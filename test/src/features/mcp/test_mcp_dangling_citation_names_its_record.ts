@@ -9,12 +9,12 @@ import { productionFixture } from "./productionFixtures";
 /**
  * A design record that cites a scene nobody declares names its own file.
  *
- * Replacing the starter with your own film is one pass over three layers, and the
+ * Replacing a completed production is one pass over three layers, and the
  * evidence graph only watches two of them. `docs/**` and `src/**` are cited, so
  * lint catches a break in either; `.automovie/design/**` is compiler-owned JSON
  * that carries no citations by design, so nothing catches it. Two measured
- * productions left that layer as the starter's, and their compiles kept reporting
- * ids the author had already deleted everywhere they knew to look.
+ * productions left legacy fixture records in that layer, and their compiles
+ * kept reporting ids the author had already deleted everywhere they knew to look.
  *
  * The diagnostic was correct and unhelpful. `Shot contract "opening" cites scene
  * "SCN-001"` sends an author into `src`, because nothing said the citation was
@@ -29,7 +29,7 @@ import { productionFixture } from "./productionFixtures";
  * Scenarios:
  *
  * 1. A production whose screenplay index no longer declares the scene its
- *    starter shot contract cites is refused with `screenplay-citation-scene-absent`.
+ *    fixture shot contract cites is refused with `screenplay-citation-scene-absent`.
  * 2. That refusal's `path` is the design record's own project-relative file, so
  *    an author reading only the diagnostic knows which file to correct or delete.
  */
@@ -38,14 +38,14 @@ export const test_mcp_dangling_citation_names_its_record = (): void => {
   try {
     // The docs layer moved on and the design layer did not, which is the shape
     // both measured productions were left in. Renaming the indexed scene is the
-    // smallest way to reproduce it: every starter record still cites the old id.
+    // smallest way to reproduce it: every fixture record still cites the old id.
     const indexPath = path.join(
       fixture.root,
       ".automovie/design/fixture-film/screenplay/index.json",
     );
     const index = fs.readFileSync(indexPath, "utf8");
     TestValidator.equals(
-      "the starter index declares the scene its records cite",
+      "the fixture index declares the scene its records cite",
       index.includes('"SCN-001"'),
       true,
     );

@@ -125,7 +125,7 @@ export const test_mcp_repaint_shot = async (): Promise<void> => {
       () => compiled,
     );
     for (let index = 0; index < FRAME_COUNT; ++index)
-      // `mask` joins the two the repaint grid needs because the starter
+      // `mask` joins the two the repaint grid needs because the fixture
       // production carries an effect-mask acceptance scenario, and a shot
       // review refuses to complete while any required review frame has no
       // current verified PNG. Repaint is gated on that completed review, so

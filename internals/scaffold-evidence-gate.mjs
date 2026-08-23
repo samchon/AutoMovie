@@ -1,49 +1,9 @@
 #!/usr/bin/env node
-// Runs `packages/cli/scaffold`'s own `npm run lint:source`, which is its
-// `@ttsc/evidence` obligation graph and its `@ttsc/lint` correctness rules
-// together, and which no other check in this repository executes.
-//
-// The scaffold is not a pnpm workspace project (`pnpm-workspace.yaml` lists
-// `packages/*` and the scaffold sits one level below `packages/cli`), so
-// `pnpm run build` never reaches it, and it cannot compile where it stands: its
-// `package.json` carries `{{version:ttsc}}`-style template tokens instead of
-// versions. Every generated project inherits that whole compiled surface
-// verbatim, so an unpaid citation or an unhandled union member there is red on
-// a user's first compile while this repository stays green.
-//
-// The gate therefore renders a disposable probe project from those inherited
-// inputs and runs the scaffold's own `npm run lint:source` over it, which is
-// `ttsc --noEmit -p tsconfig.json`.
-//
-// It compiles what that script compiles, which is the scaffold's whole
-// `include` and not a chosen part of it. Compiling only `src` and
-// `lint.config.ts`, which is what this gate did when it landed, left
-// `viewer/src` and `scripts` outside: `viewer/src/subject.ts` failed
-// `typescript/switch-exhaustiveness-check`, the rule the scaffold's own config
-// calls the load-bearing one, and every generated project died on its first
-// `npm run lint` while this gate reported a clean scaffold (3d004b41).
-//
-// Three properties make it a gate rather than a number:
-//
-//   - It classifies rather than totals. `@ttsc/lint` prefixes each diagnostic
-//     with its rule id, so the evidence graph and the correctness rules are
-//     separable from each other and from what a probe that installs nothing
-//     cannot resolve. Failing on the total would leave the gate red forever;
-//     ignoring the total would leave it blind.
-//   - It resolves what a generated project installs. The rules the scaffold
-//     leans on are type-aware, and an import that resolves to `any` silences
-//     them; measured here, a switch missing thirteen members of a union drew
-//     nothing at all until the probe could see the union. So the probe points
-//     at the workspace's own installations and at the built `@automovie/*`
-//     declarations, which is what `npm install` puts in a generated project.
-//   - It carries its own negative twins, in every run rather than in the one
-//     that built it. `ttsc` reports no lint diagnostic when the project does not
-//     declare the plugins as dependencies, and none when the lint config fails
-//     to evaluate; both were observed while this gate was built, and the symptom
-//     of each is an empty diagnostic set that reads exactly like a clean
-//     project. So every run plants one defect per axis and requires the owning
-//     rule to reject it by name. When the instrument is not running a canary
-//     goes missing and the gate fails as broken rather than passing as clean.
+/**
+ * Exercise the exact lint and evidence surface inherited by every generated
+ * project. Blank, paid, underpaid, structural, and rule canaries distinguish a
+ * genuinely clean scaffold from a graph or compiler that never ran.
+ */
 import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
@@ -58,7 +18,7 @@ const SCAFFOLD = path.join(ROOT, "packages", "cli", "scaffold");
  * `node_modules` for the lint evaluator's dependency graph, Node resolves
  * through the adjacent CLI installation that carries the generated project's
  * compiler dependencies, and the evaluator can resolve that installation's
- * `@types/node` while compiling the config factory. It is deliberately not
+ * `@types/node` while compiling the complete project declaration. It is deliberately not
  * under `experimental/`, which holds credentialed sandboxes this gate must
  * never read, write, or name.
  */
@@ -87,7 +47,7 @@ const TSCONFIG = JSON.parse(
  * while this gate stayed green. `docs` is added because it hosts no compiled
  * file and every evidence reference the graph resolves.
  */
-const INHERITED = ["docs", "config/docs", ...TSCONFIG.include];
+const INHERITED = ["docs", ...TSCONFIG.include];
 
 /**
  * The two canaries, one per axis this gate reports on.
@@ -100,9 +60,10 @@ const INHERITED = ["docs", "config/docs", ...TSCONFIG.include];
  * when `lint.config.ts` fails to evaluate. The symptom of each is an empty
  * diagnostic set that reads exactly like a paid graph and clean source.
  *
- * The evidence canary is an exported class citing nothing, planted under a
- * population the scaffold's class-grain claim selects (`src/world/*.ts`), which
- * is exactly what that claim refuses.
+ * The evidence canary is an exported property citing nothing, planted under
+ * the graph's reserved test-only canary population. It stays independent of a
+ * production kind or stage, so proving the lint instrument never requires the
+ * blank scaffold to pretend that authored production content exists.
  *
  * The correctness canary answers the same question for the type-aware half, and
  * it is deliberately not a syntactic defect. `no-debugger` would fire off the
@@ -121,14 +82,10 @@ const INHERITED = ["docs", "config/docs", ...TSCONFIG.include];
 const CANARIES = [
   {
     axis: "evidence",
-    file: path.join("src", "world", "__evidenceGateCanary.ts"),
+    file: path.join("test", "__evidenceGraphCanary.ts"),
     rule: "evidence/graph",
-    source: `/** A class the gate plants so the graph has something to reject. */
-export class __EvidenceGateCanary {
-  /** Present so the class carries a member. */
-  public readonly planted: boolean = true;
-}
-`,
+    source: `/** A property the gate plants so the graph has something to reject. */
+export const __evidenceGraphCanary = true; `,
   },
   {
     axis: "correctness",
@@ -142,14 +99,7 @@ export class __EvidenceGateCanary {
  * It names one member of a union of fourteen, so it is rejected only where the
  * union resolved to its members rather than to \`any\`.
  */
-export const __lintGateCanary = (kind: AutoMovieViewerSubjectKind): string => {
-  switch (kind) {
-    case "instance":
-      return "instance";
-  }
-  return "";
-};
-`,
+export const __lintGateCanary = (kind: AutoMovieViewerSubjectKind): string => { switch (kind) { case "instance": return "instance"; } return ""; }; `,
   },
 ];
 
@@ -166,7 +116,7 @@ const PLAIN = /\u001b\[[0-9;]*m/gu;
  *
  * Both of the layouts `ttsc` chooses between are read here rather than one being
  * forced, because the choice is made from the stream rather than from a flag:
- * a location-prefixed line for a compiler diagnostic, and a bare `error TS…:`
+ * a location-prefixed line for a compiler diagnostic, and a bare `error TS1234:`
  * line for a lint diagnostic, which carries its position inside its own message
  * instead. Lines that match neither are the summary and toolchain notices around
  * the list; they carry no diagnostic identity and are dropped rather than
@@ -323,26 +273,12 @@ const typeRoots = () =>
  * dependants use, and reaches the third-party packages that are installed
  * beside them. It is discovered rather than enumerated because a hand-written
  * module list is the thing that rots at the next dependency change.
+ *
  */
 const modulePaths = () => ({
-  // `@automovie/*` is pinned to the built declarations on purpose, which is
-  // what `npm install` puts in a generated project. Left to the fallback below
-  // it resolves through pnpm's workspace links to `packages/*/src/index.ts`,
-  // because the published entry points live under `publishConfig` and the
-  // in-repo `exports` field points at source. That drags the repository's own
-  // TypeScript into the probe's program, where it is neither the scaffold's
-  // code nor covered by `skipLibCheck`, and the gate starts reporting the
-  // repository to the author of a generated project.
   "@automovie/*": [
     posix(path.join(ROOT, "packages", "*", "lib", "index.d.ts")),
   ],
-  // `@types` comes first because a bare `three` otherwise resolves to the
-  // runtime `three.cjs`, which TypeScript accepts as the resolution and then
-  // reports as untyped (TS7016). A real install finds `@types/three` by walking
-  // `node_modules` up from the importing file, which a probe outside any
-  // install cannot do, so the ordering here is what stands in for that walk.
-  // The scaffold declares `@types/three`, `@types/pngjs` and `@types/node`
-  // itself, so these are the type sources a generated project uses too.
   "*": [
     ...installations().map((directory) => `${posix(directory)}/@types/*`),
     ...installations().map((directory) => `${posix(directory)}/*`),
@@ -369,16 +305,16 @@ const inherit = (relative) => {
 /**
  * Render the probe from the scaffold.
  *
- * The manifest declares `@ttsc/lint` and `@ttsc/evidence` because `ttsc` decides
- * whether to lint at all from the project's declared dependencies. Without them
- * it type-checks and prints no lint diagnostic, which is indistinguishable from
- * a clean graph; the canary pass is what proves the declaration took effect.
+ * The manifest declares `@ttsc/lint`, `@automovie/evidence`, and `@types/node`
+ * because `ttsc` decides whether to lint at all from the project's declared
+ * dependencies, the lint config imports the reusable graph package, and its
+ * explicit Node type reference must resolve while the isolated evaluator checks
+ * both `import.meta.dirname` and that package's Node-backed implementation. The
+ * real scaffold declares all three. The canary pass proves the two runtime
+ * declarations took effect, while the paid pass exercises the type declaration.
+ *
  */
 const render = () => {
-  // A generated project installs published `@automovie/*` packages, so the
-  // probe reads their built declarations. Saying so here turns the confusing
-  // failure that follows an unbuilt tree, a canary that draws nothing because
-  // its union resolved to `any`, into the one instruction that fixes it.
   const unbuilt = [...DECLARED]
     .filter((name) => name.startsWith("@automovie/"))
     .filter(
@@ -411,8 +347,9 @@ const render = () => {
         type: "module",
         version: "0.0.0",
         devDependencies: {
-          "@ttsc/evidence": "*",
+          "@automovie/evidence": "*",
           "@ttsc/lint": "*",
+          "@types/node": "*",
           ttsc: "*",
           typescript: "*",
         },
@@ -426,19 +363,28 @@ const render = () => {
     path.join(PROBE, "tsconfig.json"),
     `${JSON.stringify(
       {
-        // The scaffold's own compiler options, verbatim, because `npm run
-        // lint:source` is `ttsc --noEmit -p tsconfig.json` against exactly
-        // these. Only what the probe's location makes necessary is added:
-        // `typeRoots` because `@types/node` is not hoisted here, and `paths`
-        // because the probe installs nothing.
         compilerOptions: {
           ...TSCONFIG.compilerOptions,
           typeRoots: typeRoots(),
-          // No `baseUrl`: this TypeScript removed the option (TS5102), and
-          // every path below is absolute, so none is needed.
           paths: modulePaths(),
         },
         include: TSCONFIG.include,
+      },
+      null,
+      2,
+    )}\n`,
+    "utf8",
+  );
+  fs.writeFileSync(
+    path.join(PROBE, "test-tsconfig.json"),
+    `${JSON.stringify(
+      {
+        compilerOptions: {
+          ...TSCONFIG.compilerOptions,
+          typeRoots: typeRoots(),
+          paths: modulePaths(),
+        },
+        files: ["lint.config.ts", "test/scaffold.test.ts"],
       },
       null,
       2,
@@ -458,6 +404,188 @@ const compile = () => {
       "tsconfig.json",
     ],
     { cwd: PROBE, encoding: "utf8", maxBuffer: 64 * 1024 * 1024 },
+  );
+  if (result.error !== undefined) throw result.error;
+  return {
+    output: `${result.stdout ?? ""}${result.stderr ?? ""}`,
+    signal: result.signal,
+    status: result.status,
+  };
+};
+
+/** Every explicit H2 address in one shared Markdown contract. */
+const contractAnchors = (relative) =>
+  [
+    ...fs
+      .readFileSync(path.join(PROBE, "docs", relative), "utf8")
+      .matchAll(/^## .+ \{#(?<anchor>[^}]+)\}$/gmu),
+  ].map((match) => `${relative}#${match.groups.anchor}`);
+
+/**
+ * Turn the disposable probe into the smallest structurally complete active
+ * library-settings population.
+ *
+ * This is deliberately generated after the blank-scaffold pass. The public
+ * scaffold must contain no production prose or evidence tags, but inspecting
+ * config structure alone cannot prove that its real shared claims accept a
+ * paid population. Six independent H2 owners cover the six distributed
+ * settings roles; each H2 pays every per-unit common obligation, while the
+ * file pays every file-level common and settings principle.
+ */
+const activatePaidSettings = () => {
+  const configFile = path.join(PROBE, "lint.config.ts");
+  const config = fs.readFileSync(configFile, "utf8");
+  const selector = '  kind: null,\n  settings: "disabled",';
+  if (config.split(selector).length !== 2)
+    throw new Error(
+      "The scaffold graph selector changed; update the active settings probe before trusting this gate.",
+    );
+  fs.writeFileSync(
+    configFile,
+    config.replace(selector, '  kind: "library",\n  settings: "evidence",'),
+    "utf8",
+  );
+
+  const principleTargets = [
+    ...contractAnchors("principles/common.md"),
+    ...contractAnchors("principles/settings.md"),
+  ];
+  const commonTargets = contractAnchors("obligations/common.md");
+  const fileReasons = Object.freeze({
+    "principles/common.md#purpose-fit":
+      "This file exists only to prove that the active settings graph accepts a fully paid disposable population and rejects a missing relationship.",
+    "principles/common.md#layer-boundary":
+      "Every H2 states a compiler-calibration setting; none authors design, narrative, source implementation, or audience content.",
+    "principles/common.md#declared-basis":
+      "The preamble and every status line declare these facts as disposable production inventions rather than external claims.",
+    "principles/common.md#production-language":
+      "The complete file uses one consistent English calibration vocabulary for its repository-gate reader.",
+    "principles/settings.md#addressable-canon":
+      "Delivery, aim, access, convention, review condition, and domain coverage each have one independently addressable H2 owner.",
+    "principles/settings.md#information-structure":
+      "Each H2 opens with status and one bounded statement of its owner, condition, and compiler consequence.",
+    "principles/settings.md#fact-status":
+      "Every H2 explicitly labels its calibration fact as a production invention scoped to this disposable probe.",
+    "principles/settings.md#source-support":
+      "The file makes no externally checkable production claim and attaches no external authority to its invented calibration facts.",
+    "principles/settings.md#capability-boundary":
+      "The delivery scope explicitly excludes any subject or environment capability, leaving none for downstream source to guess.",
+    "principles/settings.md#constraint-sufficiency":
+      "The six owners bound the operator, observable diagnostic result, path and time units, and every excluded production domain.",
+    "principles/settings.md#observable-identity":
+      "The file defines no subject, place, or audible identity and confines its only observable result to classified compiler diagnostics.",
+    "principles/settings.md#minimal-departure":
+      "Only calibration-specific departures are authored; all unrelated production domains are explicitly outside this disposable delivery.",
+    "principles/settings.md#internal-coherence":
+      "The declared repository-relative paths, millisecond time, sole operator, and diagnostic review condition describe one compatible result.",
+  });
+  const commonReason = (target, unit) => {
+    const anchor = target.slice(target.indexOf("#") + 1);
+    if (anchor === "scope-preservation")
+      return `${unit.title} owns its one named settings role and leaves no promised descendant or delivery fact inside that role unassigned.`;
+    if (anchor === "substantive-completion")
+      return `${unit.title} states the complete calibration decision needed from this settings role rather than a placeholder for downstream work.`;
+    if (anchor === "proportionate-development")
+      return `${unit.title} receives one bounded H2 because its role is independently cited, while no subordinate production detail is invented.`;
+    if (anchor === "evidence-content-conformance")
+      return `${unit.title} cites only the file rules and distributed settings role that its stated calibration fact actually realizes.`;
+    throw new Error(`No paid-probe reason owns ${target}.`);
+  };
+  const settingsUnits = [
+    {
+      anchor: "probe-delivery-scope",
+      title: "Probe delivery scope",
+      obligation: "obligations/settings.md#delivery-scope",
+      body: "This disposable library delivers only a compiler calibration result: the active settings graph must accept this complete population and no production artifact is published.",
+    },
+    {
+      anchor: "probe-governing-aim",
+      title: "Probe governing aim",
+      obligation: "obligations/settings.md#governing-aim",
+      body: "The governing aim is to distinguish a fully paid shared graph from a graph that silently stopped enforcing one configured relationship.",
+    },
+    {
+      anchor: "probe-operator-access",
+      title: "Probe operator access",
+      obligation: "obligations/settings.md#audience-operator-access",
+      body: "The repository gate is the sole operator and may observe only compiler exit status and classified diagnostics from this disposable directory.",
+    },
+    {
+      anchor: "probe-coordinate-unit-convention",
+      title: "Probe coordinate and unit convention",
+      obligation: "obligations/settings.md#coordinate-unit-convention",
+      body: "Paths are repository-relative POSIX strings, elapsed time is measured in milliseconds, and no spatial world is represented by this compiler-only probe.",
+    },
+    {
+      anchor: "probe-delivery-review-condition",
+      title: "Probe delivery review condition",
+      obligation: "obligations/settings.md#delivery-review-condition",
+      body: "The result is reviewable only when the paid population yields no evidence or correctness diagnostic other than declared uninstalled-probe noise.",
+    },
+    {
+      anchor: "probe-settings-coverage-map",
+      title: "Probe settings coverage map",
+      obligation: "obligations/settings.md#settings-coverage-map",
+      body: "Delivery, aim, operator access, coordinate convention, and review condition each have the separate owner above; every other production domain is outside this compiler calibration scope.",
+    },
+  ];
+  const fileEvidence = principleTargets.map((target) => {
+    const reason = fileReasons[target];
+    if (reason === undefined)
+      throw new Error(`No paid-probe reason owns ${target}.`);
+    return `@evidence ${target} ${reason}`;
+  });
+  const body = [
+    "<!--",
+    ...fileEvidence,
+    "-->",
+    "",
+    "# Active settings graph probe",
+    "",
+    "Every fact below is a production invention valid only inside this disposable compiler calibration.",
+    "",
+    ...settingsUnits.flatMap((unit) => [
+      `## ${unit.title} {#${unit.anchor}}`,
+      "",
+      "<!--",
+      ...commonTargets.map(
+        (target) => `@evidence ${target} ${commonReason(target, unit)}`,
+      ),
+      `@evidence ${unit.obligation} This unit is the population owner that directly states the named settings role.`,
+      "-->",
+      "",
+      "**Status:** production invention, disposable compiler calibration.",
+      "",
+      unit.body,
+      "",
+    ]),
+  ].join("\n");
+  const target = path.join(PROBE, "docs", "settings", "production.md");
+  fs.mkdirSync(path.dirname(target), { recursive: true });
+  fs.writeFileSync(target, body, "utf8");
+  return {
+    file: target,
+    missing: `@evidence obligations/common.md#evidence-content-conformance ${commonReason(
+      "obligations/common.md#evidence-content-conformance",
+      settingsUnits[0],
+    )}`,
+  };
+};
+
+/** Execute one graph test without loading lint plugins into its test program. */
+const testGraph = ({ cwd, project, file }) => {
+  const result = spawnSync(
+    process.execPath,
+    [
+      path.join(ROOT, "node_modules", "ttsc", "lib", "launcher", "ttsx.js"),
+      "--project",
+      project,
+      "--cwd",
+      cwd,
+      "--no-plugins",
+      file,
+    ],
+    { cwd, encoding: "utf8", maxBuffer: 64 * 1024 * 1024 },
   );
   if (result.error !== undefined) throw result.error;
   return {
@@ -518,10 +646,10 @@ const main = () => {
 
   report([
     "scaffold lint:source gate",
-    `  probe:       ${PROBE}`,
-    `  ttsc:        exit ${run.status ?? `signal ${run.signal}`}, ${elapsed}ms`,
-    `  compiled:    ${TSCONFIG.include.join(", ")}`,
-    `  diagnostics: ${evidence.length} evidence, ${correctness.length} correctness,` +
+    ` probe: ${PROBE}`,
+    ` ttsc: exit ${run.status ?? `signal ${run.signal}`}, ${elapsed}ms`,
+    ` compiled: ${TSCONFIG.include.join(", ")}`,
+    ` diagnostics: ${evidence.length} evidence, ${correctness.length} correctness,` +
       ` ${uninstalled.length} uninstalled-probe noise`,
   ]);
 
@@ -529,17 +657,17 @@ const main = () => {
     report([
       "",
       "FAIL: the instrument is not running. Each canary below is a defect this run",
-      "      planted in the probe, and the rule that owes a diagnostic about it said",
-      "      nothing, so this run proves nothing and a clean result from it would be",
-      "      a lie. Read the probe's own output: a lint config that fails to",
-      "      evaluate, a project that never loads the plugin, and a union that",
-      "      resolved to `any` because its package was not found all look exactly",
-      "      like this.",
-      ...missing.map((canary) => `  ${canary.path} drew no ${canary.rule}`),
+      " planted in the probe, and the rule that owes a diagnostic about it said",
+      " nothing, so this run proves nothing and a clean result from it would be",
+      " a lie. Read the probe's own output: a lint config that fails to",
+      " evaluate, a project that never loads the plugin, and a union that",
+      " resolved to `any` because its package was not found all look exactly",
+      " like this.",
+      ...missing.map((canary) => ` ${canary.path} drew no ${canary.rule}`),
       ...run.output
         .split(/\r?\n/u)
         .slice(0, 40)
-        .map((line) => `  | ${line}`),
+        .map((line) => ` | ${line}`),
     ]);
     process.exitCode = 1;
     return;
@@ -554,19 +682,113 @@ const main = () => {
     report([
       "",
       "FAIL: packages/cli/scaffold owes the diagnostics below. Every project",
-      "      generated from it inherits them, so this is red on an author's first",
-      "      `npm run lint`.",
-      ...owed.map((diagnostic) => `  ${diagnostic.text}`),
+      " generated from it inherits them, so this is red on an author's first",
+      " `npm run lint`.",
+      ...owed.map((diagnostic) => ` ${diagnostic.text}`),
+    ]);
+    process.exitCode = 1;
+    return;
+  }
+  for (const canary of planted)
+    fs.rmSync(path.join(PROBE, canary.file), { force: true });
+  const packageGraphTests = testGraph({
+    cwd: ROOT,
+    project: "packages/evidence/tsconfig.test.json",
+    file: "packages/evidence/test/createAutoMovieEvidenceConfig.test.ts",
+  });
+  if (packageGraphTests.status !== 0) {
+    report([
+      "",
+      "FAIL: the reusable evidence package's structural graph canaries failed.",
+      ...packageGraphTests.output.split(/\r?\n/u).map((line) => ` | ${line}`),
+    ]);
+    process.exitCode = 1;
+    return;
+  }
+  report([" graph tests: reusable package canaries passed"]);
+
+  const scaffoldGraphTests = testGraph({
+    cwd: PROBE,
+    project: "test-tsconfig.json",
+    file: "test/scaffold.test.ts",
+  });
+  if (scaffoldGraphTests.status !== 0) {
+    report([
+      "",
+      "FAIL: the generated scaffold's graph consumer canary failed.",
+      ...scaffoldGraphTests.output.split(/\r?\n/u).map((line) => ` | ${line}`),
+    ]);
+    process.exitCode = 1;
+    return;
+  }
+  report([" graph tests: generated-project consumer passed"]);
+
+  const active = activatePaidSettings();
+  const paidRun = compile();
+  const paidDiagnostics = parse(paidRun.output);
+  const paidOwed = paidDiagnostics.filter(
+    (diagnostic) => axisOf(diagnostic) !== "uninstalled",
+  );
+  if (paidOwed.length !== 0) {
+    report([
+      "",
+      "FAIL: the real active settings graph rejected its completely paid",
+      " disposable population. Structural inspection is not a substitute for",
+      " executing the shared claims an author will activate.",
+      ...paidOwed.map((diagnostic) => ` ${diagnostic.text}`),
+    ]);
+    process.exitCode = 1;
+    return;
+  }
+  report([" active graph: paid settings population passed"]);
+
+  const paidSource = fs.readFileSync(active.file, "utf8");
+  if (paidSource.split(active.missing).length !== 2)
+    throw new Error(
+      "The paid settings probe no longer has exactly one selected evidence-content-conformance answer.",
+    );
+  fs.writeFileSync(active.file, paidSource.replace(active.missing, ""), "utf8");
+  const underpaidRun = compile();
+  const underpaidDiagnostics = parse(underpaidRun.output);
+  const underpaidEvidence = underpaidDiagnostics.filter(
+    (diagnostic) => axisOf(diagnostic) === "evidence",
+  );
+  const underpaidCorrectness = underpaidDiagnostics.filter(
+    (diagnostic) => axisOf(diagnostic) === "correctness",
+  );
+  const expectedUnderpayment = underpaidEvidence.filter(
+    (diagnostic) =>
+      diagnostic.text.includes("docs/settings/production.md") &&
+      diagnostic.text.includes(
+        "obligations/common.md#evidence-content-conformance",
+      ),
+  );
+  if (
+    underpaidEvidence.length !== 1 ||
+    expectedUnderpayment.length !== 1 ||
+    underpaidCorrectness.length !== 0
+  ) {
+    report([
+      "",
+      "FAIL: removing one required common-obligation citation did not produce",
+      " an isolated evidence diagnostic. The shared claim's negative edge is",
+      " therefore unproved.",
+      ...underpaidDiagnostics.map((diagnostic) => ` ${diagnostic.text}`),
     ]);
     process.exitCode = 1;
     return;
   }
   report([
+    " active graph: one removed obligation citation was rejected by evidence/graph",
+  ]);
+  report([
     "",
     "PASS: the scaffold's obligation graph is paid and its own lint rules hold over",
-    "      everything `npm run lint:source` compiles, and the two canaries this same",
-    "      run rejected are what say so. The noise count is what a probe that",
-    "      installs nothing cannot resolve; it is reported, never gated.",
+    " everything `npm run lint:source` compiles. The two blank-scaffold",
+    " canaries and the paid/underpaid active settings twins prove both lint",
+    " axes and both directions of the real shared graph. The noise count is",
+    " what a probe that installs nothing cannot resolve; it is reported,",
+    " never gated.",
   ]);
 };
 

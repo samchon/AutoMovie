@@ -1,4 +1,3 @@
-import { renderScaffold } from "@automovie/cli";
 import {
   AutoMovieProductionCompiler,
   AutoMovieProductionProject,
@@ -8,6 +7,8 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
+import { renderCompletedFilmFixture } from "../internal/completedFilmFixture";
+
 /**
  * How much of a fresh production's review queue is structural.
  *
@@ -16,7 +17,7 @@ import path from "node:path";
  * than an impression.
  */
 const root = fs.mkdtempSync(path.join(os.tmpdir(), "automovie-queue-"));
-const files = renderScaffold({ name: "queue-probe" });
+const files = renderCompletedFilmFixture("queue-probe");
 for (const [relative, content] of Object.entries(files)) {
   const target = path.join(root, relative);
   fs.mkdirSync(path.dirname(target), { recursive: true });

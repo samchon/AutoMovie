@@ -2,7 +2,7 @@
 
 Screenplays belong only to a film. Mirror the reviewed scenario's ordered files and exact H2 sequence, H3 scene, and H4 beat identities in `docs/script`.
 
-Write the final human-readable audiovisual contract. Preserve the scenario's decisive action, physical progression, exchange, timing boundary, and exit, then choose the visible action, audience-facing text, dialogue, sound, silence, perceptual access, rhythm, and implication that make the beat ready for independent shot and edit realization. Do not transcribe staging notes or hide missing narrative mechanics beneath camera language.
+Write the final human-readable audiovisual contract. Preserve the scenario's decisive action, physical progression, exchange, timing boundary, and exit, then choose the visible action, audience-facing text, dialogue, sound, silence, perceptual access, rhythm, implication, and production-recognizable audiovisual voice that make the beat ready for independent shot and edit realization. Do not transcribe staging notes or hide missing narrative mechanics beneath camera language.
 
 An H4 is the smallest lineage and authoring boundary. It need not become a visible card or cut. Preserve identity even when the final edit presents adjacent beats continuously.
 

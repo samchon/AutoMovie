@@ -317,7 +317,7 @@ export const test_viewer_formation_cadence = (): void => {
       ["halfTheCueIsHalfTheCycle", () => nclose(halfway.advance, 2.5 / stride)],
       ["travellingStraightNeverTurns", () => nclose(covered.turn, 0)],
       [
-        // The starter figure stands 1.8 m. A cycle of a walk carries a body of
+        // The fixture figure stands 1.8 m. A cycle of a walk carries a body of
         // that height somewhere between a fifth of it and a little over its
         // own height, so a measurement outside that band is not a stride at
         // all: it is an order of magnitude, or a planted fraction inverted.

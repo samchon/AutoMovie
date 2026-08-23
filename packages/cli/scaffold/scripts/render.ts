@@ -782,8 +782,8 @@ const currentPlan = async (): Promise<IAutoMovieProductionRenderJobPlan> => {
  * documentation gives: the mix has to be a pure function of what it is handed,
  * so a codec and a filesystem live on this side of it.
  *
- * Two kinds of declared asset exist and they are not the same thing. A starter
- * guide stem is a JSON descriptor: it states a duration and a format and
+ * Two kinds of declared asset exist and they are not the same thing. A
+ * placeholder guide stem is a JSON descriptor: it states a duration and a format and
  * carries no samples at all, so it plans as what it declares and mixes as the
  * bus stand-in the engine already falls back to. Everything else is a
  * container, and a container is parsed -- both for the plan identity, which is
@@ -833,7 +833,7 @@ const productionAudioSources = (
 };
 
 /**
- * Read one starter guide stem's declared format, or null when these bytes are
+ * Read one placeholder guide stem's declared format, or null when these bytes are
  * not one and belong to the container decoder instead.
  *
  * A stem that says it is a stem and then contradicts itself throws here rather

@@ -28,7 +28,7 @@ const CODE = "source-shot-nondeterministic";
  *
  * Scenarios:
  *
- * 1. The shipped starter's shot module is clean.
+ * 1. The repository-only completed-film fixture's shot module is clean.
  * 2. A wall clock, unseeded randomness, and process state are each refused, and
  *    the refusal names the spelling, the line, and the shots that module
  *    builds.
@@ -96,7 +96,7 @@ export const test_mcp_shot_determinism_refused = (): void => {
     TestValidator.equals(
       "a shot module that reads a clock, a die, or the machine is refused",
       namedFacts([
-        ["theStarterIsClean", () => clean.length === 0],
+        ["theFixtureIsClean", () => clean.length === 0],
         ["restoringItIsCleanAgain", () => restored.length === 0],
         [
           "aWallClockIsRefused",
@@ -124,7 +124,7 @@ export const test_mcp_shot_determinism_refused = (): void => {
         ["proseIsNotACall", () => prose.length === 0],
       ]),
       {
-        theStarterIsClean: true,
+        theFixtureIsClean: true,
         restoringItIsCleanAgain: true,
         aWallClockIsRefused: true,
         unseededRandomnessIsRefused: true,

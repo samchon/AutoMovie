@@ -174,7 +174,7 @@ export const exampleRenderSubject = (
  * One production may declare several tiers and check an artifact against the
  * one a render job actually targets, which is why the tier is a plain label
  * rather than a closed set. The label has to be one a job asks for — `proxy`
- * and `final` are what the starter's render job looks up — because a budget
+ * and `final` are what the generated project's render job looks up — because a budget
  * filed under a name nobody queries is a limit that never runs.
  */
 export const EXAMPLE_RENDER_BUDGET: IAutoMovieRenderBudget = {

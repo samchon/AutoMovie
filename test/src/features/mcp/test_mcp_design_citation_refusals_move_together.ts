@@ -48,7 +48,7 @@ export const test_mcp_design_citation_refusals_move_together = (): void => {
   try {
     // The docs layer moved on and the design layer did not. Renaming the
     // indexed scene and the indexed claim is the smallest way to reproduce it:
-    // every starter record goes on citing the ids the index just dropped.
+    // every fixture record goes on citing the ids the index just dropped.
     const indexPath = path.join(
       fixture.root,
       ".automovie/design/fixture-film/screenplay/index.json",
@@ -83,7 +83,7 @@ export const test_mcp_design_citation_refusals_move_together = (): void => {
             [...scene, ...claim].every((diagnostic) => opens(diagnostic.path)),
         ],
         [
-          // The starter's shot contract cites a scene and a claim in one
+          // The fixture's shot contract cites a scene and a claim in one
           // evidence entry, so one record has to appear on both sides. Two
           // disjoint sets would mean the loop this case describes is not the
           // loop that raised them.

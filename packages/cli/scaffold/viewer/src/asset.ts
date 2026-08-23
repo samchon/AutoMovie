@@ -8,9 +8,8 @@ import type { AutoMovieGuidePass, IAutoMovieModel } from "@automovie/interface";
 import { applyPose, applyRenderMode, mountViewer } from "@automovie/viewer";
 import * as THREE from "three";
 
-import { PRODUCTION_BACKGROUND } from "../../src/production";
 import { createShotTextureCache, loadCompiledModel } from "./loadCompiledModel";
-import { viewerDocument } from "./viewerDocument";
+import { VIEWER_BACKGROUND, viewerDocument } from "./viewerDocument";
 
 const { canvas, status } = viewerDocument();
 const parameters = new URLSearchParams(window.location.search);
@@ -75,7 +74,7 @@ const mounted = mountViewer(canvas, scene, camera, () => true, {
   pixelRatio: 1,
   preserveDrawingBuffer: true,
 });
-mounted.renderer.setClearColor(PRODUCTION_BACKGROUND, 1);
+mounted.renderer.setClearColor(VIEWER_BACKGROUND, 1);
 
 const queryAngle = finiteParameter("angle");
 const elevation = finiteParameter("elevation") ?? 15;

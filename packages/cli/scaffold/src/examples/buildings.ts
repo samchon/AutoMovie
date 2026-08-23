@@ -110,7 +110,7 @@ const floorSurface = (props: {
 };
 
 /**
- * A code-first building work, deliberately not part of the starter film.
+ * A code-first building technique, deliberately not part of any production.
  *
  * The work owns two independent building units — a tower and a yawed annex —
  * plus the sky-bridge that couples them at two different heights. Everything

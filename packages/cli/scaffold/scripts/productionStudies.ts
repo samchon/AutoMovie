@@ -25,8 +25,8 @@ export interface IAutoMovieProductionAcousticBinding {
 /**
  * Environmental questions this production asks.
  *
- * The starter declares none. Add measured inputs here; scripts never infer a
- * material coefficient, room mapping, climate, provider, or solver profile.
+ * A fresh scaffold declares none. Add measured inputs here; scripts never infer
+ * a material coefficient, room mapping, climate, provider, or solver profile.
  */
 export const productionAcousticStudies: readonly IAutoMovieProductionAcousticStudy[] =
   [];
@@ -47,7 +47,8 @@ export const productionBuildingStudies: IAutoMovieBuildingStudies = {
   envelope: [],
   acoustic: productionAcousticStudies.map((study) => study.request),
   air: [],
-  // One required domain prevents a report over no questions from reading as a
-  // pass. Widen this list as the production adopts further obligations.
-  required: ["daylight"],
+  // A blank scaffold chooses no analysis question for its eventual production.
+  // Add at least one required domain with the studies that answer it; the
+  // analysis summary refuses a non-empty run set with no required domain.
+  required: [],
 };

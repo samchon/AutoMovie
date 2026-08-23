@@ -21,7 +21,7 @@
     "review:status": "ttsx --cache-dir node_modules/.cache/ttsc -P tsconfig.json scripts/review-status.ts",
     "render": "ttsx --cache-dir node_modules/.cache/ttsc -P tsconfig.json scripts/render.ts",
     "viewer": "vite --host 127.0.0.1",
-    "test": "ttsx --cache-dir node_modules/.cache/ttsc -P tsconfig.json test/opening.test.ts",
+    "test": "ttsx --cache-dir node_modules/.cache/ttsc -P tsconfig.json test/scaffold.test.ts",
     "verify": "ttsx --cache-dir node_modules/.cache/ttsc -P tsconfig.json scripts/verify.ts",
     "format": "ttsc format --cache-dir node_modules/.cache/ttsc -p tsconfig.json",
     "design": "ttsx --cache-dir node_modules/.cache/ttsc -P tsconfig.json scripts/emitDesign.ts",
@@ -49,6 +49,7 @@
     "three": "{{version:three}}"
   },
   "devDependencies": {
+    "@automovie/evidence": "{{version:evidence}}",
     "@ttsc/lint": "{{version:ttscLint}}",
     "@types/node": "{{version:nodeTypes}}",
     "@types/pngjs": "{{version:pngjsTypes}}",
@@ -56,7 +57,6 @@
     "playwright": "{{version:playwright}}",
     "ttsc": "{{version:ttsc}}",
     "typescript": "{{version:typescript}}",
-    "vite": "{{version:vite}}",
-    "@ttsc/evidence": "{{version:ttscEvidence}}"
+    "vite": "{{version:vite}}"
   }
 }

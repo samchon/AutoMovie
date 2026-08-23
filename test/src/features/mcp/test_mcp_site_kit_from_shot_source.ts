@@ -15,7 +15,7 @@ import {
  *
  * `packages/engine/src/worldKit.ts` is where a production's site is built, and
  * the sandbox served exactly one of its names. That mattered because a world
- * module is shot-source code: the starter's `src/shots/opening.ts` imports
+ * module is shot-source code: the completed fixture's `src/shots/opening.ts` imports
  * `../world/plaza`, and the import gate reads the whole module rather than the
  * method the shot happens to call, so a piece that built its patch with
  * `worldTerrain` was refused at compile time. A production authoring its own
@@ -158,7 +158,7 @@ export const test_mcp_site_kit_from_shot_source = (): void => {
 };
 
 /**
- * The starter's opening shot, rewritten to build the site it plays on.
+ * The completed fixture's opening shot, rewritten to build the site it plays on.
  *
  * The podium's base height is the only parameter, because the grounded case and
  * the refused one must differ by exactly the property the gate reads. Writing

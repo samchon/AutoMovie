@@ -25,29 +25,29 @@ Audit only the axes relevant to the production:
 
 Add an axis when the work needs it and create no rule merely to fill the list. Convert labels such as “cinematic,” “realistic,” “dynamic,” or “polished” into observable choices, applicable conditions, intended effects, and representative failures before adopting them.
 
-Separate a research finding from a method that selected files must keep applying. The finding is a research or settings fact. A recurring file condition may be a package-local principle only when the shared contracts do not already ask the complete question. Use lineage to carry an established fact downward instead of copying source lists into model, motion, prose, or source code.
+Separate a research finding from a method that selected files must keep applying. The finding is a research or settings fact. A recurring file condition may be a production-local principle only when the shared contracts do not already ask the complete question. Use configured evidence relations to carry an established fact downward instead of copying source lists into design, prose, or source code.
 
 ## Canonical owner
 
 Give every adopted rule one owner:
 
-| Meaning | Owner |
-| --- | --- |
-| Delivery fact, world fact, subject, relationship, capability, constraint, or production-wide canon | Independent `docs/settings` H2 |
-| Condition every selected file must satisfy | Package-local `docs/principles/<scope>.md` |
-| Role one or more units in a complete layer population must realize | Package-local `docs/obligations/<layer>.md` |
-| Relationship already owned by settings, model, motion, narrative, or brief evidence | Existing target, selected by an added claim only when the shared graph does not already express it |
-| Independent target with different evidence behavior | Descriptive plural or collective `docs/<family>` |
-| Candidate that may be reusable but has not passed the shared admission test | `.wiki` research |
+| Meaning                                                                                            | Owner                                                                                              |
+| -------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
+| Delivery fact, world fact, subject, relationship, capability, constraint, or production-wide canon | Independent `docs/settings` H2                                                                     |
+| Condition every selected file must satisfy                                                         | Production-local `docs/production-principles/<scope>.md`                                           |
+| Role one or more units in a complete layer population must realize                                 | Production-local `docs/production-obligations/<layer>.md`                                          |
+| Relationship already owned by settings, a design branch, narrative, or brief evidence              | Existing target, selected by an added claim only when the shared graph does not already express it |
+| Independent target with different evidence behavior                                                | Descriptive plural or collective `docs/<family>`                                                   |
+| Candidate that may be reusable but has not passed the shared admission test                        | `.wiki` research                                                                                   |
 
 Narrative order is not a settings fact. A repeated visual or writing condition is not a distributed role. A role required somewhere in one population is not a per-file checklist. A representation choice is not a world capability, and a timed path is not a model interface. Do not copy one rule across settings, principles, obligations, and source.
 
-Do not create a catch-all production contract file. In a settings H2, record direct authority as `**Status:** production decision, user-confirmed.` In a package-local target, state its authority, exact applicability, intended effect, success boundary, and representative failure. Supporting research does not become the authority that selected a creative decision.
+Do not create a catch-all production contract file. In a settings H2, record direct authority as `**Status:** production decision, user-confirmed.` In a production-local target, state its authority, exact applicability, intended effect, success boundary, and representative failure. Supporting research does not become the authority that selected a creative decision.
 
 ## Activation and revision
 
-Create every package-local target and its additive `claims` entry in `lint.config.ts` in one coherent change. Follow [Evidence staging](evidence-staging.md) for population, cardinality, exclusion, stage, and review semantics. An unselected target is not enforced, and an extra claim extends rather than replaces the shared graph.
+Create every production-local target and its additive `claims` entry in `lint.config.ts` in one coherent change. Follow [Evidence staging](evidence-staging.md) for population, cardinality, exclusion, stage, and review semantics. An unselected target is not enforced, and an extra claim extends rather than replaces the shared graph.
 
-Before settings leave `draft`, account for every direct instruction and adopted rule in its canonical owner. An omitted `claims` property or empty array is valid only after a literal audit finds no independent package target.
+Before settings leave `draft`, account for every direct instruction and adopted rule in its canonical owner. An omitted `claims` property or empty array is valid only after a literal audit finds no independent production-local target.
 
 Later discoveries revise the earliest true owner. Preserve user authority, assess every affected host and descendant, propagate the change, and renew stale reviews before resuming blocked work. When another agent owns affected authorship, send the settled rule, authority, canonical document, applicability, activation behavior, affected hosts, and required recheck before explicitly resuming that owner.

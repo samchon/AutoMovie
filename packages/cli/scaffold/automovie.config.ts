@@ -25,24 +25,10 @@ export default {
     },
   },
   sound: {
-    /**
-     * Production-selected local dialogue source.
-     *
-     * This is an authored choice rather than host discovery. Change or remove
-     * it deliberately; the render script never substitutes another provider,
-     * model, revision, voice, device, or speed.
-     */
-    dialogueSynthesis: {
-      provider: "kokoro-local-v1",
-      model: "onnx-community/Kokoro-82M-v1.0-ONNX",
-      modelRevision: "1939ad2a8e416c0acfeecc08a694d14ef25f2231",
-      dtype: "q8",
-      device: "cpu",
-      voice: "af_heart",
-      speed: 1,
-    },
-    /** Authored speaker identities joined to exact compiled actor nodes. */
-    speakerBindings: [{ speaker: "soloist", actor: "soloist" }],
+    /** Add an explicit provider/model/revision/voice choice when dialogue exists. */
+    dialogueSynthesis: null,
+    /** Add authored speaker-to-actor identities when dialogue exists. */
+    speakerBindings: [],
   },
   simulation: {
     /**

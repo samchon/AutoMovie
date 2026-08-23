@@ -1,0 +1,12 @@
+{
+  "extends": "../../config/tsconfig.json",
+  "compilerOptions": {
+    "declaration": false,
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "noEmit": true,
+    "rootDir": ".",
+    "types": ["node"]
+  },
+  "files": ["test/createAutoMovieEvidenceConfig.test.ts"]
+}

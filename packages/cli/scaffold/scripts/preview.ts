@@ -17,7 +17,9 @@ for (let index = 0; index < args.length; ++index) {
   } else positional.push(argument);
 }
 const time = Number(options.get("--time") ?? positional[0] ?? "0");
-const shot = options.get("--shot") ?? positional[1] ?? "opening";
+const shot = options.get("--shot") ?? positional[1];
+if (shot === undefined || shot.trim() === "")
+  throw new Error("preview requires --shot <authored-shot-id>.");
 const passValue = options.get("--pass") ?? "beauty";
 const passes: readonly AutoMovieGuidePass[] = [
   "beauty",

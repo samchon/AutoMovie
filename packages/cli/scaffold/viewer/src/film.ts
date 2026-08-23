@@ -20,13 +20,13 @@ import {
 import type { WebGLRenderer } from "three";
 
 import type { IAutoMovieProductionViewerRuntime } from "../../scripts/productionRuntimeState";
-import { PRODUCTION_BACKGROUND } from "../../src/production";
 import {
   type IAutoMovieCompiledShotRuntime,
   createCompiledShotRuntime,
 } from "./shotRuntime";
 import {
   type IAutoMovieShotObservation,
+  VIEWER_BACKGROUND,
   viewerDocument,
 } from "./viewerDocument";
 
@@ -125,7 +125,7 @@ const mounted = mountViewer(
   },
 );
 viewerRendererRef.current = mounted.renderer;
-viewerRendererRef.current.setClearColor(PRODUCTION_BACKGROUND, 1);
+viewerRendererRef.current.setClearColor(VIEWER_BACKGROUND, 1);
 
 const renderLayer = (
   layer: IFilmLayer,

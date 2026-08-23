@@ -19,6 +19,7 @@ export const PACKAGES = Object.freeze([
   "interface",
   "engine",
   "archetypes",
+  "evidence",
   "render",
   "ingest",
   "viewer",

@@ -1,12 +1,12 @@
 # Source Composition Handbook
 
-A film is a program that emits shots. This handbook is about the shape that program takes once a production has more shots than you would willingly type, which is the point where authoring each one by hand stops being craft and becomes transcription.
+A timed AutoMovie delivery is a program that emits shots. This handbook is about the shape that program takes once a production has more shots than you would willingly type, which is the point where authoring each one by hand stops being craft and becomes transcription.
 
 `TYPESCRIPT` governs how any one module must behave: pure builds, typed payloads, explicit units, no I/O in the compile sandbox. Those rules hold everywhere here. This document is about arrangement across modules, and it applies to any production with repeated subjects: a crowd, a parade, a fleet, a corps of dancers.
 
 ## Know when to compose
 
-Hand-author while a production has a handful of shots. The starter's shots are cheaper written out than generated, and a factory built for one caller is a worse module than the caller.
+Hand-author while a production has a handful of shots. A few explicit shots are cheaper than a generator, and a factory built for one caller is a worse module than the caller.
 
 Compose at the moment you copy a shot module and change its names. That copy is the signal, not the fortieth one. The cost of hand-authoring is linear in runtime and invisible until the runtime is large, so the decision has to be made from the repetition you can see rather than from the pain you have felt.
 
@@ -190,12 +190,10 @@ The film's shot order is data the table already holds. Build the edit by walking
 
 Placement timing, transitions, and edge states still belong to the edit's own rules. Deriving the order does not license deriving a continuity claim: an edge state asserts a measured fact about two specific shots, and a factory cannot know it.
 
-## Read the shipped examples
+## Read the shipped technique examples
 
-The starter's own vocabulary is the worked example of the subject layer. Under `src/units/` a leaf subject's measured facts are fields and its one capability is a method, and a second unit derives its scale from the first rather than restating it; under `src/formations/` a group states arrangement and answers questions about its own extent; under `src/world/` a group of places emits a record that is the merge of what its pieces put down.
-
-`src/examples/` is the same lesson for the built environment: a building assembled by loops over its storeys, a physically-based finish and the ways binding its images goes wrong, props declaring placement relations instead of coordinates, a seeded instance set, an observed plan that is read rather than traced, and a renovation phased over identities the building already published.
+The scaffold leaves production branches empty and ships reusable technique examples only under `src/examples/`. They demonstrate a building assembled by loops over its storeys, a physically-based finish and the ways binding its images goes wrong, props declaring placement relations instead of coordinates, a seeded instance set, an observed plan that is read rather than traced, and a renovation phased over identities the building already published. Production owners belong under `src/models`, `src/spaces`, `src/materials`, `src/instances`, `src/motions`, and `src/systems`; examples never become owners merely because they compile.
 
 Two more are about the scale this handbook is written for, and a production authored across several passes wants both early. `src/examples/surfaceQuantities.ts` makes a surface publish what it laid, counted from the elements it emitted and split into the categories a frame cannot tell apart, so a wall nobody has clad yet stops reading as a finished one. `src/examples/surfaceOwnership.ts` divides the work by complete visual surface, one owner per surface and never a surface split across two, and gives a concern that genuinely crosses every surface, such as finish binding, its own single owner rather than a decision each surface's file makes for itself.
 
-Read the one nearest your problem and then write your own. They teach technique; they are not a content library, and copying an example's dimensions into a production is how a starter's furniture ends up in somebody's film.
+Read the one nearest your problem and then write your own. They teach technique; they are not a content library, and copying an example's dimensions into a production is how demonstration furniture ends up in somebody's film.

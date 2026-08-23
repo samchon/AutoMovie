@@ -56,7 +56,9 @@
     "typia": "catalog:samchon"
   },
   "devDependencies": {
+    "@automovie/evidence": "workspace:^",
     "@automovie/viewer": "workspace:^",
+    "@ttsc/evidence": "catalog:typescript",
     "@types/node": "catalog:utils",
     "rimraf": "catalog:utils",
     "three": "catalog:three",

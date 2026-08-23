@@ -1,170 +1,161 @@
 # Evidence Graph Handbook
 
-A production's authored layout is its obligation graph. Files under `config/docs` define reusable production law; files under `docs` state one production's evidence; TypeScript realizes reviewed model, motion, and audiovisual contracts. An unpaid edge is a compile error.
+A production's authored layout is its obligation graph. The generated project has one documentation root: shared targets live under `docs/principles` and `docs/obligations`, named authoring branches hold production hosts, separately named production target families extend the graph, and TypeScript realizes reviewed contracts. `lint.config.ts` contains the complete production kind, stage, and additive-claim selection; `@automovie/evidence` supplies the reusable graph mechanics. There is no second project-local config source.
 
-Read `SOURCE_COMPOSITION` for source arrangement and `PRODUCTION_DESIGN` before replacing the starter. This guide owns production kinds, layer boundaries, citations, and staged review.
+Read `SOURCE_COMPOSITION` for source arrangement and `PRODUCTION_DESIGN` before emitting typed design records. This guide owns production kinds, layer boundaries, citations, topology integrity, and staged review.
 
-## Select one production kind
+## Start blank and select one kind
 
-Set `kind` in `lint.config.ts`. The kinds are mutually exclusive, and authored structure rather than runtime decides among them.
+A new scaffold has `kind: null`, every stage disabled, empty governed host directories, no production design records, and no inherited evidence tags. The config still declares every population. The moment a governed host appears while disabled, or a stage becomes active without a host, lint refuses.
 
-| Kind | Result | Active result path |
+| Kind | Result | Required result path |
 | --- | --- | --- |
-| `film` | a narrative audiovisual work, including a narrative short | `storylines -> scenarios -> script -> shots -> filmSources` |
-| `brief` | one bounded non-narrative audiovisual result, such as a turntable, logo sting, or motion demonstration | `briefs -> shots -> filmSources` |
-| `library` | reusable settings, production source, and applicable model or motion design and source, with no timed result | no prose-to-shot or film-source path |
+| `film` | an audiovisual work that needs independent narrative refinement | `settings -> storylines -> scenarios -> script -> shots -> filmSources` |
+| `brief` | one bounded audiovisual result, including a simple short, turntable, logo sting, or motion demonstration | `settings -> briefs -> shots -> filmSources` |
+| `library` | reviewed reusable design/source branches with no timed shot result | `settings` plus applicable design/source branches |
 
-A ten-second story is still a film. A long technical demonstration may still be a brief. Do not use `brief` to avoid defining dramatic causality, or `library` when delivery contains a shot.
+For film and brief, reviewed `productionSources` is a parallel assembly input that must exist before `filmSources`; it does not interrupt the prose-to-shot identity ladder. Runtime alone does not choose. A short whose complete intent fits one delivery/shot/observation hierarchy may be a brief; a work that needs separate storyline, scenario, and script decisions is a film. Do not use `brief` to hide required narrative refinement or `library` when delivery contains a shot.
 
-Each layer is explicitly `disabled`, `draft`, `evidence`, or `review`. `disabled` means the layer has no governed hosts because the selected kind forbids it or its authorship has not begun. `draft` requires at least one governed host but keeps shared graph coverage off while the complete first version is written. `evidence` turns coverage on after that coherent draft exists. `review` additionally requires current review fingerprints. Every hosted Markdown layer has explicitly anchored H2 units, film and brief ladders also have correctly nested H3 and H4 units, and every governed source file has a named exported owner of the governed kind. The factory refuses residual, empty, and structurally empty populations. Select these states through `createAutoMovieEvidenceConfig`; do not rewrite graph populations to make a production pass.
+Research and design branches are orthogonal to kind. Activate them only when the delivery uses them:
 
-## Reusable law and production evidence
+| Branch | Owns |
+| --- | --- |
+| `settings` | production facts, identity, capability, constraint, access, units, and delivery/review condition |
+| `research` | exact external source, used portion, authority, uncertainty, and affected production decision |
+| `models -> src/models` | fixed bounded representation, hierarchy, articulation interface, surface partitions, fidelity ceiling |
+| `spaces -> src/spaces` | world/site/building exterior and interior, containment, envelope, openings, levels, routes, clear dimensions |
+| `materials -> src/materials` | construction, finish, texture/projection scale, surface binding, optical/physical response, state |
+| `instances -> src/instances` | prototype membership, stable ids/transforms, variation, tiers, density, contact, placement |
+| `motions -> src/motions` | named deterministic state transition, endpoints, phases, paths, parameters, composition, interruption |
+| `systems -> src/systems` | coupled lighting, environment, effects, simulation, sound, service, clock, dependency, budget, degradation |
 
-The two document roots must not mix.
+## Keep document roles disjoint
 
-| Root | Holds | Changes when |
-| --- | --- | --- |
-| `config/docs/principles` | reusable rules: per-file checklists for authored Markdown and population coverage for heterogeneous source exports, one concern per anchored H2 | the reusable authoring standard changes |
-| `config/docs/obligations/common.md` | unit-level scope, completion, proportionality, and evidence-truth duties answered by every selected authored unit | a universal unit-completion duty changes |
-| Other `config/docs/obligations` | distinct required responsibilities distributed across one layer population | the population's required roles change |
-| `docs` | researched facts and decisions for this production | the production changes |
+Shared principles are per-file checklists. Every governed Markdown file answers every applicable principle H2, with no exclusions. Common obligations are a per-unit checklist. Every governed H2 and every film/brief H3/H4 answers them directly. Layer obligations distribute distinct required roles across one H2 population; one host or several may discharge a role, but no role disappears because a glob matched nothing.
 
-An authored-document principle is a file checklist. Every Markdown file in its governed layer cites every applicable H2, exclusions are refused, and each reason says how that file obeys the rule. A source principle is covered across the selected export population because constructors, motions, deliveries, and acceptance records have different applicable duties; every source H2 still needs concrete implementation evidence, while exact design edges prevent orphan or multiply owned exports.
+The authored-unit topology is closed. Outside an optional H1 title, settings, research, and design hosts use only anchored H2 units; storyline, scenario, script, and brief hosts use only anchored H2/H3/H4 units. Any other heading depth is a hard error rather than an ungoverned hiding place.
 
-`obligations/common.md` is a no-exclusion unit checklist. Every settings, model, and motion H2 and every film or brief H2/H3/H4 answers its four items directly; one strong sibling never covers a weak unit. Other obligations distribute roles across the owning H2 population. Settings, model, and storyline roles permit no exclusion. A motion role may receive one population-wide exclusion only when the complete production lacks the condition named by that target.
+One H2 asks one falsifiable question. Before adding or changing a target:
 
-Never copy the same rule into several families. A file-wide repeated condition is a principle, a universal unit duty belongs in common obligations, and a role allocated somewhere in a population is a layer obligation.
+1. Reduce every sibling H2 to its governing subject and required decision.
+2. Run the same-answer test. If two items can receive materially the same answer, merge them or sharpen their subjects.
+3. Run the contradiction test both ways. Prove one can pass while the other fails, and that changing one need not change the other.
+4. Test one compliant boundary case and one counterexample.
+5. Add the target, its population/reference wiring, routing prose, and a negative canary in the same change.
 
-Before changing a principle, compare it with every sibling. Reduce each to the subject it governs and the decision it requires. If two can govern the same decision, merge them or redraw the boundary. Test one compliant case and one counterexample at the boundary, and check that obeying one cannot contradict another without an independently named concern.
+The principal boundaries are:
 
-The principal domain boundaries are strict:
+- settings says what exists, means, and may happen; it does not build it;
+- models define one prototype representation; spaces define topology and usable place;
+- models name stable surfaces; materials bind construction and response;
+- instances repeat reviewed prototypes; they do not create new silhouettes;
+- motions change one reviewed interface over time; systems coordinate coupled processes, owners, clocks, dependencies, and budgets;
+- storylines own narrative development and audience change;
+- scenarios own executable physical progression and entry/exit state;
+- script owns final visible, written, audible, silent, and timed expression;
+- briefs own one bounded delivery/shot/observation hierarchy with no separate narrative-refinement ladder;
+- shots own local composition and acceptance for one reviewed scene or brief shot; film source owns only global edit and auxiliary-track mapping.
 
-- settings own facts, capabilities, constraints, and observable identity;
-- models own deterministic representation, hierarchy, geometry allocation, articulation, materials, and fidelity limits;
-- motions own endpoints, phases, time mapping, spatial path, parameter domain, contacts, and composition;
-- storylines own cause and the audience's changed understanding;
-- scenarios own executable physical progression and entry or exit state;
-- scripts own final audience-visible, audience-readable, and audible expression and timing;
-- briefs own one observable non-narrative progression;
-- model and motion source own their reviewed representation or transition implementation and refuse unsupported behavior;
-- shots own one reviewed scene's local visual composition and delivery acceptance;
-- production source serializes reviewed settings into the engine-facing production record;
-- film source owns global editorial mapping and auxiliary tracks without inventing local composition or audience content.
+Foundation citations follow those ownership directions after the target branch reaches review. Models may consume spaces; materials consume model or space surfaces; instances consume model prototypes, spatial placement, and declared material variation; motions may consume any other design interface; systems may consume models, spaces, materials, instances, and motions; briefs account for every active design branch. Motion and system documents may cite one another when a coupled process and a reusable transition have distinct owners, but neither duplicates the other's state or path. The selected host population divides actual citations among the hosts that use each target. Omission from another host is not an exclusion, and only a target unused by the complete population receives one truthful population-wide exclusion.
 
-## The production layers
+## Shared targets and production-specific targets
 
-| Layer | Host | Direct evidence |
-| --- | --- | --- |
-| Research | `docs/research/*.md` | common and research principles; once a consumer exists, every research H2 is consumed by a downstream authored H2 |
-| Settings | `docs/settings/*.md` | common and settings principles; common unit obligations; settings roles |
-| Models | `docs/models/*.md` | settings; common and model principles; common unit obligations; model roles |
-| Motions | `docs/motions/*.md` | settings and models; common and motion principles; common unit obligations; motion roles |
-| Storylines | `docs/storylines/*.md` | settings; common, narrative, and storyline principles; common unit obligations; storyline roles |
-| Scenarios | `docs/scenarios/*.md` | matching storyline units and settings; common, narrative, and scenario principles; common unit obligations |
-| Script | `docs/script/*.md` | matching scenario and storyline units and settings; common, narrative, and script principles; common unit obligations |
-| Briefs | `docs/briefs/*.md` | settings and any active model or motion branches; common and brief principles; common unit obligations |
-| Model source | subject classes under `src/units`, `src/objects`, `src/world`, and `src/formations` | exactly one model file; model design units and model-source principles |
-| Motion source | exports under `src/motions` | exactly one motion file; motion design units and motion-source principles |
-| Shots | exports under `src/shots` | exactly one script scene or brief shot; shot principles |
-| Production source | exports in `src/production.ts` | settings; production-source principles |
-| Film source | export in `src/film.ts` | every script sequence or brief delivery; film-source principles |
+The shared target inventory is exact and validated when `lint.config.ts` loads. Every shared and production-local target begins with one H1 and scope statement; every anchored H2 contains exactly one `Review question:` and one final `Sources:` line. H2 anchors and titles are globally unique across that complete target inventory. No target may contain host-side `@evidence`, `@evidenceExclude`, or review tags. A local target with no additive reference and an enabled local target pattern matching zero files are both refused. A file-wide recurring condition is a principle; a duty every unit owes is a common obligation; a role allocated somewhere in one layer is a layer obligation.
 
-Research is an optional upstream branch. When enabled, it may be drafted alone, but before an authored consumer of the ledger begins, research must be in `review`; once such a consumer participates in evidence, every research H2 must support at least one downstream H2. Each entry records the identifiable source and used portion, its authority, material uncertainty or disagreement, and the exact production decision it constrains; the owning downstream layer still makes that decision.
+Production-specific rules remain under `docs` and are activated through additive typed entries in `claims`. The exact shared inventory reserves `docs/principles` and `docs/obligations`; use `docs/production-principles`, `docs/production-obligations`, or another descriptive family for local targets. Give every adopted rule one owner:
 
-## Production-specific contracts
+- a production fact or constraint is an independent settings H2;
+- a condition every selected file must meet is a local principle;
+- a role distributed across one layer is a local obligation;
+- an independent family with different evidence behavior gets a descriptive plural directory and its own claim;
+- an unproven reusable idea stays in working research.
 
-Before bulk settings work, preserve direct user instructions and audit the production's structural, stylistic, formal, subject, representation, motion, and review rules. Distinguish user-confirmed authority, author decisions, and sourced facts. Give every adopted rule one owner rather than creating a catch-all contract.
+The project declaration exposes only one extension seam for these additions: append typed entries to `claims`. That authority never permits deleting, filtering, copying, replacing, or weakening the shared claims, populations, paths, review requirements, cardinality, no-exclusion rules, host validation, target inventory, or stage topology.
 
-- A production or world fact, capability, constraint, and delivery condition belongs to an independent settings H2.
-- A condition every selected file must satisfy belongs to a production-local `docs/principles` target.
-- A role allocated across one layer belongs to a production-local `docs/obligations` target.
-- A relationship already owned by an authored unit cites that target through an added claim only when the shared graph does not already express it.
-- An independent target with different evidence behavior uses a descriptive plural or collective `docs/<family>`.
-- A possibly reusable rule without proven universality stays in working research.
+## Exact film and brief identity
 
-Declare each production-local target and its typed `claims` entry in `lint.config.ts` together. Added claims extend the shared graph and never replace or weaken it. Keep `claims` absent or empty only after a literal audit finds no independent target.
-
-## Exact unit identity
-
-A film preserves the same anchored units through all three narrative layers:
+A film preserves identical relative filenames, anchors, nesting, and order through all three narrative layers:
 
 ```text
-## sequence -> ## sequence
-### scene   -> ### scene
-#### beat   -> #### beat
+storylines/001.md     scenarios/001.md      script/001.md
+## sequence           ## sequence           ## sequence
+### scene             ### scene             ### scene
+#### beat             #### beat             #### beat
 ```
 
-Each scenario unit cites exactly one matching storyline unit. Each script unit cites exactly one matching scenario unit and one matching storyline unit. The script cites both because a scenario can itself be miswired. The factory also compares the ordered physical H2/H3/H4 anchors and nesting across active layers, so renamed, reordered, duplicated, unanchored, or cross-wired identities fail even if their citation counts are bijective. A shot cites exactly one script H3 scene for its local visual realization; film source cites every script H2 sequence for global edit and auxiliary-track assembly.
+Every scenario unit cites exactly one same-level storyline unit. Every script unit cites exactly one same-level scenario and storyline unit. The physical validator independently compares filenames and ordered H2/H3/H4 lineage, so a bijective but swapped citation still fails. A shot/acceptance export cites one script H3 scene; film source covers every script H2 sequence.
 
-A brief uses `##` delivery, `###` shot, and `####` observation. Its shot cites exactly one brief H3 and film source cites every brief H2. It does not invent a storyline or scenario for an observable demonstration that makes no narrative claim.
+A brief uses H2 delivery, H3 shot, and H4 observation. Its source cites one H3 shot and film source covers every H2 delivery. It never invents a storyline or scenario merely to satisfy the film graph.
 
-Keep stable anchors even when display titles change. The screenplay index separately resolves exact beat text and `SCN-*` identities against storyline and script documents; it is not part of `@ttsc/evidence`, so moving prose requires updating the index too.
+Keep anchors stable when titles change. The screenplay index separately resolves exact beat text and `SCN-*` identities; it is hand-authored and outside `@ttsc/evidence`, so prose changes update the index and every dependant.
 
-## Model and motion evidence
+## Source ownership
 
-A settings subject is not a model. Settings say what the subject is and what it may do; `docs/models` says how the blocking representation implements that contract. Use one model document per represented subject and give every exported model class exactly one model owner.
+Every governed TypeScript file declares a named exported class, function, or property owner. Model branches require a concrete exported class and select every exported type for exact ownership; motion branches select every exported function and property; space, material, instance, and system branches select every exported type, function, and property. Each selected design owner cites exactly one file in its matching branch. The complete source branch collectively realizes every H2 and specialist source principle.
 
-A model capability is not a motion. Settings authorize the semantic capability and limit, the model binds that limit to a named joint or other stable representation interface, and a timed transition through it belongs in `docs/motions`. Record start and end state, time domain, phases and interpolation, spatial relation, invalid inputs, contacts, interruption, composition, and the observations that can disprove the motion. Give every exported motion function and property exactly one motion owner.
+A helper that owns no model, space, material, instance, motion, system, shot, or production decision stays outside governed directories. A governed export may not cite zero or two matching design files. Cross-branch design dependencies are cited by the consuming design H2; its source implements that reviewed owner and imports the stable interface it names. Never make every motion cite every model or copy an interface into the motion document.
 
-Motion implementation lives under `src/motions`. Subject methods may delegate to it. A shot composes motions but must not hide reusable transition math or grant a model a capability its reviewed documents do not authorize.
+Production source covers reviewed settings and only serializes their engine-facing result. The blank viewer uses a neutral clear color; when it remains visible in the delivery, wire its replacement to reviewed production or system source rather than authoring an independent viewer look. Shot and acceptance exports each realize one script scene or brief shot. Film source covers every sequence/delivery and performs only timeline selection, source-time mapping, transitions, and auxiliary tracks.
 
-The graph selects governed model types exactly and motion functions and properties exactly. Every such owner cites one design file, and the population collectively covers every model or motion H2 and every source principle. Keep a helper outside these governed source directories when it implements no model or motion design fact; a governed symbol cannot cite zero or two design files.
+## Stages and expiring review
 
-## Writing citations
+Layers move through `disabled -> draft -> evidence -> review`.
 
-Markdown principle citations live in one HTML comment before the H1. Common obligations, layer roles, foundations, and lineage owned by an H2, H3, or H4 live in the comment immediately after that heading. TypeScript uses JSDoc on the exact exported symbol.
+1. Set the next eligible layer to draft and write its complete first version without evidence tags.
+2. Audit scope, addressability, substantive completion, proportionality, placeholders, same answers, contradictions, and omissions.
+3. Commit the coherent draft, set evidence, write truthful citations, and compile clean.
+4. Read every target and host in full and test the concrete relationship.
+5. Set review, copy only compiler-issued fingerprints into substantive review statements, and compile again.
+6. Begin a child only after every direct parent is reviewed.
 
-Targets under a configured Markdown root omit the root itself:
+Research may be drafted before settings. Once enabled, it must reach review before settings begins. Every research H2 is then cited and interpreted by a settings H2; specialist and narrative layers consume that settings decision instead of creating a second research path. The relationship gains review fingerprints when settings reaches review. Design source waits for its matching design documents. Film or brief shots wait for reviewed prose and every active design branch's corresponding source. Film source waits for reviewed shots and production source.
+
+Draft files containing evidence tags fail. Review fingerprints expire when a target changes. Never invent a digest, bulk-refresh stale reviews, lower a stage to hide debt, or move resident hosts into an ungoverned path.
+
+## Write narrow truthful citations
+
+Markdown file-principle citations live in one HTML comment before the H1. Unit obligations, foundations, and lineage live immediately after the owning H2/H3/H4. TypeScript citations live in JSDoc on the exact exported symbol. Targets omit the configured `docs` root:
 
 ```md
 <!--
-@evidence principles/common.md#purpose-fit This model document exists to make the soloist reviewable at blocking fidelity.
-@evidence settings/010-soloist.md#soloist-identity-scale Preserves the stated height and followed silhouette.
+@evidence principles/common.md#purpose-fit This model file owns the one blocking representation later source constructs.
+@evidence settings/010-subject.md#subject-scale Preserves the reviewed height and silhouette identity.
 -->
 ```
 
 ```text
 /**
- * @evidence models/010-soloist.md The class constructs the one reviewed soloist representation.
+ * @evidence models/010-subject.md This owner constructs exactly the reviewed subject representation.
+ * @evidence models/010-subject.md#representation Implements this design unit without adding an uncited shape decision.
+ * @evidence principles/model-sources.md#design-owned-construction Keeps the constructed constants within reviewed design.
  */
-export class Soloist extends AutoMovieSubject {}
+export class Subject extends AutoMovieSubject<IAutoMovieModelRecipe> {
+  // reviewed properties and builders
+}
 ```
 
-The reason is part of the contract. State what the host does about the target in language a reader of the target can verify. Cite the narrowest unit: a script scene cites a scenario scene anchor, not merely its file or a governing aim.
+The file target is the exact one-owner edge. H2 and source-principle targets divide implementation coverage across the selected exports in that file; when one export is the whole owner, it carries the complete applicable set.
 
-## Evidence stages and expiring review
+The reason states what the host does about the target in language a target reader can verify. Cite the narrowest unit. Principles, common obligations, and exact lineage refuse exclusion. Use population-wide exclusion only where the configured reference permits it and the complete population truly lacks the named concern; pair it with the compiler-required exclusion review. Todo is an error, not an exclusion.
 
-A child may enter `draft` only after every direct parent is in `review`. The factory refuses skipped or mixed topology before lint can report a false clean result. Advance one layer across the production before going deeper:
+## Derived state and examples
 
-1. Set the next eligible layer to `draft` and write the complete first version without compiler-driven coverage work.
-2. Audit declared scope, unit addressability, substantive completion, proportional development, placeholders, and omissions.
-3. Commit the coherent draft, set the layer to `evidence`, pay every citation, and compile clean.
-4. Commit the evidence state, read each target and host, and check their concrete relationship.
-5. Set the layer to `review`, copy only compiler-issued fingerprints into substantive review statements, and compile again.
-6. Then begin the next child at `draft`.
+`.automovie/design`, `generated`, and `renders` are derived or tool-owned. A new scaffold contains no production records and `scripts/emitDesign.ts` refuses. After reviewed source exists, add explicit imports and `emit` calls for exactly the records this production owns. Preserve the shell's project setter, unchanged-record, and orphan-inventory checks. JSON carries no evidence annotations; typed source owns the record. The screenplay index is the deliberate hand-authored exception.
 
-Where review is required, the same host carries:
+`src/examples` is outside evidence populations and ships only transferable techniques against placeholder values. Delivered source never imports it. Copy a technique into the correct governed branch, adapt it, and do not grow examples into a finished content catalogue.
 
-```text
-@evidenceReview <target> #<digest> <what was checked>
-```
+## Verify the negative space
 
-Changing the target changes its digest and reopens every dependent review. For an allowed population exclusion, use `@evidenceExclude` and the compiler-required `@evidenceExcludeReview`. Never invent a digest, mechanically restore a stale outcome, or reuse one generic review sentence across unrelated hosts.
+Do not trust a green ordinary build. Falsify active-empty, disabled-with-host, premature-tag, ownerless-source, unlisted-target, target-side-tag, illegal-kind, unreviewed-parent, filename mismatch, anchor/nesting mismatch, missing citation, wrong cardinality, stale review, and weakened-population cases. Each must fail with the intended owner named, then the restored graph must pass.
 
-## What may be excluded
+Generate a fresh scaffold and prove:
 
-Principles and exact parent edges refuse exclusion. A host that cannot satisfy a principle is defective; a refinement without its exact parent is not that refinement.
+- there is one `docs` root and no `config` directory;
+- `lint.config.ts` imports no local graph config;
+- its only graph implementation import is the published `@automovie/evidence` package;
+- production host/source/design populations are empty;
+- shared target inventory is exact and contains no evidence tags;
+- source lint and scaffold canaries pass;
+- design emission and production compile refuse the unselected blank state.
 
-Only a reference whose config permits exclusion may receive one population-wide exclusion when the concern truly does not exist. This is a decided boundary, not an unfinished task. Put it on one visible carrier and explain the complete-population fact. Common obligations, principles, exact lineage, settings roles, model roles, and storyline roles refuse exclusion. A `@todo` is an error rather than an exclusion.
-
-## Derived records and examples
-
-`.automovie/design`, `generated`, and `renders` are compiler-owned or derived. JSON cannot host evidence citations, so typed source owns production design, models, motions, shots, and the film edit while `scripts/emitDesign.ts` emits design records. Correct source or design and regenerate; do not hand-edit output.
-
-`src/examples` is outside the evidence populations by decision. It teaches a transferable technique against placeholder values, nothing imports it, and it is copied out and deleted. Adding finished content there ships an unowned library to every generated project.
-
-## Verification
-
-Do not trust a graph because its ordinary build is green. Falsify every new edge: remove one representative citation, run `internals/scaffold-evidence-gate.mjs`, and confirm the diagnostic names the intended missing relationship before restoring it.
-
-Then build and test the repository, generate a fresh scaffold, run its source lint and evidence compile, and inspect its design output. When a render, pose, expression, geometry, or motion changed, capture it in a real GPU browser and inspect the relevant beauty, depth, normals, object-id, or subject view before claiming it works.
+Compile the repository-only completed film fixture for production regression coverage. If render, pose, expression, geometry, material, instance, motion, or system output changed, inspect the applicable real-GPU views before claiming it works.

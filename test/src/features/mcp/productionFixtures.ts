@@ -1,8 +1,4 @@
-import {
-  renderScaffold,
-  scaffoldAssetDirectory,
-  writeFiles,
-} from "@automovie/cli";
+import { writeFiles } from "@automovie/cli";
 import {
   IAutoMovieAcceptanceScenario,
   IAutoMovieAssetManifest,
@@ -22,6 +18,11 @@ import {
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+
+import {
+  completedFilmJson,
+  renderCompletedFilmFixture,
+} from "../internal/completedFilmFixture";
 
 /** Preserve one compile attempt's diagnostics when a positive assertion fails. */
 export const productionCompileSucceeded = (
@@ -53,14 +54,14 @@ export const throwProductionFixtureConstructionFailure = (
   throw failure as Error;
 };
 
-/** Render the published starter shape into a disposable production root. */
+/** Render the repository-only completed film into a disposable project root. */
 export const productionFixture = (): {
   root: string;
   dispose: () => void;
 } => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "automovie-production-"));
   try {
-    const files = renderScaffold({ name: "fixture-film" });
+    const files = renderCompletedFilmFixture("fixture-film");
     const openingContract = shotContract();
     const assetManifest = JSON.parse(
       files[".automovie/assets.json"]!,
@@ -161,11 +162,6 @@ export const film = {
   }
 };
 
-const scaffoldJson = <T>(relative: string): T =>
-  JSON.parse(
-    fs.readFileSync(path.resolve(scaffoldAssetDirectory(), relative), "utf8"),
-  ) as T;
-
 /**
  * Rewrite fixture source by anchor, refusing to return it unchanged.
  *
@@ -244,8 +240,8 @@ const replaceScaffoldRegistrationContract = (props: {
 /**
  * Mutate one fixture contract and its source registration as one test action.
  *
- * Custom source modules remain test-owned; the shared starter module supports
- * its two published exports and rejects any unexpected binding.
+ * Custom source modules remain test-owned; the shared completed-film module
+ * supports its two published exports and rejects any unexpected binding.
  */
 export const setProductionFixtureShotContract = (
   project: AutoMovieProductionProject,
@@ -262,7 +258,7 @@ export const setProductionFixtureShotContract = (
     contract.source.export !== "answer"
   )
     throw new Error(
-      `Fixture scaffold source has no supported "${contract.source.export}" registration.`,
+      `Completed-film fixture source has no supported "${contract.source.export}" registration.`,
     );
   const sourcePath = path.join(project.root, contract.source.module);
   fs.writeFileSync(
@@ -303,12 +299,12 @@ export const liftFixtureSceneDisposition = (
   );
 };
 
-/** Starter production design with optional shallow overrides. */
+/** Completed regression-film design with optional shallow overrides. */
 export const productionDesign = (
   overrides: Partial<IAutoMovieProductionDesign> = {},
 ): IAutoMovieProductionDesign => ({
   ...oneShotProduction(
-    scaffoldJson<IAutoMovieProductionDesign>(
+    completedFilmJson<IAutoMovieProductionDesign>(
       ".automovie/design/{{name}}/production.json",
     ),
   ),
@@ -331,11 +327,11 @@ export const writeProductionScreenplay = (props: {
   root: string;
   productionId: string;
 }): void => {
-  // Render the starter under this production's own name so the index, the
-  // treatment and the scene prose all address `docs/<productionId>/`. Copying
-  // the scaffold asset directly would leave the `{{name}}` token in every path
-  // and the index would dangle from documents nobody can open.
-  const rendered = renderScaffold({ name: props.productionId });
+  // Render under this production's own name so the index carries its actual
+  // production id. Both disposable productions intentionally reuse the same
+  // completed-film prose already present at the index's `docs/storylines` and
+  // `docs/script` paths; this helper adds only the second tracked index.
+  const rendered = renderCompletedFilmFixture(props.productionId);
   const index = JSON.parse(
     rendered[`.automovie/design/${props.productionId}/screenplay/index.json`]!,
   ) as IAutoMovieScreenplayIndex;
@@ -363,8 +359,6 @@ export const writeProductionScreenplay = (props: {
     )}
 `,
   };
-  for (const [file, content] of Object.entries(rendered))
-    if (file.startsWith(`docs/${props.productionId}/`)) files[file] = content;
   // `writeFiles` refuses a populated root, and this always writes into a
   // fixture that already exists.
   for (const [file, content] of Object.entries(files)) {
@@ -391,20 +385,20 @@ const oneShotProduction = (
   })),
 });
 
-/** Starter primitive model recipe. */
+/** Completed-film primitive model recipe. */
 export const modelRecipe = (): IAutoMovieModelRecipe =>
-  scaffoldJson(".automovie/design/shared/models/soloist.json");
+  completedFilmJson(".automovie/design/shared/models/soloist.json");
 
-/** Starter world design. */
+/** Completed-film world design. */
 export const worldDesign = (): IAutoMovieWorldDesign =>
-  scaffoldJson(".automovie/design/shared/world.json");
+  completedFilmJson(".automovie/design/shared/world.json");
 
 /**
- * Starter world restricted to the slice `productionFixture` writes.
+ * Completed-film world restricted to the slice `productionFixture` writes.
  *
  * The disposable root drops the effect recipes and zones so the services under
  * test read a small deterministic graph. A test that rewrites the world and
- * means to put it back has to restore this slice: installing the full starter
+ * means to put it back has to restore this slice: installing the full fixture
  * world instead changes the design, and every render bundle bound to the old
  * one stops matching for good.
  */
@@ -415,18 +409,18 @@ export const fixtureWorldDesign = (): IAutoMovieWorldDesign => ({
 });
 
 /**
- * Starter shot contract restricted to its named actor.
+ * Completed-film shot contract restricted to its named actor.
  *
- * `productionFixture` renders the one-actor slice of the starter: the instanced
- * formation, its LOD recipes and its effect-mask acceptance stay out so the
- * production services under test have a small deterministic graph. The
+ * `productionFixture` renders the one-actor slice of the completed fixture: the
+ * instanced formation, its LOD recipes and its effect-mask acceptance stay out,
+ * so the production services under test have a small deterministic graph. The
  * in-memory contract has to describe that same slice, or every consumer that
  * pairs it with a fixture project resolves a formation the project does not
- * own. Tests that want the shipped instanced group drive the scaffold
- * directly.
+ * own. Tests that want the completed instanced group drive the repository-only
+ * fixture directly.
  */
 export const shotContract = (): IAutoMovieShotContract => {
-  const contract = scaffoldJson<IAutoMovieShotContract>(
+  const contract = completedFilmJson<IAutoMovieShotContract>(
     ".automovie/design/{{name}}/shots/opening.json",
   );
   return {
@@ -443,10 +437,12 @@ export const shotContract = (): IAutoMovieShotContract => {
   };
 };
 
-/** Starter acceptance scenarios. */
+/** Completed-film acceptance scenarios. */
 export const acceptanceScenarios = (): IAutoMovieAcceptanceScenario[] => [
-  scaffoldJson(".automovie/design/{{name}}/acceptance/opening-beauty.json"),
-  scaffoldJson(".automovie/design/{{name}}/acceptance/opening-pose.json"),
+  completedFilmJson(
+    ".automovie/design/{{name}}/acceptance/opening-beauty.json",
+  ),
+  completedFilmJson(".automovie/design/{{name}}/acceptance/opening-pose.json"),
 ];
 
 /** Compact valid formation covering formation-dependent services. */
