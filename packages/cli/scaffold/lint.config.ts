@@ -1,3 +1,4 @@
+/// <reference types="node" />
 import { createAutoMovieEvidenceConfig, evidence } from "@automovie/evidence";
 import type { ITtscLintConfig } from "@ttsc/lint";
 

@@ -307,11 +307,10 @@ const inherit = (relative) => {
  *
  * The manifest declares `@ttsc/lint`, `@automovie/evidence`, and `@types/node`
  * because `ttsc` decides whether to lint at all from the project's declared
- * dependencies, the lint config imports the reusable graph package, and the
- * isolated config evaluator type-checks both `import.meta.dirname` and that
- * package's Node-backed implementation. The real scaffold declares all three;
- * omitting the ambient types here made the paid Linux probe fail for a defect
- * the generated project does not carry. The canary pass proves the two runtime
+ * dependencies, the lint config imports the reusable graph package, and its
+ * explicit Node type reference must resolve while the isolated evaluator checks
+ * both `import.meta.dirname` and that package's Node-backed implementation. The
+ * real scaffold declares all three. The canary pass proves the two runtime
  * declarations took effect, while the paid pass exercises the type declaration.
  *
  */
