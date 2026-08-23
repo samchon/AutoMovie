@@ -6,11 +6,11 @@ Every layer begins `disabled` with no governed hosts. For a layer forbidden by t
 
 ## Film
 
-A film makes a narrative claim through `storylines -> scenarios -> script -> shots -> filmSources`. Use it for any narrative production, including a short film. Settings, production source, and the narrative ladder apply; model, space, material, instance, motion, and system branches apply when the film authors them. Briefs are disabled.
+A film makes a narrative claim through the exact `settings -> storylines -> scenarios -> script -> shots -> filmSources` ladder. Reviewed `productionSources` is a parallel assembly input before `filmSources`; model, space, material, instance, motion, and system branches apply when the film authors them. Use film for any narrative production, including a short film. Briefs are disabled.
 
 ## Brief
 
-A brief makes one bounded audiovisual claim directly through `briefs -> shots -> filmSources`. Use it for a simple short-form action, product turntable, locomotion demonstration, logo sting, or another result whose complete intent fits one delivery/shot/observation hierarchy. Local action may be present; independently authored causal character change, audience revelation, or scene-to-scene inheritance requires the film ladder. Narrative layers are disabled. Runtime alone never decides the shape.
+A brief makes one bounded audiovisual claim directly through the exact `settings -> briefs -> shots -> filmSources` ladder. Reviewed `productionSources` is a parallel assembly input before `filmSources`. Use brief for a simple short-form action, product turntable, locomotion demonstration, logo sting, or another result whose complete intent fits one delivery/shot/observation hierarchy. Local action may be present; independently authored causal character change, audience revelation, or scene-to-scene inheritance requires the film ladder. Narrative layers are disabled. Runtime alone never decides the shape.
 
 ## Library
 

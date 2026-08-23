@@ -305,11 +305,14 @@ const inherit = (relative) => {
 /**
  * Render the probe from the scaffold.
  *
- * The manifest declares `@ttsc/lint` and `@automovie/evidence` because `ttsc`
- * decides whether to lint at all from the project's declared dependencies and
- * the lint config imports the reusable graph package. Without them it either
- * type-checks without lint or cannot evaluate the config; the canary pass is
- * what proves both declarations took effect.
+ * The manifest declares `@ttsc/lint`, `@automovie/evidence`, and `@types/node`
+ * because `ttsc` decides whether to lint at all from the project's declared
+ * dependencies, the lint config imports the reusable graph package, and the
+ * isolated config evaluator type-checks both `import.meta.dirname` and that
+ * package's Node-backed implementation. The real scaffold declares all three;
+ * omitting the ambient types here made the paid Linux probe fail for a defect
+ * the generated project does not carry. The canary pass proves the two runtime
+ * declarations took effect, while the paid pass exercises the type declaration.
  *
  */
 const render = () => {
@@ -347,6 +350,7 @@ const render = () => {
         devDependencies: {
           "@automovie/evidence": "*",
           "@ttsc/lint": "*",
+          "@types/node": "*",
           ttsc: "*",
           typescript: "*",
         },
