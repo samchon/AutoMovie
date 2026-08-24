@@ -7,9 +7,9 @@ description: Defines how an automovie production is researched, authored, eviden
 
 `packages/cli/scaffold` is the empty authoring harness `@automovie/cli` stamps out. A completed regression film fixture lives outside it so generated projects inherit capability and contracts, never another production's content. Treat every scaffold change as a generated-project API change.
 
-Identify the selected `kind` and every layer stage in `lint.config.ts`. Read the production's `AGENTS.md`, all earlier active layers, the shared contracts under `docs/principles` and `docs/obligations`, and every production-local target selected by an added claim before writing.
+Identify the selected `kind` and every layer stage in `lint.config.ts`. Read the production's `AGENTS.md`, all earlier active layers, every applicable shared target under `docs/discovery`, `docs/principles`, and `docs/obligations`, and every production-local target selected by an added claim before writing.
 
-The scaffold has one documentation root. Reusable law lives in `docs/principles` and `docs/obligations`; production facts, research, designs, prose, and additional targets live in the other `docs` branches. Never put one production's fact in reusable law, put host-side evidence tags in a shared target, weaken a shared rule for one production, or create a local target without its corresponding additive claim. Keep that claim disabled with its host before evidence begins, then enable both together.
+The scaffold has one documentation root. Reusable shared targets live in `docs/discovery`, `docs/principles`, and `docs/obligations`; production facts, research, designs, prose, and additional targets live in the other `docs` branches. Never put one production's fact in a shared target, put host-side evidence tags there, weaken a shared rule for one production, or create a local target without its corresponding additive claim. Keep that claim disabled with its host before evidence begins, then enable both together.
 
 ## Workflow documents
 
@@ -22,7 +22,7 @@ Read each applicable document in full before acting:
 - [Design branches](design-branches.md) routes models, spaces, materials, instances, motions, and systems without overlap; it links the detailed model-and-motion procedure when those branches apply.
 - [Storylines](storylines.md), [Scenarios](scenarios.md), and [Screenplays](screenplays.md) own the film-only refinement ladder.
 - [Direct briefs](briefs.md) owns bounded audiovisual delivery that needs no independent narrative-refinement ladder.
-- [Principles and obligations](principles-and-obligations.md) governs reusable and production-local contract documents.
+- [Discovery, principles, and obligations](principles-and-obligations.md) governs reusable and production-local contract documents.
 - [Evidence staging](evidence-staging.md) owns populations, tags, `draft -> evidence -> review`, diagnostics, and fingerprints.
 - [Author process Self-Review](self-review.md) closes every complete production-specific contract, layer-authorship, evidence-repair, review-verification, and authorized stage-transition process before its author continues or hands it off.
 - [Review](review.md) owns evidence review and final whole-production review.

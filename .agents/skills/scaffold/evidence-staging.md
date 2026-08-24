@@ -40,7 +40,7 @@ Put file-level principle answers in one HTML comment before the first H1. Put co
 @evidenceExcludeReview path/file.md#anchor #fingerprint What population boundary was checked.
 ```
 
-Use configured roots such as `settings/...`, `models/...`, `motions/...`, `storylines/...`, `scenarios/...`, `script/...`, shared `principles/...` and `obligations/...`, or the root declared by a production-specific claim. Do not prefix a target with `docs/` unless that claim's root requires it. Every Markdown target unit has a stable explicit anchor.
+Use configured roots such as `settings/...`, `models/...`, `motions/...`, `storylines/...`, `scenarios/...`, `script/...`, shared `discovery/...`, `principles/...`, and `obligations/...`, or the root declared by a production-specific claim. Do not prefix a target with `docs/` unless that claim's root requires it. Every Markdown target unit has a stable explicit anchor.
 
 A reason names the host event, decision, limit, transition, implementation, or observable result that would be false without the target. A target-name paraphrase, `uses this setting`, `implements this rule`, and a copied reason are not evidence.
 
