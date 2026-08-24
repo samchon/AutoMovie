@@ -1,10 +1,10 @@
-# Principles and obligations
+# Discovery, principles, and obligations
 
 `docs/discovery` defines open production-specific searches over complete authored H2 populations. `docs/principles` defines what every governed file must answer. `docs/obligations/common.md` defines what every selected authored unit must answer, while the other obligation files define how a population divides required roles. Those three directories are the exact shared inventory. Production-local targets follow the same forms under `docs/production-principles`, `docs/production-obligations`, or another descriptive family and activate only through additive claims. The graph refuses an unwired local target, an enabled local target reference with an empty population, host-side evidence tags in any target, and an H2 title or anchor duplicated anywhere in the shared-plus-local target inventory.
 
 ## Shared form
 
-Use one H1, brief scope prose, and one fixed-anchor H2 per independently falsifiable target. Add no deeper heading. Each H2 states the binding decision and boundary, one exact review question, and a final `Sources:` line supported by scholarship, standards, primary documentation, or established practice.
+Use one H1, brief scope prose, and one fixed-anchor H2 per independently falsifiable target. Add no deeper heading. Each H2 states its falsifiable search or binding decision and boundary, one exact review question, and a final `Sources:` line supported by scholarship, standards, primary documentation, or established practice.
 
 One target owns one concern. Conditional manifestations may stay together only when they test the same decision. Split a second target that can be applied, refuted, changed, repaired, cited, omitted, or reviewed independently. If the same host reason necessarily answers two sibling targets, merge them or state the boundary that makes their answers distinct.
 

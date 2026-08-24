@@ -44,7 +44,7 @@
 
 <!-- @evidence requirements/production-evidence/graph.md#agent-production-evidence-additive-extension 작품 전용 관계를 허용하면서 공통 그래프의 무력화를 차단한다. -->
 
-팩터리는 공통 원칙·의무·저작 단계·source 단계 claim과 실행 canary를 먼저 완성하고, 입력의 `claims`를 그 배열 뒤에 이어 붙인다. 호출자는 공통 배열이나 reference를 입력으로 받지 않으므로 기존 계약을 대체하는 확장 경로를 갖지 않는다.
+팩터리는 공통 작품별 발견·원칙·의무·저작 단계·source 단계 claim과 실행 canary를 먼저 완성하고, 입력의 `claims`를 그 배열 뒤에 이어 붙인다. 호출자는 공통 배열이나 reference를 입력으로 받지 않으므로 기존 계약을 대체하는 확장 경로를 갖지 않는다.
 
 <!-- @evidenceObligation additive-local-claims 공통 claim을 먼저 완성하고 작품 전용 claim만 뒤에 추가하는 단방향 합성. -->
 
