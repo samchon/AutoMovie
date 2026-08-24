@@ -14,7 +14,7 @@ Sources: [NASA on eliciting and validating requirements from stakeholder needs a
 
 ## Canonical realization {#canonical-realization}
 
-Give every retained result one semantic owner, an observable stage-appropriate realization, and any additive claim its independent evidence behavior requires. Do not leave an adopted rule only in `.wiki`, a brief, an issue, or prose instructions, and do not create an empty target.
+Give every retained result one semantic owner, an observable stage-appropriate realization, and any additive claim its independent evidence behavior requires. Do not leave an adopted rule only in `.wiki`, a planning note, an issue, or prose instructions, and do not create an empty target.
 
 A positive acknowledgement identifies the current owner and stage-appropriate realization, plus any independent target and claim the result requires. An exclusion is valid only when the boundary search found no independent result, not when implementation is deferred.
 
