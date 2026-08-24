@@ -24,6 +24,7 @@ Read each applicable document in full before acting:
 - [Direct briefs](briefs.md) owns bounded audiovisual delivery that needs no independent narrative-refinement ladder.
 - [Principles and obligations](principles-and-obligations.md) governs reusable and production-local contract documents.
 - [Evidence staging](evidence-staging.md) owns populations, tags, `draft -> evidence -> review`, diagnostics, and fingerprints.
+- [Author process Self-Review](self-review.md) closes every complete production-specific contract, layer-authorship, evidence-repair, review-verification, and authorized stage-transition process before its author continues or hands it off.
 - [Review](review.md) owns evidence review and final whole-production review.
 
 The repository [evidence graph skill](../evidence-graph/SKILL.md) owns committed requirement-to-source traceability. This scaffold skill owns the separate generated-production graph. Apply the repository skill's citation honesty and diagnostic discipline without imposing its requirement-specification-source triangle here.
