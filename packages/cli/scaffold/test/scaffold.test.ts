@@ -32,7 +32,13 @@ for (const required of [
   "evidence repair",
   "review verification",
   "authorized stage transition",
+  "author who performed it rereads the complete affected process alone",
+  "collect findings through the whole read",
+  "repair them together at their earliest owners",
+  "restart after any edit",
   "One complete no-edit round",
+  "does not replace evidence gates",
+  "final two-clean-round whole-production review",
 ])
   assert.ok(
     agents.includes(required),
