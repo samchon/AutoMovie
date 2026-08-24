@@ -143,7 +143,7 @@ Treat a dangling target as contract drift. Find whether the document, anchor, ro
 
 Treat an uncovered requirement during requirements-first work as visible implementation debt. A deliberately red graph is more accurate than a false specification or source citation. Record the phase and debt in `.wiki/` and the pull request instead of weakening the permanent rule.
 
-The scaffold production ladder is a separate graph with its own populations and topology. Apply this skill's citation honesty and lint-inspection rules there, but use the scaffold skill to decide which film-authoring stage answers for which other stage. Do not impose the repository requirement-specification-source triangle on generated productions.
+The scaffold production ladder is a separate graph with its own populations and topology. Its exact reusable target corpus includes principles, obligations, and production-specific discovery. Discovery is ordinary coverage over the owning authored H2 population, permits one truthful population-wide exclusion only for a complete search with no independent result, and is neither a per-unit checklist nor a repository contract triangle. Apply this skill's citation honesty and lint-inspection rules there, but use the scaffold skill to decide which production stage answers each target. Do not impose the repository requirement-specification-source triangle on generated productions.
 
 ## Verify
 

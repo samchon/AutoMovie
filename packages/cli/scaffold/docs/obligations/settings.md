@@ -1,6 +1,6 @@
 # Settings obligations
 
-These required roles must be covered across the settings H2 population. They permit no exclusion: every production shape has a delivery boundary, governing aim, coordinate and unit convention, and reproducible delivery review condition.
+These required roles must be covered across the settings H2 population. They permit no exclusion: every production shape has a delivery boundary, governing aim, audience or operator access contract, coordinate and unit convention, reproducible delivery review condition, coverage map, and accounting for independently consequential subjects.
 
 ## Delivery scope {#delivery-scope}
 
@@ -53,3 +53,13 @@ Review question: which required production domain has no explicit owner, inherit
 This obligation owns domain allocation across the settings population. `principles/settings.md#addressable-canon` owns H2 decomposition, and the common obligations own required scope and unit depth.
 
 Sources: [Marie-Laure Ryan on worlds as spatiotemporal systems of entities, events, and changing states](https://marilaur.info/degrees.pdf); [Mark J. P. Wolf on maps, timelines, nature, culture, language, and world infrastructure](https://www.oreilly.com/library/view/building-imaginary-worlds/9781136220807/xhtml/12_Chapter03.xhtml); [NASA systems engineering handbook on system boundaries and interfaces](https://www.nasa.gov/reference/systems-engineering-handbook/)
+
+## Operative subject inventory {#operative-subject-inventory}
+
+The settings population inventories every person, collective, object, environmental agent, institution, subsystem, and affected population whose action, choice, state, information, resource, control, or audience observation can independently change the delivered result. Each operative subject is assigned to an existing settings H2, an inherited default, an outside-scope boundary, or an unresolved owner. The inventory is proportional to consequence and does not require a biography or separate file for every named or incidental entity.
+
+An unresolved operative subject needed by a planned downstream consumer blocks that consumer until settings owns or classifies it. `discovery/settings.md#directive-promise-subject-requirements` owns the open search that finds candidates; this obligation owns complete population accounting after discovery. `settings-coverage-map` owns domain allocation rather than subject identity.
+
+Review question: which independently consequential actor, controller, resource owner, environmental force, subsystem, or affected population can change the delivery without a settings owner or explicit classification?
+
+Sources: [Marie-Laure Ryan on storyworld entities, events, and changing states](https://marilaur.info/degrees.pdf); [Mark J. P. Wolf on world populations, institutions, and infrastructure](https://www.oreilly.com/library/view/building-imaginary-worlds/9781136220807/xhtml/12_Chapter03.xhtml); [NASA systems engineering handbook on stakeholders, system elements, and interfaces](https://www.nasa.gov/reference/systems-engineering-handbook/)

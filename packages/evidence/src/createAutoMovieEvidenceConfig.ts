@@ -255,6 +255,30 @@ const DESIGN_LAYERS = [
 ] as const satisfies readonly MarkdownLayer[];
 type DesignLayer = (typeof DESIGN_LAYERS)[number];
 
+type DiscoveryTarget =
+  | "briefs"
+  | "common"
+  | "films"
+  | "scenarios"
+  | "scripts"
+  | "settings"
+  | "storylines";
+
+const DISCOVERY_TARGETS: Record<MarkdownLayer, readonly DiscoveryTarget[]> = {
+  settings: ["common", "settings"],
+  research: ["common"],
+  models: ["common"],
+  spaces: ["common"],
+  materials: ["common"],
+  instances: ["common"],
+  motions: ["common"],
+  systems: ["common"],
+  storylines: ["common", "films", "storylines"],
+  scenarios: ["common", "films", "scenarios"],
+  script: ["common", "films", "scripts"],
+  briefs: ["common", "briefs"],
+};
+
 /**
  * Upstream design families whose reviewed units the selected host population
  * must account for. A host cites only the units it actually consumes; omission
@@ -273,6 +297,37 @@ const DESIGN_FOUNDATIONS: Partial<
 };
 
 const EXPECTED_CONTRACTS = [
+  {
+    file: "discovery/briefs.md",
+    anchors: ["work-specific-brief-requirements"],
+  },
+  {
+    file: "discovery/common.md",
+    anchors: ["shared-local-boundary", "canonical-realization"],
+  },
+  {
+    file: "discovery/films.md",
+    anchors: ["work-specific-film-requirements"],
+  },
+  {
+    file: "discovery/scenarios.md",
+    anchors: ["work-specific-scenario-requirements"],
+  },
+  {
+    file: "discovery/scripts.md",
+    anchors: ["work-specific-screenplay-requirements"],
+  },
+  {
+    file: "discovery/settings.md",
+    anchors: [
+      "directive-promise-subject-requirements",
+      "planned-delivery-backcast",
+    ],
+  },
+  {
+    file: "discovery/storylines.md",
+    anchors: ["work-specific-storyline-requirements"],
+  },
   {
     file: "obligations/common.md",
     anchors: [
@@ -327,6 +382,7 @@ const EXPECTED_CONTRACTS = [
       "coordinate-unit-convention",
       "delivery-review-condition",
       "settings-coverage-map",
+      "operative-subject-inventory",
     ],
   },
   {
@@ -939,6 +995,7 @@ const hasExportedOwner = (
 const validateContracts = (location: string): ITargetIdentityRegistry => {
   const root = path.join(location, DOCS);
   const actual = [
+    ...walkFiles(path.join(root, "discovery"), ".md"),
     ...walkFiles(path.join(root, "obligations"), ".md"),
     ...walkFiles(path.join(root, "principles"), ".md"),
   ]
@@ -1079,6 +1136,7 @@ const validateProductionTargets = (
 ): void => {
   const root = path.join(graph.location, DOCS);
   const reserved = new Set<string>([
+    "discovery",
     "obligations",
     "principles",
     ...Object.keys(MARKDOWN),
@@ -1468,6 +1526,18 @@ const layerObligation = (
   requireReview: review,
 });
 
+const discoveryReferences = (
+  layer: MarkdownLayer,
+  review: boolean,
+): ITtscEvidenceGraphReference[] =>
+  DISCOVERY_TARGETS[layer].map((target) => ({
+    type: "markdown",
+    root: DOCS,
+    files: [`discovery/${target}.md`],
+    symbol: "h2",
+    requireReview: review,
+  }));
+
 const referencesPerFile = (
   graph: IProductionGraph,
   directory: MarkdownLayer,
@@ -1534,6 +1604,7 @@ const authoredClaims = (graph: IProductionGraph): ITtscEvidenceGraphClaim[] => {
       ];
       if (MARKDOWN[name].obligation && symbol === 2)
         references.push(layerObligation(name, review));
+      if (symbol === 2) references.push(...discoveryReferences(name, review));
       if (!["settings", "research"].includes(name))
         references.push(...referencesPerFile(graph, "settings", "h2", review));
       references.push(...designFoundations(graph, name, review));
@@ -1716,18 +1787,21 @@ const sourceClaims = (graph: IProductionGraph): ITtscEvidenceGraphClaim[] => {
  * Build the immutable shared graph and append production-owned claims.
  *
  * @evidence requirements/production-evidence/README.md#production-evidence-requirements Implements the reusable graph behind the project-owned production declaration.
- * @evidence requirements/production-evidence/graph.md#agent-production-evidence-shared-contract Applies the same exact shared principles and obligations inventory to every generated project.
+ * @evidence requirements/production-evidence/graph.md#agent-production-evidence-shared-contract Applies the same exact shared principles, obligations, and discovery inventory to every generated project.
+ * @evidence requirements/production-evidence/graph.md#agent-production-evidence-discovery Distinguishes a completed production-specific search from an omitted search across every authored H2 population.
  * @evidence requirements/production-evidence/graph.md#agent-production-evidence-shape-stage Enforces the mutually exclusive production shapes and staged parent-child progression.
  * @evidence requirements/production-evidence/graph.md#agent-production-evidence-physical-integrity Validates real target identities, hosts, owners, and lineage before returning a graph.
  * @evidence requirements/production-evidence/graph.md#agent-production-evidence-additive-extension Appends production-owned claims without exposing a replacement seam for the shared graph.
  * @evidence requirements/production-evidence/graph.md#agent-production-evidence-deterministic-result Produces one deterministic graph or fails with the concrete contradictory state.
  * @evidence specifications/production-evidence/README.md#production-evidence-specifications Implements the shared construction and validation boundary for generated projects.
  * @evidence specifications/production-evidence/graph.md#spec-authoring-production-evidence-shared-contract Reads and validates the fixed shared contract inventory before constructing claims.
+ * @evidence specifications/production-evidence/graph.md#spec-authoring-production-evidence-discovery Wires common, settings, film, layer-specific, and brief discovery targets to their exact H2 populations.
  * @evidence specifications/production-evidence/graph.md#spec-authoring-production-evidence-shape-stage Implements the film, brief, and library stage state machine.
  * @evidence specifications/production-evidence/graph.md#spec-authoring-production-evidence-physical-integrity Enumerates the actual disk populations and refuses empty, residual, ambiguous, or ownerless hosts.
  * @evidence specifications/production-evidence/graph.md#spec-authoring-production-evidence-additive-extension Constructs shared claims first and composes local claims after them.
  * @evidence specifications/production-evidence/graph.md#spec-authoring-production-evidence-deterministic-result Uses deterministic identities and ordering and returns no partial graph after a validation failure.
  * @evidencePart specifications/production-evidence/graph.md#spec-authoring-production-evidence-shared-contract::shared-contract Validates the canonical common document and H2 inventory before building shared claims.
+ * @evidencePart specifications/production-evidence/graph.md#spec-authoring-production-evidence-discovery::discovery-coverage Adds stage-aligned discovery coverage with reviewed population-wide exclusions for a true no-result.
  * @evidencePart specifications/production-evidence/graph.md#spec-authoring-production-evidence-shape-stage::shape-stage-machine Enforces production-kind compatibility, lifecycle order, and parent review prerequisites.
  * @evidencePart specifications/production-evidence/graph.md#spec-authoring-production-evidence-physical-integrity::physical-population-integrity Validates real hosts, residue, identities, ownership cardinality, and lineage.
  * @evidencePart specifications/production-evidence/graph.md#spec-authoring-production-evidence-additive-extension::additive-local-claims Appends local claims only after the immutable shared claim population.
