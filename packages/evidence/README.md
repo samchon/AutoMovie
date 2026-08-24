@@ -6,7 +6,7 @@ AutoMovie 제작 저작용 증거 계약을 재사용하는 패키지다. 하나
 
 ## 작품별 발견
 
-Discovery는 모든 unit이 같은 질문을 반복하는 checklist가 아니라 완전한 H2 모집단의 일반 coverage다. 모든 저작 H2 모집단은 `discovery/common.md`를 답하고, settings는 settings discovery를, film prose는 film과 자기 layer discovery를, brief는 brief discovery를 더한다. H3와 H4에는 반복하지 않는다. 결과가 있으면 가장 이른 의미 소유자와 현재 실현을 증명하고, 결과가 정말 없으면 조사한 구체적 입력·계획된 소비자·위험과 충분한 기존 소유자를 밝힌 모집단 단위 제외 하나만 허용한다. Settings discovery는 실제 delivery를 역산하며 settings obligation은 독립적으로 결과를 바꾸는 operative subject를 빠짐없이 분류한다.
+Discovery는 모든 unit이 같은 질문을 반복하는 checklist가 아니라 완전한 H2 모집단의 일반 coverage다. 모든 저작 H2 모집단은 `discovery/common.md`를 답하고, settings는 settings discovery를, film prose는 film과 자기 layer discovery를, brief는 brief discovery를 더한다. H3와 H4에는 반복하지 않는다. 결과가 있으면 가장 이른 의미 소유자와 현재 실현을 증명하고, 결과가 정말 없으면 조사한 구체적 입력·위험과 충분한 기존 소유자를 밝힌 모집단 단위 제외 하나만 허용한다. Settings discovery는 실제 delivery를 역산하며 settings obligation은 독립적으로 결과를 바꾸는 operative subject를 빠짐없이 분류한다.
 
 ## 공개 표면
 

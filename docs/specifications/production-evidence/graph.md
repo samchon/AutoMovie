@@ -18,7 +18,7 @@
 
 팩터리는 모든 활성 저작 H2 모집단에 `discovery/common.md`를 연결한다. 설정 H2에는 `common + settings`, research와 model·space·material·instance·motion·system H2에는 `common`, film storyline H2에는 `common + films + storylines`, scenario H2에는 `common + films + scenarios`, screenplay H2에는 `common + films + scripts`, brief H2에는 `common + briefs`를 연결한다. H3와 H4에는 이 모집단 발견 관계를 반복하지 않는다.
 
-각 발견 reference는 해당 host layer가 `evidence`에 들어갈 때 활성화되고 `review`에서 현재 fingerprint를 요구한다. 일반 coverage이므로 독립 결과는 그 결과를 소유하거나 실현하는 H2가 증명하고, 완전한 모집단 조사에서 독립 결과가 없을 때만 하나의 모집단 단위 제외를 허용한다. 제외 사유는 검사한 구체적 입력·소비자·위험과 충분한 기존 소유자를 밝혀야 하며, 구현 유예나 빈 결과 선언으로 대신할 수 없다. 팩터리와 lint는 관계·제외·fingerprint의 구조를 검사하고, 구체성과 진실성은 해당 target과 전체 모집단을 다시 읽는 evidence review가 판정한다. 설정은 이 산문을 자동 해석하지 않는다.
+각 발견 reference는 해당 host layer가 `evidence`에 들어갈 때 활성화되고 `review`에서 현재 fingerprint를 요구한다. 일반 coverage이므로 독립 결과는 그 결과를 소유하거나 실현하는 H2가 증명하고, 완전한 모집단 조사에서 독립 결과가 없을 때만 하나의 모집단 단위 제외를 허용한다. 제외 사유는 검사한 구체적 입력·위험과 충분한 기존 소유자를 밝혀야 하며, 구현 유예나 빈 결과 선언으로 대신할 수 없다. 팩터리와 lint는 관계·제외·fingerprint의 구조를 검사하고, 구체성과 진실성은 해당 target과 전체 모집단을 다시 읽는 evidence review가 판정한다. 설정은 이 산문을 자동 해석하지 않는다.
 
 설정 의무 모집단은 발견된 후보 중 action, choice, state, information, resource, control 또는 audience observation을 독립적으로 바꿀 수 있는 person, collective, object, environmental agent, institution, subsystem과 affected population을 빠짐없이 분류한다. 설정 저작과 review 절차는 필요한 미해결 주체가 남으면 그 소비자의 저작 시작을 보류하며, 팩터리는 그 의미 판단을 stage 값만으로 추론하지 않는다.
 
