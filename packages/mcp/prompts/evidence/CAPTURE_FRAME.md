@@ -2,6 +2,28 @@
 
 Read this guide before `captureFrame`. The tool produces actual current PNG evidence through the host capture adapter; it does not preview hypothetical source, grade composition, or make stale pixels current.
 
+## Request deadline
+
+A registered MCP channel uses the request deadline its host manages. An author-created TypeScript SDK client is a separate client and does not inherit that host setting. If you deliberately create one, the request deadline belongs to that client, not the AutoMovie server, and the server cannot raise it for you.
+
+`captureFrame` and `captureTurntable` are synchronous evidence calls, and either may legitimately take longer than the SDK's 60,000 ms default. Pass at least `300_000` ms as the third `callTool` argument for either tool. An MCP error with code `-32001` and `data.timeout: 60000` reports the client's deadline, not an AutoMovie capture diagnostic, so correct the client option before retrying instead of diagnosing the capture pipeline from that timeout alone.
+
+```ts
+import type { Client } from "@modelcontextprotocol/sdk/client/index.js";
+import { CallToolResultSchema } from "@modelcontextprotocol/sdk/types.js";
+
+const callCaptureTool = (
+  client: Client,
+  name: "captureFrame" | "captureTurntable",
+  args: Record<string, unknown>,
+) =>
+  client.callTool(
+    { name, arguments: args },
+    CallToolResultSchema,
+    { timeout: 300_000 },
+  );
+```
+
 ## Request
 
 Choose exactly one compiler-registry target, and the choice is between these two:
