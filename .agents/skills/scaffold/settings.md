@@ -2,7 +2,7 @@
 
 Settings are required by film, brief, and library shapes. Keep production canon in `docs/settings` as ordered Markdown files. A file is a domain namespace and every independent fact or constraint is an explicitly anchored H2.
 
-Before bulk settings prose, complete the [production-specific contract](work-specific.md) pass. Record delivery scope, governing aim, audience or operator access, coordinate and unit convention, delivery review condition, and the settings coverage map before facts that depend on them.
+Before bulk settings prose, complete the [production-specific contract](work-specific.md) pass. Record delivery scope, governing aim, audience or operator access, coordinate and unit convention, delivery review condition, the settings coverage map, and the operative-subject inventory before facts that depend on them. Backcast the actual planned film, brief, or library consumers so downstream work does not invent production-wide facts or constraints.
 
 ## Topology
 
@@ -37,4 +37,4 @@ Settings are authoritative, not frozen. When later work exposes a contradiction,
 
 ## Gate
 
-Start an applicable settings layer at `settings: "draft"`. Before `evidence`, require a complete first version, stable H2 owners, no placeholders, a literal work-specific-rule audit, a settings-domain omission audit, and truthful answers to every common unit obligation. Follow [Evidence staging](evidence-staging.md) for evidence and review passes.
+Start an applicable settings layer at `settings: "draft"`. Before `evidence`, require a complete first version, stable H2 owners, no placeholders, a literal work-specific-rule audit, common and settings discovery searches, a settings-domain omission audit, complete operative-subject accounting, and truthful answers to every common unit obligation. Follow [Evidence staging](evidence-staging.md) for evidence and review passes.

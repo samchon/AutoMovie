@@ -428,9 +428,10 @@ const contractAnchors = (relative) =>
  * This is deliberately generated after the blank-scaffold pass. The public
  * scaffold must contain no production prose or evidence tags, but inspecting
  * config structure alone cannot prove that its real shared claims accept a
- * paid population. Six independent H2 owners cover the six distributed
+ * paid population. Seven independent H2 owners cover the seven distributed
  * settings roles; each H2 pays every per-unit common obligation, while the
- * file pays every file-level common and settings principle.
+ * population pays every discovery target and the file pays every file-level
+ * common and settings principle.
  */
 const activatePaidSettings = () => {
   const configFile = path.join(PROBE, "lint.config.ts");
@@ -471,7 +472,7 @@ const activatePaidSettings = () => {
     "principles/settings.md#capability-boundary":
       "The delivery scope explicitly excludes any subject or environment capability, leaving none for downstream source to guess.",
     "principles/settings.md#constraint-sufficiency":
-      "The six owners bound the operator, observable diagnostic result, path and time units, and every excluded production domain.",
+      "The seven owners bound the operator, observable diagnostic result, path and time units, operative subjects, and every excluded production domain.",
     "principles/settings.md#observable-identity":
       "The file defines no subject, place, or audible identity and confines its only observable result to classified compiler diagnostics.",
     "principles/settings.md#minimal-departure":
@@ -491,12 +492,26 @@ const activatePaidSettings = () => {
       return `${unit.title} cites only the file rules and distributed settings role that its stated calibration fact actually realizes.`;
     throw new Error(`No paid-probe reason owns ${target}.`);
   };
+  const discoveryExclusions = Object.freeze({
+    "discovery/common.md#shared-local-boundary":
+      "The probe examined its compiler-calibration directive, library promise, repository-gate operator, shared contracts, dependencies, and false-green risk; the shared principles and settings obligations fully own them, so no independent cross-layer condition remains.",
+    "discovery/common.md#canonical-realization":
+      "The complete boundary search retained no independent production contract, so the seven settings owners and their shared claim wiring are sufficient and no additional semantic owner or additive claim exists.",
+    "discovery/settings.md#directive-promise-subject-requirements":
+      "The probe examined its direct calibration instruction, diagnostic promise, operator, file dependency, unowned-subject risk, and false-green failure; the seven settings owners classify them completely without an additional production-specific fact or constraint.",
+    "discovery/settings.md#planned-delivery-backcast":
+      "Backcasting this settings-only library through its sole planned compiler-diagnostic consumer found no downstream fact beyond the delivery, aim, access, unit, review, coverage, and operative-subject owners already present.",
+  });
   const settingsUnits = [
     {
       anchor: "probe-delivery-scope",
       title: "Probe delivery scope",
       obligation: "obligations/settings.md#delivery-scope",
       body: "This disposable library delivers only a compiler calibration result: the active settings graph must accept this complete population and no production artifact is published.",
+      discovery: [
+        "discovery/common.md#shared-local-boundary",
+        "discovery/common.md#canonical-realization",
+      ],
     },
     {
       anchor: "probe-governing-aim",
@@ -527,6 +542,16 @@ const activatePaidSettings = () => {
       title: "Probe settings coverage map",
       obligation: "obligations/settings.md#settings-coverage-map",
       body: "Delivery, aim, operator access, coordinate convention, and review condition each have the separate owner above; every other production domain is outside this compiler calibration scope.",
+      discovery: ["discovery/settings.md#planned-delivery-backcast"],
+    },
+    {
+      anchor: "probe-operative-subject-inventory",
+      title: "Probe operative subject inventory",
+      obligation: "obligations/settings.md#operative-subject-inventory",
+      body: "The repository gate is the only operative subject: it controls the compile, observes the diagnostic result, and has no independent person, collective, object, environmental agent, institution, subsystem, or affected population left unclassified.",
+      discovery: [
+        "discovery/settings.md#directive-promise-subject-requirements",
+      ],
     },
   ];
   const fileEvidence = principleTargets.map((target) => {
@@ -551,6 +576,12 @@ const activatePaidSettings = () => {
       ...commonTargets.map(
         (target) => `@evidence ${target} ${commonReason(target, unit)}`,
       ),
+      ...(unit.discovery ?? []).map((target) => {
+        const reason = discoveryExclusions[target];
+        if (reason === undefined)
+          throw new Error(`No paid-probe discovery reason owns ${target}.`);
+        return `@evidenceExclude ${target} ${reason}`;
+      }),
       `@evidence ${unit.obligation} This unit is the population owner that directly states the named settings role.`,
       "-->",
       "",
@@ -565,10 +596,7 @@ const activatePaidSettings = () => {
   fs.writeFileSync(target, body, "utf8");
   return {
     file: target,
-    missing: `@evidence obligations/common.md#evidence-content-conformance ${commonReason(
-      "obligations/common.md#evidence-content-conformance",
-      settingsUnits[0],
-    )}`,
+    missing: `@evidenceExclude discovery/common.md#shared-local-boundary ${discoveryExclusions["discovery/common.md#shared-local-boundary"]}`,
   };
 };
 
@@ -756,12 +784,8 @@ const main = () => {
   const underpaidCorrectness = underpaidDiagnostics.filter(
     (diagnostic) => axisOf(diagnostic) === "correctness",
   );
-  const expectedUnderpayment = underpaidEvidence.filter(
-    (diagnostic) =>
-      diagnostic.text.includes("docs/settings/production.md") &&
-      diagnostic.text.includes(
-        "obligations/common.md#evidence-content-conformance",
-      ),
+  const expectedUnderpayment = underpaidEvidence.filter((diagnostic) =>
+    diagnostic.text.includes("discovery/common.md#shared-local-boundary"),
   );
   if (
     underpaidEvidence.length !== 1 ||
@@ -770,7 +794,7 @@ const main = () => {
   ) {
     report([
       "",
-      "FAIL: removing one required common-obligation citation did not produce",
+      "FAIL: removing one required discovery acknowledgement did not produce",
       " an isolated evidence diagnostic. The shared claim's negative edge is",
       " therefore unproved.",
       ...underpaidDiagnostics.map((diagnostic) => ` ${diagnostic.text}`),
@@ -779,7 +803,7 @@ const main = () => {
     return;
   }
   report([
-    " active graph: one removed obligation citation was rejected by evidence/graph",
+    " active graph: one removed discovery acknowledgement was rejected by evidence/graph",
   ]);
   report([
     "",

@@ -21,6 +21,7 @@ The authored-unit topology is closed. Outside an optional H1 title, settings, re
 
 - A principle is an item-by-item file checklist. Every selected Markdown file answers every applicable H2, exclusions are refused, and one strong unit cannot cover a weak unit elsewhere in the file.
 - `obligations/common.md` is an item-by-item unit checklist. Every governed settings, research, model, space, material, instance, motion, and system H2 and every film or brief H2/H3/H4 answers every item directly; exclusions are refused.
+- Discovery is ordinary coverage over one complete authored H2 population, never a per-H2 checklist. Every authored H2 population answers `discovery/common.md`; settings adds `settings.md`, film storylines add `films.md` and `storylines.md`, scenarios add `films.md` and `scenarios.md`, script adds `films.md` and `scripts.md`, and briefs add `briefs.md`. Research and design branches answer common discovery only, and H3/H4 do not repeat it. A retained result identifies its earliest owner and current realization. A true no-result receives one population-wide exclusion naming the concrete inputs, planned consumers, risks, and sufficient existing owners; deferral and an audit assertion are invalid exclusions.
 - A layer obligation is distributed coverage. Every H2 that materially realizes a role may cite it, and the complete population accounts for every role. Settings, model, space, material, instance, system, and storyline roles permit no exclusion. Motion roles permit one population-wide exclusion only where the target's own condition is absent from the complete production.
 - Settings, model, space, material, instance, motion, and system references are foundation coverage. A host cites only the units it uses. A target no host in that claim population uses may receive one concrete population-wide exclusion only where the configured reference permits it. Research has one stricter bridge: every reviewed research H2 is interpreted by a settings H2, and later layers cite that settings owner.
 - Film lineage is exact. Every scenario and screenplay H2/H3/H4 cites one matching same-level parent, every parent has one matching child, and exclusions are refused. `lint.config.ts` also compares physical anchor order and nesting.
@@ -45,7 +46,7 @@ A reason names the host event, decision, limit, transition, implementation, or o
 
 ## Transitions
 
-Move a layer from `draft` to `evidence` only after the full layer has a complete first version, stable anchored topology and ordered files, no placeholders, a manual scope and omission audit, and truthful unit-by-unit answers to every common obligation. Commit that coherent draft before changing the state.
+Move a layer from `draft` to `evidence` only after the full layer has a complete first version, stable anchored topology and ordered files, no placeholders, a manual scope and omission audit, its applicable discovery searches and result classification, and truthful unit-by-unit answers to every common obligation. Settings additionally completes planned-delivery backcast and operative-subject accounting. Commit that coherent draft before changing the state.
 
 Move the layer to `review` only after all shared and production-specific claim batches are complete and the production source lint is clean. Commit that evidence state before review. Review each relationship independently under [Review](review.md), copy only compiler-issued fingerprints, and compile again.
 
@@ -70,7 +71,7 @@ Never clear a diagnostic with exaggerated evidence, copied reviews, blanket excl
 
 ## Production-specific claims
 
-Classify a work rule through [Production-specific contract](work-specific.md) before configuring it. The exact shared inventory reserves `docs/principles` and `docs/obligations`. Put production-only selected-file conditions under `docs/production-principles`, production-only distributed roles under `docs/production-obligations`, existing relationships against their current authored targets, and other independent evidence behavior under a descriptive plural or collective family.
+Classify a work rule through [Production-specific contract](work-specific.md) before configuring it. The exact shared inventory reserves `docs/discovery`, `docs/principles`, and `docs/obligations`. Put production-only selected-file conditions under `docs/production-principles`, production-only distributed roles under `docs/production-obligations`, existing relationships against their current authored targets, and other independent evidence behavior under a descriptive plural or collective family.
 
 A production-local principle uses file hosts, H2 targets, `checklist: true`, no exclusion, and the host layer's stage and review requirement. A distributed role uses the owning layer's H2 hosts, ordinary H2 coverage, and only the exclusion behavior the target justifies. Declare these mechanics in the added typed claim, not in target prose. Create no empty target or family.
 

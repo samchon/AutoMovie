@@ -27,6 +27,12 @@ Add an axis when the work needs it and create no rule merely to fill the list. C
 
 Separate a research finding from a method that selected files must keep applying. The finding is a research or settings fact. A recurring file condition may be a production-local principle only when the shared contracts do not already ask the complete question. Use configured evidence relations to carry an established fact downward instead of copying source lists into design, prose, or source code.
 
+## Discovery evidence
+
+Complete the open search before deciding whether it found a retained production contract. When an authored H2 population reaches evidence, answer the applicable shared discovery targets through that population: every authored H2 population answers common discovery, settings adds settings discovery, film prose adds film-wide and its own layer discovery, and briefs add brief discovery. H3 and H4 do not repeat the population search. A retained result names its earliest semantic owner, current stage-appropriate realization, and any additive claim it requires. A true no-result uses one population-wide exclusion naming the concrete inputs, planned consumers, risks, and sufficient existing owners examined. Deferred work, an audit assertion, or an empty target family is not a no-result.
+
+Settings discovery backcasts the actual planned film, brief, or library consumers without pre-authoring their content. After finding candidates, the settings operative-subject obligation accounts for every person, collective, object, environmental agent, institution, subsystem, and affected population that can independently change action, state, information, resources, control, or audience observation. Classify each in an existing owner, inherited default, outside-scope boundary, or unresolved owner; a needed unresolved subject blocks its consumer.
+
 ## Canonical owner
 
 Give every adopted rule one owner:
@@ -48,6 +54,6 @@ Do not create a catch-all production contract file. In a settings H2, record dir
 
 Create every production-local target and its additive `claims` entry in `lint.config.ts` in one coherent change. Follow [Evidence staging](evidence-staging.md) for population, cardinality, exclusion, stage, and review semantics. An unselected target is not enforced, and an extra claim extends rather than replaces the shared graph.
 
-Before settings leave `draft`, account for every direct instruction and adopted rule in its canonical owner. An omitted `claims` property or empty array is valid only after a literal audit finds no independent production-local target.
+Before settings leave `draft`, account for every direct instruction and adopted rule in its canonical owner, complete the discovery searches and operative-subject inventory, and classify every result. An omitted `claims` property or empty array is valid only after that literal audit finds no independent production-local target.
 
 Later discoveries revise the earliest true owner. Preserve user authority, assess every affected host and descendant, propagate the change, and renew stale reviews before resuming blocked work. When another agent owns affected authorship, send the settled rule, authority, canonical document, applicability, activation behavior, affected hosts, and required recheck before explicitly resuming that owner.
