@@ -2,6 +2,14 @@
 
 This project begins without a production. Author work in docs, src, test, and declared assets; never mistake the empty design tree for a completed result or translate ordinary code into giant MCP payloads.
 
+## Read before acting
+
+- [.agents/skills/production/SKILL.md](.agents/skills/production/SKILL.md) owns authorship: the shape decision, the production-specific contract, every layer's procedure and gate, evidence staging, self-review, and final review. Read it, then the workflow document it routes to, before drafting anything.
+- docs/README.md owns the documentation root and its non-overlapping ownership map.
+- `getGuideDocument({ name: "AUTOMOVIE_OVERALL" })` through this project's MCP server owns tool contracts, typed records, and craft handbooks. Read the exact guide a tool or record requires.
+
+Those skills ship with the scaffold and are this project's own copy of the authoring doctrine. Editing them changes this project alone and carries nowhere, so a doctrine improvement belongs upstream in automovie; a local edit is a fork of the contract every other project still answers.
+
 ## Choose the production shape
 
 Set kind in lint.config.ts when authorship begins. A film uses the exact settings -> storylines -> scenarios -> script -> shots -> filmSources ladder. A brief answers one bounded audiovisual question through the exact settings -> briefs -> shots -> filmSources ladder when the result needs no independent storyline/scenario/script refinement; a short or simple demonstration may therefore remain a brief. Both timed shapes also require reviewed production source as a parallel input before film source. A library delivers reviewed design/source branches without a shot or film timeline. Runtime does not choose the shape.
@@ -17,7 +25,7 @@ Research and the model, space, material, instance, motion, and system branches a
 - motions owns reusable deterministic change over time;
 - systems owns coupled lighting, environment, effects, simulation, sound, service, clock, dependency, budget, and degradation behavior.
 
-Read docs/README.md and every applicable discovery target, principle, and obligation before drafting. The film ladder preserves identical filenames, anchored H2 sequences, H3 scenes, H4 beats, nesting, and order through all three prose layers. A brief uses anchored H2 delivery, H3 shot, and H4 observation units without inventing dramatic causality. Outside an optional H1 title, non-narrative hosts use only H2 and film or brief hosts use only H2/H3/H4; no other heading depth may hide authored work.
+Read docs/README.md and every applicable discovery target, principle, and obligation before drafting. Every subject a later layer stages, animates, voices, or observes has a settings owner first, and in a film that owner settles what docs/obligations/subjects.md requires. The film ladder preserves identical filenames, anchored H2 sequences, H3 scenes, H4 beats, nesting, and order through all three prose layers. A brief uses anchored H2 delivery, H3 shot, and H4 observation units without inventing dramatic causality. Outside an optional H1 title, non-narrative hosts use only H2 and film or brief hosts use only H2/H3/H4; no other heading depth may hide authored work.
 
 ## Preserve the evidence graph
 

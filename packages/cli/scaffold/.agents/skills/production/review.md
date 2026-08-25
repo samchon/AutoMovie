@@ -28,4 +28,4 @@ Use the lenses applicable to the production: delivery scope and aim; source trut
 
 Searches, diffs, compiler output, generated summaries, and earlier partial reads do not replace the full manifest read. A current fingerprint records one evidence check and does not prove production quality.
 
-Any content or instruction edit invalidates that round as a clean round. Finish a production only after two consecutive complete rounds find no issue and make no edit, followed by the scaffold skill's repository and generated-consumer verification gates.
+Any content or instruction edit invalidates that round as a clean round. Finish a production only after two consecutive complete rounds find no issue and make no edit, and after the project's own lint, compile, render, and verify gates pass on the delivered result.

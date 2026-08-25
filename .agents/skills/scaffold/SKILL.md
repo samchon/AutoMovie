@@ -1,65 +1,36 @@
 ---
 name: scaffold
-description: Defines how an automovie production is researched, authored, evidenced, implemented, and reviewed inside the scaffold, including mutually exclusive film, brief, and library shapes; the settings-to-screenplay ladder; model, space, material, instance, motion, and system branches; production-specific contracts; and generated-project guidance. Use before authoring or reviewing production content or editing packages/cli/scaffold, which every generated project inherits.
+description: Defines how packages/cli/scaffold is maintained as the authoring harness every generated project inherits verbatim, including the shipped production skill, the reserved discovery, obligation, and principle inventory, and the negative-probe and generated-consumer verification gates. Use before editing anything under packages/cli/scaffold, and to reach the production authoring procedure when authoring production content inside this repository.
 ---
 
-# Authoring a production
+# Maintaining the scaffold
 
 `packages/cli/scaffold` is the empty authoring harness `@automovie/cli` stamps out. A completed regression film fixture lives outside it so generated projects inherit capability and contracts, never another production's content. Treat every scaffold change as a generated-project API change.
 
-Identify the selected `kind` and every layer stage in `lint.config.ts`. Read the production's `AGENTS.md`, all earlier active layers, every applicable shared target under `docs/discovery`, `docs/principles`, and `docs/obligations`, and every production-local target selected by an added claim before writing.
+## The authoring procedure lives with the production
 
-The scaffold has one documentation root. Reusable shared targets live in `docs/discovery`, `docs/principles`, and `docs/obligations`; production facts, research, designs, prose, and additional targets live in the other `docs` branches. Never put one production's fact in a shared target, put host-side evidence tags there, weaken a shared rule for one production, or create a local target without its corresponding additive claim. Keep that claim disabled with its host before evidence begins, then enable both together.
+The procedure that authors a production ships inside the scaffold at `packages/cli/scaffold/.agents/skills/production/`. A generated project therefore holds its own authoring doctrine, and this repository holds exactly one copy of it.
 
-## Workflow documents
+Read [the shipped production skill](../../../packages/cli/scaffold/.agents/skills/production/SKILL.md) before authoring or reviewing production content anywhere, including a fixture or an experimental sandbox inside this repository. This maintenance skill does not restate it.
 
-Read each applicable document in full before acting:
+Editing any document under that directory changes what every future generated project is instructed to do. Apply the [documentation skill](../documentation/SKILL.md) writing rules, verify the links resolve from a generated project rather than from this repository, and run the verification gates below.
 
-- [Production kinds](production-kinds.md) selects exactly one film, brief, or library shape.
-- [Production-specific contract](work-specific.md) preserves direct instructions and classifies every adopted rule before bulk settings work.
-- [Research](research.md) owns the optional external-evidence ledger and its downstream consumption.
-- [Settings](settings.md) defines delivery, canon, capabilities, constraints, and shared conventions for every shape.
-- [Design branches](design-branches.md) routes models, spaces, materials, instances, motions, and systems without overlap; it links the detailed model-and-motion procedure when those branches apply.
-- [Storylines](storylines.md), [Scenarios](scenarios.md), and [Screenplays](screenplays.md) own the film-only refinement ladder.
-- [Direct briefs](briefs.md) owns bounded audiovisual delivery that needs no independent narrative-refinement ladder.
-- [Discovery, principles, and obligations](principles-and-obligations.md) governs reusable and production-local contract documents.
-- [Evidence staging](evidence-staging.md) owns populations, tags, `draft -> evidence -> review`, diagnostics, and fingerprints.
-- [Author process Self-Review](self-review.md) closes every complete production-specific contract, layer-authorship, evidence-repair, review-verification, and authorized stage-transition process before its author continues or hands it off.
-- [Review](review.md) owns evidence review and final whole-production review.
+## The shared contract inventory
 
-The repository [evidence graph skill](../evidence-graph/SKILL.md) owns committed requirement-to-source traceability. This scaffold skill owns the separate generated-production graph. Apply the repository skill's citation honesty and diagnostic discipline without imposing its requirement-specification-source triangle here.
+`packages/cli/scaffold/docs/discovery`, `docs/obligations`, and `docs/principles` are an exact reserved inventory. `@automovie/evidence` pins their filenames and their ordered H2 anchors, so adding, removing, renaming, or reordering a shared H2 without the matching wiring fails the graph while it loads.
 
-## Layer boundaries
+Changing that inventory means changing the target document, `EXPECTED_CONTRACTS`, the claim or reference that selects it, the package test's canaries, the paid population in `internals/scaffold-evidence-gate.mjs` whenever that probe's shape selects the target, and the routing guidance in `docs/README.md` and the shipped skill, in one coherent change. A new target family also joins the reserved directory set and the contract walk.
 
-| Owner | Decision |
-| --- | --- |
-| Research | External source identity, used portion, authority, uncertainty, and affected production decision |
-| Settings | Production and world facts, delivery, identity, capability, constraint, access, units, and review conditions |
-| Models | Deterministic fixed blocking representation and its neutral observations |
-| Spaces | Site, building exterior/interior, room, zone, boundary, opening, circulation, and clear dimension |
-| Materials | Construction, finish, texture scale, optical/physical response, surface binding, and state |
-| Instances | Prototype membership, stable repeated identity, transforms, variation, tiers, and placement validity |
-| Motions | Reusable deterministic state change over time and its neutral observations |
-| Systems | Coupled lighting, environment, effects, simulation, sound, service, state, budget, and failure behavior |
-| Storylines | Detailed narrative treatment and audience-facing development |
-| Scenarios | Executable physical progression and consequential exchange |
-| Screenplay | Final visible, written, audible, silent, and render-timed audience contract |
-| Brief | One bounded delivery/shot/observation hierarchy and falsifying observations |
-| Production source | Mechanical serialization of reviewed settings |
-| Design source | Implementation of one reviewed model, space, material, instance, motion, or system owner |
-| Shot source | Local composition, camera, light, orchestration, and acceptance for one reviewed scene or brief shot |
-| Film source | Global selection, source-time mapping, transitions, and auxiliary-track mapping |
+Classify before adding. A per-file review question is a principle, a role a whole population divides is an obligation, an open search whose result no checklist can enumerate is a discovery duty, and a production procedure is a skill document rather than a target. A rule that belongs to one production is never added here; it belongs to that production's local family and its additive claim.
 
-Correct the earliest owner when a later layer exposes a defect, then propagate the consequence and renew affected reviews. A clean compiler never authorizes an invented relationship or a decision in the wrong layer.
+An anchor is a citation address, so choose it for the durable question rather than the current wording. When an item's text changes, reread every citing host against the new text and renew its review from that reading. Replacing only the fingerprint records a check nobody performed.
 
-## Authored and derived source
-
-Write production work in `docs`, `src`, `test`, and declared assets. Subject definitions are classes, recurring behavior is a named motion function, cross-subject choreography is a shot, production source serializes settings, and film source maps reviewed local shots and authored auxiliary tracks onto global time. Every governed source file contains its own named exported owner.
-
-`.automovie/design`, `generated`, and `renders` are derived. A new scaffold contains no production records, and its generic emitter shell refuses until the author adds explicit imports and `emit` calls. Preserve that shell's setter, unchanged-record, and orphan-inventory checks. After authorship begins, correct source and regenerate. The screenplay index at `.automovie/design/<production>/screenplay/index.json` remains hand-authored because it resolves semantic coverage rather than duplicating derivable data.
-
-`src/examples` demonstrates transferable techniques only. Production source does not import it or place it in an evidence population.
+Retire an item when it is wrong, absorbed, or inapplicable. Inconvenience to one production is not a reason; that production's own local targets are where its exceptions live.
 
 ## Verification
 
-After topology, contract, or citation changes, run the scaffold evidence gate. Falsify each new edge or refusal with a disposable negative probe, restore it, and require the normal graph to pass. Build and test the repository, generate a fresh scaffold from packed packages, and prove that its source lint and canaries pass while production design and compile refuse the unselected blank state. Compile the repository-only completed fixture to preserve production regression coverage. Measure every changed executable scaffold source at 100% statements, branches, functions, and lines. For render, pose, expression, geometry, material, or motion changes, also follow the applicable 3D-modeling and viewer-verification skills.
+After topology, contract, or citation changes, run the scaffold evidence gate. Falsify each new edge or refusal with a disposable negative probe, restore it, and require the normal graph to pass. Build and test the repository, generate a fresh scaffold from packed packages, and prove that its source lint and canaries pass while production design and compile refuse the unselected blank state. Compile the repository-only completed fixture to preserve production regression coverage. Measure every changed executable scaffold source at 100% statements, branches, functions, and lines.
+
+For render, pose, expression, geometry, material, or motion changes, also follow the applicable [3D modeling](../3d-modeling/SKILL.md) and [viewer verification](../viewer-verification/SKILL.md) skills.
+
+The repository [evidence graph skill](../evidence-graph/SKILL.md) owns committed requirement-to-source traceability for this repository's own packages. The generated-production graph is separate: apply that skill's citation honesty and diagnostic discipline to it, without imposing the requirement-specification-source triangle on a production.

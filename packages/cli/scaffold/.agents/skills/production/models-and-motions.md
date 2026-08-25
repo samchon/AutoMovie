@@ -1,6 +1,6 @@
 # Models and motions
 
-Read the repository [3D modeling skill](../3d-modeling/SKILL.md) as well as this document before changing geometry, rigs, or derived assets.
+Read the `MODEL_RECIPE`, `OBJECT_RIGGING`, and `GEOMETRY` guides through the project's MCP server as well as this document before changing geometry, rigs, or derived assets.
 
 ## Model decisions
 

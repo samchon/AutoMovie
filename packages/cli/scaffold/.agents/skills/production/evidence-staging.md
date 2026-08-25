@@ -77,4 +77,4 @@ A production-local principle uses file hosts, H2 targets, `checklist: true`, no 
 
 ## Verification
 
-Run the scoped generated-project source lint at every transition and final package gate, not at prose checkpoints. After graph changes, run the scaffold gate and negative probes required by the scaffold skill. A pure deletion that changes no stage, claim, config, source, or schema needs exact target and diff inspection rather than an unrelated build.
+Run the scoped generated-project source lint at every transition and final package gate, not at prose checkpoints. After changing a claim, a target, or a stage, delete the citation the change was meant to require and confirm the compiler refuses before restoring it. A configured claim that selected no host reports the same green as a satisfied one. A pure deletion that changes no stage, claim, config, source, or schema needs exact target and diff inspection rather than an unrelated build.

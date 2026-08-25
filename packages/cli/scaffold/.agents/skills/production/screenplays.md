@@ -6,10 +6,14 @@ Write the final human-readable audiovisual contract. Preserve the scenario's dec
 
 An H4 is the smallest lineage and authoring boundary. It need not become a visible card or cut. Preserve identity even when the final edit presents adjacent beats continuously.
 
+Before final expression, rerun the [production-specific contract](work-specific.md) pass with the `discovery/common.md`, `discovery/films.md`, and `discovery/scripts.md` targets, and implement each retained expressive result in its target and claim. No example in the shared documents is a style inventory.
+
 Apply narrative unit addressability after drafting. If final expression reveals a hidden independent beat or an artificial split, repair the earliest storyline owner and propagate the new identity through scenario, screenplay, screenplay index, shots, and film source. Begin each H4 with audience-facing screenplay blocks rather than a treatment summary.
 
 ## Gate
 
 Start at `script: "draft"` only after scenarios are in `review`. Before `evidence`, read the screenplay as a viewer and reject units that merely expand scenario instructions, contain unfilmable intent, lose inherited pressure or effect, leave dialogue, captions, sound, silence, access, or render-critical time for source code to invent, compress the declared film, or fail a common unit obligation.
 
-Every H2/H3/H4 will answer the common unit obligations, cite one exact scenario and one exact storyline unit at the same level, and cite only settings it uses. Follow [Evidence staging](evidence-staging.md). After the final evidence review, continue with [Review](review.md).
+Run [Author process Self-Review](self-review.md) to its clean round before every stage transition and again after any repair.
+
+Every H2/H3/H4 will answer the common unit obligations, cite one exact scenario and one exact storyline unit at the same level, and cite only settings it uses. The H2 population also covers its applicable discovery targets. Follow [Evidence staging](evidence-staging.md). After the final evidence review, continue with [Review](review.md).

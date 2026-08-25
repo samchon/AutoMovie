@@ -24,4 +24,4 @@ For an authorship repair, do not patch only the unit where its symptom appeared.
 
 In the normal process report or handoff, name the boundary, reviewed files and populations, findings and repairs, verification results, final clean round, and any consequence outside the author's authority. Do not create a dedicated approval artifact, ledger, fingerprint, stage, or status file for this review.
 
-This review does not replace evidence lint, evidence review, compiler gates, the final [whole-production review](review.md#final-whole-production-review), or repository [Self-Review](../review/SKILL.md#self-review). The final whole-production review still requires two consecutive clean rounds; this process review requires one clean round at each boundary.
+This review does not replace evidence lint, evidence review, compiler gates, or the final [whole-production review](review.md#final-whole-production-review). The final whole-production review still requires two consecutive clean rounds; this process review requires one clean round at each boundary.

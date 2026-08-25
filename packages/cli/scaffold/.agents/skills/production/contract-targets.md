@@ -1,4 +1,4 @@
-# Discovery, principles, and obligations
+# Contract targets
 
 `docs/discovery` defines open production-specific searches over complete authored H2 populations. `docs/principles` defines what every governed file must answer. `docs/obligations/common.md` defines what every selected authored unit must answer, while the other obligation files define how a population divides required roles. Those three directories are the exact shared inventory. Production-local targets follow the same forms under `docs/production-principles`, `docs/production-obligations`, or another descriptive family and activate only through additive claims. The graph refuses an unwired local target, an enabled local target reference with an empty population, host-side evidence tags in any target, and an H2 title or anchor duplicated anywhere in the shared-plus-local target inventory.
 
