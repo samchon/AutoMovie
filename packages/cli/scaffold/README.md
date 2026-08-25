@@ -46,6 +46,8 @@ Open every PNG named by the review queue, read the exact `REVIEW_ASSET`, `REVIEW
 
 ## Begin the production
 
+`.agents/skills/production/SKILL.md` is the authoring doctrine this project ships with: the shape decision, the production-specific contract, every layer's procedure and gate, evidence staging, self-review, and final review. `AGENTS.md` routes to it, and a coding agent reads it before drafting anything.
+
 Select the kind and begin research or settings at draft. Review settings before activating design or narrative children. For each applicable design branch, review its Markdown before activating matching source. Film and brief shots wait for reviewed prose and the reviewed source corresponding to every active design branch.
 
 The design emitter is production-owned code. Import each reviewed source explicitly, state shot module/export addresses, and store every owned record through project setters. It writes and never deletes, so a record you stop deriving remains residue until you delete it or restore its owner. The screenplay index remains hand-authored. `viewer/src/viewerDocument.ts` begins with a neutral clear color so the blank viewer compiles; if that color remains visible in the delivery, replace it with one imported from reviewed production or system source rather than authoring a second visual grammar in viewer code.
