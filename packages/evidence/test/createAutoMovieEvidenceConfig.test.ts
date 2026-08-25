@@ -1178,6 +1178,56 @@ try {
       );
   }
 
+  const filmSettings = filmGraph.claims.find(
+    (claim) =>
+      claim.name === "settings H2 units preserve their exact scope and lineage",
+  );
+  const subjectDepth = referenceTo(filmSettings, "obligations/subjects.md");
+  assert.notEqual(
+    subjectDepth,
+    undefined,
+    "a film's settings population owes what each operative subject settles",
+  );
+  assert.equal(
+    subjectDepth?.requireReview,
+    true,
+    "the settings review stage renews the subject depth roles",
+  );
+  assert.equal(
+    subjectDepth?.noEvidenceExclude,
+    undefined,
+    "an observational film may truthfully exclude a role its delivery lacks",
+  );
+  for (const shape of ["brief", "library"] as const) {
+    const shaped = root();
+    write(shaped, "docs/settings/production.md", "## Scope {#scope}\n");
+    if (shape === "brief") {
+      write(shaped, "docs/briefs/001-delivery.md", narrative);
+      write(
+        shaped,
+        "src/shots/delivery.ts",
+        "export const deliveryShot = 1;\n",
+      );
+    }
+    assert.equal(
+      referenceTo(
+        createAutoMovieEvidenceConfig({
+          ...disabled(shaped),
+          kind: shape,
+          settings: "review",
+          ...(shape === "brief" ? { briefs: "review", shots: "review" } : {}),
+        }).claims.find(
+          (claim) =>
+            claim.name ===
+            "settings H2 units preserve their exact scope and lineage",
+        ),
+        "obligations/subjects.md",
+      ),
+      undefined,
+      `a ${shape} answers one bounded delivery and owes no film cast depth`,
+    );
+  }
+
   const filmWithoutModelSource = root();
   write(
     filmWithoutModelSource,

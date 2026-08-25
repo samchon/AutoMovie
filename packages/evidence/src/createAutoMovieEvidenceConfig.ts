@@ -399,6 +399,17 @@ const EXPECTED_CONTRACTS = [
     anchors: ["opening-condition", "terminal-condition", "audience-route"],
   },
   {
+    file: "obligations/subjects.md",
+    anchors: [
+      "situated-conditions",
+      "drives-and-pressures",
+      "knowledge-and-perception",
+      "expression-and-behavior",
+      "bidirectional-relationships",
+      "change-boundaries",
+    ],
+  },
+  {
     file: "obligations/systems.md",
     anchors: [
       "system-ownership-interfaces",
@@ -1526,6 +1537,27 @@ const layerObligation = (
   requireReview: review,
 });
 
+/**
+ * What each operative subject owner must settle, for a film only.
+ *
+ * `obligations/settings.md#operative-subject-inventory` accounts for the
+ * population; these roles are the depth that inventory deliberately does not
+ * require. A brief answers one bounded observation and a library exports design
+ * branches, so neither owes a cast this deep, and a film that genuinely owes
+ * none of it is a brief that chose the wrong shape.
+ *
+ * Exclusion stays open per role because an observational or non-human film can
+ * truthfully establish no consequential relationship, exactly as a production
+ * without a motion condition may exclude one motion role.
+ */
+const subjectObligation = (review: boolean): ITtscEvidenceGraphReference => ({
+  type: "markdown",
+  root: DOCS,
+  files: ["obligations/subjects.md"],
+  symbol: "h2",
+  requireReview: review,
+});
+
 const discoveryReferences = (
   layer: MarkdownLayer,
   review: boolean,
@@ -1605,6 +1637,8 @@ const authoredClaims = (graph: IProductionGraph): ITtscEvidenceGraphClaim[] => {
       if (MARKDOWN[name].obligation && symbol === 2)
         references.push(layerObligation(name, review));
       if (symbol === 2) references.push(...discoveryReferences(name, review));
+      if (symbol === 2 && name === "settings" && graph.kind === "film")
+        references.push(subjectObligation(review));
       if (!["settings", "research"].includes(name))
         references.push(...referencesPerFile(graph, "settings", "h2", review));
       references.push(...designFoundations(graph, name, review));
