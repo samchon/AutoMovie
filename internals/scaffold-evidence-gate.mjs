@@ -45,9 +45,11 @@ const TSCONFIG = JSON.parse(
  * two root configs as well, so `viewer/src/subject.ts` failed
  * `typescript/switch-exhaustiveness-check` on a user's first `npm run lint`
  * while this gate stayed green. `docs` is added because it hosts no compiled
- * file and every evidence reference the graph resolves.
+ * file and every evidence reference the graph resolves. `AGENTS.md` is added
+ * because it is the generated author's entry contract and must be inspected by
+ * the consumer canary even though TypeScript does not compile it.
  */
-const INHERITED = ["docs", ...TSCONFIG.include];
+const INHERITED = ["AGENTS.md", "docs", ...TSCONFIG.include];
 
 /**
  * The two canaries, one per axis this gate reports on.
@@ -428,9 +430,10 @@ const contractAnchors = (relative) =>
  * This is deliberately generated after the blank-scaffold pass. The public
  * scaffold must contain no production prose or evidence tags, but inspecting
  * config structure alone cannot prove that its real shared claims accept a
- * paid population. Six independent H2 owners cover the six distributed
+ * paid population. Seven independent H2 owners cover the seven distributed
  * settings roles; each H2 pays every per-unit common obligation, while the
- * file pays every file-level common and settings principle.
+ * population pays every discovery target and the file pays every file-level
+ * common and settings principle.
  */
 const activatePaidSettings = () => {
   const configFile = path.join(PROBE, "lint.config.ts");
@@ -461,7 +464,7 @@ const activatePaidSettings = () => {
     "principles/common.md#production-language":
       "The complete file uses one consistent English calibration vocabulary for its repository-gate reader.",
     "principles/settings.md#addressable-canon":
-      "Delivery, aim, access, convention, review condition, and domain coverage each have one independently addressable H2 owner.",
+      "Delivery, aim, access, convention, review condition, domain coverage, and operative-subject accounting each have one independently addressable H2 owner.",
     "principles/settings.md#information-structure":
       "Each H2 opens with status and one bounded statement of its owner, condition, and compiler consequence.",
     "principles/settings.md#fact-status":
@@ -469,11 +472,11 @@ const activatePaidSettings = () => {
     "principles/settings.md#source-support":
       "The file makes no externally checkable production claim and attaches no external authority to its invented calibration facts.",
     "principles/settings.md#capability-boundary":
-      "The delivery scope explicitly excludes any subject or environment capability, leaving none for downstream source to guess.",
+      "The delivery scope explicitly excludes any delivered-subject or environment capability, leaving none for downstream source to guess.",
     "principles/settings.md#constraint-sufficiency":
-      "The six owners bound the operator, observable diagnostic result, path and time units, and every excluded production domain.",
+      "The seven owners bound the operator, observable diagnostic result, path and time units, operative subjects, and every excluded production domain.",
     "principles/settings.md#observable-identity":
-      "The file defines no subject, place, or audible identity and confines its only observable result to classified compiler diagnostics.",
+      "The file defines no delivered-subject, place, or audible identity and confines its only observable result to classified compiler diagnostics.",
     "principles/settings.md#minimal-departure":
       "Only calibration-specific departures are authored; all unrelated production domains are explicitly outside this disposable delivery.",
     "principles/settings.md#internal-coherence":
@@ -491,12 +494,26 @@ const activatePaidSettings = () => {
       return `${unit.title} cites only the file rules and distributed settings role that its stated calibration fact actually realizes.`;
     throw new Error(`No paid-probe reason owns ${target}.`);
   };
+  const discoveryExclusions = Object.freeze({
+    "discovery/common.md#shared-local-boundary":
+      "The probe examined its compiler-calibration directive, library promise, repository-gate operator, shared contracts, dependencies, sole planned compiler-diagnostic consumer, and false-green risk; the shared principles and settings obligations fully own them, so no independent cross-layer condition remains.",
+    "discovery/common.md#canonical-realization":
+      "After examining the calibration directive, library promise, operator, dependencies, sole planned compiler-diagnostic consumer, and false-owner risk, the complete boundary search retained no independent production contract; the seven settings owners and shared claim wiring are sufficient, so no additional semantic owner or additive claim exists.",
+    "discovery/settings.md#directive-promise-subject-requirements":
+      "The probe examined its direct calibration instruction, diagnostic promise, operator, file dependency, sole planned compiler-diagnostic consumer, unowned-subject risk, and false-green failure; the seven settings owners classify them completely without an additional production-specific fact or constraint.",
+    "discovery/settings.md#planned-delivery-backcast":
+      "Backcasting this settings-only library from its calibration instruction and config through the sole planned compiler-diagnostic consumer and its downstream-invention and false-green risks found no fact beyond the delivery, aim, access, unit, review, coverage, and operative-subject owners already present.",
+  });
   const settingsUnits = [
     {
       anchor: "probe-delivery-scope",
       title: "Probe delivery scope",
       obligation: "obligations/settings.md#delivery-scope",
       body: "This disposable library delivers only a compiler calibration result: the active settings graph must accept this complete population and no production artifact is published.",
+      discovery: [
+        "discovery/common.md#shared-local-boundary",
+        "discovery/common.md#canonical-realization",
+      ],
     },
     {
       anchor: "probe-governing-aim",
@@ -527,6 +544,16 @@ const activatePaidSettings = () => {
       title: "Probe settings coverage map",
       obligation: "obligations/settings.md#settings-coverage-map",
       body: "Delivery, aim, operator access, coordinate convention, and review condition each have the separate owner above; every other production domain is outside this compiler calibration scope.",
+      discovery: ["discovery/settings.md#planned-delivery-backcast"],
+    },
+    {
+      anchor: "probe-operative-subject-inventory",
+      title: "Probe operative subject inventory",
+      obligation: "obligations/settings.md#operative-subject-inventory",
+      body: "The repository gate is the only operative subject: it controls the compile, observes the diagnostic result, and has no independent person, collective, object, environmental agent, institution, subsystem, or affected population left unclassified.",
+      discovery: [
+        "discovery/settings.md#directive-promise-subject-requirements",
+      ],
     },
   ];
   const fileEvidence = principleTargets.map((target) => {
@@ -551,6 +578,12 @@ const activatePaidSettings = () => {
       ...commonTargets.map(
         (target) => `@evidence ${target} ${commonReason(target, unit)}`,
       ),
+      ...(unit.discovery ?? []).map((target) => {
+        const reason = discoveryExclusions[target];
+        if (reason === undefined)
+          throw new Error(`No paid-probe discovery reason owns ${target}.`);
+        return `@evidenceExclude ${target} ${reason}`;
+      }),
       `@evidence ${unit.obligation} This unit is the population owner that directly states the named settings role.`,
       "-->",
       "",
@@ -565,10 +598,16 @@ const activatePaidSettings = () => {
   fs.writeFileSync(target, body, "utf8");
   return {
     file: target,
-    missing: `@evidence obligations/common.md#evidence-content-conformance ${commonReason(
-      "obligations/common.md#evidence-content-conformance",
-      settingsUnits[0],
-    )}`,
+    underpayments: [
+      {
+        line: `@evidenceExclude discovery/common.md#shared-local-boundary ${discoveryExclusions["discovery/common.md#shared-local-boundary"]}`,
+        target: "discovery/common.md#shared-local-boundary",
+      },
+      {
+        line: "@evidence obligations/settings.md#operative-subject-inventory This unit is the population owner that directly states the named settings role.",
+        target: "obligations/settings.md#operative-subject-inventory",
+      },
+    ],
   };
 };
 
@@ -743,52 +782,53 @@ const main = () => {
   report([" active graph: paid settings population passed"]);
 
   const paidSource = fs.readFileSync(active.file, "utf8");
-  if (paidSource.split(active.missing).length !== 2)
-    throw new Error(
-      "The paid settings probe no longer has exactly one selected evidence-content-conformance answer.",
+  for (const underpayment of active.underpayments) {
+    if (paidSource.split(underpayment.line).length !== 2)
+      throw new Error(
+        `The paid settings probe no longer has exactly one ${underpayment.target} acknowledgement.`,
+      );
+    fs.writeFileSync(
+      active.file,
+      paidSource.replace(underpayment.line, ""),
+      "utf8",
     );
-  fs.writeFileSync(active.file, paidSource.replace(active.missing, ""), "utf8");
-  const underpaidRun = compile();
-  const underpaidDiagnostics = parse(underpaidRun.output);
-  const underpaidEvidence = underpaidDiagnostics.filter(
-    (diagnostic) => axisOf(diagnostic) === "evidence",
-  );
-  const underpaidCorrectness = underpaidDiagnostics.filter(
-    (diagnostic) => axisOf(diagnostic) === "correctness",
-  );
-  const expectedUnderpayment = underpaidEvidence.filter(
-    (diagnostic) =>
-      diagnostic.text.includes("docs/settings/production.md") &&
-      diagnostic.text.includes(
-        "obligations/common.md#evidence-content-conformance",
-      ),
-  );
-  if (
-    underpaidEvidence.length !== 1 ||
-    expectedUnderpayment.length !== 1 ||
-    underpaidCorrectness.length !== 0
-  ) {
+    const underpaidRun = compile();
+    const underpaidDiagnostics = parse(underpaidRun.output);
+    const underpaidEvidence = underpaidDiagnostics.filter(
+      (diagnostic) => axisOf(diagnostic) === "evidence",
+    );
+    const underpaidCorrectness = underpaidDiagnostics.filter(
+      (diagnostic) => axisOf(diagnostic) === "correctness",
+    );
+    const expectedUnderpayment = underpaidEvidence.filter((diagnostic) =>
+      diagnostic.text.includes(underpayment.target),
+    );
+    if (
+      underpaidEvidence.length !== 1 ||
+      expectedUnderpayment.length !== 1 ||
+      underpaidCorrectness.length !== 0
+    ) {
+      report([
+        "",
+        `FAIL: removing ${underpayment.target} did not produce an isolated`,
+        " evidence diagnostic. The shared claim's negative edge is therefore",
+        " unproved.",
+        ...underpaidDiagnostics.map((diagnostic) => ` ${diagnostic.text}`),
+      ]);
+      process.exitCode = 1;
+      return;
+    }
     report([
-      "",
-      "FAIL: removing one required common-obligation citation did not produce",
-      " an isolated evidence diagnostic. The shared claim's negative edge is",
-      " therefore unproved.",
-      ...underpaidDiagnostics.map((diagnostic) => ` ${diagnostic.text}`),
+      ` active graph: removed ${underpayment.target} was rejected by evidence/graph`,
     ]);
-    process.exitCode = 1;
-    return;
   }
-  report([
-    " active graph: one removed obligation citation was rejected by evidence/graph",
-  ]);
   report([
     "",
     "PASS: the scaffold's obligation graph is paid and its own lint rules hold over",
-    " everything `npm run lint:source` compiles. The two blank-scaffold",
-    " canaries and the paid/underpaid active settings twins prove both lint",
-    " axes and both directions of the real shared graph. The noise count is",
-    " what a probe that installs nothing cannot resolve; it is reported,",
-    " never gated.",
+    " everything `npm run lint:source` compiles. The two blank-scaffold canaries,",
+    " paid active settings population, and two underpaid twins prove both lint",
+    " axes and both directions of the real shared graph. The noise count is what",
+    " a probe that installs nothing cannot resolve; it is reported, never gated.",
   ]);
 };
 

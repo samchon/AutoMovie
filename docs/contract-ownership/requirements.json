@@ -2252,6 +2252,12 @@
         "package": "@automovie/evidence"
       }
     },
+    "requirements/production-evidence/graph.md#agent-production-evidence-discovery": {
+      "owner": {
+        "kind": "package",
+        "package": "@automovie/evidence"
+      }
+    },
     "requirements/production-evidence/graph.md#agent-production-evidence-graph": {
       "owner": {
         "kind": "excluded",

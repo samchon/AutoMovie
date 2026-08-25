@@ -20,6 +20,11 @@ const root = (): string => {
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), "automovie-graph-"));
   roots.push(directory);
   fs.cpSync(
+    path.join(scaffold, "docs", "discovery"),
+    path.join(directory, "docs", "discovery"),
+    { recursive: true },
+  );
+  fs.cpSync(
     path.join(scaffold, "docs", "principles"),
     path.join(directory, "docs", "principles"),
     { recursive: true },
@@ -88,6 +93,14 @@ const referenceTo = (claim: Claim | undefined, file: string) =>
   referencesOf(claim).find(
     (reference) =>
       reference.type === "markdown" && reference.files.includes(file),
+  );
+
+const discoveryFilesOf = (claim: Claim | undefined): string[] =>
+  referencesOf(claim).flatMap((reference) =>
+    reference.type === "markdown" &&
+    reference.files[0]?.startsWith("discovery/") === true
+      ? reference.files
+      : [],
   );
 
 try {
@@ -202,6 +215,64 @@ try {
       `${claim.name} lost its prewired reference population`,
     );
   }
+  for (const [layer, expected] of Object.entries({
+    settings: ["common", "settings"],
+    research: ["common"],
+    models: ["common"],
+    spaces: ["common"],
+    materials: ["common"],
+    instances: ["common"],
+    motions: ["common"],
+    systems: ["common"],
+    storylines: ["common", "films", "storylines"],
+    scenarios: ["common", "films", "scenarios"],
+    script: ["common", "films", "scripts"],
+    briefs: ["common", "briefs"],
+  })) {
+    const claim = graph.claims.find(
+      (candidate) =>
+        candidate.name ===
+        `${layer} H2 units preserve their exact scope and lineage`,
+    );
+    assert.deepEqual(
+      discoveryFilesOf(claim),
+      expected.map((targetName) => `discovery/${targetName}.md`),
+      `${layer} H2 discovery targets drifted from their semantic population`,
+    );
+    for (const file of discoveryFilesOf(claim)) {
+      const reference = referenceTo(claim, file);
+      assert.equal(
+        reference !== undefined && "checklist" in reference
+          ? reference.checklist
+          : undefined,
+        undefined,
+        `${file} must remain ordinary population coverage rather than a per-H2 checklist`,
+      );
+      assert.equal(
+        reference?.noEvidenceExclude,
+        undefined,
+        `${file} must permit one truthful population-wide no-result exclusion`,
+      );
+      assert.equal(
+        reference?.requireReview,
+        false,
+        `${file} must not require a fingerprint before the host reaches review`,
+      );
+    }
+  }
+  for (const layer of ["storylines", "scenarios", "script", "briefs"])
+    for (const depth of [3, 4])
+      assert.deepEqual(
+        discoveryFilesOf(
+          graph.claims.find(
+            (claim) =>
+              claim.name ===
+              `${layer} H${depth} units preserve their exact scope and lineage`,
+          ),
+        ),
+        [],
+        `${layer} H${depth} must not duplicate H2 population discovery`,
+      );
   assert.ok(
     graph.claims.some(
       (claim) =>
@@ -1093,6 +1164,69 @@ try {
     ),
     "the complete film ladder did not reach film source",
   );
+  for (const layer of ["storylines", "scenarios", "script"]) {
+    const claim = filmGraph.claims.find(
+      (candidate) =>
+        candidate.name ===
+        `${layer} H2 units preserve their exact scope and lineage`,
+    );
+    for (const file of discoveryFilesOf(claim))
+      assert.equal(
+        referenceTo(claim, file)?.requireReview,
+        true,
+        `${layer} review must renew ${file}`,
+      );
+  }
+
+  const filmSettings = filmGraph.claims.find(
+    (claim) =>
+      claim.name === "settings H2 units preserve their exact scope and lineage",
+  );
+  const subjectDepth = referenceTo(filmSettings, "obligations/subjects.md");
+  assert.notEqual(
+    subjectDepth,
+    undefined,
+    "a film's settings population owes what each operative subject settles",
+  );
+  assert.equal(
+    subjectDepth?.requireReview,
+    true,
+    "the settings review stage renews the subject depth roles",
+  );
+  assert.equal(
+    subjectDepth?.noEvidenceExclude,
+    undefined,
+    "an observational film may truthfully exclude a role its delivery lacks",
+  );
+  for (const shape of ["brief", "library"] as const) {
+    const shaped = root();
+    write(shaped, "docs/settings/production.md", "## Scope {#scope}\n");
+    if (shape === "brief") {
+      write(shaped, "docs/briefs/001-delivery.md", narrative);
+      write(
+        shaped,
+        "src/shots/delivery.ts",
+        "export const deliveryShot = 1;\n",
+      );
+    }
+    assert.equal(
+      referenceTo(
+        createAutoMovieEvidenceConfig({
+          ...disabled(shaped),
+          kind: shape,
+          settings: "review",
+          ...(shape === "brief" ? { briefs: "review", shots: "review" } : {}),
+        }).claims.find(
+          (claim) =>
+            claim.name ===
+            "settings H2 units preserve their exact scope and lineage",
+        ),
+        "obligations/subjects.md",
+      ),
+      undefined,
+      `a ${shape} answers one bounded delivery and owes no film cast depth`,
+    );
+  }
 
   const filmWithoutModelSource = root();
   write(
@@ -1443,6 +1577,65 @@ try {
     throws(
       () => createAutoMovieEvidenceConfig(disabled(unlistedTarget)),
       "Shared contract inventory changed without graph wiring",
+    ),
+    true,
+  );
+
+  const unlistedDiscoveryTarget = root();
+  write(
+    unlistedDiscoveryTarget,
+    "docs/discovery/unwired.md",
+    target("Unwired discovery", "unwired-discovery"),
+  );
+  assert.equal(
+    throws(
+      () => createAutoMovieEvidenceConfig(disabled(unlistedDiscoveryTarget)),
+      "Shared contract inventory changed without graph wiring",
+    ),
+    true,
+  );
+
+  const removedDiscoveryTarget = root();
+  fs.rmSync(path.join(removedDiscoveryTarget, "docs/discovery/briefs.md"));
+  assert.equal(
+    throws(
+      () => createAutoMovieEvidenceConfig(disabled(removedDiscoveryTarget)),
+      "Shared contract inventory changed without graph wiring",
+    ),
+    true,
+  );
+
+  const renamedDiscoveryUnit = root();
+  const settingsDiscovery = path.join(
+    renamedDiscoveryUnit,
+    "docs/discovery/settings.md",
+  );
+  fs.writeFileSync(
+    settingsDiscovery,
+    fs
+      .readFileSync(settingsDiscovery, "utf8")
+      .replace(
+        "{#planned-delivery-backcast}",
+        "{#renamed-planned-delivery-backcast}",
+      ),
+  );
+  assert.equal(
+    throws(
+      () => createAutoMovieEvidenceConfig(disabled(renamedDiscoveryUnit)),
+      "H2 inventory changed without graph wiring",
+    ),
+    true,
+  );
+
+  const taggedDiscoveryTarget = root();
+  fs.appendFileSync(
+    path.join(taggedDiscoveryTarget, "docs/discovery/common.md"),
+    "\n<!-- @evidenceExclude discovery/common.md#shared-local-boundary invalid recursive target -->\n",
+  );
+  assert.equal(
+    throws(
+      () => createAutoMovieEvidenceConfig(disabled(taggedDiscoveryTarget)),
+      "shared target and must not carry host-side",
     ),
     true,
   );

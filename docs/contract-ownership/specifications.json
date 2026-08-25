@@ -116,6 +116,16 @@
         }
       }
     },
+    "specifications/production-evidence/graph.md#spec-authoring-production-evidence-discovery": {
+      "obligations": {
+        "discovery-coverage": {
+          "owner": {
+            "kind": "package",
+            "package": "@automovie/evidence"
+          }
+        }
+      }
+    },
     "specifications/production-evidence/graph.md#spec-authoring-production-evidence-physical-integrity": {
       "obligations": {
         "physical-population-integrity": {

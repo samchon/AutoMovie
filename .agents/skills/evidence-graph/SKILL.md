@@ -1,6 +1,6 @@
 ---
 name: evidence-graph
-description: Defines automovie's committed contract traceability from product requirements through package-independent system specifications to public TypeScript exports, including @ttsc/evidence populations, citations, exclusions, README participation, stable anchors, and triangular reachability validation. Use before adding, moving, or reviewing requirements or specifications, changing public-export evidence JSDoc, or adding or reshaping repository evidence lint configuration and structural guards. For a generated production's screenplay ladder, also use the scaffold skill. Do not use this for frame-review evidence, design-reference evidence, or provenance records that do not use @ttsc/evidence.
+description: Defines automovie's committed contract traceability from product requirements through package-independent system specifications to public TypeScript exports, including @ttsc/evidence populations, citations, exclusions, README participation, stable anchors, and triangular reachability validation. Use before adding, moving, or reviewing requirements or specifications, changing public-export evidence JSDoc, or adding or reshaping repository evidence lint configuration and structural guards. For a generated production's screenplay ladder, also use the production skill that ships in the scaffold. Do not use this for frame-review evidence, design-reference evidence, or provenance records that do not use @ttsc/evidence.
 ---
 
 # Evidence Graph
@@ -127,7 +127,7 @@ Preserve `@evidenceReview` and `@evidenceExcludeReview` when a reference require
 
 ## Change workflow
 
-1. Read the documentation skill and update `.wiki/` as the decision develops. Read the project skill for product scope, the development skill for source or test changes, and the scaffold skill when the generated production graph is involved.
+1. Read the documentation skill and update `.wiki/` as the decision develops. Read the project skill for product scope, the development skill for source or test changes, the scaffold skill when the shared contract inventory or the scaffold harness changes, and the shipped production skill when a production's own graph is involved.
 2. Inspect the current `lint.config.ts` files, workspace scripts, structural tests, installed `@ttsc/evidence` README and type declarations, and every affected citation. Do not treat an archived branch or an earlier decision as the active implementation.
 3. Classify each statement as requirement, specification, package usage, public API contract, research, or working knowledge before choosing its home.
 4. Describe each claim-reference pair as one sentence before configuring it. If the sentence does not match the selected files and symbol kinds, correct the population.
@@ -143,7 +143,7 @@ Treat a dangling target as contract drift. Find whether the document, anchor, ro
 
 Treat an uncovered requirement during requirements-first work as visible implementation debt. A deliberately red graph is more accurate than a false specification or source citation. Record the phase and debt in `.wiki/` and the pull request instead of weakening the permanent rule.
 
-The scaffold production ladder is a separate graph with its own populations and topology. Apply this skill's citation honesty and lint-inspection rules there, but use the scaffold skill to decide which film-authoring stage answers for which other stage. Do not impose the repository requirement-specification-source triangle on generated productions.
+The scaffold production ladder is a separate graph with its own populations and topology. Its exact reusable target corpus includes principles, obligations, and production-specific discovery. Discovery is ordinary coverage over the owning authored H2 population, permits one truthful population-wide exclusion only for a complete search with no independent result, and is neither a per-unit checklist nor a repository contract triangle. Apply this skill's citation honesty and lint-inspection rules there, but use `packages/cli/scaffold/.agents/skills/production/SKILL.md` to decide which production stage answers each target. Do not impose the repository requirement-specification-source triangle on generated productions.
 
 ## Verify
 

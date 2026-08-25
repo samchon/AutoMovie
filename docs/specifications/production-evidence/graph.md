@@ -8,9 +8,21 @@
 
 <!-- @evidence requirements/production-evidence/graph.md#agent-production-evidence-shared-contract 모든 프로젝트가 같은 공통 대상 집합을 해석하게 한다. -->
 
-팩터리는 `docs/principles`와 `docs/obligations`의 정규화된 상대 경로와 명시적 H2 anchor 목록을 하나의 고정 inventory로 읽는다. 그래프를 구성하기 전에 inventory의 파일·anchor identity와 실제 문서 트리가 서로 정확히 일치하는지 검사한다.
+팩터리는 `docs/principles`, `docs/obligations`와 `docs/discovery`의 정규화된 상대 경로와 명시적 H2 anchor 목록을 하나의 고정 inventory로 읽는다. 그래프를 구성하기 전에 inventory의 파일·anchor identity와 실제 문서 트리가 서로 정확히 일치하는지 검사한다.
 
 <!-- @evidenceObligation shared-contract 고정된 공통 문서·H2 inventory와 실제 트리 사이의 양방향 일치 검사. -->
+
+### 저작 H2 모집단의 작품별 발견 coverage {#spec-authoring-production-evidence-discovery}
+
+<!-- @evidence requirements/production-evidence/graph.md#agent-production-evidence-discovery 실제 작품 조사를 수행한 상태와 생략한 상태를 저작 모집단 관계로 구분한다. -->
+
+팩터리는 모든 활성 저작 H2 모집단에 `discovery/common.md`를 연결한다. 설정 H2에는 `common + settings`, research와 model·space·material·instance·motion·system H2에는 `common`, film storyline H2에는 `common + films + storylines`, scenario H2에는 `common + films + scenarios`, screenplay H2에는 `common + films + scripts`, brief H2에는 `common + briefs`를 연결한다. H3와 H4에는 이 모집단 발견 관계를 반복하지 않는다.
+
+각 발견 reference는 해당 host layer가 `evidence`에 들어갈 때 활성화되고 `review`에서 현재 fingerprint를 요구한다. 일반 coverage이므로 독립 결과는 그 결과를 소유하거나 실현하는 H2가 증명하고, 완전한 모집단 조사에서 독립 결과가 없을 때만 하나의 모집단 단위 제외를 허용한다. 제외 사유는 검사한 구체적 입력·위험과 충분한 기존 소유자를 밝혀야 하며, 구현 유예나 빈 결과 선언으로 대신할 수 없다. 팩터리와 lint는 관계·제외·fingerprint의 구조를 검사하고, 구체성과 진실성은 해당 target과 전체 모집단을 다시 읽는 evidence review가 판정한다. 설정은 이 산문을 자동 해석하지 않는다.
+
+설정 의무 모집단은 발견된 후보 중 action, choice, state, information, resource, control 또는 audience observation을 독립적으로 바꿀 수 있는 person, collective, object, environmental agent, institution, subsystem과 affected population을 빠짐없이 분류한다. 설정 저작과 review 절차는 필요한 미해결 주체가 남으면 그 소비자의 저작 시작을 보류하며, 팩터리는 그 의미 판단을 stage 값만으로 추론하지 않는다.
+
+<!-- @evidenceObligation discovery-coverage 저작 H2별 정확한 발견 대상 배치, 단계 정렬, 결과 또는 구체적 무결과 제외와 설정의 operative-subject accounting. -->
 
 ### 제작 종류와 단계 상태기계 {#spec-authoring-production-evidence-shape-stage}
 
@@ -32,7 +44,7 @@
 
 <!-- @evidence requirements/production-evidence/graph.md#agent-production-evidence-additive-extension 작품 전용 관계를 허용하면서 공통 그래프의 무력화를 차단한다. -->
 
-팩터리는 공통 원칙·의무·저작 단계·source 단계 claim과 실행 canary를 먼저 완성하고, 입력의 `claims`를 그 배열 뒤에 이어 붙인다. 호출자는 공통 배열이나 reference를 입력으로 받지 않으므로 기존 계약을 대체하는 확장 경로를 갖지 않는다.
+팩터리는 공통 작품별 발견·원칙·의무·저작 단계·source 단계 claim과 실행 canary를 먼저 완성하고, 입력의 `claims`를 그 배열 뒤에 이어 붙인다. 호출자는 공통 배열이나 reference를 입력으로 받지 않으므로 기존 계약을 대체하는 확장 경로를 갖지 않는다.
 
 <!-- @evidenceObligation additive-local-claims 공통 claim을 먼저 완성하고 작품 전용 claim만 뒤에 추가하는 단방향 합성. -->
 

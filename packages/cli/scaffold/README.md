@@ -4,9 +4,11 @@ This is a coding-agent-first AutoMovie authoring repository. It deliberately sta
 
 Choose one production shape in `lint.config.ts`: `film` for the exact `settings -> storylines -> scenarios -> script -> shots -> filmSources` ladder, `brief` for one bounded result that needs no independent narrative refinement through `settings -> briefs -> shots -> filmSources`, or `library` for reviewed design/source branches without shots. Film and brief also require reviewed `productionSources` as a parallel input before `filmSources`. Runtime does not decide the shape. Read `docs/README.md` for the non-overlapping settings, research, model, space, material, instance, motion, system, narrative, and brief ownership map.
 
-The project has one documentation root. Reusable shared targets live in `docs/principles` and `docs/obligations`; named authoring branches hold production hosts, and separately named production target families extend the graph. `lint.config.ts` owns every production stage and custom claim, while `@automovie/evidence` owns the reusable populations and topology checks. Add production-local claims; never replace or weaken the shared graph.
+The project has one documentation root. Reusable shared targets live in `docs/discovery`, `docs/principles`, and `docs/obligations`; named authoring branches hold production hosts, and separately named production target families extend the graph. `lint.config.ts` owns every production stage and custom claim, while `@automovie/evidence` owns the reusable populations and topology checks. Add production-local claims; never replace or weaken the shared graph.
 
 Each layer is `disabled`, `draft`, `evidence`, or `review`. Draft is where the first version is authored and rejects premature evidence tags. Evidence begins only after that version passes scope, addressability, completion, proportionality, same-answer, contradiction, placeholder, and omission audits. Review also requires current substantive fingerprints. A child waits for reviewed parents. Empty active populations, resident disabled hosts, ownerless source, and mismatched film identities fail while the config loads.
+
+Discovery proves that each complete authored H2 population searched the actual production instead of merely filling shared checklists. Every H2 population answers common discovery; settings adds planned-delivery and subject discovery, film prose adds film-wide and layer-specific discovery, and briefs add brief discovery. H3 and H4 do not repeat it. Retained results name their earliest owner and current realization. A true no-result is one population-wide exclusion that names the concrete inputs, risks, and sufficient owners examined. Settings also inventories every independently consequential operative subject before a dependent layer starts.
 
 `docs/research` is optional. When active, each H2 identifies one source and used portion, authority, uncertainty, and exact affected production decision. Research reaches review before settings begins; every adopted result is interpreted and cited by a settings H2 before specialist or narrative layers consume that setting. Research supports decisions but never makes them.
 
@@ -44,11 +46,15 @@ Open every PNG named by the review queue, read the exact `REVIEW_ASSET`, `REVIEW
 
 ## Begin the production
 
+`.agents/skills/production/SKILL.md` is the authoring doctrine this project ships with: the shape decision, the production-specific contract, every layer's procedure and gate, evidence staging, self-review, and final review. `AGENTS.md` routes to it, and a coding agent reads it before drafting anything.
+
 Select the kind and begin research or settings at draft. Review settings before activating design or narrative children. For each applicable design branch, review its Markdown before activating matching source. Film and brief shots wait for reviewed prose and the reviewed source corresponding to every active design branch.
 
 The design emitter is production-owned code. Import each reviewed source explicitly, state shot module/export addresses, and store every owned record through project setters. It writes and never deletes, so a record you stop deriving remains residue until you delete it or restore its owner. The screenplay index remains hand-authored. `viewer/src/viewerDocument.ts` begins with a neutral clear color so the blank viewer compiles; if that color remains visible in the delivery, replace it with one imported from reviewed production or system source rather than authoring a second visual grammar in viewer code.
 
 Read `EVIDENCE_GRAPH` for the authoring graph and `PRODUCTION_DESIGN` for typed design emission. The scaffold contains no completed production to delete.
+
+After each complete contract-discovery, layer-authorship, evidence-repair, review-verification, or authorized stage-transition process, its author rereads the complete affected surface and restarts after any repair until one complete no-edit round passes. This process review does not replace evidence gates or the final whole-production review's two consecutive clean rounds.
 
 ## Offline geometry measurements
 

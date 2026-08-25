@@ -1,6 +1,6 @@
 # Evidence Graph Handbook
 
-A production's authored layout is its obligation graph. The generated project has one documentation root: shared targets live under `docs/principles` and `docs/obligations`, named authoring branches hold production hosts, separately named production target families extend the graph, and TypeScript realizes reviewed contracts. `lint.config.ts` contains the complete production kind, stage, and additive-claim selection; `@automovie/evidence` supplies the reusable graph mechanics. There is no second project-local config source.
+A production's authored layout is its obligation graph. The generated project has one documentation root: shared targets live under `docs/principles`, `docs/obligations`, and `docs/discovery`; named authoring branches hold production hosts, separately named production target families extend the graph, and TypeScript realizes reviewed contracts. `lint.config.ts` contains the complete production kind, stage, and additive-claim selection; `@automovie/evidence` supplies the reusable graph mechanics. There is no second project-local config source.
 
 Read `SOURCE_COMPOSITION` for source arrangement and `PRODUCTION_DESIGN` before emitting typed design records. This guide owns production kinds, layer boundaries, citations, topology integrity, and staged review.
 
@@ -33,6 +33,10 @@ Research and design branches are orthogonal to kind. Activate them only when the
 
 Shared principles are per-file checklists. Every governed Markdown file answers every applicable principle H2, with no exclusions. Common obligations are a per-unit checklist. Every governed H2 and every film/brief H3/H4 answers them directly. Layer obligations distribute distinct required roles across one H2 population; one host or several may discharge a role, but no role disappears because a glob matched nothing.
 
+Discovery is ordinary coverage over a complete authored H2 population. It proves the production-specific search occurred; it is not another checklist and does not require every H2 to repeat every target. An independent result belongs to its earliest semantic owner, and a true no-result uses one population-wide exclusion that names the concrete inputs, risks, and sufficient shared owners examined. An audit assertion, future owner, deferred implementation, genre label, or style aspiration is neither a result nor an exclusion reason. Lint validates the relationship and current review fingerprint; the reviewer judges the reason's substance by rereading the target and complete host population.
+
+Every authored H2 population revisits `discovery/common.md`. Settings also answers `discovery/settings.md`; research and model, space, material, instance, motion, and system H2 populations answer only common discovery directly. Film storylines answer `common + films + storylines`, scenarios answer `common + films + scenarios`, screenplay answers `common + films + scripts`, and briefs answer `common + briefs`. H3 and H4 do not repeat these population searches. Settings backcasts the actual planned film, brief, or library consumers without pre-authoring their content, and its operative-subject obligation classifies every independently consequential actor, controller, object, environmental force, institution, subsystem, and affected population before a dependent layer starts.
+
 The authored-unit topology is closed. Outside an optional H1 title, settings, research, and design hosts use only anchored H2 units; storyline, scenario, script, and brief hosts use only anchored H2/H3/H4 units. Any other heading depth is a hard error rather than an ungoverned hiding place.
 
 One H2 asks one falsifiable question. Before adding or changing a target:
@@ -60,9 +64,9 @@ Foundation citations follow those ownership directions after the target branch r
 
 ## Shared targets and production-specific targets
 
-The shared target inventory is exact and validated when `lint.config.ts` loads. Every shared and production-local target begins with one H1 and scope statement; every anchored H2 contains exactly one `Review question:` and one final `Sources:` line. H2 anchors and titles are globally unique across that complete target inventory. No target may contain host-side `@evidence`, `@evidenceExclude`, or review tags. A local target with no additive reference and an enabled local target pattern matching zero files are both refused. A file-wide recurring condition is a principle; a duty every unit owes is a common obligation; a role allocated somewhere in one layer is a layer obligation.
+The shared target inventory is exact and validated when `lint.config.ts` loads. Every shared discovery, principle, obligation, and production-local target begins with one H1 and scope statement; every anchored H2 contains exactly one `Review question:` and one final `Sources:` line. H2 anchors and titles are globally unique across that complete target inventory. No target may contain host-side `@evidence`, `@evidenceExclude`, or review tags. A local target with no additive reference and an enabled local target pattern matching zero files are both refused. A file-wide recurring condition is a principle; a duty every unit owes is a common obligation; a role allocated somewhere in one layer is a layer obligation; an open search for production-specific conditions is discovery.
 
-Production-specific rules remain under `docs` and are activated through additive typed entries in `claims`. The exact shared inventory reserves `docs/principles` and `docs/obligations`; use `docs/production-principles`, `docs/production-obligations`, or another descriptive family for local targets. Give every adopted rule one owner:
+Production-specific rules remain under `docs` and are activated through additive typed entries in `claims`. The exact shared inventory reserves `docs/discovery`, `docs/principles`, and `docs/obligations`; use `docs/production-principles`, `docs/production-obligations`, or another descriptive family for local targets. Give every adopted rule one owner:
 
 - a production fact or constraint is an independent settings H2;
 - a condition every selected file must meet is a local principle;
@@ -136,7 +140,7 @@ export class Subject extends AutoMovieSubject<IAutoMovieModelRecipe> {
 
 The file target is the exact one-owner edge. H2 and source-principle targets divide implementation coverage across the selected exports in that file; when one export is the whole owner, it carries the complete applicable set.
 
-The reason states what the host does about the target in language a target reader can verify. Cite the narrowest unit. Principles, common obligations, and exact lineage refuse exclusion. Use population-wide exclusion only where the configured reference permits it and the complete population truly lacks the named concern; pair it with the compiler-required exclusion review. Todo is an error, not an exclusion.
+The reason states what the host does about the target in language a target reader can verify. Cite the narrowest unit. Principles, common obligations, and exact lineage refuse exclusion. Use population-wide exclusion only where the configured reference permits it and the complete population truly lacks the named concern; pair it with the compiler-required exclusion review. A discovery exclusion also names the concrete search inputs and risks plus the shared or production owner that already answers them. Todo is an error, not an exclusion.
 
 ## Derived state and examples
 
@@ -155,6 +159,7 @@ Generate a fresh scaffold and prove:
 - its only graph implementation import is the published `@automovie/evidence` package;
 - production host/source/design populations are empty;
 - shared target inventory is exact and contains no evidence tags;
+- every active H2 population carries its exact discovery references, while H3/H4 do not duplicate them;
 - source lint and scaffold canaries pass;
 - design emission and production compile refuse the unselected blank state.
 

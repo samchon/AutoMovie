@@ -31,7 +31,9 @@ Work rules, testing, the per-change 100% coverage obligation, validation, conseq
 
 ### Scaffold Authoring
 
-How a production is authored inside `packages/cli/scaffold`: mutually exclusive film, brief, and library shapes; one `docs` root for reusable principles/obligations and production-specific settings, research, model, space, material, instance, motion, system, prose, and source evidence; staged review; and generated-project guidance, `.agents/skills/scaffold/SKILL.md`. Read before authoring or reviewing production content, and before editing the scaffold, which every generated project inherits verbatim.
+How `packages/cli/scaffold` is maintained as the harness every generated project inherits verbatim: the shipped production skill, the reserved `docs/discovery`, `docs/obligations`, and `docs/principles` inventory, and the negative-probe and generated-consumer verification gates, `.agents/skills/scaffold/SKILL.md`. Read before editing anything under the scaffold.
+
+The procedure that authors a production ships inside the scaffold at `packages/cli/scaffold/.agents/skills/production/SKILL.md`, so this repository keeps one copy of it. Read that skill before authoring or reviewing production content anywhere, including a fixture or an experimental sandbox here.
 
 ### Documentation
 

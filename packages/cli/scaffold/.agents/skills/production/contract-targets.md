@@ -1,14 +1,20 @@
-# Principles and obligations
+# Contract targets
 
-`docs/principles` defines what every governed file must answer. `docs/obligations/common.md` defines what every selected authored unit must answer, while the other obligation files define how a population divides required roles. Those two directories are the exact shared inventory. Production-local targets follow the same forms under `docs/production-principles`, `docs/production-obligations`, or another descriptive family and activate only through additive claims. The graph refuses an unwired local target, an enabled local target reference with an empty population, host-side evidence tags in any target, and an H2 title or anchor duplicated anywhere in the shared-plus-local target inventory.
+`docs/discovery` defines open production-specific searches over complete authored H2 populations. `docs/principles` defines what every governed file must answer. `docs/obligations/common.md` defines what every selected authored unit must answer, while the other obligation files define how a population divides required roles. Those three directories are the exact shared inventory. Production-local targets follow the same forms under `docs/production-principles`, `docs/production-obligations`, or another descriptive family and activate only through additive claims. The graph refuses an unwired local target, an enabled local target reference with an empty population, host-side evidence tags in any target, and an H2 title or anchor duplicated anywhere in the shared-plus-local target inventory.
 
 ## Shared form
 
-Use one H1, brief scope prose, and one fixed-anchor H2 per independently falsifiable target. Add no deeper heading. Each H2 states the binding decision and boundary, one exact review question, and a final `Sources:` line supported by scholarship, standards, primary documentation, or established practice.
+Use one H1, brief scope prose, and one fixed-anchor H2 per independently falsifiable target. Add no deeper heading. Each H2 states its falsifiable search or binding decision and boundary, one exact review question, and a final `Sources:` line supported by scholarship, standards, primary documentation, or established practice.
 
 One target owns one concern. Conditional manifestations may stay together only when they test the same decision. Split a second target that can be applied, refuted, changed, repaired, cited, omitted, or reviewed independently. If the same host reason necessarily answers two sibling targets, merge them or state the boundary that makes their answers distinct.
 
 Reusable targets must be independent of one production's subject, genre, characters, ending, assets, and implementation. A candidate without that generality stays production-local or in `.wiki`. A target states observable success, representative failure, and the upstream repair required when failure reveals an earlier owner. It does not prescribe a fixed count unless the underlying contract requires one.
+
+## Discovery
+
+Each discovery H2 owns an open search whose result cannot be enumerated before reading the production. It is ordinary coverage over one complete authored H2 population, not a checklist repeated by every unit. A retained result identifies its earliest semantic owner and current realization. A true no-result permits one population-wide exclusion that names the concrete inputs and risks examined and the sufficient existing owners; an audit assertion, deferred implementation, label, or empty target is not a result.
+
+The reusable discovery target asks the question but never stores one production's answer. Put an adopted result in its production owner and add a production-local target and claim only when its independent evidence behavior requires them.
 
 ## Principles
 
