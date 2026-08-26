@@ -1,6 +1,5 @@
 import {
   AutoMovieProductionFrameCapture,
-  AutoMovieProductionGuideName,
   IAutoMovieCompileProjectOutput,
 } from "@automovie/interface";
 
@@ -36,10 +35,9 @@ export interface IAutoMovieProductionServices {
 }
 
 /**
- * Session context: guide reads, fixed root and current production services.
+ * Session context: fixed root and current production services.
  */
 export class AutoMovieProductionContext {
-  private readonly guides = new Set<AutoMovieProductionGuideName>();
   private readonly root: string;
   private readonly services = new Map<string, IAutoMovieProductionServices>();
 
@@ -53,20 +51,6 @@ export class AutoMovieProductionContext {
   ) {
     validateProductionId(defaultProductionId);
     this.root = findAutoMovieProjectRoot(projectRoot);
-  }
-
-  /**
-   * Record delivery of one exact guide.
-   */
-  public recordGuide(name: AutoMovieProductionGuideName): void {
-    this.guides.add(name);
-  }
-
-  /**
-   * Whether one exact guide received session credit.
-   */
-  public hasGuide(name: AutoMovieProductionGuideName): boolean {
-    return this.guides.has(name);
   }
 
   /**

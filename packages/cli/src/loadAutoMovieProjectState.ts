@@ -302,7 +302,7 @@ export interface IAutoMovieCurrentProjectState extends IAutoMovieProjectState {
 }
 
 /**
- * Load current tracked design and last compiler-owned output without MCP.
+ *  Load current tracked design and last compiler-owned output.
  *
  * This is a Node I/O boundary for measurement scripts, tests, and offline
  * diagnostics. It must never be imported or called by a shot/film build

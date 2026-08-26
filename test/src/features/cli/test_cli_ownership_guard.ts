@@ -87,7 +87,7 @@ export const test_cli_ownership_guard = (): void => {
       command: "Set-Content generated-alias/through-shell.json forged",
     });
     TestValidator.equals(
-      "authored design is writable while direct, shell, MCP, and linked derived paths are blocked",
+      "authored design is writable while direct, shell, and linked derived paths are blocked",
       namedFacts([
         ["authoredStatus", () => authored.status === 0],
         ["generatedStatus", () => generated.status === 2],

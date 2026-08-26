@@ -1,6 +1,6 @@
 # 실내 공간 요구사항
 
-실내는 사람이 들어가 사용하거나 camera가 내부에서 관찰하는 building interior의 공간, 경계, 마감, 설비, 가구와 state를 소유한다. MCP knowledge and evidence boundary가 안내하고 검토하는 범위는 건물 interior이며, 연결된 exterior가 정한 building mass, 건축면적과 연면적, storey elevation과 floor-to-floor height, envelope, core, shaft와 opening을 interior가 편의를 위해 바꿀 수 없다.
+실내는 사람이 들어가 사용하거나 camera가 내부에서 관찰하는 building interior의 공간, 경계, 마감, 설비, 가구와 state를 소유한다. 지식과 증거 경계가 안내하고 검토하는 범위는 건물 interior이며, 연결된 exterior가 정한 building mass, 건축면적과 연면적, storey elevation과 floor-to-floor height, envelope, core, shaft와 opening을 interior가 편의를 위해 바꿀 수 없다.
 
 각 storey, room, surface와 overlapping zone은 공유 type을 재사용하거나 독립된 ceiling, floor, tile field, wall assembly, service, lighting, acoustics와 furniture state를 가질 수 있다. Pattern의 group seed와 상관 오차, 사용자가 선택한 texture·wear·soiling, external glTF의 direct placement·native conversion·group composition은 같은 resolved building identity와 결정적 authoring evidence로 검토한다.
 

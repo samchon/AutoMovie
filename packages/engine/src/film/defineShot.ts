@@ -359,10 +359,10 @@ export interface IAutoMovieAuthoringDiagnostic {
 }
 
 /**
- * Result of the direct, non-MCP shot authoring entry point.
+ * Result of the direct shot authoring entry point.
  *
- * @evidence requirements/staging/shot-contracts-and-deliveries.md#staging-delivery-acceptance IAutoMovieCompiledDefinedShot makes delivery acceptance measurable: Result of the direct, non-MCP shot authoring entry point.
- * @evidence specifications/performance-motion-and-staging/staging-events-coverage-and-validation.md#performance-staging-contract-realization-acceptance-status IAutoMovieCompiledDefinedShot realizes inspectable delivery acceptance: Result of the direct, non-MCP shot authoring entry point.
+ * @evidence requirements/staging/shot-contracts-and-deliveries.md#staging-delivery-acceptance IAutoMovieCompiledDefinedShot makes delivery acceptance measurable: Result of the direct shot authoring entry point.
+ * @evidence specifications/performance-motion-and-staging/staging-events-coverage-and-validation.md#performance-staging-contract-realization-acceptance-status IAutoMovieCompiledDefinedShot realizes inspectable delivery acceptance: Result of the direct shot authoring entry point.
  */
 export type IAutoMovieCompiledDefinedShot =
   | {
@@ -390,7 +390,7 @@ export type IAutoMovieCompiledDefinedShot =
     };
 
 /**
- * Compile a registered shot without MCP.
+ * Compile a registered shot directly.
  *
  * The builder supplies ordinary code; the engine owns stage referential
  * integrity, blocking coherence, verb composition, ROM validation, artifact

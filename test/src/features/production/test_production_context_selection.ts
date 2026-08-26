@@ -104,24 +104,6 @@ export const test_production_context_selection = (): void => {
               "Invalid production registry",
             ),
         ],
-        [
-          "aGuideHasNoCreditBeforeItIsRecorded",
-          () =>
-            new AutoMovieProductionContext(undefined, root).hasGuide(
-              "AUTOMOVIE_OVERALL",
-            ) === false,
-        ],
-        [
-          "aRecordedGuideHasCreditUnderItsOwnNameOnly",
-          () => {
-            const context = new AutoMovieProductionContext(undefined, root);
-            context.recordGuide("AUTOMOVIE_OVERALL");
-            return (
-              context.hasGuide("AUTOMOVIE_OVERALL") &&
-              context.hasGuide("CAPTURE_FRAME") === false
-            );
-          },
-        ],
       ]),
       {
         aBlankIdIsRefusedAtConstruction: true,
@@ -129,8 +111,6 @@ export const test_production_context_selection = (): void => {
         anUntrimmedIdIsRefusedAtResolution: true,
         aProjectWithNoRegistryIsRefusedByTheRegistryReader: true,
         namingAProductionDoesNotSkipTheRegistryReader: true,
-        aGuideHasNoCreditBeforeItIsRecorded: true,
-        aRecordedGuideHasCreditUnderItsOwnNameOnly: true,
       },
     );
   } catch (error) {

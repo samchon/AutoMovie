@@ -69,10 +69,10 @@ interface ISceneCase {
 }
 
 /**
- * Every violation the MCP scene artifact validator can report, driven through
+ * Every violation the scene artifact validator can report, driven through
  * the store's read boundary.
  *
- * The validator is a pure function over the MCP-facing scene shape, consumed by
+ * The validator is a pure function over the portable scene shape, consumed by
  * both the `validateScene` tool and the `commitScene` precondition, so a commit
  * can never accept what validation rejects. Its negative branches had no test:
  * a malformed camera frustum, an unknown light type, a node pointing at no

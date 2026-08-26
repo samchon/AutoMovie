@@ -158,7 +158,7 @@ const clipValues = (result: IAutoMoviePerformedShot): number[] =>
  * to a finite point, but an EXPLICIT staged set never passes through staging,
  * and the framing solve divides by `tan(fovY / 2)`. A zero or NaN field of view
  * makes the framed distance infinite or NaN, so every keyframe the solve emits
- * is non-finite and `performShot` returns `success: true` with a clip the MCP
+ * is non-finite and `performShot` returns `success: true` with a clip the
  * artifact validator refuses at commit: the engine declaring a shot successful
  * that its own consumers cannot accept, the class #1224 and #1308 also belong
  * to.

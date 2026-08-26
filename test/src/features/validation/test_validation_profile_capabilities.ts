@@ -41,7 +41,7 @@ const failsAt = (
   );
 
 /**
- * Typed capability data is one engine contract for direct and MCP consumers.
+ * Typed capability data is one engine contract for direct and production consumers.
  *
  * Scenarios:
  *

@@ -6,7 +6,7 @@ Tile, floor, wall, ceiling, furniture와 fixture의 wear, scratch, stain, dirt, 
 
 ### 저작 의도와 자동화 경계 {#interior-aging-authoring-choice}
 
-어떤 surface를 어떤 원인과 정도로 변화시킬지는 사용자와 MCP knowledge and evidence boundary를 통해 계약과 current evidence를 받는 저작 에이전트가 선택해야 한다. 제품은 표현과 검증 수단을 제공하고 이름이나 연식만으로 임의 aging을 적용하지 않아야 한다.
+어떤 surface를 어떤 원인과 정도로 변화시킬지는 사용자와 지식과 증거 경계를 통해 계약과 current evidence를 받는 저작 에이전트가 선택해야 한다. 제품은 표현과 검증 수단을 제공하고 이름이나 연식만으로 임의 aging을 적용하지 않아야 한다.
 
 ### Source와 Mask {#interior-aging-source-mask}
 

@@ -53,7 +53,7 @@ import type { IAutoMovieRenderBundleManifest } from "./IAutoMovieProductionOracl
 import type { IAutoMovieSubjectReviewTarget } from "./IAutoMovieSubjectReview";
 
 /**
- * Closed diagnostic identities currently emitted by compiler, lint, and MCP.
+ * Closed diagnostic identities currently emitted by compiler and lint.
  *
  * This tuple is the canonical registry key set. A user-facing behavioral
  * catalog must exhaustively map it, and producers may not invent an unlisted
@@ -395,7 +395,7 @@ export interface IAutoMovieDiagnosticReference {
 }
 
 /**
- * A stable production diagnostic returned by compiler, lint and MCP.
+ * A stable production diagnostic returned by compiler and lint.
  *
  * @evidence requirements/asset-authoring/generated-assets.md#asset-generation-provider-independence Exposes `IAutoMovieDiagnostic` as the portable data boundary for the asset generation provider independence requirement.
  * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-generation-provider-choice Types `IAutoMovieDiagnostic` for the asset spec generation provider choice system contract.
@@ -450,6 +450,8 @@ export interface IAutoMovieDiagnostic {
  * The tracked manifest for a coding-agent production repository.
  *
  * @evidence requirements/agent-authoring/partial-work.md#agent-declared-omission Exposes `IAutoMovieProductionManifest` as the portable data boundary for the agent declared omission requirement.
+ * @evidence requirements/agent-authoring/project-ownership.md#agent-repository-project-boundary Draws the boundary in data: the manifest names the roots and files a project owns, and everything outside them belongs to the general capability AutoMovie ships.
+ * @evidence specifications/authoring-and-authority/capability-and-content-boundary.md#spec-authoring-system-project-responsibility Types the project-declared inventory the system structures and validates rather than supplies.
  * @evidence specifications/authoring-and-authority/partial-targets-and-atomic-results.md#spec-authoring-partial-target-input Types `IAutoMovieProductionManifest` for the spec authoring partial target input system contract.
  */
 export interface IAutoMovieProductionManifest {

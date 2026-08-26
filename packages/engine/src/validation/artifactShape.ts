@@ -5,10 +5,10 @@ import { violation } from "./violation";
 /**
  * Structural shape predicates over the artifacts the engine emits and consumes.
  *
- * These live in `engine` rather than beside the MCP validators because the
+ * These live in `engine` rather than beside the production validators because the
  * question they answer, "is this object internally well formed", belongs to the
  * artifact contract itself, not to any one consumer of it. The producer
- * (`performShot`) and the MCP commit gate must agree about that contract by
+ * (`performShot`) and the commit gate must agree about that contract by
  * sharing this code, not by two hand-maintained copies that drift until an
  * artifact passes one and fails the other (#1320).
  *

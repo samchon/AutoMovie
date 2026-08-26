@@ -28,7 +28,7 @@ const WELD_GRID = 1e9;
  * topology verdict, leaving the structural report to {@link validateModel}'s
  * mesh checks. Tessellated primitives are watertight by construction and pass;
  * the beneficiary is externally-sourced or hand-built mesh geometry validated
- * through `validateModel` or the MCP `validateModel` tool.
+ * through `validateModel`.
  *
  * @evidence requirements/asset-authoring/validation.md#asset-geometry-validation `validateMeshTopology` reports non-manifold edges and inconsistent shared-edge winding at the standalone mesh root.
  * @evidence specifications/asset-and-representation/fidelity-and-validation.md#asset-spec-validation-numeric-structure `validateMeshTopology` preserves each welded edge identity and observed incidence count or orientation beside the topology constraint.

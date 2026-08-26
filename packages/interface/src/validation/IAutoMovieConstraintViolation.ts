@@ -8,8 +8,8 @@ import { AutoMovieViolationKind } from "./AutoMovieViolationKind";
  * enriched with a {@link AutoMovieViolationKind} (so failures route to the right
  * tier/corrector) and a human-and-LLM-readable `expected` string. The engine
  * emits these from its ROM / physics / temporal verifiers at the offending JSON
- * path. A direct caller consumes them as data; the MCP surface carries the same
- * objects to an external agent when MCP owns the evidence exchange, so both
+ * path. A direct caller consumes them as data, and the same objects cross every
+ * boundary that carries a refusal outward, so both
  * direct and remote callers see exactly what was wrong and fix only that field.
  * This object _is_ how a rejected fact or a physics warning becomes an
  * actionable signal rather than a silent failure.

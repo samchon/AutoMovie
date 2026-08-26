@@ -40,8 +40,8 @@ const TARBALL_DIR = ".tarballs";
  * `exports` name built `lib/*.js` instead of `src/*.ts`. Three consequences
  * follow, and all three were measured before this replaced `link:`.
  *
- * The MCP host starts in seconds instead of 133, which is the difference
- * between a usable sandbox and an unusable one: an MCP client's `initialize`
+ * A sandbox script starts in seconds instead of 133, which is the difference
+ * between a usable sandbox and an unusable one: a driver that waits two
  * request times out at 60 seconds, and no environment variable moves it, so a
  * linked sandbox handed a live agent zero tools no matter how long it waited.
  *

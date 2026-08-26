@@ -208,7 +208,7 @@ export const realizeShotContract = (props: {
               .slice(0, index)
               .reduce((sum, previous) => sum + previous.count, 0),
       );
-    // Shot source owns choreography but not promoted hero nodes. The MCP
+    // Shot source owns choreography but not promoted hero nodes. The compiler
     // compiler adds or corrects those nodes only after compileDefinedShot has
     // returned its source, then invokes this realization again with the full
     // production. Requiring heroes during the direct/source pass makes that

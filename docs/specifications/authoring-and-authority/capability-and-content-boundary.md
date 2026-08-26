@@ -28,7 +28,7 @@ Capability 상태는 `available`, `unsupported`, `unverified` 중 하나다. `av
 <!-- @evidence requirements/product/capability-and-content.md#product-unplanted-subject-authoring 이 불변식이 미리 심지 않은 주제도 같은 능력으로 저작 가능하게 한다. -->
 <!-- @evidence requirements/product/capability-and-content.md#product-catalogue-refusal 이 불변식이 완성 자산 목록으로 일반 표현 gap을 숨기지 못하게 한다. -->
 <!-- @evidence requirements/product/scope-and-exclusions.md#product-content-catalogue-exclusion 이 불변식이 작품별 완성품 공급을 제품 경계 밖에 둔다. -->
-<!-- @evidence requirements/agent-authoring/mcp-boundary.md#agent-mcp-content-supply-refusal 이 불변식이 지식 도구도 완성 콘텐츠 공급자로 변하지 못하게 한다. -->
+<!-- @evidence requirements/agent-authoring/knowledge-boundary.md#agent-content-supply-refusal 이 불변식이 지식 도구도 완성 콘텐츠 공급자로 변하지 못하게 한다. -->
 
 새 주제는 보편 연산과 project-owned 사실의 조합으로 표현되어야 한다. Named catalogue entry, 전용 shortcut 또는 예시 자산의 존재가 성공의 선행 조건이면 그 경로는 보편 capability로 분류할 수 없다.
 

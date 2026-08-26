@@ -32,7 +32,7 @@ const preserveWorkspaceSeedFixtureCleanup = (
  * The workspace a host-owned seed resolves to, and the refusal when there is
  * none.
  *
- * Every MCP entry point starts here: the host hands in whatever path it happens
+ * Every production entry point starts here: the caller hands in whatever path it happens
  * to hold -- a directory, a file inside the project, or nothing at all -- and
  * this walk decides which immutable workspace the session belongs to. Its
  * branches had no test of their own, because every caller in the suite passed a

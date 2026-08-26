@@ -675,6 +675,7 @@ export interface IAutoMovieEditEntry {
 /**
  * Context-free shot program returned by a registered source builder.
  *
+ * @evidence requirements/agent-authoring/roles-and-authorities.md#agent-author-authority Exposes `IAutoMovieShotProgram` as the portable data boundary for the coding agent's authority to choose technique, structure, and parameters within the public contract.
  * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Exposes `IAutoMovieShotProgram` as the portable data boundary for the agent ordinary code authoring requirement.
  * @evidence specifications/authoring-and-authority/source-authority-and-derivation.md#spec-authoring-source-input Types `IAutoMovieShotProgram` for the spec authoring source input system contract.
  */

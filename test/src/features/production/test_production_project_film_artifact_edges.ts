@@ -67,7 +67,7 @@ interface IFilmCase {
 }
 
 /**
- * Every violation the MCP sequence artifact validator can report, driven
+ * Every violation the sequence artifact validator can report, driven
  * through the store's read boundary.
  *
  * This validator guards both the `commitFilm` precondition and the resident

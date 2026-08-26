@@ -43,7 +43,7 @@ const refusal = (act: () => unknown): string => {
  *
  * Scenarios:
  *
- * 1. For a 50 m elevation and a 0.05 m mullion alike, the plan the MCP surface
+ * 1. For a 50 m elevation and a 0.05 m mullion alike, the plan the production surface
  *    states and the plan the viewer harness lays out name the same viewpoints
  *    in the same order and resolve to bit-identical camera state. That equality
  *    is what lets a reviewer looking through the browser and an authoring agent

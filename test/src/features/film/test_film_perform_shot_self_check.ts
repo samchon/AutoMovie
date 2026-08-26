@@ -38,7 +38,7 @@ const perform = (set: typeof staged) =>
 /**
  * The producer states the contract its output satisfies.
  *
- * The shot artifact's rules used to live only beside the MCP commit gate, so
+ * The shot artifact's rules used to live only beside the commit gate, so
  * `performShot` could assemble a shot no consumer would accept and still report
  * success. The same failure recurred five times (#1224, #1308, #1314, #1316,
  * #1318), each closed by teaching the producer one more field, which is
@@ -60,7 +60,7 @@ const perform = (set: typeof staged) =>
  *    `performShot` call now passes through the check.
  * 2. The net catches a gap no field gate covers. `staged.scene.id` is validated
  *    nowhere on this path: `stageScene` would refuse an empty one, but an
- *    EXPLICIT staged set never passes through staging, and the MCP shape gate
+ *    EXPLICIT staged set never passes through staging, and the shape gate
  *    only requires a string. So an empty scene id reaches `shot.scene`, which
  *    the artifact contract refuses. Before the self-check this returned
  *    `success: true` with an uncommittable shot, exactly like the five fixed

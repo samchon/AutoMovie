@@ -5,7 +5,7 @@
 ### 선택 입력 {#spec-authoring-external-selection-input}
 
 <!-- @evidence requirements/product/choice-and-external-services.md#product-provider-neutral-capability 이 경계가 외부 능력을 특정 provider가 아니라 input, output, provenance와 failure로 정의한다. -->
-<!-- @evidence requirements/agent-authoring/mcp-boundary.md#agent-mcp-provider-neutrality 이 경계가 안내 surface에서 provider, model, account와 catalogue를 기본 경로로 고정하지 않게 한다. -->
+<!-- @evidence requirements/agent-authoring/knowledge-boundary.md#agent-provider-neutrality 이 경계가 안내 surface에서 provider, model, account와 catalogue를 기본 경로로 고정하지 않게 한다. -->
 
 외부 생성, 분석, 저장, 변환과 전달은 선택 가능한 execution boundary다. 시스템 contract는 provider별 API가 아니라 요청 identity, 전달 input, 반환 bytes, provenance, 한계와 failure를 정의해야 한다.
 
@@ -16,14 +16,14 @@
 
 ### 외부 실행 상태 {#spec-authoring-external-execution-state}
 
-<!-- @evidence requirements/agent-authoring/mcp-boundary.md#agent-mcp-no-surprise-external-effects 이 상태가 명시 요청 전 upload와 외부 generation을 금지한다. -->
+<!-- @evidence requirements/agent-authoring/knowledge-boundary.md#agent-no-surprise-external-effects 이 상태가 명시 요청 전 upload와 외부 generation을 금지한다. -->
 <!-- @evidence requirements/product/choice-and-external-services.md#product-delegation-not-proxy-decision 이 상태가 직접 선택, 위임과 보류를 service 가용성과 분리한다. -->
 
 외부 실행은 `unselected`, `authorized`, `running`, `refused`, `returned`, `adopted`, `superseded` 상태를 가진다. `authorized` 전에는 input 전송과 비용 발생이 없어야 하며, `returned` 결과는 사용자 또는 해당 선택을 위임받은 코딩 에이전트가 채택하기 전까지 작품 source나 current rendition이 아니다.
 
 ### 실행 요청과 side effect {#spec-authoring-external-request-output}
 
-<!-- @evidence requirements/agent-authoring/mcp-boundary.md#agent-mcp-no-surprise-external-effects 이 요청이 service, 전달 input, 결과 용도와 비용 경계를 명시하게 한다. -->
+<!-- @evidence requirements/agent-authoring/knowledge-boundary.md#agent-no-surprise-external-effects 이 요청이 service, 전달 input, 결과 용도와 비용 경계를 명시하게 한다. -->
 
 외부 실행 요청은 선택된 service identity, exact target, 전송할 input digest 목록, parameter, 결과 용도와 허용 비용을 포함해야 한다. 출력은 attempt identity, 실제 execution identity, returned bytes 또는 structured refusal이며 지식 조회와 deterministic evidence 요청은 이 실행을 암묵적으로 만들 수 없다.
 

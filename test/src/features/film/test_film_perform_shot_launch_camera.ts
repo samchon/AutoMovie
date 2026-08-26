@@ -81,7 +81,7 @@ const says = (
  * the engine injects is appended to the action list AFTER the input gate has
  * run, so it slipped past the very rule that refuses a camera as the actor of
  * any verb but `frame`. Left open, the shot compiles with a camera in
- * `shot.performances`, which the MCP artifact validator then refuses at commit:
+ * `shot.performances`, which the artifact validator then refuses at commit:
  * the engine declaring a shot successful that its own consumers cannot accept.
  *
  * Scenarios:
@@ -99,7 +99,7 @@ const says = (
  *    recoil, the engine already withholds the react, and nothing changed
  *    there.
  * 6. Across every performing scenario, `shot.performances` never names a camera,
- *    the invariant the MCP shot validator independently enforces.
+ *    the invariant the shot validator independently enforces.
  */
 export const test_film_perform_shot_launch_camera = (): void => {
   const perform = performing();
