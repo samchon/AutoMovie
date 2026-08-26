@@ -67,7 +67,9 @@ First confirm that deterministic source and full beauty/control grid are correct
 
 ## Review failures
 
-Prepare again and use only returned current selectors, frames, outcomes, fingerprint, and criteria order. Resolve error diagnostics before composing prose. Distinguish a correction from an observation, and never set the final boolean true while a correction remains.
+`review-evidence-missing` means a shot is being reviewed while frames its own contract declares are absent at that shot's current fingerprint. It is not a capture failure and retrying the compile will not clear it: capture the exact frame-and-pass pairs the message names, then compile again. If the shot moved after those frames were drawn, the old bundles are still on disk and still do not count, which is the refusal working rather than failing. Reading a stale bundle as evidence is the one error this code exists to prevent.
+
+Resolve every error diagnostic before writing a word of review prose. A review composed against a refused compile describes a production that does not exist.
 
 `review-outcome-artifact-missing` and `review-outcome-artifact-malformed` are compiler-publication failures. Compile the same current inputs, having first removed only the damaged publication the occurrence names, and prepare again. `review-outcome-contract-mismatch` reads like their sibling and is not one; it belongs under Escalation record below.
 

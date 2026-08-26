@@ -146,6 +146,8 @@ import {
 import { assertProductionFeatureUsesRenditionClips } from "./muxProductionFeatureMp4";
 import { probeProductionMedia } from "./probeProductionMedia";
 import { AutoMovieModelArchetypeRegistry } from "./productionArchetypes";
+import { productionRenderTargetFingerprint } from "./renderIdentity";
+import { reviewEvidenceDiagnostics } from "./reviewEvidenceDiagnostics";
 import {
   AUTOMOVIE_SANDBOX_BRIDGED_ENGINE_EXPORTS,
   callAutoMovieSandboxEngine,
@@ -666,6 +668,26 @@ export class AutoMovieProductionCompiler {
           realizations,
           scope: input.scope,
           screenplay,
+        }),
+      );
+    // A citation states what was verified and expires when its source moves,
+    // which says everything about prose and nothing about pixels. This is the
+    // other half: the frames a contract declared must exist at the target's
+    // current identity before any review of it can be true.
+    if (manifest !== null)
+      diagnostics.push(
+        ...reviewEvidenceDiagnostics({
+          captured: (target, fingerprint) =>
+            this.project.capturedRenderViews(target, fingerprint),
+          contracts: graph.shots,
+          fingerprint: (target) =>
+            productionRenderTargetFingerprint(
+              this.project,
+              manifest,
+              target,
+              contentInputs,
+            ),
+          scope: input.scope,
         }),
       );
     if (input.scope === "final")
@@ -7760,10 +7782,11 @@ const screenplayCoverageDiagnostics = (props: {
   // scene from shot realization with an auditable reason, so honouring it is
   // the difference between a coverage gate and a demand that every scene be
   // shot. Tombstones need no exemption; they are not active.
-  // A required acceptance scenario citing a scene is what turns a compiled
-  // realization into an observation someone signed for. The review gate refuses
-  // an incomplete review separately, so a scene cited by a required scenario is
-  // a scene a passing review had to answer for.
+  // A required acceptance scenario citing a scene is what claims that scene was
+  // observed. The claim is a declaration in the ledger and this set is coverage
+  // over declarations, not over pixels: whether the frames behind it exist is
+  // asked by `review-evidence-missing`, and whether anyone looked at them is
+  // stated in the evidence citation on the source that realizes the shot.
   const observed = new Set<string>();
   for (const scenario of props.acceptance.values()) {
     if (scenario.required !== true) continue;

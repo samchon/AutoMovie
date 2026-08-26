@@ -14,6 +14,10 @@ For an exclusion, read the target and complete claim population, find the actual
 
 A fingerprint covers its selected target and descendants, excluding evidence comments. Child changes expire ancestor reviews. Never invent, copy, or mechanically refresh a fingerprint.
 
+What a fingerprint proves is narrow, and knowing its limit is what keeps a review honest: it proves a separately addressed statement exists and was written against the cited content as it now stands. It does not prove anyone looked at anything. So for a visual unit the other half is mechanical and the compiler asks it: `review-evidence-missing` refuses a review-scope compile while a shot lacks any frame-and-pass pair its own contract's `reviewFrames` declare, filed at that shot's current fingerprint. A previous version's frames are still on disk and do not count, which is the point — the evidence a verdict rests on has to be evidence of the thing being judged.
+
+That leaves exactly one thing to you, and it is the thing no mechanism can do: open the frames and write what they showed. A citation naming no observation passes every check in this project and is still not a review.
+
 ## Final whole-production review
 
 Start only when every applicable layer is in `review`, the source lint is clean, and derived design is current. Review in this order:

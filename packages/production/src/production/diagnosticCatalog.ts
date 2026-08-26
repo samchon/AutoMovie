@@ -251,11 +251,10 @@ const FAMILY_CONTRACTS: Readonly<Record<string, IDiagnosticFamilyContract>> = {
   review: {
     path: ".agents/skills/production/review.md#evidence-review",
     invariant:
-      "Review completion requires fresh target-local evidence, every required criterion, an observation, correction state, and a non-copied outcome.",
+      "A reviewed target must hold the evidence its own contract declares, captured at the target's current identity.",
     correction:
-      "Inspect the returned evidence and repair the worksheet field named by the occurrence; the service never decides the verdict for the reviewer.",
-    recheck:
-      "Prepare a fresh worksheet and submit every returned criterion again.",
+      "Capture the declared frames the occurrence names, then state what they showed in the evidence citation on the source that realizes the target; nothing decides the verdict on the reviewer's behalf.",
+    recheck: "Compile the same scope again and confirm the occurrence is gone.",
   },
   screenplay: {
     path: ".agents/skills/production/screenplays.md#gate",

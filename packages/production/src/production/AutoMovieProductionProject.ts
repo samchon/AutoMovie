@@ -1,4 +1,6 @@
 import {
+  AutoMovieContentDigest,
+  AutoMovieGuidePass,
   IAutoMovieAcceptanceScenario,
   IAutoMovieAssetManifest,
   IAutoMovieDesignMutationConsequences,
@@ -2078,6 +2080,43 @@ export class AutoMovieProductionProject {
         );
       seen.add(key);
     }
+  }
+
+  /**
+   * Every verified frame committed for one target at one exact fingerprint.
+   *
+   * A bundle is filed under the target's fingerprint, so reading only that
+   * directory is what makes the answer current: a target whose design, source,
+   * or compiler identity moved has an empty answer here even though its
+   * previous self's pixels are still on disk. Each bundle is read through
+   * {@link verifiedRenderManifest}, so a manifest whose receipt, path, or
+   * frame bytes do not agree contributes nothing rather than counting as
+   * evidence.
+   */
+  public capturedRenderViews(
+    target: IAutoMovieRenderBundleManifest["target"],
+    fingerprint: AutoMovieContentDigest,
+  ): Array<{ time: number; pass: AutoMovieGuidePass }> {
+    this.assertIncarnation();
+    const root = this.renderRoot();
+    const directory = path.join(
+      root,
+      `${target.kind}-${encodeAutoMoviePathSegment(target.id)}`,
+      fingerprint.slice("sha256:".length),
+    );
+    const linked = lstatOrNull(directory);
+    if (linked === null || linked.isDirectory() === false) return [];
+    const views: Array<{ time: number; pass: AutoMovieGuidePass }> = [];
+    for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
+      if (entry.isDirectory() === false) continue;
+      const manifest = this.verifiedRenderManifest(
+        path.join(directory, entry.name, "manifest.json"),
+      );
+      if (manifest === null) continue;
+      for (const frame of manifest.frames)
+        views.push({ pass: frame.pass, time: frame.time });
+    }
+    return views;
   }
 
   /**

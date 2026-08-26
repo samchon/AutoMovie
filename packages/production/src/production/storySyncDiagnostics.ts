@@ -21,10 +21,9 @@ export const storySyncCriterionOf = (
 /**
  * Measure one simultaneity claim against the shots' current realizations.
  *
- * Both the compiler gate and the review worksheet route through here, so the
- * verdict a compile refuses on and the outcome a reviewer must cite are the
- * same measurement over the same realized event times, never two readings that
- * can disagree.
+ * Every consumer routes through here, so the verdict a compile refuses on and
+ * the outcome an author cites in an evidence citation are the same measurement
+ * over the same realized event times, never two readings that can disagree.
  */
 export const autoMovieStorySyncOutcome = (props: {
   criterion: Extract<
