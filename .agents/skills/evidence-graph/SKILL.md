@@ -45,7 +45,7 @@ Do not set `uniqueEvidence` on a specification reference merely to manufacture a
 
 Derive the complete carrier population from a source-tree glob. Never define that complete set as the union of hand-written paths.
 
-A listed population makes "owes no evidence" the default for every file added after the list was written, and nothing reports the omission. This failure once left the MCP repaint implementation and other source files outside their package graphs while the surrounding configuration promised automatic document admission.
+A listed population makes "owes no evidence" the default for every file added after the list was written, and nothing reports the omission. This failure once left the repaint implementation and other source files outside their package graphs while the surrounding configuration promised automatic document admission.
 
 Write each whole-population exclusion as a negative pattern beside the positive one and state in the population's JSDoc why that file owes no package contract. The repository currently accepts three reasons: a barrel re-exports declarations that already answer at their definition, a process entry point is not a contract carrier, and a generated file is not authored. Cross every directory depth (`src/**/*.ts`), because a one-level glob admits only the top directory.
 
@@ -55,11 +55,13 @@ A derived population makes a carrier's citations checked; it does not make citat
 
 ## Packages outside the graph
 
-`@automovie/mcp` and `@automovie/playground` carry no `evidence/graph` claim. Their `lint.config.ts` keeps `evidence/documented` and `evidence/todo`, so every export still owes a comment and an unpaid `@todo` still fails the build, but no export cites a requirement or a specification.
+`@automovie/production` and `@automovie/playground` carry no `evidence/graph` claim. Their `lint.config.ts` keeps `evidence/documented` and `evidence/todo`, so every export still owes a comment and an unpaid `@todo` still fails the build, but no export cites a requirement or a specification.
 
-The MCP surface is out by decision, not by omission. Its JSDoc is shipped API text: `typia.llm.controller` turns the class comment into the MCP server instruction and each method comment into a tool description under a hard length cap, and the [mcp skill](../mcp/SKILL.md) keeps the server and tool arrangement a standing experiment. Citations there competed with the prose an MCP client actually reads, and every reshuffle of an experimental surface rewrote them.
+The reason the production package was excluded no longer holds, and saying so is the point of this section. It was excluded as a shipped MCP surface: `typia.llm.controller` turned its class comments into server instructions and its method comments into tool descriptions under a hard length cap, so citations competed for room with prose an MCP client actually read, and every reshuffle of an experimental surface rewrote them. That surface is gone. What is left is ordinary internal library code — the compiler, the project store, capture, inspection, the render job — with nothing in it that a citation would displace.
 
-What that costs is recorded rather than hidden. The units MCP used to own returned to `legacy` in `docs/contract-ownership/`, where they read as debt nobody owns instead of as a promise a package answers for. Read that trade before proposing a graph claim for either package again.
+What the exclusion costs is recorded rather than hidden. The units it used to own sit in `legacy` in `docs/contract-ownership/`, where they read as debt nobody owns instead of as a promise a package answers for, and that debt is now unpaid for no stated reason. Admitting the package to the graph is the standing correction; until someone does it, describe the exclusion as debt and never as a decision.
+
+The playground is a different case and still a live one: it is a scratch surface whose files exist to be thrown away, and a citation on a file with no expected lifetime is a promise nobody intends to keep.
 
 ## Declare one owner per contract unit
 

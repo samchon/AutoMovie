@@ -1,17 +1,17 @@
 ---
 name: experiment
-description: Defines how automovie runs an ad-hoc experiment: creating a disposable source-linked sandbox under experimental/, briefing and steering a live Claude Code or Codex session that drives its MCP surface against working-tree code, and deciding what an observation is worth. Use when the user asks to try something out, drive the tools by hand, run a benchmark against an authoring agent, or see how a change behaves through a real agent; do not use for a render inspection of something already running (viewer-verification) or a repository-wide audit (issue-campaign).
+description: Defines how automovie runs an ad-hoc experiment: creating a disposable source-linked sandbox under experimental/, briefing and steering a live Claude Code or Codex session that authors inside it against working-tree code, and deciding what an observation is worth. Use when the user asks to try something out, drive a generated project by hand, run a benchmark against an authoring agent, or see how a change behaves through a real agent; do not use for a render inspection of something already running (viewer-verification) or a repository-wide audit (issue-campaign).
 ---
 
 # Experiment
 
 An experiment answers one question by running the real thing. Create a disposable sandbox, drive it with a live agent, read what happens, and throw the sandbox away.
 
-The sandbox consumes this working tree, not a release. That is the whole point: a change to `packages/mcp` or `packages/engine` is live in the next host start, so the agent-facing surface can be exercised before it ships rather than after.
+The sandbox consumes this working tree, not a release. That is the whole point: a change to `packages/production` or `packages/engine` is live in the sandbox's next script run, so the agent-facing surface can be exercised before it ships rather than after.
 
 An experiment produces an observation, not a score.
 
-Read the [project](../project/SKILL.md) and [mcp](../mcp/SKILL.md) skills before driving the tools, and the [viewer-verification](../viewer-verification/SKILL.md) skill before claiming anything about a render.
+Read the [project](../project/SKILL.md) and [scaffold](../scaffold/SKILL.md) skills before driving a sandbox, and the [viewer-verification](../viewer-verification/SKILL.md) skill before claiming anything about a render.
 
 ## Create The Sandbox
 
@@ -40,26 +40,23 @@ Read this before debugging a sandbox that will not start. Each item is a failure
 | All nine packages are pinned directly, `evidence`, `ingest`, and `render` included | `pnpm pack` rewrites the packed packages' own `workspace:^` ranges into plain semver, which would otherwise resolve from the public registry at a version this monorepo never published |
 | The install runs `npm`, not `pnpm` | npm satisfies those transitive ranges from the directly installed siblings. pnpm does not, and its `overrides` do not reach a range from inside a packed tarball either; the same 404 just surfaces one package later |
 | A standalone install, not a root workspace member | A member writes an importer into the tracked `pnpm-lock.yaml`, and `experimental/` is gitignored, so that lock would name a directory no other checkout has |
-| `.claude/settings.json` sets `enableAllProjectMcpServers` | A `.mcp.json` server starts unapproved, approval is interactive, and `--dangerously-skip-permissions` does not grant it, so a headless session would see no automovie tools at all |
 
-Linking the packages directly was tried first and is not viable. A `link:` resolves through `exports` to untransformed `src/*.ts`, and the measured MCP host then took **133 seconds** to answer `initialize` against a client timeout of **60**, which no environment variable moves. `MCP_TIMEOUT` governs a different phase and is applied; the request itself still fails with `-32001`. Warming that compile is impossible too: `ttsx` writes its emitted output to a **PID-scoped** directory under `node_modules/.cache/ttsc/ttsx/project/`, so no later process reuses it, and a `ttsc` build beforehand changes nothing.
+Linking the packages directly was tried first and is not viable. A `link:` resolves through `exports` to untransformed `src/*.ts`, so every sandbox script pays a full compile of the product tree before it does anything; the measured cost was **133 seconds** to reach a first answer, and it is paid again on the next run. Warming that compile is impossible too: `ttsx` writes its emitted output to a **PID-scoped** directory under `node_modules/.cache/ttsc/ttsx/project/`, so no later process reuses it, and a `ttsc` build beforehand changes nothing.
 
-Two symptoms map straight to this table. `typia.llm.controller(): no transform has been configured` or `does not provide an export named` for a symbol the package plainly exports both mean something is resolving `src` rather than a tarball's `lib`. `Pending approval (run claude to approve)` from `claude mcp list` means the settings file did not reach the session.
+One symptom maps straight to this table: `does not provide an export named` for a symbol the package plainly exports means something is resolving `src` rather than a tarball's `lib`.
 
 A sandbox script fails loudly but exits through a pipe, so `npm run <script> | tail` can print a plausible tail for a command that died. Read the exit code, not the tail.
 
 ## Drive It
 
-Claude Code reads the sandbox's `.mcp.json`, so attaching is nothing more than starting there:
+A sandbox is an ordinary project, so attaching is nothing more than starting there:
 
 ```bash
 cd experimental/<name>
-claude
+claude          # or: codex
 ```
 
-Codex takes its MCP servers from its own configuration rather than `.mcp.json`. The generator prints the exact `codex mcp add` line for the sandbox it just created; use that, because it carries absolute paths Codex needs.
-
-Give the agent a brief and let it work. The agent drives the tools; you observe and record. Do not narrate the tool calls on its behalf or perform them yourself, since the point is to see what the surface affords a model that has only the guides and the schemas.
+Give the agent a brief and let it work. The agent authors; you observe and record. Do not write its source on its behalf or run its scripts for it, since the point is to see what the project affords a model that has only the shipped skill, the contracts, and the compiler's refusals.
 
 Read [briefing.md](briefing.md) before writing the brief for a benchmark, where the agent authors a whole production over many rounds. What the brief withholds, the order it asks the work in, and the instrument that will judge it decide most of what such a run costs, and none of the three can be repaired later without giving up the ability to run the brief again.
 
@@ -83,7 +80,7 @@ Never adjust the sandbox to make a result look better. A sandbox edited until it
 
 An experiment is allowed to end with nothing but an answer. Publish an issue only when the observation survives fact-checking against the real code path, and follow the [issue-campaign skill's Self-Contained Issue Body](../issue-campaign/SKILL.md#self-contained-issue-body) contract when you do.
 
-Attribute before publishing: an engine defect, a missing schema axis, MCP-surface friction, and a guide gap are automovie's; a model-side failure against an adequate surface is not.
+Attribute before publishing: an engine defect, a missing contract axis, a refusal that does not say what to do, and a gap in the shipped skill are automovie's; a model-side failure against an adequate surface is not.
 
 An experiment's issue recommends a fix from outside the code, so write its approach as the hypothesis it is and say what the hypothesis rests on. Three issues from one campaign were reversed by their own implementers: a colour recommendation that would have made both paths wrong together instead of one, a lint marker that failed against six real sentences, and a quantity record that was a claim rather than a measurement. An implementer that contradicts the issue has read the code path the observation could not, so treat the contradiction as evidence.
 

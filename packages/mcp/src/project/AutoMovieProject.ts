@@ -52,10 +52,10 @@ import {
 } from "../validators/primitives";
 import { acquireCommitLock, releaseCommitLock } from "./commitLock";
 import {
-  IAutoMovieMcpActorSpec,
-  IAutoMovieMcpProjectSummary,
-  IAutoMovieMcpPropSpec,
-  IAutoMovieMcpWritableSlate,
+  IAutoMovieLegacyActorSpec,
+  IAutoMovieLegacyProjectSummary,
+  IAutoMovieLegacyPropSpec,
+  IAutoMovieLegacyWritableSlate,
   toEnginePropSpec,
 } from "./legacyRecords";
 import { beatOf, shotIdOf } from "./shotKey";
@@ -177,7 +177,7 @@ export class AutoMovieProject {
   /**
    * The stored slate assembled from the slice files (film excluded).
    */
-  public storedSlate(): Omit<IAutoMovieMcpWritableSlate, "film"> {
+  public storedSlate(): Omit<IAutoMovieLegacyWritableSlate, "film"> {
     return this.withRootNamespace(() => {
       this.synchronizeResidentState();
       const script = readValidatedJson<IAutoMovieScript>(
@@ -222,7 +222,7 @@ export class AutoMovieProject {
   /**
    * The full writable slate, including the film slice.
    */
-  public writableSlate(): IAutoMovieMcpWritableSlate {
+  public writableSlate(): IAutoMovieLegacyWritableSlate {
     return this.withRootNamespace(() => {
       const stored = this.storedSlate();
       return {
@@ -254,8 +254,8 @@ export class AutoMovieProject {
    * slices (script/scene/notes/film) are untouched.
    */
   public orderResidentSlate(
-    slate: IAutoMovieMcpWritableSlate,
-  ): IAutoMovieMcpWritableSlate {
+    slate: IAutoMovieLegacyWritableSlate,
+  ): IAutoMovieLegacyWritableSlate {
     return {
       ...slate,
       shots: orderByFilename(slate.shots, (shot) => beatOf(shot.id) ?? shot.id),
@@ -277,7 +277,7 @@ export class AutoMovieProject {
    * batch, a hard crash mid-flush remains a documented microsecond window,
    * surfaced by the per-slice load validation on the next open.
    */
-  public saveSlate(slate: IAutoMovieMcpWritableSlate): void {
+  public saveSlate(slate: IAutoMovieLegacyWritableSlate): void {
     const shots = new Map(
       slate.shots.map((shot) => [beatOf(shot.id) ?? shot.id, shot]),
     );
@@ -448,10 +448,10 @@ export class AutoMovieProject {
   /**
    * The stored prop specs, one per `props/<node>.json`, in filename order.
    */
-  public storedProps(): IAutoMovieMcpPropSpec[] {
+  public storedProps(): IAutoMovieLegacyPropSpec[] {
     return this.withRootNamespace(() => {
       this.synchronizeResidentState();
-      return this.readKeyedSlices<IAutoMovieMcpPropSpec>(
+      return this.readKeyedSlices<IAutoMovieLegacyPropSpec>(
         "props",
         {
           label: "prop node",
@@ -468,7 +468,7 @@ export class AutoMovieProject {
    * rule below the slate): re-forging a prop replaces exactly its own file,
    * leaving sibling props byte-identical.
    */
-  public saveProp(spec: IAutoMovieMcpPropSpec): void {
+  public saveProp(spec: IAutoMovieLegacyPropSpec): void {
     const file = path.join(this.root, "props", sliceFilename(spec.node));
     const content = serializeJson(spec);
     this.commitCycle((assertNamespace) =>
@@ -494,10 +494,10 @@ export class AutoMovieProject {
    * explicit input passes, which reports tampered fields against
    * `$slate.actors` with full precision.
    */
-  public storedActors(): IAutoMovieMcpActorSpec[] {
+  public storedActors(): IAutoMovieLegacyActorSpec[] {
     return this.withRootNamespace(() => {
       this.synchronizeResidentState();
-      return this.readKeyedSlices<IAutoMovieMcpActorSpec>("actors", {
+      return this.readKeyedSlices<IAutoMovieLegacyActorSpec>("actors", {
         label: "actor node",
         expected: (node) => node,
         actual: (spec) => spec.node,
@@ -520,7 +520,7 @@ export class AutoMovieProject {
    * (serializeJson is the throw-prone step) makes it all-or-nothing, exactly as
    * {@link saveSlate} does.
    */
-  public saveActors(specs: readonly IAutoMovieMcpActorSpec[]): void {
+  public saveActors(specs: readonly IAutoMovieLegacyActorSpec[]): void {
     const staged = specs.map((spec) => ({
       file: path.join(this.root, "actors", sliceFilename(spec.node)),
       content: serializeJson(spec),
@@ -619,7 +619,7 @@ export class AutoMovieProject {
   /**
    * What the project holds: which slices exist, and the tracked assets.
    */
-  public summary(): IAutoMovieMcpProjectSummary {
+  public summary(): IAutoMovieLegacyProjectSummary {
     return this.withRootNamespace(() => {
       const slate = this.writableSlate();
       return {
@@ -649,7 +649,7 @@ export class AutoMovieProject {
    * film is committed, mid-rework, ownership is undefined, and a noisy ledger
    * would prescribe deleting work about to be re-owned.
    */
-  private staleRenders(slate: IAutoMovieMcpWritableSlate): string[] {
+  private staleRenders(slate: IAutoMovieLegacyWritableSlate): string[] {
     if (slate.film === null) return [];
     const stems = new Set<string>([
       renderPathStem(slate.film.id),
@@ -1505,7 +1505,7 @@ const validateBeatEndSlice = (
 };
 
 const validatePropSlice = (
-  value: IAutoMovieMcpPropSpec,
+  value: IAutoMovieLegacyPropSpec,
   violations: IAutoMovieConstraintViolation[],
 ): void => {
   const before = violations.length;
@@ -1540,7 +1540,7 @@ const validatePropSlice = (
   if (violations.length !== before) return;
   try {
     const forged = forgeProp(
-      toEnginePropSpec(value as unknown as IAutoMovieMcpPropSpec),
+      toEnginePropSpec(value as unknown as IAutoMovieLegacyPropSpec),
     );
     if (forged.success === false) violations.push(...forged.violations);
   } catch {

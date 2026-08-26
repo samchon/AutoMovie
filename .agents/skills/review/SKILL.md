@@ -16,7 +16,7 @@ Apply [AGENTS.md's **Choose the principled course** rule](../../../AGENTS.md#att
 A complete round must satisfy all four rules:
 
 - **Whole surface:** read every changed file and hunk. For issue discovery, audit the entire campaign scope. Never partition by file, package, concern, platform, or round.
-- **Consequence surface:** inspect affected code paths, tests, rendered output, CI, packaging, documentation, and consumers. Trace side effects, state transitions, determinism, numeric and quaternion behavior, Windows and POSIX behavior, public API and MCP-surface compatibility, boundaries, and failure and recovery paths beyond the named symptom or diff.
+- **Consequence surface:** inspect affected code paths, tests, rendered output, CI, packaging, documentation, and consumers. Trace side effects, state transitions, determinism, numeric and quaternion behavior, Windows and POSIX behavior, public API compatibility, boundaries, and failure and recovery paths beyond the named symptom or diff.
 - **Fresh start:** use the current state and repeat the whole inspection. Earlier rounds, sampled files, and a recheck of only the latest fix do not count as coverage.
 - **Unlimited rounds:** whenever the reviewer applies an improvement or accepts a meaningful issue candidate, update the work and start another complete round. Stop only after a complete round produces nothing that survives verification.
 
@@ -25,7 +25,7 @@ A complete round must satisfy all four rules:
 Self-Review and an unqualified review request use this solo workflow:
 
 1. Establish the complete change surface, including the pull request base-to-head diff and any uncommitted changes.
-2. Perform one complete round under the Non-Negotiable Review Law. Include correctness and boundaries, numeric and quaternion behavior, determinism, Windows and POSIX behavior, state, public API and MCP-surface compatibility, test isolation and the 100% coverage mandate, CI and packaging, documentation and the `.wiki`, the [evidence graph skill](../evidence-graph/SKILL.md) for any changed requirement, specification, public citation, or graph configuration, and the viewer-verification skill for anything visual.
+2. Perform one complete round under the Non-Negotiable Review Law. Include correctness and boundaries, numeric and quaternion behavior, determinism, Windows and POSIX behavior, state, public API compatibility, test isolation and the 100% coverage mandate, CI and packaging, documentation and the `.wiki`, the [evidence graph skill](../evidence-graph/SKILL.md) for any changed requirement, specification, public citation, or graph configuration, and the viewer-verification skill for anything visual.
 3. Reproduce every suspected defect before accepting it.
 4. Apply every sound improvement and run the narrowest verification authorized by the owning workflow.
 5. If anything changed, restart at step 1 as a fresh full round.
@@ -62,13 +62,27 @@ A failed search proves a name was not found, not that a capability is absent, an
 Complete all four steps before writing that something is missing.
 
 1. Read the contract type's JSDoc. Deliberate exclusions are stated there ("the sun direction is an input, not a computation").
-2. Search `packages/mcp/prompts/*.md` in the user's vocabulary rather than the implementation's. The guides teach in a director's words (a curtain, a ridge, a reverberant room), so probing them with type names finds nothing even where the topic is covered.
+2. Search the shipped authoring skill under `packages/template/scaffold/.agents/skills/production/` in the user's vocabulary rather than the implementation's. It teaches in a director's words (a curtain, a ridge, a reverberant room), so probing it with type names finds nothing even where the topic is covered.
 3. Check whether related fields already exist and, if they do, read why. Half a mechanism usually means the other half was deferred under another name.
 4. Confirm the probe. Verify how the target is actually spelled, count consumers by exported symbol rather than by module filename, and read checked-in source rather than a generated artifact.
 
 When the steps turn up a declared position, the finding is not "this is missing" but "this was deferred, and here is what now lets it be done deliberately and within stated bounds", which carries a different burden of proof.
 
 "It is already there" needs the same discipline, because a symbol's existence is not a path's existence. One round withdrew a real gap after finding an ingest function and a retargeter, and the capability was still unreachable: nothing in the pipeline called the ingester, the asset manifest had no kind to declare the file under, and the retargeter was absent from the sandbox surface an authoring agent may import. Before writing that a capability exists, confirm all four: the contract gives an author somewhere to declare it, something in the compiler or runtime calls it, the author can reach the symbol, and the result shows up in a frame or in evidence.
+
+## A claim the compiler can decide is not a review criterion
+
+Looking is expensive. It costs frames, an agent's attention, and a written justification, and every verdict it produces stales the moment anything upstream moves. So the boundary worth defending is not "what could a reviewer look at" but **what can only be settled by looking**.
+
+Two requirements already draw that line, and they point the same way. `docs/requirements/story/coverage-and-acceptance.md#story-falsifiable-acceptance` asks a story success condition to carry a subject, a time or event, an observable state, and a failure condition, and forbids it ending in a bare evaluative word. `docs/requirements/story/scenes-and-observable-action.md#story-scene-observability` forbids resting acceptance on inner facts a camera cannot see. A claim that satisfies the first is by construction a predicate; a claim that needs the second is by construction pixels.
+
+Sorted by that test, a production's obligations split cleanly. Binding, exports, determinism, engine enforcement, and error paths are settled by reading the module. Identity, references, scope, ownership, ranges, and downstream consumability are settled by the records and the compile diagnostics. Acceptance outcomes are already the compiler's: it returns an explicit verdict per authored opening, closing, event, camera, actor, and formation predicate. What is left over — whether a silhouette reads, whether a performance is credible, whether a cut lands, whether a rendition holds together — is settled by looking, and by nothing else.
+
+The first group is the larger one. That is the whole argument for keeping it out of a person's hands: a compiler does not tire, does not stale, and names the exact figure that disagrees.
+
+So when a review keeps producing the same class of finding, ask whether it is a diagnostic in the wrong place. And measure what already refuses the case before writing the check that refuses it again — a regex beside a parser looks like new coverage and is a second, worse spelling of a rule that already held.
+
+This is not an argument against looking. It is what keeps looking affordable: let the compiler decide every addressed, timed, observable claim, and spend the frames on what only frames can answer. Then say what the frames showed, in the evidence citation on the source that claims the unit is realized. A citation that names no observation is not a review, and nothing records one on your behalf.
 
 ## Explicit Multi-Agent Reviews
 

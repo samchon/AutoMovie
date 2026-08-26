@@ -1,5 +1,5 @@
 import { IAutoMovieScript } from "@automovie/interface";
-import { AutoMovieProject, IAutoMovieMcpWritableSlate } from "@automovie/mcp";
+import { AutoMovieProject, IAutoMovieLegacyWritableSlate } from "@automovie/mcp";
 import { TestValidator } from "@nestia/e2e";
 import fs from "node:fs";
 import os from "node:os";
@@ -72,7 +72,7 @@ const scriptOf = (logline: string): IAutoMovieScript => ({
   ],
 });
 
-const slateOf = (logline: string): IAutoMovieMcpWritableSlate => ({
+const slateOf = (logline: string): IAutoMovieLegacyWritableSlate => ({
   script: scriptOf(logline),
   scenes: [],
   shots: [],

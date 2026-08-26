@@ -4,7 +4,7 @@ import {
   IAutoMovieSequence,
   IAutoMovieShot,
 } from "@automovie/interface";
-import { AutoMovieProject, IAutoMovieMcpWritableSlate } from "@automovie/mcp";
+import { AutoMovieProject, IAutoMovieLegacyWritableSlate } from "@automovie/mcp";
 import { TestValidator } from "@nestia/e2e";
 import fs from "node:fs";
 import os from "node:os";
@@ -53,8 +53,8 @@ const beatEndOf = (beat: string): IAutoMovieBeatEndState => ({
 });
 
 const slateWith = (
-  partial: Partial<IAutoMovieMcpWritableSlate>,
-): IAutoMovieMcpWritableSlate => ({
+  partial: Partial<IAutoMovieLegacyWritableSlate>,
+): IAutoMovieLegacyWritableSlate => ({
   script: null,
   scenes: [],
   shots: [],

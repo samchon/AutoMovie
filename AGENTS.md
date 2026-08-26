@@ -61,7 +61,7 @@ Solo repository-wide issue discovery, main-agent-vetted issue publication, DAG-o
 
 ### Experiment
 
-Ad-hoc experimentation: a disposable source-linked sandbox under `experimental/`, briefed and steered through a live Claude Code or Codex session against the working tree, `.agents/skills/experiment/SKILL.md`. Read when the user wants to try something out, run a benchmark against an authoring agent, or drive the MCP tools by hand.
+Ad-hoc experimentation: a disposable source-linked sandbox under `experimental/`, briefed and steered through a live Claude Code or Codex session against the working tree, `.agents/skills/experiment/SKILL.md`. Read when the user wants to try something out, run a benchmark against an authoring agent, or drive a generated project's scripts by hand.
 
 ### 3D Modeling
 
@@ -70,10 +70,6 @@ What automovie models and what it refuses to model, plus the verification discip
 ### Viewer Verification
 
 Driving the viewer/playground through the Playwright library to inspect renders, poses, and motion against expectation, `.agents/skills/viewer-verification/SKILL.md`. Read before claiming a viewer or render change works, and to reach a real GPU context rather than a software fallback that reads like one.
-
-### MCP Server Design
-
-Designing `packages/mcp`: what the tool surface may and may not do for its client, server/tool arrangement as an ongoing experiment, and the hard JSDoc-length constraints MCP clients impose (the 512-character server-instruction lead, the 1023-character tool-description cap), `.agents/skills/mcp/SKILL.md`. Read before adding or reshaping an MCP tool.
 
 ### Pull Request Submission
 
@@ -99,4 +95,4 @@ Update AGENTS.md only for repository-contract changes: a new skill area, a renam
 - **Create or merge.** Add a skill when a substantial repository concern would otherwise inflate AGENTS.md beyond an index. Merge sibling concerns when they share most of their structure.
 - **Repository skill files only.** Keep repository skills to `SKILL.md` and conditionally loaded sibling documents. Do not create separate `multi-agent-*` skills or `agents/openai.yaml`; parallel variants belong under `multi-agent/`.
 - **Headings are plain.** No chapter numbers in skill or AGENTS.md headings. Use descriptive titles.
-- **Current set.** The repository skills are `project`, `development`, `scaffold`, `documentation`, `evidence-graph`, `review`, `multi-agent`, `discussion`, `issue-campaign`, `experiment`, `3d-modeling`, `viewer-verification`, `mcp`, and `pull-request`.
+- **Current set.** The repository skills are `project`, `development`, `scaffold`, `documentation`, `evidence-graph`, `review`, `multi-agent`, `discussion`, `issue-campaign`, `experiment`, `3d-modeling`, `viewer-verification`, and `pull-request`.

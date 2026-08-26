@@ -77,7 +77,7 @@ The sandbox engine surface is the standard case. A capability an authoring agent
 
 Vertical scope therefore produces more hand-offs; it never authorizes editing an integration file. An owner that finishes its module and leaves the surface entry, the barrel, or the guide sentence to whoever notices has manufactured the exact "capability exists and cannot be reached" defect the vertical contract was written to prevent. Reporting that module as the issue done is the placeholder report [Honest Reporting Is Part Of The Work](#honest-reporting-is-part-of-the-work) forbids.
 
-Contract documents and guides are assigned per file, the same way source is. `docs/requirements`, `docs/specifications`, and `packages/mcp/prompts` hold one file per topic, so two issues usually write different files; a document two issues both need is an integration surface and the main agent owns it. Settle that in the ledger before dispatch rather than at the first collision.
+Contract documents and authoring skills are assigned per file, the same way source is. `docs/requirements`, `docs/specifications`, and the shipped authoring skill hold one file per topic, so two issues usually write different files; a document two issues both need is an integration surface and the main agent owns it. Settle that in the ledger before dispatch rather than at the first collision.
 
 ## Implement In Parallel
 

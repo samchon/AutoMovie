@@ -8,7 +8,7 @@ import {
   AutoMovieLegacyImporter,
   AutoMovieProductionProject,
   AutoMovieProject,
-  IAutoMovieMcpWritableSlate,
+  IAutoMovieLegacyWritableSlate,
   acquireCommitLock,
   digestAutoMovieBytes,
   releaseCommitLock,
@@ -52,7 +52,7 @@ const film: IAutoMovieSequence = {
   shots: [{ shot: shot.id, trim: null, transition: null }],
 };
 
-const slate: IAutoMovieMcpWritableSlate = {
+const slate: IAutoMovieLegacyWritableSlate = {
   script,
   scenes: [],
   shots: [shot],

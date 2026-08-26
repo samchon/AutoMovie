@@ -6,8 +6,8 @@ import {
 } from "@automovie/interface";
 import {
   AutoMovieProject,
-  IAutoMovieMcpPropSpec,
-  IAutoMovieMcpWritableSlate,
+  IAutoMovieLegacyPropSpec,
+  IAutoMovieLegacyWritableSlate,
 } from "@automovie/mcp";
 import { TestValidator } from "@nestia/e2e";
 import fs from "node:fs";
@@ -57,7 +57,7 @@ const shot: IAutoMovieShot = {
   duration: 1,
 };
 
-const propSpec = (node: string): IAutoMovieMcpPropSpec => ({
+const propSpec = (node: string): IAutoMovieLegacyPropSpec => ({
   node,
   model: {
     id: node,
@@ -85,8 +85,8 @@ const propSpec = (node: string): IAutoMovieMcpPropSpec => ({
 });
 
 const slateWith = (
-  partial: Partial<IAutoMovieMcpWritableSlate>,
-): IAutoMovieMcpWritableSlate => ({
+  partial: Partial<IAutoMovieLegacyWritableSlate>,
+): IAutoMovieLegacyWritableSlate => ({
   script: null,
   scenes: [],
   shots: [],
@@ -491,7 +491,7 @@ export const test_mcp_project_store = (): void => {
       label: "invalid prop shape has project guidance",
       dir: "props",
       file: "door.json",
-      value: { node: "door" } satisfies Partial<IAutoMovieMcpPropSpec>,
+      value: { node: "door" } satisfies Partial<IAutoMovieLegacyPropSpec>,
       read: (root) => AutoMovieProject.open(root).storedProps(),
       fragments: ["props", "door.json", "Validation detail", "model"],
     },

@@ -24,8 +24,8 @@ import {
 } from "@automovie/interface";
 
 import {
-  IAutoMovieMcpGeometryModel,
-  IAutoMovieMcpMotion,
+  IAutoMovieLegacyGeometryModel,
+  IAutoMovieLegacyMotion,
 } from "../project/legacyRecords";
 import {
   appendValidation,
@@ -41,7 +41,7 @@ import { validateSpaceShape } from "./space";
  */
 export const validateSceneArtifact = (
   scene: IAutoMovieScene,
-  models: IAutoMovieMcpGeometryModel[],
+  models: IAutoMovieLegacyGeometryModel[],
 ): IAutoMovieValidation => {
   const violations: IAutoMovieConstraintViolation[] = [];
   if (!validateObjectArtifact(scene, "$input", "scene", violations))
@@ -353,7 +353,7 @@ const remapSpaceViolations = (
 export const validateShotArtifact = (
   shot: IAutoMovieShot,
   scene: IAutoMovieScene,
-  motions: Record<string, IAutoMovieMcpMotion> | undefined,
+  motions: Record<string, IAutoMovieLegacyMotion> | undefined,
 ): IAutoMovieValidation => {
   const violations: IAutoMovieConstraintViolation[] = [];
   // The registry's own shape, addressed where the caller passed it. Absent means

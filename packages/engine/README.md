@@ -38,8 +38,7 @@ floating blocks, blocked routes, and unreachable landmarks.
 `defineShot(id, { scene, contract, build })` is the code-authoring boundary for
 one registered shot. `compileDefinedShot` runs the authored
 stage → block → perform pipeline directly in the engine, so a source module
-does not need an MCP application wrapper to produce a deterministic shot
-artifact.
+produces a deterministic shot artifact without anything wrapped around it.
 
 The returned runtime contains the compiler-ready source artifact, opening/closing continuity, independently measured participant/state/event/camera outcomes, and D010 physics-advice decisions. The registered builder remains the source of the typed stage, blocking, and performance program; the host supplies current rig lookup and frame dimensions, and a builder cannot pass by echoing its own contract ids.
 
@@ -148,7 +147,7 @@ automovie의 **결정론적 엔진**. `@automovie/interface`의 AST를 받아 �
 - `validateMotion`/`validatePose`/`clampPose` + ROM: 결정론적 오라클. 무엇을 만들든 물리 진실은 엔진이 심판한다.
 - `sampleMotion`/`sampleClip`: 재생 계약. 저작한 클립을 프레임으로 샘플링한다.
 
-[`@automovie/mcp`](../mcp)는 이 엔진의 두 번째 저작 API가 아니다. 정확히 다섯 개의 가이드·호스트 증거·리뷰 도구만 제공하며 design setter, compiler, renderer, geometry query를 노출하지 않는다. 러너블 스타터는 `npx create-automovie <dir>`로 만들고, generated project의 compile/lint/render/verify 명령이 같은 엔진을 호출한다.
+[`@automovie/production`](../production)은 이 엔진의 두 번째 저작 API가 아니다. generated project가 자기 스크립트로 돌리는 결정론적 실행 계층 — 컴파일러, 추적되는 프로젝트 저장소, 캡쳐, 검사, 렌더 잡 — 일 뿐이다. 러너블 스타터는 `npx create-automovie <dir>`로 만들고, generated project의 compile/lint/render/verify 명령이 같은 엔진을 호출한다.
 
 ## 모듈
 

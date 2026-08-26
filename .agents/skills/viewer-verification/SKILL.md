@@ -16,7 +16,7 @@ Unit tests pin the engine's numbers; they cannot tell you the character renders 
 
 ## Driving the browser
 
-Playwright is a **library** here, not an MCP server. Nothing registers a Playwright MCP server, so an agent that goes looking for one finds nothing and concludes it cannot verify visually. It can. The library lives in `test/node_modules/playwright` and the browser binaries are already installed under the user's `ms-playwright` cache; neither needs an install step.
+Playwright is a **library** here, not a tool server. This repository registers no server of any kind, so an agent that goes looking for one finds nothing and concludes it cannot verify visually. It can. The library lives in `test/node_modules/playwright` and the browser binaries are already installed under the user's `ms-playwright` cache; neither needs an install step.
 
 Two details decide whether the frame is real.
 

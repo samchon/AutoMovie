@@ -51,7 +51,7 @@ import type {
  * optional accepts both forms and states the truth: a read of the script, the
  * scene, a shot, the notes, or a beat end does not consult the film.
  */
-export interface IAutoMovieMcpStoredSlate {
+export interface IAutoMovieLegacyStoredSlate {
   /**
    * Committed script, or null before SCRIPT exists.
    */
@@ -92,9 +92,9 @@ export interface IAutoMovieMcpStoredSlate {
 }
 
 /**
- * Writable slate accepted and returned by MCP commit tools.
+ * Writable slate the v1 store committed.
  */
-export interface IAutoMovieMcpWritableSlate extends IAutoMovieMcpStoredSlate {
+export interface IAutoMovieLegacyWritableSlate extends IAutoMovieLegacyStoredSlate {
   /**
    * Assembled film, or null before CUT has committed.
    */
@@ -102,13 +102,13 @@ export interface IAutoMovieMcpWritableSlate extends IAutoMovieMcpStoredSlate {
 }
 
 /**
- * Actor context accepted by the MCP `perform` tool.
+ * Actor context the v1 store performed against.
  *
  * This is the JSON-safe subset of the engine's actor context. Gait cubic-bezier
  * tuple fields are intentionally omitted; use named easing curves for
- * MCP-supplied gait limbs.
+ * Gait limbs as the v1 record carried them.
  */
-export interface IAutoMovieMcpActorContext {
+export interface IAutoMovieLegacyActorContext {
   /**
    * Skeleton id every synthesized clip targets.
    */
@@ -117,7 +117,7 @@ export interface IAutoMovieMcpActorContext {
   /**
    * Gaits this actor can perform, without tuple-valued bezier controls.
    */
-  gaits: IAutoMovieMcpGait[];
+  gaits: IAutoMovieLegacyGait[];
 
   /**
    * Where the actor stands at the start of the shot (world meters). A RESIDENT
@@ -181,14 +181,14 @@ export interface IAutoMovieMcpActorContext {
 
 /**
  * A stored actor context as `actors/<node>.json` holds it (#1176): the
- * beat-invariant half of {@link IAutoMovieMcpActorContext}, everything but
+ * beat-invariant half of {@link IAutoMovieLegacyActorContext}, everything but
  * `position`/`facingDeg`/`gaitPhase`, which are per-beat openings the
  * continuity seed (or the caller) supplies. A resident `perform` with explicit
  * `actors` writes these through; later resident performs omit `actors` and read
  * them back.
  */
-export interface IAutoMovieMcpActorSpec extends Omit<
-  IAutoMovieMcpActorContext,
+export interface IAutoMovieLegacyActorSpec extends Omit<
+  IAutoMovieLegacyActorContext,
   "position" | "facingDeg" | "gaitPhase"
 > {
   /**
@@ -201,7 +201,7 @@ export interface IAutoMovieMcpActorSpec extends Omit<
  * A prop spec as the `forgeProp` tool accepts it, a crude primitive proxy with
  * rich meaning: body, affordances, self-declared articulation.
  */
-export interface IAutoMovieMcpPropSpec {
+export interface IAutoMovieLegacyPropSpec {
   /**
    * The scene node this prop will occupy (the staging join key).
    */
@@ -215,14 +215,14 @@ export interface IAutoMovieMcpPropSpec {
   /**
    * Self-declared moving parts, or `null` for a rigid prop.
    */
-  articulation: IAutoMovieMcpPropArticulation | null;
+  articulation: IAutoMovieLegacyPropArticulation | null;
 }
 
 /**
  * What a resident project holds, which slate slices exist as files and which
  * binary assets the manifest tracks (#614: the project folder is the memory).
  */
-export interface IAutoMovieMcpProjectSummary {
+export interface IAutoMovieLegacyProjectSummary {
   /**
    * Absolute project root directory.
    */
@@ -296,23 +296,23 @@ export interface IAutoMovieMcpProjectSummary {
  */
 
 /**
- * A prop profile driver as the MCP boundary accepts it, tuple-free.
+ * A prop profile driver as the v1 record wrote it, tuple-free.
  */
-export type IAutoMovieMcpPropDriver =
+export type IAutoMovieLegacyPropDriver =
   | IAutoMovieCopyDriver
   | IAutoMovieAimDriver
   | IAutoMovieIKDriver
   | IAutoMovieParentDriver
-  | IAutoMovieMcpDrivenDriver
+  | IAutoMovieLegacyDrivenDriver
   | IAutoMovieSpringDriver;
 
 /**
- * A prop's profile as the MCP boundary accepts it: the declared controls,
+ * A prop's profile as the v1 record wrote it: the declared controls,
  * limits, and (tuple-free) drivers. Gaits are omitted, a prop does not locomote
  * (`IAutoMovieProfile.gaits` is for bodies); the humanoid gait path rides the
  * `perform` tool's actor contexts instead.
  */
-export interface IAutoMovieMcpPropProfile {
+export interface IAutoMovieLegacyPropProfile {
   /**
    * Stable profile id.
    */
@@ -331,7 +331,7 @@ export interface IAutoMovieMcpPropProfile {
   /**
    * Drivers coupling the prop's joints, tuple-free.
    */
-  drivers: IAutoMovieMcpPropDriver[];
+  drivers: IAutoMovieLegacyPropDriver[];
 
   /**
    * Value constraints over the prop's joints (the hinge's 0..110°).
@@ -343,7 +343,7 @@ export interface IAutoMovieMcpPropProfile {
  * A prop spec as the `forgeProp` tool accepts it, a crude primitive proxy with
  * rich meaning: body, affordances, self-declared articulation.
  */
-export interface IAutoMovieMcpPropSpec {
+export interface IAutoMovieLegacyPropSpec {
   /**
    * The scene node this prop will occupy (the staging join key).
    */
@@ -357,7 +357,7 @@ export interface IAutoMovieMcpPropSpec {
   /**
    * Self-declared moving parts, or `null` for a rigid prop.
    */
-  articulation: IAutoMovieMcpPropArticulation | null;
+  articulation: IAutoMovieLegacyPropArticulation | null;
 }
 
 /**
@@ -368,7 +368,7 @@ export interface IAutoMovieMcpPropSpec {
  * stored twice.
  */
 export const toEnginePropSpec = (
-  spec: IAutoMovieMcpPropSpec,
+  spec: IAutoMovieLegacyPropSpec,
 ): IAutoMoviePropSpec => ({
   node: spec.node,
   model: spec.model,
@@ -383,7 +383,7 @@ export const toEnginePropSpec = (
 });
 
 const toEnginePropProfile = (
-  profile: IAutoMovieMcpPropProfile,
+  profile: IAutoMovieLegacyPropProfile,
 ): IAutoMovieProfile => ({
   id: profile.id,
   name: profile.name,
@@ -393,10 +393,10 @@ const toEnginePropProfile = (
 });
 
 const toEnginePropDriver = (
-  driver: IAutoMovieMcpPropDriver,
+  driver: IAutoMovieLegacyPropDriver,
 ): IAutoMovieDriver => {
   if (driver.type !== "driven") return driver;
-  // Strip the MCP-form ranges and re-add engine tuples only when present, a
+  // Strip the v1-form ranges and re-add engine tuples only when present, a
   // curve-driven driver omits both, so it must not carry a dead range (#724).
   const { inRange, outRange, ...rest } = driver;
   return {
@@ -411,31 +411,31 @@ const toEnginePropDriver = (
 };
 
 /**
- * A driven driver whose tuple-valued `inRange`/`outRange` cross the MCP
- * boundary as named {@link IAutoMovieMcpRange} objects (the LLM JSON schema
+ * A driven driver whose tuple-valued `inRange`/`outRange` cross the v1
+ * boundary as named {@link IAutoMovieLegacyRange} objects (the LLM JSON schema
  * cannot express tuples), converted to the engine's pairs in `convert.ts`.
  */
-export interface IAutoMovieMcpDrivenDriver extends Omit<
+export interface IAutoMovieLegacyDrivenDriver extends Omit<
   IAutoMovieDrivenDriver,
   "inRange" | "outRange"
 > {
   /**
    * Source value range mapped onto {@link outRange}. Omit when `curve` is set.
    */
-  inRange?: IAutoMovieMcpRange;
+  inRange?: IAutoMovieLegacyRange;
 
   /**
    * Output value range. Omit when `curve` is set.
    */
-  outRange?: IAutoMovieMcpRange;
+  outRange?: IAutoMovieLegacyRange;
 }
 
 /**
- * JSON-safe gait definition accepted by the MCP `perform` tool, mirroring
+ * JSON-safe gait definition the v1 store performed against, mirroring
  * {@link IAutoMovieGait} minus the tuple-valued bezier controls its limbs cannot
  * express here.
  */
-export interface IAutoMovieMcpGait {
+export interface IAutoMovieLegacyGait {
   /**
    * Stable name (`"walk"`, `"trot"`, `"gallop"`, `"stalk"`).
    */
@@ -460,13 +460,13 @@ export interface IAutoMovieMcpGait {
    * offsets `0, 0.5, 0.25, 0.75` (lateral sequence), a trot at `0, 0.5, 0.5, 0`
    * (diagonal pairs).
    */
-  limbs: IAutoMovieMcpGaitLimb[];
+  limbs: IAutoMovieLegacyGaitLimb[];
 }
 
 /**
- * A prop's self-declared moving parts as the MCP boundary accepts them.
+ * A prop's self-declared moving parts as the v1 record wrote them.
  */
-export interface IAutoMovieMcpPropArticulation {
+export interface IAutoMovieLegacyPropArticulation {
   /**
    * The prop's internal joint nodes.
    */
@@ -475,7 +475,7 @@ export interface IAutoMovieMcpPropArticulation {
   /**
    * The declared capability over those nodes.
    */
-  profile: IAutoMovieMcpPropProfile;
+  profile: IAutoMovieLegacyPropProfile;
 
   /**
    * The application of the profile onto the nodes (`boneMap`).
@@ -484,9 +484,9 @@ export interface IAutoMovieMcpPropArticulation {
 }
 
 /**
- * JSON-safe gait limb channel accepted by the MCP `perform` tool.
+ * JSON-safe gait limb channel the v1 store performed against.
  */
-export interface IAutoMovieMcpGaitLimb {
+export interface IAutoMovieLegacyGaitLimb {
   /**
    * The bone this limb's swing drives (a leg's upper bone).
    */
@@ -544,7 +544,7 @@ export interface IAutoMovieMcpGaitLimb {
 /**
  * A source-to-output value range, the JSON-safe form of a `[from, to]` pair.
  */
-export interface IAutoMovieMcpRange {
+export interface IAutoMovieLegacyRange {
   /**
    * Range start.
    */
@@ -557,9 +557,9 @@ export interface IAutoMovieMcpRange {
 }
 
 /**
- * Minimal model geometry lookup accepted by MCP query tools.
+ * Minimal model geometry lookup the v1 store answered with.
  */
-export interface IAutoMovieMcpGeometryModel {
+export interface IAutoMovieLegacyGeometryModel {
   /**
    * Model id referenced by scene nodes.
    */
@@ -572,11 +572,11 @@ export interface IAutoMovieMcpGeometryModel {
 }
 
 /**
- * JSON-safe motion clip crossing the MCP `perform` boundary, returned as the
+ * JSON-safe motion clip crossing the v1 `perform` boundary, returned as the
  * compiled per-actor clips, and supplied by the caller as the authored clips an
  * `enact` action plays (#1148).
  */
-export interface IAutoMovieMcpMotion {
+export interface IAutoMovieLegacyMotion {
   /**
    * Stable id so scenes and exports can cite this clip.
    */
@@ -602,7 +602,7 @@ export interface IAutoMovieMcpMotion {
    * Keyframes in strictly increasing `time` order. At least two are required: a
    * clip needs a start and an end to interpolate between.
    */
-  keyframes: IAutoMovieMcpKeyframe[];
+  keyframes: IAutoMovieLegacyKeyframe[];
 
   /**
    * The gait cycle the motion carries ({@link IAutoMovieGaitCycle}), how a
@@ -613,9 +613,9 @@ export interface IAutoMovieMcpMotion {
 }
 
 /**
- * JSON-safe keyframe returned by the MCP `perform` tool.
+ * JSON-safe keyframe the v1 store returned.
  */
-export interface IAutoMovieMcpKeyframe {
+export interface IAutoMovieLegacyKeyframe {
   /**
    * Timestamp within the clip, seconds. Must be `<= clip duration`, and
    * keyframes must be strictly increasing in `time`; both enforced by the
@@ -644,18 +644,18 @@ export interface IAutoMovieMcpKeyframe {
   /**
    * Control points for `easing: "cubicBezier"`, `null` for all other easings.
    * The engine's own keyframe carries these as the tuple `[x1, y1, x2, y2]`;
-   * the LLM schema cannot express a tuple, so the MCP boundary names the four
+   * the LLM schema cannot express a tuple, so the v1 boundary names the four
    * numbers instead. Same values, same order.
    */
-  bezier: IAutoMovieMcpBezier | null;
+  bezier: IAutoMovieLegacyBezier | null;
 }
 
 /**
- * Cubic-bezier control points as named fields, not a tuple: the MCP form of the
+ * Cubic-bezier control points as named fields, not a tuple: the v1 form of the
  * engine's `[x1, y1, x2, y2]`, in the unit square (CSS `cubic-bezier`
  * convention).
  */
-export interface IAutoMovieMcpBezier {
+export interface IAutoMovieLegacyBezier {
   /**
    * First control point x, in `[0, 1]`.
    */
