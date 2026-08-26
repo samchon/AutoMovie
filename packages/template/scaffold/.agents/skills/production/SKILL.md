@@ -7,7 +7,7 @@ description: Defines how this project's production is researched, authored, evid
 
 You are authoring one production: this project. Read its `AGENTS.md`, its `lint.config.ts`, `docs/README.md`, every active upstream layer, and every shared or production-local target its claims select before writing anything.
 
-Author a film in the order `settings -> storylines -> scenarios -> script -> shots -> filmSources`, a brief in the order `settings -> briefs -> shots -> filmSources`, and a library as settings plus each design and source branch it delivers. The workflow documents below own authorship; `docs/discovery`, `docs/principles`, and `docs/obligations` own the questions each authored population answers; [Evidence staging](evidence-staging.md) owns claims, tags, stages, and fingerprints.
+Author a film in the order `settings -> storylines -> scenarios -> script -> shots -> filmSources`, a brief in the order `settings -> briefs -> shots -> filmSources`, and a library as settings plus each design and source branch it delivers. The workflow documents below own authorship; the discovery, principle, and obligation families published by `@automovie/template` own the questions each authored population answers; [Evidence staging](evidence-staging.md) owns claims, tags, stages, and fingerprints.
 
 Apply this workflow without subject-matter exceptions. Historical, technical, mechanical, or heavily researched material still requires explicit production canon and the full lineage, evidence, staging, and review workflow. External knowledge never substitutes for an authored owner.
 

@@ -91,6 +91,6 @@ Watch once without stopping for story and emotion, once with the frame ruler for
 An edit is judged across boundaries, so evidence is taken on both sides of each one.
 
 1. `captureFrame` on the outgoing and incoming shots at the exact frames a cut joins, and one frame either side.
-2. `prepareReview` and `submitReview` under `REVIEW_SEQUENCE` for local cut logic, then under `REVIEW_FILM` for the whole assembly.
+2. State what you saw of the local cut logic, and then of the whole assembly, in the evidence citations on the film source that claims the edit is realized.
 
 Sequence review owns the boundary; film review owns the arc. Completing one never completes the other.

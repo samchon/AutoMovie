@@ -1,4 +1,4 @@
-import { writeFiles } from "automovie";
+import { writeFiles } from "@automovie/template";
 import {
   IAutoMovieAcceptanceScenario,
   IAutoMovieAssetManifest,

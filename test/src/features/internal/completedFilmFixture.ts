@@ -1,4 +1,4 @@
-import { renderScaffold } from "automovie";
+import { renderScaffold } from "@automovie/template";
 import fs from "node:fs";
 import path from "node:path";
 

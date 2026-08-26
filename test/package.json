@@ -16,6 +16,7 @@
   "dependencies": {
     "@automovie/archetypes": "workspace:^",
     "automovie": "workspace:^",
+    "@automovie/template": "workspace:^",
     "create-automovie": "workspace:^",
     "@automovie/engine": "workspace:^",
     "@automovie/face": "workspace:^",

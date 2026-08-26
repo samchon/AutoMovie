@@ -1,4 +1,4 @@
-import { renderScaffold, writeFiles } from "automovie";
+import { renderScaffold, writeFiles } from "@automovie/template";
 import { TestValidator } from "@nestia/e2e";
 import { spawnSync } from "node:child_process";
 import fs from "node:fs";

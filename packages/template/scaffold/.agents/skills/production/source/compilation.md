@@ -29,4 +29,4 @@ Use the narrowest scope that answers the current question. Exploration should no
 
 Compilation proves that the records agree with each other. It proves nothing about what the production looks like, and every defect that survived a full production survived a clean compile first.
 
-A clean source compile is the precondition for evidence, not a substitute for it: `captureTurntable` and `captureFrame` refuse against a stale compile, and `prepareReview` reports evidence as missing until the frames exist. Compile, then look, then record the verdict.
+A clean source compile is the precondition for evidence, not a substitute for it: `captureTurntable` and `captureFrame` refuse against a stale compile, and the evidence citation reports evidence as missing until the frames exist. Compile, then look, then record the verdict.

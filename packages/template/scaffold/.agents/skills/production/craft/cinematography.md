@@ -82,6 +82,6 @@ A camera number is a claim about a frame; only the frame settles it. Capture at 
 
 1. `captureFrame` on the shot target at every review time the contract declares, in `beauty`.
 2. `captureFrame` in a structural pass when the question is occlusion, silhouette separation, or depth rather than appearance.
-3. `prepareReview` and `submitReview` under `REVIEW_SHOT` for composition, staging, and continuity.
+3. State what those frames showed about composition, staging, and continuity in the evidence citation on the shot source that claims the scene is realized.
 
 Judge from what came back, not from what the solve intended. `captured:false` is a refusal, not a frame.

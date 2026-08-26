@@ -102,4 +102,4 @@ Then frame what a whole-model view cannot resolve. `captureFrame` accepts a `par
 
 Judge silhouette before detail, then hierarchy, pivots, limits, material separation, and every shot-required capability. A capability absent from the profile is not available just because a mesh visually suggests it.
 
-Close with `prepareReview` and `submitReview` under `REVIEW_ASSET`. The worksheet names which required views are still missing, so an object nobody finished looking at cannot read as reviewed.
+Close by opening every captured view of the object and saying what each one showed in the evidence citation on its design owner. An object read from one flattering angle is not an object anybody looked at.

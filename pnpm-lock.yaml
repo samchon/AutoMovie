@@ -560,6 +560,9 @@ importers:
       '@automovie/render':
         specifier: workspace:^
         version: link:../packages/render
+      '@automovie/template':
+        specifier: workspace:^
+        version: link:../packages/template
       '@automovie/viewer':
         specifier: workspace:^
         version: link:../packages/viewer

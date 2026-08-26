@@ -56,6 +56,6 @@ Probe final media facts, resident sample count, duration, channel count, sample 
 
 ## Evidence for a sound verdict
 
-Sound has no turntable, so its evidence is the media facts and the delivered timeline rather than a frame. Probe the final media, then record the verdict where it survives: `prepareReview` and `submitReview` under `REVIEW_SEQUENCE` for a cut's own audio, and under `REVIEW_FILM` for the mix, the dialogue intelligibility, and the audiovisual runtime.
+Sound has no turntable, so its evidence is the media facts and the delivered timeline rather than a frame. Probe the final media, then record what it proved in the evidence citation that owns it: the cut's own audio on its sequence owner, and the mix, the dialogue intelligibility, and the audiovisual runtime on the film source.
 
 A picture review never discharges a sound obligation, and neither does a waveform nobody listened to.
