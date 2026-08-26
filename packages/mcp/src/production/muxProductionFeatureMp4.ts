@@ -282,16 +282,6 @@ export const assertProductionRenditionClipDelivery = (props: {
 };
 
 /**
- * Validate a complete repaint cut without materializing another MP4 copy.
- */
-export const assertProductionRenditionTimelineDelivery = (props: {
-  timeline: IAutoMovieFilmTimeline;
-  clips: ReadonlyMap<string, Uint8Array>;
-}): void => {
-  productionRenditionVideoPlan(props);
-};
-
-/**
  * Prove a feature directly against immutable repaint clips without rebuilding
  * the expected full-length video in memory.
  */

@@ -1,6 +1,5 @@
 import { AUTOMOVIE_DIAGNOSTIC_CODES } from "@automovie/interface";
 import {
-  AutoMovieApplication,
   findAutoMovieDiagnosticCatalogEntry,
   listAutoMovieDiagnosticCatalog,
 } from "@automovie/mcp";
@@ -19,7 +18,6 @@ export const test_mcp_production_diagnostic_catalog = (): void => {
     "export default {};\n",
   );
   try {
-    const application = new AutoMovieApplication({ projectRoot: root });
     const catalog = listAutoMovieDiagnosticCatalog();
     const references = new Set(catalog.map((entry) => entry.reference.id));
     const revisions = new Set(
@@ -70,15 +68,6 @@ export const test_mcp_production_diagnostic_catalog = (): void => {
                 findAutoMovieDiagnosticCatalogEntry(entry.code) === entry,
             ),
         ],
-        [
-          "guides",
-          () =>
-            catalog.every(
-              (entry) =>
-                application.getGuideDocument({ name: entry.guide }).name ===
-                entry.guide,
-            ),
-        ],
       ]),
       {
         codes: true,
@@ -88,7 +77,6 @@ export const test_mcp_production_diagnostic_catalog = (): void => {
         catalogFrozen: true,
         entriesFrozen: true,
         lookups: true,
-        guides: true,
       },
     );
     TestValidator.equals(

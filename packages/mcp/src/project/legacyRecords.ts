@@ -360,6 +360,13 @@ export interface IAutoMovieMcpPropSpec {
   articulation: IAutoMovieMcpPropArticulation | null;
 }
 
+/**
+ * Convert one stored legacy prop spec into the engine's own shape.
+ *
+ * The stored form keeps ranges as objects because the payload it came from
+ * could not express tuples, so the engine pair is rebuilt here rather than
+ * stored twice.
+ */
 export const toEnginePropSpec = (
   spec: IAutoMovieMcpPropSpec,
 ): IAutoMoviePropSpec => ({

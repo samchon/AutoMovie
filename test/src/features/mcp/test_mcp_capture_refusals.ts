@@ -1,8 +1,10 @@
 import { IAutoMovieModelRecipe } from "@automovie/interface";
 import {
-  AutoMovieApplication,
   AutoMovieProductionCompiler,
+  AutoMovieProductionContext,
   AutoMovieProductionProject,
+  captureAutoMovieProductionFrame,
+  captureAutoMovieProductionTurntable,
 } from "@automovie/mcp";
 import { TestValidator } from "@nestia/e2e";
 import fs from "node:fs";
@@ -82,14 +84,12 @@ export const test_mcp_capture_refusals = async (): Promise<void> => {
       throw new Error("The capture-refusal fixture did not compile.");
 
     const host = recordingCapture();
-    const opened = new AutoMovieApplication({
-      projectRoot: fixture.root,
-      capture: host.adapter,
-    });
-    opened.getGuideDocument({ name: "AUTOMOVIE_OVERALL" });
-    opened.getGuideDocument({ name: "CAPTURE_FRAME" });
-
-    const shot = await opened.captureFrame({
+    const opened = new AutoMovieProductionContext(
+      host.adapter,
+      fixture.root,
+      undefined,
+    );
+    const shot = await captureAutoMovieProductionFrame(opened, {
       target: {
         kind: "shot",
         productionId: "fixture-film",
@@ -120,7 +120,7 @@ export const test_mcp_capture_refusals = async (): Promise<void> => {
     );
 
     const asked = host.calls.length;
-    const invalid = await opened.captureFrame({
+    const invalid = await captureAutoMovieProductionFrame(opened, {
       target: {
         kind: "asset",
         productionId: " fixture-film",
@@ -128,7 +128,7 @@ export const test_mcp_capture_refusals = async (): Promise<void> => {
         angleDeg: 0,
       },
     });
-    const unregistered = await opened.captureFrame({
+    const unregistered = await captureAutoMovieProductionFrame(opened, {
       target: {
         kind: "asset",
         productionId: "no-such-production",
@@ -136,7 +136,7 @@ export const test_mcp_capture_refusals = async (): Promise<void> => {
         angleDeg: 0,
       },
     });
-    const missing = await opened.captureFrame({
+    const missing = await captureAutoMovieProductionFrame(opened, {
       target: {
         kind: "asset",
         productionId: "fixture-film",
@@ -170,14 +170,17 @@ export const test_mcp_capture_refusals = async (): Promise<void> => {
       },
     );
 
-    const turntableInvalid = await opened.captureTurntable({
+    const turntableInvalid = await captureAutoMovieProductionTurntable(opened, {
       productionId: "fixture-film ",
       asset: "soloist",
     });
-    const turntableUnregistered = await opened.captureTurntable({
-      productionId: "no-such-production",
-      asset: "soloist",
-    });
+    const turntableUnregistered = await captureAutoMovieProductionTurntable(
+      opened,
+      {
+        productionId: "no-such-production",
+        asset: "soloist",
+      },
+    );
     TestValidator.equals(
       "a turntable refuses the same production faults by the same codes",
       [turntableInvalid, turntableUnregistered].map((output) => ({
@@ -195,7 +198,9 @@ export const test_mcp_capture_refusals = async (): Promise<void> => {
       ],
     );
 
-    const rigless = await opened.captureTurntable({ asset: "crate" });
+    const rigless = await captureAutoMovieProductionTurntable(opened, {
+      asset: "crate",
+    });
     TestValidator.equals(
       "a rigless model owes the five rest-pose views and no extreme-range one",
       {
@@ -221,7 +226,9 @@ export const test_mcp_capture_refusals = async (): Promise<void> => {
     fs.rmSync(path.join(project.generatedRoot(), "models", "soloist.json"), {
       force: true,
     });
-    const modelless = await opened.captureTurntable({ asset: "soloist" });
+    const modelless = await captureAutoMovieProductionTurntable(opened, {
+      asset: "soloist",
+    });
     TestValidator.equals(
       "a registered asset with no readable compiled model is refused by name",
       {
@@ -246,13 +253,12 @@ export const test_mcp_capture_refusals = async (): Promise<void> => {
     // A session that already read the registry keeps it, so the broken tree is
     // asked about by a new one. That is also the honest reproduction: the file
     // is gone before anybody opens the production, not while they hold it.
-    const reopened = new AutoMovieApplication({
-      projectRoot: fixture.root,
-      capture: host.adapter,
-    });
-    reopened.getGuideDocument({ name: "AUTOMOVIE_OVERALL" });
-    reopened.getGuideDocument({ name: "CAPTURE_FRAME" });
-    const registryless = await reopened.captureFrame({
+    const reopened = new AutoMovieProductionContext(
+      host.adapter,
+      fixture.root,
+      undefined,
+    );
+    const registryless = await captureAutoMovieProductionFrame(reopened, {
       target: {
         kind: "asset",
         productionId: "fixture-film",
@@ -260,9 +266,12 @@ export const test_mcp_capture_refusals = async (): Promise<void> => {
         angleDeg: 0,
       },
     });
-    const turntableRegistryless = await reopened.captureTurntable({
-      asset: "soloist",
-    });
+    const turntableRegistryless = await captureAutoMovieProductionTurntable(
+      reopened,
+      {
+        asset: "soloist",
+      },
+    );
     TestValidator.equals(
       "an unreadable compiler registry refuses both tools by name",
       {

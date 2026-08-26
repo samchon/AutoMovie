@@ -1,7 +1,8 @@
 import {
-  AutoMovieApplication,
   AutoMovieProductionCompiler,
+  AutoMovieProductionContext,
   AutoMovieProductionProject,
+  captureAutoMovieProductionFrame,
   inspectAutoMovieProduction,
   openAutoMovieProduction,
 } from "@automovie/mcp";
@@ -66,13 +67,12 @@ export const test_mcp_render_target_ownership = async (): Promise<void> => {
       throw new Error("The render-ownership fixture did not compile.");
 
     const host = recordingCapture();
-    const application = new AutoMovieApplication({
-      projectRoot: fixture.root,
-      capture: host.adapter,
-    });
-    application.getGuideDocument({ name: "AUTOMOVIE_OVERALL" });
-    application.getGuideDocument({ name: "CAPTURE_FRAME" });
-    const captured = await application.captureFrame({
+    const application = new AutoMovieProductionContext(
+      host.adapter,
+      fixture.root,
+      undefined,
+    );
+    const captured = await captureAutoMovieProductionFrame(application, {
       target: {
         kind: "asset",
         productionId: "fixture-film",

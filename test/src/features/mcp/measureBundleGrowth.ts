@@ -1,7 +1,8 @@
 import {
-  AutoMovieApplication,
   AutoMovieProductionCompiler,
+  AutoMovieProductionContext,
   AutoMovieProductionProject,
+  captureAutoMovieProductionFrame,
 } from "@automovie/mcp";
 
 import { recordingCapture } from "./captureHost";
@@ -24,18 +25,13 @@ const main = async (): Promise<void> => {
     if (compiled.success === false)
       throw new Error("The growth fixture did not compile.");
     const host = recordingCapture();
-    const application = new AutoMovieApplication({
-      projectRoot: fixture.root,
-      capture: host.adapter,
-    });
-    application.getGuideDocument({ name: "AUTOMOVIE_OVERALL" });
-    application.getGuideDocument({ name: "CAPTURE_FRAME" });
+    const context = new AutoMovieProductionContext(host.adapter, fixture.root);
 
     const spans: number[] = [];
     const total = 40;
     for (let index = 0; index < total; index++) {
       const started = process.hrtime.bigint();
-      const output = await application.captureFrame({
+      const output = await captureAutoMovieProductionFrame(context, {
         target: {
           kind: "shot",
           productionId: "fixture-film",
