@@ -42,9 +42,9 @@ The state vocabulary is yours and the arithmetic is the engine's. `closed`, `ope
 - a current state naming no declared state;
 - an empty or duplicated panel, state, or hardware id, an empty hardware kind, or a hardware element that does not resolve.
 
-Rigging a leaf buys you no visibility change, and this is the connection authors get wrong. The room culler treats a boundary carrying an opening as a portal whether or not a leaf fills it and whatever state that leaf stands in, because a shut leaf is movable state and the cull stays conservative. `BUILT_ENVIRONMENT` owns that rule and the rest of the space graph; what follows for your rig is that the state a leaf stands in never moves a space between the drawn set and the hidden one, so a shot that needs the room beyond a door out of the picture is solved by framing, lighting, or the design, never by the hinge. What the travel does feed is clearance and, separately, the swing an audience sees: `builtOpeningSweepEnvelope` returns the world volume each panel sweeps across its whole travel, which is the number a swing clearance is argued from, and the next section owns what it takes to put that swing in a frame.
+Rigging a leaf buys you no visibility change, and this is the connection authors get wrong. The room culler treats a boundary carrying an opening as a portal whether or not a leaf fills it and whatever state that leaf stands in, because a shut leaf is movable state and the cull stays conservative. [Design branches](../design-branches.md) owns that rule and the rest of the space graph; what follows for your rig is that the state a leaf stands in never moves a space between the drawn set and the hidden one, so a shot that needs the room beyond a door out of the picture is solved by framing, lighting, or the design, never by the hinge. What the travel does feed is clearance and, separately, the swing an audience sees: `builtOpeningSweepEnvelope` returns the world volume each panel sweeps across its whole travel, which is the number a swing clearance is argued from, and the next section owns what it takes to put that swing in a frame.
 
-A hinge pin, a knob, a boss, a ring pull, and a finial are surfaces of revolution. `MODEL_RECIPE` and `GEOMETRY` own the recipe vocabulary that turns a profile into one; go there rather than spelling it a second way here, and judge the result at the distance the shot actually uses, because a turned part that reads in the hand is a smear at room scale and the reverse is just as common.
+A hinge pin, a knob, a boss, a ring pull, and a finial are surfaces of revolution. [Models and motions](../models-and-motions.md) and this document own the recipe vocabulary that turns a profile into one; go there rather than spelling it a second way here, and judge the result at the distance the shot actually uses, because a turned part that reads in the hand is a smear at room scale and the reverse is just as common.
 
 ## Making a leaf move on screen
 
@@ -98,7 +98,7 @@ Check:
 
 `captureTurntable({ asset })` is the whole first step. One call commits the set an asset review is judged from: four horizontal quarters, the overhead outline pass, and the extreme-range pose of a rigged model. Assembling that set by hand is where the one angle a defect was on gets dropped.
 
-Then frame what a whole-model view cannot resolve. `captureFrame` accepts a `part` on an asset target and narrows the camera onto one compiled part with the model still around it, which is how a hinge, a pintle, a stile, or a pivot cover is actually looked at.
+Then frame what a whole-model view cannot resolve. `captureProductionFrame` accepts a `part` on an asset target and narrows the camera onto one compiled part with the model still around it, which is how a hinge, a pintle, a stile, or a pivot cover is actually looked at.
 
 Judge silhouette before detail, then hierarchy, pivots, limits, material separation, and every shot-required capability. A capability absent from the profile is not available just because a mesh visually suggests it.
 

@@ -45,7 +45,7 @@ Watching a cut tells you whether it reads. It does not tell you that the actor s
 
 `validateFilmContinuity` walks a film's beats in playback order and compares each beat's opening state against the previous beat's end state, per actor: world position drift past `positionTolerance` metres, facing drift past `facingToleranceDeg` degrees, a persistent mount that was dropped or changed, and an actor missing entirely from the incoming opening. `validateContinuity` is the same comparison for one boundary you already hold both sides of.
 
-Drift is advisory, never a gate. A hard cut may legitimately jump an actor to a new mark for a time skip or new blocking, so the finding names the actor, the offset, and the tolerance and leaves the decision with you. It rides `warnings` on a validation whose `success` is `true`, the same tier `MOTION` describes.
+Drift is advisory, never a gate. A hard cut may legitimately jump an actor to a new mark for a time skip or new blocking, so the finding names the actor, the offset, and the tolerance and leaves the decision with you. It rides `warnings` on a validation whose `success` is `true`, the same tier [Motion](motion.md) describes.
 
 Order the beats by the timeline rather than by whatever order the compiled shots happen to enumerate in. A continuity check run over the wrong order reports drift between shots that never touch.
 
@@ -90,7 +90,7 @@ Watch once without stopping for story and emotion, once with the frame ruler for
 
 An edit is judged across boundaries, so evidence is taken on both sides of each one.
 
-1. `captureFrame` on the outgoing and incoming shots at the exact frames a cut joins, and one frame either side.
+1. `captureProductionFrame` on the outgoing and incoming shots at the exact frames a cut joins, and one frame either side.
 2. State what you saw of the local cut logic, and then of the whole assembly, in the evidence citations on the film source that claims the edit is realized.
 
 Sequence review owns the boundary; film review owns the arc. Completing one never completes the other.

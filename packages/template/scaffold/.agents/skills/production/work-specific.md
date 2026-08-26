@@ -1,6 +1,6 @@
 # Production-specific contract
 
-Run this pass before bulk settings authorship and whenever research or later production work reveals a new production rule. This pass discovers and classifies the contract. Each adopted rule lives in its semantic owner, not in this guide or a status note.
+Run this pass before bulk settings authorship and whenever research or later production work reveals a new production rule. This pass discovers and classifies the contract. Each adopted rule lives in its semantic owner, not in this document or a status note.
 
 ## Inputs and authority
 

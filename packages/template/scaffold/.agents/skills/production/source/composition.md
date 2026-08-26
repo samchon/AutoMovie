@@ -2,7 +2,7 @@
 
 A timed AutoMovie delivery is a program that emits shots. This handbook is about the shape that program takes once a production has more shots than you would willingly type, which is the point where authoring each one by hand stops being craft and becomes transcription.
 
-`TYPESCRIPT` governs how any one module must behave: pure builds, typed payloads, explicit units, no I/O in the compile sandbox. Those rules hold everywhere here. This document is about arrangement across modules, and it applies to any production with repeated subjects: a crowd, a parade, a fleet, a corps of dancers.
+[TypeScript](typescript.md) governs how any one module must behave: pure builds, typed payloads, explicit units, no I/O in the compile sandbox. Those rules hold everywhere here. This document is about arrangement across modules, and it applies to any production with repeated subjects: a crowd, a parade, a fleet, a corps of dancers.
 
 ## Know when to compose
 
@@ -16,7 +16,7 @@ The sandbox runs every transpiled module, the registration probe, and the `build
 
 That is an arrangement constraint, not a micro-optimization. Keep the work inside a build proportionate to what the shot itself stages: let the engine regenerate a formation from its runtime instead of walking its members, and let a table computed once at module scope stay at module scope rather than being rebuilt inside a factory that is called per shot. Expensive derivation belongs in the ordinary scripts that emit design records and generated modules, which run outside the sandbox and under no such clock.
 
-When the result of that derivation is what source actually needs, publish it as a derived artifact and read it back from `context.derivedArtifacts`. Freezing the same table into a TypeScript literal moves the bytes out of the clock without moving the obligation: nothing then proves the literal still follows from the inputs it was computed from. `DERIVED_ARTIFACTS` owns that path.
+When the result of that derivation is what source actually needs, publish it as a derived artifact and read it back from `context.derivedArtifacts`. Freezing the same table into a TypeScript literal moves the bytes out of the clock without moving the obligation: nothing then proves the literal still follows from the inputs it was computed from. [Compilation](compilation.md) owns that path.
 
 ## Every subject is a class
 

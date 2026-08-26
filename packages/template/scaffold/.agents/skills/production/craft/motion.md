@@ -35,7 +35,7 @@ External motion remains an explicit adoption decision. The user or delegated aut
 
 Gaze leads attention, confirms target relation, and connects reaction to cause. Coordinate eyes, head, torso, and timing instead of rotating only one layer. Expressions transition from a neutral or prior state, peak around meaningful events, and settle deliberately. Use available expression channels; do not invent facial capability absent from the asset.
 
-Dialogue mouth motion follows final decoded audio and its adopted alignment when available. The user or delegated authoring agent chooses any recorded or synthesized voice source and, when applicable, its provider, model, version, and voice; no guide supplies a provider default. Mouth motion stays on the speaker's emission interval even when propagation makes the listener hear the line later. Even spacing characters across a caption interval is not speech synchronization, and missing alignment remains `unsupported` or `not-run` rather than guessed visemes.
+Dialogue mouth motion follows final decoded audio and its adopted alignment when available. The user or delegated authoring agent chooses any recorded or synthesized voice source and, when applicable, its provider, model, version, and voice; nothing here supplies a provider default. Mouth motion stays on the speaker's emission interval even when propagation makes the listener hear the line later. Even spacing characters across a caption interval is not speech synchronization, and missing alignment remains `unsupported` or `not-run` rather than guessed visemes.
 
 ## Contact and reaction
 
@@ -59,7 +59,7 @@ Read the result accordingly. A physical implausibility rides `warnings` on a val
 
 Feed them from the record rather than from a constant. `spaceGround` adapts a space into the ground source the contact checks read, so a clip over a ramp or a platform is judged against the surfaces the production authored instead of a flat plane at zero, and `groundFunction` is the one place a scalar and a height callback become the same thing. `bodyCenterOfMass` answers a model's centre for the object-side of the same question `validateBalanceSupport` asks of a performer.
 
-Two of the answers come with a correction, and neither applies itself. `plantStanceFeet` is the pass that removes skate: it detects stance, solves the leg back onto the pinned contact, and clamps the result into the rig's own range of motion, so a residual it cannot hold stays a warning rather than a silent edit. `detectBodyCollision` returns the response `suggestCollisionResponse` computes at the deepest contact, bounded by joint range of motion into a flinch. Both are hints; the authored reaction stays yours, and `MOTION`'s contact section already says why a stronger or subtler one can be right.
+Two of the answers come with a correction, and neither applies itself. `plantStanceFeet` is the pass that removes skate: it detects stance, solves the leg back onto the pinned contact, and clamps the result into the rig's own range of motion, so a residual it cannot hold stays a warning rather than a silent edit. `detectBodyCollision` returns the response `suggestCollisionResponse` computes at the deepest contact, bounded by joint range of motion into a flinch. Both are hints; the authored reaction stays yours, and this document's contact section already says why a stronger or subtler one can be right.
 
 These calls run in a project script under `scripts/`, never in shot source. They read a compiled clip, and a build function is the thing that produces one.
 
@@ -114,8 +114,8 @@ Watch at speed, half speed, and frame step. Look for foot slide, penetration, fl
 
 Reading a clip's numbers is not watching it move. Capture the frames the fault would be on rather than the frames that happen to be convenient.
 
-1. `captureFrame` on the shot target at each contact, each extreme, and one frame either side of the moment the fault would appear. Foot slide, penetration, and contact drift are visible in adjacent frames and invisible in one.
-2. `captureFrame` with the `pose` structural pass when the question is skeletal rather than pictorial.
+1. `captureProductionFrame` on the shot target at each contact, each extreme, and one frame either side of the moment the fault would appear. Foot slide, penetration, and contact drift are visible in adjacent frames and invisible in one.
+2. `captureProductionFrame` with the `pose` structural pass when the question is skeletal rather than pictorial.
 3. State what the motion actually did, in the evidence citation on the source that owns it. A verdict nobody can trace to a frame is not one.
 
 A shot contract's declared review times are the floor, not the whole answer. Add the times this motion makes decisive.

@@ -9,7 +9,7 @@ Debug from the first authoritative disagreement, not from the final unattractive
 3. Reproduce with the smallest current input at that boundary.
 4. Compare declared identity and actual bytes or values.
 5. Correct the owner, then rebuild only the documented downstream chain.
-6. Prepare fresh evidence; never reuse a stale receipt or worksheet.
+6. Capture fresh evidence; never cite a stale receipt.
 
 Do not begin by deleting generated state, widening tolerances, adding casts, rerolling diffusion, or changing several layers at once. Those actions destroy evidence about cause.
 
@@ -23,7 +23,7 @@ If a target is missing from the evidence registry, verify source binding, named 
 
 A `derived-artifact-*` refusal is not cleared by compiling. The ledger records a generator, its declared inputs, and the exact output bytes; compilation verifies that record and never runs a generator or repairs a stale result. Correct what the occurrence names, the generator, a declared input, an unsafe path, or a colliding asset registration, then rerun the explicit generation command before compiling again. Compiling first is the loop that has no exit.
 
-Never edit the ledger or the output bytes to make a digest agree. That replaces a refusal with a false statement about what produced those bytes, and the next reader has no way to detect it. Read `DERIVED_ARTIFACTS` for what each code means and whether it names the basis or the output.
+Never edit the ledger or the output bytes to make a digest agree. That replaces a refusal with a false statement about what produced those bytes, and the next reader has no way to detect it. Read [Compilation](../source/compilation.md) for what each code means and whether it names the basis or the output.
 
 ## Geometry and motion failures
 
@@ -31,9 +31,9 @@ Reduce the question to engine facts: coordinate basis, transform chain, pose sam
 
 For continuity, compare outgoing and incoming state: position, facing, pose, gaze, held objects, gait phase, event completion, sound tail, and edit source offset.
 
-Ask the compiled artifact what it is before you ask a camera to show you. `SUBJECT_INSPECTION` describes one compiled subject exactly, its kind, prototype, placement, transform, declared and measured bounds, and members, and diffs one compiled artifact against another, with no render involved. A part that compiled to a single box, a placement off by a storey, and a brace spanning three bays while rising a fraction of a metre are all arithmetic there and guesswork in a frame. Start there whenever the question is what a thing is or what changed, because a description is cheap, exact, and stays true when the lighting does not.
+Ask the compiled artifact what it is before you ask a camera to show you. [Inspection](inspection.md) describes one compiled subject exactly, its kind, prototype, placement, transform, declared and measured bounds, and members, and diffs one compiled artifact against another, with no render involved. A part that compiled to a single box, a placement off by a storey, and a brace spanning three bays while rising a fraction of a metre are all arithmetic there and guesswork in a frame. Start there whenever the question is what a thing is or what changed, because a description is cheap, exact, and stays true when the lighting does not.
 
-When the fault is inside a building, the thing hiding it is the building. A camera moved into a room shows that room, and no exterior angle shows any of them. Cut the resolved scene instead: a section plane removes a half-space so a storey reads as a plan or a wall opens into elevation. `SUBJECT_INSPECTION` owns both halves of that cut, the calculation that says how a subject's bound stands against the planes and the call that makes the cut visible, plus the reading rules each one needs. A section is an inspection viewpoint and never delivery evidence.
+When the fault is inside a building, the thing hiding it is the building. A camera moved into a room shows that room, and no exterior angle shows any of them. Cut the resolved scene instead: a section plane removes a half-space so a storey reads as a plan or a wall opens into elevation. [Inspection](inspection.md) owns both halves of that cut, the calculation that says how a subject's bound stands against the planes and the call that makes the cut visible, plus the reading rules each one needs. A section is an inspection viewpoint and never delivery evidence.
 
 When the question is not where the fault is but whether one thing is right, open that thing by itself. The scaffold's `viewer/subject.html?shot=<id>&subject=<kind>:<id>` resolves the key against the compiled shot before it decodes anything, so a mistyped id costs a line of text rather than a scene. It then derives its own eye from the subject's content box and steps that eye around a fixed turntable plan. Left and right step the azimuth, up and down change the elevation ring, the wheel or `-` and `=` pull the distance, `F` refits, `Backspace` opens the owner, and `X` cuts away the half-space the eye is in so a room reads from inside instead of presenting its outer wall. Opened with no `subject` parameter it lists every space and population of the shot as links and decodes no model at all, which is the way in when nothing has been named yet.
 
@@ -57,7 +57,7 @@ It installs no capture hook, writes nothing, holds the shot's opening second, an
 
 Run the scaffold's configured doctor or verify path. Check current compile identity, registered target, host runtime identity, decoded PNG/media facts, raster, frame rate, frame count, duration, and atomic manifest. `captured:false` means no evidence exists.
 
-`generated-stale` is not one of these failures and no doctor or verify command clears it. `captureFrame`, `repaintShot`, and review all read compile status through a read-only lint that is built never to repair what it reports, so the tools can only keep refusing while the generated tree lags current design and source. Run the ordinary scaffold compile command, then capture again.
+`generated-stale` is not one of these failures and no doctor or verify command clears it. `captureProductionFrame`, the repaint adapter, and review all read compile status through a read-only lint that is built never to repair what it reports, so the tools can only keep refusing while the generated tree lags current design and source. Run the ordinary scaffold compile command, then capture again.
 
 If a renderer produces bytes but the receipt gate rejects them, the bytes are not deliverable. Preserve the diagnostic, correct runtime or configuration, and regenerate.
 
@@ -71,9 +71,9 @@ Prepare again and use only returned current selectors, frames, outcomes, fingerp
 
 `review-outcome-artifact-missing` and `review-outcome-artifact-malformed` are compiler-publication failures. Compile the same current inputs, having first removed only the damaged publication the occurrence names, and prepare again. `review-outcome-contract-mismatch` reads like their sibling and is not one; it belongs under Escalation record below.
 
-A subject review is not a shot review, and their evidence does not convert. A capture that happens to contain the subject cannot discharge subject coverage, and a subject verdict cannot discharge a frame, range, sequence, film, or delivery obligation. the review this target owes owns what subject coverage currently reports and whether `review-subject-coverage-incomplete` can be cleared at all; read it before treating that refusal as something you failed to do, and submit the honest incomplete worksheet it describes rather than retrying.
+A subject review is not a shot review, and their evidence does not convert. A capture that happens to contain the subject cannot discharge subject coverage, and a subject verdict cannot discharge a frame, range, sequence, film, or delivery obligation. [Inspection](inspection.md) owns what subject coverage currently reports and whether `review-subject-coverage-incomplete` can be cleared at all; read it before treating that refusal as something you failed to do, and write the honest incomplete state into the citation rather than retrying until it looks complete.
 
-`review-subject-viewpoint-unsupported` is no longer the standing state of that surface, and reading it as one costs a round. It now fires only while coverage is indeterminate, which means no viewpoint plan is published for this subject at all; run `inspectSubject` on the exact compiled id and the code stops applying. One permanent case shares it: a subject the tool cannot frame is refused under the same code, and for that one the viewpoint range is not observable at all. The message distinguishes the two, so read it instead of assuming the first.
+`review-subject-viewpoint-unsupported` is no longer the standing state of that surface, and reading it as one costs a round. It now fires only while coverage is indeterminate, which means no viewpoint plan is published for this subject at all; run `inspectProductionSubject` on the exact compiled id and the code stops applying. One permanent case shares it: a subject the tool cannot frame is refused under the same code, and for that one the viewpoint range is not observable at all. The message distinguishes the two, so read it instead of assuming the first.
 
 Once a plan exists, stop looking for a warning and read the coverage record, because an honest `not-run`, `partial`, `stale`, or `reviewed` is reported there rather than as a diagnostic. Three mechanics explain most surprises in it. The plan is published before the first picture is drawn, so a sweep that refuses partway leaves its denominator standing and reports `partial` instead of a clean pass over a smaller plan. Each receipt states the revision it was drawn at, so a sweep taken before a recompile reads `stale` rather than observed. And an observation counts only while its artifact still hashes to the digest its receipt recorded, so a picture edited or replaced afterwards drops back to `missing` rather than passing on its filename.
 
