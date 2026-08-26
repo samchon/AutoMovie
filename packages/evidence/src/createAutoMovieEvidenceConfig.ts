@@ -1474,6 +1474,8 @@ const validateHosts = (graph: IProductionGraph): void => {
     identities.set(name, layer);
   }
 
+  assertSourceTreeIsClosed(graph);
+
   for (const name of Object.keys(SOURCES) as SourceLayer[]) {
     const stage = graph[name];
     const files = populationFiles(graph, SOURCES[name].files, ".ts");
@@ -1737,6 +1739,64 @@ const sourcePrinciples = (
   noEvidenceExclude: true,
   requireReview: review,
 });
+
+/**
+ * Source directories a production owns without answering a design layer for
+ * them.
+ *
+ * `examples` is reference the scaffold ships and a production deletes; it
+ * teaches a technique rather than realizing a unit, so it cites nothing.
+ */
+const UNGOVERNED_SOURCE_DIRECTORIES = ["examples"] as const;
+
+/**
+ * Refuse a source file that belongs to no production layer.
+ *
+ * The nine source populations are a closed list, and a list makes "owes no
+ * evidence" the silent default for anything added beside it. `src/props/` and
+ * `src/creatures/` are not errors the graph reports today: they compile, ship,
+ * and cite nothing, and the omission is invisible precisely because no claim
+ * ever looked. A production that needs a prop puts it under one of the seven
+ * design layers or under `shots`, and the layer vocabulary is closed on
+ * purpose, so anything outside it is a placement mistake rather than a new
+ * kind of work.
+ *
+ * This is the structural half of the graph's own rule: derive the population,
+ * then refuse what the derivation did not reach.
+ */
+const assertSourceTreeIsClosed = (graph: IProductionGraph): void => {
+  const root = path.join(graph.location, "src");
+  if (!fs.existsSync(root)) return;
+  const governed = new Set(
+    Object.values(SOURCES).flatMap((source) =>
+      source.files.map((pattern) => {
+        const wildcard = pattern.search(/[*?]/u);
+        return (wildcard === -1 ? pattern : pattern.slice(0, wildcard)).replace(
+          /[/]+$/u,
+          "",
+        );
+      }),
+    ),
+  );
+  for (const directory of UNGOVERNED_SOURCE_DIRECTORIES)
+    governed.add(`src/${directory}`);
+  for (const file of walkFiles(root, ".ts")) {
+    const relative = posix(path.relative(graph.location, file));
+    if (
+      [...governed].some(
+        (prefix) => relative === prefix || relative.startsWith(`${prefix}/`),
+      )
+    )
+      continue;
+    throw new Error(
+      `${relative} belongs to no production source layer. Move it under one of ${[
+        ...governed,
+      ]
+        .sort(compareCodeUnits)
+        .join(", ")}, or delete it; the layer vocabulary is closed.`,
+    );
+  }
+};
 
 const sourceClaims = (graph: IProductionGraph): ITtscEvidenceGraphClaim[] => {
   const shared = sharedDocsRoot(graph.location);

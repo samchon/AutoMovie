@@ -2261,6 +2261,25 @@ try {
     true,
   );
 
+  // A source directory nobody assigned is the silent half of a listed
+  // population: it compiles, ships, and cites nothing. Refusing it is what
+  // makes the seven design layers a closed vocabulary rather than a habit.
+  const strayLayer = root();
+  write(strayLayer, "src/props/chair.ts", "export const chair = 1;");
+  assert.equal(
+    throws(
+      () => createAutoMovieEvidenceConfig(disabled(strayLayer)),
+      "src/props/chair.ts belongs to no production source layer",
+    ),
+    true,
+  );
+
+  // The scaffold's own examples are the one exception, and they are excluded
+  // by name rather than by nothing having looked.
+  const examples = root();
+  write(examples, "src/examples/props.ts", "export const example = 1;");
+  assert.doesNotThrow(() => createAutoMovieEvidenceConfig(disabled(examples)));
+
   const { claims: omittedClaims, ...withoutClaims } = disabled(root());
   void omittedClaims;
   assert.doesNotThrow(() => createAutoMovieEvidenceConfig(withoutClaims));
