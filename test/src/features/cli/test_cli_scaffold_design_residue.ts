@@ -156,7 +156,7 @@ export const test_cli_scaffold_design_residue = (): void => {
     const emitter = fs.readFileSync(
       path.resolve(
         __dirname,
-        "../../../../packages/cli/scaffold/scripts/emitDesign.ts",
+        "../../../../packages/template/scaffold/scripts/emitDesign.ts",
       ),
       "utf8",
     );

@@ -235,6 +235,19 @@ export const scaffoldAssetDirectory = (): string => {
  * @evidenceExclude specifications/authoring-and-authority/prototype-determinism-and-fidelity.md#spec-authoring-prototype-exclusion-compatibility Scaffold materialization does not implement the spec authoring prototype exclusion compatibility system responsibility; it only derives the portable editable scaffold.
  * @evidenceExclude specifications/authoring-and-authority/prototype-determinism-and-fidelity.md#spec-authoring-structural-output-invariant Scaffold materialization does not implement the spec authoring structural output invariant system responsibility; it only derives the portable editable scaffold.
  * @author Samchon
+ *
+ * @evidenceExclude requirements/agent-authoring/project-ownership.md#agent-editable-source-authority Rendering produces bytes in memory; which of them a project may then edit is decided by the project that receives them, not here.
+ * @evidenceExclude requirements/agent-authoring/project-ownership.md#agent-repository-project-boundary The boundary between reusable capability and one work's facts is drawn by the packages a rendered project depends on, not by the act of rendering the template.
+ * @evidenceExclude requirements/agent-authoring/project-ownership.md#agent-project-owned-bytes External image, audio, model, and motion bytes are adopted by an authored project through its asset registry; the template ships none of them.
+ * @evidenceExclude requirements/agent-authoring/project-ownership.md#agent-authoring-tool-replaceability Tool replaceability is a property of the rendered project's dependencies and public contracts, which rendering copies rather than decides.
+ * @evidenceExclude requirements/agent-authoring/project-ownership.md#agent-ambiguous-ownership-refusal Refusing an asset of unclear source, license, or digest is the compiler's judgment over an authored production; the template carries no assets to adjudicate.
+ * @evidenceExclude specifications/authoring-and-authority/capability-and-content-boundary.md#spec-authoring-system-project-responsibility The split of system and project responsibility is stated by the contracts the template ships, not performed by rendering them.
+ * @evidenceExclude specifications/authoring-and-authority/capability-and-content-boundary.md#spec-authoring-capability-state Capability state belongs to the packages a project installs; rendering emits the same bytes whatever those packages can currently do.
+ * @evidenceExclude specifications/authoring-and-authority/capability-and-content-boundary.md#spec-authoring-capability-not-content-invariant The invariant is held by what the template contains, which is a harness and no production content; rendering copies that set without deciding it.
+ * @evidenceExclude specifications/authoring-and-authority/capability-and-content-boundary.md#spec-authoring-capability-failure-gap Distinguishing a missing implementation from an unavailable capability is a diagnosis the generated project's compiler makes, not a rendering outcome.
+ * @evidenceExclude specifications/authoring-and-authority/source-authority-and-derivation.md#spec-authoring-source-derivation-state Derivation state lives in the generated project's compiler and its tracked output; rendering has no state beyond the bytes it returns.
+ * @evidenceExclude specifications/authoring-and-authority/source-authority-and-derivation.md#spec-authoring-source-ownership-failure Ownership failures are raised where a write or a compile meets an existing tree, which is the writer's and the compiler's job rather than the renderer's.
+ * @evidenceExclude specifications/authoring-and-authority/source-authority-and-derivation.md#spec-authoring-source-resume-compatibility Rendering is a single total act with nothing to resume; resumption belongs to the render job and the compiler.
  */
 export const renderScaffold = (
   props: IAutoMovieScaffoldProps,

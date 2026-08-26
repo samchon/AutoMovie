@@ -2,7 +2,7 @@
 // this working tree instead of npm, so a change to any package can be driven by
 // a live coding agent without publishing anything.
 //
-// This is repository-local tooling on purpose. `packages/cli/scaffold/**` and
+// This is repository-local tooling on purpose. `packages/template/scaffold/**` and
 // the published `automovie` surface stay untouched: a real user's project
 // targets released versions, and only how the sandbox obtains those packages
 // differs.

@@ -35,7 +35,7 @@ import { namedFacts } from "../internal/predicates";
  *    actually styles, so it is visible and reads as something to press.
  */
 export const test_cli_scaffold_viewer_member_paging = (): void => {
-  const root = path.resolve(__dirname, "../../../../packages/cli/scaffold");
+  const root = path.resolve(__dirname, "../../../../packages/template/scaffold");
   const source = fs.readFileSync(
     path.join(root, "viewer", "src", "subject.ts"),
     "utf8",

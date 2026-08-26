@@ -16,7 +16,7 @@ import { namedFacts, throwsError } from "../internal/predicates";
  * fixture keeps compiler regression coverage elsewhere.
  */
 export const test_cli_scaffold_design_derivation = (): void => {
-  const scaffold = path.resolve(__dirname, "../../../../packages/cli/scaffold");
+  const scaffold = path.resolve(__dirname, "../../../../packages/template/scaffold");
   const assetDirectory = scaffoldAssetDirectory();
   const existsSync = fs.existsSync;
   Object.defineProperty(fs, "existsSync", {

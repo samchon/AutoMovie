@@ -4,8 +4,7 @@ import { spawnSync } from "node:child_process";
 import * as fs from "node:fs";
 import * as path from "node:path";
 
-import { renderScaffold } from "./renderScaffold";
-import { writeFiles } from "./writeFiles";
+import { renderScaffold, writeFiles } from "@automovie/template";
 
 const USAGE = `automovie: scaffold an automovie project
 
@@ -56,7 +55,6 @@ const projectNameOf = (targetDir: string): string =>
  * the target directory. Returns the process exit code (0 success, 1 on a usage
  * or scaffold error) rather than exiting, so the logic stays unit-testable.
  *
- * @evidence requirements/agent-authoring/capability-discovery.md#agent-technique-example Creates the blank scaffold whose examples teach reusable techniques and verification paths.
  * @evidence requirements/agent-authoring/project-ownership.md#agent-editable-source-authority Creates ordinary editable source as the generated project's authority.
  * @evidence requirements/agent-authoring/project-ownership.md#agent-repository-project-boundary Separates the reusable scaffold capability from the created project's facts.
  * @evidence requirements/agent-authoring/project-ownership.md#agent-project-owned-bytes Writes the selected scaffold bytes into the user-owned target.
@@ -511,6 +509,15 @@ const projectNameOf = (targetDir: string): string =>
  * @evidenceExclude specifications/interchange-and-adoption/validation-and-quarantine.md#interchange-quarantine-exposure-removal The CLI dispatcher does not implement the interchange quarantine exposure removal system responsibility; it only routes explicit local commands and preserves delegated outcomes.
  * @evidenceExclude specifications/interchange-and-adoption/validation-and-quarantine.md#interchange-validation-result-envelope The CLI dispatcher does not implement the interchange validation result envelope system responsibility; it only routes explicit local commands and preserves delegated outcomes.
  * @author Samchon
+ *
+ * @evidenceExclude requirements/operations-and-recovery/idempotency-and-side-effects.md#operations-duplicate-submission Materializing a project is `@automovie/template`'s write, and the duplicate-write boundary is captured there against a physical directory identity.
+ * @evidenceExclude requirements/operations-and-recovery/idempotency-and-side-effects.md#operations-idempotent-deterministic-results The deterministic byte result belongs to the renderer and writer in `@automovie/template`; the executable only routes a command to them.
+ * @evidenceExclude specifications/authoring-and-authority/capability-and-content-boundary.md#spec-authoring-capability-extension-compatibility Additive capability arrives through the packages a generated project installs, which the template pins; the executable adds no contract of its own.
+ * @evidenceExclude specifications/authoring-and-authority/source-authority-and-derivation.md#spec-authoring-change-impact-report The change-impact report is produced by the generated project's compiler, not by the command that creates the project.
+ * @evidenceExclude specifications/authoring-and-authority/source-authority-and-derivation.md#spec-authoring-derivation-output-lineage Output lineage is recorded by the compiler over authored source; scaffolding writes template bytes and records none.
+ * @evidenceExclude specifications/authoring-and-authority/source-authority-and-derivation.md#spec-authoring-source-change-impact-invariant The invariant binds a source change to its downstream impact inside a production, which exists only after this command has finished.
+ * @evidenceExclude specifications/execution-and-recovery/retry-backoff-and-idempotency.md#execution-deterministic-result-reuse Reuse of an identical result is decided by the writer's captured directory generation in `@automovie/template`.
+ * @evidenceExclude specifications/execution-and-recovery/retry-backoff-and-idempotency.md#execution-duplicate-submission The executable carries no submission identity; the write it delegates to owns that boundary.
  */
 export const run = (argv: readonly string[]): number => {
   const args = argv.slice(2);

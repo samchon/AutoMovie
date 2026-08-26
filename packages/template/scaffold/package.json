@@ -49,6 +49,7 @@
   },
   "devDependencies": {
     "@automovie/evidence": "{{version:evidence}}",
+    "@automovie/template": "{{version:template}}",
     "@ttsc/lint": "{{version:ttscLint}}",
     "@types/node": "{{version:nodeTypes}}",
     "@types/pngjs": "{{version:pngjsTypes}}",

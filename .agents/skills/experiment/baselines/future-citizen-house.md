@@ -285,7 +285,7 @@ modern 드라이버다. **이름·모양·깊이로는 구별되지 않고 UUID�
 
 **결함으로 올리지 않는다. 아래에 그 이유까지 적는다.**
 
-`packages/cli/scaffold/scripts/deriveBuilding.ts`의 JSDoc이 사이드카를 절대 지우지
+`packages/template/scaffold/scripts/deriveBuilding.ts`의 JSDoc이 사이드카를 절대 지우지
 않는 정책을 이렇게 정당화한다.
 
 > Rename a building **or a view** and its old files stay where they were, still

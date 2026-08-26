@@ -297,7 +297,7 @@ const modulePaths = () => ({
 const inherit = (relative) => {
   if (/[*?]/u.test(relative) === true)
     throw new Error(
-      `packages/cli/scaffold/tsconfig.json now includes the pattern ${JSON.stringify(relative)}; teach the probe to expand it before it can compile what the scaffold compiles.`,
+      `packages/template/scaffold/tsconfig.json now includes the pattern ${JSON.stringify(relative)}; teach the probe to expand it before it can compile what the scaffold compiles.`,
     );
   const target = path.join(PROBE, relative);
   fs.mkdirSync(path.dirname(target), { recursive: true });
@@ -720,7 +720,7 @@ const main = () => {
   if (owed.length !== 0) {
     report([
       "",
-      "FAIL: packages/cli/scaffold owes the diagnostics below. Every project",
+      "FAIL: packages/template/scaffold owes the diagnostics below. Every project",
       " generated from it inherits them, so this is red on an author's first",
       " `npm run lint`.",
       ...owed.map((diagnostic) => ` ${diagnostic.text}`),

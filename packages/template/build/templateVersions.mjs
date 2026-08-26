@@ -82,6 +82,7 @@ export const resolveTemplateVersions = () => ({
   interface: packageVersion("packages/interface"),
   mcp: packageVersion("packages/mcp"),
   render: packageVersion("packages/render"),
+  template: packageVersion("packages/template"),
   viewer: packageVersion("packages/viewer"),
   huggingFaceTransformers: exactCatalogVersion(
     "media",

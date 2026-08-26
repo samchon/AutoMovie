@@ -129,7 +129,7 @@ export const test_cli_scaffold_surface_material_runtime =
   async (): Promise<void> => {
     const source = path.resolve(
       __dirname,
-      "../../../../packages/cli/scaffold/viewer/src/shotRuntime.ts",
+      "../../../../packages/template/scaffold/viewer/src/shotRuntime.ts",
     );
     const runtimeModule = (await import(source)) as IScaffoldRuntimeModule;
     const compiled = compiledSurfaceShot();

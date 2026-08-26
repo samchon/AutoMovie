@@ -37,13 +37,13 @@ packages/*/src/**/*.js.map
 # `--noEmit` drops a `.d.ts` next to every `.ts`, and none is ever committed.
 packages/*/src/**/*.d.ts
 # the scaffold nests a whole project, so its own sources need the same rule
-packages/cli/scaffold/src/**/*.js
-packages/cli/scaffold/src/**/*.js.map
-packages/cli/scaffold/src/**/*.d.ts
-packages/cli/scaffold/scripts/**/*.js
-packages/cli/scaffold/scripts/**/*.js.map
-packages/cli/scaffold/*.js
-packages/cli/scaffold/*.js.map
+packages/template/scaffold/src/**/*.js
+packages/template/scaffold/src/**/*.js.map
+packages/template/scaffold/src/**/*.d.ts
+packages/template/scaffold/scripts/**/*.js
+packages/template/scaffold/scripts/**/*.js.map
+packages/template/scaffold/*.js
+packages/template/scaffold/*.js.map
 # the suite is run straight through `ttsx`, so anything emitted beside a case is
 # transpiler spill rather than a source file.
 test/src/**/*.js

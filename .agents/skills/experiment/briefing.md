@@ -83,7 +83,7 @@ Getting the massing right cheaply and then leaving it alone was the most valuabl
 
 ## Require The Surface Decomposition Early
 
-Ask for the decomposition as a deliverable of the massing stage, before there is anything to clad. One complete visual surface has one owner and no surface is ever split, which the [design-branches document](../../../packages/cli/scaffold/.agents/skills/production/design-branches.md) owns and the sandbox's own `src/examples/surfaceOwnership.ts` teaches as an authoring technique; the [review skill's law](../review/SKILL.md#non-negotiable-review-law) is the same rule for reviewers. What the brief adds is the timing.
+Ask for the decomposition as a deliverable of the massing stage, before there is anything to clad. One complete visual surface has one owner and no surface is ever split, which the [design-branches document](../../../packages/template/scaffold/.agents/skills/production/design-branches.md) owns and the sandbox's own `src/examples/surfaceOwnership.ts` teaches as an authoring technique; the [review skill's law](../review/SKILL.md#non-negotiable-review-law) is the same rule for reviewers. What the brief adds is the timing.
 
 That campaign's production restructured itself into one file per elevation, per room, and per courtyard level, with a single owner for each cross-cutting concern, but only halfway through. Before that it was a few large files and the authoring agent could not fan out at all.
 

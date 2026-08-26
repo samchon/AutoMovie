@@ -4,6 +4,7 @@ import {
   type ITtscEvidenceGraphReference,
 } from "@ttsc/evidence";
 import fs from "node:fs";
+import { createRequire } from "node:module";
 import path from "node:path";
 import ts from "typescript-compiler";
 
@@ -141,6 +142,24 @@ interface ISourcePopulation {
 }
 
 const DOCS = "docs";
+
+/**
+ * Where the shared contracts actually live.
+ *
+ * `@automovie/template` ships `docs/discovery`, `docs/obligations`, and
+ * `docs/principles`, and the graph resolves them from the installed package
+ * rather than from a copy each project carries. A project cannot legitimately
+ * edit them, the inventory is pinned here by filename and anchor, and a copy
+ * that a package upgrade can invalidate is a break waiting for the next
+ * release rather than project-owned content.
+ */
+const sharedDocsRoot = (location: string): string => {
+  const resolve = createRequire(path.join(location, "noop.js"));
+  const resolved = path.dirname(
+    resolve.resolve("@automovie/template/package.json"),
+  );
+  return posix(path.relative(location, path.join(resolved, DOCS)));
+};
 const MARKDOWN: Record<MarkdownLayer, IMarkdownPopulation> = {
   settings: { headings: [2], obligation: true, principle: "settings.md" },
   research: { headings: [2], obligation: false, principle: "research.md" },
@@ -1004,7 +1023,7 @@ const hasExportedOwner = (
 };
 
 const validateContracts = (location: string): ITargetIdentityRegistry => {
-  const root = path.join(location, DOCS);
+  const root = path.resolve(location, sharedDocsRoot(location));
   const actual = [
     ...walkFiles(path.join(root, "discovery"), ".md"),
     ...walkFiles(path.join(root, "obligations"), ".md"),
@@ -1503,11 +1522,12 @@ const validateHosts = (graph: IProductionGraph): void => {
 };
 
 const checklist = (
+  shared: string,
   file: string,
   review: boolean,
 ): ITtscEvidenceGraphReference => ({
   type: "markdown",
-  root: DOCS,
+  root: shared,
   files: [`principles/${file}`],
   symbol: "h2",
   checklist: true,
@@ -1515,9 +1535,12 @@ const checklist = (
   requireReview: review,
 });
 
-const commonObligations = (review: boolean): ITtscEvidenceGraphReference => ({
+const commonObligations = (
+  shared: string,
+  review: boolean,
+): ITtscEvidenceGraphReference => ({
   type: "markdown",
-  root: DOCS,
+  root: shared,
   files: ["obligations/common.md"],
   symbol: "h2",
   checklist: true,
@@ -1526,11 +1549,12 @@ const commonObligations = (review: boolean): ITtscEvidenceGraphReference => ({
 });
 
 const layerObligation = (
+  shared: string,
   layer: MarkdownLayer,
   review: boolean,
 ): ITtscEvidenceGraphReference => ({
   type: "markdown",
-  root: DOCS,
+  root: shared,
   files: [`obligations/${layer}.md`],
   symbol: "h2",
   noEvidenceExclude: layer === "motions" ? undefined : true,
@@ -1550,21 +1574,25 @@ const layerObligation = (
  * truthfully establish no consequential relationship, exactly as a production
  * without a motion condition may exclude one motion role.
  */
-const subjectObligation = (review: boolean): ITtscEvidenceGraphReference => ({
+const subjectObligation = (
+  shared: string,
+  review: boolean,
+): ITtscEvidenceGraphReference => ({
   type: "markdown",
-  root: DOCS,
+  root: shared,
   files: ["obligations/subjects.md"],
   symbol: "h2",
   requireReview: review,
 });
 
 const discoveryReferences = (
+  shared: string,
   layer: MarkdownLayer,
   review: boolean,
 ): ITtscEvidenceGraphReference[] =>
   DISCOVERY_TARGETS[layer].map((target) => ({
     type: "markdown",
-    root: DOCS,
+    root: shared,
     files: [`discovery/${target}.md`],
     symbol: "h2",
     requireReview: review,
@@ -1613,14 +1641,15 @@ const lineage = (
 });
 
 const authoredClaims = (graph: IProductionGraph): ITtscEvidenceGraphClaim[] => {
+  const shared = sharedDocsRoot(graph.location);
   const claims: ITtscEvidenceGraphClaim[] = [];
   for (const name of Object.keys(MARKDOWN) as MarkdownLayer[]) {
     const stage = graph[name];
     const review = requiresReview(stage);
-    const principles = [checklist("common.md", review)];
+    const principles = [checklist(shared, "common.md", review)];
     if (["storylines", "scenarios", "script"].includes(name))
-      principles.push(checklist("narratives.md", review));
-    principles.push(checklist(MARKDOWN[name].principle, review));
+      principles.push(checklist(shared, "narratives.md", review));
+    principles.push(checklist(shared, MARKDOWN[name].principle, review));
     claims.push({
       name: `${name} files answer their complete principle checklists`,
       type: "markdown",
@@ -1632,13 +1661,13 @@ const authoredClaims = (graph: IProductionGraph): ITtscEvidenceGraphClaim[] => {
     });
     for (const symbol of MARKDOWN[name].headings) {
       const references: ITtscEvidenceGraphReference[] = [
-        commonObligations(review),
+        commonObligations(shared, review),
       ];
       if (MARKDOWN[name].obligation && symbol === 2)
-        references.push(layerObligation(name, review));
-      if (symbol === 2) references.push(...discoveryReferences(name, review));
+        references.push(layerObligation(shared, name, review));
+      if (symbol === 2) references.push(...discoveryReferences(shared, name, review));
       if (symbol === 2 && name === "settings" && graph.kind === "film")
-        references.push(subjectObligation(review));
+        references.push(subjectObligation(shared, review));
       if (!["settings", "research"].includes(name))
         references.push(...referencesPerFile(graph, "settings", "h2", review));
       references.push(...designFoundations(graph, name, review));
@@ -1684,11 +1713,12 @@ const authoredClaims = (graph: IProductionGraph): ITtscEvidenceGraphClaim[] => {
 };
 
 const sourcePrinciples = (
+  shared: string,
   file: string,
   review: boolean,
 ): ITtscEvidenceGraphReference => ({
   type: "markdown",
-  root: DOCS,
+  root: shared,
   files: [`principles/${file}`],
   symbol: "h2",
   noEvidenceExclude: true,
@@ -1696,6 +1726,7 @@ const sourcePrinciples = (
 });
 
 const sourceClaims = (graph: IProductionGraph): ITtscEvidenceGraphClaim[] => {
+  const shared = sharedDocsRoot(graph.location);
   const claims: ITtscEvidenceGraphClaim[] = [];
   for (const name of [
     "modelSources",
@@ -1732,7 +1763,7 @@ const sourceClaims = (graph: IProductionGraph): ITtscEvidenceGraphClaim[] => {
         symbol: [...source.symbols],
         disabled: !requiresEvidence(graph[name]),
         reference: [
-          sourcePrinciples(source.principle, review),
+          sourcePrinciples(shared, source.principle, review),
           {
             type: "markdown",
             root: DOCS,
@@ -1770,7 +1801,7 @@ const sourceClaims = (graph: IProductionGraph): ITtscEvidenceGraphClaim[] => {
       files: [...SOURCES.shots.files],
       symbol: [...SOURCES.shots.symbols],
       disabled: !requiresEvidence(graph.shots),
-      reference: sourcePrinciples(SOURCES.shots.principle, shotReview),
+      reference: sourcePrinciples(shared, SOURCES.shots.principle, shotReview),
     },
     {
       name: "production source serializes settings and production-source principles",
@@ -1780,6 +1811,7 @@ const sourceClaims = (graph: IProductionGraph): ITtscEvidenceGraphClaim[] => {
       disabled: !requiresEvidence(graph.productionSources),
       reference: [
         sourcePrinciples(
+          shared,
           SOURCES.productionSources.principle,
           requiresReview(graph.productionSources),
         ),
@@ -1799,6 +1831,7 @@ const sourceClaims = (graph: IProductionGraph): ITtscEvidenceGraphClaim[] => {
       disabled: !requiresEvidence(graph.filmSources),
       reference: [
         sourcePrinciples(
+          shared,
           SOURCES.filmSources.principle,
           requiresReview(graph.filmSources),
         ),
@@ -1858,7 +1891,7 @@ export const createAutoMovieEvidenceConfig = (
       type: "typescript" as const,
       files: ["test/__evidenceGraphCanary.ts"],
       symbol: "property" as const,
-      reference: checklist("common.md", false),
+      reference: checklist(sharedDocsRoot(graph.location), "common.md", false),
     },
   ];
   return {

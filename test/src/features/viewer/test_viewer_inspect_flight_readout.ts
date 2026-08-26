@@ -281,7 +281,7 @@ const bimodal = (): number[] =>
 /** The shipped page, which every generated project inherits verbatim. */
 const INSPECT_SOURCE = path.resolve(
   __dirname,
-  "../../../../packages/cli/scaffold/viewer/src/inspect.ts",
+  "../../../../packages/template/scaffold/viewer/src/inspect.ts",
 );
 
 /** A full sample window of one repeated frame interval, in seconds. */
