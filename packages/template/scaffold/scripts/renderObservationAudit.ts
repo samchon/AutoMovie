@@ -11,7 +11,7 @@ import type {
 import {
   digestAutoMovieBytes,
   encodeAutoMoviePathSegment,
-} from "@automovie/mcp";
+} from "@automovie/production";
 import { auditAutoMovieRenderObservation } from "@automovie/render";
 import path from "node:path";
 

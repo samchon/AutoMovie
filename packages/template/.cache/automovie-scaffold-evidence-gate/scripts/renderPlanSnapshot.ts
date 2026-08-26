@@ -2,7 +2,7 @@ import {
   type IAutoMovieProductionRenderJobPlan,
   type IAutoMovieProductionRenderLayer,
   compareCodeUnits,
-} from "@automovie/mcp";
+} from "@automovie/production";
 import { createHash, randomUUID } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";

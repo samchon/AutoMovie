@@ -252,7 +252,7 @@ const SOURCES = [
   "packages/ingest/src",
   "packages/render",
   "packages/viewer/src",
-  "packages/mcp/src",
+  "packages/production/src",
 ];
 
 const INCLUDES = [
@@ -265,7 +265,7 @@ const INCLUDES = [
   "packages/render/src/**",
   "packages/render/gltfTransformCore.cjs",
   "packages/viewer/src/**",
-  "packages/mcp/src/**",
+  "packages/production/src/**",
 ];
 
 /** Where a run records how long each measured file was while it was measured. */

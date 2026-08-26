@@ -6,7 +6,7 @@ import {
   digestAutoMovieBytes,
   probeProductionMedia,
   probeProductionVideoMp4,
-} from "@automovie/mcp";
+} from "@automovie/production";
 import { randomUUID } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";

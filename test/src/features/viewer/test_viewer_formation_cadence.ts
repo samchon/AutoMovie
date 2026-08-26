@@ -10,7 +10,7 @@ import {
 import {
   materializeCompiledFormation,
   materializeProductionModels,
-} from "@automovie/mcp";
+} from "@automovie/production";
 import {
   buildInstancedFormation,
   formationCycleOf,
@@ -21,7 +21,7 @@ import { TestValidator } from "@nestia/e2e";
 import * as THREE from "three";
 
 import { namedFacts, nclose, throwsError } from "../internal/predicates";
-import { formationDesign, modelRecipe } from "../mcp/productionFixtures";
+import { formationDesign, modelRecipe } from "../production/productionFixtures";
 
 /**
  * A unit's cadence is the ground its own cues cover, and its action is theirs.

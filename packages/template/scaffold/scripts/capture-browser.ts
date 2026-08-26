@@ -3,7 +3,7 @@ import {
   compareCodeUnits,
   digestAutoMovieBytes,
   readAutoMovieProductionOwnedFile,
-} from "@automovie/mcp";
+} from "@automovie/production";
 import { spawnSync } from "node:child_process";
 import fs, { type BigIntStats } from "node:fs";
 import { createRequire } from "node:module";

@@ -33,7 +33,7 @@
     "automovie": "{{version:cli}}",
     "@automovie/engine": "{{version:engine}}",
     "@automovie/interface": "{{version:interface}}",
-    "@automovie/mcp": "{{version:mcp}}",
+    "@automovie/production": "{{version:production}}",
     "@automovie/render": "{{version:render}}",
     "@automovie/viewer": "{{version:viewer}}",
     "@huggingface/transformers": "{{version:huggingFaceTransformers}}",

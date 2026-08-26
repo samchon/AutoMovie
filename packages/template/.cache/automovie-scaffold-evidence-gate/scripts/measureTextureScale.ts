@@ -1,5 +1,5 @@
 import type { IAutoMovieModel } from "@automovie/interface";
-import { findAutoMovieProjectRoot } from "@automovie/mcp";
+import { findAutoMovieProjectRoot } from "@automovie/production";
 import {
   loadAutoMovieProjectState,
   requireCurrentAutoMovieProjectState,

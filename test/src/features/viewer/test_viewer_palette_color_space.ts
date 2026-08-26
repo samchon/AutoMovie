@@ -6,7 +6,7 @@ import {
 import {
   materializeCompiledInstanceSet,
   materializeProductionModels,
-} from "@automovie/mcp";
+} from "@automovie/production";
 import { buildInstancedInstanceSet, buildMaterial } from "@automovie/viewer";
 import { TestValidator } from "@nestia/e2e";
 import * as THREE from "three";

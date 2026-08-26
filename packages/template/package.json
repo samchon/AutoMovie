@@ -53,7 +53,7 @@
     "@automovie/engine": "workspace:^",
     "@automovie/evidence": "workspace:^",
     "@automovie/interface": "workspace:^",
-    "@automovie/mcp": "workspace:^",
+    "@automovie/production": "workspace:^",
     "@automovie/render": "workspace:^",
     "@automovie/viewer": "workspace:^",
     "@ttsc/evidence": "catalog:typescript",

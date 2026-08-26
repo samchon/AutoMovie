@@ -10,7 +10,7 @@ import {
   compareCodeUnits,
   digestAutoMovieBytes,
   encodeAutoMoviePathSegment,
-} from "@automovie/mcp";
+} from "@automovie/production";
 import {
   type IAutoMovieRenderBudgetAssessment,
   type IAutoMovieRenderBudgetEvidence,

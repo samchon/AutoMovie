@@ -25,9 +25,9 @@ registers, not a union the universal surface enumerates.
 | `numberParameter`, `stringParameter`, `numberOf` | Write and read the parameter values a schema declares.            |
 
 Every consumer builds its own lookup, because that call is the seam where a host
-substitutes, extends, or drops definitions. The MCP server's own default is
+substitutes, extends, or drops definitions. The production runtime's own default is
 `AUTOMOVIE_REGISTERED_ARCHETYPES` in
-`packages/mcp/src/production/productionArchetypes.ts`, and it is a parameter
+`packages/production/src/production/productionArchetypes.ts`, and it is a parameter
 default rather than a fixed choice.
 
 Every definition is data plus pure functions. `plan` reports which parameter
@@ -55,7 +55,7 @@ has to learn about it.
 
 This package is the one place a shipped, pre-made thing is allowed to live, and
 it is that place because no product package will hold one. `interface`,
-`engine`, and `viewer` do not depend on it at all, and `mcp` registers what it
+`engine`, and `viewer` do not depend on it at all, and `production` registers what it
 ships as a parameter default a host replaces, so a production that registers its
 own catalogue loses nothing. Emptying this package would leave a working engine
 with nothing to build, which is the shape a catalogue is supposed to have; the
@@ -68,7 +68,7 @@ An entry may enter when all three of these hold.
   reads. A host registers it through the registry rather than reaching for it by
   name.
 - **Its absence costs a production its own choice and nothing else.** No
-  validator, lowering step, viewer path, or MCP tool may start needing it.
+  validator, lowering step, viewer path, or production entry point may start needing it.
 - **It is not standing in for a missing capability.** An entry that exists
   because authoring the thing directly is impossible today is a capability
   defect wearing a catalogue's clothes, and the capability is the real work.
@@ -83,11 +83,11 @@ An entry may not enter when any one of these holds.
 - **It would give `interface` a runtime dependency.** `interface` stays pure
   types.
 
-One exception stands today. The MCP sandbox module map names `CAT_GAITS`,
+One exception stands today. The production sandbox module map names `CAT_GAITS`,
 `HORSE_GAITS`, and `HUMANOID_GAITS` literally, in
-`packages/mcp/src/production/linkProductionSource.ts` and
-`packages/mcp/src/production/AutoMovieProductionCompiler.ts`, so those three
-tables cannot be removed without editing `mcp`. The archetypes have a registry
+`packages/production/src/production/linkProductionSource.ts` and
+`packages/production/src/production/AutoMovieProductionCompiler.ts`, so those three
+tables cannot be removed without editing `production`. The archetypes have a registry
 seam and the gait tables do not yet; closing that is the gait side's own work,
 and it is not a licence to add more named exports in the meantime.
 
@@ -116,7 +116,7 @@ skeleton ids rather than deriving them.
 호스트가 고르는 카탈로그에 속한다.
 
 미리 만들어 둔 것을 두는 자리는 이 패키지 하나다. `interface`·`engine`·`viewer`는 이 패키지에
-의존하지 않고, `mcp`는 호스트가 교체할 수 있는 이음매를 통해 기본 카탈로그로 등록할 뿐이다.
+의존하지 않고, `production`은 호출자가 교체할 수 있는 이음매를 통해 기본 카탈로그로 등록할 뿐이다.
 여기 있는 정의를 전부 지워도 엔진은 그대로 동작하며, 만들 것이 없어질 뿐이다.
 
 들어올 수 있는 것은 셋을 모두 만족하는 항목이다. 산출물이 아니라 정의일 것(경계값을 가진
@@ -129,9 +129,9 @@ skeleton ids rather than deriving them.
 모델, 몰딩 라이브러리, 양식 팩, 이름 붙은 부재 카탈로그), 제품 패키지가 이름으로 import 해야만
 동작하게 되는 것, `interface`에 런타임 의존을 지우는 것.
 
-지금 예외가 하나 있다. MCP 샌드박스 모듈 맵이 `CAT_GAITS`·`HORSE_GAITS`·`HUMANOID_GAITS`를
-문자열로 열거하므로(`packages/mcp/src/production/linkProductionSource.ts`,
-`packages/mcp/src/production/AutoMovieProductionCompiler.ts`), 그 셋은 `mcp`를 고치지 않고는
+지금 예외가 하나 있다. production 샌드박스 모듈 맵이 `CAT_GAITS`·`HORSE_GAITS`·`HUMANOID_GAITS`를
+문자열로 열거하므로(`packages/production/src/production/linkProductionSource.ts`,
+`packages/production/src/production/AutoMovieProductionCompiler.ts`), 그 셋은 `production`을 고치지 않고는
 지울 수 없다. 아키타입에는 레지스트리 이음매가 있고 보행 테이블에는 아직 없다. 그것을 닫는
 일은 보행 쪽의 몫이며, 그때까지 이름으로 노출되는 항목을 더 늘려도 된다는 뜻은 아니다.
 

@@ -1,4 +1,4 @@
-import { AutoMovieProject } from "@automovie/mcp";
+import { AutoMovieProject } from "@automovie/production";
 import { TestValidator } from "@nestia/e2e";
 import fs from "node:fs";
 import os from "node:os";

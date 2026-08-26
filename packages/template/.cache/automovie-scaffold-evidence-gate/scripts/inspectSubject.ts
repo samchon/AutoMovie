@@ -1,4 +1,4 @@
-import type { AutoMovieProductionSubjectInspection } from "@automovie/mcp";
+import type { AutoMovieProductionSubjectInspection } from "@automovie/production";
 import path from "node:path";
 import type { Page } from "playwright";
 import { createServer } from "vite";
@@ -124,7 +124,7 @@ const inspectionSession = async (
  *
  * The compile fingerprint and the artifact revision are both in it. A sweep
  * whose source moved underneath it is a set of pictures of two different models
- * with nothing in the individual images saying so, and the MCP surface refuses
+ * with nothing in the individual images saying so, and the runtime refuses
  * that sweep after the fact; keeping both in the key means the page never
  * serves the mixed frame in the first place.
  */
@@ -253,7 +253,7 @@ const inspectionPage = (
  * Draw one named subject from one inspection-owned pose.
  *
  * This is the host half of `inspectSubject`: without it the tool refuses with
- * `capture-host-unavailable`, which is honest and blind. The MCP surface owns
+ * `capture-host-unavailable`, which is honest and blind. The runtime owns
  * the viewpoint plan, the projection and where the bytes are published; this
  * adapter owns nothing but "stage that subject, aim there, hand back the
  * canvas". Every framing decision arrives in `pose` and none is taken here, so

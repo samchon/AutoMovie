@@ -22,7 +22,7 @@
     "@automovie/face": "workspace:^",
     "@automovie/ingest": "workspace:^",
     "@automovie/interface": "workspace:^",
-    "@automovie/mcp": "workspace:^",
+    "@automovie/production": "workspace:^",
     "@automovie/render": "workspace:^",
     "@automovie/viewer": "workspace:^",
     "@huggingface/transformers": "catalog:media",

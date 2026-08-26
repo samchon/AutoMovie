@@ -28,7 +28,7 @@ npm run lint:source
 
 The empty design emitter, compile, review lint, preview, render, and verify commands fail until you select a kind and author their prerequisites. That is a truthful blank state, not setup failure. After reviewed source exists, add its explicit imports and `emit` calls to the marked block in `scripts/emitDesign.ts`; preserve the shell's unchanged-record and orphan-inventory checks. Then run `npm run design`, `npm run compile`, and the applicable review/render gates.
 
-Every checked-in `ttsc` and `ttsx` launcher, including the project-bound MCP command, pins its compiler cache to `node_modules/.cache/ttsc`. This keeps a generated project standalone even when its directory is nested below another workspace. Preserve that flag on new TypeScript launcher scripts instead of relying on upward workspace discovery.
+Every checked-in `ttsc` and `ttsx` launcher pins its compiler cache to `node_modules/.cache/ttsc`. This keeps a generated project standalone even when its directory is nested below another workspace. Preserve that flag on new TypeScript launcher scripts instead of relying on upward workspace discovery.
 
 After compilation, the viewer is available at `http://127.0.0.1:5173`. Run `capture:install` and `capture:doctor` before the first preview or render.
 
@@ -42,7 +42,7 @@ A `configured-executable` choice must declare both its product and path. Its exa
 
 Render evidence records structured Playwright, browser, executable, platform, headless/raster, backend, and actual WebGL identity. A browser/runtime change therefore produces a different content-addressed bundle; legacy v2 evidence must be recaptured.
 
-Open every PNG named by the review queue, read the exact `REVIEW_ASSET`, `REVIEW_SHOT`, `REVIEW_SEQUENCE`, or `REVIEW_FILM` contract through MCP, and review only current evidence.
+Open every PNG the contract names, and say what each one showed in the evidence citation on the source that claims the unit is realized. Only current evidence counts, and nothing records a verdict on your behalf.
 
 ## Begin the production
 
@@ -60,7 +60,7 @@ After each complete contract-discovery, layer-authorship, evidence-repair, revie
 
 Two measurements already ship. `npm run building:report` derives every drawing schedule over the buildings the compiled shots carry, including one row per room that keeps the declared cell and the measured content box apart, so what a space was declared to be and what actually landed in it are separate facts. `npm run texture:scale` re-checks each declared texture scale against the surface it was bound to over every model a build produced, and reports a census of what it examined beside its findings, because an empty finding list from a run that measured nothing reads exactly like a clean one.
 
-Beyond those, measurement scripts and tests may load the current project snapshot without an MCP session:
+Beyond those, measurement scripts and tests may load the current project snapshot:
 
 ```ts
 import {
@@ -89,7 +89,7 @@ The loaded state includes the generated compile fingerprint, the fingerprint rec
 
 The state reader performs filesystem I/O and is therefore forbidden inside shot and film `build` functions. Those functions run in the deterministic compiler sandbox. Keep the reader in standalone measurement scripts, tests, or offline diagnostics and pass only loaded typed values into engine functions.
 
-Claude Code loads the checked-in `.mcp.json` after one project approval. Other MCP clients can import the same project-bound command. Its first call is `getGuideDocument({name:"AUTOMOVIE_OVERALL"})`. `scripts/mcp.ts` fixes this repository root and production id at host startup; tool payloads never switch workspaces. Full render, chunk resume, encode, and final publication are project CLI jobs, not free-form MCP shell tools:
+Full render, chunk resume, encode, and final publication are project CLI jobs:
 
 ```sh
 npx automovie render plan npx automovie render status npx automovie render run --workers 2 npx automovie render verify npx automovie render finalize
@@ -119,7 +119,7 @@ Every planning, run, and full-sequence render first measures what the tier is ab
 
 Run `npm run verify` (or `npx automovie verify`) after publication to reopen the generated inventory, evidence-bound reviews, render receipts, and actual delivery bytes without modifying project state. It fails on damaged generated output, stale or forged receipts, and missing required deliverables.
 
-Claude Code loads `.claude/settings.json` and checks every `PreToolUse`, including direct edits, Bash, and MCP file tools, against compiler-owned generated output, render output, capture receipts, and production state. Nearest existing ancestors are resolved physically, so a symlink or junction cannot disguise an owned target. The refusal names the owning project command. The hook arms only where `package.json` declares a dependency on `automovie`, so copying it outside an AutoMovie project does not claim unrelated files.
+Claude Code loads `.claude/settings.json` and checks every `PreToolUse`, direct edits and Bash included, against compiler-owned generated output, render output, capture receipts, and production state. Nearest existing ancestors are resolved physically, so a symlink or junction cannot disguise an owned target. The refusal names the owning project command. The hook arms only where `package.json` declares a dependency on `automovie`, so copying it outside an AutoMovie project does not claim unrelated files.
 
 The production viewer accepts `?film=1` for GPU cut/dissolve playback of the compiler-owned EDL, `?shot=<id>` for one shot, and `?asset=<model-id>&angle=<degrees>&elevation=<degrees>` for an isolated model turntable. The reusable capture session opens each target/raster page once and seeks subsequent frames in place; render output reports page, navigation, seek, and capture counts so throughput improvements remain measurable.
 

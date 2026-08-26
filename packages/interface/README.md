@@ -19,7 +19,7 @@ vegetation, props, and debris. Grid, disk-scatter, and route layouts retain
 only count, seed, model reference, and bounded variation law. Compiled slots
 derive stable scale, palette, and numeric traits without expanding scene nodes.
 
-automovie의 타입 허브. 캐릭터·사물의 형상·포즈·모션·표정·머티리얼·씬과 production 증거 계약을 기술하는 모든 AST 구조체의 단일 진실 공급원이다. 코딩 에이전트는 이 타입을 tracked TypeScript에서 직접 소비하며, MCP에는 그중 정확한 다섯 도구 계약만 반영된다.
+automovie의 타입 허브. 캐릭터·사물의 형상·포즈·모션·표정·머티리얼·씬과 production 증거 계약을 기술하는 모든 AST 구조체의 단일 진실 공급원이다. 코딩 에이전트는 이 타입을 tracked TypeScript에서 직접 소비한다.
 
 런타임 의존은 없다. `typia`도, `three.js`도 없다. 순수 타입 선언만 담는다. 제약은 필드 JSDoc으로 문서화하고 `@automovie/engine`의 런타임 검증기가 강제한다. 빌드 도구(`ttsc`/`typescript`/`rimraf`/`@ttsc/lint`)는 devDependency일 뿐이다.
 
@@ -37,7 +37,7 @@ automovie는 **glTF / VRM 규약**을 따른다.
 
 - 인터페이스: `IAutoMovie*` (예: `IAutoMoviePose`).
 - 열거형·이름공간: `AutoMovie*` (예: `AutoMovieHumanoidBone`, `AutoMovieEasing`).
-- production MCP 도구: `IAutoMovieX.IProps` 입력과 `IAutoMovieX` 결과를 한 계약 쌍으로 둔다. canonical `AutoMovieApplication`은 가이드, 캡처, 선택적 repaint, 준비된 리뷰, 리뷰 제출의 다섯 계약만 노출한다.
+- production 진입점: `IAutoMovieX.IProps` 입력과 `IAutoMovieX` 결과를 한 계약 쌍으로 둔다.
 - discriminated union 판별자 필드에는 `/** Discriminator. */`.
 - optional `T?` 대신 `T | null` + JSDoc으로 null 의미 명시.
 - **타입은 러프하게.** 원시값은 `string`/`number`를 **그대로** 쓴다. `AutoMovieUuid = string`, `AutoMovieNormalized = number` 같은 **원시 래퍼 별칭을 만들지 않는다.** 수치 범위·배열 최소길이·ID 포맷 같은 제약도 타입에 박지 않는다(typia `tags` 미사용). 인터페이스는 데이터의 **모양**만 정하고, 의미·범위·단위는 필드 JSDoc으로 문서화한다. 실제 제약 강제와 `// ❌` 피드백은 `@automovie/engine`의 런타임 검증기가 책임진다(이게 automovie의 차별점인 ROM 검증이 사는 곳). 닫힌 union(본명·표정 preset·이징 등 `AutoMovie*` 열거형)만이 "잘못된 값이 구조적으로 불가능"을 보장한다. 이건 래퍼가 아니라 허용값 집합 정의라서 유지한다.

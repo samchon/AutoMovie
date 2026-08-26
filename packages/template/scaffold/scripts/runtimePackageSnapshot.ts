@@ -1,7 +1,7 @@
 import {
   digestAutoMovieBytes,
   readAutoMovieProductionOwnedFile,
-} from "@automovie/mcp";
+} from "@automovie/production";
 import fs from "node:fs";
 import path from "node:path";
 

@@ -17,7 +17,7 @@ import type {
   IAutoMovieShotContract,
   IAutoMovieVector3,
 } from "@automovie/interface";
-import type { IAutoMovieProductionRenderJobPlan } from "@automovie/mcp";
+import type { IAutoMovieProductionRenderJobPlan } from "@automovie/production";
 
 import type { IAutoMovieProductionDialogueRuntime } from "./productionRuntimeState";
 import type {

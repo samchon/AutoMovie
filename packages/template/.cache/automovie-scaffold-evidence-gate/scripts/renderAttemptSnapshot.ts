@@ -1,5 +1,5 @@
 import type { AutoMovieContentDigest } from "@automovie/interface";
-import { compareCodeUnits } from "@automovie/mcp";
+import { compareCodeUnits } from "@automovie/production";
 import { randomUUID } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";

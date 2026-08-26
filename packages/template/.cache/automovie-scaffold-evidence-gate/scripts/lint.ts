@@ -1,7 +1,7 @@
 import {
   AutoMovieProductionCompiler,
   AutoMovieProductionProject,
-} from "@automovie/mcp";
+} from "@automovie/production";
 
 import config from "../automovie.config";
 

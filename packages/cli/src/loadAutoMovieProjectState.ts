@@ -19,7 +19,7 @@ import {
   AutoMovieProductionProject,
   IAutoMovieProductionDesignGraph,
   digestAutoMovieBytes,
-} from "@automovie/mcp";
+} from "@automovie/production";
 import path from "node:path";
 import typia from "typia";
 

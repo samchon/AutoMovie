@@ -1,4 +1,4 @@
-import { digestAutoMovieBytes } from "@automovie/mcp";
+import { digestAutoMovieBytes } from "@automovie/production";
 import { createHash, randomUUID } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";

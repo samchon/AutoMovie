@@ -1,6 +1,6 @@
 import { renderScaffold, writeFiles } from "@automovie/template";
 import type { IAutoMovieProductionSoundPlan } from "@automovie/interface";
-import type { IAutoMovieProductionRenderJobPlan } from "@automovie/mcp";
+import type { IAutoMovieProductionRenderJobPlan } from "@automovie/production";
 import { TestValidator } from "@nestia/e2e";
 import { spawnSync } from "node:child_process";
 import fs from "node:fs";

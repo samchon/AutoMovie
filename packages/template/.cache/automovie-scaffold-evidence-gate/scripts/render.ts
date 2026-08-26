@@ -61,7 +61,7 @@ import {
   trimProductionAudioPresentation,
   verifyProductionRenderChunkReceipt,
   verifyProductionRenderJobPlan,
-} from "@automovie/mcp";
+} from "@automovie/production";
 import { autoMovieRenderBudgetRefusal } from "@automovie/render";
 import * as HME from "h264-mp4-encoder";
 import { BoxParser, createFile } from "mp4box";
@@ -777,7 +777,7 @@ const currentPlan = async (): Promise<IAutoMovieProductionRenderJobPlan> => {
  *
  * The bytes come from `contentInputs()`, which is the project's own owned-file
  * reader with its path fence already applied, so nothing here invents a second
- * escape check. Decoding is `@automovie/mcp`'s, for the reason its own
+ * escape check. Decoding is `@automovie/production`'s, for the reason its own
  * documentation gives: the mix has to be a pure function of what it is handed,
  * so a codec and a filesystem live on this side of it.
  *

@@ -209,7 +209,7 @@ export const test_cli_render_observation_audit = (): void => {
     writeFiles(project, renderScaffold({ name: "observation-film" }));
     for (const name of [
       "@automovie/interface",
-      "@automovie/mcp",
+      "@automovie/production",
       "@automovie/render",
     ])
       linkWorkspacePackage(project, name);

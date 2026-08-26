@@ -1,6 +1,6 @@
 # AutoMovie production contract
 
-This project begins without a production. Author work in docs, src, test, and declared assets; never mistake the empty design tree for a completed result or translate ordinary code into giant MCP payloads.
+This project begins without a production. Author work in docs, src, test, and declared assets; never mistake the empty design tree for a completed result.
 
 ## Read before acting
 

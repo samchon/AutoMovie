@@ -2,7 +2,7 @@ import {
   AUTOMOVIE_PRIMITIVE_ARCHETYPES,
   createAutoMovieArchetypeRegistry,
 } from "@automovie/archetypes";
-import { compileAutoMovieProduction } from "@automovie/mcp";
+import { compileAutoMovieProduction } from "@automovie/production";
 
 import config from "../automovie.config";
 

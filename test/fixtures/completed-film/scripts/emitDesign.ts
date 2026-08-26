@@ -12,7 +12,7 @@ import {
   AutoMovieProductionProject,
   compareCodeUnits,
   findAutoMovieProjectRoot,
-} from "@automovie/mcp";
+} from "@automovie/production";
 
 import config from "../automovie.config";
 import { chorus } from "../src/formations/chorus";

@@ -1,6 +1,6 @@
 # Models and motions
 
-Read the `MODEL_RECIPE`, `OBJECT_RIGGING`, and `GEOMETRY` guides through the project's MCP server as well as this document before changing geometry, rigs, or derived assets.
+Read [craft/rigging.md](craft/rigging.md) alongside this document before changing geometry, rigs, or derived assets.
 
 ## Model decisions
 

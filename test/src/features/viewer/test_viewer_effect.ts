@@ -3,13 +3,13 @@ import {
   IAutoMovieShotContract,
   IAutoMovieWorldDesign,
 } from "@automovie/interface";
-import { materializeCompiledEffects } from "@automovie/mcp";
+import { materializeCompiledEffects } from "@automovie/production";
 import { buildInstancedEffect, sampleCompiledEffect } from "@automovie/viewer";
 import { TestValidator } from "@nestia/e2e";
 import * as THREE from "three";
 
 import { namedFacts } from "../internal/predicates";
-import { shotContract, worldDesign } from "../mcp/productionFixtures";
+import { shotContract, worldDesign } from "../production/productionFixtures";
 
 const effectRecipe = (
   kind: IAutoMovieEffectRecipe["kind"],

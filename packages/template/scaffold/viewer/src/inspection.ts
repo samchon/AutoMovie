@@ -1,5 +1,5 @@
 /**
- * The host instrument behind the `inspectSubject` MCP tool:
+ * The host instrument behind subject inspection:
  * `/viewer/inspection.html?shot=<id>&subject=<id>&revision=<digest>`.
  *
  * `subject.html` is the same look with a person at the keyboard; this page is
@@ -23,7 +23,7 @@
  * from the subject's own content extent rather than one the film composed, the
  * frame carries no renderer identity, no target fingerprint and no render
  * bundle, and the page writes no file at all: it hands the bytes back over the
- * page hook and the MCP surface publishes them outside the render root.
+ * page hook and the runtime publishes them outside the render root.
  */
 import {
   type IAutoMovieSectionPlane,
@@ -50,7 +50,7 @@ import { VIEWER_BACKGROUND, viewerDocument } from "./viewerDocument";
 /**
  * One camera state the inspection asks this page to draw through.
  *
- * It mirrors `IAutoMovieSubjectInspectionPose` in `@automovie/mcp` field for
+ * It mirrors `IAutoMovieSubjectInspectionPose` in `@automovie/production` field for
  * field. The page derives no part of it: the tool owns the viewpoint plan and
  * the projection, and a page that recomputed either would be a second opinion
  * about where the eye was, which is exactly what a shared subject id exists to
@@ -152,7 +152,7 @@ if (shotId === undefined || shotId === "")
   throw new Error(
     "No shot was selected. Open this page with ?shot=<authored-shot-id>.",
   );
-// The revision the MCP surface digested from the compiled bytes it read. The
+// The revision the runtime digested from the compiled bytes it read. The
 // page states it rather than recomputing one, so an observation can never be
 // labelled with a state the tool did not resolve the subject against.
 const requestedRevision = parameters.get("revision");
@@ -174,7 +174,7 @@ const artifact = { revision: requestedRevision, compiled };
 /**
  * The compiled subject ids one requested name could be spelled as, in order.
  *
- * This is the same absorption the MCP surface performs, in the same order and
+ * This is the same absorption the runtime performs, in the same order and
  * for the same one divergence: a placed or reusable part is `part:<node>/<part>`
  * to the viewer and `element-part:`/`prototype-part:` to the compiler. First
  * match wins here because first match wins there, and the pose this page is

@@ -2,7 +2,7 @@ import type { AutoMovieGuidePass } from "@automovie/interface";
 import {
   AutoMovieProductionContext,
   captureAutoMovieProductionFrame,
-} from "@automovie/mcp";
+} from "@automovie/production";
 
 import config from "../automovie.config";
 import { captureProductionFrame, closeProductionFrameCapture } from "./capture";

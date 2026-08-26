@@ -25,7 +25,7 @@ MCP 0회)를 근거로 **"지목이 없으면 셸로 제품 소스를 직접 읽
 2026-08-18 사이클의 턴 1이 **같은 서명을 한 턴 안에서 재현했다 — 다만 거절 뒤에.**
 그 세션은 도구를 스스로 찾아 불렀고, 제품 서버 호출 **3건이 전부**
 `{"Err":"user cancelled MCP tool call"}`로 거절됐으며, **같은 턴에**
-`node_modules/@automovie/mcp/src/guides/AutoMovieGuideConstant.ts`를 정규식으로 긁어
+`node_modules/@automovie/production/src/guides/AutoMovieGuideConstant.ts`를 정규식으로 긁어
 가이드 본문을 재구성했다. 그 시점 이후를 세면 "MCP 0 + 제품 소스 다수"다.
 
 이 문서는 이미 **구별할 수 없는 두 상태**를 정직하게 적어두었다 — *갖고도 안 썼다*와

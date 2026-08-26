@@ -7,7 +7,7 @@ import type {
 import {
   materializeCompiledFormation,
   materializeProductionModels,
-} from "@automovie/mcp";
+} from "@automovie/production";
 import {
   buildInstancedFormation,
   regenerateFormationSlot,
@@ -18,7 +18,7 @@ import { TestValidator } from "@nestia/e2e";
 import * as THREE from "three";
 
 import { namedFacts, nclose, vclose } from "../internal/predicates";
-import { formationDesign, modelRecipe } from "../mcp/productionFixtures";
+import { formationDesign, modelRecipe } from "../production/productionFixtures";
 
 /**
  * A member of a crowd may do what its neighbours do not, on screen as well.

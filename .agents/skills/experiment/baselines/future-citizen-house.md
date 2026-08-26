@@ -516,7 +516,7 @@ revision **119**. 정확히 15 증가. 그 뒤 드라이버가 **동시 `design`
 ```text
 Error: EPERM: operation not permitted, chmod 'C:\Users\samch\.automovie-root-locks'
     at Object.chmodSync (node:fs:2062:11)
-    at ensureCoordinationRoot (…/@automovie/mcp/src/production/rootNamespaceLock.ts:115:6)
+    at ensureCoordinationRoot (…/@automovie/production/src/production/rootNamespaceLock.ts:115:6)
     at coordinatePath (…rootNamespaceLock.ts:93:3)
     at acquireExistingRoot (…rootNamespaceLock.ts:280:11)
     at acquireOrCreateProductionRootNamespace (…rootNamespaceLock.ts:330:31)
@@ -640,7 +640,7 @@ fs.chmodSync(coordinationRoot(), 0o700);             // ← 무조건, 무방비
 
 ### 잔존 확인은 `src/`가 아니라 `lib/`에서 한다 (캠페인 규칙 정정)
 
-`@automovie/mcp`는 `main: lib/index.js`, `exports["."].default: "./lib/index.js"`를 선언한다.
+`@automovie/production`는 `main: lib/index.js`, `exports["."].default: "./lib/index.js"`를 선언한다.
 **타르볼이 두 트리를 다 실으므로 `src/`가 node가 실제로 로드하는 것과 어긋날 수 있다.**
 조율자가 `src/`에서 수정 잔존을 확인해 보고했다가 `lib/`에 옛 코드가 남아 있어 자기 보고를
 무효화한 사례가 있다. **이 캠페인의 모든 잔존 확인은 `lib/*.js`로 한다.**
@@ -661,7 +661,7 @@ fs.chmodSync(coordinationRoot(), 0o700);             // ← 무조건, 무방비
 저작 에이전트가 볼 수 없거나 치울 수 없는 락을 만나면 **회귀가 아니라 #2012의 잔여**다.
 
 > **조율자가 먼저 시도한 `<root>/automovie/locks` 이전은 CI가 거절했고 CI가 옳았다.**
-> `test_mcp_project_transactions`가 **락을 쥔 채 프로젝트 루트를 교체**하는데, 루트 안에 사는
+> `test_production_project_transactions`가 **락을 쥔 채 프로젝트 루트를 교체**하는데, 루트 안에 사는
 > 락은 자기 디렉터리가 갈리면 살아남지 못한다 — 해제가 옮길 대상을 못 찾고, 파일이 소유자
 > 토큰을 든 채 남고, 같은 프로세스의 다음 획득이 **자기 락**을 만난다. 루트 옆 형제
 > 디렉터리도 같은 이유로 실패했고, dry run과 plan이 프로젝트 상태를 쓰지 않아야 한다는

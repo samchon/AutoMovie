@@ -1,4 +1,4 @@
-import { canonicalAutoMovieCaptureRuntimeIdentity } from "@automovie/mcp";
+import { canonicalAutoMovieCaptureRuntimeIdentity } from "@automovie/production";
 import { createHash } from "node:crypto";
 import { PNG } from "pngjs";
 

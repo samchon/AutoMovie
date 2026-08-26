@@ -285,7 +285,7 @@ const capturePage = (
 /**
  * Close the reusable viewer/browser session owned by one-shot CLI commands.
  *
- * The MCP host deliberately keeps it open and reuses it until its process
+ * The capture process deliberately keeps it open and reuses it until it
  * exits; preview and render call this in `finally` so they never hang.
  */
 export const closeProductionFrameCapture = async (

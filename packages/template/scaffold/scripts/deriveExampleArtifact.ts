@@ -1,7 +1,7 @@
 import {
   findAutoMovieProjectRoot,
   generateAutoMovieDerivedArtifact,
-} from "@automovie/mcp";
+} from "@automovie/production";
 
 /**
  * Explicit deterministic precomputation, run by `npm run derive:example`.

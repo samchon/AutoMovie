@@ -8,7 +8,7 @@ import type {
 import {
   encodeAutoMoviePathSegment,
   findAutoMovieProjectRoot,
-} from "@automovie/mcp";
+} from "@automovie/production";
 import {
   loadAutoMovieProjectState,
   requireCurrentAutoMovieProjectState,
