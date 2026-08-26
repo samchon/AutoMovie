@@ -23,7 +23,10 @@ import {
   IAutoMovieValidation,
 } from "@automovie/interface";
 
-import { IAutoMovieMcpGeometryModel, IAutoMovieMcpMotion } from "../dto";
+import {
+  IAutoMovieMcpGeometryModel,
+  IAutoMovieMcpMotion,
+} from "../project/legacyRecords";
 import {
   appendValidation,
   validateColorArtifact,

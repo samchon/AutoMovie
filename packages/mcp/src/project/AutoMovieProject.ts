@@ -24,13 +24,6 @@ import { randomUUID } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 
-import { toEnginePropSpec } from "../convert";
-import {
-  IAutoMovieMcpActorSpec,
-  IAutoMovieMcpProjectSummary,
-  IAutoMovieMcpPropSpec,
-  IAutoMovieMcpWritableSlate,
-} from "../dto";
 import { readAutoMovieProductionOwnedFile } from "../production/productionRenderJob";
 import {
   acquireOrCreateProductionRootNamespace,
@@ -58,6 +51,13 @@ import {
   validateVectorArtifact,
 } from "../validators/primitives";
 import { acquireCommitLock, releaseCommitLock } from "./commitLock";
+import {
+  IAutoMovieMcpActorSpec,
+  IAutoMovieMcpProjectSummary,
+  IAutoMovieMcpPropSpec,
+  IAutoMovieMcpWritableSlate,
+  toEnginePropSpec,
+} from "./legacyRecords";
 import { beatOf, shotIdOf } from "./shotKey";
 
 /**
