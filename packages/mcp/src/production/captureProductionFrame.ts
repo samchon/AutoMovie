@@ -13,7 +13,6 @@ import type {
   IAutoMovieProductionServices,
 } from "./AutoMovieProductionContext";
 import { canonicalizeAutoMovieJson } from "./contentIdentity";
-import { requireAutoMovieGuides } from "./guideGate";
 import { readAutoMovieProductionRegistry } from "./productionRegistry";
 
 /** Verified frame metadata the oracle returns with captured pixels. */
@@ -35,7 +34,6 @@ export const captureAutoMovieProductionFrame = async (
   context: AutoMovieProductionContext,
   props: IAutoMovieCaptureFrame.IProps,
 ): Promise<IAutoMovieCaptureFrame> => {
-  requireAutoMovieGuides(context, "captureFrame");
   if (
     props.target.productionId !== undefined &&
     (props.target.productionId.trim().length === 0 ||

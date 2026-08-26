@@ -13,7 +13,6 @@ import type {
 } from "./AutoMovieProductionContext";
 import { autoMovieAssetReviewViews } from "./assetReviewViews";
 import { captureAutoMovieProductionFrame } from "./captureProductionFrame";
-import { requireAutoMovieGuides } from "./guideGate";
 import { readAutoMovieProductionRegistry } from "./productionRegistry";
 
 /**
@@ -33,7 +32,6 @@ export const captureAutoMovieProductionTurntable = async (
   context: AutoMovieProductionContext,
   props: IAutoMovieCaptureTurntable.IProps,
 ): Promise<IAutoMovieCaptureTurntable> => {
-  requireAutoMovieGuides(context, "captureTurntable");
   if (
     props.productionId !== undefined &&
     (props.productionId.trim().length === 0 ||

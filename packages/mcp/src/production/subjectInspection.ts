@@ -29,7 +29,6 @@ import {
   digestAutoMovieBytes,
   encodeAutoMoviePathSegment,
 } from "./contentIdentity";
-import { requireAutoMovieGuides } from "./guideGate";
 
 /**
  * Project-relative directory every subject observation artifact is written to.
@@ -586,7 +585,6 @@ export class AutoMovieProductionSubjectInspectionService {
     context: AutoMovieProductionContext,
     input: IAutoMovieInspectSubject.IProps,
   ): Promise<IAutoMovieInspectSubject> {
-    requireAutoMovieGuides(context, "inspectSubject");
     return this.inspect(context.forProduction(input.productionId), input);
   }
 

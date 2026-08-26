@@ -24,7 +24,6 @@ import {
   compareCodeUnits,
   digestAutoMovieBytes,
 } from "./contentIdentity";
-import { AUTOMOVIE_REPAINT_GUIDE, requireAutoMovieGuides } from "./guideGate";
 import { assertProductionRenditionClipDelivery } from "./muxProductionFeatureMp4";
 import { probeProductionVideoMp4 } from "./probeProductionMedia";
 import { readAutoMovieProductionRegistry } from "./productionRegistry";
@@ -56,7 +55,6 @@ export class AutoMovieProductionRepaintService {
     context: AutoMovieProductionContext,
     input: IAutoMovieRepaintShot.IProps,
   ): Promise<IAutoMovieRepaintShot> {
-    requireAutoMovieGuides(context, "repaintShot");
     const refusal = (
       code: AutoMovieDiagnosticCode,
       message: string,
@@ -89,7 +87,6 @@ export class AutoMovieProductionRepaintService {
         "repaint-delivery-disabled",
         'The current production design declares visualDelivery "deterministic". Change that tracked contract to "repainted", recompile current source, then read DIFFUSION_ENHANCE before requesting a rendition.',
       );
-    requireAutoMovieGuides(context, "repaintShot", AUTOMOVIE_REPAINT_GUIDE);
     return this.repaint(services, input);
   }
 
