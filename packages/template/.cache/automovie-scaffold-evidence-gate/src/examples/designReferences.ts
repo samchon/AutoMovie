@@ -29,7 +29,7 @@ import type {
  * ## Registering the bytes
  *
  * The observed file lives with the project's other assets and is registered in
- * `.automovie/assets.json` with a `design-reference` use naming the document id
+ * `automovie/assets.json` with a `design-reference` use naming the document id
  * below. Bytes that a model produced record `generated` — provider, model,
  * request, prompt digest, inputs, output digest — instead of `original`, so a
  * study that no URL ever served does not have to invent one.

@@ -29,7 +29,7 @@ const server = createAutoMovieMcpServer({
 });
 ```
 
-`projectRoot` is a host seed, not a tool parameter. The server walks upward once to the nearest `automovie.config.ts` or `.automovie/manifest.json` and fixes that workspace for the session. `productionId` selects the default review namespace; shot evidence also names its production explicitly so one host can capture two sibling productions without cache pollution.
+`projectRoot` is a host seed, not a tool parameter. The server walks upward once to the nearest `automovie.config.ts` or `automovie/manifest.json` and fixes that workspace for the session. `productionId` selects the default review namespace; shot evidence also names its production explicitly so one host can capture two sibling productions without cache pollution.
 
 The only binary is:
 

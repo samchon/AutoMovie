@@ -117,7 +117,7 @@ export const test_mcp_derived_artifact_atomic_safety = (): void => {
   });
 
   withDerivedArtifactFixture((fixture) => {
-    const automovie = path.join(fixture.root, ".automovie");
+    const automovie = path.join(fixture.root, "automovie");
     fs.mkdirSync(automovie);
     const originalResolve = path.resolve;
     path.resolve = ((...segments: string[]): string =>
@@ -136,7 +136,7 @@ export const test_mcp_derived_artifact_atomic_safety = (): void => {
   });
 
   withDerivedArtifactFixture((fixture) => {
-    const automovie = path.join(fixture.root, ".automovie");
+    const automovie = path.join(fixture.root, "automovie");
     fs.mkdirSync(automovie);
     const originalRealpath = fs.realpathSync;
     fs.realpathSync = ((target: fs.PathLike): string =>
@@ -248,7 +248,7 @@ export const test_mcp_derived_artifact_atomic_safety = (): void => {
     const external = fs.mkdtempSync(
       path.join(os.tmpdir(), "automovie-derived-output-parent-"),
     );
-    const automovie = path.join(fixture.root, ".automovie");
+    const automovie = path.join(fixture.root, "automovie");
     const derived = path.join(automovie, "derived");
     fs.mkdirSync(automovie);
     try {
@@ -343,7 +343,7 @@ export const test_mcp_derived_artifact_atomic_safety = (): void => {
   });
 
   withDerivedArtifactFixture((fixture) => {
-    const derived = path.join(fixture.root, ".automovie", "derived");
+    const derived = path.join(fixture.root, "automovie", "derived");
     const originalStat = fs.statSync;
     let derivedReads = 0;
     const restoreStat = replaceFsFunction("statSync", ((
@@ -370,7 +370,7 @@ export const test_mcp_derived_artifact_atomic_safety = (): void => {
       TestValidator.predicate(
         "manifest-last leaves the renamed output visibly stale, not current",
         fs.existsSync(
-          path.join(fixture.root, ".automovie", "derived-artifacts.json"),
+          path.join(fixture.root, "automovie", "derived-artifacts.json"),
         ) === false,
       );
     } finally {

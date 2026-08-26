@@ -51,7 +51,7 @@ export const test_mcp_design_citation_refusals_move_together = (): void => {
     // every fixture record goes on citing the ids the index just dropped.
     const indexPath = path.join(
       fixture.root,
-      ".automovie/design/fixture-film/screenplay/index.json",
+      "automovie/design/fixture-film/screenplay/index.json",
     );
     rewrite(indexPath, [
       ['"SCN-001"', '"SCN-900"'],
@@ -68,7 +68,7 @@ export const test_mcp_design_citation_refusals_move_together = (): void => {
 
     const opens = (relative: string | null): boolean =>
       relative !== null &&
-      relative.startsWith(".automovie/design/") &&
+      relative.startsWith("automovie/design/") &&
       relative.endsWith(".json") &&
       fs.existsSync(path.join(fixture.root, relative));
 

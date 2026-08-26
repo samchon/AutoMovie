@@ -207,7 +207,7 @@ the leaf and not the hole". **프레임이 같은 것을 보인다** — 측면 
 
 재현: 저작 세션을 턴 도중 죽인다. 그 프로세스가 잡고 있던 lock 3개가 남는다 —
 `<home>/.automovie-root-locks/production-{id,path}-<sha256>.lock` 둘과
-`.automovie/productions/<id>/revision.lock` 하나. 이후 **모든** 프로젝트 명령이
+`automovie/productions/<id>/revision.lock` 하나. 이후 **모든** 프로젝트 명령이
 `the project commit lock is held by another session`으로 exit 1.
 
 - lock 토큰은 `${process.pid}.${nonce}.${timestamp}`로 **소유자 PID를 담고 있다.**
@@ -267,7 +267,7 @@ fingerprint를 두 번 렌더한 적이 없으므로 결정론 증거는 0건이
 앵커는 **턴 시작 시각**이고, 그 이후 mtime을 가진 파일이 그 턴의 전파다(열린 핸들을
 가진 rollout과 달리 닫힌 산출물의 mtime은 신뢰할 수 있다).
 
-턴 3 예비 판독(진행 중이라 번져 있음): `.automovie/design` **0/25**,
+턴 3 예비 판독(진행 중이라 번져 있음): `automovie/design` **0/25**,
 `generated` **23/67**(shot 20개 전부 + compile/film-edit/film-timeline),
 `reports` **7/7**, `src` **7/59**. 새 render digest 디렉터리는 드라이버가 지목한
 **바로 그 세 shot**에만 생겼다.

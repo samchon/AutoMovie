@@ -50,7 +50,7 @@ export const test_cli_ownership_guard = (): void => {
     const authored = guard(root, "Write", {
       file_path: path.join(
         root,
-        ".automovie",
+        "automovie",
         "design",
         "shots",
         "opening.json",
@@ -65,7 +65,7 @@ export const test_cli_ownership_guard = (): void => {
     const production = guard(root, "mcp__filesystem__write_file", {
       path: path.join(
         root,
-        ".automovie",
+        "automovie",
         "productions",
         "guard-film",
         "state.json",

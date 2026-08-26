@@ -362,7 +362,7 @@ export const exampleBuildingIdentities = (): string[] => {
 };
 
 /**
- * The asset ids `.automovie/assets.json` registers for this example.
+ * The asset ids `automovie/assets.json` registers for this example.
  *
  * Lineage spans every graph a production publishes ids from, not only the
  * building, so the roll-call it is checked against has to span them too. The

@@ -80,7 +80,7 @@ export const generatedShotPlugin = (
         const manifest = JSON.parse(
           readPhysicalFile(
             project,
-            path.join(project.real, ".automovie"),
+            path.join(project.real, "automovie"),
             "manifest.json",
           ).toString("utf8"),
         ) as { generatedRoot?: unknown };
@@ -223,7 +223,7 @@ const readAssetAuthorization = (
 ): IAssetAuthorization => {
   const ownershipFile = readPhysicalFileSnapshot(
     project,
-    path.join(project.real, ".automovie"),
+    path.join(project.real, "automovie"),
     "manifest.json",
   );
   const ownership = JSON.parse(ownershipFile.bytes.toString("utf8")) as {

@@ -259,7 +259,7 @@ const assertPlaywrightMetadata = (expected: IPlaywrightMetadata): void => {
 const legacyReceiptPath = (projectRoot: string): string =>
   path.join(
     path.resolve(projectRoot),
-    ".automovie",
+    "automovie",
     "capture",
     "install-receipt.json",
   );
@@ -267,7 +267,7 @@ const legacyReceiptPath = (projectRoot: string): string =>
 const receiptGenerationDirectory = (projectRoot: string): string =>
   path.join(
     path.resolve(projectRoot),
-    ".automovie",
+    "automovie",
     "capture",
     "install-receipts",
   );
@@ -311,7 +311,7 @@ const ensureCaptureReceiptDirectory = (
   const project = physicalDirectory(projectRoot, "capture project root");
   const ancestry = [project];
   let cursor = project.path;
-  for (const segment of [".automovie", "capture"]) {
+  for (const segment of ["automovie", "capture"]) {
     for (const directory of ancestry)
       assertPhysicalDirectoryIdentity(directory, "capture receipt ancestry");
     cursor = path.join(cursor, segment);
@@ -350,7 +350,7 @@ const captureReceiptDirectory = (
   const project = physicalDirectory(projectRoot, "capture project root");
   const directories = [project];
   let cursor = project.path;
-  for (const segment of [".automovie", "capture"]) {
+  for (const segment of ["automovie", "capture"]) {
     cursor = path.join(cursor, segment);
     const current = physicalDirectory(cursor, "capture receipt directory");
     if (inside(project.real, current.real) === false)

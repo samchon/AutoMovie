@@ -238,7 +238,7 @@ export const test_mcp_inspect_subject_refusals = async (): Promise<void> => {
 
     const manifestPath = path.join(
       fixture.root,
-      ".automovie",
+      "automovie",
       "productions",
       "fixture-film",
       "generated-manifest.json",

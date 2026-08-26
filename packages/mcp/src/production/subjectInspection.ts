@@ -41,7 +41,7 @@ import {
  *
  * @author Samchon
  */
-export const AUTOMOVIE_SUBJECT_INSPECTION_ROOT = ".automovie/inspections";
+export const AUTOMOVIE_SUBJECT_INSPECTION_ROOT = "automovie/inspections";
 
 /**
  * File one subject's published viewpoint plan is written to.
@@ -104,7 +104,7 @@ export interface IAutoMovieSubjectInspectionObservationRecord {
 }
 
 /** Lock guarding concurrent observation publication inside one project. */
-const INSPECTION_LOCK_PATH = ".automovie/inspections.lock";
+const INSPECTION_LOCK_PATH = "automovie/inspections.lock";
 
 /**
  * Half-diagonal a degenerate subject box is framed with, in metres.

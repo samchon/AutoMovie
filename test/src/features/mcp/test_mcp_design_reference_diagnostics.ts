@@ -150,7 +150,7 @@ interface ILedger {
 
 /** Everything the compiler would see for a healthy pair of references. */
 const inputs = (): ILedger => ({
-  path: ".automovie/assets.json",
+  path: "automovie/assets.json",
   references: [planDocument(), studyDocument()],
   evidence: evidence(),
   assets: new Map<string, Uint8Array | null>([
@@ -261,7 +261,7 @@ export const test_mcp_design_reference_diagnostics = (): void => {
       diagnostic.phase,
       diagnostic.target,
     ]),
-    [[".automovie/assets.json", "design", "pavilion-plan"]],
+    [["automovie/assets.json", "design", "pavilion-plan"]],
   );
 
   const cases: ReadonlyArray<

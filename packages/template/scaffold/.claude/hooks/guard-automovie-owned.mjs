@@ -92,12 +92,12 @@ const owned = [
   ownedRoot("generated", "generatedRoot", "npm run compile"),
   ownedRoot("renders", "renderRoot", "npm run render"),
   ownedRoot(
-    ".automovie/productions",
+    "automovie/productions",
     "production state root",
     "npm run compile or npm run render",
   ),
   ownedRoot(
-    ".automovie/capture",
+    "automovie/capture",
     "capture state root",
     "npm run capture:install or npm run preview",
   ),

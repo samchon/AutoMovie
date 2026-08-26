@@ -31,7 +31,7 @@ const result = generateAutoMovieDerivedArtifact({
   root: findAutoMovieProjectRoot(process.cwd()),
   generator: "scripts/deriveExampleArtifact.ts",
   inputs: [INPUT_PATH],
-  output: ".automovie/derived/examples/buildings-line-index.json",
+  output: "automovie/derived/examples/buildings-line-index.json",
   encoding: "utf8",
   generate: (inputs) => {
     const input = inputs[INPUT_PATH];

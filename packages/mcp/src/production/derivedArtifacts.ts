@@ -25,7 +25,7 @@ import {
  * @author Samchon
  */
 export const AUTOMOVIE_DERIVED_ARTIFACT_MANIFEST_PATH =
-  ".automovie/derived-artifacts.json" as const;
+  "automovie/derived-artifacts.json" as const;
 
 /**
  * Domain separator for generator and declared-input basis identities.
@@ -108,8 +108,8 @@ interface IProjectFileRead {
   problem: IAutoMovieDerivedArtifactProblem | null;
 }
 
-const DERIVED_ROOT = ".automovie/derived/";
-const LOCK_PATH = ".automovie/derived-artifacts.lock";
+const DERIVED_ROOT = "automovie/derived/";
+const LOCK_PATH = "automovie/derived-artifacts.lock";
 const SHA256 = /^sha256:[0-9a-f]{64}$/u;
 const WINDOWS_DRIVE = /^[A-Za-z]:/u;
 const WINDOWS_DEVICE =
@@ -153,7 +153,7 @@ export const generateAutoMovieDerivedArtifact = (
   const lockFile = resolveCanonical(root, LOCK_PATH);
   let token: string | null = null;
   try {
-    ensurePhysicalDirectory(root, path.join(root, ".automovie"));
+    ensurePhysicalDirectory(root, path.join(root, "automovie"));
     token = acquireCommitLock(lockFile);
     const manifest = readGenerationManifest(root);
     const generatorBytes = readGenerationFile(root, props.generator, true);
@@ -289,7 +289,7 @@ export const inspectAutoMovieDerivedArtifacts = (props: {
         "derived-artifact-path-unsafe",
         "derived-artifact-manifest",
         props.manifestPath,
-        `Derived artifact manifest must be "${AUTOMOVIE_DERIVED_ARTIFACT_MANIFEST_PATH}". Correct .automovie/manifest.json.`,
+        `Derived artifact manifest must be "${AUTOMOVIE_DERIVED_ARTIFACT_MANIFEST_PATH}". Correct automovie/manifest.json.`,
       ),
     );
     fingerprintFields.push(

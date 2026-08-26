@@ -19,7 +19,7 @@ export const withDerivedArtifactFixture = (
     root,
     generator: "scripts/derive.ts",
     input: "inputs/source.txt",
-    output: ".automovie/derived/result.bin",
+    output: "automovie/derived/result.bin",
   };
   writeDerivedFixtureFile(
     root,
@@ -51,7 +51,7 @@ export const readDerivedFixtureManifest = (
 ): IAutoMovieDerivedArtifactManifest =>
   JSON.parse(
     fs.readFileSync(
-      path.join(root, ".automovie", "derived-artifacts.json"),
+      path.join(root, "automovie", "derived-artifacts.json"),
       "utf8",
     ),
   ) as IAutoMovieDerivedArtifactManifest;
@@ -63,6 +63,6 @@ export const writeDerivedFixtureManifest = (
 ): void =>
   writeDerivedFixtureFile(
     root,
-    ".automovie/derived-artifacts.json",
+    "automovie/derived-artifacts.json",
     `${JSON.stringify(manifest, null, 2)}\n`,
   );

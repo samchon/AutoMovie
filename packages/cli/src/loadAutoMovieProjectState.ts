@@ -32,7 +32,7 @@ import typia from "typia";
  */
 export interface IAutoMovieProjectStateInput {
   /**
-   * Project root containing the tracked `.automovie` state directory.
+   * Project root containing the tracked `automovie` state directory.
    *
    * @evidence requirements/diagnostics/input-and-result-classification.md#diagnostics-input-finding Identifies the exact project whose state is inspected.
    * @evidence specifications/validation-and-diagnostics/classification-and-causality.md#validation-input-finding Makes the inspected source boundary explicit.

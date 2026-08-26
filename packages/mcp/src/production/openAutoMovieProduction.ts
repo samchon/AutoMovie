@@ -28,7 +28,7 @@ import type { IAutoMovieProductionDesignGraph } from "./validateProductionDesign
 
 const PROJECT_MARKERS = [
   "automovie.config.ts",
-  ".automovie/manifest.json",
+  "automovie/manifest.json",
 ] as const;
 
 /**
@@ -68,7 +68,7 @@ export const findAutoMovieProjectRoot = (
     const parent = path.dirname(current);
     if (parent === current)
       throw new Error(
-        `No AutoMovie workspace marker was found above host seed "${resolved}". Run inside a scaffold containing automovie.config.ts or initialize .automovie/manifest.json before starting the MCP host.`,
+        `No AutoMovie workspace marker was found above host seed "${resolved}". Run inside a scaffold containing automovie.config.ts or initialize automovie/manifest.json before starting the MCP host.`,
       );
     current = parent;
   }

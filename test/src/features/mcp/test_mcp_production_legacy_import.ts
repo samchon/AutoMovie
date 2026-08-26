@@ -197,7 +197,7 @@ const legacyFiles = (root: string): Map<string, Uint8Array> => {
   const output = new Map<string, Uint8Array>();
   const visit = (directory: string): void => {
     for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
-      if (entry.name.startsWith(".automovie")) continue;
+      if (entry.name.startsWith("automovie")) continue;
       const absolute = path.join(directory, entry.name);
       if (entry.isDirectory()) visit(absolute);
       else if (entry.isFile())
@@ -241,7 +241,7 @@ const rejectsTamperedRollbackBaseline = (
     importer.apply();
     const planPath = path.join(
       fixture.root,
-      ".automovie/imports/legacy-v1/plan.json",
+      "automovie/imports/legacy-v1/plan.json",
     );
     const plan = JSON.parse(
       fs.readFileSync(planPath, "utf8"),
@@ -407,7 +407,7 @@ export const test_mcp_production_legacy_import = (): void => {
         firstShotDraft: plan.shotContractDrafts[0]?.id,
         legacyRevision: plan.legacyRevision,
         legacyStateAbsent:
-          fs.existsSync(path.join(fixture.root, ".automovie")) === false,
+          fs.existsSync(path.join(fixture.root, "automovie")) === false,
         // Planning fences a namespace once per fenced operation, so the owned
         // identity is the coordinate set it acquires — one path and one id
         // coordinate for each fenced root — not how many times each was taken.
@@ -459,7 +459,7 @@ export const test_mcp_production_legacy_import = (): void => {
       if (
         typeof file !== "number" &&
         path.resolve(file.toString()) === path.resolve(legacyLockPath) &&
-        fs.existsSync(path.join(fixture.root, ".automovie")) === false
+        fs.existsSync(path.join(fixture.root, "automovie")) === false
       ) {
         legacyAssertionPathRead = true;
         fs.renameSync(legacyLockPath, legacyLockParked);
@@ -522,7 +522,7 @@ export const test_mcp_production_legacy_import = (): void => {
     })();
     const appliedPlanPath = path.join(
       fixture.root,
-      ".automovie/imports/legacy-v1/plan.json",
+      "automovie/imports/legacy-v1/plan.json",
     );
     const appliedPlanBytes = fs.readFileSync(appliedPlanPath);
     const appliedPlanParked = `${appliedPlanPath}.read-parked`;
@@ -675,7 +675,7 @@ export const test_mcp_production_legacy_import = (): void => {
         [
           "automovieGone",
           () =>
-            fs.existsSync(path.join(untouched.root, ".automovie")) === false,
+            fs.existsSync(path.join(untouched.root, "automovie")) === false,
         ],
         [
           "sourceGone",
@@ -955,7 +955,7 @@ export const test_mcp_production_legacy_import = (): void => {
   const collisions = createLegacy();
   let collisionsFailure: ILegacyImportFixtureFailure | undefined;
   try {
-    fs.mkdirSync(path.join(collisions.root, ".automovie"));
+    fs.mkdirSync(path.join(collisions.root, "automovie"));
     TestValidator.predicate(
       "a pre-existing production state collision is refused",
       throws(
@@ -963,8 +963,8 @@ export const test_mcp_production_legacy_import = (): void => {
         "already exists",
       ),
     );
-    fs.rmSync(path.join(collisions.root, ".automovie"), { recursive: true });
-    fs.writeFileSync(path.join(collisions.root, ".automovie"), "collision");
+    fs.rmSync(path.join(collisions.root, "automovie"), { recursive: true });
+    fs.writeFileSync(path.join(collisions.root, "automovie"), "collision");
     TestValidator.predicate(
       "a non-directory production state collision is refused",
       throws(
@@ -995,7 +995,7 @@ export const test_mcp_production_legacy_import = (): void => {
     fs.renameSync = ((oldPath: fs.PathLike, newPath: fs.PathLike): void => {
       if (
         path.basename(oldPath.toString()).startsWith(".automovie-import-") &&
-        path.basename(newPath.toString()) === ".automovie"
+        path.basename(newPath.toString()) === "automovie"
       )
         throw new Error("injected rename failure");
       nativeRename(oldPath, newPath);
@@ -1084,7 +1084,7 @@ export const test_mcp_production_legacy_import = (): void => {
     fs.renameSync = ((oldPath: fs.PathLike, newPath: fs.PathLike): void => {
       if (
         path.basename(oldPath.toString()).startsWith(".automovie-import-") &&
-        path.basename(newPath.toString()) === ".automovie"
+        path.basename(newPath.toString()) === "automovie"
       )
         throw publicationFailure;
       nativeRename(oldPath, newPath);
@@ -1159,7 +1159,7 @@ export const test_mcp_production_legacy_import = (): void => {
   {
     let publishRootSwapFailure: ILegacyImportFixtureFailure | undefined;
     try {
-      const stateRoot = path.join(publishRootSwap.root, ".automovie");
+      const stateRoot = path.join(publishRootSwap.root, "automovie");
       const nativeRename = fs.renameSync;
       let swapped = false;
       fs.renameSync = ((oldPath: fs.PathLike, newPath: fs.PathLike): void => {
@@ -1261,7 +1261,7 @@ export const test_mcp_production_legacy_import = (): void => {
     importer.apply();
     const planPath = path.join(
       tampered.root,
-      ".automovie/imports/legacy-v1/plan.json",
+      "automovie/imports/legacy-v1/plan.json",
     );
     fs.writeFileSync(planPath, "{}");
     TestValidator.predicate(
@@ -1321,7 +1321,7 @@ export const test_mcp_production_legacy_import = (): void => {
     importer.apply();
     const statePath = path.join(
       tamperedState.root,
-      ".automovie/imports/legacy-v1/state.json",
+      "automovie/imports/legacy-v1/state.json",
     );
     const state = JSON.parse(fs.readFileSync(statePath, "utf8")) as {
       fingerprint: string;
@@ -1469,7 +1469,7 @@ export const test_mcp_production_legacy_import = (): void => {
     importer.apply();
     const deniedPath = path.join(
       deniedImportState.root,
-      ".automovie/imports/legacy-v1/state.json",
+      "automovie/imports/legacy-v1/state.json",
     );
     const nativeLstat = fs.lstatSync;
     const nativeLstatDescriptor = Object.getOwnPropertyDescriptor(
@@ -1697,7 +1697,7 @@ export const test_mcp_production_legacy_import = (): void => {
             path.resolve(directory.toString()) ===
             path.join(rollbackFailure.root, relative),
         ) &&
-        fs.existsSync(path.join(rollbackFailure.root, ".automovie")) === false
+        fs.existsSync(path.join(rollbackFailure.root, "automovie")) === false
       )
         throw new Error(
           "owned directory restoration ran before canonical state restoration",
@@ -1708,7 +1708,7 @@ export const test_mcp_production_legacy_import = (): void => {
       if (
         quarantineCleanupDenied === false &&
         path.basename(target.toString()).startsWith(".automovie-rollback-") &&
-        fs.existsSync(path.join(rollbackFailure.root, ".automovie"))
+        fs.existsSync(path.join(rollbackFailure.root, "automovie"))
       ) {
         quarantineCleanupDenied = true;
         throw new Error("injected obsolete quarantine cleanup failure");
@@ -1726,7 +1726,7 @@ export const test_mcp_production_legacy_import = (): void => {
           ],
           [
             "stateKept",
-            () => fs.existsSync(path.join(rollbackFailure.root, ".automovie")),
+            () => fs.existsSync(path.join(rollbackFailure.root, "automovie")),
           ],
           ["reapplyUnchanged", () => importer.apply().status === "unchanged"],
           ["quarantineDenied", () => quarantineCleanupDenied],
@@ -1776,7 +1776,7 @@ export const test_mcp_production_legacy_import = (): void => {
         [
           "stateGone",
           () =>
-            fs.existsSync(path.join(rollbackFailure.root, ".automovie")) ===
+            fs.existsSync(path.join(rollbackFailure.root, "automovie")) ===
             false,
         ],
       ]),
@@ -1898,7 +1898,7 @@ export const test_mcp_production_legacy_import = (): void => {
     const plan = importer.plan();
     importer.apply();
     createMissingOwnedRoots(incompleteRestoration.root, plan);
-    const stateRoot = path.join(incompleteRestoration.root, ".automovie");
+    const stateRoot = path.join(incompleteRestoration.root, "automovie");
     const nativeRmdir = fs.rmdirSync;
     const nativeRename = fs.renameSync;
     const nativeMkdir = fs.mkdirSync;
@@ -1994,7 +1994,7 @@ export const test_mcp_production_legacy_import = (): void => {
     const plan = importer.plan();
     importer.apply();
     createMissingOwnedRoots(restorationCleanupFailure.root, plan);
-    const stateRoot = path.join(restorationCleanupFailure.root, ".automovie");
+    const stateRoot = path.join(restorationCleanupFailure.root, "automovie");
     const rollbackFailure = new Error("injected rollback failure");
     const restorationFailure = new Error(
       "injected authoritative restoration failure",
@@ -2134,7 +2134,7 @@ export const test_mcp_production_legacy_import = (): void => {
     const plan = importer.plan();
     importer.apply();
     createMissingOwnedRoots(preservedQuarantine.root, plan);
-    const stateRoot = path.join(preservedQuarantine.root, ".automovie");
+    const stateRoot = path.join(preservedQuarantine.root, "automovie");
     const nativeRmdir = fs.rmdirSync;
     const nativeRename = fs.renameSync;
     let removals = 0;
@@ -2195,7 +2195,7 @@ export const test_mcp_production_legacy_import = (): void => {
     importer.apply();
     const reappliedLock = path.join(
       incarnationRace.root,
-      ".automovie/revision.lock",
+      "automovie/revision.lock",
     );
     const retiredToken = acquireCommitLock(reappliedLock);
     importer.rollback();
@@ -2236,7 +2236,7 @@ export const test_mcp_production_legacy_import = (): void => {
     const importer = new AutoMovieLegacyImporter(extraState.root);
     importer.apply();
     fs.writeFileSync(
-      path.join(extraState.root, ".automovie/design/production.json"),
+      path.join(extraState.root, "automovie/design/production.json"),
       "{}",
     );
     TestValidator.predicate(
@@ -2263,7 +2263,7 @@ export const test_mcp_production_legacy_import = (): void => {
     fs.writeFileSync(
       path.join(
         malformedAppliedState.root,
-        ".automovie/imports/legacy-v1/state.json",
+        "automovie/imports/legacy-v1/state.json",
       ),
       "{bad",
     );
@@ -2578,7 +2578,7 @@ export const test_mcp_production_legacy_import = (): void => {
             [
               "noImportState",
               () =>
-                fs.existsSync(path.join(residentReplacement, ".automovie")) ===
+                fs.existsSync(path.join(residentReplacement, "automovie")) ===
                 false,
             ],
           ]),
@@ -2667,10 +2667,10 @@ export const test_mcp_production_legacy_import = (): void => {
         replacedAfterRollbackLock.root,
       );
       importer.apply();
-      fs.mkdirSync(path.join(rollbackReplacement, ".automovie"));
+      fs.mkdirSync(path.join(rollbackReplacement, "automovie"));
       const residentLock = path.join(
         replacedAfterRollbackLock.root,
-        ".automovie/revision.lock",
+        "automovie/revision.lock",
       );
       const nativeWrite = fs.writeFileSync;
       let replaced = false;
@@ -2716,12 +2716,12 @@ export const test_mcp_production_legacy_import = (): void => {
         ]);
       }
       const parkedToken = fs.readFileSync(
-        path.join(parkedRollbackResidentRoot, ".automovie/revision.lock"),
+        path.join(parkedRollbackResidentRoot, "automovie/revision.lock"),
         "utf8",
       );
       const replacementLock = path.join(
         rollbackReplacement,
-        ".automovie/revision.lock",
+        "automovie/revision.lock",
       );
       const retryToken = acquireCommitLock(residentLock);
       let residentLockFailure2: ILegacyImportFixtureFailure | undefined;
@@ -2773,7 +2773,7 @@ export const test_mcp_production_legacy_import = (): void => {
               );
               const parkedLock = path.join(
                 replacedAfterRollbackLock.root,
-                ".automovie/revision.lock",
+                "automovie/revision.lock",
               );
               if (fs.existsSync(parkedLock))
                 releaseCommitLock(
@@ -3335,7 +3335,7 @@ export const test_mcp_production_legacy_import = (): void => {
     importer.apply();
     const lockPath = path.join(
       mismatchedRollbackLock.root,
-      ".automovie/revision.lock",
+      "automovie/revision.lock",
     );
     const nativeWrite = fs.writeFileSync;
     let corrupted = false;
@@ -3400,7 +3400,7 @@ export const test_mcp_production_legacy_import = (): void => {
     );
     const importer = new AutoMovieLegacyImporter(linkedAppliedState.root);
     importer.apply();
-    const linkedPath = path.join(linkedAppliedState.root, ".automovie/linked");
+    const linkedPath = path.join(linkedAppliedState.root, "automovie/linked");
     const target = path.join(linkedAppliedStateTarget, "outside.txt");
     fs.writeFileSync(target, "outside");
     if (fileSymlinks) {
@@ -3442,7 +3442,7 @@ export const test_mcp_production_legacy_import = (): void => {
     importer.apply();
     const planPath = path.join(
       directoryImportPlan.root,
-      ".automovie/imports/legacy-v1/plan.json",
+      "automovie/imports/legacy-v1/plan.json",
     );
     fs.rmSync(planPath);
     fs.mkdirSync(planPath);
@@ -3467,7 +3467,7 @@ export const test_mcp_production_legacy_import = (): void => {
   try {
     const importer = new AutoMovieLegacyImporter(specialAppliedState.root);
     importer.apply();
-    const stateRoot = path.join(specialAppliedState.root, ".automovie");
+    const stateRoot = path.join(specialAppliedState.root, "automovie");
     const nativeReaddir = fs.readdirSync;
     fs.readdirSync = ((
       directory: fs.PathLike,

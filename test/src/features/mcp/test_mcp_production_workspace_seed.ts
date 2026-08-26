@@ -41,7 +41,7 @@ const preserveWorkspaceSeedFixtureCleanup = (
  * Scenarios:
  *
  * 1. A directory carrying `automovie.config.ts` resolves to itself, and so does
- *    one carrying only `.automovie/manifest.json`.
+ *    one carrying only `automovie/manifest.json`.
  * 2. A seed that is a FILE resolves to the directory holding it, which is what a
  *    host passing `__filename` relies on.
  * 3. A seed nested below the marker walks up to the nearest one, and a nested
@@ -58,14 +58,14 @@ export const test_mcp_production_workspace_seed = (): void => {
     const nested = path.join(configured, "src", "shots");
     const inner = path.join(configured, "inner");
     fs.mkdirSync(nested, { recursive: true });
-    fs.mkdirSync(path.join(manifested, ".automovie"), { recursive: true });
+    fs.mkdirSync(path.join(manifested, "automovie"), { recursive: true });
     fs.mkdirSync(inner, { recursive: true });
     fs.writeFileSync(
       path.join(configured, "automovie.config.ts"),
       "export {};",
     );
     fs.writeFileSync(
-      path.join(manifested, ".automovie", "manifest.json"),
+      path.join(manifested, "automovie", "manifest.json"),
       "{}\n",
     );
     fs.writeFileSync(path.join(inner, "automovie.config.ts"), "export {};");
@@ -110,7 +110,7 @@ export const test_mcp_production_workspace_seed = (): void => {
         [
           "No AutoMovie workspace marker was found",
           "automovie.config.ts",
-          ".automovie/manifest.json",
+          "automovie/manifest.json",
         ],
       ),
     );

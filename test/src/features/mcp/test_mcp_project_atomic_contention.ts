@@ -9,7 +9,7 @@ import { productionFixture } from "./productionFixtures";
 /**
  * A compiler-owned publish survives a held handle, and says so when it cannot.
  *
- * Opening a production writes `.automovie/productions.json` through the atomic
+ * Opening a production writes `automovie/productions.json` through the atomic
  * publish, inside the constructor, so this is the first thing every command
  * that touches a project does. On Windows that publish is a rename onto an
  * existing path, and a rename onto an existing path fails outright while
@@ -19,7 +19,7 @@ import { productionFixture } from "./productionFixtures";
  * suite would ever have caught this.
  *
  * It was measured rather than imagined. A compile in a sandbox died on
- * `EPERM: operation not permitted, rename '.automovie/productions.json.tmp.…'`,
+ * `EPERM: operation not permitted, rename 'automovie/productions.json.tmp.…'`,
  * left the generated manifest describing an input the project no longer had,
  * and the next command refused with `generated-stale` telling the author to run
  * the compile that had just died. One transient collision, one confident and
@@ -48,7 +48,7 @@ export const test_mcp_project_atomic_contention = (): void => {
   const nativeRename = fs.renameSync;
   try {
     const target = path.resolve(
-      path.join(fixture.root, ".automovie/productions.json"),
+      path.join(fixture.root, "automovie/productions.json"),
     );
     const isTarget = (destination: fs.PathLike): boolean =>
       path.resolve(destination.toString()) === target;

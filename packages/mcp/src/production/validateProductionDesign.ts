@@ -149,10 +149,10 @@ export const validateAutoMovieProductionGraph = (
   archetypes: AutoMovieModelArchetypeRegistry = AUTOMOVIE_REGISTERED_ARCHETYPES,
 ): IAutoMovieDiagnostic[] => {
   const diagnostics: IAutoMovieDiagnostic[] = [];
-  const productionRoot = `.automovie/design/${encodeAutoMoviePathSegment(
+  const productionRoot = `automovie/design/${encodeAutoMoviePathSegment(
     productionId,
   )}`;
-  const sharedRoot = ".automovie/design/shared";
+  const sharedRoot = "automovie/design/shared";
   const seenDeliverables = new Set<string>();
   if (graph.production !== null) {
     const target = "production";

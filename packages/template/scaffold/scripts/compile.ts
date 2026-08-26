@@ -9,7 +9,7 @@ import config from "../automovie.config";
 /**
  * The archetypes this production builds from.
  *
- * The compiler resolves every `archetype` in `.automovie/design/shared/models` against
+ * The compiler resolves every `archetype` in `automovie/design/shared/models` against
  * this registry and refuses a recipe naming anything outside it, so this is
  * where a production adds its own builder or drops one it never uses.
  */

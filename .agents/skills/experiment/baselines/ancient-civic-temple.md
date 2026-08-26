@@ -615,7 +615,7 @@ Codex에서 그 벡터가 닫혀 보였던 것은 Codex의 실제 열람 범위�
 #### 계측기 함정 — **전체 모집단에 대한 깨끗하고 균일한 답이 가장 의심하기 어렵다**
 
 저작자의 리뷰 상태 주장(29 complete / 20 stale / 1 revise)을 검증하려고
-`.automovie/reviews/**`의 저장된 레코드에서 `state` 필드를 세었다. 결과:
+`automovie/reviews/**`의 저장된 레코드에서 `state` 필드를 세었다. 결과:
 
 ```
 input count: 51 review record files
@@ -1263,7 +1263,7 @@ tools.shell_command({ command: "rg -n ... node_modules/@automovie" })
 전임의 S0 종료 조건이 그 때문에 성립하지 않아 턴 2에서 정정되었다.
 
 같은 덫이 **세 번째 층에도 걸려 있다.** 턴 2가 `docs`와 `src`를 옮겼는데
-`.automovie/design`은 그대로 스타터다 — `shots/{opening,answer}.json`,
+`automovie/design`은 그대로 스타터다 — `shots/{opening,answer}.json`,
 `acceptance/{opening,answer}-*.json`, `shared/models/{soloist,chorus-*}.json`,
 `shared/formations/chorus.json`. 현재 컴파일이 아직 shot `opening`과 claim
 `cue-arm-readable`을 인용하는 이유가 이것이다.

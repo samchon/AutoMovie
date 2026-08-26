@@ -182,9 +182,9 @@ const closeRenderFileDescriptor = (
 /**
  * Tracked production repository for the coding-agent-first application.
  *
- * `.automovie/design/<production>` and `.automovie/reviews/<production>` are
+ * `automovie/design/<production>` and `automovie/reviews/<production>` are
  * human-readable tracked contracts. Project-shared recipes live below
- * `.automovie/design/shared`; `src` remains coding-agent owned, while
+ * `automovie/design/shared`; `src` remains coding-agent owned, while
  * `generated/<production>` is compiler owned and `renders/<production>` is
  * content addressed. Every one-artifact mutation is staged before an optimistic
  * revision check and one short production-scoped commit lock.
@@ -239,7 +239,7 @@ export class AutoMovieProductionProject {
     this.rootReal = fs.realpathSync(root);
     this.rootDevice = rootIdentity.device;
     this.rootInode = rootIdentity.inode;
-    this.automovieRoot = path.join(root, ".automovie");
+    this.automovieRoot = path.join(root, "automovie");
     this.incarnationPath = path.join(this.automovieRoot, "incarnation.json");
     this.registryPath = path.join(this.automovieRoot, "productions.json");
     const initialStateRoot = lstatOrNull(this.automovieRoot);
@@ -775,7 +775,7 @@ export class AutoMovieProductionProject {
   public static registeredProductionIds(rootDirectory: string): string[] {
     const root = path.resolve(rootDirectory);
     const rootReal = fs.realpathSync(root);
-    const registryPath = path.join(rootReal, ".automovie", "productions.json");
+    const registryPath = path.join(rootReal, "automovie", "productions.json");
     return validateProductionRegistry(
       readOwnedJson(rootReal, registryPath),
       registryPath,
@@ -954,7 +954,7 @@ export class AutoMovieProductionProject {
         const real = fs.realpathSync(absolute);
         if (isInside(this.rootReal, real) === false)
           throw new Error(
-            `Declared asset manifest "${relativeFile}" escapes the production project through a junction. Move it into the physical .automovie directory before compilation.`,
+            `Declared asset manifest "${relativeFile}" escapes the production project through a junction. Move it into the physical automovie directory before compilation.`,
           );
         setInput(
           normalizeSlash(relativeFile),
@@ -2657,7 +2657,7 @@ export class AutoMovieProductionProject {
    *
    * Exposed so a diagnostic can name the file rather than only the id. The
    * design tree's layout is this project's to decide, and a caller that spelled
-   * `.automovie/design/shots/<id>.json` for itself would be restating that
+   * `automovie/design/shots/<id>.json` for itself would be restating that
    * layout in a second place and would be wrong the day it changes.
    *
    * It answers for a record whether or not one is resident, because the caller
@@ -3132,7 +3132,7 @@ const PROJECT_LAYOUT_LABEL = "the AutoMovie project layout";
  * The project ownership layout, which is the harness's own fixed shape rather
  * than a per-project declaration.
  *
- * This was a tracked `.automovie/manifest.json` that every project carried a
+ * This was a tracked `automovie/manifest.json` that every project carried a
  * copy of, and the copy could only ever restate what this constant already
  * says: the class synthesized exactly these values whenever the file was
  * missing. A per-project file that no project may vary is a second source of
@@ -3151,8 +3151,8 @@ const PROJECT_LAYOUT = {
   ],
   generatedRoot: "generated",
   renderRoot: "renders",
-  assetManifest: ".automovie/assets.json",
-  derivedArtifactManifest: ".automovie/derived-artifacts.json",
+  assetManifest: "automovie/assets.json",
+  derivedArtifactManifest: "automovie/derived-artifacts.json",
 } as const satisfies Omit<IAutoMovieProductionManifest, "projectId">;
 
 const SHARED_DESIGN_DIRECTORIES = ["models", "formations"] as const;
@@ -3354,11 +3354,11 @@ const validateOwnershipLayout = (
     ...entry,
     absolute: resolveInside(root, entry.relative),
   }));
-  const reserved = path.join(root, ".automovie");
+  const reserved = path.join(root, "automovie");
   for (const entry of entries)
     if (entry.absolute === root || pathsOverlap(entry.absolute, reserved))
       throw new Error(
-        `Invalid production manifest "${file}": ${entry.owner} "${entry.relative}" overlaps the project root or reserved .automovie state. Choose one dedicated directory.`,
+        `Invalid production manifest "${file}": ${entry.owner} "${entry.relative}" overlaps the project root or reserved automovie state. Choose one dedicated directory.`,
       );
   for (let left = 0; left < entries.length; ++left)
     for (let right = left + 1; right < entries.length; ++right)
@@ -3397,7 +3397,7 @@ const validateRealOwnershipLayout = (
   manifest: IAutoMovieProductionManifest,
   file: string,
 ): void => {
-  assertOwnedRootDirectory(rootReal, path.join(root, ".automovie"), file);
+  assertOwnedRootDirectory(rootReal, path.join(root, "automovie"), file);
   for (const entry of [
     ...manifest.sourceRoots.map((relative, index) => ({
       owner: `sourceRoots[${index}]`,

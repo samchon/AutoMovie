@@ -130,7 +130,7 @@ export const test_mcp_derived_artifact_generation_refusals = (): void => {
         generateAutoMovieDerivedArtifact({
           root: fixture.root,
           generator: fixture.generator,
-          inputs: [".automovie/derived-artifacts.json"],
+          inputs: ["automovie/derived-artifacts.json"],
           output: fixture.output,
           encoding: "base64",
           generate: () => new Uint8Array(),
@@ -324,7 +324,7 @@ export const test_mcp_derived_artifact_generation_refusals = (): void => {
       readDerivedFixtureManifest(fixture.root).artifacts[0]!,
     );
     const manifestBefore = fs.readFileSync(
-      path.join(fixture.root, ".automovie", "derived-artifacts.json"),
+      path.join(fixture.root, "automovie", "derived-artifacts.json"),
     );
     const outputBefore = fs.readFileSync(
       path.join(fixture.root, ...fixture.output.split("/")),
@@ -393,14 +393,14 @@ export const test_mcp_derived_artifact_generation_refusals = (): void => {
     TestValidator.equals(
       "failed artifact rename preserves old manifest",
       fs.readFileSync(
-        path.join(fixture.root, ".automovie", "derived-artifacts.json"),
+        path.join(fixture.root, "automovie", "derived-artifacts.json"),
       ),
       manifestBefore,
     );
 
     writeDerivedFixtureFile(
       fixture.root,
-      ".automovie/derived-artifacts.json",
+      "automovie/derived-artifacts.json",
       "not json",
     );
     TestValidator.equals(
@@ -461,7 +461,7 @@ export const test_mcp_derived_artifact_generation_refusals = (): void => {
         root: missingRoot,
         generator: "scripts/derive.ts",
         inputs: [],
-        output: ".automovie/derived/result.bin",
+        output: "automovie/derived/result.bin",
         encoding: "base64",
         generate: () => new Uint8Array(),
       }),
@@ -481,7 +481,7 @@ export const test_mcp_derived_artifact_generation_refusals = (): void => {
           root: rootFile,
           generator: "scripts/derive.ts",
           inputs: [],
-          output: ".automovie/derived/result.bin",
+          output: "automovie/derived/result.bin",
           encoding: "base64",
           generate: () => new Uint8Array(),
         }),

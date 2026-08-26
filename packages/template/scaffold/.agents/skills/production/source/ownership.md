@@ -1,8 +1,8 @@
 # Source Ownership
 
-The coding agent owns `src`, `docs`, `test`, and declared assets. AutoMovie owns tracked design and review records under `.automovie`. The compiler alone owns `generated`. Render commands own content-addressed `renders`.
+The coding agent owns `src`, `docs`, `test`, and declared assets. AutoMovie owns tracked design and review records under `automovie`. The compiler alone owns `generated`. Render commands own content-addressed `renders`.
 
-Deterministic derived artifacts have their own owner inside `.automovie`. An explicit generation script you write publishes the exact bytes under `.automovie/derived/` and the ledger that records their basis; compilation verifies both and never regenerates either. Hand-editing the bytes or the ledger, and registering a derived path in the external asset ledger, are both refused. `DERIVED_ARTIFACTS` owns that contract.
+Deterministic derived artifacts have their own owner inside `automovie`. An explicit generation script you write publishes the exact bytes under `automovie/derived/` and the ledger that records their basis; compilation verifies both and never regenerates either. Hand-editing the bytes or the ledger, and registering a derived path in the external asset ledger, are both refused. `DERIVED_ARTIFACTS` owns that contract.
 
 Never patch `generated` to fix a source problem. Its manifest records every compiler-owned path and digest; unowned or modified output blocks compilation. Edit the owning source or design, then run the scaffold compile command or the package compiler API.
 

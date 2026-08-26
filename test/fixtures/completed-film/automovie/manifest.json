@@ -15,8 +15,8 @@
     "package.json",
     "package-lock.json"
   ],
-  "assetManifest": ".automovie/assets.json",
-  "derivedArtifactManifest": ".automovie/derived-artifacts.json",
+  "assetManifest": "automovie/assets.json",
+  "derivedArtifactManifest": "automovie/derived-artifacts.json",
   "generatedRoot": "generated",
   "renderRoot": "renders"
 }

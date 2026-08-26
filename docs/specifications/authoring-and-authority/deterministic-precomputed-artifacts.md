@@ -10,7 +10,7 @@
 <!-- @evidence requirements/agent-authoring/deterministic-precomputation.md#agent-precomputed-derived-artifact 별도 ledger의 project-owned output record가 거대한 source literal 없이 결과를 공급한다. -->
 <!-- @evidence requirements/agent-authoring/project-ownership.md#agent-project-owned-facts Generator, input과 결과 bytes를 사용자 project가 소유하는 검토 가능한 사실로 둔다. -->
 
-Production manifest는 별도 파생 원장 `.automovie/derived-artifacts.json`을 선택한다. 그 원장의 output은 `.automovie/derived/` 아래에만 놓이며 같은 path를 `.automovie/assets.json`이 외부 또는 비결정적 생성 자산으로 등록할 수 없다. 파생 record는 output path와 source-context encoding, generator path와 digest, canonical input path와 digest의 정렬된 목록, basis digest와 output digest를 가진다. Timestamp, host path, process id와 machine metadata는 record에 들어가지 않는다.
+Production manifest는 별도 파생 원장 `automovie/derived-artifacts.json`을 선택한다. 그 원장의 output은 `automovie/derived/` 아래에만 놓이며 같은 path를 `automovie/assets.json`이 외부 또는 비결정적 생성 자산으로 등록할 수 없다. 파생 record는 output path와 source-context encoding, generator path와 digest, canonical input path와 digest의 정렬된 목록, basis digest와 output digest를 가진다. Timestamp, host path, process id와 machine metadata는 record에 들어가지 않는다.
 
 ### Basis identity {#spec-authoring-precomputed-basis}
 

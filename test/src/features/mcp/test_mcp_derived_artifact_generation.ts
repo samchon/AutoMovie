@@ -38,7 +38,7 @@ export const test_mcp_derived_artifact_generation = (): void =>
       ],
       [
         "automovie.derived-artifact.basis.v1",
-        ".automovie/derived-artifacts.json",
+        "automovie/derived-artifacts.json",
       ],
     );
 
@@ -74,7 +74,7 @@ export const test_mcp_derived_artifact_generation = (): void =>
       "derived-alpha\n",
     );
     const serializedManifest = fs.readFileSync(
-      path.join(fixture.root, ".automovie", "derived-artifacts.json"),
+      path.join(fixture.root, "automovie", "derived-artifacts.json"),
       "utf8",
     );
     TestValidator.predicate(
@@ -125,7 +125,7 @@ export const test_mcp_derived_artifact_generation = (): void =>
     const artifactFile = path.join(fixture.root, ...fixture.output.split("/"));
     const manifestFile = path.join(
       fixture.root,
-      ".automovie",
+      "automovie",
       "derived-artifacts.json",
     );
     const priorTimes = [
@@ -170,7 +170,7 @@ export const test_mcp_derived_artifact_generation = (): void =>
       false,
     );
 
-    const emptyPath = ".automovie/derived/empty.txt";
+    const emptyPath = "automovie/derived/empty.txt";
     generateAutoMovieDerivedArtifact({
       root: fixture.root,
       generator: fixture.generator,
@@ -181,7 +181,7 @@ export const test_mcp_derived_artifact_generation = (): void =>
     });
     const secondInput = "inputs/aaa.txt";
     writeDerivedFixtureFile(fixture.root, secondInput, "beta\n");
-    const largePath = ".automovie/derived/large.bin";
+    const largePath = "automovie/derived/large.bin";
     const largeBytes = new Uint8Array(2 * 1024 * 1024);
     largeBytes[0] = 255;
     largeBytes[largeBytes.length - 1] = 127;

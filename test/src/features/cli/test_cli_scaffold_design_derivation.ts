@@ -71,12 +71,12 @@ export const test_cli_scaffold_design_derivation = (): void => {
     file.startsWith("generated/"),
   );
   const productionState = Object.keys(rendered).filter((file) =>
-    file.startsWith(".automovie/productions/"),
+    file.startsWith("automovie/productions/"),
   );
   const reviewRecords = Object.keys(rendered).filter(
     (file) =>
-      file.startsWith(".automovie/reviews/") &&
-      file !== ".automovie/reviews/README.md",
+      file.startsWith("automovie/reviews/") &&
+      file !== "automovie/reviews/README.md",
   );
   const renderedMedia = Object.keys(rendered).filter(
     (file) => file.startsWith("renders/") && file !== "renders/README.md",
@@ -86,7 +86,7 @@ export const test_cli_scaffold_design_derivation = (): void => {
       /^public\/(?:assets|audio)\//u.test(file) && !file.endsWith("/README.md"),
   );
   const registeredAssets = (
-    JSON.parse(rendered[".automovie/assets.json"]!) as {
+    JSON.parse(rendered["automovie/assets.json"]!) as {
       assets: unknown[];
     }
   ).assets;
@@ -144,7 +144,7 @@ export const test_cli_scaffold_design_derivation = (): void => {
         "physical design tree is empty",
         () =>
           JSON.stringify(
-            fs.readdirSync(path.join(scaffold, ".automovie", "design")),
+            fs.readdirSync(path.join(scaffold, "automovie", "design")),
           ) === JSON.stringify([".gitkeep"]),
       ],
       [

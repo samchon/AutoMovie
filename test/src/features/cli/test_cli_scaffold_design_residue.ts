@@ -11,7 +11,7 @@ import { formationDesign, productionFixture } from "../mcp/productionFixtures";
  * A design record no source derives is nameable, and only the emitter can ask.
  *
  * The production evidence graph watches authored Markdown and TypeScript, but
- * a legacy fixture id can survive in `.automovie/design/**`: derived JSON has no
+ * a legacy fixture id can survive in `automovie/design/**`: derived JSON has no
  * JSDoc evidence owner. This case owns that design tree, which is the part the
  * source graph cannot inspect directly.
  *
@@ -36,7 +36,7 @@ import { formationDesign, productionFixture } from "../mcp/productionFixtures";
  *    resident and invisible.
  * 2. The project enumerates every resident design record across all six design
  *    kinds, so "resident minus derived" is computable rather than guessed.
- * 3. Every enumerated record maps to a project-relative `.automovie/design`
+ * 3. Every enumerated record maps to a project-relative `automovie/design`
  *    file that exists, so a refusal names something the author can open.
  * 4. No enumerated record resolves to the screenplay index's own file, so the
  *    one record the emitter deliberately leaves alone can never be accused.
@@ -103,7 +103,7 @@ export const test_cli_scaffold_design_residue = (): void => {
         .map((target) => project.designRecordPath(target))
         .filter(
           (relative) =>
-            relative.startsWith(".automovie/design/") === false ||
+            relative.startsWith("automovie/design/") === false ||
             relative.endsWith(".json") === false ||
             fs.existsSync(path.join(fixture.root, relative)) === false,
         ),
@@ -112,7 +112,7 @@ export const test_cli_scaffold_design_residue = (): void => {
 
     const index = path.join(
       fixture.root,
-      ".automovie/design",
+      "automovie/design",
       project.productionId,
       "screenplay/index.json",
     );

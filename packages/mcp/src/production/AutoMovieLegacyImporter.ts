@@ -114,7 +114,7 @@ const removeLegacyImportTemporary = (
  *
  * Planning copies the captured legacy bytes to an operating-system temporary
  * directory before opening the v1 store, so validation cannot initialize or
- * normalize the user's tree. Applying adds one atomic `.automovie` state root
+ * normalize the user's tree. Applying adds one atomic `automovie` state root
  * containing provenance and drafts; every pre-existing legacy byte remains
  * untouched. Rollback is allowed only while that imported state is exact and
  * any production-owned directories created by a later open remain empty.
@@ -166,7 +166,7 @@ export class AutoMovieLegacyImporter {
     lockToken: string,
   ): IAutoMovieLegacyImportApplyOutput {
     const root = lease.root;
-    const stateRoot = path.join(root, ".automovie");
+    const stateRoot = path.join(root, "automovie");
     const existing = lstatOrNull(stateRoot);
     if (existing !== null) {
       if (existing.isSymbolicLink() || existing.isDirectory() === false)
@@ -237,7 +237,7 @@ export class AutoMovieLegacyImporter {
     const lease = acquireProductionRootNamespace(root);
     try {
       assertProductionRootNamespaceLease(lease);
-      const stateRoot = path.join(lease.root, ".automovie");
+      const stateRoot = path.join(lease.root, "automovie");
       const linked = lstatOrNull(stateRoot);
       if (
         linked === null ||
@@ -328,7 +328,7 @@ export class AutoMovieLegacyImporter {
               try {
                 fs.rmSync(quarantine, { force: true, recursive: true });
               } catch {
-                // The authoritative applied state is restored at `.automovie`.
+                // The authoritative applied state is restored at `automovie`.
               }
             }
           } catch (restorationError) {

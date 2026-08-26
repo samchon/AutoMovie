@@ -499,7 +499,7 @@ export interface IAutoMovieProductionManifest {
    * @evidence requirements/agent-authoring/partial-work.md#agent-declared-omission Exposes `assetManifest` as the portable data boundary for the agent declared omission requirement.
    * @evidence specifications/authoring-and-authority/partial-targets-and-atomic-results.md#spec-authoring-partial-target-input Types `assetManifest` for the spec authoring partial target input system contract.
    */
-  assetManifest?: ".automovie/assets.json";
+  assetManifest?: "automovie/assets.json";
   /**
    * Project-owned deterministic precomputation ledger.
    *
@@ -509,7 +509,7 @@ export interface IAutoMovieProductionManifest {
    * @evidence requirements/agent-authoring/deterministic-precomputation.md#agent-precomputed-compile-refusal Makes the tracked derived-artifact ledger an explicit compiler input.
    * @evidence specifications/authoring-and-authority/deterministic-precomputed-artifacts.md#spec-authoring-precomputed-manifest Selects the one canonical project-relative ledger path.
    */
-  derivedArtifactManifest?: ".automovie/derived-artifacts.json";
+  derivedArtifactManifest?: "automovie/derived-artifacts.json";
   /**
    * Compiler-owned generated root.
    *

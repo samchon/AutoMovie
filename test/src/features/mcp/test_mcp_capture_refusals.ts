@@ -65,7 +65,7 @@ export const test_mcp_capture_refusals = async (): Promise<void> => {
     fs.writeFileSync(
       path.join(
         fixture.root,
-        ".automovie",
+        "automovie",
         "design",
         "shared",
         "models",

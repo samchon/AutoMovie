@@ -334,7 +334,7 @@ export class AutoMovieProductionCompiler {
           category: "error",
           phase: "source",
           target: "declared-content",
-          path: ".automovie/manifest.json",
+          path: "automovie/manifest.json",
           message: `${errorMessage(error)} Correct contentRoots/contentFiles ownership before running the compiler.`,
         });
         contentFields.push({
@@ -767,7 +767,7 @@ export class AutoMovieProductionCompiler {
             category: "error",
             phase: "compile",
             target: "asset-manifest",
-            path: ".automovie/manifest.json",
+            path: "automovie/manifest.json",
             message: `${violation.path} ${violation.expected}. Register the image, correct its typed use, or stop binding it before compiling.`,
           });
     }
@@ -826,7 +826,7 @@ export class AutoMovieProductionCompiler {
       if (referenceOf.size !== 0 || evidence.length !== 0 || uses.size !== 0)
         diagnostics.push(
           ...designReferenceDiagnostics({
-            path: projectManifest.assetManifest ?? ".automovie/assets.json",
+            path: projectManifest.assetManifest ?? "automovie/assets.json",
             references: [...referenceOf.values()],
             evidence,
             assets: new Map(
@@ -6211,7 +6211,7 @@ const missingDesignDiagnostics = (
       category: "error",
       phase: "design",
       target: "production",
-      path: `.automovie/design/${productionSegment}/production.json`,
+      path: `automovie/design/${productionSegment}/production.json`,
       message:
         "Production design is missing. Create the tracked production design record.",
     });
@@ -6221,7 +6221,7 @@ const missingDesignDiagnostics = (
       category: "error",
       phase: "design",
       target: "world",
-      path: ".automovie/design/shared/world.json",
+      path: "automovie/design/shared/world.json",
       message:
         "World design is missing. Create the tracked world design record.",
     });
@@ -6231,7 +6231,7 @@ const missingDesignDiagnostics = (
       category: "error",
       phase: "design",
       target: "shots",
-      path: `.automovie/design/${productionSegment}/shots`,
+      path: `automovie/design/${productionSegment}/shots`,
       message:
         "No shot contract exists. Create the first tracked shot contract record.",
     });
@@ -7957,7 +7957,7 @@ const finalDeliverableDiagnostics = (
         category: "error",
         phase: "render",
         target: production.id,
-        path: `.automovie/productions/${encodeAutoMoviePathSegment(project.productionId)}/render-manifest.json`,
+        path: `automovie/productions/${encodeAutoMoviePathSegment(project.productionId)}/render-manifest.json`,
         message:
           "Required deliverables have no current render manifest. Run the project render command before final compilation.",
       },

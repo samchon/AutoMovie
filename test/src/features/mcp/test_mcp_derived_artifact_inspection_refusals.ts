@@ -34,7 +34,7 @@ export const test_mcp_derived_artifact_inspection_refusals = (): void => {
       encoding: "base64",
       generate: () => new Uint8Array([0xff]),
     });
-    const secondOutput = ".automovie/derived/second.txt";
+    const secondOutput = "automovie/derived/second.txt";
     generateAutoMovieDerivedArtifact({
       root: fixture.root,
       generator: fixture.generator,
@@ -46,7 +46,7 @@ export const test_mcp_derived_artifact_inspection_refusals = (): void => {
     const baseline = readDerivedFixtureManifest(fixture.root);
     const manifestFile = path.join(
       fixture.root,
-      ".automovie",
+      "automovie",
       "derived-artifacts.json",
     );
     const outputFile = path.join(fixture.root, ...fixture.output.split("/"));
@@ -536,7 +536,7 @@ export const test_mcp_derived_artifact_inspection_refusals = (): void => {
     const collision = inspectAutoMovieDerivedArtifacts({
       root: fixture.root,
       manifestPath: AUTOMOVIE_DERIVED_ARTIFACT_MANIFEST_PATH,
-      externalAssetPaths: [".automovie/derived/external.bin"],
+      externalAssetPaths: ["automovie/derived/external.bin"],
     });
     TestValidator.equals(
       "external asset namespace collision refuses once",

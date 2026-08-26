@@ -11,7 +11,7 @@ import { productionFixture } from "./productionFixtures";
  *
  * Replacing a completed production is one pass over three layers, and the
  * evidence graph only watches two of them. `docs/**` and `src/**` are cited, so
- * lint catches a break in either; `.automovie/design/**` is compiler-owned JSON
+ * lint catches a break in either; `automovie/design/**` is compiler-owned JSON
  * that carries no citations by design, so nothing catches it. Two measured
  * productions left legacy fixture records in that layer, and their compiles
  * kept reporting ids the author had already deleted everywhere they knew to look.
@@ -41,7 +41,7 @@ export const test_mcp_dangling_citation_names_its_record = (): void => {
     // smallest way to reproduce it: every fixture record still cites the old id.
     const indexPath = path.join(
       fixture.root,
-      ".automovie/design/fixture-film/screenplay/index.json",
+      "automovie/design/fixture-film/screenplay/index.json",
     );
     const index = fs.readFileSync(indexPath, "utf8");
     TestValidator.equals(
@@ -73,7 +73,7 @@ export const test_mcp_dangling_citation_names_its_record = (): void => {
             dangling.every(
               (diagnostic) =>
                 diagnostic.path !== null &&
-                diagnostic.path.startsWith(".automovie/design/") &&
+                diagnostic.path.startsWith("automovie/design/") &&
                 diagnostic.path.endsWith(".json"),
             ),
         ],

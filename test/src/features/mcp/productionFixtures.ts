@@ -64,22 +64,22 @@ export const productionFixture = (): {
     const files = renderCompletedFilmFixture("fixture-film");
     const openingContract = shotContract();
     const assetManifest = JSON.parse(
-      files[".automovie/assets.json"]!,
+      files["automovie/assets.json"]!,
     ) as IAutoMovieAssetManifest;
     for (const asset of assetManifest.assets)
       for (const use of asset.uses) use.production = "fixture-library";
-    files[".automovie/assets.json"] =
+    files["automovie/assets.json"] =
       `${JSON.stringify(assetManifest, null, 2)}\n`;
     for (const file of [
-      ".automovie/design/fixture-film/acceptance/answer-beauty.json",
-      ".automovie/design/fixture-film/acceptance/answer-gate-mask.json",
-      ".automovie/design/fixture-film/acceptance/answer-held-cue.json",
-      ".automovie/design/fixture-film/acceptance/opening-effect-mask.json",
-      ".automovie/design/shared/formations/chorus.json",
-      ".automovie/design/shared/models/chorus-far.json",
-      ".automovie/design/shared/models/chorus-hero.json",
-      ".automovie/design/shared/models/chorus-near.json",
-      ".automovie/design/fixture-film/shots/answer.json",
+      "automovie/design/fixture-film/acceptance/answer-beauty.json",
+      "automovie/design/fixture-film/acceptance/answer-gate-mask.json",
+      "automovie/design/fixture-film/acceptance/answer-held-cue.json",
+      "automovie/design/fixture-film/acceptance/opening-effect-mask.json",
+      "automovie/design/shared/formations/chorus.json",
+      "automovie/design/shared/models/chorus-far.json",
+      "automovie/design/shared/models/chorus-hero.json",
+      "automovie/design/shared/models/chorus-near.json",
+      "automovie/design/fixture-film/shots/answer.json",
     ])
       delete files[file];
     // Dropping the answering shot leaves its scene without a realization, so
@@ -87,7 +87,7 @@ export const productionFixture = (): {
     // production-phase disposition is for, and recording it keeps this a
     // one-shot fixture rather than an incomplete film.
     const screenplay = JSON.parse(
-      files[".automovie/design/fixture-film/screenplay/index.json"]!,
+      files["automovie/design/fixture-film/screenplay/index.json"]!,
     ) as IAutoMovieScreenplayIndex;
     for (const scene of screenplay.screenplay.scenes)
       if (scene.id === "SCN-002")
@@ -96,29 +96,29 @@ export const productionFixture = (): {
           reason:
             "The one-shot fixture keeps only the opening shot, so this scene is intentionally unrealized here.",
         };
-    files[".automovie/design/fixture-film/screenplay/index.json"] =
+    files["automovie/design/fixture-film/screenplay/index.json"] =
       `${JSON.stringify(screenplay, null, 2)}\n`;
-    files[".automovie/design/fixture-film/shots/opening.json"] =
+    files["automovie/design/fixture-film/shots/opening.json"] =
       `${JSON.stringify(openingContract, null, 2)}\n`;
     files["src/shots/opening.ts"] = replaceScaffoldRegistrationContract({
       source: files["src/shots/opening.ts"]!,
       exportName: "opening",
       contract: definedShotContract(openingContract),
     });
-    files[".automovie/design/shared/world.json"] =
+    files["automovie/design/shared/world.json"] =
       `${JSON.stringify(fixtureWorldDesign(), null, 2)}\n`;
     const openingBeauty = JSON.parse(
-      files[".automovie/design/fixture-film/acceptance/opening-beauty.json"]!,
+      files["automovie/design/fixture-film/acceptance/opening-beauty.json"]!,
     ) as IAutoMovieAcceptanceScenario;
     if (openingBeauty.criterion.kind === "frame")
       openingBeauty.criterion.expectation =
         "The full performer and raised cue arm remain readable.";
-    files[".automovie/design/fixture-film/acceptance/opening-beauty.json"] =
+    files["automovie/design/fixture-film/acceptance/opening-beauty.json"] =
       `${JSON.stringify(openingBeauty, null, 2)}\n`;
-    files[".automovie/design/fixture-film/production.json"] = `${JSON.stringify(
+    files["automovie/design/fixture-film/production.json"] = `${JSON.stringify(
       oneShotProduction(
         JSON.parse(
-          files[".automovie/design/fixture-film/production.json"]!,
+          files["automovie/design/fixture-film/production.json"]!,
         ) as IAutoMovieProductionDesign,
       ),
       null,
@@ -283,8 +283,8 @@ export const liftFixtureSceneDisposition = (
   sceneId: string,
 ): void => {
   const file = [
-    path.join(root, ".automovie/design/fixture-film/screenplay/index.json"),
-    path.join(root, ".automovie/design/screenplay/index.json"),
+    path.join(root, "automovie/design/fixture-film/screenplay/index.json"),
+    path.join(root, "automovie/design/screenplay/index.json"),
   ].find((candidate) => fs.existsSync(candidate));
   if (file === undefined) return;
   const index = JSON.parse(
@@ -305,7 +305,7 @@ export const productionDesign = (
 ): IAutoMovieProductionDesign => ({
   ...oneShotProduction(
     completedFilmJson<IAutoMovieProductionDesign>(
-      ".automovie/design/{{name}}/production.json",
+      "automovie/design/{{name}}/production.json",
     ),
   ),
   id: "fixture-film",
@@ -333,10 +333,10 @@ export const writeProductionScreenplay = (props: {
   // `docs/script` paths; this helper adds only the second tracked index.
   const rendered = renderCompletedFilmFixture(props.productionId);
   const index = JSON.parse(
-    rendered[`.automovie/design/${props.productionId}/screenplay/index.json`]!,
+    rendered[`automovie/design/${props.productionId}/screenplay/index.json`]!,
   ) as IAutoMovieScreenplayIndex;
   const files: Record<string, string> = {
-    [`.automovie/design/${props.productionId}/screenplay/index.json`]: `${JSON.stringify(
+    [`automovie/design/${props.productionId}/screenplay/index.json`]: `${JSON.stringify(
       {
         ...index,
         screenplay: {
@@ -387,11 +387,11 @@ const oneShotProduction = (
 
 /** Completed-film primitive model recipe. */
 export const modelRecipe = (): IAutoMovieModelRecipe =>
-  completedFilmJson(".automovie/design/shared/models/soloist.json");
+  completedFilmJson("automovie/design/shared/models/soloist.json");
 
 /** Completed-film world design. */
 export const worldDesign = (): IAutoMovieWorldDesign =>
-  completedFilmJson(".automovie/design/shared/world.json");
+  completedFilmJson("automovie/design/shared/world.json");
 
 /**
  * Completed-film world restricted to the slice `productionFixture` writes.
@@ -421,7 +421,7 @@ export const fixtureWorldDesign = (): IAutoMovieWorldDesign => ({
  */
 export const shotContract = (): IAutoMovieShotContract => {
   const contract = completedFilmJson<IAutoMovieShotContract>(
-    ".automovie/design/{{name}}/shots/opening.json",
+    "automovie/design/{{name}}/shots/opening.json",
   );
   return {
     ...contract,
@@ -440,9 +440,9 @@ export const shotContract = (): IAutoMovieShotContract => {
 /** Completed-film acceptance scenarios. */
 export const acceptanceScenarios = (): IAutoMovieAcceptanceScenario[] => [
   completedFilmJson(
-    ".automovie/design/{{name}}/acceptance/opening-beauty.json",
+    "automovie/design/{{name}}/acceptance/opening-beauty.json",
   ),
-  completedFilmJson(".automovie/design/{{name}}/acceptance/opening-pose.json"),
+  completedFilmJson("automovie/design/{{name}}/acceptance/opening-pose.json"),
 ];
 
 /** Compact valid formation covering formation-dependent services. */

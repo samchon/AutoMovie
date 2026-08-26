@@ -6,7 +6,7 @@
  * When a deterministic computation is too expensive for the one-second source
  * budget, the result becomes a **derived artifact** published by an explicit
  * script, never a megabyte-scale literal pasted into a `.ts` file. The bytes
- * live under `.automovie/derived/`, the ledger `.automovie/derived-artifacts.json`
+ * live under `automovie/derived/`, the ledger `automovie/derived-artifacts.json`
  * records them, and the compiler verifies rather than regenerates them. Read
  * `DERIVED_ARTIFACTS` for the full contract.
  *
@@ -26,7 +26,7 @@
  *   root: findAutoMovieProjectRoot(process.cwd()),
  *   generator: "scripts/deriveMyArtifact.ts",
  *   inputs: ["src/examples/buildings.ts"],
- *   output: ".automovie/derived/buildings-line-index.json",
+ *   output: "automovie/derived/buildings-line-index.json",
  *   encoding: "utf8",
  *   generate: (inputs) =>
  *     deriveUtf8LineIndex(inputs["src/examples/buildings.ts"]!),

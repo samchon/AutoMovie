@@ -194,7 +194,7 @@ const renderLivenessScope = digestAutoMovieBytes(
 ).slice(7);
 const productionStateRoot = path.join(
   root,
-  ".automovie",
+  "automovie",
   "productions",
   productionSegment,
 );
@@ -703,7 +703,7 @@ const currentPlan = async (): Promise<IAutoMovieProductionRenderJobPlan> => {
   ensureRenderPhysicalDirectory(
     root,
     [
-      ".automovie",
+      "automovie",
       "productions",
       productionSegment,
       "render-job",

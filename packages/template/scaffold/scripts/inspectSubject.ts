@@ -262,7 +262,7 @@ const inspectionPage = (
  *
  * Nothing it returns is delivery evidence. It produces no renderer identity, no
  * target fingerprint and no render bundle, and it writes no file; the surface
- * publishes the bytes under `.automovie/inspections`, outside the render root a
+ * publishes the bytes under `automovie/inspections`, outside the render root a
  * delivery review reads.
  */
 export const inspectProductionSubject: AutoMovieProductionSubjectInspection =

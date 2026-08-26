@@ -14,7 +14,7 @@ Discovery proves that each complete authored H2 population searched the actual p
 
 Film storylines, scenarios, and script preserve identical filenames, explicit H2/H3/H4 anchors, nesting, and order. Keep beat text and `SCN-*` identities aligned with the hand-authored screenplay index; after shots exist, preserve deleted numbers as `OMITTED` and use alpha insertion ids.
 
-Every distributable file matched by the asset lint configuration belongs in `.automovie/assets.json`. Record its source URL, license, original/current SHA-256, processing chain, and reasoned use before referencing it. External glTF, GLB, and VRM entries also require explicit ingest, LOD, collision, and measurement-proxy decisions. Changed or unregistered bytes fail lint and compilation; ingestion itself remains a pure fixed-byte conversion.
+Every distributable file matched by the asset lint configuration belongs in `automovie/assets.json`. Record its source URL, license, original/current SHA-256, processing chain, and reasoned use before referencing it. External glTF, GLB, and VRM entries also require explicit ingest, LOD, collision, and measurement-proxy decisions. Changed or unregistered bytes fail lint and compilation; ingestion itself remains a pure fixed-byte conversion.
 
 ## First run
 
@@ -113,7 +113,7 @@ Each running attempt is authorized by the exact physical snapshot and `{ chunk, 
 
 Final conform also reopens the matching proxy bundle as one physical tree. Its manifest must account for the exact regular-file inventory, and every declared payload length and digest must still match before the proxy can satisfy the final plan gate.
 
-Every planning, run, and full-sequence render first measures what the tier is about to draw and checks it against the `renderBudgets` entry whose `tier` matches this render tier (`proxy` or `final`). The verdict is published as an immutable, content-addressed document under `.automovie/productions/<production>/render-job/<tier>/render-budget`, and its summary is part of the command's own output. Only `over` refuses the render, and it names the dominant owner and the source to edit. `incomplete` and `not-run` are reported exactly as they are: an unmeasured cost has not been cleared, and a production declaring no budget for this tier reads `unbudgeted` with its declared tiers named rather than passing silently.
+Every planning, run, and full-sequence render first measures what the tier is about to draw and checks it against the `renderBudgets` entry whose `tier` matches this render tier (`proxy` or `final`). The verdict is published as an immutable, content-addressed document under `automovie/productions/<production>/render-job/<tier>/render-budget`, and its summary is part of the command's own output. Only `over` refuses the render, and it names the dominant owner and the source to edit. `incomplete` and `not-run` are reported exactly as they are: an unmeasured cost has not been cleared, and a production declaring no budget for this tier reads `unbudgeted` with its declared tiers named rather than passing silently.
 
 `npm run render` is the convenience sequence: it captures current review evidence, reuses or renders current chunks, then attempts final publication. Finalize still fails closed until every current review is complete. Its terminal commit also fingerprints the revision, declared content, live evidence-bound review queue and records, generated manifest and bytes, production manifest, exact design graph, and state incarnation with canonical structured fields. The staged final compiler gate recomputes that review queue from current render evidence; any change during the gate rolls the publication back.
 
@@ -129,9 +129,9 @@ The production viewer accepts `?film=1` for GPU cut/dissolve playback of the com
 
 ## Ownership
 
-- `.automovie/design/shared`: project-shared model, world and formation design
-- `.automovie/design/<production>`, `.automovie/reviews/<production>`: production-scoped tracked contracts
-- `.automovie/productions/<production>`: production-scoped compiler, render-job, receipt and revision state
+- `automovie/design/shared`: project-shared model, world and formation design
+- `automovie/design/<production>`, `automovie/reviews/<production>`: production-scoped tracked contracts
+- `automovie/productions/<production>`: production-scoped compiler, render-job, receipt and revision state
 - `src`, `docs`, `test`, `public`: coding-agent source and assets
 - `generated`: compiler-owned; never edit
 - `renders`: content-addressed outputs; never pass an arbitrary screenshot as review evidence
