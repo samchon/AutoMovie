@@ -4,7 +4,14 @@ import path from "node:path";
 import { pathToFileURL } from "node:url";
 
 const LAYERS = ["requirements", "specifications"];
-const PACKAGE_NAME = /^@automovie\/[a-z0-9-]+$/;
+/**
+ * A workspace package name.
+ *
+ * Every library is scoped. The command-line entry point is not: it is published
+ * as `automovie` so that the tool a user installs is named after the product
+ * rather than after a folder inside it.
+ */
+const PACKAGE_NAME = /^(?:automovie|@automovie\/[a-z0-9-]+)$/;
 const PART_TARGET =
   /^(specifications\/[a-z0-9./-]+\.md#[a-z0-9-]+)::([a-z0-9-]+)$/;
 const UNIT_TARGET =

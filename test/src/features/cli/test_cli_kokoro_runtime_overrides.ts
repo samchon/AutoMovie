@@ -42,7 +42,7 @@ export const test_cli_kokoro_runtime_overrides = async (): Promise<void> => {
     path.join(
       ROOT,
       "packages",
-      "cli",
+      "template",
       "scaffold",
       "scripts",
       "withKokoroRuntimeOverrides.cjs",

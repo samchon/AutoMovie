@@ -29,11 +29,11 @@ import { fileURLToPath } from "node:url";
 import {
   WORKSPACE_TEMPLATE_VERSION_KEYS,
   resolveTemplateVersions,
-} from "../packages/cli/build/templateVersions.mjs";
+} from "../packages/template/build/templateVersions.mjs";
 import { PACKAGES, packWorkspace } from "./tgz.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const SCAFFOLD = path.join(ROOT, "packages", "cli", "scaffold");
+const SCAFFOLD = path.join(ROOT, "packages", "template", "scaffold");
 
 const USAGE = `create a working-tree automovie sandbox
 
@@ -50,7 +50,7 @@ Options:
 /**
  * Files the scaffold ships without a leading dot, because npm strips a real
  * `.gitignore` and `.npmrc` from a published package. Mirrors the rename map in
- * `packages/cli/src/renderScaffold.ts`.
+ * `packages/template/src/renderScaffold.ts`.
  */
 const RENAME = { gitignore: ".gitignore", npmrc: ".npmrc" };
 

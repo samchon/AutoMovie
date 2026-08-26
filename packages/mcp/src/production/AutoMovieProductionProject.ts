@@ -275,7 +275,11 @@ export class AutoMovieProductionProject {
       );
     this.initialized_ =
       readOwnedJson(this.rootReal, this.registryPath) === undefined;
-    this.manifest_ = { ...PROJECT_LAYOUT, projectId: projectIdOf(root) };
+    this.manifest_ = {
+      ...PROJECT_LAYOUT,
+      projectId: projectIdOf(root),
+      ...importedLegacyOf(this.rootReal, this.automovieRoot),
+    };
     validateOwnershipLayout(this.root, this.manifest_, PROJECT_LAYOUT_LABEL);
     const registration = readOnly
       ? this.readProductionRegistration(requestedProductionId)
@@ -3126,6 +3130,31 @@ interface IAutoMovieProductionRegistry {
 /**
  * Label used where an ownership-layout diagnostic once named a manifest file.
  */
+/**
+ * The legacy migration this project came from, read from the import record.
+ *
+ * The layout above is one constant every project shares, and this is the one
+ * part of the retired manifest that was never a restatement of it: which v1
+ * revision a project was migrated from is true of that project alone. It is
+ * read from the import plan the importer already writes rather than copied
+ * beside it, so a migrated project cannot disagree with its own provenance.
+ */
+const importedLegacyOf = (
+  rootReal: string,
+  automovieRoot: string,
+): Pick<IAutoMovieProductionManifest, "importedLegacy"> => {
+  const plan = readOwnedJson(
+    rootReal,
+    path.join(automovieRoot, "imports", "legacy-v1", "plan.json"),
+  );
+  if (typeof plan !== "object" || plan === null || Array.isArray(plan))
+    return {};
+  const revision = (plan as { legacyRevision?: unknown }).legacyRevision;
+  if (typeof revision !== "number" || Number.isSafeInteger(revision) === false)
+    return {};
+  return { importedLegacy: { revision, sourceRoot: "." } };
+};
+
 const PROJECT_LAYOUT_LABEL = "the AutoMovie project layout";
 
 /**
@@ -3412,13 +3441,17 @@ const validateRealOwnershipLayout = (
   for (const [index, relative] of (manifest.contentRoots ?? []).entries()) {
     const absolute = resolveInside(root, relative);
     const linked = lstatOrNull(absolute);
-    if (
-      linked === null ||
-      linked.isSymbolicLink() ||
-      linked.isDirectory() === false
-    )
+    // Absence is a shape, not a fault. The layout is one constant covering both
+    // a scaffolded production and a bare project that a legacy import or a
+    // first compile just created, and only the first carries viewer, scripts,
+    // and public. This requirement read as existence while the layout was a
+    // per-project file: declaring a content root there was the project's own
+    // claim to have it. A constant claims nothing on a project's behalf, so
+    // what survives is the escape it was written to refuse.
+    if (linked === null) continue;
+    if (linked.isSymbolicLink() || linked.isDirectory() === false)
       throw new Error(
-        `Invalid production manifest "${file}": contentRoots[${index}] "${relative}" must be an existing physical project directory.`,
+        `Invalid production manifest "${file}": contentRoots[${index}] "${relative}" must be a physical project directory rather than a link or a file.`,
       );
     const real = fs.realpathSync(absolute);
     if (isInside(rootReal, real) === false)

@@ -334,7 +334,9 @@ export class AutoMovieProductionCompiler {
           category: "error",
           phase: "source",
           target: "declared-content",
-          path: "automovie/manifest.json",
+          // No one file owns the content inventory: it is read across every
+          // content root and file the layout declares.
+          path: null,
           message: `${errorMessage(error)} Correct contentRoots/contentFiles ownership before running the compiler.`,
         });
         contentFields.push({
@@ -767,7 +769,7 @@ export class AutoMovieProductionCompiler {
             category: "error",
             phase: "compile",
             target: "asset-manifest",
-            path: "automovie/manifest.json",
+            path: "automovie/assets.json",
             message: `${violation.path} ${violation.expected}. Register the image, correct its typed use, or stop binding it before compiling.`,
           });
     }

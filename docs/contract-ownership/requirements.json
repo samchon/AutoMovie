@@ -2027,7 +2027,7 @@
     "requirements/operations-and-recovery/idempotency-and-side-effects.md#operations-duplicate-submission": {
       "owner": {
         "kind": "package",
-        "package": "automovie"
+        "package": "@automovie/template"
       }
     },
     "requirements/operations-and-recovery/migration-and-compatibility.md#operations-migration-validation": {

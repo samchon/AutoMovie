@@ -152,13 +152,25 @@ const DOCS = "docs";
  * edit them, the inventory is pinned here by filename and anchor, and a copy
  * that a package upgrade can invalidate is a break waiting for the next
  * release rather than project-owned content.
+ *
+ * One host cannot install that package: the scaffold inside it, which is the
+ * source the dependency is published from. It reaches its own publisher's
+ * `docs` directly. A generated project that never installed the package has no
+ * such sibling, so it keeps the resolution failure that names what it is
+ * missing.
  */
 const sharedDocsRoot = (location: string): string => {
   const resolve = createRequire(path.join(location, "noop.js"));
-  const resolved = path.dirname(
-    resolve.resolve("@automovie/template/package.json"),
-  );
-  return posix(path.relative(location, path.join(resolved, DOCS)));
+  try {
+    const resolved = path.dirname(
+      resolve.resolve("@automovie/template/package.json"),
+    );
+    return posix(path.relative(location, path.join(resolved, DOCS)));
+  } catch (error) {
+    const sibling = path.join(path.dirname(location), DOCS);
+    if (fs.existsSync(sibling) === false) throw error;
+    return posix(path.relative(location, sibling));
+  }
 };
 const MARKDOWN: Record<MarkdownLayer, IMarkdownPopulation> = {
   settings: { headings: [2], obligation: true, principle: "settings.md" },

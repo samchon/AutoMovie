@@ -49,10 +49,18 @@
     }
   },
   "devDependencies": {
+    "@automovie/archetypes": "workspace:^",
+    "@automovie/engine": "workspace:^",
     "@automovie/evidence": "workspace:^",
+    "@automovie/interface": "workspace:^",
+    "@automovie/mcp": "workspace:^",
+    "@automovie/render": "workspace:^",
+    "@automovie/viewer": "workspace:^",
+    "@ttsc/evidence": "catalog:typescript",
     "@ttsc/lint": "catalog:typescript",
     "@types/node": "catalog:utils",
     "rimraf": "catalog:utils",
+    "three": "catalog:three",
     "ttsc": "catalog:typescript",
     "typescript": "catalog:typescript"
   }

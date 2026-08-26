@@ -2,7 +2,6 @@ import { renderScaffold } from "@automovie/template";
 import { TestValidator } from "@nestia/e2e";
 
 const CACHE_DIRECTORY = "node_modules/.cache/ttsc";
-const MCP_PROJECT_ROOT = "$" + "{CLAUDE_PROJECT_DIR:-.}";
 
 /**
  * Every generated TypeScript tool invocation keeps compiler state inside the
@@ -11,8 +10,9 @@ const MCP_PROJECT_ROOT = "$" + "{CLAUDE_PROJECT_DIR:-.}";
  * A generated project can live below the AutoMovie workspace while remaining
  * a standalone install. Without an explicit cache root, `ttsc` walks upward to
  * the workspace marker and shares the repository's plugin and Go build caches.
- * The manifest and MCP launcher are separate execution surfaces, so this pins
- * both populations and refuses an empty or partial inventory.
+ * The manifest is the one execution surface a generated project launches
+ * through, so this pins its whole population and refuses an empty or partial
+ * inventory.
  *
  * Scenarios:
  *
@@ -20,8 +20,6 @@ const MCP_PROJECT_ROOT = "$" + "{CLAUDE_PROJECT_DIR:-.}";
  *    project-relative cache directory before its TypeScript entry point.
  * 2. The expected direct-script inventory is exact, so a renamed, added, or
  *    silently delegated launcher cannot escape the check.
- * 3. The project-bound MCP launcher passes the absolute project expansion of
- *    that cache directory before its project and entry arguments.
  */
 export const test_cli_scaffold_toolchain_cache = (): void => {
   const rendered = renderScaffold({ name: "cache-owned-film" });
@@ -59,31 +57,11 @@ export const test_cli_scaffold_toolchain_cache = (): void => {
         "lint:source",
         "preview",
         "render",
-        "review:status",
         "test",
         "texture:scale",
         "verify",
       ],
       unscoped: [],
-    },
-  );
-
-  const mcp = JSON.parse(rendered[".mcp.json"]!) as {
-    mcpServers: { automovie: { args: string[]; command: string } };
-  };
-  TestValidator.equals(
-    "the generated MCP TypeScript launcher owns the same project-local cache",
-    mcp.mcpServers.automovie,
-    {
-      command: "node",
-      args: [
-        `${MCP_PROJECT_ROOT}/node_modules/ttsc/lib/launcher/ttsx.js`,
-        "--cache-dir",
-        `${MCP_PROJECT_ROOT}/${CACHE_DIRECTORY}`,
-        "-P",
-        `${MCP_PROJECT_ROOT}/tsconfig.json`,
-        `${MCP_PROJECT_ROOT}/scripts/mcp.ts`,
-      ],
     },
   );
 };

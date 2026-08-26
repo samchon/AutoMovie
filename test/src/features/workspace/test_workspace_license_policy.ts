@@ -207,7 +207,7 @@ export const test_workspace_license_policy = (): void => {
         dependencies: { dependency: "1.0.0" },
       }),
     );
-    const scaffold = path.join(root, "packages", "cli", "scaffold");
+    const scaffold = path.join(root, "packages", "template", "scaffold");
     fs.mkdirSync(scaffold, { recursive: true });
     fs.writeFileSync(
       path.join(scaffold, "package.json"),

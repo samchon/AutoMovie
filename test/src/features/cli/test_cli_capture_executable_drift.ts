@@ -97,7 +97,7 @@ export const test_cli_capture_executable_drift = (): void => {
         path.join(
           ROOT,
           "packages",
-          "cli",
+          "template",
           "scaffold",
           "scripts",
           "captureExecutableSnapshot.ts",
