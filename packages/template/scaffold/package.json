@@ -18,7 +18,6 @@
     "lint": "npm run lint:source && ttsx --cache-dir node_modules/.cache/ttsc -P tsconfig.json scripts/lint.ts",
     "lint:source": "ttsc --cache-dir node_modules/.cache/ttsc --noEmit -p tsconfig.json",
     "preview": "ttsx --cache-dir node_modules/.cache/ttsc -P tsconfig.json scripts/preview.ts",
-    "review:status": "ttsx --cache-dir node_modules/.cache/ttsc -P tsconfig.json scripts/review-status.ts",
     "render": "ttsx --cache-dir node_modules/.cache/ttsc -P tsconfig.json scripts/render.ts",
     "viewer": "vite --host 127.0.0.1",
     "test": "ttsx --cache-dir node_modules/.cache/ttsc -P tsconfig.json test/scaffold.test.ts",

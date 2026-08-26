@@ -490,6 +490,9 @@ importers:
 
   packages/template:
     devDependencies:
+      '@automovie/evidence':
+        specifier: workspace:^
+        version: link:../evidence
       '@ttsc/lint':
         specifier: catalog:typescript
         version: 0.28.1

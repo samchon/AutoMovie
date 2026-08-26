@@ -49,6 +49,7 @@
     }
   },
   "devDependencies": {
+    "@automovie/evidence": "workspace:^",
     "@ttsc/lint": "catalog:typescript",
     "@types/node": "catalog:utils",
     "rimraf": "catalog:utils",

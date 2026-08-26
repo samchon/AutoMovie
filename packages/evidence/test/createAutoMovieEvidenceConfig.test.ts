@@ -7,38 +7,53 @@ import path from "node:path";
 type Graph = Parameters<typeof createAutoMovieEvidenceConfig>[0];
 type Claim = NonNullable<Graph["claims"]>[number];
 
-const scaffold = path.resolve(
-  import.meta.dirname,
-  "..",
-  "..",
-  "cli",
-  "scaffold",
-);
+const templateRoot = path.resolve(import.meta.dirname, "..", "..", "template");
 const roots: string[] = [];
 
+/**
+ * A disposable project that resolves the shared contracts the way a real one
+ * does.
+ *
+ * `@automovie/template` publishes `docs`, and the graph reads them from the
+ * installed package rather than from a copy the project carries. The fixture
+ * therefore links the package into the temporary root instead of copying its
+ * contracts, so a drift between the two can never pass here.
+ */
 const root = (): string => {
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), "automovie-graph-"));
   roots.push(directory);
-  fs.cpSync(
-    path.join(scaffold, "docs", "discovery"),
-    path.join(directory, "docs", "discovery"),
-    { recursive: true },
-  );
-  fs.cpSync(
-    path.join(scaffold, "docs", "principles"),
-    path.join(directory, "docs", "principles"),
-    { recursive: true },
-  );
-  fs.cpSync(
-    path.join(scaffold, "docs", "obligations"),
-    path.join(directory, "docs", "obligations"),
-    { recursive: true },
+  const linked = path.join(directory, "node_modules", "@automovie", "template");
+  fs.mkdirSync(path.dirname(linked), { recursive: true });
+  fs.cpSync(path.join(templateRoot, "docs"), path.join(linked, "docs"), {
+    recursive: true,
+  });
+  fs.writeFileSync(
+    path.join(linked, "package.json"),
+    JSON.stringify({ name: "@automovie/template", version: "0.0.0" }),
   );
   return directory;
 };
 
+/**
+ * A shared contract inside the linked package, which is where the graph reads
+ * it from now.
+ */
+const contract = (location: string, relative: string): string =>
+  path.join(location, "node_modules", "@automovie", "template", relative);
+
 const write = (location: string, relative: string, content: string): void => {
   const file = path.join(location, relative);
+  fs.mkdirSync(path.dirname(file), { recursive: true });
+  fs.writeFileSync(file, content);
+};
+
+/** Write a shared contract into the linked package the graph reads from. */
+const writeContract = (
+  location: string,
+  relative: string,
+  content: string,
+): void => {
+  const file = contract(location, relative);
   fs.mkdirSync(path.dirname(file), { recursive: true });
   fs.writeFileSync(file, content);
 };
@@ -141,12 +156,13 @@ try {
   );
 
   const fileLocationRoot = root();
+  write(fileLocationRoot, "docs/settings/production.md", "## Scope {#scope}\n");
   assert.equal(
     throws(
       () =>
         createAutoMovieEvidenceConfig(
           disabled(
-            path.join(fileLocationRoot, "docs", "principles", "common.md"),
+            path.join(fileLocationRoot, "docs", "settings", "production.md"),
           ),
         ),
       "location is not a directory",
@@ -1313,10 +1329,10 @@ try {
 
   const malformedContract = root();
   fs.writeFileSync(
-    path.join(malformedContract, "docs/principles/common.md"),
+    contract(malformedContract, "docs/principles/common.md"),
     fs
       .readFileSync(
-        path.join(malformedContract, "docs/principles/common.md"),
+        contract(malformedContract, "docs/principles/common.md"),
         "utf8",
       )
       .replace("Review question:", "Unrouted question:"),
@@ -1330,7 +1346,7 @@ try {
   );
 
   const commentedReviewQuestion = root();
-  const commentedCommon = path.join(
+  const commentedCommon = contract(
     commentedReviewQuestion,
     "docs/principles/common.md",
   );
@@ -1349,7 +1365,7 @@ try {
   );
 
   const fencedSources = root();
-  const fencedCommon = path.join(fencedSources, "docs/principles/common.md");
+  const fencedCommon = contract(fencedSources, "docs/principles/common.md");
   fs.writeFileSync(
     fencedCommon,
     fs
@@ -1366,10 +1382,10 @@ try {
 
   const duplicateContractAnchor = root();
   fs.writeFileSync(
-    path.join(duplicateContractAnchor, "docs/principles/settings.md"),
+    contract(duplicateContractAnchor, "docs/principles/settings.md"),
     fs
       .readFileSync(
-        path.join(duplicateContractAnchor, "docs/principles/settings.md"),
+        contract(duplicateContractAnchor, "docs/principles/settings.md"),
         "utf8",
       )
       .replace("{#addressable-canon}", "{#purpose-fit}"),
@@ -1384,10 +1400,10 @@ try {
 
   const duplicateContractTitle = root();
   fs.writeFileSync(
-    path.join(duplicateContractTitle, "docs/principles/settings.md"),
+    contract(duplicateContractTitle, "docs/principles/settings.md"),
     fs
       .readFileSync(
-        path.join(duplicateContractTitle, "docs/principles/settings.md"),
+        contract(duplicateContractTitle, "docs/principles/settings.md"),
         "utf8",
       )
       .replace("## Addressable canon", "## Purpose fit"),
@@ -1402,10 +1418,10 @@ try {
 
   const trailingContractProse = root();
   fs.writeFileSync(
-    path.join(trailingContractProse, "docs/principles/common.md"),
+    contract(trailingContractProse, "docs/principles/common.md"),
     fs
       .readFileSync(
-        path.join(trailingContractProse, "docs/principles/common.md"),
+        contract(trailingContractProse, "docs/principles/common.md"),
         "utf8",
       )
       .replace(/^(Sources: .+)$/mu, "$1\n\nTrailing contract prose."),
@@ -1420,10 +1436,10 @@ try {
 
   const missingContractTitle = root();
   fs.writeFileSync(
-    path.join(missingContractTitle, "docs/principles/common.md"),
+    contract(missingContractTitle, "docs/principles/common.md"),
     fs
       .readFileSync(
-        path.join(missingContractTitle, "docs/principles/common.md"),
+        contract(missingContractTitle, "docs/principles/common.md"),
         "utf8",
       )
       .replace("# Common principles", "Common principles"),
@@ -1438,9 +1454,9 @@ try {
 
   const prefacedContractTarget = root();
   fs.writeFileSync(
-    path.join(prefacedContractTarget, "docs/principles/common.md"),
+    contract(prefacedContractTarget, "docs/principles/common.md"),
     `Preamble outside the target.\n\n${fs.readFileSync(
-      path.join(prefacedContractTarget, "docs/principles/common.md"),
+      contract(prefacedContractTarget, "docs/principles/common.md"),
       "utf8",
     )}`,
   );
@@ -1454,10 +1470,10 @@ try {
 
   const nestedContractTarget = root();
   fs.writeFileSync(
-    path.join(nestedContractTarget, "docs/principles/common.md"),
+    contract(nestedContractTarget, "docs/principles/common.md"),
     fs
       .readFileSync(
-        path.join(nestedContractTarget, "docs/principles/common.md"),
+        contract(nestedContractTarget, "docs/principles/common.md"),
         "utf8",
       )
       .replace(
@@ -1475,10 +1491,10 @@ try {
 
   const unanchoredContractTarget = root();
   fs.writeFileSync(
-    path.join(unanchoredContractTarget, "docs/principles/common.md"),
+    contract(unanchoredContractTarget, "docs/principles/common.md"),
     fs
       .readFileSync(
-        path.join(unanchoredContractTarget, "docs/principles/common.md"),
+        contract(unanchoredContractTarget, "docs/principles/common.md"),
         "utf8",
       )
       .replace(" {#purpose-fit}", ""),
@@ -1493,10 +1509,10 @@ try {
 
   const duplicateContractUnitAnchor = root();
   fs.writeFileSync(
-    path.join(duplicateContractUnitAnchor, "docs/principles/common.md"),
+    contract(duplicateContractUnitAnchor, "docs/principles/common.md"),
     fs
       .readFileSync(
-        path.join(duplicateContractUnitAnchor, "docs/principles/common.md"),
+        contract(duplicateContractUnitAnchor, "docs/principles/common.md"),
         "utf8",
       )
       .replace("{#layer-boundary}", "{#purpose-fit}"),
@@ -1512,10 +1528,10 @@ try {
 
   const scopelessContractTarget = root();
   fs.writeFileSync(
-    path.join(scopelessContractTarget, "docs/principles/common.md"),
+    contract(scopelessContractTarget, "docs/principles/common.md"),
     fs
       .readFileSync(
-        path.join(scopelessContractTarget, "docs/principles/common.md"),
+        contract(scopelessContractTarget, "docs/principles/common.md"),
         "utf8",
       )
       .replace(/\n\nThese principles apply[^\n]+\n\n/u, "\n\n"),
@@ -1534,7 +1550,7 @@ try {
     ["tilde-fence-only", "~~~text\nnot a scope statement\n~~~~"],
   ] as const) {
     const falseScopeTarget = root();
-    const common = path.join(falseScopeTarget, "docs/principles/common.md");
+    const common = contract(falseScopeTarget, "docs/principles/common.md");
     fs.writeFileSync(
       common,
       fs
@@ -1556,7 +1572,7 @@ try {
 
   const targetTag = root();
   fs.appendFileSync(
-    path.join(targetTag, "docs/principles/common.md"),
+    contract(targetTag, "docs/principles/common.md"),
     "\n<!-- @evidenceExcludeReview principles/common.md#purpose-fit #invalid recursive -->\n",
   );
   assert.equal(
@@ -1568,7 +1584,7 @@ try {
   );
 
   const unlistedTarget = root();
-  write(
+  writeContract(
     unlistedTarget,
     "docs/principles/unwired.md",
     "## Unwired {#unwired}\n",
@@ -1582,7 +1598,7 @@ try {
   );
 
   const unlistedDiscoveryTarget = root();
-  write(
+  writeContract(
     unlistedDiscoveryTarget,
     "docs/discovery/unwired.md",
     target("Unwired discovery", "unwired-discovery"),
@@ -1596,7 +1612,7 @@ try {
   );
 
   const removedDiscoveryTarget = root();
-  fs.rmSync(path.join(removedDiscoveryTarget, "docs/discovery/briefs.md"));
+  fs.rmSync(contract(removedDiscoveryTarget, "docs/discovery/briefs.md"));
   assert.equal(
     throws(
       () => createAutoMovieEvidenceConfig(disabled(removedDiscoveryTarget)),
@@ -1606,7 +1622,7 @@ try {
   );
 
   const renamedDiscoveryUnit = root();
-  const settingsDiscovery = path.join(
+  const settingsDiscovery = contract(
     renamedDiscoveryUnit,
     "docs/discovery/settings.md",
   );
@@ -1629,7 +1645,7 @@ try {
 
   const taggedDiscoveryTarget = root();
   fs.appendFileSync(
-    path.join(taggedDiscoveryTarget, "docs/discovery/common.md"),
+    contract(taggedDiscoveryTarget, "docs/discovery/common.md"),
     "\n<!-- @evidenceExclude discovery/common.md#shared-local-boundary invalid recursive target -->\n",
   );
   assert.equal(
@@ -1642,7 +1658,7 @@ try {
 
   const addedContractUnit = root();
   fs.appendFileSync(
-    path.join(addedContractUnit, "docs/principles/common.md"),
+    contract(addedContractUnit, "docs/principles/common.md"),
     "\n## Unexpected shared rule {#unexpected-shared-rule}\n\nThis rule was not added to the reusable graph inventory.\n\nReview question: was the shared graph deliberately rewired for this rule?\n\nSources: production contract inventory.\n",
   );
   assert.equal(
@@ -1654,7 +1670,7 @@ try {
   );
 
   const removedContractUnit = root();
-  const removedCommon = path.join(
+  const removedCommon = contract(
     removedContractUnit,
     "docs/principles/common.md",
   );
@@ -1676,7 +1692,7 @@ try {
   );
 
   const renamedContractUnit = root();
-  const renamedCommon = path.join(
+  const renamedCommon = contract(
     renamedContractUnit,
     "docs/principles/common.md",
   );

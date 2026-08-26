@@ -21,14 +21,11 @@ import type {
   IAutoMovieRenderReport,
   IAutoMovieRenderSpec,
   IAutoMovieRepaintReceipt,
-  IAutoMovieReviewTarget,
 } from "@automovie/interface";
 import {
-  AutoMovieProductionContext,
-  captureAutoMovieProductionFrame,
   AutoMovieProductionCompiler,
+  AutoMovieProductionContext,
   AutoMovieProductionProject,
-  AutoMovieProductionReviewService,
   type IAutoMovieProductionAudioAssetIdentity,
   type IAutoMovieProductionEncoderIdentity,
   type IAutoMovieProductionRenderChunk,
@@ -40,6 +37,7 @@ import {
   assembleProductionChunkVideoMp4,
   canonicalAutoMovieCaptureRuntimeIdentity,
   canonicalAutoMovieJsonBytes,
+  captureAutoMovieProductionFrame,
   conformProductionRenditionVideoMp4,
   decodeProductionAudioAsset,
   digestAutoMovieBytes,
@@ -1446,16 +1444,22 @@ const releaseOwnedChunkClaim = (
 
 const finalize = async (plan: IAutoMovieProductionRenderJobPlan) => {
   renderProgress("finalize.start", { tier: plan.tier.kind });
-  const inspection = inspectAutoMovieProduction(productionServices());
-  const incompleteReviews = inspection.reviews.entries.filter(
-    (entry) => entry.state !== "complete",
-  );
-  if (plan.tier.kind === "final" && incompleteReviews.length !== 0)
-    throw new Error(
-      `Final publication is review-blocked by ${incompleteReviews
-        .map((entry) => `${reviewTargetLabel(entry.target)}:${entry.state}`)
-        .join(", ")}. Run review:status and submit current evidence first.`,
-    );
+  // Final publication is gated on the production's own evidence graph rather
+  // than on a stored review ledger. A film that has not answered its
+  // contracts at review stage has not been reviewed, whatever a ledger would
+  // have said about it.
+  if (plan.tier.kind === "final") {
+    const gate = new AutoMovieProductionCompiler(
+      AutoMovieProductionProject.openReadOnly(root, productionId),
+    ).lint({ scope: "final" });
+    if (gate.success === false)
+      throw new Error(
+        `Final publication is blocked by the production's evidence gate: ${gate.diagnostics
+          .filter((diagnostic) => diagnostic.category === "error")
+          .map((diagnostic) => `${diagnostic.code} ${diagnostic.target}`)
+          .join(", ")}.`,
+      );
+  }
   const status = await renderStatus(plan);
   renderProgress("finalize.status.complete", { tier: plan.tier.kind });
   const project = AutoMovieProductionProject.open(root, productionId);
@@ -1578,21 +1582,9 @@ const finalize = async (plan: IAutoMovieProductionRenderJobPlan) => {
           kind: "repainted",
           shots: shots.map((shot) => {
             const receipt = renditionReceipts.get(shot);
-            const sourceReview = project.review({ kind: "shot", id: shot });
-            const renditionReview = project.review({
-              kind: "rendition",
-              id: shot,
-            });
-            if (
-              receipt === undefined ||
-              sourceReview === null ||
-              sourceReview.complete === false ||
-              sourceReview.fingerprint !== receipt.sourceReviewFingerprint ||
-              renditionReview === null ||
-              renditionReview.complete === false
-            )
+            if (receipt === undefined)
               throw new Error(
-                `Repainted feature delivery requires current completed source and rendition reviews for shot "${shot}".`,
+                `Repainted feature delivery requires a current verified repaint receipt for shot "${shot}".`,
               );
             return {
               shot,
@@ -1601,36 +1593,8 @@ const finalize = async (plan: IAutoMovieProductionRenderJobPlan) => {
               receiptDigest: digestAutoMovieBytes(
                 canonicalAutoMovieJsonBytes(receipt),
               ),
-              sourceReviewFingerprint: sourceReview.fingerprint,
-              renditionReviewFingerprint: renditionReview.fingerprint,
             };
           }),
-          aggregateReviews: inspection.reviews.entries
-            .flatMap((entry) => {
-              if (
-                (entry.target.kind !== "sequence" &&
-                  entry.target.kind !== "film") ||
-                entry.state !== "complete"
-              )
-                return [];
-              const review = project.review(entry.target);
-              if (review === null || review.complete === false)
-                throw new Error(
-                  `Repainted feature delivery lost current ${reviewTargetLabel(entry.target)} review.`,
-                );
-              return [
-                {
-                  kind: entry.target.kind,
-                  id: entry.target.id,
-                  fingerprint: review.fingerprint,
-                },
-              ];
-            })
-            .sort(
-              (left, right) =>
-                compareCodeUnits(left.kind, right.kind) ||
-                compareCodeUnits(left.id, right.id),
-            ),
         };
       }
     } else if (deliverable.kind === "guide-pass") {
@@ -1810,16 +1774,8 @@ const finalize = async (plan: IAutoMovieProductionRenderJobPlan) => {
         AutoMovieProductionProject.open(root, productionId),
       ) === snapshot,
     publicationCurrent: () => {
-      const stagedProject = AutoMovieProductionProject.open(root, productionId);
-      const statusCompiler = new AutoMovieProductionCompiler(stagedProject);
-      const stagedReview = new AutoMovieProductionReviewService(
-        stagedProject,
-        () => statusCompiler.lint({ scope: "source" }),
-      );
       const staged = new AutoMovieProductionCompiler(
-        stagedProject,
-        (status, compilerSnapshot) =>
-          stagedReview.queue(status, compilerSnapshot),
+        AutoMovieProductionProject.open(root, productionId),
       ).lint({ scope: "final" });
       if (staged.success === false)
         throw new Error(
@@ -3029,20 +2985,6 @@ const collectRenderGarbage = (apply: boolean) => {
   });
   const project = AutoMovieProductionProject.open(root, productionId);
   const renderRoot = project.renderRoot();
-  const reviewBundles = new Set(
-    inspectAutoMovieProduction(productionServices()).reviews.entries.flatMap(
-      (entry) => {
-        const review = project.review(entry.target);
-        return (
-          review?.checks.flatMap((check) =>
-            check.evidence.flatMap((evidence) =>
-              evidence.kind === "frame" ? [evidence.bundle] : [],
-            ),
-          ) ?? []
-        );
-      },
-    ),
-  );
   const manifestPath = path.join(productionStateRoot, "render-manifest.json");
   const publicationPaths = new Set(
     fs.existsSync(manifestPath)
@@ -3169,9 +3111,6 @@ const collectRenderGarbage = (apply: boolean) => {
       const target = path.join(proxyRoot, entry.name);
       const relative = normalizeSlash(path.relative(renderRoot, target));
       const logical = `publication/${relative}`;
-      const retainedByReview = [...reviewBundles].some(
-        (bundle) => relative === bundle || relative.startsWith(`${bundle}/`),
-      );
       const retainedByManifest = [...publicationPaths].some(
         (file) => file === logical || file.startsWith(`${logical}/`),
       );
@@ -3198,7 +3137,7 @@ const collectRenderGarbage = (apply: boolean) => {
         },
       });
       const current = adjudicated.value;
-      if (current || retainedByReview || retainedByManifest) {
+      if (current || retainedByManifest) {
         if (current) {
           if (adjudicated.snapshot.kind === "file")
             publicationPaths.add(logical);
@@ -3237,12 +3176,6 @@ const collectRenderGarbage = (apply: boolean) => {
       if (sweptPublicationTargets.has(relative)) continue;
       if (sweptPublicationRoots.some((root) => relative.startsWith(root)))
         continue;
-      if (
-        [...reviewBundles].some(
-          (bundle) => relative === bundle || relative.startsWith(`${bundle}/`),
-        )
-      )
-        publicationPaths.add(`publication/${relative}`);
       const candidate: IAutoMovieProductionRenderGcCandidate = {
         path: `publication/${relative}`,
         kind: "publication",
@@ -3728,16 +3661,6 @@ const stringOption = (name: string): string | undefined => {
 
 const compareCodeUnits = (left: string, right: string): number =>
   left < right ? -1 : left > right ? 1 : 0;
-
-/** One review target as a stable operator-facing label. */
-const reviewTargetLabel = (target: IAutoMovieReviewTarget): string =>
-  target.kind === "design"
-    ? `design:${target.design.kind}`
-    : target.kind === "source"
-      ? `source:${target.path}`
-      : target.kind === "subject"
-        ? `subject:${target.shot}:${target.subject}`
-        : `${target.kind}:${target.id}`;
 
 const output = (value: unknown): void => {
   process.stdout.write(`${JSON.stringify(value, null, 2)}\n`);

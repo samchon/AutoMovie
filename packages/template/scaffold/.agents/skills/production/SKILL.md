@@ -61,6 +61,31 @@ Read each applicable document in full before acting:
 - [Author process Self-Review](self-review.md) closes every complete contract, authorship, evidence-repair, review-verification, and stage-transition process before its author continues or hands it off.
 - [Review](review.md) owns evidence review and final whole-production review.
 
+## Craft the contracts do not decide
+
+The documents above say what a unit must contain and when it may advance. These say how to make it good, and they are read when the work reaches them rather than as a set.
+
+- [Cinematography](craft/cinematography.md): shot size, the 180-degree line, eyeline, screen direction, camera motion, and the deliberate violation.
+- [Editing](craft/editing.md): the edit list, coverage, rhythm, transitions, and the priority order a cut is judged by.
+- [Motion](craft/motion.md): action verbs, clip construction, contact, weight, expression, and continuity.
+- [Sound](craft/sound.md): event-derived sound, dialogue, ambience, spatialization, and mix hierarchy.
+- [Rigging](craft/rigging.md): silhouette-first object design, axes, pivots, skeletons, profiles, and the operable openings a building owns.
+
+## Writing and compiling source
+
+- [Ownership](source/ownership.md): what the author writes, what the compiler owns, and what the renderer owns.
+- [TypeScript](source/typescript.md): deterministic source-module patterns and typed registration.
+- [Composition](source/composition.md): how a production's source is arranged once its shots repeat, which is a program that emits shots rather than one module per shot.
+- [Compilation](source/compilation.md): the design, source, and final scopes, and atomic publication.
+
+## Seeing what you built
+
+- [Capture](evidence/capture.md): exact capture targets, passes, receipts, and refusal recovery.
+- [Inspection](evidence/inspection.md): render-free descriptions of compiled elements, parts, instances, and spaces, which answer a structural question a frame only hints at.
+- [Debugging](evidence/debugging.md): diagnostics-first correction across ownership, derived artifacts, compile, inspection, and render.
+
+Capture writes actual PNGs. Open them, and let the evidence citation that claims a unit is realized say what you saw in them. A citation that names no observation is not a review, and no ledger records one for you.
+
 ## Subject canon precedes its use
 
 Every subject a later layer stages, animates, voices, or observes has a settings owner before that layer uses it, including an unnamed extra, a crowd, a machine, and an institution. `obligations/settings.md#operative-subject-inventory` owns whether every operative subject is accounted for; in a film, `obligations/subjects.md` owns what each of those owners must actually settle.

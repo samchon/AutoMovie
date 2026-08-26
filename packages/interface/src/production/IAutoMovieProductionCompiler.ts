@@ -1225,20 +1225,6 @@ export interface IAutoMovieProductionRenditionDeliveryShot {
    * @evidence specifications/editorial-render-and-delivery/delivery-audio-text-and-localization.md#spec-delivery-caption-readability-profile Types `receiptDigest` for the spec delivery caption readability profile system contract.
    */
   receiptDigest: AutoMovieContentDigest;
-  /**
-   * Current completed deterministic source-shot review fingerprint.
-   *
-   * @evidence requirements/delivery-and-accessibility/captions-subtitles-and-cues.md#delivery-caption-readability-profile Exposes `sourceReviewFingerprint` as the portable data boundary for the delivery caption readability profile requirement.
-   * @evidence specifications/editorial-render-and-delivery/delivery-audio-text-and-localization.md#spec-delivery-caption-readability-profile Types `sourceReviewFingerprint` for the spec delivery caption readability profile system contract.
-   */
-  sourceReviewFingerprint: AutoMovieContentDigest;
-  /**
-   * Current completed visual-rendition review fingerprint.
-   *
-   * @evidence requirements/delivery-and-accessibility/captions-subtitles-and-cues.md#delivery-caption-readability-profile Exposes `renditionReviewFingerprint` as the portable data boundary for the delivery caption readability profile requirement.
-   * @evidence specifications/editorial-render-and-delivery/delivery-audio-text-and-localization.md#spec-delivery-caption-readability-profile Types `renditionReviewFingerprint` for the spec delivery caption readability profile system contract.
-   */
-  renditionReviewFingerprint: AutoMovieContentDigest;
 }
 
 /**
@@ -1262,20 +1248,6 @@ export interface IAutoMovieProductionRenditionDelivery {
    * @evidence specifications/editorial-render-and-delivery/delivery-audio-text-and-localization.md#spec-delivery-caption-readability-profile Types `shots` for the spec delivery caption readability profile system contract.
    */
   shots: IAutoMovieProductionRenditionDeliveryShot[];
-  /**
-   * Current completed sequence and film reviews of the selected renditions.
-   *
-   * @evidence requirements/delivery-and-accessibility/captions-subtitles-and-cues.md#delivery-caption-readability-profile Exposes `aggregateReviews` as the portable data boundary for the delivery caption readability profile requirement.
-   * @evidence specifications/editorial-render-and-delivery/delivery-audio-text-and-localization.md#spec-delivery-caption-readability-profile Types `aggregateReviews` for the spec delivery caption readability profile system contract.
-   */
-  aggregateReviews: Array<{
-    /** Aggregate review class. */
-    kind: "sequence" | "film";
-    /** Exact sequence or film id. */
-    id: string;
-    /** Current completed review fingerprint. */
-    fingerprint: AutoMovieContentDigest;
-  }>;
 }
 
 /**

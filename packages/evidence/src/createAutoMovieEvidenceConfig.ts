@@ -1665,7 +1665,8 @@ const authoredClaims = (graph: IProductionGraph): ITtscEvidenceGraphClaim[] => {
       ];
       if (MARKDOWN[name].obligation && symbol === 2)
         references.push(layerObligation(shared, name, review));
-      if (symbol === 2) references.push(...discoveryReferences(shared, name, review));
+      if (symbol === 2)
+        references.push(...discoveryReferences(shared, name, review));
       if (symbol === 2 && name === "settings" && graph.kind === "film")
         references.push(subjectObligation(shared, review));
       if (!["settings", "research"].includes(name))

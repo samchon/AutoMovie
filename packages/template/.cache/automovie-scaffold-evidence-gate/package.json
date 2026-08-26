@@ -1,0 +1,13 @@
+{
+  "name": "automovie-scaffold-evidence-probe",
+  "private": true,
+  "type": "module",
+  "version": "0.0.0",
+  "devDependencies": {
+    "@automovie/evidence": "*",
+    "@ttsc/lint": "*",
+    "@types/node": "*",
+    "ttsc": "*",
+    "typescript": "*"
+  }
+}
