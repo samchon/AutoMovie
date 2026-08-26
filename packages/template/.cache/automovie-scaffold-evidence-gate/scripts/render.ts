@@ -23,9 +23,8 @@ import type {
   IAutoMovieRepaintReceipt,
 } from "@automovie/interface";
 import {
-  AutoMovieProductionContext,
-  captureAutoMovieProductionFrame,
   AutoMovieProductionCompiler,
+  AutoMovieProductionContext,
   AutoMovieProductionProject,
   type IAutoMovieProductionAudioAssetIdentity,
   type IAutoMovieProductionEncoderIdentity,
@@ -38,6 +37,7 @@ import {
   assembleProductionChunkVideoMp4,
   canonicalAutoMovieCaptureRuntimeIdentity,
   canonicalAutoMovieJsonBytes,
+  captureAutoMovieProductionFrame,
   conformProductionRenditionVideoMp4,
   decodeProductionAudioAsset,
   digestAutoMovieBytes,

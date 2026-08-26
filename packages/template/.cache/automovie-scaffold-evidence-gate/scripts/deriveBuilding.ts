@@ -1,7 +1,3 @@
-import {
-  loadAutoMovieProjectState,
-  requireCurrentAutoMovieProjectState,
-} from "automovie";
 import type {
   IAutoMovieBuiltEnvironment,
   IAutoMovieCompiledShotSource,
@@ -13,6 +9,10 @@ import {
   encodeAutoMoviePathSegment,
   findAutoMovieProjectRoot,
 } from "@automovie/mcp";
+import {
+  loadAutoMovieProjectState,
+  requireCurrentAutoMovieProjectState,
+} from "automovie";
 import fs from "node:fs";
 import path from "node:path";
 

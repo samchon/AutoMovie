@@ -18,7 +18,6 @@ import {
   IAutoMovieReviewTarget,
   IAutoMovieScreenplayIndex,
   IAutoMovieShotContract,
-  IAutoMovieStoredReview,
   IAutoMovieWorldDesign,
 } from "@automovie/interface";
 import { randomUUID } from "node:crypto";
@@ -206,7 +205,6 @@ export class AutoMovieProductionProject {
   private readonly productionStateRoot: string;
   private readonly productionDesignRoot: string;
   private readonly sharedDesignRoot: string;
-  private readonly reviewRoot: string;
   private readonly revisionPath: string;
   private readonly lockPath: string;
   private readonly sharedLockPath: string;
@@ -296,11 +294,6 @@ export class AutoMovieProductionProject {
       this.productionSegment,
     );
     this.sharedDesignRoot = path.join(this.automovieRoot, "design", "shared");
-    this.reviewRoot = path.join(
-      this.automovieRoot,
-      "reviews",
-      this.productionSegment,
-    );
     this.revisionPath = path.join(this.productionStateRoot, "revision.json");
     this.lockPath = path.join(this.productionStateRoot, "revision.lock");
     this.sharedLockPath = path.join(this.automovieRoot, "shared-design.lock");
@@ -310,8 +303,6 @@ export class AutoMovieProductionProject {
         this.mkdirOwned(path.join(this.sharedDesignRoot, directory));
       for (const directory of PRODUCTION_DESIGN_DIRECTORIES)
         this.mkdirOwned(path.join(this.productionDesignRoot, directory));
-      for (const directory of REVIEW_DIRECTORIES)
-        this.mkdirOwned(path.join(this.reviewRoot, directory));
       this.mkdirOwned(path.join(this.productionStateRoot, "render-receipts"));
       for (const directory of [
         ...this.manifest_.sourceRoots,
@@ -502,7 +493,6 @@ export class AutoMovieProductionProject {
     for (const directory of [
       path.join(this.automovieRoot, "design", "shared"),
       path.join(this.automovieRoot, "design", segment),
-      path.join(this.automovieRoot, "reviews", segment),
       path.join(this.automovieRoot, "productions", segment),
       path.join(
         this.resolveOwnedDirectory(this.manifest_.generatedRoot),
@@ -532,11 +522,6 @@ export class AutoMovieProductionProject {
       moves.push({
         source: path.join(this.automovieRoot, "design", directory),
         destination: path.join(this.productionDesignRoot, directory),
-      });
-    for (const directory of ["design", "source", "shots", "film"])
-      moves.push({
-        source: path.join(this.automovieRoot, "reviews", directory),
-        destination: path.join(this.reviewRoot, directory),
       });
     for (const entry of [
       "revision.json",
@@ -1387,7 +1372,6 @@ export class AutoMovieProductionProject {
         };
       const sources = [
         this.productionDesignRoot,
-        this.reviewRoot,
         this.generatedRoot(),
         this.renderRoot(),
       ];
@@ -2530,18 +2514,6 @@ export class AutoMovieProductionProject {
   }
 
   /**
-   * Read one stored review record.
-   */
-  public review(target: IAutoMovieReviewTarget): IAutoMovieStoredReview | null {
-    this.refreshRevision();
-    return readOwnedTypedJson(
-      ownedRootReal(this.rootReal, this.automovieRoot),
-      this.reviewPath(target),
-      validateStoredReview,
-    );
-  }
-
-  /**
    * Read the current production's optional screenplay/treatment index.
    */
   public screenplayIndex(): IAutoMovieScreenplayIndex | null {
@@ -2558,88 +2530,6 @@ export class AutoMovieProductionProject {
       file,
       validateScreenplayIndex,
     );
-  }
-
-  /**
-   * Store one already validated review record under an optional input fence.
-   */
-  public commitReview(
-    review: IAutoMovieStoredReview,
-    inputCurrent?: () => boolean,
-  ): number {
-    return this.commitFiles(
-      [
-        {
-          path: this.reviewPath(review.target),
-          content: serializeJson(review),
-        },
-      ],
-      inputCurrent,
-    );
-  }
-
-  /**
-   * Absolute path for a current review target.
-   */
-  public reviewPath(target: IAutoMovieReviewTarget): string {
-    this.assertIncarnation();
-    switch (target.kind) {
-      case "asset":
-        return path.join(
-          this.reviewRoot,
-          "assets",
-          `${encodeId(target.id)}.json`,
-        );
-      case "design": {
-        const design = target.design;
-        if (design.kind === "production")
-          return path.join(this.reviewRoot, "design/production.json");
-        if (design.kind === "world")
-          return path.join(this.reviewRoot, "design/world.json");
-        return path.join(
-          this.reviewRoot,
-          `design/${design.kind}s`,
-          `${encodeId(design.id)}.json`,
-        );
-      }
-      case "source":
-        return path.join(
-          this.reviewRoot,
-          "source",
-          `${encodeId(target.path)}.json`,
-        );
-      case "shot":
-        return path.join(
-          this.reviewRoot,
-          "shots",
-          `${encodeId(target.id)}.json`,
-        );
-      case "rendition":
-        return path.join(
-          this.reviewRoot,
-          "renditions",
-          `${encodeId(target.id)}.json`,
-        );
-      case "sequence":
-        return path.join(
-          this.reviewRoot,
-          "sequences",
-          `${encodeId(target.id)}.json`,
-        );
-      case "film":
-        return path.join(
-          this.reviewRoot,
-          "film",
-          `${encodeId(target.id)}.json`,
-        );
-      case "subject":
-        return path.join(
-          this.reviewRoot,
-          "subjects",
-          encodeId(target.shot),
-          `${encodeId(target.subject)}.json`,
-        );
-    }
   }
 
   private setDesign(
@@ -2931,7 +2821,6 @@ export class AutoMovieProductionProject {
     return [
       this.sharedDesignRoot,
       this.productionDesignRoot,
-      this.reviewRoot,
       this.productionStateRoot,
       resolveInside(
         resolveInside(this.root, this.manifest_.generatedRoot),
@@ -3274,18 +3163,6 @@ const PRODUCTION_DESIGN_DIRECTORIES = [
   "screenplay",
 ] as const;
 
-const REVIEW_DIRECTORIES = [
-  "assets",
-  "design/models",
-  "design/formations",
-  "design/shots",
-  "design/acceptances",
-  "source",
-  "shots",
-  "sequences",
-  "film",
-] as const;
-
 const validateProductionDesign = (
   input: unknown,
 ): IValidation<IAutoMovieProductionDesign> =>
@@ -3314,44 +3191,6 @@ const validateGeneratedManifest = (
   input: unknown,
 ): IValidation<IAutoMovieGeneratedManifest> =>
   typia.validateEquals<IAutoMovieGeneratedManifest>(input);
-const validateStoredReview = (
-  input: unknown,
-): IValidation<IAutoMovieStoredReview> =>
-  typia.validateEquals<IAutoMovieStoredReview>(
-    normalizeLegacyStoredReview(input),
-  );
-
-const normalizeLegacyStoredReview = (input: unknown): unknown => {
-  if (typeof input !== "object" || input === null) return input;
-  const source = input as Record<string, unknown>;
-  if (source.version !== 1 || Array.isArray(source.checks) === false)
-    return input;
-  let changed = false;
-  const checks = source.checks.map((check) => {
-    if (typeof check !== "object" || check === null) return check;
-    const record = check as Record<string, unknown>;
-    if (Array.isArray(record.evidence) === false) return check;
-    const evidence = record.evidence.map((item) => {
-      if (
-        typeof item !== "object" ||
-        item === null ||
-        (item as Record<string, unknown>).kind !== "frame"
-      )
-        return item;
-      const frame = item as Record<string, unknown>;
-      if (frame.target !== undefined || typeof frame.shot !== "string")
-        return item;
-      changed = true;
-      const { shot, ...current } = frame;
-      return {
-        ...current,
-        target: { kind: "shot", id: shot },
-      };
-    });
-    return { ...record, evidence };
-  });
-  return changed ? { ...source, checks } : input;
-};
 const validateScreenplayIndex = (
   input: unknown,
 ): IValidation<IAutoMovieScreenplayIndex> =>
