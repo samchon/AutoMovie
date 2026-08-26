@@ -1,5 +1,8 @@
 import type { AutoMovieGuidePass } from "@automovie/interface";
-import { AutoMovieApplication } from "@automovie/mcp";
+import {
+  AutoMovieProductionContext,
+  captureAutoMovieProductionFrame,
+} from "@automovie/mcp";
 
 import config from "../automovie.config";
 import { captureProductionFrame, closeProductionFrameCapture } from "./capture";
@@ -42,16 +45,14 @@ const height =
   options.get("--height") === undefined
     ? undefined
     : Number(options.get("--height"));
-const app = new AutoMovieApplication({
-  projectRoot: process.cwd(),
-  productionId: config.productionId,
-  capture: captureProductionFrame,
-});
-app.getGuideDocument({ name: "AUTOMOVIE_OVERALL" });
-app.getGuideDocument({ name: "CAPTURE_FRAME" });
+const context = new AutoMovieProductionContext(
+  captureProductionFrame,
+  process.cwd(),
+  config.productionId,
+);
 let captureFailure: { error: unknown } | undefined;
 try {
-  const output = await app.captureFrame({
+  const output = await captureAutoMovieProductionFrame(context, {
     target: {
       kind: "shot",
       productionId: config.productionId,

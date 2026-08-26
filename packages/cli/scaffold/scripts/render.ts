@@ -24,7 +24,8 @@ import type {
   IAutoMovieReviewTarget,
 } from "@automovie/interface";
 import {
-  AutoMovieApplication,
+  AutoMovieProductionContext,
+  captureAutoMovieProductionFrame,
   AutoMovieProductionCompiler,
   AutoMovieProductionProject,
   AutoMovieProductionReviewService,
@@ -517,7 +518,7 @@ const captureReviewEvidence = async (): Promise<{
   frames: IAutoMovieCaptureFrame[];
   deliveryTone: IDeliveryToneCheck;
 }> => {
-  const app = productionApplication();
+  const context = productionCaptureContext();
   const compiled = productionServices().compiler.compile({ scope: "source" });
   if (compiled.success === false)
     throw new Error(
@@ -547,7 +548,7 @@ const captureReviewEvidence = async (): Promise<{
     ))
       for (const pass of request.passes)
         frames.push(
-          await app.captureFrame({
+          await captureAutoMovieProductionFrame(context, {
             target: {
               kind: "shot",
               productionId,
@@ -2855,16 +2856,8 @@ const hasVisiblePixelVariance = (png: PNG): boolean => {
   return false;
 };
 
-const productionApplication = (): AutoMovieApplication => {
-  const app = new AutoMovieApplication({
-    projectRoot: root,
-    productionId,
-    capture: captureProductionFrame,
-  });
-  app.getGuideDocument({ name: "AUTOMOVIE_OVERALL" });
-  app.getGuideDocument({ name: "CAPTURE_FRAME" });
-  return app;
-};
+const productionCaptureContext = (): AutoMovieProductionContext =>
+  new AutoMovieProductionContext(captureProductionFrame, root, productionId);
 
 const productionServices = () =>
   openAutoMovieProduction({

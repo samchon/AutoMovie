@@ -4,6 +4,8 @@ export * from "./production/acceptanceScope";
 export * from "./production/AutoMovieLegacyImporter";
 export * from "./production/AutoMovieProductionCompiler";
 export * from "./production/AutoMovieProductionContext";
+export * from "./production/captureProductionFrame";
+export * from "./production/captureProductionTurntable";
 export * from "./production/AutoMovieProductionOracleService";
 export * from "./production/AutoMovieProductionProject";
 export * from "./production/captureRuntimeIdentity";

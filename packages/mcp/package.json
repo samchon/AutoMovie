@@ -1,11 +1,8 @@
 {
   "name": "@automovie/mcp",
   "version": "0.1.0",
-  "description": "AutoMovie MCP boundary for session knowledge, host evidence, optional repaint receipts, and verdict-last review.",
+  "description": "AutoMovie production library: the deterministic compiler, the tracked project store, capture, inspection, and the render job.",
   "main": "src/index.ts",
-  "bin": {
-    "automovie-mcp": "lib/bin.js"
-  },
   "exports": {
     ".": "./src/index.ts",
     "./package.json": "./package.json"
@@ -53,7 +50,6 @@
     "@automovie/ingest": "workspace:^",
     "@automovie/interface": "workspace:^",
     "@automovie/render": "workspace:^",
-    "@modelcontextprotocol/sdk": "catalog:modelcontextprotocol",
     "@typia/mcp": "catalog:samchon",
     "mp4box": "catalog:media",
     "pngjs": "catalog:media",

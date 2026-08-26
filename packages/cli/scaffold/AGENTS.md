@@ -6,7 +6,7 @@ This project begins without a production. Author work in docs, src, test, and de
 
 - [.agents/skills/production/SKILL.md](.agents/skills/production/SKILL.md) owns authorship: the shape decision, the production-specific contract, every layer's procedure and gate, evidence staging, self-review, and final review. Read it, then the workflow document it routes to, before drafting anything.
 - docs/README.md owns the documentation root and its non-overlapping ownership map.
-- `getGuideDocument({ name: "AUTOMOVIE_OVERALL" })` through this project's MCP server owns tool contracts, typed records, and craft handbooks. Read the exact guide a tool or record requires.
+- The project scripts are the tool surface: `npm run compile`, `npm run preview`, `npm run render`, `npm run verify`, and the capture and inspection commands beside them. Each is ordinary TypeScript in `scripts/`, and reading it is how you learn what it does.
 
 Those skills ship with the scaffold and are this project's own copy of the authoring doctrine. Editing them changes this project alone and carries nowhere, so a doctrine improvement belongs upstream in automovie; a local edit is a fork of the contract every other project still answers.
 
@@ -49,4 +49,4 @@ Never edit generated or renders. Correct authored source, regenerate, and renew 
 
 After each complete production-specific contract pass, layer authorship pass, evidence repair, review verification, or authorized stage transition, the author who performed it rereads the complete affected process alone before continuing or handing off. Trace source and authority, earliest owner, dependencies and consequences, claims and exclusions, review, stage, diagnostics, and the next handoff; collect findings through the whole read, repair them together at their earliest owners, and restart after any edit. One complete no-edit round closes this boundary. This does not replace evidence gates or the final two-clean-round whole-production review.
 
-Read AUTOMOVIE_OVERALL first, then the exact MCP guide required by a tool. Use MCP for current PNG evidence and evidence-bound review. Run capture:install and capture:doctor before preview/render. Never mark visual review complete without opening current bundle frames. Inspection pages help diagnose but do not substitute for delivery evidence.
+Run capture:install and capture:doctor before the first preview or render. Capture writes actual PNGs under the render root; open them and state what you saw in the evidence citation that claims the work is realized. A citation that names no observation is not a review. Inspection pages help diagnose but do not substitute for delivery evidence.
