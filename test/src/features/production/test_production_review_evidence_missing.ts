@@ -23,6 +23,18 @@ const unit = require(
     "../../../../packages/production/src/production/reviewEvidenceDiagnostics.ts",
   ),
 ) as {
+  assetReviewEvidenceDiagnostics: (props: {
+    consumed: readonly string[];
+    rigged: (model: string) => boolean;
+    scope: "design" | "source" | "review" | "final";
+    fingerprint: (
+      target: IAutoMovieRenderBundleManifest["target"],
+    ) => AutoMovieContentDigest | null;
+    captured: (
+      target: IAutoMovieRenderBundleManifest["target"],
+      fingerprint: AutoMovieContentDigest,
+    ) => ReadonlyArray<{ time: number; pass: AutoMovieGuidePass }>;
+  }) => IAutoMovieDiagnostic[];
   reviewEvidenceDiagnostics: (props: {
     contracts: ReadonlyMap<string, IAutoMovieShotContract>;
     scope: "design" | "source" | "review" | "final";
@@ -35,7 +47,7 @@ const unit = require(
     ) => ReadonlyArray<{ time: number; pass: AutoMovieGuidePass }>;
   }) => IAutoMovieDiagnostic[];
 };
-const { reviewEvidenceDiagnostics } = unit;
+const { assetReviewEvidenceDiagnostics, reviewEvidenceDiagnostics } = unit;
 
 const FINGERPRINT =
   "sha256:1111111111111111111111111111111111111111111111111111111111111111" as AutoMovieContentDigest;
@@ -69,6 +81,22 @@ const frame = (
 ): IAutoMovieShotContract["reviewFrames"][number] =>
   ({ id, passes, time }) as IAutoMovieShotContract["reviewFrames"][number];
 
+const asset = (props: {
+  consumed?: readonly string[];
+  held?: boolean;
+  rigged?: boolean;
+  scope?: "design" | "source" | "review" | "final";
+  fingerprint?: AutoMovieContentDigest | null;
+}): IAutoMovieDiagnostic[] =>
+  assetReviewEvidenceDiagnostics({
+    captured: () => (props.held === true ? [{ pass: "beauty", time: 0 }] : []),
+    consumed: props.consumed ?? ["soloist"],
+    fingerprint: () =>
+      props.fingerprint === undefined ? FINGERPRINT : props.fingerprint,
+    rigged: () => props.rigged === true,
+    scope: props.scope ?? "review",
+  });
+
 /**
  * A review is refused while the frames its own contract declares are absent at
  * the shot's current identity.
@@ -93,6 +121,10 @@ const frame = (
  *    declare at least one is a separate design refusal.
  * 7. More owed views than a message should hold are named up to a bound and the
  *    remainder is counted, so the author is told which work is left.
+ * 8. A staged model owes the whole turntable set rather than an authored one,
+ *    and a rigged model owes its extreme-range pose on top of it.
+ * 9. A model nothing stages owes nothing, because the gate is on what the film
+ *    puts on screen and not on what the library holds.
  */
 export const test_production_review_evidence_missing = (): void => {
   const missing = run({ frames: [frame("wide", 1.5, ["beauty"])] });
@@ -168,6 +200,41 @@ export const test_production_review_evidence_missing = (): void => {
           })[0]?.message.includes('"wide" at 1.5s (depth)') === true,
       ],
       ["boundedList", () => many[0]?.message.includes("and 2 more") === true],
+      // An asset owes a fixed view set rather than an authored one, so the
+      // refusal reads the same set the capture path draws from.
+      ["assetOwesItsSet", () => asset({}).length === 1],
+      ["assetTarget", () => asset({}).at(0)?.target === "asset:soloist"],
+      [
+        "assetNamesEveryView",
+        () =>
+          [
+            "turntable-front",
+            "turntable-right",
+            "turntable-back",
+            "left",
+          ].every((view) => asset({}).at(0)?.message.includes(view) === true),
+      ],
+      [
+        "aRigOwesItsExtremes",
+        () =>
+          asset({ rigged: true })
+            .at(0)
+            ?.message.includes("rig-rom-extremes") === true,
+      ],
+      [
+        "anUnriggedModelDoesNot",
+        () => asset({}).at(0)?.message.includes("rig-rom-extremes") === false,
+      ],
+      ["assetCompleteIsSilent", () => asset({ held: true }).length === 0],
+      [
+        "anUnstagedModelOwesNothing",
+        () => asset({ consumed: [] }).length === 0,
+      ],
+      [
+        "anUnaddressableModelIsSilent",
+        () => asset({ fingerprint: null }).length === 0,
+      ],
+      ["assetDesignOwesNothing", () => asset({ scope: "design" }).length === 0],
     ]),
     {
       oneRefusal: true,
@@ -187,6 +254,15 @@ export const test_production_review_evidence_missing = (): void => {
       noDeclaredFrameOwesNothing: true,
       everyDeclaredPassIsOwed: true,
       boundedList: true,
+      assetOwesItsSet: true,
+      assetTarget: true,
+      assetNamesEveryView: true,
+      aRigOwesItsExtremes: true,
+      anUnriggedModelDoesNot: true,
+      assetCompleteIsSilent: true,
+      anUnstagedModelOwesNothing: true,
+      anUnaddressableModelIsSilent: true,
+      assetDesignOwesNothing: true,
     },
   );
 };

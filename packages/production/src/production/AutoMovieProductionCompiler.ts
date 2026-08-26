@@ -147,7 +147,10 @@ import { assertProductionFeatureUsesRenditionClips } from "./muxProductionFeatur
 import { probeProductionMedia } from "./probeProductionMedia";
 import { AutoMovieModelArchetypeRegistry } from "./productionArchetypes";
 import { productionRenderTargetFingerprint } from "./renderIdentity";
-import { reviewEvidenceDiagnostics } from "./reviewEvidenceDiagnostics";
+import {
+  assetReviewEvidenceDiagnostics,
+  reviewEvidenceDiagnostics,
+} from "./reviewEvidenceDiagnostics";
 import {
   AUTOMOVIE_SANDBOX_BRIDGED_ENGINE_EXPORTS,
   callAutoMovieSandboxEngine,
@@ -217,6 +220,32 @@ export const AUTOMOVIE_PRODUCTION_COMPILER_VERSION = (
  */
 export class AutoMovieProductionCompiler {
   public constructor(private readonly project: AutoMovieProductionProject) {}
+
+  /**
+   * Whether one compiled model carries a skeleton.
+   *
+   * The extreme-range pose is part of an asset's required view set only for a
+   * rigged model, because a rig that reads correctly at rest is exactly the rig
+   * whose limits nobody looked at. A model whose compiled bytes cannot be read
+   * is reported by the compiler's own registry diagnostics, so it is treated as
+   * unrigged here rather than raising a second, worse-placed error.
+   */
+  private compiledModelIsRigged(model: string): boolean {
+    try {
+      const validation = typia.validateEquals<IAutoMovieModel>(
+        JSON.parse(
+          Buffer.from(
+            this.project.readGeneratedFile(
+              `models/${encodeAutoMoviePathSegment(model)}.json`,
+            ),
+          ).toString("utf8"),
+        ) as unknown,
+      );
+      return validation.success && validation.data.skeleton !== null;
+    } catch {
+      return false;
+    }
+  }
 
   /**
    * Compile the active design and source through the requested gate.
@@ -687,6 +716,23 @@ export class AutoMovieProductionCompiler {
               target,
               contentInputs,
             ),
+          scope: input.scope,
+        }),
+      );
+    if (manifest !== null)
+      diagnostics.push(
+        ...assetReviewEvidenceDiagnostics({
+          captured: (target, fingerprint) =>
+            this.project.capturedRenderViews(target, fingerprint),
+          consumed: consumedModelIds(graph, runtimeModels),
+          fingerprint: (target) =>
+            productionRenderTargetFingerprint(
+              this.project,
+              manifest,
+              target,
+              contentInputs,
+            ),
+          rigged: (model) => this.compiledModelIsRigged(model),
           scope: input.scope,
         }),
       );
@@ -7894,6 +7940,39 @@ const screenplayResidencyDiagnostics = (props: {
           message: `${props.contracts.size} shot contract(s) are resident with no screenplay index. Their scene citations join to numbering that does not exist, so nothing downstream can be traced to authored work. Author the screenplay index, then compile again.`,
         },
       ];
+
+/**
+ * Every model this production actually stages, closed under level of detail.
+ *
+ * An asset review is owed by what the film puts on screen, not by what the
+ * library happens to hold: a recipe nothing stages is an unused design, and
+ * asking it for a turntable would make the gate a tax on the library. Both
+ * sides are read because both can introduce a model -- a contract naming an
+ * actor or a formation, and a compiled shot source whose build path resolved
+ * one the design never named.
+ */
+const consumedModelIds = (
+  graph: IAutoMovieProductionDesignGraph,
+  runtime: ReadonlyMap<string, IAutoMovieCompiledShotSource["models"][number]>,
+): string[] => {
+  const models = new Set<string>();
+  const add = (id: string): void => {
+    if (models.has(id)) return;
+    const recipe = graph.models.get(id);
+    if (recipe === undefined) return;
+    models.add(id);
+    for (const tier of recipe.lod) add(tier.recipe);
+  };
+  for (const shot of graph.shots.values())
+    for (const participant of shot.participants)
+      if (participant.kind === "actor") add(participant.id);
+      else {
+        const formation = graph.formations.get(participant.id);
+        if (formation !== undefined) add(formation.modelRecipe);
+      }
+  for (const id of runtime.keys()) add(id);
+  return [...models].sort(compareCodeUnits);
+};
 
 const finalDeliverableDiagnostics = (
   project: AutoMovieProductionProject,

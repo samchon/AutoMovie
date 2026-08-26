@@ -6,6 +6,8 @@ import {
   IAutoMovieShotContract,
 } from "@automovie/interface";
 
+import { autoMovieAssetReviewViews } from "./assetReviewViews";
+
 /**
  * One frame a target's contract declares and the passes it declares with it.
  */
@@ -85,6 +87,73 @@ export const reviewEvidenceDiagnostics = (props: {
       message: `Shot "${id}" is being reviewed without the evidence its own contract declares. ${describe(
         missing,
       )} No bundle is filed at the shot's current fingerprint ${fingerprint}, so any review written now rests on frames that do not exist or on a previous version of this shot. Capture the declared set, then say what it showed in the evidence citation on the source that realizes this shot.`,
+    });
+  }
+  return diagnostics;
+};
+
+/**
+ * Refuse a reviewed model whose declared turntable views were never drawn.
+ *
+ * A shot's evidence is frames inside one bundle; an asset's is a separate
+ * bundle per view, because the angle, elevation, and pose are part of the
+ * target rather than of the frame. The required set is
+ * {@link autoMovieAssetReviewViews}, which the capture path and this refusal
+ * read from one place so that what an asset owes and what it was captured from
+ * cannot drift apart.
+ *
+ * Only models the production actually consumes are asked for. A recipe nothing
+ * stages is an unused design, and demanding a turntable of it would make the
+ * gate a tax on the library rather than a check on the film.
+ */
+export const assetReviewEvidenceDiagnostics = (props: {
+  /** Model ids some shot, formation, or compiled shot source consumes. */
+  consumed: readonly string[];
+  /** Whether one consumed model compiled with a skeleton. */
+  rigged: (model: string) => boolean;
+  /** Compile scope; only `review` and `final` owe pixels. */
+  scope: "design" | "source" | "review" | "final";
+  /** Current render-target fingerprint for one exact asset view. */
+  fingerprint: (
+    target: IAutoMovieRenderBundleManifest["target"],
+  ) => AutoMovieContentDigest | null;
+  /** Whether any verified bundle stands at that fingerprint. */
+  captured: (
+    target: IAutoMovieRenderBundleManifest["target"],
+    fingerprint: AutoMovieContentDigest,
+  ) => ReadonlyArray<{ time: number; pass: AutoMovieGuidePass }>;
+}): IAutoMovieDiagnostic[] => {
+  if (props.scope !== "review" && props.scope !== "final") return [];
+  const diagnostics: IAutoMovieDiagnostic[] = [];
+  for (const model of props.consumed) {
+    const missing: string[] = [];
+    let addressable = false;
+    for (const view of autoMovieAssetReviewViews({
+      rigged: props.rigged(model),
+    })) {
+      const target = {
+        kind: "asset",
+        id: model,
+        angleDeg: view.angleDeg,
+        elevationDeg: view.elevationDeg,
+        pose: view.pose,
+      } as const;
+      const fingerprint = props.fingerprint(target);
+      if (fingerprint === null) continue;
+      addressable = true;
+      if (props.captured(target, fingerprint).length === 0)
+        missing.push(`"${view.id}" (${view.pass})`);
+    }
+    if (addressable === false || missing.length === 0) continue;
+    diagnostics.push({
+      code: "review-evidence-missing",
+      category: "error",
+      phase: "review",
+      target: `asset:${model}`,
+      path: null,
+      message: `Model "${model}" is staged by this production and is being reviewed without the turntable views an asset review is judged from. Missing ${missing.join(
+        ", ",
+      )}. An object read from one flattering angle is an object whose other side nobody looked at. Capture the declared set, then say what each view showed in the evidence citation on this model's design owner.`,
     });
   }
   return diagnostics;
