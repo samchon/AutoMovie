@@ -57,7 +57,7 @@ Outside the compile sandbox, ordinary scripts can authenticate current generated
 import {
   loadAutoMovieProjectState,
   requireCurrentAutoMovieProjectState,
-} from "@automovie/cli";
+} from "automovie";
 import { Vector3 } from "@automovie/engine";
 
 const state = requireCurrentAutoMovieProjectState(

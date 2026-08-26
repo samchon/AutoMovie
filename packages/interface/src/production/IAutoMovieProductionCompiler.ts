@@ -4470,13 +4470,6 @@ export interface IAutoMovieCompileProjectOutput {
    */
   diagnostics: IAutoMovieDiagnostic[];
   /**
-   * Current review queue.
-   *
-   * @evidence requirements/diagnostics/input-and-result-classification.md#diagnostics-derived-result-finding Exposes `reviews` as the portable data boundary for the diagnostics derived result finding requirement.
-   * @evidence specifications/validation-and-diagnostics/classification-and-causality.md#validation-derived-result-finding Types `reviews` for the validation derived result finding system contract.
-   */
-  reviews: IAutoMovieReviewQueue;
-  /**
    * Compiler-owned files created, updated or already current. Empty for design
    * scope and for every refused atomic compile.
    *
@@ -4546,56 +4539,3 @@ export type IAutoMovieReviewTarget =
        */
       kind: "subject";
     } & IAutoMovieSubjectReviewTarget);
-
-/**
- * One target and its derived review state.
- *
- * @evidence requirements/story/story-clock-and-state.md#story-time-state-review-scope Exposes `IAutoMovieReviewQueueEntry` as the portable data boundary for the story time state review scope requirement.
- * @evidence specifications/narrative-and-intent/events-causality-and-time.md#narrative-intent-temporal-state-handoff Types `IAutoMovieReviewQueueEntry` for the narrative intent temporal state handoff system contract.
- */
-export interface IAutoMovieReviewQueueEntry {
-  /**
-   * Review target.
-   *
-   * @evidence requirements/story/story-clock-and-state.md#story-time-state-review-scope Exposes `target` as the portable data boundary for the story time state review scope requirement.
-   * @evidence specifications/narrative-and-intent/events-causality-and-time.md#narrative-intent-temporal-state-handoff Types `target` for the narrative intent temporal state handoff system contract.
-   */
-  target: IAutoMovieReviewTarget;
-  /**
-   * Current queue state.
-   *
-   * @evidence requirements/story/story-clock-and-state.md#story-time-state-review-scope Exposes `state` as the portable data boundary for the story time state review scope requirement.
-   * @evidence specifications/narrative-and-intent/events-causality-and-time.md#narrative-intent-temporal-state-handoff Types `state` for the narrative intent temporal state handoff system contract.
-   */
-  state: "missing" | "stale" | "incomplete" | "revise" | "complete";
-  /**
-   * Current target fingerprint.
-   *
-   * @evidence requirements/story/story-clock-and-state.md#story-time-state-review-scope Exposes `currentFingerprint` as the portable data boundary for the story time state review scope requirement.
-   * @evidence specifications/narrative-and-intent/events-causality-and-time.md#narrative-intent-temporal-state-handoff Types `currentFingerprint` for the narrative intent temporal state handoff system contract.
-   */
-  currentFingerprint: AutoMovieContentDigest | null;
-  /**
-   * Stored review fingerprint when a record exists.
-   *
-   * @evidence requirements/story/story-clock-and-state.md#story-time-state-review-scope Exposes `storedFingerprint` as the portable data boundary for the story time state review scope requirement.
-   * @evidence specifications/narrative-and-intent/events-causality-and-time.md#narrative-intent-temporal-state-handoff Types `storedFingerprint` for the narrative intent temporal state handoff system contract.
-   */
-  storedFingerprint: AutoMovieContentDigest | null;
-}
-
-/**
- * Current review states in deterministic target order.
- *
- * @evidence requirements/story/story-clock-and-state.md#story-time-state-review-scope Exposes `IAutoMovieReviewQueue` as the portable data boundary for the story time state review scope requirement.
- * @evidence specifications/narrative-and-intent/events-causality-and-time.md#narrative-intent-temporal-state-handoff Types `IAutoMovieReviewQueue` for the narrative intent temporal state handoff system contract.
- */
-export interface IAutoMovieReviewQueue {
-  /**
-   * One entry per required review target.
-   *
-   * @evidence requirements/story/story-clock-and-state.md#story-time-state-review-scope Exposes `entries` as the portable data boundary for the story time state review scope requirement.
-   * @evidence specifications/narrative-and-intent/events-causality-and-time.md#narrative-intent-temporal-state-handoff Types `entries` for the narrative intent temporal state handoff system contract.
-   */
-  entries: IAutoMovieReviewQueueEntry[];
-}

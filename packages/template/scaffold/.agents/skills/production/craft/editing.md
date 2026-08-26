@@ -53,7 +53,7 @@ Order the beats by the timeline rather than by whatever order the compiled shots
 import {
   loadAutoMovieProjectState,
   requireCurrentAutoMovieProjectState,
-} from "@automovie/cli";
+} from "automovie";
 import { validateFilmContinuity } from "@automovie/engine";
 
 const state = requireCurrentAutoMovieProjectState(

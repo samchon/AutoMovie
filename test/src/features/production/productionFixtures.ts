@@ -1,4 +1,3 @@
-import { writeFiles } from "@automovie/template";
 import {
   IAutoMovieAcceptanceScenario,
   IAutoMovieAssetManifest,
@@ -15,6 +14,7 @@ import {
   AutoMovieProductionProject,
   canonicalAutoMovieCaptureRuntimeIdentity,
 } from "@automovie/production";
+import { writeFiles } from "@automovie/template";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -439,9 +439,7 @@ export const shotContract = (): IAutoMovieShotContract => {
 
 /** Completed-film acceptance scenarios. */
 export const acceptanceScenarios = (): IAutoMovieAcceptanceScenario[] => [
-  completedFilmJson(
-    "automovie/design/{{name}}/acceptance/opening-beauty.json",
-  ),
+  completedFilmJson("automovie/design/{{name}}/acceptance/opening-beauty.json"),
   completedFilmJson("automovie/design/{{name}}/acceptance/opening-pose.json"),
 ];
 

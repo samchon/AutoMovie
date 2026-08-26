@@ -1,11 +1,17 @@
 import type { IAutoMovieDesignTarget } from "@automovie/interface";
-import { AutoMovieProductionProject, compareCodeUnits } from "@automovie/production";
+import {
+  AutoMovieProductionProject,
+  compareCodeUnits,
+} from "@automovie/production";
 import { TestValidator } from "@nestia/e2e";
 import fs from "node:fs";
 import path from "node:path";
 
 import { namedFacts } from "../internal/predicates";
-import { formationDesign, productionFixture } from "../production/productionFixtures";
+import {
+  formationDesign,
+  productionFixture,
+} from "../production/productionFixtures";
 
 /**
  * A design record no source derives is nameable, and only the emitter can ask.

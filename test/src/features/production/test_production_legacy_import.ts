@@ -674,8 +674,7 @@ export const test_production_legacy_import = (): void => {
         ["fingerprint", () => rolledBack.fingerprint === plan.fingerprint],
         [
           "automovieGone",
-          () =>
-            fs.existsSync(path.join(untouched.root, "automovie")) === false,
+          () => fs.existsSync(path.join(untouched.root, "automovie")) === false,
         ],
         [
           "sourceGone",

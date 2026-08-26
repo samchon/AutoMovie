@@ -1,5 +1,8 @@
 import { IAutoMovieScript } from "@automovie/interface";
-import { AutoMovieProject, IAutoMovieLegacyWritableSlate } from "@automovie/production";
+import {
+  AutoMovieProject,
+  IAutoMovieLegacyWritableSlate,
+} from "@automovie/production";
 import { TestValidator } from "@nestia/e2e";
 import fs from "node:fs";
 import os from "node:os";

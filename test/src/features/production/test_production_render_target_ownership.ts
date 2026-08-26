@@ -54,140 +54,147 @@ import {
  *    asserted rather than assumed because the safe answer and the bug produce
  *    the same value on every other row.
  */
-export const test_production_render_target_ownership = async (): Promise<void> => {
-  const fixture = productionFixture();
-  try {
-    const project = AutoMovieProductionProject.open(fixture.root);
-    const compiled = new AutoMovieProductionCompiler(project).compile({
-      scope: "source",
-    });
-    if (
-      productionCompileSucceeded("render ownership fixture", compiled) === false
-    )
-      throw new Error("The render-ownership fixture did not compile.");
+export const test_production_render_target_ownership =
+  async (): Promise<void> => {
+    const fixture = productionFixture();
+    try {
+      const project = AutoMovieProductionProject.open(fixture.root);
+      const compiled = new AutoMovieProductionCompiler(project).compile({
+        scope: "source",
+      });
+      if (
+        productionCompileSucceeded("render ownership fixture", compiled) ===
+        false
+      )
+        throw new Error("The render-ownership fixture did not compile.");
 
-    const host = recordingCapture();
-    const application = new AutoMovieProductionContext(
-      host.adapter,
-      fixture.root,
-      undefined,
-    );
-    const captured = await captureAutoMovieProductionFrame(application, {
-      target: {
-        kind: "asset",
-        productionId: "fixture-film",
-        id: "soloist",
-        angleDeg: 0,
-        elevationDeg: 15,
-        pose: "rest",
-        pass: "beauty",
-      },
-    });
-    if (captured.captured === false)
-      throw new Error("The asset view did not capture.");
-
-    const inspect = () =>
-      inspectAutoMovieProduction(
-        openAutoMovieProduction({
-          projectRoot: fixture.root,
+      const host = recordingCapture();
+      const application = new AutoMovieProductionContext(
+        host.adapter,
+        fixture.root,
+        undefined,
+      );
+      const captured = await captureAutoMovieProductionFrame(application, {
+        target: {
+          kind: "asset",
           productionId: "fixture-film",
-        }),
-      ).renders;
+          id: "soloist",
+          angleDeg: 0,
+          elevationDeg: 15,
+          pose: "rest",
+          pass: "beauty",
+        },
+      });
+      if (captured.captured === false)
+        throw new Error("The asset view did not capture.");
 
-    const before = inspect();
-    const owning = before.find(
-      (entry) =>
-        entry.target?.kind === "asset" && entry.target.id === "soloist",
-    );
+      const inspect = () =>
+        inspectAutoMovieProduction(
+          openAutoMovieProduction({
+            projectRoot: fixture.root,
+            productionId: "fixture-film",
+          }),
+        ).renders;
 
-    TestValidator.equals(
-      "a render entry names its own target rather than spelling it in a path",
-      namedFacts([
-        ["the captured bundle is listed", () => owning !== undefined],
-        // The whole point of the field: addressable without parsing.
-        [
-          "and states the target it was made for",
-          () =>
-            owning?.target?.kind === "asset" && owning.target.id === "soloist",
-        ],
-        ["which the design still carries", () => owning?.owned === true],
-      ]),
-      {
-        "the captured bundle is listed": true,
-        "and states the target it was made for": true,
-        "which the design still carries": true,
-      },
-    );
+      const before = inspect();
+      const owning = before.find(
+        (entry) =>
+          entry.target?.kind === "asset" && entry.target.id === "soloist",
+      );
 
-    // The record the model is derived from. Removing it is what an author does
-    // when a subject leaves the production, and the bundle stays behind.
-    const record = path.join(
-      fixture.root,
-      project.designRecordPath({ kind: "model", id: "soloist" }),
-    );
-    fs.rmSync(record);
+      TestValidator.equals(
+        "a render entry names its own target rather than spelling it in a path",
+        namedFacts([
+          ["the captured bundle is listed", () => owning !== undefined],
+          // The whole point of the field: addressable without parsing.
+          [
+            "and states the target it was made for",
+            () =>
+              owning?.target?.kind === "asset" &&
+              owning.target.id === "soloist",
+          ],
+          ["which the design still carries", () => owning?.owned === true],
+        ]),
+        {
+          "the captured bundle is listed": true,
+          "and states the target it was made for": true,
+          "which the design still carries": true,
+        },
+      );
 
-    const after = inspect();
-    const orphan = after.find((entry) => entry.path === owning?.path);
+      // The record the model is derived from. Removing it is what an author does
+      // when a subject leaves the production, and the bundle stays behind.
+      const record = path.join(
+        fixture.root,
+        project.designRecordPath({ kind: "model", id: "soloist" }),
+      );
+      fs.rmSync(record);
 
-    TestValidator.equals(
-      "a bundle whose target the design dropped is named, kept, and marked unowned",
-      namedFacts([
-        // Kept. A ledger that deleted would be making the reader's decision.
-        ["the bundle is still listed", () => orphan !== undefined],
-        [
-          "and still names what it was made for",
-          () =>
-            orphan?.target?.kind === "asset" && orphan.target.id === "soloist",
-        ],
-        ["but the design no longer carries it", () => orphan?.owned === false],
-        [
-          "and its bytes are untouched",
-          () =>
-            fs.existsSync(
-              path.join(fixture.root, path.dirname(orphan?.path ?? "")),
-            ) === true,
-        ],
-      ]),
-      {
-        "the bundle is still listed": true,
-        "and still names what it was made for": true,
-        "but the design no longer carries it": true,
-        "and its bytes are untouched": true,
-      },
-    );
+      const after = inspect();
+      const orphan = after.find((entry) => entry.path === owning?.path);
 
-    // Beside the real bundle rather than at a guessed path: the render root is
-    // production-scoped, so `renders/<anything>` would sit outside the walk and
-    // the case would pass by never being seen.
-    const unreadable = path.join(
-      fixture.root,
-      ...(owning?.path ?? "").split("/").slice(0, 2),
-      "unreadable-bundle",
-      "manifest.json",
-    );
-    fs.mkdirSync(path.dirname(unreadable), { recursive: true });
-    fs.writeFileSync(unreadable, "{ this is not a bundle manifest }", "utf8");
-    const broken = inspect().find((entry) =>
-      entry.path.includes("unreadable-bundle"),
-    );
+      TestValidator.equals(
+        "a bundle whose target the design dropped is named, kept, and marked unowned",
+        namedFacts([
+          // Kept. A ledger that deleted would be making the reader's decision.
+          ["the bundle is still listed", () => orphan !== undefined],
+          [
+            "and still names what it was made for",
+            () =>
+              orphan?.target?.kind === "asset" &&
+              orphan.target.id === "soloist",
+          ],
+          [
+            "but the design no longer carries it",
+            () => orphan?.owned === false,
+          ],
+          [
+            "and its bytes are untouched",
+            () =>
+              fs.existsSync(
+                path.join(fixture.root, path.dirname(orphan?.path ?? "")),
+              ) === true,
+          ],
+        ]),
+        {
+          "the bundle is still listed": true,
+          "and still names what it was made for": true,
+          "but the design no longer carries it": true,
+          "and its bytes are untouched": true,
+        },
+      );
 
-    TestValidator.equals(
-      "a bundle that cannot be read is not accused of being unowned",
-      namedFacts([
-        ["it is listed", () => broken !== undefined],
-        ["with no target", () => broken?.target === null],
-        // The fail-safe direction. Reversed, every unreadable bundle in every
-        // production reads as garbage, and the row that means it is lost.
-        ["and reported owned", () => broken?.owned === true],
-      ]),
-      {
-        "it is listed": true,
-        "with no target": true,
-        "and reported owned": true,
-      },
-    );
-  } finally {
-    fixture.dispose();
-  }
-};
+      // Beside the real bundle rather than at a guessed path: the render root is
+      // production-scoped, so `renders/<anything>` would sit outside the walk and
+      // the case would pass by never being seen.
+      const unreadable = path.join(
+        fixture.root,
+        ...(owning?.path ?? "").split("/").slice(0, 2),
+        "unreadable-bundle",
+        "manifest.json",
+      );
+      fs.mkdirSync(path.dirname(unreadable), { recursive: true });
+      fs.writeFileSync(unreadable, "{ this is not a bundle manifest }", "utf8");
+      const broken = inspect().find((entry) =>
+        entry.path.includes("unreadable-bundle"),
+      );
+
+      TestValidator.equals(
+        "a bundle that cannot be read is not accused of being unowned",
+        namedFacts([
+          ["it is listed", () => broken !== undefined],
+          ["with no target", () => broken?.target === null],
+          // The fail-safe direction. Reversed, every unreadable bundle in every
+          // production reads as garbage, and the row that means it is lost.
+          ["and reported owned", () => broken?.owned === true],
+        ]),
+        {
+          "it is listed": true,
+          "with no target": true,
+          "and reported owned": true,
+        },
+      );
+    } finally {
+      fixture.dispose();
+    }
+  };

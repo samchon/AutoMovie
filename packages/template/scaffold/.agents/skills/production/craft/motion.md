@@ -67,7 +67,7 @@ These calls run in a project script under `scripts/`, never in shot source. They
 import {
   loadAutoMovieProjectState,
   requireCurrentAutoMovieProjectState,
-} from "@automovie/cli";
+} from "automovie";
 import { validateFootSkate, validateGroundContact } from "@automovie/engine";
 import type { IAutoMovieValidation } from "@automovie/interface";
 

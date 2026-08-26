@@ -118,5 +118,6 @@ export const WORKSPACE_TEMPLATE_VERSION_KEYS = Object.freeze([
   "interface",
   "production",
   "render",
+  "template",
   "viewer",
 ]);

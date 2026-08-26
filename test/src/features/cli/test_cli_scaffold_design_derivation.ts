@@ -16,7 +16,10 @@ import { namedFacts, throwsError } from "../internal/predicates";
  * fixture keeps compiler regression coverage elsewhere.
  */
 export const test_cli_scaffold_design_derivation = (): void => {
-  const scaffold = path.resolve(__dirname, "../../../../packages/template/scaffold");
+  const scaffold = path.resolve(
+    __dirname,
+    "../../../../packages/template/scaffold",
+  );
   const assetDirectory = scaffoldAssetDirectory();
   const existsSync = fs.existsSync;
   Object.defineProperty(fs, "existsSync", {
@@ -73,10 +76,10 @@ export const test_cli_scaffold_design_derivation = (): void => {
   const productionState = Object.keys(rendered).filter((file) =>
     file.startsWith("automovie/productions/"),
   );
-  const reviewRecords = Object.keys(rendered).filter(
-    (file) =>
-      file.startsWith("automovie/reviews/") &&
-      file !== "automovie/reviews/README.md",
+  // Not "the review directory ships empty": the review store is retired, so
+  // the scaffold must carry no path under it at all.
+  const reviewStore = Object.keys(rendered).filter((file) =>
+    file.startsWith("automovie/reviews"),
   );
   const renderedMedia = Object.keys(rendered).filter(
     (file) => file.startsWith("renders/") && file !== "renders/README.md",
@@ -111,7 +114,7 @@ export const test_cli_scaffold_design_derivation = (): void => {
       publicMedia,
       registeredAssets,
       renderedMedia,
-      reviewRecords,
+      reviewStore,
     },
     {
       designRecords: [],
@@ -125,7 +128,7 @@ export const test_cli_scaffold_design_derivation = (): void => {
       publicMedia: [],
       registeredAssets: [],
       renderedMedia: [],
-      reviewRecords: [],
+      reviewStore: [],
     },
   );
   TestValidator.equals(

@@ -43,87 +43,90 @@ import { productionFixture } from "./productionFixtures";
  *    refusal of either code carries that clause, so the day one of them is
  *    reworded without it this goes red.
  */
-export const test_production_design_citation_refusals_move_together = (): void => {
-  const fixture = productionFixture();
-  try {
-    // The docs layer moved on and the design layer did not. Renaming the
-    // indexed scene and the indexed claim is the smallest way to reproduce it:
-    // every fixture record goes on citing the ids the index just dropped.
-    const indexPath = path.join(
-      fixture.root,
-      "automovie/design/fixture-film/screenplay/index.json",
-    );
-    rewrite(indexPath, [
-      ['"SCN-001"', '"SCN-900"'],
-      ['"cue-arm-readable"', '"cue-arm-vanished"'],
-    ]);
+export const test_production_design_citation_refusals_move_together =
+  (): void => {
+    const fixture = productionFixture();
+    try {
+      // The docs layer moved on and the design layer did not. Renaming the
+      // indexed scene and the indexed claim is the smallest way to reproduce it:
+      // every fixture record goes on citing the ids the index just dropped.
+      const indexPath = path.join(
+        fixture.root,
+        "automovie/design/fixture-film/screenplay/index.json",
+      );
+      rewrite(indexPath, [
+        ['"SCN-001"', '"SCN-900"'],
+        ['"cue-arm-readable"', '"cue-arm-vanished"'],
+      ]);
 
-    const output = openAutoMovieProduction({
-      projectRoot: fixture.root,
-    }).compiler.lint({ scope: "source" });
-    const raised = (code: string) =>
-      output.diagnostics.filter((diagnostic) => diagnostic.code === code);
-    const scene = raised("screenplay-citation-scene-absent");
-    const claim = raised("screenplay-citation-claim-absent");
+      const output = openAutoMovieProduction({
+        projectRoot: fixture.root,
+      }).compiler.lint({ scope: "source" });
+      const raised = (code: string) =>
+        output.diagnostics.filter((diagnostic) => diagnostic.code === code);
+      const scene = raised("screenplay-citation-scene-absent");
+      const claim = raised("screenplay-citation-claim-absent");
 
-    const opens = (relative: string | null): boolean =>
-      relative !== null &&
-      relative.startsWith("automovie/design/") &&
-      relative.endsWith(".json") &&
-      fs.existsSync(path.join(fixture.root, relative));
+      const opens = (relative: string | null): boolean =>
+        relative !== null &&
+        relative.startsWith("automovie/design/") &&
+        relative.endsWith(".json") &&
+        fs.existsSync(path.join(fixture.root, relative));
 
-    TestValidator.equals(
-      "the pair of dangling-citation refusals answers for the record that wrote it",
-      namedFacts([
-        ["the scene citation is refused", () => scene.length > 0],
-        ["the claim citation is refused", () => claim.length > 0],
-        [
-          "every refusal names a design record the author can open",
-          () =>
-            [...scene, ...claim].every((diagnostic) => opens(diagnostic.path)),
-        ],
-        [
-          // The fixture's shot contract cites a scene and a claim in one
-          // evidence entry, so one record has to appear on both sides. Two
-          // disjoint sets would mean the loop this case describes is not the
-          // loop that raised them.
-          "one record raises both halves of the pair",
-          () =>
-            scene.some((left) =>
-              claim.some((right) => right.path === left.path),
-            ),
-        ],
-        [
-          // Computed from one of each and then required of all of them, so a
-          // template split per owner kind cannot leave half the population
-          // drifting behind the half this fact happened to sample.
-          "the clause the two share names the compiler-owned design record",
-          () => {
-            const shared = longestCommonRun(
-              scene[0]!.message,
-              claim[0]!.message,
-            );
-            return (
-              shared.includes("compiler-owned design record") &&
+      TestValidator.equals(
+        "the pair of dangling-citation refusals answers for the record that wrote it",
+        namedFacts([
+          ["the scene citation is refused", () => scene.length > 0],
+          ["the claim citation is refused", () => claim.length > 0],
+          [
+            "every refusal names a design record the author can open",
+            () =>
               [...scene, ...claim].every((diagnostic) =>
-                diagnostic.message.includes(shared),
-              )
-            );
-          },
-        ],
-      ]),
-      {
-        "the scene citation is refused": true,
-        "the claim citation is refused": true,
-        "every refusal names a design record the author can open": true,
-        "one record raises both halves of the pair": true,
-        "the clause the two share names the compiler-owned design record": true,
-      },
-    );
-  } finally {
-    fixture.dispose();
-  }
-};
+                opens(diagnostic.path),
+              ),
+          ],
+          [
+            // The fixture's shot contract cites a scene and a claim in one
+            // evidence entry, so one record has to appear on both sides. Two
+            // disjoint sets would mean the loop this case describes is not the
+            // loop that raised them.
+            "one record raises both halves of the pair",
+            () =>
+              scene.some((left) =>
+                claim.some((right) => right.path === left.path),
+              ),
+          ],
+          [
+            // Computed from one of each and then required of all of them, so a
+            // template split per owner kind cannot leave half the population
+            // drifting behind the half this fact happened to sample.
+            "the clause the two share names the compiler-owned design record",
+            () => {
+              const shared = longestCommonRun(
+                scene[0]!.message,
+                claim[0]!.message,
+              );
+              return (
+                shared.includes("compiler-owned design record") &&
+                [...scene, ...claim].every((diagnostic) =>
+                  diagnostic.message.includes(shared),
+                )
+              );
+            },
+          ],
+        ]),
+        {
+          "the scene citation is refused": true,
+          "the claim citation is refused": true,
+          "every refusal names a design record the author can open": true,
+          "one record raises both halves of the pair": true,
+          "the clause the two share names the compiler-owned design record": true,
+        },
+      );
+    } finally {
+      fixture.dispose();
+    }
+  };
 
 /**
  * Apply every replacement, refusing one that matched nothing.

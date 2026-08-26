@@ -443,7 +443,10 @@ const compile = () => {
 const contractAnchors = (relative) =>
   [
     ...fs
-      .readFileSync(path.join(ROOT, "packages", "template", "docs", relative), "utf8")
+      .readFileSync(
+        path.join(ROOT, "packages", "template", "docs", relative),
+        "utf8",
+      )
       .matchAll(/^## .+ \{#(?<anchor>[^}]+)\}$/gmu),
   ].map((match) => `${relative}#${match.groups.anchor}`);
 

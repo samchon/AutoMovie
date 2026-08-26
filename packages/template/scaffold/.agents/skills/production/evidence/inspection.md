@@ -8,7 +8,7 @@ This ground is divided, and no guide on it substitutes for another. This one ans
 
 ## Choose the artifact and revision
 
-Load and narrow current project state with `loadAutoMovieProjectState` and `requireCurrentAutoMovieProjectState` from `@automovie/cli`; `GEOMETRY` owns that reader and its refusals. Narrowing is not politeness. A stale compile describes a design that no longer exists, and requiring `current` is what makes an inspection a fact about the same bytes a frame would be drawn from.
+Load and narrow current project state with `loadAutoMovieProjectState` and `requireCurrentAutoMovieProjectState` from `automovie`; [Ownership](../source/ownership.md) owns that reader and its refusals. Narrowing is not politeness. A stale compile describes a design that no longer exists, and requiring `current` is what makes an inspection a fact about the same bytes a frame would be drawn from.
 
 Pair a compiled shot from `generated.shots` with a revision string. `freshness.compileFingerprint` is the honest label, and it is nullable even on narrowed current state, so decide what to do about `null` instead of asserting it away. Never label an answer with an authoring-session revision, and never infer freshness from a file timestamp.
 
@@ -16,7 +16,7 @@ Pair a compiled shot from `generated.shots` with a revision string. `freshness.c
 import {
   loadAutoMovieProjectState,
   requireCurrentAutoMovieProjectState,
-} from "@automovie/cli";
+} from "automovie";
 import { describeAutoMovieSubjects } from "@automovie/engine";
 
 const state = requireCurrentAutoMovieProjectState(

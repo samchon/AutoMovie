@@ -88,218 +88,210 @@ const rangeTimeline = (): IAutoMovieFilmTimeline => {
  *    frame total the chunks do not cover, and a runtime past the exact MP4
  *    clock are each refused rather than silently re-encoded.
  */
-export const test_production_chunk_video_assembly =
-  async (): Promise<void> => {
-    const frameFormat = { fps: FPS, height: HEIGHT, width: WIDTH };
-    const chunks: Uint8Array[] = [];
-    for (const frameCount of CHUNK_FRAMES)
-      chunks.push(
-        await productionH264Mp4({
-          width: WIDTH,
-          height: HEIGHT,
-          fps: FPS,
-          frameCount,
-        }),
-      );
-    const narrowChunk = await productionH264Mp4({
-      width: WIDTH - 8,
-      height: HEIGHT - 8,
-      fps: FPS,
-      frameCount: 2,
-    });
-    const whole = await productionH264Mp4({
-      width: WIDTH,
-      height: HEIGHT,
-      fps: FPS,
-      frameCount: TOTAL_FRAMES,
-    });
+export const test_production_chunk_video_assembly = async (): Promise<void> => {
+  const frameFormat = { fps: FPS, height: HEIGHT, width: WIDTH };
+  const chunks: Uint8Array[] = [];
+  for (const frameCount of CHUNK_FRAMES)
+    chunks.push(
+      await productionH264Mp4({
+        width: WIDTH,
+        height: HEIGHT,
+        fps: FPS,
+        frameCount,
+      }),
+    );
+  const narrowChunk = await productionH264Mp4({
+    width: WIDTH - 8,
+    height: HEIGHT - 8,
+    fps: FPS,
+    frameCount: 2,
+  });
+  const whole = await productionH264Mp4({
+    width: WIDTH,
+    height: HEIGHT,
+    fps: FPS,
+    frameCount: TOTAL_FRAMES,
+  });
 
-    const single = assembleProductionChunkVideoMp4({
-      chunks: [whole],
-      frameFormat,
-      totalFrames: TOTAL_FRAMES,
-    });
-    TestValidator.equals(
-      "an assembly spanning one chunk is the monolithic encode of that chunk",
-      namedFacts([
-        [
-          "theSingleChunkAssemblyIsByteIdentical",
-          () => Buffer.from(single).equals(Buffer.from(whole)),
-        ],
-        [
-          "theSingleChunkAssemblyCarriesTheWholeFilm",
-          () => probeProductionVideoMp4(single).frameCount === TOTAL_FRAMES,
-        ],
-      ]),
-      {
-        theSingleChunkAssemblyIsByteIdentical: true,
-        theSingleChunkAssemblyCarriesTheWholeFilm: true,
-      },
-    );
+  const single = assembleProductionChunkVideoMp4({
+    chunks: [whole],
+    frameFormat,
+    totalFrames: TOTAL_FRAMES,
+  });
+  TestValidator.equals(
+    "an assembly spanning one chunk is the monolithic encode of that chunk",
+    namedFacts([
+      [
+        "theSingleChunkAssemblyIsByteIdentical",
+        () => Buffer.from(single).equals(Buffer.from(whole)),
+      ],
+      [
+        "theSingleChunkAssemblyCarriesTheWholeFilm",
+        () => probeProductionVideoMp4(single).frameCount === TOTAL_FRAMES,
+      ],
+    ]),
+    {
+      theSingleChunkAssemblyIsByteIdentical: true,
+      theSingleChunkAssemblyCarriesTheWholeFilm: true,
+    },
+  );
 
-    const assembled = assembleProductionChunkVideoMp4({
-      chunks,
-      frameFormat,
-      totalFrames: TOTAL_FRAMES,
-    });
-    const conformed = conformProductionRenditionVideoMp4({
-      timeline: rangeTimeline(),
-      clips: new Map(
-        CHUNK_FRAMES.map((_count, index): [string, Uint8Array] => [
-          `range-${index}`,
-          chunks[index]!,
-        ]),
-      ),
-    });
-    const probe = probeProductionVideoMp4(assembled);
-    TestValidator.equals(
-      "a many-chunk assembly carries every source sample onto one continuous clock",
-      namedFacts([
-        [
-          "theAssemblyCoversEveryFrame",
-          () => probe.frameCount === TOTAL_FRAMES,
-        ],
-        ["theAssemblyKeepsTheRaster", () => probe.width === WIDTH],
-        ["theAssemblyKeepsTheRasterHeight", () => probe.height === HEIGHT],
-        [
-          "theAssemblyKeepsTheFrameClock",
-          () => Math.abs(probe.fps - FPS) < 1e-9,
-        ],
-        [
-          "theAssemblyRunsTheWholeFilm",
-          () => Math.abs(probe.runtimeSeconds - TOTAL_FRAMES / FPS) < 1e-9,
-        ],
-        [
-          "theAssemblyIsSampleIdenticalToTheSameRangesConformed",
-          () => {
-            assertProductionFeatureUsesRenditionVideo({
-              feature: assembled,
-              renditionVideo: conformed,
-            });
-            return true;
-          },
-        ],
-        [
-          "theAssemblyIsNotOneChunkVerbatim",
-          () =>
-            Buffer.from(assembled).equals(Buffer.from(chunks[0]!)) === false,
-        ],
+  const assembled = assembleProductionChunkVideoMp4({
+    chunks,
+    frameFormat,
+    totalFrames: TOTAL_FRAMES,
+  });
+  const conformed = conformProductionRenditionVideoMp4({
+    timeline: rangeTimeline(),
+    clips: new Map(
+      CHUNK_FRAMES.map((_count, index): [string, Uint8Array] => [
+        `range-${index}`,
+        chunks[index]!,
       ]),
-      {
-        theAssemblyCoversEveryFrame: true,
-        theAssemblyKeepsTheRaster: true,
-        theAssemblyKeepsTheRasterHeight: true,
-        theAssemblyKeepsTheFrameClock: true,
-        theAssemblyRunsTheWholeFilm: true,
-        theAssemblyIsSampleIdenticalToTheSameRangesConformed: true,
-        theAssemblyIsNotOneChunkVerbatim: true,
-      },
-    );
+    ),
+  });
+  const probe = probeProductionVideoMp4(assembled);
+  TestValidator.equals(
+    "a many-chunk assembly carries every source sample onto one continuous clock",
+    namedFacts([
+      ["theAssemblyCoversEveryFrame", () => probe.frameCount === TOTAL_FRAMES],
+      ["theAssemblyKeepsTheRaster", () => probe.width === WIDTH],
+      ["theAssemblyKeepsTheRasterHeight", () => probe.height === HEIGHT],
+      ["theAssemblyKeepsTheFrameClock", () => Math.abs(probe.fps - FPS) < 1e-9],
+      [
+        "theAssemblyRunsTheWholeFilm",
+        () => Math.abs(probe.runtimeSeconds - TOTAL_FRAMES / FPS) < 1e-9,
+      ],
+      [
+        "theAssemblyIsSampleIdenticalToTheSameRangesConformed",
+        () => {
+          assertProductionFeatureUsesRenditionVideo({
+            feature: assembled,
+            renditionVideo: conformed,
+          });
+          return true;
+        },
+      ],
+      [
+        "theAssemblyIsNotOneChunkVerbatim",
+        () => Buffer.from(assembled).equals(Buffer.from(chunks[0]!)) === false,
+      ],
+    ]),
+    {
+      theAssemblyCoversEveryFrame: true,
+      theAssemblyKeepsTheRaster: true,
+      theAssemblyKeepsTheRasterHeight: true,
+      theAssemblyKeepsTheFrameClock: true,
+      theAssemblyRunsTheWholeFilm: true,
+      theAssemblyIsSampleIdenticalToTheSameRangesConformed: true,
+      theAssemblyIsNotOneChunkVerbatim: true,
+    },
+  );
 
-    const interrupted = throwsError(
-      () =>
-        assembleProductionChunkVideoMp4({
-          chunks: (function* () {
-            yield chunks[0]!;
-            throw new Error("the render worker was interrupted");
-          })(),
-          frameFormat,
-          totalFrames: TOTAL_FRAMES,
-        }),
-      "the render worker was interrupted",
-    );
-    const resumed = assembleProductionChunkVideoMp4({
-      chunks,
-      frameFormat,
-      totalFrames: TOTAL_FRAMES,
-    });
-    TestValidator.equals(
-      "a resumed assembly publishes exactly what an uninterrupted one would have",
-      namedFacts([
-        ["theInterruptedAttemptFailed", () => interrupted],
-        [
-          "theResumedAssemblyIsByteIdentical",
-          () => Buffer.from(resumed).equals(Buffer.from(assembled)),
-        ],
-      ]),
-      {
-        theInterruptedAttemptFailed: true,
-        theResumedAssemblyIsByteIdentical: true,
-      },
-    );
+  const interrupted = throwsError(
+    () =>
+      assembleProductionChunkVideoMp4({
+        chunks: (function* () {
+          yield chunks[0]!;
+          throw new Error("the render worker was interrupted");
+        })(),
+        frameFormat,
+        totalFrames: TOTAL_FRAMES,
+      }),
+    "the render worker was interrupted",
+  );
+  const resumed = assembleProductionChunkVideoMp4({
+    chunks,
+    frameFormat,
+    totalFrames: TOTAL_FRAMES,
+  });
+  TestValidator.equals(
+    "a resumed assembly publishes exactly what an uninterrupted one would have",
+    namedFacts([
+      ["theInterruptedAttemptFailed", () => interrupted],
+      [
+        "theResumedAssemblyIsByteIdentical",
+        () => Buffer.from(resumed).equals(Buffer.from(assembled)),
+      ],
+    ]),
+    {
+      theInterruptedAttemptFailed: true,
+      theResumedAssemblyIsByteIdentical: true,
+    },
+  );
 
-    const refuses = (
-      props: Parameters<typeof assembleProductionChunkVideoMp4>[0],
-      message: string,
-    ): boolean =>
-      throwsError(() => assembleProductionChunkVideoMp4(props), message);
-    TestValidator.equals(
-      "an assembly refuses chunks it cannot splice without re-encoding them",
-      namedFacts([
-        [
-          "noChunksIsRefused",
-          () =>
-            refuses(
-              { chunks: [], frameFormat, totalFrames: TOTAL_FRAMES },
-              "at least one encoded render chunk",
-            ),
-        ],
-        [
-          "aChangedRasterIsRefusedByIndex",
-          () =>
-            refuses(
-              {
-                chunks: [chunks[0]!, narrowChunk],
-                frameFormat,
-                totalFrames: TOTAL_FRAMES,
-              },
-              "Render chunk 1 does not share the assembled raster",
-            ),
-        ],
-        [
-          "aNonH264ChunkIsRefused",
-          () =>
-            refuses(
-              {
-                chunks: [productionMpeg4Part2Mp4()],
-                frameFormat,
-                totalFrames: TOTAL_FRAMES,
-              },
-              "is not an H.264/AVC sample entry",
-            ),
-        ],
-        [
-          "aSingleChunkShortOfTheFilmIsRefused",
-          () =>
-            refuses(
-              { chunks: [whole], frameFormat, totalFrames: TOTAL_FRAMES + 1 },
-              `Chunked video assembly covers ${TOTAL_FRAMES} frames; expected ${TOTAL_FRAMES + 1}.`,
-            ),
-        ],
-        [
-          "manyChunksShortOfTheFilmAreRefused",
-          () =>
-            refuses(
-              { chunks, frameFormat, totalFrames: TOTAL_FRAMES - 1 },
-              "Assembled chunk video parses as",
-            ),
-        ],
-        [
-          "aRuntimePastTheExactClockIsRefused",
-          () =>
-            refuses(
-              { chunks, frameFormat, totalFrames: Number.MAX_SAFE_INTEGER },
-              "exceeds the exact MP4 clock range",
-            ),
-        ],
-      ]),
-      {
-        noChunksIsRefused: true,
-        aChangedRasterIsRefusedByIndex: true,
-        aNonH264ChunkIsRefused: true,
-        aSingleChunkShortOfTheFilmIsRefused: true,
-        manyChunksShortOfTheFilmAreRefused: true,
-        aRuntimePastTheExactClockIsRefused: true,
-      },
-    );
-  };
+  const refuses = (
+    props: Parameters<typeof assembleProductionChunkVideoMp4>[0],
+    message: string,
+  ): boolean =>
+    throwsError(() => assembleProductionChunkVideoMp4(props), message);
+  TestValidator.equals(
+    "an assembly refuses chunks it cannot splice without re-encoding them",
+    namedFacts([
+      [
+        "noChunksIsRefused",
+        () =>
+          refuses(
+            { chunks: [], frameFormat, totalFrames: TOTAL_FRAMES },
+            "at least one encoded render chunk",
+          ),
+      ],
+      [
+        "aChangedRasterIsRefusedByIndex",
+        () =>
+          refuses(
+            {
+              chunks: [chunks[0]!, narrowChunk],
+              frameFormat,
+              totalFrames: TOTAL_FRAMES,
+            },
+            "Render chunk 1 does not share the assembled raster",
+          ),
+      ],
+      [
+        "aNonH264ChunkIsRefused",
+        () =>
+          refuses(
+            {
+              chunks: [productionMpeg4Part2Mp4()],
+              frameFormat,
+              totalFrames: TOTAL_FRAMES,
+            },
+            "is not an H.264/AVC sample entry",
+          ),
+      ],
+      [
+        "aSingleChunkShortOfTheFilmIsRefused",
+        () =>
+          refuses(
+            { chunks: [whole], frameFormat, totalFrames: TOTAL_FRAMES + 1 },
+            `Chunked video assembly covers ${TOTAL_FRAMES} frames; expected ${TOTAL_FRAMES + 1}.`,
+          ),
+      ],
+      [
+        "manyChunksShortOfTheFilmAreRefused",
+        () =>
+          refuses(
+            { chunks, frameFormat, totalFrames: TOTAL_FRAMES - 1 },
+            "Assembled chunk video parses as",
+          ),
+      ],
+      [
+        "aRuntimePastTheExactClockIsRefused",
+        () =>
+          refuses(
+            { chunks, frameFormat, totalFrames: Number.MAX_SAFE_INTEGER },
+            "exceeds the exact MP4 clock range",
+          ),
+      ],
+    ]),
+    {
+      noChunksIsRefused: true,
+      aChangedRasterIsRefusedByIndex: true,
+      aNonH264ChunkIsRefused: true,
+      aSingleChunkShortOfTheFilmIsRefused: true,
+      manyChunksShortOfTheFilmAreRefused: true,
+      aRuntimePastTheExactClockIsRefused: true,
+    },
+  );
+};

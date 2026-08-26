@@ -88,7 +88,6 @@ import {
   IAutoMovieProductionRenderManifest,
   IAutoMovieProductionRenderReceipt,
   IAutoMovieProductionShotProgram,
-  IAutoMovieReviewQueue,
   IAutoMovieScene,
   IAutoMovieScreenplayIndex,
   IAutoMovieShotBuildContext,
@@ -203,36 +202,6 @@ export const AUTOMOVIE_PRODUCTION_COMPILER_VERSION = (
 ).version;
 
 /**
- * Current compiler snapshot supplied to the review queue.
- *
- * @author Samchon
- */
-export interface IAutoMovieReviewQueueSnapshot {
-  /**
-   * Exact content inventory already used by the compiler fingerprint.
-   */
-  renderContentInputs: IAutoMovieProductionContentInput[];
-  /**
-   * Prospective compiler ownership manifest used by this compile.
-   */
-  generatedManifest: IAutoMovieGeneratedManifest;
-  /**
-   * Prospective compiler-owned bytes keyed by generated-root-relative path.
-   */
-  generatedFiles: ReadonlyMap<string, Uint8Array>;
-}
-
-/**
- * Provider that joins one compile result to its current review snapshot.
- *
- * @author Samchon
- */
-export type AutoMovieReviewQueueProvider = (
-  compileStatus: IAutoMovieCompileProjectOutput,
-  snapshot?: IAutoMovieReviewQueueSnapshot,
-) => IAutoMovieReviewQueue;
-
-/**
  * Deterministic source compiler and generated-ownership gate.
  *
  * Coding-agent TypeScript runs in a no-I/O VM with explicit design input and
@@ -245,12 +214,7 @@ export type AutoMovieReviewQueueProvider = (
  * @author Samchon
  */
 export class AutoMovieProductionCompiler {
-  public constructor(
-    private readonly project: AutoMovieProductionProject,
-    private readonly reviewQueue: AutoMovieReviewQueueProvider = () => ({
-      entries: [],
-    }),
-  ) {}
+  public constructor(private readonly project: AutoMovieProductionProject) {}
 
   /**
    * Compile the active design and source through the requested gate.
@@ -670,33 +634,6 @@ export class AutoMovieProductionCompiler {
       diagnostics.push(
         ...this.generatedOwnershipDiagnostics(manifest, materialize),
       );
-    const statusForReview = (): IAutoMovieCompileProjectOutput => ({
-      success: diagnostics.every(
-        (diagnostic) => diagnostic.category !== "error",
-      ),
-      revision: this.project.revision(),
-      compiler: {
-        version: AUTOMOVIE_PRODUCTION_COMPILER_VERSION,
-        inputFingerprint,
-      },
-      diagnostics: [...diagnostics],
-      reviews: { entries: [] },
-      materialized: [],
-    });
-    const reviewSnapshot: IAutoMovieReviewQueueSnapshot | undefined =
-      contentInputs === undefined
-        ? undefined
-        : {
-            renderContentInputs: contentInputs,
-            generatedManifest: manifest!,
-            generatedFiles: files!,
-          };
-    const reviews: IAutoMovieReviewQueue =
-      diagnostics.some(
-        (diagnostic) => diagnostic.code === "content-input-unsafe",
-      ) || input.scope === "design"
-        ? { entries: [] }
-        : this.reviewQueue(statusForReview(), reviewSnapshot);
     const screenplay = this.project.screenplayIndex();
     diagnostics.push(
       ...screenplayResidencyDiagnostics({ contracts: graph.shots, screenplay }),
@@ -904,7 +841,6 @@ export class AutoMovieProductionCompiler {
           inputFingerprint,
         },
         diagnostics,
-        reviews: { entries: [] },
         materialized: [],
       };
     };
@@ -928,7 +864,6 @@ export class AutoMovieProductionCompiler {
             inputFingerprint,
           },
           diagnostics,
-          reviews,
           materialized: [],
         }
       );
@@ -942,7 +877,6 @@ export class AutoMovieProductionCompiler {
             inputFingerprint,
           },
           diagnostics,
-          reviews: { entries: [] },
           materialized: [],
         }
       );
@@ -960,7 +894,6 @@ export class AutoMovieProductionCompiler {
             inputFingerprint,
           },
           diagnostics,
-          reviews,
           materialized: [],
         }
       );
@@ -985,7 +918,6 @@ export class AutoMovieProductionCompiler {
         inputFingerprint,
       },
       diagnostics,
-      reviews,
       materialized,
     };
   }

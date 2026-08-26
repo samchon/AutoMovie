@@ -45,87 +45,88 @@ import { namedFacts } from "../internal/predicates";
  *    file's own `open()` — an errno about a path the reader never chose, with
  *    nothing to do about it.
  */
-export const test_production_coordination_root_override = async (): Promise<void> => {
-  const [honoured, relative, denied] = await Promise.all([
-    probe("absolute"),
-    probe("relative"),
-    probe("denied"),
-  ]);
+export const test_production_coordination_root_override =
+  async (): Promise<void> => {
+    const [honoured, relative, denied] = await Promise.all([
+      probe("absolute"),
+      probe("relative"),
+      probe("denied"),
+    ]);
 
-  TestValidator.equals(
-    "an absolute override moves the coordination root off the home",
-    namedFacts([
-      ["the lease is taken", () => honoured.leased === true],
-      // The lock file, not the return value. A lease under the home succeeds
-      // too, so only the file's location proves the override was read.
-      [
-        "and its lock file lands in the configured directory",
-        () => honoured.locksInRoot >= 1,
-      ],
-      ["with no refusal", () => honoured.refusal === ""],
-    ]),
-    {
-      "the lease is taken": true,
-      "and its lock file lands in the configured directory": true,
-      "with no refusal": true,
-    },
-  );
+    TestValidator.equals(
+      "an absolute override moves the coordination root off the home",
+      namedFacts([
+        ["the lease is taken", () => honoured.leased === true],
+        // The lock file, not the return value. A lease under the home succeeds
+        // too, so only the file's location proves the override was read.
+        [
+          "and its lock file lands in the configured directory",
+          () => honoured.locksInRoot >= 1,
+        ],
+        ["with no refusal", () => honoured.refusal === ""],
+      ]),
+      {
+        "the lease is taken": true,
+        "and its lock file lands in the configured directory": true,
+        "with no refusal": true,
+      },
+    );
 
-  TestValidator.equals(
-    "a relative override is refused rather than resolved",
-    namedFacts([
-      ["it refuses", () => relative.leased === false],
-      [
-        "naming the variable",
-        () => relative.refusal.includes("AUTOMOVIE_COORDINATION_ROOT"),
-      ],
-      // The reason, not just the rule. A reader who does not know why relative
-      // is wrong will set it relative again from a different directory.
-      [
-        "and saying why a relative root cannot work",
-        () =>
-          relative.refusal.includes("working directory") &&
-          relative.refusal.includes("exclude nothing"),
-      ],
-    ]),
-    {
-      "it refuses": true,
-      "naming the variable": true,
-      "and saying why a relative root cannot work": true,
-    },
-  );
+    TestValidator.equals(
+      "a relative override is refused rather than resolved",
+      namedFacts([
+        ["it refuses", () => relative.leased === false],
+        [
+          "naming the variable",
+          () => relative.refusal.includes("AUTOMOVIE_COORDINATION_ROOT"),
+        ],
+        // The reason, not just the rule. A reader who does not know why relative
+        // is wrong will set it relative again from a different directory.
+        [
+          "and saying why a relative root cannot work",
+          () =>
+            relative.refusal.includes("working directory") &&
+            relative.refusal.includes("exclude nothing"),
+        ],
+      ]),
+      {
+        "it refuses": true,
+        "naming the variable": true,
+        "and saying why a relative root cannot work": true,
+      },
+    );
 
-  TestValidator.equals(
-    "an unwritable coordination root refuses with the remedy rather than an errno",
-    namedFacts([
-      ["it refuses", () => denied.leased === false],
-      [
-        "the refusal names the directory it cannot write",
-        () => denied.refusal.includes("root-lock coordination directory"),
-      ],
-      [
-        "and names the variable that moves it",
-        () => denied.refusal.includes("AUTOMOVIE_COORDINATION_ROOT"),
-      ],
-      // The half an operator gets wrong: moving one process's root and not the
-      // other's is worse than not moving either, because both then proceed.
-      [
-        "and says both processes must be set to the same value",
-        () => denied.refusal.includes("exclude nothing"),
-      ],
-      // It refused during preparation. The old failure arrived at the lock
-      // file's own open(), after the caller had already been admitted.
-      ["and it never reached a lock file", () => denied.locksInRoot === 0],
-    ]),
-    {
-      "it refuses": true,
-      "the refusal names the directory it cannot write": true,
-      "and names the variable that moves it": true,
-      "and says both processes must be set to the same value": true,
-      "and it never reached a lock file": true,
-    },
-  );
-};
+    TestValidator.equals(
+      "an unwritable coordination root refuses with the remedy rather than an errno",
+      namedFacts([
+        ["it refuses", () => denied.leased === false],
+        [
+          "the refusal names the directory it cannot write",
+          () => denied.refusal.includes("root-lock coordination directory"),
+        ],
+        [
+          "and names the variable that moves it",
+          () => denied.refusal.includes("AUTOMOVIE_COORDINATION_ROOT"),
+        ],
+        // The half an operator gets wrong: moving one process's root and not the
+        // other's is worse than not moving either, because both then proceed.
+        [
+          "and says both processes must be set to the same value",
+          () => denied.refusal.includes("exclude nothing"),
+        ],
+        // It refused during preparation. The old failure arrived at the lock
+        // file's own open(), after the caller had already been admitted.
+        ["and it never reached a lock file", () => denied.locksInRoot === 0],
+      ]),
+      {
+        "it refuses": true,
+        "the refusal names the directory it cannot write": true,
+        "and names the variable that moves it": true,
+        "and says both processes must be set to the same value": true,
+        "and it never reached a lock file": true,
+      },
+    );
+  };
 
 interface IProbe {
   leased: boolean;

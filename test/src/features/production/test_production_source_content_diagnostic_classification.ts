@@ -47,10 +47,11 @@ import { productionFixture, rewriteSource } from "./productionFixtures";
  *    reports exactly one warning-severity diagnostic under the coverage
  *    identity, naming that sleeve.
  */
-export const test_production_source_content_diagnostic_classification = (): void => {
-  inspectKindMapping();
-  inspectUncitedPenetration();
-};
+export const test_production_source_content_diagnostic_classification =
+  (): void => {
+    inspectKindMapping();
+    inspectUncitedPenetration();
+  };
 
 const KINDS: readonly AutoMovieViolationKind[] = [
   "type",

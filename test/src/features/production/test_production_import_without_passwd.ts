@@ -43,59 +43,60 @@ import { namedFacts } from "../internal/predicates";
  *    lease still resolves, which is what makes the passwd entry a fallback
  *    rather than the source.
  */
-export const test_production_import_without_passwd = async (): Promise<void> => {
-  // Concurrent, because each probe pays a full package import and none of them
-  // is ordered against another: the comment on `probe` explains that each one
-  // already fences its own directory, which is what makes this safe.
-  const [denied, partial, intact] = await Promise.all([
-    probe("both"),
-    probe("passwd-only"),
-    probe("none"),
-  ]);
+export const test_production_import_without_passwd =
+  async (): Promise<void> => {
+    // Concurrent, because each probe pays a full package import and none of them
+    // is ordered against another: the comment on `probe` explains that each one
+    // already fences its own directory, which is what makes this safe.
+    const [denied, partial, intact] = await Promise.all([
+      probe("both"),
+      probe("passwd-only"),
+      probe("none"),
+    ]);
 
-  TestValidator.equals(
-    "the package imports where the home directory cannot be read",
-    namedFacts([
-      ["it imports", () => denied.imported === true],
-      ["its surface is there", () => denied.surface === true],
-      ["taking a lease is what refuses", () => denied.leased === false],
-      [
-        "and the refusal names the capability rather than a memory fault",
-        () => denied.refusal.includes("home directory"),
-      ],
-      [
-        "and says why no fallback path is offered",
-        () => denied.refusal.includes("fence against different roots"),
-      ],
-    ]),
-    {
-      "it imports": true,
-      "its surface is there": true,
-      "taking a lease is what refuses": true,
-      "and the refusal names the capability rather than a memory fault": true,
-      "and says why no fallback path is offered": true,
-    },
-  );
+    TestValidator.equals(
+      "the package imports where the home directory cannot be read",
+      namedFacts([
+        ["it imports", () => denied.imported === true],
+        ["its surface is there", () => denied.surface === true],
+        ["taking a lease is what refuses", () => denied.leased === false],
+        [
+          "and the refusal names the capability rather than a memory fault",
+          () => denied.refusal.includes("home directory"),
+        ],
+        [
+          "and says why no fallback path is offered",
+          () => denied.refusal.includes("fence against different roots"),
+        ],
+      ]),
+      {
+        "it imports": true,
+        "its surface is there": true,
+        "taking a lease is what refuses": true,
+        "and the refusal names the capability rather than a memory fault": true,
+        "and says why no fallback path is offered": true,
+      },
+    );
 
-  TestValidator.equals(
-    "the readers are what the case removed, so the clean run still leases",
-    namedFacts([
-      ["intact imports", () => intact.imported === true],
-      ["intact leases", () => intact.leased === true],
-      // The passwd entry is the fallback, not the source: losing it alone
-      // changes nothing.
-      [
-        "losing only the passwd entry changes nothing",
-        () => partial.leased === true,
-      ],
-    ]),
-    {
-      "intact imports": true,
-      "intact leases": true,
-      "losing only the passwd entry changes nothing": true,
-    },
-  );
-};
+    TestValidator.equals(
+      "the readers are what the case removed, so the clean run still leases",
+      namedFacts([
+        ["intact imports", () => intact.imported === true],
+        ["intact leases", () => intact.leased === true],
+        // The passwd entry is the fallback, not the source: losing it alone
+        // changes nothing.
+        [
+          "losing only the passwd entry changes nothing",
+          () => partial.leased === true,
+        ],
+      ]),
+      {
+        "intact imports": true,
+        "intact leases": true,
+        "losing only the passwd entry changes nothing": true,
+      },
+    );
+  };
 
 interface IProbe {
   imported: boolean;

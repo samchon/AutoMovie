@@ -140,8 +140,10 @@ const renderSandbox = (name, specifiers) => {
  * The sandbox's manifest: the scaffold's, with every workspace package pinned
  * to its sibling tarball.
  *
- * Every one of the nine is pinned directly, including `evidence`, `ingest`, and `render`
- * which the scaffold never names. `pnpm pack` rewrites each packed package's
+ * Every one of them is pinned directly, including `evidence`, `ingest`, and
+ * `render` which the scaffold never names. Each is pinned under its published
+ * name rather than under `@automovie/` plus its directory, because the
+ * command-line package publishes as `automovie`. `pnpm pack` rewrites each packed package's
  * own `workspace:^` ranges into plain semver, so an unpinned member is fetched
  * from the public registry at a version this monorepo has never published, and
  * the install dies on `ERR_PNPM_FETCH_404 .../@automovie%2Fengine`. A direct
@@ -157,13 +159,12 @@ const renderSandbox = (name, specifiers) => {
  */
 const sandboxManifest = (rendered, specifiers) => {
   const manifest = JSON.parse(rendered);
-  for (const name of Object.keys(specifiers)) {
-    if (specifiers[name] === undefined) continue;
-    const dependency = `@automovie/${name}`;
+  for (const { key, name: dependency } of PACKAGES) {
+    if (specifiers[key] === undefined) continue;
     const table = Object.hasOwn(manifest.devDependencies ?? {}, dependency)
       ? manifest.devDependencies
       : manifest.dependencies;
-    table[dependency] = specifiers[name];
+    table[dependency] = specifiers[key];
   }
   return `${JSON.stringify(manifest, null, 2)}\n`;
 };
