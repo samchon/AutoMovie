@@ -2,23 +2,35 @@ import fs from "node:fs";
 import path from "node:path";
 
 const root = path.resolve(process.env.CLAUDE_PROJECT_DIR ?? process.cwd());
-const manifestPath = path.join(root, ".automovie", "manifest.json");
+const packagePath = path.join(root, "package.json");
 
 const block = (message) => {
   process.stderr.write(`AutoMovie ownership guard: ${message}\n`);
   process.exit(2);
 };
 
-if (fs.existsSync(manifestPath) === false) process.exit(0);
-
-let manifest;
-try {
-  manifest = JSON.parse(fs.readFileSync(manifestPath, "utf8"));
-} catch {
-  block(
-    "the existing .automovie/manifest.json is unreadable; repair it before editing generated state.",
-  );
-}
+/**
+ * Arm only inside an AutoMovie project.
+ *
+ * This hook ships inside the scaffold, so copying it somewhere else must not
+ * let it claim unrelated files. The signal is the project's declared
+ * dependency on the CLI: a directory that does not depend on `@automovie/cli`
+ * owns no generated or render root for this guard to protect.
+ */
+const declared = (() => {
+  if (fs.existsSync(packagePath) === false) process.exit(0);
+  try {
+    return JSON.parse(fs.readFileSync(packagePath, "utf8"));
+  } catch {
+    process.exit(0);
+  }
+})();
+if (
+  ["dependencies", "devDependencies"].some(
+    (field) => typeof declared?.[field]?.["@automovie/cli"] === "string",
+  ) === false
+)
+  process.exit(0);
 
 const canonical = (value) =>
   process.platform === "win32" ? value.toLowerCase() : value;
@@ -69,9 +81,16 @@ const ownedRoot = (value, field, owner) => {
   return { absolute, physical: physicalPath(absolute), owner };
 };
 
+/**
+ * The compiler- and renderer-owned roots.
+ *
+ * These are the harness's fixed layout rather than a per-project declaration,
+ * so they are stated here instead of read back from a file every project
+ * carried a copy of.
+ */
 const owned = [
-  ownedRoot(manifest.generatedRoot, "generatedRoot", "npm run compile"),
-  ownedRoot(manifest.renderRoot, "renderRoot", "npm run render"),
+  ownedRoot("generated", "generatedRoot", "npm run compile"),
+  ownedRoot("renders", "renderRoot", "npm run render"),
   ownedRoot(
     ".automovie/productions",
     "production state root",

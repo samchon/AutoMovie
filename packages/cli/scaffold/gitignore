@@ -3,7 +3,6 @@ lib/
 dist/
 generated/
 .automovie/*
-!.automovie/manifest.json
 !.automovie/assets.json
 !.automovie/derived-artifacts.json
 !.automovie/derived/

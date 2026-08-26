@@ -32,7 +32,9 @@ export const productionPublicationInputFingerprint = (
     incarnationDigest: digestAutoMovieBytes(projectState.incarnation),
     manifest: {
       value: project.manifest(),
-      digest: digestAutoMovieBytes(projectState.manifest),
+      digest: digestAutoMovieBytes(
+        Buffer.from(JSON.stringify(project.manifest()), "utf8"),
+      ),
     },
     design: {
       production: graph.production,

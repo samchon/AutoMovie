@@ -1,8 +1,8 @@
 import type { AutoMovieCaptureBrowserConfig } from "./scripts/capture-browser";
 
 /**
- * Viewer-host settings. Production ownership roots live only in the
- * authoritative `.automovie/manifest.json` read by the compiler and plugin.
+ * Viewer-host settings. Production ownership roots are the harness's fixed
+ * layout rather than a project declaration, so they are not restated here.
  */
 export default {
   /** Stable production namespace selected by project scripts. */
