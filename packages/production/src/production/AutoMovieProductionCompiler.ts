@@ -150,6 +150,7 @@ import { AutoMovieModelArchetypeRegistry } from "./productionArchetypes";
 import { productionRenderTargetFingerprint } from "./renderIdentity";
 import {
   assetReviewEvidenceDiagnostics,
+  consumedModelIds,
   reviewEvidenceDiagnostics,
 } from "./reviewEvidenceDiagnostics";
 import {
@@ -745,7 +746,7 @@ export class AutoMovieProductionCompiler {
         }),
         ...assetReviewEvidenceDiagnostics({
           captured,
-          consumed: consumedModelIds(graph, runtimeModels),
+          consumed: consumedModelIds(graph, compiled),
           fingerprint,
           rigged: (model) => this.compiledModelIsRigged(model),
           scope: input.scope,
@@ -7956,39 +7957,6 @@ const screenplayResidencyDiagnostics = (props: {
           message: `${props.contracts.size} shot contract(s) are resident with no screenplay index. Their scene citations join to numbering that does not exist, so nothing downstream can be traced to authored work. Author the screenplay index, then compile again.`,
         },
       ];
-
-/**
- * Every model this production actually stages, closed under level of detail.
- *
- * An asset review is owed by what the film puts on screen, not by what the
- * library happens to hold: a recipe nothing stages is an unused design, and
- * asking it for a turntable would make the gate a tax on the library. Both
- * sides are read because both can introduce a model -- a contract naming an
- * actor or a formation, and a compiled shot source whose build path resolved
- * one the design never named.
- */
-const consumedModelIds = (
-  graph: IAutoMovieProductionDesignGraph,
-  runtime: ReadonlyMap<string, IAutoMovieCompiledShotSource["models"][number]>,
-): string[] => {
-  const models = new Set<string>();
-  const add = (id: string): void => {
-    if (models.has(id)) return;
-    const recipe = graph.models.get(id);
-    if (recipe === undefined) return;
-    models.add(id);
-    for (const tier of recipe.lod) add(tier.recipe);
-  };
-  for (const shot of graph.shots.values())
-    for (const participant of shot.participants)
-      if (participant.kind === "actor") add(participant.id);
-      else {
-        const formation = graph.formations.get(participant.id);
-        if (formation !== undefined) add(formation.modelRecipe);
-      }
-  for (const id of runtime.keys()) add(id);
-  return [...models].sort(compareCodeUnits);
-};
 
 const finalDeliverableDiagnostics = (
   project: AutoMovieProductionProject,

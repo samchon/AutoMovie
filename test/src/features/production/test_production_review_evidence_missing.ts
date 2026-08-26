@@ -23,6 +23,17 @@ const unit = require(
     "../../../../packages/production/src/production/reviewEvidenceDiagnostics.ts",
   ),
 ) as {
+  consumedModelIds: (
+    graph: {
+      models: ReadonlyMap<string, { lod: Array<{ recipe: string }> }>;
+      shots: ReadonlyMap<
+        string,
+        { participants: Array<{ kind: string; id: string }> }
+      >;
+      formations: ReadonlyMap<string, { modelRecipe: string }>;
+    },
+    compiled: ReadonlyMap<string, { models: Array<{ id: string }> }>,
+  ) => string[];
   assetReviewEvidenceDiagnostics: (props: {
     consumed: readonly string[];
     rigged: (model: string) => boolean;
@@ -48,7 +59,37 @@ const unit = require(
     ) => ReadonlyArray<{ time: number; pass: AutoMovieGuidePass }>;
   }) => IAutoMovieDiagnostic[];
 };
-const { assetReviewEvidenceDiagnostics, reviewEvidenceDiagnostics } = unit;
+const {
+  assetReviewEvidenceDiagnostics,
+  consumedModelIds,
+  reviewEvidenceDiagnostics,
+} = unit;
+
+/**
+ * A design holding one staged model, one unstaged model, and one reached only
+ * through a formation and a level-of-detail tier.
+ */
+const designGraph = {
+  models: new Map([
+    ["soloist", { lod: [{ recipe: "soloist-far" }] }],
+    ["soloist-far", { lod: [] }],
+    ["crowd-member", { lod: [] }],
+    ["prop-nobody-stages", { lod: [] }],
+    ["resolved-by-build", { lod: [] }],
+  ]),
+  shots: new Map([
+    [
+      "opening",
+      {
+        participants: [
+          { kind: "actor", id: "soloist" },
+          { kind: "formation", id: "chorus" },
+        ],
+      },
+    ],
+  ]),
+  formations: new Map([["chorus", { modelRecipe: "crowd-member" }]]),
+};
 
 const FINGERPRINT =
   "sha256:1111111111111111111111111111111111111111111111111111111111111111" as AutoMovieContentDigest;
@@ -271,6 +312,31 @@ export const test_production_review_evidence_missing = (): void => {
         () => asset({}).at(0)?.message.includes("rig-rom-extremes") === false,
       ],
       ["assetCompleteIsSilent", () => asset({ held: true }).length === 0],
+      // The consumed set is what the film stages, closed under level of
+      // detail, from both the contracts and the compiled shot sources. Reading
+      // the materialized inventory instead would return every declared recipe
+      // and make the gate a tax on the library.
+      [
+        "stagesAreConsumed",
+        () =>
+          consumedModelIds(designGraph, new Map()).join(",") ===
+          "crowd-member,soloist,soloist-far",
+      ],
+      [
+        "aBuildPathModelIsConsumed",
+        () =>
+          consumedModelIds(
+            designGraph,
+            new Map([["opening", { models: [{ id: "resolved-by-build" }] }]]),
+          ).includes("resolved-by-build"),
+      ],
+      [
+        "anUnstagedRecipeIsNotConsumed",
+        () =>
+          consumedModelIds(designGraph, new Map()).includes(
+            "prop-nobody-stages",
+          ) === false,
+      ],
       // The pass lives on the frame rather than on the target, so a bundle
       // standing at the overhead angle proves nothing about which pass was
       // drawn there.
@@ -325,6 +391,9 @@ export const test_production_review_evidence_missing = (): void => {
       aRigOwesItsExtremes: true,
       anUnriggedModelDoesNot: true,
       assetCompleteIsSilent: true,
+      stagesAreConsumed: true,
+      aBuildPathModelIsConsumed: true,
+      anUnstagedRecipeIsNotConsumed: true,
       anOutlineViewIsNotSatisfiedByBeauty: true,
       aBeautyViewIsNotSatisfiedByOutline: true,
       anUnstagedModelOwesNothing: true,

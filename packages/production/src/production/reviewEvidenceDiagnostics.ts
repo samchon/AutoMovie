@@ -1,12 +1,15 @@
 import {
   AutoMovieContentDigest,
   AutoMovieGuidePass,
+  IAutoMovieCompiledShotSource,
   IAutoMovieDiagnostic,
   IAutoMovieRenderBundleManifest,
   IAutoMovieShotContract,
 } from "@automovie/interface";
 
 import { autoMovieAssetReviewViews } from "./assetReviewViews";
+import { compareCodeUnits } from "./contentIdentity";
+import type { IAutoMovieProductionDesignGraph } from "./validateProductionDesign";
 
 /**
  * One frame a target's contract declares and the passes it declares with it.
@@ -196,4 +199,42 @@ const describe = (missing: readonly IOwedView[]): string => {
   return missing.length <= LIMIT
     ? `Missing ${named}.`
     : `Missing ${named}, and ${missing.length - LIMIT} more.`;
+};
+
+/**
+ * Every model this production actually stages, closed under level of detail.
+ *
+ * An asset review is owed by what the film puts on screen, not by what the
+ * library happens to hold: a recipe nothing stages is an unused design, and
+ * asking it for a turntable would make the gate a tax on the library. Both
+ * sides are read because both can introduce a model -- a contract naming an
+ * actor or a formation, and a compiled shot source whose build path resolved
+ * one the design never named.
+ */
+export const consumedModelIds = (
+  graph: IAutoMovieProductionDesignGraph,
+  compiled: ReadonlyMap<string, IAutoMovieCompiledShotSource>,
+): string[] => {
+  const models = new Set<string>();
+  const add = (id: string): void => {
+    if (models.has(id)) return;
+    const recipe = graph.models.get(id);
+    if (recipe === undefined) return;
+    models.add(id);
+    for (const tier of recipe.lod) add(tier.recipe);
+  };
+  for (const shot of graph.shots.values())
+    for (const participant of shot.participants)
+      if (participant.kind === "actor") add(participant.id);
+      else {
+        const formation = graph.formations.get(participant.id);
+        if (formation !== undefined) add(formation.modelRecipe);
+      }
+  // Each compiled shot's own model list, never the materialized inventory. The
+  // inventory holds every recipe the design declares, so reading it would make
+  // the gate ask for a turntable of a model nothing stages -- a tax on the
+  // library, which is exactly what this rule exists to avoid.
+  for (const shot of compiled.values())
+    for (const model of shot.models) add(model.id);
+  return [...models].sort(compareCodeUnits);
 };
