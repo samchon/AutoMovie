@@ -20,7 +20,6 @@ import { AutoMovieProductionCompiler } from "./AutoMovieProductionCompiler";
 import type { IAutoMovieProductionServices } from "./AutoMovieProductionContext";
 import { AutoMovieProductionOracleService } from "./AutoMovieProductionOracleService";
 import { AutoMovieProductionProject } from "./AutoMovieProductionProject";
-import { AutoMovieProductionReviewService } from "./AutoMovieProductionReviewService";
 import { compareCodeUnits } from "./contentIdentity";
 import { readAutoMovieFilmTimeline } from "./filmTimeline";
 import type { AutoMovieModelArchetypeRegistry } from "./productionArchetypes";
@@ -76,7 +75,7 @@ export const findAutoMovieProjectRoot = (
 };
 
 /**
- * Open the non-MCP compiler, oracle, review, and project runtime.
+ * Open the compiler, oracle, and project runtime.
  */
 export const openAutoMovieProduction = (props: {
   /** Host-owned path at or below the project root. */
@@ -100,16 +99,9 @@ export const openAutoMovieProduction = (props: {
     props.archetypes,
   );
   const statusCompiler = new AutoMovieProductionCompiler(project);
-  const review = new AutoMovieProductionReviewService(project, () =>
-    statusCompiler.lint({ scope: "source" }),
-  );
-  const compiler = new AutoMovieProductionCompiler(
-    project,
-    (status, snapshot) => review.queue(status, snapshot),
-  );
+  const compiler = new AutoMovieProductionCompiler(project);
   return {
     project,
-    review,
     compiler,
     compileStatus: () => statusCompiler.lint({ scope: "source" }),
     oracle: new AutoMovieProductionOracleService(project, props.capture, () =>
@@ -162,7 +154,6 @@ export const inspectAutoMovieProduction = (
     .filter((file) => owned.has(file) === false);
   const compilation = services.compileStatus();
   const diagnostics = compilation.diagnostics;
-  const reviews = services.review.queue(compilation);
   const sequenceIds = new Set(
     (services.project.screenplayIndex()?.treatment.sequences ?? []).map(
       (sequence) => sequence.id,
@@ -194,14 +185,6 @@ export const inspectAutoMovieProduction = (
     ...diagnostics
       .filter((diagnostic) => diagnostic.category === "error")
       .map(diagnosticNextAction),
-    ...reviews.entries
-      .filter((entry) => entry.state !== "complete")
-      .map((entry) => ({
-        owner: "review" as const,
-        action: "prepareReview",
-        target: JSON.stringify(entry.target),
-        reason: `Current review state is ${entry.state}.`,
-      })),
   ];
   const captionReadability =
     compilation.success &&
@@ -221,7 +204,6 @@ export const inspectAutoMovieProduction = (
     design: services.project.inventory(),
     source: { bound, missing, unownedGenerated },
     diagnostics,
-    reviews,
     renders,
     captionReadability,
     nextActions,

@@ -10,7 +10,6 @@ export * from "./production/AutoMovieProductionCompiler";
 export * from "./production/AutoMovieProductionContext";
 export * from "./production/AutoMovieProductionOracleService";
 export * from "./production/AutoMovieProductionProject";
-export * from "./production/AutoMovieProductionReviewService";
 export * from "./production/captureRuntimeIdentity";
 export * from "./production/contentIdentity";
 export * from "./production/assetAcquisition";

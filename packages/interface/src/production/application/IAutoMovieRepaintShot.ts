@@ -159,13 +159,6 @@ export interface IAutoMovieRepaintReceipt {
    */
   sourceRenderFingerprint: AutoMovieContentDigest;
   /**
-   * Current completed deterministic shot-review fingerprint.
-   *
-   * @evidence requirements/repaint/scope-and-user-choice.md#repaint-independent-artifact Exposes `sourceReviewFingerprint` as the portable data boundary for the repaint independent artifact requirement.
-   * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-repaint-output-provenance Types `sourceReviewFingerprint` for the asset spec repaint output provenance system contract.
-   */
-  sourceReviewFingerprint: AutoMovieContentDigest;
-  /**
    * Host-generated identity of this repaint invocation.
    *
    * @evidence requirements/repaint/scope-and-user-choice.md#repaint-independent-artifact Exposes `attemptId` as the portable data boundary for the repaint independent artifact requirement.

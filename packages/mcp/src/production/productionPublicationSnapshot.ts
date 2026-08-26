@@ -2,7 +2,6 @@ import { AutoMovieContentDigest } from "@automovie/interface";
 
 import { AutoMovieProductionCompiler } from "./AutoMovieProductionCompiler";
 import { AutoMovieProductionProject } from "./AutoMovieProductionProject";
-import { AutoMovieProductionReviewService } from "./AutoMovieProductionReviewService";
 import {
   canonicalAutoMovieJsonBytes,
   digestAutoMovieBytes,
@@ -55,17 +54,9 @@ export const productionPublicationInputFingerprint = (
   const compiler = new AutoMovieProductionCompiler(project).lint({
     scope: "source",
   });
-  const reviews = new AutoMovieProductionReviewService(
-    project,
-    () => compiler,
-  ).queue(compiler);
   return digestAutoMovieBytes(
     canonicalAutoMovieJsonBytes({
       ...snapshot,
-      reviews: reviews.entries.map((entry) => ({
-        ...entry,
-        value: project.review(entry.target),
-      })),
       compiler: {
         success: compiler.success,
         inputFingerprint: compiler.compiler.inputFingerprint,

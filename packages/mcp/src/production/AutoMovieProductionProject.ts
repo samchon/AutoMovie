@@ -1975,15 +1975,6 @@ export class AutoMovieProductionProject {
       ) !== canonicalizeAutoMovieJson(receipt.controls)
     )
       throw new Error("Stored repaint receipt source evidence is stale.");
-    const sourceReview = this.review({ kind: "shot", id: receipt.shot });
-    if (
-      sourceReview === null ||
-      sourceReview.complete === false ||
-      sourceReview.fingerprint !== receipt.sourceReviewFingerprint
-    )
-      throw new Error(
-        "Stored repaint receipt is not bound to the current completed deterministic shot review.",
-      );
     let runtimeIdentity: unknown;
     try {
       runtimeIdentity = JSON.parse(receipt.adapterIdentity);

@@ -7,7 +7,6 @@ import {
 import { AutoMovieProductionCompiler } from "./AutoMovieProductionCompiler";
 import { AutoMovieProductionOracleService } from "./AutoMovieProductionOracleService";
 import { AutoMovieProductionProject } from "./AutoMovieProductionProject";
-import { AutoMovieProductionReviewService } from "./AutoMovieProductionReviewService";
 import {
   findAutoMovieProjectRoot,
   openAutoMovieProduction,
@@ -31,11 +30,7 @@ export interface IAutoMovieProductionServices {
    */
   oracle: AutoMovieProductionOracleService;
   /**
-   * Evidence-bound review ledger.
-   */
-  review: AutoMovieProductionReviewService;
-  /**
-   * Read-only source-gate status without review-queue recursion.
+   * Read-only source-gate status.
    */
   compileStatus: () => IAutoMovieCompileProjectOutput;
 }

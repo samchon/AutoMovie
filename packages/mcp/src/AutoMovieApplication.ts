@@ -4,9 +4,7 @@ import {
   IAutoMovieCaptureFrame,
   IAutoMovieCaptureTurntable,
   IAutoMovieGetGuideDocument,
-  IAutoMoviePrepareReview,
   IAutoMovieRepaintShot,
-  IAutoMovieSubmitReview,
 } from "@automovie/interface";
 
 import { AutoMovieProductionContext } from "./production/AutoMovieProductionContext";
@@ -15,10 +13,6 @@ import { AutoMovieProductionRepaintService } from "./production/AutoMovieProduct
 import { captureAutoMovieProductionFrame } from "./production/captureProductionFrame";
 import { captureAutoMovieProductionTurntable } from "./production/captureProductionTurntable";
 import type { AutoMovieModelArchetypeRegistry } from "./production/productionArchetypes";
-import {
-  prepareAutoMovieReviewWorksheet,
-  submitAutoMovieReviewWorksheet,
-} from "./production/reviewWorksheet";
 import {
   type AutoMovieProductionSubjectInspection,
   AutoMovieProductionSubjectInspectionService,
@@ -189,36 +183,4 @@ export class AutoMovieApplication {
     return this.inspections.serve(this.context, props);
   }
 
-  /**
-   * Prepare the current review worksheet for one target.
-   *
-   * It returns that target's exact fingerprint, the axes its kind must answer,
-   * and the current evidence that kind carries. A kind that carries no frame or
-   * outcome returns an empty inventory rather than a stand-in.
-   *
-   * It judges nothing and stores nothing. Recording a verdict is
-   * `submitReview`.
-   */
-  public prepareReview(
-    props: IAutoMoviePrepareReview.IProps,
-  ): IAutoMoviePrepareReview {
-    return prepareAutoMovieReviewWorksheet(this.context, props);
-  }
-
-  /**
-   * Validate one submitted worksheet against its freshly prepared fingerprint
-   * and store it atomically.
-   *
-   * Every criterion and every current evidence digest is rechecked here.
-   * Rejected or stale input stores no completion at all.
-   *
-   * Corrections and completion basis precede the final boolean deliberately.
-   * The reviewer states what it saw and what it corrected before it declares
-   * the target done.
-   */
-  public submitReview(
-    props: IAutoMovieSubmitReview.IProps,
-  ): IAutoMovieSubmitReview {
-    return submitAutoMovieReviewWorksheet(this.context, props);
-  }
 }

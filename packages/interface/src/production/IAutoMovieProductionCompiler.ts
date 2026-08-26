@@ -4272,13 +4272,6 @@ export interface IAutoMovieProductionInspection {
    */
   diagnostics: IAutoMovieDiagnostic[];
   /**
-   * Current review ledger projection.
-   *
-   * @evidence requirements/asset-authoring/generated-assets.md#asset-generation-provider-independence Exposes `reviews` as the portable data boundary for the asset generation provider independence requirement.
-   * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-generation-provider-choice Types `reviews` for the asset spec generation provider choice system contract.
-   */
-  reviews: IAutoMovieReviewQueue;
-  /**
    * Discovered render manifests.
    *
    * @evidence requirements/asset-authoring/generated-assets.md#asset-generation-provider-independence Exposes `renders` as the portable data boundary for the asset generation provider independence requirement.
