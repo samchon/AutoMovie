@@ -36,9 +36,10 @@ const guard = (
 /**
  * The project hook distinguishes authored files from tool-owned derivatives.
  *
- * Missing config is intentionally fail-open so the reusable hook does not
- * capture unrelated directories. Once a manifest exists, invalid config fails
- * closed and each derived root names the command that owns it.
+ * A directory that does not declare `@automovie/cli` is intentionally
+ * fail-open, so the reusable hook cannot capture unrelated directories when it
+ * is copied out of a project. Inside a real project each derived root names the
+ * command that owns it.
  */
 export const test_cli_ownership_guard = (): void => {
   const base = fs.mkdtempSync(path.join(os.tmpdir(), "automovie-guard-"));
@@ -177,29 +178,42 @@ export const test_cli_ownership_guard = (): void => {
       },
     );
 
-    const manifest = path.join(root, ".automovie", "manifest.json");
-    fs.rmSync(manifest);
+    const declaration = path.join(root, "package.json");
+    const original = fs.readFileSync(declaration, "utf8");
+    const stripped = JSON.parse(original) as {
+      dependencies?: Record<string, string>;
+      devDependencies?: Record<string, string>;
+    };
+    delete stripped.dependencies?.["@automovie/cli"];
+    delete stripped.devDependencies?.["@automovie/cli"];
+    fs.writeFileSync(declaration, JSON.stringify(stripped, null, 2));
+    const undeclared = guard(root, "Write", {
+      file_path: path.join(root, "generated", "film.json"),
+    });
+    fs.rmSync(declaration);
     const absent = guard(root, "Write", {
       file_path: path.join(root, "generated", "film.json"),
     });
-    fs.writeFileSync(manifest, "{ broken manifest");
-    const malformed = guard(root, "Write", {
+    fs.writeFileSync(declaration, original);
+    const restored = guard(root, "Write", {
       file_path: path.join(root, "generated", "film.json"),
     });
     TestValidator.equals(
-      "missing config is fail-open but malformed existing config blocks",
+      "the guard arms on the declared AutoMovie dependency and nothing else",
       namedFacts([
+        ["undeclaredStatus", () => undeclared.status === 0],
         ["absentStatus", () => absent.status === 0],
-        ["malformedStatus", () => malformed.status === 2],
+        ["restoredStatus", () => restored.status === 2],
         [
-          "malformedStderrIncludes",
-          () => malformed.stderr.includes("manifest.json is unreadable"),
+          "restoredStderrIncludes",
+          () => restored.stderr.includes("npm run compile"),
         ],
       ]),
       {
+        undeclaredStatus: true,
         absentStatus: true,
-        malformedStatus: true,
-        malformedStderrIncludes: true,
+        restoredStatus: true,
+        restoredStderrIncludes: true,
       },
     );
   } catch (error) {

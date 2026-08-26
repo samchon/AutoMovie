@@ -201,7 +201,6 @@ export class AutoMovieProductionProject {
   private readonly automovieRoot: string;
   private readonly automovieIdentity: string;
   private readonly incarnationPath: string;
-  private readonly manifestPath: string;
   private readonly registryPath: string;
   private readonly productionSegment: string;
   private readonly productionStateRoot: string;
@@ -244,7 +243,6 @@ export class AutoMovieProductionProject {
     this.rootInode = rootIdentity.inode;
     this.automovieRoot = path.join(root, ".automovie");
     this.incarnationPath = path.join(this.automovieRoot, "incarnation.json");
-    this.manifestPath = path.join(this.automovieRoot, "manifest.json");
     this.registryPath = path.join(this.automovieRoot, "productions.json");
     const initialStateRoot = lstatOrNull(this.automovieRoot);
     if (initialStateRoot?.isSymbolicLink())
@@ -277,23 +275,10 @@ export class AutoMovieProductionProject {
         incarnation,
         this.incarnationPath,
       );
-    const existing = readOwnedJson(this.rootReal, this.manifestPath);
-    this.initialized_ = existing === undefined;
-    if (existing === undefined) {
-      if (readOnly)
-        throw new Error(
-          `Read-only verification requires existing manifest "${this.manifestPath}". Run npm run compile once to initialize the project.`,
-        );
-      this.manifest_ = {
-        formatVersion: 2,
-        projectId: projectIdOf(root),
-        sourceRoots: ["src"],
-        generatedRoot: "generated",
-        renderRoot: "renders",
-      };
-      this.writeOwnedJsonAtomic(this.manifestPath, this.manifest_);
-    } else this.manifest_ = validateManifest(existing, this.manifestPath);
-    validateOwnershipLayout(this.root, this.manifest_, this.manifestPath);
+    this.initialized_ =
+      readOwnedJson(this.rootReal, this.registryPath) === undefined;
+    this.manifest_ = { ...PROJECT_LAYOUT, projectId: projectIdOf(root) };
+    validateOwnershipLayout(this.root, this.manifest_, PROJECT_LAYOUT_LABEL);
     const registration = readOnly
       ? this.readProductionRegistration(requestedProductionId)
       : this.activateProduction(requestedProductionId);
@@ -352,7 +337,7 @@ export class AutoMovieProductionProject {
       this.rootReal,
       this.root,
       this.manifest_,
-      this.manifestPath,
+      PROJECT_LAYOUT_LABEL,
     );
     this.lastReadRevision_ = readRevision(this.rootReal, this.revisionPath);
   }
@@ -825,7 +810,6 @@ export class AutoMovieProductionProject {
    */
   public projectStateRecords(): {
     incarnation: Uint8Array;
-    manifest: Uint8Array;
   } {
     this.assertIncarnation();
     const root = ownedRootReal(this.rootReal, this.automovieRoot);
@@ -839,7 +823,6 @@ export class AutoMovieProductionProject {
     };
     return {
       incarnation: read(this.incarnationPath),
-      manifest: read(this.manifestPath),
     };
   }
 
@@ -3260,6 +3243,38 @@ interface IAutoMovieProductionRegistry {
   incarnations: Record<string, string>;
 }
 
+/**
+ * Label used where an ownership-layout diagnostic once named a manifest file.
+ */
+const PROJECT_LAYOUT_LABEL = "the AutoMovie project layout";
+
+/**
+ * The project ownership layout, which is the harness's own fixed shape rather
+ * than a per-project declaration.
+ *
+ * This was a tracked `.automovie/manifest.json` that every project carried a
+ * copy of, and the copy could only ever restate what this constant already
+ * says: the class synthesized exactly these values whenever the file was
+ * missing. A per-project file that no project may vary is a second source of
+ * one truth, so the constant is the only source now and `projectId` is derived
+ * from the project directory.
+ */
+const PROJECT_LAYOUT = {
+  formatVersion: 2,
+  sourceRoots: ["src"],
+  contentRoots: ["viewer", "scripts", "public"],
+  contentFiles: [
+    "automovie.config.ts",
+    "vite.config.ts",
+    "package.json",
+    "package-lock.json",
+  ],
+  generatedRoot: "generated",
+  renderRoot: "renders",
+  assetManifest: ".automovie/assets.json",
+  derivedArtifactManifest: ".automovie/derived-artifacts.json",
+} as const satisfies Omit<IAutoMovieProductionManifest, "projectId">;
+
 const SHARED_DESIGN_DIRECTORIES = ["models", "formations"] as const;
 
 const PRODUCTION_DESIGN_DIRECTORIES = [
@@ -3389,84 +3404,6 @@ const readOwnedJson = (rootReal: string, file: string): unknown => {
   }
 };
 
-const validateManifest = (
-  value: unknown,
-  file: string,
-): IAutoMovieProductionManifest & Record<string, unknown> => {
-  if (
-    typeof value !== "object" ||
-    value === null ||
-    Array.isArray(value) ||
-    (value as { formatVersion?: unknown }).formatVersion !== 2
-  )
-    throw new Error(
-      `Unsupported production manifest "${file}". Set formatVersion to 2 or run the legacy importer.`,
-    );
-  const record = value as Record<string, unknown>;
-  if (
-    typeof record.projectId !== "string" ||
-    record.projectId.trim().length === 0 ||
-    Array.isArray(record.sourceRoots) === false ||
-    record.sourceRoots.length === 0 ||
-    record.sourceRoots.some(
-      (entry) => typeof entry !== "string" || entry.trim().length === 0,
-    ) ||
-    (record.contentRoots !== undefined &&
-      (Array.isArray(record.contentRoots) === false ||
-        record.contentRoots.some(
-          (entry) => typeof entry !== "string" || entry.trim().length === 0,
-        ))) ||
-    (record.contentFiles !== undefined &&
-      (Array.isArray(record.contentFiles) === false ||
-        record.contentFiles.some(
-          (entry) => typeof entry !== "string" || entry.trim().length === 0,
-        ))) ||
-    (record.assetManifest !== undefined &&
-      record.assetManifest !== ".automovie/assets.json") ||
-    (record.derivedArtifactManifest !== undefined &&
-      record.derivedArtifactManifest !== ".automovie/derived-artifacts.json") ||
-    typeof record.generatedRoot !== "string" ||
-    record.generatedRoot.trim().length === 0 ||
-    typeof record.renderRoot !== "string" ||
-    record.renderRoot.trim().length === 0
-  )
-    throw new Error(
-      `Invalid production manifest "${file}". Provide projectId, sourceRoots, generatedRoot and renderRoot; when present, assetManifest must be ".automovie/assets.json" and derivedArtifactManifest must be ".automovie/derived-artifacts.json".`,
-    );
-  const manifest = record as IAutoMovieProductionManifest &
-    Record<string, unknown>;
-  const pathGroups = [
-    ["sourceRoots", manifest.sourceRoots],
-    ["contentRoots", manifest.contentRoots ?? []],
-    ["contentFiles", manifest.contentFiles ?? []],
-    ["generatedRoot", [manifest.generatedRoot]],
-    ["renderRoot", [manifest.renderRoot]],
-  ] as const;
-  const spellings = new Map<string, string>();
-  for (const [owner, values] of pathGroups) {
-    const local = new Set<string>();
-    for (const pathValue of values) {
-      if (isCanonicalManifestPath(pathValue) === false)
-        throw new Error(
-          `Invalid production manifest "${file}": ${owner} entry "${pathValue}" must be one canonical project-relative POSIX path without absolute roots, backslashes, empty segments, "." or "..".`,
-        );
-      const folded = pathValue.toLowerCase();
-      if (local.has(folded))
-        throw new Error(
-          `Invalid production manifest "${file}": ${owner} repeats portable path "${pathValue}". Keep each entry once with one case spelling.`,
-        );
-      local.add(folded);
-      const prior = spellings.get(folded);
-      if (prior !== undefined && prior !== pathValue)
-        throw new Error(
-          `Invalid production manifest "${file}": path "${pathValue}" collides with "${prior}" on a case-insensitive filesystem. Use one portable spelling.`,
-        );
-      spellings.set(folded, pathValue);
-    }
-  }
-  return manifest;
-};
-
 const validateProductionRegistry = (
   value: unknown,
   file: string,
@@ -3570,14 +3507,6 @@ const legacyProductionId = (
     );
   return id;
 };
-
-const isCanonicalManifestPath = (value: string): boolean =>
-  path.posix.isAbsolute(value) === false &&
-  /^[A-Za-z]:/.test(value) === false &&
-  value.includes("\\") === false &&
-  value !== "." &&
-  path.posix.normalize(value) === value &&
-  value.split("/").every((segment) => segment.length > 0 && segment !== "..");
 
 const validateOwnershipLayout = (
   root: string,
@@ -4350,7 +4279,27 @@ const isUuid = (value: unknown): value is string =>
     value,
   );
 
-const projectIdOf = (root: string): string => path.basename(root).trim();
+/**
+ * The project's own declared identity.
+ *
+ * A tracked manifest used to carry a `projectId` copied from the same template
+ * value that names the package, so the identity was written twice and the two
+ * could disagree. `package.json` is the one place a project already states its
+ * name, and the directory basename remains the fallback for a checkout that
+ * has none.
+ */
+const projectIdOf = (root: string): string => {
+  try {
+    const declared: unknown = JSON.parse(
+      fs.readFileSync(path.join(root, "package.json"), "utf8"),
+    );
+    const name = (declared as { name?: unknown } | null)?.name;
+    if (typeof name === "string" && name.trim().length > 0) return name.trim();
+  } catch {
+    /* a project without a readable declaration falls back to its directory. */
+  }
+  return path.basename(root).trim();
+};
 
 const inputDesignId = (input: unknown): string => {
   if (
