@@ -35,6 +35,8 @@ interface IOwedView {
 export const reviewEvidenceDiagnostics = (props: {
   /** Shot contracts the compiled production carries. */
   contracts: ReadonlyMap<string, IAutoMovieShotContract>;
+  /** Production frame rate, which is the clock a declared time resolves on. */
+  fps: number;
   /** Compile scope; only `review` and `final` owe pixels. */
   scope: "design" | "source" | "review" | "final";
   /**
@@ -66,16 +68,23 @@ export const reviewEvidenceDiagnostics = (props: {
       frame.passes.map((pass) => ({ frame: frame.id, time: frame.time, pass })),
     );
     if (owed.length === 0) continue;
-    // Compare on the frame index the capture path snaps to rather than on the
-    // authored seconds. A contract states a time and the clock resolves it, so
-    // an exact float comparison would report a frame that was drawn.
+    // Compare on the frame index the capture path snaps to, never on the
+    // authored seconds. A contract states a time and the production clock
+    // resolves it: capture records the snapped time, so a declared 1.51s and
+    // the 1.5s that was actually drawn are the same frame and comparing the
+    // seconds would report a frame that exists as missing.
+    const snap = (time: number): number =>
+      Math.min(
+        Math.round(time * props.fps),
+        Math.floor(contract.durationSeconds * props.fps),
+      );
     const held = new Set(
       props
         .captured(target, fingerprint)
-        .map((view) => viewKey(view.time, view.pass)),
+        .map((view) => viewKey(snap(view.time), view.pass)),
     );
     const missing = owed.filter(
-      (view) => held.has(viewKey(view.time, view.pass)) === false,
+      (view) => held.has(viewKey(snap(view.time), view.pass)) === false,
     );
     if (missing.length === 0) continue;
     diagnostics.push({
@@ -86,7 +95,7 @@ export const reviewEvidenceDiagnostics = (props: {
       path: null,
       message: `Shot "${id}" is being reviewed without the evidence its own contract declares. ${describe(
         missing,
-      )} No bundle is filed at the shot's current fingerprint ${fingerprint}, so any review written now rests on frames that do not exist or on a previous version of this shot. Capture the declared set, then say what it showed in the evidence citation on the source that realizes this shot.`,
+      )} Evidence is read at this shot's current fingerprint ${fingerprint}, so a frame drawn before the shot last moved is still on disk and still does not count. Capture what is named above, then say what it showed in the evidence citation on the source that realizes this shot.`,
     });
   }
   return diagnostics;
@@ -141,7 +150,15 @@ export const assetReviewEvidenceDiagnostics = (props: {
       const fingerprint = props.fingerprint(target);
       if (fingerprint === null) continue;
       addressable = true;
-      if (props.captured(target, fingerprint).length === 0)
+      // The pass is a property of the frame rather than of the target, so a
+      // bundle standing at this angle proves nothing about which pass was
+      // drawn there. An outline view satisfied by a beauty frame is the
+      // silhouette check nobody performed.
+      if (
+        props
+          .captured(target, fingerprint)
+          .some((held) => held.pass === view.pass) === false
+      )
         missing.push(`"${view.id}" (${view.pass})`);
     }
     if (addressable === false || missing.length === 0) continue;
@@ -159,9 +176,9 @@ export const assetReviewEvidenceDiagnostics = (props: {
   return diagnostics;
 };
 
-/** Frame-and-pass identity, rounded to the millisecond the clock resolves. */
-const viewKey = (time: number, pass: AutoMovieGuidePass): string =>
-  `${Math.round(time * 1000)}:${pass}`;
+/** Frame-and-pass identity on the production clock. */
+const viewKey = (index: number, pass: AutoMovieGuidePass): string =>
+  `${index}:${pass}`;
 
 /**
  * Name what is owed rather than counting it.

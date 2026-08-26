@@ -37,6 +37,7 @@ const unit = require(
   }) => IAutoMovieDiagnostic[];
   reviewEvidenceDiagnostics: (props: {
     contracts: ReadonlyMap<string, IAutoMovieShotContract>;
+    fps: number;
     scope: "design" | "source" | "review" | "final";
     fingerprint: (
       target: IAutoMovieRenderBundleManifest["target"],
@@ -52,16 +53,23 @@ const { assetReviewEvidenceDiagnostics, reviewEvidenceDiagnostics } = unit;
 const FINGERPRINT =
   "sha256:1111111111111111111111111111111111111111111111111111111111111111" as AutoMovieContentDigest;
 
-/** The review-frame subset is the whole input this diagnostic reads. */
+/** The review-frame subset and duration are the whole input this reads. */
 const contracts = (
   frames: IAutoMovieShotContract["reviewFrames"],
 ): ReadonlyMap<string, IAutoMovieShotContract> =>
   new Map([
-    ["opening", { reviewFrames: frames } as unknown as IAutoMovieShotContract],
+    [
+      "opening",
+      {
+        durationSeconds: 6,
+        reviewFrames: frames,
+      } as unknown as IAutoMovieShotContract,
+    ],
   ]);
 
 const run = (props: {
   frames: IAutoMovieShotContract["reviewFrames"];
+  fps?: number;
   scope?: "design" | "source" | "review" | "final";
   held?: ReadonlyArray<{ time: number; pass: AutoMovieGuidePass }>;
   fingerprint?: AutoMovieContentDigest | null;
@@ -71,6 +79,7 @@ const run = (props: {
     contracts: contracts(props.frames),
     fingerprint: () =>
       props.fingerprint === undefined ? FINGERPRINT : props.fingerprint,
+    fps: props.fps ?? 24,
     scope: props.scope ?? "review",
   });
 
@@ -84,12 +93,16 @@ const frame = (
 const asset = (props: {
   consumed?: readonly string[];
   held?: boolean;
+  heldPasses?: AutoMovieGuidePass[];
   rigged?: boolean;
   scope?: "design" | "source" | "review" | "final";
   fingerprint?: AutoMovieContentDigest | null;
 }): IAutoMovieDiagnostic[] =>
   assetReviewEvidenceDiagnostics({
-    captured: () => (props.held === true ? [{ pass: "beauty", time: 0 }] : []),
+    captured: () =>
+      (
+        props.heldPasses ?? (props.held === true ? ["beauty", "outline"] : [])
+      ).map((pass) => ({ pass, time: 0 })),
     consumed: props.consumed ?? ["soloist"],
     fingerprint: () =>
       props.fingerprint === undefined ? FINGERPRINT : props.fingerprint,
@@ -125,6 +138,8 @@ const asset = (props: {
  *    and a rigged model owes its extreme-range pose on top of it.
  * 9. A model nothing stages owes nothing, because the gate is on what the film
  *    puts on screen and not on what the library holds.
+ * 10. An asset view is discharged by its own pass and by no other, because the
+ *    pass lives on the frame rather than on the target it was drawn for.
  */
 export const test_production_review_evidence_missing = (): void => {
   const missing = run({ frames: [frame("wide", 1.5, ["beauty"])] });
@@ -200,6 +215,36 @@ export const test_production_review_evidence_missing = (): void => {
           })[0]?.message.includes('"wide" at 1.5s (depth)') === true,
       ],
       ["boundedList", () => many[0]?.message.includes("and 2 more") === true],
+      // Capture records the time the oracle snapped to, not the time a
+      // contract asked for, so the comparison is on the frame index. Compared
+      // as seconds these two disagree and a frame that exists reads as owed.
+      [
+        "aDeclaredTimeResolvesOntoItsFrame",
+        () =>
+          run({
+            frames: [frame("wide", 1.51, ["beauty"])],
+            held: [{ pass: "beauty", time: 1.5 }],
+          }).length === 0,
+      ],
+      [
+        "aDifferentFrameStillDoesNotDischarge",
+        () =>
+          run({
+            frames: [frame("wide", 1.51, ["beauty"])],
+            held: [{ pass: "beauty", time: 1.4 }],
+          }).length === 1,
+      ],
+      // The oracle clamps a request past the end onto the last real frame, so
+      // a contract naming a time beyond its own duration is discharged by the
+      // frame that was actually drawn.
+      [
+        "aTimePastTheEndClampsLikeCaptureDoes",
+        () =>
+          run({
+            frames: [frame("tail", 99, ["beauty"])],
+            held: [{ pass: "beauty", time: 6 }],
+          }).length === 0,
+      ],
       // An asset owes a fixed view set rather than an authored one, so the
       // refusal reads the same set the capture path draws from.
       ["assetOwesItsSet", () => asset({}).length === 1],
@@ -226,6 +271,23 @@ export const test_production_review_evidence_missing = (): void => {
         () => asset({}).at(0)?.message.includes("rig-rom-extremes") === false,
       ],
       ["assetCompleteIsSilent", () => asset({ held: true }).length === 0],
+      // The pass lives on the frame rather than on the target, so a bundle
+      // standing at the overhead angle proves nothing about which pass was
+      // drawn there.
+      [
+        "anOutlineViewIsNotSatisfiedByBeauty",
+        () =>
+          asset({ heldPasses: ["beauty"] })
+            .at(0)
+            ?.message.includes('"top-outline" (outline)') === true,
+      ],
+      [
+        "aBeautyViewIsNotSatisfiedByOutline",
+        () =>
+          asset({ heldPasses: ["outline"] })
+            .at(0)
+            ?.message.includes('"turntable-front" (beauty)') === true,
+      ],
       [
         "anUnstagedModelOwesNothing",
         () => asset({ consumed: [] }).length === 0,
@@ -254,12 +316,17 @@ export const test_production_review_evidence_missing = (): void => {
       noDeclaredFrameOwesNothing: true,
       everyDeclaredPassIsOwed: true,
       boundedList: true,
+      aDeclaredTimeResolvesOntoItsFrame: true,
+      aDifferentFrameStillDoesNotDischarge: true,
+      aTimePastTheEndClampsLikeCaptureDoes: true,
       assetOwesItsSet: true,
       assetTarget: true,
       assetNamesEveryView: true,
       aRigOwesItsExtremes: true,
       anUnriggedModelDoesNot: true,
       assetCompleteIsSilent: true,
+      anOutlineViewIsNotSatisfiedByBeauty: true,
+      aBeautyViewIsNotSatisfiedByOutline: true,
       anUnstagedModelOwesNothing: true,
       anUnaddressableModelIsSilent: true,
       assetDesignOwesNothing: true,

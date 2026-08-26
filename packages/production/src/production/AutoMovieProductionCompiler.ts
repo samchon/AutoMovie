@@ -88,6 +88,7 @@ import {
   IAutoMovieProductionRenderManifest,
   IAutoMovieProductionRenderReceipt,
   IAutoMovieProductionShotProgram,
+  IAutoMovieRenderBundleManifest,
   IAutoMovieScene,
   IAutoMovieScreenplayIndex,
   IAutoMovieShotBuildContext,
@@ -703,39 +704,54 @@ export class AutoMovieProductionCompiler {
     // which says everything about prose and nothing about pixels. This is the
     // other half: the frames a contract declared must exist at the target's
     // current identity before any review of it can be true.
-    if (manifest !== null)
+    //
+    // Both halves need the generated manifest and the content inventory to
+    // address a target at all. Unsafe content is already reported as
+    // `content-input-unsafe`, and a fingerprint computed from an inventory this
+    // compile could not read would be a second, worse failure over the same
+    // cause. A production with no design record has no clock to resolve a
+    // declared time on, and nothing reviewable either. The scope condition is
+    // repeated here rather than left to the two functions so that an ordinary
+    // `--scope source` compile does not walk the model graph for an answer it
+    // will discard.
+    const productionDesign = graph.production;
+    if (
+      manifest !== null &&
+      productionDesign !== null &&
+      contentInputs !== undefined &&
+      (input.scope === "review" || input.scope === "final")
+    ) {
+      const fingerprint = (
+        target: IAutoMovieRenderBundleManifest["target"],
+      ): AutoMovieContentDigest =>
+        productionRenderTargetFingerprint(
+          this.project,
+          manifest,
+          target,
+          contentInputs,
+        );
+      const captured = (
+        target: IAutoMovieRenderBundleManifest["target"],
+        digest: AutoMovieContentDigest,
+      ): ReturnType<AutoMovieProductionProject["capturedRenderViews"]> =>
+        this.project.capturedRenderViews(target, digest);
       diagnostics.push(
         ...reviewEvidenceDiagnostics({
-          captured: (target, fingerprint) =>
-            this.project.capturedRenderViews(target, fingerprint),
+          captured,
           contracts: graph.shots,
-          fingerprint: (target) =>
-            productionRenderTargetFingerprint(
-              this.project,
-              manifest,
-              target,
-              contentInputs,
-            ),
+          fingerprint,
+          fps: productionDesign.frameFormat.fps,
           scope: input.scope,
         }),
-      );
-    if (manifest !== null)
-      diagnostics.push(
         ...assetReviewEvidenceDiagnostics({
-          captured: (target, fingerprint) =>
-            this.project.capturedRenderViews(target, fingerprint),
+          captured,
           consumed: consumedModelIds(graph, runtimeModels),
-          fingerprint: (target) =>
-            productionRenderTargetFingerprint(
-              this.project,
-              manifest,
-              target,
-              contentInputs,
-            ),
+          fingerprint,
           rigged: (model) => this.compiledModelIsRigged(model),
           scope: input.scope,
         }),
       );
+    }
     if (input.scope === "final")
       diagnostics.push(
         ...finalDeliverableDiagnostics(
