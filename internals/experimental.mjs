@@ -3,7 +3,7 @@
 // a live coding agent without publishing anything.
 //
 // This is repository-local tooling on purpose. `packages/cli/scaffold/**` and
-// the published `@automovie/cli` surface stay untouched: a real user's project
+// the published `automovie` surface stay untouched: a real user's project
 // targets released versions, and only how the sandbox obtains those packages
 // differs.
 //

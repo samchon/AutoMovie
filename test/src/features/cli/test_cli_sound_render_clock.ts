@@ -1,4 +1,4 @@
-import { renderScaffold, writeFiles } from "@automovie/cli";
+import { renderScaffold, writeFiles } from "automovie";
 import type { IAutoMovieProductionSoundPlan } from "@automovie/interface";
 import type { IAutoMovieProductionRenderJobPlan } from "@automovie/mcp";
 import { TestValidator } from "@nestia/e2e";

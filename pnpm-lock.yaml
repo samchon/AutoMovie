@@ -227,7 +227,7 @@ importers:
 
   packages/create-automovie:
     dependencies:
-      '@automovie/cli':
+      automovie:
         specifier: workspace:^
         version: link:../cli
     devDependencies:
@@ -361,9 +361,6 @@ importers:
       '@automovie/render':
         specifier: workspace:^
         version: link:../render
-      '@modelcontextprotocol/sdk':
-        specifier: catalog:modelcontextprotocol
-        version: 1.29.0(zod@4.4.3)
       '@typia/mcp':
         specifier: catalog:samchon
         version: 13.2.0(@modelcontextprotocol/sdk@1.29.0(zod@4.4.3))
@@ -521,9 +518,6 @@ importers:
       '@automovie/archetypes':
         specifier: workspace:^
         version: link:../packages/archetypes
-      '@automovie/cli':
-        specifier: workspace:^
-        version: link:../packages/cli
       '@automovie/engine':
         specifier: workspace:^
         version: link:../packages/engine
@@ -557,6 +551,9 @@ importers:
       '@nestia/e2e':
         specifier: catalog:samchon
         version: 12.1.0
+      automovie:
+        specifier: workspace:^
+        version: link:../packages/cli
       create-automovie:
         specifier: workspace:^
         version: link:../packages/create-automovie

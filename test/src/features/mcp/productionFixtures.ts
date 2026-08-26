@@ -1,4 +1,4 @@
-import { writeFiles } from "@automovie/cli";
+import { writeFiles } from "automovie";
 import {
   IAutoMovieAcceptanceScenario,
   IAutoMovieAssetManifest,

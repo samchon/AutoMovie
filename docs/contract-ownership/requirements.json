@@ -533,7 +533,7 @@
     "requirements/diagnostics/input-and-result-classification.md#diagnostics-missing-state": {
       "owner": {
         "kind": "package",
-        "package": "@automovie/cli"
+        "package": "automovie"
       }
     },
     "requirements/diagnostics/input-and-result-classification.md#diagnostics-unsupported-state": {
@@ -815,7 +815,7 @@
     "requirements/evidence-and-provenance/completeness-freshness-and-refusal.md#evidence-reapproval-after-change": {
       "owner": {
         "kind": "package",
-        "package": "@automovie/cli"
+        "package": "automovie"
       }
     },
     "requirements/evidence-and-provenance/entities-activities-agents-and-lineage.md#provenance-entity-and-revision": {
@@ -1991,61 +1991,61 @@
     "requirements/operations-and-recovery/checkpoints-resume-and-retry.md#operations-acknowledged-completion-boundary": {
       "owner": {
         "kind": "package",
-        "package": "@automovie/cli"
+        "package": "automovie"
       }
     },
     "requirements/operations-and-recovery/checkpoints-resume-and-retry.md#operations-changed-input-restart": {
       "owner": {
         "kind": "package",
-        "package": "@automovie/cli"
+        "package": "automovie"
       }
     },
     "requirements/operations-and-recovery/checkpoints-resume-and-retry.md#operations-checkpoint-completeness": {
       "owner": {
         "kind": "package",
-        "package": "@automovie/cli"
+        "package": "automovie"
       }
     },
     "requirements/operations-and-recovery/checkpoints-resume-and-retry.md#operations-resume-eligibility": {
       "owner": {
         "kind": "package",
-        "package": "@automovie/cli"
+        "package": "automovie"
       }
     },
     "requirements/operations-and-recovery/checkpoints-resume-and-retry.md#operations-resumed-result-validation": {
       "owner": {
         "kind": "package",
-        "package": "@automovie/cli"
+        "package": "automovie"
       }
     },
     "requirements/operations-and-recovery/checkpoints-resume-and-retry.md#operations-retry-lineage-and-limits": {
       "owner": {
         "kind": "package",
-        "package": "@automovie/cli"
+        "package": "automovie"
       }
     },
     "requirements/operations-and-recovery/idempotency-and-side-effects.md#operations-duplicate-submission": {
       "owner": {
         "kind": "package",
-        "package": "@automovie/cli"
+        "package": "automovie"
       }
     },
     "requirements/operations-and-recovery/migration-and-compatibility.md#operations-migration-validation": {
       "owner": {
         "kind": "package",
-        "package": "@automovie/cli"
+        "package": "automovie"
       }
     },
     "requirements/operations-and-recovery/migration-and-compatibility.md#operations-mixed-version-concurrency": {
       "owner": {
         "kind": "package",
-        "package": "@automovie/cli"
+        "package": "automovie"
       }
     },
     "requirements/operations-and-recovery/migration-and-compatibility.md#operations-nondestructive-migration": {
       "owner": {
         "kind": "package",
-        "package": "@automovie/cli"
+        "package": "automovie"
       }
     },
     "requirements/operations-and-recovery/resource-budgets-and-backpressure.md#operations-budget-admission-estimate": {
@@ -2057,61 +2057,61 @@
     "requirements/operations-and-recovery/retention-and-cleanup.md#operations-cleanup-concurrency-safety": {
       "owner": {
         "kind": "package",
-        "package": "@automovie/cli"
+        "package": "automovie"
       }
     },
     "requirements/operations-and-recovery/retention-and-cleanup.md#operations-cleanup-deletion-record": {
       "owner": {
         "kind": "package",
-        "package": "@automovie/cli"
+        "package": "automovie"
       }
     },
     "requirements/operations-and-recovery/retention-and-cleanup.md#operations-cleanup-failure-visibility": {
       "owner": {
         "kind": "package",
-        "package": "@automovie/cli"
+        "package": "automovie"
       }
     },
     "requirements/operations-and-recovery/retention-and-cleanup.md#operations-cleanup-target-preview": {
       "owner": {
         "kind": "package",
-        "package": "@automovie/cli"
+        "package": "automovie"
       }
     },
     "requirements/operations-and-recovery/retention-and-cleanup.md#operations-reference-aware-retention": {
       "owner": {
         "kind": "package",
-        "package": "@automovie/cli"
+        "package": "automovie"
       }
     },
     "requirements/operations-and-recovery/retention-and-cleanup.md#operations-sensitive-data-minimization": {
       "owner": {
         "kind": "package",
-        "package": "@automovie/cli"
+        "package": "automovie"
       }
     },
     "requirements/operations-and-recovery/scope-job-identity-and-state.md#operations-deterministic-reexecution-identity": {
       "owner": {
         "kind": "package",
-        "package": "@automovie/cli"
+        "package": "automovie"
       }
     },
     "requirements/operations-and-recovery/scope-job-identity-and-state.md#operations-job-attempt-separation": {
       "owner": {
         "kind": "package",
-        "package": "@automovie/cli"
+        "package": "automovie"
       }
     },
     "requirements/operations-and-recovery/scope-job-identity-and-state.md#operations-job-state-transition-history": {
       "owner": {
         "kind": "package",
-        "package": "@automovie/cli"
+        "package": "automovie"
       }
     },
     "requirements/operations-and-recovery/scope-job-identity-and-state.md#operations-job-state-vocabulary": {
       "owner": {
         "kind": "package",
-        "package": "@automovie/cli"
+        "package": "automovie"
       }
     },
     "requirements/product/prototype-quality.md#product-authored-variation-determinism": {
@@ -2297,37 +2297,37 @@
     "requirements/rendering/chunks-resume-and-recovery.md#rendering-atomic-publication": {
       "owner": {
         "kind": "package",
-        "package": "@automovie/cli"
+        "package": "automovie"
       }
     },
     "requirements/rendering/chunks-resume-and-recovery.md#rendering-concurrent-work": {
       "owner": {
         "kind": "package",
-        "package": "@automovie/cli"
+        "package": "automovie"
       }
     },
     "requirements/rendering/chunks-resume-and-recovery.md#rendering-failure-recovery": {
       "owner": {
         "kind": "package",
-        "package": "@automovie/cli"
+        "package": "automovie"
       }
     },
     "requirements/rendering/chunks-resume-and-recovery.md#rendering-recovery-refusal": {
       "owner": {
         "kind": "package",
-        "package": "@automovie/cli"
+        "package": "automovie"
       }
     },
     "requirements/rendering/chunks-resume-and-recovery.md#rendering-resume": {
       "owner": {
         "kind": "package",
-        "package": "@automovie/cli"
+        "package": "automovie"
       }
     },
     "requirements/rendering/chunks-resume-and-recovery.md#rendering-retry-identity": {
       "owner": {
         "kind": "package",
-        "package": "@automovie/cli"
+        "package": "automovie"
       }
     },
     "requirements/rendering/encoding-and-multiplexing.md#rendering-codec-container-facts": {
@@ -2465,31 +2465,31 @@
     "requirements/rendering/scope-and-artifact-identity.md#rendering-artifact-invalidation": {
       "owner": {
         "kind": "package",
-        "package": "@automovie/cli"
+        "package": "automovie"
       }
     },
     "requirements/rendering/scope-and-artifact-identity.md#rendering-deterministic-lane": {
       "owner": {
         "kind": "package",
-        "package": "@automovie/cli"
+        "package": "automovie"
       }
     },
     "requirements/rendering/scope-and-artifact-identity.md#rendering-missing-artifact-refusal": {
       "owner": {
         "kind": "package",
-        "package": "@automovie/cli"
+        "package": "automovie"
       }
     },
     "requirements/rendering/scope-and-artifact-identity.md#rendering-partial-artifact": {
       "owner": {
         "kind": "package",
-        "package": "@automovie/cli"
+        "package": "automovie"
       }
     },
     "requirements/rendering/scope-and-artifact-identity.md#rendering-product-scope": {
       "owner": {
         "kind": "package",
-        "package": "@automovie/cli"
+        "package": "automovie"
       }
     },
     "requirements/rendering/validation.md#rendering-validation-status": {

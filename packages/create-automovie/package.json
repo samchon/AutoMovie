@@ -49,7 +49,7 @@
     "url": "https://github.com/samchon/automovie"
   },
   "dependencies": {
-    "@automovie/cli": "workspace:^"
+    "automovie": "workspace:^"
   },
   "devDependencies": {
     "@types/node": "catalog:utils",

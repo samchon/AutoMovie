@@ -1,4 +1,4 @@
-import { renderScaffold } from "@automovie/cli";
+import { renderScaffold } from "automovie";
 import { TestValidator } from "@nestia/e2e";
 
 const CACHE_DIRECTORY = "node_modules/.cache/ttsc";

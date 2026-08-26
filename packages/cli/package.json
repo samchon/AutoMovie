@@ -1,5 +1,5 @@
 {
-  "name": "@automovie/cli",
+  "name": "automovie",
   "version": "0.1.0",
   "description": "Scaffold and inspect a coding-agent-first AutoMovie production repository.",
   "main": "src/index.ts",

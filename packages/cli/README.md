@@ -1,4 +1,4 @@
-# @automovie/cli
+# automovie
 
 Scaffold an [automovie](https://github.com/samchon/automovie) project.
 
@@ -97,7 +97,7 @@ npx automovie migrate <directory> [--dry-run | --rollback]
 The renderer and writer are exported for programmatic use: the render step returns an in-memory file map, and writing is a separate call, so the same output can be asserted in a test or written by another consumer:
 
 ```ts
-import { renderScaffold, writeFiles } from "@automovie/cli";
+import { renderScaffold, writeFiles } from "automovie";
 
 const files = renderScaffold({ name: "my-film" }); // { "package.json": "...", ... }
 writeFiles("./my-film", files);
@@ -111,7 +111,7 @@ Ordinary Node scripts can also load the current tracked design and the last comp
 import {
   loadAutoMovieProjectState,
   requireCurrentAutoMovieProjectState,
-} from "@automovie/cli";
+} from "automovie";
 import {
   Vector3,
   formationSlot,

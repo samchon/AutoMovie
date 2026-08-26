@@ -14,7 +14,7 @@ const block = (message) => {
  *
  * This hook ships inside the scaffold, so copying it somewhere else must not
  * let it claim unrelated files. The signal is the project's declared
- * dependency on the CLI: a directory that does not depend on `@automovie/cli`
+ * dependency on the CLI: a directory that does not depend on `automovie`
  * owns no generated or render root for this guard to protect.
  */
 const declared = (() => {
@@ -27,7 +27,7 @@ const declared = (() => {
 })();
 if (
   ["dependencies", "devDependencies"].some(
-    (field) => typeof declared?.[field]?.["@automovie/cli"] === "string",
+    (field) => typeof declared?.[field]?.["automovie"] === "string",
   ) === false
 )
   process.exit(0);

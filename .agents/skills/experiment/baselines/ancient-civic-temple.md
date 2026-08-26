@@ -336,7 +336,7 @@ viewer/src/subject.ts:551:61 - error TS2554: Expected 2 arguments, but got 3.
 그리고 **남의 손 패치**.
 
 **교훈이자 값싼 계측.** 샌드박스 파일을 **설치된 tarball 스캐폴드**와 대조하면 이것이
-한 번에 보인다. `node_modules/@automovie/cli/scaffold/**`는 그 프로젝트가 무엇으로
+한 번에 보인다. `node_modules/automovie/scaffold/**`는 그 프로젝트가 무엇으로
 태어났는지에 대한 **저장소와 무관한 기준선**이고, 거기서 벗어난 파일은 저작자 아니면
 침입자다. 저장소 작업 트리와 대조하는 것으로는 이것을 가릴 수 없다 — 침입자의 출처가
 바로 그 작업 트리이기 때문이다.

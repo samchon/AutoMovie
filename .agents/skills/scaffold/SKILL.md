@@ -5,7 +5,7 @@ description: Defines how packages/cli/scaffold is maintained as the authoring ha
 
 # Maintaining the scaffold
 
-`packages/cli/scaffold` is the empty authoring harness `@automovie/cli` stamps out. A completed regression film fixture lives outside it so generated projects inherit capability and contracts, never another production's content. Treat every scaffold change as a generated-project API change.
+`packages/cli/scaffold` is the empty authoring harness `automovie` stamps out. A completed regression film fixture lives outside it so generated projects inherit capability and contracts, never another production's content. Treat every scaffold change as a generated-project API change.
 
 ## The authoring procedure lives with the production
 

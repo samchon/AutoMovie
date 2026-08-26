@@ -1,4 +1,4 @@
-import { renderScaffold, writeFiles } from "@automovie/cli";
+import { renderScaffold, writeFiles } from "automovie";
 import type {
   AutoMovieCaptureObservation,
   AutoMovieContentDigest,

@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { run } from "@automovie/cli";
+import { run } from "automovie";
 
 /**
  * Creates a project-owned production through the package-manager creator

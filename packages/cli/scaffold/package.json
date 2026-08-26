@@ -31,7 +31,7 @@
   },
   "dependencies": {
     "@automovie/archetypes": "{{version:archetypes}}",
-    "@automovie/cli": "{{version:cli}}",
+    "automovie": "{{version:cli}}",
     "@automovie/engine": "{{version:engine}}",
     "@automovie/interface": "{{version:interface}}",
     "@automovie/mcp": "{{version:mcp}}",

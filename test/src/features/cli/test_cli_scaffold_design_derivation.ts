@@ -1,4 +1,4 @@
-import { renderScaffold, scaffoldAssetDirectory } from "@automovie/cli";
+import { renderScaffold, scaffoldAssetDirectory } from "automovie";
 import { TestValidator } from "@nestia/e2e";
 import fs from "node:fs";
 import path from "node:path";
