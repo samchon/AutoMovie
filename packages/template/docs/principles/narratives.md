@@ -80,7 +80,7 @@ Selected events, actions, images, sounds, and details arise from this production
 
 Review question: which choice could be transplanted unchanged into an unrelated film, and what production-owned fact should determine it instead?
 
-This item owns production-specific selection. Screenplay audiovisual selection owns which final perceptible details reach the audience.
+This item owns production-specific selection. The common machine-default obligation owns whether the writing was decided at all, and screenplay audiovisual selection owns which final perceptible details reach the audience.
 
 Sources: [Boston University on creating tension through concrete action](https://www.bu.edu/articles/2019/how-to-create-suspense/); [Purdue OWL on revealing character through specific action and speech](https://owl.purdue.edu/owl/subject_specific_writing/creative_writing/writers/fiction_writing_basics/characters_and_fiction_writing1/building_and_revealing_characters.html)
 

@@ -98,7 +98,7 @@ Keep these easily confused boundaries explicit:
 
 ## Obligations
 
-`obligations/common.md` is not distributed coverage. It is a no-exclusion checklist that every selected settings, research, model, space, material, instance, motion, and system H2 and every film or brief H2/H3/H4 answers directly. Each item owns a unit-level completion or evidence-integrity duty whose explicit failure and halt rule must survive agent summarization. Do not duplicate a file-level craft principle there.
+`obligations/common.md` is not distributed coverage. It is a no-exclusion checklist that every selected settings, research, model, space, material, instance, motion, and system H2 and every film or brief H2/H3/H4 answers directly. Each item owns one unit-level duty: declared scope, completion, proportion, whether anyone decided how the writing reads, or evidence integrity. Its explicit failure and repair rule must survive agent summarization. A craft question belongs here only when one unit can be judged against it alone; the same question asked of a whole file is a principle, and restating it here duplicates that principle.
 
 A layer obligation assigns a distinct fact or decision across a whole H2 population. Coverage is distributed: each target must be answered somewhere, but every file does not repeat every role. Settings, model, space, material, instance, system, and storyline roles are required and permit no exclusion. A motion role may permit one population-wide exclusion only when the complete production truly lacks the condition named by that target.
 
