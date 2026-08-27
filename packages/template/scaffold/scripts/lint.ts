@@ -19,12 +19,12 @@ import config from "../automovie.config";
  *
  * A scope selects which gates run; it is not a filter over the `phase` field a
  * diagnostic carries. `phase` names the pipeline stage that owns the
- * correction, so the review queue reports a consumed model asset at the
- * `source` phase because a source import is what the author must stop, and that
- * label says nothing about which scope raised it. Measured on a freshly
- * generated project: `review` scope reports sixteen `review-missing` and four
- * `asset-review-missing`, and `source` scope reports none of the twenty,
- * because the review gate runs only at `review` and `final`.
+ * correction, so a consumed model asset is reported at the `source` phase
+ * because a source import is what the author must stop, and that label says
+ * nothing about which scope raised it. Measured on a freshly generated
+ * project: `review` scope reports `review-evidence-missing` for the shot and
+ * for each consumed model, and `source` scope reports neither, because the
+ * evidence gate runs only at `review` and `final`.
  */
 const scope = ((): "design" | "source" | "review" | "final" => {
   const index = process.argv.indexOf("--scope");

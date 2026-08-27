@@ -54,4 +54,4 @@ Missing guide, unknown target, stale input, unsupported capability와 host refus
 <!-- @evidence requirements/agent-authoring/project-ownership.md#agent-authoring-tool-replaceability 이 호환성이 source와 공개 contract를 유지한 client와 agent 교체를 보장한다. -->
 <!-- @evidence requirements/agent-authoring/partial-work.md#agent-resumable-authoring 이 호환성이 hidden host session 없이 저작을 재개하게 한다. -->
 
-Guide acknowledgment 같은 session-local state는 도구 사용 gate일 수 있지만 작품 source나 미완성 작업의 유일한 저장소가 될 수 없다. 다른 compliant host나 client가 source snapshot, public contract와 receipts를 사용해 같은 target을 열 수 있어야 한다.
+Session-local state는 도구 사용 gate일 수 있지만 작품 source나 미완성 작업의 유일한 저장소가 될 수 없다. 다른 compliant host나 client가 source snapshot, public contract와 receipts를 사용해 같은 target을 열 수 있어야 한다.

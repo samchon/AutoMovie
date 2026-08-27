@@ -130,7 +130,7 @@ The production viewer accepts `?film=1` for GPU cut/dissolve playback of the com
 ## Ownership
 
 - `automovie/design/shared`: project-shared model, world and formation design
-- `automovie/design/<production>`, `automovie/reviews/<production>`: production-scoped tracked contracts
+- `automovie/design/<production>`: production-scoped tracked contracts
 - `automovie/productions/<production>`: production-scoped compiler, render-job, receipt and revision state
 - `src`, `docs`, `test`, `public`: coding-agent source and assets
 - `generated`: compiler-owned; never edit
@@ -138,4 +138,4 @@ The production viewer accepts `?film=1` for GPU cut/dissolve playback of the com
 
 `npm run lint:source` type-checks source and runs the registered `@ttsc/lint` contributors without modifying project state. `npm run lint` runs that source lint first, then runs the production compiler through the review gate in read-only mode. It deliberately fails while any design, source, shot, or film review is missing, stale, revising, or incomplete.
 
-That final gate is the question a finished film must answer, not the one a film in progress can. Pass `--scope` to ask a narrower one: `npm run lint -- --scope source` runs the same `automovie` rule set against the work so far without demanding a complete review queue, which is the check to use while building sequence by sequence. `design`, `review`, and `final` are the other scopes; omitting the flag keeps `review`. `npm run compile` is the narrower production source gate and the only command that may update generated output.
+That final gate is the question a finished film must answer, not the one a film in progress can. Pass `--scope` to ask a narrower one: `npm run lint -- --scope source` runs the same `automovie` rule set against the work so far without demanding the evidence a finished film owes, which is the check to use while building sequence by sequence. `design`, `review`, and `final` are the other scopes; omitting the flag keeps `review`. `npm run compile` is the narrower production source gate and the only command that may update generated output.

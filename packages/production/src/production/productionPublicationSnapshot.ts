@@ -13,7 +13,7 @@ import {
  * The compiler pass binds source, design, declared content, generated ownership
  * and unowned-output diagnostics. The explicit state fields close the remaining
  * adapter boundary: cached manifest semantics, exact manifest and incarnation
- * bytes, compiler-owned bytes, and the live evidence-bound review queue.
+ * bytes, and compiler-owned bytes.
  */
 export const productionPublicationInputFingerprint = (
   project: AutoMovieProductionProject,
