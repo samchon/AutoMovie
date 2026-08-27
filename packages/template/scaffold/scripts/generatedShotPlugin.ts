@@ -4,6 +4,7 @@ import path from "node:path";
 import type { Plugin } from "vite";
 
 import config from "../automovie.config";
+import { readProductionLiveWearableSoftBodies } from "./productionConfiguration";
 import { currentProductionDialogueRuntime } from "./productionRuntimeState";
 
 /**
@@ -26,7 +27,9 @@ export const generatedShotPlugin = (
       ) {
         const runtime = {
           dialogue: currentProductionDialogueRuntime(),
-          liveWearableSoftBodies: [...config.simulation.liveWearableSoftBodies],
+          liveWearableSoftBodies: readProductionLiveWearableSoftBodies(
+            config.simulation.liveWearableSoftBodies,
+          ),
         };
         response.statusCode = 200;
         response.setHeader("Content-Type", "application/json; charset=utf-8");
