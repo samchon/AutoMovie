@@ -57,6 +57,7 @@ export const test_cli_scaffold_toolchain_cache = (): void => {
         "lint:source",
         "preview",
         "render",
+        "repaint",
         "test",
         "texture:scale",
         "turntable",

@@ -23,6 +23,7 @@
     "lint:source": "ttsc --cache-dir node_modules/.cache/ttsc --noEmit -p tsconfig.json",
     "preview": "ttsx --cache-dir node_modules/.cache/ttsc -P tsconfig.json scripts/preview.ts",
     "render": "ttsx --cache-dir node_modules/.cache/ttsc -P tsconfig.json scripts/render.ts",
+    "repaint": "ttsx --cache-dir node_modules/.cache/ttsc -P tsconfig.json scripts/repaint.ts",
     "test": "ttsx --cache-dir node_modules/.cache/ttsc -P tsconfig.json test/scaffold.test.ts",
     "texture:scale": "ttsx --cache-dir node_modules/.cache/ttsc -P tsconfig.json scripts/measureTextureScale.ts",
     "turntable": "ttsx --cache-dir node_modules/.cache/ttsc -P tsconfig.json scripts/turntable.ts",

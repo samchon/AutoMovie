@@ -7,6 +7,7 @@ export * from "./production/AutoMovieProductionCompiler";
 export * from "./production/AutoMovieProductionContext";
 export * from "./production/diagnosticCatalog";
 export * from "./production/captureProductionFrame";
+export * from "./production/AutoMovieProductionRepaintService";
 export * from "./production/captureProductionTurntable";
 export * from "./production/AutoMovieProductionOracleService";
 export * from "./production/AutoMovieProductionProject";
