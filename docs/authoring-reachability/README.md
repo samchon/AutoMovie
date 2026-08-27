@@ -1,0 +1,84 @@
+# 저작 도달 가능성
+
+AutoMovie의 제품 요구와 생성 프로젝트의 저작 계약은 서로 다른 그래프다. 제품 요구는 저장소가 제공해야 할 능력을 정하고, 저작 계약은 한 production의 저자가 무엇을 결정하고 증명해야 하는지 정한다. 둘을 1,981개의 개별 인용으로 억지로 연결하지 않는다. 이 문서는 요구 family마다 저작자가 도달하는 owner가 있는지 판정하고, 기계 판정의 원본은 [families.json](./families.json)에 둔다.
+
+## 현재 모집단
+
+2026-08-28 현재 `docs/requirements/`에는 27개 family와 명시 anchor가 있는 H3 unit 1,981개가 있다. `packages/template/docs/`에는 discovery 9개, principle 71개, obligation 88개로 H2 168개가 있다. 저작 계약에서 `requirements/`를 직접 인용한 경우와 요구 문서에서 discovery, principle, obligation을 직접 인용한 경우는 모두 0건이다.
+
+Correspondence는 해당 family의 결정을 저자가 어느 계약 owner와 절차에서 만나게 되는지 말한다. 이것은 그 family의 모든 H3가 이미 구현되었다거나 하나의 계약 항목이 모든 세부 요구를 대신한다는 주장이 아니다. 부재는 다음 세 종류로만 기록한다.
+
+| 분류 | 의미 |
+| --- | --- |
+| `unpaid-authoring-edge` | 저자가 몰아야 하지만 family를 책임지는 저작 owner가 없다. 부분적으로 닿는 계약이 있어도 family 결정을 모을 owner가 없으면 이 상태다. |
+| `not-author-driven` | 저자는 입력을 선언하거나 결과에 대응할 뿐, 동작의 계약은 deterministic host나 생성 harness가 소유한다. |
+| `intentional-exclusion` | 제품이 의도적으로 제공하지 않으며, 다시 여는 관찰 가능한 조건이 있다. |
+
+## Family 교차표
+
+| 요구 family | H3 | 판정 | 저작 계약 또는 부재 근거 |
+| --- | ---: | --- | --- |
+| `acceptance` | 76 | authoring contract | common evidence conformance, brief observations, shot acceptance, production review |
+| `actors` | 62 | authoring contract | settings subject inventory, film subject obligations, model and motion branches |
+| `agent-authoring` | 38 | not author-driven | generated-project `AGENTS.md`, production router, evidence staging이 harness 동작을 소유한다 |
+| `asset-authoring` | 65 | authoring contract | model, material, instance principles and source obligations, design routing and rigging |
+| `building-exterior` | 126 | authoring contract | spaces, materials, instances, systems and their source families |
+| `camera` | 77 | authoring contract | screenplay orientation, shot composition and inputs, cinematography |
+| `delivery-and-accessibility` | 94 | unpaid authoring edge (#2127) | delivery scope와 auxiliary track은 있으나 required, optional, intentionally absent, unsupported 상태 owner가 없다 |
+| `diagnostics` | 36 | authoring contract | evidence conformance, evidence staging, diagnostics-first debugging |
+| `editorial` | 85 | authoring contract | screenplay timing, film-source editorial assembly, editing |
+| `effects-and-simulation` | 69 | authoring contract | systems behavior, state clock, budget, degradation, explicit source evaluation |
+| `evidence-and-provenance` | 51 | authoring contract | source identity, fact status, declared basis, evidence conformance and staging |
+| `external-inputs` | 60 | authoring contract | research identity and consequence, settings source support, source ownership |
+| `formations` | 54 | authoring contract | instance membership and placement, motion spatial relations |
+| `interior` | 153 | authoring contract | spaces, materials, instances, systems and their complete review sets |
+| `lighting` | 86 | authoring contract | systems state and source evaluation, shot inputs, cinematography |
+| `map` | 152 | unpaid authoring edge (#2125) | generic coordinates and topology만 있고 world, terrain, water, ecology, settlement, transport, infrastructure와 map delivery owner가 없다 |
+| `motion` | 81 | authoring contract | motion endpoints, phases, domain, time, contact, composition and pure source mapping |
+| `operations-and-recovery` | 81 | not author-driven | compiler, render and command hosts가 lock, retry, checkpoint, publication and recovery를 소유한다 |
+| `product` | 30 | authoring contract | scope preservation, purpose fit, layer boundary, production-kind router |
+| `production-design` | 99 | unpaid authoring edge (#2126) | visual grammar 일부가 흩어져 있으나 reference reconciliation, location context, breakdown, fidelity와 continuity를 모으는 source owner가 없다 |
+| `production-evidence` | 7 | authoring contract | common evidence integrity, contract-target inventory and evidence staging |
+| `rendering` | 90 | authoring contract | settings delivery scope, production-source delivery identity, shot time, film timeline and deterministic capture |
+| `repaint` | 43 | unpaid authoring edge (#2126) | 실행기는 있으나 provider, structural lock, lineage, retry, continuity와 publication을 결정하는 저작 target이 없다 |
+| `review` | 15 | authoring contract | subject verification addresses, population review sets, production review and author Self-Review |
+| `sound` | 80 | authoring contract | screenplay audible intent, systems, auxiliary-track mapping and sound craft |
+| `staging` | 70 | authoring contract | scenario physical progression and boundary, shot realization |
+| `story` | 101 | authoring contract | narratives, storylines, scenarios and final screenplay contracts |
+
+21개 family는 저작 계약으로 도달하고 2개는 host 또는 harness가 소유한다. 저작 owner가 없는 family edge는 4개이며 388 H3 unit을 대표한다. 이 수는 388개의 개별 결함을 뜻하지 않는다. 같은 family를 하나의 책임 owner로 연결해야 할 네 관계가 아직 지급되지 않았다는 뜻이다. Whole-family 의도적 제외는 현재 0개다. 이후 이 분류를 사용하려면 `families.json`에 이유와 재개 조건을 함께 적어야 한다.
+
+## 미지급 수와 gate
+
+`node internals/authoring-reachability-gate.mjs`는 미지급 수를 0으로 강제하지 않는다. #2125, #2126, #2127이 아직 같은 캠페인에서 그 owner를 만드는 중이므로 지금 0을 요구하면 거짓 correspondence를 쓰게 만든다. 대신 현재 허용 debt를 정확히 고정한다. family가 늘거나 분류가 빠지거나 대응 path와 anchor가 사라지거나 현재 debt 수가 바뀌면 ledger를 다시 판단하기 전까지 실패한다. 지급된 edge도 조용히 예전 baseline 아래에 숨을 수 없다.
+
+Specification fragment debt도 같은 방식으로 센다. 현재 `@evidenceObligation` target-anchor와 id 쌍은 24개이고 source의 고유 `@evidencePart` 쌍은 18개다. 미지급 6개는 다음과 같다.
+
+- `camera-light-and-visibility/visibility-and-image-space-observation.md#clv-clipping-clearance-evaluation::camera-clearance-swept-volume`
+- `camera-light-and-visibility/visibility-and-image-space-observation.md#clv-clipping-clearance-evaluation::clipping-planes`
+- `camera-light-and-visibility/visibility-and-image-space-observation.md#clv-clipping-clearance-evaluation::delivery-crop-region`
+- `camera-light-and-visibility/visibility-and-image-space-observation.md#clv-clipping-clearance-evaluation::depth-precision-constraint`
+- `production-evidence/graph.md#spec-authoring-production-evidence-construction::section-index`
+- `production-evidence/input.md#spec-authoring-production-evidence-declaration::section-index`
+
+## 저장소 evidence review 정책
+
+Repository requirement-specification-source graph에서는 `evidence/review`를 켜지 않는다. 현재 package source에 실제로 적힌 관계는 `@evidence` 13,548개와 `@evidenceExclude` 7,593개, 합계 21,141개다. specification의 positive 관계 2,624개를 합치면 repository graph에는 positive 16,172개와 exclusion 7,593개, 합계 23,765개가 있다. 실제 companion review tag는 0개다. source 제외 사유 7,593개는 1,174종이고 상위 20종이 4,030개(53.08%)를 차지하며, 최다 사유 하나가 1,754회 쓰인다. 23,765개의 companion 문장을 일괄 요구하면 target별 의미 검토보다 package boundary의 기계적 재진술을 늘린다.
+
+이 결정은 review를 생략한다는 뜻이 아니다. `evidence/graph`가 resolved target과 population을 검사하고 `evidence/documented`가 public carrier를 유지하며 `evidence/todo`가 선언된 미구현 계약을 거부한다. `internals/contract-ownership.mjs`는 contract owner와 fragment declaration을 추적하고, `internals/authoring-reachability-gate.mjs`는 family owner와 정확한 unpaid fragment target 집합을 추적한다. 변경자는 evidence-graph skill과 review skill에 따라 실제 host, target, 이유와 consequence를 읽고, source를 바꾸면 development skill의 테스트와 100% per-file coverage 의무를 진다. 이 조합도 산문의 의미를 자동 증명하지는 않으므로 Self-Review가 최종 owner다.
+
+생성 production의 review stage는 별도 그래프다. 작품의 선택된 저작 모집단에서 관계를 실질적으로 검사하는 절차이므로 repository-wide source edge 수와 같은 이유로 자동 해제하지 않는다. 다만 changed relationship만 고르고, 구체적인 검사 기록을 보존하며, 복제 acknowledgement를 거부하는 review mechanism이 생기면 repository 정책도 다시 판단한다. Gate는 lint config가 이 기록과 다르게 `evidence/review`를 켜는 것을 거부한다.
+
+## 기존 건물 실험 적용
+
+[modern-suburban-house baseline](../../.agents/skills/experiment/baselines/modern-suburban-house.md)과 #1952에 교차표를 적용했다. 제외된 벤치마크 #2110을 다시 실행하지 않고 이미 기록된 brief, compiled counts, report와 driver 관찰만 사용했다.
+
+| 관찰 | 교차표 판정 |
+| --- | --- |
+| 한 채의 2층집, 20개 space, 28개 opening, 23개 authored model을 같은 graph로 만들었다 | `building-exterior`, `interior`, `asset-authoring`은 spaces, models, materials, instances, systems 계약으로 도달한다 |
+| `building:report`가 opening의 void와 filling element 차이, 끊어진 구조와 선언 gap을 보고했다 | diagnostics와 review 절차가 authoring contract에 연결되어 실제 구조 finding을 만들었다 |
+| 고정 brief는 중앙 `dog-leg` 계단을 요구했지만 세 reference image는 중간참이나 180도 회귀가 없는 직선 계단을 보였다 | `production-design`의 reference reconciliation owner가 없어서 모순이 intake에서 해결되지 않았다. Driver가 저작자를 감점하지 않고 관찰자 오류로 보존한 것은 옳고, #2126이 이 unpaid edge를 받는다 |
+| 실험은 한 대지의 단독 주택을 요청했고 그 밖의 지형, 수계, 교통, 생태, 정착지나 map delivery를 요청하지 않았다 | `map` owner 부재는 실제지만 이 실행의 declared scope에서는 활성 finding이 아니다 |
+| 접근성 delivery와 repaint rendition을 요청하지 않았다 | 두 unpaid family는 이 실행에서 관찰 결과를 만들지 않았지만, required/absent 상태와 repaint 선택을 맡을 owner가 없다는 debt는 그대로 남는다 |
+
+이 적용은 crosswalk가 모든 미지급 family를 모든 production의 결함으로 바꾸지 않음을 보여 준다. 먼저 선언한 delivery scope가 family를 활성화하는지 판정하고, 활성화된 family만 그 owner에게 요구한다. Owner 자체가 없는 경우에만 family edge가 제품 debt다.

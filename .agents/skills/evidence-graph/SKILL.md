@@ -53,6 +53,12 @@ Derive a domain-partitioned population by subtraction. A specialized claim may n
 
 A derived population makes a carrier's citations checked; it does not make citations mandatory. `evidence/graph` runs its obligation from the reference toward the claim, so a new file carrying a wrong citation is an error while a new file carrying none at all is silent. `singleEvidencePerSymbol` does not close that gap, because it demands exactly one unit per host where this repository's hosts answer for several. Until the contributor grows a per-host lower bound, that bound belongs to a structural guard, and `#1900` deliberately removed the repository-shape test class that would host one. Record the unpaid edge instead of reporting the population as self-enforcing.
 
+## Measure production authoring reachability
+
+The repository contract and a generated production's authoring contract remain separate graphs. Do not manufacture one citation per requirement unit between them. [The authoring-reachability ledger](../../../docs/authoring-reachability/README.md) instead maps every requirement family to the production contract or procedure that gives its decisions an author, or to one of three explicit absence classes: unpaid authoring edge, host-owned behavior, or intentional exclusion with a resumption condition.
+
+Run `node internals/authoring-reachability-gate.mjs` whenever a requirement family, the shared production-contract inventory, or a mapped authoring path changes. The gate requires complete family inventory, verifies current H3 and shared H2 populations, resolves every recorded path and anchor, and pins the accepted unpaid counts and exact fragment target set. It does not demand zero debt while an accepted follow-up owns that debt, but any increase, decrease, target substitution, or reclassification requires the ledger to be reread and updated rather than drifting silently.
+
 ## Packages outside the graph
 
 `@automovie/production` and `@automovie/playground` carry no `evidence/graph` claim. Their `lint.config.ts` keeps `evidence/documented` and `evidence/todo`, so every export still owes a comment and an unpaid `@todo` still fails the build, but no export cites a requirement or a specification.
@@ -89,7 +95,7 @@ Leave a fragment nobody implements undeclared rather than excluding it. An exclu
 
 Migrate by touching. Every unit starts in the ledger's `legacy` snapshot with its digest, and editing that unit moves its prose away from the digest, which is what surfaces it to the next author of that unit rather than arriving as one repository-wide red gate. What surfaces is a number, not a refusal: the check reports it under `stale` and still exits zero, exactly as the counting rule above requires. Read that count when you touch a legacy unit and decide whether this is the change that should declare its owners; nothing will stop you either way, and a declaration written to clear a diagnostic is the outcome the counting rule exists to avoid.
 
-**Unpaid edge.** Nothing yet compares a unit's marker set against its declared obligation set, so a declaration can still cover five of nine fragments and pass. Until that comparison exists, read the markers when you review a declaration, and do not report a passing gate as proof that a unit is fully owned.
+`node internals/authoring-reachability-gate.mjs` compares every specification `@evidenceObligation` target-anchor and id against source `@evidencePart` pairs, rejects orphan source parts, and pins both the current unpaid total and exact target set. The pin counts debt instead of declaring it implemented. Read every unpaid fragment when its specification or claimant changes, pay it with a truthful source owner when one exists, and update the accepted set and count in the same decision.
 
 ## Stable document identities
 
@@ -127,6 +133,14 @@ Use `@evidenceExclude` only when the selected claim intentionally owes no relati
 
 Preserve `@evidenceReview` and `@evidenceExcludeReview` when a reference requires review. Treat an expired fingerprint as a request to inspect the cited content again, not as a value to copy without review.
 
+## Repository evidence review companions
+
+Keep `evidence/review` disabled on the repository requirement-specification-source graph. Its complete source population carries enough relationships that one companion review sentence per positive or excluded edge becomes repeated package-boundary acknowledgement rather than semantic inspection. The authoring-reachability ledger records the current measurement and reconsideration condition, and its gate refuses a lint configuration that enables the rule without changing that decision.
+
+The substitute controls divide what can be automated from what cannot. `evidence/graph`, `evidence/documented`, and `evidence/todo` validate populations, resolution, carriers, and declared unrealized work; contract ownership and authoring reachability gates expose owner and fragment debt; the development skill requires tests and per-file coverage; the review skill owns semantic inspection of the actual host, target, reason, and consequence. None of those tools proves prose meaning automatically, so a passing graph never replaces Self-Review.
+
+The generated-production graph is separate. Its review stage records substantive relationship inspections over the production's selected authored population and remains active under the shipped production skill. Reconsider the repository rule when a mechanism can select changed semantic relationships, preserve concrete observations, and reject copied acknowledgements without demanding a companion sentence for every stable edge.
+
 ## Change workflow
 
 1. Read the documentation skill and update `.wiki/` as the decision develops. Read the project skill for product scope, the development skill for source or test changes, the scaffold skill when the shared contract inventory or the scaffold harness changes, and the shipped production skill when a production's own graph is involved.
@@ -145,7 +159,7 @@ Treat a dangling target as contract drift. Find whether the document, anchor, ro
 
 Treat an uncovered requirement during requirements-first work as visible implementation debt. A deliberately red graph is more accurate than a false specification or source citation. Record the phase and debt in `.wiki/` and the pull request instead of weakening the permanent rule.
 
-The scaffold production ladder is a separate graph with its own populations and topology. Its exact reusable target corpus includes principles, obligations, and production-specific discovery. Discovery is ordinary coverage over the owning authored H2 population, permits one truthful population-wide exclusion only for a complete search with no independent result, and is neither a per-unit checklist nor a repository contract triangle. Apply this skill's citation honesty and lint-inspection rules there, but use `packages/template/scaffold/.agents/skills/production/SKILL.md` to decide which production stage answers each target. Do not impose the repository requirement-specification-source triangle on generated productions.
+The scaffold production ladder is a separate graph with its own populations and topology. Its exact reusable target corpus includes principles, obligations, and production-specific discovery. Discovery is file-level coverage over the flat `docs/contracts/*.md` population, with one claim for each active authored Markdown layer. A retained result belongs in the contract file that states the adopted rule and an additive claim enforces it; a true no-result receives one concrete population-wide exclusion only in `docs/contracts/index.md`. Authored H2, H3, and H4 units never host that audit. Apply this skill's citation honesty and lint-inspection rules there, but use `packages/template/scaffold/.agents/skills/production/SKILL.md` to decide which production stage answers each target. Do not impose the repository requirement-specification-source triangle on generated productions.
 
 ## Verify
 
