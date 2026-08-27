@@ -41,8 +41,9 @@ for (let index = 0; index < args.length; ++index) {
   const value = args[++index];
   if (value === undefined || value.startsWith("--"))
     throw new Error(`${argument} requires a value.`);
-  if (argument === "--style" || argument === "--character")
-    references.push({ path: value, role: argument.slice(2) as "style" });
+  if (argument === "--style") references.push({ path: value, role: "style" });
+  else if (argument === "--character")
+    references.push({ path: value, role: "character" });
   else options.set(argument, value);
 }
 const shot = options.get("--shot") ?? positional[0];
