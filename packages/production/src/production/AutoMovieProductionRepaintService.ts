@@ -71,7 +71,7 @@ export class AutoMovieProductionRepaintService {
     )
       return refusal(
         "repaint-production-invalid",
-        "repaintShot productionId must be a trimmed non-empty production namespace.",
+        "Repaint productionId must be a trimmed non-empty production namespace.",
       );
     let services: IAutoMovieProductionServices;
     try {
@@ -116,7 +116,7 @@ export class AutoMovieProductionRepaintService {
     if (status.success === false)
       return failure(
         "repaint-compile-stale",
-        "repaintShot requires a current successful source compile. Run the scaffold compile command, resolve its diagnostics, and retry.",
+        "Repaint requires a current successful source compile. Run the scaffold compile command, resolve its diagnostics, and retry.",
       );
     let registry: ReturnType<typeof readAutoMovieProductionRegistry>;
     try {
@@ -161,7 +161,7 @@ export class AutoMovieProductionRepaintService {
     )
       return failure(
         "repaint-input-invalid",
-        "repaintShot requires a non-blank prompt, safe-integer seed, strength in [0, 1], and at least one fixed style or character reference.",
+        "Repaint requires a non-blank prompt, safe-integer seed, strength in [0, 1], and at least one fixed style or character reference.",
       );
     const attemptId = randomUUID();
     let resolvedSource: ICurrentShotSource | null;

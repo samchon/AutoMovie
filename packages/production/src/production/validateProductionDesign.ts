@@ -213,7 +213,7 @@ export const validateAutoMovieProductionGraph = (
         "design-range-invalid",
         target,
         file,
-        `frameFormat width times height exceeds ${AUTOMOVIE_MAX_FRAME_PIXELS} pixels. Reduce the exact production raster so captureFrame can produce required review evidence.`,
+        `frameFormat width times height exceeds ${AUTOMOVIE_MAX_FRAME_PIXELS} pixels. Reduce the exact production raster so capture can produce the required review evidence.`,
       );
     positive(
       diagnostics,

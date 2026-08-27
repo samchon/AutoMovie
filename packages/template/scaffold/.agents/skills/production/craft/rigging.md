@@ -96,7 +96,7 @@ Check:
 
 ## Review recipe
 
-`captureTurntable({ asset })` is the whole first step. One call commits the set an asset review is judged from: four horizontal quarters, the overhead outline pass, and the extreme-range pose of a rigged model. Assembling that set by hand is where the one angle a defect was on gets dropped.
+`npm run turntable -- --asset <id>` is the whole first step. One call commits the set an asset review is judged from: four horizontal quarters, the overhead outline pass, and the extreme-range pose of a rigged model. Assembling that set by hand is where the one angle a defect was on gets dropped.
 
 Then frame what a whole-model view cannot resolve. `npm run preview` accepts a `part` on an asset target and narrows the camera onto one compiled part with the model still around it, which is how a hinge, a pintle, a stile, or a pivot cover is actually looked at.
 

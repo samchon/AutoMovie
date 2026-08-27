@@ -807,7 +807,7 @@ export class AutoMovieProductionOracleService {
     const generated = this.project.generatedManifest();
     if (generated === null)
       throw new Error(
-        "captureFrame requires a current source compile. Run the scaffold compile command before requesting pixels.",
+        "Capture requires a current source compile. Run the scaffold compile command before requesting pixels.",
       );
     const freshness = this.freshnessDiagnostic(generated);
     if (freshness !== null)
@@ -820,7 +820,7 @@ export class AutoMovieProductionOracleService {
     const production = graph.production;
     if (production === null)
       throw new Error(
-        "captureFrame requires a production frame format. Create the tracked production design record and run the scaffold compile command.",
+        "Capture requires a production frame format. Create the tracked production design record and run the scaffold compile command.",
       );
     const pass = input.pass ?? "beauty";
     const width = input.width ?? production.frameFormat.width;
@@ -839,7 +839,7 @@ export class AutoMovieProductionOracleService {
       return previewFailure(
         generated.inputFingerprint,
         "preview-input-invalid",
-        `Capture time must be non-negative; dimensions must be positive integers no larger than the validated ${production.frameFormat.width}x${production.frameFormat.height} production frame. Correct captureFrame input.`,
+        `Capture time must be non-negative; dimensions must be positive integers no larger than the validated ${production.frameFormat.width}x${production.frameFormat.height} production frame. Correct the capture request.`,
       );
     let duration: number | undefined;
     let requestedTime = input.time;
@@ -930,7 +930,7 @@ export class AutoMovieProductionOracleService {
       return previewFailure(
         generated.inputFingerprint,
         "preview-target-missing",
-        `Target "${input.target.kind}:${input.target.id}" is absent from current compiler-owned output. Correct the target or compile its source before captureFrame.`,
+        `Target "${input.target.kind}:${input.target.id}" is absent from current compiler-owned output. Correct the target or compile its source before capturing.`,
       );
     if (requestedTime > duration)
       return previewFailure(
@@ -971,7 +971,7 @@ export class AutoMovieProductionOracleService {
         "capture-failed",
         `${
           error instanceof Error ? error.message : String(error)
-        }. Correct the capture host and retry captureFrame.`,
+        }. Correct the capture host and retry.`,
       );
     }
     const captureInputsCurrent = (): boolean => {

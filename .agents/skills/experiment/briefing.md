@@ -49,7 +49,7 @@ Two consequences for a brief. A tool named once is named for the whole session, 
 
 Measuring discoverability needs a run in which the name appears in no message at all, including the ones that only list what the agent may read.
 
-**And including anything you quote back from the product.** Its own diagnostics name its tools — one review refusal reads *"Run prepareReview, correct the target, and submitReview before this compile scope"* — so relaying a diagnostic verbatim spends the measurement in the act of describing it. A driver caught that with the message already drafted: it had been analysing a contradiction between two commands' remedies, and quoting either one to the agent would have handed over two of the three names the run existed to see whether the agent could find.
+**And including anything you quote back from the product.** Its own diagnostics name its tools — one refusal used to read *"Run prepareReview, correct the target, and submitReview before this compile scope"* — so relaying a diagnostic verbatim spends the measurement in the act of describing it. A driver caught that with the message already drafted: it had been analysing a contradiction between two commands' remedies, and quoting either one to the agent would have handed over two of the three names the run existed to see whether the agent could find.
 
 The consequence is not "paraphrase the diagnostic". It is that **a finding about the product's text is the driver's to file and not the author's to be told**, and a run measuring discoverability cannot use the product's own error messages as steering material at all. Scan every outgoing message against the tool names, not only against the ones you wrote yourself.
 

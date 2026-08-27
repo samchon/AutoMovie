@@ -33,9 +33,9 @@ import {
 /**
  * Project-relative directory every subject observation artifact is written to.
  *
- * It is deliberately outside the render root. `prepareReview` collects frame
- * evidence by walking committed render bundles, so an artifact that never
- * enters that tree cannot be quoted as a delivered frame however a caller
+ * It is deliberately outside the render root. Delivery evidence is collected
+ * by walking committed render bundles, so an artifact that never enters that
+ * tree cannot be quoted as a delivered frame however a caller
  * describes it. The separation is a location, not a convention someone has to
  * remember.
  *
@@ -671,7 +671,7 @@ export class AutoMovieProductionSubjectInspectionService {
     if (resolved === null)
       return refuse(
         "capture-target-missing",
-        `Subject "${input.subject}" is absent from current compiled artifact "${input.shot}". Correct the subject id or compile its source, then retry. Use prepareReview on the same subject target to list the ids this artifact actually owns.`,
+        `Subject "${input.subject}" is absent from current compiled artifact "${input.shot}". Correct the subject id or compile its source, then retry. Inspect the same artifact to list the ids it actually owns.`,
       );
     const frame = inspectionFrame(resolved.description);
     if (frame === null)
