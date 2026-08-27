@@ -6,7 +6,26 @@ import {
 import { AutoMovieContentDigest } from "../IAutoMovieProductionDesign";
 
 /**
- * One fixed style or character reference consumed by repaint.
+ * One explicit purpose assigned to a fixed repaint reference.
+ *
+ * `character` means identity rather than costume or material. `structure` is
+ * appearance guidance only: deterministic control passes remain authoritative
+ * for geometry, motion, contact, camera, timing, and clearance.
+ *
+ * @evidence requirements/repaint/source-frames-and-reference-locking.md#repaint-reference-roles Exposes the complete non-collapsible repaint reference-role vocabulary.
+ * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-repaint-controls-references Types distinct structural-guidance, identity, costume, style, material, color, and environment references.
+ */
+export type AutoMovieRepaintReferenceRole =
+  | "structure"
+  | "character"
+  | "costume"
+  | "style"
+  | "material"
+  | "color"
+  | "environment";
+
+/**
+ * One fixed, role-specific reference consumed by repaint.
  *
  * @evidence requirements/repaint/source-frames-and-reference-locking.md#repaint-reference-roles Exposes `IAutoMovieRepaintReferenceInput` as the portable data boundary for the repaint reference roles requirement.
  * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-repaint-controls-references Types `IAutoMovieRepaintReferenceInput` for the asset spec repaint controls references system contract.
@@ -18,7 +37,7 @@ export interface IAutoMovieRepaintReferenceInput {
    * @evidence requirements/repaint/source-frames-and-reference-locking.md#repaint-reference-roles Exposes `role` as the portable data boundary for the repaint reference roles requirement.
    * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-repaint-controls-references Types `role` for the asset spec repaint controls references system contract.
    */
-  role: "style" | "character";
+  role: AutoMovieRepaintReferenceRole;
   /**
    * Exact project-relative asset-manifest path.
    *
@@ -232,8 +251,8 @@ export interface IAutoMovieRepaintReceipt {
    * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-repaint-output-provenance Types `references` for the asset spec repaint output provenance system contract.
    */
   references: Array<{
-    /** Style or character role. */
-    role: "style" | "character";
+    /** Exact non-collapsible reference role. */
+    role: AutoMovieRepaintReferenceRole;
     /** Project-relative manifest path. */
     path: string;
     /** Current byte digest. */
@@ -355,7 +374,7 @@ export namespace IAutoMovieRepaintShot {
      */
     shot: string;
     /**
-     * Fixed style and character references from the asset manifest.
+     * Fixed non-collapsible role-specific references from the asset manifest.
      *
      * @evidence requirements/repaint/source-frames-and-reference-locking.md#repaint-reference-roles Exposes `references` as the portable data boundary for the repaint reference roles requirement.
      * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-repaint-controls-references Types `references` for the asset spec repaint controls references system contract.

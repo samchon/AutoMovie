@@ -2,6 +2,7 @@ import {
   AutoMovieContentDigest,
   AutoMovieDiagnosticCode,
   AutoMovieProductionShotRepaint,
+  AutoMovieRepaintReferenceRole,
   IAutoMovieAssetManifest,
   IAutoMovieDiagnostic,
   IAutoMovieRenderBundleManifest,
@@ -58,19 +59,38 @@ export class AutoMovieProductionRepaintService {
     context: AutoMovieProductionContext,
     input: IAutoMovieRepaintShot.IProps,
   ): Promise<IAutoMovieRepaintShot> {
+    const requestedProductionId =
+      typeof input === "object" &&
+      input !== null &&
+      typeof (input as { productionId?: unknown }).productionId === "string"
+        ? (input as { productionId: string }).productionId
+        : "";
+    const requestedShot =
+      typeof input === "object" &&
+      input !== null &&
+      typeof (input as { shot?: unknown }).shot === "string"
+        ? (input as { shot: string }).shot
+        : "";
     const refusal = (
       code: AutoMovieDiagnosticCode,
       message: string,
     ): IAutoMovieRepaintShot => ({
       repainted: false,
-      productionId: input.productionId,
-      shot: input.shot,
+      productionId: requestedProductionId,
+      shot: requestedShot,
       receipt: null,
-      diagnostics: [diagnostic(code, input.shot, message, "render")],
+      diagnostics: [diagnostic(code, requestedShot, message, "render")],
     });
+    const requestValidation =
+      typia.validateEquals<IAutoMovieRepaintShot.IProps>(input);
+    if (requestValidation.success === false)
+      return refusal(
+        "repaint-input-invalid",
+        "Repaint input must match its exact public request schema before project lookup or provider execution; remove missing, mistyped, credential-bearing, or hidden fields.",
+      );
     if (
-      input.productionId.trim().length === 0 ||
-      input.productionId.trim() !== input.productionId
+      requestedProductionId.trim().length === 0 ||
+      requestedProductionId.trim() !== requestedProductionId
     )
       return refusal(
         "repaint-production-invalid",
@@ -78,7 +98,7 @@ export class AutoMovieProductionRepaintService {
       );
     let services: IAutoMovieProductionServices;
     try {
-      services = context.forProduction(input.productionId);
+      services = context.forProduction(requestedProductionId);
     } catch (error) {
       return refusal(
         "repaint-production-unregistered",
@@ -213,7 +233,7 @@ export class AutoMovieProductionRepaintService {
     )
       return failure(
         "repaint-input-invalid",
-        "Repaint requires trimmed non-blank prompts, a safe-integer seed, strength in [0, 1], scalar controls with trimmed identities, and at least one fixed style or character reference.",
+        "Repaint requires trimmed non-blank prompts, a safe-integer seed, strength in [0, 1], scalar controls with trimmed identities, and at least one fixed role-specific reference.",
       );
     const request: IAutoMovieRepaintShot.IProps = {
       ...input,
@@ -521,7 +541,7 @@ const resolveReferences = (
 ):
   | {
       values: Array<{
-        role: "style" | "character";
+        role: AutoMovieRepaintReferenceRole;
         path: string;
         digest: AutoMovieContentDigest;
         bytes: Uint8Array;
@@ -564,8 +584,9 @@ const resolveReferences = (
       ),
     };
   const seen = new Set<string>();
+  const rolesByPath = new Map<string, Set<AutoMovieRepaintReferenceRole>>();
   const values: Array<{
-    role: "style" | "character";
+    role: AutoMovieRepaintReferenceRole;
     path: string;
     digest: AutoMovieContentDigest;
     bytes: Uint8Array;
@@ -600,6 +621,9 @@ const resolveReferences = (
         ),
       };
     seen.add(key);
+    const roles = rolesByPath.get(reference.path) ?? new Set();
+    roles.add(reference.role);
+    rolesByPath.set(reference.path, roles);
     values.push({
       role: reference.role,
       path: reference.path,
@@ -607,8 +631,22 @@ const resolveReferences = (
       bytes: resident.bytes,
     });
   }
+  if (
+    [...rolesByPath.values()].some(
+      (roles) => roles.size === REPAINT_REFERENCE_ROLE_COUNT,
+    )
+  )
+    return {
+      diagnostic: diagnostic(
+        "repaint-reference-invalid",
+        input.shot,
+        "One reference image cannot stand as canonical guidance for every repaint role. Split structure, identity, costume, style, material, color, and environment authority across reviewed assets.",
+      ),
+    };
   return { values };
 };
+
+const REPAINT_REFERENCE_ROLE_COUNT = 7;
 
 const physicalFiles = (root: string): string[] => {
   if (fs.existsSync(root) === false) return [];

@@ -1,5 +1,6 @@
 import {
   AutoMovieContentDigest,
+  AutoMovieRepaintReferenceRole,
   IAutoMovieRenderBundleManifest,
   IAutoMovieRepaintGeneratorAdoption,
   IAutoMovieRepaintGeneratorProvenance,
@@ -149,7 +150,7 @@ export const productionRepaintOutputPath = (props: {
   generatorProvenance: IAutoMovieRepaintGeneratorProvenance;
   parameters: IAutoMovieRepaintParameters;
   references: readonly {
-    role: "style" | "character";
+    role: AutoMovieRepaintReferenceRole;
     path: string;
     digest: AutoMovieContentDigest;
   }[];

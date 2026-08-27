@@ -5,6 +5,7 @@ import {
   IAutoMovieRenderBundleManifest,
 } from "./IAutoMovieProductionOracle";
 import {
+  AutoMovieRepaintReferenceRole,
   IAutoMovieRepaintParameters,
   IAutoMovieRepaintRuntimeIdentity,
 } from "./capture/IAutoMovieRepaintShot";
@@ -80,8 +81,8 @@ export interface IAutoMovieProductionRepaintInput {
    * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-repaint-controls-references Types `references` for the asset spec repaint controls references system contract.
    */
   references: Array<{
-    /** Style or character role. */
-    role: "style" | "character";
+    /** Exact non-collapsible role; `character` means identity. */
+    role: AutoMovieRepaintReferenceRole;
     /** Project-relative asset-manifest path. */
     path: string;
     /** Current digest. */

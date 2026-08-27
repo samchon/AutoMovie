@@ -1,6 +1,7 @@
 import {
   AutoMovieContentDigest,
   AutoMovieGuidePass,
+  AutoMovieRepaintReferenceRole,
   IAutoMovieAcceptanceScenario,
   IAutoMovieAssetManifest,
   IAutoMovieDesignMutationConsequences,
@@ -180,6 +181,8 @@ const closeRenderFileDescriptor = (
     );
   }
 };
+
+const REPAINT_REFERENCE_ROLE_COUNT = 7;
 
 /**
  * Tracked production repository for the coding-agent-first application.
@@ -2061,6 +2064,7 @@ export class AutoMovieProductionProject {
         "Repaint asset manifest does not match its strict schema.",
       );
     const seen = new Set<string>();
+    const rolesByPath = new Map<string, Set<AutoMovieRepaintReferenceRole>>();
     if (receipt.references.length === 0)
       throw new Error("Repaint receipt requires at least one fixed reference.");
     for (const reference of receipt.references) {
@@ -2089,7 +2093,18 @@ export class AutoMovieProductionProject {
           `Repaint reference "${reference.role}:${reference.path}" is duplicate, absent, byte-stale, or not registered to shot "${receipt.shot}".`,
         );
       seen.add(key);
+      const roles = rolesByPath.get(reference.path) ?? new Set();
+      roles.add(reference.role);
+      rolesByPath.set(reference.path, roles);
     }
+    if (
+      [...rolesByPath.values()].some(
+        (roles) => roles.size === REPAINT_REFERENCE_ROLE_COUNT,
+      )
+    )
+      throw new Error(
+        "One repaint reference image cannot stand as canonical guidance for every role.",
+      );
   }
 
   /**

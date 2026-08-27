@@ -1,5 +1,6 @@
 import type {
   AutoMovieProductionShotRepaint,
+  AutoMovieRepaintReferenceRole,
   IAutoMovieAssetManifest,
   IAutoMovieProductionRegistryManifest,
   IAutoMovieRenderBundleManifest,
@@ -8,6 +9,8 @@ import type {
   IAutoMovieRepaintShot,
 } from "@automovie/interface";
 import {
+  type AutoMovieProductionContext,
+  AutoMovieProductionInputRaceError,
   AutoMovieProductionProject,
   AutoMovieProductionRepaintService,
   type IAutoMovieProductionServices,
@@ -43,6 +46,21 @@ const adoption = (): IAutoMovieRepaintGeneratorAdoption => ({
   },
 });
 
+const referenceRoles = [
+  "structure",
+  "character",
+  "costume",
+  "style",
+  "material",
+  "color",
+  "environment",
+] as const satisfies readonly AutoMovieRepaintReferenceRole[];
+
+const referencePathForRole = (role: AutoMovieRepaintReferenceRole): string =>
+  role === "structure" || role === "character"
+    ? "assets/structure-identity-reference.png"
+    : `assets/${role}-reference.png`;
+
 const input: IAutoMovieRepaintShot.IProps = {
   productionId: "repaint-adoption-test",
   shot: "opening",
@@ -51,7 +69,10 @@ const input: IAutoMovieRepaintShot.IProps = {
     seed: 17,
     strength: 0.35,
   },
-  references: [{ role: "style", path: "assets/style.png" }],
+  references: referenceRoles.map((role) => ({
+    role,
+    path: referencePathForRole(role),
+  })),
 };
 
 const services = (): IAutoMovieProductionServices =>
@@ -63,6 +84,8 @@ const services = (): IAutoMovieProductionServices =>
 const codeOf = (result: IAutoMovieRepaintShot): string | undefined =>
   result.diagnostics[0]?.code;
 
+const nonError = (message: string): Error => message as unknown as Error;
+
 const executableServices = (props: {
   root: string;
   commit: (receipt: IAutoMovieRepaintReceipt) => void;
@@ -70,24 +93,31 @@ const executableServices = (props: {
   const compileFingerprint = digestAutoMovieBytes(
     Buffer.from("repaint-compile", "utf8"),
   );
-  const referenceBytes = Buffer.from("reviewed-style-reference", "utf8");
-  const referenceDigest = digestAutoMovieBytes(referenceBytes);
   const assetManifest = completedFilmJson<IAutoMovieAssetManifest>(
     "automovie/assets.json",
   );
-  assetManifest.assets[0] = {
-    ...assetManifest.assets[0]!,
-    path: input.references[0]!.path,
-    digest: referenceDigest,
-    uses: [
-      {
-        production: input.productionId,
-        consumer: { kind: "rendition-reference", id: input.shot },
-        reason:
-          "This reviewed style reference constrains the opening rendition.",
-      },
-    ],
-  };
+  const referenceBytesByPath = new Map(
+    [...new Set(input.references.map((reference) => reference.path))].map(
+      (referencePath) => [
+        referencePath,
+        Buffer.from(`reviewed-reference:${referencePath}`, "utf8"),
+      ],
+    ),
+  );
+  assetManifest.assets = [...referenceBytesByPath].map(
+    ([referencePath, referenceBytes]) => ({
+      ...assetManifest.assets[0]!,
+      path: referencePath,
+      digest: digestAutoMovieBytes(referenceBytes),
+      uses: [
+        {
+          production: input.productionId,
+          consumer: { kind: "rendition-reference" as const, id: input.shot },
+          reason: `This reviewed role-specific reference constrains ${input.shot}.`,
+        },
+      ],
+    }),
+  );
   const assetManifestBytes = Buffer.from(JSON.stringify(assetManifest), "utf8");
   const registry: IAutoMovieProductionRegistryManifest = {
     version: 2,
@@ -151,7 +181,10 @@ const executableServices = (props: {
     manifest: () => ({ assetManifest: "automovie/assets.json" }),
     contentInputs: () => [
       { path: "automovie/assets.json", bytes: assetManifestBytes },
-      { path: input.references[0]!.path, bytes: referenceBytes },
+      ...[...referenceBytesByPath].map(([referencePath, bytes]) => ({
+        path: referencePath,
+        bytes,
+      })),
     ],
     commitRepaintRendition: (receipt: IAutoMovieRepaintReceipt) =>
       props.commit(receipt),
@@ -166,6 +199,22 @@ const executableServices = (props: {
     }),
   } as unknown as IAutoMovieProductionServices;
 };
+
+const scenarioServices = (
+  base: IAutoMovieProductionServices,
+  props: {
+    project?: Record<string, unknown>;
+    services?: Record<string, unknown>;
+  } = {},
+): IAutoMovieProductionServices =>
+  ({
+    ...(base as unknown as Record<string, unknown>),
+    ...props.services,
+    project: {
+      ...(base.project as unknown as Record<string, unknown>),
+      ...props.project,
+    },
+  }) as unknown as IAutoMovieProductionServices;
 
 /**
  * A repaint host is complete only when adapter and reviewed adoption coexist.
@@ -223,6 +272,14 @@ export const test_production_repaint_generator_adoption =
         },
       },
     ];
+    const thrownAdoption = adoption() as IAutoMovieRepaintGeneratorAdoption;
+    Object.defineProperty(thrownAdoption, "runtimeIdentity", {
+      enumerable: true,
+      get: () => {
+        throw nonError("non-error adoption failure");
+      },
+    });
+    malformed.push(thrownAdoption);
     const malformedResults = await Promise.all(
       malformed.map((generator) =>
         new AutoMovieProductionRepaintService(
@@ -235,6 +292,7 @@ export const test_production_repaint_generator_adoption =
       "invalid reviewed adoption is refused before external execution",
       malformedResults.map(codeOf),
       [
+        "repaint-host-unavailable",
         "repaint-host-unavailable",
         "repaint-host-unavailable",
         "repaint-host-unavailable",
@@ -254,6 +312,96 @@ export const test_production_repaint_generator_adoption =
       "no refused or source-stale request reaches the adapter",
       adapterCalls,
       0,
+    );
+    let projectLookups = 0;
+    const malformedEntryResults = await Promise.all(
+      [
+        null,
+        { ...input, productionId: 42 },
+        { ...input, hidden: "must-not-reach-project" },
+      ].map((invalid) =>
+        new AutoMovieProductionRepaintService(adapter, adoption()).serve(
+          {
+            forProduction: () => {
+              ++projectLookups;
+              return services();
+            },
+          } as unknown as AutoMovieProductionContext,
+          invalid as IAutoMovieRepaintShot.IProps,
+        ),
+      ),
+    );
+    TestValidator.equals(
+      "public repaint entry validates exact input before project lookup",
+      {
+        codes: malformedEntryResults.map(codeOf),
+        projectLookups,
+        adapterCalls,
+      },
+      {
+        codes: [
+          "repaint-input-invalid",
+          "repaint-input-invalid",
+          "repaint-input-invalid",
+        ],
+        projectLookups: 0,
+        adapterCalls: 0,
+      },
+    );
+    const deterministicServices = {
+      project: {
+        productionId: input.productionId,
+        graph: () => ({
+          production: { visualDelivery: "deterministic" },
+        }),
+      },
+    } as unknown as IAutoMovieProductionServices;
+    const serveFailures = await Promise.all([
+      new AutoMovieProductionRepaintService(adapter, adoption()).serve(
+        {
+          forProduction: () => deterministicServices,
+        } as unknown as AutoMovieProductionContext,
+        { ...input, productionId: "" },
+      ),
+      new AutoMovieProductionRepaintService(adapter, adoption()).serve(
+        {
+          forProduction: () => deterministicServices,
+        } as unknown as AutoMovieProductionContext,
+        { ...input, productionId: " padded " },
+      ),
+      new AutoMovieProductionRepaintService(adapter, adoption()).serve(
+        {
+          forProduction: () => {
+            throw new Error("missing production");
+          },
+        } as unknown as AutoMovieProductionContext,
+        input,
+      ),
+      new AutoMovieProductionRepaintService(adapter, adoption()).serve(
+        {
+          forProduction: () => {
+            throw nonError("non-error missing production");
+          },
+        } as unknown as AutoMovieProductionContext,
+        input,
+      ),
+      new AutoMovieProductionRepaintService(adapter, adoption()).serve(
+        {
+          forProduction: () => deterministicServices,
+        } as unknown as AutoMovieProductionContext,
+        input,
+      ),
+    ]);
+    TestValidator.equals(
+      "public repaint entry covers namespace, lookup, and delivery refusals",
+      serveFailures.map(codeOf),
+      [
+        "repaint-production-invalid",
+        "repaint-production-invalid",
+        "repaint-production-unregistered",
+        "repaint-production-unregistered",
+        "repaint-delivery-disabled",
+      ],
     );
 
     const root = fs.mkdtempSync(
@@ -285,6 +433,55 @@ export const test_production_repaint_generator_adoption =
         commit: (receipt) => committed.push(receipt),
       });
       const selected = adoption();
+      const validManifest = runnable.project.verifiedRenderManifest(
+        path.join(root, "bundle", "manifest.json"),
+      );
+      const validGenerated = runnable.project.generatedManifest();
+      if (validManifest === null || validGenerated === null)
+        throw new Error("Executable repaint fixture lost current evidence.");
+      const validInputs = runnable.project.contentInputs();
+      const validGraph = runnable.project.graph();
+      const validRegistry = JSON.parse(
+        Buffer.from(
+          runnable.project.readGeneratedFile("manifests/compile.json"),
+        ).toString("utf8"),
+      ) as IAutoMovieProductionRegistryManifest;
+      const repaint = (
+        services: IAutoMovieProductionServices,
+        props: {
+          adapter?: AutoMovieProductionShotRepaint;
+          generator?: IAutoMovieRepaintGeneratorAdoption;
+          request?: IAutoMovieRepaintShot.IProps;
+        } = {},
+      ): Promise<IAutoMovieRepaintShot> =>
+        new AutoMovieProductionRepaintService(
+          props.adapter ?? actualAdapter(selected.runtimeIdentity),
+          props.generator ?? selected,
+        ).repaint(services, props.request ?? input);
+      const servicesWithRegistry = (
+        registry: IAutoMovieProductionRegistryManifest,
+      ): IAutoMovieProductionServices => {
+        const bytes = Buffer.from(JSON.stringify(registry), "utf8");
+        const registryDigest = digestAutoMovieBytes(bytes);
+        return scenarioServices(runnable, {
+          project: {
+            generatedManifest: () => ({
+              ...validGenerated,
+              files: [
+                { path: "manifests/compile.json", digest: registryDigest },
+              ],
+            }),
+            readGeneratedFile: () => bytes,
+          },
+        });
+      };
+      let changingControlReads = 0;
+      const changingControls: Record<string, string | number | boolean> = {};
+      Object.defineProperty(changingControls, "mutating", {
+        enumerable: true,
+        get: () =>
+          ++changingControlReads === 1 ? true : ({} as unknown as boolean),
+      });
       const invalidInputs: unknown[] = [
         null,
         { ...input, hidden: "must-not-reach-provider" },
@@ -297,11 +494,45 @@ export const test_production_repaint_generator_adoption =
         },
         {
           ...input,
+          parameters: { ...input.parameters, prompt: "" },
+        },
+        {
+          ...input,
           parameters: { ...input.parameters, prompt: " padded " },
         },
         {
           ...input,
           parameters: { ...input.parameters, negativePrompt: "" },
+        },
+        {
+          ...input,
+          parameters: { ...input.parameters, negativePrompt: " padded " },
+        },
+        {
+          ...input,
+          parameters: {
+            ...input.parameters,
+            seed: Number.MAX_SAFE_INTEGER + 1,
+          },
+        },
+        {
+          ...input,
+          parameters: { ...input.parameters, strength: Number.NaN },
+        },
+        {
+          ...input,
+          parameters: { ...input.parameters, strength: -0.1 },
+        },
+        {
+          ...input,
+          parameters: { ...input.parameters, strength: 1.1 },
+        },
+        {
+          ...input,
+          parameters: {
+            ...input.parameters,
+            controls: { "": true },
+          },
         },
         {
           ...input,
@@ -321,6 +552,27 @@ export const test_production_repaint_generator_adoption =
           ...input,
           parameters: {
             ...input.parameters,
+            controls: { scheduler: "" },
+          },
+        },
+        {
+          ...input,
+          parameters: {
+            ...input.parameters,
+            controls: { guidance: Number.POSITIVE_INFINITY },
+          },
+        },
+        {
+          ...input,
+          parameters: {
+            ...input.parameters,
+            controls: changingControls,
+          },
+        },
+        {
+          ...input,
+          parameters: {
+            ...input.parameters,
             controls: new Date("2026-08-28T00:00:00.000Z"),
           },
         },
@@ -328,6 +580,16 @@ export const test_production_repaint_generator_adoption =
           ...input,
           references: [
             { ...input.references[0]!, credential: "must-not-reach-provider" },
+          ],
+        },
+        { ...input, references: [] },
+        {
+          ...input,
+          references: [
+            {
+              ...input.references[0]!,
+              role: "unknown-role",
+            },
           ],
         },
       ];
@@ -368,6 +630,384 @@ export const test_production_repaint_generator_adoption =
         providerExecutions,
         0,
       );
+      const missingRegistry = scenarioServices(runnable, {
+        project: { generatedManifest: () => null },
+      });
+      const throwingRegistry = scenarioServices(runnable, {
+        project: {
+          generatedManifest: () => {
+            throw nonError("non-error registry failure");
+          },
+        },
+      });
+      const noProduction = scenarioServices(runnable, {
+        project: {
+          graph: () => ({ ...validGraph, production: null }),
+        },
+      });
+      const noShotContract = scenarioServices(runnable, {
+        project: {
+          graph: () => ({ ...validGraph, shots: new Map() }),
+        },
+      });
+      const missingRenderRoot = scenarioServices(runnable, {
+        project: { renderRoot: () => path.join(root, "absent-render-root") },
+      });
+      const missingSourceManifest = scenarioServices(runnable, {
+        project: { verifiedRenderManifest: () => null },
+      });
+      const invalidSourceEvidence = [
+        new Error("invalid render evidence"),
+        "non-error invalid render evidence",
+      ].map((thrown) =>
+        scenarioServices(runnable, {
+          project: {
+            verifiedRenderManifest: () => {
+              throw thrown instanceof Error ? thrown : nonError(thrown);
+            },
+          },
+        }),
+      );
+      const linkedRoot = fs.mkdtempSync(
+        path.join(os.tmpdir(), "automovie-repaint-linked-render-"),
+      );
+      fs.symlinkSync(
+        path.join(root, "bundle"),
+        path.join(linkedRoot, "linked-bundle"),
+        "junction",
+      );
+      const linkedSourceEvidence = scenarioServices(runnable, {
+        project: { renderRoot: () => linkedRoot },
+      });
+      const missingReferenceManifest = scenarioServices(runnable, {
+        project: { manifest: () => ({}) },
+      });
+      const nullReferenceManifest = scenarioServices(runnable, {
+        project: {
+          contentInputs: () => [{ path: "automovie/assets.json", bytes: null }],
+        },
+      });
+      const referenceManifestBytes = validInputs.find(
+        (entry) => entry.path === "automovie/assets.json",
+      )?.bytes;
+      if (
+        referenceManifestBytes === null ||
+        referenceManifestBytes === undefined
+      )
+        throw new Error("Executable repaint fixture lost its asset manifest.");
+      const invalidReferenceJson = scenarioServices(runnable, {
+        project: {
+          contentInputs: () => [
+            { path: "automovie/assets.json", bytes: Buffer.from("{") },
+          ],
+        },
+      });
+      const malformedReferenceManifest = scenarioServices(runnable, {
+        project: {
+          contentInputs: () => [
+            { path: "automovie/assets.json", bytes: Buffer.from("{}") },
+          ],
+        },
+      });
+      const absentReferenceBytes = scenarioServices(runnable, {
+        project: {
+          contentInputs: () => [
+            { path: "automovie/assets.json", bytes: referenceManifestBytes },
+          ],
+        },
+      });
+      const nullReferenceBytes = scenarioServices(runnable, {
+        project: {
+          contentInputs: () => [
+            { path: "automovie/assets.json", bytes: referenceManifestBytes },
+            { path: input.references[0]!.path, bytes: null },
+          ],
+        },
+      });
+      const preAdapterFailures = await Promise.all([
+        repaint(missingRegistry),
+        repaint(throwingRegistry),
+        repaint(
+          servicesWithRegistry({
+            ...validRegistry,
+            shots: [],
+          }),
+        ),
+        repaint(noProduction),
+        repaint(noShotContract),
+        repaint(missingRenderRoot),
+        repaint(missingSourceManifest),
+        ...invalidSourceEvidence.map((current) => repaint(current)),
+        repaint(linkedSourceEvidence),
+        repaint(missingReferenceManifest),
+        repaint(nullReferenceManifest),
+        repaint(invalidReferenceJson),
+        repaint(malformedReferenceManifest),
+        repaint(absentReferenceBytes),
+        repaint(nullReferenceBytes),
+        repaint(runnable, {
+          request: {
+            ...input,
+            references: [
+              input.references[0]!,
+              structuredClone(input.references[0]!),
+            ],
+          },
+        }),
+        repaint(runnable, {
+          request: {
+            ...input,
+            references: [{ role: "style", path: "assets/absent.png" }],
+          },
+        }),
+        repaint(runnable, {
+          request: {
+            ...input,
+            references: referenceRoles.map((role) => ({
+              role,
+              path: input.references[0]!.path,
+            })),
+          },
+        }),
+      ]);
+      fs.rmSync(linkedRoot, { force: true, recursive: true });
+      TestValidator.equals(
+        "registry, target, source, and reference preflights refuse specifically",
+        preAdapterFailures.map(codeOf),
+        [
+          "repaint-registry-unavailable",
+          "repaint-registry-unavailable",
+          "repaint-target-missing",
+          "repaint-target-missing",
+          "repaint-target-missing",
+          "repaint-source-evidence-missing",
+          "repaint-source-evidence-missing",
+          "repaint-source-evidence-invalid",
+          "repaint-source-evidence-invalid",
+          "repaint-source-evidence-invalid",
+          "repaint-reference-manifest-missing",
+          "repaint-reference-manifest-missing",
+          "repaint-reference-manifest-invalid",
+          "repaint-reference-manifest-invalid",
+          "repaint-reference-invalid",
+          "repaint-reference-invalid",
+          "repaint-reference-invalid",
+          "repaint-reference-invalid",
+          "repaint-reference-invalid",
+        ],
+      );
+      TestValidator.equals(
+        "all preflight failures precede provider execution",
+        providerExecutions,
+        0,
+      );
+      const served = await new AutoMovieProductionRepaintService(
+        actualAdapter(selected.runtimeIdentity),
+        selected,
+      ).serve(
+        {
+          forProduction: () =>
+            scenarioServices(runnable, {
+              project: {
+                graph: () => ({
+                  ...validGraph,
+                  production: {
+                    ...validGraph.production,
+                    visualDelivery: "repainted",
+                  },
+                }),
+                commitRepaintRendition: () => 1,
+              },
+            }),
+        } as unknown as AutoMovieProductionContext,
+        input,
+      );
+      TestValidator.equals(
+        "public repaint entry delegates one admitted delivery",
+        served.repainted,
+        true,
+      );
+      const adapterFailures = await Promise.all(
+        [new Error("adapter failed"), "non-error adapter failure"].map(
+          (thrown) =>
+            repaint(runnable, {
+              adapter: async () => {
+                throw thrown instanceof Error ? thrown : nonError(thrown);
+              },
+            }),
+        ),
+      );
+      TestValidator.equals(
+        "adapter failures retain one specific refusal across thrown values",
+        adapterFailures.map(codeOf),
+        ["repaint-failed", "repaint-failed"],
+      );
+      const currentCompile = runnable.compileStatus();
+      if (currentCompile.success === false)
+        throw new Error("Executable repaint fixture compile became stale.");
+      const changingCompile = (
+        next: () => ReturnType<IAutoMovieProductionServices["compileStatus"]>,
+      ): IAutoMovieProductionServices => {
+        let calls = 0;
+        return scenarioServices(runnable, {
+          services: {
+            compileStatus: () => (++calls === 1 ? currentCompile : next()),
+          },
+        });
+      };
+      const changedRegistry: IAutoMovieProductionRegistryManifest = {
+        ...validRegistry,
+        compiler: "changed-during-repaint",
+      };
+      const changedRegistryBytes = Buffer.from(
+        JSON.stringify(changedRegistry),
+        "utf8",
+      );
+      let registryReads = 0;
+      let currentRegistryBytes = Buffer.from(JSON.stringify(validRegistry));
+      const changedRegistryServices = scenarioServices(runnable, {
+        project: {
+          generatedManifest: () => {
+            currentRegistryBytes =
+              ++registryReads === 1
+                ? Buffer.from(JSON.stringify(validRegistry))
+                : changedRegistryBytes;
+            return {
+              ...validGenerated,
+              files: [
+                {
+                  path: "manifests/compile.json",
+                  digest: digestAutoMovieBytes(currentRegistryBytes),
+                },
+              ],
+            };
+          },
+          readGeneratedFile: () => currentRegistryBytes,
+        },
+      });
+      let manifestReads = 0;
+      const vanishedManifest = scenarioServices(runnable, {
+        project: {
+          verifiedRenderManifest: () =>
+            ++manifestReads === 1 ? validManifest : null,
+        },
+      });
+      let changedManifestReads = 0;
+      const changedManifest = structuredClone(validManifest);
+      changedManifest.frames[0] = {
+        ...changedManifest.frames[0]!,
+        digest: digestAutoMovieBytes(Buffer.from("changed-frame")),
+      };
+      const changedSource = scenarioServices(runnable, {
+        project: {
+          verifiedRenderManifest: () =>
+            ++changedManifestReads === 1 ? validManifest : changedManifest,
+        },
+      });
+      let missingReferenceReads = 0;
+      const vanishedReferences = scenarioServices(runnable, {
+        project: {
+          contentInputs: () =>
+            ++missingReferenceReads === 1 ? validInputs : [],
+        },
+      });
+      const changedReferenceBytes = Buffer.from("changed-style-reference");
+      const changedReferenceDigest = digestAutoMovieBytes(
+        changedReferenceBytes,
+      );
+      const changedAssetManifest = JSON.parse(
+        Buffer.from(referenceManifestBytes).toString("utf8"),
+      ) as IAutoMovieAssetManifest;
+      changedAssetManifest.assets[0] = {
+        ...changedAssetManifest.assets[0]!,
+        digest: changedReferenceDigest,
+      };
+      const changedAssetManifestBytes = Buffer.from(
+        JSON.stringify(changedAssetManifest),
+      );
+      let referenceReads = 0;
+      const changedReferences = scenarioServices(runnable, {
+        project: {
+          contentInputs: () =>
+            ++referenceReads === 1
+              ? validInputs
+              : validInputs.map((entry) =>
+                  entry.path === "automovie/assets.json"
+                    ? { ...entry, bytes: changedAssetManifestBytes }
+                    : entry.path === input.references[0]!.path
+                      ? { ...entry, bytes: changedReferenceBytes }
+                      : entry,
+                ),
+        },
+      });
+      const racedInputs = await Promise.all([
+        repaint(changingCompile(() => ({ ...currentCompile, success: false }))),
+        repaint(
+          changingCompile(() => ({
+            ...currentCompile,
+            compiler: {
+              ...currentCompile.compiler,
+              inputFingerprint: digestAutoMovieBytes(Buffer.from("changed")),
+            },
+          })),
+        ),
+        repaint(
+          changingCompile(() => {
+            throw new Error("compile status failed during repaint");
+          }),
+        ),
+        repaint(changedRegistryServices),
+        repaint(vanishedManifest),
+        repaint(changedSource),
+        repaint(vanishedReferences),
+        repaint(changedReferences),
+      ]);
+      TestValidator.equals(
+        "every current-input race is refused after provider execution",
+        racedInputs.map(codeOf),
+        Array.from(
+          { length: racedInputs.length },
+          () => "repaint-input-changed",
+        ),
+      );
+      const equalBundle = path.join(root, "bundle-equal");
+      const richBundle = path.join(root, "bundle-rich");
+      fs.mkdirSync(equalBundle, { recursive: true });
+      fs.mkdirSync(richBundle, { recursive: true });
+      fs.writeFileSync(path.join(equalBundle, "manifest.json"), "{}\n");
+      fs.writeFileSync(path.join(richBundle, "manifest.json"), "{}\n");
+      const richManifest = structuredClone(validManifest);
+      richManifest.frames.push(
+        ...Array.from({ length: 4 }, (_, index) => ({
+          ...validManifest.frames.find(
+            (frame) => frame.index === index && frame.pass === "depth",
+          )!,
+          pass: "normal" as const,
+          path: `normal-${index}.png`,
+          digest: digestAutoMovieBytes(Buffer.from(`normal-${index}`)),
+        })),
+      );
+      try {
+        const sortedSource = await repaint(
+          scenarioServices(runnable, {
+            project: {
+              verifiedRenderManifest: (manifestPath: string) =>
+                manifestPath.includes("bundle-rich")
+                  ? richManifest
+                  : validManifest,
+              commitRepaintRendition: () => 1,
+            },
+          }),
+        );
+        TestValidator.equals(
+          "source discovery deterministically sorts unequal and equal candidates",
+          sortedSource.repainted,
+          true,
+        );
+      } finally {
+        fs.rmSync(equalBundle, { force: true, recursive: true });
+        fs.rmSync(richBundle, { force: true, recursive: true });
+      }
       const mismatch = await new AutoMovieProductionRepaintService(
         actualAdapter({
           ...selected.runtimeIdentity,
@@ -379,6 +1019,70 @@ export const test_production_repaint_generator_adoption =
         "actual adapter identity cannot differ from reviewed generator selection",
         { code: codeOf(mismatch), commits: committed.length },
         { code: "repaint-output-invalid", commits: 0 },
+      );
+      const wrongRasterBytes = await productionH264Mp4({
+        width: 8,
+        height: 16,
+        fps: 24,
+        frameCount: 4,
+      });
+      const outputFailures = await Promise.all([
+        repaint(runnable, {
+          adapter: async () => ({
+            mediaType: "image/png" as never,
+            bytes: generatedBytes,
+            runtimeIdentity: selected.runtimeIdentity,
+          }),
+        }),
+        repaint(runnable, {
+          adapter: async () => ({
+            mediaType: "video/mp4",
+            bytes: new Uint8Array(),
+            runtimeIdentity: selected.runtimeIdentity,
+          }),
+        }),
+        repaint(runnable, {
+          adapter: async () => ({
+            mediaType: "video/mp4",
+            bytes: Buffer.from("not-an-mp4"),
+            runtimeIdentity: selected.runtimeIdentity,
+          }),
+        }),
+        repaint(runnable, {
+          adapter: async () => ({
+            mediaType: "video/mp4",
+            bytes: generatedBytes,
+            runtimeIdentity: {
+              ...selected.runtimeIdentity,
+              model: " padded ",
+            },
+          }),
+        }),
+        repaint(runnable, {
+          adapter: async () => ({
+            mediaType: "video/mp4",
+            bytes: wrongRasterBytes,
+            runtimeIdentity: selected.runtimeIdentity,
+          }),
+        }),
+        repaint(runnable, {
+          adapter: async () =>
+            ({
+              get mediaType(): never {
+                throw nonError("non-error output inspection failure");
+              },
+              bytes: generatedBytes,
+              runtimeIdentity: selected.runtimeIdentity,
+            }) as never,
+        }),
+      ]);
+      TestValidator.equals(
+        "media, bytes, runtime, raster, and thrown output failures are refused",
+        outputFailures.map(codeOf),
+        Array.from(
+          { length: outputFailures.length },
+          () => "repaint-output-invalid",
+        ),
       );
 
       const accepted = await new AutoMovieProductionRepaintService(
@@ -393,6 +1097,12 @@ export const test_production_repaint_generator_adoption =
           adapterIdentity: accepted.receipt?.adapterIdentity,
           generatorProvenance: accepted.receipt?.generatorProvenance,
           structuralAuthority: accepted.receipt?.structuralAuthority,
+          referenceRoles: accepted.receipt?.references.map(
+            (reference) => reference.role,
+          ),
+          referencePaths: accepted.receipt?.references.map(
+            (reference) => reference.path,
+          ),
           receiptVersion: accepted.receipt?.version,
         },
         {
@@ -403,11 +1113,53 @@ export const test_production_repaint_generator_adoption =
           ),
           generatorProvenance: selected.generatorProvenance,
           structuralAuthority: "deterministic-source-only",
+          referenceRoles: [...referenceRoles],
+          referencePaths: input.references.map((reference) => reference.path),
           receiptVersion: 3,
         },
       );
       if (accepted.receipt === null)
         throw new Error("Accepted repaint result lost its receipt.");
+      const commitFailures = await Promise.all([
+        repaint(
+          scenarioServices(runnable, {
+            project: {
+              commitRepaintRendition: () => {
+                throw new AutoMovieProductionInputRaceError(
+                  "input changed at commit",
+                );
+              },
+            },
+          }),
+        ),
+        repaint(
+          scenarioServices(runnable, {
+            project: {
+              commitRepaintRendition: () => {
+                throw new Error("commit failed");
+              },
+            },
+          }),
+        ),
+        repaint(
+          scenarioServices(runnable, {
+            project: {
+              commitRepaintRendition: () => {
+                throw nonError("non-error commit failure");
+              },
+            },
+          }),
+        ),
+      ]);
+      TestValidator.equals(
+        "commit races and other commit failures retain distinct diagnostics",
+        commitFailures.map(codeOf),
+        [
+          "repaint-input-changed",
+          "repaint-commit-refused",
+          "repaint-commit-refused",
+        ],
+      );
       const commitThroughProject = (
         receipt: IAutoMovieRepaintReceipt,
       ): number =>
@@ -429,22 +1181,60 @@ export const test_production_repaint_generator_adoption =
           return true;
         }
       };
-      TestValidator.predicate(
-        "project revalidation rejects provenance-path drift and padded prompts",
-        projectRefuses({
+      const invalidProjectReceipts: IAutoMovieRepaintReceipt[] = [
+        {
+          ...accepted.receipt,
+          version: 2,
+        } as unknown as IAutoMovieRepaintReceipt,
+        {
           ...accepted.receipt,
           generatorProvenance: {
             ...accepted.receipt.generatorProvenance,
             termsCheckedAt: "2026-08-29",
           },
-        }) &&
-          projectRefuses({
-            ...accepted.receipt,
+        },
+        {
+          ...accepted.receipt,
+          parameters: {
+            ...accepted.receipt.parameters,
+            prompt: ` ${accepted.receipt.parameters.prompt}`,
+          },
+        },
+        ...["", " padded "].map(
+          (negativePrompt): IAutoMovieRepaintReceipt => ({
+            ...accepted.receipt!,
             parameters: {
-              ...accepted.receipt.parameters,
-              prompt: ` ${accepted.receipt.parameters.prompt}`,
+              ...accepted.receipt!.parameters,
+              negativePrompt,
             },
           }),
+        ),
+        ...(
+          [
+            { "": true },
+            { " padded ": true },
+            { scheduler: "" },
+            { scheduler: " padded " },
+            { guidance: Number.POSITIVE_INFINITY },
+          ] as Array<Record<string, string | number | boolean>>
+        ).map(
+          (controls): IAutoMovieRepaintReceipt => ({
+            ...accepted.receipt!,
+            parameters: { ...accepted.receipt!.parameters, controls },
+          }),
+        ),
+        {
+          ...accepted.receipt,
+          references: referenceRoles.map((role) => ({
+            role,
+            path: accepted.receipt!.references[0]!.path,
+            digest: accepted.receipt!.references[0]!.digest,
+          })),
+        },
+      ];
+      TestValidator.predicate(
+        "project revalidation rejects schema, provenance, prompt, and control drift",
+        invalidProjectReceipts.every(projectRefuses),
       );
 
       const snapshotCommits: IAutoMovieRepaintReceipt[] = [];

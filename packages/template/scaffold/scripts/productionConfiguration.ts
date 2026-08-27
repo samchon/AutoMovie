@@ -1,5 +1,6 @@
 import type { IAutoMovieDialogueSpeakerBinding } from "@automovie/engine";
 import type {
+  AutoMovieRepaintReferenceRole,
   IAutoMovieCompiledShotSource,
   IAutoMovieFilmTimeline,
   IAutoMovieProductionDialogueLine,
@@ -718,11 +719,14 @@ const readRepaintReferences = (
   if (Array.isArray(input) === false || input.length === 0)
     throw new Error(`${label} must be a non-empty array.`);
   const seen = new Set<string>();
-  return input.map((reference, index) => {
+  const rolesByPath = new Map<string, Set<AutoMovieRepaintReferenceRole>>();
+  const references = input.map((reference, index) => {
     const itemLabel = `${label}[${index}]`;
     const value = exactObject(reference, itemLabel, ["role", "path"]);
-    if (value.role !== "style" && value.role !== "character")
-      throw new Error(`${itemLabel}.role must be style or character.`);
+    if (isRepaintReferenceRole(value.role) === false)
+      throw new Error(
+        `${itemLabel}.role must be structure, character, costume, style, material, color, or environment.`,
+      );
     const referencePath = nonBlank(value.path, `${itemLabel}.path`);
     const identity = `${value.role}\0${referencePath}`;
     if (seen.has(identity))
@@ -730,9 +734,34 @@ const readRepaintReferences = (
         `${label} repeats reference "${value.role}:${referencePath}".`,
       );
     seen.add(identity);
+    const roles = rolesByPath.get(referencePath) ?? new Set();
+    roles.add(value.role);
+    rolesByPath.set(referencePath, roles);
     return { role: value.role, path: referencePath };
   });
+  if (
+    [...rolesByPath.values()].some(
+      (roles) => roles.size === REPAINT_REFERENCE_ROLE_COUNT,
+    )
+  )
+    throw new Error(
+      `${label} cannot assign one reference image as canonical guidance for every role; split the seven roles across reviewed assets.`,
+    );
+  return references;
 };
+
+const isRepaintReferenceRole = (
+  value: unknown,
+): value is AutoMovieRepaintReferenceRole =>
+  value === "structure" ||
+  value === "character" ||
+  value === "costume" ||
+  value === "style" ||
+  value === "material" ||
+  value === "color" ||
+  value === "environment";
+
+const REPAINT_REFERENCE_ROLE_COUNT = 7;
 
 const exactIdentitySet = (
   values: readonly unknown[],

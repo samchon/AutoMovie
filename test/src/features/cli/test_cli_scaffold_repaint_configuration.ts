@@ -10,7 +10,10 @@ import { pathToFileURL } from "node:url";
 interface IRepaintRequest {
   shot: string;
   parameters: IAutoMovieRepaintReceipt["parameters"];
-  references: Array<{ role: "style" | "character"; path: string }>;
+  references: Array<{
+    role: IAutoMovieRepaintReceipt["references"][number]["role"];
+    path: string;
+  }>;
 }
 
 interface IRepaintSelection {
@@ -78,8 +81,13 @@ const selection = (): IRepaintSelection => ({
         },
       },
       references: [
-        { role: "style", path: "assets/references/lobby-style.png" },
-        { role: "character", path: "assets/references/guide.png" },
+        { role: "structure", path: "assets/references/shared.png" },
+        { role: "character", path: "assets/references/shared.png" },
+        { role: "costume", path: "assets/references/costume.png" },
+        { role: "style", path: "assets/references/style.png" },
+        { role: "material", path: "assets/references/material.png" },
+        { role: "color", path: "assets/references/color.png" },
+        { role: "environment", path: "assets/references/environment.png" },
       ],
     },
     {
@@ -372,6 +380,18 @@ export const test_cli_scaffold_repaint_configuration =
           {
             ...request,
             references: [request.references[0], request.references[0]],
+          },
+        ],
+      },
+      {
+        ...authored,
+        requests: [
+          {
+            ...request,
+            references: request.references.map((reference) => ({
+              ...reference,
+              path: "assets/references/universal.png",
+            })),
           },
         ],
       },
