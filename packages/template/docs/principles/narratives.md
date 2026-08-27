@@ -32,6 +32,18 @@ This item owns horizontal fact continuity between units. Boundary-state inherita
 
 Sources: [Zwaan, Langston, and Graesser on continuity dimensions](https://doi.org/10.1111/j.1467-9280.1995.tb00513.x); [Laterpress on a series bible as continuity record](https://www.laterpress.com/craft-of-writing/series-bible/)
 
+## Narrated time {#narrated-time}
+
+Every unit chooses where its narration stands in story time and how many tellings one occurrence receives. It may follow story order, reach back, or anticipate; it may present one occurrence once or render a habit, season, or repeated practice in a single passage. Every departure from plain forward singular narration performs work the chronological alternative could not.
+
+Mark a reach backward or forward so the audience can place it and return, and give a habitual or repeated interval the moment at which the habit breaks. A film with one gear fails here: when every stretch of time is narrated once and at one distance, a season, a routine, or a long confrontation arrives as a list of its occasions.
+
+Review question: where does this unit's narration stand relative to story time, what span does it render at what narrative distance, how often does it narrate the occurrence or interval, and what work does any departure from plain forward singular narration perform?
+
+This item owns the unit's relation between story time and narrated order, duration, and frequency. `principles/scripts.md#pacing-rhythm` owns the audience time a passage receives, `principles/storylines.md#information-design` owns when the audience learns a fact, and `horizontal-state-continuity` owns whether inherited facts remain accurate across the shift.
+
+Sources: [Genette on order, duration, and frequency as separate relations between story time and narrative time](https://archive.org/details/narrativediscour0000gene); [Zwaan, Langston, and Graesser on the comprehension cost of a temporal discontinuity](https://doi.org/10.1111/j.1467-9280.1995.tb00513.x); [Hicks on distance, time, and proportion as organizers of narrative progression](https://www.cambridge.org/core/books/scale-crisis-and-the-modern-novel/introduction/2DC3BA9BA9CF6C3DE80AD1A2A52FFDCB)
+
 ## Audience investment {#audience-investment}
 
 Every unit gives the audience a concrete reason to continue attending through a question, desired result, choice, observation, emotion, humor, sensory development, or formal accumulation that the film actually delivers. Scale, event count, spectacle, or information volume does not substitute for this operative reason.
