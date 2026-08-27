@@ -17,11 +17,11 @@ Editing any document under that directory changes what every future generated pr
 
 ## The shared contract inventory
 
-`packages/template/scaffold/docs/discovery`, `docs/obligations`, and `docs/principles` are an exact reserved inventory. `@automovie/evidence` pins their filenames and their ordered H2 anchors, so adding, removing, renaming, or reordering a shared H2 without the matching wiring fails the graph while it loads.
+`packages/template/docs/discovery`, `packages/template/docs/obligations`, and `packages/template/docs/principles` are an exact reserved inventory published by `@automovie/template`. `@automovie/evidence` pins their filenames and ordered H2 anchors, so adding, removing, renaming, or reordering a shared H2 without the matching wiring fails the graph while it loads.
 
 Changing that inventory means changing the target document, `EXPECTED_CONTRACTS`, the claim or reference that selects it, the package test's canaries, the paid population in `internals/scaffold-evidence-gate.mjs` whenever that probe's shape selects the target, and the routing guidance in `docs/README.md` and the shipped skill, in one coherent change. A new target family also joins the reserved directory set and the contract walk.
 
-Classify before adding. A per-file review question is a principle, a role a whole population divides is an obligation, an open search whose result no checklist can enumerate is a discovery duty, and a production procedure is a skill document rather than a target. A rule that belongs to one production is never added here; it belongs to that production's local family and its additive claim.
+Classify before adding. A condition every selected authored H2/H3/H4 must answer for itself is a no-exclusion principle checklist. A role the layer's primary H2 population, or a source family's selected public-export population, covers one or more times as the item requires is a no-exclusion obligation. An open search whose result no checklist can enumerate is a discovery duty, and a production procedure is a skill document rather than a target. A rule that belongs to one production is never added here; it belongs to that production's local family and its additive claim.
 
 An anchor is a citation address, so choose it for the durable question rather than the current wording. When an item's text changes, reread every citing host against the new text and renew its review from that reading. Replacing only the fingerprint records a check nobody performed.
 

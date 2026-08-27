@@ -8,7 +8,7 @@ assert.ok(Array.isArray(rule), "the scaffold must enable its evidence graph");
 const graph = rule[1];
 assert.equal(
   graph.claims.length,
-  50,
+  40,
   "the blank scaffold must retain every prewired shared claim",
 );
 assert.equal(

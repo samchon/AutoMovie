@@ -457,10 +457,10 @@ const contractAnchors = (relative) =>
  * This is deliberately generated after the blank-scaffold pass. The public
  * scaffold must contain no production prose or evidence tags, but inspecting
  * config structure alone cannot prove that its real shared claims accept a
- * paid population. Seven independent H2 owners cover the seven distributed
- * settings roles; each H2 pays every per-unit common obligation, while the
- * population pays every discovery target and the file pays every file-level
- * common and settings principle.
+ * paid population. Ten independent primary H2 owners cover the ten settings
+ * obligations, the H2 population distributes the common obligations and
+ * discovery targets, and every H2 answers every common and settings principle
+ * for itself. Settings has no inherited file relationship to pay.
  */
 const activatePaidSettings = () => {
   const configFile = path.join(PROBE, "lint.config.ts");
@@ -480,64 +480,63 @@ const activatePaidSettings = () => {
     ...contractAnchors("principles/common.md"),
     ...contractAnchors("principles/settings.md"),
   ];
-  const commonTargets = contractAnchors("obligations/common.md");
-  const fileReasons = Object.freeze({
-    "principles/common.md#purpose-fit":
-      "This file exists only to prove that the active settings graph accepts a fully paid disposable population and rejects a missing relationship.",
-    "principles/common.md#layer-boundary":
-      "Every H2 states a compiler-calibration setting; none authors design, narrative, source implementation, or audience content.",
-    "principles/common.md#declared-basis":
-      "The preamble and every status line declare these facts as disposable production inventions rather than external claims.",
-    "principles/common.md#production-language":
-      "The complete file uses one consistent English calibration vocabulary for its repository-gate reader.",
-    "principles/settings.md#addressable-canon":
-      "Delivery, aim, access, convention, review condition, domain coverage, and operative-subject accounting each have one independently addressable H2 owner.",
-    "principles/settings.md#information-structure":
-      "Each H2 opens with status and one bounded statement of its owner, condition, and compiler consequence.",
-    "principles/settings.md#fact-status":
-      "Every H2 explicitly labels its calibration fact as a production invention scoped to this disposable probe.",
-    "principles/settings.md#source-support":
-      "The file makes no externally checkable production claim and attaches no external authority to its invented calibration facts.",
-    "principles/settings.md#capability-boundary":
-      "The delivery scope explicitly excludes any delivered-subject or environment capability, leaving none for downstream source to guess.",
-    "principles/settings.md#constraint-sufficiency":
-      "The seven owners bound the operator, observable diagnostic result, path and time units, operative subjects, and every excluded production domain.",
-    "principles/settings.md#observable-identity":
-      "The file defines no delivered-subject, place, or audible identity and confines its only observable result to classified compiler diagnostics.",
-    "principles/settings.md#minimal-departure":
-      "Only calibration-specific departures are authored; all unrelated production domains are explicitly outside this disposable delivery.",
-    "principles/settings.md#internal-coherence":
-      "The declared repository-relative paths, millisecond time, sole operator, and diagnostic review condition describe one compatible result.",
-  });
-  const commonReason = (target, unit) => {
+  const obligationTargets = [
+    ...contractAnchors("obligations/common.md"),
+    ...contractAnchors("obligations/settings.md"),
+  ];
+  const principleReason = (target, unit) => {
     const anchor = target.slice(target.indexOf("#") + 1);
     if (anchor === "scope-preservation")
       return `${unit.title} owns its one named settings role and leaves no promised descendant or delivery fact inside that role unassigned.`;
     if (anchor === "substantive-completion")
       return `${unit.title} states the complete calibration decision needed from this settings role rather than a placeholder for downstream work.`;
-    if (anchor === "proportionate-development")
-      return `${unit.title} receives one bounded H2 because its role is independently cited, while no subordinate production detail is invented.`;
     if (anchor === "machine-default")
       return `${unit.title} carries none of the marks: it states its calibration decision in plain declaratives with no restating closer, and its shape follows the information-structure rule this file cites rather than an untouched default.`;
     if (anchor === "evidence-content-conformance")
-      return `${unit.title} cites only the file rules and distributed settings role that its stated calibration fact actually realizes.`;
+      return `${unit.title} cites only the unit principles and population roles that its concrete calibration statement actually realizes.`;
+    if (anchor === "declared-basis")
+      return `${unit.title} declares its statement as a local disposable calibration choice and derives no authority from an unstated external source.`;
+    if (anchor === "information-structure")
+      return `${unit.title} is one addressable H2 with an explicit status and one bounded settings decision.`;
+    if (anchor === "fact-status")
+      return `${unit.title} labels its fact as a production invention valid only in this disposable compiler probe.`;
+    if (anchor === "source-support")
+      return `${unit.title} makes no externally checkable claim and therefore needs no external source beyond its declared local calibration basis.`;
+    if (anchor === "capability-boundary")
+      return `${unit.title} confines its capability claim to the compiler calibration role stated in this H2 and invents no downstream production capability.`;
+    if (anchor === "constraint-sufficiency")
+      return `${unit.title} states the actor, condition, and observable compiler consequence needed to use this one settings decision without downstream guessing.`;
+    if (anchor === "observable-identity")
+      return `${unit.title} defines no delivered person, place, object, or sound; its only observable identity is the named compiler-calibration result.`;
     throw new Error(`No paid-probe reason owns ${target}.`);
   };
   const discoveryExclusions = Object.freeze({
     "discovery/common.md#shared-local-boundary":
       "The probe examined its compiler-calibration directive, library promise, repository-gate operator, shared contracts, dependencies, sole planned compiler-diagnostic consumer, and false-green risk; the shared principles and settings obligations fully own them, so no independent cross-layer condition remains.",
     "discovery/common.md#canonical-realization":
-      "After examining the calibration directive, library promise, operator, dependencies, sole planned compiler-diagnostic consumer, and false-owner risk, the complete boundary search retained no independent production contract; the seven settings owners and shared claim wiring are sufficient, so no additional semantic owner or additive claim exists.",
+      "After examining the calibration directive, library promise, operator, dependencies, sole planned compiler-diagnostic consumer, and false-owner risk, the complete boundary search retained no independent production contract; the ten settings owners and shared claim wiring are sufficient, so no additional semantic owner or additive claim exists.",
     "discovery/settings.md#directive-promise-subject-requirements":
-      "The probe examined its direct calibration instruction, diagnostic promise, operator, file dependency, sole planned compiler-diagnostic consumer, unowned-subject risk, and false-green failure; the seven settings owners classify them completely without an additional production-specific fact or constraint.",
+      "The probe examined its direct calibration instruction, diagnostic promise, operator, file dependency, sole planned compiler-diagnostic consumer, unowned-subject risk, and false-green failure; the ten settings owners classify them completely without an additional production-specific fact or constraint.",
     "discovery/settings.md#planned-delivery-backcast":
       "Backcasting this settings-only library from its calibration instruction and config through the sole planned compiler-diagnostic consumer and its downstream-invention and false-green risks found no fact beyond the delivery, aim, access, unit, review, coverage, and operative-subject owners already present.",
   });
   const settingsUnits = [
     {
+      anchor: "probe-addressable-canon",
+      title: "Probe addressable canon",
+      obligations: [
+        "obligations/settings.md#addressable-canon",
+        "obligations/common.md#proportionate-development",
+      ],
+      body: "Ten independently addressable H2 owners divide the complete settings contract without a catch-all owner or a hidden descendant.",
+    },
+    {
       anchor: "probe-delivery-scope",
       title: "Probe delivery scope",
-      obligation: "obligations/settings.md#delivery-scope",
+      obligations: [
+        "obligations/settings.md#delivery-scope",
+        "obligations/common.md#purpose-fit",
+      ],
       body: "This disposable library delivers only a compiler calibration result: the active settings graph must accept this complete population and no production artifact is published.",
       discovery: [
         "discovery/common.md#shared-local-boundary",
@@ -547,55 +546,71 @@ const activatePaidSettings = () => {
     {
       anchor: "probe-governing-aim",
       title: "Probe governing aim",
-      obligation: "obligations/settings.md#governing-aim",
+      obligations: ["obligations/settings.md#governing-aim"],
       body: "The governing aim is to distinguish a fully paid shared graph from a graph that silently stopped enforcing one configured relationship.",
     },
     {
       anchor: "probe-operator-access",
       title: "Probe operator access",
-      obligation: "obligations/settings.md#audience-operator-access",
+      obligations: ["obligations/settings.md#audience-operator-access"],
       body: "The repository gate is the sole operator and may observe only compiler exit status and classified diagnostics from this disposable directory.",
     },
     {
       anchor: "probe-coordinate-unit-convention",
       title: "Probe coordinate and unit convention",
-      obligation: "obligations/settings.md#coordinate-unit-convention",
+      obligations: ["obligations/settings.md#coordinate-unit-convention"],
       body: "Paths are repository-relative POSIX strings, elapsed time is measured in milliseconds, and no spatial world is represented by this compiler-only probe.",
     },
     {
       anchor: "probe-delivery-review-condition",
       title: "Probe delivery review condition",
-      obligation: "obligations/settings.md#delivery-review-condition",
+      obligations: ["obligations/settings.md#delivery-review-condition"],
       body: "The result is reviewable only when the paid population yields no evidence or correctness diagnostic other than declared uninstalled-probe noise.",
     },
     {
       anchor: "probe-settings-coverage-map",
       title: "Probe settings coverage map",
-      obligation: "obligations/settings.md#settings-coverage-map",
-      body: "Delivery, aim, operator access, coordinate convention, and review condition each have the separate owner above; every other production domain is outside this compiler calibration scope.",
+      obligations: [
+        "obligations/settings.md#settings-coverage-map",
+        "obligations/common.md#layer-boundary",
+      ],
+      body: "Addressability, delivery, aim, operator access, coordinate convention, review, subjects, departures, and coherence each have a separate settings owner; every design, narrative, source, and audience-content domain is outside this compiler calibration scope.",
       discovery: ["discovery/settings.md#planned-delivery-backcast"],
     },
     {
       anchor: "probe-operative-subject-inventory",
       title: "Probe operative subject inventory",
-      obligation: "obligations/settings.md#operative-subject-inventory",
+      obligations: ["obligations/settings.md#operative-subject-inventory"],
       body: "The repository gate is the only operative subject: it controls the compile, observes the diagnostic result, and has no independent person, collective, object, environmental agent, institution, subsystem, or affected population left unclassified.",
       discovery: [
         "discovery/settings.md#directive-promise-subject-requirements",
       ],
     },
+    {
+      anchor: "probe-minimal-departure",
+      title: "Probe minimal departure",
+      obligations: ["obligations/settings.md#minimal-departure"],
+      body: "The production departs from shared defaults only by activating this disposable settings-only calibration; all design, narrative, source, render, and delivery content remains absent.",
+    },
+    {
+      anchor: "probe-internal-coherence",
+      title: "Probe internal coherence",
+      obligations: [
+        "obligations/settings.md#internal-coherence",
+        "obligations/common.md#production-language",
+      ],
+      body: "Repository-relative POSIX paths, milliseconds, one repository-gate operator, compiler diagnostics, and consistent English calibration vocabulary form one compatible settings contract.",
+    },
   ];
-  const fileEvidence = principleTargets.map((target) => {
-    const reason = fileReasons[target];
-    if (reason === undefined)
-      throw new Error(`No paid-probe reason owns ${target}.`);
-    return `@evidence ${target} ${reason}`;
-  });
+  const ownedObligations = new Set(
+    settingsUnits.flatMap((unit) => unit.obligations),
+  );
+  for (const target of obligationTargets)
+    if (ownedObligations.has(target) === false)
+      throw new Error(`No paid-probe H2 owns ${target}.`);
+  const obligationLine = (target, unit) =>
+    `@evidence ${target} ${unit.title} is the population owner that states this role concretely: ${unit.body}`;
   const body = [
-    "<!--",
-    ...fileEvidence,
-    "-->",
-    "",
     "# Active settings graph probe",
     "",
     "Every fact below is a production invention valid only inside this disposable compiler calibration.",
@@ -604,8 +619,8 @@ const activatePaidSettings = () => {
       `## ${unit.title} {#${unit.anchor}}`,
       "",
       "<!--",
-      ...commonTargets.map(
-        (target) => `@evidence ${target} ${commonReason(target, unit)}`,
+      ...principleTargets.map(
+        (target) => `@evidence ${target} ${principleReason(target, unit)}`,
       ),
       ...(unit.discovery ?? []).map((target) => {
         const reason = discoveryExclusions[target];
@@ -613,7 +628,7 @@ const activatePaidSettings = () => {
           throw new Error(`No paid-probe discovery reason owns ${target}.`);
         return `@evidenceExclude ${target} ${reason}`;
       }),
-      `@evidence ${unit.obligation} This unit is the population owner that directly states the named settings role.`,
+      ...unit.obligations.map((target) => obligationLine(target, unit)),
       "-->",
       "",
       "**Status:** production invention, disposable compiler calibration.",
@@ -625,6 +640,11 @@ const activatePaidSettings = () => {
   const target = path.join(PROBE, "docs", "settings", "production.md");
   fs.mkdirSync(path.dirname(target), { recursive: true });
   fs.writeFileSync(target, body, "utf8");
+  const operativeSubjectUnit = settingsUnits.find(
+    (unit) => unit.anchor === "probe-operative-subject-inventory",
+  );
+  if (operativeSubjectUnit === undefined)
+    throw new Error("The paid probe lost its operative-subject owner.");
   return {
     file: target,
     underpayments: [
@@ -633,7 +653,10 @@ const activatePaidSettings = () => {
         target: "discovery/common.md#shared-local-boundary",
       },
       {
-        line: "@evidence obligations/settings.md#operative-subject-inventory This unit is the population owner that directly states the named settings role.",
+        line: obligationLine(
+          "obligations/settings.md#operative-subject-inventory",
+          operativeSubjectUnit,
+        ),
         target: "obligations/settings.md#operative-subject-inventory",
       },
     ],
@@ -853,7 +876,7 @@ const main = () => {
   }
   report([
     "",
-    "PASS: the scaffold's obligation graph is paid and its own lint rules hold over",
+    "PASS: the scaffold's production evidence graph is paid and its own lint rules hold over",
     " everything `npm run lint:source` compiles. The two blank-scaffold canaries,",
     " paid active settings population, and two underpaid twins prove both lint",
     " axes and both directions of the real shared graph. The noise count is what",

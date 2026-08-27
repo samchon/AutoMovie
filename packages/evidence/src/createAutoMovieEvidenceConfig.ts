@@ -137,7 +137,7 @@ interface ISourcePopulation {
   files: readonly string[];
   ownerKinds: readonly ("class" | "function" | "property")[];
   ownerSymbols: readonly ("function" | "property" | "type")[];
-  principle: string;
+  obligation: string;
   symbols: readonly ("function" | "property" | "type")[];
 }
 
@@ -220,17 +220,17 @@ const MARKDOWN: Record<MarkdownLayer, IMarkdownPopulation> = {
   },
   scenarios: {
     headings: [2, 3, 4],
-    obligation: false,
+    obligation: true,
     principle: "scenarios.md",
   },
   script: {
     headings: [2, 3, 4],
-    obligation: false,
+    obligation: true,
     principle: "scripts.md",
   },
   briefs: {
     headings: [2, 3, 4],
-    obligation: false,
+    obligation: true,
     principle: "briefs.md",
   },
 };
@@ -240,7 +240,7 @@ const SOURCES: Record<SourceLayer, ISourcePopulation> = {
     files: ["src/models/**/*.ts"],
     ownerKinds: ["class"],
     ownerSymbols: ["type"],
-    principle: "model-sources.md",
+    obligation: "model-sources.md",
     symbols: ["type", "property", "function"],
   },
   spaceSources: {
@@ -248,7 +248,7 @@ const SOURCES: Record<SourceLayer, ISourcePopulation> = {
     files: ["src/spaces/**/*.ts"],
     ownerKinds: ["class", "property", "function"],
     ownerSymbols: ["type", "property", "function"],
-    principle: "space-sources.md",
+    obligation: "space-sources.md",
     symbols: ["type", "property", "function"],
   },
   materialSources: {
@@ -256,7 +256,7 @@ const SOURCES: Record<SourceLayer, ISourcePopulation> = {
     files: ["src/materials/**/*.ts"],
     ownerKinds: ["class", "property", "function"],
     ownerSymbols: ["type", "property", "function"],
-    principle: "material-sources.md",
+    obligation: "material-sources.md",
     symbols: ["type", "property", "function"],
   },
   instanceSources: {
@@ -264,7 +264,7 @@ const SOURCES: Record<SourceLayer, ISourcePopulation> = {
     files: ["src/instances/**/*.ts"],
     ownerKinds: ["class", "property", "function"],
     ownerSymbols: ["type", "property", "function"],
-    principle: "instance-sources.md",
+    obligation: "instance-sources.md",
     symbols: ["type", "property", "function"],
   },
   motionSources: {
@@ -272,7 +272,7 @@ const SOURCES: Record<SourceLayer, ISourcePopulation> = {
     files: ["src/motions/**/*.ts"],
     ownerKinds: ["property", "function"],
     ownerSymbols: ["property", "function"],
-    principle: "motion-sources.md",
+    obligation: "motion-sources.md",
     symbols: ["type", "property", "function"],
   },
   systemSources: {
@@ -280,7 +280,7 @@ const SOURCES: Record<SourceLayer, ISourcePopulation> = {
     files: ["src/systems/**/*.ts"],
     ownerKinds: ["class", "property", "function"],
     ownerSymbols: ["type", "property", "function"],
-    principle: "system-sources.md",
+    obligation: "system-sources.md",
     symbols: ["type", "property", "function"],
   },
   shots: {
@@ -288,7 +288,7 @@ const SOURCES: Record<SourceLayer, ISourcePopulation> = {
     files: ["src/shots/**/*.ts"],
     ownerKinds: ["property", "function"],
     ownerSymbols: ["property", "function"],
-    principle: "shots.md",
+    obligation: "shots.md",
     symbols: ["property", "function"],
   },
   productionSources: {
@@ -296,7 +296,7 @@ const SOURCES: Record<SourceLayer, ISourcePopulation> = {
     files: ["src/production.ts"],
     ownerKinds: ["property", "function"],
     ownerSymbols: ["property", "function"],
-    principle: "production-sources.md",
+    obligation: "production-sources.md",
     symbols: ["property", "function"],
   },
   filmSources: {
@@ -304,7 +304,7 @@ const SOURCES: Record<SourceLayer, ISourcePopulation> = {
     files: ["src/film.ts"],
     ownerKinds: ["property", "function"],
     ownerSymbols: ["property", "function"],
-    principle: "film-sources.md",
+    obligation: "film-sources.md",
     symbols: ["property", "function"],
   },
 };
@@ -392,18 +392,22 @@ const EXPECTED_CONTRACTS = [
     anchors: ["work-specific-storyline-requirements"],
   },
   {
+    file: "obligations/briefs.md",
+    anchors: ["single-scope-eligibility", "observable-progression"],
+  },
+  {
     file: "obligations/common.md",
     anchors: [
-      "scope-preservation",
-      "substantive-completion",
+      "purpose-fit",
+      "layer-boundary",
+      "production-language",
       "proportionate-development",
-      "machine-default",
-      "evidence-content-conformance",
     ],
   },
   {
     file: "obligations/instances.md",
     anchors: [
+      "addressable-instance-decisions",
       "instance-prototype-membership",
       "instance-identity-transform",
       "instance-variation-tiers",
@@ -413,6 +417,7 @@ const EXPECTED_CONTRACTS = [
   {
     file: "obligations/materials.md",
     anchors: [
+      "addressable-material-decisions",
       "material-identity-assembly",
       "material-surface-assignment",
       "material-response",
@@ -422,6 +427,7 @@ const EXPECTED_CONTRACTS = [
   {
     file: "obligations/models.md",
     anchors: [
+      "addressable-model-decisions",
       "representation-ceiling",
       "reference-scale",
       "articulation-ownership",
@@ -431,6 +437,7 @@ const EXPECTED_CONTRACTS = [
   {
     file: "obligations/motions.md",
     anchors: [
+      "addressable-motion-decisions",
       "time-base",
       "contact-policy",
       "composition-interruption",
@@ -438,8 +445,21 @@ const EXPECTED_CONTRACTS = [
     ],
   },
   {
+    file: "obligations/narratives.md",
+    anchors: ["unit-addressability"],
+  },
+  {
+    file: "obligations/scenarios.md",
+    anchors: ["scenario-boundary"],
+  },
+  {
+    file: "obligations/scripts.md",
+    anchors: ["realization-ready-contract"],
+  },
+  {
     file: "obligations/settings.md",
     anchors: [
+      "addressable-canon",
       "delivery-scope",
       "governing-aim",
       "audience-operator-access",
@@ -447,11 +467,14 @@ const EXPECTED_CONTRACTS = [
       "delivery-review-condition",
       "settings-coverage-map",
       "operative-subject-inventory",
+      "minimal-departure",
+      "internal-coherence",
     ],
   },
   {
     file: "obligations/spaces.md",
     anchors: [
+      "addressable-spatial-decisions",
       "space-reference-topology",
       "space-envelope-interface",
       "space-access-circulation",
@@ -460,7 +483,14 @@ const EXPECTED_CONTRACTS = [
   },
   {
     file: "obligations/storylines.md",
-    anchors: ["opening-condition", "terminal-condition", "audience-route"],
+    anchors: [
+      "opening-condition",
+      "terminal-condition",
+      "audience-route",
+      "resolution-aftermath",
+      "thematic-development",
+      "treatment-boundary",
+    ],
   },
   {
     file: "obligations/subjects.md",
@@ -476,6 +506,7 @@ const EXPECTED_CONTRACTS = [
   {
     file: "obligations/systems.md",
     anchors: [
+      "addressable-system-decisions",
       "system-ownership-interfaces",
       "system-state-clock",
       "system-budget-degradation",
@@ -484,23 +515,20 @@ const EXPECTED_CONTRACTS = [
   },
   {
     file: "principles/briefs.md",
-    anchors: [
-      "single-scope-eligibility",
-      "observable-progression",
-      "no-narrative-smuggling",
-    ],
+    anchors: ["no-narrative-smuggling"],
   },
   {
     file: "principles/common.md",
     anchors: [
-      "purpose-fit",
-      "layer-boundary",
+      "scope-preservation",
+      "substantive-completion",
+      "machine-default",
+      "evidence-content-conformance",
       "declared-basis",
-      "production-language",
     ],
   },
   {
-    file: "principles/film-sources.md",
+    file: "obligations/film-sources.md",
     anchors: [
       "editorial-only-assembly",
       "authored-auxiliary-tracks",
@@ -508,7 +536,7 @@ const EXPECTED_CONTRACTS = [
     ],
   },
   {
-    file: "principles/instance-sources.md",
+    file: "obligations/instance-sources.md",
     anchors: [
       "instance-source-design-ownership",
       "instance-source-stable-membership",
@@ -518,7 +546,6 @@ const EXPECTED_CONTRACTS = [
   {
     file: "principles/instances.md",
     anchors: [
-      "addressable-instance-decisions",
       "instance-information-structure",
       "instance-prototype-boundary",
       "instance-derivation-authority",
@@ -526,7 +553,7 @@ const EXPECTED_CONTRACTS = [
     ],
   },
   {
-    file: "principles/material-sources.md",
+    file: "obligations/material-sources.md",
     anchors: [
       "material-source-design-ownership",
       "material-source-renderer-mapping",
@@ -536,7 +563,6 @@ const EXPECTED_CONTRACTS = [
   {
     file: "principles/materials.md",
     anchors: [
-      "addressable-material-decisions",
       "material-information-structure",
       "material-construction-appearance",
       "material-binding-interface",
@@ -544,7 +570,7 @@ const EXPECTED_CONTRACTS = [
     ],
   },
   {
-    file: "principles/model-sources.md",
+    file: "obligations/model-sources.md",
     anchors: [
       "design-owned-construction",
       "deterministic-build",
@@ -554,7 +580,6 @@ const EXPECTED_CONTRACTS = [
   {
     file: "principles/models.md",
     anchors: [
-      "addressable-model-decisions",
       "model-information-structure",
       "representation-contract",
       "spatial-convention",
@@ -562,7 +587,7 @@ const EXPECTED_CONTRACTS = [
     ],
   },
   {
-    file: "principles/motion-sources.md",
+    file: "obligations/motion-sources.md",
     anchors: [
       "design-owned-transition",
       "pure-time-mapping",
@@ -572,7 +597,6 @@ const EXPECTED_CONTRACTS = [
   {
     file: "principles/motions.md",
     anchors: [
-      "addressable-motion-decisions",
       "motion-information-structure",
       "state-endpoints",
       "temporal-phases",
@@ -584,7 +608,6 @@ const EXPECTED_CONTRACTS = [
     file: "principles/narratives.md",
     anchors: [
       "unit-function",
-      "unit-addressability",
       "unit-connection",
       "horizontal-state-continuity",
       "audience-investment",
@@ -597,7 +620,7 @@ const EXPECTED_CONTRACTS = [
     ],
   },
   {
-    file: "principles/production-sources.md",
+    file: "obligations/production-sources.md",
     anchors: [
       "settings-only-serialization",
       "delivery-identity",
@@ -621,7 +644,6 @@ const EXPECTED_CONTRACTS = [
       "executable-progression",
       "dialogue-action",
       "knowledge-state",
-      "scenario-boundary",
     ],
   },
   {
@@ -638,25 +660,21 @@ const EXPECTED_CONTRACTS = [
       "emotional-grounding",
       "audiovisual-selection",
       "timing-allocation",
-      "realization-ready-contract",
     ],
   },
   {
     file: "principles/settings.md",
     anchors: [
-      "addressable-canon",
       "information-structure",
       "fact-status",
       "source-support",
       "capability-boundary",
       "constraint-sufficiency",
       "observable-identity",
-      "minimal-departure",
-      "internal-coherence",
     ],
   },
   {
-    file: "principles/shots.md",
+    file: "obligations/shots.md",
     anchors: [
       "contract-only-composition",
       "explicit-inputs-and-time",
@@ -664,7 +682,7 @@ const EXPECTED_CONTRACTS = [
     ],
   },
   {
-    file: "principles/space-sources.md",
+    file: "obligations/space-sources.md",
     anchors: [
       "space-source-design-ownership",
       "space-source-stable-identities",
@@ -674,7 +692,6 @@ const EXPECTED_CONTRACTS = [
   {
     file: "principles/spaces.md",
     anchors: [
-      "addressable-spatial-decisions",
       "space-information-structure",
       "space-topology",
       "space-boundary-authority",
@@ -688,13 +705,10 @@ const EXPECTED_CONTRACTS = [
       "causal-turn",
       "audience-change",
       "information-design",
-      "resolution-aftermath",
-      "thematic-development",
-      "treatment-boundary",
     ],
   },
   {
-    file: "principles/system-sources.md",
+    file: "obligations/system-sources.md",
     anchors: [
       "system-source-design-ownership",
       "system-source-explicit-evaluation",
@@ -704,7 +718,6 @@ const EXPECTED_CONTRACTS = [
   {
     file: "principles/systems.md",
     anchors: [
-      "addressable-system-decisions",
       "system-information-structure",
       "system-authority-confinement",
       "system-dependency-basis",
@@ -1568,45 +1581,46 @@ const validateHosts = (graph: IProductionGraph): void => {
   match("script", "storylines");
 };
 
-const checklist = (
+/**
+ * Creates one reference to a shared authored contract.
+ *
+ * Every shared family differs in two questions: whether every selected host
+ * answers every target for itself, and whether a truthful negative may exist.
+ * Keeping both flags here makes the family boundary visible at the only place
+ * that can otherwise invert it silently.
+ */
+const sharedReference = (
+  shared: string,
+  family: "discovery" | "obligations" | "principles",
+  file: string,
+  review: boolean,
+  checklist: boolean,
+  allowExclusion: boolean,
+): ITtscEvidenceGraphReference => ({
+  type: "markdown",
+  root: shared,
+  files: [`${family}/${file}`],
+  symbol: "h2",
+  ...(checklist ? { checklist: true } : {}),
+  ...(allowExclusion ? {} : { noEvidenceExclude: true }),
+  requireReview: review,
+});
+
+/** A principle is a no-exclusion checklist every selected unit answers. */
+const principleReference = (
   shared: string,
   file: string,
   review: boolean,
-): ITtscEvidenceGraphReference => ({
-  type: "markdown",
-  root: shared,
-  files: [`principles/${file}`],
-  symbol: "h2",
-  checklist: true,
-  noEvidenceExclude: true,
-  requireReview: review,
-});
+): ITtscEvidenceGraphReference =>
+  sharedReference(shared, "principles", file, review, true, false);
 
-const commonObligations = (
+/** An obligation is no-exclusion coverage distributed across one layer. */
+const obligationReference = (
   shared: string,
+  file: string,
   review: boolean,
-): ITtscEvidenceGraphReference => ({
-  type: "markdown",
-  root: shared,
-  files: ["obligations/common.md"],
-  symbol: "h2",
-  checklist: true,
-  noEvidenceExclude: true,
-  requireReview: review,
-});
-
-const layerObligation = (
-  shared: string,
-  layer: MarkdownLayer,
-  review: boolean,
-): ITtscEvidenceGraphReference => ({
-  type: "markdown",
-  root: shared,
-  files: [`obligations/${layer}.md`],
-  symbol: "h2",
-  noEvidenceExclude: layer === "motions" ? undefined : true,
-  requireReview: review,
-});
+): ITtscEvidenceGraphReference =>
+  sharedReference(shared, "obligations", file, review, false, false);
 
 /**
  * What each operative subject owner must settle, for a film only.
@@ -1624,26 +1638,17 @@ const layerObligation = (
 const subjectObligation = (
   shared: string,
   review: boolean,
-): ITtscEvidenceGraphReference => ({
-  type: "markdown",
-  root: shared,
-  files: ["obligations/subjects.md"],
-  symbol: "h2",
-  requireReview: review,
-});
+): ITtscEvidenceGraphReference =>
+  obligationReference(shared, "subjects.md", review);
 
 const discoveryReferences = (
   shared: string,
   layer: MarkdownLayer,
   review: boolean,
 ): ITtscEvidenceGraphReference[] =>
-  DISCOVERY_TARGETS[layer].map((target) => ({
-    type: "markdown",
-    root: shared,
-    files: [`discovery/${target}.md`],
-    symbol: "h2",
-    requireReview: review,
-  }));
+  DISCOVERY_TARGETS[layer].map((target) =>
+    sharedReference(shared, "discovery", `${target}.md`, review, false, true),
+  );
 
 const referencesPerFile = (
   graph: IProductionGraph,
@@ -1674,7 +1679,7 @@ const designFoundations = (
 
 const lineage = (
   layer: "scenarios" | "storylines",
-  symbol: "h2" | "h3" | "h4",
+  symbol: "file" | "h2" | "h3" | "h4",
   review: boolean,
 ): ITtscEvidenceGraphReference => ({
   type: "markdown",
@@ -1693,29 +1698,47 @@ const authoredClaims = (graph: IProductionGraph): ITtscEvidenceGraphClaim[] => {
   for (const name of Object.keys(MARKDOWN) as MarkdownLayer[]) {
     const stage = graph[name];
     const review = requiresReview(stage);
-    const principles = [checklist(shared, "common.md", review)];
+    const principles = [principleReference(shared, "common.md", review)];
     if (["storylines", "scenarios", "script"].includes(name))
-      principles.push(checklist(shared, "narratives.md", review));
-    principles.push(checklist(shared, MARKDOWN[name].principle, review));
-    claims.push({
-      name: `${name} files answer their complete principle checklists`,
-      type: "markdown",
-      root: DOCS,
-      files: [`${name}/**/*.md`],
-      symbol: "file",
-      disabled: !requiresEvidence(stage),
-      reference: principles,
-    });
+      principles.push(principleReference(shared, "narratives.md", review));
+    principles.push(
+      principleReference(shared, MARKDOWN[name].principle, review),
+    );
+    const fileParents: ITtscEvidenceGraphReference[] = [];
+    if (!["settings", "research"].includes(name))
+      fileParents.push(...referencesPerFile(graph, "settings", "h2", review));
+    fileParents.push(...designFoundations(graph, name, review));
+    if (name === "scenarios")
+      fileParents.push(lineage("storylines", "file", review));
+    if (name === "script")
+      fileParents.push(
+        lineage("scenarios", "file", review),
+        lineage("storylines", "file", review),
+      );
+    if (fileParents.length !== 0)
+      claims.push({
+        name: `${name} files account for inherited settings, designs, and parent files`,
+        type: "markdown",
+        root: DOCS,
+        files: [`${name}/**/*.md`],
+        symbol: "file",
+        disabled: !requiresEvidence(stage),
+        reference: fileParents,
+      });
     for (const symbol of MARKDOWN[name].headings) {
-      const references: ITtscEvidenceGraphReference[] = [
-        commonObligations(shared, review),
-      ];
-      if (MARKDOWN[name].obligation && symbol === 2)
-        references.push(layerObligation(shared, name, review));
-      if (symbol === 2)
+      const references: ITtscEvidenceGraphReference[] = [...principles];
+      if (symbol === 2) {
+        references.push(obligationReference(shared, "common.md", review));
+        if (["storylines", "scenarios", "script"].includes(name))
+          references.push(obligationReference(shared, "narratives.md", review));
+        if (MARKDOWN[name].obligation)
+          references.push(
+            obligationReference(shared, MARKDOWN[name].principle, review),
+          );
         references.push(...discoveryReferences(shared, name, review));
-      if (symbol === 2 && name === "settings" && graph.kind === "film")
-        references.push(subjectObligation(shared, review));
+        if (name === "settings" && graph.kind === "film")
+          references.push(subjectObligation(shared, review));
+      }
       if (!["settings", "research"].includes(name))
         references.push(...referencesPerFile(graph, "settings", "h2", review));
       references.push(...designFoundations(graph, name, review));
@@ -1729,7 +1752,10 @@ const authoredClaims = (graph: IProductionGraph): ITtscEvidenceGraphClaim[] => {
           lineage("storylines", `h${symbol}` as "h2" | "h3" | "h4", review),
         );
       claims.push({
-        name: `${name} H${symbol} units preserve their exact scope and lineage`,
+        name:
+          symbol === 2
+            ? `${name} H2 units answer their principle checklists, cover the layer's obligations, and account for inherited work`
+            : `${name} H${symbol} units answer their principle checklists and account for inherited work`,
         type: "markdown",
         root: DOCS,
         files: [`${name}/**/*.md`],
@@ -1760,18 +1786,11 @@ const authoredClaims = (graph: IProductionGraph): ITtscEvidenceGraphClaim[] => {
   return claims;
 };
 
-const sourcePrinciples = (
+const sourceObligations = (
   shared: string,
   file: string,
   review: boolean,
-): ITtscEvidenceGraphReference => ({
-  type: "markdown",
-  root: shared,
-  files: [`principles/${file}`],
-  symbol: "h2",
-  noEvidenceExclude: true,
-  requireReview: review,
-});
+): ITtscEvidenceGraphReference => obligationReference(shared, file, review);
 
 /**
  * Source directories a production owns without answering a design layer for
@@ -1863,13 +1882,13 @@ const sourceClaims = (graph: IProductionGraph): ITtscEvidenceGraphClaim[] => {
         },
       },
       {
-        name: `${name} realize every ${design} unit and source principle`,
+        name: `${name} realize every ${design} unit and cover their source obligations`,
         type: "typescript",
         files: [...source.files],
         symbol: [...source.symbols],
         disabled: !requiresEvidence(graph[name]),
         reference: [
-          sourcePrinciples(shared, source.principle, review),
+          sourceObligations(shared, source.obligation, review),
           {
             type: "markdown",
             root: DOCS,
@@ -1902,23 +1921,27 @@ const sourceClaims = (graph: IProductionGraph): ITtscEvidenceGraphClaim[] => {
       },
     },
     {
-      name: "shot source realizes every shot-source principle",
+      name: "shot source population covers every shot-source obligation",
       type: "typescript",
       files: [...SOURCES.shots.files],
       symbol: [...SOURCES.shots.symbols],
       disabled: !requiresEvidence(graph.shots),
-      reference: sourcePrinciples(shared, SOURCES.shots.principle, shotReview),
+      reference: sourceObligations(
+        shared,
+        SOURCES.shots.obligation,
+        shotReview,
+      ),
     },
     {
-      name: "production source serializes settings and production-source principles",
+      name: "production source serializes settings and covers production-source obligations",
       type: "typescript",
       files: [...SOURCES.productionSources.files],
       symbol: [...SOURCES.productionSources.symbols],
       disabled: !requiresEvidence(graph.productionSources),
       reference: [
-        sourcePrinciples(
+        sourceObligations(
           shared,
-          SOURCES.productionSources.principle,
+          SOURCES.productionSources.obligation,
           requiresReview(graph.productionSources),
         ),
         ...referencesPerFile(
@@ -1936,9 +1959,9 @@ const sourceClaims = (graph: IProductionGraph): ITtscEvidenceGraphClaim[] => {
       symbol: [...SOURCES.filmSources.symbols],
       disabled: !requiresEvidence(graph.filmSources),
       reference: [
-        sourcePrinciples(
+        sourceObligations(
           shared,
-          SOURCES.filmSources.principle,
+          SOURCES.filmSources.obligation,
           requiresReview(graph.filmSources),
         ),
         {
@@ -1997,7 +2020,11 @@ export const createAutoMovieEvidenceConfig = (
       type: "typescript" as const,
       files: ["test/__evidenceGraphCanary.ts"],
       symbol: "property" as const,
-      reference: checklist(sharedDocsRoot(graph.location), "common.md", false),
+      reference: principleReference(
+        sharedDocsRoot(graph.location),
+        "common.md",
+        false,
+      ),
     },
   ];
   return {

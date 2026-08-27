@@ -10,7 +10,9 @@
 
 팩터리는 `docs/principles`, `docs/obligations`와 `docs/discovery`의 정규화된 상대 경로와 명시적 H2 anchor 목록을 하나의 고정 inventory로 읽는다. 그래프를 구성하기 전에 inventory의 파일·anchor identity와 실제 문서 트리가 서로 정확히 일치하는지 검사한다.
 
-<!-- @evidenceObligation shared-contract 고정된 공통 문서·H2 inventory와 실제 트리 사이의 양방향 일치 검사. -->
+모든 원칙 reference는 선택된 저술 H2/H3/H4 host에 `checklist: true`, `noEvidenceExclude: true`로 연결한다. 모든 저술 의무 reference는 같은 계층의 primary H2 모집단에 일반 coverage와 `noEvidenceExclude: true`로 연결하며 checklist로 만들거나 H3/H4마다 반복하지 않는다. TypeScript source 의무는 그 family가 선택한 public export 모집단에 같은 방식으로 연결한다. 한 공용 reference builder가 checklist 여부와 진실한 무결과 허용 여부를 명시적으로 받아 family별 flag 조합을 한 곳에서 드러내야 한다.
+
+<!-- @evidenceObligation shared-contract 고정된 공통 문서·H2 inventory와 실제 트리 사이의 양방향 일치, 원칙의 단위별 checklist와 의무의 계층 모집단 coverage 배선. -->
 
 ### 저작 H2 모집단의 작품별 발견 coverage {#spec-authoring-production-evidence-discovery}
 
