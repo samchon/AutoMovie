@@ -1449,11 +1449,20 @@ const finalize = async (plan: IAutoMovieProductionRenderJobPlan) => {
       AutoMovieProductionProject.openReadOnly(root, productionId),
     ).lint({ scope: "final" });
     if (gate.success === false)
+      // Carry each diagnostic's own message, not just its code and target. A
+      // refusal here names the exact frames a shot or a staged model still
+      // owes, and dropping that sends the author to run the same gate again to
+      // learn what this one already knew.
       throw new Error(
-        `Final publication is blocked by the production's evidence gate: ${gate.diagnostics
-          .filter((diagnostic) => diagnostic.category === "error")
-          .map((diagnostic) => `${diagnostic.code} ${diagnostic.target}`)
-          .join(", ")}.`,
+        [
+          "Final publication is blocked by the production's evidence gate:",
+          ...gate.diagnostics
+            .filter((diagnostic) => diagnostic.category === "error")
+            .map(
+              (diagnostic) =>
+                `  ${diagnostic.code} ${diagnostic.target}: ${diagnostic.message}`,
+            ),
+        ].join("\n"),
       );
   }
   const status = await renderStatus(plan);
