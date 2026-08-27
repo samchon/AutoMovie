@@ -2,14 +2,6 @@
 
 Space documents define where bodies may exist and move: world, site, building, exterior, interior, room, zone, boundary, opening, and route. They do not own the mesh used to depict an object, its finish, or a timed traversal.
 
-## Addressable spatial decisions {#addressable-spatial-decisions}
-
-Every independently citable place, boundary, level, opening, route, clearance, or spatial observation has one stable H2 owner.
-
-Review question: which spatial fact could change independently and is still hidden inside another owner's prose?
-
-Sources: [NASA on unique, bidirectionally traceable requirements](https://www.nasa.gov/reference/system-engineering-handbook-appendix/)
-
 ## Spatial information structure {#space-information-structure}
 
 Every H2 first identifies its spatial owner, central decision, coordinate basis, and downstream consequence, then develops relations, dimensions, interfaces, limits, and verification in paragraphs with distinct functions. A drawing or table clarifies those decisions rather than replacing them.
@@ -20,7 +12,7 @@ Sources: [Purdue OWL on paragraph focus and support](https://owl.purdue.edu/owl/
 
 ## Topology before geometry {#space-topology}
 
-Every file states containment, adjacency, connection, obstruction, access, and inside/outside relations before choosing implementation geometry.
+Every space H2 states its applicable containment, adjacency, connection, obstruction, access, and inside/outside relations before choosing implementation geometry.
 
 Review question: can an implementer recover the complete place graph without reverse-engineering meshes?
 
@@ -28,16 +20,16 @@ Sources: [buildingSMART on spaces bounded by building elements](https://standard
 
 ## Canonical boundary authority {#space-boundary-authority}
 
-Every spatial relation, dimension, datum, and boundary has one canonical owner. A file that consumes a fact owned elsewhere cites that owner and states only its local consequence; it does not restate, remeasure, or silently override the shared fact.
+Every spatial relation, dimension, datum, and boundary stated or consumed by the current H2 has one canonical owner. The unit cites a fact owned elsewhere and states only its local consequence; it does not restate, remeasure, or silently override the shared fact.
 
-Review question: which spatial value or relation is authored twice, or consumed without an addressable owner?
+Review question: which spatial value or relation in this H2 is authored twice, or consumed without an addressable owner?
 
 Sources: [buildingSMART on explicit space-boundary relationships](https://standards.buildingsmart.org/IFC/RELEASE/IFC4_3/HTML/lexical/IfcRelSpaceBoundary.htm); [NASA on bidirectional traceability and interface ownership](https://www.nasa.gov/reference/systems-engineering-handbook/)
 
 ## Verification-addressable spatial claims {#space-verification-address}
 
-Every consequential spatial claim identifies the observable relation, measurement, tolerance, or route result that could falsify it and points to the population review role that will test it. This file maps its own claims; the space obligations define the complete shared review set.
+Every consequential spatial claim in the current H2 identifies the observable relation, measurement, tolerance, or route result that could falsify it and points to the population review role that will test it. This unit maps its own claims; the space obligations define the complete shared review set.
 
-Review question: which claim could fail in a plan, section, measurement, or traversal while every observation named by this file still passes?
+Review question: which claim could fail in a plan, section, measurement, or traversal while every observation named by this H2 still passes?
 
 Sources: [NASA on requirement-specific verification methods](https://www.nasa.gov/reference/system-engineering-handbook-appendix/)

@@ -19,19 +19,18 @@ The authored-unit topology is closed. Outside an optional H1 title, settings, re
 
 ## Relationship types
 
-- A principle is an item-by-item file checklist. Every selected Markdown file answers every applicable H2, exclusions are refused, and one strong unit cannot cover a weak unit elsewhere in the file.
-- `obligations/common.md` is an item-by-item unit checklist. Every governed settings, research, model, space, material, instance, motion, and system H2 and every film or brief H2/H3/H4 answers every item directly; exclusions are refused.
+- A principle is an item-by-item unit checklist. Every selected authored H2, H3, and H4 answers every applicable principle directly, exclusions are refused, and one strong unit cannot cover a weak sibling or descendant.
+- An obligation is ordinary no-exclusion coverage over one complete H2 owner population. Common obligations bind every authored layer, narrative obligations bind storyline, scenario, and screenplay, and each layer's own obligations bind that layer. An item with no citation has no owner; several citations are correct wherever the target calls for several owners. The same selected item is answered again in each layer because each layer owes it in its own terms.
 - Discovery is ordinary coverage over one complete authored H2 population, never a per-H2 checklist. Every authored H2 population answers `discovery/common.md`; settings adds `settings.md`, film storylines add `films.md` and `storylines.md`, scenarios add `films.md` and `scenarios.md`, script adds `films.md` and `scripts.md`, and briefs add `briefs.md`. Research and design branches answer common discovery only, and H3/H4 do not repeat it. A retained result identifies its earliest owner and current realization. A true no-result receives one population-wide exclusion naming the concrete inputs, risks, and sufficient existing owners; deferral and an audit assertion are invalid exclusions.
-- A layer obligation is distributed coverage. Every H2 that materially realizes a role may cite it, and the complete population accounts for every role. Settings, model, space, material, instance, system, and storyline roles permit no exclusion. Motion roles permit one population-wide exclusion only where the target's own condition is absent from the complete production.
 - Settings, model, space, material, instance, motion, and system references are foundation coverage. A host cites only the units it uses. A target no host in that claim population uses may receive one concrete population-wide exclusion only where the configured reference permits it. Research has one stricter bridge: every reviewed research H2 is interpreted by a settings H2, and later layers cite that settings owner.
 - Film lineage is exact. Every scenario and screenplay H2/H3/H4 cites one matching same-level parent, every parent has one matching child, and exclusions are refused. `lint.config.ts` also compares physical anchor order and nesting.
-- Design-source ownership is exact per selected export: model branches require a concrete exported class and select every exported type; motion branches select every exported function and property; space, material, instance, and system branches select every exported type, function, and property. Each selected export cites exactly one design file. More than one export may implement the same design; source-principle and design-unit coverage is distributed across the complete branch population. Each shot or acceptance export likewise cites one screenplay scene or brief shot, and the complete source population covers every such parent.
+- Design-source ownership is exact per selected export: model branches require a concrete exported class and select every exported type; motion branches select every exported function and property; space, material, instance, and system branches select every exported type, function, and property. Each selected export cites exactly one design file. More than one export may implement the same design; source-obligation and design-unit coverage is distributed across the complete branch population. Each shot or acceptance export likewise cites one screenplay scene or brief shot, and the complete source population covers every such parent.
 
 An omission from one host is not an exclusion. `@evidenceExclude` says no host in the complete claim population owes the target. Never cite and exclude the same target in one population, use one host as a catalogue for all targets, or use a generic reason to hide missing authored work.
 
 ## Tags
 
-Put file-level principle answers in one HTML comment before the first H1. Put common obligations, distributed roles, foundations, lineage, and package-claim evidence directly under the exact H2, H3, or H4 that realizes them unless that claim deliberately selects a file host.
+Directly below every selected authored H2, H3, and H4, answer every item of `principles/common.md`, the layer's own principle file, and, for storyline, scenario, and screenplay, `principles/narratives.md`, one line each. Place there too the obligation items this exact H2 owns and the foundation, lineage, or package-claim answers this unit justifies. Put an authored file's own setting and parentage answers in one HTML comment before its first H1 only where a configured file claim selects that relationship. File comments never carry principle answers.
 
 ```text
 @evidence path/file.md#anchor What exact fact, decision, transition, or observation the host realizes.
@@ -46,7 +45,7 @@ A reason names the host event, decision, limit, transition, implementation, or o
 
 ## Transitions
 
-Move a layer from `draft` to `evidence` only after the full layer has a complete first version, stable anchored topology and ordered files, no placeholders, a manual scope and omission audit, its applicable discovery searches and result classification, and truthful unit-by-unit answers to every common obligation. Settings additionally completes planned-delivery backcast and operative-subject accounting. Commit that coherent draft before changing the state.
+Move a layer from `draft` to `evidence` only after the full layer has a complete first version, stable anchored topology and ordered files, no placeholders, a manual scope and omission audit, and its applicable discovery searches and result classification. Read every selected principle against each H2, H3, and H4 in turn, then confirm that every selected obligation has the H2 owners its wording calls for. Settings additionally completes planned-delivery backcast and operative-subject accounting. Commit that coherent draft before changing the state.
 
 Move the layer to `review` only after all shared and production-specific claim batches are complete and the production source lint is clean. Commit that evidence state before review. Review each relationship independently under [Review](review.md), copy only compiler-issued fingerprints, and compile again.
 
@@ -67,13 +66,13 @@ A compiler diagnostic is a question about the artifact, not an instruction to ad
 
 Rewrite false or shallow content. Split, move, rename, merge, or replace a target whose scope is wrong. Correct only the tag when the content relationship already holds. Change config only when its intended population, stage, cardinality, exclusion, or implementation is itself wrong.
 
-Never clear a diagnostic with exaggerated evidence, copied reviews, blanket exclusions, filler, path shuffling, stage reduction, weakened populations, invented fingerprints, or a package exception. When `obligations/common.md#evidence-content-conformance` fails, perform its halt and repair before retaining any acknowledgement.
+Never clear a diagnostic with exaggerated evidence, copied reviews, blanket exclusions, filler, path shuffling, stage reduction, weakened populations, invented fingerprints, or a package exception. When `principles/common.md#evidence-content-conformance` fails, perform its halt and repair before retaining any acknowledgement.
 
 ## Production-specific claims
 
 Classify a work rule through [Production-specific contract](work-specific.md) before configuring it. The exact shared inventory reserves `docs/discovery`, `docs/principles`, and `docs/obligations`. Put production-only selected-file conditions under `docs/production-principles`, production-only distributed roles under `docs/production-obligations`, existing relationships against their current authored targets, and other independent evidence behavior under a descriptive plural or collective family.
 
-A production-local principle uses file hosts, H2 targets, `checklist: true`, no exclusion, and the host layer's stage and review requirement. A distributed role uses the owning layer's H2 hosts, ordinary H2 coverage, and only the exclusion behavior the target justifies. Declare these mechanics in the added typed claim, not in target prose. Create no empty target or family.
+A production-local principle uses the selected authored-unit hosts, H2 targets, `checklist: true`, no exclusion, and the host layer's stage and review requirement. A production-local obligation uses the owning layer's H2 hosts, ordinary H2 coverage, and no exclusion. Declare these mechanics in the added typed claim, not in target prose. Create no empty target or family.
 
 ## Verification
 

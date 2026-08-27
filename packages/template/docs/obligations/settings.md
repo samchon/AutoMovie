@@ -1,6 +1,18 @@
 # Settings obligations
 
-These required roles must be covered across the settings H2 population. They permit no exclusion: every production shape has a delivery boundary, governing aim, audience or operator access contract, coordinate and unit convention, reproducible delivery review condition, coverage map, and accounting for independently consequential subjects.
+These required roles must be covered across the settings H2 population. They permit no exclusion: every production shape has an addressable canon, delivery boundary, governing aim, audience or operator access contract, coordinate and unit convention, reproducible delivery review condition, coverage map, accounting for independently consequential subjects, explicit inherited-default boundary, and coherent production system.
+
+## Addressable canon {#addressable-canon}
+
+The settings population gives every independently citable, revisable, falsifiable, or reviewable production fact or constraint one stable canonical H2. Subjects, relationships, places, events outside the delivered action, resources, rules, capabilities, limits, delivery facts, and uncertainty with different consumers or change paths are not hidden in overview prose, subordinate headings, tables, or another owner's description.
+
+A file is a domain namespace rather than an evidence address. An H2 contains only attributes inseparable from its one owner and points to facts owned elsewhere instead of redefining them.
+
+Review question: which statement could change or be cited independently and therefore still lacks its own settings H2 owner?
+
+This obligation owns the settings address structure. The common scope-preservation principle owns missing required scope, and the common substantive-completion principle owns the depth of each existing H2.
+
+Sources: [NASA on unique identification and one requirement per statement](https://swehb.nasa.gov/pages/viewpage.action?pageId=146540037); [Marie-Laure Ryan on storyworld entities and states](https://marilaur.info/degrees.pdf); [ttsc on host and reference unit coverage](https://ttsc.dev/docs/evidence/claims/)
 
 ## Delivery scope {#delivery-scope}
 
@@ -50,7 +62,7 @@ The map is extensible rather than a closed checklist. When a new domain appears,
 
 Review question: which required production domain has no explicit owner, inherited default, justified scope boundary, or resolution path?
 
-This obligation owns domain allocation across the settings population. `principles/settings.md#addressable-canon` owns H2 decomposition, and the common obligations own required scope and unit depth.
+This obligation owns domain allocation across the settings population. `addressable-canon` owns H2 decomposition, while the common scope-preservation and substantive-completion principles own required scope and unit depth.
 
 Sources: [Marie-Laure Ryan on worlds as spatiotemporal systems of entities, events, and changing states](https://marilaur.info/degrees.pdf); [Mark J. P. Wolf on maps, timelines, nature, culture, language, and world infrastructure](https://www.oreilly.com/library/view/building-imaginary-worlds/9781136220807/xhtml/12_Chapter03.xhtml); [NASA systems engineering handbook on system boundaries and interfaces](https://www.nasa.gov/reference/systems-engineering-handbook/)
 
@@ -63,3 +75,21 @@ An unresolved operative subject needed by a planned downstream consumer blocks t
 Review question: which independently consequential actor, controller, resource owner, environmental force, subsystem, or affected population can change the delivery without a settings owner or explicit classification?
 
 Sources: [Marie-Laure Ryan on storyworld entities, events, and changing states](https://marilaur.info/degrees.pdf); [Mark J. P. Wolf on world populations, institutions, and infrastructure](https://www.oreilly.com/library/view/building-imaginary-worlds/9781136220807/xhtml/12_Chapter03.xhtml); [NASA systems engineering handbook on stakeholders, system elements, and interfaces](https://www.nasa.gov/reference/systems-engineering-handbook/)
+
+## Minimal departure {#minimal-departure}
+
+The settings population does not repeat real-world, medium, or genre defaults that the production leaves unchanged. It records each deliberate departure before a lower layer relies on it, including the scope and consequences of that departure. Where no departure is declared, the applicable shared default remains in force.
+
+Review question: which recorded fact merely restates a stable default, or which unstated departure would surprise a downstream author or audience?
+
+This obligation owns the boundary between inherited defaults and production-specific canon. The common scope-preservation principle owns whether the declared delivery requires an additional settings owner.
+
+Sources: [Ryan's principle of minimal departure](https://doi.org/10.1016/0304-422X%2880%2990030-3); [Ryan on possible-world construction](https://archive.org/details/possibleworldsar0000ryan)
+
+## Internal coherence {#internal-coherence}
+
+Facts across the settings population form one usable production system. Directly compare and calculate chronology, distances, travel time, axes, units, scale, runtime, capacities, resources, authority, capability limits, and delivery conditions. Resolve a contradiction at its earliest owner or record an explicit change; use a range instead of false precision when only a range is known.
+
+Review question: which pair of independently plausible settings statements cannot both hold under the same units, time, resources, or authority?
+
+Sources: [Hicks on consistency of distance, time, and scale](https://www.cambridge.org/core/books/scale-crisis-and-the-modern-novel/introduction/2DC3BA9BA9CF6C3DE80AD1A2A52FFDCB); [NIST on measurement traceability](https://www.nist.gov/calibrations/traceability)

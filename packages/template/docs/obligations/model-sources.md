@@ -1,6 +1,6 @@
-# Model source principles
+# Model source obligations
 
-These principles divide responsibility across TypeScript that constructs subjects, objects, environments, and formations from reviewed model documents. Construction owners, deterministic builders, and input boundaries cite the roles they perform; each file supplies a concrete exported class, while the separate exact design edge keeps every exported model type tied to one model document.
+These obligations divide responsibility across the TypeScript population that constructs subjects, objects, environments, and formations from reviewed model documents. Construction owners, deterministic builders, and input boundaries cite the roles they perform; each file supplies a concrete exported class, while the separate exact design edge keeps every exported model type tied to one model document.
 
 ## Design-owned construction {#design-owned-construction}
 

@@ -8,21 +8,9 @@ Every H2, H3, and H4 performs at least one identifiable function in the complete
 
 Review question: what consequence in the complete film would disappear or change if this unit were removed?
 
-This item asks why an existing unit is necessary. `obligations/common.md#scope-preservation` owns content that has no unit, and `common.md#purpose-fit` asks why the whole file exists.
+This item asks why an existing unit is necessary. `principles/common.md#scope-preservation` owns content assigned to this unit and its descendants, and `obligations/common.md#purpose-fit` asks why the whole file exists.
 
 Sources: [Burton and Poster on the distinct function of authored units](https://www.cambridge.org/core/books/abs/book-you-need-to-read-to-write-the-book-you-want-to-write/beginnings-and-endings-tension-and-pace/7B84CB546C696FD1B6A8AB753522B42C); [Trabasso and Sperry on causal connection and judged importance](https://doi.org/10.1016/0749-596X%2885%2990048-8)
-
-## Unit addressability {#unit-addressability}
-
-Every independent sequence, scene, and beat has its own H2, H3, and H4 address. One beat begins from one entry condition, carries one central dramatic or formal progression, and leaves one identifiable exit condition. Split a unit when it contains another progression with its own objective, causal or formal operation, and exit, or when one portion can move or disappear while the remainder still functions independently. H2 and H3 units organize their actual descendants instead of concealing additional scenes or beats in direct prose.
-
-A change of time, place, participant, focus, or expressive form is evidence of a possible boundary, not an automatic split. Montage, parallel action, documents, and other non-continuous forms still receive the smallest stable address that owns one coherent operation and change.
-
-Review question: does any unit hide two independently movable progressions, or does any split fragment one progression without giving both parts a function and exit?
-
-This item owns semantic boundaries inside each layer. `unit-identity` owns exact identity between layers, and the common substantive obligation owns authored depth.
-
-Sources: [Zacks and colleagues on event segmentation](https://pmc.ncbi.nlm.nih.gov/articles/PMC8710938/); [DOME on dynamic hierarchical outlining](https://aclanthology.org/2025.naacl-long.63/); [Fiction University on minimum scene function](http://blog.janicehardy.com/2019/08/how-to-write-scenes-and-what-qualifies.html)
 
 ## Unit connection {#unit-connection}
 
@@ -80,7 +68,7 @@ Selected events, actions, images, sounds, and details arise from this production
 
 Review question: which choice could be transplanted unchanged into an unrelated film, and what production-owned fact should determine it instead?
 
-This item owns production-specific selection. The common machine-default obligation owns whether the writing was decided at all, and screenplay audiovisual selection owns which final perceptible details reach the audience.
+This item owns production-specific selection. The common machine-default principle owns whether the writing was decided at all, and screenplay audiovisual selection owns which final perceptible details reach the audience.
 
 Sources: [Boston University on creating tension through concrete action](https://www.bu.edu/articles/2019/how-to-create-suspense/); [Purdue OWL on revealing character through specific action and speech](https://owl.purdue.edu/owl/subject_specific_writing/creative_writing/writers/fiction_writing_basics/characters_and_fiction_writing1/building_and_revealing_characters.html)
 

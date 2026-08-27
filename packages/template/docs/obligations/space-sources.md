@@ -1,6 +1,6 @@
-# Space source principles
+# Space source obligations
 
-Space source turns reviewed topology into stable engine-facing records without becoming a second spatial author.
+These obligations divide the work of turning reviewed topology into stable engine-facing records across the selected space-source population without making source a second spatial author.
 
 ## Design-owned topology {#space-source-design-ownership}
 

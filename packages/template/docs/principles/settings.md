@@ -2,18 +2,6 @@
 
 Settings state the production's facts, constraints, identities, and capabilities before any representation, motion, narrative order, or shot is selected.
 
-## Addressable canon {#addressable-canon}
-
-Every independently citable, revisable, falsifiable, or reviewable production fact or constraint has one stable canonical H2. Subjects, relationships, places, events outside the delivered action, resources, rules, capabilities, limits, delivery facts, and uncertainty with different consumers or change paths are not hidden in overview prose, subordinate headings, tables, or another owner's description.
-
-A file is a domain namespace rather than an evidence address. An H2 contains only attributes inseparable from its one owner and points to facts owned elsewhere instead of redefining them.
-
-Review question: which statement in this file could change or be cited without changing its surrounding H2, and therefore still needs its own owner?
-
-This item owns the settings address structure. `obligations/common.md#scope-preservation` owns missing required scope, and `obligations/common.md#substantive-completion` owns the depth of each existing H2.
-
-Sources: [NASA on unique identification and one requirement per statement](https://swehb.nasa.gov/pages/viewpage.action?pageId=146540037); [Marie-Laure Ryan on storyworld entities and states](https://marilaur.info/degrees.pdf); [ttsc on host and reference unit coverage](https://ttsc.dev/docs/evidence/claims/)
-
 ## Information structure {#information-structure}
 
 After the fact-status declaration, every H2 briefly identifies its owner, central decision, applicable boundary, and downstream consequence, then develops definitions, conditions, evidence, relationships, exceptions, and results in paragraphs with distinct functions. Tables and lists support a comparison or mapping rather than replacing the reasoning that makes the facts usable.
@@ -22,7 +10,7 @@ A paragraph carries one central claim or inseparable claim set. Split independen
 
 Review question: can a reverse outline give every paragraph one distinct job without finding repeated orientation or bundled decisions?
 
-This item owns information order inside one H2. `addressable-canon` owns separation between H2 owners, and the common substantive obligation owns the delivered depth.
+This item owns information order inside one H2. The settings addressable-canon obligation owns separation between H2 owners, and the common substantive-completion principle owns the delivered depth.
 
 Sources: [Purdue OWL on paragraph focus and support](https://owl.purdue.edu/owl/graduate_writing/introduction_to_writing/documents/drafting-your-document/organization-at-the-paragraph-level.pdf); [George Mason Writing Center on reverse outlining](https://writingcenter.gmu.edu/writing-resources/writing-as-process/reverse-outlining)
 
@@ -66,7 +54,7 @@ Every adopted rule or constraint supplies enough boundary, operating condition, 
 
 Review question: which plausible downstream choice would still require guessing because this rule lacks a limit, exception, or decision condition?
 
-This item owns the decision boundary of an adopted constraint. The common substantive obligation asks whether the complete H2 is a usable settings deliverable, and `minimal-departure` decides which inherited defaults need no restatement.
+This item owns the decision boundary of an adopted constraint. The common substantive-completion principle asks whether the complete H2 is a usable settings deliverable, and the settings minimal-departure obligation decides which inherited defaults need no restatement.
 
 Sources: [Ronen on necessary indeterminacy in fictional worlds](https://www.cambridge.org/core/books/abs/possible-worlds-in-literary-theory/fictional-entities-incomplete-beings/EA5E36B2C5D64AE648FD1D993E6F92CC); [NASA systems engineering handbook on bounded requirements and interfaces](https://www.nasa.gov/reference/systems-engineering-handbook/)
 
@@ -77,21 +65,3 @@ Every settings unit that defines a subject, place, or audible identity states th
 Review question: what visible or audible observation distinguishes this owner from a merely named placeholder?
 
 Sources: [Academy Digital Source Master on defined image characteristics](https://www.oscars.org/science-technology/sci-tech-projects/academy-digital-source-master); [glTF 2.0 scene and asset concepts](https://registry.khronos.org/glTF/specs/2.0/glTF-2.0.html#concepts)
-
-## Minimal departure {#minimal-departure}
-
-Do not repeat real-world, medium, or genre defaults that the production leaves unchanged. Record each deliberate departure before a lower layer relies on it, including the scope and consequences of that departure. Where no departure is declared, the applicable shared default remains in force.
-
-Review question: which recorded fact merely restates a stable default, or which unstated departure would surprise a downstream author or audience?
-
-This item owns the boundary between inherited defaults and production-specific canon. `scope-preservation` owns whether the declared delivery requires an additional setting domain.
-
-Sources: [Ryan's principle of minimal departure](https://doi.org/10.1016/0304-422X%2880%2990030-3); [Ryan on possible-world construction](https://archive.org/details/possibleworldsar0000ryan)
-
-## Internal coherence {#internal-coherence}
-
-Facts across settings form one usable production system. Directly compare and calculate chronology, distances, travel time, axes, units, scale, runtime, capacities, resources, authority, capability limits, and delivery conditions. Resolve a contradiction at its earliest owner or record an explicit change; use a range instead of false precision when only a range is known.
-
-Review question: which pair of independently plausible settings statements cannot both hold under the same units, time, resources, or authority?
-
-Sources: [Hicks on consistency of distance, time, and scale](https://www.cambridge.org/core/books/scale-crisis-and-the-modern-novel/introduction/2DC3BA9BA9CF6C3DE80AD1A2A52FFDCB); [NIST on measurement traceability](https://www.nist.gov/calibrations/traceability)

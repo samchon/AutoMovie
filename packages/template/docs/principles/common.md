@@ -1,43 +1,73 @@
 # Common principles
 
-These principles apply to every authored production document. They decide why a unit exists, which layer owns its decision, and how the unit distinguishes evidence from choice; they do not decide the content assigned to any specialist layer.
+Criteria every authored H2, H3, or H4 unit answers for itself in every selected layer. Judge the current unit and its declared descendants, not the file or production on average. Principles permit no exclusion.
 
-## Purpose fit {#purpose-fit}
+## Declared scope preservation {#scope-preservation}
 
-Every file contributes a necessary fact, decision, transition, implementation contract, or verification target to the declared production. Material that changes none of those belongs in working notes or is removed.
+The current unit realizes everything assigned to it by the production's delivery scope, governing aim, applicable upstream contracts, and declared unit map. Across the complete population, every promised subject, interval, capability, transition, narrative development, observation, and terminal result has an explicit owner. A missing unit, a heading without its promised content, or a downstream invention standing in for absent upstream work is an omission.
 
-Review question: what later decision or delivered observation would become underdetermined if this file disappeared?
+This principle asks what the current unit and its descendants must contain. The common proportionate-development obligation asks how the population allocates authored structure and detail among those contents.
 
-This item asks why the file exists. `obligations/common.md#scope-preservation` asks whether required content has an owner, and specialist principles decide whether this file performs its role correctly.
+Review question: which promised subject, interval, capability, transition, narrative development, observation, or terminal result assigned to this unit or its descendants has no explicit owner?
 
-Sources: [Jakobson on the dominant that orders the functions of other elements](https://archive.org/details/readingsinrussia0000mate); [Burton and Poster on the distinct work done by beginnings, endings, tension, and pace](https://www.cambridge.org/core/books/abs/book-you-need-to-read-to-write-the-book-you-want-to-write/beginnings-and-endings-tension-and-pace/7B84CB546C696FD1B6A8AB753522B42C)
+When this principle fails, do not acknowledge it or advance the layer. Restore the omitted scope at its earliest owning layer, propagate every consequence, and reread the affected descendants. A smaller delivery begins by revising settings under the authority that approved the original scope.
 
-## Layer boundary {#layer-boundary}
+Sources: [NASA on complete, bidirectionally traceable requirements](https://swehb.nasa.gov/spaces/7150/pages/16450593/SWE-051%2B-%2BSoftware%2BRequirements%2BAnalysis); [Detailed Outline Control on maintaining long-form alignment through explicit hierarchy](https://aclanthology.org/2023.acl-long.190/); [ttsc on independent claim and reference coverage](https://ttsc.dev/docs/evidence/claims/)
 
-Every file declares one document role and contains only decisions recognized by that role's specialist principle family. A mixed-role file is split, and a missing decision begins in the directory whose specialist rules own it before being carried downward. This common principle owns routing and single-role composition; the specialist principles alone define the content of each role.
+## Layer-substantive completion {#substantive-completion}
 
-Review question: does any decision in this file require a second specialist principle family to justify it, and if so where must that decision move?
+The current unit is a complete deliverable at its own layer. A settings H2 settles one usable fact or constraint; research settles one source record and production consequence; model, space, material, instance, motion, and system H2s settle one decision of their named design kind. A storyline unit is a detailed narrative treatment, a scenario unit is executable physical progression, a screenplay unit is the final audience-facing audiovisual contract, and a brief unit is a complete bounded observation contract.
 
-This item asks which layer owns a decision. `obligations/common.md#substantive-completion` asks whether an addressed unit is complete at that layer.
+A title, placeholder, future-work promise, field list, causal card, parent restatement, generic summary, or implementation that still requires the next layer to invent this layer's essential decision is not completion. Narrative H2 and H3 units directly organize the accumulated development of their descendants; they are not empty umbrellas.
 
-Sources: [Plan-and-Write on separating planning from realization](https://doi.org/10.1609/aaai.v33i01.33017378); [Detailed Outline Control on controlling generation through an explicit intermediate plan](https://arxiv.org/abs/2212.10077)
+This principle asks whether the current unit is its layer's actual artifact. The common proportionate-development obligation separately asks whether the complete population allocates enough units and detail to the declared scale.
+
+Review question: what essential decision would the next layer still have to invent because this unit is only a label, outline, restatement, placeholder, or partial artifact?
+
+When this principle fails, repair or replace the unit instead of adding evidence text. When the defect begins upstream, fix that owner first, propagate the result, and reread every affected unit before resuming the evidence batch.
+
+Sources: [Detailed Outline Control on moving creative decisions into explicit upstream plans](https://aclanthology.org/2023.acl-long.190/); [BBC screenplay format on executable scene headings, action, and dialogue](https://downloads.bbc.co.uk/writersroom/scripts/screenplay.pdf); [NASA systems engineering handbook on verification-ready definitions](https://www.nasa.gov/reference/systems-engineering-handbook/)
+
+## Machine default {#machine-default}
+
+The current unit is written the way this production writes. Every generator has a default surface it falls back to when nothing has been decided, and that surface reaches the artifact unless someone takes it out.
+
+Read the unit for its marks: vocabulary clustered on the register-raising words a model reaches for; the copula avoided, with "serves as" or "boasts" standing in for "is" and "are"; the "not X but Y" turn used for cadence rather than for a contrast the material has; a third list item added because two looked unfinished; a present participle tagged to a sentence to claim significance the sentence never earned; a qualification balancing a claim nobody disputed; a closing line that restates what precedes it; em dashes, boldface, and title case at a density the material does not need; and sentences and paragraphs of one length through the unit.
+
+Any one of these can be the right choice here. Several of them in one unit is the finding: nobody chose.
+
+Design and brief units answer this too. A model H2 that describes its articulation in generator default hides which degrees of freedom were actually decided; a brief observation written that way reads as falsifiable while naming no threshold anyone picked.
+
+Regularity the material asks for is not this defect. A settings H2 listing parallel constraints, a motion H2 stepping through phases, and a brief H4 stating one viewing condition are meant to be even, and variation forced onto one is the same failure from the other side.
+
+This principle asks whether anyone decided how the unit reads. `evidence-content-conformance` owns whether an acknowledgement is true and whether its reason is generic or copied. `principles/scripts.md#audiovisual-voice` owns the expressive stance finished screenplay chooses, `principles/narratives.md#specificity` owns whether an element belongs to this production rather than to its genre, and the common production-language obligation owns the working language and its consistency.
+
+Review question: which marks of an undecided default appear together in this unit?
+
+When this principle fails, repair by deciding. Cut what restates, put back the particular the abstraction displaced, and let sentence and paragraph length follow what is being said. Rarer synonyms, scattered irregularity, and an inserted colloquialism leave the default underneath and put a costume over it.
+
+Sources: [WikiProject AI Cleanup on the language, structural, and formatting signs of machine-generated prose](https://en.wikipedia.org/wiki/Wikipedia:Signs_of_AI_writing); [Padmakumar and He on the measured loss of lexical and content diversity in text a model co-wrote](https://arxiv.org/abs/2309.05196); [Chakrabarty and colleagues on machine-generated writing failing creative tests professional work passes](https://arxiv.org/abs/2309.14556); [Purdue OWL on monotony produced by repeated sentence structure](https://owl.purdue.edu/owl/general_writing/academic_writing/sentence_variety/similar_sentence_patterns_or_rhythms.html)
+
+## Evidence-content conformance {#evidence-content-conformance}
+
+Every acknowledgement, exclusion, and review in the current unit states a relationship that actually holds between the complete host and target. A clean compiler and a current fingerprint do not substitute for semantic truth. Each reason names the concrete fact, constraint, decision, transition, or observable result by which this host realizes the target.
+
+Unrelated or bundled targets, generic or copied reasons, omission disguised as exclusion, fabricated or mechanically refreshed fingerprints, content added only to echo a target, and weakened stages, populations, paths, or cardinality are violations.
+
+This principle owns the truth of evidence statements and their repair. The scope-preservation and substantive-completion principles own the artifact content those statements may describe, and the proportionate-development obligation owns allocation across the population.
+
+Review question: which acknowledgement, exclusion, or review claims a relationship that the complete host, target, population, and configured cardinality do not actually establish?
+
+When this principle fails, stop the evidence batch and downstream work. Read the complete host, target, config, and affected context, compare possible defects in content, ownership, hierarchy, statement, population, and compiler, then repair the earliest actual owner and every dependant before writing evidence again.
+
+Sources: [Google DeepMind on specification gaming](https://deepmind.google/blog/specification-gaming-the-flip-side-of-ai-ingenuity/); [NASA on distinguishing symptoms from root causes and tracing consequences](https://swehb.nasa.gov/spaces/SWEHBVC/pages/50889445/SWE-204%2B-%2BProcess%2BAssessments); [ttsc on evidence relationships between selected hosts and references](https://ttsc.dev/docs/evidence/claims/)
 
 ## Declared basis {#declared-basis}
 
-Every consequential claim names its declared basis: the upstream unit it inherits, the stated derivation it applies, the local choice this layer owns, or the unresolved input it exposes. External-source identity and the epistemic status of production facts belong to research and settings; this principle owns only the trace from a document's statement to the basis on which that document is entitled to make it.
+Every consequential claim in the current unit names its declared basis: the upstream unit it inherits, the stated derivation it applies, the local choice this layer owns, or the unresolved input it exposes. External-source identity and the epistemic status of production facts belong to research and settings; this principle owns only the trace from the unit's statement to the basis on which that unit is entitled to make it.
 
-Review question: can a reader point from each consequential statement to one inherited unit, explicit derivation, layer-owned choice, or unresolved input without guessing from tone?
+Review question: can a reader point from each consequential statement in this unit to one inherited unit, explicit derivation, layer-owned choice, or unresolved input without guessing from tone?
 
-This item asks where authored content derives its authority. `obligations/common.md#evidence-content-conformance` separately asks whether an evidence citation truthfully describes a configured host-target relationship.
+This item asks where the current unit derives its authority. `evidence-content-conformance` separately asks whether an evidence citation truthfully describes a configured host-target relationship.
 
 Sources: [NIST guidance on traceability through an unbroken chain of calibrations](https://www.nist.gov/calibrations/traceability); [W3C PROV-O on representing provenance relations](https://www.w3.org/TR/prov-o/)
-
-## Production language {#production-language}
-
-Every authored production document uses the primary working language declared in settings with enough grammatical and terminological consistency for its intended reader. Exact identifiers, source titles, quotations, established technical terms, and deliberately authored multilingual content may retain another language when their function and audience access remain explicit.
-
-Review question: can the intended reader understand every production decision without guessing across inconsistent language, unexplained terminology, or an unowned language switch?
-
-This item owns the linguistic accessibility of an authored file. Settings owns which working and audience-facing languages the production selected, while screenplay and film source own the content and timing of dialogue, captions, and audible language.
-
-Sources: [W3C Internationalization on declaring language in HTML](https://www.w3.org/International/questions/qa-html-language-declarations); [BBC screenplay format and language presentation](https://downloads.bbc.co.uk/writersroom/scripts/screenplay.pdf); [W3C Timed Text Markup Language](https://www.w3.org/TR/ttml2/)

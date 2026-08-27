@@ -1,6 +1,6 @@
-# Instance source principles
+# Instance source obligations
 
-Instance source realizes reviewed population rules as reproducible members without redefining their prototypes.
+These obligations divide the realization of reviewed population rules as reproducible members across the selected instance-source population without redefining their prototypes.
 
 ## Design-owned population {#instance-source-design-ownership}
 

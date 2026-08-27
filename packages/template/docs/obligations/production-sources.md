@@ -1,6 +1,6 @@
-# Production source principles
+# Production source obligations
 
-Production source serializes production-wide settings into the engine-facing design record. It is neither a second settings document nor a place to author subject construction, motion, scene action, or editorial timing.
+These obligations divide serialization of production-wide settings across the selected production-source population. Source is neither a second settings document nor a place to author subject construction, motion, scene action, or editorial timing.
 
 ## Settings-only serialization {#settings-only-serialization}
 

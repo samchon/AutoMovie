@@ -2,6 +2,14 @@
 
 These roles are distributed across the instance-design H2 population. Instances own repeated membership and placement; the prototype model remains owned by its model design.
 
+## Addressable instance decisions {#addressable-instance-decisions}
+
+The instance population gives every independently generated set, subgroup, override family, placement rule, or population observation one stable H2.
+
+Review question: which set can change independently but is still bundled under another population owner?
+
+Sources: [NASA on unique, bidirectionally traceable requirements](https://www.nasa.gov/reference/system-engineering-handbook-appendix/)
+
 ## Prototype and membership {#instance-prototype-membership}
 
 The population identifies each prototype, the exact members of every set, and the rule by which a member enters, leaves, or changes role.

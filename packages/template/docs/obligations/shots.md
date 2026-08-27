@@ -1,6 +1,6 @@
-# Shot source principles
+# Shot source obligations
 
-These principles divide responsibility across TypeScript shot deliveries and their adjacent acceptance exports. Delivery exports own local composition and deterministic shot time; acceptance exports own falsifying observations. Final timeline assembly and auxiliary tracks belong to film source. The separate exact scene edge keeps every governed export tied to one screenplay scene or brief shot.
+These obligations divide responsibility across TypeScript shot deliveries and their adjacent acceptance exports. Delivery exports own local composition and deterministic shot time; acceptance exports own falsifying observations. Final timeline assembly and auxiliary tracks belong to film source. The separate exact scene edge keeps every governed export tied to one screenplay scene or brief shot.
 
 ## Contract-only composition {#contract-only-composition}
 

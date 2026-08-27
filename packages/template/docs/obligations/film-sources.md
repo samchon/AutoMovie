@@ -1,6 +1,6 @@
-# Film source principles
+# Film source obligations
 
-Film source assembles reviewed local shots into the global audience timeline. It owns editorial mapping and auxiliary tracks, while screenplay or brief owns their meaning and shot source owns each local visual realization.
+These obligations divide assembly of reviewed local shots into the global audience timeline across the selected film-source population. Film source owns editorial mapping and auxiliary tracks, while screenplay or brief owns their meaning and shot source owns each local visual realization.
 
 ## Editorial-only assembly {#editorial-only-assembly}
 

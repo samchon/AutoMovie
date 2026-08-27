@@ -2,6 +2,14 @@
 
 These roles are distributed across the space-design H2 population. Space owns semantic topology and usable dimensions; model documents own the geometry used to depict a bounded object.
 
+## Addressable spatial decisions {#addressable-spatial-decisions}
+
+The space population gives every independently citable place, boundary, level, opening, route, clearance, or spatial observation one stable H2 owner.
+
+Review question: which spatial fact could change independently and is still hidden inside another owner's prose?
+
+Sources: [NASA on unique, bidirectionally traceable requirements](https://www.nasa.gov/reference/system-engineering-handbook-appendix/)
+
 ## Spatial reference and topology {#space-reference-topology}
 
 The population establishes named world, site, building, level, room, zone, and local frames and the containment, adjacency, opening, and transition graph between them.

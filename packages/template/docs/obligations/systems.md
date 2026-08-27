@@ -2,6 +2,14 @@
 
 These roles are distributed across lighting, environment, effects, simulation, sound, service, and other system-design H2s. A system owns coupled process behavior, not the model, space, material, instance, or motion fact it consumes. Narrative or brief prose owns audience meaning, and shot source owns its timed realization.
 
+## Addressable system decisions {#addressable-system-decisions}
+
+The system population gives every independently enabled, parameterized, ordered, budgeted, or reviewable process one stable H2.
+
+Review question: which process can fail or change alone and therefore still needs a separate owner?
+
+Sources: [NASA on unique requirements and allocated verification responsibility](https://www.nasa.gov/reference/system-engineering-handbook-appendix/)
+
 ## Ownership and interfaces {#system-ownership-interfaces}
 
 The population names each system's inputs, outputs, dependencies, affected owners, authority, and ordering relative to other systems.

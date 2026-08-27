@@ -2,14 +2,6 @@
 
 Instance documents define repeated or grouped use of reviewed prototypes. They own membership, stable identity, transform, variation, and population behavior, not prototype geometry.
 
-## Addressable instance decisions {#addressable-instance-decisions}
-
-Every independently generated set, subgroup, override family, placement rule, or population observation has one stable H2.
-
-Review question: which set can change independently but is still bundled under another population owner?
-
-Sources: [NASA on unique, bidirectionally traceable requirements](https://www.nasa.gov/reference/system-engineering-handbook-appendix/)
-
 ## Instance information structure {#instance-information-structure}
 
 Every H2 first identifies its population owner, membership decision, prototype boundary, and downstream consequence, then develops derivation, variation, placement, limits, and verification in paragraphs with distinct functions. Member tables illustrate a rule or expected case rather than becoming a second authored population.
@@ -36,8 +28,8 @@ Sources: [OpenUSD on authored stable ids and point-instancer inputs](https://ope
 
 ## Verification-addressable population claims {#instance-verification-address}
 
-Every consequential population claim identifies the member, subset, invariant, or worst case that could falsify it and points to the population review role that will test it. This file maps its own claims; the instance obligations define complete membership, placement, tier, and review coverage.
+Every consequential population claim in the current H2 identifies the member, subset, invariant, or worst case that could falsify it and points to the population review role that will test it. This unit maps its own claims; the instance obligations define complete membership, placement, tier, and review coverage.
 
-Review question: which population claim could be false while every member or subset named by this file still passes?
+Review question: which population claim could be false while every member or subset named by this H2 still passes?
 
 Sources: [NASA on verification methods and evidence assigned to requirements](https://www.nasa.gov/reference/system-engineering-handbook-appendix/)

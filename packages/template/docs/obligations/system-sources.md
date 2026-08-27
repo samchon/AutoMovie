@@ -1,6 +1,6 @@
-# System source principles
+# System source obligations
 
-System source evaluates a reviewed coupled process without acquiring authority over the owners it consumes.
+These obligations divide evaluation of reviewed coupled processes across the selected system-source population without granting it authority over the owners it consumes.
 
 ## Design-owned process {#system-source-design-ownership}
 

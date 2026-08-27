@@ -1,6 +1,16 @@
 # Motion obligations
 
-These roles must be covered across the motion-design H2 population. They define shared transition policy whose distinct contributions may be divided among motion files, rather than forcing every motion to repeat every role.
+These roles must be covered across the motion-design H2 population. They define shared transition policy whose distinct contributions may be divided among motion H2 owners, rather than forcing every H2 to repeat every role.
+
+## Addressable motion decisions {#addressable-motion-decisions}
+
+The motion population gives every independently callable, composable, revisable, or reviewable transition or observation one stable H2. A transition with its own entry, exit, time domain, parameter set, interruption behavior, or consumer does not hide under another motion's heading, and a review protocol that several transitions share belongs to the population obligation rather than being copied.
+
+Review question: which timed behavior could be selected, changed, or falsified independently and therefore still lacks its own H2 owner?
+
+This obligation owns motion-document address structure. The common substantive-completion principle owns each unit's completeness, and the exact source edge owns its implementation.
+
+Sources: [NASA on unique identification and one requirement per statement](https://swehb.nasa.gov/pages/viewpage.action?pageId=146540037); [Web Animations timing model](https://www.w3.org/TR/web-animations-1/#timing-model)
 
 ## Time base {#time-base}
 

@@ -1,6 +1,16 @@
 # Model obligations
 
-These roles must be covered across the model-design H2 population. They are shared representation policies whose distinct contributions may be divided among model files, not per-file checklists that every model repeats.
+These roles must be covered across the model-design H2 population. They are shared representation policies whose distinct contributions may be divided among model H2 owners, not per-unit checklists that every H2 repeats.
+
+## Addressable model decisions {#addressable-model-decisions}
+
+The model population gives every independently implementable, citable, revisable, or reviewable representation decision one stable H2. Geometry allocation, hierarchy, articulation interface, surface partition, fidelity boundary, and review observation with different consumers or change paths are not hidden inside one umbrella unit or repeated in another file. Material construction and response belong in materials; this layer owns only the stable surface that receives one.
+
+Review question: which model decision could change or be implemented independently and therefore still lacks its own H2 owner?
+
+This obligation owns the model-document address structure. The common substantive-completion principle owns the completeness of each addressed design unit, and the exact source edge owns its implementation.
+
+Sources: [NASA on unique identification and one requirement per statement](https://swehb.nasa.gov/pages/viewpage.action?pageId=146540037); [OpenUSD model and asset terminology](https://openusd.org/release/glossary.html)
 
 ## Representation ceiling {#representation-ceiling}
 

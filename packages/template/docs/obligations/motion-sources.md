@@ -1,6 +1,6 @@
-# Motion source principles
+# Motion source obligations
 
-These principles divide responsibility across reusable TypeScript motion constants and constructors. Constants carry reviewed values, while callable constructors own time mapping and input refusal; the separate exact design edge keeps every exported function and property tied to one motion document.
+These obligations divide responsibility across reusable TypeScript motion constants and constructors. Constants carry reviewed values, while callable constructors own time mapping and input refusal; the separate exact design edge keeps every exported function and property tied to one motion document.
 
 ## Design-owned transition {#design-owned-transition}
 

@@ -4,7 +4,7 @@
 
 A subject here is anything the film shows deciding, reacting, resisting, or refusing: a person, an animal, a crowd, an institution, or a machine. Depth follows consequence. A central subject settles every applicable role in usable detail, and a single-appearance subject settles the roles its one appearance actually exercises.
 
-Each role permits one truthful population-wide exclusion, and only when its condition is genuinely absent from the complete film. An observational or non-human film that establishes no consequential relationship excludes that role and names the delivery that makes it true; it does not exclude a role merely because writing it is inconvenient.
+Every role is covered without exclusion. Its wording carries the applicability boundary: a non-human subject answers with its operational equivalent, a film claiming no interior state defines the observable disposition it uses, and a production with no consequential relationship still records the owner whose isolation or lack of relation materially governs the delivered action. If none of these roles applies to the requested result, the work is a direct brief rather than a film with an empty subject contract.
 
 ## Situated conditions {#situated-conditions}
 

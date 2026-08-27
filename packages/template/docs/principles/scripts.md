@@ -4,17 +4,17 @@ Screenplay files are the final human-readable audiovisual contract for film shot
 
 ## Screenplay blocks {#screenplay-blocks}
 
-After its heading in draft, and after its evidence comment in evidence or review, every H3 scene and H4 beat begins with final audience-facing content rather than a treatment summary. Present visible action, dialogue, captions, audible events, and meaningful silence in distinct readable blocks at their actual order. Split a block when subject, action, speaker, audible layer, or presentation state changes materially; join fragments that obscure one continuous action or exchange.
+After its heading in draft, and after its evidence comment in evidence or review, every H2, H3, and H4 begins with the final audience-facing content appropriate to its scope rather than a treatment summary. Present visible action, dialogue, captions, audible events, and meaningful silence in distinct readable blocks at their actual order. An H2 or H3 organizes the actual descendants that carry its progression. Split a block when subject, action, speaker, audible layer, or presentation state changes materially; join fragments that obscure one continuous action or exchange.
 
 Review question: can a shot and edit author identify the final ordered visual, spoken, written, audible, and silent elements without translating a planning paragraph?
 
-This item owns screenplay block form. `filmable-expression` owns what those blocks may say, and the common substantive obligation owns completeness.
+This item owns screenplay block form. `filmable-expression` owns what those blocks may say, and the common substantive-completion principle owns completeness.
 
 Sources: [BBC screenplay format](https://downloads.bbc.co.uk/writersroom/scripts/screenplay.pdf); [BBC taped drama format](https://downloads.bbc.co.uk/writersroom/scripts/bbctapeddrama.pdf); [Academy Nicholl screenwriting resources](https://www.oscars.org/nicholl/screenwriting-resources)
 
 ## Filmable expression {#filmable-expression}
 
-Every screenplay unit expresses present audience-visible action, on-screen text, audible speech or sound, and only the contextual information needed to interpret them. Internal intent appears through an observable or audible cue or remains owned by the storyline; it does not become an unfilmable instruction.
+Every screenplay H2, H3, and H4 expresses present audience-visible action, on-screen text, audible speech or sound, and only the contextual information needed to interpret them. Internal intent appears through an observable or audible cue or remains owned by the storyline; it does not become an unfilmable instruction.
 
 Review question: what would the audience see, read, or hear for every sentence in the unit?
 
@@ -22,27 +22,27 @@ Sources: [Academy Nicholl screenwriting resources](https://www.oscars.org/nichol
 
 ## Audiovisual voice {#audiovisual-voice}
 
-Every screenplay file sustains a production-recognizable expressive logic across visible action, image, written text, dialogue, sound, silence, density, and transition. It applies the visual, audible, and formal grammar selected in settings without reducing that grammar to repeated decoration or handing its essential pattern to camera and edit source. A deliberate break identifies the pressure, event, or change that makes the break part of the same work.
+Every screenplay H2, H3, and H4 sustains the production-recognizable expressive logic across its visible action, image, written text, dialogue, sound, silence, density, and transition. It applies the visual, audible, and formal grammar selected in settings without reducing that grammar to repeated decoration or handing its essential pattern to camera and edit source. A deliberate break identifies the pressure, event, or change that makes the break part of the same work.
 
-Review question: what recurring relation among image, text, sound, silence, action, and transition makes this file belong recognizably to this production, and what authored change justifies each departure?
+Review question: what relation among image, text, sound, silence, action, and transition makes this unit belong recognizably to this production, and what authored change justifies each departure?
 
-This item owns the screenplay's patterned expressive stance. Common production language owns the working language of the authored document, the common machine-default obligation owns whether the writing was decided at all, dialogue and sound voice owns the identity and relational function of particular sources, audiovisual selection owns whether each perceptible detail earns inclusion, and settings own the production-wide grammar this layer realizes.
+This item owns the screenplay's patterned expressive stance. The common production-language obligation owns the working language of the authored document, the common machine-default principle owns whether the writing was decided at all, dialogue and sound voice owns the identity and relational function of particular sources, audiovisual selection owns whether each perceptible detail earns inclusion, and settings own the production-wide grammar this layer realizes.
 
 Sources: [Bordwell on films as patterned systems that guide spectator construction](https://www.routledge.com/Narration-in-the-Fiction-Film/Bordwell/p/book/9780415018777); [Chion on sound and image forming one audiovisual mode of perception](https://cup.columbia.edu/book/audio-vision-sound-on-screen/9780231185882/)
 
 ## Block continuity {#block-continuity}
 
-Within one scene, each screenplay block is reachable from the preceding block through legible time, place, subject, action, attention, and sound. Ellipsis, juxtaposition, montage, and abrupt cuts remain valid when the authored transition distinguishes an intended discontinuity from a missing bridge.
+Within every H2, H3, and H4, each screenplay block or organized descendant is reachable from the preceding one through legible time, place, subject, action, attention, and sound. Ellipsis, juxtaposition, montage, and abrupt cuts remain valid when the authored transition distinguishes an intended discontinuity from a missing bridge.
 
 Review question: what visible, audible, or structural cue carries the audience across every block boundary?
 
-This item owns continuity of final presentation blocks within one scene. Narrative horizontal continuity owns production facts between units, and film source owns global editorial mapping between reviewed shots.
+This item owns continuity of final presentation inside the current unit. Narrative horizontal continuity owns production facts between units, and film source owns global editorial mapping between reviewed shots.
 
 Sources: [Zwaan, Langston, and Graesser on the processing cost of situation changes](https://doi.org/10.1111/j.1467-9280.1995.tb00513.x); [Harvard Writing Center on transitions](https://writingcenter.fas.harvard.edu/transitions)
 
 ## Audience access {#audience-access}
 
-Every scene preserves the production's declared audience access: what can be seen, heard, read, inferred, or withheld and whose perceptual or documentary range authorizes it. A change of access has an authored boundary and purpose. Information that the established access must reveal is not omitted merely to manufacture surprise.
+Every screenplay H2, H3, and H4 preserves the production's declared audience access: what can be seen, heard, read, inferred, or withheld and whose perceptual or documentary range authorizes it. A change of access has an authored boundary and purpose. Information that the established access must reveal is not omitted merely to manufacture surprise.
 
 Review question: what grants the audience access to each presented fact, and what authored boundary justifies each withheld fact?
 
@@ -52,7 +52,7 @@ Sources: [Genette on the distinction between voice and focalization](https://arc
 
 ## Pacing and rhythm {#pacing-rhythm}
 
-The screenplay allocates audience time and expressive density in proportion to the importance and intended intensity of events. It expands duration that must be experienced and compresses passage through explicit ellipsis, montage, repetition, or summary presentation. Rhythm arises from action, holds, speech, silence, sound, text, and transitions, not from vague tempo adjectives.
+Every screenplay H2, H3, and H4 allocates audience time and expressive density in proportion to the importance and intended intensity of its events. It expands duration that must be experienced and compresses passage through explicit ellipsis, montage, repetition, or summary presentation. Rhythm arises from action, holds, speech, silence, sound, text, and transitions, not from vague tempo adjectives.
 
 Review question: which important beat is rushed, which minor beat is overheld, and what exact audience experience justifies each allocation?
 
@@ -62,7 +62,7 @@ Sources: [Purdue OWL on scene and summary](https://owl.purdue.edu/owl/resources/
 
 ## Audience orientation {#audience-orientation}
 
-At the moment it matters, the screenplay gives enough visual, audible, textual, or structural evidence to identify who or what acts, where and when the action occurs, what changed, and what a pointer such as a pronoun, caption, or off-screen source denotes. Mystery and disorientation remain valid when the audience retains the intended reference needed to distinguish design from error.
+At the moment it matters, every screenplay H2, H3, and H4 gives enough visual, audible, textual, or structural evidence to identify who or what acts, where and when the action occurs, what changed, and what a pointer such as a pronoun, caption, or off-screen source denotes. Mystery and disorientation remain valid when the audience retains the intended reference needed to distinguish design from error.
 
 Review question: which current subject, place, time, action, or sound source could a first viewer misidentify, and what authored cue resolves only the unintended ambiguity?
 
@@ -107,13 +107,3 @@ Review question: can shot and edit source recover every render-critical time wit
 This item owns numeric audience timing. Narrative unit identity owns the stable H2/H3/H4 addresses, motion documents own reusable transition time, and film source owns global mapping.
 
 Sources: [Web Animations timing model](https://www.w3.org/TR/web-animations-1/#timing-model); [SMPTE standards overview for time and synchronization](https://www.smpte.org/standards)
-
-## Realization-ready contract {#realization-ready-contract}
-
-Every screenplay scene contains the complete dramatic and audiovisual requirement its local shot and audience-facing edit tracks must jointly satisfy while leaving engine calls, geometry construction, reusable interpolation, camera and lighting solution, and editorial mapping to their distinct source contracts. A source realizes its assigned portion but does not invent missing story action, caption text, dialogue, sound, or audience effect.
-
-Review question: could independent shot and edit implementers build one equivalent blocking pass from this scene without making different narrative or audience-content decisions?
-
-This item owns the handoff from final screenplay to realization. The common substantive obligation owns completion of every addressed unit, and shot and film-source principles own implementation boundaries.
-
-Sources: [NASA systems engineering handbook on verification-ready requirements](https://www.nasa.gov/reference/systems-engineering-handbook/); [Academy Digital Source Master project](https://www.oscars.org/science-technology/sci-tech-projects/academy-digital-source-master)

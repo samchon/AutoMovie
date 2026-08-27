@@ -12,13 +12,13 @@ Ground emotion in cause, decision, expression, or changed relationship. A label 
 
 The treatment may quote a short line when its exact wording, lie, refusal, or silence is the hinge of the beat, but line-by-line dialogue, blocking, exact timing, camera grammar, and implementation belong downstream. A treatment is more detailed than an outline because it says what happens and why it matters; a scenario is more detailed because it says exactly how the event unfolds through space, time, process, speech, and response.
 
-Apply `docs/principles/storylines.md#treatment-boundary` by handing the settings and treatment to a cold reader and asking for the matching scenario. Any essential narrative decision that reader cannot recover belongs in the earliest storyline unit rather than downstream.
+Apply `docs/obligations/storylines.md#treatment-boundary` by handing the settings and complete treatment to a cold reader and asking for the matching scenario. Any essential narrative decision that reader cannot recover belongs in the earliest storyline unit rather than downstream.
 
 ## Unit map and granularity
 
 Before prose, rerun the [production-specific contract](work-specific.md) pass with the `discovery/common.md`, `discovery/films.md`, and `discovery/storylines.md` targets, and implement each retained result in its target and claim before relying on it.
 
-Then make a unit map with every planned H2/H3/H4 key and slug, entry, central progression, exit, audience change, and parent relation. Apply the narrative unit-addressability principle before accepting it. Every beat becomes a scenario and screenplay beat, so an unworkable count or unit size is repaired here instead of being hidden later by summary.
+Then make a unit map with every planned H2/H3/H4 key and slug, entry, central progression, exit, audience change, and parent relation. Apply the narrative unit-addressability obligation across the complete H2 owner population before accepting it. Every beat becomes a scenario and screenplay beat, so an unworkable count or unit size is repaired here instead of being hidden later by summary.
 
 After drafting, audit every umbrella and beat for a hidden independent progression. Split overloaded units, merge fragments without independent function, or revise the planned scale under its owning authority. Reverse-outline direct paragraphs under the storyline treatment-paragraph principle.
 
@@ -30,4 +30,4 @@ Start at `storylines: "draft"` only after settings are in `review`. Before `evid
 
 Run [Author process Self-Review](self-review.md) to its clean round before every stage transition and again after any repair.
 
-Every H2/H3/H4 will answer the common unit obligations and cite only settings it actually uses. The H2 population also covers every storyline obligation and its applicable discovery targets. Follow [Evidence staging](evidence-staging.md) for exact claim behavior. A later narrative change begins in the smallest true storyline owner and propagates through scenario, screenplay, shot, and film source.
+Every H2, H3, and H4 answers the complete common, narrative, and storyline principle checklists and cites only settings it actually uses. The H2 population supplies every common, narrative, and storyline-obligation owner and covers its applicable discovery targets. Follow [Evidence staging](evidence-staging.md) for exact claim behavior. A later narrative change begins in the smallest true storyline owner and propagates through scenario, screenplay, shot, and film source.

@@ -8,6 +8,6 @@ If those meanings require decisions separate from the bounded shot observations,
 
 ## Gate
 
-Start at `briefs: "draft"` after settings review. Design branches may proceed in parallel; each newly active reviewed branch adds its foundation targets and reopens affected brief evidence. Before `evidence`, verify that one document completely allocates the observable contract, each unit answers the common obligations, every observation is falsifiable at its declared condition, and no downstream shot must invent narrative or design meaning. Shots still wait for the reviewed source corresponding to every active design branch.
+Start at `briefs: "draft"` after settings review. Design branches may proceed in parallel; each newly active reviewed branch adds its foundation targets and reopens affected brief evidence. Before `evidence`, verify that one document completely allocates the observable contract, every H2, H3, and H4 answers the common and brief principle checklists, the H2 population supplies every common and brief-obligation owner, every observation is falsifiable at its declared condition, and no downstream shot must invent narrative or design meaning. Shots still wait for the reviewed source corresponding to every active design branch.
 
 Run [Author process Self-Review](self-review.md) to its clean round before the transition. Follow [Evidence staging](evidence-staging.md).

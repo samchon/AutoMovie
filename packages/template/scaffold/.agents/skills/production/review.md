@@ -8,7 +8,9 @@ Start a layer's evidence review only after that layer is in `review`. Missing or
 
 For a citation, read the complete target scope and host with necessary upstream context, decide whether the host truly realizes or depends on the target, repair any disagreement, then write a review sentence naming the facts or behavior compared and append the compiler-issued fingerprint.
 
-For a principle item, read the item in full and reread the complete host file asking only that question, unit by unit. Find the weakest governed unit and repair the file if it fails. One item receives one check; do not reuse a review sentence across items or files.
+For a principle item, read the item in full and reread the complete selected H2, H3, or H4 host with its necessary parent and descendant context, asking only that question of that unit. Repair that unit if it fails. One item receives one check on every selected unit; do not reuse a review sentence across items or units.
+
+For an obligation item, read the item in full and reread the complete H2 owner population, or the complete selected export population for a source obligation. Confirm that the population has every owner the target calls for and that each citation records one actual contribution. No citation means missing coverage; several citations are correct only where the item calls for several owners. Repeat the review independently for every authored layer or source population that selects the item.
 
 For an exclusion, read the target and complete claim population, find the actual owner or concrete scope fact that makes the target absent, and remove the exclusion when the production owes missing work. “Checked,” “confirmed,” and “not applicable” do not record a review.
 

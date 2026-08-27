@@ -23,7 +23,7 @@ Audit every domain and create no empty or irrelevant file. Mark an unused domain
 
 ## Decomposition and structure
 
-Before drafting a file, inventory candidate owners and apply `docs/principles/settings.md#addressable-canon`. Split anything with its own consumer, fact status, change path, or review. After drafting, inspect overview prose, tables, lists, and embedded biographies or specifications for hidden owners, then split every bundle and repair the references that pointed at it.
+Before drafting a file, inventory candidate owners and apply `docs/obligations/settings.md#addressable-canon`. Split anything with its own consumer, fact status, change path, or review. After drafting, inspect overview prose, tables, lists, and embedded biographies or specifications for hidden owners, then split every bundle and repair the references that pointed at it.
 
 For each resulting owner, settle the applicable boundary, status, operating conditions, authority or access, resources, dependencies, costs, limits, exceptions, present state, and downstream consequences. Those are completion questions rather than mandatory field labels.
 
@@ -51,6 +51,6 @@ Settings are authoritative, not frozen. When later work exposes a contradiction,
 
 ## Gate
 
-Start an applicable settings layer at `settings: "draft"`. Before `evidence`, require a complete first version, stable H2 owners, no placeholders, a literal work-specific-rule audit, common and settings discovery searches, a settings-domain omission audit, complete operative-subject accounting, and truthful answers to every common unit obligation.
+Start an applicable settings layer at `settings: "draft"`. Before `evidence`, require a complete first version, stable H2 owners, no placeholders, a literal work-specific-rule audit, common and settings discovery searches, a settings-domain omission audit, and complete operative-subject accounting. Read every common and settings principle against each H2 in turn, then confirm that the H2 population supplies every common, settings, and applicable subject-obligation owner the targets call for.
 
 Run [Author process Self-Review](self-review.md) to its clean round before every stage transition and again after any repair. Follow [Evidence staging](evidence-staging.md) for evidence and review passes.

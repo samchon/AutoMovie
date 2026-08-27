@@ -1,6 +1,6 @@
-# Material source principles
+# Material source obligations
 
-Material source turns reviewed construction and appearance into deterministic renderer-facing records without inventing a finish.
+These obligations divide the work of turning reviewed construction and appearance into deterministic renderer-facing records across the selected material-source population without inventing a finish.
 
 ## Design-owned material construction {#material-source-design-ownership}
 

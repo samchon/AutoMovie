@@ -2,6 +2,14 @@
 
 These roles are distributed across the material-design H2 population. Materials own surface construction and response; models and spaces own the surfaces to which those materials bind.
 
+## Addressable material decisions {#addressable-material-decisions}
+
+The material population gives every independently assignable construction, finish, texture family, junction, state, or material observation one stable H2.
+
+Review question: which material decision could be replaced or reviewed alone and therefore lacks its own owner?
+
+Sources: [NASA on unique, bidirectionally traceable requirements](https://www.nasa.gov/reference/system-engineering-handbook-appendix/)
+
 ## Material identity and assembly {#material-identity-assembly}
 
 The population names every required construction or finish, its layers or composition, units, thickness or scale where relevant, and the authored substitutions allowed by the delivery.
