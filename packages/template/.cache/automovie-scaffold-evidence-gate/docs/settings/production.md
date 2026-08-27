@@ -24,6 +24,7 @@ Every fact below is a production invention valid only inside this disposable com
 @evidence obligations/common.md#scope-preservation Probe delivery scope owns its one named settings role and leaves no promised descendant or delivery fact inside that role unassigned.
 @evidence obligations/common.md#substantive-completion Probe delivery scope states the complete calibration decision needed from this settings role rather than a placeholder for downstream work.
 @evidence obligations/common.md#proportionate-development Probe delivery scope receives one bounded H2 because its role is independently cited, while no subordinate production detail is invented.
+@evidence obligations/common.md#machine-default Probe delivery scope carries none of the marks: it states its calibration decision in plain declaratives with no restating closer, and its shape follows the information-structure rule this file cites rather than an untouched default.
 @evidence obligations/common.md#evidence-content-conformance Probe delivery scope cites only the file rules and distributed settings role that its stated calibration fact actually realizes.
 @evidenceExclude discovery/common.md#shared-local-boundary The probe examined its compiler-calibration directive, library promise, repository-gate operator, shared contracts, dependencies, sole planned compiler-diagnostic consumer, and false-green risk; the shared principles and settings obligations fully own them, so no independent cross-layer condition remains.
 @evidenceExclude discovery/common.md#canonical-realization After examining the calibration directive, library promise, operator, dependencies, sole planned compiler-diagnostic consumer, and false-owner risk, the complete boundary search retained no independent production contract; the seven settings owners and shared claim wiring are sufficient, so no additional semantic owner or additive claim exists.
@@ -40,6 +41,7 @@ This disposable library delivers only a compiler calibration result: the active 
 @evidence obligations/common.md#scope-preservation Probe governing aim owns its one named settings role and leaves no promised descendant or delivery fact inside that role unassigned.
 @evidence obligations/common.md#substantive-completion Probe governing aim states the complete calibration decision needed from this settings role rather than a placeholder for downstream work.
 @evidence obligations/common.md#proportionate-development Probe governing aim receives one bounded H2 because its role is independently cited, while no subordinate production detail is invented.
+@evidence obligations/common.md#machine-default Probe governing aim carries none of the marks: it states its calibration decision in plain declaratives with no restating closer, and its shape follows the information-structure rule this file cites rather than an untouched default.
 @evidence obligations/common.md#evidence-content-conformance Probe governing aim cites only the file rules and distributed settings role that its stated calibration fact actually realizes.
 @evidence obligations/settings.md#governing-aim This unit is the population owner that directly states the named settings role.
 -->
@@ -54,6 +56,7 @@ The governing aim is to distinguish a fully paid shared graph from a graph that 
 @evidence obligations/common.md#scope-preservation Probe operator access owns its one named settings role and leaves no promised descendant or delivery fact inside that role unassigned.
 @evidence obligations/common.md#substantive-completion Probe operator access states the complete calibration decision needed from this settings role rather than a placeholder for downstream work.
 @evidence obligations/common.md#proportionate-development Probe operator access receives one bounded H2 because its role is independently cited, while no subordinate production detail is invented.
+@evidence obligations/common.md#machine-default Probe operator access carries none of the marks: it states its calibration decision in plain declaratives with no restating closer, and its shape follows the information-structure rule this file cites rather than an untouched default.
 @evidence obligations/common.md#evidence-content-conformance Probe operator access cites only the file rules and distributed settings role that its stated calibration fact actually realizes.
 @evidence obligations/settings.md#audience-operator-access This unit is the population owner that directly states the named settings role.
 -->
@@ -68,6 +71,7 @@ The repository gate is the sole operator and may observe only compiler exit stat
 @evidence obligations/common.md#scope-preservation Probe coordinate and unit convention owns its one named settings role and leaves no promised descendant or delivery fact inside that role unassigned.
 @evidence obligations/common.md#substantive-completion Probe coordinate and unit convention states the complete calibration decision needed from this settings role rather than a placeholder for downstream work.
 @evidence obligations/common.md#proportionate-development Probe coordinate and unit convention receives one bounded H2 because its role is independently cited, while no subordinate production detail is invented.
+@evidence obligations/common.md#machine-default Probe coordinate and unit convention carries none of the marks: it states its calibration decision in plain declaratives with no restating closer, and its shape follows the information-structure rule this file cites rather than an untouched default.
 @evidence obligations/common.md#evidence-content-conformance Probe coordinate and unit convention cites only the file rules and distributed settings role that its stated calibration fact actually realizes.
 @evidence obligations/settings.md#coordinate-unit-convention This unit is the population owner that directly states the named settings role.
 -->
@@ -82,6 +86,7 @@ Paths are repository-relative POSIX strings, elapsed time is measured in millise
 @evidence obligations/common.md#scope-preservation Probe delivery review condition owns its one named settings role and leaves no promised descendant or delivery fact inside that role unassigned.
 @evidence obligations/common.md#substantive-completion Probe delivery review condition states the complete calibration decision needed from this settings role rather than a placeholder for downstream work.
 @evidence obligations/common.md#proportionate-development Probe delivery review condition receives one bounded H2 because its role is independently cited, while no subordinate production detail is invented.
+@evidence obligations/common.md#machine-default Probe delivery review condition carries none of the marks: it states its calibration decision in plain declaratives with no restating closer, and its shape follows the information-structure rule this file cites rather than an untouched default.
 @evidence obligations/common.md#evidence-content-conformance Probe delivery review condition cites only the file rules and distributed settings role that its stated calibration fact actually realizes.
 @evidence obligations/settings.md#delivery-review-condition This unit is the population owner that directly states the named settings role.
 -->
@@ -96,6 +101,7 @@ The result is reviewable only when the paid population yields no evidence or cor
 @evidence obligations/common.md#scope-preservation Probe settings coverage map owns its one named settings role and leaves no promised descendant or delivery fact inside that role unassigned.
 @evidence obligations/common.md#substantive-completion Probe settings coverage map states the complete calibration decision needed from this settings role rather than a placeholder for downstream work.
 @evidence obligations/common.md#proportionate-development Probe settings coverage map receives one bounded H2 because its role is independently cited, while no subordinate production detail is invented.
+@evidence obligations/common.md#machine-default Probe settings coverage map carries none of the marks: it states its calibration decision in plain declaratives with no restating closer, and its shape follows the information-structure rule this file cites rather than an untouched default.
 @evidence obligations/common.md#evidence-content-conformance Probe settings coverage map cites only the file rules and distributed settings role that its stated calibration fact actually realizes.
 @evidenceExclude discovery/settings.md#planned-delivery-backcast Backcasting this settings-only library from its calibration instruction and config through the sole planned compiler-diagnostic consumer and its downstream-invention and false-green risks found no fact beyond the delivery, aim, access, unit, review, coverage, and operative-subject owners already present.
 @evidence obligations/settings.md#settings-coverage-map This unit is the population owner that directly states the named settings role.
@@ -111,6 +117,7 @@ Delivery, aim, operator access, coordinate convention, and review condition each
 @evidence obligations/common.md#scope-preservation Probe operative subject inventory owns its one named settings role and leaves no promised descendant or delivery fact inside that role unassigned.
 @evidence obligations/common.md#substantive-completion Probe operative subject inventory states the complete calibration decision needed from this settings role rather than a placeholder for downstream work.
 @evidence obligations/common.md#proportionate-development Probe operative subject inventory receives one bounded H2 because its role is independently cited, while no subordinate production detail is invented.
+@evidence obligations/common.md#machine-default Probe operative subject inventory carries none of the marks: it states its calibration decision in plain declaratives with no restating closer, and its shape follows the information-structure rule this file cites rather than an untouched default.
 @evidence obligations/common.md#evidence-content-conformance Probe operative subject inventory cites only the file rules and distributed settings role that its stated calibration fact actually realizes.
 @evidenceExclude discovery/settings.md#directive-promise-subject-requirements The probe examined its direct calibration instruction, diagnostic promise, operator, file dependency, sole planned compiler-diagnostic consumer, unowned-subject risk, and false-green failure; the seven settings owners classify them completely without an additional production-specific fact or constraint.
 
