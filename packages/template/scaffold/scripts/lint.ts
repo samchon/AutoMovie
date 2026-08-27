@@ -21,10 +21,10 @@ import config from "../automovie.config";
  * diagnostic carries. `phase` names the pipeline stage that owns the
  * correction, so a consumed model asset is reported at the `source` phase
  * because a source import is what the author must stop, and that label says
- * nothing about which scope raised it. Measured on a freshly generated
- * project: `review` scope reports `review-evidence-missing` for the shot and
- * for each consumed model, and `source` scope reports neither, because the
- * evidence gate runs only at `review` and `final`.
+ * nothing about which scope raised it. The clearest case is the evidence gate:
+ * `review` and `final` report `review-evidence-missing` for a shot and for
+ * each model the film stages, and `source` reports neither, because frames do
+ * not exist yet at the stage that scope belongs to.
  */
 const scope = ((): "design" | "source" | "review" | "final" => {
   const index = process.argv.indexOf("--scope");
