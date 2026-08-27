@@ -99,7 +99,7 @@ const owned = [
   ownedRoot(
     "automovie/capture",
     "capture state root",
-    "npm run capture:install or npm run preview",
+    "npm run capture:install, npm run preview, or npm run turntable",
   ),
 ];
 
