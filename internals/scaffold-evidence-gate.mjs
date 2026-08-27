@@ -517,6 +517,8 @@ const activatePaidSettings = () => {
       return `${unit.title} states the complete calibration decision needed from this settings role rather than a placeholder for downstream work.`;
     if (anchor === "proportionate-development")
       return `${unit.title} receives one bounded H2 because its role is independently cited, while no subordinate production detail is invented.`;
+    if (anchor === "machine-default")
+      return `${unit.title} states one calibration decision in plain declaratives, and the evenness it shares with its siblings is this probe's declared shape rather than an undecided default.`;
     if (anchor === "evidence-content-conformance")
       return `${unit.title} cites only the file rules and distributed settings role that its stated calibration fact actually realizes.`;
     throw new Error(`No paid-probe reason owns ${target}.`);

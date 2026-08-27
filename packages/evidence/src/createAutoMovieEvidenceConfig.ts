@@ -397,6 +397,7 @@ const EXPECTED_CONTRACTS = [
       "scope-preservation",
       "substantive-completion",
       "proportionate-development",
+      "machine-default",
       "evidence-content-conformance",
     ],
   },

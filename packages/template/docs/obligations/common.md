@@ -1,6 +1,6 @@
 # Common authored-unit obligations
 
-Every governed settings, research, model, space, material, instance, motion, and system H2 and every film or brief H2, H3, and H4 answers these obligations directly. Judge the current unit and its descendants, not the layer average. The four items own required scope, deliverable completeness, proportional allocation, and evidence truth respectively.
+Every governed settings, research, model, space, material, instance, motion, and system H2 and every film or brief H2, H3, and H4 answers these obligations directly. Judge the current unit and its descendants, not the layer average. The items own required scope, deliverable completeness, proportional allocation, whether anyone decided how the unit reads, and evidence truth respectively.
 
 ## Declared scope preservation {#scope-preservation}
 
@@ -41,6 +41,26 @@ Review question: which consequential subject or development is compressed below 
 If it fails, redesign the population and its unit boundaries, expand consequential units, and split overloaded owners before advancing the layer. Do not thin units into summaries merely to retain an unworkable count.
 
 Sources: [CONCOCT on underdeveloped major events and overdeveloped minor events in long-form generation](https://aclanthology.org/2023.findings-emnlp.723/); [Hicks on scale as an organizing relation of time, distance, and narrative progress](https://www.cambridge.org/core/books/scale-crisis-and-the-modern-novel/introduction/2DC3BA9BA9CF6C3DE80AD1A2A52FFDCB); [NASA systems engineering handbook on allocation and verification](https://www.nasa.gov/reference/systems-engineering-handbook/)
+
+## Machine default {#machine-default}
+
+The current unit is written the way this production writes. Every generator has a default surface it falls back to when nothing has been decided, and that surface reaches the artifact unless someone takes it out.
+
+Read the unit for its marks: vocabulary clustered on the register-raising words a model reaches for; the copula avoided, with "serves as" or "boasts" standing in for is and are; the "not X but Y" turn used for cadence rather than for a contrast the material has; a third list item added because two looked unfinished; a present participle tagged to a sentence to claim significance the sentence never earned; a qualification balancing a claim nobody disputed; a closing line that restates what precedes it; em dashes, boldface, and title case at a density the material does not need; and sentences of one length through the unit.
+
+Any one of these can be the right choice here. Several of them in one unit is the finding, and what they report is that nobody chose.
+
+Design documents answer this too. A model H2 that describes its articulation in generator default hides which degrees of freedom were actually decided; a brief observation written that way reads as falsifiable while naming no threshold anyone picked.
+
+Regularity the material asks for is not this defect. A settings H2 listing parallel constraints, a motion H2 stepping through phases, and a brief H4 stating one viewing condition are meant to be even, and variation forced onto one is the same failure from the other side.
+
+This obligation asks whether anyone decided how the unit reads. `principles/scripts.md#audiovisual-voice` owns the expressive stance finished screenplay chooses, `principles/narratives.md#specificity` owns whether an element belongs to this production rather than to its genre, and `principles/common.md#production-language` owns the working language and its consistency.
+
+Review question: which marks of an undecided default appear together in this unit, and what did the author choose instead?
+
+If it fails, repair by deciding. Cut what restates, put back the particular the abstraction displaced, and let sentence length follow what is being said. Rarer synonyms, scattered irregularity, and an inserted colloquialism leave the default underneath and put a costume over it.
+
+Sources: [WikiProject AI Cleanup on the language, structural, and formatting signs of machine-generated prose](https://en.wikipedia.org/wiki/Wikipedia:Signs_of_AI_writing); [Padmakumar and He on the measured loss of lexical and content diversity in text a model co-wrote](https://arxiv.org/abs/2309.05196); [Chakrabarty and colleagues on machine-generated writing failing creative tests professional work passes](https://arxiv.org/abs/2309.14556); [Purdue OWL on monotony produced by repeated sentence structure](https://owl.purdue.edu/owl/general_writing/academic_writing/sentence_variety/similar_sentence_patterns_or_rhythms.html)
 
 ## Evidence-content conformance {#evidence-content-conformance}
 
