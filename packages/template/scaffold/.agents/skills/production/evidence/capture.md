@@ -57,4 +57,4 @@ Refusals arrive in two shapes and only one of them carries diagnostics. A refusa
 - Receipt invalid: discard the pixels. The browser, compiler state, or manifest changed during capture; retry after the repository is stable.
 - `captured:false`: read every returned diagnostic, correct its owner, and repeat the same target. It is never partial evidence.
 
-Which views are enough is not yours to decide. A shot owes every frame-and-pass pair its contract's `reviewFrames` declare; an asset owes the fixed turntable set, which is exactly what `npm run capture` captures for a turntable target. Capture the set the contract declares, and let the compile diagnostics name the exact production, target, time, and pass still owed.
+Which views are enough is not yours to decide. A shot owes every frame-and-pass pair its contract's `reviewFrames` declare; an asset owes the fixed turntable set, which is exactly what `npm run turntable` draws. Capture what the contract declares, and let `review-evidence-missing` name the exact target, time, and pass still owed.
