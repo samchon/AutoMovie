@@ -14,17 +14,19 @@
 
 <!-- @evidenceObligation shared-contract 고정된 공통 문서·H2 inventory와 실제 트리 사이의 양방향 일치, 원칙의 단위별 checklist와 의무의 계층 모집단 coverage 배선. -->
 
-### 저작 H2 모집단의 작품별 발견 coverage {#spec-authoring-production-evidence-discovery}
+### 작품 고유 계약의 발견 coverage {#spec-authoring-production-evidence-discovery}
 
-<!-- @evidence requirements/production-evidence/graph.md#agent-production-evidence-discovery 실제 작품 조사를 수행한 상태와 생략한 상태를 저작 모집단 관계로 구분한다. -->
+<!-- @evidence requirements/production-evidence/graph.md#agent-production-evidence-discovery 실제 작품 조사를 수행한 상태와 생략한 상태를 계층별 계약 감사면으로 구분한다. -->
 
-팩터리는 모든 활성 저작 H2 모집단에 `discovery/common.md`를 연결한다. 설정 H2에는 `common + settings`, research와 model·space·material·instance·motion·system H2에는 `common`, film storyline H2에는 `common + films + storylines`, scenario H2에는 `common + films + scenarios`, screenplay H2에는 `common + films + scripts`, brief H2에는 `common + briefs`를 연결한다. H3와 H4에는 이 모집단 발견 관계를 반복하지 않는다.
+팩터리는 모든 저작 계층마다 `docs/contracts/*.md`를 host로 하고 `file`을 target으로 삼는 발견 claim을 만든다. 각 claim은 `discovery/common.md`와 함께 설정에는 `settings`, film storylines에는 `films + storylines`, film scenarios에는 `films + scenarios`, film script에는 `films + scripts`, brief에는 `briefs`를 연결한다. research와 model·space·material·instance·motion·system은 `common`을 연결한다. 저작 H2/H3/H4에는 이 발견 관계를 배선하지 않는다.
 
-각 발견 reference는 해당 host layer가 `evidence`에 들어갈 때 활성화되고 `review`에서 현재 fingerprint를 요구한다. 일반 coverage이므로 독립 결과는 그 결과를 소유하거나 실현하는 H2가 증명하고, 완전한 모집단 조사에서 독립 결과가 없을 때만 하나의 모집단 단위 제외를 허용한다. 제외 사유는 검사한 구체적 입력·위험과 충분한 기존 소유자를 밝혀야 하며, 구현 유예나 빈 결과 선언으로 대신할 수 없다. 팩터리와 lint는 관계·제외·fingerprint의 구조를 검사하고, 구체성과 진실성은 해당 target과 전체 모집단을 다시 읽는 evidence review가 판정한다. 설정은 이 산문을 자동 해석하지 않는다.
+발견 claim은 계층이 `draft`에 들어가는 순간부터 활성화하여 작품 전용 규칙을 저작보다 먼저 발굴하게 하고, `review`에서는 현재 fingerprint를 요구한다. 저작 산출물에 적용하는 draft no-tags 규칙은 별도 감사면인 `docs/contracts`에는 적용하지 않는다.
+
+독립 결과가 있으면 `contracts/index.md`가 아닌 평면 계약 파일이 file-level 발견 evidence를 소유하고, 명시적 H2 계약 target으로 가장 이른 의미 소유자와 현재 실현을 증명한다. 완전한 조사에서 독립 결과가 없을 때만 `contracts/index.md`가 계층별 발견 제외를 소유할 수 있다. index는 양의 evidence tag와 H2를 가져서는 안 되고, 다른 계약 파일은 발견 제외를 가져서는 안 된다. 계약 디렉터리 바로 아래의 중첩 폴더는 거부한다. 제외 사유는 검사한 구체적 입력·위험과 충분한 기존 소유자를 밝혀야 하며, 구현 유예나 빈 결과 선언으로 대신할 수 없다. 팩터리와 lint는 관계·제외·fingerprint의 구조를 검사하고, 구체성과 진실성은 계약 파일과 계층 전체를 다시 읽는 evidence review가 판정한다. 설정은 이 산문을 자동 해석하지 않는다.
 
 설정 의무 모집단은 발견된 후보 중 action, choice, state, information, resource, control 또는 audience observation을 독립적으로 바꿀 수 있는 person, collective, object, environmental agent, institution, subsystem과 affected population을 빠짐없이 분류한다. 설정 저작과 review 절차는 필요한 미해결 주체가 남으면 그 소비자의 저작 시작을 보류하며, 팩터리는 그 의미 판단을 stage 값만으로 추론하지 않는다.
 
-<!-- @evidenceObligation discovery-coverage 저작 H2별 정확한 발견 대상 배치, 단계 정렬, 결과 또는 구체적 무결과 제외와 설정의 operative-subject accounting. -->
+<!-- @evidenceObligation discovery-coverage 계층별 계약 감사면의 정확한 발견 대상 배치, 초안 선행 활성화, 결과 또는 중앙 장부의 구체적 무결과 제외와 설정의 operative-subject accounting. -->
 
 ### 제작 종류와 단계 상태기계 {#spec-authoring-production-evidence-shape-stage}
 

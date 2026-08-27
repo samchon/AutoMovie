@@ -142,23 +142,8 @@ interface ISourcePopulation {
 }
 
 const DOCS = "docs";
-const TEMPLATE_PACKAGE = "@automovie/template";
-
-/** One directory's declared package name, or null when it declares none. */
-const packageNameOf = (directory: string): string | null => {
-  try {
-    const manifest: unknown = JSON.parse(
-      fs.readFileSync(path.join(directory, "package.json"), "utf8"),
-    );
-    return typeof manifest === "object" &&
-      manifest !== null &&
-      typeof (manifest as { name?: unknown }).name === "string"
-      ? (manifest as { name: string }).name
-      : null;
-  } catch {
-    return null;
-  }
-};
+const CONTRACTS = "contracts";
+const CONTRACT_INDEX = `${CONTRACTS}/index.md`;
 
 /**
  * Where the shared contracts actually live.
@@ -170,39 +155,18 @@ const packageNameOf = (directory: string): string | null => {
  * that a package upgrade can invalidate is a break waiting for the next
  * release rather than project-owned content.
  *
- * One host cannot install that package: the scaffold inside it, which is the
- * source the dependency is published from. It reaches its own publisher's
- * `docs` directly, and it proves that publisher by name rather than by the
- * presence of a directory: without that, a project sitting one folder below an
- * unrelated `docs/` would read its contracts there and answer the wrong
- * questions in silence. A generated project that never installed the package
- * keeps the resolution failure that names what it is missing.
- *
- * The fallback has no canary, and saying so is better than implying one. Under
- * `ttsc` the launcher installs a resolution hook that answers a workspace
- * package by name from any directory, so a fixture cannot make this resolution
- * fail; every generated project's scripts run under that launcher. The branch
- * is reachable only outside it, which is exactly where a wrong answer would be
- * least recoverable.
+ * The repository scaffold reaches the workspace package through the same
+ * `ttsc` resolution hook every generated script uses. There is deliberately no
+ * neighbouring-directory fallback: an absent package remains the install
+ * failure that names what is missing instead of silently accepting unrelated
+ * docs from a parent directory.
  */
 const sharedDocsRoot = (location: string): string => {
   const resolve = createRequire(path.join(location, "noop.js"));
-  try {
-    const resolved = path.dirname(
-      resolve.resolve("@automovie/template/package.json"),
-    );
-    return posix(path.relative(location, path.join(resolved, DOCS)));
-  } catch (error) {
-    // Identify the publisher, never merely a neighbour that happens to hold a
-    // `docs` directory. A generated project one folder below an unrelated
-    // `docs/` would otherwise resolve its contracts there and answer the wrong
-    // questions in silence, which is worse than the install error it replaced.
-    const publisher = path.dirname(location);
-    if (packageNameOf(publisher) !== TEMPLATE_PACKAGE) throw error;
-    const sibling = path.join(publisher, DOCS);
-    if (fs.existsSync(sibling) === false) throw error;
-    return posix(path.relative(location, sibling));
-  }
+  const resolved = path.dirname(
+    resolve.resolve("@automovie/template/package.json"),
+  );
+  return posix(path.relative(location, path.join(resolved, DOCS)));
 };
 const MARKDOWN: Record<MarkdownLayer, IMarkdownPopulation> = {
   settings: { headings: [2], obligation: true, principle: "settings.md" },
@@ -955,18 +919,30 @@ const markdownIdentities = (
 };
 
 const EVIDENCE_TAG = /@evidence[A-Za-z]*\b/u;
+const POSITIVE_EVIDENCE_TAG = /@evidence(?!Exclude)[A-Za-z]*\b/u;
+const EXCLUSION_TAG = /@evidenceExclude[A-Za-z]*\b/u;
+const DISCOVERY_EVIDENCE_TAG = /@evidence\s+discovery\/[\w./#-]+/u;
+const DISCOVERY_EXCLUSION_TAG = /@evidenceExclude\s+discovery\/[\w./#-]+/u;
+const EVIDENCE_TARGET = /@evidence[A-Za-z]*\s+([^\s]+)/gu;
 
 const validateTargetForm = (
   relative: string,
   file: string,
+  allowEvidencePreamble = false,
 ): IHeadingIdentity[] => {
   const source = fs.readFileSync(file, "utf8");
   const headings = markdownHeadings(file);
   const h1 = headings.filter((heading) => heading.depth === 1);
+  const h1Offset = source.search(/^#(?!#)[ \t]+\S/mu);
+  const preamble = h1Offset === -1 ? source : source.slice(0, h1Offset);
+  const preambleIsOnlyComments =
+    allowEvidencePreamble &&
+    preamble.replace(/<!--[\s\S]*?-->/gu, "").trim().length === 0;
   if (
     h1.length !== 1 ||
     headings[0]?.depth !== 1 ||
-    /^#(?!#)[ \t]+\S/u.test(source.trimStart()) === false
+    (/^#(?!#)[ \t]+\S/u.test(source.trimStart()) === false &&
+      !preambleIsOnlyComments)
   )
     throw new Error(
       `${relative} must begin with exactly one H1; received ${h1.length}.`,
@@ -1139,6 +1115,93 @@ const validateContracts = (location: string): ITargetIdentityRegistry => {
   return { anchors, titles };
 };
 
+/**
+ * Refuses a work-specific contract that the flat discovery host cannot see.
+ *
+ * The filename prefix identifies a local rule's family, so a nested directory
+ * would introduce a second, disagreeing family address while `contracts/*.md`
+ * silently selected nothing below it. The index is the negative ledger only:
+ * retained rules live beside it, and their exclusions cannot be scattered.
+ */
+const validateWorkSpecificContracts = (graph: IProductionGraph): void => {
+  const root = path.join(graph.location, DOCS, CONTRACTS);
+  const entries = fs.existsSync(root)
+    ? fs.readdirSync(root, { withFileTypes: true })
+    : [];
+  const invalidEntry = entries.find(
+    (entry) =>
+      !(
+        (entry.isFile() && path.extname(entry.name) === ".md") ||
+        (entry.isFile() && entry.name === ".gitkeep")
+      ),
+  );
+  if (invalidEntry !== undefined)
+    throw new Error(
+      `${CONTRACTS}/${invalidEntry.name}: contracts are Markdown files directly under docs/contracts, and a nested or non-contract entry is claimed by nothing.`,
+    );
+  const markdown = entries.filter(
+    (entry) => entry.isFile() && path.extname(entry.name) === ".md",
+  );
+  if (
+    (Object.keys(MARKDOWN) as MarkdownLayer[]).some((layer) =>
+      isActive(graph[layer]),
+    ) &&
+    markdown.length === 0
+  )
+    throw new Error(
+      "An active authored layer requires a retained docs/contracts rule or a truthful-negative contracts/index.md ledger.",
+    );
+  for (const entry of markdown) {
+    const relative = `${CONTRACTS}/${entry.name}`;
+    const file = path.join(root, entry.name);
+    const source = fs.readFileSync(file, "utf8");
+    const headings = markdownHeadings(file);
+    const h1 = headings.filter((heading) => heading.depth === 1);
+    const h1Offset = source.search(/^#(?!#)[ \t]+\S/mu);
+    const preamble = h1Offset === -1 ? source : source.slice(0, h1Offset);
+    if (
+      h1.length !== 1 ||
+      headings[0]?.depth !== 1 ||
+      preamble.replace(/<!--[\s\S]*?-->/gu, "").trim().length !== 0
+    )
+      throw new Error(
+        `${relative} must begin with one H1 after a comment-only evidence preamble.`,
+      );
+    if (EVIDENCE_TAG.test(source.slice(h1Offset)))
+      throw new Error(
+        `${relative} may carry discovery host tags only in its comment preamble before H1.`,
+      );
+    for (const match of source.matchAll(EVIDENCE_TARGET))
+      if (match[1]?.startsWith("discovery/") !== true)
+        throw new Error(
+          `${relative} may host only discovery evidence before its H1; received ${match[1]}.`,
+        );
+    if (relative === CONTRACT_INDEX) {
+      if (POSITIVE_EVIDENCE_TAG.test(source))
+        throw new Error(
+          `${CONTRACT_INDEX} carries truthful discovery negatives and nothing positive.`,
+        );
+      if (headings.some((heading) => heading.depth >= 2))
+        throw new Error(
+          `${CONTRACT_INDEX} carries the truthful negative ledger and no contract target H2.`,
+        );
+      if (!DISCOVERY_EXCLUSION_TAG.test(source))
+        throw new Error(
+          `${CONTRACT_INDEX} must record at least one truthful discovery negative.`,
+        );
+    } else {
+      if (EXCLUSION_TAG.test(source))
+        throw new Error(
+          `${relative} cannot scatter a discovery exclusion outside ${CONTRACT_INDEX}.`,
+        );
+      if (!DISCOVERY_EVIDENCE_TAG.test(source))
+        throw new Error(
+          `${relative} must adopt at least one retained discovery rule.`,
+        );
+    }
+  }
+};
+
 const normalizeGlob = (source: string): string => {
   let output = posix(source);
   while (output.startsWith("./")) output = output.slice(2);
@@ -1232,7 +1295,10 @@ const validateProductionTargets = (
   const targets = walkFiles(root, ".md")
     .map((file) => posix(path.relative(root, file)))
     .filter(
-      (file) => file !== "README.md" && !reserved.has(file.split("/", 1)[0]!),
+      (file) =>
+        file !== "README.md" &&
+        file !== CONTRACT_INDEX &&
+        !reserved.has(file.split("/", 1)[0]!),
     );
   const selectors: Array<{
     disabled: boolean;
@@ -1288,11 +1354,12 @@ const validateProductionTargets = (
   }
   for (const target of targets) {
     const file = path.join(root, target);
-    if (EVIDENCE_TAG.test(fs.readFileSync(file, "utf8")))
+    const localContract = target.startsWith(`${CONTRACTS}/`);
+    if (!localContract)
       throw new Error(
-        `${target} is a production target and must not carry host-side @evidence tags.`,
+        `${target} is a production-only target outside the flat docs/contracts inventory.`,
       );
-    for (const unit of validateTargetForm(target, file)) {
+    for (const unit of validateTargetForm(target, file, localContract)) {
       const previousAnchor = identities.anchors.get(unit.anchor);
       if (previousAnchor !== undefined)
         throw new Error(
@@ -1631,9 +1698,10 @@ const obligationReference = (
  * branches, so neither owes a cast this deep, and a film that genuinely owes
  * none of it is a brief that chose the wrong shape.
  *
- * Exclusion stays open per role because an observational or non-human film can
- * truthfully establish no consequential relationship, exactly as a production
- * without a motion condition may exclude one motion role.
+ * These are obligations, so exclusion stays closed. An observational or
+ * non-human film still gives each applicable role a concrete settings owner;
+ * absence of a relationship is content that owner states, not evidence that
+ * the role may disappear from the population.
  */
 const subjectObligation = (
   shared: string,
@@ -1649,6 +1717,33 @@ const discoveryReferences = (
   DISCOVERY_TARGETS[layer].map((target) =>
     sharedReference(shared, "discovery", `${target}.md`, review, false, true),
   );
+
+/**
+ * Makes one active layer's work-specific contract answer its discovery duties.
+ *
+ * A retained result is stated by the flat `docs/contracts/*.md` file that
+ * adopts the rule. A completed search with no retained result is recorded only
+ * by `docs/contracts/index.md`, so every negative a reviewer must audit is in
+ * one place. Authored settings, design, narrative, and brief units describe the
+ * work and never testify that its contract audit happened.
+ */
+const discoveryClaim = (
+  graph: IProductionGraph,
+  layer: MarkdownLayer,
+): ITtscEvidenceGraphClaim => ({
+  name: `the ${layer} work-specific contract accounts for its open-world discovery duties`,
+  type: "markdown",
+  root: DOCS,
+  files: [`${CONTRACTS}/*.md`],
+  evidenceExcludeCarriers: [CONTRACT_INDEX],
+  symbol: "file",
+  disabled: graph[layer] === "disabled",
+  reference: discoveryReferences(
+    sharedDocsRoot(graph.location),
+    layer,
+    requiresReview(graph[layer]),
+  ),
+});
 
 const referencesPerFile = (
   graph: IProductionGraph,
@@ -1698,6 +1793,7 @@ const authoredClaims = (graph: IProductionGraph): ITtscEvidenceGraphClaim[] => {
   for (const name of Object.keys(MARKDOWN) as MarkdownLayer[]) {
     const stage = graph[name];
     const review = requiresReview(stage);
+    claims.push(discoveryClaim(graph, name));
     const principles = [principleReference(shared, "common.md", review)];
     if (["storylines", "scenarios", "script"].includes(name))
       principles.push(principleReference(shared, "narratives.md", review));
@@ -1735,7 +1831,6 @@ const authoredClaims = (graph: IProductionGraph): ITtscEvidenceGraphClaim[] => {
           references.push(
             obligationReference(shared, MARKDOWN[name].principle, review),
           );
-        references.push(...discoveryReferences(shared, name, review));
         if (name === "settings" && graph.kind === "film")
           references.push(subjectObligation(shared, review));
       }
@@ -1984,20 +2079,20 @@ const sourceClaims = (graph: IProductionGraph): ITtscEvidenceGraphClaim[] => {
  *
  * @evidence requirements/production-evidence/README.md#production-evidence-requirements Implements the reusable graph behind the project-owned production declaration.
  * @evidence requirements/production-evidence/graph.md#agent-production-evidence-shared-contract Applies the same exact shared principles, obligations, and discovery inventory to every generated project.
- * @evidence requirements/production-evidence/graph.md#agent-production-evidence-discovery Distinguishes a completed production-specific search from an omitted search across every authored H2 population.
+ * @evidence requirements/production-evidence/graph.md#agent-production-evidence-discovery Distinguishes a completed production-specific search from an omitted search on every authored layer's separate contract audit surface.
  * @evidence requirements/production-evidence/graph.md#agent-production-evidence-shape-stage Enforces the mutually exclusive production shapes and staged parent-child progression.
  * @evidence requirements/production-evidence/graph.md#agent-production-evidence-physical-integrity Validates real target identities, hosts, owners, and lineage before returning a graph.
  * @evidence requirements/production-evidence/graph.md#agent-production-evidence-additive-extension Appends production-owned claims without exposing a replacement seam for the shared graph.
  * @evidence requirements/production-evidence/graph.md#agent-production-evidence-deterministic-result Produces one deterministic graph or fails with the concrete contradictory state.
  * @evidence specifications/production-evidence/README.md#production-evidence-specifications Implements the shared construction and validation boundary for generated projects.
  * @evidence specifications/production-evidence/graph.md#spec-authoring-production-evidence-shared-contract Reads and validates the fixed shared contract inventory before constructing claims.
- * @evidence specifications/production-evidence/graph.md#spec-authoring-production-evidence-discovery Wires common, settings, film, layer-specific, and brief discovery targets to their exact H2 populations.
+ * @evidence specifications/production-evidence/graph.md#spec-authoring-production-evidence-discovery Wires common, settings, film, layer-specific, and brief discovery targets to each active layer's flat work-specific contract population.
  * @evidence specifications/production-evidence/graph.md#spec-authoring-production-evidence-shape-stage Implements the film, brief, and library stage state machine.
  * @evidence specifications/production-evidence/graph.md#spec-authoring-production-evidence-physical-integrity Enumerates the actual disk populations and refuses empty, residual, ambiguous, or ownerless hosts.
  * @evidence specifications/production-evidence/graph.md#spec-authoring-production-evidence-additive-extension Constructs shared claims first and composes local claims after them.
  * @evidence specifications/production-evidence/graph.md#spec-authoring-production-evidence-deterministic-result Uses deterministic identities and ordering and returns no partial graph after a validation failure.
  * @evidencePart specifications/production-evidence/graph.md#spec-authoring-production-evidence-shared-contract::shared-contract Validates the canonical common document and H2 inventory before building shared claims.
- * @evidencePart specifications/production-evidence/graph.md#spec-authoring-production-evidence-discovery::discovery-coverage Adds stage-aligned discovery coverage with reviewed population-wide exclusions for a true no-result.
+ * @evidencePart specifications/production-evidence/graph.md#spec-authoring-production-evidence-discovery::discovery-coverage Adds draft-active contract discovery coverage with reviewed, index-only exclusions for a true no-result.
  * @evidencePart specifications/production-evidence/graph.md#spec-authoring-production-evidence-shape-stage::shape-stage-machine Enforces production-kind compatibility, lifecycle order, and parent review prerequisites.
  * @evidencePart specifications/production-evidence/graph.md#spec-authoring-production-evidence-physical-integrity::physical-population-integrity Validates real hosts, residue, identities, ownership cardinality, and lineage.
  * @evidencePart specifications/production-evidence/graph.md#spec-authoring-production-evidence-additive-extension::additive-local-claims Appends local claims only after the immutable shared claim population.
@@ -2011,6 +2106,7 @@ export const createAutoMovieEvidenceConfig = (
   const targetIdentities = validateContracts(graph.location);
   validateStages(graph);
   validateHosts(graph);
+  validateWorkSpecificContracts(graph);
   validateProductionTargets(graph, targetIdentities);
   const shared = [
     ...authoredClaims(graph),

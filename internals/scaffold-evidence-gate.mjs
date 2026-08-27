@@ -458,9 +458,10 @@ const contractAnchors = (relative) =>
  * scaffold must contain no production prose or evidence tags, but inspecting
  * config structure alone cannot prove that its real shared claims accept a
  * paid population. Ten independent primary H2 owners cover the ten settings
- * obligations, the H2 population distributes the common obligations and
- * discovery targets, and every H2 answers every common and settings principle
- * for itself. Settings has no inherited file relationship to pay.
+ * obligations, every H2 answers every common and settings principle for
+ * itself, and the separate contract index carries the complete truthful
+ * negative discovery audit. Settings has no inherited file relationship to
+ * pay.
  */
 const activatePaidSettings = () => {
   const configFile = path.join(PROBE, "lint.config.ts");
@@ -538,10 +539,6 @@ const activatePaidSettings = () => {
         "obligations/common.md#purpose-fit",
       ],
       body: "This disposable library delivers only a compiler calibration result: the active settings graph must accept this complete population and no production artifact is published.",
-      discovery: [
-        "discovery/common.md#shared-local-boundary",
-        "discovery/common.md#canonical-realization",
-      ],
     },
     {
       anchor: "probe-governing-aim",
@@ -575,16 +572,12 @@ const activatePaidSettings = () => {
         "obligations/common.md#layer-boundary",
       ],
       body: "Addressability, delivery, aim, operator access, coordinate convention, review, subjects, departures, and coherence each have a separate settings owner; every design, narrative, source, and audience-content domain is outside this compiler calibration scope.",
-      discovery: ["discovery/settings.md#planned-delivery-backcast"],
     },
     {
       anchor: "probe-operative-subject-inventory",
       title: "Probe operative subject inventory",
       obligations: ["obligations/settings.md#operative-subject-inventory"],
       body: "The repository gate is the only operative subject: it controls the compile, observes the diagnostic result, and has no independent person, collective, object, environmental agent, institution, subsystem, or affected population left unclassified.",
-      discovery: [
-        "discovery/settings.md#directive-promise-subject-requirements",
-      ],
     },
     {
       anchor: "probe-minimal-departure",
@@ -622,12 +615,6 @@ const activatePaidSettings = () => {
       ...principleTargets.map(
         (target) => `@evidence ${target} ${principleReason(target, unit)}`,
       ),
-      ...(unit.discovery ?? []).map((target) => {
-        const reason = discoveryExclusions[target];
-        if (reason === undefined)
-          throw new Error(`No paid-probe discovery reason owns ${target}.`);
-        return `@evidenceExclude ${target} ${reason}`;
-      }),
       ...unit.obligations.map((target) => obligationLine(target, unit)),
       "-->",
       "",
@@ -640,6 +627,26 @@ const activatePaidSettings = () => {
   const target = path.join(PROBE, "docs", "settings", "production.md");
   fs.mkdirSync(path.dirname(target), { recursive: true });
   fs.writeFileSync(target, body, "utf8");
+  const discoveryLines = Object.entries(discoveryExclusions).map(
+    ([discoveryTarget, reason]) =>
+      `@evidenceExclude ${discoveryTarget} ${reason}`,
+  );
+  const discoveryFile = path.join(PROBE, "docs", "contracts", "index.md");
+  fs.mkdirSync(path.dirname(discoveryFile), { recursive: true });
+  fs.writeFileSync(
+    discoveryFile,
+    [
+      "<!--",
+      ...discoveryLines,
+      "-->",
+      "",
+      "# Work-specific contract audit",
+      "",
+      "This disposable compiler probe retained no independent production rule after the complete settings-layer discovery audit.",
+      "",
+    ].join("\n"),
+    "utf8",
+  );
   const operativeSubjectUnit = settingsUnits.find(
     (unit) => unit.anchor === "probe-operative-subject-inventory",
   );
@@ -649,10 +656,12 @@ const activatePaidSettings = () => {
     file: target,
     underpayments: [
       {
+        file: discoveryFile,
         line: `@evidenceExclude discovery/common.md#shared-local-boundary ${discoveryExclusions["discovery/common.md#shared-local-boundary"]}`,
         target: "discovery/common.md#shared-local-boundary",
       },
       {
+        file: target,
         line: obligationLine(
           "obligations/settings.md#operative-subject-inventory",
           operativeSubjectUnit,
@@ -833,18 +842,19 @@ const main = () => {
   }
   report([" active graph: paid settings population passed"]);
 
-  const paidSource = fs.readFileSync(active.file, "utf8");
   for (const underpayment of active.underpayments) {
+    const paidSource = fs.readFileSync(underpayment.file, "utf8");
     if (paidSource.split(underpayment.line).length !== 2)
       throw new Error(
         `The paid settings probe no longer has exactly one ${underpayment.target} acknowledgement.`,
       );
     fs.writeFileSync(
-      active.file,
+      underpayment.file,
       paidSource.replace(underpayment.line, ""),
       "utf8",
     );
     const underpaidRun = compile();
+    fs.writeFileSync(underpayment.file, paidSource, "utf8");
     const underpaidDiagnostics = parse(underpaidRun.output);
     const underpaidEvidence = underpaidDiagnostics.filter(
       (diagnostic) => axisOf(diagnostic) === "evidence",

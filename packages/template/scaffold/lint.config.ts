@@ -16,8 +16,11 @@ import type { ITtscLintConfig } from "@ttsc/lint";
  *
  * Research and the model, space, material, instance, motion, and system
  * branches are optional only when the delivery genuinely does not use them.
- * Never delete a shared claim, weaken its cardinality, or hide a resident host;
- * add production-specific targets through `claims`.
+ * Audit discovery into flat docs/contracts files as soon as a Markdown layer
+ * enters draft. Retained rules carry discovery evidence in their comment
+ * preamble before H1, expose H2 targets, and are enforced through additive
+ * `claims`; truthful negatives live only in docs/contracts/index.md. Never
+ * delete a shared claim, weaken its cardinality, or hide a resident host.
  */
 const graph = createAutoMovieEvidenceConfig({
   location: import.meta.dirname,
