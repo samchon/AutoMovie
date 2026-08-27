@@ -148,7 +148,7 @@ A factory takes the parameters that actually differ and returns the shot definit
 
 Name factories for what the shot _is_, not for what it looks like: a factory named for an action reads at the call site, and one named for a camera move hides the beat behind the lens. Keep them honest about what they cannot know. A factory that supplies a default predicate, a default event time, or a default acceptance criterion produces shots that satisfy their contract and prove nothing, which is worse than a shot that fails to compile.
 
-Keep the module quotable while you are at it. the evidence citation returns source selectors for only the first 512 non-blank lines of a module and warns `review-selector-truncated` past that, so everything below the cut exists but cannot be cited as review evidence. A factory module that grows beyond it has a tail no review can reach; split it along its own seams before that happens.
+Keep the module readable while you are at it. A citation names a symbol, and a reviewer has to hold that symbol's whole scope in mind to say anything true about it; a factory module that grows past what one reading can carry has a tail nobody reviews honestly. Split it along its own seams before that happens.
 
 ## Derive the tracked design record from the same table
 
