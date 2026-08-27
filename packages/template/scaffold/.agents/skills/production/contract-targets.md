@@ -2,6 +2,8 @@
 
 `docs/discovery` defines open production-specific searches, `docs/principles` defines the no-exclusion checklist every selected authored H2, H3, or H4 answers for itself, and `docs/obligations` defines roles covered one or more times across a layer's H2 owner population or a source layer's selected export population. Those three directories are the exact shared inventory published by `@automovie/template`. This production keeps every rule it adopts for itself as one flat file directly under `docs/contracts`; the graph refuses a nested contract, an unwired local target, an enabled local target reference with an empty population, a host-side evidence tag inside a target H2, and an H2 title or anchor duplicated anywhere in the shared-plus-local target inventory.
 
+`automovie.config.ts` is an authored project surface but not an evidence-document host. A reviewed settings, research, or design H2 owns each production decision; the config is its executable serialization, and `scripts/productionConfiguration.ts` refuses runtime drift, hidden fields, and inconsistent compiled consumers. Do not move ownership into config JSDoc or add the config to a Markdown claim population.
+
 ## Shared form
 
 Use one H1, brief scope prose, and one fixed-anchor H2 per independently falsifiable target. Add no deeper heading. Each H2 states its falsifiable search or binding decision and boundary, one exact review question, and a final `Sources:` line supported by scholarship, standards, primary documentation, or established practice.

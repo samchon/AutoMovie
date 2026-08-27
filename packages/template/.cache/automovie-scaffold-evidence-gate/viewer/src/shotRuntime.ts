@@ -43,6 +43,7 @@ import {
 } from "@automovie/viewer";
 import * as THREE from "three";
 
+import { selectProductionLiveWearableSoftBodies } from "../../scripts/productionConfiguration";
 import type { IAutoMovieProductionDialogueRuntime } from "../../scripts/productionRuntimeState";
 import { createShotTextureCache, loadCompiledModel } from "./loadCompiledModel";
 
@@ -143,34 +144,12 @@ export interface IAutoMovieProductionWearableSoftSelection {
   maxSubjects: number;
 }
 
-/** Resolve only the wearable domain ids the production explicitly selected. */
+/** Resolve one shot's exact share of the production-wide live-soft selection. */
 export const selectProductionWearableSoftBodies = (
   domains: readonly IAutoMovieSoftBodyDomain[],
   selected: readonly string[],
-): IAutoMovieProductionWearableSoftSelection[] => {
-  const available = new Map<string, IAutoMovieSoftBodyDomain>();
-  for (const domain of domains) {
-    if (domain.id.trim().length === 0 || available.has(domain.id))
-      throw new Error(
-        "Compiled soft-body domain ids must be non-blank and unique.",
-      );
-    available.set(domain.id, domain);
-  }
-  const seen = new Set<string>();
-  return selected.map((id, subjectIndex) => {
-    if (id.trim().length === 0 || seen.has(id))
-      throw new Error(
-        "Live wearable soft-body ids must be non-blank and unique.",
-      );
-    seen.add(id);
-    const domain = available.get(id);
-    if (domain === undefined)
-      throw new Error(
-        `Live wearable soft body "${id}" is absent from this compiled shot.`,
-      );
-    return { domain, subjectIndex, maxSubjects: selected.length };
-  });
-};
+): IAutoMovieProductionWearableSoftSelection[] =>
+  selectProductionLiveWearableSoftBodies(domains, selected);
 
 export interface IAutoMovieCompiledShotRuntime {
   id: string;

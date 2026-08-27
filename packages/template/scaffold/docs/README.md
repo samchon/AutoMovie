@@ -2,6 +2,8 @@
 
 This directory holds what this production authors. Every branch below is production-owned: its facts, its research, its designs, its prose, and its work-specific contracts.
 
+The project has a third authored surface beside these documents and `src`: `automovie.config.ts` serializes reviewed delivery, dialogue, external-generator provenance, speaker, and live-simulation decisions into the runtime. It is not an evidence-document host and never becomes their semantic owner; read the shipped [Production configuration](../.agents/skills/production/configuration.md) procedure before source authorship.
+
 The shared contracts those hosts answer are not copied here. `@automovie/template` publishes `docs/discovery`, `docs/principles`, and `docs/obligations`, and the graph resolves them from the installed package, so an author cites them by their evidence roots (`discovery/...`, `principles/...`, `obligations/...`) and never edits them. Discovery states the open searches a population must run. Principles are no-exclusion checklists every selected authored H2/H3/H4 answers for itself. Obligations are no-exclusion roles the layer's primary H2 population, or a source family's selected public-export population, covers one or more times as each item requires. Work-specific results become flat files in this project's `docs/contracts`; upgrading the package delivers new shared contracts without copying them into the project.
 
 Choose one shape in lint.config.ts before authoring:

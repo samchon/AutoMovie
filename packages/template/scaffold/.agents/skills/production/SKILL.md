@@ -1,11 +1,11 @@
 ---
 name: production
-description: Defines how this project's production is researched, authored, evidenced, implemented, and reviewed, including the mutually exclusive film, brief, and library shapes, the settings-to-screenplay ladder, the model, space, material, instance, motion, and system branches, production-specific contracts, staging, self-review, and review. Use before authoring or reviewing any production document, design record, or governed source file.
+description: Defines how this project's production is researched, authored, configured, evidenced, implemented, and reviewed, including the mutually exclusive film, brief, and library shapes, the settings-to-screenplay ladder, the model, space, material, instance, motion, and system branches, production-specific contracts, staging, self-review, and review. Use before authoring or reviewing any production document, design record, governed configuration, or source file.
 ---
 
 # Authoring a production
 
-You are authoring one production: this project. Read its `AGENTS.md`, its `lint.config.ts`, `docs/README.md`, every active upstream layer, and every shared or production-local target its claims select before writing anything.
+You are authoring one production: this project. Read its `AGENTS.md`, its `lint.config.ts`, its `automovie.config.ts`, `docs/README.md`, every active upstream layer, and every shared or production-local target its claims select before writing anything.
 
 Author a film in the order `settings -> storylines -> scenarios -> script -> shots -> filmSources`, a brief in the order `settings -> briefs -> shots -> filmSources`, and a library as settings plus each design and source branch it delivers. The workflow documents below own authorship; the discovery, principle, and obligation families published by `@automovie/template` own the questions each authored population answers; [Evidence staging](evidence-staging.md) owns claims, tags, stages, and fingerprints.
 
@@ -51,6 +51,7 @@ Read each applicable document in full before acting:
 
 - [Production kinds](production-kinds.md) selects exactly one film, brief, or library shape.
 - [Production-specific contract](work-specific.md) preserves direct instructions and classifies every adopted rule before bulk settings work.
+- [Production configuration](configuration.md) separates fixed harness wiring from authored delivery, dialogue, provenance, speaker, and live-simulation choices serialized in `automovie.config.ts`; read it before source authorship.
 - [Research](research.md) owns the optional external-evidence ledger and its downstream consumption.
 - [Settings](settings.md) defines delivery, canon, subjects, capabilities, constraints, and shared conventions for every shape.
 - [Design branches](design-branches.md) routes models, spaces, materials, instances, motions, and systems without overlap; it links the detailed model-and-motion procedure when those branches apply.

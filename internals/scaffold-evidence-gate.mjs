@@ -653,7 +653,6 @@ const activatePaidSettings = () => {
   if (operativeSubjectUnit === undefined)
     throw new Error("The paid probe lost its operative-subject owner.");
   return {
-    file: target,
     underpayments: [
       {
         file: discoveryFile,

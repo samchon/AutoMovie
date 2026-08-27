@@ -92,6 +92,13 @@ jobs:
       - name: Build Packages
         run: pnpm run build
 
+      # Product requirements and generated-production authoring contracts are
+      # separate graphs. This ledger gate keeps every requirement family and
+      # specification fragment classified, resolves every recorded owner, and
+      # refuses any silent change to the accepted unpaid target set.
+      - name: Check Production Authoring Reachability
+        run: node internals/authoring-reachability-gate.mjs
+
       # `pnpm run build` cannot reach `packages/template/scaffold`: it is not a
       # workspace project (`pnpm-workspace.yaml` lists `packages/*`) and its
       # `package.json` carries template tokens rather than versions, so nothing
