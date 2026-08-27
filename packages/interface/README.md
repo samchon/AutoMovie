@@ -53,7 +53,7 @@ automovie는 **glTF / VRM 규약**을 따른다.
 | `skeleton/`   | 휴머노이드 본 열거형, 스켈레톤·본·관절 제약(ROM) 타입                                                                                                                                                            |
 | `pose/`       | 정적 포즈: 휴머노이드 의미 각도                                                                                                                                                                                  |
 | `authoring/`  | 코드 저작 정본: stage, blocking, performance, forge/review/edit 계획과 하나의 등록된 shot program                                                                                                                |
-| `production/` | 코딩 에이전트 제작 계약: asset provenance 원장, 대본 scene/beat/catalog/lock 인덱스, 다섯 MCP 지식·증거·리뷰 계약, 설계, 컴파일 소유권, 기하 질의, 렌더·배송 번들                                                |
+| `production/` | 코딩 에이전트 제작 계약: asset provenance 원장, 대본 scene/beat/catalog/lock 인덱스, 캡쳐와 리페인트 계약, 설계, 컴파일 소유권, 기하 질의, 렌더·배송 번들                                                |
 | `expression/` | 표정: ARKit 52 채널, VRM expression preset                                                                                                                                                                       |
 | `face/`       | **Dormant boundary**: 결정 001 이후 보존만 하는 face/head 파라미터 문서. 현재 motion-first 하니스의 주 저작 표면은 아니며, face editor 재개 시 호환 자산으로 쓴다.                                               |
 | `motion/`     | 시간 모션: 키프레임 + 이징                                                                                                                                                                                       |
@@ -67,7 +67,7 @@ automovie는 **glTF / VRM 규약**을 따른다.
 | `analysis/`   | 읽기 전용 대지 문맥(태양·하늘·기준 지면·인접 차폐 매스)과 채광·열·습기·공기·음향 분석 아티팩트. 지원하지 않거나 실행하지 않은 값은 `unsupported`/`not-run`으로 이유와 함께 남고 숫자를 지어내지 않는다 |
 | `fluid/`      | 건축과 독립된 유체 도메인: 고정 격자·고정 스텝 shallow-water 설계(`IAutoMovieFluidDomain`), 절대 스텝 상태·표면·분무·예산(`IAutoMovieFluidState`), 건물이 논리 공간에 묶는 수경 바인딩(`IAutoMovieWaterFeature`)                                       |
 | `cinematics/` | 촬영·편집: 샷·카메라 인텐트·커버리지(대체 앵글 테이크), 시퀀스·전환·트림, 렌더 스펙, 인터랙션 이벤트, 포즈 키포인트, 가이드 패스                                                                                 |
-| `harness/`    | 저수준 액션 콜·타겟·beat-end 엔진 어휘와 레거시 slate/context 호환 타입. 현재 stage/block/perform 입력은 `authoring/`이 소유하며 이 폴더의 Request 모양은 MCP 표면이 아님                                                      |
+| `harness/`    | 저수준 액션 콜·타겟·beat-end 엔진 어휘와 레거시 slate/context 호환 타입. 현재 stage/block/perform 입력은 `authoring/`이 소유하며 이 폴더의 Request 모양은 공개 진입점이 아님                                                      |
 | `validation/` | 검증 봉투 + 제약 위반 리포트 (engine ↔ harness 계약)                                                                                                                                                             |
 
 > 코드 저작의 정본은 `authoring/`이며 `@automovie/engine`의 `defineShot`이 이를 실행한다. `harness/`에서 엔진이 계속 소비하는 것은 action/target/beat-end 같은 저수준 어휘뿐이며, 외부 에이전트는 이를 tracked TypeScript 안에서 사용한다.
