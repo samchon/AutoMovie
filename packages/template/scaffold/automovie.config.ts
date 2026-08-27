@@ -33,6 +33,16 @@ export default {
       frameStep: 1,
     },
   },
+  visual: {
+    /**
+     * Select this only for a settings-owned repainted delivery. The generator
+     * records its exact runtime, source, rights, terms, cost, and consumer;
+     * each request mechanically serializes reviewed settings and design owners
+     * for one compiled shot. Prompt, seed, strength, controls, and references
+     * never enter through an ephemeral command-line override.
+     */
+    repaint: null,
+  },
   sound: {
     /**
      * Add an explicit provider/model/revision/voice selection and its source,

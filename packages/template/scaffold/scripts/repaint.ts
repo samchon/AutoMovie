@@ -1,4 +1,3 @@
-import type { IAutoMovieRepaintReferenceInput } from "@automovie/interface";
 import {
   AutoMovieProductionContext,
   AutoMovieProductionRepaintService,
@@ -6,6 +5,10 @@ import {
 
 import config from "../automovie.config";
 import { captureProductionFrame, closeProductionFrameCapture } from "./capture";
+import {
+  readProductionRepaintShotArgument,
+  selectProductionRepaintRequest,
+} from "./productionConfiguration";
 import { repaintProductionShot } from "./repaintAdapter";
 
 /**
@@ -23,49 +26,16 @@ import { repaintProductionShot } from "./repaintAdapter";
  * returned MP4, and commits a receipt binding compiler, source-render, control,
  * reference, adapter, parameter, and output identities.
  *
- * Every option maps to one field of the typed repaint contract rather than to a
- * format invented here, and each reference names a path the asset manifest
- * already registers. Rerolling replaces only the active rendition pointer;
- * unchanged deterministic truth keeps its own receipts.
+ * The CLI chooses only a shot. Its prompt, negative prompt, seed, strength,
+ * controls, references, generator, rights, terms, cost, and consumer come from
+ * the reviewed `visual.repaint` serialization in `automovie.config.ts`.
+ * Rerolling therefore requires an authored config revision rather than an
+ * ephemeral override. It replaces only the active rendition pointer; unchanged
+ * deterministic truth keeps its own receipts.
  */
 const args = process.argv.slice(2);
-const options = new Map<string, string>();
-const references: IAutoMovieRepaintReferenceInput[] = [];
-const positional: string[] = [];
-for (let index = 0; index < args.length; ++index) {
-  const argument = args[index]!;
-  if (argument.startsWith("--") === false) {
-    positional.push(argument);
-    continue;
-  }
-  const value = args[++index];
-  if (value === undefined || value.startsWith("--"))
-    throw new Error(`${argument} requires a value.`);
-  if (argument === "--style") references.push({ path: value, role: "style" });
-  else if (argument === "--character")
-    references.push({ path: value, role: "character" });
-  else options.set(argument, value);
-}
-const shot = options.get("--shot") ?? positional[0];
-if (shot === undefined || shot.trim() === "")
-  throw new Error("repaint requires --shot <authored-shot-id>.");
-const prompt = options.get("--prompt");
-if (prompt === undefined || prompt.trim() === "")
-  throw new Error("repaint requires --prompt <text>.");
-const numeric = (name: string): number => {
-  const raw = options.get(name);
-  if (raw === undefined) throw new Error(`repaint requires ${name} <number>.`);
-  const parsed = Number(raw);
-  if (Number.isFinite(parsed) === false)
-    throw new Error(`${name} must be a finite number; received "${raw}".`);
-  return parsed;
-};
-// Seed and strength are required rather than defaulted. A default would make
-// two runs of "the same" command produce different bytes while both look
-// reproducible, which is the one thing a rendition receipt exists to prevent.
-const seed = numeric("--seed");
-const strength = numeric("--strength");
-const negativePrompt = options.get("--negative");
+const shot = readProductionRepaintShotArgument(args);
+const selected = selectProductionRepaintRequest(config.visual.repaint, shot);
 const context = new AutoMovieProductionContext(
   captureProductionFrame,
   process.cwd(),
@@ -75,16 +45,12 @@ let repaintFailure: { error: unknown } | undefined;
 try {
   const output = await new AutoMovieProductionRepaintService(
     repaintProductionShot,
+    selected.generator,
   ).serve(context, {
-    parameters: {
-      prompt,
-      seed,
-      strength,
-      ...(negativePrompt === undefined ? {} : { negativePrompt }),
-    },
+    parameters: selected.request.parameters,
     productionId: config.productionId,
-    references,
-    shot,
+    references: [...selected.request.references],
+    shot: selected.request.shot,
   });
   process.stdout.write(`${JSON.stringify(output, null, 2)}\n`);
   if (output.repainted === false) process.exitCode = 1;

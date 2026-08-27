@@ -89,11 +89,15 @@ import {
 } from "./dialogueCacheSnapshot";
 import {
   type IAutoMovieDialogueSynthesisSelection,
+  type IAutoMovieProductionRepaintSelection,
   AUTOMOVIE_DIALOGUE_MODEL_REVISION as KOKORO_MODEL_REVISION,
   assertProductionDialogueSynthesis,
   assertProductionLiveWearableSoftBodies,
+  assertProductionRepaintReceiptAdoption,
+  assertProductionRepaintSelection,
   assertProductionSpeakerBindings,
   readProductionDialogueSynthesis,
+  readProductionRepaintSelection,
   readProductionSpeakerBindings,
 } from "./productionConfiguration";
 import {
@@ -242,6 +246,10 @@ const productionDialogueSelection =
 /** Read the exact authored speaker joins without inventing an actor. */
 const productionSpeakerBindings = () =>
   readProductionSpeakerBindings(config.sound.speakerBindings);
+/** Read every reviewed repaint choice before a render path can use it. */
+const productionRepaintSelection =
+  (): IAutoMovieProductionRepaintSelection | null =>
+    readProductionRepaintSelection(config.visual.repaint);
 const RENDER_LOCK_JSON_MAX_BYTES = 64 * 1024;
 const renderObservationAudits: IProductionRenderObservationAudit[] = [];
 const renderMaskSidecars: Array<
@@ -1420,12 +1428,24 @@ const finalize = async (plan: IAutoMovieProductionRenderJobPlan) => {
   const graph = project.graph();
   if (graph.production === null)
     throw new Error("Production design disappeared before final publication.");
+  const configuredRepaint = productionRepaintSelection();
   if (plan.tier.kind === "final") assertMatchingProxyPublication(project, plan);
   const timeline =
     plan.tier.kind === "final" &&
     graph.production.visualDelivery === "repainted"
       ? readAutoMovieFilmTimeline(project, plan.compileFingerprint)
       : null;
+  const selectedRepaint =
+    plan.tier.kind === "final"
+      ? assertProductionRepaintSelection({
+          selected: configuredRepaint,
+          visualDelivery: graph.production.visualDelivery,
+          shots:
+            timeline === null
+              ? []
+              : [...new Set(timeline.segments.map((segment) => segment.shot))],
+        })
+      : configuredRepaint;
   const renditionReceipts: Map<string, IAutoMovieRepaintReceipt> =
     timeline === null
       ? new Map()
@@ -1436,6 +1456,11 @@ const finalize = async (plan: IAutoMovieProductionRenderJobPlan) => {
             ])
             .map((receipt) => [receipt.shot, receipt] as const),
         );
+  if (plan.tier.kind === "final" && selectedRepaint !== null)
+    assertProductionRepaintReceiptAdoption({
+      selected: selectedRepaint,
+      receipts: [...renditionReceipts.values()],
+    });
   const requiredVideo = new Set(
     graph.production.deliverables
       .filter(

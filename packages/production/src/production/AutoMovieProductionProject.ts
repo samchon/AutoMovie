@@ -1836,7 +1836,7 @@ export class AutoMovieProductionProject {
   ): number {
     const validation = typia.validateEquals<IAutoMovieRepaintReceipt>(receipt);
     if (validation.success === false)
-      throw new Error("Repaint receipt does not match its strict v1 schema.");
+      throw new Error("Repaint receipt does not match its strict v3 schema.");
     this.assertCurrentRepaintReceipt(receipt, bytes);
     const output = resolveInside(this.renderRoot(), receipt.output.path);
     const tracked = path.join(
@@ -1926,13 +1926,22 @@ export class AutoMovieProductionProject {
         receipt.attemptId,
       ) === false ||
       receipt.parameters.prompt.trim().length === 0 ||
+      receipt.parameters.prompt !== receipt.parameters.prompt.trim() ||
+      (receipt.parameters.negativePrompt !== undefined &&
+        (receipt.parameters.negativePrompt.trim().length === 0 ||
+          receipt.parameters.negativePrompt !==
+            receipt.parameters.negativePrompt.trim())) ||
       Number.isSafeInteger(receipt.parameters.seed) === false ||
       Number.isFinite(receipt.parameters.strength) === false ||
       receipt.parameters.strength < 0 ||
       receipt.parameters.strength > 1 ||
-      Object.values(receipt.parameters.controls ?? {}).some(
-        (value) =>
-          typeof value === "number" && Number.isFinite(value) === false,
+      Object.entries(receipt.parameters.controls ?? {}).some(
+        ([key, value]) =>
+          key.trim().length === 0 ||
+          key !== key.trim() ||
+          (typeof value === "string" &&
+            (value.trim().length === 0 || value !== value.trim())) ||
+          (typeof value === "number" && Number.isFinite(value) === false),
       ) ||
       receipt.controls.length === 0
     )
@@ -1985,6 +1994,7 @@ export class AutoMovieProductionProject {
       sourceRenderFingerprint: receipt.sourceRenderFingerprint,
       attemptId: receipt.attemptId,
       adapterIdentity: receipt.adapterIdentity,
+      generatorProvenance: receipt.generatorProvenance,
       parameters: receipt.parameters,
       references: receipt.references,
       outputDigest: receipt.output.digest,

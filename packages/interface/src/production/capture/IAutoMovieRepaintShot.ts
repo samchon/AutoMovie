@@ -117,6 +117,47 @@ export interface IAutoMovieRepaintRuntimeIdentity {
 }
 
 /**
+ * Reviewed adoption facts for the external generator behind repaint.
+ *
+ * Credentials are deliberately absent. This record travels with every
+ * accepted rendition so a provider, rights, terms, cost, or consumer change is
+ * a new generation identity rather than untracked metadata.
+ *
+ * @evidence requirements/repaint/providers-models-and-credentials.md#repaint-provider-terms Carries the current rights and terms review beside the selected provider and model.
+ * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-repaint-output-provenance Types the rights, terms, cost, and reasoned-consumer portion of repaint output provenance.
+ */
+export interface IAutoMovieRepaintGeneratorProvenance {
+  /** Stable provider, repository, or local-tool source address. */
+  source: string;
+  /** License identifier or stable terms location reviewed for this use. */
+  license: string;
+  /** Calendar date, `YYYY-MM-DD`, on which current terms were checked. */
+  termsCheckedAt: string;
+  /** Authored cost basis, including an explicit local-compute basis. */
+  cost: string;
+  /** Typed production consumer and authored reason for this adoption. */
+  consumer: {
+    /** Exact generated-content lane. */
+    kind: "repaint";
+    /** Why this production needs a repainted appearance rendition. */
+    reason: string;
+  };
+}
+
+/**
+ * Exact runtime and reviewed provenance selected for repaint generation.
+ *
+ * @evidence requirements/repaint/providers-models-and-credentials.md#repaint-execution-boundary Keeps the chosen execution boundary explicit beside the provider and model.
+ * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-repaint-execution-eligibility Binds the host adapter to one selected runtime and adoption record.
+ */
+export interface IAutoMovieRepaintGeneratorAdoption {
+  /** Provider, model, version, and execution boundary the adapter must report. */
+  runtimeIdentity: IAutoMovieRepaintRuntimeIdentity;
+  /** Reviewed source, rights, terms, cost, and reasoned consumer. */
+  generatorProvenance: IAutoMovieRepaintGeneratorProvenance;
+}
+
+/**
  * Immutable provenance for one accepted repaint rendition.
  *
  * @evidence requirements/repaint/scope-and-user-choice.md#repaint-independent-artifact Exposes `IAutoMovieRepaintReceipt` as the portable data boundary for the repaint independent artifact requirement.
@@ -129,7 +170,7 @@ export interface IAutoMovieRepaintReceipt {
    * @evidence requirements/repaint/scope-and-user-choice.md#repaint-independent-artifact Exposes `version` as the portable data boundary for the repaint independent artifact requirement.
    * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-repaint-output-provenance Types `version` for the asset spec repaint output provenance system contract.
    */
-  version: 2;
+  version: 3;
   /**
    * Owning production namespace.
    *
@@ -205,6 +246,23 @@ export interface IAutoMovieRepaintReceipt {
    * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-repaint-output-provenance Types `adapterIdentity` for the asset spec repaint output provenance system contract.
    */
   adapterIdentity: string;
+  /**
+   * Reviewed generator adoption retained with the exact rendition bytes.
+   *
+   * @evidence requirements/repaint/identity-and-provenance.md#repaint-provenance-refusal Makes missing generator terms and adoption provenance a malformed output identity.
+   * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-repaint-output-provenance Carries the selected generator's rights, terms, cost, and consumer into the immutable receipt.
+   */
+  generatorProvenance: IAutoMovieRepaintGeneratorProvenance;
+  /**
+   * Authority boundary of the derived appearance.
+   *
+   * The rendition may be the audience-visible delivery, but it never becomes
+   * geometry, motion, contact, camera, timing, or prototype-fidelity truth.
+   *
+   * @evidence requirements/production-design/visual-delivery-and-fidelity-tiers.md#production-design-repaint-boundary Keeps the deterministic blocking pass authoritative for structure.
+   * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-repaint-eligibility-source-lock Marks the output as a derived appearance rather than a replacement source.
+   */
+  structuralAuthority: "deterministic-source-only";
   /**
    * Exact generation parameters.
    *

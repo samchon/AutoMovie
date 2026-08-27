@@ -5,6 +5,7 @@ import {
   IAutoMovieAssetManifest,
   IAutoMovieDiagnostic,
   IAutoMovieRenderBundleManifest,
+  IAutoMovieRepaintGeneratorAdoption,
   IAutoMovieRepaintReceipt,
   IAutoMovieRepaintShot,
 } from "@automovie/interface";
@@ -28,6 +29,7 @@ import { assertProductionRenditionClipDelivery } from "./muxProductionFeatureMp4
 import { probeProductionVideoMp4 } from "./probeProductionMedia";
 import { readAutoMovieProductionRegistry } from "./productionRegistry";
 import {
+  canonicalAutoMovieRepaintGeneratorAdoption,
   canonicalAutoMovieRepaintRuntimeIdentity,
   productionRepaintOutputPath,
   productionRepaintStructuralControls,
@@ -40,6 +42,7 @@ import {
 export class AutoMovieProductionRepaintService {
   public constructor(
     private readonly adapter?: AutoMovieProductionShotRepaint,
+    private readonly generator?: IAutoMovieRepaintGeneratorAdoption,
   ) {}
 
   /**
@@ -97,21 +100,53 @@ export class AutoMovieProductionRepaintService {
     services: IAutoMovieProductionServices,
     input: IAutoMovieRepaintShot.IProps,
   ): Promise<IAutoMovieRepaintShot> {
+    const requestedShot =
+      typeof input === "object" &&
+      input !== null &&
+      typeof (input as { shot?: unknown }).shot === "string"
+        ? (input as { shot: string }).shot
+        : "";
     const failure = (
       code: AutoMovieDiagnosticCode,
       message: string,
     ): IAutoMovieRepaintShot => ({
       repainted: false,
       productionId: services.project.productionId,
-      shot: input.shot,
+      shot: requestedShot,
       receipt: null,
-      diagnostics: [diagnostic(code, input.shot, message)],
+      diagnostics: [diagnostic(code, requestedShot, message)],
     });
-    if (this.adapter === undefined)
+    if (this.adapter === undefined || this.generator === undefined)
       return failure(
         "repaint-host-unavailable",
-        "This project supplies no repaint adapter. Pass one implementing AutoMovieProductionShotRepaint -- a local model or an API client -- to the call that reached here, and retry. AutoMovie will not fabricate diffusion output.",
+        "This project supplies no complete repaint host. Pass both an adapter implementing AutoMovieProductionShotRepaint and its reviewed generator adoption, then retry. AutoMovie will not fabricate diffusion output or infer provider provenance.",
       );
+    const requestValidation =
+      typia.validateEquals<IAutoMovieRepaintShot.IProps>(input);
+    if (requestValidation.success === false)
+      return failure(
+        "repaint-input-invalid",
+        "Repaint input must match its exact public request schema before provider execution; remove missing, mistyped, credential-bearing, or hidden fields.",
+      );
+    if (input.productionId !== services.project.productionId)
+      return failure(
+        "repaint-production-invalid",
+        `Repaint request productionId "${input.productionId}" does not match project "${services.project.productionId}".`,
+      );
+    let generator: IAutoMovieRepaintGeneratorAdoption;
+    let selectedAdapterIdentity: string;
+    try {
+      generator = structuredClone(this.generator);
+      canonicalAutoMovieRepaintGeneratorAdoption(generator);
+      selectedAdapterIdentity = canonicalAutoMovieRepaintRuntimeIdentity(
+        generator.runtimeIdentity,
+      );
+    } catch (error) {
+      return failure(
+        "repaint-host-unavailable",
+        `${error instanceof Error ? error.message : String(error)} Correct the reviewed repaint generator adoption before external execution.`,
+      );
+    }
     const status = services.compileStatus();
     if (status.success === false)
       return failure(
@@ -127,18 +162,18 @@ export class AutoMovieProductionRepaintService {
         error instanceof Error ? error.message : String(error),
       );
     }
-    if (registry.shots.some((shot) => shot.id === input.shot) === false)
+    if (registry.shots.some((shot) => shot.id === requestedShot) === false)
       return failure(
         "repaint-target-missing",
-        `Shot "${input.shot}" is absent from the current compiler registry. Correct the registration or compile the source that defines it.`,
+        `Shot "${requestedShot}" is absent from the current compiler registry. Correct the registration or compile the source that defines it.`,
       );
     const graph = services.project.graph();
     const production = graph.production;
-    const shot = graph.shots.get(input.shot);
+    const shot = graph.shots.get(requestedShot);
     if (production === null || shot === undefined)
       return failure(
         "repaint-target-missing",
-        `Shot "${input.shot}" has no current production frame contract. Correct the tracked design and compile before repaint.`,
+        `Shot "${requestedShot}" has no current production frame contract. Correct the tracked design and compile before repaint.`,
       );
     const expectedOutput = {
       width: production.frameFormat.width,
@@ -148,27 +183,50 @@ export class AutoMovieProductionRepaintService {
       runtimeSeconds: shot.durationSeconds,
     };
     if (
+      typeof input.parameters.prompt !== "string" ||
       input.parameters.prompt.trim().length === 0 ||
+      input.parameters.prompt !== input.parameters.prompt.trim() ||
+      (input.parameters.negativePrompt !== undefined &&
+        (typeof input.parameters.negativePrompt !== "string" ||
+          input.parameters.negativePrompt.trim().length === 0 ||
+          input.parameters.negativePrompt !==
+            input.parameters.negativePrompt.trim())) ||
       Number.isSafeInteger(input.parameters.seed) === false ||
       Number.isFinite(input.parameters.strength) === false ||
       input.parameters.strength < 0 ||
       input.parameters.strength > 1 ||
-      Object.values(input.parameters.controls ?? {}).some(
-        (value) =>
-          typeof value === "number" && Number.isFinite(value) === false,
+      Object.entries(input.parameters.controls ?? {}).some(
+        ([key, value]) =>
+          key.trim().length === 0 ||
+          key !== key.trim() ||
+          (typeof value === "string" &&
+            (value.trim().length === 0 || value !== value.trim())) ||
+          (typeof value === "number" && Number.isFinite(value) === false) ||
+          (typeof value !== "string" &&
+            typeof value !== "number" &&
+            typeof value !== "boolean"),
       ) ||
+      (input.parameters.controls !== undefined &&
+        Object.getPrototypeOf(input.parameters.controls) !== Object.prototype &&
+        Object.getPrototypeOf(input.parameters.controls) !== null) ||
       input.references.length === 0
     )
       return failure(
         "repaint-input-invalid",
-        "Repaint requires a non-blank prompt, safe-integer seed, strength in [0, 1], and at least one fixed style or character reference.",
+        "Repaint requires trimmed non-blank prompts, a safe-integer seed, strength in [0, 1], scalar controls with trimmed identities, and at least one fixed style or character reference.",
       );
+    const request: IAutoMovieRepaintShot.IProps = {
+      ...input,
+      shot: requestedShot,
+      parameters: structuredClone(input.parameters),
+      references: structuredClone(input.references),
+    };
     const attemptId = randomUUID();
     let resolvedSource: ICurrentShotSource | null;
     try {
       resolvedSource = currentShotSource(
         services,
-        input.shot,
+        requestedShot,
         registry.inputFingerprint,
         expectedOutput,
       );
@@ -184,7 +242,7 @@ export class AutoMovieProductionRepaintService {
         "No current verified shot bundle contains both beauty pixels and a structural control pass. Capture the shot frame grid and its declared depth, pose, outline, mask, or normal controls first.",
       );
     const source = resolvedSource;
-    const references = resolveReferences(services, input);
+    const references = resolveReferences(services, request);
     if ("diagnostic" in references)
       return failure(references.diagnostic.code, references.diagnostic.message);
     const sourceRenderFingerprint = productionSourceRenderFingerprint({
@@ -213,7 +271,7 @@ export class AutoMovieProductionRepaintService {
         const current = services.project.verifiedRenderManifest(
           source.manifestPath,
         );
-        const currentReferences = resolveReferences(services, input);
+        const currentReferences = resolveReferences(services, request);
         return (
           canonicalizeAutoMovieJson(currentRegistry) === registryIdentity &&
           current !== null &&
@@ -242,10 +300,10 @@ export class AutoMovieProductionRepaintService {
         projectRoot: services.project.root,
         productionId: services.project.productionId,
         compileFingerprint: registry.inputFingerprint,
-        shot: input.shot,
+        shot: requestedShot,
         source: {
           bundle: source.bundle,
-          manifest: source.manifest,
+          manifest: structuredClone(source.manifest),
           fingerprint: sourceRenderFingerprint,
           frames: source.frames.map((frame) => ({
             index: frame.index,
@@ -260,8 +318,8 @@ export class AutoMovieProductionRepaintService {
             source.manifest.rendererIdentity,
           ),
         },
-        references: references.values,
-        parameters: structuredClone(input.parameters),
+        references: structuredClone(references.values),
+        parameters: structuredClone(request.parameters),
       });
     } catch (error) {
       return failure(
@@ -284,6 +342,10 @@ export class AutoMovieProductionRepaintService {
       adapterIdentity = canonicalAutoMovieRepaintRuntimeIdentity(
         generated.runtimeIdentity,
       );
+      if (adapterIdentity !== selectedAdapterIdentity)
+        throw new Error(
+          "the adapter reported a provider, model, version, or execution boundary different from the reviewed generator adoption",
+        );
       probe = probeProductionVideoMp4(generated.bytes);
       if (
         probe.kind !== "video" ||
@@ -298,7 +360,7 @@ export class AutoMovieProductionRepaintService {
         );
       assertProductionRenditionClipDelivery({
         bytes: generated.bytes,
-        shot: input.shot,
+        shot: requestedShot,
         ...expectedOutput,
       });
     } catch (error) {
@@ -318,18 +380,19 @@ export class AutoMovieProductionRepaintService {
       }),
     );
     const outputPath = productionRepaintOutputPath({
-      shot: input.shot,
+      shot: requestedShot,
       sourceRenderFingerprint,
       attemptId,
       adapterIdentity,
-      parameters: input.parameters,
+      generatorProvenance: generator.generatorProvenance,
+      parameters: request.parameters,
       references: referenceReceipts,
       outputDigest,
     });
     const receipt: IAutoMovieRepaintReceipt = {
-      version: 2,
+      version: 3,
       productionId: services.project.productionId,
-      shot: input.shot,
+      shot: requestedShot,
       compileFingerprint: registry.inputFingerprint,
       sourceRenderFingerprint,
       attemptId,
@@ -337,7 +400,9 @@ export class AutoMovieProductionRepaintService {
       controls: productionRepaintStructuralControls(source.manifest),
       references: referenceReceipts,
       adapterIdentity,
-      parameters: structuredClone(input.parameters),
+      generatorProvenance: structuredClone(generator.generatorProvenance),
+      structuralAuthority: "deterministic-source-only",
+      parameters: structuredClone(request.parameters),
       output: {
         path: outputPath,
         digest: outputDigest,
@@ -362,7 +427,7 @@ export class AutoMovieProductionRepaintService {
     return {
       repainted: true,
       productionId: services.project.productionId,
-      shot: input.shot,
+      shot: requestedShot,
       receipt,
       diagnostics: [],
     };
