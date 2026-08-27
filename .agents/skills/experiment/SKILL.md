@@ -37,7 +37,7 @@ Read this before debugging a sandbox that will not start. Each item is a failure
 | --- | --- |
 | `@automovie/*` install as `file:./.tarballs/*.tgz`, packed from the working tree | A tarball carries `publishConfig`, so `exports` resolve to built `lib/*.js` with typia's transform applied. The sandbox exercises the same resolution a real user's project does |
 | The tarball filename carries a content digest | `file:` specifiers are keyed by path, so a rebuilt package under an unchanged version would leave a sandbox installed against stale bytes |
-| All nine packages are pinned directly, `evidence`, `ingest`, and `render` included | `pnpm pack` rewrites the packed packages' own `workspace:^` ranges into plain semver, which would otherwise resolve from the public registry at a version this monorepo never published |
+| Every packed package is pinned directly, `evidence`, `ingest`, and `render` included | `pnpm pack` rewrites the packed packages' own `workspace:^` ranges into plain semver, which would otherwise resolve from the public registry at a version this monorepo never published |
 | The install runs `npm`, not `pnpm` | npm satisfies those transitive ranges from the directly installed siblings. pnpm does not, and its `overrides` do not reach a range from inside a packed tarball either; the same 404 just surfaces one package later |
 | A standalone install, not a root workspace member | A member writes an importer into the tracked `pnpm-lock.yaml`, and `experimental/` is gitignored, so that lock would name a directory no other checkout has |
 
