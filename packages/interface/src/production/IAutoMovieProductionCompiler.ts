@@ -314,8 +314,6 @@ export const AUTOMOVIE_DIAGNOSTIC_CODES = [
 /**
  * One code from the shipped diagnostic catalog.
  *
- * @evidence requirements/review/records-and-completeness.md#review-execution-status Distinguishes a target that owes work from one that does not: `review-evidence-missing` refuses a review whose declared frames are absent at the target's current identity, so neither an artifact on disk nor a single written comment can stand in for a completed review.
- * @evidence specifications/review-and-acceptance/evidence-freshness-and-completeness.md#review-system-execution-status Types the closed code set through which those states are reported.
  * @evidence requirements/diagnostics/identity-path-and-context.md#diagnostics-code-catalog-reference Prevents producers from emitting codes absent from the enumerable catalog.
  * @evidence specifications/validation-and-diagnostics/diagnostic-identity-location-and-severity.md#validation-diagnostic-code-catalog-reference Lets catalog construction prove exhaustive code coverage.
  */

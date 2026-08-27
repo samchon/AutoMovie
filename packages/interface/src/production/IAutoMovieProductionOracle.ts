@@ -451,9 +451,7 @@ export interface IAutoMovieCaptureRuntimeIdentity {
  * Content-addressed manifest for preview and production frames.
  *
  * @evidence requirements/acceptance/evidence-and-freshness.md#acceptance-current-historical-evidence Separates current evidence from historical: a bundle is addressed by the target fingerprint it was drawn at, so a previous version's frames remain readable for comparison while never standing in for the current verdict.
- * @evidence requirements/review/records-and-completeness.md#review-verdict-receipt Carries the target identity, the compile and target fingerprints, and the exact frames a record rests on, so a later change is traceable as preserving or invalidating what was judged.
  * @evidence specifications/review-and-acceptance/evidence-freshness-and-completeness.md#acceptance-system-current-historical-evidence Types the fingerprint boundary that decides which committed frames are current for a target.
- * @evidence specifications/review-and-acceptance/verdict-authority-and-dissent.md#review-system-verdict-rationale-receipt Types the receipt-bound record a rationale is written against.
  * @evidence requirements/agent-authoring/knowledge-boundary.md#agent-content-supply-refusal Exposes `IAutoMovieRenderBundleManifest` as the portable data boundary for the agent content supply refusal requirement.
  * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-content-side-effect-invariant Types `IAutoMovieRenderBundleManifest` for the spec authoring tool content side effect invariant system contract.
  */
