@@ -63,25 +63,25 @@ const GATE_FINISH_LINEAR = Object.freeze({
  *
  * @evidence models/030-gate.md Owns the reviewed post and leaf geometry,
  *   finish, far-edge placement, hinge node, and zero-to-100-degree limit.
- * @evidenceReview models/030-gate.md #1b9711d Read models/030-gate.md and PlazaGate in src/objects/gate.ts; confirmed that the class owns the reviewed post and leaf geometry, finish, far-edge placement, hinge node, and zero-to-100-degree limit without answering another model file.
+ * @evidenceReview models/030-gate.md #b623038 Read models/030-gate.md and PlazaGate in src/objects/gate.ts; confirmed that the class owns the reviewed post and leaf geometry, finish, far-edge placement, hinge node, and zero-to-100-degree limit without answering another model file.
  * @evidence models/030-gate.md#gate-blocking-representation Implements the
- *   declared two-box proxy, finish, human-relative dimensions, and placement.
- * @evidenceReview models/030-gate.md#gate-blocking-representation #1e3238b Read models/030-gate.md#gate-blocking-representation and PlazaGate in src/objects/gate.ts; confirmed this citation after checking the claim that implements the declared two-box proxy, finish, human-relative dimensions, and staged placement.
+ *   declared two-box proxy, finish, visual-scale dimensions, and placement.
+ * @evidenceReview models/030-gate.md#gate-blocking-representation #a7078bf Read models/030-gate.md#gate-blocking-representation and PlazaGate in src/objects/gate.ts; confirmed this citation after checking the claim that implements the declared two-box proxy, finish, visual-scale dimensions without functional-clearance authority, and staged placement.
  * @evidence models/030-gate.md#gate-hinge-interface Implements the one named
  *   moving leaf, fixed frame, hinge node, and quaternion bound.
- * @evidenceReview models/030-gate.md#gate-hinge-interface #2837adc Read models/030-gate.md#gate-hinge-interface and PlazaGate in src/objects/gate.ts; confirmed this citation after checking the claim that implements the one named moving leaf, fixed frame, hinge node, and quaternion bound.
+ * @evidenceReview models/030-gate.md#gate-hinge-interface #e490241 Read models/030-gate.md#gate-hinge-interface and PlazaGate in src/objects/gate.ts; confirmed this citation after checking the claim that implements the one named moving leaf, fixed frame, hinge node, and quaternion bound.
  * @evidence models/030-gate.md#gate-neutral-review-views Exposes finish,
  *   height, placement, hinge identity, and endpoints to the neutral review set.
- * @evidenceReview models/030-gate.md#gate-neutral-review-views #2abe499 Read models/030-gate.md#gate-neutral-review-views and PlazaGate in src/objects/gate.ts; confirmed this citation after checking the claim that exposes finish, height, placement, hinge identity, and endpoints to the neutral review set.
- * @evidence principles/model-sources.md#design-owned-construction Keeps every
+ * @evidenceReview models/030-gate.md#gate-neutral-review-views #87a11c5 Read models/030-gate.md#gate-neutral-review-views and PlazaGate in src/objects/gate.ts; confirmed this citation after checking the claim that exposes finish, height, placement, hinge identity, and endpoints to the neutral review set.
+ * @evidence obligations/model-sources.md#design-owned-construction Keeps every
  *   visible dimension and structural split owned by the cited model design.
- * @evidenceReview principles/model-sources.md#design-owned-construction #6cf1a71 Read principles/model-sources.md#design-owned-construction and PlazaGate in src/objects/gate.ts; confirmed this citation after checking the claim that keeps every visible dimension and structural split owned by the cited model design.
- * @evidence principles/model-sources.md#deterministic-build Produces the same
+ * @evidenceReview obligations/model-sources.md#design-owned-construction #41ffc4f Read obligations/model-sources.md#design-owned-construction and PlazaGate in src/objects/gate.ts; confirmed this citation after checking the claim that keeps every visible dimension and structural split owned by the cited model design.
+ * @evidence obligations/model-sources.md#deterministic-build Produces the same
  *   prop, articulation, and placement from the same world context.
- * @evidenceReview principles/model-sources.md#deterministic-build #bf45408 Read principles/model-sources.md#deterministic-build and PlazaGate in src/objects/gate.ts; confirmed this citation after checking the claim that produces the same prop, articulation, and placement from the same world context.
- * @evidence principles/model-sources.md#unsupported-fidelity-is-explicit Keeps
+ * @evidenceReview obligations/model-sources.md#deterministic-build #288cbb3 Read obligations/model-sources.md#deterministic-build and PlazaGate in src/objects/gate.ts; confirmed this citation after checking the claim that produces the same prop, articulation, and placement from the same world context.
+ * @evidence obligations/model-sources.md#unsupported-fidelity-is-explicit Keeps
  *   the two-box form visibly documented as a blocking proxy.
- * @evidenceReview principles/model-sources.md#unsupported-fidelity-is-explicit #d7527d5 Read principles/model-sources.md#unsupported-fidelity-is-explicit and PlazaGate in src/objects/gate.ts; confirmed this citation after checking the claim that keeps the two-box form visibly documented as a blocking proxy.
+ * @evidenceReview obligations/model-sources.md#unsupported-fidelity-is-explicit #35050b3 Read obligations/model-sources.md#unsupported-fidelity-is-explicit and PlazaGate in src/objects/gate.ts; confirmed this citation after checking the claim that keeps the two-box form visibly documented as a blocking proxy.
  */
 export class PlazaGate extends AutoMovieSubject<IAutoMoviePropSpec> {
   public readonly id = "plaza-gate";
@@ -92,18 +92,16 @@ export class PlazaGate extends AutoMovieSubject<IAutoMoviePropSpec> {
   /** Joint id of the single hinge, before the placement prefix. */
   public readonly hinge = "hinge";
 
-  /** Clear width of the leaf, in metres. */
+  /** Authored visual width of the leaf, in metres. */
   public readonly width: number = 0.9;
 
   /**
-   * Clearance kept above the figure that walks through, in metres.
+   * Visual height margin above the standing SOLOIST reference, in metres.
    *
-   * The leaf's height is derived from this rather than authored beside it: the
-   * specification fixes the opening against the production's human scale, and
-   * two independently authored numbers is how an opening comes to be shorter
-   * than the figure it is for.
+   * This maintains the reviewed silhouette proportion and does not claim a
+   * passage, user, carried-load, mobility-aid, or equipment clearance.
    */
-  public readonly headroom: number = 0.3;
+  public readonly silhouetteMargin: number = 0.3;
 
   /** Thickness of the leaf, in metres. */
   public readonly thickness: number = 0.06;
@@ -130,11 +128,11 @@ export class PlazaGate extends AutoMovieSubject<IAutoMoviePropSpec> {
    * How tall the leaf stands, in metres.
    *
    * @evidence models/030-gate.md#gate-blocking-representation Derives the
-   *   reviewed clearance from the shared human reference.
-   * @evidenceReview models/030-gate.md#gate-blocking-representation #1e3238b Read models/030-gate.md#gate-blocking-representation and height in src/objects/gate.ts; confirmed this citation after checking the claim that derives the reviewed clearance from the shared human reference.
+   *   reviewed silhouette proportion from the standing SOLOIST reference.
+   * @evidenceReview models/030-gate.md#gate-blocking-representation #a7078bf Read models/030-gate.md#gate-blocking-representation and height in src/objects/gate.ts; confirmed this citation after checking the claim that derives only the reviewed silhouette proportion, not functional clearance, from the standing SOLOIST reference.
    */
   public height(): number {
-    return soloist.height + this.headroom;
+    return soloist.height + this.silhouetteMargin;
   }
 
   /**
@@ -149,7 +147,7 @@ export class PlazaGate extends AutoMovieSubject<IAutoMoviePropSpec> {
    *
    * @evidence models/030-gate.md#gate-blocking-representation Reads the reviewed
    *   edge relation from the staged ground itself.
-   * @evidenceReview models/030-gate.md#gate-blocking-representation #1e3238b Read models/030-gate.md#gate-blocking-representation and farEdgeZ in src/objects/gate.ts; confirmed this citation after checking the claim that reads the reviewed edge relation from the staged ground itself.
+   * @evidenceReview models/030-gate.md#gate-blocking-representation #a7078bf Read models/030-gate.md#gate-blocking-representation and farEdgeZ in src/objects/gate.ts; confirmed this citation after checking the claim that reads the reviewed edge relation from the staged ground itself.
    */
   public farEdgeZ(context: IAutoMovieShotBuildContext): number {
     // Folded rather than spread into `Math.min`, because a world may carry more
@@ -177,7 +175,7 @@ export class PlazaGate extends AutoMovieSubject<IAutoMoviePropSpec> {
    *
    * @evidence models/030-gate.md#gate-blocking-representation Reads the reviewed
    *   positive-half-extent relation from the staged ground itself.
-   * @evidenceReview models/030-gate.md#gate-blocking-representation #1e3238b Read models/030-gate.md#gate-blocking-representation and positiveEdgeX in src/objects/gate.ts; confirmed this citation after checking the claim that reads the reviewed positive-half-extent relation from the staged ground itself.
+   * @evidenceReview models/030-gate.md#gate-blocking-representation #a7078bf Read models/030-gate.md#gate-blocking-representation and positiveEdgeX in src/objects/gate.ts; confirmed this citation after checking the claim that reads the reviewed positive-half-extent relation from the staged ground itself.
    */
   public positiveEdgeX(context: IAutoMovieShotBuildContext): number {
     let edge: number | null = null;
@@ -205,7 +203,7 @@ export class PlazaGate extends AutoMovieSubject<IAutoMoviePropSpec> {
    *
    * @evidence models/030-gate.md#gate-blocking-representation Places the proxy
    *   at its reviewed far-edge relation on level ground.
-   * @evidenceReview models/030-gate.md#gate-blocking-representation #1e3238b Read models/030-gate.md#gate-blocking-representation and position in src/objects/gate.ts; confirmed this citation after checking the claim that places the proxy at its reviewed far-edge relation on level ground.
+   * @evidenceReview models/030-gate.md#gate-blocking-representation #a7078bf Read models/030-gate.md#gate-blocking-representation and position in src/objects/gate.ts; confirmed this citation after checking the claim that places the proxy at its reviewed far-edge relation on level ground.
    */
   public position(context: IAutoMovieShotBuildContext): IAutoMovieVector3 {
     return {
@@ -226,7 +224,7 @@ export class PlazaGate extends AutoMovieSubject<IAutoMoviePropSpec> {
    *
    * @evidence models/030-gate.md#gate-hinge-interface Resolves the one reviewed
    *   motion-writable hinge node.
-   * @evidenceReview models/030-gate.md#gate-hinge-interface #2837adc Read models/030-gate.md#gate-hinge-interface and hingeNode in src/objects/gate.ts; confirmed this citation after checking the claim that resolves the one reviewed motion-writable hinge node.
+   * @evidenceReview models/030-gate.md#gate-hinge-interface #e490241 Read models/030-gate.md#gate-hinge-interface and hingeNode in src/objects/gate.ts; confirmed this citation after checking the claim that resolves the one reviewed motion-writable hinge node.
    */
   public hingeNode(): string {
     return placementChildNode(this.id, this.hinge);
@@ -311,7 +309,7 @@ export class PlazaGate extends AutoMovieSubject<IAutoMoviePropSpec> {
    *
    * @evidence models/030-gate.md#gate-hinge-interface Implements the reviewed
    *   leaf binding and zero-to-100-degree quaternion limit.
-   * @evidenceReview models/030-gate.md#gate-hinge-interface #2837adc Read models/030-gate.md#gate-hinge-interface and design in src/objects/gate.ts; confirmed this citation after checking the claim that implements the reviewed leaf binding and zero-to-100-degree quaternion limit.
+   * @evidenceReview models/030-gate.md#gate-hinge-interface #e490241 Read models/030-gate.md#gate-hinge-interface and design in src/objects/gate.ts; confirmed this citation after checking the claim that implements the reviewed leaf binding and zero-to-100-degree quaternion limit.
    */
   public design(): IAutoMoviePropSpec {
     const half = (this.openDeg * Math.PI) / 360;
@@ -368,7 +366,7 @@ export class PlazaGate extends AutoMovieSubject<IAutoMoviePropSpec> {
    *
    * @evidence models/030-gate.md#gate-blocking-representation Stages the reviewed
    *   proxy square to level ground at its derived edge.
-   * @evidenceReview models/030-gate.md#gate-blocking-representation #1e3238b Read models/030-gate.md#gate-blocking-representation and stage in src/objects/gate.ts; confirmed this citation after checking the claim that stages the reviewed proxy square to level ground at its derived edge.
+   * @evidenceReview models/030-gate.md#gate-blocking-representation #a7078bf Read models/030-gate.md#gate-blocking-representation and stage in src/objects/gate.ts; confirmed this citation after checking the claim that stages the reviewed proxy square to level ground at its derived edge.
    */
   public stage(context: IAutoMovieShotBuildContext): IAutoMovieStageSetPiece {
     return {
@@ -389,7 +387,7 @@ export class PlazaGate extends AutoMovieSubject<IAutoMoviePropSpec> {
    *
    * @evidence models/030-gate.md#gate-blocking-representation Contributes both
    *   reviewed prop specification and placement under one node identity.
-   * @evidenceReview models/030-gate.md#gate-blocking-representation #1e3238b Read models/030-gate.md#gate-blocking-representation and render in src/objects/gate.ts; confirmed this citation after checking the claim that contributes both reviewed prop specification and placement under one node identity.
+   * @evidenceReview models/030-gate.md#gate-blocking-representation #a7078bf Read models/030-gate.md#gate-blocking-representation and render in src/objects/gate.ts; confirmed this citation after checking the claim that contributes both reviewed prop specification and placement under one node identity.
    */
   public render(
     context: IAutoMovieShotBuildContext,
@@ -406,6 +404,6 @@ export class PlazaGate extends AutoMovieSubject<IAutoMoviePropSpec> {
  *
  * @evidence models/030-gate.md#gate-blocking-representation Instantiates the
  *   reviewed gate owner once for the production.
- * @evidenceReview models/030-gate.md#gate-blocking-representation #1e3238b Read models/030-gate.md#gate-blocking-representation and gate in src/objects/gate.ts; confirmed this citation after checking the claim that instantiates the reviewed gate owner once for the production.
+ * @evidenceReview models/030-gate.md#gate-blocking-representation #a7078bf Read models/030-gate.md#gate-blocking-representation and gate in src/objects/gate.ts; confirmed this citation after checking the claim that instantiates the reviewed gate owner once for the production.
  */
 export const gate = new PlazaGate();

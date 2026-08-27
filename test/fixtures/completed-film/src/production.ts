@@ -8,9 +8,9 @@ import config from "../automovie.config";
  * @evidence settings/050-art-direction.md#art-palette Implements the
  *   single production background swatch reused by every viewer surface.
  * @evidenceReview settings/050-art-direction.md#art-palette #d26ffe8 Compared settings/050-art-direction.md#art-palette with the complete src/production.ts file. Verified relationship: Implements the single production background swatch reused by every viewer surface.
- * @evidence principles/production-sources.md#shared-visual-grammar Defines the
+ * @evidence obligations/production-sources.md#shared-visual-grammar Defines the
  *   shared clear color once rather than copying a viewer-local background.
- * @evidenceReview principles/production-sources.md#shared-visual-grammar #f009b71 Read principles/production-sources.md#shared-visual-grammar and PRODUCTION_BACKGROUND; confirmed the value is production-scoped and reused rather than independently authored by a viewer.
+ * @evidenceReview obligations/production-sources.md#shared-visual-grammar #af7833b Read obligations/production-sources.md#shared-visual-grammar and PRODUCTION_BACKGROUND; confirmed the value is production-scoped and reused rather than independently authored by a viewer.
  */
 export const PRODUCTION_BACKGROUND = "#182235";
 
@@ -29,9 +29,9 @@ export const PRODUCTION_BACKGROUND = "#182235";
  * the two come to disagree.
  *
  * @evidence settings/000-governing-aim.md#delivery-contract Serializes the
- *   film identity, 11.5-second edit, and five required outputs without adding
- *   audience content.
- * @evidenceReview settings/000-governing-aim.md#delivery-contract #8c45611 Compared settings/000-governing-aim.md#delivery-contract with the complete src/production.ts file. Verified relationship: Serializes the film identity, 11.5-second edit, and five required outputs without adding audience content.
+ *   film identity, 11.5-second edit, required English-caption deliverable, and
+ *   inert zero-gain audio output without adding audience content.
+ * @evidenceReview settings/000-governing-aim.md#delivery-contract #c5ab39f Compared settings/000-governing-aim.md#delivery-contract with the complete src/production.ts file. Verified relationship: Serializes the film identity, 11.5-second edit, required English-caption deliverable, and inert zero-gain audio output while film source owns the exact track mapping and intentionally absent products receive no empty deliverable.
  * @evidence settings/000-governing-aim.md#governing-aim Serializes the exact
  *   raised-hand and ordered-chorus-answer logline as the production promise.
  * @evidenceReview settings/000-governing-aim.md#governing-aim #81fee69 Compared settings/000-governing-aim.md#governing-aim with the complete src/production.ts file. Verified relationship: Serializes the exact raised-hand and ordered-chorus-answer logline as the production promise.
@@ -48,12 +48,12 @@ export const PRODUCTION_BACKGROUND = "#182235";
  *   source; this record only requires the caption deliverable kind.
  * @evidenceExcludeReview settings/000-governing-aim.md#production-language #6330b70 Compared settings/000-governing-aim.md#production-language with the complete production-source property population represented by the complete src/production.ts file. Verified relationship: Final English caption content is authored in screenplay and mapped by film source; this record only requires the caption deliverable kind.
  * @evidenceExclude settings/000-governing-aim.md#settings-coverage-map The
- *   settings audit governs authoring completeness and is not serialized as a
- *   runtime production field.
- * @evidenceExcludeReview settings/000-governing-aim.md#settings-coverage-map #2268d22 Compared settings/000-governing-aim.md#settings-coverage-map with the complete production-source property population represented by the complete src/production.ts file. Verified relationship: The settings audit governs authoring completeness and is not serialized as a runtime production field.
+ *   work-specific settings requirement allocation governs authoring
+ *   completeness and is not serialized as a runtime production field.
+ * @evidenceExcludeReview settings/000-governing-aim.md#settings-coverage-map #6f348f1 Compared settings/000-governing-aim.md#settings-coverage-map with the complete production-source property population represented by the complete src/production.ts file. Verified relationship: The work-specific settings requirement allocation governs authoring completeness and is not serialized as a runtime production field.
  * @evidence settings/050-art-direction.md#art-delivery-review-condition Keeps
  *   the delivered frame grammar sized around the readable cue and formation.
- * @evidenceReview settings/050-art-direction.md#art-delivery-review-condition #0f4608f Read settings/050-art-direction.md#art-delivery-review-condition and production; confirmed its deterministic mode and 1280-by-720, 24 fps, sRGB frame format exactly serialize the declared final review condition.
+ * @evidenceReview settings/050-art-direction.md#art-delivery-review-condition #04d2491 Read settings/050-art-direction.md#art-delivery-review-condition and production; confirmed its deterministic mode and 1280-by-720, 24 fps, sRGB frame format exactly serialize the declared final review condition.
  * @evidence settings/050-art-direction.md#art-palette Serializes the one
  *   shared primitive-3D palette and reserved subject accent.
  * @evidenceReview settings/050-art-direction.md#art-palette #d26ffe8 Compared settings/050-art-direction.md#art-palette with the complete src/production.ts file. Verified relationship: Serializes the one shared primitive-3D palette and reserved subject accent.
@@ -72,13 +72,13 @@ export const PRODUCTION_BACKGROUND = "#182235";
  * @evidenceExcludeReview settings/010-soloist.md#soloist-identity-scale #7a10a48 Read the soloist identity unit and production; confirmed Soloist owns its 1.8 m scale and this record publishes only the shared scale grammar.
  * @evidenceExclude settings/010-soloist.md#soloist-hand-capability Figure
  *   articulation is realized by model, motion, and shot sources.
- * @evidenceExcludeReview settings/010-soloist.md#soloist-hand-capability #109d526 Read the hand-capability unit and production; confirmed the model, cue motion, and shots own it and production emits no articulation field.
+ * @evidenceExcludeReview settings/010-soloist.md#soloist-hand-capability #530170d Read the hand-capability unit and production; confirmed the model, cue motion, and shots own it and production emits no articulation field.
  * @evidenceExclude settings/020-chorus.md#chorus-group-identity Formation
  *   identity is realized by the chorus model source.
  * @evidenceExcludeReview settings/020-chorus.md#chorus-group-identity #445f574 Read the chorus identity unit and production; confirmed Chorus owns rows, columns, and member scale while production emits only shared grammar.
  * @evidenceExclude settings/020-chorus.md#chorus-advance-capability Formation
  *   travel is realized by motion and shot sources.
- * @evidenceExcludeReview settings/020-chorus.md#chorus-advance-capability #f81a7e8 Read the advance unit and production; confirmed chorus motion and opening shot own the 2 m travel and production has no motion value.
+ * @evidenceExcludeReview settings/020-chorus.md#chorus-advance-capability #71e4ed1 Read the advance unit and production; confirmed chorus motion and opening shot own the 2 m travel and production has no motion value.
  * @evidenceExclude settings/020-chorus.md#chorus-hold-capability Formation
  *   holding is realized by motion and shot sources.
  * @evidenceExcludeReview settings/020-chorus.md#chorus-hold-capability #b9504eb Read the hold unit and production; confirmed chorus hold motion and both shots own the fixed endpoint and production has no formation state.
@@ -87,7 +87,7 @@ export const PRODUCTION_BACKGROUND = "#182235";
  * @evidenceExcludeReview settings/020-chorus.md#chorus-break-capability #713304a Read the break unit and production; confirmed the reusable formation and motion owners expose it while production neither selects nor parameterizes it.
  * @evidenceExclude settings/030-gate.md#gate-identity Gate identity is
  *   realized by its model and answer-shot sources.
- * @evidenceExcludeReview settings/030-gate.md#gate-identity #444fda8 Compared settings/030-gate.md#gate-identity with the complete production-source property population represented by the complete src/production.ts file. Verified relationship: Gate identity is realized by its model and answer-shot sources.
+ * @evidenceExcludeReview settings/030-gate.md#gate-identity #cc8741b Compared settings/030-gate.md#gate-identity with the complete production-source property population represented by the complete src/production.ts file. Verified relationship: Gate identity is realized by its model and answer-shot sources.
  * @evidenceExclude settings/030-gate.md#gate-placement Gate placement is
  *   derived by its model and used by the answer shot.
  * @evidenceExcludeReview settings/030-gate.md#gate-placement #a2dfd9f Compared settings/030-gate.md#gate-placement with the complete production-source property population represented by the complete src/production.ts file. Verified relationship: Gate placement is derived by its model and used by the answer shot.
@@ -104,15 +104,16 @@ export const PRODUCTION_BACKGROUND = "#182235";
  * @evidenceExclude settings/040-plaza.md#plaza-background-role Background
  *   geometry and haze are realized by plaza and shot sources.
  * @evidenceExcludeReview settings/040-plaza.md#plaza-background-role #29cf787 Read the plaza background unit and production; confirmed Plaza and opening own ground and haze geometry while production owns only the clear-color grammar.
- * @evidence principles/production-sources.md#settings-only-serialization Maps
+ * @evidence obligations/production-sources.md#settings-only-serialization Maps
  *   reviewed settings to a production design without creating story action.
- * @evidenceReview principles/production-sources.md#settings-only-serialization #9aff0f0 Read principles/production-sources.md#settings-only-serialization and production; confirmed every creative field maps to governing-aim or art-direction settings and no subject, action, or edit is implemented here.
- * @evidence principles/production-sources.md#delivery-identity Emits one
+ * @evidenceReview obligations/production-sources.md#settings-only-serialization #623f3eb Read obligations/production-sources.md#settings-only-serialization and production; confirmed every creative field maps to governing-aim or art-direction settings and no subject, action, or edit is implemented here.
+ * @evidence obligations/production-sources.md#delivery-identity Emits one
  *   mutually consistent identity, runtime, format, mode, and output list.
- * @evidenceReview principles/production-sources.md#delivery-identity #f980e31 Read principles/production-sources.md#delivery-identity and production; confirmed identity, logline, runtime, format, deterministic mode, and required deliverables agree with the non-visual authored boundary while visual grammar remains separately owned.
- * @evidence principles/production-sources.md#shared-visual-grammar Owns only
- *   production-wide palette, silhouette, and scale values.
- * @evidenceReview principles/production-sources.md#shared-visual-grammar #f009b71 Read principles/production-sources.md#shared-visual-grammar and production; confirmed subject materials stay in model sources while this record owns only shared palette, silhouette, scale, and background.
+ * @evidenceReview obligations/production-sources.md#delivery-identity #24d924e Read obligations/production-sources.md#delivery-identity and production; confirmed identity, logline, runtime, format, deterministic mode, and required deliverables agree with the non-visual authored boundary while visual grammar remains separately owned.
+ * @evidence obligations/production-sources.md#shared-visual-grammar Serializes
+ *   only the authored production-wide palette, silhouette, scale, background,
+ *   and deterministic fidelity values.
+ * @evidenceReview obligations/production-sources.md#shared-visual-grammar #af7833b Read obligations/production-sources.md#shared-visual-grammar and production; confirmed subject materials stay in model sources while this record faithfully serializes the shared palette, silhouette, scale, background, and deterministic fidelity tier without adding an aesthetic choice.
  */
 export const production = {
   id: config.productionId,

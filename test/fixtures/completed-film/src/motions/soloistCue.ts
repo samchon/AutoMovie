@@ -5,13 +5,13 @@ import type { IAutoMovieMotion } from "@automovie/interface";
  *
  * @evidence motions/010-soloist-cue.md The cue design fixes 110 degrees as the
  *   one raised-hand endpoint shared by continuation shots and motion output.
- * @evidenceReview motions/010-soloist-cue.md #c7f2166 Read motions/010-soloist-cue.md and SOLOIST_CUE_ABDUCTION in src/motions/soloistCue.ts; confirmed this citation after checking the claim that the cue design fixes 110 degrees as the one raised-hand endpoint shared by continuation shots and motion output.
+ * @evidenceReview motions/010-soloist-cue.md #cb2950d Read motions/010-soloist-cue.md and SOLOIST_CUE_ABDUCTION in src/motions/soloistCue.ts; confirmed this citation after checking the claim that the cue design fixes 110 degrees as the one raised-hand endpoint shared by continuation shots and motion output.
  * @evidence motions/010-soloist-cue.md#soloist-raise-hold Exposes the reviewed
  *   endpoint without making a shot or subject class restate it.
  * @evidenceReview motions/010-soloist-cue.md#soloist-raise-hold #d61383a Read motions/010-soloist-cue.md#soloist-raise-hold and SOLOIST_CUE_ABDUCTION in src/motions/soloistCue.ts; confirmed this citation after checking the claim that exposes the reviewed endpoint without making a shot or subject class restate it.
- * @evidence principles/motion-sources.md#design-owned-transition Carries the
+ * @evidence obligations/motion-sources.md#design-owned-transition Carries the
  *   exact endpoint owned by the cited motion design.
- * @evidenceReview principles/motion-sources.md#design-owned-transition #0815474 Read principles/motion-sources.md#design-owned-transition and SOLOIST_CUE_ABDUCTION in src/motions/soloistCue.ts; confirmed this citation after checking the claim that carries the exact endpoint owned by the cited motion design.
+ * @evidenceReview obligations/motion-sources.md#design-owned-transition #5d64f23 Read obligations/motion-sources.md#design-owned-transition and SOLOIST_CUE_ABDUCTION in src/motions/soloistCue.ts; confirmed this citation after checking the claim that carries the exact endpoint owned by the cited motion design.
  */
 export const SOLOIST_CUE_ABDUCTION = 110;
 
@@ -22,20 +22,20 @@ const ARRIVAL_SECONDS = 2;
  *
  * @evidence motions/010-soloist-cue.md Solely owns the reviewed left-arm
  *   raise to 110 degrees by 2 seconds and its terminal hold.
- * @evidenceReview motions/010-soloist-cue.md #c7f2166 Read motions/010-soloist-cue.md and createSoloistCueMotion in src/motions/soloistCue.ts; confirmed that this function solely owns the reviewed left-arm raise to 110 degrees by 2 seconds and its terminal hold.
+ * @evidenceReview motions/010-soloist-cue.md #cb2950d Read motions/010-soloist-cue.md and createSoloistCueMotion in src/motions/soloistCue.ts; confirmed that this function solely owns the reviewed left-arm raise to 110 degrees by 2 seconds and its terminal hold.
  * @evidence motions/010-soloist-cue.md#soloist-raise-hold Maps the declared
  *   start abduction to 110 degrees by 2 seconds and then holds it.
  * @evidenceReview motions/010-soloist-cue.md#soloist-raise-hold #d61383a Read motions/010-soloist-cue.md#soloist-raise-hold and createSoloistCueMotion in src/motions/soloistCue.ts; confirmed this citation after checking the claim that maps the declared start abduction to 110 degrees by 2 seconds and then holds it.
- * @evidence principles/motion-sources.md#design-owned-transition Implements
+ * @evidence obligations/motion-sources.md#design-owned-transition Implements
  *   only the endpoints, phases, joints, and parameter domain the design owns.
- * @evidenceReview principles/motion-sources.md#design-owned-transition #0815474 Read principles/motion-sources.md#design-owned-transition and createSoloistCueMotion in src/motions/soloistCue.ts; confirmed this citation after checking the claim that implements only the endpoints, phases, joints, and parameter domain the design owns.
- * @evidence principles/motion-sources.md#pure-time-mapping Uses only explicit
+ * @evidenceReview obligations/motion-sources.md#design-owned-transition #5d64f23 Read obligations/motion-sources.md#design-owned-transition and createSoloistCueMotion in src/motions/soloistCue.ts; confirmed this citation after checking the claim that implements only the endpoints, phases, joints, and parameter domain the design owns.
+ * @evidence obligations/motion-sources.md#pure-time-mapping Uses only explicit
  *   context, skeleton, duration, and start pose to emit deterministic keys.
- * @evidenceReview principles/motion-sources.md#pure-time-mapping #c0ea4a6 Read principles/motion-sources.md#pure-time-mapping and createSoloistCueMotion in src/motions/soloistCue.ts; confirmed explicit context, skeleton, duration, and start pose produce one deterministic time-addressed key record while engine sampling stays outside the constructor.
- * @evidence principles/motion-sources.md#invalid-input-is-visible Rejects
+ * @evidenceReview obligations/motion-sources.md#pure-time-mapping #3127ece Read obligations/motion-sources.md#pure-time-mapping and createSoloistCueMotion in src/motions/soloistCue.ts; confirmed explicit context, skeleton, duration, and start pose produce one deterministic time-addressed key record while engine sampling stays outside the constructor.
+ * @evidence obligations/motion-sources.md#invalid-input-is-visible Rejects
  *   invalid duration and abduction before they can produce an unauthorized
  *   motion record.
- * @evidenceReview principles/motion-sources.md#invalid-input-is-visible #ca43ce3 Read principles/motion-sources.md#invalid-input-is-visible and createSoloistCueMotion in src/motions/soloistCue.ts; confirmed this citation after checking the claim that rejects invalid duration and abduction before they can produce an unauthorized motion record.
+ * @evidenceReview obligations/motion-sources.md#invalid-input-is-visible #5ce63ab Read obligations/motion-sources.md#invalid-input-is-visible and createSoloistCueMotion in src/motions/soloistCue.ts; confirmed this citation after checking the claim that rejects invalid duration and abduction before they can produce an unauthorized motion record.
  */
 export function createSoloistCueMotion(props: {
   id: string;

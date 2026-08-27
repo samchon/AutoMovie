@@ -27,19 +27,19 @@ import { chorus } from "../formations/chorus";
  *
  * @evidence models/040-plaza.md Defines the context-free contribution boundary
  *   shared by the reviewed ground, centre landmark, and haze pieces of PLAZA.
- * @evidenceReview models/040-plaza.md #87863be Read models/040-plaza.md and WorldPiece in src/world/plaza.ts; confirmed that the abstraction defines the context-free contribution boundary shared by the reviewed ground, centre landmark, and haze pieces, while its H2 citation delimits that common world-piece boundary.
+ * @evidenceReview models/040-plaza.md #b061784 Read models/040-plaza.md and WorldPiece in src/world/plaza.ts; confirmed that the abstraction defines the context-free contribution boundary shared by the reviewed ground, centre landmark, and haze pieces, while its H2 citation delimits that common world-piece boundary.
  * @evidence models/040-plaza.md#plaza-world-composition Defines the common
  *   context-free contribution boundary for every reviewed world piece.
- * @evidenceReview models/040-plaza.md#plaza-world-composition #dc0afe8 Read models/040-plaza.md#plaza-world-composition and WorldPiece in src/world/plaza.ts; confirmed this citation after checking the claim that defines the common context-free contribution boundary for every reviewed world piece.
- * @evidence principles/model-sources.md#design-owned-construction Keeps world
+ * @evidenceReview models/040-plaza.md#plaza-world-composition #96ea0f6 Read models/040-plaza.md#plaza-world-composition and WorldPiece in src/world/plaza.ts; confirmed this citation after checking the claim that defines the common context-free contribution boundary for every reviewed world piece.
+ * @evidence obligations/model-sources.md#design-owned-construction Keeps world
  *   pieces as implementations of the cited model design.
- * @evidenceReview principles/model-sources.md#design-owned-construction #6cf1a71 Read principles/model-sources.md#design-owned-construction and WorldPiece in src/world/plaza.ts; confirmed this citation after checking the claim that keeps world pieces as implementations of the cited model design.
- * @evidence principles/model-sources.md#deterministic-build Returns the same
+ * @evidenceReview obligations/model-sources.md#design-owned-construction #41ffc4f Read obligations/model-sources.md#design-owned-construction and WorldPiece in src/world/plaza.ts; confirmed this citation after checking the claim that keeps world pieces as implementations of the cited model design.
+ * @evidence obligations/model-sources.md#deterministic-build Returns the same
  *   placed contribution from the same piece state in every shot.
- * @evidenceReview principles/model-sources.md#deterministic-build #bf45408 Read principles/model-sources.md#deterministic-build and WorldPiece in src/world/plaza.ts; confirmed this citation after checking the claim that returns the same placed contribution from the same piece state in every shot.
- * @evidence principles/model-sources.md#unsupported-fidelity-is-explicit Makes
+ * @evidenceReview obligations/model-sources.md#deterministic-build #288cbb3 Read obligations/model-sources.md#deterministic-build and WorldPiece in src/world/plaza.ts; confirmed this citation after checking the claim that returns the same placed contribution from the same piece state in every shot.
+ * @evidence obligations/model-sources.md#unsupported-fidelity-is-explicit Makes
  *   unsupported enclosure and final atmosphere fidelity absent from the API.
- * @evidenceReview principles/model-sources.md#unsupported-fidelity-is-explicit #d7527d5 Read principles/model-sources.md#unsupported-fidelity-is-explicit and WorldPiece in src/world/plaza.ts; confirmed this citation after checking the claim that makes unsupported enclosure and final atmosphere fidelity absent from the API.
+ * @evidenceReview obligations/model-sources.md#unsupported-fidelity-is-explicit #35050b3 Read obligations/model-sources.md#unsupported-fidelity-is-explicit and WorldPiece in src/world/plaza.ts; confirmed this citation after checking the claim that makes unsupported enclosure and final atmosphere fidelity absent from the API.
  */
 export abstract class WorldPiece extends AutoMovieSubject<IAutoMovieSubjectContribution> {
   /** What this piece puts into the world, independent of any shot. */
@@ -78,10 +78,10 @@ export abstract class WorldPiece extends AutoMovieSubject<IAutoMovieSubjectContr
  *
  * @evidence models/040-plaza.md Owns the one reviewed level square whose
  *   derived extent contains the formation and supplies both ground records.
- * @evidenceReview models/040-plaza.md #87863be Read models/040-plaza.md and PlazaGround in src/world/plaza.ts; confirmed that the class owns the one reviewed level square whose derived extent contains the formation and supplies both ground records, while its H2 citation delimits the ground subset it realizes.
+ * @evidenceReview models/040-plaza.md #b061784 Read models/040-plaza.md and PlazaGround in src/world/plaza.ts; confirmed that the class owns the one reviewed level square whose derived extent contains the formation and supplies both ground records, while its H2 citation delimits the ground subset it realizes.
  * @evidence models/040-plaza.md#plaza-world-composition Implements the one
  *   derived level square used by both world and rendered surface records.
- * @evidenceReview models/040-plaza.md#plaza-world-composition #dc0afe8 Read models/040-plaza.md#plaza-world-composition and PlazaGround in src/world/plaza.ts; confirmed this citation after checking the claim that implements the one derived level square used by both world and rendered surface records.
+ * @evidenceReview models/040-plaza.md#plaza-world-composition #96ea0f6 Read models/040-plaza.md#plaza-world-composition and PlazaGround in src/world/plaza.ts; confirmed this citation after checking the claim that implements the one derived level square used by both world and rendered surface records.
  */
 export class PlazaGround extends WorldPiece {
   public readonly id = "ground";
@@ -133,7 +133,7 @@ export class PlazaGround extends WorldPiece {
    *
    * @evidence models/040-plaza.md#plaza-world-composition Reads the reviewed
    *   level-surface height through the engine's owning query.
-   * @evidenceReview models/040-plaza.md#plaza-world-composition #dc0afe8 Read models/040-plaza.md#plaza-world-composition and heightAt in src/world/plaza.ts; confirmed this citation after checking the claim that reads the reviewed level-surface height through the engine's owning query.
+   * @evidenceReview models/040-plaza.md#plaza-world-composition #96ea0f6 Read models/040-plaza.md#plaza-world-composition and heightAt in src/world/plaza.ts; confirmed this citation after checking the claim that reads the reviewed level-surface height through the engine's owning query.
    */
   public heightAt(point: { x: number; z: number }): number {
     return worldSurfaceHeight(this.place().surfaces![0]!, point);
@@ -150,7 +150,7 @@ export class PlazaGround extends WorldPiece {
    *
    * @evidence models/040-plaza.md#plaza-world-composition Emits the same
    *   reviewed polygon for the floor a delivered scene draws.
-   * @evidenceReview models/040-plaza.md#plaza-world-composition #dc0afe8 Read models/040-plaza.md#plaza-world-composition and patches in src/world/plaza.ts; confirmed this citation after checking the claim that emits the same reviewed polygon for the floor a delivered scene draws.
+   * @evidenceReview models/040-plaza.md#plaza-world-composition #96ea0f6 Read models/040-plaza.md#plaza-world-composition and patches in src/world/plaza.ts; confirmed this citation after checking the claim that emits the same reviewed polygon for the floor a delivered scene draws.
    */
   public patches(): readonly IAutoMovieSurface[] {
     const half = this.halfExtent();
@@ -181,10 +181,10 @@ export class PlazaGround extends WorldPiece {
  *
  * @evidence models/040-plaza.md Owns the reviewed ground-level origin marker
  *   that lets shots address `plaza-center` without copying its coordinates.
- * @evidenceReview models/040-plaza.md #87863be Read models/040-plaza.md and PlazaCenterMark in src/world/plaza.ts; confirmed that the class owns the reviewed ground-level origin marker used by shots as `plaza-center`, while its H2 citation delimits the landmark subset it realizes.
+ * @evidenceReview models/040-plaza.md #b061784 Read models/040-plaza.md and PlazaCenterMark in src/world/plaza.ts; confirmed that the class owns the reviewed ground-level origin marker used by shots as `plaza-center`, while its H2 citation delimits the landmark subset it realizes.
  * @evidence models/040-plaza.md#plaza-world-composition Implements the reviewed
  *   named origin and its deterministic landmark record.
- * @evidenceReview models/040-plaza.md#plaza-world-composition #dc0afe8 Read models/040-plaza.md#plaza-world-composition and PlazaCenterMark in src/world/plaza.ts; confirmed this citation after checking the claim that implements the reviewed named origin and its deterministic landmark record.
+ * @evidenceReview models/040-plaza.md#plaza-world-composition #96ea0f6 Read models/040-plaza.md#plaza-world-composition and PlazaCenterMark in src/world/plaza.ts; confirmed this citation after checking the claim that implements the reviewed named origin and its deterministic landmark record.
  */
 export class PlazaCenterMark extends WorldPiece {
   public readonly id = "plaza-center";
@@ -215,10 +215,10 @@ export class PlazaCenterMark extends WorldPiece {
  *
  * @evidence models/040-plaza.md Owns the reviewed seeded smoke recipe and the
  *   bounded low-contrast PLAZA region that activates it.
- * @evidenceReview models/040-plaza.md #87863be Read models/040-plaza.md and PlazaHaze in src/world/plaza.ts; confirmed that the class owns the reviewed seeded smoke recipe together with its bounded low-contrast PLAZA region, while its H2 citation delimits the atmosphere subset it realizes.
+ * @evidenceReview models/040-plaza.md #b061784 Read models/040-plaza.md and PlazaHaze in src/world/plaza.ts; confirmed that the class owns the reviewed seeded smoke recipe together with its bounded low-contrast PLAZA region, while its H2 citation delimits the atmosphere subset it realizes.
  * @evidence models/040-plaza.md#plaza-atmosphere-proxy Implements the one
  *   reviewed seeded smoke recipe and bounded low-contrast effect zone.
- * @evidenceReview models/040-plaza.md#plaza-atmosphere-proxy #bf7943e Read models/040-plaza.md#plaza-atmosphere-proxy and PlazaHaze in src/world/plaza.ts; confirmed this citation after checking the claim that implements the one reviewed seeded smoke recipe and bounded low-contrast effect zone.
+ * @evidenceReview models/040-plaza.md#plaza-atmosphere-proxy #30a801c Read models/040-plaza.md#plaza-atmosphere-proxy and PlazaHaze in src/world/plaza.ts; confirmed this citation after checking the claim that implements the one reviewed seeded smoke recipe and bounded low-contrast effect zone.
  */
 export class PlazaHaze extends WorldPiece {
   public readonly id = "plaza-haze";
@@ -276,22 +276,22 @@ export class PlazaHaze extends WorldPiece {
  *
  * @evidence models/040-plaza.md Owns the reviewed composition of level ground,
  *   centre landmark, bounded haze, and their shared world and surface records.
- * @evidenceReview models/040-plaza.md #87863be Read models/040-plaza.md and Plaza in src/world/plaza.ts; confirmed that the class owns the reviewed composition of level ground, centre landmark, bounded haze, and their shared world and surface records without answering another model file.
+ * @evidenceReview models/040-plaza.md #b061784 Read models/040-plaza.md and Plaza in src/world/plaza.ts; confirmed that the class owns the reviewed composition of level ground, centre landmark, bounded haze, and their shared world and surface records without answering another model file.
  * @evidence models/040-plaza.md#plaza-world-composition Composes exactly the
  *   reviewed ground, origin marker, and atmosphere pieces into one world.
- * @evidenceReview models/040-plaza.md#plaza-world-composition #dc0afe8 Read models/040-plaza.md#plaza-world-composition and Plaza in src/world/plaza.ts; confirmed this citation after checking the claim that composes exactly the reviewed ground, origin marker, and atmosphere pieces into one world.
+ * @evidenceReview models/040-plaza.md#plaza-world-composition #96ea0f6 Read models/040-plaza.md#plaza-world-composition and Plaza in src/world/plaza.ts; confirmed this citation after checking the claim that composes exactly the reviewed ground, origin marker, and atmosphere pieces into one world.
  * @evidence models/040-plaza.md#plaza-neutral-review-views Exposes the shared
  *   surface, bounds, and piece identities the neutral review set compares.
- * @evidenceReview models/040-plaza.md#plaza-neutral-review-views #a5bb28d Read models/040-plaza.md#plaza-neutral-review-views and Plaza in src/world/plaza.ts; confirmed this citation after checking the claim that exposes the shared surface, bounds, and piece identities the neutral review set compares.
- * @evidence principles/model-sources.md#design-owned-construction Adds no world
+ * @evidenceReview models/040-plaza.md#plaza-neutral-review-views #a3be395 Read models/040-plaza.md#plaza-neutral-review-views and Plaza in src/world/plaza.ts; confirmed this citation after checking the claim that exposes the shared surface, bounds, and piece identities the neutral review set compares.
+ * @evidence obligations/model-sources.md#design-owned-construction Adds no world
  *   piece or spatial relation outside the cited design.
- * @evidenceReview principles/model-sources.md#design-owned-construction #6cf1a71 Read principles/model-sources.md#design-owned-construction and Plaza in src/world/plaza.ts; confirmed this citation after checking the claim that adds no world piece or spatial relation outside the cited design.
- * @evidence principles/model-sources.md#deterministic-build Merges the same
+ * @evidenceReview obligations/model-sources.md#design-owned-construction #41ffc4f Read obligations/model-sources.md#design-owned-construction and Plaza in src/world/plaza.ts; confirmed this citation after checking the claim that adds no world piece or spatial relation outside the cited design.
+ * @evidence obligations/model-sources.md#deterministic-build Merges the same
  *   ordered piece contributions into the same world record.
- * @evidenceReview principles/model-sources.md#deterministic-build #bf45408 Read principles/model-sources.md#deterministic-build and Plaza in src/world/plaza.ts; confirmed this citation after checking the claim that merges the same ordered piece contributions into the same world record.
- * @evidence principles/model-sources.md#unsupported-fidelity-is-explicit Keeps
+ * @evidenceReview obligations/model-sources.md#deterministic-build #288cbb3 Read obligations/model-sources.md#deterministic-build and Plaza in src/world/plaza.ts; confirmed this citation after checking the claim that merges the same ordered piece contributions into the same world record.
+ * @evidence obligations/model-sources.md#unsupported-fidelity-is-explicit Keeps
  *   enclosure and physically based atmosphere outside this blocking model.
- * @evidenceReview principles/model-sources.md#unsupported-fidelity-is-explicit #d7527d5 Read principles/model-sources.md#unsupported-fidelity-is-explicit and Plaza in src/world/plaza.ts; confirmed this citation after checking the claim that keeps enclosure and physically based atmosphere outside this blocking model.
+ * @evidenceReview obligations/model-sources.md#unsupported-fidelity-is-explicit #35050b3 Read obligations/model-sources.md#unsupported-fidelity-is-explicit and Plaza in src/world/plaza.ts; confirmed this citation after checking the claim that keeps enclosure and physically based atmosphere outside this blocking model.
  */
 export class Plaza extends AutoMovieSubjectGroup<
   IAutoMovieWorldDesign,
@@ -318,7 +318,7 @@ export class Plaza extends AutoMovieSubjectGroup<
    *
    * @evidence models/040-plaza.md#plaza-world-composition Composes the reviewed
    *   ground patches into the one staged space.
-   * @evidenceReview models/040-plaza.md#plaza-world-composition #dc0afe8 Read models/040-plaza.md#plaza-world-composition and space in src/world/plaza.ts; confirmed this citation after checking the claim that composes the reviewed ground patches into the one staged space.
+   * @evidenceReview models/040-plaza.md#plaza-world-composition #96ea0f6 Read models/040-plaza.md#plaza-world-composition and space in src/world/plaza.ts; confirmed this citation after checking the claim that composes the reviewed ground patches into the one staged space.
    */
   public space(): IAutoMovieSpace {
     const surfaces = this.members().flatMap((piece) => [...piece.patches()]);
@@ -334,7 +334,7 @@ export class Plaza extends AutoMovieSubjectGroup<
    *
    * @evidence models/040-plaza.md#plaza-world-composition Composes the reviewed
    *   surface, landmark, instance, and effect records without transcribing them.
-   * @evidenceReview models/040-plaza.md#plaza-world-composition #dc0afe8 Read models/040-plaza.md#plaza-world-composition and design in src/world/plaza.ts; confirmed this citation after checking the claim that composes the reviewed surface, landmark, instance, and effect records without transcribing them.
+   * @evidenceReview models/040-plaza.md#plaza-world-composition #96ea0f6 Read models/040-plaza.md#plaza-world-composition and design in src/world/plaza.ts; confirmed this citation after checking the claim that composes the reviewed surface, landmark, instance, and effect records without transcribing them.
    */
   public design(): IAutoMovieWorldDesign {
     const placed = mergeAutoMovieSubjectContributions(
@@ -366,6 +366,6 @@ export class Plaza extends AutoMovieSubjectGroup<
  *
  * @evidence models/040-plaza.md#plaza-world-composition Instantiates the
  *   reviewed complete world once.
- * @evidenceReview models/040-plaza.md#plaza-world-composition #dc0afe8 Read models/040-plaza.md#plaza-world-composition and plaza in src/world/plaza.ts; confirmed this citation after checking the claim that instantiates the reviewed complete world once.
+ * @evidenceReview models/040-plaza.md#plaza-world-composition #96ea0f6 Read models/040-plaza.md#plaza-world-composition and plaza in src/world/plaza.ts; confirmed this citation after checking the claim that instantiates the reviewed complete world once.
  */
 export const plaza = new Plaza();

@@ -30,22 +30,22 @@ import { ChorusMember, chorusHero } from "../units/chorusHero";
  *
  * @evidence models/020-chorus.md Owns the reviewed 2,049-member layout,
  *   anchor, facing, spacing, seed, and formation channels as one CHORUS model.
- * @evidenceReview models/020-chorus.md #6744e96 Read models/020-chorus.md and Chorus in src/formations/chorus.ts; confirmed that this class alone owns the reviewed 2,049-member layout, anchor, facing, spacing, seed, and formation channels, while its H2 citations delimit the formation subset it realizes.
+ * @evidenceReview models/020-chorus.md #3e77761 Read models/020-chorus.md and Chorus in src/formations/chorus.ts; confirmed that this class alone owns the reviewed 2,049-member layout, anchor, facing, spacing, seed, and formation channels, while its H2 citations delimit the formation subset it realizes.
  * @evidence models/020-chorus.md#chorus-formation-representation Implements
  *   count, layout, anchor, facing, spacing, seed, and motion channels.
- * @evidenceReview models/020-chorus.md#chorus-formation-representation #fa5f1f2 Read models/020-chorus.md#chorus-formation-representation and Chorus in src/formations/chorus.ts; confirmed this citation after checking the claim that implements count, layout, anchor, facing, spacing, seed, and motion channels.
+ * @evidenceReview models/020-chorus.md#chorus-formation-representation #b75fb56 Read models/020-chorus.md#chorus-formation-representation and Chorus in src/formations/chorus.ts; confirmed this citation after checking the claim that implements count, layout, anchor, facing, spacing, seed, and motion channels.
  * @evidence models/020-chorus.md#chorus-neutral-review-views Exposes stable
  *   formation bounds and deterministic tier placement for inspection.
- * @evidenceReview models/020-chorus.md#chorus-neutral-review-views #a9f6f94 Read models/020-chorus.md#chorus-neutral-review-views and Chorus in src/formations/chorus.ts; confirmed this citation after checking the claim that exposes stable formation bounds and deterministic tier placement for inspection.
- * @evidence principles/model-sources.md#design-owned-construction Keeps every
+ * @evidenceReview models/020-chorus.md#chorus-neutral-review-views #b58f6fc Read models/020-chorus.md#chorus-neutral-review-views and Chorus in src/formations/chorus.ts; confirmed this citation after checking the claim that exposes stable formation bounds and deterministic tier placement for inspection.
+ * @evidence obligations/model-sources.md#design-owned-construction Keeps every
  *   layout and hierarchy decision owned by the cited model design.
- * @evidenceReview principles/model-sources.md#design-owned-construction #6cf1a71 Read principles/model-sources.md#design-owned-construction and Chorus in src/formations/chorus.ts; confirmed this citation after checking the claim that keeps every layout and hierarchy decision owned by the cited model design.
- * @evidence principles/model-sources.md#deterministic-build Uses one declared
+ * @evidenceReview obligations/model-sources.md#design-owned-construction #41ffc4f Read obligations/model-sources.md#design-owned-construction and Chorus in src/formations/chorus.ts; confirmed this citation after checking the claim that keeps every layout and hierarchy decision owned by the cited model design.
+ * @evidence obligations/model-sources.md#deterministic-build Uses one declared
  *   seed and explicit dimensions to regenerate the same formation.
- * @evidenceReview principles/model-sources.md#deterministic-build #bf45408 Read principles/model-sources.md#deterministic-build and Chorus in src/formations/chorus.ts; confirmed this citation after checking the claim that uses one declared seed and explicit dimensions to regenerate the same formation.
- * @evidence principles/model-sources.md#unsupported-fidelity-is-explicit
+ * @evidenceReview obligations/model-sources.md#deterministic-build #288cbb3 Read obligations/model-sources.md#deterministic-build and Chorus in src/formations/chorus.ts; confirmed this citation after checking the claim that uses one declared seed and explicit dimensions to regenerate the same formation.
+ * @evidence obligations/model-sources.md#unsupported-fidelity-is-explicit
  *   Refuses a count that cannot fill the reviewed row layout honestly.
- * @evidenceReview principles/model-sources.md#unsupported-fidelity-is-explicit #d7527d5 Read principles/model-sources.md#unsupported-fidelity-is-explicit and Chorus in src/formations/chorus.ts; confirmed this citation after checking the claim that refuses a count that cannot fill the reviewed row layout honestly.
+ * @evidenceReview obligations/model-sources.md#unsupported-fidelity-is-explicit #35050b3 Read obligations/model-sources.md#unsupported-fidelity-is-explicit and Chorus in src/formations/chorus.ts; confirmed this citation after checking the claim that refuses a count that cannot fill the reviewed row layout honestly.
  */
 export class Chorus extends AutoMovieSubjectGroup<
   IAutoMovieFormationDesign,
@@ -90,7 +90,7 @@ export class Chorus extends AutoMovieSubjectGroup<
    *
    * @evidence models/020-chorus.md#chorus-formation-representation Draws every
    *   per-member variation from the reviewed declared seed.
-   * @evidenceReview models/020-chorus.md#chorus-formation-representation #fa5f1f2 Read models/020-chorus.md#chorus-formation-representation and seed in src/formations/chorus.ts; confirmed this citation after checking the claim that draws every per-member variation from the reviewed declared seed.
+   * @evidenceReview models/020-chorus.md#chorus-formation-representation #b75fb56 Read models/020-chorus.md#chorus-formation-representation and seed in src/formations/chorus.ts; confirmed this citation after checking the claim that draws every per-member variation from the reviewed declared seed.
    */
   public readonly seed: number = 1415;
 
@@ -131,7 +131,7 @@ export class Chorus extends AutoMovieSubjectGroup<
    *
    * @evidence models/020-chorus.md#chorus-formation-representation Emits the
    *   reviewed rows, columns, spacing, anchor, seed, and capabilities.
-   * @evidenceReview models/020-chorus.md#chorus-formation-representation #fa5f1f2 Read models/020-chorus.md#chorus-formation-representation and design in src/formations/chorus.ts; confirmed this citation after checking the claim that emits the reviewed rows, columns, spacing, anchor, seed, and capabilities.
+   * @evidenceReview models/020-chorus.md#chorus-formation-representation #b75fb56 Read models/020-chorus.md#chorus-formation-representation and design in src/formations/chorus.ts; confirmed this citation after checking the claim that emits the reviewed rows, columns, spacing, anchor, seed, and capabilities.
    */
   public design(): IAutoMovieFormationDesign {
     const slots = this.ranks * this.files;
@@ -174,7 +174,7 @@ export class Chorus extends AutoMovieSubjectGroup<
    *
    * @evidence models/020-chorus.md#chorus-formation-representation Delegates
    *   the reviewed translation to the motion owner and preserves intervals.
-   * @evidenceReview models/020-chorus.md#chorus-formation-representation #fa5f1f2 Read models/020-chorus.md#chorus-formation-representation and advance in src/formations/chorus.ts; confirmed this citation after checking the claim that delegates the reviewed translation to the motion owner and preserves intervals.
+   * @evidenceReview models/020-chorus.md#chorus-formation-representation #b75fb56 Read models/020-chorus.md#chorus-formation-representation and advance in src/formations/chorus.ts; confirmed this citation after checking the claim that delegates the reviewed translation to the motion owner and preserves intervals.
    */
   public advance(props: {
     id: string;
@@ -189,7 +189,7 @@ export class Chorus extends AutoMovieSubjectGroup<
    *
    * @evidence models/020-chorus.md#chorus-formation-representation Delegates
    *   the reviewed translation and spacing channels to the hold motion owner.
-   * @evidenceReview models/020-chorus.md#chorus-formation-representation #fa5f1f2 Read models/020-chorus.md#chorus-formation-representation and hold in src/formations/chorus.ts; confirmed this citation after checking the claim that delegates the reviewed translation and spacing channels to the hold motion owner.
+   * @evidenceReview models/020-chorus.md#chorus-formation-representation #b75fb56 Read models/020-chorus.md#chorus-formation-representation and hold in src/formations/chorus.ts; confirmed this citation after checking the claim that delegates the reviewed translation and spacing channels to the hold motion owner.
    */
   public hold(props: {
     id: string;
@@ -214,7 +214,7 @@ export class Chorus extends AutoMovieSubjectGroup<
    *
    * @evidence models/020-chorus.md#chorus-formation-representation Delegates
    *   only the reviewed uniform spacing channels to the motion owner.
-   * @evidenceReview models/020-chorus.md#chorus-formation-representation #fa5f1f2 Read models/020-chorus.md#chorus-formation-representation and break in src/formations/chorus.ts; confirmed this citation after checking the claim that delegates only the reviewed uniform spacing channels to the motion owner.
+   * @evidenceReview models/020-chorus.md#chorus-formation-representation #b75fb56 Read models/020-chorus.md#chorus-formation-representation and break in src/formations/chorus.ts; confirmed this citation after checking the claim that delegates only the reviewed uniform spacing channels to the motion owner.
    */
   public break(props: {
     id: string;
@@ -234,7 +234,7 @@ export class Chorus extends AutoMovieSubjectGroup<
    *
    * @evidence models/020-chorus.md#chorus-neutral-review-views Computes the
    *   reviewed group footprint used by neutral bounds inspection.
-   * @evidenceReview models/020-chorus.md#chorus-neutral-review-views #a9f6f94 Read models/020-chorus.md#chorus-neutral-review-views and footprint in src/formations/chorus.ts; confirmed this citation after checking the claim that computes the reviewed group footprint used by neutral bounds inspection.
+   * @evidenceReview models/020-chorus.md#chorus-neutral-review-views #b58f6fc Read models/020-chorus.md#chorus-neutral-review-views and footprint in src/formations/chorus.ts; confirmed this citation after checking the claim that computes the reviewed group footprint used by neutral bounds inspection.
    */
   public footprint(): { width: number; depth: number } {
     return {
@@ -255,7 +255,7 @@ export class Chorus extends AutoMovieSubjectGroup<
    *
    * @evidence models/020-chorus.md#chorus-neutral-review-views Extends the
    *   reviewed footprint through its full authored advance for containment.
-   * @evidenceReview models/020-chorus.md#chorus-neutral-review-views #a9f6f94 Read models/020-chorus.md#chorus-neutral-review-views and reach in src/formations/chorus.ts; confirmed this citation after checking the claim that extends the reviewed footprint through its full authored advance for containment.
+   * @evidenceReview models/020-chorus.md#chorus-neutral-review-views #b58f6fc Read models/020-chorus.md#chorus-neutral-review-views and reach in src/formations/chorus.ts; confirmed this citation after checking the claim that extends the reviewed footprint through its full authored advance for containment.
    */
   public reach(): number {
     const footprint = this.footprint();
@@ -274,7 +274,7 @@ export class Chorus extends AutoMovieSubjectGroup<
    *
    * @evidence models/020-chorus.md#chorus-formation-representation Contributes
    *   the reviewed standing formation while separate motion sources move it.
-   * @evidenceReview models/020-chorus.md#chorus-formation-representation #fa5f1f2 Read models/020-chorus.md#chorus-formation-representation and render in src/formations/chorus.ts; confirmed this citation after checking the claim that contributes the reviewed standing formation while separate motion sources move it.
+   * @evidenceReview models/020-chorus.md#chorus-formation-representation #b75fb56 Read models/020-chorus.md#chorus-formation-representation and render in src/formations/chorus.ts; confirmed this citation after checking the claim that contributes the reviewed standing formation while separate motion sources move it.
    */
   public render(
     context: IAutoMovieShotBuildContext,
@@ -291,6 +291,6 @@ export class Chorus extends AutoMovieSubjectGroup<
  *
  * @evidence models/020-chorus.md#chorus-formation-representation Instantiates
  *   the reviewed complete formation once.
- * @evidenceReview models/020-chorus.md#chorus-formation-representation #fa5f1f2 Read models/020-chorus.md#chorus-formation-representation and chorus in src/formations/chorus.ts; confirmed this citation after checking the claim that instantiates the reviewed complete formation once.
+ * @evidenceReview models/020-chorus.md#chorus-formation-representation #b75fb56 Read models/020-chorus.md#chorus-formation-representation and chorus in src/formations/chorus.ts; confirmed this citation after checking the claim that instantiates the reviewed complete formation once.
  */
 export const chorus = new Chorus();

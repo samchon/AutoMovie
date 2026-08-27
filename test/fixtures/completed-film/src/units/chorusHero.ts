@@ -31,19 +31,19 @@ const chorusProfile = (recipe: string): IAutoMovieProfile => ({
  *
  * @evidence models/020-chorus.md Owns the reviewed hero member recipe and its
  *   LOD selection without claiming formation layout or an independent subject.
- * @evidenceReview models/020-chorus.md #6744e96 Read models/020-chorus.md and ChorusMember in src/units/chorusHero.ts; confirmed that the class owns the reviewed hero member recipe and LOD selection without claiming formation layout or an independent subject, while its H2 citation delimits the member subset it realizes.
+ * @evidenceReview models/020-chorus.md #3e77761 Read models/020-chorus.md and ChorusMember in src/units/chorusHero.ts; confirmed that the class owns the reviewed hero member recipe and LOD selection without claiming formation layout or an independent subject, while its H2 citation delimits the member subset it realizes.
  * @evidence models/020-chorus.md#chorus-member-tier-representation Implements
  *   the hero recipe, scale check, material, walk profile, and LOD ladder.
- * @evidenceReview models/020-chorus.md#chorus-member-tier-representation #8993be3 Read models/020-chorus.md#chorus-member-tier-representation and ChorusMember in src/units/chorusHero.ts; confirmed this citation after checking the claim that implements the hero recipe, scale check, material, walk profile, and LOD ladder.
- * @evidence principles/model-sources.md#design-owned-construction Keeps height,
+ * @evidenceReview models/020-chorus.md#chorus-member-tier-representation #53a9c29 Read models/020-chorus.md#chorus-member-tier-representation and ChorusMember in src/units/chorusHero.ts; confirmed this citation after checking the claim that implements the hero recipe, scale check, material, walk profile, and LOD ladder.
+ * @evidence obligations/model-sources.md#design-owned-construction Keeps height,
  *   radii, palette, and tier thresholds owned by the cited model design.
- * @evidenceReview principles/model-sources.md#design-owned-construction #6cf1a71 Read principles/model-sources.md#design-owned-construction and ChorusMember in src/units/chorusHero.ts; confirmed this citation after checking the claim that keeps height, radii, palette, and tier thresholds owned by the cited model design.
- * @evidence principles/model-sources.md#deterministic-build Builds the same
+ * @evidenceReview obligations/model-sources.md#design-owned-construction #41ffc4f Read obligations/model-sources.md#design-owned-construction and ChorusMember in src/units/chorusHero.ts; confirmed this citation after checking the claim that keeps height, radii, palette, and tier thresholds owned by the cited model design.
+ * @evidence obligations/model-sources.md#deterministic-build Builds the same
  *   recipe and validation result from the same reviewed fields.
- * @evidenceReview principles/model-sources.md#deterministic-build #bf45408 Read principles/model-sources.md#deterministic-build and ChorusMember in src/units/chorusHero.ts; confirmed this citation after checking the claim that builds the same recipe and validation result from the same reviewed fields.
- * @evidence principles/model-sources.md#unsupported-fidelity-is-explicit
+ * @evidenceReview obligations/model-sources.md#deterministic-build #288cbb3 Read obligations/model-sources.md#deterministic-build and ChorusMember in src/units/chorusHero.ts; confirmed this citation after checking the claim that builds the same recipe and validation result from the same reviewed fields.
+ * @evidence obligations/model-sources.md#unsupported-fidelity-is-explicit
  *   Refuses a member scale that contradicts the reviewed reference relation.
- * @evidenceReview principles/model-sources.md#unsupported-fidelity-is-explicit #d7527d5 Read principles/model-sources.md#unsupported-fidelity-is-explicit and ChorusMember in src/units/chorusHero.ts; confirmed this citation after checking the claim that refuses a member scale that contradicts the reviewed reference relation.
+ * @evidenceReview obligations/model-sources.md#unsupported-fidelity-is-explicit #35050b3 Read obligations/model-sources.md#unsupported-fidelity-is-explicit and ChorusMember in src/units/chorusHero.ts; confirmed this citation after checking the claim that refuses a member scale that contradicts the reviewed reference relation.
  */
 export class ChorusMember extends AutoMovieSubject<IAutoMovieModelRecipe> {
   public readonly id = "chorus-hero";
@@ -61,7 +61,7 @@ export class ChorusMember extends AutoMovieSubject<IAutoMovieModelRecipe> {
    * written around.
    * @evidence models/020-chorus.md#chorus-member-tier-representation Holds the
    *   separately stated member height against its reviewed reference relation.
-   * @evidenceReview models/020-chorus.md#chorus-member-tier-representation #8993be3 Read models/020-chorus.md#chorus-member-tier-representation and SPECIFIED_HEIGHT in src/units/chorusHero.ts; confirmed this citation after checking the claim that holds the separately stated member height against its reviewed reference relation.
+   * @evidenceReview models/020-chorus.md#chorus-member-tier-representation #53a9c29 Read models/020-chorus.md#chorus-member-tier-representation and SPECIFIED_HEIGHT in src/units/chorusHero.ts; confirmed this citation after checking the claim that holds the separately stated member height against its reviewed reference relation.
    */
   public static readonly SPECIFIED_HEIGHT: number = 1.7;
 
@@ -73,7 +73,7 @@ export class ChorusMember extends AutoMovieSubject<IAutoMovieModelRecipe> {
    * mistaken for one.
    * @evidence models/020-chorus.md#chorus-member-tier-representation States the
    *   numeric tolerance used to check the reviewed height derivation.
-   * @evidenceReview models/020-chorus.md#chorus-member-tier-representation #8993be3 Read models/020-chorus.md#chorus-member-tier-representation and SCALE_TOLERANCE in src/units/chorusHero.ts; confirmed this citation after checking the claim that states the numeric tolerance used to check the reviewed height derivation.
+   * @evidenceReview models/020-chorus.md#chorus-member-tier-representation #53a9c29 Read models/020-chorus.md#chorus-member-tier-representation and SCALE_TOLERANCE in src/units/chorusHero.ts; confirmed this citation after checking the claim that states the numeric tolerance used to check the reviewed height derivation.
    */
   public static readonly SCALE_TOLERANCE: number = 1e-9;
 
@@ -115,7 +115,7 @@ export class ChorusMember extends AutoMovieSubject<IAutoMovieModelRecipe> {
    *
    * @evidence models/020-chorus.md#chorus-member-tier-representation Supplies
    *   the hero tier's reviewed profile id, name, and only gait.
-   * @evidenceReview models/020-chorus.md#chorus-member-tier-representation #8993be3 Read models/020-chorus.md#chorus-member-tier-representation and profile in src/units/chorusHero.ts; confirmed this citation after checking the claim that supplies the hero tier's reviewed profile id, name, and only gait.
+   * @evidenceReview models/020-chorus.md#chorus-member-tier-representation #53a9c29 Read models/020-chorus.md#chorus-member-tier-representation and profile in src/units/chorusHero.ts; confirmed this citation after checking the claim that supplies the hero tier's reviewed profile id, name, and only gait.
    */
   public profile(): IAutoMovieProfile {
     return chorusProfile(this.id);
@@ -136,7 +136,7 @@ export class ChorusMember extends AutoMovieSubject<IAutoMovieModelRecipe> {
    *
    * @evidence models/020-chorus.md#chorus-member-tier-representation Emits the
    *   reviewed hero recipe and its distance-tier ladder.
-   * @evidenceReview models/020-chorus.md#chorus-member-tier-representation #8993be3 Read models/020-chorus.md#chorus-member-tier-representation and design in src/units/chorusHero.ts; confirmed this citation after checking the claim that emits the reviewed hero recipe, walk profile, and distance-tier ladder.
+   * @evidenceReview models/020-chorus.md#chorus-member-tier-representation #53a9c29 Read models/020-chorus.md#chorus-member-tier-representation and design in src/units/chorusHero.ts; confirmed this citation after checking the claim that emits the reviewed hero recipe, walk profile, and distance-tier ladder.
    */
   public design(): IAutoMovieModelRecipe {
     // Compared within a tolerance, not exactly. The height is a difference of
@@ -180,7 +180,7 @@ export class ChorusMember extends AutoMovieSubject<IAutoMovieModelRecipe> {
    *
    * @evidence models/020-chorus.md#chorus-formation-representation Leaves
    *   staging to the reviewed instance formation rather than duplicating it.
-   * @evidenceReview models/020-chorus.md#chorus-formation-representation #fa5f1f2 Read models/020-chorus.md#chorus-formation-representation and render in src/units/chorusHero.ts; confirmed this citation after checking the claim that leaves staging to the reviewed instance formation rather than duplicating it.
+   * @evidenceReview models/020-chorus.md#chorus-formation-representation #b75fb56 Read models/020-chorus.md#chorus-formation-representation and render in src/units/chorusHero.ts; confirmed this citation after checking the claim that leaves staging to the reviewed instance formation rather than duplicating it.
    */
   public render(
     _context: IAutoMovieShotBuildContext,
@@ -197,7 +197,7 @@ export class ChorusMember extends AutoMovieSubject<IAutoMovieModelRecipe> {
  *
  * @evidence models/020-chorus.md#chorus-member-tier-representation Instantiates
  *   the reviewed hero member recipe once.
- * @evidenceReview models/020-chorus.md#chorus-member-tier-representation #8993be3 Read models/020-chorus.md#chorus-member-tier-representation and chorusHero in src/units/chorusHero.ts; confirmed this citation after checking the claim that instantiates the reviewed hero member recipe once.
+ * @evidenceReview models/020-chorus.md#chorus-member-tier-representation #53a9c29 Read models/020-chorus.md#chorus-member-tier-representation and chorusHero in src/units/chorusHero.ts; confirmed this citation after checking the claim that instantiates the reviewed hero member recipe once.
  */
 export const chorusHero = new ChorusMember();
 
@@ -219,19 +219,19 @@ export const chorusHero = new ChorusMember();
  *
  * @evidence models/020-chorus.md Owns one reviewed coarse distance tier that
  *   preserves CHORUS member height, articulation, palette, and gait identity.
- * @evidenceReview models/020-chorus.md #6744e96 Read models/020-chorus.md and ChorusTier in src/units/chorusHero.ts; confirmed that each instance owns one reviewed coarse distance tier preserving member height, articulation, palette, and gait identity, while its H2 citation delimits the distance-tier subset it realizes.
+ * @evidenceReview models/020-chorus.md #3e77761 Read models/020-chorus.md and ChorusTier in src/units/chorusHero.ts; confirmed that each instance owns one reviewed coarse distance tier preserving member height, articulation, palette, and gait identity, while its H2 citation delimits the distance-tier subset it realizes.
  * @evidence models/020-chorus.md#chorus-member-tier-representation Preserves
  *   member height, articulation, palette, and gait silhouette in coarse tiers.
- * @evidenceReview models/020-chorus.md#chorus-member-tier-representation #8993be3 Read models/020-chorus.md#chorus-member-tier-representation and ChorusTier in src/units/chorusHero.ts; confirmed this citation after checking the claim that preserves member height, articulation, palette, and the exact walk-only profile in coarse tiers.
- * @evidence principles/model-sources.md#design-owned-construction Uses only
+ * @evidenceReview models/020-chorus.md#chorus-member-tier-representation #53a9c29 Read models/020-chorus.md#chorus-member-tier-representation and ChorusTier in src/units/chorusHero.ts; confirmed this citation after checking the claim that preserves member height, articulation, palette, and the exact walk-only profile in coarse tiers.
+ * @evidence obligations/model-sources.md#design-owned-construction Uses only
  *   dimensions and tier identity owned by the cited model design.
- * @evidenceReview principles/model-sources.md#design-owned-construction #6cf1a71 Read principles/model-sources.md#design-owned-construction and ChorusTier in src/units/chorusHero.ts; confirmed this citation after checking the claim that uses only dimensions and tier identity owned by the cited model design.
- * @evidence principles/model-sources.md#deterministic-build Produces the same
+ * @evidenceReview obligations/model-sources.md#design-owned-construction #41ffc4f Read obligations/model-sources.md#design-owned-construction and ChorusTier in src/units/chorusHero.ts; confirmed this citation after checking the claim that uses only dimensions and tier identity owned by the cited model design.
+ * @evidence obligations/model-sources.md#deterministic-build Produces the same
  *   coarse recipe and gait profile from the same constructor fields.
- * @evidenceReview principles/model-sources.md#deterministic-build #bf45408 Read principles/model-sources.md#deterministic-build and ChorusTier in src/units/chorusHero.ts; confirmed this citation after checking the claim that produces the same coarse recipe and gait profile from the same constructor fields.
- * @evidence principles/model-sources.md#unsupported-fidelity-is-explicit
+ * @evidenceReview obligations/model-sources.md#deterministic-build #288cbb3 Read obligations/model-sources.md#deterministic-build and ChorusTier in src/units/chorusHero.ts; confirmed this citation after checking the claim that produces the same coarse recipe and gait profile from the same constructor fields.
+ * @evidence obligations/model-sources.md#unsupported-fidelity-is-explicit
  *   Refuses a tier whose radii are finer than the hero it claims to coarsen.
- * @evidenceReview principles/model-sources.md#unsupported-fidelity-is-explicit #d7527d5 Read principles/model-sources.md#unsupported-fidelity-is-explicit and ChorusTier in src/units/chorusHero.ts; confirmed this citation after checking the claim that refuses a tier whose radii are finer than the hero it claims to coarsen.
+ * @evidenceReview obligations/model-sources.md#unsupported-fidelity-is-explicit #35050b3 Read obligations/model-sources.md#unsupported-fidelity-is-explicit and ChorusTier in src/units/chorusHero.ts; confirmed this citation after checking the claim that refuses a tier whose radii are finer than the hero it claims to coarsen.
  */
 export class ChorusTier extends AutoMovieSubject<IAutoMovieModelRecipe> {
   public constructor(
@@ -276,7 +276,7 @@ export class ChorusTier extends AutoMovieSubject<IAutoMovieModelRecipe> {
    *
    * @evidence models/020-chorus.md#chorus-member-tier-representation Supplies
    *   the one reviewed articulated gait profile used by this tier.
-   * @evidenceReview models/020-chorus.md#chorus-member-tier-representation #8993be3 Read models/020-chorus.md#chorus-member-tier-representation and profile in src/units/chorusHero.ts; confirmed this citation after checking the claim that supplies the one reviewed walk-only articulated gait profile with the design-owned id and name.
+   * @evidenceReview models/020-chorus.md#chorus-member-tier-representation #53a9c29 Read models/020-chorus.md#chorus-member-tier-representation and profile in src/units/chorusHero.ts; confirmed this citation after checking the claim that supplies the one reviewed walk-only articulated gait profile with the design-owned id and name.
    */
   public profile(): IAutoMovieProfile {
     return chorusProfile(this.id);
@@ -297,7 +297,7 @@ export class ChorusTier extends AutoMovieSubject<IAutoMovieModelRecipe> {
    *
    * @evidence models/020-chorus.md#chorus-member-tier-representation Preserves
    *   the reviewed articulated proxy instead of degrading to a rigid box.
-   * @evidenceReview models/020-chorus.md#chorus-member-tier-representation #8993be3 Read models/020-chorus.md#chorus-member-tier-representation and design in src/units/chorusHero.ts; confirmed this citation after checking the claim that preserves the reviewed walk-profiled articulated proxy instead of degrading to a rigid box.
+   * @evidenceReview models/020-chorus.md#chorus-member-tier-representation #53a9c29 Read models/020-chorus.md#chorus-member-tier-representation and design in src/units/chorusHero.ts; confirmed this citation after checking the claim that preserves the reviewed walk-profiled articulated proxy instead of degrading to a rigid box.
    */
   public design(): IAutoMovieModelRecipe {
     if (
@@ -333,7 +333,7 @@ export class ChorusTier extends AutoMovieSubject<IAutoMovieModelRecipe> {
    *
    * @evidence models/020-chorus.md#chorus-formation-representation Leaves
    *   staging to the reviewed complete formation.
-   * @evidenceReview models/020-chorus.md#chorus-formation-representation #fa5f1f2 Read models/020-chorus.md#chorus-formation-representation and render in src/units/chorusHero.ts; confirmed this citation after checking the claim that leaves staging to the reviewed complete formation.
+   * @evidenceReview models/020-chorus.md#chorus-formation-representation #b75fb56 Read models/020-chorus.md#chorus-formation-representation and render in src/units/chorusHero.ts; confirmed this citation after checking the claim that leaves staging to the reviewed complete formation.
    */
   public render(
     _context: IAutoMovieShotBuildContext,
@@ -350,7 +350,7 @@ export class ChorusTier extends AutoMovieSubject<IAutoMovieModelRecipe> {
  *
  * @evidence models/020-chorus.md#chorus-member-tier-representation Instantiates
  *   the reviewed near-distance member tier.
- * @evidenceReview models/020-chorus.md#chorus-member-tier-representation #8993be3 Read models/020-chorus.md#chorus-member-tier-representation and chorusNear in src/units/chorusHero.ts; confirmed this citation after checking the claim that instantiates the reviewed near-distance member tier.
+ * @evidenceReview models/020-chorus.md#chorus-member-tier-representation #53a9c29 Read models/020-chorus.md#chorus-member-tier-representation and chorusNear in src/units/chorusHero.ts; confirmed this citation after checking the claim that instantiates the reviewed near-distance member tier.
  */
 export const chorusNear = new ChorusTier("chorus-near", "near", 0.15, 0.065);
 
@@ -362,6 +362,6 @@ export const chorusNear = new ChorusTier("chorus-near", "near", 0.15, 0.065);
  *
  * @evidence models/020-chorus.md#chorus-member-tier-representation Instantiates
  *   the reviewed far-distance member tier.
- * @evidenceReview models/020-chorus.md#chorus-member-tier-representation #8993be3 Read models/020-chorus.md#chorus-member-tier-representation and chorusFar in src/units/chorusHero.ts; confirmed this citation after checking the claim that instantiates the reviewed far-distance member tier.
+ * @evidenceReview models/020-chorus.md#chorus-member-tier-representation #53a9c29 Read models/020-chorus.md#chorus-member-tier-representation and chorusFar in src/units/chorusHero.ts; confirmed this citation after checking the claim that instantiates the reviewed far-distance member tier.
  */
 export const chorusFar = new ChorusTier("chorus-far", "far", 0.17, 0.085);

@@ -5,20 +5,20 @@ import type { IAutoMovieFormationMotion } from "@automovie/interface";
  *
  * @evidence motions/030-chorus-break.md Solely owns the reviewed uniform
  *   lateral-and-depth interval expansion with a consumer-selected scale.
- * @evidenceReview motions/030-chorus-break.md #36089c4 Read motions/030-chorus-break.md and createChorusBreakMotion in src/motions/chorusBreak.ts; confirmed that this function solely owns the reviewed uniform lateral-and-depth expansion and accepts only its consumer-selected scale.
+ * @evidenceReview motions/030-chorus-break.md #f4618ef Read motions/030-chorus-break.md and createChorusBreakMotion in src/motions/chorusBreak.ts; confirmed that this function solely owns the reviewed uniform lateral-and-depth expansion and accepts only its consumer-selected scale.
  * @evidence motions/030-chorus-break.md#chorus-uniform-break Changes only the
  *   two spacing channels from one to the same explicit scale, selecting walk
  *   while documenting that zero root travel supplies no gait cadence.
  * @evidenceReview motions/030-chorus-break.md#chorus-uniform-break #fe40ad6 Read motions/030-chorus-break.md#chorus-uniform-break and createChorusBreakMotion in src/motions/chorusBreak.ts; confirmed this citation after checking the claim that changes only the two spacing channels from one to the same explicit scale, selecting walk while zero root travel supplies no gait cadence.
- * @evidence principles/motion-sources.md#design-owned-transition Implements
+ * @evidence obligations/motion-sources.md#design-owned-transition Implements
  *   only the cited endpoints, spatial relation, and ease-out path.
- * @evidenceReview principles/motion-sources.md#design-owned-transition #0815474 Read principles/motion-sources.md#design-owned-transition and createChorusBreakMotion in src/motions/chorusBreak.ts; confirmed this citation after checking the claim that implements only the cited endpoints, spatial relation, and ease-out path.
- * @evidence principles/motion-sources.md#pure-time-mapping Maps explicit
+ * @evidenceReview obligations/motion-sources.md#design-owned-transition #5d64f23 Read obligations/motion-sources.md#design-owned-transition and createChorusBreakMotion in src/motions/chorusBreak.ts; confirmed this citation after checking the claim that implements only the cited endpoints, spatial relation, and ease-out path.
+ * @evidence obligations/motion-sources.md#pure-time-mapping Maps explicit
  *   identity, interval, and scale to one deterministic record.
- * @evidenceReview principles/motion-sources.md#pure-time-mapping #c0ea4a6 Read principles/motion-sources.md#pure-time-mapping and createChorusBreakMotion in src/motions/chorusBreak.ts; confirmed explicit identity, interval, and scale produce one deterministic time-addressed record while engine sampling stays outside the constructor.
- * @evidence principles/motion-sources.md#invalid-input-is-visible Rejects an
+ * @evidenceReview obligations/motion-sources.md#pure-time-mapping #3127ece Read obligations/motion-sources.md#pure-time-mapping and createChorusBreakMotion in src/motions/chorusBreak.ts; confirmed explicit identity, interval, and scale produce one deterministic time-addressed record while engine sampling stays outside the constructor.
+ * @evidence obligations/motion-sources.md#invalid-input-is-visible Rejects an
  *   empty identity, invalid interval, and non-expanding scale.
- * @evidenceReview principles/motion-sources.md#invalid-input-is-visible #ca43ce3 Read principles/motion-sources.md#invalid-input-is-visible and createChorusBreakMotion in src/motions/chorusBreak.ts; confirmed this citation after checking the claim that rejects an empty identity, invalid interval, and non-expanding scale.
+ * @evidenceReview obligations/motion-sources.md#invalid-input-is-visible #5ce63ab Read obligations/motion-sources.md#invalid-input-is-visible and createChorusBreakMotion in src/motions/chorusBreak.ts; confirmed this citation after checking the claim that rejects an empty identity, invalid interval, and non-expanding scale.
  */
 export function createChorusBreakMotion(props: {
   id: string;
