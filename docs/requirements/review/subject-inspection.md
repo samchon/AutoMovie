@@ -14,9 +14,9 @@
 
 ### 판정할 수 있는 대상은 관찰할 수 있어야 한다 {#review-observable-judgeable-parity}
 
-사용자가 판정을 요청할 수 있는 모든 대상은 그 대상을 직접 관찰하는 검토 단위를 가져야 한다. 단위는 시간 축 위의 frame·구간·전체 작품, 전달물 또는 주체 가운데 하나이며, 어느 단위에도 속하지 않는 대상을 판정 대상으로 제공하지 않아야 한다.
+AutoMovie가 직접 검사 target으로 공개한 모든 대상 종류는 그 대상을 실제로 여는 관찰 단위를 가져야 한다. 주체 검사 target은 안정된 주체 identity와 검사-owned viewpoint를 받아 실제 observation artifact를 생산해야 하며, 구조 검사 target은 compiled record를 반환해야 한다. 제품이 저장하지 않는 사람의 승인, 반려, waiver와 일반 작품 판정은 이 target 집합에 포함되지 않는다.
 
-관찰 단위가 없는 대상의 판정을 그 대상을 우연히 담은 다른 관찰로 대신하지 않아야 한다. 판정 대상 목록이 늘어나면 그 대상을 관찰할 단위도 함께 늘어나야 하며, 관찰 단위 없이 늘어난 대상은 미지원으로 표시해야 한다.
+관찰 단위가 없는 target을 그 대상을 우연히 담은 다른 관찰로 대신하지 않아야 한다. 공개 검사 target 종류가 늘어나면 그 target을 직접 여는 관찰 단위도 함께 늘어나야 하며, 실제 artifact를 생산할 수 없으면 무엇이 없는지 밝히고 거부해야 한다.
 
 ### 시점의 소유 {#review-subject-viewpoint-ownership}
 
@@ -30,15 +30,15 @@ Frame과 구간 검토는 반대로 저작된 camera를 그대로 물려받아�
 
 주체 검사는 화면을 볼 수 없는 당사자가 요청할 수 있어야 한다. 주체를 안정된 identity로 이름 대고 검사가 소유한 시점을 지정하면 그 시점의 관찰 artifact를 돌려받는 요청 표면이 있어야 하며, 그 표면 없이 사람의 화면에서만 열리는 검사 기구는 저작 주체에게 없는 기구로 취급해야 한다.
 
-같은 주체 identity와 같은 시점을 지정한 두 요청은 같은 대상을 같은 조건에서 열어야 한다. 검사 결과를 지목하는 근거는 관찰 artifact 자체가 아니라 주체 identity와 시점 identity여야 하며, 이미지를 주고받아야만 성립하는 지목은 지목으로 인정하지 않아야 한다.
+같은 주체 identity, 시점, raster와 검사 입력을 지정한 두 요청은 같은 대상을 같은 조건에서 열어야 한다. 검사 결과는 주체 identity, compiled revision, current plan record와 viewpoint identity로 다시 지목할 수 있어야 하며, 이미지를 주고받아야만 성립하는 지목은 지목으로 인정하지 않아야 한다.
 
 관찰 artifact를 생산하는 기구가 없으면 표면은 관찰을 지어내지 않고 거부해야 하며, 거부는 무엇이 없는지와 그것을 어떻게 갖추는지를 이름으로 말해야 한다.
 
 ### 주체 검토의 Evidence와 Freshness {#review-subject-evidence}
 
-주체 검토 evidence는 관찰한 주체 identity와 revision, 고른 시점 집합과 각 관찰 조건, 사용한 표현과 state, 그리고 그 관찰이 어느 compile 또는 source 상태에서 나왔는지를 함께 가져야 한다. 필수 시점을 관찰하지 못했으면 그 범위는 pass가 될 수 없으며 not-run, unsupported, indeterminate 또는 partial 가운데 실제 원인을 표시해야 한다.
+주체 검토 evidence는 관찰한 주체 identity와 compiled revision, compile fingerprint, 전체 required viewpoint plan, 각 관찰의 실제 pose, artifact identity와 digest를 함께 가져야 한다. Plan은 각 viewpoint identity의 direction, distance, projection, pose와 state를 선언하고 실제 관찰 집합과 분리되어야 한다. 필수 시점을 관찰하지 못했으면 그 범위는 pass가 될 수 없으며 not-run, unsupported, indeterminate 또는 partial 가운데 실제 원인을 표시해야 한다.
 
-주체, 그 구성요소, 적용 기준이나 관찰 조건이 바뀌면 그 주체의 검토를 stale로 전환해야 한다. Shot을 다시 render했다는 사실은 주체 검토를 current로 만들지 않고, 주체 검토를 다시 수행했다는 사실은 그 주체가 등장하는 frame 판정을 current로 만들지 않는다.
+주체 또는 구성요소가 바뀌어 새 compiled revision이나 compile fingerprint가 발행되거나, required viewpoint plan의 identity 또는 관찰 조건이 바뀌면 이전 관찰은 current가 아니다. 현재 plan을 먼저 게시하고 그 plan의 모든 시점을 새 observation sweep으로 생산해야 한다. Shot을 다시 render했다는 사실은 주체 검토를 current로 만들지 않고, 주체 검토를 다시 수행했다는 사실은 그 주체가 등장하는 frame 판정을 current로 만들지 않는다.
 
 ### 주체 Coverage {#review-subject-coverage}
 
@@ -46,8 +46,6 @@ Frame과 구간 검토는 반대로 저작된 camera를 그대로 물려받아�
 
 원형 단위 coverage와 배치 단위 coverage는 서로 다른 주장이며 각각의 관찰 범위와 미관찰 범위를 따로 보존해야 한다. 표본만 관찰했다면 선택 규칙과 근거를 표시하고 전체 개체군 승인과 구분해야 한다.
 
-### 시간 축 단위와의 비대체와 전파 {#review-subject-time-noninterchange}
+### 시간 축 단위와의 비대체 {#review-subject-time-noninterchange}
 
 주체 검토는 frame, 구간과 전체 작품 검토의 의무를 대신하지 않고 그 셋의 결과 또한 주체 검토의 의무를 대신하지 않아야 한다. 어느 한쪽의 coverage를 다른 쪽의 coverage로 합산하지 않아야 한다.
-
-한 주체의 결함이 확인되면 그 주체를 전달하는 frame, 구간과 상위 표면의 판정을 다시 검토 대상으로 표시해야 하며, 시간 범위에서 발견한 결함의 원인이 주체에 있으면 같은 원형을 공유하는 다른 배치도 함께 표시해야 한다.

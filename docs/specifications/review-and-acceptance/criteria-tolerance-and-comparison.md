@@ -5,7 +5,6 @@
 ### 반증 가능성과 단일 책임 {#acceptance-system-falsifiable-single-responsibility}
 
 <!-- @evidence requirements/acceptance/criteria-and-observables.md#acceptance-criterion-completeness Defines every field required for a valid criterion. -->
-<!-- @evidence requirements/review/criteria-and-comparison.md#review-observable-criteria Makes review criteria observable, bounded and falsifiable. -->
 
 Criterion 레코드는 stable identity와 version, target과 scope, intent basis, precondition, observable, expected state, comparison rule, tolerance 또는 exact 선언, failure condition, required evidence, severity, profile과 authority를 가진다. 필수 field가 빠지면 criterion은 invalid이며 대상 verdict를 만들지 않는다.
 
@@ -43,20 +42,6 @@ Observable은 수치, 구간, 집합과 관계, 순서와 state transition, 존�
 <!-- @evidence requirements/acceptance/criteria-and-observables.md#acceptance-semantic-observable Defines narrative information, events, state and audience inference with human observations. -->
 
 의미 observable은 전달할 정보, 사건, character state, causality, emotional transition 또는 audience inference와 이를 관찰할 scene과 시간 범위를 가진다. 결과는 authority의 실제 관찰문과 결속되고 자동 수치값으로 가장하지 않는다.
-
-## Baseline과 Reference 순서 {#review-system-baseline-reference-order}
-
-### 비교 가능성 {#review-system-comparability}
-
-<!-- @evidence requirements/review/criteria-and-comparison.md#review-criteria-comparison Requires every judgment to name its authored intent, criterion, baseline or reference. -->
-<!-- @evidence requirements/review/criteria-and-comparison.md#review-criteria-precedence Defines precedence when criteria or references conflict. -->
-
-Comparison context는 authored intent, criterion, accepted baseline, source, reference와 alternative candidate의 역할과 적용 순서를 명시한다. Reference와 과거 baseline은 현재 필수 criterion을 자동으로 대체하지 않으며 충돌한 근거는 숨기지 않는다.
-
-<!-- @evidence requirements/review/criteria-and-comparison.md#review-comparable-subjects Requires common source, intent, semantic position and presentation for comparison. -->
-<!-- @evidence requirements/review/criteria-and-comparison.md#review-noncomparable-state Defines noncomparable as a first-class result rather than a forced ranking. -->
-
-비교 가능한 후보는 공통 source와 intent, 대응 semantic event 또는 시간 위치, presentation context, criterion version과 허용된 variation을 공유한다. 필수 대응이 없으면 comparison state는 noncomparable이며 우열, regression 또는 pass를 만들지 않는다.
 
 ## Tolerance 레코드 {#acceptance-system-tolerance-record}
 
@@ -98,6 +83,5 @@ Tolerance는 종류, 값, 단위, 기준값, 적용 방향과 경계 포함 여�
 
 <!-- @evidence requirements/acceptance/criteria-and-observables.md#acceptance-verdict-determinism Requires identical numeric and structural inputs to yield identical verdicts. -->
 <!-- @evidence requirements/acceptance/criteria-and-observables.md#acceptance-subjective-verdict-boundary Keeps perceptual and semantic human judgment explicit. -->
-<!-- @evidence requirements/review/criteria-and-comparison.md#review-quantitative-qualitative-criteria Separates quantitative pass from qualitative judgment. -->
 
 수치와 구조 criterion은 같은 version, profile, target, observable과 comparison context에서 같은 verdict를 산출한다. 지각, 서사와 미학 criterion은 사람 judgment record를 요구하며 정량 threshold의 pass가 그 judgment를 대신하지 않는다.

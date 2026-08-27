@@ -2,6 +2,40 @@
 
 Review one declared production surface alone and exhaustively. Do not partition one evidence surface across agents because overlap, contradiction, omission, and downstream consequence are graph-wide properties.
 
+AutoMovie provides deterministic inspection, capture, compile diagnostics, and evidence lint. It does not provide a stored finding lifecycle, alternative-selection ledger, approval, rejection, conditional approval, or waiver service. Observations about the production live in its source, evidence citations, commits, and the external human production record that requested the work. Do not create a product status file to recreate the retired service.
+
+## Declare the review basis
+
+Before looking, declare the exact production kind, source and compile revision, target population, interval or viewpoint population, artifact identity, presentation conditions, and contract or criterion being judged. A result applies only to that basis. A frame does not decide an interval, one interval does not decide the whole production, and one subject observation does not decide a delivery frame.
+
+Use the production shape's real units:
+
+| Shape | Review units |
+| --- | --- |
+| Film | Exact frames, played intervals, scenes, sequences, the whole film, governed subjects, source, and actual delivery bytes |
+| Brief | Exact frames, the bounded shot or observation hierarchy, the whole delivery, governed subjects, source, and actual delivery bytes |
+| Library | Each design owner, governed subject, neutral inspection population, source, and the library's declared whole scope |
+
+Record the exact frame clock, interval endpoints, playback rate, pass, raster, color and audio conditions, language, accessibility track, subject identity, viewpoint identity, and reference revision when they affect the judgment. A proxy, thumbnail, muted playback, structural pass, or stale artifact is a different basis and cannot silently stand in for the requested one. If the basis cannot be reopened, report the missing condition and the resulting limit instead of claiming a reproducible review.
+
+## Compare and observe
+
+Define an observable question before judging it: the subject or event, time or state, expected result, allowed variation, and failure condition. Let compile and evidence lint decide identities, relationships, ranges, deterministic values, coverage, and refusal states. Judge pixels, decoded sound, performance, readability, rhythm, spatial experience, and whole-work effect by opening the current output.
+
+Compare candidates only when they share the relevant source and intent, semantic event or time position, presentation conditions, and reference version. Name their common basis and each actual difference. Preserve each candidate's observation separately. When the basis differs, report it as noncomparable rather than calling the difference an improvement or regression.
+
+For a visual or audible surface, inspect the exact frame for image facts, play the interval for motion, timing, transition, continuity and synchronization, and read the complete ordered work for causality, pacing, long continuity and ending state. State when a conclusion rests on samples. A sampled set never becomes whole-population coverage without a contract that justifies that inference.
+
+## Record findings and consequences
+
+Locate each finding at the narrowest stable address: evidence target and host, source owner, diagnostic, subject and viewpoint, frame, interval, sound or caption event, or whole-production scope. Separate the observed result, expected result, difference, production consequence, and proven cause. Do not present an inferred cause as observed fact.
+
+Describe the affected craft or contract area, impact, reproduction conditions, and repair priority. Impact and priority are separate. Distinguish a contract defect from allowed variation and an optional suggestion. Several observations may share one cause, but keep every affected scope until the common repair and its consequences are verified.
+
+Repair at the earliest semantic owner. Reopen every downstream, adjacent, parent, sibling-placement, and whole-production judgment whose basis changed. A narrow recheck restores only the scope actually reopened.
+
+Use Git history to preserve earlier observations, candidate comparisons, selections, and corrections. A later explanation supersedes an earlier conclusion without erasing what was originally observed. The authoring agent's completed review is a process result, not a human or organizational approval. Green lint, no finding, elapsed time, and a previous selection never imply approval or waive a known defect.
+
 ## Evidence review
 
 Start a layer's evidence review only after that layer is in `review`. Missing or stale review diagnostics are the worklist, not permission to bulk-fill fingerprints.

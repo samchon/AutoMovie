@@ -1,35 +1,4 @@
-# Alternative, 회귀와 재판정
-
-## Alternative Set {#review-system-alternative-set}
-
-### 공통 Basis와 Difference {#review-system-alternative-basis-difference}
-
-<!-- @evidence requirements/review/alternative-takes-and-versions.md#review-alternative-takes-versions Defines comparison and selection across take, edit, render, rendition and delivery versions. -->
-
-Alternative set은 공통 intent와 source identity, candidate identities, 차이를 만든 revision relation, comparison context와 selection state를 가진다. Candidate는 독립 target과 verdict를 유지하며 set membership이 current 선택이나 acceptance를 뜻하지 않는다.
-
-<!-- @evidence requirements/review/alternative-takes-and-versions.md#review-alternative-common-basis-difference Separates shared source and intent from performance, staging, edit, style and delivery differences. -->
-
-Alternative comparison은 공통 source, intent와 unchanged dependency를 먼저 식별하고 performance, staging, camera, timing, edit, style, quality와 delivery 조건의 차이를 정규 change set으로 보존한다.
-
-### 동기화된 비교 {#review-system-synchronized-comparison}
-
-<!-- @evidence requirements/review/alternative-takes-and-versions.md#review-synchronized-comparison Aligns candidates by semantic event, frame or time range under comparable presentation. -->
-
-후보의 대응은 같은 semantic event, frame 또는 time range를 명시하고 가능한 같은 presentation context에서 관찰한다. 길이나 구조가 달라 대응하지 않는 영역은 unmapped로 남기며 임의의 time ratio로 같은 순간을 만들지 않는다.
-
-### Candidate별 Finding {#review-system-candidate-findings}
-
-<!-- @evidence requirements/review/alternative-takes-and-versions.md#review-candidate-specific-findings Keeps annotations, findings, coverage and verdicts isolated per candidate. -->
-
-Observation, annotation, finding, evidence coverage와 verdict는 candidate identity에 결속된다. Shared observation을 재사용할 수 있는 경우에도 target과 context가 동등하다는 explicit relation이 필요하다.
-
-### 선택과 비교 이력 {#review-system-alternative-selection-history}
-
-<!-- @evidence requirements/review/alternative-takes-and-versions.md#review-alternative-selection Defines selected, alternate, hold, rejected and superseded states with tradeoffs. -->
-<!-- @evidence requirements/review/alternative-takes-and-versions.md#review-comparison-history Preserves earlier comparison and selection decisions after new versions arrive. -->
-
-Selection state는 selected, alternate, hold, rejected와 superseded를 구분하고 selector, criteria, tradeoff, finding과 time을 가진다. 새 version이나 선택 변경은 이전 comparison과 selection record를 덮어쓰지 않는다.
+# 회귀와 재판정
 
 ## 변경 영향 집합 {#acceptance-system-change-impact-set}
 
