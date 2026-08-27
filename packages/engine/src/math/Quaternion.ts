@@ -96,7 +96,7 @@ export namespace Quaternion {
   /**
    * Compose intrinsic Euler angles (degrees) into a quaternion, applying the
    * axes in the given `order`, the same intrinsic convention glTF/three.js use,
-   * so `fromEuler({x,y,z,order:"XYZ"})` equals `qx·qy·qz`. This is how the MCP
+   * so `fromEuler({x,y,z,order:"XYZ"})` equals `qx·qy·qz`. This is how the production
    * boundary lowers an LLM-authored semantic placement rotation
    * ({@link "@automovie/interface".IAutoMovieEuler}) into the engine's
    * quaternion. The model never emits a quaternion (#723).

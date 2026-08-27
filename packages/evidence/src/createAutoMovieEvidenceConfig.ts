@@ -4,6 +4,7 @@ import {
   type ITtscEvidenceGraphReference,
 } from "@ttsc/evidence";
 import fs from "node:fs";
+import { createRequire } from "node:module";
 import path from "node:path";
 import ts from "typescript-compiler";
 
@@ -141,6 +142,68 @@ interface ISourcePopulation {
 }
 
 const DOCS = "docs";
+const TEMPLATE_PACKAGE = "@automovie/template";
+
+/** One directory's declared package name, or null when it declares none. */
+const packageNameOf = (directory: string): string | null => {
+  try {
+    const manifest: unknown = JSON.parse(
+      fs.readFileSync(path.join(directory, "package.json"), "utf8"),
+    );
+    return typeof manifest === "object" &&
+      manifest !== null &&
+      typeof (manifest as { name?: unknown }).name === "string"
+      ? (manifest as { name: string }).name
+      : null;
+  } catch {
+    return null;
+  }
+};
+
+/**
+ * Where the shared contracts actually live.
+ *
+ * `@automovie/template` ships `docs/discovery`, `docs/obligations`, and
+ * `docs/principles`, and the graph resolves them from the installed package
+ * rather than from a copy each project carries. A project cannot legitimately
+ * edit them, the inventory is pinned here by filename and anchor, and a copy
+ * that a package upgrade can invalidate is a break waiting for the next
+ * release rather than project-owned content.
+ *
+ * One host cannot install that package: the scaffold inside it, which is the
+ * source the dependency is published from. It reaches its own publisher's
+ * `docs` directly, and it proves that publisher by name rather than by the
+ * presence of a directory: without that, a project sitting one folder below an
+ * unrelated `docs/` would read its contracts there and answer the wrong
+ * questions in silence. A generated project that never installed the package
+ * keeps the resolution failure that names what it is missing.
+ *
+ * The fallback has no canary, and saying so is better than implying one. Under
+ * `ttsc` the launcher installs a resolution hook that answers a workspace
+ * package by name from any directory, so a fixture cannot make this resolution
+ * fail; every generated project's scripts run under that launcher. The branch
+ * is reachable only outside it, which is exactly where a wrong answer would be
+ * least recoverable.
+ */
+const sharedDocsRoot = (location: string): string => {
+  const resolve = createRequire(path.join(location, "noop.js"));
+  try {
+    const resolved = path.dirname(
+      resolve.resolve("@automovie/template/package.json"),
+    );
+    return posix(path.relative(location, path.join(resolved, DOCS)));
+  } catch (error) {
+    // Identify the publisher, never merely a neighbour that happens to hold a
+    // `docs` directory. A generated project one folder below an unrelated
+    // `docs/` would otherwise resolve its contracts there and answer the wrong
+    // questions in silence, which is worse than the install error it replaced.
+    const publisher = path.dirname(location);
+    if (packageNameOf(publisher) !== TEMPLATE_PACKAGE) throw error;
+    const sibling = path.join(publisher, DOCS);
+    if (fs.existsSync(sibling) === false) throw error;
+    return posix(path.relative(location, sibling));
+  }
+};
 const MARKDOWN: Record<MarkdownLayer, IMarkdownPopulation> = {
   settings: { headings: [2], obligation: true, principle: "settings.md" },
   research: { headings: [2], obligation: false, principle: "research.md" },
@@ -1004,7 +1067,7 @@ const hasExportedOwner = (
 };
 
 const validateContracts = (location: string): ITargetIdentityRegistry => {
-  const root = path.join(location, DOCS);
+  const root = path.resolve(location, sharedDocsRoot(location));
   const actual = [
     ...walkFiles(path.join(root, "discovery"), ".md"),
     ...walkFiles(path.join(root, "obligations"), ".md"),
@@ -1443,6 +1506,8 @@ const validateHosts = (graph: IProductionGraph): void => {
     identities.set(name, layer);
   }
 
+  assertSourceTreeIsClosed(graph);
+
   for (const name of Object.keys(SOURCES) as SourceLayer[]) {
     const stage = graph[name];
     const files = populationFiles(graph, SOURCES[name].files, ".ts");
@@ -1503,11 +1568,12 @@ const validateHosts = (graph: IProductionGraph): void => {
 };
 
 const checklist = (
+  shared: string,
   file: string,
   review: boolean,
 ): ITtscEvidenceGraphReference => ({
   type: "markdown",
-  root: DOCS,
+  root: shared,
   files: [`principles/${file}`],
   symbol: "h2",
   checklist: true,
@@ -1515,9 +1581,12 @@ const checklist = (
   requireReview: review,
 });
 
-const commonObligations = (review: boolean): ITtscEvidenceGraphReference => ({
+const commonObligations = (
+  shared: string,
+  review: boolean,
+): ITtscEvidenceGraphReference => ({
   type: "markdown",
-  root: DOCS,
+  root: shared,
   files: ["obligations/common.md"],
   symbol: "h2",
   checklist: true,
@@ -1526,11 +1595,12 @@ const commonObligations = (review: boolean): ITtscEvidenceGraphReference => ({
 });
 
 const layerObligation = (
+  shared: string,
   layer: MarkdownLayer,
   review: boolean,
 ): ITtscEvidenceGraphReference => ({
   type: "markdown",
-  root: DOCS,
+  root: shared,
   files: [`obligations/${layer}.md`],
   symbol: "h2",
   noEvidenceExclude: layer === "motions" ? undefined : true,
@@ -1550,21 +1620,25 @@ const layerObligation = (
  * truthfully establish no consequential relationship, exactly as a production
  * without a motion condition may exclude one motion role.
  */
-const subjectObligation = (review: boolean): ITtscEvidenceGraphReference => ({
+const subjectObligation = (
+  shared: string,
+  review: boolean,
+): ITtscEvidenceGraphReference => ({
   type: "markdown",
-  root: DOCS,
+  root: shared,
   files: ["obligations/subjects.md"],
   symbol: "h2",
   requireReview: review,
 });
 
 const discoveryReferences = (
+  shared: string,
   layer: MarkdownLayer,
   review: boolean,
 ): ITtscEvidenceGraphReference[] =>
   DISCOVERY_TARGETS[layer].map((target) => ({
     type: "markdown",
-    root: DOCS,
+    root: shared,
     files: [`discovery/${target}.md`],
     symbol: "h2",
     requireReview: review,
@@ -1613,14 +1687,15 @@ const lineage = (
 });
 
 const authoredClaims = (graph: IProductionGraph): ITtscEvidenceGraphClaim[] => {
+  const shared = sharedDocsRoot(graph.location);
   const claims: ITtscEvidenceGraphClaim[] = [];
   for (const name of Object.keys(MARKDOWN) as MarkdownLayer[]) {
     const stage = graph[name];
     const review = requiresReview(stage);
-    const principles = [checklist("common.md", review)];
+    const principles = [checklist(shared, "common.md", review)];
     if (["storylines", "scenarios", "script"].includes(name))
-      principles.push(checklist("narratives.md", review));
-    principles.push(checklist(MARKDOWN[name].principle, review));
+      principles.push(checklist(shared, "narratives.md", review));
+    principles.push(checklist(shared, MARKDOWN[name].principle, review));
     claims.push({
       name: `${name} files answer their complete principle checklists`,
       type: "markdown",
@@ -1632,13 +1707,14 @@ const authoredClaims = (graph: IProductionGraph): ITtscEvidenceGraphClaim[] => {
     });
     for (const symbol of MARKDOWN[name].headings) {
       const references: ITtscEvidenceGraphReference[] = [
-        commonObligations(review),
+        commonObligations(shared, review),
       ];
       if (MARKDOWN[name].obligation && symbol === 2)
-        references.push(layerObligation(name, review));
-      if (symbol === 2) references.push(...discoveryReferences(name, review));
+        references.push(layerObligation(shared, name, review));
+      if (symbol === 2)
+        references.push(...discoveryReferences(shared, name, review));
       if (symbol === 2 && name === "settings" && graph.kind === "film")
-        references.push(subjectObligation(review));
+        references.push(subjectObligation(shared, review));
       if (!["settings", "research"].includes(name))
         references.push(...referencesPerFile(graph, "settings", "h2", review));
       references.push(...designFoundations(graph, name, review));
@@ -1684,18 +1760,78 @@ const authoredClaims = (graph: IProductionGraph): ITtscEvidenceGraphClaim[] => {
 };
 
 const sourcePrinciples = (
+  shared: string,
   file: string,
   review: boolean,
 ): ITtscEvidenceGraphReference => ({
   type: "markdown",
-  root: DOCS,
+  root: shared,
   files: [`principles/${file}`],
   symbol: "h2",
   noEvidenceExclude: true,
   requireReview: review,
 });
 
+/**
+ * Source directories a production owns without answering a design layer for
+ * them.
+ *
+ * `examples` is reference the scaffold ships and a production deletes; it
+ * teaches a technique rather than realizing a unit, so it cites nothing.
+ */
+const UNGOVERNED_SOURCE_DIRECTORIES = ["examples"] as const;
+
+/**
+ * Refuse a source file that belongs to no production layer.
+ *
+ * The nine source populations are a closed list, and a list makes "owes no
+ * evidence" the silent default for anything added beside it. `src/props/` and
+ * `src/creatures/` are not errors the graph reports today: they compile, ship,
+ * and cite nothing, and the omission is invisible precisely because no claim
+ * ever looked. A production that needs a prop puts it under one of the seven
+ * design layers or under `shots`, and the layer vocabulary is closed on
+ * purpose, so anything outside it is a placement mistake rather than a new
+ * kind of work.
+ *
+ * This is the structural half of the graph's own rule: derive the population,
+ * then refuse what the derivation did not reach.
+ */
+const assertSourceTreeIsClosed = (graph: IProductionGraph): void => {
+  const root = path.join(graph.location, "src");
+  if (!fs.existsSync(root)) return;
+  const governed = new Set(
+    Object.values(SOURCES).flatMap((source) =>
+      source.files.map((pattern) => {
+        const wildcard = pattern.search(/[*?]/u);
+        return (wildcard === -1 ? pattern : pattern.slice(0, wildcard)).replace(
+          /[/]+$/u,
+          "",
+        );
+      }),
+    ),
+  );
+  for (const directory of UNGOVERNED_SOURCE_DIRECTORIES)
+    governed.add(`src/${directory}`);
+  for (const file of walkFiles(root, ".ts")) {
+    const relative = posix(path.relative(graph.location, file));
+    if (
+      [...governed].some(
+        (prefix) => relative === prefix || relative.startsWith(`${prefix}/`),
+      )
+    )
+      continue;
+    throw new Error(
+      `${relative} belongs to no production source layer. Move it under one of ${[
+        ...governed,
+      ]
+        .sort(compareCodeUnits)
+        .join(", ")}, or delete it; the layer vocabulary is closed.`,
+    );
+  }
+};
+
 const sourceClaims = (graph: IProductionGraph): ITtscEvidenceGraphClaim[] => {
+  const shared = sharedDocsRoot(graph.location);
   const claims: ITtscEvidenceGraphClaim[] = [];
   for (const name of [
     "modelSources",
@@ -1732,7 +1868,7 @@ const sourceClaims = (graph: IProductionGraph): ITtscEvidenceGraphClaim[] => {
         symbol: [...source.symbols],
         disabled: !requiresEvidence(graph[name]),
         reference: [
-          sourcePrinciples(source.principle, review),
+          sourcePrinciples(shared, source.principle, review),
           {
             type: "markdown",
             root: DOCS,
@@ -1770,7 +1906,7 @@ const sourceClaims = (graph: IProductionGraph): ITtscEvidenceGraphClaim[] => {
       files: [...SOURCES.shots.files],
       symbol: [...SOURCES.shots.symbols],
       disabled: !requiresEvidence(graph.shots),
-      reference: sourcePrinciples(SOURCES.shots.principle, shotReview),
+      reference: sourcePrinciples(shared, SOURCES.shots.principle, shotReview),
     },
     {
       name: "production source serializes settings and production-source principles",
@@ -1780,6 +1916,7 @@ const sourceClaims = (graph: IProductionGraph): ITtscEvidenceGraphClaim[] => {
       disabled: !requiresEvidence(graph.productionSources),
       reference: [
         sourcePrinciples(
+          shared,
           SOURCES.productionSources.principle,
           requiresReview(graph.productionSources),
         ),
@@ -1799,6 +1936,7 @@ const sourceClaims = (graph: IProductionGraph): ITtscEvidenceGraphClaim[] => {
       disabled: !requiresEvidence(graph.filmSources),
       reference: [
         sourcePrinciples(
+          shared,
           SOURCES.filmSources.principle,
           requiresReview(graph.filmSources),
         ),
@@ -1858,7 +1996,7 @@ export const createAutoMovieEvidenceConfig = (
       type: "typescript" as const,
       files: ["test/__evidenceGraphCanary.ts"],
       symbol: "property" as const,
-      reference: checklist("common.md", false),
+      reference: checklist(sharedDocsRoot(graph.location), "common.md", false),
     },
   ];
   return {

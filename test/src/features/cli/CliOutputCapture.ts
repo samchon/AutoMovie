@@ -1,4 +1,4 @@
-import { run } from "@automovie/cli";
+import { run } from "automovie";
 
 export interface ICliOutputCaptureResult {
   status: number;

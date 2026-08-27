@@ -6,7 +6,7 @@ Tile field, plank run, masonry, panel, furniture set와 handmade assembly는 완
 
 ### 사용자 소유의 변주 의도 {#interior-imperfection-authoring-choice}
 
-어느 group에 어떤 오차를 얼마나 허용할지는 사용자와 MCP knowledge and evidence boundary를 통해 계약과 current evidence를 받는 저작 에이전트가 선택해야 한다. 제품은 parameter와 검증을 제공하고 “현실적으로 보인다”는 이유로 임의 noise를 자동 적용하지 않아야 한다.
+어느 group에 어떤 오차를 얼마나 허용할지는 사용자와 지식과 증거 경계를 통해 계약과 current evidence를 받는 저작 에이전트가 선택해야 한다. 제품은 parameter와 검증을 제공하고 “현실적으로 보인다”는 이유로 임의 noise를 자동 적용하지 않아야 한다.
 
 ### 서로 다른 오차의 의미 {#interior-tolerance-kinds}
 

@@ -213,7 +213,9 @@ const documentationFiles = (root, directories) => [
     const readme = path.join(directory, "README.md");
     return fs.existsSync(readme) ? [readme] : [];
   }),
-  ...walkMarkdown(path.join(root, "packages", "mcp", "prompts")),
+  ...walkMarkdown(
+    path.join(root, "packages", "template", "scaffold", ".agents", "skills"),
+  ),
 ];
 
 const documentedIn = (names, documents) => {
@@ -417,10 +419,18 @@ const writeFixture = (root) => {
     path.join(tests, "surface.test.ts"),
     'import { deliberate, tested } from "../../packages/sample/src/surface";\ndeliberate();\ntested();\n',
   );
-  const prompts = path.join(root, "packages", "mcp", "prompts", "nested");
-  fs.mkdirSync(prompts, { recursive: true });
-  fs.writeFileSync(path.join(prompts, "guide.md"), "Fixture guide.\n");
-  fs.writeFileSync(path.join(prompts, "ignored.txt"), "Not Markdown.\n");
+  const skills = path.join(
+    root,
+    "packages",
+    "template",
+    "scaffold",
+    ".agents",
+    "skills",
+    "nested",
+  );
+  fs.mkdirSync(skills, { recursive: true });
+  fs.writeFileSync(path.join(skills, "SKILL.md"), "Fixture skill.\n");
+  fs.writeFileSync(path.join(skills, "ignored.txt"), "Not Markdown.\n");
   const empty = path.join(root, "packages", "empty", "src");
   fs.mkdirSync(empty, { recursive: true });
   fs.writeFileSync(path.join(empty, "index.ts"), "");

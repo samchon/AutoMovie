@@ -10,7 +10,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const SCAFFOLD = path.join(ROOT, "packages", "cli", "scaffold");
+const SCAFFOLD = path.join(ROOT, "packages", "template", "scaffold");
 
 /**
  * The probe lives under the CLI package's ignored `.cache` for four reasons at
@@ -25,7 +25,7 @@ const SCAFFOLD = path.join(ROOT, "packages", "cli", "scaffold");
 const PROBE = path.join(
   ROOT,
   "packages",
-  "cli",
+  "template",
   ".cache",
   "automovie-scaffold-evidence-gate",
 );
@@ -297,7 +297,7 @@ const modulePaths = () => ({
 const inherit = (relative) => {
   if (/[*?]/u.test(relative) === true)
     throw new Error(
-      `packages/cli/scaffold/tsconfig.json now includes the pattern ${JSON.stringify(relative)}; teach the probe to expand it before it can compile what the scaffold compiles.`,
+      `packages/template/scaffold/tsconfig.json now includes the pattern ${JSON.stringify(relative)}; teach the probe to expand it before it can compile what the scaffold compiles.`,
     );
   const target = path.join(PROBE, relative);
   fs.mkdirSync(path.dirname(target), { recursive: true });
@@ -339,6 +339,30 @@ const render = () => {
   fs.rmSync(PROBE, { force: true, recursive: true });
   fs.mkdirSync(PROBE, { recursive: true });
   for (const relative of INHERITED) inherit(relative);
+
+  // A generated project resolves the shared contracts from the installed
+  // `@automovie/template`, so the probe has to as well. Copying the published
+  // `docs` beside a minimal manifest reproduces exactly what an author's
+  // `node_modules` holds, and keeps the probe from reading contracts the
+  // repository happens to have lying around at a different path.
+  const linkedTemplate = path.join(
+    PROBE,
+    "node_modules",
+    "@automovie",
+    "template",
+  );
+  fs.mkdirSync(linkedTemplate, { recursive: true });
+  fs.cpSync(
+    path.join(ROOT, "packages", "template", "docs"),
+    path.join(linkedTemplate, "docs"),
+    { recursive: true },
+  );
+  fs.writeFileSync(
+    path.join(linkedTemplate, "package.json"),
+    `${JSON.stringify({ name: "@automovie/template", version: "0.0.0" }, null, 2)}
+`,
+    "utf8",
+  );
 
   fs.writeFileSync(
     path.join(PROBE, "package.json"),
@@ -419,7 +443,10 @@ const compile = () => {
 const contractAnchors = (relative) =>
   [
     ...fs
-      .readFileSync(path.join(PROBE, "docs", relative), "utf8")
+      .readFileSync(
+        path.join(ROOT, "packages", "template", "docs", relative),
+        "utf8",
+      )
       .matchAll(/^## .+ \{#(?<anchor>[^}]+)\}$/gmu),
   ].map((match) => `${relative}#${match.groups.anchor}`);
 
@@ -720,7 +747,7 @@ const main = () => {
   if (owed.length !== 0) {
     report([
       "",
-      "FAIL: packages/cli/scaffold owes the diagnostics below. Every project",
+      "FAIL: packages/template/scaffold owes the diagnostics below. Every project",
       " generated from it inherits them, so this is red on an author's first",
       " `npm run lint`.",
       ...owed.map((diagnostic) => ` ${diagnostic.text}`),

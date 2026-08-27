@@ -2218,7 +2218,7 @@ export const performShot = (props: {
   };
 
   // The producer states the contract its output satisfies. Until #1320 the shot
-  // contract lived only beside the MCP commit gate, so every field this compiler
+  // contract lived only beside the commit gate, so every field this compiler
   // forgot became a shot returned as success that a consumer then refused, five
   // times over (#1224, #1308, #1314, #1316, #1318). One definition now, checked
   // here, against the same scene and clips the caller is about to receive.

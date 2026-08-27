@@ -25,7 +25,7 @@ MCP 0회)를 근거로 **"지목이 없으면 셸로 제품 소스를 직접 읽
 2026-08-18 사이클의 턴 1이 **같은 서명을 한 턴 안에서 재현했다 — 다만 거절 뒤에.**
 그 세션은 도구를 스스로 찾아 불렀고, 제품 서버 호출 **3건이 전부**
 `{"Err":"user cancelled MCP tool call"}`로 거절됐으며, **같은 턴에**
-`node_modules/@automovie/mcp/src/guides/AutoMovieGuideConstant.ts`를 정규식으로 긁어
+`node_modules/@automovie/production/src/guides/AutoMovieGuideConstant.ts`를 정규식으로 긁어
 가이드 본문을 재구성했다. 그 시점 이후를 세면 "MCP 0 + 제품 소스 다수"다.
 
 이 문서는 이미 **구별할 수 없는 두 상태**를 정직하게 적어두었다 — *갖고도 안 썼다*와
@@ -336,7 +336,7 @@ viewer/src/subject.ts:551:61 - error TS2554: Expected 2 arguments, but got 3.
 그리고 **남의 손 패치**.
 
 **교훈이자 값싼 계측.** 샌드박스 파일을 **설치된 tarball 스캐폴드**와 대조하면 이것이
-한 번에 보인다. `node_modules/@automovie/cli/scaffold/**`는 그 프로젝트가 무엇으로
+한 번에 보인다. `node_modules/automovie/scaffold/**`는 그 프로젝트가 무엇으로
 태어났는지에 대한 **저장소와 무관한 기준선**이고, 거기서 벗어난 파일은 저작자 아니면
 침입자다. 저장소 작업 트리와 대조하는 것으로는 이것을 가릴 수 없다 — 침입자의 출처가
 바로 그 작업 트리이기 때문이다.
@@ -615,7 +615,7 @@ Codex에서 그 벡터가 닫혀 보였던 것은 Codex의 실제 열람 범위�
 #### 계측기 함정 — **전체 모집단에 대한 깨끗하고 균일한 답이 가장 의심하기 어렵다**
 
 저작자의 리뷰 상태 주장(29 complete / 20 stale / 1 revise)을 검증하려고
-`.automovie/reviews/**`의 저장된 레코드에서 `state` 필드를 세었다. 결과:
+`automovie/reviews/**`의 저장된 레코드에서 `state` 필드를 세었다. 결과:
 
 ```
 input count: 51 review record files
@@ -1263,7 +1263,7 @@ tools.shell_command({ command: "rg -n ... node_modules/@automovie" })
 전임의 S0 종료 조건이 그 때문에 성립하지 않아 턴 2에서 정정되었다.
 
 같은 덫이 **세 번째 층에도 걸려 있다.** 턴 2가 `docs`와 `src`를 옮겼는데
-`.automovie/design`은 그대로 스타터다 — `shots/{opening,answer}.json`,
+`automovie/design`은 그대로 스타터다 — `shots/{opening,answer}.json`,
 `acceptance/{opening,answer}-*.json`, `shared/models/{soloist,chorus-*}.json`,
 `shared/formations/chorus.json`. 현재 컴파일이 아직 shot `opening`과 claim
 `cue-arm-readable`을 인용하는 이유가 이것이다.

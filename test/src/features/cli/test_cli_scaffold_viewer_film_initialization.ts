@@ -41,7 +41,7 @@ export const test_cli_scaffold_viewer_film_initialization = (): void => {
   const source = fs.readFileSync(
     path.resolve(
       __dirname,
-      "../../../../packages/cli/scaffold/viewer/src/film.ts",
+      "../../../../packages/template/scaffold/viewer/src/film.ts",
     ),
     "utf8",
   );

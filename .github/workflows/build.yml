@@ -92,7 +92,7 @@ jobs:
       - name: Build Packages
         run: pnpm run build
 
-      # `pnpm run build` cannot reach `packages/cli/scaffold`: it is not a
+      # `pnpm run build` cannot reach `packages/template/scaffold`: it is not a
       # workspace project (`pnpm-workspace.yaml` lists `packages/*`) and its
       # `package.json` carries template tokens rather than versions, so nothing
       # above runs the `npm run lint:source` every generated project inherits.

@@ -11,7 +11,7 @@ import {
   materializeCompiledFormation,
   materializeFormationSlot,
   materializeProductionModels,
-} from "@automovie/mcp";
+} from "@automovie/production";
 import {
   buildInstancedFormation,
   flattenInstancedObject,
@@ -23,7 +23,7 @@ import { TestValidator } from "@nestia/e2e";
 import * as THREE from "three";
 
 import { namedFacts, nclose } from "../internal/predicates";
-import { formationDesign, modelRecipe } from "../mcp/productionFixtures";
+import { formationDesign, modelRecipe } from "../production/productionFixtures";
 
 const propRecipe = (id: string, size: number): IAutoMovieModelRecipe => ({
   ...modelRecipe(),

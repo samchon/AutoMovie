@@ -37,7 +37,7 @@ import { toValidation } from "./violation";
  * The shot artifact's structural contract, owned by the engine that produces
  * it.
  *
- * It used to live only beside the MCP commit gate, so `performShot` could emit
+ * It used to live only beside the commit gate, so `performShot` could emit
  * a shot no consumer would accept and report success: the same failure recurred
  * five times (#1224, #1308, #1314, #1316, #1318), each fixed by teaching the
  * producer one more field. The rules now have a single home, on the side that

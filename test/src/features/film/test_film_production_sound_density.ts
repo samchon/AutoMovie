@@ -12,7 +12,7 @@ import {
 import {
   materializeCompiledFormation,
   materializeCompiledInstanceSet,
-} from "@automovie/mcp";
+} from "@automovie/production";
 import { TestValidator } from "@nestia/e2e";
 
 import { namedFacts, nclose } from "../internal/predicates";

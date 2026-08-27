@@ -19,7 +19,7 @@ vegetation, props, and debris. Grid, disk-scatter, and route layouts retain
 only count, seed, model reference, and bounded variation law. Compiled slots
 derive stable scale, palette, and numeric traits without expanding scene nodes.
 
-automovie의 타입 허브. 캐릭터·사물의 형상·포즈·모션·표정·머티리얼·씬과 production 증거 계약을 기술하는 모든 AST 구조체의 단일 진실 공급원이다. 코딩 에이전트는 이 타입을 tracked TypeScript에서 직접 소비하며, MCP에는 그중 정확한 다섯 도구 계약만 반영된다.
+automovie의 타입 허브. 캐릭터·사물의 형상·포즈·모션·표정·머티리얼·씬과 production 증거 계약을 기술하는 모든 AST 구조체의 단일 진실 공급원이다. 코딩 에이전트는 이 타입을 tracked TypeScript에서 직접 소비한다.
 
 런타임 의존은 없다. `typia`도, `three.js`도 없다. 순수 타입 선언만 담는다. 제약은 필드 JSDoc으로 문서화하고 `@automovie/engine`의 런타임 검증기가 강제한다. 빌드 도구(`ttsc`/`typescript`/`rimraf`/`@ttsc/lint`)는 devDependency일 뿐이다.
 
@@ -37,7 +37,7 @@ automovie는 **glTF / VRM 규약**을 따른다.
 
 - 인터페이스: `IAutoMovie*` (예: `IAutoMoviePose`).
 - 열거형·이름공간: `AutoMovie*` (예: `AutoMovieHumanoidBone`, `AutoMovieEasing`).
-- production MCP 도구: `IAutoMovieX.IProps` 입력과 `IAutoMovieX` 결과를 한 계약 쌍으로 둔다. canonical `AutoMovieApplication`은 가이드, 캡처, 선택적 repaint, 준비된 리뷰, 리뷰 제출의 다섯 계약만 노출한다.
+- production 진입점: `IAutoMovieX.IProps` 입력과 `IAutoMovieX` 결과를 한 계약 쌍으로 둔다.
 - discriminated union 판별자 필드에는 `/** Discriminator. */`.
 - optional `T?` 대신 `T | null` + JSDoc으로 null 의미 명시.
 - **타입은 러프하게.** 원시값은 `string`/`number`를 **그대로** 쓴다. `AutoMovieUuid = string`, `AutoMovieNormalized = number` 같은 **원시 래퍼 별칭을 만들지 않는다.** 수치 범위·배열 최소길이·ID 포맷 같은 제약도 타입에 박지 않는다(typia `tags` 미사용). 인터페이스는 데이터의 **모양**만 정하고, 의미·범위·단위는 필드 JSDoc으로 문서화한다. 실제 제약 강제와 `// ❌` 피드백은 `@automovie/engine`의 런타임 검증기가 책임진다(이게 automovie의 차별점인 ROM 검증이 사는 곳). 닫힌 union(본명·표정 preset·이징 등 `AutoMovie*` 열거형)만이 "잘못된 값이 구조적으로 불가능"을 보장한다. 이건 래퍼가 아니라 허용값 집합 정의라서 유지한다.
@@ -53,7 +53,7 @@ automovie는 **glTF / VRM 규약**을 따른다.
 | `skeleton/`   | 휴머노이드 본 열거형, 스켈레톤·본·관절 제약(ROM) 타입                                                                                                                                                            |
 | `pose/`       | 정적 포즈: 휴머노이드 의미 각도                                                                                                                                                                                  |
 | `authoring/`  | 코드 저작 정본: stage, blocking, performance, forge/review/edit 계획과 하나의 등록된 shot program                                                                                                                |
-| `production/` | 코딩 에이전트 제작 계약: asset provenance 원장, 대본 scene/beat/catalog/lock 인덱스, 다섯 MCP 지식·증거·리뷰 계약, 설계, 컴파일 소유권, 기하 질의, 렌더·배송 번들                                                |
+| `production/` | 코딩 에이전트 제작 계약: asset provenance 원장, 대본 scene/beat/catalog/lock 인덱스, 캡쳐와 리페인트 계약, 설계, 컴파일 소유권, 기하 질의, 렌더·배송 번들                                                |
 | `expression/` | 표정: ARKit 52 채널, VRM expression preset                                                                                                                                                                       |
 | `face/`       | **Dormant boundary**: 결정 001 이후 보존만 하는 face/head 파라미터 문서. 현재 motion-first 하니스의 주 저작 표면은 아니며, face editor 재개 시 호환 자산으로 쓴다.                                               |
 | `motion/`     | 시간 모션: 키프레임 + 이징                                                                                                                                                                                       |
@@ -67,7 +67,7 @@ automovie는 **glTF / VRM 규약**을 따른다.
 | `analysis/`   | 읽기 전용 대지 문맥(태양·하늘·기준 지면·인접 차폐 매스)과 채광·열·습기·공기·음향 분석 아티팩트. 지원하지 않거나 실행하지 않은 값은 `unsupported`/`not-run`으로 이유와 함께 남고 숫자를 지어내지 않는다 |
 | `fluid/`      | 건축과 독립된 유체 도메인: 고정 격자·고정 스텝 shallow-water 설계(`IAutoMovieFluidDomain`), 절대 스텝 상태·표면·분무·예산(`IAutoMovieFluidState`), 건물이 논리 공간에 묶는 수경 바인딩(`IAutoMovieWaterFeature`)                                       |
 | `cinematics/` | 촬영·편집: 샷·카메라 인텐트·커버리지(대체 앵글 테이크), 시퀀스·전환·트림, 렌더 스펙, 인터랙션 이벤트, 포즈 키포인트, 가이드 패스                                                                                 |
-| `harness/`    | 저수준 액션 콜·타겟·beat-end 엔진 어휘와 레거시 slate/context 호환 타입. 현재 stage/block/perform 입력은 `authoring/`이 소유하며 이 폴더의 Request 모양은 MCP 표면이 아님                                                      |
+| `harness/`    | 저수준 액션 콜·타겟·beat-end 엔진 어휘와 레거시 slate/context 호환 타입. 현재 stage/block/perform 입력은 `authoring/`이 소유하며 이 폴더의 Request 모양은 공개 진입점이 아님                                                      |
 | `validation/` | 검증 봉투 + 제약 위반 리포트 (engine ↔ harness 계약)                                                                                                                                                             |
 
 > 코드 저작의 정본은 `authoring/`이며 `@automovie/engine`의 `defineShot`이 이를 실행한다. `harness/`에서 엔진이 계속 소비하는 것은 action/target/beat-end 같은 저수준 어휘뿐이며, 외부 에이전트는 이를 tracked TypeScript 안에서 사용한다.

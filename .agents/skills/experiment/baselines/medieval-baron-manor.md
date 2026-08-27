@@ -110,7 +110,7 @@ gitignore되므로, 캠페인이 닫히고 샌드박스가 지워지면 **이 �
 
 - 주장하지 **않는다**: "이름 없이 알아냈다." 세 이름 모두 첫 호출 전에 읽은 파일
   안에 있었다. 도구 이름은 `node_modules` 없이도 프로젝트 파일 **8곳**에서 읽힌다
-  (`README.md`, `.automovie/reviews/README.md`,
+  (`README.md`, `automovie/reviews/README.md`,
   `scripts/{mcp,preview,render,inspectSubject}.ts`, `viewer/inspection.{html,ts}`).
   `AGENTS.md`에는 도구 함수 이름이 **0개**다.
 - 주장한다: **드라이버가 한 번도 지목하지 않은 조건에서, 제품이 배송하는 문서만으로

@@ -19,7 +19,7 @@ import {
   AutoMovieProductionProject,
   IAutoMovieProductionDesignGraph,
   digestAutoMovieBytes,
-} from "@automovie/mcp";
+} from "@automovie/production";
 import path from "node:path";
 import typia from "typia";
 
@@ -32,7 +32,7 @@ import typia from "typia";
  */
 export interface IAutoMovieProjectStateInput {
   /**
-   * Project root containing the tracked `.automovie` state directory.
+   * Project root containing the tracked `automovie` state directory.
    *
    * @evidence requirements/diagnostics/input-and-result-classification.md#diagnostics-input-finding Identifies the exact project whose state is inspected.
    * @evidence specifications/validation-and-diagnostics/classification-and-causality.md#validation-input-finding Makes the inspected source boundary explicit.
@@ -302,7 +302,7 @@ export interface IAutoMovieCurrentProjectState extends IAutoMovieProjectState {
 }
 
 /**
- * Load current tracked design and last compiler-owned output without MCP.
+ *  Load current tracked design and last compiler-owned output.
  *
  * This is a Node I/O boundary for measurement scripts, tests, and offline
  * diagnostics. It must never be imported or called by a shot/film build

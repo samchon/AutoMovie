@@ -41,7 +41,7 @@ const allowedExceptions = new Set(policy.allowedExceptions);
 const packageFiles = [
   path.join(root, "package.json"),
   path.join(root, "test", "package.json"),
-  path.join(root, "packages", "cli", "scaffold", "package.json"),
+  path.join(root, "packages", "template", "scaffold", "package.json"),
 ];
 const packagesRoot = path.join(root, "packages");
 if (fs.existsSync(packagesRoot))
@@ -56,7 +56,7 @@ const workspacePackageFiles = new Set(existingPackageFiles);
 const scaffoldCandidate = path.join(
   root,
   "packages",
-  "cli",
+  "template",
   "scaffold",
   "package.json",
 );

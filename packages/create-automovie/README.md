@@ -7,5 +7,5 @@ npx create-automovie my-film
 ```
 
 This package is the package-manager-native entry point. It delegates to
-`@automovie/cli`, so the generated project and `npx automovie start my-film`
+`automovie`, so the generated project and `npx automovie start my-film`
 remain byte-for-byte equivalent.

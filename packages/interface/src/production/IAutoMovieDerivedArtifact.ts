@@ -43,7 +43,7 @@ export interface IAutoMovieDerivedArtifactDependency {
  */
 export interface IAutoMovieDerivedArtifactRecord {
   /**
-   * Canonical output path below `.automovie/derived/`.
+   * Canonical output path below `automovie/derived/`.
    *
    * @evidence requirements/agent-authoring/deterministic-precomputation.md#agent-precomputed-provenance-separation Gives deterministic derivation a namespace external assets cannot own.
    * @evidence specifications/authoring-and-authority/deterministic-precomputed-artifacts.md#spec-authoring-precomputed-manifest Locates the exact resident output independently from the external asset ledger.

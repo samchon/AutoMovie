@@ -22,7 +22,7 @@ Project는 문서화된 toolchain과 공개 contract만으로 새 checkout에서
 
 ### 저작 도구의 교체 가능성 {#agent-authoring-tool-replaceability}
 
-사용자는 project source와 공개 contract를 유지한 채 코딩 에이전트, MCP client, 외부 service 또는 local tool을 교체할 수 있어야 한다. 특정 session, vendor account 또는 비공개 remote state만이 편집을 이어 갈 수 있는 소유권 잠금을 만들지 않아야 한다.
+사용자는 project source와 공개 contract를 유지한 채 코딩 에이전트, 그 client, 외부 service 또는 local tool을 교체할 수 있어야 한다. 특정 session, vendor account 또는 비공개 remote state만이 편집을 이어 갈 수 있는 소유권 잠금을 만들지 않아야 한다.
 
 ### 소유권 불명확성의 거부 {#agent-ambiguous-ownership-refusal}
 

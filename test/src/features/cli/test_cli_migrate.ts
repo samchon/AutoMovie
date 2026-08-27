@@ -1,4 +1,4 @@
-import { AutoMovieProject } from "@automovie/mcp";
+import { AutoMovieProject } from "@automovie/production";
 import { TestValidator } from "@nestia/e2e";
 import fs from "node:fs";
 import os from "node:os";
@@ -31,7 +31,7 @@ export const test_cli_migrate = (): void => {
         ],
         [
           "existsSyncRootAutomovie",
-          () => fs.existsSync(path.join(root, ".automovie")) === false,
+          () => fs.existsSync(path.join(root, "automovie")) === false,
         ],
       ]),
       {
@@ -77,7 +77,7 @@ export const test_cli_migrate = (): void => {
         ],
         [
           "existsSyncRootAutomovie",
-          () => fs.existsSync(path.join(root, ".automovie/manifest.json")),
+          () => fs.existsSync(path.join(root, "automovie/manifest.json")),
         ],
       ]),
       {
@@ -89,7 +89,7 @@ export const test_cli_migrate = (): void => {
       },
     );
 
-    const manifestPath = path.join(root, ".automovie", "manifest.json");
+    const manifestPath = path.join(root, "automovie", "manifest.json");
     const manifestBytes = fs.readFileSync(manifestPath);
     fs.appendFileSync(manifestPath, "\n");
     const refusedRollback = captureCli(["migrate", root, "--rollback"]);
@@ -101,7 +101,7 @@ export const test_cli_migrate = (): void => {
           "diagnostic",
           () => refusedRollback.stderr.includes("changed after import"),
         ],
-        ["preserved", () => fs.existsSync(path.join(root, ".automovie"))],
+        ["preserved", () => fs.existsSync(path.join(root, "automovie"))],
       ]),
       { status: true, diagnostic: true, preserved: true },
     );
@@ -119,7 +119,7 @@ export const test_cli_migrate = (): void => {
         ],
         [
           "existsSyncRootAutomovie",
-          () => fs.existsSync(path.join(root, ".automovie")) === false,
+          () => fs.existsSync(path.join(root, "automovie")) === false,
         ],
       ]),
       {

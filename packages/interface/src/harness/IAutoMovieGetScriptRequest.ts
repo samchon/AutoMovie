@@ -9,7 +9,7 @@ export interface IAutoMovieGetScriptRequest {
   /**
    * Selects the knowledge query that reads the project script contract.
    *
-   * @evidence requirements/agent-authoring/mcp-boundary.md#agent-mcp-contract-guidance This discriminator identifies the cited read-only query contract.
+   * @evidence requirements/agent-authoring/knowledge-boundary.md#agent-contract-guidance This discriminator identifies the cited read-only query contract.
    * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-knowledge-request-output This discriminator identifies the cited read-only query contract.
    */
   type: "getScript";

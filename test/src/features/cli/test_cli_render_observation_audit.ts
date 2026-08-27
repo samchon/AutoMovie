@@ -1,4 +1,3 @@
-import { renderScaffold, writeFiles } from "@automovie/cli";
 import type {
   AutoMovieCaptureObservation,
   AutoMovieContentDigest,
@@ -8,6 +7,7 @@ import type {
   IAutoMovieRenderReport,
   IAutoMovieSemanticMask,
 } from "@automovie/interface";
+import { renderScaffold, writeFiles } from "@automovie/template";
 import { TestValidator } from "@nestia/e2e";
 import { spawnSync } from "node:child_process";
 import fs from "node:fs";
@@ -209,7 +209,7 @@ export const test_cli_render_observation_audit = (): void => {
     writeFiles(project, renderScaffold({ name: "observation-film" }));
     for (const name of [
       "@automovie/interface",
-      "@automovie/mcp",
+      "@automovie/production",
       "@automovie/render",
     ])
       linkWorkspacePackage(project, name);

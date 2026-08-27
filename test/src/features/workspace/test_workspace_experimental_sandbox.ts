@@ -43,7 +43,7 @@ export const test_workspace_experimental_sandbox = (): void => {
     }).filter(([name]) => name.startsWith("@automovie/"));
     const settings = JSON.parse(
       fs.readFileSync(path.join(TARGET, ".claude", "settings.json"), "utf8"),
-    ) as { enableAllProjectMcpServers?: boolean };
+    ) as { hooks?: { PreToolUse?: unknown[] } };
     const authored = path.join(TARGET, "README.md");
     const initial = fs.readFileSync(authored, "utf8");
     fs.writeFileSync(authored, `${initial}\nauthor work\n`, "utf8");
@@ -69,7 +69,13 @@ export const test_workspace_experimental_sandbox = (): void => {
                 range.startsWith("workspace:") === false,
             ),
         ],
-        ["mcpApproved", () => settings.enableAllProjectMcpServers === true],
+        [
+          // The sandbox needs the ownership guard exactly as much as a real
+          // project does, so the generator must carry the scaffold's own hooks
+          // through rather than writing settings of its own over them.
+          "guardWired",
+          () => (settings.hooks?.PreToolUse ?? []).length === 1,
+        ],
         [
           "noWorkingResidue",
           () => fs.existsSync(path.join(TARGET, "node_modules")) === false,
@@ -92,7 +98,7 @@ export const test_workspace_experimental_sandbox = (): void => {
       {
         created: true,
         portableRanges: true,
-        mcpApproved: true,
+        guardWired: true,
         noWorkingResidue: true,
         refusedOverwrite: true,
         refreshed: true,

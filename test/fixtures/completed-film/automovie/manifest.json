@@ -1,0 +1,22 @@
+{
+  "formatVersion": 2,
+  "projectId": "{{name}}",
+  "sourceRoots": [
+    "src"
+  ],
+  "contentRoots": [
+    "viewer",
+    "scripts",
+    "public"
+  ],
+  "contentFiles": [
+    "automovie.config.ts",
+    "vite.config.ts",
+    "package.json",
+    "package-lock.json"
+  ],
+  "assetManifest": "automovie/assets.json",
+  "derivedArtifactManifest": "automovie/derived-artifacts.json",
+  "generatedRoot": "generated",
+  "renderRoot": "renders"
+}

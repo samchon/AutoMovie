@@ -5,7 +5,7 @@
   - test
 
 overrides:
-  "@huggingface/transformers>sharp": "file:packages/cli/scaffold/vendor/sharp-disabled"
+  "@huggingface/transformers>sharp": "file:packages/template/scaffold/vendor/sharp-disabled"
 
 catalogs:
   samchon:

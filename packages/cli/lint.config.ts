@@ -10,12 +10,7 @@ import type { ITtscLintConfig } from "@ttsc/lint";
  */
 const allSources = ["src/**/*.ts", "!src/**/index.ts"];
 
-const authoringSurface = [
-  "src/bin.ts",
-  "src/renderScaffold.ts",
-  "src/renderTemplate.ts",
-  "src/templateVersions.ts",
-];
+const authoringSurface = ["src/bin.ts"];
 
 const inspectionSurface = ["src/loadAutoMovieProjectState.ts"];
 
@@ -27,13 +22,7 @@ const inspectionSurface = ["src/loadAutoMovieProjectState.ts"];
  * until someone deliberately assigns it to the authoring or inspection domain,
  * instead of silently answering for nothing.
  */
-const operationsSurface = [
-  ...allSources,
-  "!src/renderScaffold.ts",
-  "!src/renderTemplate.ts",
-  "!src/templateVersions.ts",
-  "!src/loadAutoMovieProjectState.ts",
-];
+const operationsSurface = [...allSources, "!src/loadAutoMovieProjectState.ts"];
 
 const graph: ITtscEvidenceGraphConfig = {
   claims: [
@@ -47,18 +36,8 @@ const graph: ITtscEvidenceGraphConfig = {
           type: "markdown",
           root: "../../docs",
           files: [
-            "requirements/agent-authoring/**/README.md",
-            "requirements/product/**/README.md",
-          ],
-          symbol: ["h1"],
-        },
-        {
-          type: "markdown",
-          root: "../../docs",
-          files: [
-            "requirements/agent-authoring/**/*.md",
-            "requirements/product/**/*.md",
-            "!requirements/**/README.md",
+            "requirements/agent-authoring/project-ownership.md",
+            "requirements/product/capability-and-content.md",
           ],
           symbol: ["h3"],
         },
@@ -73,17 +52,15 @@ const graph: ITtscEvidenceGraphConfig = {
         {
           type: "markdown",
           root: "../../docs",
-          files: ["specifications/authoring-and-authority/**/README.md"],
-          symbol: ["h1"],
-        },
-        {
-          type: "markdown",
-          root: "../../docs",
           files: [
-            "specifications/authoring-and-authority/**/*.md",
-            "!specifications/**/README.md",
+            "specifications/authoring-and-authority/capability-and-content-boundary.md",
+            "specifications/authoring-and-authority/source-authority-and-derivation.md",
           ],
           symbol: ["h3"],
+          // Deriving scaffold bytes moved to `@automovie/template`, which
+          // answers the derivation-lineage and change-impact halves of these
+          // documents. The executable keeps the capability-state and
+          // source-ownership halves it actually performs.
         },
       ],
     },

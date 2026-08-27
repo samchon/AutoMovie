@@ -20,7 +20,7 @@ import {
  * the box a room was declared over.
  *
  * This pins the seam the scaffold's subject page stands on
- * (`packages/cli/scaffold/viewer/src/subject.ts`, opened as
+ * (`packages/template/scaffold/viewer/src/subject.ts`, opened as
  * `viewer/subject.html?subject=<kind>:<id>`). That page holds no geometry of
  * its own: it resolves a key through `describeAutoMovieSubject`, takes the
  * description's CONTENT box, and hands it to `frameAutoMovieViewerSubject`.

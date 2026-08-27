@@ -47,9 +47,16 @@ collectTargets(packageJson.publishConfig?.bin);
 
 for (const target of publishTargets) {
   if (typeof target !== "string") continue;
+  // A subpath pattern names a directory of files rather than one file, so the
+  // check is that the directory it draws from exists. `./docs/*` cannot be
+  // resolved as a path, and treating it as one reports a missing file for a
+  // directory that is right there.
+  const literal = target.includes("*")
+    ? target.slice(0, target.indexOf("*")).replace(/\/$/u, "")
+    : target;
   const resolved = path.resolve(
     process.cwd(),
-    target.startsWith("./") ? target.slice(2) : target,
+    literal.startsWith("./") ? literal.slice(2) : literal,
   );
   const exists = fs.existsSync(resolved);
   if (exists === false) fail(`publishConfig target does not exist: ${target}`);

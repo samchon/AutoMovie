@@ -2,8 +2,8 @@
 // this working tree instead of npm, so a change to any package can be driven by
 // a live coding agent without publishing anything.
 //
-// This is repository-local tooling on purpose. `packages/cli/scaffold/**` and
-// the published `@automovie/cli` surface stay untouched: a real user's project
+// This is repository-local tooling on purpose. `packages/template/scaffold/**` and
+// the published `automovie` surface stay untouched: a real user's project
 // targets released versions, and only how the sandbox obtains those packages
 // differs.
 //
@@ -11,16 +11,13 @@
 // `packages/`. `packWorkspace` explains why in full; the short version is that a
 // link resolves each package through its `exports` to untransformed `src/*.ts`,
 // and every consumer then pays a full TypeScript build on every process start.
-// For an ordinary script that is merely slow. For the MCP host it is fatal: a
-// client's `initialize` request times out at 60 seconds and the measured host
-// took 133, so a linked sandbox served an agent no tools at all. A tarball
-// carries `publishConfig`, so `exports` resolve to built `lib/*.js` with typia's
-// transform already applied, the host starts in seconds, and the sandbox
-// exercises the same resolution a real user's project does.
+// Every sandbox script would pay it again, and the measured cost to a first
+// answer was 133 seconds. A tarball carries `publishConfig`, so `exports`
+// resolve to built `lib/*.js` with typia's transform already applied, a script
+// starts in seconds, and the sandbox exercises the same resolution a real
+// user's project does.
 //
-// `sandboxManifest` then pins every workspace package to its tarball, and
-// `claudeSettings` approves the project's own MCP server so a non-interactive
-// session can reach it.
+// `sandboxManifest` then pins every workspace package to its tarball.
 import { spawnSync } from "node:child_process";
 import * as fs from "node:fs";
 import * as path from "node:path";
@@ -29,11 +26,11 @@ import { fileURLToPath } from "node:url";
 import {
   WORKSPACE_TEMPLATE_VERSION_KEYS,
   resolveTemplateVersions,
-} from "../packages/cli/build/templateVersions.mjs";
+} from "../packages/template/build/templateVersions.mjs";
 import { PACKAGES, packWorkspace } from "./tgz.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const SCAFFOLD = path.join(ROOT, "packages", "cli", "scaffold");
+const SCAFFOLD = path.join(ROOT, "packages", "template", "scaffold");
 
 const USAGE = `create a working-tree automovie sandbox
 
@@ -50,7 +47,7 @@ Options:
 /**
  * Files the scaffold ships without a leading dot, because npm strips a real
  * `.gitignore` and `.npmrc` from a published package. Mirrors the rename map in
- * `packages/cli/src/renderScaffold.ts`.
+ * `packages/template/src/renderScaffold.ts`.
  */
 const RENAME = { gitignore: ".gitignore", npmrc: ".npmrc" };
 
@@ -140,34 +137,13 @@ const renderSandbox = (name, specifiers) => {
 };
 
 /**
- * The scaffold's Claude settings with the project's own MCP server approved.
- *
- * A `.mcp.json` server starts life unapproved, and `claude mcp list` reports it
- * as `Pending approval (run claude to approve)`. Approval is interactive and
- * per-project, and `--dangerously-skip-permissions` does not grant it, so a
- * headless `claude -p` session against a fresh sandbox sees no automovie tools
- * at all and cannot be told to wait for any. Since the whole point of a sandbox
- * is to be driven by an agent, the generator grants that approval up front.
- *
- * The scaffold's own `hooks` block is preserved rather than replaced: it wires
- * the guard that refuses writes to compiler-owned paths, which a sandbox needs
- * exactly as much as a real project does.
- */
-const claudeSettings = (rendered) => {
-  const settings = JSON.parse(rendered);
-  return `${JSON.stringify(
-    { enableAllProjectMcpServers: true, ...settings },
-    null,
-    2,
-  )}\n`;
-};
-
-/**
  * The sandbox's manifest: the scaffold's, with every workspace package pinned
  * to its sibling tarball.
  *
- * Every one of the nine is pinned directly, including `evidence`, `ingest`, and `render`
- * which the scaffold never names. `pnpm pack` rewrites each packed package's
+ * Every one of them is pinned directly, including `evidence`, `ingest`, and
+ * `render` which the scaffold never names. Each is pinned under its published
+ * name rather than under `@automovie/` plus its directory, because the
+ * command-line package publishes as `automovie`. `pnpm pack` rewrites each packed package's
  * own `workspace:^` ranges into plain semver, so an unpinned member is fetched
  * from the public registry at a version this monorepo has never published, and
  * the install dies on `ERR_PNPM_FETCH_404 .../@automovie%2Fengine`. A direct
@@ -183,13 +159,12 @@ const claudeSettings = (rendered) => {
  */
 const sandboxManifest = (rendered, specifiers) => {
   const manifest = JSON.parse(rendered);
-  for (const name of Object.keys(specifiers)) {
-    if (specifiers[name] === undefined) continue;
-    const dependency = `@automovie/${name}`;
+  for (const { key, name: dependency } of PACKAGES) {
+    if (specifiers[key] === undefined) continue;
     const table = Object.hasOwn(manifest.devDependencies ?? {}, dependency)
       ? manifest.devDependencies
       : manifest.dependencies;
-    table[dependency] = specifiers[name];
+    table[dependency] = specifiers[key];
   }
   return `${JSON.stringify(manifest, null, 2)}\n`;
 };
@@ -250,9 +225,6 @@ const main = () => {
         files["package.json"],
         specifiers,
       );
-      files[".claude/settings.json"] = claudeSettings(
-        files[".claude/settings.json"],
-      );
       for (const [relative, content] of Object.entries(files)) {
         const file = path.join(target, ...relative.split("/"));
         fs.mkdirSync(path.dirname(file), { recursive: true });
@@ -284,9 +256,13 @@ const main = () => {
       `\nDrive it with Claude Code:\n` +
         `  cd experimental/${name}\n` +
         `  claude\n\n` +
-        `Drive it with Codex (its MCP servers come from its own config, not .mcp.json):\n` +
-        `  codex mcp add automovie -- node ${path.join(target, "node_modules", "ttsc", "lib", "launcher", "ttsx.js")} -P ${path.join(target, "tsconfig.json")} ${path.join(target, "scripts", "mcp.ts")}\n` +
-        `  cd experimental/${name} && codex\n\n` +
+        `Drive it with Codex:
+` +
+        `  cd experimental/${name}
+` +
+        `  codex
+
+` +
         `The sandbox installs packed working-tree tarballs, so after changing a\n` +
         `package under packages/ rerun this command with --refresh, which repacks\n` +
         `and reinstalls without rewriting scaffold-managed work in progress.\n` +

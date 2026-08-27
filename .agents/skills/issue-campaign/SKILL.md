@@ -43,7 +43,7 @@ The knowledge base supports the campaign but is not the final issue body. A publ
 
 Run the review skill's Solo Issue Discovery Rounds over the entire declared campaign scope.
 
-Source is only one evidence layer. Exercise real workflows: drive the MCP tools, render through the viewer with the viewer-verification skill, run the coverage gate when the phase authorizes it, and inspect relevant upstream behavior, history, consumers, fixtures, public documentation, and closed decisions.
+Source is only one evidence layer. Exercise real workflows: run a generated project's own scripts, render through the viewer with the viewer-verification skill, run the coverage gate when the phase authorizes it, and inspect relevant upstream behavior, history, consumers, fixtures, public documentation, and closed decisions.
 
 Treat the development skill's [Forbidden](../development/SKILL.md#forbidden) section as an explicit retrospective audit contract, not only a rule for future changes. In every complete round, inspect the current implementation and its history for violations, including code that predates the campaign or passes every test at 100% coverage. A verified violation is a meaningful issue candidate. Prove the classification from purpose, control flow, consequence, and history; resemblance or stylistic preference alone is not evidence.
 
@@ -103,14 +103,14 @@ An issue is one topic, not one package. Walk the topic down the contract before 
 | `docs/specifications` | Which specification makes that promise precise |
 | `packages/*` | Which package owns the logic, and which anchors its public exports cite |
 | Sandbox engine surface | Whether authoring source has to call it, and through which surface entry and bridge |
-| `packages/mcp/prompts` | How an authoring agent comes to know the capability is there |
+| `packages/template/scaffold/.agents/skills` | How an authoring agent comes to know the capability is there |
 | Tests | Reachability and the negative twin, not the logic alone |
 
 The table is the floor, not the boundary. A topic that also crosses the scaffold, the viewer, CI, the evidence configuration, or a skill lists that layer beside the six.
 
 **"Not applicable" is an answer and silence is not.** Write the layer down with the reason it does not apply. A layer the body never mentions is a layer nobody decided about, and the decision then falls to whoever notices it later.
 
-Name each layer's obligation by pointing at the skill that owns it. The [evidence graph skill](../evidence-graph/SKILL.md) owns what the two document layers hold and how a public export cites them, the [MCP skill](../mcp/SKILL.md) owns the guide corpus, and the development skill's rule that [a solver lands with the consumer that calls it](../development/SKILL.md#work-rules) owns the same obligation inside a single change. A second copy of any of those drifts from the original, and this repository has already shipped a guide README promising a gate nothing performed.
+Name each layer's obligation by pointing at the skill that owns it. The [evidence graph skill](../evidence-graph/SKILL.md) owns what the two document layers hold and how a public export cites them, the [scaffold skill](../scaffold/SKILL.md) owns the authoring skill a generated project ships, and the development skill's rule that [a solver lands with the consumer that calls it](../development/SKILL.md#work-rules) owns the same obligation inside a single change. A second copy of any of those drifts from the original, and this repository has already shipped a guide README promising a gate nothing performed.
 
 The failure this contract exists to prevent is a capability that exists and cannot be reached. One campaign recorded it six times (`#1904`, `#1915`, `#1917`, `#1920`, `#1930`, and `builtEnvironmentSpaceNodes`): logic that worked, with nothing exposing it, listing it, or naming it where an author would look. In `#1904` the authoring agent was told the right technique, given no way to perform it, and invented a workaround the guides explicitly forbid.
 

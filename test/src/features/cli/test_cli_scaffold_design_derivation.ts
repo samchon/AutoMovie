@@ -1,4 +1,4 @@
-import { renderScaffold, scaffoldAssetDirectory } from "@automovie/cli";
+import { renderScaffold, scaffoldAssetDirectory } from "@automovie/template";
 import { TestValidator } from "@nestia/e2e";
 import fs from "node:fs";
 import path from "node:path";
@@ -16,7 +16,10 @@ import { namedFacts, throwsError } from "../internal/predicates";
  * fixture keeps compiler regression coverage elsewhere.
  */
 export const test_cli_scaffold_design_derivation = (): void => {
-  const scaffold = path.resolve(__dirname, "../../../../packages/cli/scaffold");
+  const scaffold = path.resolve(
+    __dirname,
+    "../../../../packages/template/scaffold",
+  );
   const assetDirectory = scaffoldAssetDirectory();
   const existsSync = fs.existsSync;
   Object.defineProperty(fs, "existsSync", {
@@ -71,12 +74,12 @@ export const test_cli_scaffold_design_derivation = (): void => {
     file.startsWith("generated/"),
   );
   const productionState = Object.keys(rendered).filter((file) =>
-    file.startsWith(".automovie/productions/"),
+    file.startsWith("automovie/productions/"),
   );
-  const reviewRecords = Object.keys(rendered).filter(
-    (file) =>
-      file.startsWith(".automovie/reviews/") &&
-      file !== ".automovie/reviews/README.md",
+  // Not "the review directory ships empty": the review store is retired, so
+  // the scaffold must carry no path under it at all.
+  const reviewStore = Object.keys(rendered).filter((file) =>
+    file.startsWith("automovie/reviews"),
   );
   const renderedMedia = Object.keys(rendered).filter(
     (file) => file.startsWith("renders/") && file !== "renders/README.md",
@@ -86,7 +89,7 @@ export const test_cli_scaffold_design_derivation = (): void => {
       /^public\/(?:assets|audio)\//u.test(file) && !file.endsWith("/README.md"),
   );
   const registeredAssets = (
-    JSON.parse(rendered[".automovie/assets.json"]!) as {
+    JSON.parse(rendered["automovie/assets.json"]!) as {
       assets: unknown[];
     }
   ).assets;
@@ -111,7 +114,7 @@ export const test_cli_scaffold_design_derivation = (): void => {
       publicMedia,
       registeredAssets,
       renderedMedia,
-      reviewRecords,
+      reviewStore,
     },
     {
       designRecords: [],
@@ -125,7 +128,7 @@ export const test_cli_scaffold_design_derivation = (): void => {
       publicMedia: [],
       registeredAssets: [],
       renderedMedia: [],
-      reviewRecords: [],
+      reviewStore: [],
     },
   );
   TestValidator.equals(
@@ -144,7 +147,7 @@ export const test_cli_scaffold_design_derivation = (): void => {
         "physical design tree is empty",
         () =>
           JSON.stringify(
-            fs.readdirSync(path.join(scaffold, ".automovie", "design")),
+            fs.readdirSync(path.join(scaffold, "automovie", "design")),
           ) === JSON.stringify([".gitkeep"]),
       ],
       [

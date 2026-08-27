@@ -49,7 +49,7 @@ Two consequences for a brief. A tool named once is named for the whole session, 
 
 Measuring discoverability needs a run in which the name appears in no message at all, including the ones that only list what the agent may read.
 
-**And including anything you quote back from the product.** Its own diagnostics name its tools — one review refusal reads *"Run prepareReview, correct the target, and submitReview before this compile scope"* — so relaying a diagnostic verbatim spends the measurement in the act of describing it. A driver caught that with the message already drafted: it had been analysing a contradiction between two commands' remedies, and quoting either one to the agent would have handed over two of the three names the run existed to see whether the agent could find.
+**And including anything you quote back from the product.** Its own diagnostics name its tools — one refusal used to read *"Run prepareReview, correct the target, and submitReview before this compile scope"* — so relaying a diagnostic verbatim spends the measurement in the act of describing it. A driver caught that with the message already drafted: it had been analysing a contradiction between two commands' remedies, and quoting either one to the agent would have handed over two of the three names the run existed to see whether the agent could find.
 
 The consequence is not "paraphrase the diagnostic". It is that **a finding about the product's text is the driver's to file and not the author's to be told**, and a run measuring discoverability cannot use the product's own error messages as steering material at all. Scan every outgoing message against the tool names, not only against the ones you wrote yourself.
 
@@ -83,7 +83,7 @@ Getting the massing right cheaply and then leaving it alone was the most valuabl
 
 ## Require The Surface Decomposition Early
 
-Ask for the decomposition as a deliverable of the massing stage, before there is anything to clad. One complete visual surface has one owner and no surface is ever split, which the [design-branches document](../../../packages/cli/scaffold/.agents/skills/production/design-branches.md) owns and the sandbox's own `src/examples/surfaceOwnership.ts` teaches as an authoring technique; the [review skill's law](../review/SKILL.md#non-negotiable-review-law) is the same rule for reviewers. What the brief adds is the timing.
+Ask for the decomposition as a deliverable of the massing stage, before there is anything to clad. One complete visual surface has one owner and no surface is ever split, which the [design-branches document](../../../packages/template/scaffold/.agents/skills/production/design-branches.md) owns and the sandbox's own `src/examples/surfaceOwnership.ts` teaches as an authoring technique; the [review skill's law](../review/SKILL.md#non-negotiable-review-law) is the same rule for reviewers. What the brief adds is the timing.
 
 That campaign's production restructured itself into one file per elevation, per room, and per courtyard level, with a single owner for each cross-cutting concern, but only halfway through. Before that it was a few large files and the authoring agent could not fan out at all.
 

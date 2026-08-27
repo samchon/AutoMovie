@@ -533,7 +533,7 @@
     "requirements/diagnostics/input-and-result-classification.md#diagnostics-missing-state": {
       "owner": {
         "kind": "package",
-        "package": "@automovie/cli"
+        "package": "automovie"
       }
     },
     "requirements/diagnostics/input-and-result-classification.md#diagnostics-unsupported-state": {
@@ -815,7 +815,7 @@
     "requirements/evidence-and-provenance/completeness-freshness-and-refusal.md#evidence-reapproval-after-change": {
       "owner": {
         "kind": "package",
-        "package": "@automovie/cli"
+        "package": "automovie"
       }
     },
     "requirements/evidence-and-provenance/entities-activities-agents-and-lineage.md#provenance-entity-and-revision": {
@@ -1991,61 +1991,61 @@
     "requirements/operations-and-recovery/checkpoints-resume-and-retry.md#operations-acknowledged-completion-boundary": {
       "owner": {
         "kind": "package",
-        "package": "@automovie/cli"
+        "package": "automovie"
       }
     },
     "requirements/operations-and-recovery/checkpoints-resume-and-retry.md#operations-changed-input-restart": {
       "owner": {
         "kind": "package",
-        "package": "@automovie/cli"
+        "package": "automovie"
       }
     },
     "requirements/operations-and-recovery/checkpoints-resume-and-retry.md#operations-checkpoint-completeness": {
       "owner": {
         "kind": "package",
-        "package": "@automovie/cli"
+        "package": "automovie"
       }
     },
     "requirements/operations-and-recovery/checkpoints-resume-and-retry.md#operations-resume-eligibility": {
       "owner": {
         "kind": "package",
-        "package": "@automovie/cli"
+        "package": "automovie"
       }
     },
     "requirements/operations-and-recovery/checkpoints-resume-and-retry.md#operations-resumed-result-validation": {
       "owner": {
         "kind": "package",
-        "package": "@automovie/cli"
+        "package": "automovie"
       }
     },
     "requirements/operations-and-recovery/checkpoints-resume-and-retry.md#operations-retry-lineage-and-limits": {
       "owner": {
         "kind": "package",
-        "package": "@automovie/cli"
+        "package": "automovie"
       }
     },
     "requirements/operations-and-recovery/idempotency-and-side-effects.md#operations-duplicate-submission": {
       "owner": {
         "kind": "package",
-        "package": "@automovie/cli"
+        "package": "@automovie/template"
       }
     },
     "requirements/operations-and-recovery/migration-and-compatibility.md#operations-migration-validation": {
       "owner": {
         "kind": "package",
-        "package": "@automovie/cli"
+        "package": "automovie"
       }
     },
     "requirements/operations-and-recovery/migration-and-compatibility.md#operations-mixed-version-concurrency": {
       "owner": {
         "kind": "package",
-        "package": "@automovie/cli"
+        "package": "automovie"
       }
     },
     "requirements/operations-and-recovery/migration-and-compatibility.md#operations-nondestructive-migration": {
       "owner": {
         "kind": "package",
-        "package": "@automovie/cli"
+        "package": "automovie"
       }
     },
     "requirements/operations-and-recovery/resource-budgets-and-backpressure.md#operations-budget-admission-estimate": {
@@ -2057,61 +2057,61 @@
     "requirements/operations-and-recovery/retention-and-cleanup.md#operations-cleanup-concurrency-safety": {
       "owner": {
         "kind": "package",
-        "package": "@automovie/cli"
+        "package": "automovie"
       }
     },
     "requirements/operations-and-recovery/retention-and-cleanup.md#operations-cleanup-deletion-record": {
       "owner": {
         "kind": "package",
-        "package": "@automovie/cli"
+        "package": "automovie"
       }
     },
     "requirements/operations-and-recovery/retention-and-cleanup.md#operations-cleanup-failure-visibility": {
       "owner": {
         "kind": "package",
-        "package": "@automovie/cli"
+        "package": "automovie"
       }
     },
     "requirements/operations-and-recovery/retention-and-cleanup.md#operations-cleanup-target-preview": {
       "owner": {
         "kind": "package",
-        "package": "@automovie/cli"
+        "package": "automovie"
       }
     },
     "requirements/operations-and-recovery/retention-and-cleanup.md#operations-reference-aware-retention": {
       "owner": {
         "kind": "package",
-        "package": "@automovie/cli"
+        "package": "automovie"
       }
     },
     "requirements/operations-and-recovery/retention-and-cleanup.md#operations-sensitive-data-minimization": {
       "owner": {
         "kind": "package",
-        "package": "@automovie/cli"
+        "package": "automovie"
       }
     },
     "requirements/operations-and-recovery/scope-job-identity-and-state.md#operations-deterministic-reexecution-identity": {
       "owner": {
         "kind": "package",
-        "package": "@automovie/cli"
+        "package": "automovie"
       }
     },
     "requirements/operations-and-recovery/scope-job-identity-and-state.md#operations-job-attempt-separation": {
       "owner": {
         "kind": "package",
-        "package": "@automovie/cli"
+        "package": "automovie"
       }
     },
     "requirements/operations-and-recovery/scope-job-identity-and-state.md#operations-job-state-transition-history": {
       "owner": {
         "kind": "package",
-        "package": "@automovie/cli"
+        "package": "automovie"
       }
     },
     "requirements/operations-and-recovery/scope-job-identity-and-state.md#operations-job-state-vocabulary": {
       "owner": {
         "kind": "package",
-        "package": "@automovie/cli"
+        "package": "automovie"
       }
     },
     "requirements/product/prototype-quality.md#product-authored-variation-determinism": {
@@ -2297,37 +2297,37 @@
     "requirements/rendering/chunks-resume-and-recovery.md#rendering-atomic-publication": {
       "owner": {
         "kind": "package",
-        "package": "@automovie/cli"
+        "package": "automovie"
       }
     },
     "requirements/rendering/chunks-resume-and-recovery.md#rendering-concurrent-work": {
       "owner": {
         "kind": "package",
-        "package": "@automovie/cli"
+        "package": "automovie"
       }
     },
     "requirements/rendering/chunks-resume-and-recovery.md#rendering-failure-recovery": {
       "owner": {
         "kind": "package",
-        "package": "@automovie/cli"
+        "package": "automovie"
       }
     },
     "requirements/rendering/chunks-resume-and-recovery.md#rendering-recovery-refusal": {
       "owner": {
         "kind": "package",
-        "package": "@automovie/cli"
+        "package": "automovie"
       }
     },
     "requirements/rendering/chunks-resume-and-recovery.md#rendering-resume": {
       "owner": {
         "kind": "package",
-        "package": "@automovie/cli"
+        "package": "automovie"
       }
     },
     "requirements/rendering/chunks-resume-and-recovery.md#rendering-retry-identity": {
       "owner": {
         "kind": "package",
-        "package": "@automovie/cli"
+        "package": "automovie"
       }
     },
     "requirements/rendering/encoding-and-multiplexing.md#rendering-codec-container-facts": {
@@ -2465,31 +2465,31 @@
     "requirements/rendering/scope-and-artifact-identity.md#rendering-artifact-invalidation": {
       "owner": {
         "kind": "package",
-        "package": "@automovie/cli"
+        "package": "automovie"
       }
     },
     "requirements/rendering/scope-and-artifact-identity.md#rendering-deterministic-lane": {
       "owner": {
         "kind": "package",
-        "package": "@automovie/cli"
+        "package": "automovie"
       }
     },
     "requirements/rendering/scope-and-artifact-identity.md#rendering-missing-artifact-refusal": {
       "owner": {
         "kind": "package",
-        "package": "@automovie/cli"
+        "package": "automovie"
       }
     },
     "requirements/rendering/scope-and-artifact-identity.md#rendering-partial-artifact": {
       "owner": {
         "kind": "package",
-        "package": "@automovie/cli"
+        "package": "automovie"
       }
     },
     "requirements/rendering/scope-and-artifact-identity.md#rendering-product-scope": {
       "owner": {
         "kind": "package",
-        "package": "@automovie/cli"
+        "package": "automovie"
       }
     },
     "requirements/rendering/validation.md#rendering-validation-status": {
@@ -3143,13 +3143,13 @@
     "requirements/agent-authoring/deterministic-precomputation.md#agent-precomputed-explicit-generation": "sha256:553a98ee4d0d51b38696595f727452ac5dc47ac7bc632ec9e9fb28c9c8455421",
     "requirements/agent-authoring/deterministic-precomputation.md#agent-precomputed-portable-publication": "sha256:3cf125989045a80d417cf7d5884a35b5b423ed192632f5221a11b1e1cb18a3e3",
     "requirements/agent-authoring/deterministic-precomputation.md#agent-precomputed-provenance-separation": "sha256:39b035d184ab3584c10d251324f763dfc60e44cf5eb04137f2106ac9cffa946c",
-    "requirements/agent-authoring/mcp-boundary.md#agent-mcp-authoring-api-refusal": "sha256:22018defae7611820bd84e28c168ba5f6e8a84ca4777a1a16f7ffe603cdabdd6",
-    "requirements/agent-authoring/mcp-boundary.md#agent-mcp-content-supply-refusal": "sha256:81daef8e53ee88316eaa7a7b119bdda4b35c33e148d20f69212ee191f9569a31",
-    "requirements/agent-authoring/mcp-boundary.md#agent-mcp-contract-guidance": "sha256:99ec151b797377e3a3aba26850af007d39f374c01f6202e8ce8e27ce2ffe9290",
-    "requirements/agent-authoring/mcp-boundary.md#agent-mcp-host-evidence": "sha256:7d081e14fb6c84c48d87c1e955d727f261b1f25428928511ea74e5358c14e13c",
-    "requirements/agent-authoring/mcp-boundary.md#agent-mcp-knowledge-boundary": "sha256:ab7e6fddf5d84d6993f66ccd491fa913c3eca8ec8e2b274c18354db1891c0ecf",
-    "requirements/agent-authoring/mcp-boundary.md#agent-mcp-no-surprise-external-effects": "sha256:3b7ee831c0fea3ca7931a722fdd5e3c9240bd0eaa0d41f9c2837106dc86a31b0",
-    "requirements/agent-authoring/mcp-boundary.md#agent-mcp-provider-neutrality": "sha256:17f1b3d484820e86ae670ba45862fc684e428d93e4380cdcb9d91fb46c844bb0",
+    "requirements/agent-authoring/knowledge-boundary.md#agent-authoring-api-refusal": "sha256:22018defae7611820bd84e28c168ba5f6e8a84ca4777a1a16f7ffe603cdabdd6",
+    "requirements/agent-authoring/knowledge-boundary.md#agent-content-supply-refusal": "sha256:81daef8e53ee88316eaa7a7b119bdda4b35c33e148d20f69212ee191f9569a31",
+    "requirements/agent-authoring/knowledge-boundary.md#agent-contract-guidance": "sha256:99ec151b797377e3a3aba26850af007d39f374c01f6202e8ce8e27ce2ffe9290",
+    "requirements/agent-authoring/knowledge-boundary.md#agent-host-evidence": "sha256:7d081e14fb6c84c48d87c1e955d727f261b1f25428928511ea74e5358c14e13c",
+    "requirements/agent-authoring/knowledge-boundary.md#agent-knowledge-boundary": "sha256:ab7e6fddf5d84d6993f66ccd491fa913c3eca8ec8e2b274c18354db1891c0ecf",
+    "requirements/agent-authoring/knowledge-boundary.md#agent-no-surprise-external-effects": "sha256:3b7ee831c0fea3ca7931a722fdd5e3c9240bd0eaa0d41f9c2837106dc86a31b0",
+    "requirements/agent-authoring/knowledge-boundary.md#agent-provider-neutrality": "sha256:17f1b3d484820e86ae670ba45862fc684e428d93e4380cdcb9d91fb46c844bb0",
     "requirements/agent-authoring/partial-work.md#agent-atomic-compilation": "sha256:915de1afe8afedb51b0284ef27acfe6605a2205e87531a9135418e447f86444b",
     "requirements/agent-authoring/partial-work.md#agent-honest-partial-work": "sha256:12605a13e654900e214f483a5bb29b464694a81be9545500c85616cc1e6fe469",
     "requirements/agent-authoring/partial-work.md#agent-partial-verification-scope": "sha256:f36edd8eb1a4e814eeaabc1e638b74dfe5fe0531ed80664115ceea4d4c46221f",

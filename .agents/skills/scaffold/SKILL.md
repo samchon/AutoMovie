@@ -1,23 +1,23 @@
 ---
 name: scaffold
-description: Defines how packages/cli/scaffold is maintained as the authoring harness every generated project inherits verbatim, including the shipped production skill, the reserved discovery, obligation, and principle inventory, and the negative-probe and generated-consumer verification gates. Use before editing anything under packages/cli/scaffold, and to reach the production authoring procedure when authoring production content inside this repository.
+description: Defines how packages/template/scaffold is maintained as the authoring harness every generated project inherits verbatim, including the shipped production skill, the reserved discovery, obligation, and principle inventory, and the negative-probe and generated-consumer verification gates. Use before editing anything under packages/template/scaffold, and to reach the production authoring procedure when authoring production content inside this repository.
 ---
 
 # Maintaining the scaffold
 
-`packages/cli/scaffold` is the empty authoring harness `@automovie/cli` stamps out. A completed regression film fixture lives outside it so generated projects inherit capability and contracts, never another production's content. Treat every scaffold change as a generated-project API change.
+`packages/template/scaffold` is the empty authoring harness `automovie` stamps out. A completed regression film fixture lives outside it so generated projects inherit capability and contracts, never another production's content. Treat every scaffold change as a generated-project API change.
 
 ## The authoring procedure lives with the production
 
-The procedure that authors a production ships inside the scaffold at `packages/cli/scaffold/.agents/skills/production/`. A generated project therefore holds its own authoring doctrine, and this repository holds exactly one copy of it.
+The procedure that authors a production ships inside the scaffold at `packages/template/scaffold/.agents/skills/production/`. A generated project therefore holds its own authoring doctrine, and this repository holds exactly one copy of it.
 
-Read [the shipped production skill](../../../packages/cli/scaffold/.agents/skills/production/SKILL.md) before authoring or reviewing production content anywhere, including a fixture or an experimental sandbox inside this repository. This maintenance skill does not restate it.
+Read [the shipped production skill](../../../packages/template/scaffold/.agents/skills/production/SKILL.md) before authoring or reviewing production content anywhere, including a fixture or an experimental sandbox inside this repository. This maintenance skill does not restate it.
 
 Editing any document under that directory changes what every future generated project is instructed to do. Apply the [documentation skill](../documentation/SKILL.md) writing rules, verify the links resolve from a generated project rather than from this repository, and run the verification gates below.
 
 ## The shared contract inventory
 
-`packages/cli/scaffold/docs/discovery`, `docs/obligations`, and `docs/principles` are an exact reserved inventory. `@automovie/evidence` pins their filenames and their ordered H2 anchors, so adding, removing, renaming, or reordering a shared H2 without the matching wiring fails the graph while it loads.
+`packages/template/scaffold/docs/discovery`, `docs/obligations`, and `docs/principles` are an exact reserved inventory. `@automovie/evidence` pins their filenames and their ordered H2 anchors, so adding, removing, renaming, or reordering a shared H2 without the matching wiring fails the graph while it loads.
 
 Changing that inventory means changing the target document, `EXPECTED_CONTRACTS`, the claim or reference that selects it, the package test's canaries, the paid population in `internals/scaffold-evidence-gate.mjs` whenever that probe's shape selects the target, and the routing guidance in `docs/README.md` and the shipped skill, in one coherent change. A new target family also joins the reserved directory set and the contract walk.
 

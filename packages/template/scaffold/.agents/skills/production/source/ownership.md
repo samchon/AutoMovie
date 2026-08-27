@@ -1,0 +1,23 @@
+# Source Ownership
+
+The coding agent owns `src`, `docs`, `test`, and declared assets. AutoMovie owns tracked design and review records under `automovie`. The compiler alone owns `generated`. Render commands own content-addressed `renders`.
+
+Deterministic derived artifacts have their own owner inside `automovie`. An explicit generation script you write publishes the exact bytes under `automovie/derived/` and the ledger that records their basis; compilation verifies both and never regenerates either. Hand-editing the bytes or the ledger, and registering a derived path in the external asset ledger, are both refused. [Compilation](compilation.md) owns that contract.
+
+Never patch `generated` to fix a source problem. Its manifest records every compiler-owned path and digest; unowned or modified output blocks compilation. Edit the owning source or design, then run the scaffold compile command or the package compiler API.
+
+Shot source executes in a deterministic boundary. Wall clock, random APIs, process, network, filesystem, timers, and dynamic import are unavailable in the foundation compiler. Use explicit design seeds. A named static runtime import is available for project-relative modules and for the names `@automovie/engine` and `@automovie/archetypes` publish to the sandbox. Other packages and default, namespace, or side-effect bindings are refused at the declaration. An unavailable named engine export is refused by name, and the refusal says whether the engine has no such export or the sandbox withholds one it has. [TypeScript](typescript.md) lists the reachable engine set by the question each family answers. Type-only imports are documentation and disappear before execution.
+
+The build context contains immutable compiler-generated `runtimeModels` and compact `formationRuntime`. `engine.formationSlot` regenerates one exact representative without serializing the group.
+
+It also carries `derivedArtifacts`, whose live basis and output digests the compiler re-verified on this run. A missing or stale one refuses the compile instead of handing source an approximate value.
+
+Source returns a registered thin actor, script, stage, blocking, and performance program, event sample times, optional `enact` clips, optional bounded formation and effect cues, and optionally its own generated models, semantic props, structured built environments, the observation and lineage records those buildings cite, and the fluid, cloth, planting, and service-network domains it stages with the bindings that attach them.
+
+It does not return a finished scene or shot, model recipes, imported asset bytes, anonymous formation nodes, arbitrary per-member curves, or subjective proof that it met the contract.
+
+AutoMovie runs the engine film pipeline, adds compiler-owned data, and derives realization from current scene, pose, motion, camera, and contract predicates.
+
+Source-owned geometry does not weaken that boundary, it locates it. A mesh your code constructs is source, so it is regenerated from the same bytes on every compile and its determinism is your obligation. A recipe-materialized runtime model, an ingested external asset, and everything under `generated` stay compiler-owned, and a program that tried to hand back one of those would be claiming ownership it does not have.
+
+The dense motion and realization returned by compilation are derived output. Their source of truth is the tracked source plus bounded design and compiler protocol. Fresh reopen must regenerate identical fingerprints and bytes.

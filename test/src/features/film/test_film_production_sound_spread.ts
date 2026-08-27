@@ -10,7 +10,7 @@ import {
   IAutoMovieProductionSoundPlan,
   IAutoMovieShotContract,
 } from "@automovie/interface";
-import { materializeCompiledFormation } from "@automovie/mcp";
+import { materializeCompiledFormation } from "@automovie/production";
 import { TestValidator } from "@nestia/e2e";
 
 import { namedFacts, nclose } from "../internal/predicates";

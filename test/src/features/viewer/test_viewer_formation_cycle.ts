@@ -9,7 +9,7 @@ import {
   AUTOMOVIE_FORMATION_INSTANCE_BYTES,
   materializeCompiledFormation,
   materializeProductionModels,
-} from "@automovie/mcp";
+} from "@automovie/production";
 import {
   EDGE_SHELL_NAME,
   applyRenderMode,
@@ -27,7 +27,7 @@ import { TestValidator } from "@nestia/e2e";
 import * as THREE from "three";
 
 import { namedFacts, throwsError } from "../internal/predicates";
-import { formationDesign, modelRecipe } from "../mcp/productionFixtures";
+import { formationDesign, modelRecipe } from "../production/productionFixtures";
 
 /**
  * An anonymous formation member performs a cycle at its own seeded phase.

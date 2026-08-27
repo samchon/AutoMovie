@@ -205,7 +205,7 @@ const keysOf = (values: readonly number[]) =>
  * that names the struck camera, is refused at the aim. So the fixture's loose
  * carries no `onHit`, and the shot's performances are asserted camera-free:
  * producing a shot whose performance node is not a scene node is exactly what
- * the MCP artifact validator refuses at commit.
+ * the artifact validator refuses at commit.
  *
  * The coverage half is reached the way a caller reaches it in production:
  * `perform` takes `blocking` as an ordinary argument, so a hand-written plan

@@ -30,7 +30,7 @@ export const POSITIONAL_TARGET_SHAPE =
  *
  * Total over `unknown` because the callers differ in how much they have already
  * validated: the perform gate reaches here only past its own shape checks,
- * while the MCP geometry queries hand over whatever the agent sent.
+ * while the production geometry queries hand over whatever the agent sent.
  *
  * @evidence requirements/staging/interactions-and-choreography.md#staging-interaction-refusal Returns an actionable correction for a positional target that cannot resolve.
  * @evidence specifications/performance-motion-and-staging/staging-space-state-and-choreography.md#performance-staging-interaction-choreography-role Implements the refusal reason for an unresolved choreography target.

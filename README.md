@@ -15,32 +15,24 @@ AutoMovie is built around one evidence chain:
 3. Agent-owned TypeScript realizes shots with the same public engine that the compiler validates.
 4. Compilation measures geometry, continuity, film grammar, physics advice, and source ownership instead of trusting echoed ids.
 5. Project-owned capture binds actual pixels to compiler and runtime identity.
-6. Design, source, asset, shot, sequence, optional rendition, and film reviews bind judgment to current evidence.
-7. Rendering publishes only current, receipt-backed deliverables; read-only `verify` reopens those bytes, receipts, and reviews and rejects any mismatch.
+6. Written evidence binds judgment to what was actually seen: every claim that a unit is realized cites the requirement it answers and says what the captured frames showed.
+7. Rendering publishes only current, receipt-backed deliverables; read-only `verify` reopens those bytes and receipts and rejects any mismatch.
 
 This division keeps creative judgment with the user and coding agent while making technical claims reproducible and machine-verifiable.
 
 ## Product boundary
 
-The coding agent owns `src`, `docs`, `test`, and `public`. It writes ordinary files and runs ordinary package commands. AutoMovie owns bounded design state, compiler output, review records, render receipts, and content-addressed delivery artifacts.
+The coding agent owns `src`, `docs`, `test`, and `public`. It writes ordinary files and runs ordinary package commands. AutoMovie owns bounded design state, compiler output, render receipts, and content-addressed delivery artifacts.
 
-The MCP server is deliberately narrow. It exposes only the facts a normal coding channel cannot carry safely, and the table below is the whole surface:
+There is no tool server between the agent and the project. A generated production ships the skill that teaches how to author it, the contracts its evidence graph cites, and its own npm scripts; the agent reads the skill, writes TypeScript, runs the scripts, and states in the source what the resulting frames showed. Nothing serves it a document, holds a verdict on its behalf, or accepts a review it did not write down.
 
-| Tool               | Responsibility                                                           |
-| ------------------ | ------------------------------------------------------------------------ |
-| `getGuideDocument` | serve one packaged guide and record session read credit                  |
-| `captureFrame`     | produce and receipt an actual shot or asset PNG through the host adapter |
-| `repaintShot`      | optionally derive and receipt a structure-preserving visual rendition    |
-| `prepareReview`    | derive the current evidence-bound review worksheet                       |
-| `submitReview`     | validate and store a verdict-last review                                 |
-
-MCP has no design setter, compiler, renderer, status query, geometry query, project switcher, or internal LLM. Package and scaffold commands provide those deterministic operations, while [`@automovie/engine`](./packages/engine) and [`@automovie/interface`](./packages/interface) remain directly importable for code-native work.
+That is the whole delivery mechanism, and it is deliberate. A capability an agent cannot reach by reading the project and running its scripts does not exist, which keeps the surface honest: [`@automovie/engine`](./packages/engine) and [`@automovie/interface`](./packages/interface) remain directly importable for code-native work, and there is no internal LLM anywhere in the repository.
 
 ## Delivery modes
 
 `visualDelivery: "deterministic"` ships compiler and renderer output directly. It is the default, zero-configuration path and does not depend on a diffusion service.
 
-`visualDelivery: "repainted"` is an optional host-adapter lane. The deterministic shot remains technical truth; its completed review must precede repaint. The derived MP4 receives an immutable provenance receipt and a separate rendition review, and final sequence and film review cite the selected rendition. AutoMovie verifies those resident bytes and their provenance rather than claiming that a non-deterministic model can reproduce them.
+`visualDelivery: "repainted"` is an optional host-adapter lane. The deterministic shot remains technical truth. The derived MP4 receives an immutable provenance receipt, and the evidence that a sequence or film is realized cites the selected rendition. AutoMovie verifies those resident bytes and their provenance rather than claiming that a non-deterministic model can reproduce them.
 
 ## Start a production
 
@@ -65,13 +57,14 @@ The generated README explains the complete tracked-authoring, compile, capture, 
 | [`@automovie/interface`](./packages/interface)               | Shared data contracts for authoring, production design, generated output, evidence, review, and delivery.                           |
 | [`@automovie/engine`](./packages/engine)                     | Deterministic motion, geometry, physics, film-grammar, validation, and shot-realization engine.                                     |
 | [`@automovie/evidence`](./packages/evidence)                 | Reusable film, brief, and library authoring evidence-graph construction and topology validation.                                   |
-| [`@automovie/viewer`](./packages/viewer)                     | Three.js viewer for compiler-owned scenes, shots, films, review views, and imported models.                                         |
+| [`@automovie/viewer`](./packages/viewer)                     | Three.js viewer for compiler-owned scenes, shots, films, evidence views, and imported models.                                           |
 | [`@automovie/render`](./packages/render)                     | Render planning, deterministic frame evaluation, and video export helpers.                                                          |
 | [`@automovie/ingest`](./packages/ingest)                     | Digest-bound glTF, GLB, and VRM inspection for registered external models.                                                          |
 | [`@automovie/face`](./packages/face)                         | Parametric face, head, hair, and fitting geometry retained behind an explicit dormant boundary.                                     |
 | [`@automovie/archetypes`](./packages/archetypes)             | Primitive model archetype catalogue: parameter schemas, bounds, and geometry builders behind one registry.                          |
-| [`@automovie/mcp`](./packages/mcp)                           | Knowledge, host-evidence, optional repaint, and verdict-last review boundary.                                             |
-| [`@automovie/cli`](./packages/cli)                           | Project scaffold, migration, verification, and transport-free access to current compiler-owned state.                               |
+| [`@automovie/production`](./packages/production)             | Deterministic production library: the compiler, tracked project store, capture, inspection, and render job.                          |
+| [`@automovie/template`](./packages/template)                 | The scaffold every production is created from, the shared contracts its evidence graph cites, and the library that renders both.     |
+| [`automovie`](./packages/cli)                                | Project scaffold, migration, verification, and transport-free access to current compiler-owned state.                               |
 | [`create-automovie`](./packages/create-automovie)            | Package-manager-native one-command project creator.                                                                                 |
 | [`@automovie/playground`](./packages/playground)             | Browser demonstrations for inspecting deterministic models, motion, cameras, and imported assets.                                   |
 

@@ -1,5 +1,5 @@
 {
-  "name": "@automovie/cli",
+  "name": "automovie",
   "version": "0.1.0",
   "description": "Scaffold and inspect a coding-agent-first AutoMovie production repository.",
   "main": "src/index.ts",
@@ -11,9 +11,7 @@
     "./package.json": "./package.json"
   },
   "scripts": {
-    "prepare": "pnpm run build:versions",
-    "build:versions": "node build/sync-versions.mjs",
-    "build": "pnpm run build:versions && rimraf lib && ttsc && tsc --emitDeclarationOnly",
+    "build": "rimraf lib && ttsc && tsc --emitDeclarationOnly",
     "postbuild": "node ../../config/assertBuild.js",
     "start": "ttsx src/bin.ts",
     "prepack": "pnpm run build"
@@ -33,7 +31,7 @@
     "type": "git",
     "url": "https://github.com/samchon/automovie"
   },
-  "files": ["lib", "src", "scaffold", "package.json", "LICENSE", "README.md"],
+  "files": ["lib", "src", "package.json", "LICENSE", "README.md"],
   "publishConfig": {
     "access": "public",
     "main": "lib/index.js",
@@ -52,7 +50,8 @@
   "dependencies": {
     "@automovie/engine": "workspace:^",
     "@automovie/interface": "workspace:^",
-    "@automovie/mcp": "workspace:^",
+    "@automovie/production": "workspace:^",
+    "@automovie/template": "workspace:^",
     "typia": "catalog:samchon"
   },
   "devDependencies": {

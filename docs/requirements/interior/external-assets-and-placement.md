@@ -2,11 +2,11 @@
 
 ## 공급자 독립 외부 3D 자산 {#interior-external-asset-placement}
 
-사용자와 MCP knowledge and evidence boundary를 통해 계약과 current evidence를 받는 저작 에이전트는 외부에서 취득하거나 text-to-3D, image-to-3D와 다른 제작 서비스로 생성한 glTF 또는 GLB 자산을 interior에 사용할 수 있어야 한다. AutoMovie는 특정 공급자나 asset catalogue를 필수로 정하지 않는다.
+사용자와 지식과 증거 경계를 통해 계약과 current evidence를 받는 저작 에이전트는 외부에서 취득하거나 text-to-3D, image-to-3D와 다른 제작 서비스로 생성한 glTF 또는 GLB 자산을 interior에 사용할 수 있어야 한다. AutoMovie는 특정 공급자나 asset catalogue를 필수로 정하지 않는다.
 
 ### 사용자가 고르는 채택 방식 {#interior-external-adoption-choice}
 
-사용자는 원본 glTF scene graph를 유지한 direct placement, 형상·재료·rig·animation을 project-native 저작 구조로 변환하는 방식, 또는 어느 쪽이든 더 큰 group과 assembly에 합성하는 방식을 선택할 수 있어야 한다. 제품과 MCP knowledge and evidence boundary는 각 경로의 계약과 current evidence를 제공하되 source나 asset을 직접 저작하는 API로 가장하거나 그 결정을 대신하지 않아야 한다.
+사용자는 원본 glTF scene graph를 유지한 direct placement, 형상·재료·rig·animation을 project-native 저작 구조로 변환하는 방식, 또는 어느 쪽이든 더 큰 group과 assembly에 합성하는 방식을 선택할 수 있어야 한다. 제품과 지식과 증거 경계는 각 경로의 계약과 current evidence를 제공하되 source나 asset을 직접 저작하는 API로 가장하거나 그 결정을 대신하지 않아야 한다.
 
 ### Direct Placement {#interior-external-direct-placement}
 

@@ -38,7 +38,7 @@ const program = (): IAutoMovieShotProgram => {
 };
 
 /**
- * A registered source module drives the full film engine without MCP.
+ * A registered source module drives the full film engine without aP.
  *
  * The registration owns the emitted shot id and scene/contract identity; the
  * engine runs stage, blocking, thin-verb synthesis, ROM/artifact gates and

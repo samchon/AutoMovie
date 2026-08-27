@@ -29,7 +29,7 @@ export const test_cli_capture_cleanup = (): void => {
     path.join(
       ROOT,
       "packages",
-      "cli",
+      "template",
       "scaffold",
       "scripts",
       "preserveProductionEncoderCleanup.cjs",

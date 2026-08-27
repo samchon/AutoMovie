@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" href="data:," />
+    <title>AutoMovie subject inspection host</title>
+    <style>
+      html,
+      body {
+        width: 100%;
+        height: 100%;
+        margin: 0;
+        overflow: hidden;
+      }
+
+      #view {
+        display: block;
+        width: 100%;
+        height: 100%;
+      }
+
+      #notice,
+      #status {
+        position: fixed;
+        color: #e8edf2;
+        font: 12px/1.45 ui-monospace, SFMono-Regular, Consolas, monospace;
+        text-shadow: 0 1px 3px #000;
+        pointer-events: none;
+      }
+
+      #notice {
+        left: 16px;
+        top: 14px;
+        max-width: 46em;
+        color: #ffd479;
+      }
+
+      #status {
+        left: 16px;
+        bottom: 14px;
+        max-width: 62vw;
+        white-space: pre-line;
+      }
+    </style>
+  </head>
+  <body>
+    <canvas id="view"></canvas>
+    <div id="notice">
+      SUBJECT INSPECTION HOST. This page is driven by the subject inspection
+      tool, not by a person; open viewer/subject.html to look at a subject by
+      hand. The eye is one the inspection supplied from the subject's own
+      extent, so a frame drawn here belongs to no authored shot and is never
+      delivery evidence. Delivery frames come from npm run preview and npm run
+      render through /viewer/.
+    </div>
+    <div id="status">loading current compiler output…</div>
+    <script type="module" src="/viewer/src/inspection.ts"></script>
+  </body>
+</html>

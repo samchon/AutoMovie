@@ -115,7 +115,7 @@ export const test_cli_capture_executable_settle = async (): Promise<void> => {
         path.join(
           ROOT,
           "packages",
-          "cli",
+          "template",
           "scaffold",
           "scripts",
           "captureExecutableSnapshot.ts",

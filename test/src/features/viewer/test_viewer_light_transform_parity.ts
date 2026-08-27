@@ -109,7 +109,7 @@ const keyedMidpointDirection = (): IAutoMovieVector3 => {
  *
  * Both hosts drive lighting through one seam. The viewer and the scaffold shot
  * runtime the render package captures through (`applyLightMotion` at
- * `packages/cli/scaffold/viewer/src/shotRuntime.ts`) each call the same helper
+ * `packages/template/scaffold/viewer/src/shotRuntime.ts`) each call the same helper
  * with the scene's lights, the shot's clips and the frame's time, and that
  * helper resolves through the engine and writes through one `applyLightState`.
  * The parity risk is therefore not between two packages but between the two

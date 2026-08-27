@@ -9,7 +9,7 @@ import {
   materializeCompiledInstanceSet,
   materializeInstanceSlot,
   materializeProductionModels,
-} from "@automovie/mcp";
+} from "@automovie/production";
 import { exportModelToGLB } from "@automovie/render";
 import {
   IAutoMovieModelObject,
@@ -23,7 +23,7 @@ import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 
 import { namedFacts, nclose, throwsError } from "../internal/predicates";
-import { modelRecipe, worldDesign } from "../mcp/productionFixtures";
+import { modelRecipe, worldDesign } from "../production/productionFixtures";
 
 const instanceMeshes = (object: THREE.Object3D): THREE.InstancedMesh[] =>
   object.children.filter(

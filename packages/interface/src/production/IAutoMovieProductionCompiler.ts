@@ -53,7 +53,7 @@ import type { IAutoMovieRenderBundleManifest } from "./IAutoMovieProductionOracl
 import type { IAutoMovieSubjectReviewTarget } from "./IAutoMovieSubjectReview";
 
 /**
- * Closed diagnostic identities currently emitted by compiler, lint, and MCP.
+ * Closed diagnostic identities currently emitted by compiler and lint.
  *
  * This tuple is the canonical registry key set. A user-facing behavioral
  * catalog must exhaustively map it, and producers may not invent an unlisted
@@ -83,10 +83,6 @@ export const AUTOMOVIE_DIAGNOSTIC_CODES = [
   "asset-path-invalid",
   "asset-processing-missing",
   "asset-provenance-incomplete",
-  "asset-review-incomplete",
-  "asset-review-missing",
-  "asset-review-revise",
-  "asset-review-stale",
   "asset-texture-unclosed",
   "asset-use-dangling",
   "asset-use-duplicate",
@@ -218,16 +214,12 @@ export const AUTOMOVIE_DIAGNOSTIC_CODES = [
   "preview-target-missing",
   "production-address-mismatch",
   "registration-invalid",
-  "render-bundle-invalid",
-  "render-bundle-legacy",
-  "render-bundle-unowned",
   "render-deliverable-incomplete",
   "render-deliverable-invalid",
   "render-deliverable-media-mismatch",
   "render-deliverable-missing",
   "render-deliverable-stale",
   "render-deliverable-unowned",
-  "render-frame-invalid",
   "render-rendition-provenance-invalid",
   "repaint-commit-refused",
   "repaint-compile-stale",
@@ -245,47 +237,12 @@ export const AUTOMOVIE_DIAGNOSTIC_CODES = [
   "repaint-registry-unavailable",
   "repaint-source-evidence-invalid",
   "repaint-source-evidence-missing",
-  "repaint-source-review-incomplete",
   "repaint-target-missing",
-  "review-acceptance-coverage-incomplete",
-  "review-acceptance-coverage-misplaced",
-  "review-asset-view-coverage-incomplete",
-  "review-checklist-incomplete",
-  "review-completion-basis-empty",
-  "review-completion-basis-incomplete",
-  "review-correction-empty",
-  "review-evidence-empty",
   "review-evidence-missing",
-  "review-evidence-region-invalid",
-  "review-evidence-reused",
-  "review-evidence-selector-invalid",
-  "review-evidence-stale",
-  "review-evidence-target-mismatch",
-  "review-high-risk-not-passed",
-  "review-incomplete",
-  "review-missing",
-  "review-observation-copied",
-  "review-observation-empty",
   "review-outcome-artifact-malformed",
   "review-outcome-artifact-missing",
   "review-outcome-contract-mismatch",
-  "review-outcome-missing",
-  "review-rendition-coverage-incomplete",
-  "review-rendition-delivery-invalid",
-  "review-rendition-missing",
-  "review-rendition-source-unapproved",
-  "review-required-criterion-not-passed",
-  "review-revise",
-  "review-selector-truncated",
-  "review-self-contradiction",
-  "review-source-compile-blocked",
-  "review-source-missing",
-  "review-stale",
-  "review-subject-coverage-incomplete",
   "review-subject-viewpoint-unsupported",
-  "review-target-missing",
-  "review-target-raced",
-  "review-worksheet-stale",
   "screenplay-beat-id-repeated",
   "screenplay-beat-prose-repeated",
   "screenplay-beat-uncovered",
@@ -357,6 +314,8 @@ export const AUTOMOVIE_DIAGNOSTIC_CODES = [
 /**
  * One code from the shipped diagnostic catalog.
  *
+ * @evidence requirements/review/records-and-completeness.md#review-execution-status Distinguishes a target that owes work from one that does not: `review-evidence-missing` refuses a review whose declared frames are absent at the target's current identity, so neither an artifact on disk nor a single written comment can stand in for a completed review.
+ * @evidence specifications/review-and-acceptance/evidence-freshness-and-completeness.md#review-system-execution-status Types the closed code set through which those states are reported.
  * @evidence requirements/diagnostics/identity-path-and-context.md#diagnostics-code-catalog-reference Prevents producers from emitting codes absent from the enumerable catalog.
  * @evidence specifications/validation-and-diagnostics/diagnostic-identity-location-and-severity.md#validation-diagnostic-code-catalog-reference Lets catalog construction prove exhaustive code coverage.
  */
@@ -395,7 +354,7 @@ export interface IAutoMovieDiagnosticReference {
 }
 
 /**
- * A stable production diagnostic returned by compiler, lint and MCP.
+ * A stable production diagnostic returned by compiler and lint.
  *
  * @evidence requirements/asset-authoring/generated-assets.md#asset-generation-provider-independence Exposes `IAutoMovieDiagnostic` as the portable data boundary for the asset generation provider independence requirement.
  * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-generation-provider-choice Types `IAutoMovieDiagnostic` for the asset spec generation provider choice system contract.
@@ -450,6 +409,8 @@ export interface IAutoMovieDiagnostic {
  * The tracked manifest for a coding-agent production repository.
  *
  * @evidence requirements/agent-authoring/partial-work.md#agent-declared-omission Exposes `IAutoMovieProductionManifest` as the portable data boundary for the agent declared omission requirement.
+ * @evidence requirements/agent-authoring/project-ownership.md#agent-repository-project-boundary Draws the boundary in data: the manifest names the roots and files a project owns, and everything outside them belongs to the general capability AutoMovie ships.
+ * @evidence specifications/authoring-and-authority/capability-and-content-boundary.md#spec-authoring-system-project-responsibility Types the project-declared inventory the system structures and validates rather than supplies.
  * @evidence specifications/authoring-and-authority/partial-targets-and-atomic-results.md#spec-authoring-partial-target-input Types `IAutoMovieProductionManifest` for the spec authoring partial target input system contract.
  */
 export interface IAutoMovieProductionManifest {
@@ -499,7 +460,7 @@ export interface IAutoMovieProductionManifest {
    * @evidence requirements/agent-authoring/partial-work.md#agent-declared-omission Exposes `assetManifest` as the portable data boundary for the agent declared omission requirement.
    * @evidence specifications/authoring-and-authority/partial-targets-and-atomic-results.md#spec-authoring-partial-target-input Types `assetManifest` for the spec authoring partial target input system contract.
    */
-  assetManifest?: ".automovie/assets.json";
+  assetManifest?: "automovie/assets.json";
   /**
    * Project-owned deterministic precomputation ledger.
    *
@@ -509,7 +470,7 @@ export interface IAutoMovieProductionManifest {
    * @evidence requirements/agent-authoring/deterministic-precomputation.md#agent-precomputed-compile-refusal Makes the tracked derived-artifact ledger an explicit compiler input.
    * @evidence specifications/authoring-and-authority/deterministic-precomputed-artifacts.md#spec-authoring-precomputed-manifest Selects the one canonical project-relative ledger path.
    */
-  derivedArtifactManifest?: ".automovie/derived-artifacts.json";
+  derivedArtifactManifest?: "automovie/derived-artifacts.json";
   /**
    * Compiler-owned generated root.
    *
@@ -1225,20 +1186,6 @@ export interface IAutoMovieProductionRenditionDeliveryShot {
    * @evidence specifications/editorial-render-and-delivery/delivery-audio-text-and-localization.md#spec-delivery-caption-readability-profile Types `receiptDigest` for the spec delivery caption readability profile system contract.
    */
   receiptDigest: AutoMovieContentDigest;
-  /**
-   * Current completed deterministic source-shot review fingerprint.
-   *
-   * @evidence requirements/delivery-and-accessibility/captions-subtitles-and-cues.md#delivery-caption-readability-profile Exposes `sourceReviewFingerprint` as the portable data boundary for the delivery caption readability profile requirement.
-   * @evidence specifications/editorial-render-and-delivery/delivery-audio-text-and-localization.md#spec-delivery-caption-readability-profile Types `sourceReviewFingerprint` for the spec delivery caption readability profile system contract.
-   */
-  sourceReviewFingerprint: AutoMovieContentDigest;
-  /**
-   * Current completed visual-rendition review fingerprint.
-   *
-   * @evidence requirements/delivery-and-accessibility/captions-subtitles-and-cues.md#delivery-caption-readability-profile Exposes `renditionReviewFingerprint` as the portable data boundary for the delivery caption readability profile requirement.
-   * @evidence specifications/editorial-render-and-delivery/delivery-audio-text-and-localization.md#spec-delivery-caption-readability-profile Types `renditionReviewFingerprint` for the spec delivery caption readability profile system contract.
-   */
-  renditionReviewFingerprint: AutoMovieContentDigest;
 }
 
 /**
@@ -1262,20 +1209,6 @@ export interface IAutoMovieProductionRenditionDelivery {
    * @evidence specifications/editorial-render-and-delivery/delivery-audio-text-and-localization.md#spec-delivery-caption-readability-profile Types `shots` for the spec delivery caption readability profile system contract.
    */
   shots: IAutoMovieProductionRenditionDeliveryShot[];
-  /**
-   * Current completed sequence and film reviews of the selected renditions.
-   *
-   * @evidence requirements/delivery-and-accessibility/captions-subtitles-and-cues.md#delivery-caption-readability-profile Exposes `aggregateReviews` as the portable data boundary for the delivery caption readability profile requirement.
-   * @evidence specifications/editorial-render-and-delivery/delivery-audio-text-and-localization.md#spec-delivery-caption-readability-profile Types `aggregateReviews` for the spec delivery caption readability profile system contract.
-   */
-  aggregateReviews: Array<{
-    /** Aggregate review class. */
-    kind: "sequence" | "film";
-    /** Exact sequence or film id. */
-    id: string;
-    /** Current completed review fingerprint. */
-    fingerprint: AutoMovieContentDigest;
-  }>;
 }
 
 /**
@@ -4272,13 +4205,6 @@ export interface IAutoMovieProductionInspection {
    */
   diagnostics: IAutoMovieDiagnostic[];
   /**
-   * Current review ledger projection.
-   *
-   * @evidence requirements/asset-authoring/generated-assets.md#asset-generation-provider-independence Exposes `reviews` as the portable data boundary for the asset generation provider independence requirement.
-   * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-generation-provider-choice Types `reviews` for the asset spec generation provider choice system contract.
-   */
-  reviews: IAutoMovieReviewQueue;
-  /**
    * Discovered render manifests.
    *
    * @evidence requirements/asset-authoring/generated-assets.md#asset-generation-provider-independence Exposes `renders` as the portable data boundary for the asset generation provider independence requirement.
@@ -4503,13 +4429,6 @@ export interface IAutoMovieCompileProjectOutput {
    */
   diagnostics: IAutoMovieDiagnostic[];
   /**
-   * Current review queue.
-   *
-   * @evidence requirements/diagnostics/input-and-result-classification.md#diagnostics-derived-result-finding Exposes `reviews` as the portable data boundary for the diagnostics derived result finding requirement.
-   * @evidence specifications/validation-and-diagnostics/classification-and-causality.md#validation-derived-result-finding Types `reviews` for the validation derived result finding system contract.
-   */
-  reviews: IAutoMovieReviewQueue;
-  /**
    * Compiler-owned files created, updated or already current. Empty for design
    * scope and for every refused atomic compile.
    *
@@ -4579,56 +4498,3 @@ export type IAutoMovieReviewTarget =
        */
       kind: "subject";
     } & IAutoMovieSubjectReviewTarget);
-
-/**
- * One target and its derived review state.
- *
- * @evidence requirements/story/story-clock-and-state.md#story-time-state-review-scope Exposes `IAutoMovieReviewQueueEntry` as the portable data boundary for the story time state review scope requirement.
- * @evidence specifications/narrative-and-intent/events-causality-and-time.md#narrative-intent-temporal-state-handoff Types `IAutoMovieReviewQueueEntry` for the narrative intent temporal state handoff system contract.
- */
-export interface IAutoMovieReviewQueueEntry {
-  /**
-   * Review target.
-   *
-   * @evidence requirements/story/story-clock-and-state.md#story-time-state-review-scope Exposes `target` as the portable data boundary for the story time state review scope requirement.
-   * @evidence specifications/narrative-and-intent/events-causality-and-time.md#narrative-intent-temporal-state-handoff Types `target` for the narrative intent temporal state handoff system contract.
-   */
-  target: IAutoMovieReviewTarget;
-  /**
-   * Current queue state.
-   *
-   * @evidence requirements/story/story-clock-and-state.md#story-time-state-review-scope Exposes `state` as the portable data boundary for the story time state review scope requirement.
-   * @evidence specifications/narrative-and-intent/events-causality-and-time.md#narrative-intent-temporal-state-handoff Types `state` for the narrative intent temporal state handoff system contract.
-   */
-  state: "missing" | "stale" | "incomplete" | "revise" | "complete";
-  /**
-   * Current target fingerprint.
-   *
-   * @evidence requirements/story/story-clock-and-state.md#story-time-state-review-scope Exposes `currentFingerprint` as the portable data boundary for the story time state review scope requirement.
-   * @evidence specifications/narrative-and-intent/events-causality-and-time.md#narrative-intent-temporal-state-handoff Types `currentFingerprint` for the narrative intent temporal state handoff system contract.
-   */
-  currentFingerprint: AutoMovieContentDigest | null;
-  /**
-   * Stored review fingerprint when a record exists.
-   *
-   * @evidence requirements/story/story-clock-and-state.md#story-time-state-review-scope Exposes `storedFingerprint` as the portable data boundary for the story time state review scope requirement.
-   * @evidence specifications/narrative-and-intent/events-causality-and-time.md#narrative-intent-temporal-state-handoff Types `storedFingerprint` for the narrative intent temporal state handoff system contract.
-   */
-  storedFingerprint: AutoMovieContentDigest | null;
-}
-
-/**
- * Current review states in deterministic target order.
- *
- * @evidence requirements/story/story-clock-and-state.md#story-time-state-review-scope Exposes `IAutoMovieReviewQueue` as the portable data boundary for the story time state review scope requirement.
- * @evidence specifications/narrative-and-intent/events-causality-and-time.md#narrative-intent-temporal-state-handoff Types `IAutoMovieReviewQueue` for the narrative intent temporal state handoff system contract.
- */
-export interface IAutoMovieReviewQueue {
-  /**
-   * One entry per required review target.
-   *
-   * @evidence requirements/story/story-clock-and-state.md#story-time-state-review-scope Exposes `entries` as the portable data boundary for the story time state review scope requirement.
-   * @evidence specifications/narrative-and-intent/events-causality-and-time.md#narrative-intent-temporal-state-handoff Types `entries` for the narrative intent temporal state handoff system contract.
-   */
-  entries: IAutoMovieReviewQueueEntry[];
-}

@@ -8,9 +8,9 @@ Building mass, site contact, 건축면적과 연면적, storey elevation, floor-
 
 ### 현재 제품 범위 {#interior-current-product-scope}
 
-MCP knowledge and evidence boundary는 building interior의 저작 계약, current host evidence와 검토 결과를 저작 에이전트에게 제공한다. 선박, 항공기와 우주선 같은 다른 host의 내부는 같은 공간 원리를 설명하는 예가 될 수 있지만 현재 MCP 지원을 약속하지 않는다.
+지식과 증거 경계는 building interior의 저작 계약, current host evidence와 검토 결과를 저작 에이전트에게 제공한다. 선박, 항공기와 우주선 같은 다른 host의 내부는 같은 공간 원리를 설명하는 예가 될 수 있지만 현재 제품 지원을 약속하지 않는다.
 
-AutoMovie는 interactive editor가 아니라 project source를 저작 에이전트가 수정하고 결정적으로 compile, inspect, render와 review하는 시스템이다. MCP는 source를 직접 쓰는 저작 API가 아니라 계약과 host-produced evidence의 경계다. 요구 능력은 화면 조작 widget이 아니라 에이전트가 명시적으로 선택할 수 있는 authoring freedom, stable identity, bounded execution과 재현 가능한 evidence로 관찰되어야 한다.
+AutoMovie는 interactive editor가 아니라 project source를 저작 에이전트가 수정하고 결정적으로 compile, inspect, render와 review하는 시스템이다. 지식과 증거 경계는 source를 직접 쓰는 저작 API가 아니라 계약과 host-produced evidence의 경계다. 요구 능력은 화면 조작 widget이 아니라 에이전트가 명시적으로 선택할 수 있는 authoring freedom, stable identity, bounded execution과 재현 가능한 evidence로 관찰되어야 한다.
 
 ### Host Identity {#interior-host-identity}
 

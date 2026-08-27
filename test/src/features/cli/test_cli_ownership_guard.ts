@@ -1,4 +1,4 @@
-import { renderScaffold, writeFiles } from "@automovie/cli";
+import { renderScaffold, writeFiles } from "@automovie/template";
 import { TestValidator } from "@nestia/e2e";
 import { spawnSync } from "node:child_process";
 import fs from "node:fs";
@@ -36,7 +36,7 @@ const guard = (
 /**
  * The project hook distinguishes authored files from tool-owned derivatives.
  *
- * A directory that does not declare `@automovie/cli` is intentionally
+ * A directory that does not declare `automovie` is intentionally
  * fail-open, so the reusable hook cannot capture unrelated directories when it
  * is copied out of a project. Inside a real project each derived root names the
  * command that owns it.
@@ -50,7 +50,7 @@ export const test_cli_ownership_guard = (): void => {
     const authored = guard(root, "Write", {
       file_path: path.join(
         root,
-        ".automovie",
+        "automovie",
         "design",
         "shots",
         "opening.json",
@@ -65,7 +65,7 @@ export const test_cli_ownership_guard = (): void => {
     const production = guard(root, "mcp__filesystem__write_file", {
       path: path.join(
         root,
-        ".automovie",
+        "automovie",
         "productions",
         "guard-film",
         "state.json",
@@ -87,7 +87,7 @@ export const test_cli_ownership_guard = (): void => {
       command: "Set-Content generated-alias/through-shell.json forged",
     });
     TestValidator.equals(
-      "authored design is writable while direct, shell, MCP, and linked derived paths are blocked",
+      "authored design is writable while direct, shell, and linked derived paths are blocked",
       namedFacts([
         ["authoredStatus", () => authored.status === 0],
         ["generatedStatus", () => generated.status === 2],
@@ -184,8 +184,8 @@ export const test_cli_ownership_guard = (): void => {
       dependencies?: Record<string, string>;
       devDependencies?: Record<string, string>;
     };
-    delete stripped.dependencies?.["@automovie/cli"];
-    delete stripped.devDependencies?.["@automovie/cli"];
+    delete stripped.dependencies?.["automovie"];
+    delete stripped.devDependencies?.["automovie"];
     fs.writeFileSync(declaration, JSON.stringify(stripped, null, 2));
     const undeclared = guard(root, "Write", {
       file_path: path.join(root, "generated", "film.json"),

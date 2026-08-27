@@ -1,0 +1,73 @@
+{
+  "compilerOptions": {
+    "target": "esnext",
+    "lib": [
+      "ESNext",
+      "DOM",
+      "DOM.Iterable"
+    ],
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "esModuleInterop": true,
+    "resolveJsonModule": true,
+    "newLine": "lf",
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "skipLibCheck": true,
+    "types": [
+      "node"
+    ],
+    "typeRoots": [
+      "D:/github/samchon/automovie/packages/cli/node_modules/@types",
+      "D:/github/samchon/automovie/packages/create-automovie/node_modules/@types",
+      "D:/github/samchon/automovie/packages/evidence/node_modules/@types",
+      "D:/github/samchon/automovie/packages/playground/node_modules/@types",
+      "D:/github/samchon/automovie/packages/production/node_modules/@types",
+      "D:/github/samchon/automovie/packages/template/node_modules/@types",
+      "D:/github/samchon/automovie/packages/viewer/node_modules/@types",
+      "D:/github/samchon/automovie/test/node_modules/@types"
+    ],
+    "paths": {
+      "@automovie/*": [
+        "D:/github/samchon/automovie/packages/*/lib/index.d.ts"
+      ],
+      "*": [
+        "D:/github/samchon/automovie/packages/archetypes/node_modules/@types/*",
+        "D:/github/samchon/automovie/packages/cli/node_modules/@types/*",
+        "D:/github/samchon/automovie/packages/create-automovie/node_modules/@types/*",
+        "D:/github/samchon/automovie/packages/engine/node_modules/@types/*",
+        "D:/github/samchon/automovie/packages/evidence/node_modules/@types/*",
+        "D:/github/samchon/automovie/packages/face/node_modules/@types/*",
+        "D:/github/samchon/automovie/packages/ingest/node_modules/@types/*",
+        "D:/github/samchon/automovie/packages/interface/node_modules/@types/*",
+        "D:/github/samchon/automovie/packages/playground/node_modules/@types/*",
+        "D:/github/samchon/automovie/packages/production/node_modules/@types/*",
+        "D:/github/samchon/automovie/packages/render/node_modules/@types/*",
+        "D:/github/samchon/automovie/packages/template/node_modules/@types/*",
+        "D:/github/samchon/automovie/packages/viewer/node_modules/@types/*",
+        "D:/github/samchon/automovie/test/node_modules/@types/*",
+        "D:/github/samchon/automovie/node_modules/@types/*",
+        "D:/github/samchon/automovie/packages/archetypes/node_modules/*",
+        "D:/github/samchon/automovie/packages/cli/node_modules/*",
+        "D:/github/samchon/automovie/packages/create-automovie/node_modules/*",
+        "D:/github/samchon/automovie/packages/engine/node_modules/*",
+        "D:/github/samchon/automovie/packages/evidence/node_modules/*",
+        "D:/github/samchon/automovie/packages/face/node_modules/*",
+        "D:/github/samchon/automovie/packages/ingest/node_modules/*",
+        "D:/github/samchon/automovie/packages/interface/node_modules/*",
+        "D:/github/samchon/automovie/packages/playground/node_modules/*",
+        "D:/github/samchon/automovie/packages/production/node_modules/*",
+        "D:/github/samchon/automovie/packages/render/node_modules/*",
+        "D:/github/samchon/automovie/packages/template/node_modules/*",
+        "D:/github/samchon/automovie/packages/viewer/node_modules/*",
+        "D:/github/samchon/automovie/test/node_modules/*",
+        "D:/github/samchon/automovie/node_modules/*"
+      ]
+    }
+  },
+  "files": [
+    "lint.config.ts",
+    "test/scaffold.test.ts"
+  ]
+}
