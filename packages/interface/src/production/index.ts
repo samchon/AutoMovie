@@ -11,4 +11,4 @@ export * from "./IAutoMovieSubjectDescription";
 export * from "./IAutoMovieSubjectDiff";
 export * from "./IAutoMovieSubjectReview";
 export * from "./IAutoMovieVisualChangeReport";
-export * from "./application";
+export * from "./capture";

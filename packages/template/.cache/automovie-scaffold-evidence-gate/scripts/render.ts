@@ -42,7 +42,6 @@ import {
   decodeProductionAudioAsset,
   digestAutoMovieBytes,
   encodeAutoMoviePathSegment,
-  inspectAutoMovieProduction,
   muxProductionFeatureMp4,
   openAutoMovieProduction,
   planProductionRenderGc,
@@ -110,7 +109,6 @@ import {
   completeRenderAttempt,
   failRenderAttempt,
   listRenderAttempts,
-  readRenderAttempt,
 } from "./renderAttemptSnapshot";
 import {
   assessProductionRenderBudget,
@@ -133,9 +131,7 @@ import {
   RENDER_GC_REMOVAL_STAGING_DIRECTORY,
   assertCapturedRenderGcFileEntry,
   assertCapturedRenderTarget,
-  assertRenderPhysicalDirectoryIdentity,
   captureRenderGcTarget,
-  captureRenderPhysicalDirectory,
   createRenderGcFileSnapshot,
   ensureRenderPhysicalDirectory,
   inventoryRenderQuarantineCandidates,
@@ -3491,14 +3487,6 @@ const listFiles = (directory: string): string[] =>
       return entry.isDirectory() ? listFiles(absolute) : [absolute];
     });
 
-const readRegularInside = (directory: string, relative: string): Uint8Array => {
-  return readAutoMovieProductionOwnedFile({
-    root: stateRoot,
-    directory,
-    relative,
-  });
-};
-
 const captureExistingRenderStateTarget = (
   target: string,
 ): IRenderGcTargetSnapshot | null =>
@@ -3622,13 +3610,6 @@ const writeRenderFile = (props: {
   assertRenderChunkTemporaryTree(props.ownership);
   return snapshot;
 };
-
-const readJson = <T>(file: string): T =>
-  JSON.parse(
-    Buffer.from(
-      readRegularInside(path.dirname(file), path.basename(file)),
-    ).toString("utf8"),
-  ) as T;
 
 const readRendererJson = <T>(ownershipRoot: string, file: string): T =>
   JSON.parse(

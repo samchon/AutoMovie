@@ -7,7 +7,7 @@ import {
 import {
   IAutoMovieRepaintParameters,
   IAutoMovieRepaintRuntimeIdentity,
-} from "./application/IAutoMovieRepaintShot";
+} from "./capture/IAutoMovieRepaintShot";
 
 /**
  * Host input for one structure-preserving shot repaint.

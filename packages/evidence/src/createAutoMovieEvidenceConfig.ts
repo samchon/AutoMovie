@@ -142,6 +142,23 @@ interface ISourcePopulation {
 }
 
 const DOCS = "docs";
+const TEMPLATE_PACKAGE = "@automovie/template";
+
+/** One directory's declared package name, or null when it declares none. */
+const packageNameOf = (directory: string): string | null => {
+  try {
+    const manifest: unknown = JSON.parse(
+      fs.readFileSync(path.join(directory, "package.json"), "utf8"),
+    );
+    return typeof manifest === "object" &&
+      manifest !== null &&
+      typeof (manifest as { name?: unknown }).name === "string"
+      ? (manifest as { name: string }).name
+      : null;
+  } catch {
+    return null;
+  }
+};
 
 /**
  * Where the shared contracts actually live.
@@ -155,9 +172,18 @@ const DOCS = "docs";
  *
  * One host cannot install that package: the scaffold inside it, which is the
  * source the dependency is published from. It reaches its own publisher's
- * `docs` directly. A generated project that never installed the package has no
- * such sibling, so it keeps the resolution failure that names what it is
- * missing.
+ * `docs` directly, and it proves that publisher by name rather than by the
+ * presence of a directory: without that, a project sitting one folder below an
+ * unrelated `docs/` would read its contracts there and answer the wrong
+ * questions in silence. A generated project that never installed the package
+ * keeps the resolution failure that names what it is missing.
+ *
+ * The fallback has no canary, and saying so is better than implying one. Under
+ * `ttsc` the launcher installs a resolution hook that answers a workspace
+ * package by name from any directory, so a fixture cannot make this resolution
+ * fail; every generated project's scripts run under that launcher. The branch
+ * is reachable only outside it, which is exactly where a wrong answer would be
+ * least recoverable.
  */
 const sharedDocsRoot = (location: string): string => {
   const resolve = createRequire(path.join(location, "noop.js"));
@@ -167,7 +193,13 @@ const sharedDocsRoot = (location: string): string => {
     );
     return posix(path.relative(location, path.join(resolved, DOCS)));
   } catch (error) {
-    const sibling = path.join(path.dirname(location), DOCS);
+    // Identify the publisher, never merely a neighbour that happens to hold a
+    // `docs` directory. A generated project one folder below an unrelated
+    // `docs/` would otherwise resolve its contracts there and answer the wrong
+    // questions in silence, which is worse than the install error it replaced.
+    const publisher = path.dirname(location);
+    if (packageNameOf(publisher) !== TEMPLATE_PACKAGE) throw error;
+    const sibling = path.join(publisher, DOCS);
     if (fs.existsSync(sibling) === false) throw error;
     return posix(path.relative(location, sibling));
   }

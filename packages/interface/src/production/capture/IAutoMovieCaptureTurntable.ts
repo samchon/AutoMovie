@@ -65,7 +65,7 @@ export interface IAutoMovieAssetTurntableView {
 /**
  * Result of capturing the complete review-required turntable of one asset.
  *
- * Every view carries the same proof one `captureFrame` call carries: current
+ * Every view carries the same proof one captured frame carries: current
  * compilation, decoded pixels, runtime identity, and a receipt the frame
  * reopens through. What this adds is completeness. The asset review requires an
  * exact view set, and reproducing it by hand is where a reviewer silently
