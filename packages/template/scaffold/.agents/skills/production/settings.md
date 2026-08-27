@@ -1,25 +1,20 @@
 # Settings
 
-Settings are required by film, brief, and library shapes. Keep production canon in `docs/settings` as ordered Markdown files. A file is a domain namespace and every independent fact or constraint is an explicitly anchored H2.
+Settings are required by film, brief, and library shapes. Keep production canon in `docs/settings` as ordered Markdown files. A file is a descriptive namespace for related canon, and every independent fact or constraint is an explicitly anchored H2.
 
-Before bulk settings prose, complete the [production-specific contract](work-specific.md) pass. Record delivery scope, governing aim, audience or operator access, coordinate and unit convention, delivery review condition, the settings coverage map, and the operative-subject inventory before facts that depend on them. Backcast the actual planned film, brief, or library consumers so downstream work does not invent production-wide facts or constraints.
+The first ordered file owns delivery scope, governing aim, audience or operator access, coordinate and unit convention, delivery review condition, the current settings coverage map, and the operative-subject inventory before facts that depend on them.
 
 ## Topology
 
-Start from the applicable domains, then split, rename, or add ordered files as scale requires:
+Beyond that foundation, derive every file family, name, order, split, and merge from the requirements discovered for this production. Create no file because a shared template or another production has one. A central owner may take its own file, and a dense requirement family may span as many ordered files as its independent H2 owners require.
 
-| Suggested file | Domain |
-| --- | --- |
-| `000-foundation.md` | production kind, delivery contract, governing aim, access, conventions, review condition, coverage map |
-| `010-world-and-time.md` | inherited reality, world laws, chronology, and pre-delivery state |
-| `020-space-and-environment.md` | places, distances, environment, hazards, and shared anchors |
-| `030-subjects-and-relationships.md` | subjects, identities, relations, authority, and observable distinctions |
-| `040-capabilities-and-limits.md` | permitted state changes, resources, costs, dependencies, and inability |
-| `050-production-grammar.md` | work-wide visual, textual, audible, and formal constraints |
-| `060-systems-and-opening-state.md` | cross-system dependencies and the initial production state |
-| `070-sources-and-uncertainty.md` | source conflicts or unresolved decisions that are independent downstream facts |
+Put direct support for a fact in that fact's owning H2. Create a separate source-conflict or uncertainty owner only when its standing is itself an independent fact with downstream consumers; never create a duplicate bibliography or generated source index.
 
-Audit every domain and create no empty or irrelevant file. Mark an unused domain as inherited, outside delivery scope, or unresolved in the coverage map. A single dense domain may span as many ordered files as its independent H2 owners require, and a central owner may take a file of its own. Put direct support for a fact in its owning H2; use the final domain only when a conflict, interpretation, or uncertainty has independent consumers and a distinct review path.
+## Open-world discovery
+
+Before bulk settings prose and whenever the production contract changes, run the [production-specific contract](work-specific.md) pass with the common and settings discovery targets. `docs/discovery/settings.md#directive-promise-subject-requirements` owns the open search for requirements no shared list can anticipate; the settings coverage map records the current settings results and is not a search checklist. Backcast the actual planned film, brief, or library consumers so downstream work does not invent production-wide facts or constraints.
+
+Give each material settings result an H2 owner, or classify it as an incidental inherited default permitted by `docs/obligations/settings.md#minimal-departure`, outside the delivery scope, or unresolved with a decision condition. A needed unresolved result blocks its consumer. Route recurring authored-unit conditions and independent evidence relationships to their semantic owners under `docs/contracts` instead of turning them into settings facts.
 
 ## Decomposition and structure
 
@@ -43,7 +38,7 @@ After every downstream draft or revision, backcast its literal cast against that
 
 Research every externally checkable precision rather than writing it from memory. Search results and collection portals are discovery routes; open the direct evidence and apply `docs/principles/settings.md#source-support` before accepting a claim. Use [research.md](research.md) when source identity and uncertainty need a separate production-consumed ledger.
 
-Before leaving `draft`, audit every unresolved statement, every externally checkable precision, and every coverage-map domain against the questions research raised. Settle anything a downstream layer would otherwise have to invent; passing an unresolved value forward is an unstated invention task rather than a recorded uncertainty.
+Before leaving `draft`, audit every unresolved statement, every externally checkable precision, and every discovered requirement recorded in the current coverage map against the questions research raised. Settle anything a downstream layer would otherwise have to invent; passing an unresolved value forward is an unstated invention task rather than a recorded uncertainty.
 
 Keep only current canon and unresolved state in settings. Superseded decisions, migration notes, commit identifiers, and process history belong in `.wiki` or in Git, because a settings H2 that narrates its own history makes a downstream reader decide which version is in force.
 
@@ -51,6 +46,6 @@ Settings are authoritative, not frozen. When later work exposes a contradiction,
 
 ## Gate
 
-Start an applicable settings layer at `settings: "draft"`. Before `evidence`, require a complete first version, stable H2 owners, no placeholders, a literal work-specific-rule audit, common and settings discovery searches, a settings-domain omission audit, and complete operative-subject accounting. Read every common and settings principle against each H2 in turn, then confirm that the H2 population supplies every common, settings, and applicable subject-obligation owner the targets call for.
+Start an applicable settings layer at `settings: "draft"`. Before `evidence`, require a complete first version, stable H2 owners, no placeholders, a literal work-specific-rule audit, common and settings discovery searches, a work-specific settings-requirement omission audit, and complete operative-subject accounting. Read every common and settings principle against each H2 in turn, then confirm that the H2 population supplies every common, settings, and applicable subject-obligation owner the targets call for.
 
 Run [Author process Self-Review](self-review.md) to its clean round before every stage transition and again after any repair. Follow [Evidence staging](evidence-staging.md) for evidence and review passes.
