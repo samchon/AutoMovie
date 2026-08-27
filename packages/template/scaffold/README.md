@@ -32,6 +32,8 @@ Every checked-in `ttsc` and `ttsx` launcher pins its compiler cache to `node_mod
 
 After compilation, the viewer is available at `http://127.0.0.1:5173`. Run `capture:install` and `capture:doctor` before the first preview or render.
 
+`npm run preview -- --shot <id> --time <seconds>` draws one shot frame you name. `npm run turntable -- --asset <id>` draws the whole view set an asset review is judged from, because what an asset owes is fixed by its contract rather than chosen by whoever is looking. Both commit a receipt, and `review-evidence-missing` names whatever a reviewed shot or staged model still owes at its current fingerprint.
+
 Playwright's standard `HTTPS_PROXY`, `PLAYWRIGHT_DOWNLOAD_HOST`, and `PLAYWRIGHT_CHROMIUM_DOWNLOAD_HOST` variables support proxies and offline mirrors. The default `PLAYWRIGHT_BROWSERS_PATH=0` keeps the binary package-local; set that variable to an explicit path for a configured shared cache. To use a system browser deliberately, edit `automovie.config.ts`:
 
 ```ts

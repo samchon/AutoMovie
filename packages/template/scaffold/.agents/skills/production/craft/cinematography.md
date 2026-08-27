@@ -80,8 +80,8 @@ For each beat, design an establishing or orienting view when geography matters, 
 
 A camera number is a claim about a frame; only the frame settles it. Capture at the production raster and never at a smaller one, because a downgraded frame can never discharge a required view.
 
-1. `captureProductionFrame` on the shot target at every review time the contract declares, in `beauty`.
-2. `captureProductionFrame` in a structural pass when the question is occlusion, silhouette separation, or depth rather than appearance.
+1. `npm run preview` on the shot target at every review time the contract declares, in `beauty`.
+2. `npm run preview` in a structural pass when the question is occlusion, silhouette separation, or depth rather than appearance.
 3. State what those frames showed about composition, staging, and continuity in the evidence citation on the shot source that claims the scene is realized.
 
 Judge from what came back, not from what the solve intended. `captured:false` is a refusal, not a frame.

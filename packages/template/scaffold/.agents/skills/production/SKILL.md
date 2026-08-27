@@ -122,4 +122,4 @@ Before committing text outside ASCII, decode every staged file as strict UTF-8 a
 
 Run `npm run lint:source` while authoring source, `npm run lint -- --scope source` for the graph as it stands, and the full `npm run lint` review gate only when the production is meant to answer it. `npm run compile` is the only command that may update generated output.
 
-Run `capture:install` and `capture:doctor` before the first preview or render. Never claim a unit is realized without opening the current bundle frames and saying in its evidence citation what they showed.
+Run `capture:install` and `capture:doctor` before the first preview or render. Draw a shot frame with `npm run preview`, and an asset's whole judged set with `npm run turntable`. Never claim a unit is realized without opening the current bundle frames and saying in its evidence citation what they showed.

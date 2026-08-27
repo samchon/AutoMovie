@@ -59,6 +59,7 @@ export const test_cli_scaffold_toolchain_cache = (): void => {
         "render",
         "test",
         "texture:scale",
+        "turntable",
         "verify",
       ],
       unscoped: [],

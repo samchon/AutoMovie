@@ -98,7 +98,7 @@ Check:
 
 `captureTurntable({ asset })` is the whole first step. One call commits the set an asset review is judged from: four horizontal quarters, the overhead outline pass, and the extreme-range pose of a rigged model. Assembling that set by hand is where the one angle a defect was on gets dropped.
 
-Then frame what a whole-model view cannot resolve. `captureProductionFrame` accepts a `part` on an asset target and narrows the camera onto one compiled part with the model still around it, which is how a hinge, a pintle, a stile, or a pivot cover is actually looked at.
+Then frame what a whole-model view cannot resolve. `npm run preview` accepts a `part` on an asset target and narrows the camera onto one compiled part with the model still around it, which is how a hinge, a pintle, a stile, or a pivot cover is actually looked at.
 
 Judge silhouette before detail, then hierarchy, pivots, limits, material separation, and every shot-required capability. A capability absent from the profile is not available just because a mesh visually suggests it.
 
