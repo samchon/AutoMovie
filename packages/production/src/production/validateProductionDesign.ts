@@ -222,6 +222,59 @@ export const validateAutoMovieProductionGraph = (
       file,
       "frameFormat.fps",
     );
+    const crop = graph.production.frameFormat.crop;
+    if (crop !== undefined) {
+      bounded(
+        diagnostics,
+        crop.left,
+        0,
+        1,
+        target,
+        file,
+        "frameFormat.crop.left",
+      );
+      bounded(
+        diagnostics,
+        crop.top,
+        0,
+        1,
+        target,
+        file,
+        "frameFormat.crop.top",
+      );
+      bounded(
+        diagnostics,
+        crop.right,
+        0,
+        1,
+        target,
+        file,
+        "frameFormat.crop.right",
+      );
+      bounded(
+        diagnostics,
+        crop.bottom,
+        0,
+        1,
+        target,
+        file,
+        "frameFormat.crop.bottom",
+      );
+      if (
+        Number.isFinite(crop.left) &&
+        Number.isFinite(crop.top) &&
+        Number.isFinite(crop.right) &&
+        Number.isFinite(crop.bottom) &&
+        (crop.left >= crop.right || crop.top >= crop.bottom)
+      )
+        invalid(
+          diagnostics,
+          "design-range-invalid",
+          target,
+          file,
+          "frameFormat.crop must have left < right and top < bottom inside the normalized delivery gate. Correct the crop in the tracked production design record.",
+        );
+    }
     if (
       Number.isFinite(graph.production.targetRuntimeSeconds) &&
       graph.production.targetRuntimeSeconds > 0 &&

@@ -1141,6 +1141,9 @@ export const resolveProductionRenderTierFrameFormat = (
     height: even(source.height),
     fps: source.fps / normalized.frameStep,
     colorSpace: source.colorSpace,
+    ...(source.crop === undefined
+      ? {}
+      : { crop: structuredClone(source.crop) }),
   };
 };
 

@@ -7,6 +7,7 @@ import {
   placeFormationSlot,
   projectToNdc,
   reachPose,
+  resolveAutoMovieDeliveryCrop,
   resolveCameraAt,
   resolvePose,
   sampleClipSequence,
@@ -341,6 +342,9 @@ export class AutoMovieProductionOracleService {
           const production = graph.production!;
           const aspect =
             production.frameFormat.width / production.frameFormat.height;
+          const crop = resolveAutoMovieDeliveryCrop(
+            production.frameFormat.crop,
+          );
           const chunkMeasurements = runtime.chunks.map((chunk) => {
             const center = transformPoint(chunk.centroid);
             const transformedBounds = transformFormationBounds(
@@ -377,10 +381,13 @@ export class AutoMovieProductionOracleService {
               center,
               halfY,
               aspect,
+              crop,
             );
             const projectedPixels =
               (runtime.projectionRadius * production.frameFormat.height) /
-              (halfY * Math.max(0.001, projection.depth));
+              (halfY *
+                Math.max(0.001, projection.depth) *
+                (crop.bottom - crop.top));
             const visible = intersectsPerspectiveFrustumSphere({
               camera: resolvedCamera,
               center,
@@ -389,6 +396,7 @@ export class AutoMovieProductionOracleService {
               far: camera.far,
               halfY,
               aspect,
+              crop,
             });
             return {
               distance,
@@ -463,6 +471,7 @@ export class AutoMovieProductionOracleService {
               far: camera.far,
               halfY,
               aspect,
+              crop,
             });
           }).length;
           result = {
@@ -721,6 +730,7 @@ export class AutoMovieProductionOracleService {
           const aspect =
             graph.production.frameFormat.width /
             graph.production.frameFormat.height;
+          const crop = graph.production.frameFormat.crop;
           const samples = request.subjects.flatMap((subject) => {
             const node = compiled.scene.nodes.find(
               (item) => item.id === subject,
@@ -736,6 +746,7 @@ export class AutoMovieProductionOracleService {
               point,
               halfY,
               aspect,
+              crop,
             );
             return [{ projection }];
           });
@@ -954,6 +965,8 @@ export class AutoMovieProductionOracleService {
       Math.floor(duration * fps),
     );
     const time = index / fps;
+    const crop =
+      input.target.kind === "shot" ? production.frameFormat.crop : undefined;
     let captured: Awaited<ReturnType<AutoMovieProductionFrameCapture>>;
     try {
       captured = await this.capture({
@@ -961,6 +974,7 @@ export class AutoMovieProductionOracleService {
         time,
         width,
         height,
+        ...(crop === undefined ? {} : { crop: structuredClone(crop) }),
         projectRoot: this.project.root,
         productionId: this.project.productionId,
         compileFingerprint: generated.inputFingerprint,
@@ -1054,7 +1068,12 @@ export class AutoMovieProductionOracleService {
       );
     const renderSpec: IAutoMovieRenderSpec = {
       target: input.target.id,
-      frameFormat: { width, height, fps },
+      frameFormat: {
+        width,
+        height,
+        fps,
+        ...(crop === undefined ? {} : { crop: structuredClone(crop) }),
+      },
       toneMapping: "none",
       codec: "h264",
       pixelFormat: "yuv420p",

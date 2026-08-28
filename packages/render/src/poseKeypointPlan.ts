@@ -10,6 +10,7 @@ import {
 } from "@automovie/engine";
 import {
   IAutoMovieCamera,
+  IAutoMovieDeliveryCrop,
   IAutoMovieMotion,
   IAutoMovieScene,
   IAutoMovieSequence,
@@ -62,8 +63,11 @@ export const planPoseKeypointSidecar = (props: {
   fps: number;
   /** Render aspect (width/height); defaults inside resolvePoseKeypoints to 16/9. */
   aspect?: number;
+  /** Optional normalized delivery crop projected into the sidecar raster. */
+  crop?: IAutoMovieDeliveryCrop;
 }): IAutoMoviePoseKeypointSidecar => {
-  const { sequence, shots, scenes, motions, skeletons, fps, aspect } = props;
+  const { sequence, shots, scenes, motions, skeletons, fps, aspect, crop } =
+    props;
   if (!Number.isFinite(fps) || fps <= 0)
     throw new Error(`fps must be a finite number > 0, but was ${fps}`);
 
@@ -95,6 +99,7 @@ export const planPoseKeypointSidecar = (props: {
           motionById,
           skeletonById,
           aspect,
+          crop,
         }),
       };
     },
@@ -112,6 +117,7 @@ const actorsAt = (
     motionById: ReadonlyMap<string, IAutoMovieMotion>;
     skeletonById: ReadonlyMap<string, IAutoMovieSkeleton>;
     aspect: number | undefined;
+    crop: IAutoMovieDeliveryCrop | undefined;
   },
 ): IAutoMoviePoseKeypointActor[] => {
   const scene = lookups.sceneById.get(shot.scene);
@@ -143,6 +149,7 @@ const actorsAt = (
         cameraMotion: shot.cameraMotion,
         time,
         aspect: lookups.aspect,
+        crop: lookups.crop,
       }),
       // The atmosphere in front of this actor, from the SAME declaration and
       // the SAME law the viewer hands its shader. Spread conditionally rather

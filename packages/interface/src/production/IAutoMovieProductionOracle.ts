@@ -1,4 +1,8 @@
-import { AutoMovieGuidePass, IAutoMovieRenderSpec } from "../cinematics";
+import {
+  AutoMovieGuidePass,
+  IAutoMovieDeliveryCrop,
+  IAutoMovieRenderSpec,
+} from "../cinematics";
 import { IAutoMovieVector3 } from "../geometry";
 import { IAutoMovieRenderObservation } from "../render/IAutoMovieRenderObservation";
 import { IAutoMovieSemanticMask } from "../render/IAutoMovieSemanticMask";
@@ -656,6 +660,8 @@ export type AutoMovieProductionFrameCapture = (
     productionId: string;
     /** Current compile fingerprint. */
     compileFingerprint: AutoMovieContentDigest;
+    /** Delivery crop for a shot capture; absent for isolated asset captures. */
+    crop?: IAutoMovieDeliveryCrop;
   },
 ) => Promise<{
   /** Raw PNG bytes. */
