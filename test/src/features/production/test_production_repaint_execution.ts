@@ -622,6 +622,103 @@ export const test_production_repaint_execution = async (): Promise<void> => {
     },
   );
 
+  let reversedBeforeProviderAttemptIds = 0;
+  let reversedBeforeProviderCalls = 0;
+  let reversedBeforeProviderReads = 0;
+  let reversedBeforeProviderMessage: string | null = null;
+  try {
+    await execute({
+      policy: policy({ maximumAttempts: 1, backoffMs: [] }),
+      now: () =>
+        new Date(
+          reversedBeforeProviderReads++ === 0
+            ? "2026-08-28T10:00:01.000Z"
+            : "2026-08-28T10:00:00.000Z",
+        ),
+      attemptId: () => {
+        ++reversedBeforeProviderAttemptIds;
+        return "50000000-0000-4000-8000-000000000001";
+      },
+      calls: async () => {
+        ++reversedBeforeProviderCalls;
+        return {
+          value: "must not execute",
+          costUnits: 0,
+          availableOutput: null,
+        };
+      },
+    });
+  } catch (error) {
+    reversedBeforeProviderMessage =
+      error instanceof Error ? error.message : String(error);
+  }
+
+  let reversedAfterWaitAttemptIds = 0;
+  let reversedAfterWaitCalls = 0;
+  let reversedAfterWaitReads = 0;
+  let reversedAfterWaitMessage: string | null = null;
+  try {
+    await execute({
+      policy: policy({
+        maximumAttempts: 2,
+        backoffMs: [1],
+        retryableFailures: ["rate-limit"],
+      }),
+      now: () =>
+        new Date(
+          [
+            "2026-08-28T10:00:00.000Z",
+            "2026-08-28T10:00:00.000Z",
+            "2026-08-28T10:00:00.000Z",
+            "2026-08-28T10:00:01.000Z",
+            "2026-08-28T10:00:00.999Z",
+          ][Math.min(reversedAfterWaitReads++, 4)]!,
+        ),
+      attemptId: () =>
+        `60000000-0000-4000-8000-${String(
+          ++reversedAfterWaitAttemptIds,
+        ).padStart(12, "0")}`,
+      calls: async () => {
+        ++reversedAfterWaitCalls;
+        throw { status: 429, message: "retry after a clock rollback" };
+      },
+    });
+  } catch (error) {
+    reversedAfterWaitMessage =
+      error instanceof Error ? error.message : String(error);
+  }
+  TestValidator.equals(
+    "backward clocks reject before allocating or starting another provider attempt",
+    {
+      beforeProvider: {
+        rejected: reversedBeforeProviderMessage?.includes(
+          "precedes the previous runtime clock observation",
+        ),
+        attemptIds: reversedBeforeProviderAttemptIds,
+        providerCalls: reversedBeforeProviderCalls,
+      },
+      afterWait: {
+        rejected: reversedAfterWaitMessage?.includes(
+          "precedes the previous runtime clock observation",
+        ),
+        attemptIds: reversedAfterWaitAttemptIds,
+        providerCalls: reversedAfterWaitCalls,
+      },
+    },
+    {
+      beforeProvider: {
+        rejected: true,
+        attemptIds: 0,
+        providerCalls: 0,
+      },
+      afterWait: {
+        rejected: true,
+        attemptIds: 1,
+        providerCalls: 1,
+      },
+    },
+  );
+
   const rejectionMessage = async (
     operation: () => Promise<unknown>,
   ): Promise<string> => {
