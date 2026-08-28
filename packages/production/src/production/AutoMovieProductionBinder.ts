@@ -12,6 +12,7 @@ const AUTHORED_DOCUMENT_LAYERS = [
   "screenplays",
   "scripts",
   "settings",
+  "shots",
   "spaces",
   "systems",
   "treatments",

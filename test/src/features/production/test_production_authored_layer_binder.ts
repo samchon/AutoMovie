@@ -195,6 +195,20 @@ export const test_production_authored_layer_binder =
         }).markdown(),
         "# Site Library\n\n## Site map\n\n### Extent\n\nOne bounded site.\n",
       );
+      write(
+        library,
+        "docs/shots/001-delivery.md",
+        "# Delivery shot\n\n## Observation {#observation}\n\nThe bounded result is visible.\n",
+      );
+      TestValidator.equals(
+        "direct-brief shot reader edition",
+        await new AutoMovieProductionBinder({
+          root: library,
+          title: "Direct Brief Shots",
+          layer: "shots",
+        }).markdown(),
+        "# Direct Brief Shots\n\n## Delivery shot\n\n### Observation\n\nThe bounded result is visible.\n",
+      );
 
       const empty: string = makeRoot();
       fs.mkdirSync(path.join(empty, "docs", "settings"), { recursive: true });
