@@ -4,7 +4,7 @@ AutoMovie의 제품 요구와 생성 프로젝트의 저작 계약은 서로 다
 
 ## 현재 모집단
 
-2026-08-28 현재 `docs/requirements/`에는 27개 family와 명시 anchor가 있는 H3 unit 1,981개가 있다. `packages/template/docs/`에는 discovery 16개, principle 73개, obligation 96개로 H2 185개가 있다. 저작 계약에서 `requirements/`를 직접 인용한 경우와 요구 문서에서 discovery, principle, obligation을 직접 인용한 경우는 모두 0건이다.
+2026-08-28 현재 `docs/requirements/`에는 27개 family와 명시 anchor가 있는 H3 unit 1,982개가 있다. `packages/template/docs/`에는 discovery 17개, principle 83개, obligation 108개로 H2 208개가 있다. 저작 계약에서 `requirements/`를 직접 인용한 경우와 요구 문서에서 discovery, principle, obligation을 직접 인용한 경우는 모두 0건이다.
 
 Correspondence는 해당 family의 결정을 저자가 어느 계약 owner와 절차에서 만나게 되는지 말한다. 이것은 그 family의 모든 H3가 이미 구현되었다거나 하나의 계약 항목이 모든 세부 요구를 대신한다는 주장이 아니다. 부재는 다음 세 종류로만 기록한다.
 
@@ -33,7 +33,7 @@ Correspondence는 해당 family의 결정을 저자가 어느 계약 owner와 �
 | `formations` | 54 | authoring contract | settings member/carried-object conditions, instance membership and placement, motion spatial relations |
 | `interior` | 153 | authoring contract | settings의 user·equipment 조건, spaces·materials·instances·systems, spatial-design craft와 current measurement review set |
 | `lighting` | 86 | authoring contract | systems state and source evaluation, shot inputs, cinematography |
-| `map` | 152 | unpaid authoring edge (#2125) | generic coordinates and topology만 있고 world, terrain, water, ecology, settlement, transport, infrastructure와 map delivery owner가 없다 |
+| `map` | 152 | authoring contract | map discovery, world identity and information structure, terrain·water·ecology·land use·settlement·transport·infrastructure·weather·time state, site interfaces, deterministic map source and review |
 | `motion` | 81 | authoring contract | motion endpoints, phases, domain, time, contact, composition and pure source mapping |
 | `operations-and-recovery` | 81 | not author-driven | compiler, render and command hosts가 lock, retry, checkpoint, publication and recovery를 소유한다 |
 | `product` | 30 | authoring contract | scope preservation, purpose fit, layer boundary, production-kind router |
@@ -41,16 +41,16 @@ Correspondence는 해당 family의 결정을 저자가 어느 계약 owner와 �
 | `production-evidence` | 7 | authoring contract | common evidence integrity, contract-target inventory and evidence staging |
 | `rendering` | 90 | authoring contract | settings delivery scope, production-source delivery identity, shot time, film timeline and deterministic capture |
 | `repaint` | 43 | authoring contract | settings의 visual·fidelity 결정, 외부 generator adoption configuration, deterministic structural truth, receipt lineage와 publication evidence |
-| `review` | 15 | authoring contract | subject verification addresses, population review sets, production review and author Self-Review |
+| `review` | 16 | authoring contract | subject verification addresses, population review sets, production review and author Self-Review |
 | `sound` | 80 | authoring contract | screenplay audible intent, systems, auxiliary-track mapping and sound craft |
 | `staging` | 70 | authoring contract | script physical progression and boundary, shot realization |
 | `story` | 101 | authoring contract | narrated-time principles, sustained-middle treatment coverage, executable scripts, and final screenplay contracts |
 
-24개 family는 저작 계약으로 도달하고 2개는 host 또는 harness가 소유한다. 저작 owner가 없는 family edge는 1개이며 152 H3 unit을 대표한다. 이 수는 152개의 개별 결함을 뜻하지 않는다. `map` family를 하나의 책임 owner로 연결해야 할 한 관계가 아직 지급되지 않았다는 뜻이다. Whole-family 의도적 제외는 현재 0개다. 이후 이 분류를 사용하려면 `families.json`에 이유와 재개 조건을 함께 적어야 한다.
+25개 family는 저작 계약으로 도달하고 2개는 host 또는 harness가 소유한다. 저작 owner가 없는 family edge와 whole-family 의도적 제외는 현재 모두 0개다. 이후 부재 분류를 사용하려면 `families.json`에 이유와 재개 조건을 함께 적어야 한다.
 
 ## 미지급 수와 gate
 
-`node internals/authoring-reachability-gate.mjs`는 미지급 수를 0으로 강제하지 않는다. #2125가 아직 같은 캠페인에서 `map` owner를 만드는 중이므로 지금 0을 요구하면 거짓 correspondence를 쓰게 만든다. 대신 현재 허용 debt를 정확히 고정한다. family가 늘거나 분류가 빠지거나 대응 path와 anchor가 사라지거나 현재 debt 수가 바뀌면 ledger를 다시 판단하기 전까지 실패한다. 지급된 edge도 조용히 예전 baseline 아래에 숨을 수 없다.
+`node internals/authoring-reachability-gate.mjs`는 미지급 family 수 0을 정확히 고정한다. family가 늘거나 분류가 빠지거나 대응 path와 anchor가 사라지거나 debt가 다시 생기면 ledger를 다시 판단하기 전까지 실패한다. 지급된 edge도 조용히 예전 baseline 아래에 숨을 수 없다.
 
 Specification fragment debt도 같은 방식으로 센다. 현재 `@evidenceObligation` target-anchor와 id 쌍은 24개이고 source의 고유 `@evidencePart` 쌍은 18개다. 미지급 6개는 다음과 같다.
 

@@ -1,12 +1,12 @@
 {
   "version": 1,
   "contractInventory": {
-    "discovery": 16,
-    "principles": 73,
-    "obligations": 96
+    "discovery": 17,
+    "principles": 83,
+    "obligations": 108
   },
   "acceptedDebt": {
-    "unpaidAuthoringFamilies": 1,
+    "unpaidAuthoringFamilies": 0,
     "unpaidSpecificationFragments": 6,
     "unpaidSpecificationTargets": [
       "camera-light-and-visibility/visibility-and-image-space-observation.md#clv-clipping-clearance-evaluation::camera-clearance-swept-volume",
@@ -288,13 +288,28 @@
     {
       "family": "map",
       "requirementUnits": 152,
-      "classification": "unpaid-authoring-edge",
-      "issue": 2125,
-      "partialCorrespondences": [
-        "packages/template/docs/obligations/design/spaces.md#space-reference-topology",
-        "packages/template/docs/principles/core/settings.md#constraint-sufficiency"
+      "classification": "authoring-contract",
+      "correspondences": [
+        "packages/template/docs/discovery/design/maps.md#work-specific-map-requirements",
+        "packages/template/docs/principles/design/maps.md#map-addressable-world-identity",
+        "packages/template/docs/principles/design/maps.md#map-information-structure",
+        "packages/template/docs/principles/design/maps.md#map-coordinate-extent-scale",
+        "packages/template/docs/principles/design/maps.md#map-verification-address",
+        "packages/template/docs/obligations/design/maps.md#map-world-site-interface",
+        "packages/template/docs/obligations/design/maps.md#map-world-content-relations",
+        "packages/template/docs/obligations/design/maps.md#map-world-temporal-state",
+        "packages/template/docs/obligations/design/maps.md#map-world-scale-partition",
+        "packages/template/docs/obligations/design/maps.md#map-world-source-resolution",
+        "packages/template/docs/obligations/design/maps.md#map-review-set",
+        "packages/template/docs/obligations/design/map-sources.md#map-source-design-ownership",
+        "packages/template/docs/obligations/design/map-sources.md#map-source-deterministic-world",
+        "packages/template/docs/obligations/design/map-sources.md#map-source-preserved-lineage",
+        "packages/template/docs/obligations/design/map-sources.md#map-source-invalid-world"
       ],
-      "reason": "Generic settings and spaces can state coordinates and topology, but no branch owns terrain, hydrology, ecology, transport, settlement, infrastructure, temporal world state, or map delivery as one authored world."
+      "workflow": [
+        "packages/template/scaffold/.agents/skills/production/design-branches.md"
+      ],
+      "reason": "The map branch owns one addressable world across terrain, water, ecology, land use, settlement, transport, infrastructure, weather, time, site interfaces, deterministic source resolution, and review."
     },
     {
       "family": "motion",
@@ -416,7 +431,7 @@
     },
     {
       "family": "review",
-      "requirementUnits": 15,
+      "requirementUnits": 16,
       "classification": "authoring-contract",
       "correspondences": [
         "packages/template/docs/obligations/core/settings.md#delivery-review-condition",
