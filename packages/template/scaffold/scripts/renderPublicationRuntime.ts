@@ -1,3 +1,4 @@
+import type { IAutoMovieProductionEvidence } from "@automovie/evidence";
 import type {
   AutoMovieContentDigest,
   IAutoMovieProductionDeliverable,
@@ -227,6 +228,8 @@ export const createProductionRenderPublicationRuntime = (props: {
 
 /** Own terminal deliverable validation, encoding, and immutable publication. */
 export const createProductionRenderFinalizationRuntime = (props: {
+  /** One invocation-wide snapshot from the tracked authoring declaration. */
+  authoringEvidence?: IAutoMovieProductionEvidence;
   encoder: IProductionRenderEncoderRuntime;
   host: IProductionRenderHost;
   planning: ReturnType<typeof createProductionRenderPlanningRuntime>;
@@ -255,6 +258,7 @@ export const createProductionRenderFinalizationRuntime = (props: {
       projectRoot: root,
       productionId,
       capture: renderHost.capture,
+      authoringEvidence: props.authoringEvidence,
     });
 
   const finalize = async (plan: IAutoMovieProductionRenderJobPlan) => {
@@ -266,6 +270,7 @@ export const createProductionRenderFinalizationRuntime = (props: {
     if (plan.tier.kind === "final") {
       const gate = new AutoMovieProductionCompiler(
         AutoMovieProductionProject.openReadOnly(root, productionId),
+        props.authoringEvidence,
       ).lint({ scope: "final" });
       if (gate.success === false)
         // Carry each diagnostic's own message, not just its code and target. A
@@ -305,6 +310,7 @@ export const createProductionRenderFinalizationRuntime = (props: {
         ? assertProductionRepaintSelection({
             selected: configuredRepaint,
             visualDelivery: graph.production.visualDelivery,
+            continuity: "film",
             shots:
               timeline === null
                 ? []
@@ -645,6 +651,7 @@ export const createProductionRenderFinalizationRuntime = (props: {
       publicationCurrent: () => {
         const staged = new AutoMovieProductionCompiler(
           AutoMovieProductionProject.openReadOnly(root, productionId),
+          props.authoringEvidence,
         ).lint({ scope: "final" });
         if (staged.success === false)
           throw new Error(

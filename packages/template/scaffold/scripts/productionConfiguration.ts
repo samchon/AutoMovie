@@ -358,6 +358,7 @@ export const readProductionRepaintSelection = (
 export const assertProductionRepaintSelection = (props: {
   selected: unknown;
   visualDelivery: "deterministic" | "repainted";
+  continuity: "film" | "inapplicable";
   shots: readonly string[];
 }): IAutoMovieProductionRepaintSelection | null => {
   const selected = readProductionRepaintSelection(props.selected);
@@ -371,6 +372,19 @@ export const assertProductionRepaintSelection = (props: {
   if (selected === null)
     throw new Error(
       "A repainted visual delivery requires an explicit visual.repaint generator and reviewed request for every compiled shot.",
+    );
+  const continuityMismatch = selected.requests.find((request) =>
+    props.continuity === "film"
+      ? request.evidence.continuity === null ||
+        request.selectionReview.continuityReview === null
+      : request.evidence.continuity !== null ||
+        request.selectionReview.continuityReview !== null,
+  );
+  if (continuityMismatch !== undefined)
+    throw new Error(
+      props.continuity === "film"
+        ? `Repainted film shot "${continuityMismatch.shot}" requires a versioned continuity baseline and passing full-sequence playback review.`
+        : `Non-narrative repaint shot "${continuityMismatch.shot}" must mark film-only continuity evidence and review inapplicable with null.`,
     );
   const compiled = exactIdentitySet(props.shots, "compiled repaint shot");
   const configured = selected.requests

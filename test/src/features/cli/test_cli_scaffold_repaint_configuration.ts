@@ -45,6 +45,7 @@ interface IConfigurationModule {
   assertProductionRepaintSelection: (props: {
     selected: unknown;
     visualDelivery: "deterministic" | "repainted";
+    continuity: "film" | "inapplicable";
     shots: readonly string[];
   }) => IRepaintSelection | null;
   selectProductionRepaintRequest: (
@@ -618,64 +619,105 @@ export const test_cli_scaffold_repaint_configuration =
       ),
     );
 
+    const inapplicable: IRepaintSelection = {
+      ...authored,
+      requests: authored.requests.map((candidate) => ({
+        ...candidate,
+        evidence: { ...candidate.evidence, continuity: null },
+        selectionReview: {
+          ...candidate.selectionReview,
+          continuityReview: null,
+        },
+      })),
+    };
     TestValidator.equals(
-      "visual delivery and compiled repaint shots agree in both valid states",
+      "visual delivery, continuity population, and compiled repaint shots agree in every valid state",
       [
         configuration.assertProductionRepaintSelection({
           selected: null,
           visualDelivery: "deterministic",
+          continuity: "film",
           shots: [],
         }),
         configuration
           .assertProductionRepaintSelection({
             selected: authored,
             visualDelivery: "repainted",
+            continuity: "film",
+            shots: ["answer", "opening"],
+          })
+          ?.requests.map((candidate) => candidate.shot),
+        configuration
+          .assertProductionRepaintSelection({
+            selected: inapplicable,
+            visualDelivery: "repainted",
+            continuity: "inapplicable",
             shots: ["answer", "opening"],
           })
           ?.requests.map((candidate) => candidate.shot),
       ],
-      [null, ["opening", "answer"]],
+      [null, ["opening", "answer"], ["opening", "answer"]],
     );
     const deliveryFailures = [
       () =>
         configuration.assertProductionRepaintSelection({
           selected: authored,
           visualDelivery: "deterministic",
+          continuity: "film",
           shots: [],
         }),
       () =>
         configuration.assertProductionRepaintSelection({
           selected: null,
           visualDelivery: "repainted",
+          continuity: "film",
           shots: [],
         }),
       () =>
         configuration.assertProductionRepaintSelection({
           selected: authored,
           visualDelivery: "repainted",
+          continuity: "film",
           shots: ["opening"],
         }),
       () =>
         configuration.assertProductionRepaintSelection({
           selected: authored,
           visualDelivery: "repainted",
+          continuity: "film",
           shots: ["opening", "answer", "extra"],
         }),
       () =>
         configuration.assertProductionRepaintSelection({
           selected: authored,
           visualDelivery: "repainted",
+          continuity: "film",
           shots: ["opening", "opening"],
         }),
       () =>
         configuration.assertProductionRepaintSelection({
           selected: authored,
           visualDelivery: "repainted",
+          continuity: "film",
           shots: ["opening", " padded "],
+        }),
+      () =>
+        configuration.assertProductionRepaintSelection({
+          selected: inapplicable,
+          visualDelivery: "repainted",
+          continuity: "film",
+          shots: ["opening", "answer"],
+        }),
+      () =>
+        configuration.assertProductionRepaintSelection({
+          selected: authored,
+          visualDelivery: "repainted",
+          continuity: "inapplicable",
+          shots: ["opening", "answer"],
         }),
     ].map((operation) => messageOf(operation));
     TestValidator.predicate(
-      "delivery refuses both selection directions and every shot-set mismatch",
+      "delivery refuses selection, continuity-population, and shot-set mismatches",
       deliveryFailures.every((message) => message !== null),
     );
 
