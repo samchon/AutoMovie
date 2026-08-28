@@ -3,6 +3,7 @@ import type {
   IAutoMovieDeliveryCrop,
   IAutoMovieProductionTtsReceipt,
 } from "@automovie/interface";
+import type { IAutoMovieProductionRenderJobPlan } from "@automovie/production";
 import { renderScaffold, writeFiles } from "@automovie/template";
 import { TestValidator } from "@nestia/e2e";
 import fs from "node:fs";
@@ -76,6 +77,26 @@ interface IRuntimeModules {
   productionDialogueRuntimeIdentity(
     runtime: IDialogueRuntime | null,
   ): string | null;
+  productionRenderFrameCaptureInput(props: {
+    root: string;
+    productionId: string;
+    plan: IAutoMovieProductionRenderJobPlan;
+    shot: string;
+    sourceFrame: number;
+    sourceFps: number;
+    globalFrame: number;
+    pass: "beauty";
+  }): {
+    crop?: IAutoMovieDeliveryCrop;
+    globalFrame: number | null;
+    height: number;
+    pass: "beauty";
+    productionId: string;
+    projectRoot: string;
+    target: { kind: "shot"; id: string };
+    time: number;
+    width: number;
+  };
   productionSoundSourceDigest(props: {
     project: {
       contentInputs(): Array<{
@@ -139,6 +160,7 @@ const loadModules = (root: string): IRuntimeModules => {
     ...(require(path.join(scripts, "dialogueCacheSnapshot.ts")) as object),
     ...(require(path.join(scripts, "generatedShotPlugin.ts")) as object),
     ...(require(path.join(scripts, "productionRuntimeState.ts")) as object),
+    ...(require(path.join(scripts, "renderFrameCaptureInput.ts")) as object),
     ...(require(path.join(scripts, "renderSoundRuntime.ts")) as object),
   } as IRuntimeModules;
 };
@@ -309,6 +331,33 @@ export const test_cli_scaffold_dialogue_runtime_isolation =
       const cropB = { left: 0.2, top: 0, right: 1, bottom: 0.9 };
       await captureA.installDialogue(dialogueA);
       await captureA.installDeliveryCrop(cropA);
+      const renderCaptureInput = first.productionRenderFrameCaptureInput({
+        root: firstRoot,
+        productionId: "dialogue-proxy",
+        plan: {
+          productionId: "dialogue-proxy",
+          compileFingerprint: `sha256:${"c".repeat(64)}`,
+          sourceFrameFormat: {
+            width: 1_920,
+            height: 1_080,
+            fps: 24,
+            colorSpace: "srgb",
+            crop: cropA,
+          },
+          frameFormat: {
+            width: 960,
+            height: 540,
+            fps: 12,
+            colorSpace: "srgb",
+            crop: cropA,
+          },
+        } as IAutoMovieProductionRenderJobPlan,
+        shot: "shot-A",
+        sourceFrame: 12,
+        sourceFps: 24,
+        globalFrame: 6,
+        pass: "beauty",
+      });
       const openA = captureA.viewerRuntime();
       await captureB.installDialogue(dialogueB);
       await captureB.installDeliveryCrop(cropB);
@@ -427,6 +476,17 @@ export const test_cli_scaffold_dialogue_runtime_isolation =
               target: { kind: "shot", id: "shot-A" },
               crop: cropA,
             }) !== pageCropOnlyB,
+          renderCaptureInput: {
+            root: renderCaptureInput.projectRoot,
+            production: renderCaptureInput.productionId,
+            target: renderCaptureInput.target,
+            time: renderCaptureInput.time,
+            frame: renderCaptureInput.globalFrame,
+            pass: renderCaptureInput.pass,
+            width: renderCaptureInput.width,
+            height: renderCaptureInput.height,
+            crop: renderCaptureInput.crop,
+          },
           expectedA: first.productionDialogueRuntimeIdentity(dialogueA),
           expectedB: second.productionDialogueRuntimeIdentity(dialogueB),
           sourceDistinct: sourceA !== sourceB,
@@ -445,6 +505,17 @@ export const test_cli_scaffold_dialogue_runtime_isolation =
           pageCropA: cropA,
           pageCropB: cropB,
           cropOnlyPageInvalidated: true,
+          renderCaptureInput: {
+            root: firstRoot,
+            production: "dialogue-proxy",
+            target: { kind: "shot", id: "shot-A" },
+            time: 0.5,
+            frame: 6,
+            pass: "beauty",
+            width: 960,
+            height: 540,
+            crop: cropA,
+          },
           expectedA: first.productionDialogueRuntimeIdentity(dialogueA),
           expectedB: second.productionDialogueRuntimeIdentity(dialogueB),
           sourceDistinct: true,

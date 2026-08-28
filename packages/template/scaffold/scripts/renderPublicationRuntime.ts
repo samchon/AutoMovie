@@ -38,6 +38,7 @@ import {
   type ICurrentRenderChunkPublication,
   consumeCurrentRenderChunkFrames,
 } from "./renderChunkSnapshot";
+import { productionRenderFrameCaptureInput } from "./renderFrameCaptureInput";
 import type { IProductionRenderHost } from "./renderHost";
 import type { createProductionRenderPlanningRuntime } from "./renderPlanningRuntime";
 import {
@@ -536,18 +537,18 @@ export const createProductionRenderFinalizationRuntime = (props: {
           plan.compileFingerprint,
         );
         const frame = sampleProductionRenderFrame(timeline, 0).layers.at(-1)!;
-        const captured = await renderHost.capture({
-          projectRoot: root,
-          productionId,
-          compileFingerprint: plan.compileFingerprint,
-          target: { kind: "shot", id: frame.shot },
-          time: frame.sourceFrame / timeline.fps,
-          globalFrame: 0,
-          pass: "beauty",
-          width: plan.frameFormat.width,
-          height: plan.frameFormat.height,
-          crop: plan.frameFormat.crop,
-        });
+        const captured = await renderHost.capture(
+          productionRenderFrameCaptureInput({
+            root,
+            productionId,
+            plan,
+            shot: frame.shot,
+            sourceFrame: frame.sourceFrame,
+            sourceFps: timeline.fps,
+            globalFrame: 0,
+            pass: "beauty",
+          }),
+        );
         if (
           canonicalAutoMovieCaptureRuntimeIdentity(captured.runtimeIdentity) !==
           canonicalAutoMovieCaptureRuntimeIdentity(plan.runtimeIdentity.capture)
