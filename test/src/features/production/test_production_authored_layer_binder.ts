@@ -77,7 +77,9 @@ export const test_production_authored_layer_binder =
         film,
         "docs/screenplays/001-cue.md",
         [
-          "<!-- @evidence contracts/local.md#tone The cue answers the adopted tone. -->",
+          "<!--",
+          "@evidence contracts/local.md#tone The cue answers the adopted tone.",
+          "-->",
           "",
           "# Cue screenplay {#cue}",
           "",
