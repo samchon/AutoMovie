@@ -29,55 +29,32 @@ interface IGeneratedCommand {
   stdout: string;
 }
 
-const AUTHORED_CLAIM_NAMES = [
-  "settings H2 units answer their principle checklists, cover the layer's obligations, and account for inherited work",
-  "models files account for inherited settings, designs, and parent files",
-  "models H2 units answer their principle checklists, cover the layer's obligations, and account for inherited work",
-  "motions files account for inherited settings, designs, and parent files",
-  "motions H2 units answer their principle checklists, cover the layer's obligations, and account for inherited work",
-  "treatments files account for inherited settings, designs, and parent files",
-  "treatments H2 units answer their principle checklists, cover the layer's obligations, and account for inherited work",
-  "scripts files account for inherited settings, designs, and parent files",
-  "scripts H2 units answer their principle checklists, cover the layer's obligations, and account for inherited work",
-  "scripts H3 units answer their principle checklists and account for inherited work",
-  "scripts H4 units answer their principle checklists and account for inherited work",
-  "screenplays files account for inherited settings, designs, and parent files",
-  "screenplays H2 units answer their principle checklists, cover the layer's obligations, and account for inherited work",
-  "screenplays H3 units answer their principle checklists and account for inherited work",
-  "screenplays H4 units answer their principle checklists and account for inherited work",
-] as const;
-
 const REPOSITORY_ROOT = path.resolve(__dirname, "../../../..");
 
 const installAuthoredEvidencePopulation = (
   rendered: Record<string, string>,
 ): void => {
-  rendered["docs/contracts/index.md"] = [
-    "<!--",
-    "@evidenceExclude discovery/core/common.md#shared-local-boundary This focused runtime regression does not claim a completed work-specific discovery audit.",
-    "-->",
+  const lint = rendered["lint.config.ts"];
+  if (
+    lint === undefined ||
+    lint.includes('from "./productionEvidence"') === false ||
+    lint.includes("createAutoMovieEvidenceConfig(productionEvidence)") ===
+      false
+  )
+    throw new Error(
+      "The generated consumer no longer shares one productionEvidence declaration between lint and runtime commands.",
+    );
+  rendered["productionEvidence.ts"] = [
+    'import type { IAutoMovieEvidenceConfigProps } from "@automovie/evidence";',
     "",
-    "# Focused generated-runtime evidence boundary",
-    "",
-  ].join("\n");
-  rendered["lint.config.ts"] = [
-    'import { createAutoMovieEvidenceConfig, evidence } from "@automovie/evidence";',
-    'import type { ITtscEvidenceGraphClaim } from "@ttsc/evidence";',
-    'import type { ITtscLintConfig } from "@ttsc/lint";',
-    'import path from "node:path";',
-    "",
-    `const names = ${JSON.stringify(AUTHORED_CLAIM_NAMES, null, 2)} as const;`,
     "/**",
-    " * Exercise the repository-only completed film's actual authored Markdown.",
-    " * This is the same focused historical-fixture boundary as #2130: that",
-    " * fixture predates current source-population topology, so source claims",
-    " * stay deliberately outside this regression. The public scaffold graph is",
-    " * neither copied nor weakened; the linked docs are the generated project's",
-    " * one physical docs population and the current reusable graph owns claims.",
+    " * The completed film's one tracked graph declaration.",
+    " *",
+    " * Normal lint, render, repaint, and publication commands all consume this",
+    " * same complete root-bound identity; no test-only graph shadows it.",
     " */",
-    'const location = path.join(import.meta.dirname, ".automovie/runtime-evidence");',
-    "const full = createAutoMovieEvidenceConfig({",
-    "  location,",
+    "export const productionEvidence: IAutoMovieEvidenceConfigProps = {",
+    "  location: import.meta.dirname,",
     '  kind: "film",',
     '  populationScope: { mode: "complete-production" },',
     '  settings: "review",',
@@ -94,39 +71,17 @@ const installAuthoredEvidencePopulation = (
     '  screenplays: "review",',
     '  briefs: "disabled",',
     '  mapSources: "disabled",',
-    '  modelSources: "disabled",',
+    '  modelSources: "review",',
     '  spaceSources: "disabled",',
     '  materialSources: "disabled",',
     '  instanceSources: "disabled",',
-    '  motionSources: "disabled",',
+    '  motionSources: "review",',
     '  systemSources: "disabled",',
-    '  shots: "disabled",',
-    '  productionSources: "disabled",',
-    '  filmSources: "disabled",',
+    '  shots: "review",',
+    '  productionSources: "review",',
+    '  filmSources: "review",',
     "  claims: [],",
-    "});",
-    "const claims: ITtscEvidenceGraphClaim[] = names.map((name) => {",
-    "  const matches = full.claims.filter((claim) => claim.name === name);",
-    "  if (matches.length !== 1)",
-    '    throw new Error("Expected one current authored claim named " + name + "; received " + matches.length + ".");',
-    "  return matches[0]!;",
-    "});",
-    "for (const claim of claims) {",
-    '  if ("root" in claim)',
-    '    claim.root = path.resolve(location, claim.root ?? ".");',
-    "  const references = Array.isArray(claim.reference)",
-    "    ? claim.reference",
-    "    : [claim.reference];",
-    "  for (const reference of references)",
-    '    if ("root" in reference && typeof reference.root === "string")',
-    "      reference.root = path.resolve(location, reference.root);",
-    "}",
-    "const graph = { claims };",
-    "",
-    "export default {",
-    "  plugins: { evidence },",
-    '  rules: { "evidence/graph": ["error", graph] },',
-    "} satisfies ITtscLintConfig;",
+    "};",
     "",
   ].join("\n");
 };
@@ -549,31 +504,6 @@ export const test_cli_scaffold_repaint_runtime_contract =
         "        captions: [],\n        effects: [],",
       );
       writeFiles(fixture.root, rendered);
-      const evidenceRoot = path.join(
-        fixture.root,
-        ".automovie/runtime-evidence",
-      );
-      fs.mkdirSync(evidenceRoot, { recursive: true });
-      const actualDocuments = path.resolve(fixture.root, "docs");
-      const linkedDocuments = path.join(evidenceRoot, "docs");
-      const relativeDocuments = path.relative(fixture.root, actualDocuments);
-      if (
-        relativeDocuments.startsWith("..") ||
-        path.isAbsolute(relativeDocuments)
-      )
-        throw new Error(
-          "The focused evidence link must resolve to this generated project's actual docs directory.",
-        );
-      fs.symlinkSync(
-        actualDocuments,
-        linkedDocuments,
-        process.platform === "win32" ? "junction" : "dir",
-      );
-      TestValidator.equals(
-        "the focused graph link resolves to the generated project's actual docs",
-        path.normalize(fs.realpathSync(linkedDocuments)),
-        path.normalize(fs.realpathSync(actualDocuments)),
-      );
       const completedDocuments = Object.entries(completed)
         .filter(([file]) => /^docs\/.+\.md$/u.test(file))
         .sort(([left], [right]) => left.localeCompare(right));
