@@ -25,6 +25,7 @@ import {
   failRenderAttempt,
 } from "./renderAttemptSnapshot";
 import type { ICurrentRenderChunkPublication } from "./renderChunkSnapshot";
+import { productionRenderFrameCaptureInput } from "./renderFrameCaptureInput";
 import {
   type IRenderGcTargetSnapshot,
   assertCapturedRenderGcFileEntry,
@@ -381,18 +382,18 @@ export const createProductionRenderChunkCaptureRuntime = (props: {
     for (const sample of chunk.frames) {
       const images: Array<{ image: PNG; weight: number }> = [];
       for (const layer of productionRenderLayersForPass(sample, chunk.pass)) {
-        const captured = await props.capture({
-          projectRoot: props.root,
-          productionId: props.productionId,
-          compileFingerprint: plan.compileFingerprint,
-          target: { kind: "shot", id: layer.shot },
-          time: layer.sourceFrame / plan.sourceFrameFormat.fps,
-          globalFrame: sample.globalFrame,
-          pass: chunk.pass,
-          width: plan.frameFormat.width,
-          height: plan.frameFormat.height,
-          crop: plan.frameFormat.crop,
-        });
+        const captured = await props.capture(
+          productionRenderFrameCaptureInput({
+            root: props.root,
+            productionId: props.productionId,
+            plan,
+            shot: layer.shot,
+            sourceFrame: layer.sourceFrame,
+            sourceFps: plan.sourceFrameFormat.fps,
+            globalFrame: sample.globalFrame,
+            pass: chunk.pass,
+          }),
+        );
         if (
           canonicalAutoMovieCaptureRuntimeIdentity(captured.runtimeIdentity) !==
           canonicalAutoMovieCaptureRuntimeIdentity(plan.runtimeIdentity.capture)

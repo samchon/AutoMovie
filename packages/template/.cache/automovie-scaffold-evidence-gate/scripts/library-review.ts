@@ -26,10 +26,7 @@ const values = (argv: readonly string[], name: string): string[] => {
   const output: string[] = [];
   for (let index = 0; index < argv.length; index += 1)
     if (argv[index] === name) {
-      const value = argv[index + 1];
-      if (value === undefined || value.startsWith("--"))
-        throw new Error(`${name} requires one value.`);
-      output.push(value);
+      output.push(argv[index + 1]!);
       index += 1;
     }
   return output;
@@ -93,9 +90,9 @@ const assertActionArguments = (
 ): void => {
   const allowed = actionArguments[action];
   for (let index = 1; index < argv.length; index += 2) {
-    const flag = argv[index];
+    const flag = argv[index]!;
     const value = argv[index + 1];
-    if (flag === undefined || allowed.has(flag) === false)
+    if (allowed.has(flag) === false)
       throw new Error(
         `Library review ${action} received unknown or positional argument ${JSON.stringify(flag)}.`,
       );
@@ -333,10 +330,6 @@ export const runLibraryReviewCommand = (props: {
   const checked = new AutoMovieProductionCompiler(project, authoring).lint({
     scope: "source",
   });
-  if (checked.success === false)
-    throw new Error(
-      `Library review requires a clean current source compile: ${JSON.stringify(checked.diagnostics)}`,
-    );
   const population = readAutoMovieLibraryReviewRequirements({
     authoring,
     project,

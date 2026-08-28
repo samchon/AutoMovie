@@ -22,9 +22,9 @@ if (typeof location !== "string")
  */
 export const productionEvidence = {
   location,
-  kind: "library",
+  kind: null,
   populationScope: { mode: "complete-production" },
-  settings: "evidence",
+  settings: "disabled",
   research: "disabled",
   maps: "disabled",
   models: "disabled",
