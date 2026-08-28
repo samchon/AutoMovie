@@ -449,6 +449,58 @@ export const test_production_project_runtime_shape_repaint_records =
           }),
         ],
         [
+          "invalid output cannot be marked retryable",
+          repaintAttempt({
+            status: "invalid",
+            failure: {
+              class: "invalid-output",
+              message: "invalid output",
+              retryable: true,
+            },
+            availableOutput: null,
+          }),
+        ],
+        [
+          "input-stale attempts cannot be marked retryable",
+          repaintAttempt({
+            status: "stale",
+            failure: {
+              class: "input-stale",
+              message: "input became stale",
+              retryable: true,
+            },
+            availableOutput: null,
+          }),
+        ],
+        [
+          "budget exhaustion cannot be marked retryable",
+          repaintAttempt({
+            status: "failed",
+            failure: {
+              class: "budget-exhausted",
+              message: "budget exhausted",
+              retryable: true,
+            },
+            availableOutput: null,
+          }),
+        ],
+        [
+          "attempt failure class agrees with terminal status",
+          repaintAttempt({
+            status: "cancelled",
+            failure: {
+              class: "provider-refusal",
+              message: "provider refusal cannot be cancelled",
+              retryable: false,
+            },
+            availableOutput: null,
+          }),
+        ],
+        [
+          "successful attempt retains available output identity",
+          repaintAttempt({ availableOutput: null }),
+        ],
+        [
           "available attempt output has positive bytes",
           repaintAttempt({
             availableOutput: { digest: `sha256:${"4".repeat(64)}`, bytes: 0 },
@@ -1237,6 +1289,20 @@ export const test_production_project_runtime_shape_repaint_records =
         project.verifiedRepaintRenditions([shot, shot]),
         [validReceipt],
       );
+      const initialPointer = JSON.parse(
+        fs.readFileSync(activeFile, "utf8"),
+      ) as { selection: string };
+      const initialSelectionFile = project.trackedStatePath(
+        initialPointer.selection,
+      );
+      const initialSelectionBytes = fs.readFileSync(initialSelectionFile);
+      fs.rmSync(initialSelectionFile);
+      expectSelectionRefusal(
+        "ordinary selection refuses an unverifiable active pointer",
+        selectionProps,
+        "does not name an active verified selection",
+      );
+      fs.writeFileSync(initialSelectionFile, initialSelectionBytes);
 
       const laterAttemptId = "00000000-0000-4000-8000-000000000003";
       const laterOutputPath = productionRepaintOutputPath({
@@ -1625,6 +1691,33 @@ export const test_production_project_runtime_shape_repaint_records =
           ),
         },
         "adapter identity is invalid",
+      );
+      expectRefusal(
+        "repaint refuses an invalid stored execution policy",
+        {
+          ...validReceipt,
+          executionPolicy: {
+            ...validReceipt.executionPolicy!,
+            maximumAttempts: 0,
+          },
+        },
+        "execution policy requires",
+      );
+      expectRefusal(
+        "repaint evidence requires nonblank fields",
+        {
+          ...validReceipt,
+          evidence: { ...validReceipt.evidence!, prompt: " " },
+        },
+        "parameters are invalid",
+      );
+      expectRefusal(
+        "repaint evidence fields are exactly trimmed",
+        {
+          ...validReceipt,
+          evidence: { ...validReceipt.evidence!, settings: " padded " },
+        },
+        "parameters are invalid",
       );
 
       const assetBytes = fs.readFileSync(assetFile);

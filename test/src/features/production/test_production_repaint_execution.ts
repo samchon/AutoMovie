@@ -362,6 +362,32 @@ export const test_production_repaint_execution = async (): Promise<void> => {
       }),
     ),
   );
+  const normalizedFailures = await Promise.all([
+    execute({
+      policy: policy({ maximumAttempts: 1, backoffMs: [] }),
+      calls: async () => {
+        const failure = new Error("placeholder");
+        failure.message = "";
+        throw failure;
+      },
+    }),
+    execute({
+      policy: policy({ maximumAttempts: 1, backoffMs: [] }),
+      calls: async () => {
+        throw new AutoMovieRepaintAttemptError(
+          "provider-refusal",
+          " padded provider refusal ",
+        );
+      },
+    }),
+  ]);
+  TestValidator.equals(
+    "terminal failure messages are nonblank and exactly trimmed",
+    normalizedFailures.map(
+      ({ result }) => result.attempts[0]?.failure?.message,
+    ),
+    ["Repaint provider failed without a message.", "padded provider refusal"],
+  );
   const resolvedOnTimeout = await execute<string>({
     policy: policy({
       maximumAttempts: 1,

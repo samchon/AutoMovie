@@ -1614,6 +1614,12 @@ export const test_production_repaint_generator_adoption =
             ][Math.min(executionRollbackReads++, 2)]!,
           ),
       );
+      let thrownExecutionReads = 0;
+      const thrownExecutionRetry = await explicitRetry([priorRetryable], () => {
+        if (thrownExecutionReads++ < 2)
+          return new Date("2026-08-28T12:03:01.000Z");
+        throw nonError("execution clock unavailable");
+      });
       const retryableRetry = await explicitRetry([priorRetryable]);
       TestValidator.equals(
         "explicit retry is legal only after the last retryable failed attempt",
@@ -1627,6 +1633,7 @@ export const test_production_repaint_generator_adoption =
           invalidResume: codeOf(invalidResumeRetry),
           thrownResume: codeOf(thrownResumeRetry),
           executionRollback: codeOf(executionRollbackRetry),
+          thrownExecution: codeOf(thrownExecutionRetry),
           retryable: retryableRetry.repainted,
           providerCalls: retryLegalityProviderCalls,
         },
@@ -1640,6 +1647,7 @@ export const test_production_repaint_generator_adoption =
           invalidResume: "repaint-host-unavailable",
           thrownResume: "repaint-host-unavailable",
           executionRollback: "repaint-failed",
+          thrownExecution: "repaint-failed",
           retryable: true,
           providerCalls: 1,
         },
