@@ -811,6 +811,36 @@ export const test_production_repaint_execution = async (): Promise<void> => {
       return error instanceof Error ? error.message : String(error);
     }
   };
+  let malformedAttemptListenerRemovals = 0;
+  const malformedAttemptSignal = {
+    aborted: false,
+    addEventListener: (): void => undefined,
+    removeEventListener: (): void => {
+      ++malformedAttemptListenerRemovals;
+    },
+  } as unknown as AbortSignal;
+  const malformedAttemptWithSignal = await rejectionMessage(() =>
+    execute({
+      policy: policy(),
+      signal: malformedAttemptSignal,
+      attemptId: () => " padded ",
+      calls: async () => ({
+        value: 1,
+        costUnits: 0,
+        availableOutput: null,
+      }),
+    }),
+  );
+  TestValidator.equals(
+    "attempt-id refusal detaches a resident cancellation relay",
+    {
+      rejected: malformedAttemptWithSignal.includes(
+        "attempt id must be trimmed",
+      ),
+      removals: malformedAttemptListenerRemovals,
+    },
+    { rejected: true, removals: 1 },
+  );
   const malformedMessages = await Promise.all([
     rejectionMessage(() =>
       execute({
