@@ -4652,22 +4652,22 @@ const pauseAtomicRetry = (milliseconds: number): void => {
  * as state being merely out of date and tell the author to rerun the thing that
  * just died.
  */
-const runContendedAtomic = <T>(
-  step: () => T,
-  describe: () => string,
-  attempt = 1,
-): T => {
+const runContendedAtomic = <T>(step: () => T, describe: () => string): T => {
+  for (let attempt = 1; attempt < CONTENDED_ATOMIC_ATTEMPTS; ++attempt)
+    try {
+      return step();
+    } catch (error) {
+      if (isContendedAtomicError(error) === false) throw error;
+      pauseAtomicRetry(CONTENDED_ATOMIC_PAUSE_MS * attempt);
+    }
   try {
     return step();
   } catch (error) {
     if (isContendedAtomicError(error) === false) throw error;
-    if (attempt >= CONTENDED_ATOMIC_ATTEMPTS)
-      throw new ProductionAtomicContentionError(
-        [error],
-        `${describe()} after ${CONTENDED_ATOMIC_ATTEMPTS} attempts against a held handle. The compiler-owned file did not land, so the project may still describe an input it no longer has. Close whatever holds the path and run the command again.`,
-      );
-    pauseAtomicRetry(CONTENDED_ATOMIC_PAUSE_MS * attempt);
-    return runContendedAtomic(step, describe, attempt + 1);
+    throw new ProductionAtomicContentionError(
+      [error],
+      `${describe()} after ${CONTENDED_ATOMIC_ATTEMPTS} attempts against a held handle. The compiler-owned file did not land, so the project may still describe an input it no longer has. Close whatever holds the path and run the command again.`,
+    );
   }
 };
 
