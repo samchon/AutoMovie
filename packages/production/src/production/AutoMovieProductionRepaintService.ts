@@ -194,7 +194,10 @@ export class AutoMovieProductionRepaintService {
    * Repaint one current shot from verified deterministic controls.
    *
    * An explicit retry resumes after its latest immutable terminal attempt;
-   * an injected clock rollback cannot reopen the original elapsed-time budget.
+   * it cannot begin until the corresponding deterministic backoff elapsed.
+   * The original elapsed budget is recalculated at the actual resumed
+   * execution start, so either a rollback or a forward scheduling gap fails
+   * closed instead of reopening provider work.
    */
   public async repaint(
     services: IAutoMovieProductionServices,
@@ -327,10 +330,15 @@ export class AutoMovieProductionRepaintService {
     const requestId = this.execution?.requestId ?? randomUUID();
     const now = this.execution?.now ?? (() => new Date());
     let preflightAt: Date;
-    const executionPolicy = this.execution?.policy ?? LEGACY_REPAINT_POLICY;
-    const evidence =
-      this.execution?.evidence ?? legacyRepaintEvidence(requestedShot);
+    let executionPolicy: IAutoMovieRepaintExecutionPolicy;
+    let evidence: IAutoMovieRepaintRequestEvidence;
     try {
+      executionPolicy = structuredClone(
+        this.execution?.policy ?? LEGACY_REPAINT_POLICY,
+      );
+      evidence = structuredClone(
+        this.execution?.evidence ?? legacyRepaintEvidence(requestedShot),
+      );
       preflightAt = repaintRuntimeInstant(now(), "preflight");
       assertAutoMovieRepaintExecutionPolicy(executionPolicy);
       assertRepaintEvidence(evidence);
@@ -530,10 +538,25 @@ export class AutoMovieProductionRepaintService {
         "repaint-input-invalid",
         "Repaint execution requires a monotonic runtime clock at or after preflight and the latest immutable terminal attempt.",
       );
+    let executionStartedAt: Date;
+    try {
+      executionStartedAt = repaintRuntimeInstant(now(), "execution start");
+    } catch (error) {
+      return failure(
+        "repaint-failed",
+        error instanceof Error ? error.message : String(error),
+      );
+    }
+    if (executionStartedAt.getTime() < resumeAt.getTime())
+      return failure(
+        "repaint-failed",
+        "Repaint execution clock precedes its post-preflight resume observation.",
+      );
     const elapsed =
       priorAttempts.length === 0
         ? 0
-        : resumeAt.getTime() - new Date(priorAttempts[0]!.startedAt).getTime();
+        : executionStartedAt.getTime() -
+          new Date(priorAttempts[0]!.startedAt).getTime();
     const remainingAttempts =
       executionPolicy.maximumAttempts - priorAttempts.length;
     const remainingElapsed = executionPolicy.maximumElapsedMs - elapsed;
@@ -543,6 +566,22 @@ export class AutoMovieProductionRepaintService {
         "repaint-failed",
         "The repaint request exhausted its declared attempt, elapsed-time, or cost budget. Reroll only by creating a new request identity.",
       );
+    if (priorAttempts.length !== 0) {
+      const latest = priorAttempts.at(-1)!;
+      const retryBackoff = Math.min(
+        ...executionPolicy.backoffMs.slice(
+          priorAttempts.length - 1,
+          priorAttempts.length,
+        ),
+      );
+      const retryNotBefore =
+        new Date(latest.completedAt).getTime() + retryBackoff;
+      if (executionStartedAt.getTime() < retryNotBefore)
+        return failure(
+          "repaint-failed",
+          "Explicit retry cannot start before the unchanged execution policy's deterministic backoff has fully elapsed.",
+        );
+    }
     const remainingPolicy: IAutoMovieRepaintExecutionPolicy = {
       ...executionPolicy,
       maximumAttempts: remainingAttempts,
@@ -557,8 +596,13 @@ export class AutoMovieProductionRepaintService {
         priorAttempts.length + remainingAttempts - 1,
       ),
     };
-    let executionClockFloor = resumeAt.getTime();
+    let executionClockFloor = executionStartedAt.getTime();
+    let firstExecutionObservation = true;
     const executionNow = (): Date => {
+      if (firstExecutionObservation) {
+        firstExecutionObservation = false;
+        return new Date(executionStartedAt.getTime());
+      }
       const observed = repaintRuntimeInstant(now(), "execution");
       if (observed.getTime() < executionClockFloor)
         throw new Error(

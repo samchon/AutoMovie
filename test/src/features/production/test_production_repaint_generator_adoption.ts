@@ -1341,18 +1341,84 @@ export const test_production_repaint_generator_adoption =
         selected,
         { policy: executionPolicy(), evidence: throwingEvidence },
       ).repaint(runnable, input);
+      let nonErrorExecutionStartReads = 0;
+      let nonErrorBoundaryProviderCalls = 0;
+      const nonErrorExecutionStart =
+        await new AutoMovieProductionRepaintService(
+          async (props) => {
+            ++nonErrorBoundaryProviderCalls;
+            return actualAdapter(selected.runtimeIdentity)(props);
+          },
+          selected,
+          {
+            policy: executionPolicy(),
+            evidence: executionEvidence(),
+            now: () => {
+              if (nonErrorExecutionStartReads++ < 2)
+                return new Date("2026-08-28T12:00:00.000Z");
+              throw nonError("execution start unavailable");
+            },
+          },
+        ).repaint(runnable, input);
+      let invalidExecutionStartReads = 0;
+      const invalidExecutionStart = await new AutoMovieProductionRepaintService(
+        async (props) => {
+          ++nonErrorBoundaryProviderCalls;
+          return actualAdapter(selected.runtimeIdentity)(props);
+        },
+        selected,
+        {
+          policy: executionPolicy(),
+          evidence: executionEvidence(),
+          now: () =>
+            invalidExecutionStartReads++ < 2
+              ? new Date("2026-08-28T12:00:00.000Z")
+              : new Date(Number.NaN),
+        },
+      ).repaint(runnable, input);
+      const nonErrorSignal = {
+        get aborted(): never {
+          throw nonError("signal state unavailable");
+        },
+      } as unknown as AbortSignal;
+      const nonErrorExecutorBoundary =
+        await new AutoMovieProductionRepaintService(
+          async (props) => {
+            ++nonErrorBoundaryProviderCalls;
+            return actualAdapter(selected.runtimeIdentity)(props);
+          },
+          selected,
+          {
+            policy: executionPolicy(),
+            evidence: executionEvidence(),
+            signal: nonErrorSignal,
+            now: () => new Date("2026-08-28T12:00:00.000Z"),
+          },
+        ).repaint(runnable, input);
       TestValidator.equals(
-        "capture and explicit evidence failures remain pre-provider refusals",
-        [
-          codeOf(unavailableCapture),
-          codeOf(invalidEvidence),
-          codeOf(thrownEvidence),
-        ],
-        [
-          "repaint-source-evidence-missing",
-          "repaint-host-unavailable",
-          "repaint-host-unavailable",
-        ],
+        "capture, evidence, and non-Error runtime boundary failures remain pre-provider refusals",
+        {
+          codes: [
+            codeOf(unavailableCapture),
+            codeOf(invalidEvidence),
+            codeOf(thrownEvidence),
+            codeOf(nonErrorExecutionStart),
+            codeOf(invalidExecutionStart),
+            codeOf(nonErrorExecutorBoundary),
+          ],
+          providerCalls: nonErrorBoundaryProviderCalls,
+        },
+        {
+          codes: [
+            "repaint-source-evidence-missing",
+            "repaint-host-unavailable",
+            "repaint-host-unavailable",
+            "repaint-failed",
+            "repaint-failed",
+            "repaint-failed",
+          ],
+          providerCalls: 0,
+        },
       );
 
       const explicitRequestId = "30000000-0000-4000-8000-000000000001";
@@ -1573,6 +1639,10 @@ export const test_production_repaint_generator_adoption =
       const succeededRetry = await explicitRetry([priorSucceeded]);
       const nonretryableRetry = await explicitRetry([priorNonretryable]);
       const forgedRetry = await explicitRetry([priorForgedRetryable]);
+      const earlyRetry = await explicitRetry(
+        [priorRetryable],
+        () => new Date(priorRetryable.completedAt),
+      );
       const backwardClockRetry = await explicitRetry(
         [priorRetryable],
         () => new Date("2026-08-28T12:02:59.999Z"),
@@ -1627,6 +1697,31 @@ export const test_production_repaint_generator_adoption =
           return new Date("2026-08-28T12:03:01.000Z");
         throw nonError("execution clock unavailable");
       });
+      let postStartRollbackReads = 0;
+      const postStartRollbackRetry = await explicitRetry(
+        [priorRetryable],
+        () =>
+          new Date(
+            [
+              "2026-08-28T12:03:01.000Z",
+              "2026-08-28T12:03:02.000Z",
+              "2026-08-28T12:03:03.000Z",
+              "2026-08-28T12:03:02.999Z",
+            ][Math.min(postStartRollbackReads++, 3)]!,
+          ),
+      );
+      let exhaustedAtExecutionStartReads = 0;
+      const exhaustedAtExecutionStartRetry = await explicitRetry(
+        [priorRetryable],
+        () =>
+          new Date(
+            [
+              "2026-08-28T12:03:01.000Z",
+              "2026-08-28T12:03:02.000Z",
+              "2026-08-28T12:03:10.000Z",
+            ][Math.min(exhaustedAtExecutionStartReads++, 2)]!,
+          ),
+      );
       const retryableRetry = await explicitRetry([priorRetryable]);
       TestValidator.equals(
         "explicit retry is legal only after the last retryable failed attempt",
@@ -1634,6 +1729,7 @@ export const test_production_repaint_generator_adoption =
           succeeded: codeOf(succeededRetry),
           nonretryable: codeOf(nonretryableRetry),
           forged: codeOf(forgedRetry),
+          early: codeOf(earlyRetry),
           backwardClock: codeOf(backwardClockRetry),
           rollbackAfterPreflight: codeOf(rollbackAfterPreflightRetry),
           exhaustedDuringPreflight: codeOf(exhaustedDuringPreflightRetry),
@@ -1641,6 +1737,8 @@ export const test_production_repaint_generator_adoption =
           thrownResume: codeOf(thrownResumeRetry),
           executionRollback: codeOf(executionRollbackRetry),
           thrownExecution: codeOf(thrownExecutionRetry),
+          postStartRollback: codeOf(postStartRollbackRetry),
+          exhaustedAtExecutionStart: codeOf(exhaustedAtExecutionStartRetry),
           retryable: retryableRetry.repainted,
           providerCalls: retryLegalityProviderCalls,
         },
@@ -1648,6 +1746,7 @@ export const test_production_repaint_generator_adoption =
           succeeded: "repaint-input-invalid",
           nonretryable: "repaint-input-invalid",
           forged: "repaint-input-invalid",
+          early: "repaint-failed",
           backwardClock: "repaint-input-invalid",
           rollbackAfterPreflight: "repaint-input-invalid",
           exhaustedDuringPreflight: "repaint-failed",
@@ -1655,6 +1754,8 @@ export const test_production_repaint_generator_adoption =
           thrownResume: "repaint-host-unavailable",
           executionRollback: "repaint-failed",
           thrownExecution: "repaint-failed",
+          postStartRollback: "repaint-failed",
+          exhaustedAtExecutionStart: "repaint-failed",
           retryable: true,
           providerCalls: 1,
         },
@@ -1704,7 +1805,7 @@ export const test_production_repaint_generator_adoption =
         retryingAdapter(),
         selected,
         {
-          policy: executionPolicy(),
+          policy: executionPolicy({ backoffMs: [0] }),
           evidence: executionEvidence(),
           signal: liveSignal.signal,
         },
@@ -1968,13 +2069,22 @@ export const test_production_repaint_generator_adoption =
         };
       };
       const mutableInput = structuredClone(input);
+      const mutablePolicy = executionPolicy();
+      const mutableEvidence = executionEvidence();
+      const expectedPolicy = structuredClone(mutablePolicy);
+      const expectedEvidence = structuredClone(mutableEvidence);
       const pending = new AutoMovieProductionRepaintService(
         snapshotAdapter,
         selected,
+        { policy: mutablePolicy, evidence: mutableEvidence },
       ).repaint(snapshotServices, mutableInput);
       mutableInput.shot = "caller-mutated-shot";
       mutableInput.parameters.prompt = "caller mutation during generation";
       mutableInput.references[0]!.path = "assets/caller-mutation.png";
+      mutablePolicy.maximumAttempts = 1;
+      mutablePolicy.maximumCostUnits = 0;
+      mutablePolicy.backoffMs.length = 0;
+      mutableEvidence.prompt = "caller-mutated-evidence";
       releaseAdapter();
       const snapshotted = await pending;
       TestValidator.equals(
@@ -1984,6 +2094,8 @@ export const test_production_repaint_generator_adoption =
           shot: snapshotted.receipt?.shot,
           prompt: snapshotted.receipt?.parameters.prompt,
           reference: snapshotted.receipt?.references[0]?.path,
+          policy: snapshotted.receipt?.executionPolicy,
+          evidence: snapshotted.receipt?.evidence,
           commits: snapshotCommits.length,
         },
         {
@@ -1991,6 +2103,8 @@ export const test_production_repaint_generator_adoption =
           shot: input.shot,
           prompt: input.parameters.prompt,
           reference: input.references[0]!.path,
+          policy: expectedPolicy,
+          evidence: expectedEvidence,
           commits: 1,
         },
       );
