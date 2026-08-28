@@ -1896,30 +1896,64 @@ export class AutoMovieProductionProject {
     if (lstatOrNull(directory) === null) return [];
     if (fs.lstatSync(directory).isSymbolicLink())
       throw new Error("Repaint attempt directory must not be a link.");
-    return fs
+    const attempts = fs
       .readdirSync(directory, { withFileTypes: true })
-      .filter((entry) => entry.isFile() && entry.name.endsWith(".json"))
+      .filter((entry) => entry.name.endsWith(".json"))
       .sort((left, right) => compareCodeUnits(left.name, right.name))
-      .flatMap((entry): IAutoMovieRepaintAttemptRecord[] => {
-        try {
-          const bytes = this.readTrackedStateFile(
-            `renditions/attempts/${request}/${entry.name}`,
+      .map((entry): IAutoMovieRepaintAttemptRecord => {
+        if (entry.isFile() === false)
+          throw new Error(
+            `Repaint attempt resident "${entry.name}" must be a regular JSON file.`,
           );
-          if (bytes === null) return [];
-          const decoded = JSON.parse(
+        const relative = `renditions/attempts/${request}/${entry.name}`;
+        let decoded: IAutoMovieRepaintAttemptRecord;
+        try {
+          const bytes = this.readTrackedStateFile(relative);
+          if (bytes === null)
+            throw new Error("the resident disappeared while being read");
+          decoded = JSON.parse(
             Buffer.from(bytes).toString("utf8"),
           ) as IAutoMovieRepaintAttemptRecord;
           this.assertRepaintAttempt(decoded);
-          return decoded.requestId === request ? [decoded] : [];
-        } catch {
-          return [];
+        } catch (error) {
+          throw new Error(
+            `Repaint attempt resident "${entry.name}" is malformed: ${error instanceof Error ? error.message : String(error)}`,
+          );
         }
+        if (
+          decoded.requestId !== request ||
+          relative !== repaintAttemptPath(decoded.requestId, decoded.attemptId)
+        )
+          throw new Error(
+            `Repaint attempt resident "${entry.name}" does not match its canonical request and attempt identity.`,
+          );
+        return decoded;
       })
       .sort(
         (left, right) =>
           left.ordinal - right.ordinal ||
           compareCodeUnits(left.attemptId, right.attemptId),
       );
+    for (const [index, attempt] of attempts.entries()) {
+      const previous = attempts[index - 1];
+      if (
+        attempt.ordinal !== index + 1 ||
+        (previous !== undefined &&
+          (attempt.shot !== previous.shot ||
+            attempt.requestFingerprint !== previous.requestFingerprint ||
+            attempt.compileFingerprint !== previous.compileFingerprint ||
+            attempt.sourceRenderFingerprint !==
+              previous.sourceRenderFingerprint ||
+            attempt.adapterIdentity !== previous.adapterIdentity ||
+            attempt.seed !== previous.seed ||
+            new Date(attempt.startedAt).getTime() <
+              new Date(previous.completedAt).getTime()))
+      )
+        throw new Error(
+          `Repaint request "${request}" requires contiguous chronological attempts under one immutable request identity.`,
+        );
+    }
+    return attempts;
   }
 
   /**

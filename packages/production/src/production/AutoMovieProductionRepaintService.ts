@@ -487,6 +487,18 @@ export class AutoMovieProductionRepaintService {
         "repaint-input-invalid",
         "Explicit retry requires an existing request whose source, generator, controls, references, evidence, and execution policy are still exact.",
       );
+    if (this.execution?.requestId !== undefined) {
+      const latest = priorAttempts.at(-1)!;
+      if (
+        latest.status !== "failed" ||
+        latest.failure === null ||
+        latest.failure.retryable !== true
+      )
+        return failure(
+          "repaint-input-invalid",
+          "Explicit retry requires the latest terminal attempt to be a failed class that the unchanged execution policy marked retryable. A succeeded candidate already met the acceptance stop; use reroll for another candidate.",
+        );
+    }
     const spent = priorAttempts.reduce(
       (sum, attempt) => sum + attempt.costUnits,
       0,
