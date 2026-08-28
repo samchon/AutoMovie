@@ -31,6 +31,11 @@ import {
  */
 await runProductionRepaintCommand(process.argv.slice(2), config, () => {
   const captureRuntime = createProductionFrameCaptureRuntime();
+  const cancellation = new AbortController();
+  const interrupt = (): void =>
+    cancellation.abort(new Error("Repaint interrupted by SIGINT."));
+  const terminate = (): void =>
+    cancellation.abort(new Error("Repaint interrupted by SIGTERM."));
   const dialogueRuntime = createProductionCaptureDialogueRuntime({
     capture: captureRuntime,
     productionId: config.productionId,
@@ -39,13 +44,20 @@ await runProductionRepaintCommand(process.argv.slice(2), config, () => {
   const host = createNodeProductionRepaintHost({
     adapter: repaintProductionShot,
     capture: captureRuntime.capture,
-    closeCapture: captureRuntime.close,
+    closeCapture: async (failure) => {
+      process.removeListener("SIGINT", interrupt);
+      process.removeListener("SIGTERM", terminate);
+      await captureRuntime.close(failure);
+    },
     root: process.cwd(),
+    signal: cancellation.signal,
     setExitCode: (value) => {
       process.exitCode = value;
     },
     stdout: (value) => process.stdout.write(value),
   });
+  process.once("SIGINT", interrupt);
+  process.once("SIGTERM", terminate);
   return {
     ...host,
     serve: async (invocation) => {
