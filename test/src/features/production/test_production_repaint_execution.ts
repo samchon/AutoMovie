@@ -423,6 +423,59 @@ export const test_production_repaint_execution = async (): Promise<void> => {
         );
       }),
   });
+  let completionClockReads = 0;
+  const elapsedAtCompletion = await execute<string>({
+    policy: policy({
+      maximumAttempts: 1,
+      attemptTimeoutMs: 100,
+      backoffMs: [],
+    }),
+    now: () =>
+      new Date(
+        completionClockReads++ < 3
+          ? "2026-08-28T10:00:00.000Z"
+          : "2026-08-28T10:00:00.100Z",
+      ),
+    calls: async () => ({
+      value: "must not be accepted",
+      costUnits: 5,
+      availableOutput: {
+        digest: digest("completed-at-timeout"),
+        bytes: 11,
+      },
+    }),
+  });
+  let preProviderClockReads = 0;
+  let preProviderAttemptIds = 0;
+  let preProviderCalls = 0;
+  const elapsedBeforeProvider = await execute<string>({
+    policy: policy({
+      maximumAttempts: 1,
+      attemptTimeoutMs: 100,
+      maximumElapsedMs: 100,
+      backoffMs: [],
+    }),
+    now: () =>
+      new Date(
+        [
+          "2026-08-28T10:00:00.000Z",
+          "2026-08-28T10:00:00.050Z",
+          "2026-08-28T10:00:00.100Z",
+        ][Math.min(preProviderClockReads++, 2)]!,
+      ),
+    attemptId: () => {
+      ++preProviderAttemptIds;
+      return "40000000-0000-4000-8000-000000000001";
+    },
+    calls: async () => {
+      ++preProviderCalls;
+      return {
+        value: "must not execute",
+        costUnits: 0,
+        availableOutput: null,
+      };
+    },
+  });
   TestValidator.equals(
     "every terminal retry boundary preserves its exact stop class",
     {
@@ -461,6 +514,20 @@ export const test_production_repaint_execution = async (): Promise<void> => {
         availableOutput:
           rejectedOnTimeout.result.attempts[0]?.availableOutput?.digest,
       },
+      elapsedAtCompletion: {
+        stop: elapsedAtCompletion.result.stop,
+        accepted: elapsedAtCompletion.result.accepted,
+        failure: elapsedAtCompletion.result.attempts[0]?.failure?.class,
+        costUnits: elapsedAtCompletion.result.attempts[0]?.costUnits,
+        availableOutput:
+          elapsedAtCompletion.result.attempts[0]?.availableOutput?.digest,
+      },
+      elapsedBeforeProvider: {
+        stop: elapsedBeforeProvider.result.stop,
+        attempts: elapsedBeforeProvider.result.attempts.length,
+        attemptIds: preProviderAttemptIds,
+        providerCalls: preProviderCalls,
+      },
     },
     {
       zeroBudget: "cost-exhausted",
@@ -492,6 +559,19 @@ export const test_production_repaint_execution = async (): Promise<void> => {
         failure: "timeout",
         costUnits: 4,
         availableOutput: digest("rejected-during-timeout"),
+      },
+      elapsedAtCompletion: {
+        stop: "attempts-exhausted",
+        accepted: null,
+        failure: "timeout",
+        costUnits: 5,
+        availableOutput: digest("completed-at-timeout"),
+      },
+      elapsedBeforeProvider: {
+        stop: "elapsed-exhausted",
+        attempts: 0,
+        attemptIds: 0,
+        providerCalls: 0,
       },
     },
   );
