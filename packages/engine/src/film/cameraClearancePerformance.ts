@@ -14,6 +14,7 @@ import { sampleTimes } from "../motion/sampleClock";
 import { sampleMotion } from "../motion/sampleMotion";
 import { channelKey } from "../resolve/channel";
 import { sampleClipSequence } from "../resolve/sampleClip";
+import { validateModel } from "../validation/validateModel";
 import { ViolationCollector } from "../validation/violation";
 import { foldRoot } from "./beatEndSim";
 import { evaluateCameraClearance } from "./cameraClearance";
@@ -77,6 +78,68 @@ const originRadius = (
       ),
     ),
   );
+
+/**
+ * Maximum root-to-influencing-bone segment-length sum of one validated rig.
+ *
+ * The adapter runs the public model validator first, so parent closure, finite
+ * rest transforms, non-negative normalized skin weights, and valid skin-joint
+ * indices are established here. Bone scale is deliberately absent because
+ * both Engine FK and the Viewer ignore rig rest scale. Overflow of an otherwise
+ * finite chain remains an addressed error at this consumer.
+ */
+const maximumRigReach = (model: IAutoMovieModel): number => {
+  const skeleton = model.skeleton;
+  if (skeleton === null) return 0;
+  const bones = new Map(skeleton.bones.map((bone) => [bone.bone, bone]));
+  const reaches = new Map<(typeof skeleton.bones)[number]["bone"], number>();
+  const resolve = (name: (typeof skeleton.bones)[number]["bone"]): number => {
+    const cached = reaches.get(name);
+    if (cached !== undefined) return cached;
+    const bone = bones.get(name)!;
+    const segment = Math.hypot(
+      bone.rest.translation.x,
+      bone.rest.translation.y,
+      bone.rest.translation.z,
+    );
+    const reach = segment + (bone.parent === null ? 0 : resolve(bone.parent));
+    if (!Number.isFinite(reach))
+      throw new Error(
+        `camera clearance rig "${skeleton.id}" chain to bone "${name}" overflows`,
+      );
+    reaches.set(name, reach);
+    return reach;
+  };
+  const influenced = model.parts.flatMap((part) => {
+    if (part.attachedBone !== null) return [part.attachedBone];
+    if (part.geometry.type === "mesh" && part.geometry.mesh.skin !== null)
+      return part.geometry.mesh.skin.joints;
+    return [];
+  });
+  return Math.max(0, ...influenced.map(resolve));
+};
+
+/**
+ * Pose-independent radius for rigid and skinned geometry on one actor rig.
+ *
+ * For a rest vertex `p` bound at a joint whose chain reach is `c`, its local
+ * joint offset is at most `|p| + c`; after arbitrary joint rotations its posed
+ * distance is therefore at most `|p| + 2c`. Non-negative normalized skin
+ * weights form a convex combination of those bounded influenced positions, so
+ * the same radius contains skinned vertices as well as rigid bone attachments.
+ */
+const conservativeDeformationRadius = (
+  model: IAutoMovieModel,
+  extent: NonNullable<ReturnType<typeof computeModelRestExtent>>,
+  rigReach: number,
+): number => {
+  const radius = originRadius(extent) + 2 * rigReach;
+  if (!Number.isFinite(radius))
+    throw new Error(
+      `camera clearance deformation radius for model "${model.id}" overflows`,
+    );
+  return radius;
+};
 
 /** Describe an evaluator throw without letting hostile coercion escape. */
 const safeThrownDescription = (error: unknown): string => {
@@ -337,6 +400,19 @@ export function compileCameraClearanceReports(props: {
     return undefined;
   }
 
+  props.objectMotions.forEach((clip, clipIndex) =>
+    clip.tracks.forEach((track, trackIndex) => {
+      if (track.channel.kind === "node" && track.channel.path === "weights")
+        props.out.push(
+          "type",
+          `$input.objectMotions[${clipIndex}].tracks[${trackIndex}].channel.path`,
+          `camera clearance cannot conservatively bound morph weights in clip "${clip.id}" because the portable model carries no morph-target expansion envelope`,
+          track.channel.path,
+        );
+    }),
+  );
+  if (props.out.items.length > 0) return undefined;
+
   const models = new Map(props.models.map((model) => [model.id, model]));
   const animatedNodes = new Set(Object.keys(props.motions));
   for (const clip of props.objectMotions)
@@ -346,7 +422,31 @@ export function compileCameraClearanceReports(props: {
   const measured: IMeasuredObstacle[] = [];
   props.scene.nodes.forEach((node, index) => {
     const model = models.get(node.model);
-    const extent = model === undefined ? null : computeModelRestExtent(model);
+    let extent: ReturnType<typeof computeModelRestExtent> = null;
+    let radius = 0;
+    try {
+      if (model !== undefined) {
+        const validation = validateModel({ model });
+        if (validation.success === false) {
+          const first = validation.violations[0]!;
+          throw new Error(
+            `model contract fails at ${first.path}: ${first.expected}`,
+          );
+        }
+      }
+      const rigReach = model === undefined ? 0 : maximumRigReach(model);
+      extent = model === undefined ? null : computeModelRestExtent(model);
+      if (extent !== null && model !== undefined)
+        radius = conservativeDeformationRadius(model, extent, rigReach);
+    } catch (error) {
+      props.out.push(
+        "type",
+        `$staged.scene.nodes[${index}].model`,
+        `camera clearance cannot derive a conservative current bound for obstacle "${node.id}": ${safeThrownDescription(error)}`,
+        node.model,
+      );
+      return;
+    }
     if (extent === null) {
       props.out.push(
         "type",
@@ -359,7 +459,7 @@ export function compileCameraClearanceReports(props: {
     measured.push({
       node,
       extent,
-      radius: originRadius(extent),
+      radius,
       dynamic: animatedNodes.has(node.id),
     });
   });
