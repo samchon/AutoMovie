@@ -1540,7 +1540,7 @@ export const test_production_repaint_generator_adoption =
       let retryLegalityProviderCalls = 0;
       const explicitRetry = (
         history: IAutoMovieRepaintAttemptRecord[],
-        now: Date = new Date("2026-08-28T12:03:01.000Z"),
+        now: () => Date = () => new Date("2026-08-28T12:03:01.000Z"),
       ): Promise<IAutoMovieRepaintShot> =>
         new AutoMovieProductionRepaintService(
           async (props) => {
@@ -1552,7 +1552,7 @@ export const test_production_repaint_generator_adoption =
             policy: retryLegalityPolicy,
             evidence: executionEvidence(),
             requestId: priorSucceeded.requestId,
-            now: () => now,
+            now,
           },
         ).repaint(
           scenarioServices(runnable, {
@@ -1568,7 +1568,51 @@ export const test_production_repaint_generator_adoption =
       const forgedRetry = await explicitRetry([priorForgedRetryable]);
       const backwardClockRetry = await explicitRetry(
         [priorRetryable],
-        new Date("2026-08-28T12:02:59.999Z"),
+        () => new Date("2026-08-28T12:02:59.999Z"),
+      );
+      let rollbackAfterPreflightReads = 0;
+      const rollbackAfterPreflightRetry = await explicitRetry(
+        [priorRetryable],
+        () =>
+          new Date(
+            rollbackAfterPreflightReads++ === 0
+              ? "2026-08-28T12:03:01.000Z"
+              : "2026-08-28T12:02:59.999Z",
+          ),
+      );
+      let exhaustedDuringPreflightReads = 0;
+      const exhaustedDuringPreflightRetry = await explicitRetry(
+        [priorRetryable],
+        () =>
+          new Date(
+            exhaustedDuringPreflightReads++ === 0
+              ? "2026-08-28T12:03:01.000Z"
+              : "2026-08-28T12:03:10.000Z",
+          ),
+      );
+      let invalidResumeReads = 0;
+      const invalidResumeRetry = await explicitRetry([priorRetryable], () =>
+        invalidResumeReads++ === 0
+          ? new Date("2026-08-28T12:03:01.000Z")
+          : new Date(Number.NaN),
+      );
+      let thrownResumeReads = 0;
+      const thrownResumeRetry = await explicitRetry([priorRetryable], () => {
+        if (thrownResumeReads++ === 0)
+          return new Date("2026-08-28T12:03:01.000Z");
+        throw nonError("resume clock unavailable");
+      });
+      let executionRollbackReads = 0;
+      const executionRollbackRetry = await explicitRetry(
+        [priorRetryable],
+        () =>
+          new Date(
+            [
+              "2026-08-28T12:03:01.000Z",
+              "2026-08-28T12:03:02.000Z",
+              "2026-08-28T12:03:01.999Z",
+            ][Math.min(executionRollbackReads++, 2)]!,
+          ),
       );
       const retryableRetry = await explicitRetry([priorRetryable]);
       TestValidator.equals(
@@ -1578,6 +1622,11 @@ export const test_production_repaint_generator_adoption =
           nonretryable: codeOf(nonretryableRetry),
           forged: codeOf(forgedRetry),
           backwardClock: codeOf(backwardClockRetry),
+          rollbackAfterPreflight: codeOf(rollbackAfterPreflightRetry),
+          exhaustedDuringPreflight: codeOf(exhaustedDuringPreflightRetry),
+          invalidResume: codeOf(invalidResumeRetry),
+          thrownResume: codeOf(thrownResumeRetry),
+          executionRollback: codeOf(executionRollbackRetry),
           retryable: retryableRetry.repainted,
           providerCalls: retryLegalityProviderCalls,
         },
@@ -1586,6 +1635,11 @@ export const test_production_repaint_generator_adoption =
           nonretryable: "repaint-input-invalid",
           forged: "repaint-input-invalid",
           backwardClock: "repaint-input-invalid",
+          rollbackAfterPreflight: "repaint-input-invalid",
+          exhaustedDuringPreflight: "repaint-failed",
+          invalidResume: "repaint-host-unavailable",
+          thrownResume: "repaint-host-unavailable",
+          executionRollback: "repaint-failed",
           retryable: true,
           providerCalls: 1,
         },

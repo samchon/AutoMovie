@@ -1133,6 +1133,11 @@ export const test_production_project_runtime_shape_repaint_records =
         { ...selectionProps, selectedAt: "2026-08-28T12:00:02Z" },
         "exact UTC instant",
       );
+      expectSelectionRefusal(
+        "selection cannot precede candidate completion",
+        { ...selectionProps, selectedAt: "2026-08-28T12:00:00.999Z" },
+        "cannot precede the candidate completion instant",
+      );
       for (const [label, props] of [
         ["selection reason is nonblank", { ...selectionProps, reason: " " }],
         [
@@ -1223,7 +1228,7 @@ export const test_production_project_runtime_shape_repaint_records =
       expectSelectionRefusal(
         "reversal requires a previous active selection",
         { ...selectionProps, kind: "reversal" },
-        "requires an existing active selection",
+        "requires an existing active verified selection",
       );
 
       project.selectRepaintCandidate(selectionProps);
@@ -1232,6 +1237,60 @@ export const test_production_project_runtime_shape_repaint_records =
         project.verifiedRepaintRenditions([shot, shot]),
         [validReceipt],
       );
+
+      const laterAttemptId = "00000000-0000-4000-8000-000000000003";
+      const laterOutputPath = productionRepaintOutputPath({
+        shot,
+        sourceRenderFingerprint,
+        attemptId: laterAttemptId,
+        adapterIdentity,
+        generatorProvenance,
+        parameters,
+        executionPolicy,
+        evidence,
+        references,
+        outputDigest,
+      });
+      const laterReceipt: IAutoMovieRepaintReceipt = {
+        ...validReceipt,
+        requestId: "00000000-0000-4000-8000-000000000021",
+        attemptId: laterAttemptId,
+        startedAt: "2026-08-28T12:00:02.000Z",
+        completedAt: "2026-08-28T12:00:03.000Z",
+        output: { ...validReceipt.output, path: laterOutputPath },
+      };
+      project.commitRepaintRendition(laterReceipt, outputBytes);
+      expectSelectionRefusal(
+        "reversal cannot move from an earlier candidate to a later candidate",
+        {
+          ...selectionProps,
+          attemptId: laterReceipt.attemptId,
+          kind: "reversal",
+          selectedAt: "2026-08-28T12:00:03.000Z",
+        },
+        "completed before the current active candidate",
+      );
+      project.selectRepaintCandidate({
+        ...selectionProps,
+        attemptId: laterReceipt.attemptId,
+        selectedAt: "2026-08-28T12:00:04.000Z",
+      });
+      expectSelectionRefusal(
+        "reversal cannot select the current candidate again",
+        {
+          ...selectionProps,
+          attemptId: laterReceipt.attemptId,
+          kind: "reversal",
+          selectedAt: "2026-08-28T12:00:05.000Z",
+        },
+        "completed before the current active candidate",
+      );
+
+      const reversalProps = {
+        ...selectionProps,
+        kind: "reversal" as const,
+        selectedAt: "2026-08-28T12:00:05.000Z",
+      };
 
       const activeIdentity = fs.readFileSync(activeFile, "utf8");
       const selectionDirectory = project.trackedStatePath(
@@ -1244,7 +1303,7 @@ export const test_production_project_runtime_shape_repaint_records =
       const residentsBeforeRace = selectionResidents();
       expectSelectionRefusal(
         "selection refuses a pre-write input race",
-        { ...selectionProps, kind: "reversal", inputCurrent: () => false },
+        { ...reversalProps, inputCurrent: () => false },
         "before the guarded commit began",
       );
       TestValidator.equals(
@@ -1259,8 +1318,7 @@ export const test_production_project_runtime_shape_repaint_records =
       expectSelectionRefusal(
         "selection refuses a third post-write active-pointer identity",
         {
-          ...selectionProps,
-          kind: "reversal",
+          ...reversalProps,
           inputCurrent: () => {
             currentChecks += 1;
             if (currentChecks === 2)
@@ -1285,10 +1343,9 @@ export const test_production_project_runtime_shape_repaint_records =
       );
 
       project.selectRepaintCandidate({
-        ...selectionProps,
-        kind: "reversal",
+        ...reversalProps,
         reason: "Reverse to the already verified repaint candidate.",
-        selectedAt: "2026-08-28T12:00:03.000Z",
+        selectedAt: "2026-08-28T12:00:06.000Z",
       });
       const selectedPointer = JSON.parse(
         fs.readFileSync(activeFile, "utf8"),
@@ -1330,6 +1387,12 @@ export const test_production_project_runtime_shape_repaint_records =
       };
       const otherId = "00000000-0000-4000-8000-000000000098";
       for (const [label, mutate] of [
+        [
+          "stored selection cannot precede candidate completion",
+          (selection: StoredSelection): void => {
+            selection.selectedAt = "2026-08-28T12:00:00.999Z";
+          },
+        ],
         [
           "stored selection refuses a foreign production",
           (selection: StoredSelection): void => {

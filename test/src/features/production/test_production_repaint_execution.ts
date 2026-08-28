@@ -11,6 +11,8 @@ import { TestValidator } from "@nestia/e2e";
 
 const digest = (value: string): AutoMovieContentDigest => `sha256:${value}`;
 
+const nonError = (message: string): Error => message as unknown as Error;
+
 const policy = (
   override: Partial<IAutoMovieRepaintExecutionPolicy> = {},
 ): IAutoMovieRepaintExecutionPolicy => ({
@@ -768,7 +770,7 @@ export const test_production_repaint_execution = async (): Promise<void> => {
         policy: policy(),
         now: () => {
           if (instant++ === 0) return new Date("2026-08-28T10:00:00.000Z");
-          throw "clock unavailable";
+          throw nonError("clock unavailable");
         },
         calls: async () => ({ value: 1, costUnits: 0, availableOutput: null }),
       });
