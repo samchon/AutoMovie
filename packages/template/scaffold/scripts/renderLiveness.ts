@@ -162,6 +162,7 @@ export const preserveRenderLivenessLease = (
         releaseFailure,
       ],
       `Render liveness lease release failed after the ${lease.kind} body failed.`,
+      { cause: failure.error },
     );
   }
   if (failure !== undefined) throw failure.error;

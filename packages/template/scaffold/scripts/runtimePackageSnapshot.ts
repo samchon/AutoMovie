@@ -212,7 +212,7 @@ const deriveModuleClosure = (
     output.set(file.path, file);
     if (/\.(?:cjs|js|mjs)$/iu.test(file.path) === false) continue;
     const source = file.bytes.toString("utf8");
-    for (const specifier of moduleSpecifiers(source)) {
+    for (const specifier of moduleSpecifiers(file.path, source)) {
       if (specifier.startsWith(".") === false) continue;
       const resolved = createRequire(file.path).resolve(specifier);
       if (inside(root.real, resolved) === false)
@@ -225,17 +225,110 @@ const deriveModuleClosure = (
   return [...output.values()];
 };
 
-const moduleSpecifiers = (source: string): string[] => {
-  const patterns = [
-    /\b(?:require|import)\s*\(\s*(["'])([^"']+)\1\s*\)/gu,
-    /\bfrom\s*(["'])([^"']+)\1/gu,
-    /\bimport\s*(["'])([^"']+)\1/gu,
-    /\bnew\s+URL\s*\(\s*(["'])([^"']+)\1\s*,\s*import\.meta\.url\s*\)/gu,
-  ];
+const moduleSpecifiers = (_file: string, source: string): string[] => {
+  const tokens = javascriptTokens(source);
   const output = new Set<string>();
-  for (const pattern of patterns)
-    for (const match of source.matchAll(pattern)) output.add(match[2]!);
+  for (let index = 0; index < tokens.length; index++) {
+    const token = tokens[index]!;
+    const next = tokens[index + 1];
+    if (
+      (token.value === "require" || token.value === "import") &&
+      next?.value === "(" &&
+      tokens[index + 2]?.kind === "string" &&
+      tokens[index + 3]?.value === ")"
+    )
+      output.add(tokens[index + 2]!.value);
+    else if (
+      (token.value === "import" || token.value === "from") &&
+      next?.kind === "string"
+    )
+      output.add(next.value);
+    else if (
+      token.value === "new" &&
+      next?.value === "URL" &&
+      tokens[index + 2]?.value === "(" &&
+      tokens[index + 3]?.kind === "string" &&
+      tokens[index + 4]?.value === "," &&
+      tokens[index + 5]?.value === "import" &&
+      tokens[index + 6]?.value === "." &&
+      tokens[index + 7]?.value === "meta" &&
+      tokens[index + 8]?.value === "." &&
+      tokens[index + 9]?.value === "url" &&
+      tokens[index + 10]?.value === ")"
+    )
+      output.add(tokens[index + 3]!.value);
+  }
   return [...output].sort(compare);
+};
+
+interface IJavaScriptToken {
+  kind: "identifier" | "punctuation" | "string";
+  value: string;
+}
+
+/** Tokenize only syntax needed to identify literal module edges. */
+const javascriptTokens = (source: string): IJavaScriptToken[] => {
+  const output: IJavaScriptToken[] = [];
+  let index = 0;
+  while (index < source.length) {
+    const current = source[index]!;
+    const next = source[index + 1];
+    if (/\s/u.test(current)) {
+      index++;
+      continue;
+    }
+    if (current === "/" && next === "/") {
+      index += 2;
+      while (index < source.length && source[index] !== "\n") index++;
+      continue;
+    }
+    if (current === "/" && next === "*") {
+      const close = source.indexOf("*/", index + 2);
+      index = close === -1 ? source.length : close + 2;
+      continue;
+    }
+    if (current === "`") {
+      index++;
+      while (index < source.length) {
+        if (source[index] === "\\") index += 2;
+        else if (source[index++] === "`") break;
+      }
+      continue;
+    }
+    if (current === '"' || current === "'") {
+      const quote = current;
+      let value = "";
+      index++;
+      while (index < source.length && source[index] !== quote) {
+        if (source[index] === "\\" && index + 1 < source.length) {
+          index++;
+          const escaped = source[index++]!;
+          value +=
+            escaped === "n"
+              ? "\n"
+              : escaped === "r"
+                ? "\r"
+                : escaped === "t"
+                  ? "\t"
+                  : escaped;
+        } else value += source[index++]!;
+      }
+      if (source[index] === quote) index++;
+      output.push({ kind: "string", value });
+      continue;
+    }
+    if (/[A-Za-z_$]/u.test(current)) {
+      let value = current;
+      index++;
+      while (index < source.length && /[\w$]/u.test(source[index]!))
+        value += source[index++]!;
+      output.push({ kind: "identifier", value });
+      continue;
+    }
+    output.push({ kind: "punctuation", value: current });
+    index++;
+  }
+  return output;
 };
 
 const locatePackage = (

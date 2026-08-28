@@ -1,0 +1,360 @@
+import { renderScaffold, writeFiles } from "@automovie/template";
+import { TestValidator } from "@nestia/e2e";
+import fs from "node:fs";
+import { createRequire } from "node:module";
+import os from "node:os";
+import path from "node:path";
+
+import { namedFacts, throwsError } from "../internal/predicates";
+import { preserveCliRootFixtureCleanup } from "./CliRootFixtureCleanup";
+
+interface IRuntimePackageSnapshot {
+  assets: Array<{ digest: `sha256:${string}`; path: string }>;
+  closure: Array<{ digest: `sha256:${string}`; path: string }>;
+  contentFingerprint: `sha256:${string}`;
+  entryDigest: `sha256:${string}`;
+  fingerprint: `sha256:${string}`;
+  package: string;
+  root: string;
+  version: string;
+}
+
+interface IRuntimePackageSnapshotModule {
+  assertRuntimePackageSnapshotCurrent(snapshot: IRuntimePackageSnapshot): void;
+  bindRuntimePackageSnapshotGeneration(snapshot: IRuntimePackageSnapshot): void;
+  snapshotRuntimePackage(props: {
+    assets?: readonly (
+      | { kind: "file"; relative: string }
+      | { kind: "tree"; relative: string }
+    )[];
+    entry: string;
+    entries?: readonly string[];
+    moduleClosure?: boolean;
+    packageName: string;
+  }): IRuntimePackageSnapshot;
+}
+
+interface IPackageCase {
+  entry: string;
+  expected: readonly RegExp[];
+  mutate: RegExp;
+  name: string;
+}
+
+const packageRoot = (name: string): string => {
+  const manifest = createRequire(__filename)
+    .resolve.paths(name)
+    ?.map((base) => path.join(base, ...name.split("/"), "package.json"))
+    .find((candidate) => fs.existsSync(candidate));
+  if (manifest === undefined)
+    throw new Error(`Sound runtime package root did not resolve: ${name}.`);
+  return fs.realpathSync(path.dirname(manifest));
+};
+
+const linkWorkspacePackage = (project: string, name: string): void => {
+  const target = path.join(project, "node_modules", ...name.split("/"));
+  fs.mkdirSync(path.dirname(target), { recursive: true });
+  fs.symlinkSync(
+    packageRoot(name),
+    target,
+    process.platform === "win32" ? "junction" : "dir",
+  );
+};
+
+const copyPackage = (
+  root: string,
+  name: string,
+  generation: string,
+): string => {
+  const target = path.join(
+    root,
+    "package-copies",
+    name.replaceAll("/", "-"),
+    generation,
+  );
+  fs.cpSync(packageRoot(name), target, {
+    dereference: true,
+    recursive: true,
+  });
+  return fs.realpathSync(target);
+};
+
+const closurePath = (
+  snapshot: IRuntimePackageSnapshot,
+  pattern: RegExp,
+): string => {
+  const matches = snapshot.closure.filter((entry) => pattern.test(entry.path));
+  if (matches.length !== 1)
+    throw new Error(
+      `Expected one ${snapshot.package} closure member matching ${pattern}, got ${matches.length}.`,
+    );
+  return matches[0]!.path;
+};
+
+const replaceBytes = (file: string): void => {
+  const bytes = fs.readFileSync(file);
+  fs.writeFileSync(file, Buffer.concat([bytes, Buffer.from("\n// changed\n")]));
+};
+
+/**
+ * A generated project seals the real sound and codec executable population.
+ *
+ * The fixture copies actual installed package trees before changing their real
+ * transitive modules. It never substitutes a package-name-only test double.
+ *
+ * Scenarios:
+ *
+ * 1. Actual pngjs siblings, mp4box ESM chunks, libopus generated WASM module,
+ *    bundled H.264, Kokoro, Transformers, Sharp capability wall, and ONNX native
+ *    files all participate in the generated consumer's canonical identity.
+ * 2. Equal name/version/entry bytes with a changed real pngjs parser, mp4box
+ *    chunk, or libopus generated module produce distinct closure identities.
+ * 3. Post-snapshot mutation, same-path resident-generation replacement,
+ *    byte-identical successor, ABA, and a linked package root are refused.
+ * 4. The generated implementation remains byte-identical to scaffold source.
+ */
+export const test_cli_scaffold_sound_runtime_package_closure = (): void => {
+  const root = fs.realpathSync(
+    fs.mkdtempSync(path.join(os.tmpdir(), "automovie-sound-closure-")),
+  );
+  let failure: { error: unknown } | undefined;
+  try {
+    const project = path.join(root, "generated");
+    writeFiles(project, renderScaffold({ name: "sound-closure" }));
+    linkWorkspacePackage(project, "@automovie/production");
+    const source = path.resolve(
+      __dirname,
+      "../../../../packages/template/scaffold/scripts/runtimePackageSnapshot.ts",
+    );
+    const generated = path.join(
+      project,
+      "scripts",
+      "runtimePackageSnapshot.ts",
+    );
+    const runtime = createRequire(__filename)(
+      generated,
+    ) as IRuntimePackageSnapshotModule;
+    TestValidator.equals(
+      "generated runtime closure implementation is byte-identical",
+      fs.readFileSync(generated).equals(fs.readFileSync(source)),
+      true,
+    );
+
+    const packageCases: readonly IPackageCase[] = [
+      {
+        name: "pngjs",
+        entry: "lib/png.js",
+        expected: [
+          /^lib\/png\.js$/u,
+          /^lib\/parser-async\.js$/u,
+          /^lib\/packer-async\.js$/u,
+          /^lib\/png-sync\.js$/u,
+        ],
+        mutate: /^lib\/parser-async\.js$/u,
+      },
+      {
+        name: "mp4box",
+        entry: "dist/mp4box.all.mjs",
+        expected: [
+          /^dist\/mp4box\.all\.mjs$/u,
+          /^dist\/rolldown-runtime-[^.]+\.mjs$/u,
+          /^dist\/styp-[^.]+\.mjs$/u,
+        ],
+        mutate: /^dist\/styp-[^.]+\.mjs$/u,
+      },
+      {
+        name: "libopus-wasm",
+        entry: "dist/index.js",
+        expected: [
+          /^dist\/index\.js$/u,
+          /^dist\/generated\/libopus\.generated\.mjs$/u,
+        ],
+        mutate: /^dist\/generated\/libopus\.generated\.mjs$/u,
+      },
+    ];
+    const closureFacts: Record<string, boolean> = {};
+    for (const packageCase of packageCases) {
+      const firstRoot = copyPackage(root, packageCase.name, "first");
+      const secondRoot = copyPackage(root, packageCase.name, "second");
+      const first = runtime.snapshotRuntimePackage({
+        entry: path.join(firstRoot, ...packageCase.entry.split("/")),
+        moduleClosure: true,
+        packageName: packageCase.name,
+      });
+      const changedRelative = closurePath(first, packageCase.mutate);
+      replaceBytes(path.join(secondRoot, ...changedRelative.split("/")));
+      const second = runtime.snapshotRuntimePackage({
+        entry: path.join(secondRoot, ...packageCase.entry.split("/")),
+        moduleClosure: true,
+        packageName: packageCase.name,
+      });
+      closureFacts[`${packageCase.name} exact members`] =
+        packageCase.expected.every((pattern) =>
+          first.closure.some((entry) => pattern.test(entry.path)),
+        );
+      closureFacts[`${packageCase.name} entry unchanged`] =
+        first.entryDigest === second.entryDigest;
+      closureFacts[`${packageCase.name} closure changed`] =
+        first.contentFingerprint !== second.contentFingerprint;
+
+      replaceBytes(path.join(firstRoot, ...changedRelative.split("/")));
+      closureFacts[`${packageCase.name} later mutation refused`] = throwsError(
+        () => runtime.assertRuntimePackageSnapshotCurrent(first),
+        "changed physical identity",
+      );
+    }
+    TestValidator.equals(
+      "real transitive sound modules determine closure identity",
+      closureFacts,
+      Object.fromEntries(Object.keys(closureFacts).map((key) => [key, true])),
+    );
+
+    const actualCases = [
+      ["h264-mp4-encoder", "embuild/dist/h264-mp4-encoder.node.js"],
+      ["kokoro-js", "dist/kokoro.js"],
+      ["@huggingface/transformers", "dist/transformers.node.mjs"],
+      ["sharp", "index.cjs"],
+    ] as const;
+    const actual = actualCases.map(([name, entry]) =>
+      runtime.snapshotRuntimePackage({
+        entry: path.join(packageRoot(name), ...entry.split("/")),
+        moduleClosure: true,
+        packageName: name,
+      }),
+    );
+    const onnxRoot = packageRoot("onnxruntime-node");
+    const nativeRelative = [
+      "bin",
+      "napi-v3",
+      process.platform,
+      process.arch,
+    ].join("/");
+    const onnx = runtime.snapshotRuntimePackage({
+      assets: [{ kind: "tree", relative: nativeRelative }],
+      entry: path.join(onnxRoot, "dist", "index.js"),
+      moduleClosure: true,
+      packageName: "onnxruntime-node",
+    });
+    TestValidator.equals(
+      "bundled and native package populations are sealed",
+      {
+        packages: actual.map((snapshot) => snapshot.package),
+        closuresNonEmpty: actual.every(
+          (snapshot) => snapshot.closure.length > 1,
+        ),
+        onnxNativeFiles: onnx.assets.length > 0,
+        onnxNativePaths: onnx.assets.every((asset) =>
+          asset.path.startsWith(`${nativeRelative}/`),
+        ),
+      },
+      {
+        packages: actualCases.map(([name]) => name),
+        closuresNonEmpty: true,
+        onnxNativeFiles: true,
+        onnxNativePaths: true,
+      },
+    );
+
+    const residentRoot = copyPackage(root, "pngjs", "resident");
+    const residentEntry = path.join(residentRoot, "lib", "png.js");
+    const residentA = runtime.snapshotRuntimePackage({
+      entry: residentEntry,
+      moduleClosure: true,
+      packageName: "pngjs",
+    });
+    runtime.bindRuntimePackageSnapshotGeneration(residentA);
+    replaceBytes(path.join(residentRoot, "lib", "parser-async.js"));
+    const residentB = runtime.snapshotRuntimePackage({
+      entry: residentEntry,
+      moduleClosure: true,
+      packageName: "pngjs",
+    });
+
+    const successorRoot = copyPackage(root, "pngjs", "successor");
+    const successorEntry = path.join(successorRoot, "lib", "png.js");
+    const successor = runtime.snapshotRuntimePackage({
+      entry: successorEntry,
+      moduleClosure: true,
+      packageName: "pngjs",
+    });
+    const successorTarget = path.join(successorRoot, "lib", "parser-async.js");
+    const successorBytes = fs.readFileSync(successorTarget);
+    fs.renameSync(successorTarget, `${successorTarget}.old`);
+    fs.writeFileSync(successorTarget, successorBytes);
+
+    const abaRoot = copyPackage(root, "pngjs", "aba");
+    const aba = runtime.snapshotRuntimePackage({
+      entry: path.join(abaRoot, "lib", "png.js"),
+      moduleClosure: true,
+      packageName: "pngjs",
+    });
+    const abaTarget = path.join(abaRoot, "lib", "parser-async.js");
+    const abaBytes = fs.readFileSync(abaTarget);
+    fs.writeFileSync(abaTarget, Buffer.alloc(abaBytes.length, 7));
+    fs.writeFileSync(abaTarget, abaBytes);
+
+    const linkedRoot = path.join(root, "linked-pngjs");
+    fs.symlinkSync(
+      packageRoot("pngjs"),
+      linkedRoot,
+      process.platform === "win32" ? "junction" : "dir",
+    );
+    TestValidator.equals(
+      "resident and physical-generation drift is refused",
+      namedFacts([
+        [
+          "resident generation mismatch",
+          () =>
+            throwsError(
+              () => runtime.bindRuntimePackageSnapshotGeneration(residentB),
+              "resident module generation",
+            ),
+        ],
+        [
+          "byte-identical successor",
+          () =>
+            throwsError(
+              () => runtime.assertRuntimePackageSnapshotCurrent(successor),
+              "changed physical identity",
+            ),
+        ],
+        [
+          "ABA",
+          () =>
+            throwsError(
+              () => runtime.assertRuntimePackageSnapshotCurrent(aba),
+              "changed physical identity",
+            ),
+        ],
+        [
+          "linked root",
+          () =>
+            throwsError(
+              () =>
+                runtime.snapshotRuntimePackage({
+                  entry: path.join(linkedRoot, "lib", "png.js"),
+                  moduleClosure: true,
+                  packageName: "pngjs",
+                }),
+              "is not physical",
+            ),
+        ],
+      ]),
+      {
+        "resident generation mismatch": true,
+        "byte-identical successor": true,
+        ABA: true,
+        "linked root": true,
+      },
+    );
+  } catch (error) {
+    failure = { error };
+    throw error;
+  } finally {
+    preserveCliRootFixtureCleanup(
+      failure,
+      () => fs.rmSync(root, { force: true, recursive: true }),
+      "sound runtime package closure fixture",
+    );
+  }
+};
