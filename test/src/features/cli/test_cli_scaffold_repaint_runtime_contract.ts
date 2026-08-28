@@ -518,9 +518,10 @@ const withGeneratedRepaintSelectionReview = (
  *    their acquired runtime resources.
  * 5. The actual generated repaint entrypoint refuses invalid operations and a
  *    source-preflight failure before any request identity exists.
- * 6. A default-adapter terminal attempt returns its durable request id; retry
- *    keeps it and creates a candidate without changing the active rendition.
- * 7. A fresh reroll creates a second unselected candidate, explicit selection
+ * 6. A default-adapter terminal refusal returns its durable request id but is
+ *    not retryable; an explicit transport failure is stored as retryable and
+ *    only its request id may resume into a candidate.
+ * 7. A fresh successful reroll creates a second unselected candidate, selection
  *    activates it, stale config refuses another candidate, and restoration
  *    permits an explicit reversal to the earlier candidate.
  * 8. Only after every semantic action runs, every source runtime owner must be
@@ -825,8 +826,27 @@ export const test_cli_scaffold_repaint_runtime_contract =
           beforeRenditions: [],
         },
       );
+      const nonretryableRetry = runGeneratedFast(
+        fixture.root,
+        "scripts/repaint.ts",
+        [
+          "retry",
+          "--shot",
+          "opening",
+          "--request",
+          defaultAdapterOutput.requestId,
+        ],
+      );
+      const nonretryableRetryOutput = JSON.parse(nonretryableRetry.stdout) as {
+        repainted: boolean;
+        selected: boolean;
+        requestId: string | null;
+        diagnostics: Array<{ code: string }>;
+      };
       const adapterMedia = path.join(fixture.root, "repaint-success.mp4");
+      const adapterMode = path.join(fixture.root, "repaint-adapter-mode.txt");
       fs.writeFileSync(adapterMedia, repaint.adapterBytes);
+      fs.writeFileSync(adapterMode, "transport\n", "utf8");
       fs.writeFileSync(
         path.join(fixture.root, "scripts/repaintAdapter.ts"),
         [
@@ -834,22 +854,50 @@ export const test_cli_scaffold_repaint_runtime_contract =
           'import fs from "node:fs";',
           'import path from "node:path";',
           "",
-          "export const repaintProductionShot: AutoMovieProductionShotRepaint = async (input) => ({",
-          '  bytes: fs.readFileSync(path.join(input.projectRoot, "repaint-success.mp4")),',
-          '  mediaType: "video/mp4",',
-          "  costUnits: 1,",
-          `  runtimeIdentity: ${JSON.stringify(REPAINT_RUNTIME_IDENTITY)},`,
-          "});",
+          "export const repaintProductionShot: AutoMovieProductionShotRepaint = async (input) => {",
+          '  const mode = fs.readFileSync(path.join(input.projectRoot, "repaint-adapter-mode.txt"), "utf8").trim();',
+          '  if (mode === "transport") {',
+          '    const error = new Error("The deterministic adapter transport closed.");',
+          '    error.name = "FetchError";',
+          "    throw error;",
+          "  }",
+          "  return {",
+          '    bytes: fs.readFileSync(path.join(input.projectRoot, "repaint-success.mp4")),',
+          '    mediaType: "video/mp4",',
+          "    costUnits: 1,",
+          `    runtimeIdentity: ${JSON.stringify(REPAINT_RUNTIME_IDENTITY)},`,
+          "  };",
+          "};",
           "",
         ].join("\n"),
         "utf8",
       );
+      const transportRefusal = runGeneratedFast(
+        fixture.root,
+        "scripts/repaint.ts",
+        ["reroll", "--shot", "opening"],
+      );
+      const transportOutput = JSON.parse(transportRefusal.stdout) as {
+        repainted: boolean;
+        selected: boolean;
+        requestId: string | null;
+        diagnostics: Array<{ code: string }>;
+      };
+      if (transportOutput.requestId === null)
+        throw new Error(
+          "The retryable transport attempt emitted no resumable request id.",
+        );
+      const transportAttempts = AutoMovieProductionProject.open(
+        fixture.root,
+        "repaint-runtime-film",
+      ).repaintRequestAttempts(transportOutput.requestId);
+      fs.writeFileSync(adapterMode, "success\n", "utf8");
       const retried = runGeneratedFast(fixture.root, "scripts/repaint.ts", [
         "retry",
         "--shot",
         "opening",
         "--request",
-        defaultAdapterOutput.requestId,
+        transportOutput.requestId,
       ]);
       const retriedOutput = JSON.parse(retried.stdout) as {
         repainted: boolean;
@@ -970,6 +1018,21 @@ export const test_cli_scaffold_repaint_runtime_contract =
         "explicit retry, reroll, selection refusal, and reversal preserve reviewed candidate state",
         {
           retryStatus: retried.status,
+          nonretryableRetryStatus: nonretryableRetry.status,
+          nonretryableRetryRepainted: nonretryableRetryOutput.repainted,
+          nonretryableRetrySelected: nonretryableRetryOutput.selected,
+          nonretryableRetryRequestId: nonretryableRetryOutput.requestId,
+          nonretryableRetryCode: nonretryableRetryOutput.diagnostics[0]?.code,
+          transportStatus: transportRefusal.status,
+          transportRepainted: transportOutput.repainted,
+          transportSelected: transportOutput.selected,
+          transportRequestId: transportOutput.requestId,
+          transportCode: transportOutput.diagnostics[0]?.code,
+          transportAttempts: transportAttempts.map((attempt) => ({
+            requestId: attempt.requestId,
+            retryable: attempt.failure?.retryable,
+            status: attempt.status,
+          })),
           retryRepainted: retriedOutput.repainted,
           retrySelected: retriedOutput.selected,
           retryRequestId: retriedOutput.requestId,
@@ -1006,10 +1069,27 @@ export const test_cli_scaffold_repaint_runtime_contract =
         },
         {
           retryStatus: 0,
+          nonretryableRetryStatus: 1,
+          nonretryableRetryRepainted: false,
+          nonretryableRetrySelected: false,
+          nonretryableRetryRequestId: defaultAdapterOutput.requestId,
+          nonretryableRetryCode: "repaint-input-invalid",
+          transportStatus: 1,
+          transportRepainted: false,
+          transportSelected: false,
+          transportRequestId: transportOutput.requestId,
+          transportCode: "repaint-failed",
+          transportAttempts: [
+            {
+              requestId: transportOutput.requestId,
+              retryable: true,
+              status: "failed",
+            },
+          ],
           retryRepainted: true,
           retrySelected: false,
-          retryRequestId: defaultAdapterOutput.requestId,
-          retryReceiptRequestId: defaultAdapterOutput.requestId,
+          retryRequestId: transportOutput.requestId,
+          retryReceiptRequestId: transportOutput.requestId,
           retryAdapterIdentity: JSON.stringify(REPAINT_RUNTIME_IDENTITY),
           retryProvenance: REPAINT_PROVENANCE,
           retryParameters: {
