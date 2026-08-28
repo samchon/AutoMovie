@@ -367,7 +367,12 @@ async function main(): Promise<void> {
     });
     fs.symlinkSync(
       path.join(scaffoldRoot, ".agents", "skills", "production"),
-      path.join(linkedTemplate, ".agents", "skills", "production"),
+      path.join(linkedTemplate, ".agents", "skills", "zeta"),
+      process.platform === "win32" ? "junction" : "dir",
+    );
+    fs.symlinkSync(
+      path.join(scaffoldRoot, ".agents", "skills", "production"),
+      path.join(linkedTemplate, ".agents", "skills", "alpha"),
       process.platform === "win32" ? "junction" : "dir",
     );
     assert.throws(
@@ -377,7 +382,7 @@ async function main(): Promise<void> {
           productionEvidence: configuration,
           scaffoldRoot: linkedTemplate,
         }),
-      /installed production skills may not contain links/u,
+      /skills[\\/]alpha: installed production skills may not contain links/u,
     );
     const invalidTemplate = makeRoot("invalid-production-skill");
     write(invalidTemplate, ".agents/skills", "not a directory\n");

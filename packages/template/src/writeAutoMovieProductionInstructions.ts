@@ -72,7 +72,12 @@ const assertInstructionSourceIsPhysical = (directory: string): void => {
     throw new Error(
       `${directory}: the installed production skills are missing or linked.`,
     );
-  for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
+  for (const entry of fs
+    .readdirSync(directory, { withFileTypes: true })
+    .sort(
+      (left, right) =>
+        Number(left.name > right.name) - Number(left.name < right.name),
+    )) {
     const target = path.join(directory, entry.name);
     if (entry.isSymbolicLink())
       throw new Error(
