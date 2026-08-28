@@ -152,6 +152,8 @@ Every reusable H2 cites the sources that support its rule. A source does not rep
 
 ## Change and review
 
+An anchor is a citation address. Renaming it rewrites every citing host, so choose it for the durable question the target asks rather than its current wording. When an anchor must change, update every production, fixture, claim, acknowledgement, exclusion, and instruction link that cites it in the same coherent change.
+
 Editing a target expires every review of that target. Reread the changed item against every governed host before renewing its review; do not replace only the fingerprint.
 
 Inspect every changed contract literally with its linked skill callers and TypeScript population behavior. Check unique ownership, one-target scope, stable anchors, `Sources:` lines, local links, population semantics, and the absence of contradictory or duplicated completion points. After corrections stop, perform complete review rounds over the full instruction and contract diff. A round counts only when it finds no issue and causes no edit; require two consecutive counted rounds before final repository gates.

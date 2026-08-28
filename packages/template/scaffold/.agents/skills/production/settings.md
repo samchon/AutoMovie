@@ -8,6 +8,8 @@ Across the work-specific topology, assign explicit H2 owners for the production 
 
 Visual grammar, delivery fidelity, and subject breakdown remain settings-population roles rather than a separate production-design layer. They constrain every film, brief, object library, and building library before specialist design begins, while the broader production-design requirement family describes product capabilities that a production invokes selectively rather than ninety-nine decisions every author must restate. Promote a genuinely independent authored population only when one production needs owners, ordering, and a review lifecycle that settings H2s cannot represent without overlap.
 
+Settings own the existence, meaning, authority, capability, production-wide coordinate and time convention, and review condition of a world fact. Activate maps when the delivery must author broad-world terrain, water, ecology, land use, settlement, transport, infrastructure, weather, time state, or world-scale placement as independently reviewable design. Map specializes the settings basis into resolved world features, networks, extents, and site interfaces; settings do not absorb those decisions into canon prose, and map does not redefine what the world fact means or may do.
+
 ## Topology
 
 Beyond that foundation, derive every file family, name, order, split, and merge from the requirements discovered for this production. Create no file because a shared template or another production has one. A central owner may take its own file, and a dense requirement family may span as many ordered files as its independent H2 owners require.

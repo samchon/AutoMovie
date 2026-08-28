@@ -66,7 +66,22 @@ Start only when every applicable layer is in `review`, the source lint is clean,
 4. Read implementation and tests, regenerate design, and inspect current output under the declared delivery and neutral-review conditions.
 5. Keep findings until the complete read ends. Repair each at its earliest owner, propagate all consequences, renew stale reviews, restore the clean gate, and start a fresh round from a new manifest.
 
-Use the lenses applicable to the production: delivery scope and aim; source truth and uncertainty; canon, units, time, scale, resources, capabilities, and identity; model ceiling, silhouette, hierarchy, surface partition, articulation, and neutral views; spatial topology, envelope consistency, access, circulation, and clear dimensions; material assembly, binding, scale, response, and neutral samples; instance membership, transforms, variation, tiers, contact, and worst-case members; motion endpoints, paths, phases, contact, composition, and neutral samples; system interfaces, clocks, deterministic state, budget, degradation, and failure; narrative development, audience investment, continuity, access, information, pacing, sound, and earned effect; brief eligibility and falsifiability; shot realization, camera, light, acceptance, global edit, auxiliary tracks, and deterministic runtime.
+### Grant the premise
+
+Judge what the production makes of its declared subject and delivery, not whether a different subject or delivery would be preferable. The world, scale, register, representation ceiling, coordinate and dimension conventions, bounded question, and promise fixed by settings are the conditions under which review works. Preferring another genre, world, fidelity tier, building type, map extent, or question is not a finding.
+
+Granting the premise makes review stricter rather than more lenient. Once granted, it becomes the standard: ask whether the production followed its own premise where it led, paid every cost it implied, applied every rule it established, and earned every result it promised. Change a premise only in settings and only with the user's approval.
+
+Apply that rule in the production's own terms:
+
+| Production surface | Granted premise | A valid finding |
+| --- | --- | --- |
+| Film | settings-fixed genre, world, scale, register, and audience promise | the film avoids a consequence, rule, cost, change, or ending its own premise requires |
+| 3D object library | declared representation ceiling and the neutral observations it promises to support | the object fails an observation within that ceiling or implies unsupported fidelity |
+| Map or building library | declared extent, coordinates, dimensions, users, interfaces, and review conditions | the world, site, or building contradicts those conventions or cannot pass its own observation set |
+| Brief | the bounded delivery question and its declared falsifying observations | the observations cannot answer or falsify that question |
+
+Use the lenses applicable to the production: delivery scope and aim; source truth and uncertainty; canon, units, time, scale, resources, capabilities, and identity; model ceiling, silhouette, hierarchy, surface partition, articulation, and neutral views; map extent, coordinates, terrain, water, ecology, networks, land use, world state, scale, and site interfaces; spatial topology, envelope consistency, access, circulation, and clear dimensions; material assembly, binding, scale, response, and neutral samples; instance membership, transforms, variation, tiers, contact, and worst-case members; motion endpoints, paths, phases, contact, composition, and neutral samples; system interfaces, clocks, deterministic state, budget, degradation, and failure; narrative development, audience investment, continuity, access, information, pacing, sound, and earned effect; brief eligibility and falsifiability; shot realization, camera, light, acceptance, global edit, auxiliary tracks, and deterministic runtime.
 
 Searches, diffs, compiler output, generated summaries, and earlier partial reads do not replace the full manifest read. A current fingerprint records one evidence check and does not prove production quality.
 

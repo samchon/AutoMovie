@@ -1,19 +1,28 @@
 # Design branches
 
-Activate only branches the declared delivery actually owns. Film, brief, and library describe the output shape; they do not decide whether a production needs a model, building, finish, crowd, motion, light, effect, sound, or service. Every active branch advances from document to matching source after reviewed settings, and every source owner cites exactly one design file.
+Activate only branches the declared delivery actually owns. Film, brief, and library describe the output shape; they do not decide whether a production needs a model, world, building, finish, crowd, motion, light, effect, sound, or service. Every active branch advances from document to matching source after reviewed settings, and every source owner cites exactly one design file.
+
+## Branch routing
 
 | Branch | Owns | Does not own |
 | --- | --- | --- |
 | `docs/models -> src/models` | fixed bounded representation, geometry, hierarchy, articulation interface, surface partitions, fidelity ceiling | fictional identity, material response, placement population, timed change |
-| `docs/spaces -> src/spaces` | world/site/building exterior and interior, containment, adjacency, shared envelope, openings, levels, routes, clear dimensions | object mesh, finish, camera path |
+| `docs/maps -> src/maps` | broad-world extent and coordinates, terrain, water, ecology, land use, settlements, transport, infrastructure, weather, time state, and world-scale placement | site and building topology inside an adopted boundary, object construction, finish, dramatic composition |
+| `docs/spaces -> src/spaces` | site/building exterior and interior, containment, adjacency, shared envelope, openings, levels, local routes, clear dimensions | broad-world content and networks, object mesh, finish, camera path |
 | `docs/materials -> src/materials` | construction, finish, texture/projection scale, surface binding, optical/physical response, material state | host geometry or topology |
 | `docs/instances -> src/instances` | prototype membership, stable ids, transforms, variation, LOD tiers, density, placement and overlap | prototype construction or reusable time transition |
 | `docs/motions -> src/motions` | named deterministic state transition, endpoints, phases, paths, contacts, parameters, composition and interruption | capability authorization or target interface construction |
 | `docs/systems -> src/systems` | coupled lighting, environment, effects, simulation, sound, services, clocks, budgets, dependencies and degradation | identities and structures consumed by the process |
 
-Use settings for what exists, what it means, what it may do, and the common coordinate/time contract. A building's exterior and interior are two views of one space/envelope topology, not competing model files. A model exposes stable surface ids; a material binds to them. An instance points to a reviewed prototype; a silhouette-changing member returns to models. Motion changes one reviewed interface over time; a system coordinates processes or many owners.
+## Ownership direction
 
-## Discovery before a branch
+Use settings for what exists, what it means, what it may do, and the production-wide coordinate and time conventions. Map specializes those conventions into the broad world's resolved extent, features, networks, and states. It owns a parcel or site boundary and the external road or path through one named site-access node; spaces consumes that boundary and node, then owns site and building containment, envelope, openings, dimensions, and routes inside them. A settlement-scale footprint may locate a building in a map, but the building's exterior and interior are two views of one space/envelope topology, not competing map or model files.
+
+A model exposes stable surface ids; a material binds to them. An instance points to a reviewed prototype and a reviewed map or space placement when one governs it; a silhouette-changing member returns to models. Motion changes one reviewed interface over time; a system coordinates processes or many owners.
+
+The shared graph follows ownership direction: maps may supply foundations to spaces, instances, and systems; models may consume spaces; materials consume model or space surfaces; instances consume map or space placement, model prototypes, and declared material variation; motions may consume any other reviewed design interface; systems may consume maps, models, spaces, materials, instances, and motions; briefs account for every active design branch. Motion and system documents may therefore cite one another when a coupled process and a reusable transition have distinct owners; neither may duplicate the other's state or path. These populations divide the cited targets among the hosts that actually use them. Omission from an unrelated host is not an exclusion; only a target unused by the complete host population receives one truthful population-wide exclusion. When a foundation branch later reaches review, its targets reopen every affected downstream review without serializing otherwise independent drafting.
+
+## Discovery and draft procedure
 
 Before an active design branch enters `draft`, run its contract-hosted discovery pass against the actual production: `discovery/common.md`, `discovery/designs.md`, and the matching `discovery/<branch>.md`. Inspect the reviewed settings, direct directives, source assets and provenance, dependencies, planned consumers, promised observations, and known failures without turning those inputs or the target prose into a predetermined answer list. A film or brief runs this pass only for the design branches it actually activates; a library runs it for every design branch it delivers even though it has no narrative, brief, shot, or edit population.
 
@@ -25,11 +34,23 @@ Research remains a separate decision. When design discovery exposes a consequent
 
 After discovery is settled and before drafting a branch, read its principle and obligation files in full, inventory independent owners, and run the same-answer test: if two proposed H2s would receive materially the same answer, merge or sharpen them. Then run the contradiction test in both directions: ask whether one item could pass while the other fails, and whether each can change without changing the other. Record interfaces as citations rather than copying decisions across branches.
 
-The shared graph follows ownership direction: models may consume spaces; materials consume model or space surfaces; instances consume model prototypes, spatial placement, and declared material variation; motions may consume any other reviewed design interface; systems may consume models, spaces, materials, instances, and motions; briefs account for every active design branch. Motion and system documents may therefore cite one another when a coupled process and a reusable transition have distinct owners; neither may duplicate the other's state or path. These populations divide the cited targets among the hosts that actually use them. Omission from an unrelated host is not an exclusion; only a target unused by the complete host population receives one truthful population-wide exclusion. When a foundation branch later reaches review, its targets reopen every affected downstream review without serializing otherwise independent drafting.
+## Gates
 
-Read [Models and motions](models-and-motions.md) when either of those branches is active. For spaces, materials, instances, or systems, apply the matching principle checklist to every design H2 and cover the matching design and source-obligation files across their respective H2 and export populations; do not import model or motion questions merely because all become rendered geometry.
+Start an applicable design layer at its `<branch>: "draft"` key only after settings are in `review` and its contract-hosted discovery result is settled. Before `evidence`, require a complete first version, stable H2 owners, no placeholders, all inherited settings and reviewed-foundation citations, every matching principle answered by every H2, every matching obligation allocated across the H2 population, and the branch's finite review set and verification addresses. Run [Author process Self-Review](self-review.md) to a clean round before each stage transition and after every repair. Follow [Evidence staging](evidence-staging.md) for evidence and review passes.
 
-Read [Spatial design](craft/spatial-design.md) whenever spaces are active, and when materials or instances have spatial consequences; use it to judge plan, section, elevation, perspective, traversal, surfaces, and repeated populations without transferring their semantic ownership.
+| Branch gate | Specialist contracts before `evidence` | Matching source starts only after |
+| --- | --- | --- |
+| `maps` | `principles/maps.md`, `obligations/maps.md`, and `discovery/maps.md` | `maps: "review"`, then `mapSources: "draft"` with `obligations/map-sources.md` |
+| `spaces` | `principles/spaces.md`, `obligations/spaces.md`, and `discovery/spaces.md` | `spaces: "review"`, then `spaceSources: "draft"` with `obligations/space-sources.md` |
+| `materials` | `principles/materials.md`, `obligations/materials.md`, and `discovery/materials.md` | `materials: "review"`, then `materialSources: "draft"` with `obligations/material-sources.md` |
+| `instances` | `principles/instances.md`, `obligations/instances.md`, and `discovery/instances.md` | `instances: "review"`, then `instanceSources: "draft"` with `obligations/instance-sources.md` |
+| `systems` | `principles/systems.md`, `obligations/systems.md`, and `discovery/systems.md` | `systems: "review"`, then `systemSources: "draft"` with `obligations/system-sources.md` |
+
+Read [Models and motions](models-and-motions.md) when either of those branches is active; that document owns their corresponding gates. Do not import model or motion questions merely because all branches may become rendered geometry.
+
+## Specialist observation routes
+
+Read [Spatial design](craft/spatial-design.md) whenever maps or spaces are active, and when materials or instances have spatial consequences; use it to judge maps, plans, sections, elevations, perspectives, traversals, surfaces, networks, and repeated populations without transferring their semantic ownership.
 
 Read [Building reports](evidence/measurements.md#building-reports) when current compiled shots stage a built environment whose spatial or system review needs drawings, schedules, quantities, services, or declared studies.
 

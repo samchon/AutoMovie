@@ -21,6 +21,8 @@ Do not create `docs/packages/` or `docs/modules/`. Package usage belongs in pack
 
 Keep research and `.wiki/` outside the committed product-contract population. They justify decisions and preserve working knowledge, but a citation to research does not discharge a product promise.
 
+When writing or revising the reusable production targets under `packages/template/docs`, read the [shared production-contract source pool](references.md) before searching anew. It records which durable source settles which kind of question without coupling sources to the contract anchors that happen to cite them today. Verify every selected link and used passage again before citation.
+
 ## Required triangle
 
 Configure and validate all three positive edge families:
@@ -145,7 +147,7 @@ The generated-production graph is separate. Its review stage records substantive
 
 1. Read the documentation skill and update `.wiki/` as the decision develops. Read the project skill for product scope, the development skill for source or test changes, the scaffold skill when the shared contract inventory or the scaffold harness changes, and the shipped production skill when a production's own graph is involved.
 2. Inspect the current `lint.config.ts` files, workspace scripts, structural tests, installed `@ttsc/evidence` README and type declarations, and every affected citation. Do not treat an archived branch or an earlier decision as the active implementation.
-3. Classify each statement as requirement, specification, package usage, public API contract, research, or working knowledge before choosing its home.
+3. Classify each statement as requirement, specification, package usage, public API contract, research, or working knowledge before choosing its home. For a reusable production discovery, principle, or obligation target, check [the shared source pool](references.md) before searching anew and verify every selected link directly.
 4. Describe each claim-reference pair as one sentence before configuring it. If the sentence does not match the selected files and symbol kinds, correct the population.
 5. Add or revise the contract text, stable anchors, and positive citations together. Preserve direct requirement and specification citations on every affected public source symbol.
 6. Trace every affected source triangle from resolved units. Add or update the structural guard when native lint does not prove README inclusion, specification-host and public-source-host lower bounds, anchor uniqueness, or transitive reachability.

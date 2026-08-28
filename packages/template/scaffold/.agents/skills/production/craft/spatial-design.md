@@ -1,6 +1,6 @@
 # Spatial Design Handbook
 
-Spatial design turns authored topology, boundaries, surfaces, and populations into one coherent place. The space, material, and instance principles and obligations decide what those branches must own. This document owns how to judge the result without replacing those contracts or supplying a plan, style, finish, or asset catalogue.
+Spatial design turns authored world features, topology, boundaries, surfaces, and populations into one coherent place. The map, space, material, and instance principles and obligations decide what those branches must own. This document owns how to judge the result without replacing those contracts or supplying a map, plan, style, finish, or asset catalogue.
 
 Use it for a film set, a bounded brief, or a standalone library, including a reusable 3D environment, surface, or population. Dramatic framing may reveal the work, but neutral spatial judgment comes first because a flattering shot can hide a disconnected room, an impossible threshold, an exterior-interior mismatch, or a repeated population blocking the route it was meant to serve.
 
@@ -9,6 +9,16 @@ Use it for a film set, a bounded brief, or a standalone library, including a reu
 Begin with one observable question about one exact revision: which place or route is being judged, who or what must use it, under which production condition, and what result would falsify the design. A family house, a warehouse aisle, a plaza, a spacecraft compartment, and an abstract motion volume do not share one ideal plan. Judge each against the production's own use, access, setting, references, capabilities, and constraints.
 
 Do not import a preferred floor-plan type, period rule, furniture set, or material palette. When the production claims an era, structural language, fidelity ceiling, or reference relationship, ask whether its own decisions agree with that claim. Judge the promised blocking representation rather than demanding unpromised finish, but never use the prototype ceiling to excuse wrong topology, dimensions, clearance, placement, or envelope agreement. When the production makes no style or era claim, do not invent one in review.
+
+## Read the world before the site
+
+When maps are active, begin at their declared extent, coordinate and vertical reference, current phase, source-resolution boundary, and review scale. Trace the terrain, water, vegetation, land use, settlement, transport, infrastructure, weather, and temporal owners the production actually selected. Do not demand an unused world family, but do not let a background image, imported terrain, or settlement label stand in for the selected features and relations that must exist in the resolved world.
+
+Follow one consequential chain across owners: source or authored feature, resolved world identity, contact and dependency, route or state consequence, derived view, and falsifying observation. A road that floats above terrain, water that ignores its banks, vegetation rooted on an excluded surface, a bridge that joins no network, or a seasonal state that changes the image without changing the governed world is a spatial defect even when each isolated asset looks plausible.
+
+Read the map-space interface in both directions. Map owns the site or parcel boundary as a world feature, the external terrain and network, and the approach through one named access node. Spaces consumes that boundary and node and owns the site and building topology, dimensions, openings, and routes within it. Confirm that the coordinate transform, boundary, grade, contact, and access point agree without asking either branch to restate the other's geometry. A settlement footprint may locate a building at world scale; it does not authorize map to invent the building envelope or spaces to move the road outside the site.
+
+Use a map or plan for horizontal relations, a section or profile for height and ground contact, a route or network query for continuity, a state comparison for temporal change, and a source-resolution comparison for provenance and uncertainty. Inspect seams and representative worst cases at the scale promised by the design. A global view cannot prove a site entrance connects, and one detailed tile cannot prove the world joins across its boundary.
 
 ## Read the plan as a graph
 
@@ -66,21 +76,23 @@ Repetition should reveal an authored rule rather than evaluation order. Random-l
 
 | Observation | Look for | A defect it can expose |
 | --- | --- | --- |
+| Map | extent, coordinates, terrain and water, networks, land use, population, phase, site boundary | a disconnected access road, a feature in the wrong datum, a source gap disguised as terrain, or a phase change that leaves stale routes |
 | Plan | containment, adjacency, thresholds, route choice, usable width, population footprint | an orphaned zone, a blocked path, a door with no wall void, or a service route crossing the public one against declared intent |
 | Section | levels, heights, slab and roof relation, stairs and ramps, vertical openings, clear headroom | incompatible storey datums, a connector missing its landing, or an exterior opening at no interior height |
 | Elevation | massing, storey expression, opening rhythm and ownership, envelope continuity, material transitions | a blank host behind an authored opening, an outside level absent inside, or a finish boundary with no construction reason |
 | Perspective | human scale, depth, threshold sequence, junctions, material reading, view and privacy | a room that measures correctly but reads at the wrong scale, an obscured entrance, or an exposed private zone |
 | Traversal | ordered access, orientation, occlusion, turning and operating clearance, return path | a graph-connected route that cannot be followed, found, or passed by its declared user |
 
-No single observation substitutes for another. A plan cannot prove eye-level orientation, a perspective cannot prove a continuous route, and a traversal cannot reconcile an unseen roof or floor datum. The space review set is finite because each view answers a different failure class.
+No single observation substitutes for another. A world map cannot prove a site threshold, a plan cannot prove eye-level orientation, a perspective cannot prove a continuous route, and a traversal cannot reconcile an unseen roof or floor datum. The applicable map and space review sets are finite because each view answers a different failure class.
 
 ## Look at the place
 
 Spatial quality is a relation among observations, so finish by opening the complete review set rather than choosing one favourable view.
 
-1. For a staged film or brief environment, follow the building-report procedure, open the relevant plan, section, elevation, schedule rows, and gaps, and name the exact report revision. For a library, open the neutral observation population its reviewed space design declared; do not substitute the staged-shot command's empty result.
-2. Open the current neutral perspectives for the exact spaces, surfaces, and populations under review. Follow [inspection](../evidence/inspection.md) for stable subject identities, content versus declared bounds, sections, and the limit of the hand-driven subject page.
-3. Traverse every required route from its declared start to destination and back where return matters. For a staged environment, use the hand-driven inspection page to see the sequence and the report or engine measurements to settle dimensions and obstruction. Name the revision, start, destination, user, viewpoint or coordinates, and any sample limit.
-4. State what the plan, section, elevation, perspectives, and traversal actually showed in the evidence citations on the design or source owners that claim the result is realized. A citation that names no observation is not a spatial judgment.
+1. When maps are active, open their declared map or plan views, profiles or sections, network and route results, state comparisons, source-resolution comparisons, and boundary or seam checks at the exact reviewed revision. Name the extent, coordinate basis, phase, scale, selected feature families, and sample limits.
+2. For a staged film or brief environment, follow the building-report procedure, open the relevant plan, section, elevation, schedule rows, and gaps, and name the exact report revision. For a library, open the neutral observation population its reviewed space design declared; do not substitute the staged-shot command's empty result.
+3. Open the current neutral perspectives for the exact spaces, surfaces, and populations under review. Follow [inspection](../evidence/inspection.md) for stable subject identities, content versus declared bounds, sections, and the limit of the hand-driven subject page.
+4. Traverse every required route from its declared start to destination and back where return matters, beginning on the external map network when that approach is promised. For a staged environment, use the hand-driven inspection page to see the sequence and the report or engine measurements to settle dimensions and obstruction. Name the revision, start, destination, user, viewpoint or coordinates, and any sample limit.
+5. State what the map, plan, section, elevation, perspectives, state comparisons, and traversal actually showed in the evidence citations on the design or source owners that claim the result is realized. A citation that names no observation is not a spatial judgment.
 
 The report provides measurements and the views provide observations. Neither writes the verdict for you.

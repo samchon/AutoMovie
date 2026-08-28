@@ -37,6 +37,7 @@ Choosing any of these means the approach is already wrong. Stop and repair the a
 | Research | External source identity, used portion, authority, uncertainty, and affected production decision |
 | Settings | Production and world facts, delivery, identity, capability, constraint, access, units, and review conditions |
 | Models | Deterministic fixed blocking representation and its neutral observations |
+| Maps | Broad-world extent, coordinates, terrain, water, ecology, land use, settlement, transport, infrastructure, weather, time state, and site interfaces |
 | Spaces | Site, building exterior/interior, room, zone, boundary, opening, circulation, and clear dimension |
 | Materials | Construction, finish, texture scale, optical/physical response, surface binding, and state |
 | Instances | Prototype membership, stable repeated identity, transforms, variation, tiers, and placement validity |
@@ -47,7 +48,7 @@ Choosing any of these means the approach is already wrong. Stop and repair the a
 | Screenplay | Final visible, written, audible, silent, and render-timed audience contract |
 | Brief | One bounded delivery/shot/observation hierarchy and falsifying observations |
 | Production source | Mechanical serialization of reviewed settings |
-| Design source | Implementation of one reviewed model, space, material, instance, motion, or system owner |
+| Design source | Implementation of one reviewed model, map, space, material, instance, motion, or system owner |
 | Shot source | Local composition, camera, light, orchestration, and acceptance for one reviewed scene or brief shot |
 | Film source | Global selection, source-time mapping, transitions, and auxiliary-track mapping |
 
