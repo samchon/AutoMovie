@@ -1,7 +1,7 @@
 import {
-  readAutoMovieProductionEvidence,
   type IAutoMovieEvidenceConfigProps,
   type IAutoMovieProductionEvidence,
+  readAutoMovieProductionEvidence,
 } from "@automovie/evidence";
 import type { IAutoMovieDiagnostic } from "@automovie/interface";
 import {
@@ -40,6 +40,43 @@ const branches = [
   "systems",
 ] as const;
 
+const resetLibraryHosts = (root: string): void => {
+  for (const branch of [
+    "research",
+    "maps",
+    "models",
+    "spaces",
+    "materials",
+    "instances",
+    "motions",
+    "systems",
+    "treatments",
+    "scripts",
+    "screenplays",
+    "briefs",
+  ])
+    fs.rmSync(path.join(root, "docs", branch), {
+      force: true,
+      recursive: true,
+    });
+  for (const branch of [
+    "maps",
+    "models",
+    "spaces",
+    "materials",
+    "instances",
+    "motions",
+    "systems",
+    "shots",
+  ])
+    fs.rmSync(path.join(root, "src", branch), {
+      force: true,
+      recursive: true,
+    });
+  for (const file of ["film.ts", "production.ts"])
+    fs.rmSync(path.join(root, "src", file), { force: true });
+};
+
 const configuration = (root: string): IAutoMovieEvidenceConfigProps => ({
   location: root,
   kind: "library",
@@ -71,6 +108,12 @@ const configuration = (root: string): IAutoMovieEvidenceConfigProps => ({
 });
 
 const writeLibraryOwners = (root: string): void => {
+  fs.mkdirSync(path.join(root, "docs", "contracts"), { recursive: true });
+  fs.writeFileSync(
+    path.join(root, "docs", "contracts", "index.md"),
+    "<!-- @evidenceExclude discovery/core/common.md#shared-local-boundary The complete library fixture audit found no independent work-specific rule beyond the selected shared targets and its exact design owners. -->\n\n# Work-specific contract audit\n",
+    "utf8",
+  );
   for (const branch of branches) {
     const document = path.join(root, "docs", branch, "owner.md");
     const source = path.join(root, "src", branch, "owner.ts");
@@ -87,13 +130,6 @@ const writeLibraryOwners = (root: string): void => {
       "utf8",
     );
   }
-  const residue = path.join(root, "docs", "models", "disabled-residue.md");
-  fs.mkdirSync(path.dirname(residue), { recursive: true });
-  fs.writeFileSync(
-    residue,
-    "# Disabled model residue\n\n## Residue {#disabled-model-residue}\n\nNot selected for delivery.\n",
-    "utf8",
-  );
   fs.mkdirSync(path.join(root, "observations"), { recursive: true });
   fs.writeFileSync(
     path.join(root, "observations", "space.svg"),
@@ -153,6 +189,7 @@ const libraryDiagnostics = (props: {
 export const test_cli_scaffold_library_review_command = (): void => {
   const fixture = productionFixture();
   try {
+    resetLibraryHosts(fixture.root);
     writeLibraryOwners(fixture.root);
     const evidence = configuration(fixture.root);
     const authoring = readAutoMovieProductionEvidence({
@@ -178,7 +215,10 @@ export const test_cli_scaffold_library_review_command = (): void => {
       }),
     );
     const project = AutoMovieProductionProject.open(fixture.root);
-    const compiled = new AutoMovieProductionCompiler(project).compile({
+    const compiled = new AutoMovieProductionCompiler(
+      project,
+      authoring,
+    ).compile({
       scope: "source",
     });
     const negative = libraryDiagnostics({ root: fixture.root, authoring });

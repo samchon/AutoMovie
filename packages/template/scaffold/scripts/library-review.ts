@@ -215,10 +215,6 @@ export const runLibraryReviewCommand = (props: {
       `Library review commands require production kind "library", not ${JSON.stringify(authoring.manifest.kind)}.`,
     );
   const action = props.argv[0] ?? "inspect";
-  const project = AutoMovieProductionProject.openReadOnly(
-    root,
-    props.productionId ?? config.productionId,
-  );
 
   if (action === "plan") {
     const requested = one(props.argv, "--owner")!;
@@ -291,6 +287,10 @@ export const runLibraryReviewCommand = (props: {
     return result;
   }
 
+  const project = AutoMovieProductionProject.openReadOnly(
+    root,
+    props.productionId ?? config.productionId,
+  );
   const checked = new AutoMovieProductionCompiler(project, authoring).lint({
     scope: "source",
   });
