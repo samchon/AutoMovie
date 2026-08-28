@@ -4,7 +4,7 @@ Treatments state what changes or accumulates, why it does so, and what the audie
 
 ## Treatment paragraphs {#treatment-paragraphs}
 
-The direct body of every H2, H3, and H4 briefly establishes its inherited state, central pressure or formal task, intended change, and exit direction, then develops each causal or logical phase in connected paragraphs. Direct H2 and H3 prose organizes the accumulated movement of descendants instead of repeating them or narrating a hidden scene.
+Arrange each H2's connected paragraphs so a reader can locate its inherited state, central pressure or formal task, intended change, exit direction, and causal or logical phases without a fixed opening template. Each event file supplies its own H1 boundary and organizes its actual H2 descendants without repeating them, adding a planning summary, or narrating hidden events in direct prose.
 
 One paragraph carries one cause, attempt, reaction, choice, discovery, aftermath, formal operation, or inseparable progression. Split mixed functions, join fragments that lose the progression, and do not judge by a fixed count or length.
 
