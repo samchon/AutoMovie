@@ -139,6 +139,12 @@
             "package": "@automovie/engine"
           }
         },
+        "depth-precision-constraint": {
+          "owner": {
+            "kind": "package",
+            "package": "@automovie/engine"
+          }
+        },
         "geometry-bounds": {
           "owner": {
             "kind": "package",

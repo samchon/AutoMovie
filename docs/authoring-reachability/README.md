@@ -52,13 +52,11 @@ Correspondence는 해당 family의 결정을 저자가 어느 계약 owner와 �
 
 `node internals/authoring-reachability-gate.mjs`는 미지급 family 수 0을 정확히 고정한다. family가 늘거나 분류가 빠지거나 대응 path와 anchor가 사라지거나 debt가 다시 생기면 ledger를 다시 판단하기 전까지 실패한다. 지급된 edge도 조용히 예전 baseline 아래에 숨을 수 없다.
 
-Specification fragment debt도 같은 방식으로 센다. 현재 `@evidenceObligation` target-anchor와 id 쌍은 23개이고 source의 고유 `@evidencePart` 쌍은 22개다. 미지급 1개는 다음과 같다.
-
-- `camera-light-and-visibility/visibility-and-image-space-observation.md#clv-clipping-clearance-evaluation::depth-precision-constraint`
+Specification fragment debt도 같은 방식으로 센다. 현재 `@evidenceObligation` target-anchor와 id 쌍 41개는 source의 고유 `@evidencePart` 쌍 41개와 정확히 대응하며 미지급 fragment는 0개다.
 
 ## 저장소 evidence review 정책
 
-Repository requirement-specification-source graph에서는 `evidence/review`를 켜지 않는다. 현재 package source에 실제로 적힌 관계는 `@evidence` 13,732개와 `@evidenceExclude` 7,586개, 합계 21,318개다. specification의 positive 관계 2,625개를 합치면 repository graph에는 positive 16,357개와 exclusion 7,586개, 합계 23,943개가 있다. 실제 companion review tag는 0개다. source 제외 사유 7,586개는 1,176종이고 상위 20종이 4,019개(52.98%)를 차지하며, 최다 사유 하나가 1,747회 쓰인다. 23,943개의 companion 문장을 일괄 요구하면 target별 의미 검토보다 package boundary의 기계적 재진술을 늘린다.
+Repository requirement-specification-source graph에서는 `evidence/review`를 켜지 않는다. 현재 package source에 실제로 적힌 관계는 `@evidence` 13,817개와 `@evidenceExclude` 7,583개, 합계 21,400개다. specification의 positive 관계 2,626개를 합치면 repository graph에는 positive 16,443개와 exclusion 7,583개, 합계 24,026개가 있다. 실제 companion review tag는 0개다. source 제외 사유 7,583개는 1,181종이고 상위 20종이 4,010개(52.88%)를 차지하며, 최다 사유 하나가 1,743회 쓰인다. 24,026개의 companion 문장을 일괄 요구하면 target별 의미 검토보다 package boundary의 기계적 재진술을 늘린다.
 
 이 결정은 review를 생략한다는 뜻이 아니다. `evidence/graph`가 resolved target과 population을 검사하고 `evidence/documented`가 public carrier를 유지하며 `evidence/todo`가 선언된 미구현 계약을 거부한다. `internals/contract-ownership.mjs`는 contract owner와 fragment declaration을 추적하고, `internals/authoring-reachability-gate.mjs`는 family owner와 정확한 unpaid fragment target 집합을 추적한다. 변경자는 evidence-graph skill과 review skill에 따라 실제 host, target, 이유와 consequence를 읽고, source를 바꾸면 development skill의 테스트와 100% per-file coverage 의무를 진다. 이 조합도 산문의 의미를 자동 증명하지는 않으므로 Self-Review가 최종 owner다.
 

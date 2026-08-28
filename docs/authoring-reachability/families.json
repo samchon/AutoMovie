@@ -7,10 +7,8 @@
   },
   "acceptedDebt": {
     "unpaidAuthoringFamilies": 0,
-    "unpaidSpecificationFragments": 1,
-    "unpaidSpecificationTargets": [
-      "camera-light-and-visibility/visibility-and-image-space-observation.md#clv-clipping-clearance-evaluation::depth-precision-constraint"
-    ]
+    "unpaidSpecificationFragments": 0,
+    "unpaidSpecificationTargets": []
   },
   "repositoryReviewPolicy": {
     "evidenceReview": "disabled",
