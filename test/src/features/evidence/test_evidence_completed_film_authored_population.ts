@@ -10,17 +10,19 @@ type Stage = "disabled" | "draft" | "evidence" | "review";
 interface EvidenceState {
   location: string;
   kind: "film";
+  populationScope: { mode: "complete-production" };
   settings: Stage;
   research: Stage;
+  maps: Stage;
   models: Stage;
   spaces: Stage;
   materials: Stage;
   instances: Stage;
   motions: Stage;
   systems: Stage;
-  storylines: Stage;
-  scenarios: Stage;
-  script: Stage;
+  treatments: Stage;
+  scripts: Stage;
+  screenplays: Stage;
   briefs: Stage;
   modelSources: Stage;
   spaceSources: Stage;
@@ -46,34 +48,34 @@ const AUTHORED_CLAIM_NAMES = [
   "models H2 units answer their principle checklists, cover the layer's obligations, and account for inherited work",
   "motions files account for inherited settings, designs, and parent files",
   "motions H2 units answer their principle checklists, cover the layer's obligations, and account for inherited work",
-  "storylines files account for inherited settings, designs, and parent files",
-  "storylines H2 units answer their principle checklists, cover the layer's obligations, and account for inherited work",
-  "storylines H3 units answer their principle checklists and account for inherited work",
-  "storylines H4 units answer their principle checklists and account for inherited work",
-  "scenarios files account for inherited settings, designs, and parent files",
-  "scenarios H2 units answer their principle checklists, cover the layer's obligations, and account for inherited work",
-  "scenarios H3 units answer their principle checklists and account for inherited work",
-  "scenarios H4 units answer their principle checklists and account for inherited work",
-  "script files account for inherited settings, designs, and parent files",
-  "script H2 units answer their principle checklists, cover the layer's obligations, and account for inherited work",
-  "script H3 units answer their principle checklists and account for inherited work",
-  "script H4 units answer their principle checklists and account for inherited work",
+  "treatments files account for inherited settings, designs, and parent files",
+  "treatments H2 units answer their principle checklists, cover the layer's obligations, and account for inherited work",
+  "scripts files account for inherited settings, designs, and parent files",
+  "scripts H2 units answer their principle checklists, cover the layer's obligations, and account for inherited work",
+  "scripts H3 units answer their principle checklists and account for inherited work",
+  "scripts H4 units answer their principle checklists and account for inherited work",
+  "screenplays files account for inherited settings, designs, and parent files",
+  "screenplays H2 units answer their principle checklists, cover the layer's obligations, and account for inherited work",
+  "screenplays H3 units answer their principle checklists and account for inherited work",
+  "screenplays H4 units answer their principle checklists and account for inherited work",
 ] as const;
 
 const activeState = (location: string): EvidenceState => ({
   location,
   kind: "film",
+  populationScope: { mode: "complete-production" },
   settings: "review",
   research: "disabled",
+  maps: "disabled",
   models: "review",
   spaces: "disabled",
   materials: "disabled",
   instances: "disabled",
   motions: "review",
   systems: "disabled",
-  storylines: "review",
-  scenarios: "review",
-  script: "review",
+  treatments: "review",
+  scripts: "review",
+  screenplays: "review",
   briefs: "disabled",
   modelSources: "disabled",
   spaceSources: "disabled",
@@ -129,6 +131,127 @@ const principleInPreamble = (directory: string): string | null => {
   return null;
 };
 
+interface NarrativeUnit {
+  anchor: string;
+  depth: 2 | 3 | 4;
+  evidence: string;
+  file: string;
+}
+
+const narrativeUnits = (directory: string): NarrativeUnit[] =>
+  files(directory).flatMap((file) => {
+    const source = fs.readFileSync(file, "utf8");
+    return [
+      ...source.matchAll(
+        /^(#{2,4})[ \t]+.+\{#([^}]+)\}[ \t]*\r?\n\r?\n<!--\r?\n([\s\S]*?)\r?\n-->/gmu,
+      ),
+    ].map((match) => ({
+      anchor: match[2]!,
+      depth: match[1]!.length as 2 | 3 | 4,
+      evidence: match[3]!,
+      file,
+    }));
+  });
+
+const relativeUnitFiles = (directory: string): string[] =>
+  files(directory)
+    .filter((file) => path.basename(file) !== "index.md")
+    .map((file) => path.relative(directory, file).replaceAll(path.sep, "/"));
+
+const evidenceTargets = (unit: NarrativeUnit, layer: string): string[] =>
+  [
+    ...unit.evidence.matchAll(
+      new RegExp(`^@evidence (${layer}/[^\\s]+)`, "gmu"),
+    ),
+  ].map((match) => match[1]!);
+
+const legacyPath = (directory: string): string | null => {
+  const entries = fs.readdirSync(directory, {
+    encoding: "utf8",
+    recursive: true,
+  });
+  for (const file of entries.sort((left, right) => left.localeCompare(right))) {
+    const relative = String(file);
+    if (!/\.(?:json|md|ts)$/u.test(relative)) continue;
+    const absolute = path.join(directory, relative);
+    if (!fs.statSync(absolute).isFile()) continue;
+    if (
+      /\b(?:storylines|scenarios|script)\//u.test(
+        fs.readFileSync(absolute, "utf8"),
+      )
+    )
+      return relative;
+  }
+  return null;
+};
+
+const canonicalNarrativeTopology = (
+  fixture: string,
+): Record<string, () => boolean> => {
+  const treatments = path.join(fixture, "treatments");
+  const scripts = path.join(fixture, "scripts");
+  const screenplays = path.join(fixture, "screenplays");
+  const treatmentUnits = narrativeUnits(treatments);
+  const scriptUnits = narrativeUnits(scripts);
+  const screenplayUnits = narrativeUnits(screenplays);
+  const treatmentTargets = new Set(
+    treatmentUnits.map(
+      (unit) => `treatments/${path.basename(unit.file)}#${unit.anchor}`,
+    ),
+  );
+  const expectedUnitFiles = ["001-cue/001-cue.md", "002-answer/001-answer.md"];
+  const coveredAtEveryDepth = (units: NarrativeUnit[]): boolean =>
+    ([2, 3, 4] as const).every((depth) => {
+      const covered = new Set(
+        units
+          .filter((unit) => unit.depth === depth)
+          .flatMap((unit) => evidenceTargets(unit, "treatments")),
+      );
+      return [...treatmentTargets].every((target) => covered.has(target));
+    });
+  const directTreatmentCoverage = (units: NarrativeUnit[]): boolean =>
+    units.every((unit) => evidenceTargets(unit, "treatments").length > 0);
+  const exactScreenplayLineage = screenplayUnits.every((unit) => {
+    const relative = path
+      .relative(screenplays, unit.file)
+      .replaceAll(path.sep, "/");
+    const expected = `scripts/${relative}#${unit.anchor}`;
+    const parents = evidenceTargets(unit, "scripts");
+    return parents.length === 1 && parents[0] === expected;
+  });
+  const splitCounts = new Map<string, number>();
+  for (const unit of scriptUnits.filter((candidate) => candidate.depth === 4))
+    for (const target of evidenceTargets(unit, "treatments"))
+      splitCounts.set(target, (splitCounts.get(target) ?? 0) + 1);
+
+  return {
+    "treatments are flat H2-only event files": () =>
+      relativeUnitFiles(treatments).every((file) => !file.includes("/")) &&
+      treatmentUnits.length === 2 &&
+      treatmentUnits.every((unit) => unit.depth === 2),
+    "scripts use the grouped delivery partition": () =>
+      JSON.stringify(relativeUnitFiles(scripts)) ===
+        JSON.stringify(expectedUnitFiles) &&
+      fs.existsSync(path.join(scripts, "001-cue/index.md")) &&
+      fs.existsSync(path.join(scripts, "002-answer/index.md")),
+    "screenplays mirror script files and identities exactly": () =>
+      JSON.stringify(relativeUnitFiles(screenplays)) ===
+        JSON.stringify(expectedUnitFiles) &&
+      scriptUnits.map(({ anchor, depth }) => `${depth}:${anchor}`).join("|") ===
+        screenplayUnits
+          .map(({ anchor, depth }) => `${depth}:${anchor}`)
+          .join("|") &&
+      exactScreenplayLineage,
+    "scripts cover every treatment directly at every depth": () =>
+      directTreatmentCoverage(scriptUnits) && coveredAtEveryDepth(scriptUnits),
+    "screenplays cover every treatment directly at every depth": () =>
+      directTreatmentCoverage(screenplayUnits) &&
+      coveredAtEveryDepth(screenplayUnits),
+    "one treatment event spans multiple script units": () =>
+      [...splitCounts.values()].some((count) => count > 1),
+  };
+};
+
 /** Preserve the primary failure if removal of its disposable project fails too. */
 const preserveFixtureCleanup = (
   failure: FixtureFailure | undefined,
@@ -151,21 +274,22 @@ const preserveFixtureCleanup = (
  *
  * Discovery and source populations are deliberately outside this focused
  * regression: the repository fixture predates the current flat contract ledger
- * and source-directory topology. The explicit 17-name inventory prevents that
+ * and source-directory topology. The explicit 15-name inventory prevents that
  * isolation from becoming a silent hand-built graph or a claim filter that can
  * drop a file-parent, foundation, lineage, principle, or obligation claim.
  *
  * Scenarios:
  *
- * 1. The exact 17 current authored claim objects lint the pinned 49 H2, 6 H3,
- *    and 12 H4 hosts while every file preamble remains free of principle
+ * 1. The exact 15 current authored claim objects lint the pinned 49 H2, 4 H3,
+ *    and 8 H4 hosts while every file preamble remains free of principle
  *    declarations and review companions.
  * 2. Removing one real `machine-default` principle answer from a settings H2
  *    makes the same graph fail and name the missing principle target.
  */
 export const test_evidence_completed_film_authored_population = (): void => {
   const root = path.resolve(__dirname, "../../../..");
-  const fixture = path.join(root, "test/fixtures/completed-film/docs");
+  const completedFilm = path.join(root, "test/fixtures/completed-film");
+  const fixture = path.join(completedFilm, "docs");
   const cache = path.join(root, "test/node_modules/.cache");
   fs.mkdirSync(cache, { recursive: true });
   const temporary = fs.mkdtempSync(
@@ -196,15 +320,42 @@ export const test_evidence_completed_film_authored_population = (): void => {
 
     TestValidator.equals(
       "the focused regression names every authored claim",
-      namedFacts([["17 names", () => AUTHORED_CLAIM_NAMES.length === 17]]),
+      namedFacts([["15 names", () => AUTHORED_CLAIM_NAMES.length === 15]]),
       {
-        "17 names": true,
+        "15 names": true,
       },
     );
     TestValidator.equals(
       "the completed fixture authored host population is pinned",
       headingCounts(fixture),
-      { h2: 49, h3: 6, h4: 12 },
+      { h2: 49, h3: 4, h4: 8 },
+    );
+    TestValidator.equals(
+      "the completed fixture uses the canonical narrative ladder",
+      namedFacts(Object.entries(canonicalNarrativeTopology(fixture))),
+      {
+        "treatments are flat H2-only event files": true,
+        "scripts use the grouped delivery partition": true,
+        "screenplays mirror script files and identities exactly": true,
+        "scripts cover every treatment directly at every depth": true,
+        "screenplays cover every treatment directly at every depth": true,
+        "one treatment event spans multiple script units": true,
+      },
+    );
+    TestValidator.equals(
+      "the completed fixture carries no active legacy narrative path",
+      {
+        reference: legacyPath(completedFilm),
+        scenarioDirectory: fs.existsSync(path.join(fixture, "scenarios")),
+        scriptDirectory: fs.existsSync(path.join(fixture, "script")),
+        storylineDirectory: fs.existsSync(path.join(fixture, "storylines")),
+      },
+      {
+        reference: null,
+        scenarioDirectory: false,
+        scriptDirectory: false,
+        storylineDirectory: false,
+      },
     );
     TestValidator.equals(
       "file preambles carry no principle declaration or review companion",

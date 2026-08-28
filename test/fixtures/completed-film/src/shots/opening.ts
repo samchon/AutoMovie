@@ -367,9 +367,9 @@ const buildCue = (
 /**
  * Opening source proves a neutral-to-raised transition.
  *
- * @evidence script/001-cue.md#scn-001 Realizes SCN-001's local six-second
+ * @evidence screenplays/001-cue/001-cue.md#scn-001 Realizes SCN-001's local six-second
  *   raised-hand, ordered-advance, bounded-haze, and terminal-hold image.
- * @evidenceReview script/001-cue.md#scn-001 #5501922 Read script/001-cue.md#scn-001 and opening in src/shots/opening.ts; confirmed this citation after checking the claim that realizes SCN-001's local six-second raised-hand, ordered-advance, constant bounded-haze, and terminal-hold image while leaving its caption to film source.
+ * @evidenceReview screenplays/001-cue/001-cue.md#scn-001 #5501922 Read screenplays/001-cue/001-cue.md#scn-001 and opening in src/shots/opening.ts; confirmed this citation after checking the claim that realizes SCN-001's local six-second raised-hand, ordered-advance, constant bounded-haze, and terminal-hold image while leaving its caption to film source.
  * @evidence obligations/shots.md#contract-only-composition Composes reviewed
  *   subject, world, and motion owners without inventing a story or path.
  * @evidenceReview obligations/shots.md#contract-only-composition #c4ab445 Read obligations/shots.md#contract-only-composition and opening in src/shots/opening.ts; confirmed this citation after checking the claim that composes only the local visual portion from reviewed subject, world, and motion owners and leaves captions and edit transitions to film source.
@@ -394,9 +394,9 @@ export const opening = defineShot("opening", {
 /**
  * Answer source begins from the raised state established by the first shot.
  *
- * @evidence script/002-answer.md#scn-002 Realizes SCN-002's local six-second
+ * @evidence screenplays/002-answer/001-answer.md#scn-002 Realizes SCN-002's local six-second
  *   raised-hand hold, translated-formation hold, and shut-gate state.
- * @evidenceReview script/002-answer.md#scn-002 #98196e8 Read script/002-answer.md#scn-002 and answer in src/shots/opening.ts; confirmed this citation after checking the claim that realizes SCN-002's local six-second raised-hand hold, translated-formation hold, and shut-gate state.
+ * @evidenceReview screenplays/002-answer/001-answer.md#scn-002 #98196e8 Read screenplays/002-answer/001-answer.md#scn-002 and answer in src/shots/opening.ts; confirmed this citation after checking the claim that realizes SCN-002's local six-second raised-hand hold, translated-formation hold, and shut-gate state.
  * @evidence obligations/shots.md#contract-only-composition Reuses the reviewed
  *   cue, formation hold, gate, and plaza without inventing a new event.
  * @evidenceReview obligations/shots.md#contract-only-composition #c4ab445 Read obligations/shots.md#contract-only-composition and answer in src/shots/opening.ts; confirmed this citation after checking the claim that reuses the reviewed cue, formation hold, gate, and plaza for one local image without inventing an event or edit.
@@ -429,9 +429,9 @@ export const answer = defineShot("answer", {
  * authored, because which pass proves a claim, and what "proved" looks like in
  * it, is a judgement no contract field contains.
  *
- * @evidence script/001-cue.md#scn-001 Verifies the opening scene against its
+ * @evidence screenplays/001-cue/001-cue.md#scn-001 Verifies the opening scene against its
  *   own declared beauty, effect-mask, and pose observations.
- * @evidenceReview script/001-cue.md#scn-001 #5501922 Read script/001-cue.md#scn-001 and openingAcceptance in src/shots/opening.ts; confirmed this citation after checking the claim that verifies the opening scene's local visual portion against its declared beauty, effect-mask, and pose observations while caption verification remains a film deliverable concern.
+ * @evidenceReview screenplays/001-cue/001-cue.md#scn-001 #5501922 Read screenplays/001-cue/001-cue.md#scn-001 and openingAcceptance in src/shots/opening.ts; confirmed this citation after checking the claim that verifies the opening scene's local visual portion against its declared beauty, effect-mask, and pose observations while caption verification remains a film deliverable concern.
  * @evidence obligations/shots.md#acceptance-travels-with-delivery Places the
  *   opening beauty, haze-mask, and raised-arm pose checks beside their shot.
  * @evidenceReview obligations/shots.md#acceptance-travels-with-delivery #2e2ca50 Read obligations/shots.md#acceptance-travels-with-delivery and openingAcceptance in src/shots/opening.ts; confirmed that the opening beauty, bounded-haze mask, and raised-arm pose checks each name their owning review frame and falsifying expectation beside the shot.
@@ -505,9 +505,9 @@ export const openingAcceptance: IAutoMovieAcceptanceScenario[] = [
  * fact: its own event realization measures the current shot's source state
  * without pretending an off-screen arm appears in the gate image.
  *
- * @evidence script/002-answer.md#scn-002 Verifies the answering scene against
+ * @evidence screenplays/002-answer/001-answer.md#scn-002 Verifies the answering scene against
  *   its own declared gate images and compiled held-cue observation.
- * @evidenceReview script/002-answer.md#scn-002 #98196e8 Read script/002-answer.md#scn-002 and answerAcceptance in src/shots/opening.ts; confirmed this citation after checking the claim that verifies the answering scene against its own declared gate beauty and mask images and compiled held-cue observation.
+ * @evidenceReview screenplays/002-answer/001-answer.md#scn-002 #98196e8 Read screenplays/002-answer/001-answer.md#scn-002 and answerAcceptance in src/shots/opening.ts; confirmed this citation after checking the claim that verifies the answering scene against its own declared gate beauty and mask images and compiled held-cue observation.
  * @evidence obligations/shots.md#acceptance-travels-with-delivery Places the
  *   answer beauty, held-cue event, and shut-gate mask checks beside their shot.
  * @evidenceReview obligations/shots.md#acceptance-travels-with-delivery #2e2ca50 Read obligations/shots.md#acceptance-travels-with-delivery and answerAcceptance in src/shots/opening.ts; confirmed that the answer beauty, compiled held-cue event, and shut-gate mask checks each name their owning sample and falsifying expectation beside the shot.

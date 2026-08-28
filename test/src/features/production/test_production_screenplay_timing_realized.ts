@@ -55,7 +55,13 @@ const timing = (
 export const test_production_screenplay_timing_realized = (): void => {
   const fixture = productionFixture();
   try {
-    const scene = path.join(fixture.root, "docs", "script", "001-cue.md");
+    const scene = path.join(
+      fixture.root,
+      "docs",
+      "screenplays",
+      "001-cue",
+      "001-cue.md",
+    );
     const authored = fs.readFileSync(scene, "utf8");
     const compiler = new AutoMovieProductionCompiler(
       AutoMovieProductionProject.open(fixture.root),
@@ -134,7 +140,7 @@ export const test_production_screenplay_timing_realized = (): void => {
         ],
         [
           "theRefusalAddressesTheDocument",
-          () => delivering[0]!.path === "docs/script/001-cue.md",
+          () => delivering[0]!.path === "docs/screenplays/001-cue/001-cue.md",
         ],
         [
           "aSceneIdIsNotADuration",
