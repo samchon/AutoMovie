@@ -206,6 +206,16 @@ try {
     }),
     first,
   );
+  const modelSources = path.join(project, "src", "models");
+  const inactiveSources = path.join(project, "inactive-models");
+  fs.renameSync(modelSources, inactiveSources);
+  const withoutSource = readAutoMovieProductionEvidence({
+    root: project,
+    productionEvidence: { ...configuration, modelSources: "disabled" },
+  });
+  fs.renameSync(inactiveSources, modelSources);
+  assert.equal(withoutSource.designBranches[0]!.sourceBinding, null);
+  assert.equal(withoutSource.designOwners[0]!.sourceBinding, null);
 
   const before = new Map(
     first.designOwners[0]!.units.map((unit) => [unit.anchor, unit.digest]),
@@ -233,6 +243,14 @@ try {
         productionEvidence: configuration,
       }),
     /belongs to another project root/u,
+  );
+  write(project, "package.json", JSON.stringify({ name: "reader-library" }));
+  assert.equal(
+    readAutoMovieProductionEvidence({
+      root: project,
+      productionEvidence: configuration,
+    }).description,
+    "",
   );
   write(project, "package.json", JSON.stringify({ description: 1 }));
   assert.throws(

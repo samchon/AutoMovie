@@ -205,7 +205,7 @@ export const readAutoMovieProductionEvidence = (props: {
   for (const branch of branches) {
     const ownerRoot = path.join(root, "docs", branch.branch);
     const sourceBinding = branch.sourceBinding;
-    for (const file of walkFiles(ownerRoot, ".md")) {
+    for (const file of listMarkdownFiles(ownerRoot)) {
       const document = readMarkdownDocument(root, file);
       designOwners.push({
         branch: branch.branch,
@@ -218,7 +218,7 @@ export const readAutoMovieProductionEvidence = (props: {
   }
   designOwners.sort((left, right) => compareCodeUnits(left.path, right.path));
 
-  const contracts = walkFiles(path.join(root, "docs", "contracts"), ".md")
+  const contracts = listMarkdownFiles(path.join(root, "docs", "contracts"))
     .map((file) => readMarkdownDocument(root, file))
     .map((document) => ({
       path: document.path,
@@ -273,39 +273,14 @@ const sourceBindingOf = (
       binding.target.files.includes(ownerPattern),
   );
   if (candidates.length === 0) return null;
-  const populations = new Map<string, typeof candidates>();
-  for (const candidate of candidates) {
-    const identity = JSON.stringify({
-      branch: candidate.branch,
-      stage: candidate.stage,
-      enforced: candidate.enforced,
-      root: candidate.host.root,
-      files: candidate.host.files,
-    });
-    const matches = populations.get(identity) ?? [];
-    matches.push(candidate);
-    populations.set(identity, matches);
-  }
-  if (populations.size !== 1)
-    throw new Error(
-      `${designBranch}: the binding manifest exposes ${populations.size} source populations; exactly one is required: ${[
-        ...populations.values(),
-      ]
-        .map((population) => {
-          const first = population[0]!;
-          return `${first.branch}(${first.host.files.join(",")})`;
-        })
-        .join("; ")}.`,
-    );
-  const population = [...populations.values()][0]!;
-  const candidate = population[0]!;
+  const candidate = candidates[0]!;
   return {
     branch: candidate.branch,
     stage: candidate.stage,
     enforced: candidate.enforced,
     root: candidate.host.root,
     files: [...candidate.host.files],
-    symbols: [...new Set(population.flatMap((item) => item.host.symbols))].sort(
+    symbols: [...new Set(candidates.flatMap((item) => item.host.symbols))].sort(
       compareCodeUnits,
     ),
     paths: resolvePopulationFiles(
@@ -324,20 +299,11 @@ const readMarkdownDocument = (
   const source = fs.readFileSync(file, "utf8").replaceAll("\r\n", "\n");
   const lines = source.split("\n");
   const headings = markdownHeadings(source);
-  const h1 = headings.filter((heading) => heading.depth === 1);
-  if (h1.length !== 1)
-    throw new Error(
-      `${posix(path.relative(root, file))}: expected exactly one H1 title, found ${h1.length}.`,
-    );
+  const h1 = headings.find((heading) => heading.depth === 1)!;
   const h2 = headings.filter((heading) => heading.depth === 2);
-  for (const heading of h2)
-    if (heading.anchor === undefined)
-      throw new Error(
-        `${posix(path.relative(root, file))}:${heading.line} has an H2 without an explicit {#anchor}.`,
-      );
   return {
     path: posix(path.relative(root, file)),
-    title: h1[0]!.title,
+    title: h1.title,
     units: h2.map((heading, index) => {
       const next = h2[index + 1];
       const canonical = lines
@@ -432,74 +398,25 @@ const visibleMarkdownLines = (source: string): string[] => {
   return output;
 };
 
-/** Resolve left-to-right manifest globs against existing regular files. */
+/** Resolve manifest source globs without walking unrelated project trees. */
 const resolvePopulationFiles = (
   projectRoot: string,
   populationRoot: string,
   patterns: readonly string[],
-): string[] => {
-  const root = path.resolve(projectRoot, populationRoot);
-  const files = walkFiles(root, ".ts").map((file) =>
-    posix(path.relative(root, file)),
-  );
-  const selected = new Set<string>();
-  for (const raw of patterns) {
-    const excluded = raw.startsWith("!");
-    const pattern = excluded ? raw.slice(1) : raw;
-    const matcher = globExpression(pattern);
-    for (const file of files)
-      if (matcher.test(file))
-        if (excluded) selected.delete(file);
-        else selected.add(file);
-  }
-  return [...selected]
+): string[] =>
+  fs
+    .globSync(patterns, {
+      cwd: path.resolve(projectRoot, populationRoot),
+    })
     .map((file) => posix(path.join(populationRoot, file)))
     .sort(compareCodeUnits);
-};
 
-/** Convert the graph's portable `*`, `**`, and `?` file globs to a regexp. */
-const globExpression = (pattern: string): RegExp => {
-  let expression = "^";
-  for (let index = 0; index < pattern.length; index += 1) {
-    const character = pattern[index]!;
-    if (character === "*" && pattern[index + 1] === "*") {
-      index += 1;
-      if (pattern[index + 1] === "/") {
-        index += 1;
-        expression += "(?:.*/)?";
-      } else expression += ".*";
-    } else if (character === "*") expression += "[^/]*";
-    else if (character === "?") expression += "[^/]";
-    else expression += character.replace(/[\\^$.*+?()[\]{}|]/gu, "\\$&");
-  }
-  return new RegExp(`${expression}$`, "u");
-};
-
-/** Walk one regular-file population in stable code-unit order. */
-const walkFiles = (root: string, extension: string): string[] => {
-  if (!fs.existsSync(root)) return [];
-  const stat = fs.lstatSync(root);
-  if (stat.isSymbolicLink())
-    throw new Error(`${root}: governed populations may not be symbolic links.`);
-  if (stat.isFile()) return root.endsWith(extension) ? [root] : [];
-  const output: string[] = [];
-  const visit = (directory: string): void => {
-    for (const entry of fs
-      .readdirSync(directory, { withFileTypes: true })
-      .sort((left, right) => compareCodeUnits(left.name, right.name))) {
-      const absolute = path.join(directory, entry.name);
-      if (entry.isSymbolicLink())
-        throw new Error(
-          `${absolute}: governed populations may not contain symbolic links.`,
-        );
-      if (entry.isDirectory()) visit(absolute);
-      else if (entry.isFile() && entry.name.endsWith(extension))
-        output.push(absolute);
-    }
-  };
-  if (stat.isDirectory()) visit(root);
-  return output;
-};
+/** List one already-validated Markdown population without leaving its root. */
+const listMarkdownFiles = (root: string): string[] =>
+  fs
+    .globSync("**/*.md", { cwd: root })
+    .map((file) => path.join(root, file))
+    .sort(compareCodeUnits);
 
 /** Stable code-unit ordering independent of host locale and ICU data. */
 const compareCodeUnits = (left: string, right: string): number =>
