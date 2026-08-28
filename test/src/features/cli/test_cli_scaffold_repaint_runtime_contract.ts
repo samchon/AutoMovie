@@ -428,9 +428,10 @@ const configureGeneratedRepaint = async (
       })),
   ).flat();
   const sourceManifest: IAutoMovieRenderBundleManifest = {
-    version: 3,
+    version: 4,
     target: { kind: "shot", id: "opening" },
     compileFingerprint: generated.inputFingerprint,
+    dialogueRuntimeIdentity: null,
     rendererIdentity: testRendererIdentity(),
     targetFingerprint: digestAutoMovieBytes(
       Buffer.from("generated-repaint-opening-target"),

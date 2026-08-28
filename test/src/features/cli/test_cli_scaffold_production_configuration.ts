@@ -331,7 +331,7 @@ export const test_cli_scaffold_production_configuration =
       ].every((message) => typeof message === "string" && message.length > 0),
     );
     const receipt: IAutoMovieProductionTtsReceipt = {
-      version: 4,
+      version: 5,
       line: "line-1",
       cacheKey: "sha256:cache",
       model: "onnx-community/Kokoro-82M-v1.0-ONNX",
@@ -355,8 +355,8 @@ export const test_cli_scaffold_production_configuration =
       receiptWithoutIt;
     const staleVersionReceipt: IAutoMovieProductionTtsReceipt = {
       ...receipt,
-      // @ts-expect-error Adding provenance changed the public receipt schema.
-      version: 3,
+      // @ts-expect-error Schema v5 invalidates underpaid v4 cache receipts.
+      version: 4,
     };
     void missingProvenanceReceipt;
     void staleVersionReceipt;
