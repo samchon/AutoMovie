@@ -207,7 +207,8 @@ export const test_cli_scaffold_design_derivation = (): void => {
           completed["src/instances/chorus.ts"] === undefined &&
           completed["src/shots/opening.ts"]?.includes(
             'from "../models/chorus"',
-          ) === true,
+          ) === true &&
+          completedEmitter.includes('"formations/chorus.json"'),
       ],
       [
         "completed fixture reads its unrendered records",
