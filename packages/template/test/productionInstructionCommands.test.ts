@@ -63,6 +63,25 @@ async function main(): Promise<void> {
       "docs/models/chair.md",
       "# Chair\n\n## Frame {#frame}\n\nOne exact frame.\n",
     );
+    write(
+      project,
+      "docs/contracts/profile.md",
+      [
+        "<!-- @evidence discovery/core/common.md#shared-local-boundary This production retained one exact chair-profile rule. -->",
+        "# Chair profile contract",
+        "",
+        "This target governs the exact chair profile selected by this production.",
+        "",
+        "## Profile {#profile}",
+        "",
+        "The chair keeps its reviewed profile.",
+        "",
+        "Review question: does the chair preserve its reviewed profile?",
+        "",
+        "Sources: production decision recorded by this project.",
+        "",
+      ].join("\n"),
+    );
     write(project, "src/models/chair.ts", "export class Chair {}\n");
     write(project, ".agents/skills/stale.md", "stale\n");
     write(project, "AGENTS.md", "stale router\n");
@@ -74,6 +93,25 @@ async function main(): Promise<void> {
       settings: "review",
       models: "review",
       modelSources: "review",
+      claims: [
+        {
+          name: "models answer the chair profile contract",
+          type: "markdown",
+          root: "docs",
+          files: ["models/**/*.md"],
+          symbol: "h2",
+          disabled: false,
+          reference: {
+            type: "markdown",
+            root: "docs",
+            files: ["contracts/profile.md"],
+            symbol: "h2",
+            checklist: true,
+            noEvidenceExclude: true,
+            requireReview: true,
+          },
+        },
+      ],
     };
     const trackedBefore = snapshot(project, ["docs", "src", "package.json"]);
     const written = writeAutoMovieProductionInstructions({
@@ -93,6 +131,10 @@ async function main(): Promise<void> {
     const router = fs.readFileSync(path.join(project, "AGENTS.md"), "utf8");
     assert.match(router, /This is a library/u);
     assert.match(router, /`models` \[Chair\]\(docs\/models\/chair\.md\)/u);
+    assert.match(
+      router,
+      /\[Profile\]\(docs\/contracts\/profile\.md#profile\)/u,
+    );
     assert.doesNotMatch(router, /settings -> treatments/u);
     assert.equal(
       fs.existsSync(path.join(project, ".agents", "skills", "stale.md")),
