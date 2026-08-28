@@ -5,6 +5,7 @@ import { PNG } from "pngjs";
 import config from "../automovie.config";
 import {
   inspectCaptureGraphics,
+  inspectCurrentCaptureRuntimeClosure,
   launchCaptureBrowser,
 } from "./capture-browser";
 import { settleCaptureExecutableTouch } from "./captureExecutableSnapshot";
@@ -43,14 +44,22 @@ const preserveCleanupFailure = async (
 const SETTLE_ATTEMPTS = 4;
 const SETTLE_WAIT_MS = 2_000;
 
+const closure = inspectCurrentCaptureRuntimeClosure({
+  projectRoot: process.cwd(),
+  config: config.capture.browser,
+});
+if (closure.status === "not-ready") throw new Error(closure.correction);
+closure.assertCurrent();
 const settled = await settleCaptureExecutableTouch({
-  acquire: () => launchCaptureBrowser(process.cwd(), config.capture.browser),
+  acquire: () =>
+    launchCaptureBrowser(process.cwd(), config.capture.browser, closure),
   attempts: SETTLE_ATTEMPTS,
   waitMs: SETTLE_WAIT_MS,
 });
 const session = settled.value;
 let browserFailure: CaptureDoctorFailure | undefined;
 try {
+  session.assertRuntimeCurrent();
   const page = await session.browser.newPage({
     viewport: { width: 16, height: 16 },
     deviceScaleFactor: session.runtime.mode.deviceScaleFactor,
@@ -62,6 +71,7 @@ try {
     );
     const graphics = await inspectCaptureGraphics(page);
     const bytes = await page.locator("#view").screenshot({ type: "png" });
+    session.assertRuntimeCurrent();
     const png = PNG.sync.read(bytes);
     if (png.width !== 16 || png.height !== 16)
       throw new Error(

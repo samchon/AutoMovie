@@ -5,12 +5,13 @@ import type {
 } from "@automovie/interface";
 import path from "node:path";
 import type { Page } from "playwright";
-import { createServer } from "vite";
+import type { ViteDevServer } from "vite";
 
 import config from "../automovie.config";
 import {
   type IAutoMovieCaptureBrowserSession,
   inspectCaptureGraphics,
+  inspectCurrentCaptureRuntimeClosure,
   launchCaptureBrowser,
 } from "./capture-browser";
 import {
@@ -25,9 +26,10 @@ import {
 } from "./productionRuntimeState";
 
 interface CaptureSession {
-  server: Awaited<ReturnType<typeof createServer>>;
+  server: ViteDevServer;
   browser: IAutoMovieCaptureBrowserSession["browser"];
   runtime: IAutoMovieCaptureBrowserSession["runtime"];
+  assertRuntimeCurrent: () => void;
   origin: string;
   pages: Map<string, Promise<CapturePage>>;
 }
@@ -138,6 +140,14 @@ const startSession = async (
   productionId: string,
 ): Promise<CaptureSession> => {
   const runtimeProvider = productionFrameViewerRuntime(state);
+  const closure = inspectCurrentCaptureRuntimeClosure({
+    projectRoot,
+    config: config.capture.browser,
+  });
+  if (closure.status === "not-ready") throw new Error(closure.correction);
+  closure.assertCurrent();
+  const { createServer } = await import("vite");
+  closure.assertCurrent();
   const server = await createServer({
     root: projectRoot,
     configFile: false,
@@ -158,11 +168,14 @@ const startSession = async (
     const launched = await launchCaptureBrowser(
       projectRoot,
       config.capture.browser,
+      closure,
     );
+    launched.assertRuntimeCurrent();
     return {
       server,
       browser: launched.browser,
       runtime: launched.runtime,
+      assertRuntimeCurrent: launched.assertRuntimeCurrent,
       origin: `http://${config.viewer.host}:${address.port}`,
       pages: new Map(),
     };
@@ -244,6 +257,7 @@ const capturePage = (
   const existing = session.pages.get(key);
   if (existing !== undefined) return existing;
   const pending = (async (): Promise<CapturePage> => {
+    session.assertRuntimeCurrent();
     for (const [candidateKey, candidate] of session.pages)
       if (candidateKey !== key) {
         const parsed = JSON.parse(candidateKey) as {
@@ -299,6 +313,7 @@ const capturePage = (
       await page.locator("#status").evaluate((element) => {
         element.style.display = "none";
       });
+      session.assertRuntimeCurrent();
       return {
         page,
         diagnostics,
@@ -384,6 +399,7 @@ const captureProductionFrame = async (
   await previous;
   const captureStarted = process.hrtime.bigint();
   try {
+    session.assertRuntimeCurrent();
     let renderEvidence: Pick<
       Awaited<ReturnType<AutoMovieProductionFrameCapture>>,
       "maskSidecar" | "observation"
@@ -438,6 +454,7 @@ const captureProductionFrame = async (
     const bytes = await resident.page
       .locator("#view")
       .screenshot({ type: "png" });
+    session.assertRuntimeCurrent();
     ++state.metrics.captures;
     return {
       bytes,
