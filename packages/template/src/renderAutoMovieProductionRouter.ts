@@ -33,7 +33,7 @@ export const renderAutoMovieProductionRouter = (
         binding.target.type === "contract" ? [binding.target.path] : [],
       ),
     ),
-  ].sort();
+  ].sort((left, right) => Number(left > right) - Number(left < right));
   const commonContractLines =
     sharedContracts.length === 0
       ? [
