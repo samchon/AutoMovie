@@ -17,6 +17,7 @@ import {
   IAutoMovieProductionRenderManifest,
   IAutoMovieProductionRenderReceipt,
   IAutoMovieRenderBundleManifest,
+  IAutoMovieRepaintExecutionPolicy,
   IAutoMovieRepaintReceipt,
   IAutoMovieRepaintRuntimeIdentity,
   IAutoMovieReviewTarget,
@@ -2451,6 +2452,65 @@ export class AutoMovieProductionProject {
       throw new Error("Repaint attempt record is malformed.");
   }
 
+  /** Bind a succeeded candidate's complete attempt ledger to its policy. */
+  private assertRepaintAttemptLedgerPolicy(
+    attempts: readonly IAutoMovieRepaintAttemptRecord[],
+    policy: IAutoMovieRepaintExecutionPolicy,
+  ): void {
+    const firstStartedAt = new Date(
+      attempts[0]?.startedAt ?? Number.NaN,
+    ).getTime();
+    let spent = 0;
+    let previous: IAutoMovieRepaintAttemptRecord | null = null;
+    if (
+      attempts.length === 0 ||
+      attempts.length > policy.maximumAttempts ||
+      Number.isNaN(firstStartedAt)
+    )
+      throw new Error(
+        "Stored repaint attempt ledger exceeds its immutable execution policy.",
+      );
+    for (const [index, attempt] of attempts.entries()) {
+      const policyMarkedRetryable = policy.retryableFailures.some(
+        (failureClass) => failureClass === attempt.failure?.class,
+      );
+      if (previous !== null) {
+        const backoff = Math.min(...policy.backoffMs.slice(index - 1, index));
+        if (
+          spent >= policy.maximumCostUnits ||
+          new Date(attempt.startedAt).getTime() <
+            new Date(previous.completedAt).getTime() + backoff
+        )
+          throw new Error(
+            "Stored repaint attempt ledger exceeds its immutable execution policy.",
+          );
+      }
+      spent += attempt.costUnits;
+      if (
+        spent > policy.maximumCostUnits ||
+        (attempt.failure !== null &&
+          attempt.failure.retryable !==
+            (attempt.status === "failed" && policyMarkedRetryable))
+      )
+        throw new Error(
+          "Stored repaint attempt ledger exceeds its immutable execution policy.",
+        );
+      previous = attempt;
+    }
+    const terminal = attempts.at(-1);
+    if (
+      terminal?.status !== "succeeded" ||
+      new Date(terminal.completedAt).getTime() -
+        new Date(terminal.startedAt).getTime() >=
+        policy.attemptTimeoutMs ||
+      new Date(terminal.completedAt).getTime() - firstStartedAt >=
+        policy.maximumElapsedMs
+    )
+      throw new Error(
+        "Stored repaint attempt ledger exceeds its immutable execution policy.",
+      );
+  }
+
   /**
    * Revalidate a stored repaint receipt against its terminal attempt and every
    * current dependency.
@@ -2566,7 +2626,8 @@ export class AutoMovieProductionProject {
       evidence: receipt.evidence!,
       references: receipt.references,
     });
-    const attempt = this.repaintRequestAttempts(receipt.requestId!).find(
+    const attempts = this.repaintRequestAttempts(receipt.requestId!);
+    const attempt = attempts.find(
       (candidate) => candidate.attemptId === receipt.attemptId,
     );
     if (
@@ -2612,6 +2673,7 @@ export class AutoMovieProductionProject {
       throw new Error(
         "Stored repaint receipt does not match its immutable succeeded terminal attempt.",
       );
+    this.assertRepaintAttemptLedgerPolicy(attempts, receipt.executionPolicy!);
     const expected = productionRepaintOutputPath({
       shot: receipt.shot,
       sourceRenderFingerprint: receipt.sourceRenderFingerprint,
