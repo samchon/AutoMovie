@@ -376,14 +376,19 @@ export const assertProductionRepaintSelection = (props: {
     throw new Error(
       "A repainted visual delivery requires an explicit visual.repaint generator and reviewed request for every compiled shot.",
     );
+  const missingReview = selected.requests.find(
+    (request) => request.selectionReview === null,
+  );
+  if (missingReview !== undefined)
+    throw new Error(
+      `Repainted delivery shot "${missingReview.shot}" requires a post-generation review bound to the selected candidate attempt id and output digest.`,
+    );
   const continuityMismatch = selected.requests.find((request) =>
     props.continuity === "film"
       ? request.evidence.continuity === null ||
-        request.selectionReview?.continuityReview === null ||
-        request.selectionReview === null
+        request.selectionReview!.continuityReview === null
       : request.evidence.continuity !== null ||
-        request.selectionReview === null ||
-        request.selectionReview.continuityReview !== null,
+        request.selectionReview!.continuityReview !== null,
   );
   if (continuityMismatch !== undefined)
     throw new Error(
