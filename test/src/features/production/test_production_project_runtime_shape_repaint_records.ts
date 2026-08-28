@@ -14,6 +14,7 @@ import {
   productionRepaintActiveReceiptPath,
   productionRepaintOutputPath,
   productionRepaintReceiptPath,
+  productionRepaintRequestFingerprint,
   productionRepaintStructuralControls,
   productionSourceRenderFingerprint,
 } from "@automovie/production";
@@ -176,6 +177,41 @@ const repaintAttempt = (
     bytes: 4,
   },
   ...override,
+});
+
+const succeededAttemptForReceipt = (
+  receipt: IAutoMovieRepaintReceipt,
+): IAutoMovieRepaintAttemptRecord => ({
+  version: 1,
+  productionId: receipt.productionId,
+  shot: receipt.shot,
+  requestId: receipt.requestId!,
+  attemptId: receipt.attemptId,
+  ordinal: 1,
+  requestFingerprint: productionRepaintRequestFingerprint({
+    shot: receipt.shot,
+    compileFingerprint: receipt.compileFingerprint,
+    sourceRenderFingerprint: receipt.sourceRenderFingerprint,
+    adapterIdentity: receipt.adapterIdentity,
+    generatorProvenance: receipt.generatorProvenance,
+    parameters: receipt.parameters,
+    executionPolicy: receipt.executionPolicy!,
+    evidence: receipt.evidence!,
+    references: receipt.references,
+  }),
+  compileFingerprint: receipt.compileFingerprint,
+  sourceRenderFingerprint: receipt.sourceRenderFingerprint,
+  adapterIdentity: receipt.adapterIdentity,
+  seed: receipt.parameters.seed,
+  startedAt: receipt.startedAt!,
+  completedAt: receipt.completedAt!,
+  status: "succeeded",
+  failure: null,
+  costUnits: receipt.costUnits!,
+  availableOutput: {
+    digest: receipt.output.digest,
+    bytes: receipt.output.bytes,
+  },
 });
 
 /**
@@ -1122,7 +1158,73 @@ export const test_production_project_runtime_shape_repaint_records =
           probe: probeProductionVideoMp4(outputBytes),
         },
       };
+      try {
+        project.commitRepaintRendition(validReceipt, outputBytes);
+        throw new Error(
+          "Repaint receipt without a terminal attempt unexpectedly committed.",
+        );
+      } catch (error) {
+        TestValidator.predicate(
+          "repaint receipt requires a resident succeeded terminal attempt",
+          error instanceof Error &&
+            error.message.includes("immutable succeeded terminal attempt"),
+        );
+      }
+      const validAttempt = succeededAttemptForReceipt(validReceipt);
+      project.commitRepaintAttempt(validAttempt);
       project.commitRepaintRendition(validReceipt, outputBytes);
+      const validAttemptPath = `renditions/attempts/${validAttempt.requestId}/${validAttempt.attemptId}.json`;
+      const expectAttemptBoundCandidateOmitted = (
+        label: string,
+        mutate: (attempt: IAutoMovieRepaintAttemptRecord) => void,
+      ): void => {
+        const candidate = structuredClone(validAttempt);
+        mutate(candidate);
+        writeTrackedJson(project, validAttemptPath, candidate);
+        TestValidator.equals(label, project.verifiedRepaintCandidates(), []);
+        writeTrackedJson(project, validAttemptPath, validAttempt);
+      };
+      for (const [label, mutate] of [
+        [
+          "candidate refuses a failed terminal attempt",
+          (attempt: IAutoMovieRepaintAttemptRecord): void => {
+            attempt.status = "failed";
+            attempt.failure = {
+              class: "provider-refusal",
+              message: "provider refused",
+              retryable: false,
+            };
+          },
+        ],
+        [
+          "candidate refuses a mismatched request fingerprint",
+          (attempt: IAutoMovieRepaintAttemptRecord): void => {
+            attempt.requestFingerprint = `sha256:${"a".repeat(64)}`;
+          },
+        ],
+        [
+          "candidate refuses mismatched attempt timing",
+          (attempt: IAutoMovieRepaintAttemptRecord): void => {
+            attempt.startedAt = "2026-08-28T11:59:59.000Z";
+          },
+        ],
+        [
+          "candidate refuses mismatched attempt cost",
+          (attempt: IAutoMovieRepaintAttemptRecord): void => {
+            attempt.costUnits += 1;
+          },
+        ],
+        [
+          "candidate refuses mismatched available output",
+          (attempt: IAutoMovieRepaintAttemptRecord): void => {
+            attempt.availableOutput = {
+              digest: `sha256:${"b".repeat(64)}`,
+              bytes: validReceipt.output.bytes,
+            };
+          },
+        ],
+      ] as const)
+        expectAttemptBoundCandidateOmitted(label, mutate);
       fs.writeFileSync(path.join(repaintDirectory, "ignored.txt"), "ignored");
       fs.writeFileSync(path.join(repaintDirectory, "broken.json"), "{broken");
       writeTrackedJson(project, "renditions/foreign.json", {
@@ -1325,6 +1427,7 @@ export const test_production_project_runtime_shape_repaint_records =
         completedAt: "2026-08-28T12:00:03.000Z",
         output: { ...validReceipt.output, path: laterOutputPath },
       };
+      project.commitRepaintAttempt(succeededAttemptForReceipt(laterReceipt));
       project.commitRepaintRendition(laterReceipt, outputBytes);
       expectSelectionRefusal(
         "reversal cannot move from an earlier candidate to a later candidate",
@@ -1631,8 +1734,15 @@ export const test_production_project_runtime_shape_repaint_records =
         candidate: IAutoMovieRepaintReceipt,
         message: string,
         bytes: Uint8Array = outputBytes,
+        bindAttempt: boolean = false,
       ): void => {
         try {
+          if (bindAttempt)
+            writeTrackedJson(
+              project,
+              validAttemptPath,
+              succeededAttemptForReceipt(candidate),
+            );
           project.commitRepaintRendition(candidate, bytes);
           throw new Error(`${label} unexpectedly committed.`);
         } catch (error) {
@@ -1640,6 +1750,9 @@ export const test_production_project_runtime_shape_repaint_records =
             label,
             error instanceof Error && error.message.includes(message),
           );
+        } finally {
+          if (bindAttempt)
+            writeTrackedJson(project, validAttemptPath, validAttempt);
         }
       };
       const generatedManifestFile = project.trackedStatePath(
@@ -1888,7 +2001,7 @@ export const test_production_project_runtime_shape_repaint_records =
       expectRefusal(
         "repaint output identity refuses another production",
         { ...validReceipt, productionId: "other-production" },
-        "output identity is invalid",
+        "immutable succeeded terminal attempt",
       );
       expectRefusal(
         "repaint output identity refuses a noncanonical path",
@@ -1922,6 +2035,8 @@ export const test_production_project_runtime_shape_repaint_records =
         "repaint output identity refuses a digest that differs from bytes",
         wrongDigestReceipt,
         "output identity is invalid",
+        outputBytes,
+        true,
       );
       expectRefusal(
         "repaint output identity refuses a byte-count mismatch",
@@ -1933,6 +2048,8 @@ export const test_production_project_runtime_shape_repaint_records =
           },
         },
         "output identity is invalid",
+        outputBytes,
+        true,
       );
       const validVideoProbe = validReceipt.output.probe;
       if (validVideoProbe.kind !== "video")
@@ -2017,6 +2134,7 @@ export const test_production_project_runtime_shape_repaint_records =
           receiptForBytes(mediaBytes),
           "media facts are stale",
           mediaBytes,
+          true,
         );
 
       const productionDesignFile = path.join(
