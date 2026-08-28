@@ -38,8 +38,7 @@ const installAuthoredEvidencePopulation = (
   if (
     lint === undefined ||
     lint.includes('from "./productionEvidence"') === false ||
-    lint.includes("createAutoMovieEvidenceConfig(productionEvidence)") ===
-      false
+    lint.includes("createAutoMovieEvidenceConfig(productionEvidence)") === false
   )
     throw new Error(
       "The generated consumer no longer shares one productionEvidence declaration between lint and runtime commands.",
@@ -680,10 +679,7 @@ export const test_cli_scaffold_repaint_runtime_contract =
         ["reroll", "--shot", "opening"],
       );
       fs.writeFileSync(configuredPath, configuredSource, "utf8");
-      const adapterPath = path.join(
-        fixture.root,
-        "scripts/repaintAdapter.ts",
-      );
+      const adapterPath = path.join(fixture.root, "scripts/repaintAdapter.ts");
       const defaultAdapterSource = fs.readFileSync(adapterPath, "utf8");
       const impossiblePolicyInvocation = path.join(
         fixture.root,
