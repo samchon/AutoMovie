@@ -84,6 +84,36 @@ This item owns production-specific selection. The common machine-default princip
 
 Sources: [Boston University on creating tension through concrete action](https://www.bu.edu/articles/2019/how-to-create-suspense/); [Purdue OWL on revealing character through specific action and speech](https://owl.purdue.edu/owl/subject_specific_writing/creative_writing/writers/fiction_writing_basics/characters_and_fiction_writing1/building_and_revealing_characters.html)
 
+## Parent differentiation {#parent-differentiation}
+
+Every narrative unit performs the work its own layer owns, and that work is legible against the units it inherits. A treatment unit turns settings constraints into a chosen narrative connection and its changed or accumulated effect. A script unit stages what its cited treatment units summarized through positions, objects, exchanges, timings, and reactions. A screenplay unit realizes what its script parent fixed through visible action, audience-facing text, dialogue, sound, silence, rhythm, implication, and aftereffect.
+
+Reproducing a parent's content, order, and wording with formatting or tense changes is not this layer's work. Neither is added volume carrying no execution or audiovisual decision the parent lacked. A unit that reads no more concretely than its parent has restated it rather than realized it.
+
+Review question: what layer-owned decision does this unit add that its actual parent units did not contain?
+
+This item asks what one narrative unit adds to the units it inherits. `principles/common.md#substantive-completion` asks whether the unit is a complete layer deliverable at all, `unit-identity` owns the declared parent relationship, and `obligations/common.md#proportionate-development` owns allocation across the complete population.
+
+When this principle fails, rewrite the unit from its parents rather than polishing the reproduced text. If the parents leave this layer nothing to add, repair the earliest owning layer and propagate the result downward.
+
+Sources: [Detailed Outline Control on moving creative burden upstream and controlling drafts through detailed outlines](https://aclanthology.org/2023.acl-long.190/); [Purdue OWL on the distinct functions of scene and summary](https://owl.purdue.edu/owl/resources/writing_tutors/tutoring_creative_writing_students/documents/working-with-creative-writing-students-09152025.pdf); [CONCOCT on over-summary and over-development as long-form pacing failures](https://aclanthology.org/2023.findings-emnlp.723/)
+
+## Drive to turn {#drive-to-turn}
+
+Every unit's change is produced by an identified agent acting from a desire, need, fear, value, limit, or contradiction that settings already defines for it. Identify the agent, the drive it acted from, and what the action cost: what it gave up, risked, spent, or lost by choosing this over the available alternative.
+
+A unit in which conditions change but no agent wanted anything is a report of events, not a narrative unit. Where a unit is deliberately observational, ritual, procedural, or driven by a non-human process, the drive belongs to whoever is served, exposed, or damaged by what the unit shows, and the cost is theirs. That party may be collective, anonymous, or offscreen; it may not be invented for the evidence tag.
+
+An agent may misunderstand what it wants, want incompatible things, or fail. The requirement is that its drive operates in this unit, not that the drive is admirable, conscious, or satisfied.
+
+Review question: whose settings-owned drive produces this unit's change, what action does it cause, and what does that choice cost?
+
+This item asks whether motive produces one unit's change and gives that change a cost. `obligations/subjects.md#drives-and-pressures` owns the settings population that defines subject drives, `character-continuity` owns consistency with what earlier units showed, and `audience-investment` owns what the unit leaves at stake for the audience.
+
+When this principle fails, rewrite the unit so its change follows from a defined drive. If no settings subject owns a drive this unit could act from, return to settings and define it before continuing.
+
+Sources: [Purdue OWL on character goals, motivation, and conflict](https://owl.purdue.edu/owl/subject_specific_writing/creative_writing/writers/fiction_writing_basics/writing_compelling_characters.html); [Palmer on fictional minds in social context](https://muse.jhu.edu/book/24307); [Oatley on emotion, goals, and identification in narrative](https://doi.org/10.1016/0304-422X%2894%29P4296-S)
+
 ## Unit identity {#unit-identity}
 
 Matching H2 sequences, H3 scenes, and H4 beats preserve one stable identity from treatment through script to screenplay. A refinement adds only the detail owned by its layer; it does not merge, split, reorder, rename, or silently replace its parent unit.
