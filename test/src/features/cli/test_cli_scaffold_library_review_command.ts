@@ -294,6 +294,7 @@ export const test_cli_scaffold_library_review_command = (): void => {
       root: fixture.root,
       productionEvidence: evidence,
     });
+    let planOutputCount = 0;
     const planResults = branches.map((branch) =>
       command.runLibraryReviewCommand({
         argv: [
@@ -311,6 +312,9 @@ export const test_cli_scaffold_library_review_command = (): void => {
         productionId: "fixture-film",
         evidence,
         read: readAutoMovieProductionEvidence,
+        output: () => {
+          planOutputCount += 1;
+        },
       }),
     );
     const project = AutoMovieProductionProject.open(fixture.root);
@@ -321,7 +325,6 @@ export const test_cli_scaffold_library_review_command = (): void => {
       scope: "source",
     });
     const negative = libraryDiagnostics({ root: fixture.root, authoring });
-
     for (const branch of branches) {
       const artifact =
         branch === "spaces"
@@ -356,6 +359,39 @@ export const test_cli_scaffold_library_review_command = (): void => {
       root: fixture.root,
       authoring: currentAuthoring,
     });
+    const paidMapPlanPath = path.join(
+      fixture.root,
+      "docs",
+      "maps",
+      "owner.review.json",
+    );
+    const paidMapPlan = fs.readFileSync(paidMapPlanPath, "utf8");
+    const incompleteMapPlan = JSON.parse(paidMapPlan);
+    incompleteMapPlan.units = [];
+    fs.writeFileSync(
+      paidMapPlanPath,
+      JSON.stringify(incompleteMapPlan),
+      "utf8",
+    );
+    const structurallyIncompletePlanRefused = commandRefuses({
+      argv: [
+        "record",
+        "--owner",
+        ownerAddress(currentAuthoring, "spaces"),
+        "--observation",
+        observationId("spaces"),
+        "--runtime",
+        "automovie-library-probe:v1",
+        "--verdict",
+        "passed",
+        "--artifact-project",
+        "observations/space.svg",
+      ],
+      root: fixture.root,
+      evidence,
+      message: "Correct the library observation plan before recording",
+    });
+    fs.writeFileSync(paidMapPlanPath, paidMapPlan, "utf8");
     const singleton = require(productionEvidencePath) as {
       productionEvidence: IAutoMovieEvidenceConfigProps;
     };
@@ -757,6 +793,56 @@ export const test_cli_scaffold_library_review_command = (): void => {
         }),
         true,
       );
+    const atomicPlanArguments = [
+      "plan",
+      "--owner",
+      spaceOwner,
+      "--source",
+      "src/spaces/owner.ts",
+      "--observation",
+      "spaces-neutral:artifact",
+    ] as const;
+    const mutableFs = fs as {
+      renameSync: typeof fs.renameSync;
+      rmSync: typeof fs.rmSync;
+    };
+    const renameSync = fs.renameSync;
+    const rmSync = fs.rmSync;
+    const spacePlanDirectory = path.join(fixture.root, "docs", "spaces");
+    const temporaryPlans = (): string[] =>
+      fs
+        .readdirSync(spacePlanDirectory)
+        .filter((entry) => entry.startsWith("owner.review.json."));
+    let failedCommitWasCleaned = false;
+    let failedCleanupPreservedOriginalFailure = false;
+    try {
+      mutableFs.renameSync = () => {
+        throw new Error("atomic plan commit unavailable");
+      };
+      failedCommitWasCleaned =
+        commandRefuses({
+          argv: atomicPlanArguments,
+          root: fixture.root,
+          evidence,
+          message: "atomic plan commit unavailable",
+        }) && temporaryPlans().length === 0;
+      mutableFs.rmSync = ((target: fs.PathLike, options?: fs.RmOptions) => {
+        if (String(target).endsWith(".tmp"))
+          throw new Error("atomic plan cleanup unavailable");
+        return rmSync(target, options);
+      }) as typeof fs.rmSync;
+      failedCleanupPreservedOriginalFailure = commandRefuses({
+        argv: atomicPlanArguments,
+        root: fixture.root,
+        evidence,
+        message: "atomic plan commit unavailable",
+      });
+    } finally {
+      mutableFs.renameSync = renameSync;
+      mutableFs.rmSync = rmSync;
+      for (const temporary of temporaryPlans())
+        rmSync(path.join(spacePlanDirectory, temporary), { force: true });
+    }
     command.runLibraryReviewCommand({
       argv: [
         "plan",
@@ -1013,6 +1099,7 @@ export const test_cli_scaffold_library_review_command = (): void => {
           "exactPlansWritten",
           () =>
             planResults.length === branches.length &&
+            planOutputCount === branches.length &&
             branches.every((branch) =>
               fs.existsSync(
                 path.join(fixture.root, "docs", branch, "owner.review.json"),
@@ -1063,6 +1150,15 @@ export const test_cli_scaffold_library_review_command = (): void => {
                 entry.message.includes("stale"),
             ),
         ],
+        [
+          "structurallyIncompletePlanRefused",
+          () => structurallyIncompletePlanRefused,
+        ],
+        ["failedCommitWasCleaned", () => failedCommitWasCleaned],
+        [
+          "failedCleanupPreservedOriginalFailure",
+          () => failedCleanupPreservedOriginalFailure,
+        ],
         ["commandRefusalMatrix", () => true],
         [
           "cliAdapterSuccessAndFailure",
@@ -1096,6 +1192,9 @@ export const test_cli_scaffold_library_review_command = (): void => {
         allMapBuildingMotionAndSystemReceiptsCurrent: true,
         motionSourceChangeStalesReceipt: true,
         mapSourceChangeStalesFiniteEvidence: true,
+        structurallyIncompletePlanRefused: true,
+        failedCommitWasCleaned: true,
+        failedCleanupPreservedOriginalFailure: true,
         commandRefusalMatrix: true,
         cliAdapterSuccessAndFailure: true,
         planIdentityRetainsStaleReceipt: true,

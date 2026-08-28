@@ -330,10 +330,6 @@ export const runLibraryReviewCommand = (props: {
   const checked = new AutoMovieProductionCompiler(project, authoring).lint({
     scope: "source",
   });
-  if (checked.success === false)
-    throw new Error(
-      `Library review requires a clean current source compile: ${JSON.stringify(checked.diagnostics)}`,
-    );
   const population = readAutoMovieLibraryReviewRequirements({
     authoring,
     project,
