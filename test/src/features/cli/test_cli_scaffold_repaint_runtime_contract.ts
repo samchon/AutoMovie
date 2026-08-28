@@ -693,8 +693,9 @@ const withGeneratedRepaintSelectionReview = (
  * 2. The generated compiler publishes one current completed-film state.
  * 3. Unknown, unplanned verification and finalization actions refuse through
  *    the generated render entrypoint instead of fabricating current output.
- * 4. Dry and applied garbage collection publish explicit results and clean up
- *    their acquired runtime resources.
+ * 4. Dry and applied garbage collection accept the compiled state before any
+ *    render-job root exists, publish explicit results, and clean up their
+ *    acquired runtime resources.
  * 5. The actual generated repaint entrypoint refuses invalid operations and a
  *    source-preflight failure before any request identity exists.
  * 6. A default-adapter terminal refusal returns its durable request id but is
