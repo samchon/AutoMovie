@@ -136,11 +136,16 @@ export class AutoMovieProductionBinder {
       `${stem(this.title)}-${this.layer}.md`,
     );
     await fs.mkdir(this.output, { recursive: true });
+    const physicalOutput = await fs.realpath(this.output);
     assertOutputSeparatedFromDocs(
-      await fs.realpath(this.output),
+      physicalOutput,
       await fs.realpath(path.join(this.root, "docs")),
     );
-    await fs.writeFile(target, markdown, "utf8");
+    await fs.writeFile(
+      path.join(physicalOutput, path.basename(target)),
+      markdown,
+      "utf8",
+    );
     return target;
   }
 }
