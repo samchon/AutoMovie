@@ -3,6 +3,7 @@ import {
   AutoMovieHumanoidBone,
   IAutoMovieCamera,
   IAutoMovieClip,
+  IAutoMovieDeliveryCrop,
   IAutoMoviePose,
   IAutoMoviePoseKeypoint,
   IAutoMovieSkeleton,
@@ -55,6 +56,7 @@ const keypoints = (props: {
   camera?: IAutoMovieCamera;
   joints?: readonly AutoMovieHumanoidBone[];
   aspect?: number;
+  crop?: IAutoMovieDeliveryCrop;
   cameraMotion?: IAutoMovieClip | null;
   time?: number;
 }): IAutoMoviePoseKeypoint[] =>
@@ -65,6 +67,7 @@ const keypoints = (props: {
     camera: props.camera ?? camera(),
     joints: props.joints ?? ["hips", "head"],
     aspect: props.aspect,
+    crop: props.crop,
     cameraMotion: props.cameraMotion,
     time: props.time,
   });
@@ -113,6 +116,22 @@ export const test_film_pose_keypoints = (): void => {
       ["headInFrame", () => head.inFrame],
     ]),
     { ncloseHeadX: true, ncloseHeadY: true, headInFrame: true },
+  );
+  const croppedHips = of(
+    keypoints({
+      pose: poseAt(0, 0, -5),
+      crop: { left: 0.5, top: 0, right: 1, bottom: 1 },
+    }),
+    "hips",
+  );
+  TestValidator.equals(
+    "a keypoint on the crop boundary maps to the output edge and stays in frame",
+    namedFacts([
+      ["leftEdge", () => nclose(croppedHips.x, 0)],
+      ["verticalCenter", () => nclose(croppedHips.y, 0.5)],
+      ["inFrame", () => croppedHips.inFrame],
+    ]),
+    { leftEdge: true, verticalCenter: true, inFrame: true },
   );
 
   // 2. out-of-frame joints project honestly (unclamped) with inFrame false.
