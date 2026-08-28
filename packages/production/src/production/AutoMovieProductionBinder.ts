@@ -110,11 +110,7 @@ export class AutoMovieProductionBinder {
     if (!LAYERS.has(this.layer))
       throw new Error(`Unknown authored document layer: ${String(this.layer)}`);
 
-    const docs = path.join(this.root, "docs");
-    if (contains(this.output, docs) || contains(docs, this.output))
-      throw new Error(
-        `${this.output}: the output directory must remain separate from the authored docs tree.`,
-      );
+    assertOutputSeparatedFromDocs(this.output, path.join(this.root, "docs"));
   }
 
   /** Renders the integrated reader edition without writing it. */
@@ -140,6 +136,10 @@ export class AutoMovieProductionBinder {
       `${stem(this.title)}-${this.layer}.md`,
     );
     await fs.mkdir(this.output, { recursive: true });
+    assertOutputSeparatedFromDocs(
+      await fs.realpath(this.output),
+      await fs.realpath(path.join(this.root, "docs")),
+    );
     await fs.writeFile(target, markdown, "utf8");
     return target;
   }
@@ -309,6 +309,14 @@ function contains(parent: string, candidate: string): boolean {
       !relative.startsWith(`..${path.sep}`) &&
       !path.isAbsolute(relative))
   );
+}
+
+/** Refuses both lexical and resolved overlap with the authored docs tree. */
+function assertOutputSeparatedFromDocs(output: string, docs: string): void {
+  if (contains(output, docs) || contains(docs, output))
+    throw new Error(
+      `${output}: the output directory must remain separate from the authored docs tree.`,
+    );
 }
 
 /** Stable code-unit ordering independent of host locale and ICU data. */

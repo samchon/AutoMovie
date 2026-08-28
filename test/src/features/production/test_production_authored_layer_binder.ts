@@ -343,6 +343,31 @@ export const test_production_authored_layer_binder =
             output: path.join(film, "docs", "reader"),
           }),
       );
+      const linkedOutput = path.join(film, "linked-output");
+      try {
+        fs.symlinkSync(
+          path.join(film, "docs"),
+          linkedOutput,
+          process.platform === "win32" ? "junction" : "dir",
+        );
+        await TestValidator.error("output resolves to docs", () =>
+          new AutoMovieProductionBinder({
+            root: film,
+            title: "Unsafe",
+            layer: "screenplays",
+            output: linkedOutput,
+          }).bind(),
+        );
+      } catch (error) {
+        if (
+          !(
+            error instanceof Error &&
+            "code" in error &&
+            ["EPERM", "EACCES"].includes(String(error.code))
+          )
+        )
+          throw error;
+      }
 
       const punctuation: string = makeRoot();
       write(punctuation, "docs/settings/001-scope.md", "# Scope\n");
