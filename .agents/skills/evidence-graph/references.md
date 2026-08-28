@@ -116,6 +116,9 @@ Do not list the contract anchors that currently cite a source. Those relationshi
 | Detailed Outline Control | https://aclanthology.org/2023.acl-long.190/ | Hierarchical intermediate plans and long-form alignment |
 | DOME | https://aclanthology.org/2025.naacl-long.63/ | Dynamic hierarchical outlining and revision |
 | CONCOCT | https://aclanthology.org/2023.findings-emnlp.723/ | Underdeveloped major events, overdeveloped minor events, and specificity-based pacing |
+| Warhol, Seriality | https://www.cambridge.org/core/journals/victorian-literature-and-culture/article/seriality/8973016E70A446AB823B4094175F5655 | How installment publication changes attention, interpretation, and narrative form |
+| Digital Dickens Notes Project | https://dickensnotes.org/introduction/scholarly | Discrete serial composition, installment constraints, and pressure from the whole pattern |
+| Wirz and colleagues, cliffhangers | https://doi.org/10.1037/ppm0000392 | Cliffhangers raise arousal without necessarily increasing enjoyment or continuation intention |
 | BBC Screenplay Format | https://downloads.bbc.co.uk/writersroom/scripts/screenplay.pdf | Scene headings, visible action, action beats, dialogue, and readable screenplay units |
 | BBC Taped Drama Format | https://downloads.bbc.co.uk/writersroom/scripts/bbctapeddrama.pdf | Speaker-specific dialogue and executable action description |
 | BBC Writersroom script library | https://www.bbc.co.uk/writersroom/scripts/ | Produced-script examples across formats and genres |
