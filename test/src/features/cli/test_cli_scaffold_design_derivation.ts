@@ -3,7 +3,10 @@ import { TestValidator } from "@nestia/e2e";
 import fs from "node:fs";
 import path from "node:path";
 
-import { renderCompletedFilmFixture } from "../internal/completedFilmFixture";
+import {
+  completedFilmJson,
+  renderCompletedFilmFixture,
+} from "../internal/completedFilmFixture";
 import { namedFacts, throwsError } from "../internal/predicates";
 
 /**
@@ -207,6 +210,26 @@ export const test_cli_scaffold_design_derivation = (): void => {
           ) === true,
       ],
       [
+        "completed fixture reads its unrendered records",
+        () =>
+          completedFilmJson<{ id: string }>(
+            "automovie/design/shared/models/soloist.json",
+          ).id === "soloist",
+      ],
+      [
+        "completed fixture refuses a missing viewer background slot",
+        () =>
+          throwsError(
+            () =>
+              renderCompletedFilmFixture("missing-background-slot", (props) => {
+                const missing = renderScaffold(props);
+                missing["viewer/src/viewerDocument.ts"] = "";
+                return missing;
+              }),
+            "neutral viewer background slot",
+          ),
+      ],
+      [
         "completed fixture carries no retired review store",
         () => completedReviewStore.length === 0,
       ],
@@ -284,6 +307,8 @@ export const test_cli_scaffold_design_derivation = (): void => {
       "viewer exposes one neutral replacement slot": true,
       "completed fixture retains its production emitter": true,
       "completed formation source remains model-owned": true,
+      "completed fixture reads its unrendered records": true,
+      "completed fixture refuses a missing viewer background slot": true,
       "completed fixture carries no retired review store": true,
       "inherits no environmental study obligation": true,
       "ships the production authoring procedure": true,
