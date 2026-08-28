@@ -15,6 +15,7 @@ import {
   type AutoMovieProductionProject,
   type IAutoMovieProductionAudioAssetIdentity,
   type IAutoMovieProductionRenderJobPlan,
+  assertAutoMovieExternalGeneratorTermsAt,
   decodeProductionAudioAsset,
   digestAutoMovieBytes,
   encodeAutoMoviePathSegment,
@@ -131,7 +132,7 @@ export const runWithProductionRuntimeClosure = async <Output>(
   return output!;
 };
 
-/** Current public/cache receipt generation; older identities never hit. */
+/** Current private dialogue-cache generation; older identities never hit. */
 export const PRODUCTION_DIALOGUE_CACHE_VERSION = 5 as const;
 
 /** Exact normalized identity of one line and its executable runtime assets. */
@@ -245,6 +246,9 @@ export interface IProductionSoundRuntime {
   cacheRetention: (
     input: IProductionSoundRuntimeInput,
   ) => IProductionSoundCacheRetention;
+  inspectCurrent: (
+    input: IProductionSoundRuntimeInput,
+  ) => IProductionSoundCurrentInspection;
   prepare: (
     input: IProductionSoundRuntimeInput,
   ) => Promise<IPreparedProductionSoundRuntime>;
@@ -267,6 +271,20 @@ export interface IProductionSoundCacheRetention {
   dialoguePaths: readonly string[];
   modelPaths: readonly string[];
 }
+
+export type IProductionSoundCurrentInspection =
+  | (IProductionSoundCacheRetention & {
+      status: "current";
+      audioAssets: IAutoMovieProductionAudioAssetIdentity[];
+      dialogueRuntime: IAutoMovieProductionDialogueRuntime;
+      plan: IAutoMovieProductionSoundPlan;
+      runtimeIdentity: unknown;
+      sourceDigest: AutoMovieContentDigest;
+    })
+  | (IProductionSoundCacheRetention & {
+      status: "not-ready";
+      correction: string;
+    });
 
 /** Own source decoding, TTS preparation, caches, and runtime identity per invocation. */
 export const createProductionSoundRuntime = (props: {
@@ -560,6 +578,7 @@ export const createProductionSoundRuntime = (props: {
     modelRevision: IAutoMovieDialogueSynthesisSelection["modelRevision"];
     voice: string;
     generatorProvenance: IAutoMovieDialogueSynthesisSelection["generatorProvenance"];
+    generatedAt: string;
     sourceSampleRate: number;
     sourceSamples: number;
     pcmDigest: AutoMovieContentDigest;
@@ -618,6 +637,7 @@ export const createProductionSoundRuntime = (props: {
     const record = JSON.parse(
       Buffer.from(snapshot.receipt).toString("utf8"),
     ) as IKokoroCacheRecord;
+    const generatedAt = new Date(record.generatedAt);
     if (
       record.version !== PRODUCTION_DIALOGUE_CACHE_VERSION ||
       record.cacheKey !== cacheKey ||
@@ -629,6 +649,9 @@ export const createProductionSoundRuntime = (props: {
         selection.generatorProvenance,
       ) === false ||
       isDeepStrictEqual(record.runtimeAssets, runtimeAssets) === false ||
+      typeof record.generatedAt !== "string" ||
+      Number.isNaN(generatedAt.getTime()) ||
+      generatedAt.toISOString() !== record.generatedAt ||
       Number.isSafeInteger(record.sourceSampleRate) === false ||
       record.sourceSampleRate <= 0 ||
       Number.isSafeInteger(record.sourceSamples) === false ||
@@ -641,11 +664,31 @@ export const createProductionSoundRuntime = (props: {
       record.pcmDigest !== digestAutoMovieBytes(snapshot.pcm)
     )
       return undefined;
+    assertAutoMovieExternalGeneratorTermsAt({
+      termsCheckedAt: record.generatorProvenance.termsCheckedAt,
+      occurredAt: generatedAt,
+      label: "Kokoro dialogue receipt generatorProvenance",
+    });
     return {
       record,
       samples: new Float32Array(Uint8Array.from(snapshot.pcm).buffer),
     };
   };
+
+  const dialogueReceipt = (
+    line: IAutoMovieProductionSoundPlan["dialogue"][number],
+    cached: NonNullable<ReturnType<typeof validatedDialogueCache>>,
+  ): IAutoMovieProductionTtsReceipt => ({
+    ...cached.record,
+    version: 6,
+    line: line.id,
+    visemes: productionPhonemesToVisemes({
+      chunks: cached.record.phonemeChunks,
+      sourceSamples: cached.record.sourceSamples,
+      startFrame: line.startFrame,
+      endFrame: line.endFrame,
+    }),
+  });
 
   const loadPinnedKokoroRuntime = async (
     modelCacheRoot: string,
@@ -832,15 +875,22 @@ export const createProductionSoundRuntime = (props: {
         const dialogueText = loadedRuntime.createTextSplitter();
         dialogueText.push(line.text);
         dialogueText.close();
+        const generatedAt = new Date(props.host.now()).toISOString();
+        assertAutoMovieExternalGeneratorTermsAt({
+          termsCheckedAt: selection.generatorProvenance.termsCheckedAt,
+          occurredAt: generatedAt,
+          label: "Kokoro dialogue generation generatorProvenance",
+        });
         const chunks: Float32Array[] = [];
         const phonemes: string[] = [];
         const phonemeChunks: IKokoroCacheRecord["phonemeChunks"] = [];
         let sourceSampleRate: number | undefined;
         let sourceOffset = 0;
-        for await (const chunk of loadedRuntime.runtime.stream(dialogueText, {
+        const stream = loadedRuntime.runtime.stream(dialogueText, {
           voice: selection.voice,
           speed: selection.speed,
-        })) {
+        });
+        for await (const chunk of stream) {
           if (
             Number.isSafeInteger(chunk.audio.sampling_rate) === false ||
             chunk.audio.sampling_rate <= 0
@@ -885,6 +935,7 @@ export const createProductionSoundRuntime = (props: {
           modelRevision: selection.modelRevision,
           voice: selection.voice,
           generatorProvenance: selection.generatorProvenance,
+          generatedAt,
           sourceSampleRate,
           sourceSamples: samples.length,
           pcmDigest: digestAutoMovieBytes(bytes),
@@ -910,16 +961,7 @@ export const createProductionSoundRuntime = (props: {
           );
       }
       pcm.set(line.id, cached.samples);
-      receipts.push({
-        ...cached.record,
-        line: line.id,
-        visemes: productionPhonemesToVisemes({
-          chunks: cached.record.phonemeChunks,
-          sourceSamples: cached.record.sourceSamples,
-          startFrame: line.startFrame,
-          endFrame: line.endFrame,
-        }),
-      });
+      receipts.push(dialogueReceipt(line, cached));
       props.progress("sound.dialogue.complete", { line: line.id });
     }
     return { pcm, receipts };
@@ -975,16 +1017,38 @@ export const createProductionSoundRuntime = (props: {
     return { graph, plan, selection };
   };
 
-  const cacheRetention = (
+  const inspectCurrent = (
     input: IProductionSoundRuntimeInput,
-  ): IProductionSoundCacheRetention => {
+  ): IProductionSoundCurrentInspection => {
     const { plan, selection } = deriveCurrentSoundPlan(input);
-    if (selection === null || plan.dialogue.length === 0)
+    const installedRuntimeIdentity = runtimeIdentity();
+    const audioAssets = audioSources(input.project, input.timeline, 48_000).map(
+      (source) => source.identity,
+    );
+    if (selection === null || plan.dialogue.length === 0) {
+      const dialogueRuntime = compileProductionDialogueRuntime({
+        plan,
+        timeline: input.timeline,
+        receipts: [],
+        bindings: props.speakerBindings,
+      });
       return {
         assertCurrent: assertSoundRuntimeCurrent,
+        audioAssets,
         dialoguePaths: [],
+        dialogueRuntime,
         modelPaths: [],
+        plan,
+        runtimeIdentity: installedRuntimeIdentity,
+        sourceDigest: productionSoundSourceDigest({
+          project: input.project,
+          timeline: input.timeline,
+          runtimeIdentity: installedRuntimeIdentity,
+          dialogueRuntime,
+        }),
+        status: "current",
       };
+    }
     const modelCacheRoot = path.join(
       props.productionStateRoot,
       "model-cache",
@@ -996,8 +1060,11 @@ export const createProductionSoundRuntime = (props: {
     if (modelSnapshot === null || modelAssets.length === 0)
       return {
         assertCurrent: assertSoundRuntimeCurrent,
+        correction:
+          "Run a dialogue-producing render action to materialize the pinned Kokoro model generation before verifying this plan.",
         dialoguePaths: [],
         modelPaths: [],
+        status: "not-ready",
       };
     const cacheRoot = path.join(
       props.productionStateRoot,
@@ -1009,6 +1076,7 @@ export const createProductionSoundRuntime = (props: {
       ...modelAssets,
     ];
     const dialogueSnapshots: IDialogueCacheSnapshot[] = [];
+    const receipts: IAutoMovieProductionTtsReceipt[] = [];
     const dialoguePaths = plan.dialogue.flatMap((line) => {
       const identity = productionDialogueCacheIdentity({
         cacheRoot,
@@ -1020,23 +1088,22 @@ export const createProductionSoundRuntime = (props: {
       });
       try {
         const captured = captureExistingDialogueCache(cacheRoot, identity.path);
-        if (
-          captured === null ||
-          validatedDialogueCache(
-            captured,
-            identity.key,
-            runtimeAssets,
-            selection,
-          ) === undefined
-        )
-          return [];
+        if (captured === null) return [];
+        const cached = validatedDialogueCache(
+          captured,
+          identity.key,
+          runtimeAssets,
+          selection,
+        );
+        if (cached === undefined) return [];
         dialogueSnapshots.push(captured);
+        receipts.push(dialogueReceipt(line, cached));
         return [`audio-cache/kokoro/${identity.key.slice(7)}`];
       } catch {
         return [];
       }
     });
-    return {
+    const retention: IProductionSoundCacheRetention = {
       assertCurrent: () => {
         assertSoundRuntimeCurrent();
         assertCapturedRenderTarget(modelSnapshot);
@@ -1045,6 +1112,44 @@ export const createProductionSoundRuntime = (props: {
       },
       dialoguePaths,
       modelPaths: [`model-cache/kokoro/${KOKORO_MODEL_REVISION}`],
+    };
+    if (receipts.length !== plan.dialogue.length)
+      return {
+        ...retention,
+        status: "not-ready",
+        correction:
+          "Run a dialogue-producing render action to synthesize every current v5 Kokoro cache generation before verifying this plan.",
+      };
+    const dialogueRuntime = compileProductionDialogueRuntime({
+      plan,
+      timeline: input.timeline,
+      receipts,
+      bindings: props.speakerBindings,
+    });
+    return {
+      ...retention,
+      status: "current",
+      audioAssets,
+      dialogueRuntime,
+      plan,
+      runtimeIdentity: installedRuntimeIdentity,
+      sourceDigest: productionSoundSourceDigest({
+        project: input.project,
+        timeline: input.timeline,
+        runtimeIdentity: installedRuntimeIdentity,
+        dialogueRuntime,
+      }),
+    };
+  };
+
+  const cacheRetention = (
+    input: IProductionSoundRuntimeInput,
+  ): IProductionSoundCacheRetention => {
+    const inspected = inspectCurrent(input);
+    return {
+      assertCurrent: inspected.assertCurrent,
+      dialoguePaths: inspected.dialoguePaths,
+      modelPaths: inspected.modelPaths,
     };
   };
 
@@ -1118,6 +1223,7 @@ export const createProductionSoundRuntime = (props: {
       audioSources(project, timeline, 48_000).map((source) => source.identity),
     audioSources,
     cacheRetention,
+    inspectCurrent,
     prepare,
     runtimeIdentity,
     sourceDigest: (project, timeline, dialogueRuntime) =>

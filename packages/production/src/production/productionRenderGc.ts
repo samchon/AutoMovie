@@ -1,6 +1,7 @@
-import { AutoMovieContentDigest } from "@automovie/interface";
-
-import { IAutoMovieProductionRenderJobPlan } from "./productionRenderJob";
+type AutoMovieContentDigest =
+  import("@automovie/interface").AutoMovieContentDigest;
+type IAutoMovieProductionRenderJobPlan =
+  import("./productionRenderJob").IAutoMovieProductionRenderJobPlan;
 
 /**
  * One renderer-owned disk entry considered by mark-and-sweep.
@@ -195,8 +196,8 @@ export const planProductionRenderGc = (props: {
   for (const path of retainedChunkPaths) {
     const pointer = /^(proxy|final)\/pointers\/([0-9a-f]{64})$/u.exec(path);
     const tree = /^(proxy|final)\/tmp\/([0-9a-f]{64})\.[^.]+\.\d+$/u.exec(path);
-    const match = pointer ?? tree;
-    if (match === null) continue;
+    // Retained paths already proved an exact pointer/tree candidate above.
+    const match = (pointer ?? tree)!;
     const key = `${match[1]}\0${match[2]}`;
     const pair = retainedPairs.get(key) ?? { pointers: 0, trees: 0 };
     if (pointer === null) pair.trees++;
@@ -228,7 +229,7 @@ export const planProductionRenderGc = (props: {
   };
 };
 
-const canonicalRelativePath = (value: string): string => {
+function canonicalRelativePath(value: string): string {
   if (
     value.trim().length === 0 ||
     value.includes("\\") ||
@@ -245,4 +246,4 @@ const canonicalRelativePath = (value: string): string => {
       `Render GC path "${value}" must be one canonical relative POSIX path.`,
     );
   return value;
-};
+}
