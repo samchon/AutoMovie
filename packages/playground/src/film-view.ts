@@ -31,6 +31,7 @@ import {
   applyPose,
   applyRenderMode,
   applySceneFog,
+  assertAutoMovieViewerCameraDepthPrecision,
   buildLight,
   buildModel,
   buildSpaceObject,
@@ -462,8 +463,13 @@ const playersByShot = new Map<
 );
 
 // ── the projector: global seconds → posed set + framed camera ────────────────
-const camera = new THREE.PerspectiveCamera(40, 16 / 9, 0.05, 100);
 const stagedCam = staged.scene.cameras[0]!;
+const camera = new THREE.PerspectiveCamera(
+  stagedCam.fovY,
+  16 / 9,
+  stagedCam.near,
+  stagedCam.far,
+);
 const applyStagedCamera = (): void => {
   const t = stagedCam.transform.translation;
   const r = stagedCam.transform.rotation;
@@ -623,6 +629,11 @@ const handle = mountViewer(
   capMode ? { antialias: false, pixelRatio: 1 } : undefined,
 );
 const renderer = handle.renderer;
+const cameraDepthPrecision = assertAutoMovieViewerCameraDepthPrecision({
+  renderer,
+  source: stagedCam,
+  realized: camera,
+});
 const draw = (t: number): void => {
   if (!drawFrame(t)) renderer.render(scene, camera);
 };
@@ -667,4 +678,5 @@ let passHandle: IAutoMovieRenderModeHandle | null = null;
   sequence: cut.sequence,
   shots,
   shotIds: shots.map((s) => s.id),
+  cameraDepthPrecision,
 };

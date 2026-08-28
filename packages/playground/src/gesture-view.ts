@@ -205,8 +205,13 @@ const playersByShot = new Map(
 );
 
 // ── the projector ────────────────────────────────────────────────────────────
-const camera = new THREE.PerspectiveCamera(48, 16 / 9, 0.05, 100);
 const stagedCam = staged.scene.cameras[0]!;
+const camera = new THREE.PerspectiveCamera(
+  stagedCam.fovY,
+  16 / 9,
+  stagedCam.near,
+  stagedCam.far,
+);
 const applyStagedCamera = (): void => {
   const t = stagedCam.transform.translation;
   const r = stagedCam.transform.rotation;
