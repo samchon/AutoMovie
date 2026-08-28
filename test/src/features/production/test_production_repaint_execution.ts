@@ -5,11 +5,21 @@ import type {
 import {
   AutoMovieRepaintAttemptError,
   assertAutoMovieRepaintExecutionPolicy,
+  canonicalAutoMovieRepaintRuntimeIdentity,
   executeAutoMovieRepaintRequest,
 } from "@automovie/production";
 import { TestValidator } from "@nestia/e2e";
 
-const digest = (value: string): AutoMovieContentDigest => `sha256:${value}`;
+const digest = (value: string): AutoMovieContentDigest =>
+  `sha256:${Buffer.from(value).toString("hex").padEnd(64, "0").slice(0, 64)}`;
+
+const adapterIdentity = canonicalAutoMovieRepaintRuntimeIdentity({
+  protocolVersion: "automovie.repaint-runtime.v1",
+  provider: "fixed",
+  model: "fixed",
+  version: "1",
+  execution: "local",
+});
 
 const nonError = (message: string): Error => message as unknown as Error;
 
@@ -42,31 +52,49 @@ const execute = <T>(props: {
     availableOutput: { digest: AutoMovieContentDigest; bytes: number } | null;
   }>;
   now?: () => Date;
+  productionId?: string;
+  shot?: string;
   requestId?: string;
+  ordinalOffset?: number;
+  requestFingerprint?: AutoMovieContentDigest;
+  compileFingerprint?: AutoMovieContentDigest;
+  sourceRenderFingerprint?: AutoMovieContentDigest;
+  adapterIdentity?: string;
+  seed?: number;
   attemptId?: () => string;
   signal?: AbortSignal;
   wait?: (milliseconds: number, signal: AbortSignal) => Promise<void>;
 }) => {
   let attempt = 0;
+  let virtualElapsed = 0;
   const records: unknown[] = [];
   return executeAutoMovieRepaintRequest({
-    productionId: "repaint-execution",
-    shot: "opening",
+    productionId: props.productionId ?? "repaint-execution",
+    shot: props.shot ?? "opening",
     requestId: props.requestId ?? "10000000-0000-4000-8000-000000000001",
-    requestFingerprint: digest("request"),
-    compileFingerprint: digest("compile"),
-    sourceRenderFingerprint: digest("source"),
-    adapterIdentity: '{"provider":"fixed"}',
-    seed: 41,
+    ...(props.ordinalOffset === undefined
+      ? {}
+      : { ordinalOffset: props.ordinalOffset }),
+    requestFingerprint: props.requestFingerprint ?? digest("request"),
+    compileFingerprint: props.compileFingerprint ?? digest("compile"),
+    sourceRenderFingerprint: props.sourceRenderFingerprint ?? digest("source"),
+    adapterIdentity: props.adapterIdentity ?? adapterIdentity,
+    seed: props.seed ?? 41,
     policy: props.policy,
     signal: props.signal,
     runtime: {
-      now: props.now ?? (() => new Date("2026-08-28T10:00:00.000Z")),
+      now:
+        props.now ??
+        (() =>
+          new Date(Date.parse("2026-08-28T10:00:00.000Z") + virtualElapsed)),
       attemptId:
         props.attemptId ??
         (() =>
           `20000000-0000-4000-8000-${String(++attempt).padStart(12, "0")}`),
-      wait: props.wait ?? (() => Promise.resolve()),
+      wait: async (milliseconds, signal) => {
+        await (props.wait?.(milliseconds, signal) ?? Promise.resolve());
+        if (props.now === undefined) virtualElapsed += milliseconds;
+      },
     },
     execute: props.calls,
     onAttempt: (record) => records.push(record),
@@ -118,6 +146,7 @@ export const test_production_repaint_execution = async (): Promise<void> => {
   let calls = 0;
   const retried = await execute({
     policy: policy(),
+    ordinalOffset: 0,
     wait: (milliseconds) => {
       waits.push(milliseconds);
       return Promise.resolve();
@@ -358,10 +387,41 @@ export const test_production_repaint_execution = async (): Promise<void> => {
       throw { status: 429 };
     },
   });
+  let failedWaitProviderCalls = 0;
+  const failedWait = await execute({
+    policy: policy({ maximumAttempts: 2, backoffMs: [1] }),
+    wait: () => Promise.reject(new Error("backoff runtime unavailable")),
+    calls: async () => {
+      ++failedWaitProviderCalls;
+      throw { status: 429 };
+    },
+  });
+  const waitAbortController = new AbortController();
+  let abortedWaitProviderCalls = 0;
   const waitCancelled = await execute({
     policy: policy({ maximumAttempts: 2, backoffMs: [1] }),
-    wait: () => Promise.reject(new Error("cancel during backoff")),
+    signal: waitAbortController.signal,
+    wait: () => {
+      waitAbortController.abort("cancel during backoff");
+      return Promise.reject(new Error("cancel during backoff"));
+    },
     calls: async () => {
+      ++abortedWaitProviderCalls;
+      throw { status: 429 };
+    },
+  });
+  let earlyWaitProviderCalls = 0;
+  let earlyWaitAttemptIds = 0;
+  const earlyWait = await execute({
+    policy: policy({ maximumAttempts: 2, backoffMs: [10] }),
+    now: () => new Date("2026-08-28T10:00:00.000Z"),
+    attemptId: () => {
+      ++earlyWaitAttemptIds;
+      return "30000000-0000-4000-8000-000000000001";
+    },
+    wait: () => Promise.resolve(),
+    calls: async () => {
+      ++earlyWaitProviderCalls;
       throw { status: 429 };
     },
   });
@@ -595,7 +655,22 @@ export const test_production_repaint_execution = async (): Promise<void> => {
       zeroBudget: zeroBudget.result.stop,
       retryCost: retryCost.result.stop,
       backoffElapsed: backoffElapsed.result.stop,
-      waitCancelled: waitCancelled.result.stop,
+      failedWait: {
+        stop: failedWait.result.stop,
+        attempts: failedWait.result.attempts.length,
+        providerCalls: failedWaitProviderCalls,
+      },
+      waitCancelled: {
+        stop: waitCancelled.result.stop,
+        attempts: waitCancelled.result.attempts.length,
+        providerCalls: abortedWaitProviderCalls,
+      },
+      earlyWait: {
+        stop: earlyWait.result.stop,
+        attempts: earlyWait.result.attempts.length,
+        attemptIds: earlyWaitAttemptIds,
+        providerCalls: earlyWaitProviderCalls,
+      },
       classifiedCancelled: classifiedCancelled.result.stop,
       classifiedStale: classifiedStale.result.attempts[0]?.status,
       cancelledDuringAttempt: cancelledDuringAttempt.result.stop,
@@ -654,7 +729,22 @@ export const test_production_repaint_execution = async (): Promise<void> => {
       zeroBudget: "cost-exhausted",
       retryCost: "cost-exhausted",
       backoffElapsed: "elapsed-exhausted",
-      waitCancelled: "cancelled",
+      failedWait: {
+        stop: "backoff-failed",
+        attempts: 1,
+        providerCalls: 1,
+      },
+      waitCancelled: {
+        stop: "cancelled",
+        attempts: 1,
+        providerCalls: 1,
+      },
+      earlyWait: {
+        stop: "backoff-failed",
+        attempts: 1,
+        attemptIds: 1,
+        providerCalls: 1,
+      },
       classifiedCancelled: "cancelled",
       classifiedStale: "stale",
       cancelledDuringAttempt: "cancelled",
@@ -738,37 +828,61 @@ export const test_production_repaint_execution = async (): Promise<void> => {
   let reversedAfterWaitAttemptIds = 0;
   let reversedAfterWaitCalls = 0;
   let reversedAfterWaitReads = 0;
-  let reversedAfterWaitMessage: string | null = null;
-  try {
-    await execute({
-      policy: policy({
-        maximumAttempts: 2,
-        backoffMs: [1],
-        retryableFailures: ["rate-limit"],
-      }),
-      now: () =>
-        new Date(
-          [
-            "2026-08-28T10:00:00.000Z",
-            "2026-08-28T10:00:00.000Z",
-            "2026-08-28T10:00:00.000Z",
-            "2026-08-28T10:00:01.000Z",
-            "2026-08-28T10:00:00.999Z",
-          ][Math.min(reversedAfterWaitReads++, 4)]!,
-        ),
-      attemptId: () =>
-        `60000000-0000-4000-8000-${String(
-          ++reversedAfterWaitAttemptIds,
-        ).padStart(12, "0")}`,
-      calls: async () => {
-        ++reversedAfterWaitCalls;
-        throw { status: 429, message: "retry after a clock rollback" };
-      },
-    });
-  } catch (error) {
-    reversedAfterWaitMessage =
-      error instanceof Error ? error.message : String(error);
-  }
+  const reversedAfterWait = await execute({
+    policy: policy({
+      maximumAttempts: 2,
+      backoffMs: [1],
+      retryableFailures: ["rate-limit"],
+    }),
+    now: () =>
+      new Date(
+        [
+          "2026-08-28T10:00:00.000Z",
+          "2026-08-28T10:00:00.000Z",
+          "2026-08-28T10:00:00.000Z",
+          "2026-08-28T10:00:00.500Z",
+          "2026-08-28T10:00:00.499Z",
+        ][Math.min(reversedAfterWaitReads++, 4)]!,
+      ),
+    attemptId: () =>
+      `60000000-0000-4000-8000-${String(++reversedAfterWaitAttemptIds).padStart(
+        12,
+        "0",
+      )}`,
+    calls: async () => {
+      ++reversedAfterWaitCalls;
+      throw { status: 429, message: "retry after a clock rollback" };
+    },
+  });
+  let reversedAtRetryStartAttemptIds = 0;
+  let reversedAtRetryStartCalls = 0;
+  let reversedAtRetryStartReads = 0;
+  const reversedAtRetryStart = await execute({
+    policy: policy({
+      maximumAttempts: 2,
+      backoffMs: [10],
+      retryableFailures: ["rate-limit"],
+    }),
+    now: () =>
+      new Date(
+        [
+          "2026-08-28T10:00:00.000Z",
+          "2026-08-28T10:00:00.000Z",
+          "2026-08-28T10:00:00.000Z",
+          "2026-08-28T10:00:00.000Z",
+          "2026-08-28T10:00:00.010Z",
+          "2026-08-28T10:00:00.009Z",
+        ][Math.min(reversedAtRetryStartReads++, 5)]!,
+      ),
+    attemptId: () => {
+      ++reversedAtRetryStartAttemptIds;
+      return "70000000-0000-4000-8000-000000000001";
+    },
+    calls: async () => {
+      ++reversedAtRetryStartCalls;
+      throw { status: 429, message: "retry after attempt-start rollback" };
+    },
+  });
   TestValidator.equals(
     "backward clocks reject before allocating or starting another provider attempt",
     {
@@ -780,11 +894,16 @@ export const test_production_repaint_execution = async (): Promise<void> => {
         providerCalls: reversedBeforeProviderCalls,
       },
       afterWait: {
-        rejected: reversedAfterWaitMessage?.includes(
-          "precedes the previous runtime clock observation",
-        ),
+        stop: reversedAfterWait.result.stop,
+        attempts: reversedAfterWait.result.attempts.length,
         attemptIds: reversedAfterWaitAttemptIds,
         providerCalls: reversedAfterWaitCalls,
+      },
+      atRetryStart: {
+        stop: reversedAtRetryStart.result.stop,
+        attempts: reversedAtRetryStart.result.attempts.length,
+        attemptIds: reversedAtRetryStartAttemptIds,
+        providerCalls: reversedAtRetryStartCalls,
       },
     },
     {
@@ -794,7 +913,14 @@ export const test_production_repaint_execution = async (): Promise<void> => {
         providerCalls: 0,
       },
       afterWait: {
-        rejected: true,
+        stop: "backoff-failed",
+        attempts: 1,
+        attemptIds: 1,
+        providerCalls: 1,
+      },
+      atRetryStart: {
+        stop: "backoff-failed",
+        attempts: 1,
         attemptIds: 1,
         providerCalls: 1,
       },
@@ -811,6 +937,392 @@ export const test_production_repaint_execution = async (): Promise<void> => {
       return error instanceof Error ? error.message : String(error);
     }
   };
+  const candidateOutcome = () => ({
+    value: "candidate",
+    costUnits: 1,
+    availableOutput: { digest: digest("candidate"), bytes: 4 },
+  });
+  let invalidIdentityProviderCalls = 0;
+  const invalidIdentityMessages = await Promise.all(
+    [
+      { productionId: " " },
+      { shot: 42 as unknown as string },
+      { requestId: "not-a-request-id" },
+      { requestFingerprint: "sha256:bad" as AutoMovieContentDigest },
+      { compileFingerprint: "sha256:bad" as AutoMovieContentDigest },
+      { sourceRenderFingerprint: "sha256:bad" as AutoMovieContentDigest },
+      { adapterIdentity: "{" },
+      {
+        adapterIdentity: JSON.stringify({
+          protocolVersion: "automovie.repaint-runtime.v1",
+          provider: "fixed",
+          model: "fixed",
+          version: "1",
+          execution: "local",
+        }),
+      },
+      { seed: 1.5 },
+      { ordinalOffset: -1 },
+      { ordinalOffset: 1.5 },
+      { ordinalOffset: Number.MAX_SAFE_INTEGER },
+    ].map((override) =>
+      rejectionMessage(() =>
+        execute({
+          ...override,
+          policy: policy(),
+          calls: async () => {
+            ++invalidIdentityProviderCalls;
+            return candidateOutcome();
+          },
+        }),
+      ),
+    ),
+  );
+  TestValidator.predicate(
+    "immutable request identity refuses every malformed runtime fact before provider execution",
+    invalidIdentityProviderCalls === 0 &&
+      invalidIdentityMessages.every(
+        (message) => message !== "Malformed execution unexpectedly resolved.",
+      ),
+  );
+
+  const malformedOutcomes = await Promise.all(
+    [
+      null,
+      { digest: "sha256:bad" as AutoMovieContentDigest, bytes: 1 },
+      { digest: digest("candidate"), bytes: 0 },
+      { digest: digest("candidate"), bytes: 1.5 },
+    ].map((availableOutput) =>
+      execute({
+        policy: policy({ maximumAttempts: 1, backoffMs: [] }),
+        calls: async () => ({
+          value: "candidate",
+          costUnits: 1,
+          availableOutput,
+        }),
+      }),
+    ),
+  );
+  TestValidator.equals(
+    "null or malformed successful output disclosures close as invalid terminal attempts",
+    malformedOutcomes.map(({ result }) => ({
+      stop: result.stop,
+      accepted: result.accepted,
+      status: result.attempts[0]?.status,
+      failure: result.attempts[0]?.failure?.class,
+    })),
+    malformedOutcomes.map(
+      () =>
+        ({
+          stop: "not-retryable",
+          accepted: null,
+          status: "invalid",
+          failure: "invalid-output",
+        }) as const,
+    ),
+  );
+  const hostileOutcomeValue = await execute({
+    policy: policy({ maximumAttempts: 1, backoffMs: [] }),
+    calls: async () =>
+      Object.defineProperty(
+        {
+          costUnits: 2,
+          availableOutput: { digest: digest("hostile-value"), bytes: 8 },
+        },
+        "value",
+        {
+          get: () => {
+            throw new Error("hostile output value getter");
+          },
+        },
+      ) as {
+        value: string;
+        costUnits: number;
+        availableOutput: {
+          digest: AutoMovieContentDigest;
+          bytes: number;
+        };
+      },
+  });
+  TestValidator.equals(
+    "an unreadable accepted value closes exactly one invalid terminal attempt",
+    {
+      stop: hostileOutcomeValue.result.stop,
+      attempts: hostileOutcomeValue.result.attempts.length,
+      status: hostileOutcomeValue.result.attempts[0]?.status,
+      failure: hostileOutcomeValue.result.attempts[0]?.failure?.class,
+      costUnits: hostileOutcomeValue.result.attempts[0]?.costUnits,
+      output: hostileOutcomeValue.result.attempts[0]?.availableOutput,
+    },
+    {
+      stop: "not-retryable",
+      attempts: 1,
+      status: "invalid",
+      failure: "invalid-output",
+      costUnits: 2,
+      output: { digest: digest("hostile-value"), bytes: 8 },
+    },
+  );
+
+  const nonStringMessage = new AutoMovieRepaintAttemptError(
+    "provider-refusal",
+    "placeholder",
+  );
+  nonStringMessage.message = null as unknown as string;
+  const malformedDisclosures = [
+    new AutoMovieRepaintAttemptError(
+      "unsupported" as "provider-refusal",
+      "unsupported class",
+    ),
+    new AutoMovieRepaintAttemptError(
+      "provider-refusal",
+      "invalid cost",
+      Number.NaN,
+    ),
+    new AutoMovieRepaintAttemptError(
+      "provider-refusal",
+      "invalid partial output",
+      1,
+      { digest: digest("partial"), bytes: 0 },
+    ),
+    nonStringMessage,
+  ];
+  const malformedDisclosureResults = await Promise.all(
+    malformedDisclosures.map((disclosure) =>
+      execute({
+        policy: policy({ maximumAttempts: 1, backoffMs: [] }),
+        calls: async () => {
+          throw disclosure;
+        },
+      }),
+    ),
+  );
+  TestValidator.equals(
+    "malformed failure disclosures still preserve one well-formed terminal attempt",
+    malformedDisclosureResults.map(({ result }) => ({
+      stop: result.stop,
+      attempts: result.attempts.length,
+      status: result.attempts[0]?.status,
+      failure: result.attempts[0]?.failure?.class,
+      costUnits: result.attempts[0]?.costUnits,
+      availableOutput: result.attempts[0]?.availableOutput,
+    })),
+    malformedDisclosures.map(
+      () =>
+        ({
+          stop: "not-retryable",
+          attempts: 1,
+          status: "invalid",
+          failure: "invalid-output",
+          costUnits: 0,
+          availableOutput: null,
+        }) as const,
+    ),
+  );
+  const malformedCancelledController = new AbortController();
+  const malformedCancelled = await execute({
+    policy: policy({ maximumAttempts: 1, backoffMs: [] }),
+    signal: malformedCancelledController.signal,
+    calls: async () => {
+      malformedCancelledController.abort("cancel malformed disclosure");
+      throw new AutoMovieRepaintAttemptError(
+        "provider-refusal",
+        "invalid cost during cancellation",
+        -1,
+      );
+    },
+  });
+  TestValidator.equals(
+    "outer cancellation dominates malformed disclosure without losing terminal state",
+    {
+      stop: malformedCancelled.result.stop,
+      status: malformedCancelled.result.attempts[0]?.status,
+      failure: malformedCancelled.result.attempts[0]?.failure?.class,
+      costUnits: malformedCancelled.result.attempts[0]?.costUnits,
+    },
+    {
+      stop: "cancelled",
+      status: "cancelled",
+      failure: "cancelled",
+      costUnits: 0,
+    },
+  );
+  const hostileProviderRejections = await Promise.all(
+    [
+      new Proxy(
+        {},
+        {
+          get: () => {
+            throw new Error("hostile provider getter");
+          },
+          getPrototypeOf: () => {
+            throw new Error("hostile provider prototype");
+          },
+        },
+      ),
+      {
+        [Symbol.toPrimitive]: (): never => {
+          throw new Error("hostile provider stringification");
+        },
+      },
+    ].map((rejection) =>
+      execute({
+        policy: policy({ maximumAttempts: 1, backoffMs: [] }),
+        calls: async () => {
+          throw rejection;
+        },
+      }),
+    ),
+  );
+  TestValidator.equals(
+    "hostile provider rejection inspection cannot erase a started attempt",
+    hostileProviderRejections.map(({ result }) => ({
+      stop: result.stop,
+      attempts: result.attempts.length,
+      status: result.attempts[0]?.status,
+      failure: result.attempts[0]?.failure?.class,
+    })),
+    hostileProviderRejections.map(
+      () =>
+        ({
+          stop: "not-retryable",
+          attempts: 1,
+          status: "failed",
+          failure: "internal",
+        }) as const,
+    ),
+  );
+
+  const postProviderClockFailures = await Promise.all(
+    [
+      {
+        name: "successful output then invalid completion clock",
+        completion: (): Date => new Date(Number.NaN),
+        rejectProvider: false,
+        expectedCostUnits: 1,
+        expectedOutput: digest("candidate"),
+      },
+      {
+        name: "successful output then backward completion clock",
+        completion: (): Date => new Date("2026-08-28T09:59:59.999Z"),
+        rejectProvider: false,
+        expectedCostUnits: 1,
+        expectedOutput: digest("candidate"),
+      },
+      {
+        name: "provider rejection then invalid completion clock",
+        completion: (): Date => new Date(Number.NaN),
+        rejectProvider: true,
+        expectedCostUnits: 0,
+        expectedOutput: null,
+      },
+      {
+        name: "successful output then hostile completion clock",
+        completion: (): Date => {
+          throw new Proxy(
+            {},
+            {
+              getPrototypeOf: () => {
+                throw new Error("hostile clock prototype");
+              },
+              get: () => {
+                throw new Error("hostile clock stringification");
+              },
+            },
+          );
+        },
+        rejectProvider: false,
+        expectedCostUnits: 1,
+        expectedOutput: digest("candidate"),
+      },
+    ].map(
+      async ({
+        name,
+        completion,
+        rejectProvider,
+        expectedCostUnits,
+        expectedOutput,
+      }) => {
+        let clockReads = 0;
+        const execution = await execute({
+          policy: policy({ maximumAttempts: 1, backoffMs: [] }),
+          now: () =>
+            clockReads++ < 3
+              ? new Date("2026-08-28T10:00:00.000Z")
+              : completion(),
+          calls: async () => {
+            if (rejectProvider) throw new Error("provider rejected");
+            return candidateOutcome();
+          },
+        });
+        return { name, execution, expectedCostUnits, expectedOutput };
+      },
+    ),
+  );
+  TestValidator.equals(
+    "post-provider clock failure closes at the last valid instant without retry",
+    postProviderClockFailures.map(({ name, execution: { result } }) => ({
+      name,
+      stop: result.stop,
+      attempts: result.attempts.length,
+      status: result.attempts[0]?.status,
+      failure: result.attempts[0]?.failure?.class,
+      retryable: result.attempts[0]?.failure?.retryable,
+      costUnits: result.attempts[0]?.costUnits,
+      output: result.attempts[0]?.availableOutput?.digest ?? null,
+      startedAt: result.attempts[0]?.startedAt,
+      completedAt: result.attempts[0]?.completedAt,
+    })),
+    postProviderClockFailures.map(
+      ({ name, expectedCostUnits, expectedOutput }) => ({
+        name,
+        stop: "not-retryable" as const,
+        attempts: 1,
+        status: "failed" as const,
+        failure: "internal" as const,
+        retryable: false,
+        costUnits: expectedCostUnits,
+        output: expectedOutput,
+        startedAt: "2026-08-28T10:00:00.000Z",
+        completedAt: "2026-08-28T10:00:00.000Z",
+      }),
+    ),
+  );
+  const cancelledClockController = new AbortController();
+  let cancelledClockReads = 0;
+  const cancelledDuringCompletionClock = await execute({
+    policy: policy({ maximumAttempts: 1, backoffMs: [] }),
+    signal: cancelledClockController.signal,
+    now: () => {
+      if (cancelledClockReads++ < 3)
+        return new Date("2026-08-28T10:00:00.000Z");
+      cancelledClockController.abort("cancel during completion clock");
+      return new Date(Number.NaN);
+    },
+    calls: async () => candidateOutcome(),
+  });
+  TestValidator.equals(
+    "real cancellation dominates a simultaneous completion-clock failure",
+    {
+      stop: cancelledDuringCompletionClock.result.stop,
+      attempts: cancelledDuringCompletionClock.result.attempts.length,
+      status: cancelledDuringCompletionClock.result.attempts[0]?.status,
+      failure:
+        cancelledDuringCompletionClock.result.attempts[0]?.failure?.class,
+      costUnits: cancelledDuringCompletionClock.result.attempts[0]?.costUnits,
+      output:
+        cancelledDuringCompletionClock.result.attempts[0]?.availableOutput
+          ?.digest,
+    },
+    {
+      stop: "cancelled",
+      attempts: 1,
+      status: "cancelled",
+      failure: "cancelled",
+      costUnits: 1,
+      output: digest("candidate"),
+    },
+  );
   let malformedAttemptListenerRemovals = 0;
   const malformedAttemptSignal = {
     aborted: false,
@@ -887,21 +1399,24 @@ export const test_production_repaint_execution = async (): Promise<void> => {
     }),
     rejectionMessage(() => {
       let instant = 0;
+      const malformedClockError = new Error("placeholder");
+      malformedClockError.message = null as unknown as string;
       return execute({
         policy: policy(),
-        now: () =>
-          new Date(
-            instant++ === 2
-              ? "2026-08-28T10:00:01.000Z"
-              : "2026-08-28T10:00:00.000Z",
-          ),
+        now: () => {
+          if (instant++ === 0) return new Date("2026-08-28T10:00:00.000Z");
+          throw malformedClockError;
+        },
         calls: async () => ({ value: 1, costUnits: 0, availableOutput: null }),
       });
     }),
   ]);
   TestValidator.predicate(
-    "invalid request, attempt, and reversed completion instants reject",
-    malformedMessages.some((message) => message.includes("valid instant")) &&
-      malformedMessages.some((message) => message.includes("precedes")),
+    "invalid request, attempt, and pre-provider clock instants reject",
+    malformedMessages[0]?.includes("UUID v4") === true &&
+      malformedMessages[1]?.includes("trimmed") === true &&
+      malformedMessages.some((message) => message.includes("valid instant")) &&
+      malformedMessages.at(-1) ===
+        "Repaint request elapsed clock observation failed without an inspectable message.",
   );
 };
