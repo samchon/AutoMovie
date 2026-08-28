@@ -1,6 +1,6 @@
 # Production evidence staging
 
-Read the complete production declaration in `lint.config.ts`, every target and host involved, and the applicable authoring phase document before changing a stage or evidence statement. `@automovie/evidence` owns reusable graph mechanics; the generated project has no second local configuration source.
+Read the complete production declaration in `productionEvidence.ts`, its `lint.config.ts` graph consumer, every target and host involved, and the applicable authoring phase document before changing a stage or evidence statement. `@automovie/evidence` owns reusable graph mechanics; the generated project has no second production-evidence declaration.
 
 ## States
 
@@ -61,7 +61,7 @@ Move the layer to `review` only after all shared and production-specific claim b
 
 A child may enter `draft` only after every direct parent is in `review`. Research, when present, is an additional reviewed parent of authored documents. Shots wait for reviewed screenplay or brief and for the reviewed source corresponding to every active model, space, material, instance, motion, and system branch. Production source waits for settings. Film source waits for production source and shots.
 
-`@automovie/evidence` checks non-empty host populations, required anchors, named source owners, production-kind exclusions, flat treatment topology, treatment coverage, and exact script-to-screenplay delivery identities from the declaration before lint. Keep every project-specific selector and additive claim in `lint.config.ts` rather than another local configuration file. Preserve the typed declaration, additive `claims`, layer grouping, host-independent ordering, and mixed-state tests.
+`@automovie/evidence` checks non-empty host populations, required anchors, named source owners, production-kind exclusions, flat treatment topology, treatment coverage, and exact script-to-screenplay delivery identities from the declaration before lint. Keep every project-specific selector and additive claim in `productionEvidence.ts`; `lint.config.ts` only turns that value into the graph lint configuration. Preserve the typed declaration, additive `claims`, layer grouping, host-independent ordering, and mixed-state tests.
 
 ## Diagnostics
 

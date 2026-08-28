@@ -6,7 +6,7 @@ The project has a third authored surface beside these documents and `src`: `auto
 
 The shared contracts those hosts answer are not copied here. `@automovie/template` publishes `docs/discovery`, `docs/principles`, and `docs/obligations`, and the graph resolves them from the installed package, so an author cites them by their evidence roots (`discovery/...`, `principles/...`, `obligations/...`) and never edits them. Discovery states the open searches a population must run. Principles are no-exclusion checklists every selected authored H2/H3/H4 answers for itself. Obligations are no-exclusion roles the layer's primary H2 population, or a source family's selected public-export population, covers one or more times as each item requires. Work-specific results become flat files in this project's `docs/contracts`; upgrading the package delivers new shared contracts without copying them into the project.
 
-Choose one shape in lint.config.ts before authoring:
+Choose one shape in `../productionEvidence.ts` before authoring:
 
 | Shape | Required authored route |
 | --- | --- |

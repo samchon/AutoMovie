@@ -1,6 +1,6 @@
 # Production kinds
 
-The generated scaffold starts with `kind: null` and every stage disabled. Select exactly one `kind` in the graph declaration at the bottom of `lint.config.ts` when authorship begins. Runtime and aspect ratio do not decide the kind; authored structure does.
+The generated scaffold starts with `kind: null` and every stage disabled. Select exactly one `kind` in `productionEvidence.ts` when authorship begins. `lint.config.ts` consumes that declaration; runtime and aspect ratio do not decide the kind, authored structure does.
 
 Every layer begins `disabled` with no governed hosts. For a layer forbidden by the selected kind, that state is permanent. For a required or planned layer, it means not begun; add its hosts and enter `draft` only after its direct parents reach `review`.
 

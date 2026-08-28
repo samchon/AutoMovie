@@ -52,6 +52,15 @@ export const test_cli_scaffold_design_derivation = (): void => {
   );
   const productionStudies = rendered["scripts/productionStudies.ts"]!;
   const lint = rendered["lint.config.ts"]!;
+  const productionDeclaration = rendered["productionEvidence.ts"]!;
+  const narrativeStageOffsets = [
+    "settings",
+    "treatments",
+    "scripts",
+    "screenplays",
+    "shots",
+    "filmSources",
+  ].map((layer) => productionDeclaration.indexOf(`\n  ${layer}:`));
   const evidenceInDocs = Object.entries(rendered)
     .filter(([file]) => file.startsWith("docs/"))
     .filter(([, content]) => /@evidence[A-Za-z]*\b/u.test(content))
@@ -123,7 +132,7 @@ export const test_cli_scaffold_design_derivation = (): void => {
       evidenceInDocs: [],
       configurationFiles: [],
       generatedArtifacts: [],
-      localLintImports: [],
+      localLintImports: ["./productionEvidence"],
       productionState: [],
       productionDocuments: [],
       productionSources: [],
@@ -139,7 +148,8 @@ export const test_cli_scaffold_design_derivation = (): void => {
       ["refuses", () => emitter.includes("throw new Error(")],
       [
         "explains the first action",
-        () => emitter.includes("Select a production kind in lint.config.ts"),
+        () =>
+          emitter.includes("Select a production kind in productionEvidence.ts"),
       ],
       [
         "imports no completed production",
@@ -184,16 +194,35 @@ export const test_cli_scaffold_design_derivation = (): void => {
           ) === true,
       ],
       [
+        "names the single production-evidence authority",
+        () =>
+          rendered["AGENTS.md"]?.includes(
+            "stage declarations, and custom claims live in `productionEvidence.ts`",
+          ) === true &&
+          rendered["README.md"]?.includes(
+            "`lint.config.ts` consumes that one typed declaration",
+          ) === true &&
+          rendered["docs/README.md"]?.includes(
+            "Choose one shape in `../productionEvidence.ts`",
+          ) === true &&
+          rendered[".agents/skills/production/evidence-staging.md"]?.includes(
+            "Keep every project-specific selector and additive claim in `productionEvidence.ts`",
+          ) === true,
+      ],
+      [
         "ships only the canonical narrative ladder declaration",
         () =>
-          lint.includes(
-            "settings -> treatments -> scripts -> screenplays -> shots -> filmSources",
+          narrativeStageOffsets.every(
+            (offset, index) =>
+              offset >= 0 &&
+              (index === 0 || offset > narrativeStageOffsets[index - 1]!),
           ) &&
           ["treatments", "scripts", "screenplays"].every((layer) =>
-            lint.includes(`${layer}: "disabled"`),
+            productionDeclaration.includes(`${layer}: "disabled"`),
           ) &&
-          /\b(?:storylines|scenarios):\s/u.test(lint) === false &&
-          /^\s*script:\s/mu.test(lint) === false,
+          /\b(?:storylines|scenarios):\s/u.test(productionDeclaration) ===
+            false &&
+          /^\s*script:\s/mu.test(productionDeclaration) === false,
       ],
       [
         "keeps the retired review ledger ignored",
@@ -222,6 +251,7 @@ export const test_cli_scaffold_design_derivation = (): void => {
       "completed fixture carries no retired review store": true,
       "inherits no environmental study obligation": true,
       "ships the production authoring procedure": true,
+      "names the single production-evidence authority": true,
       "ships only the canonical narrative ladder declaration": true,
       "keeps the retired review ledger ignored": true,
       "refuses a blank project name": true,
