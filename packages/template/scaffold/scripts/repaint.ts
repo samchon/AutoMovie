@@ -24,10 +24,12 @@ import {
  * reference, adapter, parameter, and output identities.
  *
  * The CLI exposes four explicit operations. A reroll creates a new request
- * from the current reviewed configuration, retry repeats one existing request,
- * and both leave a successful candidate inactive. Select advances the active
- * pointer; reverse moves it to a prior verified candidate. Deterministic truth
- * retains its own receipts throughout those rendition transitions.
+ * from the current reviewed configuration, while retry repeats an existing
+ * request only after its latest terminal failure remains retryable under the
+ * unchanged policy. A success closes that request, so another candidate needs
+ * a reroll; both operations leave a successful candidate inactive. Select
+ * advances the active pointer; reverse moves it to a prior verified candidate.
+ * Deterministic truth retains its own receipts throughout those transitions.
  */
 await runProductionRepaintCommand(process.argv.slice(2), config, () => {
   const captureRuntime = createProductionFrameCaptureRuntime();
