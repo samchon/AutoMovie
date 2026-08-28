@@ -1517,6 +1517,14 @@ export const test_production_repaint_generator_adoption =
         },
         availableOutput: null,
       };
+      const priorForgedRetryable: IAutoMovieRepaintAttemptRecord = {
+        ...priorNonretryable,
+        failure: {
+          class: "provider-refusal",
+          message: "forged retryable bit outside the policy allowlist",
+          retryable: true,
+        },
+      };
       let retryLegalityProviderCalls = 0;
       const explicitRetry = (
         history: IAutoMovieRepaintAttemptRecord[],
@@ -1544,18 +1552,21 @@ export const test_production_repaint_generator_adoption =
         );
       const succeededRetry = await explicitRetry([priorSucceeded]);
       const nonretryableRetry = await explicitRetry([priorNonretryable]);
+      const forgedRetry = await explicitRetry([priorForgedRetryable]);
       const retryableRetry = await explicitRetry([priorRetryable]);
       TestValidator.equals(
         "explicit retry is legal only after the last retryable failed attempt",
         {
           succeeded: codeOf(succeededRetry),
           nonretryable: codeOf(nonretryableRetry),
+          forged: codeOf(forgedRetry),
           retryable: retryableRetry.repainted,
           providerCalls: retryLegalityProviderCalls,
         },
         {
           succeeded: "repaint-input-invalid",
           nonretryable: "repaint-input-invalid",
+          forged: "repaint-input-invalid",
           retryable: true,
           providerCalls: 1,
         },
