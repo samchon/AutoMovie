@@ -6,6 +6,8 @@ import type {
   AutoMovieContentDigest,
   AutoMovieGuidePass,
   IAutoMovieDiagnostic,
+  IAutoMovieLibraryReviewPopulation,
+  IAutoMovieLibraryReviewProjectReader,
   IAutoMovieRenderBundleManifest,
 } from "@automovie/interface";
 import {
@@ -19,46 +21,9 @@ import path from "node:path";
 import { namedFacts } from "../internal/predicates";
 import { productionFixture } from "./productionFixtures";
 
-interface Identity {
-  design: AutoMovieContentDigest;
-  source: AutoMovieContentDigest;
-  generated: AutoMovieContentDigest | null;
-  plan: AutoMovieContentDigest;
-}
-
-interface RequirementOwner {
-  branch: string;
-  owner: string;
-  identity: Identity;
-  observations: Array<{
-    id: string;
-    evidence: "artifact" | "facts" | "turntable";
-  }>;
-}
-
-interface Population {
-  branches: string[];
-  diagnostics: IAutoMovieDiagnostic[];
-  owners: RequirementOwner[];
-  receipts: unknown[];
-  turntables: Array<{
-    branch: string;
-    owner: string;
-    observation: string;
-    model: string;
-  }>;
-}
-
-interface ProjectReader {
-  root: string;
-  readProseDocument(path: string): string | null;
-  readRenderFile(path: string): Uint8Array;
-  readSource(path: string): Uint8Array;
-}
-
 interface ConsumerProps {
   authoring: IAutoMovieProductionEvidence;
-  project: ProjectReader;
+  project: IAutoMovieLibraryReviewProjectReader;
   scope: "design" | "source" | "review" | "final";
   compileFingerprint: AutoMovieContentDigest;
   modelExists: (model: string) => boolean;
@@ -80,9 +45,9 @@ const consumer = require(
 ) as {
   readAutoMovieLibraryReviewRequirements: (props: {
     authoring: IAutoMovieProductionEvidence;
-    project: ProjectReader;
+    project: IAutoMovieLibraryReviewProjectReader;
     compileFingerprint: AutoMovieContentDigest;
-  }) => Population;
+  }) => IAutoMovieLibraryReviewPopulation;
   libraryReviewEvidenceConsumerDiagnostics: (
     props: ConsumerProps,
   ) => IAutoMovieDiagnostic[];
@@ -159,7 +124,7 @@ const authoring = (kind: "brief" | "film" | "library" = "library") =>
     contracts: [],
   }) as unknown as IAutoMovieProductionEvidence;
 
-interface MutableProject extends ProjectReader {
+interface MutableProject extends IAutoMovieLibraryReviewProjectReader {
   prose: Map<string, string>;
   render: Map<string, Uint8Array>;
   source: Map<string, Uint8Array>;
@@ -254,7 +219,10 @@ const evidenceFor = (branch: string) => {
   };
 };
 
-const payPlans = (state: MutableProject, binding = authoring()): Population => {
+const payPlans = (
+  state: MutableProject,
+  binding = authoring(),
+): IAutoMovieLibraryReviewPopulation => {
   const population = consumer.readAutoMovieLibraryReviewRequirements({
     authoring: binding,
     project: state,
@@ -396,11 +364,36 @@ export const test_production_library_review_evidence_consumer = (): void => {
     plan.units[0].sources.push("src/spaces/support.ts");
     changed.prose.set(reviewPath("spaces"), JSON.stringify(plan));
   });
+  const bindingChanged = diagnose((_changed, changedBinding) => {
+    const target = changedBinding.designOwners.find(
+      (entry) => entry.branch === "instances",
+    )!;
+    (
+      target.sourceBinding as unknown as {
+        symbols: string[];
+      }
+    ).symbols.push("changed-owner-symbol");
+  });
+  const compileChangedState = project();
+  writePlans(compileChangedState);
+  payPlans(compileChangedState);
+  const compileChanged = consumer.libraryReviewEvidenceConsumerDiagnostics({
+    ...props(compileChangedState),
+    compileFingerprint: digest("3"),
+  });
   const artifactChanged = diagnose((changed) =>
     changed.render.set(
       "observations/material.png",
       Buffer.from("new pixels", "utf8"),
     ),
+  );
+  const factsChanged = diagnose((changed) => {
+    const plan = JSON.parse(changed.prose.get(reviewPath("systems"))!);
+    plan.units[0].receipts[0].evidence.facts.observed = false;
+    changed.prose.set(reviewPath("systems"), JSON.stringify(plan));
+  });
+  const artifactMissing = diagnose((changed) =>
+    changed.prose.delete("observations/space.svg"),
   );
   const missingViewState = project();
   writePlans(missingViewState);
@@ -465,6 +458,11 @@ export const test_production_library_review_evidence_consumer = (): void => {
     "src/motions/support.ts",
   ];
   invalidPlan.units[0].observations[0].model = "not-a-turntable";
+  invalidPlan.units[0].observations.push({
+    id: "fake-turntable",
+    evidence: "turntable",
+    model: "chair",
+  });
   invalidState.prose.set(reviewPath("motions"), JSON.stringify(invalidPlan));
   const missingSource = invalidState.source.delete("src/motions/support.ts");
   const invalidModelPlan = JSON.parse(
@@ -491,9 +489,34 @@ export const test_production_library_review_evidence_consumer = (): void => {
     reviewPath("materials"),
     JSON.stringify(missingUnitPlan),
   );
+  const blankObservationPlan = JSON.parse(
+    invalidState.prose.get(reviewPath("systems"))!,
+  );
+  blankObservationPlan.units[0].observations[0].id = " ";
+  invalidState.prose.set(
+    reviewPath("systems"),
+    JSON.stringify(blankObservationPlan),
+  );
   const invalid = consumer.readAutoMovieLibraryReviewRequirements({
     authoring: binding,
     project: invalidState,
+    compileFingerprint: COMPILE,
+  });
+  const factsOnlyModelState = project();
+  writePlans(factsOnlyModelState);
+  const factsOnlyModelPlan = JSON.parse(
+    factsOnlyModelState.prose.get(reviewPath("models"))!,
+  );
+  factsOnlyModelPlan.units[0].observations = [
+    { id: "dimensions", evidence: "facts" },
+  ];
+  factsOnlyModelState.prose.set(
+    reviewPath("models"),
+    JSON.stringify(factsOnlyModelPlan),
+  );
+  const factsOnlyModel = consumer.readAutoMovieLibraryReviewRequirements({
+    authoring: binding,
+    project: factsOnlyModelState,
     compileFingerprint: COMPILE,
   });
   const wrongRoot = consumer.libraryReviewEvidenceConsumerDiagnostics({
@@ -556,11 +579,47 @@ export const test_production_library_review_evidence_consumer = (): void => {
           ),
       ],
       [
+        "sourceBindingChangeStalesExactOwner",
+        () =>
+          bindingChanged.some(
+            (entry) =>
+              entry.target.includes("instances") &&
+              entry.message.includes("stale"),
+          ),
+      ],
+      [
+        "compileChangeStalesExactOwner",
+        () =>
+          compileChanged.some(
+            (entry) =>
+              entry.target.includes("models") &&
+              entry.message.includes("stale"),
+          ),
+      ],
+      [
         "artifactDigestIsReopened",
         () =>
           artifactChanged.some(
             (entry) =>
               entry.target.includes("materials") &&
+              entry.message.includes("does not reopen"),
+          ),
+      ],
+      [
+        "structuredFactsDigestIsReopened",
+        () =>
+          factsChanged.some(
+            (entry) =>
+              entry.target.includes("systems") &&
+              entry.message.includes("does not reopen"),
+          ),
+      ],
+      [
+        "missingProjectArtifactIsRefused",
+        () =>
+          artifactMissing.some(
+            (entry) =>
+              entry.target.includes("spaces") &&
               entry.message.includes("does not reopen"),
           ),
       ],
@@ -623,11 +682,23 @@ export const test_production_library_review_evidence_consumer = (): void => {
             "outside the active manifest-derived",
             "cannot reopen source",
             "carries a model field",
-            "names no compiled model",
+            "names no canonical compiled model",
             "has 2 matching unit plans",
             "has 0 matching unit plans",
+            "is not an exact current H2 owner",
+            "is blank or not canonically trimmed",
+            "cannot use a model turntable",
           ].every((phrase) =>
             invalid.diagnostics.some((entry) => entry.message.includes(phrase)),
+          ),
+      ],
+      [
+        "modelFactsCannotReplaceFixedTurntable",
+        () =>
+          factsOnlyModel.diagnostics.some((entry) =>
+            entry.message.includes(
+              "declares no canonical whole-model turntable",
+            ),
           ),
       ],
       [
@@ -663,7 +734,11 @@ export const test_production_library_review_evidence_consumer = (): void => {
       sourceChangeStalesExactOwner: true,
       designChangeStalesExactOwner: true,
       planChangeStalesExactOwner: true,
+      sourceBindingChangeStalesExactOwner: true,
+      compileChangeStalesExactOwner: true,
       artifactDigestIsReopened: true,
+      structuredFactsDigestIsReopened: true,
+      missingProjectArtifactIsRefused: true,
       turntableNeedsEveryCanonicalView: true,
       turntableNeedsCompiledModel: true,
       activeEmptyBranchRefused: true,
@@ -671,6 +746,7 @@ export const test_production_library_review_evidence_consumer = (): void => {
       missingMalformedAndWrongVersionPlansRefused: true,
       missingSourceWasExercised: true,
       invalidSourcesPlansAndKindsRefused: true,
+      modelFactsCannotReplaceFixedTurntable: true,
       foreignAuthoringSnapshotRefused: true,
       filmBriefAndEarlierScopesRemainUnchanged: true,
     },

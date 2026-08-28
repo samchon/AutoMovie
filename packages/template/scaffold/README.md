@@ -28,6 +28,8 @@ npm run lint:source
 
 The empty design emitter, compile, review lint, preview, render, and verify commands fail until you select a kind and author their prerequisites. That is a truthful blank state, not setup failure. After reviewed source exists, add its explicit imports and `emit` calls to the marked block in `scripts/emitDesign.ts`; preserve the shell's unchanged-record and orphan-inventory checks. Then run `npm run design`, `npm run compile`, and the applicable review/render gates.
 
+For a library, `npm run library:review -- inspect` prints the exact active branch/H2 population and current receipt state. Create one adjacent observation plan with `npm run library:review -- plan --owner docs/<branch>/<design>.md#<h2-anchor> --source src/<branch>/<owner>.ts --observation <stable-id>:artifact|facts`; models instead use `<stable-id>:turntable:<model-id>`. After performing the named observation, use `record` with the same owner and observation, one canonical `--runtime`, an explicit `--verdict`, and exactly one of `--artifact-project`, `--artifact-render`, `--facts-file`, or `--turntable`. The command derives every digest from current bytes and compiler identity; never type a receipt by hand.
+
 Every checked-in `ttsc` and `ttsx` launcher pins its compiler cache to `node_modules/.cache/ttsc`. This keeps a generated project standalone even when its directory is nested below another workspace. Preserve that flag on new TypeScript launcher scripts instead of relying on upward workspace discovery.
 
 After compilation, the viewer is available at `http://127.0.0.1:5173`. Run `capture:install` and `capture:doctor` before the first preview or render.

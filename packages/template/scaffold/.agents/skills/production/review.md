@@ -60,6 +60,39 @@ Choose evidence that can falsify the domain rather than turning every branch int
 
 The adjacent file is a physical observation plan and receipt locator, not a finding, approval, waiver, or product-status ledger. The compiler independently reopens its bytes or facts and refuses a missing, stale, failing, unsupported, not-run, runtime-unidentified, duplicate, or wrong-kind receipt. A change to the H2, any selected source byte, the compile fingerprint, or the finite plan expires the receipt. Disabling a branch or excluding an owner through the evidence graph removes it from the denominator; deleting a plan does not.
 
+The strict file shape is:
+
+```json
+{
+  "version": 1,
+  "units": [
+    {
+      "anchor": "the-design-h2-anchor",
+      "sources": ["src/models/example.ts"],
+      "observations": [
+        { "id": "whole-model", "evidence": "turntable", "model": "example" }
+      ],
+      "receipts": [
+        {
+          "observation": "whole-model",
+          "evidence": { "kind": "turntable", "model": "example" },
+          "identity": {
+            "design": "sha256:...",
+            "source": "sha256:...",
+            "generated": "sha256:...",
+            "plan": "sha256:..."
+          },
+          "runtimeIdentity": "tool:runtime:version",
+          "verdict": "passed"
+        }
+      ]
+    }
+  ]
+}
+```
+
+Use `{ "kind": "artifact", "root": "project" | "render", "path": "...", "digest": "sha256:..." }` for exact project-text or renderer-owned bytes, and `{ "kind": "facts", "facts": ..., "digest": "sha256:..." }` for canonical structured facts. Obtain the entire `identity` from `readAutoMovieLibraryReviewRequirements`; never type or copy its digests from an earlier run.
+
 That leaves exactly one thing to you, and it is the thing no mechanism can do: open the frames and write what they showed. A citation naming no observation passes every check in this project and is still not a review.
 
 ## Final whole-production review

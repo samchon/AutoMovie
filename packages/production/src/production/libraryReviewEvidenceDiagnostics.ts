@@ -1,57 +1,11 @@
 import type {
-  AutoMovieContentDigest,
   IAutoMovieDiagnostic,
+  IAutoMovieLibraryReviewOwner,
+  IAutoMovieLibraryReviewOwnerIdentity,
+  IAutoMovieLibraryReviewResolvedReceipt,
 } from "@automovie/interface";
 
 import { compareCodeUnits } from "./contentIdentity";
-
-/** One current identity shared by an owner's plan and every receipt for it. */
-interface IAutoMovieLibraryReviewOwnerIdentity {
-  design: AutoMovieContentDigest;
-  source: AutoMovieContentDigest;
-  generated: AutoMovieContentDigest | null;
-  plan: AutoMovieContentDigest;
-}
-
-/** One finite observation selected by a design owner's reviewed plan. */
-interface IAutoMovieLibraryReviewObservationRequirement {
-  id: string;
-  evidence: "artifact" | "facts" | "turntable";
-}
-
-/** One design owner delivered by the derived authoring binding. */
-interface IAutoMovieLibraryReviewOwner {
-  branch: string;
-  owner: string;
-  identity: IAutoMovieLibraryReviewOwnerIdentity;
-  observations: readonly IAutoMovieLibraryReviewObservationRequirement[];
-}
-
-/** One persisted observation offered as evidence for a library owner. */
-interface IAutoMovieLibraryReviewObservationReceipt {
-  branch: string;
-  owner: string;
-  observation: string;
-  evidence:
-    | {
-        kind: "artifact";
-        root: "project" | "render";
-        path: string;
-        digest: AutoMovieContentDigest;
-      }
-    | {
-        kind: "facts";
-        facts: unknown;
-        digest: AutoMovieContentDigest;
-      }
-    | {
-        kind: "turntable";
-        model: string;
-      };
-  identity: IAutoMovieLibraryReviewOwnerIdentity;
-  runtimeIdentity: string;
-  verdict: "failed" | "not-run" | "passed" | "unsupported";
-}
 
 /** Whether two owner identities describe the same reviewed generation. */
 const sameIdentity = (
@@ -101,9 +55,9 @@ export function libraryReviewEvidenceDiagnostics(props: {
   /** Exact delivered design-owner population selected by that binding. */
   owners: readonly IAutoMovieLibraryReviewOwner[];
   /** Historical and current persisted observation receipts. */
-  receipts: readonly IAutoMovieLibraryReviewObservationReceipt[];
+  receipts: readonly IAutoMovieLibraryReviewResolvedReceipt[];
   /** Reopen one receipt's exact artifact bytes or structured facts. */
-  current: (receipt: IAutoMovieLibraryReviewObservationReceipt) => boolean;
+  current: (receipt: IAutoMovieLibraryReviewResolvedReceipt) => boolean;
 }): IAutoMovieDiagnostic[] {
   if (
     props.kind !== "library" ||

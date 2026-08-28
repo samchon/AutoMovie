@@ -22,6 +22,7 @@
     "format": "ttsc format --cache-dir node_modules/.cache/ttsc -p tsconfig.json",
     "lint": "npm run lint:source && ttsx --cache-dir node_modules/.cache/ttsc -P tsconfig.json scripts/lint.ts",
     "lint:source": "ttsc --cache-dir node_modules/.cache/ttsc --noEmit -p tsconfig.json",
+    "library:review": "ttsx --cache-dir node_modules/.cache/ttsc -P tsconfig.json scripts/library-review.ts",
     "preview": "ttsx --cache-dir node_modules/.cache/ttsc -P tsconfig.json scripts/preview.ts",
     "render": "ttsx --cache-dir node_modules/.cache/ttsc -P tsconfig.json scripts/render.ts",
     "repaint": "ttsx --cache-dir node_modules/.cache/ttsc -P tsconfig.json scripts/repaint.ts",

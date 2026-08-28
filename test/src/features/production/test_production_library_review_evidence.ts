@@ -1,4 +1,10 @@
-import type { AutoMovieContentDigest } from "@automovie/interface";
+import type {
+  AutoMovieContentDigest,
+  AutoMovieLibraryReviewEvidenceKind,
+  IAutoMovieLibraryReviewOwner,
+  IAutoMovieLibraryReviewOwnerIdentity,
+  IAutoMovieLibraryReviewResolvedReceipt,
+} from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 import path from "node:path";
 
@@ -14,9 +20,9 @@ const unit = require(
     kind: "brief" | "film" | "library";
     scope: "design" | "source" | "review" | "final";
     branches: readonly string[];
-    owners: readonly Owner[];
-    receipts: readonly Receipt[];
-    current: (receipt: Receipt) => boolean;
+    owners: readonly IAutoMovieLibraryReviewOwner[];
+    receipts: readonly TestReceipt[];
+    current: (receipt: TestReceipt) => boolean;
   }) => Array<{
     code: string;
     category: string;
@@ -28,42 +34,16 @@ const unit = require(
 const { libraryReviewEvidenceDiagnostics } = unit;
 
 type Digest = AutoMovieContentDigest;
-type Evidence = "artifact" | "facts" | "turntable";
-interface Identity {
-  design: Digest;
-  source: Digest;
-  generated: Digest | null;
-  plan: Digest;
-}
-interface Owner {
-  branch: string;
-  owner: string;
-  identity: Identity;
-  observations: Array<{ id: string; evidence: Evidence }>;
-}
-interface Receipt {
-  branch: string;
-  owner: string;
-  observation: string;
-  evidence:
-    | {
-        kind: "artifact";
-        root: "project" | "render";
-        path: string;
-        digest: Digest;
-      }
-    | { kind: "facts"; facts: unknown; digest: Digest }
-    | { kind: "turntable"; model: string };
-  identity: Identity;
-  runtimeIdentity: string;
-  verdict: "failed" | "not-run" | "passed" | "unsupported";
+interface TestReceipt extends IAutoMovieLibraryReviewResolvedReceipt {
   resident?: boolean;
   throws?: boolean;
 }
 
 const digest = (digit: string): Digest =>
   `sha256:${digit.repeat(64)}` as Digest;
-const identity = (digit: string = "1"): Identity => ({
+const identity = (
+  digit: string = "1",
+): IAutoMovieLibraryReviewOwnerIdentity => ({
   design: digest(digit),
   source: digest(digit),
   generated: digest(digit),
@@ -72,14 +52,17 @@ const identity = (digit: string = "1"): Identity => ({
 const owner = (
   branch: string,
   id: string,
-  evidence: Evidence = "artifact",
-): Owner => ({
+  evidence: AutoMovieLibraryReviewEvidenceKind = "artifact",
+): IAutoMovieLibraryReviewOwner => ({
   branch,
   owner: id,
   identity: identity(),
   observations: [{ id: `${id}-observation`, evidence }],
 });
-const receipt = (subject: Owner, props: Partial<Receipt> = {}): Receipt => ({
+const receipt = (
+  subject: IAutoMovieLibraryReviewOwner,
+  props: Partial<TestReceipt> = {},
+): TestReceipt => ({
   branch: subject.branch,
   owner: subject.owner,
   observation: subject.observations[0]!.id,
@@ -111,8 +94,8 @@ const run = (props: {
   kind?: "brief" | "film" | "library";
   scope?: "design" | "source" | "review" | "final";
   branches: readonly string[];
-  owners: readonly Owner[];
-  receipts?: readonly Receipt[];
+  owners: readonly IAutoMovieLibraryReviewOwner[];
+  receipts?: readonly TestReceipt[];
 }): Array<{
   code: string;
   category: string;

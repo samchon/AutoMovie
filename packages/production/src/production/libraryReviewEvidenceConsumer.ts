@@ -6,6 +6,12 @@ import type {
   AutoMovieContentDigest,
   AutoMovieGuidePass,
   IAutoMovieDiagnostic,
+  IAutoMovieLibraryReviewOwnerIdentity,
+  IAutoMovieLibraryReviewPlanFile,
+  IAutoMovieLibraryReviewPopulation,
+  IAutoMovieLibraryReviewProjectReader,
+  IAutoMovieLibraryReviewResolvedReceipt,
+  IAutoMovieLibraryReviewUnitPlan,
   IAutoMovieRenderBundleManifest,
 } from "@automovie/interface";
 import typia from "typia";
@@ -22,99 +28,10 @@ import { libraryReviewEvidenceDiagnostics } from "./libraryReviewEvidenceDiagnos
 import { assetReviewEvidenceDiagnostics } from "./reviewEvidenceDiagnostics";
 
 type CompileScope = "design" | "source" | "review" | "final";
-type EvidenceKind = "artifact" | "facts" | "turntable";
-
-interface ILibraryReviewOwnerIdentity {
-  design: AutoMovieContentDigest;
-  source: AutoMovieContentDigest;
-  generated: AutoMovieContentDigest | null;
-  plan: AutoMovieContentDigest;
-}
-
-interface ILibraryReviewArtifactEvidence {
-  kind: "artifact";
-  root: "project" | "render";
-  path: string;
-  digest: AutoMovieContentDigest;
-}
-
-interface ILibraryReviewFactsEvidence {
-  kind: "facts";
-  facts: unknown;
-  digest: AutoMovieContentDigest;
-}
-
-interface ILibraryReviewTurntableEvidence {
-  kind: "turntable";
-  model: string;
-}
-
-type LibraryReviewEvidence =
-  | ILibraryReviewArtifactEvidence
-  | ILibraryReviewFactsEvidence
-  | ILibraryReviewTurntableEvidence;
-
-interface ILibraryReviewObservationPlan {
-  id: string;
-  evidence: EvidenceKind;
-  model?: string;
-}
-
-interface ILibraryReviewObservationReceipt {
-  observation: string;
-  evidence: LibraryReviewEvidence;
-  identity: ILibraryReviewOwnerIdentity;
-  runtimeIdentity: string;
-  verdict: "failed" | "not-run" | "passed" | "unsupported";
-}
-
-interface ILibraryReviewUnitPlan {
-  anchor: string;
-  sources: string[];
-  observations: ILibraryReviewObservationPlan[];
-  receipts: ILibraryReviewObservationReceipt[];
-}
-
-interface ILibraryReviewPlanFile {
-  version: 1;
-  units: ILibraryReviewUnitPlan[];
-}
-
-interface ILibraryReviewProjectReader {
-  root: string;
-  readProseDocument(path: string): string | null;
-  readRenderFile(path: string): Uint8Array;
-  readSource(path: string): Uint8Array;
-}
-
-interface IResolvedLibraryReviewOwner {
-  branch: string;
-  owner: string;
-  identity: ILibraryReviewOwnerIdentity;
-  observations: Array<{ id: string; evidence: EvidenceKind }>;
-}
-
-interface IResolvedLibraryReviewReceipt extends ILibraryReviewObservationReceipt {
-  branch: string;
-  owner: string;
-}
-
-interface IResolvedLibraryReviewPopulation {
-  branches: string[];
-  diagnostics: IAutoMovieDiagnostic[];
-  owners: IResolvedLibraryReviewOwner[];
-  receipts: IResolvedLibraryReviewReceipt[];
-  turntables: Array<{
-    branch: string;
-    owner: string;
-    observation: string;
-    model: string;
-  }>;
-}
 
 interface ILibraryReviewConsumerProps {
   authoring: IAutoMovieProductionEvidence;
-  project: ILibraryReviewProjectReader;
+  project: IAutoMovieLibraryReviewProjectReader;
   scope: CompileScope;
   compileFingerprint: AutoMovieContentDigest;
   modelExists: (model: string) => boolean;
@@ -130,7 +47,7 @@ interface ILibraryReviewConsumerProps {
 
 interface ILibraryReviewResolverProps {
   authoring: IAutoMovieProductionEvidence;
-  project: ILibraryReviewProjectReader;
+  project: IAutoMovieLibraryReviewProjectReader;
   compileFingerprint: AutoMovieContentDigest;
 }
 
@@ -167,10 +84,10 @@ const observationAddress = (
 
 /** Read one strict plan without letting malformed review records crash lint. */
 const readPlan = (props: {
-  project: ILibraryReviewProjectReader;
+  project: IAutoMovieLibraryReviewProjectReader;
   owner: IAutoMovieProductionEvidenceDesignOwner;
 }):
-  | { success: true; data: ILibraryReviewPlanFile }
+  | { success: true; data: IAutoMovieLibraryReviewPlanFile }
   | { success: false; diagnostic: IAutoMovieDiagnostic } => {
   const relative = planPath(props.owner);
   const source = props.project.readProseDocument(relative);
@@ -184,7 +101,7 @@ const readPlan = (props: {
       }),
     };
   try {
-    const validation = typia.validateEquals<ILibraryReviewPlanFile>(
+    const validation = typia.validateEquals<IAutoMovieLibraryReviewPlanFile>(
       JSON.parse(source) as unknown,
     );
     if (validation.success === true) return validation;
@@ -218,10 +135,10 @@ const identityOf = (props: {
   compileFingerprint: AutoMovieContentDigest;
   diagnostics: IAutoMovieDiagnostic[];
   owner: IAutoMovieProductionEvidenceDesignOwner;
-  project: ILibraryReviewProjectReader;
+  project: IAutoMovieLibraryReviewProjectReader;
   unit: IAutoMovieProductionEvidenceDesignOwner["units"][number];
-  plan: ILibraryReviewUnitPlan;
-}): ILibraryReviewOwnerIdentity => {
+  plan: IAutoMovieLibraryReviewUnitPlan;
+}): IAutoMovieLibraryReviewOwnerIdentity => {
   const target = `library:${props.owner.branch}:${ownerAddress(
     props.owner,
     props.unit.anchor,
@@ -241,7 +158,24 @@ const identityOf = (props: {
     role: string;
     kind: string;
     payload: Uint8Array;
-  }> = [];
+  }> = [
+    {
+      role: "library-review-source-binding",
+      kind: props.owner.sourceBinding?.branch ?? "missing",
+      payload: canonicalAutoMovieJsonBytes(
+        props.owner.sourceBinding === null
+          ? null
+          : {
+              branch: props.owner.sourceBinding.branch,
+              stage: props.owner.sourceBinding.stage,
+              enforced: props.owner.sourceBinding.enforced,
+              root: props.owner.sourceBinding.root,
+              files: props.owner.sourceBinding.files,
+              symbols: props.owner.sourceBinding.symbols,
+            },
+      ),
+    },
+  ];
   for (const source of sources) {
     if (source.trim() === "" || source.includes("\\") || seen.has(source)) {
       props.diagnostics.push(
@@ -303,8 +237,8 @@ const identityOf = (props: {
 /** Resolve the exact graph-derived library denominator into mechanical plans. */
 const resolvePopulation = (
   props: ILibraryReviewResolverProps,
-): IResolvedLibraryReviewPopulation => {
-  const output: IResolvedLibraryReviewPopulation = {
+): IAutoMovieLibraryReviewPopulation => {
+  const output: IAutoMovieLibraryReviewPopulation = {
     branches: [],
     diagnostics: [],
     owners: [],
@@ -350,6 +284,18 @@ const resolvePopulation = (
       loaded = readPlan({ project: props.project, owner });
       cachedPlans.set(relative, loaded);
       if (loaded.success === false) output.diagnostics.push(loaded.diagnostic);
+    }
+    if (loaded.success === true) {
+      const denominators = new Set(owner.units.map((unit) => unit.anchor));
+      for (const unit of loaded.data.units)
+        if (denominators.has(unit.anchor) === false)
+          output.diagnostics.push(
+            missing({
+              target: `library:${owner.branch}:${owner.path}#${unit.anchor}`,
+              path: relative,
+              message: `Library observation plan "${relative}" retains unit "${unit.anchor}", which is not an exact current H2 owner in "${owner.path}". Remove or rebind the orphan plan; historical receipt residue cannot enlarge the graph-derived denominator.`,
+            }),
+          );
     }
     for (const unit of owner.units) {
       const address = ownerAddress(owner, unit.anchor);
@@ -398,17 +344,50 @@ const resolvePopulation = (
         identity,
         observations,
       });
-      for (const observation of plan.observations)
+      if (
+        owner.branch === "models" &&
+        plan.observations.some(
+          (observation) => observation.evidence === "turntable",
+        ) === false
+      )
+        output.diagnostics.push(
+          missing({
+            target: `library:${owner.branch}:${address}`,
+            path: relative,
+            message: `Library model owner "${address}" declares no canonical whole-model turntable. Add a turntable observation bound to the exact compiled model; an artifact or fact sample cannot replace the fixed model view set.`,
+          }),
+        );
+      for (const observation of plan.observations) {
+        if (
+          observation.id.trim() === "" ||
+          observation.id !== observation.id.trim()
+        )
+          output.diagnostics.push(
+            missing({
+              target: `library:${owner.branch}:${address}:${observation.id}`,
+              path: relative,
+              message: `Library observation id ${JSON.stringify(observation.id)} on "${address}" is blank or not canonically trimmed. Give every finite observation one stable nonblank id before recording evidence.`,
+            }),
+          );
         if (observation.evidence === "turntable") {
-          if (
+          if (owner.branch !== "models")
+            output.diagnostics.push(
+              missing({
+                target: `library:${owner.branch}:${address}:${observation.id}`,
+                path: relative,
+                message: `Library ${owner.branch} observation "${observation.id}" cannot use a model turntable as its domain evidence. Declare the finite artifact or structured facts that can falsify this branch instead.`,
+              }),
+            );
+          else if (
             observation.model === undefined ||
-            observation.model.trim() === ""
+            observation.model.trim() === "" ||
+            observation.model !== observation.model.trim()
           )
             output.diagnostics.push(
               missing({
                 target: `library:${owner.branch}:${address}:${observation.id}`,
                 path: relative,
-                message: `Library turntable observation "${observation.id}" on "${address}" names no compiled model. Bind the exact model recipe whose canonical view set this observation pays.`,
+                message: `Library turntable observation "${observation.id}" on "${address}" names no canonical compiled model. Bind the exact trimmed model recipe whose canonical view set this observation pays.`,
               }),
             );
           else
@@ -426,6 +405,7 @@ const resolvePopulation = (
               message: `Library ${observation.evidence} observation "${observation.id}" on "${address}" carries a model field that only a canonical turntable may use. Remove the ambiguous field or select turntable evidence.`,
             }),
           );
+      }
       for (const receipt of plan.receipts)
         output.receipts.push({
           branch: owner.branch,
@@ -454,7 +434,7 @@ const resolvePopulation = (
  */
 export const readAutoMovieLibraryReviewRequirements = (
   props: ILibraryReviewResolverProps,
-): IResolvedLibraryReviewPopulation =>
+): IAutoMovieLibraryReviewPopulation =>
   props.authoring.manifest.kind === "library"
     ? resolvePopulation(props)
     : {
@@ -497,7 +477,7 @@ const turntableCurrent = (
 const receiptCurrent = (props: {
   consumer: ILibraryReviewConsumerProps;
   expectedTurntables: ReadonlyMap<string, string>;
-  receipt: IResolvedLibraryReviewReceipt;
+  receipt: IAutoMovieLibraryReviewResolvedReceipt;
 }): boolean => {
   if (props.receipt.evidence.kind === "turntable")
     return (
