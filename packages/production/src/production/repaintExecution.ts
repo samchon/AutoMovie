@@ -125,7 +125,9 @@ export const assertAutoMovieRepaintExecutionPolicy = (
 /**
  * Execute one repaint request within its complete retry, time, cost, and
  * cancellation envelope. Every attempted provider call yields one terminal
- * record; only a successful validation value can become a candidate.
+ * record; only a successful validation value can become a candidate. Injected
+ * clock observations must remain monotonic so a rollback cannot reopen elapsed
+ * budget or move an attempt before an already observed terminal fact.
  */
 export const executeAutoMovieRepaintRequest = async <T>(props: {
   productionId: string;
@@ -149,6 +151,23 @@ export const executeAutoMovieRepaintRequest = async <T>(props: {
 }): Promise<IAutoMovieRepaintExecutionResult<T>> => {
   assertAutoMovieRepaintExecutionPolicy(props.policy);
   const started = validInstant(props.runtime.now(), "request start");
+  let lastObservedAt = started.getTime();
+  const observeNow = (label: string): Date => {
+    let current: Date;
+    try {
+      current = validInstant(props.runtime.now(), label);
+    } catch (error) {
+      throw new AutoMovieRepaintClockError(
+        error instanceof Error ? error.message : String(error),
+      );
+    }
+    if (current.getTime() < lastObservedAt)
+      throw new AutoMovieRepaintClockError(
+        `Repaint ${label} precedes the previous runtime clock observation.`,
+      );
+    lastObservedAt = current.getTime();
+    return current;
+  };
   const attempts: IAutoMovieRepaintAttemptRecord[] = [];
   let spent = 0;
   const ordinalOffset = props.ordinalOffset ?? 0;
@@ -157,13 +176,13 @@ export const executeAutoMovieRepaintRequest = async <T>(props: {
     const ordinal = ordinalOffset + local;
     if (requestCancelled())
       return result(props.requestId, attempts, null, "cancelled");
-    const elapsed = props.runtime.now().getTime() - started.getTime();
+    const elapsed = observeNow("request elapsed").getTime() - started.getTime();
     if (elapsed >= props.policy.maximumElapsedMs)
       return result(props.requestId, attempts, null, "elapsed-exhausted");
     if (spent >= props.policy.maximumCostUnits)
       return result(props.requestId, attempts, null, "cost-exhausted");
 
-    const attemptStarted = validInstant(props.runtime.now(), "attempt start");
+    const attemptStarted = observeNow("attempt start");
     if (
       attemptStarted.getTime() - started.getTime() >=
       props.policy.maximumElapsedMs
@@ -198,10 +217,7 @@ export const executeAutoMovieRepaintRequest = async <T>(props: {
           }, timeoutMs);
         }),
       ]);
-      const outcomeCompleted = validInstant(
-        props.runtime.now(),
-        "attempt completion",
-      );
+      const outcomeCompleted = observeNow("attempt completion");
       if (requestCancelled())
         throw new AutoMovieRepaintAttemptError(
           "cancelled",
@@ -277,10 +293,8 @@ export const executeAutoMovieRepaintRequest = async <T>(props: {
         "accepted",
       );
     } catch (error) {
-      const failureCompleted = validInstant(
-        props.runtime.now(),
-        "attempt completion",
-      );
+      if (error instanceof AutoMovieRepaintClockError) throw error;
+      const failureCompleted = observeNow("attempt completion");
       const deadlineExceeded =
         timedOut ||
         failureCompleted.getTime() - attemptStarted.getTime() >= timeoutMs ||
@@ -368,6 +382,8 @@ const RETRYABLE_FAILURE_CLASSES: ReadonlySet<AutoMovieRepaintFailureClass> =
 const MAX_TIMER_MILLISECONDS = 2_147_483_647;
 
 const NEVER_ABORTED_SIGNAL = new AbortController().signal;
+
+class AutoMovieRepaintClockError extends Error {}
 
 const result = <T>(
   requestId: string,
