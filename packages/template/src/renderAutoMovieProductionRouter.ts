@@ -27,19 +27,12 @@ export const renderAutoMovieProductionRouter = (
     activeBranches.length === 0
       ? "No authored branch is active yet."
       : `Active branches: ${activeBranches.join(", ")}.`;
-  const sharedContracts = [
-    ...new Set(
-      evidence.manifest.bindings.flatMap((binding) =>
-        binding.target.type === "contract" ? [binding.target.path] : [],
-      ),
-    ),
-  ].sort((left, right) => Number(left > right) - Number(left < right));
-  const commonContractLines =
-    sharedContracts.length === 0
+  const bindingLines =
+    evidence.manifest.bindings.length === 0
       ? [
           "- No shared contract route is active before a production kind is selected.",
         ]
-      : sharedContracts.map((contract) => `- \`${contract}\``);
+      : evidence.manifest.bindings.map(renderManifestBinding);
   const localContractLines =
     evidence.contracts.length === 0
       ? ["- This production owns no local contract document yet."]
@@ -91,9 +84,9 @@ ${designOwnerLines.join("\n")}
 
 ## Contracts this production answers
 
-Shared contracts arrive through \`@automovie/template\` and are selected by \`productionEvidence.mjs\`. Cite them by their evidence roots, never by the installed filesystem path.
+Shared contracts arrive through \`@automovie/template\` and are selected by \`productionEvidence.mjs\`. Each line below is one factory-derived binding, including the answering host population and relationship; repeated contract addresses are distinct obligations, not duplicates to collapse. Cite contracts by their evidence roots, never by the installed filesystem path.
 
-${commonContractLines.join("\n")}
+${bindingLines.join("\n")}
 
 Project-local contracts are flat files under \`docs/contracts\`; every item below is read from that tracked directory.
 
@@ -113,6 +106,42 @@ Start the coding-agent session from this project root. Codex reads this \`AGENTS
 - \`npm run compile\` is the only command that may update compiler-owned output.
 `;
 };
+
+/** Render one complete factory-derived host-to-target relationship. */
+const renderManifestBinding = (
+  binding: IAutoMovieProductionEvidence["manifest"]["bindings"][number],
+): string => {
+  const targetBinding = binding.target;
+  const target =
+    targetBinding.type === "contract"
+      ? `contract ${codeList(
+          targetBinding.anchors.length === 0
+            ? [targetBinding.path]
+            : targetBinding.anchors.map(
+                (anchor) => `${targetBinding.path}#${anchor}`,
+              ),
+        )}`
+      : `population root ${inlineCode(targetBinding.root)}, files ${codeList(
+          targetBinding.files,
+        )}, symbols ${codeList(targetBinding.symbols)}`;
+  return `- Branch ${inlineCode(binding.branch)} (${inlineCode(
+    binding.stage,
+  )}, ${binding.enforced ? "enforced" : "not yet enforced"}) uses ${inlineCode(
+    binding.relationship,
+  )}: ${binding.host.type} host root ${inlineCode(
+    binding.host.root,
+  )}, files ${codeList(binding.host.files)}, symbols ${codeList(
+    binding.host.symbols,
+  )} -> ${target}; claim ${inlineCode(binding.claim)}.`;
+};
+
+/** Render one safe Markdown inline-code value from manifest-owned text. */
+const inlineCode = (value: string): string =>
+  `\`${value.replaceAll("`", "%60")}\``;
+
+/** Render a nonempty or explicitly empty inline-code inventory. */
+const codeList = (values: readonly string[]): string =>
+  values.length === 0 ? "(none)" : values.map(inlineCode).join(", ");
 
 /** Render a safe project-relative Markdown link from project-owned text. */
 const markdownLink = (title: string, file: string, anchor?: string): string => {

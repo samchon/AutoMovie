@@ -75,6 +75,26 @@ const library = renderAutoMovieProductionRouter({
         },
       },
       {
+        branch: "models",
+        stage: "review",
+        enforced: true,
+        claim: "model units cover their principles",
+        relationship: "distributed-coverage",
+        host: {
+          type: "markdown",
+          root: "docs",
+          files: ["models/**/*.md"],
+          symbols: ["h2"],
+        },
+        target: {
+          type: "contract",
+          family: "principles",
+          domain: "design",
+          path: "principles/design/models.md",
+          anchors: ["model-information-structure"],
+        },
+      },
+      {
         branch: "modelSources",
         stage: "draft",
         enforced: false,
@@ -91,6 +111,26 @@ const library = renderAutoMovieProductionRouter({
           root: "docs",
           files: ["models/**/*.md"],
           symbols: ["file"],
+        },
+      },
+      {
+        branch: "settings",
+        stage: "review",
+        enforced: true,
+        claim: "settings `foundation` fallback",
+        relationship: "foundation",
+        host: {
+          type: "markdown",
+          root: "docs",
+          files: [],
+          symbols: [],
+        },
+        target: {
+          type: "contract",
+          family: "principles",
+          domain: "core",
+          path: "principles/core/common.md",
+          anchors: [],
         },
       },
     ],
@@ -149,6 +189,28 @@ assert.match(
   /source branch `modelSources` selects 1 current source file/u,
 );
 assert.match(library, /source authorship has not started/u);
+assert.equal(
+  library.match(
+    /contract `principles\/design\/models\.md#model-information-structure`/gu,
+  )?.length,
+  2,
+);
+assert.match(
+  library,
+  /Branch `models` \(`review`, enforced\) uses `checklist`: markdown host root `docs`, files `models\/\*\*\/\*\.md`, symbols `h2` -> contract `principles\/design\/models\.md#model-information-structure`; claim `models answer their principles`\./u,
+);
+assert.match(
+  library,
+  /Branch `models` \(`review`, enforced\) uses `distributed-coverage`:[^\n]+contract `principles\/design\/models\.md#model-information-structure`/u,
+);
+assert.match(
+  library,
+  /Branch `modelSources` \(`draft`, not yet enforced\) uses `lineage`: typescript host root `\.`, files `src\/models\/\*\*\/\*\.ts`, symbols `type` -> population root `docs`, files `models\/\*\*\/\*\.md`, symbols `file`/u,
+);
+assert.match(
+  library,
+  /uses `foundation`: markdown host root `docs`, files \(none\), symbols \(none\) -> contract `principles\/core\/common\.md`; claim `settings %60foundation%60 fallback`/u,
+);
 assert.match(
   library,
   /\[Profile \\\[v2\\\]\]\(docs\/contracts\/profile%20%28one%29\.md#profile%3Av2\)/u,
