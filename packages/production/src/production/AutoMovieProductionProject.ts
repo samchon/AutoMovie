@@ -2291,12 +2291,27 @@ export class AutoMovieProductionProject {
 
   /** Revalidate one immutable terminal repaint attempt record. */
   private assertRepaintAttempt(attempt: IAutoMovieRepaintAttemptRecord): void {
+    const schema =
+      typia.validateEquals<IAutoMovieRepaintAttemptRecord>(attempt);
+    if (schema.success === false)
+      throw new Error("Repaint attempt record is malformed.");
+    let adapterIdentityValid = false;
+    try {
+      const runtime = typia.validateEquals<IAutoMovieRepaintRuntimeIdentity>(
+        JSON.parse(attempt.adapterIdentity),
+      );
+      adapterIdentityValid =
+        runtime.success &&
+        canonicalAutoMovieRepaintRuntimeIdentity(runtime.data) ===
+          attempt.adapterIdentity;
+    } catch {}
     const startedAt = new Date(attempt.startedAt);
     const completedAt = new Date(attempt.completedAt);
     if (
       attempt.version !== 1 ||
       attempt.productionId !== this.productionId ||
       attempt.shot.trim().length === 0 ||
+      attempt.shot !== attempt.shot.trim() ||
       uuid(attempt.requestId, "Repaint request id") !== attempt.requestId ||
       uuid(attempt.attemptId, "Repaint attempt id") !== attempt.attemptId ||
       Number.isSafeInteger(attempt.ordinal) === false ||
@@ -2305,7 +2320,7 @@ export class AutoMovieProductionProject {
       /^sha256:[0-9a-f]{64}$/u.test(attempt.compileFingerprint) === false ||
       /^sha256:[0-9a-f]{64}$/u.test(attempt.sourceRenderFingerprint) ===
         false ||
-      attempt.adapterIdentity.trim().length === 0 ||
+      adapterIdentityValid === false ||
       Number.isSafeInteger(attempt.seed) === false ||
       Number.isNaN(startedAt.getTime()) ||
       Number.isNaN(completedAt.getTime()) ||
@@ -2317,9 +2332,11 @@ export class AutoMovieProductionProject {
       (attempt.status === "succeeded") !== (attempt.failure === null) ||
       (attempt.failure !== null &&
         (attempt.failure.message.trim().length === 0 ||
+          attempt.failure.message !== attempt.failure.message.trim() ||
           (attempt.failure.retryable && attempt.status !== "failed"))) ||
       (attempt.availableOutput !== null &&
-        (attempt.availableOutput.bytes <= 0 ||
+        (Number.isSafeInteger(attempt.availableOutput.bytes) === false ||
+          attempt.availableOutput.bytes <= 0 ||
           /^sha256:[0-9a-f]{64}$/u.test(attempt.availableOutput.digest) ===
             false))
     )
