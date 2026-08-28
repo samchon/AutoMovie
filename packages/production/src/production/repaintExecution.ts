@@ -258,15 +258,17 @@ export const executeAutoMovieRepaintRequest = async <T>(props: {
         "accepted",
       );
     } catch (error) {
+      const timeoutDisclosure =
+        error instanceof AutoMovieRepaintAttemptError ? error : null;
       const classified = classifyFailure(
-        timedOut &&
-          !(
-            error instanceof AutoMovieRepaintAttemptError &&
-            error.failureClass === "timeout"
-          )
+        timedOut && timeoutDisclosure?.failureClass !== "timeout"
           ? new AutoMovieRepaintAttemptError(
               "timeout",
               `Repaint attempt exceeded ${timeoutMs}ms.`,
+              timeoutDisclosure === null
+                ? 0
+                : validCost(timeoutDisclosure.costUnits),
+              timeoutDisclosure?.availableOutput ?? null,
             )
           : error,
         props.signal,
