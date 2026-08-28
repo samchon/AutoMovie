@@ -1,5 +1,6 @@
 export * from "./IAutoMovieAssetManifest";
 export * from "./IAutoMovieLegacyImport";
+export * from "./IAutoMovieLibraryReviewEvidence";
 export * from "./IAutoMovieProductionCompiler";
 export * from "./IAutoMovieProductionDesign";
 export * from "./IAutoMovieProductionOracle";
