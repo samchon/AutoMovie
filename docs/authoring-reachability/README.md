@@ -43,8 +43,8 @@ Correspondence는 해당 family의 결정을 저자가 어느 계약 owner와 �
 | `repaint` | 43 | authoring contract | settings의 visual·fidelity 결정, 외부 generator adoption configuration, deterministic structural truth, receipt lineage와 publication evidence |
 | `review` | 15 | authoring contract | subject verification addresses, population review sets, production review and author Self-Review |
 | `sound` | 80 | authoring contract | screenplay audible intent, systems, auxiliary-track mapping and sound craft |
-| `staging` | 70 | authoring contract | scenario physical progression and boundary, shot realization |
-| `story` | 101 | authoring contract | narrated-time principles, sustained-middle treatment coverage, scenarios, and final screenplay contracts |
+| `staging` | 70 | authoring contract | script physical progression and boundary, shot realization |
+| `story` | 101 | authoring contract | narrated-time principles, sustained-middle treatment coverage, executable scripts, and final screenplay contracts |
 
 24개 family는 저작 계약으로 도달하고 2개는 host 또는 harness가 소유한다. 저작 owner가 없는 family edge는 1개이며 152 H3 unit을 대표한다. 이 수는 152개의 개별 결함을 뜻하지 않는다. `map` family를 하나의 책임 owner로 연결해야 할 한 관계가 아직 지급되지 않았다는 뜻이다. Whole-family 의도적 제외는 현재 0개다. 이후 이 분류를 사용하려면 `families.json`에 이유와 재개 조건을 함께 적어야 한다.
 

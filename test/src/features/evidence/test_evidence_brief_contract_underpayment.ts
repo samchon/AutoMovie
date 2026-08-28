@@ -35,17 +35,19 @@ interface IEvidenceState {
   kind: null;
   settings: Stage;
   research: Stage;
+  maps: Stage;
   models: Stage;
   spaces: Stage;
   materials: Stage;
   instances: Stage;
   motions: Stage;
   systems: Stage;
-  storylines: Stage;
-  scenarios: Stage;
-  script: Stage;
+  treatments: Stage;
+  scripts: Stage;
+  screenplays: Stage;
   briefs: Stage;
   modelSources: Stage;
+  mapSources: Stage;
   spaceSources: Stage;
   materialSources: Stage;
   instanceSources: Stage;
@@ -127,17 +129,19 @@ const disabledState = (location: string): IEvidenceState => ({
   kind: null,
   settings: "disabled",
   research: "disabled",
+  maps: "disabled",
   models: "disabled",
   spaces: "disabled",
   materials: "disabled",
   instances: "disabled",
   motions: "disabled",
   systems: "disabled",
-  storylines: "disabled",
-  scenarios: "disabled",
-  script: "disabled",
+  treatments: "disabled",
+  scripts: "disabled",
+  screenplays: "disabled",
   briefs: "disabled",
   modelSources: "disabled",
+  mapSources: "disabled",
   spaceSources: "disabled",
   materialSources: "disabled",
   instanceSources: "disabled",

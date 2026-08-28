@@ -126,7 +126,7 @@
       "correspondences": [
         "packages/template/docs/obligations/shots.md#contract-only-composition",
         "packages/template/docs/obligations/shots.md#explicit-inputs-and-time",
-        "packages/template/docs/principles/scripts.md#audience-orientation"
+        "packages/template/docs/principles/screenplays.md#audience-orientation"
       ],
       "workflow": [
         "packages/template/scaffold/.agents/skills/production/craft/cinematography.md"
@@ -141,7 +141,7 @@
         "packages/template/docs/obligations/settings.md#delivery-scope",
         "packages/template/docs/obligations/settings.md#accessibility-deliverable-states",
         "packages/template/docs/obligations/film-sources.md#authored-auxiliary-tracks",
-        "packages/template/docs/principles/scripts.md#audience-access"
+        "packages/template/docs/principles/screenplays.md#audience-access"
       ],
       "workflow": [
         "packages/template/scaffold/.agents/skills/production/settings.md"
@@ -169,7 +169,7 @@
       "correspondences": [
         "packages/template/docs/obligations/film-sources.md#editorial-only-assembly",
         "packages/template/docs/obligations/film-sources.md#deterministic-timeline",
-        "packages/template/docs/principles/scripts.md#timing-allocation"
+        "packages/template/docs/principles/screenplays.md#timing-allocation"
       ],
       "workflow": [
         "packages/template/scaffold/.agents/skills/production/craft/editing.md"
@@ -445,7 +445,7 @@
       "correspondences": [
         "packages/template/docs/principles/systems.md#system-authority-confinement",
         "packages/template/docs/obligations/systems.md#system-state-clock",
-        "packages/template/docs/principles/scripts.md#dialogue-sound-voice",
+        "packages/template/docs/principles/screenplays.md#dialogue-sound-voice",
         "packages/template/docs/obligations/film-sources.md#authored-auxiliary-tracks"
       ],
       "workflow": [
@@ -458,15 +458,15 @@
       "requirementUnits": 70,
       "classification": "authoring-contract",
       "correspondences": [
-        "packages/template/docs/principles/scenarios.md#staging-blocks",
-        "packages/template/docs/principles/scenarios.md#executable-progression",
-        "packages/template/docs/obligations/scenarios.md#scenario-boundary",
+        "packages/template/docs/principles/scripts.md#staging-blocks",
+        "packages/template/docs/principles/scripts.md#executable-progression",
+        "packages/template/docs/obligations/scripts.md#script-boundary",
         "packages/template/docs/obligations/shots.md#contract-only-composition"
       ],
       "workflow": [
-        "packages/template/scaffold/.agents/skills/production/scenarios.md"
+        "packages/template/scaffold/.agents/skills/production/scripts.md"
       ],
-      "reason": "Scenarios own executable physical progression and state handoff while shot source realizes local composition against that contract."
+      "reason": "Scripts own executable physical progression and state handoff while shot source realizes local composition against that contract."
     },
     {
       "family": "story",
@@ -475,19 +475,19 @@
       "correspondences": [
         "packages/template/docs/principles/narratives.md#unit-connection",
         "packages/template/docs/principles/narratives.md#narrated-time",
-        "packages/template/docs/principles/storylines.md#causal-turn",
-        "packages/template/docs/principles/scenarios.md#executable-progression",
-        "packages/template/docs/principles/scripts.md#screenplay-blocks",
-        "packages/template/docs/obligations/storylines.md#audience-route",
+        "packages/template/docs/principles/treatments.md#causal-turn",
+        "packages/template/docs/principles/scripts.md#executable-progression",
+        "packages/template/docs/principles/screenplays.md#screenplay-blocks",
+        "packages/template/docs/obligations/treatments.md#audience-route",
         "packages/template/docs/obligations/treatments.md#sustained-middle",
-        "packages/template/docs/obligations/scripts.md#realization-ready-contract"
+        "packages/template/docs/obligations/screenplays.md#realization-ready-contract"
       ],
       "workflow": [
-        "packages/template/scaffold/.agents/skills/production/storylines.md",
-        "packages/template/scaffold/.agents/skills/production/scenarios.md",
+        "packages/template/scaffold/.agents/skills/production/treatments.md",
+        "packages/template/scaffold/.agents/skills/production/scripts.md",
         "packages/template/scaffold/.agents/skills/production/screenplays.md"
       ],
-      "reason": "The narrative ladder refines treatment through executable scenario into the final audience-facing screenplay contract."
+      "reason": "The narrative ladder refines treatment through executable script into the final audience-facing screenplay contract."
     }
   ]
 }

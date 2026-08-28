@@ -1,6 +1,6 @@
 # Compilation
 
-The non-the script surface compiler is an atomic fence with an ordered scope ladder, and each scope checks everything the scope before it checks. Invoke it through the scaffold compile command or `compileAutoMovieProduction`.
+The production compiler is an atomic fence with an ordered scope ladder, and each scope checks everything the scope before it checks. Invoke it through the scaffold compile command or `compileAutoMovieProduction`.
 
 - `design`: validate manifest, design shape, ranges, identity, and references without reading source or materializing derived files.
 - `source`: additionally materialize primitive models and compact formation runtimes; bind each `defineShot` registration to its design contract; execute its thin stage/block/performance program through the host engine pipeline; validate actor/object/formation motion, bounded fixed-step effects, scenes, and shots; derive contract realizations; and enforce generated ownership.
@@ -11,7 +11,7 @@ What a review owes is derived from the current graph, never authored. At `review
 
 The compiler stops there on purpose. Whether the frames are any good is settled by opening them and written into the evidence citation on the source that claims the unit is realized; no diagnostic decides that and no ledger records it.
 
-The review scopes also add a check with no `source` form at all. An active screenplay scene that no required acceptance scenario cites is refused at `review` and `final` as `screenplay-scene-unobserved`, and is not reported at `source` in any category, because a compiled realization proves the film covers the scene while only a required scenario proves somebody looked at it. Read [Contract targets](../contract-targets.md) for the citation that discharges it.
+The review scopes also add a check with no `source` form at all. An active screenplay scene that no required acceptance scenario cites is refused at `review` and `final` as `screenplay-scene-unobserved`, and is not reported at `source` in any category, because a compiled realization proves the film covers the scene while only a required acceptance scenario proves somebody looked at it. Read [Contract targets](../contract-targets.md) for the citation that discharges it.
 
 Any error returns `success:false` and materializes nothing. Warnings are explicit but do not block. Diagnostics name a stable code, phase, target, owning path, and exact correction.
 

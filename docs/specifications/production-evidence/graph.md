@@ -18,7 +18,7 @@
 
 <!-- @evidence requirements/production-evidence/graph.md#agent-production-evidence-discovery 실제 작품 조사를 수행한 상태와 생략한 상태를 계층별 계약 감사면으로 구분한다. -->
 
-팩터리는 모든 저작 계층마다 `docs/contracts/*.md`를 host로 하고 `file`을 target으로 삼는 발견 claim을 만든다. 각 claim은 `discovery/common.md`와 함께 설정에는 `settings`, 각 model·space·material·instance·motion·system 분기에는 `designs + 해당 design layer`, film storylines에는 `films + storylines`, film scenarios에는 `films + scenarios`, film script에는 `films + scripts`, brief에는 `briefs`를 연결한다. Research는 `common`만 연결하여 외부 근거 채택과 design boundary 탐색을 같은 결정으로 합치지 않는다. 저작 H2/H3/H4에는 이 발견 관계를 배선하지 않는다.
+팩터리는 모든 저작 계층마다 `docs/contracts/*.md`를 host로 하고 `file`을 target으로 삼는 발견 claim을 만든다. 각 claim은 `discovery/common.md`와 함께 설정에는 `settings`, 각 model·space·material·instance·motion·system 분기에는 `designs + 해당 design layer`, film treatments에는 `films + treatments`, film scripts에는 `films + scripts`, film screenplays에는 `films + screenplays`, brief에는 `briefs`를 연결한다. Research는 `common`만 연결하여 외부 근거 채택과 design boundary 탐색을 같은 결정으로 합치지 않는다. 저작 H2/H3/H4에는 이 발견 관계를 배선하지 않는다.
 
 발견 claim은 계층이 `draft`에 들어가는 순간부터 활성화하여 작품 전용 규칙을 저작보다 먼저 발굴하게 하고, `review`에서는 현재 fingerprint를 요구한다. 저작 산출물에 적용하는 draft no-tags 규칙은 별도 감사면인 `docs/contracts`에는 적용하지 않는다.
 
@@ -32,7 +32,7 @@
 
 <!-- @evidence requirements/production-evidence/graph.md#agent-production-evidence-shape-stage 제작 종류별 허용 분기와 단계 선행 조건을 하나의 상태기계로 만든다. -->
 
-`film`은 설정에서 스토리라인·시나리오·영상 대본·shot·film source로 이어지는 사다리를, `brief`는 설정에서 brief·shot·film source로 이어지는 짧은 사다리를 허용한다. 둘은 완성 film source 전에 production source의 독립된 검토를 요구한다. `library`는 설정, 선택한 디자인 문서·source 분기와 필요할 때 설정만 직렬화하는 production source를 허용하고 서사·shot·편집 분기를 금지한다. 모든 자식 분기의 `draft`는 필요한 부모가 `review`에 도달한 뒤에만 허용하며, 아직 종류를 선택하지 않은 `null`은 모든 단계를 `disabled`로 유지한다.
+`film`은 설정에서 treatment·script·screenplay·shot·film source로 이어지는 사다리를, `brief`는 설정에서 brief·shot·film source로 이어지는 짧은 사다리를 허용한다. 둘은 완성 film source 전에 production source의 독립된 검토를 요구한다. `library`는 설정, 선택한 디자인 문서·source 분기와 필요할 때 설정만 직렬화하는 production source를 허용하고 서사·shot·편집 분기를 금지한다. 모든 자식 분기의 `draft`는 필요한 부모가 `review`에 도달한 뒤에만 허용하며, 아직 종류를 선택하지 않은 `null`은 모든 단계를 `disabled`로 유지한다.
 
 <!-- @evidenceObligation shape-stage-machine 세 제작 종류의 허용 분기, 단계 순서와 부모 검토 선행 조건. -->
 
@@ -40,7 +40,7 @@
 
 <!-- @evidence requirements/production-evidence/graph.md#agent-production-evidence-physical-integrity 선택이 실제 대상을 하나만 지배하고 비활성 잔여물을 함께 막게 한다. -->
 
-팩터리는 glob으로 Markdown과 TypeScript host를 열거하고 활성 분기의 최소 host 수, 비활성 분기의 잔여물, 명시적 H2 anchor, 중복 target identity, 각 source 파일의 구체적인 named export owner와 스토리라인·시나리오·영상 대본의 물리적 순서 identity를 그래프 생성 전에 검사한다. 반환된 claim은 lint가 실제 export와 annotation을 선택하여 디자인 owner마다 정확히 한 디자인 파일, shot·acceptance owner마다 한 영상 대본 scene 또는 brief shot, 완전한 target coverage와 단계별 review cardinality를 검사하게 한다.
+팩터리는 glob으로 Markdown과 TypeScript host를 열거하고 활성 분기의 최소 host 수, 비활성 분기의 잔여물, 명시적 H2 anchor, 중복 target identity, 각 source 파일의 구체적인 named export owner와 treatment·script·screenplay의 물리적 순서 identity를 그래프 생성 전에 검사한다. 반환된 claim은 lint가 실제 export와 annotation을 선택하여 디자인 owner마다 정확히 한 디자인 파일, shot·acceptance owner마다 한 screenplay scene 또는 brief shot, 완전한 target coverage와 단계별 review cardinality를 검사하게 한다.
 
 <!-- @evidenceObligation physical-population-integrity 실제 파일 모집단에서 검증하는 host 수, 잔여물, identity, 소유 cardinality와 계보. -->
 
