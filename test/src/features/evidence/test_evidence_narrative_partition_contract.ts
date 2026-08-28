@@ -500,6 +500,65 @@ const preserveFixtureCleanup = (
   }
 };
 
+const testTreatmentTopology = (module: IEvidenceModule): void => {
+  for (const [relative, content, diagnostic] of [
+    [
+      "docs/treatments/001-group/001-event.md",
+      "# Event\n\n## Change {#event-change}\n",
+      "Treatments are flat numbered event files",
+    ],
+    [
+      "docs/treatments/index.md",
+      "# Treatment index\n",
+      "Treatments are flat numbered event files",
+    ],
+    [
+      "docs/treatments/001-event.md",
+      "# Event\n\n## Change {#event-change}\n### Hidden scene {#hidden-scene}\n",
+      "uses H3 outside the configured H2 authored-unit topology",
+    ],
+    [
+      "docs/treatments/001-event.md",
+      "# Event\n\n## Change {#event-change}\n#### Hidden beat {#hidden-beat}\n",
+      "uses H4 outside the configured H2 authored-unit topology",
+    ],
+  ] as const) {
+    const root = fs.mkdtempSync(
+      path.join(FIXTURE_CACHE, "automovie-treatment-topology-"),
+    );
+    const safePrefix = `${path.resolve(FIXTURE_CACHE)}${path.sep}`;
+    let fixtureFailure: IFixtureFailure | undefined;
+    try {
+      copySharedContracts(root);
+      write(root, "docs/settings/production.md", "## Scope {#scope}\n");
+      write(root, relative, content);
+      assert.throws(
+        () =>
+          module.createAutoMovieEvidenceConfig({
+            ...disabledState(root),
+            kind: "film",
+            settings: "review",
+            treatments: "draft",
+          }),
+        (error: unknown) =>
+          error instanceof Error && error.message.includes(diagnostic),
+        `${relative} did not fail with '${diagnostic}'.`,
+      );
+    } catch (error) {
+      fixtureFailure = { error };
+      throw error;
+    } finally {
+      preserveFixtureCleanup(fixtureFailure, () => {
+        if (!`${path.resolve(root)}${path.sep}`.startsWith(safePrefix))
+          throw new Error(
+            `Refusing to remove a treatment-topology fixture outside ${FIXTURE_CACHE}.`,
+          );
+        fs.rmSync(root, { force: true, recursive: true });
+      });
+    }
+  }
+};
+
 const testFirstPilotPopulation = (module: IEvidenceModule): void => {
   const root = fs.mkdtempSync(
     path.join(FIXTURE_CACHE, "automovie-first-pilot-"),
@@ -624,6 +683,8 @@ const testFirstPilotPopulation = (module: IEvidenceModule): void => {
  * 5. First-pilot claims select one exact group at full strength, ignore a
  *    valid out-of-scope group, and reject a treatment event realized only by
  *    that unselected group.
+ * 6. Grouped treatment hosts, treatment indexes, and treatment H3/H4 units
+ *    fail in the actual factory before graph evaluation begins.
  */
 export const test_evidence_narrative_partition_contract = (): void => {
   fs.mkdirSync(FIXTURE_CACHE, { recursive: true });
@@ -643,6 +704,7 @@ export const test_evidence_narrative_partition_contract = (): void => {
       path.join(ROOT, "packages/evidence/package.json"),
     );
     const module = resolve("./src/index.ts") as IEvidenceModule;
+    testTreatmentTopology(module);
     testFirstPilotPopulation(module);
     const full = module.createAutoMovieEvidenceConfig(disabledState(root));
     const claims = new Map<string, IEvidenceClaim>();
