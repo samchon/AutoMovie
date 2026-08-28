@@ -41,7 +41,8 @@ export default {
      * records its exact runtime, source, rights, terms, cost, and consumer;
      * the execution policy bounds retries, time, and cost; each request retains
      * exact prompt, continuity, settings, design, screenplay or brief, and shot
-     * owners. Keep selectionReview null until a candidate exists; then bind the
+     * owners. Resolve selectionReview by shot from repaintSelectionReviews.ts;
+     * leave the entry absent until a candidate exists, then bind the
      * post-playback review to its exact attempt id and output digest before an
      * explicit selection or reversal.
      * Prompt, seed, strength, controls, references, policy, and review never

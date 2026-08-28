@@ -538,7 +538,7 @@ export const selectProductionRepaintCandidateReview = (props: {
     review.candidateOutputDigest !== props.receipt.output.digest
   )
     throw new Error(
-      `Repaint selection review for shot "${props.receipt.shot}" must name this candidate's exact attempt id and output digest. Review the generated candidate and full sequence before editing automovie.config.ts and selecting it.`,
+      `Repaint selection review for shot "${props.receipt.shot}" must name this candidate's exact attempt id and output digest. Review the generated candidate and full sequence before editing repaintSelectionReviews.ts and selecting it.`,
     );
   const { candidateAttemptId, candidateOutputDigest, ...observation } = review;
   void candidateAttemptId;

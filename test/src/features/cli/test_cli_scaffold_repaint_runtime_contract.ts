@@ -4,6 +4,7 @@ import type {
   IAutoMovieRenderBundleManifest,
 } from "@automovie/interface";
 import {
+  AutoMovieProductionCompiler,
   AutoMovieProductionProject,
   digestAutoMovieBytes,
   productionRenderBundleRelativePath,
@@ -233,6 +234,17 @@ const runGeneratedFast = (
   args: readonly string[] = [],
 ): IGeneratedCommand => runGenerated(project, script, args);
 
+const readGeneratedJson = <T>(label: string, command: IGeneratedCommand): T => {
+  try {
+    return JSON.parse(command.stdout) as T;
+  } catch (error) {
+    throw new Error(
+      `${label} emitted invalid JSON: status=${String(command.status)} stdout=${JSON.stringify(command.stdout)} stderr=${JSON.stringify(command.stderr)}.`,
+      { cause: error },
+    );
+  }
+};
+
 const runGeneratedCameraDepthRuntime = async (
   project: string,
 ): Promise<IGeneratedCameraDepthRuntimeProbe> => {
@@ -317,6 +329,7 @@ const assertGeneratedRuntimeParity = (
     "packages/template/.cache/automovie-scaffold-evidence-gate",
   );
   const entrypoints = [
+    "repaintSelectionReviews.ts",
     "scripts/capture-browser.ts",
     "scripts/capture-doctor.ts",
     "scripts/capture.ts",
@@ -593,59 +606,79 @@ const configureGeneratedRepaint = async (
 }> => {
   const configPath = path.join(root, "automovie.config.ts");
   const configSource = fs.readFileSync(configPath, "utf8");
+  const configImportSlot = '} from "./scripts/productionConfiguration";';
+  if (configSource.split(configImportSlot).length !== 2)
+    throw new Error(
+      "Generated repaint config no longer has one production-configuration import seam.",
+    );
   const repaintSlot = "    repaint: null,";
   if (configSource.split(repaintSlot).length !== 2)
     throw new Error("Generated repaint config no longer has one null slot.");
   const referencePath = "public/repaint/generated-repaint-reference.png";
+  const repaintSource = JSON.stringify(
+    {
+      generator: {
+        runtimeIdentity: REPAINT_RUNTIME_IDENTITY,
+        generatorProvenance: REPAINT_PROVENANCE,
+      },
+      executionPolicy: {
+        maximumAttempts: 3,
+        attemptTimeoutMs: 30_000,
+        maximumElapsedMs: 120_000,
+        maximumCostUnits: 3,
+        backoffMs: [0, 0],
+        retryableFailures: ["rate-limit", "timeout", "transport"],
+      },
+      requests: [
+        {
+          shot: "opening",
+          parameters: {
+            prompt: "Preserve every deterministic structure.",
+            negativePrompt: "Do not alter camera, timing, or motion.",
+            seed: 2135,
+            strength: 0.25,
+            controls: { contract: true },
+          },
+          references: [{ role: "structure", path: referencePath }],
+          evidence: {
+            prompt:
+              "docs/settings/050-art-direction.md#art-delivery-review-condition",
+            continuity: "docs/treatments/001-cue.md#event-call",
+            settings:
+              "docs/settings/050-art-direction.md#art-delivery-review-condition",
+            design:
+              "docs/models/010-soloist.md#soloist-blocking-representation",
+            screenplayOrBrief: "docs/screenplays/001-cue/001-cue.md#scn-001",
+            shot: "src/shots/opening.ts#opening",
+          },
+          selectionReview: null,
+        },
+      ],
+    },
+    null,
+    2,
+  );
+  const reviewSlot = '"selectionReview": null';
+  if (repaintSource.split(reviewSlot).length !== 2)
+    throw new Error(
+      "Generated repaint request no longer has one selection-review seam.",
+    );
   fs.writeFileSync(
     configPath,
-    configSource.replace(
-      repaintSlot,
-      `    repaint: ${JSON.stringify(
-        {
-          generator: {
-            runtimeIdentity: REPAINT_RUNTIME_IDENTITY,
-            generatorProvenance: REPAINT_PROVENANCE,
-          },
-          executionPolicy: {
-            maximumAttempts: 3,
-            attemptTimeoutMs: 30_000,
-            maximumElapsedMs: 120_000,
-            maximumCostUnits: 3,
-            backoffMs: [0, 0],
-            retryableFailures: ["rate-limit", "timeout", "transport"],
-          },
-          requests: [
-            {
-              shot: "opening",
-              parameters: {
-                prompt: "Preserve every deterministic structure.",
-                negativePrompt: "Do not alter camera, timing, or motion.",
-                seed: 2135,
-                strength: 0.25,
-                controls: { contract: true },
-              },
-              references: [{ role: "structure", path: referencePath }],
-              evidence: {
-                prompt:
-                  "docs/settings/050-art-direction.md#art-delivery-review-condition",
-                continuity: "docs/treatments/001-cue.md#event-call",
-                settings:
-                  "docs/settings/050-art-direction.md#art-delivery-review-condition",
-                design:
-                  "docs/models/010-soloist.md#soloist-blocking-representation",
-                screenplayOrBrief:
-                  "docs/screenplays/001-cue/001-cue.md#scn-001",
-                shot: "src/shots/opening.ts#opening",
-              },
-              selectionReview: null,
-            },
-          ],
-        },
-        null,
-        2,
-      ).replaceAll("\n", "\n    ")},`,
-    ),
+    configSource
+      .replace(
+        configImportSlot,
+        `${configImportSlot}\nimport { repaintSelectionReviews } from "./repaintSelectionReviews";`,
+      )
+      .replace(
+        repaintSlot,
+        `    repaint: ${repaintSource
+          .replace(
+            reviewSlot,
+            '"selectionReview": repaintSelectionReviews.opening ?? null',
+          )
+          .replaceAll("\n", "\n    ")},`,
+      ),
     "utf8",
   );
   const productionPath = path.join(root, "src/production.ts");
@@ -828,18 +861,12 @@ const configureGeneratedRepaint = async (
   };
 };
 
-const withGeneratedRepaintSelectionReview = (
-  source: string,
-  candidate: { attemptId: string; output: { digest: string } },
-): string => {
-  const slot = '"selectionReview": null';
-  if (source.split(slot).length !== 2)
-    throw new Error(
-      "The generated repaint config no longer has one unbound selection-review slot.",
-    );
-  return source.replace(
-    slot,
-    `"selectionReview": ${JSON.stringify({
+const withGeneratedRepaintSelectionReview = (candidate: {
+  attemptId: string;
+  output: { digest: string };
+}): string => {
+  const review = {
+    opening: {
       candidateAttemptId: candidate.attemptId,
       candidateOutputDigest: candidate.output.digest,
       reason:
@@ -857,8 +884,17 @@ const withGeneratedRepaintSelectionReview = (
         textureCrawl: "pass",
         transitionMismatch: "pass",
       },
-    })}`,
-  );
+    },
+  };
+  return [
+    'import type { IAutoMovieProductionRepaintSelectionReview } from "./scripts/productionConfiguration";',
+    "",
+    "export const repaintSelectionReviews =",
+    `  ${JSON.stringify(review, null, 2).replaceAll("\n", "\n  ")} satisfies Readonly<`,
+    "    Record<string, IAutoMovieProductionRepaintSelectionReview>",
+    "  >;",
+    "",
+  ].join("\n");
 };
 
 /**
@@ -880,7 +916,8 @@ const withGeneratedRepaintSelectionReview = (
  * 6. A default-adapter terminal refusal returns its durable request id but is
  *    not retryable; a transient transport failure is stored as retryable and
  *    the next bounded automatic attempt recovers into a candidate.
- * 7. A fresh successful reroll creates a second unselected candidate, selection
+ * 7. A fresh successful reroll creates a second unselected candidate, a
+ *    control-plane review keeps its deterministic compile current, selection
  *    activates it, stale config refuses another candidate, and restoration
  *    permits an explicit reversal to the earlier candidate.
  * 8. Only after every semantic action runs, every source runtime owner must be
@@ -1089,6 +1126,10 @@ export const test_cli_scaffold_repaint_runtime_contract =
         ["opening"],
       );
       const configuredPath = path.join(fixture.root, "automovie.config.ts");
+      const selectionReviewsPath = path.join(
+        fixture.root,
+        "repaintSelectionReviews.ts",
+      );
       const configuredSource = fs.readFileSync(configuredPath, "utf8");
       const staleReferenceSource = configuredSource.replace(
         repaint.referencePath,
@@ -1156,12 +1197,12 @@ export const test_cli_scaffold_repaint_runtime_contract =
       const beforeRenditions = repaintProject.verifiedRepaintRenditions([
         "opening",
       ]);
-      const defaultAdapterOutput = JSON.parse(defaultAdapterRefusal.stdout) as {
+      const defaultAdapterOutput = readGeneratedJson<{
         repainted: boolean;
         selected: boolean;
         requestId: string | null;
         diagnostics: Array<{ code: string; message: string }>;
-      };
+      }>("The generated default-adapter refusal", defaultAdapterRefusal);
       if (defaultAdapterOutput.requestId === null)
         throw new Error(
           `The terminal default-adapter attempt emitted no resumable request id: status=${String(defaultAdapterRefusal.status)} stdout=${JSON.stringify(defaultAdapterRefusal.stdout)} stderr=${JSON.stringify(defaultAdapterRefusal.stderr)}.`,
@@ -1240,12 +1281,12 @@ export const test_cli_scaffold_repaint_runtime_contract =
           defaultAdapterOutput.requestId,
         ],
       );
-      const nonretryableRetryOutput = JSON.parse(nonretryableRetry.stdout) as {
+      const nonretryableRetryOutput = readGeneratedJson<{
         repainted: boolean;
         selected: boolean;
         requestId: string | null;
         diagnostics: Array<{ code: string }>;
-      };
+      }>("The generated nonretryable retry", nonretryableRetry);
       const adapterMedia = path.join(fixture.root, "repaint-success.mp4");
       fs.writeFileSync(adapterMedia, repaint.adapterBytes);
       fs.writeFileSync(adapterMode, "transport\n", "utf8");
@@ -1254,11 +1295,12 @@ export const test_cli_scaffold_repaint_runtime_contract =
         "scripts/repaint.ts",
         ["reroll", "--shot", "opening"],
       );
-      const transportOutput = JSON.parse(transportRecovery.stdout) as {
+      const transportOutput = readGeneratedJson<{
         repainted: boolean;
         selected: boolean;
         requestId: string | null;
         receipt: {
+          compileFingerprint: string;
           requestId: string;
           attemptId: string;
           output: { digest: string };
@@ -1268,7 +1310,7 @@ export const test_cli_scaffold_repaint_runtime_contract =
           references: Array<{ path: string; role: string }>;
         } | null;
         diagnostics: Array<{ code: string; message: string }>;
-      };
+      }>("The generated transport recovery", transportRecovery);
       if (
         transportOutput.requestId === null ||
         transportOutput.receipt === null
@@ -1286,16 +1328,17 @@ export const test_cli_scaffold_repaint_runtime_contract =
         "--shot",
         "opening",
       ]);
-      const rerolledOutput = JSON.parse(rerolled.stdout) as {
+      const rerolledOutput = readGeneratedJson<{
         repainted: boolean;
         selected: boolean;
         requestId: string | null;
         receipt: {
+          compileFingerprint: string;
           requestId: string;
           attemptId: string;
           output: { digest: string };
         } | null;
-      };
+      }>("The generated fresh reroll", rerolled);
       if (rerolledOutput.receipt === null)
         throw new Error("The explicit reroll produced no repaint candidate.");
       const candidateProject = AutoMovieProductionProject.open(
@@ -1309,10 +1352,15 @@ export const test_cli_scaffold_repaint_runtime_contract =
         "opening",
       ]);
       const rerolledReviewSource = withGeneratedRepaintSelectionReview(
-        configuredSource,
         rerolledOutput.receipt,
       );
-      fs.writeFileSync(configuredPath, rerolledReviewSource, "utf8");
+      fs.writeFileSync(selectionReviewsPath, rerolledReviewSource, "utf8");
+      const reviewedCompile = new AutoMovieProductionCompiler(
+        AutoMovieProductionProject.openReadOnly(
+          fixture.root,
+          "repaint-runtime-film",
+        ),
+      ).lint({ scope: "source" });
       const selected = runGeneratedFast(fixture.root, "scripts/repaint.ts", [
         "select",
         "--shot",
@@ -1320,27 +1368,27 @@ export const test_cli_scaffold_repaint_runtime_contract =
         "--attempt",
         rerolledOutput.receipt.attemptId,
       ]);
-      const selectedOutput = JSON.parse(selected.stdout) as {
+      const selectedOutput = readGeneratedJson<{
         repainted: boolean;
         selected: boolean;
         requestId: string | null;
-      };
+      }>("The generated candidate selection", selected);
       const selectedRenditions = AutoMovieProductionProject.open(
         fixture.root,
         "repaint-runtime-film",
       ).verifiedRepaintRenditions(["opening"]);
       const transportReviewSource = withGeneratedRepaintSelectionReview(
-        configuredSource,
         transportOutput.receipt,
       );
-      const changedEvidence = transportReviewSource.replace(
+      const changedEvidence = configuredSource.replace(
         "docs/settings/050-art-direction.md#art-delivery-review-condition",
         "docs/settings/050-art-direction.md#art-palette",
       );
-      if (changedEvidence === transportReviewSource)
+      if (changedEvidence === configuredSource)
         throw new Error(
           "The generated repaint adoption negative has no evidence slot.",
         );
+      fs.writeFileSync(selectionReviewsPath, transportReviewSource, "utf8");
       fs.writeFileSync(configuredPath, changedEvidence, "utf8");
       const staleSelection = runGeneratedFast(
         fixture.root,
@@ -1353,13 +1401,13 @@ export const test_cli_scaffold_repaint_runtime_contract =
           transportOutput.receipt.attemptId,
         ],
       );
-      fs.writeFileSync(configuredPath, transportReviewSource, "utf8");
-      const staleSelectionOutput = JSON.parse(staleSelection.stdout) as {
+      fs.writeFileSync(configuredPath, configuredSource, "utf8");
+      const staleSelectionOutput = readGeneratedJson<{
         repainted: boolean;
         selected: boolean;
         requestId: string | null;
         diagnostics: Array<{ code: string }>;
-      };
+      }>("The generated stale-review selection", staleSelection);
       const preservedSelection = AutoMovieProductionProject.open(
         fixture.root,
         "repaint-runtime-film",
@@ -1371,11 +1419,11 @@ export const test_cli_scaffold_repaint_runtime_contract =
         "--attempt",
         transportOutput.receipt.attemptId,
       ]);
-      const reversedOutput = JSON.parse(reversed.stdout) as {
+      const reversedOutput = readGeneratedJson<{
         repainted: boolean;
         selected: boolean;
         requestId: string | null;
-      };
+      }>("The generated repaint reversal", reversed);
       const reversedRenditions = AutoMovieProductionProject.open(
         fixture.root,
         "repaint-runtime-film",
@@ -1399,7 +1447,9 @@ export const test_cli_scaffold_repaint_runtime_contract =
             status: attempt.status,
           })),
           transportReceiptRequestId: transportOutput.receipt.requestId,
-          transportAdapterIdentity: transportOutput.receipt.adapterIdentity,
+          transportAdapterIdentity: JSON.parse(
+            transportOutput.receipt.adapterIdentity,
+          ) as unknown,
           transportProvenance: transportOutput.receipt.generatorProvenance,
           transportParameters: transportOutput.receipt.parameters,
           transportReferences: transportOutput.receipt.references.map(
@@ -1414,6 +1464,10 @@ export const test_cli_scaffold_repaint_runtime_contract =
             .map((receipt) => receipt.attemptId)
             .sort((left, right) => (left < right ? -1 : left > right ? 1 : 0)),
           candidateRenditions: candidateRenditions.length,
+          reviewedCompileSuccess: reviewedCompile.success,
+          reviewedCompileCurrent:
+            reviewedCompile.compiler.inputFingerprint ===
+            rerolledOutput.receipt.compileFingerprint,
           selectStatus: selected.status,
           selectRepainted: selectedOutput.repainted,
           selectSelected: selectedOutput.selected,
@@ -1453,7 +1507,7 @@ export const test_cli_scaffold_repaint_runtime_contract =
             },
           ],
           transportReceiptRequestId: transportOutput.requestId,
-          transportAdapterIdentity: JSON.stringify(REPAINT_RUNTIME_IDENTITY),
+          transportAdapterIdentity: REPAINT_RUNTIME_IDENTITY,
           transportProvenance: REPAINT_PROVENANCE,
           transportParameters: {
             prompt: "Preserve every deterministic structure.",
@@ -1474,6 +1528,8 @@ export const test_cli_scaffold_repaint_runtime_contract =
             rerolledOutput.receipt.attemptId,
           ].sort((left, right) => (left < right ? -1 : left > right ? 1 : 0)),
           candidateRenditions: 0,
+          reviewedCompileSuccess: true,
+          reviewedCompileCurrent: true,
           selectStatus: 0,
           selectRepainted: true,
           selectSelected: true,

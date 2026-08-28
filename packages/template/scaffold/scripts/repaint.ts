@@ -55,7 +55,8 @@ await runProductionRepaintCommand(process.argv.slice(2), config, () => {
   return {
     ...host,
     serve: async (invocation) => {
-      await dialogueRuntime.prepare();
+      if (invocation.kind === "reroll" || invocation.kind === "retry")
+        await dialogueRuntime.prepare();
       return host.serve(invocation);
     },
   };
