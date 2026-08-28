@@ -88,7 +88,10 @@ export const snapshotRuntimePackage = (props: {
     [located.manifest.path, located.manifest],
     [entry.path, entry],
   ]);
-  const entryPaths = [entry.path, ...(props.entries ?? []).map(path.resolve)];
+  const entryPaths = [
+    entry.path,
+    ...(props.entries ?? []).map((value) => path.resolve(value)),
+  ];
   for (const additional of entryPaths.slice(1)) {
     const file = readOwnedFile(located.root, additional);
     files.set(file.path, file);
@@ -201,7 +204,7 @@ const deriveModuleClosure = (
   entries: readonly string[],
 ): IPhysicalFile[] => {
   const output = new Map<string, IPhysicalFile>();
-  const pending = [...new Set(entries.map(path.resolve))];
+  const pending = [...new Set(entries.map((value) => path.resolve(value)))];
   while (pending.length !== 0) {
     const target = pending.pop()!;
     if (output.has(target)) continue;
