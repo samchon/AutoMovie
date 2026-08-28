@@ -154,6 +154,55 @@ async function main(): Promise<void> {
       /cannot synchronize instructions into itself/u,
     );
     assert.equal(fs.readFileSync(scaffoldSkill, "utf8"), scaffoldSkillBefore);
+    const linkedManaged = makeRoot("linked-managed-instructions");
+    fs.mkdirSync(path.join(linkedManaged, ".agents"), { recursive: true });
+    const linkedSkills = path.join(linkedManaged, ".agents", "skills");
+    fs.symlinkSync(
+      path.join(scaffoldRoot, ".agents", "skills"),
+      linkedSkills,
+      process.platform === "win32" ? "junction" : "dir",
+    );
+    assert.throws(
+      () =>
+        writeAutoMovieProductionInstructions({
+          root: linkedManaged,
+          productionEvidence: disabled(linkedManaged),
+          scaffoldRoot,
+        }),
+      /generated instruction paths may not be links/u,
+    );
+    assert.equal(fs.readFileSync(scaffoldSkill, "utf8"), scaffoldSkillBefore);
+    fs.rmSync(linkedSkills);
+    const linkedAgentTarget = path.join(
+      linkedManaged,
+      "tracked-agent-target.md",
+    );
+    write(linkedManaged, "tracked-agent-target.md", "tracked bytes\n");
+    try {
+      fs.symlinkSync(linkedAgentTarget, path.join(linkedManaged, "AGENTS.md"));
+      assert.throws(
+        () =>
+          writeAutoMovieProductionInstructions({
+            root: linkedManaged,
+            productionEvidence: disabled(linkedManaged),
+            scaffoldRoot,
+          }),
+        /generated instruction paths may not be links/u,
+      );
+      assert.equal(
+        fs.readFileSync(linkedAgentTarget, "utf8"),
+        "tracked bytes\n",
+      );
+    } catch (error) {
+      if (
+        !(
+          error instanceof Error &&
+          "code" in error &&
+          ["EPERM", "EACCES"].includes(String(error.code))
+        )
+      )
+        throw error;
+    }
     assert.throws(
       () => synchronizeProductionInstructions(),
       /belongs to another project root/u,

@@ -45,18 +45,35 @@ export const writeAutoMovieProductionInstructions = (props: {
       `${root}: a scaffold source cannot synchronize instructions into itself.`,
     );
 
+  const targetSkills = path.join(root, ".agents", "skills");
+  const agents = path.join(root, "AGENTS.md");
+  const claude = path.join(root, "CLAUDE.md");
+  for (const target of [targetSkills, agents, claude])
+    assertManagedPathIsPhysical(root, target);
+
   const identity = readAutoMovieProductionEvidence({
     root,
     productionEvidence: props.productionEvidence,
   });
-  const targetSkills = path.join(root, ".agents", "skills");
   fs.rmSync(targetSkills, { force: true, recursive: true });
   fs.mkdirSync(path.dirname(targetSkills), { recursive: true });
   fs.cpSync(sourceSkills, targetSkills, { recursive: true });
 
-  const agents = path.join(root, "AGENTS.md");
-  const claude = path.join(root, "CLAUDE.md");
   fs.writeFileSync(agents, renderAutoMovieProductionRouter(identity), "utf8");
   fs.writeFileSync(claude, "@AGENTS.md\n", "utf8");
   return [targetSkills, agents, claude];
+};
+
+/** Refuse a generated instruction path whose existing component is a link. */
+const assertManagedPathIsPhysical = (root: string, target: string): void => {
+  let cursor = root;
+  for (const segment of path.relative(root, target).split(path.sep)) {
+    cursor = path.join(cursor, segment);
+    const metadata = fs.lstatSync(cursor, { throwIfNoEntry: false });
+    if (metadata === undefined) return;
+    if (metadata.isSymbolicLink())
+      throw new Error(
+        `${cursor}: generated instruction paths may not be links.`,
+      );
+  }
 };
