@@ -138,7 +138,10 @@ assert.match(
   /Active branches: `settings` \(`review`\), `models` \(`review`\), `modelSources` \(`draft`\)\./u,
 );
 assert.match(library, /`models` \[Chair\]\(docs\/models\/chair\.md\)/u);
-assert.match(library, /source branch `modelSources` selects 1 tracked file/u);
+assert.match(
+  library,
+  /source branch `modelSources` selects 1 current source file/u,
+);
 assert.match(library, /source authorship has not started/u);
 assert.match(library, /\[Profile\]\(docs\/contracts\/profile\.md#profile\)/u);
 assert.match(library, /has no H2 contract item/u);

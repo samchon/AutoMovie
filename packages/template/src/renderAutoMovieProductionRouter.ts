@@ -61,7 +61,7 @@ export const renderAutoMovieProductionRouter = (
           const source =
             owner.sourceBinding === null
               ? "source authorship has not started"
-              : `source branch \`${owner.sourceBinding.branch}\` selects ${owner.sourceBinding.paths.length} tracked file(s)`;
+              : `source branch \`${owner.sourceBinding.branch}\` selects ${owner.sourceBinding.paths.length} current source file(s)`;
           return `- \`${owner.branch}\` [${owner.title}](${owner.path}): ${units === "" ? "no H2 owner unit" : units}; ${source}.`;
         });
 
