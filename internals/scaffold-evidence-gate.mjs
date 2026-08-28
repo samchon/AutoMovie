@@ -988,6 +988,24 @@ const main = () => {
       ` active graph: removed ${underpayment.target} was rejected by evidence/graph`,
     ]);
   }
+  render();
+  const restoredScaffoldGraphTests = testGraph({
+    cwd: PROBE,
+    project: "test-tsconfig.json",
+    file: "test/scaffold.test.ts",
+  });
+  if (restoredScaffoldGraphTests.status !== 0) {
+    report([
+      "",
+      "FAIL: the final generated cache retained paid-probe state instead of the blank scaffold.",
+      ...restoredScaffoldGraphTests.output
+        .split(/\r?\n/u)
+        .map((line) => ` | ${line}`),
+    ]);
+    process.exitCode = 1;
+    return;
+  }
+  report([" cache restore: fresh blank generated-project consumer passed"]);
   report([
     "",
     "PASS: the scaffold's production evidence graph is paid and its own lint rules hold over",
