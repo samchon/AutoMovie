@@ -189,6 +189,23 @@ export type AutoMovieRepaintFailureClass =
   | "internal";
 
 /**
+ * Failure classes that can legally consume another attempt.
+ *
+ * Cancellation, stale input, and exhausted budget are hard stops. Invalid
+ * output remains an immutable rejected result and requires a reroll rather
+ * than silently repeating the same request.
+ *
+ * @evidence requirements/repaint/retries-seeds-and-variation.md#repaint-retry-budget-stop Restricts authored retry grants to failure classes that the runtime can actually retry.
+ * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-repaint-attempt-selection Keeps the public policy vocabulary identical to the bounded executor state machine.
+ */
+export type AutoMovieRepaintRetryableFailureClass =
+  | "timeout"
+  | "rate-limit"
+  | "transport"
+  | "provider-refusal"
+  | "internal";
+
+/**
  * Complete bounded execution policy for one immutable repaint request.
  *
  * @evidence requirements/repaint/retries-seeds-and-variation.md#repaint-retry-budget-stop Makes attempts, timeout, elapsed time, cost, retryability, and deterministic backoff authored inputs rather than hidden host behavior.
@@ -206,7 +223,7 @@ export interface IAutoMovieRepaintExecutionPolicy {
   /** One deterministic delay for every possible retry. */
   backoffMs: number[];
   /** Exact failure classes allowed to consume another attempt. */
-  retryableFailures: AutoMovieRepaintFailureClass[];
+  retryableFailures: AutoMovieRepaintRetryableFailureClass[];
 }
 
 /** Stable authored evidence addresses retained by one repaint request. */

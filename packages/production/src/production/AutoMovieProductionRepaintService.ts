@@ -489,12 +489,14 @@ export class AutoMovieProductionRepaintService {
       );
     if (this.execution?.requestId !== undefined) {
       const latest = priorAttempts.at(-1)!;
+      const latestFailure = latest.failure;
       if (
         latest.status !== "failed" ||
-        latest.failure === null ||
-        latest.failure.retryable !== true ||
-        executionPolicy.retryableFailures.includes(latest.failure.class) ===
-          false
+        latestFailure === null ||
+        latestFailure.retryable !== true ||
+        executionPolicy.retryableFailures.some(
+          (failureClass) => failureClass === latestFailure.class,
+        ) === false
       )
         return failure(
           "repaint-input-invalid",

@@ -1,6 +1,7 @@
 import {
   AutoMovieContentDigest,
   AutoMovieRepaintFailureClass,
+  AutoMovieRepaintRetryableFailureClass,
   IAutoMovieRepaintExecutionPolicy,
 } from "@automovie/interface";
 
@@ -109,7 +110,7 @@ export const assertAutoMovieRepaintExecutionPolicy = (
     new Set(policy.retryableFailures).size !==
       policy.retryableFailures.length ||
     policy.retryableFailures.some(
-      (value) => FAILURE_CLASSES.has(value) === false,
+      (value) => RETRYABLE_FAILURE_CLASSES.has(value) === false,
     )
   )
     throw new Error(
@@ -299,7 +300,9 @@ export const executeAutoMovieRepaintRequest = async <T>(props: {
       spent += classified.costUnits;
       const retryable =
         classified.status === "failed" &&
-        props.policy.retryableFailures.includes(classified.failureClass);
+        props.policy.retryableFailures.some(
+          (failureClass) => failureClass === classified.failureClass,
+        );
       const attempt = terminalAttempt({
         productionId: props.productionId,
         shot: props.shot,
@@ -349,17 +352,14 @@ export const executeAutoMovieRepaintRequest = async <T>(props: {
   return result(props.requestId, attempts, null, "attempts-exhausted");
 };
 
-const FAILURE_CLASSES = new Set<AutoMovieRepaintFailureClass>([
-  "timeout",
-  "rate-limit",
-  "transport",
-  "provider-refusal",
-  "invalid-output",
-  "cancelled",
-  "input-stale",
-  "budget-exhausted",
-  "internal",
-]);
+const RETRYABLE_FAILURE_CLASSES: ReadonlySet<AutoMovieRepaintFailureClass> =
+  new Set<AutoMovieRepaintRetryableFailureClass>([
+    "timeout",
+    "rate-limit",
+    "transport",
+    "provider-refusal",
+    "internal",
+  ]);
 
 const NEVER_ABORTED_SIGNAL = new AbortController().signal;
 

@@ -93,6 +93,10 @@ export const test_production_repaint_execution = async (): Promise<void> => {
     policy({ backoffMs: [0, -1] }),
     policy({ retryableFailures: ["timeout", "timeout"] }),
     policy({ retryableFailures: ["unsupported" as "timeout"] }),
+    ...["invalid-output", "cancelled", "input-stale", "budget-exhausted"].map(
+      (failureClass) =>
+        policy({ retryableFailures: [failureClass as "timeout"] }),
+    ),
   ];
   TestValidator.predicate(
     "malformed repaint execution policies are refused",

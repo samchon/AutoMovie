@@ -443,6 +443,12 @@ export const test_cli_scaffold_repaint_configuration =
         ["backoffMs", [-1]],
         ["retryableFailures", ["transport", "transport"]],
         ["retryableFailures", ["unknown"]],
+        ...[
+          "invalid-output",
+          "cancelled",
+          "input-stale",
+          "budget-exhausted",
+        ].map((failureClass) => ["retryableFailures", [failureClass]]),
       ].map(([key, value]) => ({
         ...authored,
         executionPolicy: {
