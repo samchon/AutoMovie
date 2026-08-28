@@ -364,6 +364,51 @@ const render = () => {
     "utf8",
   );
 
+  // Native ESM lint configuration executes in plain Node, exactly as it does
+  // in an installed production. Give that evaluator the publish view instead
+  // of the workspace package whose development exports point at TypeScript.
+  const linkedEvidence = path.join(
+    PROBE,
+    "node_modules",
+    "@automovie",
+    "evidence",
+  );
+  fs.mkdirSync(linkedEvidence, { recursive: true });
+  fs.cpSync(
+    path.join(ROOT, "packages", "evidence", "lib"),
+    path.join(linkedEvidence, "lib"),
+    { recursive: true },
+  );
+  fs.writeFileSync(
+    path.join(linkedEvidence, "package.json"),
+    `${JSON.stringify(
+      {
+        name: "@automovie/evidence",
+        version: "0.0.0",
+        main: "./lib/index.js",
+        types: "./lib/index.d.ts",
+        exports: {
+          ".": {
+            types: "./lib/index.d.ts",
+            default: "./lib/index.js",
+          },
+        },
+      },
+      null,
+      2,
+    )}\n`,
+    "utf8",
+  );
+  for (const dependency of ["@ttsc/evidence", "typescript-compiler"]) {
+    const target = path.join(PROBE, "node_modules", dependency);
+    fs.mkdirSync(path.dirname(target), { recursive: true });
+    fs.symlinkSync(
+      path.join(ROOT, "node_modules", dependency),
+      target,
+      "junction",
+    );
+  }
+
   fs.writeFileSync(
     path.join(PROBE, "package.json"),
     `${JSON.stringify(
