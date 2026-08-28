@@ -813,6 +813,23 @@ export const test_film_camera_clearance = (): void => {
       ),
   );
 
+  const staleBeforeGeometry = inspectAdapter({
+    models: [],
+    hero: { camera: heroCamera, motion: hostileCoercionMotion },
+    runtime: {
+      revision: "old",
+      currentRevision: "current",
+      sampleRate: 24,
+    },
+  });
+  TestValidator.predicate(
+    "stale revision is addressed before geometry or motion is read",
+    staleBeforeGeometry.reports === undefined &&
+      staleBeforeGeometry.out.items.length === 1 &&
+      staleBeforeGeometry.out.items[0]?.path ===
+        "$input.cameraClearance.currentRevision",
+  );
+
   const stalePerformance = performShot({
     ...performanceProps,
     cameraClearance: {

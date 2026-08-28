@@ -172,6 +172,16 @@ export function compileCameraClearanceReports(props: {
     );
     return undefined;
   }
+  if (props.runtime.revision !== props.runtime.currentRevision) {
+    for (const take of takes)
+      props.out.push(
+        "type",
+        "$input.cameraClearance.currentRevision",
+        `camera "${take.camera.id}" clearance read geometry revision "${props.runtime.revision}", but "${props.runtime.currentRevision}" is current; recompile against one current snapshot`,
+        props.runtime.currentRevision,
+      );
+    return undefined;
+  }
 
   const models = new Map(props.models.map((model) => [model.id, model]));
   const animatedNodes = new Set(Object.keys(props.motions));
@@ -273,15 +283,6 @@ export function compileCameraClearanceReports(props: {
         `$staged.scene.cameras[${cameraEntry.index}].clearance`,
         `camera clearance could not evaluate its fixed-clock input: ${safeThrownDescription(error)}`,
         take.camera.clearance,
-      );
-      continue;
-    }
-    if (report.status === "stale") {
-      props.out.push(
-        "type",
-        "$input.cameraClearance.currentRevision",
-        `camera "${take.camera.id}" clearance read geometry revision "${report.revision}", but "${report.currentRevision}" is current; recompile against one current snapshot`,
-        report.currentRevision,
       );
       continue;
     }
