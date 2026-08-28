@@ -30,6 +30,8 @@ import {
 } from "./productionFixtures";
 import { productionH264Mp4, productionPng } from "./productionMediaFixtures";
 
+const nonError = (message: string): Error => message as unknown as Error;
+
 interface IRepaintRecordCleanupFailure {
   error: unknown;
 }
@@ -693,6 +695,37 @@ export const test_production_project_runtime_shape_repaint_records =
         },
         { checks: 2, resident: false, ledger: [failedAttempt] },
       );
+      const mutableProject = project as AutoMovieProductionProject & {
+        repaintRequestAttempts: typeof project.repaintRequestAttempts;
+        readTrackedStateFile: typeof project.readTrackedStateFile;
+      };
+      const readAttempts = project.repaintRequestAttempts.bind(project);
+      let attemptLedgerReads = 0;
+      mutableProject.repaintRequestAttempts = (candidateRequestId) => {
+        if (++attemptLedgerReads === 2)
+          throw new Error("attempt ledger changed during commit");
+        return readAttempts(candidateRequestId);
+      };
+      try {
+        expectCommitRefusal(
+          "attempt commit refuses a ledger that becomes unreadable inside its CAS fence",
+          retryAttempt,
+        );
+      } finally {
+        mutableProject.repaintRequestAttempts = readAttempts;
+      }
+      TestValidator.equals(
+        "attempt ledger CAS failure happens before a resident is published",
+        {
+          reads: attemptLedgerReads,
+          resident: fs.existsSync(
+            project.trackedStatePath(
+              `renditions/attempts/${requestId}/${retryAttempt.attemptId}.json`,
+            ),
+          ),
+        },
+        { reads: 2, resident: false },
+      );
       project.commitRepaintAttempt(retryAttempt);
       project.commitRepaintAttempt(succeededAttempt);
       try {
@@ -725,6 +758,34 @@ export const test_production_project_runtime_shape_repaint_records =
           fs.rmSync(resident, { force: true, recursive: true });
         }
       };
+      const readTrackedStateFile = project.readTrackedStateFile.bind(project);
+      const firstAttemptPath = `renditions/attempts/${requestId}/${failedAttempt.attemptId}.json`;
+      for (const [label, read] of [
+        [
+          "attempt ledger refuses a resident that disappears during its read",
+          (): Uint8Array | null => null,
+        ],
+        [
+          "attempt ledger safely describes a non-Error resident read failure",
+          (): Uint8Array | null => {
+            throw nonError("non-error attempt resident failure");
+          },
+        ],
+      ] as const) {
+        mutableProject.readTrackedStateFile = (relativePath) =>
+          relativePath === firstAttemptPath
+            ? read()
+            : readTrackedStateFile(relativePath);
+        try {
+          expectLedgerRefusal(
+            label,
+            path.join(attemptDirectory, "unused"),
+            () => undefined,
+          );
+        } finally {
+          mutableProject.readTrackedStateFile = readTrackedStateFile;
+        }
+      }
       const directoryResident = path.join(attemptDirectory, "ignored.json");
       expectLedgerRefusal(
         "attempt ledger refuses a json directory resident",
@@ -1259,7 +1320,7 @@ export const test_production_project_runtime_shape_repaint_records =
           ordinal: number;
           startedAt: string;
           completedAt: string;
-          failureClass?: "provider-refusal" | "rate-limit";
+          failureClass?: "provider-refusal" | "rate-limit" | "timeout";
           retryable?: boolean;
           costUnits?: number;
         },
@@ -1292,7 +1353,7 @@ export const test_production_project_runtime_shape_repaint_records =
             ordinal: 1,
             startedAt: "2026-08-28T11:59:58.000Z",
             completedAt: "2026-08-28T11:59:59.000Z",
-            failureClass: "provider-refusal",
+            failureClass: "timeout",
           }),
           terminalAtOrdinal(2),
         ],
@@ -1377,9 +1438,58 @@ export const test_production_project_runtime_shape_repaint_records =
         project.verifiedRepaintCandidates([shot]),
         [validReceipt],
       );
+      mutableProject.readTrackedStateFile = (relativePath) =>
+        relativePath === validReceiptPath
+          ? null
+          : readTrackedStateFile(relativePath);
+      try {
+        TestValidator.equals(
+          "candidate enumeration omits a receipt that disappears during its owned read",
+          project.verifiedRepaintCandidates([shot]),
+          [],
+        );
+      } finally {
+        mutableProject.readTrackedStateFile = readTrackedStateFile;
+      }
       fs.rmSync(path.join(repaintDirectory, "broken.json"));
       fs.rmSync(path.join(repaintDirectory, "foreign.json"));
       fs.rmSync(path.join(repaintDirectory, "duplicate.json"));
+      const parametersWithoutControls = {
+        prompt: parameters.prompt,
+        negativePrompt: parameters.negativePrompt,
+        seed: parameters.seed,
+        strength: parameters.strength,
+      };
+      const noControlsAttemptId = "00000000-0000-4000-8000-000000000005";
+      const noControlsOutputPath = productionRepaintOutputPath({
+        shot,
+        sourceRenderFingerprint,
+        attemptId: noControlsAttemptId,
+        adapterIdentity,
+        generatorProvenance,
+        parameters: parametersWithoutControls,
+        executionPolicy,
+        evidence,
+        references,
+        outputDigest,
+      });
+      const noControlsReceipt: IAutoMovieRepaintReceipt = {
+        ...validReceipt,
+        requestId: "00000000-0000-4000-8000-000000000023",
+        attemptId: noControlsAttemptId,
+        parameters: parametersWithoutControls,
+        output: { ...validReceipt.output, path: noControlsOutputPath },
+      };
+      project.commitRepaintAttempt(
+        succeededAttemptForReceipt(noControlsReceipt),
+      );
+      project.commitRepaintRendition(noControlsReceipt, outputBytes);
+      TestValidator.predicate(
+        "candidate accepts an omitted optional controls map",
+        project
+          .verifiedRepaintCandidates([shot])
+          .some((candidate) => candidate.attemptId === noControlsAttemptId),
+      );
       const selectionProps = {
         shot,
         attemptId: validReceipt.attemptId,
@@ -1578,6 +1688,14 @@ export const test_production_project_runtime_shape_repaint_records =
       const initialPointer = JSON.parse(
         fs.readFileSync(activeFile, "utf8"),
       ) as { selection: string };
+      const initialActiveBytes = fs.readFileSync(activeFile);
+      fs.writeFileSync(activeFile, `${JSON.stringify({ version: 1 })}\n`);
+      expectSelectionRefusal(
+        "selection refuses a malformed current active pointer",
+        selectionProps,
+        "pointer is malformed",
+      );
+      fs.writeFileSync(activeFile, initialActiveBytes);
       const initialSelectionFile = project.trackedStatePath(
         initialPointer.selection,
       );
@@ -2063,6 +2181,22 @@ export const test_production_project_runtime_shape_repaint_records =
             writeTrackedJson(project, validAttemptPath, validAttempt);
         }
       };
+      expectRefusal(
+        "repaint refuses a receipt outside the exact v4 schema",
+        { ...validReceipt, hidden: true } as IAutoMovieRepaintReceipt,
+        "strict v4 schema",
+      );
+      expectRefusal(
+        "repaint refuses a blank string control value",
+        {
+          ...validReceipt,
+          parameters: {
+            ...validReceipt.parameters,
+            controls: { scheduler: "" },
+          },
+        },
+        "parameters are invalid",
+      );
       const generatedManifestFile = project.trackedStatePath(
         "generated-manifest.json",
       );

@@ -4,7 +4,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
-import { productionFixture } from "./productionFixtures";
+import { modelRecipe, productionFixture } from "./productionFixtures";
 
 const mutableFs = fs as unknown as {
   lstatSync: typeof fs.lstatSync;
@@ -242,6 +242,36 @@ export const test_production_project_runtime_shape_faults = (): void => {
         } catch {}
     }
 
+    let outerDescriptor: number | undefined;
+    const closeOnlyFailure = new Error("successful read close failed");
+    fs.openSync = ((file: fs.PathLike, flags: fs.OpenMode) => {
+      const descriptor = nativeOpen(file, flags);
+      if (
+        outerDescriptor === undefined &&
+        path.resolve(file.toString()) === path.resolve(target)
+      )
+        outerDescriptor = descriptor;
+      return descriptor;
+    }) as typeof fs.openSync;
+    fs.closeSync = ((descriptor: number) => {
+      if (descriptor === outerDescriptor) throw closeOnlyFailure;
+      return nativeClose(descriptor);
+    }) as typeof fs.closeSync;
+    try {
+      TestValidator.equals(
+        "successful render reads preserve an outer descriptor close failure",
+        refusal(() => project.readRenderFile(relative)),
+        closeOnlyFailure,
+      );
+    } finally {
+      fs.openSync = nativeOpen;
+      fs.closeSync = nativeClose;
+      if (outerDescriptor !== undefined)
+        try {
+          nativeClose(outerDescriptor);
+        } catch {}
+    }
+
     const lstatDenied = Object.assign(new Error("render lstat denied"), {
       code: "EACCES",
     });
@@ -258,6 +288,40 @@ export const test_production_project_runtime_shape_faults = (): void => {
       );
     } finally {
       mutableFs.lstatSync = nativeLstat;
+    }
+  });
+
+  withFixture(({ root }) => {
+    TestValidator.equals(
+      "open chooses the sole registered production when no id is supplied",
+      AutoMovieProductionProject.open(root).productionId,
+      "fixture-film",
+    );
+  });
+
+  withFixture(({ root, project }) => {
+    const sharedLock = path.join(root, "automovie/shared-design.lock");
+    const nativeRemove = fs.rmSync;
+    let releaseFaults = 0;
+    fs.rmSync = ((file: fs.PathLike, options?: fs.RmOptions) => {
+      if (
+        path.resolve(file.toString()) === path.resolve(sharedLock) &&
+        releaseFaults++ === 0
+      )
+        throw new Error("shared lock unlink failed after commit");
+      return nativeRemove(file, options);
+    }) as typeof fs.rmSync;
+    try {
+      const result = project.setModelRecipe({
+        ...modelRecipe(),
+        id: "shared-release-fault",
+      });
+      TestValidator.predicate(
+        "shared mutation preserves its commit after shared-lock unlink fails",
+        result.accepted && releaseFaults === 1 && fs.existsSync(sharedLock),
+      );
+    } finally {
+      fs.rmSync = nativeRemove;
     }
   });
 
@@ -475,6 +539,14 @@ export const test_production_project_runtime_shape_faults = (): void => {
   }
 
   withFixture(({ project }) => {
+    fs.rmSync(project.renderRoot(), { force: true, recursive: true });
+    TestValidator.predicate(
+      "erase skips an already absent owned output namespace",
+      project.eraseProduction("already absent output root").erased,
+    );
+  });
+
+  withFixture(({ project }) => {
     const nativeRename = fs.renameSync;
     let firstDestination: string | undefined;
     let sourceMoves = 0;
@@ -653,6 +725,98 @@ export const test_production_project_runtime_shape_faults = (): void => {
       );
     } finally {
       fs.readdirSync = nativeReadDirectory;
+    }
+  });
+
+  withFixture(({ project }) => {
+    const targetRoot = path.join(
+      project.renderRoot(),
+      "deliverables/atomic-cleanup",
+    );
+    const nativeRename = fs.renameSync;
+    const nativeRemove = fs.rmSync;
+    fs.renameSync = ((from: fs.PathLike, to: fs.PathLike) => {
+      if (path.resolve(to.toString()).startsWith(path.resolve(targetRoot)))
+        throw Object.assign(new Error("atomic publish failed"), {
+          code: "ENOSPC",
+        });
+      return nativeRename(from, to);
+    }) as typeof fs.renameSync;
+    fs.rmSync = ((file: fs.PathLike, options?: fs.RmOptions) => {
+      if (
+        path.resolve(file.toString()).startsWith(path.resolve(targetRoot)) &&
+        file.toString().includes(".tmp.")
+      )
+        throw Object.assign(new Error("atomic temporary cleanup failed"), {
+          code: "EACCES",
+        });
+      return nativeRemove(file, options);
+    }) as typeof fs.rmSync;
+    try {
+      const error = refusal(() =>
+        project.commitProductionDeliverableFiles(
+          "atomic-cleanup",
+          new Map([["candidate.bin", Buffer.from("candidate")]]),
+        ),
+      );
+      TestValidator.predicate(
+        "atomic write preserves both publication and temporary-cleanup failures",
+        error instanceof AggregateError &&
+          error.message.includes("atomic write cleanup failed") &&
+          error.errors.length === 2,
+      );
+    } finally {
+      fs.renameSync = nativeRename;
+      fs.rmSync = nativeRemove;
+    }
+  });
+
+  withFixture(({ project }) => {
+    const currentManifest = project.generatedManifest();
+    if (currentManifest === null || currentManifest.files.length === 0)
+      throw new Error("Generated fixture has no removable resident.");
+    const removed = currentManifest.files[0]!;
+    const nextManifest = {
+      ...currentManifest,
+      files: currentManifest.files.slice(1),
+    };
+    const nextFiles = new Map(
+      nextManifest.files.map((entry) => [
+        entry.path,
+        project.readGeneratedFile(entry.path),
+      ]),
+    );
+    const nativeRename = fs.renameSync;
+    const nativeRemove = fs.rmSync;
+    fs.rmSync = ((file: fs.PathLike, options?: fs.RmOptions) => {
+      if (file.toString().includes(".delete."))
+        throw Object.assign(new Error("quarantine removal failed"), {
+          code: "ENOSPC",
+        });
+      return nativeRemove(file, options);
+    }) as typeof fs.rmSync;
+    fs.renameSync = ((from: fs.PathLike, to: fs.PathLike) => {
+      if (from.toString().includes(".delete."))
+        throw Object.assign(new Error("quarantine recovery failed"), {
+          code: "EACCES",
+        });
+      return nativeRename(from, to);
+    }) as typeof fs.renameSync;
+    try {
+      const error = refusal(() =>
+        project.commitGenerated(nextFiles, nextManifest),
+      );
+      TestValidator.predicate(
+        "atomic delete preserves both quarantine and recovery failures",
+        error instanceof AggregateError &&
+          error.message.includes("atomic delete recovery failed") &&
+          error.errors.length === 2 &&
+          fs.existsSync(path.join(project.generatedRoot(), removed.path)) ===
+            false,
+      );
+    } finally {
+      fs.renameSync = nativeRename;
+      fs.rmSync = nativeRemove;
     }
   });
 
