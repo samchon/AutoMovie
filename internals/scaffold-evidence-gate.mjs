@@ -464,7 +464,7 @@ const contractAnchors = (relative) =>
  * pay.
  */
 const activatePaidSettings = () => {
-  const configFile = path.join(PROBE, "lint.config.ts");
+  const configFile = path.join(PROBE, "productionEvidence.ts");
   const config = fs.readFileSync(configFile, "utf8");
   const selector = '  kind: null,\n  settings: "disabled",';
   if (config.split(selector).length !== 2)
@@ -575,7 +575,9 @@ const activatePaidSettings = () => {
     {
       anchor: "probe-accessibility-deliverable-states",
       title: "Probe accessibility deliverable states",
-      obligations: ["obligations/core/settings.md#accessibility-deliverable-states"],
+      obligations: [
+        "obligations/core/settings.md#accessibility-deliverable-states",
+      ],
       body: "Operator-readable English text diagnostics are required and realized by compiler output; captions, subtitles, transcripts, audio description, media alternatives, and interactive controls are intentionally absent because this calibration has no timed media, audio, image, or user interface; the consequence is that the repository-gate operator receives no timed-text, synchronized transcript, described-media, media-alternative, or interactive accessibility surface, while no applicable accessibility product remains optional or silently unsupported.",
     },
     {

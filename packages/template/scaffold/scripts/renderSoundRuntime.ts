@@ -32,15 +32,13 @@ import {
   captureExistingDialogueCache,
   publishDialogueCache,
 } from "./dialogueCacheSnapshot";
-import type {
-  IAutoMovieDialogueSynthesisSelection,
-  readProductionSpeakerBindings,
-} from "./productionConfiguration";
 import {
+  type IAutoMovieDialogueSynthesisSelection,
   AUTOMOVIE_DIALOGUE_MODEL_REVISION as KOKORO_MODEL_REVISION,
   assertProductionDialogueSynthesis,
   assertProductionLiveWearableSoftBodies,
   assertProductionSpeakerBindings,
+  type readProductionSpeakerBindings,
 } from "./productionConfiguration";
 import {
   compileProductionDialogueRuntime,

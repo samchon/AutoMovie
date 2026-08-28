@@ -34,16 +34,16 @@ import {
   assertProductionRepaintSelection,
 } from "./productionConfiguration";
 import { assertProductionSoundRenderClock } from "./productionRuntime";
-import type { ICurrentRenderChunkPublication } from "./renderChunkSnapshot";
-import { consumeCurrentRenderChunkFrames } from "./renderChunkSnapshot";
+import {
+  type ICurrentRenderChunkPublication,
+  consumeCurrentRenderChunkFrames,
+} from "./renderChunkSnapshot";
 import type { IProductionRenderHost } from "./renderHost";
 import type { createProductionRenderPlanningRuntime } from "./renderPlanningRuntime";
-import type { IProductionRenderEncoderRuntime } from "./renderSoundRuntime";
-import type {
-  IProductionSoundBundle,
-  IProductionSoundRuntime,
-} from "./renderSoundRuntime";
 import {
+  type IProductionRenderEncoderRuntime,
+  type IProductionSoundBundle,
+  type IProductionSoundRuntime,
   produceProductionSound as produceSoundBundle,
   runWithProductionRuntimeClosure,
 } from "./renderSoundRuntime";

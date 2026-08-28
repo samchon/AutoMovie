@@ -1,5 +1,7 @@
-import type { AutoMovieCaptureBrowserConfig } from "./scripts/productionConfiguration";
-import type { IAutoMovieProductionConfiguration } from "./scripts/productionConfiguration";
+import type {
+  AutoMovieCaptureBrowserConfig,
+  IAutoMovieProductionConfiguration,
+} from "./scripts/productionConfiguration";
 
 /**
  * Viewer-host settings. Production ownership roots are the harness's fixed
