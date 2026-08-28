@@ -93,6 +93,8 @@ const OBLIGATIONS = [
   "obligations/production-sources.md#delivery-identity",
   "obligations/production-sources.md#shared-visual-grammar",
 ] as const;
+const UPSTREAM =
+  "upstream/delivery/production-sources.md#settings-revision-from-production-source-work";
 const REASONS = new Map<string, string>([
   [
     PRINCIPLES[0],
@@ -199,40 +201,78 @@ const assertProductionSourceClaim = (
   assert.equal(claim.type, "typescript");
   assert.equal(claim.root, undefined);
   assert.deepEqual(claim.files, [SOURCE]);
-  assert.deepEqual(claim.symbol, ["property", "function"]);
+  assert.deepEqual(claim.symbol, ["type", "property", "function"]);
   assert.equal(claim.disabled, true);
   assert.equal(claim.evidenceExcludeCarriers, undefined);
 
   const references = referencesOf(claim);
   assert.deepEqual(
     references.map(fileOf).sort((left, right) => left.localeCompare(right)),
-    ["obligations/production-sources.md", "principles/source-units.md"],
+    [
+      "obligations/production-sources.md",
+      "principles/source-units.md",
+      "upstream/delivery/production-sources.md",
+    ],
   );
   for (const reference of references) {
     assert.equal(reference.type, "markdown");
     assert.equal(reference.root, "node_modules/@automovie/template/docs");
     assert.equal(reference.symbol, "h2");
-    assert.equal(reference.noEvidenceExclude, true);
+    assert.equal(
+      reference.noEvidenceExclude,
+      fileOf(reference) === "upstream/delivery/production-sources.md"
+        ? undefined
+        : true,
+    );
     assert.equal(reference.requireReview, false);
     assert.equal(reference.singleEvidencePerSymbol, undefined);
     assert.equal(reference.uniqueEvidence, undefined);
     assert.equal(
       reference.checklist,
-      fileOf(reference) === "principles/source-units.md" ? true : undefined,
+      [
+        "principles/source-units.md",
+        "upstream/delivery/production-sources.md",
+      ].includes(fileOf(reference))
+        ? true
+        : undefined,
     );
   }
   return references;
 };
 
-/** Write one complete production-source export and its six exact answers. */
+/** Write complete production-source type and value owners with exact answers. */
 const cleanSource = (): string =>
   [
+    "/**",
+    ` * @evidence ${PRINCIPLES[0]} The type owns only the immutable delivery envelope serialized by the production value.`,
+    ` * @evidence ${PRINCIPLES[1]} Identity, runtime, frame format, delivery mode, deliverables, settings owner, and visual grammar complete this type.`,
+    ` * @evidence ${PRINCIPLES[2]} Each type-level reason names the exact field boundary and the source owner that realizes it.`,
+    ` * @evidenceExclude ${UPSTREAM} The type exercised the concrete delivery identity, twelve-second runtime, 1920x1080 24 fps format, prototype output, settings owner, and visual grammar without requiring a settings repair.`,
+    " */",
+    "export interface IProductionEnvelope {",
+    "  id: string;",
+    "  logline: string;",
+    "  runtimeSeconds: number;",
+    "  frameFormat: { width: number; height: number; fps: number };",
+    "  deliveryMode: string;",
+    "  deliverables: readonly string[];",
+    "  settingsOwner: string;",
+    "  visualGrammar: {",
+    "    palette: readonly string[];",
+    "    silhouette: string;",
+    "    scale: string;",
+    "    materialLanguage: string;",
+    "    fidelity: string;",
+    "  };",
+    "}",
+    "",
     "/**",
     ...[...PRINCIPLES, ...OBLIGATIONS].map(
       (target) => ` * @evidence ${target} ${reasonOf(target)}`,
     ),
+    ` * @evidenceExclude ${UPSTREAM} The value exercised the delivery identity, twelve-second runtime, 1920x1080 24 fps format, prototype output, settings owner, and visual grammar without requiring a settings repair.`,
     " */",
-    "export const production = {",
+    "export const production: IProductionEnvelope = {",
     '  id: "source-principle-probe",',
     '  logline: "One deterministic source proves its declared delivery.",',
     "  runtimeSeconds: 12,",
@@ -262,9 +302,6 @@ const replaceOnce = (source: string, before: string, after: string): string => {
   );
   return `${source.slice(0, first)}${after}${source.slice(first + before.length)}`;
 };
-
-const declaration = (target: string): string =>
-  ` * @evidence ${target} ${reasonOf(target)}\n`;
 
 /** State the upstream values that the focused source serializes. */
 const writeSettingsBasis = (root: string): void => {
@@ -368,7 +405,7 @@ const writeLintProject = (root: string, claim: IEvidenceClaim): void => {
 /** Run the real ttsc launcher and preserve every diagnostic channel. */
 const lint = (
   root: string,
-  phase: "complete" | "false-citation",
+  phase: "complete" | "exported-type-underpayment",
 ): ILintResult => {
   fs.writeFileSync(
     path.join(root, "phase.ts"),
@@ -422,7 +459,7 @@ const assertIsolatedDiagnostic = (result: ILintResult): void => {
     result.output,
     new RegExp(CLAIM_NAME.replace(/[.*+?^${}()|[\]\\]/gu, "\\$&"), "u"),
   );
-  assert.match(result.output, /production/u);
+  assert.match(result.output, /IProductionEnvelope/u);
   assert.match(result.output, /src\/production\.ts/u);
   assert.match(result.output, /Found 1 error\./u);
 };
@@ -441,9 +478,8 @@ const assertIsolatedDiagnostic = (result: ILintResult): void => {
  * 1. A complete production-source export answers the three per-owner source
  *    principles and three population obligations, so the real contributor
  *    accepts it without a graph diagnostic.
- * 2. The same export claims a six-second delivery while declaring twelve
- *    seconds and omits only its evidence-content-conformance answer, so the
- *    source-unit checklist rejects that exact export with one diagnostic.
+ * 2. The exported type omits only its evidence-content-conformance answer, so
+ *    the source-unit checklist rejects that exact type with one diagnostic.
  */
 export const test_evidence_source_principle_underpayment = (): void => {
   const root = fs.mkdtempSync(
@@ -491,17 +527,16 @@ export const test_evidence_source_principle_underpayment = (): void => {
     assert.equal(paid.status, 0, paid.output);
     assert.equal(count(paid.output, /\[evidence\/graph\]/gu), 0, paid.output);
 
-    const falseCitation = replaceOnce(
-      complete,
-      ` * @evidence ${OBLIGATIONS[1]} ${reasonOf(OBLIGATIONS[1])}`,
-      " * @evidence obligations/production-sources.md#delivery-identity The export claims a six-second delivery even though runtimeSeconds is twelve.",
-    );
     fs.writeFileSync(
       source,
-      replaceOnce(falseCitation, declaration(CONFORMANCE), ""),
+      replaceOnce(
+        complete,
+        ` * @evidence ${CONFORMANCE} Each type-level reason names the exact field boundary and the source owner that realizes it.\n`,
+        "",
+      ),
       "utf8",
     );
-    assertIsolatedDiagnostic(lint(root, "false-citation"));
+    assertIsolatedDiagnostic(lint(root, "exported-type-underpayment"));
   } catch (error) {
     fixtureFailure = { error };
     throw error;
