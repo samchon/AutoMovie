@@ -2,8 +2,6 @@
 
 ## 선언 스키마 {#spec-authoring-production-evidence-declaration}
 
-<!-- @evidenceObligation section-index 아래의 완전한 입력 상태 단위를 묶는 문서 구조. -->
-
 ### 설정 입력 상태 {#spec-authoring-production-evidence-input-state}
 
 <!-- @evidence requirements/production-evidence/input.md#agent-production-evidence-visible-selection 프로젝트의 완전한 선택을 하나의 명시적 입력 구조로 고정한다. -->

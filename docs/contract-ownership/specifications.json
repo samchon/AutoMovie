@@ -60,6 +60,12 @@
             "package": "@automovie/engine"
           }
         },
+        "clipping-planes": {
+          "owner": {
+            "kind": "package",
+            "package": "@automovie/engine"
+          }
+        },
         "delivery-raster-extent": {
           "owner": {
             "kind": "package",
@@ -97,13 +103,8 @@
       }
     },
     "specifications/production-evidence/graph.md#spec-authoring-production-evidence-construction": {
-      "obligations": {
-        "section-index": {
-          "owner": {
-            "kind": "excluded",
-            "reason": "This heading groups the independently partitioned graph obligations below it and states no additional system behavior."
-          }
-        }
+      "structural": {
+        "reason": "This heading groups the independently partitioned graph obligations below it and states no additional system behavior."
       }
     },
     "specifications/production-evidence/graph.md#spec-authoring-production-evidence-deterministic-result": {
@@ -157,13 +158,8 @@
       }
     },
     "specifications/production-evidence/input.md#spec-authoring-production-evidence-declaration": {
-      "obligations": {
-        "section-index": {
-          "owner": {
-            "kind": "excluded",
-            "reason": "This heading groups the visible input-state obligation below it and states no additional system behavior."
-          }
-        }
+      "structural": {
+        "reason": "This heading groups the visible input-state obligation below it and states no additional system behavior."
       }
     },
     "specifications/production-evidence/input.md#spec-authoring-production-evidence-input-state": {

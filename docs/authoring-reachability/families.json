@@ -7,14 +7,11 @@
   },
   "acceptedDebt": {
     "unpaidAuthoringFamilies": 0,
-    "unpaidSpecificationFragments": 6,
+    "unpaidSpecificationFragments": 3,
     "unpaidSpecificationTargets": [
       "camera-light-and-visibility/visibility-and-image-space-observation.md#clv-clipping-clearance-evaluation::camera-clearance-swept-volume",
-      "camera-light-and-visibility/visibility-and-image-space-observation.md#clv-clipping-clearance-evaluation::clipping-planes",
       "camera-light-and-visibility/visibility-and-image-space-observation.md#clv-clipping-clearance-evaluation::delivery-crop-region",
-      "camera-light-and-visibility/visibility-and-image-space-observation.md#clv-clipping-clearance-evaluation::depth-precision-constraint",
-      "production-evidence/graph.md#spec-authoring-production-evidence-construction::section-index",
-      "production-evidence/input.md#spec-authoring-production-evidence-declaration::section-index"
+      "camera-light-and-visibility/visibility-and-image-space-observation.md#clv-clipping-clearance-evaluation::depth-precision-constraint"
     ]
   },
   "repositoryReviewPolicy": {

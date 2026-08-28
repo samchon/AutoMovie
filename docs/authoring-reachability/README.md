@@ -52,14 +52,11 @@ Correspondence는 해당 family의 결정을 저자가 어느 계약 owner와 �
 
 `node internals/authoring-reachability-gate.mjs`는 미지급 family 수 0을 정확히 고정한다. family가 늘거나 분류가 빠지거나 대응 path와 anchor가 사라지거나 debt가 다시 생기면 ledger를 다시 판단하기 전까지 실패한다. 지급된 edge도 조용히 예전 baseline 아래에 숨을 수 없다.
 
-Specification fragment debt도 같은 방식으로 센다. 현재 `@evidenceObligation` target-anchor와 id 쌍은 25개이고 source의 고유 `@evidencePart` 쌍은 19개다. 미지급 6개는 다음과 같다.
+Specification fragment debt도 같은 방식으로 센다. 현재 `@evidenceObligation` target-anchor와 id 쌍은 23개이고 source의 고유 `@evidencePart` 쌍은 20개다. 미지급 3개는 다음과 같다.
 
 - `camera-light-and-visibility/visibility-and-image-space-observation.md#clv-clipping-clearance-evaluation::camera-clearance-swept-volume`
-- `camera-light-and-visibility/visibility-and-image-space-observation.md#clv-clipping-clearance-evaluation::clipping-planes`
 - `camera-light-and-visibility/visibility-and-image-space-observation.md#clv-clipping-clearance-evaluation::delivery-crop-region`
 - `camera-light-and-visibility/visibility-and-image-space-observation.md#clv-clipping-clearance-evaluation::depth-precision-constraint`
-- `production-evidence/graph.md#spec-authoring-production-evidence-construction::section-index`
-- `production-evidence/input.md#spec-authoring-production-evidence-declaration::section-index`
 
 ## 저장소 evidence review 정책
 

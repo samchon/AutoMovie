@@ -2,8 +2,6 @@
 
 ## 그래프 구성과 검증 {#spec-authoring-production-evidence-construction}
 
-<!-- @evidenceObligation section-index 아래의 독립된 그래프 구성·검증 단위를 묶는 문서 구조. -->
-
 ### 고정 공통 계약 해석 {#spec-authoring-production-evidence-shared-contract}
 
 <!-- @evidence requirements/production-evidence/graph.md#agent-production-evidence-shared-contract 모든 프로젝트가 같은 공통 대상 집합을 해석하게 한다. -->

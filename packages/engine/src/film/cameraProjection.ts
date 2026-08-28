@@ -502,6 +502,7 @@ export const autoMovieSectionPlanesKeepPoint = (
  *
  * @evidence requirements/camera/clipping-occlusion-and-spatial-constraints.md#camera-clipping-range Reports whether a declared cut leaves a subject's bound whole, removes it, or crosses it, with plane-level contact kept.
  * @evidence specifications/camera-light-and-visibility/visibility-and-image-space-observation.md#clv-clipping-clearance-evaluation Produces the specified `kept`, `cut`, and `crossed` outcome for a current geometry bound under the optional clipping planes.
+ * @evidencePart specifications/camera-light-and-visibility/visibility-and-image-space-observation.md#clv-clipping-clearance-evaluation::clipping-planes Evaluates every declared plane against the current box with the specified signed-distance boundary and returns the exact `kept`, `cut`, or `crossed` classification.
  */
 export const classifyAutoMovieSectionPlaneBox = (props: {
   planes: readonly IAutoMovieSectionPlane[];
