@@ -311,9 +311,10 @@ const inherit = (relative) => {
  * because `ttsc` decides whether to lint at all from the project's declared
  * dependencies, the lint config imports the reusable graph package, and its
  * explicit Node type reference must resolve while the isolated evaluator checks
- * both `import.meta.dirname` and that package's Node-backed implementation. The
- * real scaffold declares all three. The canary pass proves the two runtime
- * declarations took effect, while the paid pass exercises the type declaration.
+ * both the runtime-validated `import.meta.dirname` capability and that package's
+ * Node-backed implementation. The real scaffold declares all three. The canary
+ * pass proves the two runtime declarations took effect, while the paid pass
+ * exercises the type declaration.
  *
  */
 const render = () => {

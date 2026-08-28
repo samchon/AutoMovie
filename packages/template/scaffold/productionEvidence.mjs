@@ -1,5 +1,11 @@
 // @ts-check
 
+const location = Reflect.get(import.meta, "dirname");
+if (typeof location !== "string")
+  throw new Error(
+    "The production evidence declaration requires native import.meta.dirname support.",
+  );
+
 /**
  * The sole tracked production kind, population scope, branch-stage, and local
  * contract declaration consumed by graph lint, instruction sync, and final
@@ -15,7 +21,7 @@
  * @type {import("@automovie/evidence").IAutoMovieEvidenceConfigProps}
  */
 export const productionEvidence = {
-  location: import.meta.dirname,
+  location,
   kind: null,
   populationScope: { mode: "complete-production" },
   settings: "disabled",
