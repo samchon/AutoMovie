@@ -188,10 +188,20 @@ export const executeAutoMovieRepaintRequest = async <T>(props: {
       props.policy.maximumElapsedMs
     )
       return result(props.requestId, attempts, null, "elapsed-exhausted");
-    const attemptId = nonBlank(props.runtime.attemptId(), "attempt id");
     const controller = new AbortController();
     const relay = (): void => controller.abort(props.signal?.reason);
     props.signal?.addEventListener("abort", relay, { once: true });
+    if (requestCancelled()) {
+      props.signal?.removeEventListener("abort", relay);
+      return result(props.requestId, attempts, null, "cancelled");
+    }
+    let attemptId: string;
+    try {
+      attemptId = nonBlank(props.runtime.attemptId(), "attempt id");
+    } catch (error) {
+      props.signal?.removeEventListener("abort", relay);
+      throw error;
+    }
     const remainingElapsed = Math.max(
       1,
       props.policy.maximumElapsedMs -

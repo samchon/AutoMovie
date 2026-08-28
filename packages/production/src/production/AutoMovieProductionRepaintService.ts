@@ -917,19 +917,21 @@ const waitForRepaintBackoff = (
   signal: AbortSignal,
 ): Promise<void> =>
   new Promise((resolve, reject) => {
-    if (signal.aborted) {
-      reject(new Error("Repaint request was cancelled during backoff."));
-      return;
-    }
+    let settled = false;
     const abort = (): void => {
+      if (settled) return;
+      settled = true;
       clearTimeout(timer);
+      signal.removeEventListener("abort", abort);
       reject(new Error("Repaint request was cancelled during backoff."));
     };
     const timer = setTimeout(() => {
+      settled = true;
       signal.removeEventListener("abort", abort);
       resolve();
     }, milliseconds);
     signal.addEventListener("abort", abort, { once: true });
+    if (signal.aborted) abort();
   });
 
 const resolveReferences = (

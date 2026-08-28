@@ -202,6 +202,60 @@ export const test_production_repaint_execution = async (): Promise<void> => {
       availableOutput: null,
     }),
   });
+  let cancelledDuringRegistration = false;
+  let registrationRemovals = 0;
+  let registrationAttemptIds = 0;
+  let registrationProviderCalls = 0;
+  const registrationRaceSignal = {
+    get aborted(): boolean {
+      return cancelledDuringRegistration;
+    },
+    reason: "cancelled while registering",
+    addEventListener: (
+      _type: string,
+      listener: EventListenerOrEventListenerObject,
+    ): void => {
+      cancelledDuringRegistration = true;
+      if (typeof listener === "function") listener(new Event("abort"));
+      else listener.handleEvent(new Event("abort"));
+    },
+    removeEventListener: (): void => {
+      ++registrationRemovals;
+    },
+  } as unknown as AbortSignal;
+  const cancelledDuringRegistrationResult = await execute({
+    policy: policy(),
+    signal: registrationRaceSignal,
+    attemptId: () => {
+      ++registrationAttemptIds;
+      return "20000000-0000-4000-8000-000000000099";
+    },
+    calls: async () => {
+      ++registrationProviderCalls;
+      return {
+        value: "unreachable",
+        costUnits: 0,
+        availableOutput: null,
+      };
+    },
+  });
+  TestValidator.equals(
+    "cancellation during listener registration stops before attempt allocation",
+    {
+      stop: cancelledDuringRegistrationResult.result.stop,
+      attempts: cancelledDuringRegistrationResult.result.attempts.length,
+      attemptIds: registrationAttemptIds,
+      providerCalls: registrationProviderCalls,
+      removals: registrationRemovals,
+    },
+    {
+      stop: "cancelled",
+      attempts: 0,
+      attemptIds: 0,
+      providerCalls: 0,
+      removals: 1,
+    },
+  );
   const timedOut = await execute({
     policy: policy({
       maximumAttempts: 1,

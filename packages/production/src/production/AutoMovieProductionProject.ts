@@ -2161,6 +2161,7 @@ export class AutoMovieProductionProject {
     };
     const previousIdentity = activeBytes?.toString() ?? null;
     const nextIdentity = serializeJson(pointer);
+    const candidateIdentity = canonicalizeAutoMovieJson(receipt);
     this.commitFiles(
       [
         {
@@ -2175,11 +2176,19 @@ export class AutoMovieProductionProject {
           content: nextIdentity,
         },
       ],
-      () =>
-        (props.inputCurrent?.() ?? true) &&
-        [previousIdentity, nextIdentity].includes(
-          this.readTrackedStateFile(activePath)?.toString() ?? null,
-        ),
+      () => {
+        if ((props.inputCurrent?.() ?? true) === false) return false;
+        const currentCandidate = this.verifiedRepaintCandidates([
+          props.shot,
+        ]).find((candidate) => candidate.attemptId === props.attemptId);
+        return (
+          currentCandidate !== undefined &&
+          canonicalizeAutoMovieJson(currentCandidate) === candidateIdentity &&
+          [previousIdentity, nextIdentity].includes(
+            this.readTrackedStateFile(activePath)?.toString() ?? null,
+          )
+        );
+      },
     );
     return receipt;
   }
