@@ -1449,6 +1449,18 @@ export const test_production_repaint_generator_adoption =
         }),
         input,
       );
+      const exhaustedHistory: IAutoMovieRepaintAttemptRecord[] = [
+        {
+          ...exhaustedAttempts[0]!,
+          status: "failed",
+          failure: {
+            class: "rate-limit",
+            message: "the only permitted attempt requested another retry",
+            retryable: true,
+          },
+          availableOutput: null,
+        },
+      ];
       const exhaustedRetry = await new AutoMovieProductionRepaintService(
         actualAdapter(selected.runtimeIdentity),
         selected,
@@ -1460,7 +1472,7 @@ export const test_production_repaint_generator_adoption =
         },
       ).repaint(
         scenarioServices(runnable, {
-          project: { repaintRequestAttempts: () => exhaustedAttempts },
+          project: { repaintRequestAttempts: () => exhaustedHistory },
         }),
         input,
       );

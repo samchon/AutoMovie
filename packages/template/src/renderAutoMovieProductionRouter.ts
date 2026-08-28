@@ -45,24 +45,24 @@ export const renderAutoMovieProductionRouter = (
       ? ["- This production owns no local contract document yet."]
       : evidence.contracts.map((contract) => {
           const items = contract.items
-            .map((item) => `[${item.title}](${contract.path}#${item.anchor})`)
+            .map((item) => markdownLink(item.title, contract.path, item.anchor))
             .join("; ");
           return items === ""
-            ? `- [${contract.title}](${contract.path}) has no H2 contract item.`
-            : `- [${contract.title}](${contract.path}): ${items}.`;
+            ? `- ${markdownLink(contract.title, contract.path)} has no H2 contract item.`
+            : `- ${markdownLink(contract.title, contract.path)}: ${items}.`;
         });
   const designOwnerLines =
     evidence.designOwners.length === 0
       ? ["- No active design owner is present."]
       : evidence.designOwners.map((owner) => {
           const units = owner.units
-            .map((unit) => `[${unit.title}](${owner.path}#${unit.anchor})`)
+            .map((unit) => markdownLink(unit.title, owner.path, unit.anchor))
             .join("; ");
           const source =
             owner.sourceBinding === null
               ? "source authorship has not started"
               : `source branch \`${owner.sourceBinding.branch}\` selects ${owner.sourceBinding.paths.length} current source file(s)`;
-          return `- \`${owner.branch}\` [${owner.title}](${owner.path}): ${units === "" ? "no H2 owner unit" : units}; ${source}.`;
+          return `- \`${owner.branch}\` ${markdownLink(owner.title, owner.path)}: ${units === "" ? "no H2 owner unit" : units}; ${source}.`;
         });
 
   return `# ${evidence.packageName}
@@ -112,6 +112,17 @@ Start the coding-agent session from this project root. Codex reads this \`AGENTS
 - \`npm run book -- --layer <layer> --title <title>\` binds any authored layer into one deterministic reader-facing Markdown file under the ignored \`artifacts\` directory. It removes evidence comments and citation anchors but preserves the visible heading hierarchy and prose.
 - \`npm run compile\` is the only command that may update compiler-owned output.
 `;
+};
+
+/** Render a safe project-relative Markdown link from project-owned text. */
+const markdownLink = (title: string, file: string, anchor?: string): string => {
+  const label = title.replace(/[\\[\]]/gu, "\\$&");
+  const encode = (value: string): string =>
+    encodeURIComponent(value).replaceAll("(", "%28").replaceAll(")", "%29");
+  const destination = file.split("/").map(encode).join("/");
+  return `[${label}](${destination}${
+    anchor === undefined ? "" : `#${encode(anchor)}`
+  })`;
 };
 
 /** Explain only the selected production shape, never the other two shapes. */

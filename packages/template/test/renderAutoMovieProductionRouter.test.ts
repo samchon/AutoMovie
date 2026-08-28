@@ -121,9 +121,15 @@ const library = renderAutoMovieProductionRouter({
   ],
   contracts: [
     {
-      path: "docs/contracts/profile.md",
-      title: "Profile contract",
-      items: [{ anchor: "profile", title: "Profile", digest: "b".repeat(64) }],
+      path: "docs/contracts/profile (one).md",
+      title: "Profile [contract]",
+      items: [
+        {
+          anchor: "profile:v2",
+          title: "Profile [v2]",
+          digest: "b".repeat(64),
+        },
+      ],
     },
     {
       path: "docs/contracts/index.md",
@@ -143,7 +149,10 @@ assert.match(
   /source branch `modelSources` selects 1 current source file/u,
 );
 assert.match(library, /source authorship has not started/u);
-assert.match(library, /\[Profile\]\(docs\/contracts\/profile\.md#profile\)/u);
+assert.match(
+  library,
+  /\[Profile \\\[v2\\\]\]\(docs\/contracts\/profile%20%28one%29\.md#profile%3Av2\)/u,
+);
 assert.match(library, /has no H2 contract item/u);
 assert.doesNotMatch(library, /settings -> treatments/u);
 
