@@ -166,7 +166,9 @@ async function readLayer(
     const markdown: string = stripAuthoringMarkers(
       await fs.readFile(target, "utf8"),
     );
-    const heading: RegExpExecArray | null = /^# (.+)(?:\n|$)/u.exec(markdown);
+    const heading: RegExpExecArray | null = /^#[ \t]+(\S.*)(?:\n|$)/u.exec(
+      markdown,
+    );
     if (heading === null)
       throw new Error(
         `${target}: an authored document must open with one H1 title.`,
@@ -231,7 +233,9 @@ function rebaseHeadings(body: string, shift: number): string {
         fence = { character: opening[1][0], length: opening[1].length };
         return line;
       }
-      const heading: RegExpExecArray | null = /^(#{1,6}) (.+)$/u.exec(line);
+      const heading: RegExpExecArray | null = /^(#{1,6})[ \t]+(\S.*)$/u.exec(
+        line,
+      );
       if (heading === null) return line;
       if (heading[1].length + shift > 6)
         throw new Error(`A bound heading may not exceed H6: ${line.trim()}`);

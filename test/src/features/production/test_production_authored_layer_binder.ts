@@ -155,7 +155,7 @@ export const test_production_authored_layer_binder =
       write(
         library,
         "docs/models/001-body.md",
-        "# Body\r\n\r\n## Envelope {#envelope:v2}\r\n\r\nOne metre.\r\n",
+        "#\tBody\r\n\r\n##  Envelope {#envelope:v2}\r\n\r\nOne metre.\r\n",
       );
       write(library, "docs/models/notes.txt", "not an authored document\n");
       const libraryMarkdown: string = await new AutoMovieProductionBinder({
