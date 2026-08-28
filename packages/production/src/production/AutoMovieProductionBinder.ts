@@ -218,6 +218,15 @@ function stripAuthoringMarkers(markdown: string): string {
         fence = undefined;
       continue;
     }
+    const opening: string | undefined =
+      htmlComment === false
+        ? /^ {0,3}(`{3,}|~{3,})/u.exec(sourceLine)?.[1]
+        : undefined;
+    if (opening !== undefined) {
+      fence = { character: opening[0], length: opening.length };
+      output.push(sourceLine);
+      continue;
+    }
     let line = "";
     for (let cursor = 0; cursor < sourceLine.length; ) {
       if (htmlComment) {
@@ -236,9 +245,6 @@ function stripAuthoringMarkers(markdown: string): string {
         htmlComment = true;
       }
     }
-    const marker: string | undefined = /^ {0,3}(`{3,}|~{3,})/u.exec(line)?.[1];
-    if (marker !== undefined)
-      fence = { character: marker[0], length: marker.length };
     if (line !== "" || output.at(-1) !== "") output.push(line);
   }
   return output.join("\n").trim();
