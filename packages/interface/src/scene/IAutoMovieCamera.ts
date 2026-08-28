@@ -5,7 +5,7 @@ import { IAutoMovieVector3 } from "../geometry/IAutoMovieVector3";
  * One camera-local spherical volume used for physical clearance.
  *
  * A sphere is intentionally conservative. Its size does not shrink while the
- * camera or its host rig rotates, so an interval swept from two fixed-clock
+ * camera or its host rig rotates, so an interval swept from two ordered sample
  * states cannot expose a corner the declared envelope forgot to carry.
  * `center` permits an asymmetric camera body or a rig extending behind the
  * optical origin without turning the portable boundary into renderer geometry.
@@ -42,7 +42,7 @@ export interface IAutoMovieCameraClearanceEnvelope {
 }
 
 /**
- * One conservative contact found over a fixed-clock camera interval.
+ * One conservative contact found over one ordered camera sample interval.
  *
  * @evidence requirements/camera/clipping-occlusion-and-spatial-constraints.md#camera-dynamic-spatial-sampling Exposes the exact interval, envelope owner, and scene obstacle that failed the swept comparison.
  * @evidence specifications/camera-light-and-visibility/framing-axis-and-camera-path.md#clv-camera-path-constraints-refusal Types the addressed finding returned instead of accepting a penetrating camera path.
@@ -65,9 +65,9 @@ export interface IAutoMovieCameraClearanceFinding {
 /**
  * Reproducible physical-clearance result for one realized camera take.
  *
- * The report binds the exact geometry revision and endpoint-inclusive fixed
- * clock used for evaluation. A stale report is never a clear report, even when
- * its old geometry happened to contain no contact.
+ * The report binds the exact geometry revision and ordered base-clock-plus-key
+ * sample plan used for evaluation. A stale report is never a clear report,
+ * even when its old geometry happened to contain no contact.
  *
  * @evidence requirements/camera/clipping-occlusion-and-spatial-constraints.md#camera-spatial-geometry-revision Prevents clearance measured from an obsolete scene revision from becoming current evidence.
  * @evidence specifications/camera-light-and-visibility/framing-axis-and-camera-path.md#clv-camera-path-constraints-refusal Carries the deterministic sample plan and addressed contact set used to admit or refuse the take.
@@ -89,7 +89,7 @@ export interface IAutoMovieCameraClearanceReport {
   /** Exact ordered fixed-clock and causal sample instants evaluated. */
   sampleTimes: number[];
 
-  /** Number of adjacent sample intervals evaluated. */
+  /** Exact number of adjacent carried sample intervals evaluated. */
   intervals: number;
 
   /** Whether current geometry was clear, blocked, or stale. */

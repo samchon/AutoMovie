@@ -136,7 +136,7 @@ const runtimeModels = () => [
  * 10. A zero-duration public evaluation still detects contact at its single
  *     fixed-clock instant.
  * 11. Artifact validation requires exactly one clear report per declared take,
- *     at least the safely countable base intervals, and permits causal keys.
+ *     an exact carried sample plan, and retention of every base-clock instant.
  * 12. An evaluator throw remains addressed even when the thrown value refuses
  *     diagnostic string coercion.
  */

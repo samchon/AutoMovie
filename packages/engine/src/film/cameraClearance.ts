@@ -43,7 +43,7 @@ interface IAutoMovieCameraClearanceEvaluation {
   sampleRate: number;
   /** Shot duration in seconds. */
   duration: number;
-  /** State at every instant from the shared fixed clock. */
+  /** State at every base fixed-clock and additional causal-key instant. */
   samples: IAutoMovieCameraClearanceSample[];
 }
 
@@ -201,8 +201,8 @@ const obstaclesByNode = (
 };
 
 /**
- * Evaluate camera-body and parent-rig clearance over every adjacent fixed-clock
- * interval against current-revision resolved scene bounds.
+ * Evaluate camera-body and parent-rig clearance over every adjacent ordered
+ * sample interval against current-revision resolved scene bounds.
  *
  * Every interval uses a continuous camera capsule, including a conservative
  * rotation-arc margin, against the union of same-clock obstacle endpoint
@@ -211,8 +211,8 @@ const obstaclesByNode = (
  *
  * @param input - Complete current-revision camera and obstacle sample plan.
  * @returns Stable interval-, part-, and obstacle-ordered clearance evidence.
- * @throws Error when the supplied samples are not exactly the shared fixed
- * clock or do not carry one coherent obstacle identity set.
+ * @throws Error when the supplied samples omit a base fixed-clock instant, are
+ * not strictly ordered, or do not carry one coherent obstacle identity set.
  *
  * @evidence requirements/camera/clipping-occlusion-and-spatial-constraints.md#camera-clearance Evaluates declared camera and rig volumes against resolved scene obstacles rather than treating the optical point as the body.
  * @evidence requirements/camera/clipping-occlusion-and-spatial-constraints.md#camera-dynamic-spatial-sampling Covers each adjacent fixed-clock interval with continuous conservative bounds so clear endpoints cannot hide an interior penetration.
