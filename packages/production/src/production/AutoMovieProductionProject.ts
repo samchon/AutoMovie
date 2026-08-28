@@ -2094,13 +2094,16 @@ export class AutoMovieProductionProject {
       if (entry.isFile() === false || entry.name.endsWith(".json") === false)
         continue;
       try {
-        const bytes = this.readTrackedStateFile(`renditions/${entry.name}`);
+        const receiptPath = `renditions/${entry.name}`;
+        const bytes = this.readTrackedStateFile(receiptPath);
         if (bytes === null) continue;
         const validation = typia.validateEquals<IAutoMovieRepaintReceipt>(
           JSON.parse(Buffer.from(bytes).toString("utf8")),
         );
         if (
           validation.success === false ||
+          receiptPath !==
+            productionRepaintReceiptPath(validation.data.output.path) ||
           (selectedShots !== null &&
             selectedShots.has(validation.data.shot) === false)
         )
