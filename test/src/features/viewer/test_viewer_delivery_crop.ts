@@ -42,6 +42,12 @@ export const test_viewer_delivery_crop = (): void => {
     },
     { omitted: original, explicit: original, active: undefined },
   );
+  camera.setViewOffset(2, 1, 0, 0, 2, 1);
+  TestValidator.equals(
+    "an active whole Three.js view offset is still the crop no-op",
+    readAutoMovieDeliveryCrop(camera),
+    undefined,
+  );
 
   const crop: IAutoMovieDeliveryCrop = {
     left: 0.25,
