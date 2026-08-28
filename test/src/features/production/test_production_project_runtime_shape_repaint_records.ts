@@ -1289,28 +1289,62 @@ export const test_production_project_runtime_shape_repaint_records =
       const validReceiptPath = productionRepaintReceiptPath(
         validReceipt.output.path,
       );
-      const requestDirectory = `renditions/attempts/${validAttempt.requestId}`;
+      for (const [label, property] of [
+        ["candidate refuses a v4 receipt without startedAt", "startedAt"],
+        ["candidate refuses a v4 receipt without completedAt", "completedAt"],
+        ["candidate refuses a v4 receipt without requestId", "requestId"],
+        ["candidate refuses a v4 receipt without evidence", "evidence"],
+      ] as const) {
+        const incompleteReceipt = structuredClone(validReceipt);
+        Reflect.deleteProperty(incompleteReceipt, property);
+        writeTrackedJson(project, validReceiptPath, incompleteReceipt);
+        TestValidator.equals(label, project.verifiedRepaintCandidates(), []);
+        writeTrackedJson(project, validReceiptPath, validReceipt);
+      }
       const expectPolicyLedgerOmitted = (
         label: string,
         receipt: IAutoMovieRepaintReceipt,
         attempts: readonly IAutoMovieRepaintAttemptRecord[],
       ): void => {
-        fs.rmSync(project.trackedStatePath(requestDirectory), {
+        const candidateRequestDirectory = `renditions/attempts/${receipt.requestId}`;
+        const candidateReceiptPath = productionRepaintReceiptPath(
+          receipt.output.path,
+        );
+        const candidateOutputFile = path.join(
+          project.renderRoot(),
+          ...receipt.output.path.split("/"),
+        );
+        const usesValidOutput =
+          receipt.output.path === validReceipt.output.path;
+        fs.rmSync(project.trackedStatePath(candidateRequestDirectory), {
           force: true,
           recursive: true,
         });
+        if (usesValidOutput === false) {
+          fs.mkdirSync(path.dirname(candidateOutputFile), { recursive: true });
+          fs.writeFileSync(candidateOutputFile, outputBytes);
+        }
         for (const attempt of attempts)
           writeTrackedJson(
             project,
-            `${requestDirectory}/${attempt.attemptId}.json`,
+            `${candidateRequestDirectory}/${attempt.attemptId}.json`,
             attempt,
           );
-        writeTrackedJson(project, validReceiptPath, receipt);
-        TestValidator.equals(label, project.verifiedRepaintCandidates(), []);
-        fs.rmSync(project.trackedStatePath(requestDirectory), {
+        writeTrackedJson(project, candidateReceiptPath, receipt);
+        TestValidator.equals(
+          label,
+          project.verifiedRepaintCandidates(),
+          candidateReceiptPath === validReceiptPath ? [] : [validReceipt],
+        );
+        fs.rmSync(project.trackedStatePath(candidateRequestDirectory), {
           force: true,
           recursive: true,
         });
+        fs.rmSync(project.trackedStatePath(candidateReceiptPath), {
+          force: true,
+        });
+        if (usesValidOutput === false)
+          fs.rmSync(candidateOutputFile, { force: true });
         writeTrackedJson(project, validAttemptPath, validAttempt);
         writeTrackedJson(project, validReceiptPath, validReceipt);
       };
@@ -1419,6 +1453,70 @@ export const test_production_project_runtime_shape_repaint_records =
             completedAt: "2026-08-28T11:59:59.000Z",
           }),
           terminalAtOrdinal(2),
+        ],
+      );
+      const laterPolicy = {
+        ...executionPolicy,
+        maximumAttempts: 3,
+        backoffMs: [100, 100],
+      };
+      const laterPolicyAttemptId = "00000000-0000-4000-8000-000000000083";
+      const laterPolicyOutputPath = productionRepaintOutputPath({
+        shot,
+        sourceRenderFingerprint,
+        attemptId: laterPolicyAttemptId,
+        adapterIdentity,
+        generatorProvenance,
+        parameters,
+        executionPolicy: laterPolicy,
+        evidence,
+        references,
+        outputDigest,
+      });
+      const laterPolicyReceipt: IAutoMovieRepaintReceipt = {
+        ...validReceipt,
+        requestId: "00000000-0000-4000-8000-000000000080",
+        attemptId: laterPolicyAttemptId,
+        executionPolicy: laterPolicy,
+        output: { ...validReceipt.output, path: laterPolicyOutputPath },
+      };
+      const laterPolicyTerminal =
+        succeededAttemptForReceipt(laterPolicyReceipt);
+      expectPolicyLedgerOmitted(
+        "candidate refuses a later retryable bit contrary to receipt policy",
+        laterPolicyReceipt,
+        [
+          {
+            ...laterPolicyTerminal,
+            attemptId: "00000000-0000-4000-8000-000000000081",
+            ordinal: 1,
+            startedAt: "2026-08-28T11:59:57.000Z",
+            completedAt: "2026-08-28T11:59:58.000Z",
+            status: "failed",
+            failure: {
+              class: "rate-limit",
+              message: "Stored retryable provider failure.",
+              retryable: true,
+            },
+            costUnits: 0,
+            availableOutput: null,
+          },
+          {
+            ...laterPolicyTerminal,
+            attemptId: "00000000-0000-4000-8000-000000000082",
+            ordinal: 2,
+            startedAt: "2026-08-28T11:59:58.100Z",
+            completedAt: "2026-08-28T11:59:59.000Z",
+            status: "failed",
+            failure: {
+              class: "timeout",
+              message: "Stored timeout failure.",
+              retryable: true,
+            },
+            costUnits: 0,
+            availableOutput: null,
+          },
+          { ...laterPolicyTerminal, ordinal: 3 },
         ],
       );
       fs.writeFileSync(path.join(repaintDirectory, "ignored.txt"), "ignored");
@@ -1746,6 +1844,18 @@ export const test_production_project_runtime_shape_repaint_records =
         attemptId: laterReceipt.attemptId,
         selectedAt: "2026-08-28T12:00:04.000Z",
       });
+      const laterReceiptPath = productionRepaintReceiptPath(
+        laterReceipt.output.path,
+      );
+      const incompleteLaterReceipt = structuredClone(laterReceipt);
+      Reflect.deleteProperty(incompleteLaterReceipt, "completedAt");
+      writeTrackedJson(project, laterReceiptPath, incompleteLaterReceipt);
+      TestValidator.equals(
+        "active lineage omits a v4 receipt without completedAt",
+        project.verifiedRepaintRenditions([shot]),
+        [],
+      );
+      writeTrackedJson(project, laterReceiptPath, laterReceipt);
       expectSelectionRefusal(
         "ordinary selection cannot select the current candidate again",
         {
@@ -2193,6 +2303,17 @@ export const test_production_project_runtime_shape_repaint_records =
           parameters: {
             ...validReceipt.parameters,
             controls: { scheduler: "" },
+          },
+        },
+        "parameters are invalid",
+      );
+      expectRefusal(
+        "repaint refuses a non-finite numeric control value",
+        {
+          ...validReceipt,
+          parameters: {
+            ...validReceipt.parameters,
+            controls: { guidance: Number.POSITIVE_INFINITY },
           },
         },
         "parameters are invalid",
