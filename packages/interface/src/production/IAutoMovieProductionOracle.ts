@@ -508,7 +508,7 @@ export interface IAutoMovieRenderBundleManifest {
    * @evidence requirements/agent-authoring/knowledge-boundary.md#agent-content-supply-refusal Exposes `version` as the portable data boundary for the agent mcp content supply refusal requirement.
    * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-content-side-effect-invariant Types `version` for the spec authoring tool content side effect invariant system contract.
    */
-  version: 4;
+  version: 5;
   /**
    * Asset, shot, sequence, or film render target.
    *

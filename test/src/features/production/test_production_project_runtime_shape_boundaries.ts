@@ -1034,7 +1034,7 @@ export const test_production_project_runtime_shape_boundaries = (): void => {
 
     const renderBytes = productionPng(1, 1);
     const manifest: IAutoMovieRenderBundleManifest = {
-      version: 4,
+      version: 5,
       target: { kind: "shot", id: "opening" },
       compileFingerprint: digestAutoMovieBytes(Buffer.from("compile")),
       dialogueRuntimeIdentity: null,
@@ -1124,6 +1124,12 @@ export const test_production_project_runtime_shape_boundaries = (): void => {
       });
     };
 
+    writeManifestAndReceipt({ ...manifest, version: 4 });
+    TestValidator.equals(
+      "a pre-closure render manifest remains historical rather than current evidence",
+      project.verifiedRenderManifest(manifestFile),
+      null,
+    );
     writeManifestAndReceipt({ version: 99 });
     TestValidator.equals(
       "a schema-invalid render manifest is not verified",

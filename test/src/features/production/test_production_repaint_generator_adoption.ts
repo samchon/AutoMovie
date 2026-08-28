@@ -180,7 +180,7 @@ const executableServices = (props: {
       })),
   ).flat();
   const manifest = {
-    version: 4,
+    version: 5,
     target: { kind: "shot", id: input.shot },
     compileFingerprint,
     dialogueRuntimeIdentity: null,

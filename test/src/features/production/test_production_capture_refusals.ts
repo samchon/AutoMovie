@@ -1,4 +1,7 @@
-import { IAutoMovieModelRecipe } from "@automovie/interface";
+import {
+  AutoMovieContentDigest,
+  IAutoMovieModelRecipe,
+} from "@automovie/interface";
 import {
   AutoMovieProductionCompiler,
   AutoMovieProductionContext,
@@ -58,6 +61,8 @@ const CRATE: IAutoMovieModelRecipe = {
  * 6. With the compiler registry removed, both tools refuse as
  *    `capture-registry-unavailable` rather than capturing against a target
  *    nothing can currently prove.
+ * 7. A malformed shot dialogue identity and any non-shot dialogue identity are
+ *    refused before either can name or populate a render bundle.
  */
 export const test_production_capture_refusals = async (): Promise<void> => {
   const fixture = productionFixture();
@@ -221,6 +226,68 @@ export const test_production_capture_refusals = async (): Promise<void> => {
         poses: ["rest"],
         diagnostics: [],
       },
+    );
+
+    const malformedDialogue = new AutoMovieProductionContext(
+      async (input) => ({
+        ...(await host.adapter(input)),
+        dialogueRuntimeIdentity:
+          "sha256:not-a-content-digest" as AutoMovieContentDigest,
+      }),
+      fixture.root,
+      undefined,
+    );
+    const malformedShot = await captureAutoMovieProductionFrame(
+      malformedDialogue,
+      {
+        target: {
+          kind: "shot",
+          productionId: "fixture-film",
+          id: "opening",
+          time: 0,
+        },
+      },
+    );
+    const nonShotDialogue = new AutoMovieProductionContext(
+      async (input) => ({
+        ...(await host.adapter(input)),
+        dialogueRuntimeIdentity: `sha256:${"a".repeat(
+          64,
+        )}` as AutoMovieContentDigest,
+      }),
+      fixture.root,
+      undefined,
+    );
+    const attributedAsset = await captureAutoMovieProductionFrame(
+      nonShotDialogue,
+      {
+        target: {
+          kind: "asset",
+          productionId: "fixture-film",
+          id: "soloist",
+          angleDeg: 0,
+        },
+      },
+    );
+    TestValidator.equals(
+      "malformed and non-shot dialogue identities never become render evidence",
+      [malformedShot, attributedAsset].map((output) => ({
+        captured: output.captured,
+        receipt: output.receipt,
+        codes: output.diagnostics.map((entry) => entry.code),
+      })),
+      [
+        {
+          captured: false,
+          receipt: null,
+          codes: ["capture-dialogue-identity-invalid"],
+        },
+        {
+          captured: false,
+          receipt: null,
+          codes: ["capture-dialogue-identity-invalid"],
+        },
+      ],
     );
 
     fs.rmSync(path.join(project.generatedRoot(), "models", "soloist.json"), {

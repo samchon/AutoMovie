@@ -1102,7 +1102,7 @@ export class AutoMovieProductionOracleService {
         left.index - right.index || compareCodeUnits(left.pass, right.pass),
     );
     const manifest: IAutoMovieRenderBundleManifest = {
-      version: 4,
+      version: 5,
       target: input.target,
       compileFingerprint: generated.inputFingerprint,
       dialogueRuntimeIdentity,
