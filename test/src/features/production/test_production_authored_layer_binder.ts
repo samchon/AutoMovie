@@ -284,6 +284,32 @@ export const test_production_authored_layer_binder =
           throw error;
       }
 
+      const linkedLayer = makeRoot();
+      const linkedLayerPath = path.join(linkedLayer, "docs", "settings");
+      try {
+        fs.symlinkSync(
+          path.join(outside, "external"),
+          linkedLayerPath,
+          process.platform === "win32" ? "junction" : "dir",
+        );
+        await TestValidator.error("linked layer root", () =>
+          new AutoMovieProductionBinder({
+            root: linkedLayer,
+            title: "Linked root",
+            layer: "settings",
+          }).markdown(),
+        );
+      } catch (error) {
+        if (
+          !(
+            error instanceof Error &&
+            "code" in error &&
+            ["EPERM", "EACCES"].includes(String(error.code))
+          )
+        )
+          throw error;
+      }
+
       TestValidator.error(
         "blank title",
         () =>
