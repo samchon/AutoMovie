@@ -209,6 +209,33 @@ export const test_production_project_runtime_shape_repaint_records =
       );
       const shot = "opening";
 
+      TestValidator.equals(
+        "an absent repaint candidate directory has no candidates",
+        project.verifiedRepaintCandidates(),
+        [],
+      );
+      const repaintDirectory = project.trackedStatePath("renditions");
+      const externalCandidates = path.join(fixture.root, "external-candidates");
+      fs.mkdirSync(externalCandidates);
+      fs.symlinkSync(
+        externalCandidates,
+        repaintDirectory,
+        process.platform === "win32" ? "junction" : "dir",
+      );
+      try {
+        project.verifiedRepaintCandidates();
+        throw new Error(
+          "Linked repaint candidate directory unexpectedly read.",
+        );
+      } catch (error) {
+        TestValidator.predicate(
+          "candidate enumeration refuses a linked directory",
+          error instanceof Error &&
+            error.message.includes("must not be a link"),
+        );
+      }
+      fs.rmSync(repaintDirectory);
+
       const requestId = "00000000-0000-4000-8000-000000000030";
       TestValidator.equals(
         "an absent request has no terminal repaint attempts",
@@ -658,11 +685,21 @@ export const test_production_project_runtime_shape_repaint_records =
       };
       const evidence = {
         prompt: "scripts/repaint.ts#opening-prompt",
-        continuity: null,
+        continuity: "docs/settings/continuity.md#opening",
         settings: "docs/settings/production.md#visual-grammar",
         design: "docs/designs/opening.md#appearance",
         screenplayOrBrief: "docs/screenplays/opening.md#opening",
         shot: "scripts/shots/opening.ts#opening",
+      };
+      const continuityReview = {
+        baseline: evidence.continuity,
+        playbackEvidence: "The candidate passed sequence playback review.",
+        mixedDeliveryPolicy: "The cut preserves the deterministic transition.",
+        flicker: "pass" as const,
+        identityDrift: "pass" as const,
+        geometryWarp: "pass" as const,
+        textureCrawl: "pass" as const,
+        transitionMismatch: "pass" as const,
       };
       const references = [
         {
@@ -715,18 +752,378 @@ export const test_production_project_runtime_shape_repaint_records =
         },
       };
       project.commitRepaintRendition(validReceipt, outputBytes);
-      project.selectRepaintCandidate({
+      fs.writeFileSync(path.join(repaintDirectory, "ignored.txt"), "ignored");
+      fs.writeFileSync(path.join(repaintDirectory, "broken.json"), "{broken");
+      writeTrackedJson(project, "renditions/foreign.json", {
+        ...validReceipt,
+        shot: "other-shot",
+      });
+      writeTrackedJson(project, "renditions/duplicate.json", validReceipt);
+      TestValidator.equals(
+        "candidate enumeration omits malformed, foreign, and noncanonical duplicate residents",
+        project.verifiedRepaintCandidates(),
+        [validReceipt],
+      );
+      TestValidator.equals(
+        "candidate enumeration filters before reading another shot output",
+        project.verifiedRepaintCandidates([shot]),
+        [validReceipt],
+      );
+      fs.rmSync(path.join(repaintDirectory, "broken.json"));
+      fs.rmSync(path.join(repaintDirectory, "foreign.json"));
+      fs.rmSync(path.join(repaintDirectory, "duplicate.json"));
+      const selectionProps = {
         shot,
         attemptId: validReceipt.attemptId,
-        kind: "selection",
+        kind: "selection" as const,
         reason: "Select the structurally reviewed candidate.",
         structuralReview: "The deterministic structure remains unchanged.",
-        continuityReview: null,
+        continuityReview,
         selectedAt: "2026-08-28T12:00:02.000Z",
-      });
+      };
+      const expectSelectionRefusal = (
+        label: string,
+        props: Parameters<typeof project.selectRepaintCandidate>[0],
+        message: string,
+      ): void => {
+        try {
+          project.selectRepaintCandidate(props);
+          throw new Error(`${label} unexpectedly selected.`);
+        } catch (error) {
+          TestValidator.predicate(
+            label,
+            error instanceof Error && error.message.includes(message),
+          );
+        }
+      };
+      expectSelectionRefusal(
+        "selection refuses an absent candidate",
+        {
+          ...selectionProps,
+          attemptId: "00000000-0000-4000-8000-000000000099",
+        },
+        "absent, invalid, or stale",
+      );
+      expectSelectionRefusal(
+        "selection requires a valid instant",
+        { ...selectionProps, selectedAt: "bad" },
+        "exact UTC instant",
+      );
+      expectSelectionRefusal(
+        "selection requires a canonical UTC instant",
+        { ...selectionProps, selectedAt: "2026-08-28T12:00:02Z" },
+        "exact UTC instant",
+      );
+      for (const [label, props] of [
+        ["selection reason is nonblank", { ...selectionProps, reason: " " }],
+        [
+          "selection reason is exactly trimmed",
+          { ...selectionProps, reason: " padded" },
+        ],
+        [
+          "selection structural review is nonblank",
+          { ...selectionProps, structuralReview: " " },
+        ],
+        [
+          "selection structural review is exactly trimmed",
+          { ...selectionProps, structuralReview: "padded " },
+        ],
+        [
+          "selection continuity baseline is nonblank",
+          {
+            ...selectionProps,
+            continuityReview: { ...continuityReview, baseline: " " },
+          },
+        ],
+        [
+          "selection continuity baseline is exactly trimmed",
+          {
+            ...selectionProps,
+            continuityReview: { ...continuityReview, baseline: " padded" },
+          },
+        ],
+        [
+          "selection playback evidence is nonblank",
+          {
+            ...selectionProps,
+            continuityReview: { ...continuityReview, playbackEvidence: " " },
+          },
+        ],
+        [
+          "selection playback evidence is exactly trimmed",
+          {
+            ...selectionProps,
+            continuityReview: {
+              ...continuityReview,
+              playbackEvidence: "padded ",
+            },
+          },
+        ],
+        [
+          "selection mixed-delivery policy is nonblank when present",
+          {
+            ...selectionProps,
+            continuityReview: {
+              ...continuityReview,
+              mixedDeliveryPolicy: " ",
+            },
+          },
+        ],
+        [
+          "selection mixed-delivery policy is exactly trimmed",
+          {
+            ...selectionProps,
+            continuityReview: {
+              ...continuityReview,
+              mixedDeliveryPolicy: "padded ",
+            },
+          },
+        ],
+      ] satisfies ReadonlyArray<
+        readonly [string, Parameters<typeof project.selectRepaintCandidate>[0]]
+      >)
+        expectSelectionRefusal(label, props, "trimmed and non-empty");
+      for (const field of [
+        "flicker",
+        "identityDrift",
+        "geometryWarp",
+        "textureCrawl",
+        "transitionMismatch",
+      ] as const)
+        expectSelectionRefusal(
+          `selection requires a passing ${field} observation`,
+          {
+            ...selectionProps,
+            continuityReview: {
+              ...continuityReview,
+              [field]: "fail" as "pass",
+            },
+          },
+          "requires passing flicker",
+        );
+      expectSelectionRefusal(
+        "reversal requires a previous active selection",
+        { ...selectionProps, kind: "reversal" },
+        "requires an existing active selection",
+      );
+
+      project.selectRepaintCandidate(selectionProps);
       TestValidator.equals(
         "complete resident repaint receipt and MP4 enumerate once per unique shot",
         project.verifiedRepaintRenditions([shot, shot]),
+        [validReceipt],
+      );
+
+      const activeIdentity = fs.readFileSync(activeFile, "utf8");
+      const selectionDirectory = project.trackedStatePath(
+        `renditions/selections/${shot}`,
+      );
+      const selectionResidents = (): string[] =>
+        fs
+          .readdirSync(selectionDirectory)
+          .sort((left, right) => (left < right ? -1 : left > right ? 1 : 0));
+      const residentsBeforeRace = selectionResidents();
+      expectSelectionRefusal(
+        "selection refuses a pre-write input race",
+        { ...selectionProps, kind: "reversal", inputCurrent: () => false },
+        "before the guarded commit began",
+      );
+      TestValidator.equals(
+        "pre-write selection refusal leaves pointer and selection residents unchanged",
+        {
+          active: fs.readFileSync(activeFile, "utf8"),
+          selections: selectionResidents(),
+        },
+        { active: activeIdentity, selections: residentsBeforeRace },
+      );
+      let currentChecks = 0;
+      expectSelectionRefusal(
+        "selection refuses a third post-write active-pointer identity",
+        {
+          ...selectionProps,
+          kind: "reversal",
+          inputCurrent: () => {
+            currentChecks += 1;
+            if (currentChecks === 2)
+              fs.writeFileSync(activeFile, "third concurrent identity");
+            return true;
+          },
+        },
+        "while the guarded commit was being applied",
+      );
+      TestValidator.equals(
+        "post-write selection refusal rolls back pointer and selection residents",
+        {
+          active: fs.readFileSync(activeFile, "utf8"),
+          checks: currentChecks,
+          selections: selectionResidents(),
+        },
+        {
+          active: activeIdentity,
+          checks: 2,
+          selections: residentsBeforeRace,
+        },
+      );
+
+      project.selectRepaintCandidate({
+        ...selectionProps,
+        kind: "reversal",
+        reason: "Reverse to the already verified repaint candidate.",
+        selectedAt: "2026-08-28T12:00:03.000Z",
+      });
+      const selectedPointer = JSON.parse(
+        fs.readFileSync(activeFile, "utf8"),
+      ) as { selection: string };
+      type StoredSelection = {
+        selectionId: string;
+        kind: "selection" | "reversal";
+        productionId: string;
+        shot: string;
+        requestId: string;
+        attemptId: string;
+        selectedAt: string;
+        candidateReceipt: string;
+        output: string;
+        previousSelection: string | null;
+        reason: string;
+        structuralReview: string;
+        continuityReview: typeof continuityReview | null;
+      };
+      const selectedSelection = JSON.parse(
+        fs.readFileSync(
+          project.trackedStatePath(selectedPointer.selection),
+          "utf8",
+        ),
+      ) as StoredSelection;
+      const expectStoredSelectionOmitted = (
+        label: string,
+        mutate: (selection: StoredSelection) => void,
+      ): void => {
+        const candidate = structuredClone(selectedSelection);
+        mutate(candidate);
+        writeTrackedJson(project, selectedPointer.selection, candidate);
+        TestValidator.equals(
+          label,
+          project.verifiedRepaintRenditions([shot]),
+          [],
+        );
+        writeTrackedJson(project, selectedPointer.selection, selectedSelection);
+      };
+      const otherId = "00000000-0000-4000-8000-000000000098";
+      for (const [label, mutate] of [
+        [
+          "stored selection refuses a foreign production",
+          (selection: StoredSelection): void => {
+            selection.productionId = "other-production";
+          },
+        ],
+        [
+          "stored selection refuses a foreign shot",
+          (selection: StoredSelection): void => {
+            selection.shot = "other-shot";
+          },
+        ],
+        [
+          "stored selection refuses a path that disagrees with its id",
+          (selection: StoredSelection): void => {
+            selection.selectionId = otherId;
+          },
+        ],
+        [
+          "stored selection refuses a foreign request",
+          (selection: StoredSelection): void => {
+            selection.requestId = otherId;
+          },
+        ],
+        [
+          "stored selection refuses a foreign attempt",
+          (selection: StoredSelection): void => {
+            selection.attemptId = otherId;
+          },
+        ],
+        [
+          "stored selection refuses a foreign candidate receipt",
+          (selection: StoredSelection): void => {
+            selection.candidateReceipt = "renditions/foreign.json";
+          },
+        ],
+        [
+          "stored selection refuses a foreign output",
+          (selection: StoredSelection): void => {
+            selection.output = "repaint/foreign.mp4";
+          },
+        ],
+        [
+          "stored selection reason is nonblank",
+          (selection: StoredSelection): void => {
+            selection.reason = " ";
+          },
+        ],
+        [
+          "stored selection reason is exactly trimmed",
+          (selection: StoredSelection): void => {
+            selection.reason = " padded";
+          },
+        ],
+        [
+          "stored structural review is nonblank",
+          (selection: StoredSelection): void => {
+            selection.structuralReview = " ";
+          },
+        ],
+        [
+          "stored structural review is exactly trimmed",
+          (selection: StoredSelection): void => {
+            selection.structuralReview = "padded ";
+          },
+        ],
+        [
+          "stored reversal retains its previous selection",
+          (selection: StoredSelection): void => {
+            selection.previousSelection = null;
+          },
+        ],
+        [
+          "stored narrative repaint retains continuity review",
+          (selection: StoredSelection): void => {
+            selection.continuityReview = null;
+          },
+        ],
+        [
+          "stored continuity baseline exactly matches receipt evidence",
+          (selection: StoredSelection): void => {
+            selection.continuityReview!.baseline = " padded";
+          },
+        ],
+        [
+          "stored playback evidence is nonblank",
+          (selection: StoredSelection): void => {
+            selection.continuityReview!.playbackEvidence = " ";
+          },
+        ],
+        [
+          "stored playback evidence is exactly trimmed",
+          (selection: StoredSelection): void => {
+            selection.continuityReview!.playbackEvidence = "padded ";
+          },
+        ],
+        [
+          "stored mixed-delivery policy is nonblank when present",
+          (selection: StoredSelection): void => {
+            selection.continuityReview!.mixedDeliveryPolicy = " ";
+          },
+        ],
+        [
+          "stored mixed-delivery policy is exactly trimmed",
+          (selection: StoredSelection): void => {
+            selection.continuityReview!.mixedDeliveryPolicy = "padded ";
+          },
+        ],
+      ] as const)
+        expectStoredSelectionOmitted(label, mutate);
+      TestValidator.equals(
+        "restored stored selection remains the exact active rendition",
+        project.verifiedRepaintRenditions([shot]),
         [validReceipt],
       );
 
