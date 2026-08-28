@@ -1,6 +1,6 @@
 ---
 name: production
-description: Defines how this project's production is researched, authored, configured, evidenced, implemented, and reviewed, including the mutually exclusive film, brief, and library shapes, the settings-to-screenplay ladder, the model, space, material, instance, motion, and system branches, production-specific contracts, staging, self-review, and review. Use before authoring or reviewing any production document, design record, governed configuration, or source file.
+description: Defines how this project's production is researched, authored, configured, evidenced, implemented, and reviewed, including the mutually exclusive film, brief, and library shapes, the settings-to-screenplay ladder, the map, model, space, material, instance, motion, and system branches, production-specific contracts, staging, self-review, and review. Use before authoring or reviewing any production document, design record, governed configuration, or source file.
 ---
 
 # Authoring a production

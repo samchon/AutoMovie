@@ -41,6 +41,10 @@ async function main(): Promise<void> {
       () => synchronizeProductionInstructions({ root: scaffoldRoot }),
       /cannot synchronize instructions into itself/u,
     );
+    assert.throws(
+      () => synchronizeProductionInstructions(),
+      /belongs to another project root/u,
+    );
     write(
       project,
       "package.json",
@@ -146,6 +150,17 @@ async function main(): Promise<void> {
         }),
       /installed production skills are missing/u,
     );
+    const invalidTemplate = makeRoot("invalid-production-skill");
+    write(invalidTemplate, ".agents/skills", "not a directory\n");
+    assert.throws(
+      () =>
+        writeAutoMovieProductionInstructions({
+          root: project,
+          productionEvidence: configuration,
+          scaffoldRoot: invalidTemplate,
+        }),
+      /installed production skills are missing/u,
+    );
 
     const books = makeRoot("book-command");
     write(
@@ -159,10 +174,14 @@ async function main(): Promise<void> {
       "# Site plan\n\n## Extent {#extent}\n\nA bounded site.\n",
     );
     const docsBefore = snapshot(books, ["docs"]);
-    const screenplay = await bindProductionBook(
-      ["--title", "Final Script"],
-      books,
-    );
+    const originalCwd = process.cwd();
+    process.chdir(books);
+    let screenplay: string;
+    try {
+      screenplay = await bindProductionBook(["--title", "Final Script"]);
+    } finally {
+      process.chdir(originalCwd);
+    }
     assert.equal(
       screenplay,
       path.join(books, "artifacts", "final-script-screenplays.md"),
