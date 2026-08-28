@@ -46,6 +46,8 @@ For a principle item, read the item in full and reread the complete selected H2,
 
 For an obligation item, read the item in full and reread the complete H2 owner population, or the complete selected export population for a source obligation. Confirm that the population has every owner the target calls for and that each citation records one actual contribution. No citation means missing coverage; several citations are correct only where the item calls for several owners. Repeat the review independently for every authored layer or source population that selects the item.
 
+Trace direct treatment coverage at every script and screenplay file, H2, H3, and H4 host. Then verify exact script-file lineage and same-depth script-to-screenplay lineage; a parent citation cannot stand in for a missing child relationship, and a generated index cannot stand in for the authored unit that owns it.
+
 For an exclusion, read the target and complete claim population, find the actual owner or concrete scope fact that makes the target absent, and remove the exclusion when the production owes missing work. “Checked,” “confirmed,” and “not applicable” do not record a review.
 
 A fingerprint covers its selected target and descendants, excluding evidence comments. Child changes expire ancestor reviews. Never invent, copy, or mechanically refresh a fingerprint.
