@@ -1540,6 +1540,7 @@ export const test_production_repaint_generator_adoption =
       let retryLegalityProviderCalls = 0;
       const explicitRetry = (
         history: IAutoMovieRepaintAttemptRecord[],
+        now: Date = new Date("2026-08-28T12:03:01.000Z"),
       ): Promise<IAutoMovieRepaintShot> =>
         new AutoMovieProductionRepaintService(
           async (props) => {
@@ -1551,7 +1552,7 @@ export const test_production_repaint_generator_adoption =
             policy: retryLegalityPolicy,
             evidence: executionEvidence(),
             requestId: priorSucceeded.requestId,
-            now: () => new Date("2026-08-28T12:03:01.000Z"),
+            now: () => now,
           },
         ).repaint(
           scenarioServices(runnable, {
@@ -1565,6 +1566,10 @@ export const test_production_repaint_generator_adoption =
       const succeededRetry = await explicitRetry([priorSucceeded]);
       const nonretryableRetry = await explicitRetry([priorNonretryable]);
       const forgedRetry = await explicitRetry([priorForgedRetryable]);
+      const backwardClockRetry = await explicitRetry(
+        [priorRetryable],
+        new Date("2026-08-28T12:02:59.999Z"),
+      );
       const retryableRetry = await explicitRetry([priorRetryable]);
       TestValidator.equals(
         "explicit retry is legal only after the last retryable failed attempt",
@@ -1572,6 +1577,7 @@ export const test_production_repaint_generator_adoption =
           succeeded: codeOf(succeededRetry),
           nonretryable: codeOf(nonretryableRetry),
           forged: codeOf(forgedRetry),
+          backwardClock: codeOf(backwardClockRetry),
           retryable: retryableRetry.repainted,
           providerCalls: retryLegalityProviderCalls,
         },
@@ -1579,6 +1585,7 @@ export const test_production_repaint_generator_adoption =
           succeeded: "repaint-input-invalid",
           nonretryable: "repaint-input-invalid",
           forged: "repaint-input-invalid",
+          backwardClock: "repaint-input-invalid",
           retryable: true,
           providerCalls: 1,
         },

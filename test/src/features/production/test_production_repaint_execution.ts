@@ -766,6 +766,17 @@ export const test_production_repaint_execution = async (): Promise<void> => {
       let instant = 0;
       return execute({
         policy: policy(),
+        now: () => {
+          if (instant++ === 0) return new Date("2026-08-28T10:00:00.000Z");
+          throw "clock unavailable";
+        },
+        calls: async () => ({ value: 1, costUnits: 0, availableOutput: null }),
+      });
+    }),
+    rejectionMessage(() => {
+      let instant = 0;
+      return execute({
+        policy: policy(),
         now: () =>
           new Date(
             instant++ === 2
