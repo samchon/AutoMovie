@@ -3690,7 +3690,7 @@ export interface IAutoMovieCompiledContractRealization {
     passed: boolean;
   }>;
   /**
-   * Camera root-projection checks at authoritative review times.
+   * Camera required-bound projection checks at authoritative review times.
    *
    * @evidence requirements/diagnostics/input-and-result-classification.md#diagnostics-derived-result-finding Exposes `camera` as the portable data boundary for the diagnostics derived result finding requirement.
    * @evidence specifications/validation-and-diagnostics/classification-and-causality.md#validation-derived-result-finding Types `camera` for the validation derived result finding system contract.
@@ -3722,9 +3722,9 @@ export interface IAutoMovieCompiledContractRealization {
     requiredSubjects: number;
     /** Number resolved in current compiled output. */
     resolvedSubjects: number;
-    /** Number whose root point is inside depth and frame bounds. */
+    /** Number whose current bound intersects the clip range and frame. */
     readableSubjects: number;
-    /** Whether every required root point is readable. */
+    /** Whether every required current bound is readable at this sample. */
     passed: boolean;
   }>;
   /**
