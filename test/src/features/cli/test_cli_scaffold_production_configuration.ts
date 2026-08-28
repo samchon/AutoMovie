@@ -331,7 +331,7 @@ export const test_cli_scaffold_production_configuration =
       ].every((message) => typeof message === "string" && message.length > 0),
     );
     const receipt: IAutoMovieProductionTtsReceipt = {
-      version: 5,
+      version: 6,
       line: "line-1",
       cacheKey: "sha256:cache",
       model: "onnx-community/Kokoro-82M-v1.0-ONNX",
@@ -339,6 +339,7 @@ export const test_cli_scaffold_production_configuration =
       voice: "af_heart",
       generatorProvenance:
         parsed.generatorProvenance as IAutoMovieProductionTtsReceipt["generatorProvenance"],
+      generatedAt: "2026-08-28T00:00:00.000Z",
       sourceSampleRate: 24_000,
       sourceSamples: 1,
       pcmDigest: "sha256:pcm",
@@ -355,8 +356,8 @@ export const test_cli_scaffold_production_configuration =
       receiptWithoutIt;
     const staleVersionReceipt: IAutoMovieProductionTtsReceipt = {
       ...receipt,
-      // @ts-expect-error Schema v5 invalidates underpaid v4 cache receipts.
-      version: 4,
+      // @ts-expect-error Schema v6 invalidates underpaid v5 cache receipts.
+      version: 5,
     };
     void missingProvenanceReceipt;
     void staleVersionReceipt;

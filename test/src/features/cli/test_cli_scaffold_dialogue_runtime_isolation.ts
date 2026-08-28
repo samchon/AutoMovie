@@ -166,19 +166,19 @@ const dialogueRuntime = (
   ],
 });
 
-const runtimeEndpoint = (
+const runtimeEndpoint = async (
   module: IRuntimeModules,
   root: string,
   productionId: string,
   provider: { dialogue(): IDialogueRuntime | null },
-): IDialogueRuntime | null => {
+): Promise<IDialogueRuntime | null> => {
   let middleware:
     | ((
         request: { url: string },
         response: {
           statusCode: number;
           setHeader(name: string, value: string): void;
-          end(value: Uint8Array): void;
+          end(value: string | Uint8Array): void;
         },
         next: () => void,
       ) => void)
@@ -190,24 +190,42 @@ const runtimeEndpoint = (
       },
     },
   });
-  let body: Uint8Array | undefined;
-  middleware?.(
-    { url: "/__automovie/production-runtime.json" },
-    {
-      statusCode: 0,
-      setHeader: () => undefined,
-      end: (value) => {
-        body = value;
-      },
-    },
-    () => {
-      throw new Error("The production runtime endpoint fell through.");
-    },
-  );
-  if (body === undefined)
-    throw new Error("The production runtime endpoint emitted no body.");
+  if (middleware === undefined)
+    throw new Error("The production runtime endpoint was not installed.");
+  const handler = middleware;
+  const body = await new Promise<Buffer>((resolve, reject) => {
+    const timer = setTimeout(
+      () =>
+        reject(new Error("The production runtime endpoint emitted no body.")),
+      10_000,
+    );
+    const finish = <Value>(
+      settle: (value: Value) => void,
+      value: Value,
+    ): void => {
+      clearTimeout(timer);
+      settle(value);
+    };
+    try {
+      handler(
+        { url: "/__automovie/production-runtime.json" },
+        {
+          statusCode: 0,
+          setHeader: () => undefined,
+          end: (value) => finish(resolve, Buffer.from(value)),
+        },
+        () =>
+          finish(
+            reject,
+            new Error("The production runtime endpoint fell through."),
+          ),
+      );
+    } catch (error) {
+      finish(reject, error);
+    }
+  });
   return (
-    JSON.parse(Buffer.from(body).toString("utf8")) as {
+    JSON.parse(body.toString("utf8")) as {
       dialogue: IDialogueRuntime | null;
     }
   ).dialogue;
@@ -233,8 +251,8 @@ const dialogueSelection = (): Record<string, unknown> => ({
  *    frame mappings, page identities, runtime endpoints, and source digests.
  * 2. A viewer provider opened before B starts remains an immutable A snapshot
  *    even after A's capture owner is updated, while B serves only B.
- * 3. A public v3 underpaid receipt under a partial asset key is not reused;
- *    loading discovers the complete inventory, re-keys and seals v4 bytes, and
+ * 3. An internal v4 cache receipt under a partial asset key is not reused;
+ *    loading discovers the complete inventory, re-keys and seals v5 bytes, and
  *    the next complete-inventory invocation hits without loading.
  */
 export const test_cli_scaffold_dialogue_runtime_isolation =
@@ -277,13 +295,13 @@ export const test_cli_scaffold_dialogue_runtime_isolation =
       const openA = captureA.viewerRuntime();
       await captureB.installDialogue(dialogueB);
       await captureA.installDialogue(dialogueB);
-      const endpointA = runtimeEndpoint(
+      const endpointA = await runtimeEndpoint(
         first,
         firstRoot,
         "dialogue-proxy",
         openA,
       );
-      const endpointB = runtimeEndpoint(
+      const endpointB = await runtimeEndpoint(
         second,
         secondRoot,
         "dialogue-final",
@@ -404,7 +422,7 @@ export const test_cli_scaffold_dialogue_runtime_isolation =
         base: cacheRoot,
         pcm: new Uint8Array([1, 2, 3, 4]),
         receipt: Buffer.from(
-          `${JSON.stringify({ version: 3, cacheKey: partialIdentity.key, runtimeAssets: partialAssets })}\n`,
+          `${JSON.stringify({ version: 4, cacheKey: partialIdentity.key, runtimeAssets: partialAssets })}\n`,
         ),
         target: partialIdentity.path,
       });
@@ -476,13 +494,13 @@ export const test_cli_scaffold_dialogue_runtime_isolation =
         identify,
         load: async () => {
           ++loads;
-          throw new Error("A complete v4 cache hit must not load Kokoro.");
+          throw new Error("A complete v5 cache hit must not load Kokoro.");
         },
         read,
         runtimeAssets: (loaded) => loaded.runtimeAssets,
       });
       TestValidator.equals(
-        "the complete v4 generation seals and hits without a second load",
+        "the complete v5 generation seals and hits without a second load",
         {
           cached: secondHit.cached,
           identity: secondHit.identity,
