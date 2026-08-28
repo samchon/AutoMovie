@@ -2,6 +2,7 @@ import config from "../automovie.config";
 import { createProductionFrameCaptureRuntime } from "./capture";
 import { createProductionCaptureDialogueRuntime } from "./captureDialogueRuntime";
 import { repaintProductionShot } from "./repaintAdapter";
+import { createProductionRepaintCancellationRuntime } from "./repaintCancellationRuntime";
 import {
   createNodeProductionRepaintHost,
   runProductionRepaintCommand,
@@ -22,20 +23,15 @@ import {
  * returned MP4, and commits a receipt binding compiler, source-render, control,
  * reference, adapter, parameter, and output identities.
  *
- * The CLI chooses only a shot. Its prompt, negative prompt, seed, strength,
- * controls, references, generator, rights, terms, cost, and consumer come from
- * the reviewed `visual.repaint` serialization in `automovie.config.ts`.
- * Rerolling therefore requires an authored config revision rather than an
- * ephemeral override. It replaces only the active rendition pointer; unchanged
- * deterministic truth keeps its own receipts.
+ * The CLI exposes four explicit operations. A reroll creates a new request
+ * from the current reviewed configuration, retry repeats one existing request,
+ * and both leave a successful candidate inactive. Select advances the active
+ * pointer; reverse moves it to a prior verified candidate. Deterministic truth
+ * retains its own receipts throughout those rendition transitions.
  */
 await runProductionRepaintCommand(process.argv.slice(2), config, () => {
   const captureRuntime = createProductionFrameCaptureRuntime();
-  const cancellation = new AbortController();
-  const interrupt = (): void =>
-    cancellation.abort(new Error("Repaint interrupted by SIGINT."));
-  const terminate = (): void =>
-    cancellation.abort(new Error("Repaint interrupted by SIGTERM."));
+  const cancellation = createProductionRepaintCancellationRuntime(process);
   const dialogueRuntime = createProductionCaptureDialogueRuntime({
     capture: captureRuntime,
     productionId: config.productionId,
@@ -44,11 +40,8 @@ await runProductionRepaintCommand(process.argv.slice(2), config, () => {
   const host = createNodeProductionRepaintHost({
     adapter: repaintProductionShot,
     capture: captureRuntime.capture,
-    closeCapture: async (failure) => {
-      process.removeListener("SIGINT", interrupt);
-      process.removeListener("SIGTERM", terminate);
-      await captureRuntime.close(failure);
-    },
+    closeCapture: (failure) =>
+      cancellation.closeCapture(failure, captureRuntime.close),
     root: process.cwd(),
     signal: cancellation.signal,
     setExitCode: (value) => {
@@ -56,8 +49,7 @@ await runProductionRepaintCommand(process.argv.slice(2), config, () => {
     },
     stdout: (value) => process.stdout.write(value),
   });
-  process.once("SIGINT", interrupt);
-  process.once("SIGTERM", terminate);
+  cancellation.attach();
   return {
     ...host,
     serve: async (invocation) => {
