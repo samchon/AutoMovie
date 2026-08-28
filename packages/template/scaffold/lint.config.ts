@@ -14,7 +14,7 @@ import type { ITtscLintConfig } from "@ttsc/lint";
  * Film and brief also require reviewed productionSources as a parallel input
  * before filmSources; it does not interrupt the prose-to-shot identity ladder.
  *
- * Research and the model, space, material, instance, motion, and system
+ * Research and the map, model, space, material, instance, motion, and system
  * branches are optional only when the delivery genuinely does not use them.
  * Audit discovery into flat docs/contracts files as soon as a Markdown layer
  * enters draft. Retained rules carry discovery evidence in their comment
@@ -27,6 +27,7 @@ const graph = createAutoMovieEvidenceConfig({
   kind: null,
   settings: "disabled",
   research: "disabled",
+  maps: "disabled",
   models: "disabled",
   spaces: "disabled",
   materials: "disabled",
@@ -37,6 +38,7 @@ const graph = createAutoMovieEvidenceConfig({
   scripts: "disabled",
   screenplays: "disabled",
   briefs: "disabled",
+  mapSources: "disabled",
   modelSources: "disabled",
   spaceSources: "disabled",
   materialSources: "disabled",
