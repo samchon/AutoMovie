@@ -115,6 +115,12 @@
             "package": "@automovie/engine"
           }
         },
+        "camera-clearance-swept-volume": {
+          "owner": {
+            "kind": "package",
+            "package": "@automovie/engine"
+          }
+        },
         "clipping-planes": {
           "owner": {
             "kind": "package",
