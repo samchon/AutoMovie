@@ -486,6 +486,10 @@ importers:
         version: 7.0.2
 
   packages/template:
+    dependencies:
+      '@automovie/evidence':
+        specifier: workspace:^
+        version: link:../evidence
     devDependencies:
       '@automovie/archetypes':
         specifier: workspace:^
@@ -493,9 +497,6 @@ importers:
       '@automovie/engine':
         specifier: workspace:^
         version: link:../engine
-      '@automovie/evidence':
-        specifier: workspace:^
-        version: link:../evidence
       '@automovie/interface':
         specifier: workspace:^
         version: link:../interface
