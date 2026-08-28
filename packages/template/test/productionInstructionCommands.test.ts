@@ -361,6 +361,19 @@ async function main(): Promise<void> {
         }),
       /installed production skills are missing/u,
     );
+    const emptyTemplate = makeRoot("empty-production-skill");
+    fs.mkdirSync(path.join(emptyTemplate, ".agents", "skills"), {
+      recursive: true,
+    });
+    assert.throws(
+      () =>
+        writeAutoMovieProductionInstructions({
+          root: project,
+          productionEvidence: configuration,
+          scaffoldRoot: emptyTemplate,
+        }),
+      /installed production skill entry point is missing/u,
+    );
     const linkedTemplate = makeRoot("linked-production-skill");
     fs.mkdirSync(path.join(linkedTemplate, ".agents", "skills"), {
       recursive: true,

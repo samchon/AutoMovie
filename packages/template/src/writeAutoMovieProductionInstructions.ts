@@ -41,6 +41,11 @@ export const writeAutoMovieProductionInstructions = (props: {
       `${sourceSkills}: the installed production skills are missing.`,
     );
   assertInstructionSourceIsPhysical(sourceSkills);
+  const productionSkill = path.join(sourceSkills, "production", "SKILL.md");
+  if (!fs.lstatSync(productionSkill, { throwIfNoEntry: false })?.isFile())
+    throw new Error(
+      `${productionSkill}: the installed production skill entry point is missing.`,
+    );
   if (fs.realpathSync(root) === fs.realpathSync(scaffoldRoot))
     throw new Error(
       `${root}: a scaffold source cannot synchronize instructions into itself.`,
