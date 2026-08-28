@@ -21,7 +21,7 @@ During `complete-production-reset` only, retained pilot hosts may keep their ear
 
 `docs/contracts` is a different host kind. It records the production-contract audit completed before a layer enters `draft`, not evidence that the authored layer is complete. A layer's discovery claim therefore becomes active in `draft`, and the flat contract files may carry positive discovery answers or `index.md` exclusions before any authored host carries an evidence tag. Do not apply the authored-host draft prohibition to this contract population.
 
-The authored-unit topology is closed. Outside an optional H1 title, settings, research, model, space, material, instance, motion, system, and treatment hosts use only anchored H2 units; script, screenplay, and brief hosts use only anchored H2/H3/H4 units. Any other heading depth fails instead of hiding an ungoverned decision.
+The authored-unit topology is closed. Every treatment event file and script or screenplay unit file begins with its required H1 title; every delivery index contains only its required H1 and generated unit links. Other authored hosts may optionally begin with an H1 title. Outside that title, settings, research, model, space, material, instance, motion, system, and treatment hosts use only anchored H2 units; script, screenplay, and brief hosts use only anchored H2/H3/H4 units. Any other heading depth fails instead of hiding an ungoverned decision.
 
 ## Relationship types
 
