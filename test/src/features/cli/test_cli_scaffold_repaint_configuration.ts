@@ -550,6 +550,18 @@ export const test_cli_scaffold_repaint_configuration =
           },
         ],
       },
+      ...[63, 65].map((length) => ({
+        ...authored,
+        requests: [
+          {
+            ...request,
+            selectionReview: {
+              ...request.selectionReview!,
+              candidateOutputDigest: `sha256:${"a".repeat(length)}`,
+            },
+          },
+        ],
+      })),
       {
         ...authored,
         requests: [

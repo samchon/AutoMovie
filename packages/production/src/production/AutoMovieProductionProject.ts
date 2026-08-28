@@ -2233,9 +2233,10 @@ export class AutoMovieProductionProject {
       uuid(attempt.attemptId, "Repaint attempt id") !== attempt.attemptId ||
       Number.isSafeInteger(attempt.ordinal) === false ||
       attempt.ordinal <= 0 ||
-      /^sha256:[0-9a-f]+$/u.test(attempt.requestFingerprint) === false ||
-      /^sha256:[0-9a-f]+$/u.test(attempt.compileFingerprint) === false ||
-      /^sha256:[0-9a-f]+$/u.test(attempt.sourceRenderFingerprint) === false ||
+      /^sha256:[0-9a-f]{64}$/u.test(attempt.requestFingerprint) === false ||
+      /^sha256:[0-9a-f]{64}$/u.test(attempt.compileFingerprint) === false ||
+      /^sha256:[0-9a-f]{64}$/u.test(attempt.sourceRenderFingerprint) ===
+        false ||
       attempt.adapterIdentity.trim().length === 0 ||
       Number.isSafeInteger(attempt.seed) === false ||
       Number.isNaN(startedAt.getTime()) ||
@@ -2251,7 +2252,8 @@ export class AutoMovieProductionProject {
           (attempt.failure.retryable && attempt.status !== "failed"))) ||
       (attempt.availableOutput !== null &&
         (attempt.availableOutput.bytes <= 0 ||
-          /^sha256:[0-9a-f]+$/u.test(attempt.availableOutput.digest) === false))
+          /^sha256:[0-9a-f]{64}$/u.test(attempt.availableOutput.digest) ===
+            false))
     )
       throw new Error("Repaint attempt record is malformed.");
   }

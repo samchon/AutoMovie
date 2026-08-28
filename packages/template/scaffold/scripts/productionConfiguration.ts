@@ -1185,7 +1185,7 @@ const repaintUuid = (value: unknown, label: string): string => {
 
 const repaintDigest = (value: unknown, label: string): string => {
   const digest = nonBlank(value, label);
-  if (/^sha256:[0-9a-f]+$/u.test(digest) === false)
+  if (/^sha256:[0-9a-f]{64}$/u.test(digest) === false)
     throw new Error(`${label} must be a sha256 content digest.`);
   return digest;
 };
