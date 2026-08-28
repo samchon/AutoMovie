@@ -7,6 +7,7 @@ import {
   AutoMovieProductionProject,
   digestAutoMovieBytes,
   productionRenderBundleRelativePath,
+  productionRenderTargetFingerprint,
 } from "@automovie/production";
 import { renderScaffold, writeFiles } from "@automovie/template";
 import { TestValidator } from "@nestia/e2e";
@@ -17,7 +18,10 @@ import os from "node:os";
 import path from "node:path";
 
 import { renderCompletedFilmFixture } from "../internal/completedFilmFixture";
-import { testRendererIdentity } from "../production/productionFixtures";
+import {
+  testCaptureRuntimeIdentity,
+  testRendererIdentity,
+} from "../production/productionFixtures";
 import {
   productionH264Mp4,
   productionPng,
@@ -34,13 +38,6 @@ interface IGeneratedCameraDepthRuntimeProbe {
   draws: number;
   negative: string;
   positive: string;
-}
-
-interface IGeneratedRepaintFixture {
-  adapterBytes: Uint8Array;
-  frameBytes: Uint8Array;
-  referencePath: string;
-  sourceManifest: IAutoMovieRenderBundleManifest;
 }
 
 const REPOSITORY_ROOT = path.resolve(__dirname, "../../../..");
@@ -478,9 +475,122 @@ const REPAINT_PROVENANCE = {
   },
 };
 
+const installGeneratedRepaintRuntimeFixtures = (root: string): void => {
+  const repaintPath = path.join(root, "scripts/repaint.ts");
+  const repaintSource = fs.readFileSync(repaintPath, "utf8");
+  const captureImport =
+    'import { createProductionFrameCaptureRuntime } from "./capture";';
+  if (repaintSource.split(captureImport).length !== 2)
+    throw new Error(
+      "Generated repaint entrypoint no longer has one capture-runtime import seam.",
+    );
+  fs.writeFileSync(
+    repaintPath,
+    repaintSource.replace(
+      captureImport,
+      'import { createProductionFrameCaptureRuntime } from "./repaintCaptureFixture";',
+    ),
+    "utf8",
+  );
+  const bytes = Buffer.from(productionPng(16, 16)).toString("base64");
+  fs.writeFileSync(
+    path.join(root, "scripts/repaintCaptureFixture.ts"),
+    [
+      'import type { IAutoMovieCaptureRuntimeIdentity } from "@automovie/interface";',
+      'import type { IProductionFrameCaptureRuntime } from "./capture";',
+      "",
+      `const bytes = Buffer.from(${JSON.stringify(bytes)}, "base64");`,
+      `const runtimeIdentity: IAutoMovieCaptureRuntimeIdentity = ${JSON.stringify(testCaptureRuntimeIdentity())};`,
+      "",
+      "export const createProductionFrameCaptureRuntime = (): IProductionFrameCaptureRuntime => {",
+      '  let dialogue: ReturnType<IProductionFrameCaptureRuntime["dialogue"]> = null;',
+      '  let deliveryCrop: ReturnType<IProductionFrameCaptureRuntime["deliveryCrop"]> = null;',
+      "  return {",
+      "    capture: async (input) => {",
+      "      const width = input.width ?? 0;",
+      "      const height = input.height ?? 0;",
+      "      if (width !== 16 || height !== 16)",
+      '        throw new Error("The repaint capture fixture accepts only 16x16, received " + String(width) + "x" + String(height) + ".");',
+      "      return {",
+      "        bytes: new Uint8Array(bytes),",
+      "        dialogueRuntimeIdentity: null,",
+      "        runtimeIdentity,",
+      "        width,",
+      "        height,",
+      '        observation: { status: "not-run", reason: "The repaint capture fixture draws no scene graph." },',
+      '        maskSidecar: { status: "not-run", reason: "The repaint capture fixture derives no semantic mask." },',
+      "      };",
+      "    },",
+      "    close: async () => undefined,",
+      "    dialogue: () => structuredClone(dialogue),",
+      "    deliveryCrop: () => structuredClone(deliveryCrop),",
+      "    installDeliveryCrop: async (value) => { deliveryCrop = structuredClone(value); },",
+      "    installDialogue: async (value) => { dialogue = structuredClone(value); },",
+      "    pageIdentity: (input) => JSON.stringify(input),",
+      "    viewerRuntime: () => ({",
+      "      dialogue: () => structuredClone(dialogue),",
+      "      deliveryCrop: () => structuredClone(deliveryCrop),",
+      "    }),",
+      "    metrics: () => ({",
+      "      pagesOpened: 0, navigations: 0, seeks: 0, captures: 0,",
+      "      captureMilliseconds: 0, avoidedPageReloads: 0,",
+      "      capturesPerNavigation: 0, capturesPerSecond: 0,",
+      "    }),",
+      "  };",
+      "};",
+      "",
+    ].join("\n"),
+    "utf8",
+  );
+  fs.writeFileSync(
+    path.join(root, "scripts/repaintAdapter.ts"),
+    [
+      'import type { AutoMovieProductionShotRepaint } from "@automovie/interface";',
+      'import fs from "node:fs";',
+      'import path from "node:path";',
+      "",
+      "export const repaintProductionShot: AutoMovieProductionShotRepaint = async (input) => {",
+      '  const mode = fs.readFileSync(path.join(input.projectRoot, "repaint-adapter-mode.txt"), "utf8").trim();',
+      '  if (mode === "impossible") {',
+      '    fs.writeFileSync(path.join(input.projectRoot, "repaint-impossible-policy-invoked.txt"), "called\\n", "utf8");',
+      '    throw new Error("The impossible-policy adapter must never run.");',
+      "  }",
+      '  if (mode === "default")',
+      '    throw new Error("This project supplies no repaint adapter. Implement repaintProductionShot in scripts/repaintAdapter.ts with a local model or an API client, or set visualDelivery to \\"deterministic\\". AutoMovie will not fabricate diffusion output.");',
+      '  if (mode === "transport") {',
+      '    const marker = path.join(input.projectRoot, "repaint-transport-observed.txt");',
+      "    if (fs.existsSync(marker) === false) {",
+      '      fs.writeFileSync(marker, "observed\\n", "utf8");',
+      '      const error = new Error("The deterministic adapter transport closed once.");',
+      '      error.name = "FetchError";',
+      "      throw error;",
+      "    }",
+      "  }",
+      "  return {",
+      '    bytes: fs.readFileSync(path.join(input.projectRoot, "repaint-success.mp4")),',
+      '    mediaType: "video/mp4",',
+      "    costUnits: 1,",
+      `    runtimeIdentity: ${JSON.stringify(REPAINT_RUNTIME_IDENTITY)},`,
+      "  };",
+      "};",
+      "",
+    ].join("\n"),
+    "utf8",
+  );
+  fs.writeFileSync(
+    path.join(root, "repaint-adapter-mode.txt"),
+    "default\n",
+    "utf8",
+  );
+};
+
 const configureGeneratedRepaint = async (
   root: string,
-): Promise<IGeneratedRepaintFixture> => {
+): Promise<{
+  adapterBytes: Uint8Array;
+  referencePath: string;
+  sourceBundle: string;
+}> => {
   const configPath = path.join(root, "automovie.config.ts");
   const configSource = fs.readFileSync(configPath, "utf8");
   const repaintSlot = "    repaint: null,";
@@ -671,12 +781,20 @@ const configureGeneratedRepaint = async (
     compileFingerprint: generated.inputFingerprint,
     dialogueRuntimeIdentity: null,
     rendererIdentity: testRendererIdentity(),
-    targetFingerprint: digestAutoMovieBytes(
-      Buffer.from("generated-repaint-opening-target"),
-    ),
+    targetFingerprint: productionRenderTargetFingerprint(project, generated, {
+      kind: "shot",
+      id: "opening",
+    }),
     renderSpec: {
       target: "opening",
-      frameFormat: production.frameFormat,
+      frameFormat: {
+        width: production.frameFormat.width,
+        height: production.frameFormat.height,
+        fps: production.frameFormat.fps,
+        ...(production.frameFormat.crop === undefined
+          ? {}
+          : { crop: structuredClone(production.frameFormat.crop) }),
+      },
       toneMapping: "none",
       codec: "h264",
       pixelFormat: "yuv420p",
@@ -684,11 +802,20 @@ const configureGeneratedRepaint = async (
     },
     frames,
   };
+  const sourceBundle = productionRenderBundleRelativePath(sourceManifest);
   project.commitRenderBundle(
-    productionRenderBundleRelativePath(sourceManifest),
+    sourceBundle,
     new Map(frames.map((frame) => [frame.path, frameBytes])),
     sourceManifest,
   );
+  if (
+    project.verifiedRenderManifest(
+      path.join(project.renderRoot(), sourceBundle, "manifest.json"),
+    ) === null
+  )
+    throw new Error(
+      "Generated repaint fixture could not verify its just-committed source bundle.",
+    );
   return {
     adapterBytes: await productionH264Mp4({
       width: production.frameFormat.width,
@@ -696,55 +823,9 @@ const configureGeneratedRepaint = async (
       fps: production.frameFormat.fps,
       frameCount,
     }),
-    frameBytes,
     referencePath,
-    sourceManifest,
+    sourceBundle,
   };
-};
-
-const bindGeneratedRepaintSourceRuntime = (
-  root: string,
-  fixture: IGeneratedRepaintFixture,
-): void => {
-  const project = AutoMovieProductionProject.open(root, "repaint-runtime-film");
-  const manifests = (directory: string): string[] =>
-    fs.readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
-      const target = path.join(directory, entry.name);
-      return entry.isDirectory()
-        ? manifests(target)
-        : entry.isFile() && entry.name === "manifest.json"
-          ? [target]
-          : [];
-    });
-  const captures = manifests(project.renderRoot())
-    .map((file) => project.verifiedRenderManifest(file))
-    .filter(
-      (manifest): manifest is IAutoMovieRenderBundleManifest =>
-        manifest !== null &&
-        manifest.compileFingerprint ===
-          fixture.sourceManifest.compileFingerprint &&
-        manifest.target.kind === "shot" &&
-        manifest.target.id === "opening" &&
-        manifest.rendererIdentity !== fixture.sourceManifest.rendererIdentity &&
-        manifest.frames.some((frame) => frame.pass === "beauty"),
-    );
-  if (captures.length !== 1)
-    throw new Error(
-      `Generated repaint runtime probe published ${captures.length} current capture manifests instead of one.`,
-    );
-  const capture = captures[0]!;
-  const sourceManifest: IAutoMovieRenderBundleManifest = {
-    ...fixture.sourceManifest,
-    dialogueRuntimeIdentity: capture.dialogueRuntimeIdentity,
-    rendererIdentity: capture.rendererIdentity,
-  };
-  project.commitRenderBundle(
-    productionRenderBundleRelativePath(sourceManifest),
-    new Map(
-      sourceManifest.frames.map((frame) => [frame.path, fixture.frameBytes]),
-    ),
-    sourceManifest,
-  );
 };
 
 const withGeneratedRepaintSelectionReview = (
@@ -796,11 +877,9 @@ const withGeneratedRepaintSelectionReview = (
  *    acquired runtime resources.
  * 5. The actual generated repaint entrypoint refuses invalid operations and a
  *    stale source mutation before any request identity can exist.
- * 6. A source bundle from another renderer is refused before a request exists;
- *    after binding the actual capture runtime, a default-adapter terminal
- *    refusal returns its durable request id but is not retryable. An explicit
- *    transport failure is stored as retryable and only its request id may
- *    resume into a candidate.
+ * 6. A default-adapter terminal refusal returns its durable request id but is
+ *    not retryable; a transient transport failure is stored as retryable and
+ *    the next bounded automatic attempt recovers into a candidate.
  * 7. A fresh successful reroll creates a second unselected candidate, selection
  *    activates it, stale config refuses another candidate, and restoration
  *    permits an explicit reversal to the earlier candidate.
@@ -875,6 +954,7 @@ export const test_cli_scaffold_repaint_runtime_contract =
         "vite",
       ])
         linkWorkspacePackage(fixture.root, name);
+      installGeneratedRepaintRuntimeFixtures(fixture.root);
 
       const cameraDepthRuntime = await runGeneratedCameraDepthRuntime(
         fixture.root,
@@ -1025,8 +1105,7 @@ export const test_cli_scaffold_repaint_runtime_contract =
         ["reroll", "--shot", "opening"],
       );
       fs.writeFileSync(configuredPath, configuredSource, "utf8");
-      const adapterPath = path.join(fixture.root, "scripts/repaintAdapter.ts");
-      const defaultAdapterSource = fs.readFileSync(adapterPath, "utf8");
+      const adapterMode = path.join(fixture.root, "repaint-adapter-mode.txt");
       const impossiblePolicyInvocation = path.join(
         fixture.root,
         "repaint-impossible-policy-invoked.txt",
@@ -1040,40 +1119,31 @@ export const test_cli_scaffold_repaint_runtime_contract =
         configuredSource.replace('"transport"', '"cancelled"'),
         "utf8",
       );
-      fs.writeFileSync(
-        adapterPath,
-        [
-          'import type { AutoMovieProductionShotRepaint } from "@automovie/interface";',
-          'import fs from "node:fs";',
-          'import path from "node:path";',
-          "",
-          "export const repaintProductionShot: AutoMovieProductionShotRepaint = (input) => {",
-          `  fs.writeFileSync(path.join(input.projectRoot, ${JSON.stringify(path.basename(impossiblePolicyInvocation))}), "called\\n", "utf8");`,
-          '  throw new Error("The impossible-policy adapter must never run.");',
-          "};",
-          "",
-        ].join("\n"),
-        "utf8",
-      );
+      fs.writeFileSync(adapterMode, "impossible\n", "utf8");
       const impossiblePolicyRefusal = runGeneratedFast(
         fixture.root,
         "scripts/repaint.ts",
         ["reroll", "--shot", "opening"],
       );
       fs.writeFileSync(configuredPath, configuredSource, "utf8");
-      fs.writeFileSync(adapterPath, defaultAdapterSource, "utf8");
-      const sourceRuntimeRefusal = runGeneratedFast(
-        fixture.root,
-        "scripts/repaint.ts",
-        ["reroll", "--shot", "opening"],
-      );
-      const sourceRuntimeOutput = JSON.parse(sourceRuntimeRefusal.stdout) as {
-        repainted: boolean;
-        selected: boolean;
-        requestId: string | null;
-        diagnostics: Array<{ code: string; message: string }>;
-      };
-      bindGeneratedRepaintSourceRuntime(fixture.root, repaint);
+      fs.writeFileSync(adapterMode, "default\n", "utf8");
+      if (
+        AutoMovieProductionProject.open(
+          fixture.root,
+          "repaint-runtime-film",
+        ).verifiedRenderManifest(
+          path.join(
+            fixture.root,
+            "renders",
+            "repaint-runtime-film",
+            repaint.sourceBundle,
+            "manifest.json",
+          ),
+        ) === null
+      )
+        throw new Error(
+          "Generated repaint source bundle became unverifiable after restoring the policy and adapter bytes.",
+        );
       const defaultAdapterRefusal = runGeneratedFast(
         fixture.root,
         "scripts/repaint.ts",
@@ -1114,24 +1184,20 @@ export const test_cli_scaffold_repaint_runtime_contract =
             ) && staleSourceRefusal.stderr.includes("generated-stale"),
           impossiblePolicyStatus: impossiblePolicyRefusal.status,
           impossiblePolicyStdout: impossiblePolicyRefusal.stdout,
-          impossiblePolicyDiagnostic: impossiblePolicyRefusal.stderr.includes(
-            "unique supported retryable failure classes",
-          ),
+          impossiblePolicyDiagnostic:
+            impossiblePolicyRefusal.stderr.includes('"cancelled"') &&
+            impossiblePolicyRefusal.stderr.includes(
+              "AutoMovieRepaintRetryableFailureClass",
+            ),
           impossiblePolicyInvoked: fs.existsSync(impossiblePolicyInvocation),
-          sourceRuntimeStatus: sourceRuntimeRefusal.status,
-          sourceRuntimeRepainted: sourceRuntimeOutput.repainted,
-          sourceRuntimeSelected: sourceRuntimeOutput.selected,
-          sourceRuntimeRequestId: sourceRuntimeOutput.requestId,
-          sourceRuntimeCode: sourceRuntimeOutput.diagnostics[0]?.code,
           defaultStatus: defaultAdapterRefusal.status,
           defaultRepainted: defaultAdapterOutput.repainted,
           defaultSelected: defaultAdapterOutput.selected,
           defaultRequestId: defaultAdapterOutput.requestId,
           defaultCode: defaultAdapterOutput.diagnostics[0]?.code,
-          namesDefaultAdapter:
-            defaultAdapterOutput.diagnostics[0]?.message.includes(
-              "supplies no repaint adapter",
-            ),
+          namesDefaultAdapter: terminalAttempts[0]?.failure?.message.includes(
+            "supplies no repaint adapter",
+          ),
           terminalAttempts: terminalAttempts.map((attempt) => ({
             requestId: attempt.requestId,
             status: attempt.status,
@@ -1144,15 +1210,10 @@ export const test_cli_scaffold_repaint_runtime_contract =
           staleSourceStatus: 1,
           staleSourceStdout: "",
           staleSourceDiagnostic: true,
-          impossiblePolicyStatus: 1,
+          impossiblePolicyStatus: 2,
           impossiblePolicyStdout: "",
           impossiblePolicyDiagnostic: true,
           impossiblePolicyInvoked: false,
-          sourceRuntimeStatus: 1,
-          sourceRuntimeRepainted: false,
-          sourceRuntimeSelected: false,
-          sourceRuntimeRequestId: null,
-          sourceRuntimeCode: "repaint-source-evidence-missing",
           defaultStatus: 1,
           defaultRepainted: false,
           defaultSelected: false,
@@ -1186,62 +1247,14 @@ export const test_cli_scaffold_repaint_runtime_contract =
         diagnostics: Array<{ code: string }>;
       };
       const adapterMedia = path.join(fixture.root, "repaint-success.mp4");
-      const adapterMode = path.join(fixture.root, "repaint-adapter-mode.txt");
       fs.writeFileSync(adapterMedia, repaint.adapterBytes);
       fs.writeFileSync(adapterMode, "transport\n", "utf8");
-      fs.writeFileSync(
-        path.join(fixture.root, "scripts/repaintAdapter.ts"),
-        [
-          'import type { AutoMovieProductionShotRepaint } from "@automovie/interface";',
-          'import fs from "node:fs";',
-          'import path from "node:path";',
-          "",
-          "export const repaintProductionShot: AutoMovieProductionShotRepaint = async (input) => {",
-          '  const mode = fs.readFileSync(path.join(input.projectRoot, "repaint-adapter-mode.txt"), "utf8").trim();',
-          '  if (mode === "transport") {',
-          '    const error = new Error("The deterministic adapter transport closed.");',
-          '    error.name = "FetchError";',
-          "    throw error;",
-          "  }",
-          "  return {",
-          '    bytes: fs.readFileSync(path.join(input.projectRoot, "repaint-success.mp4")),',
-          '    mediaType: "video/mp4",',
-          "    costUnits: 1,",
-          `    runtimeIdentity: ${JSON.stringify(REPAINT_RUNTIME_IDENTITY)},`,
-          "  };",
-          "};",
-          "",
-        ].join("\n"),
-        "utf8",
-      );
-      const transportRefusal = runGeneratedFast(
+      const transportRecovery = runGeneratedFast(
         fixture.root,
         "scripts/repaint.ts",
         ["reroll", "--shot", "opening"],
       );
-      const transportOutput = JSON.parse(transportRefusal.stdout) as {
-        repainted: boolean;
-        selected: boolean;
-        requestId: string | null;
-        diagnostics: Array<{ code: string }>;
-      };
-      if (transportOutput.requestId === null)
-        throw new Error(
-          "The retryable transport attempt emitted no resumable request id.",
-        );
-      const transportAttempts = AutoMovieProductionProject.open(
-        fixture.root,
-        "repaint-runtime-film",
-      ).repaintRequestAttempts(transportOutput.requestId);
-      fs.writeFileSync(adapterMode, "success\n", "utf8");
-      const retried = runGeneratedFast(fixture.root, "scripts/repaint.ts", [
-        "retry",
-        "--shot",
-        "opening",
-        "--request",
-        transportOutput.requestId,
-      ]);
-      const retriedOutput = JSON.parse(retried.stdout) as {
+      const transportOutput = JSON.parse(transportRecovery.stdout) as {
         repainted: boolean;
         selected: boolean;
         requestId: string | null;
@@ -1254,9 +1267,20 @@ export const test_cli_scaffold_repaint_runtime_contract =
           parameters: unknown;
           references: Array<{ path: string; role: string }>;
         } | null;
+        diagnostics: Array<{ code: string; message: string }>;
       };
-      if (retriedOutput.receipt === null)
-        throw new Error("The explicit retry produced no repaint candidate.");
+      if (
+        transportOutput.requestId === null ||
+        transportOutput.receipt === null
+      )
+        throw new Error(
+          `The retryable transport attempt did not recover automatically: status=${String(transportRecovery.status)} stdout=${JSON.stringify(transportRecovery.stdout)} stderr=${JSON.stringify(transportRecovery.stderr)}.`,
+        );
+      const transportAttempts = AutoMovieProductionProject.open(
+        fixture.root,
+        "repaint-runtime-film",
+      ).repaintRequestAttempts(transportOutput.requestId);
+      fs.writeFileSync(adapterMode, "success\n", "utf8");
       const rerolled = runGeneratedFast(fixture.root, "scripts/repaint.ts", [
         "reroll",
         "--shot",
@@ -1305,15 +1329,15 @@ export const test_cli_scaffold_repaint_runtime_contract =
         fixture.root,
         "repaint-runtime-film",
       ).verifiedRepaintRenditions(["opening"]);
-      const retriedReviewSource = withGeneratedRepaintSelectionReview(
+      const transportReviewSource = withGeneratedRepaintSelectionReview(
         configuredSource,
-        retriedOutput.receipt,
+        transportOutput.receipt,
       );
-      const changedEvidence = retriedReviewSource.replace(
+      const changedEvidence = transportReviewSource.replace(
         "docs/settings/050-art-direction.md#art-delivery-review-condition",
         "docs/settings/050-art-direction.md#art-palette",
       );
-      if (changedEvidence === retriedReviewSource)
+      if (changedEvidence === transportReviewSource)
         throw new Error(
           "The generated repaint adoption negative has no evidence slot.",
         );
@@ -1326,10 +1350,10 @@ export const test_cli_scaffold_repaint_runtime_contract =
           "--shot",
           "opening",
           "--attempt",
-          retriedOutput.receipt.attemptId,
+          transportOutput.receipt.attemptId,
         ],
       );
-      fs.writeFileSync(configuredPath, retriedReviewSource, "utf8");
+      fs.writeFileSync(configuredPath, transportReviewSource, "utf8");
       const staleSelectionOutput = JSON.parse(staleSelection.stdout) as {
         repainted: boolean;
         selected: boolean;
@@ -1345,7 +1369,7 @@ export const test_cli_scaffold_repaint_runtime_contract =
         "--shot",
         "opening",
         "--attempt",
-        retriedOutput.receipt.attemptId,
+        transportOutput.receipt.attemptId,
       ]);
       const reversedOutput = JSON.parse(reversed.stdout) as {
         repainted: boolean;
@@ -1357,39 +1381,35 @@ export const test_cli_scaffold_repaint_runtime_contract =
         "repaint-runtime-film",
       ).verifiedRepaintRenditions(["opening"]);
       TestValidator.equals(
-        "explicit retry, reroll, selection refusal, and reversal preserve reviewed candidate state",
+        "automatic retry, reroll, selection refusal, and reversal preserve reviewed candidate state",
         {
-          retryStatus: retried.status,
           nonretryableRetryStatus: nonretryableRetry.status,
           nonretryableRetryRepainted: nonretryableRetryOutput.repainted,
           nonretryableRetrySelected: nonretryableRetryOutput.selected,
           nonretryableRetryRequestId: nonretryableRetryOutput.requestId,
           nonretryableRetryCode: nonretryableRetryOutput.diagnostics[0]?.code,
-          transportStatus: transportRefusal.status,
+          transportStatus: transportRecovery.status,
           transportRepainted: transportOutput.repainted,
           transportSelected: transportOutput.selected,
           transportRequestId: transportOutput.requestId,
-          transportCode: transportOutput.diagnostics[0]?.code,
+          transportDiagnostics: transportOutput.diagnostics.length,
           transportAttempts: transportAttempts.map((attempt) => ({
             requestId: attempt.requestId,
-            retryable: attempt.failure?.retryable,
+            retryable: attempt.failure?.retryable ?? null,
             status: attempt.status,
           })),
-          retryRepainted: retriedOutput.repainted,
-          retrySelected: retriedOutput.selected,
-          retryRequestId: retriedOutput.requestId,
-          retryReceiptRequestId: retriedOutput.receipt.requestId,
-          retryAdapterIdentity: retriedOutput.receipt.adapterIdentity,
-          retryProvenance: retriedOutput.receipt.generatorProvenance,
-          retryParameters: retriedOutput.receipt.parameters,
-          retryReferences: retriedOutput.receipt.references.map(
+          transportReceiptRequestId: transportOutput.receipt.requestId,
+          transportAdapterIdentity: transportOutput.receipt.adapterIdentity,
+          transportProvenance: transportOutput.receipt.generatorProvenance,
+          transportParameters: transportOutput.receipt.parameters,
+          transportReferences: transportOutput.receipt.references.map(
             ({ path: referencePath, role }) => ({ path: referencePath, role }),
           ),
           rerollStatus: rerolled.status,
           rerollRepainted: rerolledOutput.repainted,
           rerollSelected: rerolledOutput.selected,
           distinctRerollRequest:
-            rerolledOutput.requestId !== retriedOutput.requestId,
+            rerolledOutput.requestId !== transportOutput.requestId,
           candidates: candidates
             .map((receipt) => receipt.attemptId)
             .sort((left, right) => (left < right ? -1 : left > right ? 1 : 0)),
@@ -1410,44 +1430,47 @@ export const test_cli_scaffold_repaint_runtime_contract =
           reversedAttempt: reversedRenditions[0]?.attemptId,
         },
         {
-          retryStatus: 0,
           nonretryableRetryStatus: 1,
           nonretryableRetryRepainted: false,
           nonretryableRetrySelected: false,
           nonretryableRetryRequestId: defaultAdapterOutput.requestId,
           nonretryableRetryCode: "repaint-input-invalid",
-          transportStatus: 1,
-          transportRepainted: false,
+          transportStatus: 0,
+          transportRepainted: true,
           transportSelected: false,
           transportRequestId: transportOutput.requestId,
-          transportCode: "repaint-failed",
+          transportDiagnostics: 0,
           transportAttempts: [
             {
               requestId: transportOutput.requestId,
               retryable: true,
               status: "failed",
             },
+            {
+              requestId: transportOutput.requestId,
+              retryable: null,
+              status: "succeeded",
+            },
           ],
-          retryRepainted: true,
-          retrySelected: false,
-          retryRequestId: transportOutput.requestId,
-          retryReceiptRequestId: transportOutput.requestId,
-          retryAdapterIdentity: JSON.stringify(REPAINT_RUNTIME_IDENTITY),
-          retryProvenance: REPAINT_PROVENANCE,
-          retryParameters: {
+          transportReceiptRequestId: transportOutput.requestId,
+          transportAdapterIdentity: JSON.stringify(REPAINT_RUNTIME_IDENTITY),
+          transportProvenance: REPAINT_PROVENANCE,
+          transportParameters: {
             prompt: "Preserve every deterministic structure.",
             negativePrompt: "Do not alter camera, timing, or motion.",
             seed: 2135,
             strength: 0.25,
             controls: { contract: true },
           },
-          retryReferences: [{ path: repaint.referencePath, role: "structure" }],
+          transportReferences: [
+            { path: repaint.referencePath, role: "structure" },
+          ],
           rerollStatus: 0,
           rerollRepainted: true,
           rerollSelected: false,
           distinctRerollRequest: true,
           candidates: [
-            retriedOutput.receipt.attemptId,
+            transportOutput.receipt.attemptId,
             rerolledOutput.receipt.attemptId,
           ].sort((left, right) => (left < right ? -1 : left > right ? 1 : 0)),
           candidateRenditions: 0,
@@ -1458,13 +1481,13 @@ export const test_cli_scaffold_repaint_runtime_contract =
           staleStatus: 1,
           staleRepainted: false,
           staleSelected: false,
-          staleRequestId: retriedOutput.receipt.requestId,
+          staleRequestId: transportOutput.receipt.requestId,
           staleCode: "repaint-commit-refused",
           preservedAttempt: rerolledOutput.receipt.attemptId,
           reverseStatus: 0,
           reverseRepainted: true,
           reverseSelected: true,
-          reversedAttempt: retriedOutput.receipt.attemptId,
+          reversedAttempt: transportOutput.receipt.attemptId,
         },
       );
       assertGeneratedRuntimeParity(rendered);
