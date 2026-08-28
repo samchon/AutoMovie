@@ -11,9 +11,9 @@ import { preserveCliRootFixtureCleanup } from "./CliRootFixtureCleanup";
 interface ICancellationRuntime {
   signal: AbortSignal;
   attach(): void;
-  closeCapture(
-    failure: unknown,
-    close: (failure: unknown) => Promise<void>,
+  closeCapture<Failure>(
+    failure: Failure,
+    close: (failure: Failure) => Promise<void>,
   ): Promise<void>;
 }
 
@@ -35,10 +35,11 @@ const exercise = async (
   interruptBus.emit("SIGINT");
   const forwarded = new Error(`${label} primary failure`);
   let received: unknown;
-  await interrupt.closeCapture(forwarded, (failure) => {
+  const closeTypedFailure = (failure: Error): Promise<void> => {
     received = failure;
     return Promise.resolve();
-  });
+  };
+  await interrupt.closeCapture(forwarded, closeTypedFailure);
 
   const terminateBus = new EventEmitter();
   const terminate =
