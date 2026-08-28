@@ -1,5 +1,6 @@
 import { IAutoMovieClip } from "../core/IAutoMovieTrack";
 import { IAutoMovieVector3 } from "../geometry/IAutoMovieVector3";
+import { IAutoMovieCameraClearanceReport } from "../scene/IAutoMovieCamera";
 import { IAutoMovieInteractionEvent } from "./IAutoMovieInteractionEvent";
 
 /**
@@ -130,6 +131,19 @@ export interface IAutoMovieShot {
    * @evidence specifications/camera-light-and-visibility/framing-axis-and-camera-path.md#clv-camera-path-direct-sampling Types `coverage` for the clv camera path direct sampling system contract.
    */
   coverage?: IAutoMovieShotCoverage[];
+
+  /**
+   * Current-revision swept-clearance reports for the hero and alternate takes
+   * whose staged cameras declared physical envelopes.
+   *
+   * Omitted preserves legacy shots whose cameras make no clearance claim. A
+   * present list contains only clear reports: blocked or stale evaluation is a
+   * performance refusal and no shot artifact is published.
+   *
+   * @evidence requirements/camera/clipping-occlusion-and-spatial-constraints.md#camera-dynamic-spatial-sampling Carries the fixed-clock swept result beside the exact camera motion it evaluated.
+   * @evidence specifications/camera-light-and-visibility/framing-axis-and-camera-path.md#clv-camera-path-constraints-refusal Preserves accepted current-revision reports in the compiled take instead of dropping the gate's evidence.
+   */
+  cameraClearance?: IAutoMovieCameraClearanceReport[];
 
   /**
    * Shot length in seconds (local time origin = 0).

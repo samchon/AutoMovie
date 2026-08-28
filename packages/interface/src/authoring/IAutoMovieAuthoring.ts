@@ -15,6 +15,7 @@ import {
 import { IAutoMovieTimingAnchor } from "../harness/IAutoMovieTimingAnchor";
 import { IAutoMovieModel } from "../model/IAutoMovieModel";
 import { IAutoMovieShotContract } from "../production/IAutoMovieProductionDesign";
+import { IAutoMovieCameraClearanceEnvelope } from "../scene/IAutoMovieCamera";
 import { IAutoMovieFog } from "../scene/IAutoMovieFog";
 import { IAutoMovieLightShadow } from "../scene/IAutoMovieLight";
 import { IAutoMovieSceneEnvironment } from "../scene/IAutoMovieSceneEnvironment";
@@ -222,6 +223,18 @@ export interface IAutoMovieStageCamera {
    * @evidence specifications/authoring-and-authority/delegation-and-decision-authority.md#spec-authoring-authority-compatibility Types `fovDeg` for the spec authoring authority compatibility system contract.
    */
   fovDeg: number;
+
+  /**
+   * Camera-local physical body and optional parent-rig clearance envelopes.
+   *
+   * Omit only when this authored camera makes no physical-clearance claim.
+   * Stage validation refuses malformed centres and non-positive radii before
+   * lowering the same envelope onto the resolved scene camera.
+   *
+   * @evidence requirements/camera/clipping-occlusion-and-spatial-constraints.md#camera-clearance Exposes the authored camera and rig bodies whose scene penetration must be refused.
+   * @evidence specifications/camera-light-and-visibility/framing-axis-and-camera-path.md#clv-camera-path-constraints-refusal Types the physical input lowered into swept-path evaluation.
+   */
+  clearance?: IAutoMovieCameraClearanceEnvelope;
 }
 
 /**

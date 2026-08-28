@@ -1,4 +1,5 @@
 import {
+  IAutoMovieCameraClearanceEnvelope,
   IAutoMovieConstraintViolation,
   IAutoMovieLight,
   IAutoMovieMountBinding,
@@ -41,6 +42,93 @@ const isFiniteVector3 = (vector: IAutoMovieVector3): boolean =>
   [vector.x, vector.y, vector.z].every((coordinate) =>
     Number.isFinite(coordinate),
   );
+
+/**
+ * Validate one portable camera-clearance envelope before it reaches the
+ * resolved scene. The implementation deliberately reads every nested value as
+ * unknown: generated authoring code is an external boundary even when its
+ * compile-time type claims the object is well formed.
+ */
+const validateCameraClearanceEnvelope = (
+  value: unknown,
+  path: string,
+  out: ViolationCollector,
+): void => {
+  if (!isRecord(value)) {
+    out.push("type", path, "camera clearance must be an object", value);
+    return;
+  }
+
+  const validateSphere = (sphere: unknown, spherePath: string): void => {
+    if (!isRecord(sphere)) {
+      out.push(
+        "type",
+        spherePath,
+        "camera clearance sphere must be an object",
+        sphere,
+      );
+      return;
+    }
+    if (!isRecord(sphere.center))
+      out.push(
+        "type",
+        `${spherePath}.center`,
+        "camera clearance centre must be a vector object",
+        sphere.center,
+      );
+    else if (
+      ![sphere.center.x, sphere.center.y, sphere.center.z].every(
+        (coordinate) =>
+          typeof coordinate === "number" && Number.isFinite(coordinate),
+      )
+    )
+      out.push(
+        "range",
+        `${spherePath}.center`,
+        "camera clearance centre must be a finite vector",
+        sphere.center,
+      );
+    if (
+      typeof sphere.radius !== "number" ||
+      !Number.isFinite(sphere.radius) ||
+      sphere.radius <= 0
+    )
+      out.push(
+        "range",
+        `${spherePath}.radius`,
+        "camera clearance radius must be finite and greater than zero",
+        sphere.radius,
+      );
+  };
+
+  validateSphere(value.body, `${path}.body`);
+  if (!("parentRig" in value))
+    out.push(
+      "type",
+      `${path}.parentRig`,
+      "camera clearance must state a parent rig sphere or null",
+      undefined,
+    );
+  else if (value.parentRig !== null)
+    validateSphere(value.parentRig, `${path}.parentRig`);
+};
+
+/** Copy an accepted envelope so the resolved scene cannot alias author input. */
+const lowerCameraClearanceEnvelope = (
+  envelope: IAutoMovieCameraClearanceEnvelope,
+): IAutoMovieCameraClearanceEnvelope => ({
+  body: {
+    center: { ...envelope.body.center },
+    radius: envelope.body.radius,
+  },
+  parentRig:
+    envelope.parentRig === null
+      ? null
+      : {
+          center: { ...envelope.parentRig.center },
+          radius: envelope.parentRig.radius,
+        },
+});
 
 /**
  * Lower a set piece's optional size multiplier onto the node transform's scale:
@@ -912,6 +1000,7 @@ export const stageScene = (
   }
 
   staging.cameras.forEach((camera, i) => {
+    const path = `$input.cameras[${i}]`;
     claim(camera.node, `$input.cameras[${i}].node`, "camera node id");
     const positionFinite = isFiniteVector3(camera.position);
     if (!positionFinite)
@@ -957,6 +1046,12 @@ export const stageScene = (
         `$input.cameras[${i}].lookAt`,
         "camera lookAt must not equal the camera position",
         camera.lookAt,
+      );
+    if (camera.clearance !== undefined)
+      validateCameraClearanceEnvelope(
+        camera.clearance,
+        `${path}.clearance`,
+        out,
       );
   });
 
@@ -1029,6 +1124,9 @@ export const stageScene = (
       fovY: camera.fovDeg,
       near: CAMERA_NEAR,
       far: CAMERA_FAR,
+      ...(camera.clearance === undefined
+        ? {}
+        : { clearance: lowerCameraClearanceEnvelope(camera.clearance) }),
     };
   });
 
