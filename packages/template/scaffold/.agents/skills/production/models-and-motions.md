@@ -28,5 +28,5 @@ Model source begins at `modelSources: "draft"` only after model review. Motion s
 
 - A semantic scale or clearance required regardless of representation is a settings fact; proxy dimensions, occupied bounds, and primitive decomposition are model decisions derived from it.
 - Settings authorize a state change and any semantic limit; a model names the joint, pivot, and construction-safe interface that realizes it; a motion owns the timed path within both contracts.
-- A storyline states why a movement matters; a scenario stages the physical event; a script states the final audiovisual beat; a shot composes the implemented motions.
+- A treatment states why a movement matters; a script stages the physical event; a screenplay states the final audiovisual beat; a shot composes the implemented motions.
 - A library stops at its reviewed source branches. A film or brief may consume the same model or motion source through shots.

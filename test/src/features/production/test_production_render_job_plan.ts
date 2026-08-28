@@ -22,13 +22,13 @@ const digest = (fill: string): AutoMovieContentDigest =>
   `sha256:${fill.repeat(64).slice(0, 64)}`;
 
 const RUNTIME_IDENTITY = {
-  protocolVersion: "automovie.production-render-runtime.v1",
+  protocolVersion: "automovie.production-render-runtime.v2",
   sourceDigest: digest("a"),
   capture: testCaptureRuntimeIdentity(),
   encoder: {
     package: "h264-mp4-encoder",
     version: "1.0.12",
-    entryDigest: digest("b"),
+    closureDigest: digest("b"),
     codec: "h264",
     arguments: {
       quantizationParameter: 26,

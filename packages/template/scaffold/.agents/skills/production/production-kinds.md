@@ -6,7 +6,7 @@ Every layer begins `disabled` with no governed hosts. For a layer forbidden by t
 
 ## Film
 
-A film makes a narrative claim through the exact `settings -> storylines -> scenarios -> script -> shots -> filmSources` ladder. Reviewed `productionSources` is a parallel assembly input before `filmSources`; model, space, material, instance, motion, and system branches apply when the film authors them. Use film for any narrative production, including a short film. Briefs are disabled.
+A film makes a narrative claim through the exact `settings -> treatments -> scripts -> screenplays -> shots -> filmSources` ladder. Reviewed `productionSources` is a parallel assembly input before `filmSources`; model, space, material, instance, motion, and system branches apply when the film authors them. Use film for any narrative production, including a short film. Briefs are disabled.
 
 ## Brief
 

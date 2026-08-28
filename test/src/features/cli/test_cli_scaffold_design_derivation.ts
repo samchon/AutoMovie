@@ -57,7 +57,7 @@ export const test_cli_scaffold_design_derivation = (): void => {
     .filter(([, content]) => /@evidence[A-Za-z]*\b/u.test(content))
     .map(([file]) => file);
   const productionDocuments = Object.keys(rendered).filter((file) =>
-    /^docs\/(?:settings|research|models|spaces|materials|instances|motions|systems|storylines|scenarios|script|briefs)\/.+\.md$/u.test(
+    /^docs\/(?:settings|research|models|spaces|materials|instances|motions|systems|treatments|scripts|screenplays|briefs)\/.+\.md$/u.test(
       file,
     ),
   );
@@ -184,6 +184,18 @@ export const test_cli_scaffold_design_derivation = (): void => {
           ) === true,
       ],
       [
+        "ships only the canonical narrative ladder declaration",
+        () =>
+          lint.includes(
+            "settings -> treatments -> scripts -> screenplays -> shots -> filmSources",
+          ) &&
+          ["treatments", "scripts", "screenplays"].every((layer) =>
+            lint.includes(`${layer}: "disabled"`),
+          ) &&
+          /\b(?:storylines|scenarios):\s/u.test(lint) === false &&
+          /^\s*script:\s/mu.test(lint) === false,
+      ],
+      [
         "keeps the retired review ledger ignored",
         () => rendered[".gitignore"]?.includes("!automovie/reviews") === false,
       ],
@@ -210,6 +222,7 @@ export const test_cli_scaffold_design_derivation = (): void => {
       "completed fixture carries no retired review store": true,
       "inherits no environmental study obligation": true,
       "ships the production authoring procedure": true,
+      "ships only the canonical narrative ladder declaration": true,
       "keeps the retired review ledger ignored": true,
       "refuses a blank project name": true,
       "refuses a non-portable project name": true,

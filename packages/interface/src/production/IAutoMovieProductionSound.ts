@@ -674,7 +674,7 @@ export interface IAutoMovieProductionTtsReceipt {
    * @evidence requirements/sound/editing-synchronization-and-continuity.md#sound-event-synchronization Exposes `version` as the portable data boundary for the sound event synchronization requirement.
    * @evidence specifications/simulation-effects-and-sound/mix-stems-loudness-and-av-join.md#sound-event-sync-and-boundary-continuity Types `version` for the sound event sync and boundary continuity system contract.
    */
-  version: 4;
+  version: 5;
   /**
    * Exact dialogue line id.
    *

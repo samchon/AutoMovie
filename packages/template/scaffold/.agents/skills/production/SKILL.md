@@ -7,7 +7,7 @@ description: Defines how this project's production is researched, authored, conf
 
 You are authoring one production: this project. Read its `AGENTS.md`, its `lint.config.ts`, its `automovie.config.ts`, `docs/README.md`, every active upstream layer, and every shared or production-local target its claims select before writing anything.
 
-Author a film in the order `settings -> storylines -> scenarios -> script -> shots -> filmSources`, a brief in the order `settings -> briefs -> shots -> filmSources`, and a library as settings plus each design and source branch it delivers. The workflow documents below own authorship; the discovery, principle, and obligation families published by `@automovie/template` own the questions each authored population answers; [Evidence staging](evidence-staging.md) owns claims, tags, stages, and fingerprints.
+Author a film in the order `settings -> treatments -> scripts -> screenplays -> shots -> filmSources`, a brief in the order `settings -> briefs -> shots -> filmSources`, and a library as settings plus each design and source branch it delivers. The workflow documents below own authorship; the discovery, principle, and obligation families published by `@automovie/template` own the questions each authored population answers; [Evidence staging](evidence-staging.md) owns claims, tags, stages, and fingerprints.
 
 Apply this workflow without subject-matter exceptions. Historical, technical, mechanical, or heavily researched material still requires explicit production canon and the full lineage, evidence, staging, and review workflow. External knowledge never substitutes for an authored owner.
 
@@ -43,9 +43,9 @@ Choosing any of these means the approach is already wrong. Stop and repair the a
 | Instances | Prototype membership, stable repeated identity, transforms, variation, tiers, and placement validity |
 | Motions | Reusable deterministic state change over time and its neutral observations |
 | Systems | Coupled lighting, environment, effects, simulation, sound, service, state, budget, and failure behavior |
-| Storylines | Detailed narrative treatment and audience-facing development |
-| Scenarios | Executable physical progression and consequential exchange |
-| Screenplay | Final visible, written, audible, silent, and render-timed audience contract |
+| Treatments | Detailed narrative treatment and audience-facing development |
+| Scripts | Executable physical progression and consequential exchange |
+| Screenplays | Final visible, written, audible, silent, and render-timed audience contract |
 | Brief | One bounded delivery/shot/observation hierarchy and falsifying observations |
 | Production source | Mechanical serialization of reviewed settings |
 | Design source | Implementation of one reviewed model, map, space, material, instance, motion, or system owner |
@@ -64,7 +64,7 @@ Read each applicable document in full before acting:
 - [Research](research.md) owns the optional external-evidence ledger and its downstream consumption.
 - [Settings](settings.md) defines delivery, canon, subjects, capabilities, constraints, and shared conventions for every shape.
 - [Design branches](design-branches.md) routes models, spaces, materials, instances, motions, and systems without overlap; it links the detailed model-and-motion procedure when those branches apply.
-- [Storylines](storylines.md), [Scenarios](scenarios.md), and [Screenplays](screenplays.md) own the film-only refinement ladder.
+- [Treatments](treatments.md), [Scripts](scripts.md), and [Screenplays](screenplays.md) own the film-only refinement ladder.
 - [Direct briefs](briefs.md) owns bounded audiovisual delivery that needs no independent narrative-refinement ladder.
 - [Contract targets](contract-targets.md) governs the shared discovery, principle, and obligation families and their production-local counterparts.
 - [Evidence staging](evidence-staging.md) owns populations, tags, `draft -> evidence -> review`, diagnostics, and fingerprints.
@@ -103,9 +103,9 @@ Capture writes actual PNGs. Open them, and let the evidence citation that claims
 
 Every subject a later layer stages, animates, voices, or observes has a settings owner before that layer uses it, including an unnamed extra, a crowd, a machine, and an institution. `obligations/settings.md#operative-subject-inventory` owns whether every operative subject is accounted for; in a film, `obligations/subjects.md` owns what each of those owners must actually settle.
 
-A storyline, scenario, screenplay, or brief that introduces a new participant, or that turns one member of an established group into an individual actor, returns to settings and completes that subject's canon before continuing.
+A treatment, script, screenplay, or brief that introduces a new participant, or that turns one member of an established group into an individual actor, returns to settings and completes that subject's canon before continuing.
 
-Backcast the literal cast after every downstream draft or revision. A subject that appeared during writing is a settings defect until settings owns it, not a scenario detail.
+Backcast the literal cast after every downstream draft or revision. A subject that appeared during writing is a settings defect until settings owns it, not a script detail.
 
 ## Local working memory
 
@@ -115,9 +115,9 @@ Nothing in `.wiki` binds this production. Before relying on a fact, decision, or
 
 ## Prove the ladder on one unit before writing the whole layer
 
-A stage applies to a whole layer, and a stage never moves backwards. There is no scoped pilot mode: once `storylines` is in `review`, every storyline file added afterwards owes complete evidence and current fingerprints immediately. Plan for that instead of discovering it after the complete treatment is written.
+A stage applies to a whole layer, and a stage never moves backwards. There is no scoped pilot mode: once `treatments` is in `review`, every treatment file added afterwards owes complete evidence and current fingerprints immediately. Plan for that instead of discovering it after the complete treatment is written.
 
-So prove the ladder before you commit the population. While the first layer is still in `draft`, take its first sequence forward in `.wiki`: stage that treatment as a throwaway scenario pass, and carry one beat as far as a shot sketch. Nothing in `.wiki` binds the production, and nothing about it touches a stage.
+So prove the ladder before you commit the population. While the first layer is still in `draft`, take its first sequence forward in `.wiki`: stage that treatment as a throwaway script pass, and carry one beat as far as a shot sketch. Nothing in `.wiki` binds the production, and nothing about it touches a stage.
 
 What that costs is one file. What it finds is the defect class that only appears under refinement: a treatment beat that no space admits, a subject with no canon, a scene whose decisive exchange was never written, a unit count the shot budget cannot carry. Repair those in settings and in the treatment while the layer is still `draft` and the repair is free.
 

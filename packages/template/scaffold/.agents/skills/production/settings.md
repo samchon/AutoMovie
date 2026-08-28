@@ -34,7 +34,7 @@ Apply the settings information-structure principle, then reverse-outline paragra
 
 ## Subject canon
 
-`obligations/settings.md#operative-subject-inventory` decides whether every operative subject has an owner. In a film, `obligations/subjects.md` decides what each of those owners settles: the position it acts from, the motive that produces a choice, the information it starts with, the behavior an audience recognizes it by, the relationships it stands inside, and the change it can and cannot undergo. An inventory of names satisfies the first and leaves a scenario writer inventing the second.
+`obligations/settings.md#operative-subject-inventory` decides whether every operative subject has an owner. In a film, `obligations/subjects.md` decides what each of those owners settles: the position it acts from, the motive that produces a choice, the information it starts with, the behavior an audience recognizes it by, the relationships it stands inside, and the change it can and cannot undergo. An inventory of names satisfies the first and leaves a script author inventing the second.
 
 Depth follows consequence. A central subject settles every role in usable detail, a one-shot subject settles the roles its single appearance actually exercises, and neither is allowed to be absent from the inventory.
 

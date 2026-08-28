@@ -19,7 +19,6 @@ import {
   digestAutoMovieBytes,
   encodeAutoMoviePathSegment,
   readAutoMovieFilmTimeline,
-  readAutoMovieProductionOwnedFile,
   trimProductionAudioPresentation,
 } from "@automovie/production";
 import { BoxParser } from "mp4box";
@@ -54,11 +53,18 @@ import {
   productionAcousticBindings,
   productionAcousticStudies,
 } from "./productionStudies";
-import { ensureRenderPhysicalDirectory } from "./renderGcSnapshot";
+import {
+  type IRenderGcTargetSnapshot,
+  assertCapturedRenderTarget,
+  captureRenderGcTarget,
+  ensureRenderPhysicalDirectory,
+} from "./renderGcSnapshot";
 import type { IProductionRenderHost } from "./renderHost";
 import {
   type IRuntimePackageSnapshot,
   type RuntimePackageAssetSelection,
+  assertRuntimePackageSnapshotCurrent,
+  bindRuntimePackageSnapshotGeneration,
   snapshotRuntimePackage,
 } from "./runtimePackageSnapshot";
 
@@ -96,8 +102,37 @@ export interface IProductionDialogueCacheIdentity {
   path: string;
 }
 
+class ProductionRuntimeClosureError extends AggregateError {}
+
+/** Revalidate one runtime closure without replacing an operation failure. */
+export const runWithProductionRuntimeClosure = async <Output>(
+  assertCurrent: () => void,
+  operation: () => Output | Promise<Output>,
+): Promise<Output> => {
+  assertCurrent();
+  let failure: unknown;
+  let output: Output | undefined;
+  try {
+    output = await operation();
+  } catch (error) {
+    failure = error;
+  }
+  try {
+    assertCurrent();
+  } catch (closureFailure) {
+    if (failure === undefined) throw closureFailure;
+    throw new ProductionRuntimeClosureError(
+      [failure, closureFailure],
+      "Production runtime closure changed after the operation failed.",
+      { cause: failure },
+    );
+  }
+  if (failure !== undefined) throw failure;
+  return output!;
+};
+
 /** Current public/cache receipt generation; older identities never hit. */
-export const PRODUCTION_DIALOGUE_CACHE_VERSION = 4 as const;
+export const PRODUCTION_DIALOGUE_CACHE_VERSION = 5 as const;
 
 /** Exact normalized identity of one line and its executable runtime assets. */
 export const productionDialogueCacheIdentity = (props: {
@@ -194,6 +229,7 @@ export const resolveProductionDialogueCache = async <Runtime, Cached>(props: {
 };
 
 export interface IProductionSoundRuntime {
+  assertCurrent: () => void;
   audioAssets: (
     project: AutoMovieProductionProject,
     timeline: ReturnType<typeof readAutoMovieFilmTimeline>,
@@ -251,17 +287,6 @@ export const createProductionSoundRuntime = (props: {
 
   const compareCodeUnits = (left: string, right: string): number =>
     left < right ? -1 : left > right ? 1 : 0;
-
-  const listFiles = (directory: string): string[] =>
-    props.host.filesystem.existsSync(directory)
-      ? props.host.filesystem
-          .readdirSync(directory, { withFileTypes: true })
-          .flatMap((entry) => {
-            const target = path.join(directory, entry.name);
-            return entry.isDirectory() ? listFiles(target) : [target];
-          })
-          .sort(compareCodeUnits)
-      : [];
 
   const placeholderAudioStem = (
     asset: string,
@@ -349,22 +374,40 @@ export const createProductionSoundRuntime = (props: {
   ): {
     package: string;
     version: string;
-    entryDigest: AutoMovieContentDigest;
+    closureDigest: AutoMovieContentDigest;
   } => ({
     package: snapshot.package,
     version: snapshot.version,
-    entryDigest: snapshot.entryDigest,
+    closureDigest: snapshot.contentFingerprint,
   });
+
+  const packageSnapshots = new Map<string, IRuntimePackageSnapshot>();
 
   const resolvedPackageSnapshot = (
     packageName: string,
     assets: readonly RuntimePackageAssetSelection[] = [],
-  ): IRuntimePackageSnapshot =>
-    snapshotRuntimePackage({
+  ): IRuntimePackageSnapshot => {
+    const key = `${packageName}\0${JSON.stringify(assets)}`;
+    const existing = packageSnapshots.get(key);
+    if (existing !== undefined) {
+      assertRuntimePackageSnapshotCurrent(existing);
+      return existing;
+    }
+    const snapshot = snapshotRuntimePackage({
       assets,
       entry: resolveImportEntry(packageName),
+      moduleClosure: true,
       packageName,
     });
+    bindRuntimePackageSnapshotGeneration(snapshot);
+    packageSnapshots.set(key, snapshot);
+    return snapshot;
+  };
+
+  const assertCurrentRuntimePackages = (): void => {
+    for (const snapshot of packageSnapshots.values())
+      assertRuntimePackageSnapshotCurrent(snapshot);
+  };
 
   const resolvedPackageIdentity = (packageName: string) =>
     packageSnapshotIdentity(resolvedPackageSnapshot(packageName));
@@ -406,7 +449,7 @@ export const createProductionSoundRuntime = (props: {
   };
 
   const runtimeIdentity = () => ({
-    protocol: "automovie.production-sound.v1",
+    protocol: "automovie.production-sound.v2",
     sampleRate: 48_000,
     channels: 2,
     opus: {
@@ -430,27 +473,40 @@ export const createProductionSoundRuntime = (props: {
           },
   });
 
-  const kokoroModelCacheAssets = (
+  const assertSoundRuntimeCurrent = (): void => {
+    void runtimeIdentity();
+    assertCurrentRuntimePackages();
+  };
+
+  const captureKokoroModelCache = (
     modelCacheRoot: string,
-  ): IAutoMovieProductionTtsReceipt["runtimeAssets"] =>
-    props.host.filesystem.existsSync(modelCacheRoot)
-      ? listFiles(modelCacheRoot).map((file) => {
-          const relative = path
-            .relative(modelCacheRoot, file)
-            .split(path.sep)
-            .join("/");
-          return {
-            path: `model:${relative}`,
-            digest: digestAutoMovieBytes(
-              readAutoMovieProductionOwnedFile({
-                root: modelCacheRoot,
-                directory: modelCacheRoot,
-                relative,
-              }),
-            ),
-          };
-        })
-      : [];
+  ): IRenderGcTargetSnapshot | null => {
+    try {
+      return captureRenderGcTarget(props.productionStateRoot, modelCacheRoot);
+    } catch (error) {
+      if (
+        (error as NodeJS.ErrnoException).code === "ENOENT" ||
+        (error as NodeJS.ErrnoException).code === "ENOTDIR"
+      )
+        return null;
+      throw error;
+    }
+  };
+
+  const kokoroModelCacheAssets = (
+    snapshot: IRenderGcTargetSnapshot | null,
+  ): IAutoMovieProductionTtsReceipt["runtimeAssets"] => {
+    if (snapshot === null) return [];
+    if (snapshot.kind !== "directory")
+      throw new Error("Kokoro model cache revision is not a physical tree.");
+    const output = snapshot.entries.flatMap((entry) =>
+      entry.kind === "file" && entry.digest !== undefined
+        ? [{ path: `model:${entry.path}`, digest: entry.digest }]
+        : [],
+    );
+    assertCapturedRenderTarget(snapshot);
+    return output;
+  };
 
   const kokoroBaseRuntimeAssets = (
     voiceId: string,
@@ -466,16 +522,19 @@ export const createProductionSoundRuntime = (props: {
     if (voice === undefined)
       throw new Error(`Kokoro voice asset is absent: ${voiceRelative}`);
     return [
-      { path: "package:kokoro-js", digest: kokoro.entryDigest },
+      { path: "package:kokoro-js", digest: kokoro.contentFingerprint },
       {
         path: "package:@huggingface/transformers",
-        digest: transformers.entryDigest,
+        digest: transformers.closureDigest,
       },
-      { path: "package:onnxruntime-node", digest: backend.entryDigest },
+      {
+        path: "package:onnxruntime-node",
+        digest: backend.closureDigest,
+      },
       ...backend.nativeAssets,
       {
         path: "package:sharp-capability-wall",
-        digest: imageCapability.entryDigest,
+        digest: imageCapability.closureDigest,
       },
       { path: `voice:${voiceId}.bin`, digest: voice.digest },
     ];
@@ -580,7 +639,13 @@ export const createProductionSoundRuntime = (props: {
     baseRuntimeAssets: IAutoMovieProductionTtsReceipt["runtimeAssets"],
     selection: IAutoMovieDialogueSynthesisSelection,
   ): Promise<IKokoroLoadedRuntime> => {
-    props.host.filesystem.mkdirSync(modelCacheRoot, { recursive: true });
+    ensureRenderPhysicalDirectory(
+      props.productionStateRoot,
+      path
+        .relative(props.productionStateRoot, modelCacheRoot)
+        .split(path.sep)
+        .join("/"),
+    );
     props.progress("sound.model.load.start", {
       model: selection.model,
       revision: selection.modelRevision,
@@ -644,7 +709,9 @@ export const createProductionSoundRuntime = (props: {
           dtype: selection.dtype,
           device: selection.device,
         });
-        const modelAssets = kokoroModelCacheAssets(modelCacheRoot);
+        assertCurrentRuntimePackages();
+        const modelSnapshot = captureKokoroModelCache(modelCacheRoot);
+        const modelAssets = kokoroModelCacheAssets(modelSnapshot);
         if (modelAssets.length === 0)
           throw new Error(
             "Pinned Kokoro load produced no revision-scoped model cache assets.",
@@ -653,11 +720,14 @@ export const createProductionSoundRuntime = (props: {
           model: selection.model,
           revision: selection.modelRevision,
         });
-        return {
+        const output = {
           runtime: loaded as unknown as IKokoroRuntime,
           createTextSplitter: () => new TextSplitterStream(),
           runtimeAssets: [...baseRuntimeAssets, ...modelAssets],
         };
+        assertCurrentRuntimePackages();
+        if (modelSnapshot !== null) assertCapturedRenderTarget(modelSnapshot);
+        return output;
       },
     );
   };
@@ -696,7 +766,7 @@ export const createProductionSoundRuntime = (props: {
       ));
     let runtimeAssets = [
       ...baseRuntimeAssets,
-      ...kokoroModelCacheAssets(modelCacheRoot),
+      ...kokoroModelCacheAssets(captureKokoroModelCache(modelCacheRoot)),
     ];
     if (
       plan.dialogue.length > 0 &&
@@ -947,11 +1017,14 @@ export const createProductionSoundRuntime = (props: {
       };
     }
     const value = await prepared.value;
-    await props.host.installDialogue(value.dialogueRuntime);
+    await props.host.installDialogue(
+      value.plan.dialogue.length === 0 ? null : value.dialogueRuntime,
+    );
     return value;
   };
 
   return {
+    assertCurrent: assertSoundRuntimeCurrent,
     audioAssets: (project, timeline) =>
       audioSources(project, timeline, 48_000).map((source) => source.identity),
     audioSources,
@@ -1159,6 +1232,7 @@ export const createProductionRenderEncoderRuntime = (props: {
 
 /** Plan, mix, inspect, and encode one compiler-owned production soundtrack. */
 export const produceProductionSound = async (props: {
+  assertCurrent: () => void;
   assertRenderClock: (input: {
     plan: IAutoMovieProductionSoundPlan;
     render: IAutoMovieProductionRenderJobPlan;
@@ -1226,11 +1300,16 @@ export const produceProductionSound = async (props: {
   const spectrogram = productionSoundSpectrogram(rendered.pcm);
   props.progress("sound.evidence.render.complete");
   props.progress("sound.opus.encode.start");
-  const audio = await props.encoder.encodeOpus(rendered.pcm);
+  const audio = await runWithProductionRuntimeClosure(props.assertCurrent, () =>
+    props.encoder.encodeOpus(rendered.pcm),
+  );
   props.progress("sound.opus.encode.complete");
   props.progress("sound.evidence.encode.start");
-  const waveformBytes = encodeProductionSoundRaster(waveform);
-  const spectrogramBytes = encodeProductionSoundRaster(spectrogram);
+  const [waveformBytes, spectrogramBytes] =
+    await runWithProductionRuntimeClosure(props.assertCurrent, () => [
+      encodeProductionSoundRaster(waveform),
+      encodeProductionSoundRaster(spectrogram),
+    ]);
   props.progress("sound.evidence.encode.complete");
   return {
     plan: soundPlan,

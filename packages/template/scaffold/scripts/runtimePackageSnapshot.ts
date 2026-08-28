@@ -3,6 +3,7 @@ import {
   readAutoMovieProductionOwnedFile,
 } from "@automovie/production";
 import fs from "node:fs";
+import { createRequire } from "node:module";
 import path from "node:path";
 
 export type RuntimePackageAssetSelection =
@@ -15,11 +16,23 @@ export interface IRuntimePackageSnapshot {
     digest: `sha256:${string}`;
     path: string;
   }>;
+  closure: Array<{
+    digest: `sha256:${string}`;
+    path: string;
+  }>;
+  contentFingerprint: `sha256:${string}`;
+  entry: string;
   entryDigest: `sha256:${string}`;
   fingerprint: `sha256:${string}`;
   package: string;
   root: string;
   version: string;
+}
+
+interface IRuntimePackageObservation {
+  files: readonly IPhysicalFile[];
+  root: IPhysicalDirectory;
+  trees: readonly ITreeInventory[];
 }
 
 interface IPhysicalDirectory {
@@ -42,10 +55,26 @@ interface ITreeInventory {
   root: IPhysicalDirectory;
 }
 
+const observations = new WeakMap<
+  IRuntimePackageSnapshot,
+  IRuntimePackageObservation
+>();
+const generationRegistrySymbol = Symbol.for(
+  "automovie.runtime-package-generation.v1",
+);
+const generationRegistry = (() => {
+  const owner = globalThis as typeof globalThis & {
+    [generationRegistrySymbol]?: Map<string, string>;
+  };
+  return (owner[generationRegistrySymbol] ??= new Map<string, string>());
+})();
+
 /** Capture one package identity and selected runtime bytes as one snapshot. */
 export const snapshotRuntimePackage = (props: {
   assets?: readonly RuntimePackageAssetSelection[];
   entry: string;
+  entries?: readonly string[];
+  moduleClosure?: boolean;
   packageName: string;
 }): IRuntimePackageSnapshot => {
   if (
@@ -55,7 +84,18 @@ export const snapshotRuntimePackage = (props: {
     throw new Error("Runtime package name is invalid.");
   const located = locatePackage(props.entry, props.packageName);
   const entry = readOwnedFile(located.root, path.resolve(props.entry));
-  const files = [located.manifest, entry];
+  const files = new Map<string, IPhysicalFile>([
+    [located.manifest.path, located.manifest],
+    [entry.path, entry],
+  ]);
+  const entryPaths = [entry.path, ...(props.entries ?? []).map(path.resolve)];
+  for (const additional of entryPaths.slice(1)) {
+    const file = readOwnedFile(located.root, additional);
+    files.set(file.path, file);
+  }
+  if (props.moduleClosure === true)
+    for (const file of deriveModuleClosure(located.root, entryPaths))
+      files.set(file.path, file);
   const trees: ITreeInventory[] = [];
   const assets = new Map<
     string,
@@ -65,7 +105,7 @@ export const snapshotRuntimePackage = (props: {
     const selected = ownedPath(located.root, selection.relative);
     if (selection.kind === "file") {
       const file = readOwnedFile(located.root, selected);
-      files.push(file);
+      files.set(file.path, file);
       addAsset(assets, located.root, file);
       continue;
     }
@@ -77,38 +117,122 @@ export const snapshotRuntimePackage = (props: {
         throw new Error(
           `Runtime package asset "${observed.relative}" changed after inventory.`,
         );
-      files.push(file);
+      files.set(file.path, file);
       addAsset(assets, located.root, file);
     }
     assertTree(located.root, inventory);
   }
-  for (const file of files) assertPhysicalFile(file);
+  const capturedFiles = [...files.values()].sort((left, right) =>
+    compare(left.path, right.path),
+  );
+  for (const file of capturedFiles) assertPhysicalFile(file);
   for (const tree of trees) assertTree(located.root, tree);
   assertPhysicalDirectory(located.root, "runtime package root");
+  const closure = capturedFiles.map((file) => ({
+    digest: digestAutoMovieBytes(file.bytes),
+    path: path.relative(located.root.real, file.path).replaceAll("\\", "/"),
+  }));
+  const contentFingerprint = digestAutoMovieBytes(
+    Buffer.from(
+      JSON.stringify({
+        package: props.packageName,
+        version: located.version,
+        files: closure,
+      }),
+    ),
+  );
   const fingerprint = digestAutoMovieBytes(
     Buffer.from(
       JSON.stringify({
-        files: files
-          .map((file) => ({
-            identity: file.identity,
-            path: path
-              .relative(located.root.real, file.path)
-              .replaceAll("\\", "/"),
-          }))
-          .sort((x, y) => compare(x.path, y.path)),
+        files: capturedFiles.map((file) => ({
+          identity: file.identity,
+          path: path
+            .relative(located.root.real, file.path)
+            .replaceAll("\\", "/"),
+        })),
         root: located.root.identity,
         trees: trees.map(treeFingerprint).sort(compare),
       }),
     ),
   );
-  return {
+  const output: IRuntimePackageSnapshot = {
     assets: [...assets.values()].sort((x, y) => compare(x.path, y.path)),
+    closure,
+    contentFingerprint,
+    entry: entry.path,
     entryDigest: digestAutoMovieBytes(entry.bytes),
     fingerprint,
     package: props.packageName,
     root: located.root.real,
     version: located.version,
   };
+  observations.set(output, { files: capturedFiles, root: located.root, trees });
+  return output;
+};
+
+/** Revalidate the exact physical package generation captured by a snapshot. */
+export const assertRuntimePackageSnapshotCurrent = (
+  snapshot: IRuntimePackageSnapshot,
+): void => {
+  const observation = observations.get(snapshot);
+  if (observation === undefined)
+    throw new Error("Runtime package snapshot has no resident observation.");
+  for (const file of observation.files) assertPhysicalFile(file);
+  for (const tree of observation.trees) assertTree(observation.root, tree);
+  assertPhysicalDirectory(observation.root, "runtime package root");
+};
+
+/** Bind one Node module cache to the package generation first loaded through it. */
+export const bindRuntimePackageSnapshotGeneration = (
+  snapshot: IRuntimePackageSnapshot,
+): void => {
+  assertRuntimePackageSnapshotCurrent(snapshot);
+  const key = `${snapshot.package}\0${snapshot.root}`;
+  const resident = generationRegistry.get(key);
+  if (resident !== undefined && resident !== snapshot.fingerprint)
+    throw new Error(
+      `Runtime package "${snapshot.package}" changed after its resident module generation was bound. Start a new process with the current installation.`,
+    );
+  generationRegistry.set(key, snapshot.fingerprint);
+};
+
+const deriveModuleClosure = (
+  root: IPhysicalDirectory,
+  entries: readonly string[],
+): IPhysicalFile[] => {
+  const output = new Map<string, IPhysicalFile>();
+  const pending = [...new Set(entries.map(path.resolve))];
+  while (pending.length !== 0) {
+    const target = pending.pop()!;
+    if (output.has(target)) continue;
+    const file = readOwnedFile(root, target);
+    output.set(file.path, file);
+    if (/\.(?:cjs|js|mjs)$/iu.test(file.path) === false) continue;
+    const source = file.bytes.toString("utf8");
+    for (const specifier of moduleSpecifiers(source)) {
+      if (specifier.startsWith(".") === false) continue;
+      const resolved = createRequire(file.path).resolve(specifier);
+      if (inside(root.real, resolved) === false)
+        throw new Error(
+          `Runtime package module "${specifier}" escapes its package root.`,
+        );
+      pending.push(resolved);
+    }
+  }
+  return [...output.values()];
+};
+
+const moduleSpecifiers = (source: string): string[] => {
+  const patterns = [
+    /\b(?:require|import)\s*\(\s*(["'])([^"']+)\1\s*\)/gu,
+    /\bfrom\s*(["'])([^"']+)\1/gu,
+    /\bimport\s*(["'])([^"']+)\1/gu,
+    /\bnew\s+URL\s*\(\s*(["'])([^"']+)\1\s*,\s*import\.meta\.url\s*\)/gu,
+  ];
+  const output = new Set<string>();
+  for (const pattern of patterns)
+    for (const match of source.matchAll(pattern)) output.add(match[2]!);
+  return [...output].sort(compare);
 };
 
 const locatePackage = (

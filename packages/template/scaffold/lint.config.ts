@@ -7,7 +7,7 @@ import type { ITtscLintConfig } from "@ttsc/lint";
  * `draft -> evidence -> review`. The generated project starts deliberately
  * unselected and contains no production evidence inherited from its template.
  *
- * - film: settings -> storylines -> scenarios -> script -> shots -> filmSources
+ * - film: settings -> treatments -> scripts -> screenplays -> shots -> filmSources
  * - brief: settings -> briefs -> shots -> filmSources
  * - library: settings plus any reviewed design/source branches, without shots
  *
@@ -33,9 +33,9 @@ const graph = createAutoMovieEvidenceConfig({
   instances: "disabled",
   motions: "disabled",
   systems: "disabled",
-  storylines: "disabled",
-  scenarios: "disabled",
-  script: "disabled",
+  treatments: "disabled",
+  scripts: "disabled",
+  screenplays: "disabled",
   briefs: "disabled",
   modelSources: "disabled",
   spaceSources: "disabled",

@@ -47,7 +47,10 @@ import {
   publishRenderPlan,
 } from "./renderPlanSnapshot";
 import type { IProductionSoundRuntime } from "./renderSoundRuntime";
-import { snapshotRuntimePackage } from "./runtimePackageSnapshot";
+import {
+  bindRuntimePackageSnapshotGeneration,
+  snapshotRuntimePackage,
+} from "./runtimePackageSnapshot";
 
 interface IStoredRenderPlan {
   compileFingerprint: string;
@@ -655,7 +658,7 @@ export const createProductionRenderPlanningRuntime = (props: {
       height: props.height,
     });
     return {
-      protocolVersion: "automovie.production-render-runtime.v1",
+      protocolVersion: "automovie.production-render-runtime.v2",
       sourceDigest: soundRuntime.sourceDigest(
         props.project,
         props.timeline,
@@ -671,12 +674,14 @@ export const createProductionRenderPlanningRuntime = (props: {
   ): IAutoMovieProductionEncoderIdentity => {
     const snapshot = snapshotRuntimePackage({
       entry: props.h264Entry,
+      moduleClosure: true,
       packageName: "h264-mp4-encoder",
     });
+    bindRuntimePackageSnapshotGeneration(snapshot);
     const encoder = {
       package: snapshot.package,
       version: snapshot.version,
-      entryDigest: snapshot.entryDigest,
+      closureDigest: snapshot.contentFingerprint,
     };
     return {
       ...encoder,

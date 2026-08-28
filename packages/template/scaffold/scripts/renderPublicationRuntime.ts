@@ -42,7 +42,10 @@ import type {
   IProductionSoundBundle,
   IProductionSoundRuntime,
 } from "./renderSoundRuntime";
-import { produceProductionSound as produceSoundBundle } from "./renderSoundRuntime";
+import {
+  produceProductionSound as produceSoundBundle,
+  runWithProductionRuntimeClosure,
+} from "./renderSoundRuntime";
 
 /** Digest every publication input without reading mutable process state. */
 export const productionRenderPublicationFingerprint = (
@@ -364,6 +367,7 @@ export const createProductionRenderFinalizationRuntime = (props: {
       (soundPromise ??= (async () => {
         renderProgress("sound.start");
         const sound = await produceSoundBundle({
+          assertCurrent: soundRuntime.assertCurrent,
           assertRenderClock: assertProductionSoundRenderClock,
           audioSources: soundRuntime.audioSources,
           encoder: encoderRuntime,
@@ -426,7 +430,10 @@ export const createProductionRenderFinalizationRuntime = (props: {
         });
         owned.set(
           "feature.mp4",
-          muxProductionFeatureMp4({ video, audio: sound.audio }),
+          await runWithProductionRuntimeClosure(
+            soundRuntime.assertCurrent,
+            () => muxProductionFeatureMp4({ video, audio: sound.audio }),
+          ),
         );
         renderProgress("video.feature.mux.complete", {
           deliverable: deliverable.id,

@@ -41,7 +41,7 @@ interface ICaptureRuntime {
 }
 
 interface IRuntimeModules {
-  PRODUCTION_DIALOGUE_CACHE_VERSION: 4;
+  PRODUCTION_DIALOGUE_CACHE_VERSION: 5;
   captureExistingDialogueCache(
     base: string,
     target: string,
