@@ -657,26 +657,46 @@ export class AutoMovieProductionRepaintService {
             references: structuredClone(references.values),
             parameters: structuredClone(request.parameters),
           });
-          const outputDigest =
-            generated.bytes.length === 0
-              ? null
-              : digestAutoMovieBytes(generated.bytes);
-          const availableOutput =
-            outputDigest === null
-              ? null
-              : { digest: outputDigest, bytes: generated.bytes.length };
-          const costUnits = generated.costUnits ?? 0;
-          if (inputCurrent() === false)
-            throw new AutoMovieRepaintAttemptError(
-              "input-stale",
-              "Compiler registry or deterministic source pixels changed while repaint was running.",
-              costUnits,
-              availableOutput,
-            );
+          let costUnits = 0;
+          let availableOutput: {
+            digest: AutoMovieContentDigest;
+            bytes: number;
+          } | null = null;
+          let inputStaleError: AutoMovieRepaintAttemptError | undefined;
           try {
+            const reportedCostUnits = generated.costUnits;
+            if (
+              reportedCostUnits !== undefined &&
+              (Number.isFinite(reportedCostUnits) === false ||
+                reportedCostUnits < 0)
+            )
+              throw new Error(
+                "the adapter returned an invalid metered cost disclosure",
+              );
+            costUnits = reportedCostUnits ?? 0;
+            const reportedBytes = generated.bytes;
+            if (reportedBytes instanceof Uint8Array === false)
+              throw new Error("the adapter did not return Uint8Array bytes");
+            const bytes = new Uint8Array(reportedBytes);
+            const outputDigest =
+              bytes.length === 0 ? null : digestAutoMovieBytes(bytes);
+            availableOutput =
+              outputDigest === null
+                ? null
+                : { digest: outputDigest, bytes: bytes.length };
+            if (inputCurrent() === false) {
+              inputStaleError = new AutoMovieRepaintAttemptError(
+                "input-stale",
+                "Compiler registry or deterministic source pixels changed while repaint was running.",
+                costUnits,
+                availableOutput,
+              );
+              throw inputStaleError;
+            }
             if (
               generated.mediaType !== "video/mp4" ||
-              generated.bytes.length === 0
+              bytes.length === 0 ||
+              outputDigest === null
             )
               throw new Error(
                 "the adapter did not return non-empty video/mp4 bytes",
@@ -688,7 +708,7 @@ export class AutoMovieProductionRepaintService {
               throw new Error(
                 "the adapter reported a provider, model, version, or execution boundary different from the reviewed generator adoption",
               );
-            const probe = probeProductionVideoMp4(generated.bytes);
+            const probe = probeProductionVideoMp4(bytes);
             if (
               probe.kind !== "video" ||
               probe.width !== expectedOutput.width ||
@@ -702,24 +722,29 @@ export class AutoMovieProductionRepaintService {
                 `the adapter output does not match the exact ${expectedOutput.width}x${expectedOutput.height}, ${expectedOutput.fps}fps, ${expectedOutput.frameCount}-frame shot contract`,
               );
             assertProductionRenditionClipDelivery({
-              bytes: generated.bytes,
+              bytes,
               shot: requestedShot,
               ...expectedOutput,
             });
             return {
               value: {
-                generated,
+                bytes,
                 adapterIdentity,
                 probe,
-                outputDigest: outputDigest!,
+                outputDigest,
               },
               costUnits,
               availableOutput,
             };
           } catch (error) {
+            if (inputStaleError !== undefined && error === inputStaleError)
+              throw error;
             throw new AutoMovieRepaintAttemptError(
               "invalid-output",
-              error instanceof Error ? error.message : String(error),
+              safeRepaintDiagnosticMessage(
+                error,
+                "Repaint adapter output could not be inspected safely.",
+              ),
               costUnits,
               availableOutput,
             );
@@ -753,9 +778,9 @@ export class AutoMovieProductionRepaintService {
             : "repaint-failed",
         `Repaint request stopped as ${execution.stop}; every terminal attempt was preserved and no candidate was selected.`,
       );
-    const { generated, adapterIdentity, probe, outputDigest } = execution
-      .accepted.value as {
-      generated: Awaited<ReturnType<AutoMovieProductionShotRepaint>>;
+    const { bytes, adapterIdentity, probe, outputDigest } = execution.accepted
+      .value as {
+      bytes: Uint8Array;
       adapterIdentity: string;
       probe: ReturnType<typeof probeProductionVideoMp4>;
       outputDigest: AutoMovieContentDigest;
@@ -796,16 +821,12 @@ export class AutoMovieProductionRepaintService {
       output: {
         path: outputPath,
         digest: outputDigest,
-        bytes: generated.bytes.length,
+        bytes: bytes.length,
         probe,
       },
     };
     try {
-      services.project.commitRepaintRendition(
-        receipt,
-        generated.bytes,
-        inputCurrent,
-      );
+      services.project.commitRepaintRendition(receipt, bytes, inputCurrent);
     } catch (error) {
       if (error instanceof AutoMovieProductionInputRaceError)
         return failure("repaint-input-changed", error.message);
@@ -1122,6 +1143,21 @@ const diagnostic = (
   path: null,
   message,
 });
+
+const safeRepaintDiagnosticMessage = (
+  error: unknown,
+  fallback: string,
+): string => {
+  try {
+    const message: unknown =
+      error instanceof Error ? error.message : String(error);
+    return typeof message === "string" && message.trim().length !== 0
+      ? message.trim()
+      : fallback;
+  } catch {
+    return fallback;
+  }
+};
 
 const normalizeSlash = (value: string): string =>
   value.split(path.sep).join("/");
