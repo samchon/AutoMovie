@@ -36,6 +36,13 @@ interface IGeneratedCameraDepthRuntimeProbe {
   positive: string;
 }
 
+interface IGeneratedRepaintFixture {
+  adapterBytes: Uint8Array;
+  frameBytes: Uint8Array;
+  referencePath: string;
+  sourceManifest: IAutoMovieRenderBundleManifest;
+}
+
 const REPOSITORY_ROOT = path.resolve(__dirname, "../../../..");
 
 const installAuthoredEvidencePopulation = (
@@ -473,7 +480,7 @@ const REPAINT_PROVENANCE = {
 
 const configureGeneratedRepaint = async (
   root: string,
-): Promise<{ adapterBytes: Uint8Array; referencePath: string }> => {
+): Promise<IGeneratedRepaintFixture> => {
   const configPath = path.join(root, "automovie.config.ts");
   const configSource = fs.readFileSync(configPath, "utf8");
   const repaintSlot = "    repaint: null,";
@@ -689,8 +696,55 @@ const configureGeneratedRepaint = async (
       fps: production.frameFormat.fps,
       frameCount,
     }),
+    frameBytes,
     referencePath,
+    sourceManifest,
   };
+};
+
+const bindGeneratedRepaintSourceRuntime = (
+  root: string,
+  fixture: IGeneratedRepaintFixture,
+): void => {
+  const project = AutoMovieProductionProject.open(root, "repaint-runtime-film");
+  const manifests = (directory: string): string[] =>
+    fs.readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
+      const target = path.join(directory, entry.name);
+      return entry.isDirectory()
+        ? manifests(target)
+        : entry.isFile() && entry.name === "manifest.json"
+          ? [target]
+          : [];
+    });
+  const captures = manifests(project.renderRoot())
+    .map((file) => project.verifiedRenderManifest(file))
+    .filter(
+      (manifest): manifest is IAutoMovieRenderBundleManifest =>
+        manifest !== null &&
+        manifest.compileFingerprint ===
+          fixture.sourceManifest.compileFingerprint &&
+        manifest.target.kind === "shot" &&
+        manifest.target.id === "opening" &&
+        manifest.rendererIdentity !== fixture.sourceManifest.rendererIdentity &&
+        manifest.frames.some((frame) => frame.pass === "beauty"),
+    );
+  if (captures.length !== 1)
+    throw new Error(
+      `Generated repaint runtime probe published ${captures.length} current capture manifests instead of one.`,
+    );
+  const capture = captures[0]!;
+  const sourceManifest: IAutoMovieRenderBundleManifest = {
+    ...fixture.sourceManifest,
+    dialogueRuntimeIdentity: capture.dialogueRuntimeIdentity,
+    rendererIdentity: capture.rendererIdentity,
+  };
+  project.commitRenderBundle(
+    productionRenderBundleRelativePath(sourceManifest),
+    new Map(
+      sourceManifest.frames.map((frame) => [frame.path, fixture.frameBytes]),
+    ),
+    sourceManifest,
+  );
 };
 
 const withGeneratedRepaintSelectionReview = (
@@ -742,9 +796,11 @@ const withGeneratedRepaintSelectionReview = (
  *    acquired runtime resources.
  * 5. The actual generated repaint entrypoint refuses invalid operations and a
  *    stale source mutation before any request identity can exist.
- * 6. A default-adapter terminal refusal returns its durable request id but is
- *    not retryable; an explicit transport failure is stored as retryable and
- *    only its request id may resume into a candidate.
+ * 6. A source bundle from another renderer is refused before a request exists;
+ *    after binding the actual capture runtime, a default-adapter terminal
+ *    refusal returns its durable request id but is not retryable. An explicit
+ *    transport failure is stored as retryable and only its request id may
+ *    resume into a candidate.
  * 7. A fresh successful reroll creates a second unselected candidate, selection
  *    activates it, stale config refuses another candidate, and restoration
  *    permits an explicit reversal to the earlier candidate.
@@ -1006,6 +1062,18 @@ export const test_cli_scaffold_repaint_runtime_contract =
       );
       fs.writeFileSync(configuredPath, configuredSource, "utf8");
       fs.writeFileSync(adapterPath, defaultAdapterSource, "utf8");
+      const sourceRuntimeRefusal = runGeneratedFast(
+        fixture.root,
+        "scripts/repaint.ts",
+        ["reroll", "--shot", "opening"],
+      );
+      const sourceRuntimeOutput = JSON.parse(sourceRuntimeRefusal.stdout) as {
+        repainted: boolean;
+        selected: boolean;
+        requestId: string | null;
+        diagnostics: Array<{ code: string; message: string }>;
+      };
+      bindGeneratedRepaintSourceRuntime(fixture.root, repaint);
       const defaultAdapterRefusal = runGeneratedFast(
         fixture.root,
         "scripts/repaint.ts",
@@ -1026,7 +1094,7 @@ export const test_cli_scaffold_repaint_runtime_contract =
       };
       if (defaultAdapterOutput.requestId === null)
         throw new Error(
-          "The terminal default-adapter attempt emitted no resumable request id.",
+          `The terminal default-adapter attempt emitted no resumable request id: status=${String(defaultAdapterRefusal.status)} stdout=${JSON.stringify(defaultAdapterRefusal.stdout)} stderr=${JSON.stringify(defaultAdapterRefusal.stderr)}.`,
         );
       const terminalAttempts = repaintProject.repaintRequestAttempts(
         defaultAdapterOutput.requestId,
@@ -1050,6 +1118,11 @@ export const test_cli_scaffold_repaint_runtime_contract =
             "unique supported retryable failure classes",
           ),
           impossiblePolicyInvoked: fs.existsSync(impossiblePolicyInvocation),
+          sourceRuntimeStatus: sourceRuntimeRefusal.status,
+          sourceRuntimeRepainted: sourceRuntimeOutput.repainted,
+          sourceRuntimeSelected: sourceRuntimeOutput.selected,
+          sourceRuntimeRequestId: sourceRuntimeOutput.requestId,
+          sourceRuntimeCode: sourceRuntimeOutput.diagnostics[0]?.code,
           defaultStatus: defaultAdapterRefusal.status,
           defaultRepainted: defaultAdapterOutput.repainted,
           defaultSelected: defaultAdapterOutput.selected,
@@ -1075,6 +1148,11 @@ export const test_cli_scaffold_repaint_runtime_contract =
           impossiblePolicyStdout: "",
           impossiblePolicyDiagnostic: true,
           impossiblePolicyInvoked: false,
+          sourceRuntimeStatus: 1,
+          sourceRuntimeRepainted: false,
+          sourceRuntimeSelected: false,
+          sourceRuntimeRequestId: null,
+          sourceRuntimeCode: "repaint-source-evidence-missing",
           defaultStatus: 1,
           defaultRepainted: false,
           defaultSelected: false,
