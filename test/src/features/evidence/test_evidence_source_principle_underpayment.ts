@@ -33,6 +33,7 @@ interface IEvidenceClaim {
 interface IEvidenceState {
   location: string;
   kind: null;
+  populationScope: { mode: "complete-production" };
   settings: Stage;
   research: Stage;
   maps: Stage;
@@ -82,16 +83,16 @@ const SOURCE = "src/production.ts";
 const CLAIM_NAME =
   "production source owners answer source-unit principle checklists, serialize settings, and cover production-source obligations";
 const CONFORMANCE =
-  "principles/source-units.md#source-evidence-content-conformance";
+  "principles/core/source-units.md#source-evidence-content-conformance";
 const PRINCIPLES = [
-  "principles/source-units.md#source-scope-preservation",
-  "principles/source-units.md#source-substantive-completion",
+  "principles/core/source-units.md#source-scope-preservation",
+  "principles/core/source-units.md#source-substantive-completion",
   CONFORMANCE,
 ] as const;
 const OBLIGATIONS = [
-  "obligations/production-sources.md#settings-only-serialization",
-  "obligations/production-sources.md#delivery-identity",
-  "obligations/production-sources.md#shared-visual-grammar",
+  "obligations/delivery/production-sources.md#settings-only-serialization",
+  "obligations/delivery/production-sources.md#delivery-identity",
+  "obligations/delivery/production-sources.md#shared-visual-grammar",
 ] as const;
 const UPSTREAM =
   "upstream/delivery/production-sources.md#settings-revision-from-production-source-work";
@@ -148,6 +149,7 @@ const preserveFixtureCleanup = (
 const disabledState = (location: string): IEvidenceState => ({
   location,
   kind: null,
+  populationScope: { mode: "complete-production" },
   settings: "disabled",
   research: "disabled",
   maps: "disabled",
@@ -209,8 +211,8 @@ const assertProductionSourceClaim = (
   assert.deepEqual(
     references.map(fileOf).sort((left, right) => left.localeCompare(right)),
     [
-      "obligations/production-sources.md",
-      "principles/source-units.md",
+      "obligations/delivery/production-sources.md",
+      "principles/core/source-units.md",
       "upstream/delivery/production-sources.md",
     ],
   );
@@ -230,7 +232,7 @@ const assertProductionSourceClaim = (
     assert.equal(
       reference.checklist,
       [
-        "principles/source-units.md",
+        "principles/core/source-units.md",
         "upstream/delivery/production-sources.md",
       ].includes(fileOf(reference))
         ? true
