@@ -623,4 +623,5 @@ const inside = (root: string, candidate: string): boolean => {
   );
 };
 
-const compare = (x: string, y: string): number => (x < y ? -1 : 1);
+const compare = (x: string, y: string): number =>
+  Buffer.compare(Buffer.from(x, "utf8"), Buffer.from(y, "utf8"));

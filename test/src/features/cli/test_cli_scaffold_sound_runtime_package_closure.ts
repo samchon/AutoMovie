@@ -180,6 +180,37 @@ const withPhysicalDirectoryStatus = <Output>(props: {
   }
 };
 
+const withChangedSecondDescriptorRead = <Output>(props: {
+  operation: () => Output;
+  target: string;
+}): Output => {
+  const originalOpen = fs.openSync;
+  const originalRead = fs.readFileSync;
+  const target = path.resolve(props.target);
+  const descriptors = new Set<number>();
+  let reads = 0;
+  const patchedOpen = ((...args: unknown[]) => {
+    const descriptor = Reflect.apply(originalOpen, fs, args) as number;
+    if (path.resolve(String(args[0])) === target) descriptors.add(descriptor);
+    return descriptor;
+  }) as typeof fs.openSync;
+  const patchedRead = ((...args: unknown[]) => {
+    const bytes = Reflect.apply(originalRead, fs, args) as Buffer;
+    if (typeof args[0] !== "number" || descriptors.has(args[0]) === false)
+      return bytes;
+    reads++;
+    return reads === 2 ? Buffer.concat([bytes, Buffer.from("changed")]) : bytes;
+  }) as typeof fs.readFileSync;
+  Object.defineProperty(fs, "openSync", { value: patchedOpen });
+  Object.defineProperty(fs, "readFileSync", { value: patchedRead });
+  try {
+    return props.operation();
+  } finally {
+    Object.defineProperty(fs, "openSync", { value: originalOpen });
+    Object.defineProperty(fs, "readFileSync", { value: originalRead });
+  }
+};
+
 const writePackage = (props: {
   exports?: unknown;
   files: Readonly<Record<string, string | Uint8Array>>;
@@ -769,6 +800,26 @@ export const test_cli_scaffold_sound_runtime_package_closure = (): void => {
         ],
       ]),
       { "tree member after inventory": true, "file while read": true },
+    );
+    TestValidator.equals(
+      "two observations of one selected asset must agree",
+      throwsError(
+        () =>
+          withChangedSecondDescriptorRead({
+            target: path.join(raceRoot, "direct.bin"),
+            operation: () =>
+              runtime.snapshotRuntimePackage({
+                assets: [
+                  { kind: "file", relative: "direct.bin" },
+                  { kind: "file", relative: "direct.bin" },
+                ],
+                entry: path.join(raceRoot, "index.js"),
+                packageName: "race-package",
+              }),
+          }),
+        "is inconsistent",
+      ),
+      true,
     );
 
     const exactTreeRoot = writePackage({
