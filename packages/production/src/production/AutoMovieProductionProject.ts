@@ -2172,6 +2172,10 @@ export class AutoMovieProductionProject {
     const previousIdentity = activeBytes?.toString() ?? null;
     const nextIdentity = serializeJson(pointer);
     const candidateIdentity = canonicalizeAutoMovieJson(receipt);
+    const previousCandidateIdentity =
+      previousCandidate === undefined
+        ? null
+        : canonicalizeAutoMovieJson(previousCandidate);
     this.commitFiles(
       [
         {
@@ -2191,12 +2195,24 @@ export class AutoMovieProductionProject {
         const currentCandidate = this.verifiedRepaintCandidates([
           props.shot,
         ]).find((candidate) => candidate.attemptId === props.attemptId);
+        const activeIdentity =
+          this.readTrackedStateFile(activePath)?.toString() ?? null;
+        const currentActive = this.verifiedRepaintRenditions([props.shot])[0];
+        const activeLineageCurrent =
+          activeIdentity === null
+            ? previousIdentity === null && currentActive === undefined
+            : activeIdentity === previousIdentity
+              ? currentActive !== undefined &&
+                previousCandidateIdentity !== null &&
+                canonicalizeAutoMovieJson(currentActive) ===
+                  previousCandidateIdentity
+              : activeIdentity === nextIdentity &&
+                currentActive !== undefined &&
+                canonicalizeAutoMovieJson(currentActive) === candidateIdentity;
         return (
           currentCandidate !== undefined &&
           canonicalizeAutoMovieJson(currentCandidate) === candidateIdentity &&
-          [previousIdentity, nextIdentity].includes(
-            this.readTrackedStateFile(activePath)?.toString() ?? null,
-          )
+          activeLineageCurrent
         );
       },
     );
@@ -2269,137 +2285,120 @@ export class AutoMovieProductionProject {
           );
         if (pointerValidation.success === false) continue;
         const pointer = pointerValidation.data;
-        const selectionBytes = this.readTrackedStateFile(pointer.selection);
-        if (selectionBytes === null) continue;
-        const selectionValidation =
-          typia.validateEquals<IAutoMovieRepaintSelectionRecord>(
-            JSON.parse(Buffer.from(selectionBytes).toString("utf8")),
-          );
-        if (selectionValidation.success === false) continue;
-        const selection = selectionValidation.data;
-        const bytes = this.readTrackedStateFile(pointer.receipt);
-        if (bytes === null) continue;
-        const validation = typia.validateEquals<IAutoMovieRepaintReceipt>(
-          JSON.parse(Buffer.from(bytes).toString("utf8")),
-        );
-        if (validation.success === false || validation.data.shot !== shot)
-          continue;
-        let previousCandidate: IAutoMovieRepaintReceipt | null = null;
-        let previousSelectedAt: Date | null = null;
-        if (selection.previousSelection !== null) {
-          if (selection.previousSelection === pointer.selection) continue;
-          const previousSelectionBytes = this.readTrackedStateFile(
-            selection.previousSelection,
-          );
-          if (previousSelectionBytes === null) continue;
-          const previousSelectionValidation =
-            typia.validateEquals<IAutoMovieRepaintSelectionRecord>(
-              JSON.parse(Buffer.from(previousSelectionBytes).toString("utf8")),
-            );
-          if (previousSelectionValidation.success === false) continue;
-          const previousSelection = previousSelectionValidation.data;
-          const previousReceiptBytes = this.readTrackedStateFile(
-            previousSelection.candidateReceipt,
-          );
-          if (previousReceiptBytes === null) continue;
-          const previousReceiptValidation =
-            typia.validateEquals<IAutoMovieRepaintReceipt>(
-              JSON.parse(Buffer.from(previousReceiptBytes).toString("utf8")),
-            );
-          if (previousReceiptValidation.success === false) continue;
-          previousCandidate = previousReceiptValidation.data;
-          previousSelectedAt = new Date(previousSelection.selectedAt);
-          const previousCompletedAt = new Date(
-            previousCandidate.completedAt ?? Number.NaN,
-          );
-          if (
-            previousSelection.productionId !== this.productionId ||
-            previousSelection.shot !== shot ||
-            previousCandidate.shot !== shot ||
-            selection.previousSelection !==
-              repaintSelectionPath(shot, previousSelection.selectionId) ||
-            previousSelection.requestId !== previousCandidate.requestId ||
-            previousSelection.attemptId !== previousCandidate.attemptId ||
-            previousSelection.candidateReceipt !==
-              productionRepaintReceiptPath(previousCandidate.output.path) ||
-            previousSelection.output !== previousCandidate.output.path ||
-            Number.isNaN(previousSelectedAt.getTime()) ||
-            previousSelectedAt.toISOString() !== previousSelection.selectedAt ||
-            Number.isNaN(previousCompletedAt.getTime()) ||
-            previousSelectedAt.getTime() < previousCompletedAt.getTime()
-          )
-            continue;
-          const previousOutput = this.readRenderFile(
-            previousCandidate.output.path,
-          );
-          this.assertCurrentRepaintReceipt(previousCandidate, previousOutput);
-        }
-        const selectedAt = new Date(selection.selectedAt);
-        const candidateCompletedAt = new Date(
-          validation.data.completedAt ?? Number.NaN,
-        );
-        if (
-          Number.isNaN(selectedAt.getTime()) ||
-          selectedAt.toISOString() !== selection.selectedAt ||
-          Number.isNaN(candidateCompletedAt.getTime()) ||
-          selectedAt.getTime() < candidateCompletedAt.getTime() ||
-          (previousSelectedAt !== null &&
-            selectedAt.getTime() < previousSelectedAt.getTime())
-        )
-          continue;
-        assertAutoMovieExternalGeneratorTermsAt({
-          termsCheckedAt: validation.data.generatorProvenance.termsCheckedAt,
-          occurredAt: selection.selectedAt,
-          label: "stored repaint selection generator provenance",
+        const receipt = this.verifiedRepaintSelectionLineage({
+          shot,
+          selectionPath: pointer.selection,
         });
         if (
+          receipt === null ||
           canonicalizeAutoMovieJson(pointer) !==
             canonicalizeAutoMovieJson({
               version: 2,
               shot,
               selection: pointer.selection,
-              receipt: productionRepaintReceiptPath(
-                validation.data.output.path,
-              ),
-              output: validation.data.output.path,
-            } satisfies IAutoMovieActiveRepaintReceipt) ||
-          selection.productionId !== this.productionId ||
-          selection.shot !== shot ||
-          pointer.selection !==
-            repaintSelectionPath(shot, selection.selectionId) ||
-          selection.requestId !== validation.data.requestId ||
-          selection.attemptId !== validation.data.attemptId ||
-          selection.candidateReceipt !== pointer.receipt ||
-          selection.output !== pointer.output ||
-          selection.reason.trim().length === 0 ||
-          selection.reason !== selection.reason.trim() ||
-          selection.structuralReview.trim().length === 0 ||
-          selection.structuralReview !== selection.structuralReview.trim() ||
-          (selection.kind === "reversal" &&
-            (previousCandidate === null ||
-              candidateCompletedAt.getTime() >=
-                new Date(previousCandidate.completedAt!).getTime())) ||
-          (validation.data.evidence?.continuity === null
-            ? selection.continuityReview !== null
-            : selection.continuityReview === null ||
-              selection.continuityReview.baseline !==
-                validation.data.evidence?.continuity ||
-              selection.continuityReview.playbackEvidence.trim().length === 0 ||
-              selection.continuityReview.playbackEvidence !==
-                selection.continuityReview.playbackEvidence.trim() ||
-              (selection.continuityReview.mixedDeliveryPolicy !== null &&
-                (selection.continuityReview.mixedDeliveryPolicy.trim()
-                  .length === 0 ||
-                  selection.continuityReview.mixedDeliveryPolicy !==
-                    selection.continuityReview.mixedDeliveryPolicy.trim())))
+              receipt: productionRepaintReceiptPath(receipt.output.path),
+              output: receipt.output.path,
+            } satisfies IAutoMovieActiveRepaintReceipt)
         )
           continue;
-        const output = this.readRenderFile(validation.data.output.path);
-        this.assertCurrentRepaintReceipt(validation.data, output);
-        receipts.push(validation.data);
+        receipts.push(receipt);
       } catch {}
     }
     return receipts;
+  }
+
+  private verifiedRepaintSelectionLineage(props: {
+    shot: string;
+    selectionPath: string;
+  }): IAutoMovieRepaintReceipt | null {
+    const visited = new Set<string>();
+    let selectionPath: string | null = props.selectionPath;
+    let child:
+      | {
+          selection: IAutoMovieRepaintSelectionRecord;
+          selectedAt: number;
+          completedAt: number;
+        }
+      | undefined;
+    let selected: IAutoMovieRepaintReceipt | null = null;
+    while (selectionPath !== null) {
+      if (visited.has(selectionPath)) return null;
+      visited.add(selectionPath);
+      const selectionBytes = this.readTrackedStateFile(selectionPath);
+      if (selectionBytes === null) return null;
+      const selectionValidation =
+        typia.validateEquals<IAutoMovieRepaintSelectionRecord>(
+          JSON.parse(Buffer.from(selectionBytes).toString("utf8")),
+        );
+      if (selectionValidation.success === false) return null;
+      const selection = selectionValidation.data;
+      const receiptBytes = this.readTrackedStateFile(
+        selection.candidateReceipt,
+      );
+      if (receiptBytes === null) return null;
+      const receiptValidation = typia.validateEquals<IAutoMovieRepaintReceipt>(
+        JSON.parse(Buffer.from(receiptBytes).toString("utf8")),
+      );
+      if (receiptValidation.success === false) return null;
+      const receipt = receiptValidation.data;
+      const selectedAt = new Date(selection.selectedAt);
+      const completedAt = new Date(receipt.completedAt ?? Number.NaN);
+      if (
+        selection.productionId !== this.productionId ||
+        selection.shot !== props.shot ||
+        receipt.shot !== props.shot ||
+        selectionPath !==
+          repaintSelectionPath(props.shot, selection.selectionId) ||
+        selection.requestId !== receipt.requestId ||
+        selection.attemptId !== receipt.attemptId ||
+        selection.candidateReceipt !==
+          productionRepaintReceiptPath(receipt.output.path) ||
+        selection.output !== receipt.output.path ||
+        Number.isNaN(selectedAt.getTime()) ||
+        selectedAt.toISOString() !== selection.selectedAt ||
+        Number.isNaN(completedAt.getTime()) ||
+        selectedAt.getTime() < completedAt.getTime() ||
+        selection.reason.trim().length === 0 ||
+        selection.reason !== selection.reason.trim() ||
+        selection.structuralReview.trim().length === 0 ||
+        selection.structuralReview !== selection.structuralReview.trim() ||
+        (receipt.evidence?.continuity === null
+          ? selection.continuityReview !== null
+          : selection.continuityReview === null ||
+            selection.continuityReview.baseline !==
+              receipt.evidence?.continuity ||
+            selection.continuityReview.playbackEvidence.trim().length === 0 ||
+            selection.continuityReview.playbackEvidence !==
+              selection.continuityReview.playbackEvidence.trim() ||
+            (selection.continuityReview.mixedDeliveryPolicy !== null &&
+              (selection.continuityReview.mixedDeliveryPolicy.trim().length ===
+                0 ||
+                selection.continuityReview.mixedDeliveryPolicy !==
+                  selection.continuityReview.mixedDeliveryPolicy.trim()))) ||
+        (child !== undefined &&
+          (child.selectedAt < selectedAt.getTime() ||
+            (child.selection.kind === "reversal"
+              ? child.completedAt >= completedAt.getTime()
+              : child.completedAt <= completedAt.getTime()))) ||
+        (selection.previousSelection === null && selection.kind === "reversal")
+      )
+        return null;
+      assertAutoMovieExternalGeneratorTermsAt({
+        termsCheckedAt: receipt.generatorProvenance.termsCheckedAt,
+        occurredAt: selection.selectedAt,
+        label: "stored repaint selection generator provenance",
+      });
+      const output = this.readRenderFile(receipt.output.path);
+      this.assertCurrentRepaintReceipt(receipt, output);
+      selected ??= receipt;
+      child = {
+        selection,
+        selectedAt: selectedAt.getTime(),
+        completedAt: completedAt.getTime(),
+      };
+      selectionPath = selection.previousSelection;
+    }
+    return selected;
   }
 
   /** Revalidate one immutable terminal repaint attempt record. */
