@@ -17,7 +17,10 @@ export const createProductionRepaintCancellationRuntime = (host: {
     attach: () => {
       for (const entry of listeners) host.once(entry.signal, entry.listener);
     },
-    closeCapture: async (failure, close) => {
+    closeCapture: async (
+      failure: unknown,
+      close: (failure: unknown) => Promise<void>,
+    ): Promise<void> => {
       for (const entry of listeners)
         host.removeListener(entry.signal, entry.listener);
       await close(failure);
