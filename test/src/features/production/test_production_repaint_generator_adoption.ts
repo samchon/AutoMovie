@@ -86,9 +86,42 @@ const codeOf = (result: IAutoMovieRepaintShot): string | undefined =>
 
 const nonError = (message: string): Error => message as unknown as Error;
 
+interface IRepaintAdoptionFailure {
+  error: unknown;
+}
+
+class RepaintAdoptionCleanupError extends AggregateError {}
+
+const preserveRepaintAdoptionCleanup = (
+  failure: IRepaintAdoptionFailure | undefined,
+  cleanups: ReadonlyArray<() => void>,
+  resource: string,
+): void => {
+  const cleanupFailures: unknown[] = [];
+  for (const cleanup of cleanups)
+    try {
+      cleanup();
+    } catch (error) {
+      cleanupFailures.push(error);
+    }
+  if (cleanupFailures.length === 0) return;
+  if (failure === undefined) {
+    if (cleanupFailures.length === 1) throw cleanupFailures[0];
+    throw new RepaintAdoptionCleanupError(
+      cleanupFailures,
+      `${resource} cleanup failed.`,
+    );
+  }
+  throw new RepaintAdoptionCleanupError(
+    [failure.error, ...cleanupFailures],
+    `${resource} cleanup failed after the behavioral assertion failed.`,
+  );
+};
+
 const executableServices = (props: {
   root: string;
   commit: (receipt: IAutoMovieRepaintReceipt) => void;
+  referenceBytes?: (referencePath: string) => Buffer;
 }): IAutoMovieProductionServices => {
   const compileFingerprint = digestAutoMovieBytes(
     Buffer.from("repaint-compile", "utf8"),
@@ -100,7 +133,8 @@ const executableServices = (props: {
     [...new Set(input.references.map((reference) => reference.path))].map(
       (referencePath) => [
         referencePath,
-        Buffer.from(`reviewed-reference:${referencePath}`, "utf8"),
+        props.referenceBytes?.(referencePath) ??
+          Buffer.from(`reviewed-reference:${referencePath}`, "utf8"),
       ],
     ),
   );
@@ -221,12 +255,19 @@ const scenarioServices = (
  *
  * Scenarios:
  *
- * 1. Missing either half refuses before any provider call.
- * 2. Malformed or credential-bearing adoption refuses before provider call.
- * 3. A valid adoption crosses this gate and reaches the next source preflight,
- *    proving validation is executable rather than receipt-only metadata.
- * 4. The adapter's actual identity must match the selected runtime; a matching
- *    execution commits receipt v3 with reviewed provenance and fixed authority.
+ * 1. Missing, malformed, or credential-bearing adoption refuses before any
+ *    provider call, while the valid twin reaches source preflight.
+ * 2. Request shape and production namespace refusals precede execution.
+ * 3. Registry, target, source-bundle, and every role-specific reference
+ *    preflight reject missing, stale, linked, duplicated, or collapsed inputs.
+ * 4. Provider throws, invalid output media, runtime mismatch, and commit races
+ *    return stable diagnostics without publishing a receipt.
+ * 5. Source candidate ordering is deterministic and all post-provider input
+ *    changes are refused against a fresh snapshot.
+ * 6. A matching execution commits receipt v3 with reviewed provenance,
+ *    deterministic structural authority, and exact resident identities.
+ * 7. Caller/provider mutation cannot change the immutable request snapshot
+ *    shared by execution and receipt publication.
  */
 export const test_production_repaint_generator_adoption =
   async (): Promise<void> => {
@@ -407,6 +448,8 @@ export const test_production_repaint_generator_adoption =
     const root = fs.mkdtempSync(
       path.join(os.tmpdir(), "automovie-repaint-adoption-"),
     );
+    const externalRoots: string[] = [];
+    let rootFailure: IRepaintAdoptionFailure | undefined;
     try {
       const generatedBytes = await productionH264Mp4({
         width: 16,
@@ -431,6 +474,12 @@ export const test_production_repaint_generator_adoption =
       const runnable = executableServices({
         root,
         commit: (receipt) => committed.push(receipt),
+      });
+      const digestAliasRoot = path.join(root, "digest-aliases");
+      const digestAliasServices = executableServices({
+        root: digestAliasRoot,
+        commit: () => undefined,
+        referenceBytes: () => Buffer.from("one-image-under-many-paths", "utf8"),
       });
       const selected = adoption();
       const validManifest = runnable.project.verifiedRenderManifest(
@@ -671,6 +720,7 @@ export const test_production_repaint_generator_adoption =
       const linkedRoot = fs.mkdtempSync(
         path.join(os.tmpdir(), "automovie-repaint-linked-render-"),
       );
+      externalRoots.push(linkedRoot);
       fs.symlinkSync(
         path.join(root, "bundle"),
         path.join(linkedRoot, "linked-bundle"),
@@ -769,8 +819,8 @@ export const test_production_repaint_generator_adoption =
             })),
           },
         }),
+        repaint(digestAliasServices),
       ]);
-      fs.rmSync(linkedRoot, { force: true, recursive: true });
       TestValidator.equals(
         "registry, target, source, and reference preflights refuse specifically",
         preAdapterFailures.map(codeOf),
@@ -789,6 +839,7 @@ export const test_production_repaint_generator_adoption =
           "repaint-reference-manifest-missing",
           "repaint-reference-manifest-invalid",
           "repaint-reference-manifest-invalid",
+          "repaint-reference-invalid",
           "repaint-reference-invalid",
           "repaint-reference-invalid",
           "repaint-reference-invalid",
@@ -987,6 +1038,7 @@ export const test_production_repaint_generator_adoption =
           digest: digestAutoMovieBytes(Buffer.from(`normal-${index}`)),
         })),
       );
+      let bundleFailure: IRepaintAdoptionFailure | undefined;
       try {
         const sortedSource = await repaint(
           scenarioServices(runnable, {
@@ -1004,9 +1056,18 @@ export const test_production_repaint_generator_adoption =
           sortedSource.repainted,
           true,
         );
+      } catch (error) {
+        bundleFailure = { error };
+        throw error;
       } finally {
-        fs.rmSync(equalBundle, { force: true, recursive: true });
-        fs.rmSync(richBundle, { force: true, recursive: true });
+        preserveRepaintAdoptionCleanup(
+          bundleFailure,
+          [
+            () => fs.rmSync(equalBundle, { force: true, recursive: true }),
+            () => fs.rmSync(richBundle, { force: true, recursive: true }),
+          ],
+          "Source-selection bundle roots",
+        );
       }
       const mismatch = await new AutoMovieProductionRepaintService(
         actualAdapter({
@@ -1236,6 +1297,35 @@ export const test_production_repaint_generator_adoption =
         "project revalidation rejects schema, provenance, prompt, and control drift",
         invalidProjectReceipts.every(projectRefuses),
       );
+      const aliasedReferenceDigest = digestAutoMovieBytes(
+        Buffer.from("one-image-under-many-paths", "utf8"),
+      );
+      TestValidator.predicate(
+        "service and stored-receipt validation identify one image by digest across aliased paths",
+        (() => {
+          try {
+            AutoMovieProductionProject.prototype.commitRepaintRendition.call(
+              digestAliasServices.project,
+              {
+                ...accepted.receipt,
+                references: input.references.map((reference) => ({
+                  ...reference,
+                  digest: aliasedReferenceDigest,
+                })),
+              },
+              generatedBytes,
+            );
+            return false;
+          } catch (error) {
+            return (
+              error instanceof Error &&
+              error.message.includes(
+                "One repaint reference image cannot stand as canonical guidance for every role.",
+              )
+            );
+          }
+        })(),
+      );
 
       const snapshotCommits: IAutoMovieRepaintReceipt[] = [];
       const snapshotServices = executableServices({
@@ -1284,7 +1374,20 @@ export const test_production_repaint_generator_adoption =
           commits: 1,
         },
       );
+    } catch (error) {
+      rootFailure = { error };
+      throw error;
     } finally {
-      fs.rmSync(root, { force: true, recursive: true });
+      preserveRepaintAdoptionCleanup(
+        rootFailure,
+        [
+          ...externalRoots.map(
+            (external) => () =>
+              fs.rmSync(external, { force: true, recursive: true }),
+          ),
+          () => fs.rmSync(root, { force: true, recursive: true }),
+        ],
+        "Repaint-adoption roots",
+      );
     }
   };
