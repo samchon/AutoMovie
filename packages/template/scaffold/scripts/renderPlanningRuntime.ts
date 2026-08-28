@@ -494,11 +494,26 @@ export const createProductionRenderPlanningRuntime = (props: {
       authoringEvidence: props.authoringEvidence,
     });
 
+  const observedPlanGenerations = new WeakMap<
+    IAutoMovieProductionRenderJobPlan,
+    string
+  >();
+
   const readPlan = (): IAutoMovieProductionRenderJobPlan => {
     const captured = captureExistingRenderPlan(stateRoot, planPath);
     if (captured === null)
       throw new Error("No render plan exists. Run automovie render plan.");
+    observedPlanGenerations.set(captured.plan, captured.generation);
     return captured.plan;
+  };
+
+  const assertPlanCurrent = (plan: IAutoMovieProductionRenderJobPlan): void => {
+    const generation = observedPlanGenerations.get(plan);
+    const current = captureExistingRenderPlan(stateRoot, planPath);
+    if (generation === undefined || current?.generation !== generation)
+      throw new Error(
+        "Stored render plan generation changed during read-only inspection. Retry automovie render status or verify.",
+      );
   };
 
   const currentStoredPlan =
@@ -726,6 +741,7 @@ export const createProductionRenderPlanningRuntime = (props: {
     /** Observe existing plan/cache/runtime evidence without materialization. */
     reportStatus: () =>
       reportProductionRenderStatus({
+        assertPlanCurrent,
         inspectInputs: inspectCurrentRenderPlanInputs,
         output,
         readPlan,
@@ -740,6 +756,7 @@ export const createProductionRenderPlanningRuntime = (props: {
     /** Refuse incomplete or unproved evidence without materialization. */
     verify: () =>
       verifyCurrentProductionRender({
+        assertPlanCurrent,
         inspectInputs: inspectCurrentRenderPlanInputs,
         output,
         readPlan,

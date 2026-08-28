@@ -9,7 +9,7 @@ interface IRenderStatusRow {
 
 /** One descriptor or temporary inspection resource that must always close. */
 export interface IProductionRenderReadOnlyResource {
-  cleanup: () => unknown | Promise<unknown>;
+  cleanup: () => unknown;
   resource: string;
 }
 
@@ -18,13 +18,13 @@ export type ProductionRenderReadOnlyInputInspection<Inputs> =
   | {
       status: "current";
       inputs: Inputs;
-      assertCurrent: () => void | Promise<void>;
+      assertCurrent: () => unknown;
       resources: readonly IProductionRenderReadOnlyResource[];
     }
   | {
       status: "not-ready" | "not-run" | "stale";
       correction: string;
-      assertCurrent: () => void | Promise<void>;
+      assertCurrent: () => unknown;
       resources: readonly IProductionRenderReadOnlyResource[];
     };
 
@@ -38,6 +38,7 @@ export interface IProductionRenderReadOnlyRuntime<
   ) =>
     | ProductionRenderReadOnlyInputInspection<Inputs>
     | Promise<ProductionRenderReadOnlyInputInspection<Inputs>>;
+  assertPlanCurrent: (plan: Plan) => unknown;
   output: (value: unknown) => void;
   readPlan: () => Plan;
   renderStatus: (
@@ -59,7 +60,7 @@ export type ProductionRenderReadOnlyPlanInspection<Plan, Inputs> =
       status: "current";
       plan: Plan;
       inputs: Inputs;
-      assertCurrent: () => void | Promise<void>;
+      assertCurrent: () => unknown;
       resources: readonly IProductionRenderReadOnlyResource[];
     }
   | {
@@ -67,7 +68,7 @@ export type ProductionRenderReadOnlyPlanInspection<Plan, Inputs> =
       plan: Plan;
       correction: string;
       runtimeComparison: "not-ready" | "not-run" | "stale";
-      assertCurrent: () => void | Promise<void>;
+      assertCurrent: () => unknown;
       resources: readonly IProductionRenderReadOnlyResource[];
     };
 
@@ -128,30 +129,43 @@ export const inspectCurrentProductionRender = async <
   runtime: IProductionRenderReadOnlyRuntime<Plan, Inputs>,
 ): Promise<ProductionRenderReadOnlyPlanInspection<Plan, Inputs>> => {
   const plan = runtime.readPlan();
-  if (runtime.sourceFingerprint() !== plan.compileFingerprint)
+  const assertPlanCurrent = (): unknown => runtime.assertPlanCurrent(plan);
+  await assertPlanCurrent();
+  const sourceFingerprint = runtime.sourceFingerprint();
+  await assertPlanCurrent();
+  if (sourceFingerprint !== plan.compileFingerprint)
     return {
       status: "stale",
       plan,
-      assertCurrent: () => undefined,
+      assertCurrent: assertPlanCurrent,
       resources: [],
       runtimeComparison: "not-run",
       correction:
         "Source/design input changed. Run automovie render plan, then rerender only the new chunk identities.",
     };
+  await assertPlanCurrent();
   const inspected = await runtime.inspectInputs(plan);
-  if (inspected.status !== "current") {
+  const assertCurrent = async (): Promise<void> => {
+    await assertPlanCurrent();
     await inspected.assertCurrent();
+  };
+  try {
+    await assertCurrent();
+  } catch (error) {
+    return settleProductionRenderReadOnly(() => {
+      throw error;
+    }, inspected.resources);
+  }
+  if (inspected.status !== "current")
     return {
       status: "stale",
       plan,
       correction: inspected.correction,
       runtimeComparison: inspected.status,
-      assertCurrent: inspected.assertCurrent,
+      assertCurrent,
       resources: inspected.resources,
     };
-  }
   try {
-    await inspected.assertCurrent();
     if (
       runtime.runtimeIdentitiesEqual(
         inspected.inputs.runtimeIdentity,
@@ -162,7 +176,7 @@ export const inspectCurrentProductionRender = async <
         () => ({
           status: "stale" as const,
           plan,
-          assertCurrent: () => undefined,
+          assertCurrent: assertPlanCurrent,
           resources: [],
           runtimeComparison: "stale" as const,
           correction:
@@ -176,13 +190,13 @@ export const inspectCurrentProductionRender = async <
     } catch {
       invalid = true;
     }
-    await inspected.assertCurrent();
+    await assertCurrent();
     if (invalid)
       return settleProductionRenderReadOnly(
         () => ({
           status: "stale" as const,
           plan,
-          assertCurrent: () => undefined,
+          assertCurrent: assertPlanCurrent,
           resources: [],
           runtimeComparison: "stale" as const,
           correction:
@@ -199,7 +213,7 @@ export const inspectCurrentProductionRender = async <
     status: "current",
     plan,
     inputs: inspected.inputs,
-    assertCurrent: inspected.assertCurrent,
+    assertCurrent,
     resources: inspected.resources,
   };
 };
@@ -207,7 +221,7 @@ export const inspectCurrentProductionRender = async <
 /** Finish a read and its generation assertion without hiding either failure. */
 const readWhileCurrent = async <Output>(
   read: () => Output | Promise<Output>,
-  assertCurrent: () => void | Promise<void>,
+  assertCurrent: () => unknown,
 ): Promise<Output> => {
   await assertCurrent();
   let result: { value: Output } | undefined;

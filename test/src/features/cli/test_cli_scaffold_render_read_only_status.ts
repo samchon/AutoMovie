@@ -50,6 +50,7 @@ interface IReadOnlyRuntime {
 }
 
 interface Runtime {
+  assertPlanCurrent(plan: IPlan): unknown;
   inspectInputs(plan: IPlan): Inspection | Promise<Inspection>;
   output(value: unknown): void;
   readPlan(): IPlan;
@@ -136,14 +137,20 @@ const message = (error: unknown): string =>
  * 2. Missing read-only runtime evidence makes status name the one materializing
  *    correction without throwing or changing process exit state.
  * 3. Verify refuses the same missing evidence with that exact correction.
- * 4. Runtime drift and a plan inconsistent with current non-runtime inputs are
+ * 4. Unobserved graphics identity remains explicitly `not-run` and is never
+ *    reconstructed from a stored full identity.
+ * 5. Runtime drift and a plan inconsistent with current non-runtime inputs are
  *    distinct stale results, and neither reaches chunk inspection.
- * 5. Complete sealed evidence reports current chunks and verify publishes one
+ * 6. Input-generation races both before and after plan validation close their
+ *    resident resources and publish nothing.
+ * 7. Complete sealed evidence reports current chunks and verify publishes one
  *    success result without calling fetch or any materializing trap.
- * 6. A current plan with one incomplete chunk is refused only by verify.
- * 7. A runtime generation that changes during chunk inspection publishes no
- *    current result and retains primary-first cleanup aggregation unchanged.
- * 8. The generated consumer's module bytes equal the scaffold source exactly.
+ * 8. A current plan with one incomplete chunk is refused only by verify.
+ * 9. A foreign plan successor or runtime generation arriving during chunk
+ *    inspection publishes no current result.
+ * 10. Primary, generation, and cleanup failures retain primary-first identity,
+ *    cause, and ordering; cleanup-only failures remain exact.
+ * 11. The generated consumer's module bytes equal the scaffold source exactly.
  */
 export const test_cli_scaffold_render_read_only_status =
   async (): Promise<void> => {
@@ -202,21 +209,35 @@ export const test_cli_scaffold_render_read_only_status =
       let inspectCalls = 0;
       let statusCalls = 0;
       let verifyCalls = 0;
+      let planGeneration = "plan-a";
+      let observedPlanGeneration = planGeneration;
+      let replacePlanDuringStatus = false;
+      const foreignPlanSuccessor = new Error(
+        "stored render plan acquired a foreign successor",
+      );
       const outputs: unknown[] = [];
       globalThis.fetch = (() => {
         ++fetchCalls;
         throw new Error("Read-only render inspection must not fetch.");
       }) as typeof fetch;
       const runtime: Runtime = {
+        assertPlanCurrent: () => {
+          if (planGeneration !== observedPlanGeneration)
+            throw foreignPlanSuccessor;
+        },
         inspectInputs: () => {
           ++inspectCalls;
           return inspection;
         },
         output: (value) => outputs.push(value),
-        readPlan: () => plan,
+        readPlan: () => {
+          observedPlanGeneration = planGeneration;
+          return plan;
+        },
         renderStatus: () => {
           ++statusCalls;
           if (statusState.failure !== null) throw statusState.failure;
+          if (replacePlanDuringStatus) planGeneration = "plan-b";
           return rows;
         },
         runtimeIdentitiesEqual: isDeepStrictEqual,
@@ -402,6 +423,35 @@ export const test_cli_scaffold_render_read_only_status =
         },
         { identity: true, resourceCleanups: 7, statusCalls: 0 },
       );
+
+      let validationAssertions = 0;
+      const validationRace = new Error(
+        "read-only input generation changed during plan validation",
+      );
+      runtime.inspectInputs = () => ({
+        status: "current",
+        inputs,
+        resources: inspectionResources(),
+        assertCurrent: (): Promise<void> => {
+          if (++validationAssertions === 2) throw validationRace;
+          return Promise.resolve();
+        },
+      });
+      let validationRaceObserved: unknown;
+      try {
+        await module.reportProductionRenderStatus(runtime);
+      } catch (error) {
+        validationRaceObserved = error;
+      }
+      TestValidator.equals(
+        "input-generation races after validation close before chunk inspection",
+        {
+          identity: validationRaceObserved === validationRace,
+          resourceCleanups,
+          statusCalls,
+        },
+        { identity: true, resourceCleanups: 8, statusCalls: 0 },
+      );
       runtime.inspectInputs = () => currentInspection(inputs);
 
       await module.reportProductionRenderStatus(runtime);
@@ -428,9 +478,9 @@ export const test_cli_scaffold_render_read_only_status =
           },
           fetchCalls: 0,
           statusCalls: 2,
-          verifyCalls: 3,
+          verifyCalls: 4,
           currentAssertions: 11,
-          resourceCleanups: 9,
+          resourceCleanups: 10,
         },
       );
 
@@ -445,6 +495,25 @@ export const test_cli_scaffold_render_read_only_status =
         "verify refuses an incomplete current chunk with the exact recovery",
         message(incomplete),
         "Render verification found incomplete chunks. Run automovie render status, then run.",
+      );
+
+      rows = [{ status: "complete" }];
+      replacePlanDuringStatus = true;
+      const outputsBeforePlanRace = outputs.length;
+      let planRaceObserved: unknown;
+      try {
+        await module.reportProductionRenderStatus(runtime);
+      } catch (error) {
+        planRaceObserved = error;
+      }
+      replacePlanDuringStatus = false;
+      TestValidator.equals(
+        "a foreign plan successor invalidates the whole read before publication",
+        {
+          identity: planRaceObserved === foreignPlanSuccessor,
+          outputCount: outputs.length,
+        },
+        { identity: true, outputCount: outputsBeforePlanRace },
       );
 
       const changed = new Error("read-only runtime generation changed");
