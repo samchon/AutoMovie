@@ -158,7 +158,13 @@ const repaintAttempt = (
   requestFingerprint: `sha256:${"1".repeat(64)}`,
   compileFingerprint: `sha256:${"2".repeat(64)}`,
   sourceRenderFingerprint: `sha256:${"3".repeat(64)}`,
-  adapterIdentity: '{"provider":"runtime-shape-test"}',
+  adapterIdentity: canonicalAutoMovieRepaintRuntimeIdentity({
+    protocolVersion: "automovie.repaint-runtime.v1",
+    provider: "runtime-shape-test",
+    model: "runtime-shape-model",
+    version: "sha256:runtime-shape-model",
+    execution: "local",
+  }),
   seed: 7,
   startedAt: "2026-08-28T12:00:00.000Z",
   completedAt: "2026-08-28T12:00:01.000Z",
@@ -279,6 +285,14 @@ export const test_production_project_runtime_shape_repaint_records =
           repaintAttempt({ productionId: "other-production" }),
         ],
         ["attempt shot is nonblank", repaintAttempt({ shot: " " })],
+        ["attempt shot is trimmed", repaintAttempt({ shot: " padded " })],
+        [
+          "attempt schema is exact",
+          {
+            ...repaintAttempt(),
+            hidden: true,
+          } as IAutoMovieRepaintAttemptRecord,
+        ],
         [
           "attempt request id is a UUID v4",
           repaintAttempt({ requestId: "bad" }),
@@ -331,6 +345,30 @@ export const test_production_project_runtime_shape_repaint_records =
           "attempt adapter identity is nonblank",
           repaintAttempt({ adapterIdentity: " " }),
         ],
+        [
+          "attempt adapter identity is trimmed",
+          repaintAttempt({ adapterIdentity: " padded " }),
+        ],
+        [
+          "attempt adapter identity is canonical json",
+          repaintAttempt({
+            adapterIdentity: JSON.stringify(
+              {
+                protocolVersion: "automovie.repaint-runtime.v1",
+                provider: "runtime-shape-test",
+                model: "runtime-shape-model",
+                version: "sha256:runtime-shape-model",
+                execution: "local",
+              },
+              null,
+              2,
+            ),
+          }),
+        ],
+        [
+          "attempt adapter identity is valid json",
+          repaintAttempt({ adapterIdentity: "{" }),
+        ],
         ["attempt seed is an integer", repaintAttempt({ seed: 1.5 })],
         ["attempt start is an instant", repaintAttempt({ startedAt: "bad" })],
         [
@@ -352,6 +390,10 @@ export const test_production_project_runtime_shape_repaint_records =
         ["attempt cost is finite", repaintAttempt({ costUnits: Number.NaN })],
         ["attempt cost is nonnegative", repaintAttempt({ costUnits: -1 })],
         [
+          "attempt status belongs to the public vocabulary",
+          repaintAttempt({ status: "pending" as "failed" }),
+        ],
+        [
           "successful attempt has no failure",
           repaintAttempt({
             failure: {
@@ -362,6 +404,30 @@ export const test_production_project_runtime_shape_repaint_records =
           }),
         ],
         ["failed attempt has a failure", repaintAttempt({ status: "failed" })],
+        [
+          "attempt failure class belongs to the public vocabulary",
+          repaintAttempt({
+            status: "failed",
+            failure: {
+              class: "unknown" as "timeout",
+              message: "unknown class",
+              retryable: false,
+            },
+            availableOutput: null,
+          }),
+        ],
+        [
+          "attempt retryable flag is boolean",
+          repaintAttempt({
+            status: "failed",
+            failure: {
+              class: "timeout",
+              message: "invalid retryable flag",
+              retryable: "true" as unknown as boolean,
+            },
+            availableOutput: null,
+          }),
+        ],
         [
           "attempt failure message is nonblank",
           repaintAttempt({
@@ -386,6 +452,24 @@ export const test_production_project_runtime_shape_repaint_records =
           "available attempt output has positive bytes",
           repaintAttempt({
             availableOutput: { digest: `sha256:${"4".repeat(64)}`, bytes: 0 },
+          }),
+        ],
+        [
+          "available attempt output has finite bytes",
+          repaintAttempt({
+            availableOutput: {
+              digest: `sha256:${"4".repeat(64)}`,
+              bytes: Number.POSITIVE_INFINITY,
+            },
+          }),
+        ],
+        [
+          "available attempt output has integer bytes",
+          repaintAttempt({
+            availableOutput: {
+              digest: `sha256:${"4".repeat(64)}`,
+              bytes: 1.5,
+            },
           }),
         ],
         [
