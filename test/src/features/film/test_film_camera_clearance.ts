@@ -132,6 +132,12 @@ const runtimeModels = () => [
  *    valid envelope without retaining author-object aliases.
  * 9. Performance preserves a clear report, while compiler-visible body contact
  *    and a stale geometry snapshot return addressed refusal.
+ * 10. A zero-duration public evaluation still detects contact at its single
+ *     fixed-clock instant.
+ * 11. Artifact validation requires exactly one clear report per declared take
+ *     and binds its interval count to a safely countable shared clock.
+ * 12. An evaluator throw remains addressed even when the thrown value refuses
+ *     diagnostic string coercion.
  */
 export const test_film_camera_clearance = (): void => {
   const boundary = evaluate({
