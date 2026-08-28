@@ -1369,6 +1369,101 @@ try {
     true,
   );
 
+  /**
+   * Keep every governed public source declaration evidence-addressable.
+   *
+   * Scenarios:
+   *
+   * 1. Direct named type, function, property, and class declarations remain
+   *    valid, including private implementation accessors outside the public
+   *    evidence population.
+   * 2. Enum, namespace, re-export, anonymous default, public accessor,
+   *    computed-member, and unsupported export forms are each refused with the
+   *    replacement the production author must use.
+   */
+  const sourceExportProject = (source: string): string => {
+    const location = root();
+    write(location, "docs/settings/production.md", "## Scope {#scope}\n");
+    write(location, "docs/models/subject.md", "## Shape {#shape}\n");
+    write(location, "src/models/subject.ts", source);
+    return location;
+  };
+  const sourceExportGraph = (source: string): Graph => ({
+    ...disabled(sourceExportProject(source)),
+    kind: "library",
+    settings: "review",
+    models: "review",
+    modelSources: "draft",
+  });
+  assert.doesNotThrow(() =>
+    createAutoMovieEvidenceConfig(
+      sourceExportGraph(
+        [
+          "export interface ISubject { readonly id: string; }",
+          'export type SubjectId = "subject";',
+          'export const subjectName = "subject";',
+          "export function createSubject(): object { return {}; }",
+          "export class Subject {",
+          '  public readonly id = "subject";',
+          "  public move(): void {}",
+          '  private get internalLabel(): string { return "subject"; }',
+          "}",
+        ].join("\n"),
+      ),
+    ),
+  );
+  for (const [source, fragment] of [
+    [
+      'export enum SubjectKind { Fixed = "fixed" }\nexport class Subject {}',
+      "exports enum SubjectKind",
+    ],
+    [
+      "export namespace SubjectParts { export const id = 1; }\nexport class Subject {}",
+      "exports namespace SubjectParts",
+    ],
+    [
+      'export { Subject } from "./subject.js";\nexport class LocalSubject {}',
+      "uses a barrel or cross-module re-export",
+    ],
+    [
+      'export default class {}',
+      "exports an anonymous default declaration",
+    ],
+    [
+      'const Subject = class {};\nexport default Subject;',
+      "uses a default export expression or namespace export",
+    ],
+    [
+      'export class Subject { public get label(): string { return "subject"; } }',
+      "exports public accessor Subject.label",
+    ],
+    [
+      "export class Subject { public set label(value: string) { void value; } }",
+      "exports public accessor Subject.label",
+    ],
+    [
+      'export class Subject { public accessor label = "subject"; }',
+      "exports public accessor Subject.label",
+    ],
+    [
+      'export class Subject { public ["label"] = "subject"; }',
+      'exports computed public member Subject.["label"]',
+    ],
+    [
+      "export import Subject = Models.Subject;",
+      "exports unsupported ImportEqualsDeclaration syntax",
+    ],
+  ] as const) {
+    assert.equal(
+      throws(
+        () => createAutoMovieEvidenceConfig(sourceExportGraph(source)),
+        fragment,
+      ),
+      true,
+      `the source export allowlist accepted ${fragment}`,
+    );
+  }
+
   const wrongModelOwner = root();
   write(wrongModelOwner, "docs/settings/production.md", "## Scope {#scope}\n");
   write(wrongModelOwner, "docs/models/subject.md", "## Shape {#shape}\n");

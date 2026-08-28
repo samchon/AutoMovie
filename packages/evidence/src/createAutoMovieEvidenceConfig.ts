@@ -1480,6 +1480,183 @@ const hasExportedOwner = (
   );
 };
 
+/** Refuse public source syntax the evidence graph cannot address as a host. */
+const assertSourceExportsAreEvidenceAddressable = (
+  relative: string,
+  file: string,
+  text: string,
+): void => {
+  const source = ts.createSourceFile(
+    file,
+    text,
+    ts.ScriptTarget.Latest,
+    true,
+    ts.ScriptKind.TS,
+  );
+  const refuse = (form: string, replacement: string): never => {
+    throw new Error(
+      `${relative} ${form}, which no evidence type, function, or property selector can address. ${replacement}.`,
+    );
+  };
+  const modifiersOf = (node: ts.Node): readonly ts.Modifier[] =>
+    ts.canHaveModifiers(node) ? (ts.getModifiers(node) ?? []) : [];
+  const directlyExported = (node: ts.Node): boolean =>
+    modifiersOf(node).some(
+      (modifier) => modifier.kind === ts.SyntaxKind.ExportKeyword,
+    );
+  const bindingNames = (name: ts.BindingName): string[] =>
+    ts.isIdentifier(name)
+      ? [name.text]
+      : name.elements.flatMap((element) =>
+          ts.isOmittedExpression(element) ? [] : bindingNames(element.name),
+        );
+  const declarationNames = (statement: ts.Statement): string[] => {
+    if (ts.isVariableStatement(statement))
+      return statement.declarationList.declarations.flatMap((declaration) =>
+        bindingNames(declaration.name),
+      );
+    if (
+      ts.isClassDeclaration(statement) ||
+      ts.isFunctionDeclaration(statement) ||
+      ts.isInterfaceDeclaration(statement) ||
+      ts.isTypeAliasDeclaration(statement) ||
+      ts.isEnumDeclaration(statement) ||
+      ts.isModuleDeclaration(statement)
+    )
+      return statement.name === undefined ? [] : [statement.name.getText(source)];
+    return [];
+  };
+  const localDeclarations = new Set(
+    source.statements.flatMap((statement) => declarationNames(statement)),
+  );
+  const localExports = new Set<string>();
+  for (const statement of source.statements) {
+    if (!ts.isExportDeclaration(statement)) continue;
+    if (statement.moduleSpecifier !== undefined)
+      refuse(
+        "uses a barrel or cross-module re-export",
+        "Export a named declaration owned by this module",
+      );
+    const clause = statement.exportClause;
+    if (clause === undefined) {
+      refuse(
+        "uses a barrel or namespace export",
+        "Export a local named declaration",
+      );
+      continue;
+    }
+    if (!ts.isNamedExports(clause)) {
+      refuse(
+        "uses a namespace export",
+        "Export a local named declaration",
+      );
+      continue;
+    }
+    for (const element of clause.elements) {
+      const local = (element.propertyName ?? element.name).text;
+      if (element.name.text === "default" || !localDeclarations.has(local))
+        refuse(
+          "uses a default alias or imported re-export",
+          "Export a stable declaration owned by this module",
+        );
+      localExports.add(local);
+    }
+  }
+  const validateMembers = (
+    owner: string,
+    members: readonly ts.Declaration[],
+  ): void => {
+    for (const member of members) {
+      const modifiers = modifiersOf(member);
+      if (
+        modifiers.some(
+          (modifier) =>
+            modifier.kind === ts.SyntaxKind.PrivateKeyword ||
+            modifier.kind === ts.SyntaxKind.ProtectedKeyword,
+        )
+      )
+        continue;
+      const name = ts.getNameOfDeclaration(member);
+      const display = name?.getText(source) ?? "unnamed member";
+      if (
+        ts.isGetAccessorDeclaration(member) ||
+        ts.isSetAccessorDeclaration(member) ||
+        (ts.isPropertyDeclaration(member) &&
+          modifiers.some(
+            (modifier) => modifier.kind === ts.SyntaxKind.AccessorKeyword,
+          ))
+      )
+        refuse(
+          `exports public accessor ${owner}.${display}`,
+          "Use a plain readonly property or named method",
+        );
+      if (name !== undefined && ts.isComputedPropertyName(name))
+        refuse(
+          `exports computed public member ${owner}.${display}`,
+          "Use a stable identifier",
+        );
+    }
+  };
+
+  for (const statement of source.statements) {
+    if (ts.isExportDeclaration(statement)) continue;
+    if (
+      ts.isExportAssignment(statement) ||
+      ts.isNamespaceExportDeclaration(statement)
+    )
+      refuse(
+        "uses a default export expression or namespace export",
+        "Export the named declaration directly from its owning module",
+      );
+    if (
+      !directlyExported(statement) &&
+      !declarationNames(statement).some((name) => localExports.has(name))
+    )
+      continue;
+    if (ts.isEnumDeclaration(statement))
+      refuse(
+        `exports enum ${statement.name.text}`,
+        "Use a closed string-literal union",
+      );
+    if (ts.isModuleDeclaration(statement))
+      refuse(
+        `exports namespace ${statement.name.getText(source)}`,
+        "Use direct named ES-module exports",
+      );
+    if (
+      (ts.isClassDeclaration(statement) ||
+        ts.isFunctionDeclaration(statement)) &&
+      statement.name === undefined
+    )
+      refuse(
+        "exports an anonymous default declaration",
+        "Give the declaration a stable name and export it directly",
+      );
+    if (ts.isClassDeclaration(statement)) {
+      validateMembers(statement.name!.text, statement.members);
+      continue;
+    }
+    if (ts.isInterfaceDeclaration(statement)) {
+      validateMembers(statement.name.text, statement.members);
+      continue;
+    }
+    if (ts.isTypeAliasDeclaration(statement)) {
+      if (ts.isTypeLiteralNode(statement.type))
+        validateMembers(statement.name.text, statement.type.members);
+      continue;
+    }
+    if (
+      ts.isFunctionDeclaration(statement) ||
+      ts.isVariableStatement(statement)
+    )
+      continue;
+    refuse(
+      `exports unsupported ${ts.SyntaxKind[statement.kind]} syntax`,
+      "Use a named interface, type alias, class, function, or variable",
+    );
+  }
+};
+
 const validateContracts = (location: string): ITargetIdentityRegistry => {
   const root = path.resolve(location, sharedDocsRoot(location));
   const actual = [
@@ -2190,20 +2367,22 @@ const validateHosts = (graph: IProductionGraph): void => {
     if (isActive(stage) && files.length === 0)
       throw new Error(
         `${name} cannot enter ${stage} without a TypeScript host.`,
-      );
+    );
     for (const file of files) {
       const source = fs.readFileSync(file, "utf8");
+      const relative = posix(path.relative(graph.location, file));
+      assertSourceExportsAreEvidenceAddressable(relative, file, source);
       if (
         stage === "draft" &&
         EVIDENCE_TAG.test(source) &&
         !acceptsResetEvidenceTags(graph, name)
       )
         throw new Error(
-          `${posix(path.relative(graph.location, file))} is draft and must be completed before evidence tags are authored.`,
+          `${relative} is draft and must be completed before evidence tags are authored.`,
         );
       if (!hasExportedOwner(file, SOURCES[name].ownerKinds))
         throw new Error(
-          `${posix(path.relative(graph.location, file))} belongs to active ${name} but has no named exported owner of its required kind (${SOURCES[name].ownerKinds.join(", ")}).`,
+          `${relative} belongs to active ${name} but has no named exported owner of its required kind (${SOURCES[name].ownerKinds.join(", ")}).`,
         );
     }
   }

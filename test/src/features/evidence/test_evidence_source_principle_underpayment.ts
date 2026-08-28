@@ -247,7 +247,7 @@ const cleanSource = (): string =>
     ...[...PRINCIPLES, ...OBLIGATIONS].map(
       (target) => ` * @evidence ${target} ${reasonOf(target)}`,
     ),
-    ` * @evidenceExclude ${UPSTREAM} The value exercised the delivery identity, twelve-second runtime, 1920x1080 24 fps format, prototype output, settings owner, and visual grammar without requiring a settings repair.`,
+    ` * @evidenceExclude ${UPSTREAM} Comparing the value's exact delivery identity, twelve-second runtime, 1920x1080 24 fps format, prototype output, settings owner, and visual grammar with the settings found no decision that required repair.`,
     " */",
     "export const production = {",
     '  id: "source-principle-probe",',
@@ -270,7 +270,7 @@ const cleanSource = (): string =>
     ` * @evidence ${PRINCIPLES[0]} The type owns only the immutable delivery envelope serialized by the production value.`,
     ` * @evidence ${PRINCIPLES[1]} Identity, runtime, frame format, delivery mode, deliverables, settings owner, and visual grammar complete this type.`,
     ` * @evidence ${PRINCIPLES[2]} Each type-level reason names the exact field boundary and the source owner that realizes it.`,
-    ` * @evidenceExclude ${UPSTREAM} The type exercised the concrete delivery identity, twelve-second runtime, 1920x1080 24 fps format, prototype output, settings owner, and visual grammar without requiring a settings repair.`,
+    ` * @evidenceExclude ${UPSTREAM} Comparing the alias's exact delivery identity, twelve-second runtime, 1920x1080 24 fps format, prototype output, settings owner, and visual grammar with the settings found no decision that required repair.`,
     " */",
     "export type IProductionEnvelope = typeof production;",
     "",
@@ -454,7 +454,7 @@ const assertIsolatedDiagnostic = (result: ILintResult): void => {
  *
  * The complete export pays the exact source principle checklist and production
  * source obligation population. The negative then plants a plainly false
- * delivery-identity reason and removes only that export's answer to the source
+ * source-scope reason and removes that export's answer to the source
  * evidence-content-conformance principle; the same real claim must refuse it
  * with one isolated diagnostic on the selected export.
  *
@@ -463,8 +463,9 @@ const assertIsolatedDiagnostic = (result: ILintResult): void => {
  * 1. A complete production-source export answers the three per-owner source
  *    principles and three population obligations, so the real contributor
  *    accepts it without a graph diagnostic.
- * 2. The exported type omits only its evidence-content-conformance answer, so
- *    the source-unit checklist rejects that exact type with one diagnostic.
+ * 2. The exported type falsely claims a six-second runtime and omits its
+ *    evidence-content-conformance answer, so the source-unit checklist rejects
+ *    that exact type with one diagnostic.
  */
 export const test_evidence_source_principle_underpayment = (): void => {
   const root = fs.mkdtempSync(
