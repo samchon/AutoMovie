@@ -1,4 +1,6 @@
 import {
+  ViolationCollector,
+  compileCameraClearanceReports,
   compileDefinedShot,
   defineShot,
   evaluateCameraClearance,
@@ -414,6 +416,179 @@ export const test_film_camera_clearance = (): void => {
       performed.shot.cameraClearance?.[0]?.status === "clear" &&
       performed.shot.cameraClearance[0].intervals === 48,
   );
+  if (performed.success !== true)
+    throw new Error("clearance performance fixture must perform");
+
+  const heroCamera = clearStage.scene.cameras.find(
+    (camera) => camera.id === performed.shot.camera,
+  )!;
+  const baseAdapterProps = {
+    scene: clearStage.scene,
+    hero: { camera: heroCamera, motion: performed.shot.cameraMotion },
+    coverage: performed.shot.coverage ?? [],
+    duration: performed.shot.duration,
+    motions: performed.motions,
+    objectMotions: performed.shot.objectMotions,
+    models: runtimeModels(),
+    runtime: {
+      revision: "current",
+      currentRevision: "current",
+      sampleRate: 24,
+    },
+  };
+  const inspectAdapter = (
+    over: Partial<typeof baseAdapterProps> = {},
+  ): {
+    reports: ReturnType<typeof compileCameraClearanceReports>;
+    out: ViolationCollector;
+  } => {
+    const out = new ViolationCollector();
+    const reports = compileCameraClearanceReports({
+      ...baseAdapterProps,
+      ...over,
+      out,
+    });
+    return { reports, out };
+  };
+
+  const plainCamera = { ...heroCamera, clearance: undefined };
+  const plain = inspectAdapter({
+    scene: { ...clearStage.scene, cameras: [plainCamera] },
+    hero: { camera: plainCamera, motion: performed.shot.cameraMotion },
+    runtime: undefined,
+  });
+  const noRuntime = inspectAdapter({ runtime: undefined });
+  TestValidator.equals(
+    "legacy camera and missing compiler authority remain distinct",
+    [
+      [plain.reports, plain.out.items.length],
+      [noRuntime.reports, noRuntime.out.items[0]?.path],
+    ],
+    [
+      [undefined, 0],
+      [undefined, "$input.cameraClearance"],
+    ],
+  );
+
+  const missingGeometry = inspectAdapter({ models: [] });
+  const emptyGeometry = inspectAdapter({
+    models: runtimeModels().map((model) => ({ ...model, parts: [] })),
+  });
+  TestValidator.predicate(
+    "absent and empty obstacle geometry are addressed rather than skipped",
+    [missingGeometry, emptyGeometry].every(
+      ({ reports, out }) =>
+        reports === undefined &&
+        out.items.length === clearStage.scene.nodes.length &&
+        out.items.every((item) => item.path.endsWith(".model")),
+    ),
+  );
+
+  const propModel = { ...createModel(null), id: "prop" };
+  const sourceNode = clearStage.scene.nodes[0]!;
+  const staticNode = {
+    ...sourceNode,
+    id: "static-prop",
+    model: "prop",
+    transform: identity(20, 20, 20),
+  };
+  const movingNode = {
+    ...sourceNode,
+    id: "moving-prop",
+    model: "prop",
+    transform: identity(30, 30, 30),
+  };
+  const alternateCamera = { ...heroCamera, id: "cam-alt" };
+  const animated = inspectAdapter({
+    scene: {
+      ...clearStage.scene,
+      nodes: [...clearStage.scene.nodes, staticNode, movingNode],
+      cameras: [...clearStage.scene.cameras, alternateCamera],
+    },
+    coverage: [{ camera: "cam-alt", cameraMotion: null, cameraIntent: [] }],
+    models: [...runtimeModels(), propModel],
+    objectMotions: [
+      {
+        id: "moving-prop-transform",
+        name: null,
+        duration: 2,
+        loop: false,
+        tracks: [
+          {
+            channel: {
+              kind: "node",
+              node: "moving-prop",
+              path: "translation",
+            },
+            times: [0, 2],
+            values: [30, 30, 30, 31, 31, 31],
+            interpolation: "linear",
+          },
+          {
+            channel: {
+              kind: "node",
+              node: "moving-prop",
+              path: "rotation",
+            },
+            times: [0, 2],
+            values: [0, 0, 0, 1, 0, 0, 1, 0],
+            interpolation: "linear",
+          },
+          {
+            channel: {
+              kind: "node",
+              node: "moving-prop",
+              path: "scale",
+            },
+            times: [0, 2],
+            values: [1, 1, 1, 2, 2, 2],
+            interpolation: "linear",
+          },
+        ],
+      },
+    ],
+  });
+  TestValidator.predicate(
+    "static and moving obstacles share the clock across hero and coverage takes",
+    animated.out.items.length === 0 &&
+      animated.reports?.length === 2 &&
+      animated.reports.every((report) => report.status === "clear"),
+  );
+
+  const evaluatorFault = inspectAdapter({
+    runtime: { ...baseAdapterProps.runtime, sampleRate: 0 },
+  });
+  TestValidator.predicate(
+    "an invalid compiler clock is returned at the camera envelope",
+    evaluatorFault.reports === undefined &&
+      evaluatorFault.out.items.some(
+        (item) =>
+          item.path === "$input.cameraClearance.sampleRate" &&
+          item.expected.includes("sample rate"),
+      ),
+  );
+
+  const rigCamera = {
+    ...heroCamera,
+    clearance: envelope(
+      { center: { x: 0, y: 100, z: 0 }, radius: 0.01 },
+      { center: { x: 0, y: 0, z: 0 }, radius: 3 },
+    ),
+  };
+  const rigBlocked = inspectAdapter({
+    scene: { ...clearStage.scene, cameras: [rigCamera] },
+    hero: { camera: rigCamera, motion: performed.shot.cameraMotion },
+  });
+  TestValidator.predicate(
+    "performance addresses a parent-rig contact at its own member",
+    rigBlocked.reports === undefined &&
+      rigBlocked.out.items.some(
+        (item) =>
+          item.path.endsWith(".clearance.parentRig") &&
+          item.expected.includes("parent-rig"),
+      ),
+  );
+
   const stalePerformance = performShot({
     ...performanceProps,
     cameraClearance: {

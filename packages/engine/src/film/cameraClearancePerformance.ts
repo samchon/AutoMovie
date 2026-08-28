@@ -152,6 +152,17 @@ export const compileCameraClearanceReports = (props: {
     );
     return undefined;
   }
+  if (
+    !(Number.isFinite(props.runtime.sampleRate) && props.runtime.sampleRate > 0)
+  ) {
+    props.out.push(
+      "range",
+      "$input.cameraClearance.sampleRate",
+      "camera clearance sample rate must be finite and greater than zero",
+      props.runtime.sampleRate,
+    );
+    return undefined;
+  }
 
   const models = new Map(props.models.map((model) => [model.id, model]));
   const animatedNodes = new Set(Object.keys(props.motions));
