@@ -169,12 +169,14 @@ export const executeAutoMovieRepaintRequest = async <T>(props: {
     );
     const timeoutMs = Math.min(props.policy.attemptTimeoutMs, remainingElapsed);
     let timeout: ReturnType<typeof setTimeout> | undefined;
+    let timedOut = false;
     try {
       const outcome = await Promise.race([
         props.execute(controller.signal),
         new Promise<never>((resolve, reject) => {
           void resolve;
           timeout = setTimeout(() => {
+            timedOut = true;
             controller.abort("timeout");
             reject(
               new AutoMovieRepaintAttemptError(
@@ -241,7 +243,15 @@ export const executeAutoMovieRepaintRequest = async <T>(props: {
         "accepted",
       );
     } catch (error) {
-      const classified = classifyFailure(error, props.signal);
+      const classified = classifyFailure(
+        timedOut
+          ? new AutoMovieRepaintAttemptError(
+              "timeout",
+              `Repaint attempt exceeded ${timeoutMs}ms.`,
+            )
+          : error,
+        props.signal,
+      );
       spent += classified.costUnits;
       const retryable =
         classified.status === "failed" &&
