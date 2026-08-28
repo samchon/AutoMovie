@@ -20,8 +20,9 @@ For film and brief, reviewed `productionSources` is a parallel assembly input th
 | --- | --- |
 | settings | production facts, identities, capabilities, limits, and delivery contract |
 | research | retrievable external-source records and their production consequence |
+| maps | broad world organization, site boundary, scale and partition, temporal world state, and external access node |
 | models | deterministic bounded representation of one subject or reusable object |
-| spaces | world, site, building exterior/interior, room, zone, boundary, and circulation topology |
+| spaces | building exterior/interior, room, zone, enclosure, opening, and circulation topology inside the adopted map/site boundary |
 | materials | construction, finish, texture scale, optical response, and material state |
 | instances | repeated/group membership, stable instance identity, transforms, variation, and placement |
 | motions | deterministic state transition over time |
