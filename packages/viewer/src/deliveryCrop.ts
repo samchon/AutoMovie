@@ -25,14 +25,16 @@ export const applyAutoMovieDeliveryCrop = (
     resolved.bottom === 1
   )
     camera.clearViewOffset();
-  else
+  else {
+    const fullWidth = camera.aspect;
     camera.setViewOffset(
+      fullWidth,
       1,
-      1,
-      resolved.left,
+      resolved.left * fullWidth,
       resolved.top,
-      resolved.right - resolved.left,
+      (resolved.right - resolved.left) * fullWidth,
       resolved.bottom - resolved.top,
     );
+  }
   camera.updateProjectionMatrix();
 };
