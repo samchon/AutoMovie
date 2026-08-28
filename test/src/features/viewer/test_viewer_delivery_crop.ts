@@ -1,6 +1,9 @@
 import { projectToNdc, resolveAutoMovieDeliveryCrop } from "@automovie/engine";
 import { IAutoMovieDeliveryCrop } from "@automovie/interface";
-import { applyAutoMovieDeliveryCrop } from "@automovie/viewer";
+import {
+  applyAutoMovieDeliveryCrop,
+  readAutoMovieDeliveryCrop,
+} from "@automovie/viewer";
 import { TestValidator } from "@nestia/e2e";
 import * as THREE from "three";
 
@@ -32,8 +35,12 @@ export const test_viewer_delivery_crop = (): void => {
   const explicit = camera.projectionMatrix.toArray();
   TestValidator.equals(
     "omitted and explicit whole crops preserve the original matrix",
-    { omitted, explicit },
-    { omitted: original, explicit: original },
+    {
+      omitted,
+      explicit,
+      active: readAutoMovieDeliveryCrop(camera),
+    },
+    { omitted: original, explicit: original, active: undefined },
   );
 
   const crop: IAutoMovieDeliveryCrop = {
@@ -43,6 +50,11 @@ export const test_viewer_delivery_crop = (): void => {
     bottom: 0.9,
   };
   applyAutoMovieDeliveryCrop(camera, crop);
+  TestValidator.equals(
+    "the renderer exposes the same crop to downstream culling and LOD",
+    readAutoMovieDeliveryCrop(camera),
+    crop,
+  );
   const point = new THREE.Vector3(0.5, 0.25, -2);
   const actual = projected(camera, point);
   const expected = projectToNdc(

@@ -13,6 +13,7 @@ import {
   materializeProductionModels,
 } from "@automovie/production";
 import {
+  applyAutoMovieDeliveryCrop,
   buildInstancedFormation,
   flattenInstancedObject,
   regenerateFormationSlot,
@@ -1183,6 +1184,42 @@ export const test_viewer_formation = (): void => {
       atBoundaryDropsFar: true,
       pastBoundaryFallsToFar: true,
       pastBoundaryDropsNear: true,
+    },
+  );
+
+  const cropBoundary = parityBoundary * 0.75;
+  const uncroppedPopulation = buildInstancedFormation({
+    formation: withNearBoundary(parityFormation, cropBoundary),
+    models,
+  });
+  applyAutoMovieDeliveryCrop(parityCamera, undefined);
+  uncroppedPopulation.update(parityCamera, parityViewportHeight);
+  const croppedPopulation = buildInstancedFormation({
+    formation: withNearBoundary(parityFormation, cropBoundary),
+    models,
+  });
+  applyAutoMovieDeliveryCrop(parityCamera, {
+    left: 0,
+    top: 0.25,
+    right: 1,
+    bottom: 0.75,
+  });
+  croppedPopulation.update(parityCamera, parityViewportHeight);
+  TestValidator.equals(
+    "delivery crop zoom participates in formation LOD selection",
+    {
+      uncropped: {
+        near: tierVisible(uncroppedPopulation, "near"),
+        far: tierVisible(uncroppedPopulation, "far"),
+      },
+      cropped: {
+        near: tierVisible(croppedPopulation, "near"),
+        far: tierVisible(croppedPopulation, "far"),
+      },
+    },
+    {
+      uncropped: { near: false, far: true },
+      cropped: { near: true, far: false },
     },
   );
 };

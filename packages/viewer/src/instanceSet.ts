@@ -13,6 +13,7 @@ import {
 import * as THREE from "three";
 
 import { IAutoMovieModelObject } from "./buildModel";
+import { readAutoMovieDeliveryCrop } from "./deliveryCrop";
 import { flattenInstancedModel, flattenInstancedObject } from "./formation";
 
 /**
@@ -308,6 +309,12 @@ export const buildInstancedInstanceSet = (input: {
       const cameraPosition = new THREE.Vector3();
       camera.getWorldPosition(cameraPosition);
       const halfY = Math.tan(THREE.MathUtils.degToRad(camera.fov) / 2);
+      const deliveryCrop = readAutoMovieDeliveryCrop(camera);
+      const effectiveHalfY =
+        halfY *
+        (deliveryCrop === undefined
+          ? 1
+          : deliveryCrop.bottom - deliveryCrop.top);
       for (const chunk of chunks) {
         const center = root.localToWorld(
           new THREE.Vector3(
@@ -342,7 +349,7 @@ export const buildInstancedInstanceSet = (input: {
         for (const prototype of chunk.prototypes) {
           const projectedPixels =
             (prototype.projectionRadius * maximumScale * viewportHeight) /
-            (halfY * cameraDepth);
+            (effectiveHalfY * cameraDepth);
           const selected = selectFormationLod({
             lod: prototype.lod,
             distance,
