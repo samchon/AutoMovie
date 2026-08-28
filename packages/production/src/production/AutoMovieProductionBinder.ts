@@ -239,12 +239,9 @@ function stripAuthoringMarkers(markdown: string): string {
     const marker: string | undefined = /^ {0,3}(`{3,}|~{3,})/u.exec(line)?.[1];
     if (marker !== undefined)
       fence = { character: marker[0], length: marker.length };
-    output.push(line);
+    if (line !== "" || output.at(-1) !== "") output.push(line);
   }
-  return output
-    .join("\n")
-    .replace(/\n{3,}/gu, "\n\n")
-    .trim();
+  return output.join("\n").trim();
 }
 
 /** Rebases ATX headings outside fenced code and hides citation anchors. */

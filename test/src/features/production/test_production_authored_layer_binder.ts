@@ -92,6 +92,9 @@ export const test_production_authored_layer_binder =
           "```md",
           "## Quoted evidence heading {#quoted}",
           "<!-- A fenced example comment remains reader content. -->",
+          "",
+          "",
+          "Two blank example lines remain above this sentence.",
           "```",
           "",
           "The prop keeps {braces that are prose}.",
@@ -133,6 +136,9 @@ export const test_production_authored_layer_binder =
           markdown.includes("{braces that are prose}") &&
           markdown.includes(
             "<!-- A fenced example comment remains reader content. -->",
+          ) &&
+          markdown.includes(
+            "<!-- A fenced example comment remains reader content. -->\n\n\nTwo blank example lines remain above this sentence.",
           ),
       );
 
