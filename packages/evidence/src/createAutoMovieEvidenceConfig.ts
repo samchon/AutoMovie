@@ -1,6 +1,7 @@
 import {
   type ITtscEvidenceGraphClaim,
   type ITtscEvidenceGraphConfig,
+  type ITtscEvidenceGraphMarkdownReference,
   type ITtscEvidenceGraphReference,
 } from "@ttsc/evidence";
 import fs from "node:fs";
@@ -11,6 +12,7 @@ import ts from "typescript-compiler";
 import type { AutoMoviePopulationScope } from "./AutoMoviePopulationScope";
 import { assertAutoMovieEvidenceReviewReasons } from "./auditAutoMovieEvidenceReviewReasons";
 import { createAutoMoviePopulationFiles } from "./createAutoMoviePopulationFiles";
+import { walkAutoMovieProjectPopulationFiles } from "./walkAutoMovieProjectPopulationFiles";
 
 /**
  * A generated production's mutually exclusive evidence topology.
@@ -1053,18 +1055,12 @@ const logicalContractPath = (contract: ExpectedContract): string =>
 const expectedContract = (
   family: ContractFamily,
   basename: string,
-): ExpectedContract => {
-  const found = EXPECTED_CONTRACTS.find(
+): ExpectedContract =>
+  EXPECTED_CONTRACTS.find(
     (contract) =>
       contractFamily(contract) === family &&
       contractBasename(contract) === basename,
-  );
-  if (found === undefined)
-    throw new Error(
-      `Shared ${family} contract ${basename} has no canonical inventory entry.`,
-    );
-  return found;
-};
+  )!;
 
 const isActive = (stage: Stage): boolean => stage !== "disabled";
 const requiresEvidence = (stage: Stage): boolean =>
@@ -1141,7 +1137,10 @@ const validateDeclaration = (graph: IProductionGraph): void => {
     throw new Error(
       `Production evidence location does not exist: ${posix(graph.location)}.`,
     );
-  if (!fs.statSync(graph.location).isDirectory())
+  const locationEntry = fs.lstatSync(graph.location);
+  if (locationEntry.isSymbolicLink())
+    walkAutoMovieProjectPopulationFiles(graph.location, graph.location, ".md");
+  if (!locationEntry.isDirectory())
     throw new Error(
       `Production evidence location is not a directory: ${posix(graph.location)}.`,
     );
@@ -1169,7 +1168,6 @@ const validateDeclaration = (graph: IProductionGraph): void => {
 
 const walkFiles = (root: string, extension: ".md" | ".ts"): string[] => {
   if (!fs.existsSync(root)) return [];
-  if (fs.statSync(root).isFile()) return root.endsWith(extension) ? [root] : [];
   const output: string[] = [];
   const visit = (directory: string): void => {
     for (const entry of fs
@@ -1185,10 +1183,28 @@ const walkFiles = (root: string, extension: ".md" | ".ts"): string[] => {
   return output;
 };
 
+/** Walk one local population after proving its physical boundary. */
+const walkProjectFiles = (
+  graph: IProductionGraph,
+  root: string,
+  extension: ".md" | ".ts",
+): string[] =>
+  walkAutoMovieProjectPopulationFiles(graph.location, root, extension);
+
+/**
+ * Inventory active populations and inactive residue before any graph walk.
+ * The installed shared-contract package is deliberately outside these two
+ * project-owned trees, so a workspace link there remains valid.
+ */
+const validateProjectPopulationBoundary = (graph: IProductionGraph): void => {
+  walkProjectFiles(graph, path.join(graph.location, DOCS), ".md");
+  walkProjectFiles(graph, path.join(graph.location, "src"), ".ts");
+};
+
 const validateReviewReasons = (graph: IProductionGraph): void => {
   const files = [
-    ...walkFiles(path.join(graph.location, DOCS), ".md"),
-    ...walkFiles(path.join(graph.location, "src"), ".ts"),
+    ...walkProjectFiles(graph, path.join(graph.location, DOCS), ".md"),
+    ...walkProjectFiles(graph, path.join(graph.location, "src"), ".ts"),
   ];
   assertAutoMovieEvidenceReviewReasons(
     files.map((file) => ({
@@ -1907,7 +1923,7 @@ const populationHasFiles = (
   patterns: readonly string[],
 ): boolean => {
   const base = path.resolve(graph.location, root);
-  return walkFiles(base, type === "markdown" ? ".md" : ".ts")
+  return walkProjectFiles(graph, base, type === "markdown" ? ".md" : ".ts")
     .map((file) => posix(path.relative(base, file)))
     .some((file) => matchesPatterns(file, patterns));
 };
@@ -1924,7 +1940,7 @@ const validateProductionTargets = (
     "upstream",
     ...Object.keys(MARKDOWN),
   ]);
-  const targets = walkFiles(root, ".md")
+  const targets = walkProjectFiles(graph, root, ".md")
     .map((file) => posix(path.relative(root, file)))
     .filter(
       (file) =>
@@ -2236,8 +2252,12 @@ const populationFiles = (
       /[\\/]+$/u,
       "",
     );
-    return walkFiles(path.join(graph.location, concrete), extension).filter(
-      (file) => matchesGlob(posix(path.relative(graph.location, file)), root),
+    return walkProjectFiles(
+      graph,
+      path.join(graph.location, concrete),
+      extension,
+    ).filter((file) =>
+      matchesGlob(posix(path.relative(graph.location, file)), root),
     );
   });
 
@@ -2251,7 +2271,7 @@ const markdownPopulationFiles = (
         authoredPopulationFiles(graph, layer).map((file) => `${DOCS}/${file}`),
         ".md",
       )
-    : walkFiles(path.join(graph.location, DOCS, layer), ".md");
+    : walkProjectFiles(graph, path.join(graph.location, DOCS, layer), ".md");
 
 const NUMBERED_NARRATIVE_NAME = /^\d{3}-[a-z0-9]+(?:-[a-z0-9]+)*$/u;
 
@@ -2267,7 +2287,11 @@ const narrativeH1 = (file: string): string => {
 
 const validateNarrativePopulationTopology = (graph: IProductionGraph): void => {
   const treatmentRoot = path.join(graph.location, DOCS, "treatments");
-  const invalidTreatments = walkFiles(treatmentRoot, ".md").filter((file) => {
+  const invalidTreatments = walkProjectFiles(
+    graph,
+    treatmentRoot,
+    ".md",
+  ).filter((file) => {
     const relative = posix(path.relative(treatmentRoot, file));
     return (
       relative.includes("/") ||
@@ -2281,7 +2305,7 @@ const validateNarrativePopulationTopology = (graph: IProductionGraph): void => {
 
   for (const layer of ["scripts", "screenplays"] as const) {
     const directory = path.join(graph.location, DOCS, layer);
-    const residents = walkFiles(directory, ".md");
+    const residents = walkProjectFiles(graph, directory, ".md");
     const invalid = residents.filter((file) => {
       const parts = posix(path.relative(directory, file)).split("/");
       return (
@@ -2335,7 +2359,6 @@ const acceptsResetEvidenceTags = (
   if (graph.populationScope.mode !== "complete-production-reset") return false;
   if (graph.kind === "film")
     return ["treatments", "scripts", "screenplays"].includes(layer);
-  if (graph.kind !== "library") return false;
   if ((DESIGN_LAYERS as readonly string[]).includes(layer))
     return (Object.keys(SOURCES) as SourceLayer[]).some(
       (source) =>
@@ -2343,7 +2366,6 @@ const acceptsResetEvidenceTags = (
         graph[layer] === "draft" &&
         graph[source] === "draft",
     );
-  if (!(Object.keys(SOURCES) as string[]).includes(layer)) return false;
   const design = SOURCES[layer as SourceLayer].design;
   return (
     design !== null && graph[layer] === "draft" && graph[design] === "draft"
@@ -2361,7 +2383,7 @@ const validateHosts = (graph: IProductionGraph): void => {
     const disabledResidents =
       !isActive(stage) &&
       (name === "treatments" || name === "scripts" || name === "screenplays")
-        ? walkFiles(directory, ".md")
+        ? walkProjectFiles(graph, directory, ".md")
         : files;
     if (!isActive(stage) && disabledResidents.length !== 0)
       throw new Error(
@@ -2823,7 +2845,7 @@ const assertSourceTreeIsClosed = (graph: IProductionGraph): void => {
   );
   for (const directory of UNGOVERNED_SOURCE_DIRECTORIES)
     governed.add(`src/${directory}`);
-  for (const file of walkFiles(root, ".ts")) {
+  for (const file of walkProjectFiles(graph, root, ".ts")) {
     const relative = posix(path.relative(graph.location, file));
     if (
       [...governed].some(
@@ -2991,18 +3013,12 @@ const sourceClaims = (graph: IProductionGraph): IBranchClaim[] => {
   return claims;
 };
 
-const symbolsOf = (symbol: unknown): string[] =>
-  Array.isArray(symbol)
-    ? symbol.filter((value): value is string => typeof value === "string")
-    : typeof symbol === "string"
-      ? [symbol]
-      : [];
+const symbolsOf = (symbol: string | readonly string[]): string[] =>
+  Array.isArray(symbol) ? [...symbol] : [symbol as string];
 
 const contractForReference = (
-  reference: ITtscEvidenceGraphReference,
+  reference: ITtscEvidenceGraphMarkdownReference,
 ): ExpectedContract | undefined => {
-  if (reference.type !== "markdown" || reference.files.length !== 1)
-    return undefined;
   return EXPECTED_CONTRACTS.find(
     (contract) => contract.file === reference.files[0],
   );
@@ -3035,6 +3051,7 @@ const validateProductionGraph = (
   graph: IProductionGraph,
 ): ITargetIdentityRegistry => {
   validateDeclaration(graph);
+  validateProjectPopulationBoundary(graph);
   validateReviewReasons(graph);
   const targetIdentities = validateContracts(graph.location);
   validateStages(graph);
@@ -3051,16 +3068,12 @@ const sharedClaimBindings = (graph: IProductionGraph): IBranchClaim[] => [
 
 /** The authored Markdown branch selected by a project-local population. */
 const referencedMarkdownBranch = (
-  reference: ITtscEvidenceGraphReference,
+  reference: ITtscEvidenceGraphMarkdownReference,
 ): MarkdownLayer | undefined => {
-  if (reference.type !== "markdown" || evidenceRoot(reference) !== DOCS)
-    return undefined;
+  if (evidenceRoot(reference) !== DOCS) return undefined;
   const roots = new Set(
-    (reference.files ?? []).map(
-      (file) => normalizeGlob(file).split("/")[0] ?? "",
-    ),
+    reference.files.map((file) => normalizeGlob(file).split("/")[0]!),
   );
-  if (roots.size !== 1) return undefined;
   const root = [...roots][0]!;
   return (Object.keys(MARKDOWN) as MarkdownLayer[]).find(
     (branch) => branch === root,
@@ -3104,9 +3117,12 @@ export const createAutoMovieContractBindingManifest = (
     const references = Array.isArray(binding.claim.reference)
       ? binding.claim.reference
       : [binding.claim.reference];
-    for (const reference of references) {
-      if (reference.type !== "markdown" && reference.type !== "typescript")
-        continue;
+    for (const sourceReference of references) {
+      const reference =
+        sourceReference as ITtscEvidenceGraphMarkdownReference & {
+          files: string[];
+          symbol: string | string[];
+        };
       const contract = contractForReference(reference);
       const referencedBranch = referencedMarkdownBranch(reference);
       if (
@@ -3119,20 +3135,22 @@ export const createAutoMovieContractBindingManifest = (
         branch: binding.branch,
         stage: graph[binding.branch],
         enforced: binding.claim.disabled !== true,
-        claim: binding.claim.name ?? `${binding.branch} evidence relationship`,
+        claim: binding.claim.name!,
         relationship: relationshipOf(binding, reference, contract),
         host: {
           type: binding.claim.type as "markdown" | "typescript",
           root: evidenceRoot(binding.claim),
           files: [...binding.claim.files],
-          symbols: symbolsOf(binding.claim.symbol),
+          symbols: symbolsOf(
+            binding.claim.symbol as string | readonly string[],
+          ),
         },
         target:
           contract === undefined
             ? {
                 type: "population",
                 root: evidenceRoot(reference),
-                files: [...(reference.files ?? [])],
+                files: [...reference.files],
                 symbols: symbolsOf(reference.symbol),
               }
             : {
@@ -3167,7 +3185,7 @@ export const createAutoMovieContractBindingManifest = (
  * @evidence specifications/production-evidence/graph.md#spec-authoring-production-evidence-shared-contract Reads and validates the fixed shared contract inventory before constructing claims.
  * @evidence specifications/production-evidence/graph.md#spec-authoring-production-evidence-discovery Wires common, settings, design-shared, design-layer, film, narrative-layer, and brief discovery targets to each active layer's flat work-specific contract population while research remains common-only.
  * @evidence specifications/production-evidence/graph.md#spec-authoring-production-evidence-shape-stage Implements the film, brief, and library stage state machine.
- * @evidence specifications/production-evidence/graph.md#spec-authoring-production-evidence-physical-integrity Enumerates actual disk populations and enforces flat treatment events, grouped script and screenplay units, direct treatment coverage, and exact same-depth screenplay lineage.
+ * @evidence specifications/production-evidence/graph.md#spec-authoring-production-evidence-physical-integrity Enumerates actual non-linked project populations and enforces flat treatment events, grouped script and screenplay units, direct treatment coverage, and exact same-depth screenplay lineage.
  * @evidence specifications/production-evidence/graph.md#spec-authoring-production-evidence-additive-extension Constructs shared claims first and composes local claims after them.
  * @evidence specifications/production-evidence/graph.md#spec-authoring-production-evidence-deterministic-result Uses deterministic identities and ordering and returns no partial graph after a validation failure.
  * @evidencePart specifications/production-evidence/graph.md#spec-authoring-production-evidence-shared-contract::shared-contract Validates the canonical common document and H2 inventory before building shared claims.

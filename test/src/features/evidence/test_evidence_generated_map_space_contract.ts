@@ -795,9 +795,11 @@ const removeEvidencePair = (source: string, target: string): string => {
  * 2. One reviewed library graph connects `docs/maps` to `src/maps`, connects
  *    `docs/spaces` to `src/spaces`, and accepts only compiler-issued review
  *    fingerprints across the exact six current claim objects.
- * 3. Removing the space owner's acknowledgement of the map site interface
+ * 3. A linked residue inside an active design population fails during the
+ *    actual ttsc configuration load instead of disappearing from inventory.
+ * 4. Removing the space owner's acknowledgement of the map site interface
  *    produces one isolated graph diagnostic naming that target and claim.
- * 4. Revising the reviewed map design expires the map source's file and H2
+ * 5. Revising the reviewed map design expires the map source's file and H2
  *    reviews plus the consuming space H2 review, proving the downstream edge.
  */
 export const test_evidence_generated_map_space_contract = (): void => {
@@ -856,6 +858,27 @@ export const test_evidence_generated_map_space_contract = (): void => {
     const paid = lint(root, "reviewed");
     assert.equal(paid.status, 0, paid.output);
     assert.equal(count(paid.output, /\[evidence\/graph\]/gu), 0, paid.output);
+
+    const linkedResidueTarget = path.join(root, "linked-design-residue");
+    fs.mkdirSync(linkedResidueTarget);
+    fs.writeFileSync(
+      path.join(linkedResidueTarget, "hidden.md"),
+      "# Hidden linked residue\n",
+      "utf8",
+    );
+    const linkedResidue = path.join(root, "docs", "maps", "linked");
+    fs.symlinkSync(
+      linkedResidueTarget,
+      linkedResidue,
+      process.platform === "win32" ? "junction" : "dir",
+    );
+    const linked = lint(root, "linked-design-residue");
+    assert.notEqual(linked.status, 0, linked.output);
+    assert.match(
+      linked.output,
+      /project evidence populations contain only real files and directories inside the project root/u,
+    );
+    fs.rmSync(linkedResidue);
 
     const spaceFile = path.join(root, "docs/spaces/building.md");
     const reviewedSpace = fs.readFileSync(spaceFile, "utf8");

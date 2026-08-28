@@ -6,6 +6,7 @@ import {
   type IAutoMovieEvidenceConfigProps,
   createAutoMovieContractBindingManifest,
 } from "./createAutoMovieEvidenceConfig";
+import { walkAutoMovieProjectPopulationFiles } from "./walkAutoMovieProjectPopulationFiles";
 
 /**
  * One exact H2 unit carried by a production-owned contract or design owner.
@@ -161,7 +162,7 @@ interface IMarkdownDocument {
  * @evidence specifications/production-evidence/README.md#production-evidence-specifications Implements the synchronous project-identity reader over the reusable graph.
  * @evidence specifications/production-evidence/graph.md#spec-authoring-production-evidence-shared-contract Reuses the canonical manifest instead of maintaining a second contract route list.
  * @evidence specifications/production-evidence/graph.md#spec-authoring-production-evidence-shape-stage Projects active design branches from the canonical shape-and-stage machine.
- * @evidence specifications/production-evidence/graph.md#spec-authoring-production-evidence-physical-integrity Walks the exact selected physical owner and source populations and refuses ambiguous lineage.
+ * @evidence specifications/production-evidence/graph.md#spec-authoring-production-evidence-physical-integrity Walks the exact selected real, non-linked owner and source populations and refuses ambiguous lineage.
  * @evidence specifications/production-evidence/graph.md#spec-authoring-production-evidence-deterministic-result Sorts filesystem-derived populations by portable code-unit order.
  * @author Samchon
  */
@@ -205,7 +206,7 @@ export const readAutoMovieProductionEvidence = (props: {
   for (const branch of branches) {
     const ownerRoot = path.join(root, "docs", branch.branch);
     const sourceBinding = branch.sourceBinding;
-    for (const file of listMarkdownFiles(ownerRoot)) {
+    for (const file of listMarkdownFiles(root, ownerRoot)) {
       const document = readMarkdownDocument(root, file);
       designOwners.push({
         branch: branch.branch,
@@ -218,7 +219,10 @@ export const readAutoMovieProductionEvidence = (props: {
   }
   designOwners.sort((left, right) => compareCodeUnits(left.path, right.path));
 
-  const contracts = listMarkdownFiles(path.join(root, "docs", "contracts"))
+  const contracts = listMarkdownFiles(
+    root,
+    path.join(root, "docs", "contracts"),
+  )
     .map((file) => readMarkdownDocument(root, file))
     .map((document) => ({
       path: document.path,
@@ -403,20 +407,27 @@ const resolvePopulationFiles = (
   projectRoot: string,
   populationRoot: string,
   patterns: readonly string[],
-): string[] =>
-  fs
-    .globSync(patterns, {
-      cwd: path.resolve(projectRoot, populationRoot),
-    })
-    .map((file) => posix(path.join(populationRoot, file)))
+): string[] => {
+  const root = path.resolve(projectRoot, populationRoot);
+  const candidates = walkAutoMovieProjectPopulationFiles(
+    projectRoot,
+    root,
+    ".ts",
+  );
+  const selected = new Set(
+    fs
+      .globSync(patterns, { cwd: root })
+      .map((file) => path.resolve(root, file)),
+  );
+  return candidates
+    .filter((file) => selected.has(file))
+    .map((file) => posix(path.relative(projectRoot, file)))
     .sort(compareCodeUnits);
+};
 
 /** List one already-validated Markdown population without leaving its root. */
-const listMarkdownFiles = (root: string): string[] =>
-  fs
-    .globSync("**/*.md", { cwd: root })
-    .map((file) => path.join(root, file))
-    .sort(compareCodeUnits);
+const listMarkdownFiles = (projectRoot: string, root: string): string[] =>
+  walkAutoMovieProjectPopulationFiles(projectRoot, root, ".md");
 
 /** Stable code-unit ordering independent of host locale and ICU data. */
 const compareCodeUnits = (left: string, right: string): number =>

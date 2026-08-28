@@ -8,6 +8,7 @@ import os from "node:os";
 import path from "node:path";
 
 import "./auditAutoMovieEvidenceReviewReasons.test";
+import "./readAutoMovieProductionEvidence.test";
 
 type Graph = Parameters<typeof createAutoMovieEvidenceConfig>[0];
 type Claim = NonNullable<Graph["claims"]>[number];
@@ -60,6 +61,26 @@ const write = (location: string, relative: string, content: string): void => {
   const file = path.join(location, relative);
   fs.mkdirSync(path.dirname(file), { recursive: true });
   fs.writeFileSync(file, content);
+};
+
+const externalDirectory = (name: string): string => {
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), `${name}-`));
+  roots.push(directory);
+  return directory;
+};
+
+const linkDirectory = (
+  location: string,
+  relative: string,
+  target: string,
+): void => {
+  const link = path.join(location, relative);
+  fs.mkdirSync(path.dirname(link), { recursive: true });
+  fs.symlinkSync(
+    target,
+    link,
+    process.platform === "win32" ? "junction" : "dir",
+  );
 };
 
 /** Write a shared contract into the linked package the graph reads from. */
@@ -234,6 +255,61 @@ try {
     createAutoMovieContractBindingManifest(disabled(scopeRoot)).populationScope,
     { mode: "complete-production" },
   );
+  const missingSharedFamily = root();
+  fs.rmSync(
+    path.join(
+      missingSharedFamily,
+      "node_modules",
+      "@automovie",
+      "template",
+      "docs",
+      "discovery",
+    ),
+    { recursive: true },
+  );
+  assert.equal(
+    throws(
+      () => createAutoMovieEvidenceConfig(disabled(missingSharedFamily)),
+      "Shared contract inventory changed without graph wiring",
+    ),
+    true,
+  );
+  assert.equal(
+    throws(
+      () =>
+        createAutoMovieEvidenceConfig({
+          ...disabled(scopeRoot),
+          kind: "brief",
+          populationScope: { mode: "complete-production-reset" },
+        }),
+      "complete-production-reset is available only after a film or library pilot",
+    ),
+    true,
+  );
+  assert.equal(
+    throws(
+      () =>
+        createAutoMovieEvidenceConfig({
+          ...disabled(scopeRoot),
+          kind: "library",
+          populationScope: { mode: "first-pilot" },
+        }),
+      "must begin with research or an active settings layer",
+    ),
+    true,
+  );
+  assert.equal(
+    throws(
+      () =>
+        createAutoMovieEvidenceConfig({
+          ...disabled(scopeRoot),
+          kind: "film",
+          populationScope: { mode: "complete-production-reset" },
+        }),
+      "treatments, scripts, and screenplays to reset together to draft",
+    ),
+    true,
+  );
 
   const repeatedReview = root();
   write(
@@ -308,6 +384,64 @@ export const review = true;
     throws(
       () => createAutoMovieEvidenceConfig(disabled(missingDeliveryIndex)),
       "scripts/001-unindexed is a resident delivery group without index.md",
+    ),
+    true,
+  );
+
+  const invalidTreatmentName = root();
+  write(invalidTreatmentName, "docs/treatments/index.md", "# Index\n");
+  assert.equal(
+    throws(
+      () => createAutoMovieEvidenceConfig(disabled(invalidTreatmentName)),
+      "Treatments are flat numbered event files",
+    ),
+    true,
+  );
+
+  const invalidDeliveryPlacement = root();
+  write(
+    invalidDeliveryPlacement,
+    "docs/scripts/001-unit.md",
+    "# Unit\n\n## Sequence {#sequence}\n",
+  );
+  assert.equal(
+    throws(
+      () => createAutoMovieEvidenceConfig(disabled(invalidDeliveryPlacement)),
+      "scripts use numbered delivery-group directories",
+    ),
+    true,
+  );
+
+  const invalidDeliveryIndex = root();
+  write(
+    invalidDeliveryIndex,
+    "docs/scripts/001-delivery/index.md",
+    "# Delivery\n\n## Hidden {#hidden}\n",
+  );
+  write(
+    invalidDeliveryIndex,
+    "docs/scripts/001-delivery/001-unit.md",
+    "# Unit\n\n## Sequence {#sequence}\n",
+  );
+  assert.equal(
+    throws(
+      () => createAutoMovieEvidenceConfig(disabled(invalidDeliveryIndex)),
+      "is a delivery index and may contain only its H1 title",
+    ),
+    true,
+  );
+
+  const missingDeliveryH1 = root();
+  write(missingDeliveryH1, "docs/scripts/001-delivery/index.md", "No title\n");
+  write(
+    missingDeliveryH1,
+    "docs/scripts/001-delivery/001-unit.md",
+    "# Unit\n\n## Sequence {#sequence}\n",
+  );
+  assert.equal(
+    throws(
+      () => createAutoMovieEvidenceConfig(disabled(missingDeliveryH1)),
+      "must begin with exactly one H1 narrative title",
     ),
     true,
   );
@@ -398,6 +532,54 @@ export const review = true;
     ),
     true,
     "reset preserves evidence tags only for an actual design/source pair that is simultaneously draft",
+  );
+  const filmReset = root();
+  write(filmReset, "docs/settings/production.md", "## Scope {#scope}\n");
+  write(
+    filmReset,
+    "docs/treatments/001-event.md",
+    "# Event\n\n## Event {#event}\n<!-- @evidence principles/core/common.md#scope-preservation Retained film-pilot review. -->\n",
+  );
+  for (const layer of ["scripts", "screenplays"] as const) {
+    write(filmReset, `docs/${layer}/001-delivery/index.md`, "# Delivery\n");
+    write(
+      filmReset,
+      `docs/${layer}/001-delivery/001-unit.md`,
+      "# Unit\n\n## Sequence {#sequence}\n### Scene {#scene}\n#### Beat {#beat}\n",
+    );
+  }
+  assert.doesNotThrow(() =>
+    createAutoMovieEvidenceConfig({
+      ...disabled(filmReset),
+      kind: "film",
+      populationScope: { mode: "complete-production-reset" },
+      settings: "review",
+      treatments: "draft",
+      scripts: "draft",
+      screenplays: "draft",
+    }),
+  );
+  write(
+    filmReset,
+    "docs/maps/stale.md",
+    "## Stale {#stale}\n<!-- @evidence principles/core/common.md#scope-preservation A non-reset film branch cannot retain evidence. -->\n",
+  );
+  assert.equal(
+    throws(
+      () =>
+        createAutoMovieEvidenceConfig({
+          ...disabled(filmReset),
+          kind: "film",
+          populationScope: { mode: "complete-production-reset" },
+          settings: "review",
+          maps: "draft",
+          treatments: "draft",
+          scripts: "draft",
+          screenplays: "draft",
+        }),
+      "docs/maps/stale.md is draft and must be completed before evidence tags are authored",
+    ),
+    true,
   );
   fs.rmSync(path.join(resetRoot, "docs", "maps"), { recursive: true });
   assert.equal(
@@ -1240,6 +1422,142 @@ export const review = true;
           screenplays: "draft",
         }),
       "must exactly preserve scripts identity, nesting, and order",
+    ),
+    true,
+  );
+
+  for (const [name, body, diagnostic] of [
+    [
+      "h3-before-h2",
+      "# Unit\n\n### Scene {#scene}\n#### Beat {#beat}\n",
+      "has an H3 before an H2",
+    ],
+    [
+      "h4-before-h2",
+      "# Unit\n\n#### Beat {#beat}\n",
+      "has an H4 before its H2/H3 parents",
+    ],
+    [
+      "h4-before-h3",
+      "# Unit\n\n## Sequence {#sequence}\n#### Beat {#beat}\n",
+      "has an H4 before its H2/H3 parents",
+    ],
+  ] as const) {
+    const malformedLineage = root();
+    write(
+      malformedLineage,
+      "docs/settings/production.md",
+      "## Scope {#scope}\n",
+    );
+    write(
+      malformedLineage,
+      "docs/treatments/001-event.md",
+      "# Event\n\n## Event {#event}\n",
+    );
+    write(
+      malformedLineage,
+      "docs/scripts/001-delivery/index.md",
+      "# Delivery\n",
+    );
+    write(malformedLineage, `docs/scripts/001-delivery/001-${name}.md`, body);
+    assert.equal(
+      throws(
+        () =>
+          createAutoMovieEvidenceConfig({
+            ...disabled(malformedLineage),
+            kind: "film",
+            settings: "review",
+            treatments: "review",
+            scripts: "draft",
+          }),
+        diagnostic,
+      ),
+      true,
+    );
+  }
+
+  const mismatchedTitle = root();
+  write(mismatchedTitle, "docs/settings/production.md", "## Scope {#scope}\n");
+  write(
+    mismatchedTitle,
+    "docs/treatments/001-event.md",
+    "# Event\n\n## Event {#event}\n",
+  );
+  for (const layer of ["scripts", "screenplays"] as const) {
+    write(
+      mismatchedTitle,
+      `docs/${layer}/001-delivery/index.md`,
+      `# ${layer === "scripts" ? "Delivery" : "Changed delivery"}\n`,
+    );
+    write(
+      mismatchedTitle,
+      `docs/${layer}/001-delivery/001-unit.md`,
+      `# ${layer === "scripts" ? "Unit" : "Changed unit"}\n\n## Sequence {#sequence}\n### Scene {#scene}\n#### Beat {#beat}\n`,
+    );
+  }
+  assert.equal(
+    throws(
+      () =>
+        createAutoMovieEvidenceConfig({
+          ...disabled(mismatchedTitle),
+          kind: "film",
+          settings: "review",
+          treatments: "review",
+          scripts: "review",
+          screenplays: "draft",
+        }),
+      "must exactly preserve the scripts H1 title",
+    ),
+    true,
+  );
+
+  const sourcePopulationManifest = root();
+  write(
+    sourcePopulationManifest,
+    "docs/settings/production.md",
+    "## Scope {#scope}\n",
+  );
+  write(
+    sourcePopulationManifest,
+    "docs/models/owner.md",
+    "## Owner {#owner}\n",
+  );
+  write(
+    sourcePopulationManifest,
+    "src/models/owner.ts",
+    "export class Owner {}\n",
+  );
+  assert.ok(
+    createAutoMovieContractBindingManifest({
+      ...disabled(sourcePopulationManifest),
+      kind: "library",
+      settings: "review",
+      models: "review",
+      modelSources: "draft",
+    }).bindings.some(
+      (binding) =>
+        binding.branch === "modelSources" &&
+        binding.target.type === "population" &&
+        binding.target.root === "docs",
+    ),
+  );
+  write(
+    mismatchedTitle,
+    "docs/screenplays/001-delivery/001-unit.md",
+    "# Unit\n\n## Sequence {#sequence}\n### Scene {#scene}\n#### Beat {#beat}\n",
+  );
+  assert.equal(
+    throws(
+      () =>
+        createAutoMovieEvidenceConfig({
+          ...disabled(mismatchedTitle),
+          kind: "film",
+          settings: "review",
+          treatments: "review",
+          scripts: "review",
+          screenplays: "draft",
+        }),
+      "delivery-group H1 title",
     ),
     true,
   );
@@ -3811,6 +4129,321 @@ export const review = true;
   const examples = root();
   write(examples, "src/examples/props.ts", "export const example = 1;");
   assert.doesNotThrow(() => createAutoMovieEvidenceConfig(disabled(examples)));
+
+  const physicalBoundaryDiagnostic =
+    "project evidence populations contain only real files and directories inside the project root";
+
+  const linkedDesignRoot = root();
+  write(linkedDesignRoot, "docs/settings/production.md", "## Scope {#scope}\n");
+  const externalDesign = externalDirectory("automovie-linked-design");
+  write(externalDesign, "owner.md", "## Owner {#owner}\n");
+  linkDirectory(linkedDesignRoot, "docs/models", externalDesign);
+  assert.equal(
+    throws(
+      () =>
+        createAutoMovieEvidenceConfig({
+          ...disabled(linkedDesignRoot),
+          kind: "library",
+          settings: "review",
+          models: "draft",
+        }),
+      physicalBoundaryDiagnostic,
+    ),
+    true,
+    "an active design population root cannot be a junction or symlink",
+  );
+
+  const linkedStoryRoot = root();
+  write(linkedStoryRoot, "docs/settings/production.md", "## Scope {#scope}\n");
+  const externalStory = externalDirectory("automovie-linked-story");
+  write(
+    externalStory,
+    "001-event.md",
+    "# Event\n\n## Change {#event-change}\n",
+  );
+  linkDirectory(linkedStoryRoot, "docs/treatments", externalStory);
+  assert.equal(
+    throws(
+      () =>
+        createAutoMovieEvidenceConfig({
+          ...disabled(linkedStoryRoot),
+          kind: "film",
+          settings: "review",
+          treatments: "draft",
+        }),
+      physicalBoundaryDiagnostic,
+    ),
+    true,
+    "an active story population root cannot leave the project through a link",
+  );
+
+  const linkedDeliveryRoot = root();
+  write(
+    linkedDeliveryRoot,
+    "docs/settings/production.md",
+    "## Scope {#scope}\n",
+  );
+  const externalDelivery = externalDirectory("automovie-linked-delivery");
+  write(
+    externalDelivery,
+    "001-delivery.md",
+    "## Delivery {#delivery}\n### Shot {#shot}\n#### Observation {#observation}\n",
+  );
+  linkDirectory(linkedDeliveryRoot, "docs/briefs", externalDelivery);
+  assert.equal(
+    throws(
+      () =>
+        createAutoMovieEvidenceConfig({
+          ...disabled(linkedDeliveryRoot),
+          kind: "brief",
+          settings: "review",
+          briefs: "draft",
+        }),
+      physicalBoundaryDiagnostic,
+    ),
+    true,
+    "an active delivery population root cannot leave the project through a link",
+  );
+
+  const nestedLinkRoot = root();
+  write(nestedLinkRoot, "docs/settings/production.md", "## Scope {#scope}\n");
+  write(nestedLinkRoot, "docs/models/owner.md", "## Owner {#owner}\n");
+  const externalSibling = externalDirectory("automovie-linked-sibling");
+  write(externalSibling, "hidden.md", "## Hidden {#hidden}\n");
+  linkDirectory(nestedLinkRoot, "docs/models/linked", externalSibling);
+  assert.equal(
+    throws(
+      () =>
+        createAutoMovieEvidenceConfig({
+          ...disabled(nestedLinkRoot),
+          kind: "library",
+          settings: "review",
+          models: "draft",
+        }),
+      physicalBoundaryDiagnostic,
+    ),
+    true,
+    "a nested link cannot disappear from an otherwise valid active population",
+  );
+
+  const linkedContractsRoot = root();
+  fs.rmSync(path.join(linkedContractsRoot, "docs", "contracts"), {
+    recursive: true,
+  });
+  const externalContracts = externalDirectory("automovie-linked-contracts");
+  write(
+    externalContracts,
+    "index.md",
+    "<!-- @evidenceExclude discovery/core/common.md#shared-local-boundary The exact local risks are covered by shared contracts. -->\n\n# Work-specific contract audit\n",
+  );
+  linkDirectory(linkedContractsRoot, "docs/contracts", externalContracts);
+  write(
+    linkedContractsRoot,
+    "docs/settings/production.md",
+    "## Scope {#scope}\n",
+  );
+  assert.equal(
+    throws(
+      () =>
+        createAutoMovieEvidenceConfig({
+          ...disabled(linkedContractsRoot),
+          kind: "library",
+          settings: "draft",
+        }),
+      physicalBoundaryDiagnostic,
+    ),
+    true,
+    "the flat local-contract inventory cannot be supplied through a link",
+  );
+
+  const linkedSourceRoot = root();
+  write(linkedSourceRoot, "docs/settings/production.md", "## Scope {#scope}\n");
+  write(linkedSourceRoot, "docs/models/owner.md", "## Owner {#owner}\n");
+  const externalSource = externalDirectory("automovie-linked-source");
+  write(externalSource, "owner.ts", "export class Owner {}\n");
+  linkDirectory(linkedSourceRoot, "src/models", externalSource);
+  assert.equal(
+    throws(
+      () =>
+        createAutoMovieEvidenceConfig({
+          ...disabled(linkedSourceRoot),
+          kind: "library",
+          settings: "review",
+          models: "review",
+          modelSources: "draft",
+        }),
+      physicalBoundaryDiagnostic,
+    ),
+    true,
+    "a selected source population cannot be supplied through a link",
+  );
+
+  const linkedSharedContracts = root();
+  const linkedTemplate = path.join(
+    linkedSharedContracts,
+    "node_modules",
+    "@automovie",
+    "template",
+  );
+  fs.rmSync(linkedTemplate, { recursive: true });
+  linkDirectory(
+    linkedSharedContracts,
+    "node_modules/@automovie/template",
+    templateRoot,
+  );
+  write(linkedSharedContracts, "host.ts", "export const host = true;\n");
+  assert.doesNotThrow(
+    () =>
+      createAutoMovieEvidenceConfig({
+        ...disabled(linkedSharedContracts),
+        claims: [
+          {
+            name: "a broad local population still excludes dependencies",
+            type: "typescript",
+            root: ".",
+            files: ["host.ts"],
+            symbol: "property",
+            reference: {
+              type: "typescript",
+              package: "@automovie/template",
+              files: ["index.ts"],
+              symbol: "property",
+            },
+          },
+        ],
+      }),
+    "the installed shared contract package may remain a workspace link",
+  );
+
+  const inactiveLinkedDesign = root();
+  const inactiveDesignTarget = externalDirectory(
+    "automovie-inactive-linked-design",
+  );
+  write(inactiveDesignTarget, "residue.md", "inactive\n");
+  linkDirectory(inactiveLinkedDesign, "docs/models", inactiveDesignTarget);
+  assert.equal(
+    throws(
+      () => createAutoMovieEvidenceConfig(disabled(inactiveLinkedDesign)),
+      physicalBoundaryDiagnostic,
+    ),
+    true,
+    "a disabled design branch cannot hide linked residue",
+  );
+
+  const inactiveLinkedStory = root();
+  const inactiveStoryTarget = externalDirectory(
+    "automovie-inactive-linked-story",
+  );
+  write(inactiveStoryTarget, "001-residue.md", "inactive\n");
+  linkDirectory(inactiveLinkedStory, "docs/treatments", inactiveStoryTarget);
+  assert.equal(
+    throws(
+      () => createAutoMovieEvidenceConfig(disabled(inactiveLinkedStory)),
+      physicalBoundaryDiagnostic,
+    ),
+    true,
+    "a disabled story branch cannot hide linked residue",
+  );
+
+  const inactiveNestedSource = root();
+  fs.mkdirSync(path.join(inactiveNestedSource, "src", "models"), {
+    recursive: true,
+  });
+  const inactiveSourceTarget = externalDirectory(
+    "automovie-inactive-linked-source",
+  );
+  write(inactiveSourceTarget, "residue.ts", "export const residue = true;\n");
+  linkDirectory(
+    inactiveNestedSource,
+    "src/models/linked",
+    inactiveSourceTarget,
+  );
+  assert.equal(
+    throws(
+      () => createAutoMovieEvidenceConfig(disabled(inactiveNestedSource)),
+      physicalBoundaryDiagnostic,
+    ),
+    true,
+    "a disabled source branch cannot hide a nested linked residue",
+  );
+
+  const linkedProjectTarget = root();
+  const linkedProjectParent = externalDirectory("automovie-linked-project");
+  linkDirectory(linkedProjectParent, "project", linkedProjectTarget);
+  assert.equal(
+    throws(
+      () =>
+        createAutoMovieEvidenceConfig(
+          disabled(path.join(linkedProjectParent, "project")),
+        ),
+      physicalBoundaryDiagnostic,
+    ),
+    true,
+    "the declared project root itself cannot be a junction or symlink",
+  );
+
+  const escapingClaimRoot = root();
+  const externalClaim = externalDirectory("automovie-external-claim");
+  write(externalClaim, "host.md", "# Host\n");
+  assert.equal(
+    throws(
+      () =>
+        createAutoMovieEvidenceConfig({
+          ...disabled(escapingClaimRoot),
+          claims: [
+            {
+              name: "an additive claim cannot escape the project",
+              type: "markdown",
+              root: externalClaim,
+              files: ["*.md"],
+              reference: {
+                type: "markdown",
+                root: externalClaim,
+                files: ["*.md"],
+              },
+            },
+          ],
+        }),
+      physicalBoundaryDiagnostic,
+    ),
+    true,
+    "a project-local additive population cannot escape the declared root",
+  );
+
+  const linkedClaimAncestor = root();
+  const externalClaimAncestor = externalDirectory(
+    "automovie-linked-claim-ancestor",
+  );
+  fs.mkdirSync(path.join(linkedClaimAncestor, "population"));
+  linkDirectory(
+    linkedClaimAncestor,
+    "population/linked",
+    externalClaimAncestor,
+  );
+  assert.equal(
+    throws(
+      () =>
+        createAutoMovieEvidenceConfig({
+          ...disabled(linkedClaimAncestor),
+          claims: [
+            {
+              name: "an absent host below a link cannot disappear",
+              type: "markdown",
+              root: "population/linked/missing",
+              files: ["*.md"],
+              reference: {
+                type: "markdown",
+                root: "docs",
+                files: ["contracts/index.md"],
+              },
+            },
+          ],
+        }),
+      physicalBoundaryDiagnostic,
+    ),
+    true,
+    "an absent population below a linked ancestor still fails closed",
+  );
 
   const { claims: omittedClaims, ...withoutClaims } = disabled(root());
   void omittedClaims;

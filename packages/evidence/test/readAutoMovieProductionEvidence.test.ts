@@ -206,6 +206,27 @@ try {
     }),
     first,
   );
+  const linkedSourceParent = fs.mkdtempSync(
+    path.join(os.tmpdir(), "reader-linked-source-"),
+  );
+  roots.push(linkedSourceParent);
+  const linkedSourceTarget = path.join(linkedSourceParent, "models");
+  fs.renameSync(path.join(project, "src", "models"), linkedSourceTarget);
+  fs.symlinkSync(
+    linkedSourceTarget,
+    path.join(project, "src", "models"),
+    process.platform === "win32" ? "junction" : "dir",
+  );
+  assert.throws(
+    () =>
+      readAutoMovieProductionEvidence({
+        root: project,
+        productionEvidence: configuration,
+      }),
+    /project evidence populations contain only real files and directories inside the project root/u,
+  );
+  fs.rmSync(path.join(project, "src", "models"));
+  fs.renameSync(linkedSourceTarget, path.join(project, "src", "models"));
   const modelSources = path.join(project, "src", "models");
   const inactiveSources = path.join(project, "inactive-models");
   fs.renameSync(modelSources, inactiveSources);
