@@ -202,7 +202,10 @@ const runGenerated = (
       cwd: project,
       encoding: "utf8",
       env: environment,
-      timeout: plugins ? 600_000 : 180_000,
+      timeout:
+        plugins || environment.AUTOMOVIE_ISSUE_2135_COVERAGE === "1"
+          ? 600_000
+          : 180_000,
     },
   );
   if (result.error !== undefined) throw result.error;
@@ -277,6 +280,9 @@ const assertGeneratedRuntimeParity = (
     "scripts/repaintCommand.ts",
     "scripts/repaintAdapter.ts",
     "scripts/withKokoroRuntimeOverrides.cjs",
+    "viewer/src/film.ts",
+    "viewer/src/shot.ts",
+    "viewer/src/shotRuntime.ts",
     "vite.config.ts",
   ];
   TestValidator.equals(
