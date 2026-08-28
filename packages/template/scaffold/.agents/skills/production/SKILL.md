@@ -13,6 +13,17 @@ Apply this workflow without subject-matter exceptions. Historical, technical, me
 
 Write only what was requested. Do not create a placeholder file, heading, or stub, and do not invent production content without an explicit authorship request.
 
+## Generated instructions
+
+`AGENTS.md`, `CLAUDE.md`, and `.agents/skills` are ignored generated instructions, not production-owned doctrine.
+`npm run sync` deletes and replaces that instruction surface from the installed `@automovie/template`, then renders the root router from the tracked `package.json`, `productionEvidence.ts`, active authored owners, and `docs/contracts` targets.
+Do not edit generated instructions or preserve a local fork inside them.
+Change a production fact in its tracked owner, upgrade the installed template when shared doctrine changes, and run sync again.
+
+Start the coding-agent session from this project root after sync.
+Codex loads the generated `AGENTS.md`, while Claude Code follows the generated `CLAUDE.md -> @AGENTS.md` import.
+A parent repository's instructions or a session started from another directory do not prove that this production's router was loaded.
+
 ## External retrieval
 
 Web search and page retrieval are available to you. Where a phase requires a search, that phase says so: [Settings](settings.md#research-and-revision) owns when externally checkable canon must be opened rather than written from memory, [Research](research.md) owns the optional durable source ledger, and the discovery targets own the boundary search each layer owes over the production's directives, subject, sources, and assets. Those routes can record a truthful negative: an unresolved status or one population-wide exclusion naming what the search examined. That is why they can require a search at all.
@@ -119,6 +130,17 @@ Nothing in `.wiki` binds this production. Before relying on a fact, decision, or
 Use the compiler-visible [vertical-slice pilot](pilot.md) when one real film delivery group or one fresh library design/source branch can expose an expensive upstream defect before sibling authorship begins. The pilot narrows only a partition-owning population or the number of owners that exist yet. Settings, canon, the production promise, discovery, upstream revision, principles, obligations, lineage, source ownership, and review remain at full strength.
 
 An optional `.wiki` trial is still the cheaper preflight. Take one treatment event as far as a shot sketch, or sketch one design through its source boundary, before any governed host exists. It can reveal a missing space, subject, exchange, interface, or observation, but the graph never reads it and it proves nothing. Promote every retained decision into its canonical owner, then run the governed pilot when its cost is justified.
+
+## Reader editions
+
+Run `npm run book -- --layer <layer> --title <title>` when a human reader needs one integrated Markdown view of an authored layer.
+The default layer is `screenplays`; the same command accepts any authored film, brief, design, research, or settings layer supported by the binder.
+It reads `docs/<layer>` recursively in deterministic code-unit path order and writes one ignored file beneath `artifacts`, or beneath the explicit `--output` directory.
+It never edits authored documents.
+
+The edition has one supplied H1, rebases each document and its visible H1-H6 hierarchy below it, removes evidence HTML comments and trailing citation anchors, and preserves prose, links, fenced examples, and document boundaries.
+Repeated binding over the same source is byte-identical.
+Markdown is the owned reader format; PDF, Fountain, Final Draft, font shaping, and typography remain the responsibility of their existing converters.
 
 ## Recording work
 

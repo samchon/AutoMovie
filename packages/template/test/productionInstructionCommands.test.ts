@@ -4,7 +4,9 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
+import { productionEvidence } from "../scaffold/productionEvidence";
 import { bindProductionBook } from "../scaffold/scripts/book";
+import { synchronizeProductionInstructions } from "../scaffold/scripts/sync";
 import { writeAutoMovieProductionInstructions } from "../src/writeAutoMovieProductionInstructions";
 
 const roots: string[] = [];
@@ -31,6 +33,14 @@ void main();
 async function main(): Promise<void> {
   try {
     const project = createProduction("instruction-library");
+    assert.equal(productionEvidence.location, scaffoldRoot);
+    assert.deepEqual(productionEvidence.populationScope, {
+      mode: "complete-production",
+    });
+    assert.throws(
+      () => synchronizeProductionInstructions({ root: scaffoldRoot }),
+      /cannot synchronize instructions into itself/u,
+    );
     write(
       project,
       "package.json",

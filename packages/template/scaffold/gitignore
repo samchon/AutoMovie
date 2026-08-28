@@ -17,3 +17,7 @@ renders/*/
 *.log
 .DS_Store
 .wiki/
+AGENTS.md
+CLAUDE.md
+.agents/
+artifacts/

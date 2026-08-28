@@ -48,10 +48,12 @@
       "./package.json": "./package.json"
     }
   },
+  "dependencies": {
+    "@automovie/evidence": "workspace:^"
+  },
   "devDependencies": {
     "@automovie/archetypes": "workspace:^",
     "@automovie/engine": "workspace:^",
-    "@automovie/evidence": "workspace:^",
     "@automovie/interface": "workspace:^",
     "@automovie/production": "workspace:^",
     "@automovie/render": "workspace:^",
