@@ -59,6 +59,13 @@ interface IMeasuredObstacle {
   dynamic: boolean;
 }
 
+/** One motion sequence whose authored key boundaries refine the fixed clock. */
+interface IClearanceTimedSequence {
+  duration: number;
+  loop: boolean;
+  times: readonly number[];
+}
+
 /** Maximum distance from model origin to any corner of its measured box. */
 const originRadius = (
   extent: NonNullable<ReturnType<typeof computeModelRestExtent>>,
@@ -78,6 +85,75 @@ const safeThrownDescription = (error: unknown): string => {
   } catch {
     return "an uninspectable thrown value";
   }
+};
+
+/** Add every in-shot key boundary, repeating a looping sequence deterministically. */
+const addSequenceBoundaries = (
+  result: Set<number>,
+  shotDuration: number,
+  sequence: IClearanceTimedSequence,
+): void => {
+  if (!(Number.isFinite(sequence.duration) && sequence.duration > 0))
+    throw new Error(
+      "camera clearance cannot sample a motion sequence without a finite positive duration",
+    );
+  const cycles = sequence.loop
+    ? Math.ceil(shotDuration / sequence.duration)
+    : 1;
+  for (let cycle = 0; cycle < cycles; cycle++)
+    for (const time of sequence.times) {
+      const absolute = cycle * sequence.duration + time;
+      if (Number.isFinite(absolute) && absolute > 0 && absolute < shotDuration)
+        result.add(absolute);
+    }
+};
+
+/** Base fixed clock refined by every camera, actor, and object key boundary. */
+const clearanceSampleTimes = (props: {
+  duration: number;
+  sampleRate: number;
+  cameraMotion: IAutoMovieShot["cameraMotion"];
+  motions: Readonly<Record<string, IAutoMovieMotion>>;
+  objectMotions: readonly IAutoMovieClip[];
+}): number[] => {
+  for (const motion of Object.values(props.motions))
+    if (motion.keyframes.some((keyframe) => keyframe.easing === "cubicBezier"))
+      throw new Error(
+        `camera clearance cannot conservatively bound actor motion "${motion.id}" with cubicBezier easing; use linear, step, or named non-overshooting easing`,
+      );
+  for (const clip of [
+    ...props.objectMotions,
+    ...(props.cameraMotion === null ? [] : [props.cameraMotion]),
+  ])
+    if (clip.tracks.some((track) => track.interpolation === "cubicspline"))
+      throw new Error(
+        `camera clearance cannot conservatively bound clip "${clip.id}" with cubicspline interpolation; use linear or step interpolation`,
+      );
+  const result = new Set(sampleTimes(props.duration, props.sampleRate));
+  const sequences: IClearanceTimedSequence[] = [
+    ...Object.values(props.motions).map((motion) => ({
+      duration: motion.duration,
+      loop: motion.loop,
+      times: motion.keyframes.map((keyframe) => keyframe.time),
+    })),
+    ...props.objectMotions.map((clip) => ({
+      duration: clip.duration,
+      loop: clip.loop,
+      times: clip.tracks.flatMap((track) => track.times),
+    })),
+    ...(props.cameraMotion === null
+      ? []
+      : [
+          {
+            duration: props.cameraMotion.duration,
+            loop: props.cameraMotion.loop,
+            times: props.cameraMotion.tracks.flatMap((track) => track.times),
+          },
+        ]),
+  ];
+  for (const sequence of sequences)
+    addSequenceBoundaries(result, props.duration, sequence);
+  return [...result].sort((left, right) => left - right);
 };
 
 /** Resolve actor and object root authority at one shot-local instant. */
@@ -216,6 +292,13 @@ export function compileCameraClearanceReports(props: {
     const cameraEntry = cameras.get(take.camera.id)!;
     let report: IAutoMovieCameraClearanceReport;
     try {
+      const times = clearanceSampleTimes({
+        duration: props.duration,
+        sampleRate: props.runtime.sampleRate,
+        cameraMotion: take.motion,
+        motions: props.motions,
+        objectMotions: props.objectMotions,
+      });
       report = evaluateCameraClearance({
         camera: take.camera.id,
         envelope: take.camera.clearance!,
@@ -223,59 +306,57 @@ export function compileCameraClearanceReports(props: {
         currentRevision: props.runtime.currentRevision,
         sampleRate: props.runtime.sampleRate,
         duration: props.duration,
-        samples: sampleTimes(props.duration, props.runtime.sampleRate).map(
-          (time) => {
-            const resolved = resolveCameraAt(
-              take.camera.transform,
-              take.motion,
-              take.camera.id,
-              time,
-            );
-            return {
-              time,
-              camera: {
-                translation: resolved.position,
-                rotation: resolved.rotation,
-                scale: take.camera.transform.scale,
-              },
-              obstacles: measured.map((obstacle) => {
-                const transform = nodeTransformAt(
-                  obstacle.node,
-                  props.motions[obstacle.node.id],
-                  props.objectMotions,
-                  time,
+        samples: times.map((time) => {
+          const resolved = resolveCameraAt(
+            take.camera.transform,
+            take.motion,
+            take.camera.id,
+            time,
+          );
+          return {
+            time,
+            camera: {
+              translation: resolved.position,
+              rotation: resolved.rotation,
+              scale: take.camera.transform.scale,
+            },
+            obstacles: measured.map((obstacle) => {
+              const transform = nodeTransformAt(
+                obstacle.node,
+                props.motions[obstacle.node.id],
+                props.objectMotions,
+                time,
+              );
+              if (obstacle.dynamic) {
+                const scale = Math.max(
+                  Math.abs(transform.scale.x),
+                  Math.abs(transform.scale.y),
+                  Math.abs(transform.scale.z),
                 );
-                if (obstacle.dynamic) {
-                  const scale = Math.max(
-                    Math.abs(transform.scale.x),
-                    Math.abs(transform.scale.y),
-                    Math.abs(transform.scale.z),
-                  );
-                  const radius = obstacle.radius * scale;
-                  return {
-                    node: obstacle.node.id,
-                    bounds: {
-                      min: {
-                        x: transform.translation.x - radius,
-                        y: transform.translation.y - radius,
-                        z: transform.translation.z - radius,
-                      },
-                      max: {
-                        x: transform.translation.x + radius,
-                        y: transform.translation.y + radius,
-                        z: transform.translation.z + radius,
-                      },
-                    },
-                  };
-                }
+                const radius = obstacle.radius * scale;
                 return {
                   node: obstacle.node.id,
-                  bounds: nodeSubjectBox(transform, obstacle.extent),
+                  bounds: {
+                    min: {
+                      x: transform.translation.x - radius,
+                      y: transform.translation.y - radius,
+                      z: transform.translation.z - radius,
+                    },
+                    max: {
+                      x: transform.translation.x + radius,
+                      y: transform.translation.y + radius,
+                      z: transform.translation.z + radius,
+                    },
+                  },
                 };
-              }),
-            };
-          },
-        ),
+              }
+              return {
+                node: obstacle.node.id,
+                bounds: nodeSubjectBox(transform, obstacle.extent),
+              };
+            }),
+          };
+        }),
       });
     } catch (error) {
       props.out.push(

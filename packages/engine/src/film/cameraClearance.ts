@@ -236,18 +236,26 @@ export function evaluateCameraClearance(
       revision: input.revision,
       currentRevision: input.currentRevision,
       sampleRate: input.sampleRate,
+      sampleTimes: [],
       intervals: 0,
       status: "stale",
       findings: [],
     };
 
-  const times = sampleTimes(input.duration, input.sampleRate);
+  const fixedTimes = sampleTimes(input.duration, input.sampleRate);
+  const suppliedTimes = input.samples.map((sample) => sample.time);
+  const suppliedTimeSet = new Set(suppliedTimes);
   if (
-    input.samples.length !== times.length ||
-    input.samples.some((sample, index) => sample.time !== times[index])
+    suppliedTimes.some(
+      (time) => !Number.isFinite(time) || time < 0 || time > input.duration,
+    ) ||
+    suppliedTimes.some(
+      (time, index) => index > 0 && time <= suppliedTimes[index - 1]!,
+    ) ||
+    fixedTimes.some((time) => !suppliedTimeSet.has(time))
   )
     throw new Error(
-      "$input.samples must contain every endpoint-inclusive fixed-clock instant exactly once",
+      "$input.samples must contain every endpoint-inclusive fixed-clock instant in strict time order; additional causal instants are allowed",
     );
 
   const obstacleMaps = input.samples.map(obstaclesByNode);
@@ -316,6 +324,7 @@ export function evaluateCameraClearance(
     revision: input.revision,
     currentRevision: input.currentRevision,
     sampleRate: input.sampleRate,
+    sampleTimes: suppliedTimes,
     intervals: Math.max(0, input.samples.length - 1),
     status: findings.length === 0 ? "clear" : "blocked",
     findings,

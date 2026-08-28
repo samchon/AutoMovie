@@ -86,6 +86,9 @@ export interface IAutoMovieCameraClearanceReport {
   /** Endpoint-inclusive inspection samples per second. */
   sampleRate: number;
 
+  /** Exact ordered fixed-clock and causal sample instants evaluated. */
+  sampleTimes: number[];
+
   /** Number of adjacent sample intervals evaluated. */
   intervals: number;
 

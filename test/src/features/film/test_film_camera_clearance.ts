@@ -120,7 +120,8 @@ const runtimeModels = () => [
  * Scenarios:
  *
  * 1. Exact sphere/box boundary contact blocks a static camera.
- * 2. Clear endpoints do not hide a midpoint wall penetration.
+ * 2. Clear endpoints do not hide a midpoint wall penetration, including an
+ *    authored camera key that does not land on the base fixed clock.
  * 3. A parent rig can collide while the camera body remains clear.
  * 4. A moving subject crossing a fixed camera is compared at the same samples.
  * 5. Rotation of an offset envelope carries the conservative arc, not merely
@@ -134,8 +135,8 @@ const runtimeModels = () => [
  *    and a stale geometry snapshot return addressed refusal.
  * 10. A zero-duration public evaluation still detects contact at its single
  *     fixed-clock instant.
- * 11. Artifact validation requires exactly one clear report per declared take
- *     and binds its interval count to a safely countable shared clock.
+ * 11. Artifact validation requires exactly one clear report per declared take,
+ *     at least the safely countable base intervals, and permits causal keys.
  * 12. An evaluator throw remains addressed even when the thrown value refuses
  *     diagnostic string coercion.
  */
@@ -174,6 +175,34 @@ export const test_film_camera_clearance = (): void => {
     "clear endpoints still catch midpoint penetration",
     midpoint.status,
     "blocked",
+  );
+  const causalMidpoint = evaluate({
+    samples: [
+      {
+        time: 0,
+        camera: identity(-2),
+        obstacles: [{ node: "wall", bounds: box({ x: 0, y: 0, z: 0 }) }],
+      },
+      {
+        time: 0.5,
+        camera: identity(),
+        obstacles: [{ node: "wall", bounds: box({ x: 0, y: 0, z: 0 }) }],
+      },
+      {
+        time: 1,
+        camera: identity(-2),
+        obstacles: [{ node: "wall", bounds: box({ x: 0, y: 0, z: 0 }) }],
+      },
+    ],
+  });
+  TestValidator.equals(
+    "an off-clock causal key refines rather than replaces the fixed clock",
+    [
+      causalMidpoint.status,
+      causalMidpoint.intervals,
+      causalMidpoint.sampleTimes,
+    ],
+    ["blocked", 2, [0, 0.5, 1]],
   );
 
   const rigOnly = evaluate({
@@ -317,6 +346,60 @@ export const test_film_camera_clearance = (): void => {
       throws(
         () =>
           evaluate({
+            samples: [
+              { time: 0, camera: identity(), obstacles: [] },
+              { time: 0.5, camera: identity(), obstacles: [] },
+            ],
+          }),
+        "fixed-clock",
+      ),
+      throws(
+        () =>
+          evaluate({
+            samples: [
+              { time: 0, camera: identity(), obstacles: [] },
+              { time: 0, camera: identity(), obstacles: [] },
+              { time: 1, camera: identity(), obstacles: [] },
+            ],
+          }),
+        "strict time order",
+      ),
+      throws(
+        () =>
+          evaluate({
+            samples: [
+              { time: 0, camera: identity(), obstacles: [] },
+              { time: Number.NaN, camera: identity(), obstacles: [] },
+              { time: 1, camera: identity(), obstacles: [] },
+            ],
+          }),
+        "strict time order",
+      ),
+      throws(
+        () =>
+          evaluate({
+            samples: [
+              { time: 0, camera: identity(), obstacles: [] },
+              { time: -0.5, camera: identity(), obstacles: [] },
+              { time: 1, camera: identity(), obstacles: [] },
+            ],
+          }),
+        "strict time order",
+      ),
+      throws(
+        () =>
+          evaluate({
+            samples: [
+              { time: 0, camera: identity(), obstacles: [] },
+              { time: 1.5, camera: identity(), obstacles: [] },
+              { time: 1, camera: identity(), obstacles: [] },
+            ],
+          }),
+        "strict time order",
+      ),
+      throws(
+        () =>
+          evaluate({
             samples: [0, 1].map((time) => ({
               time,
               camera: identity(),
@@ -389,7 +472,7 @@ export const test_film_camera_clearance = (): void => {
         "identity set",
       ),
     ],
-    [true, true, true, true, true, true, true],
+    [true, true, true, true, true, true, true, true, true, true, true, true],
   );
 
   const authored = stageWithClearance(envelope());
@@ -465,7 +548,9 @@ export const test_film_camera_clearance = (): void => {
     "current clear performance preserves its report",
     performed.success === true &&
       performed.shot.cameraClearance?.[0]?.status === "clear" &&
-      performed.shot.cameraClearance[0].intervals === 48,
+      performed.shot.cameraClearance[0].intervals >= 48 &&
+      performed.shot.cameraClearance[0].sampleTimes.length ===
+        performed.shot.cameraClearance[0].intervals + 1,
   );
   if (performed.success !== true)
     throw new Error("clearance performance fixture must perform");
@@ -507,7 +592,11 @@ export const test_film_camera_clearance = (): void => {
     {
       ...performed.shot,
       cameraClearance: [
-        { ...acceptedReport, intervals: acceptedReport.intervals - 1 },
+        {
+          ...acceptedReport,
+          intervals:
+            Math.ceil(performed.shot.duration * acceptedReport.sampleRate) - 1,
+        },
       ],
     },
     clearStage.scene,
@@ -523,8 +612,37 @@ export const test_film_camera_clearance = (): void => {
     clearStage.scene,
     motionIds,
   );
+  const forgedHugeIntervals = validateShotArtifact(
+    {
+      ...performed.shot,
+      cameraClearance: [
+        { ...acceptedReport, intervals: Number.MAX_SAFE_INTEGER },
+      ],
+    },
+    clearStage.scene,
+    motionIds,
+  );
+  const additionalBoundaryReport = validateShotArtifact(
+    {
+      ...performed.shot,
+      cameraClearance: [
+        {
+          ...acceptedReport,
+          sampleTimes: [
+            acceptedReport.sampleTimes[0]!,
+            (acceptedReport.sampleTimes[0]! + acceptedReport.sampleTimes[1]!) /
+              2,
+            ...acceptedReport.sampleTimes.slice(1),
+          ],
+          intervals: acceptedReport.intervals + 1,
+        },
+      ],
+    },
+    clearStage.scene,
+    motionIds,
+  );
   TestValidator.predicate(
-    "artifact interval evidence must equal one safely countable shared clock",
+    "artifact intervals cover the safe base clock and may retain causal keys",
     wrongIntervalCount.success === false &&
       wrongIntervalCount.violations.some(
         (item) => item.path === "$input.cameraClearance[0].intervals",
@@ -532,7 +650,12 @@ export const test_film_camera_clearance = (): void => {
       unsafeIntervalClock.success === false &&
       unsafeIntervalClock.violations.some(
         (item) => item.path === "$input.cameraClearance[0].sampleRate",
-      ),
+      ) &&
+      forgedHugeIntervals.success === false &&
+      forgedHugeIntervals.violations.some(
+        (item) => item.path === "$input.cameraClearance[0].intervals",
+      ) &&
+      additionalBoundaryReport.success === true,
   );
 
   const metadataViolations: Parameters<typeof appendShotMetadataArtifact>[3] =
@@ -569,11 +692,17 @@ export const test_film_camera_clearance = (): void => {
           currentRevision: "current",
           sampleRate: 0,
           intervals: 0.5,
+          sampleTimes: [0, 0],
           status: "blocked",
           findings: "not-an-array",
         },
-        { ...acceptedReport, camera: "ghost", findings: [{}] },
-        { ...acceptedReport, camera: "ghost" },
+        {
+          ...acceptedReport,
+          camera: "ghost",
+          sampleTimes: [-1, Number.NaN, performed.shot.duration + 1],
+          findings: [{}],
+        },
+        { ...acceptedReport, camera: "ghost", sampleTimes: "not-an-array" },
       ],
     },
     "$metadata",
@@ -589,11 +718,16 @@ export const test_film_camera_clearance = (): void => {
       "$metadata.cameraClearance[0].currentRevision",
       "$metadata.cameraClearance[0].sampleRate",
       "$metadata.cameraClearance[0].intervals",
+      "$metadata.cameraClearance[0].sampleTimes[1]",
       "$metadata.cameraClearance[0].status",
       "$metadata.cameraClearance[0].findings",
       "$metadata.cameraClearance[1].camera",
+      "$metadata.cameraClearance[1].sampleTimes[0]",
+      "$metadata.cameraClearance[1].sampleTimes[1]",
+      "$metadata.cameraClearance[1].sampleTimes[2]",
       "$metadata.cameraClearance[1].findings",
       "$metadata.cameraClearance[2].camera",
+      "$metadata.cameraClearance[2].sampleTimes",
     ].every((path) => metadataViolations.some((item) => item.path === path)),
   );
 
@@ -731,6 +865,108 @@ export const test_film_camera_clearance = (): void => {
     animated.out.items.length === 0 &&
       animated.reports?.length === 2 &&
       animated.reports.every((report) => report.status === "clear"),
+  );
+
+  const contact = staticNode.transform.translation;
+  const offClockCameraMotion = {
+    id: "off-clock-camera-contact",
+    name: null,
+    duration: 2,
+    loop: false,
+    tracks: [
+      {
+        channel: {
+          kind: "node" as const,
+          node: heroCamera.id,
+          path: "translation" as const,
+        },
+        times: [0, 1 / 48, 1 / 24, 2],
+        values: [
+          contact.x + 100,
+          contact.y,
+          contact.z,
+          contact.x,
+          contact.y,
+          contact.z,
+          contact.x + 100,
+          contact.y,
+          contact.z,
+          contact.x + 100,
+          contact.y,
+          contact.z,
+        ],
+        interpolation: "linear" as const,
+      },
+    ],
+  };
+  const offClockContact = inspectAdapter({
+    scene: {
+      ...clearStage.scene,
+      nodes: [...clearStage.scene.nodes, staticNode],
+    },
+    hero: { camera: heroCamera, motion: offClockCameraMotion },
+    motions: {},
+    objectMotions: [],
+    models: [...runtimeModels(), propModel],
+  });
+  TestValidator.predicate(
+    "an unaligned camera key refines the compiler clock before interval sweep",
+    offClockContact.reports === undefined &&
+      offClockContact.out.items.some(
+        (item) =>
+          item.path.endsWith(".clearance.body") &&
+          item.expected.includes('obstacle "static-prop"'),
+      ),
+  );
+  const [actorNode, actorMotion] = Object.entries(performed.motions)[0]!;
+  const cubicActor = inspectAdapter({
+    motions: {
+      ...performed.motions,
+      [actorNode]: {
+        ...actorMotion,
+        keyframes: actorMotion.keyframes.map((keyframe, index) =>
+          index === 0
+            ? {
+                ...keyframe,
+                easing: "cubicBezier" as const,
+                bezier: [0.25, -2, 0.75, 2] as const,
+              }
+            : keyframe,
+        ),
+      },
+    },
+  });
+  const cubicCamera = inspectAdapter({
+    hero: {
+      camera: heroCamera,
+      motion: {
+        ...offClockCameraMotion,
+        tracks: offClockCameraMotion.tracks.map((track) => ({
+          ...track,
+          interpolation: "cubicspline" as const,
+        })),
+      },
+    },
+  });
+  const invalidSequence = inspectAdapter({
+    hero: {
+      camera: heroCamera,
+      motion: { ...offClockCameraMotion, duration: 0 },
+    },
+  });
+  TestValidator.predicate(
+    "overshooting interpolation and invalid sequences are addressed, never approximated",
+    [cubicActor, cubicCamera, invalidSequence].every(
+      ({ reports, out }) =>
+        reports === undefined &&
+        out.items.some((item) => item.path.endsWith(".clearance")),
+    ) &&
+      cubicActor.out.items.some((item) =>
+        item.expected.includes("cubicBezier"),
+      ) &&
+      cubicCamera.out.items.some((item) =>
+        item.expected.includes("cubicspline"),
+      ),
   );
 
   const evaluatorFault = inspectAdapter({

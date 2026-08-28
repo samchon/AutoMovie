@@ -6,6 +6,7 @@ import {
 } from "@automovie/interface";
 
 import { cubicHermiteValue } from "../math/cubicHermite";
+import { sampleTimes } from "../motion/sampleClock";
 import {
   AutoMovieLightProperty,
   LIGHT_CHANNEL_PROPERTIES,
@@ -486,6 +487,56 @@ const appendCameraClearanceArtifact = (
         "clearance interval count must be a safe integer",
         report.intervals,
       );
+    const validSampleTimes = validateArrayArtifact(
+      report.sampleTimes,
+      `${reportPath}.sampleTimes`,
+      "clearance sample times",
+      violations,
+    );
+    const reportedSampleTimes = asArray(report.sampleTimes);
+    if (validSampleTimes)
+      reportedSampleTimes.forEach((time, index) => {
+        const previous = reportedSampleTimes[index - 1];
+        if (
+          typeof time !== "number" ||
+          !Number.isFinite(time) ||
+          time < 0 ||
+          time > duration
+        )
+          pushViolation(
+            violations,
+            "range",
+            `${reportPath}.sampleTimes[${index}]`,
+            `clearance sample time must be finite and within [0, ${duration}]`,
+            time,
+          );
+        if (
+          index > 0 &&
+          typeof time === "number" &&
+          typeof previous === "number" &&
+          time <= previous
+        )
+          pushViolation(
+            violations,
+            "temporal",
+            `${reportPath}.sampleTimes[${index}]`,
+            "clearance sample times must be strictly increasing",
+            time,
+          );
+      });
+    if (
+      validSampleTimes &&
+      typeof report.intervals === "number" &&
+      Number.isSafeInteger(report.intervals) &&
+      report.intervals !== Math.max(0, reportedSampleTimes.length - 1)
+    )
+      pushViolation(
+        violations,
+        "range",
+        `${reportPath}.intervals`,
+        "clearance interval count must exactly match the carried sample plan",
+        report.intervals,
+      );
     if (
       typeof report.sampleRate === "number" &&
       Number.isFinite(report.sampleRate) &&
@@ -505,18 +556,22 @@ const appendCameraClearanceArtifact = (
           "clearance duration and sample rate must produce a safe-integer interval count",
           report.sampleRate,
         );
-      else if (
-        typeof report.intervals === "number" &&
-        Number.isSafeInteger(report.intervals) &&
-        report.intervals !== expectedIntervals
-      )
-        pushViolation(
-          violations,
-          "range",
-          `${reportPath}.intervals`,
-          `clearance interval count must equal the ${expectedIntervals} intervals on the report's endpoint-inclusive fixed clock`,
-          report.intervals,
-        );
+      else if (validSampleTimes) {
+        const supplied = new Set(reportedSampleTimes);
+        if (
+          reportedSampleTimes.length - 1 < expectedIntervals ||
+          sampleTimes(duration, report.sampleRate).some(
+            (time) => !supplied.has(time),
+          )
+        )
+          pushViolation(
+            violations,
+            "range",
+            `${reportPath}.sampleTimes`,
+            "clearance sample plan must retain every endpoint-inclusive fixed-clock instant",
+            report.sampleTimes,
+          );
+      }
     }
     if (report.status !== "clear")
       pushViolation(
