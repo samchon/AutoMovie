@@ -39,15 +39,16 @@ const docsSnapshot = (root: string): Record<string, string> => {
  *
  * Scenarios:
  *
- * 1. Out-of-order screenplay files bind in code-unit path order beneath one H1;
- *    H1 through H4 are rebased, comments and anchors disappear, and fenced
- *    headings plus reader Markdown survive.
+ * 1. Out-of-order screenplay groups bind as H2 partitions and ordered H3 units;
+ *    index bodies stay out, H1 through H4 are rebased, comments and anchors
+ *    disappear, and fenced headings plus reader Markdown survive.
  * 2. Model and map layers use the same transformation, proving the API is not
  *    tied to films, while CRLF input and non-Markdown neighbors remain harmless.
  * 3. Two runs write byte-identical output at one stable path and leave every
  *    authored source byte unchanged.
  * 4. Empty, missing, linked, malformed, overflowing, invalid-layer, blank-title,
- *    and docs-overlapping inputs fail without publishing an edition.
+ *    docs-overlapping, resident-symlink, hardlink, and foreign-byte inputs fail
+ *    without publishing or changing the resident bytes.
  */
 export const test_production_authored_layer_binder =
   async (): Promise<void> => {
@@ -63,11 +64,20 @@ export const test_production_authored_layer_binder =
 
     try {
       const film: string = makeRoot();
+      write(film, "docs/screenplays/001-alpha/index.md", "# Alpha group\n");
+      write(film, "docs/screenplays/001-alpha/001-zulu.md", "# Zulu unit\n");
+      write(film, "docs/screenplays/001-alpha/001-alpha.md", "# Alpha unit\n");
       write(
         film,
-        "docs/screenplays/002-answer.md",
+        "docs/screenplays/002-answer/index.md",
+        "# Answer group {#answer-group}\n\nThis index body is authoring-only.\n",
+      );
+      write(
+        film,
+        "docs/screenplays/002-answer/001-answer.md",
         "# Answer screenplay {#answer}\n\n## SEQ-ANSWER {#seq-answer}\n\nThe gate opens.\n",
       );
+      write(film, "docs/screenplays/010-appendix/index.md", "# Appendix\n");
       write(
         film,
         "docs/screenplays/010-appendix/001-observation.md",
@@ -75,7 +85,12 @@ export const test_production_authored_layer_binder =
       );
       write(
         film,
-        "docs/screenplays/001-cue.md",
+        "docs/screenplays/001-cue/index.md",
+        "# Cue group {#cue-group}\n\nThis group note is not reader content.\n",
+      );
+      write(
+        film,
+        "docs/screenplays/001-cue/001-cue.md",
         [
           "<!--",
           "@evidence contracts/local.md#tone The cue answers the adopted tone.",
@@ -115,20 +130,31 @@ export const test_production_authored_layer_binder =
         markdown.split("\n").filter((line) => line.startsWith("#")),
         [
           "# Signal / Answer",
-          "## Cue screenplay",
-          "### SEQ-CUE",
-          "#### SCN-001",
-          "##### 0.000-2.000 s",
+          "## Alpha group",
+          "### Alpha unit",
+          "### Zulu unit",
+          "## Cue group",
+          "### Cue screenplay",
+          "#### SEQ-CUE",
+          "##### SCN-001",
+          "###### 0.000-2.000 s",
           "## Quoted evidence heading {#quoted}",
-          "## Answer screenplay",
-          "### SEQ-ANSWER",
-          "## Observation",
-          "### Readable state",
+          "## Answer group",
+          "### Answer screenplay",
+          "#### SEQ-ANSWER",
+          "## Appendix",
+          "### Observation",
+          "#### Readable state",
         ],
       );
       TestValidator.predicate(
         "authoring comments removed",
         !markdown.includes("@evidence"),
+      );
+      TestValidator.predicate(
+        "group index bodies omitted",
+        !markdown.includes("This index body is authoring-only.") &&
+          !markdown.includes("This group note is not reader content."),
       );
       TestValidator.predicate(
         "reader Markdown preserved",
@@ -171,6 +197,11 @@ export const test_production_authored_layer_binder =
         "#\tBody\r\n\r\n##  Envelope {#envelope:v2}\r\n\r\nOne metre.\r\n",
       );
       write(library, "docs/models/notes.txt", "not an authored document\n");
+      write(
+        library,
+        "docs/models/010-parts/001-leg.md",
+        "# Leg\n\n## Envelope\n\nOne metre.\n",
+      );
       const libraryMarkdown: string = await new AutoMovieProductionBinder({
         root: library,
         title: "Object Library",
@@ -179,7 +210,7 @@ export const test_production_authored_layer_binder =
       TestValidator.equals(
         "library reader edition",
         libraryMarkdown,
-        "# Object Library\n\n## Body\n\n### Envelope\n\nOne metre.\n",
+        "# Object Library\n\n## Body\n\n### Envelope\n\nOne metre.\n\n## Leg\n\n### Envelope\n\nOne metre.\n",
       );
       write(
         library,
@@ -197,17 +228,17 @@ export const test_production_authored_layer_binder =
       );
       write(
         library,
-        "docs/shots/001-delivery.md",
-        "# Delivery shot\n\n## Observation {#observation}\n\nThe bounded result is visible.\n",
+        "docs/briefs/001-delivery.md",
+        "# Delivery brief\n\n## Observation {#observation}\n\nThe bounded result is visible.\n",
       );
       TestValidator.equals(
-        "direct-brief shot reader edition",
+        "direct-brief reader edition",
         await new AutoMovieProductionBinder({
           root: library,
-          title: "Direct Brief Shots",
-          layer: "shots",
+          title: "Direct Brief",
+          layer: "briefs",
         }).markdown(),
-        "# Direct Brief Shots\n\n## Delivery shot\n\n### Observation\n\nThe bounded result is visible.\n",
+        "# Direct Brief\n\n## Delivery brief\n\n### Observation\n\nThe bounded result is visible.\n",
       );
 
       const empty: string = makeRoot();
@@ -224,6 +255,132 @@ export const test_production_authored_layer_binder =
           root: empty,
           title: "Missing",
           layer: "materials",
+        }).markdown(),
+      );
+
+      const missingGrouped: string = makeRoot();
+      await TestValidator.error("missing grouped layer", () =>
+        new AutoMovieProductionBinder({
+          root: missingGrouped,
+          title: "Missing scripts",
+          layer: "scripts",
+        }).markdown(),
+      );
+
+      const missingDocs: string = makeRoot();
+      fs.rmSync(path.join(missingDocs, "docs"), { recursive: true });
+      await TestValidator.error("missing grouped docs root", () =>
+        new AutoMovieProductionBinder({
+          root: missingDocs,
+          title: "Missing docs",
+          layer: "screenplays",
+        }).markdown(),
+      );
+
+      const noGroups: string = makeRoot();
+      fs.mkdirSync(path.join(noGroups, "docs", "scripts"));
+      await TestValidator.error("empty grouped layer", () =>
+        new AutoMovieProductionBinder({
+          root: noGroups,
+          title: "No groups",
+          layer: "scripts",
+        }).markdown(),
+      );
+
+      const missingIndex: string = makeRoot();
+      write(missingIndex, "docs/scripts/001-event/001-unit.md", "# Unit\n");
+      await TestValidator.error("missing group index", () =>
+        new AutoMovieProductionBinder({
+          root: missingIndex,
+          title: "Missing index",
+          layer: "scripts",
+        }).markdown(),
+      );
+
+      const malformedIndex: string = makeRoot();
+      write(
+        malformedIndex,
+        "docs/scripts/001-event/index.md",
+        "Opening prose before the group title.\n",
+      );
+      write(malformedIndex, "docs/scripts/001-event/001-unit.md", "# Unit\n");
+      await TestValidator.error("malformed group index", () =>
+        new AutoMovieProductionBinder({
+          root: malformedIndex,
+          title: "Malformed index",
+          layer: "scripts",
+        }).markdown(),
+      );
+
+      const noUnits: string = makeRoot();
+      write(noUnits, "docs/scripts/001-event/index.md", "# Event\n");
+      await TestValidator.error("group without units", () =>
+        new AutoMovieProductionBinder({
+          root: noUnits,
+          title: "No units",
+          layer: "scripts",
+        }).markdown(),
+      );
+
+      const malformedUnit: string = makeRoot();
+      write(malformedUnit, "docs/scripts/001-event/index.md", "# Event\n");
+      write(
+        malformedUnit,
+        "docs/scripts/001-event/001-unit.md",
+        "Opening prose before the unit title.\n",
+      );
+      await TestValidator.error("malformed grouped unit", () =>
+        new AutoMovieProductionBinder({
+          root: malformedUnit,
+          title: "Malformed unit",
+          layer: "scripts",
+        }).markdown(),
+      );
+
+      const invalidIndexLeaf: string = makeRoot();
+      fs.mkdirSync(
+        path.join(invalidIndexLeaf, "docs", "scripts", "001-event", "index.md"),
+        { recursive: true },
+      );
+      await TestValidator.error("non-file group index", () =>
+        new AutoMovieProductionBinder({
+          root: invalidIndexLeaf,
+          title: "Invalid index",
+          layer: "scripts",
+        }).markdown(),
+      );
+
+      const linkedGroupedLayer: string = makeRoot();
+      const linkedGroupedSource: string = makeRoot();
+      write(linkedGroupedSource, "scripts/001-event/index.md", "# Event\n");
+      write(linkedGroupedSource, "scripts/001-event/001-unit.md", "# Unit\n");
+      fs.symlinkSync(
+        path.join(linkedGroupedSource, "scripts"),
+        path.join(linkedGroupedLayer, "docs", "scripts"),
+        process.platform === "win32" ? "junction" : "dir",
+      );
+      await TestValidator.error("linked grouped layer", () =>
+        new AutoMovieProductionBinder({
+          root: linkedGroupedLayer,
+          title: "Linked scripts",
+          layer: "scripts",
+        }).markdown(),
+      );
+
+      const linkedGroupedEntry: string = makeRoot();
+      const linkedDirectory = path.join(linkedGroupedEntry, "outside");
+      fs.mkdirSync(linkedDirectory);
+      write(linkedGroupedEntry, "docs/scripts/001-event/index.md", "# Event\n");
+      fs.symlinkSync(
+        linkedDirectory,
+        path.join(linkedGroupedEntry, "docs", "scripts", "001-event", "linked"),
+        process.platform === "win32" ? "junction" : "dir",
+      );
+      await TestValidator.error("linked grouped entry", () =>
+        new AutoMovieProductionBinder({
+          root: linkedGroupedEntry,
+          title: "Linked unit",
+          layer: "scripts",
         }).markdown(),
       );
 
@@ -475,6 +632,103 @@ export const test_production_authored_layer_binder =
         "filename fallback",
         path.basename(fallback),
         "automovie-settings.md",
+      );
+
+      const occupied: string = makeRoot();
+      write(occupied, "docs/settings/001-scope.md", "# Scope\n");
+      const occupiedTarget = write(
+        occupied,
+        "artifacts/occupied-settings.md",
+        "foreign reader bytes\n",
+      );
+      await TestValidator.error("different resident edition", () =>
+        new AutoMovieProductionBinder({
+          root: occupied,
+          title: "Occupied",
+          layer: "settings",
+        }).bind(),
+      );
+      TestValidator.equals(
+        "different resident bytes preserved",
+        fs.readFileSync(occupiedTarget, "utf8"),
+        "foreign reader bytes\n",
+      );
+
+      const linkedTargetRoot: string = makeRoot();
+      write(linkedTargetRoot, "docs/settings/001-scope.md", "# Scope\n");
+      const externalTarget = write(
+        linkedTargetRoot,
+        "external.md",
+        "external reader bytes\n",
+      );
+      const targetDirectory = path.join(linkedTargetRoot, "artifacts");
+      fs.mkdirSync(targetDirectory);
+      const targetName = path.join(targetDirectory, "linked-settings.md");
+      try {
+        fs.symlinkSync(externalTarget, targetName, "file");
+        await TestValidator.error("resident edition symlink", () =>
+          new AutoMovieProductionBinder({
+            root: linkedTargetRoot,
+            title: "Linked",
+            layer: "settings",
+          }).bind(),
+        );
+        TestValidator.equals(
+          "resident symlink target preserved",
+          fs.readFileSync(externalTarget, "utf8"),
+          "external reader bytes\n",
+        );
+      } catch (error) {
+        if (
+          !(
+            error instanceof Error &&
+            "code" in error &&
+            ["EPERM", "EACCES"].includes(String(error.code))
+          )
+        )
+          throw error;
+      }
+
+      const hardlinkedRoot: string = makeRoot();
+      write(hardlinkedRoot, "docs/settings/001-scope.md", "# Scope\n");
+      const hardlinkSource = write(
+        hardlinkedRoot,
+        "external.md",
+        "external hardlink bytes\n",
+      );
+      fs.mkdirSync(path.join(hardlinkedRoot, "artifacts"));
+      const hardlinkTarget = path.join(
+        hardlinkedRoot,
+        "artifacts",
+        "hardlinked-settings.md",
+      );
+      fs.linkSync(hardlinkSource, hardlinkTarget);
+      await TestValidator.error("resident edition hardlink", () =>
+        new AutoMovieProductionBinder({
+          root: hardlinkedRoot,
+          title: "Hardlinked",
+          layer: "settings",
+        }).bind(),
+      );
+      TestValidator.equals(
+        "resident hardlink source preserved",
+        fs.readFileSync(hardlinkSource, "utf8"),
+        "external hardlink bytes\n",
+      );
+
+      const longName: string = makeRoot();
+      write(longName, "docs/settings/001-scope.md", "# Scope\n");
+      await TestValidator.error("unpublishable final filename", () =>
+        new AutoMovieProductionBinder({
+          root: longName,
+          title: "a".repeat(300),
+          layer: "settings",
+        }).bind(),
+      );
+      TestValidator.equals(
+        "failed publication removes its temporary file",
+        fs.readdirSync(path.join(longName, "artifacts")),
+        [],
       );
     } finally {
       for (const root of roots)

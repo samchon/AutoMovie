@@ -135,11 +135,13 @@ An optional `.wiki` trial is still the cheaper preflight. Take one treatment eve
 
 Run `npm run book -- --layer <layer> --title <title>` when a human reader needs one integrated Markdown view of an authored layer.
 The default layer is `screenplays`; the same command accepts any authored film, brief, design, research, or settings layer supported by the binder.
-It reads `docs/<layer>` recursively in deterministic code-unit path order and writes one ignored file beneath `artifacts`, or beneath the explicit `--output` directory.
+For `scripts` and `screenplays`, each numbered group becomes an H2 from its required `index.md` H1 and each numbered unit becomes an inlined H3; the group index body is authoring structure and is not published.
+Every other supported layer remains a flat collection of documents ordered by deterministic relative path.
+The command writes one ignored file beneath `artifacts`, or beneath the explicit `--output` directory.
 It never edits authored documents.
 
-The edition has one supplied H1, rebases each document and its visible H1-H6 hierarchy below it, removes evidence HTML comments and trailing citation anchors, and preserves prose, links, fenced examples, and document boundaries.
-Repeated binding over the same source is byte-identical.
+The edition has one supplied H1, rebases each document and its visible heading hierarchy below it, removes evidence HTML comments and trailing citation anchors, and preserves prose, links, fenced examples, group boundaries, and document boundaries.
+Repeated binding over the same source is byte-identical; an existing output converges only when it is one ordinary file with those exact bytes, and a symlink, hardlink, or different resident file is refused without replacement.
 Markdown is the owned reader format; PDF, Fountain, Final Draft, font shaping, and typography remain the responsibility of their existing converters.
 
 ## Recording work

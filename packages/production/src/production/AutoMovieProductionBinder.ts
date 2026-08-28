@@ -1,3 +1,5 @@
+import { randomUUID } from "node:crypto";
+import type { Dirent } from "node:fs";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 
@@ -12,11 +14,14 @@ const AUTHORED_DOCUMENT_LAYERS = [
   "screenplays",
   "scripts",
   "settings",
-  "shots",
   "spaces",
   "systems",
   "treatments",
 ] as const;
+
+/** Narrative layers that carry the release partition a reader receives. */
+const GROUPED_DOCUMENT_LAYERS: ReadonlySet<AutoMovieAuthoredDocumentLayer> =
+  new Set(["screenplays", "scripts"]);
 
 /**
  * Authored Markdown layers that may be bound for a human reader.
@@ -25,8 +30,8 @@ const AUTHORED_DOCUMENT_LAYERS = [
  * motion, and built-environment work are different authored branches, but the
  * reader-facing transformation is the same for each one.
  *
- * @evidence requirements/production-design/continuity-change-and-deliverables.md#production-design-deliverable-inventory Makes every authored document family eligible for an explicit human-readable view.
- * @evidence specifications/narrative-and-intent/budgets-continuity-and-deliverables.md#narrative-intent-deliverable-output Represents the authored document family selected for one deterministic deliverable item.
+ * @evidence requirements/production-design/continuity-change-and-deliverables.md#production-design-breakdown-deliverables Makes every authored document family eligible for an explicit human-readable view.
+ * @evidence specifications/narrative-and-intent/budgets-continuity-and-deliverables.md#narrative-intent-deliverable-authority-gaps Represents the authored document family selected for one deterministic deliverable item.
  */
 export type AutoMovieAuthoredDocumentLayer =
   (typeof AUTHORED_DOCUMENT_LAYERS)[number];
@@ -34,8 +39,8 @@ export type AutoMovieAuthoredDocumentLayer =
 /**
  * Input to one authored-layer reader edition.
  *
- * @evidence requirements/production-design/continuity-change-and-deliverables.md#production-design-deliverable-inventory Declares the deliverable's source, title, format-owning output directory, and selected authored family.
- * @evidence specifications/narrative-and-intent/budgets-continuity-and-deliverables.md#narrative-intent-deliverable-output Supplies the explicit identity and source revision surface from which the Markdown view is derived.
+ * @evidence requirements/production-design/continuity-change-and-deliverables.md#production-design-breakdown-deliverables Declares the deliverable's source, title, format-owning output directory, and selected authored family.
+ * @evidence specifications/narrative-and-intent/budgets-continuity-and-deliverables.md#narrative-intent-deliverable-authority-gaps Supplies the explicit identity and source revision surface from which the Markdown view is derived.
  */
 export interface IAutoMovieProductionBindRequest {
   /** Generated-project root the binder reads. */
@@ -60,6 +65,11 @@ interface IAuthoredDocument {
   title: string;
 }
 
+interface IAuthoredDocumentGroup {
+  documents: IAuthoredDocument[];
+  title: string;
+}
+
 const LAYERS: ReadonlySet<string> = new Set(AUTHORED_DOCUMENT_LAYERS);
 
 /**
@@ -69,17 +79,16 @@ const LAYERS: ReadonlySet<string> = new Set(AUTHORED_DOCUMENT_LAYERS);
  * `docs`: only one file below the explicit output directory is produced,
  * defaulting to the scaffold's ignored `artifacts` directory. It removes HTML
  * authoring comments and trailing citation anchors, rebases every document
- * beneath one edition title, preserves reader-facing Markdown, and orders files
- * by their POSIX relative path in code-unit order. Repeating a run over the same
- * source therefore writes byte-identical output.
+ * beneath one edition title, and preserves reader-facing Markdown. Scripts and
+ * screenplays retain their numbered group partition as H2 and inline each unit
+ * as H3; every other authored layer remains a flat ordered document collection.
+ * Repeating a run over the same source therefore writes byte-identical output.
  *
  * Markdown is the complete deliverable here. PDF, Fountain, Final Draft, font
  * shaping, and typography belong to converters that already own those formats.
  *
- * @evidence requirements/production-design/continuity-change-and-deliverables.md#production-design-deliverable-inventory Emits the selected authored inventory as its declared human-readable Markdown view without changing its source.
- * @evidence requirements/production-design/continuity-change-and-deliverables.md#production-design-final-handoff Produces a stable handoff artifact from the selected authored revision while leaving source authority in the production.
- * @evidence specifications/narrative-and-intent/budgets-continuity-and-deliverables.md#narrative-intent-deliverable-output Derives one deterministic document view with an explicit source family, format, and output identity.
- * @evidence specifications/narrative-and-intent/budgets-continuity-and-deliverables.md#narrative-intent-deliverable-provenance-handoff Keeps the reader edition derivative of the authored files rather than promoting it to a second prose authority.
+ * @evidence requirements/production-design/continuity-change-and-deliverables.md#production-design-breakdown-deliverables Emits the selected authored inventory as its declared human-readable Markdown view without changing its source.
+ * @evidence specifications/narrative-and-intent/budgets-continuity-and-deliverables.md#narrative-intent-deliverable-authority-gaps Derives one deterministic document view with an explicit source family, format, and output identity.
  */
 export class AutoMovieProductionBinder {
   /** Absolute generated-project root this binder reads. */
@@ -115,15 +124,30 @@ export class AutoMovieProductionBinder {
 
   /** Renders the integrated reader edition without writing it. */
   public async markdown(): Promise<string> {
-    const documents: IAuthoredDocument[] = await readLayer(
-      this.root,
-      this.layer,
-    );
     const parts: string[] = [`# ${this.title}`];
-    for (const document of documents) {
-      parts.push(`## ${document.title}`);
-      const body: string = rebaseHeadings(document.body, 1).trim();
-      if (body !== "") parts.push(body);
+    if (GROUPED_DOCUMENT_LAYERS.has(this.layer)) {
+      const groups: IAuthoredDocumentGroup[] = await readGroupedLayer(
+        this.root,
+        this.layer,
+      );
+      for (const group of groups) {
+        parts.push(`## ${group.title}`);
+        for (const document of group.documents) {
+          parts.push(`### ${document.title}`);
+          const body: string = rebaseHeadings(document.body, 2).trim();
+          if (body !== "") parts.push(body);
+        }
+      }
+    } else {
+      const documents: IAuthoredDocument[] = await readFlatLayer(
+        this.root,
+        this.layer,
+      );
+      for (const document of documents) {
+        parts.push(`## ${document.title}`);
+        const body: string = rebaseHeadings(document.body, 1).trim();
+        if (body !== "") parts.push(body);
+      }
     }
     return `${parts.join("\n\n")}\n`;
   }
@@ -143,12 +167,64 @@ export class AutoMovieProductionBinder {
     await fs.mkdir(this.output, { recursive: true });
     const physicalOutput = await fs.realpath(this.output);
     assertOutputSeparatedFromDocs(physicalOutput, physicalDocs);
-    await fs.writeFile(
+    await publishEdition(
+      physicalOutput,
       path.join(physicalOutput, path.basename(target)),
       markdown,
-      "utf8",
     );
     return target;
+  }
+}
+
+/**
+ * Publishes complete bytes into an unused final slot without following a
+ * resident symlink or hardlink. An existing ordinary one-link file converges
+ * only when it already contains the exact deterministic edition.
+ */
+async function publishEdition(
+  output: string,
+  target: string,
+  markdown: string,
+): Promise<void> {
+  const temporary: string = path.join(
+    output,
+    `.automovie-book-${process.pid}-${randomUUID()}.tmp`,
+  );
+  try {
+    const handle = await fs.open(temporary, "wx");
+    try {
+      await handle.writeFile(markdown, "utf8");
+      await handle.sync();
+    } finally {
+      await handle.close();
+    }
+    await fs.link(temporary, target).catch(async (error: unknown) => {
+      if (!hasErrorCode(error, "EEXIST")) throw error;
+      await assertExistingEdition(target, markdown);
+    });
+  } finally {
+    await fs.rm(temporary, { force: true });
+  }
+}
+
+/** Accepts a prior deterministic publication without trusting its path alone. */
+async function assertExistingEdition(
+  target: string,
+  markdown: string,
+): Promise<void> {
+  const linked = await fs.lstat(target, { bigint: true });
+  if (linked.isSymbolicLink() || !linked.isFile() || linked.nlink !== 1n)
+    throw new Error(
+      `${target}: an existing reader edition must be one unlinked regular file.`,
+    );
+  const handle = await fs.open(target, "r");
+  try {
+    if ((await handle.readFile("utf8")) !== markdown)
+      throw new Error(
+        `${target}: an existing reader edition has different bytes.`,
+      );
+  } finally {
+    await handle.close();
   }
 }
 
@@ -174,8 +250,8 @@ async function prospectiveRealpath(target: string): Promise<string> {
   }
 }
 
-/** Reads one layer's Markdown documents in deterministic relative-path order. */
-async function readLayer(
+/** Reads one flat layer's Markdown documents in relative-path order. */
+async function readFlatLayer(
   root: string,
   layer: AutoMovieAuthoredDocumentLayer,
 ): Promise<IAuthoredDocument[]> {
@@ -209,6 +285,128 @@ async function readLayer(
     });
   }
   return documents;
+}
+
+/** Accepted narrative group directory, such as `001-opening`. */
+const GROUP_PATTERN: RegExp = /^([0-9]{3})-[a-z0-9]+(?:-[a-z0-9]+)*$/u;
+
+/** Accepted narrative unit filename, such as `001-first-beat.md`. */
+const UNIT_PATTERN: RegExp = /^([0-9]{3})-[a-z0-9]+(?:-[a-z0-9]+)*\.md$/u;
+
+/** Reads scripts or screenplays through their shared grouped delivery topology. */
+async function readGroupedLayer(
+  root: string,
+  layer: AutoMovieAuthoredDocumentLayer,
+): Promise<IAuthoredDocumentGroup[]> {
+  const layerRoot: string = path.join(root, "docs", layer);
+  const docsRoot: string = path.dirname(layerRoot);
+  const docsStatus = await fs.lstat(docsRoot).catch(() => undefined);
+  if (
+    docsStatus === undefined ||
+    docsStatus.isSymbolicLink() ||
+    !docsStatus.isDirectory()
+  )
+    throw new Error(
+      `${docsRoot}: authored docs must be one physical directory.`,
+    );
+  const entries = await physicalEntries(layerRoot).catch((error: unknown) => {
+    if (error instanceof Error && error.message.startsWith(layerRoot))
+      throw error;
+    throw new Error(`${layerRoot}: the production has no authored ${layer}.`);
+  });
+  const names: string[] = entries
+    .filter((entry) => entry.isDirectory() && GROUP_PATTERN.test(entry.name))
+    .map((entry) => entry.name)
+    .sort(numberedOrder(GROUP_PATTERN));
+  if (names.length === 0)
+    throw new Error(`${layerRoot}: the production has no authored groups.`);
+
+  const groups: IAuthoredDocumentGroup[] = [];
+  for (const name of names)
+    groups.push(await readAuthoredGroup(layerRoot, name));
+  return groups;
+}
+
+/** Reads one group index title and its ordered authored units. */
+async function readAuthoredGroup(
+  layerRoot: string,
+  name: string,
+): Promise<IAuthoredDocumentGroup> {
+  const groupRoot: string = path.join(layerRoot, name);
+  const indexPath: string = path.join(groupRoot, "index.md");
+  const index: string = await readPhysicalMarkdown(indexPath).catch(() => {
+    throw new Error(`${indexPath}: a group must carry its index.md title.`);
+  });
+  const heading: RegExpExecArray | null = /^#[ \t]+(\S.*)(?:\n|$)/u.exec(index);
+  if (heading === null)
+    throw new Error(`${indexPath}: a group index must open with one H1 title.`);
+
+  const entries = await physicalEntries(groupRoot);
+  const names: string[] = entries
+    .filter((entry) => entry.isFile() && UNIT_PATTERN.test(entry.name))
+    .map((entry) => entry.name)
+    .sort(numberedOrder(UNIT_PATTERN));
+  if (names.length === 0)
+    throw new Error(
+      `${groupRoot}: a group must contain at least one unit file.`,
+    );
+
+  const documents: IAuthoredDocument[] = [];
+  for (const unit of names)
+    documents.push(await readAuthoredDocument(path.join(groupRoot, unit)));
+  return {
+    title: stripHeadingAnchor(heading[1]),
+    documents,
+  };
+}
+
+/** Reads one authored H1 document and removes its authoring markers. */
+async function readAuthoredDocument(
+  target: string,
+): Promise<IAuthoredDocument> {
+  const markdown: string = await readPhysicalMarkdown(target);
+  const heading: RegExpExecArray | null = /^#[ \t]+(\S.*)(?:\n|$)/u.exec(
+    markdown,
+  );
+  if (heading === null)
+    throw new Error(
+      `${target}: an authored document must open with one H1 title.`,
+    );
+  return {
+    title: stripHeadingAnchor(heading[1]),
+    body: markdown.slice(heading[0].length).trim(),
+  };
+}
+
+/** Lists one physical authored directory and refuses links at its boundary. */
+async function physicalEntries(directory: string): Promise<Dirent[]> {
+  const linked = await fs.lstat(directory);
+  if (linked.isSymbolicLink() || !linked.isDirectory())
+    throw new Error(`${directory}: authored layers may not be links.`);
+  const entries = await fs.readdir(directory, { withFileTypes: true });
+  const symbolic = entries.find((entry) => entry.isSymbolicLink());
+  if (symbolic !== undefined)
+    throw new Error(
+      `${path.join(directory, symbolic.name)}: authored layers may not contain links.`,
+    );
+  return entries;
+}
+
+/** Reads one physical regular Markdown file without following a leaf link. */
+async function readPhysicalMarkdown(target: string): Promise<string> {
+  const linked = await fs.lstat(target);
+  if (linked.isSymbolicLink() || !linked.isFile())
+    throw new Error(`${target}: authored documents must be regular files.`);
+  return stripAuthoringMarkers(await fs.readFile(target, "utf8"));
+}
+
+/** Orders zero-padded authored identities, then resolves duplicate numbers. */
+function numberedOrder(
+  pattern: RegExp,
+): (left: string, right: string) => number {
+  return (left, right) =>
+    Number(pattern.exec(left)![1]) - Number(pattern.exec(right)![1]) ||
+    compareCodeUnits(left, right);
 }
 
 /** Walks regular Markdown files without following a symbolic directory entry. */
@@ -361,4 +559,11 @@ function compareCodeUnits(left: string, right: string): number {
 /** POSIX-slashes one relative path for host-independent ordering. */
 function toPosix(value: string): string {
   return value.replaceAll("\\", "/");
+}
+
+/** True when an unknown thrown value carries one filesystem error code. */
+function hasErrorCode(error: unknown, code: string): boolean {
+  return (
+    error instanceof Error && "code" in error && String(error.code) === code
+  );
 }

@@ -560,6 +560,7 @@ async function main(): Promise<void> {
     );
 
     const books = makeRoot("book-command");
+    write(books, "docs/screenplays/001-event/index.md", "# Event\n");
     write(
       books,
       "docs/screenplays/001-event/001-beat.md",
@@ -585,7 +586,7 @@ async function main(): Promise<void> {
     );
     assert.equal(
       fs.readFileSync(screenplay, "utf8"),
-      "# Final Script\n\n## First beat\n\n### Action\n\nIt begins.\n",
+      "# Final Script\n\n## Event\n\n### First beat\n\n#### Action\n\nIt begins.\n",
     );
     const customOutput = path.join(books, "reader-editions");
     const map = await bindProductionBook(

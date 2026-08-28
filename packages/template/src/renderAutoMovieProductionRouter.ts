@@ -102,7 +102,7 @@ Start the coding-agent session from this project root. Codex reads this \`AGENTS
 
 - \`npm run sync\` overwrites this router and the shipped production skill from the installed template while preserving every tracked production fact.
 - \`npm run lint:source\` checks TypeScript; \`npm run lint\` checks the evidence graph and production review gate.
-- \`npm run book -- --layer <layer> --title <title>\` binds any authored layer into one deterministic reader-facing Markdown file under the ignored \`artifacts\` directory. It removes evidence comments and citation anchors but preserves the visible heading hierarchy and prose.
+- \`npm run book -- --layer <layer> --title <title>\` binds any supported authored layer into one deterministic reader-facing Markdown file under the ignored \`artifacts\` directory. It preserves numbered script/screenplay groups, keeps other layers flat, removes evidence comments and citation anchors, and preserves visible prose and headings.
 - \`npm run compile\` is the only command that may update compiler-owned output.
 `;
 };
