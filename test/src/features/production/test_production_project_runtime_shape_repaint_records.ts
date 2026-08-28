@@ -1367,6 +1367,57 @@ export const test_production_project_runtime_shape_repaint_records =
           .readdirSync(selectionDirectory)
           .sort((left, right) => (left < right ? -1 : left > right ? 1 : 0));
       const residentsBeforeRace = selectionResidents();
+      const selectedCandidateOutput = path.join(
+        project.renderRoot(),
+        validReceipt.output.path,
+      );
+      expectSelectionRefusal(
+        "selection refuses a candidate that becomes stale before its guarded write",
+        {
+          ...reversalProps,
+          inputCurrent: () => {
+            fs.rmSync(selectedCandidateOutput);
+            return true;
+          },
+        },
+        "before the guarded commit began",
+      );
+      fs.writeFileSync(selectedCandidateOutput, outputBytes);
+      TestValidator.equals(
+        "pre-write candidate invalidation leaves selection state unchanged",
+        {
+          active: fs.readFileSync(activeFile, "utf8"),
+          selections: selectionResidents(),
+        },
+        { active: activeIdentity, selections: residentsBeforeRace },
+      );
+      let candidateCurrentChecks = 0;
+      expectSelectionRefusal(
+        "selection rolls back when its candidate becomes stale after publication",
+        {
+          ...reversalProps,
+          inputCurrent: () => {
+            if (++candidateCurrentChecks === 2)
+              fs.rmSync(selectedCandidateOutput);
+            return true;
+          },
+        },
+        "while the guarded commit was being applied",
+      );
+      fs.writeFileSync(selectedCandidateOutput, outputBytes);
+      TestValidator.equals(
+        "post-write candidate invalidation rolls selection state back",
+        {
+          active: fs.readFileSync(activeFile, "utf8"),
+          checks: candidateCurrentChecks,
+          selections: selectionResidents(),
+        },
+        {
+          active: activeIdentity,
+          checks: 2,
+          selections: residentsBeforeRace,
+        },
+      );
       expectSelectionRefusal(
         "selection refuses a pre-write input race",
         { ...reversalProps, inputCurrent: () => false },

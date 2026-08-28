@@ -1733,17 +1733,64 @@ export const test_production_repaint_generator_adoption =
             signal: preWaitAbort.signal,
           },
         ).repaint(runnable, input);
+      let backoffRegistrationAborted = false;
+      let backoffRegistrationAdds = 0;
+      let backoffRegistrationRemoves = 0;
+      let backoffRegistrationProviderCalls = 0;
+      const backoffRegistrationSignal = {
+        get aborted(): boolean {
+          return backoffRegistrationAborted;
+        },
+        reason: "cancelled while registering backoff",
+        addEventListener: (
+          _type: string,
+          listener: EventListenerOrEventListenerObject,
+        ): void => {
+          if (++backoffRegistrationAdds !== 2) return;
+          backoffRegistrationAborted = true;
+          if (typeof listener === "function") listener(new Event("abort"));
+          else listener.handleEvent(new Event("abort"));
+        },
+        removeEventListener: (): void => {
+          ++backoffRegistrationRemoves;
+        },
+      } as unknown as AbortSignal;
+      const registrationRaceBackoff =
+        await new AutoMovieProductionRepaintService(
+          async () => {
+            ++backoffRegistrationProviderCalls;
+            throw { status: 429, message: "retry" };
+          },
+          selected,
+          {
+            policy: executionPolicy({ backoffMs: [1_000] }),
+            evidence: executionEvidence(),
+            signal: backoffRegistrationSignal,
+          },
+        ).repaint(runnable, input);
       TestValidator.equals(
         "service backoff resolves normally and contains both cancellation times",
         {
           normal: normalBackoff.repainted,
           waiting: codeOf(cancelledBackoff),
           already: codeOf(alreadyCancelledBackoff),
+          registrationRace: {
+            code: codeOf(registrationRaceBackoff),
+            adds: backoffRegistrationAdds,
+            removes: backoffRegistrationRemoves,
+            providerCalls: backoffRegistrationProviderCalls,
+          },
         },
         {
           normal: true,
           waiting: "repaint-failed",
           already: "repaint-failed",
+          registrationRace: {
+            code: "repaint-failed",
+            adds: 2,
+            removes: 2,
+            providerCalls: 1,
+          },
         },
       );
 
