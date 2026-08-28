@@ -14,7 +14,7 @@ Near와 far는 positive ordered distance를 가지고 required subject, environm
 
 Depth precision constraint는 standard fixed-point perspective depth buffer의 최소 bit 수와 closed required camera-space depth interval에서 허용하는 최대 adjacent representable depth step을 metre 단위로 선언해야 한다. `levels = 2^bits - 1`, `q(z) = (1/near - 1/z) / (1/near - 1/far)`일 때 required far depth를 포함하거나 그 지점에서 끝나는 code cell의 두 경계 depth 차이를 측정하고, 그 값이 authored maximum과 정확히 같을 때까지 허용해야 한다. Required interval 전체는 near와 far 안에 있어야 한다.
 
-Required interval은 addressed sample에서 `requiredSubjects`가 명명한 모든 subject와 environment scene node의 current resolved world bound 여덟 corner를 camera space로 변환하여 도출해야 한다. Viewer는 같은 near와 far를 적용하고 실제 default framebuffer의 `DEPTH_BITS`가 authored minimum 이상인지 확인해야 한다. Logarithmic 또는 reversed depth projection은 이 metric과 같다고 간주하지 않아야 한다.
+Required interval은 addressed sample에서 `requiredSubjects`가 명명한 모든 subject와 environment scene node의 current resolved world bound 여덟 corner를 camera space로 변환하여 도출해야 한다. Viewer는 같은 near와 far를 적용하고 해당 pass가 실제로 그리는 currently bound draw framebuffer의 `DEPTH_BITS`가 authored minimum 이상인지 확인해야 한다. Logarithmic 또는 reversed depth projection은 이 metric과 같다고 간주하지 않아야 한다.
 
 Resolved scene을 잘라 내부를 드러내는 optional clipping plane은 검사가 소유하며 저작된 camera의 field가 아니어야 한다. 저작된 camera가 납품하는 clipping은 near와 far뿐이고, 단면으로 만든 관찰은 그 camera가 납품할 그림에 대한 evidence가 아니다. 이 배제가 풀리는 조건은 어떤 production이 단면 자체를 shot으로 납품해야 하는 경우이며, 그때 plane은 저작된 field가 되고 잘려나간 required subject는 readable로 셀 수 없다.
 

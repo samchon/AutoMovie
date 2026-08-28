@@ -27,7 +27,7 @@ export interface IAutoMovieViewerCameraDepthPrecisionReport {
   /** Authored minimum fixed-point depth bits, or null when non-finite. */
   minimumDepthBits: number | null;
 
-  /** Default-framebuffer `DEPTH_BITS`, or null when the query is not numeric. */
+  /** Current draw framebuffer's `DEPTH_BITS`, or null when non-numeric. */
   observedDepthBits: number | null;
 
   /** Depth projection mode observed from the renderer. */
@@ -50,18 +50,19 @@ const finiteOrNull = (value: number): number | null =>
   Number.isFinite(value) ? value : null;
 
 /**
- * Observe the default framebuffer and compare it with one resolved camera.
+ * Observe the currently bound draw framebuffer and compare it with one
+ * resolved camera.
  *
  * The engine's metric is conservative at `minimumDepthBits`; a standard viewer
  * with at least that many actual bits can only provide equal or finer adjacent
  * steps. Logarithmic and reversed projection are refused because they implement
  * a different metric rather than silently appearing as extra capability.
  *
- * @evidence requirements/camera/clipping-occlusion-and-spatial-constraints.md#camera-clipping-range Applies the same authored near, far, and minimum depth bits to the actual viewer camera and default framebuffer.
+ * @evidence requirements/camera/clipping-occlusion-and-spatial-constraints.md#camera-clipping-range Applies the same authored near, far, and minimum depth bits to the actual viewer camera and the draw framebuffer selected for this pass.
  * @evidence specifications/camera-light-and-visibility/visibility-and-image-space-observation.md#clv-clipping-clearance-evaluation Observes `DEPTH_BITS` and standard projection mode while checking source-to-runtime clip parity.
  */
 export const evaluateAutoMovieViewerCameraDepthPrecision = (props: {
-  /** Viewer renderer whose default framebuffer will draw the shot. */
+  /** Viewer renderer whose currently bound draw framebuffer receives the shot. */
   renderer: THREE.WebGLRenderer;
   /** Portable resolved camera declaration. */
   source: Pick<IAutoMovieCamera, "id" | "near" | "far" | "depthPrecision">;

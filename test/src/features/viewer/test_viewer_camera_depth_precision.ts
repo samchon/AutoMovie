@@ -115,7 +115,7 @@ export const test_viewer_camera_depth_precision = (): void => {
   );
 
   TestValidator.equals(
-    "invalid default-framebuffer observations stay addressed",
+    "invalid current-framebuffer observations stay addressed",
     [
       evaluate({ bits: "24" }),
       evaluate({ bits: 1.5 }),
