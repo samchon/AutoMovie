@@ -1566,12 +1566,16 @@ export const review = true;
         [
           "export interface ISubject { readonly id: string; }",
           'export type SubjectId = "subject";',
+          "export type SubjectShape = { readonly label: string; };",
           'export const subjectName = "subject";',
+          'export const [primarySubject, , tertiarySubject] = ["one", "two", "three"] as const;',
           "export function createSubject(): object { return {}; }",
           "export class Subject {",
+          "  public constructor() {}",
           '  public readonly id = "subject";',
           "  public move(): void {}",
           '  private get internalLabel(): string { return "subject"; }',
+          '  protected get inheritedLabel(): string { return "subject"; }',
           '  get #internal(): string { return "subject"; }',
           "}",
         ].join("\n"),
@@ -1591,7 +1595,27 @@ export const review = true;
       'export { Subject } from "./subject.js";\nexport class LocalSubject {}',
       "uses a barrel or cross-module re-export",
     ],
+    [
+      'export * from "./subject.js";\nexport class LocalSubject {}',
+      "uses a barrel or namespace export",
+    ],
+    [
+      'export * as SubjectParts from "./subject.js";\nexport class LocalSubject {}',
+      "uses a namespace export",
+    ],
+    [
+      "const Subject = class {};\nexport { Subject as default };",
+      "uses a default alias or imported re-export",
+    ],
+    [
+      'import { Subject } from "./other.js";\nexport { Subject };\nexport class LocalSubject {}',
+      "uses a default alias or imported re-export",
+    ],
     ["export default class {}", "exports an anonymous default declaration"],
+    [
+      "export default function (): void {}",
+      "exports an anonymous default declaration",
+    ],
     [
       "const Subject = class {};\nexport default Subject;",
       "uses a default export expression or namespace export",

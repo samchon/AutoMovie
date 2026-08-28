@@ -1546,26 +1546,30 @@ const assertSourceExportsAreEvidenceAddressable = (
   const localDeclarations = new Set(
     source.statements.flatMap((statement) => declarationNames(statement)),
   );
+  const namedExportsOf = (
+    clause: ts.NamedExportBindings | undefined,
+  ): ts.NamedExports => {
+    if (clause === undefined)
+      return refuse(
+        "uses a barrel or namespace export",
+        "Export a local named declaration",
+      );
+    if (!ts.isNamedExports(clause))
+      return refuse(
+        "uses a namespace export",
+        "Export a local named declaration",
+      );
+    return clause;
+  };
   const localExports = new Set<string>();
   for (const statement of source.statements) {
     if (!ts.isExportDeclaration(statement)) continue;
+    const clause = namedExportsOf(statement.exportClause);
     if (statement.moduleSpecifier !== undefined)
       refuse(
         "uses a barrel or cross-module re-export",
         "Export a named declaration owned by this module",
       );
-    const clause = statement.exportClause;
-    if (clause === undefined) {
-      refuse(
-        "uses a barrel or namespace export",
-        "Export a local named declaration",
-      );
-      continue;
-    }
-    if (!ts.isNamedExports(clause)) {
-      refuse("uses a namespace export", "Export a local named declaration");
-      continue;
-    }
     for (const element of clause.elements) {
       const local = (element.propertyName ?? element.name).text;
       if (element.name.text === "default" || !localDeclarations.has(local))
