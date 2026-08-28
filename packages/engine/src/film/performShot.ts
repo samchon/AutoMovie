@@ -58,6 +58,10 @@ import {
 } from "../validation/validateShotArtifact";
 import { ViolationCollector } from "../validation/violation";
 import {
+  IAutoMovieCameraClearanceRuntime,
+  compileCameraClearanceReports,
+} from "./cameraClearancePerformance";
+import {
   DEFAULT_SUBJECT_HEIGHT,
   IAutoMovieCameraFrameEntry,
   IAutoMovieFramedSubject,
@@ -351,7 +355,7 @@ export namespace IAutoMoviePerformedShot {
  *   the same frame table the renderer/player uses so ground planting and
  *   `attachTo` objectMotions read the visible pose, not raw rig-space FK.
  * @evidence requirements/staging/budgets-safety-and-validation.md#staging-deterministic-replay Validates staged action references and synthesized motions before producing one deterministic performed-shot result.
- * @evidence requirements/staging/budgets-safety-and-validation.md#staging-spatial-validation Resolves every action actor, target, projectile, attachment parent, and camera against the staged scene before compiling its spatial result; this host does not claim route or clearance validation.
+ * @evidence requirements/staging/budgets-safety-and-validation.md#staging-spatial-validation Resolves every action actor, target, projectile, attachment parent, and camera against the staged scene, then refuses delivered camera envelopes that contact current modeled obstacles.
  * @evidence requirements/staging/budgets-safety-and-validation.md#staging-temporal-validation Refuses non-finite, non-positive, overlapping, or out-of-shot action spans before sampling motion and interaction results on the shot clock.
  * @evidence requirements/staging/events-and-timing.md#staging-fixed-film-clock Uses the performed beat duration and shot-local seconds as the shared clock for actor clips, object clips, camera motion, and emitted interaction events.
  * @evidence requirements/staging/events-and-timing.md#staging-simultaneous-events Orders equal-time interaction events by an explicit semantic kind priority and then stable event id, independent of action traversal order.
@@ -361,7 +365,7 @@ export namespace IAutoMoviePerformedShot {
  * @evidence requirements/staging/subjects-and-object-staging.md#staging-rest-active-placement Starts each subject from its staged rest transform, then gives active actor, launch, attachment, or mounted motion explicit shot-local authority without duplicating the subject.
  * @evidence requirements/story/scenes-and-observable-action.md#story-scene-subject-dependencies Requires every performed actor, camera, frame or focus target, projectile, and attachment parent to resolve through the authored script and staged scene before compiling the shot.
  * @evidence requirements/story/scenes-and-observable-action.md#story-unfilmable-scene-refusal Returns addressed violations when required actor, camera, target, projectile, or carried-object dependencies are absent or contradictory instead of fabricating a filmable substitute.
- * @evidence requirements/camera/position-and-movement.md#camera-path-refusal Refuses invalid or non-finite camera timing and transforms, unresolved frame targets, rival live cameras, and overlapping frame moves; it does not claim path-clearance validation.
+ * @evidence requirements/camera/position-and-movement.md#camera-path-refusal Refuses invalid or non-finite camera timing and transforms, unresolved frame targets, rival live cameras, overlapping frame moves, and current-revision body or parent-rig obstruction.
  * @evidence requirements/camera/projection-lens-and-sensor.md#camera-optical-refusal Refuses non-finite or non-positive focal length and a framing camera field of view outside the finite open interval `(0, 180)`.
  * @evidence requirements/camera/scope-and-identity.md#camera-shot-distinction Elects one stable `shot.camera` identity and carries coverage cameras as separate take records instead of treating an edit or shot id as the camera.
  * @evidence requirements/camera/scope-and-identity.md#camera-authored-intent Validates and preserves the authored framing, move, focus target, and focal-length metadata without inferring dramatic intent from the resulting picture.
@@ -374,7 +378,7 @@ export namespace IAutoMoviePerformedShot {
  * @evidence specifications/performance-motion-and-staging/staging-space-state-and-choreography.md#performance-staging-mark-surface-zone-membership Reads staged placements and current motion samples as the spatial authority for targets and emitted transforms; it does not claim mark, surface, or zone membership.
  * @evidence specifications/performance-motion-and-staging/staging-space-state-and-choreography.md#performance-staging-interaction-choreography-role Compiles action participants into timed contact, reaction, attachment, and release consequences while preserving one active transform authority per subject.
  * @evidence specifications/narrative-and-intent/scene-coverage-and-acceptance.md#narrative-intent-scene-dependency-refusal Gates the concrete actor, camera, target, projectile, and attachment dependencies this shot consumes and fails on an unresolved required binding.
- * @evidence specifications/camera-light-and-visibility/framing-axis-and-camera-path.md#clv-camera-path-constraints-refusal performShot rejects only malformed, non-finite, unresolved, rival, or overlapping authored camera paths here; camera-body clearance and swept-geometry penetration remain outside this gate.
+ * @evidence specifications/camera-light-and-visibility/framing-axis-and-camera-path.md#clv-camera-path-constraints-refusal Refuses malformed, unresolved, overlapping, stale, or physically blocked hero and coverage camera paths with an author-addressed correction path.
  * @evidence specifications/camera-light-and-visibility/camera-state-projection-and-gate.md#clv-projection-sampling-refusal performShot rejects impossible framing FOV and focal-length inputs before projection or camera-motion compilation can create non-finite artifacts.
  * @evidence specifications/camera-light-and-visibility/camera-state-projection-and-gate.md#clv-camera-authority-spatial-binding Keeps the elected shot camera and each coverage camera explicit, preserves only validated authored intent, and fails when the required camera cannot be resolved.
  * @evidence specifications/camera-light-and-visibility/target-focus-exposure-and-sampling.md#clv-focus-intent-appearance-boundary Preserves the resolved focus point and focal length as intent metadata distinct from geometric FOV and from any rendered depth-of-field appearance.
@@ -395,6 +399,13 @@ export const performShot = (props: {
    * the documented fallback.
    */
   models?: readonly IAutoMovieModel[];
+  /**
+   * Compiler-owned current geometry revision and fixed inspection clock. A
+   * take whose camera declares a physical envelope requires this context;
+   * legacy cameras without an envelope remain byte-identical when it is
+   * omitted.
+   */
+  cameraClearance?: IAutoMovieCameraClearanceRuntime;
   /**
    * Compiler-owned compact formations present in this shot, so a camera can
    * frame a mass. A group target naming a formation this list does not carry is
@@ -2176,6 +2187,19 @@ export const performShot = (props: {
       }),
   );
 
+  const cameraClearance = compileCameraClearanceReports({
+    scene: staged.scene,
+    hero: { camera: cameraObject, motion: cameraMotion },
+    coverage,
+    duration: performance.duration,
+    motions,
+    objectMotions,
+    models: props.models ?? [],
+    runtime: props.cameraClearance,
+    out,
+  });
+  if (out.items.length > 0) return { success: false, violations: out.items };
+
   const shot: IAutoMovieShot = {
     id: shotId,
     name: beat!.name,
@@ -2214,6 +2238,7 @@ export const performShot = (props: {
     // coverage intent. Empty when the beat was covered by one camera; the
     // hero take stays the singular camera/cameraMotion every consumer reads.
     coverage,
+    ...(cameraClearance === undefined ? {} : { cameraClearance }),
     duration: performance.duration,
   };
 

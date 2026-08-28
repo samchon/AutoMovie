@@ -1,6 +1,7 @@
 import { CAT_GAITS, HORSE_GAITS, HUMANOID_GAITS } from "@automovie/archetypes";
 import {
   IAutoMovieActorContext,
+  type IAutoMovieCameraClearanceRuntime,
   type IAutoMovieFormationPlacement,
   autoMovieModelGaits,
   compileDefinedShot,
@@ -37,6 +38,7 @@ import {
   validateWaterFeatures,
   validateWetZones,
 } from "@automovie/engine";
+import type { IAutoMovieProductionEvidence } from "@automovie/evidence";
 import {
   type IAutoMovieExternalMotionAdoption as IAutoMovieIngestExternalMotionAdoption,
   adoptAutoMovieExternalMotion,
@@ -132,6 +134,7 @@ import { inspectAutoMovieDerivedArtifacts } from "./derivedArtifacts";
 import { designReferenceDiagnostics } from "./designReferenceDiagnostics";
 import { filmGrammarDiagnostics } from "./filmGrammarDiagnostics";
 import { readAutoMovieFilmTimeline } from "./filmTimeline";
+import { libraryReviewEvidenceConsumerDiagnostics } from "./libraryReviewEvidenceConsumer";
 import {
   AUTOMOVIE_SANDBOX_MODULE_EXPORTS,
   isProjectSourceSpecifier,
@@ -218,10 +221,15 @@ export const AUTOMOVIE_PRODUCTION_COMPILER_VERSION = (
  * The resulting scene, shot, models and sparse motions are validated by the
  * same engine consumers use and then materialized atomically as derived data.
  *
+ * @evidence requirements/review/subject-inspection.md#review-library-delivery-coverage Consumes the graph-derived library owner population at review and final without charging unused film inventory.
+ * @evidence specifications/review-and-acceptance/subject-surface-and-inspection.md#review-system-library-delivery-coverage Runs the current finite library observation gate inside the same compiler path as final publication.
  * @author Samchon
  */
 export class AutoMovieProductionCompiler {
-  public constructor(private readonly project: AutoMovieProductionProject) {}
+  public constructor(
+    private readonly project: AutoMovieProductionProject,
+    private readonly authoringEvidence?: IAutoMovieProductionEvidence,
+  ) {}
 
   /**
    * Whether one compiled model carries a skeleton.
@@ -274,6 +282,8 @@ export class AutoMovieProductionCompiler {
     input: IAutoMovieCompileProjectInput,
     materialize: boolean,
   ): IAutoMovieCompileProjectOutput {
+    if (this.authoringEvidence?.manifest.kind === "library")
+      return this.runLibrary(input);
     const graph = this.project.graph();
     const inputRevision = this.project.revision();
     const projectManifest = this.project.manifest();
@@ -528,6 +538,11 @@ export class AutoMovieProductionCompiler {
               frameFormat: graph.production!.frameFormat,
             },
             previous,
+            cameraClearance: {
+              revision: String(inputRevision),
+              currentRevision: String(this.project.revision()),
+              sampleRate: graph.production!.frameFormat.fps,
+            },
           });
           diagnostics.push(...result.diagnostics);
           if (result.value !== null) {
@@ -753,6 +768,28 @@ export class AutoMovieProductionCompiler {
         }),
       );
     }
+    if (this.authoringEvidence !== undefined)
+      diagnostics.push(
+        ...libraryReviewEvidenceConsumerDiagnostics({
+          authoring: this.authoringEvidence,
+          project: this.project,
+          scope: input.scope,
+          compileFingerprint: inputFingerprint,
+          modelExists: (model) => graph.models.has(model),
+          rigged: (model) => this.compiledModelIsRigged(model),
+          fingerprint: (target) =>
+            manifest === null || contentInputs === undefined
+              ? null
+              : productionRenderTargetFingerprint(
+                  this.project,
+                  manifest,
+                  target,
+                  contentInputs,
+                ),
+          captured: (target, digest) =>
+            this.project.capturedRenderViews(target, digest),
+        }),
+      );
     if (input.scope === "final")
       diagnostics.push(
         ...finalDeliverableDiagnostics(
@@ -1007,6 +1044,71 @@ export class AutoMovieProductionCompiler {
     };
   }
 
+  /** Run the no-film delivery gate for one generated reusable library. */
+  private runLibrary(
+    input: IAutoMovieCompileProjectInput,
+  ): IAutoMovieCompileProjectOutput {
+    const authoring = this.authoringEvidence!;
+    const graph = this.project.graph();
+    const fields: IAutoMovieFingerprintField[] = [
+      {
+        role: "library:compiler",
+        kind: AUTOMOVIE_PRODUCTION_COMPILER_PROTOCOL,
+        payload: canonicalAutoMovieJsonBytes({
+          version: AUTOMOVIE_PRODUCTION_COMPILER_VERSION,
+          manifest: authoring.manifest,
+          designBranches: authoring.designBranches,
+          designOwners: authoring.designOwners,
+        }),
+      },
+    ];
+    const sources = [
+      ...new Set(
+        authoring.designOwners.flatMap(
+          (owner) => owner.sourceBinding?.paths ?? [],
+        ),
+      ),
+    ].sort(compareCodeUnits);
+    for (const source of sources)
+      try {
+        fields.push({
+          role: `library:source:${source}`,
+          kind: "typescript",
+          payload: normalizeAutoMovieSource(this.project.readSource(source)),
+        });
+      } catch {
+        fields.push({
+          role: `library:source:${source}`,
+          kind: "absent",
+          payload: new Uint8Array(),
+        });
+      }
+    const inputFingerprint = fingerprintAutoMovieFields(fields);
+    const diagnostics = libraryReviewEvidenceConsumerDiagnostics({
+      authoring,
+      project: this.project,
+      scope: input.scope,
+      compileFingerprint: inputFingerprint,
+      modelExists: (model) => graph.models.has(model),
+      rigged: (model) => this.compiledModelIsRigged(model),
+      fingerprint: () => null,
+      captured: (target, digest) =>
+        this.project.capturedRenderViews(target, digest),
+    }).sort(compareDiagnostics);
+    return {
+      success: diagnostics.every(
+        (diagnostic) => diagnostic.category !== "error",
+      ),
+      revision: this.project.revision(),
+      compiler: {
+        version: AUTOMOVIE_PRODUCTION_COMPILER_VERSION,
+        inputFingerprint,
+      },
+      diagnostics,
+      materialized: [],
+    };
+  }
+
   private generatedOwnershipDiagnostics(
     expected: IAutoMovieGeneratedManifest,
     repairDeclaredFiles: boolean,
@@ -1179,6 +1281,8 @@ interface ICompileShotSourceProps {
       "width" | "height"
     >;
   };
+  /** Compiler-owned snapshot and fixed clock; never exposed to shot source. */
+  cameraClearance: IAutoMovieCameraClearanceRuntime;
   /** Prior full-shot closing state at the authoritative hard-cut boundary. */
   previous: IAutoMovieBeatEndState | null;
 }
@@ -2276,6 +2380,7 @@ const compileShotSource = (
       hasActorContext: (node) => runtime.actors.has(node),
       gaits: (node) => runtime.actors.get(node)?.gaits.map((gait) => gait.name),
       frameFormat: props.context.frameFormat,
+      cameraClearance: props.cameraClearance,
       world: props.context.world,
       formationDesigns: new Map(Object.entries(props.context.formations)),
       formations: Object.values(props.context.formationRuntime),

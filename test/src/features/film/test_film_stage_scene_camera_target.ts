@@ -16,7 +16,15 @@ const camera = (
   lookAt:
     | { kind: "node"; node: string }
     | { kind: "point"; point: IAutoMovieVector3 },
-) => ({ node, position, lookAt, fovDeg: 40 });
+) => ({
+  node,
+  position,
+  lookAt,
+  fovDeg: 40,
+  near: 0.1,
+  far: 1000,
+  depthPrecision: { minimumDepthBits: 24, maximumStepMeters: 100 },
+});
 
 const stage = (
   cameras: ReturnType<typeof camera>[],

@@ -13,6 +13,7 @@ import {
 import { exportModelToGLB } from "@automovie/render";
 import {
   IAutoMovieModelObject,
+  applyAutoMovieDeliveryCrop,
   buildInstancedInstanceSet,
   createImportedModelObject,
   flattenInstancedObject,
@@ -1312,6 +1313,70 @@ export const test_viewer_instance_set = async (): Promise<void> => {
   );
   builtPanels.update(distantCamera, 720);
   const distantTiers = { ...builtPanels.stats.visible };
+
+  const singlePanelDesign: IAutoMovieInstanceSetDesign = {
+    ...panelDesign,
+    id: "single-panel-crop-lod",
+    count: 1,
+    layout: {
+      kind: "grid",
+      rows: 1,
+      columns: 1,
+      spacing: { x: 1, z: 1 },
+    },
+    variation: {
+      ...panelDesign.variation,
+      scale: { min: 1, max: 1 },
+      scale3: undefined,
+    },
+  };
+  const singlePanelCompiled = materializeCompiledInstanceSet(
+    singlePanelDesign,
+    { ...world, instanceSets: [singlePanelDesign] },
+    panelRecipes,
+  );
+  const cropLodCamera = new THREE.PerspectiveCamera(45, 1, 0.1, 500);
+  cropLodCamera.position.set(0, 0, 20);
+  cropLodCamera.lookAt(0, 0, 0);
+  cropLodCamera.updateMatrixWorld(true);
+  const cropViewportHeight = 720;
+  const cropHalfY = Math.tan(THREE.MathUtils.degToRad(45) / 2);
+  const cropProjectedPixels =
+    (singlePanelCompiled.projectionRadius * cropViewportHeight) /
+    (cropHalfY * 20);
+  const cropLodBoundary = (20 * 24 * 0.75) / cropProjectedPixels;
+  const boundedSinglePanel: IAutoMovieCompiledInstanceSet = {
+    ...singlePanelCompiled,
+    lod: singlePanelCompiled.lod.map((lod) =>
+      lod.tier === "near" ? { ...lod, maxDistance: cropLodBoundary } : lod,
+    ),
+  };
+  const buildCropLodPanel = () =>
+    buildInstancedInstanceSet({
+      instanceSet: boundedSinglePanel,
+      models: panelModels,
+    });
+  const uncroppedPanel = buildCropLodPanel();
+  uncroppedPanel.update(cropLodCamera, cropViewportHeight);
+  applyAutoMovieDeliveryCrop(cropLodCamera, {
+    left: 0,
+    top: 0.25,
+    right: 1,
+    bottom: 0.75,
+  });
+  const croppedPanel = buildCropLodPanel();
+  croppedPanel.update(cropLodCamera, cropViewportHeight);
+  TestValidator.equals(
+    "delivery crop zoom participates in instance-set LOD selection",
+    {
+      uncropped: { ...uncroppedPanel.stats.visible },
+      cropped: { ...croppedPanel.stats.visible },
+    },
+    {
+      uncropped: { hero: 0, near: 0, far: 1 },
+      cropped: { hero: 0, near: 1, far: 0 },
+    },
+  );
   TestValidator.equals(
     "a registered static glTF renders as chunked, LOD-switched instancing",
     namedFacts([

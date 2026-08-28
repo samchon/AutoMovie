@@ -19,7 +19,11 @@ import {
 import { IAutoMoviePropSpec } from "../harness";
 import { IAutoMovieModel } from "../model";
 import { IAutoMovieMotion } from "../motion";
-import { IAutoMovieProductionLighting, IAutoMovieScene } from "../scene";
+import {
+  IAutoMovieCameraDepthPrecisionReport,
+  IAutoMovieProductionLighting,
+  IAutoMovieScene,
+} from "../scene";
 import { IAutoMovieServiceNetwork } from "../service";
 import {
   IAutoMoviePlantingCluster,
@@ -92,6 +96,7 @@ export const AUTOMOVIE_DIAGNOSTIC_CODES = [
   "builder-failed",
   "capture-failed",
   "capture-host-unavailable",
+  "capture-dialogue-identity-invalid",
   "capture-input-changed",
   "capture-png-blank",
   "capture-png-invalid",
@@ -314,8 +319,6 @@ export const AUTOMOVIE_DIAGNOSTIC_CODES = [
 /**
  * One code from the shipped diagnostic catalog.
  *
- * @evidence requirements/review/records-and-completeness.md#review-execution-status Distinguishes a target that owes work from one that does not: `review-evidence-missing` refuses a review whose declared frames are absent at the target's current identity, so neither an artifact on disk nor a single written comment can stand in for a completed review.
- * @evidence specifications/review-and-acceptance/evidence-freshness-and-completeness.md#review-system-execution-status Types the closed code set through which those states are reported.
  * @evidence requirements/diagnostics/identity-path-and-context.md#diagnostics-code-catalog-reference Prevents producers from emitting codes absent from the enumerable catalog.
  * @evidence specifications/validation-and-diagnostics/diagnostic-identity-location-and-severity.md#validation-diagnostic-code-catalog-reference Lets catalog construction prove exhaustive code coverage.
  */
@@ -3687,7 +3690,7 @@ export interface IAutoMovieCompiledContractRealization {
     passed: boolean;
   }>;
   /**
-   * Camera root-projection checks at authoritative review times.
+   * Camera required-bound projection checks at authoritative review times.
    *
    * @evidence requirements/diagnostics/input-and-result-classification.md#diagnostics-derived-result-finding Exposes `camera` as the portable data boundary for the diagnostics derived result finding requirement.
    * @evidence specifications/validation-and-diagnostics/classification-and-causality.md#validation-derived-result-finding Types `camera` for the validation derived result finding system contract.
@@ -3711,13 +3714,17 @@ export interface IAutoMovieCompiledContractRealization {
       /** Sampled camera orientation in world space. */
       rotation: IAutoMovieQuaternion;
     };
+    /**
+     * Required-range depth precision measured for this exact camera time.
+     */
+    depthPrecision: IAutoMovieCameraDepthPrecisionReport;
     /** Number of required subjects. */
     requiredSubjects: number;
     /** Number resolved in current compiled output. */
     resolvedSubjects: number;
-    /** Number whose root point is inside depth and frame bounds. */
+    /** Number whose current bound intersects the clip range and frame. */
     readableSubjects: number;
-    /** Whether every required root point is readable. */
+    /** Whether every required current bound is readable at this sample. */
     passed: boolean;
   }>;
   /**

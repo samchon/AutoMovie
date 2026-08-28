@@ -78,6 +78,7 @@ for (const shot of new Set(timeline.segments.map((segment) => segment.shot))) {
   const compiled = (await response.json()) as IAutoMovieCompiledShotSource;
   const runtime = await createCompiledShotRuntime(compiled, deliveryTone, {
     dialogue: productionRuntime.dialogue,
+    deliveryCrop: productionRuntime.deliveryCrop ?? undefined,
     liveWearableSoftBodies: productionRuntime.liveWearableSoftBodies,
   });
   // Each cut carries its own palette, because a colour is derived from the

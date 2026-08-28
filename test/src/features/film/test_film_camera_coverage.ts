@@ -19,6 +19,7 @@ const ALT: IAutoMovieCamera = {
   fovY: 90,
   near: 0.1,
   far: 1000,
+  depthPrecision: { minimumDepthBits: 24, maximumStepMeters: 100 },
 };
 
 const SUBJECT = { base: { x: 0, y: 0, z: 0 }, height: 2, at: null };

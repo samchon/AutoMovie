@@ -1,0 +1,1498 @@
+import {
+  ViolationCollector,
+  appendShotMetadataArtifact,
+  compileCameraClearanceReports,
+  compileDefinedShot,
+  defineShot,
+  evaluateCameraClearance,
+  performShot,
+  stageScene,
+  validateShotArtifact,
+} from "@automovie/engine";
+import {
+  IAutoMovieCameraClearanceEnvelope,
+  IAutoMovieShotProgram,
+  IAutoMovieStage,
+  IAutoMovieTransform,
+  IAutoMovieVector3,
+} from "@automovie/interface";
+import { TestValidator } from "@nestia/e2e";
+
+import {
+  makeBlockingWrite,
+  makePerformanceWrite,
+  makeScriptWrite,
+  makeStagingWrite,
+  validSynthesizer,
+} from "../internal/filmFixtures";
+import { createModel, createSkeleton } from "../internal/fixtures";
+
+const identity = (x = 0, y = 0, z = 0): IAutoMovieTransform => ({
+  translation: { x, y, z },
+  rotation: { x: 0, y: 0, z: 0, w: 1 },
+  scale: { x: 1, y: 1, z: 1 },
+});
+
+const box = (center: IAutoMovieVector3, half = 0.1) => ({
+  min: { x: center.x - half, y: center.y - half, z: center.z - half },
+  max: { x: center.x + half, y: center.y + half, z: center.z + half },
+});
+
+const envelope = (
+  body: { center: IAutoMovieVector3; radius: number } = {
+    center: { x: 0, y: 0, z: 0 },
+    radius: 0.1,
+  },
+  parentRig: IAutoMovieCameraClearanceEnvelope["parentRig"] = null,
+): IAutoMovieCameraClearanceEnvelope => ({ body, parentRig });
+
+const evaluate = (
+  over: {
+    envelope?: IAutoMovieCameraClearanceEnvelope;
+    revision?: string;
+    currentRevision?: string;
+    sampleRate?: number;
+    duration?: number;
+    samples?: Array<{
+      time: number;
+      camera: IAutoMovieTransform;
+      obstacles: Array<{
+        node: string;
+        bounds: ReturnType<typeof box>;
+      }>;
+    }>;
+  } = {},
+) =>
+  evaluateCameraClearance({
+    camera: "camera-main",
+    envelope: over.envelope ?? envelope(),
+    revision: over.revision ?? "revision-7",
+    currentRevision: over.currentRevision ?? "revision-7",
+    sampleRate: over.sampleRate ?? 1,
+    duration: over.duration ?? 1,
+    samples:
+      over.samples ??
+      [0, 1].map((time) => ({
+        time,
+        camera: identity(),
+        obstacles: [{ node: "wall", bounds: box({ x: 5, y: 0, z: 0 }) }],
+      })),
+  });
+
+const throws = (closure: () => unknown, text: string): boolean => {
+  try {
+    closure();
+    return false;
+  } catch (error) {
+    return error instanceof Error && error.message.includes(text);
+  }
+};
+
+const stageWithClearance = (
+  clearance: IAutoMovieCameraClearanceEnvelope,
+): IAutoMovieStage => {
+  const base = makeStagingWrite();
+  return {
+    ...base,
+    cameras: [
+      {
+        ...base.cameras[0]!,
+        near: 0.1,
+        far: 100,
+        depthPrecision: {
+          minimumDepthBits: 24,
+          maximumStepMeters: 1,
+        },
+        clearance,
+      },
+    ],
+  };
+};
+
+const runtimeModels = () => [
+  { ...createModel(), id: "stickman" },
+  { ...createModel(), id: "knightB" },
+];
+
+/**
+ * Camera body and parent-rig clearance are continuous, current-revision gates.
+ *
+ * Scenarios:
+ *
+ * 1. Exact sphere/box boundary contact blocks a static camera.
+ * 2. Clear endpoints do not hide a midpoint wall penetration, including an
+ *    authored camera key that does not land on the base fixed clock.
+ * 3. A parent rig can collide while the camera body remains clear.
+ * 4. A moving subject crossing a fixed camera is compared at the same samples.
+ * 5. Rotation of an offset envelope carries the conservative arc, not merely
+ *    its endpoint chord.
+ * 6. A current clear result is publishable while a stale revision is not.
+ * 7. Malformed clocks, boxes, duplicate obstacles, and changing identity sets
+ *    are refused at the evaluator boundary.
+ * 8. Stage validation rejects malformed nested envelopes and deep-lowers a
+ *    valid envelope without retaining author-object aliases.
+ * 9. Performance preserves a clear report, while compiler-visible body contact
+ *    and a stale geometry snapshot return addressed refusal.
+ * 10. A zero-duration public evaluation still detects contact at its single
+ *     fixed-clock instant.
+ * 11. Artifact validation requires exactly one clear report per declared take,
+ *     an exact carried sample plan, and retention of every base-clock instant.
+ * 12. An evaluator throw remains addressed even when the thrown value refuses
+ *     diagnostic string coercion.
+ * 13. Overshooting interpolation and open loop seams are refused rather than
+ *     trusted as endpoint-bounded motion.
+ */
+export const test_film_camera_clearance = (): void => {
+  const boundary = evaluate({
+    samples: [0, 1].map((time) => ({
+      time,
+      camera: identity(),
+      obstacles: [{ node: "wall", bounds: box({ x: 0.2, y: 0, z: 0 }, 0.1) }],
+    })),
+  });
+  TestValidator.equals(
+    "inclusive static boundary contact",
+    boundary.status,
+    "blocked",
+  );
+  TestValidator.equals("boundary finding is addressed", boundary.findings, [
+    { part: "body", obstacle: "wall", start: 0, end: 1 },
+  ]);
+
+  const midpoint = evaluate({
+    samples: [
+      {
+        time: 0,
+        camera: identity(-2),
+        obstacles: [{ node: "wall", bounds: box({ x: 0, y: 0, z: 0 }) }],
+      },
+      {
+        time: 1,
+        camera: identity(2),
+        obstacles: [{ node: "wall", bounds: box({ x: 0, y: 0, z: 0 }) }],
+      },
+    ],
+  });
+  TestValidator.equals(
+    "clear endpoints still catch midpoint penetration",
+    midpoint.status,
+    "blocked",
+  );
+  const causalMidpoint = evaluate({
+    samples: [
+      {
+        time: 0,
+        camera: identity(-2),
+        obstacles: [{ node: "wall", bounds: box({ x: 0, y: 0, z: 0 }) }],
+      },
+      {
+        time: 0.5,
+        camera: identity(),
+        obstacles: [{ node: "wall", bounds: box({ x: 0, y: 0, z: 0 }) }],
+      },
+      {
+        time: 1,
+        camera: identity(-2),
+        obstacles: [{ node: "wall", bounds: box({ x: 0, y: 0, z: 0 }) }],
+      },
+    ],
+  });
+  TestValidator.equals(
+    "an off-clock causal key refines rather than replaces the fixed clock",
+    [
+      causalMidpoint.status,
+      causalMidpoint.intervals,
+      causalMidpoint.sampleTimes,
+    ],
+    ["blocked", 2, [0, 0.5, 1]],
+  );
+
+  const rigOnly = evaluate({
+    envelope: envelope(
+      { center: { x: 0, y: 3, z: 0 }, radius: 0.1 },
+      { center: { x: 0, y: 0, z: 0 }, radius: 0.1 },
+    ),
+    samples: [0, 1].map((time) => ({
+      time,
+      camera: identity(),
+      obstacles: [{ node: "support", bounds: box({ x: 0, y: 0, z: 0 }) }],
+    })),
+  });
+  TestValidator.equals("rig-only collision is distinct", rigOnly.findings, [
+    { part: "parent-rig", obstacle: "support", start: 0, end: 1 },
+  ]);
+
+  const moving = evaluate({
+    samples: [
+      {
+        time: 0,
+        camera: identity(),
+        obstacles: [{ node: "actor", bounds: box({ x: -2, y: 0, z: 0 }) }],
+      },
+      {
+        time: 1,
+        camera: identity(),
+        obstacles: [{ node: "actor", bounds: box({ x: 2, y: 0, z: 0 }) }],
+      },
+    ],
+  });
+  TestValidator.equals(
+    "moving subject same-sample crossing",
+    moving.status,
+    "blocked",
+  );
+  const skewMiss = evaluate({
+    samples: [
+      {
+        time: 0,
+        camera: identity(-2, 2, 0),
+        obstacles: [
+          { node: "z-wall", bounds: box({ x: 0, y: 0, z: 0 }) },
+          { node: "a-floor", bounds: box({ x: 8, y: 8, z: 8 }) },
+          { node: "m-opening", bounds: box({ x: 9, y: 9, z: 9 }) },
+        ],
+      },
+      {
+        time: 1,
+        camera: identity(2, 3, 0),
+        obstacles: [
+          { node: "z-wall", bounds: box({ x: 0, y: 0, z: 0 }) },
+          { node: "a-floor", bounds: box({ x: 8, y: 8, z: 8 }) },
+          { node: "m-opening", bounds: box({ x: 9, y: 9, z: 9 }) },
+        ],
+      },
+    ],
+  });
+  TestValidator.equals(
+    "disjoint moving slabs remain clear in stable obstacle order",
+    skewMiss.status,
+    "clear",
+  );
+
+  const rotating = evaluate({
+    envelope: envelope({ center: { x: 1, y: 0, z: 0 }, radius: 0.01 }),
+    samples: [
+      {
+        time: 0,
+        camera: identity(),
+        obstacles: [
+          { node: "ceiling", bounds: box({ x: 0, y: 1, z: 0 }, 0.01) },
+        ],
+      },
+      {
+        time: 1,
+        camera: {
+          ...identity(),
+          rotation: { x: 0, y: 0, z: 1, w: 0 },
+        },
+        obstacles: [
+          { node: "ceiling", bounds: box({ x: 0, y: 1, z: 0 }, 0.01) },
+        ],
+      },
+    ],
+  });
+  TestValidator.equals(
+    "offset rotation arc is conservatively covered",
+    rotating.status,
+    "blocked",
+  );
+
+  const clear = evaluate();
+  const stale = evaluate({ currentRevision: "revision-8" });
+  const instant = evaluate({
+    duration: 0,
+    samples: [
+      {
+        time: 0,
+        camera: { ...identity(), scale: { x: 2, y: 1, z: 1 } },
+        obstacles: [{ node: "wall", bounds: box({ x: 5, y: 0, z: 0 }) }],
+      },
+    ],
+  });
+  const instantContact = evaluate({
+    duration: 0,
+    samples: [
+      {
+        time: 0,
+        camera: identity(),
+        obstacles: [{ node: "wall", bounds: box({ x: 0, y: 0, z: 0 }) }],
+      },
+    ],
+  });
+  TestValidator.equals(
+    "current, stale, and zero-duration contact reports stay distinct",
+    [
+      [clear.status, clear.intervals, clear.findings.length],
+      [stale.status, stale.intervals, stale.findings.length],
+      [instant.status, instant.intervals, instant.findings.length],
+      [
+        instantContact.status,
+        instantContact.intervals,
+        instantContact.findings,
+      ],
+    ],
+    [
+      ["clear", 1, 0],
+      ["stale", 0, 0],
+      ["clear", 0, 0],
+      ["blocked", 0, [{ part: "body", obstacle: "wall", start: 0, end: 0 }]],
+    ],
+  );
+
+  TestValidator.equals(
+    "malformed evaluation inputs are refused",
+    [
+      throws(() => evaluate({ sampleRate: 0 }), "sampleRate"),
+      throws(() => evaluate({ duration: -1 }), "duration"),
+      throws(() => evaluate({ samples: [] }), "fixed-clock"),
+      throws(
+        () =>
+          evaluate({
+            samples: [
+              { time: 0, camera: identity(), obstacles: [] },
+              { time: 0.5, camera: identity(), obstacles: [] },
+            ],
+          }),
+        "fixed-clock",
+      ),
+      throws(
+        () =>
+          evaluate({
+            samples: [
+              { time: 0, camera: identity(), obstacles: [] },
+              { time: 0, camera: identity(), obstacles: [] },
+              { time: 1, camera: identity(), obstacles: [] },
+            ],
+          }),
+        "strict time order",
+      ),
+      throws(
+        () =>
+          evaluate({
+            samples: [
+              { time: 0, camera: identity(), obstacles: [] },
+              { time: Number.NaN, camera: identity(), obstacles: [] },
+              { time: 1, camera: identity(), obstacles: [] },
+            ],
+          }),
+        "strict time order",
+      ),
+      throws(
+        () =>
+          evaluate({
+            samples: [
+              { time: 0, camera: identity(), obstacles: [] },
+              { time: -0.5, camera: identity(), obstacles: [] },
+              { time: 1, camera: identity(), obstacles: [] },
+            ],
+          }),
+        "strict time order",
+      ),
+      throws(
+        () =>
+          evaluate({
+            samples: [
+              { time: 0, camera: identity(), obstacles: [] },
+              { time: 1.5, camera: identity(), obstacles: [] },
+              { time: 1, camera: identity(), obstacles: [] },
+            ],
+          }),
+        "strict time order",
+      ),
+      throws(
+        () =>
+          evaluate({
+            samples: [0, 1].map((time) => ({
+              time,
+              camera: identity(),
+              obstacles: [
+                {
+                  node: "wall",
+                  bounds: {
+                    min: { x: Number.NaN, y: 0, z: 0 },
+                    max: { x: 1, y: 1, z: 1 },
+                  },
+                },
+              ],
+            })),
+          }),
+        "finite coordinates",
+      ),
+      throws(
+        () =>
+          evaluate({
+            samples: [0, 1].map((time) => ({
+              time,
+              camera: identity(),
+              obstacles: [
+                {
+                  node: "wall",
+                  bounds: {
+                    min: { x: 2, y: 0, z: 0 },
+                    max: { x: 1, y: 1, z: 1 },
+                  },
+                },
+              ],
+            })),
+          }),
+        "minimum",
+      ),
+      throws(
+        () =>
+          evaluate({
+            samples: [0, 1].map((time) => ({
+              time,
+              camera: identity(),
+              obstacles: [
+                { node: "wall", bounds: box({ x: 5, y: 0, z: 0 }) },
+                { node: "wall", bounds: box({ x: 6, y: 0, z: 0 }) },
+              ],
+            })),
+          }),
+        "duplicates",
+      ),
+      throws(
+        () =>
+          evaluate({
+            samples: [
+              {
+                time: 0,
+                camera: identity(),
+                obstacles: [
+                  { node: "wall", bounds: box({ x: 5, y: 0, z: 0 }) },
+                ],
+              },
+              {
+                time: 1,
+                camera: identity(),
+                obstacles: [
+                  { node: "floor", bounds: box({ x: 5, y: 0, z: 0 }) },
+                ],
+              },
+            ],
+          }),
+        "identity set",
+      ),
+    ],
+    [true, true, true, true, true, true, true, true, true, true, true, true],
+  );
+
+  const authored = stageWithClearance(envelope());
+  const staged = stageScene(makeScriptWrite(), authored);
+  TestValidator.equals("valid stage envelope lowers", staged.success, true);
+  if (staged.success === true) {
+    authored.cameras[0]!.clearance!.body.center.x = 99;
+    TestValidator.equals(
+      "resolved envelope does not alias author input",
+      staged.scene.cameras[0]!.clearance!.body.center.x,
+      0,
+    );
+  }
+  const malformed = [
+    null,
+    { body: null, parentRig: null },
+    { body: { center: [], radius: 0.1 }, parentRig: null },
+    {
+      body: { center: { x: Number.NaN, y: 0, z: 0 }, radius: 0.1 },
+      parentRig: null,
+    },
+    {
+      body: { center: { x: 0, y: 0, z: 0 }, radius: 0 },
+      parentRig: null,
+    },
+    { body: { center: { x: 0, y: 0, z: 0 }, radius: 0.1 } },
+    {
+      body: { center: { x: 0, y: 0, z: 0 }, radius: 0.1 },
+      parentRig: { center: { x: 0, y: Infinity, z: 0 }, radius: -1 },
+    },
+  ].map((clearance) =>
+    stageScene(
+      makeScriptWrite(),
+      stageWithClearance(
+        clearance as unknown as IAutoMovieCameraClearanceEnvelope,
+      ),
+    ),
+  );
+  TestValidator.predicate(
+    "every malformed envelope is refused at its clearance member",
+    malformed.every(
+      (result) =>
+        result.success === false &&
+        result.violations.some((item) => item.path.includes(".clearance")),
+    ),
+  );
+
+  const clearStage = stageScene(
+    makeScriptWrite(),
+    stageWithClearance(
+      envelope({ center: { x: 0, y: 0, z: 0 }, radius: 0.01 }),
+    ),
+  );
+  if (clearStage.success !== true)
+    throw new Error("clearance performance fixture must stage");
+  const performanceProps = {
+    script: makeScriptWrite(),
+    staged: clearStage,
+    performance: makePerformanceWrite(),
+    synthesize: validSynthesizer,
+    skeleton: () => createSkeleton(),
+    models: runtimeModels(),
+  };
+  const performed = performShot({
+    ...performanceProps,
+    cameraClearance: {
+      revision: "current",
+      currentRevision: "current",
+      sampleRate: 24,
+    },
+  });
+  TestValidator.predicate(
+    "current clear performance preserves its report",
+    performed.success === true &&
+      performed.shot.cameraClearance?.[0]?.status === "clear" &&
+      performed.shot.cameraClearance[0].intervals >= 48 &&
+      performed.shot.cameraClearance[0].sampleTimes.length ===
+        performed.shot.cameraClearance[0].intervals + 1,
+  );
+  if (performed.success !== true)
+    throw new Error("clearance performance fixture must perform");
+
+  const acceptedReport = performed.shot.cameraClearance![0]!;
+  const motionIds = new Set(
+    Object.values(performed.motions).map((motion) => motion.id),
+  );
+  const missingAcceptedReport = validateShotArtifact(
+    { ...performed.shot, cameraClearance: undefined },
+    clearStage.scene,
+    motionIds,
+  );
+  const emptyAcceptedReports = validateShotArtifact(
+    { ...performed.shot, cameraClearance: [] },
+    clearStage.scene,
+    motionIds,
+  );
+  const plainResolvedCamera = {
+    ...clearStage.scene.cameras[0]!,
+    clearance: undefined,
+  };
+  const undeclaredReport = validateShotArtifact(
+    performed.shot,
+    { ...clearStage.scene, cameras: [plainResolvedCamera] },
+    motionIds,
+  );
+  TestValidator.predicate(
+    "artifact validation requires one report for exactly each declared delivery",
+    [missingAcceptedReport, emptyAcceptedReports, undeclaredReport].every(
+      (result) =>
+        result.success === false &&
+        result.violations.some(
+          (item) => item.path === "$input.cameraClearance",
+        ),
+    ),
+  );
+  const wrongIntervalCount = validateShotArtifact(
+    {
+      ...performed.shot,
+      cameraClearance: [
+        {
+          ...acceptedReport,
+          intervals:
+            Math.ceil(performed.shot.duration * acceptedReport.sampleRate) - 1,
+        },
+      ],
+    },
+    clearStage.scene,
+    motionIds,
+  );
+  const unsafeIntervalClock = validateShotArtifact(
+    {
+      ...performed.shot,
+      cameraClearance: [
+        { ...acceptedReport, sampleRate: Number.MAX_VALUE, intervals: 0 },
+      ],
+    },
+    clearStage.scene,
+    motionIds,
+  );
+  const forgedHugeIntervals = validateShotArtifact(
+    {
+      ...performed.shot,
+      cameraClearance: [
+        { ...acceptedReport, intervals: Number.MAX_SAFE_INTEGER },
+      ],
+    },
+    clearStage.scene,
+    motionIds,
+  );
+  const additionalBoundaryReport = validateShotArtifact(
+    {
+      ...performed.shot,
+      cameraClearance: [
+        {
+          ...acceptedReport,
+          sampleTimes: [
+            acceptedReport.sampleTimes[0]!,
+            (acceptedReport.sampleTimes[0]! + acceptedReport.sampleTimes[1]!) /
+              2,
+            ...acceptedReport.sampleTimes.slice(1),
+          ],
+          intervals: acceptedReport.intervals + 1,
+        },
+      ],
+    },
+    clearStage.scene,
+    motionIds,
+  );
+  TestValidator.predicate(
+    "artifact intervals cover the safe base clock and may retain causal keys",
+    wrongIntervalCount.success === false &&
+      wrongIntervalCount.violations.some(
+        (item) => item.path === "$input.cameraClearance[0].intervals",
+      ) &&
+      unsafeIntervalClock.success === false &&
+      unsafeIntervalClock.violations.some(
+        (item) => item.path === "$input.cameraClearance[0].sampleRate",
+      ) &&
+      forgedHugeIntervals.success === false &&
+      forgedHugeIntervals.violations.some(
+        (item) => item.path === "$input.cameraClearance[0].intervals",
+      ) &&
+      additionalBoundaryReport.success === true,
+  );
+
+  const metadataViolations: Parameters<typeof appendShotMetadataArtifact>[3] =
+    [];
+  appendShotMetadataArtifact(
+    {
+      duration: performed.shot.duration,
+      camera: performed.shot.camera,
+      cameraClearance: "not-an-array",
+    },
+    "$metadata",
+    new Set([performed.shot.camera]),
+    metadataViolations,
+  );
+  appendShotMetadataArtifact(
+    {
+      duration: performed.shot.duration,
+      camera: performed.shot.camera,
+      cameraClearance: [null],
+    },
+    "$metadata",
+    new Set([performed.shot.camera]),
+    metadataViolations,
+  );
+  appendShotMetadataArtifact(
+    {
+      duration: performed.shot.duration,
+      camera: performed.shot.camera,
+      cameraClearance: [
+        {
+          ...acceptedReport,
+          camera: "",
+          revision: "old",
+          currentRevision: "current",
+          sampleRate: 0,
+          intervals: 0.5,
+          sampleTimes: [0, 0],
+          status: "blocked",
+          findings: "not-an-array",
+        },
+        {
+          ...acceptedReport,
+          camera: "ghost",
+          sampleTimes: [-1, Number.NaN, performed.shot.duration + 1],
+          findings: [{}],
+        },
+        { ...acceptedReport, camera: "ghost", sampleTimes: "not-an-array" },
+      ],
+    },
+    "$metadata",
+    new Set([performed.shot.camera]),
+    metadataViolations,
+  );
+  TestValidator.predicate(
+    "malformed stored clearance evidence is refused at every addressed member",
+    [
+      "$metadata.cameraClearance",
+      "$metadata.cameraClearance[0]",
+      "$metadata.cameraClearance[0].camera",
+      "$metadata.cameraClearance[0].currentRevision",
+      "$metadata.cameraClearance[0].sampleRate",
+      "$metadata.cameraClearance[0].intervals",
+      "$metadata.cameraClearance[0].sampleTimes[1]",
+      "$metadata.cameraClearance[0].status",
+      "$metadata.cameraClearance[0].findings",
+      "$metadata.cameraClearance[1].camera",
+      "$metadata.cameraClearance[1].sampleTimes[0]",
+      "$metadata.cameraClearance[1].sampleTimes[1]",
+      "$metadata.cameraClearance[1].sampleTimes[2]",
+      "$metadata.cameraClearance[1].findings",
+      "$metadata.cameraClearance[2].camera",
+      "$metadata.cameraClearance[2].sampleTimes",
+    ].every((path) => metadataViolations.some((item) => item.path === path)),
+  );
+
+  const heroCamera = clearStage.scene.cameras.find(
+    (camera) => camera.id === performed.shot.camera,
+  )!;
+  const baseAdapterProps = {
+    scene: clearStage.scene,
+    hero: { camera: heroCamera, motion: performed.shot.cameraMotion },
+    coverage: performed.shot.coverage ?? [],
+    duration: performed.shot.duration,
+    motions: performed.motions,
+    objectMotions: performed.shot.objectMotions,
+    models: runtimeModels(),
+    runtime: {
+      revision: "current",
+      currentRevision: "current",
+      sampleRate: 24,
+    },
+  };
+  const inspectAdapter = (
+    over: Partial<typeof baseAdapterProps> = {},
+  ): {
+    reports: ReturnType<typeof compileCameraClearanceReports>;
+    out: ViolationCollector;
+  } => {
+    const out = new ViolationCollector();
+    const reports = compileCameraClearanceReports({
+      ...baseAdapterProps,
+      ...over,
+      out,
+    });
+    return { reports, out };
+  };
+
+  const plainCamera = { ...heroCamera, clearance: undefined };
+  const plain = inspectAdapter({
+    scene: { ...clearStage.scene, cameras: [plainCamera] },
+    hero: { camera: plainCamera, motion: performed.shot.cameraMotion },
+    runtime: undefined,
+  });
+  const noRuntime = inspectAdapter({ runtime: undefined });
+  TestValidator.equals(
+    "legacy camera and missing compiler authority remain distinct",
+    [
+      [plain.reports, plain.out.items.length],
+      [noRuntime.reports, noRuntime.out.items[0]?.path],
+    ],
+    [
+      [undefined, 0],
+      [undefined, "$input.cameraClearance"],
+    ],
+  );
+
+  const missingGeometry = inspectAdapter({ models: [] });
+  const emptyGeometry = inspectAdapter({
+    models: runtimeModels().map((model) => ({ ...model, parts: [] })),
+  });
+  TestValidator.predicate(
+    "absent and empty obstacle geometry are addressed rather than skipped",
+    [missingGeometry, emptyGeometry].every(
+      ({ reports, out }) =>
+        reports === undefined &&
+        out.items.length === clearStage.scene.nodes.length &&
+        out.items.every((item) => item.path.endsWith(".model")),
+    ),
+  );
+
+  const propModel = { ...createModel(null), id: "prop" };
+  const sourceNode = clearStage.scene.nodes[0]!;
+  const staticNode = {
+    ...sourceNode,
+    id: "static-prop",
+    model: "prop",
+    transform: identity(20, 20, 20),
+  };
+  const movingNode = {
+    ...sourceNode,
+    id: "moving-prop",
+    model: "prop",
+    transform: identity(30, 30, 30),
+  };
+  const alternateCamera = { ...heroCamera, id: "cam-alt" };
+  const animated = inspectAdapter({
+    scene: {
+      ...clearStage.scene,
+      nodes: [...clearStage.scene.nodes, staticNode, movingNode],
+      cameras: [...clearStage.scene.cameras, alternateCamera],
+    },
+    coverage: [{ camera: "cam-alt", cameraMotion: null, cameraIntent: [] }],
+    models: [...runtimeModels(), propModel],
+    objectMotions: [
+      {
+        id: "moving-prop-transform",
+        name: null,
+        duration: 2,
+        loop: false,
+        tracks: [
+          {
+            channel: {
+              kind: "node",
+              node: "moving-prop",
+              path: "translation",
+            },
+            times: [0, 2],
+            values: [30, 30, 30, 31, 31, 31],
+            interpolation: "linear",
+          },
+          {
+            channel: {
+              kind: "node",
+              node: "moving-prop",
+              path: "rotation",
+            },
+            times: [0, 2],
+            values: [0, 0, 0, 1, 0, 0, 1, 0],
+            interpolation: "linear",
+          },
+          {
+            channel: {
+              kind: "node",
+              node: "moving-prop",
+              path: "scale",
+            },
+            times: [0, 2],
+            values: [1, 1, 1, 2, 2, 2],
+            interpolation: "linear",
+          },
+        ],
+      },
+    ],
+  });
+  TestValidator.predicate(
+    "static and moving obstacles share the clock across hero and coverage takes",
+    animated.out.items.length === 0 &&
+      animated.reports?.length === 2 &&
+      animated.reports.every((report) => report.status === "clear"),
+  );
+
+  const contact = staticNode.transform.translation;
+  const offClockCameraMotion = {
+    id: "off-clock-camera-contact",
+    name: null,
+    duration: 2,
+    loop: true,
+    tracks: [
+      {
+        channel: {
+          kind: "node" as const,
+          node: heroCamera.id,
+          path: "translation" as const,
+        },
+        times: [0, 1 / 48, 1 / 24, 2],
+        values: [
+          contact.x + 100,
+          contact.y,
+          contact.z,
+          contact.x,
+          contact.y,
+          contact.z,
+          contact.x + 100,
+          contact.y,
+          contact.z,
+          contact.x + 100,
+          contact.y,
+          contact.z,
+        ],
+        interpolation: "linear" as const,
+      },
+      {
+        channel: {
+          kind: "node" as const,
+          node: heroCamera.id,
+          path: "rotation" as const,
+        },
+        times: [0, 2],
+        values: [0, 0, 0, 1, 0, 0, 0, -1],
+        interpolation: "linear" as const,
+      },
+    ],
+  };
+  const offClockContact = inspectAdapter({
+    scene: {
+      ...clearStage.scene,
+      nodes: [...clearStage.scene.nodes, staticNode],
+    },
+    hero: { camera: heroCamera, motion: offClockCameraMotion },
+    motions: {},
+    objectMotions: [],
+    models: [...runtimeModels(), propModel],
+  });
+  TestValidator.predicate(
+    "an unaligned camera key refines the compiler clock before interval sweep",
+    offClockContact.reports === undefined &&
+      offClockContact.out.items.some(
+        (item) =>
+          item.path.endsWith(".clearance.body") &&
+          item.expected.includes('obstacle "static-prop"'),
+      ),
+  );
+  const [actorNode, actorMotion] = Object.entries(performed.motions)[0]!;
+  const foldedSkeleton = createSkeleton();
+  foldedSkeleton.bones = foldedSkeleton.bones.map((bone) =>
+    bone.bone === "leftUpperArm"
+      ? { ...bone, rest: identity(2) }
+      : bone.bone === "leftLowerArm"
+        ? { ...bone, rest: identity(-2) }
+        : bone,
+  );
+  const foldedRigModel = {
+    ...createModel(foldedSkeleton),
+    id: "folded-rig",
+    parts: [
+      ...createModel(foldedSkeleton).parts.map((part) => ({
+        ...part,
+        attachedBone: "leftLowerArm" as const,
+      })),
+      {
+        id: "folded-skin",
+        name: null,
+        geometry: {
+          type: "mesh" as const,
+          mesh: {
+            positions: [0, 0, 0, 0.1, 0, 0, 0, 0.1, 0],
+            normals: null,
+            uvs: null,
+            indices: [0, 1, 2],
+            skin: {
+              joints: ["leftLowerArm" as const],
+              boneIndices: new Array(12).fill(0) as number[],
+              weights: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0],
+            },
+          },
+        },
+        material: null,
+        attachedBone: null,
+        transform: null,
+      },
+    ],
+  };
+  const cameraPosition = heroCamera.transform.translation;
+  const foldedRigNode = {
+    ...sourceNode,
+    id: "folded-rig",
+    model: foldedRigModel.id,
+    transform: identity(
+      cameraPosition.x + 5,
+      cameraPosition.y,
+      cameraPosition.z,
+    ),
+  };
+  const extendedRig = inspectAdapter({
+    scene: {
+      ...clearStage.scene,
+      nodes: [...clearStage.scene.nodes, foldedRigNode],
+    },
+    motions: { [foldedRigNode.id]: actorMotion },
+    models: [...runtimeModels(), foldedRigModel],
+  });
+  TestValidator.predicate(
+    "a folded rig keeps the full articulated and skinned deformation reach",
+    extendedRig.reports === undefined &&
+      extendedRig.out.items.some(
+        (item) =>
+          item.path.endsWith(".clearance.body") &&
+          item.expected.includes('obstacle "folded-rig"'),
+      ),
+  );
+
+  const malformedRig = (id: string, bones: typeof foldedSkeleton.bones) => {
+    const model = {
+      ...foldedRigModel,
+      id,
+      skeleton: { ...foldedSkeleton, id: `${id}-skeleton`, bones },
+    };
+    const node = { ...foldedRigNode, id, model: id };
+    return inspectAdapter({
+      scene: { ...clearStage.scene, nodes: [...clearStage.scene.nodes, node] },
+      motions: { [id]: actorMotion },
+      models: [...runtimeModels(), model],
+    });
+  };
+  const cyclicRig = malformedRig(
+    "cyclic-rig",
+    foldedSkeleton.bones.map((bone) =>
+      bone.bone === "hips" ? { ...bone, parent: "spine" as const } : bone,
+    ),
+  );
+  const absentParentRig = malformedRig(
+    "absent-parent-rig",
+    foldedSkeleton.bones.map((bone) =>
+      bone.bone === "hips"
+        ? {
+            ...bone,
+            parent: "missingBone" as (typeof bone)["parent"],
+          }
+        : bone,
+    ),
+  );
+  const nonFiniteRig = malformedRig(
+    "non-finite-rig",
+    foldedSkeleton.bones.map((bone) =>
+      bone.bone === "hips"
+        ? { ...bone, rest: identity(Number.POSITIVE_INFINITY) }
+        : bone,
+    ),
+  );
+  const overflowingRig = malformedRig(
+    "overflowing-rig",
+    foldedSkeleton.bones.map((bone) =>
+      bone.bone === "hips" || bone.bone === "spine"
+        ? { ...bone, rest: identity(Number.MAX_VALUE) }
+        : bone,
+    ),
+  );
+  const radiusOverflowRig = malformedRig(
+    "radius-overflow-rig",
+    foldedSkeleton.bones.map((bone) =>
+      bone.bone === "leftLowerArm"
+        ? { ...bone, rest: identity(Number.MAX_VALUE * 0.4) }
+        : bone.bone === "leftUpperArm"
+          ? { ...bone, rest: identity() }
+          : bone,
+    ),
+  );
+  const duplicatedRig = malformedRig("duplicated-rig", [
+    ...foldedSkeleton.bones,
+    foldedSkeleton.bones[0]!,
+  ]);
+  TestValidator.predicate(
+    "malformed or overflowing public rig bounds are addressed at their staged obstacle",
+    [
+      [cyclicRig, "exactly one root"],
+      [absentParentRig, "is not a bone"],
+      [nonFiniteRig, "non-finite"],
+      [overflowingRig, "overflows"],
+      [radiusOverflowRig, "deformation radius"],
+      [duplicatedRig, "must be unique"],
+    ].every(([result, expected]) => {
+      const inspected = result as ReturnType<typeof inspectAdapter>;
+      return (
+        inspected.reports === undefined &&
+        inspected.out.items.some(
+          (item) =>
+            item.path.endsWith(".model") &&
+            item.expected.includes(expected as string),
+        )
+      );
+    }),
+  );
+
+  const morphRefusal = inspectAdapter({
+    scene: {
+      ...clearStage.scene,
+      nodes: [...clearStage.scene.nodes, movingNode],
+    },
+    motions: {},
+    models: [...runtimeModels(), propModel],
+    objectMotions: [
+      {
+        id: "unbounded-morph-expansion",
+        name: null,
+        duration: 2,
+        loop: false,
+        tracks: [
+          {
+            channel: {
+              kind: "node",
+              node: movingNode.id,
+              path: "weights",
+            },
+            times: [0, 2],
+            values: [0, 1],
+            interpolation: "linear",
+          },
+        ],
+      },
+    ],
+  });
+  TestValidator.predicate(
+    "morph expansion without a portable bound is refused at the exact track",
+    morphRefusal.reports === undefined &&
+      morphRefusal.out.items.some(
+        (item) =>
+          item.path === "$input.objectMotions[0].tracks[0].channel.path" &&
+          item.expected.includes("morph-target expansion envelope"),
+      ),
+  );
+
+  const actorLoop = (
+    firstRoot: IAutoMovieTransform | null,
+    lastRoot: IAutoMovieTransform | null,
+  ) => ({
+    ...actorMotion,
+    loop: true,
+    keyframes: actorMotion.keyframes.map((keyframe, index) => ({
+      ...keyframe,
+      pose: {
+        ...keyframe.pose,
+        root:
+          index === 0
+            ? firstRoot
+            : index === actorMotion.keyframes.length - 1
+              ? lastRoot
+              : keyframe.pose.root,
+      },
+    })),
+  });
+  const closedActorLoop = inspectAdapter({
+    motions: {
+      ...performed.motions,
+      [actorNode]: actorLoop(identity(), identity()),
+    },
+  });
+  const nullActorLoop = inspectAdapter({
+    motions: { ...performed.motions, [actorNode]: actorLoop(null, null) },
+  });
+  const openActorLoop = inspectAdapter({
+    motions: {
+      ...performed.motions,
+      [actorNode]: actorLoop(identity(), identity(1)),
+    },
+  });
+  const mixedActorLoop = inspectAdapter({
+    motions: {
+      ...performed.motions,
+      [actorNode]: actorLoop(null, identity()),
+    },
+  });
+  const emptyActorLoop = inspectAdapter({
+    motions: {
+      ...performed.motions,
+      [actorNode]: { ...actorMotion, loop: true, keyframes: [] },
+    },
+  });
+  TestValidator.predicate(
+    "only closed actor root and clearance-radius loops are sampled",
+    [closedActorLoop, nullActorLoop].every(
+      ({ reports, out }) => reports !== undefined && out.items.length === 0,
+    ) &&
+      [openActorLoop, mixedActorLoop, emptyActorLoop].every(
+        ({ reports, out }) =>
+          reports === undefined &&
+          out.items.some((item) => item.expected.includes("loop seam")),
+      ),
+  );
+
+  const objectLoop = (
+    id: string,
+    values: number[],
+    interpolation: "linear" | "cubicspline" = "linear",
+  ) =>
+    inspectAdapter({
+      scene: {
+        ...clearStage.scene,
+        nodes: [...clearStage.scene.nodes, movingNode],
+      },
+      motions: {},
+      models: [...runtimeModels(), propModel],
+      objectMotions: [
+        {
+          id,
+          name: null,
+          duration: 2,
+          loop: true,
+          tracks: [
+            {
+              channel: {
+                kind: "node",
+                node: movingNode.id,
+                path: "translation",
+              },
+              times: [0, 2],
+              values,
+              interpolation,
+            },
+            {
+              channel: {
+                kind: "node",
+                node: movingNode.id,
+                path: "rotation",
+              },
+              times: [0, 2],
+              values: [0, 0, 0, 1, 0, 1, 0, 0],
+              interpolation: "linear",
+            },
+          ],
+        },
+      ],
+    });
+  const closedObjectLoop = objectLoop(
+    "closed-object-loop",
+    [30, 30, 30, 30, 30, 30],
+  );
+  const openObjectLoop = objectLoop(
+    "open-object-loop",
+    [30, 30, 30, 31, 30, 30],
+  );
+  const malformedObjectLoop = objectLoop(
+    "malformed-object-loop",
+    [30, 30, 30, 30, 30],
+  );
+  const cubicObjectLoop = objectLoop(
+    "cubic-object-loop",
+    [30, 30, 30, 30, 30, 30],
+    "cubicspline",
+  );
+  TestValidator.predicate(
+    "object loops close translation and scale while rotation remains sphere-invariant",
+    closedObjectLoop.reports !== undefined &&
+      closedObjectLoop.out.items.length === 0 &&
+      [openObjectLoop, malformedObjectLoop].every(
+        ({ reports, out }) =>
+          reports === undefined &&
+          out.items.some((item) => item.expected.includes("loop seam")),
+      ) &&
+      cubicObjectLoop.reports === undefined &&
+      cubicObjectLoop.out.items.some((item) =>
+        item.expected.includes("cubicspline"),
+      ),
+  );
+
+  const cubicActor = inspectAdapter({
+    motions: {
+      ...performed.motions,
+      [actorNode]: {
+        ...actorMotion,
+        keyframes: actorMotion.keyframes.map((keyframe, index) =>
+          index === 0
+            ? {
+                ...keyframe,
+                easing: "cubicBezier" as const,
+                bezier: [0.25, -2, 0.75, 2] as const,
+              }
+            : keyframe,
+        ),
+      },
+    },
+  });
+  const cubicCamera = inspectAdapter({
+    hero: {
+      camera: heroCamera,
+      motion: {
+        ...offClockCameraMotion,
+        tracks: offClockCameraMotion.tracks.map((track) => ({
+          ...track,
+          interpolation: "cubicspline" as const,
+        })),
+      },
+    },
+  });
+  const invalidSequence = inspectAdapter({
+    hero: {
+      camera: heroCamera,
+      motion: { ...offClockCameraMotion, duration: 0 },
+    },
+  });
+  const openLoop = inspectAdapter({
+    hero: {
+      camera: heroCamera,
+      motion: {
+        ...offClockCameraMotion,
+        tracks: offClockCameraMotion.tracks.map((track) => ({
+          ...track,
+          values: track.values.map((value, index) =>
+            index >= track.values.length - 3 ? value + 1 : value,
+          ),
+        })),
+      },
+    },
+  });
+  TestValidator.predicate(
+    "overshooting interpolation, open loops, and invalid sequences are addressed, never approximated",
+    [cubicActor, cubicCamera, invalidSequence, openLoop].every(
+      ({ reports, out }) =>
+        reports === undefined &&
+        out.items.some((item) => item.path.endsWith(".clearance")),
+    ) &&
+      cubicActor.out.items.some((item) =>
+        item.expected.includes("cubicBezier"),
+      ) &&
+      cubicCamera.out.items.some((item) =>
+        item.expected.includes("cubicspline"),
+      ) &&
+      openLoop.out.items.some((item) => item.expected.includes("loop seam")),
+  );
+
+  const evaluatorFault = inspectAdapter({
+    runtime: { ...baseAdapterProps.runtime, sampleRate: 0 },
+  });
+  TestValidator.predicate(
+    "an invalid compiler clock is returned at the camera envelope",
+    evaluatorFault.reports === undefined &&
+      evaluatorFault.out.items.some(
+        (item) =>
+          item.path === "$input.cameraClearance.sampleRate" &&
+          item.expected.includes("sample rate"),
+      ),
+  );
+  const invalidDuration = inspectAdapter({ duration: -1 });
+  TestValidator.predicate(
+    "an invalid shot duration is returned at the declaring envelope",
+    invalidDuration.reports === undefined &&
+      invalidDuration.out.items.some(
+        (item) =>
+          item.path.endsWith(".clearance") &&
+          item.expected.includes("duration"),
+      ),
+  );
+  const hostileMotion = new Proxy(performed.shot.cameraMotion!, {
+    get: () => {
+      throw new Error("hostile camera motion");
+    },
+  });
+  const hostile = inspectAdapter({
+    hero: { camera: heroCamera, motion: hostileMotion },
+  });
+  const hostileThrownValue = {
+    [Symbol.toPrimitive]: (): never => {
+      throw new Error("hostile diagnostic coercion");
+    },
+  };
+  const hostileCoercionMotion = new Proxy(performed.shot.cameraMotion!, {
+    get: () => {
+      throw hostileThrownValue;
+    },
+  });
+  const hostileCoercion = inspectAdapter({
+    hero: { camera: heroCamera, motion: hostileCoercionMotion },
+  });
+  TestValidator.predicate(
+    "hostile runtime and diagnostic coercion remain addressed refusals",
+    hostile.reports === undefined &&
+      hostile.out.items.some(
+        (item) =>
+          item.path.endsWith(".clearance") &&
+          item.expected.includes("hostile camera motion"),
+      ) &&
+      hostileCoercion.reports === undefined &&
+      hostileCoercion.out.items.some(
+        (item) =>
+          item.path.endsWith(".clearance") &&
+          item.expected.includes("an uninspectable thrown value"),
+      ),
+  );
+
+  const rigCamera = {
+    ...heroCamera,
+    clearance: envelope(
+      { center: { x: 0, y: 100, z: 0 }, radius: 0.01 },
+      { center: { x: 0, y: 0, z: 0 }, radius: 3 },
+    ),
+  };
+  const rigBlocked = inspectAdapter({
+    scene: { ...clearStage.scene, cameras: [rigCamera] },
+    hero: { camera: rigCamera, motion: performed.shot.cameraMotion },
+  });
+  TestValidator.predicate(
+    "performance addresses a parent-rig contact at its own member",
+    rigBlocked.reports === undefined &&
+      rigBlocked.out.items.some(
+        (item) =>
+          item.path.endsWith(".clearance.parentRig") &&
+          item.expected.includes("parent-rig"),
+      ),
+  );
+
+  const staleBeforeGeometry = inspectAdapter({
+    models: [],
+    hero: { camera: heroCamera, motion: hostileCoercionMotion },
+    runtime: {
+      revision: "old",
+      currentRevision: "current",
+      sampleRate: 24,
+    },
+  });
+  TestValidator.predicate(
+    "stale revision is addressed before geometry or motion is read",
+    staleBeforeGeometry.reports === undefined &&
+      staleBeforeGeometry.out.items.length === 1 &&
+      staleBeforeGeometry.out.items[0]?.path ===
+        "$input.cameraClearance.currentRevision",
+  );
+
+  const stalePerformance = performShot({
+    ...performanceProps,
+    cameraClearance: {
+      revision: "old",
+      currentRevision: "current",
+      sampleRate: 24,
+    },
+  });
+  TestValidator.predicate(
+    "stale performance is addressed",
+    stalePerformance.success === false &&
+      stalePerformance.violations.some(
+        (item) => item.path === "$input.cameraClearance.currentRevision",
+      ),
+  );
+
+  const blockedProgram = (): IAutoMovieShotProgram => {
+    const blocking = makeBlockingWrite();
+    const performance = makePerformanceWrite();
+    blocking.camera.framing = "full";
+    for (const action of performance.draft)
+      if (action.verb === "frame") action.framing = "full";
+    return {
+      actors: [
+        { node: "knightA", model: "knightA", speed: 1, eyeHeight: 1.6 },
+        { node: "knightB", model: "knightB", speed: 1, eyeHeight: 1.6 },
+      ],
+      script: makeScriptWrite(),
+      stage: stageWithClearance(
+        envelope({ center: { x: 0, y: 0, z: 0 }, radius: 3 }),
+      ),
+      blocking,
+      performance,
+      eventSamples: [],
+    };
+  };
+  const blocked = compileDefinedShot({
+    shot: defineShot("clearance-blocked", {
+      scene: "scene-duel",
+      contract: {
+        beat: "beat-1",
+        durationSeconds: 2,
+        participants: [
+          { kind: "actor", id: "knightA" },
+          { kind: "actor", id: "knightB" },
+        ],
+        opening: [],
+        closing: [],
+        camera: {
+          intent: "Keep the duel readable without crossing the actors.",
+          requiredSubjects: ["knightA", "knightB"],
+          maxOcclusionRatio: 0.2,
+        },
+        events: [],
+        reviewFrames: [],
+      },
+      build: blockedProgram,
+    }),
+    context: undefined,
+    runtime: {
+      synthesize: validSynthesizer,
+      skeleton: () => createSkeleton(),
+      frameFormat: { width: 1920, height: 1080 },
+      models: runtimeModels(),
+      cameraClearance: {
+        revision: "current",
+        currentRevision: "current",
+        sampleRate: 24,
+      },
+    },
+  });
+  TestValidator.predicate(
+    "compiler returns an addressed camera-body refusal",
+    blocked.success === false &&
+      blocked.diagnostics.some(
+        (item) =>
+          item.phase === "performance" &&
+          item.path.includes(".clearance.body") &&
+          item.fact.includes("contacts obstacle"),
+      ),
+  );
+};

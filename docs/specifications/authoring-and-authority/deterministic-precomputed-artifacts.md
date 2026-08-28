@@ -6,6 +6,8 @@
 
 ### Manifest와 namespace {#spec-authoring-precomputed-manifest}
 
+<!-- @evidenceObligation derived-artifact-manifest 파생 artifact의 안정된 identity, namespace, input basis, 출력 digest와 generator identity 기록. -->
+
 <!-- @evidence requirements/agent-authoring/deterministic-precomputation.md#agent-precomputed-provenance-separation 별도 원장과 물리 namespace가 project derivation을 외부 provenance 자산과 구분한다. -->
 <!-- @evidence requirements/agent-authoring/deterministic-precomputation.md#agent-precomputed-derived-artifact 별도 ledger의 project-owned output record가 거대한 source literal 없이 결과를 공급한다. -->
 <!-- @evidence requirements/agent-authoring/project-ownership.md#agent-project-owned-facts Generator, input과 결과 bytes를 사용자 project가 소유하는 검토 가능한 사실로 둔다. -->

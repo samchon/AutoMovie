@@ -92,12 +92,20 @@ Repaint executor는 caller가 제공한 adapter identity와 current deterministi
 
 ### attempt, retry와 채택 계보 {#asset-spec-repaint-attempt-selection}
 
+<!-- @evidenceObligation request-attempt-selection 요청별 attempt 기록에서 하나의 허용된 결과만 명시적으로 채택하는 계보. -->
+
 <!-- @evidence requirements/repaint/retries-seeds-and-variation.md#repaint-retries-seeds-variation 매 실행을 독립 result로 기록해야 한다. -->
 <!-- @evidence requirements/repaint/retries-seeds-and-variation.md#repaint-one-accepted-lineage 여러 후보 중 하나의 명시적 accepted lineage만 publication으로 이어져야 한다. -->
 
 각 재도색 attempt는 독립 identity, request revision, seed·variation 제어, 실행 상태, output digest, 오류와 review 결과를 가진다. retry는 사전 선언한 budget과 중단 조건 안에서 새 attempt를 만들고 이전 출력을 덮어쓰지 않으며, 후보 비교 기록과 사용자 선택을 거쳐 하나의 accepted lineage만 delivery 후보가 된다.
 
+Runtime은 maximum attempt, per-attempt timeout, request elapsed·cost ceiling, retryable failure set과 attempt 순서별 deterministic backoff를 실행 전에 검증한다. Reroll은 새 request identity, retry는 같은 request identity와 새 attempt identity, select는 검증된 candidate를 active로 만드는 transaction, reversal은 이전 candidate를 새 selection record로 다시 선택하는 transaction이다. Started call은 succeeded·failed·cancelled·invalid·stale 중 하나의 terminal record로 닫히고 timeout, rate limit, provider refusal, partial bytes와 budget exhaustion도 사라지지 않는다.
+
+성공한 provider output은 candidate receipt와 bytes만 atomic publish한다. Selection은 current source·request fingerprint·generator adoption·candidate bytes·기존 pointer snapshot을 재검증하고 selection record와 active pointer를 한 transaction에 publish하므로, candidate 생성이나 failed pointer write만으로 current lineage가 바뀌지 않는다.
+
 ### 구조 비교와 연속성 {#asset-spec-repaint-structure-continuity}
+
+<!-- @evidenceObligation selected-structure-continuity 선택된 rendition을 원본 구조 검토와 시간 연속성 증거에 묶는 검증. -->
 
 <!-- @evidence requirements/repaint/structural-comparison-and-review.md#repaint-structural-comparison-review 재도색 전후 subject, pose, silhouette, camera, contact와 event를 비교해야 한다. -->
 <!-- @evidence requirements/repaint/sequence-continuity-and-publication.md#repaint-sequence-continuity-publication 여러 재도색 shot에서 같은 film의 시각 identity를 추적해야 한다. -->
@@ -110,14 +118,20 @@ review는 source와 rendition의 subject identity·count, pose, silhouette, fram
 
 sequence 기록은 character, costume, prop, location, material, palette, light, weather, damage와 texture identity를 deterministic·repainted shot 전체에서 추적한다. 공유 identity·style reference, model version, control policy와 핵심 palette는 versioned continuity baseline과 적용 shot 범위로 고정하고, 의도된 상태 변화만 시작·종료 경계를 가진 shot별 delta로 기록한다.
 
+각 request receipt는 prompt, continuity, settings, design, screenplay 또는 brief와 shot owner의 stable evidence address를 보존한다. Film request의 continuity address는 selected candidate set과 같은 baseline을 가리켜야 하고, playback observation은 flicker, identity drift, geometry warp, texture crawl와 transition mismatch를 각각 falsify할 수 있어야 한다. Continuity가 적용되지 않는 brief·library·single-image request는 null boundary를 유지하여 film review를 가장하지 않는다.
+
 앞선 rendition을 다음 shot의 reference로 채택할 때는 derivation edge와 승인 범위를 남기며, 승인되지 않은 변화가 연쇄 reference를 통해 누적되지 않게 한다. sequence playback 검토는 frame·shot 경계의 flicker, identity drift, geometry warp, texture crawl과 transition mismatch를 지목하고 해결되지 않은 구간을 publication 실패로 전달한다.
 
 ### rendition 출력과 provenance {#asset-spec-repaint-output-provenance}
+
+<!-- @evidenceObligation canonical-output-provenance 독립 rendition 출력의 요청·attempt·provider·model·terms·비용·digest 정본 기록. -->
 
 <!-- @evidence requirements/repaint/identity-and-provenance.md#repaint-identity-provenance 각 output에 source, 제공자, model, request, control, reference, 조건과 digest를 연결해야 한다. -->
 <!-- @evidence requirements/repaint/scope-and-user-choice.md#repaint-independent-artifact 재도색 결과를 원본과 독립된 artifact로 보존해야 한다. -->
 
 rendition 출력은 새 identity와 digest, source와 review revision, 제공자·model·version과 실행 환경, request·attempt identity, prompt·control·reference digest, seed 의미, 권리·조건, 구조 비교와 continuity 상태를 가진다. 출력은 원본 frame이나 자산을 덮어쓰지 않고 derivation edge로 연결되며, source가 바뀌면 새 rendition으로 재평가한다.
+
+Receipt는 provider call의 immutable start·completion UTC instant와 metered cost를 보존한다. Terms review date의 canonicalization은 wall clock과 독립적이고, execution preflight와 candidate·selection·publication validation은 명시적으로 전달된 instant의 UTC date와 비교하여 미래 review를 거절한다.
 
 ### Derivation 검증과 refusal {#asset-spec-repaint-derivation-validation}
 

@@ -12,8 +12,6 @@ export interface IAutoMovieGetNotesRequest {
   /**
    * Selects the query that reads outstanding review findings.
    *
-   * @evidence requirements/review/annotations-findings-and-verdicts.md#review-finding-lifecycle This discriminator identifies the cited read-only query contract.
-   * @evidence specifications/review-and-acceptance/observations-findings-and-defects.md#review-system-finding-lifecycle This discriminator identifies the cited read-only query contract.
    */
   type: "getNotes";
 

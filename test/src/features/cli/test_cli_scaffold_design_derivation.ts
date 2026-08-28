@@ -3,7 +3,10 @@ import { TestValidator } from "@nestia/e2e";
 import fs from "node:fs";
 import path from "node:path";
 
-import { renderCompletedFilmFixture } from "../internal/completedFilmFixture";
+import {
+  completedFilmJson,
+  renderCompletedFilmFixture,
+} from "../internal/completedFilmFixture";
 import { namedFacts, throwsError } from "../internal/predicates";
 
 /**
@@ -44,25 +47,36 @@ export const test_cli_scaffold_design_derivation = (): void => {
     });
   }
   const rendered = renderScaffold({ name: "rendered-production" });
+  const completed = renderCompletedFilmFixture("completed-production");
   const emitter = rendered["scripts/emitDesign.ts"]!;
-  const completedEmitter = renderCompletedFilmFixture("completed-production")[
-    "scripts/emitDesign.ts"
-  ]!;
+  const completedEmitter = completed["scripts/emitDesign.ts"]!;
+  const completedReviewStore = Object.keys(completed).filter((file) =>
+    file.startsWith("automovie/reviews"),
+  );
   const productionStudies = rendered["scripts/productionStudies.ts"]!;
-  const lint = rendered["lint.config.ts"]!;
+  const lint = rendered["lint.config.mjs"]!;
+  const productionDeclaration = rendered["productionEvidence.mjs"]!;
+  const narrativeStageOffsets = [
+    "settings",
+    "treatments",
+    "scripts",
+    "screenplays",
+    "shots",
+    "filmSources",
+  ].map((layer) => productionDeclaration.indexOf(`\n  ${layer}:`));
   const evidenceInDocs = Object.entries(rendered)
     .filter(([file]) => file.startsWith("docs/"))
     .filter(([, content]) => /@evidence[A-Za-z]*\b/u.test(content))
     .map(([file]) => file);
+  const productionDocumentPattern =
+    /^docs\/(?:settings|research|maps|models|spaces|materials|instances|motions|systems|treatments|scripts|screenplays|briefs)\/.+\.md$/u;
+  const productionSourcePattern =
+    /^(?:src\/(?:maps|models|spaces|materials|instances|motions|systems|shots)\/.+\.ts|src\/(?:production|film)\.ts)$/u;
   const productionDocuments = Object.keys(rendered).filter((file) =>
-    /^docs\/(?:settings|research|models|spaces|materials|instances|motions|systems|storylines|scenarios|script|briefs)\/.+\.md$/u.test(
-      file,
-    ),
+    productionDocumentPattern.test(file),
   );
   const productionSources = Object.keys(rendered).filter((file) =>
-    /^(?:src\/(?:models|spaces|materials|instances|motions|systems|shots)\/.+\.ts|src\/(?:production|film)\.ts)$/u.test(
-      file,
-    ),
+    productionSourcePattern.test(file),
   );
   const designRecords = Object.keys(rendered).filter((file) =>
     /^\.automovie\/design\/.+\.json$/u.test(file),
@@ -121,7 +135,7 @@ export const test_cli_scaffold_design_derivation = (): void => {
       evidenceInDocs: [],
       configurationFiles: [],
       generatedArtifacts: [],
-      localLintImports: [],
+      localLintImports: ["./productionEvidence.mjs"],
       productionState: [],
       productionDocuments: [],
       productionSources: [],
@@ -137,7 +151,10 @@ export const test_cli_scaffold_design_derivation = (): void => {
       ["refuses", () => emitter.includes("throw new Error(")],
       [
         "explains the first action",
-        () => emitter.includes("Select a production kind in lint.config.ts"),
+        () =>
+          emitter.includes(
+            "Select a production kind in productionEvidence.mjs",
+          ),
       ],
       [
         "imports no completed production",
@@ -151,6 +168,22 @@ export const test_cli_scaffold_design_derivation = (): void => {
           ) === JSON.stringify([".gitkeep"]),
       ],
       [
+        "preserves the empty map document branch",
+        () => rendered["docs/maps/.gitkeep"] === "",
+      ],
+      [
+        "preserves the empty map source branch",
+        () => rendered["src/maps/.gitkeep"] === "",
+      ],
+      [
+        "governs authored map documents",
+        () => productionDocumentPattern.test("docs/maps/world.md"),
+      ],
+      [
+        "governs authored map sources",
+        () => productionSourcePattern.test("src/maps/world.ts"),
+      ],
+      [
         "viewer exposes one neutral replacement slot",
         () =>
           rendered["viewer/src/viewerDocument.ts"]!.includes(
@@ -161,11 +194,102 @@ export const test_cli_scaffold_design_derivation = (): void => {
         "completed fixture retains its production emitter",
         () =>
           completedEmitter.includes("Repository-only emitter") &&
-          completedEmitter.includes('from "../src/models/soloist"'),
+          completedEmitter.includes('from "../src/models/soloist"') &&
+          completedEmitter.includes('from "../src/models/chorus"'),
+      ],
+      [
+        "completed formation source remains model-owned",
+        () =>
+          completed["src/models/chorus.ts"]?.includes(
+            "@evidence obligations/design/model-sources.md#design-owned-construction",
+          ) === true &&
+          completed["src/models/chorus.ts"]?.includes(
+            "@evidence obligations/design/instance-sources.md",
+          ) === false &&
+          completed["src/models/chorus.ts"]?.includes(
+            "Chorus in src/models/chorus.ts",
+          ) === true &&
+          completed["src/models/chorus.ts"]?.includes(
+            "src/formations/chorus.ts",
+          ) === false &&
+          completed["src/instances/chorus.ts"] === undefined &&
+          completed["src/shots/opening.ts"]?.includes(
+            'from "../models/chorus"',
+          ) === true &&
+          completedEmitter.includes('"formations/chorus.json"'),
+      ],
+      [
+        "completed fixture reads its unrendered records",
+        () =>
+          completedFilmJson<{ id: string }>(
+            "automovie/design/shared/models/soloist.json",
+          ).id === "soloist",
+      ],
+      [
+        "completed fixture refuses a missing viewer background slot",
+        () =>
+          throwsError(
+            () =>
+              renderCompletedFilmFixture("missing-background-slot", (props) => {
+                const missing = renderScaffold(props);
+                missing["viewer/src/viewerDocument.ts"] = "";
+                return missing;
+              }),
+            "neutral viewer background slot",
+          ),
+      ],
+      [
+        "completed fixture carries no retired review store",
+        () => completedReviewStore.length === 0,
       ],
       [
         "inherits no environmental study obligation",
         () => productionStudies.includes("required: []"),
+      ],
+      [
+        "ships the production authoring procedure",
+        () =>
+          rendered[".agents/skills/production/SKILL.md"]?.includes(
+            "# Authoring a production",
+          ) === true &&
+          rendered[".agents/skills/production/evidence-staging.md"]?.includes(
+            "docs/discovery",
+          ) === true,
+      ],
+      [
+        "names the single production-evidence authority",
+        () =>
+          rendered["AGENTS.md"]?.includes(
+            "stage declarations, and custom claims live in `productionEvidence.mjs`",
+          ) === true &&
+          rendered["README.md"]?.includes(
+            "`lint.config.mjs` consumes that one JSDoc-typed declaration",
+          ) === true &&
+          rendered["docs/README.md"]?.includes(
+            "Choose one shape in `../productionEvidence.mjs`",
+          ) === true &&
+          rendered[".agents/skills/production/evidence-staging.md"]?.includes(
+            "Keep every project-specific selector and additive claim in `productionEvidence.mjs`",
+          ) === true,
+      ],
+      [
+        "ships only the canonical narrative ladder declaration",
+        () =>
+          narrativeStageOffsets.every(
+            (offset, index) =>
+              offset >= 0 &&
+              (index === 0 || offset > narrativeStageOffsets[index - 1]!),
+          ) &&
+          ["treatments", "scripts", "screenplays"].every((layer) =>
+            productionDeclaration.includes(`${layer}: "disabled"`),
+          ) &&
+          /\b(?:storylines|scenarios):\s/u.test(productionDeclaration) ===
+            false &&
+          /^\s*script:\s/mu.test(productionDeclaration) === false,
+      ],
+      [
+        "keeps the retired review ledger ignored",
+        () => rendered[".gitignore"]?.includes("!automovie/reviews") === false,
       ],
       [
         "refuses a blank project name",
@@ -185,9 +309,21 @@ export const test_cli_scaffold_design_derivation = (): void => {
       "explains the first action": true,
       "imports no completed production": true,
       "physical design tree is empty": true,
+      "preserves the empty map document branch": true,
+      "preserves the empty map source branch": true,
+      "governs authored map documents": true,
+      "governs authored map sources": true,
       "viewer exposes one neutral replacement slot": true,
       "completed fixture retains its production emitter": true,
+      "completed formation source remains model-owned": true,
+      "completed fixture reads its unrendered records": true,
+      "completed fixture refuses a missing viewer background slot": true,
+      "completed fixture carries no retired review store": true,
       "inherits no environmental study obligation": true,
+      "ships the production authoring procedure": true,
+      "names the single production-evidence authority": true,
+      "ships only the canonical narrative ladder declaration": true,
+      "keeps the retired review ledger ignored": true,
       "refuses a blank project name": true,
       "refuses a non-portable project name": true,
     },

@@ -55,6 +55,7 @@ const productionRuntime =
   (await productionRuntimeResponse.json()) as IAutoMovieProductionViewerRuntime;
 const runtime = await createCompiledShotRuntime(compiled, deliveryTone, {
   dialogue: productionRuntime.dialogue,
+  deliveryCrop: productionRuntime.deliveryCrop ?? undefined,
   liveWearableSoftBodies: productionRuntime.liveWearableSoftBodies,
 });
 // The palette is a pure function of the compiled artifact, so the page derives

@@ -200,6 +200,12 @@ export const queryContractOwnership = (root, layer, owner) => {
       }
       continue;
     }
+    if (Object.hasOwn(declaration, "structural")) {
+      if (owner === undefined || owner === "structural") {
+        results.push({ target, status: "structural" });
+      }
+      continue;
+    }
     for (const [obligation, record] of Object.entries(
       declaration.obligations,
     )) {
@@ -283,6 +289,11 @@ const validateLayer = (
         );
       }
     } else {
+      if (Object.hasOwn(declaration, "structural")) {
+        exactKeys(declaration, ["structural"], target, diagnostics);
+        validateStructural(declaration.structural, target, diagnostics);
+        continue;
+      }
       exactKeys(declaration, ["obligations"], target, diagnostics);
       if (
         !plainObject(declaration.obligations) ||
@@ -318,6 +329,28 @@ const validateLayer = (
         }
       }
     }
+  }
+};
+
+/**
+ * Validate a specification heading that only groups independently payable
+ * descendants.
+ *
+ * Structural is a unit classification, not an owner kind or an obligation. It
+ * keeps the heading in the exhaustive unit ledger without manufacturing a
+ * source payment or misreporting decided document structure as legacy debt.
+ */
+const validateStructural = (structural, target, diagnostics) => {
+  if (!plainObject(structural)) {
+    diagnostics.push(`${target} structural classification must be an object`);
+    return;
+  }
+  exactKeys(structural, ["reason"], `${target} structural`, diagnostics);
+  if (
+    typeof structural.reason !== "string" ||
+    structural.reason.trim().length === 0
+  ) {
+    diagnostics.push(`${target} structural classification must state a reason`);
   }
 };
 

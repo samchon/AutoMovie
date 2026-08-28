@@ -2,6 +2,41 @@
   "version": 1,
   "layer": "specifications",
   "declarations": {
+    "specifications/README.md#specifications-topics": {
+      "structural": {
+        "reason": "This repository-level navigation heading only lists specification families; every system behavior is independently addressed by descendant anchored units."
+      }
+    },
+    "specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-repaint-attempt-selection": {
+      "obligations": {
+        "request-attempt-selection": {
+          "owner": {
+            "kind": "package",
+            "package": "@automovie/production"
+          }
+        }
+      }
+    },
+    "specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-repaint-output-provenance": {
+      "obligations": {
+        "canonical-output-provenance": {
+          "owner": {
+            "kind": "package",
+            "package": "@automovie/production"
+          }
+        }
+      }
+    },
+    "specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-repaint-structure-continuity": {
+      "obligations": {
+        "selected-structure-continuity": {
+          "owner": {
+            "kind": "package",
+            "package": "@automovie/production"
+          }
+        }
+      }
+    },
     "specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-surface-coordinate-convention": {
       "obligations": {
         "atlas-handedness": {
@@ -52,6 +87,26 @@
         }
       }
     },
+    "specifications/authoring-and-authority/deterministic-precomputed-artifacts.md#spec-authoring-precomputed-manifest": {
+      "obligations": {
+        "derived-artifact-manifest": {
+          "owner": {
+            "kind": "package",
+            "package": "@automovie/interface"
+          }
+        }
+      }
+    },
+    "specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-boundary-compatibility": {
+      "obligations": {
+        "portable-tool-boundary": {
+          "owner": {
+            "kind": "package",
+            "package": "automovie"
+          }
+        }
+      }
+    },
     "specifications/camera-light-and-visibility/visibility-and-image-space-observation.md#clv-clipping-clearance-evaluation": {
       "obligations": {
         "boundary-inclusion-tolerance": {
@@ -60,7 +115,31 @@
             "package": "@automovie/engine"
           }
         },
+        "camera-clearance-swept-volume": {
+          "owner": {
+            "kind": "package",
+            "package": "@automovie/engine"
+          }
+        },
+        "clipping-planes": {
+          "owner": {
+            "kind": "package",
+            "package": "@automovie/engine"
+          }
+        },
+        "delivery-crop-region": {
+          "owner": {
+            "kind": "package",
+            "package": "@automovie/engine"
+          }
+        },
         "delivery-raster-extent": {
+          "owner": {
+            "kind": "package",
+            "package": "@automovie/engine"
+          }
+        },
+        "depth-precision-constraint": {
           "owner": {
             "kind": "package",
             "package": "@automovie/engine"
@@ -86,6 +165,37 @@
         }
       }
     },
+    "specifications/editorial-render-and-delivery/render-schedule-state-and-headless.md#spec-render-artifact-lifecycle": {
+      "obligations": {
+        "artifact-lifecycle": {
+          "owner": {
+            "kind": "package",
+            "package": "automovie"
+          }
+        },
+        "portable-artifact-state": {
+          "owner": {
+            "kind": "package",
+            "package": "@automovie/interface"
+          }
+        }
+      }
+    },
+    "specifications/interior-space/README.md#interior-space-specification-scope": {
+      "structural": {
+        "reason": "This README heading defines the interior specification collection and routes to independently payable descendant documents without adding a separate system operation."
+      }
+    },
+    "specifications/interior-space/scope-and-host.md#interior-space-building-interior-boundary": {
+      "obligations": {
+        "building-interior-boundary": {
+          "owner": {
+            "kind": "package",
+            "package": "@automovie/engine"
+          }
+        }
+      }
+    },
     "specifications/production-evidence/graph.md#spec-authoring-production-evidence-additive-extension": {
       "obligations": {
         "additive-local-claims": {
@@ -97,13 +207,8 @@
       }
     },
     "specifications/production-evidence/graph.md#spec-authoring-production-evidence-construction": {
-      "obligations": {
-        "section-index": {
-          "owner": {
-            "kind": "excluded",
-            "reason": "This heading groups the independently partitioned graph obligations below it and states no additional system behavior."
-          }
-        }
+      "structural": {
+        "reason": "This heading groups the independently partitioned graph obligations below it and states no additional system behavior."
       }
     },
     "specifications/production-evidence/graph.md#spec-authoring-production-evidence-deterministic-result": {
@@ -157,13 +262,8 @@
       }
     },
     "specifications/production-evidence/input.md#spec-authoring-production-evidence-declaration": {
-      "obligations": {
-        "section-index": {
-          "owner": {
-            "kind": "excluded",
-            "reason": "This heading groups the visible input-state obligation below it and states no additional system behavior."
-          }
-        }
+      "structural": {
+        "reason": "This heading groups the visible input-state obligation below it and states no additional system behavior."
       }
     },
     "specifications/production-evidence/input.md#spec-authoring-production-evidence-input-state": {
@@ -175,12 +275,169 @@
           }
         }
       }
+    },
+    "specifications/review-and-acceptance/README.md#review-acceptance-document-map": {
+      "structural": {
+        "reason": "This heading is the document map for independently anchored review and acceptance contracts and states no additional system behavior."
+      }
+    },
+    "specifications/review-and-acceptance/README.md#review-acceptance-system-boundary": {
+      "obligations": {
+        "compiled-subject-review-boundary": {
+          "owner": {
+            "kind": "package",
+            "package": "@automovie/production"
+          }
+        },
+        "stored-review-lifecycle": {
+          "owner": {
+            "kind": "excluded",
+            "reason": "AutoMovie reopens compiler-derived subjects and current observation populations but deliberately does not store annotation, finding, approval, rejection, or waiver lifecycle state."
+          }
+        }
+      }
+    },
+    "specifications/review-and-acceptance/evidence-freshness-and-completeness.md#acceptance-system-current-historical-evidence": {
+      "obligations": {
+        "current-historical-closure": {
+          "owner": {
+            "kind": "package",
+            "package": "@automovie/interface"
+          }
+        }
+      }
+    },
+    "specifications/review-and-acceptance/subject-surface-and-inspection.md#review-system-library-delivery-coverage": {
+      "obligations": {
+        "library-delivery-observation-closure": {
+          "owner": {
+            "kind": "package",
+            "package": "@automovie/production"
+          }
+        }
+      }
+    },
+    "specifications/review-and-acceptance/subject-surface-and-inspection.md#review-system-subject-freshness": {
+      "obligations": {
+        "subject-freshness": {
+          "owner": {
+            "kind": "package",
+            "package": "@automovie/interface"
+          }
+        }
+      }
+    },
+    "specifications/review-and-acceptance/subject-surface-and-inspection.md#review-system-subject-inspection-reach": {
+      "obligations": {
+        "subject-inspection-reach": {
+          "owner": {
+            "kind": "package",
+            "package": "@automovie/viewer"
+          }
+        }
+      }
+    },
+    "specifications/review-and-acceptance/subject-surface-and-inspection.md#review-system-subject-observation": {
+      "obligations": {
+        "subject-observation": {
+          "owner": {
+            "kind": "package",
+            "package": "@automovie/interface"
+          }
+        }
+      }
+    },
+    "specifications/review-and-acceptance/subject-surface-and-inspection.md#review-system-subject-target-parity": {
+      "obligations": {
+        "subject-target-parity": {
+          "owner": {
+            "kind": "package",
+            "package": "@automovie/interface"
+          }
+        }
+      }
+    },
+    "specifications/review-and-acceptance/target-scope-and-context.md#review-system-compiler-artifact-read-refusal": {
+      "obligations": {
+        "compiler-artifact-reader": {
+          "owner": {
+            "kind": "excluded",
+            "reason": "AutoMovie deliberately retired the generic stored acceptance-artifact reader; current review reopens compiled subject observations directly and does not publish this separate reader surface."
+          }
+        }
+      }
+    },
+    "specifications/review-and-acceptance/target-scope-and-context.md#review-system-context-unavailable": {
+      "obligations": {
+        "context-unavailable-state": {
+          "owner": {
+            "kind": "package",
+            "package": "@automovie/interface"
+          }
+        },
+        "downstream-impact-report": {
+          "owner": {
+            "kind": "excluded",
+            "reason": "The portable subject-coverage record preserves indeterminate, not-run, partial, stale, missing, unplanned, and foreign states, but AutoMovie has no general acceptance-result surface that records an unsupported cause together with its downstream verdict impact."
+          }
+        }
+      }
+    },
+    "specifications/review-and-acceptance/target-scope-and-context.md#review-system-presentation-context": {
+      "obligations": {
+        "delivery-presentation-conditions": {
+          "owner": {
+            "kind": "excluded",
+            "reason": "The portable subject-observation record preserves subject, viewpoint, pose, artifact kind, runtime identity, and terminal status, but no current review record owns the complete delivery raster, crop, display/color, playback/audio, language, caption, and accessibility identity."
+          }
+        },
+        "presentation-context": {
+          "owner": {
+            "kind": "package",
+            "package": "@automovie/interface"
+          }
+        }
+      }
+    },
+    "specifications/review-and-acceptance/target-scope-and-context.md#review-system-scope-selection": {
+      "obligations": {
+        "scope-selection": {
+          "owner": {
+            "kind": "package",
+            "package": "@automovie/engine"
+          }
+        }
+      }
+    },
+    "specifications/review-and-acceptance/target-scope-and-context.md#review-system-target-record": {
+      "structural": {
+        "reason": "This heading only groups the independently payable target identity, scope, presentation-context, and unavailable-state descendants."
+      }
+    },
+    "specifications/review-and-acceptance/verdict-authority-and-dissent.md#acceptance-system-review-approval-roles": {
+      "obligations": {
+        "stored-approval-authority": {
+          "owner": {
+            "kind": "excluded",
+            "reason": "The product deliberately provides no stored approval, rejection, conditional-approval, waiver, or organizational authority service; those decisions remain in the external human production record."
+          }
+        }
+      }
+    },
+    "specifications/simulation-effects-and-sound/scope-tiers-and-identities.md#external-result-provider-neutrality": {
+      "obligations": {
+        "provider-neutral-provenance": {
+          "owner": {
+            "kind": "package",
+            "package": "@automovie/interface"
+          }
+        }
+      }
     }
   },
   "legacy": {
     "specifications/README.md#specifications-role": "sha256:5b010e05613dd286957bc6f7a83ac04820df69d169071430ded4a5c83f16e3ca",
     "specifications/README.md#specifications-system-boundaries": "sha256:04370d606f8bf75cfaf73dab73527f19945f4f5e9fa2d2fcfe7b319713fefdcf",
-    "specifications/README.md#specifications-topics": "sha256:2eaf0bd07dc82b181ce0b5666f0ca0fb334b9594d15064969f8bded370caadee",
     "specifications/README.md#specifications-traceability": "sha256:8042b2822708f94486db36ce1e40aeabff8ed519b9425a3fbf79dd2c83c70c95",
     "specifications/asset-and-representation/README.md#asset-spec-readme-boundary": "sha256:407f2a5d28c7b53232ade11527b660829a999e2f7287199bf101d0f01cb1adbb",
     "specifications/asset-and-representation/README.md#asset-spec-readme-index": "sha256:98c7bd4c581852a0bb3d668c24f4baa1424203750ab24a38cc2fd6686d68657c",
@@ -216,7 +473,6 @@
     "specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-generation-credential-boundary": "sha256:a61cf6b15d4d336687d9c57eac014e4e9774b9a26f7464e2aa32746a181d2877",
     "specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-generation-provider-choice": "sha256:6edd6e0a882cdd9c9e59c7fedad7fad1389153ff815eb7c4ad7ef53bfc7d09a5",
     "specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-generation-reproducibility": "sha256:c50d1af393f94f7ecfb72f59b0ed76e6fa0022a5c6411cc034a5045b0575443e",
-    "specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-repaint-attempt-selection": "sha256:346338d3542544d4acaf40d028f655da940403a7238ac9b52d2e53ca3a4b84e4",
     "specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-repaint-controls-references": "sha256:7cefa4a4c19d12e3e36c9d6b1676190eeb119ba15d0566516092818144cb962c",
     "specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-repaint-derivation-validation": "sha256:f00b0aa17d478f39efc00b58ba0420a05a7ae8dce684428c6a86b9f64afd6ccb",
     "specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-repaint-eligibility-source-lock": "sha256:08cf5b4181c3e744d8f788ecffaff7385ecff8a058e987704ec712fa510a397a",
@@ -224,8 +480,6 @@
     "specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-repaint-failure-publication": "sha256:7ea133fdfe634b921801c6004889301526a6ca520f72355e34f13d7f87cb0627",
     "specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-repaint-handoff-boundary": "sha256:f0742c4bbfa067dc892906a7d3b4f56dde45975b94bf0787e0768e347a77392a",
     "specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-repaint-manual-routing": "sha256:d7d433351b4a5516a2bfd11abebc1b2b2cccc724d3a5edcf94dc78c63c5a495f",
-    "specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-repaint-output-provenance": "sha256:9fc8cbb127fc1e5b4d3fa4ba6de613051748260d5b1d2c82b5fce54c211662a1",
-    "specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-repaint-structure-continuity": "sha256:366b2190ce20ed2395480805b0737c314d58cb50a062b3488ac1a949ab56dbe1",
     "specifications/asset-and-representation/identity-resources-and-lifecycle.md#asset-spec-adoption-output": "sha256:9862655623ccf74338761394f7922178f4510fee67eef9d8c2724efbedde01dd",
     "specifications/asset-and-representation/identity-resources-and-lifecycle.md#asset-spec-element-consumer-links": "sha256:a10dc922946655b8dc51d1bad21a0d081b0fd1013f4579eab87fa0e9232c542f",
     "specifications/asset-and-representation/identity-resources-and-lifecycle.md#asset-spec-identity-boundary": "sha256:066e367af94d00993ec54ff23c8e3eb0a3194ac65f04f624fe7e18d1158d71fe",
@@ -270,7 +524,6 @@
     "specifications/authoring-and-authority/deterministic-precomputed-artifacts.md#spec-authoring-precomputed-budget-boundary": "sha256:94a9842a1c2b9fbe80972cc0b01fc4786a502acb6174105f58c85541d4ce8f1d",
     "specifications/authoring-and-authority/deterministic-precomputed-artifacts.md#spec-authoring-precomputed-freshness": "sha256:7ce441f5d4fdafff7c74f0c7941a8b458a116577652d003002426ab10328d856",
     "specifications/authoring-and-authority/deterministic-precomputed-artifacts.md#spec-authoring-precomputed-generation": "sha256:8456611cb7dc91eb7abf87fe88171a32bd1d2405987c65c9c34870a237c1b9c8",
-    "specifications/authoring-and-authority/deterministic-precomputed-artifacts.md#spec-authoring-precomputed-manifest": "sha256:43bc7cced31a5723b4b02916c0494d5de148f24d616ad4b0305e85fba275e673",
     "specifications/authoring-and-authority/deterministic-precomputed-artifacts.md#spec-authoring-precomputed-portability": "sha256:1c08802a68c12c8971a30b1abaf42a825f9411ccdbff5343814021e34cdb4df4",
     "specifications/authoring-and-authority/external-execution-and-provider-neutrality.md#spec-authoring-external-adoption-output": "sha256:c1b85ad7e076221b4b4bd8d4f92d67c1ea4585df881e2f8bc48eed312acfda95",
     "specifications/authoring-and-authority/external-execution-and-provider-neutrality.md#spec-authoring-external-execution-state": "sha256:f1bff1bc502e0a4689553a02b82c82d386ccde1d06a6880fa9e03aa7c9d67970",
@@ -284,7 +537,6 @@
     "specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-knowledge-evidence-boundary": "sha256:942f010990e0fffc1a5fa207f76d3563e6198b8398ef940937401d24632f602c",
     "specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-knowledge-request-output": "sha256:0f067f7eb2d460a17c5056e66c82002fec47af71c1f65dc8dc6f14b6a2a03aef",
     "specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant": "sha256:21801fd0fe5559a9f5aec8d45097b6198d20884b13003dd5ff6a50f4bc3aacb8",
-    "specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-boundary-compatibility": "sha256:86466659014b84b1465e3b01d092644bf9a2d58821d99784b556c88d5b8b0342",
     "specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-choice-discovery": "sha256:4406cc19cad3a1a134e06fe196e94a9b3d6a662fb2079bed6be69a27ebfc24d6",
     "specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-content-side-effect-invariant": "sha256:7abdca1501b59ea8871170ec4d244535a07db3754a6466a08f11b2895826132d",
     "specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-diagnostic-failure": "sha256:08ba3cb3bff8adaa843681cc7a019552a080979257f82e4cb4d6a6da58d0d11e",
@@ -529,7 +781,6 @@
     "specifications/editorial-render-and-delivery/render-products-visibility-and-color.md#spec-render-pass-products": "sha256:f99001e85e972e72b11a366c9c9f19313a714b3785411b5ac9864774aa79406a",
     "specifications/editorial-render-and-delivery/render-products-visibility-and-color.md#spec-render-products-visibility-color-contract-units": "sha256:0eb5fe1fc89effa656b505144febe9fd097901569a1aba175c355b31fefdc2e0",
     "specifications/editorial-render-and-delivery/render-products-visibility-and-color.md#spec-render-visibility-culling": "sha256:290b03b991c7a2a3976818e1e4c451c55560dac281bcfec5f32c1d475fa07b45",
-    "specifications/editorial-render-and-delivery/render-schedule-state-and-headless.md#spec-render-artifact-lifecycle": "sha256:b03cc8c03b32731c69466dfa8984f155721b9ba4e59b100d3033a033a8fdb506",
     "specifications/editorial-render-and-delivery/render-schedule-state-and-headless.md#spec-render-capture-runtime-identity": "sha256:21a249d5dc0a93143ff504213f325efe8cf23ab29fa35ec0bee7696098cd6665",
     "specifications/editorial-render-and-delivery/render-schedule-state-and-headless.md#spec-render-frame-schedule": "sha256:923005110c5e4d5a5d5c15667bac3b4df25ecbf8fbb89285521a52cbda130269",
     "specifications/editorial-render-and-delivery/render-schedule-state-and-headless.md#spec-render-headless-platform": "sha256:aaf1788bca28198986f8aa42437f47920adb50298e013b7f2fefa45ca5c0b074",
@@ -783,7 +1034,6 @@
     "specifications/interchange-and-adoption/validation-and-quarantine.md#interchange-quarantine-exposure-removal": "sha256:6ab6fe6fe9de5757459d1fd7c49b5a3161d5b2c3aaa5b9989ff0bee084acdf52",
     "specifications/interchange-and-adoption/validation-and-quarantine.md#interchange-quarantine-state-machine": "sha256:2907f4a13ca347b3da4f30be9c8420fe567b24e26852ae6e219db2fc1e945b7b",
     "specifications/interchange-and-adoption/validation-and-quarantine.md#interchange-validation-result-envelope": "sha256:cf713216c0812b8fb052ed3be3b83aa273e8cbda1ca2d8443b2cdde2b32bf03d",
-    "specifications/interior-space/README.md#interior-space-specification-scope": "sha256:8793f72765a7cea0659620b46b033fbbefdf59436b102bc771fb784f11810f5d",
     "specifications/interior-space/boundaries-openings-and-circulation.md#interior-space-connector-route-topology": "sha256:cb73038cf9fc81fbc5458f843869f5cfa4b0102db0ad68f0126b3897b59b0889",
     "specifications/interior-space/boundaries-openings-and-circulation.md#interior-space-host-opening-operation": "sha256:59b3b7783b4fec0d653f311ebf213fe0158aa5c969b7a96ea7fa48fa50a217d2",
     "specifications/interior-space/boundaries-openings-and-circulation.md#interior-space-wall-partition-boundary": "sha256:4641013bb5906f9e97d07d76003561839b2b3407ec65a8f2a80ae3f44e6b7c95",
@@ -817,7 +1067,6 @@
     "specifications/interior-space/patterns-tolerances-and-aging.md#interior-space-seed-correlated-tolerance": "sha256:96befbcb18368427f0b6b54062288e4022730ab82b2c7fe45e2d43973aa70aec",
     "specifications/interior-space/patterns-tolerances-and-aging.md#interior-space-user-authored-aging": "sha256:8b5d6a4f2b69c3e88c49930ccfe8fe5e137ceb4baa0c3fc5c632104b3cda4e18",
     "specifications/interior-space/patterns-tolerances-and-aging.md#spec-patterns-tolerances-and-aging-contract-units": "sha256:cd4d0a3085d93fa3b522b6dddb4ae14f5cbe0288422b4313666c8970940b725d",
-    "specifications/interior-space/scope-and-host.md#interior-space-building-interior-boundary": "sha256:ae37d302f9772954e3d64183ad4c92163af5c575ef1ceaa7c7fa4a2ce853d325",
     "specifications/interior-space/scope-and-host.md#interior-space-independent-set-state": "sha256:c18748b46fb8b5428b51ef9e396cedc9abdbe3728c0522d766a08597a174ba20",
     "specifications/interior-space/scope-and-host.md#interior-space-linked-building-shared-facts": "sha256:b0286decb817a139139ea19a2ad23ce87f08a4cb097b1ee63f8c80fbd53a6327",
     "specifications/interior-space/scope-and-host.md#spec-scope-and-host-contract-units": "sha256:26b8b9b568cf77625307d77ffd9c3fad1eae85a3719c08a16dacdde430441ad3",
@@ -1027,8 +1276,6 @@
     "specifications/performance-motion-and-staging/staging-space-state-and-choreography.md#performance-staging-story-resolved-stage-boundary": "sha256:75d05a750cc6319c5a6d3e87bba2052aa6519b5a6dcb29e17e1f7eaaef9c62ba",
     "specifications/performance-motion-and-staging/staging-space-state-and-choreography.md#performance-staging-subject-object-placement": "sha256:987293da9e143db72754dee34cdc6b612e6ade84bbb7bc2da3dd1fb8e0b4dc16",
     "specifications/performance-motion-and-staging/staging-space-state-and-choreography.md#performance-staging-visibility-reveal-readability": "sha256:cbb36b842da3dc0e68971684e0a995e9ef405f948a9418f93b4d7a478d992314",
-    "specifications/review-and-acceptance/README.md#review-acceptance-document-map": "sha256:75844b145e85008b7765765e760ef478380ed2704b2d018ba4b1f2bf5dcf5f6f",
-    "specifications/review-and-acceptance/README.md#review-acceptance-system-boundary": "sha256:923005a6bdab41c4bd5e4cbf202d11636d4ae6965a1df7bf37157d274e8af9c7",
     "specifications/review-and-acceptance/alternatives-regression-and-revalidation.md#acceptance-system-change-impact-set": "sha256:b8ebdb9e5a2c8accc51141491e9b6f0ab708873d8faae5a7021ebe67d2e69af5",
     "specifications/review-and-acceptance/alternatives-regression-and-revalidation.md#acceptance-system-criterion-change": "sha256:d62518a0bed102c07f0637a475b87dc5debcabf603701d4e30fbe0a6ad8929c6",
     "specifications/review-and-acceptance/alternatives-regression-and-revalidation.md#acceptance-system-improvement-correctness": "sha256:e4d3935e279c597b7981e229373bc20a7f53ca45f35e2bf9ff0f57654fd218ad",
@@ -1037,11 +1284,6 @@
     "specifications/review-and-acceptance/alternatives-regression-and-revalidation.md#acceptance-system-revalidation-completion": "sha256:392a3f3e35e46983143cb6bd11f7c4fcaab2735aade0fe081c40893a5e3e5ae8",
     "specifications/review-and-acceptance/alternatives-regression-and-revalidation.md#acceptance-system-revalidation-scope": "sha256:deb3da11ee48b54925bf51caab3e7e1db6ffbca568a6d54db9a202b90b8b45e5",
     "specifications/review-and-acceptance/alternatives-regression-and-revalidation.md#acceptance-system-target-environment-change": "sha256:39d12e70d72914900ec5717c22c5759d330fa32b9a7c77afecbda8b29b81d6f5",
-    "specifications/review-and-acceptance/alternatives-regression-and-revalidation.md#review-system-alternative-basis-difference": "sha256:1b77e1a2eb904edce274d5801a7f5f9b5fca303b67b45937b40c394163211f62",
-    "specifications/review-and-acceptance/alternatives-regression-and-revalidation.md#review-system-alternative-selection-history": "sha256:fa7c09ab59571d1996658c7b0deda86f8dde159e8443a6b0b377d50b4558d94b",
-    "specifications/review-and-acceptance/alternatives-regression-and-revalidation.md#review-system-alternative-set": "sha256:316b1ed4eadc1d939d2ebb7d6b66a99f2759dd797a54185a26a7af3e51fde260",
-    "specifications/review-and-acceptance/alternatives-regression-and-revalidation.md#review-system-candidate-findings": "sha256:152ac0bb02e9dab0f6b2499533c539925b51e92d00ef3fc14e78d32f8086e88b",
-    "specifications/review-and-acceptance/alternatives-regression-and-revalidation.md#review-system-synchronized-comparison": "sha256:3181a1fd94744a8778a0ce66d6dfcba14e4ae1d76674f30642258a190e7e0e0c",
     "specifications/review-and-acceptance/approval-waiver-and-publication.md#acceptance-system-approval": "sha256:8ce8f545a63dfcdd98669420ec10ebadb54e9b7df15e67de79f7e2d46844f650",
     "specifications/review-and-acceptance/approval-waiver-and-publication.md#acceptance-system-approval-decision": "sha256:4f1a3967feca08148c0c18bc46fc0f4a673a5e9766c9e906b9fec114c8e7a9d6",
     "specifications/review-and-acceptance/approval-waiver-and-publication.md#acceptance-system-conditional-approval": "sha256:5b6f65bf098a6f445ac7c552791b8a0debfeffb870b0b19a5bbc12f7041a449d",
@@ -1073,9 +1315,6 @@
     "specifications/review-and-acceptance/criteria-tolerance-and-comparison.md#acceptance-system-structural-observable": "sha256:7a83b9dcbde856361ccd46dd7d4e915cb10680111e0faa15b5a1bba43d9bb037",
     "specifications/review-and-acceptance/criteria-tolerance-and-comparison.md#acceptance-system-tolerance-kinds": "sha256:ee44a4aa465429b4ace17ed7aeb117a73803eebd70f39410dca6c545040362e7",
     "specifications/review-and-acceptance/criteria-tolerance-and-comparison.md#acceptance-system-tolerance-record": "sha256:7a3bdc7f299e81f5ed14188687c43e6b8b1082a3ddc4e7b01beb32e13aa40fad",
-    "specifications/review-and-acceptance/criteria-tolerance-and-comparison.md#review-system-baseline-reference-order": "sha256:3c75eb71190ad2a00ae1de26be3fde6c4d861b35af4dcbe07492ad458bc935b6",
-    "specifications/review-and-acceptance/criteria-tolerance-and-comparison.md#review-system-comparability": "sha256:42f7241f2d0322b828f6b5da4e78749038a0ebc774acf6a9642a4d66c6a57d19",
-    "specifications/review-and-acceptance/evidence-freshness-and-completeness.md#acceptance-system-current-historical-evidence": "sha256:53f3380c96b83b9f1e46a5b03bdccc30b66874b3144ed4eb55eaec716a5e39dd",
     "specifications/review-and-acceptance/evidence-freshness-and-completeness.md#acceptance-system-evidence-conflict": "sha256:90c1c8f4280e81406785b00b7100391eac28e2dc0e38cadc562ff4b5fdbecd03",
     "specifications/review-and-acceptance/evidence-freshness-and-completeness.md#acceptance-system-evidence-freshness": "sha256:9d9ba1d5b8fffca169f9144b0862e13af0f4a4b7449bfd371bb1fb7c2564aae2",
     "specifications/review-and-acceptance/evidence-freshness-and-completeness.md#acceptance-system-evidence-lineage-integrity": "sha256:e1c6bf5084bf745d390de0048245c7d0a534b2bbde8597a0fefd2900a1a293a2",
@@ -1084,20 +1323,6 @@
     "specifications/review-and-acceptance/evidence-freshness-and-completeness.md#acceptance-system-perceptual-evidence": "sha256:fbcf6da86d5bb619c962d3990bbeac35aaf2099930d069ac5499638009084788",
     "specifications/review-and-acceptance/evidence-freshness-and-completeness.md#acceptance-system-semantic-evidence": "sha256:372827563da732041a116b92dc1a5d967189fa827d932170586cfdf2294f4195",
     "specifications/review-and-acceptance/evidence-freshness-and-completeness.md#acceptance-system-structural-evidence": "sha256:fb8075437560eb7ae3c9ff65aa2290bf03f7939dfa9a90dc070feba2194f2b19",
-    "specifications/review-and-acceptance/evidence-freshness-and-completeness.md#review-system-completeness-claim": "sha256:2052392608a3c08ea4f929b93176d65217735ae975a2f614807fda084a53c8b5",
-    "specifications/review-and-acceptance/evidence-freshness-and-completeness.md#review-system-execution-status": "sha256:ed21abcea1b049ef625ed9ca89159177032c7b3e9f6d5755df1129f2553a6b15",
-    "specifications/review-and-acceptance/evidence-freshness-and-completeness.md#review-system-planned-actual-coverage": "sha256:c751b5f11ee78ae10d7017ccd56ae6c0bd0ebc71491392b67d0679bd0d16caf2",
-    "specifications/review-and-acceptance/observations-findings-and-defects.md#review-system-annotation-history": "sha256:3b96c4e3664ad3de6a7bc4b79925b57d04064c9e3d25d0dbfcd0e78552a33ddf",
-    "specifications/review-and-acceptance/observations-findings-and-defects.md#review-system-defect-categories": "sha256:ef61399de79a4b6c4a3a7402d4b5793a389bf4879d00392c917d443ee86c08ec",
-    "specifications/review-and-acceptance/observations-findings-and-defects.md#review-system-defect-record": "sha256:4c0c452383885f6478db0b5ac943124b6a05dbdce5c49847982b9c928ef00e54",
-    "specifications/review-and-acceptance/observations-findings-and-defects.md#review-system-defect-variation-boundary": "sha256:56eeb7ddf1b55a2cdfc1817feb85511462bc2701fc9f0cd71b64a7e1e39e291a",
-    "specifications/review-and-acceptance/observations-findings-and-defects.md#review-system-duplicate-common-impact": "sha256:a2f3cfb0dcc0e94b1091267fe9381184b8ed9ced2a2be1431be1fa7ac5b54ea3",
-    "specifications/review-and-acceptance/observations-findings-and-defects.md#review-system-finding-lifecycle": "sha256:17f1fa2ac8bebe922b7267f90f5effa3c1ed18102acab984e62d98fc65ba45e2",
-    "specifications/review-and-acceptance/observations-findings-and-defects.md#review-system-located-annotation": "sha256:9993908e6345420b547f2d4ab90f73ddbb31c75b2f8af4dcbadfaa4c8b3b4632",
-    "specifications/review-and-acceptance/observations-findings-and-defects.md#review-system-observation-finding-chain": "sha256:0584d6a759e79fbad7bdfca1e48723dea5bf98e890904a93ec90567499405c7f",
-    "specifications/review-and-acceptance/observations-findings-and-defects.md#review-system-observation-interpretation": "sha256:9c88d80f0d6c2c48461d4675ffd371a1c738232c3f343c51b76018573cbc21a7",
-    "specifications/review-and-acceptance/observations-findings-and-defects.md#review-system-reproduction-frequency": "sha256:b77ba600e70b6d6328e1e595a5252670a377efc08a71ac7e0147dfda8ddc2140",
-    "specifications/review-and-acceptance/observations-findings-and-defects.md#review-system-severity-priority": "sha256:01a5dc9f73df363b4b2dc19cea000495d4e4fc95fb8dde01aff088ea7906341d",
     "specifications/review-and-acceptance/profiles-aggregation-and-partial-results.md#acceptance-system-aggregate-fail-incomplete": "sha256:4775fc95677c2cdcd541cac960e62a64918d0e0fd75ee74d433ce397c013d815",
     "specifications/review-and-acceptance/profiles-aggregation-and-partial-results.md#acceptance-system-aggregate-pass": "sha256:e5b1b03fadd6e38186d4099be402d349d9cb956960e7fb27ef1b943835f95eec",
     "specifications/review-and-acceptance/profiles-aggregation-and-partial-results.md#acceptance-system-blocking-profile": "sha256:bfbd2bcf254b643bd156d78b8ce41b5033ace18a88743e2ad82172b1b8ff2dc9",
@@ -1118,20 +1343,13 @@
     "specifications/review-and-acceptance/subject-description-and-structural-diff.md#review-system-subject-diff-tolerance-fanout": "sha256:9589aad5c16d3ade3edbe5aa0904ba142b170d874150fb7c9c40ba54bbd26682",
     "specifications/review-and-acceptance/subject-description-and-structural-diff.md#review-system-subject-structural-diff": "sha256:c1ba54992f8b940f04e7fde32a8c4be2be4ab4fc669f790dbf6ffee2f3fd0315",
     "specifications/review-and-acceptance/subject-surface-and-inspection.md#review-system-subject-coverage": "sha256:280c454af3ee204595a2bf04a6183e54da9fac86cbf64460e471e55cdf947491",
-    "specifications/review-and-acceptance/subject-surface-and-inspection.md#review-system-subject-freshness": "sha256:bb4eca619e7b9ea4dc86a8ffc98396488454d15cf1f25e68b286168bc6ab6483",
     "specifications/review-and-acceptance/subject-surface-and-inspection.md#review-system-subject-inspection": "sha256:d76a6301dec6f64ca24fd09e902ef8e5d79a4a630a4b74033c1c57c94db509fb",
-    "specifications/review-and-acceptance/subject-surface-and-inspection.md#review-system-subject-inspection-reach": "sha256:53438d2f53dd1526c6673042788c50abaae5c5ccb3c2f49569af204e00dbf7a5",
-    "specifications/review-and-acceptance/subject-surface-and-inspection.md#review-system-subject-observation": "sha256:a058d263e3488adf3ae9e0818a3818a04c0b2aa30d9c349e90e2c1f16574fad8",
-    "specifications/review-and-acceptance/subject-surface-and-inspection.md#review-system-subject-propagation": "sha256:8d84ce0af6186992f6eb23e4e3b36ca112200b3e3bc8bceeac8a45aebda19aa9",
     "specifications/review-and-acceptance/subject-surface-and-inspection.md#review-system-subject-record": "sha256:8aa04b9cd5fbf0dd1a45d55af448e6997ec74cd635d86478e13860dd8569fcc3",
-    "specifications/review-and-acceptance/subject-surface-and-inspection.md#review-system-subject-target-parity": "sha256:0941a4cc0c762b8545682055fc31860dad6291003dbce64daa6533d3faf8ab20",
     "specifications/review-and-acceptance/subject-surface-and-inspection.md#review-system-subject-viewpoint-plan": "sha256:5f63e9cc9a7528bf6ba601df1431b74d82e3e161ee50db0e6b21bbb599b1cf0f",
     "specifications/review-and-acceptance/surfaces-and-sampling.md#review-system-asset-surface": "sha256:407522e2ee1bd8862a319e05884127d342239ef1c695e9801997a63b23c6b7f7",
     "specifications/review-and-acceptance/surfaces-and-sampling.md#review-system-cross-scope-propagation": "sha256:46a94cc92cffcbc9fce85c2ca6b85489914e7be9c85dbfe9413371c1550bcdfa",
     "specifications/review-and-acceptance/surfaces-and-sampling.md#review-system-delivery-surface": "sha256:43c5559387bfc256e8abcf9061313f2e428411e3fb9d49afe8ba96991e9745cd",
-    "specifications/review-and-acceptance/surfaces-and-sampling.md#review-system-direct-observation": "sha256:c1849775d0a78be37d9a93171d1d41fb97ab829e6a00b65cbe6131f8706d5c8d",
     "specifications/review-and-acceptance/surfaces-and-sampling.md#review-system-film-surface": "sha256:3ed8f11a8f1d8c299ccd2e18e6918479b2d777ae25119190baa3ab128abd6c97",
-    "specifications/review-and-acceptance/surfaces-and-sampling.md#review-system-frame-surface": "sha256:7455f14e73a98c60882c24b3228c651cd2b8eed77d9d86569956b58c7c4e2695",
     "specifications/review-and-acceptance/surfaces-and-sampling.md#review-system-independent-surfaces": "sha256:0d15d45ec8c80445e97554b9a2f9904338ab8ef73fda603cf4182d5d66d439ba",
     "specifications/review-and-acceptance/surfaces-and-sampling.md#review-system-missing-sample-state": "sha256:0cd67424d7416f804aec2ba5897b7b8d465c7b1b4ad6f530e6806c75fad5785a",
     "specifications/review-and-acceptance/surfaces-and-sampling.md#review-system-sample-interval-generalization": "sha256:566185808c500780e6aa79118b03305d1d96cbb7c1e97d6825b3189ead91faae",
@@ -1139,25 +1357,13 @@
     "specifications/review-and-acceptance/surfaces-and-sampling.md#review-system-shot-interval-surface": "sha256:84e37bb045c97f8778331e49bee42e685041582fa137cdc95d52d7b73e7dcd41",
     "specifications/review-and-acceptance/surfaces-and-sampling.md#review-system-spatial-view-sampling": "sha256:13204e91212a08ed6a99c4a2dfeeed13a3164f42197b7428802e26423bed00cf",
     "specifications/review-and-acceptance/surfaces-and-sampling.md#review-system-temporal-sampling-plan": "sha256:61bc5068ab71938dfeabb32b10e4ac63412c91287bac4cd47ee7b1fb4b73a329",
-    "specifications/review-and-acceptance/target-scope-and-context.md#review-system-compiler-artifact-read-refusal": "sha256:07aa683c90eb472f79f4e1df6dc83c20c1afcf37889cd3ab5d847782d752b3ad",
     "specifications/review-and-acceptance/target-scope-and-context.md#review-system-context-invalidation": "sha256:514ed15f50e6c76a1e6c2b3701e40e61b7c049d28535d9c10a8fb1a55848da05",
-    "specifications/review-and-acceptance/target-scope-and-context.md#review-system-context-unavailable": "sha256:77a86079de2a099c2f98a8e070e76bce83de002d0a9534e8b6fc897d3d9d9e4d",
     "specifications/review-and-acceptance/target-scope-and-context.md#review-system-criterion-dependency-scope": "sha256:2fc9afdaf8bb77bccd3f999b7051e3136abfcf0fd443df7bf154f2ce29491598",
-    "specifications/review-and-acceptance/target-scope-and-context.md#review-system-criterion-reference-binding": "sha256:fc4f33a98c4a074fd07b40bfcb9eea8914c3b6a3a41c8539884cc3396daa2354",
-    "specifications/review-and-acceptance/target-scope-and-context.md#review-system-presentation-context": "sha256:b146ba52383a91c269eaae67c5503e7e30e9870fd935b7b9fac9d842c99c628d",
-    "specifications/review-and-acceptance/target-scope-and-context.md#review-system-scope-selection": "sha256:1fdafb729b8fefa641fc56d18377b5ee3aa34f9f29387cc1cdd7e7e06a6822c2",
-    "specifications/review-and-acceptance/target-scope-and-context.md#review-system-source-artifact-binding": "sha256:5b0dfd90ea4313a6fa10160bf68738ac770a3154c691813884110e1346326d78",
-    "specifications/review-and-acceptance/target-scope-and-context.md#review-system-target-record": "sha256:85fd63e443fb1d59d8ed07372a247d3bbaf8f497b625c30d6554870dcc88beac",
-    "specifications/review-and-acceptance/target-scope-and-context.md#review-system-time-playback-context": "sha256:353554878198f019fbf239e5f3be015c4d2c4fa35a207fe66bbf7b5d0915ec5f",
     "specifications/review-and-acceptance/verdict-authority-and-dissent.md#acceptance-system-authority-roles": "sha256:75d390b483bdaced498d0cf00fb4a12160d0821de70ee0f54d1bc749eb139b53",
     "specifications/review-and-acceptance/verdict-authority-and-dissent.md#acceptance-system-criterion-owner": "sha256:a76496446b108e54bf81da550d473dbdac0462e215d03038ba1675dca61e3d26",
     "specifications/review-and-acceptance/verdict-authority-and-dissent.md#acceptance-system-publication-authority": "sha256:8f162809e56134dd3f1458aa68ff6c1caabc4253c1b127a11bd41ba49887e4c7",
-    "specifications/review-and-acceptance/verdict-authority-and-dissent.md#acceptance-system-review-approval-roles": "sha256:1263b9244384e3e229405c8cdc216779921238e8693eb454af7adb699bfca8bb",
     "specifications/review-and-acceptance/verdict-authority-and-dissent.md#acceptance-system-verdict-state-machine": "sha256:47a8f8827c9525401d96d21270675f803e9a5102dc9882ae7ad3433ddea73ad6",
     "specifications/review-and-acceptance/verdict-authority-and-dissent.md#review-system-automated-check-boundary": "sha256:27b48314fafab02987ef6a31e5e879df43edeb4e602ee400ab2d5ea8429fdf22",
-    "specifications/review-and-acceptance/verdict-authority-and-dissent.md#review-system-dissent-conflict": "sha256:e2ca2a8ad916c4c4de4349527edb1e48b01079e5c60e7e2ea657bd667f1ed4f5",
-    "specifications/review-and-acceptance/verdict-authority-and-dissent.md#review-system-human-final-decision": "sha256:fa0172fc44328b6a96672fcd8b8e0f0be63f97d1454a9dba25b34ad6f6fff13c",
-    "specifications/review-and-acceptance/verdict-authority-and-dissent.md#review-system-verdict-rationale-receipt": "sha256:015936a6949f7ecb9d117e402c99df78810ed91e99a6ba9c4beb7367a30bd679",
     "specifications/review-and-acceptance/visual-change-reporting.md#review-system-visual-change-digest-boundary": "sha256:822e4a64295d4b026a8def54c8f6bb9c56ef41fa1c30c370b1ec8cd24013b835",
     "specifications/review-and-acceptance/visual-change-reporting.md#review-system-visual-change-evidence-separation": "sha256:e679335f6965f8768950615631700ebfbd9fe22931f8276ade69beaa0080e314",
     "specifications/review-and-acceptance/visual-change-reporting.md#review-system-visual-change-states": "sha256:cbf2518bf9781dac9e906d2e5526d849606f4c24b2b277c8508f5642ffe8e0f7",
@@ -1225,7 +1431,6 @@
     "specifications/simulation-effects-and-sound/scope-tiers-and-identities.md#authored-silence-and-missing-state": "sha256:02cfaf8c412203317d51a72ef31f99107829ef592329da8e1adc6a92f5ff5d17",
     "specifications/simulation-effects-and-sound/scope-tiers-and-identities.md#effect-sound-story-lifecycle-identity": "sha256:7d895e82db2b29d1adde04b8201fc5320f4c53b0df8a98c2c856bbec02a3ff6f",
     "specifications/simulation-effects-and-sound/scope-tiers-and-identities.md#effect-tier-state-machine": "sha256:69c0860f30312a20c4b0be1a0f30fe9d39a0f7ad097f0dc2715291fd74010ba9",
-    "specifications/simulation-effects-and-sound/scope-tiers-and-identities.md#external-result-provider-neutrality": "sha256:450389b3bcdc973160866c855e54006c4d2c4bff182d9be7cb442f5e541ab406",
     "specifications/simulation-effects-and-sound/scope-tiers-and-identities.md#simulation-effects-sound-common-invariants": "sha256:818066d2840e783fafefffd1d2aa7fae1be2d26c7f1b38e9249a7762f897528d",
     "specifications/simulation-effects-and-sound/scope-tiers-and-identities.md#simulation-effects-sound-prototype-fidelity-ceiling": "sha256:d1eee9449b04015c2010bf68efef5b0c9074081cb2ee0fd27a4f525ee6c2d743",
     "specifications/simulation-effects-and-sound/scope-tiers-and-identities.md#simulation-effects-sound-system-boundary": "sha256:cb0d1843e3385cd3bcfc901aa475bc3ebb141ad4478ed3524784166c55be8ba4",

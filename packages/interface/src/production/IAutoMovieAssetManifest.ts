@@ -144,7 +144,7 @@ export type IAutoMovieAssetConsumer =
       id: string;
     }
   | {
-      /** Fixed style or character reference consumed by one repaint shot. */
+      /** Fixed non-collapsible role-specific reference for one repaint shot. */
       kind: "rendition-reference";
       /** Exact shot id. */
       id: string;

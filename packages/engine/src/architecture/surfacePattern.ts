@@ -162,6 +162,7 @@ export interface IAutoMoviePatternCandidate {
  * this boundary.
  *
  * @evidence requirements/interior/textures-patterns-and-variation.md#interior-pattern-source `AutoMovieSurfacePatternGenerator` represents the author's own module program, run once per lattice cell. This ensures authored physical-module placement and texture sampling remain under project control.
+ * @evidence requirements/interior/tolerances-and-imperfections.md#interior-imperfection-authoring-choice Keeps every aesthetic deviation inside the author's pure generator and applies no automatic visual noise or preset.
  * @evidence specifications/interior-space/patterns-tolerances-and-aging.md#interior-space-physical-module-pattern `AutoMovieSurfacePatternGenerator` structures the author's own module program, run once per lattice cell for the system that resolves the declared physical-module pattern deterministically.
  */
 export type AutoMovieSurfacePatternGenerator = (cell: {

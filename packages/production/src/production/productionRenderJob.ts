@@ -22,9 +22,9 @@ export interface IAutoMovieProductionEncoderIdentity {
    */
   version: string;
   /**
-   * Digest of the resolved executable JavaScript entry.
+   * Canonical digest of the complete installed executable closure.
    */
-  entryDigest: AutoMovieContentDigest;
+  closureDigest: AutoMovieContentDigest;
   /**
    * Closed codec family emitted by the foundation adapter.
    */
@@ -49,7 +49,7 @@ export interface IAutoMovieProductionRenderRuntimeIdentity {
   /**
    * Render-runtime identity schema.
    */
-  protocolVersion: "automovie.production-render-runtime.v1";
+  protocolVersion: "automovie.production-render-runtime.v2";
   /**
    * Digest of declared viewer, capture, asset, and package input bytes.
    */
@@ -1141,6 +1141,9 @@ export const resolveProductionRenderTierFrameFormat = (
     height: even(source.height),
     fps: source.fps / normalized.frameStep,
     colorSpace: source.colorSpace,
+    ...(source.crop === undefined
+      ? {}
+      : { crop: structuredClone(source.crop) }),
   };
 };
 

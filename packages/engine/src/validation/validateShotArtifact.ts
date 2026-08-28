@@ -6,6 +6,7 @@ import {
 } from "@automovie/interface";
 
 import { cubicHermiteValue } from "../math/cubicHermite";
+import { sampleTimes } from "../motion/sampleClock";
 import {
   AutoMovieLightProperty,
   LIGHT_CHANNEL_PROPERTIES,
@@ -208,6 +209,56 @@ export const validateShotArtifact = (
     ),
     violations,
   );
+  const deliveredCameras = new Set([
+    ...(typeof shot.camera === "string" ? [shot.camera] : []),
+    ...asArray(shot.coverage)
+      .filter(isRecord)
+      .map((take) => take.camera)
+      .filter((camera): camera is string => typeof camera === "string"),
+  ]);
+  const clearanceCameras = new Set(
+    sceneCameras
+      .filter(isRecord)
+      .filter(
+        (camera) =>
+          typeof camera.id === "string" &&
+          deliveredCameras.has(camera.id) &&
+          camera.clearance !== undefined,
+      )
+      .map((camera) => camera.id as string),
+  );
+  if (clearanceCameras.size > 0 && shot.cameraClearance === undefined)
+    pushViolation(
+      violations,
+      "type",
+      "$input.cameraClearance",
+      "every delivered camera with a physical envelope must carry one accepted clearance report",
+      shot.cameraClearance,
+    );
+  const reportedCameras = new Set(
+    asArray(shot.cameraClearance)
+      .filter(isRecord)
+      .map((report) => report.camera)
+      .filter((camera): camera is string => typeof camera === "string"),
+  );
+  for (const camera of clearanceCameras)
+    if (!reportedCameras.has(camera))
+      pushViolation(
+        violations,
+        "type",
+        "$input.cameraClearance",
+        `delivered camera "${camera}" declares a physical envelope but has no accepted clearance report`,
+        shot.cameraClearance,
+      );
+  for (const camera of reportedCameras)
+    if (!clearanceCameras.has(camera))
+      pushViolation(
+        violations,
+        "type",
+        "$input.cameraClearance",
+        `clearance report camera "${camera}" must be a delivered camera that declares a physical envelope`,
+        camera,
+      );
 
   return toValidation(violations);
 };
@@ -252,8 +303,8 @@ const CAMERA_MOVES = new Set([
 ]);
 
 /**
- * The three shot fields the validators used to pass ungated: `events`,
- * `cameraIntent`, and `coverage`.
+ * The shot metadata fields validators used to pass ungated: `events`,
+ * `cameraIntent`, `coverage`, and current-revision camera clearance.
  *
  * A field the engine emits and a consumer dereferences is part of the artifact
  * contract, not decoration: `playbackEvents` and `reviewVisualRead` iterate
@@ -282,6 +333,7 @@ export const appendShotMetadataArtifact = (
     events?: unknown;
     cameraIntent?: unknown;
     coverage?: unknown;
+    cameraClearance?: unknown;
   },
   path: string,
   sceneCameras: ReadonlySet<string> | null,
@@ -311,6 +363,242 @@ export const appendShotMetadataArtifact = (
       sceneCameras,
       violations,
     );
+  if (shot.cameraClearance !== undefined)
+    appendCameraClearanceArtifact(
+      shot.cameraClearance,
+      `${path}.cameraClearance`,
+      duration,
+      sceneCameras,
+      violations,
+    );
+};
+
+/** Count shared-clock intervals without allocating a hostile-sized grid. */
+const clearanceIntervalCount = (
+  duration: number,
+  sampleRate: number,
+): number | null => {
+  const frames = Math.max(1, Math.ceil(duration * sampleRate));
+  if (!Number.isSafeInteger(frames)) return null;
+  return Math.min(duration, (frames - 1) / sampleRate) === duration
+    ? frames - 1
+    : frames;
+};
+
+/** Validate accepted, current-revision clearance evidence carried by a shot. */
+const appendCameraClearanceArtifact = (
+  reports: unknown,
+  path: string,
+  duration: number,
+  sceneCameras: ReadonlySet<string> | null,
+  violations: IAutoMovieConstraintViolation[],
+): void => {
+  if (
+    !validateArrayArtifact(
+      reports,
+      path,
+      "camera clearance reports",
+      violations,
+    )
+  )
+    return;
+  validateUniqueBy(
+    reports.map((report, index) => ({
+      id: isRecord(report) ? report.camera : undefined,
+      path: `${path}[${index}].camera`,
+    })),
+    "camera clearance report camera",
+    violations,
+  );
+  reports.forEach((report, index) => {
+    const reportPath = `${path}[${index}]`;
+    if (
+      !validateObjectArtifact(
+        report,
+        reportPath,
+        "camera clearance report",
+        violations,
+      )
+    )
+      return;
+    validateNonEmptyId(
+      report.camera,
+      `${reportPath}.camera`,
+      "clearance camera",
+      violations,
+    );
+    if (
+      typeof report.camera === "string" &&
+      sceneCameras !== null &&
+      !sceneCameras.has(report.camera)
+    )
+      pushViolation(
+        violations,
+        "type",
+        `${reportPath}.camera`,
+        `clearance camera "${report.camera}" must reference a scene camera`,
+        report.camera,
+      );
+    validateNonEmptyId(
+      report.revision,
+      `${reportPath}.revision`,
+      "clearance geometry revision",
+      violations,
+    );
+    validateNonEmptyId(
+      report.currentRevision,
+      `${reportPath}.currentRevision`,
+      "clearance current revision",
+      violations,
+    );
+    if (report.revision !== report.currentRevision)
+      pushViolation(
+        violations,
+        "type",
+        `${reportPath}.currentRevision`,
+        "a published clearance report must match the current geometry revision",
+        report.currentRevision,
+      );
+    validateRange(
+      report.sampleRate,
+      `${reportPath}.sampleRate`,
+      0,
+      Infinity,
+      "clearance sample rate",
+      violations,
+      false,
+    );
+    validateRange(
+      report.intervals,
+      `${reportPath}.intervals`,
+      0,
+      Infinity,
+      "clearance interval count",
+      violations,
+    );
+    if (
+      typeof report.intervals === "number" &&
+      !Number.isSafeInteger(report.intervals)
+    )
+      pushViolation(
+        violations,
+        "type",
+        `${reportPath}.intervals`,
+        "clearance interval count must be a safe integer",
+        report.intervals,
+      );
+    const validSampleTimes = validateArrayArtifact(
+      report.sampleTimes,
+      `${reportPath}.sampleTimes`,
+      "clearance sample times",
+      violations,
+    );
+    const reportedSampleTimes = asArray(report.sampleTimes);
+    if (validSampleTimes)
+      reportedSampleTimes.forEach((time, index) => {
+        const previous = reportedSampleTimes[index - 1];
+        if (
+          typeof time !== "number" ||
+          !Number.isFinite(time) ||
+          time < 0 ||
+          time > duration
+        )
+          pushViolation(
+            violations,
+            "range",
+            `${reportPath}.sampleTimes[${index}]`,
+            `clearance sample time must be finite and within [0, ${duration}]`,
+            time,
+          );
+        if (
+          index > 0 &&
+          typeof time === "number" &&
+          typeof previous === "number" &&
+          time <= previous
+        )
+          pushViolation(
+            violations,
+            "temporal",
+            `${reportPath}.sampleTimes[${index}]`,
+            "clearance sample times must be strictly increasing",
+            time,
+          );
+      });
+    if (
+      validSampleTimes &&
+      typeof report.intervals === "number" &&
+      Number.isSafeInteger(report.intervals) &&
+      report.intervals !== Math.max(0, reportedSampleTimes.length - 1)
+    )
+      pushViolation(
+        violations,
+        "range",
+        `${reportPath}.intervals`,
+        "clearance interval count must exactly match the carried sample plan",
+        report.intervals,
+      );
+    if (
+      typeof report.sampleRate === "number" &&
+      Number.isFinite(report.sampleRate) &&
+      report.sampleRate > 0 &&
+      Number.isFinite(duration) &&
+      duration >= 0
+    ) {
+      const expectedIntervals = clearanceIntervalCount(
+        duration,
+        report.sampleRate,
+      );
+      if (expectedIntervals === null)
+        pushViolation(
+          violations,
+          "range",
+          `${reportPath}.sampleRate`,
+          "clearance duration and sample rate must produce a safe-integer interval count",
+          report.sampleRate,
+        );
+      else if (validSampleTimes) {
+        const supplied = new Set(reportedSampleTimes);
+        if (
+          reportedSampleTimes.length - 1 < expectedIntervals ||
+          sampleTimes(duration, report.sampleRate).some(
+            (time) => !supplied.has(time),
+          )
+        )
+          pushViolation(
+            violations,
+            "range",
+            `${reportPath}.sampleTimes`,
+            "clearance sample plan must retain every endpoint-inclusive fixed-clock instant",
+            report.sampleTimes,
+          );
+      }
+    }
+    if (report.status !== "clear")
+      pushViolation(
+        violations,
+        "type",
+        `${reportPath}.status`,
+        "a shot may publish only a clear camera-clearance report",
+        report.status,
+      );
+    if (
+      !validateArrayArtifact(
+        report.findings,
+        `${reportPath}.findings`,
+        "clearance findings",
+        violations,
+      )
+    )
+      return;
+    if (report.findings.length !== 0)
+      pushViolation(
+        violations,
+        "range",
+        `${reportPath}.findings`,
+        "a published clear report must contain no contact findings",
+        report.findings,
+      );
+  });
 };
 
 const appendShotEventsArtifact = (

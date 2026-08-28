@@ -5,7 +5,6 @@
 ### 수치 Evidence {#acceptance-system-numeric-evidence}
 
 <!-- @evidence requirements/acceptance/evidence-and-freshness.md#acceptance-evidence-sufficiency Requires evidence kind and scope to match each criterion obligation. -->
-<!-- @evidence requirements/review/records-and-completeness.md#review-records-completeness Connects planned scope, observed target, findings, verdict and incomplete reasons. -->
 
 각 criterion verdict는 required evidence specification과 actual evidence set을 가지며 evidence identity, subject, scope, context, observation, producer와 freshness를 보존한다. Evidence가 존재한다는 사실과 criterion을 판정하기에 충분하다는 사실을 분리한다.
 
@@ -35,6 +34,8 @@
 
 ### Current와 Historical Evidence {#acceptance-system-current-historical-evidence}
 
+<!-- @evidenceObligation current-historical-closure 현재 판정 closure와 보존된 historical evidence의 식별·분리. -->
+
 <!-- @evidence requirements/acceptance/evidence-and-freshness.md#acceptance-evidence-freshness Binds evidence to target, version, profile, time range and actual artifact identity. -->
 
 Evidence freshness는 target, source와 dependency identity, criterion version, profile, sample scope, context와 actual artifact relation에서 계산한다. Filename, 설명, 생성 시각 또는 비슷한 frame만 같다는 이유로 current 상태를 부여하지 않는다.
@@ -42,6 +43,8 @@ Evidence freshness는 target, source와 dependency identity, criterion version, 
 <!-- @evidence requirements/acceptance/evidence-and-freshness.md#acceptance-current-historical-evidence Separates evidence usable for current verdicts from evidence usable only for comparison and provenance. -->
 
 Current evidence만 current verdict를 discharge할 수 있고 historical evidence는 comparison, regression과 provenance에 사용할 수 있다. Historical result가 더 좋아 보이거나 과거 approval에 쓰였어도 현재 pass를 만들지 않는다.
+
+Capture runtime identity는 Vite, viewer, engine, Three.js, Playwright와 Playwright core의 installed package closure를 package tree별 content digest, file count와 byte count로 정규화한다. Package-owned Chromium 또는 configured executable은 executable과 support-file tree의 content identity를 같은 closure에 포함하고, system channel은 `system-channel-unsealed`로 기록한다. Capture는 runtime import 전 snapshot을 만들고 browser launch, page load와 최종 pixel commit 전후에 같은 physical generation과 exact inventory를 다시 확인하며, 하나라도 달라지면 이전 manifest를 current evidence로 재사용하지 않는다.
 
 ### Evidence 계보와 무결성 {#acceptance-system-evidence-lineage-integrity}
 
@@ -54,21 +57,3 @@ Evidence record는 observation에서 파생된 경로, transform과 compression 
 <!-- @evidence requirements/acceptance/evidence-and-freshness.md#acceptance-evidence-conflict Exposes conflicts between numeric, structural and perceptual evidence. -->
 
 서로 다른 evidence가 같은 criterion에서 상충하는 결론을 지지하면 각 observation과 conflict relation을 보존한다. 우선 rule이나 해결 authority가 없으면 verdict는 indeterminate이며 유리한 evidence만 선택하지 않는다.
-
-## 계획과 실제 Coverage {#review-system-planned-actual-coverage}
-
-### 실행 상태 {#review-system-execution-status}
-
-<!-- @evidence requirements/review/records-and-completeness.md#review-planned-actual-coverage Separates required review coverage from what was actually observed. -->
-
-Review coverage는 required targets, frames, intervals, surfaces, criteria와 assigned authority를 포함하는 plan과 실제 observation 집합을 대조한다. Missing, excluded와 failed observation은 각 scope와 reason을 가진다.
-
-<!-- @evidence requirements/review/records-and-completeness.md#review-execution-status Defines not-started, in-review, reviewed, blocked, not-run, unsupported and stale states. -->
-
-Review execution은 not-started, in-review, reviewed, blocked, not-run, unsupported와 stale을 구분한다. Artifact 존재, 일부 annotation 또는 실행 시작만으로 reviewed나 complete가 되지 않는다.
-
-### 완결성 판정 {#review-system-completeness-claim}
-
-<!-- @evidence requirements/review/records-and-completeness.md#review-completeness-claim Restricts completion to fully reviewed required scope and resolved blocking findings. -->
-
-Review complete는 required scope와 criteria가 current evidence로 실제 검토되고 모든 blocking finding이 resolved, rejected decision의 근거 또는 유효 waiver로 처리되며 필요한 사람 decision이 존재할 때만 성립한다. Completeness verdict는 coverage와 approval state를 함께 보여 준다.

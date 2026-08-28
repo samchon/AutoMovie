@@ -18,6 +18,14 @@ Focal length and camera distance work together. A long lens at distance compress
 
 Use headroom, lead room, frame edges, negative space, and foreground layers deliberately. Preserve silhouettes at the delivery raster. Depth requires readable overlap, scale change, atmosphere, light separation, or motion parallax, not just different numeric z values.
 
+## Clip range and depth precision
+
+Every staged delivery camera explicitly authors `near`, `far`, `depthPrecision.minimumDepthBits`, and `depthPrecision.maximumStepMeters`; there is no production default to inherit. Choose the positive ordered clip range from the current geometry the shot must deliver, not from a memorized camera preset. At every contract review time, include all eight corners of every current resolved world bound named by `requiredSubjects`, including an environment element represented by a scene node, and inspect the resulting nearest and farthest camera-space metre distances. Keep the whole required interval inside `near..far` without pushing near closer or far farther merely for convenience.
+
+Choose `minimumDepthBits` from the actual draw framebuffer capability the delivery path is required to provide, not from an assumed common bit count. Choose `maximumStepMeters` from the greatest adjacent camera-space separation the production can tolerate at the furthest required depth: a thin overlapping surface, a close contact, and a deep exterior do not have the same acceptable step. Do not enlarge that tolerance to clear a diagnostic. The compiled realization reports the addressed camera and time, required interval, fixed-point code pair, measured metre step, and status; read every failed sample, correct the earliest camera, geometry, or requirement owner, and compile again.
+
+This contract is standard fixed-point perspective depth. Before every draw, the viewer requires exact source-to-rendered near/far parity, refuses logarithmic or reversed projection as a different metric, and queries the currently bound draw framebuffer's real `DEPTH_BITS`; a lower capability is a refusal rather than a degraded frame. A successful engine report therefore does not replace viewer verification, and a remembered renderer specification does not replace the live pre-draw observation.
+
 ## Continuity grammar
 
 Establish the axis of action before cutting across it. Place successive cameras on one side of the 180-degree line so screen direction remains stable. When a crossing serves the story, declare the violation in style intent and reorient the viewer through a neutral-on-axis shot, visible camera move, subject movement, or a clear new establishing view.

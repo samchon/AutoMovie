@@ -5,6 +5,7 @@ import {
   IAutoMovieRenderBundleManifest,
 } from "./IAutoMovieProductionOracle";
 import {
+  AutoMovieRepaintReferenceRole,
   IAutoMovieRepaintParameters,
   IAutoMovieRepaintRuntimeIdentity,
 } from "./capture/IAutoMovieRepaintShot";
@@ -16,6 +17,13 @@ import {
  * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-repaint-controls-references Types `IAutoMovieProductionRepaintInput` for the asset spec repaint controls references system contract.
  */
 export interface IAutoMovieProductionRepaintInput {
+  /**
+   * Attempt-scoped cancellation boundary.
+   *
+   * @evidence requirements/repaint/retries-seeds-and-variation.md#repaint-retry-budget-stop Lets the host stop a timed-out or explicitly cancelled external execution instead of leaving an unbounded call.
+   * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-repaint-attempt-selection Types cancellation as part of one distinct attempt rather than a request mutation.
+   */
+  signal: AbortSignal;
   /**
    * Active project root.
    *
@@ -80,8 +88,8 @@ export interface IAutoMovieProductionRepaintInput {
    * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-repaint-controls-references Types `references` for the asset spec repaint controls references system contract.
    */
   references: Array<{
-    /** Style or character role. */
-    role: "style" | "character";
+    /** Exact non-collapsible role; `character` means identity. */
+    role: AutoMovieRepaintReferenceRole;
     /** Project-relative asset-manifest path. */
     path: string;
     /** Current digest. */
@@ -102,7 +110,9 @@ export interface IAutoMovieProductionRepaintInput {
  * Host-owned optional diffusion adapter.
  *
  * @evidence requirements/repaint/source-frames-and-reference-locking.md#repaint-reference-roles Exposes `AutoMovieProductionShotRepaint` as the portable data boundary for the repaint reference roles requirement.
+ * @evidence requirements/repaint/retries-seeds-and-variation.md#repaint-retry-budget-stop Carries provider-reported cost into the bounded attempt policy without granting the adapter control over that policy.
  * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-repaint-controls-references Types `AutoMovieProductionShotRepaint` for the asset spec repaint controls references system contract.
+ * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-repaint-attempt-selection Returns metered cost from one attempt so orchestration can enforce the reviewed request budget.
  */
 export type AutoMovieProductionShotRepaint = (
   input: IAutoMovieProductionRepaintInput,
@@ -113,4 +123,6 @@ export type AutoMovieProductionShotRepaint = (
   mediaType: "video/mp4";
   /** Structured provider/model identity. */
   runtimeIdentity: IAutoMovieRepaintRuntimeIdentity;
+  /** Non-negative metered cost in the unit declared by the execution policy. */
+  costUnits?: number;
 }>;

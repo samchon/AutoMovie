@@ -21,6 +21,8 @@ Do not create `docs/packages/` or `docs/modules/`. Package usage belongs in pack
 
 Keep research and `.wiki/` outside the committed product-contract population. They justify decisions and preserve working knowledge, but a citation to research does not discharge a product promise.
 
+When writing or revising the reusable production targets under `packages/template/docs`, read the [shared production-contract source pool](references.md) before searching anew. It records which durable source settles which kind of question without coupling sources to the contract anchors that happen to cite them today. Verify every selected link and used passage again before citation.
+
 ## Required triangle
 
 Configure and validate all three positive edge families:
@@ -53,6 +55,12 @@ Derive a domain-partitioned population by subtraction. A specialized claim may n
 
 A derived population makes a carrier's citations checked; it does not make citations mandatory. `evidence/graph` runs its obligation from the reference toward the claim, so a new file carrying a wrong citation is an error while a new file carrying none at all is silent. `singleEvidencePerSymbol` does not close that gap, because it demands exactly one unit per host where this repository's hosts answer for several. Until the contributor grows a per-host lower bound, that bound belongs to a structural guard, and `#1900` deliberately removed the repository-shape test class that would host one. Record the unpaid edge instead of reporting the population as self-enforcing.
 
+## Measure production authoring reachability
+
+The repository contract and a generated production's authoring contract remain separate graphs. Do not manufacture one citation per requirement unit between them. [The authoring-reachability ledger](../../../docs/authoring-reachability/README.md) instead maps every requirement family to the production contract or procedure that gives its decisions an author, or to one of three explicit absence classes: unpaid authoring edge, host-owned behavior, or intentional exclusion with a resumption condition.
+
+Run `node internals/authoring-reachability-gate.mjs` whenever a requirement family, the shared production-contract inventory, or a mapped authoring path changes. The gate requires complete family inventory, verifies current H3 and shared H2 populations, resolves every recorded path and anchor, and pins the accepted unpaid counts and exact fragment target set. It does not demand zero debt while an accepted follow-up owns that debt, but any increase, decrease, target substitution, or reclassification requires the ledger to be reread and updated rather than drifting silently.
+
 ## Packages outside the graph
 
 `@automovie/production` and `@automovie/playground` carry no `evidence/graph` claim. Their `lint.config.ts` keeps `evidence/documented` and `evidence/todo`, so every export still owes a comment and an unpaid `@todo` still fails the build, but no export cites a requirement or a specification.
@@ -69,11 +77,13 @@ The positive edge families prove that a unit has a claimant or a disclaimer. The
 
 Declare exactly one owner per requirement unit and per specification obligation. A `package` owner names the workspace package that answers, and the gate requires that package to already carry a positive `@evidence` for the same target, so the ledger never invents an owner the native graph does not know. A `project-source` owner names the specification obligations the product supplies so an author can discharge it, and the gate walks those supplies until each one terminates at a package-owned obligation, rejecting a missing target, a cycle, and a path that ends in an exclusion. An obligation handed to an author with no product supply is an omission with a sentence in front of it, not an assignment. An `excluded` owner records the decided boundary once with a non-empty reason instead of repeating a disclaimer in every package.
 
+A specification heading that only groups independently payable descendants is structural rather than an obligation. Declare it as `structural: { reason }`, mutually exclusive with `obligations`; do not invent a `section-index` obligation, an excluded owner, or source `@evidencePart` to pay for document hierarchy.
+
 Split a specification unit into obligations rather than letting several partial claimants add up to a false whole. A package that owns one obligation writes `@evidencePart <unit>::<obligation-id>` in the same JSDoc block as its `@evidence <unit>`, so the part claim refines the native triangle instead of replacing it.
 
 Migrate rather than re-baseline. Initialization snapshots the existing corpus into `legacy` and refuses to overwrite a ledger that exists, so accrued debt cannot be laundered by taking a fresh snapshot. What the gate refuses afterwards is a decision somebody made: a unit that appears with no owner, and a ledger entry whose unit is gone. The debt can therefore shrink or hold, never quietly grow.
 
-Count drift, do not refuse it. A legacy unit is exactly the unit nobody has been able to assign, so failing an unrelated prose edit until someone names an owner buys a declaration written to clear a diagnostic, and a manufactured owner is worse than a counted debt. The check reports `stale` beside `legacy` for the units whose prose moved since the snapshot. `node internals/contract-ownership.mjs query --layer requirements --owner <package|project-source|excluded|legacy>` answers who owns what without reading prose.
+Count drift, do not refuse it. A legacy unit is exactly the unit nobody has been able to assign, so failing an unrelated prose edit until someone names an owner buys a declaration written to clear a diagnostic, and a manufactured owner is worse than a counted debt. The check reports `stale` beside `legacy` for the units whose prose moved since the snapshot. `node internals/contract-ownership.mjs query --layer <requirements|specifications> --owner <package|project-source|excluded|structural|legacy>` answers who owns what without reading prose.
 
 ## Partition a unit that several claimants share
 
@@ -83,13 +93,13 @@ No `@ttsc/evidence` option closes this. `evidence/graph` runs its obligation fro
 
 Declare the partition in two places that answer two different questions. The specification unit enumerates its own fragments with `<!-- @evidenceObligation <id> <what the fragment is> -->` markers, because deciding where one obligation ends is human judgment that belongs beside the prose it divides. The ledger under `docs/contract-ownership/` then answers who owns each id, because ownership must be queryable without parsing prose. A package owner proves the fragment by carrying `@evidence <unit>` and `@evidencePart <unit>::<id>` in one JSDoc block; two separate blocks do not aggregate into a claim.
 
-Split a fragment whenever the product implements part of a noun and not the rest. `{#clv-clipping-clearance-evaluation}` lists `delivery crop` as one input, and the engine applies the delivery raster's width and height while nothing applies a crop region narrower than that raster, so the unit enumerates `delivery-raster-extent` and `delivery-crop-region` separately and only the first has an owner. Merging them would hide the missing half behind a true sentence about the present one, which is the failure this partition exists to end.
+Split a unit into fragments whenever independently payable behavior can mature separately. `{#clv-clipping-clearance-evaluation}` lists `delivery crop` as one input, so the unit enumerates `delivery-raster-extent` and `delivery-crop-region` separately. The engine now owns both through distinct `@evidencePart` claims: keeping the split requires the narrower crop-region implementation to pay its own part instead of letting a true claim about the complete raster account for both, and preserves independent ownership when either behavior changes.
 
 Leave a fragment nobody implements undeclared rather than excluding it. An exclusion states that the claim intentionally owes nothing, so spending one on unfinished work restores the exact confusion between a decided boundary and an unexamined gap. An enumerated fragment with no ledger entry is visible debt; an exclusion over it is a false statement that reads green forever.
 
 Migrate by touching. Every unit starts in the ledger's `legacy` snapshot with its digest, and editing that unit moves its prose away from the digest, which is what surfaces it to the next author of that unit rather than arriving as one repository-wide red gate. What surfaces is a number, not a refusal: the check reports it under `stale` and still exits zero, exactly as the counting rule above requires. Read that count when you touch a legacy unit and decide whether this is the change that should declare its owners; nothing will stop you either way, and a declaration written to clear a diagnostic is the outcome the counting rule exists to avoid.
 
-**Unpaid edge.** Nothing yet compares a unit's marker set against its declared obligation set, so a declaration can still cover five of nine fragments and pass. Until that comparison exists, read the markers when you review a declaration, and do not report a passing gate as proof that a unit is fully owned.
+`node internals/authoring-reachability-gate.mjs` compares every specification `@evidenceObligation` target-anchor and id against source `@evidencePart` pairs, rejects orphan source parts, and pins both the current unpaid total and exact target set. The pin counts debt instead of declaring it implemented. Read every unpaid fragment when its specification or claimant changes, pay it with a truthful source owner when one exists, and update the accepted set and count in the same decision.
 
 ## Stable document identities
 
@@ -127,11 +137,19 @@ Use `@evidenceExclude` only when the selected claim intentionally owes no relati
 
 Preserve `@evidenceReview` and `@evidenceExcludeReview` when a reference requires review. Treat an expired fingerprint as a request to inspect the cited content again, not as a value to copy without review.
 
+## Repository evidence review companions
+
+Keep `evidence/review` disabled on the repository requirement-specification-source graph. Its complete source population carries enough relationships that one companion review sentence per positive or excluded edge becomes repeated package-boundary acknowledgement rather than semantic inspection. The authoring-reachability ledger records the current measurement and reconsideration condition, and its gate refuses a lint configuration that enables the rule without changing that decision.
+
+The substitute controls divide what can be automated from what cannot. `evidence/graph`, `evidence/documented`, and `evidence/todo` validate populations, resolution, carriers, and declared unrealized work; contract ownership and authoring reachability gates expose owner and fragment debt; the development skill requires tests and per-file coverage; the review skill owns semantic inspection of the actual host, target, reason, and consequence. None of those tools proves prose meaning automatically, so a passing graph never replaces Self-Review.
+
+The generated-production graph is separate. Its review stage records substantive relationship inspections over the production's selected authored population and remains active under the shipped production skill. Reconsider the repository rule when a mechanism can select changed semantic relationships, preserve concrete observations, and reject copied acknowledgements without demanding a companion sentence for every stable edge.
+
 ## Change workflow
 
 1. Read the documentation skill and update `.wiki/` as the decision develops. Read the project skill for product scope, the development skill for source or test changes, the scaffold skill when the shared contract inventory or the scaffold harness changes, and the shipped production skill when a production's own graph is involved.
-2. Inspect the current `lint.config.ts` files, workspace scripts, structural tests, installed `@ttsc/evidence` README and type declarations, and every affected citation. Do not treat an archived branch or an earlier decision as the active implementation.
-3. Classify each statement as requirement, specification, package usage, public API contract, research, or working knowledge before choosing its home.
+2. Inspect the current `lint.config.ts` and `lint.config.mjs` files, workspace scripts, structural tests, installed `@ttsc/evidence` README and type declarations, and every affected citation. Do not treat an archived branch or an earlier decision as the active implementation.
+3. Classify each statement as requirement, specification, package usage, public API contract, research, or working knowledge before choosing its home. For a reusable production discovery, upstream, principle, or obligation target, check [the shared source pool](references.md) before searching anew and verify every selected link directly.
 4. Describe each claim-reference pair as one sentence before configuring it. If the sentence does not match the selected files and symbol kinds, correct the population.
 5. Add or revise the contract text, stable anchors, and positive citations together. Preserve direct requirement and specification citations on every affected public source symbol.
 6. Trace every affected source triangle from resolved units. Add or update the structural guard when native lint does not prove README inclusion, specification-host and public-source-host lower bounds, anchor uniqueness, or transitive reachability.
@@ -145,7 +163,7 @@ Treat a dangling target as contract drift. Find whether the document, anchor, ro
 
 Treat an uncovered requirement during requirements-first work as visible implementation debt. A deliberately red graph is more accurate than a false specification or source citation. Record the phase and debt in `.wiki/` and the pull request instead of weakening the permanent rule.
 
-The scaffold production ladder is a separate graph with its own populations and topology. Its exact reusable target corpus includes principles, obligations, and production-specific discovery. Discovery is ordinary coverage over the owning authored H2 population, permits one truthful population-wide exclusion only for a complete search with no independent result, and is neither a per-unit checklist nor a repository contract triangle. Apply this skill's citation honesty and lint-inspection rules there, but use `packages/template/scaffold/.agents/skills/production/SKILL.md` to decide which production stage answers each target. Do not impose the repository requirement-specification-source triangle on generated productions.
+The scaffold production ladder is a separate graph with its own populations and topology. Its exact reusable target corpus includes principles, obligations, upstream revision, and production-specific discovery. Discovery is file-level coverage over the flat `docs/contracts/*.md` population, with one claim for each active authored Markdown layer. Upstream revision is an exclusion-permitted unit checklist over each inheriting authored or source population. A retained discovery result belongs in the contract file that states the adopted rule and an additive claim enforces it; a true no-result receives one concrete population-wide exclusion only in `docs/contracts/index.md`. Authored H2, H3, and H4 units never host the discovery audit. Apply this skill's citation honesty and lint-inspection rules there, but use `packages/template/scaffold/.agents/skills/production/SKILL.md` to decide which production stage answers each target. Do not impose the repository requirement-specification-source triangle on generated productions.
 
 ## Verify
 

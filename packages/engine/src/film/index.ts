@@ -1,5 +1,11 @@
 export * from "./blockBeat";
 export * from "./cameraMove";
+export * from "./cameraClearance";
+export {
+  compileCameraClearanceReports,
+  type IAutoMovieCameraClearanceRuntime,
+} from "./cameraClearancePerformance";
+export * from "./cameraDepthPrecision";
 export * from "./compileAttach";
 export * from "./compileLaunch";
 export * from "./cutSequence";

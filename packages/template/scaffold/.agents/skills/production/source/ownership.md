@@ -1,8 +1,10 @@
 # Source Ownership
 
-The coding agent owns `src`, `docs`, `test`, and declared assets. AutoMovie owns tracked design and review records under `automovie`. The compiler alone owns `generated`. Render commands own content-addressed `renders`.
+The coding agent owns `src`, `docs`, `test`, and declared assets. AutoMovie owns tracked design records under `automovie`; review observations remain in evidence citations and Git rather than a second project ledger. The compiler alone owns `generated`. Render commands own content-addressed `renders`.
 
 Deterministic derived artifacts have their own owner inside `automovie`. An explicit generation script you write publishes the exact bytes under `automovie/derived/` and the ledger that records their basis; compilation verifies both and never regenerates either. Hand-editing the bytes or the ledger, and registering a derived path in the external asset ledger, are both refused. [Compilation](compilation.md) owns that contract.
+
+`npm run derive:example` is an executable teaching specimen, not this production's generation command or a gate. It reads the fixed scaffold example `src/examples/buildings.ts` and publishes that example's line index so you can inspect or run one complete self-declaring generator and ledger publication. Its success proves only that the example is reproducible and satisfies no production obligation. When production source needs a precomputed result, create a production-named generator script and package command, declare the script itself, every input, and its project-owned output, then run that command explicitly before compiling.
 
 Never patch `generated` to fix a source problem. Its manifest records every compiler-owned path and digest; unowned or modified output blocks compilation. Edit the owning source or design, then run the scaffold compile command or the package compiler API.
 

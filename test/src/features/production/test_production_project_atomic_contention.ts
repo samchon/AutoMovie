@@ -42,6 +42,8 @@ import { productionFixture } from "./productionFixtures";
  * 3. A contended code that outlives every attempt surfaces as an aggregate that
  *    carries the original error and names the file that did not land, so an
  *    author reads what happened instead of an unhandled stack trace.
+ * 4. A final attempt that changes from contention to an unrelated failure
+ *    preserves that last refusal instead of misreporting exhausted contention.
  */
 export const test_production_project_atomic_contention = (): void => {
   const fixture = productionFixture();
@@ -172,6 +174,24 @@ export const test_production_project_atomic_contention = (): void => {
         "the message names the file that did not land": true,
         "the message says the project may now describe an older input": true,
       },
+    );
+
+    let changedAttempts = 0;
+    fs.renameSync = ((from: fs.PathLike, to: fs.PathLike) => {
+      if (isTarget(to) === false) return nativeRename(from, to);
+      changedAttempts += 1;
+      throw contended(changedAttempts < 5 ? "EBUSY" : "ENOSPC");
+    }) as typeof fs.renameSync;
+    const changed = refusal(() =>
+      AutoMovieProductionProject.open(fixture.root, PRODUCTION),
+    );
+    TestValidator.equals(
+      "a final non-contention failure remains the actual refusal",
+      {
+        attempts: changedAttempts,
+        code: changed?.code,
+      },
+      { attempts: 5, code: "ENOSPC" },
     );
   } finally {
     fs.renameSync = nativeRename;

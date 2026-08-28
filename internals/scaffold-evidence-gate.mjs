@@ -40,7 +40,7 @@ const TSCONFIG = JSON.parse(
  *
  * The list is derived from the scaffold's own `include` rather than written
  * down here, because a hand-written list is exactly how this gate came to miss
- * the file that killed a generated project: it named `src` and `lint.config.ts`
+ * the file that killed a generated project: it named `src` and `lint.config.mjs`
  * while `npm run lint:source` compiles `viewer/src`, `scripts`, `test` and the
  * two root configs as well, so `viewer/src/subject.ts` failed
  * `typescript/switch-exhaustiveness-check` on a user's first `npm run lint`
@@ -59,7 +59,7 @@ const INHERITED = ["AGENTS.md", "docs", ...TSCONFIG.include];
  * an instrument that stopped running, and both of the ways this instrument
  * stops were observed while it was built: `ttsc` reports no lint diagnostic at
  * all when the project does not declare the plugins as dependencies, and none
- * when `lint.config.ts` fails to evaluate. The symptom of each is an empty
+ * when `lint.config.mjs` fails to evaluate. The symptom of each is an empty
  * diagnostic set that reads exactly like a paid graph and clean source.
  *
  * The evidence canary is an exported property citing nothing, planted under
@@ -311,9 +311,10 @@ const inherit = (relative) => {
  * because `ttsc` decides whether to lint at all from the project's declared
  * dependencies, the lint config imports the reusable graph package, and its
  * explicit Node type reference must resolve while the isolated evaluator checks
- * both `import.meta.dirname` and that package's Node-backed implementation. The
- * real scaffold declares all three. The canary pass proves the two runtime
- * declarations took effect, while the paid pass exercises the type declaration.
+ * both the runtime-validated `import.meta.dirname` capability and that package's
+ * Node-backed implementation. The real scaffold declares all three. The canary
+ * pass proves the two runtime declarations took effect, while the paid pass
+ * exercises the type declaration.
  *
  */
 const render = () => {
@@ -364,6 +365,51 @@ const render = () => {
     "utf8",
   );
 
+  // Native ESM lint configuration executes in plain Node, exactly as it does
+  // in an installed production. Give that evaluator the publish view instead
+  // of the workspace package whose development exports point at TypeScript.
+  const linkedEvidence = path.join(
+    PROBE,
+    "node_modules",
+    "@automovie",
+    "evidence",
+  );
+  fs.mkdirSync(linkedEvidence, { recursive: true });
+  fs.cpSync(
+    path.join(ROOT, "packages", "evidence", "lib"),
+    path.join(linkedEvidence, "lib"),
+    { recursive: true },
+  );
+  fs.writeFileSync(
+    path.join(linkedEvidence, "package.json"),
+    `${JSON.stringify(
+      {
+        name: "@automovie/evidence",
+        version: "0.0.0",
+        main: "./lib/index.js",
+        types: "./lib/index.d.ts",
+        exports: {
+          ".": {
+            types: "./lib/index.d.ts",
+            default: "./lib/index.js",
+          },
+        },
+      },
+      null,
+      2,
+    )}\n`,
+    "utf8",
+  );
+  for (const dependency of ["@ttsc/evidence", "typescript-compiler"]) {
+    const target = path.join(PROBE, "node_modules", dependency);
+    fs.mkdirSync(path.dirname(target), { recursive: true });
+    fs.symlinkSync(
+      path.join(ROOT, "node_modules", dependency),
+      target,
+      "junction",
+    );
+  }
+
   fs.writeFileSync(
     path.join(PROBE, "package.json"),
     `${JSON.stringify(
@@ -410,7 +456,7 @@ const render = () => {
           typeRoots: typeRoots(),
           paths: modulePaths(),
         },
-        files: ["lint.config.ts", "test/scaffold.test.ts"],
+        files: ["lint.config.mjs", "test/scaffold.test.ts"],
       },
       null,
       2,
@@ -455,147 +501,203 @@ const contractAnchors = (relative) =>
  * library-settings population.
  *
  * This is deliberately generated after the blank-scaffold pass. The public
- * scaffold must contain no production prose or evidence tags, but inspecting
+ * scaffold must contain no production-authored documents or evidence tags, but inspecting
  * config structure alone cannot prove that its real shared claims accept a
- * paid population. Seven independent H2 owners cover the seven distributed
- * settings roles; each H2 pays every per-unit common obligation, while the
- * population pays every discovery target and the file pays every file-level
- * common and settings principle.
+ * paid population. Sixteen independent primary H2 owners cover the sixteen settings
+ * obligations, every H2 answers every common and settings principle for
+ * itself, and the separate contract index carries the complete truthful
+ * negative discovery audit. Settings has no inherited file relationship to
+ * pay.
  */
 const activatePaidSettings = () => {
-  const configFile = path.join(PROBE, "lint.config.ts");
+  const configFile = path.join(PROBE, "productionEvidence.mjs");
   const config = fs.readFileSync(configFile, "utf8");
-  const selector = '  kind: null,\n  settings: "disabled",';
-  if (config.split(selector).length !== 2)
+  const kindSelector = "  kind: null,";
+  const settingsSelector = '  settings: "disabled",';
+  if (
+    config.split(kindSelector).length !== 2 ||
+    config.split(settingsSelector).length !== 2
+  )
     throw new Error(
       "The scaffold graph selector changed; update the active settings probe before trusting this gate.",
     );
   fs.writeFileSync(
     configFile,
-    config.replace(selector, '  kind: "library",\n  settings: "evidence",'),
+    config
+      .replace(kindSelector, '  kind: "library",')
+      .replace(settingsSelector, '  settings: "evidence",'),
     "utf8",
   );
 
   const principleTargets = [
-    ...contractAnchors("principles/common.md"),
-    ...contractAnchors("principles/settings.md"),
+    ...contractAnchors("principles/core/common.md"),
+    ...contractAnchors("principles/core/settings.md"),
   ];
-  const commonTargets = contractAnchors("obligations/common.md");
-  const fileReasons = Object.freeze({
-    "principles/common.md#purpose-fit":
-      "This file exists only to prove that the active settings graph accepts a fully paid disposable population and rejects a missing relationship.",
-    "principles/common.md#layer-boundary":
-      "Every H2 states a compiler-calibration setting; none authors design, narrative, source implementation, or audience content.",
-    "principles/common.md#declared-basis":
-      "The preamble and every status line declare these facts as disposable production inventions rather than external claims.",
-    "principles/common.md#production-language":
-      "The complete file uses one consistent English calibration vocabulary for its repository-gate reader.",
-    "principles/settings.md#addressable-canon":
-      "Delivery, aim, access, convention, review condition, domain coverage, and operative-subject accounting each have one independently addressable H2 owner.",
-    "principles/settings.md#information-structure":
-      "Each H2 opens with status and one bounded statement of its owner, condition, and compiler consequence.",
-    "principles/settings.md#fact-status":
-      "Every H2 explicitly labels its calibration fact as a production invention scoped to this disposable probe.",
-    "principles/settings.md#source-support":
-      "The file makes no externally checkable production claim and attaches no external authority to its invented calibration facts.",
-    "principles/settings.md#capability-boundary":
-      "The delivery scope explicitly excludes any delivered-subject or environment capability, leaving none for downstream source to guess.",
-    "principles/settings.md#constraint-sufficiency":
-      "The seven owners bound the operator, observable diagnostic result, path and time units, operative subjects, and every excluded production domain.",
-    "principles/settings.md#observable-identity":
-      "The file defines no delivered-subject, place, or audible identity and confines its only observable result to classified compiler diagnostics.",
-    "principles/settings.md#minimal-departure":
-      "Only calibration-specific departures are authored; all unrelated production domains are explicitly outside this disposable delivery.",
-    "principles/settings.md#internal-coherence":
-      "The declared repository-relative paths, millisecond time, sole operator, and diagnostic review condition describe one compatible result.",
-  });
-  const commonReason = (target, unit) => {
+  const obligationTargets = [
+    ...contractAnchors("obligations/core/common.md"),
+    ...contractAnchors("obligations/core/settings.md"),
+  ];
+  const principleReason = (target, unit) => {
     const anchor = target.slice(target.indexOf("#") + 1);
     if (anchor === "scope-preservation")
       return `${unit.title} owns its one named settings role and leaves no promised descendant or delivery fact inside that role unassigned.`;
     if (anchor === "substantive-completion")
       return `${unit.title} states the complete calibration decision needed from this settings role rather than a placeholder for downstream work.`;
-    if (anchor === "proportionate-development")
-      return `${unit.title} receives one bounded H2 because its role is independently cited, while no subordinate production detail is invented.`;
     if (anchor === "machine-default")
       return `${unit.title} carries none of the marks: it states its calibration decision in plain declaratives with no restating closer, and its shape follows the information-structure rule this file cites rather than an untouched default.`;
     if (anchor === "evidence-content-conformance")
-      return `${unit.title} cites only the file rules and distributed settings role that its stated calibration fact actually realizes.`;
+      return `${unit.title} cites only the unit principles and population roles that its concrete calibration statement actually realizes.`;
+    if (anchor === "declared-basis")
+      return `${unit.title} declares its statement as a local disposable calibration choice and derives no authority from an unstated external source.`;
+    if (anchor === "information-structure")
+      return `${unit.title} is one addressable H2 with an explicit status and one bounded settings decision.`;
+    if (anchor === "fact-status")
+      return `${unit.title} labels its fact as a production invention valid only in this disposable compiler probe.`;
+    if (anchor === "source-support")
+      return `${unit.title} makes no externally checkable claim and therefore needs no external source beyond its declared local calibration basis.`;
+    if (anchor === "capability-boundary")
+      return `${unit.title} confines its capability claim to the compiler calibration role stated in this H2 and invents no downstream production capability.`;
+    if (anchor === "constraint-sufficiency")
+      return `${unit.title} states the actor, condition, and observable compiler consequence needed to use this one settings decision without downstream guessing.`;
+    if (anchor === "observable-identity")
+      return `${unit.title} defines no delivered person, place, object, or sound; its only observable identity is the named compiler-calibration result.`;
     throw new Error(`No paid-probe reason owns ${target}.`);
   };
   const discoveryExclusions = Object.freeze({
-    "discovery/common.md#shared-local-boundary":
+    "discovery/core/common.md#shared-local-boundary":
       "The probe examined its compiler-calibration directive, library promise, repository-gate operator, shared contracts, dependencies, sole planned compiler-diagnostic consumer, and false-green risk; the shared principles and settings obligations fully own them, so no independent cross-layer condition remains.",
-    "discovery/common.md#canonical-realization":
-      "After examining the calibration directive, library promise, operator, dependencies, sole planned compiler-diagnostic consumer, and false-owner risk, the complete boundary search retained no independent production contract; the seven settings owners and shared claim wiring are sufficient, so no additional semantic owner or additive claim exists.",
-    "discovery/settings.md#directive-promise-subject-requirements":
-      "The probe examined its direct calibration instruction, diagnostic promise, operator, file dependency, sole planned compiler-diagnostic consumer, unowned-subject risk, and false-green failure; the seven settings owners classify them completely without an additional production-specific fact or constraint.",
-    "discovery/settings.md#planned-delivery-backcast":
-      "Backcasting this settings-only library from its calibration instruction and config through the sole planned compiler-diagnostic consumer and its downstream-invention and false-green risks found no fact beyond the delivery, aim, access, unit, review, coverage, and operative-subject owners already present.",
+    "discovery/core/common.md#canonical-realization":
+      "After examining the calibration directive, library promise, operator, dependencies, sole planned compiler-diagnostic consumer, and false-owner risk, the complete boundary search retained no independent production contract; the sixteen settings owners and shared claim wiring are sufficient, so no additional semantic owner or additive claim exists.",
+    "discovery/core/settings.md#directive-promise-subject-requirements":
+      "The probe examined its direct calibration instruction, diagnostic promise, operator, file dependency, sole planned compiler-diagnostic consumer, unowned-subject risk, and false-green failure; the sixteen settings owners classify them completely without an additional production-specific fact or constraint.",
+    "discovery/core/settings.md#planned-delivery-backcast":
+      "Backcasting this settings-only library from its calibration instruction and config through the sole planned compiler-diagnostic consumer and its downstream-invention and false-green risks found no fact beyond the delivery, aim, visual-grammar, fidelity, build-or-adopt, access, accessibility, unit, review, coverage, operative-subject, agency, design-condition, inherited-default, and coherence owners already present.",
   });
   const settingsUnits = [
     {
+      anchor: "probe-addressable-canon",
+      title: "Probe addressable canon",
+      obligations: [
+        "obligations/core/settings.md#addressable-canon",
+        "obligations/core/common.md#proportionate-development",
+      ],
+      body: "Sixteen independently addressable H2 owners divide the complete settings contract without a catch-all owner or a hidden descendant.",
+    },
+    {
       anchor: "probe-delivery-scope",
       title: "Probe delivery scope",
-      obligation: "obligations/settings.md#delivery-scope",
-      body: "This disposable library delivers only a compiler calibration result: the active settings graph must accept this complete population and no production artifact is published.",
-      discovery: [
-        "discovery/common.md#shared-local-boundary",
-        "discovery/common.md#canonical-realization",
+      obligations: [
+        "obligations/core/settings.md#delivery-scope",
+        "obligations/core/common.md#purpose-fit",
       ],
+      body: "This disposable library delivers only a compiler calibration result: the active settings graph must accept this complete population and no production artifact is published.",
     },
     {
       anchor: "probe-governing-aim",
       title: "Probe governing aim",
-      obligation: "obligations/settings.md#governing-aim",
+      obligations: ["obligations/core/settings.md#governing-aim"],
       body: "The governing aim is to distinguish a fully paid shared graph from a graph that silently stopped enforcing one configured relationship.",
+    },
+    {
+      anchor: "probe-production-visual-grammar",
+      title: "Probe production visual grammar",
+      obligations: ["obligations/core/settings.md#production-visual-grammar"],
+      body: "This compiler calibration promises no visible surface, color, silhouette, material, spatial design, registered visual reference, or external rendition; that explicit absence is its complete production-wide visual boundary.",
+    },
+    {
+      anchor: "probe-production-fidelity-tier",
+      title: "Probe production fidelity tier",
+      obligations: ["obligations/core/settings.md#production-fidelity-tier"],
+      body: "The diagnostic-only tier supports exactly one inference: whether the configured evidence graph accepts or rejects the disposable calibration; it is neither a rendered prototype nor an audience image and authorizes no visual inference.",
+    },
+    {
+      anchor: "probe-subject-breakdown-production-scope",
+      title: "Probe subject breakdown and production scope",
+      obligations: [
+        "obligations/core/settings.md#subject-breakdown-production-scope",
+      ],
+      body: "The promised compiler result requires no map, model, space, material, instance, motion, system, external asset, or rendition to build, adopt, reuse, or derive; the generated lint configuration and this settings population are existing harness inputs rather than delivery assets.",
     },
     {
       anchor: "probe-operator-access",
       title: "Probe operator access",
-      obligation: "obligations/settings.md#audience-operator-access",
+      obligations: ["obligations/core/settings.md#audience-operator-access"],
       body: "The repository gate is the sole operator and may observe only compiler exit status and classified diagnostics from this disposable directory.",
+    },
+    {
+      anchor: "probe-accessibility-deliverable-states",
+      title: "Probe accessibility deliverable states",
+      obligations: [
+        "obligations/core/settings.md#accessibility-deliverable-states",
+      ],
+      body: "Operator-readable English text diagnostics are required and realized by compiler output; captions, subtitles, transcripts, audio description, media alternatives, and interactive controls are intentionally absent because this calibration has no timed media, audio, image, or user interface; the consequence is that the repository-gate operator receives no timed-text, synchronized transcript, described-media, media-alternative, or interactive accessibility surface, while no applicable accessibility product remains optional or silently unsupported.",
     },
     {
       anchor: "probe-coordinate-unit-convention",
       title: "Probe coordinate and unit convention",
-      obligation: "obligations/settings.md#coordinate-unit-convention",
+      obligations: ["obligations/core/settings.md#coordinate-unit-convention"],
       body: "Paths are repository-relative POSIX strings, elapsed time is measured in milliseconds, and no spatial world is represented by this compiler-only probe.",
     },
     {
       anchor: "probe-delivery-review-condition",
       title: "Probe delivery review condition",
-      obligation: "obligations/settings.md#delivery-review-condition",
+      obligations: ["obligations/core/settings.md#delivery-review-condition"],
       body: "The result is reviewable only when the paid population yields no evidence or correctness diagnostic other than declared uninstalled-probe noise.",
     },
     {
       anchor: "probe-settings-coverage-map",
       title: "Probe settings coverage map",
-      obligation: "obligations/settings.md#settings-coverage-map",
-      body: "Delivery, aim, operator access, coordinate convention, and review condition each have the separate owner above; every other production domain is outside this compiler calibration scope.",
-      discovery: ["discovery/settings.md#planned-delivery-backcast"],
+      obligations: [
+        "obligations/core/settings.md#settings-coverage-map",
+        "obligations/core/common.md#layer-boundary",
+      ],
+      body: "Open discovery of the compiler calibration's direct inputs and planned consumers requires its addressability, delivery, aim, visual grammar, fidelity tier, build-or-adopt scope, operator access, accessibility state, coordinate convention, review condition, coverage map, operative-subject inventory, agency, design-dependent subject condition, inherited-default boundary, and coherence owners. All sixteen are explicit canon in separate H2s, and no material settings requirement remains inherited, outside scope, or unresolved.",
     },
     {
       anchor: "probe-operative-subject-inventory",
       title: "Probe operative subject inventory",
-      obligation: "obligations/settings.md#operative-subject-inventory",
+      obligations: ["obligations/core/settings.md#operative-subject-inventory"],
       body: "The repository gate is the only operative subject: it controls the compile, observes the diagnostic result, and has no independent person, collective, object, environmental agent, institution, subsystem, or affected population left unclassified.",
-      discovery: [
-        "discovery/settings.md#directive-promise-subject-requirements",
+    },
+    {
+      anchor: "probe-agency-and-limits",
+      title: "Probe agency and limits",
+      obligations: ["obligations/core/settings.md#agency-and-limits"],
+      body: "The repository gate may start or decline the compile, read its exit status and classified diagnostics, and refuse a false green; once any owed diagnostic appears, the zero-owed-diagnostic threshold is crossed and it must block publication until the relationship is repaired and the compile reruns. It cannot alter contract inventory, suppress a configured relationship, or publish a successful result after that threshold. No physical, financial, or private cost is authored; the bounded operational cost is repair and rerun, and its vulnerability is a configured relationship being silently suppressed.",
+    },
+    {
+      anchor: "probe-design-dependent-subject-conditions",
+      title: "Probe design-dependent subject conditions",
+      obligations: [
+        "obligations/core/settings.md#design-dependent-subject-conditions",
       ],
+      body: "No dimension, route, control geometry, view, interaction, or acceptance threshold in this compiler-only calibration depends on a bodily, sensory, equipment, load, assistance, or movement profile; operator text access remains separately owned by the access and accessibility-deliverable units.",
+    },
+    {
+      anchor: "probe-minimal-departure",
+      title: "Probe minimal departure",
+      obligations: ["obligations/core/settings.md#minimal-departure"],
+      body: "The production departs from shared defaults only by activating this disposable settings-only calibration; all design, narrative, source, render, and delivery content remains absent.",
+    },
+    {
+      anchor: "probe-internal-coherence",
+      title: "Probe internal coherence",
+      obligations: [
+        "obligations/core/settings.md#internal-coherence",
+        "obligations/core/common.md#production-language",
+      ],
+      body: "Repository-relative POSIX paths, milliseconds, one repository-gate operator, compiler diagnostics, and consistent English calibration vocabulary form one compatible settings contract.",
     },
   ];
-  const fileEvidence = principleTargets.map((target) => {
-    const reason = fileReasons[target];
-    if (reason === undefined)
-      throw new Error(`No paid-probe reason owns ${target}.`);
-    return `@evidence ${target} ${reason}`;
-  });
+  const ownedObligations = new Set(
+    settingsUnits.flatMap((unit) => unit.obligations),
+  );
+  for (const target of obligationTargets)
+    if (ownedObligations.has(target) === false)
+      throw new Error(`No paid-probe H2 owns ${target}.`);
+  const obligationLine = (target, unit) =>
+    `@evidence ${target} ${unit.title} is the population owner that states this role concretely: ${unit.body}`;
   const body = [
-    "<!--",
-    ...fileEvidence,
-    "-->",
-    "",
     "# Active settings graph probe",
     "",
     "Every fact below is a production invention valid only inside this disposable compiler calibration.",
@@ -604,16 +706,10 @@ const activatePaidSettings = () => {
       `## ${unit.title} {#${unit.anchor}}`,
       "",
       "<!--",
-      ...commonTargets.map(
-        (target) => `@evidence ${target} ${commonReason(target, unit)}`,
+      ...principleTargets.map(
+        (target) => `@evidence ${target} ${principleReason(target, unit)}`,
       ),
-      ...(unit.discovery ?? []).map((target) => {
-        const reason = discoveryExclusions[target];
-        if (reason === undefined)
-          throw new Error(`No paid-probe discovery reason owns ${target}.`);
-        return `@evidenceExclude ${target} ${reason}`;
-      }),
-      `@evidence ${unit.obligation} This unit is the population owner that directly states the named settings role.`,
+      ...unit.obligations.map((target) => obligationLine(target, unit)),
       "-->",
       "",
       "**Status:** production invention, disposable compiler calibration.",
@@ -625,17 +721,57 @@ const activatePaidSettings = () => {
   const target = path.join(PROBE, "docs", "settings", "production.md");
   fs.mkdirSync(path.dirname(target), { recursive: true });
   fs.writeFileSync(target, body, "utf8");
+  const discoveryLines = Object.entries(discoveryExclusions).map(
+    ([discoveryTarget, reason]) =>
+      `@evidenceExclude ${discoveryTarget} ${reason}`,
+  );
+  const discoveryFile = path.join(PROBE, "docs", "contracts", "index.md");
+  fs.mkdirSync(path.dirname(discoveryFile), { recursive: true });
+  fs.writeFileSync(
+    discoveryFile,
+    [
+      "<!--",
+      ...discoveryLines,
+      "-->",
+      "",
+      "# Work-specific contract audit",
+      "",
+      "This disposable compiler probe retained no independent production rule after the complete settings-layer discovery audit.",
+      "",
+    ].join("\n"),
+    "utf8",
+  );
+  const obligationUnderpayment = (obligationTarget) => {
+    const unit = settingsUnits.find((candidate) =>
+      candidate.obligations.includes(obligationTarget),
+    );
+    if (unit === undefined)
+      throw new Error(`The paid probe lost its ${obligationTarget} owner.`);
+    return {
+      file: target,
+      line: obligationLine(obligationTarget, unit),
+      target: obligationTarget,
+    };
+  };
   return {
-    file: target,
     underpayments: [
       {
-        line: `@evidenceExclude discovery/common.md#shared-local-boundary ${discoveryExclusions["discovery/common.md#shared-local-boundary"]}`,
-        target: "discovery/common.md#shared-local-boundary",
+        file: discoveryFile,
+        line: `@evidenceExclude discovery/core/common.md#shared-local-boundary ${discoveryExclusions["discovery/core/common.md#shared-local-boundary"]}`,
+        target: "discovery/core/common.md#shared-local-boundary",
       },
-      {
-        line: "@evidence obligations/settings.md#operative-subject-inventory This unit is the population owner that directly states the named settings role.",
-        target: "obligations/settings.md#operative-subject-inventory",
-      },
+      obligationUnderpayment(
+        "obligations/core/settings.md#operative-subject-inventory",
+      ),
+      obligationUnderpayment(
+        "obligations/core/settings.md#design-dependent-subject-conditions",
+      ),
+      obligationUnderpayment(
+        "obligations/core/settings.md#production-visual-grammar",
+      ),
+      obligationUnderpayment(
+        "obligations/core/settings.md#accessibility-deliverable-states",
+      ),
     ],
   };
 };
@@ -810,18 +946,19 @@ const main = () => {
   }
   report([" active graph: paid settings population passed"]);
 
-  const paidSource = fs.readFileSync(active.file, "utf8");
   for (const underpayment of active.underpayments) {
+    const paidSource = fs.readFileSync(underpayment.file, "utf8");
     if (paidSource.split(underpayment.line).length !== 2)
       throw new Error(
         `The paid settings probe no longer has exactly one ${underpayment.target} acknowledgement.`,
       );
     fs.writeFileSync(
-      active.file,
+      underpayment.file,
       paidSource.replace(underpayment.line, ""),
       "utf8",
     );
     const underpaidRun = compile();
+    fs.writeFileSync(underpayment.file, paidSource, "utf8");
     const underpaidDiagnostics = parse(underpaidRun.output);
     const underpaidEvidence = underpaidDiagnostics.filter(
       (diagnostic) => axisOf(diagnostic) === "evidence",
@@ -851,11 +988,29 @@ const main = () => {
       ` active graph: removed ${underpayment.target} was rejected by evidence/graph`,
     ]);
   }
+  render();
+  const restoredScaffoldGraphTests = testGraph({
+    cwd: PROBE,
+    project: "test-tsconfig.json",
+    file: "test/scaffold.test.ts",
+  });
+  if (restoredScaffoldGraphTests.status !== 0) {
+    report([
+      "",
+      "FAIL: the final generated cache retained paid-probe state instead of the blank scaffold.",
+      ...restoredScaffoldGraphTests.output
+        .split(/\r?\n/u)
+        .map((line) => ` | ${line}`),
+    ]);
+    process.exitCode = 1;
+    return;
+  }
+  report([" cache restore: fresh blank generated-project consumer passed"]);
   report([
     "",
-    "PASS: the scaffold's obligation graph is paid and its own lint rules hold over",
+    "PASS: the scaffold's production evidence graph is paid and its own lint rules hold over",
     " everything `npm run lint:source` compiles. The two blank-scaffold canaries,",
-    " paid active settings population, and two underpaid twins prove both lint",
+    " paid active settings population, and isolated underpayment probes prove both lint",
     " axes and both directions of the real shared graph. The noise count is what",
     " a probe that installs nothing cannot resolve; it is reported, never gated.",
   ]);

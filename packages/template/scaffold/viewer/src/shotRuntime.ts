@@ -17,6 +17,7 @@ import type {
   AutoMovieExpressionPreset,
   AutoMovieGuidePass,
   IAutoMovieCompiledShotSource,
+  IAutoMovieDeliveryCrop,
   IAutoMovieExpression,
   IAutoMovieSoftBodyDomain,
   IAutoMovieTransform,
@@ -24,12 +25,14 @@ import type {
 import {
   AutoMoviePlayer,
   type IAutoMovieModelObject,
+  applyAutoMovieDeliveryCrop,
   applyLightMotion,
   applyObjectMotion,
   applyObjectMotions,
   applyPose,
   applyRenderMode,
   applyRendererEnvironment,
+  assertAutoMovieViewerCameraDepthPrecision,
   buildAutoMovieMaterialLibrary,
   buildFluidSprayObject,
   buildFluidSurfaceObject,
@@ -43,6 +46,7 @@ import {
 } from "@automovie/viewer";
 import * as THREE from "three";
 
+import { selectProductionLiveWearableSoftBodies } from "../../scripts/productionConfiguration";
 import type { IAutoMovieProductionDialogueRuntime } from "../../scripts/productionRuntimeState";
 import { createShotTextureCache, loadCompiledModel } from "./loadCompiledModel";
 
@@ -143,34 +147,12 @@ export interface IAutoMovieProductionWearableSoftSelection {
   maxSubjects: number;
 }
 
-/** Resolve only the wearable domain ids the production explicitly selected. */
+/** Resolve one shot's exact share of the production-wide live-soft selection. */
 export const selectProductionWearableSoftBodies = (
   domains: readonly IAutoMovieSoftBodyDomain[],
   selected: readonly string[],
-): IAutoMovieProductionWearableSoftSelection[] => {
-  const available = new Map<string, IAutoMovieSoftBodyDomain>();
-  for (const domain of domains) {
-    if (domain.id.trim().length === 0 || available.has(domain.id))
-      throw new Error(
-        "Compiled soft-body domain ids must be non-blank and unique.",
-      );
-    available.set(domain.id, domain);
-  }
-  const seen = new Set<string>();
-  return selected.map((id, subjectIndex) => {
-    if (id.trim().length === 0 || seen.has(id))
-      throw new Error(
-        "Live wearable soft-body ids must be non-blank and unique.",
-      );
-    seen.add(id);
-    const domain = available.get(id);
-    if (domain === undefined)
-      throw new Error(
-        `Live wearable soft body "${id}" is absent from this compiled shot.`,
-      );
-    return { domain, subjectIndex, maxSubjects: selected.length };
-  });
-};
+): IAutoMovieProductionWearableSoftSelection[] =>
+  selectProductionLiveWearableSoftBodies(domains, selected);
 
 export interface IAutoMovieCompiledShotRuntime {
   id: string;
@@ -228,6 +210,8 @@ export const createCompiledShotRuntime = async (
   runtime?: {
     /** Final-byte dialogue timelines installed before capture. */
     dialogue?: IAutoMovieProductionDialogueRuntime | null;
+    /** Normalized production delivery crop for shot and film pages. */
+    deliveryCrop?: IAutoMovieDeliveryCrop;
     /** Explicitly admitted live moving soft-body domain ids. */
     liveWearableSoftBodies?: readonly string[];
   },
@@ -618,8 +602,12 @@ export const createCompiledShotRuntime = async (
   const cameraIndex = compiled.scene.cameras.findIndex(
     (item) => item.id === compiled.shot.camera,
   );
-  const camera = scene.cameras[cameraIndex < 0 ? 0 : cameraIndex];
-  if (camera === undefined) throw new Error("Compiled scene has no camera.");
+  const selectedCameraIndex = cameraIndex < 0 ? 0 : cameraIndex;
+  const sourceCamera = compiled.scene.cameras[selectedCameraIndex];
+  const camera = scene.cameras[selectedCameraIndex];
+  if (sourceCamera === undefined || camera === undefined)
+    throw new Error("Compiled scene has no camera.");
+  applyAutoMovieDeliveryCrop(camera, runtime?.deliveryCrop);
   const stagedCamera = {
     position: camera.position.clone(),
     quaternion: camera.quaternion.clone(),
@@ -653,6 +641,11 @@ export const createCompiledShotRuntime = async (
     pass: AutoMovieGuidePass,
     globalFrame: number | null = null,
   ): string => {
+    assertAutoMovieViewerCameraDepthPrecision({
+      renderer,
+      source: sourceCamera,
+      realized: camera,
+    });
     const liveResults = liveSoftObjects.map((item) => ({
       item,
       solved: solveLiveSoft(item.selection, time),

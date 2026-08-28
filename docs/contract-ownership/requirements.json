@@ -2,6 +2,18 @@
   "version": 1,
   "layer": "requirements",
   "declarations": {
+    "requirements/README.md#requirements-topics": {
+      "owner": {
+        "kind": "excluded",
+        "reason": "This navigation heading only lists requirement topic documents and states no independently observable product behavior."
+      }
+    },
+    "requirements/acceptance/evidence-and-freshness.md#acceptance-current-historical-evidence": {
+      "owner": {
+        "kind": "package",
+        "package": "@automovie/interface"
+      }
+    },
     "requirements/acceptance/profiles-and-aggregation.md#acceptance-required-severity": {
       "owner": {
         "kind": "package",
@@ -126,6 +138,12 @@
       "owner": {
         "kind": "package",
         "package": "@automovie/interface"
+      }
+    },
+    "requirements/agent-authoring/project-ownership.md#agent-authoring-tool-replaceability": {
+      "owner": {
+        "kind": "package",
+        "package": "automovie"
       }
     },
     "requirements/agent-authoring/roles-and-authorities.md#agent-author-authority": {
@@ -1214,6 +1232,18 @@
         "package": "@automovie/engine"
       }
     },
+    "requirements/interior/external-assets-and-placement.md#interior-external-adoption-choice": {
+      "owner": {
+        "kind": "excluded",
+        "reason": "The current prototype records external-model provenance and validates placed references, but no package owns the complete user choice among direct placement, native conversion, and group composition with current evidence."
+      }
+    },
+    "requirements/interior/external-assets-and-placement.md#interior-external-asset-placement": {
+      "owner": {
+        "kind": "excluded",
+        "reason": "No current package owns this parent unit's complete adoption, conversion, grouping, host-constraint, resource-closure, and provenance surface; narrower ingest and placement mechanics cannot truthfully claim all descendants."
+      }
+    },
     "requirements/interior/floors-and-raised-floors.md#interior-floor-contact-scope": {
       "owner": {
         "kind": "package",
@@ -1400,6 +1430,12 @@
         "package": "@automovie/engine"
       }
     },
+    "requirements/interior/tolerances-and-imperfections.md#interior-imperfection-authoring-choice": {
+      "owner": {
+        "kind": "package",
+        "package": "@automovie/engine"
+      }
+    },
     "requirements/interior/validation-and-iteration.md#interior-addressable-diagnostics": {
       "owner": {
         "kind": "package",
@@ -1440,6 +1476,12 @@
       "owner": {
         "kind": "package",
         "package": "@automovie/engine"
+      }
+    },
+    "requirements/interior/wear-soiling-and-aging.md#interior-aging-authoring-choice": {
+      "owner": {
+        "kind": "excluded",
+        "reason": "The current prototype can render authored static material state but has no package contract for aging cause, severity, phase continuity, or automatic-aging refusal; assigning that wider choice would manufacture an owner."
       }
     },
     "requirements/interior/wet-areas-and-waterproofing.md#interior-waterproof-assembly": {
@@ -2498,19 +2540,73 @@
         "package": "@automovie/interface"
       }
     },
-    "requirements/review/annotations-findings-and-verdicts.md#review-finding-lifecycle": {
+    "requirements/repaint/providers-models-and-credentials.md#repaint-provider-terms": {
+      "owner": {
+        "kind": "package",
+        "package": "@automovie/production"
+      }
+    },
+    "requirements/repaint/retries-seeds-and-variation.md#repaint-attempt-failure-provenance": {
+      "owner": {
+        "kind": "package",
+        "package": "@automovie/production"
+      }
+    },
+    "requirements/repaint/retries-seeds-and-variation.md#repaint-one-accepted-lineage": {
+      "owner": {
+        "kind": "package",
+        "package": "@automovie/production"
+      }
+    },
+    "requirements/repaint/retries-seeds-and-variation.md#repaint-retry-budget-stop": {
+      "owner": {
+        "kind": "package",
+        "package": "@automovie/production"
+      }
+    },
+    "requirements/repaint/sequence-continuity-and-publication.md#repaint-continuity-baseline-changes": {
+      "owner": {
+        "kind": "package",
+        "package": "@automovie/production"
+      }
+    },
+    "requirements/repaint/sequence-continuity-and-publication.md#repaint-publication-gate": {
+      "owner": {
+        "kind": "package",
+        "package": "@automovie/production"
+      }
+    },
+    "requirements/repaint/sequence-continuity-and-publication.md#repaint-temporal-artifacts": {
+      "owner": {
+        "kind": "package",
+        "package": "@automovie/production"
+      }
+    },
+    "requirements/review/subject-inspection.md#review-library-delivery-coverage": {
+      "owner": {
+        "kind": "package",
+        "package": "@automovie/production"
+      }
+    },
+    "requirements/review/subject-inspection.md#review-observable-judgeable-parity": {
       "owner": {
         "kind": "package",
         "package": "@automovie/interface"
       }
     },
-    "requirements/review/annotations-findings-and-verdicts.md#review-observation-interpretation": {
+    "requirements/review/subject-inspection.md#review-subject-evidence": {
       "owner": {
         "kind": "package",
-        "package": "@automovie/engine"
+        "package": "@automovie/interface"
       }
     },
-    "requirements/review/records-and-completeness.md#review-verdict-receipt": {
+    "requirements/review/subject-inspection.md#review-subject-inspection-reach": {
+      "owner": {
+        "kind": "package",
+        "package": "@automovie/viewer"
+      }
+    },
+    "requirements/review/subject-inspection.md#review-subject-time-noninterchange": {
       "owner": {
         "kind": "package",
         "package": "@automovie/interface"
@@ -2613,6 +2709,12 @@
       }
     },
     "requirements/sound/sources-and-external-assets.md#sound-derived-source-closure": {
+      "owner": {
+        "kind": "package",
+        "package": "@automovie/interface"
+      }
+    },
+    "requirements/sound/sources-and-external-assets.md#sound-source-provenance": {
       "owner": {
         "kind": "package",
         "package": "@automovie/interface"
@@ -2961,7 +3063,6 @@
     "requirements/README.md#requirements-language-trace": "sha256:aafc3a7351c8e15ee03dd5bc47a140ff227e50b9e87a71a280adbdaf5c0ad60f",
     "requirements/README.md#requirements-role": "sha256:de3bed8ea99856774bd08caf43a6049263c11b01d2a2c82656a3aab167511112",
     "requirements/README.md#requirements-spatial-boundaries": "sha256:6c18f5dba33bbde42833484f4a2864c9f382a516e38a992972db804e14ad59da",
-    "requirements/README.md#requirements-topics": "sha256:0af5cf92906d959af7870c69ff1572dfdb37cca4d36fb388cd11360ca6d637ba",
     "requirements/acceptance/README.md#acceptance-core-contract": "sha256:fa9de322274932b86ee8e7df1885eda21f6118b96f4205f2e49c4e7961d08ab7",
     "requirements/acceptance/README.md#acceptance-document-map": "sha256:5867e00b2fc8c9709a068e7fcd87ffca65c55200deed27ec8421eba196e9cd48",
     "requirements/acceptance/README.md#acceptance-honest-outcome": "sha256:0c4c5f6348808532e6a3207b23cb092697d5476762b13fc2a56e71f37ed53994",
@@ -3009,7 +3110,6 @@
     "requirements/acceptance/criteria-and-observables.md#acceptance-structural-observable": "sha256:7d85ff1e291e0bfacae84d6eadecca0d89426cad2c6b48dbb8787ba371d8cb7b",
     "requirements/acceptance/criteria-and-observables.md#acceptance-subjective-verdict-boundary": "sha256:14a86d5cc917e65ec6458d706f0ea2de5968b16e56ed7962b54f2e7e4cccad4e",
     "requirements/acceptance/criteria-and-observables.md#acceptance-verdict-determinism": "sha256:83c673d318e61de79c4ca08ab7634a6b97807ffdf78e0ff39c32b089eaec7bdc",
-    "requirements/acceptance/evidence-and-freshness.md#acceptance-current-historical-evidence": "sha256:b188a8d81a29e1dfad11a5e2baea6c30b911c1eda649a4f854386ee2b1c7943a",
     "requirements/acceptance/evidence-and-freshness.md#acceptance-evidence-conflict": "sha256:5646b8adc341058487304784d27d8009f5e49c6b839658a010b14cb25a8ee58e",
     "requirements/acceptance/evidence-and-freshness.md#acceptance-evidence-conflict-group": "sha256:ed06c4f29c36d7e50a90fc412984b9de3871134e11048c0e2aa2349e58743b6b",
     "requirements/acceptance/evidence-and-freshness.md#acceptance-evidence-freshness": "sha256:fa5312108dcc27e22ea9e20fd63e858aa6c04a55b0af877ec7955b525eb097ec",
@@ -3156,7 +3256,6 @@
     "requirements/agent-authoring/partial-work.md#agent-partial-work-gap-distinction": "sha256:1782748b1d4ec30e7ebb4aa5d336d014121fc2ea90fce34cc0a421d1a8c3fa7b",
     "requirements/agent-authoring/partial-work.md#agent-resumable-authoring": "sha256:f5c31336cb5386af5aa5b3990ff7c1ecbd2a19ecfea27484baa6d5527d1f0aff",
     "requirements/agent-authoring/project-ownership.md#agent-ambiguous-ownership-refusal": "sha256:d1e509688a61f508feb6b5209747237e727204b899218fe396aa46bb198f85b9",
-    "requirements/agent-authoring/project-ownership.md#agent-authoring-tool-replaceability": "sha256:444e3e2464e05006e3b86efdd61b0197a55b276c465066dba345aacba1dfc037",
     "requirements/agent-authoring/project-ownership.md#agent-editable-source-authority": "sha256:81cb955f2734f754bd06e8158b0655995806f0115f9370fca603749140af9f13",
     "requirements/agent-authoring/project-ownership.md#agent-portable-authoring": "sha256:a4d195de21e8cebbeb0b9c0108f8d186b5d66afe4eccc3cadcd10420f28c99ca",
     "requirements/agent-authoring/project-ownership.md#agent-project-owned-bytes": "sha256:7833a0600c798eabe51af898702f3a76733331ecb79096dbca2ecc48acb2a93d",
@@ -3889,9 +3988,7 @@
     "requirements/interior/doors-windows-and-openings.md#interior-opening-exterior-alignment": "sha256:effcda6ed15f4e76c6bae1637489eb8126fc87375a950a0b91941dd769cba0ff",
     "requirements/interior/doors-windows-and-openings.md#interior-opening-operable-state": "sha256:ebe6e5f5819bcd1b46384af83059bb62153691243a7dcb976b82f08bbf26edc4",
     "requirements/interior/existing-conditions-phases-and-alternatives.md#interior-existing-phases-alternatives": "sha256:ef0d8c6506ef24e9350891d037c4aaf5073a51fe815f069f4c015ea5d3f84568",
-    "requirements/interior/external-assets-and-placement.md#interior-external-adoption-choice": "sha256:1aa0867236dc718645e92d5c3df657127e321c8c0d300fa4356c88a991c1a42f",
     "requirements/interior/external-assets-and-placement.md#interior-external-asset-closure": "sha256:ae57c16ad823616d6411b941beb13f46904786d2042a936a8cca744ffc93d486",
-    "requirements/interior/external-assets-and-placement.md#interior-external-asset-placement": "sha256:75da4dc9a098335291d40ff891b03574a138b8d5f9ca92a2b1efc4ff5ba973de",
     "requirements/interior/external-assets-and-placement.md#interior-external-direct-placement": "sha256:d35c7d85df249c3b51ce137ab38ec496dec6bf68e32e05b2f94034414f6e1526",
     "requirements/interior/external-assets-and-placement.md#interior-external-group-composition": "sha256:12783470e0030385da9590fce6f1fc4afc226bcaa98d97566cdfaa26f4f068cc",
     "requirements/interior/external-assets-and-placement.md#interior-external-host-constraint": "sha256:9292f49628c5fcf16c159c696ea91bf441789815873f09d24d102d0d15de9059",
@@ -3944,7 +4041,6 @@
     "requirements/interior/surface-assemblies.md#interior-surface-substance-product": "sha256:cf20dde6b283398f6e842cd97ce2666660aea9ccab0354c9d7900d8da87e13a0",
     "requirements/interior/textures-patterns-and-variation.md#interior-pattern-group-correlated-variation": "sha256:e93ae8ce2b49c6aa9fe25d6b72e262dddac48b4242b5c572e934d2fcf7e340be",
     "requirements/interior/textures-patterns-and-variation.md#interior-texture-pattern-variation": "sha256:fd7934cca43f88db1190257f492ad5c30d6b590aed47c32ca988ae305d384820",
-    "requirements/interior/tolerances-and-imperfections.md#interior-imperfection-authoring-choice": "sha256:a14ec7f58181530cb1a5ca67e8282fca49a4c159ca347c029b06854449f68b1a",
     "requirements/interior/tolerances-and-imperfections.md#interior-imperfection-boundaries": "sha256:f067461fcc880c590ea568748a906d727b121f7a18056c80fe59de8e01508bcf",
     "requirements/interior/tolerances-and-imperfections.md#interior-imperfection-canonical-result": "sha256:05bce2cdddc41a85414cbd652c4968ae6295c88d0c710542b882a4cfadbdc8d7",
     "requirements/interior/tolerances-and-imperfections.md#interior-imperfection-refusal": "sha256:4cd8cd6c53a4cb800fe375d8363d619b8887fd611f41418dc76f147256106c9b",
@@ -3965,7 +4061,6 @@
     "requirements/interior/water-and-fluid-features.md#interior-fluid-material-interaction": "sha256:d6c55d5534be17cb54de2987431445c3ee77f29633038e1513bdb5f9a7d48d4b",
     "requirements/interior/water-and-fluid-features.md#interior-fluid-volume-level": "sha256:23efbee2ca420168e60c258d562e985f91639464637279056491553297b86680",
     "requirements/interior/water-and-fluid-features.md#interior-water-fluid-features": "sha256:6db194b1a964be6d6ab6b755f2aa64f699ab8fe5044c2481f1eb8085d5de9175",
-    "requirements/interior/wear-soiling-and-aging.md#interior-aging-authoring-choice": "sha256:c7e8ff13038d060f8e3cb29c22f2579f5d479654dcc7a9075459c7d811b0f66b",
     "requirements/interior/wear-soiling-and-aging.md#interior-aging-causal-placement": "sha256:9e61801d63195d6ef4802e7926196c265ff64fd23463d1a732597a7e01777dc8",
     "requirements/interior/wear-soiling-and-aging.md#interior-aging-continuity-refusal": "sha256:641957a624cd7143e8686ef8428fb3b627af2235f0b24316a41348730efade70",
     "requirements/interior/wear-soiling-and-aging.md#interior-aging-group-variation": "sha256:b66a54ba298c12d049103c17fc1ece87451fe9723e4e3c6818894e19f67cfbd4",
@@ -4536,13 +4631,9 @@
     "requirements/repaint/providers-models-and-credentials.md#repaint-execution-boundary": "sha256:582f070b554b2a2cc8c0a97ac548e8832ff9fd3b199e0a0e8d0d6357af46aa28",
     "requirements/repaint/providers-models-and-credentials.md#repaint-provider-capabilities": "sha256:e0a824cb31315255d95b1861a878b216f58515e0b5afc0ea81650099d49d576f",
     "requirements/repaint/providers-models-and-credentials.md#repaint-provider-refusal": "sha256:4729849dfad6d4f88dbe05daa7544a41ede1686aab78b43afe36409bf71d8497",
-    "requirements/repaint/providers-models-and-credentials.md#repaint-provider-terms": "sha256:aa817c92898c5aac13aa91d2079d1876c2cc7bb000f44e619bf53af1aceba06e",
     "requirements/repaint/providers-models-and-credentials.md#repaint-providers-models-credentials": "sha256:e68aeb54e6656c55e810fa953dc452fc7187220583e731f9ea4270b5f68ade38",
-    "requirements/repaint/retries-seeds-and-variation.md#repaint-attempt-failure-provenance": "sha256:e13c9e77c5ac30b8597e709cb7a71d87cfa6a780e68dcebf503d0cf530e63e2a",
     "requirements/repaint/retries-seeds-and-variation.md#repaint-candidate-comparison": "sha256:84807decb335a2866b8a4986f324020412fa1add21b4fff0d2bcecba5ada0f36",
-    "requirements/repaint/retries-seeds-and-variation.md#repaint-one-accepted-lineage": "sha256:c4958db86363be416386397a1fad521c5b4c4bce9f4536255d5001dbbc0e1517",
     "requirements/repaint/retries-seeds-and-variation.md#repaint-retries-seeds-variation": "sha256:dd84bf11f0bdb508c9542d5d185134e2fb72733752b10ab84c5abff5459d0b9a",
-    "requirements/repaint/retries-seeds-and-variation.md#repaint-retry-budget-stop": "sha256:4e3520fde4e4b056fd39464e02c09081e2644057f0722a7552208ff9df8de525",
     "requirements/repaint/retries-seeds-and-variation.md#repaint-retry-refusal": "sha256:166a9f694bad607758aae6a0f980d7ba8a0b6db9c8915e008b4908cd1c5b48e0",
     "requirements/repaint/retries-seeds-and-variation.md#repaint-retry-request-boundary": "sha256:e76678d57d5768c43c517d6a9d72097f485a1e883ebffc25640c051e0922fbea",
     "requirements/repaint/retries-seeds-and-variation.md#repaint-seed-semantics": "sha256:72a6cdb34eef0c6e5b273154394781dd80cf70e5f5a230760a0a18bbc6aaa878",
@@ -4551,13 +4642,10 @@
     "requirements/repaint/scope-and-user-choice.md#repaint-provider-independence": "sha256:ff0d695a4a6522a0cac5b38e6986a27fa317be65ca9c91f22b2757c456ddf6fd",
     "requirements/repaint/scope-and-user-choice.md#repaint-scope-user-choice": "sha256:eed8e5147d701749638ec4ccbd25a218599aac6403ad5f401b970b9bab660eb1",
     "requirements/repaint/scope-and-user-choice.md#repaint-structure-appearance": "sha256:d5b88523fadc5855a8f417544fbf3feeb3129edf2ed1144b01eb9c412d61ed74",
-    "requirements/repaint/sequence-continuity-and-publication.md#repaint-continuity-baseline-changes": "sha256:401aaf7d73e0ef18f21de1c8480bb8cc6b0f82a47d1bc7b03caa0708bf486e09",
     "requirements/repaint/sequence-continuity-and-publication.md#repaint-continuity-drift-propagation": "sha256:9d63e708e2946999dde3ca5c85b5f8d86c6ae3a1ab9948d39b6a8ab620f0e13d",
     "requirements/repaint/sequence-continuity-and-publication.md#repaint-mixed-delivery": "sha256:b0462b7c189c2449530a07c5ff3d7df24ec7d023a633ab4bb7646ce6cad18399",
-    "requirements/repaint/sequence-continuity-and-publication.md#repaint-publication-gate": "sha256:59d3852b08ce92218454467b3ee513b3a0f552ceaa4b7c63e35638581f08be8d",
     "requirements/repaint/sequence-continuity-and-publication.md#repaint-reference-continuity": "sha256:a33204fbe3c9bfc89faca4addb8591843f0038407267f7ba0a4d5344ddef3dac",
     "requirements/repaint/sequence-continuity-and-publication.md#repaint-sequence-continuity-publication": "sha256:a2159045bdadd5697c1c53840e9df202b1e5f7ce23ebb6f82b7dba3f2611b221",
-    "requirements/repaint/sequence-continuity-and-publication.md#repaint-temporal-artifacts": "sha256:ce3b006f1c7aa581089f5af8f5e88dc2a8821b03b43552ffff000ee4bc0ebbe7",
     "requirements/repaint/source-frames-and-reference-locking.md#repaint-control-alignment": "sha256:e78c7f37960a09c30ea853e8b1927a21f8207f928654499ada26f358c1b2b04c",
     "requirements/repaint/source-frames-and-reference-locking.md#repaint-project-relative-references": "sha256:c257cc9a221c69a02cc7307d86ddf8b2fb24b41cd1729739dae583fa65a3f631",
     "requirements/repaint/source-frames-and-reference-locking.md#repaint-reference-refusal": "sha256:01cf9445f69f4856e58b8dc7591c365370a154c58e3ef156d4bf23a01408b937",
@@ -4568,68 +4656,13 @@
     "requirements/repaint/structural-comparison-and-review.md#repaint-review-status": "sha256:32450f522def062e7be049dba09756458c9cb96fd2e2d5dc9563268ad403ff06",
     "requirements/repaint/structural-comparison-and-review.md#repaint-structural-comparison-review": "sha256:9224ac97890075f6778c5688cbc35b3a93e28c2f46a627f2b944e3f2f86cbe6b",
     "requirements/repaint/structural-comparison-and-review.md#repaint-structural-failures": "sha256:0d7ba8d6884691d27f21b7ef8af9bd3793f36b6bccf5f35b2f04ca0ce26c4991",
-    "requirements/review/alternative-takes-and-versions.md#review-alternative-common-basis-difference": "sha256:1c51895e9764b2a86abe67ce60b09a3d38f46352ef97978af81a0cfbb8051264",
-    "requirements/review/alternative-takes-and-versions.md#review-alternative-selection": "sha256:d81e13a6a82d6fb0ca52a931df34dafe92534e56c957d0337198539f03f345f8",
-    "requirements/review/alternative-takes-and-versions.md#review-alternative-takes-versions": "sha256:4e941d6971039e043125942f9ca23b3571ce31ec44aa0532052cf9b7001df278",
-    "requirements/review/alternative-takes-and-versions.md#review-candidate-specific-findings": "sha256:f5490e408294dbed739607d2fdfd61caad43c667f464ef86dd0c9eeea605b3ff",
-    "requirements/review/alternative-takes-and-versions.md#review-comparison-history": "sha256:570394546ed090050ee26e6399ea7d619a145e8c560d3bc3700f6d7c1506c844",
-    "requirements/review/alternative-takes-and-versions.md#review-synchronized-comparison": "sha256:07ae1aac5776d86514a094e84d08957e57d98c49dd48d3a397814a16f950369e",
-    "requirements/review/annotations-findings-and-verdicts.md#review-annotation-history": "sha256:b6e975cfce60758fbf765011403708e3c1f0a2f2d9f67a73190b6b8780f9a943",
-    "requirements/review/annotations-findings-and-verdicts.md#review-annotations-findings-verdicts": "sha256:3e7c29c4aedaee540acddd5cf7828531701726efe72e0180e8e120d9307100e6",
-    "requirements/review/annotations-findings-and-verdicts.md#review-located-annotations": "sha256:72ec57fe694c44984970da2d2e78f128f0736fb39f38ab9f06644203bad9e0be",
-    "requirements/review/annotations-findings-and-verdicts.md#review-verdict-rationale-disagreement": "sha256:29d8b1614bb09876d65f1d5b39057fa1b349ddef9b7251b458f83506ae4899bc",
-    "requirements/review/approval-rejection-and-waivers.md#review-approval": "sha256:f83c1f5ed4e6a2e7aed63e46a3e1ca0567268d49d1f9d1b2cd5877b9a987d355",
-    "requirements/review/approval-rejection-and-waivers.md#review-approval-rejection-waivers": "sha256:896b2929d2d31f865ab1ec557b50795f1e46dc0c01859c69825c5aa3deab1cec",
-    "requirements/review/approval-rejection-and-waivers.md#review-conditional-approval": "sha256:9b4a78e13913943454d970b063ffca2fd70b03f0ded6ea8c6baf242cbd25f8c2",
-    "requirements/review/approval-rejection-and-waivers.md#review-rejection": "sha256:1b091cd9b86adc7370f9235bc63e860b84d33b3e02d60016f083ef8c6166c34a",
-    "requirements/review/approval-rejection-and-waivers.md#review-verdict-freshness": "sha256:3c6f23d558a9343c8fa991cae24242a89e43fcdebadf06415c4540b7da0ca952",
-    "requirements/review/approval-rejection-and-waivers.md#review-waiver": "sha256:d6ca20f0c317b1656665c19c5b3baae499b084add7f71560cd745378617f011c",
-    "requirements/review/criteria-and-comparison.md#review-comparable-subjects": "sha256:31999b9e0d893fee947d1e58f87cdbe410953e3381dc5eac703c7cdbc5472cd0",
-    "requirements/review/criteria-and-comparison.md#review-criteria-comparison": "sha256:9e1dda336690951cb661683117c0f2d16abad882fc12a0b511b73f5710d18d47",
-    "requirements/review/criteria-and-comparison.md#review-criteria-precedence": "sha256:8273de3e4b13b59671c05204d54e56723222fe4dfe5ffcd39d67ea9fb52025b0",
-    "requirements/review/criteria-and-comparison.md#review-direct-observation-priority": "sha256:49dc491de3e013803061838c9c412f53a6c2517c920e1f9b7eb92fa87a5a0272",
-    "requirements/review/criteria-and-comparison.md#review-noncomparable-state": "sha256:04b3e54b8e424919e285f9c1aeb10b7792a292a99764f5475e68d906bc68aac0",
-    "requirements/review/criteria-and-comparison.md#review-observable-criteria": "sha256:6428c578d58cc66a664907ea7752219d6c1ddd96c5bc337f9cbefd685717cd61",
-    "requirements/review/criteria-and-comparison.md#review-quantitative-qualitative-criteria": "sha256:20cf745f93e04ce912176d1a689118f9af5016bdfd612f893ec5cf7c63a0109a",
-    "requirements/review/defect-classification.md#review-defect-categories": "sha256:d19fd0fe07dbbcb2189ffb98aaf98461e7cafc65ede2d05e29666e1f9290d4fe",
-    "requirements/review/defect-classification.md#review-defect-classification": "sha256:49994643a72a802ed9935a15ec77255ae4cf655f46d2d1fc407f1e70dd347e90",
-    "requirements/review/defect-classification.md#review-defect-versus-variation": "sha256:48a3ad2c217b49df34f30109d046a9c67eea5752ed04a2cd2c4bfb4861033afc",
-    "requirements/review/defect-classification.md#review-duplicate-common-impact": "sha256:3d4137a48659686c570c1c5cf46a327648f2b3dcdcc25aecbc9daf1d8d1eaece",
-    "requirements/review/defect-classification.md#review-reproduction-frequency": "sha256:6d600a5438eb4f5798861f44c7b09443ecf8140ee1a49431d5c008afb0d61723",
-    "requirements/review/defect-classification.md#review-severity-priority": "sha256:f36ca38260e3b4c14d3bc66b8f5161981c567f422ec0337b42fe9a6a75568b41",
-    "requirements/review/frame-range-and-whole-work.md#review-cross-scope-propagation": "sha256:47b9f90a084fe6c647fadba0d265c013535c2ff24fd5a81b8d3c717e3a512b3b",
-    "requirements/review/frame-range-and-whole-work.md#review-frame-inspection": "sha256:c5d5a57b712a709389d56d7e818655f54373c9c0e0d7d46df40adc8cf82bc50b",
-    "requirements/review/frame-range-and-whole-work.md#review-frame-range-whole-work": "sha256:9dc851a4ddca28a73d8dd252feb23972f95427d98e165a18630e016eb125707a",
-    "requirements/review/frame-range-and-whole-work.md#review-range-inspection": "sha256:25adb3934b7fe429b0bc020e7c94aa7189211fc28b5a039253f0f19475623adc",
-    "requirements/review/frame-range-and-whole-work.md#review-sampling-full-coverage": "sha256:3fa7468e6735f9a544c75d71f1c741f5d340bfe3e267d4c36434e59e160ef7d6",
-    "requirements/review/frame-range-and-whole-work.md#review-whole-work-inspection": "sha256:3377b6f9ca0e5772b3f47c590ee511f89072272b1c5a0efbe626e2e0db62ddbf",
-    "requirements/review/records-and-completeness.md#review-completeness-claim": "sha256:925bc064e590275ade063679d642de23631e9ba2d84750cff23d2948ce6f6d6d",
-    "requirements/review/records-and-completeness.md#review-execution-status": "sha256:aa4ba197bb961a3d7d3b6bf040f61a0a9360b878adebc5fdef8fc8c3b4986b1e",
-    "requirements/review/records-and-completeness.md#review-incomplete-review": "sha256:367fd079b4a6771ed5738cdfc0c4897ff0e34c2e3182e64e7eb3b2b34e0d8e26",
-    "requirements/review/records-and-completeness.md#review-planned-actual-coverage": "sha256:64240e83d3894a6965707a997e82fe062e528f464de4a4d0d6c6769172f1ca43",
-    "requirements/review/records-and-completeness.md#review-records-completeness": "sha256:bebd1b6a3337ff86f908cc77fd38ed80ccc9b42f5aad2bc57f190b9b2853f1af",
-    "requirements/review/reproducible-context.md#review-context-criteria-reference": "sha256:2e5ad22ae7a84776d9493b1675900cc7147480c872a1d745005de70ae5c622aa",
-    "requirements/review/reproducible-context.md#review-context-presentation": "sha256:78d4ff977d3efdab20a5464bdd7a8c99253fb6a32d99d352e38d52c3a85590aa",
-    "requirements/review/reproducible-context.md#review-context-source-artifact-identity": "sha256:60b6de941eea0797fe07e15c63a8b35addcae74a58acf4dd5017a3e22a82bcf4",
-    "requirements/review/reproducible-context.md#review-context-time-playback": "sha256:20dcc40681ecf69538132d12ea4063461c253df53cd6ca6b2daf83a9096c9488",
-    "requirements/review/reproducible-context.md#review-context-unavailable": "sha256:4b667290e274fb9e83bba14d3fe8e871ac2375cf295f3cf06ccda1f95538a78d",
-    "requirements/review/reproducible-context.md#review-reproducible-context": "sha256:c98a0dd21fdb592ef1bc52d174e76235cb1a3fc35a96c8a74d6e56b14456a93d",
-    "requirements/review/scope-and-authority.md#review-human-final-authority": "sha256:b0e7049aab1c09a9a6b371b895ecdbb79fb843f9a63408c554f19b84bb9238b0",
-    "requirements/review/scope-and-authority.md#review-no-implied-approval": "sha256:18ac17b2b825b3504062d0c4f4c2d97637f094e7ad9ac1a989b4d119a2aaf682",
-    "requirements/review/scope-and-authority.md#review-scope-authority": "sha256:372021e470b93a6311d4e4ed2ba91f85512a6897de28844c6edfc1e19b670e28",
-    "requirements/review/scope-and-authority.md#review-validation-decision-boundary": "sha256:1d01e5e742b1e9d2b170f9cd15e51eed05e0a93ad27137718935dbf5bdfd65e0",
-    "requirements/review/scope-and-authority.md#review-verdict-scope-boundary": "sha256:5e1fa33fc3b770f1d8aec535961f2399321547f006779818d73a4edc3e36cd3c",
     "requirements/review/subject-description-and-structural-change.md#review-subject-compiled-truth": "sha256:52c1a49c9bb6698d4e8904c61743c49d9e4df9eba6cfe6fad6ca2ebbc1e5920c",
     "requirements/review/subject-description-and-structural-change.md#review-subject-description": "sha256:0e6449626b7007fb3879d6a5c53a597984d3be36279d265dd4b46dabdc852063",
     "requirements/review/subject-description-and-structural-change.md#review-subject-diff-tolerance-fanout": "sha256:2b0df2b809990d91cf95657906bba3cbe56021572e3af54cf56b624a5808ebd1",
     "requirements/review/subject-description-and-structural-change.md#review-subject-structural-change": "sha256:dcab89a334cb9503b1bc6b526899cb1d5c738ef1b6155f5cdcc07a90039d0b07",
-    "requirements/review/subject-inspection.md#review-observable-judgeable-parity": "sha256:e3aac925371764ea53d55ce97e7dc4ca18a8f5292d4516971d2cd335c46ca855",
     "requirements/review/subject-inspection.md#review-subject-coverage": "sha256:cfd94a8104c57c0e2614cd6e96a41782dbfd8bee3a59d697ec07fd4fbf812727",
-    "requirements/review/subject-inspection.md#review-subject-evidence": "sha256:ed3c71755a9d6f8a50ed6a4ab35421c96dfa09b0c75a1801d91ad960720189dc",
     "requirements/review/subject-inspection.md#review-subject-identity": "sha256:7568b3ff09f6b0f5ba7c81f7fd3bf9b02cff8ae934b1b21f7388b496b76e7d96",
     "requirements/review/subject-inspection.md#review-subject-inspection": "sha256:d1463a8da12737dba17b4c1d1a1503461e02e49296b578c6f65ec35ea47cba9b",
-    "requirements/review/subject-inspection.md#review-subject-inspection-reach": "sha256:e2ee8505efc92be0051f7f52aff7fc2fd578f2c651df37da6663626418492a9d",
-    "requirements/review/subject-inspection.md#review-subject-time-noninterchange": "sha256:00998cd1ec70f39f4e4095ae1b2969e1550fb1ca3acb1365d97982c67f63114a",
     "requirements/review/subject-inspection.md#review-subject-viewpoint-ownership": "sha256:bb39490ccc46b810e3eb7bd4e3335e5b28a424e14d74d0e2cf3d9357f0c94ff2",
     "requirements/review/visual-change-reporting.md#review-visual-change-catalog-identity": "sha256:e5b96955fba593a3094214f75c9e6dbbc81db3baefb02b84ad5d0e530c8147a1",
     "requirements/review/visual-change-reporting.md#review-visual-change-digest-reuse": "sha256:84d0eceeb539ebd4165a29d180ce455b8e8a06dc0a0c894219d9963db2776d1e",
@@ -4688,7 +4721,6 @@
     "requirements/sound/sources-and-external-assets.md#sound-decode-contract": "sha256:c007aafd0ca7468f74155350c09244ce68a842060da4203cc07ef729ec2ed36c",
     "requirements/sound/sources-and-external-assets.md#sound-source-choice": "sha256:2ec81e4886415f7450c35b9c548f35207fc4d8a25c481a714804e548215103de",
     "requirements/sound/sources-and-external-assets.md#sound-source-immutable-adoption": "sha256:16a521ec3d47badaa27db136c27c46c285868c2522c1951f354637416e0b6452",
-    "requirements/sound/sources-and-external-assets.md#sound-source-provenance": "sha256:ef70a9c4162ce85f02956b5aaff5b606b169012b4799bc7d7b9d0420eedad30c",
     "requirements/sound/sources-and-external-assets.md#sound-source-provider-adapter-boundary": "sha256:c221e20a9f1c515b5a6db8fd6f900649db4c66217de607921160575a5fd3b6b4",
     "requirements/sound/sources-and-external-assets.md#sound-source-secret-remote-boundary": "sha256:45343a43d156133d20b689da484b703d862214851245b99aeb5a2451ee95d580",
     "requirements/sound/sources-and-external-assets.md#sound-sources-external-assets": "sha256:c1a90165426f7acea8b5345bcf69527c58fb6d5eb72b2548ad5de11ce4f35341",

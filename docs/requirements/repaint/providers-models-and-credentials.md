@@ -16,6 +16,8 @@ Local adapter, user process, remote service와 pre-generated import 중 어디�
 
 Provider rights, model version, input retention, output usage와 region restriction은 acquisition 시점의 current source에서 확인하고 영구 불변으로 가정하지 않아야 한다.
 
+Terms review date는 실제 `YYYY-MM-DD` UTC calendar date이고 generator 실행 또는 기존 output 채택 receipt의 UTC date보다 미래일 수 없다. Configuration preflight는 외부 호출 전 captured clock snapshot으로 이를 거절하고, 저장된 receipt와 재개된 publication도 자신의 immutable 실행·채택 instant에 대해 같은 비교를 반복해야 한다. Canonical content identity는 ambient wall clock을 읽지 않으며 date parsing과 runtime fact 비교를 분리한다. 임의의 만료 기간은 이 규칙에 포함하지 않는다.
+
 ### Credential Separation {#repaint-credential-separation}
 
 API key, access token, cookie와 account secret은 source, prompt, request receipt, log, artifact, manifest와 evidence에 기록하지 않아야 한다.

@@ -87,6 +87,7 @@ const compiled = (): IAutoMovieCompiledShotSource =>
           fovY: 50,
           near: 0.1,
           far: 100,
+          depthPrecision: { minimumDepthBits: 24, maximumStepMeters: 100 },
         },
       ],
       lights: [],

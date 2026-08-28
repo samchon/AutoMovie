@@ -19,18 +19,14 @@ import {
   createCaptureExecutableSnapshot,
   openCaptureExecutable,
 } from "./captureExecutableSnapshot";
+import {
+  type IProductionCaptureRuntimeClosureSnapshot,
+  snapshotProductionCaptureRuntimeClosure,
+} from "./captureRuntimeClosure";
+import type { AutoMovieCaptureBrowserConfig } from "./productionConfiguration";
 import { snapshotRuntimePackage } from "./runtimePackageSnapshot";
 
 const CAPTURE_INSTALL_RECEIPT_MAX_BYTES = 64 * 1024;
-
-export type AutoMovieCaptureBrowserConfig =
-  | { source: "playwright-chromium" }
-  | { source: "system-channel"; channel: "chrome" | "msedge" }
-  | {
-      source: "configured-executable";
-      product: "chromium" | "chrome" | "msedge";
-      executablePath: string;
-    };
 
 export interface IAutoMovieCaptureInstallReceipt {
   version: 1;
@@ -93,7 +89,12 @@ interface IPhysicalDirectory {
 export interface IAutoMovieCaptureBrowserSession {
   browser: Browser;
   runtime: Omit<IAutoMovieCaptureRuntimeIdentity, "graphics">;
+  assertRuntimeCurrent: () => void;
 }
+
+export type AutoMovieCaptureRuntimeClosureInspection =
+  | ({ status: "current" } & IProductionCaptureRuntimeClosureSnapshot)
+  | { status: "not-ready"; correction: string };
 
 const configError = (): Error =>
   new Error(
@@ -141,7 +142,7 @@ export const parseCaptureBrowserConfig = (
 };
 
 const require = createRequire(import.meta.url);
-const CAPTURE_PROTOCOL = "automovie.capture-runtime.v1";
+const CAPTURE_PROTOCOL = "automovie.capture-runtime.v2";
 const BROWSER_NAME = "chromium";
 const REQUESTED_BACKEND = "angle:swiftshader";
 const DEVICE_SCALE_FACTOR = 1;
@@ -1023,11 +1024,90 @@ const packageOwnedProvenance = async (
   return { executable, receipt };
 };
 
+const CAPTURE_RUNTIME_ROOT_PACKAGES = [
+  "vite",
+  "@automovie/viewer",
+  "@automovie/production",
+  "playwright",
+] as const;
+
+const captureBrowserSupportRoot = (executablePath: string): string => {
+  let cursor = path.dirname(path.resolve(executablePath));
+  for (;;) {
+    if (/^chromium(?:_headless_shell)?-[0-9]+$/u.test(path.basename(cursor)))
+      return cursor;
+    const parent = path.dirname(cursor);
+    if (parent === cursor) return path.dirname(path.resolve(executablePath));
+    cursor = parent;
+  }
+};
+
+/**
+ * Inspect the installed package and browser-support closure without launching,
+ * importing, writing, or materializing any runtime artifact.
+ */
+export const inspectCurrentCaptureRuntimeClosure = (props: {
+  projectRoot: string;
+  config: unknown;
+}): AutoMovieCaptureRuntimeClosureInspection => {
+  try {
+    const root = path.resolve(props.projectRoot);
+    const config = parseCaptureBrowserConfig(props.config);
+    const resolver = createRequire(path.join(root, "package.json"));
+    const packageEntries = CAPTURE_RUNTIME_ROOT_PACKAGES.map((packageName) => ({
+      package: packageName,
+      entry: fs.realpathSync(resolver.resolve(packageName)),
+    }));
+    let browserSupport:
+      | {
+          source: "package-owned" | "configured-executable";
+          root: string;
+        }
+      | { source: "system-channel" };
+    if (config.source === "playwright-chromium") {
+      const receipt = readCaptureInstallReceipt(root);
+      browserSupport = {
+        source: "package-owned",
+        root: captureBrowserSupportRoot(receipt.browser.executablePath),
+      };
+    } else if (config.source === "configured-executable")
+      browserSupport = {
+        source: "configured-executable",
+        root: path.dirname(path.resolve(root, config.executablePath)),
+      };
+    else browserSupport = { source: "system-channel" };
+    const snapshot = snapshotProductionCaptureRuntimeClosure({
+      packageEntries,
+      browserSupport,
+    });
+    return { status: "current", ...snapshot };
+  } catch (error) {
+    return {
+      status: "not-ready",
+      correction: `${
+        error instanceof Error ? error.message : String(error)
+      } Correct the installed capture runtime, then run npm run capture:doctor.`,
+    };
+  }
+};
+
 export const launchCaptureBrowser = async (
   projectRoot: string,
   inputConfig: unknown,
+  inspectedClosure?: Extract<
+    AutoMovieCaptureRuntimeClosureInspection,
+    { status: "current" }
+  >,
 ): Promise<IAutoMovieCaptureBrowserSession> => {
   const config = parseCaptureBrowserConfig(inputConfig);
+  const closure =
+    inspectedClosure ??
+    inspectCurrentCaptureRuntimeClosure({
+      projectRoot,
+      config: inputConfig,
+    });
+  if (closure.status === "not-ready") throw new Error(closure.correction);
+  closure.assertCurrent();
   const metadata = capturePlaywrightMetadata();
   const { chromium } = await loadPlaywright(projectRoot);
   let product: IAutoMovieCaptureRuntimeIdentity["browser"]["product"];
@@ -1071,6 +1151,7 @@ export const launchCaptureBrowser = async (
     launch = { executablePath: executable.path };
   }
   try {
+    closure.assertCurrent();
     assertPlaywrightMetadata(metadata);
     if (executable !== null) assertCaptureExecutable(executable);
   } catch (error) {
@@ -1156,6 +1237,7 @@ export const launchCaptureBrowser = async (
           package: "playwright",
           version: metadata.packageVersion,
         },
+        runtimeClosure: structuredClone(closure.identity),
         browser: {
           product,
           version: browserVersion,
@@ -1172,6 +1254,7 @@ export const launchCaptureBrowser = async (
           deviceScaleFactor: DEVICE_SCALE_FACTOR,
         },
       },
+      assertRuntimeCurrent: closure.assertCurrent,
     };
   } catch (error) {
     await preserveCaptureBrowserCleanup({ error }, [

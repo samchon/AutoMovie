@@ -1,6 +1,7 @@
 import type { IAutoMovieDialogueVisemeTimeline } from "@automovie/engine";
 import type {
   AutoMovieContentDigest,
+  IAutoMovieDeliveryCrop,
   IAutoMovieFilmTimeline,
   IAutoMovieProductionTtsReceipt,
 } from "@automovie/interface";
@@ -31,40 +32,41 @@ export interface IAutoMovieProductionDialogueRuntime {
 export interface IAutoMovieProductionViewerRuntime {
   /** Final-byte dialogue state, or null before a render has prepared it. */
   dialogue: IAutoMovieProductionDialogueRuntime | null;
+  /** Normalized production delivery crop, or null for the complete gate. */
+  deliveryCrop: IAutoMovieDeliveryCrop | null;
   /** Exact authored live-soft admission order. */
   liveWearableSoftBodies: string[];
 }
 
-let captureDialogueRuntime: IAutoMovieProductionDialogueRuntime | null = null;
+/** Clone one delivery crop without sharing mutable authoring input. */
+export const cloneProductionDeliveryCrop = (
+  crop: IAutoMovieDeliveryCrop | null,
+): IAutoMovieDeliveryCrop | null => (crop === null ? null : { ...crop });
 
-/** Install one immutable dialogue runtime for the current capture process. */
-export const installProductionDialogueRuntime = (
+/** Clone one immutable dialogue runtime at an invocation boundary. */
+export const cloneProductionDialogueRuntime = (
   runtime: IAutoMovieProductionDialogueRuntime | null,
-): void => {
-  captureDialogueRuntime = runtime === null ? null : structuredClone(runtime);
-};
-
-/** Read the current immutable dialogue runtime for the viewer middleware. */
-export const currentProductionDialogueRuntime =
-  (): IAutoMovieProductionDialogueRuntime | null =>
-    captureDialogueRuntime === null
-      ? null
-      : structuredClone(captureDialogueRuntime);
+): IAutoMovieProductionDialogueRuntime | null =>
+  runtime === null ? null : structuredClone(runtime);
 
 /** Content identity included in page reuse and render-source fingerprints. */
-export const productionDialogueRuntimeIdentity = (): string | null => {
-  if (captureDialogueRuntime === null) return null;
-  return createHash("sha256")
-    .update(Buffer.from(JSON.stringify(captureDialogueRuntime), "utf8"))
-    .digest("hex");
+export const productionDialogueRuntimeIdentity = (
+  runtime: IAutoMovieProductionDialogueRuntime | null,
+): AutoMovieContentDigest | null => {
+  if (runtime === null) return null;
+  return `sha256:${createHash("sha256")
+    .update(Buffer.from(JSON.stringify(runtime), "utf8"))
+    .digest("hex")}`;
 };
 
 /** Resolve a shot-local seek only when exactly one film occurrence fits. */
-export const productionDialogueFrameForShotTime = (props: {
-  shot: string;
-  time: number;
-}): number | null => {
-  const runtime = captureDialogueRuntime;
+export const productionDialogueFrameForShotTime = (
+  runtime: IAutoMovieProductionDialogueRuntime | null,
+  props: {
+    shot: string;
+    time: number;
+  },
+): number | null => {
   if (
     runtime === null ||
     Number.isFinite(props.time) === false ||

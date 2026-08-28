@@ -105,6 +105,7 @@ const compiledShot = (props: {
         fovY: 50,
         near: 0.1,
         far: 200,
+        depthPrecision: { minimumDepthBits: 24, maximumStepMeters: 100 },
       },
     ],
     lights: [],

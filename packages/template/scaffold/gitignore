@@ -9,8 +9,6 @@ automovie/*
 !automovie/derived/**
 !automovie/design/
 !automovie/design/**
-!automovie/reviews/
-!automovie/reviews/**
 automovie/capture/
 .automovie-liveness-*
 .automovie-chunk-*
@@ -19,3 +17,7 @@ renders/*/
 *.log
 .DS_Store
 .wiki/
+AGENTS.md
+CLAUDE.md
+.agents/
+artifacts/

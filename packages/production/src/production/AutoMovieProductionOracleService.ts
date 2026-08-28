@@ -7,6 +7,7 @@ import {
   placeFormationSlot,
   projectToNdc,
   reachPose,
+  resolveAutoMovieDeliveryCrop,
   resolveCameraAt,
   resolvePose,
   sampleClipSequence,
@@ -341,6 +342,9 @@ export class AutoMovieProductionOracleService {
           const production = graph.production!;
           const aspect =
             production.frameFormat.width / production.frameFormat.height;
+          const crop = resolveAutoMovieDeliveryCrop(
+            production.frameFormat.crop,
+          );
           const chunkMeasurements = runtime.chunks.map((chunk) => {
             const center = transformPoint(chunk.centroid);
             const transformedBounds = transformFormationBounds(
@@ -377,10 +381,13 @@ export class AutoMovieProductionOracleService {
               center,
               halfY,
               aspect,
+              crop,
             );
             const projectedPixels =
               (runtime.projectionRadius * production.frameFormat.height) /
-              (halfY * Math.max(0.001, projection.depth));
+              (halfY *
+                Math.max(0.001, projection.depth) *
+                (crop.bottom - crop.top));
             const visible = intersectsPerspectiveFrustumSphere({
               camera: resolvedCamera,
               center,
@@ -389,6 +396,7 @@ export class AutoMovieProductionOracleService {
               far: camera.far,
               halfY,
               aspect,
+              crop,
             });
             return {
               distance,
@@ -463,6 +471,7 @@ export class AutoMovieProductionOracleService {
               far: camera.far,
               halfY,
               aspect,
+              crop,
             });
           }).length;
           result = {
@@ -721,6 +730,7 @@ export class AutoMovieProductionOracleService {
           const aspect =
             graph.production.frameFormat.width /
             graph.production.frameFormat.height;
+          const crop = graph.production.frameFormat.crop;
           const samples = request.subjects.flatMap((subject) => {
             const node = compiled.scene.nodes.find(
               (item) => item.id === subject,
@@ -736,6 +746,7 @@ export class AutoMovieProductionOracleService {
               point,
               halfY,
               aspect,
+              crop,
             );
             return [{ projection }];
           });
@@ -954,6 +965,8 @@ export class AutoMovieProductionOracleService {
       Math.floor(duration * fps),
     );
     const time = index / fps;
+    const crop =
+      input.target.kind === "shot" ? production.frameFormat.crop : undefined;
     let captured: Awaited<ReturnType<AutoMovieProductionFrameCapture>>;
     try {
       captured = await this.capture({
@@ -961,6 +974,7 @@ export class AutoMovieProductionOracleService {
         time,
         width,
         height,
+        ...(crop === undefined ? {} : { crop: structuredClone(crop) }),
         projectRoot: this.project.root,
         productionId: this.project.productionId,
         compileFingerprint: generated.inputFingerprint,
@@ -1019,6 +1033,22 @@ export class AutoMovieProductionOracleService {
         `${String(error)} Correct the capture adapter or run npm run capture:install and npm run capture:doctor before these pixels enter a render bundle.`,
       );
     }
+    const dialogueRuntimeIdentity = captured.dialogueRuntimeIdentity;
+    if (
+      dialogueRuntimeIdentity !== null &&
+      /^sha256:[0-9a-f]{64}$/u.test(dialogueRuntimeIdentity) === false
+    )
+      return previewFailure(
+        generated.inputFingerprint,
+        "capture-dialogue-identity-invalid",
+        "The capture host returned an invalid dialogue runtime identity. Rebuild the current dialogue runtime and capture the frame again.",
+      );
+    if (input.target.kind !== "shot" && dialogueRuntimeIdentity !== null)
+      return previewFailure(
+        generated.inputFingerprint,
+        "capture-dialogue-identity-invalid",
+        "A non-shot capture must not claim a dialogue runtime identity. Clear the capture host dialogue state and capture the asset again.",
+      );
     if (
       captured.width !== width ||
       captured.height !== height ||
@@ -1038,7 +1068,12 @@ export class AutoMovieProductionOracleService {
       );
     const renderSpec: IAutoMovieRenderSpec = {
       target: input.target.id,
-      frameFormat: { width, height, fps },
+      frameFormat: {
+        width,
+        height,
+        fps,
+        ...(crop === undefined ? {} : { crop: structuredClone(crop) }),
+      },
       toneMapping: "none",
       codec: "h264",
       pixelFormat: "yuv420p",
@@ -1046,6 +1081,7 @@ export class AutoMovieProductionOracleService {
     };
     const relativeBundle = productionRenderBundleRelativePath({
       target: input.target,
+      dialogueRuntimeIdentity,
       rendererIdentity,
       targetFingerprint,
       renderSpec,
@@ -1073,6 +1109,7 @@ export class AutoMovieProductionOracleService {
       {
         target: input.target,
         compileFingerprint: generated.inputFingerprint,
+        dialogueRuntimeIdentity,
         rendererIdentity,
         targetFingerprint,
         renderSpec,
@@ -1084,9 +1121,10 @@ export class AutoMovieProductionOracleService {
         left.index - right.index || compareCodeUnits(left.pass, right.pass),
     );
     const manifest: IAutoMovieRenderBundleManifest = {
-      version: 3,
+      version: 5,
       target: input.target,
       compileFingerprint: generated.inputFingerprint,
+      dialogueRuntimeIdentity,
       rendererIdentity,
       targetFingerprint,
       renderSpec,
@@ -1565,6 +1603,7 @@ const retainedBundleFrames = (
     IAutoMovieRenderBundleManifest,
     | "target"
     | "compileFingerprint"
+    | "dialogueRuntimeIdentity"
     | "rendererIdentity"
     | "targetFingerprint"
     | "renderSpec"
@@ -1579,6 +1618,7 @@ const retainedBundleFrames = (
     Buffer.from(
       canonicalAutoMovieJsonBytes({
         target: manifest.target,
+        dialogueRuntimeIdentity: manifest.dialogueRuntimeIdentity,
         rendererIdentity: manifest.rendererIdentity,
         targetFingerprint: manifest.targetFingerprint,
         renderSpec: manifest.renderSpec,
@@ -1587,6 +1627,7 @@ const retainedBundleFrames = (
       Buffer.from(
         canonicalAutoMovieJsonBytes({
           target: expected.target,
+          dialogueRuntimeIdentity: expected.dialogueRuntimeIdentity,
           rendererIdentity: expected.rendererIdentity,
           targetFingerprint: expected.targetFingerprint,
           renderSpec: expected.renderSpec,

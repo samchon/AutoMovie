@@ -1,4 +1,5 @@
 import {
+  IAutoMovieDeliveryCrop,
   IAutoMovieMotion,
   IAutoMovieScene,
   IAutoMovieSequence,
@@ -53,7 +54,14 @@ const scene: IAutoMovieScene = {
     },
   ],
   cameras: [
-    { id: "cam", transform: t3(0, 0, 0), fovY: 60, near: 0.1, far: 100 },
+    {
+      id: "cam",
+      transform: t3(0, 0, 0),
+      fovY: 60,
+      near: 0.1,
+      far: 100,
+      depthPrecision: { minimumDepthBits: 24, maximumStepMeters: 100 },
+    },
   ],
   lights: [],
 };
@@ -84,6 +92,7 @@ const plan = (over: {
   skeletons?: (typeof skeleton)[];
   fps?: number;
   sequence?: IAutoMovieSequence;
+  crop?: IAutoMovieDeliveryCrop;
 }) =>
   planPoseKeypointSidecar({
     sequence: over.sequence ?? sequence,
@@ -92,6 +101,7 @@ const plan = (over: {
     motions: [over.motion ?? travel(0, 0)],
     skeletons: over.skeletons ?? [skeleton],
     fps: over.fps ?? 2,
+    crop: over.crop,
   });
 
 const hipsX = (frames: ReturnType<typeof plan>["frames"], frame: number) =>
@@ -144,6 +154,34 @@ export const test_render_pose_keypoint_sidecar = (): void => {
       ["ncloseHipsXStill2", () => nclose(hipsX(still.frames, 1), 0.5)],
     ]),
     { ncloseHipsXStill: true, ncloseHipsXStill2: true },
+  );
+  const cropped = plan({
+    crop: { left: 0.5, top: 0, right: 1, bottom: 1 },
+  });
+  const croppedHips = cropped.frames.map(
+    (frame) =>
+      frame.actors[0]!.keypoints.find((keypoint) => keypoint.bone === "hips")!,
+  );
+  TestValidator.equals(
+    "the sidecar preserves crop projection and exact boundary inclusion",
+    namedFacts([
+      ["leftEdge", () => croppedHips.every((hips) => nclose(hips.x, 0))],
+      [
+        "verticalParity",
+        () =>
+          cropped.frames.every((frame, index) => {
+            const hips = frame.actors[0]!.keypoints.find(
+              (keypoint) => keypoint.bone === "hips",
+            )!;
+            const wholeHips = still.frames[index]!.actors[0]!.keypoints.find(
+              (keypoint) => keypoint.bone === "hips",
+            )!;
+            return nclose(hips.y, wholeHips.y);
+          }),
+      ],
+      ["inFrame", () => croppedHips.every((hips) => hips.inFrame)],
+    ]),
+    { leftEdge: true, verticalParity: true, inFrame: true },
   );
 
   // 2. travelling actor moves between frames.

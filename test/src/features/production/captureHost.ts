@@ -40,6 +40,7 @@ export const recordingCapture = (): {
       const height = input.height ?? 0;
       return Promise.resolve({
         bytes: capturedPng(width, height),
+        dialogueRuntimeIdentity: null,
         runtimeIdentity: testCaptureRuntimeIdentity(),
         width,
         height,

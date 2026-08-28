@@ -53,7 +53,8 @@ const preserveCliRenderFixtureCleanup = (
  * 2. The scaffold-local TypeScript launcher receives its project flag, the
  *    render script, the action and the options, in exact order.
  * 3. The public CLI propagates the child process exit status.
- * 4. `verify` accepts no arguments and delegates the read-only final verifier.
+ * 4. `verify` and `sync` accept no arguments and delegate the final verifier
+ *    and generated-instruction synchronizer respectively.
  */
 export const test_cli_render = (): void => {
   const nativeCwd = process.cwd();
@@ -71,6 +72,8 @@ export const test_cli_render = (): void => {
     const missingProject = captureCli(["render", "plan"]);
     const missingVerify = captureCli(["verify"]);
     const invalidVerify = captureCli(["verify", "--repair"]);
+    const missingSync = captureCli(["sync"]);
+    const invalidSync = captureCli(["sync", "--keep-local"]);
     fs.mkdirSync(path.join(outside, "scripts"), { recursive: true });
     fs.writeFileSync(
       path.join(outside, "scripts", "render.ts"),
@@ -105,6 +108,16 @@ export const test_cli_render = (): void => {
           "invalidVerifyStderrIncludes",
           () => invalidVerify.stderr.includes("takes no arguments"),
         ],
+        ["missingSyncStatus", () => missingSync.status === 1],
+        [
+          "missingSyncStderrIncludes",
+          () => missingSync.stderr.includes("scaffolded project"),
+        ],
+        ["invalidSyncStatus", () => invalidSync.status === 1],
+        [
+          "invalidSyncStderrIncludes",
+          () => invalidSync.stderr.includes("takes no arguments"),
+        ],
         ["missingLauncherStatus", () => missingLauncher.status === 1],
         [
           "missingLauncherStderrIncludes",
@@ -122,6 +135,10 @@ export const test_cli_render = (): void => {
         missingVerifyStderrIncludes: true,
         invalidVerifyStatus: true,
         invalidVerifyStderrIncludes: true,
+        missingSyncStatus: true,
+        missingSyncStderrIncludes: true,
+        invalidSyncStatus: true,
+        invalidSyncStderrIncludes: true,
         missingLauncherStatus: true,
         missingLauncherStderrIncludes: true,
       },
@@ -129,6 +146,7 @@ export const test_cli_render = (): void => {
 
     const script = path.join(project, "scripts", "render.ts");
     const verifyScript = path.join(project, "scripts", "verify.ts");
+    const syncScript = path.join(project, "scripts", "sync.ts");
     // The launcher this repository ships, at the path the CLI resolves it
     // from. A stub rather than the real one, because what is under test is the
     // argv the CLI hands it and not what it does with them.
@@ -144,6 +162,7 @@ export const test_cli_render = (): void => {
     fs.mkdirSync(path.dirname(launcher), { recursive: true });
     fs.writeFileSync(script, "// delegated scaffold render entry\n");
     fs.writeFileSync(verifyScript, "// delegated scaffold verify entry\n");
+    fs.writeFileSync(syncScript, "// delegated scaffold sync entry\n");
     fs.writeFileSync(
       launcher,
       `import fs from "node:fs";
@@ -157,6 +176,8 @@ if (process.argv[5] === "verify") process.exitCode = 7;
 if (process.argv[5] === "finalize") process.kill(process.pid, "SIGTERM");
 if (process.argv[4]?.endsWith("verify.ts"))
   fs.writeFileSync("verify-call.json", JSON.stringify(process.argv.slice(2)));
+if (process.argv[4]?.endsWith("sync.ts"))
+  fs.writeFileSync("sync-call.json", JSON.stringify(process.argv.slice(2)));
 `,
     );
     process.chdir(project);
@@ -178,8 +199,12 @@ if (process.argv[4]?.endsWith("verify.ts"))
     const propagated = captureCli(["render", "verify"]);
     const signaled = captureCli(["render", "finalize"]);
     const verified = captureCli(["verify"]);
+    const synchronized = captureCli(["sync"]);
     const verifyCall = JSON.parse(
       fs.readFileSync(path.join(project, "verify-call.json"), "utf8"),
+    ) as string[];
+    const syncCall = JSON.parse(
+      fs.readFileSync(path.join(project, "sync-call.json"), "utf8"),
     ) as string[];
     TestValidator.equals(
       "render CLI delegates exact argv and propagates child status",
@@ -203,11 +228,14 @@ if (process.argv[4]?.endsWith("verify.ts"))
         ["propagatedStatus", () => propagated.status === 7],
         ["signaledStatus", () => signaled.status === 1],
         ["verifiedStatus", () => verified.status === 0],
+        ["synchronizedStatus", () => synchronized.status === 0],
         [
           "verifyCallVerifyScript",
           () => path.resolve(verifyCall[2]!) === verifyScript,
         ],
         ["verifyCall", () => verifyCall.length === 3],
+        ["syncCallSyncScript", () => path.resolve(syncCall[2]!) === syncScript],
+        ["syncCall", () => syncCall.length === 3],
       ]),
       {
         delegatedStatus: true,
@@ -222,8 +250,11 @@ if (process.argv[4]?.endsWith("verify.ts"))
         propagatedStatus: true,
         signaledStatus: true,
         verifiedStatus: true,
+        synchronizedStatus: true,
         verifyCallVerifyScript: true,
         verifyCall: true,
+        syncCallSyncScript: true,
+        syncCall: true,
       },
     );
   } catch (error) {

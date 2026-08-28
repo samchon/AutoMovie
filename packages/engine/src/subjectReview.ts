@@ -17,6 +17,7 @@ import { describeAutoMovieSubject } from "./subjectDescription";
  * inspection-owned viewpoint authority, and delivery-evidence separation.
  *
  * @evidence requirements/review/subject-inspection.md#review-subject-identity Reuses the compiled subject identity rather than reconstructing it from names.
+ * @evidence requirements/review/subject-inspection.md#review-observable-judgeable-parity Resolves every supported public subject target into its own observable review unit.
  * @evidence requirements/review/subject-inspection.md#review-subject-viewpoint-ownership Assigns viewpoint authority to inspection and excludes the result from delivery evidence.
  * @evidence specifications/review-and-acceptance/subject-surface-and-inspection.md#review-system-subject-record Resolves the shared compiled description into one review record.
  * @evidence specifications/review-and-acceptance/subject-surface-and-inspection.md#review-system-subject-target-parity Gives every resolvable compiled subject an independent review unit.

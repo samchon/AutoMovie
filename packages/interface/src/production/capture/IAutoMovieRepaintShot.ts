@@ -6,7 +6,26 @@ import {
 import { AutoMovieContentDigest } from "../IAutoMovieProductionDesign";
 
 /**
- * One fixed style or character reference consumed by repaint.
+ * One explicit purpose assigned to a fixed repaint reference.
+ *
+ * `character` means identity rather than costume or material. `structure` is
+ * appearance guidance only: deterministic control passes remain authoritative
+ * for geometry, motion, contact, camera, timing, and clearance.
+ *
+ * @evidence requirements/repaint/source-frames-and-reference-locking.md#repaint-reference-roles Exposes the complete non-collapsible repaint reference-role vocabulary.
+ * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-repaint-controls-references Types distinct structural-guidance, identity, costume, style, material, color, and environment references.
+ */
+export type AutoMovieRepaintReferenceRole =
+  | "structure"
+  | "character"
+  | "costume"
+  | "style"
+  | "material"
+  | "color"
+  | "environment";
+
+/**
+ * One fixed, role-specific reference consumed by repaint.
  *
  * @evidence requirements/repaint/source-frames-and-reference-locking.md#repaint-reference-roles Exposes `IAutoMovieRepaintReferenceInput` as the portable data boundary for the repaint reference roles requirement.
  * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-repaint-controls-references Types `IAutoMovieRepaintReferenceInput` for the asset spec repaint controls references system contract.
@@ -18,7 +37,7 @@ export interface IAutoMovieRepaintReferenceInput {
    * @evidence requirements/repaint/source-frames-and-reference-locking.md#repaint-reference-roles Exposes `role` as the portable data boundary for the repaint reference roles requirement.
    * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-repaint-controls-references Types `role` for the asset spec repaint controls references system contract.
    */
-  role: "style" | "character";
+  role: AutoMovieRepaintReferenceRole;
   /**
    * Exact project-relative asset-manifest path.
    *
@@ -117,6 +136,113 @@ export interface IAutoMovieRepaintRuntimeIdentity {
 }
 
 /**
+ * Reviewed adoption facts for the external generator behind repaint.
+ *
+ * Credentials are deliberately absent. This record travels with every
+ * accepted rendition so a provider, rights, terms, cost, or consumer change is
+ * a new generation identity rather than untracked metadata.
+ *
+ * @evidence requirements/repaint/providers-models-and-credentials.md#repaint-provider-terms Carries the current rights and terms review beside the selected provider and model.
+ * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-repaint-output-provenance Types the rights, terms, cost, and reasoned-consumer portion of repaint output provenance.
+ */
+export interface IAutoMovieRepaintGeneratorProvenance {
+  /** Stable provider, repository, or local-tool source address. */
+  source: string;
+  /** License identifier or stable terms location reviewed for this use. */
+  license: string;
+  /** Calendar date, `YYYY-MM-DD`, on which current terms were checked. */
+  termsCheckedAt: string;
+  /** Authored cost basis, including an explicit local-compute basis. */
+  cost: string;
+  /** Typed production consumer and authored reason for this adoption. */
+  consumer: {
+    /** Exact generated-content lane. */
+    kind: "repaint";
+    /** Why this production needs a repainted appearance rendition. */
+    reason: string;
+  };
+}
+
+/**
+ * Exact runtime and reviewed provenance selected for repaint generation.
+ *
+ * @evidence requirements/repaint/providers-models-and-credentials.md#repaint-execution-boundary Keeps the chosen execution boundary explicit beside the provider and model.
+ * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-repaint-execution-eligibility Binds the host adapter to one selected runtime and adoption record.
+ */
+export interface IAutoMovieRepaintGeneratorAdoption {
+  /** Provider, model, version, and execution boundary the adapter must report. */
+  runtimeIdentity: IAutoMovieRepaintRuntimeIdentity;
+  /** Reviewed source, rights, terms, cost, and reasoned consumer. */
+  generatorProvenance: IAutoMovieRepaintGeneratorProvenance;
+}
+
+/** Failure classes that an authored repaint retry policy may admit. */
+export type AutoMovieRepaintFailureClass =
+  | "timeout"
+  | "rate-limit"
+  | "transport"
+  | "provider-refusal"
+  | "invalid-output"
+  | "cancelled"
+  | "input-stale"
+  | "budget-exhausted"
+  | "internal";
+
+/**
+ * Failure classes that can legally consume another attempt.
+ *
+ * Cancellation, stale input, and exhausted budget are hard stops. Invalid
+ * output remains an immutable rejected result and requires a reroll rather
+ * than silently repeating the same request.
+ *
+ * @evidence requirements/repaint/retries-seeds-and-variation.md#repaint-retry-budget-stop Restricts authored retry grants to failure classes that the runtime can actually retry.
+ * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-repaint-attempt-selection Keeps the public policy vocabulary identical to the bounded executor state machine.
+ */
+export type AutoMovieRepaintRetryableFailureClass =
+  | "timeout"
+  | "rate-limit"
+  | "transport"
+  | "provider-refusal"
+  | "internal";
+
+/**
+ * Complete bounded execution policy for one immutable repaint request.
+ *
+ * @evidence requirements/repaint/retries-seeds-and-variation.md#repaint-retry-budget-stop Makes attempts, timeout, elapsed time, cost, retryability, and deterministic backoff authored inputs rather than hidden host behavior.
+ * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-repaint-attempt-selection Types the bounded request policy consumed before an external call.
+ */
+export interface IAutoMovieRepaintExecutionPolicy {
+  /** Maximum provider calls belonging to one request. */
+  maximumAttempts: number;
+  /** Per-attempt cancellation deadline in milliseconds. */
+  attemptTimeoutMs: number;
+  /** Whole-request wall-time ceiling in milliseconds. */
+  maximumElapsedMs: number;
+  /** Maximum metered cost in the adapter's declared cost unit. */
+  maximumCostUnits: number;
+  /** One deterministic delay for every possible retry. */
+  backoffMs: number[];
+  /** Exact failure classes allowed to consume another attempt. */
+  retryableFailures: AutoMovieRepaintRetryableFailureClass[];
+}
+
+/** Stable authored evidence addresses retained by one repaint request. */
+export interface IAutoMovieRepaintRequestEvidence {
+  /** Prompt and negative-prompt owner. */
+  prompt: string;
+  /** Applicable versioned continuity owner, or null outside film continuity. */
+  continuity: string | null;
+  /** Settings decision governing delivery and shared visual grammar. */
+  settings: string;
+  /** Design owner governing the exact subject or space appearance. */
+  design: string;
+  /** Screenplay or bounded brief owner that requires the shot. */
+  screenplayOrBrief: string;
+  /** Exact shot-source owner and acceptance surface. */
+  shot: string;
+}
+
+/**
  * Immutable provenance for one accepted repaint rendition.
  *
  * @evidence requirements/repaint/scope-and-user-choice.md#repaint-independent-artifact Exposes `IAutoMovieRepaintReceipt` as the portable data boundary for the repaint independent artifact requirement.
@@ -129,7 +255,7 @@ export interface IAutoMovieRepaintReceipt {
    * @evidence requirements/repaint/scope-and-user-choice.md#repaint-independent-artifact Exposes `version` as the portable data boundary for the repaint independent artifact requirement.
    * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-repaint-output-provenance Types `version` for the asset spec repaint output provenance system contract.
    */
-  version: 2;
+  version: 3 | 4;
   /**
    * Owning production namespace.
    *
@@ -159,12 +285,27 @@ export interface IAutoMovieRepaintReceipt {
    */
   sourceRenderFingerprint: AutoMovieContentDigest;
   /**
+   * Immutable identity shared by the transport attempts of one request.
+   *
+   * @evidence requirements/repaint/retries-seeds-and-variation.md#repaint-retry-request-boundary Separates a request from the attempts that retry it.
+   * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-repaint-attempt-selection Carries the stable request side of request/attempt identity.
+   */
+  requestId?: string;
+  /**
    * Host-generated identity of this repaint invocation.
    *
    * @evidence requirements/repaint/scope-and-user-choice.md#repaint-independent-artifact Exposes `attemptId` as the portable data boundary for the repaint independent artifact requirement.
    * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-repaint-output-provenance Types `attemptId` for the asset spec repaint output provenance system contract.
    */
   attemptId: string;
+  /** UTC instant captured immediately before this provider call. */
+  startedAt?: string;
+  /** UTC instant captured when the validated candidate completed. */
+  completedAt?: string;
+  /** Metered cost charged to this successful attempt. */
+  costUnits?: number;
+  /** Complete bounded policy under which the request executed. */
+  executionPolicy?: IAutoMovieRepaintExecutionPolicy;
   /**
    * Content-addressed deterministic source bundle.
    *
@@ -191,8 +332,8 @@ export interface IAutoMovieRepaintReceipt {
    * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-repaint-output-provenance Types `references` for the asset spec repaint output provenance system contract.
    */
   references: Array<{
-    /** Style or character role. */
-    role: "style" | "character";
+    /** Exact non-collapsible reference role. */
+    role: AutoMovieRepaintReferenceRole;
     /** Project-relative manifest path. */
     path: string;
     /** Current byte digest. */
@@ -206,12 +347,31 @@ export interface IAutoMovieRepaintReceipt {
    */
   adapterIdentity: string;
   /**
+   * Reviewed generator adoption retained with the exact rendition bytes.
+   *
+   * @evidence requirements/repaint/identity-and-provenance.md#repaint-provenance-refusal Makes missing generator terms and adoption provenance a malformed output identity.
+   * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-repaint-output-provenance Carries the selected generator's rights, terms, cost, and consumer into the immutable receipt.
+   */
+  generatorProvenance: IAutoMovieRepaintGeneratorProvenance;
+  /**
+   * Authority boundary of the derived appearance.
+   *
+   * The rendition may be the audience-visible delivery, but it never becomes
+   * geometry, motion, contact, camera, timing, or prototype-fidelity truth.
+   *
+   * @evidence requirements/production-design/visual-delivery-and-fidelity-tiers.md#production-design-repaint-boundary Keeps the deterministic blocking pass authoritative for structure.
+   * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-repaint-eligibility-source-lock Marks the output as a derived appearance rather than a replacement source.
+   */
+  structuralAuthority: "deterministic-source-only";
+  /**
    * Exact generation parameters.
    *
    * @evidence requirements/repaint/scope-and-user-choice.md#repaint-independent-artifact Exposes `parameters` as the portable data boundary for the repaint independent artifact requirement.
    * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-repaint-output-provenance Types `parameters` for the asset spec repaint output provenance system contract.
    */
   parameters: IAutoMovieRepaintParameters;
+  /** Stable evidence addresses from which this immutable request was formed. */
+  evidence?: IAutoMovieRepaintRequestEvidence;
   /**
    * Verified rendition output.
    *
@@ -244,6 +404,16 @@ export interface IAutoMovieRepaintShot {
    * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-repaint-controls-references Types `repainted` for the asset spec repaint controls references system contract.
    */
   repainted: boolean;
+  /** True only when a separate guarded selection transaction made it active. */
+  selected: boolean;
+  /**
+   * Immutable request identity that a transport retry resumes, or null when
+   * validation refused before a request existed.
+   *
+   * @evidence requirements/repaint/retries-seeds-and-variation.md#repaint-retry-request-boundary Makes a failed attempt addressable by the explicit retry operation without changing its request controls.
+   * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-repaint-attempt-selection Returns the stable request side of the stored request/attempt lineage.
+   */
+  requestId: string | null;
   /**
    * Current production namespace.
    *
@@ -297,7 +467,7 @@ export namespace IAutoMovieRepaintShot {
      */
     shot: string;
     /**
-     * Fixed style and character references from the asset manifest.
+     * Fixed non-collapsible role-specific references from the asset manifest.
      *
      * @evidence requirements/repaint/source-frames-and-reference-locking.md#repaint-reference-roles Exposes `references` as the portable data boundary for the repaint reference roles requirement.
      * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-repaint-controls-references Types `references` for the asset spec repaint controls references system contract.

@@ -25,6 +25,7 @@ import * as THREE from "three";
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 
 import { IAutoMovieModelObject, buildModel } from "./buildModel";
+import { readAutoMovieDeliveryCrop } from "./deliveryCrop";
 import {
   IAutoMovieFormationCycle,
   applyFormationCycleCadence,
@@ -494,6 +495,12 @@ export const buildInstancedFormation = (input: {
       camera.getWorldPosition(cameraPosition);
       camera.getWorldQuaternion(cameraRotation);
       const halfY = Math.tan(THREE.MathUtils.degToRad(camera.fov) / 2);
+      const deliveryCrop = readAutoMovieDeliveryCrop(camera);
+      const effectiveHalfY =
+        halfY *
+        (deliveryCrop === undefined
+          ? 1
+          : deliveryCrop.bottom - deliveryCrop.top);
       for (const hero of input.formation.heroes) {
         const object = input.heroObjects?.get(hero.actor);
         if (object === undefined) continue;
@@ -553,6 +560,7 @@ export const buildInstancedFormation = (input: {
           far: camera.far,
           halfY,
           aspect: camera.aspect,
+          crop: deliveryCrop,
         });
         if (object.visible) ++stats.visible.hero;
       }
@@ -581,7 +589,7 @@ export const buildInstancedFormation = (input: {
           -center.clone().applyMatrix4(camera.matrixWorldInverse).z,
         );
         const projectedPixels =
-          (selectionRadius * viewportHeight) / (halfY * cameraDepth);
+          (selectionRadius * viewportHeight) / (effectiveHalfY * cameraDepth);
         const selected = selectFormationLod({
           lod: input.formation.lod,
           distance,

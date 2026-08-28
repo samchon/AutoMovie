@@ -27,6 +27,7 @@ import { IAutoMovieCollisionResponse } from "../physics/collisionResponse";
 import { IAutoMovieRestFrame } from "../rom/restFrame";
 import { compareCodeUnits } from "../text/compareCodeUnits";
 import { blockBeat } from "./blockBeat";
+import { IAutoMovieCameraClearanceRuntime } from "./cameraClearancePerformance";
 import { performShot } from "./performShot";
 import { realizeShotContract } from "./realizeShotContract";
 import { resolveBeatEnd, resolveBeatOpening } from "./resolveBeatEnd";
@@ -136,6 +137,15 @@ export interface IAutoMovieShotRuntime {
     IAutoMovieProductionDesign["frameFormat"],
     "width" | "height"
   >;
+  /**
+   * Geometry revision and fixed-clock authority for camera-body clearance.
+   * Required only when a delivered staged camera declares a clearance
+   * envelope.
+   *
+   * @evidence requirements/camera/clipping-occlusion-and-spatial-constraints.md#camera-spatial-geometry-revision Carries the measured and current revision through the public shot compiler boundary.
+   * @evidence specifications/camera-light-and-visibility/framing-axis-and-camera-path.md#clv-camera-path-constraints-refusal Arms the addressed swept-path refusal before a shot artifact is published.
+   */
+  cameraClearance?: IAutoMovieCameraClearanceRuntime;
   /**
    * Optional world landmarks cited by contract predicates.
    *
@@ -523,6 +533,7 @@ export const compileDefinedShot = <Context>(props: {
       objectMotions: props.runtime.objectMotions,
       props: props.runtime.props,
       frameFormat: props.runtime.frameFormat,
+      cameraClearance: props.runtime.cameraClearance,
       hasActorContext: props.runtime.hasActorContext,
       jointAxes: props.runtime.jointAxes,
       restFrames: props.runtime.restFrames,

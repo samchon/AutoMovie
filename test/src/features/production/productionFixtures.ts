@@ -13,6 +13,8 @@ import {
   AutoMovieProductionCompiler,
   AutoMovieProductionProject,
   canonicalAutoMovieCaptureRuntimeIdentity,
+  canonicalizeAutoMovieJson,
+  digestAutoMovieBytes,
 } from "@automovie/production";
 import { writeFiles } from "@automovie/template";
 import fs from "node:fs";
@@ -329,8 +331,9 @@ export const writeProductionScreenplay = (props: {
 }): void => {
   // Render under this production's own name so the index carries its actual
   // production id. Both disposable productions intentionally reuse the same
-  // completed-film prose already present at the index's `docs/storylines` and
-  // `docs/script` paths; this helper adds only the second tracked index.
+  // completed-film authored documents already present at the index's
+  // `docs/treatments` and
+  // `docs/screenplays` paths; this helper adds only the second tracked index.
   const rendered = renderCompletedFilmFixture(props.productionId);
   const index = JSON.parse(
     rendered[`automovie/design/${props.productionId}/screenplay/index.json`]!,
@@ -466,34 +469,69 @@ export const formationDesign = (
 /** Stable structured capture-runtime identity for production test fixtures. */
 export const testCaptureRuntimeIdentity = (
   browserVersion = "148.0.7778.96",
-): IAutoMovieCaptureRuntimeIdentity => ({
-  protocolVersion: "automovie.capture-runtime.v1",
-  playwright: {
-    package: "playwright",
-    version: "1.60.0",
-  },
-  browser: {
-    product: "chromium",
-    version: browserVersion,
-    revision: "1223",
-    source: "package-owned",
-    executableDigest: `sha256:${"1".repeat(64)}` as `sha256:${string}`,
-  },
-  platform: {
-    os: "test",
-    arch: "test",
-  },
-  mode: {
-    headless: "chromium",
-    deviceScaleFactor: 1,
-  },
-  graphics: {
-    requestedBackend: "angle:swiftshader",
-    api: "webgl2",
-    vendor: "AutoMovie Test Vendor",
-    renderer: "AutoMovie Test Renderer",
-  },
-});
+): IAutoMovieCaptureRuntimeIdentity => {
+  const packages = [
+    "@automovie/engine",
+    "@automovie/viewer",
+    "playwright",
+    "playwright-core",
+    "three",
+    "vite",
+  ].map((name, index) => ({
+    package: name,
+    version: "1.0.0",
+    contentDigest:
+      `sha256:${String(index + 2).repeat(64)}` as `sha256:${string}`,
+    files: 1,
+    bytes: 1,
+  }));
+  const browserSupport = {
+    status: "content-sealed" as const,
+    source: "package-owned" as const,
+    contentDigest: `sha256:${"8".repeat(64)}` as `sha256:${string}`,
+    files: 1,
+    bytes: 1,
+  };
+  const closureBasis = {
+    protocolVersion: "automovie.capture-runtime-closure.v1" as const,
+    packages,
+    browserSupport,
+  };
+  return {
+    protocolVersion: "automovie.capture-runtime.v2",
+    playwright: {
+      package: "playwright",
+      version: "1.60.0",
+    },
+    runtimeClosure: {
+      ...closureBasis,
+      contentDigest: digestAutoMovieBytes(
+        Buffer.from(canonicalizeAutoMovieJson(closureBasis), "utf8"),
+      ),
+    },
+    browser: {
+      product: "chromium",
+      version: browserVersion,
+      revision: "1223",
+      source: "package-owned",
+      executableDigest: `sha256:${"1".repeat(64)}` as `sha256:${string}`,
+    },
+    platform: {
+      os: "test",
+      arch: "test",
+    },
+    mode: {
+      headless: "chromium",
+      deviceScaleFactor: 1,
+    },
+    graphics: {
+      requestedBackend: "angle:swiftshader",
+      api: "webgl2",
+      vendor: "AutoMovie Test Vendor",
+      renderer: "AutoMovie Test Renderer",
+    },
+  };
+};
 
 /** Canonical manifest encoding of the stable capture fixture identity. */
 export const testRendererIdentity = (

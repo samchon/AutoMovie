@@ -20,6 +20,20 @@ A complete round must satisfy all four rules:
 - **Fresh start:** use the current state and repeat the whole inspection. Earlier rounds, sampled files, and a recheck of only the latest fix do not count as coverage.
 - **Unlimited rounds:** whenever the reviewer applies an improvement or accepts a meaningful issue candidate, update the work and start another complete round. Stop only after a complete round produces nothing that survives verification.
 
+## Review records belong to the procedure
+
+AutoMovie has no repository review service, finding ledger, approval state, or waiver store. A repository review record is the Git and pull-request chronology produced while following this skill. A generated production follows its shipped [production review procedure](../../../packages/template/scaffold/.agents/skills/production/review.md) instead; neither workflow invents a second product ledger.
+
+Declare the exact branch, base and head, working-tree state, artifact revision, and file or rendered-output population the round reads. A conclusion applies only to that surface. A clean check, an empty finding set, elapsed time, or a judgment over one file never implies a wider approval.
+
+Write each finding at the narrowest reproducible location: changed line, public symbol, test case, diagnostic, target identity, frame, interval, subject, or render view. Separate what was observed, what the contract requires, the resulting consequence, and any cause proved from control flow or history. An unproved cause stays a hypothesis.
+
+Compare alternatives only when their source, intent, platform, inputs, event or time position, and presentation conditions make the comparison meaningful. Name the common basis and the actual difference. If the basis does not match, report the comparison limit instead of ranking the candidates.
+
+Classify a verified finding by affected contract or behavior, impact, reproduction conditions, and repair priority. Impact and priority are different facts. Several manifestations may share one root cause, but each reproducing location remains evidence until the whole class is repaired.
+
+Preserve history through commits and formal pull-request reviews. A later correction explains and supersedes an earlier finding without rewriting the earlier observation. A Self-Review `COMMENT` is a process record, never an approval, rejection, conditional approval, or waiver on behalf of a person or organization.
+
 ## Self-Review
 
 Self-Review and an unqualified review request use this solo workflow:

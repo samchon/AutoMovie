@@ -26,8 +26,7 @@ import type {
 } from "./productionStudies";
 
 export {
-  currentProductionDialogueRuntime,
-  installProductionDialogueRuntime,
+  cloneProductionDialogueRuntime,
   productionDialogueFrameForShotTime,
   productionDialogueRuntimeIdentity,
   type IAutoMovieProductionDialogueRuntime,

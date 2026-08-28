@@ -16,6 +16,7 @@ Visibility는 source가 존재하거나 frustum과 교차한다는 사실, image
 <!-- @evidence requirements/camera/clipping-occlusion-and-spatial-constraints.md#camera-clipping-range Near·far의 ordered distance와 required depth 범위를 검증한다. -->
 <!-- @evidence requirements/camera/clipping-occlusion-and-spatial-constraints.md#camera-clearance Camera body와 path가 wall, terrain, vehicle와 subject를 침범하는지 판정한다. -->
 <!-- @evidence requirements/camera/clipping-occlusion-and-spatial-constraints.md#camera-dynamic-spatial-sampling Moving camera와 geometry의 swept interval을 보수적으로 검사한다. -->
+<!-- @evidence requirements/camera/framing-and-shot-size.md#camera-framing-delivery-gate Delivery raster와 별개인 crop window를 실제 framing 판정 경계로 사용한다. -->
 Clipping evaluation은 camera projection convention, positive ordered near·far distance, optional clipping planes, delivery crop와 current geometry bounds를 사용한다. Boundary inclusion과 tolerance를 선언하고 required subject·environment 범위와 depth precision constraint를 함께 보고한다.
 
 <!-- @evidenceObligation projection-convention Optical axis, transform order, vertical FOV와 aspect가 만드는 camera-local half-space convention. -->
@@ -26,6 +27,12 @@ Clipping evaluation은 camera projection convention, positive ordered near·far 
 <!-- @evidenceObligation geometry-bounds Clip을 취하는 current resolved geometry bound. -->
 <!-- @evidenceObligation boundary-inclusion-tolerance Boundary inclusion과 tolerance를 선언한 대로 판정한다. -->
 <!-- @evidenceObligation depth-precision-constraint Required subject·environment 범위와 depth precision constraint를 보고한다. -->
+
+Depth precision은 standard fixed-point perspective projection에서 camera-space metre를 측정한다. `L = 2^bits - 1`, `q(z) = (1/near - 1/z) / (1/near - 1/far)`, `upper = ceil(clamp(q(requiredFar), 0, 1) * L)`, `lower = max(0, upper - 1)`, `z(k) = 1 / (1/near - (k/L) * (1/near - 1/far))`로 두고 `z(upper) - z(lower)`를 required interval의 최대 adjacent depth step으로 보고한다. Perspective spacing은 far 쪽으로 단조 증가하므로 이 far-end cell이 closed interval의 worst step이며, measured step이 authored maximum 이하이면 exact equality를 포함해 통과한다.
+
+각 addressed shot sample은 `requiredSubjects`가 명명한 모든 subject와 environment scene node의 current resolved world bound 여덟 corner를 그 sample의 resolved camera space로 변환해 `requiredNear`와 `requiredFar`를 도출한다. Report는 camera identity, sample time, near·far, required interval, minimum depth bits, maximum step, code pair, measured metre step과 status를 함께 가진다. Interval이 clip 범위를 벗어나거나 operand가 유한하지 않으면 통과시키지 않는다. Viewer는 source와 realized near·far의 exact parity, standard projection mode와 해당 pass에 currently bound인 draw framebuffer의 actual `DEPTH_BITS >= minimumDepthBits`를 draw 전에 검사하며 logarithmic 또는 reversed depth는 다른 metric으로 거부한다.
+
+Delivery crop은 crop 전 gate의 pixel edge를 기준으로 한 top-left-origin normalized 좌표 `{ left, top, right, bottom }`이며 `0 <= left < right <= 1`, `0 <= top < bottom <= 1`을 만족해야 한다. 생략과 `{ 0, 0, 1, 1 }`은 완전한 delivery gate를 뜻하고 projection·pixel 결과를 바꾸지 않는다. 선택한 crop은 output raster 전체로 다시 투영되므로 final, proxy, diagnostic resolution이 달라도 동일한 normalized window를 사용한다. Left·top·right·bottom 경계에 정확히 닿은 geometry는 포함하고, crop 밖의 geometry는 delivery acceptance와 capture에서 제외한다.
 
 Optional clipping plane은 평면 위의 한 점과 제거되는 쪽 unit normal로 주어지고 signed distance `n·(p − p0)`로 평가한다. `0`은 남는 쪽에 포함한다. Bound에 대한 결과는 `kept`, `cut`, `crossed` 셋이며 `cut`은 어느 한 평면이 bound 전체를 제거했다는 뜻이고 `crossed`는 어느 평면도 단독으로 bound 전체를 제거하지 못했다는 뜻일 뿐 남는 점의 존재를 보장하지 않는다. 잘린 단면을 메우는 surface는 evaluation의 산출물이 아니다.
 

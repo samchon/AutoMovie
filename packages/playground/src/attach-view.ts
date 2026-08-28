@@ -21,6 +21,7 @@ import {
   AutoMoviePlayer,
   applyObjectMotion,
   applyObjectMotions,
+  assertAutoMovieViewerCameraDepthPrecision,
   buildModel,
   mountViewer,
 } from "@automovie/viewer";
@@ -106,6 +107,9 @@ const staging: IAutoMovieStage = {
       position: { x: 4.2, y: 1.6, z: 0.1 },
       lookAt: { kind: "point", point: { x: 0, y: 1, z: 0.1 } },
       fovDeg: 46,
+      near: 0.1,
+      far: 1000,
+      depthPrecision: { minimumDepthBits: 24, maximumStepMeters: 0.6 },
     },
   ],
   lights: [
@@ -255,8 +259,13 @@ const playersByShot = new Map(
 );
 
 // ── the projector: global seconds → posed walker + carried blade + camera ────
-const camera = new THREE.PerspectiveCamera(46, 16 / 9, 0.05, 100);
 const stagedCam = staged.scene.cameras[0]!;
+const camera = new THREE.PerspectiveCamera(
+  stagedCam.fovY,
+  16 / 9,
+  stagedCam.near,
+  stagedCam.far,
+);
 const applyStagedCamera = (): void => {
   const t = stagedCam.transform.translation;
   const r = stagedCam.transform.rotation;
@@ -293,6 +302,11 @@ if (freezeAt !== null && Number.isFinite(freezeAt)) renderAt(freezeAt);
 const handle = mountViewer(canvas, scene, camera, (elapsed) => {
   if (!capMode && freezeAt === null) renderAt(elapsed % (FILM_DURATION + 0.8));
 });
+const cameraDepthPrecision = assertAutoMovieViewerCameraDepthPrecision({
+  renderer: handle.renderer,
+  source: stagedCam,
+  realized: camera,
+});
 (window as unknown as { __afSeek: (t: number) => void }).__afSeek = (
   t: number,
 ): void => {
@@ -303,4 +317,5 @@ const handle = mountViewer(canvas, scene, camera, (elapsed) => {
   ready: true,
   duration: FILM_DURATION,
   shots: shots.map((s) => s.id),
+  cameraDepthPrecision,
 };

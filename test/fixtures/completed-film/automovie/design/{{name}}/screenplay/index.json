@@ -2,7 +2,7 @@
   "version": 1,
   "production": "{{name}}",
   "treatment": {
-    "path": "docs/storylines/001-cue.md",
+    "path": "docs/treatments/001-cue.md",
     "sequences": [
       {
         "id": "SEQ-CUE",
@@ -17,7 +17,7 @@
             "text": "CHORUS closes the authored distance without losing order."
           }
         ],
-        "path": "docs/storylines/001-cue.md"
+        "path": "docs/treatments/001-cue.md"
       },
       {
         "id": "SEQ-ANSWER",
@@ -32,12 +32,12 @@
             "text": "GATE stays shut while the raised hand and advanced rows remain the established answer."
           }
         ],
-        "path": "docs/storylines/002-answer.md"
+        "path": "docs/treatments/002-answer.md"
       }
     ]
   },
   "screenplay": {
-    "path": "docs/script/001-cue.md",
+    "path": "docs/screenplays/001-cue/001-cue.md",
     "lock": {
       "activatedBy": "agent-before-first-shot",
       "reason": "The starter already registers opening and answer shot contracts, so their scene joins require stable numbering.",
@@ -63,7 +63,7 @@
         ],
         "location": "plaza",
         "disposition": null,
-        "path": "docs/script/001-cue.md"
+        "path": "docs/screenplays/001-cue/001-cue.md"
       },
       {
         "id": "SCN-002",
@@ -81,7 +81,7 @@
         ],
         "location": "plaza",
         "disposition": null,
-        "path": "docs/script/002-answer.md"
+        "path": "docs/screenplays/002-answer/001-answer.md"
       }
     ]
   },

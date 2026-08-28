@@ -1,4 +1,8 @@
-import { AutoMovieGuidePass, IAutoMovieRenderSpec } from "../cinematics";
+import {
+  AutoMovieGuidePass,
+  IAutoMovieDeliveryCrop,
+  IAutoMovieRenderSpec,
+} from "../cinematics";
 import { IAutoMovieVector3 } from "../geometry";
 import { IAutoMovieRenderObservation } from "../render/IAutoMovieRenderObservation";
 import { IAutoMovieSemanticMask } from "../render/IAutoMovieSemanticMask";
@@ -374,7 +378,7 @@ export interface IAutoMovieCaptureRuntimeIdentity {
    * @evidence requirements/rendering/passes-channels-and-products.md#rendering-identity-mask-channels Exposes `protocolVersion` as the portable data boundary for the rendering identity mask channels requirement.
    * @evidence specifications/editorial-render-and-delivery/render-products-visibility-and-color.md#spec-render-pass-products Types `protocolVersion` for the spec render pass products system contract.
    */
-  protocolVersion: "automovie.capture-runtime.v1";
+  protocolVersion: "automovie.capture-runtime.v2";
   /**
    * Exact Playwright package that selected and launched the browser.
    *
@@ -386,6 +390,53 @@ export interface IAutoMovieCaptureRuntimeIdentity {
     package: "playwright";
     /** Installed package version. */
     version: string;
+  };
+  /**
+   * Content identity of every installed package and browser support byte that
+   * can participate in the captured frame.
+   *
+   * @evidence requirements/acceptance/evidence-and-freshness.md#acceptance-current-historical-evidence Makes an installed renderer change a new evidence generation rather than letting historical pixels remain current.
+   * @evidence specifications/review-and-acceptance/evidence-freshness-and-completeness.md#acceptance-system-current-historical-evidence Types the installed runtime closure consumed by capture freshness comparisons.
+   * @evidencePart specifications/review-and-acceptance/evidence-freshness-and-completeness.md#acceptance-system-current-historical-evidence::current-historical-closure
+   */
+  runtimeClosure: {
+    /** Capture-closure schema and semantics. */
+    protocolVersion: "automovie.capture-runtime-closure.v1";
+    /** Canonical digest of the complete package and browser-support identity. */
+    contentDigest: AutoMovieContentDigest;
+    /** Complete dependency-closed installed package generations. */
+    packages: Array<{
+      /** Installed package name. */
+      package: string;
+      /** Installed package version. */
+      version: string;
+      /** Digest of every captured package file path and byte digest. */
+      contentDigest: AutoMovieContentDigest;
+      /** Number of captured package files. */
+      files: number;
+      /** Total captured package bytes. */
+      bytes: number;
+    }>;
+    /** Browser support closure, or the explicit unsealed system-channel boundary. */
+    browserSupport:
+      | {
+          /** A physical support tree was sealed. */
+          status: "content-sealed";
+          /** How the browser executable was selected. */
+          source: "package-owned" | "configured-executable";
+          /** Digest of every support-file path and byte digest. */
+          contentDigest: AutoMovieContentDigest;
+          /** Number of captured support files. */
+          files: number;
+          /** Total captured support bytes. */
+          bytes: number;
+        }
+      | {
+          /** A system channel remains compatible but is not content sealed. */
+          status: "system-channel-unsealed";
+          /** Explicit compatibility boundary. */
+          source: "system-channel";
+        };
   };
   /**
    * Exact browser executable provenance.
@@ -451,9 +502,7 @@ export interface IAutoMovieCaptureRuntimeIdentity {
  * Content-addressed manifest for preview and production frames.
  *
  * @evidence requirements/acceptance/evidence-and-freshness.md#acceptance-current-historical-evidence Separates current evidence from historical: a bundle is addressed by the target fingerprint it was drawn at, so a previous version's frames remain readable for comparison while never standing in for the current verdict.
- * @evidence requirements/review/records-and-completeness.md#review-verdict-receipt Carries the target identity, the compile and target fingerprints, and the exact frames a record rests on, so a later change is traceable as preserving or invalidating what was judged.
  * @evidence specifications/review-and-acceptance/evidence-freshness-and-completeness.md#acceptance-system-current-historical-evidence Types the fingerprint boundary that decides which committed frames are current for a target.
- * @evidence specifications/review-and-acceptance/verdict-authority-and-dissent.md#review-system-verdict-rationale-receipt Types the receipt-bound record a rationale is written against.
  * @evidence requirements/agent-authoring/knowledge-boundary.md#agent-content-supply-refusal Exposes `IAutoMovieRenderBundleManifest` as the portable data boundary for the agent content supply refusal requirement.
  * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-content-side-effect-invariant Types `IAutoMovieRenderBundleManifest` for the spec authoring tool content side effect invariant system contract.
  */
@@ -464,7 +513,7 @@ export interface IAutoMovieRenderBundleManifest {
    * @evidence requirements/agent-authoring/knowledge-boundary.md#agent-content-supply-refusal Exposes `version` as the portable data boundary for the agent mcp content supply refusal requirement.
    * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-content-side-effect-invariant Types `version` for the spec authoring tool content side effect invariant system contract.
    */
-  version: 3;
+  version: 5;
   /**
    * Asset, shot, sequence, or film render target.
    *
@@ -516,6 +565,14 @@ export interface IAutoMovieRenderBundleManifest {
    * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-content-side-effect-invariant Types `compileFingerprint` for the spec authoring tool content side effect invariant system contract.
    */
   compileFingerprint: AutoMovieContentDigest;
+  /**
+   * Final-byte dialogue and viseme identity installed before these pixels were
+   * drawn, or null when this target consumes no dialogue runtime.
+   *
+   * @evidence requirements/agent-authoring/knowledge-boundary.md#agent-content-supply-refusal Exposes `dialogueRuntimeIdentity` as the portable data boundary for the agent mcp content supply refusal requirement.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-content-side-effect-invariant Types `dialogueRuntimeIdentity` for the spec authoring tool content side effect invariant system contract.
+   */
+  dialogueRuntimeIdentity: AutoMovieContentDigest | null;
   /**
    * Canonical JSON encoding of one validated capture runtime identity.
    *
@@ -604,10 +661,14 @@ export type AutoMovieProductionFrameCapture = (
     productionId: string;
     /** Current compile fingerprint. */
     compileFingerprint: AutoMovieContentDigest;
+    /** Delivery crop for a shot capture; absent for isolated asset captures. */
+    crop?: IAutoMovieDeliveryCrop;
   },
 ) => Promise<{
   /** Raw PNG bytes. */
   bytes: Uint8Array;
+  /** Final-byte dialogue state consumed by the drawn frame, or null. */
+  dialogueRuntimeIdentity: AutoMovieContentDigest | null;
   /** Structured browser, executable, mode, platform, and graphics identity. */
   runtimeIdentity: IAutoMovieCaptureRuntimeIdentity;
   /** Pixel width. */

@@ -437,6 +437,7 @@ export const autoMovieViewerSubjectKey = (
  * looking at different things.
  *
  * @evidence requirements/review/subject-inspection.md#review-subject-identity `parseAutoMovieViewerSubjectKey` resolves a portable subject name back to its kind, identity, and revision without inferring an unstated kind.
+ * @evidence requirements/review/subject-inspection.md#review-observable-judgeable-parity `parseAutoMovieViewerSubjectKey` refuses any public subject target that cannot be opened as its own observation unit.
  * @evidence specifications/review-and-acceptance/subject-surface-and-inspection.md#review-system-subject-target-parity `parseAutoMovieViewerSubjectKey` refuses a target it cannot resolve to a subject unit instead of substituting a neighbouring one.
  * @author Samchon
  */
@@ -693,6 +694,8 @@ export const applyAutoMovieViewerSubjectPose = (
  * argument is not optional.
  *
  * @evidence requirements/review/subject-inspection.md#review-subject-inspection-reach `captureAutoMovieViewerSubjectView` answers a named subject and a stated viewpoint with an observation artifact, which is what makes the instrument usable by a party that cannot look at a screen.
+ * @evidence specifications/review-and-acceptance/subject-surface-and-inspection.md#review-system-subject-inspection-reach Resolves a stable subject and viewpoint request into the actual viewer observation artifact.
+ * @evidencePart specifications/review-and-acceptance/subject-surface-and-inspection.md#review-system-subject-inspection-reach::subject-inspection-reach
  * @evidence requirements/review/subject-inspection.md#review-subject-evidence `captureAutoMovieViewerSubjectView` produces one subject observation carrying the observed identity, the viewpoint it was taken from, and the artifact it produced.
  * @evidence requirements/review/subject-inspection.md#review-subject-viewpoint-ownership `captureAutoMovieViewerSubjectView` renders through the inspection's own pose and marks the result as something no delivery review may consume.
  * @evidence specifications/review-and-acceptance/subject-surface-and-inspection.md#review-system-subject-observation `captureAutoMovieViewerSubjectView` emits the subject observation record the inspection surface accumulates.

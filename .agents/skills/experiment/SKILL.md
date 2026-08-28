@@ -25,7 +25,7 @@ The name must be one portable directory segment. `--no-install` renders without 
 
 Creation packs every workspace package, so it runs each package's build and takes several minutes. A sandbox holds the tarballs it was created from, not a live view of the working tree, so **a change under `packages/` reaches it only when you pack again**.
 
-Use `--refresh` for that once a production is under way. `--force` re-renders the blank scaffold and can overwrite user-authored scaffold-managed files such as `lint.config.ts`, guides, scripts, viewer files, and package wiring; `--refresh` repacks, rewrites only the manifest's tarball pins, and reinstalls without replacing production content.
+Use `--refresh` for that once a production is under way. `--force` re-renders the blank scaffold and can overwrite user-authored scaffold-managed files such as `lint.config.mjs`, guides, scripts, viewer files, and package wiring; `--refresh` repacks, rewrites only the manifest's tarball pins, and reinstalls without replacing production content.
 
 `experimental/` is gitignored. Delete a sandbox when its question is answered, and never commit anything from inside one.
 

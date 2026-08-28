@@ -38,7 +38,7 @@ Actual deployed viewer 또는 final decoded media에서 composition, motion, lig
 
 ### Result Status {#rendering-validation-status}
 
-Planned, scheduled, rendering, partially-materialized, materialized, probed, reviewed, failed, unsupported와 not-run을 구분해야 한다. Path, file count 또는 이전 성공 receipt만으로 current success를 보고해서는 안 된다.
+Planned, scheduled, rendering, partially-materialized, materialized, probed, reviewed, failed, unsupported와 not-run을 구분해야 한다. Path, file count 또는 이전 성공 receipt만으로 current success를 보고해서는 안 된다. Status와 verify는 source를 우선 읽는 관찰 전용 동작이어야 하며 artifact를 합성·설치·다운로드·실행·capture·publish·repair하지 않는다. 누락·부분·stale·not-run 상태를 그대로 보고하고, graphics의 완전한 runtime identity는 저장된 대체값이 아니라 `capture:doctor` 검증을 요구한다.
 
 ### Validation Refusal {#rendering-validation-refusal}
 

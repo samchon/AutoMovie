@@ -47,8 +47,8 @@ const toPosix = (value: string): string => value.split(path.sep).join("/");
  * The rendered key for one scaffold-relative path.
  *
  * Path segments receive the same strict substitution and unknown-token failure
- * as file payloads. No shipped path carries a token today — the prose ladder is
- * named for its rung rather than for the production — but a path is rendered
+ * as file payloads. No shipped path carries a token today — authored content
+ * directories are named for their owner rather than for the production — but a path is rendered
  * through the same gate as its content so a templated one can never be shipped
  * verbatim by having taken a quieter route.
  */

@@ -4,6 +4,8 @@
     "lib": ["ESNext", "DOM", "DOM.Iterable"],
     "module": "esnext",
     "moduleResolution": "bundler",
+    "allowJs": true,
+    "checkJs": true,
     "esModuleInterop": true,
     "resolveJsonModule": true,
     "newLine": "lf",
@@ -18,8 +20,10 @@
     "scripts",
     "test",
     "viewer/src",
+    "productionEvidence.mjs",
+    "repaintSelectionReviews.ts",
     "automovie.config.ts",
     "vite.config.ts",
-    "lint.config.ts"
+    "lint.config.mjs"
   ]
 }

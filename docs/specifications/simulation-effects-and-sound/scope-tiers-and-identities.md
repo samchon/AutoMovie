@@ -27,11 +27,15 @@
 Effect identity는 production, shot, instance, causal event, tier, parameter revision을 포함한다. Sound identity는 production, timeline, cue 또는 sustained source, source revision, emission event와 presentation route를 포함한다. 생성, 활성, 소멸, tail의 구간은 반열림 구간으로 기록하며 동일 원인에서 파생된 effect와 sound는 원인 identity를 공유하되 서로의 presentation identity를 대신하지 않는다.
 
 ### 외부 결과와 provider 중립성 {#external-result-provider-neutrality}
+
+<!-- @evidenceObligation provider-neutral-provenance 외부 생성 결과의 source, provider, model, terms, cost, consumer와 생성 시점을 provider-neutral record로 보존. -->
 <!-- @evidence requirements/effects-and-simulation/scope-and-simulation-tiers.md#effects-external-provider-neutrality 이 절은 외부 effect 결과를 provider가 아닌 채택 artifact로 식별한다. -->
 <!-- @evidence requirements/sound/scope-and-identity.md#sound-provider-neutrality 이 절은 sound source와 timing을 provider product에 종속시키지 않는다. -->
 <!-- @evidence requirements/external-inputs/identity-coordinates-and-units.md#external-identity-content-provenance 동일 content와 서로 다른 source provenance를 합치지 않는 identity 경계를 유지한다. -->
 
 외부 생성 또는 해석은 입력 snapshot hash, provider-neutral 설정, 도구ㆍ모델 revision, 출력 byte digest, unitsㆍbasisㆍclock, license와 receipt를 가진 immutable adopted result로만 들어온다. Runtime 계약은 provider 이름, remote job handle, credential에 의존하지 않는다. 같은 bytes와 해석 metadata는 같은 simulation evaluation content identity를 공유할 수 있지만 source, acquisition, provenance, rights와 adoption revision은 각각 보존하며 하나의 adopted result로 합치지 않는다. Bytes나 해석 metadata가 바뀌면 새 evaluation content revision이고 provenance 또는 rights가 바뀌면 content가 같아도 새 adoption revision이다.
+
+Generator adoption은 실제 UTC calendar terms-review date와 생성 또는 채택 instant를 분리해 보존한다. Canonical identity는 date 문자열의 실재성만 검증하고, preflight와 receipt validation은 주입된 동일 UTC instant에 대해 미래 review를 거절한다. 따라서 UTC 자정 양쪽, leap day, cache resume와 direct generation이 같은 비교 의미를 가지며 credential presence는 이 검증이나 실행을 시작시키지 않는다.
 
 ### 침묵과 누락 상태 {#authored-silence-and-missing-state}
 <!-- @evidence requirements/sound/scope-and-identity.md#sound-authored-silence 이 절은 의도된 침묵을 명시적 상태로 보존한다. -->

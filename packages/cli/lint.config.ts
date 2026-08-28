@@ -54,6 +54,7 @@ const graph: ITtscEvidenceGraphConfig = {
           root: "../../docs",
           files: [
             "specifications/authoring-and-authority/capability-and-content-boundary.md",
+            "specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md",
             "specifications/authoring-and-authority/source-authority-and-derivation.md",
           ],
           symbol: ["h3"],

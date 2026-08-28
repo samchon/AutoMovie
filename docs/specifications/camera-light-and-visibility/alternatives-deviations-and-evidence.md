@@ -43,7 +43,6 @@ Lighting deviation은 affected source·surface·subject·camera·rule·interval,
 <!-- @evidence requirements/lighting/alternatives-and-intentional-deviations.md#lighting-alternative-comparison-conditions Camera, staging, geometry, material, time, exposure, view와 raster를 통제한다. -->
 <!-- @evidence requirements/lighting/alternatives-and-intentional-deviations.md#lighting-alternative-selection 선택 이유, acceptance, approximation, continuity와 budget consequence를 기록한다. -->
 <!-- @evidence requirements/lighting/alternatives-and-intentional-deviations.md#lighting-alternative-refusal Noncomparable condition, branch mixing과 unsupported claim을 finding으로 만든다. -->
-<!-- @evidence requirements/review/alternative-takes-and-versions.md#review-alternative-common-basis-difference Candidate의 공통 basis와 intentional difference를 검토 가능하게 한다. -->
 
 Lighting A/B receipt는 camera, staging, geometry, material, rational sample, exposure, working space, display view와 raster를 고정하거나 difference로 열거한다. Selection receipt는 chosen branch, decision owner, reason, satisfied acceptance, unresolved approximation, continuity·budget consequence와 replaced branches를 가진다.
 
@@ -55,7 +54,6 @@ Common condition이 불명확하거나 semantic event를 대응할 수 없는 �
 
 <!-- @evidence requirements/camera/validation.md#camera-validation-manifest Camera evidence가 take, upstream source, revisions, raster, samples와 tolerance를 기록하게 한다. -->
 <!-- @evidence requirements/lighting/analysis-and-visual-validation.md#lighting-analysis-contract Lighting evidence가 question, quantity, operands, samples와 approximation을 기록하게 한다. -->
-<!-- @evidence requirements/review/reproducible-context.md#review-reproducible-context 다른 검토자가 같은 target과 조건을 다시 열 수 있게 한다. -->
 
 Evidence manifest는 target production·scene·shot·take·branch identity, exact source and dependency closure, story·staging·design·geometry·material revisions, camera·lighting·exposure·display state, delivery raster, rational sample plan, pass 또는 analysis profile, tolerance, execution identity, artifact digest, method, coverage와 freshness를 가진다. 한 evidence item은 자신이 실제 관찰한 method와 scope만 증명한다.
 
@@ -72,7 +70,6 @@ Evidence plan은 start, middle, end, semantic event, cue, cut, transition bounda
 
 <!-- @evidence requirements/camera/validation.md#camera-current-viewer-evidence Source 변경 뒤 실제 current pixels와 geometry metadata를 함께 검토한다. -->
 <!-- @evidence requirements/lighting/analysis-and-visual-validation.md#lighting-fresh-visual-evidence Camera, light, material, display와 branch 변경이 capture를 stale로 만든다. -->
-<!-- @evidence requirements/review/frame-range-and-whole-work.md#review-sampling-full-coverage Sampled review와 전체 interval review의 coverage를 구분한다. -->
 
 Current pixel evidence는 source closure와 artifact digest가 manifest의 expected identity와 일치하고 실제 display 또는 decoded product를 해당 raster·pass·sample에서 관찰한 기록이다. Source, geometry, material, camera, exposure, display, lighting branch 또는 execution identity의 영향받는 변경은 metric, capture와 downstream verdict를 `stale`로 만든다.
 
@@ -82,8 +79,6 @@ Sampled frames는 선언한 sample coverage만 증명하고 전체 interval이�
 
 <!-- @evidence requirements/camera/validation.md#camera-validation-status Numeric, frame, sequence grammar, failed, unsupported와 not-run을 구분한다. -->
 <!-- @evidence requirements/lighting/analysis-and-visual-validation.md#lighting-analysis-status Solved metric, rendered review, failed, unsupported와 not-run을 구분한다. -->
-<!-- @evidence requirements/review/records-and-completeness.md#review-execution-status Artifact 존재와 실제 review 완료를 구분한다. -->
-<!-- @evidence requirements/review/scope-and-authority.md#review-validation-decision-boundary 자동 검사가 사람의 작품 판정을 대신하지 않게 한다. -->
 
 Result status는 `planned`, `computed`, `rendered`, `reviewed`, `failed`, `unsupported`, `not-run`, `stale`와 `noncomparable`을 구분하고 method별 scope를 가진다. Numeric geometry pass는 pixel review나 grammar pass가 아니며 beauty image는 photometric analysis가 아니다.
 

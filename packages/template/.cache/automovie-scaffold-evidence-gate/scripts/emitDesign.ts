@@ -118,7 +118,7 @@ if (derived.size === 0)
   throw new Error(
     [
       "No production design emitter has been authored.",
-      "Select a production kind in lint.config.ts, complete and review settings,",
+      "Select a production kind in productionEvidence.mjs, complete and review settings,",
       "author the applicable design and source branches, then add explicit",
       "imports and emit calls to scripts/emitDesign.ts.",
     ].join(" "),

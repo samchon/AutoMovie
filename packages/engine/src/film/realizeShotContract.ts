@@ -20,9 +20,11 @@ import { Quaternion } from "../math/Quaternion";
 import { sampleMotion } from "../motion/sampleMotion";
 import { productionRuntimeModelId } from "../productionIdentity";
 import { sampleClipSequence } from "../resolve/sampleClip";
+import { evaluateAutoMovieCameraDepthPrecision } from "./cameraDepthPrecision";
 import { computeModelRestExtent, computeRestHeight } from "./cameraMove";
 import {
   intersectsPerspectiveFrustumBox,
+  projectToNdc,
   resolveCameraAt,
 } from "./cameraProjection";
 import {
@@ -62,7 +64,7 @@ import {
  * @evidence specifications/narrative-and-intent/locations-subjects-and-assets.md#narrative-intent-subject-prototype-role Preserves the distinction between compact formation slots, anonymous members, and explicitly promoted hero instances in the realization result.
  * @evidence specifications/performance-motion-and-staging/staging-space-state-and-choreography.md#performance-staging-visibility-reveal-readability Applies automatic coarse framing acceptance to current subject boxes at declared contract times; it does not evaluate occlusion, contrast, reveal, or readable duration.
  * @evidence specifications/camera-light-and-visibility/visibility-and-image-space-observation.md#clv-clipping-clearance-evaluation Applies exact current-bound frustum clipping at the addressed contract time against an empty optional plane set, because an authored camera declares no section plane and a cut view is never delivery evidence; it does not evaluate camera clearance or swept geometry.
- * @evidencePart specifications/camera-light-and-visibility/visibility-and-image-space-observation.md#clv-clipping-clearance-evaluation::delivery-raster-extent Derives the side-plane aspect from the production delivery raster's width and height at the addressed contract time; it does not apply a crop region narrower than that raster.
+ * @evidencePart specifications/camera-light-and-visibility/visibility-and-image-space-observation.md#clv-clipping-clearance-evaluation::delivery-raster-extent Derives the side-plane aspect from the production delivery raster's width and height at the addressed contract time, then applies its normalized crop without changing that raster.
  * @evidence specifications/camera-light-and-visibility/framing-axis-and-camera-path.md#clv-framing-interval-crop Evaluates the live subject bound at each addressed contract time; it does not claim crop intent, interval extrema, or swept visibility between samples.
  */
 export const realizeShotContract = (props: {
@@ -75,7 +77,7 @@ export const realizeShotContract = (props: {
   /** Direct authoring raster when no production design object exists. */
   frameFormat?: Pick<
     IAutoMovieProductionDesign["frameFormat"],
-    "width" | "height"
+    "crop" | "width" | "height"
   >;
   world: IAutoMovieWorldDesign | null;
   formations: ReadonlyMap<string, IAutoMovieFormationDesign>;
@@ -176,7 +178,7 @@ export const realizeShotContract = (props: {
     if (outcome.passed === false)
       fail(
         `camera at ${outcome.time}s`,
-        "must resolve and project every required subject root inside current camera depth and frame bounds",
+        "must resolve every required subject bound inside the current camera frame and clipping range with the declared depth precision",
       );
 
   const formations = props.contract.participants.flatMap((participant) => {
@@ -497,6 +499,18 @@ const cameraOutcome = (
   if (camera === undefined || frameFormat === undefined)
     return {
       time,
+      depthPrecision: evaluateAutoMovieCameraDepthPrecision({
+        camera: props.compiled.shot.camera,
+        time,
+        near: Number.NaN,
+        far: Number.NaN,
+        requiredNear: Number.NaN,
+        requiredFar: Number.NaN,
+        constraint: {
+          minimumDepthBits: Number.NaN,
+          maximumStepMeters: Number.NaN,
+        },
+      }),
       requiredSubjects: props.contract.camera.requiredSubjects.length,
       resolvedSubjects: 0,
       readableSubjects: 0,
@@ -512,6 +526,8 @@ const cameraOutcome = (
   const aspect = frameFormat.width / frameFormat.height;
   let resolvedSubjects = 0;
   let readableSubjects = 0;
+  let requiredNear = Number.POSITIVE_INFINITY;
+  let requiredFar = Number.NEGATIVE_INFINITY;
   for (const subject of props.contract.camera.requiredSubjects)
     try {
       // A node subject carries its orientation as well as its root: a yawed
@@ -532,6 +548,19 @@ const cameraOutcome = (
         : actorTransformAt(props, subject, time);
       ++resolvedSubjects;
       const box = framedSubjectBox(props, subject, placement, time);
+      for (const x of [box.min.x, box.max.x])
+        for (const y of [box.min.y, box.max.y])
+          for (const z of [box.min.z, box.max.z]) {
+            const depth = projectToNdc(
+              resolvedCamera,
+              { x, y, z },
+              halfY,
+              aspect,
+              frameFormat.crop,
+            ).depth;
+            requiredNear = Math.min(requiredNear, depth);
+            requiredFar = Math.max(requiredFar, depth);
+          }
       if (
         intersectsPerspectiveFrustumBox({
           camera: resolvedCamera,
@@ -541,10 +570,20 @@ const cameraOutcome = (
           far: camera.far,
           halfY,
           aspect,
+          crop: frameFormat.crop,
         })
       )
         ++readableSubjects;
     } catch {}
+  const depthPrecision = evaluateAutoMovieCameraDepthPrecision({
+    camera: camera.id,
+    time,
+    near: camera.near,
+    far: camera.far,
+    requiredNear: resolvedSubjects === 0 ? Number.NaN : requiredNear,
+    requiredFar: resolvedSubjects === 0 ? Number.NaN : requiredFar,
+    constraint: camera.depthPrecision,
+  });
   return {
     time,
     // State the camera this sample actually measured whenever a compiled move
@@ -565,12 +604,14 @@ const cameraOutcome = (
             rotation: { ...resolvedCamera.rotation },
           },
         }),
+    depthPrecision,
     requiredSubjects: props.contract.camera.requiredSubjects.length,
     resolvedSubjects,
     readableSubjects,
     passed:
       resolvedSubjects === props.contract.camera.requiredSubjects.length &&
-      readableSubjects === props.contract.camera.requiredSubjects.length,
+      readableSubjects === props.contract.camera.requiredSubjects.length &&
+      depthPrecision.passed,
   };
 };
 

@@ -1,15 +1,14 @@
+import { compareCodeUnits } from "@automovie/engine";
 import { renderScaffold } from "@automovie/template";
 import fs from "node:fs";
 import path from "node:path";
 
 const FIXTURE = path.resolve(__dirname, "../../../fixtures/completed-film");
 
-const files = (root: string): string[] =>
-  fs
+const files = (root: string): string[] => {
+  return fs
     .readdirSync(root, { withFileTypes: true })
-    .sort((left, right) =>
-      left.name < right.name ? -1 : left.name > right.name ? 1 : 0,
-    )
+    .sort((left, right) => compareCodeUnits(left.name, right.name))
     .flatMap((entry) => {
       const absolute = path.join(root, entry.name);
       return entry.isDirectory()
@@ -18,6 +17,7 @@ const files = (root: string): string[] =>
           ? [absolute]
           : [];
     });
+};
 
 /**
  * Overlay the repository-only completed film fixture on the blank public
@@ -29,15 +29,18 @@ const files = (root: string): string[] =>
  */
 export const renderCompletedFilmFixture = (
   name: string,
+  scaffold: (props: {
+    name: string;
+  }) => Record<string, string> = renderScaffold,
 ): Record<string, string> => {
-  const rendered = renderScaffold({ name });
+  const rendered = scaffold({ name });
   for (const absolute of files(FIXTURE)) {
     const legacyRelative = path
       .relative(FIXTURE, absolute)
       .replaceAll("\\", "/")
       .replaceAll("{{name}}", name);
     const relative = legacyRelative
-      .replace(/^src\/formations\//u, "src/instances/")
+      .replace(/^src\/formations\//u, "src/models/")
       .replace(/^src\/objects\//u, "src/models/")
       .replace(/^src\/units\//u, "src/models/")
       .replace(/^src\/world\//u, "src/models/");
@@ -45,15 +48,15 @@ export const renderCompletedFilmFixture = (
       .readFileSync(absolute, "utf8")
       .replaceAll("\r\n", "\n")
       .replaceAll("{{name}}", name)
-      .replaceAll("src/formations/", "src/instances/")
+      .replaceAll("src/formations/", "src/models/")
       .replaceAll("src/objects/", "src/models/")
       .replaceAll("src/units/", "src/models/")
       .replaceAll("src/world/", "src/models/")
-      .replaceAll("../formations/", "../instances/")
+      .replaceAll("../formations/", "../models/")
       .replaceAll("../objects/", "../models/")
       .replaceAll("../units/", "../models/")
       .replaceAll("../world/", "../models/")
-      .replaceAll("./formations/", "./instances/")
+      .replaceAll("./formations/", "./models/")
       .replaceAll("./objects/", "./models/")
       .replaceAll("./units/", "./models/")
       .replaceAll("./world/", "./models/");
