@@ -116,7 +116,7 @@ Sources: [Purdue OWL on character goals, motivation, and conflict](https://owl.p
 
 ## Unit identity {#unit-identity}
 
-Every unit names the stable identity appropriate to its axis. A treatment H2 owns one event in the flat narrative sequence. A script H2, H3, or H4 names every treatment H2 it realizes but may split one event across delivery units or braid several events into one. A screenplay preserves exactly one same-depth script identity, nesting position, and order while retaining the treatment identities that script unit realizes.
+Every unit names the stable identity appropriate to its axis. A treatment H2 owns one minimum logical unit inside an event file in the flat narrative sequence. A script H2, H3, or H4 names every treatment H2 it realizes but may split one event across delivery units or braid several events into one. A screenplay preserves exactly one same-depth script identity, nesting position, and order while retaining the treatment identities that script unit realizes.
 
 Review question: what stable identity does this unit own, which actual narrative parents does its layer require it to realize, and does that relation preserve every event without inventing one?
 
