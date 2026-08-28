@@ -464,7 +464,7 @@ export const test_evidence_completed_film_authored_population = (): void => {
     const negativeSource = fs
       .readFileSync(delivery, "utf8")
       .replace(
-        /^@evidence principles\/common\.md#machine-default .+\n@evidenceReview principles\/common\.md#machine-default .+\n/mu,
+        /^@evidence principles\/core\/common\.md#machine-default .+\n@evidenceReview principles\/core\/common\.md#machine-default .+\n/mu,
         "",
       );
     fs.writeFileSync(delivery, negativeSource, "utf8");
