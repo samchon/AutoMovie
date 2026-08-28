@@ -71,11 +71,13 @@ export interface IAutoMovieProductionRepaintRequest {
   parameters: IAutoMovieRepaintParameters;
   references: readonly IAutoMovieRepaintReferenceInput[];
   evidence: IAutoMovieRepaintRequestEvidence;
-  selectionReview: IAutoMovieProductionRepaintSelectionReview;
+  selectionReview: IAutoMovieProductionRepaintSelectionReview | null;
 }
 
 /** Reviewed evidence used only by explicit candidate selection or reversal. */
 export interface IAutoMovieProductionRepaintSelectionReview {
+  candidateAttemptId: string;
+  candidateOutputDigest: string;
   reason: string;
   structuralReview: string;
   continuityReview: {
@@ -341,11 +343,12 @@ export const readProductionRepaintSelection = (
   });
   for (const [index, request] of requests.entries()) {
     if (
-      (request.evidence.continuity === null) !==
+      request.selectionReview !== null &&
+      ((request.evidence.continuity === null) !==
         (request.selectionReview.continuityReview === null) ||
-      (request.evidence.continuity !== null &&
-        request.selectionReview.continuityReview?.baseline !==
-          request.evidence.continuity)
+        (request.evidence.continuity !== null &&
+          request.selectionReview.continuityReview?.baseline !==
+            request.evidence.continuity))
     )
       throw new Error(
         `visual.repaint.requests[${index}] must pair a film continuity evidence address with the same reviewed baseline, or use null for both outside film continuity.`,
@@ -376,8 +379,10 @@ export const assertProductionRepaintSelection = (props: {
   const continuityMismatch = selected.requests.find((request) =>
     props.continuity === "film"
       ? request.evidence.continuity === null ||
-        request.selectionReview.continuityReview === null
+        request.selectionReview?.continuityReview === null ||
+        request.selectionReview === null
       : request.evidence.continuity !== null ||
+        request.selectionReview === null ||
         request.selectionReview.continuityReview !== null,
   );
   if (continuityMismatch !== undefined)
@@ -513,6 +518,29 @@ export const assertProductionRepaintCandidateAdoption = (props: {
   assertRepaintReceiptMatchesSelection(selected, props.receipt);
 };
 
+/** Return only a review explicitly authored for this immutable candidate. */
+export const selectProductionRepaintCandidateReview = (props: {
+  request: IAutoMovieProductionRepaintRequest;
+  receipt: IAutoMovieRepaintReceipt;
+}): Omit<
+  IAutoMovieProductionRepaintSelectionReview,
+  "candidateAttemptId" | "candidateOutputDigest"
+> => {
+  const review = props.request.selectionReview;
+  if (
+    review === null ||
+    review.candidateAttemptId !== props.receipt.attemptId ||
+    review.candidateOutputDigest !== props.receipt.output.digest
+  )
+    throw new Error(
+      `Repaint selection review for shot "${props.receipt.shot}" must name this candidate's exact attempt id and output digest. Review the generated candidate and full sequence before editing automovie.config.ts and selecting it.`,
+    );
+  const { candidateAttemptId, candidateOutputDigest, ...observation } = review;
+  void candidateAttemptId;
+  void candidateOutputDigest;
+  return observation;
+};
+
 const assertRepaintReceiptMatchesSelection = (
   selected: IAutoMovieProductionRepaintSelection,
   receipt: IAutoMovieRepaintReceipt,
@@ -551,6 +579,9 @@ const assertRepaintReceiptMatchesSelection = (
     canonicalizeAutoMovieJson(receipt.generatorProvenance) !==
       canonicalizeAutoMovieJson(selected.generator.generatorProvenance) ||
     reviewed === undefined ||
+    reviewed.selectionReview === null ||
+    reviewed.selectionReview.candidateAttemptId !== receipt.attemptId ||
+    reviewed.selectionReview.candidateOutputDigest !== receipt.output.digest ||
     canonicalizeAutoMovieJson(receipt.executionPolicy) !==
       canonicalizeAutoMovieJson(selected.executionPolicy) ||
     canonicalizeAutoMovieJson(receipt.parameters) !==
@@ -894,14 +925,25 @@ const readRepaintEvidence = (
 const readRepaintSelectionReview = (
   input: unknown,
   label: string,
-): IAutoMovieProductionRepaintSelectionReview => {
+): IAutoMovieProductionRepaintSelectionReview | null => {
+  if (input === null) return null;
   const value = exactObject(input, label, [
+    "candidateAttemptId",
+    "candidateOutputDigest",
     "reason",
     "structuralReview",
     "continuityReview",
   ]);
   if (value.continuityReview === null)
     return {
+      candidateAttemptId: repaintUuid(
+        value.candidateAttemptId,
+        `${label}.candidateAttemptId`,
+      ),
+      candidateOutputDigest: repaintDigest(
+        value.candidateOutputDigest,
+        `${label}.candidateOutputDigest`,
+      ),
       reason: nonBlank(value.reason, `${label}.reason`),
       structuralReview: nonBlank(
         value.structuralReview,
@@ -942,6 +984,14 @@ const readRepaintSelectionReview = (
         `${label}.continuityReview.${key} must be the reviewed "pass" verdict.`,
       );
   return {
+    candidateAttemptId: repaintUuid(
+      value.candidateAttemptId,
+      `${label}.candidateAttemptId`,
+    ),
+    candidateOutputDigest: repaintDigest(
+      value.candidateOutputDigest,
+      `${label}.candidateOutputDigest`,
+    ),
     reason: nonBlank(value.reason, `${label}.reason`),
     structuralReview: nonBlank(
       value.structuralReview,
@@ -1126,6 +1176,13 @@ const repaintUuid = (value: unknown, label: string): string => {
   )
     throw new Error(`${label} must be a UUID v4.`);
   return id;
+};
+
+const repaintDigest = (value: unknown, label: string): string => {
+  const digest = nonBlank(value, label);
+  if (/^sha256:[0-9a-f]+$/u.test(digest) === false)
+    throw new Error(`${label} must be a sha256 content digest.`);
+  return digest;
 };
 
 const nonBlank = (value: unknown, label: string): string => {

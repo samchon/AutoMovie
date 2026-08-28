@@ -7,6 +7,7 @@ import {
   type IAutoMovieProductionConfiguration,
   assertProductionRepaintCandidateAdoption,
   readProductionRepaintCommand,
+  selectProductionRepaintCandidateReview,
   selectProductionRepaintRequest,
 } from "./productionConfiguration";
 import type { repaintProductionShot } from "./repaintAdapter";
@@ -98,42 +99,39 @@ export const createNodeProductionRepaintHost = (props: {
         .forProduction(invocation.productionId)
         .project.verifiedRepaintCandidates([invocation.request.shot])
         .find((receipt) => receipt.attemptId === invocation.attemptId);
-      if (candidate !== undefined)
-        try {
-          assertProductionRepaintCandidateAdoption({
-            selected: {
-              generator: invocation.generator,
-              executionPolicy: invocation.executionPolicy,
-              requests: [invocation.request],
-            },
-            receipt: candidate,
-          });
-        } catch (error) {
-          return {
-            repainted: false,
-            selected: false,
-            requestId: candidate.requestId ?? null,
-            productionId: invocation.productionId,
-            shot: invocation.request.shot,
-            receipt: null,
-            diagnostics: [
-              {
-                code: "repaint-commit-refused",
-                category: "error",
-                phase: "render",
-                target: invocation.request.shot,
-                path: null,
-                message: error instanceof Error ? error.message : String(error),
-              },
-            ],
-          };
-        }
+      if (candidate === undefined)
+        return repaintSelectionRefusal(
+          invocation,
+          null,
+          `Repaint candidate "${invocation.attemptId}" is absent, invalid, or stale for shot "${invocation.request.shot}".`,
+        );
+      let review: ReturnType<typeof selectProductionRepaintCandidateReview>;
+      try {
+        assertProductionRepaintCandidateAdoption({
+          selected: {
+            generator: invocation.generator,
+            executionPolicy: invocation.executionPolicy,
+            requests: [invocation.request],
+          },
+          receipt: candidate,
+        });
+        review = selectProductionRepaintCandidateReview({
+          request: invocation.request,
+          receipt: candidate,
+        });
+      } catch (error) {
+        return repaintSelectionRefusal(
+          invocation,
+          candidate.requestId ?? null,
+          error instanceof Error ? error.message : String(error),
+        );
+      }
       return new AutoMovieProductionRepaintService().select(context, {
         productionId: invocation.productionId,
         shot: invocation.request.shot,
         attemptId: invocation.attemptId!,
         kind: invocation.kind,
-        ...invocation.request.selectionReview,
+        ...review,
       });
     }
     return new AutoMovieProductionRepaintService(
@@ -156,4 +154,27 @@ export const createNodeProductionRepaintHost = (props: {
   },
   setExitCode: props.setExitCode,
   stdout: props.stdout,
+});
+
+const repaintSelectionRefusal = (
+  invocation: IProductionRepaintInvocation,
+  requestId: string | null,
+  message: string,
+): RepaintOutput => ({
+  repainted: false,
+  selected: false,
+  requestId,
+  productionId: invocation.productionId,
+  shot: invocation.request.shot,
+  receipt: null,
+  diagnostics: [
+    {
+      code: "repaint-commit-refused",
+      category: "error",
+      phase: "render",
+      target: invocation.request.shot,
+      path: null,
+      message,
+    },
+  ],
 });

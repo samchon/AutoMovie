@@ -16,6 +16,8 @@ interface IRepaintRequest {
   }>;
   evidence: NonNullable<IAutoMovieRepaintReceipt["evidence"]>;
   selectionReview: {
+    candidateAttemptId: string;
+    candidateOutputDigest: string;
     reason: string;
     structuralReview: string;
     continuityReview: {
@@ -28,7 +30,7 @@ interface IRepaintRequest {
       textureCrawl: "pass";
       transitionMismatch: "pass";
     } | null;
-  };
+  } | null;
 }
 
 interface IRepaintSelection {
@@ -68,6 +70,16 @@ interface IConfigurationModule {
     selected: IRepaintSelection;
     receipt: IAutoMovieRepaintReceipt;
   }) => void;
+  selectProductionRepaintCandidateReview: (props: {
+    request: IRepaintRequest;
+    receipt: IAutoMovieRepaintReceipt;
+  }) => {
+    reason: string;
+    structuralReview: string;
+    continuityReview: NonNullable<
+      IRepaintRequest["selectionReview"]
+    >["continuityReview"];
+  };
   assertProductionRepaintReceiptAdoption: (props: {
     selected: IRepaintSelection;
     receipts: readonly IAutoMovieRepaintReceipt[];
@@ -75,6 +87,8 @@ interface IConfigurationModule {
 }
 
 const digest = (value: string): AutoMovieContentDigest => `sha256:${value}`;
+const outputDigest = (shot: "opening" | "answer"): AutoMovieContentDigest =>
+  `sha256:${(shot === "opening" ? "a" : "b").repeat(64)}`;
 const OCCURRED_AT = "2026-08-28T23:59:59.999Z";
 
 const selection = (): IRepaintSelection => ({
@@ -137,6 +151,8 @@ const selection = (): IRepaintSelection => ({
         shot: "src/shots/opening.ts#opening",
       },
       selectionReview: {
+        candidateAttemptId: "33333333-3333-4333-8333-333333333333",
+        candidateOutputDigest: outputDigest("opening"),
         reason: "Candidate preserves the reviewed opening appearance.",
         structuralReview: "Depth and outline stay aligned at every frame.",
         continuityReview: {
@@ -170,6 +186,8 @@ const selection = (): IRepaintSelection => ({
         shot: "src/shots/answer.ts#answer",
       },
       selectionReview: {
+        candidateAttemptId: "44444444-4444-4444-8444-444444444444",
+        candidateOutputDigest: outputDigest("answer"),
         reason: "Candidate preserves the reviewed reverse-angle appearance.",
         structuralReview: "Depth and outline stay aligned at every frame.",
         continuityReview: {
@@ -237,7 +255,7 @@ const receipt = (
     evidence: structuredClone(request.evidence),
     output: {
       path: `renditions/${shot}/result.mp4`,
-      digest: digest(`output-${shot}`),
+      digest: outputDigest(shot as "opening" | "answer"),
       bytes: 1,
       probe: {
         kind: "video",
@@ -298,6 +316,18 @@ export const test_cli_scaffold_repaint_configuration =
       "null remains the explicit no-repaint selection",
       configuration.readProductionRepaintSelection(null),
       null,
+    );
+    const unreviewed: IRepaintSelection = {
+      ...authored,
+      requests: authored.requests.map((request) => ({
+        ...request,
+        selectionReview: null,
+      })),
+    };
+    TestValidator.equals(
+      "candidate review remains null until an actual output is reviewed",
+      configuration.readProductionRepaintSelection(unreviewed, OCCURRED_AT),
+      unreviewed,
     );
 
     const runtime = authored.generator.runtimeIdentity;
@@ -499,6 +529,30 @@ export const test_cli_scaffold_repaint_configuration =
       {
         ...authored,
         requests: [
+          {
+            ...request,
+            selectionReview: {
+              ...request.selectionReview!,
+              candidateAttemptId: "not-a-uuid",
+            },
+          },
+        ],
+      },
+      {
+        ...authored,
+        requests: [
+          {
+            ...request,
+            selectionReview: {
+              ...request.selectionReview!,
+              candidateOutputDigest: "not-a-digest",
+            },
+          },
+        ],
+      },
+      {
+        ...authored,
+        requests: [
           { ...request, references: [{ role: "mask", path: "asset.png" }] },
         ],
       },
@@ -556,14 +610,13 @@ export const test_cli_scaffold_repaint_configuration =
           },
         ],
       })),
-      { ...authored, requests: [{ ...request, selectionReview: null }] },
       {
         ...authored,
         requests: [
           {
             ...request,
             selectionReview: {
-              ...request.selectionReview,
+              ...request.selectionReview!,
               reason: "",
             },
           },
@@ -575,9 +628,9 @@ export const test_cli_scaffold_repaint_configuration =
           {
             ...request,
             selectionReview: {
-              ...request.selectionReview,
+              ...request.selectionReview!,
               continuityReview: {
-                ...request.selectionReview.continuityReview!,
+                ...request.selectionReview!.continuityReview!,
                 flicker: "fail",
               },
             },
@@ -590,9 +643,9 @@ export const test_cli_scaffold_repaint_configuration =
           {
             ...request,
             selectionReview: {
-              ...request.selectionReview,
+              ...request.selectionReview!,
               continuityReview: {
-                ...request.selectionReview.continuityReview!,
+                ...request.selectionReview!.continuityReview!,
                 baseline: "settings/continuity.md#another-baseline",
               },
             },
@@ -625,7 +678,7 @@ export const test_cli_scaffold_repaint_configuration =
         ...candidate,
         evidence: { ...candidate.evidence, continuity: null },
         selectionReview: {
-          ...candidate.selectionReview,
+          ...candidate.selectionReview!,
           continuityReview: null,
         },
       })),
@@ -704,6 +757,13 @@ export const test_cli_scaffold_repaint_configuration =
       () =>
         configuration.assertProductionRepaintSelection({
           selected: inapplicable,
+          visualDelivery: "repainted",
+          continuity: "film",
+          shots: ["opening", "answer"],
+        }),
+      () =>
+        configuration.assertProductionRepaintSelection({
+          selected: unreviewed,
           visualDelivery: "repainted",
           continuity: "film",
           shots: ["opening", "answer"],
@@ -827,11 +887,23 @@ export const test_cli_scaffold_repaint_configuration =
     );
 
     const receipts = [receipt(parsed, "answer"), receipt(parsed, "opening")];
-    for (const candidate of receipts)
+    for (const candidate of receipts) {
       configuration.assertProductionRepaintCandidateAdoption({
         selected: parsed,
         receipt: candidate,
       });
+      TestValidator.equals(
+        `selection review is bound to ${candidate.shot}'s immutable candidate`,
+        configuration.selectProductionRepaintCandidateReview({
+          request: parsed.requests.find(
+            (request) => request.shot === candidate.shot,
+          )!,
+          receipt: candidate,
+        }).reason,
+        parsed.requests.find((request) => request.shot === candidate.shot)!
+          .selectionReview!.reason,
+      );
+    }
     configuration.assertProductionRepaintReceiptAdoption({
       selected: parsed,
       receipts,
@@ -844,6 +916,33 @@ export const test_cli_scaffold_repaint_configuration =
         value.shot === shot ? transform(structuredClone(value)) : value,
       );
     const receiptFailures = [
+      () =>
+        configuration.selectProductionRepaintCandidateReview({
+          request: unreviewed.requests[0]!,
+          receipt: receipts.find((value) => value.shot === "opening")!,
+        }),
+      () =>
+        configuration.selectProductionRepaintCandidateReview({
+          request: {
+            ...parsed.requests[0]!,
+            selectionReview: {
+              ...parsed.requests[0]!.selectionReview!,
+              candidateAttemptId: "55555555-5555-4555-8555-555555555555",
+            },
+          },
+          receipt: receipts.find((value) => value.shot === "opening")!,
+        }),
+      () =>
+        configuration.selectProductionRepaintCandidateReview({
+          request: {
+            ...parsed.requests[0]!,
+            selectionReview: {
+              ...parsed.requests[0]!.selectionReview!,
+              candidateOutputDigest: `sha256:${"c".repeat(64)}`,
+            },
+          },
+          receipt: receipts.find((value) => value.shot === "opening")!,
+        }),
       () =>
         configuration.assertProductionRepaintReceiptAdoption({
           selected: null as unknown as IRepaintSelection,
