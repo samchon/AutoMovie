@@ -1,13 +1,16 @@
 import { IAutoMovieCaptureRuntimeIdentity } from "@automovie/interface";
 import typia from "typia";
 
-import { canonicalizeAutoMovieJson } from "./contentIdentity";
+import {
+  canonicalizeAutoMovieJson,
+  digestAutoMovieBytes,
+} from "./contentIdentity";
 
 /**
  * Current structured capture-runtime identity protocol.
  */
 export const AUTOMOVIE_CAPTURE_RUNTIME_IDENTITY_PROTOCOL =
-  "automovie.capture-runtime.v1";
+  "automovie.capture-runtime.v2";
 
 /**
  * Validate and canonically encode one capture runtime identity.
@@ -36,6 +39,83 @@ export const canonicalAutoMovieCaptureRuntimeIdentity = (
     throw new Error(
       "AutoMovie capture runtime identity text fields must be non-blank.",
     );
+  const digest = /^sha256:[0-9a-f]{64}$/u;
+  const packages = identity.runtimeClosure.packages;
+  const sortedPackages = [...packages].sort((left, right) =>
+    compareCodeUnits(
+      `${left.package}\0${left.version}\0${left.contentDigest}`,
+      `${right.package}\0${right.version}\0${right.contentDigest}`,
+    ),
+  );
+  if (
+    identity.runtimeClosure.protocolVersion !==
+      "automovie.capture-runtime-closure.v1" ||
+    digest.test(identity.runtimeClosure.contentDigest) === false ||
+    packages.length === 0 ||
+    packages.some(
+      (entry, index) =>
+        entry.package.trim().length === 0 ||
+        entry.package !== entry.package.trim() ||
+        entry.version.trim().length === 0 ||
+        entry.version !== entry.version.trim() ||
+        digest.test(entry.contentDigest) === false ||
+        Number.isSafeInteger(entry.files) === false ||
+        entry.files <= 0 ||
+        Number.isSafeInteger(entry.bytes) === false ||
+        entry.bytes <= 0 ||
+        entry.package !== sortedPackages[index]?.package ||
+        entry.version !== sortedPackages[index]?.version ||
+        entry.contentDigest !== sortedPackages[index]?.contentDigest,
+    ) ||
+    new Set(
+      packages.map(
+        (entry) => `${entry.package}\0${entry.version}\0${entry.contentDigest}`,
+      ),
+    ).size !== packages.length ||
+    [
+      "vite",
+      "@automovie/viewer",
+      "@automovie/engine",
+      "three",
+      "playwright",
+      "playwright-core",
+    ].some(
+      (required) =>
+        packages.some((entry) => entry.package === required) === false,
+    )
+  )
+    throw new Error(
+      "AutoMovie capture runtime package closure must be complete, canonical, non-empty, and content addressed.",
+    );
+  const browserSupport = identity.runtimeClosure.browserSupport;
+  if (
+    (browserSupport.status === "content-sealed" &&
+      (digest.test(browserSupport.contentDigest) === false ||
+        Number.isSafeInteger(browserSupport.files) === false ||
+        browserSupport.files <= 0 ||
+        Number.isSafeInteger(browserSupport.bytes) === false ||
+        browserSupport.bytes <= 0)) ||
+    (identity.browser.source === "system-channel") !==
+      (browserSupport.status === "system-channel-unsealed") ||
+    browserSupport.source !== identity.browser.source
+  )
+    throw new Error(
+      "AutoMovie capture runtime browser support closure does not match the selected browser source.",
+    );
+  const closureDigest = digestAutoMovieBytes(
+    Buffer.from(
+      canonicalizeAutoMovieJson({
+        protocolVersion: identity.runtimeClosure.protocolVersion,
+        packages: identity.runtimeClosure.packages,
+        browserSupport: identity.runtimeClosure.browserSupport,
+      }),
+      "utf8",
+    ),
+  );
+  if (closureDigest !== identity.runtimeClosure.contentDigest)
+    throw new Error(
+      "AutoMovie capture runtime closure digest does not match its package and browser support identities.",
+    );
   if (
     Number.isFinite(identity.mode.deviceScaleFactor) === false ||
     identity.mode.deviceScaleFactor <= 0
@@ -45,7 +125,7 @@ export const canonicalAutoMovieCaptureRuntimeIdentity = (
     );
   if (
     identity.browser.executableDigest !== null &&
-    /^sha256:[0-9a-f]{64}$/.test(identity.browser.executableDigest) === false
+    digest.test(identity.browser.executableDigest) === false
   )
     throw new Error(
       "AutoMovie capture runtime executableDigest must be one exact SHA-256 digest.",
@@ -80,8 +160,11 @@ export const canonicalAutoMovieCaptureRuntimeIdentity = (
   return canonicalizeAutoMovieJson(validation.data);
 };
 
+const compareCodeUnits = (left: string, right: string): number =>
+  left < right ? -1 : left > right ? 1 : 0;
+
 /**
- * Parse one exact canonical identity embedded in a v3 render manifest.
+ * Parse one exact canonical identity embedded in a current render manifest.
  */
 export const parseAutoMovieCaptureRuntimeIdentity = (
   encoded: string,

@@ -374,7 +374,7 @@ export interface IAutoMovieCaptureRuntimeIdentity {
    * @evidence requirements/rendering/passes-channels-and-products.md#rendering-identity-mask-channels Exposes `protocolVersion` as the portable data boundary for the rendering identity mask channels requirement.
    * @evidence specifications/editorial-render-and-delivery/render-products-visibility-and-color.md#spec-render-pass-products Types `protocolVersion` for the spec render pass products system contract.
    */
-  protocolVersion: "automovie.capture-runtime.v1";
+  protocolVersion: "automovie.capture-runtime.v2";
   /**
    * Exact Playwright package that selected and launched the browser.
    *
@@ -386,6 +386,52 @@ export interface IAutoMovieCaptureRuntimeIdentity {
     package: "playwright";
     /** Installed package version. */
     version: string;
+  };
+  /**
+   * Content identity of every installed package and browser support byte that
+   * can participate in the captured frame.
+   *
+   * @evidence requirements/acceptance/evidence-and-freshness.md#acceptance-current-historical-evidence Makes an installed renderer change a new evidence generation rather than letting historical pixels remain current.
+   * @evidence specifications/review-and-acceptance/evidence-freshness-and-completeness.md#acceptance-system-current-historical-evidence Types the installed runtime closure consumed by capture freshness comparisons.
+   */
+  runtimeClosure: {
+    /** Capture-closure schema and semantics. */
+    protocolVersion: "automovie.capture-runtime-closure.v1";
+    /** Canonical digest of the complete package and browser-support identity. */
+    contentDigest: AutoMovieContentDigest;
+    /** Complete dependency-closed installed package generations. */
+    packages: Array<{
+      /** Installed package name. */
+      package: string;
+      /** Installed package version. */
+      version: string;
+      /** Digest of every captured package file path and byte digest. */
+      contentDigest: AutoMovieContentDigest;
+      /** Number of captured package files. */
+      files: number;
+      /** Total captured package bytes. */
+      bytes: number;
+    }>;
+    /** Browser support closure, or the explicit unsealed system-channel boundary. */
+    browserSupport:
+      | {
+          /** A physical support tree was sealed. */
+          status: "content-sealed";
+          /** How the browser executable was selected. */
+          source: "package-owned" | "configured-executable";
+          /** Digest of every support-file path and byte digest. */
+          contentDigest: AutoMovieContentDigest;
+          /** Number of captured support files. */
+          files: number;
+          /** Total captured support bytes. */
+          bytes: number;
+        }
+      | {
+          /** A system channel remains compatible but is not content sealed. */
+          status: "system-channel-unsealed";
+          /** Explicit compatibility boundary. */
+          source: "system-channel";
+        };
   };
   /**
    * Exact browser executable provenance.
