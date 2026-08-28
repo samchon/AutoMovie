@@ -478,7 +478,7 @@ const configureGeneratedRepaint = async (
   const repaintSlot = "    repaint: null,";
   if (configSource.split(repaintSlot).length !== 2)
     throw new Error("Generated repaint config no longer has one null slot.");
-  const referencePath = "assets/generated-repaint-reference.png";
+  const referencePath = "public/repaint/generated-repaint-reference.png";
   fs.writeFileSync(
     configPath,
     configSource.replace(
@@ -550,6 +550,8 @@ const configureGeneratedRepaint = async (
     "utf8",
   );
   const referenceBytes = productionPng(16, 16);
+  const generationPrompt =
+    "Create the deterministic 16 by 16 repaint structure reference fixture.";
   const referenceFile = path.join(root, referencePath);
   fs.mkdirSync(path.dirname(referenceFile), { recursive: true });
   fs.writeFileSync(referenceFile, referenceBytes);
@@ -560,13 +562,20 @@ const configureGeneratedRepaint = async (
   manifest.assets.push({
     path: referencePath,
     digest: digestAutoMovieBytes(referenceBytes),
-    original: {
-      url: "local://generated-repaint-reference",
-      digest: digestAutoMovieBytes(referenceBytes),
+    generated: {
+      provider: "automovie-test-fixture",
+      model: "production-png-v1",
+      request: null,
+      prompt: generationPrompt,
+      promptDigest: digestAutoMovieBytes(Buffer.from(generationPrompt, "utf8")),
+      inputs: [],
+      outputDigest: digestAutoMovieBytes(referenceBytes),
+      reproducible: false,
+      seed: null,
     },
     license: {
-      identifier: "test-only",
-      url: "local://generated-fixture-license",
+      identifier: "MIT",
+      url: "https://github.com/samchon/AutoMovie/blob/master/LICENSE",
       notice: "Generated entirely inside the repaint runtime contract test.",
     },
     processing: [],
@@ -579,6 +588,9 @@ const configureGeneratedRepaint = async (
       },
     ],
   });
+  manifest.assets.sort((left, right) =>
+    left.path < right.path ? -1 : left.path > right.path ? 1 : 0,
+  );
   fs.writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
   const compiled = runGeneratedFast(root, "scripts/compile.ts");
   if (compiled.status !== 0)
@@ -912,7 +924,7 @@ export const test_cli_scaffold_repaint_runtime_contract =
       const configuredSource = fs.readFileSync(configuredPath, "utf8");
       const missingReferenceSource = configuredSource.replace(
         repaint.referencePath,
-        "assets/generated-repaint-reference-missing.png",
+        "public/repaint/generated-repaint-reference-missing.png",
       );
       if (missingReferenceSource === configuredSource)
         throw new Error(
