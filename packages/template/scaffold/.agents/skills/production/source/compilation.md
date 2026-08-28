@@ -1,6 +1,6 @@
 # Compilation
 
-The production compiler is an atomic fence with an ordered scope ladder, and each scope checks everything the scope before it checks. Invoke it through the scaffold compile command or `compileAutoMovieProduction`.
+The production compiler is an atomic fence with an ordered scope ladder. Each scope includes every check from the preceding scope. Invoke it through the scaffold compile command or `compileAutoMovieProduction`.
 
 - `design`: validate manifest, design shape, ranges, identity, and references without reading source or materializing derived files.
 - `source`: additionally materialize primitive models and compact formation runtimes; bind each `defineShot` registration to its design contract; execute its thin stage/block/performance program through the host engine pipeline; validate actor/object/formation motion, bounded fixed-step effects, scenes, and shots; derive contract realizations; and enforce generated ownership.
