@@ -58,6 +58,7 @@ import {
   productionRepaintActiveReceiptPath,
   productionRepaintOutputPath,
   productionRepaintReceiptPath,
+  productionRepaintRequestFingerprint,
   productionRepaintStructuralControls,
   productionSourceRenderFingerprint,
 } from "./renditionIdentity";
@@ -2001,7 +2002,8 @@ export class AutoMovieProductionProject {
   }
 
   /**
-   * Atomically commit one parsed repaint candidate and immutable receipt.
+   * Atomically commit one parsed repaint candidate and immutable receipt after
+   * its matching succeeded terminal attempt is resident.
    *
    * The active pointer is deliberately untouched. A candidate becomes current
    * only through `selectRepaintCandidate` after review.
@@ -2462,7 +2464,10 @@ export class AutoMovieProductionProject {
       throw new Error("Repaint attempt record is malformed.");
   }
 
-  /** Revalidate a stored repaint receipt against every current dependency. */
+  /**
+   * Revalidate a stored repaint receipt against its terminal attempt and every
+   * current dependency.
+   */
   private assertCurrentRepaintReceipt(
     receipt: IAutoMovieRepaintReceipt,
     bytes: Uint8Array,
@@ -2563,6 +2568,63 @@ export class AutoMovieProductionProject {
     )
       throw new Error("Stored repaint adapter identity is invalid.");
     this.validateRepaintReferences(receipt);
+    const requestFingerprint = productionRepaintRequestFingerprint({
+      shot: receipt.shot,
+      compileFingerprint: receipt.compileFingerprint,
+      sourceRenderFingerprint: receipt.sourceRenderFingerprint,
+      adapterIdentity: receipt.adapterIdentity,
+      generatorProvenance: receipt.generatorProvenance,
+      parameters: receipt.parameters,
+      executionPolicy: receipt.executionPolicy!,
+      evidence: receipt.evidence!,
+      references: receipt.references,
+    });
+    const attempt = this.repaintRequestAttempts(receipt.requestId!).find(
+      (candidate) => candidate.attemptId === receipt.attemptId,
+    );
+    if (
+      attempt === undefined ||
+      canonicalizeAutoMovieJson({
+        productionId: attempt.productionId,
+        shot: attempt.shot,
+        requestId: attempt.requestId,
+        attemptId: attempt.attemptId,
+        requestFingerprint: attempt.requestFingerprint,
+        compileFingerprint: attempt.compileFingerprint,
+        sourceRenderFingerprint: attempt.sourceRenderFingerprint,
+        adapterIdentity: attempt.adapterIdentity,
+        seed: attempt.seed,
+        startedAt: attempt.startedAt,
+        completedAt: attempt.completedAt,
+        status: attempt.status,
+        failure: attempt.failure,
+        costUnits: attempt.costUnits,
+        availableOutput: attempt.availableOutput,
+      }) !==
+        canonicalizeAutoMovieJson({
+          productionId: receipt.productionId,
+          shot: receipt.shot,
+          requestId: receipt.requestId,
+          attemptId: receipt.attemptId,
+          requestFingerprint,
+          compileFingerprint: receipt.compileFingerprint,
+          sourceRenderFingerprint: receipt.sourceRenderFingerprint,
+          adapterIdentity: receipt.adapterIdentity,
+          seed: receipt.parameters.seed,
+          startedAt: receipt.startedAt,
+          completedAt: receipt.completedAt,
+          status: "succeeded",
+          failure: null,
+          costUnits: receipt.costUnits,
+          availableOutput: {
+            digest: receipt.output.digest,
+            bytes: receipt.output.bytes,
+          },
+        })
+    )
+      throw new Error(
+        "Stored repaint receipt does not match its immutable succeeded terminal attempt.",
+      );
     const expected = productionRepaintOutputPath({
       shot: receipt.shot,
       sourceRenderFingerprint: receipt.sourceRenderFingerprint,
@@ -2576,7 +2638,6 @@ export class AutoMovieProductionProject {
       outputDigest: receipt.output.digest,
     });
     if (
-      receipt.productionId !== this.productionId ||
       receipt.output.path !== expected ||
       receipt.output.digest !== digestAutoMovieBytes(bytes) ||
       receipt.output.bytes !== bytes.length
