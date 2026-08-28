@@ -1034,9 +1034,10 @@ export const test_production_project_runtime_shape_boundaries = (): void => {
 
     const renderBytes = productionPng(1, 1);
     const manifest: IAutoMovieRenderBundleManifest = {
-      version: 3,
+      version: 4,
       target: { kind: "shot", id: "opening" },
       compileFingerprint: digestAutoMovieBytes(Buffer.from("compile")),
+      dialogueRuntimeIdentity: null,
       rendererIdentity: testRendererIdentity(),
       targetFingerprint: digestAutoMovieBytes(Buffer.from("target")),
       renderSpec: {

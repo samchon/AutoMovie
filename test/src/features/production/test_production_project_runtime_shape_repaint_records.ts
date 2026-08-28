@@ -289,9 +289,10 @@ export const test_production_project_runtime_shape_repaint_records =
 
       const frameBytes = productionPng(16, 16);
       const sourceManifest: IAutoMovieRenderBundleManifest = {
-        version: 3,
+        version: 4,
         target: { kind: "shot", id: shot },
         compileFingerprint: generated.inputFingerprint,
+        dialogueRuntimeIdentity: null,
         rendererIdentity: testRendererIdentity(),
         targetFingerprint: digestAutoMovieBytes(
           Buffer.from("runtime-shape-opening-target"),

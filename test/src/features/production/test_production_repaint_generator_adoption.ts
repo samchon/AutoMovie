@@ -180,9 +180,10 @@ const executableServices = (props: {
       })),
   ).flat();
   const manifest = {
-    version: 3,
+    version: 4,
     target: { kind: "shot", id: input.shot },
     compileFingerprint,
+    dialogueRuntimeIdentity: null,
     rendererIdentity: testRendererIdentity(),
     targetFingerprint: digestAutoMovieBytes(
       Buffer.from("opening-target", "utf8"),
