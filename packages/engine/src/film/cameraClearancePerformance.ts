@@ -87,6 +87,63 @@ const safeThrownDescription = (error: unknown): string => {
   }
 };
 
+/** Whether two authored component vectors are exactly identical. */
+const sameComponents = (left: readonly number[], right: readonly number[]) =>
+  left.length === right.length &&
+  left.every((component, index) => component === right[index]);
+
+/** Whether a looping actor returns its clearance-relevant root to the seam. */
+const actorLoopIsClosed = (motion: IAutoMovieMotion): boolean => {
+  if (!motion.loop) return true;
+  const first = motion.keyframes[0]?.pose.root;
+  const last = motion.keyframes[motion.keyframes.length - 1]?.pose.root;
+  if (first === undefined || last === undefined) return false;
+  if (first === null || last === null) return first === last;
+  return (
+    sameComponents(
+      [first.translation.x, first.translation.y, first.translation.z],
+      [last.translation.x, last.translation.y, last.translation.z],
+    ) &&
+    Math.max(
+      Math.abs(first.scale.x),
+      Math.abs(first.scale.y),
+      Math.abs(first.scale.z),
+    ) ===
+      Math.max(
+        Math.abs(last.scale.x),
+        Math.abs(last.scale.y),
+        Math.abs(last.scale.z),
+      )
+  );
+};
+
+/** Whether every geometry-relevant clip channel returns to its loop seam. */
+const clipLoopIsClosed = (
+  clip: IAutoMovieClip,
+  rotationMatters: boolean,
+): boolean => {
+  if (!clip.loop) return true;
+  return clip.tracks.every((track) => {
+    if (
+      track.channel.kind !== "node" ||
+      (track.channel.path === "rotation" && !rotationMatters)
+    )
+      return true;
+    const width = track.values.length / track.times.length;
+    if (!(Number.isSafeInteger(width) && width > 0)) return false;
+    const first = track.values.slice(0, width);
+    const last = track.values.slice(track.values.length - width);
+    if (track.channel.path !== "rotation") return sameComponents(first, last);
+    return (
+      sameComponents(first, last) ||
+      sameComponents(
+        first,
+        last.map((component) => -component),
+      )
+    );
+  });
+};
+
 /** Add every in-shot key boundary, repeating a looping sequence deterministically. */
 const addSequenceBoundaries = (
   result: Set<number>,
@@ -116,19 +173,40 @@ const clearanceSampleTimes = (props: {
   motions: Readonly<Record<string, IAutoMovieMotion>>;
   objectMotions: readonly IAutoMovieClip[];
 }): number[] => {
-  for (const motion of Object.values(props.motions))
+  for (const motion of Object.values(props.motions)) {
     if (motion.keyframes.some((keyframe) => keyframe.easing === "cubicBezier"))
       throw new Error(
         `camera clearance cannot conservatively bound actor motion "${motion.id}" with cubicBezier easing; use linear, step, or named non-overshooting easing`,
       );
-  for (const clip of [
-    ...props.objectMotions,
-    ...(props.cameraMotion === null ? [] : [props.cameraMotion]),
-  ])
+    if (!actorLoopIsClosed(motion))
+      throw new Error(
+        `camera clearance cannot conservatively bound actor motion "${motion.id}" across an open loop seam; close its root translation and clearance radius`,
+      );
+  }
+  for (const clip of props.objectMotions) {
     if (clip.tracks.some((track) => track.interpolation === "cubicspline"))
       throw new Error(
         `camera clearance cannot conservatively bound clip "${clip.id}" with cubicspline interpolation; use linear or step interpolation`,
       );
+    if (!clipLoopIsClosed(clip, false))
+      throw new Error(
+        `camera clearance cannot conservatively bound clip "${clip.id}" across an open loop seam; close its node translation and scale channels`,
+      );
+  }
+  if (props.cameraMotion !== null) {
+    if (
+      props.cameraMotion.tracks.some(
+        (track) => track.interpolation === "cubicspline",
+      )
+    )
+      throw new Error(
+        `camera clearance cannot conservatively bound clip "${props.cameraMotion.id}" with cubicspline interpolation; use linear or step interpolation`,
+      );
+    if (!clipLoopIsClosed(props.cameraMotion, true))
+      throw new Error(
+        `camera clearance cannot conservatively bound clip "${props.cameraMotion.id}" across an open loop seam; close its camera transform channels`,
+      );
+  }
   const result = new Set(sampleTimes(props.duration, props.sampleRate));
   const sequences: IClearanceTimedSequence[] = [
     ...Object.values(props.motions).map((motion) => ({

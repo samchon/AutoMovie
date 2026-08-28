@@ -139,6 +139,8 @@ const runtimeModels = () => [
  *     an exact carried sample plan, and retention of every base-clock instant.
  * 12. An evaluator throw remains addressed even when the thrown value refuses
  *     diagnostic string coercion.
+ * 13. Overshooting interpolation and open loop seams are refused rather than
+ *     trusted as endpoint-bounded motion.
  */
 export const test_film_camera_clearance = (): void => {
   const boundary = evaluate({
@@ -872,7 +874,7 @@ export const test_film_camera_clearance = (): void => {
     id: "off-clock-camera-contact",
     name: null,
     duration: 2,
-    loop: false,
+    loop: true,
     tracks: [
       {
         channel: {
@@ -954,9 +956,23 @@ export const test_film_camera_clearance = (): void => {
       motion: { ...offClockCameraMotion, duration: 0 },
     },
   });
+  const openLoop = inspectAdapter({
+    hero: {
+      camera: heroCamera,
+      motion: {
+        ...offClockCameraMotion,
+        tracks: offClockCameraMotion.tracks.map((track) => ({
+          ...track,
+          values: track.values.map((value, index) =>
+            index >= track.values.length - 3 ? value + 1 : value,
+          ),
+        })),
+      },
+    },
+  });
   TestValidator.predicate(
-    "overshooting interpolation and invalid sequences are addressed, never approximated",
-    [cubicActor, cubicCamera, invalidSequence].every(
+    "overshooting interpolation, open loops, and invalid sequences are addressed, never approximated",
+    [cubicActor, cubicCamera, invalidSequence, openLoop].every(
       ({ reports, out }) =>
         reports === undefined &&
         out.items.some((item) => item.path.endsWith(".clearance")),
@@ -966,7 +982,8 @@ export const test_film_camera_clearance = (): void => {
       ) &&
       cubicCamera.out.items.some((item) =>
         item.expected.includes("cubicspline"),
-      ),
+      ) &&
+      openLoop.out.items.some((item) => item.expected.includes("loop seam")),
   );
 
   const evaluatorFault = inspectAdapter({
