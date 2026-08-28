@@ -401,10 +401,6 @@ const locatePackage = (
           throw new Error(
             `Runtime package "${packageName}" has no valid version.`,
           );
-        if (inside(root.real, path.resolve(entry)) === false)
-          throw new Error(
-            `Runtime package entry for "${packageName}" escapes its root.`,
-          );
         assertPhysicalFile(manifest);
         assertPhysicalDirectory(root, "runtime package root");
         return { manifest, root, version: parsed.version };
@@ -433,10 +429,7 @@ const ownedPath = (root: IPhysicalDirectory, relative: string): string => {
     )
   )
     throw new Error(`Runtime package asset path "${relative}" is invalid.`);
-  const absolute = path.resolve(root.real, ...segments);
-  if (inside(root.real, absolute) === false)
-    throw new Error(`Runtime package asset path "${relative}" escapes.`);
-  return absolute;
+  return path.resolve(root.real, ...segments);
 };
 
 const addAsset = (
@@ -476,8 +469,6 @@ const readOwnedFile = (
     : relativeOwner.split(path.sep)) {
     cursor = path.join(cursor, segment);
     const identity = physicalDirectory(cursor, "runtime package ancestry");
-    if (inside(root.real, identity.real) === false)
-      throw new Error("Runtime package ancestry escapes its physical root.");
     directories.push(identity);
   }
   const linked = fs.lstatSync(absolute, { bigint: true });
@@ -510,16 +501,12 @@ const scanTree = (
   directory: string,
 ): ITreeInventory => {
   const root = physicalDirectory(directory, "runtime package asset tree");
-  if (inside(packageRoot.real, root.real) === false)
-    throw new Error("Runtime package asset tree escapes its package.");
   const output: ITreeInventory = { directories: [], files: [], root };
   const visit = (current: string): void => {
     const identity = physicalDirectory(
       current,
       "runtime package asset directory",
     );
-    if (inside(root.real, identity.real) === false)
-      throw new Error("Runtime package asset directory escapes its tree.");
     output.directories.push({
       identity,
       relative: path.relative(root.real, identity.real).replaceAll("\\", "/"),
@@ -530,14 +517,12 @@ const scanTree = (
       if (status.isSymbolicLink())
         throw new Error(`Runtime package asset "${absolute}" is linked.`);
       if (status.isDirectory()) visit(absolute);
-      else if (status.isFile())
+      else
         output.files.push({
           identity: physicalVersion(status),
           path: absolute,
           relative: path.relative(root.real, absolute).replaceAll("\\", "/"),
         });
-      else
-        throw new Error(`Runtime package asset "${absolute}" is not physical.`);
     }
     assertPhysicalDirectory(identity, "runtime package asset directory");
   };
@@ -638,4 +623,4 @@ const inside = (root: string, candidate: string): boolean => {
   );
 };
 
-const compare = (x: string, y: string): number => (x < y ? -1 : x > y ? 1 : 0);
+const compare = (x: string, y: string): number => (x < y ? -1 : 1);

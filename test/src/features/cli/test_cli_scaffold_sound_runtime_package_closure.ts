@@ -118,6 +118,34 @@ const replaceBytes = (file: string): void => {
   fs.writeFileSync(file, Buffer.concat([bytes, Buffer.from("\n// changed\n")]));
 };
 
+const withAlteredLstatVersion = <Output>(props: {
+  alter: (observation: number) => boolean;
+  operation: () => Output;
+  target: string;
+}): Output => {
+  const original = fs.lstatSync;
+  const target = path.resolve(props.target);
+  let observations = 0;
+  const patched = ((...args: unknown[]) => {
+    const status = Reflect.apply(original, fs, args) as fs.BigIntStats;
+    if (path.resolve(String(args[0])) !== target) return status;
+    observations++;
+    if (props.alter(observations) === false) return status;
+    return new Proxy(status, {
+      get: (subject, property, receiver) =>
+        property === "ctimeNs"
+          ? subject.ctimeNs + 1n
+          : Reflect.get(subject, property, receiver),
+    });
+  }) as typeof fs.lstatSync;
+  Object.defineProperty(fs, "lstatSync", { value: patched });
+  try {
+    return props.operation();
+  } finally {
+    Object.defineProperty(fs, "lstatSync", { value: original });
+  }
+};
+
 const writePackage = (props: {
   exports?: unknown;
   files: Readonly<Record<string, string | Uint8Array>>;
@@ -588,6 +616,7 @@ export const test_cli_scaffold_sound_runtime_package_closure = (): void => {
         "templated.cjs": "module.exports = true;\n",
         "templated.mjs": "export const template = true;\n",
         "templated.wasm": new Uint8Array([0, 97, 115, 109, 1]),
+        "unterminated.js": "/* unfinished module comment",
         "extra.bin": "extra",
         "asset.bin": "asset",
         "assets/root.bin": "root",
@@ -599,7 +628,10 @@ export const test_cli_scaffold_sound_runtime_package_closure = (): void => {
         { kind: "file", relative: "asset.bin" },
         { kind: "tree", relative: "assets" },
       ],
-      entries: [path.join(syntaxRoot, "extra.bin")],
+      entries: [
+        path.join(syntaxRoot, "extra.bin"),
+        path.join(syntaxRoot, "unterminated.js"),
+      ],
       entry: path.join(syntaxRoot, "index.js"),
       moduleClosure: true,
       packageExports: true,
@@ -631,9 +663,73 @@ export const test_cli_scaffold_sound_runtime_package_closure = (): void => {
           "templated.cjs",
           "templated.mjs",
           "templated.wasm",
+          "unterminated.js",
         ],
         assets: ["asset.bin", "assets/nested/member.bin", "assets/root.bin"],
       },
+    );
+    const addedTreeMember = path.join(syntaxRoot, "assets", "added.bin");
+    fs.writeFileSync(addedTreeMember, "added", "utf8");
+    TestValidator.equals(
+      "selected tree inventory rejects a later member",
+      throwsError(
+        () => runtime.assertRuntimePackageSnapshotCurrent(syntax),
+        "changed physical identity",
+      ),
+      true,
+    );
+    fs.rmSync(addedTreeMember);
+
+    const raceRoot = writePackage({
+      root: path.join(root, "race-package"),
+      name: "race-package",
+      files: {
+        "index.js": "module.exports = true;\n",
+        "assets/file.bin": "tree race",
+        "direct.bin": "read race",
+      },
+    });
+    TestValidator.equals(
+      "in-flight package generation changes are refused",
+      namedFacts([
+        [
+          "tree member after inventory",
+          () =>
+            throwsError(
+              () =>
+                withAlteredLstatVersion({
+                  target: path.join(raceRoot, "assets", "file.bin"),
+                  alter: (observation) => observation >= 2,
+                  operation: () =>
+                    runtime.snapshotRuntimePackage({
+                      assets: [{ kind: "tree", relative: "assets" }],
+                      entry: path.join(raceRoot, "index.js"),
+                      packageName: "race-package",
+                    }),
+                }),
+              "changed after inventory",
+            ),
+        ],
+        [
+          "file while read",
+          () =>
+            throwsError(
+              () =>
+                withAlteredLstatVersion({
+                  target: path.join(raceRoot, "direct.bin"),
+                  alter: (observation) => observation === 5,
+                  operation: () =>
+                    runtime.snapshotRuntimePackage({
+                      assets: [{ kind: "file", relative: "direct.bin" }],
+                      entry: path.join(raceRoot, "index.js"),
+                      packageName: "race-package",
+                    }),
+                }),
+              "changed while its bytes were read",
+            ),
+        ],
+      ]),
+      { "tree member after inventory": true, "file while read": true },
     );
 
     const outside = path.join(root, "outside.js");
@@ -661,6 +757,15 @@ export const test_cli_scaffold_sound_runtime_package_closure = (): void => {
     );
     const noManifest = path.join(root, "no-manifest.js");
     fs.writeFileSync(noManifest, "module.exports = true;\n", "utf8");
+    const manifestDirectoryRoot = path.join(root, "manifest-directory");
+    fs.mkdirSync(path.join(manifestDirectoryRoot, "package.json"), {
+      recursive: true,
+    });
+    fs.writeFileSync(
+      path.join(manifestDirectoryRoot, "index.js"),
+      "module.exports = true;\n",
+      "utf8",
+    );
     TestValidator.equals(
       "invalid package facts and unobserved snapshots are refused",
       namedFacts([
@@ -726,6 +831,19 @@ export const test_cli_scaffold_sound_runtime_package_closure = (): void => {
             ),
         ],
         [
+          "directory entry",
+          () =>
+            throwsError(
+              () =>
+                runtime.snapshotRuntimePackage({
+                  entries: [path.join(syntaxRoot, "assets")],
+                  entry: path.join(syntaxRoot, "index.js"),
+                  packageName: "closure-syntax",
+                }),
+              "is not physical",
+            ),
+        ],
+        [
           "invalid version",
           () =>
             throwsError(
@@ -747,6 +865,18 @@ export const test_cli_scaffold_sound_runtime_package_closure = (): void => {
                   packageName: "never-present",
                 }),
               "no matching package.json ancestor",
+            ),
+        ],
+        [
+          "manifest directory",
+          () =>
+            throwsError(
+              () =>
+                runtime.snapshotRuntimePackage({
+                  entry: path.join(manifestDirectoryRoot, "index.js"),
+                  packageName: "manifest-directory",
+                }),
+              "is not physical",
             ),
         ],
         ...["", ".", "..", "a\\b", "a\0b"].map(
@@ -786,8 +916,10 @@ export const test_cli_scaffold_sound_runtime_package_closure = (): void => {
           "foreign snapshot",
           "module escape",
           "entry escape",
+          "directory entry",
           "invalid version",
           "missing manifest",
+          "manifest directory",
           ...["", ".", "..", "a\\b", "a\0b"].map(
             (relative) => `invalid asset ${JSON.stringify(relative)}`,
           ),
