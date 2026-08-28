@@ -44,11 +44,11 @@ export const cloneProductionDialogueRuntime = (
 /** Content identity included in page reuse and render-source fingerprints. */
 export const productionDialogueRuntimeIdentity = (
   runtime: IAutoMovieProductionDialogueRuntime | null,
-): string | null => {
+): AutoMovieContentDigest | null => {
   if (runtime === null) return null;
-  return createHash("sha256")
+  return `sha256:${createHash("sha256")
     .update(Buffer.from(JSON.stringify(runtime), "utf8"))
-    .digest("hex");
+    .digest("hex")}`;
 };
 
 /** Resolve a shot-local seek only when exactly one film occurrence fits. */

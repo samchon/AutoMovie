@@ -462,7 +462,7 @@ export interface IAutoMovieRenderBundleManifest {
    * @evidence requirements/agent-authoring/knowledge-boundary.md#agent-content-supply-refusal Exposes `version` as the portable data boundary for the agent mcp content supply refusal requirement.
    * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-content-side-effect-invariant Types `version` for the spec authoring tool content side effect invariant system contract.
    */
-  version: 3;
+  version: 4;
   /**
    * Asset, shot, sequence, or film render target.
    *
@@ -514,6 +514,14 @@ export interface IAutoMovieRenderBundleManifest {
    * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-content-side-effect-invariant Types `compileFingerprint` for the spec authoring tool content side effect invariant system contract.
    */
   compileFingerprint: AutoMovieContentDigest;
+  /**
+   * Final-byte dialogue and viseme identity installed before these pixels were
+   * drawn, or null when this target consumes no dialogue runtime.
+   *
+   * @evidence requirements/agent-authoring/knowledge-boundary.md#agent-content-supply-refusal Exposes `dialogueRuntimeIdentity` as the portable data boundary for the agent mcp content supply refusal requirement.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-content-side-effect-invariant Types `dialogueRuntimeIdentity` for the spec authoring tool content side effect invariant system contract.
+   */
+  dialogueRuntimeIdentity: AutoMovieContentDigest | null;
   /**
    * Canonical JSON encoding of one validated capture runtime identity.
    *
@@ -606,6 +614,8 @@ export type AutoMovieProductionFrameCapture = (
 ) => Promise<{
   /** Raw PNG bytes. */
   bytes: Uint8Array;
+  /** Final-byte dialogue state consumed by the drawn frame, or null. */
+  dialogueRuntimeIdentity: AutoMovieContentDigest | null;
   /** Structured browser, executable, mode, platform, and graphics identity. */
   runtimeIdentity: IAutoMovieCaptureRuntimeIdentity;
   /** Pixel width. */

@@ -441,6 +441,10 @@ const captureProductionFrame = async (
     ++state.metrics.captures;
     return {
       bytes,
+      dialogueRuntimeIdentity:
+        input.target.kind === "shot"
+          ? productionDialogueRuntimeIdentity(state.dialogue)
+          : null,
       runtimeIdentity: { ...session.runtime, graphics: resident.graphics },
       width: input.width!,
       height: input.height!,

@@ -1,5 +1,6 @@
 import config from "../automovie.config";
 import { createProductionFrameCaptureRuntime } from "./capture";
+import { createProductionCaptureDialogueRuntime } from "./captureDialogueRuntime";
 import { repaintProductionShot } from "./repaintAdapter";
 import {
   createNodeProductionRepaintHost,
@@ -30,7 +31,12 @@ import {
  */
 await runProductionRepaintCommand(process.argv.slice(2), config, () => {
   const captureRuntime = createProductionFrameCaptureRuntime();
-  return createNodeProductionRepaintHost({
+  const dialogueRuntime = createProductionCaptureDialogueRuntime({
+    capture: captureRuntime,
+    productionId: config.productionId,
+    root: process.cwd(),
+  });
+  const host = createNodeProductionRepaintHost({
     adapter: repaintProductionShot,
     capture: captureRuntime.capture,
     closeCapture: captureRuntime.close,
@@ -40,4 +46,11 @@ await runProductionRepaintCommand(process.argv.slice(2), config, () => {
     },
     stdout: (value) => process.stdout.write(value),
   });
+  return {
+    ...host,
+    serve: async (invocation) => {
+      await dialogueRuntime.prepare();
+      return host.serve(invocation);
+    },
+  };
 });

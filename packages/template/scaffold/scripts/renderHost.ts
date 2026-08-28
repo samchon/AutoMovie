@@ -92,7 +92,8 @@ export const createNodeProductionRenderHost = (): IProductionRenderHost =>
     createProductionFrameCaptureRuntime(),
   );
 
-const createNodeProductionRenderHostWithCapture = (
+/** Bind the real Node host to one caller-owned capture runtime. */
+export const createNodeProductionRenderHostWithCapture = (
   captureRuntime: IProductionFrameCaptureRuntime,
 ): IProductionRenderHost =>
   createProductionRenderHost({
