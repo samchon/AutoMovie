@@ -174,9 +174,9 @@ const repaintAttempt = (
 
 /**
  * Enumerate stored repaint records through every early integrity boundary.
- * Each corrupt resident is omitted rather than trusted, while the active
- * pointer/receipt bytes are asserted so a missing write cannot make the same
- * empty result pass.
+ * Each corrupt attempt ledger is refused rather than silently reopening a
+ * consumed retry budget, while active pointer/receipt bytes are asserted so a
+ * missing write cannot make the same empty result pass.
  *
  * Scenarios:
  *
@@ -397,7 +397,10 @@ export const test_production_project_runtime_shape_repaint_records =
         expectAttemptRefusal(label, candidate),
       );
 
-      const succeededAttempt = repaintAttempt();
+      const succeededAttempt = repaintAttempt({
+        startedAt: "2026-08-28T12:00:01.000Z",
+        completedAt: "2026-08-28T12:00:02.000Z",
+      });
       const failedAttempt = repaintAttempt({
         attemptId: "00000000-0000-4000-8000-000000000032",
         ordinal: 1,
@@ -406,9 +409,11 @@ export const test_production_project_runtime_shape_repaint_records =
         costUnits: 0,
         availableOutput: null,
       });
-      const tiedAttempt = repaintAttempt({
+      const thirdAttempt = repaintAttempt({
         attemptId: "00000000-0000-4000-8000-000000000033",
-        ordinal: 1,
+        ordinal: 3,
+        startedAt: "2026-08-28T12:00:02.000Z",
+        completedAt: "2026-08-28T12:00:03.000Z",
         status: "cancelled",
         failure: {
           class: "cancelled",
@@ -418,9 +423,64 @@ export const test_production_project_runtime_shape_repaint_records =
         costUnits: 0,
         availableOutput: null,
       });
-      project.commitRepaintAttempt(succeededAttempt);
       project.commitRepaintAttempt(failedAttempt);
-      project.commitRepaintAttempt(tiedAttempt);
+      const expectCommitRefusal = (
+        label: string,
+        candidate: IAutoMovieRepaintAttemptRecord,
+        inputCurrent?: () => boolean,
+      ): void => {
+        try {
+          project.commitRepaintAttempt(candidate, inputCurrent);
+          throw new Error(`${label} unexpectedly committed.`);
+        } catch (error) {
+          TestValidator.predicate(label, error instanceof Error);
+        }
+      };
+      expectCommitRefusal(
+        "attempt commit refuses a skipped ordinal",
+        thirdAttempt,
+      );
+      expectCommitRefusal(
+        "attempt commit refuses a tied ordinal",
+        repaintAttempt({
+          attemptId: "00000000-0000-4000-8000-000000000042",
+          ordinal: 1,
+        }),
+      );
+      expectCommitRefusal(
+        "attempt commit refuses immutable request-identity drift",
+        {
+          ...succeededAttempt,
+          attemptId: "00000000-0000-4000-8000-000000000043",
+          requestFingerprint: `sha256:${"9".repeat(64)}`,
+        },
+      );
+      expectCommitRefusal(
+        "attempt commit preserves its input-current fence",
+        succeededAttempt,
+        () => false,
+      );
+      let postWriteChecks = 0;
+      expectCommitRefusal(
+        "attempt commit rolls back when its post-write input fence changes",
+        succeededAttempt,
+        () => ++postWriteChecks === 1,
+      );
+      TestValidator.equals(
+        "post-write attempt refusal removes the tentative resident",
+        {
+          checks: postWriteChecks,
+          resident: fs.existsSync(
+            project.trackedStatePath(
+              `renditions/attempts/${requestId}/${succeededAttempt.attemptId}.json`,
+            ),
+          ),
+          ledger: project.repaintRequestAttempts(requestId),
+        },
+        { checks: 2, resident: false, ledger: [failedAttempt] },
+      );
+      project.commitRepaintAttempt(succeededAttempt);
+      project.commitRepaintAttempt(thirdAttempt);
       try {
         project.commitRepaintAttempt(succeededAttempt);
         throw new Error(
@@ -436,23 +496,127 @@ export const test_production_project_runtime_shape_repaint_records =
         `renditions/attempts/${requestId}`,
       );
       fs.writeFileSync(path.join(attemptDirectory, "ignored.txt"), "ignored");
-      fs.mkdirSync(path.join(attemptDirectory, "ignored.json"));
-      fs.writeFileSync(path.join(attemptDirectory, "broken.json"), "{broken");
+      const expectLedgerRefusal = (
+        label: string,
+        resident: string,
+        prepare: () => void,
+      ): void => {
+        prepare();
+        try {
+          project.repaintRequestAttempts(requestId);
+          throw new Error(`${label} unexpectedly enumerated.`);
+        } catch (error) {
+          TestValidator.predicate(label, error instanceof Error);
+        } finally {
+          fs.rmSync(resident, { force: true, recursive: true });
+        }
+      };
+      const directoryResident = path.join(attemptDirectory, "ignored.json");
+      expectLedgerRefusal(
+        "attempt ledger refuses a json directory resident",
+        directoryResident,
+        () => fs.mkdirSync(directoryResident),
+      );
+      const brokenResident = path.join(
+        attemptDirectory,
+        "00000000-0000-4000-8000-000000000040.json",
+      );
+      expectLedgerRefusal(
+        "attempt ledger refuses malformed json",
+        brokenResident,
+        () => fs.writeFileSync(brokenResident, "{broken"),
+      );
+      const foreignResident = path.join(
+        attemptDirectory,
+        "00000000-0000-4000-8000-000000000035.json",
+      );
+      expectLedgerRefusal(
+        "attempt ledger refuses a foreign request identity",
+        foreignResident,
+        () =>
+          fs.writeFileSync(
+            foreignResident,
+            `${JSON.stringify(
+              repaintAttempt({
+                requestId: "00000000-0000-4000-8000-000000000034",
+                attemptId: "00000000-0000-4000-8000-000000000035",
+                ordinal: 4,
+              }),
+              null,
+              2,
+            )}\n`,
+          ),
+      );
+      const noncanonicalResident = path.join(
+        attemptDirectory,
+        "wrong-request.json",
+      );
+      expectLedgerRefusal(
+        "attempt ledger refuses a noncanonical attempt path",
+        noncanonicalResident,
+        () =>
+          fs.writeFileSync(
+            noncanonicalResident,
+            `${JSON.stringify(
+              repaintAttempt({
+                attemptId: "00000000-0000-4000-8000-000000000041",
+                ordinal: 4,
+              }),
+              null,
+              2,
+            )}\n`,
+          ),
+      );
+      const thirdPath = path.join(
+        attemptDirectory,
+        `${thirdAttempt.attemptId}.json`,
+      );
       fs.writeFileSync(
-        path.join(attemptDirectory, "wrong-request.json"),
+        thirdPath,
+        `${JSON.stringify({ ...thirdAttempt, ordinal: 2 }, null, 2)}\n`,
+      );
+      try {
+        project.repaintRequestAttempts(requestId);
+        throw new Error("Duplicate repaint ordinals unexpectedly enumerated.");
+      } catch (error) {
+        TestValidator.predicate(
+          "attempt ledger refuses duplicate ordinals",
+          error instanceof Error,
+        );
+      } finally {
+        fs.writeFileSync(
+          thirdPath,
+          `${JSON.stringify(thirdAttempt, null, 2)}\n`,
+        );
+      }
+      fs.writeFileSync(
+        thirdPath,
         `${JSON.stringify(
-          repaintAttempt({
-            requestId: "00000000-0000-4000-8000-000000000034",
-            attemptId: "00000000-0000-4000-8000-000000000035",
-          }),
+          { ...thirdAttempt, startedAt: "2026-08-28T12:00:01.999Z" },
           null,
           2,
         )}\n`,
       );
+      try {
+        project.repaintRequestAttempts(requestId);
+        throw new Error(
+          "Overlapping repaint attempts unexpectedly enumerated.",
+        );
+      } catch (error) {
+        TestValidator.predicate(
+          "attempt ledger refuses chronology that overlaps its predecessor",
+          error instanceof Error,
+        );
+      } finally {
+        fs.writeFileSync(
+          thirdPath,
+          `${JSON.stringify(thirdAttempt, null, 2)}\n`,
+        );
+      }
       TestValidator.equals(
-        "terminal attempts omit corrupt and foreign residents and sort ordinal ties by id",
+        "terminal attempts enumerate one contiguous immutable request ledger",
         project.repaintRequestAttempts(requestId),
-        [failedAttempt, tiedAttempt, succeededAttempt],
+        [failedAttempt, succeededAttempt, thirdAttempt],
       );
       const linkedRequest = "00000000-0000-4000-8000-000000000036";
       const linkedDirectory = project.trackedStatePath(

@@ -1474,6 +1474,93 @@ export const test_production_repaint_generator_adoption =
         { first: true, attempts: 1, retry: "repaint-failed" },
       );
 
+      const retryLegalityAttempts: IAutoMovieRepaintAttemptRecord[] = [];
+      const retryLegalityPolicy = executionPolicy();
+      await new AutoMovieProductionRepaintService(
+        actualAdapter(selected.runtimeIdentity),
+        selected,
+        {
+          policy: retryLegalityPolicy,
+          evidence: executionEvidence(),
+          now: () => new Date("2026-08-28T12:03:00.000Z"),
+        },
+      ).repaint(
+        scenarioServices(runnable, {
+          project: {
+            commitRepaintAttempt: (attempt: IAutoMovieRepaintAttemptRecord) => {
+              retryLegalityAttempts.push(attempt);
+              return 1;
+            },
+            commitRepaintRendition: () => 1,
+          },
+        }),
+        input,
+      );
+      const priorSucceeded = retryLegalityAttempts[0]!;
+      const priorNonretryable: IAutoMovieRepaintAttemptRecord = {
+        ...priorSucceeded,
+        status: "failed",
+        failure: {
+          class: "provider-refusal",
+          message: "provider refused without retry permission",
+          retryable: false,
+        },
+        availableOutput: null,
+      };
+      const priorRetryable: IAutoMovieRepaintAttemptRecord = {
+        ...priorSucceeded,
+        status: "failed",
+        failure: {
+          class: "rate-limit",
+          message: "provider requested a retry",
+          retryable: true,
+        },
+        availableOutput: null,
+      };
+      let retryLegalityProviderCalls = 0;
+      const explicitRetry = (
+        history: IAutoMovieRepaintAttemptRecord[],
+      ): Promise<IAutoMovieRepaintShot> =>
+        new AutoMovieProductionRepaintService(
+          async (props) => {
+            ++retryLegalityProviderCalls;
+            return actualAdapter(selected.runtimeIdentity)(props);
+          },
+          selected,
+          {
+            policy: retryLegalityPolicy,
+            evidence: executionEvidence(),
+            requestId: priorSucceeded.requestId,
+            now: () => new Date("2026-08-28T12:03:01.000Z"),
+          },
+        ).repaint(
+          scenarioServices(runnable, {
+            project: {
+              repaintRequestAttempts: () => history,
+              commitRepaintRendition: () => 1,
+            },
+          }),
+          input,
+        );
+      const succeededRetry = await explicitRetry([priorSucceeded]);
+      const nonretryableRetry = await explicitRetry([priorNonretryable]);
+      const retryableRetry = await explicitRetry([priorRetryable]);
+      TestValidator.equals(
+        "explicit retry is legal only after the last retryable failed attempt",
+        {
+          succeeded: codeOf(succeededRetry),
+          nonretryable: codeOf(nonretryableRetry),
+          retryable: retryableRetry.repainted,
+          providerCalls: retryLegalityProviderCalls,
+        },
+        {
+          succeeded: "repaint-input-invalid",
+          nonretryable: "repaint-input-invalid",
+          retryable: true,
+          providerCalls: 1,
+        },
+      );
+
       const attemptCommitFailures = await Promise.all(
         [
           new Error("attempt commit failed"),
