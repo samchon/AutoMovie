@@ -709,7 +709,7 @@ const withGeneratedRepaintSelectionReview = (
  *    render-job root exists, publish explicit results, and clean up their
  *    acquired runtime resources.
  * 5. The actual generated repaint entrypoint refuses invalid operations and a
- *    source-preflight failure before any request identity exists.
+ *    stale source mutation before any request identity can exist.
  * 6. A default-adapter terminal refusal returns its durable request id but is
  *    not retryable; an explicit transport failure is stored as retryable and
  *    only its request id may resume into a candidate.
@@ -922,16 +922,16 @@ export const test_cli_scaffold_repaint_runtime_contract =
       );
       const configuredPath = path.join(fixture.root, "automovie.config.ts");
       const configuredSource = fs.readFileSync(configuredPath, "utf8");
-      const missingReferenceSource = configuredSource.replace(
+      const staleReferenceSource = configuredSource.replace(
         repaint.referencePath,
         "public/repaint/generated-repaint-reference-missing.png",
       );
-      if (missingReferenceSource === configuredSource)
+      if (staleReferenceSource === configuredSource)
         throw new Error(
-          "The generated repaint preflight negative has no reference slot.",
+          "The generated repaint stale-source negative has no reference slot.",
         );
-      fs.writeFileSync(configuredPath, missingReferenceSource, "utf8");
-      const preflightRefusal = runGeneratedFast(
+      fs.writeFileSync(configuredPath, staleReferenceSource, "utf8");
+      const staleSourceRefusal = runGeneratedFast(
         fixture.root,
         "scripts/repaint.ts",
         ["reroll", "--shot", "opening"],
@@ -986,11 +986,6 @@ export const test_cli_scaffold_repaint_runtime_contract =
       const beforeRenditions = repaintProject.verifiedRepaintRenditions([
         "opening",
       ]);
-      const preflightOutput = JSON.parse(preflightRefusal.stdout) as {
-        repainted: boolean;
-        requestId: string | null;
-        diagnostics: Array<{ code: string; message: string }>;
-      };
       const defaultAdapterOutput = JSON.parse(defaultAdapterRefusal.stdout) as {
         repainted: boolean;
         selected: boolean;
@@ -1005,15 +1000,18 @@ export const test_cli_scaffold_repaint_runtime_contract =
         defaultAdapterOutput.requestId,
       );
       TestValidator.equals(
-        "the actual generated repaint CLI separates preflight refusal from a durable terminal attempt",
+        "the actual generated repaint CLI separates stale source refusal from a durable terminal attempt",
         {
           confinedStatus: confinedRepaint.status !== 0,
           confinedDiagnostic: confinedRepaint.stderr.includes(
             "repaint requires exactly one operation",
           ),
-          preflightStatus: preflightRefusal.status,
-          preflightRepainted: preflightOutput.repainted,
-          preflightRequestId: preflightOutput.requestId,
+          staleSourceStatus: staleSourceRefusal.status,
+          staleSourceStdout: staleSourceRefusal.stdout,
+          staleSourceDiagnostic:
+            staleSourceRefusal.stderr.includes(
+              "Dialogue capture requires a current source compile",
+            ) && staleSourceRefusal.stderr.includes("generated-stale"),
           impossiblePolicyStatus: impossiblePolicyRefusal.status,
           impossiblePolicyStdout: impossiblePolicyRefusal.stdout,
           impossiblePolicyDiagnostic: impossiblePolicyRefusal.stderr.includes(
@@ -1038,9 +1036,9 @@ export const test_cli_scaffold_repaint_runtime_contract =
         {
           confinedStatus: true,
           confinedDiagnostic: true,
-          preflightStatus: 1,
-          preflightRepainted: false,
-          preflightRequestId: null,
+          staleSourceStatus: 1,
+          staleSourceStdout: "",
+          staleSourceDiagnostic: true,
           impossiblePolicyStatus: 1,
           impossiblePolicyStdout: "",
           impossiblePolicyDiagnostic: true,
