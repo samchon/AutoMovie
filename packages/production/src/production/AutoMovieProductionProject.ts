@@ -1876,7 +1876,9 @@ export class AutoMovieProductionProject {
     if (
       attempt.ordinal !== priorAttempts.length + 1 ||
       (previous !== undefined &&
-        (attempt.shot !== previous.shot ||
+        (previous.status !== "failed" ||
+          previous.failure?.retryable !== true ||
+          attempt.shot !== previous.shot ||
           attempt.requestFingerprint !== previous.requestFingerprint ||
           attempt.compileFingerprint !== previous.compileFingerprint ||
           attempt.sourceRenderFingerprint !==
@@ -1969,7 +1971,9 @@ export class AutoMovieProductionProject {
       if (
         attempt.ordinal !== index + 1 ||
         (previous !== undefined &&
-          (attempt.shot !== previous.shot ||
+          (previous.status !== "failed" ||
+            previous.failure?.retryable !== true ||
+            attempt.shot !== previous.shot ||
             attempt.requestFingerprint !== previous.requestFingerprint ||
             attempt.compileFingerprint !== previous.compileFingerprint ||
             attempt.sourceRenderFingerprint !==
@@ -1980,7 +1984,7 @@ export class AutoMovieProductionProject {
               new Date(previous.completedAt).getTime()))
       )
         throw new Error(
-          `Repaint request "${request}" requires contiguous chronological attempts under one immutable request identity.`,
+          `Repaint request "${request}" requires contiguous chronological attempts whose preceding terminal state remained retryable under one immutable request identity.`,
         );
     }
     return attempts;
