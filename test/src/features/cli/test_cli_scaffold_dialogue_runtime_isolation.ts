@@ -11,7 +11,6 @@ import { createRequire } from "node:module";
 import os from "node:os";
 import path from "node:path";
 
-import { productionRenderFrameCaptureInput } from "../../../../packages/template/scaffold/scripts/renderFrameCaptureInput";
 import { preserveCliHarnessCleanup } from "./CliHarnessCleanup";
 
 interface IDialogueRuntime {
@@ -361,11 +360,11 @@ export const test_cli_scaffold_dialogue_runtime_isolation =
         pass: "beauty" as const,
       };
       const hostileRenderCaptureInput =
-        productionRenderFrameCaptureInput(renderInputProps);
+        first.productionRenderFrameCaptureInput(renderInputProps);
       hostileRenderCaptureInput.crop!.left = 0.75;
       const renderCaptureInput =
         first.productionRenderFrameCaptureInput(renderInputProps);
-      const renderNoCropInput = productionRenderFrameCaptureInput({
+      const renderNoCropInput = first.productionRenderFrameCaptureInput({
         root: firstRoot,
         productionId: "dialogue-proxy",
         plan: {
