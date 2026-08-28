@@ -22,9 +22,17 @@ const commandPath = path.resolve(
   __dirname,
   "../../../../packages/template/scaffold/scripts/library-review.ts",
 );
+const commandEntryPath = path.resolve(
+  __dirname,
+  "../../../../packages/template/scaffold/scripts/library-review-cli.ts",
+);
 const productionEvidencePath = path.resolve(
   __dirname,
-  "../../../../packages/template/scaffold/productionEvidence.ts",
+  "../../../../packages/template/scaffold/productionEvidence.mjs",
+);
+const templatePackageRoot = path.resolve(
+  __dirname,
+  "../../../../packages/template",
 );
 const configurationPath = path.resolve(
   __dirname,
@@ -33,12 +41,23 @@ const configurationPath = path.resolve(
 const command = require(commandPath) as {
   runLibraryReviewCommand: (props: {
     argv: readonly string[];
-    root?: string;
-    productionId?: string;
-    evidence?: IAutoMovieEvidenceConfigProps;
+    root: string;
+    productionId: string;
+    evidence: IAutoMovieEvidenceConfigProps;
     output?: (value: unknown) => void;
   }) => unknown;
+  runLibraryReviewCli: (props: {
+    argv: readonly string[];
+    evidence: IAutoMovieEvidenceConfigProps;
+    productionId: string;
+    root: string;
+    run: typeof command.runLibraryReviewCommand;
+    stderr: (value: string) => void;
+    stdout: (value: string) => void;
+  }) => number;
 };
+
+const nonError = (message: string): Error => message as unknown as Error;
 
 const branches = [
   "instances",
@@ -169,6 +188,31 @@ const writeLibraryOwners = (root: string): void => {
   );
 };
 
+/** Install the published shared-contract view this generated fixture declares. */
+const installSharedContracts = (root: string): void => {
+  const destination = path.join(root, "node_modules", "@automovie", "template");
+  fs.mkdirSync(destination, { recursive: true });
+  fs.cpSync(
+    path.join(templatePackageRoot, "docs"),
+    path.join(destination, "docs"),
+    {
+      recursive: true,
+    },
+  );
+  fs.writeFileSync(
+    path.join(destination, "package.json"),
+    JSON.stringify({
+      name: "@automovie/template",
+      version: "0.0.0",
+      exports: {
+        "./docs/*": "./docs/*",
+        "./package.json": "./package.json",
+      },
+    }),
+    "utf8",
+  );
+};
+
 const observationId = (branch: (typeof branches)[number]): string =>
   branch === "maps"
     ? "map-plan-section-elevation-traversal-extent"
@@ -234,6 +278,7 @@ const commandRefuses = (props: {
 export const test_cli_scaffold_library_review_command = (): void => {
   const fixture = productionFixture();
   try {
+    installSharedContracts(fixture.root);
     const modelSource = fs.readFileSync(
       path.join(fixture.root, "src", "models", "soloist.ts"),
       "utf8",
@@ -314,18 +359,78 @@ export const test_cli_scaffold_library_review_command = (): void => {
     const originalEvidence = { ...singleton.productionEvidence };
     const originalProductionId = configured.default.productionId;
     const originalDirectory = process.cwd();
-    let defaultSingletonInspect = false;
+    const originalArguments = [...process.argv];
+    const originalExitCode = process.exitCode;
+    const originalStderr = process.stderr.write;
+    const originalStdout = process.stdout.write;
+    let cliOutput = "";
+    let cliError = "";
+    let cliSuccess = -1;
+    let cliFailure = -1;
+    let cliNonError = -1;
+    let entrySuccess = false;
     try {
       Object.assign(singleton.productionEvidence, evidence);
       configured.default.productionId = "fixture-film";
       process.chdir(fixture.root);
-      defaultSingletonInspect =
-        (
-          command.runLibraryReviewCommand({ argv: [] }) as {
-            owners: unknown[];
-          }
-        ).owners.length === branches.length;
+      cliSuccess = command.runLibraryReviewCli({
+        argv: [],
+        evidence,
+        productionId: "fixture-film",
+        root: fixture.root,
+        run: command.runLibraryReviewCommand,
+        stderr: (value) => {
+          cliError += value;
+        },
+        stdout: (value) => {
+          cliOutput += value;
+        },
+      });
+      cliFailure = command.runLibraryReviewCli({
+        argv: ["unknown"],
+        evidence,
+        productionId: "fixture-film",
+        root: fixture.root,
+        run: command.runLibraryReviewCommand,
+        stderr: (value) => {
+          cliError += value;
+        },
+        stdout: (value) => {
+          cliOutput += value;
+        },
+      });
+      cliNonError = command.runLibraryReviewCli({
+        argv: [],
+        evidence,
+        productionId: "fixture-film",
+        root: fixture.root,
+        run: () => {
+          throw nonError("non-error command failure");
+        },
+        stderr: (value) => {
+          cliError += value;
+        },
+        stdout: (value) => {
+          cliOutput += value;
+        },
+      });
+      process.stderr.write = ((value: string | Uint8Array): boolean => {
+        cliError += value.toString();
+        return true;
+      }) as typeof process.stderr.write;
+      process.stdout.write = ((value: string | Uint8Array): boolean => {
+        cliOutput += value.toString();
+        return true;
+      }) as typeof process.stdout.write;
+      process.argv = [process.execPath, commandEntryPath];
+      delete require.cache[require.resolve(commandEntryPath)];
+      require(commandEntryPath);
+      entrySuccess = process.exitCode === 0;
     } finally {
+      process.stderr.write = originalStderr;
+      process.stdout.write = originalStdout;
+      process.argv = originalArguments;
+      process.exitCode = originalExitCode;
       process.chdir(originalDirectory);
       Object.assign(singleton.productionEvidence, originalEvidence);
       configured.default.productionId = originalProductionId;
@@ -341,10 +446,21 @@ export const test_cli_scaffold_library_review_command = (): void => {
       },
     });
     const spaceOwner = ownerAddress(authoring, "spaces");
-    const refusals: Array<readonly [readonly string[], string]> = [
+    const unboundOwner = authoring.designOwners.find(
+      (entry) => entry.sourceBinding === null,
+    )!;
+    const unboundOwnerAddress = `${unboundOwner.path}#${unboundOwner.units[0]!.anchor}`;
+    const refusals: Array<
+      readonly [
+        argv: readonly string[],
+        message: string,
+        evidence?: IAutoMovieEvidenceConfigProps,
+      ]
+    > = [
       [["unknown"], 'must be "inspect", "plan", or "record"'],
       [["inspect", "positional"], "unknown or positional"],
       [["inspect", "--typo", "value"], "unknown or positional"],
+      [["inspect", undefined as unknown as string], "unknown or positional"],
       [
         [
           "plan",
@@ -360,11 +476,16 @@ export const test_cli_scaffold_library_review_command = (): void => {
         "unknown or positional",
       ],
       [["plan", "--owner", "--source", "bad"], "requires one value"],
+      [["plan", "--owner"], "requires one value"],
       [["plan", "--owner", spaceOwner, "--owner", spaceOwner], "exactly once"],
       [["plan", "--owner", "invalid"], "must be one exact"],
       [
         ["plan", "--owner", "docs/spaces/owner.md#absent"],
         "outside the exact active",
+      ],
+      [
+        ["plan", "--owner", unboundOwnerAddress],
+        "no enforced reviewed source population",
       ],
       [["plan", "--owner", spaceOwner], "nonempty unique subset"],
       [
@@ -445,6 +566,20 @@ export const test_cli_scaffold_library_review_command = (): void => {
         [
           "record",
           "--owner",
+          "docs/spaces/owner.md#absent",
+          "--observation",
+          "spaces-neutral",
+          "--runtime",
+          "probe:v1",
+          "--verdict",
+          "passed",
+        ],
+        "outside current owner",
+      ],
+      [
+        [
+          "record",
+          "--owner",
           spaceOwner,
           "--observation",
           "spaces-neutral",
@@ -517,6 +652,22 @@ export const test_cli_scaffold_library_review_command = (): void => {
         [
           "record",
           "--owner",
+          ownerAddress(authoring, "instances"),
+          "--observation",
+          observationId("instances"),
+          "--runtime",
+          "probe:v1",
+          "--verdict",
+          "passed",
+          "--facts-file",
+          "observations/absent.json",
+        ],
+        "Facts file",
+      ],
+      [
+        [
+          "record",
+          "--owner",
           spaceOwner,
           "--observation",
           "spaces-neutral",
@@ -566,9 +717,59 @@ export const test_cli_scaffold_library_review_command = (): void => {
         "unknown or positional",
       ],
     ];
-    const refusalCoverage = refusals.every(([argv, message]) =>
-      commandRefuses({ argv, root: fixture.root, evidence, message }),
-    );
+    for (const [argv, message, selectedEvidence] of refusals)
+      TestValidator.equals(
+        `library review command refuses ${JSON.stringify(argv)} with ${JSON.stringify(message)}`,
+        commandRefuses({
+          argv,
+          root: fixture.root,
+          evidence: selectedEvidence ?? evidence,
+          message,
+        }),
+        true,
+      );
+    command.runLibraryReviewCommand({
+      argv: [
+        "plan",
+        "--owner",
+        spaceOwner,
+        "--source",
+        "src/spaces/owner.ts",
+        "--observation",
+        "spaces-neutral:artifact",
+        "--observation",
+        "space-perspective:artifact",
+      ],
+      root: fixture.root,
+      productionId: "fixture-film",
+      evidence,
+    });
+    command.runLibraryReviewCommand({
+      argv: [
+        "record",
+        "--owner",
+        spaceOwner,
+        "--observation",
+        "spaces-neutral",
+        "--runtime",
+        "automovie-library-probe:v2",
+        "--verdict",
+        "passed",
+        "--artifact-project",
+        "observations/space.svg",
+      ],
+      root: fixture.root,
+      productionId: "fixture-film",
+      evidence,
+    });
+    const planIdentityReceipts = (
+      JSON.parse(
+        fs.readFileSync(
+          path.join(fixture.root, "docs", "spaces", "owner.review.json"),
+          "utf8",
+        ),
+      ) as { units: Array<{ receipts: unknown[] }> }
+    ).units[0]!.receipts.length;
     const renderArtifact = path.join(
       fixture.root,
       "renders",
@@ -814,8 +1015,19 @@ export const test_cli_scaffold_library_review_command = (): void => {
                 entry.message.includes("stale"),
             ),
         ],
-        ["commandRefusalMatrix", () => refusalCoverage],
-        ["defaultSingletonInspect", () => defaultSingletonInspect],
+        ["commandRefusalMatrix", () => true],
+        [
+          "cliAdapterSuccessAndFailure",
+          () =>
+            cliSuccess === 0 &&
+            cliFailure === 1 &&
+            cliNonError === 1 &&
+            entrySuccess &&
+            cliOutput.includes('"owners"') &&
+            cliError.includes("must be") &&
+            cliError.includes("non-error command failure"),
+        ],
+        ["planIdentityRetainsStaleReceipt", () => planIdentityReceipts === 2],
         ["staleReceiptRetainedAlongsideCurrent", () => motionReceipts === 2],
         [
           "malformedPlanRefusedWithoutMutation",
@@ -836,7 +1048,8 @@ export const test_cli_scaffold_library_review_command = (): void => {
         motionSourceChangeStalesReceipt: true,
         mapSourceChangeStalesFiniteEvidence: true,
         commandRefusalMatrix: true,
-        defaultSingletonInspect: true,
+        cliAdapterSuccessAndFailure: true,
+        planIdentityRetainsStaleReceipt: true,
         staleReceiptRetainedAlongsideCurrent: true,
         malformedPlanRefusedWithoutMutation: true,
         mismatchedTurntableRefusedWithoutMutation: true,

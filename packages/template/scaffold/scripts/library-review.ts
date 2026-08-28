@@ -19,10 +19,6 @@ import {
 import { randomUUID } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
-
-import config from "../automovie.config";
-import { productionEvidence } from "../productionEvidence";
 
 type Verdict = "failed" | "not-run" | "passed" | "unsupported";
 
@@ -234,15 +230,15 @@ const evidenceOf = (props: {
  */
 export const runLibraryReviewCommand = (props: {
   argv: readonly string[];
-  root?: string;
-  productionId?: string;
-  evidence?: IAutoMovieEvidenceConfigProps;
+  root: string;
+  productionId: string;
+  evidence: IAutoMovieEvidenceConfigProps;
   output?: (value: unknown) => void;
 }): unknown => {
-  const root = path.resolve(props.root ?? process.cwd());
+  const root = path.resolve(props.root);
   const authoring = readAutoMovieProductionEvidence({
     root,
-    productionEvidence: props.evidence ?? productionEvidence,
+    productionEvidence: props.evidence,
   });
   if (authoring.manifest.kind !== "library")
     throw new Error(
@@ -267,16 +263,19 @@ export const runLibraryReviewCommand = (props: {
       throw new Error(
         `Owner ${JSON.stringify(requested)} is outside the exact active authoring population.`,
       );
+    const sourceBinding = owner.sourceBinding;
+    if (sourceBinding?.enforced !== true || sourceBinding.stage !== "review")
+      throw new Error(
+        `Owner ${JSON.stringify(requested)} has no enforced reviewed source population. Review its manifest-derived source branch before planning observations.`,
+      );
     const sources = values(props.argv, "--source");
     if (
       sources.length === 0 ||
       new Set(sources).size !== sources.length ||
-      sources.some(
-        (source) => owner.sourceBinding?.paths.includes(source) !== true,
-      )
+      sources.some((source) => sourceBinding.paths.includes(source) !== true)
     )
       throw new Error(
-        `Plan sources must be a nonempty unique subset of ${JSON.stringify(owner.sourceBinding?.paths ?? [])}.`,
+        `Plan sources must be a nonempty unique subset of ${JSON.stringify(sourceBinding.paths)}.`,
       );
     const observations = values(props.argv, "--observation").map(observationOf);
     if (
@@ -328,7 +327,7 @@ export const runLibraryReviewCommand = (props: {
 
   const project = AutoMovieProductionProject.openReadOnly(
     root,
-    props.productionId ?? config.productionId,
+    props.productionId,
   );
   const checked = new AutoMovieProductionCompiler(project, authoring).lint({
     scope: "source",
@@ -415,19 +414,27 @@ export const runLibraryReviewCommand = (props: {
   return result;
 };
 
-if (
-  process.argv[1] !== undefined &&
-  path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)
-)
+/** Run the process-facing adapter while keeping command behavior testable. */
+export const runLibraryReviewCli = (props: {
+  argv: readonly string[];
+  evidence: IAutoMovieEvidenceConfigProps;
+  productionId: string;
+  root: string;
+  run: typeof runLibraryReviewCommand;
+  stderr: (value: string) => void;
+  stdout: (value: string) => void;
+}): number => {
   try {
-    runLibraryReviewCommand({
-      argv: process.argv.slice(2),
-      output: (value) =>
-        process.stdout.write(`${JSON.stringify(value, null, 2)}\n`),
+    props.run({
+      argv: props.argv,
+      evidence: props.evidence,
+      productionId: props.productionId,
+      root: props.root,
+      output: (value) => props.stdout(`${JSON.stringify(value, null, 2)}\n`),
     });
+    return 0;
   } catch (error) {
-    process.stderr.write(
-      `${error instanceof Error ? error.message : String(error)}\n`,
-    );
-    process.exitCode = 1;
+    props.stderr(`${error instanceof Error ? error.message : String(error)}\n`);
+    return 1;
   }
+};

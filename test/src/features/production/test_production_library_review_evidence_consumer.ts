@@ -464,6 +464,22 @@ export const test_production_library_review_evidence_consumer = (): void => {
     project: malformedState,
     compileFingerprint: COMPILE,
   });
+  const nonErrorJsonState = project();
+  writePlans(nonErrorJsonState);
+  const parseJson = JSON.parse;
+  let nonErrorJson: IAutoMovieLibraryReviewPopulation;
+  try {
+    JSON.parse = (() => {
+      throw nonError("plan parser unavailable");
+    }) as typeof JSON.parse;
+    nonErrorJson = consumer.readAutoMovieLibraryReviewRequirements({
+      authoring: binding,
+      project: nonErrorJsonState,
+      compileFingerprint: COMPILE,
+    });
+  } finally {
+    JSON.parse = parseJson;
+  }
   const invalidState = project();
   writePlans(invalidState);
   const invalidPlan = JSON.parse(
@@ -483,7 +499,7 @@ export const test_production_library_review_evidence_consumer = (): void => {
     evidence: "turntable",
     model: "chair",
   });
-  invalidPlan.units[0].observations.push({
+  invalidPlan.units[0].observations.unshift({
     id: "artifact-without-model",
     evidence: "artifact",
   });
@@ -744,6 +760,13 @@ export const test_production_library_review_evidence_consumer = (): void => {
             entry.message.includes("has no adjacent finite observation plan"),
           ),
       ],
+      [
+        "nonErrorPlanParserFailureFailsClosed",
+        () =>
+          nonErrorJson.diagnostics.some((entry) =>
+            entry.message.includes("plan parser unavailable"),
+          ),
+      ],
       ["missingSourceWasExercised", () => missingSource === false],
       [
         "invalidSourcesPlansAndKindsRefused",
@@ -839,6 +862,7 @@ export const test_production_library_review_evidence_consumer = (): void => {
       activeEmptyBranchRefused: true,
       unreviewedBranchesRefused: true,
       missingMalformedAndWrongVersionPlansRefused: true,
+      nonErrorPlanParserFailureFailsClosed: true,
       missingSourceWasExercised: true,
       invalidSourcesPlansAndKindsRefused: true,
       modelFactsCannotReplaceFixedTurntable: true,

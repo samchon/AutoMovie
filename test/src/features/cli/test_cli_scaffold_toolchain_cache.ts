@@ -46,6 +46,7 @@ export const test_cli_scaffold_toolchain_cache = (): void => {
     },
     {
       invocations: [
+        "book",
         "building:report",
         "capture:doctor",
         "capture:install",
@@ -53,6 +54,7 @@ export const test_cli_scaffold_toolchain_cache = (): void => {
         "derive:example",
         "design",
         "format",
+        "library:review",
         "lint",
         "lint:source",
         "preview",
