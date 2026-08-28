@@ -242,17 +242,30 @@ export interface IProductionSoundRuntime {
     identity: IAutoMovieProductionAudioAssetIdentity;
     samples: Float32Array | null;
   }>;
-  prepare: (input: {
-    project: AutoMovieProductionProject;
-    compileFingerprint: AutoMovieContentDigest;
-    timeline: ReturnType<typeof readAutoMovieFilmTimeline>;
-  }) => Promise<IPreparedProductionSoundRuntime>;
+  cacheRetention: (
+    input: IProductionSoundRuntimeInput,
+  ) => IProductionSoundCacheRetention;
+  prepare: (
+    input: IProductionSoundRuntimeInput,
+  ) => Promise<IPreparedProductionSoundRuntime>;
   runtimeIdentity: () => unknown;
   sourceDigest: (
     project: AutoMovieProductionProject,
     timeline: ReturnType<typeof readAutoMovieFilmTimeline>,
     dialogueRuntime: IAutoMovieProductionDialogueRuntime,
   ) => AutoMovieContentDigest;
+}
+
+export interface IProductionSoundRuntimeInput {
+  project: AutoMovieProductionProject;
+  compileFingerprint: AutoMovieContentDigest;
+  timeline: ReturnType<typeof readAutoMovieFilmTimeline>;
+}
+
+export interface IProductionSoundCacheRetention {
+  assertCurrent: () => void;
+  dialoguePaths: readonly string[];
+  modelPaths: readonly string[];
 }
 
 /** Own source decoding, TTS preparation, caches, and runtime identity per invocation. */
@@ -931,6 +944,110 @@ export const createProductionSoundRuntime = (props: {
       ),
     );
 
+  const deriveCurrentSoundPlan = (input: IProductionSoundRuntimeInput) => {
+    const graph = input.project.graph();
+    const production = graph.production;
+    if (production === null)
+      throw new Error("Production sound planning requires a design.");
+    const compiled = readProductionCompiledShots(input.project, input.timeline);
+    assertProductionLiveWearableSoftBodies({
+      selected: props.liveWearableSoftBodies,
+      shots: compiled,
+    });
+    const plan = deriveProductionRuntimeSoundPlan({
+      timeline: input.timeline,
+      contracts: graph.shots,
+      compiled,
+      sound: production.sound,
+      acousticStudies: productionAcousticStudies,
+      acousticBindings: productionAcousticBindings,
+    });
+    const selection = assertProductionDialogueSynthesis({
+      selected: props.dialogueSelection,
+      dialogue: plan.dialogue,
+    });
+    assertProductionSpeakerBindings({
+      bindings: props.speakerBindings,
+      dialogue: plan.dialogue,
+      timeline: input.timeline,
+      shots: compiled,
+    });
+    return { graph, plan, selection };
+  };
+
+  const cacheRetention = (
+    input: IProductionSoundRuntimeInput,
+  ): IProductionSoundCacheRetention => {
+    const { plan, selection } = deriveCurrentSoundPlan(input);
+    if (selection === null || plan.dialogue.length === 0)
+      return {
+        assertCurrent: assertSoundRuntimeCurrent,
+        dialoguePaths: [],
+        modelPaths: [],
+      };
+    const modelCacheRoot = path.join(
+      props.productionStateRoot,
+      "model-cache",
+      "kokoro",
+      KOKORO_MODEL_REVISION,
+    );
+    const modelSnapshot = captureKokoroModelCache(modelCacheRoot);
+    const modelAssets = kokoroModelCacheAssets(modelSnapshot);
+    if (modelSnapshot === null || modelAssets.length === 0)
+      return {
+        assertCurrent: assertSoundRuntimeCurrent,
+        dialoguePaths: [],
+        modelPaths: [],
+      };
+    const cacheRoot = path.join(
+      props.productionStateRoot,
+      "audio-cache",
+      "kokoro",
+    );
+    const runtimeAssets = [
+      ...kokoroBaseRuntimeAssets(selection.voice),
+      ...modelAssets,
+    ];
+    const dialogueSnapshots: IDialogueCacheSnapshot[] = [];
+    const dialoguePaths = plan.dialogue.flatMap((line) => {
+      const identity = productionDialogueCacheIdentity({
+        cacheRoot,
+        selection,
+        text: line.text,
+        language: line.language,
+        speaker: line.speaker ?? null,
+        runtimeAssets,
+      });
+      try {
+        const captured = captureExistingDialogueCache(cacheRoot, identity.path);
+        if (
+          captured === null ||
+          validatedDialogueCache(
+            captured,
+            identity.key,
+            runtimeAssets,
+            selection,
+          ) === undefined
+        )
+          return [];
+        dialogueSnapshots.push(captured);
+        return [`audio-cache/kokoro/${identity.key.slice(7)}`];
+      } catch {
+        return [];
+      }
+    });
+    return {
+      assertCurrent: () => {
+        assertSoundRuntimeCurrent();
+        assertCapturedRenderTarget(modelSnapshot);
+        for (const snapshot of dialogueSnapshots)
+          assertCapturedRenderTarget(snapshot.snapshot);
+      },
+      dialoguePaths,
+      modelPaths: [`model-cache/kokoro/${KOKORO_MODEL_REVISION}`],
+    };
+  };
+
   let prepared:
     | {
         identity: AutoMovieContentDigest;
@@ -942,10 +1059,8 @@ export const createProductionSoundRuntime = (props: {
       }
     | undefined;
   const prepare: IProductionSoundRuntime["prepare"] = async (input) => {
-    const graph = input.project.graph();
-    const production = graph.production;
-    if (production === null)
-      throw new Error("Production runtime preparation requires a design.");
+    const { graph, plan, selection } = deriveCurrentSoundPlan(input);
+    const production = graph.production!;
     const identity = digestAutoMovieBytes(
       Buffer.from(
         JSON.stringify({
@@ -965,34 +1080,8 @@ export const createProductionSoundRuntime = (props: {
         identity,
         value: (async () => {
           props.progress("sound.runtime.prepare.start");
-          const compiled = readProductionCompiledShots(
-            input.project,
-            input.timeline,
-          );
-          assertProductionLiveWearableSoftBodies({
-            selected: props.liveWearableSoftBodies,
-            shots: compiled,
-          });
-          const plan = deriveProductionRuntimeSoundPlan({
-            timeline: input.timeline,
-            contracts: graph.shots,
-            compiled,
-            sound: production.sound,
-            acousticStudies: productionAcousticStudies,
-            acousticBindings: productionAcousticBindings,
-          });
           props.progress("sound.plan.complete", {
             dialogueLines: plan.dialogue.length,
-          });
-          const selection = assertProductionDialogueSynthesis({
-            selected: props.dialogueSelection,
-            dialogue: plan.dialogue,
-          });
-          assertProductionSpeakerBindings({
-            bindings: props.speakerBindings,
-            dialogue: plan.dialogue,
-            timeline: input.timeline,
-            shots: compiled,
           });
           props.progress("sound.synthesis.start");
           const synthesized = await synthesizeProductionDialogue(
@@ -1028,6 +1117,7 @@ export const createProductionSoundRuntime = (props: {
     audioAssets: (project, timeline) =>
       audioSources(project, timeline, 48_000).map((source) => source.identity),
     audioSources,
+    cacheRetention,
     prepare,
     runtimeIdentity,
     sourceDigest: (project, timeline, dialogueRuntime) =>

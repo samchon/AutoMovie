@@ -7,6 +7,7 @@ import {
   type IAutoMovieProductionRenderJobPlan,
   type IAutoMovieProductionRenderTier,
   planProductionRenderGc,
+  readAutoMovieFilmTimeline,
   verifyProductionRenderChunkReceipt,
 } from "@automovie/production";
 import path from "node:path";
@@ -46,6 +47,8 @@ import {
   preserveRenderLivenessLease,
 } from "./renderLiveness";
 import { captureExistingRenderPlan } from "./renderPlanSnapshot";
+import type { IProductionSoundRuntime } from "./renderSoundRuntime";
+import { inventoryProductionSoundCaches } from "./soundCacheSnapshot";
 
 export interface IProductionRenderGcRuntime<Lease, Result> {
   acquire: () => Lease;
@@ -90,6 +93,7 @@ export const createProductionRenderGarbageRuntime = (props: {
   ) => AutoMovieContentDigest;
   renderTier: IAutoMovieProductionRenderTier;
   root: string;
+  soundRuntime: IProductionSoundRuntime;
   sourceFingerprint: () => AutoMovieContentDigest;
   stateRoot: string;
 }) => {
@@ -144,6 +148,11 @@ export const createProductionRenderGarbageRuntime = (props: {
         : [];
     });
     const project = AutoMovieProductionProject.openReadOnly(root, productionId);
+    const soundRetention = props.soundRuntime.cacheRetention({
+      compileFingerprint: currentCompileFingerprint,
+      project,
+      timeline: readAutoMovieFilmTimeline(project, currentCompileFingerprint),
+    });
     const renderRoot = project.renderRoot();
     const manifestPath = path.join(productionStateRoot, "render-manifest.json");
     const publicationPaths = new Set(
@@ -168,6 +177,17 @@ export const createProductionRenderGarbageRuntime = (props: {
       snapshot: IRenderGcTargetSnapshot;
     }> = [];
     const retainedChunkPaths = new Set<string>();
+    const retainedCachePaths = new Set([
+      ...soundRetention.dialoguePaths,
+      ...soundRetention.modelPaths,
+    ]);
+    for (const entry of inventoryProductionSoundCaches({
+      captureTarget: props.captureTarget,
+      productionStateRoot,
+    })) {
+      candidates.push(entry.candidate);
+      candidateSnapshots.set(gcCandidateKey(entry.candidate), entry.snapshot);
+    }
     for (const tier of ["proxy", "final"] as const) {
       const tierPlan = plans.find((plan) => plan.tier.kind === tier);
       const tierChunks = new Map(
@@ -352,8 +372,10 @@ export const createProductionRenderGarbageRuntime = (props: {
       plans,
       publicationPaths: [...publicationPaths],
       retainedChunkPaths: [...retainedChunkPaths],
+      retainedCachePaths: [...retainedCachePaths],
       candidates,
     });
+    soundRetention.assertCurrent();
     if (apply) {
       const quarantines = new Map<string, string>();
       for (const candidate of plan.remove) {
@@ -389,6 +411,7 @@ export const createProductionRenderGarbageRuntime = (props: {
           });
       }
     }
+    soundRetention.assertCurrent();
     return { applied: apply, ...plan };
   };
 

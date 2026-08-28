@@ -13,7 +13,14 @@ export interface IAutoMovieProductionRenderGcCandidate {
   /**
    * Ownership class; active locks and attempts are deliberately absent.
    */
-  kind: "chunk" | "chunk-pointer" | "chunk-tree" | "quarantine" | "publication";
+  kind:
+    | "chunk"
+    | "chunk-pointer"
+    | "chunk-tree"
+    | "dialogue-cache"
+    | "model-cache"
+    | "quarantine"
+    | "publication";
   /**
    * Chunk digest for chunk, pointer, and tree entries; otherwise null.
    */
@@ -31,7 +38,7 @@ export interface IAutoMovieProductionRenderGcPlan {
   /**
    * GC plan schema.
    */
-  version: 1;
+  version: 2;
   /**
    * Entries retained because a current plan or publication marks them.
    */
@@ -60,6 +67,8 @@ export const planProductionRenderGc = (props: {
   publicationPaths: readonly string[];
   /** Exact pointer/tree paths authenticated as current by the renderer host. */
   retainedChunkPaths: readonly string[];
+  /** Exact dialogue/model generations authenticated as current by the sound host. */
+  retainedCachePaths: readonly string[];
   /** Physical inventory collected without following links. */
   candidates: readonly IAutoMovieProductionRenderGcCandidate[];
 }): IAutoMovieProductionRenderGcPlan => {
@@ -79,6 +88,13 @@ export const planProductionRenderGc = (props: {
     if (retainedChunkPaths.has(path))
       throw new Error(`Render GC retained chunk path "${path}" is duplicate.`);
     retainedChunkPaths.add(path);
+  }
+  const retainedCachePaths = new Set<string>();
+  for (const value of props.retainedCachePaths) {
+    const path = canonicalRelativePath(value);
+    if (retainedCachePaths.has(path))
+      throw new Error(`Render GC retained cache path "${path}" is duplicate.`);
+    retainedCachePaths.add(path);
   }
   const paths = new Set<string>();
   const chunkPublicationCandidates = new Set<string>();
@@ -101,6 +117,12 @@ export const planProductionRenderGc = (props: {
           : candidate.kind === "chunk-tree"
             ? treePath?.[2]
             : undefined;
+    const cachePath =
+      candidate.kind === "dialogue-cache"
+        ? /^audio-cache\/kokoro\/([^/]+)$/u.exec(path)
+        : candidate.kind === "model-cache"
+          ? /^model-cache\/kokoro\/([^/]+)$/u.exec(path)
+          : null;
     if (
       paths.has(path) ||
       Number.isSafeInteger(candidate.bytes) === false ||
@@ -116,9 +138,16 @@ export const planProductionRenderGc = (props: {
         /^(?:proxy|final)\/quarantine\/[^/]+$/u.test(path) === false) ||
       (candidate.kind === "publication" &&
         path.startsWith("publication/") === false) ||
+      ((candidate.kind === "dialogue-cache" ||
+        candidate.kind === "model-cache") &&
+        (cachePath === null ||
+          candidate.digest === null ||
+          /^sha256:[0-9a-f]{64}$/.test(candidate.digest) === false)) ||
       (candidate.kind !== "chunk" &&
         candidate.kind !== "chunk-pointer" &&
         candidate.kind !== "chunk-tree" &&
+        candidate.kind !== "dialogue-cache" &&
+        candidate.kind !== "model-cache" &&
         candidate.digest !== null)
     )
       throw new Error(
@@ -135,6 +164,9 @@ export const planProductionRenderGc = (props: {
       ((candidate.kind === "chunk-pointer" ||
         candidate.kind === "chunk-tree") &&
         retainedChunkPaths.has(path)) ||
+      ((candidate.kind === "dialogue-cache" ||
+        candidate.kind === "model-cache") &&
+        retainedCachePaths.has(path)) ||
       (candidate.kind === "publication" && activePublication.has(path))
     )
       keep.push(normalized);
@@ -144,6 +176,20 @@ export const planProductionRenderGc = (props: {
     if (chunkPublicationCandidates.has(path) === false)
       throw new Error(
         `Render GC retained chunk path "${path}" has no exact pointer/tree candidate.`,
+      );
+  const cacheCandidates = new Set(
+    props.candidates
+      .filter(
+        (candidate) =>
+          candidate.kind === "dialogue-cache" ||
+          candidate.kind === "model-cache",
+      )
+      .map((candidate) => canonicalRelativePath(candidate.path)),
+  );
+  for (const path of retainedCachePaths)
+    if (cacheCandidates.has(path) === false)
+      throw new Error(
+        `Render GC retained cache path "${path}" has no exact cache candidate.`,
       );
   const retainedPairs = new Map<string, { pointers: number; trees: number }>();
   for (const path of retainedChunkPaths) {
@@ -175,7 +221,7 @@ export const planProductionRenderGc = (props: {
       "Render GC reclaimable byte total exceeds safe integer range.",
     );
   return {
-    version: 1,
+    version: 2,
     keep,
     remove,
     reclaimableBytes,

@@ -294,6 +294,7 @@ const executeProductionRenderCommand = async (
     renderPublicationFingerprint: productionRenderPublicationFingerprint,
     renderTier,
     root,
+    soundRuntime,
     sourceFingerprint: () => planningRuntime.sourceFingerprint(),
     stateRoot,
   });
