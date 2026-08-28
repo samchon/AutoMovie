@@ -6,6 +6,10 @@ import lint from "../lint.config.mjs";
 const rule = lint.rules["evidence/graph"];
 assert.ok(Array.isArray(rule), "the scaffold must enable its evidence graph");
 const graph = rule[1];
+if (typeof graph === "string")
+  throw new Error(
+    "The scaffold evidence rule must carry one inline graph configuration.",
+  );
 assert.equal(
   graph.claims.length,
   54,
