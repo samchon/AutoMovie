@@ -2,13 +2,15 @@
 
 AutoMovie 제작 저작용 증거 계약을 재사용하는 패키지다. 하나의 제작 종류, 저작 분기별 단계와 선택적인 작품 전용 claim을 `@ttsc/evidence` 그래프로 바꾸고, lint가 시작되기 전에 실제 저작 구조를 검증한다.
 
-이 패키지는 공통 discovery·principle·obligation target inventory, film·brief·library 호환성, 단계 전이, 비활성 폴더 잔여물, target identity, 계보, 소유 cardinality와 작품 전용 claim의 추가 합성을 맡는다. 작품의 결정이나 제작 문장은 소유하지 않는다.
+이 패키지는 공통 discovery·upstream·principle·obligation target inventory, film·brief·library 호환성, 단계 전이, 비활성 폴더 잔여물, target identity, 계보, 소유 cardinality와 작품 전용 claim의 추가 합성을 맡는다. 작품의 결정이나 제작 문장은 소유하지 않는다.
 
 ## 원칙과 의무
 
 Principle은 선택된 모든 저술 H2/H3/H4가 각 항목을 자기 자신에 대해 답하는 무배제 checklist다. 한 강한 단위나 파일 앞 주석이 약한 형제를 대신할 수 없다. Obligation은 한 계층의 primary H2 모집단이 항목의 의미가 요구하는 수만큼 소유자를 나누어 갖는 무배제 coverage다. 같은 obligation을 여러 계층이 선택하면 각 계층이 자기 산출물의 언어로 다시 충족하지만, H3/H4 모집단마다 같은 항목을 반복하지 않는다. TypeScript source 계약은 H2 대신 해당 family의 선택된 public export 모집단이 coverage를 진다.
 
 진단 방향도 반대다. 답하지 않은 principle은 그 단위가 자기 질문을 하지 않았다는 뜻이므로 그 단위를 고친다. 답하지 않은 obligation은 계층에 그 역할의 소유자가 없다는 뜻이므로 population의 소유 구조를 고친다. 모든 공용 reference는 한 builder에서 `checklist`와 exclusion 허용 여부를 명시해 이 차이를 드러낸다.
+
+Upstream은 실제 부모를 상속하는 design·brief·서사 H2/H3/H4와 source export가 각각 답하는 exclusion 허용 checklist다. 하위 작업이 부모 결함을 드러내면 가장 이른 부모에서 고친 사실을 양의 evidence로 기록하고, 부모가 충분했다면 실제 부모와 시험한 결정을 구체적으로 밝힌 exclusion을 기록한다. Settings와 research는 저술 부모가 없어 이 family를 선택하지 않는다. Upstream은 부모의 충분성을 묻고, 무배제 parent-differentiation principle은 자식이 자기 층의 결정을 더했는지를 별도로 묻는다.
 
 ## 작품별 발견
 
@@ -28,4 +30,4 @@ Discovery는 저술 unit에 반복하는 checklist나 H2 모집단 coverage가 �
 
 생성 프로젝트는 완전한 제작 선택을 `lint.config.ts` 하나에 둔다. scaffold 내부의 별도 config module은 없다. 이 파일은 재사용 그래프 동작과 lint plugin을 이 패키지에서 가져온다. 저자는 `claims`를 추가할 수 있지만 공통 reference를 교체하거나 cardinality를 바꾸거나 잔여물·topology 검사를 끌 수 없다.
 
-공통 discovery, principle과 obligation은 `@automovie/template`이 게시하는 평범한 Markdown이며 생성 프로젝트는 설치된 package에서 그 exact inventory를 읽는다. 작품 전용 발견 결과와 target만 생성 프로젝트의 평면 `docs/contracts`에 남는다. 이 패키지는 공통 inventory, 계약 디렉터리의 평면성, index-only 제외, H1 앞 발견 태그, additive target 선택과 실제 문서 집합을 검사할 뿐, 작품 문장을 숨기거나 생성하지 않는다.
+공통 discovery, upstream, principle과 obligation은 `@automovie/template`이 게시하는 평범한 Markdown이며 생성 프로젝트는 설치된 package에서 그 exact inventory를 읽는다. 작품 전용 발견 결과와 target만 생성 프로젝트의 평면 `docs/contracts`에 남는다. 이 패키지는 공통 inventory, 계약 디렉터리의 평면성, index-only 제외, H1 앞 발견 태그, additive target 선택과 실제 문서 집합을 검사할 뿐, 작품 문장을 숨기거나 생성하지 않는다.

@@ -138,7 +138,7 @@ const discoveryFilesOf = (claim: Claim | undefined): string[] =>
 
 const sharedFilesOf = (
   claim: Claim | undefined,
-  family: "obligations" | "principles",
+  family: "obligations" | "principles" | "upstream",
 ): string[] =>
   referencesOf(claim)
     .flatMap((reference) =>
@@ -333,15 +333,55 @@ try {
             `${file} states a duty the selected layer cannot excuse`,
           );
         }
+        if (file.startsWith("upstream/")) {
+          assert.equal(
+            reference.checklist,
+            true,
+            `${file} must be answered by every selected inheriting host`,
+          );
+          assert.equal(
+            reference.noEvidenceExclude,
+            undefined,
+            `${file} must permit a concrete negative when actual parents were sufficient`,
+          );
+          assert.notEqual(
+            claim.symbol,
+            "file",
+            `${file} must bind inherited units rather than a whole Markdown file`,
+          );
+        }
       }
     }
   }
-  const sharedContractFiles = ["discovery", "obligations", "principles"]
+  for (const sourceClaim of [
+    "shot source owners answer source-unit principle checklists",
+    "production source owners answer source-unit principle checklists",
+    "film source owners answer source-unit principle checklists",
+  ])
+    assert.deepEqual(
+      graph.claims.find((claim) => claim.name?.startsWith(sourceClaim))?.symbol,
+      ["type", "property", "function"],
+      `${sourceClaim} must select exported types as well as values; removing type must reopen this canary`,
+    );
+  const sharedFiles = (directory: string, prefix = ""): string[] =>
+    fs.readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
+      const relative = prefix === "" ? entry.name : `${prefix}/${entry.name}`;
+      return entry.isDirectory()
+        ? sharedFiles(path.join(directory, entry.name), relative)
+        : entry.name.endsWith(".md")
+          ? [relative]
+          : [];
+    });
+  const sharedContractFiles = [
+    "discovery",
+    "obligations",
+    "principles",
+    "upstream",
+  ]
     .flatMap((family) =>
-      fs
-        .readdirSync(path.join(templateRoot, "docs", family))
-        .filter((file) => file.endsWith(".md"))
-        .map((file) => `${family}/${file}`),
+      sharedFiles(path.join(templateRoot, "docs", family)).map(
+        (file) => `${family}/${file}`,
+      ),
     )
     .sort();
   write(empty, "docs/settings/production.md", "## Scope {#scope}\n");
@@ -357,7 +397,9 @@ try {
           referencesOf(claim).flatMap((reference) =>
             reference.type === "markdown"
               ? reference.files.filter((file) =>
-                  /^(?:discovery|obligations|principles)\//u.test(file),
+                  /^(?:discovery|obligations|principles|upstream)\//u.test(
+                    file,
+                  ),
                 )
               : [],
           ),
@@ -368,7 +410,7 @@ try {
   assert.deepEqual(
     wiredSharedContractFiles,
     sharedContractFiles,
-    "every published discovery, principle, and obligation file must govern at least one shared graph claim",
+    "every published discovery, upstream, principle, and obligation file must govern at least one shared graph claim",
   );
   for (const [layer, expected] of Object.entries({
     settings: ["common", "settings"],
@@ -481,6 +523,16 @@ try {
     briefs: "briefs",
   })) {
     const narrative = ["treatments", "scripts", "screenplays"].includes(layer);
+    const inherited = [
+      "maps",
+      "models",
+      "spaces",
+      "materials",
+      "instances",
+      "motions",
+      "systems",
+      "briefs",
+    ].includes(layer);
     const depths = ["treatments", "scripts", "screenplays", "briefs"].includes(
       layer,
     )
@@ -499,9 +551,25 @@ try {
         [
           "principles/common.md",
           ...(narrative ? ["principles/narratives.md"] : []),
+          ...(inherited ? ["principles/inherited-units.md"] : []),
           `principles/${contract}.md`,
         ].sort(),
         `${layer} H${depth} must answer every applicable principle for itself`,
+      );
+      assert.deepEqual(
+        sharedFilesOf(claim, "upstream"),
+        ["settings", "research"].includes(layer)
+          ? []
+          : [
+              `upstream/${
+                ["briefs"].includes(layer)
+                  ? "delivery"
+                  : narrative
+                    ? "story"
+                    : "design"
+              }/${layer}.md`,
+            ],
+        `${layer} H${depth} must select exactly its domain-partitioned upstream checklist`,
       );
       assert.deepEqual(
         sharedFilesOf(claim, "obligations"),
@@ -542,7 +610,11 @@ try {
     );
     assert.deepEqual(
       sharedFilesOf(briefUnit, "principles"),
-      ["principles/briefs.md", "principles/common.md"],
+      [
+        "principles/briefs.md",
+        "principles/common.md",
+        "principles/inherited-units.md",
+      ],
       `brief H${depth} units must answer information structure without inheriting film narrative principles`,
     );
     const briefInformation = referenceTo(briefUnit, "principles/briefs.md");
@@ -1623,9 +1695,12 @@ try {
       "obligations/design/models.md",
       "obligations/design/motions.md",
       "principles/core/common.md",
+      "principles/core/inherited-units.md",
       "principles/core/settings.md",
       "principles/design/models.md",
       "principles/design/motions.md",
+      "upstream/design/models.md",
+      "upstream/design/motions.md",
     ].sort(),
     "an object library must expose its complete core and selected design contract set",
   );
@@ -1694,6 +1769,10 @@ try {
       "principles/design/materials.md",
       "principles/design/spaces.md",
       "principles/design/systems.md",
+      "upstream/design/instances.md",
+      "upstream/design/materials.md",
+      "upstream/design/spaces.md",
+      "upstream/design/systems.md",
     ].sort(),
     "a building library must expose only its shared and selected design contracts",
   );
@@ -1962,9 +2041,14 @@ try {
       "obligations/delivery/production-sources.md",
       "obligations/delivery/shots.md",
       "principles/core/common.md",
+      "principles/core/inherited-units.md",
       "principles/core/settings.md",
       "principles/core/source-units.md",
       "principles/delivery/briefs.md",
+      "upstream/delivery/briefs.md",
+      "upstream/delivery/film-sources.md",
+      "upstream/delivery/production-sources.md",
+      "upstream/delivery/shots.md",
     ].sort(),
     "a direct brief must expose the complete core and delivery set without film-story contracts",
   );

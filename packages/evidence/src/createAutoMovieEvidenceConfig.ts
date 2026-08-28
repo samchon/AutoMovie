@@ -130,7 +130,7 @@ type SourceLayer =
   | "systemSources";
 type EvidenceBranch = MarkdownLayer | SourceLayer;
 type ContractDomain = "core" | "delivery" | "design" | "story";
-type ContractFamily = "discovery" | "obligations" | "principles";
+type ContractFamily = "discovery" | "obligations" | "principles" | "upstream";
 type ContractRelationship =
   | "checklist"
   | "distributed-coverage"
@@ -331,7 +331,7 @@ const SOURCES: Record<SourceLayer, ISourcePopulation> = {
     ownerKinds: ["property", "function"],
     ownerSymbols: ["property", "function"],
     obligation: "shots.md",
-    symbols: ["property", "function"],
+    symbols: ["type", "property", "function"],
   },
   productionSources: {
     design: null,
@@ -339,7 +339,7 @@ const SOURCES: Record<SourceLayer, ISourcePopulation> = {
     ownerKinds: ["property", "function"],
     ownerSymbols: ["property", "function"],
     obligation: "production-sources.md",
-    symbols: ["property", "function"],
+    symbols: ["type", "property", "function"],
   },
   filmSources: {
     design: null,
@@ -347,7 +347,7 @@ const SOURCES: Record<SourceLayer, ISourcePopulation> = {
     ownerKinds: ["property", "function"],
     ownerSymbols: ["property", "function"],
     obligation: "film-sources.md",
-    symbols: ["property", "function"],
+    symbols: ["type", "property", "function"],
   },
 };
 const DESIGN_LAYERS = [
@@ -794,6 +794,8 @@ const EXPECTED_CONTRACTS = [
       "character-continuity",
       "information-entry",
       "specificity",
+      "parent-differentiation",
+      "drive-to-turn",
       "unit-identity",
       "state-continuity",
       "observable-inheritance",
@@ -914,6 +916,116 @@ const EXPECTED_CONTRACTS = [
       "system-dependency-basis",
       "system-verification-address",
     ],
+  },
+  {
+    domain: "core",
+    file: "principles/inherited-units.md",
+    anchors: ["derived-parent-differentiation"],
+  },
+  {
+    domain: "delivery",
+    file: "upstream/delivery/briefs.md",
+    anchors: ["parent-revision-from-brief-work"],
+  },
+  {
+    domain: "delivery",
+    file: "upstream/delivery/film-sources.md",
+    anchors: ["parent-revision-from-film-source-work"],
+  },
+  {
+    domain: "delivery",
+    file: "upstream/delivery/production-sources.md",
+    anchors: ["settings-revision-from-production-source-work"],
+  },
+  {
+    domain: "delivery",
+    file: "upstream/delivery/shots.md",
+    anchors: ["parent-revision-from-shot-work"],
+  },
+  {
+    domain: "design",
+    file: "upstream/design/instance-sources.md",
+    anchors: ["design-revision-from-instance-source-work"],
+  },
+  {
+    domain: "design",
+    file: "upstream/design/instances.md",
+    anchors: ["parent-revision-from-instance-work"],
+  },
+  {
+    domain: "design",
+    file: "upstream/design/map-sources.md",
+    anchors: ["design-revision-from-map-source-work"],
+  },
+  {
+    domain: "design",
+    file: "upstream/design/maps.md",
+    anchors: ["settings-revision-from-map-work"],
+  },
+  {
+    domain: "design",
+    file: "upstream/design/material-sources.md",
+    anchors: ["design-revision-from-material-source-work"],
+  },
+  {
+    domain: "design",
+    file: "upstream/design/materials.md",
+    anchors: ["parent-revision-from-material-work"],
+  },
+  {
+    domain: "design",
+    file: "upstream/design/model-sources.md",
+    anchors: ["design-revision-from-model-source-work"],
+  },
+  {
+    domain: "design",
+    file: "upstream/design/models.md",
+    anchors: ["settings-and-space-revision-from-model-work"],
+  },
+  {
+    domain: "design",
+    file: "upstream/design/motion-sources.md",
+    anchors: ["design-revision-from-motion-source-work"],
+  },
+  {
+    domain: "design",
+    file: "upstream/design/motions.md",
+    anchors: ["parent-revision-from-motion-work"],
+  },
+  {
+    domain: "design",
+    file: "upstream/design/space-sources.md",
+    anchors: ["design-revision-from-space-source-work"],
+  },
+  {
+    domain: "design",
+    file: "upstream/design/spaces.md",
+    anchors: ["settings-and-map-revision-from-space-work"],
+  },
+  {
+    domain: "design",
+    file: "upstream/design/system-sources.md",
+    anchors: ["design-revision-from-system-source-work"],
+  },
+  {
+    domain: "design",
+    file: "upstream/design/systems.md",
+    anchors: ["parent-revision-from-system-work"],
+  },
+  {
+    domain: "story",
+    file: "upstream/story/screenplays.md",
+    anchors: ["script-and-canon-revision-from-screenplay-work"],
+  },
+  {
+    domain: "story",
+    file: "upstream/story/scripts.md",
+    anchors: ["treatment-and-settings-revision-from-script-work"],
+  },
+  {
+    domain: "story",
+    file: "upstream/story/treatments.md",
+    anchors: ["settings-revision-from-treatment-work"],
   },
 ] as const;
 
@@ -1317,6 +1429,7 @@ const validateContracts = (location: string): ITargetIdentityRegistry => {
     ...walkFiles(path.join(root, "discovery"), ".md"),
     ...walkFiles(path.join(root, "obligations"), ".md"),
     ...walkFiles(path.join(root, "principles"), ".md"),
+    ...walkFiles(path.join(root, "upstream"), ".md"),
   ]
     .map((file) => posix(path.relative(root, file)))
     .sort(compareCodeUnits);
@@ -1335,7 +1448,8 @@ const validateContracts = (location: string): ITargetIdentityRegistry => {
   for (const [index, relative] of actual.entries()) {
     const file = path.join(root, relative);
     const source = fs.readFileSync(file, "utf8");
-    if (EVIDENCE_TAG.test(source))
+    const prose = source.replace(/`[^`\r\n]*`/gu, "");
+    if (EVIDENCE_TAG.test(prose))
       throw new Error(
         `${relative} is a shared target and must not carry host-side @evidence tags.`,
       );
@@ -1545,6 +1659,7 @@ const validateProductionTargets = (
     "discovery",
     "obligations",
     "principles",
+    "upstream",
     ...Object.keys(MARKDOWN),
   ]);
   const targets = walkFiles(root, ".md")
@@ -1950,6 +2065,14 @@ const obligationReference = (
 ): ITtscEvidenceGraphReference =>
   sharedReference(shared, "obligations", file, review, false, false);
 
+/** An upstream duty is an exclusion-permitted checklist for each child unit. */
+const upstreamReference = (
+  shared: string,
+  file: string,
+  review: boolean,
+): ITtscEvidenceGraphReference =>
+  sharedReference(shared, "upstream", file, review, true, true);
+
 /**
  * What each operative subject owner must settle, for a film only.
  *
@@ -2068,6 +2191,19 @@ const authoredClaims = (graph: IProductionGraph): IBranchClaim[] => {
     const principles = [principleReference(shared, "common.md", review)];
     if (["treatments", "scripts", "screenplays"].includes(name))
       principles.push(principleReference(shared, "narratives.md", review));
+    if (
+      [
+        "maps",
+        "models",
+        "spaces",
+        "materials",
+        "instances",
+        "motions",
+        "systems",
+        "briefs",
+      ].includes(name)
+    )
+      principles.push(principleReference(shared, "inherited-units.md", review));
     principles.push(
       principleReference(shared, MARKDOWN[name].principle, review),
     );
@@ -2096,6 +2232,8 @@ const authoredClaims = (graph: IProductionGraph): IBranchClaim[] => {
       );
     for (const symbol of MARKDOWN[name].headings) {
       const references: ITtscEvidenceGraphReference[] = [...principles];
+      if (!["settings", "research"].includes(name))
+        references.push(upstreamReference(shared, `${name}.md`, review));
       if (symbol === 2) {
         references.push(obligationReference(shared, "common.md", review));
         if (["treatments", "scripts", "screenplays"].includes(name))
@@ -2271,6 +2409,7 @@ const sourceClaims = (graph: IProductionGraph): IBranchClaim[] => {
           disabled: !requiresEvidence(graph[name]),
           reference: [
             sourceUnitPrinciples(shared, review),
+            upstreamReference(shared, source.obligation, review),
             sourceObligations(shared, source.obligation, review),
             {
               type: "markdown",
@@ -2313,6 +2452,7 @@ const sourceClaims = (graph: IProductionGraph): IBranchClaim[] => {
       disabled: !requiresEvidence(graph.shots),
       reference: [
         sourceUnitPrinciples(shared, shotReview),
+        upstreamReference(shared, "shots.md", shotReview),
         sourceObligations(shared, SOURCES.shots.obligation, shotReview),
       ],
     }),
@@ -2324,6 +2464,11 @@ const sourceClaims = (graph: IProductionGraph): IBranchClaim[] => {
       disabled: !requiresEvidence(graph.productionSources),
       reference: [
         sourceUnitPrinciples(shared, requiresReview(graph.productionSources)),
+        upstreamReference(
+          shared,
+          SOURCES.productionSources.obligation,
+          requiresReview(graph.productionSources),
+        ),
         sourceObligations(
           shared,
           SOURCES.productionSources.obligation,
@@ -2345,6 +2490,11 @@ const sourceClaims = (graph: IProductionGraph): IBranchClaim[] => {
       disabled: !requiresEvidence(graph.filmSources),
       reference: [
         sourceUnitPrinciples(shared, requiresReview(graph.filmSources)),
+        upstreamReference(
+          shared,
+          SOURCES.filmSources.obligation,
+          requiresReview(graph.filmSources),
+        ),
         sourceObligations(
           shared,
           SOURCES.filmSources.obligation,
@@ -2390,7 +2540,7 @@ const relationshipOf = (
   contract: ExpectedContract | undefined,
 ): ContractRelationship => {
   if (contract !== undefined)
-    return contractFamily(contract) === "principles"
+    return ["principles", "upstream"].includes(contractFamily(contract))
       ? "checklist"
       : "distributed-coverage";
   if (

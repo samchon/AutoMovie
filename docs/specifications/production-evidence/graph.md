@@ -8,11 +8,15 @@
 
 <!-- @evidence requirements/production-evidence/graph.md#agent-production-evidence-shared-contract 모든 프로젝트가 같은 공통 대상 집합을 해석하게 한다. -->
 
-팩터리는 `docs/principles`, `docs/obligations`와 `docs/discovery`의 정규화된 상대 경로와 명시적 H2 anchor 목록을 하나의 고정 inventory로 읽는다. 그래프를 구성하기 전에 inventory의 파일·anchor identity와 실제 문서 트리가 서로 정확히 일치하는지 검사한다.
+팩터리는 `docs/principles`, `docs/obligations`, domain 별 `docs/upstream/{design,story,delivery}`와 `docs/discovery`의 정규화된 상대 경로와 명시적 H2 anchor 목록을 하나의 고정 inventory로 읽는다. 그래프를 구성하기 전에 inventory의 파일·anchor identity와 실제 문서 트리가 서로 정확히 일치하는지 검사한다.
 
 모든 원칙 reference는 선택된 저술 H2/H3/H4 host에 `checklist: true`, `noEvidenceExclude: true`로 연결한다. 모든 저술 의무 reference는 같은 계층의 primary H2 모집단에 일반 coverage와 `noEvidenceExclude: true`로 연결하며 checklist로 만들거나 H3/H4마다 반복하지 않는다. TypeScript source 의무는 그 family가 선택한 public export 모집단에 같은 방식으로 연결한다. 한 공용 reference builder가 checklist 여부와 진실한 무결과 허용 여부를 명시적으로 받아 family별 flag 조합을 한 곳에서 드러내야 한다.
 
-<!-- @evidenceObligation shared-contract 고정된 공통 문서·H2 inventory와 실제 트리 사이의 양방향 일치, 원칙의 단위별 checklist와 의무의 계층 모집단 coverage 배선. -->
+상위 수정 reference는 상속하는 design·brief·서사 H2/H3/H4와 source export에 `checklist: true`로 연결하고 제외를 허용한다. 각 host는 하위 저작이 드러내어 가장 이른 부모에서 수리한 결함을 양의 evidence로 기록하거나, 실제 부모와 시험한 결정을 밝힌 제외로 충분성을 기록한다. 설정과 조사는 이 reference를 선택하지 않는다. 별도의 무배제 parent-differentiation 원칙과 실제 계보 관계가 자식의 layer-owned 추가 결정과 한 개 이상의 실제 부모를 각각 검사하므로, 상위 수정 제외가 부모 없는 host를 정당화할 수 없다.
+
+팩터리는 반환 전에 현재 프로젝트의 저술 Markdown과 TypeScript host에서 인접한 acknowledgement-review 쌍과 host별 review 관찰을 결정적인 순서로 읽는다. 구두점·기호·대소문자·기계적인 비교 도입부를 정규화한 review가 acknowledgement와 같거나, target 경로만 바꾼 같은 관찰이 한 host의 서로 다른 target에 반복되면 문서·host·line·target을 밝히며 실패한다. 이 검사는 fingerprint, outcome, queue 또는 review ledger를 만들지 않고 그 밖의 산문 품질을 판정하지 않는다.
+
+<!-- @evidenceObligation shared-contract 고정된 공통 문서·H2 inventory와 실제 트리 사이의 양방향 일치, 원칙과 상위 수정의 단위별 checklist, 의무의 계층 모집단 coverage, 기계적으로 복제된 review 이유의 무상태 거부. -->
 
 ### 작품 고유 계약의 발견 coverage {#spec-authoring-production-evidence-discovery}
 
@@ -40,7 +44,7 @@
 
 <!-- @evidence requirements/production-evidence/graph.md#agent-production-evidence-physical-integrity 선택이 실제 대상을 하나만 지배하고 비활성 잔여물을 함께 막게 한다. -->
 
-팩터리는 glob으로 Markdown과 TypeScript host를 열거하고 활성 분기의 최소 host 수, 비활성 분기의 잔여물, 명시적 H2 anchor, 중복 target identity, 각 source 파일의 구체적인 named export owner와 `treatments`·`scripts`·`screenplays`의 물리적 순서 identity를 그래프 생성 전에 검사한다. 반환된 claim은 lint가 실제 export와 annotation을 선택하여 디자인 owner마다 정확히 한 디자인 파일, shot·acceptance owner마다 한 screenplay scene 또는 brief shot, 완전한 target coverage와 단계별 review cardinality를 검사하게 한다.
+팩터리는 glob으로 Markdown과 TypeScript host를 열거하고 활성 분기의 최소 host 수, 비활성 분기의 잔여물, 명시적 H2 anchor, 중복 target identity, 각 source 파일의 구체적인 named export owner와 `treatments`·`scripts`·`screenplays`의 물리적 순서 identity를 그래프 생성 전에 검사한다. 반환된 claim은 lint가 실제 export와 annotation을 선택하여 각 상속 단위가 한 개 이상의 실제 부모를 갖게 하고, 디자인 owner마다 정확히 한 디자인 파일, shot·acceptance owner마다 한 screenplay scene 또는 brief shot, 완전한 target coverage와 단계별 review cardinality를 검사하게 한다.
 
 <!-- @evidenceObligation physical-population-integrity 실제 파일 모집단에서 검증하는 host 수, 잔여물, identity, 소유 cardinality와 계보. -->
 
@@ -56,6 +60,6 @@
 
 <!-- @evidence requirements/production-evidence/graph.md#agent-production-evidence-deterministic-result 같은 입력의 동일 출력과 모순 입력의 명시적 실패를 규정한다. -->
 
-파일·anchor·claim은 고정 inventory와 코드 단위 정렬 순서를 사용한다. 검증 실패는 잘못된 종류·단계·분기 또는 파일 경로와 충돌한 identity를 이름 붙인 예외로 반환하며, 모든 검증이 끝나기 전에는 부분 그래프를 공개하지 않는다.
+파일·anchor·claim과 review-reason 검사는 고정 inventory와 코드 단위 정렬 순서를 사용한다. 검증 실패는 잘못된 종류·단계·분기, 파일 경로와 충돌한 identity 또는 기계적으로 복제된 review의 문서·host·line·target을 이름 붙인 예외로 반환하며, 모든 검증이 끝나기 전에는 부분 그래프를 공개하지 않는다.
 
 <!-- @evidenceObligation deterministic-failure 고정 순서의 그래프 구성과 구체적인 원인을 가진 원자적 사전 실패. -->

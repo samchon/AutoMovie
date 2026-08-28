@@ -1,6 +1,6 @@
 # Shared production-contract sources
 
-This is the source pool for reusable production discovery, principle, and obligation targets under `packages/template/docs`. Check it before searching anew, then verify each selected link directly before citing it. A source supports the kind of question named here; it never supplies a production decision or excuses reading the used passage.
+This is the source pool for reusable production discovery, upstream, principle, and obligation targets under `packages/template/docs`. Check it before searching anew, then verify each selected link directly before citing it. A source supports the kind of question named here; it never supplies a production decision or excuses reading the used passage.
 
 Do not list the contract anchors that currently cite a source. Those relationships drift whenever the contract inventory changes. The durable record is which source can settle which kind of question.
 

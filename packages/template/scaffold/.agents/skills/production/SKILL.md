@@ -7,7 +7,7 @@ description: Defines how this project's production is researched, authored, conf
 
 You are authoring one production: this project. Read its `AGENTS.md`, its `lint.config.ts`, its `automovie.config.ts`, `docs/README.md`, every active upstream layer, and every shared or production-local target its claims select before writing anything.
 
-Author a film in the order `settings -> treatments -> scripts -> screenplays -> shots -> filmSources`, a brief in the order `settings -> briefs -> shots -> filmSources`, and a library as settings plus each design and source branch it delivers. The workflow documents below own authorship; the discovery, principle, and obligation families published by `@automovie/template` own the questions each authored population answers; [Evidence staging](evidence-staging.md) owns claims, tags, stages, and fingerprints.
+Author a film in the order `settings -> treatments -> scripts -> screenplays -> shots -> filmSources`, a brief in the order `settings -> briefs -> shots -> filmSources`, and a library as settings plus each design and source branch it delivers. The workflow documents below own authorship; the discovery, upstream, principle, and obligation families published by `@automovie/template` own the questions each authored population answers; [Evidence staging](evidence-staging.md) owns claims, tags, stages, and fingerprints.
 
 Apply this workflow without subject-matter exceptions. Historical, technical, mechanical, or heavily researched material still requires explicit production canon and the full lineage, evidence, staging, and review workflow. External knowledge never substitutes for an authored owner.
 
@@ -67,7 +67,7 @@ Read each applicable document in full before acting:
 - [Design branches](design-branches.md) routes models, spaces, materials, instances, motions, and systems without overlap; it links the detailed model-and-motion procedure when those branches apply.
 - [Treatments](treatments.md), [Scripts](scripts.md), and [Screenplays](screenplays.md) own the film-only refinement ladder.
 - [Direct briefs](briefs.md) owns bounded audiovisual delivery that needs no independent narrative-refinement ladder.
-- [Contract targets](contract-targets.md) governs the shared discovery, principle, and obligation families and their production-local counterparts.
+- [Contract targets](contract-targets.md) governs the shared discovery, upstream, principle, and obligation families and their production-local counterparts.
 - [Evidence staging](evidence-staging.md) owns populations, tags, `draft -> evidence -> review`, diagnostics, and fingerprints.
 - [Author process Self-Review](self-review.md) closes every complete contract, authorship, evidence-repair, review-verification, and stage-transition process before its author continues or hands it off.
 - [Review](review.md) owns evidence review and final whole-production review.
@@ -116,7 +116,7 @@ Nothing in `.wiki` binds this production. Before relying on a fact, decision, or
 
 ## Prove the ladder before expanding it
 
-Use the compiler-visible [vertical-slice pilot](pilot.md) when one real film delivery group or one fresh library design/source branch can expose an expensive upstream defect before sibling authorship begins. The pilot narrows only a partition-owning population or the number of owners that exist yet. Settings, canon, the production promise, discovery, principles, obligations, lineage, source ownership, and review remain at full strength.
+Use the compiler-visible [vertical-slice pilot](pilot.md) when one real film delivery group or one fresh library design/source branch can expose an expensive upstream defect before sibling authorship begins. The pilot narrows only a partition-owning population or the number of owners that exist yet. Settings, canon, the production promise, discovery, upstream revision, principles, obligations, lineage, source ownership, and review remain at full strength.
 
 An optional `.wiki` trial is still the cheaper preflight. Take one treatment event as far as a shot sketch, or sketch one design through its source boundary, before any governed host exists. It can reveal a missing space, subject, exchange, interface, or observation, but the graph never reads it and it proves nothing. Promote every retained decision into its canonical owner, then run the governed pilot when its cost is justified.
 
