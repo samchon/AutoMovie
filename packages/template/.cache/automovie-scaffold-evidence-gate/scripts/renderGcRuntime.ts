@@ -135,18 +135,20 @@ export const createProductionRenderGarbageRuntime = (props: {
 
   const collectRenderGarbage = (apply: boolean) => {
     const currentCompileFingerprint = sourceFingerprint();
-    const plans = (["proxy", "final"] as const).flatMap((tier) => {
-      const file = path.join(renderJobRoot, tier, "plan.json");
-      const captured = captureExistingRenderPlan(renderJobRoot, file);
-      if (captured === null) return [];
-      const plan = captured.plan;
-      const currentTier =
-        tier === "proxy" ? config.render.proxy : config.render.final;
-      return plan.compileFingerprint === currentCompileFingerprint &&
-        isDeepStrictEqual(plan.tier, currentTier)
-        ? [plan]
-        : [];
-    });
+    const plans = renderHost.filesystem.existsSync(renderJobRoot)
+      ? (["proxy", "final"] as const).flatMap((tier) => {
+          const file = path.join(renderJobRoot, tier, "plan.json");
+          const captured = captureExistingRenderPlan(renderJobRoot, file);
+          if (captured === null) return [];
+          const plan = captured.plan;
+          const currentTier =
+            tier === "proxy" ? config.render.proxy : config.render.final;
+          return plan.compileFingerprint === currentCompileFingerprint &&
+            isDeepStrictEqual(plan.tier, currentTier)
+            ? [plan]
+            : [];
+        })
+      : [];
     const project = AutoMovieProductionProject.openReadOnly(root, productionId);
     const soundRetention = props.soundRuntime.cacheRetention({
       compileFingerprint: currentCompileFingerprint,
