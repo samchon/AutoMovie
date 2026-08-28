@@ -400,7 +400,7 @@ export class AutoMovieProductionProject {
   private assertWritable(): void {
     if (this.readOnly_)
       throw new Error(
-        `Production "${this.productionId ?? "<opening>"}" was opened read-only and cannot mutate project state.`,
+        `Production "${this.productionId}" was opened read-only and cannot mutate project state.`,
       );
   }
 
@@ -898,11 +898,10 @@ export class AutoMovieProductionProject {
       source: boolean,
       render: boolean,
     ): void => {
-      const retained = inputs.get(inputPath);
       inputs.set(inputPath, {
         bytes,
         render,
-        source: source || retained?.source === true,
+        source,
       });
     };
     const visit = (
@@ -949,7 +948,7 @@ export class AutoMovieProductionProject {
     };
     for (const [relativeRoot, source, render] of [
       ...this.manifest_.sourceRoots.map((root) => [root, true, false] as const),
-      ...(this.manifest_.contentRoots ?? []).map(
+      ...PROJECT_LAYOUT.contentRoots.map(
         (root) => [root, false, true] as const,
       ),
     ]) {
@@ -970,7 +969,7 @@ export class AutoMovieProductionProject {
         );
       visit(absolute, physicalRoot, source, render);
     }
-    for (const relativeFile of this.manifest_.contentFiles ?? []) {
+    for (const relativeFile of PROJECT_LAYOUT.contentFiles) {
       const absolute = resolveInside(this.root, relativeFile);
       const linked = lstatOrNull(absolute);
       if (linked === null) {
@@ -1736,7 +1735,6 @@ export class AutoMovieProductionProject {
     }
     const linked = lstatOrNull(file);
     if (linked === null || linked.isFile() === false) return null;
-    if (linked.isSymbolicLink()) return null;
     if (isInside(this.rootReal, fs.realpathSync(file)) === false) return null;
     return Buffer.from(
       readAutoMovieProductionOwnedFile({
@@ -2754,12 +2752,9 @@ export class AutoMovieProductionProject {
 
   /** Verify every repaint reference against current declared asset bytes. */
   private validateRepaintReferences(receipt: IAutoMovieRepaintReceipt): void {
-    const assetManifest = this.manifest_.assetManifest;
+    const assetManifest = PROJECT_LAYOUT.assetManifest;
     const inputs = this.contentInputs();
-    const manifestInput =
-      assetManifest === undefined
-        ? undefined
-        : inputs.find((input) => input.path === assetManifest);
+    const manifestInput = inputs.find((input) => input.path === assetManifest);
     if (manifestInput?.bytes === null || manifestInput === undefined)
       throw new Error(
         "Repaint receipt references require the current declared asset manifest.",
@@ -4164,7 +4159,7 @@ const validateRealOwnershipLayout = (
     const absolute = resolveInside(root, entry.relative);
     assertOwnedRootDirectory(rootReal, absolute);
   }
-  for (const [index, relative] of (manifest.contentRoots ?? []).entries()) {
+  for (const [index, relative] of PROJECT_LAYOUT.contentRoots.entries()) {
     const absolute = resolveInside(root, relative);
     const linked = lstatOrNull(absolute);
     // Absence is a shape, not a fault. The layout is one constant covering both
@@ -5042,10 +5037,6 @@ const assertPhysicalDirectoryAncestors = (
   allowMissingTail: boolean,
 ): void => {
   const resolved = path.resolve(directory);
-  if (isInside(projectRootReal, resolved) === false)
-    throw new Error(
-      `Owned directory "${directory}" escapes the physical project root.`,
-    );
   const relative = path.relative(projectRootReal, resolved);
   let current = projectRootReal;
   for (const segment of relative === "" ? [] : relative.split(path.sep)) {
