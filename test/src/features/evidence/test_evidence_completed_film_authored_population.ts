@@ -270,6 +270,90 @@ const preserveFixtureCleanup = (
   }
 };
 
+/** Install the generated consumer's exact published evidence package view. */
+const installPublishedEvidenceRuntime = (
+  repository: string,
+  project: string,
+): void => {
+  const build = path.join(repository, "packages/evidence/lib");
+  if (fs.existsSync(path.join(build, "index.js")) === false) {
+    const command =
+      process.platform === "win32"
+        ? {
+            executable: process.env.ComSpec ?? "cmd.exe",
+            arguments: [
+              "/d",
+              "/s",
+              "/c",
+              "pnpm --filter @automovie/evidence build",
+            ],
+          }
+        : {
+            executable: "pnpm",
+            arguments: ["--filter", "@automovie/evidence", "build"],
+          };
+    const result = spawnSync(command.executable, command.arguments, {
+      cwd: repository,
+      encoding: "utf8",
+      env: { ...process.env, FORCE_COLOR: "0" },
+      maxBuffer: 64 * 1024 * 1024,
+    });
+    if (result.error !== undefined) throw result.error;
+    if (result.status !== 0 || result.signal !== null)
+      throw new Error(
+        [
+          `Building the completed-film consumer's @automovie/evidence facade exited ${result.status ?? `by ${result.signal}`}.`,
+          result.stdout,
+          result.stderr,
+        ].join("\n"),
+      );
+  }
+  if (fs.existsSync(path.join(build, "index.d.ts")) === false)
+    throw new Error(
+      "The canonical @automovie/evidence build omitted its public declarations.",
+    );
+  const evidencePackage = path.join(
+    project,
+    "node_modules/@automovie/evidence",
+  );
+  fs.mkdirSync(evidencePackage, { recursive: true });
+  fs.cpSync(build, path.join(evidencePackage, "lib"), { recursive: true });
+  fs.writeFileSync(
+    path.join(evidencePackage, "package.json"),
+    `${JSON.stringify(
+      {
+        name: "@automovie/evidence",
+        version: "0.1.0",
+        main: "./lib/index.js",
+        types: "./lib/index.d.ts",
+        exports: {
+          ".": {
+            types: "./lib/index.d.ts",
+            default: "./lib/index.js",
+          },
+        },
+      },
+      null,
+      2,
+    )}\n`,
+    "utf8",
+  );
+  for (const dependency of [
+    "@ttsc/evidence",
+    "@ttsc/lint",
+    "typescript-compiler",
+  ]) {
+    const source = path.join(repository, "node_modules", dependency);
+    const destination = path.join(project, "node_modules", dependency);
+    fs.mkdirSync(path.dirname(destination), { recursive: true });
+    fs.symlinkSync(
+      source,
+      destination,
+      process.platform === "win32" ? "junction" : "dir",
+    );
+  }
+};
+
 /**
  * Compile and lint the completed-film fixture's authored Markdown populations
  * with the exact claim objects returned by the current reusable graph.
@@ -305,6 +389,7 @@ export const test_evidence_completed_film_authored_population = (): void => {
 
   let fixtureFailure: FixtureFailure | undefined;
   try {
+    installPublishedEvidenceRuntime(root, temporary);
     fs.cpSync(fixture, path.join(temporary, "docs"), { recursive: true });
     fs.mkdirSync(path.join(temporary, "docs/contracts"), { recursive: true });
     fs.writeFileSync(

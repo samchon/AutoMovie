@@ -34,25 +34,27 @@ const REPOSITORY_ROOT = path.resolve(__dirname, "../../../..");
 const installAuthoredEvidencePopulation = (
   rendered: Record<string, string>,
 ): void => {
-  const lint = rendered["lint.config.ts"];
+  const lint = rendered["lint.config.mjs"];
   if (
     lint === undefined ||
-    lint.includes('from "./productionEvidence"') === false ||
+    lint.includes('from "./productionEvidence.mjs"') === false ||
     lint.includes("createAutoMovieEvidenceConfig(productionEvidence)") === false
   )
     throw new Error(
       "The generated consumer no longer shares one productionEvidence declaration between lint and runtime commands.",
     );
-  rendered["productionEvidence.ts"] = [
-    'import type { IAutoMovieEvidenceConfigProps } from "@automovie/evidence";',
+  rendered["productionEvidence.mjs"] = [
+    "// @ts-check",
     "",
     "/**",
     " * The completed film's one tracked graph declaration.",
     " *",
     " * Normal lint, render, repaint, and publication commands all consume this",
     " * same complete root-bound identity; no test-only graph shadows it.",
+    " *",
+    ' * @type {import("@automovie/evidence").IAutoMovieEvidenceConfigProps}',
     " */",
-    "export const productionEvidence: IAutoMovieEvidenceConfigProps = {",
+    "export const productionEvidence = {",
     "  location: import.meta.dirname,",
     '  kind: "film",',
     '  populationScope: { mode: "complete-production" },',
@@ -95,6 +97,68 @@ const linkWorkspacePackage = (project: string, name: string): void => {
   const packageRoot = path.dirname(manifest);
   const target = path.join(project, "node_modules", ...name.split("/"));
   fs.mkdirSync(path.dirname(target), { recursive: true });
+  if (name === "@automovie/evidence") {
+    const build = path.join(packageRoot, "lib");
+    if (fs.existsSync(path.join(build, "index.js")) === false) {
+      const command =
+        process.platform === "win32"
+          ? {
+              executable: process.env.ComSpec ?? "cmd.exe",
+              arguments: [
+                "/d",
+                "/s",
+                "/c",
+                "pnpm --filter @automovie/evidence build",
+              ],
+            }
+          : {
+              executable: "pnpm",
+              arguments: ["--filter", "@automovie/evidence", "build"],
+            };
+      const result = spawnSync(command.executable, command.arguments, {
+        cwd: REPOSITORY_ROOT,
+        encoding: "utf8",
+        env: { ...process.env, FORCE_COLOR: "0" },
+        maxBuffer: 64 * 1024 * 1024,
+      });
+      if (result.error !== undefined) throw result.error;
+      if (result.status !== 0 || result.signal !== null)
+        throw new Error(
+          [
+            `Building the generated consumer's @automovie/evidence facade exited ${result.status ?? `by ${result.signal}`}.`,
+            result.stdout,
+            result.stderr,
+          ].join("\n"),
+        );
+    }
+    if (fs.existsSync(path.join(build, "index.d.ts")) === false)
+      throw new Error(
+        "The canonical @automovie/evidence build omitted its public declarations.",
+      );
+    fs.mkdirSync(target, { recursive: true });
+    fs.cpSync(build, path.join(target, "lib"), { recursive: true });
+    fs.writeFileSync(
+      path.join(target, "package.json"),
+      `${JSON.stringify(
+        {
+          name: "@automovie/evidence",
+          version: "0.1.0",
+          main: "./lib/index.js",
+          types: "./lib/index.d.ts",
+          exports: {
+            ".": {
+              types: "./lib/index.d.ts",
+              default: "./lib/index.js",
+            },
+          },
+        },
+        null,
+        2,
+      )}\n`,
+      "utf8",
+    );
+    return;
+  }
   fs.symlinkSync(
     packageRoot,
     target,
@@ -543,6 +607,7 @@ export const test_cli_scaffold_repaint_runtime_contract =
         "playwright",
         "pngjs",
         "three",
+        "typescript-compiler",
         "vite",
       ])
         linkWorkspacePackage(fixture.root, name);
