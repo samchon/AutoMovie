@@ -2,10 +2,11 @@ import { renderScaffold, writeFiles } from "@automovie/template";
 import { TestValidator } from "@nestia/e2e";
 import { createHash } from "node:crypto";
 import fs from "node:fs";
+import { createRequire } from "node:module";
 import os from "node:os";
 import path from "node:path";
-import { pathToFileURL } from "node:url";
 import { isDeepStrictEqual } from "node:util";
+import * as ts from "typescript-compiler";
 
 import { preserveCliHarnessCleanup } from "./CliHarnessCleanup";
 
@@ -99,6 +100,33 @@ const runtimeRoot = (): { preserve: boolean; root: string } => {
   return { preserve: true, root };
 };
 
+const compiledRuntimeRoot = (fixture: {
+  preserve: boolean;
+  root: string;
+}): { preserve: boolean; root: string } => {
+  if (fixture.preserve === false)
+    return {
+      preserve: false,
+      root: fs.mkdtempSync(
+        path.join(os.tmpdir(), "automovie-render-read-only-compiled-"),
+      ),
+    };
+  const root = path.resolve(`${fixture.root}-compiled`);
+  const cache = path.join(REPOSITORY_ROOT, "node_modules/.cache");
+  const relative = path.relative(cache, root);
+  if (
+    path.isAbsolute(relative) ||
+    relative === ".." ||
+    relative.startsWith(`..${path.sep}`)
+  )
+    throw new Error(
+      "The retained compiled read-only fixture must remain inside node_modules/.cache.",
+    );
+  fs.rmSync(root, { force: true, recursive: true });
+  fs.mkdirSync(root, { recursive: true });
+  return { preserve: true, root };
+};
+
 const census = (root: string, directory = root): IFixtureCensusEntry[] =>
   fs
     .readdirSync(directory, { withFileTypes: true })
@@ -156,6 +184,7 @@ export const test_cli_scaffold_render_read_only_status =
   async (): Promise<void> => {
     const fixture = runtimeRoot();
     const root = fixture.root;
+    const compiledFixture = compiledRuntimeRoot(fixture);
     let failure: { error: unknown } | undefined;
     const originalFetch = globalThis.fetch;
     try {
@@ -166,10 +195,44 @@ export const test_cli_scaffold_render_read_only_status =
         path.join(REPOSITORY_ROOT, "packages/template/scaffold", relative),
         "utf8",
       );
-      const generated = fs.readFileSync(path.join(root, relative), "utf8");
-      const module = (await import(
-        `${pathToFileURL(path.join(root, relative)).href}?read-only-contract`
-      )) as IReadOnlyRuntime;
+      const generatedPath = path.join(root, relative);
+      const generated = fs.readFileSync(generatedPath, "utf8");
+      const compiledPath = path.join(
+        compiledFixture.root,
+        "renderReadOnlyRuntime.cjs",
+      );
+      const sourceMapPrefix =
+        "//# sourceMappingURL=data:application/json;base64,";
+      const transpiled = ts.transpileModule(generated, {
+        fileName: generatedPath,
+        compilerOptions: {
+          inlineSourceMap: true,
+          inlineSources: true,
+          module: ts.ModuleKind.CommonJS,
+          target: ts.ScriptTarget.ES2022,
+        },
+      }).outputText;
+      const transpiledParts = transpiled.split(sourceMapPrefix);
+      const sourceMap = JSON.parse(
+        Buffer.from(transpiledParts.pop()!.trim(), "base64").toString("utf8"),
+      ) as { file: string; sources: string[] };
+      sourceMap.file = path.basename(compiledPath);
+      sourceMap.sources = [
+        path
+          .relative(compiledFixture.root, generatedPath)
+          .split(path.sep)
+          .join("/"),
+      ];
+      fs.writeFileSync(
+        compiledPath,
+        `${transpiledParts.join(sourceMapPrefix)}${sourceMapPrefix}${Buffer.from(
+          JSON.stringify(sourceMap),
+        ).toString("base64")}\n`,
+        "utf8",
+      );
+      const module = createRequire(__filename)(
+        compiledPath,
+      ) as IReadOnlyRuntime;
       const plan: IPlan = {
         compileFingerprint: "source-a",
         runtimeIdentity: { generation: "runtime-a" },
@@ -712,6 +775,16 @@ export const test_cli_scaffold_render_read_only_status =
     } finally {
       globalThis.fetch = originalFetch;
       preserveCliHarnessCleanup(failure, [
+        {
+          resource: "compiled render read-only runtime fixture",
+          cleanup: () =>
+            compiledFixture.preserve
+              ? undefined
+              : fs.rmSync(compiledFixture.root, {
+                  force: true,
+                  recursive: true,
+                }),
+        },
         {
           resource: "render read-only status fixture",
           cleanup: () =>
