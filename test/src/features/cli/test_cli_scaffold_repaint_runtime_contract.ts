@@ -750,6 +750,46 @@ export const test_cli_scaffold_repaint_runtime_contract =
         ["reroll", "--shot", "opening"],
       );
       fs.writeFileSync(configuredPath, configuredSource, "utf8");
+      const adapterPath = path.join(
+        fixture.root,
+        "scripts/repaintAdapter.ts",
+      );
+      const defaultAdapterSource = fs.readFileSync(adapterPath, "utf8");
+      const impossiblePolicyInvocation = path.join(
+        fixture.root,
+        "repaint-impossible-policy-invoked.txt",
+      );
+      if (configuredSource.split('"transport"').length !== 2)
+        throw new Error(
+          "The generated repaint config has no unique transport retry slot.",
+        );
+      fs.writeFileSync(
+        configuredPath,
+        configuredSource.replace('"transport"', '"cancelled"'),
+        "utf8",
+      );
+      fs.writeFileSync(
+        adapterPath,
+        [
+          'import type { AutoMovieProductionShotRepaint } from "@automovie/interface";',
+          'import fs from "node:fs";',
+          'import path from "node:path";',
+          "",
+          "export const repaintProductionShot: AutoMovieProductionShotRepaint = (input) => {",
+          `  fs.writeFileSync(path.join(input.projectRoot, ${JSON.stringify(path.basename(impossiblePolicyInvocation))}), "called\\n", "utf8");`,
+          '  throw new Error("The impossible-policy adapter must never run.");',
+          "};",
+          "",
+        ].join("\n"),
+        "utf8",
+      );
+      const impossiblePolicyRefusal = runGeneratedFast(
+        fixture.root,
+        "scripts/repaint.ts",
+        ["reroll", "--shot", "opening"],
+      );
+      fs.writeFileSync(configuredPath, configuredSource, "utf8");
+      fs.writeFileSync(adapterPath, defaultAdapterSource, "utf8");
       const defaultAdapterRefusal = runGeneratedFast(
         fixture.root,
         "scripts/repaint.ts",
@@ -790,6 +830,12 @@ export const test_cli_scaffold_repaint_runtime_contract =
           preflightStatus: preflightRefusal.status,
           preflightRepainted: preflightOutput.repainted,
           preflightRequestId: preflightOutput.requestId,
+          impossiblePolicyStatus: impossiblePolicyRefusal.status,
+          impossiblePolicyStdout: impossiblePolicyRefusal.stdout,
+          impossiblePolicyDiagnostic: impossiblePolicyRefusal.stderr.includes(
+            "unique supported retryable failure classes",
+          ),
+          impossiblePolicyInvoked: fs.existsSync(impossiblePolicyInvocation),
           defaultStatus: defaultAdapterRefusal.status,
           defaultRepainted: defaultAdapterOutput.repainted,
           defaultSelected: defaultAdapterOutput.selected,
@@ -811,6 +857,10 @@ export const test_cli_scaffold_repaint_runtime_contract =
           preflightStatus: 1,
           preflightRepainted: false,
           preflightRequestId: null,
+          impossiblePolicyStatus: 1,
+          impossiblePolicyStdout: "",
+          impossiblePolicyDiagnostic: true,
+          impossiblePolicyInvoked: false,
           defaultStatus: 1,
           defaultRepainted: false,
           defaultSelected: false,
