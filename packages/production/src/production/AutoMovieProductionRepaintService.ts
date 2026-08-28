@@ -120,7 +120,10 @@ export class AutoMovieProductionRepaintService {
     } catch (error) {
       return refusal(
         "repaint-production-unregistered",
-        error instanceof Error ? error.message : String(error),
+        safeRepaintDiagnosticMessage(
+          error,
+          "Repaint production lookup failed without a safe diagnostic.",
+        ),
       );
     }
     if (services.project.graph().production?.visualDelivery !== "repainted")
@@ -182,7 +185,10 @@ export class AutoMovieProductionRepaintService {
           diagnostic(
             "repaint-commit-refused",
             input.shot,
-            error instanceof Error ? error.message : String(error),
+            safeRepaintDiagnosticMessage(
+              error,
+              "Repaint selection could not be committed safely.",
+            ),
             "render",
           ),
         ],
@@ -250,7 +256,7 @@ export class AutoMovieProductionRepaintService {
     } catch (error) {
       return failure(
         "repaint-host-unavailable",
-        `${error instanceof Error ? error.message : String(error)} Correct the reviewed repaint generator adoption before external execution.`,
+        `${safeRepaintDiagnosticMessage(error, "Repaint generator adoption could not be inspected safely.")} Correct the reviewed repaint generator adoption before external execution.`,
       );
     }
     const status = services.compileStatus();
@@ -265,7 +271,10 @@ export class AutoMovieProductionRepaintService {
     } catch (error) {
       return failure(
         "repaint-registry-unavailable",
-        error instanceof Error ? error.message : String(error),
+        safeRepaintDiagnosticMessage(
+          error,
+          "Repaint compiler registry could not be read safely.",
+        ),
       );
     }
     if (registry.shots.some((shot) => shot.id === requestedShot) === false)
@@ -350,7 +359,10 @@ export class AutoMovieProductionRepaintService {
     } catch (error) {
       return failure(
         "repaint-host-unavailable",
-        error instanceof Error ? error.message : String(error),
+        safeRepaintDiagnosticMessage(
+          error,
+          "Repaint generator provenance could not be inspected safely.",
+        ),
       );
     }
     let resolvedSource: ICurrentShotSource | null;
@@ -397,7 +409,10 @@ export class AutoMovieProductionRepaintService {
     } catch (error) {
       return failure(
         "repaint-source-evidence-invalid",
-        error instanceof Error ? error.message : String(error),
+        safeRepaintDiagnosticMessage(
+          error,
+          "Repaint source evidence could not be inspected safely.",
+        ),
       );
     }
     if (resolvedSource === null)
@@ -484,7 +499,10 @@ export class AutoMovieProductionRepaintService {
     } catch (error) {
       return failure(
         "repaint-input-invalid",
-        error instanceof Error ? error.message : String(error),
+        safeRepaintDiagnosticMessage(
+          error,
+          "Stored repaint attempt history could not be inspected safely.",
+        ),
       );
     }
     if (priorAttempts.length !== 0) currentRequestId = requestId;
@@ -525,7 +543,10 @@ export class AutoMovieProductionRepaintService {
     } catch (error) {
       return failure(
         "repaint-host-unavailable",
-        error instanceof Error ? error.message : String(error),
+        safeRepaintDiagnosticMessage(
+          error,
+          "Repaint execution resume clock could not be inspected safely.",
+        ),
       );
     }
     if (
@@ -544,7 +565,10 @@ export class AutoMovieProductionRepaintService {
     } catch (error) {
       return failure(
         "repaint-failed",
-        error instanceof Error ? error.message : String(error),
+        safeRepaintDiagnosticMessage(
+          error,
+          "Repaint execution start clock could not be inspected safely.",
+        ),
       );
     }
     if (executionStartedAt.getTime() < resumeAt.getTime())
@@ -755,7 +779,10 @@ export class AutoMovieProductionRepaintService {
     } catch (error) {
       return failure(
         "repaint-failed",
-        error instanceof Error ? error.message : String(error),
+        safeRepaintDiagnosticMessage(
+          error,
+          "Repaint execution failed without a safe diagnostic.",
+        ),
       );
     }
     try {
@@ -766,7 +793,10 @@ export class AutoMovieProductionRepaintService {
     } catch (error) {
       return failure(
         "repaint-commit-refused",
-        error instanceof Error ? error.message : String(error),
+        safeRepaintDiagnosticMessage(
+          error,
+          "Repaint terminal attempts could not be committed safely.",
+        ),
       );
     }
     if (execution.accepted === null)
@@ -828,11 +858,15 @@ export class AutoMovieProductionRepaintService {
     try {
       services.project.commitRepaintRendition(receipt, bytes, inputCurrent);
     } catch (error) {
-      if (error instanceof AutoMovieProductionInputRaceError)
-        return failure("repaint-input-changed", error.message);
+      const inputRaceMessage = safeRepaintInputRaceMessage(error);
+      if (inputRaceMessage !== null)
+        return failure("repaint-input-changed", inputRaceMessage);
       return failure(
         "repaint-commit-refused",
-        error instanceof Error ? error.message : String(error),
+        safeRepaintDiagnosticMessage(
+          error,
+          "Repaint candidate could not be committed safely.",
+        ),
       );
     }
     return {
@@ -1156,6 +1190,19 @@ const safeRepaintDiagnosticMessage = (
       : fallback;
   } catch {
     return fallback;
+  }
+};
+
+const safeRepaintInputRaceMessage = (error: unknown): string | null => {
+  try {
+    return error instanceof AutoMovieProductionInputRaceError
+      ? safeRepaintDiagnosticMessage(
+          error,
+          "Repaint input changed without a safe diagnostic.",
+        )
+      : null;
+  } catch {
+    return null;
   }
 };
 
