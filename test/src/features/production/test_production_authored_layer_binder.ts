@@ -267,6 +267,15 @@ export const test_production_authored_layer_binder =
           }),
       );
       TestValidator.error(
+        "multiline title",
+        () =>
+          new AutoMovieProductionBinder({
+            root: film,
+            title: "Signal\n# Injected title",
+            layer: "screenplays",
+          }),
+      );
+      TestValidator.error(
         "unknown layer",
         () =>
           new AutoMovieProductionBinder({

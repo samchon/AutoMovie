@@ -114,6 +114,8 @@ export class AutoMovieProductionBinder {
 
     if (this.title.length === 0)
       throw new Error("A reader-facing production title is required.");
+    if (/\r|\n/u.test(this.title))
+      throw new Error("A reader-facing production title must be one line.");
     if (!LAYERS.has(this.layer))
       throw new Error(`Unknown authored document layer: ${String(this.layer)}`);
 
