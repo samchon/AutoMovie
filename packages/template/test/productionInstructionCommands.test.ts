@@ -129,6 +129,31 @@ async function main(): Promise<void> {
       () => synchronizeProductionInstructions({ root: scaffoldRoot }),
       /cannot synchronize instructions into itself/u,
     );
+    const scaffoldSkill = path.join(
+      scaffoldRoot,
+      ".agents",
+      "skills",
+      "production",
+      "SKILL.md",
+    );
+    const scaffoldSkillBefore = fs.readFileSync(scaffoldSkill, "utf8");
+    const aliasParent = makeRoot("scaffold-alias");
+    const scaffoldAlias = path.join(aliasParent, "scaffold");
+    fs.symlinkSync(
+      scaffoldRoot,
+      scaffoldAlias,
+      process.platform === "win32" ? "junction" : "dir",
+    );
+    assert.throws(
+      () =>
+        writeAutoMovieProductionInstructions({
+          root: scaffoldAlias,
+          productionEvidence,
+          scaffoldRoot,
+        }),
+      /cannot synchronize instructions into itself/u,
+    );
+    assert.equal(fs.readFileSync(scaffoldSkill, "utf8"), scaffoldSkillBefore);
     assert.throws(
       () => synchronizeProductionInstructions(),
       /belongs to another project root/u,

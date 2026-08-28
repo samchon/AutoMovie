@@ -35,14 +35,14 @@ export const writeAutoMovieProductionInstructions = (props: {
   const scaffoldRoot = path.resolve(
     props.scaffoldRoot ?? scaffoldAssetDirectory(),
   );
-  if (root === scaffoldRoot)
-    throw new Error(
-      `${root}: a scaffold source cannot synchronize instructions into itself.`,
-    );
   const sourceSkills = path.join(scaffoldRoot, ".agents", "skills");
   if (!fs.existsSync(sourceSkills) || !fs.statSync(sourceSkills).isDirectory())
     throw new Error(
       `${sourceSkills}: the installed production skills are missing.`,
+    );
+  if (fs.realpathSync(root) === fs.realpathSync(scaffoldRoot))
+    throw new Error(
+      `${root}: a scaffold source cannot synchronize instructions into itself.`,
     );
 
   const identity = readAutoMovieProductionEvidence({
