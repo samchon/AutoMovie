@@ -101,7 +101,7 @@ That leaves exactly one thing to you, and it is the thing no mechanism can do: o
 
 Start only when every applicable layer is in `review`, the source lint is clean, and derived design is current. Review in this order:
 
-1. Confirm the production kind and rebuild a fresh sorted manifest of shared contracts, production-local targets, research, settings, every active design branch, film or brief prose, governed source, tests, derived design, and required review frames.
+1. Confirm the production kind and rebuild a fresh sorted manifest of shared contracts, production-local targets, research, settings, every active design branch, film narrative or brief documents, governed source, tests, derived design, and required review frames.
 2. Read shared and local targets for single ownership and non-overlap, then read authored layers in dependency order.
 3. Trace direct treatment coverage at every script and screenplay file/H2/H3/H4 host, exact script-file and same-depth script-to-screenplay lineage, and exact design ownership at every configured design-owner export.
 4. Read implementation and tests, regenerate design, and inspect current output under the declared delivery and neutral-review conditions.

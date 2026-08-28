@@ -331,7 +331,8 @@ export const writeProductionScreenplay = (props: {
 }): void => {
   // Render under this production's own name so the index carries its actual
   // production id. Both disposable productions intentionally reuse the same
-  // completed-film prose already present at the index's `docs/treatments` and
+  // completed-film authored documents already present at the index's
+  // `docs/treatments` and
   // `docs/screenplays` paths; this helper adds only the second tracked index.
   const rendered = renderCompletedFilmFixture(props.productionId);
   const index = JSON.parse(

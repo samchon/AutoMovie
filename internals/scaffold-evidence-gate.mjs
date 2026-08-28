@@ -501,7 +501,7 @@ const contractAnchors = (relative) =>
  * library-settings population.
  *
  * This is deliberately generated after the blank-scaffold pass. The public
- * scaffold must contain no production prose or evidence tags, but inspecting
+ * scaffold must contain no production-authored documents or evidence tags, but inspecting
  * config structure alone cannot prove that its real shared claims accept a
  * paid population. Sixteen independent primary H2 owners cover the sixteen settings
  * obligations, every H2 answers every common and settings principle for

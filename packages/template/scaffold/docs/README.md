@@ -1,6 +1,6 @@
 # Production documents
 
-This directory holds what this production authors. Every branch below is production-owned: its facts, its research, its designs, its prose, and its work-specific contracts.
+This directory holds what this production authors. Every branch below is production-owned: its facts, its research, its designs, its narrative or brief documents, and its work-specific contracts.
 
 The project has a third authored surface beside these documents and `src`: `automovie.config.ts` serializes reviewed delivery, dialogue, external-generator provenance, speaker, and live-simulation decisions into the runtime. It is not an evidence-document host and never becomes their semantic owner; read the shipped [Production configuration](../.agents/skills/production/configuration.md) procedure before source authorship.
 
@@ -14,7 +14,7 @@ Choose one shape in `../productionEvidence.mjs` before authoring:
 | Brief | settings -> briefs -> shots -> filmSources |
 | Library | settings plus each matching design -> source branch it delivers |
 
-For film and brief, reviewed `productionSources` is a parallel assembly input that must exist before `filmSources`; it does not interrupt the prose-to-shot identity ladder. Runtime alone does not choose the shape. A short or simple demonstration may be a brief when one delivery/shot/observation hierarchy completely owns it. A work whose causal, choice, or revelation structure needs independent treatment/script/screenplay refinement is a film. Design branches are orthogonal to shape:
+For film and brief, reviewed `productionSources` is a parallel assembly input that must exist before `filmSources`; it does not interrupt the narrative-or-brief-to-shot identity ladder. Runtime alone does not choose the shape. A short or simple demonstration may be a brief when one delivery/shot/observation hierarchy completely owns it. A work whose causal, choice, or revelation structure needs independent treatment/script/screenplay refinement is a film. Design branches are orthogonal to shape:
 
 | Directory | Sole ownership |
 | --- | --- |

@@ -6,7 +6,7 @@ Read the shipped [`automovie.config.ts`](../../../automovie.config.ts) and its e
 
 ## Wiring and authored choices
 
-Do not turn fixed harness wiring into production prose. Do not hide a production choice among wiring values.
+Do not turn fixed harness wiring into authored production content. Do not hide a production choice among wiring values.
 
 | Field | Kind | Owner and consequence |
 | --- | --- | --- |

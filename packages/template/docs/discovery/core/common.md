@@ -1,6 +1,6 @@
 # Production-Specific Contract Discovery
 
-Work-wide and cross-layer outcomes that every authored H2 population revisits. Layer-local requirements belong in that layer's discovery file, and conditions shared only by film prose belong in `films.md`.
+Work-wide and cross-layer outcomes that every authored H2 population revisits. Layer-local requirements belong in that layer's discovery file, and conditions shared only by treatments, scripts, and screenplays belong in `films.md`.
 
 ## Shared and local boundary {#shared-local-boundary}
 
