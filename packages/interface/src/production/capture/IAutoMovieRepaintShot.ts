@@ -390,6 +390,14 @@ export interface IAutoMovieRepaintShot {
   /** True only when a separate guarded selection transaction made it active. */
   selected: boolean;
   /**
+   * Immutable request identity that a transport retry resumes, or null when
+   * validation refused before a request existed.
+   *
+   * @evidence requirements/repaint/retries-seeds-and-variation.md#repaint-retry-request-boundary Makes a failed attempt addressable by the explicit retry operation without changing its request controls.
+   * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-repaint-attempt-selection Returns the stable request side of the stored request/attempt lineage.
+   */
+  requestId: string | null;
+  /**
    * Current production namespace.
    *
    * @evidence requirements/repaint/source-frames-and-reference-locking.md#repaint-reference-roles Exposes `productionId` as the portable data boundary for the repaint reference roles requirement.

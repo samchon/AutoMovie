@@ -3,9 +3,10 @@ import {
   AutoMovieProductionRepaintService,
 } from "@automovie/production";
 
-import type { IAutoMovieProductionConfiguration } from "./productionConfiguration";
 import {
-  readProductionRepaintShotArgument,
+  type IAutoMovieProductionConfiguration,
+  assertProductionRepaintCandidateAdoption,
+  readProductionRepaintCommand,
   selectProductionRepaintRequest,
 } from "./productionConfiguration";
 import type { repaintProductionShot } from "./repaintAdapter";
@@ -15,13 +16,19 @@ type RepaintOutput = Awaited<
 >;
 
 export interface IProductionRepaintInvocation {
+  kind: "reroll" | "retry" | "selection" | "reversal";
+  productionId: string;
   generator: NonNullable<
     IAutoMovieProductionConfiguration["visual"]["repaint"]
   >["generator"];
-  productionId: string;
+  executionPolicy: NonNullable<
+    IAutoMovieProductionConfiguration["visual"]["repaint"]
+  >["executionPolicy"];
   request: NonNullable<
     IAutoMovieProductionConfiguration["visual"]["repaint"]
   >["requests"][number];
+  requestId?: string;
+  attemptId?: string;
 }
 
 export interface IProductionRepaintHost {
@@ -36,16 +43,28 @@ export const runProductionRepaintCommand = async (
   args: readonly string[],
   config: IAutoMovieProductionConfiguration,
   createHost: () => IProductionRepaintHost,
+  occurredAt: Date | string = new Date(),
 ): Promise<void> => {
-  const shot = readProductionRepaintShotArgument(args);
-  const selected = selectProductionRepaintRequest(config.visual.repaint, shot);
+  const command = readProductionRepaintCommand(args);
+  const selected = selectProductionRepaintRequest(
+    config.visual.repaint,
+    command.shot,
+    occurredAt,
+  );
   const host = createHost();
   let failure: { error: unknown } | undefined;
   try {
     const output = await host.serve({
+      kind: command.kind,
       generator: selected.generator,
+      executionPolicy: selected.executionPolicy,
       productionId: config.productionId,
       request: selected.request,
+      ...(command.kind === "retry"
+        ? { requestId: command.requestId }
+        : command.kind === "selection" || command.kind === "reversal"
+          ? { attemptId: command.attemptId }
+          : {}),
     });
     host.stdout(`${JSON.stringify(output, null, 2)}\n`);
     if (output.repainted === false) host.setExitCode(1);
@@ -63,27 +82,78 @@ export const createNodeProductionRepaintHost = (props: {
   capture: ConstructorParameters<typeof AutoMovieProductionContext>[0];
   closeCapture: IProductionRepaintHost["closeCapture"];
   root: string;
+  signal?: AbortSignal;
   setExitCode: IProductionRepaintHost["setExitCode"];
   stdout: IProductionRepaintHost["stdout"];
 }): IProductionRepaintHost => ({
   closeCapture: props.closeCapture,
-  serve: async (invocation) =>
-    new AutoMovieProductionRepaintService(
+  serve: async (invocation) => {
+    const context = new AutoMovieProductionContext(
+      props.capture,
+      props.root,
+      invocation.productionId,
+    );
+    if (invocation.kind === "selection" || invocation.kind === "reversal") {
+      const candidate = context
+        .forProduction(invocation.productionId)
+        .project.verifiedRepaintCandidates([invocation.request.shot])
+        .find((receipt) => receipt.attemptId === invocation.attemptId);
+      if (candidate !== undefined)
+        try {
+          assertProductionRepaintCandidateAdoption({
+            selected: {
+              generator: invocation.generator,
+              executionPolicy: invocation.executionPolicy,
+              requests: [invocation.request],
+            },
+            receipt: candidate,
+          });
+        } catch (error) {
+          return {
+            repainted: false,
+            selected: false,
+            requestId: candidate.requestId ?? null,
+            productionId: invocation.productionId,
+            shot: invocation.request.shot,
+            receipt: null,
+            diagnostics: [
+              {
+                code: "repaint-commit-refused",
+                category: "error",
+                phase: "render",
+                target: invocation.request.shot,
+                path: null,
+                message: error instanceof Error ? error.message : String(error),
+              },
+            ],
+          };
+        }
+      return new AutoMovieProductionRepaintService().select(context, {
+        productionId: invocation.productionId,
+        shot: invocation.request.shot,
+        attemptId: invocation.attemptId!,
+        kind: invocation.kind,
+        ...invocation.request.selectionReview,
+      });
+    }
+    return new AutoMovieProductionRepaintService(
       props.adapter,
       invocation.generator,
-    ).serve(
-      new AutoMovieProductionContext(
-        props.capture,
-        props.root,
-        invocation.productionId,
-      ),
       {
-        parameters: invocation.request.parameters,
-        productionId: invocation.productionId,
-        references: [...invocation.request.references],
-        shot: invocation.request.shot,
+        policy: invocation.executionPolicy,
+        evidence: invocation.request.evidence,
+        ...(invocation.requestId === undefined
+          ? {}
+          : { requestId: invocation.requestId }),
+        ...(props.signal === undefined ? {} : { signal: props.signal }),
       },
-    ),
+    ).serve(context, {
+      parameters: invocation.request.parameters,
+      productionId: invocation.productionId,
+      references: [...invocation.request.references],
+      shot: invocation.request.shot,
+    });
+  },
   setExitCode: props.setExitCode,
   stdout: props.stdout,
 });

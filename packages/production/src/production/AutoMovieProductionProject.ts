@@ -2053,6 +2053,7 @@ export class AutoMovieProductionProject {
       output: receipt.output.path,
     };
     const previousIdentity = activeBytes?.toString() ?? null;
+    const nextIdentity = serializeJson(pointer);
     this.commitFiles(
       [
         {
@@ -2064,13 +2065,14 @@ export class AutoMovieProductionProject {
         },
         {
           path: path.join(this.productionStateRoot, ...activePath.split("/")),
-          content: serializeJson(pointer),
+          content: nextIdentity,
         },
       ],
       () =>
         (props.inputCurrent?.() ?? true) &&
-        (this.readTrackedStateFile(activePath)?.toString() ?? null) ===
-          previousIdentity,
+        [previousIdentity, nextIdentity].includes(
+          this.readTrackedStateFile(activePath)?.toString() ?? null,
+        ),
     );
     return receipt;
   }

@@ -14,16 +14,33 @@ interface IRepaintRequest {
     role: IAutoMovieRepaintReceipt["references"][number]["role"];
     path: string;
   }>;
+  evidence: NonNullable<IAutoMovieRepaintReceipt["evidence"]>;
+  selectionReview: {
+    reason: string;
+    structuralReview: string;
+    continuityReview: {
+      baseline: string;
+      playbackEvidence: string;
+      mixedDeliveryPolicy: string | null;
+      flicker: "pass";
+      identityDrift: "pass";
+      geometryWarp: "pass";
+      textureCrawl: "pass";
+      transitionMismatch: "pass";
+    } | null;
+  };
 }
 
 interface IRepaintSelection {
   generator: IAutoMovieRepaintGeneratorAdoption;
+  executionPolicy: NonNullable<IAutoMovieRepaintReceipt["executionPolicy"]>;
   requests: IRepaintRequest[];
 }
 
 interface IConfigurationModule {
   readProductionRepaintSelection: (
     selected: unknown,
+    occurredAt?: Date | string,
   ) => IRepaintSelection | null;
   assertProductionRepaintSelection: (props: {
     selected: unknown;
@@ -33,11 +50,23 @@ interface IConfigurationModule {
   selectProductionRepaintRequest: (
     selected: unknown,
     shot: unknown,
+    occurredAt?: Date | string,
   ) => {
     generator: IAutoMovieRepaintGeneratorAdoption;
+    executionPolicy: IRepaintSelection["executionPolicy"];
     request: IRepaintRequest;
   };
-  readProductionRepaintShotArgument: (args: readonly string[]) => string;
+  readProductionRepaintCommand: (
+    args: readonly string[],
+  ) =>
+    | { kind: "reroll"; shot: string }
+    | { kind: "retry"; shot: string; requestId: string }
+    | { kind: "selection"; shot: string; attemptId: string }
+    | { kind: "reversal"; shot: string; attemptId: string };
+  assertProductionRepaintCandidateAdoption: (props: {
+    selected: IRepaintSelection;
+    receipt: IAutoMovieRepaintReceipt;
+  }) => void;
   assertProductionRepaintReceiptAdoption: (props: {
     selected: IRepaintSelection;
     receipts: readonly IAutoMovieRepaintReceipt[];
@@ -45,6 +74,7 @@ interface IConfigurationModule {
 }
 
 const digest = (value: string): AutoMovieContentDigest => `sha256:${value}`;
+const OCCURRED_AT = "2026-08-28T23:59:59.999Z";
 
 const selection = (): IRepaintSelection => ({
   generator: {
@@ -65,6 +95,14 @@ const selection = (): IRepaintSelection => ({
         reason: "the reviewed final delivery requires appearance rendition",
       },
     },
+  },
+  executionPolicy: {
+    maximumAttempts: 2,
+    attemptTimeoutMs: 500,
+    maximumElapsedMs: 2_000,
+    maximumCostUnits: 4,
+    backoffMs: [25],
+    retryableFailures: ["timeout", "rate-limit", "transport"],
   },
   requests: [
     {
@@ -89,6 +127,28 @@ const selection = (): IRepaintSelection => ({
         { role: "color", path: "assets/references/color.png" },
         { role: "environment", path: "assets/references/environment.png" },
       ],
+      evidence: {
+        prompt: "settings/visual.md#opening-prompt",
+        continuity: "settings/continuity.md#baseline-v3",
+        settings: "settings/visual.md#shared-grammar",
+        design: "models/guide.md#appearance",
+        screenplayOrBrief: "screenplays/opening.md#arrival",
+        shot: "src/shots/opening.ts#opening",
+      },
+      selectionReview: {
+        reason: "Candidate preserves the reviewed opening appearance.",
+        structuralReview: "Depth and outline stay aligned at every frame.",
+        continuityReview: {
+          baseline: "settings/continuity.md#baseline-v3",
+          playbackEvidence: "Played the complete opening at delivery rate.",
+          mixedDeliveryPolicy: null,
+          flicker: "pass",
+          identityDrift: "pass",
+          geometryWarp: "pass",
+          textureCrawl: "pass",
+          transitionMismatch: "pass",
+        },
+      },
     },
     {
       shot: "answer",
@@ -100,6 +160,28 @@ const selection = (): IRepaintSelection => ({
       references: [
         { role: "style", path: "assets/references/lobby-style.png" },
       ],
+      evidence: {
+        prompt: "settings/visual.md#answer-prompt",
+        continuity: "settings/continuity.md#baseline-v3",
+        settings: "settings/visual.md#shared-grammar",
+        design: "spaces/lobby.md#appearance",
+        screenplayOrBrief: "screenplays/opening.md#answer",
+        shot: "src/shots/answer.ts#answer",
+      },
+      selectionReview: {
+        reason: "Candidate preserves the reviewed reverse-angle appearance.",
+        structuralReview: "Depth and outline stay aligned at every frame.",
+        continuityReview: {
+          baseline: "settings/continuity.md#baseline-v3",
+          playbackEvidence: "Played the complete answer at delivery rate.",
+          mixedDeliveryPolicy: "Both shots use the selected repaint lane.",
+          flicker: "pass",
+          identityDrift: "pass",
+          geometryWarp: "pass",
+          textureCrawl: "pass",
+          transitionMismatch: "pass",
+        },
+      },
     },
   ],
 });
@@ -122,12 +204,23 @@ const receipt = (
   );
   if (request === undefined) throw new Error(`Missing test request ${shot}.`);
   return {
-    version: 3,
+    version: 4,
     productionId: "repaint-config-test",
     shot,
     compileFingerprint: digest("compile"),
     sourceRenderFingerprint: digest(`source-${shot}`),
-    attemptId: `attempt-${shot}`,
+    requestId:
+      shot === "opening"
+        ? "11111111-1111-4111-8111-111111111111"
+        : "22222222-2222-4222-8222-222222222222",
+    attemptId:
+      shot === "opening"
+        ? "33333333-3333-4333-8333-333333333333"
+        : "44444444-4444-4444-8444-444444444444",
+    startedAt: "2026-08-28T00:00:00.000Z",
+    completedAt: "2026-08-28T00:00:01.000Z",
+    costUnits: 1,
+    executionPolicy: structuredClone(selected.executionPolicy),
     sourceBundle: `renders/${shot}/source`,
     controls: [{ pass: "depth", frameDigests: [digest(`depth-${shot}`)] }],
     references: request.references.map((reference, index) => ({
@@ -140,6 +233,7 @@ const receipt = (
     ),
     structuralAuthority: "deterministic-source-only",
     parameters: structuredClone(request.parameters),
+    evidence: structuredClone(request.evidence),
     output: {
       path: `renditions/${shot}/result.mp4`,
       digest: digest(`output-${shot}`),
@@ -166,12 +260,17 @@ const receipt = (
  * 1. A complete generator adoption and per-shot request set round-trips, while
  *    null remains the explicit deterministic-delivery choice.
  * 2. Extra, missing, padded, malformed, credential-bearing, or duplicate
- *    generator, request, parameter, control, and reference fields are refused.
+ *    generator, policy, request, evidence, review, parameter, control, and
+ *    reference fields are refused.
  * 3. Repaint delivery requires bidirectional equality between reviewed config
  *    shots and the compiled timeline; deterministic delivery requires null.
- * 4. The CLI resolves only a configured shot and cannot supply prompt controls.
+ * 4. The CLI separates reroll, same-request retry, candidate selection, and
+ *    reversal and cannot supply prompt controls or review evidence.
  * 5. Final publication accepts receipts only when generator adoption, complete
- *    request, structural authority, and shot population still exactly match.
+ *    request, execution time, structural authority, and shot population still
+ *    exactly match.
+ * 6. Future terms-review dates fail before execution and from stored receipts,
+ *    while same-day, past, leap-day, and UTC-midnight boundaries stay valid.
  */
 export const test_cli_scaffold_repaint_configuration =
   async (): Promise<void> => {
@@ -185,7 +284,10 @@ export const test_cli_scaffold_repaint_configuration =
         : require(configSource)
     ) as IConfigurationModule;
     const authored = selection();
-    const parsed = configuration.readProductionRepaintSelection(authored)!;
+    const parsed = configuration.readProductionRepaintSelection(
+      authored,
+      OCCURRED_AT,
+    )!;
     TestValidator.equals(
       "repaint config preserves the complete reviewed adoption and requests",
       parsed,
@@ -286,6 +388,41 @@ export const test_cli_scaffold_repaint_configuration =
     TestValidator.predicate(
       "repaint config refuses malformed and hidden generator adoption fields",
       exactAndGeneratorFailures.every(
+        (value) =>
+          messageOf(() =>
+            configuration.readProductionRepaintSelection(value),
+          ) !== null,
+      ),
+    );
+
+    const policyFailures: unknown[] = [
+      { ...authored, executionPolicy: null },
+      {
+        ...authored,
+        executionPolicy: { ...authored.executionPolicy, hidden: true },
+      },
+      ...[
+        ["maximumAttempts", 0],
+        ["maximumAttempts", 1.5],
+        ["attemptTimeoutMs", 0],
+        ["maximumElapsedMs", 100],
+        ["maximumCostUnits", -1],
+        ["maximumCostUnits", Number.POSITIVE_INFINITY],
+        ["backoffMs", []],
+        ["backoffMs", [-1]],
+        ["retryableFailures", ["transport", "transport"]],
+        ["retryableFailures", ["unknown"]],
+      ].map(([key, value]) => ({
+        ...authored,
+        executionPolicy: {
+          ...authored.executionPolicy,
+          [String(key)]: value,
+        },
+      })),
+    ];
+    TestValidator.predicate(
+      "repaint config refuses every malformed or widened execution policy",
+      policyFailures.every(
         (value) =>
           messageOf(() =>
             configuration.readProductionRepaintSelection(value),
@@ -395,6 +532,81 @@ export const test_cli_scaffold_repaint_configuration =
           },
         ],
       },
+      { ...authored, requests: [{ ...request, evidence: null }] },
+      {
+        ...authored,
+        requests: [
+          { ...request, evidence: { ...request.evidence, hidden: true } },
+        ],
+      },
+      ...[
+        ["prompt", ""],
+        ["continuity", 10],
+        ["settings", " padded "],
+        ["design", ""],
+        ["screenplayOrBrief", ""],
+        ["shot", ""],
+      ].map(([key, value]) => ({
+        ...authored,
+        requests: [
+          {
+            ...request,
+            evidence: { ...request.evidence, [String(key)]: value },
+          },
+        ],
+      })),
+      { ...authored, requests: [{ ...request, selectionReview: null }] },
+      {
+        ...authored,
+        requests: [
+          {
+            ...request,
+            selectionReview: {
+              ...request.selectionReview,
+              reason: "",
+            },
+          },
+        ],
+      },
+      {
+        ...authored,
+        requests: [
+          {
+            ...request,
+            selectionReview: {
+              ...request.selectionReview,
+              continuityReview: {
+                ...request.selectionReview.continuityReview!,
+                flicker: "fail",
+              },
+            },
+          },
+        ],
+      },
+      {
+        ...authored,
+        requests: [
+          {
+            ...request,
+            selectionReview: {
+              ...request.selectionReview,
+              continuityReview: {
+                ...request.selectionReview.continuityReview!,
+                baseline: "settings/continuity.md#another-baseline",
+              },
+            },
+          },
+        ],
+      },
+      {
+        ...authored,
+        requests: [
+          {
+            ...request,
+            evidence: { ...request.evidence, continuity: null },
+          },
+        ],
+      },
     ];
     TestValidator.predicate(
       "repaint config refuses malformed request, parameter, control, and reference fields",
@@ -468,42 +680,101 @@ export const test_cli_scaffold_repaint_configuration =
     );
 
     TestValidator.equals(
-      "the repaint command resolves the complete reviewed request by shot only",
+      "the repaint command separates request, retry, selection, and reversal identities",
       {
-        shot: configuration.readProductionRepaintShotArgument([
+        reroll: configuration.readProductionRepaintCommand([
+          "reroll",
           "--shot",
           "opening",
+        ]),
+        retry: configuration.readProductionRepaintCommand([
+          "retry",
+          "--shot",
+          "opening",
+          "--request",
+          "11111111-1111-4111-8111-111111111111",
+        ]),
+        selection: configuration.readProductionRepaintCommand([
+          "select",
+          "--shot",
+          "opening",
+          "--attempt",
+          "33333333-3333-4333-8333-333333333333",
+        ]),
+        reversal: configuration.readProductionRepaintCommand([
+          "reverse",
+          "--shot",
+          "opening",
+          "--attempt",
+          "44444444-4444-4444-8444-444444444444",
         ]),
         selected: configuration.selectProductionRepaintRequest(
           authored,
           "opening",
+          OCCURRED_AT,
         ),
       },
       {
-        shot: "opening",
+        reroll: { kind: "reroll", shot: "opening" },
+        retry: {
+          kind: "retry",
+          shot: "opening",
+          requestId: "11111111-1111-4111-8111-111111111111",
+        },
+        selection: {
+          kind: "selection",
+          shot: "opening",
+          attemptId: "33333333-3333-4333-8333-333333333333",
+        },
+        reversal: {
+          kind: "reversal",
+          shot: "opening",
+          attemptId: "44444444-4444-4444-8444-444444444444",
+        },
         selected: {
           generator: authored.generator,
+          executionPolicy: authored.executionPolicy,
           request: authored.requests[0],
         },
       },
     );
     TestValidator.predicate(
-      "repaint command selection refuses positional, extra, null, blank, padded, and unknown shots",
+      "repaint operations refuse ambiguous, malformed, injected, and unknown identities",
       [
-        () => configuration.readProductionRepaintShotArgument(["opening"]),
+        () => configuration.readProductionRepaintCommand(["opening"]),
         () =>
-          configuration.readProductionRepaintShotArgument([
+          configuration.readProductionRepaintCommand([
+            "reroll",
             "--shot",
             "opening",
             "extra",
           ]),
+        () => configuration.readProductionRepaintCommand(["--prompt", "x"]),
         () =>
-          configuration.readProductionRepaintShotArgument(["--prompt", "x"]),
-        () => configuration.readProductionRepaintShotArgument(["--shot", ""]),
+          configuration.readProductionRepaintCommand(["reroll", "--shot", ""]),
         () =>
-          configuration.readProductionRepaintShotArgument([
+          configuration.readProductionRepaintCommand([
+            "reroll",
             "--shot",
             " padded ",
+          ]),
+        () =>
+          configuration.readProductionRepaintCommand([
+            "retry",
+            "--shot",
+            "opening",
+            "--request",
+            "not-a-uuid",
+          ]),
+        () =>
+          configuration.readProductionRepaintCommand([
+            "select",
+            "--shot",
+            "opening",
+            "--attempt",
+            "33333333-3333-4333-8333-333333333333",
+            "--reason",
+            "injected",
           ]),
         () => configuration.selectProductionRepaintRequest(null, "opening"),
         () => configuration.selectProductionRepaintRequest(authored, ""),
@@ -514,6 +785,11 @@ export const test_cli_scaffold_repaint_configuration =
     );
 
     const receipts = [receipt(parsed, "answer"), receipt(parsed, "opening")];
+    for (const candidate of receipts)
+      configuration.assertProductionRepaintCandidateAdoption({
+        selected: parsed,
+        receipt: candidate,
+      });
     configuration.assertProductionRepaintReceiptAdoption({
       selected: parsed,
       receipts,
@@ -547,6 +823,49 @@ export const test_cli_scaffold_repaint_configuration =
           receipts: mutateReceipt("opening", (value) => ({
             ...value,
             adapterIdentity: "not-json",
+          })),
+        }),
+      () =>
+        configuration.assertProductionRepaintReceiptAdoption({
+          selected: parsed,
+          receipts: mutateReceipt("opening", (value) => ({
+            ...value,
+            version: 3,
+          })),
+        }),
+      () =>
+        configuration.assertProductionRepaintReceiptAdoption({
+          selected: parsed,
+          receipts: mutateReceipt("opening", (value) => ({
+            ...value,
+            startedAt: "not-an-instant",
+          })),
+        }),
+      () =>
+        configuration.assertProductionRepaintReceiptAdoption({
+          selected: parsed,
+          receipts: mutateReceipt("opening", (value) => ({
+            ...value,
+            startedAt: "2026-08-28T00:00:02.000Z",
+          })),
+        }),
+      () =>
+        configuration.assertProductionRepaintReceiptAdoption({
+          selected: parsed,
+          receipts: mutateReceipt("opening", (value) => ({
+            ...value,
+            executionPolicy: {
+              ...value.executionPolicy!,
+              maximumCostUnits: value.executionPolicy!.maximumCostUnits + 1,
+            },
+          })),
+        }),
+      () =>
+        configuration.assertProductionRepaintReceiptAdoption({
+          selected: parsed,
+          receipts: mutateReceipt("opening", (value) => ({
+            ...value,
+            evidence: { ...value.evidence!, shot: "src/shots/other.ts#other" },
           })),
         }),
       () =>
@@ -604,5 +923,46 @@ export const test_cli_scaffold_repaint_configuration =
     TestValidator.predicate(
       "publication refuses missing, repeated, malformed, changed, or over-authoritative receipts",
       receiptFailures.every((message) => message !== null),
+    );
+
+    const calendarSelection = (termsCheckedAt: string): IRepaintSelection => ({
+      ...authored,
+      generator: {
+        ...authored.generator,
+        generatorProvenance: {
+          ...authored.generator.generatorProvenance,
+          termsCheckedAt,
+        },
+      },
+    });
+    TestValidator.equals(
+      "terms review uses the injected UTC day without entering content identity",
+      {
+        past: configuration.readProductionRepaintSelection(
+          calendarSelection("2024-02-29"),
+          "2026-08-28T00:00:00.000Z",
+        )?.generator.generatorProvenance.termsCheckedAt,
+        sameDayBeforeMidnight: configuration.readProductionRepaintSelection(
+          calendarSelection("2026-08-28"),
+          "2026-08-28T23:59:59.999Z",
+        )?.generator.generatorProvenance.termsCheckedAt,
+        sameDayAfterMidnight: configuration.readProductionRepaintSelection(
+          calendarSelection("2026-08-29"),
+          "2026-08-29T00:00:00.000Z",
+        )?.generator.generatorProvenance.termsCheckedAt,
+        futureRefused:
+          messageOf(() =>
+            configuration.readProductionRepaintSelection(
+              calendarSelection("2026-08-29"),
+              "2026-08-28T23:59:59.999Z",
+            ),
+          ) !== null,
+      },
+      {
+        past: "2024-02-29",
+        sameDayBeforeMidnight: "2026-08-28",
+        sameDayAfterMidnight: "2026-08-29",
+        futureRefused: true,
+      },
     );
   };

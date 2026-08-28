@@ -5,19 +5,31 @@ import type {
   IAutoMovieFilmTimeline,
   IAutoMovieProductionDialogueLine,
   IAutoMovieProductionTtsReceipt,
+  IAutoMovieRepaintExecutionPolicy,
   IAutoMovieRepaintGeneratorAdoption,
   IAutoMovieRepaintGeneratorProvenance,
   IAutoMovieRepaintParameters,
   IAutoMovieRepaintReceipt,
   IAutoMovieRepaintReferenceInput,
+  IAutoMovieRepaintRequestEvidence,
   IAutoMovieSoftBodyDomain,
 } from "@automovie/interface";
 import {
   type IAutoMovieProductionRenderTier,
+  assertAutoMovieExternalGeneratorTermsAt,
+  assertAutoMovieRepaintExecutionPolicy,
   canonicalizeAutoMovieJson,
 } from "@automovie/production";
 
-import type { AutoMovieCaptureBrowserConfig } from "./capture-browser";
+/** Browser-selection wiring shared without importing the executable capture host. */
+export type AutoMovieCaptureBrowserConfig =
+  | { source: "playwright-chromium" }
+  | { source: "system-channel"; channel: "chrome" | "msedge" }
+  | {
+      source: "configured-executable";
+      product: "chromium" | "chrome" | "msedge";
+      executablePath: string;
+    };
 
 /** Kokoro adapter identity implemented by the shipped render runtime. */
 export const AUTOMOVIE_DIALOGUE_PROVIDER = "kokoro-local-v1" as const;
@@ -58,13 +70,39 @@ export interface IAutoMovieProductionRepaintRequest {
   shot: string;
   parameters: IAutoMovieRepaintParameters;
   references: readonly IAutoMovieRepaintReferenceInput[];
+  evidence: IAutoMovieRepaintRequestEvidence;
+  selectionReview: IAutoMovieProductionRepaintSelectionReview;
+}
+
+/** Reviewed evidence used only by explicit candidate selection or reversal. */
+export interface IAutoMovieProductionRepaintSelectionReview {
+  reason: string;
+  structuralReview: string;
+  continuityReview: {
+    baseline: string;
+    playbackEvidence: string;
+    mixedDeliveryPolicy: string | null;
+    flicker: "pass";
+    identityDrift: "pass";
+    geometryWarp: "pass";
+    textureCrawl: "pass";
+    transitionMismatch: "pass";
+  } | null;
 }
 
 /** Complete generator adoption and request population for repaint delivery. */
 export interface IAutoMovieProductionRepaintSelection {
   generator: IAutoMovieRepaintGeneratorAdoption;
+  executionPolicy: IAutoMovieRepaintExecutionPolicy;
   requests: readonly IAutoMovieProductionRepaintRequest[];
 }
+
+/** One explicit repaint operation with no hidden reroll or adoption choice. */
+export type AutoMovieProductionRepaintCommand =
+  | { kind: "reroll"; shot: string }
+  | { kind: "retry"; shot: string; requestId: string }
+  | { kind: "selection"; shot: string; attemptId: string }
+  | { kind: "reversal"; shot: string; attemptId: string };
 
 /** Complete generated-project configuration, separating wiring from choices. */
 export interface IAutoMovieProductionConfiguration {
@@ -95,6 +133,7 @@ export interface IAutoMovieProductionConfiguration {
 /** Read one explicit generator adoption without accepting hidden parameters. */
 export const readProductionDialogueSynthesis = (
   selected: unknown,
+  occurredAt: Date | string = new Date(),
 ): IAutoMovieDialogueSynthesisSelection | null => {
   if (selected === null) return null;
   const value = exactObject(selected, "sound.dialogueSynthesis", [
@@ -136,6 +175,7 @@ export const readProductionDialogueSynthesis = (
       value.generatorProvenance,
       "sound.dialogueSynthesis.generatorProvenance",
       "dialogue-synthesis",
+      occurredAt,
     ),
   };
 };
@@ -144,8 +184,12 @@ export const readProductionDialogueSynthesis = (
 export const assertProductionDialogueSynthesis = (props: {
   selected: unknown;
   dialogue: readonly unknown[];
+  occurredAt?: Date | string;
 }): IAutoMovieDialogueSynthesisSelection | null => {
-  const selected = readProductionDialogueSynthesis(props.selected);
+  const selected = readProductionDialogueSynthesis(
+    props.selected,
+    props.occurredAt,
+  );
   if (props.dialogue.length !== 0 && selected === null)
     throw new Error(
       "Dialogue lines require an explicit sound.dialogueSynthesis selection.",
@@ -155,6 +199,44 @@ export const assertProductionDialogueSynthesis = (props: {
       "sound.dialogueSynthesis selects a generator but the production has no dialogue lines to synthesize.",
     );
   return selected;
+};
+
+/** Refuse generated or resumed dialogue receipts with stale adoption time. */
+export const assertProductionDialogueReceiptAdoption = (props: {
+  selected: IAutoMovieDialogueSynthesisSelection;
+  receipts: readonly IAutoMovieProductionTtsReceipt[];
+  occurredAt?: Date | string;
+}): void => {
+  const selected = readProductionDialogueSynthesis(
+    props.selected,
+    props.occurredAt ?? props.receipts[0]?.generatedAt ?? new Date(),
+  );
+  if (selected === null)
+    throw new Error(
+      "Dialogue receipt adoption requires a reviewed sound.dialogueSynthesis selection.",
+    );
+  for (const receipt of props.receipts) {
+    exactUtcInstant(
+      receipt.generatedAt,
+      `Dialogue receipt "${receipt.line}" generatedAt`,
+    );
+    assertAutoMovieExternalGeneratorTermsAt({
+      termsCheckedAt: receipt.generatorProvenance.termsCheckedAt,
+      occurredAt: receipt.generatedAt,
+      label: `Dialogue receipt "${receipt.line}" generator provenance`,
+    });
+    if (
+      receipt.version !== 6 ||
+      receipt.model !== selected.model ||
+      receipt.modelRevision !== selected.modelRevision ||
+      receipt.voice !== selected.voice ||
+      canonicalizeAutoMovieJson(receipt.generatorProvenance) !==
+        canonicalizeAutoMovieJson(selected.generatorProvenance)
+    )
+      throw new Error(
+        `Dialogue receipt "${receipt.line}" does not match the current reviewed generator adoption or immutable synthesis instant.`,
+      );
+  }
 };
 
 /**
@@ -167,10 +249,12 @@ export const assertProductionDialogueSynthesis = (props: {
  */
 export const readProductionRepaintSelection = (
   selected: unknown,
+  occurredAt: Date | string = new Date(),
 ): IAutoMovieProductionRepaintSelection | null => {
   if (selected === null) return null;
   const value = exactObject(selected, "visual.repaint", [
     "generator",
+    "executionPolicy",
     "requests",
   ]);
   const generatorValue = exactObject(
@@ -213,8 +297,13 @@ export const readProductionRepaintSelection = (
       generatorValue.generatorProvenance,
       "visual.repaint.generator.generatorProvenance",
       "repaint",
+      occurredAt,
     ),
   };
+  const executionPolicy = readRepaintExecutionPolicy(
+    value.executionPolicy,
+    "visual.repaint.executionPolicy",
+  );
   if (Array.isArray(value.requests) === false || value.requests.length === 0)
     throw new Error(
       "visual.repaint.requests must be a non-empty array for a selected repaint generator.",
@@ -226,6 +315,8 @@ export const readProductionRepaintSelection = (
       "shot",
       "parameters",
       "references",
+      "evidence",
+      "selectionReview",
     ]);
     const shot = nonBlank(record.shot, `${label}.shot`);
     if (shots.has(shot))
@@ -241,9 +332,26 @@ export const readProductionRepaintSelection = (
         record.references,
         `${label}.references`,
       ),
+      evidence: readRepaintEvidence(record.evidence, `${label}.evidence`),
+      selectionReview: readRepaintSelectionReview(
+        record.selectionReview,
+        `${label}.selectionReview`,
+      ),
     };
   });
-  return { generator, requests };
+  for (const [index, request] of requests.entries()) {
+    if (
+      (request.evidence.continuity === null) !==
+        (request.selectionReview.continuityReview === null) ||
+      (request.evidence.continuity !== null &&
+        request.selectionReview.continuityReview?.baseline !==
+          request.evidence.continuity)
+    )
+      throw new Error(
+        `visual.repaint.requests[${index}] must pair a film continuity evidence address with the same reviewed baseline, or use null for both outside film continuity.`,
+      );
+  }
+  return { generator, executionPolicy, requests };
 };
 
 /** Refuse a delivery whose reviewed request set differs from compiled shots. */
@@ -282,11 +390,13 @@ export const assertProductionRepaintSelection = (props: {
 export const selectProductionRepaintRequest = (
   selected: unknown,
   shot: unknown,
+  occurredAt: Date | string = new Date(),
 ): {
   generator: IAutoMovieRepaintGeneratorAdoption;
+  executionPolicy: IAutoMovieRepaintExecutionPolicy;
   request: IAutoMovieProductionRepaintRequest;
 } => {
-  const repaint = readProductionRepaintSelection(selected);
+  const repaint = readProductionRepaintSelection(selected, occurredAt);
   if (repaint === null)
     throw new Error(
       "This production has no reviewed visual.repaint generator or requests.",
@@ -297,16 +407,44 @@ export const selectProductionRepaintRequest = (
     throw new Error(
       `Shot "${id}" has no reviewed visual.repaint request in automovie.config.ts.`,
     );
-  return { generator: repaint.generator, request };
+  return {
+    generator: repaint.generator,
+    executionPolicy: repaint.executionPolicy,
+    request,
+  };
 };
 
-/** Read the repaint CLI's only allowed operation selector. */
-export const readProductionRepaintShotArgument = (
+/** Read one explicit reroll, retry, selection, or reversal operation. */
+export const readProductionRepaintCommand = (
   args: readonly string[],
-): string => {
-  if (args.length !== 2 || args[0] !== "--shot")
-    throw new Error("repaint requires exactly --shot <authored-shot-id>.");
-  return nonBlank(args[1], "repaint --shot");
+): AutoMovieProductionRepaintCommand => {
+  if (args[0] === "reroll" && args.length === 3 && args[1] === "--shot")
+    return { kind: "reroll", shot: nonBlank(args[2], "repaint --shot") };
+  if (
+    args[0] === "retry" &&
+    args.length === 5 &&
+    args[1] === "--shot" &&
+    args[3] === "--request"
+  )
+    return {
+      kind: "retry",
+      shot: nonBlank(args[2], "repaint --shot"),
+      requestId: repaintUuid(args[4], "repaint --request"),
+    };
+  if (
+    (args[0] === "select" || args[0] === "reverse") &&
+    args.length === 5 &&
+    args[1] === "--shot" &&
+    args[3] === "--attempt"
+  )
+    return {
+      kind: args[0] === "select" ? "selection" : "reversal",
+      shot: nonBlank(args[2], "repaint --shot"),
+      attemptId: repaintUuid(args[4], "repaint --attempt"),
+    };
+  throw new Error(
+    "repaint requires exactly one operation: reroll --shot <id>, retry --shot <id> --request <uuid-v4>, select --shot <id> --attempt <uuid-v4>, or reverse --shot <id> --attempt <uuid-v4>.",
+  );
 };
 
 /** Refuse stored outputs created under another generator adoption. */
@@ -319,7 +457,6 @@ export const assertProductionRepaintReceiptAdoption = (props: {
     throw new Error(
       "Repaint receipt adoption requires a reviewed visual.repaint selection.",
     );
-  const expected = selected.generator;
   const configuredShots = new Set(
     selected.requests.map((request) => request.shot),
   );
@@ -328,44 +465,7 @@ export const assertProductionRepaintReceiptAdoption = (props: {
     if (receiptShots.has(receipt.shot))
       throw new Error(`Repaint receipts repeat shot "${receipt.shot}".`);
     receiptShots.add(receipt.shot);
-    let runtime: unknown;
-    try {
-      runtime = JSON.parse(receipt.adapterIdentity);
-    } catch {
-      throw new Error(
-        `Repaint receipt for shot "${receipt.shot}" has a non-JSON adapter identity.`,
-      );
-    }
-    const actual = readProductionRepaintSelection({
-      generator: {
-        runtimeIdentity: runtime,
-        generatorProvenance: receipt.generatorProvenance,
-      },
-      requests: [
-        {
-          shot: receipt.shot,
-          parameters: receipt.parameters,
-          references: receipt.references.map(({ role, path }) => ({
-            role,
-            path,
-          })),
-        },
-      ],
-    })!;
-    const reviewed = selected.requests.find(
-      (request) => request.shot === receipt.shot,
-    );
-    if (
-      canonicalizeAutoMovieJson(actual.generator) !==
-        canonicalizeAutoMovieJson(expected) ||
-      reviewed === undefined ||
-      canonicalizeAutoMovieJson(actual.requests[0]) !==
-        canonicalizeAutoMovieJson(reviewed) ||
-      receipt.structuralAuthority !== "deterministic-source-only"
-    )
-      throw new Error(
-        `Repaint receipt for shot "${receipt.shot}" does not match the current reviewed generator adoption, per-shot request, or deterministic structural-authority boundary.`,
-      );
+    assertRepaintReceiptMatchesSelection(selected, receipt);
   }
   const missing = [...configuredShots].filter(
     (shot) => receiptShots.has(shot) === false,
@@ -376,6 +476,80 @@ export const assertProductionRepaintReceiptAdoption = (props: {
   if (missing.length !== 0 || extra.length !== 0)
     throw new Error(
       `Current repaint receipts must exactly equal configured requests; missing: ${missing.join(", ") || "none"}; extra: ${extra.join(", ") || "none"}.`,
+    );
+};
+
+/** Refuse selection of one candidate from stale config or evidence owners. */
+export const assertProductionRepaintCandidateAdoption = (props: {
+  selected: IAutoMovieProductionRepaintSelection;
+  receipt: IAutoMovieRepaintReceipt;
+}): void => {
+  if (props.receipt.startedAt === undefined)
+    throw new Error(
+      `Repaint candidate for shot "${props.receipt.shot}" has no immutable execution instant.`,
+    );
+  const selected = readProductionRepaintSelection(
+    props.selected,
+    props.receipt.startedAt,
+  );
+  if (selected === null)
+    throw new Error(
+      "Repaint candidate adoption requires a reviewed visual.repaint selection.",
+    );
+  assertRepaintReceiptMatchesSelection(selected, props.receipt);
+};
+
+const assertRepaintReceiptMatchesSelection = (
+  selected: IAutoMovieProductionRepaintSelection,
+  receipt: IAutoMovieRepaintReceipt,
+): void => {
+  let runtime: unknown;
+  try {
+    runtime = JSON.parse(receipt.adapterIdentity);
+  } catch {
+    throw new Error(
+      `Repaint receipt for shot "${receipt.shot}" has a non-JSON adapter identity.`,
+    );
+  }
+  const reviewed = selected.requests.find(
+    (request) => request.shot === receipt.shot,
+  );
+  if (
+    receipt.version !== 4 ||
+    receipt.requestId === undefined ||
+    repaintUuid(receipt.requestId, "Repaint receipt requestId") !==
+      receipt.requestId ||
+    repaintUuid(receipt.attemptId, "Repaint receipt attemptId") !==
+      receipt.attemptId ||
+    receipt.startedAt === undefined ||
+    receipt.completedAt === undefined ||
+    receipt.executionPolicy === undefined ||
+    receipt.evidence === undefined ||
+    exactUtcInstant(receipt.startedAt, "Repaint receipt startedAt") >
+      exactUtcInstant(receipt.completedAt, "Repaint receipt completedAt") ||
+    assertAutoMovieExternalGeneratorTermsAt({
+      termsCheckedAt: receipt.generatorProvenance.termsCheckedAt,
+      occurredAt: receipt.startedAt,
+      label: `Repaint receipt for shot "${receipt.shot}" generator provenance`,
+    }) !== receipt.generatorProvenance.termsCheckedAt ||
+    canonicalizeAutoMovieJson(runtime) !==
+      canonicalizeAutoMovieJson(selected.generator.runtimeIdentity) ||
+    canonicalizeAutoMovieJson(receipt.generatorProvenance) !==
+      canonicalizeAutoMovieJson(selected.generator.generatorProvenance) ||
+    reviewed === undefined ||
+    canonicalizeAutoMovieJson(receipt.executionPolicy) !==
+      canonicalizeAutoMovieJson(selected.executionPolicy) ||
+    canonicalizeAutoMovieJson(receipt.parameters) !==
+      canonicalizeAutoMovieJson(reviewed.parameters) ||
+    canonicalizeAutoMovieJson(
+      receipt.references.map(({ role, path }) => ({ role, path })),
+    ) !== canonicalizeAutoMovieJson(reviewed.references) ||
+    canonicalizeAutoMovieJson(receipt.evidence) !==
+      canonicalizeAutoMovieJson(reviewed.evidence) ||
+    receipt.structuralAuthority !== "deterministic-source-only"
+  )
+    throw new Error(
+      `Repaint receipt for shot "${receipt.shot}" does not match the current reviewed generator adoption, bounded policy, evidence-addressed request, execution time, or deterministic structural-authority boundary.`,
     );
 };
 
@@ -583,6 +757,7 @@ const readExternalGeneratorProvenance = <
   input: unknown,
   label: string,
   kind: Kind,
+  occurredAt: Date | string,
 ): Kind extends "dialogue-synthesis"
   ? IAutoMovieExternalGeneratorProvenance
   : IAutoMovieRepaintGeneratorProvenance => {
@@ -593,18 +768,11 @@ const readExternalGeneratorProvenance = <
     "cost",
     "consumer",
   ]);
-  const termsCheckedAt = nonBlank(
-    value.termsCheckedAt,
-    `${label}.termsCheckedAt`,
-  );
-  if (
-    /^\d{4}-\d{2}-\d{2}$/u.test(termsCheckedAt) === false ||
-    Number.isNaN(new Date(`${termsCheckedAt}T00:00:00.000Z`).getTime()) ||
-    new Date(`${termsCheckedAt}T00:00:00.000Z`)
-      .toISOString()
-      .startsWith(termsCheckedAt) === false
-  )
-    throw new Error(`${label}.termsCheckedAt must be a real YYYY-MM-DD date.`);
+  const termsCheckedAt = assertAutoMovieExternalGeneratorTermsAt({
+    termsCheckedAt: value.termsCheckedAt,
+    occurredAt,
+    label,
+  });
   const consumer = exactObject(value.consumer, `${label}.consumer`, [
     "kind",
     "reason",
@@ -644,6 +812,150 @@ const exactObject = (
       `${label} requires ${keys.join(", ")} and allows only ${[...keys, ...optional].join(", ")}; unknown: ${unknown.join(", ") || "none"}; missing: ${missing.join(", ") || "none"}.`,
     );
   return value;
+};
+
+const readRepaintExecutionPolicy = (
+  input: unknown,
+  label: string,
+): IAutoMovieRepaintExecutionPolicy => {
+  const value = exactObject(input, label, [
+    "maximumAttempts",
+    "attemptTimeoutMs",
+    "maximumElapsedMs",
+    "maximumCostUnits",
+    "backoffMs",
+    "retryableFailures",
+  ]);
+  if (
+    Array.isArray(value.backoffMs) === false ||
+    Array.isArray(value.retryableFailures) === false
+  )
+    throw new Error(
+      `${label}.backoffMs and ${label}.retryableFailures must be arrays.`,
+    );
+  const policy: IAutoMovieRepaintExecutionPolicy = {
+    maximumAttempts: value.maximumAttempts as number,
+    attemptTimeoutMs: value.attemptTimeoutMs as number,
+    maximumElapsedMs: value.maximumElapsedMs as number,
+    maximumCostUnits: value.maximumCostUnits as number,
+    backoffMs: [...value.backoffMs] as number[],
+    retryableFailures: [
+      ...value.retryableFailures,
+    ] as IAutoMovieRepaintExecutionPolicy["retryableFailures"],
+  };
+  assertAutoMovieRepaintExecutionPolicy(policy);
+  return policy;
+};
+
+const readRepaintEvidence = (
+  input: unknown,
+  label: string,
+): IAutoMovieRepaintRequestEvidence => {
+  const value = exactObject(input, label, [
+    "prompt",
+    "continuity",
+    "settings",
+    "design",
+    "screenplayOrBrief",
+    "shot",
+  ]);
+  if (value.continuity !== null && typeof value.continuity !== "string")
+    throw new Error(`${label}.continuity must be null or an evidence address.`);
+  return {
+    prompt: nonBlank(value.prompt, `${label}.prompt`),
+    continuity:
+      value.continuity === null
+        ? null
+        : nonBlank(value.continuity, `${label}.continuity`),
+    settings: nonBlank(value.settings, `${label}.settings`),
+    design: nonBlank(value.design, `${label}.design`),
+    screenplayOrBrief: nonBlank(
+      value.screenplayOrBrief,
+      `${label}.screenplayOrBrief`,
+    ),
+    shot: nonBlank(value.shot, `${label}.shot`),
+  };
+};
+
+const readRepaintSelectionReview = (
+  input: unknown,
+  label: string,
+): IAutoMovieProductionRepaintSelectionReview => {
+  const value = exactObject(input, label, [
+    "reason",
+    "structuralReview",
+    "continuityReview",
+  ]);
+  if (value.continuityReview === null)
+    return {
+      reason: nonBlank(value.reason, `${label}.reason`),
+      structuralReview: nonBlank(
+        value.structuralReview,
+        `${label}.structuralReview`,
+      ),
+      continuityReview: null,
+    };
+  const continuity = exactObject(
+    value.continuityReview,
+    `${label}.continuityReview`,
+    [
+      "baseline",
+      "playbackEvidence",
+      "mixedDeliveryPolicy",
+      "flicker",
+      "identityDrift",
+      "geometryWarp",
+      "textureCrawl",
+      "transitionMismatch",
+    ],
+  );
+  if (
+    continuity.mixedDeliveryPolicy !== null &&
+    typeof continuity.mixedDeliveryPolicy !== "string"
+  )
+    throw new Error(
+      `${label}.continuityReview.mixedDeliveryPolicy must be null or reviewed text.`,
+    );
+  for (const key of [
+    "flicker",
+    "identityDrift",
+    "geometryWarp",
+    "textureCrawl",
+    "transitionMismatch",
+  ] as const)
+    if (continuity[key] !== "pass")
+      throw new Error(
+        `${label}.continuityReview.${key} must be the reviewed "pass" verdict.`,
+      );
+  return {
+    reason: nonBlank(value.reason, `${label}.reason`),
+    structuralReview: nonBlank(
+      value.structuralReview,
+      `${label}.structuralReview`,
+    ),
+    continuityReview: {
+      baseline: nonBlank(
+        continuity.baseline,
+        `${label}.continuityReview.baseline`,
+      ),
+      playbackEvidence: nonBlank(
+        continuity.playbackEvidence,
+        `${label}.continuityReview.playbackEvidence`,
+      ),
+      mixedDeliveryPolicy:
+        continuity.mixedDeliveryPolicy === null
+          ? null
+          : nonBlank(
+              continuity.mixedDeliveryPolicy,
+              `${label}.continuityReview.mixedDeliveryPolicy`,
+            ),
+      flicker: "pass",
+      identityDrift: "pass",
+      geometryWarp: "pass",
+      textureCrawl: "pass",
+      transitionMismatch: "pass",
+    },
+  };
 };
 
 const readRepaintParameters = (
@@ -781,6 +1093,26 @@ const exactIdentitySet = (
 
 const compareCodeUnits = (left: string, right: string): number =>
   left < right ? -1 : left > right ? 1 : 0;
+
+const exactUtcInstant = (value: unknown, label: string): number => {
+  if (typeof value !== "string")
+    throw new Error(`${label} must be an exact UTC instant.`);
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime()) || parsed.toISOString() !== value)
+    throw new Error(`${label} must be an exact UTC instant.`);
+  return parsed.getTime();
+};
+
+const repaintUuid = (value: unknown, label: string): string => {
+  const id = nonBlank(value, label);
+  if (
+    /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu.test(
+      id,
+    ) === false
+  )
+    throw new Error(`${label} must be a UUID v4.`);
+  return id;
+};
 
 const nonBlank = (value: unknown, label: string): string => {
   if (

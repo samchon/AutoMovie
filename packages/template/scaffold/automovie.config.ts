@@ -1,4 +1,4 @@
-import type { AutoMovieCaptureBrowserConfig } from "./scripts/capture-browser";
+import type { AutoMovieCaptureBrowserConfig } from "./scripts/productionConfiguration";
 import type { IAutoMovieProductionConfiguration } from "./scripts/productionConfiguration";
 
 /**
@@ -37,9 +37,11 @@ export default {
     /**
      * Select this only for a settings-owned repainted delivery. The generator
      * records its exact runtime, source, rights, terms, cost, and consumer;
-     * each request mechanically serializes reviewed settings and design owners
-     * for one compiled shot. Prompt, seed, strength, controls, and references
-     * never enter through an ephemeral command-line override.
+     * the execution policy bounds retries, time, and cost; each request retains
+     * exact prompt, continuity, settings, design, screenplay or brief, and shot
+     * owners plus the review used only for explicit candidate selection.
+     * Prompt, seed, strength, controls, references, policy, and review never
+     * enter through an ephemeral command-line override.
      */
     repaint: null,
   },

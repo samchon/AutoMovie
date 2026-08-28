@@ -93,6 +93,7 @@ export class AutoMovieProductionRepaintService {
     ): IAutoMovieRepaintShot => ({
       repainted: false,
       selected: false,
+      requestId: null,
       productionId: requestedProductionId,
       shot: requestedShot,
       receipt: null,
@@ -163,6 +164,7 @@ export class AutoMovieProductionRepaintService {
       return {
         repainted: true,
         selected: true,
+        requestId: receipt.requestId ?? null,
         productionId: input.productionId,
         shot: input.shot,
         receipt,
@@ -172,6 +174,7 @@ export class AutoMovieProductionRepaintService {
       return {
         repainted: false,
         selected: false,
+        requestId: null,
         productionId: input.productionId,
         shot: input.shot,
         receipt: null,
@@ -200,12 +203,14 @@ export class AutoMovieProductionRepaintService {
       typeof (input as { shot?: unknown }).shot === "string"
         ? (input as { shot: string }).shot
         : "";
+    let currentRequestId: string | null = null;
     const failure = (
       code: AutoMovieDiagnosticCode,
       message: string,
     ): IAutoMovieRepaintShot => ({
       repainted: false,
       selected: false,
+      requestId: currentRequestId,
       productionId: services.project.productionId,
       shot: requestedShot,
       receipt: null,
@@ -317,6 +322,7 @@ export class AutoMovieProductionRepaintService {
       references: structuredClone(input.references),
     };
     const requestId = this.execution?.requestId ?? randomUUID();
+    currentRequestId = requestId;
     const now = this.execution?.now ?? (() => new Date());
     const preflightAt = now();
     const executionPolicy = this.execution?.policy ?? LEGACY_REPAINT_POLICY;
@@ -710,6 +716,7 @@ export class AutoMovieProductionRepaintService {
     return {
       repainted: true,
       selected: false,
+      requestId,
       productionId: services.project.productionId,
       shot: requestedShot,
       receipt,
