@@ -9,6 +9,7 @@ export * from "./applyObjectMotion";
 export * from "./applyLightMotion";
 export * from "./applyDissolve";
 export * from "./buildSpace";
+export * from "./deliveryCrop";
 export * from "./buildScene";
 export * from "./sceneEnvironment";
 export * from "./AutoMoviePlayer";

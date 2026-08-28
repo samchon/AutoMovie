@@ -139,7 +139,12 @@ export interface IAutoMovieViewerHandle {
  * @evidenceExclude requirements/camera/clipping-occlusion-and-spatial-constraints.md#camera-spatial-alternatives The viewer applies resolved camera state; camera authorship, analysis, and constraint refusal remain upstream.
  * @evidenceExclude requirements/camera/clipping-occlusion-and-spatial-constraints.md#camera-spatial-geometry-revision The viewer applies resolved camera state; camera authorship, analysis, and constraint refusal remain upstream.
  * @evidenceExclude requirements/camera/continuity-and-intentional-violations.md The viewer applies resolved camera state; camera authorship, analysis, and constraint refusal remain upstream.
- * @evidenceExclude requirements/camera/framing-and-shot-size.md The viewer applies resolved camera state; camera authorship, analysis, and constraint refusal remain upstream.
+ * @evidenceExclude requirements/camera/framing-and-shot-size.md#camera-framing-source-trace The viewer applies resolved camera state; camera authorship, analysis, and constraint refusal remain upstream.
+ * @evidenceExclude requirements/camera/framing-and-shot-size.md#camera-landmark-framing The viewer applies resolved camera state; camera authorship, analysis, and constraint refusal remain upstream.
+ * @evidenceExclude requirements/camera/framing-and-shot-size.md#camera-headroom-lead-room The viewer applies resolved camera state; camera authorship, analysis, and constraint refusal remain upstream.
+ * @evidenceExclude requirements/camera/framing-and-shot-size.md#camera-multi-subject-composition The viewer applies resolved camera state; camera authorship, analysis, and constraint refusal remain upstream.
+ * @evidenceExclude requirements/camera/framing-and-shot-size.md#camera-framing-range The viewer applies resolved camera state; camera authorship, analysis, and constraint refusal remain upstream.
+ * @evidenceExclude requirements/camera/framing-and-shot-size.md#camera-intentional-crop The viewer applies resolved camera state; camera authorship, analysis, and constraint refusal remain upstream.
  * @evidenceExclude requirements/camera/position-and-movement.md The viewer applies resolved camera state; camera authorship, analysis, and constraint refusal remain upstream.
  * @evidenceExclude requirements/camera/projection-lens-and-sensor.md#camera-aperture-distinction The viewer applies resolved camera state; camera authorship, analysis, and constraint refusal remain upstream.
  * @evidenceExclude requirements/camera/projection-lens-and-sensor.md#camera-gate-offset The viewer applies resolved camera state; camera authorship, analysis, and constraint refusal remain upstream.
