@@ -1,3 +1,4 @@
+import type { IAutoMovieProductionEvidence } from "@automovie/evidence";
 import {
   AutoMovieProductionFrameCapture,
   IAutoMovieCaptionReadabilityBoundary,
@@ -76,6 +77,10 @@ export const findAutoMovieProjectRoot = (
 
 /**
  * Open the compiler, oracle, and project runtime.
+ *
+ * @evidence requirements/review/subject-inspection.md#review-library-delivery-coverage Carries the one graph-derived authoring snapshot into every compiler service opened for a library.
+ * @evidence specifications/review-and-acceptance/subject-surface-and-inspection.md#review-system-library-delivery-coverage Preserves one authoring truth across status, review, final, and publication consumers.
+ * @author Samchon
  */
 export const openAutoMovieProduction = (props: {
   /** Host-owned path at or below the project root. */
@@ -92,14 +97,22 @@ export const openAutoMovieProduction = (props: {
    * something outside the registry is refused with a design diagnostic.
    */
   archetypes?: AutoMovieModelArchetypeRegistry;
+  /** Exact graph-derived authoring identity for review and final gates. */
+  authoringEvidence?: IAutoMovieProductionEvidence;
 }): IAutoMovieProductionServices => {
   const project = AutoMovieProductionProject.open(
     findAutoMovieProjectRoot(props.projectRoot),
     props.productionId,
     props.archetypes,
   );
-  const statusCompiler = new AutoMovieProductionCompiler(project);
-  const compiler = new AutoMovieProductionCompiler(project);
+  const statusCompiler = new AutoMovieProductionCompiler(
+    project,
+    props.authoringEvidence,
+  );
+  const compiler = new AutoMovieProductionCompiler(
+    project,
+    props.authoringEvidence,
+  );
   return {
     project,
     compiler,

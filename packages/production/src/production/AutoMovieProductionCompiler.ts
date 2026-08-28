@@ -37,6 +37,7 @@ import {
   validateWaterFeatures,
   validateWetZones,
 } from "@automovie/engine";
+import type { IAutoMovieProductionEvidence } from "@automovie/evidence";
 import {
   type IAutoMovieExternalMotionAdoption as IAutoMovieIngestExternalMotionAdoption,
   adoptAutoMovieExternalMotion,
@@ -132,6 +133,7 @@ import { inspectAutoMovieDerivedArtifacts } from "./derivedArtifacts";
 import { designReferenceDiagnostics } from "./designReferenceDiagnostics";
 import { filmGrammarDiagnostics } from "./filmGrammarDiagnostics";
 import { readAutoMovieFilmTimeline } from "./filmTimeline";
+import { libraryReviewEvidenceConsumerDiagnostics } from "./libraryReviewEvidenceConsumer";
 import {
   AUTOMOVIE_SANDBOX_MODULE_EXPORTS,
   isProjectSourceSpecifier,
@@ -218,10 +220,15 @@ export const AUTOMOVIE_PRODUCTION_COMPILER_VERSION = (
  * The resulting scene, shot, models and sparse motions are validated by the
  * same engine consumers use and then materialized atomically as derived data.
  *
+ * @evidence requirements/review/subject-inspection.md#review-library-delivery-coverage Consumes the graph-derived library owner population at review and final without charging unused film inventory.
+ * @evidence specifications/review-and-acceptance/subject-surface-and-inspection.md#review-system-library-delivery-coverage Runs the current finite library observation gate inside the same compiler path as final publication.
  * @author Samchon
  */
 export class AutoMovieProductionCompiler {
-  public constructor(private readonly project: AutoMovieProductionProject) {}
+  public constructor(
+    private readonly project: AutoMovieProductionProject,
+    private readonly authoringEvidence?: IAutoMovieProductionEvidence,
+  ) {}
 
   /**
    * Whether one compiled model carries a skeleton.
@@ -753,6 +760,28 @@ export class AutoMovieProductionCompiler {
         }),
       );
     }
+    if (this.authoringEvidence !== undefined)
+      diagnostics.push(
+        ...libraryReviewEvidenceConsumerDiagnostics({
+          authoring: this.authoringEvidence,
+          project: this.project,
+          scope: input.scope,
+          compileFingerprint: inputFingerprint,
+          modelExists: (model) => graph.models.has(model),
+          rigged: (model) => this.compiledModelIsRigged(model),
+          fingerprint: (target) =>
+            manifest === null || contentInputs === undefined
+              ? null
+              : productionRenderTargetFingerprint(
+                  this.project,
+                  manifest,
+                  target,
+                  contentInputs,
+                ),
+          captured: (target, digest) =>
+            this.project.capturedRenderViews(target, digest),
+        }),
+      );
     if (input.scope === "final")
       diagnostics.push(
         ...finalDeliverableDiagnostics(

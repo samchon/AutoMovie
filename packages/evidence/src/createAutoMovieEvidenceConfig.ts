@@ -255,7 +255,7 @@ const MARKDOWN: Record<MarkdownLayer, IMarkdownPopulation> = {
   motions: { headings: [2], obligation: true, principle: "motions.md" },
   systems: { headings: [2], obligation: true, principle: "systems.md" },
   treatments: {
-    headings: [2, 3, 4],
+    headings: [2],
     obligation: true,
     principle: "treatments.md",
   },
@@ -582,7 +582,7 @@ const EXPECTED_CONTRACTS = [
   {
     domain: "story",
     file: "obligations/scripts.md",
-    anchors: ["script-boundary"],
+    anchors: ["release-partition", "script-boundary"],
   },
   {
     domain: "story",
@@ -2015,10 +2015,7 @@ const authoredPopulationFiles = (
   graph: IProductionGraph,
   layer: MarkdownLayer,
 ): string[] => {
-  if (
-    graph.populationScope.mode === "first-pilot" &&
-    (layer === "treatments" || layer === "scripts" || layer === "screenplays")
-  )
+  if (layer === "treatments" || layer === "scripts" || layer === "screenplays")
     return createAutoMoviePopulationFiles(layer, graph.populationScope);
   return [`${layer}/**/*.md`];
 };
@@ -2043,14 +2040,76 @@ const markdownPopulationFiles = (
   graph: IProductionGraph,
   layer: MarkdownLayer,
 ): string[] =>
-  graph.populationScope.mode === "first-pilot" &&
-  (layer === "treatments" || layer === "scripts" || layer === "screenplays")
+  layer === "treatments" || layer === "scripts" || layer === "screenplays"
     ? populationFiles(
         graph,
         authoredPopulationFiles(graph, layer).map((file) => `${DOCS}/${file}`),
         ".md",
       )
     : walkFiles(path.join(graph.location, DOCS, layer), ".md");
+
+const NUMBERED_NARRATIVE_NAME = /^\d{3}-[a-z0-9]+(?:-[a-z0-9]+)*$/u;
+
+const narrativeH1 = (file: string): string => {
+  const headings = markdownHeadings(file);
+  const h1 = headings.filter((heading) => heading.depth === 1);
+  if (h1.length !== 1 || headings[0]?.depth !== 1)
+    throw new Error(
+      `${posix(file)} must begin with exactly one H1 narrative title; received ${h1.length}.`,
+    );
+  return h1[0]!.title;
+};
+
+const validateNarrativePopulationTopology = (graph: IProductionGraph): void => {
+  const treatmentRoot = path.join(graph.location, DOCS, "treatments");
+  const invalidTreatments = walkFiles(treatmentRoot, ".md").filter((file) => {
+    const relative = posix(path.relative(treatmentRoot, file));
+    return (
+      relative.includes("/") ||
+      !NUMBERED_NARRATIVE_NAME.test(relative.slice(0, -3))
+    );
+  });
+  if (invalidTreatments.length !== 0)
+    throw new Error(
+      `Treatments are flat numbered event files and may have no group, index, or nested host; received ${invalidTreatments.map((file) => posix(path.relative(graph.location, file))).join(", ")}.`,
+    );
+
+  for (const layer of ["scripts", "screenplays"] as const) {
+    const directory = path.join(graph.location, DOCS, layer);
+    const residents = walkFiles(directory, ".md");
+    const invalid = residents.filter((file) => {
+      const parts = posix(path.relative(directory, file)).split("/");
+      return (
+        parts.length !== 2 ||
+        !NUMBERED_NARRATIVE_NAME.test(parts[0]!) ||
+        (parts[1] !== "index.md" &&
+          !NUMBERED_NARRATIVE_NAME.test(parts[1]!.slice(0, -3)))
+      );
+    });
+    if (invalid.length !== 0)
+      throw new Error(
+        `${layer} use numbered delivery-group directories containing only index.md and numbered unit files; received ${invalid.map((file) => posix(path.relative(graph.location, file))).join(", ")}.`,
+      );
+    const groups = new Set(
+      markdownPopulationFiles(graph, layer).map(
+        (file) => posix(path.relative(directory, file)).split("/")[0]!,
+      ),
+    );
+    for (const group of groups) {
+      const index = path.join(directory, group, "index.md");
+      if (!fs.existsSync(index))
+        throw new Error(
+          `${layer}/${group} is an active delivery group without index.md.`,
+        );
+      const headings = markdownHeadings(index);
+      narrativeH1(index);
+      if (headings.some((heading) => heading.depth !== 1))
+        throw new Error(
+          `${posix(path.relative(graph.location, index))} is a delivery index and may contain only its H1 title and generated unit links.`,
+        );
+    }
+  }
+};
 
 const acceptsResetEvidenceTags = (
   graph: IProductionGraph,
@@ -2060,15 +2119,24 @@ const acceptsResetEvidenceTags = (
   if (graph.kind === "film")
     return ["treatments", "scripts", "screenplays"].includes(layer);
   if (graph.kind !== "library") return false;
-  if ((DESIGN_LAYERS as readonly string[]).includes(layer)) return true;
+  if ((DESIGN_LAYERS as readonly string[]).includes(layer))
+    return (Object.keys(SOURCES) as SourceLayer[]).some(
+      (source) =>
+        SOURCES[source].design === layer &&
+        graph[layer] === "draft" &&
+        graph[source] === "draft",
+    );
+  if (!(Object.keys(SOURCES) as string[]).includes(layer)) return false;
+  const design = SOURCES[layer as SourceLayer].design;
   return (
-    (Object.keys(SOURCES) as SourceLayer[]).includes(layer as SourceLayer) &&
-    SOURCES[layer as SourceLayer].design !== null
+    design !== null && graph[layer] === "draft" && graph[design] === "draft"
   );
 };
 
 const validateHosts = (graph: IProductionGraph): void => {
+  validateNarrativePopulationTopology(graph);
   const identities = new Map<MarkdownLayer, Map<string, IHeadingIdentity[]>>();
+  const titles = new Map<MarkdownLayer, Map<string, string>>();
   for (const name of Object.keys(MARKDOWN) as MarkdownLayer[]) {
     const stage = graph[name];
     const directory = path.join(graph.location, DOCS, name);
@@ -2081,6 +2149,7 @@ const validateHosts = (graph: IProductionGraph): void => {
       throw new Error(`${name} cannot enter ${stage} without a Markdown host.`);
     if (!isActive(stage)) continue;
     const layer = new Map<string, IHeadingIdentity[]>();
+    const layerTitles = new Map<string, string>();
     for (const file of files) {
       const relative = posix(path.relative(directory, file));
       const source = fs.readFileSync(file, "utf8");
@@ -2092,6 +2161,8 @@ const validateHosts = (graph: IProductionGraph): void => {
         throw new Error(
           `${posix(path.relative(graph.location, file))} is draft and must be completed before evidence tags are authored.`,
         );
+      if (name === "treatments" || name === "scripts" || name === "screenplays")
+        layerTitles.set(relative, narrativeH1(file));
       layer.set(relative, markdownIdentities(file, MARKDOWN[name].headings));
     }
     const seen = new Set<string>();
@@ -2104,6 +2175,7 @@ const validateHosts = (graph: IProductionGraph): void => {
         seen.add(unit.anchor);
       }
     identities.set(name, layer);
+    titles.set(name, layerTitles);
   }
 
   assertSourceTreeIsClosed(graph);
@@ -2136,10 +2208,7 @@ const validateHosts = (graph: IProductionGraph): void => {
     }
   }
 
-  const match = (
-    childName: "screenplays" | "scripts",
-    parentName: "scripts" | "treatments",
-  ): void => {
+  const match = (childName: "screenplays", parentName: "scripts"): void => {
     const child = identities.get(childName);
     if (child === undefined) return;
     const parent = identities.get(parentName)!;
@@ -2153,6 +2222,12 @@ const validateHosts = (graph: IProductionGraph): void => {
         `${childName} filenames must exactly preserve ${parentName}; received [${childFiles.join(", ")}], expected [${parentFiles.join(", ")}].`,
       );
     for (const file of childFiles) {
+      if (
+        titles.get(childName)!.get(file) !== titles.get(parentName)!.get(file)
+      )
+        throw new Error(
+          `${childName}/${file} must exactly preserve the ${parentName} H1 title.`,
+        );
       const signature = (items: readonly IHeadingIdentity[]): string[] =>
         items.map((item) => `H${item.depth}:${item.lineage}`);
       const received = signature(child.get(file)!);
@@ -2165,10 +2240,29 @@ const validateHosts = (graph: IProductionGraph): void => {
           `${childName}/${file} must exactly preserve ${parentName} identity, nesting, and order; received [${received.join(", ")}], expected [${expected.join(", ")}].`,
         );
     }
+    const groups = new Set(childFiles.map((file) => file.split("/")[0]!));
+    for (const group of groups) {
+      const childIndex = path.join(
+        graph.location,
+        DOCS,
+        childName,
+        group,
+        "index.md",
+      );
+      const parentIndex = path.join(
+        graph.location,
+        DOCS,
+        parentName,
+        group,
+        "index.md",
+      );
+      if (narrativeH1(childIndex) !== narrativeH1(parentIndex))
+        throw new Error(
+          `${childName}/${group}/index.md must exactly preserve the ${parentName} delivery-group H1 title.`,
+        );
+    }
   };
-  match("scripts", "treatments");
   match("screenplays", "scripts");
-  match("screenplays", "treatments");
 };
 
 /**
@@ -2319,6 +2413,18 @@ const lineage = (
   requireReview: review,
 });
 
+const coverage = (
+  graph: IProductionGraph,
+  review: boolean,
+): ITtscEvidenceGraphReference => ({
+  type: "markdown",
+  root: DOCS,
+  files: authoredPopulationFiles(graph, "treatments"),
+  symbol: "h2",
+  noEvidenceExclude: true,
+  requireReview: review,
+});
+
 interface IBranchClaim {
   branch: EvidenceBranch;
   claim: ITtscEvidenceGraphClaim;
@@ -2359,12 +2465,11 @@ const authoredClaims = (graph: IProductionGraph): IBranchClaim[] => {
     if (!["settings", "research"].includes(name))
       fileParents.push(...referencesPerFile(graph, "settings", "h2", review));
     fileParents.push(...designFoundations(graph, name, review));
-    if (name === "scripts")
-      fileParents.push(lineage(graph, "treatments", "file", review));
+    if (name === "scripts") fileParents.push(coverage(graph, review));
     if (name === "screenplays")
       fileParents.push(
         lineage(graph, "scripts", "file", review),
-        lineage(graph, "treatments", "file", review),
+        coverage(graph, review),
       );
     if (fileParents.length !== 0)
       claims.push(
@@ -2396,24 +2501,11 @@ const authoredClaims = (graph: IProductionGraph): IBranchClaim[] => {
       if (!["settings", "research"].includes(name))
         references.push(...referencesPerFile(graph, "settings", "h2", review));
       references.push(...designFoundations(graph, name, review));
-      if (name === "scripts")
-        references.push(
-          lineage(
-            graph,
-            "treatments",
-            `h${symbol}` as "h2" | "h3" | "h4",
-            review,
-          ),
-        );
+      if (name === "scripts") references.push(coverage(graph, review));
       if (name === "screenplays")
         references.push(
           lineage(graph, "scripts", `h${symbol}` as "h2" | "h3" | "h4", review),
-          lineage(
-            graph,
-            "treatments",
-            `h${symbol}` as "h2" | "h3" | "h4",
-            review,
-          ),
+          coverage(graph, review),
         );
       claims.push(
         ...branchClaims(name, {

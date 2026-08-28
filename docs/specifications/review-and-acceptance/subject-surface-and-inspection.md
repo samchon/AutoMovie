@@ -65,3 +65,11 @@ Shot render, rendition 교체와 delivery 재생성은 주체 freshness key에 �
 주체 coverage는 선언된 개체군 정의, 그 정의가 만든 계획 대상 집합, 실제 관찰한 집합, 미관찰 집합과 표본 선택 규칙을 가진다. 개체군 정의가 없으면 completeness는 계산되지 않고 상태는 indeterminate다.
 
 원형 개체군과 placement 개체군은 서로 다른 coverage 축이며 하나의 비율로 합치지 않는다. 주체 coverage와 frame·구간·전체 작품 coverage도 서로 다른 축이며, 한 축의 완결성 주장이 다른 축의 미관찰 범위를 덮지 않는다.
+
+### Library 전달 관찰 집계 {#review-system-library-delivery-coverage}
+
+<!-- @evidence requirements/review/subject-inspection.md#review-library-delivery-coverage Library의 graph-selected 전달 owner와 branch별 유한 current observation을 review denominator로 고정한다. -->
+
+Library review resolver는 동일한 typed authoring declaration에서 active design branch, reviewed source binding, exact design document와 H2 digest를 읽고, 별도 domain 목록 없이 owner 개체군을 만든다. Active branch는 owner가 0개여도 보존되어 empty population을 실패시키며, disabled branch와 selected binding 밖 파일은 filesystem residue만으로 승격하지 않는다. Film과 brief는 이 resolver를 사용하지 않고 compiled shot·formation·model consumer에서 기존 review 개체군을 계산한다.
+
+각 H2에 인접한 versioned plan은 manifest-derived source population 안의 exact source subset과 finite observation id·kind를 선언한다. Owner freshness identity는 H2 digest, normalized selected source bytes, compile fingerprint와 receipt를 제외한 canonical plan digest로 구성한다. Artifact receipt는 project text 또는 render bytes의 digest를, facts receipt는 canonical structured-fact digest를, model turntable receipt는 compiler가 정한 current whole-model view 집합과 적용 가능한 rig range를 다시 연다. 모든 receipt는 observation runtime identity와 passed, failed, unsupported 또는 not-run verdict를 가지며 current identity에 정확히 하나의 reopened passed receipt가 없으면 `review-evidence-missing`이다. Plan/receipt file은 물리 관찰의 locator이고 approval, waiver 또는 finding lifecycle ledger가 아니다.

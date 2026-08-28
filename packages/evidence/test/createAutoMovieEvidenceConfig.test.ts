@@ -272,6 +272,24 @@ try {
     modelSources: "draft",
   };
   assert.doesNotThrow(() => createAutoMovieEvidenceConfig(resetDeclaration));
+  write(
+    resetRoot,
+    "docs/maps/sibling.md",
+    "## Sibling {#sibling}\n<!-- @evidence principles/common.md#scope-preservation A stale, unpaired design tag. -->\n",
+  );
+  assert.equal(
+    throws(
+      () =>
+        createAutoMovieEvidenceConfig({
+          ...resetDeclaration,
+          maps: "draft",
+        }),
+      "docs/maps/sibling.md is draft and must be completed before evidence tags are authored",
+    ),
+    true,
+    "reset preserves evidence tags only for an actual design/source pair that is simultaneously draft",
+  );
+  fs.rmSync(path.join(resetRoot, "docs", "maps"), { recursive: true });
   assert.equal(
     throws(
       () =>
@@ -395,8 +413,8 @@ try {
         graph.claims.filter((claim) => claim.type === type).length,
       ]),
     ),
-    { markdown: 37, typescript: 19 },
-    "the disabled graph keeps all 37 authored/population claims and all 19 source/canary claims instead of silently dropping an empty population",
+    { markdown: 35, typescript: 19 },
+    "the disabled graph keeps all 35 authored/population claims and all 19 source/canary claims instead of silently dropping an empty population",
   );
   assert.equal(
     new Set(graph.claims.map((claim) => claim.name)).size,
@@ -668,9 +686,7 @@ try {
       "systems",
       "briefs",
     ].includes(layer);
-    const depths = ["treatments", "scripts", "screenplays", "briefs"].includes(
-      layer,
-    )
+    const depths = ["scripts", "screenplays", "briefs"].includes(layer)
       ? [2, 3, 4]
       : [2];
     for (const depth of depths) {
@@ -894,8 +910,8 @@ try {
   write(h3BeforeH2, "docs/settings/production.md", "## Scope {#scope}\n");
   write(
     h3BeforeH2,
-    "docs/treatments/001.md",
-    "### Scene {#scene}\n#### Beat {#beat}\n",
+    "docs/treatments/001-event.md",
+    "# Event\n\n### Scene {#scene}\n",
   );
   assert.equal(
     throws(
@@ -906,7 +922,7 @@ try {
           settings: "review",
           treatments: "draft",
         }),
-      "has an H3 before an H2",
+      "uses H3 outside the configured H2 authored-unit topology",
     ),
     true,
   );
@@ -915,8 +931,8 @@ try {
   write(h4BeforeH3, "docs/settings/production.md", "## Scope {#scope}\n");
   write(
     h4BeforeH3,
-    "docs/treatments/001.md",
-    "## Sequence {#sequence}\n#### Beat {#beat}\n### Scene {#scene}\n",
+    "docs/treatments/001-event.md",
+    "# Event\n\n## Event {#event}\n#### Beat {#beat}\n",
   );
   assert.equal(
     throws(
@@ -927,7 +943,7 @@ try {
           settings: "review",
           treatments: "draft",
         }),
-      "has an H4 before its H2/H3 parents",
+      "uses H4 outside the configured H2 authored-unit topology",
     ),
     true,
   );
@@ -940,8 +956,18 @@ try {
   );
   write(
     hiddenNarrativeSubheading,
-    "docs/treatments/001.md",
-    "## Sequence {#sequence}\n### Scene {#scene}\n#### Beat {#beat}\n##### Hidden note {#hidden-note}\n",
+    "docs/treatments/001-event.md",
+    "# Event\n\n## Event {#event}\n",
+  );
+  write(
+    hiddenNarrativeSubheading,
+    "docs/scripts/001-delivery/001-unit.md",
+    "# Unit\n\n## Sequence {#sequence}\n### Scene {#scene}\n#### Beat {#beat}\n##### Hidden note {#hidden-note}\n",
+  );
+  write(
+    hiddenNarrativeSubheading,
+    "docs/scripts/001-delivery/index.md",
+    "# Delivery\n",
   );
   assert.equal(
     throws(
@@ -950,7 +976,8 @@ try {
           ...disabled(hiddenNarrativeSubheading),
           kind: "film",
           settings: "review",
-          treatments: "draft",
+          treatments: "review",
+          scripts: "draft",
         }),
       "uses H5 outside the configured H2/H3/H4 authored-unit topology",
     ),
@@ -961,9 +988,15 @@ try {
   write(missingBeat, "docs/settings/production.md", "## Scope {#scope}\n");
   write(
     missingBeat,
-    "docs/treatments/001.md",
-    "## Sequence {#sequence}\n### Scene {#scene}\n",
+    "docs/treatments/001-event.md",
+    "# Event\n\n## Event {#event}\n",
   );
+  write(
+    missingBeat,
+    "docs/scripts/001-delivery/001-unit.md",
+    "# Unit\n\n## Sequence {#sequence}\n### Scene {#scene}\n",
+  );
+  write(missingBeat, "docs/scripts/001-delivery/index.md", "# Delivery\n");
   assert.equal(
     throws(
       () =>
@@ -971,7 +1004,8 @@ try {
           ...disabled(missingBeat),
           kind: "film",
           settings: "review",
-          treatments: "draft",
+          treatments: "review",
+          scripts: "draft",
         }),
       "has no H4 unit",
     ),
@@ -1006,13 +1040,28 @@ try {
   );
   write(
     mismatchedIdentity,
-    "docs/treatments/001.md",
-    "## Sequence {#sequence}\n### Scene {#scene}\n#### Beat {#beat}\n",
+    "docs/treatments/001-event.md",
+    "# Event\n\n## Event {#event}\n",
   );
   write(
     mismatchedIdentity,
-    "docs/scripts/001.md",
-    "## Sequence {#sequence}\n### Scene {#scene}\n#### Other beat {#other-beat}\n",
+    "docs/scripts/001-delivery/001-unit.md",
+    "# Unit\n\n## Sequence {#sequence}\n### Scene {#scene}\n#### Beat {#beat}\n",
+  );
+  write(
+    mismatchedIdentity,
+    "docs/scripts/001-delivery/index.md",
+    "# Delivery\n",
+  );
+  write(
+    mismatchedIdentity,
+    "docs/screenplays/001-delivery/001-unit.md",
+    "# Unit\n\n## Sequence {#sequence}\n### Scene {#scene}\n#### Other beat {#other-beat}\n",
+  );
+  write(
+    mismatchedIdentity,
+    "docs/screenplays/001-delivery/index.md",
+    "# Delivery\n",
   );
   assert.equal(
     throws(
@@ -1022,9 +1071,10 @@ try {
           kind: "film",
           settings: "review",
           treatments: "review",
-          scripts: "draft",
+          scripts: "review",
+          screenplays: "draft",
         }),
-      "must exactly preserve treatments identity, nesting, and order",
+      "must exactly preserve scripts identity, nesting, and order",
     ),
     true,
   );
@@ -1551,13 +1601,20 @@ try {
   write(
     mismatch,
     "docs/treatments/001-opening.md",
-    "## Sequence {#sequence}\n### Scene {#scene}\n#### Beat {#beat}\n",
+    "# Opening event\n\n## Event {#event}\n",
   );
   write(
     mismatch,
-    "docs/scripts/002-renamed.md",
-    "## Sequence {#sequence}\n### Scene {#scene}\n#### Beat {#beat}\n",
+    "docs/scripts/001-delivery/001-opening.md",
+    "# Opening unit\n\n## Sequence {#sequence}\n### Scene {#scene}\n#### Beat {#beat}\n",
   );
+  write(mismatch, "docs/scripts/001-delivery/index.md", "# Delivery\n");
+  write(
+    mismatch,
+    "docs/screenplays/001-delivery/002-renamed.md",
+    "# Opening unit\n\n## Sequence {#sequence}\n### Scene {#scene}\n#### Beat {#beat}\n",
+  );
+  write(mismatch, "docs/screenplays/001-delivery/index.md", "# Delivery\n");
   assert.equal(
     throws(
       () =>
@@ -1566,7 +1623,8 @@ try {
           kind: "film",
           settings: "review",
           treatments: "review",
-          scripts: "draft",
+          scripts: "review",
+          screenplays: "draft",
         }),
       "filenames must exactly preserve",
     ),
@@ -1581,8 +1639,8 @@ try {
   );
   write(
     briefWithNarrative,
-    "docs/treatments/001.md",
-    "## Sequence {#sequence}\n### Scene {#scene}\n#### Beat {#beat}\n",
+    "docs/treatments/001-event.md",
+    "# Event\n\n## Event {#event}\n",
   );
   assert.equal(
     throws(
@@ -1976,9 +2034,12 @@ try {
   const film = root();
   write(film, "docs/settings/production.md", "## Scope {#scope}\n");
   const narrative =
-    "## Sequence {#sequence}\n### Scene {#scene}\n#### Beat {#beat}\n";
-  for (const layer of ["treatments", "scripts", "screenplays"])
-    write(film, `docs/${layer}/001-sequence.md`, narrative);
+    "# Unit\n\n## Sequence {#sequence}\n### Scene {#scene}\n#### Beat {#beat}\n";
+  write(film, "docs/treatments/001-event.md", "# Event\n\n## Event {#event}\n");
+  for (const layer of ["scripts", "screenplays"]) {
+    write(film, `docs/${layer}/001-delivery/index.md`, "# Delivery\n");
+    write(film, `docs/${layer}/001-delivery/001-unit.md`, narrative);
+  }
   write(film, "src/shots/sequence.ts", "export const sequenceShot = 1;\n");
   write(film, "src/production.ts", "export const production = 1;\n");
   write(film, "src/film.ts", "export const assembledFilm = 1;\n");
@@ -2130,8 +2191,23 @@ try {
     "docs/models/subject.md",
     "## Subject {#subject}\n",
   );
-  for (const layer of ["treatments", "scripts", "screenplays"])
-    write(filmWithoutModelSource, `docs/${layer}/001-sequence.md`, narrative);
+  write(
+    filmWithoutModelSource,
+    "docs/treatments/001-event.md",
+    "# Event\n\n## Event {#event}\n",
+  );
+  for (const layer of ["scripts", "screenplays"]) {
+    write(
+      filmWithoutModelSource,
+      `docs/${layer}/001-delivery/index.md`,
+      "# Delivery\n",
+    );
+    write(
+      filmWithoutModelSource,
+      `docs/${layer}/001-delivery/001-unit.md`,
+      narrative,
+    );
+  }
   write(
     filmWithoutModelSource,
     "src/shots/sequence.ts",
