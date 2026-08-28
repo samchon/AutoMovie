@@ -32,6 +32,8 @@ The population allocates intended entrances, routes, reachable zones, clear widt
 
 Review question: which required traversal or view lacks one continuous, dimensioned, unobstructed route?
 
+This obligation owns the spatial allocation against already authored profiles. `obligations/settings.md#design-dependent-subject-conditions` owns the applicable user, equipment, load, assistance, and uncertainty profiles; this item owns entrances, routes, widths, heights, obstacles, reachable zones, and intentionally inaccessible regions against those profiles.
+
 Sources: [NASA on verification methods and requirement-level responsibility](https://www.nasa.gov/reference/system-engineering-handbook-appendix/)
 
 ## Space review set {#space-review-set}

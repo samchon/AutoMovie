@@ -44,10 +44,12 @@ export const test_cli_scaffold_design_derivation = (): void => {
     });
   }
   const rendered = renderScaffold({ name: "rendered-production" });
+  const completed = renderCompletedFilmFixture("completed-production");
   const emitter = rendered["scripts/emitDesign.ts"]!;
-  const completedEmitter = renderCompletedFilmFixture("completed-production")[
-    "scripts/emitDesign.ts"
-  ]!;
+  const completedEmitter = completed["scripts/emitDesign.ts"]!;
+  const completedReviewStore = Object.keys(completed).filter((file) =>
+    file.startsWith("automovie/reviews"),
+  );
   const productionStudies = rendered["scripts/productionStudies.ts"]!;
   const lint = rendered["lint.config.ts"]!;
   const evidenceInDocs = Object.entries(rendered)
@@ -164,8 +166,26 @@ export const test_cli_scaffold_design_derivation = (): void => {
           completedEmitter.includes('from "../src/models/soloist"'),
       ],
       [
+        "completed fixture carries no retired review store",
+        () => completedReviewStore.length === 0,
+      ],
+      [
         "inherits no environmental study obligation",
         () => productionStudies.includes("required: []"),
+      ],
+      [
+        "ships the production authoring procedure",
+        () =>
+          rendered[".agents/skills/production/SKILL.md"]?.includes(
+            "# Authoring a production",
+          ) === true &&
+          rendered[".agents/skills/production/evidence-staging.md"]?.includes(
+            "docs/discovery",
+          ) === true,
+      ],
+      [
+        "keeps the retired review ledger ignored",
+        () => rendered[".gitignore"]?.includes("!automovie/reviews") === false,
       ],
       [
         "refuses a blank project name",
@@ -187,7 +207,10 @@ export const test_cli_scaffold_design_derivation = (): void => {
       "physical design tree is empty": true,
       "viewer exposes one neutral replacement slot": true,
       "completed fixture retains its production emitter": true,
+      "completed fixture carries no retired review store": true,
       "inherits no environmental study obligation": true,
+      "ships the production authoring procedure": true,
+      "keeps the retired review ledger ignored": true,
       "refuses a blank project name": true,
       "refuses a non-portable project name": true,
     },

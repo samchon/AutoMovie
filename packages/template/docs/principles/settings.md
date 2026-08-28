@@ -44,7 +44,7 @@ Every subject or environment capability states the semantic state it may change,
 
 Review question: could a downstream author decide whether an intended action is permitted without inventing an interface, motion, or scene?
 
-This item owns what may change in the production world. Model articulation owns the stable representation interface, and motion parameter domain owns the allowed inputs and degrees of freedom used over time.
+This item owns what an addressed subject or environment may change in the production world. `obligations/settings.md#design-dependent-subject-conditions` owns the user, equipment, load, assistance, uncertainty, and other conditions the delivery must accommodate or measure rather than the subject's own capability. Model articulation owns the stable representation interface, and motion parameter domain owns the allowed inputs and degrees of freedom used over time.
 
 Sources: [glTF 2.0 coordinate-system and units requirements](https://registry.khronos.org/glTF/specs/2.0/glTF-2.0.html#coordinate-system-and-units); [OpenUSD model and prim concepts](https://openusd.org/release/glossary.html)
 

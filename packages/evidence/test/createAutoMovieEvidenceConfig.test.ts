@@ -16,8 +16,9 @@ const roots: string[] = [];
  *
  * `@automovie/template` publishes `docs`, and the graph reads them from the
  * installed package rather than from a copy the project carries. The fixture
- * therefore links the package into the temporary root instead of copying its
- * contracts, so a drift between the two can never pass here.
+ * therefore builds that package-shaped dependency from the current template
+ * docs on every run; it never maintains a second checked-in contract copy that
+ * could drift and still pass here.
  */
 const root = (): string => {
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), "automovie-graph-"));
@@ -285,15 +286,49 @@ try {
       }
     }
   }
+  const sharedContractFiles = ["discovery", "obligations", "principles"]
+    .flatMap((family) =>
+      fs
+        .readdirSync(path.join(templateRoot, "docs", family))
+        .filter((file) => file.endsWith(".md"))
+        .map((file) => `${family}/${file}`),
+    )
+    .sort();
+  write(empty, "docs/settings/production.md", "## Scope {#scope}\n");
+  const contractFilmGraph = createAutoMovieEvidenceConfig({
+    ...disabled(empty),
+    kind: "film",
+    settings: "draft",
+  });
+  const wiredSharedContractFiles = [
+    ...new Set(
+      [graph, contractFilmGraph].flatMap((configured) =>
+        configured.claims.flatMap((claim) =>
+          referencesOf(claim).flatMap((reference) =>
+            reference.type === "markdown"
+              ? reference.files.filter((file) =>
+                  /^(?:discovery|obligations|principles)\//u.test(file),
+                )
+              : [],
+          ),
+        ),
+      ),
+    ),
+  ].sort();
+  assert.deepEqual(
+    wiredSharedContractFiles,
+    sharedContractFiles,
+    "every published discovery, principle, and obligation file must govern at least one shared graph claim",
+  );
   for (const [layer, expected] of Object.entries({
     settings: ["common", "settings"],
     research: ["common"],
-    models: ["common"],
-    spaces: ["common"],
-    materials: ["common"],
-    instances: ["common"],
-    motions: ["common"],
-    systems: ["common"],
+    models: ["common", "designs", "models"],
+    spaces: ["common", "designs", "spaces"],
+    materials: ["common", "designs", "materials"],
+    instances: ["common", "designs", "instances"],
+    motions: ["common", "designs", "motions"],
+    systems: ["common", "designs", "systems"],
     storylines: ["common", "films", "storylines"],
     scenarios: ["common", "films", "scenarios"],
     script: ["common", "films", "scripts"],
@@ -422,6 +457,7 @@ try {
           ? [
               "obligations/common.md",
               ...(narrative ? ["obligations/narratives.md"] : []),
+              ...(layer === "storylines" ? ["obligations/treatments.md"] : []),
               ...(layer === "research" ? [] : [`obligations/${contract}.md`]),
             ].sort()
           : [],
@@ -429,6 +465,72 @@ try {
       );
     }
   }
+  const briefH2 = graph.claims.find(
+    (claim) =>
+      claim.name ===
+      "briefs H2 units answer their principle checklists, cover the layer's obligations, and account for inherited work",
+  );
+  assert.deepEqual(
+    sharedFilesOf(briefH2, "obligations"),
+    ["obligations/briefs.md", "obligations/common.md"],
+    "brief H2 units must cover addressability without inheriting film narrative obligations",
+  );
+  const briefAddressability = referenceTo(briefH2, "obligations/briefs.md");
+  assert.equal(
+    briefAddressability !== undefined && "checklist" in briefAddressability
+      ? briefAddressability.checklist
+      : undefined,
+    undefined,
+  );
+  assert.equal(briefAddressability?.noEvidenceExclude, true);
+  for (const depth of [3, 4]) {
+    const briefUnit = graph.claims.find(
+      (claim) =>
+        claim.name ===
+        `briefs H${depth} units answer their principle checklists and account for inherited work`,
+    );
+    assert.deepEqual(
+      sharedFilesOf(briefUnit, "principles"),
+      ["principles/briefs.md", "principles/common.md"],
+      `brief H${depth} units must answer information structure without inheriting film narrative principles`,
+    );
+    const briefInformation = referenceTo(briefUnit, "principles/briefs.md");
+    assert.equal(
+      briefInformation !== undefined && "checklist" in briefInformation
+        ? briefInformation.checklist
+        : undefined,
+      true,
+    );
+    assert.equal(briefInformation?.noEvidenceExclude, true);
+  }
+  const storylineH2 = graph.claims.find(
+    (claim) =>
+      claim.name ===
+      "storylines H2 units answer their principle checklists, cover the layer's obligations, and account for inherited work",
+  );
+  assert.deepEqual(
+    sharedFilesOf(storylineH2, "obligations"),
+    [
+      "obligations/common.md",
+      "obligations/narratives.md",
+      "obligations/storylines.md",
+      "obligations/treatments.md",
+    ],
+    "the storyline H2 population must cover the treatment-wide sustained-middle obligation",
+  );
+  for (const depth of [3, 4])
+    assert.deepEqual(
+      sharedFilesOf(
+        graph.claims.find(
+          (claim) =>
+            claim.name ===
+            `storylines H${depth} units answer their principle checklists and account for inherited work`,
+        ),
+        "obligations",
+      ),
+      [],
+      `storyline H${depth} units must not turn treatment population obligations into per-unit checklists`,
+    );
   assert.ok(
     graph.claims.some(
       (claim) =>
@@ -1368,23 +1470,32 @@ try {
         "export const deliveryShot = 1;\n",
       );
     }
+    const shapedSettings = createAutoMovieEvidenceConfig({
+      ...disabled(shaped),
+      kind: shape,
+      settings: "review",
+      ...(shape === "brief" ? { briefs: "review", shots: "review" } : {}),
+    }).claims.find(
+      (claim) =>
+        claim.name ===
+        "settings H2 units answer their principle checklists, cover the layer's obligations, and account for inherited work",
+    );
     assert.equal(
-      referenceTo(
-        createAutoMovieEvidenceConfig({
-          ...disabled(shaped),
-          kind: shape,
-          settings: "review",
-          ...(shape === "brief" ? { briefs: "review", shots: "review" } : {}),
-        }).claims.find(
-          (claim) =>
-            claim.name ===
-            "settings H2 units answer their principle checklists, cover the layer's obligations, and account for inherited work",
-        ),
-        "obligations/subjects.md",
-      ),
+      referenceTo(shapedSettings, "obligations/subjects.md"),
       undefined,
       `a ${shape} answers one bounded delivery and owes no film cast depth`,
     );
+    const designConditions = referenceTo(
+      shapedSettings,
+      "obligations/settings.md",
+    );
+    assert.notEqual(
+      designConditions,
+      undefined,
+      `a ${shape} still owes the all-shape settings obligations`,
+    );
+    assert.equal(designConditions?.requireReview, true);
+    assert.equal(designConditions?.noEvidenceExclude, true);
   }
 
   const filmWithoutModelSource = root();

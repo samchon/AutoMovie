@@ -12,9 +12,9 @@ Sources: [SMPTE standards overview for time and synchronization](https://www.smp
 
 ## Authored auxiliary tracks {#authored-auxiliary-tracks}
 
-Every caption, audible item, timeline effect track, and intentionally silent structural track is authorized upstream with exact audience content and timing where those are creative choices. Shot-local visual effects remain owned by shot source. Pipeline fixtures remain visibly inert and are named as fixtures.
+Every caption, audible item, timeline effect track, and intentionally silent structural track is authorized upstream with exact audience content and timing where those are creative choices. Every required accessibility product from `obligations/settings.md#accessibility-deliverable-states` that belongs to a film timeline or language version has an explicit track mapping; an intentionally absent or unsupported product is never disguised as an empty successful track. Shot-local visual effects remain owned by shot source. Pipeline fixtures remain visibly inert and are named as fixtures.
 
-Review question: where are the text, language, audible meaning, effect, and time of every non-video track authored, and would deleting a fixture leave audience meaning unchanged?
+Review question: where are the text, language, audible meaning, effect, and time of every required non-video track authored and mapped, and would deleting a fixture leave audience meaning unchanged?
 
 Sources: [W3C Timed Text Markup Language](https://www.w3.org/TR/ttml2/); [Web Audio API](https://www.w3.org/TR/webaudio/); [Academy Digital Source Master project](https://www.oscars.org/science-technology/sci-tech-projects/academy-digital-source-master)
 

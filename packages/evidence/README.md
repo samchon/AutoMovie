@@ -12,7 +12,7 @@ Principle은 선택된 모든 저술 H2/H3/H4가 각 항목을 자기 자신에 
 
 ## 작품별 발견
 
-Discovery는 저술 unit에 반복하는 checklist나 H2 모집단 coverage가 아니라 별도 작품 계약 감사면의 file-level coverage다. 모든 활성 Markdown 계층은 `docs/contracts/*.md`에서 `discovery/common.md`를 답하고, settings는 settings discovery를, film prose는 film과 자기 layer discovery를, brief는 brief discovery를 더한다. 결과가 있으면 평면 계약 파일이 가장 이른 의미 소유자와 현재 실현을 증명한다. 결과가 정말 없으면 `docs/contracts/index.md`만 조사한 구체적 입력·위험과 충분한 기존 소유자를 밝힌 계층 단위 제외를 소유한다. 저술 H2/H3/H4는 제작 내용을 기술할 뿐 감사를 증언하지 않는다. 발견 claim은 저술 계층의 draft부터 활성화되고 review에서 현재 fingerprint를 요구한다. Settings discovery는 실제 delivery를 역산하며 settings obligation은 독립적으로 결과를 바꾸는 operative subject를 빠짐없이 분류한다.
+Discovery는 저술 unit에 반복하는 checklist나 H2 모집단 coverage가 아니라 별도 작품 계약 감사면의 file-level coverage다. 모든 활성 Markdown 계층은 `docs/contracts/*.md`에서 `discovery/common.md`를 답하고, settings는 settings discovery를, 각 model·space·material·instance·motion·system 분기는 designs와 자기 layer discovery를, film prose는 film과 자기 layer discovery를, brief는 brief discovery를 더한다. Research는 common만 답해 외부 근거 채택과 design boundary 탐색을 합치지 않는다. 결과가 있으면 평면 계약 파일이 가장 이른 의미 소유자와 현재 실현을 증명한다. 결과가 정말 없으면 `docs/contracts/index.md`만 조사한 구체적 입력·위험과 충분한 기존 소유자를 밝힌 계층 단위 제외를 소유한다. 저술 H2/H3/H4는 제작 내용을 기술할 뿐 감사를 증언하지 않는다. 발견 claim은 저술 계층의 draft부터 활성화되고 review에서 현재 fingerprint를 요구한다. Settings discovery는 실제 delivery를 역산하며 settings obligation은 독립적으로 결과를 바꾸는 operative subject를 빠짐없이 분류한다.
 
 ## 공개 표면
 

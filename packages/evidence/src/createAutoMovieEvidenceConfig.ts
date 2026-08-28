@@ -285,21 +285,28 @@ type DesignLayer = (typeof DESIGN_LAYERS)[number];
 type DiscoveryTarget =
   | "briefs"
   | "common"
+  | "designs"
   | "films"
+  | "instances"
+  | "materials"
+  | "models"
+  | "motions"
   | "scenarios"
   | "scripts"
   | "settings"
-  | "storylines";
+  | "spaces"
+  | "storylines"
+  | "systems";
 
 const DISCOVERY_TARGETS: Record<MarkdownLayer, readonly DiscoveryTarget[]> = {
   settings: ["common", "settings"],
   research: ["common"],
-  models: ["common"],
-  spaces: ["common"],
-  materials: ["common"],
-  instances: ["common"],
-  motions: ["common"],
-  systems: ["common"],
+  models: ["common", "designs", "models"],
+  spaces: ["common", "designs", "spaces"],
+  materials: ["common", "designs", "materials"],
+  instances: ["common", "designs", "instances"],
+  motions: ["common", "designs", "motions"],
+  systems: ["common", "designs", "systems"],
   storylines: ["common", "films", "storylines"],
   scenarios: ["common", "films", "scenarios"],
   script: ["common", "films", "scripts"],
@@ -333,8 +340,28 @@ const EXPECTED_CONTRACTS = [
     anchors: ["shared-local-boundary", "canonical-realization"],
   },
   {
+    file: "discovery/designs.md",
+    anchors: ["work-specific-design-requirements"],
+  },
+  {
     file: "discovery/films.md",
     anchors: ["work-specific-film-requirements"],
+  },
+  {
+    file: "discovery/instances.md",
+    anchors: ["work-specific-instance-requirements"],
+  },
+  {
+    file: "discovery/materials.md",
+    anchors: ["work-specific-material-requirements"],
+  },
+  {
+    file: "discovery/models.md",
+    anchors: ["work-specific-model-requirements"],
+  },
+  {
+    file: "discovery/motions.md",
+    anchors: ["work-specific-motion-requirements"],
   },
   {
     file: "discovery/scenarios.md",
@@ -352,12 +379,24 @@ const EXPECTED_CONTRACTS = [
     ],
   },
   {
+    file: "discovery/spaces.md",
+    anchors: ["work-specific-space-requirements"],
+  },
+  {
     file: "discovery/storylines.md",
     anchors: ["work-specific-storyline-requirements"],
   },
   {
+    file: "discovery/systems.md",
+    anchors: ["work-specific-system-requirements"],
+  },
+  {
     file: "obligations/briefs.md",
-    anchors: ["single-scope-eligibility", "observable-progression"],
+    anchors: [
+      "single-scope-eligibility",
+      "brief-unit-addressability",
+      "observable-progression",
+    ],
   },
   {
     file: "obligations/common.md",
@@ -426,11 +465,17 @@ const EXPECTED_CONTRACTS = [
       "addressable-canon",
       "delivery-scope",
       "governing-aim",
+      "production-visual-grammar",
+      "production-fidelity-tier",
+      "subject-breakdown-production-scope",
       "audience-operator-access",
+      "accessibility-deliverable-states",
       "coordinate-unit-convention",
       "delivery-review-condition",
       "settings-coverage-map",
       "operative-subject-inventory",
+      "agency-and-limits",
+      "design-dependent-subject-conditions",
       "minimal-departure",
       "internal-coherence",
     ],
@@ -468,6 +513,10 @@ const EXPECTED_CONTRACTS = [
     ],
   },
   {
+    file: "obligations/treatments.md",
+    anchors: ["sustained-middle"],
+  },
+  {
     file: "obligations/systems.md",
     anchors: [
       "addressable-system-decisions",
@@ -479,7 +528,7 @@ const EXPECTED_CONTRACTS = [
   },
   {
     file: "principles/briefs.md",
-    anchors: ["no-narrative-smuggling"],
+    anchors: ["brief-information-structure", "no-narrative-smuggling"],
   },
   {
     file: "principles/common.md",
@@ -574,6 +623,7 @@ const EXPECTED_CONTRACTS = [
       "unit-function",
       "unit-connection",
       "horizontal-state-continuity",
+      "narrated-time",
       "audience-investment",
       "character-continuity",
       "information-entry",
@@ -1827,6 +1877,8 @@ const authoredClaims = (graph: IProductionGraph): ITtscEvidenceGraphClaim[] => {
         references.push(obligationReference(shared, "common.md", review));
         if (["storylines", "scenarios", "script"].includes(name))
           references.push(obligationReference(shared, "narratives.md", review));
+        if (name === "storylines")
+          references.push(obligationReference(shared, "treatments.md", review));
         if (MARKDOWN[name].obligation)
           references.push(
             obligationReference(shared, MARKDOWN[name].principle, review),
@@ -2086,7 +2138,7 @@ const sourceClaims = (graph: IProductionGraph): ITtscEvidenceGraphClaim[] => {
  * @evidence requirements/production-evidence/graph.md#agent-production-evidence-deterministic-result Produces one deterministic graph or fails with the concrete contradictory state.
  * @evidence specifications/production-evidence/README.md#production-evidence-specifications Implements the shared construction and validation boundary for generated projects.
  * @evidence specifications/production-evidence/graph.md#spec-authoring-production-evidence-shared-contract Reads and validates the fixed shared contract inventory before constructing claims.
- * @evidence specifications/production-evidence/graph.md#spec-authoring-production-evidence-discovery Wires common, settings, film, layer-specific, and brief discovery targets to each active layer's flat work-specific contract population.
+ * @evidence specifications/production-evidence/graph.md#spec-authoring-production-evidence-discovery Wires common, settings, design-shared, design-layer, film, narrative-layer, and brief discovery targets to each active layer's flat work-specific contract population while research remains common-only.
  * @evidence specifications/production-evidence/graph.md#spec-authoring-production-evidence-shape-stage Implements the film, brief, and library stage state machine.
  * @evidence specifications/production-evidence/graph.md#spec-authoring-production-evidence-physical-integrity Enumerates the actual disk populations and refuses empty, residual, ambiguous, or ownerless hosts.
  * @evidence specifications/production-evidence/graph.md#spec-authoring-production-evidence-additive-extension Constructs shared claims first and composes local claims after them.

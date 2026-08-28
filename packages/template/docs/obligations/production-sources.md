@@ -20,8 +20,8 @@ Sources: [NASA systems engineering handbook on system boundaries and verificatio
 
 ## Shared visual grammar {#shared-visual-grammar}
 
-Production-wide color, silhouette, and scale values establish only the common visual grammar. Subject-specific geometry and materials remain in model source, while viewer surfaces consume the same production background rather than maintaining an independent look.
+Every production-wide color, silhouette, scale, material-language, state-vocabulary, and fidelity value implements `obligations/settings.md#production-visual-grammar` or `#production-fidelity-tier` without adding an independent aesthetic choice. Subject-specific geometry and materials remain in their specialist source populations, while viewer surfaces consume the same production background rather than maintaining an independent look.
 
-Review question: is each shared visual value defined once at production scope and reused everywhere it governs?
+Review question: which shared visual or fidelity value lacks one authored settings owner, is redefined by a source consumer, or is not reused everywhere it governs?
 
 Sources: [glTF 2.0 scene, material, and asset concepts](https://registry.khronos.org/glTF/specs/2.0/glTF-2.0.html#concepts); [Academy Digital Source Master project](https://www.oscars.org/science-technology/sci-tech-projects/academy-digital-source-master)

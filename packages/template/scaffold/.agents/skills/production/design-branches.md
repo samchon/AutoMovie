@@ -28,3 +28,13 @@ After discovery is settled and before drafting a branch, read its principle and 
 The shared graph follows ownership direction: models may consume spaces; materials consume model or space surfaces; instances consume model prototypes, spatial placement, and declared material variation; motions may consume any other reviewed design interface; systems may consume models, spaces, materials, instances, and motions; briefs account for every active design branch. Motion and system documents may therefore cite one another when a coupled process and a reusable transition have distinct owners; neither may duplicate the other's state or path. These populations divide the cited targets among the hosts that actually use them. Omission from an unrelated host is not an exclusion; only a target unused by the complete host population receives one truthful population-wide exclusion. When a foundation branch later reaches review, its targets reopen every affected downstream review without serializing otherwise independent drafting.
 
 Read [Models and motions](models-and-motions.md) when either of those branches is active. For spaces, materials, instances, or systems, apply the matching principle checklist to every design H2 and cover the matching design and source-obligation files across their respective H2 and export populations; do not import model or motion questions merely because all become rendered geometry.
+
+Read [Spatial design](craft/spatial-design.md) whenever spaces are active, and when materials or instances have spatial consequences; use it to judge plan, section, elevation, perspective, traversal, surfaces, and repeated populations without transferring their semantic ownership.
+
+Read [Building reports](evidence/measurements.md#building-reports) when current compiled shots stage a built environment whose spatial or system review needs drawings, schedules, quantities, services, or declared studies.
+
+Read [Texture scale](evidence/measurements.md#texture-scale) when a review depends on a physical or normalized texture scale surviving the geometry that receives it.
+
+Read the reported census or empty-population state; command availability and exit code alone never complete the review set.
+
+A library-only space branch has no shot artifact for `building:report`; use other exact observations or a production-owned offline script instead of creating a dummy shot.

@@ -4,6 +4,10 @@ Settings are required by film, brief, and library shapes. Keep production canon 
 
 The first ordered file owns delivery scope, governing aim, audience or operator access, coordinate and unit convention, delivery review condition, the current settings coverage map, and the operative-subject inventory before facts that depend on them.
 
+Across the work-specific topology, assign explicit H2 owners for the production visual grammar, delivery fidelity, subject breakdown and feasible build-or-adopt scope, accessibility deliverable states, operative agency or a passive boundary, and every subject condition on which a design actually depends. These are population roles, not mandatory filenames or a license to combine independently changeable decisions in the first file.
+
+Visual grammar, delivery fidelity, and subject breakdown remain settings-population roles rather than a separate production-design layer. They constrain every film, brief, object library, and building library before specialist design begins, while the broader production-design requirement family describes product capabilities that a production invokes selectively rather than ninety-nine decisions every author must restate. Promote a genuinely independent authored population only when one production needs owners, ordering, and a review lifecycle that settings H2s cannot represent without overlap.
+
 ## Topology
 
 Beyond that foundation, derive every file family, name, order, split, and merge from the requirements discovered for this production. Create no file because a shared template or another production has one. A central owner may take its own file, and a dense requirement family may span as many ordered files as its independent H2 owners require.
@@ -31,6 +35,8 @@ Apply the settings information-structure principle, then reverse-outline paragra
 `obligations/settings.md#operative-subject-inventory` decides whether every operative subject has an owner. In a film, `obligations/subjects.md` decides what each of those owners settles: the position it acts from, the motive that produces a choice, the information it starts with, the behavior an audience recognizes it by, the relationships it stands inside, and the change it can and cannot undergo. An inventory of names satisfies the first and leaves a scenario writer inventing the second.
 
 Depth follows consequence. A central subject settles every role in usable detail, a one-shot subject settles the roles its single appearance actually exercises, and neither is allowed to be absent from the inventory.
+
+Every shape applies `obligations/settings.md#agency-and-limits` to central or recurring people, populations, institutions, machines, environments, operators, or forces whose choice, control, refusal, access, or response can change delivery. A passive object library records that it has no operative agency instead of inventing one. Every shape also applies `#design-dependent-subject-conditions`: a route, handle, view, clearance, control, or acceptance threshold that relies on a user or equipment profile must name and bound that profile before the design branch consumes it. These cross-shape roles do not import film-only motive, knowledge, expression, relationship, or character change.
 
 After every downstream draft or revision, backcast its literal cast against that inventory. A new participant, or a group member who becomes an individual actor, is a settings defect: complete its canon here before the downstream work continues.
 

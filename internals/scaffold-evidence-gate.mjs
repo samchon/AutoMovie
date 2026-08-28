@@ -457,7 +457,7 @@ const contractAnchors = (relative) =>
  * This is deliberately generated after the blank-scaffold pass. The public
  * scaffold must contain no production prose or evidence tags, but inspecting
  * config structure alone cannot prove that its real shared claims accept a
- * paid population. Ten independent primary H2 owners cover the ten settings
+ * paid population. Sixteen independent primary H2 owners cover the sixteen settings
  * obligations, every H2 answers every common and settings principle for
  * itself, and the separate contract index carries the complete truthful
  * negative discovery audit. Settings has no inherited file relationship to
@@ -515,11 +515,11 @@ const activatePaidSettings = () => {
     "discovery/common.md#shared-local-boundary":
       "The probe examined its compiler-calibration directive, library promise, repository-gate operator, shared contracts, dependencies, sole planned compiler-diagnostic consumer, and false-green risk; the shared principles and settings obligations fully own them, so no independent cross-layer condition remains.",
     "discovery/common.md#canonical-realization":
-      "After examining the calibration directive, library promise, operator, dependencies, sole planned compiler-diagnostic consumer, and false-owner risk, the complete boundary search retained no independent production contract; the ten settings owners and shared claim wiring are sufficient, so no additional semantic owner or additive claim exists.",
+      "After examining the calibration directive, library promise, operator, dependencies, sole planned compiler-diagnostic consumer, and false-owner risk, the complete boundary search retained no independent production contract; the sixteen settings owners and shared claim wiring are sufficient, so no additional semantic owner or additive claim exists.",
     "discovery/settings.md#directive-promise-subject-requirements":
-      "The probe examined its direct calibration instruction, diagnostic promise, operator, file dependency, sole planned compiler-diagnostic consumer, unowned-subject risk, and false-green failure; the ten settings owners classify them completely without an additional production-specific fact or constraint.",
+      "The probe examined its direct calibration instruction, diagnostic promise, operator, file dependency, sole planned compiler-diagnostic consumer, unowned-subject risk, and false-green failure; the sixteen settings owners classify them completely without an additional production-specific fact or constraint.",
     "discovery/settings.md#planned-delivery-backcast":
-      "Backcasting this settings-only library from its calibration instruction and config through the sole planned compiler-diagnostic consumer and its downstream-invention and false-green risks found no fact beyond the delivery, aim, access, unit, review, coverage, and operative-subject owners already present.",
+      "Backcasting this settings-only library from its calibration instruction and config through the sole planned compiler-diagnostic consumer and its downstream-invention and false-green risks found no fact beyond the delivery, aim, visual-grammar, fidelity, build-or-adopt, access, accessibility, unit, review, coverage, operative-subject, agency, design-condition, inherited-default, and coherence owners already present.",
   });
   const settingsUnits = [
     {
@@ -529,7 +529,7 @@ const activatePaidSettings = () => {
         "obligations/settings.md#addressable-canon",
         "obligations/common.md#proportionate-development",
       ],
-      body: "Ten independently addressable H2 owners divide the complete settings contract without a catch-all owner or a hidden descendant.",
+      body: "Sixteen independently addressable H2 owners divide the complete settings contract without a catch-all owner or a hidden descendant.",
     },
     {
       anchor: "probe-delivery-scope",
@@ -547,10 +547,36 @@ const activatePaidSettings = () => {
       body: "The governing aim is to distinguish a fully paid shared graph from a graph that silently stopped enforcing one configured relationship.",
     },
     {
+      anchor: "probe-production-visual-grammar",
+      title: "Probe production visual grammar",
+      obligations: ["obligations/settings.md#production-visual-grammar"],
+      body: "This compiler calibration promises no visible surface, color, silhouette, material, spatial design, registered visual reference, or external rendition; that explicit absence is its complete production-wide visual boundary.",
+    },
+    {
+      anchor: "probe-production-fidelity-tier",
+      title: "Probe production fidelity tier",
+      obligations: ["obligations/settings.md#production-fidelity-tier"],
+      body: "The diagnostic-only tier supports exactly one inference: whether the configured evidence graph accepts or rejects the disposable calibration; it is neither a rendered prototype nor an audience image and authorizes no visual inference.",
+    },
+    {
+      anchor: "probe-subject-breakdown-production-scope",
+      title: "Probe subject breakdown and production scope",
+      obligations: [
+        "obligations/settings.md#subject-breakdown-production-scope",
+      ],
+      body: "The promised compiler result requires no model, space, material, instance, motion, system, external asset, or rendition to build, adopt, reuse, or derive; the generated lint configuration and this settings population are existing harness inputs rather than delivery assets.",
+    },
+    {
       anchor: "probe-operator-access",
       title: "Probe operator access",
       obligations: ["obligations/settings.md#audience-operator-access"],
       body: "The repository gate is the sole operator and may observe only compiler exit status and classified diagnostics from this disposable directory.",
+    },
+    {
+      anchor: "probe-accessibility-deliverable-states",
+      title: "Probe accessibility deliverable states",
+      obligations: ["obligations/settings.md#accessibility-deliverable-states"],
+      body: "Operator-readable English text diagnostics are required and realized by compiler output; captions, subtitles, transcripts, audio description, media alternatives, and interactive controls are intentionally absent because this calibration has no timed media, audio, image, or user interface; the consequence is that the repository-gate operator receives no timed-text, synchronized transcript, described-media, media-alternative, or interactive accessibility surface, while no applicable accessibility product remains optional or silently unsupported.",
     },
     {
       anchor: "probe-coordinate-unit-convention",
@@ -571,13 +597,27 @@ const activatePaidSettings = () => {
         "obligations/settings.md#settings-coverage-map",
         "obligations/common.md#layer-boundary",
       ],
-      body: "Addressability, delivery, aim, operator access, coordinate convention, review, subjects, departures, and coherence each have a separate settings owner; every design, narrative, source, and audience-content domain is outside this compiler calibration scope.",
+      body: "Open discovery of the compiler calibration's direct inputs and planned consumers requires its addressability, delivery, aim, visual grammar, fidelity tier, build-or-adopt scope, operator access, accessibility state, coordinate convention, review condition, coverage map, operative-subject inventory, agency, design-dependent subject condition, inherited-default boundary, and coherence owners. All sixteen are explicit canon in separate H2s, and no material settings requirement remains inherited, outside scope, or unresolved.",
     },
     {
       anchor: "probe-operative-subject-inventory",
       title: "Probe operative subject inventory",
       obligations: ["obligations/settings.md#operative-subject-inventory"],
       body: "The repository gate is the only operative subject: it controls the compile, observes the diagnostic result, and has no independent person, collective, object, environmental agent, institution, subsystem, or affected population left unclassified.",
+    },
+    {
+      anchor: "probe-agency-and-limits",
+      title: "Probe agency and limits",
+      obligations: ["obligations/settings.md#agency-and-limits"],
+      body: "The repository gate may start or decline the compile, read its exit status and classified diagnostics, and refuse a false green; once any owed diagnostic appears, the zero-owed-diagnostic threshold is crossed and it must block publication until the relationship is repaired and the compile reruns. It cannot alter contract inventory, suppress a configured relationship, or publish a successful result after that threshold. No physical, financial, or private cost is authored; the bounded operational cost is repair and rerun, and its vulnerability is a configured relationship being silently suppressed.",
+    },
+    {
+      anchor: "probe-design-dependent-subject-conditions",
+      title: "Probe design-dependent subject conditions",
+      obligations: [
+        "obligations/settings.md#design-dependent-subject-conditions",
+      ],
+      body: "No dimension, route, control geometry, view, interaction, or acceptance threshold in this compiler-only calibration depends on a bodily, sensory, equipment, load, assistance, or movement profile; operator text access remains separately owned by the access and accessibility-deliverable units.",
     },
     {
       anchor: "probe-minimal-departure",
@@ -647,11 +687,18 @@ const activatePaidSettings = () => {
     ].join("\n"),
     "utf8",
   );
-  const operativeSubjectUnit = settingsUnits.find(
-    (unit) => unit.anchor === "probe-operative-subject-inventory",
-  );
-  if (operativeSubjectUnit === undefined)
-    throw new Error("The paid probe lost its operative-subject owner.");
+  const obligationUnderpayment = (obligationTarget) => {
+    const unit = settingsUnits.find((candidate) =>
+      candidate.obligations.includes(obligationTarget),
+    );
+    if (unit === undefined)
+      throw new Error(`The paid probe lost its ${obligationTarget} owner.`);
+    return {
+      file: target,
+      line: obligationLine(obligationTarget, unit),
+      target: obligationTarget,
+    };
+  };
   return {
     underpayments: [
       {
@@ -659,14 +706,18 @@ const activatePaidSettings = () => {
         line: `@evidenceExclude discovery/common.md#shared-local-boundary ${discoveryExclusions["discovery/common.md#shared-local-boundary"]}`,
         target: "discovery/common.md#shared-local-boundary",
       },
-      {
-        file: target,
-        line: obligationLine(
-          "obligations/settings.md#operative-subject-inventory",
-          operativeSubjectUnit,
-        ),
-        target: "obligations/settings.md#operative-subject-inventory",
-      },
+      obligationUnderpayment(
+        "obligations/settings.md#operative-subject-inventory",
+      ),
+      obligationUnderpayment(
+        "obligations/settings.md#design-dependent-subject-conditions",
+      ),
+      obligationUnderpayment(
+        "obligations/settings.md#production-visual-grammar",
+      ),
+      obligationUnderpayment(
+        "obligations/settings.md#accessibility-deliverable-states",
+      ),
     ],
   };
 };
@@ -887,7 +938,7 @@ const main = () => {
     "",
     "PASS: the scaffold's production evidence graph is paid and its own lint rules hold over",
     " everything `npm run lint:source` compiles. The two blank-scaffold canaries,",
-    " paid active settings population, and two underpaid twins prove both lint",
+    " paid active settings population, and isolated underpayment probes prove both lint",
     " axes and both directions of the real shared graph. The noise count is what",
     " a probe that installs nothing cannot resolve; it is reported, never gated.",
   ]);

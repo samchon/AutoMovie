@@ -2498,24 +2498,6 @@
         "package": "@automovie/interface"
       }
     },
-    "requirements/review/annotations-findings-and-verdicts.md#review-finding-lifecycle": {
-      "owner": {
-        "kind": "package",
-        "package": "@automovie/interface"
-      }
-    },
-    "requirements/review/annotations-findings-and-verdicts.md#review-observation-interpretation": {
-      "owner": {
-        "kind": "package",
-        "package": "@automovie/engine"
-      }
-    },
-    "requirements/review/records-and-completeness.md#review-verdict-receipt": {
-      "owner": {
-        "kind": "package",
-        "package": "@automovie/interface"
-      }
-    },
     "requirements/sound/dialogue-voice-and-visemes.md#sound-dialogue-refusal": {
       "owner": {
         "kind": "package",
@@ -4568,57 +4550,6 @@
     "requirements/repaint/structural-comparison-and-review.md#repaint-review-status": "sha256:32450f522def062e7be049dba09756458c9cb96fd2e2d5dc9563268ad403ff06",
     "requirements/repaint/structural-comparison-and-review.md#repaint-structural-comparison-review": "sha256:9224ac97890075f6778c5688cbc35b3a93e28c2f46a627f2b944e3f2f86cbe6b",
     "requirements/repaint/structural-comparison-and-review.md#repaint-structural-failures": "sha256:0d7ba8d6884691d27f21b7ef8af9bd3793f36b6bccf5f35b2f04ca0ce26c4991",
-    "requirements/review/alternative-takes-and-versions.md#review-alternative-common-basis-difference": "sha256:1c51895e9764b2a86abe67ce60b09a3d38f46352ef97978af81a0cfbb8051264",
-    "requirements/review/alternative-takes-and-versions.md#review-alternative-selection": "sha256:d81e13a6a82d6fb0ca52a931df34dafe92534e56c957d0337198539f03f345f8",
-    "requirements/review/alternative-takes-and-versions.md#review-alternative-takes-versions": "sha256:4e941d6971039e043125942f9ca23b3571ce31ec44aa0532052cf9b7001df278",
-    "requirements/review/alternative-takes-and-versions.md#review-candidate-specific-findings": "sha256:f5490e408294dbed739607d2fdfd61caad43c667f464ef86dd0c9eeea605b3ff",
-    "requirements/review/alternative-takes-and-versions.md#review-comparison-history": "sha256:570394546ed090050ee26e6399ea7d619a145e8c560d3bc3700f6d7c1506c844",
-    "requirements/review/alternative-takes-and-versions.md#review-synchronized-comparison": "sha256:07ae1aac5776d86514a094e84d08957e57d98c49dd48d3a397814a16f950369e",
-    "requirements/review/annotations-findings-and-verdicts.md#review-annotation-history": "sha256:b6e975cfce60758fbf765011403708e3c1f0a2f2d9f67a73190b6b8780f9a943",
-    "requirements/review/annotations-findings-and-verdicts.md#review-annotations-findings-verdicts": "sha256:3e7c29c4aedaee540acddd5cf7828531701726efe72e0180e8e120d9307100e6",
-    "requirements/review/annotations-findings-and-verdicts.md#review-located-annotations": "sha256:72ec57fe694c44984970da2d2e78f128f0736fb39f38ab9f06644203bad9e0be",
-    "requirements/review/annotations-findings-and-verdicts.md#review-verdict-rationale-disagreement": "sha256:29d8b1614bb09876d65f1d5b39057fa1b349ddef9b7251b458f83506ae4899bc",
-    "requirements/review/approval-rejection-and-waivers.md#review-approval": "sha256:f83c1f5ed4e6a2e7aed63e46a3e1ca0567268d49d1f9d1b2cd5877b9a987d355",
-    "requirements/review/approval-rejection-and-waivers.md#review-approval-rejection-waivers": "sha256:896b2929d2d31f865ab1ec557b50795f1e46dc0c01859c69825c5aa3deab1cec",
-    "requirements/review/approval-rejection-and-waivers.md#review-conditional-approval": "sha256:9b4a78e13913943454d970b063ffca2fd70b03f0ded6ea8c6baf242cbd25f8c2",
-    "requirements/review/approval-rejection-and-waivers.md#review-rejection": "sha256:1b091cd9b86adc7370f9235bc63e860b84d33b3e02d60016f083ef8c6166c34a",
-    "requirements/review/approval-rejection-and-waivers.md#review-verdict-freshness": "sha256:3c6f23d558a9343c8fa991cae24242a89e43fcdebadf06415c4540b7da0ca952",
-    "requirements/review/approval-rejection-and-waivers.md#review-waiver": "sha256:d6ca20f0c317b1656665c19c5b3baae499b084add7f71560cd745378617f011c",
-    "requirements/review/criteria-and-comparison.md#review-comparable-subjects": "sha256:31999b9e0d893fee947d1e58f87cdbe410953e3381dc5eac703c7cdbc5472cd0",
-    "requirements/review/criteria-and-comparison.md#review-criteria-comparison": "sha256:9e1dda336690951cb661683117c0f2d16abad882fc12a0b511b73f5710d18d47",
-    "requirements/review/criteria-and-comparison.md#review-criteria-precedence": "sha256:8273de3e4b13b59671c05204d54e56723222fe4dfe5ffcd39d67ea9fb52025b0",
-    "requirements/review/criteria-and-comparison.md#review-direct-observation-priority": "sha256:49dc491de3e013803061838c9c412f53a6c2517c920e1f9b7eb92fa87a5a0272",
-    "requirements/review/criteria-and-comparison.md#review-noncomparable-state": "sha256:04b3e54b8e424919e285f9c1aeb10b7792a292a99764f5475e68d906bc68aac0",
-    "requirements/review/criteria-and-comparison.md#review-observable-criteria": "sha256:6428c578d58cc66a664907ea7752219d6c1ddd96c5bc337f9cbefd685717cd61",
-    "requirements/review/criteria-and-comparison.md#review-quantitative-qualitative-criteria": "sha256:20cf745f93e04ce912176d1a689118f9af5016bdfd612f893ec5cf7c63a0109a",
-    "requirements/review/defect-classification.md#review-defect-categories": "sha256:d19fd0fe07dbbcb2189ffb98aaf98461e7cafc65ede2d05e29666e1f9290d4fe",
-    "requirements/review/defect-classification.md#review-defect-classification": "sha256:49994643a72a802ed9935a15ec77255ae4cf655f46d2d1fc407f1e70dd347e90",
-    "requirements/review/defect-classification.md#review-defect-versus-variation": "sha256:48a3ad2c217b49df34f30109d046a9c67eea5752ed04a2cd2c4bfb4861033afc",
-    "requirements/review/defect-classification.md#review-duplicate-common-impact": "sha256:3d4137a48659686c570c1c5cf46a327648f2b3dcdcc25aecbc9daf1d8d1eaece",
-    "requirements/review/defect-classification.md#review-reproduction-frequency": "sha256:6d600a5438eb4f5798861f44c7b09443ecf8140ee1a49431d5c008afb0d61723",
-    "requirements/review/defect-classification.md#review-severity-priority": "sha256:f36ca38260e3b4c14d3bc66b8f5161981c567f422ec0337b42fe9a6a75568b41",
-    "requirements/review/frame-range-and-whole-work.md#review-cross-scope-propagation": "sha256:47b9f90a084fe6c647fadba0d265c013535c2ff24fd5a81b8d3c717e3a512b3b",
-    "requirements/review/frame-range-and-whole-work.md#review-frame-inspection": "sha256:c5d5a57b712a709389d56d7e818655f54373c9c0e0d7d46df40adc8cf82bc50b",
-    "requirements/review/frame-range-and-whole-work.md#review-frame-range-whole-work": "sha256:9dc851a4ddca28a73d8dd252feb23972f95427d98e165a18630e016eb125707a",
-    "requirements/review/frame-range-and-whole-work.md#review-range-inspection": "sha256:25adb3934b7fe429b0bc020e7c94aa7189211fc28b5a039253f0f19475623adc",
-    "requirements/review/frame-range-and-whole-work.md#review-sampling-full-coverage": "sha256:3fa7468e6735f9a544c75d71f1c741f5d340bfe3e267d4c36434e59e160ef7d6",
-    "requirements/review/frame-range-and-whole-work.md#review-whole-work-inspection": "sha256:3377b6f9ca0e5772b3f47c590ee511f89072272b1c5a0efbe626e2e0db62ddbf",
-    "requirements/review/records-and-completeness.md#review-completeness-claim": "sha256:925bc064e590275ade063679d642de23631e9ba2d84750cff23d2948ce6f6d6d",
-    "requirements/review/records-and-completeness.md#review-execution-status": "sha256:aa4ba197bb961a3d7d3b6bf040f61a0a9360b878adebc5fdef8fc8c3b4986b1e",
-    "requirements/review/records-and-completeness.md#review-incomplete-review": "sha256:367fd079b4a6771ed5738cdfc0c4897ff0e34c2e3182e64e7eb3b2b34e0d8e26",
-    "requirements/review/records-and-completeness.md#review-planned-actual-coverage": "sha256:64240e83d3894a6965707a997e82fe062e528f464de4a4d0d6c6769172f1ca43",
-    "requirements/review/records-and-completeness.md#review-records-completeness": "sha256:bebd1b6a3337ff86f908cc77fd38ed80ccc9b42f5aad2bc57f190b9b2853f1af",
-    "requirements/review/reproducible-context.md#review-context-criteria-reference": "sha256:2e5ad22ae7a84776d9493b1675900cc7147480c872a1d745005de70ae5c622aa",
-    "requirements/review/reproducible-context.md#review-context-presentation": "sha256:78d4ff977d3efdab20a5464bdd7a8c99253fb6a32d99d352e38d52c3a85590aa",
-    "requirements/review/reproducible-context.md#review-context-source-artifact-identity": "sha256:60b6de941eea0797fe07e15c63a8b35addcae74a58acf4dd5017a3e22a82bcf4",
-    "requirements/review/reproducible-context.md#review-context-time-playback": "sha256:20dcc40681ecf69538132d12ea4063461c253df53cd6ca6b2daf83a9096c9488",
-    "requirements/review/reproducible-context.md#review-context-unavailable": "sha256:4b667290e274fb9e83bba14d3fe8e871ac2375cf295f3cf06ccda1f95538a78d",
-    "requirements/review/reproducible-context.md#review-reproducible-context": "sha256:c98a0dd21fdb592ef1bc52d174e76235cb1a3fc35a96c8a74d6e56b14456a93d",
-    "requirements/review/scope-and-authority.md#review-human-final-authority": "sha256:b0e7049aab1c09a9a6b371b895ecdbb79fb843f9a63408c554f19b84bb9238b0",
-    "requirements/review/scope-and-authority.md#review-no-implied-approval": "sha256:18ac17b2b825b3504062d0c4f4c2d97637f094e7ad9ac1a989b4d119a2aaf682",
-    "requirements/review/scope-and-authority.md#review-scope-authority": "sha256:372021e470b93a6311d4e4ed2ba91f85512a6897de28844c6edfc1e19b670e28",
-    "requirements/review/scope-and-authority.md#review-validation-decision-boundary": "sha256:1d01e5e742b1e9d2b170f9cd15e51eed05e0a93ad27137718935dbf5bdfd65e0",
-    "requirements/review/scope-and-authority.md#review-verdict-scope-boundary": "sha256:5e1fa33fc3b770f1d8aec535961f2399321547f006779818d73a4edc3e36cd3c",
     "requirements/review/subject-description-and-structural-change.md#review-subject-compiled-truth": "sha256:52c1a49c9bb6698d4e8904c61743c49d9e4df9eba6cfe6fad6ca2ebbc1e5920c",
     "requirements/review/subject-description-and-structural-change.md#review-subject-description": "sha256:0e6449626b7007fb3879d6a5c53a597984d3be36279d265dd4b46dabdc852063",
     "requirements/review/subject-description-and-structural-change.md#review-subject-diff-tolerance-fanout": "sha256:2b0df2b809990d91cf95657906bba3cbe56021572e3af54cf56b624a5808ebd1",

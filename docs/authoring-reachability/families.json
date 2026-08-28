@@ -1,12 +1,12 @@
 {
   "version": 1,
   "contractInventory": {
-    "discovery": 9,
-    "principles": 71,
-    "obligations": 88
+    "discovery": 16,
+    "principles": 73,
+    "obligations": 96
   },
   "acceptedDebt": {
-    "unpaidAuthoringFamilies": 4,
+    "unpaidAuthoringFamilies": 1,
     "unpaidSpecificationFragments": 6,
     "unpaidSpecificationTargets": [
       "camera-light-and-visibility/visibility-and-image-space-observation.md#clv-clipping-clearance-evaluation::camera-clearance-swept-volume",
@@ -19,7 +19,7 @@
   },
   "repositoryReviewPolicy": {
     "evidenceReview": "disabled",
-    "reason": "The current repository requirement-specification-source graph has 23,765 written evidence relationships. Requiring one companion review tag per relationship would turn review into repeated acknowledgement instead of semantic inspection.",
+    "reason": "The current repository requirement-specification-source graph has 23,769 written evidence relationships. Requiring one companion review tag per relationship would turn review into repeated acknowledgement instead of semantic inspection.",
     "substitutes": [
       ".agents/skills/review/SKILL.md",
       ".agents/skills/development/SKILL.md",
@@ -50,6 +50,8 @@
       "classification": "authoring-contract",
       "correspondences": [
         "packages/template/docs/obligations/settings.md#operative-subject-inventory",
+        "packages/template/docs/obligations/settings.md#agency-and-limits",
+        "packages/template/docs/obligations/settings.md#design-dependent-subject-conditions",
         "packages/template/docs/obligations/subjects.md#situated-conditions",
         "packages/template/docs/principles/models.md#representation-contract",
         "packages/template/docs/principles/motions.md#state-endpoints"
@@ -57,7 +59,7 @@
       "workflow": [
         "packages/template/scaffold/.agents/skills/production/models-and-motions.md"
       ],
-      "reason": "Settings own subject canon, model and motion branches own deterministic proxy performance, and film subjects receive the dedicated subject population obligations."
+      "reason": "Settings own subject canon and every condition a design relies on, model and motion branches own deterministic proxy performance, and film subjects additionally receive the dedicated dramatic population obligations."
     },
     {
       "family": "agent-authoring",
@@ -76,6 +78,10 @@
       "requirementUnits": 65,
       "classification": "authoring-contract",
       "correspondences": [
+        "packages/template/docs/discovery/designs.md#work-specific-design-requirements",
+        "packages/template/docs/discovery/models.md#work-specific-model-requirements",
+        "packages/template/docs/discovery/materials.md#work-specific-material-requirements",
+        "packages/template/docs/discovery/instances.md#work-specific-instance-requirements",
         "packages/template/docs/principles/models.md#representation-contract",
         "packages/template/docs/principles/materials.md#material-construction-appearance",
         "packages/template/docs/principles/instances.md#instance-prototype-boundary",
@@ -94,6 +100,12 @@
       "requirementUnits": 126,
       "classification": "authoring-contract",
       "correspondences": [
+        "packages/template/docs/discovery/designs.md#work-specific-design-requirements",
+        "packages/template/docs/discovery/spaces.md#work-specific-space-requirements",
+        "packages/template/docs/discovery/materials.md#work-specific-material-requirements",
+        "packages/template/docs/discovery/instances.md#work-specific-instance-requirements",
+        "packages/template/docs/discovery/systems.md#work-specific-system-requirements",
+        "packages/template/docs/obligations/settings.md#design-dependent-subject-conditions",
         "packages/template/docs/principles/spaces.md#space-topology",
         "packages/template/docs/obligations/spaces.md#space-envelope-interface",
         "packages/template/docs/obligations/space-sources.md#space-source-design-ownership",
@@ -101,9 +113,11 @@
         "packages/template/docs/obligations/systems.md#system-ownership-interfaces"
       ],
       "workflow": [
-        "packages/template/scaffold/.agents/skills/production/design-branches.md"
+        "packages/template/scaffold/.agents/skills/production/design-branches.md",
+        "packages/template/scaffold/.agents/skills/production/craft/spatial-design.md",
+        "packages/template/scaffold/.agents/skills/production/evidence/measurements.md"
       ],
-      "reason": "Spaces own site, envelope, openings, routes, and interior interfaces while material and system branches own assemblies and coupled exterior processes."
+      "reason": "Settings own the subject and equipment profiles that condition external routes, clearances, and openings; spaces own site, envelope, openings, routes, and interior interfaces while material and system branches own assemblies and coupled exterior processes."
     },
     {
       "family": "camera",
@@ -122,14 +136,17 @@
     {
       "family": "delivery-and-accessibility",
       "requirementUnits": 94,
-      "classification": "unpaid-authoring-edge",
-      "issue": 2127,
-      "partialCorrespondences": [
+      "classification": "authoring-contract",
+      "correspondences": [
         "packages/template/docs/obligations/settings.md#delivery-scope",
+        "packages/template/docs/obligations/settings.md#accessibility-deliverable-states",
         "packages/template/docs/obligations/film-sources.md#authored-auxiliary-tracks",
         "packages/template/docs/principles/scripts.md#audience-access"
       ],
-      "reason": "The current contracts can name delivery and auxiliary tracks but have no authoring owner for required, optional, intentionally absent, and unsupported accessibility deliverable states."
+      "workflow": [
+        "packages/template/scaffold/.agents/skills/production/settings.md"
+      ],
+      "reason": "Settings own the author-driven delivery choice by classifying every applicable accessibility product as required, optional, intentionally absent, or unsupported for every shape; film source maps required timeline and language-version tracks while screenplay owns their audience content. Deterministic hosts, not the production author, own the remaining container, codec, timebase, media-fact probing, encoding, packaging, byte-level validation, publication, retention, and recovery mechanics that realize and verify those declared choices."
     },
     {
       "family": "diagnostics",
@@ -164,6 +181,8 @@
       "requirementUnits": 69,
       "classification": "authoring-contract",
       "correspondences": [
+        "packages/template/docs/discovery/designs.md#work-specific-design-requirements",
+        "packages/template/docs/discovery/systems.md#work-specific-system-requirements",
         "packages/template/docs/principles/systems.md#system-authority-confinement",
         "packages/template/docs/principles/systems.md#system-dependency-basis",
         "packages/template/docs/obligations/systems.md#system-state-clock",
@@ -212,6 +231,10 @@
       "requirementUnits": 54,
       "classification": "authoring-contract",
       "correspondences": [
+        "packages/template/docs/discovery/designs.md#work-specific-design-requirements",
+        "packages/template/docs/discovery/instances.md#work-specific-instance-requirements",
+        "packages/template/docs/discovery/motions.md#work-specific-motion-requirements",
+        "packages/template/docs/obligations/settings.md#design-dependent-subject-conditions",
         "packages/template/docs/principles/instances.md#instance-prototype-boundary",
         "packages/template/docs/obligations/instances.md#instance-prototype-membership",
         "packages/template/docs/obligations/instances.md#instance-placement-review",
@@ -220,13 +243,19 @@
       "workflow": [
         "packages/template/scaffold/.agents/skills/production/design-branches.md"
       ],
-      "reason": "Instance populations own membership, placement, and tiers while motions own deterministic reform and traversal."
+      "reason": "Settings own the member and carried-object profiles that condition spacing and traversal; instance populations own membership, placement, and tiers while motions own deterministic reform and traversal."
     },
     {
       "family": "interior",
       "requirementUnits": 153,
       "classification": "authoring-contract",
       "correspondences": [
+        "packages/template/docs/discovery/designs.md#work-specific-design-requirements",
+        "packages/template/docs/discovery/spaces.md#work-specific-space-requirements",
+        "packages/template/docs/discovery/materials.md#work-specific-material-requirements",
+        "packages/template/docs/discovery/instances.md#work-specific-instance-requirements",
+        "packages/template/docs/discovery/systems.md#work-specific-system-requirements",
+        "packages/template/docs/obligations/settings.md#design-dependent-subject-conditions",
         "packages/template/docs/principles/spaces.md#space-topology",
         "packages/template/docs/obligations/spaces.md#space-access-circulation",
         "packages/template/docs/obligations/spaces.md#space-review-set",
@@ -235,9 +264,11 @@
         "packages/template/docs/obligations/systems.md#system-ownership-interfaces"
       ],
       "workflow": [
-        "packages/template/scaffold/.agents/skills/production/design-branches.md"
+        "packages/template/scaffold/.agents/skills/production/design-branches.md",
+        "packages/template/scaffold/.agents/skills/production/craft/spatial-design.md",
+        "packages/template/scaffold/.agents/skills/production/evidence/measurements.md"
       ],
-      "reason": "Space, material, instance, and system branches jointly cover connected rooms, surfaces, furnishings, services, environment, and review."
+      "reason": "Settings own the user and equipment conditions that design decisions serve; space, material, instance, and system branches jointly cover connected rooms, clearances, surfaces, furnishings, services, environment, and review."
     },
     {
       "family": "lighting",
@@ -270,6 +301,8 @@
       "requirementUnits": 81,
       "classification": "authoring-contract",
       "correspondences": [
+        "packages/template/docs/discovery/designs.md#work-specific-design-requirements",
+        "packages/template/docs/discovery/motions.md#work-specific-motion-requirements",
         "packages/template/docs/principles/motions.md#state-endpoints",
         "packages/template/docs/principles/motions.md#temporal-phases",
         "packages/template/docs/principles/motions.md#parameter-domain",
@@ -312,14 +345,27 @@
     {
       "family": "production-design",
       "requirementUnits": 99,
-      "classification": "unpaid-authoring-edge",
-      "issue": 2126,
-      "partialCorrespondences": [
+      "classification": "authoring-contract",
+      "correspondences": [
+        "packages/template/docs/discovery/designs.md#work-specific-design-requirements",
+        "packages/template/docs/discovery/models.md#work-specific-model-requirements",
+        "packages/template/docs/discovery/spaces.md#work-specific-space-requirements",
+        "packages/template/docs/discovery/materials.md#work-specific-material-requirements",
+        "packages/template/docs/discovery/instances.md#work-specific-instance-requirements",
+        "packages/template/docs/discovery/motions.md#work-specific-motion-requirements",
+        "packages/template/docs/discovery/systems.md#work-specific-system-requirements",
         "packages/template/docs/principles/settings.md#observable-identity",
+        "packages/template/docs/obligations/settings.md#production-visual-grammar",
+        "packages/template/docs/obligations/settings.md#production-fidelity-tier",
+        "packages/template/docs/obligations/settings.md#subject-breakdown-production-scope",
         "packages/template/docs/obligations/production-sources.md#shared-visual-grammar",
         "packages/template/docs/principles/materials.md#material-construction-appearance"
       ],
-      "reason": "Visual grammar, reference reconciliation, location context, subject breakdown, fidelity choice, and cross-branch continuity are scattered consequences without one source-owning authoring layer."
+      "workflow": [
+        "packages/template/scaffold/.agents/skills/production/settings.md",
+        "packages/template/scaffold/.agents/skills/production/design-branches.md"
+      ],
+      "reason": "Settings own production-wide visual grammar, reference reconciliation, fidelity, subject breakdown, and feasible build-or-adopt scope; design branches own specialist realization and production source serializes shared values."
     },
     {
       "family": "production-evidence",
@@ -355,13 +401,18 @@
     {
       "family": "repaint",
       "requirementUnits": 43,
-      "classification": "unpaid-authoring-edge",
-      "issue": 2126,
-      "partialCorrespondences": [
+      "classification": "authoring-contract",
+      "correspondences": [
         "packages/template/docs/obligations/settings.md#delivery-scope",
+        "packages/template/docs/obligations/settings.md#production-visual-grammar",
+        "packages/template/docs/obligations/settings.md#production-fidelity-tier",
         "packages/template/docs/obligations/shots.md#acceptance-travels-with-delivery"
       ],
-      "reason": "The scaffold can execute repaint and settings can name a delivery, but no target owns provider choice, structural lock, rendition lineage, retry policy, continuity, and publication as author decisions."
+      "workflow": [
+        "packages/template/scaffold/.agents/skills/production/configuration.md",
+        "packages/template/scaffold/.agents/skills/production/evidence/capture.md"
+      ],
+      "reason": "Settings own the visual and fidelity decision, production configuration records the adopted external generator and provenance, and capture plus shot acceptance own structural truth, rendition lineage, and publication evidence."
     },
     {
       "family": "review",
@@ -423,10 +474,12 @@
       "classification": "authoring-contract",
       "correspondences": [
         "packages/template/docs/principles/narratives.md#unit-connection",
+        "packages/template/docs/principles/narratives.md#narrated-time",
         "packages/template/docs/principles/storylines.md#causal-turn",
         "packages/template/docs/principles/scenarios.md#executable-progression",
         "packages/template/docs/principles/scripts.md#screenplay-blocks",
         "packages/template/docs/obligations/storylines.md#audience-route",
+        "packages/template/docs/obligations/treatments.md#sustained-middle",
         "packages/template/docs/obligations/scripts.md#realization-ready-contract"
       ],
       "workflow": [

@@ -13,6 +13,14 @@ Apply this workflow without subject-matter exceptions. Historical, technical, me
 
 Write only what was requested. Do not create a placeholder file, heading, or stub, and do not invent production content without an explicit authorship request.
 
+## External retrieval
+
+Web search and page retrieval are available to you. Where a phase requires a search, that phase says so: [Settings](settings.md#research-and-revision) owns when externally checkable canon must be opened rather than written from memory, [Research](research.md) owns the optional durable source ledger, and the discovery targets own the boundary search each layer owes over the production's directives, subject, sources, and assets. Those routes can record a truthful negative: an unresolved status or one population-wide exclusion naming what the search examined. That is why they can require a search at all.
+
+Elsewhere the means are yours to use as the production calls for them: checking a link before it enters a `Sources:` line, or reading the sources behind a contract item when its wording alone leaves what it asks unclear. No item outside those phases obliges you to search, and none accepts a search in place of what it does ask.
+
+A source that blocks automated retrieval is blocked, not absent. Record the block instead of silently dropping the claim or lowering its precision. When direct support remains unavailable, follow `docs/principles/settings.md#source-support`: deliberately reduce precision or return the claim to unresolved rather than attaching a broad portal.
+
 ## Forbidden
 
 Choosing any of these means the approach is already wrong. Stop and repair the artifact instead.
@@ -51,7 +59,7 @@ Read each applicable document in full before acting:
 
 - [Production kinds](production-kinds.md) selects exactly one film, brief, or library shape.
 - [Production-specific contract](work-specific.md) preserves direct instructions and classifies every adopted rule before bulk settings work.
-- [Production configuration](configuration.md) separates fixed harness wiring from authored delivery, dialogue, provenance, speaker, and live-simulation choices serialized in `automovie.config.ts`; read it before source authorship.
+- [Production configuration](configuration.md) separates fixed harness wiring from authored delivery, appearance, dialogue, provenance, speaker, and live-simulation choices serialized in `automovie.config.ts`; read it before source authorship.
 - [Research](research.md) owns the optional external-evidence ledger and its downstream consumption.
 - [Settings](settings.md) defines delivery, canon, subjects, capabilities, constraints, and shared conventions for every shape.
 - [Design branches](design-branches.md) routes models, spaces, materials, instances, motions, and systems without overlap; it links the detailed model-and-motion procedure when those branches apply.
@@ -71,16 +79,19 @@ The documents above say what a unit must contain and when it may advance. These 
 - [Motion](craft/motion.md): action verbs, clip construction, contact, weight, expression, and continuity.
 - [Sound](craft/sound.md): event-derived sound, dialogue, ambience, spatialization, and mix hierarchy.
 - [Rigging](craft/rigging.md): silhouette-first object design, axes, pivots, skeletons, profiles, and the operable openings a building owns.
+- [Spatial design](craft/spatial-design.md): plan and circulation, openings and daylight, proportion and scale, exterior/interior agreement, material reading, repeated populations, and the distinct judgments made from plan, section, elevation, perspective, and traversal.
 
 ## Writing and compiling source
 
-- [Ownership](source/ownership.md): what the author writes, what the compiler owns, and what the renderer owns.
+- [Ownership](source/ownership.md): what the author writes, what the compiler owns, what the renderer owns, and why `derive:example` is an executable teaching specimen rather than a production gate.
 - [TypeScript](source/typescript.md): deterministic source-module patterns and typed registration.
 - [Composition](source/composition.md): how a production's source is arranged once its shots repeat, which is a program that emits shots rather than one module per shot.
 - [Compilation](source/compilation.md): the design, source, and final scopes, and atomic publication.
 
 ## Seeing what you built
 
+- [Repaint](configuration.md#repaint-adoption-and-request-population): reviewed generator adoption, per-shot appearance requests, receipt identity, and the deterministic structural-authority ceiling.
+- [Offline measurements](evidence/measurements.md): current-state building reports and texture-scale census, including their honest empty-population boundaries and their use in design review sets.
 - [Capture](evidence/capture.md): exact capture targets, passes, receipts, and refusal recovery.
 - [Inspection](evidence/inspection.md): render-free descriptions of compiled elements, parts, instances, and spaces, which answer a structural question a frame only hints at.
 - [Debugging](evidence/debugging.md): diagnostics-first correction across ownership, derived artifacts, compile, inspection, and render.
@@ -113,11 +124,13 @@ The trial narrows what is drafted, not what the production promises. Settings st
 
 ## Recording work
 
-Commit one authored document at a time. After each coherent creation or material revision, stage exactly that one path, pass `git diff --check` on the staged content, confirm the staged list holds only that path, and commit it with a message about that document.
+Commit one authored document at a time. After each coherent creation or material revision, stage exactly that one path, pass `git diff --check` on the staged content, confirm the staged list holds only that path, and commit it.
+
+Write the message about the production, not about the operation. Name what the document now establishes, changes, or repairs in the production's own terms, so the log reads as its history rather than a list of file events. `Author space 007` and `Repair the atrium source ledgers` say nothing a reader could not get from the diff stat; `Separate the atrium's declared cell from the occupied stair volume` and `Limit the service-door pivot before it enters the wall` say what changed. State the consequence when a change has one.
 
 Never create an empty or partial commit, stage broadly, mix files you do not own, move part of a layer to the next stage, enter review with unresolved evidence diagnostics, or begin a downstream layer while a required build fails. A stage-transition commit records the complete coherent snapshot that [Evidence staging](evidence-staging.md) requires; a progress commit records work inside the current stage and never certifies a partial layer as complete.
 
-Before committing text outside ASCII, decode every staged file as strict UTF-8 and reject the commit on a replacement character or other encoding damage. Encoding loss raises no build error, so this check is the only one that catches it.
+Before committing text outside ASCII, decode every staged file as strict UTF-8 and reject the commit on a replacement character. That catches truncation but not substitution: a mangled accent or curly quote decodes cleanly as some other script's letter, so also reject any character outside the writing systems this production uses. A letter from an unrelated script sitting inside a word is the common form, and it survives every check that looks only at validity. Encoding damage raises no build error, so these two checks are the only ones that catch it.
 
 ## Verification
 
