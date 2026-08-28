@@ -242,7 +242,7 @@ function rebaseHeadings(body: string, shift: number): string {
 
 /** Removes one trailing evidence-graph anchor from a heading title. */
 function stripHeadingAnchor(title: string): string {
-  return title.replace(/\s*\{#[A-Za-z0-9_-]+\}\s*$/u, "").trim();
+  return title.replace(/\s*\{#[^{}\s]+\}\s*$/u, "").trim();
 }
 
 /** Creates one portable filename stem from the reader-facing title. */
