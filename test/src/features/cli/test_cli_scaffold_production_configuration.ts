@@ -12,11 +12,20 @@ import { pathToFileURL } from "node:url";
 import { softPanel } from "../internal/softFixtures";
 
 interface IConfigurationModule {
-  readProductionDialogueSynthesis: (selected: unknown) => unknown;
+  readProductionDialogueSynthesis: (
+    selected: unknown,
+    occurredAt?: Date | string,
+  ) => unknown;
   assertProductionDialogueSynthesis: (props: {
     selected: unknown;
     dialogue: readonly unknown[];
+    occurredAt?: Date | string;
   }) => unknown;
+  assertProductionDialogueReceiptAdoption: (props: {
+    selected: unknown;
+    receipts: readonly IAutoMovieProductionTtsReceipt[];
+    occurredAt?: Date | string;
+  }) => void;
   readProductionSpeakerBindings: (
     selected: unknown,
   ) => Array<{ speaker: string; actor: string }>;
@@ -176,6 +185,9 @@ const withValue = (
  *    moving-boundary domains, while another shot's selected id may be absent.
  * 5. Missing moving domains, selected static domains, unknown ids, duplicate
  *    ids, and malformed identities fail before a static substitute can render.
+ * 6. Dialogue selection and stored receipts reject future terms and malformed
+ *    synthesis instants while preserving past, same-day, leap-day, and UTC
+ *    midnight boundaries.
  */
 export const test_cli_scaffold_production_configuration =
   async (): Promise<void> => {
@@ -380,6 +392,96 @@ export const test_cli_scaffold_production_configuration =
           },
         }),
       ) !== null,
+    );
+    const adoptionReceipt = (
+      selection: Record<string, unknown>,
+      generatedAt: string,
+    ): IAutoMovieProductionTtsReceipt => ({
+      ...receipt,
+      generatedAt,
+      generatorProvenance: structuredClone(
+        selection.generatorProvenance,
+      ) as IAutoMovieProductionTtsReceipt["generatorProvenance"],
+    });
+    const sameDay = withValue(selected, "generatorProvenance", {
+      ...provenance,
+      termsCheckedAt: "2026-08-28",
+    });
+    const leapDay = withValue(selected, "generatorProvenance", {
+      ...provenance,
+      termsCheckedAt: "2024-02-29",
+    });
+    const past = withValue(selected, "generatorProvenance", {
+      ...provenance,
+      termsCheckedAt: "2024-02-28",
+    });
+    TestValidator.equals(
+      "dialogue terms accept past, same-day, leap-day, and UTC-midnight boundaries",
+      [
+        [sameDay, "2026-08-28T00:00:00.000Z"],
+        [leapDay, "2024-02-29T23:59:59.999Z"],
+        [past, "2024-02-29T00:00:00.000Z"],
+      ].map(([selection, generatedAt]) => {
+        configuration.assertProductionDialogueReceiptAdoption({
+          selected: selection!,
+          receipts: [
+            adoptionReceipt(
+              selection as Record<string, unknown>,
+              generatedAt as string,
+            ),
+          ],
+          occurredAt: generatedAt as string,
+        });
+        return true;
+      }),
+      [true, true, true],
+    );
+    const future = withValue(selected, "generatorProvenance", {
+      ...provenance,
+      termsCheckedAt: "2026-08-29",
+    });
+    const futureConfig = messageOf(() =>
+      configuration.readProductionDialogueSynthesis(
+        future,
+        "2026-08-28T23:59:59.999Z",
+      ),
+    );
+    const futureReceipt = messageOf(() =>
+      configuration.assertProductionDialogueReceiptAdoption({
+        selected: sameDay,
+        receipts: [adoptionReceipt(sameDay, "2026-08-27T23:59:59.999Z")],
+        occurredAt: "2026-08-28T00:00:00.000Z",
+      }),
+    );
+    const malformedInstants = [
+      "2026-08-28",
+      "2026-08-28T09:00:00.000+09:00",
+      "2026-02-30T00:00:00.000Z",
+      "not-an-instant",
+    ].map((generatedAt) =>
+      messageOf(() =>
+        configuration.assertProductionDialogueReceiptAdoption({
+          selected,
+          receipts: [adoptionReceipt(selected, generatedAt)],
+        }),
+      ),
+    );
+    const staleReceipt = messageOf(() =>
+      configuration.assertProductionDialogueReceiptAdoption({
+        selected,
+        receipts: [
+          {
+            ...receipt,
+            version: 5,
+          } as unknown as IAutoMovieProductionTtsReceipt,
+        ],
+      }),
+    );
+    TestValidator.predicate(
+      "future terms, non-canonical instants, and stale receipt versions are refused",
+      [futureConfig, futureReceipt, staleReceipt, ...malformedInstants].every(
+        (message) => typeof message === "string" && message.length !== 0,
+      ),
     );
 
     const bindings = configuration.readProductionSpeakerBindings([
