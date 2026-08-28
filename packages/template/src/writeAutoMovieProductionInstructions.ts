@@ -36,10 +36,11 @@ export const writeAutoMovieProductionInstructions = (props: {
     props.scaffoldRoot ?? scaffoldAssetDirectory(),
   );
   const sourceSkills = path.join(scaffoldRoot, ".agents", "skills");
-  if (!fs.existsSync(sourceSkills) || !fs.statSync(sourceSkills).isDirectory())
+  if (!fs.existsSync(sourceSkills))
     throw new Error(
       `${sourceSkills}: the installed production skills are missing.`,
     );
+  assertInstructionSourceIsPhysical(sourceSkills);
   if (fs.realpathSync(root) === fs.realpathSync(scaffoldRoot))
     throw new Error(
       `${root}: a scaffold source cannot synchronize instructions into itself.`,
@@ -62,6 +63,23 @@ export const writeAutoMovieProductionInstructions = (props: {
   fs.writeFileSync(agents, renderAutoMovieProductionRouter(identity), "utf8");
   fs.writeFileSync(claude, "@AGENTS.md\n", "utf8");
   return [targetSkills, agents, claude];
+};
+
+/** Refuse links and non-directories anywhere in the installed skill tree. */
+const assertInstructionSourceIsPhysical = (directory: string): void => {
+  const metadata = fs.lstatSync(directory);
+  if (metadata.isSymbolicLink() || !metadata.isDirectory())
+    throw new Error(
+      `${directory}: the installed production skills are missing or linked.`,
+    );
+  for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
+    const target = path.join(directory, entry.name);
+    if (entry.isSymbolicLink())
+      throw new Error(
+        `${target}: installed production skills may not contain links.`,
+      );
+    if (entry.isDirectory()) assertInstructionSourceIsPhysical(target);
+  }
 };
 
 /** Refuse a generated instruction path whose existing component is a link. */

@@ -361,6 +361,24 @@ async function main(): Promise<void> {
         }),
       /installed production skills are missing/u,
     );
+    const linkedTemplate = makeRoot("linked-production-skill");
+    fs.mkdirSync(path.join(linkedTemplate, ".agents", "skills"), {
+      recursive: true,
+    });
+    fs.symlinkSync(
+      path.join(scaffoldRoot, ".agents", "skills", "production"),
+      path.join(linkedTemplate, ".agents", "skills", "production"),
+      process.platform === "win32" ? "junction" : "dir",
+    );
+    assert.throws(
+      () =>
+        writeAutoMovieProductionInstructions({
+          root: project,
+          productionEvidence: configuration,
+          scaffoldRoot: linkedTemplate,
+        }),
+      /installed production skills may not contain links/u,
+    );
     const invalidTemplate = makeRoot("invalid-production-skill");
     write(invalidTemplate, ".agents/skills", "not a directory\n");
     assert.throws(
