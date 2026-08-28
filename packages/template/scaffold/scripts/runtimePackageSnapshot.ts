@@ -262,6 +262,7 @@ const moduleSpecifiers = (_file: string, source: string): string[] => {
     const next = tokens[index + 1];
     if (
       (token.value === "require" || token.value === "import") &&
+      tokens[index - 1]?.value !== "." &&
       next?.value === "(" &&
       tokens[index + 2]?.kind === "string" &&
       tokens[index + 3]?.value === ")"
@@ -317,11 +318,20 @@ const javascriptTokens = (source: string): IJavaScriptToken[] => {
       continue;
     }
     if (current === "`") {
+      let value = "";
+      let interpolated = false;
       index++;
       while (index < source.length) {
-        if (source[index] === "\\") index += 2;
-        else if (source[index++] === "`") break;
+        if (source[index] === "\\" && index + 1 < source.length) {
+          index++;
+          value += source[index++]!;
+        } else if (source[index] === "$" && source[index + 1] === "{") {
+          interpolated = true;
+          index += 2;
+        } else if (source[index++] === "`") break;
+        else value += source[index - 1]!;
       }
+      if (interpolated === false) output.push({ kind: "string", value });
       continue;
     }
     if (current === '"' || current === "'") {

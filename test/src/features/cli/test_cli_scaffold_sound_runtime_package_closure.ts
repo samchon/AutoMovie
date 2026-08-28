@@ -157,13 +157,52 @@ export const test_cli_scaffold_sound_runtime_package_closure = (): void => {
       "scripts",
       "runtimePackageSnapshot.ts",
     );
-    const runtime = createRequire(__filename)(
+    const generatedRuntime = createRequire(__filename)(
       generated,
+    ) as IRuntimePackageSnapshotModule;
+    const runtime = createRequire(__filename)(
+      source,
     ) as IRuntimePackageSnapshotModule;
     TestValidator.equals(
       "generated runtime closure implementation is byte-identical",
       fs.readFileSync(generated).equals(fs.readFileSync(source)),
       true,
+    );
+    const generatedFirstRoot = copyPackage(
+      root,
+      "libopus-wasm",
+      "generated-first",
+    );
+    const generatedSecondRoot = copyPackage(
+      root,
+      "libopus-wasm",
+      "generated-second",
+    );
+    const generatedFirst = generatedRuntime.snapshotRuntimePackage({
+      entry: path.join(generatedFirstRoot, "dist", "index.js"),
+      moduleClosure: true,
+      packageName: "libopus-wasm",
+    });
+    const generatedMember = closurePath(
+      generatedFirst,
+      /^dist\/generated\/libopus\.generated\.mjs$/u,
+    );
+    replaceBytes(path.join(generatedSecondRoot, ...generatedMember.split("/")));
+    const generatedSecond = generatedRuntime.snapshotRuntimePackage({
+      entry: path.join(generatedSecondRoot, "dist", "index.js"),
+      moduleClosure: true,
+      packageName: "libopus-wasm",
+    });
+    TestValidator.equals(
+      "generated consumer rejects a changed real transitive codec module",
+      {
+        entryUnchanged:
+          generatedFirst.entryDigest === generatedSecond.entryDigest,
+        closureChanged:
+          generatedFirst.contentFingerprint !==
+          generatedSecond.contentFingerprint,
+      },
+      { entryUnchanged: true, closureChanged: true },
     );
 
     const packageCases: readonly IPackageCase[] = [
@@ -422,10 +461,14 @@ export const test_cli_scaffold_sound_runtime_package_closure = (): void => {
           "const template = `require('./template.js')`;",
           "const escaped = ['line\\n', 'return\\r', 'tab\\t'];",
           "require('./required.cjs');",
+          "object.require('./property.cjs'); object.import('./property.mjs');",
+          "require(`./templated.cjs`); import(`./templated.mjs`);",
           "import('./dynamic.mjs');",
           "export * from './exported.js';",
           "import './side.js';",
           "new URL('./runtime.wasm', import.meta.url);",
+          "new URL(`./templated.wasm`, import.meta.url);",
+          "require(`./$" + "{variable}.cjs`);",
           "require(variable); import(variable); new URL(variable, import.meta.url);",
         ].join("\n"),
         "required.cjs": "require('./cycle.cjs');\n",
@@ -437,6 +480,9 @@ export const test_cli_scaffold_sound_runtime_package_closure = (): void => {
         "exported.js": "export const exported = true;\n",
         "side.js": "export const side = true;\n",
         "runtime.wasm": new Uint8Array([0, 97, 115, 109]),
+        "templated.cjs": "module.exports = true;\n",
+        "templated.mjs": "export const template = true;\n",
+        "templated.wasm": new Uint8Array([0, 97, 115, 109, 1]),
         "extra.bin": "extra",
         "asset.bin": "asset",
         "assets/root.bin": "root",
@@ -477,6 +523,9 @@ export const test_cli_scaffold_sound_runtime_package_closure = (): void => {
           "required.cjs",
           "runtime.wasm",
           "side.js",
+          "templated.cjs",
+          "templated.mjs",
+          "templated.wasm",
         ],
         assets: ["asset.bin", "assets/nested/member.bin", "assets/root.bin"],
       },
