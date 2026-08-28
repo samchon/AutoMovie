@@ -1,5 +1,6 @@
 import type {
   IAutoMovieAssetManifest,
+  IAutoMovieProductionDesign,
   IAutoMovieRenderBundleManifest,
 } from "@automovie/interface";
 import {
@@ -549,6 +550,29 @@ const configureGeneratedRepaint = async (
       .replace("height: 720", "height: 16"),
     "utf8",
   );
+  const productionContractPath = path.join(
+    root,
+    "automovie/design/repaint-runtime-film/production.json",
+  );
+  const productionContract = JSON.parse(
+    fs.readFileSync(productionContractPath, "utf8"),
+  ) as IAutoMovieProductionDesign;
+  if (
+    productionContract.visualDelivery !== "deterministic" ||
+    productionContract.frameFormat.width !== 1280 ||
+    productionContract.frameFormat.height !== 720
+  )
+    throw new Error(
+      "Generated repaint production contract no longer has the deterministic 1280 by 720 baseline.",
+    );
+  productionContract.visualDelivery = "repainted";
+  productionContract.frameFormat.width = 16;
+  productionContract.frameFormat.height = 16;
+  fs.writeFileSync(
+    productionContractPath,
+    `${JSON.stringify(productionContract, null, 2)}\n`,
+    "utf8",
+  );
   const referenceBytes = productionPng(16, 16);
   const generationPrompt =
     "Create the deterministic 16 by 16 repaint structure reference fixture.";
@@ -605,6 +629,14 @@ const configureGeneratedRepaint = async (
   if (generated === null || production === null || shot === undefined)
     throw new Error(
       "Generated repaint fixture has no compiled opening design.",
+    );
+  if (
+    production.visualDelivery !== "repainted" ||
+    production.frameFormat.width !== 16 ||
+    production.frameFormat.height !== 16
+  )
+    throw new Error(
+      "Generated repaint fixture compile did not publish the repainted 16 by 16 production contract.",
     );
   const frameCount = Math.round(
     shot.durationSeconds * production.frameFormat.fps,
