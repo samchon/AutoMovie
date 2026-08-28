@@ -1,6 +1,22 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 
+const AUTHORED_DOCUMENT_LAYERS = [
+  "briefs",
+  "instances",
+  "maps",
+  "materials",
+  "models",
+  "motions",
+  "research",
+  "screenplays",
+  "scripts",
+  "settings",
+  "spaces",
+  "systems",
+  "treatments",
+] as const;
+
 /**
  * Authored Markdown layers that may be bound for a human reader.
  *
@@ -12,19 +28,7 @@ import * as path from "node:path";
  * @evidence specifications/narrative-and-intent/budgets-continuity-and-deliverables.md#narrative-intent-deliverable-output Represents the authored document family selected for one deterministic deliverable item.
  */
 export type AutoMovieAuthoredDocumentLayer =
-  | "briefs"
-  | "instances"
-  | "maps"
-  | "materials"
-  | "models"
-  | "motions"
-  | "research"
-  | "screenplays"
-  | "scripts"
-  | "settings"
-  | "spaces"
-  | "systems"
-  | "treatments";
+  (typeof AUTHORED_DOCUMENT_LAYERS)[number];
 
 /**
  * Input to one authored-layer reader edition.
@@ -55,21 +59,7 @@ interface IAuthoredDocument {
   title: string;
 }
 
-const LAYERS = new Set<AutoMovieAuthoredDocumentLayer>([
-  "briefs",
-  "instances",
-  "maps",
-  "materials",
-  "models",
-  "motions",
-  "research",
-  "screenplays",
-  "scripts",
-  "settings",
-  "spaces",
-  "systems",
-  "treatments",
-]);
+const LAYERS: ReadonlySet<string> = new Set(AUTHORED_DOCUMENT_LAYERS);
 
 /**
  * Binds one authored production layer into one reader-facing Markdown file.
