@@ -92,6 +92,7 @@ export const AUTOMOVIE_DIAGNOSTIC_CODES = [
   "builder-failed",
   "capture-failed",
   "capture-host-unavailable",
+  "capture-dialogue-identity-invalid",
   "capture-input-changed",
   "capture-png-blank",
   "capture-png-invalid",

@@ -1019,6 +1019,22 @@ export class AutoMovieProductionOracleService {
         `${String(error)} Correct the capture adapter or run npm run capture:install and npm run capture:doctor before these pixels enter a render bundle.`,
       );
     }
+    const dialogueRuntimeIdentity = captured.dialogueRuntimeIdentity;
+    if (
+      dialogueRuntimeIdentity !== null &&
+      /^sha256:[0-9a-f]{64}$/u.test(dialogueRuntimeIdentity) === false
+    )
+      return previewFailure(
+        generated.inputFingerprint,
+        "capture-dialogue-identity-invalid",
+        "The capture host returned an invalid dialogue runtime identity. Rebuild the current dialogue runtime and capture the frame again.",
+      );
+    if (input.target.kind !== "shot" && dialogueRuntimeIdentity !== null)
+      return previewFailure(
+        generated.inputFingerprint,
+        "capture-dialogue-identity-invalid",
+        "A non-shot capture must not claim a dialogue runtime identity. Clear the capture host dialogue state and capture the asset again.",
+      );
     if (
       captured.width !== width ||
       captured.height !== height ||
@@ -1046,6 +1062,7 @@ export class AutoMovieProductionOracleService {
     };
     const relativeBundle = productionRenderBundleRelativePath({
       target: input.target,
+      dialogueRuntimeIdentity,
       rendererIdentity,
       targetFingerprint,
       renderSpec,
@@ -1073,6 +1090,7 @@ export class AutoMovieProductionOracleService {
       {
         target: input.target,
         compileFingerprint: generated.inputFingerprint,
+        dialogueRuntimeIdentity,
         rendererIdentity,
         targetFingerprint,
         renderSpec,
@@ -1084,9 +1102,10 @@ export class AutoMovieProductionOracleService {
         left.index - right.index || compareCodeUnits(left.pass, right.pass),
     );
     const manifest: IAutoMovieRenderBundleManifest = {
-      version: 3,
+      version: 4,
       target: input.target,
       compileFingerprint: generated.inputFingerprint,
+      dialogueRuntimeIdentity,
       rendererIdentity,
       targetFingerprint,
       renderSpec,
@@ -1565,6 +1584,7 @@ const retainedBundleFrames = (
     IAutoMovieRenderBundleManifest,
     | "target"
     | "compileFingerprint"
+    | "dialogueRuntimeIdentity"
     | "rendererIdentity"
     | "targetFingerprint"
     | "renderSpec"
@@ -1579,6 +1599,7 @@ const retainedBundleFrames = (
     Buffer.from(
       canonicalAutoMovieJsonBytes({
         target: manifest.target,
+        dialogueRuntimeIdentity: manifest.dialogueRuntimeIdentity,
         rendererIdentity: manifest.rendererIdentity,
         targetFingerprint: manifest.targetFingerprint,
         renderSpec: manifest.renderSpec,
@@ -1587,6 +1608,7 @@ const retainedBundleFrames = (
       Buffer.from(
         canonicalAutoMovieJsonBytes({
           target: expected.target,
+          dialogueRuntimeIdentity: expected.dialogueRuntimeIdentity,
           rendererIdentity: expected.rendererIdentity,
           targetFingerprint: expected.targetFingerprint,
           renderSpec: expected.renderSpec,
