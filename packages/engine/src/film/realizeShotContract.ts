@@ -20,9 +20,11 @@ import { Quaternion } from "../math/Quaternion";
 import { sampleMotion } from "../motion/sampleMotion";
 import { productionRuntimeModelId } from "../productionIdentity";
 import { sampleClipSequence } from "../resolve/sampleClip";
+import { evaluateAutoMovieCameraDepthPrecision } from "./cameraDepthPrecision";
 import { computeModelRestExtent, computeRestHeight } from "./cameraMove";
 import {
   intersectsPerspectiveFrustumBox,
+  projectToNdc,
   resolveCameraAt,
 } from "./cameraProjection";
 import {
@@ -176,7 +178,7 @@ export const realizeShotContract = (props: {
     if (outcome.passed === false)
       fail(
         `camera at ${outcome.time}s`,
-        "must resolve and project every required subject root inside current camera depth and frame bounds",
+        "must resolve every required subject bound inside the current camera frame and clipping range with the declared depth precision",
       );
 
   const formations = props.contract.participants.flatMap((participant) => {
@@ -497,6 +499,18 @@ const cameraOutcome = (
   if (camera === undefined || frameFormat === undefined)
     return {
       time,
+      depthPrecision: evaluateAutoMovieCameraDepthPrecision({
+        camera: props.compiled.shot.camera,
+        time,
+        near: Number.NaN,
+        far: Number.NaN,
+        requiredNear: Number.NaN,
+        requiredFar: Number.NaN,
+        constraint: {
+          minimumDepthBits: Number.NaN,
+          maximumStepMeters: Number.NaN,
+        },
+      }),
       requiredSubjects: props.contract.camera.requiredSubjects.length,
       resolvedSubjects: 0,
       readableSubjects: 0,
@@ -512,6 +526,8 @@ const cameraOutcome = (
   const aspect = frameFormat.width / frameFormat.height;
   let resolvedSubjects = 0;
   let readableSubjects = 0;
+  let requiredNear = Number.POSITIVE_INFINITY;
+  let requiredFar = Number.NEGATIVE_INFINITY;
   for (const subject of props.contract.camera.requiredSubjects)
     try {
       // A node subject carries its orientation as well as its root: a yawed
@@ -532,6 +548,19 @@ const cameraOutcome = (
         : actorTransformAt(props, subject, time);
       ++resolvedSubjects;
       const box = framedSubjectBox(props, subject, placement, time);
+      for (const x of [box.min.x, box.max.x])
+        for (const y of [box.min.y, box.max.y])
+          for (const z of [box.min.z, box.max.z]) {
+            const depth = projectToNdc(
+              resolvedCamera,
+              { x, y, z },
+              halfY,
+              aspect,
+              frameFormat.crop,
+            ).depth;
+            requiredNear = Math.min(requiredNear, depth);
+            requiredFar = Math.max(requiredFar, depth);
+          }
       if (
         intersectsPerspectiveFrustumBox({
           camera: resolvedCamera,
@@ -546,6 +575,15 @@ const cameraOutcome = (
       )
         ++readableSubjects;
     } catch {}
+  const depthPrecision = evaluateAutoMovieCameraDepthPrecision({
+    camera: camera.id,
+    time,
+    near: camera.near,
+    far: camera.far,
+    requiredNear: resolvedSubjects === 0 ? Number.NaN : requiredNear,
+    requiredFar: resolvedSubjects === 0 ? Number.NaN : requiredFar,
+    constraint: camera.depthPrecision,
+  });
   return {
     time,
     // State the camera this sample actually measured whenever a compiled move
@@ -566,12 +604,14 @@ const cameraOutcome = (
             rotation: { ...resolvedCamera.rotation },
           },
         }),
+    depthPrecision,
     requiredSubjects: props.contract.camera.requiredSubjects.length,
     resolvedSubjects,
     readableSubjects,
     passed:
       resolvedSubjects === props.contract.camera.requiredSubjects.length &&
-      readableSubjects === props.contract.camera.requiredSubjects.length,
+      readableSubjects === props.contract.camera.requiredSubjects.length &&
+      depthPrecision.passed,
   };
 };
 

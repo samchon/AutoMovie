@@ -25,13 +25,6 @@ import { validateSpace } from "../validation/validateSpace";
 import { ViolationCollector } from "../validation/violation";
 import { lookRotation } from "./cameraMove";
 
-/**
- * Camera frustum bounds the staging schema does not ask source code for, the
- * decides placement and field of view, the engine owns the clip planes.
- */
-const CAMERA_NEAR = 0.1;
-const CAMERA_FAR = 1000;
-
 /** Cameras look down local −Z (glTF convention); lights shine down −Z too. */
 const FORWARD: IAutoMovieVector3 = { x: 0, y: 0, z: -1 };
 
@@ -129,6 +122,43 @@ const lowerCameraClearanceEnvelope = (
           radius: envelope.parentRig.radius,
         },
 });
+
+/** Validate the authored fixed-point depth precision boundary. */
+const validateCameraDepthPrecision = (
+  value: unknown,
+  path: string,
+  out: ViolationCollector,
+): void => {
+  if (!isRecord(value)) {
+    out.push("type", path, "camera depth precision must be an object", value);
+    return;
+  }
+  const bits = value.minimumDepthBits;
+  if (
+    typeof bits !== "number" ||
+    !Number.isSafeInteger(bits) ||
+    bits <= 0 ||
+    !Number.isSafeInteger(2 ** bits - 1)
+  )
+    out.push(
+      "range",
+      `${path}.minimumDepthBits`,
+      "minimum depth bits must produce an exact positive safe-integer code count",
+      bits,
+    );
+  const maximumStep = value.maximumStepMeters;
+  if (
+    typeof maximumStep !== "number" ||
+    !Number.isFinite(maximumStep) ||
+    maximumStep <= 0
+  )
+    out.push(
+      "range",
+      `${path}.maximumStepMeters`,
+      "maximum adjacent depth step must be finite and greater than zero metres",
+      maximumStep,
+    );
+};
 
 /**
  * Lower a set piece's optional size multiplier onto the node transform's scale:
@@ -1017,6 +1047,25 @@ export const stageScene = (
         `vertical field of view must be within (0, 180)°, but was ${camera.fovDeg}`,
         camera.fovDeg,
       );
+    if (!Number.isFinite(camera.near) || camera.near <= 0)
+      out.push(
+        "range",
+        `${path}.near`,
+        "camera near distance must be finite and greater than zero metres",
+        camera.near,
+      );
+    if (!Number.isFinite(camera.far) || camera.far <= camera.near)
+      out.push(
+        "range",
+        `${path}.far`,
+        "camera far distance must be finite and greater than near",
+        camera.far,
+      );
+    validateCameraDepthPrecision(
+      camera.depthPrecision,
+      `${path}.depthPrecision`,
+      out,
+    );
     if (camera.lookAt.kind === "node" && !placedPoints.has(camera.lookAt.node))
       out.push(
         "type",
@@ -1122,8 +1171,9 @@ export const stageScene = (
         scale: { x: 1, y: 1, z: 1 },
       },
       fovY: camera.fovDeg,
-      near: CAMERA_NEAR,
-      far: CAMERA_FAR,
+      near: camera.near,
+      far: camera.far,
+      depthPrecision: { ...camera.depthPrecision },
       ...(camera.clearance === undefined
         ? {}
         : { clearance: lowerCameraClearanceEnvelope(camera.clearance) }),

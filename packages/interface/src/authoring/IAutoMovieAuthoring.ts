@@ -15,7 +15,10 @@ import {
 import { IAutoMovieTimingAnchor } from "../harness/IAutoMovieTimingAnchor";
 import { IAutoMovieModel } from "../model/IAutoMovieModel";
 import { IAutoMovieShotContract } from "../production/IAutoMovieProductionDesign";
-import { IAutoMovieCameraClearanceEnvelope } from "../scene/IAutoMovieCamera";
+import {
+  IAutoMovieCameraClearanceEnvelope,
+  IAutoMovieCameraDepthPrecisionConstraint,
+} from "../scene/IAutoMovieCamera";
 import { IAutoMovieFog } from "../scene/IAutoMovieFog";
 import { IAutoMovieLightShadow } from "../scene/IAutoMovieLight";
 import { IAutoMovieSceneEnvironment } from "../scene/IAutoMovieSceneEnvironment";
@@ -223,6 +226,30 @@ export interface IAutoMovieStageCamera {
    * @evidence specifications/authoring-and-authority/delegation-and-decision-authority.md#spec-authoring-authority-compatibility Types `fovDeg` for the spec authoring authority compatibility system contract.
    */
   fovDeg: number;
+
+  /**
+   * Positive near clip distance in camera-space metres.
+   *
+   * @evidence requirements/camera/clipping-occlusion-and-spatial-constraints.md#camera-clipping-range Exposes the authored near boundary instead of accepting a stage-owned constant.
+   * @evidence specifications/camera-light-and-visibility/visibility-and-image-space-observation.md#clv-clipping-clearance-evaluation Types the near operand lowered without substitution into clipping and precision evaluation.
+   */
+  near: number;
+
+  /**
+   * Far clip distance in camera-space metres, strictly greater than `near`.
+   *
+   * @evidence requirements/camera/clipping-occlusion-and-spatial-constraints.md#camera-clipping-range Exposes the authored far boundary instead of accepting a stage-owned constant.
+   * @evidence specifications/camera-light-and-visibility/visibility-and-image-space-observation.md#clv-clipping-clearance-evaluation Types the far operand lowered without substitution into clipping and precision evaluation.
+   */
+  far: number;
+
+  /**
+   * Minimum standard depth capability and maximum adjacent step in metres.
+   *
+   * @evidence requirements/camera/clipping-occlusion-and-spatial-constraints.md#camera-clipping-range Makes precision acceptance an authored numeric boundary rather than an inferred renderer default.
+   * @evidence specifications/camera-light-and-visibility/visibility-and-image-space-observation.md#clv-clipping-clearance-evaluation Types the precision constraint lowered onto the resolved camera and evaluated against current required bounds.
+   */
+  depthPrecision: IAutoMovieCameraDepthPrecisionConstraint;
 
   /**
    * Camera-local physical body and optional parent-rig clearance envelopes.

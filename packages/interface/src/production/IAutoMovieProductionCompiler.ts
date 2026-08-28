@@ -19,7 +19,11 @@ import {
 import { IAutoMoviePropSpec } from "../harness";
 import { IAutoMovieModel } from "../model";
 import { IAutoMovieMotion } from "../motion";
-import { IAutoMovieProductionLighting, IAutoMovieScene } from "../scene";
+import {
+  IAutoMovieCameraDepthPrecisionReport,
+  IAutoMovieProductionLighting,
+  IAutoMovieScene,
+} from "../scene";
 import { IAutoMovieServiceNetwork } from "../service";
 import {
   IAutoMoviePlantingCluster,
@@ -3710,6 +3714,10 @@ export interface IAutoMovieCompiledContractRealization {
       /** Sampled camera orientation in world space. */
       rotation: IAutoMovieQuaternion;
     };
+    /**
+     * Required-range depth precision measured for this exact camera time.
+     */
+    depthPrecision: IAutoMovieCameraDepthPrecisionReport;
     /** Number of required subjects. */
     requiredSubjects: number;
     /** Number resolved in current compiled output. */
