@@ -204,6 +204,12 @@ export const test_cli_scaffold_design_derivation = (): void => {
           completed["src/models/chorus.ts"]?.includes(
             "@evidence obligations/design/instance-sources.md",
           ) === false &&
+          completed["src/models/chorus.ts"]?.includes(
+            "Chorus in src/models/chorus.ts",
+          ) === true &&
+          completed["src/models/chorus.ts"]?.includes(
+            "src/formations/chorus.ts",
+          ) === false &&
           completed["src/instances/chorus.ts"] === undefined &&
           completed["src/shots/opening.ts"]?.includes(
             'from "../models/chorus"',
