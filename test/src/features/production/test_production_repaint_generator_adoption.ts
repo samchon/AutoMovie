@@ -144,7 +144,7 @@ const preserveRepaintAdoptionCleanup = (
 
 const executableServices = (props: {
   root: string;
-  commit: (receipt: IAutoMovieRepaintReceipt) => void;
+  commit: (receipt: IAutoMovieRepaintReceipt, bytes: Uint8Array) => void;
   referenceBytes?: (referencePath: string) => Buffer;
 }): IAutoMovieProductionServices => {
   const compileFingerprint = digestAutoMovieBytes(
@@ -246,8 +246,10 @@ const executableServices = (props: {
         bytes,
       })),
     ],
-    commitRepaintRendition: (receipt: IAutoMovieRepaintReceipt) =>
-      props.commit(receipt),
+    commitRepaintRendition: (
+      receipt: IAutoMovieRepaintReceipt,
+      bytes: Uint8Array,
+    ) => props.commit(receipt, bytes),
     commitRepaintAttempt: (attempt: IAutoMovieRepaintAttemptRecord) => {
       repaintAttempts.push(structuredClone(attempt));
       return repaintAttempts.length;
@@ -1180,6 +1182,35 @@ export const test_production_repaint_generator_adoption =
               runtimeIdentity: selected.runtimeIdentity,
             }) as never,
         }),
+        repaint(runnable, {
+          adapter: async () =>
+            ({
+              mediaType: "video/mp4",
+              get bytes(): never {
+                throw nonError("non-error bytes inspection failure");
+              },
+              runtimeIdentity: selected.runtimeIdentity,
+            }) as never,
+        }),
+        repaint(runnable, {
+          adapter: async () =>
+            ({
+              mediaType: "video/mp4",
+              bytes: generatedBytes,
+              get costUnits(): never {
+                throw nonError("non-error cost inspection failure");
+              },
+              runtimeIdentity: selected.runtimeIdentity,
+            }) as never,
+        }),
+        repaint(runnable, {
+          adapter: async () => ({
+            mediaType: "video/mp4",
+            bytes: generatedBytes,
+            costUnits: Number.POSITIVE_INFINITY,
+            runtimeIdentity: selected.runtimeIdentity,
+          }),
+        }),
       ]);
       TestValidator.equals(
         "media, bytes, runtime, raster, and thrown output failures are refused",
@@ -1188,6 +1219,53 @@ export const test_production_repaint_generator_adoption =
           { length: outputFailures.length },
           () => "repaint-output-invalid",
         ),
+      );
+
+      const mutableOutputRoot = path.join(root, "mutable-output");
+      const mutableCommits: Array<{
+        receipt: IAutoMovieRepaintReceipt;
+        bytes: Uint8Array;
+      }> = [];
+      const mutableOutputServices = executableServices({
+        root: mutableOutputRoot,
+        commit: (receipt, bytes) => {
+          mutableCommits.push({
+            receipt,
+            bytes: new Uint8Array(bytes),
+          });
+        },
+      });
+      const providerOwnedBytes = new Uint8Array(generatedBytes);
+      const mutableOutput = await repaint(mutableOutputServices, {
+        adapter: async () =>
+          ({
+            mediaType: "video/mp4",
+            get bytes(): Uint8Array {
+              queueMicrotask(() => providerOwnedBytes.fill(0));
+              return providerOwnedBytes;
+            },
+            runtimeIdentity: selected.runtimeIdentity,
+          }) as never,
+      });
+      await Promise.resolve();
+      const committedMutable = mutableCommits[0] ?? null;
+      TestValidator.equals(
+        "provider mutation after output disclosure cannot change committed bytes",
+        {
+          repainted: mutableOutput.repainted,
+          providerMutated: providerOwnedBytes.every((byte) => byte === 0),
+          committedDigest:
+            committedMutable === null
+              ? null
+              : digestAutoMovieBytes(committedMutable.bytes),
+          receiptDigest: committedMutable?.receipt.output.digest ?? null,
+        },
+        {
+          repainted: true,
+          providerMutated: true,
+          committedDigest: digestAutoMovieBytes(generatedBytes),
+          receiptDigest: digestAutoMovieBytes(generatedBytes),
+        },
       );
 
       const accepted = await new AutoMovieProductionRepaintService(
@@ -1902,6 +1980,31 @@ export const test_production_repaint_generator_adoption =
         },
       );
 
+      const blankInputRace = new AutoMovieProductionInputRaceError(
+        "placeholder input race",
+      );
+      blankInputRace.message = "";
+      const hostileInputRace = new Proxy(
+        new AutoMovieProductionInputRaceError("hostile input race"),
+        {
+          get: (target, property, receiver) => {
+            if (property === "message")
+              throw nonError("input race diagnostic getter failed");
+            return Reflect.get(target, property, receiver);
+          },
+        },
+      );
+      const hostileInstanceCheck = new Proxy(
+        {},
+        {
+          getPrototypeOf: () => {
+            throw nonError("input race instance check failed");
+          },
+          get: () => {
+            throw nonError("commit diagnostic coercion failed");
+          },
+        },
+      );
       const commitFailures = await Promise.all([
         repaint(
           scenarioServices(runnable, {
@@ -1932,6 +2035,18 @@ export const test_production_repaint_generator_adoption =
             },
           }),
         ),
+        ...[blankInputRace, hostileInputRace, hostileInstanceCheck].map(
+          (thrown) =>
+            repaint(
+              scenarioServices(runnable, {
+                project: {
+                  commitRepaintRendition: () => {
+                    throw thrown;
+                  },
+                },
+              }),
+            ),
+        ),
       ]);
       TestValidator.equals(
         "commit races and other commit failures retain distinct diagnostics",
@@ -1940,7 +2055,34 @@ export const test_production_repaint_generator_adoption =
           "repaint-input-changed",
           "repaint-commit-refused",
           "repaint-commit-refused",
+          "repaint-input-changed",
+          "repaint-input-changed",
+          "repaint-commit-refused",
         ],
+      );
+      const hostileAttemptError = new Proxy(
+        new Error("attempt commit failed"),
+        {
+          get: (target, property, receiver) => {
+            if (property === "message")
+              throw nonError("attempt diagnostic getter failed");
+            return Reflect.get(target, property, receiver);
+          },
+        },
+      );
+      const hostileAttemptCommit = await repaint(
+        scenarioServices(runnable, {
+          project: {
+            commitRepaintAttempt: () => {
+              throw hostileAttemptError;
+            },
+          },
+        }),
+      );
+      TestValidator.equals(
+        "hostile attempt persistence diagnostics fail closed",
+        codeOf(hostileAttemptCommit),
+        "repaint-commit-refused",
       );
       const commitThroughProject = (
         receipt: IAutoMovieRepaintReceipt,
