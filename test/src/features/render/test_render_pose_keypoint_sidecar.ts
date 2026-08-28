@@ -158,16 +158,14 @@ export const test_render_pose_keypoint_sidecar = (): void => {
   const cropped = plan({
     crop: { left: 0.5, top: 0, right: 1, bottom: 1 },
   });
+  const croppedHips = cropped.frames.map(
+    (frame) =>
+      frame.actors[0]!.keypoints.find((keypoint) => keypoint.bone === "hips")!,
+  );
   TestValidator.equals(
     "the sidecar preserves crop projection and exact boundary inclusion",
     namedFacts([
-      [
-        "leftEdge",
-        () =>
-          cropped.frames.every((_, frame) =>
-            nclose(hipsX(cropped.frames, frame), 0),
-          ),
-      ],
+      ["leftEdge", () => croppedHips.every((hips) => nclose(hips.x, 0))],
       [
         "verticalParity",
         () =>
@@ -181,13 +179,7 @@ export const test_render_pose_keypoint_sidecar = (): void => {
             return nclose(hips.y, wholeHips.y);
           }),
       ],
-      [
-        "inFrame",
-        () =>
-          cropped.frames.every(
-            (frame) => frame.actors[0]!.keypoints[0]!.inFrame,
-          ),
-      ],
+      ["inFrame", () => croppedHips.every((hips) => hips.inFrame)],
     ]),
     { leftEdge: true, verticalParity: true, inFrame: true },
   );
