@@ -203,6 +203,62 @@ async function main(): Promise<void> {
       )
         throw error;
     }
+    const wrongAgent = makeRoot("directory-agent-instructions");
+    write(wrongAgent, ".agents/skills/preserved.md", "preserved skills\n");
+    write(wrongAgent, "AGENTS.md/preserved.md", "preserved agent bytes\n");
+    assert.throws(
+      () =>
+        writeAutoMovieProductionInstructions({
+          root: wrongAgent,
+          productionEvidence: disabled(wrongAgent),
+          scaffoldRoot,
+        }),
+      /AGENTS\.md: the generated instruction target must be a file/u,
+    );
+    assert.equal(
+      fs.readFileSync(
+        path.join(wrongAgent, ".agents", "skills", "preserved.md"),
+        "utf8",
+      ),
+      "preserved skills\n",
+    );
+    assert.equal(
+      fs.readFileSync(
+        path.join(wrongAgent, "AGENTS.md", "preserved.md"),
+        "utf8",
+      ),
+      "preserved agent bytes\n",
+    );
+    const wrongSkills = makeRoot("file-skills-instructions");
+    write(wrongSkills, ".agents/skills", "preserved skills bytes\n");
+    assert.throws(
+      () =>
+        writeAutoMovieProductionInstructions({
+          root: wrongSkills,
+          productionEvidence: disabled(wrongSkills),
+          scaffoldRoot,
+        }),
+      /skills: the generated instruction target must be a directory/u,
+    );
+    assert.equal(
+      fs.readFileSync(path.join(wrongSkills, ".agents", "skills"), "utf8"),
+      "preserved skills bytes\n",
+    );
+    const wrongAgentParent = makeRoot("file-agent-parent-instructions");
+    write(wrongAgentParent, ".agents", "preserved parent bytes\n");
+    assert.throws(
+      () =>
+        writeAutoMovieProductionInstructions({
+          root: wrongAgentParent,
+          productionEvidence: disabled(wrongAgentParent),
+          scaffoldRoot,
+        }),
+      /\.agents: generated instruction parent paths must be directories/u,
+    );
+    assert.equal(
+      fs.readFileSync(path.join(wrongAgentParent, ".agents"), "utf8"),
+      "preserved parent bytes\n",
+    );
     assert.throws(
       () => synchronizeProductionInstructions(),
       /belongs to another project root/u,

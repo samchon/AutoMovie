@@ -54,8 +54,9 @@ export const writeAutoMovieProductionInstructions = (props: {
   const targetSkills = path.join(root, ".agents", "skills");
   const agents = path.join(root, "AGENTS.md");
   const claude = path.join(root, "CLAUDE.md");
-  for (const target of [targetSkills, agents, claude])
-    assertManagedPathIsPhysical(root, target);
+  assertManagedPathIsPhysical(root, targetSkills, "directory");
+  assertManagedPathIsPhysical(root, agents, "file");
+  assertManagedPathIsPhysical(root, claude, "file");
 
   const identity = readAutoMovieProductionEvidence({
     root,
@@ -93,15 +94,32 @@ const assertInstructionSourceIsPhysical = (directory: string): void => {
 };
 
 /** Refuse a generated instruction path whose existing component is a link. */
-const assertManagedPathIsPhysical = (root: string, target: string): void => {
+const assertManagedPathIsPhysical = (
+  root: string,
+  target: string,
+  expected: "directory" | "file",
+): void => {
   let cursor = root;
-  for (const segment of path.relative(root, target).split(path.sep)) {
+  const segments = path.relative(root, target).split(path.sep);
+  for (const [index, segment] of segments.entries()) {
     cursor = path.join(cursor, segment);
     const metadata = fs.lstatSync(cursor, { throwIfNoEntry: false });
     if (metadata === undefined) return;
     if (metadata.isSymbolicLink())
       throw new Error(
         `${cursor}: generated instruction paths may not be links.`,
+      );
+    const final = index === segments.length - 1;
+    if (!final && !metadata.isDirectory())
+      throw new Error(
+        `${cursor}: generated instruction parent paths must be directories.`,
+      );
+    if (
+      final &&
+      (expected === "directory" ? !metadata.isDirectory() : !metadata.isFile())
+    )
+      throw new Error(
+        `${cursor}: the generated instruction target must be a ${expected}.`,
       );
   }
 };
