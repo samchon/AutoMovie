@@ -466,14 +466,20 @@ const contractAnchors = (relative) =>
 const activatePaidSettings = () => {
   const configFile = path.join(PROBE, "productionEvidence.ts");
   const config = fs.readFileSync(configFile, "utf8");
-  const selector = '  kind: null,\n  settings: "disabled",';
-  if (config.split(selector).length !== 2)
+  const kindSelector = "  kind: null,";
+  const settingsSelector = '  settings: "disabled",';
+  if (
+    config.split(kindSelector).length !== 2 ||
+    config.split(settingsSelector).length !== 2
+  )
     throw new Error(
       "The scaffold graph selector changed; update the active settings probe before trusting this gate.",
     );
   fs.writeFileSync(
     configFile,
-    config.replace(selector, '  kind: "library",\n  settings: "evidence",'),
+    config
+      .replace(kindSelector, '  kind: "library",')
+      .replace(settingsSelector, '  settings: "evidence",'),
     "utf8",
   );
 
