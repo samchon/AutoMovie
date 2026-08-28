@@ -179,6 +179,25 @@ export const test_cli_scaffold_sound_cache_lifecycle = (): void => {
       { before, after: census(missing), inventory: missingInventory },
       { before: [], after: [], inventory: [] },
     );
+    const fileRootState = path.join(root, "file-root-state");
+    fs.mkdirSync(path.join(fileRootState, "audio-cache"), { recursive: true });
+    fs.writeFileSync(
+      path.join(fileRootState, "audio-cache", "kokoro"),
+      "not a directory",
+      "utf8",
+    );
+    TestValidator.equals(
+      "a non-directory cache root is refused",
+      throwsError(
+        () =>
+          lifecycle.inventoryProductionSoundCaches({
+            captureTarget: lifecycle.captureRenderGcTarget,
+            productionStateRoot: fileRootState,
+          }),
+        "is not a directory",
+      ),
+      true,
+    );
 
     const state = path.join(root, "production-state");
     fs.mkdirSync(state);
@@ -385,6 +404,196 @@ export const test_cli_scaffold_sound_cache_lifecycle = (): void => {
       { gcDuringSession: true, sessionDuringGc: true },
     );
 
+    const guardName = `.automovie-liveness-${scope}.gc-apply.lock`;
+    const activeGuard = lifecycle.acquireRenderGcLease({
+      coordinationRoot: coordination,
+      pid: 501,
+      processAlive: () => false,
+      scope,
+    });
+    const duplicateGuard = throwsError(
+      () =>
+        lifecycle.acquireRenderGcLease({
+          coordinationRoot: coordination,
+          pid: 502,
+          processAlive: (pid) => pid === 501,
+          scope,
+        }),
+      "already active",
+    );
+    lifecycle.releaseRenderLivenessLease(activeGuard);
+    const staleGuard = lifecycle.acquireRenderGcLease({
+      coordinationRoot: coordination,
+      pid: 503,
+      processAlive: () => false,
+      scope,
+    });
+    const recoveredGuard = lifecycle.acquireRenderGcLease({
+      coordinationRoot: coordination,
+      pid: 504,
+      processAlive: () => false,
+      scope,
+    });
+    const staleOwnerRefused = throwsError(
+      () => lifecycle.releaseRenderLivenessLease(staleGuard),
+      "changed",
+    );
+    lifecycle.releaseRenderLivenessLease(recoveredGuard);
+    const changingGuard = lifecycle.acquireRenderGcLease({
+      coordinationRoot: coordination,
+      pid: 505,
+      processAlive: () => false,
+      scope,
+    });
+    let inspected = 0;
+    const becameActive = throwsError(
+      () =>
+        lifecycle.acquireRenderSessionLease({
+          coordinationRoot: coordination,
+          pid: 506,
+          processAlive: (pid) => pid === 505 && ++inspected === 2,
+          scope,
+          tier: "proxy",
+        }),
+      "became active while inspected",
+    );
+    lifecycle.releaseRenderLivenessLease(changingGuard);
+    fs.writeFileSync(
+      path.join(coordination, guardName),
+      `${JSON.stringify({ kind: "session", pid: 1, tier: null, token: "x" })}\n`,
+      "utf8",
+    );
+    const invalidGuard = throwsError(
+      () =>
+        lifecycle.acquireRenderSessionLease({
+          coordinationRoot: coordination,
+          pid: 507,
+          processAlive: () => false,
+          scope,
+          tier: "proxy",
+        }),
+      "no trustworthy owner identity",
+    );
+    fs.rmSync(path.join(coordination, guardName));
+    const vanished = lifecycle.acquireRenderGcLease({
+      coordinationRoot: coordination,
+      pid: 508,
+      processAlive: () => false,
+      scope,
+    });
+    fs.rmSync(vanished.snapshot.target);
+    const vanishedRelease =
+      lifecycle.releaseRenderLivenessLease(vanished) === false;
+    const firstSession = lifecycle.acquireRenderSessionLease({
+      coordinationRoot: coordination,
+      pid: 509,
+      processAlive: () => false,
+      scope,
+      tier: "proxy",
+    });
+    const secondSession = lifecycle.acquireRenderSessionLease({
+      coordinationRoot: coordination,
+      pid: 510,
+      processAlive: () => false,
+      scope,
+      tier: "final",
+    });
+    const pluralSessions = throwsError(
+      () =>
+        lifecycle.acquireRenderGcLease({
+          coordinationRoot: coordination,
+          pid: 511,
+          processAlive: (pid) => pid === 509 || pid === 510,
+          scope,
+        }),
+      "active render sessions",
+    );
+    lifecycle.releaseRenderLivenessLease(firstSession);
+    lifecycle.releaseRenderLivenessLease(secondSession);
+    const staleSession = lifecycle.acquireRenderSessionLease({
+      coordinationRoot: coordination,
+      pid: 512,
+      processAlive: () => false,
+      scope,
+      tier: "proxy",
+    });
+    const gcAfterStaleSession = lifecycle.acquireRenderGcLease({
+      coordinationRoot: coordination,
+      pid: 513,
+      processAlive: () => false,
+      scope,
+    });
+    const staleSessionReleased =
+      lifecycle.releaseRenderLivenessLease(staleSession) === false;
+    lifecycle.releaseRenderLivenessLease(gcAfterStaleSession);
+    const invalidClaim = `.automovie-liveness-${scope}.session.invalid.lock`;
+    fs.writeFileSync(path.join(coordination, invalidClaim), "invalid", "utf8");
+    const invalidSessionClaim = throwsError(
+      () =>
+        lifecycle.acquireRenderGcLease({
+          coordinationRoot: coordination,
+          pid: 514,
+          processAlive: () => false,
+          scope,
+        }),
+      "claim",
+    );
+    fs.rmSync(path.join(coordination, invalidClaim));
+    TestValidator.equals(
+      "stale, duplicate, changing, invalid and vanished leases stay fail-closed",
+      {
+        duplicateGuard,
+        staleOwnerRefused,
+        becameActive,
+        invalidGuard,
+        vanishedRelease,
+        pluralSessions,
+        staleSessionReleased,
+        invalidSessionClaim,
+        invalidPid: throwsError(
+          () =>
+            lifecycle.acquireRenderGcLease({
+              coordinationRoot: coordination,
+              pid: 0,
+              processAlive: () => false,
+              scope,
+            }),
+          "PID",
+        ),
+        invalidScope: throwsError(
+          () =>
+            lifecycle.acquireRenderGcLease({
+              coordinationRoot: coordination,
+              pid: 515,
+              processAlive: () => false,
+              scope: "not-a-digest",
+            }),
+          "scope",
+        ),
+        missingCoordination: throwsError(() =>
+          lifecycle.acquireRenderGcLease({
+            coordinationRoot: path.join(root, "absent-coordination"),
+            pid: 516,
+            processAlive: () => false,
+            scope,
+          }),
+        ),
+      },
+      {
+        duplicateGuard: true,
+        staleOwnerRefused: true,
+        becameActive: true,
+        invalidGuard: true,
+        vanishedRelease: true,
+        pluralSessions: true,
+        staleSessionReleased: true,
+        invalidSessionClaim: true,
+        invalidPid: true,
+        invalidScope: true,
+        missingCoordination: true,
+      },
+    );
+
     const events: string[] = [];
     const dry = lifecycle.runProductionRenderGarbageCollection(false, {
       acquire: () => {
@@ -431,6 +640,34 @@ export const test_cli_scaffold_sound_cache_lifecycle = (): void => {
     const combined = capture(() =>
       lifecycle.preserveRenderLivenessLease({ error: primary }, exactLease),
     );
+    fs.rmSync(exactLease.snapshot.target);
+    const cleanupOnlyLease = lifecycle.acquireRenderGcLease({
+      coordinationRoot: coordination,
+      pid: 517,
+      processAlive: () => false,
+      scope,
+    });
+    fs.renameSync(
+      cleanupOnlyLease.snapshot.target,
+      `${cleanupOnlyLease.snapshot.target}.previous`,
+    );
+    fs.writeFileSync(cleanupOnlyLease.snapshot.target, "foreign", "utf8");
+    const cleanupOnly = capture(() =>
+      lifecycle.preserveRenderLivenessLease(undefined, cleanupOnlyLease),
+    );
+    fs.rmSync(cleanupOnlyLease.snapshot.target);
+    const primaryOnlyLease = lifecycle.acquireRenderGcLease({
+      coordinationRoot: coordination,
+      pid: 518,
+      processAlive: () => false,
+      scope,
+    });
+    const primaryOnly = capture(() =>
+      lifecycle.preserveRenderLivenessLease(
+        { error: primary },
+        primaryOnlyLease,
+      ),
+    );
     TestValidator.equals(
       "dry/apply ordering and primary-first cleanup are exact",
       {
@@ -440,6 +677,8 @@ export const test_cli_scaffold_sound_cache_lifecycle = (): void => {
         aggregate: combined instanceof AggregateError,
         cause: combined instanceof AggregateError ? combined.cause : undefined,
         errors: combined instanceof AggregateError ? [...combined.errors] : [],
+        cleanupOnly: cleanupOnly instanceof Error,
+        primaryOnly: primaryOnly === primary,
       },
       {
         dry: "dry",
@@ -454,6 +693,8 @@ export const test_cli_scaffold_sound_cache_lifecycle = (): void => {
         aggregate: true,
         cause: primary,
         errors: [primary, (combined as AggregateError).errors[1]],
+        cleanupOnly: true,
+        primaryOnly: true,
       },
     );
   } catch (error) {
