@@ -9,6 +9,7 @@ import path from "node:path";
 import ts from "typescript-compiler";
 
 import type { AutoMoviePopulationScope } from "./AutoMoviePopulationScope";
+import { assertAutoMovieEvidenceReviewReasons } from "./auditAutoMovieEvidenceReviewReasons";
 import { createAutoMoviePopulationFiles } from "./createAutoMoviePopulationFiles";
 
 /**
@@ -1184,6 +1185,19 @@ const walkFiles = (root: string, extension: ".md" | ".ts"): string[] => {
   return output;
 };
 
+const validateReviewReasons = (graph: IProductionGraph): void => {
+  const files = [
+    ...walkFiles(path.join(graph.location, DOCS), ".md"),
+    ...walkFiles(path.join(graph.location, "src"), ".ts"),
+  ];
+  assertAutoMovieEvidenceReviewReasons(
+    files.map((file) => ({
+      path: posix(path.relative(graph.location, file)),
+      source: fs.readFileSync(file, "utf8"),
+    })),
+  );
+};
+
 interface IHeadingIdentity {
   anchor: string;
   depth: 2 | 3 | 4;
@@ -1577,6 +1591,7 @@ const assertSourceExportsAreEvidenceAddressable = (
       )
         continue;
       const name = ts.getNameOfDeclaration(member);
+      if (name !== undefined && ts.isPrivateIdentifier(name)) continue;
       const display = name?.getText(source) ?? "unnamed member";
       if (
         ts.isGetAccessorDeclaration(member) ||
@@ -2268,7 +2283,7 @@ const validateNarrativePopulationTopology = (graph: IProductionGraph): void => {
         `${layer} use numbered delivery-group directories containing only index.md and numbered unit files; received ${invalid.map((file) => posix(path.relative(graph.location, file))).join(", ")}.`,
       );
     const groups = new Set(
-      markdownPopulationFiles(graph, layer).map(
+      residents.map(
         (file) => posix(path.relative(directory, file)).split("/")[0]!,
       ),
     );
@@ -2276,7 +2291,19 @@ const validateNarrativePopulationTopology = (graph: IProductionGraph): void => {
       const index = path.join(directory, group, "index.md");
       if (!fs.existsSync(index))
         throw new Error(
-          `${layer}/${group} is an active delivery group without index.md.`,
+          `${layer}/${group} is a resident delivery group without index.md.`,
+        );
+      const numberedUnits = residents.filter((file) => {
+        const parts = posix(path.relative(directory, file)).split("/");
+        return (
+          parts[0] === group &&
+          parts[1] !== "index.md" &&
+          NUMBERED_NARRATIVE_NAME.test(parts[1]!.slice(0, -3))
+        );
+      });
+      if (numberedUnits.length === 0)
+        throw new Error(
+          `${layer}/${group} is a delivery group without a numbered unit file.`,
         );
       const headings = markdownHeadings(index);
       narrativeH1(index);
@@ -2318,9 +2345,14 @@ const validateHosts = (graph: IProductionGraph): void => {
     const stage = graph[name];
     const directory = path.join(graph.location, DOCS, name);
     const files = markdownPopulationFiles(graph, name);
-    if (!isActive(stage) && files.length !== 0)
+    const disabledResidents =
+      !isActive(stage) &&
+      (name === "treatments" || name === "scripts" || name === "screenplays")
+        ? walkFiles(directory, ".md")
+        : files;
+    if (!isActive(stage) && disabledResidents.length !== 0)
       throw new Error(
-        `${name} is disabled but governed hosts remain: ${files.map((file) => posix(path.relative(graph.location, file))).join(", ")}.`,
+        `${name} is disabled but governed hosts remain: ${disabledResidents.map((file) => posix(path.relative(graph.location, file))).join(", ")}.`,
       );
     if (isActive(stage) && files.length === 0)
       throw new Error(`${name} cannot enter ${stage} without a Markdown host.`);
@@ -2990,6 +3022,7 @@ const validateProductionGraph = (
   graph: IProductionGraph,
 ): ITargetIdentityRegistry => {
   validateDeclaration(graph);
+  validateReviewReasons(graph);
   const targetIdentities = validateContracts(graph.location);
   validateStages(graph);
   validateHosts(graph);

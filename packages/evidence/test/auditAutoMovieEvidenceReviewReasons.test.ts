@@ -40,7 +40,7 @@ const testRestatementForms = (): void => {
   ]);
   assert.match(
     message,
-    /docs\/models\/example\.md:8 \[evidence-review-restatement\] principles\/common\.md#scope-preservation \(docs\/models\/example\.md#form\)/u,
+    /docs\/models\/example\.md:8 \[evidence-review-restatement\] principles\/core\/common\.md#scope-preservation \(docs\/models\/example\.md#form\)/u,
   );
   assert.match(
     message,
@@ -48,7 +48,7 @@ const testRestatementForms = (): void => {
   );
   assert.match(
     message,
-    /docs\/models\/example\.md:12 \[evidence-review-restatement\] principles\/models\.md#spatial-convention \(docs\/models\/example\.md#form\)/u,
+    /docs\/models\/example\.md:12 \[evidence-review-restatement\] principles\/design\/models\.md#spatial-convention \(docs\/models\/example\.md#form\)/u,
   );
 };
 
@@ -76,7 +76,7 @@ const testHostLocalReuse = (): void => {
   ]);
   assert.match(
     message,
-    /\[evidence-review-reused\] principles\/models\.md#reviewable-structure \(docs\/models\/example\.md#first\)/u,
+    /\[evidence-review-reused\] principles\/design\/models\.md#reviewable-structure \(docs\/models\/example\.md#first\)/u,
   );
   assert.doesNotMatch(message, /docs\/models\/example\.md#second/u);
 };

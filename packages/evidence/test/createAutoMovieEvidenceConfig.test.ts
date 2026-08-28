@@ -7,6 +7,8 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
+import "./auditAutoMovieEvidenceReviewReasons.test";
+
 type Graph = Parameters<typeof createAutoMovieEvidenceConfig>[0];
 type Claim = NonNullable<Graph["claims"]>[number];
 type ContractManifest = ReturnType<
@@ -233,6 +235,41 @@ try {
     { mode: "complete-production" },
   );
 
+  const repeatedReview = root();
+  write(
+    repeatedReview,
+    "docs/settings/review.md",
+    "## Review {#review}\n<!--\n@evidence principles/core/common.md#scope-preservation The unit owns its complete boundary.\n@evidenceReview principles/core/common.md#scope-preservation #abcdef0 Compared the target with the host. Verified relationship: The unit owns its complete boundary.\n-->\n",
+  );
+  assert.equal(
+    throws(
+      () => createAutoMovieEvidenceConfig(disabled(repeatedReview)),
+      "[evidence-review-restatement] principles/core/common.md#scope-preservation (docs/settings/review.md#review)",
+    ),
+    true,
+  );
+
+  const reusedReview = root();
+  write(
+    reusedReview,
+    "src/models/review.ts",
+    `/**
+ * @evidence principles/core/source-units.md#scope-preservation Owns one model boundary.
+ * @evidenceReview principles/core/source-units.md#scope-preservation #abcdef0 Checked principles/core/source-units.md#scope-preservation against this export and found the left profile is the weakest observation.
+ * @evidence principles/core/source-units.md#substantive-completion Builds one complete model.
+ * @evidenceReview principles/core/source-units.md#substantive-completion #abcdef1 Checked principles/core/source-units.md#substantive-completion against this export and found the left profile is the weakest observation.
+ */
+export const review = true;
+`,
+  );
+  assert.equal(
+    throws(
+      () => createAutoMovieEvidenceConfig(disabled(reusedReview)),
+      "[evidence-review-reused] principles/core/source-units.md#substantive-completion (src/models/review.ts::docblock@1)",
+    ),
+    true,
+  );
+
   const pilotRoot = root();
   write(pilotRoot, "docs/settings/production.md", "## Scope {#scope}\n");
   const pilotGraph = createAutoMovieEvidenceConfig({
@@ -249,6 +286,65 @@ try {
       claim.name?.startsWith("scripts H2 units"),
     )?.files,
     ["scripts/001-first-delivery/???-*.md"],
+  );
+
+  const indexOnly = root();
+  write(indexOnly, "docs/scripts/001-empty/index.md", "# Empty\n");
+  assert.equal(
+    throws(
+      () => createAutoMovieEvidenceConfig(disabled(indexOnly)),
+      "scripts/001-empty is a delivery group without a numbered unit file",
+    ),
+    true,
+  );
+
+  const disabledNarrative = root();
+  write(disabledNarrative, "docs/scripts/001-stale/index.md", "# Stale\n");
+  write(
+    disabledNarrative,
+    "docs/scripts/001-stale/001-unit.md",
+    "# Stale\n\n## Unit {#unit}\n",
+  );
+  assert.equal(
+    throws(
+      () => createAutoMovieEvidenceConfig(disabled(disabledNarrative)),
+      "scripts is disabled but governed hosts remain",
+    ),
+    true,
+  );
+
+  const outOfScopePilot = root();
+  write(outOfScopePilot, "docs/settings/production.md", "## Scope {#scope}\n");
+  write(
+    outOfScopePilot,
+    "docs/treatments/001-event.md",
+    "# Event\n\n## Event {#event}\n",
+  );
+  for (const group of ["001-first-delivery", "002-retained-delivery"]) {
+    write(outOfScopePilot, `docs/scripts/${group}/index.md`, `# ${group}\n`);
+    write(
+      outOfScopePilot,
+      `docs/scripts/${group}/001-unit.md`,
+      `# ${group}\n\n## Sequence {#${group}-sequence}\n\n### Scene {#${group}-scene}\n\n#### Beat {#${group}-beat}\n`,
+    );
+  }
+  const scopedGraph = createAutoMovieEvidenceConfig({
+    ...disabled(outOfScopePilot),
+    kind: "film",
+    populationScope: {
+      mode: "first-pilot",
+      partitionGroup: "001-first-delivery",
+    },
+    settings: "review",
+    treatments: "review",
+    scripts: "draft",
+  });
+  assert.deepEqual(
+    scopedGraph.claims.find((claim) =>
+      claim.name?.startsWith("scripts H2 units"),
+    )?.files,
+    ["scripts/001-first-delivery/???-*.md"],
+    "a structurally valid out-of-scope delivery group remains resident but unclaimed during the first pilot",
   );
 
   const resetRoot = root();
@@ -566,19 +662,59 @@ try {
     "every published discovery, upstream, principle, and obligation file must govern at least one shared graph claim",
   );
   for (const [layer, expected] of Object.entries({
-    settings: ["common", "settings"],
-    research: ["common"],
-    maps: ["common", "designs", "maps"],
-    models: ["common", "designs", "models"],
-    spaces: ["common", "designs", "spaces"],
-    materials: ["common", "designs", "materials"],
-    instances: ["common", "designs", "instances"],
-    motions: ["common", "designs", "motions"],
-    systems: ["common", "designs", "systems"],
-    treatments: ["common", "films", "treatments"],
-    scripts: ["common", "films", "scripts"],
-    screenplays: ["common", "films", "screenplays"],
-    briefs: ["common", "briefs"],
+    settings: ["discovery/core/common.md", "discovery/core/settings.md"],
+    research: ["discovery/core/common.md"],
+    maps: [
+      "discovery/core/common.md",
+      "discovery/design/designs.md",
+      "discovery/design/maps.md",
+    ],
+    models: [
+      "discovery/core/common.md",
+      "discovery/design/designs.md",
+      "discovery/design/models.md",
+    ],
+    spaces: [
+      "discovery/core/common.md",
+      "discovery/design/designs.md",
+      "discovery/design/spaces.md",
+    ],
+    materials: [
+      "discovery/core/common.md",
+      "discovery/design/designs.md",
+      "discovery/design/materials.md",
+    ],
+    instances: [
+      "discovery/core/common.md",
+      "discovery/design/designs.md",
+      "discovery/design/instances.md",
+    ],
+    motions: [
+      "discovery/core/common.md",
+      "discovery/design/designs.md",
+      "discovery/design/motions.md",
+    ],
+    systems: [
+      "discovery/core/common.md",
+      "discovery/design/designs.md",
+      "discovery/design/systems.md",
+    ],
+    treatments: [
+      "discovery/core/common.md",
+      "discovery/story/films.md",
+      "discovery/story/treatments.md",
+    ],
+    scripts: [
+      "discovery/core/common.md",
+      "discovery/story/films.md",
+      "discovery/story/scripts.md",
+    ],
+    screenplays: [
+      "discovery/core/common.md",
+      "discovery/story/films.md",
+      "discovery/story/screenplays.md",
+    ],
+    briefs: ["discovery/core/common.md", "discovery/delivery/briefs.md"],
   })) {
     const discoveryClaim = graph.claims.find(
       (candidate) =>
@@ -592,7 +728,7 @@ try {
     ]);
     assert.deepEqual(
       discoveryFilesOf(discoveryClaim),
-      expected.map((targetName) => `discovery/${targetName}.md`),
+      expected,
       `${layer} work-specific contract discovery targets drifted from their semantic population`,
     );
     for (const file of discoveryFilesOf(discoveryClaim)) {
@@ -676,6 +812,13 @@ try {
     briefs: "briefs",
   })) {
     const narrative = ["treatments", "scripts", "screenplays"].includes(layer);
+    const domain = ["settings", "research"].includes(layer)
+      ? "core"
+      : layer === "briefs"
+        ? "delivery"
+        : narrative
+          ? "story"
+          : "design";
     const inherited = [
       "maps",
       "models",
@@ -703,7 +846,7 @@ try {
           "principles/core/common.md",
           ...(narrative ? ["principles/story/narratives.md"] : []),
           ...(inherited ? ["principles/core/inherited-units.md"] : []),
-          `principles/${contract}.md`,
+          `principles/${domain}/${contract}.md`,
         ].sort(),
         `${layer} H${depth} must answer every applicable principle for itself`,
       );
@@ -728,7 +871,9 @@ try {
           ? [
               "obligations/core/common.md",
               ...(narrative ? ["obligations/story/narratives.md"] : []),
-              ...(layer === "research" ? [] : [`obligations/${contract}.md`]),
+              ...(layer === "research"
+                ? []
+                : [`obligations/${domain}/${contract}.md`]),
             ].sort()
           : [],
         `${layer} obligations must be covered once-plus across only its primary H2 owner population`,
@@ -742,7 +887,7 @@ try {
   );
   assert.deepEqual(
     sharedFilesOf(briefH2, "obligations"),
-    ["obligations/delivery/briefs.md", "obligations/core/common.md"],
+    ["obligations/core/common.md", "obligations/delivery/briefs.md"],
     "brief H2 units must cover addressability without inheriting film narrative obligations",
   );
   const briefAddressability = referenceTo(
@@ -765,9 +910,9 @@ try {
     assert.deepEqual(
       sharedFilesOf(briefUnit, "principles"),
       [
-        "principles/delivery/briefs.md",
         "principles/core/common.md",
         "principles/core/inherited-units.md",
+        "principles/delivery/briefs.md",
       ],
       `brief H${depth} units must answer information structure without inheriting film narrative principles`,
     );
@@ -1413,6 +1558,7 @@ try {
           '  public readonly id = "subject";',
           "  public move(): void {}",
           '  private get internalLabel(): string { return "subject"; }',
+          '  get #internal(): string { return "subject"; }',
           "}",
         ].join("\n"),
       ),
