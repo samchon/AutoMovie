@@ -29,6 +29,7 @@ const command = require(
     root: string;
     productionId: string;
     evidence: IAutoMovieEvidenceConfigProps;
+    output?: (value: unknown) => void;
   }) => unknown;
 };
 
@@ -170,6 +171,25 @@ const libraryDiagnostics = (props: {
     .lint({ scope: "review" })
     .diagnostics.filter((entry) => entry.target.startsWith("library:"));
 
+const commandRefuses = (props: {
+  argv: readonly string[];
+  root: string;
+  evidence: IAutoMovieEvidenceConfigProps;
+  message: string;
+}): boolean => {
+  try {
+    command.runLibraryReviewCommand({
+      argv: props.argv,
+      root: props.root,
+      productionId: "fixture-film",
+      evidence: props.evidence,
+    });
+    return false;
+  } catch (error) {
+    return error instanceof Error && error.message.includes(props.message);
+  }
+};
+
 /**
  * A generated library can create and pay branch-specific review plans without
  * inventing a shot, and the shipped compiler consumes the same authoring truth.
@@ -256,6 +276,241 @@ export const test_cli_scaffold_library_review_command = (): void => {
       root: fixture.root,
       authoring: currentAuthoring,
     });
+    let outputCount = 0;
+    command.runLibraryReviewCommand({
+      argv: ["inspect"],
+      root: fixture.root,
+      productionId: "fixture-film",
+      evidence,
+      output: () => {
+        outputCount += 1;
+      },
+    });
+    const spaceOwner = ownerAddress(authoring, "spaces");
+    const refusals: Array<readonly [readonly string[], string]> = [
+      [["unknown"], 'must be "inspect", "plan", or "record"'],
+      [["plan", "--owner", "--source", "bad"], "requires one value"],
+      [["plan", "--owner", spaceOwner, "--owner", spaceOwner], "exactly once"],
+      [["plan", "--owner", "invalid"], "must be one exact"],
+      [
+        ["plan", "--owner", "docs/spaces/owner.md#absent"],
+        "outside the exact active",
+      ],
+      [["plan", "--owner", spaceOwner], "nonempty unique subset"],
+      [
+        [
+          "plan",
+          "--owner",
+          spaceOwner,
+          "--source",
+          "src/spaces/owner.ts",
+          "--source",
+          "src/spaces/owner.ts",
+        ],
+        "nonempty unique subset",
+      ],
+      [
+        ["plan", "--owner", spaceOwner, "--source", "src/other.ts"],
+        "nonempty unique subset",
+      ],
+      [
+        ["plan", "--owner", spaceOwner, "--source", "src/spaces/owner.ts"],
+        "one or more uniquely named",
+      ],
+      [
+        [
+          "plan",
+          "--owner",
+          spaceOwner,
+          "--source",
+          "src/spaces/owner.ts",
+          "--observation",
+          "same:artifact",
+          "--observation",
+          "same:facts",
+        ],
+        "uniquely named",
+      ],
+      ...[
+        " :artifact",
+        "bad:unknown",
+        "bad:artifact:model",
+        "bad:turntable",
+        "bad:turntable: model",
+        "bad:turntable:model:extra",
+      ].map(
+        (observation) =>
+          [
+            [
+              "plan",
+              "--owner",
+              spaceOwner,
+              "--source",
+              "src/spaces/owner.ts",
+              "--observation",
+              observation,
+            ],
+            observation.includes("turntable") &&
+            observation.split(":").length === 3
+              ? "needs a model"
+              : observation.includes("artifact:model")
+                ? "only for turntable"
+                : "must be id:artifact",
+          ] as const,
+      ),
+      [
+        [
+          "plan",
+          "--owner",
+          spaceOwner,
+          "--source",
+          "src/spaces/owner.ts",
+          "--observation",
+          "fake:turntable:chair",
+        ],
+        "not a model turntable",
+      ],
+      [["record"], "--owner is required"],
+      [
+        [
+          "record",
+          "--owner",
+          spaceOwner,
+          "--observation",
+          "spaces-neutral",
+          "--runtime",
+          " ",
+          "--verdict",
+          "passed",
+        ],
+        "canonical nonblank",
+      ],
+      [
+        [
+          "record",
+          "--owner",
+          spaceOwner,
+          "--observation",
+          "spaces-neutral",
+          "--runtime",
+          "probe:v1",
+          "--verdict",
+          "maybe",
+        ],
+        "Unsupported terminal verdict",
+      ],
+      [
+        [
+          "record",
+          "--owner",
+          spaceOwner,
+          "--observation",
+          "absent",
+          "--runtime",
+          "probe:v1",
+          "--verdict",
+          "passed",
+        ],
+        "outside current owner",
+      ],
+      [
+        [
+          "record",
+          "--owner",
+          spaceOwner,
+          "--observation",
+          "spaces-neutral",
+          "--runtime",
+          "probe:v1",
+          "--verdict",
+          "passed",
+        ],
+        "Record exactly one",
+      ],
+      [
+        [
+          "record",
+          "--owner",
+          spaceOwner,
+          "--observation",
+          "spaces-neutral",
+          "--runtime",
+          "probe:v1",
+          "--verdict",
+          "passed",
+          "--artifact-project",
+          "absent.txt",
+        ],
+        "absent or unsafe",
+      ],
+      [
+        [
+          "record",
+          "--owner",
+          spaceOwner,
+          "--observation",
+          "spaces-neutral",
+          "--runtime",
+          "probe:v1",
+          "--verdict",
+          "passed",
+          "--artifact-project",
+          "observations/space.svg",
+          "--facts-file",
+          "observations/spaces.json",
+        ],
+        "Record exactly one",
+      ],
+      [
+        [
+          "record",
+          "--owner",
+          spaceOwner,
+          "--observation",
+          "spaces-neutral",
+          "--runtime",
+          "probe:v1",
+          "--verdict",
+          "passed",
+          "--turntable",
+          "chair",
+        ],
+        "requires artifact, not turntable",
+      ],
+    ];
+    const refusalCoverage = refusals.every(([argv, message]) =>
+      commandRefuses({ argv, root: fixture.root, evidence, message }),
+    );
+    const renderArtifact = path.join(
+      fixture.root,
+      "renders",
+      "fixture-film",
+      "observations",
+      "space.png",
+    );
+    fs.mkdirSync(path.dirname(renderArtifact), { recursive: true });
+    fs.writeFileSync(renderArtifact, "rendered space", "utf8");
+    command.runLibraryReviewCommand({
+      argv: [
+        "record",
+        "--owner",
+        spaceOwner,
+        "--observation",
+        "spaces-neutral",
+        "--runtime",
+        "automovie-library-probe:v1",
+        "--verdict",
+        "passed",
+        "--artifact-render",
+        "observations/space.png",
+      ],
+      root: fixture.root,
+      productionId: "fixture-film",
+      evidence,
+      output: () => {
+        outputCount += 1;
+      },
+    });
     fs.writeFileSync(
       path.join(fixture.root, "src", "motions", "owner.ts"),
       'export const motionsLibraryOwner = "changed";\n',
@@ -318,6 +573,8 @@ export const test_cli_scaffold_library_review_command = (): void => {
                 entry.message.includes("stale"),
             ),
         ],
+        ["commandRefusalMatrix", () => refusalCoverage],
+        ["inspectAndRecordEmitResults", () => outputCount === 2],
       ]),
       {
         exactPlansWritten: true,
@@ -326,6 +583,8 @@ export const test_cli_scaffold_library_review_command = (): void => {
         unpaidOwnersRefused: true,
         allBuildingMotionAndSystemReceiptsCurrent: true,
         motionSourceChangeStalesReceipt: true,
+        commandRefusalMatrix: true,
+        inspectAndRecordEmitResults: true,
       },
     );
   } finally {

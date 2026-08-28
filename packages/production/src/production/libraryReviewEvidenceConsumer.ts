@@ -491,15 +491,11 @@ const receiptCurrent = (props: {
       turntableCurrent(props.consumer, props.receipt.evidence.model)
     );
   if (props.receipt.evidence.kind === "facts")
-    try {
-      return (
-        digestAutoMovieBytes(
-          canonicalAutoMovieJsonBytes(props.receipt.evidence.facts),
-        ) === props.receipt.evidence.digest
-      );
-    } catch {
-      return false;
-    }
+    return (
+      digestAutoMovieBytes(
+        canonicalAutoMovieJsonBytes(props.receipt.evidence.facts),
+      ) === props.receipt.evidence.digest
+    );
   try {
     const bytes =
       props.receipt.evidence.root === "render"

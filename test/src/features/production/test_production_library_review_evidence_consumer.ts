@@ -519,6 +519,18 @@ export const test_production_library_review_evidence_consumer = (): void => {
     project: factsOnlyModelState,
     compileFingerprint: COMPILE,
   });
+  const noSourceState = project();
+  writePlans(noSourceState);
+  const noSourcePlan = JSON.parse(
+    noSourceState.prose.get(reviewPath("spaces"))!,
+  );
+  noSourcePlan.units[0].sources = [];
+  noSourceState.prose.set(reviewPath("spaces"), JSON.stringify(noSourcePlan));
+  const noSource = consumer.readAutoMovieLibraryReviewRequirements({
+    authoring: binding,
+    project: noSourceState,
+    compileFingerprint: COMPILE,
+  });
   const wrongRoot = consumer.libraryReviewEvidenceConsumerDiagnostics({
     ...props(state, binding),
     project: { ...state, root: "C:/other-project" },
@@ -702,6 +714,13 @@ export const test_production_library_review_evidence_consumer = (): void => {
           ),
       ],
       [
+        "libraryOwnerNeedsSource",
+        () =>
+          noSource.diagnostics.some((entry) =>
+            entry.message.includes("names no source owner"),
+          ),
+      ],
+      [
         "foreignAuthoringSnapshotRefused",
         () =>
           wrongRoot[0]?.target === "library:authoring-binding" &&
@@ -747,6 +766,7 @@ export const test_production_library_review_evidence_consumer = (): void => {
       missingSourceWasExercised: true,
       invalidSourcesPlansAndKindsRefused: true,
       modelFactsCannotReplaceFixedTurntable: true,
+      libraryOwnerNeedsSource: true,
       foreignAuthoringSnapshotRefused: true,
       filmBriefAndEarlierScopesRemainUnchanged: true,
     },
