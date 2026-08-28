@@ -17,7 +17,12 @@ import {
   IAutoMovieStage,
   IAutoMovieVector3,
 } from "@automovie/interface";
-import { AutoMoviePlayer, buildModel, mountViewer } from "@automovie/viewer";
+import {
+  AutoMoviePlayer,
+  assertAutoMovieViewerCameraDepthPrecision,
+  buildModel,
+  mountViewer,
+} from "@automovie/viewer";
 import * as THREE from "three";
 
 import { DEFAULT_STICKMAN, buildStickman } from "./stickman";
@@ -238,6 +243,11 @@ if (freezeAt !== null && Number.isFinite(freezeAt)) renderAt(freezeAt);
 const handle = mountViewer(canvas, scene, camera, (elapsed) => {
   if (!capMode && freezeAt === null) renderAt(elapsed % (FILM_DURATION + 0.8));
 });
+const cameraDepthPrecision = assertAutoMovieViewerCameraDepthPrecision({
+  renderer: handle.renderer,
+  source: stagedCam,
+  realized: camera,
+});
 (window as unknown as { __afSeek: (t: number) => void }).__afSeek = (
   t: number,
 ): void => {
@@ -248,4 +258,5 @@ const handle = mountViewer(canvas, scene, camera, (elapsed) => {
   ready: true,
   duration: FILM_DURATION,
   shots: shots.map((s) => s.id),
+  cameraDepthPrecision,
 };
