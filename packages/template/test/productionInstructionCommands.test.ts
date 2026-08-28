@@ -151,7 +151,7 @@ async function main(): Promise<void> {
           productionEvidence,
           scaffoldRoot,
         }),
-      /cannot synchronize instructions into itself/u,
+      /generated project root must have a physical directory ancestry/u,
     );
     assert.equal(fs.readFileSync(scaffoldSkill, "utf8"), scaffoldSkillBefore);
     const linkedManaged = makeRoot("linked-managed-instructions");
@@ -172,6 +172,100 @@ async function main(): Promise<void> {
       /generated instruction paths may not be links/u,
     );
     assert.equal(fs.readFileSync(scaffoldSkill, "utf8"), scaffoldSkillBefore);
+    const aliasedRootParent = makeRoot("aliased-generated-root");
+    const aliasedRootTarget = makeRoot("aliased-generated-target");
+    write(
+      aliasedRootTarget,
+      ".agents/skills/preserved.md",
+      "preserved aliased skills\n",
+    );
+    write(aliasedRootTarget, "AGENTS.md", "preserved aliased agent\n");
+    write(aliasedRootTarget, "CLAUDE.md", "preserved aliased claude\n");
+    const aliasedRootBefore = snapshot(aliasedRootTarget, [
+      ".agents",
+      "AGENTS.md",
+      "CLAUDE.md",
+    ]);
+    const aliasedRoot = path.join(aliasedRootParent, "generated");
+    fs.symlinkSync(
+      aliasedRootTarget,
+      aliasedRoot,
+      process.platform === "win32" ? "junction" : "dir",
+    );
+    assert.throws(
+      () =>
+        writeAutoMovieProductionInstructions({
+          root: aliasedRoot,
+          productionEvidence: disabled(aliasedRoot),
+          scaffoldRoot,
+        }),
+      /generated project root must have a physical directory ancestry/u,
+    );
+    assert.deepEqual(
+      snapshot(aliasedRootTarget, [".agents", "AGENTS.md", "CLAUDE.md"]),
+      aliasedRootBefore,
+    );
+    const linkedParentContainer = makeRoot("linked-generated-parent");
+    const linkedParentTarget = makeRoot("linked-generated-parent-target");
+    const linkedParentProject = path.join(linkedParentTarget, "project");
+    fs.mkdirSync(linkedParentProject);
+    write(
+      linkedParentProject,
+      ".agents/skills/preserved.md",
+      "preserved linked-parent skills\n",
+    );
+    write(linkedParentProject, "AGENTS.md", "preserved linked-parent agent\n");
+    write(linkedParentProject, "CLAUDE.md", "preserved linked-parent claude\n");
+    const linkedParentBefore = snapshot(linkedParentProject, [
+      ".agents",
+      "AGENTS.md",
+      "CLAUDE.md",
+    ]);
+    const linkedParent = path.join(linkedParentContainer, "parent");
+    fs.symlinkSync(
+      linkedParentTarget,
+      linkedParent,
+      process.platform === "win32" ? "junction" : "dir",
+    );
+    assert.throws(
+      () =>
+        writeAutoMovieProductionInstructions({
+          root: path.join(linkedParent, "project"),
+          productionEvidence: disabled(path.join(linkedParent, "project")),
+          scaffoldRoot,
+        }),
+      /generated project root must have a physical directory ancestry/u,
+    );
+    assert.deepEqual(
+      snapshot(linkedParentProject, [".agents", "AGENTS.md", "CLAUDE.md"]),
+      linkedParentBefore,
+    );
+    const absentRoot = path.join(aliasedRootParent, "absent");
+    assert.throws(
+      () =>
+        writeAutoMovieProductionInstructions({
+          root: absentRoot,
+          productionEvidence: disabled(absentRoot),
+          scaffoldRoot,
+        }),
+      /generated project root must have a physical directory ancestry/u,
+    );
+    assert.equal(fs.existsSync(absentRoot), false);
+    const fileRoot = path.join(aliasedRootParent, "project-file");
+    fs.writeFileSync(fileRoot, "preserved project bytes\n", "utf8");
+    assert.throws(
+      () =>
+        writeAutoMovieProductionInstructions({
+          root: fileRoot,
+          productionEvidence: disabled(fileRoot),
+          scaffoldRoot,
+        }),
+      /generated project root must have a physical directory ancestry/u,
+    );
+    assert.equal(
+      fs.readFileSync(fileRoot, "utf8"),
+      "preserved project bytes\n",
+    );
     fs.rmSync(linkedSkills);
     const linkedAgentTarget = path.join(
       linkedManaged,

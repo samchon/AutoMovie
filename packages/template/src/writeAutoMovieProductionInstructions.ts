@@ -35,6 +35,7 @@ export const writeAutoMovieProductionInstructions = (props: {
   const scaffoldRoot = path.resolve(
     props.scaffoldRoot ?? scaffoldAssetDirectory(),
   );
+  assertManagedRootIsPhysical(root);
   const sourceSkills = path.join(scaffoldRoot, ".agents", "skills");
   if (!fs.existsSync(sourceSkills))
     throw new Error(
@@ -69,6 +70,27 @@ export const writeAutoMovieProductionInstructions = (props: {
   fs.writeFileSync(agents, renderAutoMovieProductionRouter(identity), "utf8");
   fs.writeFileSync(claude, "@AGENTS.md\n", "utf8");
   return [targetSkills, agents, claude];
+};
+
+/** Refuse a generated-project root that aliases or is not a directory. */
+const assertManagedRootIsPhysical = (root: string): void => {
+  let cursor = path.parse(root).root;
+  const segments = path
+    .relative(cursor, root)
+    .split(path.sep)
+    .filter((segment) => segment.length !== 0);
+  for (const segment of ["", ...segments]) {
+    cursor = path.join(cursor, segment);
+    const metadata = fs.lstatSync(cursor, { throwIfNoEntry: false });
+    if (
+      metadata === undefined ||
+      metadata.isSymbolicLink() ||
+      !metadata.isDirectory()
+    )
+      throw new Error(
+        `${cursor}: the generated project root must have a physical directory ancestry.`,
+      );
+  }
 };
 
 /** Refuse links and non-directories anywhere in the installed skill tree. */
