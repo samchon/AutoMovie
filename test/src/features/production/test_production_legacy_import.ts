@@ -262,6 +262,16 @@ const rejectsTamperedRollbackBaseline = (
   }
 };
 
+const retiredReviewDirectories = [
+  "reviews/design/models",
+  "reviews/design/formations",
+  "reviews/design/shots",
+  "reviews/design/acceptances",
+  "reviews/source",
+  "reviews/shots",
+  "reviews/film",
+] as const;
+
 /**
  * Legacy import plans, applies, reopens, and rolls back without byte loss.
  *
@@ -277,6 +287,8 @@ const rejectsTamperedRollbackBaseline = (
  * 4. Actorless shots report that their readable subject needs reconstruction, and
  *    canonical rollback plans reject wrong roots, escaping directories, and
  *    duplicate file entries.
+ * 5. Current imports create no review ledger, while reapply and rollback accept
+ *    only the complete empty directory shell emitted before ledger retirement.
  */
 export const test_production_legacy_import = (): void => {
   const fileSymlinks = supportsFileSymlinks();
@@ -565,8 +577,50 @@ export const test_production_legacy_import = (): void => {
     }) as typeof fs.readFileSync;
     let repeated: ReturnType<AutoMovieLegacyImporter["apply"]> | null = null;
     let repeatedRejected = false;
+    const reviewLedgerAbsentAfterApply =
+      fs.existsSync(path.join(fixture.root, "automovie/reviews")) === false;
+    for (const directory of retiredReviewDirectories)
+      fs.mkdirSync(path.join(fixture.root, "automovie", directory), {
+        recursive: true,
+      });
+    let retiredEmptyReviewLayoutTolerated = false;
+    let retiredReviewFileRejected = false;
+    let partialRetiredReviewLayoutRejected = false;
+    let unknownReviewDirectoryRejected = false;
     try {
       repeated = importer.apply();
+      retiredEmptyReviewLayoutTolerated = repeated.status === "unchanged";
+      const retiredReviewFile = path.join(
+        fixture.root,
+        "automovie/reviews/source/finding.json",
+      );
+      fs.writeFileSync(retiredReviewFile, "{}\n");
+      retiredReviewFileRejected = throws(
+        () => importer.apply(),
+        "different or incomplete import",
+      );
+      fs.rmSync(retiredReviewFile);
+      const unknownReviewDirectory = path.join(
+        fixture.root,
+        "automovie/reviews/unknown-ledger",
+      );
+      fs.mkdirSync(unknownReviewDirectory);
+      unknownReviewDirectoryRejected = throws(
+        () => importer.apply(),
+        "different or incomplete import",
+      );
+      fs.rmdirSync(unknownReviewDirectory);
+      fs.rmSync(path.join(fixture.root, "automovie/reviews"), {
+        force: true,
+        recursive: true,
+      });
+      fs.mkdirSync(path.join(fixture.root, "automovie/reviews/film"), {
+        recursive: true,
+      });
+      partialRetiredReviewLayoutRejected = throws(
+        () => importer.apply(),
+        "different or incomplete import",
+      );
     } catch {
       repeatedRejected = true;
     } finally {
@@ -591,6 +645,14 @@ export const test_production_legacy_import = (): void => {
               fs.renameSync(appliedPlanParked, appliedPlanPath);
           },
         },
+        {
+          resource: "retired empty review directory layout",
+          cleanup: () =>
+            fs.rmSync(path.join(fixture.root, "automovie/reviews"), {
+              force: true,
+              recursive: true,
+            }),
+        },
       ]);
     }
     const production = AutoMovieProductionProject.open(fixture.root);
@@ -600,6 +662,20 @@ export const test_production_legacy_import = (): void => {
         ["applied", () => applied.status === "applied"],
         ["assertionPathUnread", () => legacyAssertionPathRead === false],
         ["repeatAccepted", () => repeatedRejected === false],
+        ["reviewLedgerAbsentAfterApply", () => reviewLedgerAbsentAfterApply],
+        [
+          "retiredEmptyReviewLayoutTolerated",
+          () => retiredEmptyReviewLayoutTolerated,
+        ],
+        ["retiredReviewFileRejected", () => retiredReviewFileRejected],
+        [
+          "partialRetiredReviewLayoutRejected",
+          () => partialRetiredReviewLayoutRejected,
+        ],
+        [
+          "unknownReviewDirectoryRejected",
+          () => unknownReviewDirectoryRejected,
+        ],
         ["planPathUnread", () => appliedPlanPathRead === false],
         ["repeatUnchanged", () => repeated?.status === "unchanged"],
         // Read through the optional chain again: a narrowing established on
@@ -615,6 +691,12 @@ export const test_production_legacy_import = (): void => {
         [
           "sourceRoot",
           () => production.manifest().importedLegacy?.sourceRoot === ".",
+        ],
+        [
+          "reviewLedgerAbsent",
+          () =>
+            fs.existsSync(path.join(fixture.root, "automovie/reviews")) ===
+            false,
         ],
         [
           "legacyUntouched",
@@ -637,11 +719,17 @@ export const test_production_legacy_import = (): void => {
         applied: true,
         assertionPathUnread: true,
         repeatAccepted: true,
+        reviewLedgerAbsentAfterApply: true,
+        retiredEmptyReviewLayoutTolerated: true,
+        retiredReviewFileRejected: true,
+        partialRetiredReviewLayoutRejected: true,
+        unknownReviewDirectoryRejected: true,
         planPathUnread: true,
         repeatUnchanged: true,
         repeatFingerprint: true,
         revision: true,
         sourceRoot: true,
+        reviewLedgerAbsent: true,
         legacyUntouched: true,
         reapplyRefused: true,
         rollbackRefused: true,
@@ -666,6 +754,13 @@ export const test_production_legacy_import = (): void => {
     const importer = new AutoMovieLegacyImporter(untouched.root);
     const plan = importer.plan();
     importer.apply();
+    // An untouched import made before review-ledger retirement may still carry
+    // the old empty directory shell. Rollback must accept and remove it while
+    // continuing to refuse any resident review record.
+    for (const directory of retiredReviewDirectories)
+      fs.mkdirSync(path.join(untouched.root, "automovie", directory), {
+        recursive: true,
+      });
     createMissingOwnedRoots(untouched.root, plan);
     const rolledBack = importer.rollback();
     TestValidator.equals(
@@ -850,6 +945,30 @@ export const test_production_legacy_import = (): void => {
   let planningCleanupFailure: ILegacyImportFixtureFailure | undefined;
   try {
     const importer = new AutoMovieLegacyImporter(planningCleanup.root);
+    const nativeProjectOpen = AutoMovieProject.open;
+    const planningTaskFailure = new Error(
+      "injected legacy planning task failure",
+    );
+    AutoMovieProject.open = (() => {
+      throw planningTaskFailure;
+    }) as typeof AutoMovieProject.open;
+    let taskCaught: unknown;
+    let projectOpenHookFailure: ILegacyImportFixtureFailure | undefined;
+    try {
+      taskCaught = captureFailure(() => importer.plan());
+    } catch (error) {
+      projectOpenHookFailure = { error };
+      throw error;
+    } finally {
+      preserveLegacyImportFixtureCleanup(projectOpenHookFailure, [
+        {
+          resource: "planning project-open hook",
+          cleanup: () => {
+            AutoMovieProject.open = nativeProjectOpen;
+          },
+        },
+      ]);
+    }
     const nativeWrite = fs.writeFileSync;
     const nativeRm = fs.rmSync;
     const standaloneCleanupFailure = new Error(
@@ -927,6 +1046,7 @@ export const test_production_legacy_import = (): void => {
     TestValidator.equals(
       "legacy planning cleanup preserves standalone and combined failures",
       namedFacts([
+        ["task", () => taskCaught === planningTaskFailure],
         ["standalone", () => standaloneCaught === standaloneCleanupFailure],
         [
           "combined",
@@ -937,7 +1057,7 @@ export const test_production_legacy_import = (): void => {
             ]),
         ],
       ]),
-      { standalone: true, combined: true },
+      { task: true, standalone: true, combined: true },
     );
   } catch (error) {
     planningCleanupFailure = { error };
@@ -3123,6 +3243,7 @@ export const test_production_legacy_import = (): void => {
   let specialInventoryEntryFailure: ILegacyImportFixtureFailure | undefined;
   try {
     const nativeReaddir = fs.readdirSync;
+    let injectedInventoryEntry: "special" | "symlink" = "special";
     fs.readdirSync = ((
       directory: fs.PathLike,
       options?: { withFileTypes?: boolean },
@@ -3140,7 +3261,7 @@ export const test_production_legacy_import = (): void => {
           ...entries,
           {
             name: "special-device",
-            isSymbolicLink: () => false,
+            isSymbolicLink: () => injectedInventoryEntry === "symlink",
             isDirectory: () => false,
             isFile: () => false,
           } as fs.Dirent,
@@ -3154,6 +3275,14 @@ export const test_production_legacy_import = (): void => {
         throws(
           () => new AutoMovieLegacyImporter(specialInventoryEntry.root).plan(),
           "not a regular file or directory",
+        ),
+      );
+      injectedInventoryEntry = "symlink";
+      TestValidator.predicate(
+        "linked filesystem entries cannot enter legacy inventory",
+        throws(
+          () => new AutoMovieLegacyImporter(specialInventoryEntry.root).plan(),
+          "symlink or junction",
         ),
       );
     } catch (error) {
@@ -3206,6 +3335,40 @@ export const test_production_legacy_import = (): void => {
           "symlink or junction",
         ),
       );
+    } else {
+      const nativeLstat = fs.lstatSync;
+      const lstatHook = (file: fs.PathLike, ...args: unknown[]): fs.Stats => {
+        if (path.resolve(file.toString()) === revisionPath)
+          return { isSymbolicLink: () => true } as fs.Stats;
+        return Reflect.apply(nativeLstat, fs, [file, ...args]) as fs.Stats;
+      };
+      if (Reflect.set(fs, "lstatSync", lstatHook) === false)
+        throw new Error("Unable to install the linked-revision lstat hook.");
+      let lstatFailure: ILegacyImportFixtureFailure | undefined;
+      try {
+        TestValidator.predicate(
+          "legacy project files reject a synthetic linked-file stat on hosts without file-symlink privilege",
+          throws(
+            () => new AutoMovieLegacyImporter(linkedRevision.root).plan(),
+            "symlink or junction",
+          ),
+        );
+      } catch (error) {
+        lstatFailure = { error };
+        throw error;
+      } finally {
+        preserveLegacyImportFixtureCleanup(lstatFailure, [
+          {
+            resource: "linked-revision lstat hook",
+            cleanup: () => {
+              if (Reflect.set(fs, "lstatSync", nativeLstat) === false)
+                throw new Error(
+                  "Unable to restore the linked-revision lstat hook.",
+                );
+            },
+          },
+        ]);
+      }
     }
   } catch (error) {
     linkedRevisionFailure = { error };
@@ -3237,6 +3400,7 @@ export const test_production_legacy_import = (): void => {
     "symlink",
     "directory",
     "foreign-token",
+    "read-error",
   ] as const) {
     if (lockMutation === "symlink" && fileSymlinks === false) continue;
     const changingLock = createLegacy();
@@ -3252,7 +3416,16 @@ export const test_production_legacy_import = (): void => {
       fs.writeFileSync(outsideLockPath, "external-owner");
       const nativeOpen = fs.openSync;
       let changed = false;
+      let injectedLockReadFailure = false;
       fs.openSync = ((file: fs.PathLike, ...args: unknown[]): number => {
+        if (
+          lockMutation === "read-error" &&
+          changed &&
+          path.resolve(file.toString()) === lockPath
+        ) {
+          injectedLockReadFailure = true;
+          throw new Error("injected resident-lock read failure");
+        }
         const descriptor = Reflect.apply(nativeOpen, fs, [
           file,
           ...args,
@@ -3262,12 +3435,14 @@ export const test_production_legacy_import = (): void => {
           path.resolve(file.toString()) === manifestPath
         ) {
           changed = true;
-          fs.rmSync(lockPath, { force: true });
-          if (lockMutation === "symlink")
-            fs.symlinkSync(outsideLockPath, lockPath);
-          else if (lockMutation === "directory") fs.mkdirSync(lockPath);
-          else if (lockMutation === "foreign-token")
-            fs.writeFileSync(lockPath, "external-owner");
+          if (lockMutation !== "read-error") {
+            fs.rmSync(lockPath, { force: true });
+            if (lockMutation === "symlink")
+              fs.symlinkSync(outsideLockPath, lockPath);
+            else if (lockMutation === "directory") fs.mkdirSync(lockPath);
+            else if (lockMutation === "foreign-token")
+              fs.writeFileSync(lockPath, "external-owner");
+          }
         }
         return descriptor;
       }) as typeof fs.openSync;
@@ -3285,8 +3460,12 @@ export const test_production_legacy_import = (): void => {
                 ),
             ],
             ["changed", () => changed],
+            [
+              "read failure observed",
+              () => lockMutation !== "read-error" || injectedLockReadFailure,
+            ],
           ]),
-          { refused: true, changed: true },
+          { refused: true, changed: true, "read failure observed": true },
         );
       } catch (error) {
         openSyncFailure = { error };
@@ -3468,6 +3647,7 @@ export const test_production_legacy_import = (): void => {
     importer.apply();
     const stateRoot = path.join(specialAppliedState.root, "automovie");
     const nativeReaddir = fs.readdirSync;
+    let injectedAppliedEntry: "special" | "symlink" = "special";
     fs.readdirSync = ((
       directory: fs.PathLike,
       options?: { withFileTypes?: boolean },
@@ -3484,7 +3664,7 @@ export const test_production_legacy_import = (): void => {
           ...entries,
           {
             name: "special-device",
-            isSymbolicLink: () => false,
+            isSymbolicLink: () => injectedAppliedEntry === "symlink",
             isDirectory: () => false,
             isFile: () => false,
           } as fs.Dirent,
@@ -3495,6 +3675,11 @@ export const test_production_legacy_import = (): void => {
     try {
       TestValidator.predicate(
         "special applied-state entries invalidate rollback verification",
+        throws(() => importer.rollback(), "changed after import"),
+      );
+      injectedAppliedEntry = "symlink";
+      TestValidator.predicate(
+        "linked applied-state entries invalidate rollback verification",
         throws(() => importer.rollback(), "changed after import"),
       );
     } catch (error) {

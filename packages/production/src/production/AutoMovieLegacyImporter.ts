@@ -56,6 +56,13 @@ const PRODUCTION_STATE_DIRECTORIES = [
   "design/formations",
   "design/shots",
   "design/acceptance",
+  "render-receipts",
+  "imports/legacy-v1",
+] as const;
+/** Empty directories emitted before the product review ledger was retired. */
+const RETIRED_EMPTY_STATE_DIRECTORIES = new Set([
+  "reviews",
+  "reviews/design",
   "reviews/design/models",
   "reviews/design/formations",
   "reviews/design/shots",
@@ -63,9 +70,7 @@ const PRODUCTION_STATE_DIRECTORIES = [
   "reviews/source",
   "reviews/shots",
   "reviews/film",
-  "render-receipts",
-  "imports/legacy-v1",
-] as const;
+]);
 
 interface ILegacyManifest {
   version: 1;
@@ -693,17 +698,24 @@ const assertLegacyLock = (root: string, lockToken?: string): void => {
       );
     return;
   }
-  let matches = false;
-  if (status !== null && status.isSymbolicLink() === false && status.isFile())
-    try {
-      const bytes = readPhysicalFile(root, "revision.lock", true);
-      matches =
-        bytes !== null && Buffer.from(bytes).toString("utf8") === lockToken;
-    } catch {}
+  const matches =
+    status !== null && status.isSymbolicLink() === false && status.isFile()
+      ? readLegacyLockMatches(root, lockToken)
+      : false;
   if (matches === false)
     throw new Error(
       `Legacy project commit lock "${lock}" changed during import apply. No production state was published.`,
     );
+};
+
+/** Treat an unreadable resident lock as a changed lock without hiding the read. */
+const readLegacyLockMatches = (root: string, lockToken: string): boolean => {
+  try {
+    const bytes = readPhysicalFile(root, "revision.lock", true);
+    return bytes !== null && Buffer.from(bytes).toString("utf8") === lockToken;
+  } catch {
+    return false;
+  }
 };
 
 const equalOptionalBytes = (
@@ -721,7 +733,7 @@ const withLegacyProject = <T>(
   const temporary = fs.mkdtempSync(
     path.join(os.tmpdir(), "automovie-legacy-import-"),
   );
-  let failure: ILegacyImportCleanupFailure | undefined;
+  let result: T;
   try {
     for (const [relative, bytes] of snapshot.files)
       if (bytes !== null) {
@@ -729,13 +741,17 @@ const withLegacyProject = <T>(
         fs.mkdirSync(path.dirname(file), { recursive: true });
         fs.writeFileSync(file, bytes);
       }
-    return task(AutoMovieProject.open(temporary));
+    result = task(AutoMovieProject.open(temporary));
   } catch (error) {
-    failure = { error };
+    removeLegacyImportTemporary(
+      temporary,
+      { error },
+      "legacy planning snapshot",
+    );
     throw error;
-  } finally {
-    removeLegacyImportTemporary(temporary, failure, "legacy planning snapshot");
   }
+  removeLegacyImportTemporary(temporary, undefined, "legacy planning snapshot");
+  return result;
 };
 
 const collectDirectory = (
@@ -1002,8 +1018,16 @@ const verifyAppliedImport = (
     if (toleratedFile !== undefined) expectedFiles.push(toleratedFile.path);
     expectedFiles.sort(compareCodeUnits);
     const tree = collectStateTree(stateRoot);
+    const retiredDirectories = tree.directories.filter((directory) =>
+      RETIRED_EMPTY_STATE_DIRECTORIES.has(directory),
+    );
+    const activeDirectories = tree.directories.filter(
+      (directory) => RETIRED_EMPTY_STATE_DIRECTORIES.has(directory) === false,
+    );
     if (
-      equalStrings(tree.directories, expectedStateDirectories()) === false ||
+      (retiredDirectories.length !== 0 &&
+        retiredDirectories.length !== RETIRED_EMPTY_STATE_DIRECTORIES.size) ||
+      equalStrings(activeDirectories, expectedStateDirectories()) === false ||
       equalStrings(tree.files, expectedFiles) === false
     )
       return false;

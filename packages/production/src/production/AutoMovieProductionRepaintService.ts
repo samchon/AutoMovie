@@ -584,7 +584,10 @@ const resolveReferences = (
       ),
     };
   const seen = new Set<string>();
-  const rolesByPath = new Map<string, Set<AutoMovieRepaintReferenceRole>>();
+  const rolesByDigest = new Map<
+    AutoMovieContentDigest,
+    Set<AutoMovieRepaintReferenceRole>
+  >();
   const values: Array<{
     role: AutoMovieRepaintReferenceRole;
     path: string;
@@ -621,9 +624,9 @@ const resolveReferences = (
         ),
       };
     seen.add(key);
-    const roles = rolesByPath.get(reference.path) ?? new Set();
+    const roles = rolesByDigest.get(record.digest) ?? new Set();
     roles.add(reference.role);
-    rolesByPath.set(reference.path, roles);
+    rolesByDigest.set(record.digest, roles);
     values.push({
       role: reference.role,
       path: reference.path,
@@ -632,7 +635,7 @@ const resolveReferences = (
     });
   }
   if (
-    [...rolesByPath.values()].some(
+    [...rolesByDigest.values()].some(
       (roles) => roles.size === REPAINT_REFERENCE_ROLE_COUNT,
     )
   )

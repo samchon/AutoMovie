@@ -187,12 +187,13 @@ const REPAINT_REFERENCE_ROLE_COUNT = 7;
 /**
  * Tracked production repository for the coding-agent-first application.
  *
- * `automovie/design/<production>` and `automovie/reviews/<production>` are
- * human-readable tracked contracts. Project-shared recipes live below
- * `automovie/design/shared`; `src` remains coding-agent owned, while
- * `generated/<production>` is compiler owned and `renders/<production>` is
- * content addressed. Every one-artifact mutation is staged before an optimistic
- * revision check and one short production-scoped commit lock.
+ * `automovie/design/<production>` is the human-readable tracked design
+ * contract. Project-shared recipes live below `automovie/design/shared`; `src`
+ * remains coding-agent owned, while `generated/<production>` is compiler owned
+ * and `renders/<production>` is content addressed. Review observations stay in
+ * evidence citations and Git rather than a second project ledger. Every
+ * one-artifact mutation is staged before an optimistic revision check and one
+ * short production-scoped commit lock.
  */
 export class AutoMovieProductionProject {
   /**
@@ -1871,8 +1872,8 @@ export class AutoMovieProductionProject {
   /**
    * Re-read and verify every current repaint receipt and its resident MP4.
    *
-   * Invalid, stale, linked, or forged records are omitted; review preparation
-   * treats an omitted required shot as missing rendition evidence.
+   * Invalid, stale, linked, or forged records are omitted; publication
+   * verification treats an omitted required shot as missing rendition evidence.
    */
   public verifiedRepaintRenditions(
     shots: readonly string[],
@@ -2064,7 +2065,10 @@ export class AutoMovieProductionProject {
         "Repaint asset manifest does not match its strict schema.",
       );
     const seen = new Set<string>();
-    const rolesByPath = new Map<string, Set<AutoMovieRepaintReferenceRole>>();
+    const rolesByDigest = new Map<
+      AutoMovieContentDigest,
+      Set<AutoMovieRepaintReferenceRole>
+    >();
     if (receipt.references.length === 0)
       throw new Error("Repaint receipt requires at least one fixed reference.");
     for (const reference of receipt.references) {
@@ -2093,12 +2097,12 @@ export class AutoMovieProductionProject {
           `Repaint reference "${reference.role}:${reference.path}" is duplicate, absent, byte-stale, or not registered to shot "${receipt.shot}".`,
         );
       seen.add(key);
-      const roles = rolesByPath.get(reference.path) ?? new Set();
+      const roles = rolesByDigest.get(reference.digest) ?? new Set();
       roles.add(reference.role);
-      rolesByPath.set(reference.path, roles);
+      rolesByDigest.set(reference.digest, roles);
     }
     if (
-      [...rolesByPath.values()].some(
+      [...rolesByDigest.values()].some(
         (roles) => roles.size === REPAINT_REFERENCE_ROLE_COUNT,
       )
     )
