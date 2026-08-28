@@ -1251,6 +1251,14 @@ export const test_production_repaint_generator_adoption =
         selectionContext(() => accepted.receipt!),
         selection,
       );
+      const selectedWithoutRequest =
+        new AutoMovieProductionRepaintService().select(
+          selectionContext(() => ({
+            ...accepted.receipt!,
+            requestId: undefined,
+          })),
+          selection,
+        );
       const refusedSelections = [
         new Error("selection commit failed"),
         nonError("non-error selection commit failed"),
@@ -1267,11 +1275,13 @@ export const test_production_repaint_generator_adoption =
         {
           selected: selectedCandidate.selected,
           attemptId: selectedCandidate.receipt?.attemptId,
+          absentRequestId: selectedWithoutRequest.requestId,
           refused: refusedSelections.map(codeOf),
         },
         {
           selected: true,
           attemptId: accepted.receipt.attemptId,
+          absentRequestId: null,
           refused: ["repaint-commit-refused", "repaint-commit-refused"],
         },
       );
@@ -1312,10 +1322,30 @@ export const test_production_repaint_generator_adoption =
           evidence: { ...executionEvidence(), prompt: " padded " },
         },
       ).repaint(runnable, input);
+      const throwingEvidence = executionEvidence();
+      Object.defineProperty(throwingEvidence, "prompt", {
+        enumerable: true,
+        get: () => {
+          throw nonError("non-error evidence failure");
+        },
+      });
+      const thrownEvidence = await new AutoMovieProductionRepaintService(
+        actualAdapter(selected.runtimeIdentity),
+        selected,
+        { policy: executionPolicy(), evidence: throwingEvidence },
+      ).repaint(runnable, input);
       TestValidator.equals(
         "capture and explicit evidence failures remain pre-provider refusals",
-        [codeOf(unavailableCapture), codeOf(invalidEvidence)],
-        ["repaint-source-evidence-missing", "repaint-host-unavailable"],
+        [
+          codeOf(unavailableCapture),
+          codeOf(invalidEvidence),
+          codeOf(thrownEvidence),
+        ],
+        [
+          "repaint-source-evidence-missing",
+          "repaint-host-unavailable",
+          "repaint-host-unavailable",
+        ],
       );
 
       const explicitRequestId = "30000000-0000-4000-8000-000000000001";
@@ -1326,6 +1356,20 @@ export const test_production_repaint_generator_adoption =
         now: () => new Date("2026-08-28T12:01:00.000Z"),
       };
       const retryLookupFailures = await Promise.all([
+        new AutoMovieProductionRepaintService(
+          actualAdapter(selected.runtimeIdentity),
+          selected,
+          explicitExecution,
+        ).repaint(
+          scenarioServices(runnable, {
+            project: {
+              repaintRequestAttempts: () => {
+                throw new Error("retry history unreadable");
+              },
+            },
+          }),
+          input,
+        ),
         new AutoMovieProductionRepaintService(
           actualAdapter(selected.runtimeIdentity),
           selected,
@@ -1373,6 +1417,7 @@ export const test_production_repaint_generator_adoption =
         "explicit retry rejects unreadable, absent, and foreign histories",
         retryLookupFailures.map(codeOf),
         [
+          "repaint-input-invalid",
           "repaint-input-invalid",
           "repaint-input-invalid",
           "repaint-input-invalid",
