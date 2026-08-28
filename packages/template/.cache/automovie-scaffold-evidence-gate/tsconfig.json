@@ -71,6 +71,7 @@
     "scripts",
     "test",
     "viewer/src",
+    "productionEvidence.ts",
     "automovie.config.ts",
     "vite.config.ts",
     "lint.config.ts"

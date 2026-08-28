@@ -1,5 +1,7 @@
-import type { AutoMovieCaptureBrowserConfig } from "./scripts/capture-browser";
-import type { IAutoMovieProductionConfiguration } from "./scripts/productionConfiguration";
+import type {
+  AutoMovieCaptureBrowserConfig,
+  IAutoMovieProductionConfiguration,
+} from "./scripts/productionConfiguration";
 
 /**
  * Viewer-host settings. Production ownership roots are the harness's fixed
@@ -32,6 +34,20 @@ export default {
       resolutionScale: 1,
       frameStep: 1,
     },
+  },
+  visual: {
+    /**
+     * Select this only for a settings-owned repainted delivery. The generator
+     * records its exact runtime, source, rights, terms, cost, and consumer;
+     * the execution policy bounds retries, time, and cost; each request retains
+     * exact prompt, continuity, settings, design, screenplay or brief, and shot
+     * owners. Keep selectionReview null until a candidate exists; then bind the
+     * post-playback review to its exact attempt id and output digest before an
+     * explicit selection or reversal.
+     * Prompt, seed, strength, controls, references, policy, and review never
+     * enter through an ephemeral command-line override.
+     */
+    repaint: null,
   },
   sound: {
     /**

@@ -5,24 +5,31 @@ import type {
 } from "@automovie/interface";
 import path from "node:path";
 import type { Page } from "playwright";
-import { createServer } from "vite";
+import type { ViteDevServer } from "vite";
 
 import config from "../automovie.config";
 import {
   type IAutoMovieCaptureBrowserSession,
   inspectCaptureGraphics,
+  inspectCurrentCaptureRuntimeClosure,
   launchCaptureBrowser,
 } from "./capture-browser";
-import { generatedShotPlugin } from "./generatedShotPlugin";
 import {
+  type IGeneratedShotRuntimeProvider,
+  generatedShotPlugin,
+} from "./generatedShotPlugin";
+import {
+  type IAutoMovieProductionDialogueRuntime,
+  cloneProductionDialogueRuntime,
   productionDialogueFrameForShotTime,
   productionDialogueRuntimeIdentity,
 } from "./productionRuntimeState";
 
 interface CaptureSession {
-  server: Awaited<ReturnType<typeof createServer>>;
+  server: ViteDevServer;
   browser: IAutoMovieCaptureBrowserSession["browser"];
   runtime: IAutoMovieCaptureBrowserSession["runtime"];
+  assertRuntimeCurrent: () => void;
   origin: string;
   pages: Map<string, Promise<CapturePage>>;
 }
@@ -43,6 +50,40 @@ interface ProductionCaptureCleanup {
   resource: string;
 }
 
+interface ProductionFrameCaptureState {
+  dialogue: IAutoMovieProductionDialogueRuntime | null;
+  metrics: {
+    pagesOpened: number;
+    navigations: number;
+    seeks: number;
+    captures: number;
+    captureMilliseconds: number;
+  };
+  sessionIdentity: string | null;
+  sessionPromise: Promise<CaptureSession> | null;
+}
+
+/** One reusable capture/browser session owned by one command invocation. */
+export interface IProductionFrameCaptureRuntime {
+  capture: (
+    input: IProductionFrameCaptureInput,
+  ) => ReturnType<AutoMovieProductionFrameCapture>;
+  close: (failure?: ProductionCaptureFailure) => Promise<void>;
+  dialogue: () => IAutoMovieProductionDialogueRuntime | null;
+  installDialogue: (
+    runtime: IAutoMovieProductionDialogueRuntime | null,
+  ) => Promise<void>;
+  pageIdentity: (input: IProductionFrameCaptureInput) => string;
+  viewerRuntime: () => IGeneratedShotRuntimeProvider;
+  metrics: () => Readonly<
+    ProductionFrameCaptureState["metrics"] & {
+      avoidedPageReloads: number;
+      capturesPerNavigation: number;
+      capturesPerSecond: number;
+    }
+  >;
+}
+
 class ProductionCaptureCleanupError extends AggregateError {}
 
 /**
@@ -61,16 +102,6 @@ class ProductionCaptureCleanupError extends AggregateError {}
  */
 export const PRODUCTION_DELIVERY_TONE_MAPPING: IAutoMovieRenderSpec["toneMapping"] =
   "none";
-
-let sessionPromise: Promise<CaptureSession> | null = null;
-let sessionIdentity: string | null = null;
-let captureMetrics = {
-  pagesOpened: 0,
-  navigations: 0,
-  seeks: 0,
-  captures: 0,
-  captureMilliseconds: 0,
-};
 
 /** Preserve an operation failure while attempting every requested cleanup. */
 const preserveProductionCaptureCleanup = async (
@@ -104,14 +135,24 @@ const preserveProductionCaptureCleanup = async (
 };
 
 const startSession = async (
+  state: ProductionFrameCaptureState,
   projectRoot: string,
   productionId: string,
 ): Promise<CaptureSession> => {
+  const runtimeProvider = productionFrameViewerRuntime(state);
+  const closure = inspectCurrentCaptureRuntimeClosure({
+    projectRoot,
+    config: config.capture.browser,
+  });
+  if (closure.status === "not-ready") throw new Error(closure.correction);
+  closure.assertCurrent();
+  const { createServer } = await import("vite");
+  closure.assertCurrent();
   const server = await createServer({
     root: projectRoot,
     configFile: false,
     logLevel: "silent",
-    plugins: [generatedShotPlugin(projectRoot, productionId)],
+    plugins: [generatedShotPlugin(projectRoot, productionId, runtimeProvider)],
     resolve: { dedupe: ["three"] },
     server: { host: config.viewer.host, port: 0, strictPort: false },
   });
@@ -127,11 +168,14 @@ const startSession = async (
     const launched = await launchCaptureBrowser(
       projectRoot,
       config.capture.browser,
+      closure,
     );
+    launched.assertRuntimeCurrent();
     return {
       server,
       browser: launched.browser,
       runtime: launched.runtime,
+      assertRuntimeCurrent: launched.assertRuntimeCurrent,
       origin: `http://${config.viewer.host}:${address.port}`,
       pages: new Map(),
     };
@@ -143,65 +187,77 @@ const startSession = async (
   }
 };
 
+const productionFrameViewerRuntime = (
+  state: ProductionFrameCaptureState,
+): IGeneratedShotRuntimeProvider => {
+  const dialogue = cloneProductionDialogueRuntime(state.dialogue);
+  return { dialogue: () => dialogue };
+};
+
 const captureSession = async (
+  state: ProductionFrameCaptureState,
   projectRoot: string,
   productionId: string,
 ): Promise<CaptureSession> => {
   const root = path.resolve(projectRoot);
   const identity = `${root}\0${productionId}`;
-  if (sessionPromise !== null && sessionIdentity === identity)
-    return sessionPromise;
-  await closeProductionFrameCapture();
-  sessionIdentity = identity;
-  captureMetrics = {
+  if (state.sessionPromise !== null && state.sessionIdentity === identity)
+    return state.sessionPromise;
+  await closeProductionFrameCapture(state);
+  state.sessionIdentity = identity;
+  state.metrics = {
     pagesOpened: 0,
     navigations: 0,
     seeks: 0,
     captures: 0,
     captureMilliseconds: 0,
   };
-  sessionPromise = startSession(root, productionId);
+  state.sessionPromise = startSession(state, root, productionId);
   try {
-    return await sessionPromise;
+    return await state.sessionPromise;
   } catch (error) {
-    sessionPromise = null;
-    sessionIdentity = null;
+    state.sessionPromise = null;
+    state.sessionIdentity = null;
     throw error;
   }
 };
 
 /** Measured navigation/capture counts for the current reusable session. */
-export const productionFrameCaptureMetrics = (): Readonly<
-  typeof captureMetrics & {
+const productionFrameCaptureMetrics = (
+  state: ProductionFrameCaptureState,
+): Readonly<
+  ProductionFrameCaptureState["metrics"] & {
     avoidedPageReloads: number;
     capturesPerNavigation: number;
     capturesPerSecond: number;
   }
 > => ({
-  ...captureMetrics,
+  ...state.metrics,
   avoidedPageReloads: Math.max(
     0,
-    captureMetrics.captures - captureMetrics.navigations,
+    state.metrics.captures - state.metrics.navigations,
   ),
   capturesPerNavigation:
-    captureMetrics.navigations === 0
+    state.metrics.navigations === 0
       ? 0
-      : captureMetrics.captures / captureMetrics.navigations,
+      : state.metrics.captures / state.metrics.navigations,
   capturesPerSecond:
-    captureMetrics.captureMilliseconds === 0
+    state.metrics.captureMilliseconds === 0
       ? 0
-      : captureMetrics.captures / (captureMetrics.captureMilliseconds / 1_000),
+      : state.metrics.captures / (state.metrics.captureMilliseconds / 1_000),
 });
 
 const capturePage = (
+  state: ProductionFrameCaptureState,
   session: CaptureSession,
   input: Parameters<AutoMovieProductionFrameCapture>[0],
 ): Promise<CapturePage> => {
   const subject = capturePageSubject(input);
-  const key = capturePageKey(input);
+  const key = capturePageKey(state, input);
   const existing = session.pages.get(key);
   if (existing !== undefined) return existing;
   const pending = (async (): Promise<CapturePage> => {
+    session.assertRuntimeCurrent();
     for (const [candidateKey, candidate] of session.pages)
       if (candidateKey !== key) {
         const parsed = JSON.parse(candidateKey) as {
@@ -224,7 +280,7 @@ const capturePage = (
       viewport: { width: input.width!, height: input.height! },
       deviceScaleFactor: session.runtime.mode.deviceScaleFactor,
     });
-    ++captureMetrics.pagesOpened;
+    ++state.metrics.pagesOpened;
     const diagnostics: string[] = [];
     page.on("console", (message) =>
       diagnostics.push(`console:${message.type()}: ${message.text()}`),
@@ -249,7 +305,7 @@ const capturePage = (
         url.searchParams.set("part", input.target.part);
     }
     try {
-      ++captureMetrics.navigations;
+      ++state.metrics.navigations;
       await page.goto(url.href, { waitUntil: "networkidle" });
       await page.waitForFunction(
         () => window.__automovieCapture?.ready === true,
@@ -257,6 +313,7 @@ const capturePage = (
       await page.locator("#status").evaluate((element) => {
         element.style.display = "none";
       });
+      session.assertRuntimeCurrent();
       return {
         page,
         diagnostics,
@@ -288,12 +345,13 @@ const capturePage = (
  * The capture process deliberately keeps it open and reuses it until it
  * exits; preview and render call this in `finally` so they never hang.
  */
-export const closeProductionFrameCapture = async (
+const closeProductionFrameCapture = async (
+  state: ProductionFrameCaptureState,
   failure?: ProductionCaptureFailure,
 ): Promise<void> => {
-  const pending = sessionPromise;
-  sessionPromise = null;
-  sessionIdentity = null;
+  const pending = state.sessionPromise;
+  state.sessionPromise = null;
+  state.sessionIdentity = null;
   if (pending === null) return;
   let session: CaptureSession;
   try {
@@ -322,11 +380,16 @@ type IProductionFrameCaptureInput =
     globalFrame?: number;
   };
 
-export const captureProductionFrame = async (
+const captureProductionFrame = async (
+  state: ProductionFrameCaptureState,
   input: IProductionFrameCaptureInput,
 ): ReturnType<AutoMovieProductionFrameCapture> => {
-  const session = await captureSession(input.projectRoot, input.productionId);
-  const resident = await capturePage(session, input);
+  const session = await captureSession(
+    state,
+    input.projectRoot,
+    input.productionId,
+  );
+  const resident = await capturePage(state, session, input);
   const previous = resident.queue;
   let release = (): void => undefined;
   const turn = new Promise<void>((resolve) => {
@@ -336,12 +399,13 @@ export const captureProductionFrame = async (
   await previous;
   const captureStarted = process.hrtime.bigint();
   try {
+    session.assertRuntimeCurrent();
     let renderEvidence: Pick<
       Awaited<ReturnType<AutoMovieProductionFrameCapture>>,
       "maskSidecar" | "observation"
     >;
     try {
-      ++captureMetrics.seeks;
+      ++state.metrics.seeks;
       await resident.page.evaluate(
         ({ time, pass, globalFrame }) =>
           window.__automovieCapture!.seek(time, pass, globalFrame),
@@ -351,7 +415,7 @@ export const captureProductionFrame = async (
           globalFrame:
             input.globalFrame ??
             (input.target.kind === "shot"
-              ? productionDialogueFrameForShotTime({
+              ? productionDialogueFrameForShotTime(state.dialogue, {
                   shot: input.target.id,
                   time: input.time,
                 })
@@ -390,23 +454,28 @@ export const captureProductionFrame = async (
     const bytes = await resident.page
       .locator("#view")
       .screenshot({ type: "png" });
-    ++captureMetrics.captures;
+    session.assertRuntimeCurrent();
+    ++state.metrics.captures;
     return {
       bytes,
+      dialogueRuntimeIdentity:
+        input.target.kind === "shot"
+          ? productionDialogueRuntimeIdentity(state.dialogue)
+          : null,
       runtimeIdentity: { ...session.runtime, graphics: resident.graphics },
       width: input.width!,
       height: input.height!,
       ...renderEvidence,
     };
   } catch (error) {
-    const key = capturePageKey(input);
+    const key = capturePageKey(state, input);
     session.pages.delete(key);
     await preserveProductionCaptureCleanup({ error }, [
       { resource: "capture page", cleanup: () => resident.page.close() },
     ]);
     throw error;
   } finally {
-    captureMetrics.captureMilliseconds +=
+    state.metrics.captureMilliseconds +=
       Number(process.hrtime.bigint() - captureStarted) / 1_000_000;
     release();
   }
@@ -428,6 +497,7 @@ const capturePageSubject = (
       };
 
 const capturePageKey = (
+  state: ProductionFrameCaptureState,
   input: Parameters<AutoMovieProductionFrameCapture>[0],
 ): string =>
   JSON.stringify({
@@ -437,7 +507,42 @@ const capturePageKey = (
     // A page drawn under one delivery curve is not a page that can serve
     // another, so the curve belongs in the identity that decides page reuse.
     toneMapping: PRODUCTION_DELIVERY_TONE_MAPPING,
-    dialogueRuntime: productionDialogueRuntimeIdentity(),
+    dialogueRuntime: productionDialogueRuntimeIdentity(state.dialogue),
     width: input.width,
     height: input.height,
   });
+
+/** Create an isolated capture session, viewer runtime, and metrics owner. */
+export const createProductionFrameCaptureRuntime =
+  (): IProductionFrameCaptureRuntime => {
+    const state: ProductionFrameCaptureState = {
+      dialogue: null,
+      metrics: {
+        pagesOpened: 0,
+        navigations: 0,
+        seeks: 0,
+        captures: 0,
+        captureMilliseconds: 0,
+      },
+      sessionIdentity: null,
+      sessionPromise: null,
+    };
+    return {
+      capture: (input) => captureProductionFrame(state, input),
+      close: (failure) => closeProductionFrameCapture(state, failure),
+      dialogue: () => cloneProductionDialogueRuntime(state.dialogue),
+      installDialogue: async (runtime) => {
+        const next = cloneProductionDialogueRuntime(runtime);
+        if (
+          productionDialogueRuntimeIdentity(state.dialogue) ===
+          productionDialogueRuntimeIdentity(next)
+        )
+          return;
+        await closeProductionFrameCapture(state);
+        state.dialogue = next;
+      },
+      pageIdentity: (input) => capturePageKey(state, input),
+      viewerRuntime: () => productionFrameViewerRuntime(state),
+      metrics: () => productionFrameCaptureMetrics(state),
+    };
+  };

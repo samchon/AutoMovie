@@ -4,7 +4,7 @@ import {
 } from "@automovie/production";
 
 import config from "../automovie.config";
-import { captureProductionFrame, closeProductionFrameCapture } from "./capture";
+import { createProductionFrameCaptureRuntime } from "./capture";
 
 /**
  * Capture the complete view set one asset review is judged from.
@@ -42,8 +42,9 @@ const height =
   options.get("--height") === undefined
     ? undefined
     : Number(options.get("--height"));
+const captureRuntime = createProductionFrameCaptureRuntime();
 const context = new AutoMovieProductionContext(
-  captureProductionFrame,
+  captureRuntime.capture,
   process.cwd(),
   config.productionId,
 );
@@ -61,5 +62,5 @@ try {
   captureFailure = { error };
   throw error;
 } finally {
-  await closeProductionFrameCapture(captureFailure);
+  await captureRuntime.close(captureFailure);
 }

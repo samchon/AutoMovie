@@ -5,7 +5,20 @@ import type { Plugin } from "vite";
 
 import config from "../automovie.config";
 import { readProductionLiveWearableSoftBodies } from "./productionConfiguration";
-import { currentProductionDialogueRuntime } from "./productionRuntimeState";
+import {
+  type IAutoMovieProductionDialogueRuntime,
+  cloneProductionDialogueRuntime,
+} from "./productionRuntimeState";
+
+/** Invocation-owned state exposed to the viewer middleware. */
+export interface IGeneratedShotRuntimeProvider {
+  dialogue: () => IAutoMovieProductionDialogueRuntime | null;
+  prepare?: () => Promise<unknown>;
+}
+
+const NO_DIALOGUE_RUNTIME: IGeneratedShotRuntimeProvider = {
+  dialogue: () => null,
+};
 
 /**
  * Serve bounded compiler-owned viewer JSON and registered model bytes.
@@ -18,6 +31,7 @@ import { currentProductionDialogueRuntime } from "./productionRuntimeState";
 export const generatedShotPlugin = (
   projectRoot: string,
   productionId: string,
+  runtimeProvider: IGeneratedShotRuntimeProvider = NO_DIALOGUE_RUNTIME,
 ): Plugin => ({
   name: "automovie-generated-shot",
   configureServer: (server) => {
@@ -25,16 +39,35 @@ export const generatedShotPlugin = (
       if (
         request.url?.split("?", 1)[0] === "/__automovie/production-runtime.json"
       ) {
-        const runtime = {
-          dialogue: currentProductionDialogueRuntime(),
-          liveWearableSoftBodies: readProductionLiveWearableSoftBodies(
-            config.simulation.liveWearableSoftBodies,
-          ),
-        };
-        response.statusCode = 200;
-        response.setHeader("Content-Type", "application/json; charset=utf-8");
-        response.setHeader("Cache-Control", "no-store");
-        response.end(Buffer.from(`${JSON.stringify(runtime)}\n`, "utf8"));
+        void Promise.resolve()
+          .then(() => runtimeProvider.prepare?.())
+          .then(() => {
+            const runtime = {
+              dialogue: cloneProductionDialogueRuntime(
+                runtimeProvider.dialogue(),
+              ),
+              liveWearableSoftBodies: readProductionLiveWearableSoftBodies(
+                config.simulation.liveWearableSoftBodies,
+              ),
+            };
+            response.statusCode = 200;
+            response.setHeader(
+              "Content-Type",
+              "application/json; charset=utf-8",
+            );
+            response.setHeader("Cache-Control", "no-store");
+            response.end(Buffer.from(`${JSON.stringify(runtime)}\n`, "utf8"));
+          })
+          .catch((error: unknown) => {
+            response.statusCode = 503;
+            response.setHeader("Content-Type", "text/plain; charset=utf-8");
+            response.setHeader("Cache-Control", "no-store");
+            response.end(
+              `Production dialogue runtime preparation failed: ${
+                error instanceof Error ? error.message : String(error)
+              }`,
+            );
+          });
         return;
       }
       let asset: string | null;
