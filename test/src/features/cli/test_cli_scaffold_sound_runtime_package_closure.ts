@@ -5,6 +5,7 @@ import { createRequire } from "node:module";
 import os from "node:os";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
+import { tsImport } from "tsx/esm/api";
 import * as ts from "typescript-compiler";
 
 import { namedFacts, throwsError } from "../internal/predicates";
@@ -280,58 +281,67 @@ export const test_cli_scaffold_sound_runtime_package_closure =
       const generatedRuntime = createRequire(__filename)(
         generated,
       ) as IRuntimePackageSnapshotModule;
-      const instrumented = path.join(
-        project,
-        "scripts",
-        "runtimePackageSnapshot.instrumented.mjs",
-      );
-      const productionShim = path.join(
-        project,
-        "scripts",
-        "productionShim.mjs",
-      );
-      const transpiled = ts.transpileModule(fs.readFileSync(source, "utf8"), {
-        fileName: source,
-        compilerOptions: {
-          inlineSources: true,
-          module: ts.ModuleKind.ESNext,
-          sourceMap: true,
-          target: ts.ScriptTarget.ES2022,
-        },
-      });
-      const sourceMap = JSON.parse(transpiled.sourceMapText!) as {
-        file: string;
-        sources: string[];
-      };
-      sourceMap.file = path.basename(instrumented);
-      sourceMap.sources = [source];
-      fs.writeFileSync(
-        productionShim,
-        [
-          'import production from "@automovie/production";',
-          "export const { digestAutoMovieBytes, readAutoMovieProductionOwnedFile } = production;",
-          "",
-        ].join("\n"),
-        "utf8",
-      );
-      fs.writeFileSync(
-        instrumented,
-        transpiled.outputText
-          .replace('"@automovie/production"', '"./productionShim.mjs"')
-          .replace(
-            /^\/\/# sourceMappingURL=.*$/mu,
-            `//# sourceMappingURL=${path.basename(instrumented)}.map`,
-          ),
-        "utf8",
-      );
-      fs.writeFileSync(
-        `${instrumented}.map`,
-        JSON.stringify(sourceMap),
-        "utf8",
-      );
-      const runtime = (await import(
-        pathToFileURL(instrumented).href
-      )) as IRuntimePackageSnapshotModule;
+      let runtime: IRuntimePackageSnapshotModule;
+      if (process.env.AUTOMOVIE_EXACT_ESM_COVERAGE === "1") {
+        const instrumented = path.join(
+          project,
+          "scripts",
+          "runtimePackageSnapshot.instrumented.mjs",
+        );
+        const productionShim = path.join(
+          project,
+          "scripts",
+          "productionShim.mjs",
+        );
+        const transpiled = ts.transpileModule(fs.readFileSync(source, "utf8"), {
+          fileName: source,
+          compilerOptions: {
+            inlineSources: true,
+            module: ts.ModuleKind.ESNext,
+            sourceMap: true,
+            target: ts.ScriptTarget.ES2022,
+          },
+        });
+        const sourceMap = JSON.parse(transpiled.sourceMapText!) as {
+          file: string;
+          sources: string[];
+        };
+        sourceMap.file = path.basename(instrumented);
+        sourceMap.sources = [source];
+        fs.writeFileSync(
+          productionShim,
+          [
+            'import { createRequire } from "node:module";',
+            "const require = createRequire(import.meta.url);",
+            'const production = require("@automovie/production");',
+            "export const { digestAutoMovieBytes, readAutoMovieProductionOwnedFile } = production;",
+            "",
+          ].join("\n"),
+          "utf8",
+        );
+        fs.writeFileSync(
+          instrumented,
+          transpiled.outputText
+            .replace('"@automovie/production"', '"./productionShim.mjs"')
+            .replace(
+              /^\/\/# sourceMappingURL=.*$/mu,
+              `//# sourceMappingURL=${path.basename(instrumented)}.map`,
+            ),
+          "utf8",
+        );
+        fs.writeFileSync(
+          `${instrumented}.map`,
+          JSON.stringify(sourceMap),
+          "utf8",
+        );
+        runtime = (await tsImport(pathToFileURL(instrumented).href, {
+          parentURL: pathToFileURL(__filename).href,
+          tsconfig: false,
+        })) as IRuntimePackageSnapshotModule;
+      } else
+        runtime = createRequire(__filename)(
+          source,
+        ) as IRuntimePackageSnapshotModule;
       TestValidator.equals(
         "generated runtime closure implementation is byte-identical",
         fs.readFileSync(generated).equals(fs.readFileSync(source)),

@@ -4,12 +4,63 @@ import {
   type IAutoMovieProductionRenderJobPlan,
 } from "@automovie/production";
 import { TestValidator } from "@nestia/e2e";
+import fs from "node:fs";
+import { createRequire } from "node:module";
+import os from "node:os";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
+import { tsImport } from "tsx/esm/api";
+import * as ts from "typescript-compiler";
 
 import { namedFacts, throwsError } from "../internal/predicates";
 
 let planProductionRenderGc: typeof import("@automovie/production").planProductionRenderGc;
+
+const loadExactRenderGc = async (
+  source: string,
+): Promise<
+  Pick<typeof import("@automovie/production"), "planProductionRenderGc">
+> => {
+  const directory = fs.mkdtempSync(
+    path.join(os.tmpdir(), "automovie-production-render-gc-"),
+  );
+  try {
+    const instrumented = path.join(directory, "productionRenderGc.mjs");
+    const transpiled = ts.transpileModule(fs.readFileSync(source, "utf8"), {
+      fileName: source,
+      compilerOptions: {
+        inlineSources: true,
+        module: ts.ModuleKind.ESNext,
+        sourceMap: true,
+        target: ts.ScriptTarget.ES2022,
+      },
+    });
+    const sourceMap = JSON.parse(transpiled.sourceMapText!) as {
+      file: string;
+      sources: string[];
+    };
+    sourceMap.file = path.basename(instrumented);
+    sourceMap.sources = [source];
+    fs.writeFileSync(
+      instrumented,
+      transpiled.outputText.replace(
+        /^\/\/# sourceMappingURL=.*$/mu,
+        `//# sourceMappingURL=${path.basename(instrumented)}.map`,
+      ),
+      "utf8",
+    );
+    fs.writeFileSync(`${instrumented}.map`, JSON.stringify(sourceMap), "utf8");
+    return (await tsImport(pathToFileURL(instrumented).href, {
+      parentURL: pathToFileURL(__filename).href,
+      tsconfig: false,
+    })) as Pick<
+      typeof import("@automovie/production"),
+      "planProductionRenderGc"
+    >;
+  } finally {
+    fs.rmSync(directory, { force: true, recursive: true });
+  }
+};
 
 const digest = (fill: string): AutoMovieContentDigest =>
   `sha256:${fill.repeat(64).slice(0, 64)}`;
@@ -64,14 +115,17 @@ const plan = (
  * 3. The reclaim sum accepts the largest safe integer and refuses overflow.
  */
 export const test_production_render_gc = async (): Promise<void> => {
-  ({ planProductionRenderGc } = (await import(
-    pathToFileURL(
-      path.resolve(
-        __dirname,
-        "../../../../packages/production/src/production/productionRenderGc.ts",
-      ),
-    ).href
-  )) as Pick<typeof import("@automovie/production"), "planProductionRenderGc">);
+  const source = path.resolve(
+    __dirname,
+    "../../../../packages/production/src/production/productionRenderGc.ts",
+  );
+  ({ planProductionRenderGc } =
+    process.env.AUTOMOVIE_EXACT_ESM_COVERAGE === "1"
+      ? await loadExactRenderGc(source)
+      : (createRequire(__filename)(source) as Pick<
+          typeof import("@automovie/production"),
+          "planProductionRenderGc"
+        >));
   const active = digest("a");
   const pointer = `proxy/pointers/${"a".repeat(64)}`;
   const tree = `proxy/tmp/${"a".repeat(64)}.owner.7`;

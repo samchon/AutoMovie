@@ -149,7 +149,11 @@ export const test_cli_scaffold_sound_cache_lifecycle = (): void => {
   try {
     const project = path.join(root, "generated");
     writeFiles(project, renderScaffold({ name: "sound-cache-life" }));
-    for (const name of ["@automovie/interface", "@automovie/production"])
+    for (const name of [
+      "@automovie/interface",
+      "@automovie/production",
+      "pngjs",
+    ])
       linkWorkspacePackage(project, name);
     const scripts = path.join(project, "scripts");
     const lifecycle = {
