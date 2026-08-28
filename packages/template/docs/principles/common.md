@@ -16,7 +16,7 @@ Sources: [NASA on complete, bidirectionally traceable requirements](https://sweh
 
 ## Layer-substantive completion {#substantive-completion}
 
-The current unit is a complete deliverable at its own layer. A settings H2 settles one usable fact or constraint; research settles one source record and production consequence; model, space, material, instance, motion, and system H2s settle one decision of their named design kind. A storyline unit is a detailed narrative treatment, a scenario unit is executable physical progression, a screenplay unit is the final audience-facing audiovisual contract, and a brief unit is a complete bounded observation contract.
+The current unit is a complete deliverable at its own layer. A settings H2 settles one usable fact or constraint; research settles one source record and production consequence; model, space, material, instance, motion, and system H2s settle one decision of their named design kind. A treatment unit is detailed narrative development, a script unit is executable physical progression, a screenplay unit is the final audience-facing audiovisual contract, and a brief unit is a complete bounded observation contract.
 
 A title, placeholder, future-work promise, field list, causal card, parent restatement, generic summary, or implementation that still requires the next layer to invent this layer's essential decision is not completion. Narrative H2 and H3 units directly organize the accumulated development of their descendants; they are not empty umbrellas.
 
@@ -40,7 +40,7 @@ Design and brief units answer this too. A model H2 that describes its articulati
 
 Regularity the material asks for is not this defect. A settings H2 listing parallel constraints, a motion H2 stepping through phases, and a brief H4 stating one viewing condition are meant to be even, and variation forced onto one is the same failure from the other side.
 
-This principle asks whether anyone decided how the unit reads. `evidence-content-conformance` owns whether an acknowledgement is true and whether its reason is generic or copied. `principles/scripts.md#audiovisual-voice` owns the expressive stance finished screenplay chooses, `principles/narratives.md#specificity` owns whether an element belongs to this production rather than to its genre, and the common production-language obligation owns the working language and its consistency.
+This principle asks whether anyone decided how the unit reads. `evidence-content-conformance` owns whether an acknowledgement is true and whether its reason is generic or copied. `principles/screenplays.md#audiovisual-voice` owns the expressive stance finished screenplay chooses, `principles/narratives.md#specificity` owns whether an element belongs to this production rather than to its genre, and the common production-language obligation owns the working language and its consistency.
 
 Review question: which marks of an undecided default appear together in this unit?
 

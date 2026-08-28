@@ -1,6 +1,6 @@
 # Narrative obligations
 
-Duties each complete storyline, scenario, and screenplay H2 owner population satisfies in its own form. Each item appears one or more times across that population, as its wording requires. These duties judge the shape of the addressed population rather than one unit in isolation and permit no exclusion.
+Duties each complete treatment, script, and screenplay H2 owner population satisfies in its own form. Each item appears one or more times across that population, as its wording requires. These duties judge the shape of the addressed population rather than one unit in isolation and permit no exclusion.
 
 ## Unit addressability {#unit-addressability}
 

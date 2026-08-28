@@ -1,6 +1,6 @@
 # Film Discovery
 
-The outcomes for production-specific conditions shared by storylines, scenarios, and screenplay. Settings anticipates them during backcast, and each film prose layer rechecks them. Work-wide conditions belong in `common.md`, and conditions unique to one film prose layer belong in that layer's discovery file.
+The outcomes for production-specific conditions shared by treatments, scripts, and screenplays. Settings anticipates them during backcast, and each film prose layer rechecks them. Work-wide conditions belong in `common.md`, and conditions unique to one film prose layer belong in that layer's discovery file.
 
 ## Work-specific film requirements {#work-specific-film-requirements}
 

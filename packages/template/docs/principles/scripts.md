@@ -1,109 +1,65 @@
-# Screenplay principles
+# Script principles
 
-Screenplay files are the final human-readable audiovisual contract for film shots and audience-facing edit tracks. They preserve scenario and storyline ancestry while choosing exactly what the audience sees, reads, and hears.
+Scripts are production-capable initial scripts. They translate reviewed treatment units into physically executable action, reaction, movement, transition, and consequential exchange without choosing final audience expression or implementation.
 
-## Screenplay blocks {#screenplay-blocks}
+## Staging blocks {#staging-blocks}
 
-After its heading in draft, and after its evidence comment in evidence or review, every H2, H3, and H4 begins with the final audience-facing content appropriate to its scope rather than a treatment summary. Present visible action, dialogue, captions, audible events, and meaningful silence in distinct readable blocks at their actual order. An H2 or H3 organizes the actual descendants that carry its progression. Split a block when subject, action, speaker, audible layer, or presentation state changes materially; join fragments that obscure one continuous action or exchange.
+After its heading in draft, and after its evidence comment in evidence or review, every H2, H3, and H4 begins with the executable progression appropriate to its scope rather than a planning summary. One paragraph carries one followable action beat or continuous process and breaks at a meaningful action, reaction, time, or spatial change. Consequential speech is separated by speaker and kept beside the action, interruption, silence, or response that changes its effect.
 
-Review question: can a shot and edit author identify the final ordered visual, spoken, written, audible, and silent elements without translating a planning paragraph?
+Do not compress a whole scene into one descriptive slab, hide decisive speech inside a summary, or split every gesture into fragments that obscure continuous action. Block size follows execution and reaction boundaries rather than a fixed line count.
 
-This item owns screenplay block form. `filmable-expression` owns what those blocks may say, and the common substantive-completion principle owns completeness.
+Review question: can a maker follow the physical and conversational order directly from the blocks without reconstructing a beat list?
 
-Sources: [BBC screenplay format](https://downloads.bbc.co.uk/writersroom/scripts/screenplay.pdf); [BBC taped drama format](https://downloads.bbc.co.uk/writersroom/scripts/bbctapeddrama.pdf); [Academy Nicholl screenwriting resources](https://www.oscars.org/nicholl/screenwriting-resources)
+This item owns the current unit's readable initial-script block structure. `executable-progression` owns which actions occur, and the common substantive-completion principle owns completeness.
 
-## Filmable expression {#filmable-expression}
+Sources: [BBC screenplay format on scene action and dialogue blocks](https://downloads.bbc.co.uk/writersroom/scripts/screenplay.pdf); [BBC taped drama format](https://downloads.bbc.co.uk/writersroom/scripts/bbctapeddrama.pdf); [Academy Nicholl screenwriting resources](https://www.oscars.org/nicholl/screenwriting-resources)
 
-Every screenplay H2, H3, and H4 expresses present audience-visible action, on-screen text, audible speech or sound, and only the contextual information needed to interpret them. Internal intent appears through an observable or audible cue or remains owned by the storyline; it does not become an unfilmable instruction.
+## Scene entry state {#scene-entry-state}
 
-Review question: what would the audience see, read, or hear for every sentence in the unit?
+Every H2, H3, and H4 establishes the time, place, participants or active forces, observational range, inherited physical and social pressure, and triggering condition appropriate to its scope. A child inherits those facts and identifies the narrower state that begins its progression. The opening blocks make each boundary executable rather than listing a field sheet.
 
-Sources: [Academy Nicholl screenwriting resources](https://www.oscars.org/nicholl/screenwriting-resources); [BBC Writersroom script library and format examples](https://www.bbc.co.uk/writersroom/scripts/)
+Review question: could this unit begin from its predecessor or parent with every participant, resource, and active constraint in a known state?
 
-## Audiovisual voice {#audiovisual-voice}
+This item owns the current scene's starting conditions. Narrative horizontal continuity owns whether those conditions accurately inherit earlier facts.
 
-Every screenplay H2, H3, and H4 sustains the production-recognizable expressive logic across its visible action, image, written text, dialogue, sound, silence, density, and transition. It applies the visual, audible, and formal grammar selected in settings without reducing that grammar to repeated decoration or handing its essential pattern to camera and edit source. A deliberate break identifies the pressure, event, or change that makes the break part of the same work.
+Sources: [Oregon State University on setting as time and place](https://liberalarts.oregonstate.edu/wlf/what-setting); [Zacks and colleagues on event boundaries](https://pmc.ncbi.nlm.nih.gov/articles/PMC8710938/); [BubbleCow on scene goals, conflict, and outcomes](https://bubblecow.com/blog/writing-craft/pacing-and-scenes/scene-structure-goal-conflict-and-outcome/)
 
-Review question: what relation among image, text, sound, silence, action, and transition makes this unit belong recognizably to this production, and what authored change justifies each departure?
+## Scene exit state {#scene-exit-state}
 
-This item owns the screenplay's patterned expressive stance. The common production-language obligation owns the working language of the authored document, the common machine-default principle owns whether the writing was decided at all, dialogue and sound voice owns the identity and relational function of particular sources, audiovisual selection owns whether each perceptible detail earns inclusion, and settings own the production-wide grammar this layer realizes.
+Every H2, H3, and H4 leaves an observable state that its successor or parent exit can inherit, including any changed choice, relation, knowledge, resource, position, physical condition, emotion, or audience interpretation. A unit may return to its initial condition only when the repetition or refusal itself leaves an identifiable result.
 
-Sources: [Bordwell on films as patterned systems that guide spectator construction](https://www.routledge.com/Narration-in-the-Fiction-Film/Bordwell/p/book/9780415018777); [Chion on sound and image forming one audiovisual mode of perception](https://cup.columbia.edu/book/audio-vision-sound-on-screen/9780231185882/)
+Review question: what exact changed or deliberately unchanged state exists when this unit ends?
 
-## Block continuity {#block-continuity}
+This item owns the current scene's terminal physical and informational state. Narrative unit connection owns the meaning of its relation to the next unit.
 
-Within every H2, H3, and H4, each screenplay block or organized descendant is reachable from the preceding one through legible time, place, subject, action, attention, and sound. Ellipsis, juxtaposition, montage, and abrupt cuts remain valid when the authored transition distinguishes an intended discontinuity from a missing bridge.
+Sources: [Zacks and colleagues on event boundaries](https://pmc.ncbi.nlm.nih.gov/articles/PMC8710938/); [BubbleCow on a scene outcome creating the next condition](https://bubblecow.com/blog/writing-craft/pacing-and-scenes/scene-structure-goal-conflict-and-outcome/); [Harvard Writing Center on transitions](https://writingcenter.fas.harvard.edu/transitions)
 
-Review question: what visible, audible, or structural cue carries the audience across every block boundary?
+## Executable progression {#executable-progression}
 
-This item owns continuity of final presentation inside the current unit. Narrative horizontal continuity owns production facts between units, and film source owns global editorial mapping between reviewed shots.
+Every H2, H3, and H4 orders its complete progression through concrete actions, reactions, movements, and processes whose time and causal relations are legible. An H2 or H3 organizes the actual descendants that perform that progression rather than replacing them with direct summary. Where an objective operates, name who attempts what, the available resistance or limit, and the response. Observation, ritual, montage, environment, and non-human process need no artificial conflict, but still state what changes in what order. Movement, objects, resources, environment, bodily or mechanical limits, and required time obey settings.
 
-Sources: [Zwaan, Langston, and Graesser on the processing cost of situation changes](https://doi.org/10.1111/j.1467-9280.1995.tb00513.x); [Harvard Writing Center on transitions](https://writingcenter.fas.harvard.edu/transitions)
+Review question: could every action in this unit and its descendants be enacted with existing settings capabilities without another physical or production decision?
 
-## Audience access {#audience-access}
+This item owns action order inside one scene. Narrative unit connection owns relations between scenes, model design owns representation interfaces, and motion design owns reusable interpolation paths.
 
-Every screenplay H2, H3, and H4 preserves the production's declared audience access: what can be seen, heard, read, inferred, or withheld and whose perceptual or documentary range authorizes it. A change of access has an authored boundary and purpose. Information that the established access must reveal is not omitted merely to manufacture surprise.
+Sources: [Zwaan, Langston, and Graesser on spatial, temporal, causal, protagonist, and goal continuity](https://doi.org/10.1111/j.1467-9280.1995.tb00513.x); [Oregon State University on interaction between setting and action](https://liberalarts.oregonstate.edu/wlf/what-setting)
 
-Review question: what grants the audience access to each presented fact, and what authored boundary justifies each withheld fact?
+## Dialogue action {#dialogue-action}
 
-This item owns the final perceptual and informational access contract. Settings own the production-wide access rule, storyline information design owns disclosure order, and shot source chooses the camera and lighting implementation.
+In every H2, H3, or H4 where speech or silence changes a choice, knowledge, power, relation, or exit state, the script writes the consequential wording or tactic and the adjacent action and response. It may summarize only incidental exchange that changes none of them. Shared facts are not repeated merely to explain them to the audience, and harmless chatter is not added to imitate a script.
 
-Sources: [Genette on the distinction between voice and focalization](https://archive.org/details/narrativediscour0000gene); [Burton and Poster on point of view and controlled shifts](https://www.cambridge.org/core/books/abs/prompts-you-need-to-help-you-write-the-book-you-want-to-write/point-of-view/9E9D1AA8E2841E6508D5864791DDE0FE)
+Review question: which spoken, withheld, interrupted, or nonverbal exchange changes the scene, and is its consequence executable from the script?
 
-## Pacing and rhythm {#pacing-rhythm}
+This item owns the tactic and result of exchange. `executable-progression` owns its place in the action sequence, `knowledge-state` owns information transfer, and screenplay dialogue voice owns final audience wording and performance texture.
 
-Every screenplay H2, H3, and H4 allocates audience time and expressive density in proportion to the importance and intended intensity of its events. It expands duration that must be experienced and compresses passage through explicit ellipsis, montage, repetition, or summary presentation. Rhythm arises from action, holds, speech, silence, sound, text, and transitions, not from vague tempo adjectives.
+Sources: [Center for Fiction on dialogue as narrative action](https://centerforfiction.org/writing-tools/tips-for-writing-dialogue/); [Cambridge Companion to Narrative on dialogue functions](https://www.cambridge.org/core/books/abs/cambridge-companion-to-narrative/dialogue/DA260BBCE7DBBA9BCB4196CE7F35ABDC)
 
-Review question: which important beat is rushed, which minor beat is overheld, and what exact audience experience justifies each allocation?
+## Knowledge state {#knowledge-state}
 
-This item owns experiential pacing inside the screenplay. `timing-allocation` owns render-critical numeric time, and the common proportional obligation owns scale and detail across the complete population.
+Every H2, H3, and H4 tracks what each relevant participant knows, believes, suspects, or misunderstands before and after its progression at the precision of that unit. New information travels through an authored carrier such as a document, observation, statement, silence, absence, or physical result. When the audience is ahead of or behind a participant, state the extent and duration of that difference. A production that claims no private mental state says so and limits knowledge claims to observable response.
 
-Sources: [Purdue OWL on scene and summary](https://owl.purdue.edu/owl/resources/writing_tutors/tutoring_creative_writing_students/documents/working-with-creative-writing-students-09152025.pdf); [University of Nevada, Reno on psychic distance and pacing](https://www.unr.edu/writing-speaking-center/writing-speaking-resources/psychic-distance-in-creative-writing)
+Review question: by what observable carrier does every information change in this unit reach the participant or audience entitled to receive it?
 
-## Audience orientation {#audience-orientation}
+This item owns information movement inside the scene. Narrative horizontal continuity owns preservation between scenes, and treatment information design owns audience disclosure order.
 
-At the moment it matters, every screenplay H2, H3, and H4 gives enough visual, audible, textual, or structural evidence to identify who or what acts, where and when the action occurs, what changed, and what a pointer such as a pronoun, caption, or off-screen source denotes. Mystery and disorientation remain valid when the audience retains the intended reference needed to distinguish design from error.
-
-Review question: which current subject, place, time, action, or sound source could a first viewer misidentify, and what authored cue resolves only the unintended ambiguity?
-
-This item owns immediate identification during viewing. Narrative information entry owns introduction of new concepts, and audience access owns what may be perceived at all.
-
-Sources: [Harvard Writing Center on transitions](https://writingcenter.fas.harvard.edu/transitions); [Seton Hill University on concrete setting and clarity](https://jerz.setonhill.edu/writing/creative1/shortstory/)
-
-## Dialogue and sound voice {#dialogue-sound-voice}
-
-Where dialogue, narration, captions, or designed sound occurs, diction, rhythm, register, silence, interruption, acoustic character, and repetition distinguish the speaker, source, relationship, and production tone while preserving the scenario's consequential exchange. Literal realism and stylization are both valid when their observable rule is consistent.
-
-Review question: could the audience identify who or what produced each line or sound and what relation or tactic its form expresses?
-
-This item owns final wording and audible character. Scenario dialogue action owns the exchange's tactic and result, and film source only maps the authored content onto the global track.
-
-Sources: [Cambridge Companion to Narrative on dialogue and character voice](https://www.cambridge.org/core/books/abs/cambridge-companion-to-narrative/dialogue/DA260BBCE7DBBA9BCB4196CE7F35ABDC); [Locher and Jucker on realism and stylization in fictional dialogue](https://www.cambridge.org/core/elements/fiction-and-pragmatics/D198C6EEF1402A67B259E53221B1CD16); [Center for Fiction on dialogue function and subtext](https://centerforfiction.org/writing-tools/tips-for-writing-dialogue/)
-
-## Emotional grounding {#emotional-grounding}
-
-When a scene intends an emotional effect, the screenplay first gives the audience a perceivable object, context, and change through action, expression, sound, text, distance, timing, or silence. Intensity matches what prior units and the current event have earned, and the emotion affects interpretation, choice, action, relation, or aftermath rather than remaining a label.
-
-Review question: what audience-perceptible evidence earns the intended emotion, and what consequence proves it matters?
-
-Sources: [Oatley on emotion and identification in narrative](https://doi.org/10.1016/0304-422X%2894%29P4296-S); [Bal and Veltkamp on narrative engagement and empathy](https://doi.org/10.1016/j.paid.2011.10.005)
-
-## Audiovisual selection {#audiovisual-selection}
-
-The screenplay selects only visible, written, audible, and silent details that change action, atmosphere, relation, theme, emotion, or audience understanding. It supplies enough evidence for the audience to form the intended image and implication without filling sensory categories mechanically or explaining every meaning. Shot-local camera and lighting solutions remain downstream.
-
-Review question: what work does each selected audiovisual detail perform, and which omitted detail would leave a real gap rather than useful audience inference?
-
-This item owns which final perceptible facts the audience receives. Shot source owns how local composition presents them, and film source owns their global mapping.
-
-Sources: [Oregon State University on setting as an active narrative element](https://liberalarts.oregonstate.edu/wlf/what-setting); [Ingarden on indeterminacy and concretization](https://plato.stanford.edu/entries/ingarden/); [Iser on gaps and reader participation](https://doi.org/10.2307/468316)
-
-## Timing allocation {#timing-allocation}
-
-Every render-critical action, exchange, sound, caption, transition requirement, or hold states an exact duration, boundary, or explicit shot-owned timing reference at the narrowest unit that owns it. Qualitative pacing may explain effect but does not replace the time needed for deterministic rendering.
-
-Review question: can shot and edit source recover every render-critical time without translating an adverb or inventing a number?
-
-This item owns numeric audience timing. Narrative unit identity owns the stable H2/H3/H4 addresses, motion documents own reusable transition time, and film source owns global mapping.
-
-Sources: [Web Animations timing model](https://www.w3.org/TR/web-animations-1/#timing-model); [SMPTE standards overview for time and synchronization](https://www.smpte.org/standards)
+Sources: [Brewer and Lichtenstein on information arrangement and affect](https://doi.org/10.1017/S0140525X00017568); [Zwaan, Langston, and Graesser on event-state continuity](https://doi.org/10.1111/j.1467-9280.1995.tb00513.x)

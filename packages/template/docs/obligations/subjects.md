@@ -1,6 +1,6 @@
 # Subject obligations
 
-`obligations/settings.md#operative-subject-inventory` decides whether every operative subject has an owner. These roles decide what those owners settle, and the settings H2 population of a film covers them. An inventory of names satisfies the first duty and leaves a scenario writer inventing the second: what makes this subject act, what it already knows, how an audience recognizes it, and how far it can change.
+`obligations/settings.md#operative-subject-inventory` decides whether every operative subject has an owner. These roles decide what those owners settle, and the settings H2 population of a film covers them. An inventory of names satisfies the first duty and leaves a script author inventing the second: what makes this subject act, what it already knows, how an audience recognizes it, and how far it can change.
 
 A subject here is anything the film shows deciding, reacting, resisting, or refusing: a person, an animal, a crowd, an institution, or a machine. Depth follows consequence. A central subject settles every applicable role in usable detail, and a single-appearance subject settles the roles its one appearance actually exercises.
 
@@ -32,13 +32,13 @@ Each recurring or consequential subject has defined knowledge, error, attention,
 
 Review question: what does this subject already know, wrongly believe, or fail to notice before the delivered action begins?
 
-This item owns the information a subject starts from. `principles/scenarios.md#knowledge-state` owns how information then moves inside one staged scene, and `principles/storylines.md#information-design` owns what the audience is told and when.
+This item owns the information a subject starts from. `principles/scripts.md#knowledge-state` owns how information then moves inside one staged scene, and `principles/treatments.md#information-design` owns what the audience is told and when.
 
 Sources: [Palmer on social minds and distributed cognition](https://muse.jhu.edu/book/24307); [Zwaan, Langston, and Graesser on tracking protagonists, intentions, and situation change](https://doi.org/10.1111/j.1467-9280.1995.tb00513.x)
 
 ## Expression and behavior {#expression-and-behavior}
 
-Each recurring or consequential subject has defined observable behavior: posture, gait, gesture, habitual action, concealment, speech register, and any sound it characteristically makes. A film delivers a subject through what an audience sees and hears, so an interior trait with no observable form is not yet usable by a scenario, a motion, or a shot.
+Each recurring or consequential subject has defined observable behavior: posture, gait, gesture, habitual action, concealment, speech register, and any sound it characteristically makes. A film delivers a subject through what an audience sees and hears, so an interior trait with no observable form is not yet usable by a script, a motion, or a shot.
 
 Review question: which observable behavior lets an audience tell this subject apart from another one carrying the same description?
 
@@ -58,7 +58,7 @@ Sources: [Palmer on social and intermental character models](https://muse.jhu.ed
 
 ## Change boundaries {#change-boundaries}
 
-Each central subject has defined credible paths of change, resistant limits, stakes, and irreversible thresholds. Settings own those boundaries as facts; storylines own the audience-facing order in which a change is shown, and scenarios own the physical progression that performs it.
+Each central subject has defined credible paths of change, resistant limits, stakes, and irreversible thresholds. Settings own those boundaries as facts; treatments own the audience-facing order in which a change is shown, and scripts own the physical progression that performs it.
 
 Review question: which change is this subject capable of, which is it not, and what threshold makes a change irreversible?
 

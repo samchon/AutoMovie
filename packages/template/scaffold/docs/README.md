@@ -10,11 +10,11 @@ Choose one shape in lint.config.ts before authoring:
 
 | Shape | Required authored route |
 | --- | --- |
-| Film | settings -> storylines -> scenarios -> script -> shots -> filmSources |
+| Film | settings -> treatments -> scripts -> screenplays -> shots -> filmSources |
 | Brief | settings -> briefs -> shots -> filmSources |
 | Library | settings plus each matching design -> source branch it delivers |
 
-For film and brief, reviewed `productionSources` is a parallel assembly input that must exist before `filmSources`; it does not interrupt the prose-to-shot identity ladder. Runtime alone does not choose the shape. A short or simple demonstration may be a brief when one delivery/shot/observation hierarchy completely owns it. A work whose causal, choice, or revelation structure needs independent storyline/scenario/script refinement is a film. Design branches are orthogonal to shape:
+For film and brief, reviewed `productionSources` is a parallel assembly input that must exist before `filmSources`; it does not interrupt the prose-to-shot identity ladder. Runtime alone does not choose the shape. A short or simple demonstration may be a brief when one delivery/shot/observation hierarchy completely owns it. A work whose causal, choice, or revelation structure needs independent treatment/script/screenplay refinement is a film. Design branches are orthogonal to shape:
 
 | Directory | Sole ownership |
 | --- | --- |
@@ -26,16 +26,16 @@ For film and brief, reviewed `productionSources` is a parallel assembly input th
 | instances | repeated/group membership, stable instance identity, transforms, variation, and placement |
 | motions | deterministic state transition over time |
 | systems | lighting, environment, effects, simulation, sound, services, and other coupled processes |
-| storylines | film treatment: causal/formal development and audience change |
-| scenarios | the same film units refined into executable physical progression |
-| script | the same film units refined into final audiovisual screenplay |
+| treatments | film treatment: causal/formal development and audience change |
+| scripts | the same film units refined into executable physical progression |
+| screenplays | the same film units refined into final audiovisual screenplay |
 | briefs | one bounded delivery/shot/observation hierarchy with no separate narrative-refinement ladder |
 
 Every shape answers the settings population roles for operative-subject inventory, actual agency or a passive boundary, and the subject conditions on which its design depends. A film additionally answers `obligations/subjects.md` across its settings H2 population: those film-only roles decide dramatic position, motive, knowledge, expression, relationship, and change without taxing a brief or reusable library with false character work.
 
-Each active Markdown file contains explicitly anchored H2 owners. Every storyline, scenario, script, and brief file also contains anchored H3 and H4 owners. Outside an optional file-title H1, settings, research, and design files permit only H2 units, while film and brief prose permits only H2/H3/H4 units. Any other authored heading depth is a hard error. The film filenames, identities, nesting, and order stay exactly equal through storyline, scenario, and script.
+Each active Markdown file contains explicitly anchored H2 owners. Every treatment, script, screenplay, and brief file also contains anchored H3 and H4 owners. Outside an optional file-title H1, settings, research, and design files permit only H2 units, while film and brief prose permits only H2/H3/H4 units. Any other authored heading depth is a hard error. The film filenames, identities, nesting, and order stay exactly equal through treatment, script, and screenplay.
 
-Discovery is file-level coverage over the separate work-specific contract population, not a checklist repeated by authored units. Every active Markdown layer selects `docs/contracts/*.md` and answers `discovery/common.md`; settings adds `settings.md`, each model, space, material, instance, motion, or system branch adds `designs.md` and its own layer file, storylines add `films.md` and `storylines.md`, scenarios add `films.md` and `scenarios.md`, script adds `films.md` and `scripts.md`, and briefs add `briefs.md`. Research adds nothing beyond common so external-evidence adoption stays separate from design-boundary discovery. A retained result becomes a flat contract file that identifies its earliest semantic owner and current realization. A true no-result is recorded only in `docs/contracts/index.md` and names the concrete inputs, risks, and sufficient existing owners examined. Authored H2/H3/H4 units describe the work and do not testify about the audit. Settings backcasts the actual planned delivery and accounts for every independently consequential operative subject before a dependent layer begins.
+Discovery is file-level coverage over the separate work-specific contract population, not a checklist repeated by authored units. Every active Markdown layer selects `docs/contracts/*.md` and answers `discovery/common.md`; settings adds `settings.md`, each model, space, material, instance, motion, or system branch adds `designs.md` and its own layer file, treatments add `films.md` and `treatments.md`, scripts add `films.md` and `scripts.md`, screenplays add `films.md` and `screenplays.md`, and briefs add `briefs.md`. Research adds nothing beyond common so external-evidence adoption stays separate from design-boundary discovery. A retained result becomes a flat contract file that identifies its earliest semantic owner and current realization. A true no-result is recorded only in `docs/contracts/index.md` and names the concrete inputs, risks, and sufficient existing owners examined. Authored H2/H3/H4 units describe the work and do not testify about the audit. Settings backcasts the actual planned delivery and accounts for every independently consequential operative subject before a dependent layer begins.
 
 Stages are disabled -> draft -> evidence -> review. Draft authored hosts first without evidence tags; the separate contract audit is active at draft and carries discovery evidence only in each retained rule's comment preamble before H1. After the complete layer is coherent, switch to evidence and write truthful authored-host citations. Review adds target fingerprints and must be complete before a child layer starts. Empty active populations, an active layer with neither a retained contract nor a truthful negative ledger, and files left in disabled populations are hard errors.
 

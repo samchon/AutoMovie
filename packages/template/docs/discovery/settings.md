@@ -14,7 +14,7 @@ Sources: [Ryan on storyworlds as reconstructed systems rather than closed invent
 
 ## Planned delivery backcast {#planned-delivery-backcast}
 
-Backcast the production's actual planned consumers to discover every production-wide fact or constraint they would otherwise have to invent. For a film, inspect planned storylines, scenarios, screenplay, design branches, shots, production source, and edit. For a brief, inspect the bounded observations, design branches, shots, production source, and edit. For a library, inspect the selected design and source branches and any production serialization. Put consequential canon in settings before downstream use; route narrative order, design decisions, shot realization, and edit choices to their own owners.
+Backcast the production's actual planned consumers to discover every production-wide fact or constraint they would otherwise have to invent. For a film, inspect planned treatments, scripts, screenplays, design branches, shots, production source, and edit. For a brief, inspect the bounded observations, design branches, shots, production source, and edit. For a library, inspect the selected design and source branches and any production serialization. Put consequential canon in settings before downstream use; route narrative order, design decisions, shot realization, and edit choices to their own owners.
 
 A positive acknowledgement identifies the settings owners and any separately activated production contract. If the planned consumers need no additional owner, one population-wide exclusion names the consumers examined and the existing owners that make invention unnecessary.
 

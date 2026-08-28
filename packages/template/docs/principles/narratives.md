@@ -1,6 +1,6 @@
 # Narrative principles
 
-These principles bind the storyline, scenario, and screenplay ladders of a film production. They govern narrative units, horizontal continuity, and vertical refinement while each layer's specialist principles own the decisions that layer adds.
+These principles bind the treatment, script, and screenplay ladder of a film production. They govern narrative units, horizontal continuity, and vertical refinement while each layer's specialist principles own the decisions that layer adds.
 
 ## Unit function {#unit-function}
 
@@ -18,7 +18,7 @@ Every unit inherits an earlier state and sustains or changes it through an expli
 
 Review question: by what specific relation does this unit arrive from its predecessor and alter what its successor can mean or do?
 
-This item owns the relation between narrative units. `state-continuity` owns the correctness of inherited facts, and `storylines.md#information-design` owns production-wide disclosure order.
+This item owns the relation between narrative units. `state-continuity` owns the correctness of inherited facts, and `treatments.md#information-design` owns production-wide disclosure order.
 
 Sources: [Trabasso and van den Broek on causal networks and recall](https://doi.org/10.1016/0749-596X%2885%2990049-X); [Zwaan, Langston, and Graesser on event-indexing dimensions](https://doi.org/10.1111/j.1467-9280.1995.tb00513.x); [Wisconsin Writing Center on cohesion beyond simple causation](https://writing.wisc.edu/handbook/style/connectingideas/)
 
@@ -40,7 +40,7 @@ Mark a reach backward or forward so the audience can place it and return, and gi
 
 Review question: where does this unit's narration stand relative to story time, what span does it render at what narrative distance, how often does it narrate the occurrence or interval, and what work does any departure from plain forward singular narration perform?
 
-This item owns the unit's relation between story time and narrated order, duration, and frequency. `principles/scripts.md#pacing-rhythm` owns the audience time a passage receives, `principles/storylines.md#information-design` owns when the audience learns a fact, and `horizontal-state-continuity` owns whether inherited facts remain accurate across the shift.
+This item owns the unit's relation between story time and narrated order, duration, and frequency. `principles/screenplays.md#pacing-rhythm` owns the audience time a passage receives, `principles/treatments.md#information-design` owns when the audience learns a fact, and `horizontal-state-continuity` owns whether inherited facts remain accurate across the shift.
 
 Sources: [Genette on order, duration, and frequency as separate relations between story time and narrative time](https://archive.org/details/narrativediscour0000gene); [Zwaan, Langston, and Graesser on the comprehension cost of a temporal discontinuity](https://doi.org/10.1111/j.1467-9280.1995.tb00513.x); [Hicks on distance, time, and proportion as organizers of narrative progression](https://www.cambridge.org/core/books/scale-crisis-and-the-modern-novel/introduction/2DC3BA9BA9CF6C3DE80AD1A2A52FFDCB)
 
@@ -50,7 +50,7 @@ Every unit gives the audience a concrete reason to continue attending through a 
 
 Review question: what specific audience investment is active during this unit, and how does the unit change or repay it?
 
-This item owns continued attention. Information quantity and order belong to storyline information design, and screenplay timing owns the seconds allocated to the final experience.
+This item owns continued attention. Information quantity and order belong to treatment information design, and screenplay timing owns the seconds allocated to the final experience.
 
 Sources: [Green and Brock on narrative transportation](https://doi.org/10.1037/0022-3514.79.5.701); [Busselle and Bilandzic on dimensions of narrative engagement](https://doi.org/10.1080/15213260903287259); [Baroni on tellability](https://www-archiv.fdm.uni-hamburg.de/lhn/node/30.html)
 
@@ -70,7 +70,7 @@ Every new name, rule, relation, and background fact arrives when the audience ca
 
 Review question: what observable context lets the audience understand and retain each new item at its first appearance?
 
-This item owns local comprehensibility at introduction. Storyline information design owns when the production discloses it, and scenario knowledge state owns how participants obtain it.
+This item owns local comprehensibility at introduction. Treatment information design owns when the production discloses it, and script knowledge state owns how participants obtain it.
 
 Sources: [Sternberg on delayed and distributed exposition](https://archive.org/details/expositionalmode0000ster); [Zwaan, Langston, and Graesser on the processing cost of situation changes](https://doi.org/10.1111/j.1467-9280.1995.tb00513.x)
 
@@ -86,7 +86,7 @@ Sources: [Boston University on creating tension through concrete action](https:/
 
 ## Unit identity {#unit-identity}
 
-Matching H2 sequences, H3 scenes, and H4 beats preserve one stable identity from storyline through scenario to screenplay. A refinement adds only the detail owned by its layer; it does not merge, split, reorder, rename, or silently replace its parent unit.
+Matching H2 sequences, H3 scenes, and H4 beats preserve one stable identity from treatment through script to screenplay. A refinement adds only the detail owned by its layer; it does not merge, split, reorder, rename, or silently replace its parent unit.
 
 Review question: does every unit refine exactly one same-level parent while retaining the same dramatic or formal event?
 
@@ -96,11 +96,11 @@ Sources: [Plan-and-Write on hierarchical planning and realization](https://doi.o
 
 ## Boundary-state inheritance {#state-continuity}
 
-Every boundary state asserted by a storyline unit remains present in its matching scenario and screenplay unit. A lower layer adds only physical or audiovisual detail it owns; it does not replace an inherited subject, knowledge, place, time, initiating condition, or terminal relation.
+Every boundary state asserted by a treatment unit remains present in its matching script and screenplay unit. A lower layer adds only physical or audiovisual detail it owns; it does not replace an inherited subject, knowledge, place, time, initiating condition, or terminal relation.
 
 Review question: which inherited boundary fact survives through the three matching units, and which added fact belongs only to the refining layer?
 
-This item owns vertical boundary-state preservation. `horizontal-state-continuity` owns facts between neighboring units, and scenario entry and exit principles own physical completeness within one scenario unit.
+This item owns vertical boundary-state preservation. `horizontal-state-continuity` owns facts between neighboring units, and script entry and exit principles own physical completeness within one script unit.
 
 Sources: [Zwaan, Langston, and Graesser on event-indexing dimensions](https://doi.org/10.1111/j.1467-9280.1995.tb00513.x); [Zacks and colleagues on perceived event boundaries](https://pmc.ncbi.nlm.nih.gov/articles/PMC8710938/)
 
@@ -110,6 +110,6 @@ Every narrative layer retains its parent unit's required audience-visible or aud
 
 Review question: what one audience-perceptible change survives from treatment through physical staging to the final screenplay?
 
-This item owns vertical preservation of the required audience effect. Storyline audience change owns the before-and-after understanding inside one treatment unit.
+This item owns vertical preservation of the required audience effect. Treatment audience change owns the before-and-after understanding inside one treatment unit.
 
 Sources: [Detailed Outline Control](https://arxiv.org/abs/2212.10077); [NASA systems engineering handbook on bidirectional traceability](https://www.nasa.gov/reference/systems-engineering-handbook/)

@@ -12,7 +12,7 @@ Those skills ship with the scaffold and are this project's own copy of the autho
 
 ## Choose the production shape
 
-Set kind in lint.config.ts when authorship begins. A film uses the exact settings -> storylines -> scenarios -> script -> shots -> filmSources ladder. A brief answers one bounded audiovisual question through the exact settings -> briefs -> shots -> filmSources ladder when the result needs no independent storyline/scenario/script refinement; a short or simple demonstration may therefore remain a brief. Both timed shapes also require reviewed production source as a parallel input before film source. A library delivers reviewed design/source branches without a shot or film timeline. Runtime does not choose the shape.
+Set kind in lint.config.ts when authorship begins. A film uses the exact settings -> treatments -> scripts -> screenplays -> shots -> filmSources ladder. A brief answers one bounded audiovisual question through the exact settings -> briefs -> shots -> filmSources ladder when the result needs no independent treatment/script/screenplay refinement; a short or simple demonstration may therefore remain a brief. Both timed shapes also require reviewed production source as a parallel input before film source. A library delivers reviewed design/source branches without a shot or film timeline. Runtime does not choose the shape.
 
 Research and the model, space, material, instance, motion, and system branches are orthogonal. Activate only what the delivery uses:
 
