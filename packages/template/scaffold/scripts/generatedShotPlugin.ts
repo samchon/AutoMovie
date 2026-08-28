@@ -5,7 +5,19 @@ import type { Plugin } from "vite";
 
 import config from "../automovie.config";
 import { readProductionLiveWearableSoftBodies } from "./productionConfiguration";
-import { currentProductionDialogueRuntime } from "./productionRuntimeState";
+import {
+  type IAutoMovieProductionDialogueRuntime,
+  cloneProductionDialogueRuntime,
+} from "./productionRuntimeState";
+
+/** Invocation-owned state exposed to the viewer middleware. */
+export interface IGeneratedShotRuntimeProvider {
+  dialogue: () => IAutoMovieProductionDialogueRuntime | null;
+}
+
+const NO_DIALOGUE_RUNTIME: IGeneratedShotRuntimeProvider = {
+  dialogue: () => null,
+};
 
 /**
  * Serve bounded compiler-owned viewer JSON and registered model bytes.
@@ -18,6 +30,7 @@ import { currentProductionDialogueRuntime } from "./productionRuntimeState";
 export const generatedShotPlugin = (
   projectRoot: string,
   productionId: string,
+  runtimeProvider: IGeneratedShotRuntimeProvider = NO_DIALOGUE_RUNTIME,
 ): Plugin => ({
   name: "automovie-generated-shot",
   configureServer: (server) => {
@@ -26,7 +39,7 @@ export const generatedShotPlugin = (
         request.url?.split("?", 1)[0] === "/__automovie/production-runtime.json"
       ) {
         const runtime = {
-          dialogue: currentProductionDialogueRuntime(),
+          dialogue: cloneProductionDialogueRuntime(runtimeProvider.dialogue()),
           liveWearableSoftBodies: readProductionLiveWearableSoftBodies(
             config.simulation.liveWearableSoftBodies,
           ),

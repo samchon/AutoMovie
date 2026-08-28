@@ -5,7 +5,7 @@ import {
 } from "@automovie/production";
 
 import config from "../automovie.config";
-import { captureProductionFrame, closeProductionFrameCapture } from "./capture";
+import { createProductionFrameCaptureRuntime } from "./capture";
 
 const args = process.argv.slice(2);
 const options = new Map<string, string>();
@@ -45,8 +45,9 @@ const height =
   options.get("--height") === undefined
     ? undefined
     : Number(options.get("--height"));
+const captureRuntime = createProductionFrameCaptureRuntime();
 const context = new AutoMovieProductionContext(
-  captureProductionFrame,
+  captureRuntime.capture,
   process.cwd(),
   config.productionId,
 );
@@ -69,5 +70,5 @@ try {
   captureFailure = { error };
   throw error;
 } finally {
-  await closeProductionFrameCapture(captureFailure);
+  await captureRuntime.close(captureFailure);
 }

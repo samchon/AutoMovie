@@ -1,15 +1,10 @@
-import {
-  AutoMovieProductionContext,
-  AutoMovieProductionRepaintService,
-} from "@automovie/production";
-
 import config from "../automovie.config";
-import { captureProductionFrame, closeProductionFrameCapture } from "./capture";
-import {
-  readProductionRepaintShotArgument,
-  selectProductionRepaintRequest,
-} from "./productionConfiguration";
+import { createProductionFrameCaptureRuntime } from "./capture";
 import { repaintProductionShot } from "./repaintAdapter";
+import {
+  createNodeProductionRepaintHost,
+  runProductionRepaintCommand,
+} from "./repaintCommand";
 
 /**
  * Derive one shot's repainted rendition from its deterministic source.
@@ -33,30 +28,16 @@ import { repaintProductionShot } from "./repaintAdapter";
  * ephemeral override. It replaces only the active rendition pointer; unchanged
  * deterministic truth keeps its own receipts.
  */
-const args = process.argv.slice(2);
-const shot = readProductionRepaintShotArgument(args);
-const selected = selectProductionRepaintRequest(config.visual.repaint, shot);
-const context = new AutoMovieProductionContext(
-  captureProductionFrame,
-  process.cwd(),
-  config.productionId,
-);
-let repaintFailure: { error: unknown } | undefined;
-try {
-  const output = await new AutoMovieProductionRepaintService(
-    repaintProductionShot,
-    selected.generator,
-  ).serve(context, {
-    parameters: selected.request.parameters,
-    productionId: config.productionId,
-    references: [...selected.request.references],
-    shot: selected.request.shot,
+await runProductionRepaintCommand(process.argv.slice(2), config, () => {
+  const captureRuntime = createProductionFrameCaptureRuntime();
+  return createNodeProductionRepaintHost({
+    adapter: repaintProductionShot,
+    capture: captureRuntime.capture,
+    closeCapture: captureRuntime.close,
+    root: process.cwd(),
+    setExitCode: (value) => {
+      process.exitCode = value;
+    },
+    stdout: (value) => process.stdout.write(value),
   });
-  process.stdout.write(`${JSON.stringify(output, null, 2)}\n`);
-  if (output.repainted === false) process.exitCode = 1;
-} catch (error) {
-  repaintFailure = { error };
-  throw error;
-} finally {
-  await closeProductionFrameCapture(repaintFailure);
-}
+});

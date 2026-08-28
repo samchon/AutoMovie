@@ -35,36 +35,30 @@ export interface IAutoMovieProductionViewerRuntime {
   liveWearableSoftBodies: string[];
 }
 
-let captureDialogueRuntime: IAutoMovieProductionDialogueRuntime | null = null;
-
-/** Install one immutable dialogue runtime for the current capture process. */
-export const installProductionDialogueRuntime = (
+/** Clone one immutable dialogue runtime at an invocation boundary. */
+export const cloneProductionDialogueRuntime = (
   runtime: IAutoMovieProductionDialogueRuntime | null,
-): void => {
-  captureDialogueRuntime = runtime === null ? null : structuredClone(runtime);
-};
-
-/** Read the current immutable dialogue runtime for the viewer middleware. */
-export const currentProductionDialogueRuntime =
-  (): IAutoMovieProductionDialogueRuntime | null =>
-    captureDialogueRuntime === null
-      ? null
-      : structuredClone(captureDialogueRuntime);
+): IAutoMovieProductionDialogueRuntime | null =>
+  runtime === null ? null : structuredClone(runtime);
 
 /** Content identity included in page reuse and render-source fingerprints. */
-export const productionDialogueRuntimeIdentity = (): string | null => {
-  if (captureDialogueRuntime === null) return null;
+export const productionDialogueRuntimeIdentity = (
+  runtime: IAutoMovieProductionDialogueRuntime | null,
+): string | null => {
+  if (runtime === null) return null;
   return createHash("sha256")
-    .update(Buffer.from(JSON.stringify(captureDialogueRuntime), "utf8"))
+    .update(Buffer.from(JSON.stringify(runtime), "utf8"))
     .digest("hex");
 };
 
 /** Resolve a shot-local seek only when exactly one film occurrence fits. */
-export const productionDialogueFrameForShotTime = (props: {
-  shot: string;
-  time: number;
-}): number | null => {
-  const runtime = captureDialogueRuntime;
+export const productionDialogueFrameForShotTime = (
+  runtime: IAutoMovieProductionDialogueRuntime | null,
+  props: {
+    shot: string;
+    time: number;
+  },
+): number | null => {
   if (
     runtime === null ||
     Number.isFinite(props.time) === false ||

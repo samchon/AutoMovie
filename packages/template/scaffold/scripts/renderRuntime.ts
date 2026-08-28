@@ -1,0 +1,405 @@
+import {
+  type IAutoMovieProductionRenderTier,
+  digestAutoMovieBytes,
+  encodeAutoMoviePathSegment,
+  readAutoMovieProductionOwnedFile,
+  runProductionRenderJob,
+} from "@automovie/production";
+import { createRequire } from "node:module";
+import path from "node:path";
+
+import config from "../automovie.config";
+import { inspectPublishedProxyBundle } from "./assertProxyBundle";
+import {
+  type IAutoMovieProductionRepaintSelection,
+  readProductionDialogueSynthesis,
+  readProductionRepaintSelection,
+  readProductionSpeakerBindings,
+} from "./productionConfiguration";
+import { publishProxyBundle } from "./publishProxyBundle";
+import {
+  type IProductionRenderInvocationObservationState,
+  createProductionRenderChunkCaptureRuntime,
+  createProductionRenderChunkLeaseRuntime,
+} from "./renderChunkRuntime";
+import {
+  publishRenderChunkSnapshot,
+  removeCapturedRenderChunkPointer,
+} from "./renderChunkSnapshot";
+import {
+  type IProductionRenderCommand,
+  runProductionRenderCommand,
+} from "./renderCommand";
+import { createProductionRenderGarbageRuntime } from "./renderGcRuntime";
+import {
+  type IRenderGcTargetSnapshot,
+  captureRenderGcTarget,
+  createRenderGcFileSnapshot,
+  ensureRenderPhysicalDirectory,
+  removeCapturedRenderGcTarget,
+} from "./renderGcSnapshot";
+import {
+  type IProductionRenderHost,
+  createNodeProductionRenderHost,
+} from "./renderHost";
+import {
+  acquireRenderSessionLease,
+  preserveRenderLivenessLease,
+} from "./renderLiveness";
+import {
+  auditProductionRenderCapture,
+  publishProductionMaskSidecar,
+  summarizeProductionRenderObservations,
+} from "./renderObservationAudit";
+import { createProductionRenderPlanningRuntime } from "./renderPlanningRuntime";
+import {
+  createProductionRenderFinalizationRuntime,
+  createProductionRenderPublicationRuntime,
+  productionRenderPublicationFingerprint,
+} from "./renderPublicationRuntime";
+import {
+  createProductionRenderEncoderRuntime,
+  createProductionSoundRuntime,
+} from "./renderSoundRuntime";
+import {
+  type IRenderChunkTemporaryTree,
+  assertRenderChunkTemporaryTree,
+  createRenderChunkTemporaryTree,
+} from "./renderTemporarySnapshot";
+
+const executeProductionRenderCommand = async (
+  command: IProductionRenderCommand,
+  renderHost: IProductionRenderHost,
+): Promise<void> => {
+  const root = renderHost.root;
+  const productionId = config.productionId;
+  const renderTier: IAutoMovieProductionRenderTier =
+    command.tier === "proxy" ? config.render.proxy : config.render.final;
+  const renderChunkFrames = command.chunkFrames;
+  const productionSegment = encodeAutoMoviePathSegment(productionId);
+  const renderLivenessScope = digestAutoMovieBytes(
+    Buffer.from(
+      JSON.stringify({
+        protocol: "automovie.render-liveness.v1",
+        productionId,
+      }),
+    ),
+  ).slice(7);
+  const productionStateRoot = path.join(
+    root,
+    "automovie",
+    "productions",
+    productionSegment,
+  );
+  const renderJobRoot = path.join(productionStateRoot, "render-job");
+  const stateRoot = path.join(renderJobRoot, renderTier.kind);
+  const planPath = path.join(stateRoot, "plan.json");
+  const require = createRequire(import.meta.url);
+  const preserveProductionEncoderCleanup = (
+    require("./preserveProductionEncoderCleanup.cjs") as {
+      preserveProductionEncoderCleanup: (
+        failure: { error: unknown } | undefined,
+        resources: readonly { resource: string; cleanup: () => unknown }[],
+      ) => void;
+    }
+  ).preserveProductionEncoderCleanup;
+  /** Read every reviewed repaint choice before a render path can use it. */
+  const productionRepaintSelection =
+    (): IAutoMovieProductionRepaintSelection | null =>
+      readProductionRepaintSelection(config.visual.repaint);
+  const renderObservations: IProductionRenderInvocationObservationState = {
+    audits: [],
+    maskSidecars: [],
+  };
+
+  const main = async (command: IProductionRenderCommand): Promise<void> => {
+    const action = command.action;
+    if (action === "gc") {
+      output(gcRuntime.collect(command.apply));
+      return;
+    }
+    if (action === "status") {
+      await planningRuntime.reportStatus();
+      return;
+    }
+    if (action === "verify") {
+      await planningRuntime.verify();
+      return;
+    }
+    const session = acquireRenderSessionLease({
+      coordinationRoot: root,
+      pid: renderHost.pid,
+      processAlive: renderHost.processAlive,
+      scope: renderLivenessScope,
+      tier: renderTier.kind,
+    });
+    let sessionFailure: { error: unknown } | undefined;
+    try {
+      if (action === "finalize") {
+        output(
+          await finalizationRuntime.finalize(
+            await planningRuntime.currentStoredPlan(),
+          ),
+        );
+        return;
+      }
+      const current = await planningRuntime.currentPlan();
+      const enforcedBudget = planningRuntime.enforceRenderBudget(current);
+      const budget = enforcedBudget.summary;
+      if (action === "plan") {
+        output({
+          ...current,
+          budget,
+          deliveryTone: planningRuntime.uncheckedDeliveryTone(
+            "planning captures no review evidence, so no committed bundle states the sealed delivery curve",
+          ),
+        });
+        return;
+      }
+      const deliveryTone =
+        action === "all"
+          ? (await planningRuntime.captureReviewEvidence()).deliveryTone
+          : planningRuntime.uncheckedDeliveryTone(
+              `the "${action}" action captures no review evidence, so no committed bundle states the sealed delivery curve`,
+            );
+      if (action === "run" || action === "all") {
+        gcRuntime.recoverAbandonedTemporaryDirectories(current.chunks);
+        gcRuntime.quarantineStaleSlotOutputs(current.chunks);
+        const result = await runProductionRenderJob({
+          plan: current,
+          workers: command.workers,
+          deliverable: command.deliverable,
+          adapters: {
+            current: (chunk) => planningRuntime.currentReceipt(current, chunk),
+            acquire: chunkLease.acquire,
+            render: (chunk) =>
+              chunkCapture.render(current, chunk, enforcedBudget.reports),
+            fail: chunkLease.fail,
+            release: chunkLease.release,
+          },
+        });
+        output({
+          plan: {
+            compileFingerprint: current.compileFingerprint,
+            editFingerprint: current.editFingerprint,
+            tier: current.tier,
+          },
+          budget,
+          deliveryTone,
+          capture: renderHost.captureMetrics(),
+          observation: {
+            ...summarizeProductionRenderObservations(renderObservations.audits),
+            maskSidecars: [...renderObservations.maskSidecars].sort(
+              (left, right) =>
+                left.globalFrame - right.globalFrame ||
+                compareCodeUnits(left.pass, right.pass) ||
+                compareCodeUnits(left.shot, right.shot),
+            ),
+          },
+          result,
+          chunks: await planningRuntime.renderStatus(current),
+        });
+        if (result.failed.length !== 0 || result.busy.length !== 0)
+          renderHost.setExitCode(1);
+        if (
+          action === "run" ||
+          result.failed.length !== 0 ||
+          result.busy.length !== 0
+        )
+          return;
+      }
+      output(await finalizationRuntime.finalize(current));
+    } catch (error) {
+      sessionFailure = { error };
+      throw error;
+    } finally {
+      preserveRenderLivenessLease(sessionFailure, session);
+    }
+  };
+
+  const writeRenderFile = (props: {
+    bytes: Uint8Array;
+    file: string;
+    ownership: IRenderChunkTemporaryTree;
+  }): IRenderGcTargetSnapshot => {
+    if (path.dirname(path.resolve(props.file)) !== props.ownership.tree.path)
+      throw new Error("Render chunk file changed declared parent.");
+    assertRenderChunkTemporaryTree(props.ownership);
+    const snapshot = createRenderGcFileSnapshot(
+      props.ownership.tree.path,
+      props.file,
+      props.bytes,
+    );
+    if (
+      snapshot.base.path !== props.ownership.tree.path ||
+      snapshot.base.real !== props.ownership.tree.real ||
+      snapshot.base.identity !== props.ownership.tree.identity
+    )
+      throw new Error("Render chunk file changed parent ownership.");
+    assertRenderChunkTemporaryTree(props.ownership);
+    return snapshot;
+  };
+
+  const readRendererJson = <T>(ownershipRoot: string, file: string): T =>
+    JSON.parse(
+      Buffer.from(
+        readAutoMovieProductionOwnedFile({
+          root: ownershipRoot,
+          directory: path.dirname(file),
+          relative: path.basename(file),
+        }),
+      ).toString("utf8"),
+    ) as T;
+
+  const compareCodeUnits = (left: string, right: string): number =>
+    left < right ? -1 : left > right ? 1 : 0;
+
+  const output = (value: unknown): void => {
+    renderHost.stdout(`${JSON.stringify(value, null, 2)}\n`);
+  };
+
+  const renderProgress = (
+    stage: string,
+    details: Readonly<Record<string, number | string>> = {},
+  ): void => {
+    renderHost.stderr(
+      `[automovie:render] ${JSON.stringify({ stage, ...details })}\n`,
+    );
+  };
+
+  const soundRuntime = createProductionSoundRuntime({
+    dialogueSelection: readProductionDialogueSynthesis(
+      config.sound.dialogueSynthesis,
+    ),
+    host: renderHost,
+    liveWearableSoftBodies: config.simulation.liveWearableSoftBodies,
+    productionStateRoot,
+    progress: renderProgress,
+    speakerBindings: readProductionSpeakerBindings(
+      config.sound.speakerBindings,
+    ),
+  });
+  const gcRuntime = createProductionRenderGarbageRuntime({
+    captureTarget: captureRenderGcTarget,
+    compareCodeUnits,
+    finalTier: config.render.final,
+    host: renderHost,
+    productionId,
+    productionStateRoot,
+    proxyTier: config.render.proxy,
+    readRendererJson,
+    removeTarget: removeCapturedRenderGcTarget,
+    renderJobRoot,
+    renderLivenessScope,
+    renderPublicationFingerprint: productionRenderPublicationFingerprint,
+    renderTier,
+    root,
+    sourceFingerprint: () => planningRuntime.sourceFingerprint(),
+    stateRoot,
+  });
+  const planningRuntime = createProductionRenderPlanningRuntime({
+    captureCurrentChunkPointer: gcRuntime.captureCurrentChunkPointer,
+    compareCodeUnits,
+    h264Entry: require.resolve("h264-mp4-encoder"),
+    host: renderHost,
+    output,
+    planPath,
+    productionId,
+    productionSegment,
+    renderChunkFrames,
+    renderTier,
+    root,
+    soundRuntime,
+    stateRoot,
+  });
+  const encoderRuntime = createProductionRenderEncoderRuntime({
+    createMp4File: renderHost.createMp4File,
+    h264Module: renderHost.h264Module,
+    preserveCleanup: preserveProductionEncoderCleanup,
+    productionEncoderIdentity: planningRuntime.productionEncoderIdentity,
+  });
+  const publicationRuntime = createProductionRenderPublicationRuntime({
+    assertCurrentEncoder: encoderRuntime.assertCurrent,
+    currentChunk: planningRuntime.currentChunkPublication,
+    ensureDirectory: ensureRenderPhysicalDirectory,
+    filesystem: renderHost.filesystem,
+    inspectProxy: inspectPublishedProxyBundle,
+    processAlive: renderHost.processAlive,
+    publicationFingerprint: productionRenderPublicationFingerprint,
+    publishProxyBundle,
+  });
+  const finalizationRuntime = createProductionRenderFinalizationRuntime({
+    encoder: encoderRuntime,
+    host: renderHost,
+    planning: planningRuntime,
+    productionId,
+    progress: renderProgress,
+    publication: publicationRuntime,
+    repaintSelection: productionRepaintSelection,
+    root,
+    sound: soundRuntime,
+  });
+  const chunkLease = createProductionRenderChunkLeaseRuntime({
+    captureExisting: gcRuntime.captureExistingRenderStateTarget,
+    host: renderHost,
+    quarantine: (target, reason, snapshot) =>
+      gcRuntime.quarantine(target, reason, snapshot),
+    readJson: gcRuntime.readCapturedRenderJson,
+    remove: gcRuntime.removeOwnedChunkClaim,
+    stateRoot,
+  });
+  const chunkCapture = createProductionRenderChunkCaptureRuntime({
+    capture: renderHost.capture,
+    captureCompleted: captureRenderGcTarget,
+    capturePointer: gcRuntime.captureCurrentChunkPointer,
+    createTemporary: createRenderChunkTemporaryTree,
+    current: planningRuntime.currentChunk,
+    encode: (frames, plan) =>
+      encoderRuntime.encodePngFrames((consumeFrame) => {
+        for (const frame of frames) consumeFrame(frame);
+      }, plan),
+    lease: chunkLease,
+    observations: {
+      audit: auditProductionRenderCapture,
+      publishMask: publishProductionMaskSidecar,
+      state: renderObservations,
+    },
+    pid: renderHost.pid,
+    productionId,
+    publication: {
+      publish: publishRenderChunkSnapshot,
+      removePointer: removeCapturedRenderChunkPointer,
+    },
+    randomUuid: renderHost.randomUuid,
+    renderLivenessScope,
+    root,
+    stateRoot,
+    tier: renderTier.kind,
+    write: writeRenderFile,
+  });
+
+  let renderFailure: { error: unknown } | undefined;
+  try {
+    await main(command);
+  } catch (error) {
+    renderFailure = { error };
+    throw error;
+  } finally {
+    await renderHost.closeCapture(renderFailure);
+  }
+};
+
+/** Run the Node-backed renderer through the shared raw-argument command seam. */
+export const runProductionRenderWithHost = async (
+  args: readonly string[],
+  host: IProductionRenderHost,
+): Promise<void> =>
+  runProductionRenderCommand(args, (command) =>
+    executeProductionRenderCommand(command, host),
+  );
+
+/** Run the actual generated CLI on the real Node production host. */
+export const runNodeProductionRender = async (
+  args: readonly string[],
+): Promise<void> =>
+  runProductionRenderWithHost(args, createNodeProductionRenderHost());

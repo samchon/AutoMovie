@@ -265,7 +265,9 @@ export const assertProductionRepaintSelection = (props: {
       "A repainted visual delivery requires an explicit visual.repaint generator and reviewed request for every compiled shot.",
     );
   const compiled = exactIdentitySet(props.shots, "compiled repaint shot");
-  const configured = selected.requests.map((request) => request.shot).sort();
+  const configured = selected.requests
+    .map((request) => request.shot)
+    .sort(compareCodeUnits);
   if (
     compiled.length !== configured.length ||
     compiled.some((shot, index) => shot !== configured[index])
@@ -774,8 +776,11 @@ const exactIdentitySet = (
       throw new Error(`${label} repeats identity "${identity}".`);
     seen.add(identity);
   }
-  return [...seen].sort();
+  return [...seen].sort(compareCodeUnits);
 };
+
+const compareCodeUnits = (left: string, right: string): number =>
+  left < right ? -1 : left > right ? 1 : 0;
 
 const nonBlank = (value: unknown, label: string): string => {
   if (
