@@ -1564,7 +1564,7 @@ export const review = true;
     createAutoMovieEvidenceConfig(
       sourceExportGraph(
         [
-          "export interface ISubject { readonly id: string; }",
+          'export interface ISubject { readonly id: string; readonly "literal": string; }',
           'export type SubjectId = "subject";',
           "export type SubjectShape = { readonly label: string; };",
           'export const subjectName = "subject";',
@@ -1635,6 +1635,14 @@ export const review = true;
     [
       'export class Subject { public ["label"] = "subject"; }',
       'exports computed public member Subject.["label"]',
+    ],
+    [
+      'export class Subject { public "two words" = "subject"; }',
+      'exports unaddressable public literal member Subject."two words"',
+    ],
+    [
+      'export class Subject { public "" = "subject"; }',
+      'exports unaddressable public literal member Subject.""',
     ],
     [
       "export import Subject = Models.Subject;",

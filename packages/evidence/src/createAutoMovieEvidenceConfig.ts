@@ -1614,6 +1614,15 @@ const assertSourceExportsAreEvidenceAddressable = (
           `exports computed public member ${owner}.${display}`,
           "Use a stable identifier",
         );
+      if (
+        name !== undefined &&
+        ts.isStringLiteral(name) &&
+        (name.text.length === 0 || /\s/u.test(name.text))
+      )
+        refuse(
+          `exports unaddressable public literal member ${owner}.${display}`,
+          "Use a non-empty, whitespace-free identifier",
+        );
     }
   };
 
