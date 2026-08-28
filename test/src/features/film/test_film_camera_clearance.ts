@@ -497,6 +497,37 @@ export const test_film_camera_clearance = (): void => {
         ),
     ),
   );
+  const wrongIntervalCount = validateShotArtifact(
+    {
+      ...performed.shot,
+      cameraClearance: [
+        { ...acceptedReport, intervals: acceptedReport.intervals - 1 },
+      ],
+    },
+    clearStage.scene,
+    motionIds,
+  );
+  const unsafeIntervalClock = validateShotArtifact(
+    {
+      ...performed.shot,
+      cameraClearance: [
+        { ...acceptedReport, sampleRate: Number.MAX_VALUE, intervals: 0 },
+      ],
+    },
+    clearStage.scene,
+    motionIds,
+  );
+  TestValidator.predicate(
+    "artifact interval evidence must equal one safely countable shared clock",
+    wrongIntervalCount.success === false &&
+      wrongIntervalCount.violations.some(
+        (item) => item.path === "$input.cameraClearance[0].intervals",
+      ) &&
+      unsafeIntervalClock.success === false &&
+      unsafeIntervalClock.violations.some(
+        (item) => item.path === "$input.cameraClearance[0].sampleRate",
+      ),
+  );
 
   const metadataViolations: Parameters<typeof appendShotMetadataArtifact>[3] =
     [];

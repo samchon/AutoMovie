@@ -366,15 +366,29 @@ export const appendShotMetadataArtifact = (
     appendCameraClearanceArtifact(
       shot.cameraClearance,
       `${path}.cameraClearance`,
+      duration,
       sceneCameras,
       violations,
     );
+};
+
+/** Count shared-clock intervals without allocating a hostile-sized grid. */
+const clearanceIntervalCount = (
+  duration: number,
+  sampleRate: number,
+): number | null => {
+  const frames = Math.max(1, Math.ceil(duration * sampleRate));
+  if (!Number.isSafeInteger(frames)) return null;
+  return Math.min(duration, (frames - 1) / sampleRate) === duration
+    ? frames - 1
+    : frames;
 };
 
 /** Validate accepted, current-revision clearance evidence carried by a shot. */
 const appendCameraClearanceArtifact = (
   reports: unknown,
   path: string,
+  duration: number,
   sceneCameras: ReadonlySet<string> | null,
   violations: IAutoMovieConstraintViolation[],
 ): void => {
@@ -472,6 +486,38 @@ const appendCameraClearanceArtifact = (
         "clearance interval count must be a safe integer",
         report.intervals,
       );
+    if (
+      typeof report.sampleRate === "number" &&
+      Number.isFinite(report.sampleRate) &&
+      report.sampleRate > 0 &&
+      Number.isFinite(duration) &&
+      duration >= 0
+    ) {
+      const expectedIntervals = clearanceIntervalCount(
+        duration,
+        report.sampleRate,
+      );
+      if (expectedIntervals === null)
+        pushViolation(
+          violations,
+          "range",
+          `${reportPath}.sampleRate`,
+          "clearance duration and sample rate must produce a safe-integer interval count",
+          report.sampleRate,
+        );
+      else if (
+        typeof report.intervals === "number" &&
+        Number.isSafeInteger(report.intervals) &&
+        report.intervals !== expectedIntervals
+      )
+        pushViolation(
+          violations,
+          "range",
+          `${reportPath}.intervals`,
+          `clearance interval count must equal the ${expectedIntervals} intervals on the report's endpoint-inclusive fixed clock`,
+          report.intervals,
+        );
+    }
     if (report.status !== "clear")
       pushViolation(
         violations,
