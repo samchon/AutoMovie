@@ -86,11 +86,16 @@ export const test_production_repaint_execution = async (): Promise<void> => {
   const invalid = [
     policy({ maximumAttempts: 0, backoffMs: [] }),
     policy({ attemptTimeoutMs: 0 }),
+    policy({
+      attemptTimeoutMs: 2_147_483_648,
+      maximumElapsedMs: 2_147_483_648,
+    }),
     policy({ maximumElapsedMs: 0 }),
     policy({ attemptTimeoutMs: 10_001 }),
     policy({ maximumCostUnits: -1 }),
     policy({ backoffMs: [0] }),
     policy({ backoffMs: [0, -1] }),
+    policy({ backoffMs: [0, 2_147_483_648] }),
     policy({ retryableFailures: ["timeout", "timeout"] }),
     policy({ retryableFailures: ["unsupported" as "timeout"] }),
     ...["invalid-output", "cancelled", "input-stale", "budget-exhausted"].map(

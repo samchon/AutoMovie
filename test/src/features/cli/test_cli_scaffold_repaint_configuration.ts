@@ -432,6 +432,14 @@ export const test_cli_scaffold_repaint_configuration =
         ...authored,
         executionPolicy: { ...authored.executionPolicy, hidden: true },
       },
+      {
+        ...authored,
+        executionPolicy: {
+          ...authored.executionPolicy,
+          attemptTimeoutMs: 2_147_483_648,
+          maximumElapsedMs: 2_147_483_648,
+        },
+      },
       ...[
         ["maximumAttempts", 0],
         ["maximumAttempts", 1.5],
@@ -441,6 +449,7 @@ export const test_cli_scaffold_repaint_configuration =
         ["maximumCostUnits", Number.POSITIVE_INFINITY],
         ["backoffMs", []],
         ["backoffMs", [-1]],
+        ["backoffMs", [0, 2_147_483_648]],
         ["retryableFailures", ["transport", "transport"]],
         ["retryableFailures", ["unknown"]],
         ...[

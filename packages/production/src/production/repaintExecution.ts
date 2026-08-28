@@ -98,6 +98,7 @@ export const assertAutoMovieRepaintExecutionPolicy = (
     policy.maximumAttempts <= 0 ||
     Number.isSafeInteger(policy.attemptTimeoutMs) === false ||
     policy.attemptTimeoutMs <= 0 ||
+    policy.attemptTimeoutMs > MAX_TIMER_MILLISECONDS ||
     Number.isSafeInteger(policy.maximumElapsedMs) === false ||
     policy.maximumElapsedMs <= 0 ||
     policy.attemptTimeoutMs > policy.maximumElapsedMs ||
@@ -105,7 +106,10 @@ export const assertAutoMovieRepaintExecutionPolicy = (
     policy.maximumCostUnits < 0 ||
     policy.backoffMs.length !== policy.maximumAttempts - 1 ||
     policy.backoffMs.some(
-      (value) => Number.isSafeInteger(value) === false || value < 0,
+      (value) =>
+        Number.isSafeInteger(value) === false ||
+        value < 0 ||
+        value > MAX_TIMER_MILLISECONDS,
     ) ||
     new Set(policy.retryableFailures).size !==
       policy.retryableFailures.length ||
@@ -114,7 +118,7 @@ export const assertAutoMovieRepaintExecutionPolicy = (
     )
   )
     throw new Error(
-      "Repaint execution policy requires positive attempt/elapsed time bounds, a non-negative cost ceiling, exactly one deterministic backoff per possible retry, and unique supported retryable failure classes.",
+      "Repaint execution policy requires positive attempt/elapsed time bounds, host-safe timer delays, a non-negative cost ceiling, exactly one deterministic backoff per possible retry, and unique supported retryable failure classes.",
     );
 };
 
@@ -360,6 +364,8 @@ const RETRYABLE_FAILURE_CLASSES: ReadonlySet<AutoMovieRepaintFailureClass> =
     "provider-refusal",
     "internal",
   ]);
+
+const MAX_TIMER_MILLISECONDS = 2_147_483_647;
 
 const NEVER_ABORTED_SIGNAL = new AbortController().signal;
 
