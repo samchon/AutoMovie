@@ -35,6 +35,20 @@ interface IRuntimePackageSnapshotModule {
   }): IRuntimePackageSnapshot;
 }
 
+interface IRenderSoundModule {
+  createProductionRenderEncoderRuntime(props: {
+    createMp4File: () => unknown;
+    h264Module: unknown;
+    preserveCleanup: () => void;
+    productionEncoderIdentity: () => unknown;
+  }): unknown;
+  encodeProductionSoundRaster(raster: {
+    height: number;
+    rgba: Uint8Array;
+    width: number;
+  }): Uint8Array;
+}
+
 interface IPackageCase {
   entry: string;
   expected: readonly RegExp[];
@@ -60,6 +74,13 @@ const linkWorkspacePackage = (project: string, name: string): void => {
     target,
     process.platform === "win32" ? "junction" : "dir",
   );
+};
+
+const copyWorkspacePackage = (project: string, name: string): string => {
+  const target = path.join(project, "node_modules", ...name.split("/"));
+  fs.mkdirSync(path.dirname(target), { recursive: true });
+  fs.cpSync(packageRoot(name), target, { dereference: true, recursive: true });
+  return fs.realpathSync(target);
 };
 
 const copyPackage = (
@@ -147,7 +168,10 @@ export const test_cli_scaffold_sound_runtime_package_closure = (): void => {
   try {
     const project = path.join(root, "generated");
     writeFiles(project, renderScaffold({ name: "sound-closure" }));
+    linkWorkspacePackage(project, "@automovie/engine");
     linkWorkspacePackage(project, "@automovie/production");
+    const residentPngRoot = copyWorkspacePackage(project, "pngjs");
+    const residentMp4Root = copyWorkspacePackage(project, "mp4box");
     const source = path.resolve(
       __dirname,
       "../../../../packages/template/scaffold/scripts/runtimePackageSnapshot.ts",
@@ -167,6 +191,87 @@ export const test_cli_scaffold_sound_runtime_package_closure = (): void => {
       "generated runtime closure implementation is byte-identical",
       fs.readFileSync(generated).equals(fs.readFileSync(source)),
       true,
+    );
+    const generatedSoundPath = path.join(
+      project,
+      "scripts",
+      "renderSoundRuntime.ts",
+    );
+    const generatedRequire = createRequire(generatedSoundPath);
+    const pngEntry = generatedRequire.resolve("pngjs");
+    const mp4Entry = generatedRequire.resolve("mp4box");
+    const sound = generatedRequire(generatedSoundPath) as IRenderSoundModule;
+    TestValidator.equals(
+      "generated sound module does not load codecs before identity capture",
+      {
+        png: require.cache[pngEntry],
+        mp4: require.cache[mp4Entry],
+      },
+      { png: undefined, mp4: undefined },
+    );
+    sound.encodeProductionSoundRaster({
+      height: 1,
+      rgba: new Uint8Array([0, 0, 0, 0]),
+      width: 1,
+    });
+    sound.createProductionRenderEncoderRuntime({
+      createMp4File: () => ({}),
+      h264Module: {},
+      preserveCleanup: () => undefined,
+      productionEncoderIdentity: () => ({}),
+    });
+    TestValidator.equals(
+      "generated sound codecs load only after their generation is bound",
+      {
+        png: require.cache[pngEntry] !== undefined,
+        mp4: require.cache[mp4Entry] !== undefined,
+      },
+      { png: true, mp4: true },
+    );
+    replaceBytes(path.join(residentPngRoot, "lib", "parser-async.js"));
+    const mp4Snapshot = generatedRuntime.snapshotRuntimePackage({
+      entry: mp4Entry,
+      moduleClosure: true,
+      packageName: "mp4box",
+    });
+    replaceBytes(
+      path.join(
+        residentMp4Root,
+        ...closurePath(mp4Snapshot, /^dist\/styp-[^.]+\.cjs$/u).split("/"),
+      ),
+    );
+    TestValidator.equals(
+      "resident codec generations refuse transitive replacement",
+      namedFacts([
+        [
+          "pngjs",
+          () =>
+            throwsError(
+              () =>
+                sound.encodeProductionSoundRaster({
+                  height: 1,
+                  rgba: new Uint8Array([0, 0, 0, 0]),
+                  width: 1,
+                }),
+              "changed physical identity",
+            ),
+        ],
+        [
+          "mp4box",
+          () =>
+            throwsError(
+              () =>
+                sound.createProductionRenderEncoderRuntime({
+                  createMp4File: () => ({}),
+                  h264Module: {},
+                  preserveCleanup: () => undefined,
+                  productionEncoderIdentity: () => ({}),
+                }),
+              "changed physical identity",
+            ),
+        ],
+      ]),
+      { pngjs: true, mp4box: true },
     );
     const generatedFirstRoot = copyPackage(
       root,

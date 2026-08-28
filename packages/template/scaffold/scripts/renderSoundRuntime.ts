@@ -22,12 +22,10 @@ import {
   readAutoMovieFilmTimeline,
   trimProductionAudioPresentation,
 } from "@automovie/production";
-import { BoxParser } from "mp4box";
 import { createRequire } from "node:module";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { isDeepStrictEqual } from "node:util";
-import { PNG } from "pngjs";
 
 import {
   type IDialogueCacheSnapshot,
@@ -104,6 +102,40 @@ export interface IProductionDialogueCacheIdentity {
 }
 
 class ProductionRuntimeClosureError extends AggregateError {}
+
+interface IResidentRuntimePackage<Module> {
+  module: Module;
+  snapshot: IRuntimePackageSnapshot;
+}
+
+const residentRequire = createRequire(import.meta.url);
+const residentRuntimePackages = new Map<
+  string,
+  IResidentRuntimePackage<unknown>
+>();
+
+/** Snapshot and bind a package generation before Node is allowed to load it. */
+const residentRuntimePackage = <Module>(
+  packageName: string,
+): IResidentRuntimePackage<Module> => {
+  const existing = residentRuntimePackages.get(packageName);
+  if (existing !== undefined) {
+    assertRuntimePackageSnapshotCurrent(existing.snapshot);
+    return existing as IResidentRuntimePackage<Module>;
+  }
+  const snapshot = snapshotRuntimePackage({
+    entry: residentRequire.resolve(packageName),
+    moduleClosure: true,
+    packageName,
+  });
+  bindRuntimePackageSnapshotGeneration(snapshot);
+  const loaded = {
+    module: residentRequire(packageName) as Module,
+    snapshot,
+  };
+  residentRuntimePackages.set(packageName, loaded);
+  return loaded;
+};
 
 /** Revalidate one runtime closure without replacing an operation failure. */
 export const runWithProductionRuntimeClosure = async <Output>(
@@ -505,8 +537,12 @@ export const createProductionSoundRuntime = (props: {
       vbr: false,
       frameSize: 960,
     },
-    mux: resolvedPackageIdentity("mp4box"),
-    evidencePng: resolvedPackageIdentity("pngjs"),
+    mux: packageSnapshotIdentity(
+      residentRuntimePackage<typeof import("mp4box")>("mp4box").snapshot,
+    ),
+    evidencePng: packageSnapshotIdentity(
+      residentRuntimePackage<typeof import("pngjs")>("pngjs").snapshot,
+    ),
     tts: (() => {
       if (props.dialogueSelection === null) return null;
       const kokoro = resolvedPackageSnapshot("kokoro-js");
@@ -1288,6 +1324,10 @@ export const createProductionRenderEncoderRuntime = (props: {
   ) => void;
   productionEncoderIdentity: (fps: number) => unknown;
 }): IProductionRenderEncoderRuntime => {
+  const { BoxParser } =
+    residentRuntimePackage<typeof import("mp4box")>("mp4box").module;
+  const { PNG } =
+    residentRuntimePackage<typeof import("pngjs")>("pngjs").module;
   const assertCurrentEncoder = (
     plan: IAutoMovieProductionRenderJobPlan,
   ): void => {
@@ -1564,6 +1604,8 @@ export const encodeProductionSoundRaster = (raster: {
   height: number;
   rgba: Uint8Array;
 }): Uint8Array => {
+  const { PNG } =
+    residentRuntimePackage<typeof import("pngjs")>("pngjs").module;
   const png = new PNG({ width: raster.width, height: raster.height });
   png.data = Buffer.from(raster.rgba);
   return PNG.sync.write(png);
