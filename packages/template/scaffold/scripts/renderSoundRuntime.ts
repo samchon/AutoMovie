@@ -417,8 +417,13 @@ export const createProductionSoundRuntime = (props: {
   const resolvedPackageSnapshot = (
     packageName: string,
     assets: readonly RuntimePackageAssetSelection[] = [],
+    options: {
+      entry?: string;
+      packageExports?: boolean;
+    } = {},
   ): IRuntimePackageSnapshot => {
-    const key = `${packageName}\0${JSON.stringify(assets)}`;
+    const entry = options.entry ?? resolveImportEntry(packageName);
+    const key = `${packageName}\0${entry}\0${options.packageExports === true}\0${JSON.stringify(assets)}`;
     const existing = packageSnapshots.get(key);
     if (existing !== undefined) {
       assertRuntimePackageSnapshotCurrent(existing);
@@ -426,8 +431,9 @@ export const createProductionSoundRuntime = (props: {
     }
     const snapshot = snapshotRuntimePackage({
       assets,
-      entry: resolveImportEntry(packageName),
+      entry,
       moduleClosure: true,
+      packageExports: options.packageExports,
       packageName,
     });
     bindRuntimePackageSnapshotGeneration(snapshot);
@@ -442,6 +448,15 @@ export const createProductionSoundRuntime = (props: {
 
   const resolvedPackageIdentity = (packageName: string) =>
     packageSnapshotIdentity(resolvedPackageSnapshot(packageName));
+
+  const resolvedDependencySnapshot = (
+    importer: IRuntimePackageSnapshot,
+    packageName: string,
+  ): IRuntimePackageSnapshot =>
+    resolvedPackageSnapshot(packageName, [], {
+      entry: createRequire(importer.entry).resolve(packageName),
+      packageExports: true,
+    });
 
   const onnxRuntimeNodeIdentity = (): ReturnType<
     typeof packageSnapshotIdentity
@@ -492,16 +507,26 @@ export const createProductionSoundRuntime = (props: {
     },
     mux: resolvedPackageIdentity("mp4box"),
     evidencePng: resolvedPackageIdentity("pngjs"),
-    tts:
-      props.dialogueSelection === null
-        ? null
-        : {
-            ...resolvedPackageIdentity("kokoro-js"),
-            adapter: resolvedPackageIdentity("@huggingface/transformers"),
-            backend: onnxRuntimeNodeIdentity(),
-            imageCapability: resolvedPackageIdentity("sharp"),
-            ...props.dialogueSelection,
-          },
+    tts: (() => {
+      if (props.dialogueSelection === null) return null;
+      const kokoro = resolvedPackageSnapshot("kokoro-js");
+      const adapter = resolvedPackageSnapshot("@huggingface/transformers");
+      return {
+        ...packageSnapshotIdentity(kokoro),
+        adapter: packageSnapshotIdentity(adapter),
+        backend: onnxRuntimeNodeIdentity(),
+        dependencies: [
+          packageSnapshotIdentity(
+            resolvedDependencySnapshot(kokoro, "phonemizer"),
+          ),
+          packageSnapshotIdentity(
+            resolvedDependencySnapshot(adapter, "onnxruntime-common"),
+          ),
+        ],
+        imageCapability: resolvedPackageIdentity("sharp"),
+        ...props.dialogueSelection,
+      };
+    })(),
   });
 
   const assertSoundRuntimeCurrent = (): void => {
@@ -546,9 +571,18 @@ export const createProductionSoundRuntime = (props: {
     const kokoro = resolvedPackageSnapshot("kokoro-js", [
       { kind: "file", relative: voiceRelative },
     ]);
-    const transformers = resolvedPackageIdentity("@huggingface/transformers");
+    const transformersSnapshot = resolvedPackageSnapshot(
+      "@huggingface/transformers",
+    );
+    const transformers = packageSnapshotIdentity(transformersSnapshot);
     const backend = onnxRuntimeNodeIdentity();
     const imageCapability = resolvedPackageIdentity("sharp");
+    const phonemizer = packageSnapshotIdentity(
+      resolvedDependencySnapshot(kokoro, "phonemizer"),
+    );
+    const onnxCommon = packageSnapshotIdentity(
+      resolvedDependencySnapshot(transformersSnapshot, "onnxruntime-common"),
+    );
     const voice = kokoro.assets.find((asset) => asset.path === voiceRelative);
     if (voice === undefined)
       throw new Error(`Kokoro voice asset is absent: ${voiceRelative}`);
@@ -562,7 +596,15 @@ export const createProductionSoundRuntime = (props: {
         path: "package:onnxruntime-node",
         digest: backend.closureDigest,
       },
+      {
+        path: "package:onnxruntime-common",
+        digest: onnxCommon.closureDigest,
+      },
       ...backend.nativeAssets,
+      {
+        path: "package:phonemizer",
+        digest: phonemizer.closureDigest,
+      },
       {
         path: "package:sharp-capability-wall",
         digest: imageCapability.closureDigest,

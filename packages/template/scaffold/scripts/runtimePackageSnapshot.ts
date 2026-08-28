@@ -75,6 +75,7 @@ export const snapshotRuntimePackage = (props: {
   entry: string;
   entries?: readonly string[];
   moduleClosure?: boolean;
+  packageExports?: boolean;
   packageName: string;
 }): IRuntimePackageSnapshot => {
   if (
@@ -91,6 +92,9 @@ export const snapshotRuntimePackage = (props: {
   const entryPaths = [
     entry.path,
     ...(props.entries ?? []).map((value) => path.resolve(value)),
+    ...(props.packageExports === true
+      ? packageExecutableExports(located.root, located.manifest.bytes)
+      : []),
   ];
   for (const additional of entryPaths.slice(1)) {
     const file = readOwnedFile(located.root, additional);
@@ -171,6 +175,31 @@ export const snapshotRuntimePackage = (props: {
   };
   observations.set(output, { files: capturedFiles, root: located.root, trees });
   return output;
+};
+
+const packageExecutableExports = (
+  root: IPhysicalDirectory,
+  manifest: Buffer,
+): string[] => {
+  const parsed = JSON.parse(manifest.toString("utf8")) as {
+    exports?: unknown;
+  };
+  const relative = new Set<string>();
+  const visit = (value: unknown): void => {
+    if (typeof value === "string") {
+      if (/^\.\/.*\.(?:cjs|js|mjs|node|wasm)$/iu.test(value))
+        relative.add(value.slice(2));
+      return;
+    }
+    if (Array.isArray(value)) {
+      for (const member of value) visit(member);
+      return;
+    }
+    if (value !== null && typeof value === "object")
+      for (const member of Object.values(value)) visit(member);
+  };
+  visit(parsed.exports);
+  return [...relative].sort(compare).map((value) => ownedPath(root, value));
 };
 
 /** Revalidate the exact physical package generation captured by a snapshot. */

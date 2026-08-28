@@ -30,6 +30,7 @@ interface IRuntimePackageSnapshotModule {
     entry: string;
     entries?: readonly string[];
     moduleClosure?: boolean;
+    packageExports?: boolean;
     packageName: string;
   }): IRuntimePackageSnapshot;
 }
@@ -97,6 +98,7 @@ const replaceBytes = (file: string): void => {
 };
 
 const writePackage = (props: {
+  exports?: unknown;
   files: Readonly<Record<string, string | Uint8Array>>;
   name: string;
   root: string;
@@ -105,7 +107,11 @@ const writePackage = (props: {
   fs.mkdirSync(props.root, { recursive: true });
   fs.writeFileSync(
     path.join(props.root, "package.json"),
-    `${JSON.stringify({ name: props.name, version: props.version ?? "1.0.0" })}\n`,
+    `${JSON.stringify({
+      name: props.name,
+      version: props.version ?? "1.0.0",
+      ...(props.exports === undefined ? {} : { exports: props.exports }),
+    })}\n`,
     "utf8",
   );
   for (const [relative, bytes] of Object.entries(props.files)) {
@@ -125,8 +131,8 @@ const writePackage = (props: {
  * Scenarios:
  *
  * 1. Actual pngjs siblings, mp4box ESM chunks, libopus generated WASM module,
- *    bundled H.264, Kokoro, Transformers, Sharp capability wall, and ONNX native
- *    files all participate in the generated consumer's canonical identity.
+ *    bundled H.264, Kokoro, Transformers, phonemizer, ONNX common/native, and
+ *    the Sharp capability wall participate in the generated identity.
  * 2. Equal name/version/entry bytes with a changed real pngjs parser, mp4box
  *    chunk, or libopus generated module produce distinct closure identities.
  * 3. Post-snapshot mutation, same-path resident-generation replacement,
@@ -242,6 +248,26 @@ export const test_cli_scaffold_sound_runtime_package_closure = (): void => {
         packageName: name,
       }),
     );
+    const kokoroRoot = packageRoot("kokoro-js");
+    const phonemizerEntry = createRequire(
+      path.join(kokoroRoot, "dist", "kokoro.js"),
+    ).resolve("phonemizer");
+    const phonemizer = runtime.snapshotRuntimePackage({
+      entry: phonemizerEntry,
+      moduleClosure: true,
+      packageExports: true,
+      packageName: "phonemizer",
+    });
+    const transformersRoot = packageRoot("@huggingface/transformers");
+    const onnxCommonEntry = createRequire(
+      path.join(transformersRoot, "dist", "transformers.node.mjs"),
+    ).resolve("onnxruntime-common");
+    const onnxCommon = runtime.snapshotRuntimePackage({
+      entry: onnxCommonEntry,
+      moduleClosure: true,
+      packageExports: true,
+      packageName: "onnxruntime-common",
+    });
     const onnxRoot = packageRoot("onnxruntime-node");
     const nativeRelative = [
       "bin",
@@ -262,6 +288,12 @@ export const test_cli_scaffold_sound_runtime_package_closure = (): void => {
         closuresNonEmpty: actual.every(
           (snapshot) => snapshot.closure.length > 1,
         ),
+        phonemizerExports: phonemizer.closure
+          .map((entry) => entry.path)
+          .filter((entry) => /^dist\/phonemizer\.(?:cjs|js)$/u.test(entry)),
+        onnxCommonExports: onnxCommon.closure
+          .map((entry) => entry.path)
+          .filter((entry) => /^dist\/(?:cjs|esm)\/index\.js$/u.test(entry)),
         onnxNativeFiles: onnx.assets.length > 0,
         onnxNativePaths: onnx.assets.every((asset) =>
           asset.path.startsWith(`${nativeRelative}/`),
@@ -270,6 +302,8 @@ export const test_cli_scaffold_sound_runtime_package_closure = (): void => {
       {
         packages: actualCases.map(([name]) => name),
         closuresNonEmpty: true,
+        phonemizerExports: ["dist/phonemizer.cjs", "dist/phonemizer.js"],
+        onnxCommonExports: ["dist/cjs/index.js", "dist/esm/index.js"],
         onnxNativeFiles: true,
         onnxNativePaths: true,
       },
@@ -371,6 +405,14 @@ export const test_cli_scaffold_sound_runtime_package_closure = (): void => {
     const syntaxRoot = writePackage({
       root: path.join(root, "syntax-package"),
       name: "closure-syntax",
+      exports: {
+        ".": {
+          types: "./types/index.d.ts",
+          import: [null, "./export-entry.mjs"],
+          require: "./export-require.cjs",
+        },
+        "./asset": "./asset.bin",
+      },
       files: {
         "index.js": [
           "// require('./comment.js')",
@@ -389,6 +431,9 @@ export const test_cli_scaffold_sound_runtime_package_closure = (): void => {
         "required.cjs": "require('./cycle.cjs');\n",
         "cycle.cjs": "require('./required.cjs');\n",
         "dynamic.mjs": "export const dynamic = true;\n",
+        "export-entry.mjs": "import './export-leaf.js';\n",
+        "export-leaf.js": "export const leaf = true;\n",
+        "export-require.cjs": "module.exports = require('./export-leaf.js');\n",
         "exported.js": "export const exported = true;\n",
         "side.js": "export const side = true;\n",
         "runtime.wasm": new Uint8Array([0, 97, 115, 109]),
@@ -406,6 +451,7 @@ export const test_cli_scaffold_sound_runtime_package_closure = (): void => {
       entries: [path.join(syntaxRoot, "extra.bin")],
       entry: path.join(syntaxRoot, "index.js"),
       moduleClosure: true,
+      packageExports: true,
       packageName: "closure-syntax",
     });
     TestValidator.equals(
@@ -421,6 +467,9 @@ export const test_cli_scaffold_sound_runtime_package_closure = (): void => {
           "assets/root.bin",
           "cycle.cjs",
           "dynamic.mjs",
+          "export-entry.mjs",
+          "export-leaf.js",
+          "export-require.cjs",
           "exported.js",
           "extra.bin",
           "index.js",
