@@ -1471,6 +1471,67 @@ try {
     "the same declaration and filesystem must produce one deterministic manifest",
   );
 
+  const settingsOnly = root();
+  write(settingsOnly, "docs/settings/production.md", "## Scope {#scope}\n");
+  const settingsOnlyManifest = createAutoMovieContractBindingManifest({
+    ...disabled(settingsOnly),
+    kind: "library",
+    settings: "draft",
+  });
+  assert.equal(
+    settingsOnlyManifest.bindings.some(
+      (binding) =>
+        binding.target.type === "population" &&
+        binding.target.root === "docs" &&
+        binding.target.files.includes("research/**/*.md"),
+    ),
+    false,
+    "a settings-only manifest must not publish a population route to disabled research",
+  );
+  assert.equal(
+    manifestContractPaths(settingsOnlyManifest).includes(
+      "principles/core/settings.md",
+    ),
+    true,
+    "filtering an inactive population target must preserve active settings contract routes",
+  );
+
+  const pendingResearchConsumption = root();
+  write(
+    pendingResearchConsumption,
+    "docs/research/source.md",
+    "## Source {#source}\n",
+  );
+  write(
+    pendingResearchConsumption,
+    "docs/settings/production.md",
+    "## Scope {#scope}\n",
+  );
+  const pendingResearchManifest = createAutoMovieContractBindingManifest({
+    ...disabled(pendingResearchConsumption),
+    kind: "library",
+    research: "review",
+    settings: "draft",
+  });
+  const pendingResearchBindings = pendingResearchManifest.bindings.filter(
+    (binding) =>
+      binding.claim ===
+        "reviewed research records support the settings decisions that interpret them" &&
+      binding.target.type === "population" &&
+      binding.target.root === "docs" &&
+      binding.target.files.includes("research/**/*.md"),
+  );
+  assert.equal(
+    pendingResearchBindings.length,
+    1,
+    "active research must retain its population route before settings reaches evidence",
+  );
+  assert.equal(
+    pendingResearchBindings[0]!.enforced,
+    false,
+    "an active pre-evidence relationship must remain visible as unenforced",
+  );
+
   const objectLibrary = root();
   write(objectLibrary, "docs/settings/production.md", "## Scope {#scope}\n");
   write(objectLibrary, "docs/models/object.md", "## Object {#object}\n");

@@ -2406,6 +2406,24 @@ const sharedClaimBindings = (graph: IProductionGraph): IBranchClaim[] => [
   ...sourceClaims(graph),
 ];
 
+/** The authored Markdown branch selected by a project-local population. */
+const referencedMarkdownBranch = (
+  reference: ITtscEvidenceGraphReference,
+): MarkdownLayer | undefined => {
+  if (reference.type !== "markdown" || evidenceRoot(reference) !== DOCS)
+    return undefined;
+  const roots = new Set(
+    (reference.files ?? []).map(
+      (file) => normalizeGlob(file).split("/")[0] ?? "",
+    ),
+  );
+  if (roots.size !== 1) return undefined;
+  const root = [...roots][0]!;
+  return (Object.keys(MARKDOWN) as MarkdownLayer[]).find(
+    (branch) => branch === root,
+  );
+};
+
 /**
  * Derive the selected common-contract and population routes from the same
  * validated claims used by `createAutoMovieEvidenceConfig`.
@@ -2447,6 +2465,13 @@ export const createAutoMovieContractBindingManifest = (
       if (reference.type !== "markdown" && reference.type !== "typescript")
         continue;
       const contract = contractForReference(reference);
+      const referencedBranch = referencedMarkdownBranch(reference);
+      if (
+        contract === undefined &&
+        referencedBranch !== undefined &&
+        !isActive(graph[referencedBranch])
+      )
+        continue;
       bindings.push({
         branch: binding.branch,
         stage: graph[binding.branch],
