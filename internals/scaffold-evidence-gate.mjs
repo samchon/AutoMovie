@@ -40,7 +40,7 @@ const TSCONFIG = JSON.parse(
  *
  * The list is derived from the scaffold's own `include` rather than written
  * down here, because a hand-written list is exactly how this gate came to miss
- * the file that killed a generated project: it named `src` and `lint.config.ts`
+ * the file that killed a generated project: it named `src` and `lint.config.mjs`
  * while `npm run lint:source` compiles `viewer/src`, `scripts`, `test` and the
  * two root configs as well, so `viewer/src/subject.ts` failed
  * `typescript/switch-exhaustiveness-check` on a user's first `npm run lint`
@@ -59,7 +59,7 @@ const INHERITED = ["AGENTS.md", "docs", ...TSCONFIG.include];
  * an instrument that stopped running, and both of the ways this instrument
  * stops were observed while it was built: `ttsc` reports no lint diagnostic at
  * all when the project does not declare the plugins as dependencies, and none
- * when `lint.config.ts` fails to evaluate. The symptom of each is an empty
+ * when `lint.config.mjs` fails to evaluate. The symptom of each is an empty
  * diagnostic set that reads exactly like a paid graph and clean source.
  *
  * The evidence canary is an exported property citing nothing, planted under
@@ -410,7 +410,7 @@ const render = () => {
           typeRoots: typeRoots(),
           paths: modulePaths(),
         },
-        files: ["lint.config.ts", "test/scaffold.test.ts"],
+        files: ["lint.config.mjs", "test/scaffold.test.ts"],
       },
       null,
       2,
@@ -464,7 +464,7 @@ const contractAnchors = (relative) =>
  * pay.
  */
 const activatePaidSettings = () => {
-  const configFile = path.join(PROBE, "productionEvidence.ts");
+  const configFile = path.join(PROBE, "productionEvidence.mjs");
   const config = fs.readFileSync(configFile, "utf8");
   const kindSelector = "  kind: null,";
   const settingsSelector = '  settings: "disabled",';
@@ -570,7 +570,7 @@ const activatePaidSettings = () => {
       obligations: [
         "obligations/core/settings.md#subject-breakdown-production-scope",
       ],
-      body: "The promised compiler result requires no model, space, material, instance, motion, system, external asset, or rendition to build, adopt, reuse, or derive; the generated lint configuration and this settings population are existing harness inputs rather than delivery assets.",
+      body: "The promised compiler result requires no map, model, space, material, instance, motion, system, external asset, or rendition to build, adopt, reuse, or derive; the generated lint configuration and this settings population are existing harness inputs rather than delivery assets.",
     },
     {
       anchor: "probe-operator-access",

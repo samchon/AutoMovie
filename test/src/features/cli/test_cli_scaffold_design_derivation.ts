@@ -54,8 +54,8 @@ export const test_cli_scaffold_design_derivation = (): void => {
     file.startsWith("automovie/reviews"),
   );
   const productionStudies = rendered["scripts/productionStudies.ts"]!;
-  const lint = rendered["lint.config.ts"]!;
-  const productionDeclaration = rendered["productionEvidence.ts"]!;
+  const lint = rendered["lint.config.mjs"]!;
+  const productionDeclaration = rendered["productionEvidence.mjs"]!;
   const narrativeStageOffsets = [
     "settings",
     "treatments",
@@ -135,7 +135,7 @@ export const test_cli_scaffold_design_derivation = (): void => {
       evidenceInDocs: [],
       configurationFiles: [],
       generatedArtifacts: [],
-      localLintImports: ["./productionEvidence"],
+      localLintImports: ["./productionEvidence.mjs"],
       productionState: [],
       productionDocuments: [],
       productionSources: [],
@@ -152,7 +152,9 @@ export const test_cli_scaffold_design_derivation = (): void => {
       [
         "explains the first action",
         () =>
-          emitter.includes("Select a production kind in productionEvidence.ts"),
+          emitter.includes(
+            "Select a production kind in productionEvidence.mjs",
+          ),
       ],
       [
         "imports no completed production",
@@ -258,16 +260,16 @@ export const test_cli_scaffold_design_derivation = (): void => {
         "names the single production-evidence authority",
         () =>
           rendered["AGENTS.md"]?.includes(
-            "stage declarations, and custom claims live in `productionEvidence.ts`",
+            "stage declarations, and custom claims live in `productionEvidence.mjs`",
           ) === true &&
           rendered["README.md"]?.includes(
-            "`lint.config.ts` consumes that one typed declaration",
+            "`lint.config.mjs` consumes that one JSDoc-typed declaration",
           ) === true &&
           rendered["docs/README.md"]?.includes(
-            "Choose one shape in `../productionEvidence.ts`",
+            "Choose one shape in `../productionEvidence.mjs`",
           ) === true &&
           rendered[".agents/skills/production/evidence-staging.md"]?.includes(
-            "Keep every project-specific selector and additive claim in `productionEvidence.ts`",
+            "Keep every project-specific selector and additive claim in `productionEvidence.mjs`",
           ) === true,
       ],
       [

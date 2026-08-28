@@ -5,7 +5,7 @@ import os from "node:os";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 
-import { productionEvidence } from "../scaffold/productionEvidence";
+import { productionEvidence } from "../scaffold/productionEvidence.mjs";
 import { bindProductionBook } from "../scaffold/scripts/book";
 import { synchronizeProductionInstructions } from "../scaffold/scripts/sync";
 import { renderScaffold } from "../src/renderScaffold";
@@ -79,7 +79,7 @@ async function main(): Promise<void> {
     write(generated, ".agents/skills/stale.md", "stale generated skill\n");
     const generatedTrackedBefore = snapshot(generated, [
       "package.json",
-      "productionEvidence.ts",
+      "productionEvidence.mjs",
       "docs",
       "src",
     ]);
@@ -113,7 +113,7 @@ async function main(): Promise<void> {
     assert.deepEqual(
       snapshot(generated, [
         "package.json",
-        "productionEvidence.ts",
+        "productionEvidence.mjs",
         "docs",
         "src",
       ]),

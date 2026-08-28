@@ -6,10 +6,12 @@ class KokoroRuntimeOverrideError extends AggregateError {}
 const COORDINATION_KEY = Symbol.for(
   "automovie.kokoro-runtime-override-coordination.v1",
 );
-const coordination = globalThis[COORDINATION_KEY] ?? {
+/** @type {{ tail: Promise<void> } | undefined} */
+const storedCoordination = Reflect.get(globalThis, COORDINATION_KEY);
+const coordination = storedCoordination ?? {
   tail: Promise.resolve(),
 };
-globalThis[COORDINATION_KEY] = coordination;
+Reflect.set(globalThis, COORDINATION_KEY, coordination);
 
 /**
  * Install temporary Kokoro runtime overrides and restore every attempted one.
@@ -24,16 +26,17 @@ globalThis[COORDINATION_KEY] = coordination;
  * @returns {Promise<Output>}
  */
 const withKokoroRuntimeOverrides = async (overrides, operation) => {
-  let release;
+  /** @type {Array<() => void>} */
+  const releases = [];
   const predecessor = coordination.tail;
   coordination.tail = new Promise((resolve) => {
-    release = resolve;
+    releases.push(resolve);
   });
   await predecessor;
   try {
     return await withExclusiveKokoroRuntimeOverrides(overrides, operation);
   } finally {
-    release();
+    releases[0]();
   }
 };
 

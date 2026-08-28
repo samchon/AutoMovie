@@ -350,7 +350,7 @@ const linkEvidenceRuntime = (root: string): void => {
 /** Materialize the selected real claim object as the temporary lint config. */
 const writeLintProject = (root: string, claim: IEvidenceClaim): void => {
   fs.writeFileSync(
-    path.join(root, "lint.config.ts"),
+    path.join(root, "lint.config.mjs"),
     [
       'import { evidence } from "@ttsc/evidence";',
       "",
@@ -377,10 +377,12 @@ const writeLintProject = (root: string, claim: IEvidenceClaim): void => {
           target: "esnext",
           module: "esnext",
           moduleResolution: "bundler",
+          allowJs: true,
+          checkJs: true,
           skipLibCheck: true,
           strict: true,
         },
-        include: ["phase.ts", "src/**/*.ts", "lint.config.ts"],
+        include: ["phase.ts", "src/**/*.ts", "lint.config.mjs"],
       },
       null,
       2,

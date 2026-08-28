@@ -65,7 +65,7 @@ const fixture = () => {
   );
   write(
     root,
-    "packages/example/lint.config.ts",
+    "packages/example/native/lint.config.mjs",
     'export default { rules: { "evidence/graph": "error" } };\n',
   );
   write(root, "packages/README.md", "# Packages\n");
@@ -228,7 +228,9 @@ test("the gate accumulates classification, path, debt, and review-policy drift",
     family: "alpha",
     requirementUnits: 2,
     classification: "intentional-exclusion",
-    correspondences: ["packages/template/docs/principles/core/common.md#missing"],
+    correspondences: [
+      "packages/template/docs/principles/core/common.md#missing",
+    ],
     reason: "none",
   };
   assert.throws(

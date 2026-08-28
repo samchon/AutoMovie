@@ -5,7 +5,7 @@ description: Defines how this project's production is researched, authored, conf
 
 # Authoring a production
 
-You are authoring one production: this project. Read its `AGENTS.md`, its `productionEvidence.ts` declaration, the `lint.config.ts` consumer, its `automovie.config.ts`, `docs/README.md`, every active upstream layer, and every shared or production-local target its claims select before writing anything.
+You are authoring one production: this project. Read its `AGENTS.md`, its `productionEvidence.mjs` declaration, the `lint.config.mjs` consumer, its `automovie.config.ts`, `docs/README.md`, every active upstream layer, and every shared or production-local target its claims select before writing anything.
 
 Author a film in the order `settings -> treatments -> scripts -> screenplays -> shots -> filmSources`, a brief in the order `settings -> briefs -> shots -> filmSources`, and a library as settings plus each design and source branch it delivers. The workflow documents below own authorship; the discovery, upstream, principle, and obligation families published by `@automovie/template` own the questions each authored population answers; [Evidence staging](evidence-staging.md) owns claims, tags, stages, and fingerprints.
 
@@ -16,7 +16,7 @@ Write only what was requested. Do not create a placeholder file, heading, or stu
 ## Generated instructions
 
 `AGENTS.md`, `CLAUDE.md`, and `.agents/skills` are ignored generated instructions, not production-owned doctrine.
-`npm run sync` deletes and replaces that instruction surface from the installed `@automovie/template`, then renders the root router from the tracked `package.json`, `productionEvidence.ts`, active authored owners, and `docs/contracts` targets.
+`npm run sync` deletes and replaces that instruction surface from the installed `@automovie/template`, then renders the root router from the tracked `package.json`, `productionEvidence.mjs`, active authored owners, and `docs/contracts` targets.
 Do not edit generated instructions or preserve a local fork inside them.
 Change a production fact in its tracked owner, upgrade the installed template when shared doctrine changes, and run sync again.
 

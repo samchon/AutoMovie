@@ -148,7 +148,7 @@ interface IMarkdownDocument {
  * Read one generated project's graph-backed authoring identity synchronously.
  *
  * The caller supplies the same tracked `productionEvidence` object imported by
- * `lint.config.ts`. The reader refuses a declaration for another root, derives
+ * `lint.config.mjs`. The reader refuses a declaration for another root, derives
  * the shape-aware manifest through the evidence factory, then reads only the
  * active design owners and flat local contracts that manifest governs. Source
  * lineage and physical source paths come from the manifest rather than from a

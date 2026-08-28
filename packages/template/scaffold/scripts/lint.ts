@@ -5,7 +5,7 @@ import {
 } from "@automovie/production";
 
 import config from "../automovie.config";
-import { productionEvidence } from "../productionEvidence";
+import { productionEvidence } from "../productionEvidence.mjs";
 
 /**
  * The scope this lint runs at, `review` unless `--scope <name>` says otherwise.

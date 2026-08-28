@@ -390,7 +390,7 @@ const writePopulation = (
 const writeLintProject = (root: string, claims: IEvidenceClaim[]): void => {
   write(
     root,
-    "lint.config.ts",
+    "lint.config.mjs",
     [
       'import { evidence } from "@ttsc/evidence";',
       "",
@@ -417,10 +417,12 @@ const writeLintProject = (root: string, claims: IEvidenceClaim[]): void => {
           target: "esnext",
           module: "esnext",
           moduleResolution: "bundler",
+          allowJs: true,
+          checkJs: true,
           skipLibCheck: true,
           strict: true,
         },
-        include: ["index.ts", "lint.config.ts"],
+        include: ["index.ts", "lint.config.mjs"],
       },
       null,
       2,

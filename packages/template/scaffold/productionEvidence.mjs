@@ -1,4 +1,4 @@
-import type { IAutoMovieEvidenceConfigProps } from "@automovie/evidence";
+// @ts-check
 
 /**
  * The sole tracked production kind, population scope, branch-stage, and local
@@ -11,8 +11,10 @@ import type { IAutoMovieEvidenceConfigProps } from "@automovie/evidence";
  * shots, and film sources; a library selects settings and only its delivered
  * design/source pairs. Film and brief also require reviewed productionSources
  * as the parallel serialized input to filmSources.
+ *
+ * @type {import("@automovie/evidence").IAutoMovieEvidenceConfigProps}
  */
-export const productionEvidence: IAutoMovieEvidenceConfigProps = {
+export const productionEvidence = {
   location: import.meta.dirname,
   kind: null,
   populationScope: { mode: "complete-production" },

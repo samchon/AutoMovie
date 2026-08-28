@@ -5,7 +5,7 @@ import {
 } from "@automovie/production";
 
 import config from "../automovie.config";
-import { productionEvidence } from "../productionEvidence";
+import { productionEvidence } from "../productionEvidence.mjs";
 
 const project = AutoMovieProductionProject.openReadOnly(
   process.cwd(),

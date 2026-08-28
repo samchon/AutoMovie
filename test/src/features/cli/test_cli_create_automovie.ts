@@ -67,7 +67,7 @@ export const test_cli_create_automovie = (): void => {
               path.join(target, "src", "examples", "buildings.ts"),
             ) &&
             fs.existsSync(path.join(target, "docs")) &&
-            fs.existsSync(path.join(target, "lint.config.ts")) &&
+            fs.existsSync(path.join(target, "lint.config.mjs")) &&
             fs.existsSync(path.join(target, "src", "film.ts")) === false,
         ],
         [

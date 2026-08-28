@@ -270,9 +270,8 @@ const collectSourceEvidence = (root) => {
 const evidenceReviewConfigs = (root) =>
   ["config", "docs", "packages", "test"]
     .flatMap((directory) =>
-      walk(
-        path.join(root, directory),
-        (file) => path.basename(file) === "lint.config.ts",
+      walk(path.join(root, directory), (file) =>
+        /^lint\.config\.(?:mjs|ts)$/u.test(path.basename(file)),
       ),
     )
     .filter((file) =>

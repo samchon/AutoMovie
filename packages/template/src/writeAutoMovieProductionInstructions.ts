@@ -13,7 +13,7 @@ import { scaffoldAssetDirectory } from "./renderScaffold";
  *
  * `AGENTS.md`, `CLAUDE.md`, and `.agents/skills` are generated and ignored.
  * Every fact the production owns remains tracked elsewhere: the package
- * manifest, `productionEvidence.ts`, authored documents, source, and local
+ * manifest, `productionEvidence.mjs`, authored documents, source, and local
  * contracts. Sync therefore removes the old shipped skill tree before copying
  * the installed one, so a renamed doctrine file cannot survive as a stale fork.
  *
@@ -26,7 +26,7 @@ import { scaffoldAssetDirectory } from "./renderScaffold";
 export const writeAutoMovieProductionInstructions = (props: {
   /** Generated-project root whose instruction surface is replaced. */
   root: string;
-  /** The same tracked declaration imported by `lint.config.ts`. */
+  /** The same tracked declaration imported by `lint.config.mjs`. */
   productionEvidence: IAutoMovieEvidenceConfigProps;
   /** Alternate scaffold asset root used only by deterministic consumers/tests. */
   scaffoldRoot?: string;

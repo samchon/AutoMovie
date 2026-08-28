@@ -69,12 +69,12 @@ export const renderAutoMovieProductionRouter = (
 ${description}
 This file governs authoring this production. Read it before acting, then read the documents it routes to.
 
-It is generated from the installed scaffold by \`npm run sync\` and is not tracked. Do not edit it: change \`package.json\`, \`productionEvidence.ts\`, \`docs\`, or the installed AutoMovie version, then run the command again. Sync deliberately overwrites this router and the shipped production skill so one generated project cannot silently fork the shared doctrine.
+It is generated from the installed scaffold by \`npm run sync\` and is not tracked. Do not edit it: change \`package.json\`, \`productionEvidence.mjs\`, \`docs\`, or the installed AutoMovie version, then run the command again. Sync deliberately overwrites this router and the shipped production skill so one generated project cannot silently fork the shared doctrine.
 
 ## This production
 
 - Package \`${evidence.packageName}\`.
-- \`productionEvidence.ts\` is the single tracked production-kind, population-scope, branch, and lifecycle declaration. \`lint.config.ts\`, sync, and final review consume that same typed value; the generated branch-and-stage view below reports it but never overrides it.
+- \`productionEvidence.mjs\` is the single tracked production-kind, population-scope, branch, and lifecycle declaration. \`lint.config.mjs\`, sync, and final review consume that same JSDoc-typed value; the generated branch-and-stage view below reports it but never overrides it.
 - ${shapeProcedure(evidence.manifest.kind)}
 - ${branchLine}
 
@@ -91,7 +91,7 @@ ${designOwnerLines.join("\n")}
 
 ## Contracts this production answers
 
-Shared contracts arrive through \`@automovie/template\` and are selected by \`productionEvidence.ts\`. Cite them by their evidence roots, never by the installed filesystem path.
+Shared contracts arrive through \`@automovie/template\` and are selected by \`productionEvidence.mjs\`. Cite them by their evidence roots, never by the installed filesystem path.
 
 ${commonContractLines.join("\n")}
 
@@ -99,7 +99,7 @@ Project-local contracts are flat files under \`docs/contracts\`; every item belo
 
 ${localContractLines.join("\n")}
 
-Add a local contract only after [Production-specific contract](.agents/skills/production/work-specific.md) establishes its owner and authority, activate its host relationship through the typed helper used by \`productionEvidence.ts\`, and run \`npm run sync\` so this router lists it.
+Add a local contract only after [Production-specific contract](.agents/skills/production/work-specific.md) establishes its owner and authority, activate its host relationship through the typed helper used by \`productionEvidence.mjs\`, and run \`npm run sync\` so this router lists it.
 
 ## Instruction loading
 
@@ -137,7 +137,7 @@ const shapeProcedure = (
     case "library":
       return "This is a library: author settings plus only the selected design and matching source branches.";
     case null:
-      return "No production kind is selected. Choose film, brief, or library in `productionEvidence.ts` before authoring a downstream branch.";
+      return "No production kind is selected. Choose film, brief, or library in `productionEvidence.mjs` before authoring a downstream branch.";
   }
 };
 

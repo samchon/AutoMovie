@@ -10,7 +10,7 @@ import { createRequire } from "node:module";
 import path from "node:path";
 
 import config from "../automovie.config";
-import { productionEvidence } from "../productionEvidence";
+import { productionEvidence } from "../productionEvidence.mjs";
 import { inspectPublishedProxyBundle } from "./assertProxyBundle";
 import {
   type IAutoMovieProductionRepaintSelection,
