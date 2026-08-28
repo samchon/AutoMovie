@@ -147,9 +147,10 @@ export const executeAutoMovieRepaintRequest = async <T>(props: {
   const attempts: IAutoMovieRepaintAttemptRecord[] = [];
   let spent = 0;
   const ordinalOffset = props.ordinalOffset ?? 0;
+  const requestCancelled = (): boolean => props.signal?.aborted === true;
   for (let local = 1; local <= props.policy.maximumAttempts; local++) {
     const ordinal = ordinalOffset + local;
-    if (props.signal?.aborted === true)
+    if (requestCancelled())
       return result(props.requestId, attempts, null, "cancelled");
     const elapsed = props.runtime.now().getTime() - started.getTime();
     if (elapsed >= props.policy.maximumElapsedMs)
@@ -187,6 +188,20 @@ export const executeAutoMovieRepaintRequest = async <T>(props: {
           }, timeoutMs);
         }),
       ]);
+      if (requestCancelled())
+        throw new AutoMovieRepaintAttemptError(
+          "cancelled",
+          "Repaint request was cancelled.",
+          validCost(outcome.costUnits),
+          outcome.availableOutput,
+        );
+      if (timedOut)
+        throw new AutoMovieRepaintAttemptError(
+          "timeout",
+          `Repaint attempt exceeded ${timeoutMs}ms.`,
+          validCost(outcome.costUnits),
+          outcome.availableOutput,
+        );
       const costUnits = validCost(outcome.costUnits);
       spent += costUnits;
       if (spent > props.policy.maximumCostUnits) {
@@ -244,7 +259,11 @@ export const executeAutoMovieRepaintRequest = async <T>(props: {
       );
     } catch (error) {
       const classified = classifyFailure(
-        timedOut
+        timedOut &&
+          !(
+            error instanceof AutoMovieRepaintAttemptError &&
+            error.failureClass === "timeout"
+          )
           ? new AutoMovieRepaintAttemptError(
               "timeout",
               `Repaint attempt exceeded ${timeoutMs}ms.`,
@@ -362,14 +381,17 @@ const classifyFailure = (
   costUnits: number;
   availableOutput: IAutoMovieRepaintAttemptOutput | null;
 } => {
-  if (outerSignal?.aborted === true)
+  if (outerSignal?.aborted === true) {
+    const disclosed =
+      error instanceof AutoMovieRepaintAttemptError ? error : null;
     return {
       failureClass: "cancelled",
       status: "cancelled",
       message: "Repaint request was cancelled.",
-      costUnits: 0,
-      availableOutput: null,
+      costUnits: disclosed === null ? 0 : validCost(disclosed.costUnits),
+      availableOutput: disclosed?.availableOutput ?? null,
     };
+  }
   if (error instanceof AutoMovieRepaintAttemptError)
     return {
       failureClass: error.failureClass,
