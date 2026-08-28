@@ -524,7 +524,7 @@ const writeSources = (root: string): void => {
 
 /** Use the rendered lint config while selecting this focused real-graph slice. */
 const configureGraph = (root: string): void => {
-  const declarationFile = path.join(root, "productionEvidence.ts");
+  const declarationFile = path.join(root, "productionEvidence.mjs");
   let declaration = fs.readFileSync(declarationFile, "utf8");
   for (const [before, after] of [
     ["  kind: null,", '  kind: "library",'],
@@ -536,59 +536,24 @@ const configureGraph = (root: string): void => {
   ] as const)
     declaration = replaceOnce(declaration, before, after);
   fs.writeFileSync(declarationFile, declaration, "utf8");
-  const declarationModule = replaceOnce(
-    replaceOnce(
-      declaration,
-      'import type { IAutoMovieEvidenceConfigProps } from "@automovie/evidence";\n\n',
-      "",
-    ),
-    "export const productionEvidence: IAutoMovieEvidenceConfigProps =",
-    "export const productionEvidence =",
-  );
-  fs.writeFileSync(
-    path.join(root, "productionEvidence.mjs"),
-    declarationModule,
-    "utf8",
-  );
-
-  const lintFile = path.join(root, "lint.config.ts");
+  const lintFile = path.join(root, "lint.config.mjs");
   const lintSource = fs.readFileSync(lintFile, "utf8");
   const before =
     "const graph = createAutoMovieEvidenceConfig(productionEvidence);";
   const after = [
-    `const names = ${JSON.stringify(CLAIM_NAMES, null, 2)} as const;`,
+    `const names = ${JSON.stringify(CLAIM_NAMES, null, 2)};`,
     "const full = createAutoMovieEvidenceConfig(productionEvidence);",
     "const graph = {",
     "  claims: names.map((name) => {",
     "    const matches = full.claims.filter((claim) => claim.name === name);",
     "    if (matches.length !== 1)",
     '      throw new Error("Expected one current claim named \'" + name + "\'; received " + matches.length + ".");',
-    "    return matches[0]!;",
+    "    return matches[0];",
     "  }),",
     "};",
   ].join("\n");
   const configuredLint = replaceOnce(lintSource, before, after);
   fs.writeFileSync(lintFile, configuredLint, "utf8");
-  const lintModuleWithImport = replaceOnce(
-    replaceOnce(
-      replaceOnce(
-        configuredLint,
-        'import type { ITtscLintConfig } from "@ttsc/lint";\n\n',
-        "",
-      ),
-      'from "./productionEvidence";',
-      'from "./productionEvidence.mjs";',
-    ),
-    "} satisfies ITtscLintConfig;",
-    "};",
-  );
-  const lintModule = replaceOnce(
-    replaceOnce(lintModuleWithImport, "] as const;", "];"),
-    "    return matches[0]!;",
-    "    return matches[0];",
-  );
-  fs.writeFileSync(path.join(root, "lint.config.mjs"), lintModule, "utf8");
-  fs.rmSync(lintFile);
   fs.writeFileSync(
     path.join(root, "tsconfig.json"),
     `${JSON.stringify(
@@ -863,16 +828,20 @@ export const test_evidence_generated_map_space_contract = (): void => {
       "the real scaffold publishes the map route and stage declarations",
       {
         mapStage:
-          rendered["productionEvidence.ts"]?.includes('maps: "disabled"'),
-        mapSourceStage: rendered["productionEvidence.ts"]?.includes(
+          rendered["productionEvidence.mjs"]?.includes('maps: "disabled"'),
+        mapSourceStage: rendered["productionEvidence.mjs"]?.includes(
           'mapSources: "disabled"',
         ),
-        completePopulation: rendered["productionEvidence.ts"]?.includes(
+        completePopulation: rendered["productionEvidence.mjs"]?.includes(
           'populationScope: { mode: "complete-production" }',
         ),
-        lintConsumesDeclaration: rendered["lint.config.ts"]?.includes(
-          "createAutoMovieEvidenceConfig(productionEvidence)",
-        ),
+        lintConsumesDeclaration:
+          rendered["lint.config.mjs"]?.includes(
+            "createAutoMovieEvidenceConfig(productionEvidence)",
+          ) &&
+          rendered["lint.config.mjs"]?.includes(
+            'from "./productionEvidence.mjs"',
+          ),
         mapOwnership: rendered["docs/README.md"]?.includes(
           "| maps | broad world organization, site boundary, scale and partition, temporal world state, and external access node |",
         ),
