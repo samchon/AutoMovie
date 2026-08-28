@@ -11,6 +11,7 @@ import { createRequire } from "node:module";
 import os from "node:os";
 import path from "node:path";
 
+import { productionRenderFrameCaptureInput } from "../../../../packages/template/scaffold/scripts/renderFrameCaptureInput";
 import { preserveCliHarnessCleanup } from "./CliHarnessCleanup";
 
 interface IDialogueRuntime {
@@ -331,27 +332,46 @@ export const test_cli_scaffold_dialogue_runtime_isolation =
       const cropB = { left: 0.2, top: 0, right: 1, bottom: 0.9 };
       await captureA.installDialogue(dialogueA);
       await captureA.installDeliveryCrop(cropA);
-      const renderCaptureInput = first.productionRenderFrameCaptureInput({
+      const renderPlan = {
+        productionId: "dialogue-proxy",
+        compileFingerprint: `sha256:${"c".repeat(64)}`,
+        sourceFrameFormat: {
+          width: 1_920,
+          height: 1_080,
+          fps: 24,
+          colorSpace: "srgb",
+          crop: cropA,
+        },
+        frameFormat: {
+          width: 960,
+          height: 540,
+          fps: 12,
+          colorSpace: "srgb",
+          crop: cropA,
+        },
+      } as IAutoMovieProductionRenderJobPlan;
+      const renderInputProps = {
+        root: firstRoot,
+        productionId: "dialogue-proxy",
+        plan: renderPlan,
+        shot: "shot-A",
+        sourceFrame: 12,
+        sourceFps: 24,
+        globalFrame: 6,
+        pass: "beauty" as const,
+      };
+      const hostileRenderCaptureInput =
+        productionRenderFrameCaptureInput(renderInputProps);
+      hostileRenderCaptureInput.crop!.left = 0.75;
+      const renderCaptureInput =
+        first.productionRenderFrameCaptureInput(renderInputProps);
+      const renderNoCropInput = productionRenderFrameCaptureInput({
         root: firstRoot,
         productionId: "dialogue-proxy",
         plan: {
-          productionId: "dialogue-proxy",
-          compileFingerprint: `sha256:${"c".repeat(64)}`,
-          sourceFrameFormat: {
-            width: 1_920,
-            height: 1_080,
-            fps: 24,
-            colorSpace: "srgb",
-            crop: cropA,
-          },
-          frameFormat: {
-            width: 960,
-            height: 540,
-            fps: 12,
-            colorSpace: "srgb",
-            crop: cropA,
-          },
-        } as IAutoMovieProductionRenderJobPlan,
+          ...renderPlan,
+          frameFormat: { ...renderPlan.frameFormat, crop: undefined },
+        },
         shot: "shot-A",
         sourceFrame: 12,
         sourceFps: 24,
@@ -476,6 +496,9 @@ export const test_cli_scaffold_dialogue_runtime_isolation =
               target: { kind: "shot", id: "shot-A" },
               crop: cropA,
             }) !== pageCropOnlyB,
+          hostileRenderCaptureCrop: hostileRenderCaptureInput.crop,
+          planCropAfterHostileCapture: renderPlan.frameFormat.crop,
+          renderNoCrop: renderNoCropInput.crop,
           renderCaptureInput: {
             root: renderCaptureInput.projectRoot,
             production: renderCaptureInput.productionId,
@@ -505,6 +528,9 @@ export const test_cli_scaffold_dialogue_runtime_isolation =
           pageCropA: cropA,
           pageCropB: cropB,
           cropOnlyPageInvalidated: true,
+          hostileRenderCaptureCrop: { ...cropA, left: 0.75 },
+          planCropAfterHostileCapture: cropA,
+          renderNoCrop: undefined,
           renderCaptureInput: {
             root: firstRoot,
             production: "dialogue-proxy",

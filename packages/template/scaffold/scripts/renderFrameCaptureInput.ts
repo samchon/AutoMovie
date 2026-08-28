@@ -29,5 +29,8 @@ export const productionRenderFrameCaptureInput = (props: {
   pass: props.pass,
   width: props.plan.frameFormat.width,
   height: props.plan.frameFormat.height,
-  crop: props.plan.frameFormat.crop,
+  crop:
+    props.plan.frameFormat.crop === undefined
+      ? undefined
+      : { ...props.plan.frameFormat.crop },
 });
