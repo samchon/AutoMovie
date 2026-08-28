@@ -90,7 +90,8 @@ interface IAutoMovieRepaintExecutionResult<T> {
     | "elapsed-exhausted"
     | "attempts-exhausted"
     | "backoff-failed"
-    | "not-retryable";
+    | "not-retryable"
+    | "observer-failed";
 }
 
 /** Validate the exact bounded repaint policy before any provider execution. */
@@ -134,6 +135,8 @@ export const assertAutoMovieRepaintExecutionPolicy = (
  * budget or move an attempt before an already observed terminal fact. A retry
  * never starts until the runtime clock proves that its complete declared
  * backoff elapsed; wait-boundary failures stop without another provider call.
+ * An attempt-observer refusal also stops without changing or duplicating the
+ * terminal record already produced by the provider call.
  */
 export const executeAutoMovieRepaintRequest = async <T>(props: {
   productionId: string;
@@ -179,6 +182,14 @@ export const executeAutoMovieRepaintRequest = async <T>(props: {
     return current;
   };
   const attempts: IAutoMovieRepaintAttemptRecord[] = [];
+  const notifyAttempt = (attempt: IAutoMovieRepaintAttemptRecord): boolean => {
+    try {
+      props.onAttempt(structuredClone(attempt));
+      return true;
+    } catch {
+      return false;
+    }
+  };
   let spent = 0;
   let nextAttemptNotBefore = started.getTime();
   const ordinalOffset = props.ordinalOffset ?? 0;
@@ -340,7 +351,8 @@ export const executeAutoMovieRepaintRequest = async <T>(props: {
           availableOutput: disclosedOutput,
         });
         attempts.push(attempt);
-        props.onAttempt(structuredClone(attempt));
+        if (notifyAttempt(attempt) === false)
+          return result(props.requestId, attempts, null, "observer-failed");
         return result(props.requestId, attempts, null, "cost-exhausted");
       }
       const attempt = terminalAttempt({
@@ -362,7 +374,8 @@ export const executeAutoMovieRepaintRequest = async <T>(props: {
         availableOutput: disclosedOutput,
       });
       attempts.push(attempt);
-      props.onAttempt(structuredClone(attempt));
+      if (notifyAttempt(attempt) === false)
+        return result(props.requestId, attempts, null, "observer-failed");
       return result(props.requestId, attempts, { value, attempt }, "accepted");
     } catch (error) {
       let terminalError = error;
@@ -448,7 +461,8 @@ export const executeAutoMovieRepaintRequest = async <T>(props: {
         availableOutput: classified.availableOutput,
       });
       attempts.push(attempt);
-      props.onAttempt(structuredClone(attempt));
+      if (notifyAttempt(attempt) === false)
+        return result(props.requestId, attempts, null, "observer-failed");
       if (classified.status === "cancelled")
         return result(props.requestId, attempts, null, "cancelled");
       if (retryable === false)

@@ -46,6 +46,25 @@ import {
   executeAutoMovieRepaintRequest,
 } from "./repaintExecution";
 
+interface IAutoMovieRepaintSelectionInput {
+  productionId: string;
+  shot: string;
+  attemptId: string;
+  kind: "selection" | "reversal";
+  reason: string;
+  structuralReview: string;
+  continuityReview: {
+    baseline: string;
+    playbackEvidence: string;
+    mixedDeliveryPolicy: string | null;
+    flicker: "pass";
+    identityDrift: "pass";
+    geometryWarp: "pass";
+    textureCrawl: "pass";
+    transitionMismatch: "pass";
+  } | null;
+}
+
 /**
  * Optional host repaint orchestration and immutable rendition provenance.
  */
@@ -75,18 +94,8 @@ export class AutoMovieProductionRepaintService {
     context: AutoMovieProductionContext,
     input: IAutoMovieRepaintShot.IProps,
   ): Promise<IAutoMovieRepaintShot> {
-    const requestedProductionId =
-      typeof input === "object" &&
-      input !== null &&
-      typeof (input as { productionId?: unknown }).productionId === "string"
-        ? (input as { productionId: string }).productionId
-        : "";
-    const requestedShot =
-      typeof input === "object" &&
-      input !== null &&
-      typeof (input as { shot?: unknown }).shot === "string"
-        ? (input as { shot: string }).shot
-        : "";
+    const requestedProductionId = safeRepaintInputText(input, "productionId");
+    const requestedShot = safeRepaintInputText(input, "shot");
     const refusal = (
       code: AutoMovieDiagnosticCode,
       message: string,
@@ -99,9 +108,8 @@ export class AutoMovieProductionRepaintService {
       receipt: null,
       diagnostics: [diagnostic(code, requestedShot, message, "render")],
     });
-    const requestValidation =
-      typia.validateEquals<IAutoMovieRepaintShot.IProps>(input);
-    if (requestValidation.success === false)
+    const request = validatedRepaintRequest(input);
+    if (request === null)
       return refusal(
         "repaint-input-invalid",
         "Repaint input must match its exact public request schema before project lookup or provider execution; remove missing, mistyped, credential-bearing, or hidden fields.",
@@ -131,7 +139,7 @@ export class AutoMovieProductionRepaintService {
         "repaint-delivery-disabled",
         'The current production design declares visualDelivery "deterministic". Change that tracked contract to "repainted", recompile current source, then read DIFFUSION_ENHANCE before requesting a rendition.',
       );
-    return this.repaint(services, input);
+    return this.repaint(services, request);
   }
 
   /**
@@ -139,60 +147,70 @@ export class AutoMovieProductionRepaintService {
    */
   public select(
     context: AutoMovieProductionContext,
-    input: {
-      productionId: string;
-      shot: string;
-      attemptId: string;
-      kind: "selection" | "reversal";
-      reason: string;
-      structuralReview: string;
-      continuityReview: {
-        baseline: string;
-        playbackEvidence: string;
-        mixedDeliveryPolicy: string | null;
-        flicker: "pass";
-        identityDrift: "pass";
-        geometryWarp: "pass";
-        textureCrawl: "pass";
-        transitionMismatch: "pass";
-      } | null;
-    },
+    input: IAutoMovieRepaintSelectionInput,
   ): IAutoMovieRepaintShot {
-    const services = context.forProduction(input.productionId);
+    const requestedProductionId = safeRepaintInputText(input, "productionId");
+    const requestedShot = safeRepaintInputText(input, "shot");
+    const refusal = (
+      code: AutoMovieDiagnosticCode,
+      message: string,
+    ): IAutoMovieRepaintShot => ({
+      repainted: false,
+      selected: false,
+      requestId: null,
+      productionId: requestedProductionId,
+      shot: requestedShot,
+      receipt: null,
+      diagnostics: [diagnostic(code, requestedShot, message, "render")],
+    });
+    const request = validatedRepaintSelection(input);
+    if (request === null)
+      return refusal(
+        "repaint-input-invalid",
+        "Repaint selection input must match its exact public request schema before project lookup; remove missing, mistyped, or hidden fields.",
+      );
+    if (
+      request.productionId.trim().length === 0 ||
+      request.productionId.trim() !== request.productionId
+    )
+      return refusal(
+        "repaint-production-invalid",
+        "Repaint selection productionId must be a trimmed non-empty production namespace.",
+      );
+    let services: IAutoMovieProductionServices;
+    try {
+      services = context.forProduction(request.productionId);
+    } catch (error) {
+      return refusal(
+        "repaint-production-unregistered",
+        safeRepaintDiagnosticMessage(
+          error,
+          "Repaint production lookup failed without a safe diagnostic.",
+        ),
+      );
+    }
     try {
       const receipt = services.project.selectRepaintCandidate({
-        ...input,
+        ...request,
         selectedAt: (this.execution?.now ?? (() => new Date()))().toISOString(),
       });
       return {
         repainted: true,
         selected: true,
         requestId: receipt.requestId ?? null,
-        productionId: input.productionId,
-        shot: input.shot,
+        productionId: request.productionId,
+        shot: request.shot,
         receipt,
         diagnostics: [],
       };
     } catch (error) {
-      return {
-        repainted: false,
-        selected: false,
-        requestId: null,
-        productionId: input.productionId,
-        shot: input.shot,
-        receipt: null,
-        diagnostics: [
-          diagnostic(
-            "repaint-commit-refused",
-            input.shot,
-            safeRepaintDiagnosticMessage(
-              error,
-              "Repaint selection could not be committed safely.",
-            ),
-            "render",
-          ),
-        ],
-      };
+      return refusal(
+        "repaint-commit-refused",
+        safeRepaintDiagnosticMessage(
+          error,
+          "Repaint selection could not be committed safely.",
+        ),
+      );
     }
   }
 
@@ -209,12 +227,7 @@ export class AutoMovieProductionRepaintService {
     services: IAutoMovieProductionServices,
     input: IAutoMovieRepaintShot.IProps,
   ): Promise<IAutoMovieRepaintShot> {
-    const requestedShot =
-      typeof input === "object" &&
-      input !== null &&
-      typeof (input as { shot?: unknown }).shot === "string"
-        ? (input as { shot: string }).shot
-        : "";
+    const requestedShot = safeRepaintInputText(input, "shot");
     let currentRequestId: string | null = null;
     const failure = (
       code: AutoMovieDiagnosticCode,
@@ -228,17 +241,17 @@ export class AutoMovieProductionRepaintService {
       receipt: null,
       diagnostics: [diagnostic(code, requestedShot, message)],
     });
+    const validatedInput = validatedRepaintRequest(input);
+    if (validatedInput === null)
+      return failure(
+        "repaint-input-invalid",
+        "Repaint input must match its exact public request schema before provider execution; remove missing, mistyped, credential-bearing, or hidden fields.",
+      );
+    input = validatedInput;
     if (this.adapter === undefined || this.generator === undefined)
       return failure(
         "repaint-host-unavailable",
         "This project supplies no complete repaint host. Pass both an adapter implementing AutoMovieProductionShotRepaint and its reviewed generator adoption, then retry. AutoMovie will not fabricate diffusion output or infer provider provenance.",
-      );
-    const requestValidation =
-      typia.validateEquals<IAutoMovieRepaintShot.IProps>(input);
-    if (requestValidation.success === false)
-      return failure(
-        "repaint-input-invalid",
-        "Repaint input must match its exact public request schema before provider execution; remove missing, mistyped, credential-bearing, or hidden fields.",
       );
     if (input.productionId !== services.project.productionId)
       return failure(
@@ -1201,6 +1214,43 @@ const safeRepaintInputRaceMessage = (error: unknown): string | null => {
           "Repaint input changed without a safe diagnostic.",
         )
       : null;
+  } catch {
+    return null;
+  }
+};
+
+const safeRepaintInputText = (
+  input: unknown,
+  key: "productionId" | "shot",
+): string => {
+  try {
+    if (typeof input !== "object" || input === null) return "";
+    const value: unknown = Reflect.get(input, key);
+    return typeof value === "string" ? value : "";
+  } catch {
+    return "";
+  }
+};
+
+const validatedRepaintRequest = (
+  input: unknown,
+): IAutoMovieRepaintShot.IProps | null => {
+  try {
+    const validation =
+      typia.validateEquals<IAutoMovieRepaintShot.IProps>(input);
+    return validation.success ? structuredClone(validation.data) : null;
+  } catch {
+    return null;
+  }
+};
+
+const validatedRepaintSelection = (
+  input: unknown,
+): IAutoMovieRepaintSelectionInput | null => {
+  try {
+    const validation =
+      typia.validateEquals<IAutoMovieRepaintSelectionInput>(input);
+    return validation.success ? structuredClone(validation.data) : null;
   } catch {
     return null;
   }
