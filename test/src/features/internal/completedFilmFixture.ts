@@ -1,3 +1,4 @@
+import { compareCodeUnits } from "@automovie/engine";
 import { renderScaffold } from "@automovie/template";
 import fs from "node:fs";
 import path from "node:path";
@@ -7,10 +8,7 @@ const FIXTURE = path.resolve(__dirname, "../../../fixtures/completed-film");
 const files = (root: string): string[] => {
   return fs
     .readdirSync(root, { withFileTypes: true })
-    .sort(
-      (left, right) =>
-        Number(left.name > right.name) - Number(left.name < right.name),
-    )
+    .sort((left, right) => compareCodeUnits(left.name, right.name))
     .flatMap((entry) => {
       const absolute = path.join(root, entry.name);
       return entry.isDirectory()
