@@ -218,6 +218,7 @@ const executableServices = (props: {
   const bundle = path.join(props.root, "bundle");
   fs.mkdirSync(bundle, { recursive: true });
   fs.writeFileSync(path.join(bundle, "manifest.json"), "{}\n", "utf8");
+  const repaintAttempts: IAutoMovieRepaintAttemptRecord[] = [];
   const project = {
     productionId: input.productionId,
     root: props.root,
@@ -247,8 +248,14 @@ const executableServices = (props: {
     ],
     commitRepaintRendition: (receipt: IAutoMovieRepaintReceipt) =>
       props.commit(receipt),
-    commitRepaintAttempt: () => 1,
-    repaintRequestAttempts: () => [],
+    commitRepaintAttempt: (attempt: IAutoMovieRepaintAttemptRecord) => {
+      repaintAttempts.push(structuredClone(attempt));
+      return repaintAttempts.length;
+    },
+    repaintRequestAttempts: (requestId: string) =>
+      structuredClone(
+        repaintAttempts.filter((attempt) => attempt.requestId === requestId),
+      ),
     commitFiles: () => 1,
   };
   Object.setPrototypeOf(project, AutoMovieProductionProject.prototype);
@@ -1843,7 +1850,7 @@ export const test_production_repaint_generator_adoption =
           generatedBytes,
         );
       TestValidator.equals(
-        "project revalidation accepts the exact current v3 receipt identity",
+        "project revalidation accepts the exact current v4 receipt and terminal attempt identity",
         commitThroughProject(accepted.receipt),
         1,
       );

@@ -329,7 +329,6 @@ export class AutoMovieProductionProject {
       projectId: projectIdOf(root),
       ...importedLegacyOf(this.rootReal, this.automovieRoot),
     };
-    validateOwnershipLayout(this.root, this.manifest_, PROJECT_LAYOUT_LABEL);
     const registration = readOnly
       ? this.readProductionRegistration(requestedProductionId)
       : this.activateProduction(requestedProductionId);
@@ -2391,11 +2390,7 @@ export class AutoMovieProductionProject {
         receipts.push(validation.data);
       } catch {}
     }
-    return receipts.sort(
-      (left, right) =>
-        compareCodeUnits(left.shot, right.shot) ||
-        compareCodeUnits(left.output.path, right.output.path),
-    );
+    return receipts;
   }
 
   /** Revalidate one immutable terminal repaint attempt record. */
@@ -4068,59 +4063,6 @@ const legacyProductionId = (
   return id;
 };
 
-const validateOwnershipLayout = (
-  root: string,
-  manifest: IAutoMovieProductionManifest,
-  file: string,
-): void => {
-  const entries = [
-    ...manifest.sourceRoots.map((relative, index) => ({
-      owner: `sourceRoots[${index}]`,
-      relative,
-    })),
-    { owner: "generatedRoot", relative: manifest.generatedRoot },
-    { owner: "renderRoot", relative: manifest.renderRoot },
-  ].map((entry) => ({
-    ...entry,
-    absolute: resolveInside(root, entry.relative),
-  }));
-  const reserved = path.join(root, "automovie");
-  for (const entry of entries)
-    if (entry.absolute === root || pathsOverlap(entry.absolute, reserved))
-      throw new Error(
-        `Invalid production manifest "${file}": ${entry.owner} "${entry.relative}" overlaps the project root or reserved automovie state. Choose one dedicated directory.`,
-      );
-  for (let left = 0; left < entries.length; ++left)
-    for (let right = left + 1; right < entries.length; ++right)
-      if (pathsOverlap(entries[left]!.absolute, entries[right]!.absolute))
-        throw new Error(
-          `Invalid production manifest "${file}": ${entries[left]!.owner} "${entries[left]!.relative}" overlaps ${entries[right]!.owner} "${entries[right]!.relative}". Source, generated and render ownership roots must be disjoint.`,
-        );
-  const forbidden = [
-    reserved,
-    resolveInside(root, manifest.generatedRoot),
-    resolveInside(root, manifest.renderRoot),
-  ];
-  for (const [kind, values] of [
-    ["contentRoots", manifest.contentRoots ?? []],
-    ["contentFiles", manifest.contentFiles ?? []],
-  ] as const)
-    for (const relative of values) {
-      const absolute = resolveInside(root, relative);
-      if (
-        absolute === root ||
-        forbidden.some((owner) =>
-          kind === "contentRoots"
-            ? pathsOverlap(absolute, owner)
-            : isInside(owner, absolute),
-        )
-      )
-        throw new Error(
-          `Invalid production manifest "${file}": ${kind} entry "${relative}" overlaps AutoMovie state, generated, render, or the whole project. Declare only coding-agent-owned inputs.`,
-        );
-    }
-};
-
 const validateRealOwnershipLayout = (
   rootReal: string,
   root: string,
@@ -4955,9 +4897,6 @@ const isInside = (root: string, candidate: string): boolean => {
       relative.startsWith(`..${path.sep}`) === false)
   );
 };
-
-const pathsOverlap = (left: string, right: string): boolean =>
-  isInside(left, right) || isInside(right, left);
 
 /**
  * Canonical render-root-relative bundle path for one manifest identity.
