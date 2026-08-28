@@ -3,11 +3,14 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { pathToFileURL } from "node:url";
 
 import { productionEvidence } from "../scaffold/productionEvidence";
 import { bindProductionBook } from "../scaffold/scripts/book";
 import { synchronizeProductionInstructions } from "../scaffold/scripts/sync";
+import { renderScaffold } from "../src/renderScaffold";
 import { writeAutoMovieProductionInstructions } from "../src/writeAutoMovieProductionInstructions";
+import { writeFiles } from "../src/writeFiles";
 
 const roots: string[] = [];
 const packageRoot = path.resolve(import.meta.dirname, "..");
@@ -32,6 +35,91 @@ void main();
 
 async function main(): Promise<void> {
   try {
+    const generated = makeRoot("generated-sync-consumer");
+    writeFiles(generated, renderScaffold({ name: "generated-sync-consumer" }));
+    const installedTemplate = path.join(
+      generated,
+      "node_modules",
+      "@automovie",
+      "template",
+    );
+    fs.mkdirSync(path.dirname(installedTemplate), { recursive: true });
+    write(
+      generated,
+      "node_modules/@automovie/template/package.json",
+      JSON.stringify({
+        name: "@automovie/template",
+        type: "module",
+        exports: {
+          ".": "./index.ts",
+          "./package.json": "./package.json",
+        },
+      }),
+    );
+    write(
+      generated,
+      "node_modules/@automovie/template/index.ts",
+      `export { writeAutoMovieProductionInstructions } from ${JSON.stringify(
+        pathToFileURL(
+          path.join(
+            packageRoot,
+            "src",
+            "writeAutoMovieProductionInstructions.ts",
+          ),
+        ).href,
+      )};\n`,
+    );
+    fs.cpSync(
+      path.join(packageRoot, "docs"),
+      path.join(installedTemplate, "docs"),
+      { recursive: true },
+    );
+    write(generated, "AGENTS.md", "stale generated router\n");
+    write(generated, "CLAUDE.md", "stale generated import\n");
+    write(generated, ".agents/skills/stale.md", "stale generated skill\n");
+    const generatedTrackedBefore = snapshot(generated, [
+      "package.json",
+      "productionEvidence.ts",
+      "docs",
+      "src",
+    ]);
+    const generatedSync = (await import(
+      `${pathToFileURL(path.join(generated, "scripts", "sync.ts")).href}?generated-consumer`
+    )) as {
+      synchronizeProductionInstructions: (props: {
+        root: string;
+        scaffoldRoot: string;
+      }) => string[];
+    };
+    assert.equal(
+      generatedSync.synchronizeProductionInstructions({
+        root: generated,
+        scaffoldRoot,
+      }).length,
+      3,
+    );
+    assert.match(
+      fs.readFileSync(path.join(generated, "AGENTS.md"), "utf8"),
+      /No production kind is selected/u,
+    );
+    assert.equal(
+      fs.readFileSync(path.join(generated, "CLAUDE.md"), "utf8"),
+      "@AGENTS.md\n",
+    );
+    assert.equal(
+      fs.existsSync(path.join(generated, ".agents", "skills", "stale.md")),
+      false,
+    );
+    assert.deepEqual(
+      snapshot(generated, [
+        "package.json",
+        "productionEvidence.ts",
+        "docs",
+        "src",
+      ]),
+      generatedTrackedBefore,
+    );
+
     const project = createProduction("instruction-library");
     assert.equal(productionEvidence.location, scaffoldRoot);
     assert.deepEqual(productionEvidence.populationScope, {
