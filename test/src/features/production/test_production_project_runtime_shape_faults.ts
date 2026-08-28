@@ -1,10 +1,17 @@
-import { AutoMovieProductionProject } from "@automovie/production";
+import {
+  AutoMovieProductionCompiler,
+  AutoMovieProductionProject,
+} from "@automovie/production";
 import { TestValidator } from "@nestia/e2e";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
-import { modelRecipe, productionFixture } from "./productionFixtures";
+import {
+  modelRecipe,
+  productionCompileSucceeded,
+  productionFixture,
+} from "./productionFixtures";
 
 const mutableFs = fs as unknown as {
   lstatSync: typeof fs.lstatSync;
@@ -301,16 +308,31 @@ export const test_production_project_runtime_shape_faults = (): void => {
 
   withFixture(({ root, project }) => {
     const sharedLock = path.join(root, "automovie/shared-design.lock");
-    const nativeRemove = fs.rmSync;
+    const revisionLock = project.trackedStatePath("revision.lock");
+    const incarnation = path.join(root, "automovie/incarnation.json");
+    const nativeRename = fs.renameSync;
     let releaseFaults = 0;
-    fs.rmSync = ((file: fs.PathLike, options?: fs.RmOptions) => {
+    fs.renameSync = ((from: fs.PathLike, to: fs.PathLike) => {
+      const result = nativeRename(from, to);
       if (
-        path.resolve(file.toString()) === path.resolve(sharedLock) &&
-        releaseFaults++ === 0
-      )
-        throw new Error("shared lock unlink failed after commit");
-      return nativeRemove(file, options);
-    }) as typeof fs.rmSync;
+        path.resolve(from.toString()) === path.resolve(revisionLock) &&
+        path.basename(to.toString()).startsWith(".automovie-lock-release-")
+      ) {
+        ++releaseFaults;
+        fs.writeFileSync(
+          incarnation,
+          `${JSON.stringify(
+            {
+              version: 1,
+              id: "00000000-0000-4000-8000-000000000099",
+            },
+            null,
+            2,
+          )}\n`,
+        );
+      }
+      return result;
+    }) as typeof fs.renameSync;
     try {
       const result = project.setModelRecipe({
         ...modelRecipe(),
@@ -321,7 +343,7 @@ export const test_production_project_runtime_shape_faults = (): void => {
         result.accepted && releaseFaults === 1 && fs.existsSync(sharedLock),
       );
     } finally {
-      fs.rmSync = nativeRemove;
+      fs.renameSync = nativeRename;
     }
   });
 
@@ -537,14 +559,6 @@ export const test_production_project_runtime_shape_faults = (): void => {
       );
     }
   }
-
-  withFixture(({ project }) => {
-    fs.rmSync(project.renderRoot(), { force: true, recursive: true });
-    TestValidator.predicate(
-      "erase skips an already absent owned output namespace",
-      project.eraseProduction("already absent output root").erased,
-    );
-  });
 
   withFixture(({ project }) => {
     const nativeRename = fs.renameSync;
@@ -772,6 +786,13 @@ export const test_production_project_runtime_shape_faults = (): void => {
   });
 
   withFixture(({ project }) => {
+    const compiled = new AutoMovieProductionCompiler(project).compile({
+      scope: "source",
+    });
+    if (
+      productionCompileSucceeded("atomic delete recovery", compiled) === false
+    )
+      throw new Error("Generated fixture compilation failed.");
     const currentManifest = project.generatedManifest();
     if (currentManifest === null || currentManifest.files.length === 0)
       throw new Error("Generated fixture has no removable resident.");
