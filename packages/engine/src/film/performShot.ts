@@ -58,6 +58,10 @@ import {
 } from "../validation/validateShotArtifact";
 import { ViolationCollector } from "../validation/violation";
 import {
+  IAutoMovieCameraClearanceRuntime,
+  compileCameraClearanceReports,
+} from "./cameraClearancePerformance";
+import {
   DEFAULT_SUBJECT_HEIGHT,
   IAutoMovieCameraFrameEntry,
   IAutoMovieFramedSubject,
@@ -374,7 +378,7 @@ export namespace IAutoMoviePerformedShot {
  * @evidence specifications/performance-motion-and-staging/staging-space-state-and-choreography.md#performance-staging-mark-surface-zone-membership Reads staged placements and current motion samples as the spatial authority for targets and emitted transforms; it does not claim mark, surface, or zone membership.
  * @evidence specifications/performance-motion-and-staging/staging-space-state-and-choreography.md#performance-staging-interaction-choreography-role Compiles action participants into timed contact, reaction, attachment, and release consequences while preserving one active transform authority per subject.
  * @evidence specifications/narrative-and-intent/scene-coverage-and-acceptance.md#narrative-intent-scene-dependency-refusal Gates the concrete actor, camera, target, projectile, and attachment dependencies this shot consumes and fails on an unresolved required binding.
- * @evidence specifications/camera-light-and-visibility/framing-axis-and-camera-path.md#clv-camera-path-constraints-refusal performShot rejects only malformed, non-finite, unresolved, rival, or overlapping authored camera paths here; camera-body clearance and swept-geometry penetration remain outside this gate.
+ * @evidence specifications/camera-light-and-visibility/framing-axis-and-camera-path.md#clv-camera-path-constraints-refusal Refuses malformed, unresolved, overlapping, stale, or physically blocked hero and coverage camera paths with an author-addressed correction path.
  * @evidence specifications/camera-light-and-visibility/camera-state-projection-and-gate.md#clv-projection-sampling-refusal performShot rejects impossible framing FOV and focal-length inputs before projection or camera-motion compilation can create non-finite artifacts.
  * @evidence specifications/camera-light-and-visibility/camera-state-projection-and-gate.md#clv-camera-authority-spatial-binding Keeps the elected shot camera and each coverage camera explicit, preserves only validated authored intent, and fails when the required camera cannot be resolved.
  * @evidence specifications/camera-light-and-visibility/target-focus-exposure-and-sampling.md#clv-focus-intent-appearance-boundary Preserves the resolved focus point and focal length as intent metadata distinct from geometric FOV and from any rendered depth-of-field appearance.
@@ -395,6 +399,13 @@ export const performShot = (props: {
    * the documented fallback.
    */
   models?: readonly IAutoMovieModel[];
+  /**
+   * Compiler-owned current geometry revision and fixed inspection clock. A
+   * take whose camera declares a physical envelope requires this context;
+   * legacy cameras without an envelope remain byte-identical when it is
+   * omitted.
+   */
+  cameraClearance?: IAutoMovieCameraClearanceRuntime;
   /**
    * Compiler-owned compact formations present in this shot, so a camera can
    * frame a mass. A group target naming a formation this list does not carry is
@@ -2176,6 +2187,19 @@ export const performShot = (props: {
       }),
   );
 
+  const cameraClearance = compileCameraClearanceReports({
+    scene: staged.scene,
+    hero: { camera: cameraObject, motion: cameraMotion },
+    coverage,
+    duration: performance.duration,
+    motions,
+    objectMotions,
+    models: props.models ?? [],
+    runtime: props.cameraClearance,
+    out,
+  });
+  if (out.items.length > 0) return { success: false, violations: out.items };
+
   const shot: IAutoMovieShot = {
     id: shotId,
     name: beat!.name,
@@ -2214,6 +2238,7 @@ export const performShot = (props: {
     // coverage intent. Empty when the beat was covered by one camera; the
     // hero take stays the singular camera/cameraMotion every consumer reads.
     coverage,
+    ...(cameraClearance === undefined ? {} : { cameraClearance }),
     duration: performance.duration,
   };
 

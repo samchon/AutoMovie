@@ -1,6 +1,7 @@
 import { CAT_GAITS, HORSE_GAITS, HUMANOID_GAITS } from "@automovie/archetypes";
 import {
   IAutoMovieActorContext,
+  type IAutoMovieCameraClearanceRuntime,
   type IAutoMovieFormationPlacement,
   autoMovieModelGaits,
   compileDefinedShot,
@@ -537,6 +538,11 @@ export class AutoMovieProductionCompiler {
               frameFormat: graph.production!.frameFormat,
             },
             previous,
+            cameraClearance: {
+              revision: String(inputRevision),
+              currentRevision: String(this.project.revision()),
+              sampleRate: graph.production!.frameFormat.fps,
+            },
           });
           diagnostics.push(...result.diagnostics);
           if (result.value !== null) {
@@ -1275,6 +1281,8 @@ interface ICompileShotSourceProps {
       "width" | "height"
     >;
   };
+  /** Compiler-owned snapshot and fixed clock; never exposed to shot source. */
+  cameraClearance: IAutoMovieCameraClearanceRuntime;
   /** Prior full-shot closing state at the authoritative hard-cut boundary. */
   previous: IAutoMovieBeatEndState | null;
 }
@@ -2372,6 +2380,7 @@ const compileShotSource = (
       hasActorContext: (node) => runtime.actors.has(node),
       gaits: (node) => runtime.actors.get(node)?.gaits.map((gait) => gait.name),
       frameFormat: props.context.frameFormat,
+      cameraClearance: props.cameraClearance,
       world: props.context.world,
       formationDesigns: new Map(Object.entries(props.context.formations)),
       formations: Object.values(props.context.formationRuntime),
