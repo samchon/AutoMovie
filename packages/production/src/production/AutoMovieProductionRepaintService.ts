@@ -492,7 +492,9 @@ export class AutoMovieProductionRepaintService {
       if (
         latest.status !== "failed" ||
         latest.failure === null ||
-        latest.failure.retryable !== true
+        latest.failure.retryable !== true ||
+        executionPolicy.retryableFailures.includes(latest.failure.class) ===
+          false
       )
         return failure(
           "repaint-input-invalid",
