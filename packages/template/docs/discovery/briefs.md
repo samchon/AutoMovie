@@ -10,4 +10,4 @@ A positive acknowledgement identifies the current authored owners and contract w
 
 Review question: which bounded delivery or observation condition is specific to this production and absent from the reusable brief contract?
 
-Sources: [NIST test and evaluation guidance](https://www.nist.gov/topics/testing); [NASA systems engineering handbook on defining verification objectives](https://www.nasa.gov/reference/systems-engineering-handbook/); [Academy Digital Source Master project](https://www.oscars.org/science-technology/sci-tech-projects/academy-digital-source-master)
+Sources: [NIST definition of verification as objective evidence against specified requirements](https://www.nist.gov/glossary-term/34441); [NASA systems engineering handbook on defining verification objectives](https://www.nasa.gov/reference/systems-engineering-handbook/); [Academy Digital Source Master project](https://www.oscars.org/science-technology/sci-tech-projects/academy-digital-source-master)

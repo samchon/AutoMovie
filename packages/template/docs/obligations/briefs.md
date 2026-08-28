@@ -10,7 +10,7 @@ Review question: can the requested result be stated as one bounded falsifiable q
 
 This obligation decides whether the requested result qualifies for the brief shape. The no-narrative-smuggling principle separately checks every authored unit after selection against that boundary.
 
-Sources: [NIST test and evaluation guidance](https://www.nist.gov/topics/testing); [NASA systems engineering handbook on defining verification objectives](https://www.nasa.gov/reference/systems-engineering-handbook/)
+Sources: [NIST definition of verification as objective evidence against specified requirements](https://www.nist.gov/glossary-term/34441); [NASA systems engineering handbook on defining verification objectives](https://www.nasa.gov/reference/systems-engineering-handbook/)
 
 ## Brief unit addressability {#brief-unit-addressability}
 

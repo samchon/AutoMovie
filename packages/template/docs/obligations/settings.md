@@ -66,7 +66,7 @@ The settings define how the audience or library operator may access the delivere
 
 Review question: what may the intended recipient see, hear, read, control, and know, and what boundary prevents an unauthorized inference or operation?
 
-Sources: [Genette on the distinction between voice and focalization](https://archive.org/details/narrativediscour0000gene); [NIST test and evaluation guidance](https://www.nist.gov/topics/testing); [NASA systems engineering handbook on stakeholder expectations and interfaces](https://www.nasa.gov/reference/systems-engineering-handbook/)
+Sources: [Genette on the distinction between voice and focalization](https://archive.org/details/narrativediscour0000gene); [NASA systems engineering handbook on stakeholder expectations and interfaces](https://www.nasa.gov/reference/systems-engineering-handbook/)
 
 ## Accessibility deliverable states {#accessibility-deliverable-states}
 
@@ -138,7 +138,7 @@ Review question: which dimension, control, route, view, interaction, or acceptan
 
 This obligation owns the profiles and conditions a design must serve. `operative-subject-inventory` owns whether the consequential subject has an owner, `principles/settings.md#capability-boundary` owns what an addressed subject can and cannot do, `accessibility-deliverable-states` classifies alternative products rather than physical or operational design inputs, and `obligations/spaces.md#space-access-circulation` owns how a space allocates routes and clearances for the profiles settled here. Dramatic motive, knowledge, expression, relationship, and change remain film-only subject obligations.
 
-Sources: [2010 ADA Standards for Accessible Design](https://www.ada.gov/law-and-regs/design-standards/2010-stds/); [NASA Human Integration Design Handbook](https://www.nasa.gov/reference/human-integration-design-handbook/); [NIST handbook on uncertainty in measurement](https://www.nist.gov/pml/nist-technical-note-1297)
+Sources: [2010 ADA Standards for Accessible Design](https://www.ada.gov/law-and-regs/design-standards/2010-stds/); [NASA Human Integration Design Handbook](https://www.nasa.gov/organizations/ochmo/human-integration-design-handbook/); [NIST handbook on uncertainty in measurement](https://www.nist.gov/pml/nist-technical-note-1297)
 
 ## Minimal departure {#minimal-departure}
 
