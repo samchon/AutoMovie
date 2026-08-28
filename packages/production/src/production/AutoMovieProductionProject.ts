@@ -1,6 +1,7 @@
 import {
   AutoMovieContentDigest,
   AutoMovieGuidePass,
+  AutoMovieRepaintFailureClass,
   AutoMovieRepaintReferenceRole,
   IAutoMovieAcceptanceScenario,
   IAutoMovieAssetManifest,
@@ -165,6 +166,15 @@ interface IAutoMovieRepaintSelectionRecord {
     transitionMismatch: "pass";
   } | null;
 }
+
+const REPAINT_RETRYABLE_FAILURE_CLASSES: ReadonlySet<AutoMovieRepaintFailureClass> =
+  new Set([
+    "timeout",
+    "rate-limit",
+    "transport",
+    "provider-refusal",
+    "internal",
+  ]);
 
 /**
  * A guarded production commit no longer matches its input snapshot.
@@ -2085,10 +2095,7 @@ export class AutoMovieProductionProject {
         );
     }
     const activePath = productionRepaintActiveReceiptPath(props.shot);
-    const verifiedActive =
-      props.kind === "reversal"
-        ? this.verifiedRepaintRenditions([props.shot])[0]
-        : undefined;
+    const verifiedActive = this.verifiedRepaintRenditions([props.shot])[0];
     const activeBytes = this.readTrackedStateFile(activePath);
     let previousSelection: string | null = null;
     let previousCandidate: IAutoMovieRepaintReceipt | undefined;
@@ -2105,13 +2112,16 @@ export class AutoMovieProductionProject {
             previous.data.receipt &&
           candidate.output.path === previous.data.output,
       );
-    }
-    if (props.kind === "reversal") {
       if (
-        previousSelection === null ||
         previousCandidate === undefined ||
         verifiedActive?.attemptId !== previousCandidate.attemptId
       )
+        throw new Error(
+          "Current repaint selection pointer does not name an active verified selection.",
+        );
+    }
+    if (props.kind === "reversal") {
+      if (previousSelection === null || previousCandidate === undefined)
         throw new Error(
           "Repaint reversal requires an existing active verified selection.",
         );
@@ -2418,10 +2428,22 @@ export class AutoMovieProductionProject {
       Number.isFinite(attempt.costUnits) === false ||
       attempt.costUnits < 0 ||
       (attempt.status === "succeeded") !== (attempt.failure === null) ||
+      (attempt.status === "succeeded" && attempt.availableOutput === null) ||
       (attempt.failure !== null &&
         (attempt.failure.message.trim().length === 0 ||
           attempt.failure.message !== attempt.failure.message.trim() ||
-          (attempt.failure.retryable && attempt.status !== "failed"))) ||
+          attempt.status !==
+            (attempt.failure.class === "cancelled"
+              ? "cancelled"
+              : attempt.failure.class === "invalid-output"
+                ? "invalid"
+                : attempt.failure.class === "input-stale"
+                  ? "stale"
+                  : "failed") ||
+          (attempt.failure.retryable &&
+            (attempt.status !== "failed" ||
+              REPAINT_RETRYABLE_FAILURE_CLASSES.has(attempt.failure.class) ===
+                false)))) ||
       (attempt.availableOutput !== null &&
         (Number.isSafeInteger(attempt.availableOutput.bytes) === false ||
           attempt.availableOutput.bytes <= 0 ||
@@ -2455,6 +2477,13 @@ export class AutoMovieProductionProject {
       receipt.costUnits! < 0 ||
       receipt.executionPolicy === undefined ||
       receipt.evidence === undefined ||
+      Object.entries(receipt.evidence ?? {}).some(
+        ([key, value]) =>
+          (key !== "continuity" || value !== null) &&
+          (typeof value !== "string" ||
+            value.trim().length === 0 ||
+            value !== value.trim()),
+      ) ||
       receipt.parameters.prompt.trim().length === 0 ||
       receipt.parameters.prompt !== receipt.parameters.prompt.trim() ||
       (receipt.parameters.negativePrompt !== undefined &&
@@ -2476,6 +2505,7 @@ export class AutoMovieProductionProject {
       receipt.controls.length === 0
     )
       throw new Error("Stored repaint receipt parameters are invalid.");
+    assertAutoMovieRepaintExecutionPolicy(receipt.executionPolicy!);
     assertAutoMovieExternalGeneratorTermsAt({
       termsCheckedAt: receipt.generatorProvenance.termsCheckedAt,
       occurredAt: receipt.startedAt!,

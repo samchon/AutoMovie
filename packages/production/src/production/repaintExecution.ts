@@ -448,7 +448,7 @@ const classifyFailure = (
             : error.failureClass === "input-stale"
               ? "stale"
               : "failed",
-      message: error.message,
+      message: repaintFailureMessage(error.message),
       costUnits: validCost(error.costUnits),
       availableOutput: error.availableOutput,
     };
@@ -471,18 +471,26 @@ const classifyFailure = (
         ? "transport"
         : "provider-refusal",
     status: "failed",
-    message:
+    message: repaintFailureMessage(
       error instanceof Error
         ? error.message
         : typeof candidate.message === "string"
           ? candidate.message
           : String(error),
+    ),
     costUnits:
       typeof candidate.costUnits === "number"
         ? validCost(candidate.costUnits)
         : 0,
     availableOutput: null,
   };
+};
+
+const repaintFailureMessage = (value: string): string => {
+  const message = value.trim();
+  return message.length === 0
+    ? "Repaint provider failed without a message."
+    : message;
 };
 
 const validCost = (value: number): number => {
