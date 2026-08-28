@@ -254,9 +254,13 @@ const assertGeneratedRuntimeParity = (
     "packages/template/.cache/automovie-scaffold-evidence-gate",
   );
   const entrypoints = [
+    "scripts/capture-browser.ts",
+    "scripts/capture-doctor.ts",
     "scripts/capture.ts",
     "scripts/captureDialogueRuntime.ts",
+    "scripts/captureRuntimeClosure.ts",
     "scripts/generatedShotPlugin.ts",
+    "scripts/preview.ts",
     "scripts/productionConfiguration.ts",
     "scripts/productionRuntimeState.ts",
     "scripts/render.ts",
@@ -272,6 +276,7 @@ const assertGeneratedRuntimeParity = (
     "scripts/repaintCommand.ts",
     "scripts/repaintAdapter.ts",
     "scripts/withKokoroRuntimeOverrides.cjs",
+    "vite.config.ts",
   ];
   TestValidator.equals(
     "every generated runtime owner preserves scaffold, consumer, and gate-cache bytes",
