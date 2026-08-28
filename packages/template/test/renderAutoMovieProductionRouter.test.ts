@@ -133,6 +133,10 @@ const library = renderAutoMovieProductionRouter({
   ],
 });
 assert.match(library, /This is a library/u);
+assert.match(
+  library,
+  /Active branches: `settings` \(`review`\), `models` \(`review`\), `modelSources` \(`draft`\)\./u,
+);
 assert.match(library, /`models` \[Chair\]\(docs\/models\/chair\.md\)/u);
 assert.match(library, /source branch `modelSources` selects 1 tracked file/u);
 assert.match(library, /source authorship has not started/u);

@@ -21,7 +21,7 @@ export const renderAutoMovieProductionRouter = (
   const description =
     evidence.description === "" ? "" : `\n${evidence.description}\n`;
   const activeBranches = evidence.manifest.branches.map(
-    (branch) => `\`${branch.name}\``,
+    (branch) => `\`${branch.name}\` (\`${branch.stage}\`)`,
   );
   const branchLine =
     activeBranches.length === 0
@@ -74,7 +74,7 @@ It is generated from the installed scaffold by \`npm run sync\` and is not track
 ## This production
 
 - Package \`${evidence.packageName}\`.
-- \`productionEvidence.ts\` is the single tracked production-kind, population-scope, branch, and lifecycle declaration. \`lint.config.ts\`, sync, and final review consume that same typed value; this router never restates stages.
+- \`productionEvidence.ts\` is the single tracked production-kind, population-scope, branch, and lifecycle declaration. \`lint.config.ts\`, sync, and final review consume that same typed value; the generated branch-and-stage view below reports it but never overrides it.
 - ${shapeProcedure(evidence.manifest.kind)}
 - ${branchLine}
 
