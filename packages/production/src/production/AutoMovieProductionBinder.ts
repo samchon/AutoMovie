@@ -135,18 +135,42 @@ export class AutoMovieProductionBinder {
       this.output,
       `${stem(this.title)}-${this.layer}.md`,
     );
+    const physicalDocs = await fs.realpath(path.join(this.root, "docs"));
+    assertOutputSeparatedFromDocs(
+      await prospectiveRealpath(this.output),
+      physicalDocs,
+    );
     await fs.mkdir(this.output, { recursive: true });
     const physicalOutput = await fs.realpath(this.output);
-    assertOutputSeparatedFromDocs(
-      physicalOutput,
-      await fs.realpath(path.join(this.root, "docs")),
-    );
+    assertOutputSeparatedFromDocs(physicalOutput, physicalDocs);
     await fs.writeFile(
       path.join(physicalOutput, path.basename(target)),
       markdown,
       "utf8",
     );
     return target;
+  }
+}
+
+/** Resolve where a not-yet-created path will live through its nearest ancestor. */
+async function prospectiveRealpath(target: string): Promise<string> {
+  const suffix: string[] = [];
+  let existing = target;
+  while (true) {
+    try {
+      return path.join(await fs.realpath(existing), ...suffix);
+    } catch (error) {
+      if (
+        !(
+          error instanceof Error &&
+          "code" in error &&
+          String(error.code) === "ENOENT"
+        )
+      )
+        throw error;
+      suffix.unshift(path.basename(existing));
+      existing = path.dirname(existing);
+    }
   }
 }
 

@@ -396,6 +396,32 @@ export const test_production_authored_layer_binder =
             output: path.join(film, "docs", "reader"),
           }),
       );
+      const blockedOutputParent = write(
+        film,
+        "blocked-output-parent",
+        "preserved output-parent bytes\n",
+      );
+      await TestValidator.error("output ancestor is not a directory", () =>
+        new AutoMovieProductionBinder({
+          root: film,
+          title: "Unsafe",
+          layer: "screenplays",
+          output: path.join(blockedOutputParent, "reader"),
+        }).bind(),
+      );
+      TestValidator.equals(
+        "blocked output ancestor remains unchanged",
+        fs.readFileSync(blockedOutputParent, "utf8"),
+        "preserved output-parent bytes\n",
+      );
+      await TestValidator.error("invalid output path", () =>
+        new AutoMovieProductionBinder({
+          root: film,
+          title: "Unsafe",
+          layer: "screenplays",
+          output: path.join(film, "\0invalid-output"),
+        }).bind(),
+      );
       const linkedOutput = path.join(film, "linked-output");
       try {
         fs.symlinkSync(
@@ -410,6 +436,22 @@ export const test_production_authored_layer_binder =
             layer: "screenplays",
             output: linkedOutput,
           }).bind(),
+        );
+        const prospectiveNestedOutput = path.join(
+          linkedOutput,
+          "not-yet-created-reader",
+        );
+        await TestValidator.error("prospective output resolves into docs", () =>
+          new AutoMovieProductionBinder({
+            root: film,
+            title: "Unsafe",
+            layer: "screenplays",
+            output: prospectiveNestedOutput,
+          }).bind(),
+        );
+        TestValidator.predicate(
+          "prospective refusal leaves docs unchanged",
+          !fs.existsSync(path.join(film, "docs", "not-yet-created-reader")),
         );
       } catch (error) {
         if (
