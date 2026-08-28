@@ -29,6 +29,12 @@ interface IGeneratedCommand {
   stdout: string;
 }
 
+interface IGeneratedCameraDepthRuntimeProbe {
+  draws: number;
+  negative: string;
+  positive: string;
+}
+
 const REPOSITORY_ROOT = path.resolve(__dirname, "../../../..");
 
 const installAuthoredEvidencePopulation = (
@@ -222,6 +228,55 @@ const runGeneratedFast = (
   args: readonly string[] = [],
 ): IGeneratedCommand => runGenerated(project, script, args);
 
+const runGeneratedCameraDepthRuntime = async (
+  project: string,
+): Promise<IGeneratedCameraDepthRuntimeProbe> => {
+  const { build } = await import("vite");
+  const output = fs.mkdtempSync(
+    path.join(project, "node_modules/.camera-depth-runtime-"),
+  );
+  const entry = "camera-depth-runtime.mjs";
+  try {
+    await build({
+      build: {
+        emptyOutDir: true,
+        outDir: output,
+        rollupOptions: {
+          external: ["@automovie/production"],
+          output: { entryFileNames: entry, format: "es" },
+        },
+        ssr: "test/camera-depth-runtime.ts",
+      },
+      configFile: false,
+      logLevel: "silent",
+      root: project,
+      ssr: { noExternal: ["@automovie/engine", "@automovie/viewer", "three"] },
+    });
+    const command = spawnSync(process.execPath, [path.join(output, entry)], {
+      cwd: project,
+      encoding: "utf8",
+      env: process.env,
+    });
+    if (command.status !== 0)
+      throw new Error(
+        `The generated camera-depth runtime probe failed (${String(command.status)}).\n${command.stdout}\n${command.stderr}`,
+      );
+    const prefix = "CAMERA_DEPTH_RUNTIME ";
+    const line = command.stdout
+      .split(/\r?\n/u)
+      .find((candidate) => candidate.startsWith(prefix));
+    if (line === undefined)
+      throw new Error(
+        `The generated camera-depth runtime probe returned no receipt.\n${command.stdout}\n${command.stderr}`,
+      );
+    return JSON.parse(
+      line.slice(prefix.length),
+    ) as IGeneratedCameraDepthRuntimeProbe;
+  } finally {
+    fs.rmSync(output, { force: true, recursive: true });
+  }
+};
+
 const runtimeRoot = (): { preserve: boolean; root: string } => {
   const configured = process.env.AUTOMOVIE_ISSUE_2135_RUNTIME_ROOT;
   if (configured === undefined)
@@ -305,8 +360,6 @@ const assertGeneratedRuntimeParity = (
 const generatedCameraDepthRuntimeProbe = (): string =>
   [
     'import type { IAutoMovieCompiledShotSource } from "@automovie/interface";',
-    'import * as THREE from "three";',
-    'import { createCompiledShotRuntime } from "../viewer/src/shotRuntime";',
     "",
     "const identity = {",
     "  translation: { x: 0, y: 0, z: 5 },",
@@ -352,7 +405,8 @@ const generatedCameraDepthRuntimeProbe = (): string =>
     "  },",
     "} as unknown as IAutoMovieCompiledShotSource;",
     "",
-    "const main = async (): Promise<void> => {",
+    "export const cameraDepthRuntimeProbe = async () => {",
+    '  const { createCompiledShotRuntime } = await import("../viewer/src/shotRuntime");',
     "  const runtime = await createCompiledShotRuntime(compiled);",
     "  let depthBits = 16;",
     "  let draws = 0;",
@@ -365,11 +419,11 @@ const generatedCameraDepthRuntimeProbe = (): string =>
     "        parameter === depthParameter ? depthBits : null,",
     "    }),",
     "    domElement: { height: 100 },",
-    "    toneMapping: THREE.NoToneMapping,",
+    "    toneMapping: 0,",
     "    toneMappingExposure: 1,",
-    "    shadowMap: { enabled: false, type: THREE.PCFShadowMap },",
+    "    shadowMap: { enabled: false, type: 1 },",
     "    render: () => { ++draws; },",
-    "  } as unknown as THREE.WebGLRenderer;",
+    "  } as never;",
     "  const negative = (() => {",
     "    try {",
     '      runtime.render(renderer, 0, "beauty");',
@@ -383,13 +437,17 @@ const generatedCameraDepthRuntimeProbe = (): string =>
     "  await runtime.dispose();",
     '  if (negative.includes("insufficient-capability") === false || draws !== 1)',
     '    throw new Error("depth runtime assertion did not gate the draw: " + negative + "; draws=" + String(draws));',
-    '  console.log("CAMERA_DEPTH_RUNTIME " + JSON.stringify({ negative, positive, draws }));',
+    "  return { negative, positive, draws };",
     "};",
     "",
-    "void main().catch((error: unknown) => {",
-    "  console.error(error);",
-    "  process.exitCode = 1;",
-    "});",
+    "void cameraDepthRuntimeProbe()",
+    "  .then((result) => {",
+    '    console.log("CAMERA_DEPTH_RUNTIME " + JSON.stringify(result));',
+    "  })",
+    "  .catch((error: unknown) => {",
+    "    console.error(error);",
+    "    process.exitCode = 1;",
+    "  });",
     "",
   ].join("\n");
 
@@ -717,23 +775,21 @@ export const test_cli_scaffold_repaint_runtime_contract =
       ])
         linkWorkspacePackage(fixture.root, name);
 
-      const cameraDepthRuntime = runGeneratedFast(
+      const cameraDepthRuntime = await runGeneratedCameraDepthRuntime(
         fixture.root,
-        "test/camera-depth-runtime.ts",
       );
       TestValidator.equals(
         "the actual generated shot runtime gates the current draw framebuffer before rendering",
         {
-          status: cameraDepthRuntime.status,
-          negative: cameraDepthRuntime.stdout.includes(
+          negative: cameraDepthRuntime.negative.includes(
             'Camera depth precision refused "camera-depth": insufficient-capability',
           ),
-          positive: cameraDepthRuntime.stdout.includes(
+          positive: cameraDepthRuntime.positive.includes(
             "camera-depth-shot  t=0.000s  beauty",
           ),
-          draws: cameraDepthRuntime.stdout.includes('"draws":1'),
+          draws: cameraDepthRuntime.draws === 1,
         },
-        { status: 0, negative: true, positive: true, draws: true },
+        { negative: true, positive: true, draws: true },
       );
 
       const evidenceDelivery = path.join(

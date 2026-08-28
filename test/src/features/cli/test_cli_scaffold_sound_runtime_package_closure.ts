@@ -59,11 +59,20 @@ interface IPackageCase {
   name: string;
 }
 
+const REPOSITORY_ROOT = path.resolve(__dirname, "../../../..");
+
 const packageRoot = (name: string): string => {
   const manifest = createRequire(__filename)
     .resolve.paths(name)
     ?.map((base) => path.join(base, ...name.split("/"), "package.json"))
     .find((candidate) => fs.existsSync(candidate));
+  if (manifest === undefined && name === "sharp")
+    return fs.realpathSync(
+      path.join(
+        REPOSITORY_ROOT,
+        "packages/template/scaffold/vendor/sharp-disabled",
+      ),
+    );
   if (manifest === undefined)
     throw new Error(`Sound runtime package root did not resolve: ${name}.`);
   return fs.realpathSync(path.dirname(manifest));

@@ -93,6 +93,30 @@ const writeBrowserSupport = (root: string): string => {
   return root;
 };
 
+const withDistinctNamespaceDevice = <Output>(
+  file: string,
+  operation: () => Output,
+): Output => {
+  const original = fs.lstatSync;
+  const target = path.resolve(file);
+  const patched = ((...args: unknown[]) => {
+    const status = Reflect.apply(original, fs, args) as fs.BigIntStats;
+    if (path.resolve(String(args[0])) !== target) return status;
+    return new Proxy(status, {
+      get: (subject, property, receiver) =>
+        property === "dev"
+          ? subject.dev + 1n
+          : Reflect.get(subject, property, receiver),
+    });
+  }) as typeof fs.lstatSync;
+  Object.defineProperty(fs, "lstatSync", { value: patched });
+  try {
+    return operation();
+  } finally {
+    Object.defineProperty(fs, "lstatSync", { value: original });
+  }
+};
+
 /**
  * A generated project seals installed capture bytes rather than package labels.
  *
@@ -113,6 +137,8 @@ const writeBrowserSupport = (root: string): string => {
  *    physical generation.
  * 4. A linked browser-support root is refused instead of being mislabeled as
  *    the physical tree that the generated project sealed.
+ * 5. A platform may expose distinct namespace and descriptor device domains;
+ *    each observation remains stable and the physical snapshot is accepted.
  */
 export const test_cli_scaffold_capture_runtime_closure = (): void => {
   const root = fs.realpathSync(
@@ -147,10 +173,14 @@ export const test_cli_scaffold_capture_runtime_closure = (): void => {
     );
     const browserA = writeBrowserSupport(path.join(root, "chromium-a"));
     const browserB = writeBrowserSupport(path.join(root, "chromium-b"));
-    const first = closure.snapshotProductionCaptureRuntimeClosure({
-      packageEntries: packagesA,
-      browserSupport: { source: "package-owned", root: browserA },
-    });
+    const first = withDistinctNamespaceDevice(
+      path.join(browserA, "chrome.exe"),
+      () =>
+        closure.snapshotProductionCaptureRuntimeClosure({
+          packageEntries: packagesA,
+          browserSupport: { source: "package-owned", root: browserA },
+        }),
+    );
     const second = closure.snapshotProductionCaptureRuntimeClosure({
       packageEntries: packagesB,
       browserSupport: { source: "package-owned", root: browserB },

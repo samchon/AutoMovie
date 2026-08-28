@@ -359,6 +359,9 @@ const assertPhysicalTreeCurrent = (snapshot: IPhysicalTreeSnapshot): void => {
 const readPhysicalFile = (
   file: string,
 ): { bytes: Buffer; status: fs.BigIntStats } => {
+  const linked = fs.lstatSync(file, { bigint: true });
+  if (linked.isSymbolicLink() || linked.isFile() === false)
+    throw new Error(`Capture support file "${file}" is not physical.`);
   const descriptor = fs.openSync(file, "r");
   try {
     const opened = fs.fstatSync(descriptor, { bigint: true });
@@ -368,11 +371,20 @@ const readPhysicalFile = (
     const confirmed = fs.fstatSync(descriptor, { bigint: true });
     const repeated = readDescriptorBytes(descriptor, confirmed.size);
     const resident = fs.lstatSync(file, { bigint: true });
+    const residentDescriptor = fs.openSync(file, "r");
+    let reopened: fs.BigIntStats;
+    try {
+      reopened = fs.fstatSync(residentDescriptor, { bigint: true });
+    } finally {
+      fs.closeSync(residentDescriptor);
+    }
     if (
       resident.isSymbolicLink() ||
       resident.isFile() === false ||
-      resident.dev !== confirmed.dev ||
-      resident.ino !== confirmed.ino ||
+      physicalVersion(resident) !== physicalVersion(linked) ||
+      physicalVersion(confirmed) !== physicalVersion(opened) ||
+      reopened.dev !== confirmed.dev ||
+      reopened.ino !== confirmed.ino ||
       bytes.equals(repeated) === false ||
       repeated.length !== Number(confirmed.size)
     )
