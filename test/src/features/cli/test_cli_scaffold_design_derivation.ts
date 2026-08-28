@@ -65,15 +65,15 @@ export const test_cli_scaffold_design_derivation = (): void => {
     .filter(([file]) => file.startsWith("docs/"))
     .filter(([, content]) => /@evidence[A-Za-z]*\b/u.test(content))
     .map(([file]) => file);
+  const productionDocumentPattern =
+    /^docs\/(?:settings|research|maps|models|spaces|materials|instances|motions|systems|treatments|scripts|screenplays|briefs)\/.+\.md$/u;
+  const productionSourcePattern =
+    /^(?:src\/(?:maps|models|spaces|materials|instances|motions|systems|shots)\/.+\.ts|src\/(?:production|film)\.ts)$/u;
   const productionDocuments = Object.keys(rendered).filter((file) =>
-    /^docs\/(?:settings|research|models|spaces|materials|instances|motions|systems|treatments|scripts|screenplays|briefs)\/.+\.md$/u.test(
-      file,
-    ),
+    productionDocumentPattern.test(file),
   );
   const productionSources = Object.keys(rendered).filter((file) =>
-    /^(?:src\/(?:models|spaces|materials|instances|motions|systems|shots)\/.+\.ts|src\/(?:production|film)\.ts)$/u.test(
-      file,
-    ),
+    productionSourcePattern.test(file),
   );
   const designRecords = Object.keys(rendered).filter((file) =>
     /^\.automovie\/design\/.+\.json$/u.test(file),
@@ -163,6 +163,22 @@ export const test_cli_scaffold_design_derivation = (): void => {
           ) === JSON.stringify([".gitkeep"]),
       ],
       [
+        "preserves the empty map document branch",
+        () => rendered["docs/maps/.gitkeep"] === "",
+      ],
+      [
+        "preserves the empty map source branch",
+        () => rendered["src/maps/.gitkeep"] === "",
+      ],
+      [
+        "governs authored map documents",
+        () => productionDocumentPattern.test("docs/maps/world.md"),
+      ],
+      [
+        "governs authored map sources",
+        () => productionSourcePattern.test("src/maps/world.ts"),
+      ],
+      [
         "viewer exposes one neutral replacement slot",
         () =>
           rendered["viewer/src/viewerDocument.ts"]!.includes(
@@ -246,6 +262,10 @@ export const test_cli_scaffold_design_derivation = (): void => {
       "explains the first action": true,
       "imports no completed production": true,
       "physical design tree is empty": true,
+      "preserves the empty map document branch": true,
+      "preserves the empty map source branch": true,
+      "governs authored map documents": true,
+      "governs authored map sources": true,
       "viewer exposes one neutral replacement slot": true,
       "completed fixture retains its production emitter": true,
       "completed fixture carries no retired review store": true,

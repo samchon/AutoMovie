@@ -6,7 +6,7 @@ Every layer begins `disabled` with no governed hosts. For a layer forbidden by t
 
 ## Film
 
-A film makes a narrative claim through the exact `settings -> treatments -> scripts -> screenplays -> shots -> filmSources` ladder. Reviewed `productionSources` is a parallel assembly input before `filmSources`; model, space, material, instance, motion, and system branches apply when the film authors them. Use film for any narrative production, including a short film. Briefs are disabled.
+A film makes a narrative claim through the exact `settings -> treatments -> scripts -> screenplays -> shots -> filmSources` ladder. Reviewed `productionSources` is a parallel assembly input before `filmSources`; map, model, space, material, instance, motion, and system branches apply when the film authors them. Use film for any narrative production, including a short film. Briefs are disabled.
 
 ## Brief
 
@@ -14,7 +14,7 @@ A brief makes one bounded audiovisual claim directly through the exact `settings
 
 ## Library
 
-A library authors reusable settings and whichever model, space, material, instance, motion, or system design/source branches apply, without a timed audiovisual result. Use it for a figure, prop, environment, building exterior/interior, material system, repeated population, rig, motion, light/effect/simulation/sound system, or compatible collection that has no shots. Production source is optional when the library needs to serialize a reviewed delivery contract; narrative, brief, shot, and film-source layers are disabled.
+A library authors reusable settings and whichever map, model, space, material, instance, motion, or system design/source branches apply, without a timed audiovisual result. Use it for a world, site, figure, prop, environment, building exterior/interior, material system, repeated population, rig, motion, light/effect/simulation/sound system, or compatible collection that has no shots. Production source is optional when the library needs to serialize a reviewed delivery contract; narrative, brief, shot, and film-source layers are disabled.
 
 ## Refusals
 

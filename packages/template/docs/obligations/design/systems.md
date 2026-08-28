@@ -1,6 +1,6 @@
 # System obligations
 
-These roles are distributed across lighting, environment, effects, simulation, sound, service, and other system-design H2s. A system owns coupled process behavior, not the model, space, material, instance, or motion fact it consumes. Narrative or brief prose owns audience meaning, and shot source owns its timed realization.
+These roles are distributed across lighting, environment, effects, simulation, sound, service, and other system-design H2s. A system owns coupled process behavior, not the map, model, space, material, instance, or motion fact it consumes. Narrative or brief prose owns audience meaning, and shot source owns its timed realization.
 
 ## Addressable system decisions {#addressable-system-decisions}
 

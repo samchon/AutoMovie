@@ -1,6 +1,6 @@
 # Motion design principles
 
-Motion documents specify deterministic change of represented state over time. They consume settings capabilities and whichever reviewed model, space, material, instance, or system interface owns the changed property, without redefining any of them.
+Motion documents specify deterministic change of represented state over time. They consume settings capabilities and whichever reviewed map, model, space, material, instance, or system interface owns the changed property, without redefining any of them.
 
 ## Motion information structure {#motion-information-structure}
 

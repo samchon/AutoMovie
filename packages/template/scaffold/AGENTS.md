@@ -14,12 +14,13 @@ Those skills ship with the scaffold and are this project's own copy of the autho
 
 Set `kind` in `productionEvidence.ts` when authorship begins. A film uses the exact settings -> treatments -> scripts -> screenplays -> shots -> filmSources ladder. A brief answers one bounded audiovisual question through the exact settings -> briefs -> shots -> filmSources ladder when the result needs no independent treatment/script/screenplay refinement; a short or simple demonstration may therefore remain a brief. Both timed shapes also require reviewed production source as a parallel input before film source. A library delivers reviewed design/source branches without a shot or film timeline. Runtime does not choose the shape.
 
-Research and the model, space, material, instance, motion, and system branches are orthogonal. Activate only what the delivery uses:
+Research and the map, model, space, material, instance, motion, and system branches are orthogonal. Activate only what the delivery uses:
 
 - research owns exact external sources, used portions, authority, uncertainty, and affected production decisions;
 - settings owns production facts, identities, capabilities, limits, units, and delivery conditions;
+- maps owns broad-world extent and coordinates, terrain, water, ecology, land use, settlements, transport, infrastructure, weather, world-scale placement, the adopted site boundary, and its external access node;
 - models owns fixed bounded representation and stable articulation/surface interfaces;
-- spaces owns world/site/building exterior and interior topology, boundaries, openings, levels, routes, and clear dimensions;
+- spaces owns site and building exterior and interior topology inside an adopted boundary, containment, adjacency, envelope, openings, levels, local routes, and clear dimensions;
 - materials owns construction, finish, scale, surface binding, response, and material state;
 - instances owns repeated membership, stable ids and transforms, variation, tiers, density, contact, and placement;
 - motions owns reusable deterministic change over time;
@@ -37,11 +38,11 @@ Stages are disabled -> draft -> evidence -> review. Disabled means no governed h
 
 The project declaration has one extension seam for production-specific targets: add typed claims to `claims`. The shared inventory belongs to the installed template package; put every production-only target directly under `docs/contracts` with a descriptive family-prefixed filename. Every retained rule file carries its discovery host evidence only in the comment preamble before H1 and exposes its enforceable targets as H2s selected by an additive reference. Every enabled local target pattern must select at least one file. Only `docs/contracts/index.md` may carry truthful discovery exclusions, and it carries no positive evidence or target H2. Never delete, filter, copy, replace, or weaken the shared claim set, paths, review requirements, cardinality, no-exclusion rules, host checks, or stage topology to make a build pass.
 
-Every governed source file declares a named exported owner. Model branches require a concrete exported class and select every exported type for exact ownership; motion branches select every exported function and property; space, material, instance, and system branches select every exported type, function, and property. Each selected design owner cites exactly one reviewed design file; the complete branch realizes all H2 units and source principles. Shot and acceptance owners each cite one screenplay scene or brief shot. Production source serializes reviewed settings. Film source performs only global edit and auxiliary-track assembly.
+Every governed source file declares a named exported owner. Model branches require a concrete exported class and select every exported type for exact ownership; motion branches select every exported function and property; map, space, material, instance, and system branches select every exported type, function, and property. Each selected design owner cites exactly one reviewed design file; the complete branch realizes all H2 units and source principles. Shot and acceptance owners each cite one screenplay scene or brief shot. Production source serializes reviewed settings. Film source performs only global edit and auxiliary-track assembly.
 
 ## Author and verify source
 
-src/examples is reading material, not a library or evidence population. Move and adapt a technique into its owning src/models, spaces, materials, instances, motions, systems, or shots branch, or into scripts when its guide identifies an offline derivation. Never import examples into delivered source or grow them into a catalogue of finished content.
+src/examples is reading material, not a library or evidence population. Move and adapt a technique into its owning src/maps, models, spaces, materials, instances, motions, systems, or shots branch, or into scripts when its guide identifies an offline derivation. Never import examples into delivered source or grow them into a catalogue of finished content.
 
 scripts/emitDesign.ts initially refuses. After reviewed design and source exist, extend its marked block with explicit imports and `emit` calls for exactly the records this production owns. Preserve the generic setter wrapper, unchanged-record behavior, and project-inventory orphan refusal. It writes and never deletes, so a stopped record remains residue until deleted or derived again. The screenplay index is hand-authored because semantic scene/beat coverage is not derivable without comparing prose to itself. The blank viewer's clear color is neutral infrastructure; if it remains visible in delivery, import its replacement from reviewed production or system source so viewer code does not become a second visual owner.
 

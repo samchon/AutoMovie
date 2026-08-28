@@ -1,6 +1,6 @@
 # Design Discovery
 
-The outcome for production-specific conditions shared by the active model, space, material, instance, motion, and system branches. Every active design branch applies this file with `common.md` and its own branch discovery file. Production-wide conditions belong in `common.md`, and conditions unique to one branch belong in that branch's file.
+The outcome for production-specific conditions shared by the active map, model, space, material, instance, motion, and system branches. Every active design branch applies this file with `common.md` and its own branch discovery file. Production-wide conditions belong in `common.md`, and conditions unique to one branch belong in that branch's file.
 
 ## Work-specific design requirements {#work-specific-design-requirements}
 

@@ -26,7 +26,7 @@ Sources: [Zacks and colleagues on event segmentation](https://pmc.ncbi.nlm.nih.g
 
 ## Observable progression {#observable-progression}
 
-The complete brief population allocates its observable contract: the H2 delivery states the bounded question and overall initial-to-terminal progression, each H3 shot assigns the portion it presents, and each H4 observation states the viewing condition and result that can answer or falsify that portion. The units cite the settings and every applicable model, space, material, instance, motion, and system design they use rather than restating them.
+The complete brief population allocates its observable contract: the H2 delivery states the bounded question and overall initial-to-terminal progression, each H3 shot assigns the portion it presents, and each H4 observation states the viewing condition and result that can answer or falsify that portion. The units cite the settings and every applicable map, model, space, material, instance, motion, and system design they use rather than restating them.
 
 Review question: what exact observation proves the complete brief progression occurred as requested?
 

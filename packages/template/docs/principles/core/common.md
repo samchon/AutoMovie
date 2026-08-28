@@ -16,7 +16,7 @@ Sources: [NASA on complete, bidirectionally traceable requirements](https://sweh
 
 ## Layer-substantive completion {#substantive-completion}
 
-The current unit is a complete deliverable at its own layer. A settings H2 settles one usable fact or constraint; research settles one source record and production consequence; model, space, material, instance, motion, and system H2s settle one decision of their named design kind. A treatment unit is detailed narrative development, a script unit is executable physical progression, a screenplay unit is the final audience-facing audiovisual contract, and a brief unit is a complete bounded observation contract.
+The current unit is a complete deliverable at its own layer. A settings H2 settles one usable fact or constraint; research settles one source record and production consequence; map, model, space, material, instance, motion, and system H2s settle one decision of their named design kind. A treatment unit is detailed narrative development, a script unit is executable physical progression, a screenplay unit is the final audience-facing audiovisual contract, and a brief unit is a complete bounded observation contract.
 
 A title, placeholder, future-work promise, field list, causal card, parent restatement, generic summary, or implementation that still requires the next layer to invent this layer's essential decision is not completion. Narrative H2 and H3 units directly organize the accumulated development of their descendants; they are not empty umbrellas.
 

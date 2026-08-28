@@ -12,7 +12,7 @@ Sources: [Purdue OWL on paragraph focus and support](https://owl.purdue.edu/owl/
 
 ## Authority confinement {#system-authority-confinement}
 
-Every system H2 writes only the state channels its process owns and cites the model, space, material, instance, or motion owners it consumes. It does not redefine their identity, construction, capability, or transition merely because the process reads or affects them. Audience meaning remains in narrative or brief prose and is realized by shots rather than becoming a system input.
+Every system H2 writes only the state channels its process owns and cites the map, model, space, material, instance, or motion owners it consumes. It does not redefine their identity, construction, capability, or transition merely because the process reads or affects them. Audience meaning remains in narrative or brief prose and is realized by shots rather than becoming a system input.
 
 Review question: which output crosses the declared write boundary or silently takes ownership from a consumed branch?
 

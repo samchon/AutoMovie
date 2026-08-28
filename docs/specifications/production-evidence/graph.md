@@ -22,7 +22,7 @@
 
 <!-- @evidence requirements/production-evidence/graph.md#agent-production-evidence-discovery 실제 작품 조사를 수행한 상태와 생략한 상태를 계층별 계약 감사면으로 구분한다. -->
 
-팩터리는 모든 저작 계층마다 `docs/contracts/*.md`를 host로 하고 `file`을 target으로 삼는 발견 claim을 만든다. 각 claim은 `discovery/core/common.md`와 함께 설정에는 `settings`, 각 model·space·material·instance·motion·system 분기에는 `designs + 해당 design layer`, `film`의 `treatments`에는 `films + treatments`, `scripts`에는 `films + scripts`, `screenplays`에는 `films + screenplays`, `brief`에는 `briefs`를 연결한다. Research는 `common`만 연결하여 외부 근거 채택과 design boundary 탐색을 같은 결정으로 합치지 않는다. 저작 H2/H3/H4에는 이 발견 관계를 배선하지 않는다.
+팩터리는 모든 저작 계층마다 `docs/contracts/*.md`를 host로 하고 `file`을 target으로 삼는 발견 claim을 만든다. 각 claim은 `discovery/core/common.md`와 함께 설정에는 `settings`, 각 map·model·space·material·instance·motion·system 분기에는 `designs + 해당 design layer`, `film`의 `treatments`에는 `films + treatments`, `scripts`에는 `films + scripts`, `screenplays`에는 `films + screenplays`, `brief`에는 `briefs`를 연결한다. Research는 `common`만 연결하여 외부 근거 채택과 design boundary 탐색을 같은 결정으로 합치지 않는다. 저작 H2/H3/H4에는 이 발견 관계를 배선하지 않는다.
 
 발견 claim은 계층이 `draft`에 들어가는 순간부터 활성화하여 작품 전용 규칙을 저작보다 먼저 발굴하게 하고, `review`에서는 현재 fingerprint를 요구한다. 저작 산출물에 적용하는 draft no-tags 규칙은 별도 감사면인 `docs/contracts`에는 적용하지 않는다.
 
