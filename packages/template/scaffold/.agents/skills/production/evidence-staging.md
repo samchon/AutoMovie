@@ -13,7 +13,11 @@ Every layer is `disabled`, `draft`, `evidence`, or `review`.
 
 An applicable layer moves only `disabled -> draft -> evidence -> review`. Leave completed layers in `review` so later target edits reopen affected checks. Do not return incomplete authored hosts to `disabled`, and do not leave a host behind when its layer is disabled.
 
+The one exception is a passed [vertical-slice pilot](pilot.md). Its explicit `complete-production-reset` transition moves the complete pilot-authored film ladder or library design/source slice together from `review` to `draft`, preserves every pilot host as editable source material, and selects the complete production population. No other mode, partial branch, unrepaired pilot, or later ordinary revision may move a stage backwards.
+
 `draft` contains no evidence tags in authored settings, research, design, narrative, brief, or source hosts. Preserve their citation intent in ordinary prose or working notes, then author their complete evidence batch only after the layer passes its first-version audits and moves to `evidence`. This keeps partial production annotations from looking like partial completion.
+
+During `complete-production-reset` only, retained pilot hosts may keep their earlier tags while their reset branches remain in `draft`. The reset state disables those claims, so the tags pay no complete-production obligation and certify no retained content. New or revised body receives no tag in draft, and every retained relationship is reread and renewed only after the rebuilt complete layer returns to evidence and review. Changing the mode to evade an ordinary draft diagnostic is a harness violation.
 
 `docs/contracts` is a different host kind. It records the production-contract audit completed before a layer enters `draft`, not evidence that the authored layer is complete. A layer's discovery claim therefore becomes active in `draft`, and the flat contract files may carry positive discovery answers or `index.md` exclusions before any authored host carries an evidence tag. Do not apply the authored-host draft prohibition to this contract population.
 

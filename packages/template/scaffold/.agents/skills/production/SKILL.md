@@ -59,6 +59,7 @@ Correct the earliest owner when a later layer exposes a defect, then propagate t
 Read each applicable document in full before acting:
 
 - [Production kinds](production-kinds.md) selects exactly one film, brief, or library shape.
+- [Vertical-slice pilot](pilot.md) proves one truthful film or library slice through its last owned realization layer at full contract strength, then resets the retained work into the complete population.
 - [Production-specific contract](work-specific.md) preserves direct instructions and classifies every adopted rule before bulk settings work.
 - [Production configuration](configuration.md) separates fixed harness wiring from authored delivery, appearance, dialogue, provenance, speaker, and live-simulation choices serialized in `automovie.config.ts`; read it before source authorship.
 - [Research](research.md) owns the optional external-evidence ledger and its downstream consumption.
@@ -113,15 +114,11 @@ Create and use this project's own `.wiki/` as ignored local memory for ideas, ac
 
 Nothing in `.wiki` binds this production. Before relying on a fact, decision, or rule, promote it into its canonical owner under `docs`. Never stage or commit `.wiki`.
 
-## Prove the ladder on one unit before writing the whole layer
+## Prove the ladder before expanding it
 
-A stage applies to a whole layer, and a stage never moves backwards. There is no scoped pilot mode: once `treatments` is in `review`, every treatment file added afterwards owes complete evidence and current fingerprints immediately. Plan for that instead of discovering it after the complete treatment is written.
+Use the compiler-visible [vertical-slice pilot](pilot.md) when one real film delivery group or one fresh library design/source branch can expose an expensive upstream defect before sibling authorship begins. The pilot narrows only a partition-owning population or the number of owners that exist yet. Settings, canon, the production promise, discovery, principles, obligations, lineage, source ownership, and review remain at full strength.
 
-So prove the ladder before you commit the population. While the first layer is still in `draft`, take its first sequence forward in `.wiki`: stage that treatment as a throwaway script pass, and carry one beat as far as a shot sketch. Nothing in `.wiki` binds the production, and nothing about it touches a stage.
-
-What that costs is one file. What it finds is the defect class that only appears under refinement: a treatment beat that no space admits, a subject with no canon, a scene whose decisive exchange was never written, a unit count the shot budget cannot carry. Repair those in settings and in the treatment while the layer is still `draft` and the repair is free.
-
-The trial narrows what is drafted, not what the production promises. Settings stay scoped to the complete declared delivery, and every obligation, discovery duty, and review that binds the complete production binds the trial unit at full strength while you read it.
+An optional `.wiki` trial is still the cheaper preflight. Take one treatment event as far as a shot sketch, or sketch one design through its source boundary, before any governed host exists. It can reveal a missing space, subject, exchange, interface, or observation, but the graph never reads it and it proves nothing. Promote every retained decision into its canonical owner, then run the governed pilot when its cost is justified.
 
 ## Recording work
 
