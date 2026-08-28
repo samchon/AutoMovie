@@ -1,4 +1,7 @@
-import { createAutoMovieEvidenceConfig } from "@automovie/evidence";
+import {
+  createAutoMovieContractBindingManifest,
+  createAutoMovieEvidenceConfig,
+} from "@automovie/evidence";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import os from "node:os";
@@ -6,6 +9,9 @@ import path from "node:path";
 
 type Graph = Parameters<typeof createAutoMovieEvidenceConfig>[0];
 type Claim = NonNullable<Graph["claims"]>[number];
+type ContractManifest = ReturnType<
+  typeof createAutoMovieContractBindingManifest
+>;
 
 const templateRoot = path.resolve(import.meta.dirname, "..", "..", "template");
 const roots: string[] = [];
@@ -82,9 +88,9 @@ const disabled = (location: string): Graph => ({
   instances: "disabled",
   motions: "disabled",
   systems: "disabled",
-  storylines: "disabled",
-  scenarios: "disabled",
-  script: "disabled",
+  treatments: "disabled",
+  scripts: "disabled",
+  screenplays: "disabled",
   briefs: "disabled",
   modelSources: "disabled",
   spaceSources: "disabled",
@@ -138,6 +144,19 @@ const sharedFilesOf = (
     )
     .filter((file) => file.startsWith(`${family}/`))
     .sort();
+
+const manifestContractPaths = (
+  manifest: ContractManifest,
+  branch?: ContractManifest["branches"][number]["name"],
+): string[] => [
+  ...new Set(
+    manifest.bindings
+      .filter((binding) => branch === undefined || binding.branch === branch)
+      .flatMap((binding) =>
+        binding.target.type === "contract" ? [binding.target.path] : [],
+      ),
+  ),
+];
 
 try {
   assert.equal(
@@ -329,9 +348,9 @@ try {
     instances: ["common", "designs", "instances"],
     motions: ["common", "designs", "motions"],
     systems: ["common", "designs", "systems"],
-    storylines: ["common", "films", "storylines"],
-    scenarios: ["common", "films", "scenarios"],
-    script: ["common", "films", "scripts"],
+    treatments: ["common", "films", "treatments"],
+    scripts: ["common", "films", "scripts"],
+    screenplays: ["common", "films", "screenplays"],
     briefs: ["common", "briefs"],
   })) {
     const discoveryClaim = graph.claims.find(
@@ -401,7 +420,7 @@ try {
     referenceTo(draftDiscoveryClaim, "discovery/common.md")?.requireReview,
     false,
   );
-  for (const layer of ["storylines", "scenarios", "script", "briefs"])
+  for (const layer of ["treatments", "scripts", "screenplays", "briefs"])
     for (const depth of [3, 4])
       assert.deepEqual(
         discoveryFilesOf(
@@ -423,13 +442,13 @@ try {
     instances: "instances",
     motions: "motions",
     systems: "systems",
-    storylines: "storylines",
-    scenarios: "scenarios",
-    script: "scripts",
+    treatments: "treatments",
+    scripts: "scripts",
+    screenplays: "screenplays",
     briefs: "briefs",
   })) {
-    const narrative = ["storylines", "scenarios", "script"].includes(layer);
-    const depths = ["storylines", "scenarios", "script", "briefs"].includes(
+    const narrative = ["treatments", "scripts", "screenplays"].includes(layer);
+    const depths = ["treatments", "scripts", "screenplays", "briefs"].includes(
       layer,
     )
       ? [2, 3, 4]
@@ -457,7 +476,6 @@ try {
           ? [
               "obligations/common.md",
               ...(narrative ? ["obligations/narratives.md"] : []),
-              ...(layer === "storylines" ? ["obligations/treatments.md"] : []),
               ...(layer === "research" ? [] : [`obligations/${contract}.md`]),
             ].sort()
           : [],
@@ -503,20 +521,19 @@ try {
     );
     assert.equal(briefInformation?.noEvidenceExclude, true);
   }
-  const storylineH2 = graph.claims.find(
+  const treatmentH2 = graph.claims.find(
     (claim) =>
       claim.name ===
-      "storylines H2 units answer their principle checklists, cover the layer's obligations, and account for inherited work",
+      "treatments H2 units answer their principle checklists, cover the layer's obligations, and account for inherited work",
   );
   assert.deepEqual(
-    sharedFilesOf(storylineH2, "obligations"),
+    sharedFilesOf(treatmentH2, "obligations"),
     [
       "obligations/common.md",
       "obligations/narratives.md",
-      "obligations/storylines.md",
       "obligations/treatments.md",
     ],
-    "the storyline H2 population must cover the treatment-wide sustained-middle obligation",
+    "the treatment H2 population must cover its complete treatment obligations once across the population",
   );
   for (const depth of [3, 4])
     assert.deepEqual(
@@ -524,12 +541,12 @@ try {
         graph.claims.find(
           (claim) =>
             claim.name ===
-            `storylines H${depth} units answer their principle checklists and account for inherited work`,
+            `treatments H${depth} units answer their principle checklists and account for inherited work`,
         ),
         "obligations",
       ),
       [],
-      `storyline H${depth} units must not turn treatment population obligations into per-unit checklists`,
+      `treatment H${depth} units must not turn treatment population obligations into per-unit checklists`,
     );
   assert.ok(
     graph.claims.some(
@@ -636,7 +653,7 @@ try {
   write(h3BeforeH2, "docs/settings/production.md", "## Scope {#scope}\n");
   write(
     h3BeforeH2,
-    "docs/storylines/001.md",
+    "docs/treatments/001.md",
     "### Scene {#scene}\n#### Beat {#beat}\n",
   );
   assert.equal(
@@ -646,7 +663,7 @@ try {
           ...disabled(h3BeforeH2),
           kind: "film",
           settings: "review",
-          storylines: "draft",
+          treatments: "draft",
         }),
       "has an H3 before an H2",
     ),
@@ -657,7 +674,7 @@ try {
   write(h4BeforeH3, "docs/settings/production.md", "## Scope {#scope}\n");
   write(
     h4BeforeH3,
-    "docs/storylines/001.md",
+    "docs/treatments/001.md",
     "## Sequence {#sequence}\n#### Beat {#beat}\n### Scene {#scene}\n",
   );
   assert.equal(
@@ -667,7 +684,7 @@ try {
           ...disabled(h4BeforeH3),
           kind: "film",
           settings: "review",
-          storylines: "draft",
+          treatments: "draft",
         }),
       "has an H4 before its H2/H3 parents",
     ),
@@ -682,7 +699,7 @@ try {
   );
   write(
     hiddenNarrativeSubheading,
-    "docs/storylines/001.md",
+    "docs/treatments/001.md",
     "## Sequence {#sequence}\n### Scene {#scene}\n#### Beat {#beat}\n##### Hidden note {#hidden-note}\n",
   );
   assert.equal(
@@ -692,7 +709,7 @@ try {
           ...disabled(hiddenNarrativeSubheading),
           kind: "film",
           settings: "review",
-          storylines: "draft",
+          treatments: "draft",
         }),
       "uses H5 outside the configured H2/H3/H4 authored-unit topology",
     ),
@@ -703,7 +720,7 @@ try {
   write(missingBeat, "docs/settings/production.md", "## Scope {#scope}\n");
   write(
     missingBeat,
-    "docs/storylines/001.md",
+    "docs/treatments/001.md",
     "## Sequence {#sequence}\n### Scene {#scene}\n",
   );
   assert.equal(
@@ -713,7 +730,7 @@ try {
           ...disabled(missingBeat),
           kind: "film",
           settings: "review",
-          storylines: "draft",
+          treatments: "draft",
         }),
       "has no H4 unit",
     ),
@@ -748,12 +765,12 @@ try {
   );
   write(
     mismatchedIdentity,
-    "docs/storylines/001.md",
+    "docs/treatments/001.md",
     "## Sequence {#sequence}\n### Scene {#scene}\n#### Beat {#beat}\n",
   );
   write(
     mismatchedIdentity,
-    "docs/scenarios/001.md",
+    "docs/scripts/001.md",
     "## Sequence {#sequence}\n### Scene {#scene}\n#### Other beat {#other-beat}\n",
   );
   assert.equal(
@@ -763,10 +780,10 @@ try {
           ...disabled(mismatchedIdentity),
           kind: "film",
           settings: "review",
-          storylines: "review",
-          scenarios: "draft",
+          treatments: "review",
+          scripts: "draft",
         }),
-      "must exactly preserve storylines identity, nesting, and order",
+      "must exactly preserve treatments identity, nesting, and order",
     ),
     true,
   );
@@ -1236,12 +1253,12 @@ try {
   write(mismatch, "docs/settings/production.md", "## Scope {#scope}\n");
   write(
     mismatch,
-    "docs/storylines/001-opening.md",
+    "docs/treatments/001-opening.md",
     "## Sequence {#sequence}\n### Scene {#scene}\n#### Beat {#beat}\n",
   );
   write(
     mismatch,
-    "docs/scenarios/002-renamed.md",
+    "docs/scripts/002-renamed.md",
     "## Sequence {#sequence}\n### Scene {#scene}\n#### Beat {#beat}\n",
   );
   assert.equal(
@@ -1251,8 +1268,8 @@ try {
           ...disabled(mismatch),
           kind: "film",
           settings: "review",
-          storylines: "review",
-          scenarios: "draft",
+          treatments: "review",
+          scripts: "draft",
         }),
       "filenames must exactly preserve",
     ),
@@ -1267,7 +1284,7 @@ try {
   );
   write(
     briefWithNarrative,
-    "docs/storylines/001.md",
+    "docs/treatments/001.md",
     "## Sequence {#sequence}\n### Scene {#scene}\n#### Beat {#beat}\n",
   );
   assert.equal(
@@ -1277,9 +1294,9 @@ try {
           ...disabled(briefWithNarrative),
           kind: "brief",
           settings: "review",
-          storylines: "draft",
+          treatments: "draft",
         }),
-      "cannot activate storylines",
+      "cannot activate treatments",
     ),
     true,
   );
@@ -1320,7 +1337,7 @@ try {
   for (const name of ["spaces", "materials", "instances", "motions", "systems"])
     write(branches, `src/${name}/owner.ts`, `export const ${name}Owner = 1;\n`);
   write(branches, "src/production.ts", "export const production = 1;\n");
-  const branchGraph = createAutoMovieEvidenceConfig({
+  const branchDeclaration: Graph = {
     ...disabled(branches),
     kind: "library",
     settings: "review",
@@ -1337,7 +1354,153 @@ try {
     motionSources: "review",
     systemSources: "review",
     productionSources: "review",
+  };
+  const branchGraph = createAutoMovieEvidenceConfig(branchDeclaration);
+  const branchManifest =
+    createAutoMovieContractBindingManifest(branchDeclaration);
+  assert.deepEqual(
+    branchManifest.branches.map((branch) => branch.name),
+    [
+      "settings",
+      "models",
+      "spaces",
+      "materials",
+      "instances",
+      "motions",
+      "systems",
+      "modelSources",
+      "spaceSources",
+      "materialSources",
+      "instanceSources",
+      "motionSources",
+      "systemSources",
+      "productionSources",
+    ],
+    "a library manifest must expose only its exact active authored and source branches",
+  );
+  assert.equal(
+    branchManifest.bindings.every(
+      (binding) =>
+        binding.target.type !== "contract" ||
+        binding.target.path.split("/").length === 3,
+    ),
+    true,
+    "public contract routes must include their logical domain instead of freezing the legacy flat package layout",
+  );
+  assert.deepEqual(
+    new Set(branchManifest.bindings.map((binding) => binding.relationship)),
+    new Set(["checklist", "distributed-coverage", "foundation", "lineage"]),
+    "the manifest must preserve every relationship form the graph assigns",
+  );
+  assert.deepEqual(
+    createAutoMovieContractBindingManifest(branchDeclaration),
+    branchManifest,
+    "the same declaration and filesystem must produce one deterministic manifest",
+  );
+
+  const objectLibrary = root();
+  write(objectLibrary, "docs/settings/production.md", "## Scope {#scope}\n");
+  write(objectLibrary, "docs/models/object.md", "## Object {#object}\n");
+  write(objectLibrary, "docs/motions/turn.md", "## Turn {#turn}\n");
+  const objectManifest = createAutoMovieContractBindingManifest({
+    ...disabled(objectLibrary),
+    kind: "library",
+    settings: "review",
+    models: "draft",
+    motions: "draft",
   });
+  assert.deepEqual(
+    objectManifest.branches.map((branch) => branch.name),
+    ["settings", "models", "motions"],
+    "an object library must not inherit building, narrative, or delivery branches",
+  );
+  assert.deepEqual(
+    manifestContractPaths(objectManifest).sort(),
+    [
+      "discovery/core/common.md",
+      "discovery/core/settings.md",
+      "discovery/design/designs.md",
+      "discovery/design/models.md",
+      "discovery/design/motions.md",
+      "obligations/core/common.md",
+      "obligations/core/settings.md",
+      "obligations/design/models.md",
+      "obligations/design/motions.md",
+      "principles/core/common.md",
+      "principles/core/settings.md",
+      "principles/design/models.md",
+      "principles/design/motions.md",
+    ].sort(),
+    "an object library must expose its complete core and selected design contract set",
+  );
+  assert.equal(
+    objectManifest.bindings.some(
+      (binding) =>
+        binding.branch === "models" &&
+        binding.stage === "draft" &&
+        binding.enforced === false &&
+        binding.target.type === "contract" &&
+        binding.target.path === "principles/design/models.md",
+    ),
+    true,
+    "draft routing must retain later principle duties without claiming that lint enforces them early",
+  );
+  assert.equal(
+    objectManifest.bindings.some(
+      (binding) =>
+        binding.branch === "models" &&
+        binding.stage === "draft" &&
+        binding.enforced === true &&
+        binding.target.type === "contract" &&
+        binding.target.path === "discovery/design/models.md",
+    ),
+    true,
+    "draft routing must show that discovery coverage is already enforced",
+  );
+
+  const buildingLibrary = root();
+  write(buildingLibrary, "docs/settings/production.md", "## Scope {#scope}\n");
+  for (const layer of ["spaces", "materials", "instances", "systems"])
+    write(
+      buildingLibrary,
+      `docs/${layer}/building.md`,
+      `## ${layer} {#${layer}}\n`,
+    );
+  const buildingManifest = createAutoMovieContractBindingManifest({
+    ...disabled(buildingLibrary),
+    kind: "library",
+    settings: "review",
+    spaces: "draft",
+    materials: "draft",
+    instances: "draft",
+    systems: "draft",
+  });
+  assert.deepEqual(
+    buildingManifest.branches.map((branch) => branch.name),
+    ["settings", "spaces", "materials", "instances", "systems"],
+    "a building library must not inherit object-motion, narrative, or delivery branches",
+  );
+  assert.deepEqual(
+    manifestContractPaths(buildingManifest)
+      .filter((contractPath) => contractPath.includes("/design/"))
+      .sort(),
+    [
+      "discovery/design/designs.md",
+      "discovery/design/instances.md",
+      "discovery/design/materials.md",
+      "discovery/design/spaces.md",
+      "discovery/design/systems.md",
+      "obligations/design/instances.md",
+      "obligations/design/materials.md",
+      "obligations/design/spaces.md",
+      "obligations/design/systems.md",
+      "principles/design/instances.md",
+      "principles/design/materials.md",
+      "principles/design/spaces.md",
+      "principles/design/systems.md",
+    ].sort(),
+    "a building library must expose only its shared and selected design contracts",
+  );
   assert.ok(
     branchGraph.claims.some((claim) => claim.name?.includes("systemSources")),
     "the system source branch is not wired",
@@ -1402,29 +1565,52 @@ try {
   write(film, "docs/settings/production.md", "## Scope {#scope}\n");
   const narrative =
     "## Sequence {#sequence}\n### Scene {#scene}\n#### Beat {#beat}\n";
-  for (const layer of ["storylines", "scenarios", "script"])
+  for (const layer of ["treatments", "scripts", "screenplays"])
     write(film, `docs/${layer}/001-sequence.md`, narrative);
   write(film, "src/shots/sequence.ts", "export const sequenceShot = 1;\n");
   write(film, "src/production.ts", "export const production = 1;\n");
   write(film, "src/film.ts", "export const assembledFilm = 1;\n");
-  const filmGraph = createAutoMovieEvidenceConfig({
+  const filmDeclaration: Graph = {
     ...disabled(film),
     kind: "film",
     settings: "review",
-    storylines: "review",
-    scenarios: "review",
-    script: "review",
+    treatments: "review",
+    scripts: "review",
+    screenplays: "review",
     shots: "review",
     productionSources: "review",
     filmSources: "review",
-  });
+  };
+  const filmGraph = createAutoMovieEvidenceConfig(filmDeclaration);
+  const filmManifest = createAutoMovieContractBindingManifest(filmDeclaration);
+  assert.equal(
+    manifestContractPaths(filmManifest).some((contractPath) =>
+      contractPath.includes("/design/"),
+    ),
+    false,
+    "a design-free film must not inherit design contracts merely because AutoMovie can author designs",
+  );
+  assert.equal(
+    manifestContractPaths(filmManifest).includes(
+      "obligations/story/subjects.md",
+    ),
+    true,
+    "a film route must retain its film-only operative-subject depth",
+  );
+  assert.equal(
+    manifestContractPaths(filmManifest).includes(
+      "obligations/delivery/briefs.md",
+    ),
+    false,
+    "a film route must not inherit the mutually exclusive direct-brief contract",
+  );
   assert.ok(
     filmGraph.claims.some((claim) =>
       claim.name?.includes("film source assembles every screenplay sequence"),
     ),
     "the complete film ladder did not reach film source",
   );
-  for (const layer of ["storylines", "scenarios", "script"]) {
+  for (const layer of ["treatments", "scripts", "screenplays"]) {
     const claim = filmGraph.claims.find(
       (candidate) =>
         candidate.name ===
@@ -1509,7 +1695,7 @@ try {
     "docs/models/subject.md",
     "## Subject {#subject}\n",
   );
-  for (const layer of ["storylines", "scenarios", "script"])
+  for (const layer of ["treatments", "scripts", "screenplays"])
     write(filmWithoutModelSource, `docs/${layer}/001-sequence.md`, narrative);
   write(
     filmWithoutModelSource,
@@ -1524,9 +1710,9 @@ try {
           kind: "film",
           settings: "review",
           models: "review",
-          storylines: "review",
-          scenarios: "review",
-          script: "review",
+          treatments: "review",
+          scripts: "review",
+          screenplays: "review",
           shots: "draft",
         }),
       "shots cannot enter draft before modelSources is in review",
@@ -1544,7 +1730,7 @@ try {
   write(brief, "src/shots/delivery.ts", "export const deliveryShot = 1;\n");
   write(brief, "src/production.ts", "export const production = 1;\n");
   write(brief, "src/film.ts", "export const assembledBrief = 1;\n");
-  const briefGraph = createAutoMovieEvidenceConfig({
+  const briefDeclaration: Graph = {
     ...disabled(brief),
     kind: "brief",
     settings: "review",
@@ -1552,7 +1738,28 @@ try {
     shots: "review",
     productionSources: "review",
     filmSources: "review",
-  });
+  };
+  const briefGraph = createAutoMovieEvidenceConfig(briefDeclaration);
+  const briefManifest =
+    createAutoMovieContractBindingManifest(briefDeclaration);
+  assert.deepEqual(
+    manifestContractPaths(briefManifest).sort(),
+    [
+      "discovery/core/common.md",
+      "discovery/core/settings.md",
+      "discovery/delivery/briefs.md",
+      "obligations/core/common.md",
+      "obligations/core/settings.md",
+      "obligations/delivery/briefs.md",
+      "obligations/delivery/film-sources.md",
+      "obligations/delivery/production-sources.md",
+      "obligations/delivery/shots.md",
+      "principles/core/common.md",
+      "principles/core/settings.md",
+      "principles/delivery/briefs.md",
+    ].sort(),
+    "a direct brief must expose the complete core and delivery set without film-story contracts",
+  );
   assert.ok(
     JSON.stringify(briefGraph.claims).includes('"files":["briefs/**/*.md"]'),
     "the brief route did not bind shots and delivery to brief units",
