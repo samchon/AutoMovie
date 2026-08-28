@@ -189,7 +189,10 @@ async function readLayer(
 
 /** Walks regular Markdown files without following a symbolic directory entry. */
 async function listMarkdownFiles(root: string): Promise<string[]> {
-  if ((await fs.lstat(root)).isSymbolicLink())
+  if (
+    (await fs.lstat(path.dirname(root))).isSymbolicLink() ||
+    (await fs.lstat(root)).isSymbolicLink()
+  )
     throw new Error(`${root}: authored layers may not be links.`);
   const result: string[] = [];
   const walk = async (directory: string): Promise<void> => {

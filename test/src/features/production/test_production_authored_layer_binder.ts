@@ -258,6 +258,7 @@ export const test_production_authored_layer_binder =
       const linked: string = makeRoot();
       const outside: string = makeRoot();
       write(outside, "external/outside.md", "# Outside\n");
+      write(outside, "settings/outside.md", "# Outside settings\n");
       fs.mkdirSync(path.join(linked, "docs", "settings"), { recursive: true });
       const link = path.join(linked, "docs", "settings", "external");
       try {
@@ -296,6 +297,32 @@ export const test_production_authored_layer_binder =
           new AutoMovieProductionBinder({
             root: linkedLayer,
             title: "Linked root",
+            layer: "settings",
+          }).markdown(),
+        );
+      } catch (error) {
+        if (
+          !(
+            error instanceof Error &&
+            "code" in error &&
+            ["EPERM", "EACCES"].includes(String(error.code))
+          )
+        )
+          throw error;
+      }
+
+      const linkedDocs = makeRoot();
+      fs.rmSync(path.join(linkedDocs, "docs"), { recursive: true });
+      try {
+        fs.symlinkSync(
+          path.dirname(path.join(outside, "external")),
+          path.join(linkedDocs, "docs"),
+          process.platform === "win32" ? "junction" : "dir",
+        );
+        await TestValidator.error("linked docs root", () =>
+          new AutoMovieProductionBinder({
+            root: linkedDocs,
+            title: "Linked docs",
             layer: "settings",
           }).markdown(),
         );
