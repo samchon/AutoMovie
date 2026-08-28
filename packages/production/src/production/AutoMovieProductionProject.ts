@@ -1871,6 +1871,26 @@ export class AutoMovieProductionProject {
     const relative = repaintAttemptPath(attempt.requestId, attempt.attemptId);
     if (this.readTrackedStateFile(relative) !== null)
       throw new Error(`Repaint attempt "${attempt.attemptId}" already exists.`);
+    const priorAttempts = this.repaintRequestAttempts(attempt.requestId);
+    const previous = priorAttempts.at(-1);
+    if (
+      attempt.ordinal !== priorAttempts.length + 1 ||
+      (previous !== undefined &&
+        (attempt.shot !== previous.shot ||
+          attempt.requestFingerprint !== previous.requestFingerprint ||
+          attempt.compileFingerprint !== previous.compileFingerprint ||
+          attempt.sourceRenderFingerprint !==
+            previous.sourceRenderFingerprint ||
+          attempt.adapterIdentity !== previous.adapterIdentity ||
+          attempt.seed !== previous.seed ||
+          new Date(attempt.startedAt).getTime() <
+            new Date(previous.completedAt).getTime()))
+    )
+      throw new Error(
+        `Repaint attempt "${attempt.attemptId}" is not the next chronological terminal state of its immutable request.`,
+      );
+    const priorIdentity = canonicalizeAutoMovieJson(priorAttempts);
+    const nextIdentity = canonicalizeAutoMovieJson([...priorAttempts, attempt]);
     return this.commitFiles(
       [
         {
@@ -1878,7 +1898,17 @@ export class AutoMovieProductionProject {
           content: serializeJson(attempt),
         },
       ],
-      inputCurrent,
+      () => {
+        if ((inputCurrent?.() ?? true) === false) return false;
+        try {
+          const current = canonicalizeAutoMovieJson(
+            this.repaintRequestAttempts(attempt.requestId),
+          );
+          return current === priorIdentity || current === nextIdentity;
+        } catch {
+          return false;
+        }
+      },
     );
   }
 
