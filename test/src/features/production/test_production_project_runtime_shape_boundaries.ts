@@ -383,6 +383,7 @@ export const test_production_project_runtime_shape_boundaries = (): void => {
     const replacement = Buffer.from("not a content directory", "utf8");
     fs.renameSync(viewer, parked);
     fs.writeFileSync(viewer, replacement);
+    let viewerFailure: IBoundaryFailure | undefined;
     try {
       TestValidator.predicate(
         "pre-open declared content root refuses a file",
@@ -396,9 +397,18 @@ export const test_production_project_runtime_shape_boundaries = (): void => {
         [fs.readFileSync(viewer), fs.statSync(parked).isDirectory()],
         [replacement, true],
       );
+    } catch (error) {
+      viewerFailure = { error };
+      throw error;
     } finally {
-      fs.rmSync(viewer);
-      fs.renameSync(parked, viewer);
+      preserveCleanup(
+        viewerFailure,
+        () => {
+          fs.rmSync(viewer);
+          fs.renameSync(parked, viewer);
+        },
+        "Content-root file replacement",
+      );
     }
   });
   withFixture(({ root }) => {
@@ -557,6 +567,7 @@ export const test_production_project_runtime_shape_boundaries = (): void => {
 
     fs.renameSync(registry, registryResident);
     fs.mkdirSync(registry);
+    let registryFailure: IBoundaryFailure | undefined;
     try {
       TestValidator.predicate(
         "static registration read refuses a physical non-file owner",
@@ -565,9 +576,18 @@ export const test_production_project_runtime_shape_boundaries = (): void => {
           "not a regular file",
         ),
       );
+    } catch (error) {
+      registryFailure = { error };
+      throw error;
     } finally {
-      fs.rmdirSync(registry);
-      fs.renameSync(registryResident, registry);
+      preserveCleanup(
+        registryFailure,
+        () => {
+          fs.rmdirSync(registry);
+          fs.renameSync(registryResident, registry);
+        },
+        "Registry directory replacement",
+      );
     }
 
     TestValidator.predicate(

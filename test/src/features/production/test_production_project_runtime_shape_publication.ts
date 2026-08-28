@@ -603,6 +603,9 @@ export const test_production_project_runtime_shape_publication = (): void => {
                 "changed while the guarded commit was being applied",
               ) &&
               error.errors[1] instanceof Error &&
+              (error.errors[1] as NodeJS.ErrnoException).code ===
+                "ERR_FS_EISDIR" &&
+              error.errors[1].message.includes(rollbackTarget) &&
               error.message.includes("rollback was incomplete")
             );
           }
