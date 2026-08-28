@@ -32,6 +32,7 @@ import {
   applyPose,
   applyRenderMode,
   applyRendererEnvironment,
+  assertAutoMovieViewerCameraDepthPrecision,
   buildAutoMovieMaterialLibrary,
   buildFluidSprayObject,
   buildFluidSurfaceObject,
@@ -601,8 +602,11 @@ export const createCompiledShotRuntime = async (
   const cameraIndex = compiled.scene.cameras.findIndex(
     (item) => item.id === compiled.shot.camera,
   );
-  const camera = scene.cameras[cameraIndex < 0 ? 0 : cameraIndex];
-  if (camera === undefined) throw new Error("Compiled scene has no camera.");
+  const selectedCameraIndex = cameraIndex < 0 ? 0 : cameraIndex;
+  const sourceCamera = compiled.scene.cameras[selectedCameraIndex];
+  const camera = scene.cameras[selectedCameraIndex];
+  if (sourceCamera === undefined || camera === undefined)
+    throw new Error("Compiled scene has no camera.");
   applyAutoMovieDeliveryCrop(camera, runtime?.deliveryCrop);
   const stagedCamera = {
     position: camera.position.clone(),
@@ -637,6 +641,11 @@ export const createCompiledShotRuntime = async (
     pass: AutoMovieGuidePass,
     globalFrame: number | null = null,
   ): string => {
+    assertAutoMovieViewerCameraDepthPrecision({
+      renderer,
+      source: sourceCamera,
+      realized: camera,
+    });
     const liveResults = liveSoftObjects.map((item) => ({
       item,
       solved: solveLiveSoft(item.selection, time),
