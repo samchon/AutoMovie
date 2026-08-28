@@ -1,6 +1,6 @@
 # TypeScript source-unit principles
 
-Criteria every TypeScript owner exposed through a public export and selected by an active source population answers for itself. A top-level exported type, property, or function is one owner; each selected public member of an exported type is another. Judge the selected declaration together with its initializer or body and the source-local behavior it invokes, not the enclosing export, file, or source population on average. Principles permit no exclusion.
+Criteria that every TypeScript owner exposed through a public export and selected by an active source population answers for itself. A top-level exported type, property, or function is one owner; each selected public member of an exported type is another. Judge the selected declaration together with its initializer or body and the source-local behavior it invokes, not the enclosing export, file, or source population on average. Principles permit no exclusion.
 
 Source-family obligations remain ordinary population coverage: they allocate the construction, transition, serialization, shot, or editorial roles the complete selected owner population owes. These principles ask whether each individual selected owner is a truthful and complete source artifact within the scope it claims.
 
