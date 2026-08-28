@@ -42,8 +42,8 @@ const docsSnapshot = (root: string): Record<string, string> => {
  * 1. Out-of-order screenplay files bind in code-unit path order beneath one H1;
  *    H1 through H4 are rebased, comments and anchors disappear, and fenced
  *    headings plus reader Markdown survive.
- * 2. A model layer uses the same transformation, proving the API is not tied
- *    to films, while CRLF input and non-Markdown neighbors remain harmless.
+ * 2. Model and map layers use the same transformation, proving the API is not
+ *    tied to films, while CRLF input and non-Markdown neighbors remain harmless.
  * 3. Two runs write byte-identical output at one stable path and leave every
  *    authored source byte unchanged.
  * 4. Empty, missing, linked, malformed, overflowing, invalid-layer, blank-title,
@@ -168,6 +168,20 @@ export const test_production_authored_layer_binder =
         libraryMarkdown,
         "# Object Library\n\n## Body\n\n### Envelope\n\nOne metre.\n",
       );
+      write(
+        library,
+        "docs/maps/001-site.md",
+        "# Site map\n\n## Extent {#extent}\n\nOne bounded site.\n",
+      );
+      TestValidator.equals(
+        "map reader edition",
+        await new AutoMovieProductionBinder({
+          root: library,
+          title: "Site Library",
+          layer: "maps",
+        }).markdown(),
+        "# Site Library\n\n## Site map\n\n### Extent\n\nOne bounded site.\n",
+      );
 
       const empty: string = makeRoot();
       fs.mkdirSync(path.join(empty, "docs", "settings"), { recursive: true });
@@ -258,7 +272,7 @@ export const test_production_authored_layer_binder =
           new AutoMovieProductionBinder({
             root: film,
             title: "Unknown",
-            layer: "storylines",
+            layer: "unknown",
           } as unknown as ConstructorParameters<
             typeof AutoMovieProductionBinder
           >[0]),

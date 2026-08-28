@@ -14,6 +14,7 @@ import * as path from "node:path";
 export type AutoMovieAuthoredDocumentLayer =
   | "briefs"
   | "instances"
+  | "maps"
   | "materials"
   | "models"
   | "motions"
@@ -57,6 +58,7 @@ interface IAuthoredDocument {
 const LAYERS = new Set<AutoMovieAuthoredDocumentLayer>([
   "briefs",
   "instances",
+  "maps",
   "materials",
   "models",
   "motions",

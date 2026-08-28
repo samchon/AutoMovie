@@ -273,18 +273,41 @@ const sourceBindingOf = (
       binding.target.files.includes(ownerPattern),
   );
   if (candidates.length === 0) return null;
-  if (candidates.length !== 1)
+  const populations = new Map<string, typeof candidates>();
+  for (const candidate of candidates) {
+    const identity = JSON.stringify({
+      branch: candidate.branch,
+      stage: candidate.stage,
+      enforced: candidate.enforced,
+      root: candidate.host.root,
+      files: candidate.host.files,
+    });
+    const matches = populations.get(identity) ?? [];
+    matches.push(candidate);
+    populations.set(identity, matches);
+  }
+  if (populations.size !== 1)
     throw new Error(
-      `${designBranch}: the binding manifest exposes ${candidates.length} source lineages; exactly one is required.`,
+      `${designBranch}: the binding manifest exposes ${populations.size} source populations; exactly one is required: ${[
+        ...populations.values(),
+      ]
+        .map((population) => {
+          const first = population[0]!;
+          return `${first.branch}(${first.host.files.join(",")})`;
+        })
+        .join("; ")}.`,
     );
-  const candidate = candidates[0]!;
+  const population = [...populations.values()][0]!;
+  const candidate = population[0]!;
   return {
     branch: candidate.branch,
     stage: candidate.stage,
     enforced: candidate.enforced,
     root: candidate.host.root,
     files: [...candidate.host.files],
-    symbols: [...candidate.host.symbols],
+    symbols: [...new Set(population.flatMap((item) => item.host.symbols))].sort(
+      compareCodeUnits,
+    ),
     paths: resolvePopulationFiles(
       root,
       candidate.host.root,
