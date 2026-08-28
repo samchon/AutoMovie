@@ -1,3 +1,4 @@
+import type { IAutoMovieDeliveryCrop } from "@automovie/interface";
 import { createHash } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
@@ -7,17 +8,20 @@ import config from "../automovie.config";
 import { readProductionLiveWearableSoftBodies } from "./productionConfiguration";
 import {
   type IAutoMovieProductionDialogueRuntime,
+  cloneProductionDeliveryCrop,
   cloneProductionDialogueRuntime,
 } from "./productionRuntimeState";
 
 /** Invocation-owned state exposed to the viewer middleware. */
 export interface IGeneratedShotRuntimeProvider {
   dialogue: () => IAutoMovieProductionDialogueRuntime | null;
+  deliveryCrop: () => IAutoMovieDeliveryCrop | null;
   prepare?: () => Promise<unknown>;
 }
 
 const NO_DIALOGUE_RUNTIME: IGeneratedShotRuntimeProvider = {
   dialogue: () => null,
+  deliveryCrop: () => null,
 };
 
 /**
@@ -45,6 +49,9 @@ export const generatedShotPlugin = (
             const runtime = {
               dialogue: cloneProductionDialogueRuntime(
                 runtimeProvider.dialogue(),
+              ),
+              deliveryCrop: cloneProductionDeliveryCrop(
+                runtimeProvider.deliveryCrop(),
               ),
               liveWearableSoftBodies: readProductionLiveWearableSoftBodies(
                 config.simulation.liveWearableSoftBodies,

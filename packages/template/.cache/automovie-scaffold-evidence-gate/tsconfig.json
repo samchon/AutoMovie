@@ -8,6 +8,8 @@
     ],
     "module": "esnext",
     "moduleResolution": "bundler",
+    "allowJs": true,
+    "checkJs": true,
     "esModuleInterop": true,
     "resolveJsonModule": true,
     "newLine": "lf",
@@ -71,9 +73,9 @@
     "scripts",
     "test",
     "viewer/src",
-    "productionEvidence.ts",
+    "productionEvidence.mjs",
     "automovie.config.ts",
     "vite.config.ts",
-    "lint.config.ts"
+    "lint.config.mjs"
   ]
 }

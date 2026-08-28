@@ -1,4 +1,10 @@
-import type { IAutoMovieEvidenceConfigProps } from "@automovie/evidence";
+// @ts-check
+
+const location = Reflect.get(import.meta, "dirname");
+if (typeof location !== "string")
+  throw new Error(
+    "The production evidence declaration requires native import.meta.dirname support.",
+  );
 
 /**
  * The sole tracked production kind, population scope, branch-stage, and local
@@ -11,9 +17,11 @@ import type { IAutoMovieEvidenceConfigProps } from "@automovie/evidence";
  * shots, and film sources; a library selects settings and only its delivered
  * design/source pairs. Film and brief also require reviewed productionSources
  * as the parallel serialized input to filmSources.
+ *
+ * @type {import("@automovie/evidence").IAutoMovieEvidenceConfigProps}
  */
-export const productionEvidence: IAutoMovieEvidenceConfigProps = {
-  location: import.meta.dirname,
+export const productionEvidence = {
+  location,
   kind: "library",
   populationScope: { mode: "complete-production" },
   settings: "evidence",

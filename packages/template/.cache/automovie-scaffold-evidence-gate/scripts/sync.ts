@@ -2,7 +2,7 @@ import { writeAutoMovieProductionInstructions } from "@automovie/template";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { productionEvidence } from "../productionEvidence";
+import { productionEvidence } from "../productionEvidence.mjs";
 
 /**
  * Replace this project's generated instruction surface from its installed template.

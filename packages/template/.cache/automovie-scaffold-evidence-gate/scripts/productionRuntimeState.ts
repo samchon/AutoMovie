@@ -1,6 +1,7 @@
 import type { IAutoMovieDialogueVisemeTimeline } from "@automovie/engine";
 import type {
   AutoMovieContentDigest,
+  IAutoMovieDeliveryCrop,
   IAutoMovieFilmTimeline,
   IAutoMovieProductionTtsReceipt,
 } from "@automovie/interface";
@@ -31,9 +32,16 @@ export interface IAutoMovieProductionDialogueRuntime {
 export interface IAutoMovieProductionViewerRuntime {
   /** Final-byte dialogue state, or null before a render has prepared it. */
   dialogue: IAutoMovieProductionDialogueRuntime | null;
+  /** Normalized production delivery crop, or null for the complete gate. */
+  deliveryCrop: IAutoMovieDeliveryCrop | null;
   /** Exact authored live-soft admission order. */
   liveWearableSoftBodies: string[];
 }
+
+/** Clone one delivery crop without sharing mutable authoring input. */
+export const cloneProductionDeliveryCrop = (
+  crop: IAutoMovieDeliveryCrop | null,
+): IAutoMovieDeliveryCrop | null => (crop === null ? null : { ...crop });
 
 /** Clone one immutable dialogue runtime at an invocation boundary. */
 export const cloneProductionDialogueRuntime = (

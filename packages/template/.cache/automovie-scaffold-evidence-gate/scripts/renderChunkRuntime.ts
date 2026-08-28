@@ -391,6 +391,7 @@ export const createProductionRenderChunkCaptureRuntime = (props: {
           pass: chunk.pass,
           width: plan.frameFormat.width,
           height: plan.frameFormat.height,
+          crop: plan.frameFormat.crop,
         });
         if (
           canonicalAutoMovieCaptureRuntimeIdentity(captured.runtimeIdentity) !==

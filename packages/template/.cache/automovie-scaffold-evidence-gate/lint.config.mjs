@@ -1,12 +1,11 @@
-/// <reference types="node" />
+// @ts-check
 import { createAutoMovieEvidenceConfig, evidence } from "@automovie/evidence";
-import type { ITtscLintConfig } from "@ttsc/lint";
 
-import { productionEvidence } from "./productionEvidence";
+import { productionEvidence } from "./productionEvidence.mjs";
 
 const graph = createAutoMovieEvidenceConfig(productionEvidence);
 
-export default {
+export default /** @satisfies {import("@ttsc/lint").ITtscLintConfig} */ {
   format: {
     severity: "off",
     semi: true,
@@ -43,4 +42,4 @@ export default {
     "typescript/require-array-sort-compare": "error",
     "typescript/switch-exhaustiveness-check": "error",
   },
-} satisfies ITtscLintConfig;
+};

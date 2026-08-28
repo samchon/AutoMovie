@@ -20,6 +20,7 @@ import {
 } from "./generatedShotPlugin";
 import {
   type IAutoMovieProductionDialogueRuntime,
+  cloneProductionDeliveryCrop,
   cloneProductionDialogueRuntime,
   productionDialogueFrameForShotTime,
   productionDialogueRuntimeIdentity,
@@ -52,6 +53,9 @@ interface ProductionCaptureCleanup {
 
 interface ProductionFrameCaptureState {
   dialogue: IAutoMovieProductionDialogueRuntime | null;
+  deliveryCrop: NonNullable<
+    Parameters<AutoMovieProductionFrameCapture>[0]["crop"]
+  > | null;
   metrics: {
     pagesOpened: number;
     navigations: number;
@@ -70,6 +74,10 @@ export interface IProductionFrameCaptureRuntime {
   ) => ReturnType<AutoMovieProductionFrameCapture>;
   close: (failure?: ProductionCaptureFailure) => Promise<void>;
   dialogue: () => IAutoMovieProductionDialogueRuntime | null;
+  deliveryCrop: () => ProductionFrameCaptureState["deliveryCrop"];
+  installDeliveryCrop: (
+    crop: ProductionFrameCaptureState["deliveryCrop"],
+  ) => Promise<void>;
   installDialogue: (
     runtime: IAutoMovieProductionDialogueRuntime | null,
   ) => Promise<void>;
@@ -191,7 +199,21 @@ const productionFrameViewerRuntime = (
   state: ProductionFrameCaptureState,
 ): IGeneratedShotRuntimeProvider => {
   const dialogue = cloneProductionDialogueRuntime(state.dialogue);
-  return { dialogue: () => dialogue };
+  const deliveryCrop = cloneProductionDeliveryCrop(state.deliveryCrop);
+  return {
+    dialogue: () => dialogue,
+    deliveryCrop: () => deliveryCrop,
+  };
+};
+
+const installProductionDeliveryCrop = async (
+  state: ProductionFrameCaptureState,
+  crop: ProductionFrameCaptureState["deliveryCrop"],
+): Promise<void> => {
+  const next = cloneProductionDeliveryCrop(crop);
+  if (JSON.stringify(state.deliveryCrop) === JSON.stringify(next)) return;
+  await closeProductionFrameCapture(state);
+  state.deliveryCrop = next;
 };
 
 const captureSession = async (
@@ -384,6 +406,10 @@ const captureProductionFrame = async (
   state: ProductionFrameCaptureState,
   input: IProductionFrameCaptureInput,
 ): ReturnType<AutoMovieProductionFrameCapture> => {
+  await installProductionDeliveryCrop(
+    state,
+    input.target.kind === "shot" ? (input.crop ?? null) : null,
+  );
   const session = await captureSession(
     state,
     input.projectRoot,
@@ -508,6 +534,7 @@ const capturePageKey = (
     // another, so the curve belongs in the identity that decides page reuse.
     toneMapping: PRODUCTION_DELIVERY_TONE_MAPPING,
     dialogueRuntime: productionDialogueRuntimeIdentity(state.dialogue),
+    deliveryCrop: input.target.kind === "shot" ? (input.crop ?? null) : null,
     width: input.width,
     height: input.height,
   });
@@ -517,6 +544,7 @@ export const createProductionFrameCaptureRuntime =
   (): IProductionFrameCaptureRuntime => {
     const state: ProductionFrameCaptureState = {
       dialogue: null,
+      deliveryCrop: null,
       metrics: {
         pagesOpened: 0,
         navigations: 0,
@@ -531,6 +559,8 @@ export const createProductionFrameCaptureRuntime =
       capture: (input) => captureProductionFrame(state, input),
       close: (failure) => closeProductionFrameCapture(state, failure),
       dialogue: () => cloneProductionDialogueRuntime(state.dialogue),
+      deliveryCrop: () => cloneProductionDeliveryCrop(state.deliveryCrop),
+      installDeliveryCrop: (crop) => installProductionDeliveryCrop(state, crop),
       installDialogue: async (runtime) => {
         const next = cloneProductionDialogueRuntime(runtime);
         if (

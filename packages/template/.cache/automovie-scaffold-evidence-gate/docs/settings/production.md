@@ -123,12 +123,12 @@ The diagnostic-only tier supports exactly one inference: whether the configured 
 @evidence principles/core/settings.md#capability-boundary Probe subject breakdown and production scope confines its capability claim to the compiler calibration role stated in this H2 and invents no downstream production capability.
 @evidence principles/core/settings.md#constraint-sufficiency Probe subject breakdown and production scope states the actor, condition, and observable compiler consequence needed to use this one settings decision without downstream guessing.
 @evidence principles/core/settings.md#observable-identity Probe subject breakdown and production scope defines no delivered person, place, object, or sound; its only observable identity is the named compiler-calibration result.
-@evidence obligations/core/settings.md#subject-breakdown-production-scope Probe subject breakdown and production scope is the population owner that states this role concretely: The promised compiler result requires no model, space, material, instance, motion, system, external asset, or rendition to build, adopt, reuse, or derive; the generated lint configuration and this settings population are existing harness inputs rather than delivery assets.
+@evidence obligations/core/settings.md#subject-breakdown-production-scope Probe subject breakdown and production scope is the population owner that states this role concretely: The promised compiler result requires no map, model, space, material, instance, motion, system, external asset, or rendition to build, adopt, reuse, or derive; the generated lint configuration and this settings population are existing harness inputs rather than delivery assets.
 -->
 
 **Status:** production invention, disposable compiler calibration.
 
-The promised compiler result requires no model, space, material, instance, motion, system, external asset, or rendition to build, adopt, reuse, or derive; the generated lint configuration and this settings population are existing harness inputs rather than delivery assets.
+The promised compiler result requires no map, model, space, material, instance, motion, system, external asset, or rendition to build, adopt, reuse, or derive; the generated lint configuration and this settings population are existing harness inputs rather than delivery assets.
 
 ## Probe operator access {#probe-operator-access}
 

@@ -13,15 +13,12 @@ import {
   AutoMovieProductionProject,
   canonicalAutoMovieJsonBytes,
   digestAutoMovieBytes,
+  parseAutoMovieLibraryReviewPlan,
   readAutoMovieLibraryReviewRequirements,
 } from "@automovie/production";
 import { randomUUID } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
-
-import config from "../automovie.config";
-import { productionEvidence } from "../productionEvidence";
 
 type Verdict = "failed" | "not-run" | "passed" | "unsupported";
 
@@ -70,9 +67,42 @@ const readPlan = (
   root: string,
   relative: string,
 ): IAutoMovieLibraryReviewPlanFile =>
-  JSON.parse(
+  parseAutoMovieLibraryReviewPlan(
     fs.readFileSync(path.join(root, relative), "utf8"),
-  ) as IAutoMovieLibraryReviewPlanFile;
+  );
+
+const actionArguments = {
+  inspect: new Set<string>(),
+  plan: new Set(["--owner", "--source", "--observation"]),
+  record: new Set([
+    "--owner",
+    "--observation",
+    "--runtime",
+    "--verdict",
+    "--artifact-project",
+    "--artifact-render",
+    "--facts-file",
+    "--turntable",
+  ]),
+} as const;
+
+/** Refuse positional and unknown arguments before any command-side mutation. */
+const assertActionArguments = (
+  argv: readonly string[],
+  action: keyof typeof actionArguments,
+): void => {
+  const allowed = actionArguments[action];
+  for (let index = 1; index < argv.length; index += 2) {
+    const flag = argv[index];
+    const value = argv[index + 1];
+    if (flag === undefined || allowed.has(flag) === false)
+      throw new Error(
+        `Library review ${action} received unknown or positional argument ${JSON.stringify(flag)}.`,
+      );
+    if (value === undefined || value.startsWith("--"))
+      throw new Error(`${flag} requires one value.`);
+  }
+};
 
 const writePlan = (props: {
   root: string;
@@ -200,21 +230,27 @@ const evidenceOf = (props: {
  */
 export const runLibraryReviewCommand = (props: {
   argv: readonly string[];
-  root?: string;
-  productionId?: string;
-  evidence?: IAutoMovieEvidenceConfigProps;
+  root: string;
+  productionId: string;
+  evidence: IAutoMovieEvidenceConfigProps;
+  read: typeof readAutoMovieProductionEvidence;
   output?: (value: unknown) => void;
 }): unknown => {
-  const root = path.resolve(props.root ?? process.cwd());
-  const authoring = readAutoMovieProductionEvidence({
+  const root = path.resolve(props.root);
+  const authoring = props.read({
     root,
-    productionEvidence: props.evidence ?? productionEvidence,
+    productionEvidence: props.evidence,
   });
   if (authoring.manifest.kind !== "library")
     throw new Error(
       `Library review commands require production kind "library", not ${JSON.stringify(authoring.manifest.kind)}.`,
     );
   const action = props.argv[0] ?? "inspect";
+  if (action !== "inspect" && action !== "plan" && action !== "record")
+    throw new Error(
+      'Library review action must be "inspect", "plan", or "record".',
+    );
+  assertActionArguments(props.argv, action);
 
   if (action === "plan") {
     const requested = one(props.argv, "--owner")!;
@@ -228,16 +264,19 @@ export const runLibraryReviewCommand = (props: {
       throw new Error(
         `Owner ${JSON.stringify(requested)} is outside the exact active authoring population.`,
       );
+    const sourceBinding = owner.sourceBinding;
+    if (sourceBinding?.enforced !== true || sourceBinding.stage !== "review")
+      throw new Error(
+        `Owner ${JSON.stringify(requested)} has no enforced reviewed source population. Review its manifest-derived source branch before planning observations.`,
+      );
     const sources = values(props.argv, "--source");
     if (
       sources.length === 0 ||
       new Set(sources).size !== sources.length ||
-      sources.some(
-        (source) => owner.sourceBinding?.paths.includes(source) !== true,
-      )
+      sources.some((source) => sourceBinding.paths.includes(source) !== true)
     )
       throw new Error(
-        `Plan sources must be a nonempty unique subset of ${JSON.stringify(owner.sourceBinding?.paths ?? [])}.`,
+        `Plan sources must be a nonempty unique subset of ${JSON.stringify(sourceBinding.paths)}.`,
       );
     const observations = values(props.argv, "--observation").map(observationOf);
     if (
@@ -289,7 +328,7 @@ export const runLibraryReviewCommand = (props: {
 
   const project = AutoMovieProductionProject.openReadOnly(
     root,
-    props.productionId ?? config.productionId,
+    props.productionId,
   );
   const checked = new AutoMovieProductionCompiler(project, authoring).lint({
     scope: "source",
@@ -307,10 +346,6 @@ export const runLibraryReviewCommand = (props: {
     props.output?.(population);
     return population;
   }
-  if (action !== "record")
-    throw new Error(
-      'Library review action must be "inspect", "plan", or "record".',
-    );
   if (population.diagnostics.length !== 0)
     throw new Error(
       `Correct the library observation plan before recording: ${JSON.stringify(population.diagnostics)}`,
@@ -338,6 +373,15 @@ export const runLibraryReviewCommand = (props: {
     throw new Error(
       `Observation ${JSON.stringify(observation)} requires ${requirement.evidence}, not ${evidence.kind}.`,
     );
+  if (evidence.kind === "turntable") {
+    const planned = population.turntables.find(
+      (entry) => entry.owner === requested && entry.observation === observation,
+    );
+    if (planned?.model !== evidence.model)
+      throw new Error(
+        `Observation ${JSON.stringify(observation)} requires planned model ${JSON.stringify(planned?.model)}, not ${JSON.stringify(evidence.model)}.`,
+      );
+  }
   const parts = ownerParts(requested);
   const relative = planPath(parts.design);
   const plan = readPlan(root, relative);
@@ -371,19 +415,29 @@ export const runLibraryReviewCommand = (props: {
   return result;
 };
 
-if (
-  process.argv[1] !== undefined &&
-  path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)
-)
+/** Run the process-facing adapter while keeping command behavior testable. */
+export const runLibraryReviewCli = (props: {
+  argv: readonly string[];
+  evidence: IAutoMovieEvidenceConfigProps;
+  productionId: string;
+  read: typeof readAutoMovieProductionEvidence;
+  root: string;
+  run: typeof runLibraryReviewCommand;
+  stderr: (value: string) => void;
+  stdout: (value: string) => void;
+}): number => {
   try {
-    runLibraryReviewCommand({
-      argv: process.argv.slice(2),
-      output: (value) =>
-        process.stdout.write(`${JSON.stringify(value, null, 2)}\n`),
+    props.run({
+      argv: props.argv,
+      evidence: props.evidence,
+      productionId: props.productionId,
+      read: props.read,
+      root: props.root,
+      output: (value) => props.stdout(`${JSON.stringify(value, null, 2)}\n`),
     });
+    return 0;
   } catch (error) {
-    process.stderr.write(
-      `${error instanceof Error ? error.message : String(error)}\n`,
-    );
-    process.exitCode = 1;
+    props.stderr(`${error instanceof Error ? error.message : String(error)}\n`);
+    return 1;
   }
+};

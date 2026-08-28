@@ -546,6 +546,7 @@ export const createProductionRenderFinalizationRuntime = (props: {
           pass: "beauty",
           width: plan.frameFormat.width,
           height: plan.frameFormat.height,
+          crop: plan.frameFormat.crop,
         });
         if (
           canonicalAutoMovieCaptureRuntimeIdentity(captured.runtimeIdentity) !==
