@@ -408,8 +408,6 @@ const terminalAttempt = (
 ): IAutoMovieRepaintAttemptRecord => {
   const startedAt = validInstant(input.startedAt, "attempt start");
   const completedAt = validInstant(input.completedAt, "attempt completion");
-  if (completedAt.getTime() < startedAt.getTime())
-    throw new Error("Repaint attempt completion precedes its start.");
   return {
     version: 1,
     ...input,

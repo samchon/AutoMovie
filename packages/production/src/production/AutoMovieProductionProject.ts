@@ -2032,7 +2032,8 @@ export class AutoMovieProductionProject {
     selectedAt: string;
     inputCurrent?: () => boolean;
   }): IAutoMovieRepaintReceipt {
-    const receipt = this.verifiedRepaintCandidates([props.shot]).find(
+    const candidates = this.verifiedRepaintCandidates([props.shot]);
+    const receipt = candidates.find(
       (candidate) => candidate.attemptId === props.attemptId,
     );
     if (receipt === undefined)
@@ -2045,6 +2046,10 @@ export class AutoMovieProductionProject {
       selectedAt.toISOString() !== props.selectedAt
     )
       throw new Error("Repaint selection requires an exact UTC instant.");
+    if (selectedAt.getTime() < new Date(receipt.completedAt!).getTime())
+      throw new Error(
+        "Repaint selection cannot precede the candidate completion instant.",
+      );
     assertAutoMovieExternalGeneratorTermsAt({
       termsCheckedAt: receipt.generatorProvenance.termsCheckedAt,
       occurredAt: selectedAt,
@@ -2080,8 +2085,13 @@ export class AutoMovieProductionProject {
         );
     }
     const activePath = productionRepaintActiveReceiptPath(props.shot);
+    const verifiedActive =
+      props.kind === "reversal"
+        ? this.verifiedRepaintRenditions([props.shot])[0]
+        : undefined;
     const activeBytes = this.readTrackedStateFile(activePath);
     let previousSelection: string | null = null;
+    let previousCandidate: IAutoMovieRepaintReceipt | undefined;
     if (activeBytes !== null) {
       const previous = typia.validateEquals<IAutoMovieActiveRepaintReceipt>(
         JSON.parse(Buffer.from(activeBytes).toString("utf8")),
@@ -2089,11 +2099,30 @@ export class AutoMovieProductionProject {
       if (previous.success === false || previous.data.shot !== props.shot)
         throw new Error("Current repaint selection pointer is malformed.");
       previousSelection = previous.data.selection;
-    }
-    if (props.kind === "reversal" && previousSelection === null)
-      throw new Error(
-        "Repaint reversal requires an existing active selection.",
+      previousCandidate = candidates.find(
+        (candidate) =>
+          productionRepaintReceiptPath(candidate.output.path) ===
+            previous.data.receipt &&
+          candidate.output.path === previous.data.output,
       );
+    }
+    if (props.kind === "reversal") {
+      if (
+        previousSelection === null ||
+        previousCandidate === undefined ||
+        verifiedActive?.attemptId !== previousCandidate.attemptId
+      )
+        throw new Error(
+          "Repaint reversal requires an existing active verified selection.",
+        );
+      if (
+        new Date(receipt.completedAt!).getTime() >=
+        new Date(previousCandidate.completedAt!).getTime()
+      )
+        throw new Error(
+          "Repaint reversal requires a candidate completed before the current active candidate.",
+        );
+    }
     const selectionId = randomUUID();
     const selectionPath = repaintSelectionPath(props.shot, selectionId);
     const candidateReceipt = productionRepaintReceiptPath(receipt.output.path);
@@ -2226,10 +2255,67 @@ export class AutoMovieProductionProject {
         );
         if (validation.success === false || validation.data.shot !== shot)
           continue;
+        let previousCandidate: IAutoMovieRepaintReceipt | null = null;
+        let previousSelectedAt: Date | null = null;
+        if (selection.previousSelection !== null) {
+          if (selection.previousSelection === pointer.selection) continue;
+          const previousSelectionBytes = this.readTrackedStateFile(
+            selection.previousSelection,
+          );
+          if (previousSelectionBytes === null) continue;
+          const previousSelectionValidation =
+            typia.validateEquals<IAutoMovieRepaintSelectionRecord>(
+              JSON.parse(Buffer.from(previousSelectionBytes).toString("utf8")),
+            );
+          if (previousSelectionValidation.success === false) continue;
+          const previousSelection = previousSelectionValidation.data;
+          const previousReceiptBytes = this.readTrackedStateFile(
+            previousSelection.candidateReceipt,
+          );
+          if (previousReceiptBytes === null) continue;
+          const previousReceiptValidation =
+            typia.validateEquals<IAutoMovieRepaintReceipt>(
+              JSON.parse(Buffer.from(previousReceiptBytes).toString("utf8")),
+            );
+          if (previousReceiptValidation.success === false) continue;
+          previousCandidate = previousReceiptValidation.data;
+          previousSelectedAt = new Date(previousSelection.selectedAt);
+          const previousCompletedAt = new Date(
+            previousCandidate.completedAt ?? Number.NaN,
+          );
+          if (
+            previousSelection.productionId !== this.productionId ||
+            previousSelection.shot !== shot ||
+            previousCandidate.shot !== shot ||
+            selection.previousSelection !==
+              repaintSelectionPath(shot, previousSelection.selectionId) ||
+            previousSelection.requestId !== previousCandidate.requestId ||
+            previousSelection.attemptId !== previousCandidate.attemptId ||
+            previousSelection.candidateReceipt !==
+              productionRepaintReceiptPath(previousCandidate.output.path) ||
+            previousSelection.output !== previousCandidate.output.path ||
+            Number.isNaN(previousSelectedAt.getTime()) ||
+            previousSelectedAt.toISOString() !== previousSelection.selectedAt ||
+            Number.isNaN(previousCompletedAt.getTime()) ||
+            previousSelectedAt.getTime() < previousCompletedAt.getTime()
+          )
+            continue;
+          const previousOutput = this.readRenderFile(
+            previousCandidate.output.path,
+          );
+          this.assertCurrentRepaintReceipt(previousCandidate, previousOutput);
+        }
         const selectedAt = new Date(selection.selectedAt);
+        const candidateCompletedAt = new Date(
+          validation.data.completedAt ?? Number.NaN,
+        );
         if (
           Number.isNaN(selectedAt.getTime()) ||
-          selectedAt.toISOString() !== selection.selectedAt
+          selectedAt.toISOString() !== selection.selectedAt ||
+          Number.isNaN(candidateCompletedAt.getTime()) ||
+          selectedAt.getTime() < candidateCompletedAt.getTime() ||
+          (previousSelectedAt !== null &&
+            selectedAt.getTime() < previousSelectedAt.getTime())
         )
           continue;
         assertAutoMovieExternalGeneratorTermsAt({
@@ -2261,7 +2347,9 @@ export class AutoMovieProductionProject {
           selection.structuralReview.trim().length === 0 ||
           selection.structuralReview !== selection.structuralReview.trim() ||
           (selection.kind === "reversal" &&
-            selection.previousSelection === null) ||
+            (previousCandidate === null ||
+              candidateCompletedAt.getTime() >=
+                new Date(previousCandidate.completedAt!).getTime())) ||
           (validation.data.evidence?.continuity === null
             ? selection.continuityReview !== null
             : selection.continuityReview === null ||

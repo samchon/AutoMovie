@@ -192,6 +192,9 @@ export class AutoMovieProductionRepaintService {
 
   /**
    * Repaint one current shot from verified deterministic controls.
+   *
+   * An explicit retry resumes after its latest immutable terminal attempt;
+   * an injected clock rollback cannot reopen the original elapsed-time budget.
    */
   public async repaint(
     services: IAutoMovieProductionServices,
@@ -323,11 +326,12 @@ export class AutoMovieProductionRepaintService {
     };
     const requestId = this.execution?.requestId ?? randomUUID();
     const now = this.execution?.now ?? (() => new Date());
-    const preflightAt = now();
+    let preflightAt: Date;
     const executionPolicy = this.execution?.policy ?? LEGACY_REPAINT_POLICY;
     const evidence =
       this.execution?.evidence ?? legacyRepaintEvidence(requestedShot);
     try {
+      preflightAt = repaintRuntimeInstant(now(), "preflight");
       assertAutoMovieRepaintExecutionPolicy(executionPolicy);
       assertRepaintEvidence(evidence);
       assertAutoMovieExternalGeneratorTermsAt({
@@ -507,11 +511,29 @@ export class AutoMovieProductionRepaintService {
       (sum, attempt) => sum + attempt.costUnits,
       0,
     );
+    let resumeAt: Date;
+    try {
+      resumeAt = repaintRuntimeInstant(now(), "execution resume");
+    } catch (error) {
+      return failure(
+        "repaint-host-unavailable",
+        error instanceof Error ? error.message : String(error),
+      );
+    }
+    if (
+      resumeAt.getTime() < preflightAt.getTime() ||
+      (priorAttempts.length !== 0 &&
+        resumeAt.getTime() <
+          new Date(priorAttempts.at(-1)!.completedAt).getTime())
+    )
+      return failure(
+        "repaint-input-invalid",
+        "Repaint execution requires a monotonic runtime clock at or after preflight and the latest immutable terminal attempt.",
+      );
     const elapsed =
       priorAttempts.length === 0
         ? 0
-        : preflightAt.getTime() -
-          new Date(priorAttempts[0]!.startedAt).getTime();
+        : resumeAt.getTime() - new Date(priorAttempts[0]!.startedAt).getTime();
     const remainingAttempts =
       executionPolicy.maximumAttempts - priorAttempts.length;
     const remainingElapsed = executionPolicy.maximumElapsedMs - elapsed;
@@ -535,6 +557,16 @@ export class AutoMovieProductionRepaintService {
         priorAttempts.length + remainingAttempts - 1,
       ),
     };
+    let executionClockFloor = resumeAt.getTime();
+    const executionNow = (): Date => {
+      const observed = repaintRuntimeInstant(now(), "execution");
+      if (observed.getTime() < executionClockFloor)
+        throw new Error(
+          "Repaint execution clock precedes its post-preflight resume observation.",
+        );
+      executionClockFloor = observed.getTime();
+      return observed;
+    };
     let execution;
     try {
       execution = await executeAutoMovieRepaintRequest({
@@ -550,7 +582,7 @@ export class AutoMovieProductionRepaintService {
         policy: remainingPolicy,
         signal: this.execution?.signal,
         runtime: {
-          now,
+          now: executionNow,
           attemptId: randomUUID,
           wait: waitForRepaintBackoff,
         },
@@ -651,9 +683,17 @@ export class AutoMovieProductionRepaintService {
         },
         onAttempt: () => undefined,
       });
-      for (const attempt of execution.attempts)
+    } catch (error) {
+      return failure(
+        "repaint-failed",
+        error instanceof Error ? error.message : String(error),
+      );
+    }
+    try {
+      for (const attempt of execution.attempts) {
         services.project.commitRepaintAttempt(attempt);
-      if (execution.attempts.length !== 0) currentRequestId = requestId;
+        currentRequestId = requestId;
+      }
     } catch (error) {
       return failure(
         "repaint-commit-refused",
@@ -836,6 +876,13 @@ const LEGACY_REPAINT_POLICY: IAutoMovieRepaintExecutionPolicy = {
   maximumCostUnits: Number.MAX_SAFE_INTEGER,
   backoffMs: [],
   retryableFailures: [],
+};
+
+const repaintRuntimeInstant = (value: Date, label: string): Date => {
+  const observed = new Date(value.getTime());
+  if (Number.isNaN(observed.getTime()))
+    throw new Error(`Repaint ${label} requires a valid runtime instant.`);
+  return observed;
 };
 
 const legacyRepaintEvidence = (
