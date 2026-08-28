@@ -281,6 +281,8 @@ export class AutoMovieProductionCompiler {
     input: IAutoMovieCompileProjectInput,
     materialize: boolean,
   ): IAutoMovieCompileProjectOutput {
+    if (this.authoringEvidence?.manifest.kind === "library")
+      return this.runLibrary(input);
     const graph = this.project.graph();
     const inputRevision = this.project.revision();
     const projectManifest = this.project.manifest();
@@ -1033,6 +1035,71 @@ export class AutoMovieProductionCompiler {
       },
       diagnostics,
       materialized,
+    };
+  }
+
+  /** Run the no-film delivery gate for one generated reusable library. */
+  private runLibrary(
+    input: IAutoMovieCompileProjectInput,
+  ): IAutoMovieCompileProjectOutput {
+    const authoring = this.authoringEvidence!;
+    const graph = this.project.graph();
+    const fields: IAutoMovieFingerprintField[] = [
+      {
+        role: "library:compiler",
+        kind: AUTOMOVIE_PRODUCTION_COMPILER_PROTOCOL,
+        payload: canonicalAutoMovieJsonBytes({
+          version: AUTOMOVIE_PRODUCTION_COMPILER_VERSION,
+          manifest: authoring.manifest,
+          designBranches: authoring.designBranches,
+          designOwners: authoring.designOwners,
+        }),
+      },
+    ];
+    const sources = [
+      ...new Set(
+        authoring.designOwners.flatMap(
+          (owner) => owner.sourceBinding?.paths ?? [],
+        ),
+      ),
+    ].sort(compareCodeUnits);
+    for (const source of sources)
+      try {
+        fields.push({
+          role: `library:source:${source}`,
+          kind: "typescript",
+          payload: normalizeAutoMovieSource(this.project.readSource(source)),
+        });
+      } catch {
+        fields.push({
+          role: `library:source:${source}`,
+          kind: "absent",
+          payload: new Uint8Array(),
+        });
+      }
+    const inputFingerprint = fingerprintAutoMovieFields(fields);
+    const diagnostics = libraryReviewEvidenceConsumerDiagnostics({
+      authoring,
+      project: this.project,
+      scope: input.scope,
+      compileFingerprint: inputFingerprint,
+      modelExists: (model) => graph.models.has(model),
+      rigged: (model) => this.compiledModelIsRigged(model),
+      fingerprint: () => null,
+      captured: (target, digest) =>
+        this.project.capturedRenderViews(target, digest),
+    }).sort(compareDiagnostics);
+    return {
+      success: diagnostics.every(
+        (diagnostic) => diagnostic.category !== "error",
+      ),
+      revision: this.project.revision(),
+      compiler: {
+        version: AUTOMOVIE_PRODUCTION_COMPILER_VERSION,
+        inputFingerprint,
+      },
+      diagnostics,
+      materialized: [],
     };
   }
 
