@@ -12,7 +12,7 @@ Discovery proves that each active Markdown layer audited the actual production i
 
 `docs/research` is optional. When active, each H2 identifies one source and used portion, authority, uncertainty, and exact affected production decision. Research reaches review before settings begins; every adopted result is interpreted and cited by a settings H2 before specialist or narrative layers consume that setting. Research supports decisions but never makes them.
 
-Film treatments, scripts, and screenplays preserve identical filenames, explicit H2/H3/H4 anchors, nesting, and order. Keep beat text and `SCN-*` identities aligned with the hand-authored screenplay index; after shots exist, preserve deleted numbers as `OMITTED` and use alpha insertion ids.
+Film treatments are flat numbered event files with H2 units only and no delivery group. Scripts partition those events independently into grouped H2/H3/H4 delivery units, and screenplays preserve the script filenames, anchors, nesting, and order exactly. Both scripts and screenplays retain direct many-to-many treatment coverage. Keep screenplay beat text and `SCN-*` identities aligned with the hand-authored screenplay index; after shots exist, preserve deleted numbers as `OMITTED` and use alpha insertion ids.
 
 Every distributable file matched by the asset lint configuration belongs in `automovie/assets.json`. Record its source URL, license, original/current SHA-256, processing chain, and reasoned use before referencing it. External glTF, GLB, and VRM entries also require explicit ingest, LOD, collision, and measurement-proxy decisions. Changed or unregistered bytes fail lint and compilation; ingestion itself remains a pure fixed-byte conversion.
 

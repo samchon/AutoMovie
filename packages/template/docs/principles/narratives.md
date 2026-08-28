@@ -116,19 +116,19 @@ Sources: [Purdue OWL on character goals, motivation, and conflict](https://owl.p
 
 ## Unit identity {#unit-identity}
 
-Matching H2 sequences, H3 scenes, and H4 beats preserve one stable identity from treatment through script to screenplay. A refinement adds only the detail owned by its layer; it does not merge, split, reorder, rename, or silently replace its parent unit.
+Every unit names the stable identity appropriate to its axis. A treatment H2 owns one event in the flat narrative sequence. A script H2, H3, or H4 names every treatment H2 it realizes but may split one event across delivery units or braid several events into one. A screenplay preserves exactly one same-depth script identity, nesting position, and order while retaining the treatment identities that script unit realizes.
 
-Review question: does every unit refine exactly one same-level parent while retaining the same dramatic or formal event?
+Review question: what stable identity does this unit own, which actual narrative parents does its layer require it to realize, and does that relation preserve every event without inventing one?
 
-This item owns vertical identity. `unit-addressability` owns whether each layer chose the correct semantic boundaries before identity is propagated.
+This item owns vertical attribution, coverage, and lineage after each axis has been addressed. `unit-addressability` owns whether treatments chose the right event boundaries and scripts chose the right delivery boundaries before those relations are declared.
 
 Sources: [Plan-and-Write on hierarchical planning and realization](https://doi.org/10.1609/aaai.v33i01.33017378); [Detailed Outline Control](https://arxiv.org/abs/2212.10077)
 
 ## Boundary-state inheritance {#state-continuity}
 
-Every boundary state asserted by a treatment unit remains present in its matching script and screenplay unit. A lower layer adds only physical or audiovisual detail it owns; it does not replace an inherited subject, knowledge, place, time, initiating condition, or terminal relation.
+A treatment H2 states the boundary facts its later realizations must retain. Every script unit preserves the boundary facts of every treatment H2 it realizes, and the script population preserves each treatment event across all units that divide or braid it. Every screenplay unit preserves the boundary facts of its exact script parent and of the treatment H2s it cites directly. A lower layer adds only physical or audiovisual detail it owns; it does not replace an inherited subject, knowledge, place, time, initiating condition, or terminal relation.
 
-Review question: which inherited boundary fact survives through the three matching units, and which added fact belongs only to the refining layer?
+Review question: which entry and exit facts does this unit establish or inherit for its layer, and where does it preserve every applicable parent fact across a split or braid?
 
 This item owns vertical boundary-state preservation. `horizontal-state-continuity` owns facts between neighboring units, and script entry and exit principles own physical completeness within one script unit.
 
@@ -136,10 +136,10 @@ Sources: [Zwaan, Langston, and Graesser on event-indexing dimensions](https://do
 
 ## Observable inheritance {#observable-inheritance}
 
-Every narrative layer retains its parent unit's required audience-visible or audience-audible change while translating it into its own decision type. It may make the observation more precise but may not replace it with an implementation convenience.
+A treatment H2 states the audience-visible or audience-audible change its later realizations must retain. Every script unit retains the required change of every treatment H2 it realizes while translating those events into physical execution. Every screenplay unit retains the required change of its exact script parent and of every directly cited treatment H2 while translating it into final audiovisual expression. A split or braid may distribute changes among child units, but their union loses none and substitutes no implementation convenience.
 
-Review question: what one audience-perceptible change survives from treatment through physical staging to the final screenplay?
+Review question: which audience-perceptible change does this unit establish or inherit, and where is any parent change distributed across sibling units completed without loss?
 
-This item owns vertical preservation of the required audience effect. Treatment audience change owns the before-and-after understanding inside one treatment unit.
+This item owns vertical preservation of required audience effects across coverage and exact lineage. Treatment audience change owns the before-and-after understanding inside one treatment unit.
 
 Sources: [Detailed Outline Control](https://arxiv.org/abs/2212.10077); [NASA systems engineering handbook on bidirectional traceability](https://www.nasa.gov/reference/systems-engineering-handbook/)
