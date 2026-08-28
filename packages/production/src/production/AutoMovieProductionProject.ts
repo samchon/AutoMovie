@@ -2179,18 +2179,31 @@ export class AutoMovieProductionProject {
             } satisfies IAutoMovieActiveRepaintReceipt) ||
           selection.productionId !== this.productionId ||
           selection.shot !== shot ||
-          selection.selectionId !== path.basename(pointer.selection, ".json") ||
+          pointer.selection !==
+            repaintSelectionPath(shot, selection.selectionId) ||
           selection.requestId !== validation.data.requestId ||
           selection.attemptId !== validation.data.attemptId ||
           selection.candidateReceipt !== pointer.receipt ||
           selection.output !== pointer.output ||
+          selection.reason.trim().length === 0 ||
+          selection.reason !== selection.reason.trim() ||
           selection.structuralReview.trim().length === 0 ||
+          selection.structuralReview !== selection.structuralReview.trim() ||
+          (selection.kind === "reversal" &&
+            selection.previousSelection === null) ||
           (validation.data.evidence?.continuity === null
             ? selection.continuityReview !== null
             : selection.continuityReview === null ||
               selection.continuityReview.baseline !==
                 validation.data.evidence?.continuity ||
-              selection.continuityReview.playbackEvidence.trim().length === 0)
+              selection.continuityReview.playbackEvidence.trim().length === 0 ||
+              selection.continuityReview.playbackEvidence !==
+                selection.continuityReview.playbackEvidence.trim() ||
+              (selection.continuityReview.mixedDeliveryPolicy !== null &&
+                (selection.continuityReview.mixedDeliveryPolicy.trim()
+                  .length === 0 ||
+                  selection.continuityReview.mixedDeliveryPolicy !==
+                    selection.continuityReview.mixedDeliveryPolicy.trim())))
         )
           continue;
         const output = this.readRenderFile(validation.data.output.path);
