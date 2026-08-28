@@ -33,6 +33,7 @@ interface IEvidenceClaim {
 interface IEvidenceState {
   location: string;
   kind: null;
+  populationScope: { mode: "complete-production" };
   settings: Stage;
   research: Stage;
   maps: Stage;
@@ -89,14 +90,16 @@ const CLAIM_NAMES = {
   h3: "briefs H3 units answer their principle checklists and account for inherited work",
   h4: "briefs H4 units answer their principle checklists and account for inherited work",
 } as const;
-const PRINCIPLES = [
+const CHECKLISTS = [
   "principles/core/common.md#scope-preservation",
   "principles/core/common.md#substantive-completion",
   "principles/core/common.md#machine-default",
   "principles/core/common.md#evidence-content-conformance",
   "principles/core/common.md#declared-basis",
+  "principles/core/inherited-units.md#derived-parent-differentiation",
   INFORMATION_STRUCTURE,
   "principles/delivery/briefs.md#no-narrative-smuggling",
+  "upstream/delivery/briefs.md#parent-revision-from-brief-work",
 ] as const;
 const OBLIGATIONS = [
   "obligations/core/common.md#purpose-fit",
@@ -128,6 +131,7 @@ const preserveFixtureCleanup = (
 const disabledState = (location: string): IEvidenceState => ({
   location,
   kind: null,
+  populationScope: { mode: "complete-production" },
   settings: "disabled",
   research: "disabled",
   maps: "disabled",
@@ -181,8 +185,9 @@ const selectClaim = (
  *
  * Principles remain no-exclusion checklists on every H2/H3/H4 host, while
  * obligations remain no-exclusion population coverage on H2 alone. The exact
- * file inventory also proves that the empty root acquired no fabricated
- * settings, design, or narrative parent.
+ * file inventory also proves that the empty root retains its common and brief
+ * upstream accounting without fabricating settings, design, or narrative
+ * hosts.
  */
 const assertBriefClaim = (
   claim: IEvidenceClaim,
@@ -201,24 +206,34 @@ const assertBriefClaim = (
     references.map(fileOf).sort((left, right) => left.localeCompare(right)),
     symbol === "h2"
       ? [
-          "obligations/delivery/briefs.md",
           "obligations/core/common.md",
-          "principles/delivery/briefs.md",
+          "obligations/delivery/briefs.md",
           "principles/core/common.md",
+          "principles/core/inherited-units.md",
+          "principles/delivery/briefs.md",
+          "upstream/delivery/briefs.md",
         ]
-      : ["principles/delivery/briefs.md", "principles/core/common.md"],
+      : [
+          "principles/core/common.md",
+          "principles/core/inherited-units.md",
+          "principles/delivery/briefs.md",
+          "upstream/delivery/briefs.md",
+        ],
   );
   for (const reference of references) {
     assert.equal(reference.type, "markdown");
     assert.equal(reference.root, "node_modules/@automovie/template/docs");
     assert.equal(reference.symbol, "h2");
-    assert.equal(reference.noEvidenceExclude, true);
+    assert.equal(
+      reference.noEvidenceExclude,
+      fileOf(reference).startsWith("upstream/") ? undefined : true,
+    );
     assert.equal(reference.requireReview, false);
     assert.equal(reference.singleEvidencePerSymbol, undefined);
     assert.equal(reference.uniqueEvidence, undefined);
     assert.equal(
       reference.checklist,
-      fileOf(reference).startsWith("principles/") ? true : undefined,
+      fileOf(reference).startsWith("obligations/") ? undefined : true,
     );
   }
   return references;
@@ -245,19 +260,19 @@ const cleanBrief = (): string =>
     "",
     "## Delivery {#delivery}",
     "",
-    evidenceBlock("Delivery", [...PRINCIPLES, ...OBLIGATIONS]),
+    evidenceBlock("Delivery", [...CHECKLISTS, ...OBLIGATIONS]),
     "",
     "Delivery owns one five-second clockwise rotation under the fixed front-camera review condition. The result is a complete visible turn, and any reversal or incomplete turn falsifies it; Shot and Observation allocate that result.",
     "",
     "### Shot {#shot}",
     "",
-    evidenceBlock("Shot", PRINCIPLES),
+    evidenceBlock("Shot", CHECKLISTS),
     "",
     "Shot owns the locked frontal composition for the complete rotation. The subject remains centered at constant scale, and Observation states the acceptance predicate.",
     "",
     "#### Observation {#observation}",
     "",
-    evidenceBlock("Observation", PRINCIPLES),
+    evidenceBlock("Observation", CHECKLISTS),
     "",
     "From the locked frontal camera, observe one uninterrupted clockwise turn ending at the initial silhouette; a reversed direction, cut, or different terminal silhouette falsifies this observation.",
     "",
@@ -362,6 +377,13 @@ const linkEvidencePlugins = (root: string): void => {
       process.platform === "win32" ? "junction" : "dir",
     );
   }
+  const typescript = path.dirname(resolve.resolve("typescript/package.json"));
+  const destination = path.join(root, "node_modules", "typescript");
+  fs.symlinkSync(
+    typescript,
+    destination,
+    process.platform === "win32" ? "junction" : "dir",
+  );
 };
 
 /** Install only the shared contract package shape the graph factory resolves. */
