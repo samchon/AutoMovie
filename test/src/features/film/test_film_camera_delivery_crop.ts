@@ -37,6 +37,21 @@ const segment = (
     crop,
   });
 
+const verticalSegment = (
+  y: number,
+  crop: IAutoMovieDeliveryCrop | undefined,
+): boolean =>
+  intersectsPerspectiveFrustumSegment({
+    camera: CAMERA,
+    from: { x: 0, y, z: -2 },
+    to: { x: 0.5, y, z: -2 },
+    near: 1,
+    far: 10,
+    halfY: 1,
+    aspect: 1,
+    crop,
+  });
+
 /** Delivery crop is one validated gate across point and bounded projection. */
 export const test_film_camera_delivery_crop = (): void => {
   const whole = resolveAutoMovieDeliveryCrop(undefined);
@@ -89,6 +104,10 @@ export const test_film_camera_delivery_crop = (): void => {
       ["leftOutside", () => segment(-0.001, RIGHT_HALF) === false],
       ["rightOutside", () => segment(2.001, RIGHT_HALF) === false],
       [
+        "cropOnlyRejection",
+        () => segment(-0.001, undefined) && !segment(-0.001, RIGHT_HALF),
+      ],
+      [
         "wholeParity",
         () => segment(-1, undefined) === segment(-1, explicitWhole),
       ],
@@ -98,8 +117,26 @@ export const test_film_camera_delivery_crop = (): void => {
       rightEdge: true,
       leftOutside: true,
       rightOutside: true,
+      cropOnlyRejection: true,
       wholeParity: true,
     },
+  );
+
+  const BOTTOM_HALF: IAutoMovieDeliveryCrop = {
+    left: 0,
+    top: 0.5,
+    right: 1,
+    bottom: 1,
+  };
+  TestValidator.equals(
+    "top-origin vertical crop includes both exact edges and rejects outside",
+    namedFacts([
+      ["topEdge", () => verticalSegment(0, BOTTOM_HALF)],
+      ["bottomEdge", () => verticalSegment(-2, BOTTOM_HALF)],
+      ["topOutside", () => !verticalSegment(0.001, BOTTOM_HALF)],
+      ["bottomOutside", () => !verticalSegment(-2.001, BOTTOM_HALF)],
+    ]),
+    { topEdge: true, bottomEdge: true, topOutside: true, bottomOutside: true },
   );
 
   TestValidator.equals(
