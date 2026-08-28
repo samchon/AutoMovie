@@ -27,6 +27,7 @@ export default defineConfig(async () => {
     plugins: [
       generatedShotPlugin(process.cwd(), config.productionId, {
         dialogue: captureRuntime.dialogue,
+        deliveryCrop: captureRuntime.deliveryCrop,
         prepare: async () => {
           closure.assertCurrent();
           await dialogueRuntime.prepare();

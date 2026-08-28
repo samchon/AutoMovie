@@ -17,6 +17,7 @@ import type {
   AutoMovieExpressionPreset,
   AutoMovieGuidePass,
   IAutoMovieCompiledShotSource,
+  IAutoMovieDeliveryCrop,
   IAutoMovieExpression,
   IAutoMovieSoftBodyDomain,
   IAutoMovieTransform,
@@ -24,6 +25,7 @@ import type {
 import {
   AutoMoviePlayer,
   type IAutoMovieModelObject,
+  applyAutoMovieDeliveryCrop,
   applyLightMotion,
   applyObjectMotion,
   applyObjectMotions,
@@ -207,6 +209,8 @@ export const createCompiledShotRuntime = async (
   runtime?: {
     /** Final-byte dialogue timelines installed before capture. */
     dialogue?: IAutoMovieProductionDialogueRuntime | null;
+    /** Normalized production delivery crop for shot and film pages. */
+    deliveryCrop?: IAutoMovieDeliveryCrop;
     /** Explicitly admitted live moving soft-body domain ids. */
     liveWearableSoftBodies?: readonly string[];
   },
@@ -599,6 +603,7 @@ export const createCompiledShotRuntime = async (
   );
   const camera = scene.cameras[cameraIndex < 0 ? 0 : cameraIndex];
   if (camera === undefined) throw new Error("Compiled scene has no camera.");
+  applyAutoMovieDeliveryCrop(camera, runtime?.deliveryCrop);
   const stagedCamera = {
     position: camera.position.clone(),
     quaternion: camera.quaternion.clone(),

@@ -83,6 +83,14 @@ export const createProductionCaptureDialogueRuntime = (props: {
             current.diagnostics,
           )}`,
         );
+      const production = project.graph().production;
+      if (production === null)
+        throw new Error(
+          "Capture preparation requires a current production frame format.",
+        );
+      await props.capture.installDeliveryCrop(
+        production.frameFormat.crop ?? null,
+      );
       const generated = project.generatedManifest();
       if (
         generated === null ||
