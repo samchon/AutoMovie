@@ -53,7 +53,14 @@ const scene: IAutoMovieScene = {
     },
   ],
   cameras: [
-    { id: "cam", transform: t3(0, 0, 0), fovY: 60, near: 0.1, far: 100 },
+    {
+      id: "cam",
+      transform: t3(0, 0, 0),
+      fovY: 60,
+      near: 0.1,
+      far: 100,
+      depthPrecision: { minimumDepthBits: 24, maximumStepMeters: 100 },
+    },
   ],
   lights: [],
 };

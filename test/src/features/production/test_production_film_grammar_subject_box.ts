@@ -198,6 +198,7 @@ const readEdit = (props: {
           fovY: FOV_Y,
           near: 0.1,
           far: 2000,
+          depthPrecision: { minimumDepthBits: 24, maximumStepMeters: 100 },
         },
       ],
       lights: [],

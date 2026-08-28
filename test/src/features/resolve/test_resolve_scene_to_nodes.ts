@@ -87,7 +87,14 @@ export const test_resolve_scene_to_nodes = (): void => {
       },
     ],
     cameras: [
-      { id: "cam", transform: T(0, 1.5, 4), fovY: 40, near: 0.1, far: 100 },
+      {
+        id: "cam",
+        transform: T(0, 1.5, 4),
+        fovY: 40,
+        near: 0.1,
+        far: 100,
+        depthPrecision: { minimumDepthBits: 24, maximumStepMeters: 100 },
+      },
     ],
     lights: [
       {

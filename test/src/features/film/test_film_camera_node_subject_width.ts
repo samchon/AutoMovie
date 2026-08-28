@@ -127,6 +127,7 @@ const camera = (): IAutoMovieCamera => ({
   fovY: FOV_Y,
   near: 0.1,
   far: 1000,
+  depthPrecision: { minimumDepthBits: 24, maximumStepMeters: 100 },
 });
 
 const action: IAutoMovieCameraAction = {
@@ -288,6 +289,9 @@ const performFacade = (model: IAutoMovieModel): IAutoMovieClip | null => {
           position: { x: 0, y: 2, z: 200 },
           lookAt: { kind: "node", node: "west-facade" },
           fovDeg: FOV_Y,
+          near: 0.1,
+          far: 1000,
+          depthPrecision: { minimumDepthBits: 24, maximumStepMeters: 100 },
         },
       ],
     }),

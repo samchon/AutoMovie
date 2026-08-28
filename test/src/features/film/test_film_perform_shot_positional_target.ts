@@ -37,12 +37,18 @@ const staging = makeStagingWrite({
       position: { x: 2, y: 1.5, z: 0.35 },
       lookAt: { kind: "node", node: "knightA" },
       fovDeg: 40,
+      near: 0.1,
+      far: 1000,
+      depthPrecision: { minimumDepthBits: 24, maximumStepMeters: 100 },
     },
     {
       node: "cam-side",
       position: { x: -2, y: 1.5, z: 0.35 },
       lookAt: { kind: "node", node: "knightB" },
       fovDeg: 40,
+      near: 0.1,
+      far: 1000,
+      depthPrecision: { minimumDepthBits: 24, maximumStepMeters: 100 },
     },
   ],
 });

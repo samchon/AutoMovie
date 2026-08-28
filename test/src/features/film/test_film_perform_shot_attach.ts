@@ -76,6 +76,9 @@ const stagingOf = () =>
         position: { x: 3, y: 1.6, z: 3 },
         lookAt: { kind: "node", node: "knight" },
         fovDeg: 45,
+        near: 0.1,
+        far: 1000,
+        depthPrecision: { minimumDepthBits: 24, maximumStepMeters: 100 },
       },
     ],
   });

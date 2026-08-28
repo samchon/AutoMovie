@@ -91,6 +91,9 @@ const cameraOf = (): IAutoMovieStage["cameras"] => [
     position: { x: 4, y: 2, z: 4 },
     lookAt: { kind: "node", node: "dragon" },
     fovDeg: 45,
+    near: 0.1,
+    far: 1000,
+    depthPrecision: { minimumDepthBits: 24, maximumStepMeters: 100 },
   },
 ];
 

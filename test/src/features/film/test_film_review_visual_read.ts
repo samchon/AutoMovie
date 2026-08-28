@@ -29,6 +29,10 @@ const camera = (over: Partial<IAutoMovieCamera> = {}): IAutoMovieCamera => ({
   near: 0.1,
   far: 100,
   ...over,
+  depthPrecision: over.depthPrecision ?? {
+    minimumDepthBits: 24,
+    maximumStepMeters: 100,
+  },
 });
 
 const node = (id: string): IAutoMovieSceneNode => ({

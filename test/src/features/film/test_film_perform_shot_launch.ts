@@ -63,6 +63,9 @@ const stagingOf = () =>
         position: { x: 3, y: 1.6, z: 4 },
         lookAt: { kind: "node", node: "foe" },
         fovDeg: 45,
+        near: 0.1,
+        far: 1000,
+        depthPrecision: { minimumDepthBits: 24, maximumStepMeters: 100 },
       },
     ],
   });

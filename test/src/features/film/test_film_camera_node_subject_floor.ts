@@ -63,6 +63,7 @@ const camera = (): IAutoMovieCamera => ({
   fovY: 40,
   near: 0.1,
   far: 500,
+  depthPrecision: { minimumDepthBits: 24, maximumStepMeters: 100 },
 });
 
 const action = (

@@ -67,7 +67,14 @@ const sceneOf = (fog: IAutoMovieScene["fog"]): IAutoMovieScene => ({
     },
   ],
   cameras: [
-    { id: "cam", transform: t3(0, 0, 0), fovY: 60, near: 0.1, far: 200 },
+    {
+      id: "cam",
+      transform: t3(0, 0, 0),
+      fovY: 60,
+      near: 0.1,
+      far: 200,
+      depthPrecision: { minimumDepthBits: 24, maximumStepMeters: 100 },
+    },
   ],
   lights: [],
   fog,
