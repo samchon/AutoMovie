@@ -1211,6 +1211,22 @@ export const test_production_repaint_generator_adoption =
             runtimeIdentity: selected.runtimeIdentity,
           }),
         }),
+        repaint(runnable, {
+          adapter: async () => ({
+            mediaType: "video/mp4",
+            bytes: generatedBytes,
+            costUnits: -1,
+            runtimeIdentity: selected.runtimeIdentity,
+          }),
+        }),
+        repaint(runnable, {
+          adapter: async () =>
+            ({
+              mediaType: "video/mp4",
+              bytes: "not-bytes",
+              runtimeIdentity: selected.runtimeIdentity,
+            }) as never,
+        }),
       ]);
       TestValidator.equals(
         "media, bytes, runtime, raster, and thrown output failures are refused",
