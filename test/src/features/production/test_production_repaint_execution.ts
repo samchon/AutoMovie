@@ -351,6 +351,51 @@ export const test_production_repaint_execution = async (): Promise<void> => {
       }),
     ),
   );
+  const resolvedOnTimeout = await execute<string>({
+    policy: policy({
+      maximumAttempts: 1,
+      attemptTimeoutMs: 1,
+      backoffMs: [],
+    }),
+    calls: (signal) =>
+      new Promise((resolve) => {
+        signal.addEventListener(
+          "abort",
+          () =>
+            resolve({
+              value: "must not be accepted",
+              costUnits: 2,
+              availableOutput: {
+                digest: digest("resolved-during-timeout"),
+                bytes: 5,
+              },
+            }),
+          { once: true },
+        );
+      }),
+  });
+  const outerAbort = new AbortController();
+  const resolvedOnOuterAbort = await execute<string>({
+    policy: policy({ maximumAttempts: 1, backoffMs: [] }),
+    signal: outerAbort.signal,
+    calls: (signal) =>
+      new Promise((resolve) => {
+        signal.addEventListener(
+          "abort",
+          () =>
+            resolve({
+              value: "must not be accepted",
+              costUnits: 3,
+              availableOutput: {
+                digest: digest("resolved-during-cancellation"),
+                bytes: 7,
+              },
+            }),
+          { once: true },
+        );
+        queueMicrotask(() => outerAbort.abort("cancelled"));
+      }),
+  });
   TestValidator.equals(
     "every terminal retry boundary preserves its exact stop class",
     {
@@ -365,6 +410,22 @@ export const test_production_repaint_execution = async (): Promise<void> => {
       transported: transported.map(
         ({ result }) => result.attempts[0]?.failure?.class,
       ),
+      resolvedOnTimeout: {
+        stop: resolvedOnTimeout.result.stop,
+        accepted: resolvedOnTimeout.result.accepted,
+        failure: resolvedOnTimeout.result.attempts[0]?.failure?.class,
+        costUnits: resolvedOnTimeout.result.attempts[0]?.costUnits,
+        availableOutput:
+          resolvedOnTimeout.result.attempts[0]?.availableOutput?.digest,
+      },
+      resolvedOnOuterAbort: {
+        stop: resolvedOnOuterAbort.result.stop,
+        accepted: resolvedOnOuterAbort.result.accepted,
+        failure: resolvedOnOuterAbort.result.attempts[0]?.failure?.class,
+        costUnits: resolvedOnOuterAbort.result.attempts[0]?.costUnits,
+        availableOutput:
+          resolvedOnOuterAbort.result.attempts[0]?.availableOutput?.digest,
+      },
     },
     {
       zeroBudget: "cost-exhausted",
@@ -376,6 +437,20 @@ export const test_production_repaint_execution = async (): Promise<void> => {
       cancelledDuringAttempt: "cancelled",
       invalidCosts: ["not-retryable", "not-retryable"],
       transported: ["transport", "transport", "transport"],
+      resolvedOnTimeout: {
+        stop: "attempts-exhausted",
+        accepted: null,
+        failure: "timeout",
+        costUnits: 2,
+        availableOutput: digest("resolved-during-timeout"),
+      },
+      resolvedOnOuterAbort: {
+        stop: "cancelled",
+        accepted: null,
+        failure: "cancelled",
+        costUnits: 3,
+        availableOutput: digest("resolved-during-cancellation"),
+      },
     },
   );
 
