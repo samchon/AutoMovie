@@ -52,6 +52,9 @@ const staging: IAutoMovieStage = {
       position: { x: 3.4, y: 1.5, z: 0.2 },
       lookAt: { kind: "point", point: { x: 0, y: 1, z: 0 } },
       fovDeg: 48,
+      near: 0.1,
+      far: 1000,
+      depthPrecision: { minimumDepthBits: 24, maximumStepMeters: 0.6 },
     },
   ],
   lights: [

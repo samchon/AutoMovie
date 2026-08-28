@@ -130,6 +130,9 @@ const staging: IAutoMovieStage = {
       position: { x: 2.2, y: 1.4, z: -0.8 },
       lookAt: { kind: "node", node: "walker" },
       fovDeg: 40,
+      near: 0.1,
+      far: 1000,
+      depthPrecision: { minimumDepthBits: 24, maximumStepMeters: 0.6 },
     },
   ],
   lights: [
