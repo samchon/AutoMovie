@@ -1083,12 +1083,12 @@ export const test_production_project_runtime_shape_repaint_records =
         controls: { guidance: 1 },
       };
       const executionPolicy = {
-        maximumAttempts: 1,
-        attemptTimeoutMs: 1_000,
-        maximumElapsedMs: 1_000,
-        maximumCostUnits: 1,
-        backoffMs: [],
-        retryableFailures: [] as [],
+        maximumAttempts: 2,
+        attemptTimeoutMs: 2_000,
+        maximumElapsedMs: 5_000,
+        maximumCostUnits: 2,
+        backoffMs: [100],
+        retryableFailures: ["rate-limit" as const],
       };
       const evidence = {
         prompt: "scripts/repaint.ts#opening-prompt",
@@ -1225,6 +1225,141 @@ export const test_production_project_runtime_shape_repaint_records =
         ],
       ] as const)
         expectAttemptBoundCandidateOmitted(label, mutate);
+      const validReceiptPath = productionRepaintReceiptPath(
+        validReceipt.output.path,
+      );
+      const requestDirectory = `renditions/attempts/${validAttempt.requestId}`;
+      const expectPolicyLedgerOmitted = (
+        label: string,
+        receipt: IAutoMovieRepaintReceipt,
+        attempts: readonly IAutoMovieRepaintAttemptRecord[],
+      ): void => {
+        fs.rmSync(project.trackedStatePath(requestDirectory), {
+          force: true,
+          recursive: true,
+        });
+        for (const attempt of attempts)
+          writeTrackedJson(
+            project,
+            `${requestDirectory}/${attempt.attemptId}.json`,
+            attempt,
+          );
+        writeTrackedJson(project, validReceiptPath, receipt);
+        TestValidator.equals(label, project.verifiedRepaintCandidates(), []);
+        fs.rmSync(project.trackedStatePath(requestDirectory), {
+          force: true,
+          recursive: true,
+        });
+        writeTrackedJson(project, validAttemptPath, validAttempt);
+        writeTrackedJson(project, validReceiptPath, validReceipt);
+      };
+      const failedPrior = (
+        attemptId: string,
+        props: {
+          ordinal: number;
+          startedAt: string;
+          completedAt: string;
+          failureClass?: "provider-refusal" | "rate-limit";
+          retryable?: boolean;
+          costUnits?: number;
+        },
+      ): IAutoMovieRepaintAttemptRecord => ({
+        ...validAttempt,
+        attemptId,
+        ordinal: props.ordinal,
+        startedAt: props.startedAt,
+        completedAt: props.completedAt,
+        status: "failed",
+        failure: {
+          class: props.failureClass ?? "rate-limit",
+          message: "Stored retryable provider failure.",
+          retryable: props.retryable ?? true,
+        },
+        costUnits: props.costUnits ?? 0,
+        availableOutput: null,
+      });
+      const terminalAtOrdinal = (
+        ordinal: number,
+      ): IAutoMovieRepaintAttemptRecord => ({
+        ...validAttempt,
+        ordinal,
+      });
+      expectPolicyLedgerOmitted(
+        "candidate refuses a prior retryable bit contrary to receipt policy",
+        validReceipt,
+        [
+          failedPrior("00000000-0000-4000-8000-000000000071", {
+            ordinal: 1,
+            startedAt: "2026-08-28T11:59:58.000Z",
+            completedAt: "2026-08-28T11:59:59.000Z",
+            failureClass: "provider-refusal",
+          }),
+          terminalAtOrdinal(2),
+        ],
+      );
+      expectPolicyLedgerOmitted(
+        "candidate refuses a retry started before immutable policy backoff",
+        validReceipt,
+        [
+          failedPrior("00000000-0000-4000-8000-000000000072", {
+            ordinal: 1,
+            startedAt: "2026-08-28T11:59:59.000Z",
+            completedAt: "2026-08-28T11:59:59.950Z",
+          }),
+          terminalAtOrdinal(2),
+        ],
+      );
+      expectPolicyLedgerOmitted(
+        "candidate refuses more attempts than immutable policy permits",
+        validReceipt,
+        [
+          failedPrior("00000000-0000-4000-8000-000000000073", {
+            ordinal: 1,
+            startedAt: "2026-08-28T11:59:57.000Z",
+            completedAt: "2026-08-28T11:59:58.000Z",
+          }),
+          failedPrior("00000000-0000-4000-8000-000000000074", {
+            ordinal: 2,
+            startedAt: "2026-08-28T11:59:58.100Z",
+            completedAt: "2026-08-28T11:59:59.000Z",
+          }),
+          terminalAtOrdinal(3),
+        ],
+      );
+      expectPolicyLedgerOmitted(
+        "candidate refuses cumulative cost above immutable policy budget",
+        validReceipt,
+        [
+          failedPrior("00000000-0000-4000-8000-000000000075", {
+            ordinal: 1,
+            startedAt: "2026-08-28T11:59:58.000Z",
+            completedAt: "2026-08-28T11:59:59.000Z",
+            costUnits: 2,
+          }),
+          terminalAtOrdinal(2),
+        ],
+      );
+      const timeoutReceipt: IAutoMovieRepaintReceipt = {
+        ...validReceipt,
+        completedAt: "2026-08-28T12:00:02.000Z",
+      };
+      expectPolicyLedgerOmitted(
+        "candidate refuses a succeeded attempt at the immutable timeout ceiling",
+        timeoutReceipt,
+        [succeededAttemptForReceipt(timeoutReceipt)],
+      );
+      expectPolicyLedgerOmitted(
+        "candidate refuses total elapsed time at the immutable request ceiling",
+        validReceipt,
+        [
+          failedPrior("00000000-0000-4000-8000-000000000076", {
+            ordinal: 1,
+            startedAt: "2026-08-28T11:59:56.000Z",
+            completedAt: "2026-08-28T11:59:59.000Z",
+          }),
+          terminalAtOrdinal(2),
+        ],
+      );
       fs.writeFileSync(path.join(repaintDirectory, "ignored.txt"), "ignored");
       fs.writeFileSync(path.join(repaintDirectory, "broken.json"), "{broken");
       writeTrackedJson(project, "renditions/foreign.json", {

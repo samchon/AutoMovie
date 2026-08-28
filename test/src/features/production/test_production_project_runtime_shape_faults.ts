@@ -329,6 +329,333 @@ export const test_production_project_runtime_shape_faults = (): void => {
       }
     });
 
+  withFixture(({ root, project }) => {
+    const designRoot = path.join(root, "automovie/design/fixture-film");
+    const nativeLstat = fs.lstatSync;
+    let observations = 0;
+    mutableFs.lstatSync = ((file: fs.PathLike) => {
+      const state = nativeLstat(file);
+      if (path.resolve(file.toString()) !== path.resolve(designRoot))
+        return state;
+      observations += 1;
+      return observations === 4
+        ? (Object.assign(
+            Object.create(Object.getPrototypeOf(state)) as fs.Stats,
+            state,
+            { isSymbolicLink: () => true },
+          ) as fs.Stats)
+        : state;
+    }) as typeof fs.lstatSync;
+    try {
+      const error = refusal(() => project.eraseProduction("unsafe source"));
+      TestValidator.predicate(
+        "erase refuses a source namespace that changes into a symbolic link after preflight",
+        observations >= 4 && messageIncludes(error, "refused unsafe namespace"),
+      );
+    } finally {
+      mutableFs.lstatSync = nativeLstat;
+    }
+  });
+
+  withFixture(({ root, project }) => {
+    const models = path.join(root, "automovie/design/shared/models");
+    const target = fs
+      .readdirSync(models)
+      .filter((entry) => entry.endsWith(".json"))
+      .sort((left, right) => left.localeCompare(right))[0]!;
+    const nativeReadDirectory = fs.readdirSync;
+    let removed = false;
+    fs.readdirSync = ((directory: fs.PathLike, options?: unknown) => {
+      const entries = nativeReadDirectory(directory, options as never);
+      if (
+        removed === false &&
+        path.resolve(directory.toString()) === path.resolve(models)
+      ) {
+        fs.rmSync(path.join(models, target));
+        removed = true;
+      }
+      return entries;
+    }) as typeof fs.readdirSync;
+    try {
+      const error = refusal(() => project.inventory());
+      TestValidator.predicate(
+        "design enumeration refuses a file that disappears before its owned read",
+        removed && messageIncludes(error, "disappeared"),
+      );
+    } finally {
+      fs.readdirSync = nativeReadDirectory;
+    }
+  });
+
+  withFixture(({ root, project }) => {
+    const models = path.join(root, "automovie/design/shared/models");
+    const templatePath = fs
+      .readdirSync(models)
+      .filter((entry) => entry.endsWith(".json"))
+      .map((entry) => path.join(models, entry))[0]!;
+    const template = JSON.parse(fs.readFileSync(templatePath, "utf8")) as {
+      id: string;
+    };
+    for (const id of ["K", "K"]) {
+      const value = { ...template, id };
+      fs.writeFileSync(
+        path.join(models, `${encodeURIComponent(id)}.json`),
+        `${JSON.stringify(value)}\n`,
+      );
+    }
+    TestValidator.predicate(
+      "design enumeration refuses Unicode ids that collide under case folding",
+      messageIncludes(
+        refusal(() => project.inventory()),
+        "collide by case",
+      ),
+    );
+  });
+
+  withFixture(({ root }) => {
+    const registry = path.join(root, "automovie/productions.json");
+    const nativeOpen = fs.openSync;
+    const denied = Object.assign(new Error("registry read denied"), {
+      code: "EACCES",
+    });
+    fs.openSync = ((file: fs.PathLike, flags: fs.OpenMode) => {
+      if (path.resolve(file.toString()) === path.resolve(registry))
+        throw denied;
+      return nativeOpen(file, flags);
+    }) as typeof fs.openSync;
+    try {
+      TestValidator.equals(
+        "registry read preserves a non-disappearance owned-file failure",
+        refusal(() => AutoMovieProductionProject.registeredProductionIds(root)),
+        denied,
+      );
+    } finally {
+      fs.openSync = nativeOpen;
+    }
+  });
+
+  {
+    const fixture = productionFixture();
+    const external = fs.mkdtempSync(
+      path.join(os.tmpdir(), "automovie-manifest-content-root-"),
+    );
+    const viewer = path.join(fixture.root, "viewer");
+    const nativeRealpath = fs.realpathSync;
+    let failure: IFaultFailure | undefined;
+    fs.realpathSync = ((file: fs.PathLike) =>
+      path.resolve(file.toString()) === path.resolve(viewer)
+        ? external
+        : nativeRealpath(file)) as typeof fs.realpathSync;
+    try {
+      TestValidator.predicate(
+        "open refuses a declared content-root junction that escapes the project",
+        messageIncludes(
+          refusal(() =>
+            AutoMovieProductionProject.open(fixture.root, "fixture-film"),
+          ),
+          "escapes the project through a directory junction",
+        ),
+      );
+    } catch (error) {
+      failure = { error };
+      throw error;
+    } finally {
+      fs.realpathSync = nativeRealpath;
+      preserveCleanup(
+        failure,
+        fixture.dispose,
+        "Manifest content-root fixture",
+      );
+      preserveCleanup(
+        failure,
+        () => fs.rmSync(external, { force: true, recursive: true }),
+        "Manifest content-root target",
+      );
+    }
+  }
+
+  withFixture(({ project }) => {
+    const nativeRename = fs.renameSync;
+    let firstDestination: string | undefined;
+    let sourceMoves = 0;
+    fs.renameSync = ((from: fs.PathLike, to: fs.PathLike) => {
+      const destination = path.resolve(to.toString());
+      if (path.basename(path.dirname(destination)).startsWith(".erase-")) {
+        sourceMoves += 1;
+        if (sourceMoves === 1) {
+          const result = nativeRename(from, to);
+          firstDestination = destination;
+          return result;
+        }
+        if (firstDestination !== undefined) {
+          nativeRename(firstDestination, `${firstDestination}.parked`);
+          fs.mkdirSync(firstDestination);
+        }
+        throw new Error("later erase move failed");
+      }
+      return nativeRename(from, to);
+    }) as typeof fs.renameSync;
+    try {
+      const error = refusal(() =>
+        project.eraseProduction("identity replacement during erase"),
+      );
+      TestValidator.predicate(
+        "erase refuses rollback after a quarantined original changes identity",
+        error instanceof AggregateError &&
+          error.message.includes("changed physical identity") &&
+          error.message.includes("No stale-path rollback was attempted"),
+      );
+    } finally {
+      fs.renameSync = nativeRename;
+    }
+  });
+
+  withFixture(({ project }) => {
+    const nativeRename = fs.renameSync;
+    let firstSource: string | undefined;
+    let sourceMoves = 0;
+    fs.renameSync = ((from: fs.PathLike, to: fs.PathLike) => {
+      const destination = path.resolve(to.toString());
+      if (path.basename(path.dirname(destination)).startsWith(".erase-")) {
+        sourceMoves += 1;
+        if (sourceMoves === 1) {
+          firstSource = path.resolve(from.toString());
+          return nativeRename(from, to);
+        }
+        if (firstSource !== undefined) fs.mkdirSync(firstSource);
+        throw new Error("later erase move failed");
+      }
+      return nativeRename(from, to);
+    }) as typeof fs.renameSync;
+    try {
+      const error = refusal(() =>
+        project.eraseProduction("rollback source replacement"),
+      );
+      TestValidator.predicate(
+        "erase leaves a quarantined original untouched when its source path is replaced",
+        error instanceof AggregateError &&
+          error.message.includes("rollback was incomplete") &&
+          error.errors.some((entry) =>
+            messageIncludes(entry, "was replaced before rollback"),
+          ),
+      );
+    } finally {
+      fs.renameSync = nativeRename;
+    }
+  });
+
+  withFixture(({ root, project }) => {
+    const registry = path.join(root, "automovie/productions.json");
+    const auditParent = path.join(root, "automovie/audit/production-deletions");
+    const nativeRename = fs.renameSync;
+    const nativeRemove = fs.rmSync;
+    fs.renameSync = ((from: fs.PathLike, to: fs.PathLike) => {
+      if (path.resolve(to.toString()) === path.resolve(registry))
+        throw new Error("erase registry publish failed");
+      return nativeRename(from, to);
+    }) as typeof fs.renameSync;
+    fs.rmSync = ((file: fs.PathLike, options?: fs.RmOptions) => {
+      if (
+        path.resolve(path.dirname(file.toString())) ===
+          path.resolve(auditParent) &&
+        path.basename(file.toString()).startsWith("fixture-film-") &&
+        path.basename(file.toString()).endsWith(".json")
+      )
+        throw new Error("erase audit rollback failed");
+      return nativeRemove(file, options);
+    }) as typeof fs.rmSync;
+    try {
+      const error = refusal(() =>
+        project.eraseProduction("audit rollback failure"),
+      );
+      TestValidator.predicate(
+        "erase aggregates an audit cleanup failure after restoring quarantined sources",
+        error instanceof AggregateError &&
+          error.message.includes("rollback was incomplete") &&
+          error.errors.some((entry) =>
+            messageIncludes(entry, "erase audit rollback failed"),
+          ),
+      );
+    } finally {
+      fs.renameSync = nativeRename;
+      fs.rmSync = nativeRemove;
+    }
+  });
+
+  withFixture(({ project }) => {
+    const nativeRemove = fs.rmSync;
+    let registryCleanupFaults = 0;
+    fs.rmSync = ((file: fs.PathLike, options?: fs.RmOptions) => {
+      if (file.toString().includes("productions.json.tmp.")) {
+        registryCleanupFaults += 1;
+        throw new Error("post-publish registry cleanup failed");
+      }
+      return nativeRemove(file, options);
+    }) as typeof fs.rmSync;
+    try {
+      const erased = project.eraseProduction("committed cleanup failure");
+      TestValidator.predicate(
+        "erase preserves its registry commit point after temporary cleanup fails",
+        registryCleanupFaults === 1 && erased.erased,
+      );
+    } finally {
+      fs.rmSync = nativeRemove;
+    }
+  });
+
+  withFixture(({ root, project }) => {
+    const stateRoot = path.join(root, "automovie/productions/fixture-film");
+    const nativeMkdir = fs.mkdirSync;
+    let replaced = false;
+    fs.mkdirSync = ((
+      directory: fs.PathLike,
+      options?: fs.MakeDirectoryOptions,
+    ) => {
+      const result = nativeMkdir(directory, options);
+      if (
+        replaced === false &&
+        path.basename(directory.toString()).startsWith(".erase-")
+      ) {
+        fs.renameSync(stateRoot, `${stateRoot}.parked`);
+        nativeMkdir(stateRoot);
+        replaced = true;
+      }
+      return result;
+    }) as typeof fs.mkdirSync;
+    try {
+      const error = refusal(() => project.eraseProduction("state replacement"));
+      TestValidator.predicate(
+        "erase abandons only process-local lock ownership after state-root replacement",
+        replaced && messageIncludes(error, "physical identity"),
+      );
+    } finally {
+      fs.mkdirSync = nativeMkdir;
+    }
+  });
+
+  withFixture(({ root, project }) => {
+    const auditParent = path.join(root, "automovie/audit/production-deletions");
+    fs.mkdirSync(path.dirname(auditParent), { recursive: true });
+    fs.writeFileSync(auditParent, "audit obstruction");
+    const nativeReadDirectory = fs.readdirSync;
+    fs.readdirSync = ((directory: fs.PathLike, options?: unknown) => {
+      if (path.basename(directory.toString()).startsWith(".erase-"))
+        throw new Error("quarantine inspection failed");
+      return nativeReadDirectory(directory, options as never);
+    }) as typeof fs.readdirSync;
+    try {
+      TestValidator.predicate(
+        "erase preserves its original refusal when empty-quarantine inspection also fails",
+        messageIncludes(
+          refusal(() => project.eraseProduction("quarantine inspection")),
+          "not a physical directory",
+        ),
+      );
+    } finally {
+      fs.readdirSync = nativeReadDirectory;
+    }
+  });
+
   withRoot((root) => {
     const source = path.join(root, "automovie/design/models");
     fs.mkdirSync(source, { recursive: true });
