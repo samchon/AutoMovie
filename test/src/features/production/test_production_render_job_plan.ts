@@ -210,6 +210,8 @@ const chunkShape = (
  *    nothing, an odd authored raster, a timeline whose clock disagrees with the
  *    production, a shot with no compiler-owned source fingerprint, an audio cue
  *    with no verified asset, and a guide-pass request naming two passes.
+ * 7. Changing only the normalized crop invalidates every chunk identity while
+ *    preserving the raster, clock, and exact crop in both frame formats.
  */
 export const test_production_render_job_plan = (): void => {
   const final = plan({});
@@ -239,6 +241,29 @@ export const test_production_render_job_plan = (): void => {
       totalFrames: 12,
       chunkFrames: 5,
       compileFingerprint: digest("d"),
+    },
+  );
+  const croppedProduction = PRODUCTION();
+  croppedProduction.frameFormat.crop = {
+    left: 0.1,
+    top: 0.2,
+    right: 0.9,
+    bottom: 0.8,
+  };
+  const cropped = plan({ production: croppedProduction });
+  TestValidator.equals(
+    "a crop-only change invalidates chunks without changing raster or clock",
+    {
+      sourceFrameFormat: cropped.sourceFrameFormat,
+      frameFormat: cropped.frameFormat,
+      everyChunkChanged: cropped.chunks.every(
+        (chunk, index) => chunk.id !== final.chunks[index]?.id,
+      ),
+    },
+    {
+      sourceFrameFormat: croppedProduction.frameFormat,
+      frameFormat: croppedProduction.frameFormat,
+      everyChunkChanged: true,
     },
   );
   TestValidator.equals(

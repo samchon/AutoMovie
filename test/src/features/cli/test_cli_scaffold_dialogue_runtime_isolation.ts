@@ -1,5 +1,6 @@
 import type {
   AutoMovieContentDigest,
+  IAutoMovieDeliveryCrop,
   IAutoMovieProductionTtsReceipt,
 } from "@automovie/interface";
 import { renderScaffold, writeFiles } from "@automovie/template";
@@ -36,8 +37,13 @@ interface IDialogueRuntime {
 
 interface ICaptureRuntime {
   installDialogue(runtime: IDialogueRuntime | null): Promise<void>;
+  installDeliveryCrop(crop: IAutoMovieDeliveryCrop | null): Promise<void>;
+  deliveryCrop(): IAutoMovieDeliveryCrop | null;
   pageIdentity(input: Record<string, unknown>): string;
-  viewerRuntime(): { dialogue(): IDialogueRuntime | null };
+  viewerRuntime(): {
+    dialogue(): IDialogueRuntime | null;
+    deliveryCrop(): IAutoMovieDeliveryCrop | null;
+  };
 }
 
 interface IRuntimeModules {
@@ -50,7 +56,10 @@ interface IRuntimeModules {
   generatedShotPlugin(
     root: string,
     productionId: string,
-    provider: { dialogue(): IDialogueRuntime | null },
+    provider: {
+      dialogue(): IDialogueRuntime | null;
+      deliveryCrop(): IAutoMovieDeliveryCrop | null;
+    },
   ): { configureServer(server: unknown): unknown };
   productionDialogueCacheIdentity(props: {
     cacheRoot: string;
@@ -170,8 +179,14 @@ const runtimeEndpoint = async (
   module: IRuntimeModules,
   root: string,
   productionId: string,
-  provider: { dialogue(): IDialogueRuntime | null },
-): Promise<IDialogueRuntime | null> => {
+  provider: {
+    dialogue(): IDialogueRuntime | null;
+    deliveryCrop(): IAutoMovieDeliveryCrop | null;
+  },
+): Promise<{
+  dialogue: IDialogueRuntime | null;
+  deliveryCrop: IAutoMovieDeliveryCrop | null;
+}> => {
   let middleware:
     | ((
         request: { url: string },
@@ -224,11 +239,10 @@ const runtimeEndpoint = async (
       finish(reject, error);
     }
   });
-  return (
-    JSON.parse(body.toString("utf8")) as {
-      dialogue: IDialogueRuntime | null;
-    }
-  ).dialogue;
+  return JSON.parse(body.toString("utf8")) as {
+    dialogue: IDialogueRuntime | null;
+    deliveryCrop: IAutoMovieDeliveryCrop | null;
+  };
 };
 
 const dialogueSelection = (): Record<string, unknown> => ({
@@ -291,10 +305,15 @@ export const test_cli_scaffold_dialogue_runtime_isolation =
       const dialogueB = dialogueRuntime("B", 48);
       const captureA = first.createProductionFrameCaptureRuntime();
       const captureB = second.createProductionFrameCaptureRuntime();
+      const cropA = { left: 0, top: 0.1, right: 0.8, bottom: 1 };
+      const cropB = { left: 0.2, top: 0, right: 1, bottom: 0.9 };
       await captureA.installDialogue(dialogueA);
+      await captureA.installDeliveryCrop(cropA);
       const openA = captureA.viewerRuntime();
       await captureB.installDialogue(dialogueB);
+      await captureB.installDeliveryCrop(cropB);
       await captureA.installDialogue(dialogueB);
+      await captureA.installDeliveryCrop(cropB);
       const endpointA = await runtimeEndpoint(
         first,
         firstRoot,
@@ -325,16 +344,31 @@ export const test_cli_scaffold_dialogue_runtime_isolation =
           projectRoot: firstRoot,
           productionId: "dialogue-proxy",
           target: { kind: "shot", id: "shot-A" },
+          crop: cropA,
         }),
-      ) as { dialogueRuntime: string | null };
+      ) as {
+        dialogueRuntime: string | null;
+        deliveryCrop: IAutoMovieDeliveryCrop | null;
+      };
+      const pageCropOnlyB = pageRuntimeA.pageIdentity({
+        ...basePage,
+        projectRoot: firstRoot,
+        productionId: "dialogue-proxy",
+        target: { kind: "shot", id: "shot-A" },
+        crop: cropB,
+      });
       const pageB = JSON.parse(
         captureB.pageIdentity({
           ...basePage,
           projectRoot: secondRoot,
           productionId: "dialogue-final",
           target: { kind: "shot", id: "shot-B" },
+          crop: cropB,
         }),
-      ) as { dialogueRuntime: string | null };
+      ) as {
+        dialogueRuntime: string | null;
+        deliveryCrop: IAutoMovieDeliveryCrop | null;
+      };
       const pageEmpty = JSON.parse(
         emptyPage.pageIdentity({
           ...basePage,
@@ -342,7 +376,10 @@ export const test_cli_scaffold_dialogue_runtime_isolation =
           productionId: "dialogue-proxy",
           target: { kind: "shot", id: "shot-A" },
         }),
-      ) as { dialogueRuntime: string | null };
+      ) as {
+        dialogueRuntime: string | null;
+        deliveryCrop: IAutoMovieDeliveryCrop | null;
+      };
       const project = {
         contentInputs: () => [
           { path: "src/film.ts", bytes: Buffer.from("same"), render: true },
@@ -364,8 +401,10 @@ export const test_cli_scaffold_dialogue_runtime_isolation =
       TestValidator.equals(
         "two generated roots preserve invocation-owned dialogue facts",
         {
-          endpointA,
-          endpointB,
+          endpointDialogueA: endpointA.dialogue,
+          endpointDialogueB: endpointB.dialogue,
+          endpointCropA: endpointA.deliveryCrop,
+          endpointCropB: endpointB.deliveryCrop,
           frameA: first.productionDialogueFrameForShotTime(dialogueA, {
             shot: "shot-A",
             time: 0.5,
@@ -377,18 +416,35 @@ export const test_cli_scaffold_dialogue_runtime_isolation =
           pageEmpty: pageEmpty.dialogueRuntime,
           pageA: pageA.dialogueRuntime,
           pageB: pageB.dialogueRuntime,
+          pageCropEmpty: pageEmpty.deliveryCrop,
+          pageCropA: pageA.deliveryCrop,
+          pageCropB: pageB.deliveryCrop,
+          cropOnlyPageInvalidated:
+            pageRuntimeA.pageIdentity({
+              ...basePage,
+              projectRoot: firstRoot,
+              productionId: "dialogue-proxy",
+              target: { kind: "shot", id: "shot-A" },
+              crop: cropA,
+            }) !== pageCropOnlyB,
           expectedA: first.productionDialogueRuntimeIdentity(dialogueA),
           expectedB: second.productionDialogueRuntimeIdentity(dialogueB),
           sourceDistinct: sourceA !== sourceB,
         },
         {
-          endpointA: dialogueA,
-          endpointB: dialogueB,
+          endpointDialogueA: dialogueA,
+          endpointDialogueB: dialogueB,
+          endpointCropA: cropA,
+          endpointCropB: cropB,
           frameA: 12,
           frameB: 60,
           pageEmpty: null,
           pageA: first.productionDialogueRuntimeIdentity(dialogueA),
           pageB: second.productionDialogueRuntimeIdentity(dialogueB),
+          pageCropEmpty: null,
+          pageCropA: cropA,
+          pageCropB: cropB,
+          cropOnlyPageInvalidated: true,
           expectedA: first.productionDialogueRuntimeIdentity(dialogueA),
           expectedB: second.productionDialogueRuntimeIdentity(dialogueB),
           sourceDistinct: true,
