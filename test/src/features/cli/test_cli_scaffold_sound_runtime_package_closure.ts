@@ -118,6 +118,14 @@ const replaceBytes = (file: string): void => {
   fs.writeFileSync(file, Buffer.concat([bytes, Buffer.from("\n// changed\n")]));
 };
 
+const alteredPhysicalVersion = (status: fs.BigIntStats): fs.BigIntStats =>
+  new Proxy(status, {
+    get: (subject, property, receiver) =>
+      property === "ctimeNs"
+        ? subject.ctimeNs + 1n
+        : Reflect.get(subject, property, receiver),
+  });
+
 const withAlteredLstatVersion = <Output>(props: {
   alter: (observation: number) => boolean;
   operation: () => Output;
@@ -131,18 +139,44 @@ const withAlteredLstatVersion = <Output>(props: {
     if (path.resolve(String(args[0])) !== target) return status;
     observations++;
     if (props.alter(observations) === false) return status;
-    return new Proxy(status, {
-      get: (subject, property, receiver) =>
-        property === "ctimeNs"
-          ? subject.ctimeNs + 1n
-          : Reflect.get(subject, property, receiver),
-    });
+    return alteredPhysicalVersion(status);
   }) as typeof fs.lstatSync;
   Object.defineProperty(fs, "lstatSync", { value: patched });
   try {
     return props.operation();
   } finally {
     Object.defineProperty(fs, "lstatSync", { value: original });
+  }
+};
+
+const withPhysicalDirectoryStatus = <Output>(props: {
+  lstat: fs.BigIntStats;
+  operation: () => Output;
+  stat: fs.BigIntStats;
+  target: string;
+}): Output => {
+  const originalLstat = fs.lstatSync;
+  const originalStat = fs.statSync;
+  const target = path.resolve(props.target);
+  const patch = (
+    original: typeof fs.lstatSync | typeof fs.statSync,
+    replacement: fs.BigIntStats,
+  ) =>
+    ((...args: unknown[]) =>
+      path.resolve(String(args[0])) === target
+        ? replacement
+        : Reflect.apply(original, fs, args)) as typeof fs.lstatSync;
+  Object.defineProperty(fs, "lstatSync", {
+    value: patch(originalLstat, props.lstat),
+  });
+  Object.defineProperty(fs, "statSync", {
+    value: patch(originalStat, props.stat),
+  });
+  try {
+    return props.operation();
+  } finally {
+    Object.defineProperty(fs, "lstatSync", { value: originalLstat });
+    Object.defineProperty(fs, "statSync", { value: originalStat });
   }
 };
 
@@ -583,9 +617,11 @@ export const test_cli_scaffold_sound_runtime_package_closure = (): void => {
           import: [null, "./export-entry.mjs"],
           require: "./export-require.cjs",
         },
+        "./reverse": ["./z.js", "./a.js"],
         "./asset": "./asset.bin",
       },
       files: {
+        "a.js": "export const a = true;\n",
         "index.js": [
           "// require('./comment.js')",
           "/* import('./block-comment.js') */",
@@ -617,6 +653,7 @@ export const test_cli_scaffold_sound_runtime_package_closure = (): void => {
         "templated.mjs": "export const template = true;\n",
         "templated.wasm": new Uint8Array([0, 97, 115, 109, 1]),
         "unterminated.js": "/* unfinished module comment",
+        "z.js": "export const z = true;\n",
         "extra.bin": "extra",
         "asset.bin": "asset",
         "assets/root.bin": "root",
@@ -645,6 +682,7 @@ export const test_cli_scaffold_sound_runtime_package_closure = (): void => {
       },
       {
         closure: [
+          "a.js",
           "asset.bin",
           "assets/nested/member.bin",
           "assets/root.bin",
@@ -664,6 +702,7 @@ export const test_cli_scaffold_sound_runtime_package_closure = (): void => {
           "templated.mjs",
           "templated.wasm",
           "unterminated.js",
+          "z.js",
         ],
         assets: ["asset.bin", "assets/nested/member.bin", "assets/root.bin"],
       },
@@ -732,6 +771,53 @@ export const test_cli_scaffold_sound_runtime_package_closure = (): void => {
       { "tree member after inventory": true, "file while read": true },
     );
 
+    const exactTreeRoot = writePackage({
+      root: path.join(root, "exact-tree-package"),
+      name: "exact-tree-package",
+      files: {
+        "index.js": "module.exports = true;\n",
+        "assets/original.bin": "original",
+      },
+    });
+    const exactTree = runtime.snapshotRuntimePackage({
+      assets: [{ kind: "tree", relative: "assets" }],
+      entry: path.join(exactTreeRoot, "index.js"),
+      packageName: "exact-tree-package",
+    });
+    const exactTreeDirectory = path.join(exactTreeRoot, "assets");
+    const exactTreeLstat = fs.lstatSync(exactTreeDirectory, { bigint: true });
+    const exactTreeStat = fs.statSync(exactTreeDirectory, { bigint: true });
+    fs.writeFileSync(path.join(exactTreeDirectory, "added.bin"), "added");
+    TestValidator.equals(
+      "tree membership changes even when directory metadata is held constant",
+      throwsError(
+        () =>
+          withPhysicalDirectoryStatus({
+            target: exactTreeDirectory,
+            lstat: exactTreeLstat,
+            stat: exactTreeStat,
+            operation: () =>
+              runtime.assertRuntimePackageSnapshotCurrent(exactTree),
+          }),
+        "changed exact inventory",
+      ),
+      true,
+    );
+
+    const linkedMemberRoot = writePackage({
+      root: path.join(root, "linked-member-package"),
+      name: "linked-member-package",
+      files: {
+        "index.js": "module.exports = true;\n",
+        "assets/owned.bin": "owned",
+      },
+    });
+    fs.symlinkSync(
+      packageRoot("pngjs"),
+      path.join(linkedMemberRoot, "assets", "linked"),
+      process.platform === "win32" ? "junction" : "dir",
+    );
+
     const outside = path.join(root, "outside.js");
     fs.writeFileSync(outside, "module.exports = true;\n", "utf8");
     const escapeRoot = writePackage({
@@ -766,6 +852,15 @@ export const test_cli_scaffold_sound_runtime_package_closure = (): void => {
       "module.exports = true;\n",
       "utf8",
     );
+    const directoryRaceRoot = writePackage({
+      root: path.join(root, "directory-race"),
+      name: "directory-race",
+      files: { "index.js": "module.exports = true;\n" },
+    });
+    const directoryRaceLstat = fs.lstatSync(directoryRaceRoot, {
+      bigint: true,
+    });
+    const directoryRaceStat = fs.statSync(directoryRaceRoot, { bigint: true });
     TestValidator.equals(
       "invalid package facts and unobserved snapshots are refused",
       namedFacts([
@@ -879,6 +974,24 @@ export const test_cli_scaffold_sound_runtime_package_closure = (): void => {
               "is not physical",
             ),
         ],
+        [
+          "directory resolution race",
+          () =>
+            throwsError(
+              () =>
+                withPhysicalDirectoryStatus({
+                  target: directoryRaceRoot,
+                  lstat: directoryRaceLstat,
+                  stat: alteredPhysicalVersion(directoryRaceStat),
+                  operation: () =>
+                    runtime.snapshotRuntimePackage({
+                      entry: path.join(directoryRaceRoot, "index.js"),
+                      packageName: "directory-race",
+                    }),
+                }),
+              "changed while resolved",
+            ),
+        ],
         ...["", ".", "..", "a\\b", "a\0b"].map(
           (relative) =>
             [
@@ -908,6 +1021,19 @@ export const test_cli_scaffold_sound_runtime_package_closure = (): void => {
               "not physical",
             ),
         ],
+        [
+          "linked asset member",
+          () =>
+            throwsError(
+              () =>
+                runtime.snapshotRuntimePackage({
+                  assets: [{ kind: "tree", relative: "assets" }],
+                  entry: path.join(linkedMemberRoot, "index.js"),
+                  packageName: "linked-member-package",
+                }),
+              "is linked",
+            ),
+        ],
       ]),
       Object.fromEntries(
         [
@@ -920,10 +1046,12 @@ export const test_cli_scaffold_sound_runtime_package_closure = (): void => {
           "invalid version",
           "missing manifest",
           "manifest directory",
+          "directory resolution race",
           ...["", ".", "..", "a\\b", "a\0b"].map(
             (relative) => `invalid asset ${JSON.stringify(relative)}`,
           ),
           "linked asset tree",
+          "linked asset member",
         ].map((key) => [key, true]),
       ),
     );
