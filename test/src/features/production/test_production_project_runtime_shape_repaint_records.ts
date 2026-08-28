@@ -1389,6 +1389,31 @@ export const test_production_project_runtime_shape_repaint_records =
         continuityReview,
         selectedAt: "2026-08-28T12:00:02.000Z",
       };
+      const nullContinuityEvidence = { ...evidence, continuity: null };
+      const nullContinuityAttemptId = "00000000-0000-4000-8000-000000000004";
+      const nullContinuityOutputPath = productionRepaintOutputPath({
+        shot,
+        sourceRenderFingerprint,
+        attemptId: nullContinuityAttemptId,
+        adapterIdentity,
+        generatorProvenance,
+        parameters,
+        executionPolicy,
+        evidence: nullContinuityEvidence,
+        references,
+        outputDigest,
+      });
+      const nullContinuityReceipt: IAutoMovieRepaintReceipt = {
+        ...validReceipt,
+        requestId: "00000000-0000-4000-8000-000000000022",
+        attemptId: nullContinuityAttemptId,
+        evidence: nullContinuityEvidence,
+        output: { ...validReceipt.output, path: nullContinuityOutputPath },
+      };
+      project.commitRepaintAttempt(
+        succeededAttemptForReceipt(nullContinuityReceipt),
+      );
+      project.commitRepaintRendition(nullContinuityReceipt, outputBytes);
       const expectSelectionRefusal = (
         label: string,
         props: Parameters<typeof project.selectRepaintCandidate>[0],
@@ -1426,6 +1451,30 @@ export const test_production_project_runtime_shape_repaint_records =
         "selection cannot precede candidate completion",
         { ...selectionProps, selectedAt: "2026-08-28T12:00:00.999Z" },
         "cannot precede the candidate completion instant",
+      );
+      expectSelectionRefusal(
+        "selection refuses an omitted required continuity review",
+        { ...selectionProps, continuityReview: null },
+        "must match the candidate continuity evidence exactly",
+      );
+      expectSelectionRefusal(
+        "selection refuses a continuity review for a candidate without continuity evidence",
+        {
+          ...selectionProps,
+          attemptId: nullContinuityReceipt.attemptId,
+        },
+        "must match the candidate continuity evidence exactly",
+      );
+      expectSelectionRefusal(
+        "selection refuses a continuity baseline different from its candidate evidence",
+        {
+          ...selectionProps,
+          continuityReview: {
+            ...continuityReview,
+            baseline: "docs/settings/continuity.md#other",
+          },
+        },
+        "must match the candidate continuity evidence exactly",
       );
       for (const [label, props] of [
         ["selection reason is nonblank", { ...selectionProps, reason: " " }],
@@ -1579,6 +1628,20 @@ export const test_production_project_runtime_shape_repaint_records =
         attemptId: laterReceipt.attemptId,
         selectedAt: "2026-08-28T12:00:04.000Z",
       });
+      expectSelectionRefusal(
+        "ordinary selection cannot select the current candidate again",
+        {
+          ...selectionProps,
+          attemptId: laterReceipt.attemptId,
+          selectedAt: "2026-08-28T12:00:05.000Z",
+        },
+        "completed after the current active candidate",
+      );
+      expectSelectionRefusal(
+        "ordinary selection cannot move to an older candidate",
+        { ...selectionProps, selectedAt: "2026-08-28T12:00:05.000Z" },
+        "completed after the current active candidate",
+      );
       expectSelectionRefusal(
         "reversal cannot select the current candidate again",
         {
