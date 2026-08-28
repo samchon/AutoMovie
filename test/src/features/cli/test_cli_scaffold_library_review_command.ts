@@ -467,6 +467,15 @@ export const test_cli_scaffold_library_review_command = (): void => {
         ),
       };
     };
+    const readWithFilmManifest: typeof readAutoMovieProductionEvidence = (
+      props,
+    ) => {
+      const snapshot = readAutoMovieProductionEvidence(props);
+      return {
+        ...snapshot,
+        manifest: { ...snapshot.manifest, kind: "film" },
+      };
+    };
     const refusals: Array<
       readonly [
         argv: readonly string[],
@@ -475,6 +484,7 @@ export const test_cli_scaffold_library_review_command = (): void => {
       ]
     > = [
       [["unknown"], 'must be "inspect", "plan", or "record"'],
+      [["inspect"], 'require production kind "library"', readWithFilmManifest],
       [["inspect", "positional"], "unknown or positional"],
       [["inspect", "--typo", "value"], "unknown or positional"],
       [["inspect", undefined as unknown as string], "unknown or positional"],
@@ -939,6 +949,20 @@ export const test_cli_scaffold_library_review_command = (): void => {
     const modelSourcePath = modelAuthoring.designOwners
       .find((entry) => entry.branch === "models")!
       .sourceBinding!.paths.find((entry) => entry.endsWith("/soloist.ts"))!;
+    const modelWithoutTurntableRefused = commandRefuses({
+      argv: [
+        "plan",
+        "--owner",
+        modelOwner,
+        "--source",
+        modelSourcePath,
+        "--observation",
+        "whole-model:artifact",
+      ],
+      root: fixture.root,
+      evidence: modelEvidence,
+      message: "canonical turntable",
+    });
     command.runLibraryReviewCommand({
       argv: [
         "plan",
@@ -1061,6 +1085,7 @@ export const test_cli_scaffold_library_review_command = (): void => {
           "mismatchedTurntableRefusedWithoutMutation",
           () => mismatchedTurntableRefused && mismatchedTurntableUnchanged,
         ],
+        ["modelWithoutTurntableRefused", () => modelWithoutTurntableRefused],
         ["inspectAndRecordEmitResults", () => outputCount === 2],
       ]),
       {
@@ -1077,6 +1102,7 @@ export const test_cli_scaffold_library_review_command = (): void => {
         staleReceiptRetainedAlongsideCurrent: true,
         malformedPlanRefusedWithoutMutation: true,
         mismatchedTurntableRefusedWithoutMutation: true,
+        modelWithoutTurntableRefused: true,
         inspectAndRecordEmitResults: true,
       },
     );

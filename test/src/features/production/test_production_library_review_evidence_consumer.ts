@@ -559,6 +559,43 @@ export const test_production_library_review_evidence_consumer = (): void => {
     project: factsOnlyModelState,
     compileFingerprint: COMPILE,
   });
+  const modelLessOrderingState = project();
+  writePlans(modelLessOrderingState);
+  const modelLessOrderingPlan = JSON.parse(
+    modelLessOrderingState.prose.get(reviewPath("motions"))!,
+  );
+  modelLessOrderingPlan.units[0].observations = [
+    { id: "z-last", evidence: "facts" },
+    { id: "a-first", evidence: "artifact" },
+  ];
+  modelLessOrderingState.prose.set(
+    reviewPath("motions"),
+    JSON.stringify(modelLessOrderingPlan),
+  );
+  const modelLessOrdering = consumer.readAutoMovieLibraryReviewRequirements({
+    authoring: binding,
+    project: modelLessOrderingState,
+    compileFingerprint: COMPILE,
+  });
+  const reversedModelLessOrderingState = project();
+  writePlans(reversedModelLessOrderingState);
+  const reversedModelLessOrderingPlan = JSON.parse(
+    reversedModelLessOrderingState.prose.get(reviewPath("motions"))!,
+  );
+  reversedModelLessOrderingPlan.units[0].observations = [
+    { id: "a-first", evidence: "artifact" },
+    { id: "z-last", evidence: "facts" },
+  ];
+  reversedModelLessOrderingState.prose.set(
+    reviewPath("motions"),
+    JSON.stringify(reversedModelLessOrderingPlan),
+  );
+  const reversedModelLessOrdering =
+    consumer.readAutoMovieLibraryReviewRequirements({
+      authoring: binding,
+      project: reversedModelLessOrderingState,
+      compileFingerprint: COMPILE,
+    });
   const noSourceState = project();
   writePlans(noSourceState);
   const noSourcePlan = JSON.parse(
@@ -796,6 +833,15 @@ export const test_production_library_review_evidence_consumer = (): void => {
           ),
       ],
       [
+        "modelLessObservationsSortDeterministically",
+        () =>
+          modelLessOrdering.owners.find((entry) => entry.branch === "motions")
+            ?.identity.plan ===
+          reversedModelLessOrdering.owners.find(
+            (entry) => entry.branch === "motions",
+          )?.identity.plan,
+      ],
+      [
         "libraryOwnerNeedsSource",
         () =>
           noSource.diagnostics.some((entry) =>
@@ -841,6 +887,10 @@ export const test_production_library_review_evidence_consumer = (): void => {
           consumer.libraryReviewEvidenceConsumerDiagnostics({
             ...props(state),
             scope: "source",
+          }).length === 0 &&
+          consumer.libraryReviewEvidenceConsumerDiagnostics({
+            ...props(state),
+            scope: "final",
           }).length === 0,
       ],
     ]),
@@ -866,6 +916,7 @@ export const test_production_library_review_evidence_consumer = (): void => {
       missingSourceWasExercised: true,
       invalidSourcesPlansAndKindsRefused: true,
       modelFactsCannotReplaceFixedTurntable: true,
+      modelLessObservationsSortDeterministically: true,
       libraryOwnerNeedsSource: true,
       missingSourceBindingFailsClosed: true,
       nonErrorSourceFailureFailsClosed: true,
