@@ -1,3 +1,4 @@
+import type { IAutoMovieProductionEvidence } from "@automovie/evidence";
 import type {
   AutoMovieCaptureObservation,
   AutoMovieContentDigest,
@@ -31,109 +32,38 @@ import { autoMovieRenderBudgetRefusal } from "@automovie/render";
 import path from "node:path";
 import { isDeepStrictEqual } from "node:util";
 
+import config from "../automovie.config";
 import { PRODUCTION_DELIVERY_TONE_MAPPING } from "./capture";
+import { inspectCurrentCaptureRuntimeClosure } from "./capture-browser";
 import { listRenderAttempts } from "./renderAttemptSnapshot";
 import {
   assessProductionRenderBudget,
   publishRenderBudgetEvidence,
 } from "./renderBudgetSnapshot";
-import type { ICurrentRenderChunkPublication } from "./renderChunkSnapshot";
-import { loadCurrentRenderChunkPublication } from "./renderChunkSnapshot";
-import type { IRenderGcTargetSnapshot } from "./renderGcSnapshot";
-import { ensureRenderPhysicalDirectory } from "./renderGcSnapshot";
+import {
+  type ICurrentRenderChunkPublication,
+  loadCurrentRenderChunkPublication,
+} from "./renderChunkSnapshot";
+import {
+  type IRenderGcTargetSnapshot,
+  ensureRenderPhysicalDirectory,
+} from "./renderGcSnapshot";
 import type { IProductionRenderHost } from "./renderHost";
 import {
   captureExistingRenderPlan,
   publishRenderPlan,
 } from "./renderPlanSnapshot";
+import {
+  type ProductionRenderReadOnlyInputInspection,
+  reportProductionRenderStatus,
+  verifyCurrentProductionRender,
+} from "./renderReadOnlyRuntime";
 import type { IProductionSoundRuntime } from "./renderSoundRuntime";
 import {
+  assertRuntimePackageSnapshotCurrent,
   bindRuntimePackageSnapshotGeneration,
   snapshotRuntimePackage,
 } from "./runtimePackageSnapshot";
-
-interface IStoredRenderPlan {
-  compileFingerprint: string;
-  runtimeIdentity: unknown;
-}
-
-interface IRenderStatusRow {
-  status: string;
-}
-
-export interface IProductionRenderPlanningRuntime<
-  Plan extends IStoredRenderPlan,
-  Inputs extends { runtimeIdentity: unknown },
-> {
-  currentInputs: (plan: Plan) => Inputs | Promise<Inputs>;
-  currentStoredPlan: () => Plan | Promise<Plan>;
-  output: (value: unknown) => void;
-  readPlan: () => Plan;
-  renderStatus: (
-    plan: Plan,
-  ) => IRenderStatusRow[] | Promise<IRenderStatusRow[]>;
-  sourceFingerprint: () => string;
-  staleRows: (plan: Plan, reason: string) => unknown;
-  verifyPlan: (props: { plan: Plan } & Inputs) => void;
-}
-
-/** Report current, stale-source, stale-runtime, or invalid-plan status. */
-export const reportProductionRenderStatus = async <
-  Plan extends IStoredRenderPlan,
-  Inputs extends { runtimeIdentity: unknown },
->(
-  runtime: IProductionRenderPlanningRuntime<Plan, Inputs>,
-): Promise<void> => {
-  const plan = runtime.readPlan();
-  if (runtime.sourceFingerprint() !== plan.compileFingerprint) {
-    runtime.output(
-      runtime.staleRows(
-        plan,
-        "Source/design input changed. Run automovie render plan, then rerender only the new chunk identities.",
-      ),
-    );
-    return;
-  }
-  const inputs = await runtime.currentInputs(plan);
-  if (
-    isDeepStrictEqual(inputs.runtimeIdentity, plan.runtimeIdentity) === false
-  ) {
-    runtime.output(
-      runtime.staleRows(
-        plan,
-        "Capture, graphics, render-source, or encoder identity changed. Run automovie render plan, then rerender only the new chunk identities.",
-      ),
-    );
-    return;
-  }
-  try {
-    runtime.verifyPlan({ plan, ...inputs });
-    runtime.output(await runtime.renderStatus(plan));
-  } catch {
-    runtime.output(
-      runtime.staleRows(
-        plan,
-        "Stored render plan differs from current compiler-owned inputs. Run automovie render plan, then rerender only the new chunk identities.",
-      ),
-    );
-  }
-};
-
-/** Verify that every chunk of the current immutable plan is complete. */
-export const verifyCurrentProductionRender = async <
-  Plan extends IStoredRenderPlan,
-  Inputs extends { runtimeIdentity: unknown },
->(
-  runtime: IProductionRenderPlanningRuntime<Plan, Inputs>,
-): Promise<void> => {
-  const current = await runtime.currentStoredPlan();
-  const chunks = await runtime.renderStatus(current);
-  if (chunks.some((item) => item.status !== "complete"))
-    throw new Error(
-      "Render verification found incomplete chunks. Run automovie render status, then run.",
-    );
-  runtime.output({ verified: true, plan: current, chunks });
-};
 
 export interface IProductionDeliveryToneCheck {
   requested: IAutoMovieRenderSpec["toneMapping"];
@@ -198,6 +128,8 @@ export const checkProductionDeliveryTone = (props: {
 
 /** Own planning inputs, runtime identity, status, verification, and budget evidence. */
 export const createProductionRenderPlanningRuntime = (props: {
+  /** One invocation-wide snapshot from the tracked authoring declaration. */
+  authoringEvidence?: IAutoMovieProductionEvidence;
   captureCurrentChunkPointer: (
     chunk: IAutoMovieProductionRenderChunk,
   ) => IRenderGcTargetSnapshot | null;
@@ -232,6 +164,7 @@ export const createProductionRenderPlanningRuntime = (props: {
   const sourceFingerprint = (): AutoMovieContentDigest => {
     const checked = new AutoMovieProductionCompiler(
       AutoMovieProductionProject.openReadOnly(root, productionId),
+      props.authoringEvidence,
     ).lint({ scope: "source" });
     if (checked.success === false)
       throw new Error(
@@ -558,6 +491,7 @@ export const createProductionRenderPlanningRuntime = (props: {
       projectRoot: root,
       productionId,
       capture: renderHost.capture,
+      authoringEvidence: props.authoringEvidence,
     });
 
   const readPlan = (): IAutoMovieProductionRenderJobPlan => {
@@ -589,13 +523,47 @@ export const createProductionRenderPlanningRuntime = (props: {
   const stalePlanRows = (
     plan: IAutoMovieProductionRenderJobPlan,
     correction: string,
+    runtimeComparison: "not-ready" | "not-run" | "stale" = "stale",
   ) =>
     plan.chunks.map((chunk) => ({
       slot: chunk.slot,
       chunk: chunk.id,
       status: "stale" as const,
+      runtimeComparison,
       correction,
     }));
+
+  const snapshotProductionEncoderIdentity = (fps: number) => {
+    const snapshot = snapshotRuntimePackage({
+      entry: props.h264Entry,
+      moduleClosure: true,
+      packageName: "h264-mp4-encoder",
+    });
+    const encoder: IAutoMovieProductionEncoderIdentity = {
+      package: snapshot.package,
+      version: snapshot.version,
+      closureDigest: snapshot.contentFingerprint,
+      codec: "h264",
+      arguments: {
+        quantizationParameter: 24,
+        speed: 10,
+        groupOfPictures: fps,
+      },
+    };
+    return {
+      identity: encoder,
+      assertCurrent: () => assertRuntimePackageSnapshotCurrent(snapshot),
+      bindCurrent: () => bindRuntimePackageSnapshotGeneration(snapshot),
+    };
+  };
+
+  const productionEncoderIdentity = (
+    fps: number,
+  ): IAutoMovieProductionEncoderIdentity => {
+    const snapshot = snapshotProductionEncoderIdentity(fps);
+    snapshot.bindCurrent();
+    return snapshot.identity;
+  };
 
   const currentRenderPlanInputs = async (
     plan: IAutoMovieProductionRenderJobPlan,
@@ -629,6 +597,82 @@ export const createProductionRenderPlanningRuntime = (props: {
       runtimeIdentity,
       sourceFingerprints: renderShotFingerprints(project, timeline),
       audioAssets: soundRuntime.audioAssets(project, timeline),
+    };
+  };
+
+  /**
+   * Observe resident plan inputs without synthesis, installation, capture,
+   * publication, or any other repair. Graphics remains explicitly `not-run`
+   * because only `capture:doctor` may launch a browser to re-establish it.
+   */
+  const inspectCurrentRenderPlanInputs = (
+    plan: IAutoMovieProductionRenderJobPlan,
+  ): ProductionRenderReadOnlyInputInspection<
+    Awaited<ReturnType<typeof currentRenderPlanInputs>>
+  > => {
+    const project = AutoMovieProductionProject.openReadOnly(root, productionId);
+    const graph = project.graph();
+    if (graph.production === null)
+      throw new Error(
+        "Render runtime inspection requires a production design.",
+      );
+    const timeline = readAutoMovieFilmTimeline(
+      project,
+      plan.compileFingerprint,
+    );
+    const sound = soundRuntime.inspectCurrent({
+      project,
+      compileFingerprint: plan.compileFingerprint,
+      timeline,
+    });
+    if (sound.status === "not-ready")
+      return {
+        status: "not-ready",
+        correction: sound.correction,
+        assertCurrent: sound.assertCurrent,
+        resources: [],
+      };
+    const capture = inspectCurrentCaptureRuntimeClosure({
+      projectRoot: root,
+      config: config.capture.browser,
+    });
+    if (capture.status === "not-ready")
+      return {
+        status: "not-ready",
+        correction: capture.correction,
+        assertCurrent: sound.assertCurrent,
+        resources: [],
+      };
+    const encoder = snapshotProductionEncoderIdentity(plan.frameFormat.fps);
+    const assertCurrent = (): void => {
+      sound.assertCurrent();
+      capture.assertCurrent();
+      encoder.assertCurrent();
+    };
+    assertCurrent();
+    const stored =
+      plan.runtimeIdentity as Partial<IAutoMovieProductionRenderRuntimeIdentity> | null;
+    if (
+      stored === null ||
+      stored.protocolVersion !== "automovie.production-render-runtime.v2" ||
+      stored.sourceDigest !== sound.sourceDigest ||
+      isDeepStrictEqual(stored.capture?.runtimeClosure, capture.identity) ===
+        false ||
+      isDeepStrictEqual(stored.encoder, encoder.identity) === false
+    )
+      return {
+        status: "stale",
+        correction:
+          "Capture closure, render source, sound runtime, or encoder identity changed. Run automovie render plan, then rerender only the new chunk identities.",
+        assertCurrent,
+        resources: [],
+      };
+    return {
+      status: "not-run",
+      correction:
+        "Capture graphics identity comparison is not-run because read-only inspection cannot launch a browser. Run npm run capture:doctor to re-establish it without repairing render state.",
+      assertCurrent,
+      resources: [],
     };
   };
 
@@ -669,31 +713,6 @@ export const createProductionRenderPlanningRuntime = (props: {
     };
   };
 
-  const productionEncoderIdentity = (
-    fps: number,
-  ): IAutoMovieProductionEncoderIdentity => {
-    const snapshot = snapshotRuntimePackage({
-      entry: props.h264Entry,
-      moduleClosure: true,
-      packageName: "h264-mp4-encoder",
-    });
-    bindRuntimePackageSnapshotGeneration(snapshot);
-    const encoder = {
-      package: snapshot.package,
-      version: snapshot.version,
-      closureDigest: snapshot.contentFingerprint,
-    };
-    return {
-      ...encoder,
-      codec: "h264",
-      arguments: {
-        quantizationParameter: 24,
-        speed: 10,
-        groupOfPictures: fps,
-      },
-    };
-  };
-
   return {
     captureReviewEvidence,
     currentChunk,
@@ -704,26 +723,28 @@ export const createProductionRenderPlanningRuntime = (props: {
     enforceRenderBudget,
     productionEncoderIdentity,
     renderStatus,
+    /** Observe existing plan/cache/runtime evidence without materialization. */
     reportStatus: () =>
       reportProductionRenderStatus({
-        currentInputs: currentRenderPlanInputs,
-        currentStoredPlan,
+        inspectInputs: inspectCurrentRenderPlanInputs,
         output,
         readPlan,
         renderStatus,
+        runtimeIdentitiesEqual: isDeepStrictEqual,
         sourceFingerprint,
         staleRows: stalePlanRows,
         verifyPlan: verifyProductionRenderJobPlan,
       }),
     sourceFingerprint,
     uncheckedDeliveryTone,
+    /** Refuse incomplete or unproved evidence without materialization. */
     verify: () =>
       verifyCurrentProductionRender({
-        currentInputs: currentRenderPlanInputs,
-        currentStoredPlan,
+        inspectInputs: inspectCurrentRenderPlanInputs,
         output,
         readPlan,
         renderStatus,
+        runtimeIdentitiesEqual: isDeepStrictEqual,
         sourceFingerprint,
         staleRows: stalePlanRows,
         verifyPlan: verifyProductionRenderJobPlan,
