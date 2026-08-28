@@ -1,11 +1,13 @@
 import {
   ViolationCollector,
+  appendShotMetadataArtifact,
   compileCameraClearanceReports,
   compileDefinedShot,
   defineShot,
   evaluateCameraClearance,
   performShot,
   stageScene,
+  validateShotArtifact,
 } from "@automovie/engine";
 import {
   IAutoMovieCameraClearanceEnvelope,
@@ -445,6 +447,102 @@ export const test_film_camera_clearance = (): void => {
   );
   if (performed.success !== true)
     throw new Error("clearance performance fixture must perform");
+
+  const acceptedReport = performed.shot.cameraClearance![0]!;
+  const motionIds = new Set(
+    Object.values(performed.motions).map((motion) => motion.id),
+  );
+  const missingAcceptedReport = validateShotArtifact(
+    { ...performed.shot, cameraClearance: undefined },
+    clearStage.scene,
+    motionIds,
+  );
+  const emptyAcceptedReports = validateShotArtifact(
+    { ...performed.shot, cameraClearance: [] },
+    clearStage.scene,
+    motionIds,
+  );
+  const plainResolvedCamera = {
+    ...clearStage.scene.cameras[0]!,
+    clearance: undefined,
+  };
+  const undeclaredReport = validateShotArtifact(
+    performed.shot,
+    { ...clearStage.scene, cameras: [plainResolvedCamera] },
+    motionIds,
+  );
+  TestValidator.predicate(
+    "artifact validation requires one report for exactly each declared delivery",
+    [missingAcceptedReport, emptyAcceptedReports, undeclaredReport].every(
+      (result) =>
+        result.success === false &&
+        result.violations.some(
+          (item) => item.path === "$input.cameraClearance",
+        ),
+    ),
+  );
+
+  const metadataViolations: Parameters<typeof appendShotMetadataArtifact>[3] =
+    [];
+  appendShotMetadataArtifact(
+    {
+      duration: performed.shot.duration,
+      camera: performed.shot.camera,
+      cameraClearance: "not-an-array",
+    },
+    "$metadata",
+    new Set([performed.shot.camera]),
+    metadataViolations,
+  );
+  appendShotMetadataArtifact(
+    {
+      duration: performed.shot.duration,
+      camera: performed.shot.camera,
+      cameraClearance: [null],
+    },
+    "$metadata",
+    new Set([performed.shot.camera]),
+    metadataViolations,
+  );
+  appendShotMetadataArtifact(
+    {
+      duration: performed.shot.duration,
+      camera: performed.shot.camera,
+      cameraClearance: [
+        {
+          ...acceptedReport,
+          camera: "",
+          revision: "old",
+          currentRevision: "current",
+          sampleRate: 0,
+          intervals: 0.5,
+          status: "blocked",
+          findings: "not-an-array",
+        },
+        { ...acceptedReport, camera: "ghost", findings: [{}] },
+        { ...acceptedReport, camera: "ghost" },
+      ],
+    },
+    "$metadata",
+    new Set([performed.shot.camera]),
+    metadataViolations,
+  );
+  TestValidator.predicate(
+    "malformed stored clearance evidence is refused at every addressed member",
+    [
+      "$metadata.cameraClearance",
+      "$metadata.cameraClearance[0]",
+      "$metadata.cameraClearance[0].camera",
+      "$metadata.cameraClearance[0].currentRevision",
+      "$metadata.cameraClearance[0].sampleRate",
+      "$metadata.cameraClearance[0].intervals",
+      "$metadata.cameraClearance[0].status",
+      "$metadata.cameraClearance[0].findings",
+      "$metadata.cameraClearance[1].camera",
+      "$metadata.cameraClearance[1].findings",
+      "$metadata.cameraClearance[2].camera",
+    ].every((path) => metadataViolations.some((item) => item.path === path)),
+  );
 
   const heroCamera = clearStage.scene.cameras.find(
     (camera) => camera.id === performed.shot.camera,
