@@ -271,6 +271,7 @@ const assertGeneratedRuntimeParity = (
     "scripts/renderHost.ts",
     "scripts/renderRuntime.ts",
     "scripts/renderChunkRuntime.ts",
+    "scripts/renderFrameCaptureInput.ts",
     "scripts/renderSoundRuntime.ts",
     "scripts/renderPlanningRuntime.ts",
     "scripts/renderPublicationRuntime.ts",
@@ -299,6 +300,98 @@ const assertGeneratedRuntimeParity = (
     }),
   );
 };
+
+/** Actual generated-product consumer for the camera depth render gate. */
+const generatedCameraDepthRuntimeProbe = (): string =>
+  [
+    'import type { IAutoMovieCompiledShotSource } from "@automovie/interface";',
+    'import * as THREE from "three";',
+    'import { createCompiledShotRuntime } from "../viewer/src/shotRuntime";',
+    "",
+    "const identity = {",
+    "  translation: { x: 0, y: 0, z: 5 },",
+    "  rotation: { x: 0, y: 0, z: 0, w: 1 },",
+    "  scale: { x: 1, y: 1, z: 1 },",
+    "};",
+    "const compiled = {",
+    "  eventSamples: [],",
+    "  scene: {",
+    '    id: "camera-depth-scene",',
+    "    name: null,",
+    "    nodes: [],",
+    "    cameras: [{",
+    '      id: "camera-depth",',
+    "      transform: identity,",
+    "      fovY: 45,",
+    "      near: 0.25,",
+    "      far: 250,",
+    "      depthPrecision: { minimumDepthBits: 24, maximumStepMeters: 0.1 },",
+    "    }],",
+    "    lights: [],",
+    "    environment: null,",
+    "    space: null,",
+    "    fog: null,",
+    "  },",
+    "  motions: [],",
+    "  models: [],",
+    "  formations: [],",
+    "  instanceSets: [],",
+    "  formationMotions: [],",
+    "  formationSlotMotions: [],",
+    "  effects: [],",
+    "  shot: {",
+    '    id: "camera-depth-shot",',
+    "    name: null,",
+    '    scene: "camera-depth-scene",',
+    '    camera: "camera-depth",',
+    "    duration: 1,",
+    "    performances: [],",
+    "    objectMotions: [],",
+    "    cameraMotion: null,",
+    "    lightMotions: [],",
+    "  },",
+    "} as unknown as IAutoMovieCompiledShotSource;",
+    "",
+    "const main = async (): Promise<void> => {",
+    "  const runtime = await createCompiledShotRuntime(compiled);",
+    "  let depthBits = 16;",
+    "  let draws = 0;",
+    "  const depthParameter = 0x0d56;",
+    "  const renderer = {",
+    "    capabilities: { logarithmicDepthBuffer: false, reverseDepthBuffer: false },",
+    "    getContext: () => ({",
+    "      DEPTH_BITS: depthParameter,",
+    "      getParameter: (parameter: number) =>",
+    "        parameter === depthParameter ? depthBits : null,",
+    "    }),",
+    "    domElement: { height: 100 },",
+    "    toneMapping: THREE.NoToneMapping,",
+    "    toneMappingExposure: 1,",
+    "    shadowMap: { enabled: false, type: THREE.PCFShadowMap },",
+    "    render: () => { ++draws; },",
+    "  } as unknown as THREE.WebGLRenderer;",
+    "  const negative = (() => {",
+    "    try {",
+    '      runtime.render(renderer, 0, "beauty");',
+    '      return "accepted";',
+    "    } catch (error) {",
+    "      return (error as Error).message;",
+    "    }",
+    "  })();",
+    "  depthBits = 24;",
+    '  const positive = runtime.render(renderer, 0, "beauty");',
+    "  await runtime.dispose();",
+    '  if (negative.includes("insufficient-capability") === false || draws !== 1)',
+    '    throw new Error("depth runtime assertion did not gate the draw: " + negative + "; draws=" + String(draws));',
+    '  console.log("CAMERA_DEPTH_RUNTIME " + JSON.stringify({ negative, positive, draws }));',
+    "};",
+    "",
+    "void main().catch((error: unknown) => {",
+    "  console.error(error);",
+    "  process.exitCode = 1;",
+    "});",
+    "",
+  ].join("\n");
 
 const REPAINT_RUNTIME_IDENTITY = {
   protocolVersion: "automovie.repaint-runtime.v1",
@@ -564,6 +657,8 @@ export const test_cli_scaffold_repaint_runtime_contract =
       const completed = renderCompletedFilmFixture("repaint-runtime-film");
       for (const [file, content] of Object.entries(completed))
         rendered[file] = content;
+      rendered["test/camera-depth-runtime.ts"] =
+        generatedCameraDepthRuntimeProbe();
       installAuthoredEvidencePopulation(rendered);
       const film = rendered["src/film.ts"]!;
       const captionPopulation =
@@ -621,6 +716,25 @@ export const test_cli_scaffold_repaint_runtime_contract =
         "vite",
       ])
         linkWorkspacePackage(fixture.root, name);
+
+      const cameraDepthRuntime = runGeneratedFast(
+        fixture.root,
+        "test/camera-depth-runtime.ts",
+      );
+      TestValidator.equals(
+        "the actual generated shot runtime gates the current draw framebuffer before rendering",
+        {
+          status: cameraDepthRuntime.status,
+          negative: cameraDepthRuntime.stdout.includes(
+            'Camera depth precision refused "camera-depth": insufficient-capability',
+          ),
+          positive: cameraDepthRuntime.stdout.includes(
+            "camera-depth-shot  t=0.000s  beauty",
+          ),
+          draws: cameraDepthRuntime.stdout.includes('"draws":1'),
+        },
+        { status: 0, negative: true, positive: true, draws: true },
+      );
 
       const evidenceDelivery = path.join(
         fixture.root,
