@@ -17,9 +17,11 @@ import { namedFacts } from "../internal/predicates";
 
 const NODE = "civic/entry-canopy";
 
-/** The deck hangs 8 m above the element origin and is 4 m deep. */
+/** The deck hangs 8 m above the element origin and is 4 m tall. */
 const FLOOR = 8;
 const HEIGHT = 4;
+/** Keep this vertical-floor fixture outside every solved camera's near plane. */
+const THICKNESS = 0.2;
 
 const transform = (x: number, y: number, z: number) => ({
   translation: { x, y, z },
@@ -44,7 +46,12 @@ const canopy = (): IAutoMovieModel => ({
       name: null,
       geometry: {
         type: "primitive",
-        shape: { type: "box", width: 12, height: HEIGHT, depth: 6 },
+        shape: {
+          type: "box",
+          width: 12,
+          height: HEIGHT,
+          depth: THICKNESS,
+        },
       },
       material: null,
       attachedBone: null,
