@@ -272,10 +272,19 @@ export const executeAutoMovieRepaintRequest = async <T>(props: {
         "accepted",
       );
     } catch (error) {
+      const failureCompleted = validInstant(
+        props.runtime.now(),
+        "attempt completion",
+      );
+      const deadlineExceeded =
+        timedOut ||
+        failureCompleted.getTime() - attemptStarted.getTime() >= timeoutMs ||
+        failureCompleted.getTime() - started.getTime() >=
+          props.policy.maximumElapsedMs;
       const timeoutDisclosure =
         error instanceof AutoMovieRepaintAttemptError ? error : null;
       const classified = classifyFailure(
-        timedOut && timeoutDisclosure?.failureClass !== "timeout"
+        deadlineExceeded && timeoutDisclosure?.failureClass !== "timeout"
           ? new AutoMovieRepaintAttemptError(
               "timeout",
               `Repaint attempt exceeded ${timeoutMs}ms.`,
@@ -303,7 +312,7 @@ export const executeAutoMovieRepaintRequest = async <T>(props: {
         adapterIdentity: props.adapterIdentity,
         seed: props.seed,
         startedAt: attemptStarted,
-        completedAt: props.runtime.now(),
+        completedAt: failureCompleted,
         status: classified.status,
         failure: {
           class: classified.failureClass,
@@ -323,7 +332,7 @@ export const executeAutoMovieRepaintRequest = async <T>(props: {
         return result(props.requestId, attempts, null, "attempts-exhausted");
       if (spent >= props.policy.maximumCostUnits)
         return result(props.requestId, attempts, null, "cost-exhausted");
-      const afterAttempt = props.runtime.now().getTime() - started.getTime();
+      const afterAttempt = failureCompleted.getTime() - started.getTime();
       const backoff = props.policy.backoffMs[local - 1]!;
       if (afterAttempt + backoff >= props.policy.maximumElapsedMs)
         return result(props.requestId, attempts, null, "elapsed-exhausted");
