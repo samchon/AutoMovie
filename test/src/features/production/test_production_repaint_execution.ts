@@ -396,6 +396,33 @@ export const test_production_repaint_execution = async (): Promise<void> => {
         queueMicrotask(() => outerAbort.abort("cancelled"));
       }),
   });
+  const rejectedOnTimeout = await execute<string>({
+    policy: policy({
+      maximumAttempts: 1,
+      attemptTimeoutMs: 1,
+      backoffMs: [],
+    }),
+    calls: (signal) =>
+      new Promise((resolve, reject) => {
+        void resolve;
+        signal.addEventListener(
+          "abort",
+          () =>
+            reject(
+              new AutoMovieRepaintAttemptError(
+                "provider-refusal",
+                "adapter disclosed a partial output while aborting",
+                4,
+                {
+                  digest: digest("rejected-during-timeout"),
+                  bytes: 9,
+                },
+              ),
+            ),
+          { once: true },
+        );
+      }),
+  });
   TestValidator.equals(
     "every terminal retry boundary preserves its exact stop class",
     {
@@ -426,6 +453,14 @@ export const test_production_repaint_execution = async (): Promise<void> => {
         availableOutput:
           resolvedOnOuterAbort.result.attempts[0]?.availableOutput?.digest,
       },
+      rejectedOnTimeout: {
+        stop: rejectedOnTimeout.result.stop,
+        accepted: rejectedOnTimeout.result.accepted,
+        failure: rejectedOnTimeout.result.attempts[0]?.failure?.class,
+        costUnits: rejectedOnTimeout.result.attempts[0]?.costUnits,
+        availableOutput:
+          rejectedOnTimeout.result.attempts[0]?.availableOutput?.digest,
+      },
     },
     {
       zeroBudget: "cost-exhausted",
@@ -450,6 +485,13 @@ export const test_production_repaint_execution = async (): Promise<void> => {
         failure: "cancelled",
         costUnits: 3,
         availableOutput: digest("resolved-during-cancellation"),
+      },
+      rejectedOnTimeout: {
+        stop: "attempts-exhausted",
+        accepted: null,
+        failure: "timeout",
+        costUnits: 4,
+        availableOutput: digest("rejected-during-timeout"),
       },
     },
   );
