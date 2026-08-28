@@ -202,6 +202,33 @@ export const test_film_camera_clearance = (): void => {
     moving.status,
     "blocked",
   );
+  const skewMiss = evaluate({
+    samples: [
+      {
+        time: 0,
+        camera: identity(-2, 2, 0),
+        obstacles: [
+          { node: "z-wall", bounds: box({ x: 0, y: 0, z: 0 }) },
+          { node: "a-floor", bounds: box({ x: 8, y: 8, z: 8 }) },
+          { node: "m-opening", bounds: box({ x: 9, y: 9, z: 9 }) },
+        ],
+      },
+      {
+        time: 1,
+        camera: identity(2, 3, 0),
+        obstacles: [
+          { node: "z-wall", bounds: box({ x: 0, y: 0, z: 0 }) },
+          { node: "a-floor", bounds: box({ x: 8, y: 8, z: 8 }) },
+          { node: "m-opening", bounds: box({ x: 9, y: 9, z: 9 }) },
+        ],
+      },
+    ],
+  });
+  TestValidator.equals(
+    "disjoint moving slabs remain clear in stable obstacle order",
+    skewMiss.status,
+    "clear",
+  );
 
   const rotating = evaluate({
     envelope: envelope({ center: { x: 1, y: 0, z: 0 }, radius: 0.01 }),
@@ -565,6 +592,33 @@ export const test_film_camera_clearance = (): void => {
         (item) =>
           item.path === "$input.cameraClearance.sampleRate" &&
           item.expected.includes("sample rate"),
+      ),
+  );
+  const invalidDuration = inspectAdapter({ duration: -1 });
+  TestValidator.predicate(
+    "an invalid shot duration is returned at the declaring envelope",
+    invalidDuration.reports === undefined &&
+      invalidDuration.out.items.some(
+        (item) =>
+          item.path.endsWith(".clearance") &&
+          item.expected.includes("duration"),
+      ),
+  );
+  const hostileMotion = new Proxy(performed.shot.cameraMotion!, {
+    get: () => {
+      throw new Error("hostile camera motion");
+    },
+  });
+  const hostile = inspectAdapter({
+    hero: { camera: heroCamera, motion: hostileMotion },
+  });
+  TestValidator.predicate(
+    "a hostile runtime value is still an addressed evaluator refusal",
+    hostile.reports === undefined &&
+      hostile.out.items.some(
+        (item) =>
+          item.path.endsWith(".clearance") &&
+          item.expected.includes("hostile camera motion"),
       ),
   );
 

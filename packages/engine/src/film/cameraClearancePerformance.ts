@@ -121,7 +121,7 @@ const nodeTransformAt = (
  * @evidence requirements/camera/clipping-occlusion-and-spatial-constraints.md#camera-dynamic-spatial-sampling Resolves camera, actor, and object state on one shared fixed clock before conservative interval comparison.
  * @evidence specifications/camera-light-and-visibility/framing-axis-and-camera-path.md#clv-camera-path-constraints-refusal Converts missing geometry, stale state, and body or rig contact into author-addressed performance refusal.
  */
-export const compileCameraClearanceReports = (props: {
+export function compileCameraClearanceReports(props: {
   scene: IAutoMovieScene;
   hero: { camera: IAutoMovieCamera; motion: IAutoMovieShot["cameraMotion"] };
   coverage: readonly IAutoMovieShotCoverage[];
@@ -131,7 +131,7 @@ export const compileCameraClearanceReports = (props: {
   models: readonly IAutoMovieModel[];
   runtime: IAutoMovieCameraClearanceRuntime | undefined;
   out: ViolationCollector;
-}): IAutoMovieCameraClearanceReport[] | undefined => {
+}): IAutoMovieCameraClearanceReport[] | undefined {
   const cameras = new Map(
     props.scene.cameras.map((camera, index) => [camera.id, { camera, index }]),
   );
@@ -262,7 +262,7 @@ export const compileCameraClearanceReports = (props: {
       props.out.push(
         "range",
         `$staged.scene.cameras[${cameraEntry.index}].clearance`,
-        `camera clearance could not evaluate its fixed-clock input: ${error instanceof Error ? error.message : String(error)}`,
+        `camera clearance could not evaluate its fixed-clock input: ${String(error)}`,
         take.camera.clearance,
       );
       continue;
@@ -286,4 +286,4 @@ export const compileCameraClearanceReports = (props: {
     if (report.status === "clear") reports.push(report);
   }
   return props.out.items.length === 0 ? reports : undefined;
-};
+}

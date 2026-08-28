@@ -221,9 +221,9 @@ const obstaclesByNode = (
  * @evidencePart specifications/camera-light-and-visibility/visibility-and-image-space-observation.md#clv-clipping-clearance-evaluation::camera-clearance-swept-volume Compares camera-body and parent-rig capsules with every current scene obstacle's same-fixed-clock conservative interval bound.
  * @author Samchon
  */
-export const evaluateCameraClearance = (
+export function evaluateCameraClearance(
   input: IAutoMovieCameraClearanceEvaluation,
-): IAutoMovieCameraClearanceReport => {
+): IAutoMovieCameraClearanceReport {
   if (!(Number.isFinite(input.sampleRate) && input.sampleRate > 0))
     throw new Error("$input.sampleRate must be finite and greater than zero");
   if (!(Number.isFinite(input.duration) && input.duration >= 0))
@@ -289,7 +289,7 @@ export const evaluateCameraClearance = (
         sphere.radius * scale +
         rotationArcMargin(first.camera, second.camera, sphere.center);
       for (const node of [...firstObstacles.keys()].sort((a, b) =>
-        a < b ? -1 : a > b ? 1 : 0,
+        a.localeCompare(b),
       )) {
         const obstacle = unionBoxes(
           firstObstacles.get(node)!,
@@ -315,4 +315,4 @@ export const evaluateCameraClearance = (
     status: findings.length === 0 ? "clear" : "blocked",
     findings,
   };
-};
+}
