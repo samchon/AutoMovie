@@ -12,11 +12,11 @@ Ground emotion in cause, decision, expression, or changed relationship. A label 
 
 The treatment may quote a short line when its exact wording, lie, refusal, or silence is the hinge of the beat, but line-by-line dialogue, blocking, exact timing, camera grammar, and implementation belong downstream. A treatment is more detailed than an outline because it says what happens and why it matters; a script is more detailed because it says exactly how the event unfolds through space, time, process, speech, and response.
 
-Apply `docs/obligations/treatments.md#treatment-boundary` by handing the settings and complete treatment to a cold reader and asking for the matching script. Any essential narrative decision that reader cannot recover belongs in the earliest treatment unit rather than downstream.
+Apply `docs/obligations/story/treatments.md#treatment-boundary` by handing the settings and complete treatment to a cold reader and asking for the matching script. Any essential narrative decision that reader cannot recover belongs in the earliest treatment unit rather than downstream.
 
 ## Unit map and granularity
 
-Before prose, rerun the [production-specific contract](work-specific.md) pass with the `discovery/common.md`, `discovery/films.md`, and `discovery/treatments.md` targets, and implement each retained result in its target and claim before relying on it.
+Before prose, rerun the [production-specific contract](work-specific.md) pass with the `discovery/core/common.md`, `discovery/story/films.md`, and `discovery/story/treatments.md` targets, and implement each retained result in its target and claim before relying on it.
 
 Then make a unit map with every planned event filename, H1 title, H2 key and slug, entry, central progression, exit, audience change, and settings relation. Apply the narrative unit-addressability obligation across the complete H2 owner population before accepting it. Number event files continuously across the layer. The sequence of events carries the work's movements; a directory would promise a grouping this layer does not own and would pull the events toward a later delivery shape.
 
@@ -32,4 +32,4 @@ Start at `treatments: "draft"` only after settings are in `review`. Before `evid
 
 Run [Author process Self-Review](self-review.md) to its clean round before every stage transition and again after any repair.
 
-Every H2 answers the complete common, narrative, and treatment principle checklists and cites only settings it actually uses. The H2 population supplies every common, narrative, and treatment obligation owner, including `obligations/treatments.md#sustained-middle`, and covers its applicable discovery targets. Follow [Evidence staging](evidence-staging.md) for exact claim behavior. A later narrative change begins in the smallest true treatment owner and propagates through every script and screenplay unit that realizes it, then through shot and film source.
+Every H2 answers the complete common, narrative, and treatment principle checklists and cites only settings it actually uses. The H2 population supplies every common, narrative, and treatment obligation owner, including `obligations/story/treatments.md#sustained-middle`, and covers its applicable discovery targets. Follow [Evidence staging](evidence-staging.md) for exact claim behavior. A later narrative change begins in the smallest true treatment owner and propagates through every script and screenplay unit that realizes it, then through shot and film source.

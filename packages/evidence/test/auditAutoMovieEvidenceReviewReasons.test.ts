@@ -29,12 +29,12 @@ const testRestatementForms = (): void => {
 ## Form {#form}
 
 <!--
-@evidence principles/common.md#scope-preservation The unit owns its promised silhouette.
-@evidenceReview principles/common.md#scope-preservation #abc123 The unit owns its promised silhouette!
+@evidence principles/core/common.md#scope-preservation The unit owns its promised silhouette.
+@evidenceReview principles/core/common.md#scope-preservation #abc123 The unit owns its promised silhouette!
 @evidenceExclude settings/limits.md#speed This population has no moving owner.
 @evidenceExcludeReview settings/limits.md#speed #def456 Compared settings/limits.md#speed with the complete population. Verified relationship: This population has no moving owner.
-@evidence principles/models.md#spatial-convention The origin is at ground centre.
-@evidenceReview principles/models.md#spatial-convention #789abc Inspection found that the origin is at ground centre.
+@evidence principles/design/models.md#spatial-convention The origin is at ground centre.
+@evidenceReview principles/design/models.md#spatial-convention #789abc Inspection found that the origin is at ground centre.
 -->
 `),
   ]);
@@ -60,17 +60,17 @@ const testHostLocalReuse = (): void => {
 ## First {#first}
 
 <!--
-@evidence principles/models.md#representation-contract The proxy has a fixed silhouette.
-@evidenceReview principles/models.md#representation-contract #abc123 Read principles/models.md#representation-contract and the host; the weakest face split remains observable at the left profile.
-@evidence principles/models.md#reviewable-structure The proxy exposes its face split.
-@evidenceReview principles/models.md#reviewable-structure #def456 Read principles/models.md#reviewable-structure and the host; the weakest face split remains observable at the left profile.
+@evidence principles/design/models.md#representation-contract The proxy has a fixed silhouette.
+@evidenceReview principles/design/models.md#representation-contract #abc123 Read principles/design/models.md#representation-contract and the host; the weakest face split remains observable at the left profile.
+@evidence principles/design/models.md#reviewable-structure The proxy exposes its face split.
+@evidenceReview principles/design/models.md#reviewable-structure #def456 Read principles/design/models.md#reviewable-structure and the host; the weakest face split remains observable at the left profile.
 -->
 
 ## Second {#second}
 
 <!--
-@evidence principles/models.md#spatial-convention The origin is at ground centre.
-@evidenceReview principles/models.md#spatial-convention #789abc Read principles/models.md#spatial-convention and the host; the weakest face split remains observable at the left profile.
+@evidence principles/design/models.md#spatial-convention The origin is at ground centre.
+@evidenceReview principles/design/models.md#spatial-convention #789abc Read principles/design/models.md#spatial-convention and the host; the weakest face split remains observable at the left profile.
 -->
 `),
   ]);
@@ -85,10 +85,10 @@ const testTargetInterpolationReuse = (): void => {
   const message = rejectionMessage([
     document(
       `/**
- * @evidence principles/source-units.md#scope-preservation Builds the declared joint.
- * @evidenceReview principles/source-units.md#scope-preservation #abc123 Checked principles/source-units.md#scope-preservation against the export and found the named joint.
- * @evidence principles/source-units.md#substantive-completion Constructs the joint.
- * @evidenceReview principles/source-units.md#substantive-completion #def456 Checked principles/source-units.md#substantive-completion against the export and found the named joint.
+ * @evidence principles/core/source-units.md#scope-preservation Builds the declared joint.
+ * @evidenceReview principles/core/source-units.md#scope-preservation #abc123 Checked principles/core/source-units.md#scope-preservation against the export and found the named joint.
+ * @evidence principles/core/source-units.md#substantive-completion Constructs the joint.
+ * @evidenceReview principles/core/source-units.md#substantive-completion #def456 Checked principles/core/source-units.md#substantive-completion against the export and found the named joint.
  */
 export const joint = true;
 `,
@@ -104,8 +104,8 @@ const testAcceptedBoundaries = (): void => {
     assertAutoMovieEvidenceReviewReasons([
       document(`
 \`\`\`
-@evidence principles/common.md#scope-preservation Example acknowledgement.
-@evidenceReview principles/common.md#scope-preservation #abc123 Example acknowledgement.
+@evidence principles/core/common.md#scope-preservation Example acknowledgement.
+@evidenceReview principles/core/common.md#scope-preservation #abc123 Example acknowledgement.
 \`\`\`
 
 # Example
@@ -113,11 +113,11 @@ const testAcceptedBoundaries = (): void => {
 ## First without an explicit anchor
 
 <!--
-@evidence principles/common.md#scope-preservation The unit owns its silhouette.
+@evidence principles/core/common.md#scope-preservation The unit owns its silhouette.
 
-@evidenceReview principles/common.md#scope-preservation #abc123 The unit owns its silhouette.
-@evidence principles/models.md#reviewable-structure The unit names the left profile.
-@evidenceReview principles/models.md#reviewable-structure #def456 The review found the left profile is weakest because its face split narrows to one pixel.
+@evidenceReview principles/core/common.md#scope-preservation #abc123 The unit owns its silhouette.
+@evidence principles/design/models.md#reviewable-structure The unit names the left profile.
+@evidenceReview principles/design/models.md#reviewable-structure #def456 The review found the left profile is weakest because its face split narrows to one pixel.
 @evidenceExclude settings/limits.md#speed No moving subject exists.
 @evidenceReview settings/limits.md#speed #789abc The mismatched review kind is not the paired exclusion review.
 -->
@@ -133,8 +133,8 @@ const testAssertion = (): void => {
       assertAutoMovieEvidenceReviewReasons([
         document(`
 <!--
-@evidence principles/common.md#scope-preservation The unit owns its scope.
-@evidenceReview principles/common.md#scope-preservation #abc123 The unit owns its scope.
+@evidence principles/core/common.md#scope-preservation The unit owns its scope.
+@evidenceReview principles/core/common.md#scope-preservation #abc123 The unit owns its scope.
 -->
 `),
       ]),

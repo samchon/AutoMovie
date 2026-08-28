@@ -22,7 +22,7 @@
 
 <!-- @evidence requirements/production-evidence/graph.md#agent-production-evidence-discovery 실제 작품 조사를 수행한 상태와 생략한 상태를 계층별 계약 감사면으로 구분한다. -->
 
-팩터리는 모든 저작 계층마다 `docs/contracts/*.md`를 host로 하고 `file`을 target으로 삼는 발견 claim을 만든다. 각 claim은 `discovery/common.md`와 함께 설정에는 `settings`, 각 model·space·material·instance·motion·system 분기에는 `designs + 해당 design layer`, `film`의 `treatments`에는 `films + treatments`, `scripts`에는 `films + scripts`, `screenplays`에는 `films + screenplays`, `brief`에는 `briefs`를 연결한다. Research는 `common`만 연결하여 외부 근거 채택과 design boundary 탐색을 같은 결정으로 합치지 않는다. 저작 H2/H3/H4에는 이 발견 관계를 배선하지 않는다.
+팩터리는 모든 저작 계층마다 `docs/contracts/*.md`를 host로 하고 `file`을 target으로 삼는 발견 claim을 만든다. 각 claim은 `discovery/core/common.md`와 함께 설정에는 `settings`, 각 model·space·material·instance·motion·system 분기에는 `designs + 해당 design layer`, `film`의 `treatments`에는 `films + treatments`, `scripts`에는 `films + scripts`, `screenplays`에는 `films + screenplays`, `brief`에는 `briefs`를 연결한다. Research는 `common`만 연결하여 외부 근거 채택과 design boundary 탐색을 같은 결정으로 합치지 않는다. 저작 H2/H3/H4에는 이 발견 관계를 배선하지 않는다.
 
 발견 claim은 계층이 `draft`에 들어가는 순간부터 활성화하여 작품 전용 규칙을 저작보다 먼저 발굴하게 하고, `review`에서는 현재 fingerprint를 요구한다. 저작 산출물에 적용하는 draft no-tags 규칙은 별도 감사면인 `docs/contracts`에는 적용하지 않는다.
 
@@ -44,7 +44,7 @@
 
 <!-- @evidence requirements/production-evidence/graph.md#agent-production-evidence-physical-integrity 선택이 실제 대상을 하나만 지배하고 비활성 잔여물을 함께 막게 한다. -->
 
-팩터리는 glob으로 Markdown과 TypeScript host를 열거하고 활성 분기의 최소 host 수, 비활성 분기의 잔여물, 명시적 H2 anchor, 중복 target identity, 각 source 파일의 구체적인 named export owner와 `treatments`·`scripts`·`screenplays`의 물리적 순서 identity를 그래프 생성 전에 검사한다. 반환된 claim은 lint가 실제 export와 annotation을 선택하여 각 상속 단위가 한 개 이상의 실제 부모를 갖게 하고, 디자인 owner마다 정확히 한 디자인 파일, shot·acceptance owner마다 한 screenplay scene 또는 brief shot, 완전한 target coverage와 단계별 review cardinality를 검사하게 한다.
+팩터리는 glob으로 Markdown과 TypeScript host를 열거하고 활성 분기의 최소 host 수, 비활성 분기의 잔여물, 명시적 H2 anchor, 중복 target identity, 각 source 파일의 구체적인 named export owner를 그래프 생성 전에 검사한다. `treatments`는 중첩·index가 없는 평면 번호 event 파일이고 각 H2가 한 사건이다. `scripts`와 `screenplays`는 번호 delivery-group 디렉터리와 H1 전용 `index.md`, 번호 unit 파일의 H2/H3/H4 구조를 사용한다. 모든 script와 screenplay 파일 host 및 H2/H3/H4 단위는 treatment H2를 직접 완전 피복하고, screenplay는 대응 script의 group-index H1, unit 파일과 H1, 동일 깊이 lineage와 순서를 정확히 보존한다. 반환된 claim은 lint가 실제 export와 annotation을 선택하여 각 상속 단위가 한 개 이상의 실제 부모를 갖게 하고, 디자인 owner마다 정확히 한 디자인 파일, shot·acceptance owner마다 한 screenplay scene 또는 brief shot, 완전한 target coverage와 단계별 review cardinality를 검사하게 한다.
 
 <!-- @evidenceObligation physical-population-integrity 실제 파일 모집단에서 검증하는 host 수, 잔여물, identity, 소유 cardinality와 계보. -->
 

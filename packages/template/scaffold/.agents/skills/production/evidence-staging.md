@@ -36,7 +36,7 @@ An omission from one host is not an exclusion. `@evidenceExclude` says no host i
 
 ## Tags
 
-Directly below every selected authored H2, H3, and H4, answer every item of `principles/common.md`, the layer's own principle file, and, for treatment, script, and screenplay, `principles/narratives.md`, one line each. Place there too the obligation items this exact H2 owns and the foundation, lineage, or package-claim answers this unit justifies. Put an authored file's own setting and parentage answers in one HTML comment before its first H1 only where a configured file claim selects that relationship. File comments never carry principle answers.
+Directly below every selected authored H2, H3, and H4, answer every item of `principles/core/common.md`, the layer's own principle file, and, for treatment, script, and screenplay, `principles/story/narratives.md`, one line each. Place there too the obligation items this exact H2 owns and the foundation, lineage, or package-claim answers this unit justifies. Put an authored file's own setting and parentage answers in one HTML comment before its first H1 only where a configured file claim selects that relationship. File comments never carry principle answers.
 
 Put a contract file's discovery answer in one HTML comment before its first H1, because discovery selects the contract as a file host. Keep those annotations outside the target H2s the same file defines. Put every discovery exclusion in that position in `docs/contracts/index.md` and nowhere else; the index has no target H2 or positive answer. A contract in a nested directory is refused because `contracts/*.md` cannot select it.
 
@@ -76,7 +76,7 @@ A compiler diagnostic is a question about the artifact, not an instruction to ad
 
 Rewrite false or shallow content. Split, move, rename, merge, or replace a target whose scope is wrong. Correct only the tag when the content relationship already holds. Change config only when its intended population, stage, cardinality, exclusion, or implementation is itself wrong.
 
-Never clear a diagnostic with exaggerated evidence, copied reviews, blanket exclusions, filler, path shuffling, stage reduction, weakened populations, invented fingerprints, or a package exception. When `principles/common.md#evidence-content-conformance` fails, perform its halt and repair before retaining any acknowledgement.
+Never clear a diagnostic with exaggerated evidence, copied reviews, blanket exclusions, filler, path shuffling, stage reduction, weakened populations, invented fingerprints, or a package exception. When `principles/core/common.md#evidence-content-conformance` fails, perform its halt and repair before retaining any acknowledgement.
 
 ## Production-specific claims
 

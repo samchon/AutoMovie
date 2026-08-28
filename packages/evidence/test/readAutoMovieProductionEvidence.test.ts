@@ -77,7 +77,7 @@ try {
     project,
     "docs/contracts/visual.md",
     [
-      "<!-- @evidence discovery/common.md#shared-local-boundary The production audit retained this exact local visual rule. -->",
+      "<!-- @evidence discovery/core/common.md#shared-local-boundary The production audit retained this exact local visual rule. -->",
       "# Local visual contract",
       "",
       "This target governs the exact model profile selected by this production.",
@@ -284,7 +284,7 @@ function createProject(name: string): string {
   write(
     root,
     "docs/contracts/index.md",
-    "<!-- @evidenceExclude discovery/common.md#shared-local-boundary This reader fixture retains no other production-specific rule. -->\n\n# Work-specific contract audit\n",
+    "<!-- @evidenceExclude discovery/core/common.md#shared-local-boundary This reader fixture retains no other production-specific rule. -->\n\n# Work-specific contract audit\n",
   );
   return root;
 }

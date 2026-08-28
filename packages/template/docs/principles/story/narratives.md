@@ -8,7 +8,7 @@ Every H2, H3, and H4 performs at least one identifiable function in the complete
 
 Review question: what consequence in the complete film would disappear or change if this unit were removed?
 
-This item asks why an existing unit is necessary. `principles/common.md#scope-preservation` owns content assigned to this unit and its descendants, and `obligations/common.md#purpose-fit` asks why the whole file exists.
+This item asks why an existing unit is necessary. `principles/core/common.md#scope-preservation` owns content assigned to this unit and its descendants, and `obligations/core/common.md#purpose-fit` asks why the whole file exists.
 
 Sources: [Burton and Poster on the distinct function of authored units](https://www.cambridge.org/core/books/abs/book-you-need-to-read-to-write-the-book-you-want-to-write/beginnings-and-endings-tension-and-pace/7B84CB546C696FD1B6A8AB753522B42C); [Trabasso and Sperry on causal connection and judged importance](https://doi.org/10.1016/0749-596X%2885%2990048-8)
 
@@ -40,7 +40,7 @@ Mark a reach backward or forward so the audience can place it and return, and gi
 
 Review question: where does this unit's narration stand relative to story time, what span does it render at what narrative distance, how often does it narrate the occurrence or interval, and what work does any departure from plain forward singular narration perform?
 
-This item owns the unit's relation between story time and narrated order, duration, and frequency. `principles/screenplays.md#pacing-rhythm` owns the audience time a passage receives, `principles/treatments.md#information-design` owns when the audience learns a fact, and `horizontal-state-continuity` owns whether inherited facts remain accurate across the shift.
+This item owns the unit's relation between story time and narrated order, duration, and frequency. `principles/story/screenplays.md#pacing-rhythm` owns the audience time a passage receives, `principles/story/treatments.md#information-design` owns when the audience learns a fact, and `horizontal-state-continuity` owns whether inherited facts remain accurate across the shift.
 
 Sources: [Genette on order, duration, and frequency as separate relations between story time and narrative time](https://archive.org/details/narrativediscour0000gene); [Zwaan, Langston, and Graesser on the comprehension cost of a temporal discontinuity](https://doi.org/10.1111/j.1467-9280.1995.tb00513.x); [Hicks on distance, time, and proportion as organizers of narrative progression](https://www.cambridge.org/core/books/scale-crisis-and-the-modern-novel/introduction/2DC3BA9BA9CF6C3DE80AD1A2A52FFDCB)
 
@@ -92,7 +92,7 @@ Reproducing a parent's content, order, and wording with formatting or tense chan
 
 Review question: what layer-owned decision does this unit add that its actual parent units did not contain?
 
-This item asks what one narrative unit adds to the units it inherits. `principles/common.md#substantive-completion` asks whether the unit is a complete layer deliverable at all, `unit-identity` owns the declared parent relationship, and `obligations/common.md#proportionate-development` owns allocation across the complete population.
+This item asks what one narrative unit adds to the units it inherits. `principles/core/common.md#substantive-completion` asks whether the unit is a complete layer deliverable at all, `unit-identity` owns the declared parent relationship, and `obligations/core/common.md#proportionate-development` owns allocation across the complete population.
 
 When this principle fails, rewrite the unit from its parents rather than polishing the reproduced text. If the parents leave this layer nothing to add, repair the earliest owning layer and propagate the result downward.
 
@@ -108,7 +108,7 @@ An agent may misunderstand what it wants, want incompatible things, or fail. The
 
 Review question: whose settings-owned drive produces this unit's change, what action does it cause, and what does that choice cost?
 
-This item asks whether motive produces one unit's change and gives that change a cost. `obligations/subjects.md#drives-and-pressures` owns the settings population that defines subject drives, `character-continuity` owns consistency with what earlier units showed, and `audience-investment` owns what the unit leaves at stake for the audience.
+This item asks whether motive produces one unit's change and gives that change a cost. `obligations/story/subjects.md#drives-and-pressures` owns the settings population that defines subject drives, `character-continuity` owns consistency with what earlier units showed, and `audience-investment` owns what the unit leaves at stake for the audience.
 
 When this principle fails, rewrite the unit so its change follows from a defined drive. If no settings subject owns a drive this unit could act from, return to settings and define it before continuing.
 

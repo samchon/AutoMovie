@@ -35,15 +35,15 @@ const chorusProfile = (recipe: string): IAutoMovieProfile => ({
  * @evidence models/020-chorus.md#chorus-member-tier-representation Implements
  *   the hero recipe, scale check, material, walk profile, and LOD ladder.
  * @evidenceReview models/020-chorus.md#chorus-member-tier-representation #53a9c29 Read models/020-chorus.md#chorus-member-tier-representation and ChorusMember in src/units/chorusHero.ts; confirmed this citation after checking the claim that implements the hero recipe, scale check, material, walk profile, and LOD ladder.
- * @evidence obligations/model-sources.md#design-owned-construction Keeps height,
+ * @evidence obligations/design/model-sources.md#design-owned-construction Keeps height,
  *   radii, palette, and tier thresholds owned by the cited model design.
- * @evidenceReview obligations/model-sources.md#design-owned-construction #41ffc4f Read obligations/model-sources.md#design-owned-construction and ChorusMember in src/units/chorusHero.ts; confirmed this citation after checking the claim that keeps height, radii, palette, and tier thresholds owned by the cited model design.
- * @evidence obligations/model-sources.md#deterministic-build Builds the same
+ * @evidenceReview obligations/design/model-sources.md#design-owned-construction #41ffc4f Read obligations/design/model-sources.md#design-owned-construction and ChorusMember in src/units/chorusHero.ts; confirmed this citation after checking the claim that keeps height, radii, palette, and tier thresholds owned by the cited model design.
+ * @evidence obligations/design/model-sources.md#deterministic-build Builds the same
  *   recipe and validation result from the same reviewed fields.
- * @evidenceReview obligations/model-sources.md#deterministic-build #288cbb3 Read obligations/model-sources.md#deterministic-build and ChorusMember in src/units/chorusHero.ts; confirmed this citation after checking the claim that builds the same recipe and validation result from the same reviewed fields.
- * @evidence obligations/model-sources.md#unsupported-fidelity-is-explicit
+ * @evidenceReview obligations/design/model-sources.md#deterministic-build #288cbb3 Read obligations/design/model-sources.md#deterministic-build and ChorusMember in src/units/chorusHero.ts; confirmed this citation after checking the claim that builds the same recipe and validation result from the same reviewed fields.
+ * @evidence obligations/design/model-sources.md#unsupported-fidelity-is-explicit
  *   Refuses a member scale that contradicts the reviewed reference relation.
- * @evidenceReview obligations/model-sources.md#unsupported-fidelity-is-explicit #35050b3 Read obligations/model-sources.md#unsupported-fidelity-is-explicit and ChorusMember in src/units/chorusHero.ts; confirmed this citation after checking the claim that refuses a member scale that contradicts the reviewed reference relation.
+ * @evidenceReview obligations/design/model-sources.md#unsupported-fidelity-is-explicit #35050b3 Read obligations/design/model-sources.md#unsupported-fidelity-is-explicit and ChorusMember in src/units/chorusHero.ts; confirmed this citation after checking the claim that refuses a member scale that contradicts the reviewed reference relation.
  */
 export class ChorusMember extends AutoMovieSubject<IAutoMovieModelRecipe> {
   public readonly id = "chorus-hero";
@@ -223,15 +223,15 @@ export const chorusHero = new ChorusMember();
  * @evidence models/020-chorus.md#chorus-member-tier-representation Preserves
  *   member height, articulation, palette, and gait silhouette in coarse tiers.
  * @evidenceReview models/020-chorus.md#chorus-member-tier-representation #53a9c29 Read models/020-chorus.md#chorus-member-tier-representation and ChorusTier in src/units/chorusHero.ts; confirmed this citation after checking the claim that preserves member height, articulation, palette, and the exact walk-only profile in coarse tiers.
- * @evidence obligations/model-sources.md#design-owned-construction Uses only
+ * @evidence obligations/design/model-sources.md#design-owned-construction Uses only
  *   dimensions and tier identity owned by the cited model design.
- * @evidenceReview obligations/model-sources.md#design-owned-construction #41ffc4f Read obligations/model-sources.md#design-owned-construction and ChorusTier in src/units/chorusHero.ts; confirmed this citation after checking the claim that uses only dimensions and tier identity owned by the cited model design.
- * @evidence obligations/model-sources.md#deterministic-build Produces the same
+ * @evidenceReview obligations/design/model-sources.md#design-owned-construction #41ffc4f Read obligations/design/model-sources.md#design-owned-construction and ChorusTier in src/units/chorusHero.ts; confirmed this citation after checking the claim that uses only dimensions and tier identity owned by the cited model design.
+ * @evidence obligations/design/model-sources.md#deterministic-build Produces the same
  *   coarse recipe and gait profile from the same constructor fields.
- * @evidenceReview obligations/model-sources.md#deterministic-build #288cbb3 Read obligations/model-sources.md#deterministic-build and ChorusTier in src/units/chorusHero.ts; confirmed this citation after checking the claim that produces the same coarse recipe and gait profile from the same constructor fields.
- * @evidence obligations/model-sources.md#unsupported-fidelity-is-explicit
+ * @evidenceReview obligations/design/model-sources.md#deterministic-build #288cbb3 Read obligations/design/model-sources.md#deterministic-build and ChorusTier in src/units/chorusHero.ts; confirmed this citation after checking the claim that produces the same coarse recipe and gait profile from the same constructor fields.
+ * @evidence obligations/design/model-sources.md#unsupported-fidelity-is-explicit
  *   Refuses a tier whose radii are finer than the hero it claims to coarsen.
- * @evidenceReview obligations/model-sources.md#unsupported-fidelity-is-explicit #35050b3 Read obligations/model-sources.md#unsupported-fidelity-is-explicit and ChorusTier in src/units/chorusHero.ts; confirmed this citation after checking the claim that refuses a tier whose radii are finer than the hero it claims to coarsen.
+ * @evidenceReview obligations/design/model-sources.md#unsupported-fidelity-is-explicit #35050b3 Read obligations/design/model-sources.md#unsupported-fidelity-is-explicit and ChorusTier in src/units/chorusHero.ts; confirmed this citation after checking the claim that refuses a tier whose radii are finer than the hero it claims to coarsen.
  */
 export class ChorusTier extends AutoMovieSubject<IAutoMovieModelRecipe> {
   public constructor(

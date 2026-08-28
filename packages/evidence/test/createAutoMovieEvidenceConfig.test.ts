@@ -42,7 +42,7 @@ const root = (): string => {
   fs.mkdirSync(contractDirectory, { recursive: true });
   fs.writeFileSync(
     path.join(contractDirectory, "index.md"),
-    "<!-- @evidenceExclude discovery/common.md#shared-local-boundary This structural graph fixture retains no production-specific rule. -->\n\n# Work-specific contract audit\n",
+    "<!-- @evidenceExclude discovery/core/common.md#shared-local-boundary This structural graph fixture retains no production-specific rule. -->\n\n# Work-specific contract audit\n",
   );
   return directory;
 };
@@ -75,7 +75,7 @@ const target = (title: string, anchor: string): string =>
   `# ${title} contract\n\nThis production-only target states one bounded rule for its selected hosts.\n\n<!--\n### A commented heading is not a target.\n-->\n\n\`\`\`md\n### A fenced heading is not a target.\n\`\`\`\n\n## ${title} {#${anchor}}\n\nSelected hosts preserve the production-owned ${title.toLowerCase()} decision without replacing shared law.\n\nReview question: does the selected host preserve this exact production-owned decision?\n\nSources: production decision recorded by the owning project.\n`;
 
 const localTarget = (title: string, anchor: string): string =>
-  `<!-- @evidence discovery/common.md#shared-local-boundary The production audit retained this exact local rule. -->\n${target(title, anchor)}`;
+  `<!-- @evidence discovery/core/common.md#shared-local-boundary The production audit retained this exact local rule. -->\n${target(title, anchor)}`;
 
 const disabled = (location: string): Graph => ({
   location,
@@ -256,7 +256,7 @@ try {
   write(
     resetRoot,
     "docs/models/subject.md",
-    "## Subject {#subject}\n<!-- @evidence principles/common.md#scope-preservation Retained pilot review. -->\n",
+    "## Subject {#subject}\n<!-- @evidence principles/core/common.md#scope-preservation Retained pilot review. -->\n",
   );
   write(
     resetRoot,
@@ -275,7 +275,7 @@ try {
   write(
     resetRoot,
     "docs/maps/sibling.md",
-    "## Sibling {#sibling}\n<!-- @evidence principles/common.md#scope-preservation A stale, unpaired design tag. -->\n",
+    "## Sibling {#sibling}\n<!-- @evidence principles/core/common.md#scope-preservation A stale, unpaired design tag. -->\n",
   );
   assert.equal(
     throws(
@@ -644,7 +644,7 @@ try {
     "the separate contract audit starts with authored draft rather than waiting for evidence",
   );
   assert.equal(
-    referenceTo(draftDiscoveryClaim, "discovery/common.md")?.requireReview,
+    referenceTo(draftDiscoveryClaim, "discovery/core/common.md")?.requireReview,
     false,
   );
   for (const layer of ["treatments", "scripts", "screenplays", "briefs"])
@@ -700,9 +700,9 @@ try {
       assert.deepEqual(
         sharedFilesOf(claim, "principles"),
         [
-          "principles/common.md",
-          ...(narrative ? ["principles/narratives.md"] : []),
-          ...(inherited ? ["principles/inherited-units.md"] : []),
+          "principles/core/common.md",
+          ...(narrative ? ["principles/story/narratives.md"] : []),
+          ...(inherited ? ["principles/core/inherited-units.md"] : []),
           `principles/${contract}.md`,
         ].sort(),
         `${layer} H${depth} must answer every applicable principle for itself`,
@@ -726,8 +726,8 @@ try {
         sharedFilesOf(claim, "obligations"),
         depth === 2
           ? [
-              "obligations/common.md",
-              ...(narrative ? ["obligations/narratives.md"] : []),
+              "obligations/core/common.md",
+              ...(narrative ? ["obligations/story/narratives.md"] : []),
               ...(layer === "research" ? [] : [`obligations/${contract}.md`]),
             ].sort()
           : [],
@@ -742,10 +742,10 @@ try {
   );
   assert.deepEqual(
     sharedFilesOf(briefH2, "obligations"),
-    ["obligations/briefs.md", "obligations/common.md"],
+    ["obligations/delivery/briefs.md", "obligations/core/common.md"],
     "brief H2 units must cover addressability without inheriting film narrative obligations",
   );
-  const briefAddressability = referenceTo(briefH2, "obligations/briefs.md");
+  const briefAddressability = referenceTo(briefH2, "obligations/delivery/briefs.md");
   assert.equal(
     briefAddressability !== undefined && "checklist" in briefAddressability
       ? briefAddressability.checklist
@@ -762,13 +762,13 @@ try {
     assert.deepEqual(
       sharedFilesOf(briefUnit, "principles"),
       [
-        "principles/briefs.md",
-        "principles/common.md",
-        "principles/inherited-units.md",
+        "principles/delivery/briefs.md",
+        "principles/core/common.md",
+        "principles/core/inherited-units.md",
       ],
       `brief H${depth} units must answer information structure without inheriting film narrative principles`,
     );
-    const briefInformation = referenceTo(briefUnit, "principles/briefs.md");
+    const briefInformation = referenceTo(briefUnit, "principles/delivery/briefs.md");
     assert.equal(
       briefInformation !== undefined && "checklist" in briefInformation
         ? briefInformation.checklist
@@ -785,9 +785,9 @@ try {
   assert.deepEqual(
     sharedFilesOf(treatmentH2, "obligations"),
     [
-      "obligations/common.md",
-      "obligations/narratives.md",
-      "obligations/treatments.md",
+      "obligations/core/common.md",
+      "obligations/story/narratives.md",
+      "obligations/story/treatments.md",
     ],
     "the treatment H2 population must cover its complete treatment obligations once across the population",
   );
@@ -1335,7 +1335,7 @@ try {
   write(
     premature,
     "docs/settings/production.md",
-    "## Scope {#scope}\n\n<!-- @evidence principles/common.md#scope-preservation premature -->\n",
+    "## Scope {#scope}\n\n<!-- @evidence principles/core/common.md#scope-preservation premature -->\n",
   );
   assert.equal(
     throws(
@@ -2072,7 +2072,7 @@ try {
     claim.name?.includes("systems H2 units answer their principle checklists"),
   );
   assert.equal(
-    referenceTo(systemObligation, "obligations/systems.md")?.noEvidenceExclude,
+    referenceTo(systemObligation, "obligations/design/systems.md")?.noEvidenceExclude,
     true,
     "required non-motion layer obligations must refuse exclusions",
   );
@@ -2080,7 +2080,7 @@ try {
     claim.name?.includes("motions H2 units answer their principle checklists"),
   );
   assert.equal(
-    referenceTo(motionObligation, "obligations/motions.md")?.noEvidenceExclude,
+    referenceTo(motionObligation, "obligations/design/motions.md")?.noEvidenceExclude,
     true,
     "the population-wide motion-role obligation must refuse exclusions",
   );
@@ -2220,7 +2220,7 @@ try {
       claim.name ===
       "settings H2 units answer their principle checklists, cover the layer's obligations, and account for inherited work",
   );
-  const subjectDepth = referenceTo(filmSettings, "obligations/subjects.md");
+  const subjectDepth = referenceTo(filmSettings, "obligations/story/subjects.md");
   assert.notEqual(
     subjectDepth,
     undefined,
@@ -2258,13 +2258,13 @@ try {
         "settings H2 units answer their principle checklists, cover the layer's obligations, and account for inherited work",
     );
     assert.equal(
-      referenceTo(shapedSettings, "obligations/subjects.md"),
+      referenceTo(shapedSettings, "obligations/story/subjects.md"),
       undefined,
       `a ${shape} answers one bounded delivery and owes no film cast depth`,
     );
     const designConditions = referenceTo(
       shapedSettings,
-      "obligations/settings.md",
+      "obligations/core/settings.md",
     );
     assert.notEqual(
       designConditions,
@@ -2402,10 +2402,10 @@ try {
 
   const malformedContract = root();
   fs.writeFileSync(
-    contract(malformedContract, "docs/principles/common.md"),
+    contract(malformedContract, "docs/principles/core/common.md"),
     fs
       .readFileSync(
-        contract(malformedContract, "docs/principles/common.md"),
+        contract(malformedContract, "docs/principles/core/common.md"),
         "utf8",
       )
       .replace("Review question:", "Unrouted question:"),
@@ -2421,7 +2421,7 @@ try {
   const commentedReviewQuestion = root();
   const commentedCommon = contract(
     commentedReviewQuestion,
-    "docs/principles/common.md",
+    "docs/principles/core/common.md",
   );
   fs.writeFileSync(
     commentedCommon,
@@ -2438,7 +2438,7 @@ try {
   );
 
   const fencedSources = root();
-  const fencedCommon = contract(fencedSources, "docs/principles/common.md");
+  const fencedCommon = contract(fencedSources, "docs/principles/core/common.md");
   fs.writeFileSync(
     fencedCommon,
     fs
@@ -2455,10 +2455,10 @@ try {
 
   const duplicateContractAnchor = root();
   fs.writeFileSync(
-    contract(duplicateContractAnchor, "docs/principles/settings.md"),
+    contract(duplicateContractAnchor, "docs/principles/core/settings.md"),
     fs
       .readFileSync(
-        contract(duplicateContractAnchor, "docs/principles/settings.md"),
+        contract(duplicateContractAnchor, "docs/principles/core/settings.md"),
         "utf8",
       )
       .replace("{#information-structure}", "{#scope-preservation}"),
@@ -2473,10 +2473,10 @@ try {
 
   const duplicateContractTitle = root();
   fs.writeFileSync(
-    contract(duplicateContractTitle, "docs/principles/settings.md"),
+    contract(duplicateContractTitle, "docs/principles/core/settings.md"),
     fs
       .readFileSync(
-        contract(duplicateContractTitle, "docs/principles/settings.md"),
+        contract(duplicateContractTitle, "docs/principles/core/settings.md"),
         "utf8",
       )
       .replace("## Information structure", "## Declared scope preservation"),
@@ -2491,10 +2491,10 @@ try {
 
   const trailingContractProse = root();
   fs.writeFileSync(
-    contract(trailingContractProse, "docs/principles/common.md"),
+    contract(trailingContractProse, "docs/principles/core/common.md"),
     fs
       .readFileSync(
-        contract(trailingContractProse, "docs/principles/common.md"),
+        contract(trailingContractProse, "docs/principles/core/common.md"),
         "utf8",
       )
       .replace(/^(Sources: .+)$/mu, "$1\n\nTrailing contract prose."),
@@ -2509,10 +2509,10 @@ try {
 
   const missingContractTitle = root();
   fs.writeFileSync(
-    contract(missingContractTitle, "docs/principles/common.md"),
+    contract(missingContractTitle, "docs/principles/core/common.md"),
     fs
       .readFileSync(
-        contract(missingContractTitle, "docs/principles/common.md"),
+        contract(missingContractTitle, "docs/principles/core/common.md"),
         "utf8",
       )
       .replace("# Common principles", "Common principles"),
@@ -2527,9 +2527,9 @@ try {
 
   const prefacedContractTarget = root();
   fs.writeFileSync(
-    contract(prefacedContractTarget, "docs/principles/common.md"),
+    contract(prefacedContractTarget, "docs/principles/core/common.md"),
     `Preamble outside the target.\n\n${fs.readFileSync(
-      contract(prefacedContractTarget, "docs/principles/common.md"),
+      contract(prefacedContractTarget, "docs/principles/core/common.md"),
       "utf8",
     )}`,
   );
@@ -2543,10 +2543,10 @@ try {
 
   const nestedContractTarget = root();
   fs.writeFileSync(
-    contract(nestedContractTarget, "docs/principles/common.md"),
+    contract(nestedContractTarget, "docs/principles/core/common.md"),
     fs
       .readFileSync(
-        contract(nestedContractTarget, "docs/principles/common.md"),
+        contract(nestedContractTarget, "docs/principles/core/common.md"),
         "utf8",
       )
       .replace(
@@ -2564,10 +2564,10 @@ try {
 
   const unanchoredContractTarget = root();
   fs.writeFileSync(
-    contract(unanchoredContractTarget, "docs/principles/common.md"),
+    contract(unanchoredContractTarget, "docs/principles/core/common.md"),
     fs
       .readFileSync(
-        contract(unanchoredContractTarget, "docs/principles/common.md"),
+        contract(unanchoredContractTarget, "docs/principles/core/common.md"),
         "utf8",
       )
       .replace(" {#scope-preservation}", ""),
@@ -2582,10 +2582,10 @@ try {
 
   const duplicateContractUnitAnchor = root();
   fs.writeFileSync(
-    contract(duplicateContractUnitAnchor, "docs/principles/common.md"),
+    contract(duplicateContractUnitAnchor, "docs/principles/core/common.md"),
     fs
       .readFileSync(
-        contract(duplicateContractUnitAnchor, "docs/principles/common.md"),
+        contract(duplicateContractUnitAnchor, "docs/principles/core/common.md"),
         "utf8",
       )
       .replace("{#substantive-completion}", "{#scope-preservation}"),
@@ -2601,10 +2601,10 @@ try {
 
   const scopelessContractTarget = root();
   fs.writeFileSync(
-    contract(scopelessContractTarget, "docs/principles/common.md"),
+    contract(scopelessContractTarget, "docs/principles/core/common.md"),
     fs
       .readFileSync(
-        contract(scopelessContractTarget, "docs/principles/common.md"),
+        contract(scopelessContractTarget, "docs/principles/core/common.md"),
         "utf8",
       )
       .replace(/\n\nCriteria every authored[^\n]+\n\n/u, "\n\n"),
@@ -2623,7 +2623,7 @@ try {
     ["tilde-fence-only", "~~~text\nnot a scope statement\n~~~~"],
   ] as const) {
     const falseScopeTarget = root();
-    const common = contract(falseScopeTarget, "docs/principles/common.md");
+    const common = contract(falseScopeTarget, "docs/principles/core/common.md");
     fs.writeFileSync(
       common,
       fs
@@ -2645,8 +2645,8 @@ try {
 
   const targetTag = root();
   fs.appendFileSync(
-    contract(targetTag, "docs/principles/common.md"),
-    "\n<!-- @evidenceExcludeReview principles/common.md#scope-preservation #invalid recursive -->\n",
+    contract(targetTag, "docs/principles/core/common.md"),
+    "\n<!-- @evidenceExcludeReview principles/core/common.md#scope-preservation #invalid recursive -->\n",
   );
   assert.equal(
     throws(
@@ -2685,7 +2685,7 @@ try {
   );
 
   const removedDiscoveryTarget = root();
-  fs.rmSync(contract(removedDiscoveryTarget, "docs/discovery/briefs.md"));
+  fs.rmSync(contract(removedDiscoveryTarget, "docs/discovery/delivery/briefs.md"));
   assert.equal(
     throws(
       () => createAutoMovieEvidenceConfig(disabled(removedDiscoveryTarget)),
@@ -2697,7 +2697,7 @@ try {
   const renamedDiscoveryUnit = root();
   const settingsDiscovery = contract(
     renamedDiscoveryUnit,
-    "docs/discovery/settings.md",
+    "docs/discovery/core/settings.md",
   );
   fs.writeFileSync(
     settingsDiscovery,
@@ -2718,8 +2718,8 @@ try {
 
   const taggedDiscoveryTarget = root();
   fs.appendFileSync(
-    contract(taggedDiscoveryTarget, "docs/discovery/common.md"),
-    "\n<!-- @evidenceExclude discovery/common.md#shared-local-boundary invalid recursive target -->\n",
+    contract(taggedDiscoveryTarget, "docs/discovery/core/common.md"),
+    "\n<!-- @evidenceExclude discovery/core/common.md#shared-local-boundary invalid recursive target -->\n",
   );
   assert.equal(
     throws(
@@ -2731,7 +2731,7 @@ try {
 
   const addedContractUnit = root();
   fs.appendFileSync(
-    contract(addedContractUnit, "docs/principles/common.md"),
+    contract(addedContractUnit, "docs/principles/core/common.md"),
     "\n## Unexpected shared rule {#unexpected-shared-rule}\n\nThis rule was not added to the reusable graph inventory.\n\nReview question: was the shared graph deliberately rewired for this rule?\n\nSources: production contract inventory.\n",
   );
   assert.equal(
@@ -2745,7 +2745,7 @@ try {
   const removedContractUnit = root();
   const removedCommon = contract(
     removedContractUnit,
-    "docs/principles/common.md",
+    "docs/principles/core/common.md",
   );
   fs.writeFileSync(
     removedCommon,
@@ -2764,7 +2764,7 @@ try {
   const renamedContractUnit = root();
   const renamedCommon = contract(
     renamedContractUnit,
-    "docs/principles/common.md",
+    "docs/principles/core/common.md",
   );
   fs.writeFileSync(
     renamedCommon,
@@ -2813,7 +2813,7 @@ try {
   write(
     workSpecificContract,
     "docs/contracts/principles-common.md",
-    `<!-- @evidence discovery/common.md#shared-local-boundary The production audit retained this exact local rule. -->\n${target("Local contract", "local-contract")}`,
+    `<!-- @evidence discovery/core/common.md#shared-local-boundary The production audit retained this exact local rule. -->\n${target("Local contract", "local-contract")}`,
   );
   assert.doesNotThrow(() =>
     createAutoMovieEvidenceConfig({
@@ -2877,7 +2877,7 @@ try {
   write(
     negativeContractIndex,
     "docs/contracts/index.md",
-    "<!-- @evidenceExclude discovery/common.md#shared-local-boundary The complete audit found no independent local rule. -->\n\n# Work-specific contract\n",
+    "<!-- @evidenceExclude discovery/core/common.md#shared-local-boundary The complete audit found no independent local rule. -->\n\n# Work-specific contract\n",
   );
   assert.doesNotThrow(() =>
     createAutoMovieEvidenceConfig(disabled(negativeContractIndex)),
@@ -2886,7 +2886,7 @@ try {
   const nestedContract = root();
   write(
     nestedContract,
-    "docs/contracts/principles/common.md",
+    "docs/contracts/principles/core/common.md",
     target("Nested contract", "nested-contract"),
   );
   assert.equal(
@@ -2901,7 +2901,7 @@ try {
   write(
     positiveContractIndex,
     "docs/contracts/index.md",
-    "<!-- @evidence discovery/common.md#shared-local-boundary A positive rule cannot live in the negative ledger. -->\n\n# Work-specific contract\n",
+    "<!-- @evidence discovery/core/common.md#shared-local-boundary A positive rule cannot live in the negative ledger. -->\n\n# Work-specific contract\n",
   );
   assert.equal(
     throws(
@@ -2943,7 +2943,7 @@ try {
   write(
     lateContractIndexEvidence,
     "docs/contracts/index.md",
-    "# Work-specific contract\n\n<!-- @evidenceExclude discovery/common.md#shared-local-boundary This negative appears after H1. -->\n",
+    "# Work-specific contract\n\n<!-- @evidenceExclude discovery/core/common.md#shared-local-boundary This negative appears after H1. -->\n",
   );
   assert.equal(
     throws(
@@ -2957,7 +2957,7 @@ try {
   write(
     scatteredContractExclusion,
     "docs/contracts/principles-common.md",
-    `<!-- @evidenceExcludeReview discovery/common.md#shared-local-boundary #abcdef0 This reviewed negative is scattered. -->\n${target("Scattered contract", "scattered-contract")}`,
+    `<!-- @evidenceExcludeReview discovery/core/common.md#shared-local-boundary #abcdef0 This reviewed negative is scattered. -->\n${target("Scattered contract", "scattered-contract")}`,
   );
   assert.equal(
     throws(
@@ -2971,12 +2971,12 @@ try {
   write(
     recursiveContractEvidence,
     "docs/contracts/principles-common.md",
-    `<!-- @evidence discovery/common.md#shared-local-boundary The production audit retained this exact local rule. -->\n${target(
+    `<!-- @evidence discovery/core/common.md#shared-local-boundary The production audit retained this exact local rule. -->\n${target(
       "Recursive contract",
       "recursive-contract",
     ).replace(
       "Selected hosts preserve",
-      "<!-- @evidence discovery/common.md#shared-local-boundary A target unit cannot host its own graph evidence. -->\n\nSelected hosts preserve",
+      "<!-- @evidence discovery/core/common.md#shared-local-boundary A target unit cannot host its own graph evidence. -->\n\nSelected hosts preserve",
     )}`,
   );
   assert.equal(
@@ -3007,7 +3007,7 @@ try {
   write(
     nonDiscoveryContractEvidence,
     "docs/contracts/principles-common.md",
-    `<!-- @evidence principles/common.md#purpose-fit This target is not a discovery audit. -->\n${target("Wrong host", "wrong-host")}`,
+    `<!-- @evidence principles/core/common.md#purpose-fit This target is not a discovery audit. -->\n${target("Wrong host", "wrong-host")}`,
   );
   assert.equal(
     throws(
@@ -3036,7 +3036,7 @@ try {
   write(
     missingContractHeading,
     "docs/contracts/principles-common.md",
-    "<!-- @evidence discovery/common.md#shared-local-boundary A heading is still required. -->\n",
+    "<!-- @evidence discovery/core/common.md#shared-local-boundary A heading is still required. -->\n",
   );
   assert.equal(
     throws(
@@ -3204,7 +3204,7 @@ try {
   write(
     taggedProductionTarget,
     "docs/contracts/tagged.md",
-    `<!-- @evidencePart principles/common.md#scope-preservation::fragment recursive -->\n${target("Tagged", "tagged")}`,
+    `<!-- @evidencePart principles/core/common.md#scope-preservation::fragment recursive -->\n${target("Tagged", "tagged")}`,
   );
   assert.equal(
     throws(

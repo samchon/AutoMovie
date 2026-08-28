@@ -18,13 +18,13 @@ Put direct support for a fact in that fact's owning H2. Create a separate source
 
 ## Open-world discovery
 
-Before bulk settings prose and whenever the production contract changes, run the [production-specific contract](work-specific.md) pass with the common and settings discovery targets. `docs/discovery/settings.md#directive-promise-subject-requirements` owns the open search for requirements no shared list can anticipate; the settings coverage map records the current settings results and is not a search checklist. Backcast the actual planned film, brief, or library consumers so downstream work does not invent production-wide facts or constraints.
+Before bulk settings prose and whenever the production contract changes, run the [production-specific contract](work-specific.md) pass with the common and settings discovery targets. `docs/discovery/core/settings.md#directive-promise-subject-requirements` owns the open search for requirements no shared list can anticipate; the settings coverage map records the current settings results and is not a search checklist. Backcast the actual planned film, brief, or library consumers so downstream work does not invent production-wide facts or constraints.
 
-Give each material settings result an H2 owner, or classify it as an incidental inherited default permitted by `docs/obligations/settings.md#minimal-departure`, outside the delivery scope, or unresolved with a decision condition. A needed unresolved result blocks its consumer. Route recurring authored-unit conditions and independent evidence relationships to their semantic owners under `docs/contracts` instead of turning them into settings facts.
+Give each material settings result an H2 owner, or classify it as an incidental inherited default permitted by `docs/obligations/core/settings.md#minimal-departure`, outside the delivery scope, or unresolved with a decision condition. A needed unresolved result blocks its consumer. Route recurring authored-unit conditions and independent evidence relationships to their semantic owners under `docs/contracts` instead of turning them into settings facts.
 
 ## Decomposition and structure
 
-Before drafting a file, inventory candidate owners and apply `docs/obligations/settings.md#addressable-canon`. Split anything with its own consumer, fact status, change path, or review. After drafting, inspect overview prose, tables, lists, and embedded biographies or specifications for hidden owners, then split every bundle and repair the references that pointed at it.
+Before drafting a file, inventory candidate owners and apply `docs/obligations/core/settings.md#addressable-canon`. Split anything with its own consumer, fact status, change path, or review. After drafting, inspect overview prose, tables, lists, and embedded biographies or specifications for hidden owners, then split every bundle and repair the references that pointed at it.
 
 For each resulting owner, settle the applicable boundary, status, operating conditions, authority or access, resources, dependencies, costs, limits, exceptions, present state, and downstream consequences. Those are completion questions rather than mandatory field labels.
 
@@ -34,17 +34,17 @@ Apply the settings information-structure principle, then reverse-outline paragra
 
 ## Subject canon
 
-`obligations/settings.md#operative-subject-inventory` decides whether every operative subject has an owner. In a film, `obligations/subjects.md` decides what each of those owners settles: the position it acts from, the motive that produces a choice, the information it starts with, the behavior an audience recognizes it by, the relationships it stands inside, and the change it can and cannot undergo. An inventory of names satisfies the first and leaves a script author inventing the second.
+`obligations/core/settings.md#operative-subject-inventory` decides whether every operative subject has an owner. In a film, `obligations/story/subjects.md` decides what each of those owners settles: the position it acts from, the motive that produces a choice, the information it starts with, the behavior an audience recognizes it by, the relationships it stands inside, and the change it can and cannot undergo. An inventory of names satisfies the first and leaves a script author inventing the second.
 
 Depth follows consequence. A central subject settles every role in usable detail, a one-shot subject settles the roles its single appearance actually exercises, and neither is allowed to be absent from the inventory.
 
-Every shape applies `obligations/settings.md#agency-and-limits` to central or recurring people, populations, institutions, machines, environments, operators, or forces whose choice, control, refusal, access, or response can change delivery. A passive object library records that it has no operative agency instead of inventing one. Every shape also applies `#design-dependent-subject-conditions`: a route, handle, view, clearance, control, or acceptance threshold that relies on a user or equipment profile must name and bound that profile before the design branch consumes it. These cross-shape roles do not import film-only motive, knowledge, expression, relationship, or character change.
+Every shape applies `obligations/core/settings.md#agency-and-limits` to central or recurring people, populations, institutions, machines, environments, operators, or forces whose choice, control, refusal, access, or response can change delivery. A passive object library records that it has no operative agency instead of inventing one. Every shape also applies `#design-dependent-subject-conditions`: a route, handle, view, clearance, control, or acceptance threshold that relies on a user or equipment profile must name and bound that profile before the design branch consumes it. These cross-shape roles do not import film-only motive, knowledge, expression, relationship, or character change.
 
 After every downstream draft or revision, backcast its literal cast against that inventory. A new participant, or a group member who becomes an individual actor, is a settings defect: complete its canon here before the downstream work continues.
 
 ## Research and revision
 
-Research every externally checkable precision rather than writing it from memory. Search results and collection portals are discovery routes; open the direct evidence and apply `docs/principles/settings.md#source-support` before accepting a claim. Use [research.md](research.md) when source identity and uncertainty need a separate production-consumed ledger.
+Research every externally checkable precision rather than writing it from memory. Search results and collection portals are discovery routes; open the direct evidence and apply `docs/principles/core/settings.md#source-support` before accepting a claim. Use [research.md](research.md) when source identity and uncertainty need a separate production-consumed ledger.
 
 Before leaving `draft`, audit every unresolved statement, every externally checkable precision, and every discovered requirement recorded in the current coverage map against the questions research raised. Settle anything a downstream layer would otherwise have to invent; passing an unresolved value forward is an unstated invention task rather than a recorded uncertainty.
 

@@ -40,7 +40,7 @@ Design and brief units answer this too. A model H2 that describes its articulati
 
 Regularity the material asks for is not this defect. A settings H2 listing parallel constraints, a motion H2 stepping through phases, and a brief H4 stating one viewing condition are meant to be even, and variation forced onto one is the same failure from the other side.
 
-This principle asks whether anyone decided how the unit reads. `evidence-content-conformance` owns whether an acknowledgement is true and whether its reason is generic or copied. `principles/screenplays.md#audiovisual-voice` owns the expressive stance finished screenplay chooses, `principles/narratives.md#specificity` owns whether an element belongs to this production rather than to its genre, and the common production-language obligation owns the working language and its consistency.
+This principle asks whether anyone decided how the unit reads. `evidence-content-conformance` owns whether an acknowledgement is true and whether its reason is generic or copied. `principles/story/screenplays.md#audiovisual-voice` owns the expressive stance finished screenplay chooses, `principles/story/narratives.md#specificity` owns whether an element belongs to this production rather than to its genre, and the common production-language obligation owns the working language and its consistency.
 
 Review question: which marks of an undecided default appear together in this unit?
 

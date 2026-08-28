@@ -1,6 +1,6 @@
 # Subject obligations
 
-`obligations/settings.md#operative-subject-inventory` decides whether every operative subject has an owner. These roles decide what those owners settle, and the settings H2 population of a film covers them. An inventory of names satisfies the first duty and leaves a script author inventing the second: what makes this subject act, what it already knows, how an audience recognizes it, and how far it can change.
+`obligations/core/settings.md#operative-subject-inventory` decides whether every operative subject has an owner. These roles decide what those owners settle, and the settings H2 population of a film covers them. An inventory of names satisfies the first duty and leaves a script author inventing the second: what makes this subject act, what it already knows, how an audience recognizes it, and how far it can change.
 
 A subject here is anything the film shows deciding, reacting, resisting, or refusing: a person, an animal, a crowd, an institution, or a machine. Depth follows consequence. A central subject settles every applicable role in usable detail, and a single-appearance subject settles the roles its one appearance actually exercises.
 
@@ -12,7 +12,7 @@ Each recurring or consequential subject has a defined bodily or operational stat
 
 Review question: which external condition would change what this subject is able to attempt in the delivered action?
 
-This item owns the external position a subject acts from. `drives-and-pressures` owns its internal motive, and `principles/settings.md#capability-boundary` owns the permitted state changes and their limits.
+This item owns the external position a subject acts from. `drives-and-pressures` owns its internal motive, and `principles/core/settings.md#capability-boundary` owns the permitted state changes and their limits.
 
 Sources: [OpenStax on persons within biological, social, political, and economic systems](https://openstax.org/books/introduction-anthropology/pages/1-1-the-study-of-humanity-or-anthropology-is-vast); [Marie-Laure Ryan on entities holding states in a storyworld](https://marilaur.info/degrees.pdf)
 
@@ -22,7 +22,7 @@ Each recurring or consequential subject has defined desires, needs, fears, value
 
 Review question: what would this subject give up, and what would it refuse, when the delivered action puts it under pressure?
 
-This item owns the motive that produces a choice. `principles/narratives.md#character-continuity` owns whether a staged action stays intelligible against that motive.
+This item owns the motive that produces a choice. `principles/story/narratives.md#character-continuity` owns whether a staged action stays intelligible against that motive.
 
 Sources: [Purdue OWL on goals, obstacles, and consequential action](https://owl.purdue.edu/owl/subject_specific_writing/creative_writing/writers/fiction_writing_basics/writing_compelling_characters.html); [Palmer on fictional minds in social context](https://muse.jhu.edu/book/24307)
 
@@ -32,7 +32,7 @@ Each recurring or consequential subject has defined knowledge, error, attention,
 
 Review question: what does this subject already know, wrongly believe, or fail to notice before the delivered action begins?
 
-This item owns the information a subject starts from. `principles/scripts.md#knowledge-state` owns how information then moves inside one staged scene, and `principles/treatments.md#information-design` owns what the audience is told and when.
+This item owns the information a subject starts from. `principles/story/scripts.md#knowledge-state` owns how information then moves inside one staged scene, and `principles/story/treatments.md#information-design` owns what the audience is told and when.
 
 Sources: [Palmer on social minds and distributed cognition](https://muse.jhu.edu/book/24307); [Zwaan, Langston, and Graesser on tracking protagonists, intentions, and situation change](https://doi.org/10.1111/j.1467-9280.1995.tb00513.x)
 
@@ -42,7 +42,7 @@ Each recurring or consequential subject has defined observable behavior: posture
 
 Review question: which observable behavior lets an audience tell this subject apart from another one carrying the same description?
 
-This item owns the observable behavior a subject is recognized by. `principles/settings.md#observable-identity` owns the fixed appearance under the delivery review condition, and motion design owns the reusable timed path that performs a behavior.
+This item owns the observable behavior a subject is recognized by. `principles/core/settings.md#observable-identity` owns the fixed appearance under the delivery review condition, and motion design owns the reusable timed path that performs a behavior.
 
 Sources: [Purdue OWL on revealing character through concrete behavior](https://owl.purdue.edu/owl/subject_specific_writing/creative_writing/writers/fiction_writing_basics/characters_and_fiction_writing1/building_and_revealing_characters.html); [Cambridge Companion to Narrative on dialogue as characterizing action](https://www.cambridge.org/core/books/abs/cambridge-companion-to-narrative/dialogue/DA260BBCE7DBBA9BCB4196CE7F35ABDC)
 
@@ -62,6 +62,6 @@ Each central subject has defined credible paths of change, resistant limits, sta
 
 Review question: which change is this subject capable of, which is it not, and what threshold makes a change irreversible?
 
-This item owns the permitted range of subject change. `principles/narratives.md#horizontal-state-continuity` owns whether a delivered change was actually earned inside the film.
+This item owns the permitted range of subject change. `principles/story/narratives.md#horizontal-state-continuity` owns whether a delivered change was actually earned inside the film.
 
 Sources: [Zacks, Speer, and Reynolds on event boundaries and changed situation models](https://pmc.ncbi.nlm.nih.gov/articles/PMC8710938/); [Purdue OWL on desire moving a character into action](https://owl.purdue.edu/owl/subject_specific_writing/creative_writing/writers/fiction_writing_basics/characters_and_fiction_writing1/index.html)

@@ -80,31 +80,31 @@ const ROOT = path.resolve(__dirname, "../../../..");
 const TTSC = path.join(ROOT, "node_modules/ttsc/lib/launcher/ttsc.js");
 const TTSC_CACHE = path.join(ROOT, "node_modules/.cache/ttsc");
 const BRIEF = "docs/briefs/delivery.md";
-const ADDRESSABILITY = "obligations/briefs.md#brief-unit-addressability";
+const ADDRESSABILITY = "obligations/delivery/briefs.md#brief-unit-addressability";
 const INFORMATION_STRUCTURE =
-  "principles/briefs.md#brief-information-structure";
+  "principles/delivery/briefs.md#brief-information-structure";
 const CLAIM_NAMES = {
   h2: "briefs H2 units answer their principle checklists, cover the layer's obligations, and account for inherited work",
   h3: "briefs H3 units answer their principle checklists and account for inherited work",
   h4: "briefs H4 units answer their principle checklists and account for inherited work",
 } as const;
 const PRINCIPLES = [
-  "principles/common.md#scope-preservation",
-  "principles/common.md#substantive-completion",
-  "principles/common.md#machine-default",
-  "principles/common.md#evidence-content-conformance",
-  "principles/common.md#declared-basis",
+  "principles/core/common.md#scope-preservation",
+  "principles/core/common.md#substantive-completion",
+  "principles/core/common.md#machine-default",
+  "principles/core/common.md#evidence-content-conformance",
+  "principles/core/common.md#declared-basis",
   INFORMATION_STRUCTURE,
-  "principles/briefs.md#no-narrative-smuggling",
+  "principles/delivery/briefs.md#no-narrative-smuggling",
 ] as const;
 const OBLIGATIONS = [
-  "obligations/common.md#purpose-fit",
-  "obligations/common.md#layer-boundary",
-  "obligations/common.md#production-language",
-  "obligations/common.md#proportionate-development",
-  "obligations/briefs.md#single-scope-eligibility",
+  "obligations/core/common.md#purpose-fit",
+  "obligations/core/common.md#layer-boundary",
+  "obligations/core/common.md#production-language",
+  "obligations/core/common.md#proportionate-development",
+  "obligations/delivery/briefs.md#single-scope-eligibility",
   ADDRESSABILITY,
-  "obligations/briefs.md#observable-progression",
+  "obligations/delivery/briefs.md#observable-progression",
 ] as const;
 
 /** Preserve the primary failure if removal of its disposable project fails too. */
@@ -200,12 +200,12 @@ const assertBriefClaim = (
     references.map(fileOf).sort((left, right) => left.localeCompare(right)),
     symbol === "h2"
       ? [
-          "obligations/briefs.md",
-          "obligations/common.md",
-          "principles/briefs.md",
-          "principles/common.md",
+          "obligations/delivery/briefs.md",
+          "obligations/core/common.md",
+          "principles/delivery/briefs.md",
+          "principles/core/common.md",
         ]
-      : ["principles/briefs.md", "principles/common.md"],
+      : ["principles/delivery/briefs.md", "principles/core/common.md"],
   );
   for (const reference of references) {
     assert.equal(reference.type, "markdown");
@@ -460,7 +460,7 @@ export const test_evidence_brief_contract_underpayment = (): void => {
     fs.mkdirSync(path.join(root, "docs/contracts"), { recursive: true });
     fs.writeFileSync(
       path.join(root, "docs/contracts/index.md"),
-      "<!-- @evidenceExclude discovery/common.md#shared-local-boundary This empty disabled graph retains no production-specific contract. -->\n\n# Contract audit\n",
+      "<!-- @evidenceExclude discovery/core/common.md#shared-local-boundary This empty disabled graph retains no production-specific contract. -->\n\n# Contract audit\n",
       "utf8",
     );
 

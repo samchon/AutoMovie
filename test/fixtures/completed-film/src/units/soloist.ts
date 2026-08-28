@@ -31,16 +31,16 @@ import { createSoloistCueMotion } from "../motions/soloistCue";
  * @evidence models/010-soloist.md#soloist-neutral-review-views Exposes stable
  *   occupied height and pose states the neutral review set compares.
  * @evidenceReview models/010-soloist.md#soloist-neutral-review-views #ada235a Read models/010-soloist.md#soloist-neutral-review-views and Soloist in src/units/soloist.ts; confirmed this citation after checking the claim that exposes stable occupied height and pose states the neutral review set compares.
- * @evidence obligations/model-sources.md#design-owned-construction Makes every
+ * @evidence obligations/design/model-sources.md#design-owned-construction Makes every
  *   visible constant answer to the cited model design.
- * @evidenceReview obligations/model-sources.md#design-owned-construction #41ffc4f Read obligations/model-sources.md#design-owned-construction and Soloist in src/units/soloist.ts; confirmed this citation after checking the claim that makes every visible constant answer to the cited model design.
- * @evidence obligations/model-sources.md#deterministic-build Maps the same
+ * @evidenceReview obligations/design/model-sources.md#design-owned-construction #41ffc4f Read obligations/design/model-sources.md#design-owned-construction and Soloist in src/units/soloist.ts; confirmed this citation after checking the claim that makes every visible constant answer to the cited model design.
+ * @evidence obligations/design/model-sources.md#deterministic-build Maps the same
  *   explicit model and runtime inputs to the same recipe and contribution.
- * @evidenceReview obligations/model-sources.md#deterministic-build #288cbb3 Read obligations/model-sources.md#deterministic-build and Soloist in src/units/soloist.ts; confirmed this citation after checking the claim that maps the same explicit model and runtime inputs to the same recipe and contribution.
- * @evidence obligations/model-sources.md#unsupported-fidelity-is-explicit
+ * @evidenceReview obligations/design/model-sources.md#deterministic-build #288cbb3 Read obligations/design/model-sources.md#deterministic-build and Soloist in src/units/soloist.ts; confirmed this citation after checking the claim that maps the same explicit model and runtime inputs to the same recipe and contribution.
+ * @evidence obligations/design/model-sources.md#unsupported-fidelity-is-explicit
  *   Refuses a missing compiled model or skeleton instead of degrading the
  *   reviewed articulated proxy.
- * @evidenceReview obligations/model-sources.md#unsupported-fidelity-is-explicit #35050b3 Read obligations/model-sources.md#unsupported-fidelity-is-explicit and Soloist in src/units/soloist.ts; confirmed this citation after checking the claim that refuses a missing compiled model or skeleton instead of degrading the reviewed articulated proxy.
+ * @evidenceReview obligations/design/model-sources.md#unsupported-fidelity-is-explicit #35050b3 Read obligations/design/model-sources.md#unsupported-fidelity-is-explicit and Soloist in src/units/soloist.ts; confirmed this citation after checking the claim that refuses a missing compiled model or skeleton instead of degrading the reviewed articulated proxy.
  */
 export class Soloist extends AutoMovieSubject<IAutoMovieModelRecipe> {
   public readonly id = "soloist";
@@ -145,9 +145,9 @@ export class Soloist extends AutoMovieSubject<IAutoMovieModelRecipe> {
    * @evidence models/010-soloist.md#soloist-articulation-interface Resolves the
    *   stable compiler skeleton the motion design is allowed to drive.
    * @evidenceReview models/010-soloist.md#soloist-articulation-interface #f553537 Read models/010-soloist.md#soloist-articulation-interface and skeleton in src/units/soloist.ts; confirmed this citation after checking the claim that resolves the stable compiler skeleton the motion design is allowed to drive.
-   * @evidence obligations/model-sources.md#unsupported-fidelity-is-explicit
+   * @evidence obligations/design/model-sources.md#unsupported-fidelity-is-explicit
    *   Refuses when the reviewed articulated model has no skeleton.
-   * @evidenceReview obligations/model-sources.md#unsupported-fidelity-is-explicit #35050b3 Read obligations/model-sources.md#unsupported-fidelity-is-explicit and skeleton in src/units/soloist.ts; confirmed this citation after checking the claim that refuses when the reviewed articulated model has no skeleton.
+   * @evidenceReview obligations/design/model-sources.md#unsupported-fidelity-is-explicit #35050b3 Read obligations/design/model-sources.md#unsupported-fidelity-is-explicit and skeleton in src/units/soloist.ts; confirmed this citation after checking the claim that refuses when the reviewed articulated model has no skeleton.
    */
   public skeleton(context: IAutoMovieShotBuildContext): string {
     const model = context.runtimeModels[this.id];

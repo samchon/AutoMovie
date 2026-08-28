@@ -220,7 +220,7 @@ function createProduction(name: string): string {
   write(
     root,
     "docs/contracts/index.md",
-    "<!-- @evidenceExclude discovery/common.md#shared-local-boundary This command fixture retains no production-specific rule. -->\n\n# Work-specific contract audit\n",
+    "<!-- @evidenceExclude discovery/core/common.md#shared-local-boundary This command fixture retains no production-specific rule. -->\n\n# Work-specific contract audit\n",
   );
   return root;
 }

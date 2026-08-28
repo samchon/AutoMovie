@@ -73,15 +73,15 @@ const GATE_FINISH_LINEAR = Object.freeze({
  * @evidence models/030-gate.md#gate-neutral-review-views Exposes finish,
  *   height, placement, hinge identity, and endpoints to the neutral review set.
  * @evidenceReview models/030-gate.md#gate-neutral-review-views #87a11c5 Read models/030-gate.md#gate-neutral-review-views and PlazaGate in src/objects/gate.ts; confirmed this citation after checking the claim that exposes finish, height, placement, hinge identity, and endpoints to the neutral review set.
- * @evidence obligations/model-sources.md#design-owned-construction Keeps every
+ * @evidence obligations/design/model-sources.md#design-owned-construction Keeps every
  *   visible dimension and structural split owned by the cited model design.
- * @evidenceReview obligations/model-sources.md#design-owned-construction #41ffc4f Read obligations/model-sources.md#design-owned-construction and PlazaGate in src/objects/gate.ts; confirmed this citation after checking the claim that keeps every visible dimension and structural split owned by the cited model design.
- * @evidence obligations/model-sources.md#deterministic-build Produces the same
+ * @evidenceReview obligations/design/model-sources.md#design-owned-construction #41ffc4f Read obligations/design/model-sources.md#design-owned-construction and PlazaGate in src/objects/gate.ts; confirmed this citation after checking the claim that keeps every visible dimension and structural split owned by the cited model design.
+ * @evidence obligations/design/model-sources.md#deterministic-build Produces the same
  *   prop, articulation, and placement from the same world context.
- * @evidenceReview obligations/model-sources.md#deterministic-build #288cbb3 Read obligations/model-sources.md#deterministic-build and PlazaGate in src/objects/gate.ts; confirmed this citation after checking the claim that produces the same prop, articulation, and placement from the same world context.
- * @evidence obligations/model-sources.md#unsupported-fidelity-is-explicit Keeps
+ * @evidenceReview obligations/design/model-sources.md#deterministic-build #288cbb3 Read obligations/design/model-sources.md#deterministic-build and PlazaGate in src/objects/gate.ts; confirmed this citation after checking the claim that produces the same prop, articulation, and placement from the same world context.
+ * @evidence obligations/design/model-sources.md#unsupported-fidelity-is-explicit Keeps
  *   the two-box form visibly documented as a blocking proxy.
- * @evidenceReview obligations/model-sources.md#unsupported-fidelity-is-explicit #35050b3 Read obligations/model-sources.md#unsupported-fidelity-is-explicit and PlazaGate in src/objects/gate.ts; confirmed this citation after checking the claim that keeps the two-box form visibly documented as a blocking proxy.
+ * @evidenceReview obligations/design/model-sources.md#unsupported-fidelity-is-explicit #35050b3 Read obligations/design/model-sources.md#unsupported-fidelity-is-explicit and PlazaGate in src/objects/gate.ts; confirmed this citation after checking the claim that keeps the two-box form visibly documented as a blocking proxy.
  */
 export class PlazaGate extends AutoMovieSubject<IAutoMoviePropSpec> {
   public readonly id = "plaza-gate";

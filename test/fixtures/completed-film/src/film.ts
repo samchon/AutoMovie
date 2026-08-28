@@ -9,16 +9,16 @@ import type { IAutoMovieFilmSource } from "@automovie/interface";
  * @evidence screenplays/002-answer/001-answer.md#seq-answer Dissolves into the complete answer
  *   source and holds it through the final global sample.
  * @evidenceReview screenplays/002-answer/001-answer.md#seq-answer #d29078c Read screenplays/002-answer/001-answer.md#seq-answer and film; confirmed the six-second answer enters through the authored half-second dissolve, holds its wide insert, and fades to black over its final local half-second.
- * @evidence obligations/film-sources.md#editorial-only-assembly Selects only the
+ * @evidence obligations/delivery/film-sources.md#editorial-only-assembly Selects only the
  *   two reviewed shots and declares their half-second overlap and fades.
- * @evidenceReview obligations/film-sources.md#editorial-only-assembly #86e74ab Read obligations/film-sources.md#editorial-only-assembly and film; confirmed both video entries select reviewed shots, map explicit local/global intervals, and assemble exactly 11.5 seconds without local creative decisions.
- * @evidence obligations/film-sources.md#authored-auxiliary-tracks Maps the
+ * @evidenceReview obligations/delivery/film-sources.md#editorial-only-assembly #86e74ab Read obligations/delivery/film-sources.md#editorial-only-assembly and film; confirmed both video entries select reviewed shots, map explicit local/global intervals, and assemble exactly 11.5 seconds without local creative decisions.
+ * @evidence obligations/delivery/film-sources.md#authored-auxiliary-tracks Maps the
  *   screenplay caption exactly and keeps the named structural guide at zero
  *   gain while creating no empty success track for intentionally absent products.
- * @evidenceReview obligations/film-sources.md#authored-auxiliary-tracks #eb8a354 Read obligations/film-sources.md#authored-auxiliary-tracks and film; confirmed it maps the required English caption exactly from screenplay into the global 1.5-3.0 second English track, keeps the zero-gain fixture explicitly inert, and creates no empty success track for intentionally absent description, transcript, signed, subtitle, or clean-audio products.
- * @evidence obligations/film-sources.md#deterministic-timeline Returns fixed,
+ * @evidenceReview obligations/delivery/film-sources.md#authored-auxiliary-tracks #eb8a354 Read obligations/delivery/film-sources.md#authored-auxiliary-tracks and film; confirmed it maps the required English caption exactly from screenplay into the global 1.5-3.0 second English track, keeps the zero-gain fixture explicitly inert, and creates no empty success track for intentionally absent description, transcript, signed, subtitle, or clean-audio products.
+ * @evidence obligations/delivery/film-sources.md#deterministic-timeline Returns fixed,
  *   ordered tracks from production context without mutable or discovered state.
- * @evidenceReview obligations/film-sources.md#deterministic-timeline #7324edc Read obligations/film-sources.md#deterministic-timeline and film; confirmed build reads only production identity and returns fixed literal track order and values with no mutable state or fallback.
+ * @evidenceReview obligations/delivery/film-sources.md#deterministic-timeline #7324edc Read obligations/delivery/film-sources.md#deterministic-timeline and film; confirmed build reads only production identity and returns fixed literal track order and values with no mutable state or fallback.
  */
 export const film = {
   build(context) {

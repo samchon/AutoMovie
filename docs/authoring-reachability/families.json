@@ -35,9 +35,9 @@
       "requirementUnits": 76,
       "classification": "authoring-contract",
       "correspondences": [
-        "packages/template/docs/principles/common.md#evidence-content-conformance",
-        "packages/template/docs/obligations/briefs.md#observable-progression",
-        "packages/template/docs/obligations/shots.md#acceptance-travels-with-delivery"
+        "packages/template/docs/principles/core/common.md#evidence-content-conformance",
+        "packages/template/docs/obligations/delivery/briefs.md#observable-progression",
+        "packages/template/docs/obligations/delivery/shots.md#acceptance-travels-with-delivery"
       ],
       "workflow": [
         "packages/template/scaffold/.agents/skills/production/review.md"
@@ -49,12 +49,12 @@
       "requirementUnits": 62,
       "classification": "authoring-contract",
       "correspondences": [
-        "packages/template/docs/obligations/settings.md#operative-subject-inventory",
-        "packages/template/docs/obligations/settings.md#agency-and-limits",
-        "packages/template/docs/obligations/settings.md#design-dependent-subject-conditions",
-        "packages/template/docs/obligations/subjects.md#situated-conditions",
-        "packages/template/docs/principles/models.md#representation-contract",
-        "packages/template/docs/principles/motions.md#state-endpoints"
+        "packages/template/docs/obligations/core/settings.md#operative-subject-inventory",
+        "packages/template/docs/obligations/core/settings.md#agency-and-limits",
+        "packages/template/docs/obligations/core/settings.md#design-dependent-subject-conditions",
+        "packages/template/docs/obligations/story/subjects.md#situated-conditions",
+        "packages/template/docs/principles/design/models.md#representation-contract",
+        "packages/template/docs/principles/design/motions.md#state-endpoints"
       ],
       "workflow": [
         "packages/template/scaffold/.agents/skills/production/models-and-motions.md"
@@ -78,16 +78,16 @@
       "requirementUnits": 65,
       "classification": "authoring-contract",
       "correspondences": [
-        "packages/template/docs/discovery/designs.md#work-specific-design-requirements",
-        "packages/template/docs/discovery/models.md#work-specific-model-requirements",
-        "packages/template/docs/discovery/materials.md#work-specific-material-requirements",
-        "packages/template/docs/discovery/instances.md#work-specific-instance-requirements",
-        "packages/template/docs/principles/models.md#representation-contract",
-        "packages/template/docs/principles/materials.md#material-construction-appearance",
-        "packages/template/docs/principles/instances.md#instance-prototype-boundary",
-        "packages/template/docs/obligations/model-sources.md#design-owned-construction",
-        "packages/template/docs/obligations/material-sources.md#material-source-design-ownership",
-        "packages/template/docs/obligations/instance-sources.md#instance-source-design-ownership"
+        "packages/template/docs/discovery/design/designs.md#work-specific-design-requirements",
+        "packages/template/docs/discovery/design/models.md#work-specific-model-requirements",
+        "packages/template/docs/discovery/design/materials.md#work-specific-material-requirements",
+        "packages/template/docs/discovery/design/instances.md#work-specific-instance-requirements",
+        "packages/template/docs/principles/design/models.md#representation-contract",
+        "packages/template/docs/principles/design/materials.md#material-construction-appearance",
+        "packages/template/docs/principles/design/instances.md#instance-prototype-boundary",
+        "packages/template/docs/obligations/design/model-sources.md#design-owned-construction",
+        "packages/template/docs/obligations/design/material-sources.md#material-source-design-ownership",
+        "packages/template/docs/obligations/design/instance-sources.md#instance-source-design-ownership"
       ],
       "workflow": [
         "packages/template/scaffold/.agents/skills/production/design-branches.md",
@@ -100,17 +100,17 @@
       "requirementUnits": 126,
       "classification": "authoring-contract",
       "correspondences": [
-        "packages/template/docs/discovery/designs.md#work-specific-design-requirements",
-        "packages/template/docs/discovery/spaces.md#work-specific-space-requirements",
-        "packages/template/docs/discovery/materials.md#work-specific-material-requirements",
-        "packages/template/docs/discovery/instances.md#work-specific-instance-requirements",
-        "packages/template/docs/discovery/systems.md#work-specific-system-requirements",
-        "packages/template/docs/obligations/settings.md#design-dependent-subject-conditions",
-        "packages/template/docs/principles/spaces.md#space-topology",
-        "packages/template/docs/obligations/spaces.md#space-envelope-interface",
-        "packages/template/docs/obligations/space-sources.md#space-source-design-ownership",
-        "packages/template/docs/obligations/materials.md#material-identity-assembly",
-        "packages/template/docs/obligations/systems.md#system-ownership-interfaces"
+        "packages/template/docs/discovery/design/designs.md#work-specific-design-requirements",
+        "packages/template/docs/discovery/design/spaces.md#work-specific-space-requirements",
+        "packages/template/docs/discovery/design/materials.md#work-specific-material-requirements",
+        "packages/template/docs/discovery/design/instances.md#work-specific-instance-requirements",
+        "packages/template/docs/discovery/design/systems.md#work-specific-system-requirements",
+        "packages/template/docs/obligations/core/settings.md#design-dependent-subject-conditions",
+        "packages/template/docs/principles/design/spaces.md#space-topology",
+        "packages/template/docs/obligations/design/spaces.md#space-envelope-interface",
+        "packages/template/docs/obligations/design/space-sources.md#space-source-design-ownership",
+        "packages/template/docs/obligations/design/materials.md#material-identity-assembly",
+        "packages/template/docs/obligations/design/systems.md#system-ownership-interfaces"
       ],
       "workflow": [
         "packages/template/scaffold/.agents/skills/production/design-branches.md",
@@ -124,9 +124,9 @@
       "requirementUnits": 77,
       "classification": "authoring-contract",
       "correspondences": [
-        "packages/template/docs/obligations/shots.md#contract-only-composition",
-        "packages/template/docs/obligations/shots.md#explicit-inputs-and-time",
-        "packages/template/docs/principles/screenplays.md#audience-orientation"
+        "packages/template/docs/obligations/delivery/shots.md#contract-only-composition",
+        "packages/template/docs/obligations/delivery/shots.md#explicit-inputs-and-time",
+        "packages/template/docs/principles/story/screenplays.md#audience-orientation"
       ],
       "workflow": [
         "packages/template/scaffold/.agents/skills/production/craft/cinematography.md"
@@ -138,10 +138,10 @@
       "requirementUnits": 94,
       "classification": "authoring-contract",
       "correspondences": [
-        "packages/template/docs/obligations/settings.md#delivery-scope",
-        "packages/template/docs/obligations/settings.md#accessibility-deliverable-states",
-        "packages/template/docs/obligations/film-sources.md#authored-auxiliary-tracks",
-        "packages/template/docs/principles/screenplays.md#audience-access"
+        "packages/template/docs/obligations/core/settings.md#delivery-scope",
+        "packages/template/docs/obligations/core/settings.md#accessibility-deliverable-states",
+        "packages/template/docs/obligations/delivery/film-sources.md#authored-auxiliary-tracks",
+        "packages/template/docs/principles/story/screenplays.md#audience-access"
       ],
       "workflow": [
         "packages/template/scaffold/.agents/skills/production/settings.md"
@@ -153,8 +153,8 @@
       "requirementUnits": 36,
       "classification": "authoring-contract",
       "correspondences": [
-        "packages/template/docs/principles/common.md#evidence-content-conformance",
-        "packages/template/docs/principles/common.md#declared-basis"
+        "packages/template/docs/principles/core/common.md#evidence-content-conformance",
+        "packages/template/docs/principles/core/common.md#declared-basis"
       ],
       "workflow": [
         "packages/template/scaffold/.agents/skills/production/evidence-staging.md",
@@ -167,9 +167,9 @@
       "requirementUnits": 85,
       "classification": "authoring-contract",
       "correspondences": [
-        "packages/template/docs/obligations/film-sources.md#editorial-only-assembly",
-        "packages/template/docs/obligations/film-sources.md#deterministic-timeline",
-        "packages/template/docs/principles/screenplays.md#timing-allocation"
+        "packages/template/docs/obligations/delivery/film-sources.md#editorial-only-assembly",
+        "packages/template/docs/obligations/delivery/film-sources.md#deterministic-timeline",
+        "packages/template/docs/principles/story/screenplays.md#timing-allocation"
       ],
       "workflow": [
         "packages/template/scaffold/.agents/skills/production/craft/editing.md"
@@ -181,13 +181,13 @@
       "requirementUnits": 69,
       "classification": "authoring-contract",
       "correspondences": [
-        "packages/template/docs/discovery/designs.md#work-specific-design-requirements",
-        "packages/template/docs/discovery/systems.md#work-specific-system-requirements",
-        "packages/template/docs/principles/systems.md#system-authority-confinement",
-        "packages/template/docs/principles/systems.md#system-dependency-basis",
-        "packages/template/docs/obligations/systems.md#system-state-clock",
-        "packages/template/docs/obligations/systems.md#system-budget-degradation",
-        "packages/template/docs/obligations/system-sources.md#system-source-explicit-evaluation"
+        "packages/template/docs/discovery/design/designs.md#work-specific-design-requirements",
+        "packages/template/docs/discovery/design/systems.md#work-specific-system-requirements",
+        "packages/template/docs/principles/design/systems.md#system-authority-confinement",
+        "packages/template/docs/principles/design/systems.md#system-dependency-basis",
+        "packages/template/docs/obligations/design/systems.md#system-state-clock",
+        "packages/template/docs/obligations/design/systems.md#system-budget-degradation",
+        "packages/template/docs/obligations/design/system-sources.md#system-source-explicit-evaluation"
       ],
       "workflow": [
         "packages/template/scaffold/.agents/skills/production/design-branches.md"
@@ -199,10 +199,10 @@
       "requirementUnits": 51,
       "classification": "authoring-contract",
       "correspondences": [
-        "packages/template/docs/principles/common.md#evidence-content-conformance",
-        "packages/template/docs/principles/common.md#declared-basis",
-        "packages/template/docs/principles/research.md#source-identity",
-        "packages/template/docs/principles/settings.md#fact-status"
+        "packages/template/docs/principles/core/common.md#evidence-content-conformance",
+        "packages/template/docs/principles/core/common.md#declared-basis",
+        "packages/template/docs/principles/core/research.md#source-identity",
+        "packages/template/docs/principles/core/settings.md#fact-status"
       ],
       "workflow": [
         "packages/template/scaffold/.agents/skills/production/evidence-staging.md",
@@ -215,10 +215,10 @@
       "requirementUnits": 60,
       "classification": "authoring-contract",
       "correspondences": [
-        "packages/template/docs/principles/research.md#source-identity",
-        "packages/template/docs/principles/research.md#production-consequence",
-        "packages/template/docs/principles/settings.md#source-support",
-        "packages/template/docs/principles/settings.md#fact-status"
+        "packages/template/docs/principles/core/research.md#source-identity",
+        "packages/template/docs/principles/core/research.md#production-consequence",
+        "packages/template/docs/principles/core/settings.md#source-support",
+        "packages/template/docs/principles/core/settings.md#fact-status"
       ],
       "workflow": [
         "packages/template/scaffold/.agents/skills/production/research.md",
@@ -231,14 +231,14 @@
       "requirementUnits": 54,
       "classification": "authoring-contract",
       "correspondences": [
-        "packages/template/docs/discovery/designs.md#work-specific-design-requirements",
-        "packages/template/docs/discovery/instances.md#work-specific-instance-requirements",
-        "packages/template/docs/discovery/motions.md#work-specific-motion-requirements",
-        "packages/template/docs/obligations/settings.md#design-dependent-subject-conditions",
-        "packages/template/docs/principles/instances.md#instance-prototype-boundary",
-        "packages/template/docs/obligations/instances.md#instance-prototype-membership",
-        "packages/template/docs/obligations/instances.md#instance-placement-review",
-        "packages/template/docs/principles/motions.md#spatial-relation"
+        "packages/template/docs/discovery/design/designs.md#work-specific-design-requirements",
+        "packages/template/docs/discovery/design/instances.md#work-specific-instance-requirements",
+        "packages/template/docs/discovery/design/motions.md#work-specific-motion-requirements",
+        "packages/template/docs/obligations/core/settings.md#design-dependent-subject-conditions",
+        "packages/template/docs/principles/design/instances.md#instance-prototype-boundary",
+        "packages/template/docs/obligations/design/instances.md#instance-prototype-membership",
+        "packages/template/docs/obligations/design/instances.md#instance-placement-review",
+        "packages/template/docs/principles/design/motions.md#spatial-relation"
       ],
       "workflow": [
         "packages/template/scaffold/.agents/skills/production/design-branches.md"
@@ -250,18 +250,18 @@
       "requirementUnits": 153,
       "classification": "authoring-contract",
       "correspondences": [
-        "packages/template/docs/discovery/designs.md#work-specific-design-requirements",
-        "packages/template/docs/discovery/spaces.md#work-specific-space-requirements",
-        "packages/template/docs/discovery/materials.md#work-specific-material-requirements",
-        "packages/template/docs/discovery/instances.md#work-specific-instance-requirements",
-        "packages/template/docs/discovery/systems.md#work-specific-system-requirements",
-        "packages/template/docs/obligations/settings.md#design-dependent-subject-conditions",
-        "packages/template/docs/principles/spaces.md#space-topology",
-        "packages/template/docs/obligations/spaces.md#space-access-circulation",
-        "packages/template/docs/obligations/spaces.md#space-review-set",
-        "packages/template/docs/principles/materials.md#material-construction-appearance",
-        "packages/template/docs/obligations/instances.md#instance-placement-review",
-        "packages/template/docs/obligations/systems.md#system-ownership-interfaces"
+        "packages/template/docs/discovery/design/designs.md#work-specific-design-requirements",
+        "packages/template/docs/discovery/design/spaces.md#work-specific-space-requirements",
+        "packages/template/docs/discovery/design/materials.md#work-specific-material-requirements",
+        "packages/template/docs/discovery/design/instances.md#work-specific-instance-requirements",
+        "packages/template/docs/discovery/design/systems.md#work-specific-system-requirements",
+        "packages/template/docs/obligations/core/settings.md#design-dependent-subject-conditions",
+        "packages/template/docs/principles/design/spaces.md#space-topology",
+        "packages/template/docs/obligations/design/spaces.md#space-access-circulation",
+        "packages/template/docs/obligations/design/spaces.md#space-review-set",
+        "packages/template/docs/principles/design/materials.md#material-construction-appearance",
+        "packages/template/docs/obligations/design/instances.md#instance-placement-review",
+        "packages/template/docs/obligations/design/systems.md#system-ownership-interfaces"
       ],
       "workflow": [
         "packages/template/scaffold/.agents/skills/production/design-branches.md",
@@ -275,10 +275,10 @@
       "requirementUnits": 86,
       "classification": "authoring-contract",
       "correspondences": [
-        "packages/template/docs/principles/systems.md#system-authority-confinement",
-        "packages/template/docs/obligations/systems.md#system-state-clock",
-        "packages/template/docs/obligations/shots.md#explicit-inputs-and-time",
-        "packages/template/docs/obligations/system-sources.md#system-source-explicit-evaluation"
+        "packages/template/docs/principles/design/systems.md#system-authority-confinement",
+        "packages/template/docs/obligations/design/systems.md#system-state-clock",
+        "packages/template/docs/obligations/delivery/shots.md#explicit-inputs-and-time",
+        "packages/template/docs/obligations/design/system-sources.md#system-source-explicit-evaluation"
       ],
       "workflow": [
         "packages/template/scaffold/.agents/skills/production/craft/cinematography.md"
@@ -291,8 +291,8 @@
       "classification": "unpaid-authoring-edge",
       "issue": 2125,
       "partialCorrespondences": [
-        "packages/template/docs/obligations/spaces.md#space-reference-topology",
-        "packages/template/docs/principles/settings.md#constraint-sufficiency"
+        "packages/template/docs/obligations/design/spaces.md#space-reference-topology",
+        "packages/template/docs/principles/core/settings.md#constraint-sufficiency"
       ],
       "reason": "Generic settings and spaces can state coordinates and topology, but no branch owns terrain, hydrology, ecology, transport, settlement, infrastructure, temporal world state, or map delivery as one authored world."
     },
@@ -301,14 +301,14 @@
       "requirementUnits": 81,
       "classification": "authoring-contract",
       "correspondences": [
-        "packages/template/docs/discovery/designs.md#work-specific-design-requirements",
-        "packages/template/docs/discovery/motions.md#work-specific-motion-requirements",
-        "packages/template/docs/principles/motions.md#state-endpoints",
-        "packages/template/docs/principles/motions.md#temporal-phases",
-        "packages/template/docs/principles/motions.md#parameter-domain",
-        "packages/template/docs/obligations/motions.md#time-base",
-        "packages/template/docs/obligations/motions.md#contact-policy",
-        "packages/template/docs/obligations/motion-sources.md#pure-time-mapping"
+        "packages/template/docs/discovery/design/designs.md#work-specific-design-requirements",
+        "packages/template/docs/discovery/design/motions.md#work-specific-motion-requirements",
+        "packages/template/docs/principles/design/motions.md#state-endpoints",
+        "packages/template/docs/principles/design/motions.md#temporal-phases",
+        "packages/template/docs/principles/design/motions.md#parameter-domain",
+        "packages/template/docs/obligations/design/motions.md#time-base",
+        "packages/template/docs/obligations/design/motions.md#contact-policy",
+        "packages/template/docs/obligations/design/motion-sources.md#pure-time-mapping"
       ],
       "workflow": [
         "packages/template/scaffold/.agents/skills/production/models-and-motions.md",
@@ -332,9 +332,9 @@
       "requirementUnits": 30,
       "classification": "authoring-contract",
       "correspondences": [
-        "packages/template/docs/principles/common.md#scope-preservation",
-        "packages/template/docs/obligations/common.md#purpose-fit",
-        "packages/template/docs/obligations/common.md#layer-boundary"
+        "packages/template/docs/principles/core/common.md#scope-preservation",
+        "packages/template/docs/obligations/core/common.md#purpose-fit",
+        "packages/template/docs/obligations/core/common.md#layer-boundary"
       ],
       "workflow": [
         "packages/template/scaffold/.agents/skills/production/SKILL.md",
@@ -347,19 +347,19 @@
       "requirementUnits": 99,
       "classification": "authoring-contract",
       "correspondences": [
-        "packages/template/docs/discovery/designs.md#work-specific-design-requirements",
-        "packages/template/docs/discovery/models.md#work-specific-model-requirements",
-        "packages/template/docs/discovery/spaces.md#work-specific-space-requirements",
-        "packages/template/docs/discovery/materials.md#work-specific-material-requirements",
-        "packages/template/docs/discovery/instances.md#work-specific-instance-requirements",
-        "packages/template/docs/discovery/motions.md#work-specific-motion-requirements",
-        "packages/template/docs/discovery/systems.md#work-specific-system-requirements",
-        "packages/template/docs/principles/settings.md#observable-identity",
-        "packages/template/docs/obligations/settings.md#production-visual-grammar",
-        "packages/template/docs/obligations/settings.md#production-fidelity-tier",
-        "packages/template/docs/obligations/settings.md#subject-breakdown-production-scope",
-        "packages/template/docs/obligations/production-sources.md#shared-visual-grammar",
-        "packages/template/docs/principles/materials.md#material-construction-appearance"
+        "packages/template/docs/discovery/design/designs.md#work-specific-design-requirements",
+        "packages/template/docs/discovery/design/models.md#work-specific-model-requirements",
+        "packages/template/docs/discovery/design/spaces.md#work-specific-space-requirements",
+        "packages/template/docs/discovery/design/materials.md#work-specific-material-requirements",
+        "packages/template/docs/discovery/design/instances.md#work-specific-instance-requirements",
+        "packages/template/docs/discovery/design/motions.md#work-specific-motion-requirements",
+        "packages/template/docs/discovery/design/systems.md#work-specific-system-requirements",
+        "packages/template/docs/principles/core/settings.md#observable-identity",
+        "packages/template/docs/obligations/core/settings.md#production-visual-grammar",
+        "packages/template/docs/obligations/core/settings.md#production-fidelity-tier",
+        "packages/template/docs/obligations/core/settings.md#subject-breakdown-production-scope",
+        "packages/template/docs/obligations/delivery/production-sources.md#shared-visual-grammar",
+        "packages/template/docs/principles/design/materials.md#material-construction-appearance"
       ],
       "workflow": [
         "packages/template/scaffold/.agents/skills/production/settings.md",
@@ -372,8 +372,8 @@
       "requirementUnits": 7,
       "classification": "authoring-contract",
       "correspondences": [
-        "packages/template/docs/principles/common.md#evidence-content-conformance",
-        "packages/template/docs/principles/common.md#scope-preservation"
+        "packages/template/docs/principles/core/common.md#evidence-content-conformance",
+        "packages/template/docs/principles/core/common.md#scope-preservation"
       ],
       "workflow": [
         "packages/template/scaffold/.agents/skills/production/contract-targets.md",
@@ -386,11 +386,11 @@
       "requirementUnits": 90,
       "classification": "authoring-contract",
       "correspondences": [
-        "packages/template/docs/obligations/settings.md#delivery-scope",
-        "packages/template/docs/obligations/settings.md#delivery-review-condition",
-        "packages/template/docs/obligations/production-sources.md#delivery-identity",
-        "packages/template/docs/obligations/shots.md#explicit-inputs-and-time",
-        "packages/template/docs/obligations/film-sources.md#deterministic-timeline"
+        "packages/template/docs/obligations/core/settings.md#delivery-scope",
+        "packages/template/docs/obligations/core/settings.md#delivery-review-condition",
+        "packages/template/docs/obligations/delivery/production-sources.md#delivery-identity",
+        "packages/template/docs/obligations/delivery/shots.md#explicit-inputs-and-time",
+        "packages/template/docs/obligations/delivery/film-sources.md#deterministic-timeline"
       ],
       "workflow": [
         "packages/template/scaffold/.agents/skills/production/evidence/capture.md",
@@ -403,10 +403,10 @@
       "requirementUnits": 43,
       "classification": "authoring-contract",
       "correspondences": [
-        "packages/template/docs/obligations/settings.md#delivery-scope",
-        "packages/template/docs/obligations/settings.md#production-visual-grammar",
-        "packages/template/docs/obligations/settings.md#production-fidelity-tier",
-        "packages/template/docs/obligations/shots.md#acceptance-travels-with-delivery"
+        "packages/template/docs/obligations/core/settings.md#delivery-scope",
+        "packages/template/docs/obligations/core/settings.md#production-visual-grammar",
+        "packages/template/docs/obligations/core/settings.md#production-fidelity-tier",
+        "packages/template/docs/obligations/delivery/shots.md#acceptance-travels-with-delivery"
       ],
       "workflow": [
         "packages/template/scaffold/.agents/skills/production/configuration.md",
@@ -419,18 +419,18 @@
       "requirementUnits": 15,
       "classification": "authoring-contract",
       "correspondences": [
-        "packages/template/docs/obligations/settings.md#delivery-review-condition",
-        "packages/template/docs/principles/models.md#reviewable-structure",
-        "packages/template/docs/obligations/models.md#model-review-set",
-        "packages/template/docs/principles/spaces.md#space-verification-address",
-        "packages/template/docs/obligations/spaces.md#space-review-set",
-        "packages/template/docs/principles/materials.md#material-verification-address",
-        "packages/template/docs/obligations/materials.md#material-review-set",
-        "packages/template/docs/principles/instances.md#instance-verification-address",
-        "packages/template/docs/obligations/instances.md#instance-placement-review",
-        "packages/template/docs/obligations/motions.md#motion-review-set",
-        "packages/template/docs/principles/systems.md#system-verification-address",
-        "packages/template/docs/obligations/systems.md#system-review-set"
+        "packages/template/docs/obligations/core/settings.md#delivery-review-condition",
+        "packages/template/docs/principles/design/models.md#reviewable-structure",
+        "packages/template/docs/obligations/design/models.md#model-review-set",
+        "packages/template/docs/principles/design/spaces.md#space-verification-address",
+        "packages/template/docs/obligations/design/spaces.md#space-review-set",
+        "packages/template/docs/principles/design/materials.md#material-verification-address",
+        "packages/template/docs/obligations/design/materials.md#material-review-set",
+        "packages/template/docs/principles/design/instances.md#instance-verification-address",
+        "packages/template/docs/obligations/design/instances.md#instance-placement-review",
+        "packages/template/docs/obligations/design/motions.md#motion-review-set",
+        "packages/template/docs/principles/design/systems.md#system-verification-address",
+        "packages/template/docs/obligations/design/systems.md#system-review-set"
       ],
       "workflow": [
         "packages/template/scaffold/.agents/skills/production/review.md",
@@ -443,10 +443,10 @@
       "requirementUnits": 80,
       "classification": "authoring-contract",
       "correspondences": [
-        "packages/template/docs/principles/systems.md#system-authority-confinement",
-        "packages/template/docs/obligations/systems.md#system-state-clock",
-        "packages/template/docs/principles/screenplays.md#dialogue-sound-voice",
-        "packages/template/docs/obligations/film-sources.md#authored-auxiliary-tracks"
+        "packages/template/docs/principles/design/systems.md#system-authority-confinement",
+        "packages/template/docs/obligations/design/systems.md#system-state-clock",
+        "packages/template/docs/principles/story/screenplays.md#dialogue-sound-voice",
+        "packages/template/docs/obligations/delivery/film-sources.md#authored-auxiliary-tracks"
       ],
       "workflow": [
         "packages/template/scaffold/.agents/skills/production/craft/sound.md"
@@ -458,10 +458,10 @@
       "requirementUnits": 70,
       "classification": "authoring-contract",
       "correspondences": [
-        "packages/template/docs/principles/scripts.md#staging-blocks",
-        "packages/template/docs/principles/scripts.md#executable-progression",
-        "packages/template/docs/obligations/scripts.md#script-boundary",
-        "packages/template/docs/obligations/shots.md#contract-only-composition"
+        "packages/template/docs/principles/story/scripts.md#staging-blocks",
+        "packages/template/docs/principles/story/scripts.md#executable-progression",
+        "packages/template/docs/obligations/story/scripts.md#script-boundary",
+        "packages/template/docs/obligations/delivery/shots.md#contract-only-composition"
       ],
       "workflow": [
         "packages/template/scaffold/.agents/skills/production/scripts.md"
@@ -473,14 +473,14 @@
       "requirementUnits": 101,
       "classification": "authoring-contract",
       "correspondences": [
-        "packages/template/docs/principles/narratives.md#unit-connection",
-        "packages/template/docs/principles/narratives.md#narrated-time",
-        "packages/template/docs/principles/treatments.md#causal-turn",
-        "packages/template/docs/principles/scripts.md#executable-progression",
-        "packages/template/docs/principles/screenplays.md#screenplay-blocks",
-        "packages/template/docs/obligations/treatments.md#audience-route",
-        "packages/template/docs/obligations/treatments.md#sustained-middle",
-        "packages/template/docs/obligations/screenplays.md#realization-ready-contract"
+        "packages/template/docs/principles/story/narratives.md#unit-connection",
+        "packages/template/docs/principles/story/narratives.md#narrated-time",
+        "packages/template/docs/principles/story/treatments.md#causal-turn",
+        "packages/template/docs/principles/story/scripts.md#executable-progression",
+        "packages/template/docs/principles/story/screenplays.md#screenplay-blocks",
+        "packages/template/docs/obligations/story/treatments.md#audience-route",
+        "packages/template/docs/obligations/story/treatments.md#sustained-middle",
+        "packages/template/docs/obligations/story/screenplays.md#realization-ready-contract"
       ],
       "workflow": [
         "packages/template/scaffold/.agents/skills/production/treatments.md",

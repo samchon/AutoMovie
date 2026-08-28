@@ -24,7 +24,7 @@ The shared graph follows ownership direction: maps may supply foundations to spa
 
 ## Discovery and draft procedure
 
-Before an active design branch enters `draft`, run its contract-hosted discovery pass against the actual production: `discovery/common.md`, `discovery/designs.md`, and the matching `discovery/<branch>.md`. Inspect the reviewed settings, direct directives, source assets and provenance, dependencies, planned consumers, promised observations, and known failures without turning those inputs or the target prose into a predetermined answer list. A film or brief runs this pass only for the design branches it actually activates; a library runs it for every design branch it delivers even though it has no narrative, brief, shot, or edit population.
+Before an active design branch enters `draft`, run its contract-hosted discovery pass against the actual production: `discovery/core/common.md`, `discovery/design/designs.md`, and the matching `discovery/<branch>.md`. Inspect the reviewed settings, direct directives, source assets and provenance, dependencies, planned consumers, promised observations, and known failures without turning those inputs or the target prose into a predetermined answer list. A film or brief runs this pass only for the design branches it actually activates; a library runs it for every design branch it delivers even though it has no narrative, brief, shot, or edit population.
 
 Keep the three scopes distinct. `common.md` searches for production-wide and cross-layer rules, `designs.md` searches for conditions that must remain compatible across active design branches, and the branch file searches for conditions only that specialist population can own. `films.md` and `briefs.md` govern their timed authored populations and do not replace or enter design discovery. A production with no timed output still owes the complete applicable design search.
 
@@ -40,11 +40,11 @@ Start an applicable design layer at its `<branch>: "draft"` key only after setti
 
 | Branch gate | Specialist contracts before `evidence` | Matching source starts only after |
 | --- | --- | --- |
-| `maps` | `principles/maps.md`, `obligations/maps.md`, and `discovery/maps.md` | `maps: "review"`, then `mapSources: "draft"` with `obligations/map-sources.md` |
-| `spaces` | `principles/spaces.md`, `obligations/spaces.md`, and `discovery/spaces.md` | `spaces: "review"`, then `spaceSources: "draft"` with `obligations/space-sources.md` |
-| `materials` | `principles/materials.md`, `obligations/materials.md`, and `discovery/materials.md` | `materials: "review"`, then `materialSources: "draft"` with `obligations/material-sources.md` |
-| `instances` | `principles/instances.md`, `obligations/instances.md`, and `discovery/instances.md` | `instances: "review"`, then `instanceSources: "draft"` with `obligations/instance-sources.md` |
-| `systems` | `principles/systems.md`, `obligations/systems.md`, and `discovery/systems.md` | `systems: "review"`, then `systemSources: "draft"` with `obligations/system-sources.md` |
+| `maps` | `principles/design/maps.md`, `obligations/design/maps.md`, and `discovery/design/maps.md` | `maps: "review"`, then `mapSources: "draft"` with `obligations/design/map-sources.md` |
+| `spaces` | `principles/design/spaces.md`, `obligations/design/spaces.md`, and `discovery/design/spaces.md` | `spaces: "review"`, then `spaceSources: "draft"` with `obligations/design/space-sources.md` |
+| `materials` | `principles/design/materials.md`, `obligations/design/materials.md`, and `discovery/design/materials.md` | `materials: "review"`, then `materialSources: "draft"` with `obligations/design/material-sources.md` |
+| `instances` | `principles/design/instances.md`, `obligations/design/instances.md`, and `discovery/design/instances.md` | `instances: "review"`, then `instanceSources: "draft"` with `obligations/design/instance-sources.md` |
+| `systems` | `principles/design/systems.md`, `obligations/design/systems.md`, and `discovery/design/systems.md` | `systems: "review"`, then `systemSources: "draft"` with `obligations/design/system-sources.md` |
 
 Read [Models and motions](models-and-motions.md) when either of those branches is active; that document owns their corresponding gates. Do not import model or motion questions merely because all branches may become rendered geometry.
 

@@ -4,7 +4,7 @@ Criteria that every TypeScript owner exposed through a public export and selecte
 
 Source-family obligations remain ordinary population coverage: they allocate the construction, transition, serialization, shot, or editorial roles the complete selected owner population owes. These principles ask whether each individual selected owner is a truthful and complete source artifact within the scope it claims.
 
-`obligations/common.md#proportionate-development` does not apply to a source owner. Line count, declaration count, and implementation size do not establish whether code is complete or whether one source role received enough attention; source scope, executable behavior, types, tests, and evidence relationships do.
+`obligations/core/common.md#proportionate-development` does not apply to a source owner. Line count, declaration count, and implementation size do not establish whether code is complete or whether one source role received enough attention; source scope, executable behavior, types, tests, and evidence relationships do.
 
 ## Source-owner scope preservation {#source-scope-preservation}
 

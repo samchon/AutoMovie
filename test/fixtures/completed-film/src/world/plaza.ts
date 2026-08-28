@@ -31,15 +31,15 @@ import { chorus } from "../formations/chorus";
  * @evidence models/040-plaza.md#plaza-world-composition Defines the common
  *   context-free contribution boundary for every reviewed world piece.
  * @evidenceReview models/040-plaza.md#plaza-world-composition #96ea0f6 Read models/040-plaza.md#plaza-world-composition and WorldPiece in src/world/plaza.ts; confirmed this citation after checking the claim that defines the common context-free contribution boundary for every reviewed world piece.
- * @evidence obligations/model-sources.md#design-owned-construction Keeps world
+ * @evidence obligations/design/model-sources.md#design-owned-construction Keeps world
  *   pieces as implementations of the cited model design.
- * @evidenceReview obligations/model-sources.md#design-owned-construction #41ffc4f Read obligations/model-sources.md#design-owned-construction and WorldPiece in src/world/plaza.ts; confirmed this citation after checking the claim that keeps world pieces as implementations of the cited model design.
- * @evidence obligations/model-sources.md#deterministic-build Returns the same
+ * @evidenceReview obligations/design/model-sources.md#design-owned-construction #41ffc4f Read obligations/design/model-sources.md#design-owned-construction and WorldPiece in src/world/plaza.ts; confirmed this citation after checking the claim that keeps world pieces as implementations of the cited model design.
+ * @evidence obligations/design/model-sources.md#deterministic-build Returns the same
  *   placed contribution from the same piece state in every shot.
- * @evidenceReview obligations/model-sources.md#deterministic-build #288cbb3 Read obligations/model-sources.md#deterministic-build and WorldPiece in src/world/plaza.ts; confirmed this citation after checking the claim that returns the same placed contribution from the same piece state in every shot.
- * @evidence obligations/model-sources.md#unsupported-fidelity-is-explicit Makes
+ * @evidenceReview obligations/design/model-sources.md#deterministic-build #288cbb3 Read obligations/design/model-sources.md#deterministic-build and WorldPiece in src/world/plaza.ts; confirmed this citation after checking the claim that returns the same placed contribution from the same piece state in every shot.
+ * @evidence obligations/design/model-sources.md#unsupported-fidelity-is-explicit Makes
  *   unsupported enclosure and final atmosphere fidelity absent from the API.
- * @evidenceReview obligations/model-sources.md#unsupported-fidelity-is-explicit #35050b3 Read obligations/model-sources.md#unsupported-fidelity-is-explicit and WorldPiece in src/world/plaza.ts; confirmed this citation after checking the claim that makes unsupported enclosure and final atmosphere fidelity absent from the API.
+ * @evidenceReview obligations/design/model-sources.md#unsupported-fidelity-is-explicit #35050b3 Read obligations/design/model-sources.md#unsupported-fidelity-is-explicit and WorldPiece in src/world/plaza.ts; confirmed this citation after checking the claim that makes unsupported enclosure and final atmosphere fidelity absent from the API.
  */
 export abstract class WorldPiece extends AutoMovieSubject<IAutoMovieSubjectContribution> {
   /** What this piece puts into the world, independent of any shot. */
@@ -283,15 +283,15 @@ export class PlazaHaze extends WorldPiece {
  * @evidence models/040-plaza.md#plaza-neutral-review-views Exposes the shared
  *   surface, bounds, and piece identities the neutral review set compares.
  * @evidenceReview models/040-plaza.md#plaza-neutral-review-views #a3be395 Read models/040-plaza.md#plaza-neutral-review-views and Plaza in src/world/plaza.ts; confirmed this citation after checking the claim that exposes the shared surface, bounds, and piece identities the neutral review set compares.
- * @evidence obligations/model-sources.md#design-owned-construction Adds no world
+ * @evidence obligations/design/model-sources.md#design-owned-construction Adds no world
  *   piece or spatial relation outside the cited design.
- * @evidenceReview obligations/model-sources.md#design-owned-construction #41ffc4f Read obligations/model-sources.md#design-owned-construction and Plaza in src/world/plaza.ts; confirmed this citation after checking the claim that adds no world piece or spatial relation outside the cited design.
- * @evidence obligations/model-sources.md#deterministic-build Merges the same
+ * @evidenceReview obligations/design/model-sources.md#design-owned-construction #41ffc4f Read obligations/design/model-sources.md#design-owned-construction and Plaza in src/world/plaza.ts; confirmed this citation after checking the claim that adds no world piece or spatial relation outside the cited design.
+ * @evidence obligations/design/model-sources.md#deterministic-build Merges the same
  *   ordered piece contributions into the same world record.
- * @evidenceReview obligations/model-sources.md#deterministic-build #288cbb3 Read obligations/model-sources.md#deterministic-build and Plaza in src/world/plaza.ts; confirmed this citation after checking the claim that merges the same ordered piece contributions into the same world record.
- * @evidence obligations/model-sources.md#unsupported-fidelity-is-explicit Keeps
+ * @evidenceReview obligations/design/model-sources.md#deterministic-build #288cbb3 Read obligations/design/model-sources.md#deterministic-build and Plaza in src/world/plaza.ts; confirmed this citation after checking the claim that merges the same ordered piece contributions into the same world record.
+ * @evidence obligations/design/model-sources.md#unsupported-fidelity-is-explicit Keeps
  *   enclosure and physically based atmosphere outside this blocking model.
- * @evidenceReview obligations/model-sources.md#unsupported-fidelity-is-explicit #35050b3 Read obligations/model-sources.md#unsupported-fidelity-is-explicit and Plaza in src/world/plaza.ts; confirmed this citation after checking the claim that keeps enclosure and physically based atmosphere outside this blocking model.
+ * @evidenceReview obligations/design/model-sources.md#unsupported-fidelity-is-explicit #35050b3 Read obligations/design/model-sources.md#unsupported-fidelity-is-explicit and Plaza in src/world/plaza.ts; confirmed this citation after checking the claim that keeps enclosure and physically based atmosphere outside this blocking model.
  */
 export class Plaza extends AutoMovieSubjectGroup<
   IAutoMovieWorldDesign,

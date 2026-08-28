@@ -30,7 +30,7 @@ Every treatment unit names what the audience expects, learns, reinterprets, ques
 
 Review question: how is the audience's understanding or expectation different at the unit's exit?
 
-This item owns the information delta inside one unit. `obligations/treatments.md#audience-route` owns the production-wide order of those deltas, and narrative information entry owns local comprehensibility.
+This item owns the information delta inside one unit. `obligations/story/treatments.md#audience-route` owns the production-wide order of those deltas, and narrative information entry owns local comprehensibility.
 
 Sources: [Brewer and Lichtenstein on story structure and affect](https://doi.org/10.1017/S0140525X00017568); [Living Handbook of Narratology on narratorial representation](https://www-archiv.fdm.uni-hamburg.de/lhn/node/44.html)
 

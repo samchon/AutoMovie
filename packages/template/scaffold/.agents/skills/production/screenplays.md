@@ -6,7 +6,7 @@ Write the final human-readable audiovisual contract. Preserve the script's decis
 
 An H4 is the smallest lineage and authoring boundary. It need not become a visible card or cut. Preserve identity even when the final edit presents adjacent beats continuously.
 
-Before final expression, rerun the [production-specific contract](work-specific.md) pass with the `discovery/common.md`, `discovery/films.md`, and `discovery/screenplays.md` targets, and implement each retained expressive result in its target and claim. No example in the shared documents is a style inventory.
+Before final expression, rerun the [production-specific contract](work-specific.md) pass with the `discovery/core/common.md`, `discovery/story/films.md`, and `discovery/story/screenplays.md` targets, and implement each retained expressive result in its target and claim. No example in the shared documents is a style inventory.
 
 Apply the narrative unit-addressability obligation across the population after drafting. If final expression reveals a missing or overloaded treatment event, repair the earliest treatment owner and repartition every affected script unit. If it reveals only a hidden delivery scene or beat or an artificial delivery split, repair the script partition without manufacturing a treatment boundary. Propagate the resulting script identity exactly through screenplay, screenplay index, shots, and film source. Begin each H4 with audience-facing screenplay blocks rather than a treatment summary.
 

@@ -45,17 +45,17 @@ const fixture = () => {
   );
   write(
     root,
-    "packages/template/docs/discovery/common.md",
+    "packages/template/docs/discovery/core/common.md",
     "# Discovery\n\n## Search {#search}\n",
   );
   write(
     root,
-    "packages/template/docs/principles/common.md",
+    "packages/template/docs/principles/core/common.md",
     "# Principles\n\n## Principle {#principle}\n",
   );
   write(
     root,
-    "packages/template/docs/obligations/common.md",
+    "packages/template/docs/obligations/core/common.md",
     "# Obligations\n\n## Obligation {#obligation}\n",
   );
   write(
@@ -108,7 +108,7 @@ const fixture = () => {
         requirementUnits: 1,
         classification: "authoring-contract",
         correspondences: [
-          "packages/template/docs/principles/common.md#principle",
+          "packages/template/docs/principles/core/common.md#principle",
         ],
         reason:
           "The shared principle gives every alpha unit a concrete authoring owner.",
@@ -228,7 +228,7 @@ test("the gate accumulates classification, path, debt, and review-policy drift",
     family: "alpha",
     requirementUnits: 2,
     classification: "intentional-exclusion",
-    correspondences: ["packages/template/docs/principles/common.md#missing"],
+    correspondences: ["packages/template/docs/principles/core/common.md#missing"],
     reason: "none",
   };
   assert.throws(

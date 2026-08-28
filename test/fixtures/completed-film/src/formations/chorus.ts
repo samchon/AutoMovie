@@ -37,15 +37,15 @@ import { ChorusMember, chorusHero } from "../units/chorusHero";
  * @evidence models/020-chorus.md#chorus-neutral-review-views Exposes stable
  *   formation bounds and deterministic tier placement for inspection.
  * @evidenceReview models/020-chorus.md#chorus-neutral-review-views #b58f6fc Read models/020-chorus.md#chorus-neutral-review-views and Chorus in src/formations/chorus.ts; confirmed this citation after checking the claim that exposes stable formation bounds and deterministic tier placement for inspection.
- * @evidence obligations/model-sources.md#design-owned-construction Keeps every
+ * @evidence obligations/design/model-sources.md#design-owned-construction Keeps every
  *   layout and hierarchy decision owned by the cited model design.
- * @evidenceReview obligations/model-sources.md#design-owned-construction #41ffc4f Read obligations/model-sources.md#design-owned-construction and Chorus in src/formations/chorus.ts; confirmed this citation after checking the claim that keeps every layout and hierarchy decision owned by the cited model design.
- * @evidence obligations/model-sources.md#deterministic-build Uses one declared
+ * @evidenceReview obligations/design/model-sources.md#design-owned-construction #41ffc4f Read obligations/design/model-sources.md#design-owned-construction and Chorus in src/formations/chorus.ts; confirmed this citation after checking the claim that keeps every layout and hierarchy decision owned by the cited model design.
+ * @evidence obligations/design/model-sources.md#deterministic-build Uses one declared
  *   seed and explicit dimensions to regenerate the same formation.
- * @evidenceReview obligations/model-sources.md#deterministic-build #288cbb3 Read obligations/model-sources.md#deterministic-build and Chorus in src/formations/chorus.ts; confirmed this citation after checking the claim that uses one declared seed and explicit dimensions to regenerate the same formation.
- * @evidence obligations/model-sources.md#unsupported-fidelity-is-explicit
+ * @evidenceReview obligations/design/model-sources.md#deterministic-build #288cbb3 Read obligations/design/model-sources.md#deterministic-build and Chorus in src/formations/chorus.ts; confirmed this citation after checking the claim that uses one declared seed and explicit dimensions to regenerate the same formation.
+ * @evidence obligations/design/model-sources.md#unsupported-fidelity-is-explicit
  *   Refuses a count that cannot fill the reviewed row layout honestly.
- * @evidenceReview obligations/model-sources.md#unsupported-fidelity-is-explicit #35050b3 Read obligations/model-sources.md#unsupported-fidelity-is-explicit and Chorus in src/formations/chorus.ts; confirmed this citation after checking the claim that refuses a count that cannot fill the reviewed row layout honestly.
+ * @evidenceReview obligations/design/model-sources.md#unsupported-fidelity-is-explicit #35050b3 Read obligations/design/model-sources.md#unsupported-fidelity-is-explicit and Chorus in src/formations/chorus.ts; confirmed this citation after checking the claim that refuses a count that cannot fill the reviewed row layout honestly.
  */
 export class Chorus extends AutoMovieSubjectGroup<
   IAutoMovieFormationDesign,

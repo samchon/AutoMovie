@@ -12,15 +12,15 @@ import { CHORUS_ADVANCE_METRES } from "./chorusAdvance";
  *   2 m translated state with unit spacing and an explicit zero-travel walk
  *   gait across the supplied interval.
  * @evidenceReview motions/025-chorus-hold.md#chorus-advanced-hold #bea0013 Read motions/025-chorus-hold.md#chorus-advanced-hold and createChorusHoldMotion in src/motions/chorusHold.ts; confirmed this citation after checking the claim that repeats the exact 2 m translated state with unit spacing and an explicit zero-travel walk gait across the supplied interval.
- * @evidence obligations/motion-sources.md#design-owned-transition Implements
+ * @evidence obligations/design/motion-sources.md#design-owned-transition Implements
  *   only the cited constant endpoints and linear phase.
- * @evidenceReview obligations/motion-sources.md#design-owned-transition #5d64f23 Read obligations/motion-sources.md#design-owned-transition and createChorusHoldMotion in src/motions/chorusHold.ts; confirmed this citation after checking the claim that implements only the cited constant endpoints and linear phase.
- * @evidence obligations/motion-sources.md#pure-time-mapping Maps explicit
+ * @evidenceReview obligations/design/motion-sources.md#design-owned-transition #5d64f23 Read obligations/design/motion-sources.md#design-owned-transition and createChorusHoldMotion in src/motions/chorusHold.ts; confirmed this citation after checking the claim that implements only the cited constant endpoints and linear phase.
+ * @evidence obligations/design/motion-sources.md#pure-time-mapping Maps explicit
  *   identities and seconds to one deterministic held record.
- * @evidenceReview obligations/motion-sources.md#pure-time-mapping #3127ece Read obligations/motion-sources.md#pure-time-mapping and createChorusHoldMotion in src/motions/chorusHold.ts; confirmed explicit identities and seconds produce one deterministic time-addressed held record while engine sampling stays outside the constructor.
- * @evidence obligations/motion-sources.md#invalid-input-is-visible Rejects an
+ * @evidenceReview obligations/design/motion-sources.md#pure-time-mapping #3127ece Read obligations/design/motion-sources.md#pure-time-mapping and createChorusHoldMotion in src/motions/chorusHold.ts; confirmed explicit identities and seconds produce one deterministic time-addressed held record while engine sampling stays outside the constructor.
+ * @evidence obligations/design/motion-sources.md#invalid-input-is-visible Rejects an
  *   invalid identity or interval before repeating the advanced endpoint.
- * @evidenceReview obligations/motion-sources.md#invalid-input-is-visible #5ce63ab Read obligations/motion-sources.md#invalid-input-is-visible and createChorusHoldMotion in src/motions/chorusHold.ts; confirmed that invalid identities and intervals fail before the function can repeat the advanced endpoint.
+ * @evidenceReview obligations/design/motion-sources.md#invalid-input-is-visible #5ce63ab Read obligations/design/motion-sources.md#invalid-input-is-visible and createChorusHoldMotion in src/motions/chorusHold.ts; confirmed that invalid identities and intervals fail before the function can repeat the advanced endpoint.
  */
 export function createChorusHoldMotion(props: {
   id: string;

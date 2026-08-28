@@ -8,9 +8,9 @@ import config from "../automovie.config";
  * @evidence settings/050-art-direction.md#art-palette Implements the
  *   single production background swatch reused by every viewer surface.
  * @evidenceReview settings/050-art-direction.md#art-palette #d26ffe8 Compared settings/050-art-direction.md#art-palette with the complete src/production.ts file. Verified relationship: Implements the single production background swatch reused by every viewer surface.
- * @evidence obligations/production-sources.md#shared-visual-grammar Defines the
+ * @evidence obligations/delivery/production-sources.md#shared-visual-grammar Defines the
  *   shared clear color once rather than copying a viewer-local background.
- * @evidenceReview obligations/production-sources.md#shared-visual-grammar #af7833b Read obligations/production-sources.md#shared-visual-grammar and PRODUCTION_BACKGROUND; confirmed the value is production-scoped and reused rather than independently authored by a viewer.
+ * @evidenceReview obligations/delivery/production-sources.md#shared-visual-grammar #af7833b Read obligations/delivery/production-sources.md#shared-visual-grammar and PRODUCTION_BACKGROUND; confirmed the value is production-scoped and reused rather than independently authored by a viewer.
  */
 export const PRODUCTION_BACKGROUND = "#182235";
 
@@ -104,16 +104,16 @@ export const PRODUCTION_BACKGROUND = "#182235";
  * @evidenceExclude settings/040-plaza.md#plaza-background-role Background
  *   geometry and haze are realized by plaza and shot sources.
  * @evidenceExcludeReview settings/040-plaza.md#plaza-background-role #29cf787 Read the plaza background unit and production; confirmed Plaza and opening own ground and haze geometry while production owns only the clear-color grammar.
- * @evidence obligations/production-sources.md#settings-only-serialization Maps
+ * @evidence obligations/delivery/production-sources.md#settings-only-serialization Maps
  *   reviewed settings to a production design without creating story action.
- * @evidenceReview obligations/production-sources.md#settings-only-serialization #623f3eb Read obligations/production-sources.md#settings-only-serialization and production; confirmed every creative field maps to governing-aim or art-direction settings and no subject, action, or edit is implemented here.
- * @evidence obligations/production-sources.md#delivery-identity Emits one
+ * @evidenceReview obligations/delivery/production-sources.md#settings-only-serialization #623f3eb Read obligations/delivery/production-sources.md#settings-only-serialization and production; confirmed every creative field maps to governing-aim or art-direction settings and no subject, action, or edit is implemented here.
+ * @evidence obligations/delivery/production-sources.md#delivery-identity Emits one
  *   mutually consistent identity, runtime, format, mode, and output list.
- * @evidenceReview obligations/production-sources.md#delivery-identity #24d924e Read obligations/production-sources.md#delivery-identity and production; confirmed identity, logline, runtime, format, deterministic mode, and required deliverables agree with the non-visual authored boundary while visual grammar remains separately owned.
- * @evidence obligations/production-sources.md#shared-visual-grammar Serializes
+ * @evidenceReview obligations/delivery/production-sources.md#delivery-identity #24d924e Read obligations/delivery/production-sources.md#delivery-identity and production; confirmed identity, logline, runtime, format, deterministic mode, and required deliverables agree with the non-visual authored boundary while visual grammar remains separately owned.
+ * @evidence obligations/delivery/production-sources.md#shared-visual-grammar Serializes
  *   only the authored production-wide palette, silhouette, scale, background,
  *   and deterministic fidelity values.
- * @evidenceReview obligations/production-sources.md#shared-visual-grammar #af7833b Read obligations/production-sources.md#shared-visual-grammar and production; confirmed subject materials stay in model sources while this record faithfully serializes the shared palette, silhouette, scale, background, and deterministic fidelity tier without adding an aesthetic choice.
+ * @evidenceReview obligations/delivery/production-sources.md#shared-visual-grammar #af7833b Read obligations/delivery/production-sources.md#shared-visual-grammar and production; confirmed subject materials stay in model sources while this record faithfully serializes the shared palette, silhouette, scale, background, and deterministic fidelity tier without adding an aesthetic choice.
  */
 export const production = {
   id: config.productionId,

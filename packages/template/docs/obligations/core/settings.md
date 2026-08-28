@@ -36,7 +36,7 @@ The settings population defines the production-wide color, silhouette, proportio
 
 Review question: which delivered subject, place, state, or rendition still requires an implementer to invent or privately override the visual language that joins it to the rest of the production?
 
-This obligation owns the authored visual system and its scope. `governing-aim` owns the audience or operator effect that system serves, while `obligations/production-sources.md#shared-visual-grammar` owns faithful engine-facing serialization of already authored shared values.
+This obligation owns the authored visual system and its scope. `governing-aim` owns the audience or operator effect that system serves, while `obligations/delivery/production-sources.md#shared-visual-grammar` owns faithful engine-facing serialization of already authored shared values.
 
 Sources: [OpenUSD on composition and asset structure](https://openusd.org/release/glossary.html); [glTF 2.0 on scenes, nodes, meshes, and materials](https://registry.khronos.org/glTF/specs/2.0/glTF-2.0.html#concepts); [Academy Digital Source Master project](https://www.oscars.org/science-technology/sci-tech-projects/academy-digital-source-master)
 
@@ -46,7 +46,7 @@ The settings population defines each promised delivery's representation tier, ta
 
 Review question: what observation may the intended recipient legitimately make from each promised output, and which stronger inference must the production explicitly refuse?
 
-This obligation owns production-wide delivery fidelity. `delivery-review-condition` owns the reproducible frame, distance, camera, control, or sample under which that promise is judged, `obligations/models.md#representation-ceiling` owns the shared ceiling of the selected model population, and each design H2 owns the particular representation it authorizes within those boundaries.
+This obligation owns production-wide delivery fidelity. `delivery-review-condition` owns the reproducible frame, distance, camera, control, or sample under which that promise is judged, `obligations/design/models.md#representation-ceiling` owns the shared ceiling of the selected model population, and each design H2 owns the particular representation it authorizes within those boundaries.
 
 Sources: [OpenUSD on model kinds and asset resolution](https://openusd.org/release/glossary.html); [Academy Digital Source Master project](https://www.oscars.org/science-technology/sci-tech-projects/academy-digital-source-master); [NASA systems engineering handbook on verification against intended use](https://www.nasa.gov/reference/systems-engineering-handbook/)
 
@@ -74,7 +74,7 @@ The settings population enumerates the accessibility products applicable to ever
 
 Review question: which intended recipient could be excluded because an accessibility product has no explicit state, reason where absent, or realization owner where required?
 
-This obligation owns the production-level output decision. `delivery-scope` owns what the package promises generally, `audience-operator-access` owns what the recipient may perceive or control inside the work, and `obligations/film-sources.md#authored-auxiliary-tracks` owns timeline and language-version mappings for required film tracks.
+This obligation owns the production-level output decision. `delivery-scope` owns what the package promises generally, `audience-operator-access` owns what the recipient may perceive or control inside the work, and `obligations/delivery/film-sources.md#authored-auxiliary-tracks` owns timeline and language-version mappings for required film tracks.
 
 Sources: [W3C media accessibility user requirements](https://www.w3.org/TR/media-accessibility-reqs/); [Web Content Accessibility Guidelines 2.2](https://www.w3.org/TR/WCAG22/); [W3C Timed Text Markup Language](https://www.w3.org/TR/ttml2/)
 
@@ -96,9 +96,9 @@ Sources: [Academy Digital Source Master project](https://www.oscars.org/science-
 
 ## Settings coverage map {#settings-coverage-map}
 
-The settings population defines the settings domains this delivery actually requires and identifies their current file families and H2 owners. It classifies each material requirement as explicit canon, an incidental inherited default permitted by `obligations/settings.md#minimal-departure`, outside the delivery scope, or unresolved with a decision condition. It does not copy a universal topic inventory into the map or create an owner merely to fill one.
+The settings population defines the settings domains this delivery actually requires and identifies their current file families and H2 owners. It classifies each material requirement as explicit canon, an incidental inherited default permitted by `obligations/core/settings.md#minimal-departure`, outside the delivery scope, or unresolved with a decision condition. It does not copy a universal topic inventory into the map or create an owner merely to fill one.
 
-`discovery/settings.md#directive-promise-subject-requirements` owns the open search for requirements no shared list can anticipate. This map records the current settings results. When a new requirement emerges or an old classification stops mattering, add, reorganize, consolidate, or retire its semantic owners and update the map.
+`discovery/core/settings.md#directive-promise-subject-requirements` owns the open search for requirements no shared list can anticipate. This map records the current settings results. When a new requirement emerges or an old classification stops mattering, add, reorganize, consolidate, or retire its semantic owners and update the map.
 
 For an unresolved domain, record the decision condition and research path. If downstream work depends on it, the unresolved label is not completed coverage; stop downstream progress until the needed canon is settled.
 
@@ -112,7 +112,7 @@ Sources: [Marie-Laure Ryan on worlds as reconstructed systems of entities, event
 
 The settings population inventories every person, collective, object, environmental agent, institution, subsystem, and affected population whose action, choice, state, information, resource, control, or audience observation can independently change the delivered result. Each operative subject is assigned to an existing settings H2, an inherited default, an outside-scope boundary, or an unresolved owner. The inventory is proportional to consequence and does not require a biography or separate file for every named or incidental entity.
 
-An unresolved operative subject needed by a planned downstream consumer blocks that consumer until settings owns or classifies it. `discovery/settings.md#directive-promise-subject-requirements` owns the open search that finds candidates; this obligation owns complete population accounting after discovery. `settings-coverage-map` owns domain allocation rather than subject identity.
+An unresolved operative subject needed by a planned downstream consumer blocks that consumer until settings owns or classifies it. `discovery/core/settings.md#directive-promise-subject-requirements` owns the open search that finds candidates; this obligation owns complete population accounting after discovery. `settings-coverage-map` owns domain allocation rather than subject identity.
 
 Review question: which independently consequential actor, controller, resource owner, environmental force, subsystem, or affected population can change the delivery without a settings owner or explicit classification?
 
@@ -122,11 +122,11 @@ Sources: [Marie-Laure Ryan on storyworld entities, events, and changing states](
 
 Across the settings population, identify every central or recurring operative subject whose choice, control, refusal, access, or response can change the delivered result. A subject may be a person, population, institution, machine, environment, operator, or other force. For each applicable subject, define what it controls, accesses, and can do together with costs, prohibitions, vulnerabilities, genuine alternatives, refusal capacity, and thresholds that change a decision. Downstream work must not invent convenient power or helplessness.
 
-A delivery containing only a passive asset with no operative choice, control, refusal, or response states that boundary without inventing agency; the asset's capabilities and hard limits remain owned by `principles/settings.md#capability-boundary`.
+A delivery containing only a passive asset with no operative choice, control, refusal, or response states that boundary without inventing agency; the asset's capabilities and hard limits remain owned by `principles/core/settings.md#capability-boundary`.
 
 Review question: which operative subject can change the delivered result without defined control, access, cost, prohibition, vulnerability, genuine alternative, refusal capacity, or decision-changing threshold, and if none exists, where does settings establish the passive boundary?
 
-This obligation owns the population-wide allocation of operative agency. `principles/settings.md#capability-boundary` owns the semantic state and hard limits of each capability stated by one settings H2. Film-only `obligations/subjects.md` owns dramatic motive, knowledge, expression, relationship, and character change; a threshold here changes a choice, while `obligations/subjects.md#change-boundaries` changes the subject.
+This obligation owns the population-wide allocation of operative agency. `principles/core/settings.md#capability-boundary` owns the semantic state and hard limits of each capability stated by one settings H2. Film-only `obligations/story/subjects.md` owns dramatic motive, knowledge, expression, relationship, and character change; a threshold here changes a choice, while `obligations/story/subjects.md#change-boundaries` changes the subject.
 
 Sources: [Purdue OWL on goals, obstacles, and consequential action](https://owl.purdue.edu/owl/subject_specific_writing/creative_writing/writers/fiction_writing_basics/writing_compelling_characters.html); [Ryan on possible action within storyworld states](https://marilaur.info/degrees.pdf); [NASA systems engineering handbook on functions, interfaces, constraints, and control](https://www.nasa.gov/reference/systems-engineering-handbook/)
 
@@ -136,7 +136,7 @@ When a design decision depends on a person's, population's, operator's, carried 
 
 Review question: which dimension, control, route, view, interaction, or acceptance threshold assumes a subject condition that settings never identified, bounded, or sourced?
 
-This obligation owns the profiles and conditions a design must serve. `operative-subject-inventory` owns whether the consequential subject has an owner, `principles/settings.md#capability-boundary` owns what an addressed subject can and cannot do, `accessibility-deliverable-states` classifies alternative products rather than physical or operational design inputs, and `obligations/spaces.md#space-access-circulation` owns how a space allocates routes and clearances for the profiles settled here. Dramatic motive, knowledge, expression, relationship, and change remain film-only subject obligations.
+This obligation owns the profiles and conditions a design must serve. `operative-subject-inventory` owns whether the consequential subject has an owner, `principles/core/settings.md#capability-boundary` owns what an addressed subject can and cannot do, `accessibility-deliverable-states` classifies alternative products rather than physical or operational design inputs, and `obligations/design/spaces.md#space-access-circulation` owns how a space allocates routes and clearances for the profiles settled here. Dramatic motive, knowledge, expression, relationship, and change remain film-only subject obligations.
 
 Sources: [2010 ADA Standards for Accessible Design](https://www.ada.gov/law-and-regs/design-standards/2010-stds/); [NASA Human Integration Design Handbook](https://www.nasa.gov/organizations/ochmo/human-integration-design-handbook/); [NIST handbook on uncertainty in measurement](https://www.nist.gov/pml/nist-technical-note-1297)
 

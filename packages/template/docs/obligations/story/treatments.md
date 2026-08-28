@@ -20,7 +20,7 @@ Sources: [Burton and Poster on beginnings and endings](https://www.cambridge.org
 
 ## Audience route {#audience-route}
 
-The treatments allocate the production-wide order in which the audience receives, withholds, and reinterprets the information necessary to experience the promised change. This H2 owns sequencing across units; `principles/treatments.md#audience-change` separately owns the information delta inside each unit.
+The treatments allocate the production-wide order in which the audience receives, withholds, and reinterprets the information necessary to experience the promised change. This H2 owns sequencing across units; `principles/story/treatments.md#audience-change` separately owns the information delta inside each unit.
 
 Review question: what must the audience know before each major turn, and what must remain unresolved until after it?
 
@@ -62,6 +62,6 @@ Detour, subplot, digression, and return are ways a middle does this, not evidenc
 
 Review question: across the complete treatment population, which middle stretches raise the outcome's cost, narrow the remaining possibilities, or unsettle what the audience took as settled, and which stretch exits unchanged?
 
-This item owns accumulation across the span between beginning and ending. `principles/narratives.md#audience-investment` owns whether one unit gives a reason to continue, `principles/narratives.md#unit-connection` owns how two units relate, and `resolution-aftermath` owns what the ending does with what accumulated.
+This item owns accumulation across the span between beginning and ending. `principles/story/narratives.md#audience-investment` owns whether one unit gives a reason to continue, `principles/story/narratives.md#unit-connection` owns how two units relate, and `resolution-aftermath` owns what the ending does with what accumulated.
 
 Sources: [Brooks on the middle as a dilatory space that defers the ending and thereby intensifies it](https://archive.org/details/readingforplotde00broo); [research on serial form and sustained engagement across a continuing narrative](https://pmc.ncbi.nlm.nih.gov/articles/PMC12192482/); [Minnesota on the conditions that sustain suspense and surprise](https://manifold.open.umn.edu/read/c10-plot-rodak-storey/section/d89285f2-a958-4caa-9c4d-7f0f612724b8)

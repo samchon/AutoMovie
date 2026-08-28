@@ -12,7 +12,7 @@ The map must satisfy four conditions before drafting begins:
 
 - **Coverage.** Every treatment H2 in the active population is realized by the script population at every governed script depth. A treatment event nothing cites has been dropped, and the graph refuses it.
 - **Attribution.** Every script unit realizes at least one treatment H2. A parentless unit is invention arriving in the wrong layer; author the event in treatments first instead of hiding it in the partition.
-- **Weight.** No unit exists to reach a count, and no event is compressed merely to fit one. Allocate the declared film scale under `obligations/common.md#proportionate-development`.
+- **Weight.** No unit exists to reach a count, and no event is compressed merely to fit one. Allocate the declared film scale under `obligations/core/common.md#proportionate-development`.
 - **Wholeness.** Each boundary leaves the audience with a complete part and a specific pressure, question, consequence, or formal state that the next part can answer. A cut that only interrupts is not a delivery boundary.
 
 Review the map against the complete reviewed treatment sequence. When the exercise exposes a treatment defect, repair that event and propagate its consequences before returning to the partition. When it exposes only a better delivery grouping, revise the map without manufacturing a matching treatment group.
@@ -27,7 +27,7 @@ For every H4, enact the exact temporal and spatial conditions at the precision t
 
 Write every exchange whose wording, tactic, lie, refusal, interruption, or silence changes a choice, knowledge, power, or relationship as actual speaker-separated dialogue, together with the action and response around it. Summarize only incidental speech that changes none of them. A unit that says such an exchange occurs, buries its decisive line inside explanatory prose, or leaves a maker to invent the executable middle fails the common substantive-completion principle regardless of how well it reads.
 
-Before refining the partition map, rerun the [production-specific contract](work-specific.md) pass with the `discovery/common.md`, `discovery/films.md`, and `discovery/scripts.md` targets. Staging is where an unowned execution rule first becomes visible, so implement each retained result in its target and claim rather than solving it once by hand.
+Before refining the partition map, rerun the [production-specific contract](work-specific.md) pass with the `discovery/core/common.md`, `discovery/story/films.md`, and `discovery/story/scripts.md` targets. Staging is where an unowned execution rule first becomes visible, so implement each retained result in its target and claim rather than solving it once by hand.
 
 Apply the narrative addressability obligation across the partition and the script staging-block principle to every H2/H3/H4. Reverse-outline the execution blocks after drafting. If executable detail reveals a missing narrative event, repair treatments first; if it reveals a defective delivery scene or beat boundary, repair the script partition and propagate that exact identity only to screenplays.
 

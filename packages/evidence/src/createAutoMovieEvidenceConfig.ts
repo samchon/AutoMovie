@@ -224,12 +224,13 @@ const CONTRACT_INDEX = `${CONTRACTS}/index.md`;
 /**
  * Where the shared contracts actually live.
  *
- * `@automovie/template` ships `docs/discovery`, `docs/obligations`, and
- * `docs/principles`, and the graph resolves them from the installed package
- * rather than from a copy each project carries. A project cannot legitimately
- * edit them, the inventory is pinned here by filename and anchor, and a copy
- * that a package upgrade can invalidate is a break waiting for the next
- * release rather than project-owned content.
+ * `@automovie/template` ships discovery, obligation, and principle contracts
+ * under their physical `family/domain/file` addresses, and the graph resolves
+ * them from the installed package rather than from a copy each project
+ * carries. A project cannot legitimately edit them, the inventory is pinned
+ * here by domain, filename, and anchor, and a copy that a package upgrade can
+ * invalidate is a break waiting for the next release rather than project-owned
+ * content.
  *
  * The repository scaffold reaches the workspace package through the same
  * `ttsc` resolution hook every generated script uses. There is deliberately no
@@ -422,62 +423,62 @@ const DESIGN_FOUNDATIONS: Partial<
 const EXPECTED_CONTRACTS = [
   {
     domain: "delivery",
-    file: "discovery/briefs.md",
+    file: "discovery/delivery/briefs.md",
     anchors: ["work-specific-brief-requirements"],
   },
   {
     domain: "core",
-    file: "discovery/common.md",
+    file: "discovery/core/common.md",
     anchors: ["shared-local-boundary", "canonical-realization"],
   },
   {
     domain: "design",
-    file: "discovery/designs.md",
+    file: "discovery/design/designs.md",
     anchors: ["work-specific-design-requirements"],
   },
   {
     domain: "story",
-    file: "discovery/films.md",
+    file: "discovery/story/films.md",
     anchors: ["work-specific-film-requirements"],
   },
   {
     domain: "design",
-    file: "discovery/instances.md",
+    file: "discovery/design/instances.md",
     anchors: ["work-specific-instance-requirements"],
   },
   {
     domain: "design",
-    file: "discovery/maps.md",
+    file: "discovery/design/maps.md",
     anchors: ["work-specific-map-requirements"],
   },
   {
     domain: "design",
-    file: "discovery/materials.md",
+    file: "discovery/design/materials.md",
     anchors: ["work-specific-material-requirements"],
   },
   {
     domain: "design",
-    file: "discovery/models.md",
+    file: "discovery/design/models.md",
     anchors: ["work-specific-model-requirements"],
   },
   {
     domain: "design",
-    file: "discovery/motions.md",
+    file: "discovery/design/motions.md",
     anchors: ["work-specific-motion-requirements"],
   },
   {
     domain: "story",
-    file: "discovery/scripts.md",
+    file: "discovery/story/scripts.md",
     anchors: ["work-specific-script-requirements"],
   },
   {
     domain: "story",
-    file: "discovery/screenplays.md",
+    file: "discovery/story/screenplays.md",
     anchors: ["work-specific-screenplay-requirements"],
   },
   {
     domain: "core",
-    file: "discovery/settings.md",
+    file: "discovery/core/settings.md",
     anchors: [
       "directive-promise-subject-requirements",
       "planned-delivery-backcast",
@@ -485,22 +486,22 @@ const EXPECTED_CONTRACTS = [
   },
   {
     domain: "design",
-    file: "discovery/spaces.md",
+    file: "discovery/design/spaces.md",
     anchors: ["work-specific-space-requirements"],
   },
   {
     domain: "story",
-    file: "discovery/treatments.md",
+    file: "discovery/story/treatments.md",
     anchors: ["work-specific-treatment-requirements"],
   },
   {
     domain: "design",
-    file: "discovery/systems.md",
+    file: "discovery/design/systems.md",
     anchors: ["work-specific-system-requirements"],
   },
   {
     domain: "delivery",
-    file: "obligations/briefs.md",
+    file: "obligations/delivery/briefs.md",
     anchors: [
       "single-scope-eligibility",
       "brief-unit-addressability",
@@ -509,7 +510,7 @@ const EXPECTED_CONTRACTS = [
   },
   {
     domain: "core",
-    file: "obligations/common.md",
+    file: "obligations/core/common.md",
     anchors: [
       "purpose-fit",
       "layer-boundary",
@@ -519,7 +520,7 @@ const EXPECTED_CONTRACTS = [
   },
   {
     domain: "design",
-    file: "obligations/instances.md",
+    file: "obligations/design/instances.md",
     anchors: [
       "addressable-instance-decisions",
       "instance-prototype-membership",
@@ -530,7 +531,7 @@ const EXPECTED_CONTRACTS = [
   },
   {
     domain: "design",
-    file: "obligations/maps.md",
+    file: "obligations/design/maps.md",
     anchors: [
       "addressable-map-decisions",
       "map-world-site-interface",
@@ -543,7 +544,7 @@ const EXPECTED_CONTRACTS = [
   },
   {
     domain: "design",
-    file: "obligations/materials.md",
+    file: "obligations/design/materials.md",
     anchors: [
       "addressable-material-decisions",
       "material-identity-assembly",
@@ -554,7 +555,7 @@ const EXPECTED_CONTRACTS = [
   },
   {
     domain: "design",
-    file: "obligations/models.md",
+    file: "obligations/design/models.md",
     anchors: [
       "addressable-model-decisions",
       "representation-ceiling",
@@ -565,7 +566,7 @@ const EXPECTED_CONTRACTS = [
   },
   {
     domain: "design",
-    file: "obligations/motions.md",
+    file: "obligations/design/motions.md",
     anchors: [
       "addressable-motion-decisions",
       "time-base",
@@ -576,22 +577,22 @@ const EXPECTED_CONTRACTS = [
   },
   {
     domain: "story",
-    file: "obligations/narratives.md",
+    file: "obligations/story/narratives.md",
     anchors: ["unit-addressability"],
   },
   {
     domain: "story",
-    file: "obligations/scripts.md",
+    file: "obligations/story/scripts.md",
     anchors: ["release-partition", "script-boundary"],
   },
   {
     domain: "story",
-    file: "obligations/screenplays.md",
+    file: "obligations/story/screenplays.md",
     anchors: ["realization-ready-contract"],
   },
   {
     domain: "core",
-    file: "obligations/settings.md",
+    file: "obligations/core/settings.md",
     anchors: [
       "addressable-canon",
       "delivery-scope",
@@ -613,7 +614,7 @@ const EXPECTED_CONTRACTS = [
   },
   {
     domain: "design",
-    file: "obligations/spaces.md",
+    file: "obligations/design/spaces.md",
     anchors: [
       "addressable-spatial-decisions",
       "space-reference-topology",
@@ -624,7 +625,7 @@ const EXPECTED_CONTRACTS = [
   },
   {
     domain: "story",
-    file: "obligations/subjects.md",
+    file: "obligations/story/subjects.md",
     anchors: [
       "situated-conditions",
       "drives-and-pressures",
@@ -636,7 +637,7 @@ const EXPECTED_CONTRACTS = [
   },
   {
     domain: "story",
-    file: "obligations/treatments.md",
+    file: "obligations/story/treatments.md",
     anchors: [
       "opening-condition",
       "terminal-condition",
@@ -649,7 +650,7 @@ const EXPECTED_CONTRACTS = [
   },
   {
     domain: "design",
-    file: "obligations/systems.md",
+    file: "obligations/design/systems.md",
     anchors: [
       "addressable-system-decisions",
       "system-ownership-interfaces",
@@ -660,12 +661,12 @@ const EXPECTED_CONTRACTS = [
   },
   {
     domain: "delivery",
-    file: "principles/briefs.md",
+    file: "principles/delivery/briefs.md",
     anchors: ["brief-information-structure", "no-narrative-smuggling"],
   },
   {
     domain: "core",
-    file: "principles/common.md",
+    file: "principles/core/common.md",
     anchors: [
       "scope-preservation",
       "substantive-completion",
@@ -676,7 +677,7 @@ const EXPECTED_CONTRACTS = [
   },
   {
     domain: "core",
-    file: "principles/source-units.md",
+    file: "principles/core/source-units.md",
     anchors: [
       "source-scope-preservation",
       "source-substantive-completion",
@@ -685,7 +686,7 @@ const EXPECTED_CONTRACTS = [
   },
   {
     domain: "delivery",
-    file: "obligations/film-sources.md",
+    file: "obligations/delivery/film-sources.md",
     anchors: [
       "editorial-only-assembly",
       "authored-auxiliary-tracks",
@@ -694,7 +695,7 @@ const EXPECTED_CONTRACTS = [
   },
   {
     domain: "design",
-    file: "obligations/instance-sources.md",
+    file: "obligations/design/instance-sources.md",
     anchors: [
       "instance-source-design-ownership",
       "instance-source-stable-membership",
@@ -703,7 +704,7 @@ const EXPECTED_CONTRACTS = [
   },
   {
     domain: "design",
-    file: "obligations/map-sources.md",
+    file: "obligations/design/map-sources.md",
     anchors: [
       "map-source-design-ownership",
       "map-source-deterministic-world",
@@ -713,7 +714,7 @@ const EXPECTED_CONTRACTS = [
   },
   {
     domain: "design",
-    file: "principles/instances.md",
+    file: "principles/design/instances.md",
     anchors: [
       "instance-information-structure",
       "instance-prototype-boundary",
@@ -723,7 +724,7 @@ const EXPECTED_CONTRACTS = [
   },
   {
     domain: "design",
-    file: "principles/maps.md",
+    file: "principles/design/maps.md",
     anchors: [
       "map-addressable-world-identity",
       "map-information-structure",
@@ -733,7 +734,7 @@ const EXPECTED_CONTRACTS = [
   },
   {
     domain: "design",
-    file: "obligations/material-sources.md",
+    file: "obligations/design/material-sources.md",
     anchors: [
       "material-source-design-ownership",
       "material-source-renderer-mapping",
@@ -742,7 +743,7 @@ const EXPECTED_CONTRACTS = [
   },
   {
     domain: "design",
-    file: "principles/materials.md",
+    file: "principles/design/materials.md",
     anchors: [
       "material-information-structure",
       "material-construction-appearance",
@@ -752,7 +753,7 @@ const EXPECTED_CONTRACTS = [
   },
   {
     domain: "design",
-    file: "obligations/model-sources.md",
+    file: "obligations/design/model-sources.md",
     anchors: [
       "design-owned-construction",
       "deterministic-build",
@@ -761,7 +762,7 @@ const EXPECTED_CONTRACTS = [
   },
   {
     domain: "design",
-    file: "principles/models.md",
+    file: "principles/design/models.md",
     anchors: [
       "model-information-structure",
       "representation-contract",
@@ -771,7 +772,7 @@ const EXPECTED_CONTRACTS = [
   },
   {
     domain: "design",
-    file: "obligations/motion-sources.md",
+    file: "obligations/design/motion-sources.md",
     anchors: [
       "design-owned-transition",
       "pure-time-mapping",
@@ -780,7 +781,7 @@ const EXPECTED_CONTRACTS = [
   },
   {
     domain: "design",
-    file: "principles/motions.md",
+    file: "principles/design/motions.md",
     anchors: [
       "motion-information-structure",
       "state-endpoints",
@@ -791,7 +792,7 @@ const EXPECTED_CONTRACTS = [
   },
   {
     domain: "story",
-    file: "principles/narratives.md",
+    file: "principles/story/narratives.md",
     anchors: [
       "unit-function",
       "unit-connection",
@@ -810,7 +811,7 @@ const EXPECTED_CONTRACTS = [
   },
   {
     domain: "delivery",
-    file: "obligations/production-sources.md",
+    file: "obligations/delivery/production-sources.md",
     anchors: [
       "settings-only-serialization",
       "delivery-identity",
@@ -819,7 +820,7 @@ const EXPECTED_CONTRACTS = [
   },
   {
     domain: "core",
-    file: "principles/research.md",
+    file: "principles/core/research.md",
     anchors: [
       "source-identity",
       "production-consequence",
@@ -828,7 +829,7 @@ const EXPECTED_CONTRACTS = [
   },
   {
     domain: "story",
-    file: "principles/scripts.md",
+    file: "principles/story/scripts.md",
     anchors: [
       "staging-blocks",
       "scene-entry-state",
@@ -840,7 +841,7 @@ const EXPECTED_CONTRACTS = [
   },
   {
     domain: "story",
-    file: "principles/screenplays.md",
+    file: "principles/story/screenplays.md",
     anchors: [
       "screenplay-blocks",
       "filmable-expression",
@@ -857,7 +858,7 @@ const EXPECTED_CONTRACTS = [
   },
   {
     domain: "core",
-    file: "principles/settings.md",
+    file: "principles/core/settings.md",
     anchors: [
       "information-structure",
       "fact-status",
@@ -869,7 +870,7 @@ const EXPECTED_CONTRACTS = [
   },
   {
     domain: "delivery",
-    file: "obligations/shots.md",
+    file: "obligations/delivery/shots.md",
     anchors: [
       "contract-only-composition",
       "explicit-inputs-and-time",
@@ -878,7 +879,7 @@ const EXPECTED_CONTRACTS = [
   },
   {
     domain: "design",
-    file: "obligations/space-sources.md",
+    file: "obligations/design/space-sources.md",
     anchors: [
       "space-source-design-ownership",
       "space-source-stable-identities",
@@ -887,7 +888,7 @@ const EXPECTED_CONTRACTS = [
   },
   {
     domain: "design",
-    file: "principles/spaces.md",
+    file: "principles/design/spaces.md",
     anchors: [
       "space-information-structure",
       "space-topology",
@@ -897,7 +898,7 @@ const EXPECTED_CONTRACTS = [
   },
   {
     domain: "story",
-    file: "principles/treatments.md",
+    file: "principles/story/treatments.md",
     anchors: [
       "treatment-paragraphs",
       "causal-turn",
@@ -907,7 +908,7 @@ const EXPECTED_CONTRACTS = [
   },
   {
     domain: "design",
-    file: "obligations/system-sources.md",
+    file: "obligations/design/system-sources.md",
     anchors: [
       "system-source-design-ownership",
       "system-source-explicit-evaluation",
@@ -916,7 +917,7 @@ const EXPECTED_CONTRACTS = [
   },
   {
     domain: "design",
-    file: "principles/systems.md",
+    file: "principles/design/systems.md",
     anchors: [
       "system-information-structure",
       "system-authority-confinement",
@@ -926,7 +927,7 @@ const EXPECTED_CONTRACTS = [
   },
   {
     domain: "core",
-    file: "principles/inherited-units.md",
+    file: "principles/core/inherited-units.md",
     anchors: ["derived-parent-differentiation"],
   },
   {
@@ -2496,7 +2497,7 @@ const upstreamReference = (
 /**
  * What each operative subject owner must settle, for a film only.
  *
- * `obligations/settings.md#operative-subject-inventory` accounts for the
+ * `obligations/core/settings.md#operative-subject-inventory` accounts for the
  * population; these roles are the depth that inventory deliberately does not
  * require. A brief answers one bounded observation and a library exports design
  * branches, so neither owes a cast this deep, and a film that genuinely owes
@@ -3033,7 +3034,7 @@ const referencedMarkdownBranch = (
  * @evidence specifications/production-evidence/README.md#production-evidence-specifications Implements the reusable routing projection of the evidence configuration system.
  * @evidence specifications/production-evidence/graph.md#spec-authoring-production-evidence-shared-contract Projects contract paths, domains, and anchors from the canonical inventory and live graph references.
  * @evidence specifications/production-evidence/graph.md#spec-authoring-production-evidence-shape-stage Includes every active branch and preserves pending draft relationships beside current enforcement state.
- * @evidence specifications/production-evidence/graph.md#spec-authoring-production-evidence-physical-integrity Reuses the validated host roots, globs, symbols, foundations, and lineage populations.
+ * @evidence specifications/production-evidence/graph.md#spec-authoring-production-evidence-physical-integrity Reuses the validated flat-treatment, grouped-delivery, direct-coverage, and same-depth lineage populations.
  * @evidence specifications/production-evidence/graph.md#spec-authoring-production-evidence-deterministic-result Preserves the canonical factory order without filesystem-dependent resorting.
  * @evidencePart specifications/production-evidence/graph.md#spec-authoring-production-evidence-shared-contract::shared-contract Resolves every public contract route through the same inventory entry that builds its graph reference.
  * @evidencePart specifications/production-evidence/graph.md#spec-authoring-production-evidence-shape-stage::shape-stage-machine Filters only disabled branches while retaining later-stage duties as unenforced routes.
@@ -3121,7 +3122,7 @@ export const createAutoMovieContractBindingManifest = (
  * @evidence specifications/production-evidence/graph.md#spec-authoring-production-evidence-shared-contract Reads and validates the fixed shared contract inventory before constructing claims.
  * @evidence specifications/production-evidence/graph.md#spec-authoring-production-evidence-discovery Wires common, settings, design-shared, design-layer, film, narrative-layer, and brief discovery targets to each active layer's flat work-specific contract population while research remains common-only.
  * @evidence specifications/production-evidence/graph.md#spec-authoring-production-evidence-shape-stage Implements the film, brief, and library stage state machine.
- * @evidence specifications/production-evidence/graph.md#spec-authoring-production-evidence-physical-integrity Enumerates the actual disk populations and refuses empty, residual, ambiguous, or ownerless hosts.
+ * @evidence specifications/production-evidence/graph.md#spec-authoring-production-evidence-physical-integrity Enumerates actual disk populations and enforces flat treatment events, grouped script and screenplay units, direct treatment coverage, and exact same-depth screenplay lineage.
  * @evidence specifications/production-evidence/graph.md#spec-authoring-production-evidence-additive-extension Constructs shared claims first and composes local claims after them.
  * @evidence specifications/production-evidence/graph.md#spec-authoring-production-evidence-deterministic-result Uses deterministic identities and ordering and returns no partial graph after a validation failure.
  * @evidencePart specifications/production-evidence/graph.md#spec-authoring-production-evidence-shared-contract::shared-contract Validates the canonical common document and H2 inventory before building shared claims.

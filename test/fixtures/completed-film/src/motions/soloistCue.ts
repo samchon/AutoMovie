@@ -9,9 +9,9 @@ import type { IAutoMovieMotion } from "@automovie/interface";
  * @evidence motions/010-soloist-cue.md#soloist-raise-hold Exposes the reviewed
  *   endpoint without making a shot or subject class restate it.
  * @evidenceReview motions/010-soloist-cue.md#soloist-raise-hold #d61383a Read motions/010-soloist-cue.md#soloist-raise-hold and SOLOIST_CUE_ABDUCTION in src/motions/soloistCue.ts; confirmed this citation after checking the claim that exposes the reviewed endpoint without making a shot or subject class restate it.
- * @evidence obligations/motion-sources.md#design-owned-transition Carries the
+ * @evidence obligations/design/motion-sources.md#design-owned-transition Carries the
  *   exact endpoint owned by the cited motion design.
- * @evidenceReview obligations/motion-sources.md#design-owned-transition #5d64f23 Read obligations/motion-sources.md#design-owned-transition and SOLOIST_CUE_ABDUCTION in src/motions/soloistCue.ts; confirmed this citation after checking the claim that carries the exact endpoint owned by the cited motion design.
+ * @evidenceReview obligations/design/motion-sources.md#design-owned-transition #5d64f23 Read obligations/design/motion-sources.md#design-owned-transition and SOLOIST_CUE_ABDUCTION in src/motions/soloistCue.ts; confirmed this citation after checking the claim that carries the exact endpoint owned by the cited motion design.
  */
 export const SOLOIST_CUE_ABDUCTION = 110;
 
@@ -26,16 +26,16 @@ const ARRIVAL_SECONDS = 2;
  * @evidence motions/010-soloist-cue.md#soloist-raise-hold Maps the declared
  *   start abduction to 110 degrees by 2 seconds and then holds it.
  * @evidenceReview motions/010-soloist-cue.md#soloist-raise-hold #d61383a Read motions/010-soloist-cue.md#soloist-raise-hold and createSoloistCueMotion in src/motions/soloistCue.ts; confirmed this citation after checking the claim that maps the declared start abduction to 110 degrees by 2 seconds and then holds it.
- * @evidence obligations/motion-sources.md#design-owned-transition Implements
+ * @evidence obligations/design/motion-sources.md#design-owned-transition Implements
  *   only the endpoints, phases, joints, and parameter domain the design owns.
- * @evidenceReview obligations/motion-sources.md#design-owned-transition #5d64f23 Read obligations/motion-sources.md#design-owned-transition and createSoloistCueMotion in src/motions/soloistCue.ts; confirmed this citation after checking the claim that implements only the endpoints, phases, joints, and parameter domain the design owns.
- * @evidence obligations/motion-sources.md#pure-time-mapping Uses only explicit
+ * @evidenceReview obligations/design/motion-sources.md#design-owned-transition #5d64f23 Read obligations/design/motion-sources.md#design-owned-transition and createSoloistCueMotion in src/motions/soloistCue.ts; confirmed this citation after checking the claim that implements only the endpoints, phases, joints, and parameter domain the design owns.
+ * @evidence obligations/design/motion-sources.md#pure-time-mapping Uses only explicit
  *   context, skeleton, duration, and start pose to emit deterministic keys.
- * @evidenceReview obligations/motion-sources.md#pure-time-mapping #3127ece Read obligations/motion-sources.md#pure-time-mapping and createSoloistCueMotion in src/motions/soloistCue.ts; confirmed explicit context, skeleton, duration, and start pose produce one deterministic time-addressed key record while engine sampling stays outside the constructor.
- * @evidence obligations/motion-sources.md#invalid-input-is-visible Rejects
+ * @evidenceReview obligations/design/motion-sources.md#pure-time-mapping #3127ece Read obligations/design/motion-sources.md#pure-time-mapping and createSoloistCueMotion in src/motions/soloistCue.ts; confirmed explicit context, skeleton, duration, and start pose produce one deterministic time-addressed key record while engine sampling stays outside the constructor.
+ * @evidence obligations/design/motion-sources.md#invalid-input-is-visible Rejects
  *   invalid duration and abduction before they can produce an unauthorized
  *   motion record.
- * @evidenceReview obligations/motion-sources.md#invalid-input-is-visible #5ce63ab Read obligations/motion-sources.md#invalid-input-is-visible and createSoloistCueMotion in src/motions/soloistCue.ts; confirmed this citation after checking the claim that rejects invalid duration and abduction before they can produce an unauthorized motion record.
+ * @evidenceReview obligations/design/motion-sources.md#invalid-input-is-visible #5ce63ab Read obligations/design/motion-sources.md#invalid-input-is-visible and createSoloistCueMotion in src/motions/soloistCue.ts; confirmed this citation after checking the claim that rejects invalid duration and abduction before they can produce an unauthorized motion record.
  */
 export function createSoloistCueMotion(props: {
   id: string;

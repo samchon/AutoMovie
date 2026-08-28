@@ -227,7 +227,7 @@ const copySharedContracts = (root: string): void => {
   write(
     root,
     "docs/contracts/index.md",
-    "<!-- @evidenceExclude discovery/common.md#shared-local-boundary This focused structural probe retains no production-specific rule. -->\n\n# Contract audit\n",
+    "<!-- @evidenceExclude discovery/core/common.md#shared-local-boundary This focused structural probe retains no production-specific rule. -->\n\n# Contract audit\n",
   );
 };
 

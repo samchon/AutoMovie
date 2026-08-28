@@ -30,7 +30,7 @@ Web search and page retrieval are available to you. Where a phase requires a sea
 
 Elsewhere the means are yours to use as the production calls for them: checking a link before it enters a `Sources:` line, or reading the sources behind a contract item when its wording alone leaves what it asks unclear. No item outside those phases obliges you to search, and none accepts a search in place of what it does ask.
 
-A source that blocks automated retrieval is blocked, not absent. Record the block instead of silently dropping the claim or lowering its precision. When direct support remains unavailable, follow `docs/principles/settings.md#source-support`: deliberately reduce precision or return the claim to unresolved rather than attaching a broad portal.
+A source that blocks automated retrieval is blocked, not absent. Record the block instead of silently dropping the claim or lowering its precision. When direct support remains unavailable, follow `docs/principles/core/settings.md#source-support`: deliberately reduce precision or return the claim to unresolved rather than attaching a broad portal.
 
 ## Forbidden
 
@@ -113,7 +113,7 @@ Capture writes actual PNGs. Open them, and let the evidence citation that claims
 
 ## Subject canon precedes its use
 
-Every subject a later layer stages, animates, voices, or observes has a settings owner before that layer uses it, including an unnamed extra, a crowd, a machine, and an institution. `obligations/settings.md#operative-subject-inventory` owns whether every operative subject is accounted for; in a film, `obligations/subjects.md` owns what each of those owners must actually settle.
+Every subject a later layer stages, animates, voices, or observes has a settings owner before that layer uses it, including an unnamed extra, a crowd, a machine, and an institution. `obligations/core/settings.md#operative-subject-inventory` owns whether every operative subject is accounted for; in a film, `obligations/story/subjects.md` owns what each of those owners must actually settle.
 
 A treatment, script, screenplay, or brief that introduces a new participant, or that turns one member of an established group into an individual actor, returns to settings and completes that subject's canon before continuing.
 

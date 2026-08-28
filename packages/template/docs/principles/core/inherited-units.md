@@ -10,6 +10,6 @@ Reformatting a parent, copying its fields into a table, expanding its prose with
 
 Review question: what decision owned by this derived unit's declared layer does it add beyond every actual parent it consumes?
 
-This item asks what one complete-looking child adds to its parents. `principles/common.md#substantive-completion` asks whether it is a complete artifact of its own layer at all, while `obligations/common.md#layer-boundary` routes each decision to the specialist population entitled to own it. The population's domain file under `docs/upstream/{design,story,delivery}` separately records what authoring the child proved wrong in those parents and permits a concrete negative when they were sufficient.
+This item asks what one complete-looking child adds to its parents. `principles/core/common.md#substantive-completion` asks whether it is a complete artifact of its own layer at all, while `obligations/core/common.md#layer-boundary` routes each decision to the specialist population entitled to own it. The population's domain file under `docs/upstream/{design,story,delivery}` separately records what authoring the child proved wrong in those parents and permits a concrete negative when they were sufficient.
 
 Sources: [NASA on bidirectional traceability and allocated design responsibility](https://www.nasa.gov/reference/systems-engineering-handbook/); [W3C PROV-O on derivation, attribution, and responsibility](https://www.w3.org/TR/prov-o/)

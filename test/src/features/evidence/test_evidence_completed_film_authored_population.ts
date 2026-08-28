@@ -311,7 +311,7 @@ export const test_evidence_completed_film_authored_population = (): void => {
       path.join(temporary, "docs/contracts/index.md"),
       [
         "<!--",
-        "@evidenceExclude discovery/common.md#shared-local-boundary This focused authored-population regression does not claim a completed work-specific discovery audit.",
+        "@evidenceExclude discovery/core/common.md#shared-local-boundary This focused authored-population regression does not claim a completed work-specific discovery audit.",
         "-->",
         "",
         "# Focused authored-population test boundary",
@@ -479,7 +479,7 @@ export const test_evidence_completed_film_authored_population = (): void => {
         ["failed", () => negative.status !== 0 || negative.signal !== null],
         [
           "named target",
-          () => negativeOutput.includes("principles/common.md#machine-default"),
+          () => negativeOutput.includes("principles/core/common.md#machine-default"),
         ],
         [
           "one evidence diagnostic",

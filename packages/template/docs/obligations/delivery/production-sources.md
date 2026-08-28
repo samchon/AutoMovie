@@ -20,7 +20,7 @@ Sources: [NASA systems engineering handbook on system boundaries and verificatio
 
 ## Shared visual grammar {#shared-visual-grammar}
 
-Every production-wide color, silhouette, scale, material-language, state-vocabulary, and fidelity value implements `obligations/settings.md#production-visual-grammar` or `#production-fidelity-tier` without adding an independent aesthetic choice. Subject-specific geometry and materials remain in their specialist source populations, while viewer surfaces consume the same production background rather than maintaining an independent look.
+Every production-wide color, silhouette, scale, material-language, state-vocabulary, and fidelity value implements `obligations/core/settings.md#production-visual-grammar` or `#production-fidelity-tier` without adding an independent aesthetic choice. Subject-specific geometry and materials remain in their specialist source populations, while viewer surfaces consume the same production background rather than maintaining an independent look.
 
 Review question: which shared visual or fidelity value lacks one authored settings owner, is redefined by a source consumer, or is not reused everywhere it governs?
 
