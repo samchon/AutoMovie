@@ -1779,6 +1779,7 @@ export class AutoMovieProductionProject {
       throw error;
     }
     let failure: IRenderFileDescriptorFailure | undefined;
+    let bytes: Uint8Array | undefined;
     try {
       const opened = fs.fstatSync(descriptor, { bigint: true });
       const assertResidentFile = (): void => {
@@ -1809,15 +1810,14 @@ export class AutoMovieProductionProject {
         }
       };
       assertResidentFile();
-      const bytes = fs.readFileSync(descriptor);
+      bytes = fs.readFileSync(descriptor);
       assertResidentFile();
-      return bytes;
     } catch (error) {
       failure = { error };
-      throw error;
-    } finally {
-      closeRenderFileDescriptor(descriptor, failure, relativePath);
     }
+    closeRenderFileDescriptor(descriptor, failure, relativePath);
+    if (failure !== undefined) throw failure.error;
+    return bytes!;
   }
 
   /**
@@ -2559,7 +2559,7 @@ export class AutoMovieProductionProject {
       receipt.costUnits! < 0 ||
       receipt.executionPolicy === undefined ||
       receipt.evidence === undefined ||
-      Object.entries(receipt.evidence ?? {}).some(
+      Object.entries(receipt.evidence!).some(
         ([key, value]) =>
           (key !== "continuity" || value !== null) &&
           (typeof value !== "string" ||

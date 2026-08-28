@@ -2308,6 +2308,17 @@ export const test_production_project_runtime_shape_repaint_records =
         "parameters are invalid",
       );
       expectRefusal(
+        "repaint refuses a padded string control value",
+        {
+          ...validReceipt,
+          parameters: {
+            ...validReceipt.parameters,
+            controls: { scheduler: " padded " },
+          },
+        },
+        "parameters are invalid",
+      );
+      expectRefusal(
         "repaint refuses a non-finite numeric control value",
         {
           ...validReceipt,

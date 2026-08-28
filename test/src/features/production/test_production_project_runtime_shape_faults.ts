@@ -15,6 +15,7 @@ import {
 
 const mutableFs = fs as unknown as {
   lstatSync: typeof fs.lstatSync;
+  statSync: typeof fs.statSync;
 };
 
 interface IFaultFailure {
@@ -157,12 +158,12 @@ export const test_production_project_runtime_shape_faults = (): void => {
 
     const nativeLstat = fs.lstatSync;
     let targetLstats = 0;
-    mutableFs.lstatSync = ((file: fs.PathLike) => {
+    mutableFs.lstatSync = ((file: fs.PathLike, options?: fs.StatOptions) => {
       if (path.resolve(file.toString()) === path.resolve(target)) {
         targetLstats += 1;
         if (targetLstats === 2) return nativeLstat(path.dirname(target));
       }
-      return nativeLstat(file);
+      return nativeLstat(file, options as never);
     }) as typeof fs.lstatSync;
     try {
       TestValidator.predicate(
@@ -419,8 +420,8 @@ export const test_production_project_runtime_shape_faults = (): void => {
     const designRoot = path.join(root, "automovie/design/fixture-film");
     const nativeLstat = fs.lstatSync;
     let observations = 0;
-    mutableFs.lstatSync = ((file: fs.PathLike) => {
-      const state = nativeLstat(file);
+    mutableFs.lstatSync = ((file: fs.PathLike, options?: fs.StatOptions) => {
+      const state = nativeLstat(file, options as never);
       if (path.resolve(file.toString()) !== path.resolve(designRoot))
         return state;
       observations += 1;
@@ -437,6 +438,31 @@ export const test_production_project_runtime_shape_faults = (): void => {
       TestValidator.predicate(
         "erase refuses a source namespace that changes into a symbolic link after preflight",
         observations >= 4 && messageIncludes(error, "refused unsafe namespace"),
+      );
+    } finally {
+      mutableFs.lstatSync = nativeLstat;
+    }
+  });
+
+  withFixture(({ root, project }) => {
+    const designRoot = path.join(root, "automovie/design/fixture-film");
+    const nativeLstat = fs.lstatSync;
+    let observations = 0;
+    mutableFs.lstatSync = ((file: fs.PathLike, options?: fs.StatOptions) => {
+      if (path.resolve(file.toString()) === path.resolve(designRoot)) {
+        observations += 1;
+        if (observations === 4)
+          throw Object.assign(new Error("source disappeared"), {
+            code: "ENOENT",
+          });
+      }
+      return nativeLstat(file, options as never);
+    }) as typeof fs.lstatSync;
+    try {
+      const erased = project.eraseProduction("already absent source");
+      TestValidator.predicate(
+        "erase tolerates one source that disappears after its fenced preflight",
+        observations >= 4 && erased.erased,
       );
     } finally {
       mutableFs.lstatSync = nativeLstat;
@@ -716,6 +742,109 @@ export const test_production_project_runtime_shape_faults = (): void => {
       );
     } finally {
       fs.mkdirSync = nativeMkdir;
+    }
+  });
+
+  withFixture(({ root, project }) => {
+    project.setModelRecipe({
+      ...modelRecipe(),
+      id: "owned-root-probe",
+    });
+    const automovieRoot = path.join(root, "automovie");
+    const revisionLock = project.trackedStatePath("revision.lock");
+    const nativeWrite = fs.writeFileSync;
+    const nativeStat = fs.statSync;
+    let armed = false;
+    let shifted = false;
+    fs.writeFileSync = ((
+      file: fs.PathOrFileDescriptor,
+      data: string | NodeJS.ArrayBufferView,
+      options?: fs.WriteFileOptions,
+    ) => {
+      const result = nativeWrite(file, data, options as never);
+      if (
+        typeof file !== "number" &&
+        path.resolve(file.toString()) === path.resolve(revisionLock) &&
+        typeof options === "object" &&
+        options !== null &&
+        options.flag === "wx"
+      )
+        armed = true;
+      return result;
+    }) as typeof fs.writeFileSync;
+    mutableFs.statSync = ((file: fs.PathLike, options?: fs.StatOptions) => {
+      const state = nativeStat(file, options as never);
+      if (
+        armed &&
+        path.resolve(file.toString()) === path.resolve(automovieRoot) &&
+        typeof state.ino === "bigint"
+      ) {
+        armed = false;
+        shifted = true;
+        return Object.assign(
+          Object.create(Object.getPrototypeOf(state)),
+          state,
+          {
+            ino: state.ino + 1n,
+          },
+        ) as fs.BigIntStats;
+      }
+      return state;
+    }) as typeof fs.statSync;
+    try {
+      const error = refusal(() =>
+        project.setModelRecipe({
+          ...modelRecipe(),
+          id: "lock-acquisition-incarnation",
+        }),
+      );
+      TestValidator.predicate(
+        "a lock acquired against a shifted state root releases its exact owner token",
+        shifted &&
+          messageIncludes(error, "state root identity changed") &&
+          fs.existsSync(revisionLock) === false,
+      );
+    } finally {
+      fs.writeFileSync = nativeWrite;
+      mutableFs.statSync = nativeStat;
+    }
+  });
+
+  withFixture(({ project }) => {
+    project.setModelRecipe({
+      ...modelRecipe(),
+      id: "owned-root-read",
+    });
+    const revision = project.trackedStatePath("revision.json");
+    const stateRoot = path.dirname(revision);
+    const nativeLstat = fs.lstatSync;
+    let armed = false;
+    mutableFs.lstatSync = ((file: fs.PathLike, options?: fs.StatOptions) => {
+      const state = nativeLstat(file, options as never);
+      if (path.resolve(file.toString()) === path.resolve(revision)) {
+        armed = true;
+        return state;
+      }
+      if (armed && path.resolve(file.toString()) === path.resolve(stateRoot)) {
+        armed = false;
+        return Object.assign(
+          Object.create(Object.getPrototypeOf(state)) as fs.Stats,
+          state,
+          { isDirectory: () => false },
+        ) as fs.Stats;
+      }
+      return state;
+    }) as typeof fs.lstatSync;
+    try {
+      const error = refusal(() =>
+        project.readTrackedStateFile("revision.json"),
+      );
+      TestValidator.predicate(
+        "an owned root replaced by a non-directory is refused at its owner boundary",
+        armed === false && messageIncludes(error, "Owned root"),
+      );
+    } finally {
+      mutableFs.lstatSync = nativeLstat;
     }
   });
 
