@@ -30,6 +30,8 @@ Evidence는 판정 대상, version, profile, 시간 범위와 실제 산출물 i
 
 Current evidence는 현재 판정에 사용할 수 있고 historical evidence는 비교와 provenance에 사용할 수 있어야 한다. Historical evidence가 더 좋아 보이더라도 현재 결과의 pass를 대신하지 않아야 한다.
 
+Capture evidence는 실제 사용한 Vite, viewer, engine, Three.js와 Playwright package bytes 및 package-owned 또는 configured browser support tree의 identity를 가져야 한다. 같은 package 이름과 version만으로 다른 설치를 current로 간주하지 않으며 system channel은 content-sealed인 것처럼 표시하지 않아야 한다.
+
 ### Evidence 계보와 무결성 {#acceptance-evidence-lineage-integrity}
 
 사용자는 evidence가 어떤 대상과 관찰에서 파생되었는지, 변환 또는 압축으로 무엇이 달라졌는지, bytes와 metadata가 판정 이후 바뀌지 않았는지 확인할 수 있어야 한다.

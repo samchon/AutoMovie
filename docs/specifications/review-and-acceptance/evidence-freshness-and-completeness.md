@@ -42,6 +42,8 @@ Evidence freshness는 target, source와 dependency identity, criterion version, 
 
 Current evidence만 current verdict를 discharge할 수 있고 historical evidence는 comparison, regression과 provenance에 사용할 수 있다. Historical result가 더 좋아 보이거나 과거 approval에 쓰였어도 현재 pass를 만들지 않는다.
 
+Capture runtime identity는 Vite, viewer, engine, Three.js, Playwright와 Playwright core의 installed package closure를 package tree별 content digest, file count와 byte count로 정규화한다. Package-owned Chromium 또는 configured executable은 executable과 support-file tree의 content identity를 같은 closure에 포함하고, system channel은 `system-channel-unsealed`로 기록한다. Capture는 runtime import 전 snapshot을 만들고 browser launch, page load와 최종 pixel commit 전후에 같은 physical generation과 exact inventory를 다시 확인하며, 하나라도 달라지면 이전 manifest를 current evidence로 재사용하지 않는다.
+
 ### Evidence 계보와 무결성 {#acceptance-system-evidence-lineage-integrity}
 
 <!-- @evidence requirements/acceptance/evidence-and-freshness.md#acceptance-evidence-lineage-integrity Preserves derivation, transformation, byte identity and post-verdict integrity. -->
