@@ -82,6 +82,16 @@ const observationAddress = (
   observation: string,
 ): string => JSON.stringify([branch, owner, observation]);
 
+/** Describe an unknown failure without allowing hostile coercion to escape. */
+const describeFailure = (failure: unknown): string => {
+  try {
+    const message = (failure as { message?: unknown }).message;
+    return typeof message === "string" ? message : String(failure);
+  } catch {
+    return "unprintable thrown value";
+  }
+};
+
 /** Read one strict plan without letting malformed review records crash lint. */
 const readPlan = (props: {
   project: IAutoMovieLibraryReviewProjectReader;
@@ -90,7 +100,19 @@ const readPlan = (props: {
   | { success: true; data: IAutoMovieLibraryReviewPlanFile }
   | { success: false; diagnostic: IAutoMovieDiagnostic } => {
   const relative = planPath(props.owner);
-  const source = props.project.readProseDocument(relative);
+  let source: string | null;
+  try {
+    source = props.project.readProseDocument(relative);
+  } catch (error) {
+    return {
+      success: false,
+      diagnostic: missing({
+        target: `library:${props.owner.branch}:${props.owner.path}`,
+        path: relative,
+        message: `Library observation plan "${relative}" cannot be read (${describeFailure(error)}). Restore the tracked plan before review.`,
+      }),
+    };
+  }
   if (source === null)
     return {
       success: false,
@@ -120,7 +142,7 @@ const readPlan = (props: {
       diagnostic: missing({
         target: `library:${props.owner.branch}:${props.owner.path}`,
         path: relative,
-        message: `Library observation plan "${relative}" is not readable JSON (${error instanceof Error ? error.message : String(error)}). Correct the tracked plan before review.`,
+        message: `Library observation plan "${relative}" is not readable JSON (${describeFailure(error)}). Correct the tracked plan before review.`,
       }),
     };
   }
@@ -230,7 +252,7 @@ const identityOf = (props: {
         missing({
           target,
           path: source,
-          message: `Library design owner "${ownerAddress(props.owner, props.unit.anchor)}" cannot reopen source "${source}" (${error instanceof Error ? error.message : String(error)}). Restore the exact tracked source before review.`,
+          message: `Library design owner "${ownerAddress(props.owner, props.unit.anchor)}" cannot reopen source "${source}" (${describeFailure(error)}). Restore the exact tracked source before review.`,
         }),
       );
     }

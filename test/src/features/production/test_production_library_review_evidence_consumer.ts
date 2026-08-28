@@ -635,6 +635,36 @@ export const test_production_library_review_evidence_consumer = (): void => {
     project: nonErrorSourceState,
     compileFingerprint: COMPILE,
   });
+  const unreadablePlanState = project();
+  writePlans(unreadablePlanState);
+  const readProseDocument = unreadablePlanState.readProseDocument;
+  unreadablePlanState.readProseDocument = (relative) => {
+    if (relative === reviewPath("maps"))
+      throw new Error("plan bytes unavailable");
+    return readProseDocument(relative);
+  };
+  const unreadablePlan = consumer.readAutoMovieLibraryReviewRequirements({
+    authoring: binding,
+    project: unreadablePlanState,
+    compileFingerprint: COMPILE,
+  });
+  const hostileSourceState = project();
+  writePlans(hostileSourceState);
+  const ordinarySourceReader = hostileSourceState.readSource;
+  hostileSourceState.readSource = (relative) => {
+    if (relative === sourcePath("maps"))
+      throw {
+        [Symbol.toPrimitive]: () => {
+          throw new Error("coercion must remain contained");
+        },
+      };
+    return ordinarySourceReader(relative);
+  };
+  const hostileSource = consumer.readAutoMovieLibraryReviewRequirements({
+    authoring: binding,
+    project: hostileSourceState,
+    compileFingerprint: COMPILE,
+  });
   const wrongRoot = consumer.libraryReviewEvidenceConsumerDiagnostics({
     ...props(state, binding),
     project: { ...state, root: "C:/other-project" },
@@ -865,6 +895,24 @@ export const test_production_library_review_evidence_consumer = (): void => {
           ),
       ],
       [
+        "unreadablePlanFailureFailsClosed",
+        () =>
+          unreadablePlan.diagnostics.some(
+            (entry) =>
+              entry.path === reviewPath("maps") &&
+              entry.message.includes("plan bytes unavailable"),
+          ),
+      ],
+      [
+        "hostileSourceFailureFailsClosed",
+        () =>
+          hostileSource.diagnostics.some(
+            (entry) =>
+              entry.path === sourcePath("maps") &&
+              entry.message.includes("unprintable thrown value"),
+          ),
+      ],
+      [
         "foreignAuthoringSnapshotRefused",
         () =>
           wrongRoot[0]?.target === "library:authoring-binding" &&
@@ -920,6 +968,8 @@ export const test_production_library_review_evidence_consumer = (): void => {
       libraryOwnerNeedsSource: true,
       missingSourceBindingFailsClosed: true,
       nonErrorSourceFailureFailsClosed: true,
+      unreadablePlanFailureFailsClosed: true,
+      hostileSourceFailureFailsClosed: true,
       foreignAuthoringSnapshotRefused: true,
       filmBriefAndEarlierScopesRemainUnchanged: true,
     },
