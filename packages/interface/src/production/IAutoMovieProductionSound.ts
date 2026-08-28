@@ -674,7 +674,7 @@ export interface IAutoMovieProductionTtsReceipt {
    * @evidence requirements/sound/editing-synchronization-and-continuity.md#sound-event-synchronization Exposes `version` as the portable data boundary for the sound event synchronization requirement.
    * @evidence specifications/simulation-effects-and-sound/mix-stems-loudness-and-av-join.md#sound-event-sync-and-boundary-continuity Types `version` for the sound event sync and boundary continuity system contract.
    */
-  version: 5;
+  version: 6;
   /**
    * Exact dialogue line id.
    *
@@ -737,6 +737,14 @@ export interface IAutoMovieProductionTtsReceipt {
       reason: string;
     };
   };
+  /**
+   * UTC instant captured immediately before the generator call that produced
+   * this receipt's immutable PCM.
+   *
+   * @evidence requirements/sound/sources-and-external-assets.md#sound-source-provenance Prevents a future terms-review date from entering a generated-audio adoption or a resumed cache receipt.
+   * @evidence specifications/simulation-effects-and-sound/scope-tiers-and-identities.md#external-result-provider-neutrality Binds terms validation to an immutable generation instant without adding wall-clock state to content identity.
+   */
+  generatedAt: string;
   /**
    * Model-native PCM clock before deterministic resampling.
    *
