@@ -203,9 +203,46 @@ async function listMarkdownFiles(root: string): Promise<string[]> {
 
 /** Removes evidence comments while preserving reader-facing Markdown. */
 function stripAuthoringMarkers(markdown: string): string {
-  return markdown
-    .replaceAll("\r\n", "\n")
-    .replace(/<!--[\s\S]*?-->/gu, "")
+  const output: string[] = [];
+  let fence: { character: string; length: number } | undefined;
+  let htmlComment = false;
+  for (const sourceLine of markdown.replaceAll("\r\n", "\n").split("\n")) {
+    if (fence !== undefined) {
+      output.push(sourceLine);
+      if (
+        new RegExp(
+          `^ {0,3}${fence.character}{${fence.length},}[ \\t]*$`,
+          "u",
+        ).test(sourceLine)
+      )
+        fence = undefined;
+      continue;
+    }
+    let line = "";
+    for (let cursor = 0; cursor < sourceLine.length; ) {
+      if (htmlComment) {
+        const close = sourceLine.indexOf("-->", cursor);
+        if (close === -1) break;
+        cursor = close + 3;
+        htmlComment = false;
+      } else {
+        const open = sourceLine.indexOf("<!--", cursor);
+        if (open === -1) {
+          line += sourceLine.slice(cursor);
+          break;
+        }
+        line += sourceLine.slice(cursor, open);
+        cursor = open + 4;
+        htmlComment = true;
+      }
+    }
+    const marker: string | undefined = /^ {0,3}(`{3,}|~{3,})/u.exec(line)?.[1];
+    if (marker !== undefined)
+      fence = { character: marker[0], length: marker.length };
+    output.push(line);
+  }
+  return output
+    .join("\n")
     .replace(/\n{3,}/gu, "\n\n")
     .trim();
 }

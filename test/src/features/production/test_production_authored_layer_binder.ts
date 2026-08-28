@@ -91,6 +91,7 @@ export const test_production_authored_layer_binder =
           "",
           "```md",
           "## Quoted evidence heading {#quoted}",
+          "<!-- A fenced example comment remains reader content. -->",
           "```",
           "",
           "The prop keeps {braces that are prose}.",
@@ -122,13 +123,17 @@ export const test_production_authored_layer_binder =
       );
       TestValidator.predicate(
         "authoring comments removed",
-        !markdown.includes("<!--") && !markdown.includes("@evidence"),
+        !markdown.includes("@evidence"),
       );
       TestValidator.predicate(
         "reader Markdown preserved",
         markdown.includes(
           "[blocking notes](https://example.invalid/blocking)",
-        ) && markdown.includes("{braces that are prose}"),
+        ) &&
+          markdown.includes("{braces that are prose}") &&
+          markdown.includes(
+            "<!-- A fenced example comment remains reader content. -->",
+          ),
       );
 
       const first: string = await filmBinder.bind();
