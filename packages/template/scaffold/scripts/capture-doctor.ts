@@ -95,6 +95,7 @@ try {
     const runtimeIdentity = { ...session.runtime, graphics };
     const rendererIdentity =
       canonicalAutoMovieCaptureRuntimeIdentity(runtimeIdentity);
+    session.assertRuntimeCurrent();
     process.stdout.write(
       `${JSON.stringify(
         {
