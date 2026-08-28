@@ -71,6 +71,15 @@ const originRadius = (
     ),
   );
 
+/** Describe an evaluator throw without letting hostile coercion escape. */
+const safeThrownDescription = (error: unknown): string => {
+  try {
+    return String(error);
+  } catch {
+    return "an uninspectable thrown value";
+  }
+};
+
 /** Resolve actor and object root authority at one shot-local instant. */
 const nodeTransformAt = (
   node: IAutoMovieScene["nodes"][number],
@@ -262,7 +271,7 @@ export function compileCameraClearanceReports(props: {
       props.out.push(
         "range",
         `$staged.scene.cameras[${cameraEntry.index}].clearance`,
-        `camera clearance could not evaluate its fixed-clock input: ${String(error)}`,
+        `camera clearance could not evaluate its fixed-clock input: ${safeThrownDescription(error)}`,
         take.camera.clearance,
       );
       continue;

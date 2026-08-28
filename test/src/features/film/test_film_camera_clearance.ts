@@ -272,17 +272,33 @@ export const test_film_camera_clearance = (): void => {
       },
     ],
   });
+  const instantContact = evaluate({
+    duration: 0,
+    samples: [
+      {
+        time: 0,
+        camera: identity(),
+        obstacles: [{ node: "wall", bounds: box({ x: 0, y: 0, z: 0 }) }],
+      },
+    ],
+  });
   TestValidator.equals(
-    "current clear, stale, and zero-duration reports stay distinct",
+    "current, stale, and zero-duration contact reports stay distinct",
     [
       [clear.status, clear.intervals, clear.findings.length],
       [stale.status, stale.intervals, stale.findings.length],
       [instant.status, instant.intervals, instant.findings.length],
+      [
+        instantContact.status,
+        instantContact.intervals,
+        instantContact.findings,
+      ],
     ],
     [
       ["clear", 1, 0],
       ["stale", 0, 0],
       ["clear", 0, 0],
+      ["blocked", 0, [{ part: "body", obstacle: "wall", start: 0, end: 0 }]],
     ],
   );
 
@@ -710,13 +726,32 @@ export const test_film_camera_clearance = (): void => {
   const hostile = inspectAdapter({
     hero: { camera: heroCamera, motion: hostileMotion },
   });
+  const hostileThrownValue = {
+    [Symbol.toPrimitive]: (): never => {
+      throw new Error("hostile diagnostic coercion");
+    },
+  };
+  const hostileCoercionMotion = new Proxy(performed.shot.cameraMotion!, {
+    get: () => {
+      throw hostileThrownValue;
+    },
+  });
+  const hostileCoercion = inspectAdapter({
+    hero: { camera: heroCamera, motion: hostileCoercionMotion },
+  });
   TestValidator.predicate(
-    "a hostile runtime value is still an addressed evaluator refusal",
+    "hostile runtime and diagnostic coercion remain addressed refusals",
     hostile.reports === undefined &&
       hostile.out.items.some(
         (item) =>
           item.path.endsWith(".clearance") &&
           item.expected.includes("hostile camera motion"),
+      ) &&
+      hostileCoercion.reports === undefined &&
+      hostileCoercion.out.items.some(
+        (item) =>
+          item.path.endsWith(".clearance") &&
+          item.expected.includes("an uninspectable thrown value"),
       ),
   );
 

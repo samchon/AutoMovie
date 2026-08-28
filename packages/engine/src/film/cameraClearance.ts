@@ -264,10 +264,14 @@ export function evaluateCameraClearance(
   }
 
   const findings: IAutoMovieCameraClearanceFinding[] = [];
-  for (let index = 1; index < input.samples.length; index++) {
-    const first = input.samples[index - 1]!;
+  const intervalEnds =
+    input.samples.length === 1
+      ? [0]
+      : input.samples.slice(1).map((_, index) => index + 1);
+  for (const index of intervalEnds) {
+    const first = input.samples[Math.max(0, index - 1)]!;
     const second = input.samples[index]!;
-    const firstObstacles = obstacleMaps[index - 1]!;
+    const firstObstacles = obstacleMaps[Math.max(0, index - 1)]!;
     const secondObstacles = obstacleMaps[index]!;
     const parts: Array<
       readonly ["body" | "parent-rig", IAutoMovieCameraClearanceSphere]
