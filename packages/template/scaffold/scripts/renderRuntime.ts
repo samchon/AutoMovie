@@ -1,3 +1,4 @@
+import { readAutoMovieProductionEvidence } from "@automovie/evidence";
 import {
   type IAutoMovieProductionRenderTier,
   digestAutoMovieBytes,
@@ -9,6 +10,7 @@ import { createRequire } from "node:module";
 import path from "node:path";
 
 import config from "../automovie.config";
+import { productionEvidence } from "../productionEvidence";
 import { inspectPublishedProxyBundle } from "./assertProxyBundle";
 import {
   type IAutoMovieProductionRepaintSelection,
@@ -73,6 +75,10 @@ const executeProductionRenderCommand = async (
 ): Promise<void> => {
   const root = renderHost.root;
   const productionId = config.productionId;
+  const authoringEvidence = readAutoMovieProductionEvidence({
+    root,
+    productionEvidence,
+  });
   const renderTier: IAutoMovieProductionRenderTier =
     command.tier === "proxy" ? config.render.proxy : config.render.final;
   const renderChunkFrames = command.chunkFrames;
@@ -299,6 +305,7 @@ const executeProductionRenderCommand = async (
     stateRoot,
   });
   const planningRuntime = createProductionRenderPlanningRuntime({
+    authoringEvidence,
     captureCurrentChunkPointer: gcRuntime.captureCurrentChunkPointer,
     compareCodeUnits,
     h264Entry: require.resolve("h264-mp4-encoder"),
@@ -330,6 +337,7 @@ const executeProductionRenderCommand = async (
     publishProxyBundle,
   });
   const finalizationRuntime = createProductionRenderFinalizationRuntime({
+    authoringEvidence,
     encoder: encoderRuntime,
     host: renderHost,
     planning: planningRuntime,
