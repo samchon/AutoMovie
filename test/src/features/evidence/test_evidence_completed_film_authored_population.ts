@@ -24,6 +24,7 @@ interface EvidenceState {
   scripts: Stage;
   screenplays: Stage;
   briefs: Stage;
+  mapSources: Stage;
   modelSources: Stage;
   spaceSources: Stage;
   materialSources: Stage;
@@ -77,6 +78,7 @@ const activeState = (location: string): EvidenceState => ({
   scripts: "review",
   screenplays: "review",
   briefs: "disabled",
+  mapSources: "disabled",
   modelSources: "disabled",
   spaceSources: "disabled",
   materialSources: "disabled",
