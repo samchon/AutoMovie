@@ -476,6 +476,28 @@ export const test_production_repaint_execution = async (): Promise<void> => {
       };
     },
   });
+  let rejectedClockReads = 0;
+  const elapsedAtRejection = await execute<string>({
+    policy: policy({
+      maximumAttempts: 1,
+      attemptTimeoutMs: 100,
+      backoffMs: [],
+    }),
+    now: () =>
+      new Date(
+        rejectedClockReads++ < 3
+          ? "2026-08-28T10:00:00.000Z"
+          : "2026-08-28T10:00:00.100Z",
+      ),
+    calls: async () => {
+      throw new AutoMovieRepaintAttemptError(
+        "provider-refusal",
+        "adapter disclosed a partial output at the deadline",
+        6,
+        { digest: digest("rejected-at-deadline"), bytes: 13 },
+      );
+    },
+  });
   TestValidator.equals(
     "every terminal retry boundary preserves its exact stop class",
     {
@@ -528,6 +550,14 @@ export const test_production_repaint_execution = async (): Promise<void> => {
         attemptIds: preProviderAttemptIds,
         providerCalls: preProviderCalls,
       },
+      elapsedAtRejection: {
+        stop: elapsedAtRejection.result.stop,
+        accepted: elapsedAtRejection.result.accepted,
+        failure: elapsedAtRejection.result.attempts[0]?.failure?.class,
+        costUnits: elapsedAtRejection.result.attempts[0]?.costUnits,
+        availableOutput:
+          elapsedAtRejection.result.attempts[0]?.availableOutput?.digest,
+      },
     },
     {
       zeroBudget: "cost-exhausted",
@@ -572,6 +602,13 @@ export const test_production_repaint_execution = async (): Promise<void> => {
         attempts: 0,
         attemptIds: 0,
         providerCalls: 0,
+      },
+      elapsedAtRejection: {
+        stop: "attempts-exhausted",
+        accepted: null,
+        failure: "timeout",
+        costUnits: 6,
+        availableOutput: digest("rejected-at-deadline"),
       },
     },
   );
