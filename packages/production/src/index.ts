@@ -4,6 +4,7 @@ export * from "./project/commitLock";
 export * from "./production/acceptanceScope";
 export * from "./production/AutoMovieLegacyImporter";
 export * from "./production/AutoMovieProductionCompiler";
+export * from "./production/AutoMovieProductionBinder";
 export * from "./production/AutoMovieProductionContext";
 export * from "./production/diagnosticCatalog";
 export * from "./production/captureProductionFrame";
