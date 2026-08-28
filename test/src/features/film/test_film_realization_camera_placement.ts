@@ -98,7 +98,8 @@ const compile = (framed: boolean) =>
  * 2. That placement is a different point from the staged transform, which is
  *    what makes the record worth writing.
  * 3. A beat with no `frame` action compiles no move and records no placement, so
- *    its realization keeps the bytes it always had.
+ *    its realization adds only the addressed depth report to the pre-existing
+ *    locked-camera record.
  */
 export const test_film_realization_camera_placement = (): void => {
   const framed = compile(true);
@@ -178,17 +179,34 @@ export const test_film_realization_camera_placement = (): void => {
           ),
       ],
       [
-        "lockedRecordIsUnchanged",
+        "lockedRecordHasOnlyDepthReportAddition",
         () =>
           locked.success &&
           JSON.stringify(locked.realization.camera) ===
             // The contract samples its opening, its one review frame and its
             // closing, and states one required subject the staged camera holds
             // throughout. Spelling the whole record out is what makes this a
-            // byte guard rather than a restatement of the check above it.
+            // byte guard for the one intentional depth-report addition.
             JSON.stringify(
               [0, 1, 2].map((time) => ({
                 time,
+                depthPrecision: {
+                  camera: "cam-main",
+                  time,
+                  metric: "maximum-adjacent-depth-step",
+                  unit: "meters",
+                  near: 0.1,
+                  far: 1000,
+                  requiredNear: 1.8113350546673495,
+                  requiredFar: 2.5243811122728674,
+                  minimumDepthBits: 24,
+                  maximumStepMeters: 100,
+                  lowerCode: 16114219,
+                  upperCode: 16114220,
+                  measuredStepMeters: 0.0000037979279130517796,
+                  status: "satisfied",
+                  passed: true,
+                },
                 requiredSubjects: 1,
                 resolvedSubjects: 1,
                 readableSubjects: 1,
@@ -207,7 +225,7 @@ export const test_film_realization_camera_placement = (): void => {
       framedStagedCameraIsUnchanged: true,
       framedPlacementLeavesTheStagedPoint: true,
       lockedSamplesCarryNoPlacement: true,
-      lockedRecordIsUnchanged: true,
+      lockedRecordHasOnlyDepthReportAddition: true,
     },
   );
 };
