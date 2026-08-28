@@ -397,9 +397,16 @@ export const test_production_project_runtime_shape_repaint_records =
         expectAttemptRefusal(label, candidate),
       );
 
-      const succeededAttempt = repaintAttempt({
+      const retryAttempt = repaintAttempt({
         startedAt: "2026-08-28T12:00:01.000Z",
         completedAt: "2026-08-28T12:00:02.000Z",
+        status: "failed",
+        failure: {
+          class: "rate-limit",
+          message: "provider requested another attempt",
+          retryable: true,
+        },
+        availableOutput: null,
       });
       const failedAttempt = repaintAttempt({
         attemptId: "00000000-0000-4000-8000-000000000032",
@@ -409,19 +416,11 @@ export const test_production_project_runtime_shape_repaint_records =
         costUnits: 0,
         availableOutput: null,
       });
-      const thirdAttempt = repaintAttempt({
+      const succeededAttempt = repaintAttempt({
         attemptId: "00000000-0000-4000-8000-000000000033",
         ordinal: 3,
         startedAt: "2026-08-28T12:00:02.000Z",
         completedAt: "2026-08-28T12:00:03.000Z",
-        status: "cancelled",
-        failure: {
-          class: "cancelled",
-          message: "cancelled by the author",
-          retryable: false,
-        },
-        costUnits: 0,
-        availableOutput: null,
       });
       project.commitRepaintAttempt(failedAttempt);
       const expectCommitRefusal = (
@@ -436,9 +435,52 @@ export const test_production_project_runtime_shape_repaint_records =
           TestValidator.predicate(label, error instanceof Error);
         }
       };
+      const succeededRequest = "00000000-0000-4000-8000-000000000050";
+      project.commitRepaintAttempt(
+        repaintAttempt({
+          requestId: succeededRequest,
+          attemptId: "00000000-0000-4000-8000-000000000051",
+          ordinal: 1,
+        }),
+      );
+      expectCommitRefusal(
+        "attempt commit refuses an append after a succeeded terminal",
+        repaintAttempt({
+          requestId: succeededRequest,
+          attemptId: "00000000-0000-4000-8000-000000000052",
+          ordinal: 2,
+          startedAt: "2026-08-28T12:00:01.000Z",
+          completedAt: "2026-08-28T12:00:02.000Z",
+        }),
+      );
+      const nonretryableRequest = "00000000-0000-4000-8000-000000000060";
+      project.commitRepaintAttempt(
+        repaintAttempt({
+          requestId: nonretryableRequest,
+          attemptId: "00000000-0000-4000-8000-000000000061",
+          ordinal: 1,
+          status: "failed",
+          failure: {
+            class: "provider-refusal",
+            message: "provider refused without retry permission",
+            retryable: false,
+          },
+          availableOutput: null,
+        }),
+      );
+      expectCommitRefusal(
+        "attempt commit refuses an append after a nonretryable failure",
+        repaintAttempt({
+          requestId: nonretryableRequest,
+          attemptId: "00000000-0000-4000-8000-000000000062",
+          ordinal: 2,
+          startedAt: "2026-08-28T12:00:01.000Z",
+          completedAt: "2026-08-28T12:00:02.000Z",
+        }),
+      );
       expectCommitRefusal(
         "attempt commit refuses a skipped ordinal",
-        thirdAttempt,
+        succeededAttempt,
       );
       expectCommitRefusal(
         "attempt commit refuses a tied ordinal",
@@ -450,20 +492,20 @@ export const test_production_project_runtime_shape_repaint_records =
       expectCommitRefusal(
         "attempt commit refuses immutable request-identity drift",
         {
-          ...succeededAttempt,
+          ...retryAttempt,
           attemptId: "00000000-0000-4000-8000-000000000043",
           requestFingerprint: `sha256:${"9".repeat(64)}`,
         },
       );
       expectCommitRefusal(
         "attempt commit preserves its input-current fence",
-        succeededAttempt,
+        retryAttempt,
         () => false,
       );
       let postWriteChecks = 0;
       expectCommitRefusal(
         "attempt commit rolls back when its post-write input fence changes",
-        succeededAttempt,
+        retryAttempt,
         () => ++postWriteChecks === 1,
       );
       TestValidator.equals(
@@ -472,15 +514,15 @@ export const test_production_project_runtime_shape_repaint_records =
           checks: postWriteChecks,
           resident: fs.existsSync(
             project.trackedStatePath(
-              `renditions/attempts/${requestId}/${succeededAttempt.attemptId}.json`,
+              `renditions/attempts/${requestId}/${retryAttempt.attemptId}.json`,
             ),
           ),
           ledger: project.repaintRequestAttempts(requestId),
         },
         { checks: 2, resident: false, ledger: [failedAttempt] },
       );
+      project.commitRepaintAttempt(retryAttempt);
       project.commitRepaintAttempt(succeededAttempt);
-      project.commitRepaintAttempt(thirdAttempt);
       try {
         project.commitRepaintAttempt(succeededAttempt);
         throw new Error(
@@ -569,11 +611,11 @@ export const test_production_project_runtime_shape_repaint_records =
       );
       const thirdPath = path.join(
         attemptDirectory,
-        `${thirdAttempt.attemptId}.json`,
+        `${succeededAttempt.attemptId}.json`,
       );
       fs.writeFileSync(
         thirdPath,
-        `${JSON.stringify({ ...thirdAttempt, ordinal: 2 }, null, 2)}\n`,
+        `${JSON.stringify({ ...succeededAttempt, ordinal: 2 }, null, 2)}\n`,
       );
       try {
         project.repaintRequestAttempts(requestId);
@@ -586,13 +628,13 @@ export const test_production_project_runtime_shape_repaint_records =
       } finally {
         fs.writeFileSync(
           thirdPath,
-          `${JSON.stringify(thirdAttempt, null, 2)}\n`,
+          `${JSON.stringify(succeededAttempt, null, 2)}\n`,
         );
       }
       fs.writeFileSync(
         thirdPath,
         `${JSON.stringify(
-          { ...thirdAttempt, startedAt: "2026-08-28T12:00:01.999Z" },
+          { ...succeededAttempt, startedAt: "2026-08-28T12:00:01.999Z" },
           null,
           2,
         )}\n`,
@@ -610,13 +652,13 @@ export const test_production_project_runtime_shape_repaint_records =
       } finally {
         fs.writeFileSync(
           thirdPath,
-          `${JSON.stringify(thirdAttempt, null, 2)}\n`,
+          `${JSON.stringify(succeededAttempt, null, 2)}\n`,
         );
       }
       TestValidator.equals(
         "terminal attempts enumerate one contiguous immutable request ledger",
         project.repaintRequestAttempts(requestId),
-        [failedAttempt, succeededAttempt, thirdAttempt],
+        [failedAttempt, retryAttempt, succeededAttempt],
       );
       const linkedRequest = "00000000-0000-4000-8000-000000000036";
       const linkedDirectory = project.trackedStatePath(
