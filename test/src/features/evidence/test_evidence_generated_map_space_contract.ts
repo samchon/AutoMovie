@@ -609,6 +609,50 @@ const configureGraph = (root: string): void => {
   );
 };
 
+/** Build and locate the exact publish-view package facade. */
+const buildEvidenceRuntime = (): string => {
+  const command =
+    process.platform === "win32"
+      ? {
+          executable: process.env.ComSpec ?? "cmd.exe",
+          arguments: [
+            "/d",
+            "/s",
+            "/c",
+            "pnpm --filter @automovie/evidence build",
+          ],
+        }
+      : {
+          executable: "pnpm",
+          arguments: ["--filter", "@automovie/evidence", "build"],
+        };
+  const result = spawnSync(command.executable, command.arguments, {
+    cwd: ROOT,
+    encoding: "utf8",
+    env: { ...process.env, FORCE_COLOR: "0" },
+    maxBuffer: 64 * 1024 * 1024,
+  });
+  if (result.error !== undefined) throw result.error;
+  if (result.status !== 0 || result.signal !== null)
+    throw new Error(
+      [
+        `Building the generated consumer's @automovie/evidence facade exited ${result.status ?? `by ${result.signal}`}.`,
+        result.stdout,
+        result.stderr,
+      ].join("\n"),
+    );
+  const destination = path.join(ROOT, "packages/evidence/lib");
+  assert.ok(
+    fs.existsSync(path.join(destination, "index.js")),
+    "The canonical @automovie/evidence build omitted its public facade.",
+  );
+  assert.ok(
+    fs.existsSync(path.join(destination, "index.d.ts")),
+    "The canonical @automovie/evidence build omitted its public declarations.",
+  );
+  return destination;
+};
+
 /** Resolve the real factory and contributor without installing the fixture. */
 const linkRuntime = (root: string): void => {
   const links = [
@@ -616,6 +660,10 @@ const linkRuntime = (root: string): void => {
     [path.join(ROOT, "node_modules/@ttsc/lint"), "@ttsc/lint"],
     [path.join(ROOT, "node_modules/@types/node"), "@types/node"],
     [path.join(ROOT, "node_modules/typescript"), "typescript"],
+    [
+      path.join(ROOT, "node_modules/typescript-compiler"),
+      "typescript-compiler",
+    ],
   ] as const;
   for (const [source, relative] of links) {
     const destination = path.join(root, "node_modules", relative);
@@ -628,12 +676,7 @@ const linkRuntime = (root: string): void => {
   }
   const evidencePackage = path.join(root, "node_modules/@automovie/evidence");
   fs.mkdirSync(evidencePackage, { recursive: true });
-  const evidenceBuild = path.join(ROOT, "packages/evidence/lib");
-  assert.ok(
-    fs.existsSync(path.join(evidenceBuild, "index.js")),
-    "Build @automovie/evidence before running its installed-package consumer.",
-  );
-  fs.cpSync(evidenceBuild, path.join(evidencePackage, "lib"), {
+  fs.cpSync(buildEvidenceRuntime(), path.join(evidencePackage, "lib"), {
     recursive: true,
   });
   fs.writeFileSync(
