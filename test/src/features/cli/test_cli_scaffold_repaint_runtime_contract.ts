@@ -702,7 +702,7 @@ export const test_cli_scaffold_repaint_runtime_contract =
           compiledPublication: fs.existsSync(
             path.join(
               fixture.root,
-              "generated/repaint-runtime-film/compile.json",
+              "generated/repaint-runtime-film/manifests/compile.json",
             ),
           ),
           statusRefusal: status.status !== 0,
