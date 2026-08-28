@@ -959,7 +959,7 @@ export const test_film_camera_clearance = (): void => {
             indices: [0, 1, 2],
             skin: {
               joints: ["leftLowerArm" as const],
-              boneIndices: Array(12).fill(0) as number[],
+              boneIndices: new Array(12).fill(0) as number[],
               weights: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0],
             },
           },
