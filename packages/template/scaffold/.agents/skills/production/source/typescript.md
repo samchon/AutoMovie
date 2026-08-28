@@ -2,6 +2,14 @@
 
 AutoMovie source is ordinary tracked TypeScript compiled in a deterministic no-I/O sandbox. Types and JSDoc are the primary payload textbook. Let the compiler reject invalid structure early; do not defeat it with casts, `any`, ignored diagnostics, or copied generated JSON.
 
+## Evidence carried by each export
+
+Every TypeScript owner exposed through a public export and selected by an active source population answers all three H2 checklists in `principles/source-units.md` in its own JSDoc. A top-level exported type, property, or function is one owner; each selected public member of an exported type is another. Read the declaration, initializer or body, source-local callees, graph claim, target, callers, tests, and generated consequence together. State how that owner preserves the exact scope it claims, constitutes a complete type, value, or behavior at its declared granularity, and makes every evidence reason on it true.
+
+Source-family obligations are different. They allocate the map, model, space, material, instance, motion, system, shot, production, or film roles one or more times across the selected source-owner population; one strong owner cannot answer a source-unit principle for a weak sibling. Do not cite `obligations/common.md#proportionate-development` from source: code length, export count, and file size do not prove completeness or a sound allocation of implementation effort. The one-second sandbox work budget below remains an execution limit, not that obligation or a code-size proxy.
+
+Do not add a principle acknowledgement to silence a diagnostic. When an export omits or exceeds cited scope, is a placeholder or partial implementation, or gives a generic, copied, bundled, or false evidence reason, repair the earliest actual owner and every downstream consequence first. Renew a review only after rereading the complete behavior against the changed target.
+
 ## Module shape
 
 Use `defineShot(id, { scene, contract, build })` as the stable named export selected by the design record's source binding. It is one of the engine names the shot VM publishes, and the next section lists the rest; import package types with `import type`, and reach the compiler's own runtime data through `context.engine`. Keep build functions pure: output depends only on the frozen context and source-local deterministic code. No filesystem, network, process environment, clock, randomness, global mutation, or host-specific path lookup belongs inside shot or film source.

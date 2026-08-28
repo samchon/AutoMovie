@@ -668,6 +668,15 @@ const EXPECTED_CONTRACTS = [
     ],
   },
   {
+    domain: "core",
+    file: "principles/source-units.md",
+    anchors: [
+      "source-scope-preservation",
+      "source-substantive-completion",
+      "source-evidence-content-conformance",
+    ],
+  },
+  {
     domain: "delivery",
     file: "obligations/film-sources.md",
     anchors: [
@@ -2155,6 +2164,13 @@ const sourceObligations = (
   review: boolean,
 ): ITtscEvidenceGraphReference => obligationReference(shared, file, review);
 
+/** The no-exclusion checklist every selected TypeScript source owner answers. */
+const sourceUnitPrinciples = (
+  shared: string,
+  review: boolean,
+): ITtscEvidenceGraphReference =>
+  principleReference(shared, "source-units.md", review);
+
 /**
  * Source directories a production owns without answering a design layer for
  * them.
@@ -2248,12 +2264,13 @@ const sourceClaims = (graph: IProductionGraph): IBranchClaim[] => {
           },
         },
         {
-          name: `${name} realize every ${design} unit and cover their source obligations`,
+          name: `${name} owners answer source-unit principle checklists, realize every ${design} unit, and cover source obligations`,
           type: "typescript",
           files: [...source.files],
           symbol: [...source.symbols],
           disabled: !requiresEvidence(graph[name]),
           reference: [
+            sourceUnitPrinciples(shared, review),
             sourceObligations(shared, source.obligation, review),
             {
               type: "markdown",
@@ -2289,24 +2306,24 @@ const sourceClaims = (graph: IProductionGraph): IBranchClaim[] => {
       },
     }),
     ...branchClaims("shots", {
-      name: "shot source population covers every shot-source obligation",
+      name: "shot source owners answer source-unit principle checklists and cover every shot-source obligation",
       type: "typescript",
       files: [...SOURCES.shots.files],
       symbol: [...SOURCES.shots.symbols],
       disabled: !requiresEvidence(graph.shots),
-      reference: sourceObligations(
-        shared,
-        SOURCES.shots.obligation,
-        shotReview,
-      ),
+      reference: [
+        sourceUnitPrinciples(shared, shotReview),
+        sourceObligations(shared, SOURCES.shots.obligation, shotReview),
+      ],
     }),
     ...branchClaims("productionSources", {
-      name: "production source serializes settings and covers production-source obligations",
+      name: "production source owners answer source-unit principle checklists, serialize settings, and cover production-source obligations",
       type: "typescript",
       files: [...SOURCES.productionSources.files],
       symbol: [...SOURCES.productionSources.symbols],
       disabled: !requiresEvidence(graph.productionSources),
       reference: [
+        sourceUnitPrinciples(shared, requiresReview(graph.productionSources)),
         sourceObligations(
           shared,
           SOURCES.productionSources.obligation,
@@ -2321,12 +2338,13 @@ const sourceClaims = (graph: IProductionGraph): IBranchClaim[] => {
       ],
     }),
     ...branchClaims("filmSources", {
-      name: "film source assembles every screenplay sequence or brief delivery",
+      name: "film source owners answer source-unit principle checklists, assemble every screenplay sequence or brief delivery, and cover film-source obligations",
       type: "typescript",
       files: [...SOURCES.filmSources.files],
       symbol: [...SOURCES.filmSources.symbols],
       disabled: !requiresEvidence(graph.filmSources),
       reference: [
+        sourceUnitPrinciples(shared, requiresReview(graph.filmSources)),
         sourceObligations(
           shared,
           SOURCES.filmSources.obligation,

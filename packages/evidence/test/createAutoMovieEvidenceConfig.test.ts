@@ -253,10 +253,15 @@ try {
 
   const empty = root();
   const graph = createAutoMovieEvidenceConfig(disabled(empty));
-  assert.equal(
-    graph.claims.length,
-    57,
-    "the disabled graph keeps every shared claim instead of silently dropping an empty population",
+  assert.deepEqual(
+    Object.fromEntries(
+      ["markdown", "typescript"].map((type) => [
+        type,
+        graph.claims.filter((claim) => claim.type === type).length,
+      ]),
+    ),
+    { markdown: 37, typescript: 19 },
+    "the disabled graph keeps all 37 authored/population claims and all 19 source/canary claims instead of silently dropping an empty population",
   );
   assert.equal(
     new Set(graph.claims.map((claim) => claim.name)).size,
@@ -264,6 +269,16 @@ try {
     "every shared claim has one stable diagnostic identity",
   );
   for (const claim of graph.claims) {
+    assert.equal(
+      typeof claim.name,
+      "string",
+      "every shared manifest claim must carry its stable diagnostic name",
+    );
+    assert.notEqual(
+      claim.symbol,
+      undefined,
+      `${claim.name} must declare the host symbols projected by the manifest`,
+    );
     assert.ok(
       claim.files.some((file) => file.startsWith("!") === false),
       `${claim.name} lost its prewired positive host glob`,
@@ -273,7 +288,21 @@ try {
       `${claim.name} lost its prewired reference population`,
     );
     for (const reference of referencesOf(claim)) {
-      if (reference.type !== "markdown") continue;
+      assert.equal(
+        reference.type,
+        "markdown",
+        `${claim.name} uses a non-Markdown shared reference the public manifest cannot project`,
+      );
+      assert.equal(
+        reference.files.length,
+        1,
+        `${claim.name} must expose each shared contract or population route as one independently classified reference`,
+      );
+      assert.notEqual(
+        reference.symbol,
+        undefined,
+        `${claim.name} must declare the target symbols projected by the manifest`,
+      );
       for (const file of reference.files) {
         if (file.startsWith("principles/")) {
           assert.equal(
@@ -1470,6 +1499,32 @@ try {
     branchManifest,
     "the same declaration and filesystem must produce one deterministic manifest",
   );
+  const sourceUnitBindings = branchManifest.bindings.filter(
+    (binding) =>
+      binding.target.type === "contract" &&
+      binding.target.path === "principles/core/source-units.md",
+  );
+  assert.deepEqual(
+    sourceUnitBindings.map((binding) => binding.branch),
+    [
+      "mapSources",
+      "modelSources",
+      "spaceSources",
+      "materialSources",
+      "instanceSources",
+      "motionSources",
+      "systemSources",
+      "productionSources",
+    ],
+    "every active source branch and no inactive source branch must expose its source-unit checklist",
+  );
+  assert.equal(
+    sourceUnitBindings.every(
+      (binding) => binding.relationship === "checklist" && binding.enforced,
+    ),
+    true,
+    "review-stage source-unit checklists must be enforced checklist relationships",
+  );
 
   const settingsOnly = root();
   write(settingsOnly, "docs/settings/production.md", "## Scope {#scope}\n");
@@ -1494,6 +1549,13 @@ try {
     ),
     true,
     "filtering an inactive population target must preserve active settings contract routes",
+  );
+  assert.equal(
+    manifestContractPaths(settingsOnlyManifest).includes(
+      "principles/core/source-units.md",
+    ),
+    false,
+    "a manifest with no active source branch must not publish a source-unit checklist",
   );
 
   const pendingResearchConsumption = root();
@@ -1749,7 +1811,9 @@ try {
   );
   assert.ok(
     filmGraph.claims.some((claim) =>
-      claim.name?.includes("film source assembles every screenplay sequence"),
+      claim.name?.includes(
+        "film source owners answer source-unit principle checklists, assemble every screenplay sequence",
+      ),
     ),
     "the complete film ladder did not reach film source",
   );
@@ -1899,6 +1963,7 @@ try {
       "obligations/delivery/shots.md",
       "principles/core/common.md",
       "principles/core/settings.md",
+      "principles/core/source-units.md",
       "principles/delivery/briefs.md",
     ].sort(),
     "a direct brief must expose the complete core and delivery set without film-story contracts",
