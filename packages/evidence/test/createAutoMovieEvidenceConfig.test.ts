@@ -80,6 +80,7 @@ const localTarget = (title: string, anchor: string): string =>
 const disabled = (location: string): Graph => ({
   location,
   kind: null,
+  populationScope: { mode: "complete-production" },
   settings: "disabled",
   research: "disabled",
   maps: "disabled",
@@ -161,6 +162,140 @@ const manifestContractPaths = (
 ];
 
 try {
+  const scopeRoot = root();
+  const missingScope = disabled(scopeRoot) as Partial<Graph>;
+  delete missingScope.populationScope;
+  assert.equal(
+    throws(
+      () => createAutoMovieEvidenceConfig(missingScope as Graph),
+      "populationScope must be an explicit object",
+    ),
+    true,
+  );
+  for (const populationScope of [
+    { mode: "unknown" },
+    { mode: "complete-production", partitionGroup: "001-first" },
+  ])
+    assert.equal(
+      throws(
+        () =>
+          createAutoMovieEvidenceConfig({
+            ...disabled(scopeRoot),
+            populationScope,
+          } as Graph),
+        populationScope.mode === "unknown"
+          ? "Unsupported production population scope"
+          : "unsupported fields: partitionGroup",
+      ),
+      true,
+    );
+  assert.equal(
+    throws(
+      () =>
+        createAutoMovieEvidenceConfig({
+          ...disabled(scopeRoot),
+          kind: "film",
+          populationScope: { mode: "first-pilot" },
+        }),
+      "film pilot requires one exact 001-lower-kebab-case",
+    ),
+    true,
+  );
+  assert.equal(
+    throws(
+      () =>
+        createAutoMovieEvidenceConfig({
+          ...disabled(scopeRoot),
+          kind: "library",
+          populationScope: {
+            mode: "first-pilot",
+            partitionGroup: "001-first",
+          },
+        }),
+      "library pilot cannot invent a partitionGroup",
+    ),
+    true,
+  );
+  assert.equal(
+    throws(
+      () =>
+        createAutoMovieEvidenceConfig({
+          ...disabled(scopeRoot),
+          kind: "brief",
+          populationScope: { mode: "first-pilot" },
+        }),
+      "first-pilot is available only for a film or library",
+    ),
+    true,
+  );
+  assert.deepEqual(
+    createAutoMovieContractBindingManifest(disabled(scopeRoot)).populationScope,
+    { mode: "complete-production" },
+  );
+
+  const pilotRoot = root();
+  write(pilotRoot, "docs/settings/production.md", "## Scope {#scope}\n");
+  const pilotGraph = createAutoMovieEvidenceConfig({
+    ...disabled(pilotRoot),
+    kind: "film",
+    populationScope: {
+      mode: "first-pilot",
+      partitionGroup: "001-first-delivery",
+    },
+    settings: "draft",
+  });
+  assert.deepEqual(
+    pilotGraph.claims.find((claim) =>
+      claim.name?.startsWith("scripts H2 units"),
+    )?.files,
+    ["scripts/001-first-delivery/???-*.md"],
+  );
+
+  const resetRoot = root();
+  write(resetRoot, "docs/settings/production.md", "## Scope {#scope}\n");
+  write(
+    resetRoot,
+    "docs/models/subject.md",
+    "## Subject {#subject}\n<!-- @evidence principles/common.md#scope-preservation Retained pilot review. -->\n",
+  );
+  write(
+    resetRoot,
+    "src/models/subject.ts",
+    "/** @evidence models/subject.md#subject Retained pilot source. */\nexport class Subject {}\n",
+  );
+  const resetDeclaration: Graph = {
+    ...disabled(resetRoot),
+    kind: "library",
+    populationScope: { mode: "complete-production-reset" },
+    settings: "review",
+    models: "draft",
+    modelSources: "draft",
+  };
+  assert.doesNotThrow(() => createAutoMovieEvidenceConfig(resetDeclaration));
+  assert.equal(
+    throws(
+      () =>
+        createAutoMovieEvidenceConfig({
+          ...resetDeclaration,
+          populationScope: { mode: "complete-production" },
+        }),
+      "modelSources cannot enter draft before models is in review",
+    ),
+    true,
+  );
+  assert.equal(
+    throws(
+      () =>
+        createAutoMovieEvidenceConfig({
+          ...disabled(scopeRoot),
+          kind: "library",
+          populationScope: { mode: "complete-production-reset" },
+        }),
+      "requires at least one matching design and source branch in draft",
+    ),
+    true,
+  );
+
   assert.equal(
     throws(
       () =>
@@ -1895,6 +2030,20 @@ try {
       ),
     ),
     "the complete film ladder did not reach film source",
+  );
+  assert.deepEqual(
+    filmGraph.claims.find((claim) =>
+      claim.name?.startsWith("shot and acceptance owners each realize"),
+    )?.symbol,
+    ["property", "function"],
+    "exact shot parentage must select only concrete shot owners",
+  );
+  assert.deepEqual(
+    filmGraph.claims.find((claim) =>
+      claim.name?.startsWith("shot source owners answer source-unit"),
+    )?.symbol,
+    ["type", "property", "function"],
+    "shot source contracts must still cover exported types and concrete owners",
   );
   for (const layer of ["treatments", "scripts", "screenplays"]) {
     const claim = filmGraph.claims.find(

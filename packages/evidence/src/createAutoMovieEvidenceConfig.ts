@@ -8,6 +8,9 @@ import { createRequire } from "node:module";
 import path from "node:path";
 import ts from "typescript-compiler";
 
+import type { AutoMoviePopulationScope } from "./AutoMoviePopulationScope";
+import { createAutoMoviePopulationFiles } from "./createAutoMoviePopulationFiles";
+
 /**
  * A generated production's mutually exclusive evidence topology.
  *
@@ -51,6 +54,8 @@ export interface IAutoMovieEvidenceConfigProps {
   location: string;
   /** Mutually exclusive production shape, or null before selection. */
   kind: ProductionKind | null;
+  /** Exact complete, first-pilot, or post-pilot-reset host population. */
+  populationScope: AutoMoviePopulationScope;
   /** Canonical production-settings document stage. */
   settings: Stage;
   /** Optional external-research ledger stage. */
@@ -149,6 +154,8 @@ type ContractRelationship =
 interface IAutoMovieContractBindingManifest {
   /** Selected production shape, or null before any branch can be active. */
   kind: ProductionKind | null;
+  /** Exact authored population selected by the project declaration. */
+  populationScope: AutoMoviePopulationScope;
   /** Active authored and source branches in deterministic factory order. */
   branches: readonly {
     name: EvidenceBranch;
@@ -1074,6 +1081,55 @@ const EVIDENCE_STAGES: readonly unknown[] = [
 const describeDeclarationValue = (value: unknown): string =>
   typeof value === "string" ? JSON.stringify(value) : String(value);
 
+const validatePopulationScope = (graph: IProductionGraph): void => {
+  const scope: unknown = graph.populationScope;
+  if (scope === null || typeof scope !== "object" || Array.isArray(scope))
+    throw new Error("Production populationScope must be an explicit object.");
+  const declaration = scope as Record<string, unknown>;
+  const mode = declaration.mode;
+  if (
+    mode !== "complete-production" &&
+    mode !== "complete-production-reset" &&
+    mode !== "first-pilot"
+  )
+    throw new Error(
+      `Unsupported production population scope ${describeDeclarationValue(mode)}.`,
+    );
+  const allowed = new Set(
+    mode === "first-pilot" ? ["mode", "partitionGroup"] : ["mode"],
+  );
+  const unexpected = Object.keys(declaration).filter(
+    (key) => !allowed.has(key),
+  );
+  if (unexpected.length !== 0)
+    throw new Error(
+      `Production populationScope has unsupported fields: ${unexpected.join(", ")}.`,
+    );
+  if (mode === "complete-production") return;
+  if (mode === "complete-production-reset") {
+    if (graph.kind !== "film" && graph.kind !== "library")
+      throw new Error(
+        "complete-production-reset is available only after a film or library pilot.",
+      );
+    return;
+  }
+  if (graph.kind === "film") {
+    createAutoMoviePopulationFiles(
+      "scripts",
+      scope as AutoMoviePopulationScope,
+    );
+    return;
+  }
+  if (graph.kind === "library") {
+    if (Object.hasOwn(declaration, "partitionGroup"))
+      throw new Error(
+        "A library pilot cannot invent a partitionGroup selector.",
+      );
+    return;
+  }
+  throw new Error("first-pilot is available only for a film or library.");
+};
+
 const validateDeclaration = (graph: IProductionGraph): void => {
   if (typeof graph.location !== "string" || !path.isAbsolute(graph.location))
     throw new Error(
@@ -1092,6 +1148,7 @@ const validateDeclaration = (graph: IProductionGraph): void => {
     throw new Error(
       `Unsupported production kind ${describeDeclarationValue(kind)}.`,
     );
+  validatePopulationScope(graph);
   for (const name of [
     ...(Object.keys(MARKDOWN) as MarkdownLayer[]),
     ...(Object.keys(SOURCES) as SourceLayer[]),
@@ -1820,6 +1877,33 @@ const validateStages = (graph: IProductionGraph): void => {
       );
     return;
   }
+  if (graph.populationScope.mode === "complete-production-reset") {
+    if (
+      graph.kind === "film" &&
+      [graph.treatments, graph.scripts, graph.screenplays].some(
+        (stage) => stage !== "draft",
+      )
+    )
+      throw new Error(
+        "A film complete-production-reset requires treatments, scripts, and screenplays to reset together to draft.",
+      );
+    if (graph.kind === "library") {
+      const hasResetPair = (Object.keys(SOURCES) as SourceLayer[]).some(
+        (source) => {
+          const design = SOURCES[source].design;
+          return (
+            design !== null &&
+            graph[design] === "draft" &&
+            graph[source] === "draft"
+          );
+        },
+      );
+      if (!hasResetPair)
+        throw new Error(
+          "A library complete-production-reset requires at least one matching design and source branch in draft.",
+        );
+    }
+  }
   if (!isActive(graph.settings) && !isActive(graph.research))
     throw new Error(
       `${graph.kind} must begin with research or an active settings layer.`,
@@ -1865,22 +1949,35 @@ const validateStages = (graph: IProductionGraph): void => {
     "briefs",
   ] as const)
     requireReviewedParent(name, graph[name], "settings", graph.settings);
-  requireReviewedParent(
-    "scripts",
-    graph.scripts,
-    "treatments",
-    graph.treatments,
-  );
-  requireReviewedParent(
-    "screenplays",
-    graph.screenplays,
-    "scripts",
-    graph.scripts,
-  );
+  if (
+    graph.populationScope.mode !== "complete-production-reset" ||
+    graph.kind !== "film"
+  ) {
+    requireReviewedParent(
+      "scripts",
+      graph.scripts,
+      "treatments",
+      graph.treatments,
+    );
+    requireReviewedParent(
+      "screenplays",
+      graph.screenplays,
+      "scripts",
+      graph.scripts,
+    );
+  }
 
   for (const name of Object.keys(SOURCES) as SourceLayer[]) {
     const design = SOURCES[name].design;
-    if (design !== null)
+    if (
+      design !== null &&
+      !(
+        graph.populationScope.mode === "complete-production-reset" &&
+        graph.kind === "library" &&
+        graph[name] === "draft" &&
+        graph[design] === "draft"
+      )
+    )
       requireReviewedParent(name, graph[name], design, graph[design]);
   }
   requireReviewedParent(
@@ -1914,6 +2011,18 @@ const validateStages = (graph: IProductionGraph): void => {
   }
 };
 
+const authoredPopulationFiles = (
+  graph: IProductionGraph,
+  layer: MarkdownLayer,
+): string[] => {
+  if (
+    graph.populationScope.mode === "first-pilot" &&
+    (layer === "treatments" || layer === "scripts" || layer === "screenplays")
+  )
+    return createAutoMoviePopulationFiles(layer, graph.populationScope);
+  return [`${layer}/**/*.md`];
+};
+
 const populationFiles = (
   graph: IProductionGraph,
   roots: readonly string[],
@@ -1925,15 +2034,45 @@ const populationFiles = (
       /[\\/]+$/u,
       "",
     );
-    return walkFiles(path.join(graph.location, concrete), extension);
+    return walkFiles(path.join(graph.location, concrete), extension).filter(
+      (file) => matchesGlob(posix(path.relative(graph.location, file)), root),
+    );
   });
+
+const markdownPopulationFiles = (
+  graph: IProductionGraph,
+  layer: MarkdownLayer,
+): string[] =>
+  graph.populationScope.mode === "first-pilot" &&
+  (layer === "treatments" || layer === "scripts" || layer === "screenplays")
+    ? populationFiles(
+        graph,
+        authoredPopulationFiles(graph, layer).map((file) => `${DOCS}/${file}`),
+        ".md",
+      )
+    : walkFiles(path.join(graph.location, DOCS, layer), ".md");
+
+const acceptsResetEvidenceTags = (
+  graph: IProductionGraph,
+  layer: EvidenceBranch,
+): boolean => {
+  if (graph.populationScope.mode !== "complete-production-reset") return false;
+  if (graph.kind === "film")
+    return ["treatments", "scripts", "screenplays"].includes(layer);
+  if (graph.kind !== "library") return false;
+  if ((DESIGN_LAYERS as readonly string[]).includes(layer)) return true;
+  return (
+    (Object.keys(SOURCES) as SourceLayer[]).includes(layer as SourceLayer) &&
+    SOURCES[layer as SourceLayer].design !== null
+  );
+};
 
 const validateHosts = (graph: IProductionGraph): void => {
   const identities = new Map<MarkdownLayer, Map<string, IHeadingIdentity[]>>();
   for (const name of Object.keys(MARKDOWN) as MarkdownLayer[]) {
     const stage = graph[name];
     const directory = path.join(graph.location, DOCS, name);
-    const files = walkFiles(directory, ".md");
+    const files = markdownPopulationFiles(graph, name);
     if (!isActive(stage) && files.length !== 0)
       throw new Error(
         `${name} is disabled but governed hosts remain: ${files.map((file) => posix(path.relative(graph.location, file))).join(", ")}.`,
@@ -1945,7 +2084,11 @@ const validateHosts = (graph: IProductionGraph): void => {
     for (const file of files) {
       const relative = posix(path.relative(directory, file));
       const source = fs.readFileSync(file, "utf8");
-      if (stage === "draft" && EVIDENCE_TAG.test(source))
+      if (
+        stage === "draft" &&
+        EVIDENCE_TAG.test(source) &&
+        !acceptsResetEvidenceTags(graph, name)
+      )
         throw new Error(
           `${posix(path.relative(graph.location, file))} is draft and must be completed before evidence tags are authored.`,
         );
@@ -1978,7 +2121,11 @@ const validateHosts = (graph: IProductionGraph): void => {
       );
     for (const file of files) {
       const source = fs.readFileSync(file, "utf8");
-      if (stage === "draft" && EVIDENCE_TAG.test(source))
+      if (
+        stage === "draft" &&
+        EVIDENCE_TAG.test(source) &&
+        !acceptsResetEvidenceTags(graph, name)
+      )
         throw new Error(
           `${posix(path.relative(graph.location, file))} is draft and must be completed before evidence tags are authored.`,
         );
@@ -2137,7 +2284,7 @@ const referencesPerFile = (
   noEvidenceExclude = false,
 ): ITtscEvidenceGraphReference[] => {
   const root = path.join(graph.location, DOCS);
-  return walkFiles(path.join(root, directory), ".md").map((file) => ({
+  return markdownPopulationFiles(graph, directory).map((file) => ({
     type: "markdown",
     root: DOCS,
     files: [posix(path.relative(root, file))],
@@ -2157,13 +2304,14 @@ const designFoundations = (
     .flatMap((design) => referencesPerFile(graph, design, "h2", review));
 
 const lineage = (
+  graph: IProductionGraph,
   layer: "scripts" | "treatments",
   symbol: "file" | "h2" | "h3" | "h4",
   review: boolean,
 ): ITtscEvidenceGraphReference => ({
   type: "markdown",
   root: DOCS,
-  files: [`${layer}/**/*.md`],
+  files: authoredPopulationFiles(graph, layer),
   symbol,
   noEvidenceExclude: true,
   uniqueEvidence: true,
@@ -2212,11 +2360,11 @@ const authoredClaims = (graph: IProductionGraph): IBranchClaim[] => {
       fileParents.push(...referencesPerFile(graph, "settings", "h2", review));
     fileParents.push(...designFoundations(graph, name, review));
     if (name === "scripts")
-      fileParents.push(lineage("treatments", "file", review));
+      fileParents.push(lineage(graph, "treatments", "file", review));
     if (name === "screenplays")
       fileParents.push(
-        lineage("scripts", "file", review),
-        lineage("treatments", "file", review),
+        lineage(graph, "scripts", "file", review),
+        lineage(graph, "treatments", "file", review),
       );
     if (fileParents.length !== 0)
       claims.push(
@@ -2224,7 +2372,7 @@ const authoredClaims = (graph: IProductionGraph): IBranchClaim[] => {
           name: `${name} files account for inherited settings, designs, and parent files`,
           type: "markdown",
           root: DOCS,
-          files: [`${name}/**/*.md`],
+          files: authoredPopulationFiles(graph, name),
           symbol: "file",
           disabled: !requiresEvidence(stage),
           reference: fileParents,
@@ -2250,12 +2398,22 @@ const authoredClaims = (graph: IProductionGraph): IBranchClaim[] => {
       references.push(...designFoundations(graph, name, review));
       if (name === "scripts")
         references.push(
-          lineage("treatments", `h${symbol}` as "h2" | "h3" | "h4", review),
+          lineage(
+            graph,
+            "treatments",
+            `h${symbol}` as "h2" | "h3" | "h4",
+            review,
+          ),
         );
       if (name === "screenplays")
         references.push(
-          lineage("scripts", `h${symbol}` as "h2" | "h3" | "h4", review),
-          lineage("treatments", `h${symbol}` as "h2" | "h3" | "h4", review),
+          lineage(graph, "scripts", `h${symbol}` as "h2" | "h3" | "h4", review),
+          lineage(
+            graph,
+            "treatments",
+            `h${symbol}` as "h2" | "h3" | "h4",
+            review,
+          ),
         );
       claims.push(
         ...branchClaims(name, {
@@ -2265,7 +2423,7 @@ const authoredClaims = (graph: IProductionGraph): IBranchClaim[] => {
               : `${name} H${symbol} units answer their principle checklists and account for inherited work`,
           type: "markdown",
           root: DOCS,
-          files: [`${name}/**/*.md`],
+          files: authoredPopulationFiles(graph, name),
           symbol: `h${symbol}` as "h2" | "h3" | "h4",
           disabled: !requiresEvidence(stage),
           reference: references,
@@ -2321,7 +2479,7 @@ const UNGOVERNED_SOURCE_DIRECTORIES = ["examples"] as const;
 /**
  * Refuse a source file that belongs to no production layer.
  *
- * The nine source populations are a closed list, and a list makes "owes no
+ * The ten source populations are a closed list, and a list makes "owes no
  * evidence" the silent default for anything added beside it. `src/props/` and
  * `src/creatures/` are not errors the graph reports today: they compile, ship,
  * and cite nothing, and the omission is invisible precisely because no claim
@@ -2431,7 +2589,7 @@ const sourceClaims = (graph: IProductionGraph): IBranchClaim[] => {
       name: "shot and acceptance owners each realize one screenplay scene or brief shot",
       type: "typescript",
       files: [...SOURCES.shots.files],
-      symbol: [...SOURCES.shots.symbols],
+      symbol: [...SOURCES.shots.ownerSymbols],
       disabled: !requiresEvidence(graph.shots),
       reference: {
         type: "markdown",
@@ -2670,7 +2828,12 @@ export const createAutoMovieContractBindingManifest = (
       });
     }
   }
-  return { kind: graph.kind, branches, bindings };
+  return {
+    kind: graph.kind,
+    populationScope: graph.populationScope,
+    branches,
+    bindings,
+  };
 };
 
 /**
