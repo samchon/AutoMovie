@@ -6,8 +6,10 @@ import {
   IAutoMovieAssetManifest,
   IAutoMovieDiagnostic,
   IAutoMovieRenderBundleManifest,
+  IAutoMovieRepaintExecutionPolicy,
   IAutoMovieRepaintGeneratorAdoption,
   IAutoMovieRepaintReceipt,
+  IAutoMovieRepaintRequestEvidence,
   IAutoMovieRepaintShot,
 } from "@automovie/interface";
 import { randomUUID } from "node:crypto";
@@ -30,12 +32,19 @@ import { assertProductionRenditionClipDelivery } from "./muxProductionFeatureMp4
 import { probeProductionVideoMp4 } from "./probeProductionMedia";
 import { readAutoMovieProductionRegistry } from "./productionRegistry";
 import {
+  assertAutoMovieExternalGeneratorTermsAt,
   canonicalAutoMovieRepaintGeneratorAdoption,
   canonicalAutoMovieRepaintRuntimeIdentity,
   productionRepaintOutputPath,
+  productionRepaintRequestFingerprint,
   productionRepaintStructuralControls,
   productionSourceRenderFingerprint,
 } from "./renditionIdentity";
+import {
+  AutoMovieRepaintAttemptError,
+  assertAutoMovieRepaintExecutionPolicy,
+  executeAutoMovieRepaintRequest,
+} from "./repaintExecution";
 
 /**
  * Optional host repaint orchestration and immutable rendition provenance.
@@ -44,6 +53,13 @@ export class AutoMovieProductionRepaintService {
   public constructor(
     private readonly adapter?: AutoMovieProductionShotRepaint,
     private readonly generator?: IAutoMovieRepaintGeneratorAdoption,
+    private readonly execution?: {
+      policy: IAutoMovieRepaintExecutionPolicy;
+      evidence: IAutoMovieRepaintRequestEvidence;
+      requestId?: string;
+      signal?: AbortSignal;
+      now?: () => Date;
+    },
   ) {}
 
   /**
@@ -76,6 +92,7 @@ export class AutoMovieProductionRepaintService {
       message: string,
     ): IAutoMovieRepaintShot => ({
       repainted: false,
+      selected: false,
       productionId: requestedProductionId,
       shot: requestedShot,
       receipt: null,
@@ -114,6 +131,63 @@ export class AutoMovieProductionRepaintService {
   }
 
   /**
+   * Select or reverse to one reviewed candidate without invoking the adapter.
+   */
+  public select(
+    context: AutoMovieProductionContext,
+    input: {
+      productionId: string;
+      shot: string;
+      attemptId: string;
+      kind: "selection" | "reversal";
+      reason: string;
+      structuralReview: string;
+      continuityReview: {
+        baseline: string;
+        playbackEvidence: string;
+        mixedDeliveryPolicy: string | null;
+        flicker: "pass";
+        identityDrift: "pass";
+        geometryWarp: "pass";
+        textureCrawl: "pass";
+        transitionMismatch: "pass";
+      } | null;
+    },
+  ): IAutoMovieRepaintShot {
+    const services = context.forProduction(input.productionId);
+    try {
+      const receipt = services.project.selectRepaintCandidate({
+        ...input,
+        selectedAt: (this.execution?.now ?? (() => new Date()))().toISOString(),
+      });
+      return {
+        repainted: true,
+        selected: true,
+        productionId: input.productionId,
+        shot: input.shot,
+        receipt,
+        diagnostics: [],
+      };
+    } catch (error) {
+      return {
+        repainted: false,
+        selected: false,
+        productionId: input.productionId,
+        shot: input.shot,
+        receipt: null,
+        diagnostics: [
+          diagnostic(
+            "repaint-commit-refused",
+            input.shot,
+            error instanceof Error ? error.message : String(error),
+            "render",
+          ),
+        ],
+      };
+    }
+  }
+
+  /**
    * Repaint one current shot from verified deterministic controls.
    */
   public async repaint(
@@ -131,6 +205,7 @@ export class AutoMovieProductionRepaintService {
       message: string,
     ): IAutoMovieRepaintShot => ({
       repainted: false,
+      selected: false,
       productionId: services.project.productionId,
       shot: requestedShot,
       receipt: null,
@@ -241,14 +316,66 @@ export class AutoMovieProductionRepaintService {
       parameters: structuredClone(input.parameters),
       references: structuredClone(input.references),
     };
-    const attemptId = randomUUID();
+    const requestId = this.execution?.requestId ?? randomUUID();
+    const now = this.execution?.now ?? (() => new Date());
+    const preflightAt = now();
+    const executionPolicy = this.execution?.policy ?? LEGACY_REPAINT_POLICY;
+    const evidence =
+      this.execution?.evidence ?? legacyRepaintEvidence(requestedShot);
+    try {
+      assertAutoMovieRepaintExecutionPolicy(executionPolicy);
+      assertRepaintEvidence(evidence);
+      assertAutoMovieExternalGeneratorTermsAt({
+        termsCheckedAt: generator.generatorProvenance.termsCheckedAt,
+        occurredAt: preflightAt,
+        label: "repaint generator provenance",
+      });
+    } catch (error) {
+      return failure(
+        "repaint-host-unavailable",
+        error instanceof Error ? error.message : String(error),
+      );
+    }
     let resolvedSource: ICurrentShotSource | null;
     try {
+      const currentCapture = await services.oracle.preview({
+        target: { kind: "shot", id: requestedShot },
+        time: 0,
+        pass: "beauty",
+        width: expectedOutput.width,
+        height: expectedOutput.height,
+      });
+      if (
+        currentCapture.captured === false ||
+        currentCapture.renderBundle === null
+      )
+        return failure(
+          "repaint-source-evidence-missing",
+          `The current dialogue and capture runtime could not produce a verified source frame: ${currentCapture.diagnostics
+            .map((diagnostic) => diagnostic.message)
+            .join("; ")}`,
+        );
+      const currentManifest = services.project.verifiedRenderManifest(
+        path.join(
+          services.project.root,
+          currentCapture.renderBundle,
+          "manifest.json",
+        ),
+      );
+      if (currentManifest === null)
+        return failure(
+          "repaint-source-evidence-invalid",
+          "The current dialogue and capture runtime produced no verifiable render manifest. Discard that capture and retry before repaint.",
+        );
       resolvedSource = currentShotSource(
         services,
         requestedShot,
         registry.inputFingerprint,
         expectedOutput,
+        {
+          dialogueRuntimeIdentity: currentManifest.dialogueRuntimeIdentity,
+          rendererIdentity: currentManifest.rendererIdentity,
+        },
       );
     } catch (error) {
       return failure(
@@ -314,84 +441,6 @@ export class AutoMovieProductionRepaintService {
         return false;
       }
     };
-    let generated: Awaited<ReturnType<AutoMovieProductionShotRepaint>>;
-    try {
-      generated = await this.adapter({
-        projectRoot: services.project.root,
-        productionId: services.project.productionId,
-        compileFingerprint: registry.inputFingerprint,
-        shot: requestedShot,
-        source: {
-          bundle: source.bundle,
-          manifest: structuredClone(source.manifest),
-          fingerprint: sourceRenderFingerprint,
-          frames: source.frames.map((frame) => ({
-            index: frame.index,
-            time: frame.time,
-            pass: frame.pass,
-            digest: frame.digest,
-            bytes: services.project.readRenderFile(
-              normalizeSlash(path.join(source.bundle, frame.path)),
-            ),
-          })),
-          captureRuntime: parseAutoMovieCaptureRuntimeIdentity(
-            source.manifest.rendererIdentity,
-          ),
-        },
-        references: structuredClone(references.values),
-        parameters: structuredClone(request.parameters),
-      });
-    } catch (error) {
-      return failure(
-        "repaint-failed",
-        `${
-          error instanceof Error ? error.message : String(error)
-        }. Correct the configured repaint adapter and retry without changing the deterministic source receipt.`,
-      );
-    }
-    if (inputCurrent() === false)
-      return failure(
-        "repaint-input-changed",
-        "Compiler registry or deterministic source pixels changed while repaint was running. Discard the mixed result and retry from current evidence.",
-      );
-    let adapterIdentity: string;
-    let probe: ReturnType<typeof probeProductionVideoMp4>;
-    try {
-      if (generated.mediaType !== "video/mp4" || generated.bytes.length === 0)
-        throw new Error("the adapter did not return non-empty video/mp4 bytes");
-      adapterIdentity = canonicalAutoMovieRepaintRuntimeIdentity(
-        generated.runtimeIdentity,
-      );
-      if (adapterIdentity !== selectedAdapterIdentity)
-        throw new Error(
-          "the adapter reported a provider, model, version, or execution boundary different from the reviewed generator adoption",
-        );
-      probe = probeProductionVideoMp4(generated.bytes);
-      if (
-        probe.kind !== "video" ||
-        probe.width !== expectedOutput.width ||
-        probe.height !== expectedOutput.height ||
-        probe.frameCount !== expectedOutput.frameCount ||
-        Math.abs(probe.fps - expectedOutput.fps) > 1e-9 ||
-        Math.abs(probe.runtimeSeconds - expectedOutput.runtimeSeconds) > 1e-9
-      )
-        throw new Error(
-          `the adapter output does not match the exact ${expectedOutput.width}x${expectedOutput.height}, ${expectedOutput.fps}fps, ${expectedOutput.frameCount}-frame shot contract`,
-        );
-      assertProductionRenditionClipDelivery({
-        bytes: generated.bytes,
-        shot: requestedShot,
-        ...expectedOutput,
-      });
-    } catch (error) {
-      return failure(
-        "repaint-output-invalid",
-        `${
-          error instanceof Error ? error.message : String(error)
-        }. Return a parseable H.264 MP4 and complete structured adapter identity.`,
-      );
-    }
-    const outputDigest = digestAutoMovieBytes(generated.bytes);
     const referenceReceipts = references.values.map(
       ({ role, path: referencePath, digest }) => ({
         role,
@@ -399,23 +448,236 @@ export class AutoMovieProductionRepaintService {
         digest,
       }),
     );
+    const requestFingerprint = productionRepaintRequestFingerprint({
+      shot: requestedShot,
+      compileFingerprint: registry.inputFingerprint,
+      sourceRenderFingerprint,
+      adapterIdentity: selectedAdapterIdentity,
+      generatorProvenance: generator.generatorProvenance,
+      parameters: request.parameters,
+      executionPolicy,
+      evidence,
+      references: referenceReceipts,
+    });
+    let priorAttempts;
+    try {
+      priorAttempts = this.execution?.requestId
+        ? services.project.repaintRequestAttempts(requestId)
+        : [];
+    } catch (error) {
+      return failure(
+        "repaint-input-invalid",
+        error instanceof Error ? error.message : String(error),
+      );
+    }
+    if (
+      this.execution?.requestId !== undefined &&
+      (priorAttempts.length === 0 ||
+        priorAttempts.some(
+          (attempt) => attempt.requestFingerprint !== requestFingerprint,
+        ))
+    )
+      return failure(
+        "repaint-input-invalid",
+        "Explicit retry requires an existing request whose source, generator, controls, references, evidence, and execution policy are still exact.",
+      );
+    const spent = priorAttempts.reduce(
+      (sum, attempt) => sum + attempt.costUnits,
+      0,
+    );
+    const elapsed =
+      priorAttempts.length === 0
+        ? 0
+        : preflightAt.getTime() -
+          new Date(priorAttempts[0]!.startedAt).getTime();
+    const remainingAttempts =
+      executionPolicy.maximumAttempts - priorAttempts.length;
+    const remainingElapsed = executionPolicy.maximumElapsedMs - elapsed;
+    const remainingCost = executionPolicy.maximumCostUnits - spent;
+    if (remainingAttempts <= 0 || remainingElapsed <= 0 || remainingCost <= 0)
+      return failure(
+        "repaint-failed",
+        "The repaint request exhausted its declared attempt, elapsed-time, or cost budget. Reroll only by creating a new request identity.",
+      );
+    const remainingPolicy: IAutoMovieRepaintExecutionPolicy = {
+      ...executionPolicy,
+      maximumAttempts: remainingAttempts,
+      maximumElapsedMs: remainingElapsed,
+      maximumCostUnits: remainingCost,
+      attemptTimeoutMs: Math.min(
+        executionPolicy.attemptTimeoutMs,
+        remainingElapsed,
+      ),
+      backoffMs: executionPolicy.backoffMs.slice(
+        priorAttempts.length,
+        priorAttempts.length + remainingAttempts - 1,
+      ),
+    };
+    let execution;
+    try {
+      execution = await executeAutoMovieRepaintRequest({
+        productionId: services.project.productionId,
+        shot: requestedShot,
+        requestId,
+        ordinalOffset: priorAttempts.length,
+        requestFingerprint,
+        compileFingerprint: registry.inputFingerprint,
+        sourceRenderFingerprint,
+        adapterIdentity: selectedAdapterIdentity,
+        seed: request.parameters.seed,
+        policy: remainingPolicy,
+        signal: this.execution?.signal,
+        runtime: {
+          now,
+          attemptId: randomUUID,
+          wait: waitForRepaintBackoff,
+        },
+        execute: async (signal) => {
+          const generated = await this.adapter!({
+            signal,
+            projectRoot: services.project.root,
+            productionId: services.project.productionId,
+            compileFingerprint: registry.inputFingerprint,
+            shot: requestedShot,
+            source: {
+              bundle: source.bundle,
+              manifest: structuredClone(source.manifest),
+              fingerprint: sourceRenderFingerprint,
+              frames: source.frames.map((frame) => ({
+                index: frame.index,
+                time: frame.time,
+                pass: frame.pass,
+                digest: frame.digest,
+                bytes: services.project.readRenderFile(
+                  normalizeSlash(path.join(source.bundle, frame.path)),
+                ),
+              })),
+              captureRuntime: parseAutoMovieCaptureRuntimeIdentity(
+                source.manifest.rendererIdentity,
+              ),
+            },
+            references: structuredClone(references.values),
+            parameters: structuredClone(request.parameters),
+          });
+          const outputDigest =
+            generated.bytes.length === 0
+              ? null
+              : digestAutoMovieBytes(generated.bytes);
+          const availableOutput =
+            outputDigest === null
+              ? null
+              : { digest: outputDigest, bytes: generated.bytes.length };
+          const costUnits = generated.costUnits ?? 0;
+          if (inputCurrent() === false)
+            throw new AutoMovieRepaintAttemptError(
+              "input-stale",
+              "Compiler registry or deterministic source pixels changed while repaint was running.",
+              costUnits,
+              availableOutput,
+            );
+          try {
+            if (
+              generated.mediaType !== "video/mp4" ||
+              generated.bytes.length === 0
+            )
+              throw new Error(
+                "the adapter did not return non-empty video/mp4 bytes",
+              );
+            const adapterIdentity = canonicalAutoMovieRepaintRuntimeIdentity(
+              generated.runtimeIdentity,
+            );
+            if (adapterIdentity !== selectedAdapterIdentity)
+              throw new Error(
+                "the adapter reported a provider, model, version, or execution boundary different from the reviewed generator adoption",
+              );
+            const probe = probeProductionVideoMp4(generated.bytes);
+            if (
+              probe.kind !== "video" ||
+              probe.width !== expectedOutput.width ||
+              probe.height !== expectedOutput.height ||
+              probe.frameCount !== expectedOutput.frameCount ||
+              Math.abs(probe.fps - expectedOutput.fps) > 1e-9 ||
+              Math.abs(probe.runtimeSeconds - expectedOutput.runtimeSeconds) >
+                1e-9
+            )
+              throw new Error(
+                `the adapter output does not match the exact ${expectedOutput.width}x${expectedOutput.height}, ${expectedOutput.fps}fps, ${expectedOutput.frameCount}-frame shot contract`,
+              );
+            assertProductionRenditionClipDelivery({
+              bytes: generated.bytes,
+              shot: requestedShot,
+              ...expectedOutput,
+            });
+            return {
+              value: {
+                generated,
+                adapterIdentity,
+                probe,
+                outputDigest: outputDigest!,
+              },
+              costUnits,
+              availableOutput,
+            };
+          } catch (error) {
+            throw new AutoMovieRepaintAttemptError(
+              "invalid-output",
+              error instanceof Error ? error.message : String(error),
+              costUnits,
+              availableOutput,
+            );
+          }
+        },
+        onAttempt: () => undefined,
+      });
+      for (const attempt of execution.attempts)
+        services.project.commitRepaintAttempt(attempt);
+    } catch (error) {
+      return failure(
+        "repaint-commit-refused",
+        error instanceof Error ? error.message : String(error),
+      );
+    }
+    if (execution.accepted === null)
+      return failure(
+        execution.attempts.at(-1)?.status === "stale"
+          ? "repaint-input-changed"
+          : execution.attempts.at(-1)?.status === "invalid"
+            ? "repaint-output-invalid"
+            : "repaint-failed",
+        `Repaint request stopped as ${execution.stop}; every terminal attempt was preserved and no candidate was selected.`,
+      );
+    const { generated, adapterIdentity, probe, outputDigest } = execution
+      .accepted.value as {
+      generated: Awaited<ReturnType<AutoMovieProductionShotRepaint>>;
+      adapterIdentity: string;
+      probe: ReturnType<typeof probeProductionVideoMp4>;
+      outputDigest: AutoMovieContentDigest;
+    };
+    const acceptedAttempt = execution.accepted.attempt;
     const outputPath = productionRepaintOutputPath({
       shot: requestedShot,
       sourceRenderFingerprint,
-      attemptId,
+      attemptId: acceptedAttempt.attemptId,
       adapterIdentity,
       generatorProvenance: generator.generatorProvenance,
       parameters: request.parameters,
+      executionPolicy,
+      evidence,
       references: referenceReceipts,
       outputDigest,
     });
     const receipt: IAutoMovieRepaintReceipt = {
-      version: 3,
+      version: 4,
       productionId: services.project.productionId,
       shot: requestedShot,
       compileFingerprint: registry.inputFingerprint,
       sourceRenderFingerprint,
-      attemptId,
+      requestId,
+      attemptId: acceptedAttempt.attemptId,
+      startedAt: acceptedAttempt.startedAt,
+      completedAt: acceptedAttempt.completedAt,
+      costUnits: acceptedAttempt.costUnits,
+      executionPolicy: structuredClone(executionPolicy),
       sourceBundle: source.bundle,
       controls: productionRepaintStructuralControls(source.manifest),
       references: referenceReceipts,
@@ -423,6 +685,7 @@ export class AutoMovieProductionRepaintService {
       generatorProvenance: structuredClone(generator.generatorProvenance),
       structuralAuthority: "deterministic-source-only",
       parameters: structuredClone(request.parameters),
+      evidence: structuredClone(evidence),
       output: {
         path: outputPath,
         digest: outputDigest,
@@ -446,6 +709,7 @@ export class AutoMovieProductionRepaintService {
     }
     return {
       repainted: true,
+      selected: false,
       productionId: services.project.productionId,
       shot: requestedShot,
       receipt,
@@ -471,6 +735,10 @@ const currentShotSource = (
     fps: number;
     frameCount: number;
   },
+  runtime: Pick<
+    IAutoMovieRenderBundleManifest,
+    "dialogueRuntimeIdentity" | "rendererIdentity"
+  >,
 ): ICurrentShotSource | null => {
   const candidates = physicalFiles(services.project.renderRoot())
     .filter((file) => path.basename(file) === "manifest.json")
@@ -490,6 +758,8 @@ const currentShotSource = (
       if (
         manifest === null ||
         manifest.compileFingerprint !== compileFingerprint ||
+        manifest.dialogueRuntimeIdentity !== runtime.dialogueRuntimeIdentity ||
+        manifest.rendererIdentity !== runtime.rendererIdentity ||
         manifest.target.kind !== "shot" ||
         manifest.target.id !== shot ||
         manifest.renderSpec.frameFormat.width !== expected.width ||
@@ -534,6 +804,62 @@ const currentShotSource = (
     );
   return candidates[0] ?? null;
 };
+
+const LEGACY_REPAINT_POLICY: IAutoMovieRepaintExecutionPolicy = {
+  maximumAttempts: 1,
+  attemptTimeoutMs: 3_600_000,
+  maximumElapsedMs: 3_600_000,
+  maximumCostUnits: Number.MAX_SAFE_INTEGER,
+  backoffMs: [],
+  retryableFailures: [],
+};
+
+const legacyRepaintEvidence = (
+  shot: string,
+): IAutoMovieRepaintRequestEvidence => ({
+  prompt: `legacy:repaint:${shot}:prompt`,
+  continuity: null,
+  settings: "legacy:repaint:settings",
+  design: `legacy:repaint:${shot}:design`,
+  screenplayOrBrief: `legacy:repaint:${shot}:screenplay-or-brief`,
+  shot: `legacy:repaint:${shot}:shot`,
+});
+
+const assertRepaintEvidence = (
+  evidence: IAutoMovieRepaintRequestEvidence,
+): void => {
+  for (const [key, value] of Object.entries(evidence)) {
+    if (key === "continuity" && value === null) continue;
+    if (
+      typeof value !== "string" ||
+      value.trim().length === 0 ||
+      value !== value.trim()
+    )
+      throw new Error(
+        `Repaint request evidence ${key} must be a trimmed non-empty stable address.`,
+      );
+  }
+};
+
+const waitForRepaintBackoff = (
+  milliseconds: number,
+  signal: AbortSignal,
+): Promise<void> =>
+  new Promise((resolve, reject) => {
+    if (signal.aborted) {
+      reject(new Error("Repaint request was cancelled during backoff."));
+      return;
+    }
+    const abort = (): void => {
+      clearTimeout(timer);
+      reject(new Error("Repaint request was cancelled during backoff."));
+    };
+    const timer = setTimeout(() => {
+      signal.removeEventListener("abort", abort);
+      resolve();
+    }, milliseconds);
+    signal.addEventListener("abort", abort, { once: true });
+  });
 
 const resolveReferences = (
   services: IAutoMovieProductionServices,

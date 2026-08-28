@@ -18,6 +18,13 @@ import {
  */
 export interface IAutoMovieProductionRepaintInput {
   /**
+   * Attempt-scoped cancellation boundary.
+   *
+   * @evidence requirements/repaint/retries-seeds-and-variation.md#repaint-retry-budget-stop Lets the host stop a timed-out or explicitly cancelled external execution instead of leaving an unbounded call.
+   * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-repaint-attempt-selection Types cancellation as part of one distinct attempt rather than a request mutation.
+   */
+  signal: AbortSignal;
+  /**
    * Active project root.
    *
    * @evidence requirements/repaint/source-frames-and-reference-locking.md#repaint-reference-roles Exposes `projectRoot` as the portable data boundary for the repaint reference roles requirement.
@@ -114,4 +121,11 @@ export type AutoMovieProductionShotRepaint = (
   mediaType: "video/mp4";
   /** Structured provider/model identity. */
   runtimeIdentity: IAutoMovieRepaintRuntimeIdentity;
+  /**
+   * Non-negative metered cost in the unit declared by the execution policy.
+   *
+   * @evidence requirements/repaint/retries-seeds-and-variation.md#repaint-retry-budget-stop Lets the request stop at its declared cost ceiling.
+   * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-repaint-attempt-selection Carries attempt cost into bounded retry adjudication.
+   */
+  costUnits?: number;
 }>;

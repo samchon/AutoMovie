@@ -176,6 +176,55 @@ export interface IAutoMovieRepaintGeneratorAdoption {
   generatorProvenance: IAutoMovieRepaintGeneratorProvenance;
 }
 
+/** Failure classes that an authored repaint retry policy may admit. */
+export type AutoMovieRepaintFailureClass =
+  | "timeout"
+  | "rate-limit"
+  | "transport"
+  | "provider-refusal"
+  | "invalid-output"
+  | "cancelled"
+  | "input-stale"
+  | "budget-exhausted"
+  | "internal";
+
+/**
+ * Complete bounded execution policy for one immutable repaint request.
+ *
+ * @evidence requirements/repaint/retries-seeds-and-variation.md#repaint-retry-budget-stop Makes attempts, timeout, elapsed time, cost, retryability, and deterministic backoff authored inputs rather than hidden host behavior.
+ * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-repaint-attempt-selection Types the bounded request policy consumed before an external call.
+ */
+export interface IAutoMovieRepaintExecutionPolicy {
+  /** Maximum provider calls belonging to one request. */
+  maximumAttempts: number;
+  /** Per-attempt cancellation deadline in milliseconds. */
+  attemptTimeoutMs: number;
+  /** Whole-request wall-time ceiling in milliseconds. */
+  maximumElapsedMs: number;
+  /** Maximum metered cost in the adapter's declared cost unit. */
+  maximumCostUnits: number;
+  /** One deterministic delay for every possible retry. */
+  backoffMs: number[];
+  /** Exact failure classes allowed to consume another attempt. */
+  retryableFailures: AutoMovieRepaintFailureClass[];
+}
+
+/** Stable authored evidence addresses retained by one repaint request. */
+export interface IAutoMovieRepaintRequestEvidence {
+  /** Prompt and negative-prompt owner. */
+  prompt: string;
+  /** Applicable versioned continuity owner, or null outside film continuity. */
+  continuity: string | null;
+  /** Settings decision governing delivery and shared visual grammar. */
+  settings: string;
+  /** Design owner governing the exact subject or space appearance. */
+  design: string;
+  /** Screenplay or bounded brief owner that requires the shot. */
+  screenplayOrBrief: string;
+  /** Exact shot-source owner and acceptance surface. */
+  shot: string;
+}
+
 /**
  * Immutable provenance for one accepted repaint rendition.
  *
@@ -189,7 +238,7 @@ export interface IAutoMovieRepaintReceipt {
    * @evidence requirements/repaint/scope-and-user-choice.md#repaint-independent-artifact Exposes `version` as the portable data boundary for the repaint independent artifact requirement.
    * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-repaint-output-provenance Types `version` for the asset spec repaint output provenance system contract.
    */
-  version: 3;
+  version: 3 | 4;
   /**
    * Owning production namespace.
    *
@@ -219,12 +268,27 @@ export interface IAutoMovieRepaintReceipt {
    */
   sourceRenderFingerprint: AutoMovieContentDigest;
   /**
+   * Immutable identity shared by the transport attempts of one request.
+   *
+   * @evidence requirements/repaint/retries-seeds-and-variation.md#repaint-retry-request-boundary Separates a request from the attempts that retry it.
+   * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-repaint-attempt-selection Carries the stable request side of request/attempt identity.
+   */
+  requestId?: string;
+  /**
    * Host-generated identity of this repaint invocation.
    *
    * @evidence requirements/repaint/scope-and-user-choice.md#repaint-independent-artifact Exposes `attemptId` as the portable data boundary for the repaint independent artifact requirement.
    * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-repaint-output-provenance Types `attemptId` for the asset spec repaint output provenance system contract.
    */
   attemptId: string;
+  /** UTC instant captured immediately before this provider call. */
+  startedAt?: string;
+  /** UTC instant captured when the validated candidate completed. */
+  completedAt?: string;
+  /** Metered cost charged to this successful attempt. */
+  costUnits?: number;
+  /** Complete bounded policy under which the request executed. */
+  executionPolicy?: IAutoMovieRepaintExecutionPolicy;
   /**
    * Content-addressed deterministic source bundle.
    *
@@ -289,6 +353,8 @@ export interface IAutoMovieRepaintReceipt {
    * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-repaint-output-provenance Types `parameters` for the asset spec repaint output provenance system contract.
    */
   parameters: IAutoMovieRepaintParameters;
+  /** Stable evidence addresses from which this immutable request was formed. */
+  evidence?: IAutoMovieRepaintRequestEvidence;
   /**
    * Verified rendition output.
    *
@@ -321,6 +387,8 @@ export interface IAutoMovieRepaintShot {
    * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-repaint-controls-references Types `repainted` for the asset spec repaint controls references system contract.
    */
   repainted: boolean;
+  /** True only when a separate guarded selection transaction made it active. */
+  selected: boolean;
   /**
    * Current production namespace.
    *

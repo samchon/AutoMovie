@@ -2,10 +2,12 @@ import {
   AutoMovieContentDigest,
   AutoMovieRepaintReferenceRole,
   IAutoMovieRenderBundleManifest,
+  IAutoMovieRepaintExecutionPolicy,
   IAutoMovieRepaintGeneratorAdoption,
   IAutoMovieRepaintGeneratorProvenance,
   IAutoMovieRepaintParameters,
   IAutoMovieRepaintReceipt,
+  IAutoMovieRepaintRequestEvidence,
   IAutoMovieRepaintRuntimeIdentity,
 } from "@automovie/interface";
 import path from "node:path";
@@ -61,7 +63,8 @@ export const canonicalAutoMovieRepaintGeneratorProvenance = (
     ]) === false ||
     isNonBlank(provenance.source) === false ||
     isNonBlank(provenance.license) === false ||
-    isRealCalendarDate(provenance.termsCheckedAt) === false ||
+    canonicalAutoMovieExternalGeneratorTermsDate(provenance.termsCheckedAt) !==
+      provenance.termsCheckedAt ||
     isNonBlank(provenance.cost) === false ||
     hasExactKeys(provenance.consumer, ["kind", "reason"]) === false ||
     provenance.consumer.kind !== "repaint" ||
@@ -71,6 +74,69 @@ export const canonicalAutoMovieRepaintGeneratorProvenance = (
       "Repaint generator provenance requires exact non-blank source, license, real YYYY-MM-DD terms review, cost, and a reasoned repaint consumer, with no credential or hidden field.",
     );
   return canonicalizeAutoMovieJson(provenance);
+};
+
+/**
+ * Canonicalize one real external-generator terms review calendar date.
+ *
+ * This content-identity operation deliberately has no wall-clock dependency.
+ * Execution and adoption boundaries compare the result with their captured
+ * UTC instant through `assertAutoMovieExternalGeneratorTermsAt`.
+ *
+ * @evidence requirements/repaint/providers-models-and-credentials.md#repaint-provider-terms Keeps a real reviewed terms date in generator provenance without making content identity depend on the current clock.
+ * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-repaint-output-provenance Separates canonical generator identity from runtime-fact validation.
+ */
+export const canonicalAutoMovieExternalGeneratorTermsDate = (
+  value: unknown,
+): string => {
+  if (
+    isNonBlank(value) === false ||
+    /^\d{4}-\d{2}-\d{2}$/u.test(value) === false
+  )
+    throw new Error(
+      "External generator termsCheckedAt must be a real YYYY-MM-DD date.",
+    );
+  const parsed = new Date(`${value}T00:00:00.000Z`);
+  if (
+    Number.isNaN(parsed.getTime()) ||
+    parsed.toISOString().slice(0, 10) !== value
+  )
+    throw new Error(
+      "External generator termsCheckedAt must be a real YYYY-MM-DD date.",
+    );
+  return value;
+};
+
+/**
+ * Refuse a terms review that lies after one captured execution/adoption time.
+ *
+ * The caller supplies the instant so preflight, persisted-receipt validation,
+ * UTC-midnight tests, and resumed work all use the same explicit fact instead
+ * of consulting ambient time inside a content-identity helper.
+ *
+ * @evidence requirements/repaint/providers-models-and-credentials.md#repaint-provider-terms Prevents a repaint execution from claiming terms were reviewed on a later UTC calendar day.
+ * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-repaint-output-provenance Binds reviewed generator terms to the immutable execution or adoption instant retained by the receipt.
+ */
+export const assertAutoMovieExternalGeneratorTermsAt = (props: {
+  termsCheckedAt: unknown;
+  occurredAt: Date | string;
+  label: string;
+}): string => {
+  const termsCheckedAt = canonicalAutoMovieExternalGeneratorTermsDate(
+    props.termsCheckedAt,
+  );
+  const occurredAt =
+    props.occurredAt instanceof Date
+      ? new Date(props.occurredAt.getTime())
+      : new Date(props.occurredAt);
+  if (Number.isNaN(occurredAt.getTime()))
+    throw new Error(`${props.label} requires a valid execution instant.`);
+  const executionDate = occurredAt.toISOString().slice(0, 10);
+  if (termsCheckedAt > executionDate)
+    throw new Error(
+      `${props.label}.termsCheckedAt ${termsCheckedAt} is later than execution UTC date ${executionDate}.`,
+    );
+  return termsCheckedAt;
 };
 
 /** Validate and canonicalize one exact repaint generator adoption. */
@@ -149,6 +215,8 @@ export const productionRepaintOutputPath = (props: {
   adapterIdentity: string;
   generatorProvenance: IAutoMovieRepaintGeneratorProvenance;
   parameters: IAutoMovieRepaintParameters;
+  executionPolicy?: IAutoMovieRepaintExecutionPolicy;
+  evidence?: IAutoMovieRepaintRequestEvidence;
   references: readonly {
     role: AutoMovieRepaintReferenceRole;
     path: string;
@@ -158,13 +226,15 @@ export const productionRepaintOutputPath = (props: {
 }): string => {
   const request = digestAutoMovieBytes(
     canonicalAutoMovieJsonBytes({
-      protocol: "automovie.repaint-request.v3",
+      protocol: "automovie.repaint-request.v4",
       attemptId: props.attemptId,
       adapterIdentity: props.adapterIdentity,
       generatorProvenance: JSON.parse(
         canonicalAutoMovieRepaintGeneratorProvenance(props.generatorProvenance),
       ),
       parameters: props.parameters,
+      executionPolicy: props.executionPolicy,
+      evidence: props.evidence,
       references: props.references,
     }),
   );
@@ -176,6 +246,39 @@ export const productionRepaintOutputPath = (props: {
     `${props.outputDigest.slice(7)}.mp4`,
   ].join("/");
 };
+
+/** Content identity shared by every transport retry of one repaint request. */
+export const productionRepaintRequestFingerprint = (props: {
+  shot: string;
+  compileFingerprint: AutoMovieContentDigest;
+  sourceRenderFingerprint: AutoMovieContentDigest;
+  adapterIdentity: string;
+  generatorProvenance: IAutoMovieRepaintGeneratorProvenance;
+  parameters: IAutoMovieRepaintParameters;
+  executionPolicy: IAutoMovieRepaintExecutionPolicy;
+  evidence: IAutoMovieRepaintRequestEvidence;
+  references: readonly {
+    role: AutoMovieRepaintReferenceRole;
+    path: string;
+    digest: AutoMovieContentDigest;
+  }[];
+}): AutoMovieContentDigest =>
+  digestAutoMovieBytes(
+    canonicalAutoMovieJsonBytes({
+      protocol: "automovie.repaint-request.v4",
+      shot: props.shot,
+      compileFingerprint: props.compileFingerprint,
+      sourceRenderFingerprint: props.sourceRenderFingerprint,
+      adapterIdentity: props.adapterIdentity,
+      generatorProvenance: JSON.parse(
+        canonicalAutoMovieRepaintGeneratorProvenance(props.generatorProvenance),
+      ),
+      parameters: props.parameters,
+      executionPolicy: props.executionPolicy,
+      evidence: props.evidence,
+      references: props.references,
+    }),
+  );
 
 /**
  * Convert one render-root path to the corresponding tracked receipt path.
@@ -211,16 +314,3 @@ const isNonBlank = (value: unknown): value is string =>
   typeof value === "string" &&
   value.trim().length !== 0 &&
   value === value.trim();
-
-const isRealCalendarDate = (value: unknown): value is string => {
-  if (
-    isNonBlank(value) === false ||
-    /^\d{4}-\d{2}-\d{2}$/u.test(value) === false
-  )
-    return false;
-  const parsed = new Date(`${value}T00:00:00.000Z`);
-  return (
-    Number.isNaN(parsed.getTime()) === false &&
-    parsed.toISOString().startsWith(value)
-  );
-};

@@ -52,6 +52,7 @@ import {
 } from "./productionArchetypes";
 import { readAutoMovieProductionOwnedFile } from "./productionRenderJob";
 import {
+  assertAutoMovieExternalGeneratorTermsAt,
   canonicalAutoMovieRepaintRuntimeIdentity,
   productionRepaintActiveReceiptPath,
   productionRepaintOutputPath,
@@ -59,6 +60,10 @@ import {
   productionRepaintStructuralControls,
   productionSourceRenderFingerprint,
 } from "./renditionIdentity";
+import {
+  IAutoMovieRepaintAttemptRecord,
+  assertAutoMovieRepaintExecutionPolicy,
+} from "./repaintExecution";
 import {
   IAutoMovieProductionRootNamespaceLease,
   acquireOrCreateProductionRootNamespace,
@@ -128,10 +133,37 @@ export interface IAutoMovieProductionContentInput {
 }
 
 interface IAutoMovieActiveRepaintReceipt {
-  version: 1;
+  version: 2;
   shot: string;
+  selection: string;
   receipt: string;
   output: string;
+}
+
+interface IAutoMovieRepaintSelectionRecord {
+  version: 1;
+  selectionId: string;
+  kind: "selection" | "reversal";
+  productionId: string;
+  shot: string;
+  requestId: string;
+  attemptId: string;
+  selectedAt: string;
+  candidateReceipt: string;
+  output: string;
+  previousSelection: string | null;
+  reason: string;
+  structuralReview: string;
+  continuityReview: {
+    baseline: string;
+    playbackEvidence: string;
+    mixedDeliveryPolicy: string | null;
+    flicker: "pass";
+    identityDrift: "pass";
+    geometryWarp: "pass";
+    textureCrawl: "pass";
+    transitionMismatch: "pass";
+  } | null;
 }
 
 /**
@@ -1830,8 +1862,71 @@ export class AutoMovieProductionProject {
     return this.commitFiles(writes, inputCurrent);
   }
 
+  /** Persist one immutable terminal repaint attempt without changing selection. */
+  public commitRepaintAttempt(
+    attempt: IAutoMovieRepaintAttemptRecord,
+    inputCurrent?: () => boolean,
+  ): number {
+    this.assertRepaintAttempt(attempt);
+    const relative = repaintAttemptPath(attempt.requestId, attempt.attemptId);
+    if (this.readTrackedStateFile(relative) !== null)
+      throw new Error(`Repaint attempt "${attempt.attemptId}" already exists.`);
+    return this.commitFiles(
+      [
+        {
+          path: path.join(this.productionStateRoot, ...relative.split("/")),
+          content: serializeJson(attempt),
+        },
+      ],
+      inputCurrent,
+    );
+  }
+
+  /** Read every immutable terminal attempt belonging to one request. */
+  public repaintRequestAttempts(
+    requestId: string,
+  ): IAutoMovieRepaintAttemptRecord[] {
+    const request = uuid(requestId, "Repaint request id");
+    const directory = path.join(
+      this.productionStateRoot,
+      "renditions",
+      "attempts",
+      request,
+    );
+    if (lstatOrNull(directory) === null) return [];
+    if (fs.lstatSync(directory).isSymbolicLink())
+      throw new Error("Repaint attempt directory must not be a link.");
+    return fs
+      .readdirSync(directory, { withFileTypes: true })
+      .filter((entry) => entry.isFile() && entry.name.endsWith(".json"))
+      .sort((left, right) => compareCodeUnits(left.name, right.name))
+      .flatMap((entry): IAutoMovieRepaintAttemptRecord[] => {
+        try {
+          const bytes = this.readTrackedStateFile(
+            `renditions/attempts/${request}/${entry.name}`,
+          );
+          if (bytes === null) return [];
+          const decoded = JSON.parse(
+            Buffer.from(bytes).toString("utf8"),
+          ) as IAutoMovieRepaintAttemptRecord;
+          this.assertRepaintAttempt(decoded);
+          return decoded.requestId === request ? [decoded] : [];
+        } catch {
+          return [];
+        }
+      })
+      .sort(
+        (left, right) =>
+          left.ordinal - right.ordinal ||
+          compareCodeUnits(left.attemptId, right.attemptId),
+      );
+  }
+
   /**
-   * Atomically commit one parsed repaint clip and its immutable receipt.
+   * Atomically commit one parsed repaint candidate and immutable receipt.
+   *
+   * The active pointer is deliberately untouched. A candidate becomes current
+   * only through `selectRepaintCandidate` after review.
    */
   public commitRepaintRendition(
     receipt: IAutoMovieRepaintReceipt,
@@ -1840,32 +1935,184 @@ export class AutoMovieProductionProject {
   ): number {
     const validation = typia.validateEquals<IAutoMovieRepaintReceipt>(receipt);
     if (validation.success === false)
-      throw new Error("Repaint receipt does not match its strict v3 schema.");
+      throw new Error("Repaint receipt does not match its strict v4 schema.");
     this.assertCurrentRepaintReceipt(receipt, bytes);
     const output = resolveInside(this.renderRoot(), receipt.output.path);
     const tracked = path.join(
       this.productionStateRoot,
       ...productionRepaintReceiptPath(receipt.output.path).split("/"),
     );
-    const active = path.join(
-      this.productionStateRoot,
-      ...productionRepaintActiveReceiptPath(receipt.shot).split("/"),
-    );
     return this.commitFiles(
       [
         { path: output, content: bytes },
         { path: tracked, content: serializeJson(receipt) },
-        {
-          path: active,
-          content: serializeJson({
-            version: 1,
-            shot: receipt.shot,
-            receipt: productionRepaintReceiptPath(receipt.output.path),
-            output: receipt.output.path,
-          } satisfies IAutoMovieActiveRepaintReceipt),
-        },
       ],
       inputCurrent,
+    );
+  }
+
+  /**
+   * Select or reverse to one stored current candidate in a guarded transaction.
+   */
+  public selectRepaintCandidate(props: {
+    shot: string;
+    attemptId: string;
+    kind: "selection" | "reversal";
+    reason: string;
+    structuralReview: string;
+    continuityReview: IAutoMovieRepaintSelectionRecord["continuityReview"];
+    selectedAt: string;
+    inputCurrent?: () => boolean;
+  }): IAutoMovieRepaintReceipt {
+    const receipt = this.verifiedRepaintCandidates([props.shot]).find(
+      (candidate) => candidate.attemptId === props.attemptId,
+    );
+    if (receipt === undefined)
+      throw new Error(
+        `Repaint candidate "${props.attemptId}" is absent, invalid, or stale for shot "${props.shot}".`,
+      );
+    const selectedAt = new Date(props.selectedAt);
+    if (
+      Number.isNaN(selectedAt.getTime()) ||
+      selectedAt.toISOString() !== props.selectedAt
+    )
+      throw new Error("Repaint selection requires an exact UTC instant.");
+    assertAutoMovieExternalGeneratorTermsAt({
+      termsCheckedAt: receipt.generatorProvenance.termsCheckedAt,
+      occurredAt: selectedAt,
+      label: "repaint selection generator provenance",
+    });
+    assertAutoMovieRepaintExecutionPolicy(receipt.executionPolicy!);
+    const reason = trimmedText(props.reason, "Repaint selection reason");
+    const structuralReview = trimmedText(
+      props.structuralReview,
+      "Repaint structural review evidence",
+    );
+    const continuityReview = props.continuityReview;
+    if (continuityReview !== null) {
+      trimmedText(continuityReview.baseline, "Repaint continuity baseline");
+      trimmedText(
+        continuityReview.playbackEvidence,
+        "Repaint sequence playback evidence",
+      );
+      if (continuityReview.mixedDeliveryPolicy !== null)
+        trimmedText(
+          continuityReview.mixedDeliveryPolicy,
+          "Repaint mixed-delivery transition policy",
+        );
+      if (
+        continuityReview.flicker !== "pass" ||
+        continuityReview.identityDrift !== "pass" ||
+        continuityReview.geometryWarp !== "pass" ||
+        continuityReview.textureCrawl !== "pass" ||
+        continuityReview.transitionMismatch !== "pass"
+      )
+        throw new Error(
+          "Repaint continuity selection requires passing flicker, identity drift, geometry warp, texture crawl, and transition mismatch observations.",
+        );
+    }
+    const activePath = productionRepaintActiveReceiptPath(props.shot);
+    const activeBytes = this.readTrackedStateFile(activePath);
+    let previousSelection: string | null = null;
+    if (activeBytes !== null) {
+      const previous = typia.validateEquals<IAutoMovieActiveRepaintReceipt>(
+        JSON.parse(Buffer.from(activeBytes).toString("utf8")),
+      );
+      if (previous.success === false || previous.data.shot !== props.shot)
+        throw new Error("Current repaint selection pointer is malformed.");
+      previousSelection = previous.data.selection;
+    }
+    if (props.kind === "reversal" && previousSelection === null)
+      throw new Error(
+        "Repaint reversal requires an existing active selection.",
+      );
+    const selectionId = randomUUID();
+    const selectionPath = repaintSelectionPath(props.shot, selectionId);
+    const candidateReceipt = productionRepaintReceiptPath(receipt.output.path);
+    const selection: IAutoMovieRepaintSelectionRecord = {
+      version: 1,
+      selectionId,
+      kind: props.kind,
+      productionId: this.productionId,
+      shot: props.shot,
+      requestId: receipt.requestId!,
+      attemptId: receipt.attemptId,
+      selectedAt: props.selectedAt,
+      candidateReceipt,
+      output: receipt.output.path,
+      previousSelection,
+      reason,
+      structuralReview,
+      continuityReview: structuredClone(continuityReview),
+    };
+    const pointer: IAutoMovieActiveRepaintReceipt = {
+      version: 2,
+      shot: props.shot,
+      selection: selectionPath,
+      receipt: candidateReceipt,
+      output: receipt.output.path,
+    };
+    const previousIdentity = activeBytes?.toString() ?? null;
+    this.commitFiles(
+      [
+        {
+          path: path.join(
+            this.productionStateRoot,
+            ...selectionPath.split("/"),
+          ),
+          content: serializeJson(selection),
+        },
+        {
+          path: path.join(this.productionStateRoot, ...activePath.split("/")),
+          content: serializeJson(pointer),
+        },
+      ],
+      () =>
+        (props.inputCurrent?.() ?? true) &&
+        (this.readTrackedStateFile(activePath)?.toString() ?? null) ===
+          previousIdentity,
+    );
+    return receipt;
+  }
+
+  /** Re-read every immutable current candidate without consulting selection. */
+  public verifiedRepaintCandidates(
+    shots?: readonly string[],
+  ): IAutoMovieRepaintReceipt[] {
+    this.refreshRevision();
+    const selectedShots = shots === undefined ? null : new Set(shots);
+    const directory = path.join(this.productionStateRoot, "renditions");
+    if (lstatOrNull(directory) === null) return [];
+    if (fs.lstatSync(directory).isSymbolicLink())
+      throw new Error("Repaint candidate directory must not be a link.");
+    const receipts: IAutoMovieRepaintReceipt[] = [];
+    for (const entry of fs
+      .readdirSync(directory, { withFileTypes: true })
+      .sort((left, right) => compareCodeUnits(left.name, right.name))) {
+      if (entry.isFile() === false || entry.name.endsWith(".json") === false)
+        continue;
+      try {
+        const bytes = this.readTrackedStateFile(`renditions/${entry.name}`);
+        if (bytes === null) continue;
+        const validation = typia.validateEquals<IAutoMovieRepaintReceipt>(
+          JSON.parse(Buffer.from(bytes).toString("utf8")),
+        );
+        if (
+          validation.success === false ||
+          (selectedShots !== null &&
+            selectedShots.has(validation.data.shot) === false)
+        )
+          continue;
+        const output = this.readRenderFile(validation.data.output.path);
+        this.assertCurrentRepaintReceipt(validation.data, output);
+        receipts.push(validation.data);
+      } catch {}
+    }
+    return receipts.sort(
+      (left, right) =>
+        compareCodeUnits(left.shot, right.shot) ||
+        compareCodeUnits(left.completedAt!, right.completedAt!) ||
+        compareCodeUnits(left.attemptId, right.attemptId),
     );
   }
 
@@ -1891,6 +2138,14 @@ export class AutoMovieProductionProject {
           );
         if (pointerValidation.success === false) continue;
         const pointer = pointerValidation.data;
+        const selectionBytes = this.readTrackedStateFile(pointer.selection);
+        if (selectionBytes === null) continue;
+        const selectionValidation =
+          typia.validateEquals<IAutoMovieRepaintSelectionRecord>(
+            JSON.parse(Buffer.from(selectionBytes).toString("utf8")),
+          );
+        if (selectionValidation.success === false) continue;
+        const selection = selectionValidation.data;
         const bytes = this.readTrackedStateFile(pointer.receipt);
         if (bytes === null) continue;
         const validation = typia.validateEquals<IAutoMovieRepaintReceipt>(
@@ -1898,14 +2153,42 @@ export class AutoMovieProductionProject {
         );
         if (validation.success === false || validation.data.shot !== shot)
           continue;
+        const selectedAt = new Date(selection.selectedAt);
+        if (
+          Number.isNaN(selectedAt.getTime()) ||
+          selectedAt.toISOString() !== selection.selectedAt
+        )
+          continue;
+        assertAutoMovieExternalGeneratorTermsAt({
+          termsCheckedAt: validation.data.generatorProvenance.termsCheckedAt,
+          occurredAt: selection.selectedAt,
+          label: "stored repaint selection generator provenance",
+        });
         if (
           canonicalizeAutoMovieJson(pointer) !==
-          canonicalizeAutoMovieJson({
-            version: 1,
-            shot,
-            receipt: productionRepaintReceiptPath(validation.data.output.path),
-            output: validation.data.output.path,
-          } satisfies IAutoMovieActiveRepaintReceipt)
+            canonicalizeAutoMovieJson({
+              version: 2,
+              shot,
+              selection: pointer.selection,
+              receipt: productionRepaintReceiptPath(
+                validation.data.output.path,
+              ),
+              output: validation.data.output.path,
+            } satisfies IAutoMovieActiveRepaintReceipt) ||
+          selection.productionId !== this.productionId ||
+          selection.shot !== shot ||
+          selection.selectionId !== path.basename(pointer.selection, ".json") ||
+          selection.requestId !== validation.data.requestId ||
+          selection.attemptId !== validation.data.attemptId ||
+          selection.candidateReceipt !== pointer.receipt ||
+          selection.output !== pointer.output ||
+          selection.structuralReview.trim().length === 0 ||
+          (validation.data.evidence?.continuity === null
+            ? selection.continuityReview !== null
+            : selection.continuityReview === null ||
+              selection.continuityReview.baseline !==
+                validation.data.evidence?.continuity ||
+              selection.continuityReview.playbackEvidence.trim().length === 0)
         )
           continue;
         const output = this.readRenderFile(validation.data.output.path);
@@ -1920,15 +2203,65 @@ export class AutoMovieProductionProject {
     );
   }
 
+  /** Revalidate one immutable terminal repaint attempt record. */
+  private assertRepaintAttempt(attempt: IAutoMovieRepaintAttemptRecord): void {
+    const startedAt = new Date(attempt.startedAt);
+    const completedAt = new Date(attempt.completedAt);
+    if (
+      attempt.version !== 1 ||
+      attempt.productionId !== this.productionId ||
+      attempt.shot.trim().length === 0 ||
+      uuid(attempt.requestId, "Repaint request id") !== attempt.requestId ||
+      uuid(attempt.attemptId, "Repaint attempt id") !== attempt.attemptId ||
+      Number.isSafeInteger(attempt.ordinal) === false ||
+      attempt.ordinal <= 0 ||
+      /^sha256:[0-9a-f]+$/u.test(attempt.requestFingerprint) === false ||
+      /^sha256:[0-9a-f]+$/u.test(attempt.compileFingerprint) === false ||
+      /^sha256:[0-9a-f]+$/u.test(attempt.sourceRenderFingerprint) === false ||
+      attempt.adapterIdentity.trim().length === 0 ||
+      Number.isSafeInteger(attempt.seed) === false ||
+      Number.isNaN(startedAt.getTime()) ||
+      Number.isNaN(completedAt.getTime()) ||
+      startedAt.toISOString() !== attempt.startedAt ||
+      completedAt.toISOString() !== attempt.completedAt ||
+      completedAt.getTime() < startedAt.getTime() ||
+      Number.isFinite(attempt.costUnits) === false ||
+      attempt.costUnits < 0 ||
+      (attempt.status === "succeeded") !== (attempt.failure === null) ||
+      (attempt.failure !== null &&
+        (attempt.failure.message.trim().length === 0 ||
+          (attempt.failure.retryable && attempt.status !== "failed"))) ||
+      (attempt.availableOutput !== null &&
+        (attempt.availableOutput.bytes <= 0 ||
+          /^sha256:[0-9a-f]+$/u.test(attempt.availableOutput.digest) === false))
+    )
+      throw new Error("Repaint attempt record is malformed.");
+  }
+
   /** Revalidate a stored repaint receipt against every current dependency. */
   private assertCurrentRepaintReceipt(
     receipt: IAutoMovieRepaintReceipt,
     bytes: Uint8Array,
   ): void {
+    const startedAt = new Date(receipt.startedAt ?? Number.NaN);
+    const completedAt = new Date(receipt.completedAt ?? Number.NaN);
     if (
+      receipt.version !== 4 ||
+      /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu.test(
+        receipt.requestId ?? "",
+      ) === false ||
       /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu.test(
         receipt.attemptId,
       ) === false ||
+      Number.isNaN(startedAt.getTime()) ||
+      Number.isNaN(completedAt.getTime()) ||
+      startedAt.toISOString() !== receipt.startedAt ||
+      completedAt.toISOString() !== receipt.completedAt ||
+      completedAt.getTime() < startedAt.getTime() ||
+      Number.isFinite(receipt.costUnits) === false ||
+      receipt.costUnits! < 0 ||
+      receipt.executionPolicy === undefined ||
+      receipt.evidence === undefined ||
       receipt.parameters.prompt.trim().length === 0 ||
       receipt.parameters.prompt !== receipt.parameters.prompt.trim() ||
       (receipt.parameters.negativePrompt !== undefined &&
@@ -1950,6 +2283,11 @@ export class AutoMovieProductionProject {
       receipt.controls.length === 0
     )
       throw new Error("Stored repaint receipt parameters are invalid.");
+    assertAutoMovieExternalGeneratorTermsAt({
+      termsCheckedAt: receipt.generatorProvenance.termsCheckedAt,
+      occurredAt: receipt.startedAt!,
+      label: "stored repaint generator provenance",
+    });
     const generated = this.generatedManifest();
     if (
       generated === null ||
@@ -2000,6 +2338,8 @@ export class AutoMovieProductionProject {
       adapterIdentity: receipt.adapterIdentity,
       generatorProvenance: receipt.generatorProvenance,
       parameters: receipt.parameters,
+      executionPolicy: receipt.executionPolicy!,
+      evidence: receipt.evidence!,
       references: receipt.references,
       outputDigest: receipt.output.digest,
     });
@@ -3888,6 +4228,38 @@ const diagnosticIdentity = (
 const serializeJson = (value: unknown): string =>
   `${JSON.stringify(value, null, 2)}\n`;
 
+const repaintAttemptPath = (requestId: string, attemptId: string): string =>
+  path.posix.join(
+    "renditions",
+    "attempts",
+    encodeAutoMoviePathSegment(uuid(requestId, "Repaint request id")),
+    `${encodeAutoMoviePathSegment(uuid(attemptId, "Repaint attempt id"))}.json`,
+  );
+
+const repaintSelectionPath = (shot: string, selectionId: string): string =>
+  path.posix.join(
+    "renditions",
+    "selections",
+    encodeAutoMoviePathSegment(trimmedText(shot, "Repaint shot")),
+    `${encodeAutoMoviePathSegment(uuid(selectionId, "Repaint selection id"))}.json`,
+  );
+
+const uuid = (value: string, label: string): string => {
+  if (
+    /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu.test(
+      value,
+    ) === false
+  )
+    throw new Error(`${label} must be a UUID v4.`);
+  return value;
+};
+
+const trimmedText = (value: string, label: string): string => {
+  if (value.trim().length === 0 || value !== value.trim())
+    throw new Error(`${label} must be trimmed and non-empty.`);
+  return value;
+};
+
 const temporaryPath = (file: string, operation: "tmp" | "delete"): string =>
   `${file}.${operation}.${process.pid}.${randomUUID()}`;
 
@@ -4300,12 +4672,17 @@ const pathsOverlap = (left: string, right: string): boolean =>
 export const productionRenderBundleRelativePath = (
   manifest: Pick<
     IAutoMovieRenderBundleManifest,
-    "target" | "rendererIdentity" | "targetFingerprint" | "renderSpec"
+    | "target"
+    | "dialogueRuntimeIdentity"
+    | "rendererIdentity"
+    | "targetFingerprint"
+    | "renderSpec"
   >,
 ): string => {
   const renderSpecFingerprint = digestAutoMovieBytes(
     canonicalAutoMovieJsonBytes({
       target: manifest.target,
+      dialogueRuntimeIdentity: manifest.dialogueRuntimeIdentity,
       rendererIdentity: manifest.rendererIdentity,
       renderSpec: manifest.renderSpec,
     }),

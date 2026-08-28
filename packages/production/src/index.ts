@@ -31,6 +31,7 @@ export * from "./production/productionPublicationSnapshot";
 export * from "./production/productionRenderJob";
 export * from "./production/productionRenderGc";
 export * from "./production/productionRegistry";
+export * from "./production/repaintExecution";
 export * from "./production/renditionIdentity";
 export * from "./production/renderIdentity";
 export * from "./production/rootNamespaceLock";

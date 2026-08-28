@@ -6,6 +6,8 @@ import type {
   IAutoMovieRepaintRuntimeIdentity,
 } from "@automovie/interface";
 import {
+  assertAutoMovieExternalGeneratorTermsAt,
+  canonicalAutoMovieExternalGeneratorTermsDate,
   canonicalAutoMovieRepaintGeneratorAdoption,
   canonicalAutoMovieRepaintGeneratorProvenance,
   canonicalAutoMovieRepaintRuntimeIdentity,
@@ -57,6 +59,8 @@ const messageOf = (operation: () => unknown): string | null => {
  *    rendition path, while an unchanged request retains the same path.
  * 4. Public repaint receipt v3 requires both reviewed provenance and the
  *    deterministic-source authority boundary.
+ * 5. Terms dates canonicalize without a clock, while runtime validation uses
+ *    one explicit UTC instant and refuses only a later calendar day.
  */
 export const test_production_repaint_generator_identity = (): void => {
   const selected = adoption();
@@ -155,6 +159,36 @@ export const test_production_repaint_generator_identity = (): void => {
           ),
         ) !== null,
     ),
+  );
+  TestValidator.equals(
+    "external generator terms use explicit UTC execution-day boundaries",
+    {
+      leapDay: canonicalAutoMovieExternalGeneratorTermsDate("2028-02-29"),
+      beforeMidnight: assertAutoMovieExternalGeneratorTermsAt({
+        termsCheckedAt: "2026-08-28",
+        occurredAt: "2026-08-28T23:59:59.999Z",
+        label: "repaint generator provenance",
+      }),
+      afterMidnight: assertAutoMovieExternalGeneratorTermsAt({
+        termsCheckedAt: "2026-08-28",
+        occurredAt: "2026-08-29T00:00:00.000Z",
+        label: "repaint generator provenance",
+      }),
+      future: messageOf(() =>
+        assertAutoMovieExternalGeneratorTermsAt({
+          termsCheckedAt: "2026-08-29",
+          occurredAt: "2026-08-28T23:59:59.999Z",
+          label: "repaint generator provenance",
+        }),
+      ),
+    },
+    {
+      leapDay: "2028-02-29",
+      beforeMidnight: "2026-08-28",
+      afterMidnight: "2026-08-28",
+      future:
+        "repaint generator provenance.termsCheckedAt 2026-08-29 is later than execution UTC date 2026-08-28.",
+    },
   );
   TestValidator.predicate(
     "repaint provenance rejects every malformed or hidden adoption field",
