@@ -207,6 +207,9 @@ export const productionRepaintStructuralControls = (
 
 /**
  * Content-addressed output path for one immutable rendition.
+ *
+ * @evidence requirements/repaint/retries-seeds-and-variation.md#repaint-attempt-failure-provenance Binds a candidate output to the complete immutable attempt request rather than an optional subset of its policy or evidence.
+ * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-repaint-attempt-selection Keeps candidate identity distinct when any bounded policy or upstream evidence owner changes.
  */
 export const productionRepaintOutputPath = (props: {
   shot: string;
@@ -215,8 +218,8 @@ export const productionRepaintOutputPath = (props: {
   adapterIdentity: string;
   generatorProvenance: IAutoMovieRepaintGeneratorProvenance;
   parameters: IAutoMovieRepaintParameters;
-  executionPolicy?: IAutoMovieRepaintExecutionPolicy;
-  evidence?: IAutoMovieRepaintRequestEvidence;
+  executionPolicy: IAutoMovieRepaintExecutionPolicy;
+  evidence: IAutoMovieRepaintRequestEvidence;
   references: readonly {
     role: AutoMovieRepaintReferenceRole;
     path: string;

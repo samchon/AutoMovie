@@ -1,8 +1,10 @@
 import type {
   AutoMovieContentDigest,
+  IAutoMovieRepaintExecutionPolicy,
   IAutoMovieRepaintGeneratorAdoption,
   IAutoMovieRepaintGeneratorProvenance,
   IAutoMovieRepaintReceipt,
+  IAutoMovieRepaintRequestEvidence,
   IAutoMovieRepaintRuntimeIdentity,
 } from "@automovie/interface";
 import {
@@ -213,6 +215,22 @@ export const test_production_repaint_generator_identity = (): void => {
     ),
   );
 
+  const executionPolicy: IAutoMovieRepaintExecutionPolicy = {
+    maximumAttempts: 2,
+    attemptTimeoutMs: 1_000,
+    maximumElapsedMs: 10_000,
+    maximumCostUnits: 5,
+    backoffMs: [100],
+    retryableFailures: ["transport"],
+  };
+  const evidence: IAutoMovieRepaintRequestEvidence = {
+    prompt: "docs/prompts/opening.md#repaint",
+    continuity: "docs/continuity/film-v1.md#opening",
+    settings: "docs/settings/visual.md#delivery",
+    design: "docs/design/cast.md#lead",
+    screenplayOrBrief: "docs/screenplays/opening.md#shot",
+    shot: "scripts/shots/opening.ts#opening",
+  };
   const outputRequest = {
     shot: "opening",
     sourceRenderFingerprint: digest("source"),
@@ -228,6 +246,8 @@ export const test_production_repaint_generator_identity = (): void => {
       strength: 0.35,
       controls: { scheduler: "fixed", guidance: 7.5 },
     },
+    executionPolicy,
+    evidence,
     references: [
       {
         role: "style" as const,
@@ -306,7 +326,86 @@ export const test_production_repaint_generator_identity = (): void => {
         },
       ],
     },
+    {
+      ...outputRequest,
+      references: [
+        {
+          ...outputRequest.references[0]!,
+          role: "material" as const,
+        },
+      ],
+    },
+    {
+      ...outputRequest,
+      references: [
+        {
+          ...outputRequest.references[0]!,
+          digest: digest("another-style"),
+        },
+      ],
+    },
+    {
+      ...outputRequest,
+      executionPolicy: {
+        ...executionPolicy,
+        maximumAttempts: 3,
+        backoffMs: [100, 200],
+      },
+    },
+    {
+      ...outputRequest,
+      executionPolicy: { ...executionPolicy, attemptTimeoutMs: 900 },
+    },
+    {
+      ...outputRequest,
+      executionPolicy: { ...executionPolicy, maximumElapsedMs: 11_000 },
+    },
+    {
+      ...outputRequest,
+      executionPolicy: { ...executionPolicy, maximumCostUnits: 6 },
+    },
+    {
+      ...outputRequest,
+      executionPolicy: { ...executionPolicy, backoffMs: [101] },
+    },
+    {
+      ...outputRequest,
+      executionPolicy: {
+        ...executionPolicy,
+        retryableFailures: [
+          "timeout",
+        ] as IAutoMovieRepaintExecutionPolicy["retryableFailures"],
+      },
+    },
+    {
+      ...outputRequest,
+      evidence: { ...evidence, prompt: `${evidence.prompt}:revised` },
+    },
+    {
+      ...outputRequest,
+      evidence: { ...evidence, continuity: null },
+    },
+    {
+      ...outputRequest,
+      evidence: { ...evidence, settings: `${evidence.settings}:revised` },
+    },
+    {
+      ...outputRequest,
+      evidence: { ...evidence, design: `${evidence.design}:revised` },
+    },
+    {
+      ...outputRequest,
+      evidence: {
+        ...evidence,
+        screenplayOrBrief: `${evidence.screenplayOrBrief}:revised`,
+      },
+    },
+    {
+      ...outputRequest,
+      evidence: { ...evidence, shot: `${evidence.shot}:revised` },
+    },
     { ...outputRequest, attemptId: "attempt-2" },
+    { ...outputRequest, shot: "closing" },
     { ...outputRequest, sourceRenderFingerprint: digest("another-source") },
     { ...outputRequest, outputDigest: digest("another-output") },
   ];
