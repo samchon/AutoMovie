@@ -280,7 +280,10 @@ const targetsForHost = (
   symbol: HostSymbol,
 ): string[] =>
   referencesOf(claim).flatMap((reference) =>
-    reference.root === "docs"
+    reference.root === "docs" &&
+    reference.files.every((file) =>
+      ["scripts/", "treatments/"].some((layer) => file.startsWith(layer)),
+    )
       ? relationshipTargets(layer, index, symbol, reference)
       : h2Targets(root, reference),
   );
@@ -473,9 +476,11 @@ const assertDiagnostic = (
   result: ILintResult,
   claim: string,
   target: string,
+  diagnostic: RegExp,
 ): void => {
   assert.notEqual(result.status, 0, result.output);
   assert.match(result.output, /\[evidence\/graph\]/u);
+  assert.match(result.output, diagnostic);
   assert.ok(result.output.includes(claim), result.output);
   assert.ok(result.output.includes(target), result.output);
 };
@@ -506,7 +511,7 @@ const testFirstPilotPopulation = (module: IEvidenceModule): void => {
   let fixtureFailure: IFixtureFailure | undefined;
   try {
     copySharedContracts(root);
-    write(root, "docs/settings/production.md", "## Scope {#scope}\n");
+    write(root, "docs/research/source.md", "## Source {#source}\n");
     const graph = module.createAutoMovieEvidenceConfig({
       ...disabledState(root),
       kind: "film",
@@ -514,7 +519,7 @@ const testFirstPilotPopulation = (module: IEvidenceModule): void => {
         mode: "first-pilot",
         partitionGroup: GROUP,
       },
-      settings: "draft",
+      research: "draft",
     });
     const claims = new Map<string, IEvidenceClaim>();
     for (const layer of ["scripts", "screenplays"] as const)
@@ -570,11 +575,11 @@ const testFirstPilotPopulation = (module: IEvidenceModule): void => {
     assert.equal(baseline.status, 0, baseline.output);
     assert.doesNotMatch(baseline.output, /\[evidence\/graph\]/u);
 
-    const overflow = "treatments/003-overflow.md#overflow";
+    const overflow = "treatments/003-overflow.md#overflow-event";
     write(
       root,
       "docs/treatments/003-overflow.md",
-      "# Overflow\n\n## Overflow belongs outside the pilot {#overflow}\n\nThis event is realized only by an unselected delivery group.\n",
+      "# Overflow\n\n## Overflow belongs outside the pilot {#overflow-event}\n\nThis event is realized only by an unselected delivery group.\n",
     );
     write(
       root,
@@ -585,6 +590,7 @@ const testFirstPilotPopulation = (module: IEvidenceModule): void => {
       lint(root, "first-pilot-overflow-treatment"),
       claimName("scripts", "h2"),
       overflow,
+      /Missing acknowledgement/u,
     );
   } catch (error) {
     fixtureFailure = { error };
@@ -668,6 +674,7 @@ export const test_evidence_narrative_partition_contract = (): void => {
       lint(root, "missing-script-treatment"),
       claimName("scripts", "h2"),
       TREATMENTS[1],
+      /Missing acknowledgement/u,
     );
     write(root, scriptPath, baseline.scripts[1]!);
 
@@ -693,6 +700,7 @@ export const test_evidence_narrative_partition_contract = (): void => {
       lint(root, "two-script-parents"),
       claimName("screenplays", "h2"),
       scriptTarget(1, "h2"),
+      /exactly one/iu,
     );
     write(root, screenplayPath, baseline.screenplays[0]!);
 
@@ -710,6 +718,7 @@ export const test_evidence_narrative_partition_contract = (): void => {
       lint(root, "missing-screenplay-treatment"),
       claimName("screenplays", "h2"),
       TREATMENTS[1],
+      /Missing acknowledgement/u,
     );
   } catch (error) {
     fixtureFailure = { error };
