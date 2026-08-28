@@ -158,8 +158,13 @@ export const executeAutoMovieRepaintRequest = async <T>(props: {
     if (spent >= props.policy.maximumCostUnits)
       return result(props.requestId, attempts, null, "cost-exhausted");
 
-    const attemptId = nonBlank(props.runtime.attemptId(), "attempt id");
     const attemptStarted = validInstant(props.runtime.now(), "attempt start");
+    if (
+      attemptStarted.getTime() - started.getTime() >=
+      props.policy.maximumElapsedMs
+    )
+      return result(props.requestId, attempts, null, "elapsed-exhausted");
+    const attemptId = nonBlank(props.runtime.attemptId(), "attempt id");
     const controller = new AbortController();
     const relay = (): void => controller.abort(props.signal?.reason);
     props.signal?.addEventListener("abort", relay, { once: true });
@@ -188,6 +193,10 @@ export const executeAutoMovieRepaintRequest = async <T>(props: {
           }, timeoutMs);
         }),
       ]);
+      const outcomeCompleted = validInstant(
+        props.runtime.now(),
+        "attempt completion",
+      );
       if (requestCancelled())
         throw new AutoMovieRepaintAttemptError(
           "cancelled",
@@ -195,7 +204,12 @@ export const executeAutoMovieRepaintRequest = async <T>(props: {
           validCost(outcome.costUnits),
           outcome.availableOutput,
         );
-      if (timedOut)
+      if (
+        timedOut ||
+        outcomeCompleted.getTime() - attemptStarted.getTime() >= timeoutMs ||
+        outcomeCompleted.getTime() - started.getTime() >=
+          props.policy.maximumElapsedMs
+      )
         throw new AutoMovieRepaintAttemptError(
           "timeout",
           `Repaint attempt exceeded ${timeoutMs}ms.`,
@@ -217,7 +231,7 @@ export const executeAutoMovieRepaintRequest = async <T>(props: {
           adapterIdentity: props.adapterIdentity,
           seed: props.seed,
           startedAt: attemptStarted,
-          completedAt: props.runtime.now(),
+          completedAt: outcomeCompleted,
           status: "failed",
           failure: {
             class: "budget-exhausted",
@@ -243,7 +257,7 @@ export const executeAutoMovieRepaintRequest = async <T>(props: {
         adapterIdentity: props.adapterIdentity,
         seed: props.seed,
         startedAt: attemptStarted,
-        completedAt: props.runtime.now(),
+        completedAt: outcomeCompleted,
         status: "succeeded",
         failure: null,
         costUnits,
