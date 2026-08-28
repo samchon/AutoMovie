@@ -14,6 +14,8 @@ Placement record는 자신이 참조하는 원형 identity를 별도 field로 �
 
 ### 검사 Target에서 관찰 단위로의 해석 {#review-system-subject-target-parity}
 
+<!-- @evidenceObligation subject-target-parity 동일 subject target을 구조 관찰과 viewer 관찰에서 같은 identity로 해석하는 계약. -->
+
 <!-- @evidence requirements/review/subject-inspection.md#review-observable-judgeable-parity 제품이 공개한 모든 주체 검사 target이 실제 관찰 단위로 해석되게 만든다. -->
 <!-- @evidence requirements/acceptance/review-surfaces-and-sampling.md#acceptance-subject-surface 주체를 shot과 독립된 acceptance 표면으로 정의한다. -->
 
@@ -32,6 +34,8 @@ Frame과 구간 표면은 반대로 저작된 camera state를 그대로 사용�
 
 ### 주체 검사의 요청 표면 {#review-system-subject-inspection-reach}
 
+<!-- @evidenceObligation subject-inspection-reach 안정된 subject와 viewpoint identity로 실제 viewer 검사를 요청하는 표면. -->
+
 <!-- @evidence requirements/review/subject-inspection.md#review-subject-inspection-reach 화면을 볼 수 없는 당사자가 검사를 요청할 수 있어야 한다는 요구를 요청 표면 계약으로 고정한다. -->
 
 주체 검사 요청 표면은 주체 target, viewpoint plan 선택 규칙과 raster 크기를 입력으로 받고, 해석된 주체 record, plan, 각 시점의 해석된 camera state, 그 시점에서 생산된 관찰 artifact와 coverage를 반환한다. 표면은 저작된 camera, shot 경계와 film time을 입력으로 받지 않으며, 같은 주체, plan 선택 규칙과 raster 크기는 어느 요청자에게나 같은 시점 identity와 같은 camera state를 만든다.
@@ -42,6 +46,8 @@ Frame과 구간 표면은 반대로 저작된 camera state를 그대로 사용�
 
 ### 주체 Observation Record {#review-system-subject-observation}
 
+<!-- @evidenceObligation subject-observation 관찰 조건, 상태, artifact 또는 facts와 digest를 구분해 기록하는 portable record. -->
+
 <!-- @evidence requirements/review/subject-inspection.md#review-subject-evidence 주체 관찰의 evidence 구성과 필수 표본 누락 상태를 정의한다. -->
 
 주체 검사는 current plan record와 observation record를 분리한다. Plan record는 주체 target, compiled revision, compile fingerprint, ordered viewpoint population과 각 viewpoint의 direction, distance, projection, pose와 state를 가진다. 각 observation record는 주체 identity와 revision, required viewpoint identity, 실제 camera pose, artifact identity와 digest, compile fingerprint를 가진다.
@@ -49,6 +55,8 @@ Frame과 구간 표면은 반대로 저작된 camera state를 그대로 사용�
 필수 시점이 없거나 읽을 수 없으면 coverage는 complete가 될 수 없다. 결과는 원인에 따라 not-run, unsupported, indeterminate 또는 partial이며 관찰된 시점의 좁은 결과를 별도로 보존한다.
 
 ### 주체 Freshness {#review-system-subject-freshness}
+
+<!-- @evidenceObligation subject-freshness 현재 compile, source, design, plan과 관찰 runtime identity에 묶인 freshness 검증. -->
 
 <!-- @evidence requirements/review/subject-inspection.md#review-subject-evidence 주체 검토가 stale로 전환되는 조건을 freshness key로 고정한다. -->
 <!-- @evidence requirements/review/subject-inspection.md#review-subject-time-noninterchange 시간 축 검토와 주체 검토가 서로의 freshness를 회복하지 못하게 한다. -->

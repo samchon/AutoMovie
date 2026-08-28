@@ -450,6 +450,8 @@ const resolvePopulation = (
  * @evidence requirements/review/subject-inspection.md#review-subject-evidence Binds each library observation to the current design, source, compile, and plan identities.
  * @evidence requirements/review/subject-inspection.md#review-library-delivery-coverage Exposes the exact graph-derived owner and finite observation populations without promoting inactive residue.
  * @evidence specifications/review-and-acceptance/subject-surface-and-inspection.md#review-system-subject-freshness Derives the current freshness identity before an observation receipt is written.
+ * @evidence specifications/review-and-acceptance/README.md#review-acceptance-system-boundary Reopens compiler-derived library subjects and their exact planned evidence without creating a stored approval or waiver service.
+ * @evidencePart specifications/review-and-acceptance/README.md#review-acceptance-system-boundary::compiled-subject-review-boundary
  * @evidence specifications/review-and-acceptance/subject-surface-and-inspection.md#review-system-library-delivery-coverage Keeps the planned population distinct from received and reopened evidence.
  * @author Samchon
  */

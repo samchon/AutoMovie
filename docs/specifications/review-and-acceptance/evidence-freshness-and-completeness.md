@@ -34,6 +34,8 @@
 
 ### Current와 Historical Evidence {#acceptance-system-current-historical-evidence}
 
+<!-- @evidenceObligation current-historical-closure 현재 판정 closure와 보존된 historical evidence의 식별·분리. -->
+
 <!-- @evidence requirements/acceptance/evidence-and-freshness.md#acceptance-evidence-freshness Binds evidence to target, version, profile, time range and actual artifact identity. -->
 
 Evidence freshness는 target, source와 dependency identity, criterion version, profile, sample scope, context와 actual artifact relation에서 계산한다. Filename, 설명, 생성 시각 또는 비슷한 frame만 같다는 이유로 current 상태를 부여하지 않는다.

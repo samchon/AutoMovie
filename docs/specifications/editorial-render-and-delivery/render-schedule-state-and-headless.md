@@ -3,6 +3,9 @@
 ## Contract units {#spec-render-schedule-state-headless-contract-units}
 
 ### Render phase와 공통 Artifact 축 {#spec-render-artifact-lifecycle}
+
+<!-- @evidenceObligation artifact-lifecycle plan, run, resume, inspect, publish 단계가 공유하는 artifact identity와 상태 전이. -->
+<!-- @evidenceObligation portable-artifact-state render target의 결정적 입력과 content identity를 package-independent record로 보존하는 경계. -->
 <!-- @evidence requirements/rendering/scope-and-artifact-identity.md#rendering-scope-artifact-identity Render artifact의 complete identity를 정밀화한다. -->
 <!-- @evidence requirements/rendering/scope-and-artifact-identity.md#rendering-compile-render-distinction Compile과 render 책임을 정밀화한다. -->
 <!-- @evidence requirements/rendering/scope-and-artifact-identity.md#rendering-planned-materialized 계획과 materialization 상태를 정밀화한다. -->
@@ -20,7 +23,7 @@ Render request는 production과 compiled revision, selected edit, film range, ca
 
 Status와 verify 경로는 source descriptor를 먼저 읽고 기존 plan과 artifact만 관찰하며 생성·설치·capture·publication 동작을 호출하지 않는다. 관찰 중 plan descriptor 또는 generation이 바뀌면 source, input, chunk와 row를 읽기 전후에 currentness를 다시 확인하여 stale 결과가 successor publication을 덮지 못하게 한다. Resource cleanup은 primary failure를 보존하면서 모든 acquired resource를 닫고, cleanup도 실패하면 primary error를 첫 cause로 유지하는 `AggregateError`로 두 실패를 함께 보고한다.
 
-각 render product는 [독립 Artifact 상태 축 계약](../execution-and-recovery/artifacts-and-atomic-publication.md#execution-artifact-lifecycle-contract)의 같은 다섯 축 snapshot을 소비하고 render-specific phase record만 추가한다. Phase record는 requested, planned, scheduled, lowering, rendering, probing, reviewing과 finished position 및 active, succeeded, failed, unsupported 또는 not-run outcome을 가지며 expected predecessor와 새 evidence에 결속된다. Requirement의 partially-materialized와 materialized는 materialization 및 completeness 축에, probed와 reviewed는 validation evidence와 method receipt에, stale은 freshness에 남기므로 phase, path, plan, process success와 과거 receipt가 artifact truth나 current publication을 대신하지 않는다.
+각 render product는 [독립 Artifact 상태 축 계약](../execution-and-recovery/artifacts-and-atomic-publication.md#execution-artifact-lifecycle-contract)의 같은 다섯 축 snapshot을 소비하고 render-specific phase record만 추가한다. Portable render target은 renderer, settings, asset closure와 content digest를 고정하고, CLI lifecycle은 plan, run, status, verify와 finalize 단계 전이를 소유한다. Phase record는 requested, planned, scheduled, lowering, rendering, probing, reviewing과 finished position 및 active, succeeded, failed, unsupported 또는 not-run outcome을 가지며 expected predecessor와 새 evidence에 결속된다. Requirement의 partially-materialized와 materialized는 materialization 및 completeness 축에, probed와 reviewed는 validation evidence와 method receipt에, stale은 freshness에 남기므로 phase, path, plan, process success와 과거 receipt가 artifact truth나 current publication을 대신하지 않는다.
 
 Input 변경은 dependency relation에 따라 정확한 product와 downstream encode·review의 freshness를 stale로 바꾸고 consumer 또는 runtime profile 변화는 compatibility를 별도로 다시 판정하며, 이미 관측한 materialization coverage, integrity와 과거 validation receipt를 지우지 않는다. 이전 성공 product는 complete, integrity verified와 당시 validation passed evidence를 유지하면서 현재 expected input에는 stale, 현재 runtime에는 incompatible, publication에는 current 또는 superseded, storage에는 unavailable, policy에는 quarantined일 수 있으며 이 조합을 새 render success로 확대하지 않는다.
 
