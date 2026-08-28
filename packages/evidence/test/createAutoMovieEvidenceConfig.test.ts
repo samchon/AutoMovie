@@ -298,6 +298,20 @@ export const review = true;
     true,
   );
 
+  const missingDeliveryIndex = root();
+  write(
+    missingDeliveryIndex,
+    "docs/scripts/001-unindexed/001-unit.md",
+    "# Unit\n\n## Sequence {#sequence}\n### Scene {#scene}\n#### Beat {#beat}\n",
+  );
+  assert.equal(
+    throws(
+      () => createAutoMovieEvidenceConfig(disabled(missingDeliveryIndex)),
+      "scripts/001-unindexed is a resident delivery group without index.md",
+    ),
+    true,
+  );
+
   const disabledNarrative = root();
   write(disabledNarrative, "docs/scripts/001-stale/index.md", "# Stale\n");
   write(
