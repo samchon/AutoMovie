@@ -2088,6 +2088,15 @@ export class AutoMovieProductionProject {
           "Repaint continuity selection requires passing flicker, identity drift, geometry warp, texture crawl, and transition mismatch observations.",
         );
     }
+    if (
+      receipt.evidence!.continuity === null
+        ? continuityReview !== null
+        : continuityReview === null ||
+          continuityReview.baseline !== receipt.evidence!.continuity
+    )
+      throw new Error(
+        "Repaint continuity selection must match the candidate continuity evidence exactly.",
+      );
     const activePath = productionRepaintActiveReceiptPath(props.shot);
     const verifiedActive = this.verifiedRepaintRenditions([props.shot])[0];
     const activeBytes = this.readTrackedStateFile(activePath);
@@ -2126,7 +2135,14 @@ export class AutoMovieProductionProject {
         throw new Error(
           "Repaint reversal requires a candidate completed before the current active candidate.",
         );
-    }
+    } else if (
+      previousCandidate !== undefined &&
+      new Date(receipt.completedAt!).getTime() <=
+        new Date(previousCandidate.completedAt!).getTime()
+    )
+      throw new Error(
+        "Repaint selection requires a candidate completed after the current active candidate; use reversal for an older candidate.",
+      );
     const selectionId = randomUUID();
     const selectionPath = repaintSelectionPath(props.shot, selectionId);
     const candidateReceipt = productionRepaintReceiptPath(receipt.output.path);
