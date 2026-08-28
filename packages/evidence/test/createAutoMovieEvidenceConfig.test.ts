@@ -82,6 +82,7 @@ const disabled = (location: string): Graph => ({
   kind: null,
   settings: "disabled",
   research: "disabled",
+  maps: "disabled",
   models: "disabled",
   spaces: "disabled",
   materials: "disabled",
@@ -92,6 +93,7 @@ const disabled = (location: string): Graph => ({
   scripts: "disabled",
   screenplays: "disabled",
   briefs: "disabled",
+  mapSources: "disabled",
   modelSources: "disabled",
   spaceSources: "disabled",
   materialSources: "disabled",
@@ -253,7 +255,7 @@ try {
   const graph = createAutoMovieEvidenceConfig(disabled(empty));
   assert.equal(
     graph.claims.length,
-    52,
+    57,
     "the disabled graph keeps every shared claim instead of silently dropping an empty population",
   );
   assert.equal(
@@ -342,6 +344,7 @@ try {
   for (const [layer, expected] of Object.entries({
     settings: ["common", "settings"],
     research: ["common"],
+    maps: ["common", "designs", "maps"],
     models: ["common", "designs", "models"],
     spaces: ["common", "designs", "spaces"],
     materials: ["common", "designs", "materials"],
@@ -436,6 +439,7 @@ try {
   for (const [layer, contract] of Object.entries({
     settings: "settings",
     research: "research",
+    maps: "maps",
     models: "models",
     spaces: "spaces",
     materials: "materials",
@@ -557,6 +561,7 @@ try {
     "the permanent evidence-lint canary was removed",
   );
   for (const layer of [
+    "maps",
     "models",
     "spaces",
     "materials",
@@ -797,6 +802,62 @@ try {
           kind: "library",
         }),
       "must begin with research or an active settings layer",
+    ),
+    true,
+  );
+
+  assert.equal(
+    ["storylines", "scenarios", "script"].some(
+      (legacy) => legacy in disabled(kindWithoutBeginning),
+    ),
+    false,
+    "the public declaration must expose only treatments, scripts, and screenplays",
+  );
+
+  const treatmentBeforeSettings = root();
+  assert.equal(
+    throws(
+      () =>
+        createAutoMovieEvidenceConfig({
+          ...disabled(treatmentBeforeSettings),
+          kind: "film",
+          settings: "draft",
+          treatments: "draft",
+        }),
+      "treatments cannot enter draft before settings is in review",
+    ),
+    true,
+  );
+
+  const scriptBeforeTreatment = root();
+  assert.equal(
+    throws(
+      () =>
+        createAutoMovieEvidenceConfig({
+          ...disabled(scriptBeforeTreatment),
+          kind: "film",
+          settings: "review",
+          treatments: "draft",
+          scripts: "draft",
+        }),
+      "scripts cannot enter draft before treatments is in review",
+    ),
+    true,
+  );
+
+  const screenplayBeforeScript = root();
+  assert.equal(
+    throws(
+      () =>
+        createAutoMovieEvidenceConfig({
+          ...disabled(screenplayBeforeScript),
+          kind: "film",
+          settings: "review",
+          treatments: "review",
+          scripts: "draft",
+          screenplays: "draft",
+        }),
+      "screenplays cannot enter draft before scripts is in review",
     ),
     true,
   );
@@ -1321,6 +1382,7 @@ try {
   const branches = root();
   write(branches, "docs/settings/production.md", "## Scope {#scope}\n");
   for (const name of [
+    "maps",
     "models",
     "spaces",
     "materials",
@@ -1334,19 +1396,28 @@ try {
       `## ${name} owner {#${name}-owner}\n`,
     );
   write(branches, "src/models/owner.ts", "export class ModelOwner {}\n");
-  for (const name of ["spaces", "materials", "instances", "motions", "systems"])
+  for (const name of [
+    "maps",
+    "spaces",
+    "materials",
+    "instances",
+    "motions",
+    "systems",
+  ])
     write(branches, `src/${name}/owner.ts`, `export const ${name}Owner = 1;\n`);
   write(branches, "src/production.ts", "export const production = 1;\n");
   const branchDeclaration: Graph = {
     ...disabled(branches),
     kind: "library",
     settings: "review",
+    maps: "review",
     models: "review",
     spaces: "review",
     materials: "review",
     instances: "review",
     motions: "review",
     systems: "review",
+    mapSources: "review",
     modelSources: "review",
     spaceSources: "review",
     materialSources: "review",
@@ -1362,12 +1433,14 @@ try {
     branchManifest.branches.map((branch) => branch.name),
     [
       "settings",
+      "maps",
       "models",
       "spaces",
       "materials",
       "instances",
       "motions",
       "systems",
+      "mapSources",
       "modelSources",
       "spaceSources",
       "materialSources",
@@ -1522,6 +1595,7 @@ try {
     "the population-wide motion-role obligation must refuse exclusions",
   );
   for (const foundation of [
+    "maps",
     "models",
     "spaces",
     "materials",
@@ -1533,10 +1607,11 @@ try {
       `motion units omitted the active ${foundation} foundation`,
     );
   for (const [host, foundations] of Object.entries({
+    spaces: ["maps"],
     models: ["spaces"],
     materials: ["models", "spaces"],
-    instances: ["models", "spaces", "materials"],
-    systems: ["models", "spaces", "materials", "instances", "motions"],
+    instances: ["maps", "models", "spaces", "materials"],
+    systems: ["maps", "models", "spaces", "materials", "instances", "motions"],
   })) {
     const hostClaim = branchGraph.claims.find((claim) =>
       claim.name?.includes(
@@ -1583,6 +1658,13 @@ try {
   };
   const filmGraph = createAutoMovieEvidenceConfig(filmDeclaration);
   const filmManifest = createAutoMovieContractBindingManifest(filmDeclaration);
+  const filmRouting = JSON.stringify({ filmGraph, filmManifest });
+  for (const legacyPath of ["storylines/", "scenarios/", '"script/**/*.md"'])
+    assert.equal(
+      filmRouting.includes(legacyPath),
+      false,
+      `the canonical film graph must not retain legacy path ${legacyPath}`,
+    );
   assert.equal(
     manifestContractPaths(filmManifest).some((contractPath) =>
       contractPath.includes("/design/"),

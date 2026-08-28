@@ -55,6 +55,8 @@ export interface IAutoMovieEvidenceConfigProps {
   settings: Stage;
   /** Optional external-research ledger stage. */
   research: Stage;
+  /** Broad-world map design-document stage. */
+  maps: Stage;
   /** Model design-document stage. */
   models: Stage;
   /** Built-space and environment design-document stage. */
@@ -77,6 +79,8 @@ export interface IAutoMovieEvidenceConfigProps {
   briefs: Stage;
   /** TypeScript model construction-source stage. */
   modelSources: Stage;
+  /** TypeScript resolved-world construction-source stage. */
+  mapSources: Stage;
   /** TypeScript space construction-source stage. */
   spaceSources: Stage;
   /** TypeScript material construction-source stage. */
@@ -102,6 +106,7 @@ type IProductionGraph = IAutoMovieEvidenceConfigProps;
 type MarkdownLayer =
   | "briefs"
   | "instances"
+  | "maps"
   | "materials"
   | "models"
   | "motions"
@@ -115,6 +120,7 @@ type MarkdownLayer =
 type SourceLayer =
   | "filmSources"
   | "instanceSources"
+  | "mapSources"
   | "materialSources"
   | "modelSources"
   | "motionSources"
@@ -234,6 +240,7 @@ const sharedDocsRoot = (location: string): string => {
 const MARKDOWN: Record<MarkdownLayer, IMarkdownPopulation> = {
   settings: { headings: [2], obligation: true, principle: "settings.md" },
   research: { headings: [2], obligation: false, principle: "research.md" },
+  maps: { headings: [2], obligation: true, principle: "maps.md" },
   models: { headings: [2], obligation: true, principle: "models.md" },
   spaces: { headings: [2], obligation: true, principle: "spaces.md" },
   materials: { headings: [2], obligation: true, principle: "materials.md" },
@@ -262,6 +269,14 @@ const MARKDOWN: Record<MarkdownLayer, IMarkdownPopulation> = {
   },
 };
 const SOURCES: Record<SourceLayer, ISourcePopulation> = {
+  mapSources: {
+    design: "maps",
+    files: ["src/maps/**/*.ts"],
+    ownerKinds: ["class", "property", "function"],
+    ownerSymbols: ["type", "property", "function"],
+    obligation: "map-sources.md",
+    symbols: ["type", "property", "function"],
+  },
   modelSources: {
     design: "models",
     files: ["src/models/**/*.ts"],
@@ -336,6 +351,7 @@ const SOURCES: Record<SourceLayer, ISourcePopulation> = {
   },
 };
 const DESIGN_LAYERS = [
+  "maps",
   "models",
   "spaces",
   "materials",
@@ -351,6 +367,7 @@ type DiscoveryTarget =
   | "designs"
   | "films"
   | "instances"
+  | "maps"
   | "materials"
   | "models"
   | "motions"
@@ -364,6 +381,7 @@ type DiscoveryTarget =
 const DISCOVERY_TARGETS: Record<MarkdownLayer, readonly DiscoveryTarget[]> = {
   settings: ["common", "settings"],
   research: ["common"],
+  maps: ["common", "designs", "maps"],
   models: ["common", "designs", "models"],
   spaces: ["common", "designs", "spaces"],
   materials: ["common", "designs", "materials"],
@@ -385,11 +403,12 @@ const DISCOVERY_TARGETS: Record<MarkdownLayer, readonly DiscoveryTarget[]> = {
 const DESIGN_FOUNDATIONS: Partial<
   Record<MarkdownLayer, readonly DesignLayer[]>
 > = {
+  spaces: ["maps"],
   models: ["spaces"],
   materials: ["models", "spaces"],
-  instances: ["models", "spaces", "materials"],
-  motions: ["models", "spaces", "materials", "instances", "systems"],
-  systems: ["models", "spaces", "materials", "instances", "motions"],
+  instances: ["maps", "models", "spaces", "materials"],
+  motions: ["maps", "models", "spaces", "materials", "instances", "systems"],
+  systems: ["maps", "models", "spaces", "materials", "instances", "motions"],
   briefs: DESIGN_LAYERS,
 };
 
@@ -418,6 +437,11 @@ const EXPECTED_CONTRACTS = [
     domain: "design",
     file: "discovery/instances.md",
     anchors: ["work-specific-instance-requirements"],
+  },
+  {
+    domain: "design",
+    file: "discovery/maps.md",
+    anchors: ["work-specific-map-requirements"],
   },
   {
     domain: "design",
@@ -495,6 +519,19 @@ const EXPECTED_CONTRACTS = [
       "instance-identity-transform",
       "instance-variation-tiers",
       "instance-placement-review",
+    ],
+  },
+  {
+    domain: "design",
+    file: "obligations/maps.md",
+    anchors: [
+      "addressable-map-decisions",
+      "map-world-site-interface",
+      "map-world-content-relations",
+      "map-world-temporal-state",
+      "map-world-scale-partition",
+      "map-world-source-resolution",
+      "map-review-set",
     ],
   },
   {
@@ -650,12 +687,32 @@ const EXPECTED_CONTRACTS = [
   },
   {
     domain: "design",
+    file: "obligations/map-sources.md",
+    anchors: [
+      "map-source-design-ownership",
+      "map-source-deterministic-world",
+      "map-source-preserved-lineage",
+      "map-source-invalid-world",
+    ],
+  },
+  {
+    domain: "design",
     file: "principles/instances.md",
     anchors: [
       "instance-information-structure",
       "instance-prototype-boundary",
       "instance-derivation-authority",
       "instance-verification-address",
+    ],
+  },
+  {
+    domain: "design",
+    file: "principles/maps.md",
+    anchors: [
+      "map-addressable-world-identity",
+      "map-information-structure",
+      "map-coordinate-extent-scale",
+      "map-verification-address",
     ],
   },
   {
@@ -1673,6 +1730,7 @@ const validateStages = (graph: IProductionGraph): void => {
         requireReviewedParent(name, graph[name], "research", graph.research);
 
   for (const name of [
+    "maps",
     "models",
     "spaces",
     "materials",
@@ -2159,6 +2217,7 @@ const sourceClaims = (graph: IProductionGraph): IBranchClaim[] => {
   const shared = sharedDocsRoot(graph.location);
   const claims: IBranchClaim[] = [];
   for (const name of [
+    "mapSources",
     "modelSources",
     "spaceSources",
     "materialSources",
