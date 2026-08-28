@@ -1524,7 +1524,9 @@ const assertSourceExportsAreEvidenceAddressable = (
       ts.isEnumDeclaration(statement) ||
       ts.isModuleDeclaration(statement)
     )
-      return statement.name === undefined ? [] : [statement.name.getText(source)];
+      return statement.name === undefined
+        ? []
+        : [statement.name.getText(source)];
     return [];
   };
   const localDeclarations = new Set(
@@ -1547,10 +1549,7 @@ const assertSourceExportsAreEvidenceAddressable = (
       continue;
     }
     if (!ts.isNamedExports(clause)) {
-      refuse(
-        "uses a namespace export",
-        "Export a local named declaration",
-      );
+      refuse("uses a namespace export", "Export a local named declaration");
       continue;
     }
     for (const element of clause.elements) {
@@ -2368,7 +2367,7 @@ const validateHosts = (graph: IProductionGraph): void => {
     if (isActive(stage) && files.length === 0)
       throw new Error(
         `${name} cannot enter ${stage} without a TypeScript host.`,
-    );
+      );
     for (const file of files) {
       const source = fs.readFileSync(file, "utf8");
       const relative = posix(path.relative(graph.location, file));

@@ -80,7 +80,8 @@ const ROOT = path.resolve(__dirname, "../../../..");
 const TTSC = path.join(ROOT, "node_modules/ttsc/lib/launcher/ttsc.js");
 const TTSC_CACHE = path.join(ROOT, "node_modules/.cache/ttsc");
 const BRIEF = "docs/briefs/delivery.md";
-const ADDRESSABILITY = "obligations/delivery/briefs.md#brief-unit-addressability";
+const ADDRESSABILITY =
+  "obligations/delivery/briefs.md#brief-unit-addressability";
 const INFORMATION_STRUCTURE =
   "principles/delivery/briefs.md#brief-information-structure";
 const CLAIM_NAMES = {

@@ -745,7 +745,10 @@ try {
     ["obligations/delivery/briefs.md", "obligations/core/common.md"],
     "brief H2 units must cover addressability without inheriting film narrative obligations",
   );
-  const briefAddressability = referenceTo(briefH2, "obligations/delivery/briefs.md");
+  const briefAddressability = referenceTo(
+    briefH2,
+    "obligations/delivery/briefs.md",
+  );
   assert.equal(
     briefAddressability !== undefined && "checklist" in briefAddressability
       ? briefAddressability.checklist
@@ -768,7 +771,10 @@ try {
       ],
       `brief H${depth} units must answer information structure without inheriting film narrative principles`,
     );
-    const briefInformation = referenceTo(briefUnit, "principles/delivery/briefs.md");
+    const briefInformation = referenceTo(
+      briefUnit,
+      "principles/delivery/briefs.md",
+    );
     assert.equal(
       briefInformation !== undefined && "checklist" in briefInformation
         ? briefInformation.checklist
@@ -1425,12 +1431,9 @@ try {
       'export { Subject } from "./subject.js";\nexport class LocalSubject {}',
       "uses a barrel or cross-module re-export",
     ],
+    ["export default class {}", "exports an anonymous default declaration"],
     [
-      'export default class {}',
-      "exports an anonymous default declaration",
-    ],
-    [
-      'const Subject = class {};\nexport default Subject;',
+      "const Subject = class {};\nexport default Subject;",
       "uses a default export expression or namespace export",
     ],
     [
@@ -2072,7 +2075,8 @@ try {
     claim.name?.includes("systems H2 units answer their principle checklists"),
   );
   assert.equal(
-    referenceTo(systemObligation, "obligations/design/systems.md")?.noEvidenceExclude,
+    referenceTo(systemObligation, "obligations/design/systems.md")
+      ?.noEvidenceExclude,
     true,
     "required non-motion layer obligations must refuse exclusions",
   );
@@ -2080,7 +2084,8 @@ try {
     claim.name?.includes("motions H2 units answer their principle checklists"),
   );
   assert.equal(
-    referenceTo(motionObligation, "obligations/design/motions.md")?.noEvidenceExclude,
+    referenceTo(motionObligation, "obligations/design/motions.md")
+      ?.noEvidenceExclude,
     true,
     "the population-wide motion-role obligation must refuse exclusions",
   );
@@ -2220,7 +2225,10 @@ try {
       claim.name ===
       "settings H2 units answer their principle checklists, cover the layer's obligations, and account for inherited work",
   );
-  const subjectDepth = referenceTo(filmSettings, "obligations/story/subjects.md");
+  const subjectDepth = referenceTo(
+    filmSettings,
+    "obligations/story/subjects.md",
+  );
   assert.notEqual(
     subjectDepth,
     undefined,
@@ -2438,7 +2446,10 @@ try {
   );
 
   const fencedSources = root();
-  const fencedCommon = contract(fencedSources, "docs/principles/core/common.md");
+  const fencedCommon = contract(
+    fencedSources,
+    "docs/principles/core/common.md",
+  );
   fs.writeFileSync(
     fencedCommon,
     fs
@@ -2685,7 +2696,9 @@ try {
   );
 
   const removedDiscoveryTarget = root();
-  fs.rmSync(contract(removedDiscoveryTarget, "docs/discovery/delivery/briefs.md"));
+  fs.rmSync(
+    contract(removedDiscoveryTarget, "docs/discovery/delivery/briefs.md"),
+  );
   assert.equal(
     throws(
       () => createAutoMovieEvidenceConfig(disabled(removedDiscoveryTarget)),

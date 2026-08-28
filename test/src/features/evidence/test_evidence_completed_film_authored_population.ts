@@ -479,7 +479,10 @@ export const test_evidence_completed_film_authored_population = (): void => {
         ["failed", () => negative.status !== 0 || negative.signal !== null],
         [
           "named target",
-          () => negativeOutput.includes("principles/core/common.md#machine-default"),
+          () =>
+            negativeOutput.includes(
+              "principles/core/common.md#machine-default",
+            ),
         ],
         [
           "one evidence diagnostic",
