@@ -2498,6 +2498,12 @@
         "package": "@automovie/interface"
       }
     },
+    "requirements/review/subject-inspection.md#review-library-delivery-coverage": {
+      "owner": {
+        "kind": "package",
+        "package": "@automovie/production"
+      }
+    },
     "requirements/sound/dialogue-voice-and-visemes.md#sound-dialogue-refusal": {
       "owner": {
         "kind": "package",

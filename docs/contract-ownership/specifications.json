@@ -175,6 +175,16 @@
           }
         }
       }
+    },
+    "specifications/review-and-acceptance/subject-surface-and-inspection.md#review-system-library-delivery-coverage": {
+      "obligations": {
+        "library-delivery-observation-closure": {
+          "owner": {
+            "kind": "package",
+            "package": "@automovie/production"
+          }
+        }
+      }
     }
   },
   "legacy": {
