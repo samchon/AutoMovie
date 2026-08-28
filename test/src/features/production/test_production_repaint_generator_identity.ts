@@ -1,5 +1,6 @@
 import type {
   AutoMovieContentDigest,
+  IAutoMovieRenderBundleManifest,
   IAutoMovieRepaintExecutionPolicy,
   IAutoMovieRepaintGeneratorAdoption,
   IAutoMovieRepaintGeneratorProvenance,
@@ -13,7 +14,12 @@ import {
   canonicalAutoMovieRepaintGeneratorAdoption,
   canonicalAutoMovieRepaintGeneratorProvenance,
   canonicalAutoMovieRepaintRuntimeIdentity,
+  productionRepaintActiveReceiptPath,
   productionRepaintOutputPath,
+  productionRepaintReceiptPath,
+  productionRepaintRequestFingerprint,
+  productionRepaintStructuralControls,
+  productionSourceRenderFingerprint,
 } from "@automovie/production";
 import { TestValidator } from "@nestia/e2e";
 
@@ -176,6 +182,18 @@ export const test_production_repaint_generator_identity = (): void => {
         occurredAt: "2026-08-29T00:00:00.000Z",
         label: "repaint generator provenance",
       }),
+      dateObject: assertAutoMovieExternalGeneratorTermsAt({
+        termsCheckedAt: "2026-08-28",
+        occurredAt: new Date("2026-08-28T12:00:00.000Z"),
+        label: "repaint generator provenance",
+      }),
+      invalidInstant: messageOf(() =>
+        assertAutoMovieExternalGeneratorTermsAt({
+          termsCheckedAt: "2026-08-28",
+          occurredAt: "not-an-instant",
+          label: "repaint generator provenance",
+        }),
+      ),
       future: messageOf(() =>
         assertAutoMovieExternalGeneratorTermsAt({
           termsCheckedAt: "2026-08-29",
@@ -188,6 +206,9 @@ export const test_production_repaint_generator_identity = (): void => {
       leapDay: "2028-02-29",
       beforeMidnight: "2026-08-28",
       afterMidnight: "2026-08-28",
+      dateObject: "2026-08-28",
+      invalidInstant:
+        "repaint generator provenance requires a valid execution instant.",
       future:
         "repaint generator provenance.termsCheckedAt 2026-08-29 is later than execution UTC date 2026-08-28.",
     },
@@ -414,6 +435,82 @@ export const test_production_repaint_generator_identity = (): void => {
     requestVariants.every(
       (variant) => productionRepaintOutputPath(variant) !== originalPath,
     ),
+  );
+
+  const sourceManifest = {
+    frames: [
+      { path: "beauty-0.png", pass: "beauty", digest: digest("beauty-0") },
+      { path: "depth-0.png", pass: "depth", digest: digest("depth-0") },
+      { path: "depth-1.png", pass: "depth", digest: digest("depth-1") },
+      { path: "mask-0.png", pass: "mask", digest: digest("mask-0") },
+    ],
+  } as unknown as IAutoMovieRenderBundleManifest;
+  const sourceFrames = sourceManifest.frames.map(({ path, digest }) => ({
+    path,
+    digest,
+  }));
+  const sourceFingerprint = productionSourceRenderFingerprint({
+    manifest: sourceManifest,
+    frames: sourceFrames,
+  });
+  const requestFingerprint = productionRepaintRequestFingerprint({
+    ...outputRequest,
+    compileFingerprint: digest("compile"),
+  });
+  const receiptPath = productionRepaintReceiptPath(originalPath);
+  const activePath = productionRepaintActiveReceiptPath("opening");
+  TestValidator.equals(
+    "source, structural, request, receipt, and active identities are deterministic",
+    {
+      sourceStable:
+        productionSourceRenderFingerprint({
+          manifest: sourceManifest,
+          frames: sourceFrames,
+        }) === sourceFingerprint,
+      sourceChanges:
+        productionSourceRenderFingerprint({
+          manifest: sourceManifest,
+          frames: [
+            ...sourceFrames.slice(0, -1),
+            { ...sourceFrames.at(-1)!, digest: digest("mask-revised") },
+          ],
+        }) !== sourceFingerprint,
+      controls: productionRepaintStructuralControls(sourceManifest),
+      requestStable:
+        productionRepaintRequestFingerprint({
+          ...outputRequest,
+          compileFingerprint: digest("compile"),
+        }) === requestFingerprint,
+      requestChanges:
+        productionRepaintRequestFingerprint({
+          ...outputRequest,
+          compileFingerprint: digest("compile-revised"),
+        }) !== requestFingerprint,
+      receiptStable: productionRepaintReceiptPath(originalPath) === receiptPath,
+      receiptChanges:
+        productionRepaintReceiptPath(`${originalPath}.other`) !== receiptPath,
+      activeStable:
+        productionRepaintActiveReceiptPath("opening") === activePath,
+      activeChanges:
+        productionRepaintActiveReceiptPath("closing") !== activePath,
+    },
+    {
+      sourceStable: true,
+      sourceChanges: true,
+      controls: [
+        {
+          pass: "depth",
+          frameDigests: [digest("depth-0"), digest("depth-1")],
+        },
+        { pass: "mask", frameDigests: [digest("mask-0")] },
+      ],
+      requestStable: true,
+      requestChanges: true,
+      receiptStable: true,
+      receiptChanges: true,
+      activeStable: true,
+      activeChanges: true,
+    },
   );
 
   const receipt: IAutoMovieRepaintReceipt = {
