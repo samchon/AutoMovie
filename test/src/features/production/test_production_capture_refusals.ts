@@ -63,6 +63,8 @@ const CRATE: IAutoMovieModelRecipe = {
  *    nothing can currently prove.
  * 7. A malformed shot dialogue identity and any non-shot dialogue identity are
  *    refused before either can name or populate a render bundle.
+ * 8. Two valid shot dialogue identities produce different content-addressed
+ *    bundles whose verified manifests retain their exact respective values.
  */
 export const test_production_capture_refusals = async (): Promise<void> => {
   const fixture = productionFixture();
@@ -288,6 +290,61 @@ export const test_production_capture_refusals = async (): Promise<void> => {
           codes: ["capture-dialogue-identity-invalid"],
         },
       ],
+    );
+
+    const captureAttributedShot = async (
+      digit: "b" | "c",
+    ): Promise<Awaited<ReturnType<typeof captureAutoMovieProductionFrame>>> =>
+      captureAutoMovieProductionFrame(
+        new AutoMovieProductionContext(
+          async (input) => ({
+            ...(await host.adapter(input)),
+            dialogueRuntimeIdentity: `sha256:${digit.repeat(
+              64,
+            )}` as AutoMovieContentDigest,
+          }),
+          fixture.root,
+          undefined,
+        ),
+        {
+          target: {
+            kind: "shot",
+            productionId: "fixture-film",
+            id: "opening",
+            time: 0,
+          },
+        },
+      );
+    const attributedShotB = await captureAttributedShot("b");
+    const attributedShotC = await captureAttributedShot("c");
+    const attributedReceipts = [attributedShotB, attributedShotC].map(
+      (output) => output.receipt,
+    );
+    if (attributedReceipts.some((receipt) => receipt === null))
+      throw new Error("Attributed shot capture did not return both receipts.");
+    const attributedManifests = attributedReceipts.map((receipt) =>
+      project.verifiedRenderManifest(
+        path.join(fixture.root, receipt!.bundle, "manifest.json"),
+      ),
+    );
+    TestValidator.equals(
+      "dialogue identity invalidates the bundle address and remains exact in its manifest",
+      {
+        captured: [attributedShotB.captured, attributedShotC.captured],
+        distinctBundles:
+          attributedReceipts[0]!.bundle !== attributedReceipts[1]!.bundle,
+        dialogueRuntimeIdentities: attributedManifests.map(
+          (manifest) => manifest?.dialogueRuntimeIdentity,
+        ),
+      },
+      {
+        captured: [true, true],
+        distinctBundles: true,
+        dialogueRuntimeIdentities: [
+          `sha256:${"b".repeat(64)}`,
+          `sha256:${"c".repeat(64)}`,
+        ],
+      },
     );
 
     fs.rmSync(path.join(project.generatedRoot(), "models", "soloist.json"), {
