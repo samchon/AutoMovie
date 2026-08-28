@@ -1,4 +1,6 @@
 import assert from "node:assert";
+import fs from "node:fs";
+import path from "node:path";
 
 import { assertAutoMovieEvidenceReviewReasons } from "../src/auditAutoMovieEvidenceReviewReasons";
 
@@ -140,8 +142,40 @@ const testAssertion = (): void => {
   );
 };
 
+const fixtureDocuments = (
+  directory: string,
+  root = directory,
+): Array<Parameters<typeof assertAutoMovieEvidenceReviewReasons>[0][number]> =>
+  fs
+    .readdirSync(directory, { withFileTypes: true })
+    .sort((left, right) => left.name.localeCompare(right.name))
+    .flatMap((entry) => {
+      const absolute = path.join(directory, entry.name);
+      if (entry.isDirectory()) return fixtureDocuments(absolute, root);
+      return entry.isFile() && /\.(?:md|ts)$/u.test(entry.name)
+        ? [
+            {
+              path: path.relative(root, absolute).replaceAll("\\", "/"),
+              source: fs.readFileSync(absolute, "utf8"),
+            },
+          ]
+        : [];
+    });
+
+const testCompletedFilmCorpus = (): void => {
+  const fixture = path.resolve(
+    import.meta.dirname,
+    "../../../test/fixtures/completed-film",
+  );
+  assert.doesNotThrow(
+    () => assertAutoMovieEvidenceReviewReasons(fixtureDocuments(fixture)),
+    "the complete historical production must contain zero mechanical restatements and zero same-host review reuse",
+  );
+};
+
 testRestatementForms();
 testHostLocalReuse();
 testTargetInterpolationReuse();
 testAcceptedBoundaries();
 testAssertion();
+testCompletedFilmCorpus();
