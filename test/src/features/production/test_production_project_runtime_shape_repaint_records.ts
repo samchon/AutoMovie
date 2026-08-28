@@ -6,6 +6,7 @@ import {
 import {
   AutoMovieProductionCompiler,
   AutoMovieProductionProject,
+  IAutoMovieRepaintAttemptRecord,
   canonicalAutoMovieRepaintRuntimeIdentity,
   digestAutoMovieBytes,
   probeProductionVideoMp4,
@@ -19,6 +20,7 @@ import {
 import { TestValidator } from "@nestia/e2e";
 import fs from "node:fs";
 import path from "node:path";
+import process from "node:process";
 
 import {
   productionCompileSucceeded,
@@ -61,12 +63,24 @@ const writeTrackedJson = (
 const repaintReceipt = (shot: string): IAutoMovieRepaintReceipt => {
   const outputPath = "repaint/missing-output.mp4";
   return {
-    version: 3,
+    version: 4,
     productionId: "fixture-film",
     shot,
     compileFingerprint: `sha256:${"1".repeat(64)}`,
     sourceRenderFingerprint: `sha256:${"2".repeat(64)}`,
+    requestId: "00000000-0000-4000-8000-000000000010",
     attemptId: "00000000-0000-4000-8000-000000000001",
+    startedAt: "2026-08-28T12:00:00.000Z",
+    completedAt: "2026-08-28T12:00:01.000Z",
+    costUnits: 0,
+    executionPolicy: {
+      maximumAttempts: 1,
+      attemptTimeoutMs: 1_000,
+      maximumElapsedMs: 1_000,
+      maximumCostUnits: 0,
+      backoffMs: [],
+      retryableFailures: [],
+    },
     sourceBundle: "shot-opening/source/render",
     controls: [
       {
@@ -106,6 +120,14 @@ const repaintReceipt = (shot: string): IAutoMovieRepaintReceipt => {
       strength: 0.5,
       controls: { guidance: 1 },
     },
+    evidence: {
+      prompt: "scripts/repaint.ts#opening-prompt",
+      continuity: null,
+      settings: "docs/settings/production.md#visual-grammar",
+      design: "docs/designs/opening.md#appearance",
+      screenplayOrBrief: "docs/screenplays/opening.md#opening",
+      shot: "scripts/shots/opening.ts#opening",
+    },
     output: {
       path: outputPath,
       digest: digestAutoMovieBytes(Buffer.from("missing output")),
@@ -124,6 +146,32 @@ const repaintReceipt = (shot: string): IAutoMovieRepaintReceipt => {
   };
 };
 
+const repaintAttempt = (
+  override: Partial<IAutoMovieRepaintAttemptRecord> = {},
+): IAutoMovieRepaintAttemptRecord => ({
+  version: 1,
+  productionId: "fixture-film",
+  shot: "opening",
+  requestId: "00000000-0000-4000-8000-000000000030",
+  attemptId: "00000000-0000-4000-8000-000000000031",
+  ordinal: 2,
+  requestFingerprint: `sha256:${"1".repeat(64)}`,
+  compileFingerprint: `sha256:${"2".repeat(64)}`,
+  sourceRenderFingerprint: `sha256:${"3".repeat(64)}`,
+  adapterIdentity: '{"provider":"runtime-shape-test"}',
+  seed: 7,
+  startedAt: "2026-08-28T12:00:00.000Z",
+  completedAt: "2026-08-28T12:00:01.000Z",
+  status: "succeeded",
+  failure: null,
+  costUnits: 1,
+  availableOutput: {
+    digest: `sha256:${"4".repeat(64)}`,
+    bytes: 4,
+  },
+  ...override,
+});
+
 /**
  * Enumerate stored repaint records through every early integrity boundary.
  * Each corrupt resident is omitted rather than trusted, while the active
@@ -132,20 +180,22 @@ const repaintReceipt = (shot: string): IAutoMovieRepaintReceipt => {
  *
  * Scenarios:
  *
- * 1. Malformed and schema-invalid active pointers are omitted.
- * 2. Missing, malformed, schema-invalid, wrong-shot, and noncanonical immutable
+ * 1. Terminal repaint attempts validate every identity, time, cost, state, and
+ *    available-output boundary; immutable records enumerate in ordinal/id order.
+ * 2. Malformed and schema-invalid active pointers and selections are omitted.
+ * 3. Missing, malformed, schema-invalid, wrong-shot, and noncanonical immutable
  *    receipts are omitted while their resident bytes are asserted.
- * 3. A canonical pointer/receipt with absent output bytes is omitted.
- * 4. The positive twin compiles current inputs, commits a verified source
+ * 4. A canonical pointer/selection/receipt with absent output bytes is omitted.
+ * 5. The positive twin compiles current inputs, commits a verified source
  *    bundle, real H.264 output, fixed reference, and immutable repaint receipt,
  *    then enumerates that exact receipt once from duplicate shot requests.
- * 5. Missing/stale compile and source evidence plus invalid adapter identities
+ * 6. Missing/stale compile and source evidence plus invalid adapter identities
  *    refuse before any receipt update.
- * 6. Asset-manifest, resident-byte, shot-use, role-duplicate, and all-role
+ * 7. Asset-manifest, resident-byte, shot-use, role-duplicate, and all-role
  *    collapse probes preserve distinct fixed-reference authority.
- * 7. Output production/path/digest/size and parsed raster/clock/count facts are
+ * 8. Output production/path/digest/size and parsed raster/clock/count facts are
  *    each checked against real H.264 bytes.
- * 8. Removing the production or shot record proves stored media targets are
+ * 9. Removing the production or shot record proves stored media targets are
  *    revalidated rather than trusted from an old receipt.
  */
 export const test_production_project_runtime_shape_repaint_records =
@@ -158,6 +208,218 @@ export const test_production_project_runtime_shape_repaint_records =
         "fixture-film",
       );
       const shot = "opening";
+
+      const requestId = "00000000-0000-4000-8000-000000000030";
+      TestValidator.equals(
+        "an absent request has no terminal repaint attempts",
+        project.repaintRequestAttempts(requestId),
+        [],
+      );
+      try {
+        project.repaintRequestAttempts("not-a-request-id");
+        throw new Error("Malformed request id unexpectedly enumerated.");
+      } catch (error) {
+        TestValidator.predicate(
+          "attempt enumeration requires a UUID v4 request id",
+          error instanceof Error && error.message.includes("must be a UUID v4"),
+        );
+      }
+      const expectAttemptRefusal = (
+        label: string,
+        candidate: IAutoMovieRepaintAttemptRecord,
+      ): void => {
+        try {
+          project.commitRepaintAttempt(candidate);
+          throw new Error(`${label} unexpectedly committed.`);
+        } catch (error) {
+          TestValidator.predicate(
+            label,
+            error instanceof Error &&
+              (error.message.includes("attempt record is malformed") ||
+                error.message.includes("must be a UUID v4")),
+          );
+        }
+      };
+      const invalidAttempts: Array<
+        readonly [string, IAutoMovieRepaintAttemptRecord]
+      > = [
+        [
+          "attempt format version is exact",
+          repaintAttempt({ version: 2 as 1 }),
+        ],
+        [
+          "attempt production is current",
+          repaintAttempt({ productionId: "other-production" }),
+        ],
+        ["attempt shot is nonblank", repaintAttempt({ shot: " " })],
+        [
+          "attempt request id is a UUID v4",
+          repaintAttempt({ requestId: "bad" }),
+        ],
+        ["attempt id is a UUID v4", repaintAttempt({ attemptId: "bad" })],
+        ["attempt ordinal is an integer", repaintAttempt({ ordinal: 1.5 })],
+        ["attempt ordinal is positive", repaintAttempt({ ordinal: 0 })],
+        [
+          "attempt request fingerprint is a digest",
+          repaintAttempt({ requestFingerprint: "sha256:" }),
+        ],
+        [
+          "attempt compile fingerprint is a digest",
+          repaintAttempt({ compileFingerprint: "sha256:" }),
+        ],
+        [
+          "attempt source fingerprint is a digest",
+          repaintAttempt({ sourceRenderFingerprint: "sha256:" }),
+        ],
+        [
+          "attempt adapter identity is nonblank",
+          repaintAttempt({ adapterIdentity: " " }),
+        ],
+        ["attempt seed is an integer", repaintAttempt({ seed: 1.5 })],
+        ["attempt start is an instant", repaintAttempt({ startedAt: "bad" })],
+        [
+          "attempt completion is an instant",
+          repaintAttempt({ completedAt: "bad" }),
+        ],
+        [
+          "attempt start is canonical UTC",
+          repaintAttempt({ startedAt: "2026-08-28T12:00:00Z" }),
+        ],
+        [
+          "attempt completion is canonical UTC",
+          repaintAttempt({ completedAt: "2026-08-28T12:00:01Z" }),
+        ],
+        [
+          "attempt completion does not precede start",
+          repaintAttempt({ completedAt: "2026-08-28T11:59:59.000Z" }),
+        ],
+        ["attempt cost is finite", repaintAttempt({ costUnits: Number.NaN })],
+        ["attempt cost is nonnegative", repaintAttempt({ costUnits: -1 })],
+        [
+          "successful attempt has no failure",
+          repaintAttempt({
+            failure: {
+              class: "internal",
+              message: "unexpected",
+              retryable: false,
+            },
+          }),
+        ],
+        ["failed attempt has a failure", repaintAttempt({ status: "failed" })],
+        [
+          "attempt failure message is nonblank",
+          repaintAttempt({
+            status: "failed",
+            failure: { class: "timeout", message: " ", retryable: true },
+            availableOutput: null,
+          }),
+        ],
+        [
+          "only a failed attempt may be retryable",
+          repaintAttempt({
+            status: "cancelled",
+            failure: {
+              class: "cancelled",
+              message: "cancelled",
+              retryable: true,
+            },
+            availableOutput: null,
+          }),
+        ],
+        [
+          "available attempt output has positive bytes",
+          repaintAttempt({
+            availableOutput: { digest: `sha256:${"4".repeat(64)}`, bytes: 0 },
+          }),
+        ],
+        [
+          "available attempt output has a digest",
+          repaintAttempt({ availableOutput: { digest: "sha256:", bytes: 1 } }),
+        ],
+      ];
+      invalidAttempts.forEach(([label, candidate]) =>
+        expectAttemptRefusal(label, candidate),
+      );
+
+      const succeededAttempt = repaintAttempt();
+      const failedAttempt = repaintAttempt({
+        attemptId: "00000000-0000-4000-8000-000000000032",
+        ordinal: 1,
+        status: "failed",
+        failure: { class: "timeout", message: "timed out", retryable: true },
+        costUnits: 0,
+        availableOutput: null,
+      });
+      const tiedAttempt = repaintAttempt({
+        attemptId: "00000000-0000-4000-8000-000000000033",
+        ordinal: 1,
+        status: "cancelled",
+        failure: {
+          class: "cancelled",
+          message: "cancelled by the author",
+          retryable: false,
+        },
+        costUnits: 0,
+        availableOutput: null,
+      });
+      project.commitRepaintAttempt(succeededAttempt);
+      project.commitRepaintAttempt(failedAttempt);
+      project.commitRepaintAttempt(tiedAttempt);
+      try {
+        project.commitRepaintAttempt(succeededAttempt);
+        throw new Error(
+          "Duplicate terminal repaint attempt unexpectedly committed.",
+        );
+      } catch (error) {
+        TestValidator.predicate(
+          "terminal repaint attempts are immutable",
+          error instanceof Error && error.message.includes("already exists"),
+        );
+      }
+      const attemptDirectory = project.trackedStatePath(
+        `renditions/attempts/${requestId}`,
+      );
+      fs.writeFileSync(path.join(attemptDirectory, "ignored.txt"), "ignored");
+      fs.mkdirSync(path.join(attemptDirectory, "ignored.json"));
+      fs.writeFileSync(path.join(attemptDirectory, "broken.json"), "{broken");
+      fs.writeFileSync(
+        path.join(attemptDirectory, "wrong-request.json"),
+        `${JSON.stringify(
+          repaintAttempt({
+            requestId: "00000000-0000-4000-8000-000000000034",
+            attemptId: "00000000-0000-4000-8000-000000000035",
+          }),
+          null,
+          2,
+        )}\n`,
+      );
+      TestValidator.equals(
+        "terminal attempts omit corrupt and foreign residents and sort ordinal ties by id",
+        project.repaintRequestAttempts(requestId),
+        [failedAttempt, tiedAttempt, succeededAttempt],
+      );
+      const linkedRequest = "00000000-0000-4000-8000-000000000036";
+      const linkedDirectory = project.trackedStatePath(
+        `renditions/attempts/${linkedRequest}`,
+      );
+      const externalAttempts = path.join(fixture.root, "external-attempts");
+      fs.mkdirSync(externalAttempts);
+      fs.symlinkSync(
+        externalAttempts,
+        linkedDirectory,
+        process.platform === "win32" ? "junction" : "dir",
+      );
+      try {
+        project.repaintRequestAttempts(linkedRequest);
+        throw new Error("Linked attempt directory unexpectedly enumerated.");
+      } catch (error) {
+        TestValidator.predicate(
+          "attempt enumeration refuses a linked directory",
+          error instanceof Error &&
+            error.message.includes("must not be a link"),
+        );
+      }
+
       const activePath = productionRepaintActiveReceiptPath(shot);
       const activeFile = project.trackedStatePath(activePath);
       fs.mkdirSync(path.dirname(activeFile), { recursive: true });
@@ -178,15 +440,46 @@ export const test_production_project_runtime_shape_repaint_records =
 
       const receipt = repaintReceipt(shot);
       const trackedReceipt = productionRepaintReceiptPath(receipt.output.path);
+      const selectionId = "00000000-0000-4000-8000-000000000011";
+      const selectionPath = `renditions/selections/${shot}/${selectionId}.json`;
       const pointer = {
-        version: 1 as const,
+        version: 2 as const,
         shot,
+        selection: selectionPath,
         receipt: trackedReceipt,
         output: receipt.output.path,
       };
       writeTrackedJson(project, activePath, pointer);
       TestValidator.equals(
-        "active pointer without its immutable receipt is omitted",
+        "active pointer without its immutable selection is omitted",
+        project.verifiedRepaintRenditions([shot]),
+        [],
+      );
+
+      writeTrackedJson(project, selectionPath, { version: 99 });
+      TestValidator.equals(
+        "wrong selection schema is omitted",
+        project.verifiedRepaintRenditions([shot]),
+        [],
+      );
+      writeTrackedJson(project, selectionPath, {
+        version: 1,
+        selectionId,
+        kind: "selection",
+        productionId: "fixture-film",
+        shot,
+        requestId: receipt.requestId,
+        attemptId: receipt.attemptId,
+        selectedAt: "2026-08-28T12:00:02.000Z",
+        candidateReceipt: trackedReceipt,
+        output: receipt.output.path,
+        previousSelection: null,
+        reason: "Exercise stored repaint selection integrity.",
+        structuralReview: "The deterministic structure remains unchanged.",
+        continuityReview: null,
+      });
+      TestValidator.equals(
+        "active selection without its immutable receipt is omitted",
         project.verifiedRepaintRenditions([shot]),
         [],
       );
@@ -289,7 +582,7 @@ export const test_production_project_runtime_shape_repaint_records =
 
       const frameBytes = productionPng(16, 16);
       const sourceManifest: IAutoMovieRenderBundleManifest = {
-        version: 4,
+        version: 5,
         target: { kind: "shot", id: shot },
         compileFingerprint: generated.inputFingerprint,
         dialogueRuntimeIdentity: null,
@@ -355,6 +648,22 @@ export const test_production_project_runtime_shape_repaint_records =
         strength: 0.5,
         controls: { guidance: 1 },
       };
+      const executionPolicy = {
+        maximumAttempts: 1,
+        attemptTimeoutMs: 1_000,
+        maximumElapsedMs: 1_000,
+        maximumCostUnits: 1,
+        backoffMs: [],
+        retryableFailures: [] as [],
+      };
+      const evidence = {
+        prompt: "scripts/repaint.ts#opening-prompt",
+        continuity: null,
+        settings: "docs/settings/production.md#visual-grammar",
+        design: "docs/designs/opening.md#appearance",
+        screenplayOrBrief: "docs/screenplays/opening.md#opening",
+        shot: "scripts/shots/opening.ts#opening",
+      };
       const references = [
         {
           role: "style" as const,
@@ -373,16 +682,23 @@ export const test_production_project_runtime_shape_repaint_records =
         adapterIdentity,
         generatorProvenance,
         parameters,
+        executionPolicy,
+        evidence,
         references,
         outputDigest,
       });
       const validReceipt: IAutoMovieRepaintReceipt = {
-        version: 3,
+        version: 4,
         productionId: "fixture-film",
         shot,
         compileFingerprint: generated.inputFingerprint,
         sourceRenderFingerprint,
+        requestId: "00000000-0000-4000-8000-000000000020",
         attemptId: "00000000-0000-4000-8000-000000000002",
+        startedAt: "2026-08-28T12:00:00.000Z",
+        completedAt: "2026-08-28T12:00:01.000Z",
+        costUnits: 1,
+        executionPolicy,
         sourceBundle,
         controls: productionRepaintStructuralControls(sourceManifest),
         references,
@@ -390,6 +706,7 @@ export const test_production_project_runtime_shape_repaint_records =
         generatorProvenance,
         structuralAuthority: "deterministic-source-only",
         parameters,
+        evidence,
         output: {
           path: outputPath,
           digest: outputDigest,
@@ -398,6 +715,15 @@ export const test_production_project_runtime_shape_repaint_records =
         },
       };
       project.commitRepaintRendition(validReceipt, outputBytes);
+      project.selectRepaintCandidate({
+        shot,
+        attemptId: validReceipt.attemptId,
+        kind: "selection",
+        reason: "Select the structurally reviewed candidate.",
+        structuralReview: "The deterministic structure remains unchanged.",
+        continuityReview: null,
+        selectedAt: "2026-08-28T12:00:02.000Z",
+      });
       TestValidator.equals(
         "complete resident repaint receipt and MP4 enumerate once per unique shot",
         project.verifiedRepaintRenditions([shot, shot]),
@@ -662,6 +988,8 @@ export const test_production_project_runtime_shape_repaint_records =
             adapterIdentity,
             generatorProvenance,
             parameters,
+            executionPolicy,
+            evidence,
             references,
             outputDigest: wrongOutputDigest,
           }),
@@ -712,6 +1040,8 @@ export const test_production_project_runtime_shape_repaint_records =
               adapterIdentity,
               generatorProvenance,
               parameters,
+              executionPolicy,
+              evidence,
               references,
               outputDigest: digest,
             }),
