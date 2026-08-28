@@ -486,7 +486,7 @@ export const test_evidence_source_principle_underpayment = (): void => {
     fs.mkdirSync(path.join(root, "docs/contracts"), { recursive: true });
     fs.writeFileSync(
       path.join(root, "docs/contracts/index.md"),
-      "<!-- @evidenceExclude discovery/common.md#shared-local-boundary This empty disabled graph retains no production-specific contract. -->\n\n# Contract audit\n",
+      "<!-- @evidenceExclude discovery/core/common.md#shared-local-boundary This empty disabled graph retains no production-specific contract. -->\n\n# Contract audit\n",
       "utf8",
     );
 
