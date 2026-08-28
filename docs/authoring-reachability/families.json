@@ -7,10 +7,8 @@
   },
   "acceptedDebt": {
     "unpaidAuthoringFamilies": 0,
-    "unpaidSpecificationFragments": 3,
+    "unpaidSpecificationFragments": 1,
     "unpaidSpecificationTargets": [
-      "camera-light-and-visibility/visibility-and-image-space-observation.md#clv-clipping-clearance-evaluation::camera-clearance-swept-volume",
-      "camera-light-and-visibility/visibility-and-image-space-observation.md#clv-clipping-clearance-evaluation::delivery-crop-region",
       "camera-light-and-visibility/visibility-and-image-space-observation.md#clv-clipping-clearance-evaluation::depth-precision-constraint"
     ]
   },

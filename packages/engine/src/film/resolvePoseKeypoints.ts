@@ -1,6 +1,7 @@
 import {
   AutoMovieHumanoidBone,
   IAutoMovieCamera,
+  IAutoMovieDeliveryCrop,
   IAutoMoviePose,
   IAutoMoviePoseKeypoint,
   IAutoMovieShot,
@@ -85,6 +86,9 @@ export const resolvePoseKeypoints = (props: {
   /** Render aspect (width/height). Defaults to 16/9. */
   aspect?: number;
 
+  /** Optional normalized delivery crop applied to the projected keypoints. */
+  crop?: IAutoMovieDeliveryCrop;
+
   /** Joints to emit. Defaults to the OpenPose body set. */
   joints?: readonly AutoMovieHumanoidBone[];
 }): IAutoMoviePoseKeypoint[] => {
@@ -109,7 +113,13 @@ export const resolvePoseKeypoints = (props: {
     const rig = rigByBone.get(bone);
     if (rig === undefined) continue;
     const world = toSceneWorld(props.node.transform, rig);
-    const { ndcX, ndcY, depth } = projectToNdc(cam, world, halfY, aspect);
+    const { ndcX, ndcY, depth } = projectToNdc(
+      cam,
+      world,
+      halfY,
+      aspect,
+      props.crop,
+    );
     const inFrame =
       depth >= props.camera.near &&
       depth <= props.camera.far &&

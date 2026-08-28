@@ -1,5 +1,5 @@
 import { IAutoMovieEnvironmentContext } from "../analysis/IAutoMovieEnvironmentContext";
-import { AutoMovieGuidePass } from "../cinematics";
+import { AutoMovieGuidePass, IAutoMovieDeliveryCrop } from "../cinematics";
 import { IAutoMovieProfile } from "../core";
 import {
   IAutoMovieHeightRule,
@@ -407,6 +407,11 @@ export interface IAutoMovieProductionDesign {
     fps: number;
     /** Output color space. */
     colorSpace: "srgb";
+    /**
+     * Optional normalized delivery-gate window projected onto the full output
+     * raster. Omission and the complete `0,0,1,1` window are geometric no-ops.
+     */
+    crop?: IAutoMovieDeliveryCrop;
   };
   /**
    * Bounded visual grammar rather than screenplay prose.

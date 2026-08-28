@@ -66,6 +66,12 @@
             "package": "@automovie/engine"
           }
         },
+        "delivery-crop-region": {
+          "owner": {
+            "kind": "package",
+            "package": "@automovie/engine"
+          }
+        },
         "delivery-raster-extent": {
           "owner": {
             "kind": "package",

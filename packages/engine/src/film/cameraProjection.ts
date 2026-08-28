@@ -1,4 +1,5 @@
 import {
+  IAutoMovieDeliveryCrop,
   IAutoMovieQuaternion,
   IAutoMovieShot,
   IAutoMovieVector3,
@@ -31,6 +32,71 @@ export interface IAutoMovieResolvedCamera {
    */
   rotation: IAutoMovieQuaternion;
 }
+
+const WHOLE_DELIVERY_CROP: IAutoMovieDeliveryCrop = {
+  left: 0,
+  top: 0,
+  right: 1,
+  bottom: 1,
+};
+
+/**
+ * Validate and resolve one portable delivery-gate crop.
+ *
+ * Coordinates name pixel edges in the uncropped raster with a top-left
+ * origin. Omission resolves to the whole gate. The returned object never
+ * aliases caller-owned input, so render and review consumers share values
+ * without sharing mutation.
+ *
+ * @evidence requirements/camera/framing-and-shot-size.md#camera-framing-delivery-gate Resolves the authored delivery window in a resolution-independent coordinate system before projection and rendering consume it.
+ * @evidence specifications/camera-light-and-visibility/visibility-and-image-space-observation.md#clv-clipping-clearance-evaluation Validates the closed normalized crop region that narrows the delivery frustum without changing its near or far planes.
+ * @evidencePart specifications/camera-light-and-visibility/visibility-and-image-space-observation.md#clv-clipping-clearance-evaluation::delivery-crop-region Validates finite ordered top-left-origin crop edges inside the complete delivery gate and supplies the exact same normalized region to projection consumers.
+ */
+export const resolveAutoMovieDeliveryCrop = (
+  crop: IAutoMovieDeliveryCrop | undefined,
+): IAutoMovieDeliveryCrop => {
+  const resolved = crop ?? WHOLE_DELIVERY_CROP;
+  if (
+    [resolved.left, resolved.top, resolved.right, resolved.bottom].every(
+      (edge) => Number.isFinite(edge) && edge >= 0 && edge <= 1,
+    ) === false ||
+    resolved.left >= resolved.right ||
+    resolved.top >= resolved.bottom
+  )
+    throw new RangeError(
+      "Delivery crop edges must be finite, normalized to [0, 1], and ordered left < right and top < bottom.",
+    );
+  return { ...resolved };
+};
+
+interface IAutoMovieDeliveryCropNdc {
+  bottom: number;
+  height: number;
+  left: number;
+  right: number;
+  top: number;
+  width: number;
+  whole: boolean;
+}
+
+const deliveryCropNdc = (
+  crop: IAutoMovieDeliveryCrop | undefined,
+): IAutoMovieDeliveryCropNdc => {
+  const resolved = resolveAutoMovieDeliveryCrop(crop);
+  return {
+    left: 2 * resolved.left - 1,
+    right: 2 * resolved.right - 1,
+    top: 1 - 2 * resolved.top,
+    bottom: 1 - 2 * resolved.bottom,
+    width: resolved.right - resolved.left,
+    height: resolved.bottom - resolved.top,
+    whole:
+      resolved.left === 0 &&
+      resolved.top === 0 &&
+      resolved.right === 1 &&
+      resolved.bottom === 1,
+  };
+};
 
 /**
  * The camera's world placement at `time`: static (its base transform), or
@@ -95,15 +161,20 @@ export const projectToNdc = (
   point: IAutoMovieVector3,
   halfY: number,
   aspect: number,
+  crop?: IAutoMovieDeliveryCrop,
 ): { ndcX: number; ndcY: number; depth: number } => {
   const local = Quaternion.rotateVector(
     Quaternion.inverse(camera.rotation),
     Vector3.subtract(point, camera.position),
   );
   const depth = -local.z;
+  const ndcX = local.x / (depth * halfY * aspect);
+  const ndcY = local.y / (depth * halfY);
+  const gate = deliveryCropNdc(crop);
+  if (gate.whole) return { ndcX, ndcY, depth };
   return {
-    ndcX: local.x / (depth * halfY * aspect),
-    ndcY: local.y / (depth * halfY),
+    ndcX: (ndcX - (gate.left + gate.right) / 2) / gate.width,
+    ndcY: (ndcY - (gate.bottom + gate.top) / 2) / gate.height,
     depth,
   };
 };
@@ -141,6 +212,7 @@ export const intersectsPerspectiveFrustumSegment = (props: {
   far: number;
   halfY: number;
   aspect: number;
+  crop?: IAutoMovieDeliveryCrop;
 }): boolean => {
   const inverse = Quaternion.inverse(props.camera.rotation);
   const local = (point: IAutoMovieVector3): IAutoMovieVector3 =>
@@ -151,15 +223,16 @@ export const intersectsPerspectiveFrustumSegment = (props: {
   const from = local(props.from);
   const to = local(props.to);
   const halfX = props.halfY * props.aspect;
+  const crop = deliveryCropNdc(props.crop);
   // Six half-spaces, each written as `f(p) <= 0`. The camera looks down its
   // local −Z, so the viewing depth is `-p.z` and the side planes open with it.
   const planes: ((point: IAutoMovieVector3) => number)[] = [
     (point) => props.near + point.z,
     (point) => -point.z - props.far,
-    (point) => point.x + point.z * halfX,
-    (point) => -point.x + point.z * halfX,
-    (point) => point.y + point.z * props.halfY,
-    (point) => -point.y + point.z * props.halfY,
+    (point) => point.x + crop.right * point.z * halfX,
+    (point) => -point.x - crop.left * point.z * halfX,
+    (point) => point.y + crop.top * point.z * props.halfY,
+    (point) => -point.y - crop.bottom * point.z * props.halfY,
   ];
   let lower = 0;
   let upper = 1;
@@ -188,11 +261,13 @@ const frustumCorners = (props: {
   far: number;
   halfY: number;
   aspect: number;
+  crop?: IAutoMovieDeliveryCrop;
 }): IAutoMovieVector3[] => {
   const halfX = props.halfY * props.aspect;
+  const crop = deliveryCropNdc(props.crop);
   return [props.near, props.far].flatMap((depth) =>
-    [-1, 1].flatMap((sx) =>
-      [-1, 1].map((sy) =>
+    [crop.left, crop.right].flatMap((sx) =>
+      [crop.bottom, crop.top].map((sy) =>
         Vector3.add(
           props.camera.position,
           Quaternion.rotateVector(props.camera.rotation, {
@@ -296,6 +371,7 @@ export const intersectsPerspectiveFrustumBox = (props: {
   far: number;
   halfY: number;
   aspect: number;
+  crop?: IAutoMovieDeliveryCrop;
 }): boolean => {
   const corners = [props.min.x, props.max.x].flatMap((x) =>
     [props.min.y, props.max.y].flatMap((y) =>
@@ -312,6 +388,7 @@ export const intersectsPerspectiveFrustumBox = (props: {
         far: props.far,
         halfY: props.halfY,
         aspect: props.aspect,
+        crop: props.crop,
       })
     )
       return true;
@@ -347,6 +424,7 @@ export const intersectsPerspectiveFrustumSphere = (props: {
   far: number;
   halfY: number;
   aspect: number;
+  crop?: IAutoMovieDeliveryCrop;
 }): boolean => {
   const local = Quaternion.rotateVector(
     Quaternion.inverse(props.camera.rotation),
@@ -361,10 +439,16 @@ export const intersectsPerspectiveFrustumSphere = (props: {
   )
     return false;
   const halfX = props.halfY * props.aspect;
+  const crop = deliveryCropNdc(props.crop);
+  const rightDistance = local.x - depth * halfX * crop.right;
+  const leftDistance = -local.x + depth * halfX * crop.left;
+  const topDistance = local.y - depth * props.halfY * crop.top;
+  const bottomDistance = -local.y + depth * props.halfY * crop.bottom;
   return (
-    Math.abs(local.x) <= depth * halfX + props.radius * Math.hypot(1, halfX) &&
-    Math.abs(local.y) <=
-      depth * props.halfY + props.radius * Math.hypot(1, props.halfY)
+    rightDistance <= props.radius * Math.hypot(1, halfX * crop.right) &&
+    leftDistance <= props.radius * Math.hypot(1, halfX * crop.left) &&
+    topDistance <= props.radius * Math.hypot(1, props.halfY * crop.top) &&
+    bottomDistance <= props.radius * Math.hypot(1, props.halfY * crop.bottom)
   );
 };
 
