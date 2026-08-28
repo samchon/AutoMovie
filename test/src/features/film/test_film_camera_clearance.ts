@@ -1,10 +1,27 @@
-import { evaluateCameraClearance } from "@automovie/engine";
+import {
+  compileDefinedShot,
+  defineShot,
+  evaluateCameraClearance,
+  performShot,
+  stageScene,
+} from "@automovie/engine";
 import {
   IAutoMovieCameraClearanceEnvelope,
+  IAutoMovieShotProgram,
+  IAutoMovieStage,
   IAutoMovieTransform,
   IAutoMovieVector3,
 } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
+
+import {
+  makeBlockingWrite,
+  makePerformanceWrite,
+  makeScriptWrite,
+  makeStagingWrite,
+  validSynthesizer,
+} from "../internal/filmFixtures";
+import { createModel, createSkeleton } from "../internal/fixtures";
 
 const identity = (x = 0, y = 0, z = 0): IAutoMovieTransform => ({
   translation: { x, y, z },
@@ -25,21 +42,23 @@ const envelope = (
   parentRig: IAutoMovieCameraClearanceEnvelope["parentRig"] = null,
 ): IAutoMovieCameraClearanceEnvelope => ({ body, parentRig });
 
-const evaluate = (over: {
-  envelope?: IAutoMovieCameraClearanceEnvelope;
-  revision?: string;
-  currentRevision?: string;
-  sampleRate?: number;
-  duration?: number;
-  samples?: Array<{
-    time: number;
-    camera: IAutoMovieTransform;
-    obstacles: Array<{
-      node: string;
-      bounds: ReturnType<typeof box>;
+const evaluate = (
+  over: {
+    envelope?: IAutoMovieCameraClearanceEnvelope;
+    revision?: string;
+    currentRevision?: string;
+    sampleRate?: number;
+    duration?: number;
+    samples?: Array<{
+      time: number;
+      camera: IAutoMovieTransform;
+      obstacles: Array<{
+        node: string;
+        bounds: ReturnType<typeof box>;
+      }>;
     }>;
-  }>;
-} = {}) =>
+  } = {},
+) =>
   evaluateCameraClearance({
     camera: "camera-main",
     envelope: over.envelope ?? envelope(),
@@ -65,6 +84,32 @@ const throws = (closure: () => unknown, text: string): boolean => {
   }
 };
 
+const stageWithClearance = (
+  clearance: IAutoMovieCameraClearanceEnvelope,
+): IAutoMovieStage => {
+  const base = makeStagingWrite();
+  return {
+    ...base,
+    cameras: [
+      {
+        ...base.cameras[0]!,
+        near: 0.1,
+        far: 100,
+        depthPrecision: {
+          minimumDepthBits: 24,
+          maximumStepMeters: 1,
+        },
+        clearance,
+      },
+    ],
+  };
+};
+
+const runtimeModels = () => [
+  { ...createModel(), id: "stickman" },
+  { ...createModel(), id: "knightB" },
+];
+
 /**
  * Camera body and parent-rig clearance are continuous, current-revision gates.
  *
@@ -79,18 +124,24 @@ const throws = (closure: () => unknown, text: string): boolean => {
  * 6. A current clear result is publishable while a stale revision is not.
  * 7. Malformed clocks, boxes, duplicate obstacles, and changing identity sets
  *    are refused at the evaluator boundary.
+ * 8. Stage validation rejects malformed nested envelopes and deep-lowers a
+ *    valid envelope without retaining author-object aliases.
+ * 9. Performance preserves a clear report, while compiler-visible body contact
+ *    and a stale geometry snapshot return addressed refusal.
  */
 export const test_film_camera_clearance = (): void => {
   const boundary = evaluate({
     samples: [0, 1].map((time) => ({
       time,
       camera: identity(),
-      obstacles: [
-        { node: "wall", bounds: box({ x: 0.2, y: 0, z: 0 }, 0.1) },
-      ],
+      obstacles: [{ node: "wall", bounds: box({ x: 0.2, y: 0, z: 0 }, 0.1) }],
     })),
   });
-  TestValidator.equals("inclusive static boundary contact", boundary.status, "blocked");
+  TestValidator.equals(
+    "inclusive static boundary contact",
+    boundary.status,
+    "blocked",
+  );
   TestValidator.equals("boundary finding is addressed", boundary.findings, [
     { part: "body", obstacle: "wall", start: 0, end: 1 },
   ]);
@@ -109,7 +160,11 @@ export const test_film_camera_clearance = (): void => {
       },
     ],
   });
-  TestValidator.equals("clear endpoints still catch midpoint penetration", midpoint.status, "blocked");
+  TestValidator.equals(
+    "clear endpoints still catch midpoint penetration",
+    midpoint.status,
+    "blocked",
+  );
 
   const rigOnly = evaluate({
     envelope: envelope(
@@ -119,9 +174,7 @@ export const test_film_camera_clearance = (): void => {
     samples: [0, 1].map((time) => ({
       time,
       camera: identity(),
-      obstacles: [
-        { node: "support", bounds: box({ x: 0, y: 0, z: 0 }) },
-      ],
+      obstacles: [{ node: "support", bounds: box({ x: 0, y: 0, z: 0 }) }],
     })),
   });
   TestValidator.equals("rig-only collision is distinct", rigOnly.findings, [
@@ -142,7 +195,11 @@ export const test_film_camera_clearance = (): void => {
       },
     ],
   });
-  TestValidator.equals("moving subject same-sample crossing", moving.status, "blocked");
+  TestValidator.equals(
+    "moving subject same-sample crossing",
+    moving.status,
+    "blocked",
+  );
 
   const rotating = evaluate({
     envelope: envelope({ center: { x: 1, y: 0, z: 0 }, radius: 0.01 }),
@@ -150,7 +207,9 @@ export const test_film_camera_clearance = (): void => {
       {
         time: 0,
         camera: identity(),
-        obstacles: [{ node: "ceiling", bounds: box({ x: 0, y: 1, z: 0 }, 0.01) }],
+        obstacles: [
+          { node: "ceiling", bounds: box({ x: 0, y: 1, z: 0 }, 0.01) },
+        ],
       },
       {
         time: 1,
@@ -158,11 +217,17 @@ export const test_film_camera_clearance = (): void => {
           ...identity(),
           rotation: { x: 0, y: 0, z: 1, w: 0 },
         },
-        obstacles: [{ node: "ceiling", bounds: box({ x: 0, y: 1, z: 0 }, 0.01) }],
+        obstacles: [
+          { node: "ceiling", bounds: box({ x: 0, y: 1, z: 0 }, 0.01) },
+        ],
       },
     ],
   });
-  TestValidator.equals("offset rotation arc is conservatively covered", rotating.status, "blocked");
+  TestValidator.equals(
+    "offset rotation arc is conservatively covered",
+    rotating.status,
+    "blocked",
+  );
 
   const clear = evaluate();
   const stale = evaluate({ currentRevision: "revision-8" });
@@ -272,5 +337,162 @@ export const test_film_camera_clearance = (): void => {
       ),
     ],
     [true, true, true, true, true, true, true],
+  );
+
+  const authored = stageWithClearance(envelope());
+  const staged = stageScene(makeScriptWrite(), authored);
+  TestValidator.equals("valid stage envelope lowers", staged.success, true);
+  if (staged.success === true) {
+    authored.cameras[0]!.clearance!.body.center.x = 99;
+    TestValidator.equals(
+      "resolved envelope does not alias author input",
+      staged.scene.cameras[0]!.clearance!.body.center.x,
+      0,
+    );
+  }
+  const malformed = [
+    null,
+    { body: null, parentRig: null },
+    { body: { center: [], radius: 0.1 }, parentRig: null },
+    {
+      body: { center: { x: Number.NaN, y: 0, z: 0 }, radius: 0.1 },
+      parentRig: null,
+    },
+    {
+      body: { center: { x: 0, y: 0, z: 0 }, radius: 0 },
+      parentRig: null,
+    },
+    { body: { center: { x: 0, y: 0, z: 0 }, radius: 0.1 } },
+    {
+      body: { center: { x: 0, y: 0, z: 0 }, radius: 0.1 },
+      parentRig: { center: { x: 0, y: Infinity, z: 0 }, radius: -1 },
+    },
+  ].map((clearance) =>
+    stageScene(
+      makeScriptWrite(),
+      stageWithClearance(
+        clearance as unknown as IAutoMovieCameraClearanceEnvelope,
+      ),
+    ),
+  );
+  TestValidator.predicate(
+    "every malformed envelope is refused at its clearance member",
+    malformed.every(
+      (result) =>
+        result.success === false &&
+        result.violations.some((item) => item.path.includes(".clearance")),
+    ),
+  );
+
+  const clearStage = stageScene(
+    makeScriptWrite(),
+    stageWithClearance(
+      envelope({ center: { x: 0, y: 0, z: 0 }, radius: 0.01 }),
+    ),
+  );
+  if (clearStage.success !== true)
+    throw new Error("clearance performance fixture must stage");
+  const performanceProps = {
+    script: makeScriptWrite(),
+    staged: clearStage,
+    performance: makePerformanceWrite(),
+    synthesize: validSynthesizer,
+    skeleton: () => createSkeleton(),
+    models: runtimeModels(),
+  };
+  const performed = performShot({
+    ...performanceProps,
+    cameraClearance: {
+      revision: "current",
+      currentRevision: "current",
+      sampleRate: 24,
+    },
+  });
+  TestValidator.predicate(
+    "current clear performance preserves its report",
+    performed.success === true &&
+      performed.shot.cameraClearance?.[0]?.status === "clear" &&
+      performed.shot.cameraClearance[0].intervals === 48,
+  );
+  const stalePerformance = performShot({
+    ...performanceProps,
+    cameraClearance: {
+      revision: "old",
+      currentRevision: "current",
+      sampleRate: 24,
+    },
+  });
+  TestValidator.predicate(
+    "stale performance is addressed",
+    stalePerformance.success === false &&
+      stalePerformance.violations.some(
+        (item) => item.path === "$input.cameraClearance.currentRevision",
+      ),
+  );
+
+  const blockedProgram = (): IAutoMovieShotProgram => {
+    const blocking = makeBlockingWrite();
+    const performance = makePerformanceWrite();
+    blocking.camera.framing = "full";
+    for (const action of performance.draft)
+      if (action.verb === "frame") action.framing = "full";
+    return {
+      actors: [
+        { node: "knightA", model: "knightA", speed: 1, eyeHeight: 1.6 },
+        { node: "knightB", model: "knightB", speed: 1, eyeHeight: 1.6 },
+      ],
+      script: makeScriptWrite(),
+      stage: stageWithClearance(
+        envelope({ center: { x: 0, y: 0, z: 0 }, radius: 3 }),
+      ),
+      blocking,
+      performance,
+      eventSamples: [],
+    };
+  };
+  const blocked = compileDefinedShot({
+    shot: defineShot("clearance-blocked", {
+      scene: "scene-duel",
+      contract: {
+        beat: "beat-1",
+        durationSeconds: 2,
+        participants: [
+          { kind: "actor", id: "knightA" },
+          { kind: "actor", id: "knightB" },
+        ],
+        opening: [],
+        closing: [],
+        camera: {
+          intent: "Keep the duel readable without crossing the actors.",
+          requiredSubjects: ["knightA", "knightB"],
+          maxOcclusionRatio: 0.2,
+        },
+        events: [],
+        reviewFrames: [],
+      },
+      build: blockedProgram,
+    }),
+    context: undefined,
+    runtime: {
+      synthesize: validSynthesizer,
+      skeleton: () => createSkeleton(),
+      frameFormat: { width: 1920, height: 1080 },
+      models: runtimeModels(),
+      cameraClearance: {
+        revision: "current",
+        currentRevision: "current",
+        sampleRate: 24,
+      },
+    },
+  });
+  TestValidator.predicate(
+    "compiler returns an addressed camera-body refusal",
+    blocked.success === false &&
+      blocked.diagnostics.some(
+        (item) =>
+          item.phase === "performance" &&
+          item.path.includes(".clearance.body") &&
+          item.fact.includes("contacts obstacle"),
+      ),
   );
 };
