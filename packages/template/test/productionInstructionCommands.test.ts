@@ -150,6 +150,13 @@ async function main(): Promise<void> {
         "utf8",
       ),
     );
+    assert.match(
+      fs.readFileSync(
+        path.join(project, ".agents", "skills", "production", "SKILL.md"),
+        "utf8",
+      ),
+      /routes maps, models, spaces, materials, instances, motions, and systems/u,
+    );
     assert.deepEqual(
       snapshot(project, ["docs", "src", "package.json"]),
       trackedBefore,

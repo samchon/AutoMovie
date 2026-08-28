@@ -75,7 +75,7 @@ Read each applicable document in full before acting:
 - [Production configuration](configuration.md) separates fixed harness wiring from authored delivery, appearance, dialogue, provenance, speaker, and live-simulation choices serialized in `automovie.config.ts`; read it before source authorship.
 - [Research](research.md) owns the optional external-evidence ledger and its downstream consumption.
 - [Settings](settings.md) defines delivery, canon, subjects, capabilities, constraints, and shared conventions for every shape.
-- [Design branches](design-branches.md) routes models, spaces, materials, instances, motions, and systems without overlap; it links the detailed model-and-motion procedure when those branches apply.
+- [Design branches](design-branches.md) routes maps, models, spaces, materials, instances, motions, and systems without overlap; it links the detailed model-and-motion procedure when those branches apply.
 - [Treatments](treatments.md), [Scripts](scripts.md), and [Screenplays](screenplays.md) own the film-only refinement ladder.
 - [Direct briefs](briefs.md) owns bounded audiovisual delivery that needs no independent narrative-refinement ladder.
 - [Contract targets](contract-targets.md) governs the shared discovery, upstream, principle, and obligation families and their production-local counterparts.
