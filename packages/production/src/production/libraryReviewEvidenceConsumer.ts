@@ -101,24 +101,20 @@ const readPlan = (props: {
       }),
     };
   try {
-    const validation = typia.validateEquals<IAutoMovieLibraryReviewPlanFile>(
-      JSON.parse(source) as unknown,
-    );
-    if (validation.success === true) return validation;
     return {
-      success: false,
-      diagnostic: missing({
-        target: `library:${props.owner.branch}:${props.owner.path}`,
-        path: relative,
-        message: `Library observation plan "${relative}" does not match its exact version-1 schema (${validation.errors
-          .slice(0, 3)
-          .map((error) => `${error.path}: expected ${error.expected}`)
-          .join(
-            "; ",
-          )}). Correct the plan instead of letting an ambiguous receipt enter review.`,
-      }),
+      success: true,
+      data: parseAutoMovieLibraryReviewPlan(source),
     };
   } catch (error) {
+    if (error instanceof TypeError)
+      return {
+        success: false,
+        diagnostic: missing({
+          target: `library:${props.owner.branch}:${props.owner.path}`,
+          path: relative,
+          message: `Library observation plan "${relative}" does not match its exact version-1 schema (${error.message}). Correct the plan instead of letting an ambiguous receipt enter review.`,
+        }),
+      };
     return {
       success: false,
       diagnostic: missing({
@@ -128,6 +124,31 @@ const readPlan = (props: {
       }),
     };
   }
+};
+
+/**
+ * Parse one tracked library observation plan against the exact closed schema.
+ *
+ * The shipped authoring command and compiler consumer share this boundary so
+ * preserving receipts can never admit properties the review gate would reject.
+ *
+ * @evidence requirements/review/subject-inspection.md#review-library-delivery-coverage Refuses malformed plans before either authoring mutation or review aggregation.
+ * @evidence specifications/review-and-acceptance/subject-surface-and-inspection.md#review-system-library-delivery-coverage Applies one exact versioned schema at the producer and consumer boundaries.
+ * @author Samchon
+ */
+export const parseAutoMovieLibraryReviewPlan = (
+  source: string,
+): IAutoMovieLibraryReviewPlanFile => {
+  const validation = typia.validateEquals<IAutoMovieLibraryReviewPlanFile>(
+    JSON.parse(source) as unknown,
+  );
+  if (validation.success === true) return validation.data;
+  throw new TypeError(
+    validation.errors
+      .slice(0, 3)
+      .map((error) => `${error.path}: expected ${error.expected}`)
+      .join("; "),
+  );
 };
 
 /** Derive one unit identity from its exact H2, source subset, and plan. */
@@ -518,8 +539,8 @@ const receiptCurrent = (props: {
  * finite observations while leaving film and brief review populations alone.
  *
  * The branch and H2 denominator comes only from
- * `readAutoMovieProductionEvidence`; this consumer carries no model, space,
- * material, instance, motion, or system table. Each adjacent plan selects its
+ * `readAutoMovieProductionEvidence`; this consumer carries no map, model,
+ * space, material, instance, motion, or system table. Each adjacent plan selects its
  * exact source subset and finite observations. Receipt identity binds the H2,
  * source bytes, current compile generation, and observation plan, while the
  * evidence body is reopened independently as canonical facts, exact project or
@@ -531,6 +552,7 @@ const receiptCurrent = (props: {
  * @evidence specifications/review-and-acceptance/subject-surface-and-inspection.md#review-system-subject-target-parity Maps every selected design owner to independently checkable observation evidence.
  * @evidence specifications/review-and-acceptance/subject-surface-and-inspection.md#review-system-subject-freshness Reopens evidence against the current multi-part owner identity.
  * @evidence specifications/review-and-acceptance/subject-surface-and-inspection.md#review-system-library-delivery-coverage Computes completeness over the graph-derived plan instead of filesystem residue.
+ * @evidencePart specifications/review-and-acceptance/subject-surface-and-inspection.md#review-system-library-delivery-coverage::library-delivery-observation-closure
  * @author Samchon
  */
 export const libraryReviewEvidenceConsumerDiagnostics = (

@@ -68,8 +68,10 @@ Shot render, rendition 교체와 delivery 재생성은 주체 freshness key에 �
 
 ### Library 전달 관찰 집계 {#review-system-library-delivery-coverage}
 
+<!-- @evidenceObligation library-delivery-observation-closure The production consumer closes every graph-derived map, model, space, material, instance, motion, and system delivery owner against its exact current plan, source, compile, runtime, evidence, and terminal-verdict identity. -->
+
 <!-- @evidence requirements/review/subject-inspection.md#review-library-delivery-coverage Library의 graph-selected 전달 owner와 branch별 유한 current observation을 review denominator로 고정한다. -->
 
-Library review resolver는 동일한 typed authoring declaration에서 active design branch, reviewed source binding, exact design document와 H2 digest를 읽고, 별도 domain 목록 없이 owner 개체군을 만든다. Active branch는 owner가 0개여도 보존되어 empty population을 실패시키며, disabled branch와 selected binding 밖 파일은 filesystem residue만으로 승격하지 않는다. Film과 brief는 이 resolver를 사용하지 않고 compiled shot·formation·model consumer에서 기존 review 개체군을 계산한다.
+Library review resolver는 동일한 typed authoring declaration에서 active design branch, reviewed source binding, exact design document와 H2 digest를 읽고, 별도 domain 목록 없이 map·model·space·material·instance·motion·system owner 개체군을 만든다. Active branch는 owner가 0개여도 보존되어 empty population을 실패시키며, disabled branch와 selected binding 밖 파일은 filesystem residue만으로 승격하지 않는다. Map owner는 current extent와 coordinate, terrain·water·network·site interface를 plan·section·elevation·traversal 같은 declared finite observation으로 닫는다. Film과 brief는 이 resolver를 사용하지 않고 compiled shot·formation·model consumer에서 기존 review 개체군을 계산한다.
 
 각 H2에 인접한 versioned plan은 manifest-derived source population 안의 exact source subset과 finite observation id·kind를 선언한다. Owner freshness identity는 H2 digest, normalized selected source bytes, compile fingerprint와 receipt를 제외한 canonical plan digest로 구성한다. Artifact receipt는 project text 또는 render bytes의 digest를, facts receipt는 canonical structured-fact digest를, model turntable receipt는 compiler가 정한 current whole-model view 집합과 적용 가능한 rig range를 다시 연다. 모든 receipt는 observation runtime identity와 passed, failed, unsupported 또는 not-run verdict를 가지며 current identity에 정확히 하나의 reopened passed receipt가 없으면 `review-evidence-missing`이다. Plan/receipt file은 물리 관찰의 locator이고 approval, waiver 또는 finding lifecycle ledger가 아니다.

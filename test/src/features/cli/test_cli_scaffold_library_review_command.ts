@@ -18,23 +18,31 @@ import {
   productionFixture,
 } from "../production/productionFixtures";
 
-const command = require(
-  path.resolve(
-    __dirname,
-    "../../../../packages/template/scaffold/scripts/library-review.ts",
-  ),
-) as {
+const commandPath = path.resolve(
+  __dirname,
+  "../../../../packages/template/scaffold/scripts/library-review.ts",
+);
+const productionEvidencePath = path.resolve(
+  __dirname,
+  "../../../../packages/template/scaffold/productionEvidence.ts",
+);
+const configurationPath = path.resolve(
+  __dirname,
+  "../../../../packages/template/scaffold/automovie.config.ts",
+);
+const command = require(commandPath) as {
   runLibraryReviewCommand: (props: {
     argv: readonly string[];
-    root: string;
-    productionId: string;
-    evidence: IAutoMovieEvidenceConfigProps;
+    root?: string;
+    productionId?: string;
+    evidence?: IAutoMovieEvidenceConfigProps;
     output?: (value: unknown) => void;
   }) => unknown;
 };
 
 const branches = [
   "instances",
+  "maps",
   "materials",
   "motions",
   "spaces",
@@ -84,7 +92,7 @@ const configuration = (root: string): IAutoMovieEvidenceConfigProps => ({
   populationScope: { mode: "complete-production" },
   settings: "review",
   research: "disabled",
-  maps: "disabled",
+  maps: "review",
   models: "disabled",
   spaces: "review",
   materials: "review",
@@ -95,7 +103,7 @@ const configuration = (root: string): IAutoMovieEvidenceConfigProps => ({
   scripts: "disabled",
   screenplays: "disabled",
   briefs: "disabled",
-  mapSources: "disabled",
+  mapSources: "review",
   modelSources: "disabled",
   spaceSources: "review",
   materialSources: "review",
@@ -148,7 +156,23 @@ const writeLibraryOwners = (root: string): void => {
       `${JSON.stringify({ branch, observed: true, samples: [0, 0.5, 1] })}\n`,
       "utf8",
     );
+  fs.writeFileSync(
+    path.join(root, "observations", "maps.json"),
+    `${JSON.stringify({
+      extent: { min: [-20, 0, -15], max: [20, 8, 15] },
+      coordinate: { unit: "meter", up: "+Y", forward: "+Z" },
+      views: ["plan", "section", "elevation"],
+      traversal: { from: "west-entry", to: "site", reachable: true },
+      terrainWaterNetworkSiteInterfaces: "checked",
+    })}\n`,
+    "utf8",
+  );
 };
+
+const observationId = (branch: (typeof branches)[number]): string =>
+  branch === "maps"
+    ? "map-plan-section-elevation-traversal-extent"
+    : `${branch}-neutral`;
 
 const ownerAddress = (
   authoring: IAutoMovieProductionEvidence,
@@ -196,11 +220,12 @@ const commandRefuses = (props: {
  *
  * Scenarios:
  *
- * 1. The shipped `plan` command accepts exact space, material, instance,
+ * 1. The shipped `plan` command accepts exact map, space, material, instance,
  *    motion, and system H2/source owners while disabled model residue stays out.
  * 2. Review fails at every exact owner before any receipt is recorded.
- * 3. Project artifacts pay building space/material observations and canonical
- *    structured facts pay instance, motion, and nonvisual system observations.
+ * 3. Structured map extent/view/traversal facts, building space/material
+ *    artifacts, and instance, motion, and nonvisual system facts pay their
+ *    distinct finite observations.
  * 4. After all current receipts are recorded the library diagnostic population
  *    is empty even though the project has no library dummy shot.
  * 5. A motion source change makes only current receipts stale and review fails
@@ -209,6 +234,10 @@ const commandRefuses = (props: {
 export const test_cli_scaffold_library_review_command = (): void => {
   const fixture = productionFixture();
   try {
+    const modelSource = fs.readFileSync(
+      path.join(fixture.root, "src", "models", "soloist.ts"),
+      "utf8",
+    );
     resetLibraryHosts(fixture.root);
     writeLibraryOwners(fixture.root);
     const evidence = configuration(fixture.root);
@@ -225,7 +254,7 @@ export const test_cli_scaffold_library_review_command = (): void => {
           "--source",
           `src/${branch}/owner.ts`,
           "--observation",
-          `${branch}-neutral:${
+          `${observationId(branch)}:${
             branch === "spaces" || branch === "materials" ? "artifact" : "facts"
           }`,
         ],
@@ -256,7 +285,7 @@ export const test_cli_scaffold_library_review_command = (): void => {
           "--owner",
           ownerAddress(authoring, branch),
           "--observation",
-          `${branch}-neutral`,
+          observationId(branch),
           "--runtime",
           "automovie-library-probe:v1",
           "--verdict",
@@ -276,6 +305,31 @@ export const test_cli_scaffold_library_review_command = (): void => {
       root: fixture.root,
       authoring: currentAuthoring,
     });
+    const singleton = require(productionEvidencePath) as {
+      productionEvidence: IAutoMovieEvidenceConfigProps;
+    };
+    const configured = require(configurationPath) as {
+      default: { productionId: string };
+    };
+    const originalEvidence = { ...singleton.productionEvidence };
+    const originalProductionId = configured.default.productionId;
+    const originalDirectory = process.cwd();
+    let defaultSingletonInspect = false;
+    try {
+      Object.assign(singleton.productionEvidence, evidence);
+      configured.default.productionId = "fixture-film";
+      process.chdir(fixture.root);
+      defaultSingletonInspect =
+        (
+          command.runLibraryReviewCommand({ argv: [] }) as {
+            owners: unknown[];
+          }
+        ).owners.length === branches.length;
+    } finally {
+      process.chdir(originalDirectory);
+      Object.assign(singleton.productionEvidence, originalEvidence);
+      configured.default.productionId = originalProductionId;
+    }
     let outputCount = 0;
     command.runLibraryReviewCommand({
       argv: ["inspect"],
@@ -289,6 +343,22 @@ export const test_cli_scaffold_library_review_command = (): void => {
     const spaceOwner = ownerAddress(authoring, "spaces");
     const refusals: Array<readonly [readonly string[], string]> = [
       [["unknown"], 'must be "inspect", "plan", or "record"'],
+      [["inspect", "positional"], "unknown or positional"],
+      [["inspect", "--typo", "value"], "unknown or positional"],
+      [
+        [
+          "plan",
+          "--owner",
+          spaceOwner,
+          "--source",
+          "src/spaces/owner.ts",
+          "--observation",
+          "space:artifact",
+          "--typo",
+          "value",
+        ],
+        "unknown or positional",
+      ],
       [["plan", "--owner", "--source", "bad"], "requires one value"],
       [["plan", "--owner", spaceOwner, "--owner", spaceOwner], "exactly once"],
       [["plan", "--owner", "invalid"], "must be one exact"],
@@ -350,8 +420,8 @@ export const test_cli_scaffold_library_review_command = (): void => {
               "--observation",
               observation,
             ],
-            observation.includes("turntable") &&
-            observation.split(":").length === 3
+            observation === "bad:turntable" ||
+            observation === "bad:turntable: model"
               ? "needs a model"
               : observation.includes("artifact:model")
                 ? "only for turntable"
@@ -477,6 +547,24 @@ export const test_cli_scaffold_library_review_command = (): void => {
         ],
         "requires artifact, not turntable",
       ],
+      [
+        [
+          "record",
+          "--owner",
+          spaceOwner,
+          "--observation",
+          "spaces-neutral",
+          "--runtime",
+          "probe:v1",
+          "--verdict",
+          "passed",
+          "--artifact-project",
+          "observations/space.svg",
+          "--typo",
+          "value",
+        ],
+        "unknown or positional",
+      ],
     ];
     const refusalCoverage = refusals.every(([argv, message]) =>
       commandRefuses({ argv, root: fixture.root, evidence, message }),
@@ -524,6 +612,150 @@ export const test_cli_scaffold_library_review_command = (): void => {
       root: fixture.root,
       authoring: changedAuthoring,
     });
+    fs.writeFileSync(
+      path.join(fixture.root, "src", "maps", "owner.ts"),
+      'export const mapsLibraryOwner = "changed";\n',
+      "utf8",
+    );
+    const mapChangedAuthoring = readAutoMovieProductionEvidence({
+      root: fixture.root,
+      productionEvidence: evidence,
+    });
+    const mapStale = libraryDiagnostics({
+      root: fixture.root,
+      authoring: mapChangedAuthoring,
+    });
+    command.runLibraryReviewCommand({
+      argv: [
+        "record",
+        "--owner",
+        ownerAddress(mapChangedAuthoring, "motions"),
+        "--observation",
+        observationId("motions"),
+        "--runtime",
+        "automovie-library-probe:v2",
+        "--verdict",
+        "passed",
+        "--facts-file",
+        "observations/motions.json",
+      ],
+      root: fixture.root,
+      productionId: "fixture-film",
+      evidence,
+    });
+    const motionReceipts = (
+      JSON.parse(
+        fs.readFileSync(
+          path.join(fixture.root, "docs", "motions", "owner.review.json"),
+          "utf8",
+        ),
+      ) as { units: Array<{ receipts: unknown[] }> }
+    ).units[0]!.receipts.length;
+
+    const spacePlanPath = path.join(
+      fixture.root,
+      "docs",
+      "spaces",
+      "owner.review.json",
+    );
+    const currentSpacePlan = fs.readFileSync(spacePlanPath, "utf8");
+    const malformedSpacePlan = `${JSON.stringify(
+      {
+        ...(JSON.parse(currentSpacePlan) as object),
+        unexpected: true,
+      },
+      null,
+      2,
+    )}\n`;
+    fs.writeFileSync(spacePlanPath, malformedSpacePlan, "utf8");
+    const malformedPlanRefused = commandRefuses({
+      argv: [
+        "plan",
+        "--owner",
+        spaceOwner,
+        "--source",
+        "src/spaces/owner.ts",
+        "--observation",
+        "spaces-neutral:artifact",
+      ],
+      root: fixture.root,
+      evidence,
+      message: "expected undefined",
+    });
+    const malformedPlanUnchanged =
+      fs.readFileSync(spacePlanPath, "utf8") === malformedSpacePlan;
+    fs.writeFileSync(spacePlanPath, currentSpacePlan, "utf8");
+
+    fs.mkdirSync(path.join(fixture.root, "docs", "models"), {
+      recursive: true,
+    });
+    fs.mkdirSync(path.join(fixture.root, "src", "models"), {
+      recursive: true,
+    });
+    fs.writeFileSync(
+      path.join(fixture.root, "docs", "models", "owner.md"),
+      "# models owner\n\n## Delivery {#models-delivery}\n\nThe current whole-model turntable delivery.\n",
+      "utf8",
+    );
+    fs.writeFileSync(
+      path.join(fixture.root, "src", "models", "soloist.ts"),
+      modelSource,
+      "utf8",
+    );
+    const modelEvidence: IAutoMovieEvidenceConfigProps = {
+      ...evidence,
+      models: "review",
+      modelSources: "review",
+    };
+    const modelAuthoring = readAutoMovieProductionEvidence({
+      root: fixture.root,
+      productionEvidence: modelEvidence,
+    });
+    const modelOwner = ownerAddress(modelAuthoring, "models");
+    const modelSourcePath = modelAuthoring.designOwners
+      .find((entry) => entry.branch === "models")!
+      .sourceBinding!.paths.find((entry) => entry.endsWith("/soloist.ts"))!;
+    command.runLibraryReviewCommand({
+      argv: [
+        "plan",
+        "--owner",
+        modelOwner,
+        "--source",
+        modelSourcePath,
+        "--observation",
+        "whole-model:turntable:soloist",
+      ],
+      root: fixture.root,
+      productionId: "fixture-film",
+      evidence: modelEvidence,
+    });
+    const modelPlanPath = path.join(
+      fixture.root,
+      "docs",
+      "models",
+      "owner.review.json",
+    );
+    const currentModelPlan = fs.readFileSync(modelPlanPath, "utf8");
+    const mismatchedTurntableRefused = commandRefuses({
+      argv: [
+        "record",
+        "--owner",
+        modelOwner,
+        "--observation",
+        "whole-model",
+        "--runtime",
+        "automovie-library-probe:v1",
+        "--verdict",
+        "passed",
+        "--turntable",
+        "another-model",
+      ],
+      root: fixture.root,
+      evidence: modelEvidence,
+      message: "requires planned model",
+    });
+    const mismatchedTurntableUnchanged =
+      fs.readFileSync(modelPlanPath, "utf8") === currentModelPlan;
 
     TestValidator.equals(
       "generated library plans and receipts close the actual compiler consumer",
@@ -561,7 +793,7 @@ export const test_cli_scaffold_library_review_command = (): void => {
             ),
         ],
         [
-          "allBuildingMotionAndSystemReceiptsCurrent",
+          "allMapBuildingMotionAndSystemReceiptsCurrent",
           () => positive.length === 0,
         ],
         [
@@ -573,7 +805,26 @@ export const test_cli_scaffold_library_review_command = (): void => {
                 entry.message.includes("stale"),
             ),
         ],
+        [
+          "mapSourceChangeStalesFiniteEvidence",
+          () =>
+            mapStale.some(
+              (entry) =>
+                entry.target.includes("maps") &&
+                entry.message.includes("stale"),
+            ),
+        ],
         ["commandRefusalMatrix", () => refusalCoverage],
+        ["defaultSingletonInspect", () => defaultSingletonInspect],
+        ["staleReceiptRetainedAlongsideCurrent", () => motionReceipts === 2],
+        [
+          "malformedPlanRefusedWithoutMutation",
+          () => malformedPlanRefused && malformedPlanUnchanged,
+        ],
+        [
+          "mismatchedTurntableRefusedWithoutMutation",
+          () => mismatchedTurntableRefused && mismatchedTurntableUnchanged,
+        ],
         ["inspectAndRecordEmitResults", () => outputCount === 2],
       ]),
       {
@@ -581,9 +832,14 @@ export const test_cli_scaffold_library_review_command = (): void => {
         disabledResidueExcluded: true,
         sourceCompileCurrent: true,
         unpaidOwnersRefused: true,
-        allBuildingMotionAndSystemReceiptsCurrent: true,
+        allMapBuildingMotionAndSystemReceiptsCurrent: true,
         motionSourceChangeStalesReceipt: true,
+        mapSourceChangeStalesFiniteEvidence: true,
         commandRefusalMatrix: true,
+        defaultSingletonInspect: true,
+        staleReceiptRetainedAlongsideCurrent: true,
+        malformedPlanRefusedWithoutMutation: true,
+        mismatchedTurntableRefusedWithoutMutation: true,
         inspectAndRecordEmitResults: true,
       },
     );

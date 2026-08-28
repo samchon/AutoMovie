@@ -65,10 +65,12 @@ const contentIdentity = require(
 
 const digest = (digit: string): AutoMovieContentDigest =>
   `sha256:${digit.repeat(64)}` as AutoMovieContentDigest;
+const nonError = (message: string): Error => message as unknown as Error;
 const COMPILE = digest("1");
 const CAPTURE = digest("2");
 const branches = [
   "instances",
+  "maps",
   "materials",
   "models",
   "motions",
@@ -162,6 +164,11 @@ const project = (): MutableProject => {
 };
 
 const observation = (branch: string) => {
+  if (branch === "maps")
+    return {
+      id: "map-plan-section-elevation-traversal-extent",
+      evidence: "facts",
+    };
   if (branch === "models")
     return { id: "whole-model", evidence: "turntable", model: "chair" };
   if (branch === "spaces")
@@ -209,7 +216,17 @@ const evidenceFor = (branch: string) => {
         Buffer.from("material-pixels", "utf8"),
       ),
     };
-  const facts = { branch, observed: true, samples: [0, 0.5, 1] };
+  const facts =
+    branch === "maps"
+      ? {
+          branch,
+          extent: { min: [-20, 0, -15], max: [20, 8, 15] },
+          coordinate: { unit: "meter", up: "+Y", forward: "+Z" },
+          views: ["plan", "section", "elevation"],
+          traversal: { from: "west-entry", to: "site", reachable: true },
+          terrainWaterNetworkSiteInterfaces: "checked",
+        }
+      : { branch, observed: true, samples: [0, 0.5, 1] };
   return {
     kind: "facts",
     facts,
@@ -325,8 +342,8 @@ const compilerProbe = (): {
  *
  * Scenarios:
  *
- * 1. Model, space, material, instance, motion, and system plans expose exact
- *    current identities; fixed turntables, artifacts, and facts pay them.
+ * 1. Map, model, space, material, instance, motion, and system plans expose
+ *    exact current identities; fixed turntables, artifacts, and facts pay them.
  * 2. Design, source, compile, plan, artifact, runtime, or view changes make the
  *    exact owner or observation fail rather than trusting a receipt assertion.
  * 3. Missing, malformed, duplicate, unbound, or unreadable plans and sources
@@ -351,6 +368,9 @@ export const test_production_library_review_evidence_consumer = (): void => {
   );
   const sourceChanged = diagnose((changed) =>
     changed.source.set(sourcePath("motions"), Buffer.from("changed", "utf8")),
+  );
+  const mapSourceChanged = diagnose((changed) =>
+    changed.source.set(sourcePath("maps"), Buffer.from("changed", "utf8")),
   );
   const designChanged = diagnose((_changed, changedBinding) => {
     const target = changedBinding.designOwners.find(
@@ -463,6 +483,10 @@ export const test_production_library_review_evidence_consumer = (): void => {
     evidence: "turntable",
     model: "chair",
   });
+  invalidPlan.units[0].observations.push({
+    id: "artifact-without-model",
+    evidence: "artifact",
+  });
   invalidState.prose.set(reviewPath("motions"), JSON.stringify(invalidPlan));
   const missingSource = invalidState.source.delete("src/motions/support.ts");
   const invalidModelPlan = JSON.parse(
@@ -531,6 +555,33 @@ export const test_production_library_review_evidence_consumer = (): void => {
     project: noSourceState,
     compileFingerprint: COMPILE,
   });
+  const missingBinding = authoring();
+  const missingBindingOwner = missingBinding.designOwners.find(
+    (entry) => entry.branch === "maps",
+  )!;
+  (missingBindingOwner as unknown as { sourceBinding: null }).sourceBinding =
+    null;
+  const missingBindingState = project();
+  writePlans(missingBindingState);
+  const missingBindingDiagnostics =
+    consumer.readAutoMovieLibraryReviewRequirements({
+      authoring: missingBinding,
+      project: missingBindingState,
+      compileFingerprint: COMPILE,
+    });
+  const nonErrorSourceState = project();
+  writePlans(nonErrorSourceState);
+  const readSource = nonErrorSourceState.readSource;
+  nonErrorSourceState.readSource = (relative) => {
+    if (relative === sourcePath("maps"))
+      throw nonError("source bytes unavailable");
+    return readSource(relative);
+  };
+  const nonErrorSource = consumer.readAutoMovieLibraryReviewRequirements({
+    authoring: binding,
+    project: nonErrorSourceState,
+    compileFingerprint: COMPILE,
+  });
   const wrongRoot = consumer.libraryReviewEvidenceConsumerDiagnostics({
     ...props(state, binding),
     project: { ...state, root: "C:/other-project" },
@@ -570,6 +621,14 @@ export const test_production_library_review_evidence_consumer = (): void => {
             (entry) =>
               entry.target.includes("motions") &&
               entry.message.includes("stale"),
+          ),
+      ],
+      [
+        "mapSourceChangeStalesFiniteEvidence",
+        () =>
+          mapSourceChanged.some(
+            (entry) =>
+              entry.target.includes("maps") && entry.message.includes("stale"),
           ),
       ],
       [
@@ -721,6 +780,22 @@ export const test_production_library_review_evidence_consumer = (): void => {
           ),
       ],
       [
+        "missingSourceBindingFailsClosed",
+        () =>
+          missingBindingDiagnostics.diagnostics.some(
+            (entry) =>
+              entry.target.includes("maps") &&
+              entry.message.includes("missing population"),
+          ),
+      ],
+      [
+        "nonErrorSourceFailureFailsClosed",
+        () =>
+          nonErrorSource.diagnostics.some((entry) =>
+            entry.message.includes("source bytes unavailable"),
+          ),
+      ],
+      [
         "foreignAuthoringSnapshotRefused",
         () =>
           wrongRoot[0]?.target === "library:authoring-binding" &&
@@ -751,6 +826,7 @@ export const test_production_library_review_evidence_consumer = (): void => {
       allDomainEvidenceComplete: true,
       compilerAndOpenApiRunTheSameLibraryGate: true,
       sourceChangeStalesExactOwner: true,
+      mapSourceChangeStalesFiniteEvidence: true,
       designChangeStalesExactOwner: true,
       planChangeStalesExactOwner: true,
       sourceBindingChangeStalesExactOwner: true,
@@ -767,6 +843,8 @@ export const test_production_library_review_evidence_consumer = (): void => {
       invalidSourcesPlansAndKindsRefused: true,
       modelFactsCannotReplaceFixedTurntable: true,
       libraryOwnerNeedsSource: true,
+      missingSourceBindingFailsClosed: true,
+      nonErrorSourceFailureFailsClosed: true,
       foreignAuthoringSnapshotRefused: true,
       filmBriefAndEarlierScopesRemainUnchanged: true,
     },

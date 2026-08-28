@@ -13,6 +13,7 @@ import {
   AutoMovieProductionProject,
   canonicalAutoMovieJsonBytes,
   digestAutoMovieBytes,
+  parseAutoMovieLibraryReviewPlan,
   readAutoMovieLibraryReviewRequirements,
 } from "@automovie/production";
 import { randomUUID } from "node:crypto";
@@ -70,9 +71,42 @@ const readPlan = (
   root: string,
   relative: string,
 ): IAutoMovieLibraryReviewPlanFile =>
-  JSON.parse(
+  parseAutoMovieLibraryReviewPlan(
     fs.readFileSync(path.join(root, relative), "utf8"),
-  ) as IAutoMovieLibraryReviewPlanFile;
+  );
+
+const actionArguments = {
+  inspect: new Set<string>(),
+  plan: new Set(["--owner", "--source", "--observation"]),
+  record: new Set([
+    "--owner",
+    "--observation",
+    "--runtime",
+    "--verdict",
+    "--artifact-project",
+    "--artifact-render",
+    "--facts-file",
+    "--turntable",
+  ]),
+} as const;
+
+/** Refuse positional and unknown arguments before any command-side mutation. */
+const assertActionArguments = (
+  argv: readonly string[],
+  action: keyof typeof actionArguments,
+): void => {
+  const allowed = actionArguments[action];
+  for (let index = 1; index < argv.length; index += 2) {
+    const flag = argv[index];
+    const value = argv[index + 1];
+    if (flag === undefined || allowed.has(flag) === false)
+      throw new Error(
+        `Library review ${action} received unknown or positional argument ${JSON.stringify(flag)}.`,
+      );
+    if (value === undefined || value.startsWith("--"))
+      throw new Error(`${flag} requires one value.`);
+  }
+};
 
 const writePlan = (props: {
   root: string;
@@ -215,6 +249,11 @@ export const runLibraryReviewCommand = (props: {
       `Library review commands require production kind "library", not ${JSON.stringify(authoring.manifest.kind)}.`,
     );
   const action = props.argv[0] ?? "inspect";
+  if (action !== "inspect" && action !== "plan" && action !== "record")
+    throw new Error(
+      'Library review action must be "inspect", "plan", or "record".',
+    );
+  assertActionArguments(props.argv, action);
 
   if (action === "plan") {
     const requested = one(props.argv, "--owner")!;
@@ -307,10 +346,6 @@ export const runLibraryReviewCommand = (props: {
     props.output?.(population);
     return population;
   }
-  if (action !== "record")
-    throw new Error(
-      'Library review action must be "inspect", "plan", or "record".',
-    );
   if (population.diagnostics.length !== 0)
     throw new Error(
       `Correct the library observation plan before recording: ${JSON.stringify(population.diagnostics)}`,
@@ -338,6 +373,15 @@ export const runLibraryReviewCommand = (props: {
     throw new Error(
       `Observation ${JSON.stringify(observation)} requires ${requirement.evidence}, not ${evidence.kind}.`,
     );
+  if (evidence.kind === "turntable") {
+    const planned = population.turntables.find(
+      (entry) => entry.owner === requested && entry.observation === observation,
+    );
+    if (planned?.model !== evidence.model)
+      throw new Error(
+        `Observation ${JSON.stringify(observation)} requires planned model ${JSON.stringify(planned?.model)}, not ${JSON.stringify(evidence.model)}.`,
+      );
+  }
   const parts = ownerParts(requested);
   const relative = planPath(parts.design);
   const plan = readPlan(root, relative);
