@@ -1719,6 +1719,42 @@ export const test_production_project_runtime_shape_repaint_records =
           selections: residentsBeforeRace,
         },
       );
+      let activeLineageChecks = 0;
+      expectSelectionRefusal(
+        "selection rolls back when the active lineage changes after publication",
+        {
+          ...reversalProps,
+          inputCurrent: () => {
+            if (++activeLineageChecks === 2) {
+              const initialSelection = JSON.parse(
+                initialSelectionBytes.toString(),
+              ) as { reason: string };
+              initialSelection.reason = " ";
+              writeTrackedJson(
+                project,
+                initialPointer.selection,
+                initialSelection,
+              );
+            }
+            return true;
+          },
+        },
+        "while the guarded commit was being applied",
+      );
+      fs.writeFileSync(initialSelectionFile, initialSelectionBytes);
+      TestValidator.equals(
+        "post-write active-lineage invalidation rolls selection state back",
+        {
+          active: fs.readFileSync(activeFile, "utf8"),
+          checks: activeLineageChecks,
+          selections: selectionResidents(),
+        },
+        {
+          active: activeIdentity,
+          checks: 2,
+          selections: residentsBeforeRace,
+        },
+      );
       expectSelectionRefusal(
         "selection refuses a pre-write input race",
         { ...reversalProps, inputCurrent: () => false },
@@ -1921,6 +1957,80 @@ export const test_production_project_runtime_shape_repaint_records =
         ],
       ] as const)
         expectStoredSelectionOmitted(label, mutate);
+      const previousSelectionPath = selectedSelection.previousSelection!;
+      const previousSelection = JSON.parse(
+        fs.readFileSync(
+          project.trackedStatePath(previousSelectionPath),
+          "utf8",
+        ),
+      ) as StoredSelection;
+      const expectStoredAncestorOmitted = (
+        label: string,
+        mutate: (selection: StoredSelection) => void,
+      ): void => {
+        const candidate = structuredClone(previousSelection);
+        mutate(candidate);
+        writeTrackedJson(project, previousSelectionPath, candidate);
+        TestValidator.equals(
+          label,
+          project.verifiedRepaintRenditions([shot]),
+          [],
+        );
+        writeTrackedJson(project, previousSelectionPath, previousSelection);
+      };
+      for (const [label, mutate] of [
+        [
+          "stored selection lineage refuses a blank ancestor reason",
+          (selection: StoredSelection): void => {
+            selection.reason = " ";
+          },
+        ],
+        [
+          "stored selection lineage refuses a padded ancestor structural review",
+          (selection: StoredSelection): void => {
+            selection.structuralReview = "padded ";
+          },
+        ],
+        [
+          "stored selection lineage refuses an omitted ancestor continuity review",
+          (selection: StoredSelection): void => {
+            selection.continuityReview = null;
+          },
+        ],
+        [
+          "stored selection lineage refuses an ancestor continuity baseline different from its candidate",
+          (selection: StoredSelection): void => {
+            selection.continuityReview!.baseline =
+              "docs/settings/continuity.md#other";
+          },
+        ],
+        [
+          "stored selection lineage refuses a deeper cycle",
+          (selection: StoredSelection): void => {
+            selection.previousSelection = selectedPointer.selection;
+          },
+        ],
+      ] as const)
+        expectStoredAncestorOmitted(label, mutate);
+      expectStoredSelectionOmitted(
+        "stored ordinary selection cannot move to an older candidate",
+        (selection) => {
+          selection.kind = "selection";
+        },
+      );
+      expectStoredSelectionOmitted(
+        "stored ordinary selection cannot select the same candidate again",
+        (selection) => {
+          selection.kind = "selection";
+          selection.previousSelection = initialPointer.selection;
+        },
+      );
+      expectStoredSelectionOmitted(
+        "stored selection lineage refuses a self-cycle",
+        (selection) => {
+          selection.previousSelection = selectedPointer.selection;
+        },
+      );
       TestValidator.equals(
         "restored stored selection remains the exact active rendition",
         project.verifiedRepaintRenditions([shot]),
