@@ -416,6 +416,9 @@ importers:
       '@automovie/engine':
         specifier: workspace:^
         version: link:../engine
+      '@automovie/evidence':
+        specifier: workspace:^
+        version: link:../evidence
       '@automovie/ingest':
         specifier: workspace:^
         version: link:../ingest
@@ -563,6 +566,9 @@ importers:
       '@automovie/engine':
         specifier: workspace:^
         version: link:../packages/engine
+      '@automovie/evidence':
+        specifier: workspace:^
+        version: link:../packages/evidence
       '@automovie/face':
         specifier: workspace:^
         version: link:../packages/face
