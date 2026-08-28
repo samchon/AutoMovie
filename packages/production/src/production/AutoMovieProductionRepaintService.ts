@@ -322,7 +322,6 @@ export class AutoMovieProductionRepaintService {
       references: structuredClone(input.references),
     };
     const requestId = this.execution?.requestId ?? randomUUID();
-    currentRequestId = requestId;
     const now = this.execution?.now ?? (() => new Date());
     const preflightAt = now();
     const executionPolicy = this.execution?.policy ?? LEGACY_REPAINT_POLICY;
@@ -476,6 +475,7 @@ export class AutoMovieProductionRepaintService {
         error instanceof Error ? error.message : String(error),
       );
     }
+    if (priorAttempts.length !== 0) currentRequestId = requestId;
     if (
       this.execution?.requestId !== undefined &&
       (priorAttempts.length === 0 ||
@@ -637,6 +637,7 @@ export class AutoMovieProductionRepaintService {
       });
       for (const attempt of execution.attempts)
         services.project.commitRepaintAttempt(attempt);
+      if (execution.attempts.length !== 0) currentRequestId = requestId;
     } catch (error) {
       return failure(
         "repaint-commit-refused",
