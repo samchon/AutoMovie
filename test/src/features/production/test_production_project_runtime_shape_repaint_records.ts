@@ -298,6 +298,35 @@ export const test_production_project_runtime_shape_repaint_records =
           "attempt source fingerprint is a digest",
           repaintAttempt({ sourceRenderFingerprint: "sha256:" }),
         ],
+        ...([63, 65] as const).flatMap((length) => [
+          [
+            `attempt request fingerprint has exactly 64 hexadecimal characters (${length})`,
+            repaintAttempt({
+              requestFingerprint: `sha256:${"1".repeat(length)}`,
+            }),
+          ] as const,
+          [
+            `attempt compile fingerprint has exactly 64 hexadecimal characters (${length})`,
+            repaintAttempt({
+              compileFingerprint: `sha256:${"2".repeat(length)}`,
+            }),
+          ] as const,
+          [
+            `attempt source fingerprint has exactly 64 hexadecimal characters (${length})`,
+            repaintAttempt({
+              sourceRenderFingerprint: `sha256:${"3".repeat(length)}`,
+            }),
+          ] as const,
+          [
+            `available attempt output digest has exactly 64 hexadecimal characters (${length})`,
+            repaintAttempt({
+              availableOutput: {
+                digest: `sha256:${"4".repeat(length)}`,
+                bytes: 1,
+              },
+            }),
+          ] as const,
+        ]),
         [
           "attempt adapter identity is nonblank",
           repaintAttempt({ adapterIdentity: " " }),

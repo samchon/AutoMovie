@@ -4,8 +4,10 @@ import type {
   IAutoMovieAssetManifest,
   IAutoMovieProductionRegistryManifest,
   IAutoMovieRenderBundleManifest,
+  IAutoMovieRepaintExecutionPolicy,
   IAutoMovieRepaintGeneratorAdoption,
   IAutoMovieRepaintReceipt,
+  IAutoMovieRepaintRequestEvidence,
   IAutoMovieRepaintShot,
 } from "@automovie/interface";
 import {
@@ -14,6 +16,7 @@ import {
   AutoMovieProductionProject,
   AutoMovieProductionRepaintService,
   type IAutoMovieProductionServices,
+  type IAutoMovieRepaintAttemptRecord,
   canonicalAutoMovieRepaintRuntimeIdentity,
   digestAutoMovieBytes,
 } from "@automovie/production";
@@ -74,6 +77,27 @@ const input: IAutoMovieRepaintShot.IProps = {
     path: referencePathForRole(role),
   })),
 };
+
+const executionPolicy = (
+  override: Partial<IAutoMovieRepaintExecutionPolicy> = {},
+): IAutoMovieRepaintExecutionPolicy => ({
+  maximumAttempts: 2,
+  attemptTimeoutMs: 1_000,
+  maximumElapsedMs: 10_000,
+  maximumCostUnits: 10,
+  backoffMs: [1],
+  retryableFailures: ["rate-limit"],
+  ...override,
+});
+
+const executionEvidence = (): IAutoMovieRepaintRequestEvidence => ({
+  prompt: "docs/obligations/repaint-prompt.md#opening",
+  continuity: null,
+  settings: "docs/settings/production.md#opening",
+  design: "docs/designs/opening.md#opening",
+  screenplayOrBrief: "docs/screenplays/opening.md#opening",
+  shot: "docs/shots/opening.md#opening",
+});
 
 const services = (): IAutoMovieProductionServices =>
   ({
@@ -223,11 +247,23 @@ const executableServices = (props: {
     ],
     commitRepaintRendition: (receipt: IAutoMovieRepaintReceipt) =>
       props.commit(receipt),
+    commitRepaintAttempt: () => 1,
+    repaintRequestAttempts: () => [],
     commitFiles: () => 1,
   };
   Object.setPrototypeOf(project, AutoMovieProductionProject.prototype);
   return {
     project,
+    oracle: {
+      preview: () =>
+        Promise.resolve({
+          captured: true,
+          compileFingerprint,
+          renderBundle: "bundle",
+          frame: null,
+          diagnostics: [],
+        }),
+    },
     compileStatus: () => ({
       success: true,
       compiler: { inputFingerprint: compileFingerprint },
@@ -265,7 +301,7 @@ const scenarioServices = (
  *    return stable diagnostics without publishing a receipt.
  * 5. Source candidate ordering is deterministic and all post-provider input
  *    changes are refused against a fresh snapshot.
- * 6. A matching execution commits receipt v3 with reviewed provenance,
+ * 6. A matching execution commits receipt v4 with reviewed provenance,
  *    deterministic structural authority, and exact resident identities.
  * 7. Caller/provider mutation cannot change the immutable request snapshot
  *    shared by execution and receipt publication.
@@ -832,7 +868,7 @@ export const test_production_repaint_generator_adoption =
           "repaint-target-missing",
           "repaint-target-missing",
           "repaint-source-evidence-missing",
-          "repaint-source-evidence-missing",
+          "repaint-source-evidence-invalid",
           "repaint-source-evidence-invalid",
           "repaint-source-evidence-invalid",
           "repaint-source-evidence-invalid",
@@ -941,7 +977,7 @@ export const test_production_repaint_generator_adoption =
       const vanishedManifest = scenarioServices(runnable, {
         project: {
           verifiedRenderManifest: () =>
-            ++manifestReads === 1 ? validManifest : null,
+            ++manifestReads <= 2 ? validManifest : null,
         },
       });
       let changedManifestReads = 0;
@@ -953,7 +989,7 @@ export const test_production_repaint_generator_adoption =
       const changedSource = scenarioServices(runnable, {
         project: {
           verifiedRenderManifest: () =>
-            ++changedManifestReads === 1 ? validManifest : changedManifest,
+            ++changedManifestReads <= 2 ? validManifest : changedManifest,
         },
       });
       let missingReferenceReads = 0;
@@ -1177,11 +1213,316 @@ export const test_production_repaint_generator_adoption =
           structuralAuthority: "deterministic-source-only",
           referenceRoles: [...referenceRoles],
           referencePaths: input.references.map((reference) => reference.path),
-          receiptVersion: 3,
+          receiptVersion: 4,
         },
       );
       if (accepted.receipt === null)
         throw new Error("Accepted repaint result lost its receipt.");
+
+      const selection = {
+        productionId: input.productionId,
+        shot: input.shot,
+        attemptId: accepted.receipt.attemptId,
+        kind: "selection" as const,
+        reason: "The reviewed candidate preserves the authored structure.",
+        structuralReview: "The deterministic silhouette remains exact.",
+        continuityReview: null,
+      };
+      const selectionContext = (
+        selectRepaintCandidate: (
+          candidate: unknown,
+        ) => IAutoMovieRepaintReceipt,
+      ): AutoMovieProductionContext =>
+        ({
+          forProduction: () =>
+            scenarioServices(runnable, {
+              project: { selectRepaintCandidate },
+            }),
+        }) as unknown as AutoMovieProductionContext;
+      const selectedCandidate = new AutoMovieProductionRepaintService(
+        undefined,
+        undefined,
+        {
+          policy: executionPolicy(),
+          evidence: executionEvidence(),
+          now: () => new Date("2026-08-28T12:00:00.000Z"),
+        },
+      ).select(
+        selectionContext(() => accepted.receipt!),
+        selection,
+      );
+      const refusedSelections = [
+        new Error("selection commit failed"),
+        nonError("non-error selection commit failed"),
+      ].map((thrown) =>
+        new AutoMovieProductionRepaintService().select(
+          selectionContext(() => {
+            throw thrown;
+          }),
+          selection,
+        ),
+      );
+      TestValidator.equals(
+        "selection entry returns reviewed receipts and contains commit refusals",
+        {
+          selected: selectedCandidate.selected,
+          attemptId: selectedCandidate.receipt?.attemptId,
+          refused: refusedSelections.map(codeOf),
+        },
+        {
+          selected: true,
+          attemptId: accepted.receipt.attemptId,
+          refused: ["repaint-commit-refused", "repaint-commit-refused"],
+        },
+      );
+
+      const unavailableCapture = await new AutoMovieProductionRepaintService(
+        actualAdapter(selected.runtimeIdentity),
+        selected,
+      ).repaint(
+        scenarioServices(runnable, {
+          services: {
+            oracle: {
+              preview: () =>
+                Promise.resolve({
+                  captured: false,
+                  compileFingerprint: null,
+                  renderBundle: null,
+                  frame: null,
+                  diagnostics: [
+                    {
+                      code: "repaint-source-evidence-missing",
+                      severity: "error",
+                      scope: "render",
+                      path: input.shot,
+                      message: "capture unavailable",
+                    },
+                  ],
+                }),
+            },
+          },
+        }),
+        input,
+      );
+      const invalidEvidence = await new AutoMovieProductionRepaintService(
+        actualAdapter(selected.runtimeIdentity),
+        selected,
+        {
+          policy: executionPolicy(),
+          evidence: { ...executionEvidence(), prompt: " padded " },
+        },
+      ).repaint(runnable, input);
+      TestValidator.equals(
+        "capture and explicit evidence failures remain pre-provider refusals",
+        [codeOf(unavailableCapture), codeOf(invalidEvidence)],
+        ["repaint-source-evidence-missing", "repaint-host-unavailable"],
+      );
+
+      const explicitRequestId = "30000000-0000-4000-8000-000000000001";
+      const explicitExecution = {
+        policy: executionPolicy(),
+        evidence: executionEvidence(),
+        requestId: explicitRequestId,
+        now: () => new Date("2026-08-28T12:01:00.000Z"),
+      };
+      const retryLookupFailures = await Promise.all([
+        new AutoMovieProductionRepaintService(
+          actualAdapter(selected.runtimeIdentity),
+          selected,
+          explicitExecution,
+        ).repaint(
+          scenarioServices(runnable, {
+            project: {
+              repaintRequestAttempts: () => {
+                throw nonError("retry history unreadable");
+              },
+            },
+          }),
+          input,
+        ),
+        new AutoMovieProductionRepaintService(
+          actualAdapter(selected.runtimeIdentity),
+          selected,
+          explicitExecution,
+        ).repaint(
+          scenarioServices(runnable, {
+            project: { repaintRequestAttempts: () => [] },
+          }),
+          input,
+        ),
+        new AutoMovieProductionRepaintService(
+          actualAdapter(selected.runtimeIdentity),
+          selected,
+          explicitExecution,
+        ).repaint(
+          scenarioServices(runnable, {
+            project: {
+              repaintRequestAttempts: () => [
+                {
+                  requestFingerprint: digestAutoMovieBytes(
+                    Buffer.from("foreign request"),
+                  ),
+                },
+              ],
+            },
+          }),
+          input,
+        ),
+      ]);
+      TestValidator.equals(
+        "explicit retry rejects unreadable, absent, and foreign histories",
+        retryLookupFailures.map(codeOf),
+        [
+          "repaint-input-invalid",
+          "repaint-input-invalid",
+          "repaint-input-invalid",
+        ],
+      );
+
+      const exhaustedAttempts: IAutoMovieRepaintAttemptRecord[] = [];
+      const oneAttemptPolicy = executionPolicy({
+        maximumAttempts: 1,
+        backoffMs: [],
+      });
+      const firstAttempt = await new AutoMovieProductionRepaintService(
+        actualAdapter(selected.runtimeIdentity),
+        selected,
+        {
+          policy: oneAttemptPolicy,
+          evidence: executionEvidence(),
+          now: () => new Date("2026-08-28T12:02:00.000Z"),
+        },
+      ).repaint(
+        scenarioServices(runnable, {
+          project: {
+            commitRepaintAttempt: (attempt: IAutoMovieRepaintAttemptRecord) => {
+              exhaustedAttempts.push(attempt);
+              return 1;
+            },
+            commitRepaintRendition: () => 1,
+          },
+        }),
+        input,
+      );
+      const exhaustedRetry = await new AutoMovieProductionRepaintService(
+        actualAdapter(selected.runtimeIdentity),
+        selected,
+        {
+          policy: oneAttemptPolicy,
+          evidence: executionEvidence(),
+          requestId: exhaustedAttempts[0]!.requestId,
+          now: () => new Date("2026-08-28T12:02:01.000Z"),
+        },
+      ).repaint(
+        scenarioServices(runnable, {
+          project: { repaintRequestAttempts: () => exhaustedAttempts },
+        }),
+        input,
+      );
+      TestValidator.equals(
+        "persisted attempts close an exhausted explicit retry before provider use",
+        {
+          first: firstAttempt.repainted,
+          attempts: exhaustedAttempts.length,
+          retry: codeOf(exhaustedRetry),
+        },
+        { first: true, attempts: 1, retry: "repaint-failed" },
+      );
+
+      const attemptCommitFailures = await Promise.all(
+        [
+          new Error("attempt commit failed"),
+          nonError("attempt commit failed"),
+        ].map((thrown) =>
+          new AutoMovieProductionRepaintService(
+            actualAdapter(selected.runtimeIdentity),
+            selected,
+          ).repaint(
+            scenarioServices(runnable, {
+              project: {
+                commitRepaintAttempt: () => {
+                  throw thrown;
+                },
+              },
+            }),
+            input,
+          ),
+        ),
+      );
+      TestValidator.equals(
+        "attempt-journal failures refuse publication",
+        attemptCommitFailures.map(codeOf),
+        ["repaint-commit-refused", "repaint-commit-refused"],
+      );
+
+      const retryingAdapter = (
+        beforeFailure?: () => void,
+      ): AutoMovieProductionShotRepaint => {
+        let calls = 0;
+        const succeeding = actualAdapter(selected.runtimeIdentity);
+        return async (props) => {
+          if (++calls === 1) {
+            beforeFailure?.();
+            throw { status: 429, message: "retry" };
+          }
+          return succeeding(props);
+        };
+      };
+      const liveSignal = new AbortController();
+      const normalBackoff = await new AutoMovieProductionRepaintService(
+        retryingAdapter(),
+        selected,
+        {
+          policy: executionPolicy(),
+          evidence: executionEvidence(),
+          signal: liveSignal.signal,
+        },
+      ).repaint(runnable, input);
+      const waitingAbort = new AbortController();
+      const cancelledBackoff = await new AutoMovieProductionRepaintService(
+        retryingAdapter(() => {
+          setTimeout(() => waitingAbort.abort("cancelled"), 1);
+        }),
+        selected,
+        {
+          policy: executionPolicy({ backoffMs: [25] }),
+          evidence: executionEvidence(),
+          signal: waitingAbort.signal,
+        },
+      ).repaint(runnable, input);
+      const preWaitAbort = new AbortController();
+      const alreadyCancelledBackoff =
+        await new AutoMovieProductionRepaintService(
+          async () => {
+            throw {
+              get status(): number {
+                preWaitAbort.abort("cancelled");
+                return 429;
+              },
+              message: "retry",
+            };
+          },
+          selected,
+          {
+            policy: executionPolicy(),
+            evidence: executionEvidence(),
+            signal: preWaitAbort.signal,
+          },
+        ).repaint(runnable, input);
+      TestValidator.equals(
+        "service backoff resolves normally and contains both cancellation times",
+        {
+          normal: normalBackoff.repainted,
+          waiting: codeOf(cancelledBackoff),
+          already: codeOf(alreadyCancelledBackoff),
+        },
+        {
+          normal: true,
+          waiting: "repaint-failed",
+          already: "repaint-failed",
+        },
+      );
+
       const commitFailures = await Promise.all([
         repaint(
           scenarioServices(runnable, {

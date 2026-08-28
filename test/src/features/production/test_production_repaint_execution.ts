@@ -40,6 +40,8 @@ const execute = <T>(props: {
     availableOutput: { digest: AutoMovieContentDigest; bytes: number } | null;
   }>;
   now?: () => Date;
+  requestId?: string;
+  attemptId?: () => string;
   signal?: AbortSignal;
   wait?: (milliseconds: number, signal: AbortSignal) => Promise<void>;
 }) => {
@@ -48,7 +50,7 @@ const execute = <T>(props: {
   return executeAutoMovieRepaintRequest({
     productionId: "repaint-execution",
     shot: "opening",
-    requestId: "10000000-0000-4000-8000-000000000001",
+    requestId: props.requestId ?? "10000000-0000-4000-8000-000000000001",
     requestFingerprint: digest("request"),
     compileFingerprint: digest("compile"),
     sourceRenderFingerprint: digest("source"),
@@ -58,8 +60,10 @@ const execute = <T>(props: {
     signal: props.signal,
     runtime: {
       now: props.now ?? (() => new Date("2026-08-28T10:00:00.000Z")),
-      attemptId: () =>
-        `20000000-0000-4000-8000-${String(++attempt).padStart(12, "0")}`,
+      attemptId:
+        props.attemptId ??
+        (() =>
+          `20000000-0000-4000-8000-${String(++attempt).padStart(12, "0")}`),
       wait: props.wait ?? (() => Promise.resolve()),
     },
     execute: props.calls,
@@ -256,5 +260,185 @@ export const test_production_repaint_execution = async (): Promise<void> => {
       timeout: ["attempts-exhausted", "timeout"],
       elapsed: ["elapsed-exhausted", 0],
     },
+  );
+
+  const zeroBudget = await execute({
+    policy: policy({ maximumCostUnits: 0 }),
+    calls: async () => ({
+      value: "unreachable",
+      costUnits: 0,
+      availableOutput: null,
+    }),
+  });
+  const retryCost = await execute({
+    policy: policy({
+      maximumAttempts: 2,
+      maximumCostUnits: 1,
+      backoffMs: [1],
+      retryableFailures: ["timeout"],
+    }),
+    calls: async () => {
+      throw new AutoMovieRepaintAttemptError("timeout", "retry", 1);
+    },
+  });
+  const backoffElapsed = await execute({
+    policy: policy({
+      maximumAttempts: 2,
+      maximumElapsedMs: 100,
+      attemptTimeoutMs: 100,
+      backoffMs: [100],
+      retryableFailures: ["rate-limit"],
+    }),
+    calls: async () => {
+      throw { status: 429 };
+    },
+  });
+  const waitCancelled = await execute({
+    policy: policy({ maximumAttempts: 2, backoffMs: [1] }),
+    wait: () => Promise.reject(new Error("cancel during backoff")),
+    calls: async () => {
+      throw { status: 429 };
+    },
+  });
+  const classifiedCancelled = await execute({
+    policy: policy(),
+    calls: async () => {
+      throw new AutoMovieRepaintAttemptError("cancelled", "cancelled");
+    },
+  });
+  const classifiedStale = await execute({
+    policy: policy(),
+    calls: async () => {
+      throw new AutoMovieRepaintAttemptError("input-stale", "stale");
+    },
+  });
+  const liveController = new AbortController();
+  const cancelledDuringAttempt = await execute({
+    policy: policy(),
+    signal: liveController.signal,
+    calls: (signal) =>
+      new Promise((resolve, reject) => {
+        void resolve;
+        signal.addEventListener("abort", () => reject(new Error("aborted")), {
+          once: true,
+        });
+        queueMicrotask(() => liveController.abort("user"));
+      }),
+  });
+  const invalidCostResults = await Promise.all(
+    [Number.NaN, -1].map((costUnits) =>
+      execute({
+        policy: policy({ maximumAttempts: 1, backoffMs: [] }),
+        calls: async () => ({
+          value: "bad cost",
+          costUnits,
+          availableOutput: null,
+        }),
+      }),
+    ),
+  );
+  const transported = await Promise.all(
+    [
+      { name: "FetchError", message: "fetch" },
+      { code: "ECONNRESET", message: "reset", costUnits: 1 },
+      { code: "ETIMEDOUT" },
+    ].map((failure) =>
+      execute({
+        policy: policy({ maximumAttempts: 1, backoffMs: [] }),
+        calls: async () => {
+          throw failure;
+        },
+      }),
+    ),
+  );
+  TestValidator.equals(
+    "every terminal retry boundary preserves its exact stop class",
+    {
+      zeroBudget: zeroBudget.result.stop,
+      retryCost: retryCost.result.stop,
+      backoffElapsed: backoffElapsed.result.stop,
+      waitCancelled: waitCancelled.result.stop,
+      classifiedCancelled: classifiedCancelled.result.stop,
+      classifiedStale: classifiedStale.result.attempts[0]?.status,
+      cancelledDuringAttempt: cancelledDuringAttempt.result.stop,
+      invalidCosts: invalidCostResults.map(({ result }) => result.stop),
+      transported: transported.map(
+        ({ result }) => result.attempts[0]?.failure?.class,
+      ),
+    },
+    {
+      zeroBudget: "cost-exhausted",
+      retryCost: "cost-exhausted",
+      backoffElapsed: "elapsed-exhausted",
+      waitCancelled: "cancelled",
+      classifiedCancelled: "cancelled",
+      classifiedStale: "stale",
+      cancelledDuringAttempt: "cancelled",
+      invalidCosts: ["not-retryable", "not-retryable"],
+      transported: ["transport", "transport", "transport"],
+    },
+  );
+
+  const rejectionMessage = async (
+    operation: () => Promise<unknown>,
+  ): Promise<string> => {
+    try {
+      await operation();
+      throw new Error("Malformed execution unexpectedly resolved.");
+    } catch (error) {
+      return error instanceof Error ? error.message : String(error);
+    }
+  };
+  const malformedMessages = await Promise.all([
+    rejectionMessage(() =>
+      execute({
+        policy: policy(),
+        requestId: " ",
+        calls: async () => ({ value: 1, costUnits: 0, availableOutput: null }),
+      }),
+    ),
+    rejectionMessage(() =>
+      execute({
+        policy: policy(),
+        attemptId: () => " padded ",
+        calls: async () => ({ value: 1, costUnits: 0, availableOutput: null }),
+      }),
+    ),
+    rejectionMessage(() =>
+      execute({
+        policy: policy(),
+        now: () => new Date(Number.NaN),
+        calls: async () => ({ value: 1, costUnits: 0, availableOutput: null }),
+      }),
+    ),
+    rejectionMessage(() => {
+      let instant = 0;
+      return execute({
+        policy: policy(),
+        now: () =>
+          instant++ < 2
+            ? new Date("2026-08-28T10:00:00.000Z")
+            : new Date(Number.NaN),
+        calls: async () => ({ value: 1, costUnits: 0, availableOutput: null }),
+      });
+    }),
+    rejectionMessage(() => {
+      let instant = 0;
+      return execute({
+        policy: policy(),
+        now: () =>
+          new Date(
+            instant++ === 2
+              ? "2026-08-28T10:00:01.000Z"
+              : "2026-08-28T10:00:00.000Z",
+          ),
+        calls: async () => ({ value: 1, costUnits: 0, availableOutput: null }),
+      });
+    }),
+  ]);
+  TestValidator.predicate(
+    "invalid request, attempt, and reversed completion instants reject",
+    malformedMessages.some((message) => message.includes("valid instant")) &&
+      malformedMessages.some((message) => message.includes("precedes")),
   );
 };
