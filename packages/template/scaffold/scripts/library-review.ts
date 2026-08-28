@@ -233,10 +233,11 @@ export const runLibraryReviewCommand = (props: {
   root: string;
   productionId: string;
   evidence: IAutoMovieEvidenceConfigProps;
+  read: typeof readAutoMovieProductionEvidence;
   output?: (value: unknown) => void;
 }): unknown => {
   const root = path.resolve(props.root);
-  const authoring = readAutoMovieProductionEvidence({
+  const authoring = props.read({
     root,
     productionEvidence: props.evidence,
   });
@@ -419,6 +420,7 @@ export const runLibraryReviewCli = (props: {
   argv: readonly string[];
   evidence: IAutoMovieEvidenceConfigProps;
   productionId: string;
+  read: typeof readAutoMovieProductionEvidence;
   root: string;
   run: typeof runLibraryReviewCommand;
   stderr: (value: string) => void;
@@ -429,6 +431,7 @@ export const runLibraryReviewCli = (props: {
       argv: props.argv,
       evidence: props.evidence,
       productionId: props.productionId,
+      read: props.read,
       root: props.root,
       output: (value) => props.stdout(`${JSON.stringify(value, null, 2)}\n`),
     });

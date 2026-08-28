@@ -44,12 +44,14 @@ const command = require(commandPath) as {
     root: string;
     productionId: string;
     evidence: IAutoMovieEvidenceConfigProps;
+    read: typeof readAutoMovieProductionEvidence;
     output?: (value: unknown) => void;
   }) => unknown;
   runLibraryReviewCli: (props: {
     argv: readonly string[];
     evidence: IAutoMovieEvidenceConfigProps;
     productionId: string;
+    read: typeof readAutoMovieProductionEvidence;
     root: string;
     run: typeof command.runLibraryReviewCommand;
     stderr: (value: string) => void;
@@ -244,6 +246,7 @@ const commandRefuses = (props: {
   root: string;
   evidence: IAutoMovieEvidenceConfigProps;
   message: string;
+  read?: typeof readAutoMovieProductionEvidence;
 }): boolean => {
   try {
     command.runLibraryReviewCommand({
@@ -251,6 +254,7 @@ const commandRefuses = (props: {
       root: props.root,
       productionId: "fixture-film",
       evidence: props.evidence,
+      read: props.read ?? readAutoMovieProductionEvidence,
     });
     return false;
   } catch (error) {
@@ -306,6 +310,7 @@ export const test_cli_scaffold_library_review_command = (): void => {
         root: fixture.root,
         productionId: "fixture-film",
         evidence,
+        read: readAutoMovieProductionEvidence,
       }),
     );
     const project = AutoMovieProductionProject.open(fixture.root);
@@ -340,6 +345,7 @@ export const test_cli_scaffold_library_review_command = (): void => {
         root: fixture.root,
         productionId: "fixture-film",
         evidence,
+        read: readAutoMovieProductionEvidence,
       });
     }
     const currentAuthoring = readAutoMovieProductionEvidence({
@@ -377,6 +383,7 @@ export const test_cli_scaffold_library_review_command = (): void => {
         argv: [],
         evidence,
         productionId: "fixture-film",
+        read: readAutoMovieProductionEvidence,
         root: fixture.root,
         run: command.runLibraryReviewCommand,
         stderr: (value) => {
@@ -390,6 +397,7 @@ export const test_cli_scaffold_library_review_command = (): void => {
         argv: ["unknown"],
         evidence,
         productionId: "fixture-film",
+        read: readAutoMovieProductionEvidence,
         root: fixture.root,
         run: command.runLibraryReviewCommand,
         stderr: (value) => {
@@ -403,6 +411,7 @@ export const test_cli_scaffold_library_review_command = (): void => {
         argv: [],
         evidence,
         productionId: "fixture-film",
+        read: readAutoMovieProductionEvidence,
         root: fixture.root,
         run: () => {
           throw nonError("non-error command failure");
@@ -441,20 +450,28 @@ export const test_cli_scaffold_library_review_command = (): void => {
       root: fixture.root,
       productionId: "fixture-film",
       evidence,
+      read: readAutoMovieProductionEvidence,
       output: () => {
         outputCount += 1;
       },
     });
     const spaceOwner = ownerAddress(authoring, "spaces");
-    const unboundOwner = authoring.designOwners.find(
-      (entry) => entry.sourceBinding === null,
-    )!;
-    const unboundOwnerAddress = `${unboundOwner.path}#${unboundOwner.units[0]!.anchor}`;
+    const readWithUnboundSpace: typeof readAutoMovieProductionEvidence = (
+      props,
+    ) => {
+      const snapshot = readAutoMovieProductionEvidence(props);
+      return {
+        ...snapshot,
+        designOwners: snapshot.designOwners.map((entry) =>
+          entry.branch === "spaces" ? { ...entry, sourceBinding: null } : entry,
+        ),
+      };
+    };
     const refusals: Array<
       readonly [
         argv: readonly string[],
         message: string,
-        evidence?: IAutoMovieEvidenceConfigProps,
+        read?: typeof readAutoMovieProductionEvidence,
       ]
     > = [
       [["unknown"], 'must be "inspect", "plan", or "record"'],
@@ -484,8 +501,9 @@ export const test_cli_scaffold_library_review_command = (): void => {
         "outside the exact active",
       ],
       [
-        ["plan", "--owner", unboundOwnerAddress],
+        ["plan", "--owner", spaceOwner],
         "no enforced reviewed source population",
+        readWithUnboundSpace,
       ],
       [["plan", "--owner", spaceOwner], "nonempty unique subset"],
       [
@@ -717,14 +735,15 @@ export const test_cli_scaffold_library_review_command = (): void => {
         "unknown or positional",
       ],
     ];
-    for (const [argv, message, selectedEvidence] of refusals)
+    for (const [argv, message, selectedRead] of refusals)
       TestValidator.equals(
         `library review command refuses ${JSON.stringify(argv)} with ${JSON.stringify(message)}`,
         commandRefuses({
           argv,
           root: fixture.root,
-          evidence: selectedEvidence ?? evidence,
+          evidence,
           message,
+          read: selectedRead,
         }),
         true,
       );
@@ -743,6 +762,7 @@ export const test_cli_scaffold_library_review_command = (): void => {
       root: fixture.root,
       productionId: "fixture-film",
       evidence,
+      read: readAutoMovieProductionEvidence,
     });
     command.runLibraryReviewCommand({
       argv: [
@@ -761,6 +781,7 @@ export const test_cli_scaffold_library_review_command = (): void => {
       root: fixture.root,
       productionId: "fixture-film",
       evidence,
+      read: readAutoMovieProductionEvidence,
     });
     const planIdentityReceipts = (
       JSON.parse(
@@ -796,6 +817,7 @@ export const test_cli_scaffold_library_review_command = (): void => {
       root: fixture.root,
       productionId: "fixture-film",
       evidence,
+      read: readAutoMovieProductionEvidence,
       output: () => {
         outputCount += 1;
       },
@@ -843,6 +865,7 @@ export const test_cli_scaffold_library_review_command = (): void => {
       root: fixture.root,
       productionId: "fixture-film",
       evidence,
+      read: readAutoMovieProductionEvidence,
     });
     const motionReceipts = (
       JSON.parse(
@@ -929,6 +952,7 @@ export const test_cli_scaffold_library_review_command = (): void => {
       root: fixture.root,
       productionId: "fixture-film",
       evidence: modelEvidence,
+      read: readAutoMovieProductionEvidence,
     });
     const modelPlanPath = path.join(
       fixture.root,
