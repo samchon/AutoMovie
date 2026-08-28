@@ -6,7 +6,7 @@ import type {
 import { compareCodeUnits } from "./contentIdentity";
 
 /** One current identity shared by an owner's plan and every receipt for it. */
-interface ILibraryReviewOwnerIdentity {
+interface IAutoMovieLibraryReviewOwnerIdentity {
   design: AutoMovieContentDigest;
   source: AutoMovieContentDigest;
   generated: AutoMovieContentDigest | null;
@@ -14,27 +14,28 @@ interface ILibraryReviewOwnerIdentity {
 }
 
 /** One finite observation selected by a design owner's reviewed plan. */
-interface ILibraryReviewObservationRequirement {
+interface IAutoMovieLibraryReviewObservationRequirement {
   id: string;
-  evidence: "artifact" | "facts";
+  evidence: "artifact" | "facts" | "turntable";
 }
 
 /** One design owner delivered by the derived authoring binding. */
-interface ILibraryReviewOwner {
+interface IAutoMovieLibraryReviewOwner {
   branch: string;
   owner: string;
-  identity: ILibraryReviewOwnerIdentity;
-  observations: readonly ILibraryReviewObservationRequirement[];
+  identity: IAutoMovieLibraryReviewOwnerIdentity;
+  observations: readonly IAutoMovieLibraryReviewObservationRequirement[];
 }
 
 /** One persisted observation offered as evidence for a library owner. */
-interface ILibraryReviewObservationReceipt {
+interface IAutoMovieLibraryReviewObservationReceipt {
   branch: string;
   owner: string;
   observation: string;
   evidence:
     | {
         kind: "artifact";
+        root: "project" | "render";
         path: string;
         digest: AutoMovieContentDigest;
       }
@@ -42,16 +43,20 @@ interface ILibraryReviewObservationReceipt {
         kind: "facts";
         facts: unknown;
         digest: AutoMovieContentDigest;
+      }
+    | {
+        kind: "turntable";
+        model: string;
       };
-  identity: ILibraryReviewOwnerIdentity;
+  identity: IAutoMovieLibraryReviewOwnerIdentity;
   runtimeIdentity: string;
   verdict: "failed" | "not-run" | "passed" | "unsupported";
 }
 
 /** Whether two owner identities describe the same reviewed generation. */
 const sameIdentity = (
-  left: ILibraryReviewOwnerIdentity,
-  right: ILibraryReviewOwnerIdentity,
+  left: IAutoMovieLibraryReviewOwnerIdentity,
+  right: IAutoMovieLibraryReviewOwnerIdentity,
 ): boolean =>
   left.design === right.design &&
   left.source === right.source &&
@@ -80,11 +85,11 @@ const observationKey = (
  * so an unstaged recipe in either shape never becomes review work merely
  * because it exists in inventory.
  *
- * Artifact and structured-fact receipts share the same freshness rule. A
- * caller reopens the exact evidence through `current`; a path, exit code, or
- * receipt assertion cannot declare itself current. Historical receipts remain
- * visible to classify a missing observation as stale without being promoted to
- * the current generation.
+ * Artifact, structured-fact, and canonical turntable receipts share the same
+ * freshness rule. A caller reopens the exact evidence through `current`; a
+ * path, exit code, or receipt assertion cannot declare itself current.
+ * Historical receipts remain visible to classify a missing observation as
+ * stale without being promoted to the current generation.
  */
 export function libraryReviewEvidenceDiagnostics(props: {
   /** Production shape selected by the derived authoring binding. */
@@ -94,11 +99,11 @@ export function libraryReviewEvidenceDiagnostics(props: {
   /** Active reviewed design branches from the derived authoring binding. */
   branches: readonly string[];
   /** Exact delivered design-owner population selected by that binding. */
-  owners: readonly ILibraryReviewOwner[];
+  owners: readonly IAutoMovieLibraryReviewOwner[];
   /** Historical and current persisted observation receipts. */
-  receipts: readonly ILibraryReviewObservationReceipt[];
+  receipts: readonly IAutoMovieLibraryReviewObservationReceipt[];
   /** Reopen one receipt's exact artifact bytes or structured facts. */
-  current: (receipt: ILibraryReviewObservationReceipt) => boolean;
+  current: (receipt: IAutoMovieLibraryReviewObservationReceipt) => boolean;
 }): IAutoMovieDiagnostic[] {
   if (
     props.kind !== "library" ||

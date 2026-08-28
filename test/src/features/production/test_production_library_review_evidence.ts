@@ -28,7 +28,7 @@ const unit = require(
 const { libraryReviewEvidenceDiagnostics } = unit;
 
 type Digest = AutoMovieContentDigest;
-type Evidence = "artifact" | "facts";
+type Evidence = "artifact" | "facts" | "turntable";
 interface Identity {
   design: Digest;
   source: Digest;
@@ -46,8 +46,14 @@ interface Receipt {
   owner: string;
   observation: string;
   evidence:
-    | { kind: "artifact"; path: string; digest: Digest }
-    | { kind: "facts"; facts: unknown; digest: Digest };
+    | {
+        kind: "artifact";
+        root: "project" | "render";
+        path: string;
+        digest: Digest;
+      }
+    | { kind: "facts"; facts: unknown; digest: Digest }
+    | { kind: "turntable"; model: string };
   identity: Identity;
   runtimeIdentity: string;
   verdict: "failed" | "not-run" | "passed" | "unsupported";
@@ -81,14 +87,20 @@ const receipt = (subject: Owner, props: Partial<Receipt> = {}): Receipt => ({
     subject.observations[0]!.evidence === "artifact"
       ? {
           kind: "artifact",
+          root: "render",
           path: `observations/${subject.owner}.png`,
           digest: digest("3"),
         }
-      : {
-          kind: "facts",
-          facts: { observed: subject.owner },
-          digest: digest("4"),
-        },
+      : subject.observations[0]!.evidence === "facts"
+        ? {
+            kind: "facts",
+            facts: { observed: subject.owner },
+            digest: digest("4"),
+          }
+        : {
+            kind: "turntable",
+            model: subject.owner,
+          },
   identity: subject.identity,
   runtimeIdentity: "tool:runtime:v1",
   verdict: "passed",
@@ -141,6 +153,7 @@ const run = (props: {
 export const test_production_library_review_evidence = (): void => {
   const owners = [
     owner("models", "chair"),
+    owner("models", "rig", "turntable"),
     owner("spaces", "atrium"),
     owner("materials", "oak"),
     owner("instances", "seat-row", "facts"),
@@ -187,6 +200,10 @@ export const test_production_library_review_evidence = (): void => {
               ["instances", "motions", "systems"].includes(entry.branch),
             )
             .every((entry) => entry.evidence.kind === "facts"),
+      ],
+      [
+        "canonicalTurntableUsesItsOwnEvidenceKind",
+        () => receipts[1]?.evidence.kind === "turntable",
       ],
       [
         "missingOwnerNamesBranch",
@@ -328,6 +345,7 @@ export const test_production_library_review_evidence = (): void => {
     {
       allBranchesComplete: true,
       nonvisualFactsNeedNoFrame: true,
+      canonicalTurntableUsesItsOwnEvidenceKind: true,
       missingOwnerNamesBranch: true,
       emptyPlanRefused: true,
       duplicateOwnerRefused: true,
