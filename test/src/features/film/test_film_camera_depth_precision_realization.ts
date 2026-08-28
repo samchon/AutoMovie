@@ -74,11 +74,27 @@ const camera = (
   return value;
 };
 
-const realize = (resolvedCamera: IAutoMovieCamera) =>
+const realize = (
+  resolvedCamera: IAutoMovieCamera,
+  options: {
+    camera?: boolean;
+    frameFormat?: boolean;
+    requiredSubjects?: string[];
+  } = {},
+) =>
   realizeShotContract({
-    contract,
+    contract: {
+      ...contract,
+      camera: {
+        ...contract.camera,
+        requiredSubjects:
+          options.requiredSubjects ?? contract.camera.requiredSubjects,
+      },
+    },
     production: null,
-    frameFormat: { width: 100, height: 100 },
+    ...(options.frameFormat === false
+      ? {}
+      : { frameFormat: { width: 100, height: 100 } }),
     world: null,
     formations: new Map<string, IAutoMovieFormationDesign>(),
     compiled: {
@@ -95,7 +111,7 @@ const realize = (resolvedCamera: IAutoMovieCamera) =>
             motion: null,
           },
         ],
-        cameras: [resolvedCamera],
+        cameras: options.camera === false ? [] : [resolvedCamera],
         lights: [],
       },
       motions: [],
@@ -198,5 +214,50 @@ export const test_film_camera_depth_precision_realization = (): void => {
     "repeat realization is byte-stable",
     JSON.stringify(realize(camera()).realization.camera),
     JSON.stringify(accepted.realization.camera),
+  );
+
+  const absentCamera = realize(camera(), { camera: false });
+  const absentRaster = realize(camera(), { frameFormat: false });
+  const absentSubject = realize(camera(), {
+    requiredSubjects: ["absent-required-box"],
+  });
+  TestValidator.equals(
+    "unresolved camera inputs and required geometry produce addressed invalid reports",
+    namedFacts([
+      [
+        "camera",
+        () =>
+          absentCamera.realization.camera.every(
+            (sample) =>
+              sample.depthPrecision.camera === "camera-main" &&
+              sample.depthPrecision.status === "invalid" &&
+              sample.resolvedSubjects === 0 &&
+              sample.passed === false,
+          ) && absentCamera.diagnostics.length === 3,
+      ],
+      [
+        "raster",
+        () =>
+          absentRaster.realization.camera.every(
+            (sample) =>
+              sample.depthPrecision.status === "invalid" &&
+              sample.resolvedSubjects === 0 &&
+              sample.passed === false,
+          ) && absentRaster.diagnostics.length === 3,
+      ],
+      [
+        "subject",
+        () =>
+          absentSubject.realization.camera.every(
+            (sample) =>
+              sample.depthPrecision.status === "invalid" &&
+              sample.requiredSubjects === 1 &&
+              sample.resolvedSubjects === 0 &&
+              sample.readableSubjects === 0 &&
+              sample.passed === false,
+          ) && absentSubject.diagnostics.length === 3,
+      ],
+    ]),
+    { camera: true, raster: true, subject: true },
   );
 };
