@@ -189,7 +189,22 @@ export const test_cli_scaffold_design_derivation = (): void => {
         "completed fixture retains its production emitter",
         () =>
           completedEmitter.includes("Repository-only emitter") &&
-          completedEmitter.includes('from "../src/models/soloist"'),
+          completedEmitter.includes('from "../src/models/soloist"') &&
+          completedEmitter.includes('from "../src/models/chorus"'),
+      ],
+      [
+        "completed formation source remains model-owned",
+        () =>
+          completed["src/models/chorus.ts"]?.includes(
+            "@evidence obligations/design/model-sources.md#design-owned-construction",
+          ) === true &&
+          completed["src/models/chorus.ts"]?.includes(
+            "@evidence obligations/design/instance-sources.md",
+          ) === false &&
+          completed["src/instances/chorus.ts"] === undefined &&
+          completed["src/shots/opening.ts"]?.includes(
+            'from "../models/chorus"',
+          ) === true,
       ],
       [
         "completed fixture carries no retired review store",
@@ -268,6 +283,7 @@ export const test_cli_scaffold_design_derivation = (): void => {
       "governs authored map sources": true,
       "viewer exposes one neutral replacement slot": true,
       "completed fixture retains its production emitter": true,
+      "completed formation source remains model-owned": true,
       "completed fixture carries no retired review store": true,
       "inherits no environmental study obligation": true,
       "ships the production authoring procedure": true,

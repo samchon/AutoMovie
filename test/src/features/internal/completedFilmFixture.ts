@@ -37,7 +37,7 @@ export const renderCompletedFilmFixture = (
       .replaceAll("\\", "/")
       .replaceAll("{{name}}", name);
     const relative = legacyRelative
-      .replace(/^src\/formations\//u, "src/instances/")
+      .replace(/^src\/formations\//u, "src/models/")
       .replace(/^src\/objects\//u, "src/models/")
       .replace(/^src\/units\//u, "src/models/")
       .replace(/^src\/world\//u, "src/models/");
@@ -45,15 +45,15 @@ export const renderCompletedFilmFixture = (
       .readFileSync(absolute, "utf8")
       .replaceAll("\r\n", "\n")
       .replaceAll("{{name}}", name)
-      .replaceAll("src/formations/", "src/instances/")
+      .replaceAll("src/formations/", "src/models/")
       .replaceAll("src/objects/", "src/models/")
       .replaceAll("src/units/", "src/models/")
       .replaceAll("src/world/", "src/models/")
-      .replaceAll("../formations/", "../instances/")
+      .replaceAll("../formations/", "../models/")
       .replaceAll("../objects/", "../models/")
       .replaceAll("../units/", "../models/")
       .replaceAll("../world/", "../models/")
-      .replaceAll("./formations/", "./instances/")
+      .replaceAll("./formations/", "./models/")
       .replaceAll("./objects/", "./models/")
       .replaceAll("./units/", "./models/")
       .replaceAll("./world/", "./models/");
