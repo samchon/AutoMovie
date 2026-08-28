@@ -23,14 +23,94 @@ const ROOT = path.resolve(__dirname, "../../../..");
 const TTSC = path.join(ROOT, "node_modules/ttsc/lib/launcher/ttsc.js");
 const FIXTURE_CACHE = path.join(ROOT, "test/node_modules/.cache");
 const TTSC_CACHE = path.join(ROOT, "node_modules/.cache/ttsc");
+const MAP_DISCOVERY_CLAIM =
+  "the maps work-specific contract accounts for its open-world discovery duties";
+const SPACE_DISCOVERY_CLAIM =
+  "the spaces work-specific contract accounts for its open-world discovery duties";
+const BUILDING_LOCAL_CLAIM =
+  "every space owner preserves the production-specific site access clearance";
+const SPACE_OWNER_CLAIM =
+  "spaces H2 units answer their principle checklists, cover the layer's obligations, and account for inherited work";
 const CLAIM_NAMES = [
+  MAP_DISCOVERY_CLAIM,
+  SPACE_DISCOVERY_CLAIM,
+  BUILDING_LOCAL_CLAIM,
   "maps H2 units answer their principle checklists, cover the layer's obligations, and account for inherited work",
-  "spaces H2 units answer their principle checklists, cover the layer's obligations, and account for inherited work",
+  SPACE_OWNER_CLAIM,
   "mapSources owners each answer exactly one maps design file",
   "mapSources owners answer source-unit principle checklists, realize every maps unit, and cover source obligations",
   "spaceSources owners each answer exactly one spaces design file",
   "spaceSources owners answer source-unit principle checklists, realize every spaces unit, and cover source obligations",
 ] as const;
+const BUILDING_DISCOVERY_TARGETS = [
+  "discovery/core/common.md#shared-local-boundary",
+  "discovery/core/common.md#canonical-realization",
+  "discovery/design/designs.md#work-specific-design-requirements",
+  "discovery/design/maps.md#work-specific-map-requirements",
+  "discovery/design/spaces.md#work-specific-space-requirements",
+] as const;
+const BUILDING_LOCAL_TARGET =
+  "contracts/site-access-clearance.md#unique-clear-entry-route";
+const BUILDING_DISCOVERY_FINDINGS: Readonly<
+  Record<string, { evidence: string; review: string }>
+> = {
+  "discovery/core/common.md#canonical-realization": {
+    evidence:
+      "The retained access rule has one contract address, one map-owned endpoint, one space-owned opening and route, and direct plan/traversal falsifiers.",
+    review:
+      "Reviewed the rule's contract address, current map and space realizations, and two falsifying observations and confirmed that they describe the same production fact.",
+  },
+  "discovery/design/designs.md#work-specific-design-requirements": {
+    evidence:
+      "The actual building needs one compatibility rule across the map and space branches: site-access-east remains map-owned while door-east and the clear route remain space-owned.",
+    review:
+      "Reviewed both design populations and found that the retained rule fixes their shared interface without transferring the road, opening, or route to the wrong owner.",
+  },
+  "discovery/design/maps.md#work-specific-map-requirements": {
+    evidence:
+      "The actual site audit requires road-east to terminate once at site-access-east on the adopted boundary so the building has one stable external entry identity.",
+    review:
+      "Reviewed the resolved site polygon, road terminus, node census, and boundary query; a shifted, duplicate, or disconnected access node falsifies the map half.",
+  },
+  "discovery/design/spaces.md#work-specific-space-requirements": {
+    evidence:
+      "The actual building audit requires door-east to be the sole envelope opening at site-access-east and to begin a continuous 1.2 metre route into room-main.",
+    review:
+      "Reviewed plan, clear dimensions, opening census, and entry traversal; a second opening, broken route, or sub-limit width falsifies the space half.",
+  },
+};
+const OBJECT_DISCOVERY_CLAIM =
+  "the models work-specific contract accounts for its open-world discovery duties";
+const OBJECT_LOCAL_CLAIM =
+  "every model owner preserves the inspection arm's service interfaces";
+const OBJECT_DISCOVERY_TARGETS = [
+  "discovery/core/common.md#shared-local-boundary",
+  "discovery/core/common.md#canonical-realization",
+  "discovery/design/designs.md#work-specific-design-requirements",
+  "discovery/design/models.md#work-specific-model-requirements",
+] as const;
+const OBJECT_DISCOVERY_FINDINGS: Readonly<
+  Record<string, { evidence: string; review: string }>
+> = {
+  "discovery/core/common.md#canonical-realization": {
+    evidence:
+      "The retained service-interface rule has one contract address, one model owner, stable joint and surface identities, and neutral/service-pose turntable falsifiers.",
+    review:
+      "Reviewed the contract, current model owner, identity inventory, and promised poses and confirmed that they all describe the same inspection-arm rule.",
+  },
+  "discovery/design/designs.md#work-specific-design-requirements": {
+    evidence:
+      "The actual maintenance consumer requires articulation, routed cable, and replaceable jaw surfaces to remain compatible without merging their ownership identities.",
+    review:
+      "Reviewed the represented subject, maintenance boundary, source assets, and downstream pose consumer; the retained rule is the one cross-interface condition they share.",
+  },
+  "discovery/design/models.md#work-specific-model-requirements": {
+    evidence:
+      "The actual subject needs separately addressable base, elbow, wrist, jaws, cable guide, contact pads, and sleeve so both service poses expose the cable bend and replacement surfaces.",
+    review:
+      "Reviewed the joint chain, surface partition census, neutral pose, and service pose; a merged jaw, hidden bend, or coupled pad falsifies the model-specific result.",
+  },
+};
 const SETTINGS_TARGET = "settings/production.md#production-contract";
 const MAP_TARGET = "maps/world.md#site-boundary-and-access";
 const SPACE_TARGET = "spaces/building.md#building-inside-site";
@@ -357,6 +437,11 @@ const writeDesign = (root: string): void => {
       "",
       markdownEvidence("space", SPACE_TARGETS),
       "",
+      "<!--",
+      `@evidence ${BUILDING_LOCAL_TARGET} The space realizes the retained unique access node, sole envelope opening, 1.2 metre clear route, and plan/traversal failure conditions.`,
+      `@evidenceReview ${BUILDING_LOCAL_TARGET} Reviewed the complete space owner against the production-specific access-clearance rule and its map-owned endpoint.`,
+      "-->",
+      "",
       "The 12 by 8 metre building footprint lies inside `site-main`; its east door is the sole envelope opening and has `site-access-east` as its external endpoint. Inside, `room-main` occupies the enclosed footprint and `entry-route` joins the door to the room centre with 1.2 metre clear width and 2.1 metre clear height.",
       "",
       "The space does not redefine the site polygon, external road, or access-node coordinates. Review plan, section, east elevation, interior perspective, and an entry traversal. A footprint outside the adopted boundary, a different access id, a broken containment edge, a blocked route, or a sub-limit clear dimension falsifies this unit.",
@@ -368,12 +453,45 @@ const writeDesign = (root: string): void => {
     fs.mkdirSync(path.dirname(file), { recursive: true });
     fs.writeFileSync(file, content, "utf8");
   }
-  const contracts = path.join(root, "docs/contracts/index.md");
+  const contracts = path.join(root, "docs/contracts");
   fs.writeFileSync(
-    contracts,
+    path.join(contracts, "site-access-clearance.md"),
+    [
+      "<!--",
+      ...BUILDING_DISCOVERY_TARGETS.slice(1).flatMap((target) => {
+        const finding = BUILDING_DISCOVERY_FINDINGS[target];
+        assert.ok(
+          finding,
+          `No building discovery finding exists for ${target}.`,
+        );
+        return [
+          `@evidence ${target} ${finding.evidence}`,
+          `@evidenceReview ${target} ${finding.review}`,
+        ];
+      }),
+      "-->",
+      "",
+      "# Site access clearance",
+      "",
+      "This contract governs the one map-to-space entry interface retained by the focused building library.",
+      "",
+      "## Unique clear entry route {#unique-clear-entry-route}",
+      "",
+      "The map owns `site-access-east`; the space consumes it as the sole external endpoint of `door-east` and preserves a 1.2 metre clear route through that opening into `room-main`. The current map and space owners realize the rule, and plan plus entry traversal falsify a disconnected, duplicated, or sub-limit route.",
+      "",
+      "Review question: Does the actual site-to-room interface preserve one unique 1.2 metre clear route through the map-owned access node and space-owned opening?",
+      "",
+      "Sources: production-local map, space, source, plan, and entry-traversal audit.",
+      "",
+    ].join("\n"),
+    "utf8",
+  );
+  fs.writeFileSync(
+    path.join(contracts, "index.md"),
     [
       "<!--",
       "@evidenceExclude discovery/core/common.md#shared-local-boundary The focused settings, map, space, and source owners were checked for subject-specific rules; their complete site-interface contract is already owned by the selected shared targets, so no independent production rule remains.",
+      "@evidenceExcludeReview discovery/core/common.md#shared-local-boundary Reviewed the complete building-library population, inputs, interfaces, and failure cases and confirmed that no second cross-layer ownership boundary remains beyond the retained access-clearance rule.",
       "-->",
       "",
       "# Focused discovery audit",
@@ -535,6 +653,26 @@ const configureGraph = (root: string): void => {
     ['  spaceSources: "disabled",', '  spaceSources: "review",'],
   ] as const)
     declaration = replaceOnce(declaration, before, after);
+  declaration = replaceOnce(
+    declaration,
+    "// @ts-check\n",
+    '// @ts-check\n\nimport { createAutoMovieProductionPrincipleClaim } from "@automovie/evidence";\n',
+  );
+  declaration = replaceOnce(
+    declaration,
+    "  claims: [],",
+    [
+      "  claims: [",
+      "    createAutoMovieProductionPrincipleClaim({",
+      `      name: ${JSON.stringify(BUILDING_LOCAL_CLAIM)},`,
+      '      document: "contracts/site-access-clearance.md",',
+      '      files: ["spaces/**/*.md"],',
+      '      symbol: "h2",',
+      '      stage: "review",',
+      "    }),",
+      "  ],",
+    ].join("\n"),
+  );
   fs.writeFileSync(declarationFile, declaration, "utf8");
   const lintFile = path.join(root, "lint.config.mjs");
   const lintSource = fs.readFileSync(lintFile, "utf8");
@@ -572,6 +710,137 @@ const configureGraph = (root: string): void => {
     )}\n`,
     "utf8",
   );
+};
+
+/** Select the one real object-library discovery consumer under test. */
+const configureObjectDiscoveryGraph = (root: string): void => {
+  const declarationFile = path.join(root, "productionEvidence.mjs");
+  let declaration = fs.readFileSync(declarationFile, "utf8");
+  for (const [before, after] of [
+    ["  kind: null,", '  kind: "library",'],
+    ['  settings: "disabled",', '  settings: "review",'],
+    ['  models: "disabled",', '  models: "review",'],
+  ] as const)
+    declaration = replaceOnce(declaration, before, after);
+  declaration = replaceOnce(
+    declaration,
+    "// @ts-check\n",
+    '// @ts-check\n\nimport { createAutoMovieProductionPrincipleClaim } from "@automovie/evidence";\n',
+  );
+  declaration = replaceOnce(
+    declaration,
+    "  claims: [],",
+    [
+      "  claims: [",
+      "    createAutoMovieProductionPrincipleClaim({",
+      `      name: ${JSON.stringify(OBJECT_LOCAL_CLAIM)},`,
+      '      document: "contracts/inspection-arm-articulation.md",',
+      '      files: ["models/**/*.md"],',
+      '      symbol: "h2",',
+      '      stage: "review",',
+      "    }),",
+      "  ],",
+    ].join("\n"),
+  );
+  fs.writeFileSync(declarationFile, declaration, "utf8");
+
+  const lintFile = path.join(root, "lint.config.mjs");
+  const lintSource = fs.readFileSync(lintFile, "utf8");
+  const before =
+    "const graph = createAutoMovieEvidenceConfig(productionEvidence);";
+  const after = [
+    "const full = createAutoMovieEvidenceConfig(productionEvidence);",
+    `const names = new Set(${JSON.stringify([OBJECT_DISCOVERY_CLAIM, OBJECT_LOCAL_CLAIM])});`,
+    "const matches = full.claims.filter((claim) => names.has(claim.name));",
+    "if (matches.length !== names.size)",
+    `  throw new Error(${JSON.stringify("Expected the object discovery and retained-rule claims exactly once.")});`,
+    "const graph = { claims: matches };",
+  ].join("\n");
+  fs.writeFileSync(lintFile, replaceOnce(lintSource, before, after), "utf8");
+  fs.writeFileSync(
+    path.join(root, "tsconfig.json"),
+    `${JSON.stringify(
+      {
+        compilerOptions: {
+          target: "esnext",
+          module: "esnext",
+          moduleResolution: "bundler",
+          skipLibCheck: true,
+          strict: true,
+        },
+        include: ["phase.ts"],
+      },
+      null,
+      2,
+    )}\n`,
+    "utf8",
+  );
+};
+
+/** Materialize one object-specific rule found by the model discovery targets. */
+const writeObjectDiscovery = (root: string): void => {
+  const files: Readonly<Record<string, string>> = {
+    "docs/settings/production.md": [
+      "# Articulated inspection prop settings",
+      "",
+      "## Delivery contract {#delivery-contract}",
+      "",
+      "This library delivers one reusable inspection-arm prop whose two service poses must preserve a visible cable bend and separately replaceable jaw surfaces.",
+      "",
+    ].join("\n"),
+    "docs/models/inspection-arm.md": [
+      "# Inspection arm model",
+      "",
+      "## Articulation and surface partitions {#articulation-and-surface-partitions}",
+      "",
+      "<!--",
+      `@evidence contracts/inspection-arm-articulation.md#independently-inspectable-service-interfaces The model realizes the retained jaw articulation, cable route, stable contact pads, and neutral/service-pose inspection surface.`,
+      `@evidenceReview contracts/inspection-arm-articulation.md#independently-inspectable-service-interfaces Reviewed the complete model owner against the retained service-interface rule and its falsifying turntable observations.`,
+      "-->",
+      "",
+      "The blocking model owns base, elbow, wrist, left-jaw, right-jaw, and cable-guide joints. The jaw-contact pads and cable sleeve remain separate stable surface partitions. Neutral and service poses expose every joint limit, cable bend, and replaceable surface to the turntable review.",
+      "",
+    ].join("\n"),
+    "docs/contracts/inspection-arm-articulation.md": [
+      "<!--",
+      ...OBJECT_DISCOVERY_TARGETS.slice(1).flatMap((target) => {
+        const finding = OBJECT_DISCOVERY_FINDINGS[target];
+        assert.ok(finding, `No object discovery finding exists for ${target}.`);
+        return [
+          `@evidence ${target} ${finding.evidence}`,
+          `@evidenceReview ${target} ${finding.review}`,
+        ];
+      }),
+      "-->",
+      "",
+      "# Inspection-arm articulation and surface identity",
+      "",
+      "This contract governs the one articulation and maintenance interface retained by the focused object library.",
+      "",
+      "## Independently inspectable service interfaces {#independently-inspectable-service-interfaces}",
+      "",
+      "The model owner realizes the base-to-jaw articulation chain, cable guide, jaw-contact pads, and cable sleeve as independent stable identities. Neutral and service-pose turntables falsify a merged jaw, hidden cable bend, coupled replacement surface, or unreachable joint limit.",
+      "",
+      "Review question: Do the actual neutral and service poses keep every articulation, cable bend, and replaceable contact surface independently inspectable?",
+      "",
+      "Sources: production-local subject, maintenance-consumer, service-pose, and turntable audit.",
+      "",
+    ].join("\n"),
+    "docs/contracts/index.md": [
+      "<!--",
+      "@evidenceExclude discovery/core/common.md#shared-local-boundary The complete object-library audit found no second cross-layer ownership boundary beyond the retained articulation-and-surface rule and the selected shared model targets.",
+      "@evidenceExcludeReview discovery/core/common.md#shared-local-boundary Reviewed the complete object-library inputs, consumers, source subject, service poses, maintenance boundary, and promised observations for any additional shared/local split.",
+      "-->",
+      "",
+      "# Object-library discovery audit",
+      "",
+    ].join("\n"),
+  };
+  for (const [relative, content] of Object.entries(files)) {
+    const file = path.join(root, relative);
+    fs.mkdirSync(path.dirname(file), { recursive: true });
+    fs.writeFileSync(file, content, "utf8");
+  }
 };
 
 /** Build and locate the exact publish-view package facade. */
@@ -747,6 +1016,8 @@ const applyFingerprints = (
 ): void => {
   let replacements = 0;
   for (const relative of [
+    "docs/contracts/index.md",
+    "docs/contracts/site-access-clearance.md",
     "docs/maps/world.md",
     "docs/spaces/building.md",
     "src/maps/world.ts",
@@ -773,7 +1044,9 @@ const applyFingerprints = (
   }
   assert.equal(
     replacements,
-    MAP_TARGETS.length +
+    BUILDING_DISCOVERY_TARGETS.length +
+      1 +
+      MAP_TARGETS.length +
       SPACE_TARGETS.length +
       MAP_SOURCE_TARGETS.length +
       SPACE_SOURCE_TARGETS.length,
@@ -792,26 +1065,116 @@ const removeEvidencePair = (source: string, target: string): string => {
   return kept.join("\n");
 };
 
+/** Prove one generated object library consumes and settles model discovery. */
+const verifyObjectDiscoveryConsumer = (): void => {
+  const root = fs.mkdtempSync(
+    path.join(FIXTURE_CACHE, "automovie-generated-object-discovery-"),
+  );
+  const safePrefix = `${path.resolve(FIXTURE_CACHE)}${path.sep}`;
+  if (!`${path.resolve(root)}${path.sep}`.startsWith(safePrefix))
+    throw new Error(
+      `Refusing a generated object-discovery fixture outside ${FIXTURE_CACHE}.`,
+    );
+  let fixtureFailure: IFixtureFailure | undefined;
+  try {
+    writeFiles(root, renderScaffold({ name: "inspection-arm-library" }));
+    linkRuntime(root);
+    writeObjectDiscovery(root);
+    configureObjectDiscoveryGraph(root);
+
+    const unfingerprinted = lint(root, "object-discovery-unfingerprinted");
+    const fingerprints = issuedFingerprints(unfingerprinted);
+    let replacements = 0;
+    for (const relative of [
+      "docs/contracts/index.md",
+      "docs/contracts/inspection-arm-articulation.md",
+      "docs/models/inspection-arm.md",
+    ]) {
+      const file = path.join(root, relative);
+      const updated = fs
+        .readFileSync(file, "utf8")
+        .replace(
+          /@evidence(?:Exclude)?Review ([^\s]+) Reviewed /gu,
+          (declaration, target: string) => {
+            const fingerprint = fingerprints.get(target);
+            assert.ok(
+              fingerprint,
+              `No compiler-issued object-discovery fingerprint exists for ${target}.`,
+            );
+            replacements += 1;
+            return declaration.replace(
+              `${target} Reviewed `,
+              `${target} #${fingerprint} Reviewed `,
+            );
+          },
+        );
+      fs.writeFileSync(file, updated, "utf8");
+    }
+    assert.equal(replacements, OBJECT_DISCOVERY_TARGETS.length + 1);
+
+    const paid = lint(root, "object-discovery-reviewed");
+    assert.equal(paid.status, 0, paid.output);
+    assert.equal(count(paid.output, /\[evidence\/graph\]/gu), 0, paid.output);
+
+    const contractFile = path.join(
+      root,
+      "docs/contracts/inspection-arm-articulation.md",
+    );
+    const reviewed = fs.readFileSync(contractFile, "utf8");
+    const modelTarget = OBJECT_DISCOVERY_TARGETS.at(-1)!;
+    fs.writeFileSync(
+      contractFile,
+      removeEvidencePair(reviewed, modelTarget),
+      "utf8",
+    );
+    const disconnected = lint(root, "object-discovery-disconnected");
+    TestValidator.equals(
+      "an actual object library must settle its model-specific discovery target",
+      {
+        failed: disconnected.status !== 0,
+        graphDiagnostics: count(disconnected.output, /\[evidence\/graph\]/gu),
+        target: disconnected.output.includes(modelTarget),
+        claim: disconnected.output.includes(OBJECT_DISCOVERY_CLAIM),
+      },
+      { failed: true, graphDiagnostics: 1, target: true, claim: true },
+    );
+  } catch (error) {
+    fixtureFailure = { error };
+    throw error;
+  } finally {
+    preserveFixtureCleanup(fixtureFailure, () => {
+      if (!`${path.resolve(root)}${path.sep}`.startsWith(safePrefix))
+        throw new Error(
+          `Refusing to remove a fixture outside ${FIXTURE_CACHE}.`,
+        );
+      fs.rmSync(root, { force: true, recursive: true });
+    });
+  }
+};
+
 /**
  * Prove the generated-project map branch and its space consumer through the
  * current public evidence factory and the installed ttsc contributor.
  *
  * Scenarios:
  *
- * 1. A real rendered scaffold exposes map and map-source stages and routes map
+ * 1. A generated object library retains one subject-specific articulation and
+ *    surface rule and fails when its model discovery target is disconnected.
+ * 2. A real rendered scaffold exposes map and map-source stages and routes map
  *    ownership separately from spaces in its generated documentation.
- * 2. One reviewed library graph connects `docs/maps` to `src/maps`, connects
- *    `docs/spaces` to `src/spaces`, and accepts only compiler-issued review
- *    fingerprints across the exact six current claim objects.
- * 3. A linked residue inside an active design population fails during the
+ * 3. One reviewed building-library graph settles map and space discovery,
+ *    connects `docs/maps` to `src/maps`, connects `docs/spaces` to `src/spaces`,
+ *    and accepts only compiler-issued fingerprints across nine current claims.
+ * 4. A linked residue inside an active design population fails during the
  *    actual ttsc configuration load instead of disappearing from inventory.
- * 4. Removing the space owner's acknowledgement of the map site interface
+ * 5. Removing the space owner's acknowledgement of the map site interface
  *    produces one isolated graph diagnostic naming that target and claim.
- * 5. Revising the reviewed map design expires the map source's file and H2
+ * 6. Revising the reviewed map design expires the map source's file and H2
  *    reviews plus the consuming space H2 review, proving the downstream edge.
  */
 export const test_evidence_generated_map_space_contract = (): void => {
   fs.mkdirSync(FIXTURE_CACHE, { recursive: true });
+  verifyObjectDiscoveryConsumer();
   const root = fs.mkdtempSync(
     path.join(FIXTURE_CACHE, "automovie-generated-map-space-"),
   );
@@ -871,6 +1234,36 @@ export const test_evidence_generated_map_space_contract = (): void => {
     assert.equal(paid.status, 0, paid.output);
     assert.equal(count(paid.output, /\[evidence\/graph\]/gu), 0, paid.output);
 
+    const buildingContractFile = path.join(
+      root,
+      "docs/contracts/site-access-clearance.md",
+    );
+    const reviewedBuildingContract = fs.readFileSync(
+      buildingContractFile,
+      "utf8",
+    );
+    const spaceDiscoveryTarget = BUILDING_DISCOVERY_TARGETS.at(-1)!;
+    fs.writeFileSync(
+      buildingContractFile,
+      removeEvidencePair(reviewedBuildingContract, spaceDiscoveryTarget),
+      "utf8",
+    );
+    const undiscoveredSpace = lint(root, "space-discovery-disconnected");
+    TestValidator.equals(
+      "an actual building library must settle its space-specific discovery target",
+      {
+        failed: undiscoveredSpace.status !== 0,
+        graphDiagnostics: count(
+          undiscoveredSpace.output,
+          /\[evidence\/graph\]/gu,
+        ),
+        target: undiscoveredSpace.output.includes(spaceDiscoveryTarget),
+        claim: undiscoveredSpace.output.includes(SPACE_DISCOVERY_CLAIM),
+      },
+      { failed: true, graphDiagnostics: 1, target: true, claim: true },
+    );
+    fs.writeFileSync(buildingContractFile, reviewedBuildingContract, "utf8");
+
     const linkedResidueTarget = path.join(root, "linked-design-residue");
     fs.mkdirSync(linkedResidueTarget);
     fs.writeFileSync(
@@ -900,13 +1293,20 @@ export const test_evidence_generated_map_space_contract = (): void => {
       "utf8",
     );
     const disconnected = lint(root, "disconnected-space");
+    if (
+      disconnected.status !== 0 &&
+      count(disconnected.output, /\[evidence\/graph\]/gu) === 0
+    )
+      throw new Error(
+        `The disconnected map-space probe failed before graph adjudication.\n${disconnected.output}`,
+      );
     TestValidator.equals(
       "the map-space foundation edge fails in isolation",
       {
         failed: disconnected.status !== 0,
         graphDiagnostics: count(disconnected.output, /\[evidence\/graph\]/gu),
         target: disconnected.output.includes(MAP_TARGET),
-        claim: disconnected.output.includes(CLAIM_NAMES[1]),
+        claim: disconnected.output.includes(SPACE_OWNER_CLAIM),
       },
       {
         failed: true,
