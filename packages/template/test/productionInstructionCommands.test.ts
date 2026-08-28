@@ -206,7 +206,7 @@ async function main(): Promise<void> {
       [["--title"], /requires a value/u],
       [["--layer", "maps"], /requires an explicit --title/u],
       [
-        ["--layer", "storylines", "--title", "Old"],
+        ["--layer", "unknown", "--title", "Invalid"],
         /Unknown authored document layer/u,
       ],
     ] as const) {
