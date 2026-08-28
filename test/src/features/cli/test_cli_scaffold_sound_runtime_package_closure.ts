@@ -911,7 +911,9 @@ export const test_cli_scaffold_sound_runtime_package_closure = (): void => {
     const directoryRaceLstat = fs.lstatSync(directoryRaceRoot, {
       bigint: true,
     });
-    const directoryRaceStat = fs.statSync(directoryRaceRoot, { bigint: true });
+    const directoryRaceStat = fs.statSync(directoryRaceRoot, {
+      bigint: true,
+    });
     TestValidator.equals(
       "invalid package facts and unobserved snapshots are refused",
       namedFacts([
