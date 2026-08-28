@@ -4333,14 +4333,31 @@ const shotUsesLandmark = (shot: IAutoMovieShotContract): boolean =>
           predicate.to.kind === "landmark"),
   );
 
+type AutoMovieMutationConsequenceReviewTarget = Exclude<
+  IAutoMovieReviewTarget,
+  { kind: "subject" }
+>;
+
+interface IAutoMovieMutationConsequences extends Omit<
+  IAutoMovieDesignMutationConsequences,
+  "staleReviews"
+> {
+  staleReviews: AutoMovieMutationConsequenceReviewTarget[];
+}
+
 const consequencesOf = (
   graph: IAutoMovieProductionDesignGraph,
   target: IAutoMovieDesignTarget,
   generatedPaths: readonly string[],
   screenplay: IAutoMovieScreenplayIndex | null,
-): IAutoMovieDesignMutationConsequences => {
-  const staleReviews = new Map<string, IAutoMovieReviewTarget>();
-  const addReview = (review: IAutoMovieReviewTarget): void => {
+): IAutoMovieMutationConsequences => {
+  const staleReviews = new Map<
+    string,
+    AutoMovieMutationConsequenceReviewTarget
+  >();
+  const addReview = (
+    review: AutoMovieMutationConsequenceReviewTarget,
+  ): void => {
     staleReviews.set(reviewConsequenceKey(review), review);
   };
   addReview({ kind: "design", design: target });
@@ -4478,11 +4495,14 @@ const affectedSequenceIds = (
 };
 
 const mergeMutationConsequences = (
-  current: IAutoMovieDesignMutationConsequences,
-  next: IAutoMovieDesignMutationConsequences,
+  current: IAutoMovieMutationConsequences,
+  next: IAutoMovieMutationConsequences,
   includeRenditions: boolean,
-): IAutoMovieDesignMutationConsequences => {
-  const staleReviews = new Map<string, IAutoMovieReviewTarget>();
+): IAutoMovieMutationConsequences => {
+  const staleReviews = new Map<
+    string,
+    AutoMovieMutationConsequenceReviewTarget
+  >();
   for (const target of [...current.staleReviews, ...next.staleReviews])
     if (target.kind !== "rendition" || includeRenditions)
       staleReviews.set(reviewConsequenceKey(target), target);
@@ -4515,11 +4535,11 @@ const modelRecipeDependsOn = (
   );
 };
 
-const reviewConsequenceKey = (target: IAutoMovieReviewTarget): string => {
+const reviewConsequenceKey = (
+  target: AutoMovieMutationConsequenceReviewTarget,
+): string => {
   if (target.kind === "design") return `design:${targetKey(target.design)}`;
   if (target.kind === "source") return `source:${target.path}`;
-  if (target.kind === "subject")
-    return `subject:${target.shot}:${target.subject}`;
   return `${target.kind}:${target.id}`;
 };
 
