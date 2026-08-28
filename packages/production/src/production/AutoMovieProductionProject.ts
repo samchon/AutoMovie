@@ -4130,7 +4130,7 @@ const validateRealOwnershipLayout = (
   manifest: IAutoMovieProductionManifest,
   file: string,
 ): void => {
-  assertOwnedRootDirectory(rootReal, path.join(root, "automovie"), file);
+  assertOwnedRootDirectory(rootReal, path.join(root, "automovie"));
   for (const entry of [
     ...manifest.sourceRoots.map((relative, index) => ({
       owner: `sourceRoots[${index}]`,
@@ -4140,7 +4140,7 @@ const validateRealOwnershipLayout = (
     { owner: "renderRoot", relative: manifest.renderRoot },
   ]) {
     const absolute = resolveInside(root, entry.relative);
-    assertOwnedRootDirectory(rootReal, absolute, file);
+    assertOwnedRootDirectory(rootReal, absolute);
   }
   for (const [index, relative] of (manifest.contentRoots ?? []).entries()) {
     const absolute = resolveInside(root, relative);
@@ -5043,14 +5043,10 @@ const assertPhysicalDirectoryAncestors = (
 const assertOwnedRootDirectory = (
   projectRootReal: string,
   directory: string,
-  manifestPath: string,
 ): void => {
-  const linked = fs.lstatSync(directory);
-  if (linked.isSymbolicLink() || linked.isDirectory() === false)
-    throw new Error(
-      `Invalid production manifest "${manifestPath}": owned root "${relativeToRoot(projectRootReal, directory)}" must be a physical project directory, not a symlink or junction.`,
-    );
+  const ancestry = acquirePhysicalDirectoryAncestry(projectRootReal, directory);
   assertRealAncestorInside(projectRootReal, directory);
+  assertPhysicalDirectoryAncestry(ancestry);
 };
 
 const ownedRootReal = (projectRootReal: string, directory: string): string => {
