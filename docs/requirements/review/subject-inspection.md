@@ -26,6 +26,10 @@ Frame과 구간 검토는 반대로 저작된 camera를 그대로 물려받아�
 
 주체 검토가 만든 관찰을 delivery evidence로 제시하지 않아야 하며, 저작된 shot의 frame이 주체를 담고 있다는 사실만으로 그 주체를 검토했다고 주장하지 않아야 한다.
 
+검사가 시점을 소유한다는 것은 저자가 시점을 고른다는 뜻이 아니다. 각 주체가 지불해야 하는 required 시점 개체군은 compiled topology에서 파생해야 하며, 호출자는 질문을 더할 수 있고 required 집합을 줄일 수 없다. Bounded rigid subject의 최소 폐쇄 집합은 front, rear, left, right, top, bottom의 canonical six faces와 서로 반대인 두 oblique perspective이고, rigged subject는 range-of-motion과 extreme state 관찰을 그 위에 더하되 그것이 여덟 시점을 대신하지 않는다. Canonical face는 symmetry, identity 또는 in-use invisibility를 진술한 evidence-reviewed waiver로만 면제되며, waiver는 부재하는 요구가 아니라 주소를 가진 typed record여야 한다.
+
+건물 exterior의 시점 개체군은 고정 장수가 아니라 envelope에서 파생한다. 노출된 모든 facade, 모든 exterior corner와 reentrant corner, roof와 top, site/context, envelope를 관통하는 모든 opening이 각각 자기 시점을 지불하며 대표 facade 하나가 sibling facade를 대신하지 않는다. Volume을 진술한 모든 logical space는 자기 자신이 검토 단위이며, 중심에서 네 cardinal 방향으로 바라보는 시점 넷, 자기 extent의 네 corner에서 안쪽을 바라보는 시점 넷, 그리고 그 space의 boundary에 뚫린 opening마다 threshold 시점 하나를 지불한다. 각 interior 시점의 camera는 그 space 자신의 진술된 volume 안에 있어야 하며, bounding box 바깥을 도는 시점은 그 space의 관찰이 아니다.
+
 ### 검사 기구의 도달 {#review-subject-inspection-reach}
 
 주체 검사는 화면을 볼 수 없는 당사자가 요청할 수 있어야 한다. 주체를 안정된 identity로 이름 대고 검사가 소유한 시점을 지정하면 그 시점의 관찰 artifact를 돌려받는 요청 표면이 있어야 하며, 그 표면 없이 사람의 화면에서만 열리는 검사 기구는 저작 주체에게 없는 기구로 취급해야 한다.

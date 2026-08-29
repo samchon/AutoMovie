@@ -32,6 +32,10 @@ Resolver는 제품이 공개한 주체 검사 target을 안정된 주체 record�
 
 Frame과 구간 표면은 반대로 저작된 camera state를 그대로 사용하고 자체 시점을 선택하지 않는다. 주체 검사가 만든 관찰은 delivery evidence population에 들어가지 않으며, 주체를 담은 shot frame은 그 주체의 viewpoint plan을 충족한 표본으로 계상되지 않는다.
 
+Required viewpoint 개체군은 caller input이 아니라 compiled topology에서 파생한다. Bounded rigid subject는 여섯 canonical face와 서로 반대인 두 oblique을 지불하고, 건물 unit은 자기 envelope에서, volume을 진술한 각 logical space는 자기 interior에서 개체군을 얻는다. 노출 여부는 하나의 space만 감싸는 separation인지로 정하고, facade·roof·underside 구분은 그 separation의 outward normal이 수평보다 수직에 가까운지로 정하며, corner의 exterior·reentrant 구분은 두 facade가 만나는 점에서 각 facade의 몸이 다른 facade의 outward plane 뒤에 있는지로 정한다. 각 space는 자기 interior centre에서 네 cardinal station, 자기 extent의 네 corner에서 안쪽을 향한 station, 자기 boundary에 뚫린 opening마다 threshold station 하나를 얻는다.
+
+Interior station의 position은 그 space 자신의 진술된 volume 안에 있음이 증명된 점이어야 한다. 증명하지 못한 station은 개체군에서 사라지지 않고 identity만 남긴 채 미해결로 보고되며, 호출자 입력은 station을 더할 수 있고 뺄 수 없다. 같은 record는 어느 호출자에게나 같은 station identity와 같은 순서를 만든다.
+
 ### 주체 검사의 요청 표면 {#review-system-subject-inspection-reach}
 
 <!-- @evidenceObligation subject-inspection-reach 안정된 subject와 viewpoint identity로 실제 viewer 검사를 요청하는 표면. -->
