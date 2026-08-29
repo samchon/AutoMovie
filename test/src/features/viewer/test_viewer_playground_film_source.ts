@@ -69,7 +69,16 @@ const checkedSpawn = (arguments_: readonly string[], label: string): void => {
 };
 
 const stageHosts = (directory: string): readonly string[] => {
-  const importPath = path.relative(directory, HOST).replaceAll("\\", "/");
+  // Drop the `.ts` the absolute host path carries. `ttsc` compiles the staged
+  // project under the repository's own base configuration, which enables
+  // neither `allowImportingTsExtensions` nor the `noEmit` pairing it requires,
+  // so a specifier that keeps the extension is rejected with TS5097 before any
+  // host runs. Every other import of this fixture, including this file's own,
+  // is extensionless, and that is what the staged host must look like too.
+  const importPath = path
+    .relative(directory, HOST)
+    .replaceAll("\\", "/")
+    .replace(/\.ts$/u, "");
   const specifier = importPath.startsWith(".") ? importPath : `./${importPath}`;
   const hosts = CASES.map((entry) => path.join(directory, entry.filename));
   for (const [index, entry] of CASES.entries())
