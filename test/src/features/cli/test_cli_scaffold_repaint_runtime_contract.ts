@@ -757,75 +757,55 @@ const configureGeneratedRepaint = async (
   referencePath: string;
   sourceBundle: string;
 }> => {
-  const configPath = path.join(root, "automovie.config.ts");
-  const configSource = fs.readFileSync(configPath, "utf8");
-  const configImportSlot = '} from "./scripts/productionConfiguration";';
-  const repaintSlot = "    repaint: null,";
   const referencePath = "public/repaint/generated-repaint-reference.png";
-  const repaintSource = JSON.stringify(
-    {
-      generator: {
-        runtimeIdentity: REPAINT_RUNTIME_IDENTITY,
-        generatorProvenance: REPAINT_PROVENANCE,
-      },
-      executionPolicy: {
-        maximumAttempts: 3,
-        attemptTimeoutMs: 30_000,
-        maximumElapsedMs: 120_000,
-        maximumCostUnits: 3,
-        backoffMs: [0, 0],
-        retryableFailures: ["rate-limit", "timeout", "transport"],
-      },
-      requests: [
-        {
-          shot: "opening",
-          parameters: {
-            prompt: "Preserve every deterministic structure.",
-            negativePrompt: "Do not alter camera, timing, or motion.",
-            seed: 2135,
-            strength: 0.25,
-            controls: { contract: true },
-          },
-          references: [{ role: "structure", path: referencePath }],
-          evidence: {
-            prompt:
-              "docs/settings/050-art-direction.md#art-delivery-review-condition",
-            continuity: "docs/treatments/001-cue.md#event-call",
-            settings:
-              "docs/settings/050-art-direction.md#art-delivery-review-condition",
-            design:
-              "docs/models/010-soloist.md#soloist-blocking-representation",
-            screenplayOrBrief: "docs/screenplays/001-cue/001-cue.md#scn-001",
-            shot: "src/shots/opening.ts#opening",
-          },
-          selectionReview: null,
-        },
-      ],
+  /**
+   * The reviewed repaint adoption this generated production authors.
+   *
+   * It goes on the design record rather than into a configuration file beside
+   * `src`, so a changed prompt, seed, reference, or policy stales the compile
+   * that consumed it. The per-candidate selection review deliberately does not
+   * travel with it: a request is design, while a candidate review is an
+   * observation of a render the current source already produced, and recording
+   * one must not invalidate that render. `repaintSelectionReviews.ts` therefore
+   * stays outside compiler content and the runtime joins it by shot.
+   */
+  const authoredRepaint: NonNullable<IAutoMovieProductionDesign["repaint"]> = {
+    generator: {
+      runtimeIdentity: REPAINT_RUNTIME_IDENTITY,
+      generatorProvenance: REPAINT_PROVENANCE,
     },
-    null,
-    2,
-  );
-  const authoredRepaint = rewriteOnce(
-    "The generated repaint request's selection-review seam",
-    repaintSource,
-    '"selectionReview": null',
-    '"selectionReview": repaintSelectionReviews.opening ?? null',
-  ).replaceAll("\n", "\n    ");
-  fs.writeFileSync(
-    configPath,
-    rewriteOnce(
-      "The generated repaint config's null repaint slot",
-      rewriteOnce(
-        "The generated repaint config's production-configuration import seam",
-        configSource,
-        configImportSlot,
-        `${configImportSlot}\nimport { repaintSelectionReviews } from "./repaintSelectionReviews";`,
-      ),
-      repaintSlot,
-      `    repaint: ${authoredRepaint},`,
-    ),
-    "utf8",
-  );
+    executionPolicy: {
+      maximumAttempts: 3,
+      attemptTimeoutMs: 30_000,
+      maximumElapsedMs: 120_000,
+      maximumCostUnits: 3,
+      backoffMs: [0, 0],
+      retryableFailures: ["rate-limit", "timeout", "transport"],
+    },
+    requests: [
+      {
+        shot: "opening",
+        parameters: {
+          prompt: "Preserve every deterministic structure.",
+          negativePrompt: "Do not alter camera, timing, or motion.",
+          seed: 2135,
+          strength: 0.25,
+          controls: { contract: true },
+        },
+        references: [{ role: "structure", path: referencePath }],
+        evidence: {
+          prompt:
+            "docs/settings/050-art-direction.md#art-delivery-review-condition",
+          continuity: "docs/treatments/001-cue.md#event-call",
+          settings:
+            "docs/settings/050-art-direction.md#art-delivery-review-condition",
+          design: "docs/models/010-soloist.md#soloist-blocking-representation",
+          screenplayOrBrief: "docs/screenplays/001-cue/001-cue.md#scn-001",
+          shot: "src/shots/opening.ts#opening",
+        },
+      },
+    ],
+  };
   const productionPath = path.join(root, "src/production.ts");
   fs.writeFileSync(
     productionPath,
@@ -865,6 +845,7 @@ const configureGeneratedRepaint = async (
   productionContract.visualDelivery = "repainted";
   productionContract.frameFormat.width = 16;
   productionContract.frameFormat.height = 16;
+  productionContract.repaint = authoredRepaint;
   fs.writeFileSync(
     productionContractPath,
     `${JSON.stringify(productionContract, null, 2)}\n`,
@@ -1290,7 +1271,15 @@ export const test_cli_scaffold_repaint_runtime_contract =
         "scripts/repaint.ts",
         ["opening"],
       );
-      const configuredPath = path.join(fixture.root, "automovie.config.ts");
+      // The two negatives below mutate the authored repaint adoption, which now
+      // lives on the design record rather than in a configuration file. They
+      // keep rewriting bytes through `rewriteOnce` on purpose: that helper
+      // throws when its anchor is gone, which is what makes a negative case go
+      // red instead of quietly asserting against unmutated material.
+      const configuredPath = path.join(
+        fixture.root,
+        "automovie/design/repaint-runtime-film/production.json",
+      );
       const selectionReviewsPath = path.join(
         fixture.root,
         "repaintSelectionReviews.ts",

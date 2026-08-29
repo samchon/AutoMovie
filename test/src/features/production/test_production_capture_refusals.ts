@@ -55,7 +55,8 @@ const CRATE: IAutoMovieModelRecipe = {
  *    host for nothing in any of them.
  * 3. `captureTurntable` refuses the same two production faults with the same
  *    codes, so one tool's namespace rules are not a second dialect.
- * 4. A rigless model's turntable is exactly the five rest-pose views.
+ * 4. A rigless model's turntable is exactly the nine rest-pose views: the six
+ *    canonical faces, two opposing obliques, and the steep outline pass.
  * 5. A registered asset whose compiled model is gone is refused by name rather
  *    than swept at the view set a rigged model would owe.
  * 6. With the compiler registry removed, both tools refuse as
@@ -209,7 +210,7 @@ export const test_production_capture_refusals = async (): Promise<void> => {
       asset: "crate",
     });
     TestValidator.equals(
-      "a rigless model owes the five rest-pose views and no extreme-range one",
+      "a rigless model owes the nine rest-pose views and no extreme-range one",
       {
         captured: rigless.captured,
         views: rigless.views.map((view) => view.id),
@@ -223,6 +224,10 @@ export const test_production_capture_refusals = async (): Promise<void> => {
           "turntable-right",
           "turntable-back",
           "turntable-left",
+          "turntable-top",
+          "turntable-bottom",
+          "oblique-front-right-top",
+          "oblique-rear-left-top",
           "top-outline",
         ],
         poses: ["rest"],

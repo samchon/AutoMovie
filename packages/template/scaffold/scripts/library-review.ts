@@ -302,7 +302,7 @@ export const runLibraryReviewCommand = (props: {
       : { version: 1 as const, units: [] };
     const retained = previous.units.find(
       (unit) => unit.anchor === parts.anchor,
-    )?.receipts;
+    );
     const plan: IAutoMovieLibraryReviewPlanFile = {
       version: 1,
       units: [
@@ -311,7 +311,14 @@ export const runLibraryReviewCommand = (props: {
           anchor: parts.anchor,
           sources,
           observations,
-          receipts: retained ?? [],
+          // A waiver is the one record that keeps a required observation
+          // unopened, so rebuilding the unit literal without it silently
+          // reopens every waived view. The receipt path mutates `receipts` in
+          // place and already carries waivers through; this is the plan path.
+          ...(retained?.waivers === undefined
+            ? {}
+            : { waivers: retained.waivers }),
+          receipts: retained?.receipts ?? [],
         },
       ].sort((left, right) =>
         left.anchor < right.anchor ? -1 : left.anchor > right.anchor ? 1 : 0,

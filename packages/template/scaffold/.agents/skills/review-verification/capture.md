@@ -27,7 +27,7 @@ A colour means nothing without the document that names it. The palette is the si
 
 ## The whole asset turntable in one call
 
-`npm run turntable -- --asset <id>` captures the complete view set an asset review is judged from: the four horizontal quarters at fifteen degrees, the steep `outline` pass overhead, and a rigged model's `rom-extremes` pose. The set belongs to the contract rather than to the request, which is the point of it. An asset covered from the angles its author chose is an asset whose back nobody looked at.
+`npm run turntable -- --asset <id>` captures the complete view set an asset review is judged from: the six canonical faces, two opposing oblique perspectives, the steep `outline` pass overhead, and a rigged model's `rom-extremes` pose. Front, rear, left and right are taken straight on, top and bottom as steeply as this surface's own elevation interval admits, and the two obliques a half turn apart so that no corner of the subject survives both. The set belongs to the contract rather than to the request, which is the point of it. An asset covered from the angles its author chose is an asset whose back nobody looked at.
 
 Every view runs through the same path `npm run preview` uses, so each one carries the same receipt and the same refusals. What comes back is a ledger, not six receipts: `views` lists every required view in canonical order with the project-relative `frame` it committed, or `null` where that view was refused, and `captured` is true only when every one of them committed. A refused view is named by the diagnostic whose target reads `<asset>#<view id>`.
 
