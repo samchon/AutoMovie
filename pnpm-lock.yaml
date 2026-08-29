@@ -113,6 +113,9 @@ importers:
       '@ttsc/lint':
         specifier: catalog:typescript
         version: 0.28.1
+      '@types/node':
+        specifier: catalog:utils
+        version: 22.19.20
       prettier:
         specifier: catalog:typescript
         version: 3.8.3

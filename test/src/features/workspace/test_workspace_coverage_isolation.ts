@@ -13,6 +13,7 @@ import {
 } from "../../coverage/measureCoverage";
 import {
   coverageCommandWiringDiagnostics,
+  coverageProcessIsEntry,
   coverageRunDependencies,
   runCoverage,
   runCoverageCli,
@@ -337,6 +338,18 @@ export const test_workspace_coverage_isolation = (): void => {
   setCoverageExitStatus(0);
   const directExitStatus = process.exitCode;
   process.exitCode = previousExitStatus;
+  // The two `runCoverageCli` calls above pin the unit with both booleans, which
+  // is what let the real defect hide: the call site passed
+  // `require.main === module`, always false under `ttsx`, so the covered unit
+  // sat behind a wiring nothing could reach and the command measured nothing
+  // while exiting 0. Pin the binding itself, both ways.
+  const entryDecision = {
+    own: coverageProcessIsEntry(
+      path.resolve(__dirname, "../../coverage/runCoverage.ts"),
+    ),
+    launcher: coverageProcessIsEntry(path.resolve(__dirname, "../../index.ts")),
+    absent: coverageProcessIsEntry(undefined),
+  };
   TestValidator.equals(
     "one typed coverage command preserves order and failure classes",
     {
@@ -351,6 +364,7 @@ export const test_workspace_coverage_isolation = (): void => {
       reportGap,
       cliStatuses,
       directExitStatus,
+      entryDecision,
     },
     {
       green: 0,
@@ -364,6 +378,7 @@ export const test_workspace_coverage_isolation = (): void => {
       reportGap: 1,
       cliStatuses: [0],
       directExitStatus: 0,
+      entryDecision: { own: true, launcher: false, absent: false },
     },
   );
 };
