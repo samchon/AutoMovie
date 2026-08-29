@@ -6,13 +6,12 @@ Read the shipped [`automovie.config.ts`](../../../automovie.config.ts) and its e
 
 ## Wiring and authored choices
 
-Do not turn fixed harness wiring into authored production content. Do not hide a production choice among wiring values.
+Every field in this file is an authored production choice. Harness wiring is not here at all any more, so there is nothing in it to mistake one for: the production namespace is derived from this project's own `package.json` name by `scripts/projectIdentity.ts`, and the capture browser and local viewer server are host boundaries owned by `scripts/hostBoundary.ts`. Each of those carries a shipped default and is overridden only by an explicit input on the invoking command (`AUTOMOVIE_CAPTURE_BROWSER`, `AUTOMOVIE_CAPTURE_BROWSER_PRODUCT`, `AUTOMOVIE_CAPTURE_BROWSER_EXECUTABLE`, `AUTOMOVIE_VIEWER_HOST`, `AUTOMOVIE_VIEWER_BASE_PATH`); an unrecognized value is refused by name rather than replaced with the default. Nothing there changes what the production delivers, which is why none of it is a project declaration.
+
+Do not move a production choice out to that boundary, and do not bring a host fact back into this file.
 
 | Field | Kind | Owner and consequence |
 | --- | --- | --- |
-| `productionId` | Wiring | Project scripts use the stable production namespace already selected by the repository. |
-| `capture.browser` | Wiring | Local capture launch wiring. It does not decide what the production delivers. |
-| `viewer.host`, `viewer.basePath` | Wiring | Local viewer-server addresses. They are not audience access, camera, or delivery choices. |
 | `render.proxy`, `render.final` | Authored serialization | [Settings](settings.md) owns the delivery and `obligations/core/settings.md#delivery-review-condition` owns the reproducible condition. The config records the corresponding scale and temporal decimation. A later visual-delivery or fidelity owner refines that same decision; do not create a second owner here. |
 | `visual.repaint.generator.runtimeIdentity` | Authored serialization | The settings `production-fidelity-tier` owner selects the provider, model, immutable version, and execution boundary for the promised delivery. [Research](research.md) supplies current capability and availability facts. The adapter must report this exact identity; it cannot select or substitute it. |
 | `visual.repaint.generator.generatorProvenance` | Authored serialization | Research owns the source, license or terms location, and review date. The settings fidelity owner owns the accepted cost basis and reason this production needs an appearance rendition. The config carries the joined adoption without a credential. |
