@@ -6,6 +6,7 @@ import type {
 import {
   AutoMovieProductionCompiler,
   AutoMovieProductionProject,
+  compareCodeUnits,
   digestAutoMovieBytes,
   productionRenderBundleRelativePath,
   productionRenderTargetFingerprint,
@@ -43,64 +44,109 @@ interface IGeneratedCameraDepthRuntimeProbe {
 
 const REPOSITORY_ROOT = path.resolve(__dirname, "../../../..");
 
+/**
+ * Replace exactly one occurrence of `anchor`, refusing anything else.
+ *
+ * `String.replace` returns its input when the anchor is gone, so an arrangement
+ * step built on it stops mutating its subject without going red and the case
+ * quietly proceeds to assert something else. Every rewrite this scenario
+ * performs on rendered scaffold source goes through here so that a moved anchor
+ * fails the arrangement instead of weakening the experiment.
+ */
+const rewriteOnce = (
+  what: string,
+  source: string,
+  anchor: string | RegExp,
+  replacement: string,
+): string => {
+  const occurrences =
+    typeof anchor === "string"
+      ? source.split(anchor).length - 1
+      : [
+          ...source.matchAll(
+            // Deduplicated, because `new RegExp(anchor, "gg")` is a syntax
+            // error rather than a count.
+            new RegExp(
+              anchor.source,
+              [...new Set(`${anchor.flags}g`)].join(""),
+            ),
+          ),
+        ].length;
+  if (occurrences !== 1)
+    throw new Error(
+      `${what} needs exactly one anchor, found ${String(occurrences)}: ${String(anchor)}.`,
+    );
+  return source.replace(anchor, replacement);
+};
+
+/**
+ * Rewrite the first of several equivalent anchors, refusing an empty match.
+ *
+ * Some authored populations repeat one citation shape across every owner in the
+ * file, and the negative this scenario plants deliberately breaks exactly one of
+ * them so the graph reports exactly one diagnostic. Uniqueness is therefore the
+ * wrong guard there, while "the anchor still exists" is the one that keeps the
+ * arrangement honest.
+ */
+const rewriteFirst = (
+  what: string,
+  source: string,
+  anchor: string | RegExp,
+  replacement: string,
+): string => {
+  const rewritten = source.replace(anchor, replacement);
+  if (rewritten === source)
+    throw new Error(`${what} found no anchor to rewrite: ${String(anchor)}.`);
+  return rewritten;
+};
+
+/**
+ * The completed film's active graph population, keyed by the blank scaffold's
+ * own selector line.
+ *
+ * The blank `lint.config.ts` ships every layer `"disabled"` and `kind: null`,
+ * because a generated project must inherit capability rather than another
+ * production's evidence state. The fixture that stands in for a finished film
+ * has to raise exactly the layers its documents pay, and it raises them in the
+ * one tracked declaration the generated project's lint, sync, and runtime
+ * commands all read, so no test-only graph shadows the real one.
+ */
+const AUTHORED_EVIDENCE_POPULATION: ReadonlyArray<readonly [string, string]> = [
+  ["  kind: null,", '  kind: "film",'],
+  ['  settings: "disabled",', '  settings: "review",'],
+  ['  models: "disabled",', '  models: "review",'],
+  ['  motions: "disabled",', '  motions: "review",'],
+  ['  treatments: "disabled",', '  treatments: "review",'],
+  ['  scripts: "disabled",', '  scripts: "review",'],
+  ['  screenplays: "disabled",', '  screenplays: "review",'],
+  ['  modelSources: "disabled",', '  modelSources: "review",'],
+  ['  motionSources: "disabled",', '  motionSources: "review",'],
+  ['  shots: "disabled",', '  shots: "review",'],
+  ['  productionSources: "disabled",', '  productionSources: "review",'],
+  ['  filmSources: "disabled",', '  filmSources: "review",'],
+];
+
 const installAuthoredEvidencePopulation = (
   rendered: Record<string, string>,
 ): void => {
-  const lint = rendered["lint.config.mjs"];
+  const lint = rendered["lint.config.ts"];
   if (
     lint === undefined ||
-    lint.includes('from "./productionEvidence.mjs"') === false ||
     lint.includes("createAutoMovieEvidenceConfig(productionEvidence)") === false
   )
     throw new Error(
       "The generated consumer no longer shares one productionEvidence declaration between lint and runtime commands.",
     );
-  rendered["productionEvidence.mjs"] = [
-    "// @ts-check",
-    "",
-    'const location = Reflect.get(import.meta, "dirname");',
-    'if (typeof location !== "string")',
-    '  throw new Error("The production evidence declaration requires native import.meta.dirname support.");',
-    "",
-    "/**",
-    " * The completed film's one tracked graph declaration.",
-    " *",
-    " * Normal lint, render, repaint, and publication commands all consume this",
-    " * same complete root-bound identity; no test-only graph shadows it.",
-    " *",
-    ' * @type {import("@automovie/evidence").IAutoMovieEvidenceConfigProps}',
-    " */",
-    "export const productionEvidence = {",
-    "  location,",
-    '  kind: "film",',
-    '  populationScope: { mode: "complete-production" },',
-    '  settings: "review",',
-    '  research: "disabled",',
-    '  maps: "disabled",',
-    '  models: "review",',
-    '  spaces: "disabled",',
-    '  materials: "disabled",',
-    '  instances: "disabled",',
-    '  motions: "review",',
-    '  systems: "disabled",',
-    '  treatments: "review",',
-    '  scripts: "review",',
-    '  screenplays: "review",',
-    '  briefs: "disabled",',
-    '  mapSources: "disabled",',
-    '  modelSources: "review",',
-    '  spaceSources: "disabled",',
-    '  materialSources: "disabled",',
-    '  instanceSources: "disabled",',
-    '  motionSources: "review",',
-    '  systemSources: "disabled",',
-    '  shots: "review",',
-    '  productionSources: "review",',
-    '  filmSources: "review",',
-    "  claims: [],",
-    "};",
-    "",
-  ].join("\n");
+  rendered["lint.config.ts"] = AUTHORED_EVIDENCE_POPULATION.reduce(
+    (source, [anchor, replacement]) =>
+      rewriteOnce(
+        "The generated consumer's authored evidence population",
+        source,
+        anchor,
+        replacement,
+      ),
+    lint,
+  );
 };
 
 const linkWorkspacePackage = (project: string, name: string): void => {
@@ -182,16 +228,65 @@ const linkWorkspacePackage = (project: string, name: string): void => {
   );
 };
 
+/**
+ * The environment a real user's shell would hand a generated project.
+ *
+ * Only the two launcher variables proved to leak this test program's own
+ * loader are removed. `NODE_OPTIONS` carries the parent's `ttsx` register hook
+ * and `TTSX_RUNTIME_MANIFEST` points at the parent's PID-scoped emit, and a
+ * child that inherits either resolves this repository's TypeScript sources
+ * through the parent's transpiler instead of through its own module boundary,
+ * which is the boundary this scenario exists to exercise. Everything else is
+ * inherited, because a child scrubbed of its whole environment is no longer the
+ * process a user runs.
+ *
+ * `AUTOMOVIE_ISSUE_2135_COVERAGE=1` is an explicit opt-out of the `NODE_OPTIONS`
+ * half, set by hand and by nothing in the repository. It exists so a coverage
+ * investigation can keep the parent's transpiler hook and attribute the child's
+ * TypeScript to the same source paths; it costs exactly the isolation this
+ * scenario otherwise enforces, which is why it is opt-in rather than the
+ * default. `NODE_V8_COVERAGE` is what c8 hands down, and it is inherited either
+ * way.
+ */
+const generatedEnvironment = (): NodeJS.ProcessEnv => {
+  const environment = { ...process.env };
+  if (environment.AUTOMOVIE_ISSUE_2135_COVERAGE !== "1")
+    delete environment.NODE_OPTIONS;
+  delete environment.TTSX_RUNTIME_MANIFEST;
+  return environment;
+};
+
+/**
+ * This run's own generated-command transpile cache, removed with the fixture.
+ *
+ * The directory is named for the running process so two suites never share one
+ * cache, and it is deleted on the way out so a suite does not leave a fresh
+ * orphan under `node_modules/.cache` on every invocation.
+ */
+const GENERATED_CACHE = path.join(
+  REPOSITORY_ROOT,
+  `node_modules/.cache/issue-2135-ttsc-${process.pid}`,
+);
+
+/**
+ * The ceiling a cold generated command is allowed, uniform across every script.
+ *
+ * A generated project compiles this repository's whole TypeScript surface on its
+ * first command, and how long that takes depends on the machine and on whether
+ * coverage instrumentation is attached, not on which script was asked for. Two
+ * different ceilings only meant that the same cold compile passed under one
+ * command and was killed under another. The ceiling is not a way to let a
+ * failure through: a command that reaches it throws with the script, the
+ * elapsed limit, and everything the child managed to say.
+ */
+const GENERATED_TIMEOUT = 600_000;
+
 const runGenerated = (
   project: string,
   script: string,
   args: readonly string[] = [],
   plugins = false,
 ): IGeneratedCommand => {
-  const environment = { ...process.env };
-  if (environment.AUTOMOVIE_ISSUE_2135_COVERAGE !== "1")
-    delete environment.NODE_OPTIONS;
-  delete environment.TTSX_RUNTIME_MANIFEST;
   const result = spawnSync(
     process.execPath,
     [
@@ -200,10 +295,7 @@ const runGenerated = (
         "lib/launcher/ttsx.js",
       ),
       "--cache-dir",
-      path.join(
-        REPOSITORY_ROOT,
-        `node_modules/.cache/issue-2135-ttsc-${process.pid}`,
-      ),
+      GENERATED_CACHE,
       ...(plugins ? [] : ["--no-plugins"]),
       "-P",
       path.join(project, "tsconfig.json"),
@@ -213,20 +305,39 @@ const runGenerated = (
     {
       cwd: project,
       encoding: "utf8",
-      env: environment,
-      timeout:
-        plugins || environment.AUTOMOVIE_ISSUE_2135_COVERAGE === "1"
-          ? 600_000
-          : 180_000,
+      env: generatedEnvironment(),
+      timeout: GENERATED_TIMEOUT,
     },
   );
-  if (result.error !== undefined) throw result.error;
+  if (result.error !== undefined)
+    throw new Error(
+      [
+        `The generated command "${[script, ...args].join(" ")}" did not complete (limit ${String(GENERATED_TIMEOUT)} ms).`,
+        `stdout: ${result.stdout ?? ""}`,
+        `stderr: ${result.stderr ?? ""}`,
+      ].join("\n"),
+      { cause: result.error },
+    );
   return {
     status: result.status,
     stderr: result.stderr,
     stdout: result.stdout,
   };
 };
+
+/**
+ * One comparable transcript of a generated command.
+ *
+ * A child spawned on Windows ends its lines with CRLF and `ttsc` colours its
+ * diagnostics, so a raw `includes` over `stdout` alone reads differently on the
+ * two platforms this contract has to hold on. Normalizing both here keeps the
+ * diagnostic counts platform-independent and keeps stderr in the same window as
+ * stdout, where an evidence diagnostic can land on either.
+ */
+const generatedOutput = (command: IGeneratedCommand): string =>
+  `${command.stdout}\n${command.stderr}`
+    .replaceAll("\r\n", "\n")
+    .replace(/\u001B\[[0-?]*[ -/]*[@-~]/gu, "");
 
 const runGeneratedFast = (
   project: string,
@@ -252,28 +363,79 @@ const runGeneratedCameraDepthRuntime = async (
   const output = fs.mkdtempSync(
     path.join(project, "node_modules/.camera-depth-runtime-"),
   );
-  const entry = "camera-depth-runtime.mjs";
+  const entry = "camera-depth-runtime.cjs";
   try {
     await build({
       build: {
+        // The probe is one Node entry, not a site. Copying the production's
+        // `public/` tree beside it would only add megabytes and make the
+        // single-chunk closure check below read a directory listing instead of
+        // the bundle.
+        copyPublicDir: false,
         emptyOutDir: true,
         outDir: output,
         rollupOptions: {
-          external: ["@automovie/production"],
-          output: { entryFileNames: entry, format: "es" },
+          output: {
+            entryFileNames: entry,
+            format: "cjs",
+            inlineDynamicImports: true,
+          },
         },
         ssr: "test/camera-depth-runtime.ts",
       },
       configFile: false,
       logLevel: "silent",
       root: project,
-      ssr: { noExternal: ["@automovie/engine", "@automovie/viewer", "three"] },
+      ssr: {
+        // Every workspace package stays in the bundle. A generated project's
+        // `node_modules/@automovie/*` is this repository's own package root,
+        // whose development `exports` resolve to `src/*.ts`, so any package
+        // left external makes bare Node open a TypeScript file and die with
+        // `ERR_UNKNOWN_FILE_EXTENSION`. A single CommonJS chunk is what carries
+        // the CJS-only transitive dependencies these packages pull in; an ESM
+        // chunk holding one of them fails with `require is not defined`, and
+        // the dynamic `viewer/src/shotRuntime` import has to be inlined for the
+        // single-file output to be complete.
+        noExternal: [/^@automovie\//u, "three"],
+      },
     });
+    // Reading the emitted bundle is what makes the closure a measurement rather
+    // than a configuration. `noExternal` is a request, and rollup answers it
+    // silently: a package it declined to inline leaves an ordinary `require` in
+    // the output, and the probe then dies on the first workspace `.ts` file it
+    // opens. Both halves are checked, because a second chunk is the same
+    // unclosed bundle in a different shape.
+    const emitted = fs.readdirSync(output).sort(compareCodeUnits);
+    const bundle = fs.readFileSync(path.join(output, entry), "utf8");
+    const escapes = [...bundle.matchAll(/(?:require|import)\("([^"]+)"\)/gu)]
+      .map((match) => match[1] ?? "")
+      .filter(
+        (specifier) =>
+          specifier.startsWith("@automovie/") ||
+          specifier === "three" ||
+          specifier.startsWith("three/"),
+      )
+      .sort(compareCodeUnits);
+    TestValidator.equals(
+      "the generated camera-depth runtime bundle closes over every workspace package",
+      { emitted, escapes },
+      { emitted: [entry], escapes: [] },
+    );
     const command = spawnSync(process.execPath, [path.join(output, entry)], {
       cwd: project,
       encoding: "utf8",
-      env: process.env,
+      env: generatedEnvironment(),
+      timeout: GENERATED_TIMEOUT,
     });
+    if (command.error !== undefined)
+      throw new Error(
+        [
+          `The generated camera-depth runtime probe did not complete (limit ${String(GENERATED_TIMEOUT)} ms).`,
+          `stdout: ${command.stdout ?? ""}`,
+          `stderr: ${command.stderr ?? ""}`,
+        ].join("\n"),
+        { cause: command.error },
+      );
     if (command.status !== 0)
       throw new Error(
         `The generated camera-depth runtime probe failed (${String(command.status)}).\n${command.stdout}\n${command.stderr}`,
@@ -324,10 +486,6 @@ const assertGeneratedRuntimeParity = (
   rendered: Readonly<Record<string, string>>,
 ): void => {
   const scaffold = path.join(REPOSITORY_ROOT, "packages/template/scaffold");
-  const cache = path.join(
-    REPOSITORY_ROOT,
-    "packages/template/.cache/automovie-scaffold-evidence-gate",
-  );
   const entrypoints = [
     "repaintSelectionReviews.ts",
     "scripts/capture-browser.ts",
@@ -360,16 +518,15 @@ const assertGeneratedRuntimeParity = (
     "vite.config.ts",
   ];
   TestValidator.equals(
-    "every generated runtime owner preserves scaffold, consumer, and gate-cache bytes",
+    "every generated runtime owner preserves the scaffold's own bytes in the rendered consumer",
     entrypoints.map((relative) => ({
       relative,
-      cache: fs.readFileSync(path.join(cache, relative), "utf8"),
       rendered: rendered[relative],
       source: fs.readFileSync(path.join(scaffold, relative), "utf8"),
     })),
     entrypoints.map((relative) => {
       const source = fs.readFileSync(path.join(scaffold, relative), "utf8");
-      return { relative, cache: source, rendered: source, source };
+      return { relative, rendered: source, source };
     }),
   );
 };
@@ -491,16 +648,12 @@ const REPAINT_PROVENANCE = {
 const installGeneratedRepaintRuntimeFixtures = (root: string): void => {
   const repaintPath = path.join(root, "scripts/repaint.ts");
   const repaintSource = fs.readFileSync(repaintPath, "utf8");
-  const captureImport =
-    'import { createProductionFrameCaptureRuntime } from "./capture";';
-  if (repaintSource.split(captureImport).length !== 2)
-    throw new Error(
-      "Generated repaint entrypoint no longer has one capture-runtime import seam.",
-    );
   fs.writeFileSync(
     repaintPath,
-    repaintSource.replace(
-      captureImport,
+    rewriteOnce(
+      "The generated repaint entrypoint's capture-runtime import seam",
+      repaintSource,
+      'import { createProductionFrameCaptureRuntime } from "./capture";',
       'import { createProductionFrameCaptureRuntime } from "./repaintCaptureFixture";',
     ),
     "utf8",
@@ -607,13 +760,7 @@ const configureGeneratedRepaint = async (
   const configPath = path.join(root, "automovie.config.ts");
   const configSource = fs.readFileSync(configPath, "utf8");
   const configImportSlot = '} from "./scripts/productionConfiguration";';
-  if (configSource.split(configImportSlot).length !== 2)
-    throw new Error(
-      "Generated repaint config no longer has one production-configuration import seam.",
-    );
   const repaintSlot = "    repaint: null,";
-  if (configSource.split(repaintSlot).length !== 2)
-    throw new Error("Generated repaint config no longer has one null slot.");
   const referencePath = "public/repaint/generated-repaint-reference.png";
   const repaintSource = JSON.stringify(
     {
@@ -658,46 +805,46 @@ const configureGeneratedRepaint = async (
     null,
     2,
   );
-  const reviewSlot = '"selectionReview": null';
-  if (repaintSource.split(reviewSlot).length !== 2)
-    throw new Error(
-      "Generated repaint request no longer has one selection-review seam.",
-    );
+  const authoredRepaint = rewriteOnce(
+    "The generated repaint request's selection-review seam",
+    repaintSource,
+    '"selectionReview": null',
+    '"selectionReview": repaintSelectionReviews.opening ?? null',
+  ).replaceAll("\n", "\n    ");
   fs.writeFileSync(
     configPath,
-    configSource
-      .replace(
+    rewriteOnce(
+      "The generated repaint config's null repaint slot",
+      rewriteOnce(
+        "The generated repaint config's production-configuration import seam",
+        configSource,
         configImportSlot,
         `${configImportSlot}\nimport { repaintSelectionReviews } from "./repaintSelectionReviews";`,
-      )
-      .replace(
-        repaintSlot,
-        `    repaint: ${repaintSource
-          .replace(
-            reviewSlot,
-            '"selectionReview": repaintSelectionReviews.opening ?? null',
-          )
-          .replaceAll("\n", "\n    ")},`,
       ),
+      repaintSlot,
+      `    repaint: ${authoredRepaint},`,
+    ),
     "utf8",
   );
   const productionPath = path.join(root, "src/production.ts");
-  const productionSource = fs.readFileSync(productionPath, "utf8");
-  for (const from of [
-    ['visualDelivery: "deterministic"', 'visualDelivery: "repainted"'],
-    ["width: 1280", "width: 16"],
-    ["height: 720", "height: 16"],
-  ].map(([from]) => from))
-    if (productionSource.split(from).length !== 2)
-      throw new Error(
-        `Generated repaint production has no exact ${from} slot.`,
-      );
   fs.writeFileSync(
     productionPath,
-    productionSource
-      .replace('visualDelivery: "deterministic"', 'visualDelivery: "repainted"')
-      .replace("width: 1280", "width: 16")
-      .replace("height: 720", "height: 16"),
+    (
+      [
+        ['visualDelivery: "deterministic"', 'visualDelivery: "repainted"'],
+        ["width: 1280", "width: 16"],
+        ["height: 720", "height: 16"],
+      ] as const
+    ).reduce(
+      (source, [anchor, replacement]) =>
+        rewriteOnce(
+          "The generated repaint production's delivery slot",
+          source,
+          anchor,
+          replacement,
+        ),
+      fs.readFileSync(productionPath, "utf8"),
+    ),
     "utf8",
   );
   const productionContractPath = path.join(
@@ -935,15 +1082,10 @@ export const test_cli_scaffold_repaint_runtime_contract =
       rendered["test/camera-depth-runtime.ts"] =
         generatedCameraDepthRuntimeProbe();
       installAuthoredEvidencePopulation(rendered);
-      const film = rendered["src/film.ts"]!;
-      const captionPopulation =
-        /[ ]{8}captions: \[\n(?:.|\n)*?[ ]{8}\],\n[ ]{8}effects: \[\],/u;
-      if ([...film.matchAll(new RegExp(captionPopulation, "gu"))].length !== 1)
-        throw new Error(
-          "The generated-runtime fixture must expose one caption population for the no-synthesis render twin.",
-        );
-      rendered["src/film.ts"] = film.replace(
-        captionPopulation,
+      rendered["src/film.ts"] = rewriteOnce(
+        "The generated-runtime fixture's caption population for the no-synthesis render twin",
+        rendered["src/film.ts"]!,
+        /[ ]{8}captions: \[\n(?:.|\n)*?[ ]{8}\],\n[ ]{8}effects: \[\],/u,
         "        captions: [],\n        effects: [],",
       );
       writeFiles(fixture.root, rendered);
@@ -1014,39 +1156,61 @@ export const test_cli_scaffold_repaint_runtime_contract =
         fixture.root,
         "docs/settings/000-governing-aim.md",
       );
-      const evidenceSource = fs.readFileSync(evidenceDelivery, "utf8");
-      const evidenceNegative = evidenceSource.replace(
-        /^@evidence principles\/core\/common\.md#machine-default .+\n@evidenceReview principles\/core\/common\.md#machine-default .+\n/mu,
-        "",
+      const evidenceBytes = fs.readFileSync(evidenceDelivery);
+      const evidenceDigest = digestAutoMovieBytes(evidenceBytes);
+      fs.writeFileSync(
+        evidenceDelivery,
+        rewriteFirst(
+          "The generated-runtime evidence negative",
+          evidenceBytes.toString("utf8"),
+          /^@evidence principles\/core\/common\.md#machine-default .+\n@evidenceReview principles\/core\/common\.md#machine-default .+\n/mu,
+          "",
+        ),
+        "utf8",
       );
-      if (evidenceNegative === evidenceSource)
-        throw new Error(
-          "The generated-runtime evidence negative must remove one authored principle citation pair.",
-        );
-      fs.writeFileSync(evidenceDelivery, evidenceNegative, "utf8");
       const rejectedEvidence = runGenerated(
         fixture.root,
         "scripts/compile.ts",
         [],
         true,
       );
-      fs.writeFileSync(evidenceDelivery, evidenceSource, "utf8");
+      fs.writeFileSync(evidenceDelivery, evidenceBytes);
+      // The accepted half only means something if the restore was exact. A
+      // near-restore would let a real refusal read as a harness artifact and a
+      // harness artifact read as a product defect, which is the confusion this
+      // scenario exists to remove.
+      const restoredDigest = digestAutoMovieBytes(
+        fs.readFileSync(evidenceDelivery),
+      );
+      if (restoredDigest !== evidenceDigest)
+        throw new Error(
+          `The generated-runtime evidence negative did not restore its authored bytes: ${evidenceDigest} became ${restoredDigest}.`,
+        );
       const acceptedEvidence = runGenerated(
         fixture.root,
         "scripts/compile.ts",
         [],
         true,
       );
-      const rejectedEvidenceOutput =
-        `${rejectedEvidence.stdout}\n${rejectedEvidence.stderr}`
-          .replaceAll("\r\n", "\n")
-          .replace(/\u001B\[[0-?]*[ -/]*[@-~]/gu, "");
+      const rejectedEvidenceOutput = generatedOutput(rejectedEvidence);
+      const acceptedEvidenceOutput = generatedOutput(acceptedEvidence);
+      if (
+        acceptedEvidence.status !== 0 ||
+        acceptedEvidenceOutput.includes("[evidence/graph]")
+      )
+        throw new Error(
+          [
+            `The restored generated evidence graph refused its own byte-for-byte authored population (status ${String(acceptedEvidence.status)}).`,
+            `stdout: ${acceptedEvidence.stdout}`,
+            `stderr: ${acceptedEvidence.stderr}`,
+          ].join("\n"),
+        );
       TestValidator.equals(
         "normal generated commands keep the completed fixture's real evidence guard active",
         {
-          acceptedCommandSuccess:
-            acceptedEvidence.status === 0 &&
-            acceptedEvidence.stderr.includes("[evidence/graph]") === false,
+          acceptedStatus: acceptedEvidence.status,
+          acceptedGraphDiagnostics:
+            acceptedEvidenceOutput.includes("[evidence/graph]"),
           negativeFailed: rejectedEvidence.status !== 0,
           negativeNamedTarget: rejectedEvidenceOutput.includes(
             "principles/core/common.md#machine-default",
@@ -1056,7 +1220,8 @@ export const test_cli_scaffold_repaint_runtime_contract =
               .length === 1,
         },
         {
-          acceptedCommandSuccess: true,
+          acceptedStatus: 0,
+          acceptedGraphDiagnostics: false,
           negativeFailed: true,
           negativeNamedTarget: true,
           negativeSingleDiagnostic: true,
@@ -1131,15 +1296,16 @@ export const test_cli_scaffold_repaint_runtime_contract =
         "repaintSelectionReviews.ts",
       );
       const configuredSource = fs.readFileSync(configuredPath, "utf8");
-      const staleReferenceSource = configuredSource.replace(
-        repaint.referencePath,
-        "public/repaint/generated-repaint-reference-missing.png",
+      fs.writeFileSync(
+        configuredPath,
+        rewriteOnce(
+          "The generated repaint stale-source negative's reference slot",
+          configuredSource,
+          repaint.referencePath,
+          "public/repaint/generated-repaint-reference-missing.png",
+        ),
+        "utf8",
       );
-      if (staleReferenceSource === configuredSource)
-        throw new Error(
-          "The generated repaint stale-source negative has no reference slot.",
-        );
-      fs.writeFileSync(configuredPath, staleReferenceSource, "utf8");
       const staleSourceRefusal = runGeneratedFast(
         fixture.root,
         "scripts/repaint.ts",
@@ -1151,13 +1317,14 @@ export const test_cli_scaffold_repaint_runtime_contract =
         fixture.root,
         "repaint-impossible-policy-invoked.txt",
       );
-      if (configuredSource.split('"transport"').length !== 2)
-        throw new Error(
-          "The generated repaint config has no unique transport retry slot.",
-        );
       fs.writeFileSync(
         configuredPath,
-        configuredSource.replace('"transport"', '"cancelled"'),
+        rewriteOnce(
+          "The generated repaint config's transport retry slot",
+          configuredSource,
+          '"transport"',
+          '"cancelled"',
+        ),
         "utf8",
       );
       fs.writeFileSync(adapterMode, "impossible\n", "utf8");
@@ -1380,14 +1547,15 @@ export const test_cli_scaffold_repaint_runtime_contract =
       const transportReviewSource = withGeneratedRepaintSelectionReview(
         transportOutput.receipt,
       );
-      const changedEvidence = configuredSource.replace(
+      // The authored request cites this settings anchor for both its prompt and
+      // its settings evidence, and moving either one is enough to make the
+      // adoption stale, so this negative deliberately changes the first.
+      const changedEvidence = rewriteFirst(
+        "The generated repaint adoption negative's evidence slot",
+        configuredSource,
         "docs/settings/050-art-direction.md#art-delivery-review-condition",
         "docs/settings/050-art-direction.md#art-palette",
       );
-      if (changedEvidence === configuredSource)
-        throw new Error(
-          "The generated repaint adoption negative has no evidence slot.",
-        );
       fs.writeFileSync(selectionReviewsPath, transportReviewSource, "utf8");
       fs.writeFileSync(configuredPath, changedEvidence, "utf8");
       const staleSelection = runGeneratedFast(
@@ -1557,6 +1725,11 @@ export const test_cli_scaffold_repaint_runtime_contract =
             resource: "repaint runtime fixture root",
             cleanup: () =>
               fs.rmSync(fixture.root, { force: true, recursive: true }),
+          },
+          {
+            resource: "generated command transpile cache",
+            cleanup: () =>
+              fs.rmSync(GENERATED_CACHE, { force: true, recursive: true }),
           },
         ]);
     }
