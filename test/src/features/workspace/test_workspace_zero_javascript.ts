@@ -1,12 +1,17 @@
 import { TestValidator } from "@nestia/e2e";
+import fs from "node:fs";
 import path from "node:path";
 
 import {
   type IZeroJavaScriptDependencies,
+  ZERO_JAVASCRIPT_ROOT,
   ZeroJavaScriptError,
   assertZeroJavaScript,
   findAuthoredJavaScript,
+  isProcessEntry,
   runZeroJavaScript,
+  setZeroJavaScriptExitCode,
+  zeroJavaScriptCli,
 } from "../../integrity/zeroJavaScript";
 import { namedFacts } from "../internal/predicates";
 
@@ -34,7 +39,37 @@ const captureRun = (
   return { code, error, output };
 };
 
-/** The repository rejects every authored JavaScript extension without exceptions. */
+/**
+ * The repository rejects every authored JavaScript extension without exceptions,
+ * over the whole repository rather than over whatever subtree the caller stood
+ * in.
+ *
+ * The scanned population is the part that has to be pinned rather than assumed.
+ * `git ls-files` is scoped to its working directory, so the entry's former
+ * `process.cwd()` default made the population a property of the shell. Run from
+ * `test/`, which is where the runner and its `tsconfig.json` live, it printed
+ * "No directly authored JavaScript files are present." while
+ * `build/zeroJavaScriptNegativeProbe.js` sat unignored in the tree: a guard that
+ * reports the same green over a narrowed population is exactly the failure this
+ * invariant exists to prevent.
+ *
+ * Scenarios:
+ *
+ * 1. The real repository passes, which is the invariant itself.
+ * 2. The default root is the repository root and contains `build/` and
+ *    `packages/`, so the entry cannot be scoped down to the package it lives in.
+ * 3. A listing of TypeScript, JSON, and a Markdown file whose name merely
+ *    contains `.mjs` is accepted, so the match is on the extension rather than
+ *    on the substring.
+ * 4. A `.js` entry the index still names but that is gone from disk is ignored,
+ *    because a deleted file is not authored source.
+ * 5. All three forbidden extensions are rejected together, sorted, with every
+ *    path named in both the error's data and its message.
+ * 6. A failure of the listing itself is reported rather than read as an empty
+ *    population, which would be the same green as a clean repository.
+ * 7. The entry guard answers both ways and publishes its status through the
+ *    process, so a guard that never fires cannot pass as one that did.
+ */
 export const test_workspace_zero_javascript = (): void => {
   assertZeroJavaScript(ROOT);
 
@@ -60,11 +95,31 @@ export const test_workspace_zero_javascript = (): void => {
   } catch (error) {
     caught = error;
   }
+  const entry = path.join(
+    ROOT,
+    "test",
+    "src",
+    "integrity",
+    "zeroJavaScript.ts",
+  );
+  const previous = process.exitCode;
+  zeroJavaScriptCli(false, setZeroJavaScriptExitCode);
+  const skipped = process.exitCode === previous;
+  zeroJavaScriptCli(true, setZeroJavaScriptExitCode);
+  const ran = process.exitCode === 0;
+  process.exitCode = previous;
 
   TestValidator.equals(
     "zero-JavaScript invariant has positive, deleted, negative, and error behavior",
     namedFacts([
       ["clean accepted", () => clean.code === 0 && clean.error === ""],
+      [
+        "default root is the repository",
+        () =>
+          ZERO_JAVASCRIPT_ROOT === ROOT &&
+          fs.existsSync(path.join(ZERO_JAVASCRIPT_ROOT, "build")) &&
+          fs.existsSync(path.join(ZERO_JAVASCRIPT_ROOT, "packages")),
+      ],
       [
         "success explains invariant",
         () => clean.output.includes("No directly authored JavaScript"),
@@ -95,9 +150,18 @@ export const test_workspace_zero_javascript = (): void => {
         () =>
           nonError.code === 1 && nonError.error === "Error: listing failed\n",
       ],
+      [
+        "entry guard answers both ways",
+        () =>
+          isProcessEntry(entry, entry) === true &&
+          isProcessEntry(path.join(ROOT, "package.json"), entry) === false &&
+          isProcessEntry(undefined, entry) === false,
+      ],
+      ["entry guard publishes only when it fires", () => skipped && ran],
     ]),
     {
       "clean accepted": true,
+      "default root is the repository": true,
       "success explains invariant": true,
       "deleted index entry ignored": true,
       "all three extensions rejected": true,
@@ -105,6 +169,8 @@ export const test_workspace_zero_javascript = (): void => {
       "error owns exact paths": true,
       "negative output names every path": true,
       "listing failure preserved": true,
+      "entry guard answers both ways": true,
+      "entry guard publishes only when it fires": true,
     },
   );
 };

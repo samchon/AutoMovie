@@ -24,18 +24,39 @@ export interface IPackWorkspaceDependencies {
   readonly write: (message: string) => unknown;
 }
 
+/**
+ * Quote a path that is about to be joined into a Windows shell command line.
+ *
+ * `spawnSync` needs `shell: true` on Windows because `pnpm` is a `.CMD` shim
+ * Node refuses to execute directly, and a shell invocation discards the
+ * argument array: Node joins `file` and `args` with single spaces and hands
+ * `cmd.exe` one string, so it is the caller's job to quote. Unquoted, a
+ * destination under `C:\Users\John Doe\...` reached `pnpm` as
+ * `--pack-destination C:\Users\John` plus two stray positionals, and the
+ * measured result was worse than a crash: `pnpm pack` exited 0 and reported a
+ * tarball written to the truncated path, so every downstream check passed while
+ * bytes landed outside the requested directory.
+ *
+ * Windows forbids `"` in a path, so wrapping is total there; POSIX keeps the
+ * argument array and must not be quoted, because the quotes would become part
+ * of the path.
+ */
+export const shellArgument = (value: string, shell: boolean): string =>
+  shell ? `"${value}"` : value;
+
 export const packWorkspaceDependencies: IPackWorkspaceDependencies = {
   remove: (directory) => fs.rmSync(directory, { recursive: true, force: true }),
   makeDirectory: (directory) => fs.mkdirSync(directory, { recursive: true }),
   pack: (directory, destination) => {
+    const shell = process.platform === "win32";
     const result = spawnSync(
       "pnpm",
-      ["pack", "--pack-destination", destination],
+      ["pack", "--pack-destination", shellArgument(destination, shell)],
       {
         cwd: directory,
         stdio: ["ignore", "pipe", "inherit"],
         encoding: "utf8",
-        shell: process.platform === "win32",
+        shell,
       },
     );
     return { status: result.status, stdout: result.stdout };
@@ -159,5 +180,25 @@ export const buildTgz = (
   return output;
 };
 
-if (path.resolve(process.argv[1] ?? "") === path.resolve(__filename))
-  buildTgz();
+/**
+ * True when Node started this file rather than importing it.
+ *
+ * The entry arrives as a parameter so both answers can be exercised without
+ * spawning a process for each: a module-scope comparison is only ever taken one
+ * way inside a test run, which is how an entry guard reaches a release having
+ * never been observed to fire. The comparison stays on `process.argv[1]`
+ * because that is the form `pnpm run build:tgz` is proven to execute under; the
+ * `undefined` arm covers a host that starts Node without a script path at all,
+ * where `path.resolve` would throw.
+ */
+export const isProcessEntry = (
+  entry: string | undefined,
+  file: string,
+): boolean => entry !== undefined && path.resolve(entry) === path.resolve(file);
+
+/** Pack the workspace only when this module is the process entry. */
+export const buildTgzCli = (entry: boolean, run: () => unknown): void => {
+  if (entry) run();
+};
+
+buildTgzCli(isProcessEntry(process.argv[1], __filename), buildTgz);
