@@ -234,22 +234,34 @@ export const coverageScriptShapes = (
 ): ICoverageScriptShapes => {
   const repository = ROOT.replaceAll("\\", "/").toLowerCase();
   const measured = (url: string): boolean => {
-    // `fileURLToPath` rather than stripping the scheme by hand. The hand-rolled
-    // form was `url.replace(/^file:[/]{3}/u, "")`, which is right only for a
-    // Windows drive letter: `file:///D:/a` loses three slashes and correctly
-    // becomes `D:/a`, while `file:///home/a` becomes `home/a` and loses the
-    // leading slash that `repository` still carries. Every POSIX comparison
-    // therefore failed, so this census reported zero measured scripts on Linux
-    // and the shape diagnostic it exists to produce was silently empty there.
-    // The second `.replace(/[/]/gu, "/")` was a no-op that read like the
-    // backslash normalization it was not.
-    let target: string;
+    // Decode the URL rather than stripping its scheme by hand, and decode it
+    // the same way on every host.
+    //
+    // The hand-rolled form was `url.replace(/^file:[/]{3}/u, "")`, which is
+    // right only for a Windows drive letter: `file:///D:/a` loses three slashes
+    // and correctly becomes `D:/a`, while `file:///home/a` becomes `home/a` and
+    // loses the leading slash that `repository` still carries. Since
+    // `coverageSourceRoots` is `["."]`, every comparison takes the prefix
+    // branch, so every POSIX comparison failed and this census reported zero
+    // measured scripts on Linux for its whole life.
+    //
+    // `fileURLToPath` fixes that but decides by host: it refuses
+    // `file:///repo/a` on Windows because there is no drive letter, which is a
+    // real URL shape this function is asked about. What the census needs is the
+    // path the URL names, not the path this host could open, so the parse is
+    // neutral and only a genuinely malformed URL is skipped.
+    let lowered: string;
     try {
-      target = fileURLToPath(url);
+      const parsed = new URL(url);
+      const decoded = decodeURIComponent(parsed.pathname);
+      // A leading slash belongs to a POSIX path and precedes a Windows drive
+      // letter; keep the first and drop the second.
+      lowered = (/^\/[A-Za-z]:/u.test(decoded) ? decoded.slice(1) : decoded)
+        .replaceAll("\\", "/")
+        .toLowerCase();
     } catch {
       return false;
     }
-    const lowered = target.replaceAll("\\", "/").toLowerCase();
     return roots.some((root) => {
       if (root === ".")
         return lowered === repository || lowered.startsWith(`${repository}/`);

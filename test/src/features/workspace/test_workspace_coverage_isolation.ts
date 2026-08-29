@@ -153,11 +153,12 @@ export const test_workspace_coverage_isolation = (): void => {
   );
   fs.writeFileSync(
     path.join(shaped, "coverage-2-2-0.json"),
-    // A `file:` URL the platform cannot turn into a path. `%2F` is an encoded
-    // separator, which `fileURLToPath` refuses on both platforms, so this is
-    // the case that proves the census skips an unusable URL instead of
-    // throwing out of the whole walk and losing every record behind it.
-    JSON.stringify({ result: [shape(64), { url: "file:///a%2Fb.ts" }] }),
+    // A malformed `file:` URL, which is the case that proves the census skips
+    // an unusable record instead of throwing out of the whole walk and losing
+    // every record behind it. The parse is deliberately host-neutral, so a
+    // POSIX-shaped URL on Windows is measured rather than skipped; only a URL
+    // that is not a URL fails here.
+    JSON.stringify({ result: [shape(64), { url: "file://[invalid" }] }),
   );
 
   const drawn = {
