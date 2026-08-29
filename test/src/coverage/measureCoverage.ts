@@ -234,8 +234,22 @@ export const coverageScriptShapes = (
 ): ICoverageScriptShapes => {
   const repository = ROOT.replaceAll("\\", "/").toLowerCase();
   const measured = (url: string): boolean => {
-    const target = url.replace(/^file:[/]{3}/u, "").replace(/[/]/gu, "/");
-    const lowered = target.toLowerCase();
+    // `fileURLToPath` rather than stripping the scheme by hand. The hand-rolled
+    // form was `url.replace(/^file:[/]{3}/u, "")`, which is right only for a
+    // Windows drive letter: `file:///D:/a` loses three slashes and correctly
+    // becomes `D:/a`, while `file:///home/a` becomes `home/a` and loses the
+    // leading slash that `repository` still carries. Every POSIX comparison
+    // therefore failed, so this census reported zero measured scripts on Linux
+    // and the shape diagnostic it exists to produce was silently empty there.
+    // The second `.replace(/[/]/gu, "/")` was a no-op that read like the
+    // backslash normalization it was not.
+    let target: string;
+    try {
+      target = fileURLToPath(url);
+    } catch {
+      return false;
+    }
+    const lowered = target.replaceAll("\\", "/").toLowerCase();
     return roots.some((root) => {
       if (root === ".")
         return lowered === repository || lowered.startsWith(`${repository}/`);

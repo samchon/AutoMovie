@@ -153,7 +153,11 @@ export const test_workspace_coverage_isolation = (): void => {
   );
   fs.writeFileSync(
     path.join(shaped, "coverage-2-2-0.json"),
-    JSON.stringify({ result: [shape(64)] }),
+    // A `file:` URL the platform cannot turn into a path. `%2F` is an encoded
+    // separator, which `fileURLToPath` refuses on both platforms, so this is
+    // the case that proves the census skips an unusable URL instead of
+    // throwing out of the whole walk and losing every record behind it.
+    JSON.stringify({ result: [shape(64), { url: "file:///a%2Fb.ts" }] }),
   );
 
   const drawn = {

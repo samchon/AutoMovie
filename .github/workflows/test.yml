@@ -56,6 +56,17 @@ jobs:
       - name: Install Dependencies
         run: pnpm install
 
+      # The suite contains scenarios that resolve what a generated project
+      # installs, and those read each package's built `lib/index.d.ts`. Without
+      # this step `test_cli_scaffold_evidence_gate` fails in three milliseconds
+      # with "carry no built lib/index.d.ts ... Run `pnpm run build` first",
+      # which is the probe refusing to measure rather than a defect it found.
+      # `build.yml` runs that one scenario after its own build; this lane runs
+      # the whole suite, so it has to satisfy the same precondition instead of
+      # excluding the scenario that exposes it.
+      - name: Build Packages
+        run: pnpm run build
+
       # `@ttsc/lint` and typia ship source plugins that are Go programs the
       # toolchain builds
       # once per cache key, and a cold build costs minutes in every job. The
@@ -100,6 +111,17 @@ jobs:
 
       - name: Install Dependencies
         run: pnpm install
+
+      # The suite contains scenarios that resolve what a generated project
+      # installs, and those read each package's built `lib/index.d.ts`. Without
+      # this step `test_cli_scaffold_evidence_gate` fails in three milliseconds
+      # with "carry no built lib/index.d.ts ... Run `pnpm run build` first",
+      # which is the probe refusing to measure rather than a defect it found.
+      # `build.yml` runs that one scenario after its own build; this lane runs
+      # the whole suite, so it has to satisfy the same precondition instead of
+      # excluding the scenario that exposes it.
+      - name: Build Packages
+        run: pnpm run build
 
       # `@ttsc/lint` and typia ship source plugins that are Go programs the
       # toolchain builds
