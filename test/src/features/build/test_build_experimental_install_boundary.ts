@@ -38,6 +38,12 @@ import {
  * 3. The install runs in the directory it was given, proving `cwd` carries the
  *    target rather than the process's own working directory: the installed
  *    lockfile appears under that directory and nowhere else.
+ * 4. A target whose path contains a space installs too. The boundary opens a
+ *    Windows shell, which discards the argument array and joins the command into
+ *    one string, and the sibling pack boundary lost its destination to exactly
+ *    that. `cwd` survives because it is an option rather than an argument, and
+ *    that difference is worth pinning rather than assuming: the same assumption
+ *    about the pack destination held until it was measured.
  */
 const assertBuildExperimentalInstallBoundary = async (): Promise<void> => {
   const { experimentalDependencies } =
@@ -60,8 +66,22 @@ const assertBuildExperimentalInstallBoundary = async (): Promise<void> => {
     );
     fs.writeFileSync(path.join(bad, "package.json"), "{ not json", "utf8");
 
+    const spaced = path.join(scratch, "target with space");
+    fs.mkdirSync(spaced, { recursive: true });
+    fs.writeFileSync(
+      path.join(spaced, "package.json"),
+      `${JSON.stringify(
+        { name: "automovie-spaced-probe", private: true, version: "1.0.0" },
+        null,
+        2,
+      )}
+`,
+      "utf8",
+    );
+
     const accepted = experimentalDependencies.install(good);
     const refused = experimentalDependencies.install(bad);
+    const spacedStatus = experimentalDependencies.install(spaced);
 
     TestValidator.equals(
       "the install boundary executes npm and reports its status",
@@ -77,11 +97,18 @@ const assertBuildExperimentalInstallBoundary = async (): Promise<void> => {
             fs.existsSync(path.join(good, "package-lock.json")) &&
             fs.existsSync(path.join(scratch, "package-lock.json")) === false,
         ],
+        [
+          "a target path containing a space installs into that path",
+          () =>
+            spacedStatus === 0 &&
+            fs.existsSync(path.join(spaced, "package-lock.json")),
+        ],
       ]),
       {
         "a minimal project installs": true,
         "an unparsable manifest fails": true,
         "the install ran in the directory it was given": true,
+        "a target path containing a space installs into that path": true,
       },
     );
   } catch (error) {
