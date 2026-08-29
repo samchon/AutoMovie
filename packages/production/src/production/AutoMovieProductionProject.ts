@@ -238,6 +238,14 @@ const REPAINT_REFERENCE_ROLE_COUNT = 7;
  * evidence citations and Git rather than a second project ledger. Every
  * one-artifact mutation is staged before an optimistic revision check and one
  * short production-scoped commit lock.
+ *
+ * @evidence requirements/production-design/continuity-change-and-deliverables.md#production-design-continuity-deliverables Owns the tracked design, revision, derived artifact, and publication records that keep one production's continuity and handoff explicit.
+ * @evidence requirements/repaint/providers-models-and-credentials.md#repaint-providers-models-credentials Keeps external repaint execution behind explicit adapter identity and project-owned immutable records rather than hidden provider state.
+ * @evidence requirements/repaint/retries-seeds-and-variation.md#repaint-retries-seeds-variation Stores each request and attempt independently, charges retry order, and changes the active pointer only through an accepted lineage.
+ * @evidence requirements/repaint/sequence-continuity-and-publication.md#repaint-sequence-continuity-publication Binds accepted rendition selection to current structural, continuity, temporal, and publication evidence.
+ * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-generation-boundary Persists explicit generator choice, request identity, result provenance, and refusal records without treating external output as deterministic source truth.
+ * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-repaint-handoff-boundary Owns the source lock, controls, attempts, selection, validation, and publication pointers of the optional repaint handoff.
+ * @evidence specifications/narrative-and-intent/budgets-continuity-and-deliverables.md#narrative-intent-design-continuity-ledger Preserves production revisions and immutable identities so design change comparison remains source-derived.
  */
 export class AutoMovieProductionProject {
   /**

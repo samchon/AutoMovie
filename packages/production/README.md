@@ -39,6 +39,20 @@ Subject inspection is the same shape: without an instrument the call refuses rat
 
 A generated library passes its single graph-derived authoring snapshot into the compiler at `review` and `final`. `readAutoMovieLibraryReviewRequirements` exposes the exact active branch, H2 owner, source, compile, and finite-plan identities to its offline observation commands. The compiler derives the same population again, reopens artifact bytes or canonical structured facts, and refuses stale or inconclusive receipts. Film and brief keep their compiled-consumer population, so an unused recipe is still not charged merely because it exists.
 
+## Reviewed public utility callables
+
+These utilities are public for generated-project scripts and diagnostic clients;
+they are not test-only helpers.
+
+| Callable | Direct consumer purpose |
+|---|---|
+| `decodeAutoMoviePathSegment` | Decodes one canonical project-path segment without accepting traversal. |
+| `listAutoMovieDiagnosticCatalog` | Lists the stable diagnostic catalog used by offline project tooling. |
+| `findAutoMovieDiagnosticCatalogEntry` | Resolves one diagnostic code to its remediation contract. |
+| `assertProductionFeatureUsesRenditionVideo` | Refuses production features that bypass the canonical rendition video. |
+| `readAutoMovieSubjectInspection` | Reads and validates one committed subject-inspection receipt. |
+| `compareAutoMovieVisualRevisions` | Compares two visual-revision receipts for review tooling. |
+
 ## Migration
 
 `AutoMovieLegacyImporter` remains the upgrade path while format-v1 projects still need one. It plans against a copy, applies one atomic state root beside the untouched legacy bytes, and refuses a rollback once the imported project has been worked in.

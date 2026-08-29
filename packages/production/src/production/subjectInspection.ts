@@ -567,6 +567,8 @@ export const autoMovieSubjectInspectionPose = (props: {
  * adapter from frame capture, the artifacts are written outside the render
  * root, and the answer carries `deliveryEvidence` as a literal `false`.
  *
+ * @evidence requirements/review/subject-inspection.md#review-subject-inspection Resolves stable subject identity, service-owned viewpoints, reachable image observations, freshness, coverage, and the boundary from shot-time evidence.
+ * @evidence specifications/review-and-acceptance/subject-surface-and-inspection.md#review-system-subject-inspection Implements the subject record, target interpretation, viewpoint plan, request, observation, freshness, and coverage contract without storing an approval workflow.
  * @author Samchon
  */
 export class AutoMovieProductionSubjectInspectionService {

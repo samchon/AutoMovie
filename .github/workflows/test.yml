@@ -7,7 +7,6 @@ on:
       # pending instead of reporting a result for the pull request (#1397).
       - '.github/workflows/build.yml'
       - '.github/workflows/test.yml'
-      - '.github/license-policy.json'
       # Matched by SHAPE, mirroring build.yml. The suite reads more than `src`:
       # the per-package lint ruleset `ttsc` enforces before a scenario runs, the
       # generators whose output it asserts, the guide corpus `prepare` bakes
@@ -17,7 +16,6 @@ on:
       - 'packages/*/*.json'
       - 'packages/*/*.ts'
       - 'packages/*/*.cts'
-      - 'packages/*/*.cjs'
       - 'packages/*/*.html'
       # Package entry documents are part of the published package surface and
       # therefore travel through the packaged test boundary (#1397).
@@ -28,14 +26,14 @@ on:
       - 'packages/*/scripts/**'
       # Shared compiler/lint policy is a direct test input.
       - 'config/**'
-      - 'internals/*.mjs'
       - 'test/**'
       # Root tooling configuration directly affects test installation and
       # execution (#1335).
-      - '*.js'
       - '*.json'
+      - '*.ts'
       - '*.yaml'
       - '*.yml'
+      - 'build/**'
       - '.prettier*'
       - '.gitattributes'
       # The root public entry document is named rather than globbing all
@@ -48,6 +46,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: 22.x
@@ -69,26 +69,14 @@ jobs:
           path: node_modules/.cache/ttsc/plugins
           key: ttsc-plugins-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
 
-      - name: Check Production Dependency Licenses
-        run: pnpm run license:check
-
-      # The test program runs straight through ttsx (ttsc's tsgo runner, no
-      # separate compile step). The run executes every scenario and fails on a
-      # failing assertion. Coverage is measured and reported beside it, but does
-      # not fail the job: the repository has never met the 100% threshold the
-      # script used to enforce, so a permanently red job told nobody anything
-      # and buried real regressions in the same colour.
-      - name: Run Tests and Measure Coverage
+      # One typed command executes every scenario, writes the historical gap
+      # report, and then refuses any touched authored source below whole-file
+      # 100% coverage or missing exact instrumentation.
+      - name: Run Tests and Enforce Coverage
+        env:
+          AUTOMOVIE_COVERAGE_BASE: origin/${{ github.base_ref }}
         run: pnpm coverage
         working-directory: test
-
-      # Always, not only on failure: the gaps are the record of what is left,
-      # and they are worth reading on a green run. This step can fail the job,
-      # and only for one thing: a reported position past the end of the file it
-      # names, which is the instrument inverting a source map against the wrong
-      # artifact rather than a gap anybody can close.
-      - name: Report Coverage Gaps
-        run: node internals/report-coverage-gaps.mjs
 
       - name: Save Toolchain Plugin Cache
         if: always()
@@ -103,6 +91,8 @@ jobs:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: 22.x
@@ -124,15 +114,11 @@ jobs:
           path: node_modules/.cache/ttsc/plugins
           key: ttsc-plugins-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
 
-      - name: Check Production Dependency Licenses
-        run: pnpm run license:check
-
-      - name: Run Tests and Measure Coverage
+      - name: Run Tests and Enforce Coverage
+        env:
+          AUTOMOVIE_COVERAGE_BASE: origin/${{ github.base_ref }}
         run: pnpm coverage
         working-directory: test
-
-      - name: Report Coverage Gaps
-        run: node internals/report-coverage-gaps.mjs
 
       - name: Save Toolchain Plugin Cache
         if: always()

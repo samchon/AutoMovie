@@ -1,6 +1,32 @@
 import fs from "node:fs";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
+
+interface ICoveragePosition {
+  column?: number;
+  line?: number;
+}
+
+interface ICoverageSpan {
+  end?: ICoveragePosition;
+  start?: ICoveragePosition;
+}
+
+interface IIstanbulFileCoverage {
+  b: Record<string, number[]>;
+  branchMap: Record<string, { locations: ICoverageSpan[]; type: string }>;
+  f: Record<string, number>;
+  fnMap: Record<string, { loc: ICoverageSpan; name: string }>;
+  s: Record<string, number>;
+  statementMap: Record<string, ICoverageSpan>;
+}
+
+interface IFunctionGapProps {
+  covered: Set<string>;
+  name: string | undefined;
+  text: string | null;
+}
+
+type Writer = (line: string) => void;
 
 /**
  * Whether a zero-hit function entry is a gap this file actually has.
@@ -25,7 +51,7 @@ import { fileURLToPath } from "node:url";
  * how many carry a position that could not be confirmed, so a reader knows which
  * line numbers to distrust.
  */
-export const functionGapIsReal = (props) => {
+export const functionGapIsReal = (props: IFunctionGapProps): boolean => {
   const name = props.name;
   if (typeof name !== "string" || name.startsWith("(anonymous")) return true;
   if (props.covered.has(name)) return false;
@@ -41,7 +67,10 @@ export const functionGapIsReal = (props) => {
  * different artifact, which is not. Reporting the count keeps that difference
  * visible without guessing which one a given entry is.
  */
-export const functionPositionConfirmed = (source, entry) => {
+export const functionPositionConfirmed = (
+  source: string[],
+  entry: { loc?: ICoverageSpan; name?: string },
+): boolean => {
   const name = entry?.name;
   if (typeof name !== "string" || name.startsWith("(anonymous")) return true;
   const line = source[(entry?.loc?.start?.line ?? 0) - 1];
@@ -54,7 +83,7 @@ export const functionPositionConfirmed = (source, entry) => {
  * A file nobody can read cannot answer either question, so its entries are
  * printed exactly as the tool stated them rather than judged against nothing.
  */
-const sourceText = (file) => {
+const sourceText = (file: string): string | null => {
   try {
     return fs.readFileSync(file, "utf8");
   } catch {
@@ -69,7 +98,7 @@ const sourceText = (file) => {
  * a guard that tolerates one line past the end is a guard with a hole in the one
  * place it is supposed to be exact.
  */
-export const lineCount = (text) =>
+export const lineCount = (text: string): number =>
   text === "" ? 0 : text.split("\n").length - (text.endsWith("\n") ? 1 : 0);
 
 /**
@@ -93,7 +122,14 @@ export const lineCount = (text) =>
  * past the end, and not one of them was a fault. A file the sidecar does not
  * name is left unjudged and counted as such.
  */
-export const positionsPastEndOfFile = (data, lines) => {
+export const positionsPastEndOfFile = (
+  data: {
+    branchMap?: Record<string, { locations?: ICoverageSpan[] }>;
+    fnMap?: Record<string, { loc?: ICoverageSpan }>;
+    statementMap?: Record<string, ICoverageSpan>;
+  },
+  lines: number,
+): number => {
   const spans = [
     ...Object.values(data.statementMap ?? {}),
     ...Object.values(data.fnMap ?? {}).map((entry) => entry?.loc),
@@ -115,62 +151,81 @@ export const positionsPastEndOfFile = (data, lines) => {
  * to judge nothing, because the alternative is judging a report against a file
  * it never measured.
  */
-export const measuredLineCount = (record, file) =>
-  record === null || record === undefined || typeof record[file] !== "number"
-    ? null
-    : record[file];
+export const measuredLineCount = (
+  record: Record<string, unknown> | null | undefined,
+  file: string,
+): number | null => {
+  const value = record?.[file];
+  return typeof value === "number" ? value : null;
+};
 
 /**
  * What each file's length was when the report was written, or `null`.
  *
  * Absent for a report produced before this sidecar existed, or by anything other
- * than `internals/coverage.mjs`. That is a reason to judge nothing rather than a
+ * than the typed coverage command. That is a reason to judge nothing rather than a
  * reason to judge against today's file.
  */
-const readMeasuredLines = () => {
+const readMeasuredLines = (
+  reportFile: string,
+): Record<string, unknown> | null => {
   try {
     return JSON.parse(
       fs.readFileSync(
-        path.join(path.dirname(REPORT), "measured-lines.json"),
+        path.join(path.dirname(reportFile), "measured-lines.json"),
         "utf8",
       ),
-    );
+    ) as Record<string, unknown>;
   } catch {
     return null;
   }
 };
 
-const REPORT = path.resolve(
-  "node_modules/.cache/automovie-c8-report/coverage-final.json",
+const ROOT = path.resolve(__dirname, "../../..");
+export const COVERAGE_REPORT_FILE = path.join(
+  ROOT,
+  "node_modules",
+  ".cache",
+  "automovie-c8-report",
+  "coverage-final.json",
 );
 
-const relative = (file) =>
-  path.relative(process.cwd(), file).replaceAll("\\", "/");
+const relative = (file: string): string =>
+  path.relative(ROOT, file).replaceAll("\\", "/");
 
-const location = (span) =>
-  span.start.line === span.end.line
-    ? `${span.start.line}:${span.start.column}-${span.end.column}`
-    : `${span.start.line}:${span.start.column}-${span.end.line}:${span.end.column}`;
+const location = (span: ICoverageSpan): string => {
+  const start = span.start ?? {};
+  const end = span.end ?? {};
+  return start.line === end.line
+    ? `${start.line ?? "?"}:${start.column ?? "?"}-${end.column ?? "?"}`
+    : `${start.line ?? "?"}:${start.column ?? "?"}-${end.line ?? "?"}:${end.column ?? "?"}`;
+};
 
 /**
  * Print every uncovered position the last measurement can stand behind.
  *
  * Guarded so importing this module to read its rule does not print a report,
- * which is what lets the rule be tested at all. `coverage.mjs` carries the same
- * guard for the same reason.
+ * which is what lets focused scenarios ask about the rule without printing the
+ * repository report.
  */
-const reportGaps = () => {
-  if (fs.existsSync(REPORT) === false) {
-    console.log("No Istanbul coverage-final.json was produced.");
-    return;
+export const reportCoverageGaps = (
+  reportFile: string = COVERAGE_REPORT_FILE,
+  write: Writer = console.log,
+): number => {
+  if (fs.existsSync(reportFile) === false) {
+    write("No Istanbul coverage-final.json was produced.");
+    return 2;
   }
-  const coverage = JSON.parse(fs.readFileSync(REPORT, "utf8"));
+  const coverage = JSON.parse(fs.readFileSync(reportFile, "utf8")) as Record<
+    string,
+    IIstanbulFileCoverage
+  >;
   let ghosts = 0;
   let unconfirmed = 0;
   let outside = 0;
   let unmeasured = 0;
-  const outsideFiles = [];
-  const measuredLines = readMeasuredLines();
+  const outsideFiles: string[] = [];
+  const measuredLines = readMeasuredLines(reportFile);
   for (const [file, data] of Object.entries(coverage).sort(([left], [right]) =>
     left.localeCompare(right),
   )) {
@@ -206,7 +261,7 @@ const reportGaps = () => {
     const functions = kept.map(
       (definition) => `${definition.name}@${location(definition.loc)}`,
     );
-    const branches = [];
+    const branches: string[] = [];
     for (const [id, hits] of Object.entries(data.b))
       hits.forEach((count, index) => {
         if (count === 0)
@@ -220,20 +275,20 @@ const reportGaps = () => {
       branches.length === 0
     )
       continue;
-    console.log(`::group::${relative(file)}`);
+    write(`::group::${relative(file)}`);
     if (statements.length !== 0)
-      console.log(`uncovered statements: ${statements.join(", ")}`);
+      write(`uncovered statements: ${statements.join(", ")}`);
     if (functions.length !== 0)
-      console.log(`uncovered functions: ${functions.join(", ")}`);
+      write(`uncovered functions: ${functions.join(", ")}`);
     if (branches.length !== 0)
-      console.log(`uncovered branches: ${branches.join(", ")}`);
-    console.log("::endgroup::");
+      write(`uncovered branches: ${branches.join(", ")}`);
+    write("::endgroup::");
   }
   // Said at the end and always. A dropped entry is a statement about the
   // instrument rather than about the code, and a reader who cannot see how many
   // were dropped cannot tell a clean report from a filtered one.
   if (ghosts !== 0)
-    console.log(
+    write(
       `${ghosts} zero-hit function entr${ghosts === 1 ? "y" : "ies"} named a function that ran under another entry, or a name this repository never wrote, and ${ghosts === 1 ? "is" : "are"} not listed above. That is the coverage tool reading its own emitted output, not a gap here.`,
     );
   // A refusal rather than a notice, because a position outside the file it names
@@ -241,24 +296,18 @@ const reportGaps = () => {
   // the report this was measured against, so it costs nothing until it costs a
   // red job, which is the point.
   if (outside !== 0) {
-    console.log(
+    write(
       `${outside} reported position${outside === 1 ? "" : "s"} lie past the end of the file named, so a source map was inverted against the wrong artifact:`,
     );
-    for (const named of outsideFiles) console.log(`  ${named}`);
-    process.exitCode = 1;
+    for (const named of outsideFiles) write(`  ${named}`);
   }
   if (unmeasured !== 0)
-    console.log(
+    write(
       `${unmeasured} file${unmeasured === 1 ? "" : "s"} could not be checked for positions past their own end, because the measurement recorded no length for ${unmeasured === 1 ? "it" : "them"}. Re-run the measurement to restore that check.`,
     );
   if (unconfirmed !== 0)
-    console.log(
+    write(
       `${unconfirmed} of the uncovered functions listed above carr${unconfirmed === 1 ? "ies" : "y"} a line that does not contain ${unconfirmed === 1 ? "its" : "their"} own name. The gap is real and the position is not to be trusted; find the function by name.`,
     );
+  return outside === 0 ? 0 : 2;
 };
-
-if (
-  process.argv[1] !== undefined &&
-  path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)
-)
-  reportGaps();

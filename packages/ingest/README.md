@@ -15,7 +15,15 @@ ingest.
 
 ## 공개 표면
 
-- glTF/GLB 문서를 AutoMovie model·skeleton으로 변환하는 수입 함수. 구조적 결함(중복 morph target 이름, 알 수 없는 attachedBone 등)은 던지거나 구조화된 오류로 구분한다.
+| Callable | 직접 소비 목적 |
+|---|---|
+| `humanoidSkeleton` | 정규화된 humanoid bone mapping을 AutoMovie skeleton 계약으로 변환한다. |
+| `ingestDocument` | 이미 파싱된 glTF 문서를 model·skeleton·clip AST로 수입한다. |
+| `ingestFaceTemplate` | glTF face topology와 morph target을 보존된 face template로 수입한다. |
+
+이 함수들은 파일 시스템이나 브라우저를 소유하지 않는 직접 수입 경계다. 구조적
+결함(중복 morph target 이름, 알 수 없는 `attachedBone` 등)은 던지거나 구조화된
+오류로 구분한다.
 
 ## 경계
 

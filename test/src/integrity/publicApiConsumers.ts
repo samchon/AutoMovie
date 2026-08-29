@@ -1,10 +1,9 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import process from "node:process";
 import ts from "typescript-compiler";
 
-const ROOT = path.resolve(import.meta.dirname, "..");
+const ROOT = path.resolve(__dirname, "../../..");
 const SOURCE_EXTENSION = /\.(?:[cm]?ts|tsx)$/u;
 const SKIPPED_DIRECTORIES = new Set(["dist", "lib", "node_modules"]);
 const PLACEHOLDER =
@@ -12,7 +11,34 @@ const PLACEHOLDER =
 const PLACEHOLDER_REASON =
   /^(?:later|n\/a|na|none|pending|tbd|todo|unknown|unspecified)\b/iu;
 
-const walk = (directory) => {
+interface IPublicCallableBase {
+  location: string;
+  names: string[];
+  package: string;
+}
+
+interface IPublicFinding extends IPublicCallableBase {
+  code: string;
+  reason: string;
+}
+
+interface IPublicExportRecord {
+  declaration: ts.Declaration;
+  names: Set<string>;
+  package: string;
+  productReferences: string[];
+  testReferences: string[];
+}
+
+export interface IPublicApiConsumerAnalysis {
+  documentedOnly: number;
+  findings: IPublicFinding[];
+  publicCallables: number;
+  testOnly: number;
+  testOnlyCallables: IPublicCallableBase[];
+}
+
+const walk = (directory: string): string[] => {
   if (fs.existsSync(directory) === false) return [];
   return fs.readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
     const target = path.join(directory, entry.name);
@@ -26,7 +52,7 @@ const walk = (directory) => {
   });
 };
 
-const walkMarkdown = (directory) => {
+const walkMarkdown = (directory: string): string[] => {
   if (fs.existsSync(directory) === false) return [];
   return fs.readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
     const target = path.join(directory, entry.name);
@@ -38,7 +64,7 @@ const walkMarkdown = (directory) => {
   });
 };
 
-const inside = (file, directory) => {
+const inside = (file: string, directory: string): boolean => {
   const relative = path.relative(path.resolve(directory), path.resolve(file));
   return (
     relative !== "" &&
@@ -48,9 +74,12 @@ const inside = (file, directory) => {
   );
 };
 
-const originalSymbol = (checker, symbol) => {
+const originalSymbol = (
+  checker: ts.TypeChecker,
+  symbol: ts.Symbol,
+): ts.Symbol => {
   let current = symbol;
-  const seen = new Set();
+  const seen = new Set<ts.Symbol>();
   while (
     (current.flags & ts.SymbolFlags.Alias) !== 0 &&
     seen.has(current) === false
@@ -61,15 +90,18 @@ const originalSymbol = (checker, symbol) => {
   return current;
 };
 
-const declarationOf = (checker, symbol) => {
+const declarationOf = (
+  checker: ts.TypeChecker,
+  symbol: ts.Symbol,
+): ts.Declaration | undefined => {
   const original = originalSymbol(checker, symbol);
   return original.valueDeclaration ?? original.declarations?.[0];
 };
 
-const declarationKey = (declaration) =>
+const declarationKey = (declaration: ts.Declaration): string =>
   `${path.resolve(declaration.getSourceFile().fileName)}:${declaration.pos}:${declaration.end}`;
 
-const packageRoots = (root) => {
+const packageRoots = (root: string): string[] => {
   const directory = path.join(root, "packages");
   if (fs.existsSync(directory) === false) return [];
   return fs
@@ -81,30 +113,39 @@ const packageRoots = (root) => {
     );
 };
 
-const packageName = (directory) => {
+const packageName = (directory: string): string => {
   const manifest = path.join(directory, "package.json");
   if (fs.existsSync(manifest) === false) return path.basename(directory);
-  const parsed = JSON.parse(fs.readFileSync(manifest, "utf8"));
+  const parsed = JSON.parse(fs.readFileSync(manifest, "utf8")) as {
+    name?: unknown;
+  };
   return typeof parsed.name === "string"
     ? parsed.name
     : path.basename(directory);
 };
 
-const moduleSource = (program, file) =>
+const moduleSource = (
+  program: ts.Program,
+  file: string,
+): ts.SourceFile | undefined =>
   program
     .getSourceFiles()
     .find(
       (candidate) => path.resolve(candidate.fileName) === path.resolve(file),
     );
 
-const callableExports = (program, checker, directories) => {
-  const exports = new Map();
+const callableExports = (
+  program: ts.Program,
+  checker: ts.TypeChecker,
+  directories: string[],
+): Map<string, IPublicExportRecord> => {
+  const exports = new Map<string, IPublicExportRecord>();
   for (const directory of directories) {
     const entry = path.join(directory, "src", "index.ts");
     const source = moduleSource(program, entry);
     if (source === undefined)
       throw new Error(`Package entry was not loaded: ${entry}`);
-    const module = source.symbol ?? checker.getSymbolAtLocation(source);
+    const module = checker.getSymbolAtLocation(source);
     if (module === undefined) continue;
     for (const exported of checker.getExportsOfModule(module)) {
       const symbol = originalSymbol(checker, exported);
@@ -120,7 +161,7 @@ const callableExports = (program, checker, directories) => {
       const key = declarationKey(declaration);
       const record = exports.get(key) ?? {
         declaration,
-        names: new Set(),
+        names: new Set<string>(),
         package: packageName(directory),
         productReferences: [],
         testReferences: [],
@@ -132,7 +173,7 @@ const callableExports = (program, checker, directories) => {
   return exports;
 };
 
-const declarationName = (node) => {
+const declarationName = (node: ts.Identifier): boolean => {
   const parent = node.parent;
   return (
     ((ts.isFunctionDeclaration(parent) ||
@@ -150,7 +191,7 @@ const declarationName = (node) => {
   );
 };
 
-const typePosition = (node) => {
+const typePosition = (node: ts.Node): boolean => {
   for (
     let current = node.parent;
     current !== undefined;
@@ -162,14 +203,19 @@ const typePosition = (node) => {
   return false;
 };
 
-const collectReferences = (props) => {
+const collectReferences = (props: {
+  checker: ts.TypeChecker;
+  exports: Map<string, IPublicExportRecord>;
+  program: ts.Program;
+  root: string;
+}): void => {
   const packages = path.join(props.root, "packages");
   const tests = path.join(props.root, "test", "src");
   for (const source of props.program.getSourceFiles()) {
     const product = inside(source.fileName, packages);
     const test = inside(source.fileName, tests);
     if (!product && !test) continue;
-    const visit = (node) => {
+    const visit = (node: ts.Node): void => {
       if (
         ts.isIdentifier(node) &&
         declarationName(node) === false &&
@@ -206,9 +252,10 @@ const collectReferences = (props) => {
   }
 };
 
-const escapeRegExp = (value) => value.replace(/[.*+?^${}()|[\]\\]/gu, "\\$&");
+const escapeRegExp = (value: string): string =>
+  value.replace(/[.*+?^${}()|[\]\\]/gu, "\\$&");
 
-const documentationFiles = (root, directories) => [
+const documentationFiles = (root: string, directories: string[]): string[] => [
   ...directories.flatMap((directory) => {
     const readme = path.join(directory, "README.md");
     return fs.existsSync(readme) ? [readme] : [];
@@ -218,7 +265,10 @@ const documentationFiles = (root, directories) => [
   ),
 ];
 
-const documentedIn = (names, documents) => {
+const documentedIn = (
+  names: string[],
+  documents: Array<{ file: string; text: string }>,
+): string | null => {
   for (const name of names) {
     const pattern = new RegExp(
       `(?<![A-Za-z0-9_$])${escapeRegExp(name)}(?![A-Za-z0-9_$])`,
@@ -230,9 +280,14 @@ const documentedIn = (names, documents) => {
   return null;
 };
 
-const publicUnconsumed = (declaration) => {
+type PublicUnconsumed =
+  | { kind: "absent" }
+  | { kind: "invalid"; reason: string }
+  | { kind: "valid"; planned: string; reason: string };
+
+const publicUnconsumed = (declaration: ts.Declaration): PublicUnconsumed => {
   const source = declaration.getSourceFile();
-  let host = declaration;
+  let host: ts.Node = declaration;
   while (host.parent !== undefined && ts.isStatement(host) === false)
     host = host.parent;
   const leading = source.text.slice(host.getFullStart(), host.getStart(source));
@@ -249,8 +304,8 @@ const publicUnconsumed = (declaration) => {
       kind: "invalid",
       reason: "expected exactly one planned-consumer and reason",
     };
-  const planned = exact[0][1].trim();
-  const reason = exact[0][2].replace(/\s*\*\/\s*$/u, "").trim();
+  const planned = exact[0]![1]!.trim();
+  const reason = exact[0]![2]!.replace(/\s*\*\/\s*$/u, "").trim();
   if (
     planned.length === 0 ||
     reason.length === 0 ||
@@ -265,7 +320,9 @@ const publicUnconsumed = (declaration) => {
   return { kind: "valid", planned, reason };
 };
 
-const analyzePublicApiConsumers = (root) => {
+export const analyzePublicApiConsumers = (
+  root: string = ROOT,
+): IPublicApiConsumerAnalysis => {
   const directories = packageRoots(root);
   const roots = [
     walk(path.join(root, "packages")),
@@ -291,11 +348,13 @@ const analyzePublicApiConsumers = (root) => {
     file: path.relative(root, file),
     text: fs.readFileSync(file, "utf8"),
   }));
-  const findings = [];
-  const testOnlyCallables = [];
+  const findings: IPublicFinding[] = [];
+  const testOnlyCallables: IPublicCallableBase[] = [];
   let documentedOnly = 0;
   for (const record of exports.values()) {
-    const names = [...record.names].sort();
+    const names = [...record.names].sort((left, right) =>
+      left.localeCompare(right),
+    );
     const declaration = publicUnconsumed(record.declaration);
     const documented = documentedIn(names, documents);
     const references =
@@ -340,8 +399,15 @@ const analyzePublicApiConsumers = (root) => {
       record.testReferences.length !== 0 &&
       documented === null &&
       declaration.kind === "absent"
-    )
+    ) {
       testOnlyCallables.push(base);
+      findings.push({
+        ...base,
+        code: "test-only-public-callable",
+        reason:
+          "tests exercise this export, but no product consumer, reviewed public-surface document, or valid early-API declaration adjudicates it",
+      });
+    }
     if (references === 0 && documented !== null) documentedOnly++;
   }
   return {
@@ -357,7 +423,7 @@ const analyzePublicApiConsumers = (root) => {
   };
 };
 
-const writeFixture = (root) => {
+const writeFixture = (root: string): void => {
   const source = path.join(root, "packages", "sample", "src");
   fs.mkdirSync(source, { recursive: true });
   fs.mkdirSync(path.join(root, "packages", "sample", "node_modules"), {
@@ -436,7 +502,7 @@ const writeFixture = (root) => {
   fs.writeFileSync(path.join(empty, "index.ts"), "");
 };
 
-const writeCleanFixture = (root) => {
+const writeCleanFixture = (root: string): void => {
   const source = path.join(root, "packages", "clean", "src");
   fs.mkdirSync(source, { recursive: true });
   fs.writeFileSync(
@@ -453,7 +519,7 @@ const writeCleanFixture = (root) => {
   );
 };
 
-const expectMismatch = (callback, message) => {
+const expectMismatch = (callback: () => void, message: string): void => {
   try {
     callback();
   } catch (error) {
@@ -463,14 +529,7 @@ const expectMismatch = (callback, message) => {
   throw new Error(`Expected self-test mismatch containing "${message}".`);
 };
 
-const assertExitCode = (actual, expected, label) => {
-  if (actual !== expected)
-    throw new Error(
-      `${label} produced exit code ${actual}; expected ${expected}.`,
-    );
-};
-
-const selfTest = () => {
+export const selfTestPublicApiConsumers = (): void => {
   const fixture = fs.mkdtempSync(
     path.join(os.tmpdir(), "automovie-public-api-"),
   );
@@ -498,17 +557,19 @@ const selfTest = () => {
       "Package entry was not loaded",
     );
     const result = analyzePublicApiConsumers(fixture);
-    const actual = result.findings.map((finding) => [
+    const actual: Array<[string, string]> = result.findings.map((finding) => [
       finding.code,
       finding.names.join(","),
     ]);
-    const expected = [
+    const expected: Array<[string, string]> = [
       ["unconsumed-public-callable", "dead"],
       ["invalid-public-unconsumed", "malformed"],
       ["invalid-public-unconsumed", "malformedSyntax"],
       ["invalid-public-unconsumed", "placeholderReason"],
       ["stale-public-unconsumed", "stale"],
-    ].sort(
+      ["test-only-public-callable", "tested"],
+    ];
+    expected.sort(
       ([leftCode, leftName], [rightCode, rightName]) =>
         leftCode.localeCompare(rightCode) || leftName.localeCompare(rightName),
     );
@@ -516,13 +577,13 @@ const selfTest = () => {
       ([leftCode, leftName], [rightCode, rightName]) =>
         leftCode.localeCompare(rightCode) || leftName.localeCompare(rightName),
     );
-    const assertFindings = (observed) => {
+    const assertFindings = (observed: Array<[string, string]>): void => {
       if (JSON.stringify(observed) !== JSON.stringify(expected))
         throw new Error(
           `Public API consumer self-test mismatch: ${JSON.stringify({ actual: observed, expected })}`,
         );
     };
-    const assertPopulation = (observed) => {
+    const assertPopulation = (observed: IPublicApiConsumerAnalysis): void => {
       if (
         observed.publicCallables !== 9 ||
         observed.documentedOnly !== 1 ||
@@ -550,68 +611,16 @@ const selfTest = () => {
         }, "wanted mismatch"),
       "different mismatch",
     );
-    const output = { log: () => undefined, error: () => undefined };
-    assertExitCode(
-      main(["--list-test-only"], fixture, output),
-      1,
-      "Finding fixture",
-    );
-    assertExitCode(main([], clean, output), 0, "Clean fixture");
-    expectMismatch(
-      () => assertExitCode(0, 1, "Synthetic fixture"),
-      "Synthetic fixture produced exit code",
-    );
-    expectMismatch(
-      () => runGate(["--unknown"], clean, output),
-      "Unknown arguments",
-    );
-    expectMismatch(
-      () => main(["--self-test", "--list-test-only"], clean, output),
-      "cannot be combined",
-    );
+    const cleanResult = analyzePublicApiConsumers(clean);
+    if (cleanResult.publicCallables !== 1 || cleanResult.findings.length !== 0)
+      throw new Error(
+        `Public API clean fixture mismatch: ${JSON.stringify(cleanResult)}`,
+      );
     console.log(
-      "Public API consumer gate self-test passed (9 callables, 5 expected refusals, 1 test-only report).",
+      "Public API consumer gate self-test passed (9 callables, 6 expected refusals, 1 refused test-only callable).",
     );
   } finally {
     fs.rmSync(fixture, { force: true, recursive: true });
     fs.rmSync(clean, { force: true, recursive: true });
   }
 };
-
-const runGate = (arguments_, root = ROOT, output = console) => {
-  const unknown = arguments_.filter(
-    (argument) => argument !== "--list-test-only",
-  );
-  if (unknown.length !== 0)
-    throw new Error(`Unknown arguments: ${unknown.join(", ")}`);
-  const result = analyzePublicApiConsumers(root);
-  output.log(
-    `Public API consumers: ${result.publicCallables} callables, ${result.documentedOnly} documented-only, ${result.testOnly} test-only.`,
-  );
-  if (arguments_.includes("--list-test-only"))
-    for (const callable of result.testOnlyCallables)
-      output.log(
-        `test-only-public-callable: ${callable.package} ${callable.names.join(", ")} at ${callable.location}`,
-      );
-  if (result.findings.length === 0) {
-    output.log("Public API consumer gate passed.");
-    return 0;
-  }
-  for (const finding of result.findings)
-    output.error(
-      `${finding.code}: ${finding.package} ${finding.names.join(", ")} at ${finding.location}: ${finding.reason}`,
-    );
-  return 1;
-};
-
-const main = (arguments_, root = ROOT, output = console) => {
-  if (arguments_.includes("--self-test")) {
-    if (arguments_.length !== 1)
-      throw new Error("--self-test cannot be combined with other arguments.");
-    selfTest();
-    return 0;
-  }
-  return runGate(arguments_, root, output);
-};
-
-process.exitCode = main(process.argv.slice(2));

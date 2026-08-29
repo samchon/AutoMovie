@@ -47,7 +47,7 @@ import { DEFAULT_STICKMAN, buildStickman } from "./stickman";
 // consumed by the engine's film compilers, played back through the sequence
 // resolver: real gait travel, a follow camera compiled from a `frame` verb,
 // a hard cut onto an orbiting close-up. Deterministic via `renderAt(t)`, so
-// capture-shots.mjs bakes the identical film every run.
+// capture-shots.ts bakes the identical film every run.
 
 // ── the coding-agent-authored stage values ──────────────────────────────────
 const script: IAutoMovieScript = {
@@ -390,7 +390,28 @@ const cut = cutSequence(
 );
 if (cut.success !== true) throw new Error("cut failed");
 
-/** Compiled running time, in seconds, of the two-shot pursuit demonstration. */
+/**
+ * Compiled running time, in seconds, of the two-shot pursuit demonstration.
+ *
+ * This exported value is the stable clock consumed by the interactive viewer
+ * and headless capture harness. Its host is therefore the narrow public carrier
+ * for what this page actually demonstrates: authored geometry, fixed-clock
+ * motion, deterministic replay, and a readable blocking render. The playground
+ * neither creates nor publishes a downstream fidelity rendition, so those
+ * contracts are declined here instead of being implied by a successful demo.
+ *
+ * @evidence requirements/product/prototype-quality.md#product-prototype-geometry The staged actors, set pieces, support surface, and camera preserve their authored spatial relations in the rendered demo.
+ * @evidence requirements/product/prototype-quality.md#product-prototype-motion-time The compiled duration drives repeatable shot-local motion, transitions, and capture seeks on one film clock.
+ * @evidence requirements/product/prototype-quality.md#product-authored-variation-determinism The page renders the same tracked declarations at the same requested second without hidden random state.
+ * @evidence requirements/product/prototype-quality.md#product-prototype-readability The browser and capture paths expose the same subject, action, staging, and cut for direct visual judgment.
+ * @evidenceExclude requirements/product/prototype-quality.md#product-prototype-handoff This local deterministic viewer demo neither invokes nor publishes an optional downstream finishing lane.
+ * @evidence specifications/authoring-and-authority/prototype-determinism-and-fidelity.md#spec-authoring-deterministic-input-identity The exported duration closes the tracked scene, motion, edit, and fixed capture clock into one repeatable demo identity.
+ * @evidence specifications/authoring-and-authority/prototype-determinism-and-fidelity.md#spec-authoring-structural-output-invariant The page lowers the declared geometry, motion, camera, light, and transition into a directly inspectable browser frame.
+ * @evidence specifications/authoring-and-authority/prototype-determinism-and-fidelity.md#spec-authoring-choice-determinism-invariant The demo keeps authored choices in tracked source and introduces no hidden completion step.
+ * @evidenceExclude specifications/authoring-and-authority/prototype-determinism-and-fidelity.md#spec-authoring-downstream-fidelity-output This package emits no downstream fidelity result or rendition identity.
+ * @evidenceExclude specifications/authoring-and-authority/prototype-determinism-and-fidelity.md#spec-authoring-fidelity-failure-choice No external fidelity provider runs in this playground, so provider failure and fallback choices belong outside it.
+ * @evidenceExclude specifications/authoring-and-authority/prototype-determinism-and-fidelity.md#spec-authoring-prototype-exclusion-compatibility This disposable viewer demonstration does not define product-wide export, editor, or compatibility policy.
+ */
 export const FILM_DURATION = cut.runtime;
 
 // ── the set: scene nodes → three.js ─────────────────────────────────────────
@@ -599,7 +620,7 @@ const renderShotOnly = (sample: SequenceRenderShotSample): void => {
   renderer.render(scene, camera);
 };
 
-// ── mount + deterministic seek contract (capture-shots.mjs) ──────────────────
+// ── mount + deterministic seek contract (capture-shots.ts) ───────────────────
 const params = new URLSearchParams(location.search);
 const canvas = document.querySelector<HTMLCanvasElement>("#view")!;
 const capMode = params.get("cap") === "1";

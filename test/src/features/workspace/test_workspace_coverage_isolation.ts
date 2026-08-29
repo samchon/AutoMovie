@@ -1,10 +1,23 @@
 import { TestValidator } from "@nestia/e2e";
-import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 
+import {
+  coverageMissingScripts,
+  coverageRecordCount,
+  coverageRecords,
+  coverageScriptShapes,
+  coverageTemporaryDirectory,
+} from "../../coverage/measureCoverage";
+import {
+  coverageCommandWiringDiagnostics,
+  coverageRunDependencies,
+  runCoverage,
+  runCoverageCli,
+  setCoverageExitStatus,
+} from "../../coverage/runCoverage";
 import { namedFacts } from "../internal/predicates";
 
 /**
@@ -40,25 +53,54 @@ import { namedFacts } from "../internal/predicates";
  * 2. Importing the entry point does not launch a measurement, so the rule above
  *    is readable without paying for the suite — and so this case is not itself
  *    a coverage run.
- * 3. The published `coverage` script routes through that entry point and hands
- *    c8 no temporary directory of its own, which is where the shared constant
- *    lived before.
- * 4. The gap reporter reads the exact directory the entry point writes. These
- *    are two files with one path between them, and moving either alone reports
- *    a different run than the one just measured.
- * 5. The entry point can say what a run's own record directory holds, counting
+ * 3. The entry point can say what a run's own record directory holds, counting
  *    records and nothing else. The suite's total is bimodal — about 83.6% or
  *    about 56.3%, on either platform, with an identical denominator and every
  *    test passing either way — and the count settled which half of that it is:
  *    a good run and a bad run both wrote **179** records, so nothing failed to
  *    flush and a third of the coverage is on disk without reaching the total.
- * 6. A record caught mid-write is counted as present and not as parsable. That
+ * 4. A record caught mid-write is counted as present and not as parsable. That
  *    is the difference the next question turns on, and a walk that counted a
  *    stray note, a nested directory, or a truncated record as usable would
  *    answer neither question.
  */
 export const test_workspace_coverage_isolation = (): void => {
-  const entry = path.join(ROOT, "internals", "coverage.mjs");
+  const wiring = {
+    rootPackage: fs.readFileSync(path.join(ROOT, "package.json"), "utf8"),
+    testPackage: fs.readFileSync(
+      path.join(ROOT, "test", "package.json"),
+      "utf8",
+    ),
+    workflow: fs.readFileSync(
+      path.join(ROOT, ".github", "workflows", "test.yml"),
+      "utf8",
+    ),
+  };
+  TestValidator.equals(
+    "the root command and both CI lanes use one typed coverage boundary",
+    {
+      actual: coverageCommandWiringDiagnostics(wiring),
+      disconnected: coverageCommandWiringDiagnostics({
+        rootPackage: "{}",
+        testPackage: "{}",
+        workflow:
+          "internals/coverage.mjs\nlicense:check\nReport Coverage Gaps\n",
+      }),
+    },
+    {
+      actual: [],
+      disconnected: [
+        "root consumer:check is not the typed targeted scenario",
+        "test coverage does not use the single typed entry",
+        "both CI checkouts must fetch the comparison base",
+        "both CI lanes must pass the pull-request base",
+        "both CI lanes must run the same coverage command",
+        "both CI lanes must run coverage from the test package",
+        "typed root tools and build tools must trigger CI",
+        "CI still names a deleted JavaScript-era gate",
+      ],
+    },
+  );
   // A directory holding a complete record, a truncated one, and two things that
   // are not records at all, so every figure is asserted against a mixture rather
   // than against an empty answer.
@@ -71,8 +113,8 @@ export const test_workspace_coverage_isolation = (): void => {
   // absent ones would return the same number and the case would pass inverted.
   // The fourth is not a file URL at all, so the walk has to skip it rather
   // than report it absent.
-  const present = path.join(records, "present.js");
-  const alsoPresent = path.join(records, "also-present.js");
+  const present = path.join(records, "present.ts");
+  const alsoPresent = path.join(records, "also-present.ts");
   fs.writeFileSync(present, "");
   fs.writeFileSync(alsoPresent, "");
   fs.writeFileSync(
@@ -81,7 +123,7 @@ export const test_workspace_coverage_isolation = (): void => {
       result: [
         { url: pathToFileURL(present).href },
         { url: pathToFileURL(alsoPresent).href },
-        { url: pathToFileURL(path.join(records, "gone.js")).href },
+        { url: pathToFileURL(path.join(records, "gone.ts")).href },
         { url: "node:internal/modules/cjs/loader" },
       ],
     }),
@@ -92,7 +134,7 @@ export const test_workspace_coverage_isolation = (): void => {
   fs.mkdirSync(path.join(records, "nested"));
   // Two processes reading one measured source, the second in a different shape.
   // Kept in its own directory so the record counts above stay what they assert.
-  // `present.js` sits outside the measured set and must not be counted at all.
+  // `present.ts` sits outside the measured set and must not be counted at all.
   const shaped = fs.mkdtempSync(
     path.join(os.tmpdir(), "automovie-coverage-shapes-"),
   );
@@ -113,89 +155,25 @@ export const test_workspace_coverage_isolation = (): void => {
     JSON.stringify({ result: [shape(64)] }),
   );
 
-  const probe = spawnSync(
-    process.execPath,
-    [
-      "-e",
-      `import(${JSON.stringify(pathToFileURL(entry).href)}).then((module) => {
-         const first = module.coverageTemporaryDirectory();
-         const second = module.coverageTemporaryDirectory();
-         const counted = module.coverageRecordCount(${JSON.stringify(records)});
-         const walked = module.coverageRecords(${JSON.stringify(records)});
-         const absent = module.coverageRecordCount(${JSON.stringify(
-           path.join(records, "never-created"),
-         )});
-         const scripts = module.coverageMissingScripts(${JSON.stringify(records)});
-         const shapes = module.coverageScriptShapes(${JSON.stringify(shaped)});
-         const narrow = module.coverageScriptShapes(${JSON.stringify(shaped)}, [
-           "packages/face/src",
-         ]);
-         console.log(
-           JSON.stringify({
-             first,
-             second,
-             counted,
-             absent,
-             walked,
-             scripts,
-             shapes,
-             narrow,
-           }),
-         );
-       });`,
-    ],
-    { cwd: ROOT, encoding: "utf8" },
-  );
+  const drawn = {
+    first: coverageTemporaryDirectory(),
+    second: coverageTemporaryDirectory(),
+    counted: coverageRecordCount(records),
+    absent: coverageRecordCount(path.join(records, "never-created")),
+    walked: coverageRecords(records),
+    scripts: coverageMissingScripts(records),
+    shapes: coverageScriptShapes(shaped),
+    narrow: coverageScriptShapes(shaped, ["packages/face/src"]),
+  };
   fs.rmSync(records, { recursive: true, force: true });
   fs.rmSync(shaped, { recursive: true, force: true });
 
   const parent = path.join(ROOT, "node_modules", ".cache", "automovie-c8");
-  const drawn = ((): {
-    first: string;
-    second: string;
-    counted: number;
-    absent: number;
-    walked: { count: number; bytes: number; parsed: number; results: number };
-    scripts: { urls: number; missing: number };
-    shapes: {
-      urls: number;
-      reread: number;
-      disagreeing: number;
-      sample: string[];
-    };
-    narrow: { urls: number; reread: number; disagreeing: number };
-  } | null => {
-    const line = probe.stdout
-      .split("\n")
-      .map((value) => value.trim())
-      .find((value) => value.startsWith("{"));
-    if (line === undefined) return null;
-    return JSON.parse(line) as {
-      first: string;
-      second: string;
-      counted: number;
-      absent: number;
-      walked: {
-        count: number;
-        bytes: number;
-        parsed: number;
-        results: number;
-      };
-      scripts: { urls: number; missing: number };
-      shapes: {
-        urls: number;
-        reread: number;
-        disagreeing: number;
-        sample: string[];
-      };
-      narrow: { urls: number; reread: number; disagreeing: number };
-    };
-  })();
 
   TestValidator.equals(
     "every coverage run draws a directory no other run writes",
     namedFacts([
-      ["the entry point answered", () => drawn !== null],
+      ["the typed measurement functions answered", () => drawn.counted === 2],
       // A whole-suite figure can read lower than a scoped one over the same
       // file, which no execution count can do and a merge can. Two processes
       // that resolved one source through different loaded forms leave two range
@@ -205,39 +183,36 @@ export const test_workspace_coverage_isolation = (): void => {
       // visible.
       [
         "a source read in two shapes is counted as both reread and disagreeing",
-        () => drawn?.shapes.reread === 1 && drawn?.shapes.disagreeing === 1,
+        () => drawn.shapes.reread === 1 && drawn.shapes.disagreeing === 1,
       ],
       [
         "and named, so the figure it spoils can be found",
-        () => drawn?.shapes.sample.join(" ").includes("probe.ts") === true,
+        () => drawn.shapes.sample.join(" ").includes("probe.ts") === true,
       ],
       // Every process also loads its own launcher and toolchain, and those
       // disagree constantly without touching one figure this repository reports.
       [
         "a source outside the measured set is not counted at all",
-        () => drawn?.narrow.urls === 0 && drawn?.narrow.disagreeing === 0,
+        () => drawn.narrow.urls === 0 && drawn.narrow.disagreeing === 0,
       ],
-      [
-        "two draws in one process differ",
-        () => drawn !== null && drawn.first !== drawn.second,
-      ],
+      ["two draws in one process differ", () => drawn.first !== drawn.second],
       [
         "both sit under the coverage cache",
         () =>
-          drawn !== null &&
           path.dirname(path.resolve(drawn.first)) === parent &&
           path.dirname(path.resolve(drawn.second)) === parent,
       ],
       [
         "neither is the shared parent itself",
         () =>
-          drawn !== null &&
           path.resolve(drawn.first) !== parent &&
           path.resolve(drawn.second) !== parent,
       ],
       [
-        "importing it measured nothing",
-        () => probe.stdout.includes("AutoMovie Test Program") === false,
+        "drawing a path does not create or start a measurement",
+        () =>
+          fs.existsSync(drawn.first) === false &&
+          fs.existsSync(drawn.second) === false,
       ],
       // The count is what separates "no records were written" from "records
       // were written and not merged", which is the only question a low total
@@ -245,11 +220,11 @@ export const test_workspace_coverage_isolation = (): void => {
       // different question than the one it is printed to answer.
       [
         "it counts records and not the other contents",
-        () => drawn !== null && drawn.counted === 2,
+        () => drawn.counted === 2,
       ],
       [
         "and a directory that was never created is zero rather than a throw",
-        () => drawn !== null && drawn.absent === 0,
+        () => drawn.absent === 0,
       ],
       // A record caught mid-write has a name, an entry and a size and no usable
       // content, so a count alone reads it as present. Parsability is what
@@ -258,7 +233,6 @@ export const test_workspace_coverage_isolation = (): void => {
       [
         "an unreadable record counts as present and not as parsable",
         () =>
-          drawn !== null &&
           drawn.walked.count === 2 &&
           drawn.walked.parsed === 1 &&
           drawn.walked.results === 4 &&
@@ -269,25 +243,22 @@ export const test_workspace_coverage_isolation = (): void => {
       // it. The three figures above cannot see that; this one can.
       [
         "a script URL that no longer exists is reported as gone",
-        () => drawn !== null && drawn.scripts.missing === 1,
+        () => drawn.scripts.missing === 1,
       ],
       // Counted per distinct URL, and a non-file URL is skipped rather than
       // reported absent: `node:` internals are named by every record and are
       // not files anybody could look for.
-      [
-        "and only the file URLs are looked for",
-        () => drawn !== null && drawn.scripts.urls === 3,
-      ],
+      ["and only the file URLs are looked for", () => drawn.scripts.urls === 3],
     ]),
     {
-      "the entry point answered": true,
+      "the typed measurement functions answered": true,
       "a source read in two shapes is counted as both reread and disagreeing": true,
       "and named, so the figure it spoils can be found": true,
       "a source outside the measured set is not counted at all": true,
       "two draws in one process differ": true,
       "both sit under the coverage cache": true,
       "neither is the shared parent itself": true,
-      "importing it measured nothing": true,
+      "drawing a path does not create or start a measurement": true,
       "it counts records and not the other contents": true,
       "and a directory that was never created is zero rather than a throw": true,
       "an unreadable record counts as present and not as parsable": true,
@@ -296,51 +267,106 @@ export const test_workspace_coverage_isolation = (): void => {
     },
   );
 
-  const script = (
-    JSON.parse(
-      fs.readFileSync(path.join(ROOT, "test", "package.json"), "utf8"),
-    ) as { scripts: Record<string, string> }
-  ).scripts.coverage;
-  const reporter = fs.readFileSync(
-    path.join(ROOT, "internals", "report-coverage-gaps.mjs"),
-    "utf8",
+  const order: string[] = [];
+  const arguments_: string[] = [];
+  const dependencies = coverageRunDependencies(
+    () => (order.push("measure"), 0),
+    (received) => {
+      order.push("changed");
+      arguments_.push(...received);
+      return 0;
+    },
+    () => (order.push("report"), 0),
   );
-  const entryText = fs.readFileSync(entry, "utf8");
-
-  TestValidator.equals(
-    "the published script routes through it and the reporter reads what it wrote",
-    namedFacts([
-      [
-        "the script invokes the entry point",
-        () => script.includes("internals/coverage.mjs"),
-      ],
-      [
-        "the script names no temporary directory of its own",
-        () => script.includes("--temp-directory") === false,
-      ],
-      [
-        "the entry point writes the report directory the reporter resolves",
-        () =>
-          entryText.includes(REPORT_DIRECTORY) &&
-          reporter.includes(REPORT_DIRECTORY),
-      ],
-    ]),
+  const green = runCoverage(["--base", "origin/master"], dependencies);
+  const ordinaryRed = runCoverage([], {
+    measure: () => 1,
+    report: () => {
+      throw new Error("report ran after a failed measurement");
+    },
+    changed: () => {
+      throw new Error("changed gate ran after a failed measurement");
+    },
+  });
+  const measurementInstrumentRed = runCoverage([], {
+    measure: () => 2,
+    report: () => {
+      throw new Error("report ran after an invalid measurement");
+    },
+    changed: () => {
+      throw new Error("changed gate ran after an invalid measurement");
+    },
+  });
+  const instrumentRed = runCoverage([], {
+    measure: () => 0,
+    report: () => 2,
+    changed: () => {
+      throw new Error("changed gate ran after an invalid report");
+    },
+  });
+  const changedRed = runCoverage([], {
+    measure: () => 0,
+    report: () => 0,
+    changed: () => 2,
+  });
+  const coverageGap = runCoverage([], {
+    measure: () => 0,
+    report: () => 0,
+    changed: () => 1,
+  });
+  const reportGap = runCoverage([], {
+    measure: () => 0,
+    report: () => 1,
+    changed: () => {
+      throw new Error("changed gate ran after a failed report");
+    },
+  });
+  const cliStatuses: number[] = [];
+  runCoverageCli(false, [], dependencies, (status) => cliStatuses.push(status));
+  runCoverageCli(
+    true,
+    [],
     {
-      "the script invokes the entry point": true,
-      "the script names no temporary directory of its own": true,
-      "the entry point writes the report directory the reporter resolves": true,
+      measure: () => 0,
+      report: () => 0,
+      changed: () => 0,
+    },
+    (status) => cliStatuses.push(status),
+  );
+  const previousExitStatus = process.exitCode;
+  setCoverageExitStatus(0);
+  const directExitStatus = process.exitCode;
+  process.exitCode = previousExitStatus;
+  TestValidator.equals(
+    "one typed coverage command preserves order and failure classes",
+    {
+      green,
+      order,
+      arguments_,
+      ordinaryRed,
+      measurementInstrumentRed,
+      instrumentRed,
+      changedRed,
+      coverageGap,
+      reportGap,
+      cliStatuses,
+      directExitStatus,
+    },
+    {
+      green: 0,
+      order: ["measure", "report", "changed"],
+      arguments_: ["--base", "origin/master"],
+      ordinaryRed: 1,
+      measurementInstrumentRed: 2,
+      instrumentRed: 2,
+      changedRed: 2,
+      coverageGap: 1,
+      reportGap: 1,
+      cliStatuses: [0],
+      directExitStatus: 0,
     },
   );
 };
 
 /** The repository root, four levels above `test/src/features/workspace`. */
 const ROOT = path.resolve(__dirname, "../../../..");
-
-/**
- * The one path the measurement writes and the gap reporter reads.
- *
- * Spelled once here so the assertion fails when either side moves rather than
- * when both move together, which is the only arrangement that would report a
- * different run than the one just measured.
- */
-const REPORT_DIRECTORY = "automovie-c8-report";
