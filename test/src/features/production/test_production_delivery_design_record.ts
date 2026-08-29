@@ -1,10 +1,33 @@
 import { AutoMovieProductionProject } from "@automovie/production";
 import { TestValidator } from "@nestia/e2e";
 import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
 
 import { namedFacts, throwsError } from "../internal/predicates";
 import { productionFixture } from "./productionFixtures";
+
+interface IDesignEscapeFailure {
+  error: unknown;
+}
+
+class DesignEscapeCleanupError extends AggregateError {}
+
+/** Remove one staged escape without replacing the assertion's own failure. */
+const preserveDesignEscapeCleanup = (
+  failure: IDesignEscapeFailure | undefined,
+  cleanup: () => void,
+): void => {
+  try {
+    cleanup();
+  } catch (cleanupFailure) {
+    if (failure === undefined) throw cleanupFailure;
+    throw new DesignEscapeCleanupError(
+      [failure.error, cleanupFailure],
+      "Staged design-escape cleanup failed after the refusal assertion failed.",
+    );
+  }
+};
 
 /**
  * One production's design record, read without opening project state.
@@ -34,8 +57,8 @@ import { productionFixture } from "./productionFixtures";
  * 3. A resident record whose bytes are not JSON is refused by file name.
  * 4. A resident record whose shape is not a production design is refused by
  *    file name and by the offending path inside it.
- * 5. A record reached through a symlinked file is refused rather than followed
- *    out of the project.
+ * 5. A record reached through a namespace directory that links outside the
+ *    project is refused rather than followed out of it.
  */
 export const test_production_delivery_design_record = (): void => {
   const fixture = productionFixture();
@@ -114,33 +137,42 @@ export const test_production_delivery_design_record = (): void => {
       ),
     );
 
-    fs.writeFileSync(record, original, "utf8");
-    const outside = path.join(fixture.root, "outside-production.json");
-    fs.writeFileSync(outside, original, "utf8");
-    fs.rmSync(record);
-    let linked = true;
+    // The escape is staged as a directory junction rather than a file symlink:
+    // a junction needs no elevation on Windows, which is why every other fence
+    // scenario in this suite stages one, and the file it exposes is an ordinary
+    // regular file so only the realpath check can catch it.
+    const outside = fs.mkdtempSync(
+      path.join(os.tmpdir(), "automovie-design-escape-"),
+    );
+    fs.writeFileSync(path.join(outside, "production.json"), original, "utf8");
+    fs.rmSync(path.dirname(record), { force: true, recursive: true });
+    fs.symlinkSync(
+      outside,
+      path.dirname(record),
+      process.platform === "win32" ? "junction" : "dir",
+    );
+    let escapeFailure: IDesignEscapeFailure | undefined;
     try {
-      fs.symlinkSync(outside, record, "file");
-    } catch {
-      // A host that refuses to create symbolic links cannot exercise this
-      // refusal, and inventing a substitute would assert something the fence
-      // does not do. Restore the record and say so through the fact below.
-      linked = false;
-      fs.writeFileSync(record, original, "utf8");
-    }
-    TestValidator.equals(
-      "a linked design record is refused rather than followed out of the project",
-      linked === false ||
+      TestValidator.predicate(
+        "a design record reached through an escaping namespace is refused",
         throwsError(
           () =>
             AutoMovieProductionProject.productionDesign(
               fixture.root,
               "fixture-film",
             ),
-          ["is a symlink", "production.json"],
+          ["escapes the production root", "production.json"],
         ),
-      true,
-    );
+      );
+    } catch (error) {
+      escapeFailure = { error };
+      throw error;
+    } finally {
+      preserveDesignEscapeCleanup(escapeFailure, () => {
+        fs.unlinkSync(path.dirname(record));
+        fs.rmSync(outside, { force: true, recursive: true });
+      });
+    }
   } finally {
     fixture.dispose();
   }

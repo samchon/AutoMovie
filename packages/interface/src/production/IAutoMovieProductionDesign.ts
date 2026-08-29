@@ -362,10 +362,12 @@ export interface IAutoMovieProductionDesign {
    */
   captionReadabilityProfiles?: IAutoMovieCaptionReadabilityProfile[];
   /**
-   * Optional production-owned propagation and room-response choices.
+   * Optional production-owned propagation, room-response, and dialogue
+   * choices.
    *
-   * Omission preserves the legacy dry path. The engine does not choose a
-   * physical profile, external provider, adopted asset, or room mapping.
+   * Omitting propagation or the room response preserves the legacy dry path.
+   * The engine does not choose a physical profile, external provider, adopted
+   * asset, or room mapping.
    *
    * The same record carries the two dialogue decisions nothing else can make
    * for the production: which generator it adopted under which reviewed rights,
@@ -455,13 +457,16 @@ export interface IAutoMovieProductionDesign {
    * @evidence specifications/narrative-and-intent/design-authority-and-visual-language.md#narrative-intent-design-authority-boundary Types the tier pair as part of the canonical design record its downstream render consumers read.
    */
   renderTiers?: {
-    /** Review-scale tier; `resolutionScale` lies in `(0, 1]`. */
+    /**
+     * Review tier, which must be cheaper than the final one in at least one of
+     * its two axes. A proxy that reduces neither is refused rather than run.
+     */
     proxy: {
       /** Stable tier identity used in slots, chunks, and publication paths. */
       kind: "proxy";
       /** Output raster multiplier in `(0, 1]`. */
       resolutionScale: number;
-      /** Keep every Nth source frame; a positive safe integer. */
+      /** Keep every Nth source frame; an integer from 1 through 16. */
       frameStep: number;
     };
     /** Delivery tier; `resolutionScale` and `frameStep` are exactly one. */
@@ -525,8 +530,8 @@ export interface IAutoMovieProductionDesign {
    * actually declare a moving boundary, and list order is the stable subject
    * budget order every shot shares.
    *
-   * Omission admits none, which is correct for a production that stages no
-   * moving-boundary domain and refused for one that does.
+   * Omission admits none. That is correct for a production staging no
+   * moving-boundary domain, and refused for one that stages any.
    *
    * @evidence requirements/effects-and-simulation/soft-bodies-and-deformation.md#effects-soft-anchors Separates the domains whose anchors move with a performance from the static ones, which is exactly what admission costs.
    * @evidence specifications/simulation-effects-and-sound/soft-bodies-and-deformation.md#soft-static-moving-anchor-input Types the production-wide selection the solver reads before it samples an owner pose at a fixed-step boundary.
