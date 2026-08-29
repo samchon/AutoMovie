@@ -10,8 +10,10 @@ import {
 
 import { Quaternion } from "../math/Quaternion";
 import { Vector3 } from "../math/Vector3";
+import { compareAutoMovieRenderIds } from "../render/renderDigest";
 import {
   builtEnvironmentBuildingOfSpace,
+  builtEnvironmentDescendantSpaces,
   builtEnvironmentSpaceConnectors,
   builtSpaceContainsPoint,
   builtSpaceStatesVolume,
@@ -19,11 +21,14 @@ import {
 import { outlineHull, polygonBounds } from "./planarGeometry";
 
 /**
- * Slack, in metres, below which two derived points are the same point.
+ * Slack below which two derived quantities are treated as one.
  *
- * Everything here is metres of building, so one micrometre is far below any
+ * It is read two ways, and both land on the same number for the same reason.
+ * As a length it is metres of building, so one micrometre is far below any
  * authored dimension and far above the drift a rotation and a linear solve
- * introduce.
+ * introduce. As the scalar triple product of three unit normals it is
+ * dimensionless, and one micrometre of it is three planes so nearly coplanar
+ * that the point they meet at is numerically meaningless.
  *
  * @evidence requirements/review/subject-inspection.md#review-subject-viewpoint-ownership Fixes the slack under which two derived observation stations are one station.
  * @evidence specifications/review-and-acceptance/subject-surface-and-inspection.md#review-system-subject-viewpoint-plan Bounds the numeric tolerance the derivation is deterministic under.
@@ -223,10 +228,6 @@ export interface IAutoMovieBuildingObservationCensus {
   /** Connectors landing in one of those spaces, in code-unit order. */
   connectors: string[];
 }
-
-/** Compare two ids the same way every other derived population orders them. */
-const byCodeUnits = (left: string, right: string): number =>
-  left < right ? -1 : left > right ? 1 : 0;
 
 /** Read a plane as a unit normal and its matching offset, or null if degenerate. */
 const unitPlane = (plane: {
@@ -445,7 +446,7 @@ export const builtEnvironmentEnvelopeFaces = (
     });
   }
   return faces.sort((left, right) =>
-    byCodeUnits(left.boundary, right.boundary),
+    compareAutoMovieRenderIds(left.boundary, right.boundary),
   );
 };
 
@@ -506,29 +507,9 @@ export const builtEnvironmentEnvelopeCorners = (
         normal: Vector3.normalize(Vector3.add(a.normal, b.normal)),
       });
     }
-  return corners.sort((left, right) => byCodeUnits(left.id, right.id));
-};
-
-/** Every logical space descending from one root, including the root itself. */
-const descendants = (
-  environment: IAutoMovieBuiltEnvironment,
-  root: string,
-): Set<string> => {
-  const reached = new Set<string>([root]);
-  let grew = true;
-  while (grew) {
-    grew = false;
-    for (const space of environment.spaces)
-      if (
-        space.parent !== null &&
-        reached.has(space.parent) &&
-        reached.has(space.id) === false
-      ) {
-        reached.add(space.id);
-        grew = true;
-      }
-  }
-  return reached;
+  return corners.sort((left, right) =>
+    compareAutoMovieRenderIds(left.id, right.id),
+  );
 };
 
 /** The first point of a ladder toward the interior centre that lands inside. */
@@ -726,7 +707,7 @@ export const builtSpaceObservationStations = (
       ),
     )
     .slice()
-    .sort((left, right) => byCodeUnits(left.id, right.id))) {
+    .sort((left, right) => compareAutoMovieRenderIds(left.id, right.id))) {
     const mouth = openingCentre(environment, opening);
     const settled =
       mouth === null || placed === null
@@ -764,7 +745,9 @@ export const builtEnvironmentBuildingCensus = (
   const corners = builtEnvironmentEnvelopeCorners(environment);
   return environment.buildings
     .map((building) => {
-      const owned = descendants(environment, building.space);
+      const owned = new Set(
+        builtEnvironmentDescendantSpaces(environment, building.space),
+      );
       const mine = faces.filter((face) => face.building === building.id);
       const envelope = new Set(mine.map((face) => face.boundary));
       return {
@@ -776,13 +759,13 @@ export const builtEnvironmentBuildingCensus = (
         entrances: environment.openings
           .filter((opening) => envelope.has(opening.boundary))
           .map((opening) => opening.id)
-          .sort(byCodeUnits),
+          .sort(compareAutoMovieRenderIds),
         spaces: environment.spaces
           .filter(
             (space) => owned.has(space.id) && builtSpaceStatesVolume(space),
           )
           .map((space) => space.id)
-          .sort(byCodeUnits),
+          .sort(compareAutoMovieRenderIds),
         connectors: [
           ...new Set(
             [...owned].flatMap((space) =>
@@ -791,8 +774,10 @@ export const builtEnvironmentBuildingCensus = (
               ),
             ),
           ),
-        ].sort(byCodeUnits),
+        ].sort(compareAutoMovieRenderIds),
       };
     })
-    .sort((left, right) => byCodeUnits(left.building, right.building));
+    .sort((left, right) =>
+      compareAutoMovieRenderIds(left.building, right.building),
+    );
 };
