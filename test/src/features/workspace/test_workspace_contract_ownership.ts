@@ -1,16 +1,13 @@
 import { TestValidator } from "@nestia/e2e";
-import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
+import { runContractOwnership } from "../../integrity/contractOwnership";
 import { namedFacts } from "../internal/predicates";
 
-const ROOT = path.resolve(__dirname, "../../../..");
-const GUARD = path.join(ROOT, "internals", "contract-ownership.mjs");
-
 interface ICommandResult {
-  status: number | null;
+  status: number;
   stderr: string;
   stdout: string;
 }
@@ -41,17 +38,18 @@ const preserveFixtureCleanup = (
 const command = (root: string, ...args: string[]): ICommandResult => {
   const normalized = [...args];
   if (normalized.length === 0) normalized.push("check");
-  const result = spawnSync(
-    process.execPath,
-    [GUARD, ...normalized, "--root", root],
-    {
-      encoding: "utf8",
-    },
+  const stdout: string[] = [];
+  const stderr: string[] = [];
+  const status = runContractOwnership(
+    [...normalized, "--root", root],
+    root,
+    { write: (message) => stdout.push(message) },
+    { write: (message) => stderr.push(message) },
   );
   return {
-    status: result.status,
-    stderr: result.stderr,
-    stdout: result.stdout,
+    status,
+    stderr: stderr.join(""),
+    stdout: stdout.join(""),
   };
 };
 

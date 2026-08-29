@@ -12,7 +12,6 @@
   },
   "scripts": {
     "build": "rimraf lib && ttsc && tsc --emitDeclarationOnly",
-    "postbuild": "node ../../config/assertBuild.js",
     "start": "ttsx src/bin.ts",
     "prepack": "pnpm run build"
   },

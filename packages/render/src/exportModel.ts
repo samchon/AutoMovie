@@ -1,10 +1,11 @@
 import { tessellate } from "@automovie/engine";
 import { IAutoMovieModel, IAutoMovieTransform } from "@automovie/interface";
-import type { Material, Node } from "@gltf-transform/core" with {
-  "resolution-mode": "import",
-};
-
-import { importGltfTransformCore } from "../gltfTransformCore.cjs";
+import {
+  Document,
+  type Material,
+  type Node,
+  NodeIO,
+} from "@gltf-transform/core";
 
 /**
  * Serialize an {@link IAutoMovieModel} AST into a binary glTF (`.glb`) byte
@@ -249,7 +250,6 @@ import { importGltfTransformCore } from "../gltfTransformCore.cjs";
 export const exportModelToGLB = async (
   model: IAutoMovieModel,
 ): Promise<Uint8Array> => {
-  const { Document, NodeIO } = await importGltfTransformCore();
   const doc = new Document();
   const buffer = doc.createBuffer();
   const scene = doc.createScene(model.name ?? model.id);

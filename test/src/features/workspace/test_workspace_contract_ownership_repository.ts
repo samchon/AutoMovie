@@ -1,9 +1,9 @@
 import { TestValidator } from "@nestia/e2e";
-import { spawnSync } from "node:child_process";
 import path from "node:path";
 
+import { runContractOwnership } from "../../integrity/contractOwnership";
+
 const ROOT = path.resolve(__dirname, "../../../..");
-const GUARD = path.join(ROOT, "internals", "contract-ownership.mjs");
 
 /**
  * This repository's own contract units each declare one owner or stand as
@@ -23,14 +23,18 @@ const GUARD = path.join(ROOT, "internals", "contract-ownership.mjs");
  *    tree, and the guard reports the declared and remaining legacy counts.
  */
 export const test_workspace_contract_ownership_repository = (): void => {
-  const result = spawnSync(process.execPath, [GUARD, "check", "--root", ROOT], {
-    encoding: "utf8",
-  });
+  const stderr: string[] = [];
+  const status = runContractOwnership(
+    ["check", "--root", ROOT],
+    ROOT,
+    { write: () => undefined },
+    { write: (message) => stderr.push(message) },
+  );
   TestValidator.equals(
     `every contract unit declares an owner or stands as recorded debt${
-      result.status === 0 ? "" : `\n${result.stderr}`
+      status === 0 ? "" : `\n${stderr.join("")}`
     }`,
-    result.status,
+    status,
     0,
   );
 };

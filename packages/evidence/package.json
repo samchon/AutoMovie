@@ -9,7 +9,6 @@
   },
   "scripts": {
     "build": "rimraf lib && ttsc && tsc --emitDeclarationOnly",
-    "postbuild": "node ../../config/assertBuild.js",
     "prepack": "pnpm run build",
     "test": "ttsx --no-plugins -P tsconfig.test.json test/createAutoMovieEvidenceConfig.test.ts"
   },

@@ -56,10 +56,10 @@ export const test_cli_scaffold_kokoro_override_concurrency =
       writeFiles(firstRoot, renderScaffold({ name: "kokoro-first" }));
       writeFiles(secondRoot, renderScaffold({ name: "kokoro-second" }));
       const first = require(
-        path.join(firstRoot, "scripts/withKokoroRuntimeOverrides.cjs"),
+        path.join(firstRoot, "scripts/withKokoroRuntimeOverrides.ts"),
       ) as IKokoroOverrideModule;
       const second = require(
-        path.join(secondRoot, "scripts/withKokoroRuntimeOverrides.cjs"),
+        path.join(secondRoot, "scripts/withKokoroRuntimeOverrides.ts"),
       ) as IKokoroOverrideModule;
       TestValidator.equals(
         "generated roots load distinct override module objects",

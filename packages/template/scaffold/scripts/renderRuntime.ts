@@ -6,12 +6,12 @@ import {
   readAutoMovieProductionOwnedFile,
   runProductionRenderJob,
 } from "@automovie/production";
-import { createRequire } from "node:module";
 import path from "node:path";
 
 import config from "../automovie.config";
 import { productionEvidence } from "../productionEvidence.mjs";
 import { inspectPublishedProxyBundle } from "./assertProxyBundle";
+import { preserveProductionEncoderCleanup } from "./preserveProductionEncoderCleanup";
 import {
   type IAutoMovieProductionRepaintSelection,
   readProductionDialogueSynthesis,
@@ -100,15 +100,6 @@ const executeProductionRenderCommand = async (
   const renderJobRoot = path.join(productionStateRoot, "render-job");
   const stateRoot = path.join(renderJobRoot, renderTier.kind);
   const planPath = path.join(stateRoot, "plan.json");
-  const require = createRequire(import.meta.url);
-  const preserveProductionEncoderCleanup = (
-    require("./preserveProductionEncoderCleanup.cjs") as {
-      preserveProductionEncoderCleanup: (
-        failure: { error: unknown } | undefined,
-        resources: readonly { resource: string; cleanup: () => unknown }[],
-      ) => void;
-    }
-  ).preserveProductionEncoderCleanup;
   /** Read every reviewed repaint choice before a render path can use it. */
   const productionRepaintSelection =
     (): IAutoMovieProductionRepaintSelection | null =>

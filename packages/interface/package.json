@@ -9,7 +9,6 @@
   },
   "scripts": {
     "build": "rimraf lib && ttsc && tsc --emitDeclarationOnly",
-    "postbuild": "node ../../config/assertBuild.js",
     "prepack": "pnpm run build"
   },
   "keywords": ["animation", "filmmaking", "production", "typescript", "types"],

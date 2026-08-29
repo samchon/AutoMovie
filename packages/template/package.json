@@ -10,9 +10,8 @@
   },
   "scripts": {
     "prepare": "pnpm run build:versions",
-    "build:versions": "node build/sync-versions.mjs",
+    "build:versions": "ttsx -P tsconfig.json --no-plugins build/syncVersions.ts",
     "build": "pnpm run build:versions && rimraf lib && ttsc && tsc --emitDeclarationOnly",
-    "postbuild": "node ../../config/assertBuild.js",
     "prepack": "pnpm run build"
   },
   "keywords": [

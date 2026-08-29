@@ -40,7 +40,7 @@ An example that proves a capability lives in a test fixture or in `packages/arch
 
 - `packages/interface` (`@automovie/interface`): the type hub, the AST the LLM emits against (geometry, skeleton/rig, pose, expression, motion, material, model, scene, validation). Pure types with no runtime dependency; ranges and units live in field JSDoc, enforced by `engine` validators.
 - `packages/engine` (`@automovie/engine`): the deterministic engine. Math, kinematics (FK), ROM and other constraint validators, motion sampling, tessellation, the film pipeline (stage/block/perform/cut). Pure TypeScript, no `three.js`.
-- `packages/evidence` (`@automovie/evidence`): the reusable production-authoring evidence graph. It validates film, brief, and library topology and turns one generated project's stages plus additive claims into `@ttsc/evidence` configuration; production choices stay in that project's `productionEvidence.mjs`, and `lint.config.mjs` consumes that declaration.
+- `packages/evidence` (`@automovie/evidence`): the reusable production-authoring evidence graph. It validates film, brief, and library topology and turns one generated project's stages plus additive claims into `@ttsc/evidence` configuration; one typed `lint.config.ts` owns and exports that complete project-local declaration, and every reusable target lives in the generated project's own scaffold-local `docs` inventory.
 - `packages/face` (`@automovie/face`): dormant parametric face/head/hair geometry, retained for compatibility and frozen by the likeness exclusion above. Do not extend it. `forge` remains the engine stand-in authoring stage and is intentionally free as a future package name.
 - `packages/archetypes` (`@automovie/archetypes`): the shipped model-archetype catalogue -- parameter schemas, bounds, geometry builders and the declarative gait tables -- behind one registry the compiler is handed rather than one it enumerates. A figure or a prop the engine happens to ship lives here and not in `engine`, so what a production performs stays the production's decision.
 - `packages/ingest` (`@automovie/ingest`): glTF/model ingestion via `@gltf-transform/core`.
@@ -50,8 +50,9 @@ An example that proves a capability lives in a test fixture or in `packages/arch
 - `packages/create-automovie`: the one-command project creator, a thin front door onto the same scaffolder.
 - `packages/playground`: Vite demo pages exercising the pipeline end to end; capture-verified via headless Chrome (see `.agents/skills/viewer-verification/SKILL.md`).
 - `packages/production` (`@automovie/production`): the deterministic production library a generated project runs on — the compiler, the tracked project store, capture, inspection, and the render job. It answers a project's own scripts, not a network surface: the repository hosts no internal LLM and no tool server, and what an authoring agent knows comes from the shipped skill rather than from a call.
-- `test/` (`@automovie/test`): the `@nestia/e2e` `DynamicExecutor` program; one scenario per file under `test/src/features/<domain>/`, builders under `features/internal/`.
-- `config/` (`@automovie/config`): the workspace-wide base `tsconfig.json`, shared lint policy, and package-output assertion.
+- `test/` (`@automovie/test`): the `@nestia/e2e` `DynamicExecutor` program; one scenario per file under `test/src/features/<domain>/`, builders under `features/internal/`, repository invariants under `test/src/integrity/`, and coverage orchestration under `test/src/coverage/`.
+- `build/`: the two typed repository operations that materialize package tarballs and disposable experiments, `tgz.ts` and `experimental.ts`; it is not a catch-all for validation, tests, or package tooling, and there is no `internals/` directory.
+- `config/` (`@automovie/config`): the workspace-wide base `tsconfig.json` and shared lint policy.
 - `docs/` (`@automovie/docs`): product requirements and package-independent system specifications, checked as an evidence graph during the workspace build.
 - `.wiki/` (gitignored): the working knowledge base (research, design, decisions, worklog). Local to a checkout and often empty; read what it holds at session start and write what it lacks.
 - `.references/` (gitignored): downloaded reference materials (specs, example models, motion datasets) used during reference study.
@@ -61,9 +62,11 @@ An example that proves a capability lives in a test fixture or in `packages/arch
 ```bash
 pnpm install                              # workspace install (native TypeScript 7 / tsgo via ttsc)
 pnpm run build                            # docs evidence lint plus recursive package builds
+pnpm run build:tgz                        # pack the working tree for generated consumers
+pnpm run experimental <name>             # render and install one disposable sandbox
 pnpm run format                           # prettier write
-pnpm --filter @automovie/test start          # run the test suite (ttsx, no separate compile step)
-pnpm --filter @automovie/test coverage       # run the suite and report c8 coverage
+pnpm --filter @automovie/test start       # run the test suite (ttsx, no separate compile step)
+pnpm --filter @automovie/test coverage    # run the suite and report c8 coverage
 ```
 
 Node 22 LTS, pnpm 10. CI: `.github/workflows/{build,test}.yml`.

@@ -353,7 +353,7 @@ const assertGeneratedRuntimeParity = (
     "scripts/repaintCancellationRuntime.ts",
     "scripts/repaintCommand.ts",
     "scripts/repaintAdapter.ts",
-    "scripts/withKokoroRuntimeOverrides.cjs",
+    "scripts/withKokoroRuntimeOverrides.ts",
     "viewer/src/film.ts",
     "viewer/src/shot.ts",
     "viewer/src/shotRuntime.ts",

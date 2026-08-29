@@ -28,7 +28,6 @@
   },
   "scripts": {
     "build": "rimraf lib && ttsc",
-    "postbuild": "node ../../config/assertBuild.js",
     "prepack": "pnpm run build"
   },
   "keywords": [],

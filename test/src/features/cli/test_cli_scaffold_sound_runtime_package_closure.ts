@@ -550,7 +550,7 @@ export const test_cli_scaffold_sound_runtime_package_closure =
         ["h264-mp4-encoder", "embuild/dist/h264-mp4-encoder.node.js"],
         ["kokoro-js", "dist/kokoro.js"],
         ["@huggingface/transformers", "dist/transformers.node.mjs"],
-        ["sharp", "index.cjs"],
+        ["sharp", "index.ts"],
       ] as const;
       const actual = actualCases.map(([name, entry]) =>
         runtime.snapshotRuntimePackage({
