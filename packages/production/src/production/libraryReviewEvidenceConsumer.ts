@@ -5,6 +5,7 @@ import type {
 import type {
   AutoMovieContentDigest,
   AutoMovieGuidePass,
+  IAutoMovieBuiltEnvironment,
   IAutoMovieDiagnostic,
   IAutoMovieLibraryReviewOwnerIdentity,
   IAutoMovieLibraryReviewPlanFile,
@@ -24,6 +25,10 @@ import {
   fingerprintAutoMovieFields,
   normalizeAutoMovieSource,
 } from "./contentIdentity";
+import {
+  autoMovieLibraryObservationRequirements,
+  libraryObservationClosureDiagnostics,
+} from "./libraryObservationRequirements";
 import { libraryReviewEvidenceDiagnostics } from "./libraryReviewEvidenceDiagnostics";
 import { assetReviewEvidenceDiagnostics } from "./reviewEvidenceDiagnostics";
 
@@ -49,6 +54,20 @@ interface ILibraryReviewResolverProps {
   authoring: IAutoMovieProductionEvidence;
   project: IAutoMovieLibraryReviewProjectReader;
   compileFingerprint: AutoMovieContentDigest;
+  /**
+   * Building topology one exact design owner materialized, if any.
+   *
+   * Optional because a caller holding no materialized artifact has none to
+   * hand over, not because the derived population is optional. A caller that
+   * does hold one must supply it: the required observations of an owner whose
+   * environments are withheld are the empty set, and an empty set is exactly
+   * what a shrunk plan looks like from here.
+   */
+  environments?: (props: {
+    branch: string;
+    owner: string;
+    anchor: string;
+  }) => readonly IAutoMovieBuiltEnvironment[];
 }
 
 /** One review-phase refusal at the exact library authoring address. */
@@ -257,6 +276,12 @@ const identityOf = (props: {
       );
     }
   }
+  const waivers = [...(props.plan.waivers ?? [])].sort((left, right) =>
+    compareCodeUnits(
+      JSON.stringify([left.observation, left.ground, left.disclosedBy]),
+      JSON.stringify([right.observation, right.ground, right.disclosedBy]),
+    ),
+  );
   const observations = [...props.plan.observations].sort((left, right) =>
     compareCodeUnits(
       JSON.stringify([left.id, left.evidence, left.model ?? null]),
@@ -272,6 +297,7 @@ const identityOf = (props: {
         anchor: props.unit.anchor,
         sources: [...seen].sort(compareCodeUnits),
         observations,
+        waivers,
       }),
     ),
   };
@@ -286,6 +312,7 @@ const resolvePopulation = (
     diagnostics: [],
     owners: [],
     receipts: [],
+    required: [],
     turntables: [],
   };
   const eligible = new Set<string>();
@@ -381,6 +408,29 @@ const resolvePopulation = (
         id: observation.id,
         evidence: observation.evidence,
       }));
+      const required = autoMovieLibraryObservationRequirements(
+        props.environments?.({
+          branch: owner.branch,
+          owner: address,
+          anchor: unit.anchor,
+        }) ?? [],
+      );
+      output.diagnostics.push(
+        ...libraryObservationClosureDiagnostics({
+          target: `library:${owner.branch}:${address}`,
+          path: relative,
+          required,
+          declared: observations.map((observation) => observation.id),
+          waivers: plan.waivers ?? [],
+        }),
+      );
+      output.required.push(
+        ...required.map((entry) => ({
+          branch: owner.branch,
+          owner: address,
+          ...entry,
+        })),
+      );
       output.owners.push({
         branch: owner.branch,
         owner: address,
@@ -469,6 +519,14 @@ const resolvePopulation = (
  * The function intentionally returns an empty population for film and brief,
  * whose review denominator continues to come from compiled consumers.
  *
+ * `required` carries the half of the denominator nobody authors. Given the
+ * building topology an owner materialized, it names every exposed facade, every
+ * corner those facades meet at, every roof, underside and opening of the
+ * envelope, the unit's own setting view, and the interior stations of each of
+ * its rooms, each with the point an eye was proved to stand at. A plan may add
+ * observations to that population and may never remove one; an addressed waiver
+ * is the only way a derived observation goes unopened.
+ *
  * @evidence requirements/review/subject-inspection.md#review-subject-evidence Binds each library observation to the current design, source, compile, and plan identities.
  * @evidence requirements/review/subject-inspection.md#review-library-delivery-coverage Exposes the exact graph-derived owner and finite observation populations without promoting inactive residue.
  * @evidence specifications/review-and-acceptance/subject-surface-and-inspection.md#review-system-subject-freshness Derives the current freshness identity before an observation receipt is written.
@@ -488,6 +546,7 @@ export const readAutoMovieLibraryReviewRequirements = (
         diagnostics: [],
         owners: [],
         receipts: [],
+        required: [],
         turntables: [],
       };
 

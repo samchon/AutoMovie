@@ -1,3 +1,4 @@
+import { IAutoMovieVector3 } from "../geometry/IAutoMovieVector3";
 import { IAutoMovieDiagnostic } from "./IAutoMovieProductionCompiler";
 import { AutoMovieContentDigest } from "./IAutoMovieProductionDesign";
 
@@ -92,6 +93,121 @@ export type AutoMovieLibraryReviewEvidence =
   | IAutoMovieLibraryReviewTurntableEvidence;
 
 /**
+ * What a topology-derived library observation opens, and why it is required.
+ *
+ * The roles are the failure classes a building review is counted over, and they
+ * do not substitute for one another: an elevation cannot show the corner join
+ * two elevations hide between them, a corner cannot show the room behind the
+ * wall, and one room's interior says nothing about its siblings.
+ *
+ * @evidence requirements/review/subject-inspection.md#review-subject-viewpoint-ownership Names each role the derived population charges a library owner for.
+ * @evidence specifications/review-and-acceptance/subject-surface-and-inspection.md#review-system-subject-viewpoint-plan Types the closed role set the topology derivation partitions by.
+ * @author Samchon
+ */
+export type AutoMovieLibraryObservationRole =
+  | "context"
+  | "corner"
+  | "entrance"
+  | "facade"
+  | "interior-center"
+  | "interior-corner"
+  | "interior-threshold"
+  | "roof"
+  | "underside";
+
+/**
+ * Where a derived interior eye was proved to stand and what it looks at.
+ *
+ * @evidence requirements/review/subject-inspection.md#review-subject-viewpoint-ownership Carries the proved interior camera an interior observation is judged from.
+ * @evidence specifications/review-and-acceptance/subject-surface-and-inspection.md#review-system-subject-viewpoint-plan Types the derived pose whose position is inside the space it names.
+ * @author Samchon
+ */
+export interface IAutoMovieLibraryObservationPose {
+  /** World eye position, proved inside {@link space}'s own stated volume. */
+  position: IAutoMovieVector3;
+  /** Unit view direction. */
+  direction: IAutoMovieVector3;
+  /** World point the eye is aimed at. */
+  target: IAutoMovieVector3;
+  /** Logical space the eye stands in, or null for an exterior observation. */
+  space: string | null;
+}
+
+/**
+ * One observation a library owner's compiled topology requires of it.
+ *
+ * The population is derived rather than declared, which is the whole point: a
+ * plan may add questions to it and may never take one away, so an owner cannot
+ * be covered by a few flattering angles and still read complete.
+ *
+ * @evidence requirements/review/subject-inspection.md#review-subject-viewpoint-ownership Makes the required population a function of the compiled topology rather than of the author.
+ * @evidence specifications/review-and-acceptance/subject-surface-and-inspection.md#review-system-subject-viewpoint-plan Types one member of the derived, non-shrinkable required population.
+ * @author Samchon
+ */
+export interface IAutoMovieLibraryRequiredObservation {
+  /** Stable id the plan must declare and a receipt must pay. */
+  id: string;
+  /** Failure class this observation answers. */
+  role: AutoMovieLibraryObservationRole;
+  /** Stable compiled subject address the observation opens. */
+  subject: string;
+  /** Building unit the requirement descends from. */
+  building: string;
+  /** Topology address the requirement was derived from. */
+  origin: string;
+  /**
+   * Where an interior eye was proved to stand, or null.
+   *
+   * An exterior observation is framed from the subject's own extent by the
+   * instrument that draws it, so the topology fixes which face must be opened
+   * rather than where the camera stands. An interior observation is the
+   * opposite: that the eye is inside the room is the claim being made, so the
+   * point is derived, proved against that room's own volume, and carried here.
+   */
+  pose: IAutoMovieLibraryObservationPose | null;
+}
+
+/**
+ * Why a required canonical observation is excused from being opened.
+ *
+ * A redundant face may be left out only when another view and an explicit
+ * identity or mirror statement disclose it, which is the boundary the design
+ * disclosure guidance draws. `in-use-invisibility` covers the third case a
+ * building adds: a face no observer can ever reach in the work's own use.
+ *
+ * @evidence requirements/review/subject-inspection.md#review-subject-viewpoint-ownership Fixes the closed set of grounds a canonical observation may be waived on.
+ * @evidence specifications/review-and-acceptance/subject-surface-and-inspection.md#review-system-subject-viewpoint-plan Types the waiver ground the review gate reopens.
+ * @author Samchon
+ */
+export type AutoMovieLibraryObservationWaiverGround =
+  | "identity"
+  | "in-use-invisibility"
+  | "symmetry";
+
+/**
+ * One addressable excuse for a required observation the plan does not open.
+ *
+ * A waiver is a typed thing rather than an absent requirement, which is what
+ * keeps it reviewable: it names the observation it excuses, the ground it rests
+ * on, the other required observation that discloses the same form, and the
+ * concrete fact that makes the ground true.
+ *
+ * @evidence requirements/review/subject-inspection.md#review-subject-viewpoint-ownership Models a waived face as an addressed record instead of a missing requirement.
+ * @evidence specifications/review-and-acceptance/subject-surface-and-inspection.md#review-system-subject-viewpoint-plan Types the waiver whose ground, discloser, and reason the gate reopens.
+ * @author Samchon
+ */
+export interface IAutoMovieLibraryReviewWaiver {
+  /** Required observation id this waiver excuses. */
+  observation: string;
+  /** Ground the excuse rests on. */
+  ground: AutoMovieLibraryObservationWaiverGround;
+  /** Another required observation that discloses the waived form. */
+  disclosedBy: string;
+  /** Concrete statement of the fact that makes the ground true. */
+  reason: string;
+}
+
+/**
  * One finite observation declared by a library design owner.
  *
  * @evidence requirements/review/subject-inspection.md#review-library-delivery-coverage Gives every delivered H2 a bounded, falsifiable observation denominator.
@@ -141,6 +257,14 @@ export interface IAutoMovieLibraryReviewUnitPlan {
   sources: string[];
   /** Finite observations capable of falsifying this owner. */
   observations: IAutoMovieLibraryReviewObservationPlan[];
+  /**
+   * Addressed excuses for derived observations this plan does not open.
+   *
+   * Omitted is equivalent to none. A waiver participates in the plan identity,
+   * so excusing a face after the fact expires every receipt on this owner
+   * rather than quietly shrinking what the owner owed.
+   */
+  waivers?: IAutoMovieLibraryReviewWaiver[];
   /** Historical and current physical observation receipts. */
   receipts: IAutoMovieLibraryReviewObservationReceipt[];
 }
@@ -195,6 +319,20 @@ export interface IAutoMovieLibraryReviewResolvedReceipt extends IAutoMovieLibrar
 }
 
 /**
+ * One derived observation resolved to the exact branch and H2 that owes it.
+ *
+ * @evidence requirements/review/subject-inspection.md#review-subject-viewpoint-ownership Keeps each derived viewpoint addressed to the owner whose topology produced it.
+ * @evidence specifications/review-and-acceptance/subject-surface-and-inspection.md#review-system-subject-viewpoint-plan Types the owner-addressed member of the derived required population.
+ * @author Samchon
+ */
+export interface IAutoMovieLibraryResolvedRequirement extends IAutoMovieLibraryRequiredObservation {
+  /** Active manifest-derived design branch. */
+  branch: string;
+  /** Exact design-document and H2 address. */
+  owner: string;
+}
+
+/**
  * One fixed model-turntable requirement derived from an owner plan.
  *
  * @evidence requirements/review/subject-inspection.md#review-library-delivery-coverage Keeps the model and exact observation address together.
@@ -228,6 +366,14 @@ export interface IAutoMovieLibraryReviewPopulation {
   owners: IAutoMovieLibraryReviewOwner[];
   /** Receipts resolved from their adjacent owner files. */
   receipts: IAutoMovieLibraryReviewResolvedReceipt[];
+  /**
+   * Observations the owners' compiled topology requires of them.
+   *
+   * Empty when no owner materialized a building topology, which is a fact about
+   * what the compiler published rather than a licence to declare nothing: the
+   * plans' own finite observations remain the denominator either way.
+   */
+  required: IAutoMovieLibraryResolvedRequirement[];
   /** Canonical whole-model view requirements. */
   turntables: IAutoMovieLibraryReviewTurntableRequirement[];
 }
