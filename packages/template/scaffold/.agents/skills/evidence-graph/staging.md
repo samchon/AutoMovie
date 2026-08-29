@@ -61,6 +61,10 @@ Move the layer to `review` only after all shared and production-specific claim b
 
 A child may enter `draft` only after every direct parent is in `review`. Research, when present, is an additional reviewed parent of authored documents. Shots wait for reviewed screenplay or brief and for the reviewed source corresponding to every active map, model, space, material, instance, motion, and system branch. Production source waits for settings. Film source waits for production source and shots.
 
+A design layer may enter `review` only after every active design layer it is founded on is also in `review`. Spaces are founded on maps, models on spaces, materials on models and spaces, instances on maps, models, spaces and materials, and motions and systems on each other and on all four. A foundation contributes none of its units until it is itself reviewed, so reviewing a layer ahead of its foundation records a completion that paid nothing for the parent it depends on. A foundation left `disabled` is not demanded: a library that delivers spaces without a map branch owes no map references.
+
+This gate is on entering `review` rather than on entering `draft` because motions and systems are founded on each other. Write both against one another through `draft` and `evidence`, then promote both to `review` in one declaration; that is the only order in which each is reviewed with the other's reviewed units available.
+
 `@automovie/evidence` checks non-empty host populations, required anchors, named source owners, production-kind exclusions, flat treatment topology, treatment coverage, and exact script-to-screenplay delivery identities from the declaration before lint. Keep every project-specific selector and additive claim in the one typed `lint.config.ts` declaration that also turns that value into the graph lint configuration. Preserve the typed declaration, additive `claims`, layer grouping, host-independent ordering, and mixed-state tests.
 
 ## Diagnostics

@@ -2073,6 +2073,44 @@ const requireReviewedParent = (
     );
 };
 
+/**
+ * Refuse a design layer that reaches review over an active but unreviewed
+ * foundation.
+ *
+ * `designFoundations` contributes a foundation's units only once that
+ * foundation is itself in review, so a host promoted ahead of its foundation
+ * pays nothing for it and reads complete. A production could therefore review
+ * `spaces` against a `draft` `maps` with zero map references demanded, and
+ * collect that debt only later, when the parent caught up. The window is a
+ * false completion rather than permanent unsoundness, which is exactly the kind
+ * of gap a stage is supposed to close.
+ *
+ * The gate is on entering review rather than on entering draft, because
+ * `DESIGN_FOUNDATIONS` is not a tree. `motions` and `systems` name each other,
+ * so a draft-entry rule would deadlock the pair with no legal order. Gating
+ * review lets both sit in draft and evidence while they are written against one
+ * another and then promote together in one declaration, which is the only
+ * honest way to review a mutual dependency: each is read with the other's
+ * reviewed units available.
+ *
+ * An inactive foundation is skipped rather than demanded. A library that
+ * delivers spaces without a map branch owes no map references, and forcing one
+ * would manufacture an owner for a decision the production never made.
+ */
+const requireReviewedFoundations = (graph: IProductionGraph): void => {
+  for (const [name, foundations] of Object.entries(DESIGN_FOUNDATIONS) as [
+    MarkdownLayer,
+    readonly DesignLayer[],
+  ][]) {
+    if (graph[name] !== "review") continue;
+    for (const design of foundations)
+      if (isActive(graph[design]) && graph[design] !== "review")
+        throw new Error(
+          `${name} cannot enter review before ${design} is in review. An active foundation contributes no units until it is reviewed, so reviewing ${name} first pays nothing for ${design}. Promote both in one declaration when they depend on each other.`,
+        );
+  }
+};
+
 const validateStages = (graph: IProductionGraph): void => {
   const stages = [
     ...Object.keys(MARKDOWN).map((name) => graph[name as MarkdownLayer]),
@@ -2157,6 +2195,7 @@ const validateStages = (graph: IProductionGraph): void => {
     "briefs",
   ] as const)
     requireReviewedParent(name, graph[name], "settings", graph.settings);
+  requireReviewedFoundations(graph);
   if (
     graph.populationScope.mode !== "complete-production-reset" ||
     graph.kind !== "film"

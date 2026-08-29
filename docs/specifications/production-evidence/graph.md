@@ -34,7 +34,7 @@
 
 <!-- @evidence requirements/production-evidence/graph.md#agent-production-evidence-shape-stage 제작 종류별 허용 분기와 단계 선행 조건을 하나의 상태기계로 만든다. -->
 
-`film`은 `settings`에서 `treatments`·`scripts`·`screenplays`·`shots`·`filmSources`로 이어지는 사다리를, `brief`는 `settings`에서 `briefs`·`shots`·`filmSources`로 이어지는 짧은 사다리를 허용한다. 둘은 완성 `filmSources` 전에 `productionSources`의 독립된 검토를 요구한다. `library`는 `settings`, 선택한 디자인 문서·source 분기와 필요할 때 설정만 직렬화하는 `productionSources`를 허용하고 서사·`shots`·편집 분기를 금지한다. 모든 자식 분기의 `draft`는 필요한 부모가 `review`에 도달한 뒤에만 허용하며, 아직 종류를 선택하지 않은 `null`은 모든 단계를 `disabled`로 유지한다.
+`film`은 `settings`에서 `treatments`·`scripts`·`screenplays`·`shots`·`filmSources`로 이어지는 사다리를, `brief`는 `settings`에서 `briefs`·`shots`·`filmSources`로 이어지는 짧은 사다리를 허용한다. 둘은 완성 `filmSources` 전에 `productionSources`의 독립된 검토를 요구한다. `library`는 `settings`, 선택한 디자인 문서·source 분기와 필요할 때 설정만 직렬화하는 `productionSources`를 허용하고 서사·`shots`·편집 분기를 금지한다. 모든 자식 분기의 `draft`는 필요한 부모가 `review`에 도달한 뒤에만 허용하며, 아직 종류를 선택하지 않은 `null`은 모든 단계를 `disabled`로 유지한다. 디자인 분기의 `review`는 그 분기가 기반으로 삼는 모든 활성 디자인 분기가 함께 `review`에 있을 때에만 허용한다. 기반 분기는 자신이 검토되기 전까지 어떤 단위도 자식에게 지불시키지 않으므로, 기반보다 먼저 검토된 분기는 자신이 의존하는 부모에 아무것도 지불하지 않은 완료를 기록한다. `disabled` 기반은 요구하지 않는다. 이 선행 조건을 `draft`가 아니라 `review` 진입에 두는 이유는 `motions`와 `systems`가 서로를 기반으로 삼기 때문이며, 두 분기는 하나의 선언에서 함께 `review`로 승격한다.
 
 <!-- @evidenceObligation shape-stage-machine 세 제작 종류의 허용 분기, 단계 순서와 부모 검토 선행 조건. -->
 
