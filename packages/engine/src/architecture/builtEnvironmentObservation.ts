@@ -416,9 +416,10 @@ export const builtEnvironmentEnvelopeFaces = (
     );
     // The frame states its own outward direction, and a face wound the other
     // way would aim every derived camera into the wall. Ask the space which
-    // side it is on and keep the authored direction only when neither probe
-    // lands inside, which is the ordinary case for a face offset by its own
-    // wall thickness.
+    // side the frame points at instead: a probe that lands inside means the
+    // authored direction points in. A probe that lands outside is kept, which
+    // covers both the ordinary outward frame and a face standing off the volume
+    // by its own wall thickness, where neither side of it is in the room.
     const normal = builtSpaceContainsPoint(
       space,
       Vector3.add(
@@ -482,16 +483,33 @@ export const builtEnvironmentEnvelopeCorners = (
         continue;
       const tolerance =
         Math.max(a.thickness, b.thickness) + AUTOMOVIE_OBSERVATION_EPSILON;
-      let meeting: IAutoMovieVector3 | null = null;
+      // Two facades meeting at a building corner share a whole edge, so the
+      // nearest pair is not one point but every pair along it. Averaging them
+      // puts the corner at the middle of that edge rather than at whichever end
+      // the outlines happened to be written from, which is both the point a
+      // corner observation aims at and an answer independent of authoring order.
       let best = Number.POSITIVE_INFINITY;
+      const meetings: IAutoMovieVector3[] = [];
       for (const left of a.vertices)
         for (const right of b.vertices) {
           const gap = Vector3.length(Vector3.subtract(left, right));
-          if (gap > tolerance || gap >= best) continue;
-          best = gap;
-          meeting = Vector3.scale(Vector3.add(left, right), 0.5);
+          if (gap > Math.min(tolerance, best + AUTOMOVIE_OBSERVATION_EPSILON))
+            continue;
+          if (gap < best - AUTOMOVIE_OBSERVATION_EPSILON) {
+            best = gap;
+            meetings.length = 0;
+          }
+          meetings.push(Vector3.scale(Vector3.add(left, right), 0.5));
         }
-      if (meeting === null) continue;
+      if (meetings.length === 0) continue;
+      const meeting = Vector3.scale(
+        meetings.reduce((sum, point) => Vector3.add(sum, point), {
+          x: 0,
+          y: 0,
+          z: 0,
+        }),
+        1 / meetings.length,
+      );
       const toB = Vector3.subtract(b.centroid, meeting);
       if (Vector3.length(toB) <= AUTOMOVIE_OBSERVATION_EPSILON) continue;
       const turn = Vector3.dot(a.normal, Vector3.normalize(toB));

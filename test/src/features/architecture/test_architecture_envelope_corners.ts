@@ -68,8 +68,8 @@ export const test_architecture_envelope_corners = (): void => {
     "the north-east corner stands where its two walls meet",
     namedFacts([
       [
-        "the meeting point is the shared vertical edge",
-        () => vclose(rectangle[0]!.position, { x: 4, y: 0, z: 6 }),
+        "the meeting point is the middle of the shared vertical edge",
+        () => vclose(rectangle[0]!.position, { x: 4, y: 1.5, z: 6 }),
       ],
       [
         "and the bisector points off the envelope",
@@ -88,7 +88,7 @@ export const test_architecture_envelope_corners = (): void => {
       ],
     ]),
     {
-      "the meeting point is the shared vertical edge": true,
+      "the meeting point is the middle of the shared vertical edge": true,
       "and the bisector points off the envelope": true,
       "naming both walls in code-unit order": true,
     },
