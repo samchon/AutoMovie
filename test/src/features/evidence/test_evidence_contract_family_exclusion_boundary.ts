@@ -622,6 +622,12 @@ const writeLintProject = (root: string, claims: IEvidenceClaim[]): void => {
  * contract-ledger negatives, and leaving them out is what keeps every
  * diagnostic here attributable to one reference.
  *
+ * A clean lint of a paid population and a lint that never ran are the same
+ * bytes, so the clean run is not evidence on its own. The two refusals below
+ * come out of the same fixture, the same linked contributor and the same
+ * generated configuration, which is what licenses reading the clean run as a
+ * paid population rather than as a silent instrument.
+ *
  * Scenarios:
  *
  * 1. A real library declaration with reviewed settings and an evidence-stage
