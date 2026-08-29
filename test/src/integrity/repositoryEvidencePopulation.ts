@@ -7,7 +7,6 @@ const EVIDENCE_TAG =
 
 export interface IEvidenceClaimDefinition {
   contracts: string[];
-  headingLevels?: Record<string, 2 | 3>;
   name: string;
 }
 
@@ -76,9 +75,6 @@ export const GRAPH_DEFINITIONS: IEvidenceGraphDefinition[] = [
           "specifications/review-and-acceptance/subject-surface-and-inspection.md",
           "specifications/review-and-acceptance/README.md",
         ],
-        headingLevels: {
-          "specifications/review-and-acceptance/README.md": 2,
-        },
       },
     ],
   },
@@ -124,17 +120,29 @@ const contractFile = (reference: string): string =>
   reference.split("#", 1)[0] ?? reference;
 type ReadText = (file: string) => string;
 
+/**
+ * Every explicitly anchored controlled heading in a claim's contract files.
+ *
+ * The evidence-graph skill gives both H2 and H3 an explicit unique anchor, and
+ * a source may cite either, so resolution accepts both levels. Reading one
+ * level per file is what produced this function's last defect: the default was
+ * H3, the six requirement documents this repository's production claim cites
+ * anchor their whole-document unit at H2, and all twelve of those citations
+ * were therefore reported as missing references while every anchor was in fact
+ * present. That had already been met once with a per-file level override for a
+ * README whose only anchors are H2, which patched one document and left the
+ * class open.
+ *
+ * Widening this set weakens nothing. It answers only whether a cited anchor
+ * exists, so a citation naming an anchor no document declares still fails.
+ */
 const contractReferences = (
   root: string,
   claim: IEvidenceClaimDefinition,
   readText: ReadText,
 ): string[] =>
   claim.contracts.flatMap((contract) => {
-    const level = claim.headingLevels?.[contract] ?? 3;
-    const heading = new RegExp(
-      `^#{${level}}\\s+.+?\\s*\\{#([^}]+)\\}\\s*$`,
-      "u",
-    );
+    const heading = /^#{2,3}\s+.+?\s*\{#([^}]+)\}\s*$/u;
     return readText(path.join(root, "docs", contract))
       .split(/\r?\n/u)
       .flatMap((line) => {
