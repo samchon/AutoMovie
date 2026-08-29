@@ -62,18 +62,21 @@ export const renderAutoMovieProductionRouter = (
 ${description}
 This file governs authoring this production. Read it before acting, then read the documents it routes to.
 
-It is generated from the installed scaffold by \`npm run sync\` and is not tracked. Do not edit it: change \`package.json\`, \`productionEvidence.mjs\`, \`docs\`, or the installed AutoMovie version, then run the command again. Sync deliberately overwrites this router and the shipped production skill so one generated project cannot silently fork the shared doctrine.
+It is generated from the installed scaffold by \`npm run sync\` and is not tracked. Do not edit it: change \`package.json\`, \`lint.config.ts\`, \`docs\`, or the installed AutoMovie version, then run the command again. Sync deliberately overwrites this router and the shipped skill inventory so one generated project cannot silently fork the shared doctrine.
 
 ## This production
 
 - Package \`${evidence.packageName}\`.
-- \`productionEvidence.mjs\` is the single tracked production-kind, population-scope, branch, and lifecycle declaration. \`lint.config.mjs\`, sync, and final review consume that same JSDoc-typed value; the generated branch-and-stage view below reports it but never overrides it.
+- \`lint.config.ts\` is the single typed production-kind, population-scope, branch, custom-claim, and graph declaration. Lint, sync, and final review consume the same exported value; the generated branch-and-stage view below reports it but never overrides it.
 - ${shapeProcedure(evidence.manifest.kind)}
 - ${branchLine}
 
 ## Procedure
 
-- [Production](.agents/skills/production/SKILL.md) owns research, settings, the selected shape, design branches, source authorship, evidence staging, Self-Review, and final review. Read the phase document it routes to before drafting.
+- [Production lifecycle](.agents/skills/production-lifecycle/SKILL.md) owns shape selection, research, settings, pilots, treatments, scripts, screenplays, and briefs.
+- [Evidence graph](.agents/skills/evidence-graph/SKILL.md) owns the local contract inventory, claims, stages, citations, exclusions, and fingerprints.
+- [Source authoring](.agents/skills/source-authoring/SKILL.md) owns design branches, TypeScript, geometry, rigs, motion, spatial design, and compilation.
+- [Review verification](.agents/skills/review-verification/SKILL.md) owns Self-Review, viewer inspection, capture, measurements, and final acceptance.
 ${shapeProcedureLine(evidence.manifest.kind)}
 
 ## Active design owners
@@ -84,7 +87,7 @@ ${designOwnerLines.join("\n")}
 
 ## Contracts this production answers
 
-Shared contracts arrive through \`@automovie/template\` and are selected by \`productionEvidence.mjs\`. Each line below is one factory-derived binding, including the answering host population and relationship; repeated contract addresses are distinct obligations, not duplicates to collapse. Cite contracts by their evidence roots, never by the installed filesystem path.
+Reusable contracts live in this project's own \`docs/{discovery,upstream,principles,obligations}\` inventory and are selected by \`lint.config.ts\`. Each line below is one factory-derived binding, including the answering host population and relationship; repeated contract addresses are distinct obligations, not duplicates to collapse. Cite contracts by their project-local evidence roots.
 
 ${bindingLines.join("\n")}
 
@@ -92,15 +95,15 @@ Project-local contracts are flat files under \`docs/contracts\`; every item belo
 
 ${localContractLines.join("\n")}
 
-Add a local contract only after [Production-specific contract](.agents/skills/production/work-specific.md) establishes its owner and authority, activate its host relationship through the typed helper used by \`productionEvidence.mjs\`, and run \`npm run sync\` so this router lists it.
+Add a local contract only after [Production-specific contract](.agents/skills/evidence-graph/work-specific.md) establishes its owner and authority, activate its host relationship through the typed helper used by \`lint.config.ts\`, and run \`npm run sync\` so this router lists it.
 
 ## Instruction loading
 
-Start the coding-agent session from this project root. Codex reads this \`AGENTS.md\`; Claude Code follows \`CLAUDE.md -> @AGENTS.md\`. A session started above or below this root is not proof that this production's instructions entered context, so the scaffold verification procedure checks both agents from a freshly generated project.
+Start the coding-agent session from this project root. Codex reads this \`AGENTS.md\`; Claude Code follows \`CLAUDE.md -> @AGENTS.md\`. A session started above or below this root is not proof that this production's instructions entered context. Run \`npm run sync\`, then start or restart each coding-agent session from this root; no provider-specific hook substitutes for instruction loading.
 
 ## Commands
 
-- \`npm run sync\` overwrites this router and the shipped production skill from the installed template while preserving every tracked production fact.
+- \`npm run sync\` overwrites this router and the four shipped skills from the installed template while preserving every tracked production fact.
 - \`npm run lint:source\` checks TypeScript; \`npm run lint\` checks the evidence graph and production review gate.
 - \`npm run book -- --layer <layer> --title <title>\` binds any supported authored layer into one deterministic reader-facing Markdown file under the ignored \`artifacts\` directory. It preserves numbered script/screenplay groups, keeps other layers flat, removes evidence comments and citation anchors, and preserves visible prose and headings.
 - \`npm run compile\` is the only command that may update compiler-owned output.
@@ -166,7 +169,7 @@ const shapeProcedure = (
     case "library":
       return "This is a library: author settings plus only the selected design and matching source branches.";
     case null:
-      return "No production kind is selected. Choose film, brief, or library in `productionEvidence.mjs` before authoring a downstream branch.";
+      return "No production kind is selected. Choose film, brief, or library in `lint.config.ts` before authoring a downstream branch.";
   }
 };
 

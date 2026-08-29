@@ -212,17 +212,10 @@ const write = (root: string, relative: string, content: string): void => {
 };
 
 const copySharedContracts = (root: string): void => {
-  const destination = path.join(root, "node_modules", "@automovie", "template");
-  fs.mkdirSync(destination, { recursive: true });
   fs.cpSync(
-    path.join(ROOT, "packages/template/docs"),
-    path.join(destination, "docs"),
+    path.join(ROOT, "packages/template/scaffold/docs"),
+    path.join(root, "docs"),
     { recursive: true },
-  );
-  fs.writeFileSync(
-    path.join(destination, "package.json"),
-    '{"name":"@automovie/template","version":"0.0.0"}\n',
-    "utf8",
   );
   write(
     root,
@@ -390,7 +383,7 @@ const writePopulation = (
 const writeLintProject = (root: string, claims: IEvidenceClaim[]): void => {
   write(
     root,
-    "lint.config.mjs",
+    "lint.config.ts",
     [
       'import { evidence } from "@ttsc/evidence";',
       "",
@@ -422,7 +415,7 @@ const writeLintProject = (root: string, claims: IEvidenceClaim[]): void => {
           skipLibCheck: true,
           strict: true,
         },
-        include: ["index.ts", "lint.config.mjs"],
+        include: ["index.ts", "lint.config.ts"],
       },
       null,
       2,

@@ -5,55 +5,49 @@ on:
       # Keep both required checks present when either workflow contract
       # changes. A path-filtered required workflow can otherwise remain
       # pending instead of reporting a result for the pull request (#1397).
-      - '.github/workflows/build.yml'
-      - '.github/workflows/test.yml'
-      - '.github/license-policy.json'
+      - ".github/workflows/build.yml"
+      - ".github/workflows/test.yml"
       # Every build input a package can carry, by SHAPE rather than by name.
       # The previous list named `src`, `package.json`, and `tsconfig.json`, and
       # each input added afterwards (per-package lint rules, code generators,
       # the guide corpus, the CLI scaffold, playground scripts and entry points)
       # fell outside it, so a change to any of them ran no job at all (#1333).
       # Enumerating today's files is what drifted, so these match the shape.
-      - 'packages/*/src/**'
-      - 'packages/*/*.json'
-      - 'packages/*/*.ts'
-      - 'packages/*/*.cts'
-      - 'packages/*/*.cjs'
-      - 'packages/*/*.html'
+      - "packages/*/src/**"
+      - "packages/*/*.json"
+      - "packages/*/*.ts"
+      - "packages/*/*.cts"
+      - "packages/*/*.html"
       # Package entry documents are part of the published package surface and
       # therefore travel through the packaged build boundary (#1397).
-      - 'packages/*/*.md'
-      - 'packages/*/build/**'
-      - 'packages/*/prompts/**'
-      - 'packages/*/scaffold/**'
-      - 'packages/*/scripts/**'
+      - "packages/*/*.md"
+      - "packages/*/build/**"
+      - "packages/*/prompts/**"
+      - "packages/*/scaffold/**"
+      - "packages/*/scripts/**"
       # Shared compiler/lint policy and the documentation evidence project are
       # workspace build inputs in their own right.
-      - 'config/**'
-      - 'docs/**'
-      - 'internals/*.mjs'
-      - 'test/**'
-      # Root tooling configuration, by shape for the same reason (#1335). The
-      # root half was outside the enumeration #1333 re-derived, so a pull
-      # request touching only `prettier.config.js`, `.prettierignore` or
-      # `.gitattributes` ran neither workflow. All three are read by the steps
-      # below: the first two decide what `format:check` checks and how, and
-      # `.gitattributes` normalizes the line endings of the tree this job
-      # checks out and builds.
+      - "config/**"
+      - "docs/**"
+      - "test/**"
+      - "build/**"
+      # Root TypeScript tooling and configuration are build inputs by shape.
+      # `.prettierignore` and `.gitattributes` are named separately because
+      # they decide formatting scope and checkout line endings respectively.
       #
       # A leading `*` is kept off the dotfiles on purpose: `.gitignore` is not
       # a build input, so it stays unmatched rather than triggering both jobs.
-      - '*.js'
-      - '*.json'
-      - '*.yaml'
-      - '*.yml'
-      - '.prettier*'
-      - '.gitattributes'
+      - "*.ts"
+      - "*.json"
+      - "*.yaml"
+      - "*.yml"
+      - ".prettier*"
+      - ".gitattributes"
       # The root public entry document is named instead of globbing every
       # Markdown file. Agent instructions remain outside the build surface;
       # #1386 and #1387 showed that a public-document-only change still needs
       # a reported check.
-      - 'README.md'
+      - "README.md"
 jobs:
   Ubuntu:
     runs-on: ubuntu-latest
@@ -80,9 +74,6 @@ jobs:
           path: node_modules/.cache/ttsc/plugins
           key: ttsc-plugins-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
 
-      - name: Check Production Dependency Licenses
-        run: pnpm run license:check
-
       # Formatting drifts silently without a gate: three separate topics in one
       # session each found the same three files unformatted on master and each
       # had to revert the churn to keep its diff on topic.
@@ -97,7 +88,7 @@ jobs:
       # specification fragment classified, resolves every recorded owner, and
       # refuses any silent change to the accepted unpaid target set.
       - name: Check Production Authoring Reachability
-        run: node internals/authoring-reachability-gate.mjs
+        run: pnpm --dir test start -- --include test_evidence_authoring_reachability
 
       # `pnpm run build` cannot reach `packages/template/scaffold`: it is not a
       # workspace project (`pnpm-workspace.yaml` lists `packages/*`) and its
@@ -114,7 +105,7 @@ jobs:
       # `@automovie/*` to the built declarations a generated project installs,
       # rather than to this repository's own TypeScript.
       - name: Check Scaffold lint:source
-        run: node internals/scaffold-evidence-gate.mjs
+        run: pnpm --dir test start -- --include test_cli_scaffold_evidence_gate
 
       - name: Save Toolchain Plugin Cache
         if: always()

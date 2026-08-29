@@ -5,7 +5,6 @@ import {
   type ITtscEvidenceGraphReference,
 } from "@ttsc/evidence";
 import fs from "node:fs";
-import { createRequire } from "node:module";
 import path from "node:path";
 import ts from "typescript-compiler";
 
@@ -227,27 +226,15 @@ const CONTRACT_INDEX = `${CONTRACTS}/index.md`;
 /**
  * Where the shared contracts actually live.
  *
- * `@automovie/template` ships discovery, obligation, and principle contracts
- * under their physical `family/domain/file` addresses, and the graph resolves
- * them from the installed package rather than from a copy each project
- * carries. A project cannot legitimately edit them, the inventory is pinned
- * here by domain, filename, and anchor, and a copy that a package upgrade can
- * invalidate is a break waiting for the next release rather than project-owned
- * content.
- *
- * The repository scaffold reaches the workspace package through the same
- * `ttsc` resolution hook every generated script uses. There is deliberately no
- * neighbouring-directory fallback: an absent package remains the install
- * failure that names what is missing instead of silently accepting unrelated
- * docs from a parent directory.
+ * `@automovie/template` ships discovery, upstream, obligation, and principle
+ * contracts under their physical `family/domain/file` addresses inside the
+ * generated project. The scaffold copies the complete inventory verbatim, so
+ * graph lint, instruction sync, and a standalone generated consumer all resolve
+ * the same project-owned contract root without reaching back into an installed
+ * package. The inventory remains pinned here by domain, filename, and anchor; a
+ * missing or locally divergent file is therefore a concrete graph failure.
  */
-const sharedDocsRoot = (location: string): string => {
-  const resolve = createRequire(path.join(location, "noop.js"));
-  const resolved = path.dirname(
-    resolve.resolve("@automovie/template/package.json"),
-  );
-  return posix(path.relative(location, path.join(resolved, DOCS)));
-};
+const sharedDocsRoot = (_location: string): string => DOCS;
 const MARKDOWN: Record<MarkdownLayer, IMarkdownPopulation> = {
   settings: { headings: [2], obligation: true, principle: "settings.md" },
   research: { headings: [2], obligation: false, principle: "research.md" },

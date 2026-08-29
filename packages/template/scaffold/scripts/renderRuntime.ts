@@ -9,7 +9,7 @@ import {
 import path from "node:path";
 
 import config from "../automovie.config";
-import { productionEvidence } from "../productionEvidence.mjs";
+import { productionEvidence } from "../lint.config";
 import { inspectPublishedProxyBundle } from "./assertProxyBundle";
 import { preserveProductionEncoderCleanup } from "./preserveProductionEncoderCleanup";
 import {

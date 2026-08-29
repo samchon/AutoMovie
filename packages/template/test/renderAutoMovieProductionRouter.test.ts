@@ -217,6 +217,18 @@ assert.match(
 );
 assert.match(library, /has no H2 contract item/u);
 assert.doesNotMatch(library, /settings -> treatments/u);
+for (const skill of [
+  "evidence-graph",
+  "production-lifecycle",
+  "review-verification",
+  "source-authoring",
+])
+  assert.match(library, new RegExp(`skills/${skill}/SKILL\\.md`, "u"));
+assert.match(library, /Reusable contracts live in this project's own/u);
+assert.doesNotMatch(
+  library,
+  /node_modules|arrive through `@automovie\/template`/u,
+);
 
 const film = renderAutoMovieProductionRouter({
   ...base,

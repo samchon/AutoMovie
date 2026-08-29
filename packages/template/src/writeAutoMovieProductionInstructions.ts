@@ -13,7 +13,7 @@ import { scaffoldAssetDirectory } from "./renderScaffold";
  *
  * `AGENTS.md`, `CLAUDE.md`, and `.agents/skills` are generated and ignored.
  * Every fact the production owns remains tracked elsewhere: the package
- * manifest, `productionEvidence.mjs`, authored documents, source, and local
+ * manifest, `lint.config.ts`, authored documents, source, and local
  * contracts. Sync therefore removes the old shipped skill tree before copying
  * the installed one, so a renamed doctrine file cannot survive as a stale fork.
  *
@@ -26,7 +26,7 @@ import { scaffoldAssetDirectory } from "./renderScaffold";
 export const writeAutoMovieProductionInstructions = (props: {
   /** Generated-project root whose instruction surface is replaced. */
   root: string;
-  /** The same tracked declaration imported by `lint.config.mjs`. */
+  /** The same tracked declaration exported by `lint.config.ts`. */
   productionEvidence: IAutoMovieEvidenceConfigProps;
   /** Alternate scaffold asset root used only by deterministic consumers/tests. */
   scaffoldRoot?: string;
@@ -42,11 +42,18 @@ export const writeAutoMovieProductionInstructions = (props: {
       `${sourceSkills}: the installed production skills are missing.`,
     );
   assertInstructionSourceIsPhysical(sourceSkills);
-  const productionSkill = path.join(sourceSkills, "production", "SKILL.md");
-  if (!fs.lstatSync(productionSkill, { throwIfNoEntry: false })?.isFile())
-    throw new Error(
-      `${productionSkill}: the installed production skill entry point is missing.`,
-    );
+  for (const name of [
+    "evidence-graph",
+    "production-lifecycle",
+    "review-verification",
+    "source-authoring",
+  ]) {
+    const entry = path.join(sourceSkills, name, "SKILL.md");
+    if (!fs.lstatSync(entry, { throwIfNoEntry: false })?.isFile())
+      throw new Error(
+        `${entry}: the installed ${name} skill entry point is missing.`,
+      );
+  }
   if (fs.realpathSync(root) === fs.realpathSync(scaffoldRoot))
     throw new Error(
       `${root}: a scaffold source cannot synchronize instructions into itself.`,

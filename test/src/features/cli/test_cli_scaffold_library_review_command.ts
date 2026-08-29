@@ -26,13 +26,9 @@ const commandEntryPath = path.resolve(
   __dirname,
   "../../../../packages/template/scaffold/scripts/library-review-cli.ts",
 );
-const productionEvidencePath = path.resolve(
+const lintConfigPath = path.resolve(
   __dirname,
-  "../../../../packages/template/scaffold/productionEvidence.mjs",
-);
-const templatePackageRoot = path.resolve(
-  __dirname,
-  "../../../../packages/template",
+  "../../../../packages/template/scaffold/lint.config.ts",
 );
 const configurationPath = path.resolve(
   __dirname,
@@ -190,31 +186,6 @@ const writeLibraryOwners = (root: string): void => {
   );
 };
 
-/** Install the published shared-contract view this generated fixture declares. */
-const installSharedContracts = (root: string): void => {
-  const destination = path.join(root, "node_modules", "@automovie", "template");
-  fs.mkdirSync(destination, { recursive: true });
-  fs.cpSync(
-    path.join(templatePackageRoot, "docs"),
-    path.join(destination, "docs"),
-    {
-      recursive: true,
-    },
-  );
-  fs.writeFileSync(
-    path.join(destination, "package.json"),
-    JSON.stringify({
-      name: "@automovie/template",
-      version: "0.0.0",
-      exports: {
-        "./docs/*": "./docs/*",
-        "./package.json": "./package.json",
-      },
-    }),
-    "utf8",
-  );
-};
-
 const observationId = (branch: (typeof branches)[number]): string =>
   branch === "maps"
     ? "map-plan-section-elevation-traversal-extent"
@@ -282,7 +253,6 @@ const commandRefuses = (props: {
 export const test_cli_scaffold_library_review_command = (): void => {
   const fixture = productionFixture();
   try {
-    installSharedContracts(fixture.root);
     const modelSource = fs.readFileSync(
       path.join(fixture.root, "src", "models", "soloist.ts"),
       "utf8",
@@ -392,7 +362,7 @@ export const test_cli_scaffold_library_review_command = (): void => {
       message: "Correct the library observation plan before recording",
     });
     fs.writeFileSync(paidMapPlanPath, paidMapPlan, "utf8");
-    const singleton = require(productionEvidencePath) as {
+    const singleton = require(lintConfigPath) as {
       productionEvidence: IAutoMovieEvidenceConfigProps;
     };
     const configured = require(configurationPath) as {

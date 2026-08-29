@@ -1,7 +1,7 @@
 import { readAutoMovieProductionEvidence } from "@automovie/evidence";
 
 import config from "../automovie.config";
-import { productionEvidence } from "../productionEvidence.mjs";
+import { productionEvidence } from "../lint.config";
 import { runLibraryReviewCli, runLibraryReviewCommand } from "./library-review";
 
 process.exitCode = runLibraryReviewCli({

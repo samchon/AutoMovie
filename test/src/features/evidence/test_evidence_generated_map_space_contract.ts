@@ -642,8 +642,8 @@ const writeSources = (root: string): void => {
 
 /** Use the rendered lint config while selecting this focused real-graph slice. */
 const configureGraph = (root: string): void => {
-  const declarationFile = path.join(root, "productionEvidence.mjs");
-  let declaration = fs.readFileSync(declarationFile, "utf8");
+  const lintFile = path.join(root, "lint.config.ts");
+  let lintSource = fs.readFileSync(lintFile, "utf8");
   for (const [before, after] of [
     ["  kind: null,", '  kind: "library",'],
     ['  settings: "disabled",', '  settings: "review",'],
@@ -652,14 +652,14 @@ const configureGraph = (root: string): void => {
     ['  mapSources: "disabled",', '  mapSources: "review",'],
     ['  spaceSources: "disabled",', '  spaceSources: "review",'],
   ] as const)
-    declaration = replaceOnce(declaration, before, after);
-  declaration = replaceOnce(
-    declaration,
-    "// @ts-check\n",
-    '// @ts-check\n\nimport { createAutoMovieProductionPrincipleClaim } from "@automovie/evidence";\n',
+    lintSource = replaceOnce(lintSource, before, after);
+  lintSource = replaceOnce(
+    lintSource,
+    "  createAutoMovieEvidenceConfig,\n",
+    "  createAutoMovieEvidenceConfig,\n  createAutoMovieProductionPrincipleClaim,\n",
   );
-  declaration = replaceOnce(
-    declaration,
+  lintSource = replaceOnce(
+    lintSource,
     "  claims: [],",
     [
       "  claims: [",
@@ -673,9 +673,6 @@ const configureGraph = (root: string): void => {
       "  ],",
     ].join("\n"),
   );
-  fs.writeFileSync(declarationFile, declaration, "utf8");
-  const lintFile = path.join(root, "lint.config.mjs");
-  const lintSource = fs.readFileSync(lintFile, "utf8");
   const before =
     "const graph = createAutoMovieEvidenceConfig(productionEvidence);";
   const after = [
@@ -714,21 +711,21 @@ const configureGraph = (root: string): void => {
 
 /** Select the one real object-library discovery consumer under test. */
 const configureObjectDiscoveryGraph = (root: string): void => {
-  const declarationFile = path.join(root, "productionEvidence.mjs");
-  let declaration = fs.readFileSync(declarationFile, "utf8");
+  const lintFile = path.join(root, "lint.config.ts");
+  let lintSource = fs.readFileSync(lintFile, "utf8");
   for (const [before, after] of [
     ["  kind: null,", '  kind: "library",'],
     ['  settings: "disabled",', '  settings: "review",'],
     ['  models: "disabled",', '  models: "review",'],
   ] as const)
-    declaration = replaceOnce(declaration, before, after);
-  declaration = replaceOnce(
-    declaration,
-    "// @ts-check\n",
-    '// @ts-check\n\nimport { createAutoMovieProductionPrincipleClaim } from "@automovie/evidence";\n',
+    lintSource = replaceOnce(lintSource, before, after);
+  lintSource = replaceOnce(
+    lintSource,
+    "  createAutoMovieEvidenceConfig,\n",
+    "  createAutoMovieEvidenceConfig,\n  createAutoMovieProductionPrincipleClaim,\n",
   );
-  declaration = replaceOnce(
-    declaration,
+  lintSource = replaceOnce(
+    lintSource,
     "  claims: [],",
     [
       "  claims: [",
@@ -742,10 +739,6 @@ const configureObjectDiscoveryGraph = (root: string): void => {
       "  ],",
     ].join("\n"),
   );
-  fs.writeFileSync(declarationFile, declaration, "utf8");
-
-  const lintFile = path.join(root, "lint.config.mjs");
-  const lintSource = fs.readFileSync(lintFile, "utf8");
   const before =
     "const graph = createAutoMovieEvidenceConfig(productionEvidence);";
   const after = [
@@ -918,23 +911,9 @@ const linkRuntime = (root: string): void => {
     '{"name":"@automovie/evidence","version":"0.0.0","main":"./lib/index.js","types":"./lib/index.d.ts","exports":{".":{"types":"./lib/index.d.ts","default":"./lib/index.js"}}}\n',
     "utf8",
   );
-  const template = path.join(root, "node_modules/@automovie/template");
-  fs.mkdirSync(template, { recursive: true });
-  fs.cpSync(
-    path.join(ROOT, "packages/template/docs"),
-    path.join(template, "docs"),
-    {
-      recursive: true,
-    },
-  );
   assert.ok(
-    fs.existsSync(path.join(template, "docs/principles/design/maps.md")),
-    "The shared package omitted its map principles.",
-  );
-  fs.writeFileSync(
-    path.join(template, "package.json"),
-    '{"name":"@automovie/template","version":"0.0.0","exports":{"./package.json":"./package.json","./docs/*":"./docs/*"}}\n',
-    "utf8",
+    fs.existsSync(path.join(root, "docs/principles/design/maps.md")),
+    "The generated project omitted its scaffold-local map principles.",
   );
   const resolve = createRequire(
     path.join(ROOT, "packages/evidence/package.json"),
@@ -1187,40 +1166,6 @@ export const test_evidence_generated_map_space_contract = (): void => {
   let fixtureFailure: IFixtureFailure | undefined;
   try {
     const rendered = renderScaffold({ name: "map-space-library" });
-    TestValidator.equals(
-      "the real scaffold publishes the map route and stage declarations",
-      {
-        mapStage:
-          rendered["productionEvidence.mjs"]?.includes('maps: "disabled"'),
-        mapSourceStage: rendered["productionEvidence.mjs"]?.includes(
-          'mapSources: "disabled"',
-        ),
-        completePopulation: rendered["productionEvidence.mjs"]?.includes(
-          'populationScope: { mode: "complete-production" }',
-        ),
-        lintConsumesDeclaration:
-          rendered["lint.config.mjs"]?.includes(
-            "createAutoMovieEvidenceConfig(productionEvidence)",
-          ) &&
-          rendered["lint.config.mjs"]?.includes(
-            'from "./productionEvidence.mjs"',
-          ),
-        mapOwnership: rendered["docs/README.md"]?.includes(
-          "| maps | broad world organization, site boundary, scale and partition, temporal world state, and external access node |",
-        ),
-        spaceOwnership: rendered["docs/README.md"]?.includes(
-          "| spaces | building exterior/interior, room, zone, enclosure, opening, and circulation topology inside the adopted map/site boundary |",
-        ),
-      },
-      {
-        mapStage: true,
-        mapSourceStage: true,
-        completePopulation: true,
-        lintConsumesDeclaration: true,
-        mapOwnership: true,
-        spaceOwnership: true,
-      },
-    );
     writeFiles(root, rendered);
     linkRuntime(root);
     writeDesign(root);

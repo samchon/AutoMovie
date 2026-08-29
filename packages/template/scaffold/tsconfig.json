@@ -21,10 +21,9 @@
     "test",
     "vendor/sharp-disabled/index.ts",
     "viewer/src",
-    "productionEvidence.mjs",
     "repaintSelectionReviews.ts",
     "automovie.config.ts",
     "vite.config.ts",
-    "lint.config.mjs"
+    "lint.config.ts"
   ]
 }

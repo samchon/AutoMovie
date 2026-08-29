@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import fs from "node:fs";
 
-import lint from "../lint.config.mjs";
+import lint from "../lint.config";
 
 const rule = lint.rules["evidence/graph"];
 assert.ok(Array.isArray(rule), "the scaffold must enable its evidence graph");
@@ -25,6 +25,36 @@ assert.equal(
   "the reserved evidence-lint canary proves the generated graph is running",
   "the permanent instrument canary must remain the final shared claim",
 );
+assert.equal(
+  JSON.stringify(graph).includes("node_modules/@automovie/template"),
+  false,
+  "the generated graph must resolve contracts only from project-local docs",
+);
+for (const skill of [
+  "evidence-graph",
+  "production-lifecycle",
+  "review-verification",
+  "source-authoring",
+])
+  assert.equal(
+    fs.existsSync(
+      new URL(`../.agents/skills/${skill}/SKILL.md`, import.meta.url),
+    ),
+    true,
+    `the generated project must ship the ${skill} trigger entry point`,
+  );
+for (const forbidden of [
+  "../.claude/settings.json",
+  "../.agents/skills/production/SKILL.md",
+  "../lint.config.mjs",
+  "../productionEvidence.mjs",
+  "../productionEvidence.ts",
+])
+  assert.equal(
+    fs.existsSync(new URL(forbidden, import.meta.url)),
+    false,
+    `the generated project must not ship ${forbidden}`,
+  );
 
 const agents = fs.readFileSync(
   new URL("../AGENTS.md", import.meta.url),

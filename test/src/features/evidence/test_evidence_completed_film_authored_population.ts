@@ -390,6 +390,12 @@ export const test_evidence_completed_film_authored_population = (): void => {
   let fixtureFailure: FixtureFailure | undefined;
   try {
     installPublishedEvidenceRuntime(root, temporary);
+    for (const family of ["discovery", "upstream", "principles", "obligations"])
+      fs.cpSync(
+        path.join(root, "packages/template/scaffold/docs", family),
+        path.join(temporary, "docs", family),
+        { recursive: true },
+      );
     fs.cpSync(fixture, path.join(temporary, "docs"), { recursive: true });
     fs.mkdirSync(path.join(temporary, "docs/contracts"), { recursive: true });
     fs.writeFileSync(
@@ -453,27 +459,26 @@ export const test_evidence_completed_film_authored_population = (): void => {
     const state = JSON.stringify(activeState(temporary), null, 2);
     const names = JSON.stringify(AUTHORED_CLAIM_NAMES, null, 2);
     fs.writeFileSync(
-      path.join(temporary, "lint.config.mjs"),
+      path.join(temporary, "lint.config.ts"),
       [
-        "// @ts-check",
-        "",
-        'import { createAutoMovieEvidenceConfig, evidence } from "@automovie/evidence";',
+        'import { createAutoMovieEvidenceConfig, evidence, type IAutoMovieEvidenceConfigProps } from "@automovie/evidence";',
+        'import type { ITtscLintConfig } from "@ttsc/lint";',
         "",
         `const names = ${names};`,
-        `const configuration = /** @type {import("@automovie/evidence").IAutoMovieEvidenceConfigProps} */ (${state});`,
+        `const configuration = ${state} satisfies IAutoMovieEvidenceConfigProps;`,
         "const full = createAutoMovieEvidenceConfig(configuration);",
         "const claims = names.map((name) => {",
         "  const matches = full.claims.filter((claim) => claim.name === name);",
         "  if (matches.length !== 1)",
         '    throw new Error("Expected one current authored claim named " + name + "; received " + matches.length + ".");',
-        "  return /** @type {NonNullable<typeof matches[number]>} */ (matches[0]);",
+        "  return matches[0]!;",
         "});",
         "const graph = { claims };",
         "",
-        'export default /** @satisfies {import("@ttsc/lint").ITtscLintConfig} */ ({',
+        "export default {",
         "  plugins: { evidence },",
         '  rules: { "evidence/graph": ["error", graph] },',
-        "});",
+        "} satisfies ITtscLintConfig;",
         "",
       ].join("\n"),
       "utf8",
@@ -515,7 +520,7 @@ export const test_evidence_completed_film_authored_population = (): void => {
             strict: true,
             types: ["node"],
           },
-          include: ["index.ts", "lint.config.mjs"],
+          include: ["index.ts", "lint.config.ts"],
         },
         null,
         2,
