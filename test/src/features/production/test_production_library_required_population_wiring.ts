@@ -37,6 +37,8 @@ const ANCHOR = "hall-delivery";
 const COMPILE = `sha256:${"1".repeat(64)}` as AutoMovieContentDigest;
 const EAST = "building:hall-house/house/facade/wall-east";
 const WEST = "building:hall-house/house/facade/wall-west";
+const CONTEXT = "building:hall-house/house/context";
+const UNDERSIDE = "building:hall-house/house/underside/floor-slab";
 
 /**
  * The derived population reaches the review gate, or it reaches nothing.
@@ -60,8 +62,9 @@ const WEST = "building:hall-house/house/facade/wall-west";
  *    addressed to the branch and H2 that owes it.
  * 2. The plan declaring one observation of its own is refused once for every
  *    derived observation it does not open, at that observation's own address.
- * 3. Opening one derived observation and waiving another, disclosed by the one
- *    it opened, removes exactly those two refusals.
+ * 3. Opening two derived observations and waiving two more, each disclosed by
+ *    one of the opened ones, removes exactly those four refusals, on two
+ *    different grounds.
  * 4. That waiver moves the owner's plan digest, so excusing a face after the
  *    fact expires every receipt written against the owner it excused it on.
  * 5. With no topology handed over, the same owner requires nothing and the plan
@@ -83,6 +86,7 @@ export const test_production_library_required_population_wiring = (): void => {
       observations: [
         { id: "plan-section-elevation", evidence: "artifact" },
         { id: WEST, evidence: "artifact" },
+        { id: CONTEXT, evidence: "artifact" },
       ],
       waivers: [
         {
@@ -91,6 +95,13 @@ export const test_production_library_required_population_wiring = (): void => {
           disclosedBy: WEST,
           reason:
             "The east and west elevations are one authored panel mirrored about the hall's own centre line.",
+        },
+        {
+          observation: UNDERSIDE,
+          ground: "in-use-invisibility",
+          disclosedBy: CONTEXT,
+          reason:
+            "The hall bears directly on grade, so the underside of its floor slab is not reachable by any observer of the work; the setting view shows it sitting on the ground.",
         },
       ],
     }),
@@ -148,38 +159,42 @@ export const test_production_library_required_population_wiring = (): void => {
   );
 
   TestValidator.equals(
-    "opening one elevation and waiving its mirror removes exactly two",
+    "opening two views and waiving two more removes exactly those four",
     namedFacts([
       [
-        "nineteen derived observations remain unopened",
-        () => withWaiver.diagnostics.length === 19,
+        "seventeen derived observations remain unopened",
+        () => withWaiver.diagnostics.length === 17,
       ],
       [
-        "the opened elevation is no longer refused",
+        "neither opened view is refused",
         () =>
-          withWaiver.diagnostics.some((diagnostic) =>
-            diagnostic.target.endsWith(WEST),
+          [WEST, CONTEXT].some((id) =>
+            withWaiver.diagnostics.some((diagnostic) =>
+              diagnostic.target.endsWith(id),
+            ),
           ) === false,
       ],
       [
-        "and neither is the one its mirror discloses",
+        "and neither is the mirrored elevation nor the buried underside",
         () =>
-          withWaiver.diagnostics.some((diagnostic) =>
-            diagnostic.target.endsWith(EAST),
+          [EAST, UNDERSIDE].some((id) =>
+            withWaiver.diagnostics.some((diagnostic) =>
+              diagnostic.target.endsWith(id),
+            ),
           ) === false,
       ],
       [
-        "while the waiver moves the plan digest that expires receipts",
+        "while the waivers move the plan digest that expires receipts",
         () =>
           withWaiver.owners[0]?.identity.plan !==
           withBuilding.owners[0]?.identity.plan,
       ],
     ]),
     {
-      "nineteen derived observations remain unopened": true,
-      "the opened elevation is no longer refused": true,
-      "and neither is the one its mirror discloses": true,
-      "while the waiver moves the plan digest that expires receipts": true,
+      "seventeen derived observations remain unopened": true,
+      "neither opened view is refused": true,
+      "and neither is the mirrored elevation nor the buried underside": true,
+      "while the waivers move the plan digest that expires receipts": true,
     },
   );
 

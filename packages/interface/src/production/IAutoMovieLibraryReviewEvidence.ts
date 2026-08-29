@@ -201,7 +201,14 @@ export interface IAutoMovieLibraryReviewWaiver {
   observation: string;
   /** Ground the excuse rests on. */
   ground: AutoMovieLibraryObservationWaiverGround;
-  /** Another required observation that discloses the waived form. */
+  /**
+   * Another required observation this plan opens that establishes the ground.
+   *
+   * For `symmetry` and `identity` it is the view that discloses the same form.
+   * For `in-use-invisibility` it is the view that shows the face cannot be
+   * reached, which is what keeps every ground answerable by something somebody
+   * actually looked at rather than by an assertion.
+   */
   disclosedBy: string;
   /** Concrete statement of the fact that makes the ground true. */
   reason: string;
