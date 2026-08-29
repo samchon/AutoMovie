@@ -3,7 +3,6 @@ import path from "node:path";
 import type { Page } from "playwright";
 import { createServer } from "vite";
 
-import config from "../automovie.config";
 import type { IAutoMovieInspectionAnswer } from "../viewer/src/inspection";
 import {
   type IAutoMovieCaptureBrowserSession,
@@ -12,6 +11,11 @@ import {
   preserveCaptureBrowserCleanup,
 } from "./capture-browser";
 import { generatedShotPlugin } from "./generatedShotPlugin";
+import {
+  readAutoMovieHostCaptureBrowser,
+  readAutoMovieHostViewerBasePath,
+  readAutoMovieHostViewerHost,
+} from "./hostBoundary";
 
 interface InspectionSession {
   server: Awaited<ReturnType<typeof createServer>>;
@@ -49,13 +53,14 @@ const startSession = async (
   projectRoot: string,
   productionId: string,
 ): Promise<InspectionSession> => {
+  const viewerHost = readAutoMovieHostViewerHost(process.env);
   const server = await createServer({
     root: projectRoot,
     configFile: false,
     logLevel: "silent",
     plugins: [generatedShotPlugin(projectRoot, productionId)],
     resolve: { dedupe: ["three"] },
-    server: { host: config.viewer.host, port: 0, strictPort: false },
+    server: { host: viewerHost, port: 0, strictPort: false },
   });
   try {
     await server.listen();
@@ -68,12 +73,12 @@ const startSession = async (
       throw new Error("Vite did not expose a numeric local address.");
     const launched = await launchCaptureBrowser(
       projectRoot,
-      config.capture.browser,
+      readAutoMovieHostCaptureBrowser(process.env),
     );
     return {
       server,
       browser: launched.browser,
-      origin: `http://${config.viewer.host}:${address.port}`,
+      origin: `http://${viewerHost}:${address.port}`,
       pages: new Map(),
     };
   } catch (error) {
@@ -196,19 +201,14 @@ const inspectionPage = (
     );
     const url = new URL(
       "inspection.html",
-      // The trailing slash is forced rather than assumed. `basePath` is a
-      // project-editable setting and the delivery capture navigates to it
-      // directly, so `/viewer` and `/viewer/` behave identically there; this
-      // page is a SIBLING of that base, and URL resolution drops the last
-      // segment of a base that does not end in one. Measured: `/viewer`
-      // resolves to `/inspection.html`, which 404s and surfaces as "the page
-      // never became ready" rather than as a configuration fault.
-      new URL(
-        config.viewer.basePath.endsWith("/")
-          ? config.viewer.basePath
-          : `${config.viewer.basePath}/`,
-        session.origin,
-      ),
+      // The host boundary hands back a directory path, trailing slash and all,
+      // which is what makes this join safe. The delivery capture navigates to
+      // the base directly, so `/viewer` and `/viewer/` behave identically
+      // there; this page is a SIBLING of that base, and URL resolution drops
+      // the last segment of a base that does not end in one. Measured:
+      // `/viewer` resolves to `/inspection.html`, which 404s and surfaces as
+      // "the page never became ready" rather than as a host-input fault.
+      new URL(readAutoMovieHostViewerBasePath(process.env), session.origin),
     );
     url.searchParams.set("shot", input.target.shot);
     url.searchParams.set("revision", input.revision);

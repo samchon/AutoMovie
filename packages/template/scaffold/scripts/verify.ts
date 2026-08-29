@@ -4,12 +4,15 @@ import {
   AutoMovieProductionProject,
 } from "@automovie/production";
 
-import config from "../automovie.config";
 import { productionEvidence } from "../lint.config";
+import { currentAutoMovieProductionId } from "./projectIdentity";
+
+/** The production namespace this project declares in its own package manifest. */
+const productionId = currentAutoMovieProductionId();
 
 const project = AutoMovieProductionProject.openReadOnly(
   process.cwd(),
-  config.productionId,
+  productionId,
 );
 const authoringEvidence = readAutoMovieProductionEvidence({
   root: process.cwd(),

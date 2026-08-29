@@ -21,16 +21,6 @@ import {
   canonicalizeAutoMovieJson,
 } from "@automovie/production";
 
-/** Browser-selection wiring shared without importing the executable capture host. */
-export type AutoMovieCaptureBrowserConfig =
-  | { source: "playwright-chromium" }
-  | { source: "system-channel"; channel: "chrome" | "msedge" }
-  | {
-      source: "configured-executable";
-      product: "chromium" | "chrome" | "msedge";
-      executablePath: string;
-    };
-
 /** Kokoro adapter identity implemented by the shipped render runtime. */
 export const AUTOMOVIE_DIALOGUE_PROVIDER = "kokoro-local-v1" as const;
 /** Exact model repository implemented by the shipped render runtime. */
@@ -46,7 +36,7 @@ export const AUTOMOVIE_DIALOGUE_DEVICE = "cpu" as const;
  * Authored adoption facts for an external generator used by this production.
  *
  * The record contains no credential. It answers the same source, rights, cost,
- * and consumer questions for generated sound that `automovie/assets.json`
+ * and consumer questions for generated sound that the project asset manifest
  * answers for distributable input bytes and that a repaint adapter must answer
  * for generated pictures.
  */
@@ -106,12 +96,16 @@ export type AutoMovieProductionRepaintCommand =
   | { kind: "selection"; shot: string; attemptId: string }
   | { kind: "reversal"; shot: string; attemptId: string };
 
-/** Complete generated-project configuration, separating wiring from choices. */
+/**
+ * The production's authored delivery decisions, separated from host wiring.
+ *
+ * Only decisions that change delivered pixels, delivered sound, external
+ * rights, runtime cost, or the meaning of a review belong here. The production
+ * namespace is derived from `package.json` by `scripts/projectIdentity.ts`, and
+ * the capture browser and local viewer server are host boundaries owned by
+ * `scripts/hostBoundary.ts`; none of the three is a project declaration.
+ */
 export interface IAutoMovieProductionConfiguration {
-  /** Stable production namespace used by project scripts. */
-  productionId: string;
-  /** Pure browser-launch wiring. */
-  capture: { browser: AutoMovieCaptureBrowserConfig };
   /** Authored delivery tiers implementing the settings delivery contract. */
   render: {
     proxy: IAutoMovieProductionRenderTier & { kind: "proxy" };
@@ -128,8 +122,6 @@ export interface IAutoMovieProductionConfiguration {
   };
   /** Authored admission order for expensive moving-boundary solves. */
   simulation: { liveWearableSoftBodies: readonly string[] };
-  /** Pure local viewer-server wiring. */
-  viewer: { host: string; basePath: string };
 }
 
 /** Read one explicit generator adoption without accepting hidden parameters. */

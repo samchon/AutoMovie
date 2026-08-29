@@ -14,7 +14,13 @@ import {
   findAutoMovieProjectRoot,
 } from "@automovie/production";
 
-import config from "../automovie.config";
+import { readAutoMovieProjectProductionId } from "./projectIdentity";
+
+/** The project this invocation belongs to, found from the host's own seed. */
+const projectRoot = findAutoMovieProjectRoot(process.cwd());
+
+/** The production namespace that project declares in its own package manifest. */
+const productionId = readAutoMovieProjectProductionId(projectRoot);
 
 /**
  * Production-owned design emitter entry point.
@@ -29,8 +35,8 @@ import config from "../automovie.config";
  * source derives cannot survive as plausible residue.
  */
 const project = AutoMovieProductionProject.open(
-  findAutoMovieProjectRoot(process.cwd()),
-  config.productionId,
+  projectRoot,
+  productionId,
   createAutoMovieArchetypeRegistry(AUTOMOVIE_PRIMITIVE_ARCHETYPES),
 );
 

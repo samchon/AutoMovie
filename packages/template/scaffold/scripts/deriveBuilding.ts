@@ -16,12 +16,18 @@ import {
 import fs from "node:fs";
 import path from "node:path";
 
-import config from "../automovie.config";
 import {
   type IAutoMovieBuildingGap,
   deriveAutoMovieBuildingReport,
 } from "./buildingReport";
 import { productionBuildingStudies } from "./productionStudies";
+import { readAutoMovieProjectProductionId } from "./projectIdentity";
+
+/** The project this invocation belongs to, found from the host's own seed. */
+const projectRoot = findAutoMovieProjectRoot(process.cwd());
+
+/** The production namespace that project declares in its own package manifest. */
+const productionId = readAutoMovieProjectProductionId(projectRoot);
 
 /**
  * Derive the construction documents and performance studies of every building
@@ -69,8 +75,8 @@ import { productionBuildingStudies } from "./productionStudies";
  */
 const state = requireCurrentAutoMovieProjectState(
   loadAutoMovieProjectState({
-    root: findAutoMovieProjectRoot(process.cwd()),
-    productionId: config.productionId,
+    root: projectRoot,
+    productionId,
   }),
 );
 

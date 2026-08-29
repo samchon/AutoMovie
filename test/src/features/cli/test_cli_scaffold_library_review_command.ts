@@ -30,10 +30,6 @@ const lintConfigPath = path.resolve(
   __dirname,
   "../../../../packages/template/scaffold/lint.config.ts",
 );
-const configurationPath = path.resolve(
-  __dirname,
-  "../../../../packages/template/scaffold/automovie.config.ts",
-);
 const command = require(commandPath) as {
   runLibraryReviewCommand: (props: {
     argv: readonly string[];
@@ -365,11 +361,7 @@ export const test_cli_scaffold_library_review_command = (): void => {
     const singleton = require(lintConfigPath) as {
       productionEvidence: IAutoMovieEvidenceConfigProps;
     };
-    const configured = require(configurationPath) as {
-      default: { productionId: string };
-    };
     const originalEvidence = { ...singleton.productionEvidence };
-    const originalProductionId = configured.default.productionId;
     const originalDirectory = process.cwd();
     const originalArguments = [...process.argv];
     const originalExitCode = process.exitCode;
@@ -383,7 +375,9 @@ export const test_cli_scaffold_library_review_command = (): void => {
     let entrySuccess = false;
     try {
       Object.assign(singleton.productionEvidence, evidence);
-      configured.default.productionId = "fixture-film";
+      // The entry derives its production namespace from the project it runs in,
+      // so the working directory is the whole selection: the fixture's own
+      // package manifest names "fixture-film".
       process.chdir(fixture.root);
       cliSuccess = command.runLibraryReviewCli({
         argv: [],
@@ -448,7 +442,6 @@ export const test_cli_scaffold_library_review_command = (): void => {
       process.exitCode = originalExitCode;
       process.chdir(originalDirectory);
       Object.assign(singleton.productionEvidence, originalEvidence);
-      configured.default.productionId = originalProductionId;
     }
     let outputCount = 0;
     command.runLibraryReviewCommand({

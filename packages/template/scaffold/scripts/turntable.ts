@@ -3,8 +3,11 @@ import {
   captureAutoMovieProductionTurntable,
 } from "@automovie/production";
 
-import config from "../automovie.config";
 import { createProductionFrameCaptureRuntime } from "./capture";
+import { currentAutoMovieProductionId } from "./projectIdentity";
+
+/** The production namespace this project declares in its own package manifest. */
+const productionId = currentAutoMovieProductionId();
 
 /**
  * Capture the complete view set one asset review is judged from.
@@ -46,13 +49,13 @@ const captureRuntime = createProductionFrameCaptureRuntime();
 const context = new AutoMovieProductionContext(
   captureRuntime.capture,
   process.cwd(),
-  config.productionId,
+  productionId,
 );
 let captureFailure: { error: unknown } | undefined;
 try {
   const output = await captureAutoMovieProductionTurntable(context, {
     asset,
-    productionId: config.productionId,
+    productionId,
     width,
     height,
   });

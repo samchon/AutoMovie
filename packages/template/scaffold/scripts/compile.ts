@@ -4,7 +4,10 @@ import {
 } from "@automovie/archetypes";
 import { compileAutoMovieProduction } from "@automovie/production";
 
-import config from "../automovie.config";
+import { currentAutoMovieProductionId } from "./projectIdentity";
+
+/** The production namespace this project declares in its own package manifest. */
+const productionId = currentAutoMovieProductionId();
 
 /**
  * The archetypes this production builds from.
@@ -19,7 +22,7 @@ const archetypes = createAutoMovieArchetypeRegistry(
 
 const output = compileAutoMovieProduction({
   projectRoot: process.cwd(),
-  productionId: config.productionId,
+  productionId,
   scope: "source",
   archetypes,
 });

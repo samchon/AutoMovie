@@ -1,20 +1,16 @@
-import type {
-  AutoMovieCaptureBrowserConfig,
-  IAutoMovieProductionConfiguration,
-} from "./scripts/productionConfiguration";
+import type { IAutoMovieProductionConfiguration } from "./scripts/productionConfiguration";
 
 /**
- * Viewer-host settings. Production ownership roots are the harness's fixed
- * layout rather than a project declaration, so they are not restated here.
+ * The production's authored delivery decisions, serialized for the runtime.
+ *
+ * Every value here changes delivered pixels, delivered sound, external rights,
+ * runtime cost, or the meaning of a review, and each one answers to a reviewed
+ * settings, research, or design H2 that owns it. Host facts do not belong here:
+ * the production namespace is derived from `package.json`, and the capture
+ * browser and local viewer server are host boundaries selected on the invoking
+ * command (see `scripts/projectIdentity.ts` and `scripts/hostBoundary.ts`).
  */
 export default {
-  /** Stable production namespace selected by project scripts. */
-  productionId: "{{name}}",
-  capture: {
-    browser: {
-      source: "playwright-chromium",
-    } satisfies AutoMovieCaptureBrowserConfig,
-  },
   render: {
     /**
      * Authored review delivery. Its scale and frame decimation implement the
@@ -71,9 +67,5 @@ export default {
      * an omitted domain and a selected static domain are both refused.
      */
     liveWearableSoftBodies: [],
-  },
-  viewer: {
-    host: "127.0.0.1",
-    basePath: "/viewer/",
   },
 } as const satisfies IAutoMovieProductionConfiguration;

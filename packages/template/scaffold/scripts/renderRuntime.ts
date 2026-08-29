@@ -18,6 +18,7 @@ import {
   readProductionRepaintSelection,
   readProductionSpeakerBindings,
 } from "./productionConfiguration";
+import { readAutoMovieProjectProductionId } from "./projectIdentity";
 import { publishProxyBundle } from "./publishProxyBundle";
 import {
   type IProductionRenderInvocationObservationState,
@@ -74,7 +75,7 @@ const executeProductionRenderCommand = async (
   renderHost: IProductionRenderHost,
 ): Promise<void> => {
   const root = renderHost.root;
-  const productionId = config.productionId;
+  const productionId = readAutoMovieProjectProductionId(root);
   const authoringEvidence = readAutoMovieProductionEvidence({
     root,
     productionEvidence,

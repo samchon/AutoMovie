@@ -23,7 +23,7 @@ import {
   type IProductionCaptureRuntimeClosureSnapshot,
   snapshotProductionCaptureRuntimeClosure,
 } from "./captureRuntimeClosure";
-import type { AutoMovieCaptureBrowserConfig } from "./productionConfiguration";
+import type { AutoMovieCaptureBrowserConfig } from "./hostBoundary";
 import { snapshotRuntimePackage } from "./runtimePackageSnapshot";
 
 const CAPTURE_INSTALL_RECEIPT_MAX_BYTES = 64 * 1024;
@@ -98,7 +98,7 @@ export type AutoMovieCaptureRuntimeClosureInspection =
 
 const configError = (): Error =>
   new Error(
-    'Invalid capture browser config. In automovie.config.ts choose exactly { source: "playwright-chromium" }, { source: "system-channel", channel: "chrome" | "msedge" }, or { source: "configured-executable", product: "chromium" | "chrome" | "msedge", executablePath: "<non-blank project-relative or absolute path>" }.',
+    'Invalid capture browser selection. The host boundary produces exactly { source: "playwright-chromium" }, { source: "system-channel", channel: "chrome" | "msedge" }, or { source: "configured-executable", product: "chromium" | "chrome" | "msedge", executablePath: "<non-blank project-relative or absolute path>" }.',
   );
 
 const exactKeys = (
@@ -1141,7 +1141,7 @@ export const launchCaptureBrowser = async (
       executable = openCaptureExecutable(executablePath);
     } catch {
       throw new Error(
-        `Configured capture executable "${executablePath}" is not a physical file. Correct automovie.config.ts or install that executable.`,
+        `Configured capture executable "${executablePath}" is not a physical file. Correct AUTOMOVIE_CAPTURE_BROWSER_EXECUTABLE or install that executable.`,
       );
     }
     product = config.product;

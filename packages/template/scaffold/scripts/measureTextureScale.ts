@@ -5,12 +5,18 @@ import {
   requireCurrentAutoMovieProjectState,
 } from "automovie";
 
-import config from "../automovie.config";
+import { readAutoMovieProjectProductionId } from "./projectIdentity";
 import {
   type IAutoMovieTextureScaleSubject,
   autoMovieTextureScaleLines,
   deriveAutoMovieTextureScaleReport,
 } from "./textureScaleReport";
+
+/** The project this invocation belongs to, found from the host's own seed. */
+const projectRoot = findAutoMovieProjectRoot(process.cwd());
+
+/** The production namespace that project declares in its own package manifest. */
+const productionId = readAutoMovieProjectProductionId(projectRoot);
 
 /**
  * Measure the texture scale of every model this build produced.
@@ -45,8 +51,8 @@ import {
  */
 const state = requireCurrentAutoMovieProjectState(
   loadAutoMovieProjectState({
-    root: findAutoMovieProjectRoot(process.cwd()),
-    productionId: config.productionId,
+    root: projectRoot,
+    productionId,
   }),
 );
 

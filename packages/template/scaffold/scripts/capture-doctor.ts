@@ -2,13 +2,13 @@ import { canonicalAutoMovieCaptureRuntimeIdentity } from "@automovie/production"
 import { createHash } from "node:crypto";
 import { PNG } from "pngjs";
 
-import config from "../automovie.config";
 import {
   inspectCaptureGraphics,
   inspectCurrentCaptureRuntimeClosure,
   launchCaptureBrowser,
 } from "./capture-browser";
 import { settleCaptureExecutableTouch } from "./captureExecutableSnapshot";
+import { readAutoMovieHostCaptureBrowser } from "./hostBoundary";
 
 interface CaptureDoctorFailure {
   error: unknown;
@@ -44,15 +44,15 @@ const preserveCleanupFailure = async (
 const SETTLE_ATTEMPTS = 4;
 const SETTLE_WAIT_MS = 2_000;
 
+const browser = readAutoMovieHostCaptureBrowser(process.env);
 const closure = inspectCurrentCaptureRuntimeClosure({
   projectRoot: process.cwd(),
-  config: config.capture.browser,
+  config: browser,
 });
 if (closure.status === "not-ready") throw new Error(closure.correction);
 closure.assertCurrent();
 const settled = await settleCaptureExecutableTouch({
-  acquire: () =>
-    launchCaptureBrowser(process.cwd(), config.capture.browser, closure),
+  acquire: () => launchCaptureBrowser(process.cwd(), browser, closure),
   attempts: SETTLE_ATTEMPTS,
   waitMs: SETTLE_WAIT_MS,
 });
