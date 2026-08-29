@@ -22,7 +22,6 @@ Frame capture defaults to the Chromium build pinned to this project's Playwright
 
 ```bash
 npm install
-npm test
 npm run lint:source
 ```
 

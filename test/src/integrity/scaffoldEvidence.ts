@@ -1000,22 +1000,11 @@ const validateInitialCompile = (
   return { correctness, evidence, uninstalled };
 };
 
-type GraphConsumer = "generated" | "reusable" | "restored";
-
-const assertGraphConsumer = (
-  result: IProcessResult,
-  consumer: GraphConsumer,
-): void => {
+const assertGraphConsumer = (result: IProcessResult): void => {
   if (result.status === 0) return;
-  const label =
-    consumer === "reusable"
-      ? "the reusable evidence package's structural graph canaries"
-      : consumer === "generated"
-        ? "the generated scaffold's graph consumer canary"
-        : "the restored generated consumer retained paid-probe state instead of the blank scaffold";
   throw new Error(
     [
-      `FAIL: ${label} failed.`,
+      "FAIL: the reusable evidence package's structural graph canaries failed.",
       ...result.output.split(/\r?\n/u).map((line) => ` | ${line}`),
     ].join("\n"),
   );
@@ -1131,20 +1120,8 @@ const main = (): void => {
     project: "packages/evidence/tsconfig.test.json",
     file: "packages/evidence/test/createAutoMovieEvidenceConfig.test.ts",
   });
-  assertGraphConsumer(packageGraphTests, "reusable");
+  assertGraphConsumer(packageGraphTests);
   report([" graph tests: reusable package canaries passed"]);
-
-  const scaffoldGraphTests = testGraph({
-    cwd: PROBE,
-    project: "tsconfig.json",
-    file: "test/scaffold.test.ts",
-    // `compile()` already type-checks this complete project. Run the consumer
-    // against the declared-but-uninstalled probe without asking ttsx to reject
-    // the external runtime packages a real generated project installs.
-    noCheck: true,
-  });
-  assertGraphConsumer(scaffoldGraphTests, "generated");
-  report([" graph tests: generated-project consumer passed"]);
   testInstructionSync();
   report([" instruction sync: local-docs consumer passed"]);
 
@@ -1169,14 +1146,6 @@ const main = (): void => {
     ]);
   }
   render();
-  const restoredScaffoldGraphTests = testGraph({
-    cwd: PROBE,
-    project: "tsconfig.json",
-    file: "test/scaffold.test.ts",
-    noCheck: true,
-  });
-  assertGraphConsumer(restoredScaffoldGraphTests, "restored");
-  report([" probe restore: fresh blank generated-project consumer passed"]);
   report([
     "",
     "PASS: the scaffold's production evidence graph is paid and its own lint rules hold over",

@@ -50,12 +50,7 @@ export const coverageCommandWiringDiagnostics = (
     diagnostics.push("test coverage does not use the single typed entry");
   if (occurrences(files.workflow, "fetch-depth: 0") !== 2)
     diagnostics.push("both CI checkouts must fetch the comparison base");
-  if (
-    occurrences(
-      files.workflow,
-      WORKFLOW_BASE_ENVIRONMENT,
-    ) !== 2
-  )
+  if (occurrences(files.workflow, WORKFLOW_BASE_ENVIRONMENT) !== 2)
     diagnostics.push("both CI lanes must pass the pull-request base");
   if (occurrences(files.workflow, "run: pnpm coverage") !== 2)
     diagnostics.push("both CI lanes must run the same coverage command");

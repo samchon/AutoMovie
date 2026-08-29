@@ -22,7 +22,7 @@ A complete round must satisfy all four rules:
 
 ## Review records belong to the procedure
 
-AutoMovie has no repository review service, finding ledger, approval state, or waiver store. A repository review record is the Git and pull-request chronology produced while following this skill. A generated production follows its shipped [production review procedure](../../../packages/template/scaffold/.agents/skills/production/review.md) instead; neither workflow invents a second product ledger.
+AutoMovie has no repository review service, finding ledger, approval state, or waiver store. A repository review record is the Git and pull-request chronology produced while following this skill. A generated production follows its shipped [production review procedure](../../../packages/template/scaffold/.agents/skills/review-verification/review.md) instead; neither workflow invents a second product ledger.
 
 Declare the exact branch, base and head, working-tree state, artifact revision, and file or rendered-output population the round reads. A conclusion applies only to that surface. A clean check, an empty finding set, elapsed time, or a judgment over one file never implies a wider approval.
 
@@ -76,7 +76,7 @@ A failed search proves a name was not found, not that a capability is absent, an
 Complete all four steps before writing that something is missing.
 
 1. Read the contract type's JSDoc. Deliberate exclusions are stated there ("the sun direction is an input, not a computation").
-2. Search the shipped authoring skill under `packages/template/scaffold/.agents/skills/production/` in the user's vocabulary rather than the implementation's. It teaches in a director's words (a curtain, a ridge, a reverberant room), so probing it with type names finds nothing even where the topic is covered.
+2. Search all four shipped authoring skills under `packages/template/scaffold/.agents/skills/{production-lifecycle,evidence-graph,source-authoring,review-verification}/` in the user's vocabulary rather than the implementation's. They teach in a director's words (a curtain, a ridge, a reverberant room), so probing them only with type names finds nothing even where the topic is covered.
 3. Check whether related fields already exist and, if they do, read why. Half a mechanism usually means the other half was deferred under another name.
 4. Confirm the probe. Verify how the target is actually spelled, count consumers by exported symbol rather than by module filename, and read checked-in source rather than a generated artifact.
 

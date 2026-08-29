@@ -198,12 +198,11 @@ const testOutcomeRefusals = (): void => {
     /scaffold owes the diagnostics/u,
   );
 
-  for (const consumer of ["reusable", "generated", "restored"] as const)
-    assert.throws(
-      () => contract.assertGraphConsumer(result("graph failed", 1), consumer),
-      /FAIL:/u,
-    );
-  contract.assertGraphConsumer(result(""), "reusable");
+  assert.throws(
+    () => contract.assertGraphConsumer(result("graph failed", 1)),
+    /FAIL:/u,
+  );
+  contract.assertGraphConsumer(result(""));
 
   assert.throws(
     () =>

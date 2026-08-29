@@ -10,7 +10,6 @@ overrides:
 catalogs:
   samchon:
     typia: &typia ^13.2.0
-    "@typia/mcp": *typia
     "@nestia/e2e": ^12.1.0
   typescript:
     ttsc: &ttsc ^0.28.1
@@ -24,8 +23,6 @@ catalogs:
     "@types/three": *three
   gltf:
     "@gltf-transform/core": ^4.1.1
-  modelcontextprotocol:
-    "@modelcontextprotocol/sdk": ^1.29.0
   vite:
     vite: ^5.4.10
     esbuild: ^0.21.5

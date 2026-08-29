@@ -7,8 +7,8 @@
   "scripts": {
     "build": "ttsc -p tsconfig.json --noEmit",
     "start": "ttsx -P tsconfig.json src/index.ts",
-    "start:fast": "ttsx -P tsconfig.json src/index.ts --exclude test_lint_plugin_walking_skeleton test_cli_ownership_guard",
-    "start:subprocess": "ttsx -P tsconfig.json src/index.ts --include test_lint_plugin_walking_skeleton test_cli_ownership_guard",
+    "start:fast": "ttsx -P tsconfig.json src/index.ts --exclude test_lint_plugin_walking_skeleton",
+    "start:subprocess": "ttsx -P tsconfig.json src/index.ts --include test_lint_plugin_walking_skeleton",
     "consumer:check": "ttsx -P tsconfig.json src/index.ts --include test_workspace_public_api_consumers",
     "coverage": "ttsx -P tsconfig.json src/coverage/runCoverage.ts"
   },
@@ -28,7 +28,6 @@
     "@automovie/render": "workspace:^",
     "@automovie/viewer": "workspace:^",
     "@huggingface/transformers": "catalog:media",
-    "@modelcontextprotocol/sdk": "catalog:modelcontextprotocol",
     "h264-mp4-encoder": "catalog:media",
     "kokoro-js": "catalog:media",
     "libopus-wasm": "catalog:media",
