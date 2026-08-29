@@ -97,6 +97,12 @@ export type AutoMovieProductionRepaintCommand =
   | { kind: "selection"; shot: string; attemptId: string }
   | { kind: "reversal"; shot: string; attemptId: string };
 
+/** The proxy and final tiers one production renders at. */
+export interface IAutoMovieProductionRenderTiers {
+  proxy: IAutoMovieProductionRenderTier & { kind: "proxy" };
+  final: IAutoMovieProductionRenderTier & { kind: "final" };
+}
+
 /**
  * The review and delivery tiers a production renders at until it declares its
  * own pair on its design record.
@@ -110,12 +116,6 @@ export const AUTOMOVIE_SHIPPED_RENDER_TIERS = {
   proxy: { kind: "proxy", resolutionScale: 0.5, frameStep: 2 },
   final: { kind: "final", resolutionScale: 1, frameStep: 1 },
 } as const satisfies IAutoMovieProductionRenderTiers;
-
-/** The proxy and final tiers one production renders at. */
-export interface IAutoMovieProductionRenderTiers {
-  proxy: IAutoMovieProductionRenderTier & { kind: "proxy" };
-  final: IAutoMovieProductionRenderTier & { kind: "final" };
-}
 
 /**
  * Read the production's own delivery tiers, or the shipped pair when it

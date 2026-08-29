@@ -336,18 +336,13 @@ const readAssetAuthorization = (
 const readCompiledAssetClosure = (
   project: IPhysicalDirectory,
   productionId: string,
-  generatedRootValue: unknown,
+  generatedRoot: string,
 ): ICompiledAssetClosure => {
-  if (
-    typeof generatedRootValue !== "string" ||
-    generatedRootValue.trim().length === 0 ||
-    productionId.trim().length === 0 ||
-    productionId !== productionId.trim()
-  )
+  if (productionId.trim().length === 0 || productionId !== productionId.trim())
     throw new Error("invalid compiled asset closure owner");
   const modelsRoot = path.resolve(
     project.real,
-    generatedRootValue,
+    generatedRoot,
     encodePathSegment(productionId),
     "models",
   );
