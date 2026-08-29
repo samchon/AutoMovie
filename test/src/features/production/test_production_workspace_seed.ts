@@ -32,63 +32,107 @@ const preserveWorkspaceSeedFixtureCleanup = (
  * The workspace a host-owned seed resolves to, and the refusal when there is
  * none.
  *
- * Every production entry point starts here: the caller hands in whatever path it happens
- * to hold -- a directory, a file inside the project, or nothing at all -- and
- * this walk decides which immutable workspace the session belongs to. Its
- * branches had no test of their own, because every caller in the suite passed a
- * root that already carried a marker.
+ * Every production entry point starts here: the caller hands in whatever path
+ * it happens to hold -- a directory, a file inside the project, or nothing at
+ * all -- and this walk decides which immutable workspace the session belongs
+ * to. Its branches had no test of their own, because every caller in the suite
+ * passed a root that already carried a marker.
+ *
+ * A project is recognized by markers it already has for reasons of its own: the
+ * `package.json` that names it and the `automovie.config.ts` that carries its
+ * authored delivery decisions. Both are required, which is what keeps a seed
+ * inside an ordinary Node package from resolving to that package and having a
+ * production namespace created underneath it. The legacy
+ * `automovie/manifest.json` is deliberately not a marker any more: import input
+ * is not a shape a current project is asked to carry, so discovery must not
+ * wait for a state tree to exist.
  *
  * Scenarios:
  *
- * 1. A directory carrying `automovie.config.ts` resolves to itself, and so does
- *    one carrying only `automovie/manifest.json`.
- * 2. A seed that is a FILE resolves to the directory holding it, which is what a
- *    host passing `__filename` relies on.
- * 3. A seed nested below the marker walks up to the nearest one, and a nested
- *    marker wins over its ancestor.
- * 4. A seed with no marker above it is refused by name, with the two ways to make
- *    it resolvable stated in the message rather than implied.
+ * 1. A directory carrying both markers resolves to itself.
+ * 2. A directory carrying only `package.json`, one carrying only
+ *    `automovie.config.ts`, and one carrying only the legacy
+ *    `automovie/manifest.json` are each walked past rather than resolved.
+ * 3. A seed that is a FILE resolves to the directory holding it, which is what
+ *    a host passing `__filename` relies on.
+ * 4. A seed nested below a project walks up to the nearest one, and a nested
+ *    project wins over its ancestor.
+ * 5. A seed with no project above it is refused by name, with both markers
+ *    stated in the message rather than implied.
  */
 export const test_production_workspace_seed = (): void => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "automovie-seed-"));
   let workspaceSeedFailure: IWorkspaceSeedFixtureFailure | undefined;
   try {
-    const configured = path.join(root, "configured");
-    const manifested = path.join(root, "manifested");
-    const nested = path.join(configured, "src", "shots");
-    const inner = path.join(configured, "inner");
+    /** Give one directory the complete generated-project marker pair. */
+    const project = (directory: string): string => {
+      fs.mkdirSync(directory, { recursive: true });
+      fs.writeFileSync(path.join(directory, "package.json"), '{ "name": "p" }');
+      fs.writeFileSync(
+        path.join(directory, "automovie.config.ts"),
+        "export default {};",
+      );
+      return directory;
+    };
+    const complete = project(path.join(root, "complete"));
+    const nested = path.join(complete, "src", "shots");
+    const inner = project(path.join(complete, "inner"));
+    const packageOnly = path.join(root, "package-only");
+    const configOnly = path.join(root, "config-only");
+    const legacyOnly = path.join(root, "legacy-only");
     fs.mkdirSync(nested, { recursive: true });
-    fs.mkdirSync(path.join(manifested, "automovie"), { recursive: true });
-    fs.mkdirSync(inner, { recursive: true });
+    fs.mkdirSync(packageOnly, { recursive: true });
+    fs.mkdirSync(configOnly, { recursive: true });
+    fs.mkdirSync(path.join(legacyOnly, "automovie"), { recursive: true });
+    fs.writeFileSync(path.join(packageOnly, "package.json"), '{ "name": "p" }');
     fs.writeFileSync(
-      path.join(configured, "automovie.config.ts"),
-      "export {};",
+      path.join(configOnly, "automovie.config.ts"),
+      "export default {};",
     );
     fs.writeFileSync(
-      path.join(manifested, "automovie", "manifest.json"),
+      path.join(legacyOnly, "automovie", "manifest.json"),
       "{}\n",
     );
-    fs.writeFileSync(path.join(inner, "automovie.config.ts"), "export {};");
     const seedFile = path.join(nested, "opening.ts");
     fs.writeFileSync(seedFile, "export {};");
     TestValidator.equals(
-      "a host seed resolves to the nearest workspace marker above it",
+      "a host seed resolves to the nearest complete project above it",
       namedFacts([
         [
-          "configDirectoryResolvesToItself",
-          () => findAutoMovieProjectRoot(configured) === configured,
+          "completeProjectResolvesToItself",
+          () => findAutoMovieProjectRoot(complete) === complete,
         ],
         [
-          "manifestDirectoryResolvesToItself",
-          () => findAutoMovieProjectRoot(manifested) === manifested,
+          "packageAloneIsNotAProject",
+          () =>
+            throwsError(
+              () => findAutoMovieProjectRoot(packageOnly),
+              "No AutoMovie project was found",
+            ),
+        ],
+        [
+          "configAloneIsNotAProject",
+          () =>
+            throwsError(
+              () => findAutoMovieProjectRoot(configOnly),
+              "No AutoMovie project was found",
+            ),
+        ],
+        [
+          "legacyStateTreeIsNotAProject",
+          () =>
+            throwsError(
+              () => findAutoMovieProjectRoot(legacyOnly),
+              "No AutoMovie project was found",
+            ),
         ],
         [
           "fileSeedResolvesToItsWorkspace",
-          () => findAutoMovieProjectRoot(seedFile) === configured,
+          () => findAutoMovieProjectRoot(seedFile) === complete,
         ],
         [
           "nestedDirectoryWalksUp",
-          () => findAutoMovieProjectRoot(nested) === configured,
+          () => findAutoMovieProjectRoot(nested) === complete,
         ],
         [
           "nearestMarkerWinsOverAncestor",
@@ -96,21 +140,23 @@ export const test_production_workspace_seed = (): void => {
         ],
       ]),
       {
-        configDirectoryResolvesToItself: true,
-        manifestDirectoryResolvesToItself: true,
+        completeProjectResolvesToItself: true,
+        packageAloneIsNotAProject: true,
+        configAloneIsNotAProject: true,
+        legacyStateTreeIsNotAProject: true,
         fileSeedResolvesToItsWorkspace: true,
         nestedDirectoryWalksUp: true,
         nearestMarkerWinsOverAncestor: true,
       },
     );
     TestValidator.predicate(
-      "a seed with no workspace above it is refused with both remedies named",
+      "a seed with no project above it is refused with both markers named",
       throwsError(
         () => findAutoMovieProjectRoot(path.parse(root).root),
         [
-          "No AutoMovie workspace marker was found",
+          "No AutoMovie project was found",
+          "package.json",
           "automovie.config.ts",
-          "automovie/manifest.json",
         ],
       ),
     );

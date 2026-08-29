@@ -14,6 +14,10 @@ import { namedFacts } from "../internal/predicates";
 export const test_production_diagnostic_catalog = (): void => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "automovie-catalog-"));
   fs.writeFileSync(
+    path.join(root, "package.json"),
+    '{ "name": "catalog-fixture" }\n',
+  );
+  fs.writeFileSync(
     path.join(root, "automovie.config.ts"),
     "export default {};\n",
   );

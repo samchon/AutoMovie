@@ -51,7 +51,16 @@ export const test_production_context_selection = (): void => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "automovie-context-"));
   let contextFailure: IContextFixtureFailure | undefined;
   try {
-    fs.writeFileSync(path.join(root, "automovie.config.ts"), "export {};");
+    // The walk that resolves a host seed reads the project's own markers, so
+    // the fixture carries the same pair a generated project ships.
+    fs.writeFileSync(
+      path.join(root, "package.json"),
+      '{ "name": "context-fixture" }',
+    );
+    fs.writeFileSync(
+      path.join(root, "automovie.config.ts"),
+      "export default {};",
+    );
     TestValidator.equals(
       "a session resolves one production, or says exactly why it cannot",
       namedFacts([

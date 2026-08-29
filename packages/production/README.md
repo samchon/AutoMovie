@@ -27,7 +27,7 @@ const status = inspectAutoMovieProduction(
 );
 ```
 
-`projectRoot` is a seed rather than an answer. Every entry point walks upward once to the nearest `automovie.config.ts` or `automovie/manifest.json` and fixes that workspace for the call. `productionId` selects which production inside it; capture also names its production explicitly, so one process can serve two sibling productions without cache pollution.
+`projectRoot` is a seed rather than an answer. Every entry point walks upward once to the nearest directory carrying both `package.json` and `automovie.config.ts`, which is what a generated project already has, and fixes that workspace for the call. Requiring both is what keeps a seed inside an ordinary Node package from resolving to that package; the legacy `automovie/manifest.json` is no longer a marker, because import input is not a shape a current project is asked to carry. `productionId` selects which production inside it; capture also names its production explicitly, so one process can serve two sibling productions without cache pollution.
 
 ## Evidence provenance
 
