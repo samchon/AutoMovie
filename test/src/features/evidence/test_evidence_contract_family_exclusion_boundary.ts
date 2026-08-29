@@ -642,6 +642,10 @@ const writeLintProject = (root: string, claims: IEvidenceClaim[]): void => {
  * 3. Excusing the second unit's representation-contract principle with an
  *    exclusion of that same target is refused where it is written and leaves
  *    the principle unanswered, even though the sibling unit still answers it.
+ *    The unanswered count names the model principle document's own item total,
+ *    so adding or retiring an item there turns this red; re-pin the count from
+ *    the reported diagnostic after rereading the changed item against both
+ *    fixture units, never from the item list alone.
  * 4. Excusing the reference-scale obligation the same way is refused as well,
  *    so the obligation family shares the principle's closed exclusion while
  *    differing in its per-host checklist.
