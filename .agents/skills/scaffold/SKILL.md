@@ -1,25 +1,25 @@
 ---
 name: scaffold
-description: Defines how packages/template/scaffold is maintained as the authoring harness every generated project inherits verbatim, including the shipped production skill, the reserved discovery, obligation, and principle inventory, and the negative-probe and generated-consumer verification gates. Use before editing anything under packages/template/scaffold, and to reach the production authoring procedure when authoring production content inside this repository.
+description: Defines how packages/template/scaffold is maintained as the self-contained authoring harness every generated project inherits verbatim, including its four trigger-partitioned production skills, local contract inventory, and negative-probe and generated-consumer verification gates. Use before editing anything under packages/template/scaffold, and to reach the applicable production authoring procedure when authoring production content inside this repository.
 ---
 
 # Maintaining the scaffold
 
 `packages/template/scaffold` is the empty authoring harness `automovie` stamps out. A completed regression film fixture lives outside it so generated projects inherit capability and contracts, never another production's content. Treat every scaffold change as a generated-project API change.
 
-## The authoring procedure lives with the production
+## The authoring procedures live with the production
 
-The procedure that authors a production ships inside the scaffold at `packages/template/scaffold/.agents/skills/production/`. A generated project therefore holds its own authoring doctrine, and this repository holds exactly one copy of it.
+The procedures that author a production ship inside the scaffold as `production-lifecycle`, `evidence-graph`, `source-authoring`, and `review-verification`. A generated project therefore holds its own trigger-partitioned authoring doctrine, and this repository holds exactly one copy of each concern.
 
-Read [the shipped production skill](../../../packages/template/scaffold/.agents/skills/production/SKILL.md) before authoring or reviewing production content anywhere, including a fixture or an experimental sandbox inside this repository. This maintenance skill does not restate it.
+Read the applicable shipped [production lifecycle](../../../packages/template/scaffold/.agents/skills/production-lifecycle/SKILL.md), [evidence graph](../../../packages/template/scaffold/.agents/skills/evidence-graph/SKILL.md), [source authoring](../../../packages/template/scaffold/.agents/skills/source-authoring/SKILL.md), and [review verification](../../../packages/template/scaffold/.agents/skills/review-verification/SKILL.md) skills before authoring or reviewing production content anywhere, including a fixture or an experimental sandbox inside this repository. This maintenance skill does not restate them.
 
 Editing any document under that directory changes what every future generated project is instructed to do. Apply the [documentation skill](../documentation/SKILL.md) writing rules, verify the links resolve from a generated project rather than from this repository, and run the verification gates below.
 
 ## The shared contract inventory
 
-`packages/template/docs/{discovery,obligations,principles}/{core,design,story,delivery}` and `packages/template/docs/upstream/{design,story,delivery}` are an exact reserved inventory published by `@automovie/template`. The physical family/domain boundary is part of the contract: `core` holds cross-shape foundations, `design` holds maps, objects, materials, instances, motion, systems, and building space work, `story` holds the film ladder, and `delivery` holds briefs, shots, and release inputs. Object, map, motion, interior, and exterior productions share the design domain but remain separate active branches, so the directory partition must never collapse them into a video-only or undifferentiated design checklist. `@automovie/evidence` pins every family/domain filename and ordered H2 anchor, so adding, removing, renaming, moving, or reordering a shared H2 without the matching wiring fails the graph while it loads.
+`packages/template/scaffold/docs/{discovery,obligations,principles}/{core,design,story,delivery}` and `packages/template/scaffold/docs/upstream/{design,story,delivery}` are an exact reserved inventory shipped inside the scaffold by `@automovie/template`. The physical family/domain boundary is part of the contract: `core` holds cross-shape foundations, `design` holds maps, objects, materials, instances, motion, systems, and building space work, `story` holds the film ladder, and `delivery` holds briefs, shots, and release inputs. Object, map, motion, interior, and exterior productions share the design domain but remain separate active branches, so the directory partition must never collapse them into a video-only or undifferentiated design checklist. `@automovie/evidence` pins every family/domain filename and ordered H2 anchor, so adding, removing, renaming, moving, or reordering a shared H2 without the matching wiring fails the graph while it loads.
 
-Changing that inventory means changing the target document, `EXPECTED_CONTRACTS`, the claim or reference that selects it, the package test's canaries, the paid population in `internals/scaffold-evidence-gate.mjs` whenever that probe's shape selects the target, and the routing guidance in `docs/README.md` and the shipped skill, in one coherent change. A new target family also joins the reserved directory set and the contract walk.
+Changing that inventory means changing the target document, `EXPECTED_CONTRACTS`, the claim or reference that selects it, the package test's canaries, the paid population in `test/src/integrity/scaffoldEvidence.ts` whenever that probe's shape selects the target, and the routing guidance in `docs/README.md` and the shipped skill, in one coherent change. A new target family also joins the reserved directory set and the contract walk.
 
 ## Why maps is a separate design branch
 
@@ -40,7 +40,7 @@ Retire an item when it is wrong, absorbed, or inapplicable. Inconvenience to one
 After topology, contract, or citation changes, run the scaffold evidence gate. Falsify each new edge or refusal with a disposable negative probe, restore it, and require the normal graph to pass. Build and test the repository, generate a fresh scaffold from packed packages, and prove that its source lint and canaries pass while production design and compile refuse the unselected blank state. Compile the repository-only completed fixture to preserve production regression coverage. Measure every changed executable scaffold source at 100% statements, branches, functions, and lines.
 
 Instruction synchronization is an overwrite contract.
-In a fresh generated project, select representative production shapes through the tracked `productionEvidence.mjs`, run `npm run sync`, and prove that stale `AGENTS.md`, `CLAUDE.md`, and `.agents/skills` content disappears while tracked package, contract, document, and source bytes do not change.
+In a fresh generated project, select representative production shapes through the tracked `lint.config.ts`, run `npm run sync`, and prove that stale `AGENTS.md`, `CLAUDE.md`, and `.agents/skills` content disappears while tracked package, contract, document, and source bytes do not change.
 Run sync twice and require byte-identical generated instructions.
 Verify that the root `AGENTS.md` names only the selected shape and exact active owners, that `CLAUDE.md` contains only `@AGENTS.md`, and that the generated instruction paths are ignored.
 Perform this check from the fresh project root so the expected Codex entry point and Claude Code import resolve there; a parent checkout's `AGENTS.md` is not evidence that the generated project's instructions load.

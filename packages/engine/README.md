@@ -176,6 +176,65 @@ automovie의 **결정론적 엔진**. `@automovie/interface`의 AST를 받아 �
 | `architecture/` | 코드 저작 건축의 검증과 lowering: 모든 요소·공간이 정확히 한 건물 단위에 속하는 총 소유권, 공간 질의(포함·인접·연결자·지지면·노드·소속 건물), 설계와 관찰을 분리해 유지하는 도면 근거, phase별 lifecycle snapshot과 대안 비교·변경 영향·content digest를 stable id 위에서 계산하는 설계 계보, 적층을 호스트 측정선 위에 놓아 전체 치수·개구부 reveal·접합 연속성을 내고 층 충돌과 마감 누락·중복을 가려내는 재료 구성, 저자가 모듈 법칙을 쓰고 엔진이 클리핑·개구부 회피·절단 분류·이웃 측정·시드 변주·수량과 손실을 맡는 결정적 표면 패턴 |
 | `render/` | 렌더 예산 측정과 의미 증거: 장면 인벤토리, 초과 소유자와 되돌아가는 길을 함께 내는 예산 판정, 순서에 의존하지 않는 시맨틱 마스크, 방 가시성 힌트, 대상 지문 |
 
+## 직접 조합하는 공개 callable
+
+다음 callable은 테스트 편의를 위한 노출이 아니라, 라이브러리 소비자가 엔진의
+결정론적 중간 단계와 검증기를 직접 조합할 수 있도록 유지하는 공개 표면이다.
+
+| Callable | 직접 소비 목적 |
+|---|---|
+| `autoMovieDewPoint` | 환경 분석기가 쓰는 온도·습도 기반 이슬점 계산 |
+| `builtBoundaryWallCut` | 건축 lowering 결과에서 경계벽 절단면 조회 |
+| `builtConnectorGeometry` | 계단·램프·승강기 연결부의 생성 기하 조회 |
+| `builtConnectorCarriagePlacements` | 연결부 안 운반체 배치의 결정론적 조회 |
+| `builtConnectorSectionAt` | 연결부 진행률에 따른 단면 실측 |
+| `builtEnvironmentSupportSweep` | 지지면과 건축 요소 사이의 간섭 sweep |
+| `builtEnvironmentPlacementOverlapSweep` | 배치된 환경 요소 사이의 중첩 sweep |
+| `designLineageDecisionComparisons` | 설계 lineage 두 상태의 결정 비교 |
+| `designLineageDigest` | 설계 lineage의 안정적 content digest |
+| `flattenHead` | 보존된 face 계약을 평탄화하는 호환 경계 |
+| `morphFace` | 보존된 face morph 계약의 엔진 실행 경계 |
+| `autoMovieSectionPlanesKeepPoint` | viewer와 같은 절단면 포함 판정의 headless 사용 |
+| `forgeCast` | 등록 archetype으로 stand-in cast를 직접 생성 |
+| `playbackFrameSamples` | 고정 FPS 재생 구간의 프레임 표본 생성 |
+| `readSlateContext` | slate 메타데이터의 정규화된 문맥 조회 |
+| `reviewShot` | shot review 입력을 결정론적으로 정규화 |
+| `reviewVisualRead` | visual-read review 입력을 결정론적으로 정규화 |
+| `scriptAncestors` | script graph에서 안정적인 조상 순회 |
+| `locateOnBeat` | beat 내부 위치를 시간·공간 좌표로 해석 |
+| `autoMovieStoryInterval` | story 범위를 정규화된 시간 구간으로 변환 |
+| `fluidStateDigest` | 유체 상태의 재현 가능한 digest |
+| `tessellateToMesh` | parametric geometry를 검증 가능한 mesh로 tessellate |
+| `resolveAffordanceSeat` | 착석 affordance의 지지 자세 해석 |
+| `pointSegmentDistance` | 공간 검증기가 공유하는 점-선분 거리 계산 |
+| `motionToClip` | motion 계약을 재생 가능한 clip으로 변환 |
+| `followPathMotion` | 경로 추종 motion을 결정론적으로 생성 |
+| `resolveActorWorldFrame` | actor의 world-space frame 해석 |
+| `resolveBoneTarget` | rig target을 bone-local 목표로 해석 |
+| `mergePoses` | 복수 pose channel의 결정론적 합성 |
+| `autoMovieRenderTargetAssets` | render target이 실제로 요구하는 asset 집합 조회 |
+| `autoMovieRenderTargetSummary` | render target의 정규화된 요약 생성 |
+| `autoMovieRoomVisibility` | room 단위 가시성 집합 계산 |
+| `resolveAutoMovieSemanticMask` | semantic id를 안정적인 mask 값으로 해석 |
+| `createSpringState` | spring simulation의 명시적 초기 상태 생성 |
+| `restRelativeConstraint` | rest pose 상대 constraint 계산 |
+| `serviceSegmentBounds` | 건물 service segment의 실측 bounds 계산 |
+| `serviceEnvelopeObstructions` | service envelope의 장애물 검출 |
+| `serviceNetworkSchematic` | service network의 안정적인 schematic 생성 |
+| `serviceAnalysisSupport` | service 분석 결과의 지지 근거 계산 |
+| `plantingStateDigest` | 식재 simulation 상태의 안정적 digest |
+| `sampleSoftBody` | 연성체 상태를 지정 시간에서 표본화 |
+| `softBodyStateDigest` | 연성체 상태의 안정적 digest |
+| `affordanceSupportContacts` | affordance가 요구하는 지지 접점 계산 |
+| `surfaceContains` | standable surface의 점 포함 판정 |
+| `isWalkable` | surface의 보행 가능성 판정 |
+| `supportContactsFor` | 배치물의 지지 접점 해석 |
+| `validateExpressionResult` | expression 결과 계약 검증 |
+| `detectFreeFall` | 지지 없는 동역학 상태 검출 |
+| `validateMeshTopology` | mesh manifold·winding·boundary 검증 |
+| `validatePoseResult` | pose 결과 계약 검증 |
+| `detectSupportToppling` | 지지 다각형 밖 무게중심의 전도 검출 |
+
 ## 검증 티어 (현재 구현)
 
 - **Tier 1 (range):** 값 범위. blendshape·머티리얼 계수 ∈ [0,1], 프리미티브 치수 > 0 등. (인터페이스가 러프 타입이라 엔진이 범위를 강제)

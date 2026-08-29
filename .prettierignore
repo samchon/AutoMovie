@@ -3,5 +3,4 @@ experimental/**
 **/lib/**
 **/dist/**
 .wiki/**
-packages/mcp/src/guides/AutoMovieGuideConstant.ts
 **/*.json

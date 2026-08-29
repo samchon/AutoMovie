@@ -147,12 +147,12 @@ interface IMarkdownDocument {
 /**
  * Read one generated project's graph-backed authoring identity synchronously.
  *
- * The caller supplies the same tracked `productionEvidence` object imported by
- * `lint.config.mjs`. The reader refuses a declaration for another root, derives
- * the shape-aware manifest through the evidence factory, then reads only the
- * active design owners and flat local contracts that manifest governs. Source
- * lineage and physical source paths come from the manifest rather than from a
- * second model-to-source table.
+ * The caller supplies the same tracked `productionEvidence` object exported by
+ * the generated project's typed `lint.config.ts`. The reader refuses a
+ * declaration for another root, derives the shape-aware manifest through the
+ * evidence factory, then reads only the active design owners and flat local
+ * contracts that manifest governs. Source lineage and physical source paths
+ * come from the manifest rather than from a second model-to-source table.
  *
  * @evidence requirements/production-evidence/README.md#production-evidence-requirements Implements a reusable inspection of the generated project's declared evidence identity.
  * @evidence requirements/production-evidence/graph.md#agent-production-evidence-shared-contract Exposes shared bindings and production-local targets together without copying either inventory.

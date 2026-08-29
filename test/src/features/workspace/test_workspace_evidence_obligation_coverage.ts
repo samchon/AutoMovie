@@ -1,13 +1,11 @@
 import { TestValidator } from "@nestia/e2e";
-import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
+import { runContractOwnership } from "../../integrity/contractOwnership";
 import { namedFacts } from "../internal/predicates";
 
-const ROOT = path.resolve(__dirname, "../../../..");
-const GUARD = path.join(ROOT, "internals", "contract-ownership.mjs");
 const SPECIFICATION =
   "specifications/example/partial-coverage.md#spec-partial-coverage";
 
@@ -38,18 +36,22 @@ const invoke = (
   root: string,
   command: "check" | "initialize",
   layer?: string,
-) =>
-  spawnSync(
-    process.execPath,
+): { status: number; stderr: string; stdout: string } => {
+  const stdout: string[] = [];
+  const stderr: string[] = [];
+  const status = runContractOwnership(
     [
-      GUARD,
       command,
       "--root",
       root,
       ...(layer === undefined ? [] : ["--layer", layer]),
     ],
-    { encoding: "utf8" },
+    root,
+    { write: (message) => stdout.push(message) },
+    { write: (message) => stderr.push(message) },
   );
+  return { status, stderr: stderr.join(""), stdout: stdout.join("") };
+};
 
 /** Replace one initialized legacy unit with an obligation declaration. */
 const declareSpecification = (

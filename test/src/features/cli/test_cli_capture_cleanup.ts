@@ -1,11 +1,18 @@
 import { TestValidator } from "@nestia/e2e";
+import { spawnSync } from "node:child_process";
 import { createRequire } from "node:module";
 import path from "node:path";
+import { pathToFileURL } from "node:url";
+import { tsImport } from "tsx/esm/api";
 
 import { namedFacts } from "../internal/predicates";
 
-/** Repository root, four levels above `test/src/features/cli`. */
-const ROOT = path.resolve(__dirname, "..", "..", "..", "..");
+interface IEncoderCleanupModule {
+  preserveProductionEncoderCleanup(
+    failure: { error: unknown } | undefined,
+    resources: readonly { resource: string; cleanup: () => unknown }[],
+  ): void;
+}
 
 const aggregateContainsExactly = (
   error: unknown,
@@ -24,22 +31,20 @@ interface IEncoderCleanupCapture {
  * The shipped encoder cleanup helper retains the operation failure and every
  * release failure in deterministic resource order.
  */
-export const test_cli_capture_cleanup = (): void => {
-  const helper = createRequire(__filename)(
-    path.join(
-      ROOT,
-      "packages",
-      "template",
-      "scaffold",
-      "scripts",
-      "preserveProductionEncoderCleanup.cjs",
-    ),
-  ) as {
-    preserveProductionEncoderCleanup: (
-      failure: { error: unknown } | undefined,
-      resources: readonly { resource: string; cleanup: () => unknown }[],
-    ) => void;
-  };
+const CHILD_ENV = "AUTOMOVIE_CAPTURE_CLEANUP_CHILD";
+
+const assertCaptureCleanup = async (): Promise<void> => {
+  const source = path.resolve(
+    __dirname,
+    "../../../../packages/template/scaffold/scripts/preserveProductionEncoderCleanup.ts",
+  );
+  const { preserveProductionEncoderCleanup } = (await tsImport(
+    pathToFileURL(source).href,
+    {
+      parentURL: pathToFileURL(__filename).href,
+      tsconfig: false,
+    },
+  )) as IEncoderCleanupModule;
   const primaryFailure = new Error("encoder primary failure");
   const firstCleanupFailure = new Error("first encoder cleanup failure");
   const secondCleanupFailure = new Error("second encoder cleanup failure");
@@ -50,7 +55,7 @@ export const test_cli_capture_cleanup = (): void => {
     const order: number[] = [];
     let caught: unknown;
     try {
-      helper.preserveProductionEncoderCleanup(
+      preserveProductionEncoderCleanup(
         failure,
         [0, 1].map((index) => ({
           resource: `encoder-${index}`,
@@ -126,3 +131,27 @@ export const test_cli_capture_cleanup = (): void => {
     },
   );
 };
+
+/** Exercise the shipped typed helper through a fresh TypeScript consumer. */
+export const test_cli_capture_cleanup = (): void => {
+  const childEnvironment = { ...process.env };
+  delete childEnvironment.NODE_OPTIONS;
+  const child = spawnSync(
+    process.execPath,
+    [createRequire(__filename).resolve("tsx/cli"), __filename],
+    {
+      encoding: "utf8",
+      env: { ...childEnvironment, [CHILD_ENV]: "1" },
+    },
+  );
+  if (child.status !== 0)
+    throw new Error(
+      `capture-cleanup typed consumer failed (${String(child.status)}):\n${child.stdout}${child.stderr}`,
+    );
+};
+
+if (process.env[CHILD_ENV] === "1")
+  void assertCaptureCleanup().catch((error: unknown) => {
+    console.error(error);
+    process.exitCode = 1;
+  });

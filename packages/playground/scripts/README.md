@@ -12,15 +12,8 @@ All commands run from `packages/playground` (or via `pnpm --filter
 `tsconfig.scripts.json` owns the root `scripts/*.ts` production entries and
 their shared TypeScript support. The playground `build` checks this Node/DOM
 program before Vite builds the separate browser `src` program, so workspace API
-drift fails the normal package and repository build even though the `.cjs`
-launchers still use esbuild for runtime bundling.
-
-Production `.mjs` utilities such as `build-human.mjs`, `capture-shots.mjs`, and
-`capture-head.mjs` run directly in Node and remain outside this TypeScript-only
-program. MakeHuman/model-fitting utilities under `scripts/mh/**` keep their
-separate experimental boundary. Add every new production `.ts` launcher entry
-at the scripts root so the existing `scripts/*.ts` boundary picks it up
-automatically.
+drift fails the normal package and repository build. Every maintained script is
+a typed entry under `scripts/*.ts`, which this boundary picks up automatically.
 
 ## Models (`.glb`)
 
@@ -60,7 +53,7 @@ pnpm shots shadowbox   # only shots whose output path matches "shadowbox"
 ```
 
 Overrides via env: `CHROME=/path/to/chrome` (binary), `BASE=http://host:port`
-(server). The shot list lives at the top of `capture-shots.mjs`. Add a row
+(server). The shot list lives at the top of `capture-shots.ts`. Add a row
 `[page, query, durationSeconds, frameCount, width, height, outPath, fps]` to
 capture a new clip. Encoding uses `h264-mp4-encoder` (wasm) + `pngjs`.
 
@@ -107,19 +100,3 @@ frame paths, encoded MP4 path, and a pixel probe for sampled dissolve frames.
 pnpm render:sequence
 pnpm render:sequence -- --fps 12 --out .shots/_render-see/film-sequence.mp4
 ```
-
-## Head screenshots (`.png`)
-
-The head editor needs two capture modes across many angles:
-
-- `model`: canvas only, with the UI hidden, for socket and form inspection.
-- `overlay`: viewport capture with the reference sheet alpha blended over it.
-
-Run:
-
-```bash
-pnpm shots:head
-```
-
-Outputs overwrite the current cycle in `.shots/head/model/`,
-`.shots/head/overlay/`, and `.shots/head-latest.png`.

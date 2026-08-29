@@ -1,11 +1,22 @@
 import { TestValidator } from "@nestia/e2e";
+import { spawnSync } from "node:child_process";
 import { createRequire } from "node:module";
 import path from "node:path";
+import { pathToFileURL } from "node:url";
+import { tsImport } from "tsx/esm/api";
 
 import { namedFacts } from "../internal/predicates";
 
-/** Repository root, four levels above `test/src/features/cli`. */
-const ROOT = path.resolve(__dirname, "..", "..", "..", "..");
+interface IKokoroRuntimeOverrideModule {
+  withKokoroRuntimeOverrides<Output>(
+    overrides: readonly {
+      resource: string;
+      install: () => unknown;
+      restore: () => unknown;
+    }[],
+    operation: () => Output | Promise<Output>,
+  ): Promise<Output>;
+}
 
 interface IKokoroOverrideCapture {
   caught: unknown;
@@ -37,26 +48,20 @@ const aggregateContainsExactly = (
  * 5. An operation failure followed by restoration failures is aggregated with the
  *    primary failure first.
  */
-export const test_cli_kokoro_runtime_overrides = async (): Promise<void> => {
-  const helper = createRequire(__filename)(
-    path.join(
-      ROOT,
-      "packages",
-      "template",
-      "scaffold",
-      "scripts",
-      "withKokoroRuntimeOverrides.cjs",
-    ),
-  ) as {
-    withKokoroRuntimeOverrides: <Output>(
-      overrides: readonly {
-        resource: string;
-        install: () => unknown;
-        restore: () => unknown;
-      }[],
-      operation: () => Output | Promise<Output>,
-    ) => Promise<Output>;
-  };
+const CHILD_ENV = "AUTOMOVIE_KOKORO_OVERRIDE_CHILD";
+
+const assertKokoroRuntimeOverrides = async (): Promise<void> => {
+  const source = path.resolve(
+    __dirname,
+    "../../../../packages/template/scaffold/scripts/withKokoroRuntimeOverrides.ts",
+  );
+  const { withKokoroRuntimeOverrides } = (await tsImport(
+    pathToFileURL(source).href,
+    {
+      parentURL: pathToFileURL(__filename).href,
+      tsconfig: false,
+    },
+  )) as IKokoroRuntimeOverrideModule;
   const setupFailure = new Error("Kokoro override setup failed");
   const operationFailure = new Error("Kokoro load failed");
   const firstRestorationFailure = new Error("cache restoration failed");
@@ -70,7 +75,7 @@ export const test_cli_kokoro_runtime_overrides = async (): Promise<void> => {
     let caught: unknown;
     let output: unknown;
     try {
-      output = await helper.withKokoroRuntimeOverrides(
+      output = await withKokoroRuntimeOverrides(
         [0, 1].map((index) => ({
           resource: `override-${index}`,
           install: (): void => {
@@ -174,3 +179,27 @@ export const test_cli_kokoro_runtime_overrides = async (): Promise<void> => {
     },
   );
 };
+
+/** Exercise the shipped typed helper through a fresh TypeScript consumer. */
+export const test_cli_kokoro_runtime_overrides = (): void => {
+  const childEnvironment = { ...process.env };
+  delete childEnvironment.NODE_OPTIONS;
+  const child = spawnSync(
+    process.execPath,
+    [createRequire(__filename).resolve("tsx/cli"), __filename],
+    {
+      encoding: "utf8",
+      env: { ...childEnvironment, [CHILD_ENV]: "1" },
+    },
+  );
+  if (child.status !== 0)
+    throw new Error(
+      `Kokoro-override typed consumer failed (${String(child.status)}):\n${child.stdout}${child.stderr}`,
+    );
+};
+
+if (process.env[CHILD_ENV] === "1")
+  void assertKokoroRuntimeOverrides().catch((error: unknown) => {
+    console.error(error);
+    process.exitCode = 1;
+  });

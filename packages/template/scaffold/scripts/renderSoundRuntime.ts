@@ -64,6 +64,7 @@ import {
   bindRuntimePackageSnapshotGeneration,
   snapshotRuntimePackage,
 } from "./runtimePackageSnapshot";
+import { withKokoroRuntimeOverrides } from "./withKokoroRuntimeOverrides";
 
 export interface IProductionRenderEncoderRuntime {
   assertCurrent: (plan: IAutoMovieProductionRenderJobPlan) => void;
@@ -330,19 +331,6 @@ export const createProductionSoundRuntime = (props: {
   ) => void;
   speakerBindings: ReturnType<typeof readProductionSpeakerBindings>;
 }): IProductionSoundRuntime => {
-  const require = createRequire(import.meta.url);
-  const withKokoroRuntimeOverrides = (
-    require("./withKokoroRuntimeOverrides.cjs") as {
-      withKokoroRuntimeOverrides: <Output>(
-        overrides: readonly {
-          resource: string;
-          install: () => unknown;
-          restore: () => unknown;
-        }[],
-        operation: () => Output | Promise<Output>,
-      ) => Promise<Output>;
-    }
-  ).withKokoroRuntimeOverrides;
   const resolveImportEntry = (packageName: string): string =>
     fileURLToPath(import.meta.resolve(packageName));
 

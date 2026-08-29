@@ -9,7 +9,13 @@ import {
 } from "../src";
 
 const roots: string[] = [];
-const templateRoot = path.resolve(import.meta.dirname, "..", "..", "template");
+const scaffoldRoot = path.resolve(
+  import.meta.dirname,
+  "..",
+  "..",
+  "template",
+  "scaffold",
+);
 
 /**
  * The production-evidence reader exposes one exact router/review denominator.
@@ -288,20 +294,16 @@ try {
   for (const root of roots) fs.rmSync(root, { force: true, recursive: true });
 }
 
-/** Create the package-shaped shared contract dependency used by the graph. */
+/** Create a generated project with its scaffold-local contract inventory. */
 function createProject(name: string): string {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), `${name}-`));
   roots.push(root);
-  const linked = path.join(root, "node_modules", "@automovie", "template");
-  fs.mkdirSync(path.dirname(linked), { recursive: true });
-  fs.cpSync(path.join(templateRoot, "docs"), path.join(linked, "docs"), {
-    recursive: true,
-  });
-  write(
-    root,
-    "node_modules/@automovie/template/package.json",
-    JSON.stringify({ name: "@automovie/template", version: "0.0.0" }),
-  );
+  for (const family of ["discovery", "obligations", "principles", "upstream"])
+    fs.cpSync(
+      path.join(scaffoldRoot, "docs", family),
+      path.join(root, "docs", family),
+      { recursive: true },
+    );
   write(
     root,
     "docs/contracts/index.md",

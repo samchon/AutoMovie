@@ -9,7 +9,6 @@
   },
   "scripts": {
     "build": "rimraf lib && ttsc && tsc --emitDeclarationOnly",
-    "postbuild": "node ../../config/assertBuild.js",
     "prepack": "pnpm run build"
   },
   "author": "Samchon",
@@ -21,8 +20,6 @@
   "files": [
     "lib",
     "src",
-    "gltfTransformCore.cjs",
-    "gltfTransformCore.d.cts",
     "package.json",
     "LICENSE",
     "README.md"

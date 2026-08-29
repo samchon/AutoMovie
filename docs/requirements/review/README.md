@@ -57,4 +57,4 @@ PR #2100은 MCP review service와 ledger를 폐기했다. 아래 표는 그 변�
 | `scope-and-authority.md#review-no-implied-approval` | 절차 | Finding 부재, green check와 시간 경과는 외부 승인을 만들지 않는다. |
 | `subject-inspection.md#review-observable-judgeable-parity` | 제품 | AutoMovie가 직접 검사 target으로 공개한 모든 종류는 실제 observation을 만드는 대응 표면을 가져야 한다. Subject record, viewpoint plan, capture와 coverage가 이 불변식을 구현한다. |
 
-Repository 변경 검토는 [Review skill](../../../.agents/skills/review/SKILL.md)이 소유하고, 생성 production의 evidence review와 whole-production review는 [shipped Production review](../../../packages/template/scaffold/.agents/skills/production/review.md)가 소유한다. 둘 다 검토 범위, 실제 관찰, finding과 완료 조건을 절차 안에서 유지하고 별도 제품 ledger를 만들지 않는다.
+Repository 변경 검토는 [Review skill](../../../.agents/skills/review/SKILL.md)이 소유하고, 생성 production의 evidence review와 whole-production review는 [shipped Production review](../../../packages/template/scaffold/.agents/skills/review-verification/review.md)가 소유한다. 둘 다 검토 범위, 실제 관찰, finding과 완료 조건을 절차 안에서 유지하고 별도 제품 ledger를 만들지 않는다.

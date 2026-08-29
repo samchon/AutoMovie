@@ -8,6 +8,7 @@ experimental/
 
 node_modules/
 packages/cli/.cache/
+packages/template/.cache/
 lib/
 dist/
 

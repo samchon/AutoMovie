@@ -5,8 +5,8 @@
     "moduleResolution": "Bundler",
     "strict": true,
     "skipLibCheck": true,
-    "types": ["three"],
+    "types": ["node", "three"],
     "lib": ["ESNext", "DOM", "DOM.Iterable"]
   },
-  "include": ["src"]
+  "include": ["src", "scripts/*.ts", "scripts/*.cts"]
 }

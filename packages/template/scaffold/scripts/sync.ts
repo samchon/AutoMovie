@@ -2,7 +2,7 @@ import { writeAutoMovieProductionInstructions } from "@automovie/template";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { productionEvidence } from "../productionEvidence.mjs";
+import { productionEvidence } from "../lint.config";
 
 /**
  * Replace this project's generated instruction surface from its installed template.
@@ -10,7 +10,7 @@ import { productionEvidence } from "../productionEvidence.mjs";
  * Scenarios:
  *
  * 1. The current tracked evidence declaration produces a shape-aware router
- *    and a complete fresh copy of the installed production skill.
+ *    and a complete fresh copy of the installed production skills.
  * 2. A stale or locally edited generated instruction is overwritten while
  *    tracked production documents and source remain untouched.
  */

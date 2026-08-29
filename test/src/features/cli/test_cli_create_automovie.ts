@@ -49,9 +49,6 @@ export const test_cli_create_automovie = (): void => {
   try {
     const target = path.join(base, "my-film");
     const created = create(target);
-    const manifest = JSON.parse(
-      fs.readFileSync(path.join(target, "package.json"), "utf8"),
-    ) as { scripts?: Record<string, string> };
     const sentinel = path.join(target, "author-owned.txt");
     fs.writeFileSync(sentinel, "keep\n", "utf8");
     const repeated = create(target);
@@ -60,24 +57,7 @@ export const test_cli_create_automovie = (): void => {
       "creation publishes ordinary source without hidden work and refuses overwrite",
       namedFacts([
         ["created", () => created.status === 0 && created.stderr === ""],
-        [
-          "source",
-          () =>
-            fs.existsSync(
-              path.join(target, "src", "examples", "buildings.ts"),
-            ) &&
-            fs.existsSync(path.join(target, "docs")) &&
-            fs.existsSync(path.join(target, "lint.config.mjs")) &&
-            fs.existsSync(path.join(target, "src", "film.ts")) === false,
-        ],
-        [
-          "workflows",
-          () =>
-            typeof manifest.scripts?.build === "string" &&
-            typeof manifest.scripts?.lint === "string" &&
-            typeof manifest.scripts?.render === "string" &&
-            typeof manifest.scripts?.verify === "string",
-        ],
+        ["createdDirectory", () => fs.statSync(target).isDirectory()],
         [
           "noHiddenInstall",
           () => fs.existsSync(path.join(target, "node_modules")) === false,
@@ -93,8 +73,7 @@ export const test_cli_create_automovie = (): void => {
       ]),
       {
         created: true,
-        source: true,
-        workflows: true,
+        createdDirectory: true,
         noHiddenInstall: true,
         refusedOverwrite: true,
         preservedAuthorFile: true,

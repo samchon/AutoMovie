@@ -218,7 +218,7 @@ const assertProductionSourceClaim = (
   );
   for (const reference of references) {
     assert.equal(reference.type, "markdown");
-    assert.equal(reference.root, "node_modules/@automovie/template/docs");
+    assert.equal(reference.root, "docs");
     assert.equal(reference.symbol, "h2");
     assert.equal(
       reference.noEvidenceExclude,
@@ -308,19 +308,12 @@ const writeSettingsBasis = (root: string): void => {
   );
 };
 
-/** Install only the shared contract package shape resolved by the graph. */
+/** Copy the generated project's scaffold-local shared contracts. */
 const copySharedContracts = (root: string): void => {
-  const destination = path.join(root, "node_modules", "@automovie", "template");
-  fs.mkdirSync(destination, { recursive: true });
   fs.cpSync(
-    path.join(ROOT, "packages/template/docs"),
-    path.join(destination, "docs"),
+    path.join(ROOT, "packages/template/scaffold/docs"),
+    path.join(root, "docs"),
     { recursive: true },
-  );
-  fs.writeFileSync(
-    path.join(destination, "package.json"),
-    '{"name":"@automovie/template","version":"0.0.0"}\n',
-    "utf8",
   );
 };
 
@@ -350,7 +343,7 @@ const linkEvidenceRuntime = (root: string): void => {
 /** Materialize the selected real claim object as the temporary lint config. */
 const writeLintProject = (root: string, claim: IEvidenceClaim): void => {
   fs.writeFileSync(
-    path.join(root, "lint.config.mjs"),
+    path.join(root, "lint.config.ts"),
     [
       'import { evidence } from "@ttsc/evidence";',
       "",
@@ -382,7 +375,7 @@ const writeLintProject = (root: string, claim: IEvidenceClaim): void => {
           skipLibCheck: true,
           strict: true,
         },
-        include: ["phase.ts", "src/**/*.ts", "lint.config.mjs"],
+        include: ["phase.ts", "src/**/*.ts", "lint.config.ts"],
       },
       null,
       2,

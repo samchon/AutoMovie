@@ -1,22 +1,70 @@
-import { evidence } from "@ttsc/evidence";
+import { type ITtscEvidenceGraphConfig, evidence } from "@ttsc/evidence";
 import type { ITtscLintConfig } from "@ttsc/lint";
 
 /**
- * `@automovie/production` documents its public surface without joining the
- * repository contract graph.
+ * Every authored production declaration joins the repository contract graph.
  *
- * The reason it does not is spent. This was a shipped MCP surface whose class
- * comments became server instructions and whose method comments became tool
- * descriptions under a hard length cap, so citations competed for room with
- * prose a client actually read. That surface is gone, and what is left is
- * ordinary library code with nothing in it a citation would displace. The
- * units this package used to own sit in `legacy` in `docs/contract-ownership`,
- * where they read as debt nobody owns; admitting this package to the graph is
- * the standing correction, and until someone makes it the exclusion is debt
- * rather than a decision. `evidence/documented` and `evidence/todo` stay:
- * every exported symbol still owes a comment, and an unpaid `@todo` still
- * fails the build.
+ * The barrel is the only source exclusion because it re-exports declarations
+ * whose defining symbols already carry their own contract evidence. A new
+ * production source therefore enters both claims merely by existing.
  */
+const publicSurface = ["src/**/*.ts", "!src/**/index.ts"];
+
+const productionRequirementContracts = [
+  "requirements/operations-and-recovery/concurrent-runs-and-locking.md",
+  "requirements/production-design/continuity-change-and-deliverables.md",
+  "requirements/repaint/providers-models-and-credentials.md",
+  "requirements/repaint/retries-seeds-and-variation.md",
+  "requirements/repaint/sequence-continuity-and-publication.md",
+  "requirements/review/subject-inspection.md",
+];
+
+const productionSpecificationContracts = [
+  "specifications/asset-and-representation/generated-assets-and-repaint-handoff.md",
+  "specifications/execution-and-recovery/concurrent-ownership-and-locking.md",
+  "specifications/narrative-and-intent/budgets-continuity-and-deliverables.md",
+  "specifications/review-and-acceptance/subject-surface-and-inspection.md",
+];
+
+const graph: ITtscEvidenceGraphConfig = {
+  claims: [
+    {
+      name: "public production exports implement requirements",
+      type: "typescript",
+      files: publicSurface,
+      symbol: ["type", "function", "property"],
+      reference: [
+        {
+          type: "markdown",
+          root: "../../docs",
+          files: productionRequirementContracts,
+          symbol: "h3",
+        },
+      ],
+    },
+    {
+      name: "public production exports implement specifications",
+      type: "typescript",
+      files: publicSurface,
+      symbol: ["type", "function", "property"],
+      reference: [
+        {
+          type: "markdown",
+          root: "../../docs",
+          files: productionSpecificationContracts,
+          symbol: "h3",
+        },
+        {
+          type: "markdown",
+          root: "../../docs",
+          files: ["specifications/review-and-acceptance/README.md"],
+          symbol: "h2",
+        },
+      ],
+    },
+  ],
+};
+
 export default {
   extends: "../../config/lint.config.ts",
   plugins: { evidence },
@@ -25,6 +73,7 @@ export default {
       "error",
       { symbol: ["type", "function", "property"] },
     ],
+    "evidence/graph": ["error", graph],
     "evidence/todo": "error",
   },
 } satisfies ITtscLintConfig;

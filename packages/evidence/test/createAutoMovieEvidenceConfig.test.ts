@@ -16,31 +16,33 @@ type ContractManifest = ReturnType<
   typeof createAutoMovieContractBindingManifest
 >;
 
-const templateRoot = path.resolve(import.meta.dirname, "..", "..", "template");
+const scaffoldRoot = path.resolve(
+  import.meta.dirname,
+  "..",
+  "..",
+  "template",
+  "scaffold",
+);
+const templatePackageRoot = path.dirname(scaffoldRoot);
 const roots: string[] = [];
 
 /**
- * A disposable project that resolves the shared contracts the way a real one
- * does.
+ * A disposable project that owns the shared contracts the way a real one does.
  *
- * `@automovie/template` publishes `docs`, and the graph reads them from the
- * installed package rather than from a copy the project carries. The fixture
- * therefore builds that package-shaped dependency from the current template
- * docs on every run; it never maintains a second checked-in contract copy that
- * could drift and still pass here.
+ * The scaffold ships discovery, upstream, obligation, and principle inventories
+ * inside the generated project's own `docs`. The fixture copies those exact
+ * scaffold bytes without constructing a package-shaped dependency, proving the
+ * graph has no runtime dependency on `@automovie/template` resolution.
  */
 const root = (): string => {
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), "automovie-graph-"));
   roots.push(directory);
-  const linked = path.join(directory, "node_modules", "@automovie", "template");
-  fs.mkdirSync(path.dirname(linked), { recursive: true });
-  fs.cpSync(path.join(templateRoot, "docs"), path.join(linked, "docs"), {
-    recursive: true,
-  });
-  fs.writeFileSync(
-    path.join(linked, "package.json"),
-    JSON.stringify({ name: "@automovie/template", version: "0.0.0" }),
-  );
+  for (const family of ["discovery", "obligations", "principles", "upstream"])
+    fs.cpSync(
+      path.join(scaffoldRoot, "docs", family),
+      path.join(directory, "docs", family),
+      { recursive: true },
+    );
   const contractDirectory = path.join(directory, "docs", "contracts");
   fs.mkdirSync(contractDirectory, { recursive: true });
   fs.writeFileSync(
@@ -51,11 +53,10 @@ const root = (): string => {
 };
 
 /**
- * A shared contract inside the linked package, which is where the graph reads
- * it from now.
+ * A shared contract inside the generated project's own documentation root.
  */
 const contract = (location: string, relative: string): string =>
-  path.join(location, "node_modules", "@automovie", "template", relative);
+  path.join(location, relative);
 
 const write = (location: string, relative: string, content: string): void => {
   const file = path.join(location, relative);
@@ -83,7 +84,7 @@ const linkDirectory = (
   );
 };
 
-/** Write a shared contract into the linked package the graph reads from. */
+/** Write a shared contract into the generated project's local inventory. */
 const writeContract = (
   location: string,
   relative: string,
@@ -256,17 +257,9 @@ try {
     { mode: "complete-production" },
   );
   const missingSharedFamily = root();
-  fs.rmSync(
-    path.join(
-      missingSharedFamily,
-      "node_modules",
-      "@automovie",
-      "template",
-      "docs",
-      "discovery",
-    ),
-    { recursive: true },
-  );
+  fs.rmSync(path.join(missingSharedFamily, "docs", "discovery"), {
+    recursive: true,
+  });
   assert.equal(
     throws(
       () => createAutoMovieEvidenceConfig(disabled(missingSharedFamily)),
@@ -824,7 +817,7 @@ export const review = true;
     "upstream",
   ]
     .flatMap((family) =>
-      sharedFiles(path.join(templateRoot, "docs", family)).map(
+      sharedFiles(path.join(scaffoldRoot, "docs", family)).map(
         (file) => `${family}/${file}`,
       ),
     )
@@ -4278,24 +4271,24 @@ export const review = true;
     "a selected source population cannot be supplied through a link",
   );
 
-  const linkedSharedContracts = root();
+  const linkedDependencyConsumer = root();
   const linkedTemplate = path.join(
-    linkedSharedContracts,
+    linkedDependencyConsumer,
     "node_modules",
     "@automovie",
     "template",
   );
-  fs.rmSync(linkedTemplate, { recursive: true });
+  fs.rmSync(linkedTemplate, { force: true, recursive: true });
   linkDirectory(
-    linkedSharedContracts,
+    linkedDependencyConsumer,
     "node_modules/@automovie/template",
-    templateRoot,
+    templatePackageRoot,
   );
-  write(linkedSharedContracts, "host.ts", "export const host = true;\n");
+  write(linkedDependencyConsumer, "host.ts", "export const host = true;\n");
   assert.doesNotThrow(
     () =>
       createAutoMovieEvidenceConfig({
-        ...disabled(linkedSharedContracts),
+        ...disabled(linkedDependencyConsumer),
         claims: [
           {
             name: "a broad local population still excludes dependencies",
@@ -4312,7 +4305,7 @@ export const review = true;
           },
         ],
       }),
-    "the installed shared contract package may remain a workspace link",
+    "a referenced dependency package may remain a workspace link",
   );
 
   const inactiveLinkedDesign = root();

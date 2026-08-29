@@ -5,9 +5,8 @@ import os from "node:os";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 
-import { productionEvidence } from "../scaffold/productionEvidence.mjs";
+import { productionEvidence } from "../scaffold/lint.config";
 import { bindProductionBook } from "../scaffold/scripts/book";
-import { synchronizeProductionInstructions } from "../scaffold/scripts/sync";
 import { renderScaffold } from "../src/renderScaffold";
 import { writeAutoMovieProductionInstructions } from "../src/writeAutoMovieProductionInstructions";
 import { writeFiles } from "../src/writeFiles";
@@ -69,17 +68,22 @@ async function main(): Promise<void> {
         ).href,
       )};\n`,
     );
-    fs.cpSync(
-      path.join(packageRoot, "docs"),
-      path.join(installedTemplate, "docs"),
-      { recursive: true },
+    fs.symlinkSync(
+      path.resolve(packageRoot, "..", "evidence"),
+      path.join(generated, "node_modules", "@automovie", "evidence"),
+      process.platform === "win32" ? "junction" : "dir",
+    );
+    assert.equal(
+      fs.existsSync(path.join(installedTemplate, "docs")),
+      false,
+      "instruction sync must not require package-owned contract docs",
     );
     write(generated, "AGENTS.md", "stale generated router\n");
     write(generated, "CLAUDE.md", "stale generated import\n");
     write(generated, ".agents/skills/stale.md", "stale generated skill\n");
     const generatedTrackedBefore = snapshot(generated, [
       "package.json",
-      "productionEvidence.mjs",
+      "lint.config.ts",
       "docs",
       "src",
     ]);
@@ -111,12 +115,7 @@ async function main(): Promise<void> {
       false,
     );
     assert.deepEqual(
-      snapshot(generated, [
-        "package.json",
-        "productionEvidence.mjs",
-        "docs",
-        "src",
-      ]),
+      snapshot(generated, ["package.json", "lint.config.ts", "docs", "src"]),
       generatedTrackedBefore,
     );
 
@@ -126,14 +125,19 @@ async function main(): Promise<void> {
       mode: "complete-production",
     });
     assert.throws(
-      () => synchronizeProductionInstructions({ root: scaffoldRoot }),
+      () =>
+        writeAutoMovieProductionInstructions({
+          root: scaffoldRoot,
+          productionEvidence,
+          scaffoldRoot,
+        }),
       /cannot synchronize instructions into itself/u,
     );
     const scaffoldSkill = path.join(
       scaffoldRoot,
       ".agents",
       "skills",
-      "production",
+      "production-lifecycle",
       "SKILL.md",
     );
     const scaffoldSkillBefore = fs.readFileSync(scaffoldSkill, "utf8");
@@ -354,7 +358,12 @@ async function main(): Promise<void> {
       "preserved parent bytes\n",
     );
     assert.throws(
-      () => synchronizeProductionInstructions(),
+      () =>
+        writeAutoMovieProductionInstructions({
+          root: process.cwd(),
+          productionEvidence,
+          scaffoldRoot,
+        }),
       /belongs to another project root/u,
     );
     write(
@@ -452,23 +461,29 @@ async function main(): Promise<void> {
       fs.existsSync(path.join(project, ".agents", "skills", "stale.md")),
       false,
     );
-    assert.equal(
-      fs.readFileSync(
-        path.join(project, ".agents", "skills", "production", "SKILL.md"),
-        "utf8",
-      ),
-      fs.readFileSync(
-        path.join(scaffoldRoot, ".agents", "skills", "production", "SKILL.md"),
-        "utf8",
-      ),
-    );
-    assert.match(
-      fs.readFileSync(
-        path.join(project, ".agents", "skills", "production", "SKILL.md"),
-        "utf8",
-      ),
-      /routes maps, models, spaces, materials, instances, motions, and systems/u,
-    );
+    for (const skill of [
+      "evidence-graph",
+      "production-lifecycle",
+      "review-verification",
+      "source-authoring",
+    ])
+      assert.equal(
+        fs.readFileSync(
+          path.join(project, ".agents", "skills", skill, "SKILL.md"),
+          "utf8",
+        ),
+        fs.readFileSync(
+          path.join(scaffoldRoot, ".agents", "skills", skill, "SKILL.md"),
+          "utf8",
+        ),
+      );
+    for (const skill of [
+      "evidence-graph",
+      "production-lifecycle",
+      "review-verification",
+      "source-authoring",
+    ])
+      assert.match(router, new RegExp(`skills/${skill}/SKILL\\.md`, "u"));
     assert.deepEqual(
       snapshot(project, ["docs", "src", "package.json"]),
       trackedBefore,
@@ -511,10 +526,16 @@ async function main(): Promise<void> {
         }),
       /installed production skills are missing/u,
     );
-    const emptyTemplate = makeRoot("empty-production-skill");
-    fs.mkdirSync(path.join(emptyTemplate, ".agents", "skills"), {
-      recursive: true,
-    });
+    const emptyTemplate = makeRoot("incomplete-skill-inventory");
+    fs.cpSync(
+      path.join(scaffoldRoot, ".agents", "skills"),
+      path.join(emptyTemplate, ".agents", "skills"),
+      { recursive: true },
+    );
+    fs.rmSync(
+      path.join(emptyTemplate, ".agents", "skills", "source-authoring"),
+      { recursive: true },
+    );
     assert.throws(
       () =>
         writeAutoMovieProductionInstructions({
@@ -522,19 +543,19 @@ async function main(): Promise<void> {
           productionEvidence: configuration,
           scaffoldRoot: emptyTemplate,
         }),
-      /installed production skill entry point is missing/u,
+      /installed source-authoring skill entry point is missing/u,
     );
     const linkedTemplate = makeRoot("linked-production-skill");
     fs.mkdirSync(path.join(linkedTemplate, ".agents", "skills"), {
       recursive: true,
     });
     fs.symlinkSync(
-      path.join(scaffoldRoot, ".agents", "skills", "production"),
+      path.join(scaffoldRoot, ".agents", "skills", "source-authoring"),
       path.join(linkedTemplate, ".agents", "skills", "zeta"),
       process.platform === "win32" ? "junction" : "dir",
     );
     fs.symlinkSync(
-      path.join(scaffoldRoot, ".agents", "skills", "production"),
+      path.join(scaffoldRoot, ".agents", "skills", "source-authoring"),
       path.join(linkedTemplate, ".agents", "skills", "alpha"),
       process.platform === "win32" ? "junction" : "dir",
     );
@@ -621,19 +642,15 @@ async function main(): Promise<void> {
   }
 }
 
-/** Create a generated-project fixture with the installed shared contracts. */
+/** Create a generated-project fixture with self-contained scaffold contracts. */
 function createProduction(name: string): string {
   const root = makeRoot(name);
-  const linked = path.join(root, "node_modules", "@automovie", "template");
-  fs.mkdirSync(path.dirname(linked), { recursive: true });
-  fs.cpSync(path.join(packageRoot, "docs"), path.join(linked, "docs"), {
-    recursive: true,
-  });
-  write(
-    root,
-    "node_modules/@automovie/template/package.json",
-    JSON.stringify({ name: "@automovie/template", version: "0.0.0" }),
-  );
+  for (const family of ["discovery", "obligations", "principles", "upstream"])
+    fs.cpSync(
+      path.join(scaffoldRoot, "docs", family),
+      path.join(root, "docs", family),
+      { recursive: true },
+    );
   write(
     root,
     "docs/contracts/index.md",

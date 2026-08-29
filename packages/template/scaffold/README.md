@@ -2,9 +2,9 @@
 
 This is a coding-agent-first AutoMovie authoring repository. It deliberately starts without production documents, source, design records, assets, or review claims. Author documents, source, assets, and the screenplay index as ordinary project-owned files; emit the other tracked design records from reviewed source. AutoMovie supplies bounded design types and owns deterministic generated output, geometry facts, actual-frame evidence, and review freshness.
 
-Choose one production shape in `productionEvidence.mjs`: `film` for the exact `settings -> treatments -> scripts -> screenplays -> shots -> filmSources` ladder, `brief` for one bounded result that needs no independent narrative refinement through `settings -> briefs -> shots -> filmSources`, or `library` for reviewed design/source branches without shots. Film and brief also require reviewed `productionSources` as a parallel input before `filmSources`. Runtime does not decide the shape. Read `docs/README.md` for the non-overlapping settings, research, map, model, space, material, instance, motion, system, narrative, and brief ownership map.
+Choose one production shape in `lint.config.ts`: `film` for the exact `settings -> treatments -> scripts -> screenplays -> shots -> filmSources` ladder, `brief` for one bounded result that needs no independent narrative refinement through `settings -> briefs -> shots -> filmSources`, or `library` for reviewed design/source branches without shots. Film and brief also require reviewed `productionSources` as a parallel input before `filmSources`. Runtime does not decide the shape. Read `docs/README.md` for the non-overlapping settings, research, map, model, space, material, instance, motion, system, narrative, and brief ownership map.
 
-The project has one documentation root. `@automovie/template` publishes the reusable shared targets in its `docs/discovery`, `docs/principles`, and `docs/obligations`; named authoring branches hold production hosts, and this project's flat `docs/contracts/*.md` population holds every production-only target discovered for this work. `productionEvidence.mjs` owns the production kind, population scope, every branch stage, and every additive custom claim. `lint.config.mjs` consumes that one JSDoc-typed declaration, while `@automovie/evidence` owns the reusable populations and topology checks. Never replace or weaken the shared graph.
+The project has one self-contained documentation root. Its scaffold-supplied `docs/{discovery,upstream,principles,obligations}` inventory contains every reusable target; named authoring branches hold production hosts, and flat `docs/contracts/*.md` files hold production-specific targets. The single typed `lint.config.ts` owns the production kind, population scope, every branch stage, every additive custom claim, and the resulting graph, while `@automovie/evidence` supplies reusable populations and topology checks. No evidence target resolves through `node_modules`. Never replace or weaken the shared graph.
 
 Each layer is `disabled`, `draft`, `evidence`, or `review`. Draft is where the first version is authored and rejects premature evidence tags in authored hosts; its separate contract audit is already active and puts discovery evidence in the comment preamble before each rule's H1. The one `complete-production-reset` exception preserves a passed pilot's old tags as inactive draft source material while the complete population is rebuilt; they pay no claim and every relationship is reread before evidence. Evidence begins only after that version passes scope, addressability, completion, proportionality, same-answer, contradiction, placeholder, and omission audits. Review also requires current substantive fingerprints. A child waits for reviewed parents outside that synchronized reset. Empty active populations, an active layer with no retained rule or truthful negative ledger, hosts resident inside a disabled selected population, ownerless source, and mismatched film identities fail while the config loads.
 
@@ -22,7 +22,6 @@ Frame capture defaults to the Chromium build pinned to this project's Playwright
 
 ```bash
 npm install
-npm test
 npm run lint:source
 ```
 
@@ -52,7 +51,7 @@ Open every PNG the contract names, and say what each one showed in the evidence 
 
 ## Begin the production
 
-`.agents/skills/production/SKILL.md` is the authoring doctrine this project ships with: the shape decision, the production-specific contract, every layer's procedure and gate, evidence staging, self-review, and final review. `AGENTS.md` routes to it, and a coding agent reads it before drafting anything.
+The scaffold ships four independently discoverable authoring skills. `.agents/skills/production-lifecycle/SKILL.md` owns shape and narrative lifecycle, `evidence-graph/SKILL.md` owns contracts and graph stages, `source-authoring/SKILL.md` owns TypeScript and geometry realization, and `review-verification/SKILL.md` owns Self-Review, viewer evidence, and final acceptance. `AGENTS.md` routes to all four, and each skill routes conditionally needed sibling documents one level deep.
 
 Select the kind and begin research or settings at draft. Review settings before activating design or narrative children. For each applicable design branch, review its Markdown before activating matching source. Film shots wait for reviewed screenplays, brief shots wait for reviewed briefs, and both wait for the reviewed source corresponding to every active design branch.
 
@@ -124,8 +123,6 @@ Every planning, run, and full-sequence render first measures what the tier is ab
 `npm run render` is the convenience sequence: it captures current evidence, reuses or renders current chunks, then attempts final publication. Finalize still fails closed: the production's own evidence graph must accept the final scope, so a unit whose citation is missing, stale, or unreviewed stops the publication. Its terminal commit fingerprints the revision, declared content, generated manifest and bytes, production manifest, exact design graph, and state incarnation with canonical structured fields. The staged final gate recomputes that answer from current evidence; any change during the gate rolls the publication back.
 
 Run `npm run verify` (or `npx automovie verify`) after publication to reopen the generated inventory, render receipts, and actual delivery bytes without modifying project state. It fails on damaged generated output, stale or forged receipts, and missing required deliverables.
-
-Claude Code loads `.claude/settings.json` and checks every `PreToolUse`, direct edits and Bash included, against compiler-owned generated output, render output, capture receipts, and production state. Nearest existing ancestors are resolved physically, so a symlink or junction cannot disguise an owned target. The refusal names the owning project command. The hook arms only where `package.json` declares a dependency on `automovie`, so copying it outside an AutoMovie project does not claim unrelated files.
 
 The production viewer accepts `?film=1` for GPU cut/dissolve playback of the compiler-owned EDL, `?shot=<id>` for one shot, and `?asset=<model-id>&angle=<degrees>&elevation=<degrees>` for an isolated model turntable. The reusable capture session opens each target/raster page once and seeks subsequent frames in place; render output reports page, navigation, seek, and capture counts so throughput improvements remain measurable.
 
