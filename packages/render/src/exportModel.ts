@@ -1,11 +1,6 @@
 import { tessellate } from "@automovie/engine";
 import { IAutoMovieModel, IAutoMovieTransform } from "@automovie/interface";
-import {
-  Document,
-  type Material,
-  type Node,
-  NodeIO,
-} from "@gltf-transform/core";
+import type { Document, Material, Node } from "@gltf-transform/core";
 
 /**
  * Serialize an {@link IAutoMovieModel} AST into a binary glTF (`.glb`) byte
@@ -250,7 +245,26 @@ import {
 export const exportModelToGLB = async (
   model: IAutoMovieModel,
 ): Promise<Uint8Array> => {
-  const doc = new Document();
+  // Acquired here rather than at module scope, because this is the workspace's
+  // only runtime edge to `@gltf-transform/core` and the barrel re-exports this
+  // module. `@automovie/production` imports one path helper from that barrel,
+  // so an eager import made every generated project's `scripts/compile.ts` load
+  // a glTF serializer it never calls. Under Node 22 that load fails outright:
+  // the package's `require` condition serves `dist/index.cjs`, whose first act
+  // is `require("property-graph")`, and `property-graph` is ESM-only, so the
+  // ESM-to-CJS translator's synthetic `require` returns undefined and the
+  // compile dies with `Cannot read properties of undefined (reading 'exports')`.
+  // Every `@gltf-transform/core` import in `@automovie/ingest` is `import type`
+  // and erases, which is why ingest never showed this and render did.
+  //
+  // This is containment, not a cure. The translator defect is the Node line's:
+  // the identical command succeeds on 24.18.0 and fails on the 22.15.0 that
+  // `useNodeVersion` pins. Deferring the load to the call means the path that
+  // never calls this function never pays for it, and the callers that do are
+  // CommonJS entries where `require` of an ESM package is supported.
+  const { Document: GLTFDocument, NodeIO } =
+    await import("@gltf-transform/core");
+  const doc: Document = new GLTFDocument();
   const buffer = doc.createBuffer();
   const scene = doc.createScene(model.name ?? model.id);
 
