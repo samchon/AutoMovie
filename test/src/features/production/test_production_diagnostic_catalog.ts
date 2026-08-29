@@ -17,10 +17,7 @@ export const test_production_diagnostic_catalog = (): void => {
     path.join(root, "package.json"),
     '{ "name": "catalog-fixture" }\n',
   );
-  fs.writeFileSync(
-    path.join(root, "automovie.config.ts"),
-    "export default {};\n",
-  );
+  fs.writeFileSync(path.join(root, "lint.config.ts"), "export default {};\n");
   try {
     const catalog = listAutoMovieDiagnosticCatalog();
     const references = new Set(catalog.map((entry) => entry.reference.id));

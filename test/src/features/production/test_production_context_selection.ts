@@ -57,10 +57,7 @@ export const test_production_context_selection = (): void => {
       path.join(root, "package.json"),
       '{ "name": "context-fixture" }',
     );
-    fs.writeFileSync(
-      path.join(root, "automovie.config.ts"),
-      "export default {};",
-    );
+    fs.writeFileSync(path.join(root, "lint.config.ts"), "export default {};");
     TestValidator.equals(
       "a session resolves one production, or says exactly why it cannot",
       namedFacts([

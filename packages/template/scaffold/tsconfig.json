@@ -21,7 +21,6 @@
     "vendor/sharp-disabled/index.ts",
     "viewer/src",
     "repaintSelectionReviews.ts",
-    "automovie.config.ts",
     "vite.config.ts",
     "lint.config.ts"
   ]

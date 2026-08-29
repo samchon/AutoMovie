@@ -369,7 +369,7 @@ export const test_production_project_runtime_shape_faults = (): void => {
     },
     {
       label: "standalone content file realpath",
-      relative: "automovie.config.ts",
+      relative: "vite.config.ts",
       occurrence: 1,
       message: "content file",
     },

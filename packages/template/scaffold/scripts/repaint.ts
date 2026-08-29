@@ -1,6 +1,9 @@
-import config from "../automovie.config";
+import { AutoMovieProductionProject } from "@automovie/production";
+
+import { repaintSelectionReviews } from "../repaintSelectionReviews";
 import { createProductionFrameCaptureRuntime } from "./capture";
 import { createProductionCaptureDialogueRuntime } from "./captureDialogueRuntime";
+import { productionRepaintInput } from "./productionConfiguration";
 import { currentAutoMovieProductionId } from "./projectIdentity";
 import { repaintProductionShot } from "./repaintAdapter";
 import { createProductionRepaintCancellationRuntime } from "./repaintCancellationRuntime";
@@ -37,7 +40,14 @@ const productionId = currentAutoMovieProductionId();
  */
 await runProductionRepaintCommand(
   process.argv.slice(2),
-  { productionId, repaint: config.visual.repaint },
+  {
+    productionId,
+    repaint: productionRepaintInput(
+      AutoMovieProductionProject.productionDesign(process.cwd(), productionId)
+        ?.repaint,
+      repaintSelectionReviews,
+    ),
+  },
   () => {
     const captureRuntime = createProductionFrameCaptureRuntime();
     const cancellation = createProductionRepaintCancellationRuntime(process);

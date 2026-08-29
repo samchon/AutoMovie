@@ -33,18 +33,23 @@ import type { IAutoMovieProductionDesignGraph } from "./validateProductionDesign
  * Both markers already exist for reasons of their own, which is the point: the
  * walk reads the project's own identity rather than a reserved state directory
  * it would then have to create in order to be found. `package.json` names the
- * project and the production namespace derived from it, and
- * `automovie.config.ts` carries the production's own authored delivery
- * decisions. Requiring both is what keeps a host seed inside an ordinary Node
+ * project and the production namespace derived from it, and `lint.config.ts`
+ * is the one typed declaration of the production's kind, populations, stages,
+ * and graph. Requiring both is what keeps a host seed inside an ordinary Node
  * package from resolving to that package and having production state written
  * underneath it.
+ *
+ * Neither marker is a place a decision could hide. `automovie.config.ts` was
+ * the second marker until the delivery decisions it carried moved onto the
+ * production design record they always belonged to, and there is no file left
+ * whose only job is to be found.
  *
  * `automovie/manifest.json` used to stand in for either of them. It no longer
  * does: that path is the legacy v1 layout, which is import input rather than a
  * shape any current project is asked to carry, so discovery must not depend on
  * a state tree existing before the project can be opened.
  */
-const PROJECT_MARKERS = ["package.json", "automovie.config.ts"] as const;
+const PROJECT_MARKERS = ["package.json", "lint.config.ts"] as const;
 
 /**
  * Exact grapheme implementation this package can evaluate.

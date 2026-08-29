@@ -1,10 +1,10 @@
 import type { IAutoMovieDeliveryCrop } from "@automovie/interface";
+import { AutoMovieProductionProject } from "@automovie/production";
 import { createHash } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import type { Plugin } from "vite";
 
-import config from "../automovie.config";
 import { readProductionLiveWearableSoftBodies } from "./productionConfiguration";
 import {
   type IAutoMovieProductionDialogueRuntime,
@@ -23,6 +23,19 @@ const NO_DIALOGUE_RUNTIME: IGeneratedShotRuntimeProvider = {
   dialogue: () => null,
   deliveryCrop: () => null,
 };
+
+/**
+ * The compiler-owned output root and the asset provenance ledger this project
+ * carries.
+ *
+ * Both are the harness ownership layout every AutoMovie project shares rather
+ * than anything this project declares, so the viewer route names them directly.
+ * They were read out of a per-project manifest until that file became one copy
+ * of a constant no project may vary, and reading a retired layout record here
+ * would keep the old shape alive for exactly one consumer.
+ */
+const COMPILER_OWNED_ROOT = "generated";
+const ASSET_MANIFEST_PATH = "automovie/assets.json";
 
 /**
  * Serve bounded compiler-owned viewer JSON and registered model bytes.
@@ -54,7 +67,10 @@ export const generatedShotPlugin = (
                 runtimeProvider.deliveryCrop(),
               ),
               liveWearableSoftBodies: readProductionLiveWearableSoftBodies(
-                config.simulation.liveWearableSoftBodies,
+                AutoMovieProductionProject.productionDesign(
+                  projectRoot,
+                  productionId,
+                )?.simulation?.liveWearableSoftBodies ?? [],
               ),
             };
             response.statusCode = 200;
@@ -120,18 +136,6 @@ export const generatedShotPlugin = (
       }
       try {
         const project = physicalDirectory(projectRoot, "viewer project root");
-        const manifest = JSON.parse(
-          readPhysicalFile(
-            project,
-            path.join(project.real, "automovie"),
-            "manifest.json",
-          ).toString("utf8"),
-        ) as { generatedRoot?: unknown };
-        if (
-          typeof manifest.generatedRoot !== "string" ||
-          manifest.generatedRoot.trim().length === 0
-        )
-          throw new Error("invalid generated root");
         if (
           productionId.trim().length === 0 ||
           productionId.trim() !== productionId
@@ -139,7 +143,7 @@ export const generatedShotPlugin = (
           throw new Error("invalid production id");
         const generatedRoot = path.resolve(
           project.real,
-          manifest.generatedRoot,
+          COMPILER_OWNED_ROOT,
           encodePathSegment(productionId),
         );
         const relativeRoot = path.relative(project.real, generatedRoot);
@@ -264,22 +268,7 @@ const readAssetAuthorization = (
   productionId: string,
   assetPath: string,
 ): IAssetAuthorization => {
-  const ownershipFile = readPhysicalFileSnapshot(
-    project,
-    path.join(project.real, "automovie"),
-    "manifest.json",
-  );
-  const ownership = JSON.parse(ownershipFile.bytes.toString("utf8")) as {
-    assetManifest?: unknown;
-    generatedRoot?: unknown;
-  };
-  if (
-    typeof ownership.assetManifest !== "string" ||
-    ownership.assetManifest.trim() === "" ||
-    ownership.assetManifest !== ownership.assetManifest.trim()
-  )
-    throw new Error("project has no registered asset manifest");
-  const ledgerPath = path.resolve(project.real, ownership.assetManifest);
+  const ledgerPath = path.resolve(project.real, ASSET_MANIFEST_PATH);
   if (isInside(project.real, ledgerPath) === false)
     throw new Error("asset manifest escapes project");
   const ledgerFile = readPhysicalFileSnapshot(
@@ -307,14 +296,14 @@ const readAssetAuthorization = (
   const compiled = readCompiledAssetClosure(
     project,
     productionId,
-    ownership.generatedRoot,
+    COMPILER_OWNED_ROOT,
   );
   const compiledDigest = compiled.closure.get(assetPath);
   if (compiledDigest === undefined || compiledDigest !== record.digest)
     throw new Error(
       "asset is not in the current compiler-sealed viewer closure",
     );
-  const files = [ownershipFile, ledgerFile, ...compiled.files];
+  const files = [ledgerFile, ...compiled.files];
   const fingerprint = createHash("sha256")
     .update(
       JSON.stringify({

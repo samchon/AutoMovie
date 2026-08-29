@@ -12,7 +12,8 @@ import type { AutoMovieProductionShotRepaint } from "@automovie/interface";
  *
  * Replace this export, but do not select a generator here. The reviewed exact
  * provider, model, version, execution boundary, source, rights, terms, cost,
- * consumer, and per-shot request live in `automovie.config.ts`. The runtime
+ * consumer, and per-shot request live on this production's design record. The
+ * runtime
  * resolves that request, verifies the deterministic source the rendition
  * derives from, refuses an adapter identity that differs from the selection,
  * parses the returned MP4, and commits a receipt binding compiler,

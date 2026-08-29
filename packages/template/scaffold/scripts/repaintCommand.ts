@@ -39,8 +39,13 @@ export const runProductionRepaintCommand = async (
   authored: {
     /** The production namespace the reviewed request belongs to. */
     productionId: string;
-    /** This production's own reviewed repaint adoption, or null for none. */
-    repaint: IAutoMovieProductionRepaintSelection | null;
+    /**
+     * This production's own reviewed repaint adoption, or null for none.
+     *
+     * Resident bytes rather than a compile-time literal, so the parser below
+     * settles its shape before an operation reads a prompt out of it.
+     */
+    repaint: unknown;
   },
   createHost: () => IProductionRepaintHost,
   occurredAt: Date | string = new Date(),
