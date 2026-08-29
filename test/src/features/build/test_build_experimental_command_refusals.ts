@@ -83,6 +83,9 @@ const runner =
  *    rather than as `[object Object]`.
  * 8. Every refusal writes to the error stream and leaves the output stream
  *    empty, so a caller reading stdout cannot mistake a refusal for a result.
+ * 9. The repository's own manifest carries no `file:./.tarballs/` pin. That is
+ *    the signature the traversal left behind, and it survives a rename of the
+ *    root package in a way an assertion on its name would not.
  */
 const assertBuildExperimentalCommandRefusals = async (): Promise<void> => {
   const module = await loadBuildModule<IExperimentalModule>("experimental.ts");
@@ -163,11 +166,11 @@ const assertBuildExperimentalCommandRefusals = async (): Promise<void> => {
         () => thrown.code === 1 && thrown.error === "pack exploded\n",
       ],
       [
-        "the repository manifest was never rewritten",
+        "the repository manifest carries no sandbox pin",
         () =>
           fs
             .readFileSync(path.join(ROOT, "package.json"), "utf8")
-            .includes(`"name": "@automovie/station"`),
+            .includes("file:./.tarballs/") === false,
       ],
     ]),
     {
@@ -179,7 +182,7 @@ const assertBuildExperimentalCommandRefusals = async (): Promise<void> => {
       "an unportable name leaves no directory behind": true,
       "refresh without a manifest refuses": true,
       "a non-Error failure keeps its text": true,
-      "the repository manifest was never rewritten": true,
+      "the repository manifest carries no sandbox pin": true,
     },
   );
 };
