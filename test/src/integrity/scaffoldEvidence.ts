@@ -168,6 +168,37 @@ export const __lintGateCanary = (kind: AutoMovieViewerSubjectKind): string => { 
 ];
 
 /**
+ * What the probe compiles: everything the scaffold compiles, plus the directory
+ * of any canary this gate plants that the scaffold's own project does not
+ * already cover.
+ *
+ * The two lists are deliberately different, and collapsing them is what broke
+ * this gate. The scaffold's `include` is the generated project's own contract,
+ * so it may only name directories the scaffold actually ships; it stopped
+ * naming `test` when the scaffold stopped shipping one. The evidence canary
+ * still has to sit at the exact path the reserved claim selects,
+ * `test/__evidenceGraphCanary.ts`, because a claim whose file selector matches
+ * nothing is dropped before its references are read. A planted canary the
+ * project never compiles therefore draws no diagnostic, which this gate reads,
+ * correctly, as the instrument having stopped.
+ *
+ * Deriving the difference from the canaries themselves keeps the probe
+ * compiling every canary it plants without asking a generated project to
+ * declare a directory it does not have, and without a second hand-written list
+ * to fall out of step with the first.
+ */
+const PROBE_INCLUDE = [
+  ...TSCONFIG.include,
+  ...[
+    ...new Set(
+      CANARIES.map((canary) =>
+        path.dirname(canary.file).split(path.sep).join("/"),
+      ),
+    ),
+  ].filter((directory) => TSCONFIG.include.includes(directory) === false),
+];
+
+/**
  * Colour escapes `ttsc` emits when it decides the stream can render them.
  *
  * It decides that from the stream rather than from a flag, and `--pretty false`
@@ -532,7 +563,7 @@ const render = (): void => {
           typeRoots: typeRoots(),
           paths: modulePaths(),
         },
-        include: TSCONFIG.include,
+        include: PROBE_INCLUDE,
       },
       null,
       2,
@@ -1102,7 +1133,7 @@ const main = (): void => {
     "scaffold lint:source gate",
     ` probe: ${PROBE}`,
     ` ttsc: exit ${run.status}, ${elapsed}ms`,
-    ` compiled: ${TSCONFIG.include.join(", ")}`,
+    ` compiled: ${PROBE_INCLUDE.join(", ")}`,
     ` diagnostics: ${evidence.length} evidence, ${correctness.length} correctness,` +
       ` ${uninstalled.length} uninstalled-probe noise`,
   ]);
