@@ -190,7 +190,16 @@ export const runExperimental = (
         sandboxManifest(fs.readFileSync(manifest, "utf8"), specifiers),
         "utf8",
       );
-      output.write(`Refreshed experimental/${name} against the pack\n`);
+      // Say which of the two happened. `--refresh --no-install` leaves the
+      // specifiers empty, so the rewrite preserves the pins the manifest
+      // already carried; reporting that as a refresh against the pack tells an
+      // experimenter their package change reached the sandbox when nothing was
+      // packed at all, which is the one thing this command exists to answer.
+      output.write(
+        install
+          ? `Refreshed experimental/${name} against the pack\n`
+          : `Rewrote experimental/${name}'s manifest; --no-install packed nothing\n`,
+      );
     } else {
       files["package.json"] = sandboxManifest(
         files["package.json"],

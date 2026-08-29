@@ -73,11 +73,14 @@ const runner =
  * 4. `--refresh` packs, repins the manifest onto the pack's specifiers, and
  *    installs, all against the same target directory.
  * 5. The refreshed sandbox keeps the author's edit to a scaffold-managed file.
- * 6. A failing install refuses with a status of one, names the sandbox, and
+ * 6. `--refresh --no-install` packs nothing, so it says so rather than claiming
+ *    a refresh against a pack that never ran. That message is the only signal an
+ *    experimenter has that a package change reached the sandbox.
+ * 7. A failing install refuses with a status of one, names the sandbox, and
  *    tells the operator to re-run with `--force`.
- * 7. `--force` re-renders over the non-empty directory and discards the author's
+ * 8. `--force` re-renders over the non-empty directory and discards the author's
  *    edit, which is the behaviour `--refresh` exists to avoid.
- * 8. `runExperimentalCli` publishes a status only when this module is the
+ * 9. `runExperimentalCli` publishes a status only when this module is the
  *    process entry, and `setExperimentalExitCode` is what publishes it.
  */
 const assertBuildExperimentalCommandLifecycle = async (): Promise<void> => {
@@ -112,6 +115,7 @@ const assertBuildExperimentalCommandLifecycle = async (): Promise<void> => {
       .readFileSync(authored, "utf8")
       .includes("authored by the experiment");
 
+    const dryRefresh = run([name, "--refresh", "--no-install"]);
     const failedInstall = run([name, "--refresh"], 1);
     const forced = run([name, "--force", "--no-install"]);
     const discarded = fs
@@ -161,6 +165,15 @@ const assertBuildExperimentalCommandLifecycle = async (): Promise<void> => {
         ],
         ["refresh preserves the authored edit", () => preserved],
         [
+          "a dry refresh does not claim a pack",
+          () =>
+            dryRefresh.code === 0 &&
+            dryRefresh.packs.length === 0 &&
+            dryRefresh.installs.length === 0 &&
+            dryRefresh.output.includes("--no-install packed nothing") &&
+            dryRefresh.output.includes("against the pack") === false,
+        ],
+        [
           "a failing install refuses and points at force",
           () =>
             failedInstall.code === 1 &&
@@ -184,6 +197,7 @@ const assertBuildExperimentalCommandLifecycle = async (): Promise<void> => {
         "a non-empty sandbox refuses and names force": true,
         "refresh packs, repins, and installs the same target": true,
         "refresh preserves the authored edit": true,
+        "a dry refresh does not claim a pack": true,
         "a failing install refuses and points at force": true,
         "force re-renders and discards the authored edit": true,
         "the cli publishes a status only on the entry": true,
