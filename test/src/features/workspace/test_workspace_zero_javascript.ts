@@ -12,6 +12,7 @@ import {
   runZeroJavaScript,
   setZeroJavaScriptExitCode,
   zeroJavaScriptCli,
+  zeroJavaScriptDependencies,
 } from "../../integrity/zeroJavaScript";
 import { namedFacts } from "../internal/predicates";
 
@@ -67,7 +68,12 @@ const captureRun = (
  *    path named in both the error's data and its message.
  * 6. A failure of the listing itself is reported rather than read as an empty
  *    population, which would be the same green as a clean repository.
- * 7. The entry guard answers both ways and publishes its status through the
+ * 7. The real listing boundary reports the repository's own tracked and
+ *    unignored paths, and the real presence boundary answers `true` for a file,
+ *    `false` for a directory, and `false` for a path that is not there. Nothing
+ *    else reaches the second one: the extension test short-circuits ahead of it
+ *    whenever the repository is clean, which is every run that passes.
+ * 8. The entry guard answers both ways and publishes its status through the
  *    process, so a guard that never fires cannot pass as one that did.
  */
 export const test_workspace_zero_javascript = (): void => {
@@ -102,6 +108,7 @@ export const test_workspace_zero_javascript = (): void => {
     "integrity",
     "zeroJavaScript.ts",
   );
+  const listed = zeroJavaScriptDependencies.list(ROOT);
   const previous = process.exitCode;
   zeroJavaScriptCli(false, setZeroJavaScriptExitCode);
   const skipped = process.exitCode === previous;
@@ -151,6 +158,20 @@ export const test_workspace_zero_javascript = (): void => {
           nonError.code === 1 && nonError.error === "Error: listing failed\n",
       ],
       [
+        "the listing boundary reads this repository",
+        () =>
+          listed.includes("package.json") &&
+          listed.includes("build/tgz.ts") &&
+          listed.every((relative) => relative !== ""),
+      ],
+      [
+        "the presence boundary separates file, directory, and absence",
+        () =>
+          zeroJavaScriptDependencies.isFile(ROOT, "build/tgz.ts") === true &&
+          zeroJavaScriptDependencies.isFile(ROOT, "build") === false &&
+          zeroJavaScriptDependencies.isFile(ROOT, "build/absent.js") === false,
+      ],
+      [
         "entry guard answers both ways",
         () =>
           isProcessEntry(entry, entry) === true &&
@@ -169,6 +190,8 @@ export const test_workspace_zero_javascript = (): void => {
       "error owns exact paths": true,
       "negative output names every path": true,
       "listing failure preserved": true,
+      "the listing boundary reads this repository": true,
+      "the presence boundary separates file, directory, and absence": true,
       "entry guard answers both ways": true,
       "entry guard publishes only when it fires": true,
     },
