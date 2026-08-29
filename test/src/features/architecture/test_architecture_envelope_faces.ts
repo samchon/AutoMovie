@@ -41,9 +41,9 @@ import { namedFacts, vclose } from "../internal/predicates";
  *    ground slab as `underside`, from their normals alone.
  * 4. The east wall's world outline, centroid and outward normal equal the metres
  *    typed by hand from the fixture's own frame.
- * 5. A separation between two spaces, a separation carrying no face, and a
- *    separation citing a space the record does not hold are all absent, because
- *    none of the three is an exposed face of anything.
+ * 5. A separation between two spaces, a separation carrying no face, one that
+ *    encloses no space at all, and one citing a space the record does not hold
+ *    are all absent, because none of the four is an exposed face of anything.
  * 6. A face whose authored `+Z` points into its own space is reported pointing
  *    out of it.
  * 7. A face whose outline encloses no area still reports a centroid, taken from
@@ -184,10 +184,10 @@ export const test_architecture_envelope_faces = (): void => {
 /**
  * One deliberately malformed record holding every separation that is not a face.
  *
- * It cites a space the record does not hold, so `validateBuiltEnvironment`
- * refuses it and no scenario above asks it to pass. What it is here for is the
- * three ways a separation fails to be exposed and the two ways an exposed one is
- * awkward, all in one read.
+ * It cites a space the record does not hold and a separation that encloses
+ * nothing, so `validateBuiltEnvironment` refuses it and no scenario above asks
+ * it to pass. What it is here for is the four ways a separation fails to be
+ * exposed and the two ways an exposed one is awkward, all in one read.
  */
 const oddBoundaries = (): IAutoMovieBuiltEnvironment => ({
   version: 1,
@@ -245,6 +245,22 @@ const oddBoundaries = (): IAutoMovieBuiltEnvironment => ({
       kind: "threshold",
       spaces: ["hall"],
       elements: [],
+    },
+    {
+      id: "unbounded",
+      kind: "wall",
+      spaces: [],
+      elements: [],
+      face: {
+        origin: { x: 0, y: 0, z: 0 },
+        rotation: FACE_ROTATION.keepZ,
+        outline: [
+          { x: 0, y: 0 },
+          { x: 1, y: 0 },
+          { x: 1, y: 1 },
+        ],
+        thickness: 0.2,
+      },
     },
     {
       id: "orphan",

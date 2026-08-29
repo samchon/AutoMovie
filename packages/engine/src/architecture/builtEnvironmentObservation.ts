@@ -565,12 +565,14 @@ const interiorCentre = (
   };
   if (builtSpaceContainsPoint(space, middle)) return middle;
   // A space split into several cells, or pierced by a void, can miss its own
-  // box centre. Every convex cell contains the mean of its own corners, so the
-  // first cell that closes a volume supplies an interior point instead.
+  // box centre. A convex cell contains the mean of its own corners, and that
+  // cell is part of the space's own union, so the first cell closing a volume
+  // supplies an interior point without a second containment test. A cell that
+  // closes nothing supplies no corners and is passed over.
   for (const cell of space.cells) {
     const vertices = builtConvexCellVertices(cell);
     if (vertices.length === 0) continue;
-    const mean = Vector3.scale(
+    return Vector3.scale(
       vertices.reduce((sum, vertex) => Vector3.add(sum, vertex), {
         x: 0,
         y: 0,
@@ -578,7 +580,6 @@ const interiorCentre = (
       }),
       1 / vertices.length,
     );
-    if (builtSpaceContainsPoint(space, mean)) return mean;
   }
   return null;
 };
@@ -609,6 +610,23 @@ const openingCentre = (
       z: 0,
     }),
   );
+};
+
+/** Where an eye stands to read one opening from inside the space it serves. */
+const thresholdPose = (props: {
+  environment: IAutoMovieBuiltEnvironment;
+  space: IAutoMovieBuiltSpace;
+  opening: IAutoMovieBuiltOpening;
+  anchor: IAutoMovieVector3;
+}): IAutoMovieSpaceObservationStation["pose"] => {
+  const mouth = openingCentre(props.environment, props.opening);
+  if (mouth === null) return null;
+  const settled = settle(
+    props.space,
+    { ...mouth, y: props.anchor.y },
+    props.anchor,
+  );
+  return settled === null ? null : aim(settled, props.anchor);
 };
 
 /**
@@ -725,22 +743,21 @@ export const builtSpaceObservationStations = (
       ),
     )
     .slice()
-    .sort((left, right) => compareAutoMovieRenderIds(left.id, right.id))) {
-    const mouth = openingCentre(environment, opening);
-    const settled =
-      mouth === null || placed === null
-        ? null
-        : settle(space, { ...mouth, y: placed.anchor.y }, placed.anchor);
+    .sort((left, right) => compareAutoMovieRenderIds(left.id, right.id)))
     stations.push({
       id: `threshold-${opening.id}`,
       role: "threshold",
       opening: opening.id,
       pose:
-        settled === null || placed === null
+        placed === null
           ? null
-          : aim(settled, placed.anchor),
+          : thresholdPose({
+              environment,
+              space,
+              opening,
+              anchor: placed.anchor,
+            }),
     });
-  }
   return stations;
 };
 

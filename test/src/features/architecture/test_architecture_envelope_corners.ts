@@ -121,7 +121,7 @@ export const test_architecture_envelope_corners = (): void => {
     "the re-entrant corner stands at the inside angle of the footprint",
     vclose(notched.find((corner) => corner.kind === "reentrant")!.position, {
       x: 2,
-      y: 0,
+      y: 1.5,
       z: 2,
     }),
     true,

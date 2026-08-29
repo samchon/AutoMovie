@@ -43,28 +43,36 @@ import { namedFacts, vclose } from "../internal/predicates";
  *    which look one millimetre outward, and leaves its corner stations unaimed,
  *    because a corner and the centre are the same point there.
  * 6. An opening on a separation carrying no face keeps its threshold station
- *    and reports no place to stand.
+ *    and reports no place to stand, and so does an opening whose face stands so
+ *    far off the room that no step toward the centre reaches inside it.
+ * 7. An opening in a space with no extent at all keeps its threshold station
+ *    without the opening ever being placed, because there is no anchor to walk
+ *    toward.
  */
 export const test_architecture_space_station_placement = (): void => {
   TestValidator.equals(
     "a space that closes no volume keeps its stations and places none",
     unplaced(
       builtSpaceObservationStations(
-        room({
-          id: "hall",
-          kind: "room",
-          parent: null,
-          cells: [
-            {
-              id: "sky",
-              planes: [{ normal: { x: 0, y: 1, z: 0 }, offset: 3 }],
-            },
-          ],
-        }),
+        room(
+          {
+            id: "hall",
+            kind: "room",
+            parent: null,
+            cells: [
+              {
+                id: "sky",
+                planes: [{ normal: { x: 0, y: 1, z: 0 }, offset: 3 }],
+              },
+            ],
+          },
+          [{ id: "gap", kind: "passage", boundary: "located", fill: null }],
+          [locatedWall()],
+        ),
         "hall",
       ),
     ),
-    { count: 8, placed: 0 },
+    { count: 9, placed: 0 },
   );
 
   TestValidator.equals(
@@ -131,13 +139,35 @@ export const test_architecture_space_station_placement = (): void => {
   const faceless = builtSpaceObservationStations(withFacelessOpening(), "hall");
 
   TestValidator.equals(
-    "an opening on a faceless separation keeps its threshold, unplaced",
+    "an unreachable opening keeps its threshold station, unplaced",
     faceless
       .filter((station) => station.role === "threshold")
       .map((station) => [station.id, station.pose]),
-    [["threshold-gap", null]],
+    [
+      ["threshold-distant-gap", null],
+      ["threshold-gap", null],
+    ],
   );
 };
+
+/** One located separation on the north side of the four-by-six hall. */
+const locatedWall = (): IAutoMovieBuiltEnvironment["boundaries"][number] => ({
+  id: "located",
+  kind: "wall",
+  spaces: ["hall"],
+  elements: [],
+  face: {
+    origin: { x: 0, y: 0, z: 6 },
+    rotation: FACE_ROTATION.keepZ,
+    outline: [
+      { x: 0, y: 0 },
+      { x: 4, y: 0 },
+      { x: 4, y: 3 },
+      { x: 0, y: 3 },
+    ],
+    thickness: 0.2,
+  },
+});
 
 /** How many stations came back and how many of them found a place to stand. */
 const unplaced = (
@@ -232,6 +262,9 @@ const notched = (): IAutoMovieBuiltSpace => ({
   kind: "room",
   parent: null,
   cells: [
+    // A half-space five metres under the floor closes no volume and holds no
+    // point of the room, so the anchor walk must pass over it to reach the arm.
+    { id: "below", planes: [{ normal: { x: 0, y: 1, z: 0 }, offset: -5 }] },
     boxCell("long", { x: 0, y: 0, z: 0 }, { x: 4, y: 3, z: 1 }),
     boxCell("short", { x: 0, y: 0, z: 1 }, { x: 1, y: 3, z: 4 }),
   ],
@@ -245,7 +278,14 @@ const pointVolume = (): IAutoMovieBuiltSpace => ({
   cells: [boxCell("point", { x: 0, y: 0, z: 0 }, { x: 0, y: 0, z: 0 })],
 });
 
-/** A room with one opening declared on a separation that states no face. */
+/**
+ * A room whose two openings are each unreachable for a different reason.
+ *
+ * `gap` is declared on a separation that states no face, so nothing says where
+ * its mouth is. `distant-gap` has a face fifty metres east of the room, so its
+ * mouth is real and every step of the ladder toward the room's centre is still
+ * outside the room.
+ */
 const withFacelessOpening = (): IAutoMovieBuiltEnvironment =>
   room(
     {
@@ -254,16 +294,20 @@ const withFacelessOpening = (): IAutoMovieBuiltEnvironment =>
       parent: null,
       cells: [boxCell("hall-cell", { x: 0, y: 0, z: 0 }, { x: 4, y: 3, z: 6 })],
     },
-    [{ id: "gap", kind: "passage", boundary: "logical", fill: null }],
+    [
+      { id: "gap", kind: "passage", boundary: "logical", fill: null },
+      { id: "distant-gap", kind: "passage", boundary: "distant", fill: null },
+    ],
     [
       { id: "logical", kind: "threshold", spaces: ["hall"], elements: [] },
+      locatedWall(),
       {
-        id: "located",
+        id: "distant",
         kind: "wall",
         spaces: ["hall"],
         elements: [],
         face: {
-          origin: { x: 0, y: 0, z: 6 },
+          origin: { x: 50, y: 0, z: 0 },
           rotation: FACE_ROTATION.keepZ,
           outline: [
             { x: 0, y: 0 },
