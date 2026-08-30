@@ -79,6 +79,12 @@ const UNIT_TARGET =
  * ordinary pair of cases. An `Error` contributes its message rather than its
  * class name, so a command's stderr stays the diagnostic rather than
  * `ContractOwnershipError: ` followed by it.
+ *
+ * The changed-coverage and coverage-population gates state the same sentence,
+ * and they import it from here rather than restating it. `isProcessEntry` is
+ * duplicated in `build/tgz.ts` because that file is outside this package's
+ * `tsconfig.json` root and cannot share a definition; these three callers are
+ * all inside `test/src`, so no such boundary excuses a second copy.
  */
 export const describeThrown = (error: unknown): string =>
   error instanceof Error ? error.message : String(error);

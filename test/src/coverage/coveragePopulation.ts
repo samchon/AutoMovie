@@ -1,11 +1,8 @@
 import fs from "node:fs";
 import path from "node:path";
 
-import {
-  describeThrown,
-  isAuthoredExecutableSource,
-  runGit,
-} from "./changedCoverage";
+import { isAuthoredExecutableSource, runGit } from "./changedCoverage";
+import { describeThrown } from "../integrity/contractOwnership";
 
 type Writer = (line: string) => void;
 
