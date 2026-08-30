@@ -1141,6 +1141,15 @@ const assertResolvableLinks = (
         ...broken.map((entry) => ` ${entry}`),
       ].join("\n"),
     );
+  if (checked === 0)
+    throw new Error(
+      [
+        "FAIL: the link check selected no link at all, so its clean result is",
+        " about nothing. An empty inventory, a corpus with no Markdown, and a",
+        " match pattern that stopped matching all report exactly this, and all",
+        " three read as a corpus whose every link resolves.",
+      ].join("\n"),
+    );
   return checked;
 };
 
@@ -1162,10 +1171,19 @@ const testShippedInventory = (): void => {
   const before = Object.keys(rendered);
   assertRetiredSurfacesAbsent(before);
   const links = assertResolvableLinks(rendered);
+  const cache = path.join(SCAFFOLD, ".cache", `inventory-${process.pid}`);
   const planted = [
-    path.join(SCAFFOLD, "scripts", "__shippedInventoryCanary.js"),
-    path.join(SCAFFOLD, "scripts", "__shippedInventoryCanary.d.ts"),
-    path.join(SCAFFOLD, ".cache", "__shippedInventoryCanary.json"),
+    path.join(
+      SCAFFOLD,
+      "scripts",
+      `__shippedInventoryCanary.${process.pid}.js`,
+    ),
+    path.join(
+      SCAFFOLD,
+      "scripts",
+      `__shippedInventoryCanary.${process.pid}.d.ts`,
+    ),
+    path.join(cache, "canary.json"),
   ];
   try {
     for (const file of planted) {
@@ -1178,7 +1196,16 @@ const testShippedInventory = (): void => {
     );
   } finally {
     for (const file of planted) fs.rmSync(file, { force: true });
-    fs.rmSync(path.join(SCAFFOLD, ".cache"), { force: true, recursive: true });
+    fs.rmSync(cache, { force: true, recursive: true });
+    // Only this run's own subdirectory is removed above. The shared parent goes
+    // when it is empty and stays when a concurrent run still owns something in
+    // it, so two suites on one checkout cannot delete each other's plant and
+    // read the resulting unchanged inventory as a pass.
+    try {
+      fs.rmdirSync(path.join(SCAFFOLD, ".cache"));
+    } catch {
+      /* another run still owns a plant here */
+    }
   }
   report([
     ` byte inventory: ${before.length} shipped paths, no retired surface, ` +
