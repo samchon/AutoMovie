@@ -68,6 +68,13 @@ test("reports the real production and playground populations", () => {
     result.graphs.map((graph) => graph.package),
     ["production", "playground"],
   );
+  // The gate's accepting exit, pinned beside the refusals below. A gate only
+  // ever watched refusing is one nobody has watched agree, and this is the
+  // status the CI lane reads.
+  assert.equal(
+    runRepositoryEvidencePopulationGate(root, () => undefined),
+    0,
+  );
 });
 
 test("executes both real evidence graph configurations", () => {

@@ -116,8 +116,9 @@ const walkSources = (directory: string): string[] =>
     })
     .sort(compare);
 
-const contractFile = (reference: string): string =>
-  reference.split("#", 1)[0] ?? reference;
+// A split always yields at least one piece, so the first is the file part
+// whether or not the reference carries an anchor.
+const contractFile = (reference: string): string => reference.split("#", 1)[0]!;
 type ReadText = (file: string) => string;
 
 /**
@@ -177,7 +178,8 @@ export const evidenceCarriers = (
           citations.push({ kind, reference });
       }
       if (citations.length === 0) continue;
-      const line = text.slice(0, block.index ?? 0).split("\n").length;
+      // Every `matchAll` result carries the offset it was found at.
+      const line = text.slice(0, block.index!).split("\n").length;
       carriers.push({
         file: slash(path.relative(root, file)),
         line,
