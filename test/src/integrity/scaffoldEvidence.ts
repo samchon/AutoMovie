@@ -1154,6 +1154,49 @@ const assertResolvableLinks = (
 };
 
 /**
+ * The scaffold-relative path with a leading dot removed from its basename.
+ *
+ * npm strips a real `.gitignore` and `.npmrc` from a published package, so the
+ * scaffold stores those two undotted and the renderer restores the dot. That is
+ * the only systematic difference between a path on disk and the key a generated
+ * project receives, and normalizing it on both sides compares the two
+ * populations without writing the rename table down a second time to fall out
+ * of step with the first.
+ */
+const shippedKey = (relative: string): string =>
+  relative.replace(/(^|\/)\.(?=[^/]*$)/u, "$1");
+
+/**
+ * Refuse any file sitting in the scaffold directory that is not handed over.
+ *
+ * The oracle is the renderer's own decision rather than a second copy of its
+ * exclusion rule: whatever the walk refused to ship is, by that fact, something
+ * the scaffold does not mean to hand over, and this reports it where it can be
+ * deleted. Without it the filter is silent in exactly the case it was written
+ * for, because a stray artifact stops reaching a customer and also stops being
+ * visible to anyone.
+ */
+const assertNothingUnshipped = (
+  tree: readonly string[],
+  keys: readonly string[],
+): void => {
+  const shipped = new Set(keys.map(shippedKey));
+  const refused = tree.filter(
+    (file) => shipped.has(shippedKey(file)) === false,
+  );
+  if (refused.length !== 0)
+    throw new Error(
+      [
+        "FAIL: packages/template/scaffold holds files the scaffolder refuses to",
+        " ship. They are derived artifacts or working residue rather than",
+        " content, and the repository ignores most of their paths, so `git",
+        " status` cannot report them. Delete them.",
+        ...refused.map((file) => ` ${file}`),
+      ].join("\n"),
+    );
+};
+
+/**
  * What a generated project receives, and that no derived artifact rides along.
  *
  * The negative half plants the exact class that reached this tree four times in
@@ -1162,14 +1205,28 @@ const assertResolvableLinks = (
  * the scaffold, so `git status` says nothing while the scaffolder reads them off
  * the disk. Measured before the filter existed, planting three such files took
  * the inventory from 244 keys to 247, which is emitted output installed into a
- * customer's project. The plant is removed in `finally` and carries a name no
- * author would choose, so a run that dies mid-probe leaves a file the next run's
- * positive half reports rather than one that hides.
+ * customer's project.
+ *
+ * The filter alone would make that class invisible rather than harmless, which
+ * is why the tree is compared with the inventory before anything is planted. A
+ * stray artifact then stops reaching a customer and starts being reported here,
+ * including one this probe itself left behind if a run died between its plant
+ * and its `finally`.
  */
 const testShippedInventory = (): void => {
   const rendered = renderScaffold({ name: "inventory-probe" });
   const before = Object.keys(rendered);
   assertRetiredSurfacesAbsent(before);
+  assertNothingUnshipped(
+    treeFiles(SCAFFOLD).filter((file) => {
+      const directories = file.split("/").slice(0, -1);
+      return (
+        directories.includes("node_modules") === false &&
+        directories.includes(".git") === false
+      );
+    }),
+    before,
+  );
   const links = assertResolvableLinks(rendered);
   const cache = path.join(SCAFFOLD, ".cache", `inventory-${process.pid}`);
   const planted = [
@@ -1203,8 +1260,9 @@ const testShippedInventory = (): void => {
     // directory, so leaving it costs nothing the tracked-status claim depends on.
   }
   report([
-    ` byte inventory: ${before.length} shipped paths, no retired surface, ` +
-      `${links} links resolve, ${planted.length} planted artifacts refused`,
+    ` byte inventory: ${before.length} shipped paths, no retired surface, no` +
+      ` unshipped residue, ${links} links resolve,` +
+      ` ${planted.length} planted artifacts refused`,
   ]);
 };
 
@@ -1687,6 +1745,7 @@ export const scaffoldEvidenceTestContract = {
   assertGraphConsumer,
   assertInstructionSync,
   assertInventoryIgnoresArtifacts,
+  assertNothingUnshipped,
   assertOwnedObligations,
   assertPaidCompile,
   assertPaidSourceLine,
@@ -1704,5 +1763,6 @@ export const scaffoldEvidenceTestContract = {
   processResult,
   replaceOnce,
   resolveLink,
+  shippedKey,
   validateInitialCompile,
 };
