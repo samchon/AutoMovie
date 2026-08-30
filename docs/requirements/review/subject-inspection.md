@@ -54,7 +54,11 @@ Frame과 구간 검토는 반대로 저작된 camera를 그대로 물려받아�
 
 Library 검토는 shot에 등장한 항목이 아니라 evidence graph가 선택한 active reviewed design/source branch의 exact design owner와 H2를 전달 개체군으로 사용해야 한다. 선택된 branch의 owner 개체군이 비었거나 owner의 유한 관찰 계획, current source·compiled identity, 실제 artifact 또는 structured facts, tool/runtime identity와 terminal verdict 가운데 하나라도 없으면 review와 final은 실패해야 한다. Map은 current world extent·coordinate·terrain·water·network·site interface를 반증할 수 있는 plan·section·elevation·traversal 관찰을, model은 current compiled asset의 고정 whole-model turntable과 적용 가능한 rig range를 사용해야 한다. Space·material·instance·motion·system은 각각 plan·section·elevation·perspective·traversal, surface·channel·scale, membership·placement·clearance, endpoint·phase·contact·transition, finite-state·stress·budget·terminal-state 가운데 선언한 유한 집합을 사용해야 한다. Film과 brief에서 실제 consumer가 사용하지 않은 inventory, disabled branch와 delivery scope 밖 residue는 이 개체군에 들어오지 않아야 한다.
 
+Library 전달 개체군의 compiled topology는 실제로 실행된 library source의 산출물이어야 한다. Active reviewed design branch의 각 owner는 자기 reviewed design H2를 지목하는 source export를 가져야 하고, compiler는 그 source를 실행해 결과를 검증한 뒤 compiler-owned artifact로 원자적으로 발행해야 하며, 발행된 artifact와 그 소유 관계를 offline 관찰 명령이 같은 주소로 다시 열 수 있어야 한다. Source가 존재하는데 어떤 export도 그 H2를 realize하지 않으면 review와 final은 실패해야 한다. Source bytes만 fingerprint하고 아무것도 만들지 않은 상태를 전달로 간주해서는 안 되며, 어떤 required 관찰도 파생되지 않는 빈 개체군을 완료로 보고해서도 안 된다.
+
 Design H2, 선택 source bytes, compile identity 또는 관찰 계획이 바뀌면 이전 receipt는 stale이고, exit code나 파일 존재만으로 current observation을 주장하지 않아야 한다. Library를 timed shot으로 가장하거나 dummy film frame을 만들어 이 의무를 대체해서는 안 된다.
+
+한 관찰의 완료는 current identity에서 정확히 하나의 다시 열린 passed receipt다. 같은 identity의 failed, unsupported, not-run과 runtime 미식별 결과는 history로 남으며, 완료를 만들지도 않고 이미 완료된 관찰을 모호하게 만들지도 않는다. 따라서 실패를 기록한 저자가 green으로 돌아가기 위해 그 실패를 삭제할 필요가 없어야 하고, 삭제나 plan 축소로 실패를 없애는 것을 완료로 간주해서도 안 된다.
 
 ### 시간 축 단위와의 비대체 {#review-subject-time-noninterchange}
 
