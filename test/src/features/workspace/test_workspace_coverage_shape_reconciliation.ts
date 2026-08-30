@@ -21,6 +21,20 @@ import {
 const ROOT = path.resolve(__dirname, "../../../..");
 
 /**
+ * A repository file's URL, spelled once and built the way Node builds one.
+ *
+ * `file:///` followed by a path is right only where the path starts with a
+ * drive letter. On a POSIX runner the path's own leading slash makes it four,
+ * and the census reads a URL it cannot parse -- which is how the first of these
+ * two call sites failed on Ubuntu while passing on Windows, and how the reader
+ * `isMeasuredScriptUrl` replaced reported zero measured scripts on Linux for
+ * its whole life. One spelling is what keeps the second site from repeating the
+ * first.
+ */
+const repositoryUrl = (...segments: readonly string[]): string =>
+  pathToFileURL(path.join(ROOT, ...segments)).href;
+
+/**
  * A merge that loses hits is replaced by the fullest reading each file got.
  *
  * c8 writes one entry per source path. When two processes load one source in
@@ -281,14 +295,8 @@ export const test_workspace_coverage_shape_reconciliation = (): void => {
           path.join(directory, "real-records"),
           path.join(directory, "real-report"),
         ),
-        // Built the way Node builds one. Spelling `file:///` plus a path is
-        // right only where the path starts with a drive letter: on a POSIX
-        // runner the leading slash makes it four, and the census reads a URL it
-        // cannot parse. That is the same host-shaped mistake this repository
-        // already paid for once, in the reader this predicate replaced.
         inside: parts.measured(
-          pathToFileURL(path.join(ROOT, "packages", "engine", "src", "x.ts"))
-            .href,
+          repositoryUrl("packages", "engine", "src", "x.ts"),
         ),
         outside: parts.measured("file:///elsewhere/x.ts"),
         // A signalled reporter has no status, and reading that as success
@@ -318,7 +326,13 @@ export const test_workspace_coverage_shape_reconciliation = (): void => {
     const liveReport = path.join(directory, "live-report");
     fs.mkdirSync(liveRecords, { recursive: true });
     fs.mkdirSync(liveReport, { recursive: true });
-    const liveUrl = `file:///${ROOT.replaceAll("\\", "/")}/packages/engine/src/architecture/builtEnvironmentObservation.ts`;
+    const liveUrl = repositoryUrl(
+      "packages",
+      "engine",
+      "src",
+      "architecture",
+      "builtEnvironmentObservation.ts",
+    );
     for (const [name, offset] of [
       ["one.json", 0],
       ["two.json", 40],
