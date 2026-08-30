@@ -243,6 +243,138 @@ const testOutcomeRefusals = (): void => {
       ),
     /did not produce an isolated/u,
   );
+
+  assert.equal(contract.replaceOnce("a b a", "b", "c"), "a c a");
+  assert.throws(
+    () => contract.replaceOnce("a a", "a", "b"),
+    /update the refusal probes/u,
+  );
+  assert.throws(
+    () => contract.replaceOnce("a", "missing", "b"),
+    /update the refusal probes/u,
+  );
+
+  assert.equal(contract.resolveLink("a/b/c.md", "./d.md"), "a/b/d.md");
+  assert.equal(contract.resolveLink("a/b/c.md", "../../e/f.md"), "e/f.md");
+  assert.equal(contract.resolveLink("a/b/c.md", "d//e.md"), "a/b/d/e.md");
+
+  assert.deepEqual(
+    [
+      ...contract.markdownAnchors(
+        "## A Title {#explicit}\n\n### Plain Heading\n",
+      ),
+    ],
+    ["explicit", "a-title", "plain-heading"],
+  );
+
+  contract.assertRetiredSurfacesAbsent([
+    ".claudette/keep.md",
+    "lint.config.ts",
+  ]);
+  for (const [key, fragment] of [
+    [".claude", /provider-specific control plane/u],
+    [".claude/settings.json", /provider-specific control plane/u],
+    ["lint.config.mjs", /second graph declaration/u],
+    ["scripts/productionEvidence.json", /second graph declaration/u],
+    [".cache/ttsc/entry.json", /tool cache/u],
+    ["scripts/compile.js", /compiler output/u],
+    ["scripts/compile.d.ts", /compiler output/u],
+  ] as const)
+    assert.throws(
+      () => contract.assertRetiredSurfacesAbsent([key]),
+      fragment,
+      key,
+    );
+
+  contract.assertInventoryIgnoresArtifacts(["a.md"], ["a.md"]);
+  assert.throws(
+    () => contract.assertInventoryIgnoresArtifacts(["a.md"], ["a.md", "b.js"]),
+    /shipped: b\.js/u,
+  );
+  assert.throws(
+    () => contract.assertInventoryIgnoresArtifacts(["a.md", "b.md"], ["a.md"]),
+    /lost: b\.md/u,
+  );
+
+  assert.equal(
+    contract.assertResolvableLinks({
+      "docs/a.md":
+        "[external](https://example.invalid) [self](#top) [file](../b.md) [anchored](../b.md#unit) [asset](../c.json#fragment)\n",
+      "b.md": "## Unit {#unit}\n",
+      "c.json": "{}\n",
+      "d.txt": "[ignored](nowhere.md)\n",
+    }),
+    3,
+  );
+  assert.throws(
+    () => contract.assertResolvableLinks({ "a.md": "[gone](missing.md)\n" }),
+    /no missing\.md is shipped/u,
+  );
+  assert.throws(
+    () =>
+      contract.assertResolvableLinks({
+        "a.md": "[gone](b.md#absent)\n",
+        "b.md": "## Unit {#unit}\n",
+      }),
+    /no such anchor in b\.md/u,
+  );
+
+  const syncedInstructions = {
+    claude: "@AGENTS.md\n",
+    divergent: [] as readonly string[],
+    router: [
+      "evidence-graph",
+      "production-lifecycle",
+      "review-verification",
+      "source-authoring",
+    ]
+      .map((skill) => `[x](.agents/skills/${skill}/SKILL.md)`)
+      .join("\n"),
+  };
+  contract.assertSynchronizedInstructions(syncedInstructions);
+  assert.throws(
+    () =>
+      contract.assertSynchronizedInstructions({
+        ...syncedInstructions,
+        claude: "@AGENTS.md\nplus a local fork\n",
+      }),
+    /cannot reach its own authoring/u,
+  );
+  assert.throws(
+    () =>
+      contract.assertSynchronizedInstructions({
+        ...syncedInstructions,
+        router: syncedInstructions.router.replace(
+          ".agents/skills/source-authoring/SKILL.md",
+          "",
+        ),
+      }),
+    /source-authoring is not routed/u,
+  );
+  assert.throws(
+    () =>
+      contract.assertSynchronizedInstructions({
+        ...syncedInstructions,
+        divergent: ["review-verification/review.md"],
+      }),
+    /review-verification\/review\.md differs/u,
+  );
+
+  const refusal = {
+    edits: [] as readonly (readonly [string, string])[],
+    expect: "settings cannot enter evidence without a Markdown host.",
+    name: "an active settings layer with no Markdown host",
+  };
+  contract.assertConfigRefusal(refusal, result(`error: ${refusal.expect}`, 2));
+  assert.throws(
+    () => contract.assertConfigRefusal(refusal, result(refusal.expect, 0)),
+    /was not refused with its own diagnostic/u,
+  );
+  assert.throws(
+    () =>
+      contract.assertConfigRefusal(refusal, result("some other failure", 2)),
+    /was not refused with its own diagnostic/u,
+  );
 };
 
 /**
