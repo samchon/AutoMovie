@@ -1,7 +1,11 @@
 import fs from "node:fs";
 import path from "node:path";
 
-import { isAuthoredExecutableSource, runGit } from "./changedCoverage";
+import {
+  describeThrown,
+  isAuthoredExecutableSource,
+  runGit,
+} from "./changedCoverage";
 
 type Writer = (line: string) => void;
 
@@ -141,7 +145,7 @@ export const runCoveragePopulationGate = (options: {
     return result.unmeasured.length + result.unjudged.length === 0 ? 0 : 2;
   } catch (error) {
     write(
-      `INSTRUMENT FAILURE: coverage population could not be inspected: ${String(error)}`,
+      `INSTRUMENT FAILURE: coverage population could not be inspected: ${describeThrown(error)}`,
     );
     return 2;
   }

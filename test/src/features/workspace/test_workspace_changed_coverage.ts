@@ -10,6 +10,7 @@ import {
   type GitExecute,
   type IIstanbulFileCoverage,
   collectGitChangedLines,
+  describeThrown,
   inspectChangedCoverage,
   isAuthoredExecutableSource,
   parseChangedCoverageArguments,
@@ -232,6 +233,20 @@ test("parses new-side diff lines and recognizes authored executable source", () 
   assert.equal(
     isAuthoredExecutableSource("packages/engine/src/readme.md"),
     false,
+  );
+  // The diagnostics carry an `Error`'s message rather than its class name,
+  // because the caller has already prefixed the sentence and `INSTRUMENT
+  // FAILURE: Error: ...` reads as if something printed twice. The other side is
+  // a value nothing in this repository throws, which is exactly why it is one
+  // function with two cases instead of three inline branches that can only be
+  // covered by pretending.
+  assert.equal(
+    describeThrown(new Error("the report was unreadable")),
+    "the report was unreadable",
+  );
+  assert.equal(
+    describeThrown("a value nothing here throws"),
+    "a value nothing here throws",
   );
 });
 

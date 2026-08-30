@@ -3,7 +3,13 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
-import { runContractOwnership } from "../../integrity/contractOwnership";
+import {
+  contractOwnershipProcessIsEntry,
+  describeThrown,
+  runContractOwnership,
+  runContractOwnershipCli,
+  setContractOwnershipExitStatus,
+} from "../../integrity/contractOwnership";
 import { namedFacts } from "../internal/predicates";
 
 interface ICommandResult {
@@ -167,6 +173,10 @@ export const test_workspace_contract_ownership = (): void => {
         "",
         "The product does not claim this atom.",
         "",
+        "## Grouping heading {#spec-structural}",
+        "",
+        "Independently payable descendants live under this heading.",
+        "",
         "## Specification migration debt {#spec-legacy}",
         "",
         "An unchanged existing specification.",
@@ -195,6 +205,9 @@ export const test_workspace_contract_ownership = (): void => {
       "packages/engine/package.json",
       JSON.stringify({ name: "@automovie/engine" }),
     );
+    // A directory under `packages/` that is not a workspace package. The scan
+    // has to walk past it rather than fail on the manifest it does not have.
+    write(root, "packages/no-manifest/.keep", "");
     const engineFile = path.join(root, "packages", "engine", "src", "query.ts");
     const engineSource = [
       "/**",
@@ -273,6 +286,12 @@ export const test_workspace_contract_ownership = (): void => {
                 reason: "A licensed professional owns certification.",
               },
             },
+          },
+        },
+        "specifications/system.md#spec-structural": {
+          structural: {
+            reason:
+              "This heading only groups descendants that are payable on their own.",
           },
         },
         "specifications/system.md#spec-supply": {
@@ -498,6 +517,258 @@ export const test_workspace_contract_ownership = (): void => {
     );
     const unknownCommand = command(root, "unknown");
     const unknownLayer = command(root, "query", "--layer", "unknown");
+    const missingLayer = command(root, "query");
+
+    // Every remaining refusal in the gate, each reached by the one ledger shape
+    // that produces it. A diagnostic nothing has ever produced is a sentence,
+    // not a guard, and this file is the only place that difference is visible.
+    const ledgerWith = (
+      source: string,
+      update: (ledger: Record<string, any>) => void,
+    ): string => {
+      const ledger = JSON.parse(source) as Record<string, any>;
+      update(ledger);
+      // Sortedness is asserted by its own case above, so every mutation here
+      // restores it rather than failing on a second diagnostic it did not mean
+      // to raise.
+      for (const key of ["declarations", "legacy"]) {
+        const map: unknown = ledger[key];
+        // A case that deliberately replaces the map with something else is
+        // asserting on that shape, so re-sorting it would quietly restore an
+        // object and the case would pass against material it did not write.
+        if (
+          typeof map !== "object" ||
+          map === null ||
+          Array.isArray(map) === true
+        )
+          continue;
+        ledger[key] = Object.fromEntries(
+          Object.keys(map)
+            .sort((left, right) => (left < right ? -1 : left > right ? 1 : 0))
+            .map((name) => [name, (map as Record<string, unknown>)[name]]),
+        );
+      }
+      return `${JSON.stringify(ledger, null, 2)}\n`;
+    };
+    const refusedRequirements = (
+      update: (ledger: Record<string, any>) => void,
+    ): ICommandResult =>
+      temporarily(reqLedgerFile, ledgerWith(validReqLedger, update), () =>
+        command(root, "check"),
+      );
+    const refusedSpecifications = (
+      update: (ledger: Record<string, any>) => void,
+    ): ICommandResult =>
+      temporarily(specLedgerFile, ledgerWith(validSpecLedger, update), () =>
+        command(root, "check"),
+      );
+    const requirementOwner = (
+      ledger: Record<string, any>,
+      target: string,
+      owner: unknown,
+    ): void => {
+      ledger.declarations[target] = { owner };
+    };
+
+    const scalarLedger = temporarily(reqLedgerFile, '"not a ledger"\n', () =>
+      command(root, "check"),
+    );
+    const wrongVersion = refusedRequirements((ledger) => {
+      ledger.version = 2;
+    });
+    const wrongLayer = refusedRequirements((ledger) => {
+      ledger.layer = "specifications";
+    });
+    const listDeclarations = refusedRequirements((ledger) => {
+      ledger.declarations = [];
+    });
+    const scalarLegacy = refusedRequirements((ledger) => {
+      ledger.legacy = "none";
+    });
+    const extraLedgerKey = refusedRequirements((ledger) => {
+      ledger.snapshot = 1;
+    });
+    const invalidTarget = refusedRequirements((ledger) => {
+      ledger.legacy["requirements/topic.md#NotAnAnchor"] =
+        `sha256:${"a".repeat(64)}`;
+    });
+    const invalidDigest = refusedRequirements((ledger) => {
+      ledger.legacy["requirements/topic.md#req-legacy"] = "not-a-digest";
+    });
+    const scalarDeclaration = refusedRequirements((ledger) => {
+      ledger.declarations["requirements/topic.md#req-package"] = "interface";
+    });
+    const scalarOwner = refusedRequirements((ledger) => {
+      requirementOwner(
+        ledger,
+        "requirements/topic.md#req-package",
+        "interface",
+      );
+    });
+    const invalidPackageOwner = refusedRequirements((ledger) => {
+      requirementOwner(ledger, "requirements/topic.md#req-package", {
+        kind: "package",
+        package: "Not A Package",
+      });
+    });
+    const unknownPackageOwner = refusedRequirements((ledger) => {
+      requirementOwner(ledger, "requirements/topic.md#req-package", {
+        kind: "package",
+        package: "@automovie/absent",
+      });
+    });
+    const emptySupplies = refusedRequirements((ledger) => {
+      requirementOwner(ledger, "requirements/topic.md#req-project", {
+        kind: "project-source",
+        supplies: [],
+      });
+    });
+    // Two spellings of the same refusal, kept apart because the supply walk
+    // reads the owner in the same pass that reports it: an empty list is walked
+    // as an empty list, and an absent key is walked as nothing at all.
+    const absentSupplies = refusedRequirements((ledger) => {
+      requirementOwner(ledger, "requirements/topic.md#req-project", {
+        kind: "project-source",
+      });
+    });
+    const absentObligationSupplies = refusedSpecifications((ledger) => {
+      ledger.declarations["specifications/system.md#spec-supply"].obligations[
+        "project-assembly"
+      ] = { owner: { kind: "project-source" } };
+    });
+    const invalidSupply = refusedRequirements((ledger) => {
+      requirementOwner(ledger, "requirements/topic.md#req-project", {
+        kind: "project-source",
+        supplies: ["specifications/system.md#spec-supply"],
+      });
+    });
+    const repeatedSupply = refusedRequirements((ledger) => {
+      requirementOwner(ledger, "requirements/topic.md#req-project", {
+        kind: "project-source",
+        supplies: [
+          "specifications/system.md#spec-supply::engine-evaluation",
+          "specifications/system.md#spec-supply::engine-evaluation",
+        ],
+      });
+    });
+    const unsortedSupplies = refusedRequirements((ledger) => {
+      requirementOwner(ledger, "requirements/topic.md#req-project", {
+        kind: "project-source",
+        supplies: [
+          "specifications/system.md#spec-supply::engine-evaluation",
+          "specifications/system.md#spec-chain::engine-binding",
+        ],
+      });
+    });
+    const emptyObligations = refusedSpecifications((ledger) => {
+      ledger.declarations["specifications/system.md#spec-chain"] = {
+        obligations: {},
+      };
+    });
+    const scalarObligation = refusedSpecifications((ledger) => {
+      ledger.declarations["specifications/system.md#spec-chain"].obligations[
+        "engine-binding"
+      ] = "engine";
+    });
+    const invalidObligationId = refusedSpecifications((ledger) => {
+      ledger.declarations["specifications/system.md#spec-chain"].obligations = {
+        Engine_Binding: {
+          owner: { kind: "package", package: "@automovie/engine" },
+        },
+      };
+    });
+    const scalarStructural = refusedSpecifications((ledger) => {
+      ledger.declarations["specifications/system.md#spec-structural"] = {
+        structural: "a grouping heading",
+      };
+    });
+    const emptyStructuralReason = refusedSpecifications((ledger) => {
+      ledger.declarations["specifications/system.md#spec-structural"] = {
+        structural: { reason: "  " },
+      };
+    });
+    const extraStructuralKey = refusedSpecifications((ledger) => {
+      ledger.declarations["specifications/system.md#spec-structural"] = {
+        structural: { reason: "Groups payable descendants.", note: "extra" },
+      };
+    });
+    const structuralQuery = command(
+      root,
+      "query",
+      "--layer",
+      "specifications",
+      "--owner",
+      "structural",
+    );
+    const brokenManifest = temporarily(
+      path.join(root, "packages", "engine", "package.json"),
+      "{",
+      () => command(root, "check"),
+    );
+
+    // A tree with no ledger at all, which is also the only shape that walks a
+    // `packages` directory and a documents directory that are not there.
+    const bare = fs.mkdtempSync(path.join(os.tmpdir(), "automovie-bare-"));
+    let missingLedger: ICommandResult;
+    try {
+      missingLedger = command(bare, "check");
+    } finally {
+      fs.rmSync(bare, { force: true, recursive: true });
+    }
+
+    // The CLI defaults, which the `command` helper cannot reach because it
+    // always supplies a command word and a `--root`.
+    const flagFirst: string[] = [];
+    const flagFirstStatus = runContractOwnership(
+      ["--root", root],
+      root,
+      { write: (message) => flagFirst.push(message) },
+      { write: (message) => flagFirst.push(message) },
+    );
+    const cwdRoot: string[] = [];
+    const cwdRootStatus = runContractOwnership(
+      ["check"],
+      root,
+      { write: (message) => cwdRoot.push(message) },
+      { write: (message) => cwdRoot.push(message) },
+    );
+
+    const thrownDescriptions = [
+      describeThrown(new Error("the ledger could not be read")),
+      describeThrown("a value nothing in this repository throws"),
+    ];
+
+    // The module-scope entry guard, which only a real invocation can take. It is
+    // a value and a unit here for the same reason the coverage command's is: the
+    // binding between a command and its own resolved path is the one part of the
+    // wiring nothing else can inspect, and `require.main === module` has already
+    // silently disarmed one gate in this repository.
+    const cliStatuses: number[] = [];
+    runContractOwnershipCli(
+      false,
+      () => {
+        throw new Error("the command ran for an importing module");
+      },
+      (status) => cliStatuses.push(status),
+    );
+    runContractOwnershipCli(
+      true,
+      () => 7,
+      (status) => cliStatuses.push(status),
+    );
+    const entryDecision = {
+      own: contractOwnershipProcessIsEntry(
+        path.resolve(__dirname, "../../integrity/contractOwnership.ts"),
+      ),
+      launcher: contractOwnershipProcessIsEntry(
+        path.resolve(__dirname, "../../index.ts"),
+      ),
+      absent: contractOwnershipProcessIsEntry(undefined),
+    };
+    const previousExitStatus = process.exitCode;
+    setContractOwnershipExitStatus(0);
+    const directExitStatus = process.exitCode;
+    process.exitCode = previousExitStatus;
 
     TestValidator.equals(
       "ownership declarations, migration ratchet, evidence twins, and supply closure all gate",
@@ -605,6 +876,193 @@ export const test_workspace_contract_ownership = (): void => {
           "unknownLayerRejected",
           () => unknownLayer.stderr.includes("layer must be one of"),
         ],
+        [
+          "missingLayerRejected",
+          () => missingLayer.stderr.includes("layer must be one of"),
+        ],
+        [
+          "scalarLedgerRejected",
+          () => scalarLedger.stderr.includes("declarations must be an object"),
+        ],
+        [
+          "wrongVersionRejected",
+          () => wrongVersion.stderr.includes("ledger version must be 1"),
+        ],
+        [
+          "wrongLayerRejected",
+          () =>
+            wrongLayer.stderr.includes(
+              "requirements ledger declares layer 'specifications'",
+            ),
+        ],
+        [
+          "listDeclarationsRejected",
+          () =>
+            listDeclarations.stderr.includes("declarations must be an object"),
+        ],
+        [
+          "scalarLegacyRejected",
+          () => scalarLegacy.stderr.includes("legacy must be an object"),
+        ],
+        [
+          "extraLedgerKeyRejected",
+          () =>
+            extraLedgerKey.stderr.includes(
+              "requirements ledger keys must be exactly",
+            ),
+        ],
+        [
+          "invalidTargetRejected",
+          () => invalidTarget.stderr.includes("ledger has invalid target"),
+        ],
+        [
+          "invalidDigestRejected",
+          () =>
+            invalidDigest.stderr.includes("invalid snapshot digest") &&
+            // The touch-to-migrate ratchet reads that digest, so a malformed one
+            // must be refused rather than counted as drift.
+            invalidDigest.status === 1,
+        ],
+        [
+          "scalarDeclarationRejected",
+          () =>
+            scalarDeclaration.stderr.includes("declaration must be an object"),
+        ],
+        [
+          "scalarOwnerRejected",
+          () => scalarOwner.stderr.includes("must declare one owner object"),
+        ],
+        [
+          "invalidPackageOwnerRejected",
+          () =>
+            invalidPackageOwner.stderr.includes("has invalid package owner"),
+        ],
+        [
+          "unknownPackageOwnerRejected",
+          () =>
+            unknownPackageOwner.stderr.includes(
+              "names unknown package owner '@automovie/absent'",
+            ),
+        ],
+        [
+          "emptySuppliesRejected",
+          () => emptySupplies.stderr.includes("must name product supplies"),
+        ],
+        [
+          "absentSuppliesRejected",
+          () => absentSupplies.stderr.includes("must name product supplies"),
+        ],
+        [
+          "absentObligationSuppliesRejected",
+          () =>
+            absentObligationSupplies.stderr.includes(
+              "must name product supplies",
+            ),
+        ],
+        [
+          "invalidSupplyRejected",
+          () =>
+            invalidSupply.stderr.includes(
+              "has invalid project-source supply target",
+            ),
+        ],
+        [
+          "repeatedSupplyRejected",
+          () =>
+            repeatedSupply.stderr.includes("repeats a project-source supply"),
+        ],
+        [
+          "unsortedSuppliesRejected",
+          () =>
+            unsortedSupplies.stderr.includes(
+              "project-source supplies must be sorted",
+            ),
+        ],
+        [
+          "emptyObligationsRejected",
+          () =>
+            emptyObligations.stderr.includes(
+              "must declare at least one obligation",
+            ),
+        ],
+        [
+          "scalarObligationRejected",
+          () =>
+            scalarObligation.stderr.includes("declaration must be an object"),
+        ],
+        [
+          "invalidObligationIdRejected",
+          () =>
+            invalidObligationId.stderr.includes("has invalid obligation id"),
+        ],
+        [
+          "scalarStructuralRejected",
+          () =>
+            scalarStructural.stderr.includes(
+              "structural classification must be an object",
+            ),
+        ],
+        [
+          "emptyStructuralReasonRejected",
+          () =>
+            emptyStructuralReason.stderr.includes(
+              "structural classification must state a reason",
+            ),
+        ],
+        [
+          "extraStructuralKeyRejected",
+          () =>
+            extraStructuralKey.stderr.includes(
+              "structural keys must be exactly reason",
+            ),
+        ],
+        [
+          "structuralQueryable",
+          () =>
+            structuralQuery.stdout.includes("spec-structural") &&
+            structuralQuery.stdout.includes('"status": "structural"'),
+        ],
+        [
+          "brokenManifestRejected",
+          () =>
+            brokenManifest.status === 1 && brokenManifest.stderr.length !== 0,
+        ],
+        [
+          "missingLedgerRejected",
+          () => missingLedger.stderr.includes("missing ownership ledger"),
+        ],
+        [
+          "leadingFlagRunsCheck",
+          () =>
+            flagFirstStatus === 0 &&
+            flagFirst.join("").includes('"declarations"'),
+        ],
+        [
+          "absentRootFallsBackToCwd",
+          () =>
+            cwdRootStatus === 0 && cwdRoot.join("").includes('"declarations"'),
+        ],
+        [
+          "thrownValuesDescribed",
+          () =>
+            thrownDescriptions[0] === "the ledger could not be read" &&
+            thrownDescriptions[1] ===
+              "a value nothing in this repository throws",
+        ],
+        [
+          "entryGuardRunsOnceForItsOwnModule",
+          () =>
+            cliStatuses.length === 1 &&
+            cliStatuses[0] === 7 &&
+            directExitStatus === 0,
+        ],
+        [
+          "entryPathDecidesTheBinding",
+          () =>
+            entryDecision.own === true &&
+            entryDecision.launcher === false &&
+            entryDecision.absent === false,
+        ],
       ]),
       Object.fromEntries(
         [
@@ -637,6 +1095,39 @@ export const test_workspace_contract_ownership = (): void => {
           "duplicateAnchorRejected",
           "unknownCommandRejected",
           "unknownLayerRejected",
+          "missingLayerRejected",
+          "scalarLedgerRejected",
+          "wrongVersionRejected",
+          "wrongLayerRejected",
+          "listDeclarationsRejected",
+          "scalarLegacyRejected",
+          "extraLedgerKeyRejected",
+          "invalidTargetRejected",
+          "invalidDigestRejected",
+          "scalarDeclarationRejected",
+          "scalarOwnerRejected",
+          "invalidPackageOwnerRejected",
+          "unknownPackageOwnerRejected",
+          "emptySuppliesRejected",
+          "absentSuppliesRejected",
+          "absentObligationSuppliesRejected",
+          "invalidSupplyRejected",
+          "repeatedSupplyRejected",
+          "unsortedSuppliesRejected",
+          "emptyObligationsRejected",
+          "scalarObligationRejected",
+          "invalidObligationIdRejected",
+          "scalarStructuralRejected",
+          "emptyStructuralReasonRejected",
+          "extraStructuralKeyRejected",
+          "structuralQueryable",
+          "brokenManifestRejected",
+          "missingLedgerRejected",
+          "leadingFlagRunsCheck",
+          "absentRootFallsBackToCwd",
+          "thrownValuesDescribed",
+          "entryGuardRunsOnceForItsOwnModule",
+          "entryPathDecidesTheBinding",
         ].map((name) => [name, true]),
       ),
     );

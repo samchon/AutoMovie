@@ -70,6 +70,19 @@ const PART_TARGET =
 const UNIT_TARGET =
   /^(requirements|specifications)\/(?:[A-Za-z0-9._-]+\/)*[A-Za-z0-9._-]+\.md#[a-z0-9-]+$/;
 
+/**
+ * The sentence a thrown value contributes to a diagnostic.
+ *
+ * Written inline it was three copies of one branch whose `String` alternative
+ * nothing in this repository can reach, which is a defensive path that can only
+ * ever be covered by pretending. As one function it is an ordinary unit with an
+ * ordinary pair of cases. An `Error` contributes its message rather than its
+ * class name, so a command's stderr stays the diagnostic rather than
+ * `ContractOwnershipError: ` followed by it.
+ */
+export const describeThrown = (error: unknown): string =>
+  error instanceof Error ? error.message : String(error);
+
 /** A deterministic failure from the contract-ownership gate. */
 export class ContractOwnershipError extends Error {
   public readonly diagnostics: readonly string[];
@@ -300,8 +313,10 @@ export const queryContractOwnership = (
       }
       continue;
     }
+    // `inspectContractOwnership` above accepted the ledger, so a specification
+    // declaration that is not structural carries obligations.
     for (const [obligation, record] of Object.entries(
-      declaration.obligations ?? {},
+      declaration.obligations!,
     )) {
       if (record.owner !== undefined && ownerMatches(record.owner, owner)) {
         results.push({
@@ -454,8 +469,21 @@ const validateSupplies = (
   packages: PackageDirectories,
   diagnostics: Diagnostics,
 ): void => {
-  const specifications = ledgers.get("specifications")!.declarations;
-  const requirements = ledgers.get("requirements")!.declarations;
+  // A ledger whose declarations are not an object has already been reported by
+  // `validateLayer`, which stops reading it at that point. This pass runs after
+  // that one regardless, so it has to stop reading it too: walking the missing
+  // map turned a hand-edited ledger's honest diagnostic into `Cannot convert
+  // undefined or null to object`, which names neither the file nor the fault.
+  const declarationsOf = (
+    layer: ContractLayer,
+  ): Record<string, IContractDeclaration> => {
+    const declarations: unknown = ledgers.get(layer)!.declarations;
+    return plainObject(declarations)
+      ? (declarations as Record<string, IContractDeclaration>)
+      : {};
+  };
+  const specifications = declarationsOf("specifications");
+  const requirements = declarationsOf("requirements");
   const obligations = new Map<string, IContractOwner | undefined>();
   for (const [target, declaration] of Object.entries(specifications)) {
     for (const [id, record] of Object.entries(declaration.obligations ?? {})) {
@@ -678,7 +706,7 @@ const loadLedger = (root: string, layer: ContractLayer): IContractLedger => {
     ) as IContractLedger;
   } catch (error) {
     throw new ContractOwnershipError([
-      `cannot parse ownership ledger '${slash(path.relative(root, location))}': ${error instanceof Error ? error.message : String(error)}`,
+      `cannot parse ownership ledger '${slash(path.relative(root, location))}': ${describeThrown(error)}`,
     ]);
   }
 };
@@ -719,7 +747,9 @@ const ownerMatches = (owner: IContractOwner, query?: string): boolean =>
   query === undefined || query === ownerIdentity(owner);
 
 const ownerIdentity = (owner: IContractOwner): string =>
-  owner.kind === "package" ? (owner.package ?? "package") : owner.kind;
+  // Only reachable after `inspectContractOwnership` accepted the ledger, which
+  // refuses a package owner whose `package` is not a string.
+  owner.kind === "package" ? owner.package! : owner.kind;
 
 const childDirectories = (directory: string): string[] => {
   try {
@@ -762,8 +792,7 @@ const capture = <Value>(
   } catch (error) {
     if (error instanceof ContractOwnershipError)
       diagnostics.push(...error.diagnostics);
-    else
-      diagnostics.push(error instanceof Error ? error.message : String(error));
+    else diagnostics.push(describeThrown(error));
     return undefined;
   }
 };
@@ -830,12 +859,40 @@ export const runContractOwnership = (
     }
     return 0;
   } catch (error) {
-    errorOutput.write(
-      `${error instanceof Error ? error.message : String(error)}\n`,
-    );
+    errorOutput.write(`${describeThrown(error)}\n`);
     return 1;
   }
 };
 
-if (path.resolve(process.argv[1] ?? "") === path.resolve(__filename))
-  process.exitCode = runContractOwnership(process.argv.slice(2));
+/**
+ * Whether the process was started on this module rather than on an importer.
+ *
+ * Split out for the same reason the coverage command's entry predicate was: an
+ * `if` at module scope is a branch only a real invocation can take, so the
+ * binding between the command and its own resolved path is the one part of the
+ * wiring nothing can inspect. Here it is a value, and the wrapper below is a
+ * unit both booleans can be handed.
+ */
+export const contractOwnershipProcessIsEntry = (
+  entry: string | undefined,
+): boolean => path.resolve(entry ?? "") === path.resolve(__filename);
+
+/** Execute the command only for the direct TypeScript entry module. */
+export const runContractOwnershipCli = (
+  isEntry: boolean,
+  run: () => number,
+  setExitStatus: (status: number) => void,
+): void => {
+  if (isEntry === false) return;
+  setExitStatus(run());
+};
+
+export const setContractOwnershipExitStatus = (status: number): void => {
+  process.exitCode = status;
+};
+
+runContractOwnershipCli(
+  contractOwnershipProcessIsEntry(process.argv[1]),
+  runContractOwnership.bind(undefined, process.argv.slice(2)),
+  setContractOwnershipExitStatus,
+);

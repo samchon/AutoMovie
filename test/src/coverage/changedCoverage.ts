@@ -447,12 +447,26 @@ export const parseChangedCoverageArguments = (
   return options;
 };
 
+/**
+ * The sentence a thrown value contributes to a diagnostic.
+ *
+ * One spelling for the whole coverage tree. Written the long way three times, it
+ * was three branches whose `String` side nothing in this repository can throw,
+ * which is a defensive alternative that can only ever be covered by pretending;
+ * as one exported function it is an ordinary unit with an ordinary pair of
+ * cases. An `Error` contributes its message rather than its class name, because
+ * these sentences are already prefixed by the caller and `INSTRUMENT FAILURE:
+ * Error: ...` reads as if something printed twice.
+ */
+export const describeThrown = (error: unknown): string =>
+  error instanceof Error ? error.message : String(error);
+
 const readJson = (file: string, label: string): unknown => {
   try {
     return JSON.parse(fs.readFileSync(file, "utf8"));
   } catch (error) {
     throw new Error(
-      `${label} could not be read at ${file}: ${error instanceof Error ? error.message : String(error)}`,
+      `${label} could not be read at ${file}: ${describeThrown(error)}`,
     );
   }
 };
@@ -492,9 +506,7 @@ export const runChangedCoverageGate = (
     if (result.gaps.length !== 0) return 1;
     return 0;
   } catch (error) {
-    write(
-      `INSTRUMENT FAILURE: ${error instanceof Error ? error.message : String(error)}`,
-    );
+    write(`INSTRUMENT FAILURE: ${describeThrown(error)}`);
     return 2;
   }
 };
