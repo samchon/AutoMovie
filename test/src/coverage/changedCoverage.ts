@@ -4,9 +4,9 @@ import fs from "node:fs";
 import path from "node:path";
 import process from "node:process";
 
+import { describeThrown } from "../integrity/contractOwnership";
 import { COVERAGE_REPORT_DIRECTORY, MEASURED_SOURCES } from "./measureCoverage";
 import { positionsPastEndOfFile } from "./reportCoverageGaps";
-import { describeThrown } from "../integrity/contractOwnership";
 
 const SOURCE_EXTENSION = /\.(?:[cm]?ts|tsx)$/u;
 
