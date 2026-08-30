@@ -27,6 +27,13 @@ on:
       # Shared compiler/lint policy is a direct test input.
       - 'config/**'
       - 'test/**'
+      # The two contract document layers are read by the suite itself, not only
+      # by the docs build: contract ownership, repository evidence population,
+      # and authoring reachability all resolve anchors and prose out of `docs/`.
+      # Without this the only lane a documentation-only pull request ran was
+      # `build.yml`, so a moved anchor or a removed unit reported success from a
+      # workflow that had never executed the gate that reads it.
+      - 'docs/**'
       # Root tooling configuration directly affects test installation and
       # execution (#1335).
       - '*.json'

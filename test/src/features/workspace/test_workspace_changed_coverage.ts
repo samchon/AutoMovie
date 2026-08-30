@@ -20,6 +20,11 @@ import {
   runGit,
 } from "../../coverage/changedCoverage";
 import {
+  inspectCoveragePopulation,
+  repositoryCandidates,
+  runCoveragePopulationGate,
+} from "../../coverage/coveragePopulation";
+import {
   type ICoverageMeasurementDependencies,
   type ICoverageSpawnResult,
   MEASURED_LINES,
@@ -182,6 +187,27 @@ test("parses new-side diff lines and recognizes authored executable source", () 
     false,
   );
   assert.equal(isAuthoredExecutableSource("test/src/features/a.ts"), false);
+  // The two typed repository-tool roots are measured, so the gate has to judge
+  // them. Both sit under `test/`, and one of them is additionally named
+  // `coverage`, which is also the name of c8's own output directory. The
+  // exemption covered the first rule and not the second, so the four modules
+  // that implement the per-change obligation were measured and never judged.
+  assert.equal(
+    isAuthoredExecutableSource("test/src/coverage/measureCoverage.ts"),
+    true,
+  );
+  assert.equal(
+    isAuthoredExecutableSource("test/src/integrity/zeroJavaScript.ts"),
+    true,
+  );
+  // The negative twin: a real coverage output directory is still refused, at the
+  // repository root and inside a package, or the exemption above would have
+  // bought the rule away instead of narrowing it.
+  assert.equal(isAuthoredExecutableSource("coverage/report/a.ts"), false);
+  assert.equal(
+    isAuthoredExecutableSource("packages/engine/coverage/a.ts"),
+    false,
+  );
   assert.equal(
     isAuthoredExecutableSource("packages/evidence/test/a.test.ts"),
     false,
@@ -596,6 +622,166 @@ test("collects committed, staged, worktree, and untracked sources", () => {
         () => undefined,
       ),
       2,
+    );
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("refuses a run whose measured and judged populations disagree", () => {
+  const root = fs.realpathSync(
+    fs.mkdtempSync(path.join(os.tmpdir(), "automovie-coverage-population-")),
+  );
+  try {
+    git(root, ["init", "-b", "master"]);
+    git(root, ["config", "user.email", "coverage@example.com"]);
+    git(root, ["config", "user.name", "Coverage Gate"]);
+    const source = path.join(root, "packages", "engine", "src");
+    const scenarios = path.join(root, "test", "src", "features");
+    fs.mkdirSync(source, { recursive: true });
+    fs.mkdirSync(scenarios, { recursive: true });
+    fs.mkdirSync(path.join(root, "ignored"));
+    fs.writeFileSync(path.join(root, ".gitignore"), "ignored/\n");
+    fs.writeFileSync(path.join(source, "a.ts"), "export const a = 1;\n");
+    fs.writeFileSync(path.join(source, "gone.ts"), "export const gone = 1;\n");
+    fs.writeFileSync(
+      path.join(scenarios, "f.ts"),
+      "export const scenario = 1;\n",
+    );
+    git(root, ["add", "-A"]);
+    git(root, ["commit", "-m", "base"]);
+    // Tracked and then removed from the working tree. Nothing can instrument a
+    // file that is not there, so it must leave the obliged population rather
+    // than become a permanent unmeasured accusation.
+    fs.rmSync(path.join(source, "gone.ts"));
+    // Untracked and not ignored: the working tree added it, so the gate owes it
+    // the same judgment it owes a committed source.
+    fs.writeFileSync(path.join(source, "new.ts"), "export const added = 1;\n");
+    // Ignored: a local artifact, not a repository fact, and a gate that means
+    // the same thing in CI cannot be decided by one.
+    fs.writeFileSync(
+      path.join(root, "ignored", "x.ts"),
+      "export const local = 1;\n",
+    );
+
+    assert.deepEqual(repositoryCandidates(root), [
+      ".gitignore",
+      "packages/engine/src/a.ts",
+      "packages/engine/src/gone.ts",
+      "packages/engine/src/new.ts",
+      "test/src/features/f.ts",
+    ]);
+
+    const disagreeing = path.join(root, "report-disagreeing");
+    const agreeing = path.join(root, "report-agreeing");
+    fs.mkdirSync(disagreeing);
+    fs.mkdirSync(agreeing);
+    const keys = (names: string[]): string =>
+      JSON.stringify(
+        Object.fromEntries(names.map((name) => [path.join(root, name), {}])),
+      );
+    fs.writeFileSync(
+      path.join(disagreeing, "coverage-final.json"),
+      // `a.ts` agrees; `f.ts` is measured and never judged; `ignored/x.ts` is
+      // measured and unknown to the repository; the root itself and a path
+      // outside it are neither. `new.ts` is judged and never measured.
+      keys([
+        "packages/engine/src/a.ts",
+        "test/src/features/f.ts",
+        "ignored/x.ts",
+        ".",
+        "../outside.ts",
+      ]),
+    );
+    fs.writeFileSync(
+      path.join(agreeing, "coverage-final.json"),
+      keys(["packages/engine/src/a.ts", "packages/engine/src/new.ts"]),
+    );
+
+    const inspection = inspectCoveragePopulation({
+      root,
+      candidates: repositoryCandidates(root),
+      measured: Object.keys(
+        JSON.parse(
+          fs.readFileSync(
+            path.join(disagreeing, "coverage-final.json"),
+            "utf8",
+          ),
+        ) as Record<string, unknown>,
+      ),
+    });
+    assert.deepEqual(inspection, {
+      obliged: 2,
+      measured: 3,
+      unmeasured: ["packages/engine/src/new.ts"],
+      unjudged: ["test/src/features/f.ts"],
+    });
+
+    const printed: string[] = [];
+    const write = (line: string): void => void printed.push(line);
+    assert.equal(
+      runCoveragePopulationGate({
+        root,
+        reportDirectory: disagreeing,
+        write,
+      }),
+      2,
+    );
+    assert.ok(
+      printed.some(
+        (line) =>
+          line.startsWith("INSTRUMENT FAILURE: packages/engine/src/new.ts:") &&
+          line.includes("the measurement never took it"),
+      ),
+    );
+    assert.ok(
+      printed.some(
+        (line) =>
+          line.startsWith("INSTRUMENT FAILURE: test/src/features/f.ts:") &&
+          line.includes("never judges it"),
+      ),
+    );
+    assert.ok(printed.every((line) => line.includes("ignored/x.ts") === false));
+
+    printed.length = 0;
+    assert.equal(
+      runCoveragePopulationGate({ root, reportDirectory: agreeing, write }),
+      0,
+    );
+    assert.deepEqual(printed, [
+      "Coverage population: 2 authored executable sources owed coverage, 2 measured entries in the report.",
+    ]);
+
+    // No writer: the default sink is what CI reads, so it is proved by a run
+    // whose only output is the benign summary line above.
+    assert.equal(
+      runCoveragePopulationGate({ root, reportDirectory: agreeing }),
+      0,
+    );
+
+    printed.length = 0;
+    assert.equal(
+      runCoveragePopulationGate({
+        root,
+        reportDirectory: path.join(root, "missing"),
+        write,
+      }),
+      2,
+    );
+    fs.writeFileSync(path.join(agreeing, "coverage-final.json"), "[]");
+    assert.equal(
+      runCoveragePopulationGate({ root, reportDirectory: agreeing, write }),
+      2,
+    );
+    assert.ok(
+      printed.every((line) =>
+        line.startsWith("INSTRUMENT FAILURE: coverage population"),
+      ),
+    );
+    assert.ok(
+      printed.some((line) =>
+        line.includes("does not contain a coverage object"),
+      ),
     );
   } finally {
     fs.rmSync(root, { recursive: true, force: true });

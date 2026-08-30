@@ -2,7 +2,10 @@ import process from "node:process";
 
 import { isProcessEntry } from "../integrity/zeroJavaScript";
 import { runChangedCoverageGate } from "./changedCoverage";
+import { runCoveragePopulationGate } from "./coveragePopulation";
 import {
+  COVERAGE_REPORT_DIRECTORY,
+  COVERAGE_ROOT,
   coverageMeasurementDependencies,
   measureCoverage,
 } from "./measureCoverage";
@@ -11,6 +14,7 @@ import { reportCoverageGaps } from "./reportCoverageGaps";
 export interface IRunCoverageDependencies {
   changed: (arguments_: string[]) => number;
   measure: () => number;
+  population: () => number;
   report: () => number;
 }
 
@@ -62,6 +66,8 @@ export const coverageCommandWiringDiagnostics = (
     files.workflow.includes("- 'build/**'") === false
   )
     diagnostics.push("typed root tools and build tools must trigger CI");
+  if (files.workflow.includes("- 'docs/**'") === false)
+    diagnostics.push("the contract document layers must trigger the suite");
   if (
     files.workflow.includes("internals/") ||
     files.workflow.includes("license:check") ||
@@ -75,9 +81,19 @@ export const coverageRunDependencies = (
   measure: () => number,
   changed: (arguments_: string[]) => number,
   report: () => number,
-): IRunCoverageDependencies => ({ changed, measure, report });
+  population: () => number,
+): IRunCoverageDependencies => ({ changed, measure, population, report });
 
-/** Run the suite, historical report, and touched-file gate in that order. */
+/**
+ * Run the suite, the historical report, the population gate, and the
+ * touched-file gate in that order.
+ *
+ * The population gate sits between the report and the touched-file gate because
+ * it decides whether that gate's verdict covers the set it names. A source the
+ * gate would demand 100% of and the run never measured, or one the run measured
+ * and the gate never judges, both leave a green verdict that answered about a
+ * different population, so the run stops there rather than printing one.
+ */
 export const runCoverage = (
   arguments_: string[],
   dependencies: IRunCoverageDependencies,
@@ -86,6 +102,8 @@ export const runCoverage = (
   if (measurement !== 0) return measurement === 2 ? 2 : 1;
   const report = dependencies.report();
   if (report !== 0) return report === 2 ? 2 : 1;
+  const population = dependencies.population();
+  if (population !== 0) return population === 2 ? 2 : 1;
   const changed = dependencies.changed(arguments_);
   return changed === 2 ? 2 : changed === 0 ? 0 : 1;
 };
@@ -135,6 +153,10 @@ runCoverageCli(
     measureCoverage.bind(undefined, coverageMeasurementDependencies),
     runChangedCoverageGate,
     reportCoverageGaps,
+    runCoveragePopulationGate.bind(undefined, {
+      root: COVERAGE_ROOT,
+      reportDirectory: COVERAGE_REPORT_DIRECTORY,
+    }),
   ),
   setCoverageExitStatus,
 );

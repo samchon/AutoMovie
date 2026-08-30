@@ -64,6 +64,13 @@ import { namedFacts } from "../internal/predicates";
  *    is the difference the next question turns on, and a walk that counted a
  *    stray note, a nested directory, or a truncated record as usable would
  *    answer neither question.
+ * 5. The one command runs measure, report, population and changed in that order,
+ *    stops at the first refusal, and keeps an instrument fault a different exit
+ *    status from a coverage gap. The population step is pinned between the
+ *    report and the changed gate because a disagreeing population makes the
+ *    changed gate's verdict describe a set other than the one it names, and both
+ *    of its statuses are pinned so a step wired to a gate that cannot refuse
+ *    would show here.
  */
 export const test_workspace_coverage_isolation = (): void => {
   const wiring = {
@@ -98,6 +105,7 @@ export const test_workspace_coverage_isolation = (): void => {
         "both CI lanes must run the same coverage command",
         "both CI lanes must run coverage from the test package",
         "typed root tools and build tools must trigger CI",
+        "the contract document layers must trigger the suite",
         "CI still names a deleted JavaScript-era gate",
       ],
     },
@@ -283,49 +291,61 @@ export const test_workspace_coverage_isolation = (): void => {
       return 0;
     },
     () => (order.push("report"), 0),
+    () => (order.push("population"), 0),
   );
   const green = runCoverage(["--base", "origin/master"], dependencies);
+  const unreached = (step: string, after: string): (() => never) => {
+    return () => {
+      throw new Error(`${step} ran after ${after}`);
+    };
+  };
   const ordinaryRed = runCoverage([], {
     measure: () => 1,
-    report: () => {
-      throw new Error("report ran after a failed measurement");
-    },
-    changed: () => {
-      throw new Error("changed gate ran after a failed measurement");
-    },
+    report: unreached("report", "a failed measurement"),
+    population: unreached("population gate", "a failed measurement"),
+    changed: unreached("changed gate", "a failed measurement"),
   });
   const measurementInstrumentRed = runCoverage([], {
     measure: () => 2,
-    report: () => {
-      throw new Error("report ran after an invalid measurement");
-    },
-    changed: () => {
-      throw new Error("changed gate ran after an invalid measurement");
-    },
+    report: unreached("report", "an invalid measurement"),
+    population: unreached("population gate", "an invalid measurement"),
+    changed: unreached("changed gate", "an invalid measurement"),
   });
   const instrumentRed = runCoverage([], {
     measure: () => 0,
     report: () => 2,
-    changed: () => {
-      throw new Error("changed gate ran after an invalid report");
-    },
+    population: unreached("population gate", "an invalid report"),
+    changed: unreached("changed gate", "an invalid report"),
+  });
+  const populationInstrumentRed = runCoverage([], {
+    measure: () => 0,
+    report: () => 0,
+    population: () => 2,
+    changed: unreached("changed gate", "a disagreeing population"),
+  });
+  const populationOrdinaryRed = runCoverage([], {
+    measure: () => 0,
+    report: () => 0,
+    population: () => 1,
+    changed: unreached("changed gate", "a refused population"),
   });
   const changedRed = runCoverage([], {
     measure: () => 0,
     report: () => 0,
+    population: () => 0,
     changed: () => 2,
   });
   const coverageGap = runCoverage([], {
     measure: () => 0,
     report: () => 0,
+    population: () => 0,
     changed: () => 1,
   });
   const reportGap = runCoverage([], {
     measure: () => 0,
     report: () => 1,
-    changed: () => {
-      throw new Error("changed gate ran after a failed report");
-    },
+    population: unreached("population gate", "a failed report"),
+    changed: unreached("changed gate", "a failed report"),
   });
   const cliStatuses: number[] = [];
   runCoverageCli(false, [], dependencies, (status) => cliStatuses.push(status));
@@ -335,6 +355,7 @@ export const test_workspace_coverage_isolation = (): void => {
     {
       measure: () => 0,
       report: () => 0,
+      population: () => 0,
       changed: () => 0,
     },
     (status) => cliStatuses.push(status),
@@ -364,6 +385,8 @@ export const test_workspace_coverage_isolation = (): void => {
       ordinaryRed,
       measurementInstrumentRed,
       instrumentRed,
+      populationInstrumentRed,
+      populationOrdinaryRed,
       changedRed,
       coverageGap,
       reportGap,
@@ -373,11 +396,13 @@ export const test_workspace_coverage_isolation = (): void => {
     },
     {
       green: 0,
-      order: ["measure", "report", "changed"],
+      order: ["measure", "report", "population", "changed"],
       arguments_: ["--base", "origin/master"],
       ordinaryRed: 1,
       measurementInstrumentRed: 2,
       instrumentRed: 2,
+      populationInstrumentRed: 2,
+      populationOrdinaryRed: 1,
       changedRed: 2,
       coverageGap: 1,
       reportGap: 1,

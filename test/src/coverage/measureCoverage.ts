@@ -357,6 +357,25 @@ export const coverageRecords = (directory: string): ICoverageRecords => {
 /** The measured set. One definition, so two runs cannot count different things. */
 export const coverageSourceRoots = ["."];
 
+/**
+ * The measured population, written as source-tree shapes rather than as a list.
+ *
+ * A pattern that names one directory of a root makes "owes no coverage" the
+ * default for every sibling added afterwards, and nothing reports the omission.
+ * The scaffold entry was `scripts/**` plus `lint.config.ts`, so the shipped
+ * `src/examples`, the shipped `viewer/src`, `vite.config.ts` and
+ * `repaintSelectionReviews.ts` were outside it while carrying exactly the same
+ * kind of authored TypeScript. `isAuthoredExecutableSource` admitted all of
+ * them, so the changed-file gate demanded coverage for a file the measurement
+ * never took, and reported the disagreement as `changed measured source is
+ * absent from coverage-final.json` — an instrument diagnostic for what was
+ * really a population that had drifted from the predicate beside it.
+ * `packages/template/scaffold/**` is one shape for one root; the extension and
+ * `node_modules` filters decide the rest.
+ *
+ * {@link runCoveragePopulationGate} is what keeps this honest, by refusing any
+ * run where a file one population admits the other does not.
+ */
 export const coverageIncludes = [
   "*.ts",
   "*.tsx",
@@ -377,8 +396,7 @@ export const coverageIncludes = [
   "packages/*/src/**",
   "test/src/coverage/**",
   "test/src/integrity/**",
-  "packages/template/scaffold/lint.config.ts",
-  "packages/template/scaffold/scripts/**",
+  "packages/template/scaffold/**",
 ];
 
 const SOURCES = coverageSourceRoots;

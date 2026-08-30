@@ -95,7 +95,24 @@ type Writer = (line: string) => void;
 const slash = (value: string): string => value.replaceAll("\\", "/");
 const canonical = (value: string): string => slash(path.resolve(value));
 
-/** Whether a repository path is authored executable source owed coverage. */
+/**
+ * Whether a repository path is authored executable source owed coverage.
+ *
+ * The two typed repository-tool roots are named because both sit under `test/`,
+ * which the ordinary rule removes: they are tools this repository runs against
+ * itself rather than scenarios, and `measureCoverage` measures them for exactly
+ * that reason. The exemption has to cover the directory-name rule as well as the
+ * `test/` one, because `test/src/coverage/` also contains the segment `coverage`
+ * that names c8's own output directory. It did not: `test/src/integrity/**` was
+ * admitted and `test/src/coverage/**` was silently refused, so the four modules
+ * that implement the per-change 100% obligation were the only measured sources
+ * the obligation never applied to. They are measured (the whole-suite report
+ * carries all four, three of them below 100%) and they were unjudged, which is
+ * the one shape where a gate can be edited freely while reporting green.
+ *
+ * The directory names that stay unconditional are the ones no authored source
+ * ever legitimately sits under.
+ */
 export const isAuthoredExecutableSource = (relative: string): boolean => {
   const target = slash(relative);
   const typedRepositoryTool =
@@ -105,10 +122,9 @@ export const isAuthoredExecutableSource = (relative: string): boolean => {
     SOURCE_EXTENSION.test(target) === false ||
     /\.d\.[cm]?ts$/u.test(target) ||
     (typedRepositoryTool === false &&
-      /(^|\/)(?:test|tests|__tests__|fixtures)(\/|$)/u.test(target)) ||
-    /(^|\/)(?:node_modules|dist|coverage|generated|\.cache)(\/|$)/u.test(
-      target,
-    ) ||
+      (/(^|\/)(?:test|tests|__tests__|fixtures)(\/|$)/u.test(target) ||
+        /(^|\/)coverage(\/|$)/u.test(target))) ||
+    /(^|\/)(?:node_modules|dist|generated|\.cache)(\/|$)/u.test(target) ||
     /(?:\.test|\.spec|\.generated)\.[cm]?[jt]sx?$/u.test(target) ||
     /(^|\/)(?:index|bin)\.ts$/u.test(target)
   )
