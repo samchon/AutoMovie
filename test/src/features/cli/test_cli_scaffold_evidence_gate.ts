@@ -329,6 +329,18 @@ const testOutcomeRefusals = (): void => {
     /no such anchor in b\.md/u,
   );
 
+  // The stray-artifact refusal, whose whole point is to speak in the one case
+  // `git status` is configured to be silent about. A run with a clean scaffold
+  // never reaches its throw, so the refusal is only real if it is exercised
+  // here: this cycle produced that exact accident four times and one instance
+  // disarmed typia across a package.
+  contract.assertNothingUnshipped(["docs/a.md"], ["docs/a.md"]);
+  contract.assertNothingUnshipped([".gitignore"], ["gitignore"]);
+  assert.throws(
+    () => contract.assertNothingUnshipped(["scripts/x.js"], ["docs/a.md"]),
+    /refuses to[\s\S]*scripts\/x\.js/u,
+  );
+
   const emptyLinkPopulations: Readonly<Record<string, string>>[] = [
     {},
     { "a.txt": "[x](y.md)\n" },
