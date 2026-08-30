@@ -25,6 +25,11 @@ Resolver는 제품이 공개한 주체 검사 target을 안정된 주체 record�
 
 ### 시점 Plan의 소유 {#review-system-subject-viewpoint-plan}
 
+<!-- @evidenceObligation viewpoint-plan-record 시점 plan이 담는 내용과 결정적 identity·순서, 그리고 authored camera·shot 경계·film time을 입력으로 받지 않는다는 것. -->
+<!-- @evidenceObligation delivery-evidence-separation 주체 관찰이 delivery evidence 개체군에 들어가지 않고, 주체를 담은 shot frame이 그 주체의 표본으로 계상되지 않는다는 것. -->
+<!-- @evidenceObligation topology-derived-population required 개체군을 compiled topology에서 파생하는 것과 노출·facade/roof/underside·exterior/reentrant corner 분류 규칙. -->
+<!-- @evidenceObligation interior-station-containment interior station이 그 space 자신의 진술된 volume 안에 있음을 증명하는 것과, 증명하지 못한 station을 identity만 남긴 채 미해결로 보고하는 것. -->
+<!-- @evidenceObligation population-non-shrinkable 호출자가 station을 더할 수는 있어도 뺄 수 없다는 것과, 같은 record가 어느 호출자에게나 같은 station identity와 순서를 만든다는 것. -->
 <!-- @evidence requirements/review/subject-inspection.md#review-subject-viewpoint-ownership 검사가 시점을 소유한다는 불변식을 viewpoint plan으로 고정한다. -->
 <!-- @evidence requirements/acceptance/review-surfaces-and-sampling.md#acceptance-spatial-view-sampling 형상, 접촉, occlusion과 deformation을 드러내는 각도와 구조 view를 요구한다. -->
 
