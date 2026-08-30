@@ -73,7 +73,30 @@ const renderKey = (
  * to hand over. Naming them here is what makes the shipped set a fact the code
  * decides instead of a fact the disk decides.
  */
-const UNSHIPPED = new Set([".git", "node_modules"]);
+const UNSHIPPED_DIRECTORIES = new Set([".cache", ".git", "node_modules"]);
+
+/**
+ * File shapes the scaffold never ships, whatever a host leaves there.
+ *
+ * The scaffold's authored tree is TypeScript, Markdown, JSON, HTML and three
+ * dotfile stand-ins. It contains no JavaScript and no declaration file, so a
+ * file carrying a compiler-output shape was emitted into the directory by a
+ * tool run rather than authored, and it belongs to the same class as the lint
+ * cache above.
+ *
+ * The reason to name the class rather than the two directories alone is that
+ * this one is invisible where it happens. Running the type-checker without
+ * `--noEmit` drops `.js`, `.js.map` and `.d.ts` beside every source, and the
+ * repository `.gitignore` covers exactly those paths under `scaffold/src`,
+ * `scaffold/scripts` and the scaffold root, so `git status` stays quiet while
+ * this walk reads them straight off the disk. Measured on this tree: planting
+ * `scripts/__emitted.js`, `scripts/__emitted.d.ts` and `.cache/stray.json`
+ * took the rendered inventory from 244 keys to 247, so every project generated
+ * while they sat there would have installed all three, and a generated
+ * project's loader prefers an emitted `.js` to the `.ts` beside it.
+ */
+const UNSHIPPED_FILES =
+  /(?:\.(?:c|m)?js(?:\.map)?|\.d\.(?:c|m)?ts|\.tsbuildinfo)$/u;
 
 /**
  * Every shipped file under `root`, root-relative, in deterministic sorted
@@ -96,9 +119,10 @@ const listFiles = (root: string): string[] => {
     for (const entry of entries) {
       const full = path.join(dir, entry.name);
       if (entry.isDirectory()) {
-        if (UNSHIPPED.has(entry.name)) continue;
+        if (UNSHIPPED_DIRECTORIES.has(entry.name)) continue;
         walk(full);
-      } else if (entry.isFile()) out.push(path.relative(root, full));
+      } else if (entry.isFile() && UNSHIPPED_FILES.test(entry.name) === false)
+        out.push(path.relative(root, full));
     }
   };
   walk(root);
