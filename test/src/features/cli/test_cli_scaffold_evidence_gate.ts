@@ -244,6 +244,16 @@ const testOutcomeRefusals = (): void => {
     /did not produce an isolated/u,
   );
 
+  assert.deepEqual(
+    contract.processResult({
+      signal: null,
+      status: 0,
+      stderr: null,
+      stdout: null,
+    }),
+    { output: "", status: 0 },
+  );
+
   assert.equal(contract.replaceOnce("a b a", "b", "c"), "a c a");
   assert.throws(
     () => contract.replaceOnce("a a", "a", "b"),
@@ -318,6 +328,17 @@ const testOutcomeRefusals = (): void => {
       }),
     /no such anchor in b\.md/u,
   );
+
+  const emptyLinkPopulations: Readonly<Record<string, string>>[] = [
+    {},
+    { "a.txt": "[x](y.md)\n" },
+    { "a.md": "[x](#top)\n" },
+  ];
+  for (const emptyLinkPopulation of emptyLinkPopulations)
+    assert.throws(
+      () => contract.assertResolvableLinks(emptyLinkPopulation),
+      /selected no link at all/u,
+    );
 
   const syncedInstructions = {
     claude: "@AGENTS.md\n",
