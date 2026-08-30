@@ -1023,9 +1023,16 @@ export const test_workspace_contract_ownership = (): void => {
             structuralQuery.stdout.includes('"status": "structural"'),
         ],
         [
+          // The parse error's own wording is Node's and changes between
+          // releases, so what is pinned is the consequence: the manifest could
+          // not be read, so the package it names is not a workspace package and
+          // every owner that claimed it is refused by name.
           "brokenManifestRejected",
           () =>
-            brokenManifest.status === 1 && brokenManifest.stderr.length !== 0,
+            brokenManifest.status === 1 &&
+            brokenManifest.stderr.includes(
+              "names unknown package owner '@automovie/engine'",
+            ),
         ],
         [
           "missingLedgerRejected",
