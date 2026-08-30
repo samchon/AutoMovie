@@ -185,6 +185,10 @@ const SHELL_OBLIGATIONS: readonly (readonly [string, string])[] = [
     "This population needs a construction owner and a surface-ownership owner; without the construction role every downstream material and instance decision would be underdetermined.",
   ],
   [
+    "obligations/core/common.md#population-variety",
+    "The two model units close differently: the shell names the construction the seat is built from, and the surface unit names what the material owner may bind to. One naming a build and the other naming a boundary is the distribution this population chose.",
+  ],
+  [
     "obligations/core/common.md#layer-boundary",
     "Surface appearance and wear response are routed to the materials layer and the chair's in-world identity stays in settings, so no decision here needs a second specialist family.",
   ],

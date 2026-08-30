@@ -715,6 +715,12 @@ const activatePaidSettings = (): { underpayments: IUnderpayment[] } => {
       body: "Sixteen independently addressable H2 owners divide the complete settings contract without a catch-all owner or a hidden descendant.",
     },
     {
+      anchor: "probe-population-shape",
+      title: "Probe population shape",
+      obligations: ["obligations/core/common.md#population-variety"],
+      body: "The sixteen owners do not all close the same way: some name a boundary, some name a value the compiler reads, some name what the probe refuses to publish, and one names this distribution. A population-level duty cannot be paid by a unit that only describes itself, so the owner that answers it is the one that reads the others together.",
+    },
+    {
       anchor: "probe-delivery-scope",
       title: "Probe delivery scope",
       obligations: [

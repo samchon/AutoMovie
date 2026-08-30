@@ -503,6 +503,7 @@ const EXPECTED_CONTRACTS = [
     file: "obligations/core/common.md",
     anchors: [
       "purpose-fit",
+      "population-variety",
       "layer-boundary",
       "production-language",
       "proportionate-development",
