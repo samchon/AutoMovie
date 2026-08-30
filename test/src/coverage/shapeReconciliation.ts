@@ -159,14 +159,29 @@ export const unionEntryByLine = <T extends ICoverageEntry>(
   // Most positions, and on a tie the reading that saw the most of them run. An
   // entry carrying no position map cannot be folded at all, so without the
   // tiebreak the base among such entries would be whichever arrived first.
-  const rank = (entry: T): readonly [number, number] => [
+  // A reading that ran outranks one that did not, whatever their sizes.
+  //
+  // `--all` writes an entry for a file a group never loaded, and that entry has
+  // one position per source line -- comment and blank lines included -- with no
+  // hits anywhere. Ranked by positions alone it beats every real reading, and
+  // the fold then carries the real hits onto a structure in which every comment
+  // is an uncovered statement. Measured on `build/experimental.ts`: 49 lines
+  // read as uncovered under the full suite, line 1 among them, while the file's
+  // own tests read it at 99 percent.
+  //
+  // Among readings that ran, more positions is still the better structure, and
+  // coverage breaks a tie so entries carrying no position map at all are not
+  // ordered by arrival.
+  const rank = (entry: T): readonly [number, number, number] => [
+    coveredPositions(entry) > 0 ? 1 : 0,
     Object.keys(entry.statementMap ?? {}).length,
     coveredPositions(entry),
   ];
   const base = entries.reduce<T | undefined>((standing, entry) => {
     if (standing === undefined) return entry;
-    const [positions, covered] = rank(entry);
-    const [held, heldCovered] = rank(standing);
+    const [ran, positions, covered] = rank(entry);
+    const [heldRan, held, heldCovered] = rank(standing);
+    if (ran !== heldRan) return ran > heldRan ? entry : standing;
     return positions > held || (positions === held && covered > heldCovered)
       ? entry
       : standing;
