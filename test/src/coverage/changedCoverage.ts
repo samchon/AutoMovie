@@ -1,12 +1,21 @@
 import { spawnSync } from "node:child_process";
 import crypto from "node:crypto";
 import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import process from "node:process";
 
 import { describeThrown } from "../integrity/contractOwnership";
+import {
+  emitsNoExecutableStatement,
+  excuseNonExecutableGaps,
+  repositoryEmitProbe,
+} from "./executableEmission";
 import { COVERAGE_REPORT_DIRECTORY, MEASURED_SOURCES } from "./measureCoverage";
-import { positionsPastEndOfFile } from "./reportCoverageGaps";
+import {
+  functionGapIsReal,
+  positionsPastEndOfFile,
+} from "./reportCoverageGaps";
 
 const SOURCE_EXTENSION = /\.(?:[cm]?ts|tsx)$/u;
 
@@ -54,6 +63,8 @@ export interface ICoverageTotals {
 }
 
 export interface IChangedCoverageInspection {
+  /** Files whose entries disagree about their own shape, and by how much. */
+  disagreements: string[];
   files: Array<{ file: string; totals: ICoverageTotals }>;
   gaps: string[];
   instrumentFailures: string[];
@@ -296,6 +307,7 @@ export const inspectChangedCoverage = (props: {
 }): IChangedCoverageInspection => {
   const coverage = indexed(props.coverage);
   const measured = indexed(props.measuredSources);
+  const disagreements: string[] = [];
   const instrumentFailures = [...props.divergent].map(
     (file) =>
       `${file}: index and worktree contain different snapshots; stage the final file or restore one side before measuring`,
@@ -378,14 +390,55 @@ export const inspectChangedCoverage = (props: {
       if (hits === 0) gaps.push(`${relative}:${line} uncovered line`);
     }
 
+    // A zero function entry whose name already ran under another entry in the
+    // same file is a second reading of one function, not an untested one, and
+    // an entry naming something the file does not contain is a helper the
+    // transpile emitted. `reportCoverageGaps` has told the historical reader
+    // this since it was written -- measured there at 137 and 13 entries -- and
+    // the gate was counting both as debt.
+    //
+    // Both readings arrive together when one source is loaded in two shapes:
+    // measured here, adding a single test that runs a generated child against
+    // the built package moved `builtEnvironment.ts` from 94 function entries to
+    // 116 while its statement total did not change. Dropping the artifacts
+    // takes them out of the numerator and the denominator alike, and the count
+    // is reported rather than absorbed, because a gate that silently stops
+    // counting something reads the same as one that counted it and was
+    // satisfied.
+    // Read plainly rather than defensively: the snapshot comparison above has
+    // already read this file, so a guard here would be an alternative nothing
+    // can reach and could only be covered by pretending.
+    const text = fs.readFileSync(file, "utf8");
+    const ranNames = new Set(
+      Object.entries(data.fnMap ?? {})
+        .filter(([id]) => (data.f?.[id] ?? 0) > 0)
+        .map(([, entry]) => entry?.name)
+        .filter((name): name is string => typeof name === "string"),
+    );
+    let secondReadings = 0;
     for (const [id, entry] of Object.entries(data.fnMap ?? {})) {
       const covered = (data.f?.[id] ?? 0) > 0;
+      if (
+        covered === false &&
+        functionGapIsReal({
+          covered: ranNames,
+          name: entry?.name,
+          text,
+        }) === false
+      ) {
+        secondReadings++;
+        continue;
+      }
       count("functions", covered);
       if (covered === false)
         gaps.push(
           `${relative}:${entry?.loc?.start?.line ?? "?"} uncovered function ${entry?.name ?? "(anonymous)"}`,
         );
     }
+    if (secondReadings !== 0)
+      disagreements.push(
+        `${relative}: ${secondReadings} function ${secondReadings === 1 ? "entry is" : "entries are"} a second reading of a function that ran, not an untested one`,
+      );
 
     for (const [id, entry] of Object.entries(data.branchMap ?? {})) {
       const locations = entry?.locations ?? [];
@@ -401,7 +454,7 @@ export const inspectChangedCoverage = (props: {
     }
     files.push({ file: relative, totals: fileTotals });
   }
-  return { totals, files, gaps, instrumentFailures };
+  return { totals, files, gaps, instrumentFailures, disagreements };
 };
 
 /** Print a human-readable changed-coverage verdict. */
@@ -420,6 +473,8 @@ export const reportChangedCoverage = (
     write(
       `${entry.file}: statements ${entry.totals.statements.covered}/${entry.totals.statements.total}, branches ${entry.totals.branches.covered}/${entry.totals.branches.total}, functions ${entry.totals.functions.covered}/${entry.totals.functions.total}, lines ${entry.totals.lines.covered}/${entry.totals.lines.total}.`,
     );
+  for (const disagreement of result.disagreements)
+    write(`INSTRUMENT DISAGREEMENT: ${disagreement}`);
   for (const gap of result.gaps) write(`COVERAGE GAP: ${gap}`);
   for (const failure of result.instrumentFailures)
     write(`INSTRUMENT FAILURE: ${failure}`);
@@ -488,9 +543,31 @@ export const runChangedCoverageGate = (
       coverage,
       measuredSources,
     });
-    reportChangedCoverage(changes, result, write);
+    const probe = repositoryEmitProbe({
+      compilerRoot: path.resolve(__dirname, "../../.."),
+      root,
+      spawn: spawnSync,
+    });
+    const outDirectory = fs.mkdtempSync(
+      path.join(os.tmpdir(), "automovie-coverage-emit-"),
+    );
+    let judged;
+    try {
+      judged = excuseNonExecutableGaps({
+        gaps: result.gaps,
+        isNonExecutable: (file) =>
+          emitsNoExecutableStatement({ file, outDirectory, probe }),
+      });
+    } finally {
+      fs.rmSync(outDirectory, { recursive: true, force: true });
+    }
+    reportChangedCoverage(changes, { ...result, gaps: judged.gaps }, write);
+    for (const file of judged.excused)
+      write(
+        `NOT EXECUTABLE: ${file} emits no statement of its own, so it owes no coverage`,
+      );
     if (result.instrumentFailures.length !== 0) return 2;
-    if (result.gaps.length !== 0) return 1;
+    if (judged.gaps.length !== 0) return 1;
     return 0;
   } catch (error) {
     write(`INSTRUMENT FAILURE: ${describeThrown(error)}`);

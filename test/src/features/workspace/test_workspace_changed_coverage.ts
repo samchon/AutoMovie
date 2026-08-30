@@ -263,7 +263,10 @@ const coveredFixture = (): ICoveredFixture => {
     s: { 0: 1 },
     fnMap: {
       0: {
-        name: "choose",
+        // Named as the fixture text names it. A real source contains its own
+        // function's name, and an entry naming something the file does not
+        // contain is what the gate now reads as a transpile artifact.
+        name: "value",
         decl: { start: { line: 2, column: 0 }, end: { line: 2, column: 5 } },
         loc: { start: { line: 2, column: 0 }, end: { line: 2, column: 34 } },
       },
@@ -336,7 +339,7 @@ test("requires 100 percent of every touched file, not only changed lines", () =>
     assert.equal(red.gaps.length, 6);
     assert.match(red.gaps.join("\n"), /:1 uncovered statement/u);
     assert.match(red.gaps.join("\n"), /uncovered line/u);
-    assert.match(red.gaps.join("\n"), /uncovered function choose/u);
+    assert.match(red.gaps.join("\n"), /uncovered function value/u);
     assert.match(red.gaps.join("\n"), /uncovered branch cond-expr\[1\]/u);
   } finally {
     fs.rmSync(fixture.root, { recursive: true, force: true });
@@ -432,7 +435,9 @@ test("handles comment-only files and sparse Istanbul maps without false green", 
         loc: { start: { line: 1 }, end: { line: 1 } },
       },
       fallbackLocation: {
-        name: "fallbackLocation",
+        // Named as the fixture text names it, so this entry survives the
+        // artifact reading and still exercises the missing-location fallback.
+        name: "first",
         decl: { start: { line: 1 }, end: { line: 1 } },
         loc: {},
       },
@@ -465,8 +470,16 @@ test("handles comment-only files and sparse Istanbul maps without false green", 
       statements: { covered: 0, total: 4 },
       lines: { covered: 0, total: 2 },
       branches: { covered: 0, total: 4 },
-      functions: { covered: 0, total: 3 },
+      // `unchanged` names something this file does not contain, which is the
+      // transpile-helper reading, so it leaves the totals and is reported as a
+      // disagreement instead. The anonymous entry stays, because nothing can be
+      // said about a name that is not there, and so does the one named as the
+      // text names it.
+      functions: { covered: 0, total: 2 },
     });
+    assert.deepEqual(sparse.disagreements, [
+      `${fixture.relative}: 1 function entry is a second reading of a function that ran, not an untested one`,
+    ]);
     assert.match(sparse.gaps.join("\n"), /function \(anonymous\)/u);
     assert.match(sparse.gaps.join("\n"), /branch branch\[0\]/u);
 
@@ -873,6 +886,7 @@ test("reports totals, gaps, and instrument failures separately", () => {
       ],
       gaps: ["a.ts:1 uncovered line"],
       instrumentFailures: ["b.ts: stale"],
+      disagreements: ["c.ts: 2 function entries are a second reading"],
     },
     (line) => output.push(line),
   );
@@ -881,8 +895,11 @@ test("reports totals, gaps, and instrument failures separately", () => {
     /statements 1\/2, branches 2\/2, functions 0\/1, lines 1\/2/u,
   );
   assert.match(output[2], /^a\.ts: statements/u);
-  assert.match(output[3], /^COVERAGE GAP:/u);
-  assert.match(output[4], /^INSTRUMENT FAILURE:/u);
+  // A disagreement is stated before the gaps it would otherwise have been
+  // counted among, so a reader meets the reason before the list.
+  assert.match(output[3], /^INSTRUMENT DISAGREEMENT: c\.ts: 2 function/u);
+  assert.match(output[4], /^COVERAGE GAP:/u);
+  assert.match(output[5], /^INSTRUMENT FAILURE:/u);
 });
 
 test("records exact source identity and line counts beside a coverage report", () => {
@@ -1138,14 +1155,27 @@ test("executes type-only TypeScript and exposes CommonJS helper attribution", ()
       ),
     });
     assert.deepEqual(commonJsResult.instrumentFailures, []);
+    // `get` is the emitted interop accessor, not a function this source
+    // declares, and the file's text does not contain the name. It leaves the
+    // totals and is reported at the file's address instead of being counted as
+    // untested code -- which is the whole reason this case measures a real
+    // transpiled artifact rather than a hand-written map.
+    assert.deepEqual(commonJsResult.disagreements, [
+      `${relative}: 1 function entry is a second reading of a function that ran, not an untested one`,
+    ]);
     assert.deepEqual(commonJsResult.totals, {
       statements: { covered: 2, total: 2 },
       branches: { covered: 2, total: 4 },
-      functions: { covered: 2, total: 3 },
+      functions: { covered: 2, total: 2 },
       lines: { covered: 2, total: 2 },
     });
-    assert.equal(commonJsResult.gaps.length, 3);
-    assert.match(commonJsResult.gaps.join("\n"), /uncovered function get/u);
+    assert.equal(commonJsResult.gaps.length, 2);
+    // The emitted accessor is no longer among the gaps; it is named as a
+    // disagreement above, which is where a reader can act on it.
+    assert.equal(
+      commonJsResult.gaps.some((gap) => gap.includes("function get")),
+      false,
+    );
     assert.equal(
       commonJsResult.gaps.filter((gap) => gap.includes("uncovered branch"))
         .length,
@@ -1194,6 +1224,12 @@ test("executes type-only TypeScript and exposes CommonJS helper attribution", ()
 test("runs the coverage orchestrator through injectable child dependencies", () => {
   const roots: string[] = [];
   const output: string[] = [];
+  // A shape correction that cannot be produced is an instrument failure, not a
+  // quiet fall back to the merge it was going to replace.
+  let reconciliation: { failure: string | null; groups: number } = {
+    failure: null,
+    groups: 1,
+  };
   const dependencies = (
     result: ICoverageSpawnResult,
     sample: string[],
@@ -1241,6 +1277,7 @@ test("runs the coverage orchestrator through injectable child dependencies", () 
     writeLines: () => output.push("lines"),
     writeSources: () => output.push("sources"),
     records: () => ({ count: 2, parsed: 2, results: 4, bytes: 128 }),
+    reconcile: () => reconciliation,
     missingScripts: () => ({ urls: 3, missing: 1 }),
     scriptShapes: () => ({
       urls: 3,
@@ -1254,6 +1291,26 @@ test("runs the coverage orchestrator through injectable child dependencies", () 
   });
 
   assert.equal(measureCoverage(dependencies({ status: 0 }, ["sample.ts"])), 0);
+  assert.match(
+    output.join("\n"),
+    /coverage groups: 1 shape-consistent record group, so the merge had nothing to lose/u,
+  );
+  reconciliation = { failure: null, groups: 3 };
+  assert.equal(measureCoverage(dependencies({ status: 0 }, [])), 0);
+  assert.match(
+    output.join("\n"),
+    /coverage groups: 3 shape-consistent record groups, report corrected/u,
+  );
+  reconciliation = {
+    failure: "shape group 2 wrote no readable report",
+    groups: 3,
+  };
+  assert.equal(measureCoverage(dependencies({ status: 0 }, [])), 2);
+  assert.match(
+    output.join("\n"),
+    /INSTRUMENT FAILURE: shape group 2 wrote no readable report/u,
+  );
+  reconciliation = { failure: null, groups: 1 };
   assert.equal(measureCoverage(dependencies({ status: 1 }, [])), 1);
   assert.equal(measureCoverage(dependencies({ status: null }, [])), 2);
   assert.equal(
