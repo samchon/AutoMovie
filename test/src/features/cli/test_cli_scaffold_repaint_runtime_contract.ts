@@ -1357,6 +1357,11 @@ export const test_cli_scaffold_repaint_runtime_contract =
       // is the runtime guard on a derived artifact, and that guard names the
       // exact path and the accepted set rather than the type.
       //
+      // It does not echo the rejected value, so this pins the indexed position
+      // instead: `retryableFailures[2]` locates the member an author has to
+      // correct, and naming one accepted member proves the refusal came from
+      // the union rather than from a missing field.
+      //
       // Both halves survive, in different places. Requiring the old exit code
       // here would pin a compile-time refusal to a file TypeScript cannot see.
       if (impossiblePolicyRefusal.status !== 1)
@@ -1425,11 +1430,9 @@ export const test_cli_scaffold_repaint_runtime_contract =
           impossiblePolicyStatus: impossiblePolicyRefusal.status,
           impossiblePolicyStdout: impossiblePolicyRefusal.stdout,
           impossiblePolicyDiagnostic:
-            impossiblePolicyRefusal.stderr.includes('"cancelled"') &&
             impossiblePolicyRefusal.stderr.includes(
-              "repaint.executionPolicy.retryableFailures",
-            ) &&
-            impossiblePolicyRefusal.stderr.includes('"provider-refusal"'),
+              "repaint.executionPolicy.retryableFailures[2]",
+            ) && impossiblePolicyRefusal.stderr.includes('"provider-refusal"'),
           impossiblePolicyInvoked: fs.existsSync(impossiblePolicyInvocation),
           defaultStatus: defaultAdapterRefusal.status,
           defaultRepainted: defaultAdapterOutput.repainted,
