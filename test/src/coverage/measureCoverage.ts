@@ -368,8 +368,8 @@ export const coverageSourceRoots = ["."];
  * kind of authored TypeScript. `isAuthoredExecutableSource` admitted all of
  * them, so the changed-file gate demanded coverage for a file the measurement
  * never took, and reported the disagreement as `changed measured source is
- * absent from coverage-final.json` — an instrument diagnostic for what was
- * really a population that had drifted from the predicate beside it.
+ * absent from coverage-final.json`, which is an instrument diagnostic for what
+ * was really a population that had drifted from the predicate beside it.
  * `packages/template/scaffold/**` is one shape for one root; the extension and
  * `node_modules` filters decide the rest.
  *

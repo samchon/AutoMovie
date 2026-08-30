@@ -357,6 +357,40 @@
         }
       }
     },
+    "specifications/review-and-acceptance/subject-surface-and-inspection.md#review-system-subject-viewpoint-plan": {
+      "obligations": {
+        "delivery-evidence-separation": {
+          "owner": {
+            "kind": "package",
+            "package": "@automovie/viewer"
+          }
+        },
+        "interior-station-containment": {
+          "owner": {
+            "kind": "package",
+            "package": "@automovie/engine"
+          }
+        },
+        "population-non-shrinkable": {
+          "owner": {
+            "kind": "package",
+            "package": "@automovie/production"
+          }
+        },
+        "topology-derived-population": {
+          "owner": {
+            "kind": "package",
+            "package": "@automovie/engine"
+          }
+        },
+        "viewpoint-plan-record": {
+          "owner": {
+            "kind": "package",
+            "package": "@automovie/viewer"
+          }
+        }
+      }
+    },
     "specifications/review-and-acceptance/target-scope-and-context.md#review-system-compiler-artifact-read-refusal": {
       "obligations": {
         "compiler-artifact-reader": {
@@ -1345,7 +1379,6 @@
     "specifications/review-and-acceptance/subject-surface-and-inspection.md#review-system-subject-coverage": "sha256:280c454af3ee204595a2bf04a6183e54da9fac86cbf64460e471e55cdf947491",
     "specifications/review-and-acceptance/subject-surface-and-inspection.md#review-system-subject-inspection": "sha256:d76a6301dec6f64ca24fd09e902ef8e5d79a4a630a4b74033c1c57c94db509fb",
     "specifications/review-and-acceptance/subject-surface-and-inspection.md#review-system-subject-record": "sha256:8aa04b9cd5fbf0dd1a45d55af448e6997ec74cd635d86478e13860dd8569fcc3",
-    "specifications/review-and-acceptance/subject-surface-and-inspection.md#review-system-subject-viewpoint-plan": "sha256:5f63e9cc9a7528bf6ba601df1431b74d82e3e161ee50db0e6b21bbb599b1cf0f",
     "specifications/review-and-acceptance/surfaces-and-sampling.md#review-system-asset-surface": "sha256:407522e2ee1bd8862a319e05884127d342239ef1c695e9801997a63b23c6b7f7",
     "specifications/review-and-acceptance/surfaces-and-sampling.md#review-system-cross-scope-propagation": "sha256:46a94cc92cffcbc9fce85c2ca6b85489914e7be9c85dbfe9413371c1550bcdfa",
     "specifications/review-and-acceptance/surfaces-and-sampling.md#review-system-delivery-surface": "sha256:43c5559387bfc256e8abcf9061313f2e428411e3fb9d49afe8ba96991e9745cd",
