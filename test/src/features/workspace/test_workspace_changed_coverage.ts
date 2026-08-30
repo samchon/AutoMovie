@@ -1224,6 +1224,12 @@ test("executes type-only TypeScript and exposes CommonJS helper attribution", ()
 test("runs the coverage orchestrator through injectable child dependencies", () => {
   const roots: string[] = [];
   const output: string[] = [];
+  // A shape correction that cannot be produced is an instrument failure, not a
+  // quiet fall back to the merge it was going to replace.
+  let reconciliation: { failure: string | null; groups: number } = {
+    failure: null,
+    groups: 1,
+  };
   const dependencies = (
     result: ICoverageSpawnResult,
     sample: string[],
@@ -1271,6 +1277,7 @@ test("runs the coverage orchestrator through injectable child dependencies", () 
     writeLines: () => output.push("lines"),
     writeSources: () => output.push("sources"),
     records: () => ({ count: 2, parsed: 2, results: 4, bytes: 128 }),
+    reconcile: () => reconciliation,
     missingScripts: () => ({ urls: 3, missing: 1 }),
     scriptShapes: () => ({
       urls: 3,
@@ -1284,6 +1291,26 @@ test("runs the coverage orchestrator through injectable child dependencies", () 
   });
 
   assert.equal(measureCoverage(dependencies({ status: 0 }, ["sample.ts"])), 0);
+  assert.match(
+    output.join("\n"),
+    /coverage groups: 1 shape-consistent record group, so the merge had nothing to lose/u,
+  );
+  reconciliation = { failure: null, groups: 3 };
+  assert.equal(measureCoverage(dependencies({ status: 0 }, [])), 0);
+  assert.match(
+    output.join("\n"),
+    /coverage groups: 3 shape-consistent record groups, report corrected/u,
+  );
+  reconciliation = {
+    failure: "shape group 2 wrote no readable report",
+    groups: 3,
+  };
+  assert.equal(measureCoverage(dependencies({ status: 0 }, [])), 2);
+  assert.match(
+    output.join("\n"),
+    /INSTRUMENT FAILURE: shape group 2 wrote no readable report/u,
+  );
+  reconciliation = { failure: null, groups: 1 };
   assert.equal(measureCoverage(dependencies({ status: 1 }, [])), 1);
   assert.equal(measureCoverage(dependencies({ status: null }, [])), 2);
   assert.equal(

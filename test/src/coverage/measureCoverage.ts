@@ -27,6 +27,11 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { lineCount } from "./reportCoverageGaps";
+import {
+  type ICoverageEntry,
+  type IShapeReconciliation,
+  reconcileCoverageShapes,
+} from "./shapeReconciliation";
 
 export interface ICoverageRecords {
   bytes: number;
@@ -70,6 +75,7 @@ export interface ICoverageMeasurementDependencies {
   mkdir: (directory: string, options: { recursive: true }) => unknown;
   missingScripts: (directory: string) => ICoverageMissingScripts;
   records: (directory: string) => ICoverageRecords;
+  reconcile: (directory: string) => IShapeReconciliation;
   remove: (directory: string) => void;
   scriptShapes: (directory: string) => ICoverageScriptShapes;
   sourceHostDirectory: () => string;
@@ -228,46 +234,60 @@ export const coverageMissingScripts = (
  * and toolchain, and those disagree with each other constantly without affecting
  * one figure this repository reports.
  */
+/**
+ * Whether one raw V8 script URL names a file this measurement covers.
+ *
+ * Extracted so the shape census and the shape reconciliation ask one question
+ * instead of two that can drift apart. The decoding notes inside are the
+ * reason this is a parse rather than a host path resolution.
+ */
+export const isMeasuredScriptUrl = (
+  url: string,
+  roots: readonly string[],
+  repository: string,
+): boolean => {
+  // Decode the URL rather than stripping its scheme by hand, and decode it
+  // the same way on every host.
+  //
+  // The hand-rolled form was `url.replace(/^file:[/]{3}/u, "")`, which is
+  // right only for a Windows drive letter: `file:///D:/a` loses three slashes
+  // and correctly becomes `D:/a`, while `file:///home/a` becomes `home/a` and
+  // loses the leading slash that `repository` still carries. Since
+  // `coverageSourceRoots` is `["."]`, every comparison takes the prefix
+  // branch, so every POSIX comparison failed and this census reported zero
+  // measured scripts on Linux for its whole life.
+  //
+  // `fileURLToPath` fixes that but decides by host: it refuses
+  // `file:///repo/a` on Windows because there is no drive letter, which is a
+  // real URL shape this function is asked about. What the census needs is the
+  // path the URL names, not the path this host could open, so the parse is
+  // neutral and only a genuinely malformed URL is skipped.
+  let lowered: string;
+  try {
+    const parsed = new URL(url);
+    const decoded = decodeURIComponent(parsed.pathname);
+    // A leading slash belongs to a POSIX path and precedes a Windows drive
+    // letter; keep the first and drop the second.
+    lowered = (/^\/[A-Za-z]:/u.test(decoded) ? decoded.slice(1) : decoded)
+      .replaceAll("\\", "/")
+      .toLowerCase();
+  } catch {
+    return false;
+  }
+  return roots.some((root) => {
+    if (root === ".")
+      return lowered === repository || lowered.startsWith(`${repository}/`);
+    return lowered.includes(root.toLowerCase());
+  });
+};
+
 export const coverageScriptShapes = (
   directory: string,
   roots: readonly string[] = SOURCES,
 ): ICoverageScriptShapes => {
   const repository = ROOT.replaceAll("\\", "/").toLowerCase();
-  const measured = (url: string): boolean => {
-    // Decode the URL rather than stripping its scheme by hand, and decode it
-    // the same way on every host.
-    //
-    // The hand-rolled form was `url.replace(/^file:[/]{3}/u, "")`, which is
-    // right only for a Windows drive letter: `file:///D:/a` loses three slashes
-    // and correctly becomes `D:/a`, while `file:///home/a` becomes `home/a` and
-    // loses the leading slash that `repository` still carries. Since
-    // `coverageSourceRoots` is `["."]`, every comparison takes the prefix
-    // branch, so every POSIX comparison failed and this census reported zero
-    // measured scripts on Linux for its whole life.
-    //
-    // `fileURLToPath` fixes that but decides by host: it refuses
-    // `file:///repo/a` on Windows because there is no drive letter, which is a
-    // real URL shape this function is asked about. What the census needs is the
-    // path the URL names, not the path this host could open, so the parse is
-    // neutral and only a genuinely malformed URL is skipped.
-    let lowered: string;
-    try {
-      const parsed = new URL(url);
-      const decoded = decodeURIComponent(parsed.pathname);
-      // A leading slash belongs to a POSIX path and precedes a Windows drive
-      // letter; keep the first and drop the second.
-      lowered = (/^\/[A-Za-z]:/u.test(decoded) ? decoded.slice(1) : decoded)
-        .replaceAll("\\", "/")
-        .toLowerCase();
-    } catch {
-      return false;
-    }
-    return roots.some((root) => {
-      if (root === ".")
-        return lowered === repository || lowered.startsWith(`${repository}/`);
-      return lowered.includes(root.toLowerCase());
-    });
-  };
+  const measured = (url: string): boolean =>
+    isMeasuredScriptUrl(url, roots, repository);
   const shapes = new Map<string, { count: number; forms: Set<string> }>();
   let entries: string[];
   try {
@@ -509,6 +529,116 @@ export const writeMeasuredSources = (
 export const removeCoverageTemporaryDirectory = (directory: string): void =>
   fs.rmSync(directory, { recursive: true, force: true });
 
+/**
+ * Ask each shape-consistent group of raw records for its own report.
+ *
+ * The group reports are written beside the run's own temp directory, which is
+ * removed with it, so a corrected run leaves nothing behind for the next one to
+ * inherit.
+ */
+/**
+ * The parts a real shape reconciliation is made of, each one askable on its own.
+ *
+ * Kept as a value rather than inlined so the wiring is reachable by a test. A
+ * composition root nothing can call is where a one-line mistake -- the wrong
+ * report filename, a group directory that is never made -- survives every green
+ * run until it is needed.
+ */
+export const measuredShapeReconciliationParts = (props: {
+  groupRoot: string;
+  reportDirectory: string;
+  /**
+   * The reporter launcher, so a signalled process is an ordinary case.
+   *
+   * `spawnSync` reports a signalled child as a null status, and a reconciliation
+   * that read that as success would write a corrected report from a group whose
+   * reporter never finished. Naming the launcher here is what makes that an
+   * input rather than an alternative only a killed process could produce.
+   */
+  spawn?: (
+    command: string,
+    argv: readonly string[],
+    options: { cwd: string; shell: false; stdio: "ignore" },
+  ) => { status: number | null };
+  temporary: string;
+}): Parameters<typeof reconcileCoverageShapes>[0] => ({
+  copy: (from, to) => fs.copyFileSync(from, to),
+  groupRoot: props.groupRoot,
+  measured: (url) =>
+    isMeasuredScriptUrl(url, SOURCES, ROOT.replaceAll("\\", "/").toLowerCase()),
+  mkdir: (directory) => fs.mkdirSync(directory, { recursive: true }),
+  readReport: (directory) => {
+    try {
+      return JSON.parse(
+        fs.readFileSync(path.join(directory, "coverage-final.json"), "utf8"),
+      ) as Record<string, ICoverageEntry>;
+    } catch {
+      return null;
+    }
+  },
+  report: (records, reports) =>
+    (props.spawn ?? spawnSync)(
+      process.execPath,
+      [
+        path.join(ROOT, "test", "node_modules", "c8", "bin", "c8.js"),
+        "report",
+        "--all",
+        ...SOURCES.flatMap((source) => ["--src", source]),
+        ...INCLUDES.flatMap((include) => ["--include", include]),
+        "--exclude",
+        "**/index.ts",
+        "--exclude",
+        "**/bin.ts",
+        "--extension",
+        ".ts",
+        "--extension",
+        ".tsx",
+        "--extension",
+        ".cts",
+        "--extension",
+        ".mts",
+        "--temp-directory",
+        records,
+        "--reports-dir",
+        reports,
+        "--reporter=json",
+      ],
+      { cwd: ROOT, shell: false, stdio: "ignore" },
+    ).status ?? 1,
+  temporary: props.temporary,
+  writeReport: (entries) =>
+    fs.writeFileSync(
+      path.join(props.reportDirectory, "coverage-final.json"),
+      JSON.stringify(entries),
+      "utf8",
+    ),
+});
+
+/**
+ * Ask each shape-consistent group of raw records for its own report.
+ *
+ * The group reports are written beside the run's own temp directory and removed
+ * with it, so a corrected run leaves nothing behind for the next one to
+ * inherit.
+ */
+export const reconcileMeasuredShapes = (
+  temporary: string,
+  reportDirectory: string = REPORT,
+): IShapeReconciliation => {
+  const groupRoot = `${temporary}-shapes`;
+  try {
+    return reconcileCoverageShapes(
+      measuredShapeReconciliationParts({
+        groupRoot,
+        reportDirectory,
+        temporary,
+      }),
+    );
+  } finally {
+    fs.rmSync(groupRoot, { force: true, recursive: true });
+  }
+};
+
 export const coverageMeasurementDependencies: ICoverageMeasurementDependencies =
   {
     temporaryDirectory: coverageTemporaryDirectory,
@@ -518,6 +648,7 @@ export const coverageMeasurementDependencies: ICoverageMeasurementDependencies =
     writeLines: writeMeasuredLines,
     writeSources: writeMeasuredSources,
     records: coverageRecords,
+    reconcile: reconcileMeasuredShapes,
     missingScripts: coverageMissingScripts,
     scriptShapes: coverageScriptShapes,
     log: console.log,
@@ -601,6 +732,22 @@ export const measureCoverage = (
     // and does not reach the total. The remaining numbers separate a record
     // caught mid-write from a merge that drops complete ones, and they cost one
     // directory read on a step that already took minutes.
+    // Correct the merge before anything reads it. c8 writes one entry per
+    // source path, and when two processes saw one source in two emitted forms
+    // that entry is worse than the better of the two -- measured here at 90.93
+    // percent where the two groups alone read 100 and 32.56. The snapshot and
+    // the gate both consume this report, so the correction comes first.
+    const reconciliation = dependencies.reconcile(temporary);
+    if (reconciliation.failure !== null) {
+      dependencies.log(`INSTRUMENT FAILURE: ${reconciliation.failure}`);
+      return 2;
+    }
+    dependencies.log(
+      `coverage groups: ${reconciliation.groups} shape-consistent record ` +
+        (reconciliation.groups === 1
+          ? "group, so the merge had nothing to lose"
+          : "groups, report corrected to the fullest reading of each file"),
+    );
     dependencies.writeLines();
     dependencies.writeSources();
     const records = dependencies.records(temporary);
