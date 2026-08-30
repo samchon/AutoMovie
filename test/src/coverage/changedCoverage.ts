@@ -1,10 +1,16 @@
 import { spawnSync } from "node:child_process";
 import crypto from "node:crypto";
 import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import process from "node:process";
 
 import { describeThrown } from "../integrity/contractOwnership";
+import {
+  emitsNoExecutableStatement,
+  excuseNonExecutableGaps,
+  repositoryEmitProbe,
+} from "./executableEmission";
 import { COVERAGE_REPORT_DIRECTORY, MEASURED_SOURCES } from "./measureCoverage";
 import { positionsPastEndOfFile } from "./reportCoverageGaps";
 
@@ -488,9 +494,31 @@ export const runChangedCoverageGate = (
       coverage,
       measuredSources,
     });
-    reportChangedCoverage(changes, result, write);
+    const probe = repositoryEmitProbe({
+      compilerRoot: path.resolve(__dirname, "../../.."),
+      root,
+      spawn: spawnSync,
+    });
+    const outDirectory = fs.mkdtempSync(
+      path.join(os.tmpdir(), "automovie-coverage-emit-"),
+    );
+    let judged;
+    try {
+      judged = excuseNonExecutableGaps({
+        gaps: result.gaps,
+        isNonExecutable: (file) =>
+          emitsNoExecutableStatement({ file, outDirectory, probe }),
+      });
+    } finally {
+      fs.rmSync(outDirectory, { recursive: true, force: true });
+    }
+    reportChangedCoverage(changes, { ...result, gaps: judged.gaps }, write);
+    for (const file of judged.excused)
+      write(
+        `NOT EXECUTABLE: ${file} emits no statement of its own, so it owes no coverage`,
+      );
     if (result.instrumentFailures.length !== 0) return 2;
-    if (result.gaps.length !== 0) return 1;
+    if (judged.gaps.length !== 0) return 1;
     return 0;
   } catch (error) {
     write(`INSTRUMENT FAILURE: ${describeThrown(error)}`);
