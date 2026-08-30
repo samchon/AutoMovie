@@ -13,6 +13,26 @@ import { throwsError } from "../internal/predicates";
  * of it left internally valid residue from another film. The public scaffold is
  * now intentionally empty at that ownership boundary; the repository-only film
  * fixture keeps compiler regression coverage elsewhere.
+ *
+ * Emptiness is judged by pattern over the whole rendered map rather than against
+ * a remembered file list, because the failure is a production document, source
+ * module, design record, or asset arriving under any name, and a list only
+ * refuses the names it already knew.
+ *
+ * Scenarios:
+ *
+ * 1. A missing shipped asset directory fails at the public boundary that reports
+ *    it, so a truncated install is named rather than rendering a project with
+ *    silently absent assets.
+ * 2. No rendered production document, production or film source module, design
+ *    record, tracked production or review state, rendered media, or public asset
+ *    exists, and no production document carries an evidence tag. Each is a
+ *    separate way another film's content used to survive, so each is reported by
+ *    name rather than folded into one count.
+ * 3. A blank name and a name carrying a path separator are both refused, so the
+ *    renderer cannot be handed an identity that escapes its own directory.
+ * 4. No rendered path still carries the `{{name}}` placeholder, which is what an
+ *    unsubstituted path template would leave behind.
  */
 export const test_cli_scaffold_design_derivation = (): void => {
   const assetDirectory = scaffoldAssetDirectory();

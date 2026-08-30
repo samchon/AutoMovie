@@ -43,9 +43,12 @@ const carried = (name: string, args: unknown[]): unknown =>
  *    which a caller would read as a kernel that returned nothing.
  * 5. Malformed argument text is refused rather than parsed into a call, so a
  *    corrupted crossing cannot reach a kernel with arguments nobody wrote.
- * 6. Every bridged name is on the importable surface, and the names the surface
- *    lists that nothing bridges are exactly the four the sandbox stands in for.
- *    Either side drifting is what made a stand-in unreachable before.
+ * 6. Nothing is bridged that a source module could not import, because a bridge
+ *    to a name the surface withholds is a kernel no author can reach. The
+ *    opposite drift, a surface name the sandbox neither bridges nor stands in
+ *    for, is refused by the sandbox itself while it boots and surfaces as a
+ *    failed compile, so it is not restated here as a second copy of the
+ *    stand-in table.
  */
 export const test_production_sandbox_engine_bridge = (): void => {
   const profile = [
@@ -119,30 +122,11 @@ export const test_production_sandbox_engine_bridge = (): void => {
 
   const surface = new Set(AUTOMOVIE_SANDBOX_ENGINE_SURFACE);
   TestValidator.equals(
-    "what is bridged and what is stood in for together cover the surface exactly",
-    namedFacts([
-      [
-        "bridgedAreImportable",
-        () =>
-          AUTOMOVIE_SANDBOX_BRIDGED_ENGINE_EXPORTS.every((name) =>
-            surface.has(name),
-          ),
-      ],
-      [
-        "standIns",
-        () =>
-          [...surface]
-            .filter(
-              (name) =>
-                AUTOMOVIE_SANDBOX_BRIDGED_ENGINE_EXPORTS.includes(name) ===
-                false,
-            )
-            .sort((left, right) => (left < right ? -1 : 1))
-            .join(",") ===
-          "AutoMovieSubject,AutoMovieSubjectGroup,defineShot,worldSurfaceHeight",
-      ],
-    ]),
-    { bridgedAreImportable: true, standIns: true },
+    "nothing is bridged that a source module cannot import",
+    AUTOMOVIE_SANDBOX_BRIDGED_ENGINE_EXPORTS.filter(
+      (name) => surface.has(name) === false,
+    ),
+    [],
   );
 
   TestValidator.equals(

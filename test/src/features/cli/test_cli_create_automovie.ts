@@ -42,7 +42,34 @@ const create = (target: string): ICreatorResult => {
   }
 };
 
-/** The package-manager creator publishes editable source and refuses overwrite. */
+/**
+ * The one-command creator publishes editable source and never writes twice.
+ *
+ * `create-automovie` is the front door: whatever it leaves behind is the whole
+ * of what an author starts from, and it runs against a directory the author
+ * chose rather than one the tool owns. So the two facts worth pinning are that
+ * a first run produces ordinary source the author can open, and that a second
+ * run over the same directory refuses rather than reconciles. What it must not
+ * do is silently install, because an install the author did not ask for is
+ * minutes of network work and a `node_modules` the creator would then own.
+ *
+ * The scenarios drive the real creator over a real temporary directory rather
+ * than a rendered file map, since refusal and preservation are decisions about
+ * a directory that already exists and a map has no such state.
+ *
+ * Scenarios:
+ *
+ * 1. A first run over an absent directory exits zero with nothing on stderr and
+ *    leaves a directory behind, which is the successful path.
+ * 2. That run installs nothing: no `node_modules` exists afterwards, so the
+ *    creator has not quietly become a package manager.
+ * 3. A second run over the same directory exits one and names the directory it
+ *    refused, so the author is told which path stopped it rather than being
+ *    handed a merged tree.
+ * 4. A file the author wrote between the two runs survives the refusal byte for
+ *    byte. This is the negative twin of the refusal: an exit code alone would
+ *    still permit a creator that overwrote first and reported afterwards.
+ */
 export const test_cli_create_automovie = (): void => {
   const base = fs.mkdtempSync(path.join(os.tmpdir(), "create-automovie-"));
   let failure: { error: unknown } | undefined;
