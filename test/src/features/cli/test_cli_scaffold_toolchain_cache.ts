@@ -21,6 +21,12 @@ interface ILauncher {
  * the population is the thing under test: a launcher that is added, renamed, or
  * split out of an existing script has to answer the same question, and a list
  * would answer it only for the scripts that existed when the list was written.
+ *
+ * What it reads is a segment that starts with the launcher's own name, which is
+ * every spelling the manifest currently uses. A script that reached the same
+ * compiler through `npx`, through `node` and a resolved path, or through another
+ * script this reading cannot follow would not be counted, and that limit is
+ * recorded rather than papered over with a wider pattern nothing exercises.
  */
 const launchers = (manifest: string): ILauncher[] =>
   Object.entries(
