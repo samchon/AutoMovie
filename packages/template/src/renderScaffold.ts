@@ -134,11 +134,19 @@ const listFiles = (root: string): string[] => {
  * so it works both from `src` (ttsx, in development) and the published `lib`
  * (the `scaffold/` folder ships alongside).
  *
+ * `moduleDirectory` defaults to this module's own, which is the only value any
+ * caller passes. It is a parameter so that the missing-assets refusal is an
+ * ordinary case over an ordinary input rather than a branch reachable only by
+ * moving the shipped directory out from under a running test. A guard whose
+ * failure sentence has never been produced is a guard nobody has read.
+ *
  * @evidence requirements/agent-authoring/capability-discovery.md#agent-technique-example Locates the scaffold whose examples teach reusable authoring techniques instead of supplying finished production content.
  * @evidence specifications/authoring-and-authority/capability-and-content-boundary.md#spec-authoring-capability-input-output Exposes the capability-oriented scaffold as the input to deterministic scaffold rendering.
  */
-export const scaffoldAssetDirectory = (): string => {
-  const directory = path.resolve(__dirname, "..", "scaffold");
+export const scaffoldAssetDirectory = (
+  moduleDirectory: string = __dirname,
+): string => {
+  const directory = path.resolve(moduleDirectory, "..", "scaffold");
   if (!fs.existsSync(directory))
     throw new Error(`scaffold assets are missing: ${directory}`);
   return directory;
@@ -278,11 +286,14 @@ export const renderScaffold = (
 ): Record<string, string> => {
   const name = props.name.trim();
   if (name.length === 0) throw new Error("scaffold requires a project name");
+  // A trailing space cannot survive `trim`, so refusing one here would be a
+  // rule no input can break: such a name is normalized rather than rejected.
+  // A trailing dot is not whitespace and reaches this rule intact, which is
+  // why only that half of the Windows restriction is stated.
   if (
     name === "." ||
     name === ".." ||
     name.endsWith(".") ||
-    name.endsWith(" ") ||
     /[<>:"/\\|?*\u0000-\u001f]/u.test(name) ||
     /^(?:con|prn|aux|nul|com[1-9]|lpt[1-9])(?:\.|$)/iu.test(name)
   )
