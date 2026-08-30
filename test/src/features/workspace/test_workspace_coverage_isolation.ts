@@ -169,6 +169,23 @@ export const test_workspace_coverage_isolation = (): void => {
     JSON.stringify({ result: [shape(64), { url: "file://[invalid" }] }),
   );
 
+  // Both host shapes of a `file:` URL, so the drive-letter arm and the POSIX
+  // arm are each decided on every platform. `pathToFileURL` produces only the
+  // running host's shape, so a run on one platform would leave the other arm
+  // undecided, which is what CI reported against `measureCoverage.ts`.
+  const hostShapes = fs.mkdtempSync(
+    path.join(os.tmpdir(), "automovie-coverage-hosts-"),
+  );
+  fs.writeFileSync(
+    path.join(hostShapes, "coverage-3-1-0.json"),
+    JSON.stringify({
+      result: [
+        { url: "file:///D:/repo/packages/engine/src/windows.ts" },
+        { url: "file:///home/runner/packages/engine/src/posix.ts" },
+      ],
+    }),
+  );
+
   const drawn = {
     first: coverageTemporaryDirectory(),
     second: coverageTemporaryDirectory(),
@@ -178,9 +195,11 @@ export const test_workspace_coverage_isolation = (): void => {
     scripts: coverageMissingScripts(records),
     shapes: coverageScriptShapes(shaped),
     narrow: coverageScriptShapes(shaped, ["packages/face/src"]),
+    hosts: coverageScriptShapes(hostShapes, ["packages/engine/src"]).urls,
   };
   fs.rmSync(records, { recursive: true, force: true });
   fs.rmSync(shaped, { recursive: true, force: true });
+  fs.rmSync(hostShapes, { recursive: true, force: true });
 
   const parent = path.join(ROOT, "node_modules", ".cache", "automovie-c8");
 
@@ -208,6 +227,10 @@ export const test_workspace_coverage_isolation = (): void => {
       [
         "a source outside the measured set is not counted at all",
         () => drawn.narrow.urls === 0 && drawn.narrow.disagreeing === 0,
+      ],
+      [
+        "both host shapes of a file URL are measured on either platform",
+        () => drawn.hosts === 2,
       ],
       ["two draws in one process differ", () => drawn.first !== drawn.second],
       [
@@ -269,6 +292,7 @@ export const test_workspace_coverage_isolation = (): void => {
       "a source read in two shapes is counted as both reread and disagreeing": true,
       "and named, so the figure it spoils can be found": true,
       "a source outside the measured set is not counted at all": true,
+      "both host shapes of a file URL are measured on either platform": true,
       "two draws in one process differ": true,
       "both sit under the coverage cache": true,
       "neither is the shared parent itself": true,
