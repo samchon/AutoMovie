@@ -10,8 +10,17 @@ import {
 type Writer = (line: string) => void;
 
 const slash = (value: string): string => value.replaceAll("\\", "/");
-const compare = (left: string, right: string): number =>
-  left.localeCompare(right);
+
+/**
+ * Code-unit order, the spelling the scaffold renderer already uses.
+ *
+ * `localeCompare` varies with the host's locale and ICU build, and this decides
+ * the order two CI lanes print the same diagnostics in. Written as a subtraction
+ * rather than as nested conditionals because it is then one expression with
+ * nothing in it that a test would have to reach.
+ */
+const byCodeUnit = (left: string, right: string): number =>
+  Number(left > right) - Number(left < right);
 
 export interface ICoveragePopulationInspection {
   measured: number;
@@ -39,7 +48,7 @@ export const repositoryCandidates = (root: string): string[] => {
       ...listing(["ls-files", "-z"]),
       ...listing(["ls-files", "--others", "--exclude-standard", "-z"]),
     ]),
-  ].sort(compare);
+  ].sort(byCodeUnit);
 };
 
 /**
@@ -79,7 +88,7 @@ export const inspectCoveragePopulation = (props: {
   const obliged = [...known]
     .filter(isAuthoredExecutableSource)
     .filter((file) => fs.existsSync(path.resolve(props.root, file)))
-    .sort(compare);
+    .sort(byCodeUnit);
   return {
     obliged: obliged.length,
     measured: measured.size,
@@ -88,7 +97,7 @@ export const inspectCoveragePopulation = (props: {
       .filter(
         (file) => known.has(file) && isAuthoredExecutableSource(file) === false,
       )
-      .sort(compare),
+      .sort(byCodeUnit),
   };
 };
 
