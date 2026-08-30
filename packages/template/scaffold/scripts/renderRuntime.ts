@@ -7,6 +7,7 @@ import {
   readAutoMovieProductionOwnedFile,
   runProductionRenderJob,
 } from "@automovie/production";
+import { createRequire } from "node:module";
 import path from "node:path";
 
 import { productionEvidence } from "../lint.config";
@@ -311,7 +312,12 @@ const executeProductionRenderCommand = async (
     authoringEvidence,
     captureCurrentChunkPointer: gcRuntime.captureCurrentChunkPointer,
     compareCodeUnits,
-    h264Entry: require.resolve("h264-mp4-encoder"),
+    // A generated project is `"type": "module"`, so `require` is not defined in
+    // this scope and the bare call threw `ReferenceError` the moment anything
+    // reached it. It is a lazy field on the planning runtime, so `status`,
+    // `verify` and `finalize` never touched it and only `render gc` did, which
+    // is why one command failed while its siblings passed.
+    h264Entry: createRequire(import.meta.url).resolve("h264-mp4-encoder"),
     host: renderHost,
     output,
     planPath,
