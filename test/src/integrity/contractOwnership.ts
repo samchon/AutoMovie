@@ -251,7 +251,21 @@ const countStaleLegacy = (
       units.has(target) && units.get(target)!.digest !== digest,
   ).length;
 
-/** Return the declared or migration status of every unit in one layer. */
+/**
+ * Return the declared or migration status of every unit in one layer.
+ *
+ * A legacy unit whose prose has moved reports `stale` rather than `legacy`, so
+ * the drift `check` counts can also be named. The count on its own says how much
+ * debt this change disturbed and not which debt, and the rule that reads it
+ * ("read that count when you touch a legacy unit and decide whether this is the
+ * change that should declare its owners") cannot be followed without the
+ * identities. Finding two moved units among fifty-one otherwise costs a
+ * throwaway script that re-derives every digest at the merge base.
+ *
+ * `--owner legacy` still selects the whole recorded debt, drifted or not,
+ * because a stale unit has not stopped being legacy; `--owner stale` narrows it
+ * to the units this working tree moved.
+ */
 export const queryContractOwnership = (
   root: string,
   layer: ContractLayer,
@@ -260,10 +274,14 @@ export const queryContractOwnership = (
   assertLayer(layer);
   inspectContractOwnership(root);
   const ledger = loadLedger(root, layer);
+  const units = collectContractUnits(root, layer);
   const results: IContractOwnershipQuery[] = [];
-  for (const target of Object.keys(ledger.legacy)) {
-    if (owner === undefined || owner === "legacy") {
-      results.push({ target, status: "legacy" });
+  for (const [target, digest] of Object.entries(ledger.legacy)) {
+    // `inspectContractOwnership` above already refused a ledger entry naming a
+    // unit the documents do not have, so every recorded target resolves here.
+    const status = units.get(target)!.digest === digest ? "legacy" : "stale";
+    if (owner === undefined || owner === "legacy" || owner === status) {
+      results.push({ target, status });
     }
   }
   for (const [target, declaration] of Object.entries(ledger.declarations)) {

@@ -106,6 +106,11 @@ const temporarily = <T>(
  * 3. A new unit fails until it is classified, a removed unit fails until its
  *    debt entry is pruned, and an edited legacy unit is counted as drift rather
  *    than refused, because forcing a declaration there buys a manufactured one.
+ *    The drift is also named: `--owner stale` returns the moved unit, `--owner
+ *    legacy` still returns the whole recorded debt because a moved unit has not
+ *    stopped being legacy, and a settled tree returns nothing stale. A count
+ *    nobody can turn into identities cannot be acted on, and finding two moved
+ *    units among fifty-one otherwise costs a throwaway digest script.
  * 4. Package ownership without positive native evidence and a part tag separated
  *    from its native base citation both fail.
  * 5. Missing product supplies, missing specification refinement, a supply cycle,
@@ -348,6 +353,44 @@ export const test_workspace_contract_ownership = (): void => {
       ),
       () => command(root, "check"),
     );
+    // The count says how much debt this change disturbed; the query has to say
+    // which, or the rule that reads the count cannot be followed. `stale` names
+    // the moved unit, `legacy` keeps returning the whole recorded debt because a
+    // moved unit has not stopped being legacy, and an unmoved tree has nothing
+    // stale in it.
+    const drifted = temporarily(
+      requirementFile,
+      requirementSource.replace(
+        "An unchanged existing unit.",
+        "A changed existing unit.",
+      ),
+      () => ({
+        stale: command(
+          root,
+          "query",
+          "--layer",
+          "requirements",
+          "--owner",
+          "stale",
+        ),
+        legacy: command(
+          root,
+          "query",
+          "--layer",
+          "requirements",
+          "--owner",
+          "legacy",
+        ),
+      }),
+    );
+    const settledStaleQuery = command(
+      root,
+      "query",
+      "--layer",
+      "requirements",
+      "--owner",
+      "stale",
+    );
     const removedLegacyRejected = temporarily(
       requirementFile,
       requirementSource.replace(
@@ -489,6 +532,24 @@ export const test_workspace_contract_ownership = (): void => {
             touchedLegacyCounted.stdout.includes('"stale":{"requirements":1'),
         ],
         [
+          "touchedLegacyNamed",
+          () =>
+            drifted.stale.stdout.includes("req-legacy") &&
+            drifted.stale.stdout.includes('"status": "stale"'),
+        ],
+        [
+          "legacyStillWholeDebt",
+          () =>
+            drifted.legacy.stdout.includes("req-legacy") &&
+            drifted.legacy.stdout.includes('"status": "stale"'),
+        ],
+        [
+          "settledTreeHasNothingStale",
+          () =>
+            settledStaleQuery.status === 0 &&
+            settledStaleQuery.stdout.trim() === "[]",
+        ],
+        [
           "removedLegacyRejected",
           () => removedLegacyRejected.stderr.includes("names missing unit"),
         ],
@@ -559,6 +620,9 @@ export const test_workspace_contract_ownership = (): void => {
           "obligationQueryable",
           "newUnitRejected",
           "touchedLegacyCounted",
+          "touchedLegacyNamed",
+          "legacyStillWholeDebt",
+          "settledTreeHasNothingStale",
           "removedLegacyRejected",
           "packageEvidenceRejected",
           "splitPartRejected",
