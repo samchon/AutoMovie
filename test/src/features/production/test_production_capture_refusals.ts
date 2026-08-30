@@ -32,8 +32,8 @@ const CRATE: IAutoMovieModelRecipe = {
 };
 
 /**
- * Every capture refusal is attributable, and a rigless model owes five views
- * rather than six.
+ * Every capture refusal is attributable, and a rigless model owes nine views
+ * rather than ten.
  *
  * The success paths were pinned by the two cases beside this one, which leaves
  * the answers a caller actually gets when something is wrong: an untrimmed
@@ -44,7 +44,7 @@ const CRATE: IAutoMovieModelRecipe = {
  *
  * The rigless model is the other half of the required view set. `rom-extremes`
  * joins the set only for a model whose compiled form carries a skeleton, so a
- * prop that owed six views would be a prop whose review can never complete.
+ * prop that owed ten views would be a prop whose review can never complete.
  *
  * Scenarios:
  *

@@ -29,8 +29,9 @@ const derive = unit.autoMovieLibraryObservationRequirements;
 /**
  * What a building owes is counted from the building, not from a fixed number.
  *
- * A bounded object closes on eight views because it has six faces and two
- * useful diagonals. A building has as many elevations as it has exposed sides,
+ * A bounded object closes on nine views because it has six faces, two useful
+ * diagonals, and the steep outline pass that reads the silhouette those eight
+ * flatten. A building has as many elevations as it has exposed sides,
  * as many corner readings as those elevations meet at, and as many interiors as
  * it has rooms, so its population is a function of its own envelope and space
  * tree. That is what makes "complete" mean something here: an author cannot
