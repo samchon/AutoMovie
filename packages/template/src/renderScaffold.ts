@@ -78,11 +78,11 @@ const UNSHIPPED_DIRECTORIES = new Set([".cache", ".git", "node_modules"]);
 /**
  * File shapes the scaffold never ships, whatever a host leaves there.
  *
- * The scaffold's authored tree is TypeScript, Markdown, JSON, HTML and three
- * dotfile stand-ins. It contains no JavaScript and no declaration file, so a
- * file carrying a compiler-output shape was emitted into the directory by a
- * tool run rather than authored, and it belongs to the same class as the lint
- * cache above.
+ * The scaffold's authored tree is Markdown, TypeScript, JSON, HTML, the two
+ * dotfile stand-ins renamed above, a licence and directory placeholders. It
+ * contains no JavaScript and no declaration file, so a file carrying a
+ * compiler-output shape was emitted into the directory by a tool run rather
+ * than authored, and it belongs to the same class as the lint cache above.
  *
  * The reason to name the class rather than the two directories alone is that
  * this one is invisible where it happens. Running the type-checker without
