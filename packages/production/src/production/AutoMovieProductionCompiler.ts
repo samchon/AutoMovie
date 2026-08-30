@@ -951,37 +951,15 @@ export class AutoMovieProductionCompiler {
     diagnostics.sort(compareDiagnostics);
     const inputRaceFailure = (
       message: string,
-    ): IAutoMovieCompileProjectOutput => {
-      diagnostics.push({
-        code: "compile-input-changed",
-        category: "error",
-        phase: "compile",
-        target: "compiler-input",
-        path: null,
-        message: `${message} Re-run the scaffold compile command against the current design, source, and declared content snapshot.`,
-      });
-      diagnostics.sort(compareDiagnostics);
-      return {
-        success: false,
-        revision: this.project.revision(),
-        compiler: {
-          version: AUTOMOVIE_PRODUCTION_COMPILER_VERSION,
-          inputFingerprint,
-        },
+    ): IAutoMovieCompileProjectOutput =>
+      this.inputRaceFailure({ diagnostics, inputFingerprint, message });
+    const confirmInputSnapshot = (): IAutoMovieCompileProjectOutput | null =>
+      this.confirmInputSnapshot({
         diagnostics,
-        materialized: [],
-      };
-    };
-    const confirmInputSnapshot = (): IAutoMovieCompileProjectOutput | null => {
-      try {
-        this.project.confirmCurrentSnapshot(inputCurrent, inputRevision);
-        return null;
-      } catch (error) {
-        if (error instanceof AutoMovieProductionInputRaceError === false)
-          throw error;
-        return inputRaceFailure(error.message);
-      }
-    };
+        inputCurrent,
+        inputFingerprint,
+        inputRevision,
+      });
     if (diagnostics.some((diagnostic) => diagnostic.category === "error"))
       return (
         confirmInputSnapshot() ?? {
@@ -1160,9 +1138,7 @@ export class AutoMovieProductionCompiler {
             owner: registration.design,
             source,
             export: registration.export,
-            sourceDigest: digestAutoMovieBytes(
-              Buffer.from(text, "utf8") as Uint8Array,
-            ),
+            sourceDigest: digestAutoMovieBytes(Buffer.from(text, "utf8")),
             contribution: registration.contribution,
           });
         }
@@ -1174,26 +1150,32 @@ export class AutoMovieProductionCompiler {
     // where a design document with nothing behind it is the exact thing the
     // library gate exists to refuse.
     if (input.scope !== "design")
-      for (const [address, context] of [...units].sort(([left], [right]) =>
-        compareCodeUnits(left, right),
+      for (const owner of [...authoring.designOwners].sort((left, right) =>
+        compareCodeUnits(left.path, right.path),
       )) {
-        if (registeredBy.has(address)) continue;
-        const binding = authoring.designOwners.find(
-          (owner) => owner.path === context.design,
-        )?.sourceBinding;
-        if (binding === null || binding === undefined) continue;
-        if (binding.paths.length === 0) continue;
-        diagnostics.push({
-          code: "source-export-missing",
-          category:
-            input.scope === "review" || input.scope === "final"
-              ? "error"
-              : "warning",
-          phase: "source",
-          target: `library:${context.branch}:${address}`,
-          path: context.design,
-          message: `No source export in the ${binding.branch} population registers library design owner "${address}". Export one owner whose \`design\` names that exact document and anchor, so this reviewed decision has a compiled artifact behind it.`,
-        });
+        // A branch that has not started its source yet owes no registration,
+        // and neither does one whose binding selects no file. The owner is read
+        // from the population it came from rather than looked up again, so the
+        // binding is in hand and no absent-owner case can arise here.
+        const binding = owner.sourceBinding;
+        if (binding === null || binding.paths.length === 0) continue;
+        for (const unit of [...owner.units].sort((left, right) =>
+          compareCodeUnits(left.anchor, right.anchor),
+        )) {
+          const address = `${owner.path}#${unit.anchor}`;
+          if (registeredBy.has(address)) continue;
+          diagnostics.push({
+            code: "source-export-missing",
+            category:
+              input.scope === "review" || input.scope === "final"
+                ? "error"
+                : "warning",
+            phase: "source",
+            target: `library:${owner.branch}:${address}`,
+            path: owner.path,
+            message: `No source export in the ${binding.branch} population registers library design owner "${address}". Export one owner whose \`design\` names that exact document and anchor, so this reviewed decision has a compiled artifact behind it.`,
+          });
+        }
       }
 
     const publication =
@@ -1262,36 +1244,13 @@ export class AutoMovieProductionCompiler {
       version: AUTOMOVIE_PRODUCTION_COMPILER_VERSION,
       inputFingerprint,
     };
-    const raceFailure = (message: string): IAutoMovieCompileProjectOutput => {
-      const raced = [
-        ...diagnostics,
-        {
-          code: "compile-input-changed" as const,
-          category: "error" as const,
-          phase: "compile" as const,
-          target: "compiler-input",
-          path: null,
-          message: `${message} Re-run the scaffold compile command against the current design, source, and declared content snapshot.`,
-        },
-      ].sort(compareDiagnostics);
-      return {
-        success: false,
-        revision: this.project.revision(),
-        compiler,
-        diagnostics: raced,
-        materialized: [],
-      };
-    };
-    const confirmInputSnapshot = (): IAutoMovieCompileProjectOutput | null => {
-      try {
-        this.project.confirmCurrentSnapshot(inputCurrent, inputRevision);
-        return null;
-      } catch (error) {
-        if (error instanceof AutoMovieProductionInputRaceError === false)
-          throw error;
-        return raceFailure(error.message);
-      }
-    };
+    const confirmInputSnapshot = (): IAutoMovieCompileProjectOutput | null =>
+      this.confirmInputSnapshot({
+        diagnostics,
+        inputCurrent,
+        inputFingerprint,
+        inputRevision,
+      });
     const failed = diagnostics.some(
       (diagnostic) => diagnostic.category === "error",
     );
@@ -1317,7 +1276,11 @@ export class AutoMovieProductionCompiler {
     } catch (error) {
       if (error instanceof AutoMovieProductionInputRaceError === false)
         throw error;
-      return raceFailure(error.message);
+      return this.inputRaceFailure({
+        diagnostics,
+        inputFingerprint,
+        message: error.message,
+      });
     }
     return {
       success: true,
@@ -1447,6 +1410,59 @@ export class AutoMovieProductionCompiler {
     return props.diagnostics
       .slice(before)
       .every((diagnostic) => diagnostic.category !== "error");
+  }
+
+  /**
+   * Publish the refusal a compiler-input race produces.
+   *
+   * Both shapes end here rather than carrying a copy each. What raced is the
+   * same fact whichever gate noticed it, and a second spelling of the message
+   * would be a second answer to "what does a caller do about this".
+   */
+  private inputRaceFailure(props: {
+    diagnostics: IAutoMovieDiagnostic[];
+    inputFingerprint: AutoMovieContentDigest;
+    message: string;
+  }): IAutoMovieCompileProjectOutput {
+    props.diagnostics.push({
+      code: "compile-input-changed",
+      category: "error",
+      phase: "compile",
+      target: "compiler-input",
+      path: null,
+      message: `${props.message} Re-run the scaffold compile command against the current design, source, and declared content snapshot.`,
+    });
+    props.diagnostics.sort(compareDiagnostics);
+    return {
+      success: false,
+      revision: this.project.revision(),
+      compiler: {
+        version: AUTOMOVIE_PRODUCTION_COMPILER_VERSION,
+        inputFingerprint: props.inputFingerprint,
+      },
+      diagnostics: props.diagnostics,
+      materialized: [],
+    };
+  }
+
+  /** Confirm nothing moved under a result that publishes no generated bytes. */
+  private confirmInputSnapshot(props: {
+    diagnostics: IAutoMovieDiagnostic[];
+    inputCurrent: () => boolean;
+    inputFingerprint: AutoMovieContentDigest;
+    inputRevision: number;
+  }): IAutoMovieCompileProjectOutput | null {
+    try {
+      this.project.confirmCurrentSnapshot(
+        props.inputCurrent,
+        props.inputRevision,
+      );
+      return null;
+    } catch (error) {
+      if (error instanceof AutoMovieProductionInputRaceError === false)
+        throw error;
+      return this.inputRaceFailure({ ...props, message: error.message });
+    }
   }
 
   private generatedOwnershipDiagnostics(
