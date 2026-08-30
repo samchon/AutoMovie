@@ -1342,15 +1342,27 @@ export const test_cli_scaffold_repaint_runtime_contract =
       );
       fs.writeFileSync(configuredPath, configuredSource, "utf8");
       fs.writeFileSync(adapterMode, "default\n", "utf8");
-      // This refusal is the one case here whose expected exit is 2 rather than
-      // 0 or 1, because it must be rejected by the design record's own typed
-      // validation and name the union member it violates. Anything else is a
-      // different failure wearing the same boolean, which has already cost this
-      // scenario two round trips through CI.
-      if (impossiblePolicyRefusal.status !== 2)
+      // The impossible retry class must be refused before any adapter runs, and
+      // the refusal has to name what was wrong.
+      //
+      // This case used to require exit 2 and the type name
+      // `AutoMovieRepaintRetryableFailureClass`, and both belonged to a guard
+      // that moved rather than one that was lost. The value lived in a
+      // TypeScript configuration file, so an invalid union member was a compile
+      // error and `ttsx` refused to start the script at all, which is where the
+      // exit code and the type name came from. The authored value now lives in
+      // governed source that `emitDesign` publishes as the design record, so the
+      // compile-time guard still holds at its owner, and this case mutates the
+      // emitted record instead, which no author edits by hand. What it exercises
+      // is the runtime guard on a derived artifact, and that guard names the
+      // exact path and the accepted set rather than the type.
+      //
+      // Both halves survive, in different places. Requiring the old exit code
+      // here would pin a compile-time refusal to a file TypeScript cannot see.
+      if (impossiblePolicyRefusal.status !== 1)
         throw new Error(
           [
-            `The impossible retry policy exited ${impossiblePolicyRefusal.status} rather than refusing with 2.`,
+            `The impossible retry policy exited ${impossiblePolicyRefusal.status} rather than refusing with 1.`,
             impossiblePolicyRefusal.stdout,
             impossiblePolicyRefusal.stderr,
           ].join("\n"),
@@ -1415,8 +1427,9 @@ export const test_cli_scaffold_repaint_runtime_contract =
           impossiblePolicyDiagnostic:
             impossiblePolicyRefusal.stderr.includes('"cancelled"') &&
             impossiblePolicyRefusal.stderr.includes(
-              "AutoMovieRepaintRetryableFailureClass",
-            ),
+              "repaint.executionPolicy.retryableFailures",
+            ) &&
+            impossiblePolicyRefusal.stderr.includes('"provider-refusal"'),
           impossiblePolicyInvoked: fs.existsSync(impossiblePolicyInvocation),
           defaultStatus: defaultAdapterRefusal.status,
           defaultRepainted: defaultAdapterOutput.repainted,
@@ -1438,7 +1451,7 @@ export const test_cli_scaffold_repaint_runtime_contract =
           staleSourceStatus: 1,
           staleSourceStdout: "",
           staleSourceDiagnostic: true,
-          impossiblePolicyStatus: 2,
+          impossiblePolicyStatus: 1,
           impossiblePolicyStdout: "",
           impossiblePolicyDiagnostic: true,
           impossiblePolicyInvoked: false,
