@@ -16,6 +16,8 @@ It also carries `derivedArtifacts`, whose live basis and output digests the comp
 
 Source returns a registered thin actor, script, stage, blocking, and performance program, event sample times, optional `enact` clips, optional bounded formation and effect cues, and optionally its own generated models, semantic props, structured built environments, the observation and lineage records those buildings cite, and the fluid, cloth, planting, and service-network domains it stages with the bindings that attach them.
 
+A library owner returns something else and less: no scene, no clock and no staged world, only the buildings and models its own reviewed decision owns. Its `build` receives the address it registered and nothing more, so everything else it needs is arithmetic it does itself or a named import from the engine surface.
+
 It does not return a finished scene or shot, model recipes, imported asset bytes, anonymous formation nodes, arbitrary per-member curves, or subjective proof that it met the contract.
 
 AutoMovie runs the engine film pipeline, adds compiler-owned data, and derives realization from current scene, pose, motion, camera, and contract predicates.
