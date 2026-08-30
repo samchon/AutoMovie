@@ -1197,15 +1197,10 @@ const testShippedInventory = (): void => {
   } finally {
     for (const file of planted) fs.rmSync(file, { force: true });
     fs.rmSync(cache, { force: true, recursive: true });
-    // Only this run's own subdirectory is removed above. The shared parent goes
-    // when it is empty and stays when a concurrent run still owns something in
-    // it, so two suites on one checkout cannot delete each other's plant and
-    // read the resulting unchanged inventory as a pass.
-    try {
-      fs.rmdirSync(path.join(SCAFFOLD, ".cache"));
-    } catch {
-      /* another run still owns a plant here */
-    }
+    // Only this run's own subdirectory goes. Removing the shared parent would
+    // either delete a concurrent run's plant, which turns a race into a pass, or
+    // need a guard no single-process run can reach. Git does not track an empty
+    // directory, so leaving it costs nothing the tracked-status claim depends on.
   }
   report([
     ` byte inventory: ${before.length} shipped paths, no retired surface, ` +
