@@ -58,6 +58,7 @@ import {
   IAutoMovieCompiledFilmEdit,
   IAutoMovieCompiledFormation,
   IAutoMovieCompiledShotSource,
+  IAutoMovieConstraintViolation,
   IAutoMovieDefinedShotContract,
   IAutoMovieDesignEvidence,
   IAutoMovieDesignLineage,
@@ -78,7 +79,10 @@ import {
   IAutoMovieGeneratedFile,
   IAutoMovieGeneratedManifest,
   IAutoMovieGeneratedMeasurementProxy,
+  IAutoMovieLibraryBuildContext,
+  IAutoMovieLibraryContribution,
   IAutoMovieMaterializedFile,
+  IAutoMovieMaterializedLibrary,
   IAutoMovieModel,
   IAutoMovieModelProxyAsset,
   IAutoMovieModelRecipe,
@@ -142,6 +146,8 @@ import {
 } from "./linkProductionSource";
 import {
   IAutoMovieExternalModelRuntimeBinding,
+  IAutoMovieMaterializedLibraryResult,
+  materializeAutoMovieLibraryFiles,
   materializeCompiledFormationInventory,
   materializeCompiledInstanceSetInventory,
   materializeCompiledShot,
@@ -283,7 +289,7 @@ export class AutoMovieProductionCompiler {
     materialize: boolean,
   ): IAutoMovieCompileProjectOutput {
     if (this.authoringEvidence?.manifest.kind === "library")
-      return this.runLibrary(input);
+      return this.runLibrary(input, materialize);
     const graph = this.project.graph();
     const inputRevision = this.project.revision();
     const projectManifest = this.project.manifest();
@@ -1044,12 +1050,303 @@ export class AutoMovieProductionCompiler {
     };
   }
 
-  /** Run the no-film delivery gate for one generated reusable library. */
+  /**
+   * Execute, publish and gate one generated reusable library.
+   *
+   * A film reaches its compiled artifacts through shots. A library has none, so
+   * this is the whole of its source path: every file the reviewed source
+   * branches select is linked, inspected, transpiled and evaluated in the same
+   * deterministic sandbox a shot runs in, every owner registration it exports is
+   * matched against an exact active design H2, and what those owners return is
+   * validated by the engine and published atomically as compiler-owned bytes.
+   *
+   * The order matters. The built environments this run produced are what the
+   * review consumer derives its required observation population from, so they
+   * are handed over from memory rather than read back from the tree: an owner
+   * whose building the compile just refused must not be charged observations
+   * against a stale copy of it, and an owner whose building it accepted must be
+   * charged them whether or not anything has been written yet.
+   */
   private runLibrary(
     input: IAutoMovieCompileProjectInput,
+    materialize: boolean,
   ): IAutoMovieCompileProjectOutput {
     const authoring = this.authoringEvidence!;
-    const graph = this.project.graph();
+    const inputRevision = this.project.revision();
+    const sources = [
+      ...new Set(
+        authoring.designOwners.flatMap(
+          (owner) => owner.sourceBinding?.paths ?? [],
+        ),
+      ),
+    ].sort(compareCodeUnits);
+    const inputFingerprint = this.libraryInputFingerprint(authoring, sources);
+    const diagnostics: IAutoMovieDiagnostic[] = [];
+
+    // The exact addresses a source registration is allowed to name. A library
+    // owner declares which reviewed decision it realizes; anything else is a
+    // building nobody asked for, and a review that never charges it is exactly
+    // how an unreviewed artifact ships.
+    const units = new Map<string, IAutoMovieLibraryBuildContext>();
+    for (const owner of authoring.designOwners)
+      for (const unit of owner.units)
+        units.set(`${owner.path}#${unit.anchor}`, {
+          production: this.project.productionId,
+          branch: owner.branch,
+          design: owner.path,
+          anchor: unit.anchor,
+        });
+
+    const results: IAutoMovieMaterializedLibraryResult[] = [];
+    const registeredBy = new Map<string, string>();
+    const environmentOwner = new Map<string, string>();
+    const models = new Map<string, IAutoMovieModel>();
+    const modelOwner = new Map<string, string>();
+    if (input.scope !== "design")
+      for (const source of sources) {
+        let text: string | null = null;
+        try {
+          text = this.readLibrarySource(source);
+        } catch (error) {
+          diagnostics.push({
+            code: "source-path-missing",
+            category: "error",
+            phase: "source",
+            target: `library-source:${source}`,
+            path: source,
+            message: `Library source "${source}" is selected by a reviewed source binding but cannot be read (${errorMessage(error)}). Restore the exact tracked file or correct the binding before compiling.`,
+          });
+        }
+        if (text === null) continue;
+        const compiled = compileLibrarySource({
+          path: source,
+          source: text,
+          readSource: (relative) => this.readLibrarySource(relative),
+          context: (design) => units.get(design) ?? null,
+        });
+        diagnostics.push(...compiled.diagnostics);
+        for (const registration of compiled.registrations) {
+          const context = units.get(registration.design)!;
+          const target = `library:${context.branch}:${registration.design}`;
+          const previous = registeredBy.get(registration.design);
+          if (previous !== undefined) {
+            diagnostics.push({
+              code: "source-registration-mismatch",
+              category: "error",
+              phase: "source",
+              target,
+              path: source,
+              message: `Library design owner "${registration.design}" is registered by both "${previous}" and "${source}#${registration.export}". Keep one source export per reviewed H2; two registrations make the published artifact depend on file order.`,
+            });
+            continue;
+          }
+          registeredBy.set(
+            registration.design,
+            `${source}#${registration.export}`,
+          );
+          const accepted = this.acceptLibraryContribution({
+            context,
+            diagnostics,
+            environmentOwner,
+            modelOwner,
+            models,
+            registration,
+            source,
+            target,
+          });
+          if (accepted === false) continue;
+          results.push({
+            branch: context.branch,
+            owner: registration.design,
+            source,
+            export: registration.export,
+            sourceDigest: digestAutoMovieBytes(
+              Buffer.from(text, "utf8") as Uint8Array,
+            ),
+            contribution: registration.contribution,
+          });
+        }
+      }
+
+    // An owner whose branch already has source and no registration is an
+    // unrealized decision. It warns while source is being written, because that
+    // is the ordinary state of a branch in progress, and blocks from review on,
+    // where a design document with nothing behind it is the exact thing the
+    // library gate exists to refuse.
+    if (input.scope !== "design")
+      for (const [address, context] of [...units].sort(([left], [right]) =>
+        compareCodeUnits(left, right),
+      )) {
+        if (registeredBy.has(address)) continue;
+        const binding = authoring.designOwners.find(
+          (owner) => owner.path === context.design,
+        )?.sourceBinding;
+        if (binding === null || binding === undefined) continue;
+        if (binding.paths.length === 0) continue;
+        diagnostics.push({
+          code: "source-export-missing",
+          category:
+            input.scope === "review" || input.scope === "final"
+              ? "error"
+              : "warning",
+          phase: "source",
+          target: `library:${context.branch}:${address}`,
+          path: context.design,
+          message: `No source export in the ${binding.branch} population registers library design owner "${address}". Export one owner whose \`design\` names that exact document and anchor, so this reviewed decision has a compiled artifact behind it.`,
+        });
+      }
+
+    const publication =
+      input.scope === "design"
+        ? null
+        : materializeAutoMovieLibraryFiles({
+            production: this.project.productionId,
+            compiler: AUTOMOVIE_PRODUCTION_COMPILER_PROTOCOL,
+            inputFingerprint,
+            results,
+          });
+    const entries: IAutoMovieGeneratedFile[] =
+      publication === null
+        ? []
+        : [...publication.files]
+            .map(([file, bytes]) => ({
+              path: file,
+              owner: "compiler" as const,
+              digest: digestAutoMovieBytes(bytes),
+              sourceTargets: libraryTargetsOf(file, publication.index),
+            }))
+            .sort((left, right) => compareCodeUnits(left.path, right.path));
+    const manifest: IAutoMovieGeneratedManifest | null =
+      publication === null
+        ? null
+        : {
+            version: 1,
+            compiler: {
+              packageVersion: AUTOMOVIE_PRODUCTION_COMPILER_VERSION,
+              protocolVersion: AUTOMOVIE_PRODUCTION_COMPILER_PROTOCOL,
+            },
+            inputFingerprint,
+            files: entries,
+          };
+    if (manifest !== null)
+      diagnostics.push(
+        ...this.generatedOwnershipDiagnostics(manifest, materialize),
+      );
+
+    const environmentsOf = new Map(
+      results.map((result) => [
+        JSON.stringify([result.branch, result.owner]),
+        result.contribution.environments,
+      ]),
+    );
+    diagnostics.push(
+      ...libraryReviewEvidenceConsumerDiagnostics({
+        authoring,
+        project: this.project,
+        scope: input.scope,
+        compileFingerprint: inputFingerprint,
+        environments: ({ branch, owner }) =>
+          environmentsOf.get(JSON.stringify([branch, owner])) ?? [],
+        modelExists: (model) => models.has(model),
+        rigged: (model) => (models.get(model)?.skeleton ?? null) !== null,
+        fingerprint: () => null,
+        captured: (target, digest) =>
+          this.project.capturedRenderViews(target, digest),
+      }),
+    );
+    diagnostics.sort(compareDiagnostics);
+
+    const inputCurrent = (): boolean =>
+      this.libraryInputFingerprint(authoring, sources) === inputFingerprint;
+    const compiler = {
+      version: AUTOMOVIE_PRODUCTION_COMPILER_VERSION,
+      inputFingerprint,
+    };
+    const raceFailure = (message: string): IAutoMovieCompileProjectOutput => {
+      const raced = [
+        ...diagnostics,
+        {
+          code: "compile-input-changed" as const,
+          category: "error" as const,
+          phase: "compile" as const,
+          target: "compiler-input",
+          path: null,
+          message: `${message} Re-run the scaffold compile command against the current design, source, and declared content snapshot.`,
+        },
+      ].sort(compareDiagnostics);
+      return {
+        success: false,
+        revision: this.project.revision(),
+        compiler,
+        diagnostics: raced,
+        materialized: [],
+      };
+    };
+    const confirmInputSnapshot = (): IAutoMovieCompileProjectOutput | null => {
+      try {
+        this.project.confirmCurrentSnapshot(inputCurrent, inputRevision);
+        return null;
+      } catch (error) {
+        if (error instanceof AutoMovieProductionInputRaceError === false)
+          throw error;
+        return raceFailure(error.message);
+      }
+    };
+    const failed = diagnostics.some(
+      (diagnostic) => diagnostic.category === "error",
+    );
+    if (failed || input.scope === "design" || materialize === false)
+      return (
+        confirmInputSnapshot() ?? {
+          success: failed === false,
+          revision: inputRevision,
+          compiler,
+          diagnostics,
+          materialized: [],
+        }
+      );
+    const materializedFiles = statusesOf(this.project, entries);
+    let revision: number;
+    try {
+      revision = this.project.commitGenerated(
+        publication!.files,
+        manifest!,
+        inputCurrent,
+        inputRevision,
+      );
+    } catch (error) {
+      if (error instanceof AutoMovieProductionInputRaceError === false)
+        throw error;
+      return raceFailure(error.message);
+    }
+    return {
+      success: true,
+      revision,
+      compiler,
+      diagnostics,
+      materialized: materializedFiles,
+    };
+  }
+
+  /** Normalized project source text, read exactly as the film linker reads it. */
+  private readLibrarySource(relative: string): string {
+    return Buffer.from(
+      normalizeAutoMovieSource(this.project.readSource(relative)),
+    ).toString("utf8");
+  }
+
+  /**
+   * The compiler input identity of one library, recomputed on demand.
+   *
+   * A library's inputs are the authoring declaration and the source bytes its
+   * reviewed bindings select, so the same read answers both the fingerprint the
+   * result carries and the guard the atomic publication runs against a
+   * concurrent edit.
+   */
+  private libraryInputFingerprint(
+    authoring: IAutoMovieProductionEvidence,
+    sources: readonly string[],
+  ): AutoMovieContentDigest {
     const fields: IAutoMovieFingerprintField[] = [
       {
         role: "library:compiler",
@@ -1062,13 +1359,6 @@ export class AutoMovieProductionCompiler {
         }),
       },
     ];
-    const sources = [
-      ...new Set(
-        authoring.designOwners.flatMap(
-          (owner) => owner.sourceBinding?.paths ?? [],
-        ),
-      ),
-    ].sort(compareCodeUnits);
     for (const source of sources)
       try {
         fields.push({
@@ -1083,30 +1373,80 @@ export class AutoMovieProductionCompiler {
           payload: new Uint8Array(),
         });
       }
-    const inputFingerprint = fingerprintAutoMovieFields(fields);
-    const diagnostics = libraryReviewEvidenceConsumerDiagnostics({
-      authoring,
-      project: this.project,
-      scope: input.scope,
-      compileFingerprint: inputFingerprint,
-      modelExists: (model) => graph.models.has(model),
-      rigged: (model) => this.compiledModelIsRigged(model),
-      fingerprint: () => null,
-      captured: (target, digest) =>
-        this.project.capturedRenderViews(target, digest),
-    }).sort(compareDiagnostics);
-    return {
-      success: diagnostics.every(
-        (diagnostic) => diagnostic.category !== "error",
-      ),
-      revision: this.project.revision(),
-      compiler: {
-        version: AUTOMOVIE_PRODUCTION_COMPILER_VERSION,
-        inputFingerprint,
-      },
-      diagnostics,
-      materialized: [],
+    return fingerprintAutoMovieFields(fields);
+  }
+
+  /**
+   * Validate one owner's contribution and claim the ids it publishes.
+   *
+   * The engine validators decide whether the building and the models are
+   * coherent, exactly as they do for a shot's code-authored environment, so a
+   * library and a film cannot disagree about what a valid building is. What is
+   * decided here instead is ownership: two owners publishing one id would write
+   * one file twice, and which of them won would depend on the order the source
+   * population happened to be read in.
+   */
+  private acceptLibraryContribution(props: {
+    context: IAutoMovieLibraryBuildContext;
+    diagnostics: IAutoMovieDiagnostic[];
+    environmentOwner: Map<string, string>;
+    modelOwner: Map<string, string>;
+    models: Map<string, IAutoMovieModel>;
+    registration: ICompiledLibraryOwnerRegistration;
+    source: string;
+    target: string;
+  }): boolean {
+    const before = props.diagnostics.length;
+    const report = (violation: IAutoMovieConstraintViolation): void => {
+      props.diagnostics.push(
+        autoMovieSourceContentDiagnostic({
+          finding: autoMovieSourceContentFinding(
+            violation,
+            `Library owner "${props.registration.design}" publishes ${violation.path.slice("$input".length) || "a record"} that ${violation.expected}. Correct ${props.source} before compiling.`,
+          ),
+          target: props.target,
+          path: props.source,
+        }),
+      );
     };
+    const claim = (
+      owners: Map<string, string>,
+      id: string,
+      kind: string,
+    ): boolean => {
+      const previous = owners.get(id);
+      if (previous !== undefined) {
+        props.diagnostics.push({
+          code: "source-export-invalid",
+          category: "error",
+          phase: "source",
+          target: props.target,
+          path: props.source,
+          message: `Library ${kind} "${id}" is published by both "${previous}" and "${props.registration.design}". Give every published ${kind} one owner; two owners write one compiler-owned file twice.`,
+        });
+        return false;
+      }
+      owners.set(id, props.registration.design);
+      return true;
+    };
+    for (const environment of props.registration.contribution.environments) {
+      for (const violation of autoMovieValidationFindings(
+        validateBuiltEnvironment({ environment }),
+      ))
+        report(violation);
+      claim(props.environmentOwner, environment.id, "built environment");
+    }
+    for (const model of props.registration.contribution.models) {
+      for (const violation of autoMovieValidationFindings(
+        validateModel({ model }),
+      ))
+        report(violation);
+      if (claim(props.modelOwner, model.id, "model"))
+        props.models.set(model.id, model);
+    }
+    return props.diagnostics
+      .slice(before)
+      .every((diagnostic) => diagnostic.category !== "error");
   }
 
   private generatedOwnershipDiagnostics(
@@ -2235,6 +2575,20 @@ const SANDBOX_BOOTSTRAP = `
     }
     return inside;
   };
+  // What a build function returned, read once for both entry points. A promise
+  // is reported rather than awaited, because a deterministic module that had to
+  // wait for something has already left the boundary this sandbox draws.
+  const settle = (result) => {
+    const returnedPromise =
+      typeof result === "object" &&
+      result !== null &&
+      typeof result.then === "function";
+    const serialized = returnedPromise ? null : stringify(result);
+    return {
+      returnedPromise,
+      resultJson: typeof serialized === "string" ? serialized : null,
+    };
+  };
   const invoke = (contextJson, exportName) => {
     const data = parse(contextJson);
     const engine = Object.freeze({
@@ -2251,19 +2605,23 @@ const SANDBOX_BOOTSTRAP = `
         instanceSlot(data, instanceSet, slot),
     });
     const context = freeze({ ...data, engine });
-    const result = automovieModule.exports[exportName].build(context);
-    const returnedPromise =
-      typeof result === "object" &&
-      result !== null &&
-      typeof result.then === "function";
-    const serialized = returnedPromise ? null : stringify(result);
-    return {
-      returnedPromise,
-      resultJson: typeof serialized === "string" ? serialized : null,
-    };
+    return settle(automovieModule.exports[exportName].build(context));
   };
+  // A library owner receives its own address and nothing else. The film helpers
+  // above read a staged world, a formation runtime and an instance runtime, and
+  // a library compile has none of the three, so handing one over would be a
+  // context whose members throw the moment they are touched.
+  const invokeLibrary = (contextJson, exportName) =>
+    settle(
+      automovieModule.exports[exportName].build(freeze(parse(contextJson))),
+    );
   Object.defineProperty(globalThis, "__automovieInvoke", {
     value: invoke,
+    writable: false,
+    configurable: false,
+  });
+  Object.defineProperty(globalThis, "__automovieInvokeLibrary", {
+    value: invokeLibrary,
     writable: false,
     configurable: false,
   });
@@ -3541,9 +3899,38 @@ const transpileDeterministicSource = (props: {
   };
 };
 
-const compileDeterministicSource = <T>(
-  props: ICompileDeterministicSourceProps<T>,
-): ICompileDeterministicSourceResult<T> => {
+/**
+ * One linked, inspected and transpiled module graph, ready to evaluate.
+ *
+ * The plan exists because two callers need the same preparation and then
+ * diverge: a film's shot or edit module has exactly one named export the
+ * compiler already knows, and a library module carries however many owner
+ * registrations its author wrote. Preparing the graph twice would be two
+ * answers to what "deterministic project source" means.
+ */
+interface IDeterministicSourcePlan {
+  /** Resolved import map of the entry module. */
+  entryImports: Record<string, string>;
+  /** Every imported project module, transpiled in dependency order. */
+  transpiledImports: Array<{
+    path: string;
+    imports: Record<string, string>;
+    output: string;
+  }>;
+  /** Transpiled entry module. */
+  output: string;
+}
+
+/** Link, inspect and transpile one deterministic entry and its import graph. */
+const planDeterministicSource = (props: {
+  target: string;
+  path: string;
+  source: string;
+  readSource: (relativePath: string) => string;
+}): {
+  plan: IDeterministicSourcePlan | null;
+  diagnostics: IAutoMovieDiagnostic[];
+} => {
   const diagnostics = inspectSource(props.target, props.path, props.source);
   // Imported project source is inspected and transpiled exactly as the entry
   // is. A determinism rule that applied only to the module a shot happens to
@@ -3570,7 +3957,7 @@ const compileDeterministicSource = <T>(
       ...inspectSource(props.target, module.path, module.source),
     );
   if (diagnostics.some((diagnostic) => diagnostic.category === "error"))
-    return { value: null, diagnostics };
+    return { plan: null, diagnostics };
   const transpiledImports: Array<{
     path: string;
     imports: Record<string, string>;
@@ -3591,7 +3978,7 @@ const compileDeterministicSource = <T>(
       });
   }
   if (diagnostics.some((diagnostic) => diagnostic.category === "error"))
-    return { value: null, diagnostics };
+    return { plan: null, diagnostics };
   // The entry transpiles through the same helper its imports do, so an option
   // that changes for one cannot fail to change for the other.
   const transpiled = transpileDeterministicSource({
@@ -3600,7 +3987,30 @@ const compileDeterministicSource = <T>(
     source: props.source,
   });
   diagnostics.push(...transpiled.diagnostics);
-  if (transpiled.output === null) return { value: null, diagnostics };
+  if (transpiled.output === null) return { plan: null, diagnostics };
+  return {
+    plan: {
+      entryImports: linked.entryImports,
+      transpiledImports,
+      output: transpiled.output,
+    },
+    diagnostics,
+  };
+};
+
+/**
+ * Evaluate one prepared module graph inside a fresh deterministic sandbox.
+ *
+ * Every failure here is thrown rather than reported, because the caller owns
+ * the diagnostic identity: the same broken module is a shot that failed to
+ * build or a library owner that failed to register, and only the caller knows
+ * which. A sandbox is created per call, so no two entry modules share a realm.
+ */
+const evaluateDeterministicPlan = (props: {
+  target: string;
+  path: string;
+  plan: IDeterministicSourcePlan;
+}): vm.Context => {
   const sandbox = vm.createContext(
     {},
     {
@@ -3613,20 +4023,34 @@ const compileDeterministicSource = <T>(
   // Only strings cross it in either direction, so the sandbox never holds a
   // structured value from this realm.
   sandbox.__automovieEngineCall = callAutoMovieSandboxEngine;
+  new vm.Script(SANDBOX_BOOTSTRAP, {
+    filename: `${props.path}#sandbox`,
+  }).runInContext(sandbox, { timeout: 1_000 });
+  sandbox.__automovieSetEntry(props.plan.entryImports);
+  for (const module of props.plan.transpiledImports)
+    new vm.Script(
+      `__automovieDefine(${JSON.stringify(module.path)}, ${JSON.stringify(module.imports)}, (module, exports, require) => {\n${module.output}\n});`,
+      { filename: module.path },
+    ).runInContext(sandbox, { timeout: 1_000 });
+  new vm.Script(props.plan.output, {
+    filename: props.path,
+  }).runInContext(sandbox, { timeout: 1_000 });
+  return sandbox;
+};
+
+const compileDeterministicSource = <T>(
+  props: ICompileDeterministicSourceProps<T>,
+): ICompileDeterministicSourceResult<T> => {
+  const planned = planDeterministicSource(props);
+  const diagnostics = planned.diagnostics;
+  if (planned.plan === null) return { value: null, diagnostics };
   let registrationScene: string | undefined;
   try {
-    new vm.Script(SANDBOX_BOOTSTRAP, {
-      filename: `${props.path}#sandbox`,
-    }).runInContext(sandbox, { timeout: 1_000 });
-    sandbox.__automovieSetEntry(linked.entryImports);
-    for (const module of transpiledImports)
-      new vm.Script(
-        `__automovieDefine(${JSON.stringify(module.path)}, ${JSON.stringify(module.imports)}, (module, exports, require) => {\n${module.output}\n});`,
-        { filename: module.path },
-      ).runInContext(sandbox, { timeout: 1_000 });
-    new vm.Script(transpiled.output, {
-      filename: props.path,
-    }).runInContext(sandbox, { timeout: 1_000 });
+    const sandbox = evaluateDeterministicPlan({
+      target: props.target,
+      path: props.path,
+      plan: planned.plan,
+    });
     sandbox.__automovieExportName = props.exportName;
     new vm.Script(
       `globalThis.__automovieExportValid =
@@ -3772,6 +4196,214 @@ const compileDeterministicSource = <T>(
       ],
     };
   }
+};
+
+/**
+ * Which generated file each executed library owner is answerable for.
+ *
+ * The film path reads its targets back out of the design graph, because a shot
+ * file is named after the shot it compiles. A library artifact is named after
+ * the environment or model inside it, so the index the same publication just
+ * produced is what says whose it is; nothing has to be parsed out of a path.
+ */
+const libraryTargetsOf = (
+  file: string,
+  index: IAutoMovieMaterializedLibrary,
+): string[] => {
+  for (const owner of index.owners) {
+    const target = `library:${owner.branch}:${owner.owner}`;
+    for (const environment of owner.environments)
+      if (
+        file ===
+        `library/environments/${encodeAutoMoviePathSegment(environment)}.json`
+      )
+        return [target];
+    for (const model of owner.models)
+      if (file === `models/${encodeAutoMoviePathSegment(model)}.json`)
+        return [target];
+  }
+  return ["library"];
+};
+
+/** One owner registration a library source module exported and returned. */
+interface ICompiledLibraryOwnerRegistration {
+  /** Named export the registration was found under. */
+  export: string;
+  /** Exact design-document and H2 address the export registered. */
+  design: string;
+  /** Validated contribution the export's build function returned. */
+  contribution: IAutoMovieLibraryContribution;
+}
+
+/**
+ * Find every library owner registration a module exports, in code-unit order.
+ *
+ * Discovery is a property of the module rather than a name the compiler was
+ * told, because a source population selects files and an author decides how
+ * many owners live in one. Only the address crosses the boundary here; the
+ * contribution is fetched separately through the ordinary invocation path.
+ */
+const LIBRARY_OWNER_DISCOVERY = `
+(() => {
+  "use strict";
+  globalThis.__automovieLibraryOwnersJson = JSON.stringify(
+    Object.keys(module.exports)
+      .filter((name) => {
+        const value = module.exports[name];
+        return (
+          value !== null &&
+          typeof value === "object" &&
+          typeof value.design === "string" &&
+          typeof value.build === "function"
+        );
+      })
+      .sort()
+      .map((name) => ({ name, design: module.exports[name].design })),
+  );
+})();
+`;
+
+const LIBRARY_INVOCATION = `
+(() => {
+  "use strict";
+  const snapshot = __automovieInvokeLibrary(
+    __automovieContextJson,
+    __automovieExportName,
+  );
+  globalThis.__automovieReturnedPromise = snapshot.returnedPromise;
+  globalThis.__automovieResultJson = snapshot.resultJson;
+  delete globalThis.__automovieContextJson;
+  delete globalThis.__automovieExportName;
+})();
+`;
+
+/**
+ * Run one library source module and collect the owners it registers.
+ *
+ * The module graph is prepared exactly as a shot's is, so a library owner is
+ * held to the same determinism rules and reaches the same engine surface. What
+ * differs is only what happens after evaluation: instead of invoking one export
+ * the compiler already knew the name of, this discovers however many owner
+ * registrations the module carries and invokes each against its own address.
+ *
+ * An address the active authoring declaration does not own is refused here
+ * rather than silently skipped, because a module that builds a subject no
+ * reviewed decision asked for would publish an artifact no review ever charges
+ * an observation on.
+ */
+const compileLibrarySource = (props: {
+  /** Project-relative source path selected by a reviewed source binding. */
+  path: string;
+  /** Normalized source text of that file. */
+  source: string;
+  /** Reader for project source this module imports. */
+  readSource: (relativePath: string) => string;
+  /** Build context for an address the active authoring population owns. */
+  context: (design: string) => IAutoMovieLibraryBuildContext | null;
+}): {
+  registrations: ICompiledLibraryOwnerRegistration[];
+  diagnostics: IAutoMovieDiagnostic[];
+} => {
+  const target = `library-source:${props.path}`;
+  const planned = planDeterministicSource({
+    target,
+    path: props.path,
+    source: props.source,
+    readSource: props.readSource,
+  });
+  const diagnostics = planned.diagnostics;
+  const registrations: ICompiledLibraryOwnerRegistration[] = [];
+  if (planned.plan === null) return { registrations, diagnostics };
+  let current = "the module";
+  try {
+    const sandbox = evaluateDeterministicPlan({
+      target,
+      path: props.path,
+      plan: planned.plan,
+    });
+    new vm.Script(LIBRARY_OWNER_DISCOVERY, {
+      filename: `${props.path}#library-owners`,
+    }).runInContext(sandbox, { timeout: 1_000 });
+    const discovered = JSON.parse(
+      sandbox.__automovieLibraryOwnersJson as string,
+    ) as Array<{ name: string; design: string }>;
+    for (const entry of discovered) {
+      current = `export "${entry.name}"`;
+      const context = props.context(entry.design);
+      if (context === null) {
+        diagnostics.push({
+          code: "source-registration-mismatch",
+          category: "error",
+          phase: "source",
+          target: `${target}:${entry.name}`,
+          path: props.path,
+          message: `Library source export "${entry.name}" registers design owner ${JSON.stringify(entry.design)}, which is not an exact active design document and H2 anchor in this project's authoring declaration. Register one "docs/<branch>/<document>.md#<anchor>" address the graph already selects, or remove the export.`,
+        });
+        continue;
+      }
+      sandbox.__automovieContextJson = JSON.stringify(context);
+      sandbox.__automovieExportName = entry.name;
+      new vm.Script(LIBRARY_INVOCATION, {
+        filename: `${props.path}#${entry.name}`,
+      }).runInContext(sandbox, { timeout: 1_000 });
+      if (sandbox.__automovieReturnedPromise === true) {
+        diagnostics.push({
+          code: "source-export-invalid",
+          category: "error",
+          phase: "source",
+          target: `${target}:${entry.name}`,
+          path: props.path,
+          message: `Library owner export "${entry.name}" returned a Promise. Return a synchronous deterministic library contribution from ${props.path}.`,
+        });
+        continue;
+      }
+      const resultJson = sandbox.__automovieResultJson as unknown;
+      const validation = typia.validateEquals<IAutoMovieLibraryContribution>(
+        typeof resultJson === "string"
+          ? (JSON.parse(resultJson) as unknown)
+          : undefined,
+      );
+      if (validation.success === false) {
+        for (const error of validation.errors)
+          diagnostics.push({
+            code: "source-export-invalid",
+            category: "error",
+            phase: "source",
+            target: `${target}:${entry.name}`,
+            path: props.path,
+            message: `${error.path} expects ${error.expected}. Fix the returned library contribution in ${props.path}.`,
+          });
+        continue;
+      }
+      registrations.push({
+        export: entry.name,
+        design: entry.design,
+        contribution: validation.data,
+      });
+    }
+  } catch (error) {
+    const message =
+      typeof error === "object" && error !== null && "message" in error
+        ? String((error as { message: unknown }).message)
+        : String(error);
+    return {
+      registrations: [],
+      diagnostics: [
+        ...diagnostics,
+        {
+          code: message.includes("timed out")
+            ? "source-execution-timeout"
+            : "source-execution-failed",
+          category: "error",
+          phase: "source",
+          target,
+          path: props.path,
+          message: `Library source ${current} in ${props.path} failed while building its contribution: ${message}. No generated artifact was published. Correct the operation or precondition named by this fact, then rerun the same compile scope.`,
+        },
+      ],
+    };
+  }
+  return { registrations, diagnostics };
 };
 
 interface ICompiledFilmDraft {

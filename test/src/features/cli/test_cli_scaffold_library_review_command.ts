@@ -129,6 +129,23 @@ const configuration = (root: string): IAutoMovieEvidenceConfigProps => ({
   claims: [],
 });
 
+/**
+ * One governed library source file that registers its own design owner.
+ *
+ * A library compile executes this population and refuses a reviewed H2 no
+ * export realizes, so a fixture whose sources were bare constants would be a
+ * library with design documents and nothing built behind them. `marker` moves
+ * the source bytes without moving the registration, which is what the staleness
+ * cases need: a changed owner, not a withdrawn one.
+ */
+const libraryOwnerSource = (branch: string, marker = "initial"): string =>
+  `// ${marker}
+export const ${branch}LibraryOwner = {
+  design: "docs/${branch}/owner.md#${branch}-delivery",
+  build: () => ({ environments: [], models: [] }),
+};
+`;
+
 const writeLibraryOwners = (root: string): void => {
   fs.mkdirSync(path.join(root, "docs", "contracts"), { recursive: true });
   fs.writeFileSync(
@@ -146,11 +163,7 @@ const writeLibraryOwners = (root: string): void => {
       `# ${branch} owner\n\n## Delivery {#${branch}-delivery}\n\nThe current ${branch} delivery and its finite neutral observation.\n`,
       "utf8",
     );
-    fs.writeFileSync(
-      source,
-      `export const ${branch}LibraryOwner = ${JSON.stringify(branch)};\n`,
-      "utf8",
-    );
+    fs.writeFileSync(source, libraryOwnerSource(branch), "utf8");
   }
   fs.mkdirSync(path.join(root, "observations"), { recursive: true });
   fs.writeFileSync(
@@ -883,7 +896,7 @@ export const test_cli_scaffold_library_review_command = (): void => {
     });
     fs.writeFileSync(
       path.join(fixture.root, "src", "motions", "owner.ts"),
-      'export const motionsLibraryOwner = "changed";\n',
+      libraryOwnerSource("motions", "changed"),
       "utf8",
     );
     const changedAuthoring = readAutoMovieProductionEvidence({
@@ -896,7 +909,7 @@ export const test_cli_scaffold_library_review_command = (): void => {
     });
     fs.writeFileSync(
       path.join(fixture.root, "src", "maps", "owner.ts"),
-      'export const mapsLibraryOwner = "changed";\n',
+      libraryOwnerSource("maps", "changed"),
       "utf8",
     );
     const mapChangedAuthoring = readAutoMovieProductionEvidence({

@@ -34,22 +34,6 @@ import { assetReviewEvidenceDiagnostics } from "./reviewEvidenceDiagnostics";
 
 type CompileScope = "design" | "source" | "review" | "final";
 
-interface ILibraryReviewConsumerProps {
-  authoring: IAutoMovieProductionEvidence;
-  project: IAutoMovieLibraryReviewProjectReader;
-  scope: CompileScope;
-  compileFingerprint: AutoMovieContentDigest;
-  modelExists: (model: string) => boolean;
-  rigged: (model: string) => boolean;
-  fingerprint: (
-    target: IAutoMovieRenderBundleManifest["target"],
-  ) => AutoMovieContentDigest | null;
-  captured: (
-    target: IAutoMovieRenderBundleManifest["target"],
-    fingerprint: AutoMovieContentDigest,
-  ) => ReadonlyArray<{ time: number; pass: AutoMovieGuidePass }>;
-}
-
 interface ILibraryReviewResolverProps {
   authoring: IAutoMovieProductionEvidence;
   project: IAutoMovieLibraryReviewProjectReader;
@@ -68,6 +52,19 @@ interface ILibraryReviewResolverProps {
     owner: string;
     anchor: string;
   }) => readonly IAutoMovieBuiltEnvironment[];
+}
+
+interface ILibraryReviewConsumerProps extends ILibraryReviewResolverProps {
+  scope: CompileScope;
+  modelExists: (model: string) => boolean;
+  rigged: (model: string) => boolean;
+  fingerprint: (
+    target: IAutoMovieRenderBundleManifest["target"],
+  ) => AutoMovieContentDigest | null;
+  captured: (
+    target: IAutoMovieRenderBundleManifest["target"],
+    fingerprint: AutoMovieContentDigest,
+  ) => ReadonlyArray<{ time: number; pass: AutoMovieGuidePass }>;
 }
 
 /** One review-phase refusal at the exact library authoring address. */

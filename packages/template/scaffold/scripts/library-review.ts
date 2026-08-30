@@ -11,6 +11,7 @@ import type {
 import {
   AutoMovieProductionCompiler,
   AutoMovieProductionProject,
+  autoMovieMaterializedLibraryEnvironments,
   canonicalAutoMovieJsonBytes,
   digestAutoMovieBytes,
   parseAutoMovieLibraryReviewPlan,
@@ -341,6 +342,13 @@ export const runLibraryReviewCommand = (props: {
     authoring,
     project,
     compileFingerprint: checked.compiler.inputFingerprint,
+    // The buildings this project's last compile published. Without them this
+    // command would report an owner as owing only what its author already
+    // wrote down, while the compiler charges it every facade, corner and room
+    // its topology derives, and the two answers would disagree at review.
+    environments: autoMovieMaterializedLibraryEnvironments({
+      read: (relative) => project.readGeneratedFile(relative),
+    }),
   });
   if (action === "inspect") {
     props.output?.(population);
@@ -386,11 +394,17 @@ export const runLibraryReviewCommand = (props: {
   const relative = planPath(parts.design);
   const plan = readPlan(root, relative);
   const unit = plan.units.find((entry) => entry.anchor === parts.anchor)!;
+  // A new result supersedes the accepted one and nothing else. Dropping every
+  // same-identity receipt erased the failure an author had just recorded, so
+  // re-running an unchanged observation and passing it made the earlier failure
+  // vanish from the file. Only a passed receipt is replaced; a failed,
+  // unsupported or not-run one is the observation history this plan carries.
   unit.receipts = [
     ...unit.receipts.filter(
       (receipt) =>
         receipt.observation !== observation ||
-        sameIdentity(receipt.identity, owner.identity) === false,
+        sameIdentity(receipt.identity, owner.identity) === false ||
+        receipt.verdict !== "passed",
     ),
     {
       observation,
