@@ -1231,6 +1231,24 @@ export const test_cli_scaffold_repaint_runtime_contract =
         throw new Error(
           `Generated no-plugin compile failed: ${compiled.stdout}\n${compiled.stderr}`,
         );
+      // The render cleanup actions are the only two commands here expected to
+      // succeed, so a boolean is all the assertion below can say about them and
+      // a reader of a red run learns nothing. Both CI platforms reported
+      // `dryGcStatus` and `appliedGcStatus` false with every earlier outcome
+      // true, which is a command that ran and failed rather than a contract
+      // that changed. Surface what it printed.
+      for (const [label, result] of [
+        ["gc", dryGc],
+        ["gc --apply", appliedGc],
+      ] as const)
+        if (result.status !== 0)
+          throw new Error(
+            [
+              `Generated render ${label} exited ${result.status}.`,
+              result.stdout,
+              result.stderr,
+            ].join("\n"),
+          );
       TestValidator.equals(
         "generated compile and render actions keep explicit refusal and cleanup outcomes",
         {
