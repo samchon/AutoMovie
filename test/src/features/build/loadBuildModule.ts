@@ -52,6 +52,22 @@ export interface IExperimentalWriter {
 export interface IExperimentalModule {
   readonly EXPERIMENTAL_ROOT: string;
   readonly experimentalDependencies: IExperimentalDependencies;
+  readonly runExperimentalInstall: (
+    target: string,
+    launch?: (
+      command: string,
+      argv: readonly string[],
+      options: { cwd: string; shell: boolean; stdio: "inherit" },
+    ) => { status: number | null },
+  ) => number | null;
+  readonly experimentalInstallRequest: (
+    target: string,
+    platform?: string,
+  ) => {
+    argv: readonly string[];
+    command: string;
+    options: { cwd: string; shell: boolean; stdio: "inherit" };
+  };
   readonly runExperimental: (
     args: readonly string[],
     dependencies?: IExperimentalDependencies,
