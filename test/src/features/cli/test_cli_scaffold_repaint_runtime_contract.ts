@@ -1342,6 +1342,19 @@ export const test_cli_scaffold_repaint_runtime_contract =
       );
       fs.writeFileSync(configuredPath, configuredSource, "utf8");
       fs.writeFileSync(adapterMode, "default\n", "utf8");
+      // This refusal is the one case here whose expected exit is 2 rather than
+      // 0 or 1, because it must be rejected by the design record's own typed
+      // validation and name the union member it violates. Anything else is a
+      // different failure wearing the same boolean, which has already cost this
+      // scenario two round trips through CI.
+      if (impossiblePolicyRefusal.status !== 2)
+        throw new Error(
+          [
+            `The impossible retry policy exited ${impossiblePolicyRefusal.status} rather than refusing with 2.`,
+            impossiblePolicyRefusal.stdout,
+            impossiblePolicyRefusal.stderr,
+          ].join("\n"),
+        );
       if (
         AutoMovieProductionProject.open(
           fixture.root,
