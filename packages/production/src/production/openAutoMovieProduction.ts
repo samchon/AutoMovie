@@ -154,6 +154,16 @@ export const compileAutoMovieProduction = (props: {
   scope: IAutoMovieCompileProjectInput["scope"];
   /** Archetype catalogue this production registers. */
   archetypes?: AutoMovieModelArchetypeRegistry;
+  /**
+   * Exact graph-derived authoring identity, required to compile a library.
+   *
+   * The compiler chooses its shape from this declaration, so a library
+   * compiled without it takes the film path and is refused for a design tree
+   * it was never going to have. A film or brief may omit it, which is why it
+   * stays optional rather than becoming a required argument on the one entry
+   * every generated project calls.
+   */
+  authoringEvidence?: IAutoMovieProductionEvidence;
 }): IAutoMovieCompileProjectOutput =>
   openAutoMovieProduction(props).compiler.compile({ scope: props.scope });
 

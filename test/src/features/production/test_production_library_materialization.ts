@@ -2,6 +2,7 @@ import type { IAutoMovieCompileProjectOutput } from "@automovie/interface";
 import {
   AutoMovieProductionCompiler,
   AutoMovieProductionProject,
+  compileAutoMovieProduction,
 } from "@automovie/production";
 import { TestValidator } from "@nestia/e2e";
 
@@ -212,6 +213,33 @@ export const test_production_library_materialization = (): void => {
         "at the same input identity": true,
         "lint succeeds over the current tree and materializes nothing": true,
         "design scope reads no source and publishes nothing": true,
+      },
+    );
+
+    // The package entry every generated project's own compile command calls.
+    // Without the authoring declaration it takes the film path and refuses a
+    // library for records it was never going to carry, which is how a library
+    // could be materialized by this compiler and by nothing an author runs.
+    const throughPackageApi = compileAutoMovieProduction({
+      projectRoot: fixture.root,
+      productionId: production,
+      scope: "source",
+      authoringEvidence: libraryAuthoring({ root: fixture.root }),
+    });
+    TestValidator.equals(
+      "the package compile entry reaches the library path too",
+      {
+        success: throughPackageApi.success,
+        published: throughPackageApi.materialized
+          .map((file) => file.path)
+          .sort((left, right) => (left < right ? -1 : left > right ? 1 : 0)),
+      },
+      {
+        success: true,
+        published: [
+          "library/environments/hall-house.json",
+          "library/index.json",
+        ],
       },
     );
 
