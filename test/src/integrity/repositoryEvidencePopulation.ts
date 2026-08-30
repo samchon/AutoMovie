@@ -99,6 +99,37 @@ export const GRAPH_DEFINITIONS: IEvidenceGraphDefinition[] = [
 
 const compare = (left: string, right: string): number =>
   left.localeCompare(right);
+
+/**
+ * Every package whose lint configuration turns the contract graph on.
+ *
+ * Derived rather than listed. The two packages this gate was written for were
+ * named in `GRAPH_DEFINITIONS`, and eleven others enabled the same graph
+ * without being measured -- which is precisely the opaque boolean this guard
+ * exists to prevent, arrived at from the other side. A list is where the next
+ * package goes missing; a derivation is where it cannot.
+ */
+export const graphEnabledPackages = (
+  root: string,
+  readText: ReadText = (file) => fs.readFileSync(file, "utf8"),
+): string[] => {
+  const packages = path.join(root, "packages");
+  if (fs.existsSync(packages) === false) return [];
+  return fs
+    .readdirSync(packages, { withFileTypes: true })
+    .filter((entry) => entry.isDirectory())
+    .map((entry) => entry.name)
+    .filter((name) => {
+      const config = path.join(packages, name, "lint.config.ts");
+      // Read plainly after the existence check. A read that fails anyway is an
+      // instrument problem worth surfacing, and a guard here would be an
+      // alternative nothing can reach that could only be covered by pretending.
+      return (
+        fs.existsSync(config) && readText(config).includes('"evidence/graph"')
+      );
+    })
+    .sort(compare);
+};
 const slash = (value: string): string => value.replaceAll(path.sep, "/");
 
 const walkSources = (directory: string): string[] =>
@@ -281,6 +312,31 @@ export const inspectRepositoryEvidencePopulations = (
       carrierFiles: carrierFiles.size,
       carriers: population.carriers.length,
       claims,
+    });
+  }
+  // Every other package that runs the same graph, counted rather than trusted.
+  // The deep claim checks stay where they are written; what this adds is the
+  // one question no package may escape -- did the configured graph select
+  // anything at all.
+  const named = new Set(definitions.map((definition) => definition.package));
+  for (const name of graphEnabledPackages(root, readText)) {
+    if (named.has(name)) continue;
+    const population = evidenceCarriers(
+      root,
+      { claims: [], excludeIndex: true, package: name, sourceGlob: "" },
+      readText,
+    );
+    if (population.carriers.length === 0)
+      diagnostics.push(
+        `${name}: evidence/graph is enabled and selected no citation host`,
+      );
+    graphs.push({
+      package: name,
+      sources: population.files.length,
+      carrierFiles: new Set(population.carriers.map((carrier) => carrier.file))
+        .size,
+      carriers: population.carriers.length,
+      claims: [],
     });
   }
   return { graphs, diagnostics };

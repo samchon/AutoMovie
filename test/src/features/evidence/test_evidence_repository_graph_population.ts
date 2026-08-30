@@ -6,6 +6,7 @@ import path from "node:path";
 import {
   GRAPH_DEFINITIONS,
   evidenceCarriers,
+  graphEnabledPackages,
   inspectRepositoryEvidencePopulations,
   reportRepositoryEvidencePopulations,
   runRepositoryEvidencePopulationGate,
@@ -64,9 +65,42 @@ test("reports the real production and playground populations", () => {
   reportRepositoryEvidencePopulations(result, (line) => output.push(line));
   console.log(output.join("\n"));
   assert.deepEqual(result.diagnostics, []);
+  // Every package that runs this graph, not the two the definitions name. The
+  // other eleven enabled it and went unmeasured, which is the opaque boolean
+  // this guard exists to prevent arrived at from the other side.
   assert.deepEqual(
     result.graphs.map((graph) => graph.package),
-    ["production", "playground"],
+    [
+      "production",
+      "playground",
+      ...graphEnabledPackages(root).filter(
+        (name) => name !== "production" && name !== "playground",
+      ),
+    ],
+  );
+  assert.deepEqual(graphEnabledPackages(root), [
+    "archetypes",
+    "cli",
+    "create-automovie",
+    "engine",
+    "evidence",
+    "face",
+    "ingest",
+    "interface",
+    "playground",
+    "production",
+    "render",
+    "template",
+    "viewer",
+  ]);
+  // The ratio the gate now prints. It refuses only a package that selected no
+  // host at all, because selection is not obligation -- but an eleven-of-
+  // fifty-eight population is a fact a reader should meet without asking.
+  assert.deepEqual(
+    result.graphs
+      .filter((graph) => graph.package === "production")
+      .map((graph) => [graph.sources, graph.carrierFiles]),
+    [[58, 11]],
   );
   // The gate's accepting exit, pinned beside the refusals below. A gate only
   // ever watched refusing is one nobody has watched agree, and this is the
@@ -75,6 +109,35 @@ test("reports the real production and playground populations", () => {
     runRepositoryEvidencePopulationGate(root, () => undefined),
     0,
   );
+
+  // And the refusal the widening adds, produced rather than assumed: a package
+  // whose configured graph selected no citation host at all. Read against a
+  // tree carrying one, because a rule that has never refused is a rule nobody
+  // has watched work.
+  const tree = fs.mkdtempSync(path.join(os.tmpdir(), "automovie-graph-pop-"));
+  try {
+    const silent = path.join(tree, "packages", "quiet", "src");
+    fs.mkdirSync(silent, { recursive: true });
+    fs.writeFileSync(
+      path.join(tree, "packages", "quiet", "lint.config.ts"),
+      ['export default { rules: { "evidence/graph": [] } };', ""].join("\n"),
+      "utf8",
+    );
+    fs.writeFileSync(
+      path.join(silent, "value.ts"),
+      ["export const value = 1;", ""].join("\n"),
+      "utf8",
+    );
+    assert.deepEqual(
+      inspectRepositoryEvidencePopulations(tree, []).diagnostics,
+      ["quiet: evidence/graph is enabled and selected no citation host"],
+    );
+    // A root with no packages at all answers with none rather than throwing:
+    // the derivation is asked about whatever root the caller points at.
+    assert.deepEqual(graphEnabledPackages(path.join(tree, "elsewhere")), []);
+  } finally {
+    fs.rmSync(tree, { recursive: true, force: true });
+  }
 });
 
 test("executes both real evidence graph configurations", () => {

@@ -5,8 +5,20 @@ import type { ITtscLintConfig } from "@ttsc/lint";
  * Every authored production declaration joins the repository contract graph.
  *
  * The barrel is the only source exclusion because it re-exports declarations
- * whose defining symbols already carry their own contract evidence. A new
- * production source therefore enters both claims merely by existing.
+ * whose defining symbols already carry their own contract evidence.
+ *
+ * Joining is selection, not obligation, and this comment used to say otherwise:
+ * a new source entered both claims "merely by existing", which reads as a duty
+ * the graph does not impose. What the claims enforce is that every contract
+ * target has at least one implementing host, so a source that implements no
+ * listed target owes nothing and stays silent.
+ *
+ * The consequence is worth seeing rather than inferring. Measured on this
+ * package, eleven of fifty-eight selected sources carry a citation, and the
+ * repository population gate now prints that ratio for every package that runs
+ * this graph. Requiring the other forty-seven to speak would buy package-
+ * boundary restatement rather than semantic inspection, which is the same
+ * reason `evidence/review` stays off on this graph.
  */
 const publicSurface = ["src/**/*.ts", "!src/**/index.ts"];
 
