@@ -13,10 +13,17 @@ export interface IRecordShapes {
   urls: ReadonlyMap<string, string>;
 }
 
+export interface ICoverageSpan {
+  start?: { line?: number };
+}
+
 export interface ICoverageEntry {
   b?: Record<string, number[]>;
+  branchMap?: Record<string, { locations?: ICoverageSpan[] }>;
   f?: Record<string, number>;
+  fnMap?: Record<string, { loc?: ICoverageSpan }>;
   s?: Record<string, number>;
+  statementMap?: Record<string, ICoverageSpan>;
 }
 
 /** The signature a record gives one script, as `coverageScriptShapes` spells it. */
@@ -99,6 +106,107 @@ export const mostCoveredEntries = <T extends ICoverageEntry>(
         best[file] = entry;
     }
   return best;
+};
+
+/** Which source lines one entry says ran, per kind of position. */
+const coveredLines = (
+  entry: ICoverageEntry,
+): {
+  branches: Set<number>;
+  functions: Set<number>;
+  statements: Set<number>;
+} => {
+  const statements = new Set<number>();
+  const functions = new Set<number>();
+  const branches = new Set<number>();
+  for (const [id, span] of Object.entries(entry.statementMap ?? {}))
+    if ((entry.s?.[id] ?? 0) > 0 && typeof span?.start?.line === "number")
+      statements.add(span.start.line);
+  for (const [id, span] of Object.entries(entry.fnMap ?? {}))
+    if ((entry.f?.[id] ?? 0) > 0 && typeof span?.loc?.start?.line === "number")
+      functions.add(span.loc.start.line);
+  for (const [id, span] of Object.entries(entry.branchMap ?? {})) {
+    const hits = entry.b?.[id] ?? [];
+    for (const [index, location] of (span?.locations ?? []).entries())
+      if ((hits[index] ?? 0) > 0 && typeof location?.start?.line === "number")
+        branches.add(location.start.line);
+  }
+  return { branches, functions, statements };
+};
+
+/**
+ * One entry's positions, marked covered wherever any group saw that line run.
+ *
+ * Taking the fullest single reading is not a union, and the shortfall was
+ * measured: `build/experimental.ts` reads 99.61 percent under the build tests
+ * and about 70 under the full suite, because a record carrying its coverage is
+ * assigned to a group by some unrelated file's shape conflict and its half is
+ * never added to the other's. Positions are what the two halves have in common:
+ * identifiers differ between shapes, line numbers do not.
+ *
+ * The base is the reading with the most positions, so the structure this
+ * returns is one c8 actually produced rather than a shape assembled here. A
+ * position keeps its own hits when it has them and otherwise takes a single hit
+ * from the line, so nothing is marked run that no process ran.
+ *
+ * The granularity is the line, which is the honest limit: two statements on one
+ * line cannot be told apart, and one of them covered marks both. Recording that
+ * is better than claiming an exactness the identifiers cannot support.
+ */
+export const unionEntryByLine = <T extends ICoverageEntry>(
+  entries: readonly T[],
+): T | undefined => {
+  // Most positions, and on a tie the reading that saw the most of them run. An
+  // entry carrying no position map cannot be folded at all, so without the
+  // tiebreak the base among such entries would be whichever arrived first.
+  const rank = (entry: T): readonly [number, number] => [
+    Object.keys(entry.statementMap ?? {}).length,
+    coveredPositions(entry),
+  ];
+  const base = entries.reduce<T | undefined>((standing, entry) => {
+    if (standing === undefined) return entry;
+    const [positions, covered] = rank(entry);
+    const [held, heldCovered] = rank(standing);
+    return positions > held || (positions === held && covered > heldCovered)
+      ? entry
+      : standing;
+  }, undefined);
+  if (base === undefined) return undefined;
+  const lines = entries.map(coveredLines);
+  const ran = (kind: "branches" | "functions" | "statements", line: unknown) =>
+    typeof line === "number" && lines.some((set) => set[kind].has(line));
+  const s = { ...(base.s ?? {}) };
+  for (const [id, span] of Object.entries(base.statementMap ?? {}))
+    if ((s[id] ?? 0) === 0 && ran("statements", span?.start?.line)) s[id] = 1;
+  const f = { ...(base.f ?? {}) };
+  for (const [id, span] of Object.entries(base.fnMap ?? {}))
+    if ((f[id] ?? 0) === 0 && ran("functions", span?.loc?.start?.line))
+      f[id] = 1;
+  const b: Record<string, number[]> = {};
+  for (const [id, span] of Object.entries(base.branchMap ?? {}))
+    b[id] = (span?.locations ?? []).map((location, index) => {
+      const hits = base.b?.[id]?.[index] ?? 0;
+      return hits > 0 || ran("branches", location?.start?.line)
+        ? Math.max(hits, 1)
+        : 0;
+    });
+  return { ...base, b: { ...(base.b ?? {}), ...b }, f, s };
+};
+
+/** Per file, every group's reading folded together by position. */
+export const unionEntries = <T extends ICoverageEntry>(
+  reports: ReadonlyArray<Record<string, T>>,
+): Record<string, T> => {
+  const grouped = new Map<string, T[]>();
+  for (const report of reports)
+    for (const [file, entry] of Object.entries(report))
+      grouped.set(file, [...(grouped.get(file) ?? []), entry]);
+  const united: Record<string, T> = {};
+  for (const [file, entries] of grouped) {
+    const merged = unionEntryByLine(entries);
+    if (merged !== undefined) united[file] = merged;
+  }
+  return united;
 };
 
 /** Every raw record in a temp directory, reduced to its per-script shapes. */
@@ -197,6 +305,6 @@ export const reconcileCoverageShapes = (props: {
       };
     reports.push(read);
   }
-  props.writeReport(mostCoveredEntries(reports));
+  props.writeReport(unionEntries(reports));
   return { failure: null, groups: groups.length };
 };
