@@ -51,6 +51,12 @@ Use configured evidence roots such as `settings/...`, `models/...`, `motions/...
 
 A reason names the host event, decision, limit, transition, implementation, or observable result that would be false without the target. A target-name paraphrase, `uses this setting`, `implements this rule`, and a copied reason are not evidence.
 
+Test a reason by exchange rather than by reading it alone. Take the sentence this host gave and read it against a sibling host that answers the same target, then take the sibling's sentence and read it against this host. If neither becomes false, neither was written about the host it sits on, and both are generic however specific the wording looks. A detail lifted from the host does not by itself survive the exchange: when the sentence around the detail would hold equally with any other detail from any sibling, the frame is the reason and the detail is decoration.
+
+Counting the host is a description of its size, not a statement about what the target required. `four facades and nine rooms`, `nine viewpoints`, `three shots` are true of every host shaped like this one. Write instead what this host does that a sibling does not, in the terms the target names.
+
+When a statement turns on how something is written rather than on what it is -- a number, a dimension, an identifier, a title, a quoted line -- give the host's own rendering. A host whose source reads `1.6` is not addressed by a reason that says `160cm`, and one whose only mention of a station sits in a heading has not realized that station in its body. The fact may well be present, but a claim recorded in a notation the host never uses cannot be checked by reading the host, which is the only check this graph has.
+
 ## Transitions
 
 Move a layer from `disabled` to `draft` only after its initially applicable discovery targets have been searched against the declared production and answered in `docs/contracts`: a retained rule file with its enforcing additive claim, or a concrete truthful negative on `index.md`. Add the layer's non-empty authored hosts as the transition begins. A layer forbidden by the selected shape remains disabled with neither authored hosts nor a running discovery claim.
