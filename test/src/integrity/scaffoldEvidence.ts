@@ -1118,8 +1118,12 @@ const assertResolvableLinks = (
       const target = match.groups!.target!;
       if (/^(?:[a-z][a-z0-9+.-]*:|#)/u.test(target)) continue;
       checked += 1;
-      const [file, anchor] = target.split("#");
-      const resolved = resolveLink(key, file ?? "");
+      const hash = target.indexOf("#");
+      const anchor = hash === -1 ? undefined : target.slice(hash + 1);
+      const resolved = resolveLink(
+        key,
+        hash === -1 ? target : target.slice(0, hash),
+      );
       if (keys.has(resolved) === false) {
         broken.push(`${key} -> ${target} (no ${resolved} is shipped)`);
         continue;
@@ -1217,8 +1221,9 @@ const treeFiles = (root: string): string[] => {
   const walk = (directory: string): void => {
     for (const entry of fs
       .readdirSync(directory, { withFileTypes: true })
-      .sort((left, right) =>
-        left.name > right.name ? 1 : left.name < right.name ? -1 : 0,
+      .sort(
+        (left, right) =>
+          Number(left.name > right.name) - Number(left.name < right.name),
       )) {
       const full = path.join(directory, entry.name);
       if (entry.isDirectory()) walk(full);
@@ -1655,25 +1660,27 @@ export const runScaffoldEvidenceGate = (): void => {
 /** Pure guard and classifier seams exercised by the typed negative scenarios. */
 export const scaffoldEvidenceTestContract = {
   activeSettingsConfig,
-  assertConfigRefusal,
-  assertInventoryIgnoresArtifacts,
-  assertResolvableLinks,
-  assertRetiredSurfacesAbsent,
-  assertSynchronizedInstructions,
   assertBuiltPackages,
+  assertConfigRefusal,
   assertGraphConsumer,
   assertInstructionSync,
+  assertInventoryIgnoresArtifacts,
   assertOwnedObligations,
   assertPaidCompile,
   assertPaidSourceLine,
+  assertResolvableLinks,
+  assertRetiredSurfacesAbsent,
+  assertSynchronizedInstructions,
   assertUnderpayment,
   axisOf,
   inherit,
+  markdownAnchors,
   obligationUnderpayment,
   packageOf,
   paidPrincipleReason,
   parse,
   processResult,
   replaceOnce,
+  resolveLink,
   validateInitialCompile,
 };
