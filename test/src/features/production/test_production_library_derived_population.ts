@@ -11,6 +11,7 @@ import { namedFacts } from "../internal/predicates";
 import {
   LIBRARY_OWNER,
   LIBRARY_PLAN,
+  LIBRARY_SOURCE,
   libraryAuthoring,
   libraryFixture,
 } from "./libraryFixtures";
@@ -59,8 +60,12 @@ const OWNER = `library:spaces:${LIBRARY_OWNER}`;
  *    plan neither opens nor waives, at that observation's own address.
  * 4. The exterior and interior roles are the ones the topology produced, and the
  *    interior stations carry the point an eye was proved to stand at.
- * 5. Deleting the published building withdraws the derived population, so the
- *    charge follows the artifact rather than the design document.
+ * 5. Deleting or corrupting the published building withdraws the derived
+ *    population, so the charge follows the artifact rather than the design
+ *    document, and a corrupt artifact is dropped rather than thrown on.
+ * 6. The command refuses to plan against an owner the declaration does not
+ *    carry, and against a source branch the graph does not enforce: a design
+ *    document with no current realization is not a delivered owner.
  */
 export const test_production_library_derived_population = (): void => {
   const fixture = libraryFixture();
@@ -223,6 +228,84 @@ export const test_production_library_derived_population = (): void => {
         ).length,
       },
       { unopenedBefore: 21, unopenedAfter: 0, owedReceipts: 21 },
+    );
+    // A published building the tree no longer carries is generated-output
+    // tampering, which the ownership gate names at that exact file. The reader
+    // drops it rather than throwing, so an observation command reports the
+    // owner as owing nothing instead of dying on a corrupt artifact.
+    fixture.writeGenerated(
+      "library/environments/hall-house.json",
+      "not a building\n",
+    );
+    TestValidator.equals(
+      "a published building that no longer reopens leaves nothing derived",
+      inspect().required.length,
+      0,
+    );
+
+    // The same reader, given bytes that parse but are not a building.
+    fixture.writeGenerated("library/environments/hall-house.json", "{}\n");
+    TestValidator.equals(
+      "and neither does one whose bytes are no longer a building",
+      inspect().required.length,
+      0,
+    );
+
+    // One refusal of the planning path this command owns: an owner whose
+    // source branch is not enforced cannot be planned against, because a
+    // design document with no current realization is not a delivered owner.
+    const unenforced = libraryAuthoring({ root: fixture.root });
+    (
+      unenforced.designOwners[0]!.sourceBinding as unknown as {
+        enforced: boolean;
+      }
+    ).enforced = false;
+    let refusedUnenforced = "";
+    try {
+      command.runLibraryReviewCommand({
+        argv: ["plan", "--owner", LIBRARY_OWNER, "--source", LIBRARY_SOURCE],
+        root: fixture.root,
+        productionId: project.productionId,
+        evidence: {},
+        read: (() =>
+          unenforced) as unknown as typeof readAutoMovieProductionEvidence,
+      });
+    } catch (error) {
+      refusedUnenforced =
+        error instanceof Error ? error.message : String(error);
+    }
+    let refusedUnknown = "";
+    try {
+      command.runLibraryReviewCommand({
+        argv: [
+          "plan",
+          "--owner",
+          "docs/spaces/other.md#other-delivery",
+          "--source",
+          LIBRARY_SOURCE,
+        ],
+        root: fixture.root,
+        productionId: project.productionId,
+        evidence: {},
+        read: (() =>
+          libraryAuthoring({
+            root: fixture.root,
+          })) as unknown as typeof readAutoMovieProductionEvidence,
+      });
+    } catch (error) {
+      refusedUnknown = error instanceof Error ? error.message : String(error);
+    }
+    TestValidator.equals(
+      "the command refuses both ways a plan can name the wrong owner",
+      {
+        unenforced: refusedUnenforced.includes(
+          "no enforced reviewed source population",
+        ),
+        unknown: refusedUnknown.includes(
+          "outside the exact active authoring population",
+        ),
+      },
+      { unenforced: true, unknown: true },
     );
     fixture.writeGenerated("library/index.json", "not json\n");
     TestValidator.equals(
