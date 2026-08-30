@@ -252,18 +252,19 @@ const inspectionPage = (
 /**
  * Draw one named subject from one inspection-owned pose.
  *
- * This is the host half of `inspectSubject`: without it the tool refuses with
- * `capture-host-unavailable`, which is honest and blind. The runtime owns
- * the viewpoint plan, the projection and where the bytes are published; this
- * adapter owns nothing but "stage that subject, aim there, hand back the
- * canvas". Every framing decision arrives in `pose` and none is taken here, so
- * an agent naming a subject through the tool and a reviewer opening
- * `viewer/subject.html` on the same subject are looking through one eye.
+ * This is the host half of subject inspection: without it the inspection
+ * service refuses with `capture-host-unavailable`, which is honest and blind.
+ * The service owns the viewpoint plan, the projection and where the bytes are
+ * published; this adapter owns nothing but "stage that subject, aim there, hand
+ * back the canvas". Every framing decision arrives in `pose` and none is taken
+ * here, so an author who passes this adapter to the inspection service and a
+ * reviewer opening `viewer/subject.html` on the same subject are looking
+ * through one eye.
  *
  * Nothing it returns is delivery evidence. It produces no renderer identity, no
- * target fingerprint and no render bundle, and it writes no file; the surface
- * publishes the bytes under `automovie/inspections`, outside the render root a
- * delivery review reads.
+ * target fingerprint and no render bundle, and it writes no file; the inspection
+ * service publishes the bytes under `automovie/inspections`, outside the render
+ * root a delivery review reads.
  */
 export const inspectProductionSubject: AutoMovieProductionSubjectInspection =
   async (input) => {
