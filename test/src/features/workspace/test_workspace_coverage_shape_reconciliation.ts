@@ -2,6 +2,7 @@ import { TestValidator } from "@nestia/e2e";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { pathToFileURL } from "node:url";
 
 import {
   measuredShapeReconciliationParts,
@@ -280,8 +281,14 @@ export const test_workspace_coverage_shape_reconciliation = (): void => {
           path.join(directory, "real-records"),
           path.join(directory, "real-report"),
         ),
+        // Built the way Node builds one. Spelling `file:///` plus a path is
+        // right only where the path starts with a drive letter: on a POSIX
+        // runner the leading slash makes it four, and the census reads a URL it
+        // cannot parse. That is the same host-shaped mistake this repository
+        // already paid for once, in the reader this predicate replaced.
         inside: parts.measured(
-          `file:///${ROOT.replaceAll("\\", "/")}/packages/engine/src/x.ts`,
+          pathToFileURL(path.join(ROOT, "packages", "engine", "src", "x.ts"))
+            .href,
         ),
         outside: parts.measured("file:///elsewhere/x.ts"),
         // A signalled reporter has no status, and reading that as success
