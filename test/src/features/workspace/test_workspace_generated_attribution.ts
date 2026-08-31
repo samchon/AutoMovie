@@ -122,7 +122,17 @@ export const test_workspace_generated_attribution = (): void => {
         { url: "file:///tmp/project/index.js" },
         {},
       ],
-      "source-map-cache": { [generated("same.ts")]: { version: 3 } },
+      // The shape V8 writes: the entry carries its own url and its own
+      // `data.sources`, and c8 resolves a range through those rather than
+      // through the record's url. Rewriting only the record's url credited
+      // twelve entries and left the report at zero.
+      "source-map-cache": {
+        [generated("same.ts")]: {
+          data: { sources: [generated("same.ts"), "file:///elsewhere.ts"] },
+          lineLengths: [24],
+          url: generated("same.ts"),
+        },
+      },
     };
     const outcome = attributeRecordUrls({
       isRepository: (url) => url === repositoryUrl,
@@ -148,6 +158,75 @@ export const test_workspace_generated_attribution = (): void => {
         ],
         cache: [repositoryUrl],
       },
+    );
+
+    // What the map now says, which is what decides where the report lands. Its
+    // own url follows the record's, its creditable source is re-addressed, and
+    // a source naming nothing creditable is left exactly as it was.
+    const moved = record["source-map-cache"]?.[repositoryUrl] as {
+      data: { sources: string[] };
+      url: string;
+    };
+    TestValidator.equals(
+      "the map's own url and creditable sources are re-addressed with it",
+      { sources: moved.data.sources, url: moved.url },
+      {
+        sources: [repositoryUrl, "file:///elsewhere.ts"],
+        url: repositoryUrl,
+      },
+    );
+
+    // And the shapes a map can arrive in that carry nothing to move: no entry
+    // at all, a null entry, an entry with no `data`, and one whose `sources` is
+    // not a list. Each is an ordinary reading rather than an error.
+    const ragged: {
+      result: Array<{ url?: string }>;
+      "source-map-cache"?: Record<string, unknown>;
+    } = {
+      result: [
+        { url: generated("same.ts") },
+        { url: generated("same.ts") },
+        { url: generated("same.ts") },
+      ],
+      "source-map-cache": {
+        [generated("same.ts")]: null,
+      },
+    };
+    const first = attributeRecordUrls({
+      isRepository: () => false,
+      record: ragged,
+      sources,
+    });
+    ragged["source-map-cache"] = {
+      [generated("same.ts")]: { data: { sources: "not-a-list" } },
+    };
+    ragged.result = [{ url: generated("same.ts") }];
+    const second = attributeRecordUrls({
+      isRepository: () => false,
+      record: ragged,
+      sources,
+    });
+    ragged["source-map-cache"] = { [generated("same.ts")]: { url: 7 } };
+    ragged.result = [{ url: generated("same.ts") }];
+    const third = attributeRecordUrls({
+      isRepository: () => false,
+      record: ragged,
+      sources,
+    });
+    TestValidator.equals(
+      "a map with nothing to move is folded rather than refused",
+      {
+        first: first.attributed,
+        second: second.attributed,
+        third: third.attributed,
+        // A record with no cache at all takes the same path.
+        none: attributeRecordUrls({
+          isRepository: () => false,
+          record: { result: [{ url: generated("same.ts") }] },
+          sources,
+        }).attributed,
+      },
+      { first: 3, second: 1, third: 1, none: 1 },
     );
 
     const directory = path.join(root, "records");
