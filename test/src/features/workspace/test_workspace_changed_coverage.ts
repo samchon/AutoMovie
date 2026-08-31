@@ -364,6 +364,37 @@ test("requires 100 percent of every touched file, not only changed lines", () =>
       files: new Map([[fixture.relative, new Set<number>()]]),
     });
     assert.deepEqual(deletion.gaps, []);
+    // A function entry anchored only at its declaration, which is a shape the
+    // transpile produces: the demand is placed from `decl` when `loc` is
+    // absent, so an entry the change occupies is still asked for and one it
+    // does not occupy is still excused. The address degrades to `?` because
+    // only `loc` carries a position to report, which is the honest limit.
+    const declarationOnly = (lines: Set<number>) =>
+      inspectChangedCoverage({
+        ...fixture,
+        divergent: [],
+        files: new Map([[fixture.relative, lines]]),
+        coverage: {
+          [fixture.file]: {
+            ...fixture.data,
+            fnMap: { 0: { name: "value", decl: { start: { line: 2 } } } },
+            f: { 0: 0 },
+          },
+        },
+      });
+    assert.deepEqual(
+      declarationOnly(new Set([2])).gaps.filter((gap) =>
+        gap.includes("function"),
+      ),
+      [`${fixture.relative}:? uncovered function value`],
+    );
+    const elsewhere = declarationOnly(new Set([1]));
+    assert.deepEqual(
+      elsewhere.gaps.filter((gap) => gap.includes("function")),
+      [],
+    );
+    assert.equal(elsewhere.inherited.length, 1);
+
     assert.deepEqual(deletion.inherited, [
       `INHERITED GAP: ${fixture.relative} carries 2 statements, 1 branch, 1` +
         " function uncovered on lines this change did not touch; closing them" +
