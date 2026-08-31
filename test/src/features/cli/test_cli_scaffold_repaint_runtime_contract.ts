@@ -19,6 +19,7 @@ import { createRequire } from "node:module";
 import os from "node:os";
 import path from "node:path";
 
+import { builtOutputIsStale } from "../internal/builtPackageFreshness";
 import { renderCompletedFilmFixture } from "../internal/completedFilmFixture";
 import {
   testCaptureRuntimeIdentity,
@@ -161,7 +162,9 @@ const linkWorkspacePackage = (project: string, name: string): void => {
   fs.mkdirSync(path.dirname(target), { recursive: true });
   if (name === "@automovie/evidence") {
     const build = path.join(packageRoot, "lib");
-    if (fs.existsSync(path.join(build, "index.js")) === false) {
+    if (
+      builtOutputIsStale({ output: path.join(build, "index.js"), packageRoot })
+    ) {
       const command =
         process.platform === "win32"
           ? {

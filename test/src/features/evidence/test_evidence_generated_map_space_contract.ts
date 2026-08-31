@@ -837,6 +837,15 @@ const writeObjectDiscovery = (root: string): void => {
 };
 
 /** Build and locate the exact publish-view package facade. */
+/**
+ * Always builds, so it never inherits another branch's output.
+ *
+ * The two fixtures beside this one asked whether `lib/index.js` existed and
+ * used whatever was there, which made a build left by another branch look
+ * current; they now ask `builtOutputIsStale` instead. This one spends the build
+ * every time and needs no such question, and saying so is what keeps a later
+ * reader from adding one here for symmetry.
+ */
 const buildEvidenceRuntime = (): string => {
   const command =
     process.platform === "win32"

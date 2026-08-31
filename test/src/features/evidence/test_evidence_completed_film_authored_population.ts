@@ -3,6 +3,7 @@ import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 
+import { builtOutputIsStale } from "../internal/builtPackageFreshness";
 import { namedFacts } from "../internal/predicates";
 
 type Stage = "disabled" | "draft" | "evidence" | "review";
@@ -276,7 +277,12 @@ const installPublishedEvidenceRuntime = (
   project: string,
 ): void => {
   const build = path.join(repository, "packages/evidence/lib");
-  if (fs.existsSync(path.join(build, "index.js")) === false) {
+  if (
+    builtOutputIsStale({
+      output: path.join(build, "index.js"),
+      packageRoot: path.join(repository, "packages/evidence"),
+    })
+  ) {
     const command =
       process.platform === "win32"
         ? {
