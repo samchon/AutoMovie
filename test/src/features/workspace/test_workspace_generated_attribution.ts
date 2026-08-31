@@ -7,9 +7,11 @@ import { pathToFileURL } from "node:url";
 import {
   attributableScaffoldSources,
   attributeGeneratedRecords,
+  attributeLinkedLibraries,
   attributeRecordUrls,
   digestText,
   generatedScaffoldKey,
+  linkedWorkspaceLibraryPath,
   pathToRecordUrl,
   recordUrlToPath,
 } from "../../coverage/generatedAttribution";
@@ -274,10 +276,10 @@ export const test_workspace_generated_attribution = (): void => {
         }),
       },
       {
-        pass: { attributed: 1, records: 1, refused: [] },
+        pass: { attributed: 1, linked: 0, records: 1, refused: [] },
         written: ["one.json"],
         untouched: { result: [{ url: "file:///tmp/other.js" }] },
-        absent: { attributed: 0, records: 0, refused: [] },
+        absent: { attributed: 0, linked: 0, records: 0, refused: [] },
       },
     );
 
@@ -299,7 +301,7 @@ export const test_workspace_generated_attribution = (): void => {
         ),
       },
       {
-        again: { attributed: 0, records: 0, refused: [] },
+        again: { attributed: 0, linked: 0, records: 0, refused: [] },
         stored: { result: [{ url: repositoryUrl }] },
       },
     );
@@ -344,6 +346,100 @@ export const test_workspace_generated_attribution = (): void => {
         refused: [child("no-such-scaffold-script.ts")],
         first: true,
         second: child("no-such-scaffold-script.ts"),
+      },
+    );
+    // A generated project receives the repository's built packages by copy and
+    // the child requires that copy, so V8 records it at the fixture's path.
+    // The fixture is deleted on the way out, and c8 must read a script to place
+    // its ranges: a script it cannot read loses its whole reading, source map
+    // included. Re-addressing it to the repository's own copy of the same build
+    // is what makes it readable again.
+    //
+    // Measured on a real record directory: 144 such URLs across 16 records, and
+    // six `packages/evidence/src` files gained coverage once the report could
+    // follow their maps -- `createAutoMovieEvidenceConfig.ts` from 1,826
+    // covered statements to 3,038.
+    // Built from a real absolute path: a hand-written `file:///tmp/...` has no
+    // drive letter and cannot be read back on Windows.
+    const fixture = (name: string): string =>
+      path.join(
+        root,
+        ".cache/gate-1/node_modules/@automovie/evidence/lib/deep",
+        name,
+      );
+    const fixtureLib = pathToRecordUrl(fixture("one.js"));
+    TestValidator.equals(
+      "a linked workspace build maps to the repository's copy and nothing else does",
+      {
+        linked: linkedWorkspaceLibraryPath({ root, url: fixtureLib }),
+        // Not a linked build: no `@automovie` scope, or no `lib` segment.
+        other: linkedWorkspaceLibraryPath({
+          root,
+          url: pathToRecordUrl(
+            path.join(root, "node_modules/left-pad/lib/x.js"),
+          ),
+        }),
+        source: linkedWorkspaceLibraryPath({
+          root,
+          url: pathToRecordUrl(
+            path.join(root, "node_modules/@automovie/evidence/src/one.ts"),
+          ),
+        }),
+      },
+      {
+        linked: path.join(root, "packages", "evidence", "lib", "deep/one.js"),
+        other: undefined,
+        source: undefined,
+      },
+    );
+
+    const linkedRecord = {
+      result: [
+        { url: fixtureLib },
+        // Still on disk where it stands, so it is readable there and moving it
+        // would claim the two are one copy on nothing but the path's shape.
+        { url: pathToRecordUrl(fixture("present.js")) },
+        // Vanished, and the repository has no counterpart to move it to.
+        { url: fixtureLib.replace("/evidence/", "/no-such-package/") },
+        { url: pathToRecordUrl(path.join(root, "unrelated.js")) },
+      ],
+    };
+    const slashed = (one: string): string => one.replaceAll("\\", "/");
+    const present = new Set(
+      [
+        fixture("present.js"),
+        path.join(root, "packages", "evidence", "lib", "deep/one.js"),
+      ].map(slashed),
+    );
+    TestValidator.equals(
+      "only a vanished linked build with a repository counterpart is moved",
+      {
+        moved: attributeLinkedLibraries({
+          exists: (file) =>
+            present.has(file) ||
+            present.has(pathToFileURL(file).href) ||
+            [...present].some((one) =>
+              one.endsWith(file.replaceAll("\\", "/")),
+            ),
+          record: linkedRecord,
+          root,
+        }),
+        first: recordUrlToPath(linkedRecord.result[0]!.url!).replaceAll(
+          "\\",
+          "/",
+        ),
+        second: linkedRecord.result[1]!.url,
+        third: linkedRecord.result[2]!.url,
+        fourth: linkedRecord.result[3]!.url,
+      },
+      {
+        moved: 1,
+        first: slashed(
+          path.join(root, "packages", "evidence", "lib", "deep/one.js"),
+        ),
+        second: pathToRecordUrl(fixture("present.js")),
+        third: fixtureLib.replace("/evidence/", "/no-such-package/"),
+        fourth: pathToRecordUrl(path.join(root, "unrelated.js")),
       },
     );
   } finally {

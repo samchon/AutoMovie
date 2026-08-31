@@ -176,9 +176,75 @@ export const attributeRecordUrls = (props: {
 /** Read one record back, so a caller never has to know the encoding. */
 export const recordUrlToPath = (url: string): string => fileURLToPath(url);
 
+/**
+ * The repository file a vanished fixture-linked workspace build came from.
+ *
+ * A generated project receives the repository's built packages by copy:
+ * `linkWorkspacePackage` rebuilds a stale one, then `fs.cpSync(build, target)`.
+ * The child then requires that copy, and V8 records it at the fixture's own
+ * path. The fixture is deleted on the way out, so by the time the report runs
+ * the file is gone -- which is what the run has been printing all along as
+ * `219 of them gone from disk at report time`.
+ *
+ * c8 must read a script to place its ranges. A script it cannot read is not
+ * merely unmapped: the whole reading is dropped, and its source map with it, so
+ * nothing reaches the `src` the map names. That is why `--exclude-after-remap`
+ * alone moved nothing when it was tried: the flag reorders filtering, and the
+ * reading here dies of absence rather than of filtering.
+ *
+ * Re-addressing it to the repository's own copy of the same build is what makes
+ * the file readable again. The bytes are the same bytes: the copy is taken from
+ * `packages/<name>/lib` in the same run, and #2183's freshness gate refuses a
+ * build older than the source it claims to be.
+ */
+export const linkedWorkspaceLibraryPath = (props: {
+  root: string;
+  url: string;
+}): string | undefined => {
+  const match = /\/node_modules\/@automovie\/([a-z0-9-]+)\/lib\/(.+)$/u.exec(
+    props.url.replaceAll("\\", "/"),
+  );
+  if (match === null) return undefined;
+  return path.join(props.root, "packages", match[1]!, "lib", match[2]!);
+};
+
+/**
+ * Re-address every vanished linked build in one record to the repository's.
+ *
+ * Only a URL whose file is actually gone is moved. A linked build that still
+ * exists is readable where it stands, and moving it would claim the two are the
+ * same copy on no evidence beyond the path shape.
+ */
+export const attributeLinkedLibraries = (props: {
+  exists?: (file: string) => boolean;
+  record: { result?: Array<{ url?: string }> };
+  root: string;
+}): number => {
+  const exists = props.exists ?? ((file: string) => fs.existsSync(file));
+  let attributed = 0;
+  for (const entry of props.record.result ?? []) {
+    const url = entry.url;
+    if (typeof url !== "string") continue;
+    const target = linkedWorkspaceLibraryPath({ root: props.root, url });
+    if (target === undefined) continue;
+    let vanished;
+    try {
+      vanished = exists(fileURLToPath(url)) === false;
+    } catch {
+      continue;
+    }
+    if (vanished === false || exists(target) === false) continue;
+    entry.url = pathToRecordUrl(target);
+    attributed++;
+  }
+  return attributed;
+};
+
 export interface IAttributionPass {
   /** Generated URLs credited to a repository source, across every record. */
   attributed: number;
+  /** Vanished linked workspace builds re-addressed to the repository's copy. */
+  linked: number;
   /** Records whose bytes were rewritten. */
   records: number;
   /** Distinct generated URLs no repository source vouched for. */
@@ -196,9 +262,11 @@ export interface IAttributionPass {
  */
 export const attributeGeneratedRecords = (props: {
   directory: string;
+  exists?: (file: string) => boolean;
   isRepository: (url: string) => boolean;
   list?: (directory: string) => string[];
   read?: (file: string) => string;
+  root?: string;
   sources: ReadonlyMap<string, string>;
   write?: (file: string, text: string) => void;
 }): IAttributionPass => {
@@ -209,12 +277,13 @@ export const attributeGeneratedRecords = (props: {
     ((file: string, text: string) => fs.writeFileSync(file, text, "utf8"));
   const refused = new Set<string>();
   let attributed = 0;
+  let linked = 0;
   let records = 0;
   let entries: string[];
   try {
     entries = list(props.directory);
   } catch {
-    return { attributed, records, refused: [] };
+    return { attributed, linked, records, refused: [] };
   }
   for (const entry of entries) {
     if (entry.endsWith(".json") === false) continue;
@@ -231,13 +300,23 @@ export const attributeGeneratedRecords = (props: {
       sources: props.sources,
     });
     for (const url of outcome.refused) refused.add(url);
-    if (outcome.attributed === 0) continue;
+    const moved =
+      props.root === undefined
+        ? 0
+        : attributeLinkedLibraries({
+            exists: props.exists,
+            record,
+            root: props.root,
+          });
+    linked += moved;
+    if (outcome.attributed === 0 && moved === 0) continue;
     attributed += outcome.attributed;
     records++;
     write(file, JSON.stringify(record));
   }
   return {
     attributed,
+    linked,
     records,
     refused: [...refused].sort((left, right) => left.localeCompare(right)),
   };

@@ -1313,9 +1313,10 @@ test("runs the coverage orchestrator through injectable child dependencies", () 
   // through `measureCoverage` rather than only through the pass itself.
   let attribution: {
     attributed: number;
+    linked: number;
     records: number;
     refused: string[];
-  } = { attributed: 0, records: 0, refused: [] };
+  } = { attributed: 0, linked: 0, records: 0, refused: [] };
   const dependencies = (
     result: ICoverageSpawnResult,
     sample: string[],
@@ -1393,6 +1394,7 @@ test("runs the coverage orchestrator through injectable child dependencies", () 
   // refusing is that somebody can go and look at what ran.
   attribution = {
     attributed: 12,
+    linked: 0,
     records: 3,
     refused: ["file:///tmp/film/generated/scripts/drift.ts"],
   };
@@ -1406,13 +1408,13 @@ test("runs the coverage orchestrator through injectable child dependencies", () 
     /^UNATTRIBUTED GENERATED SCRIPT: file:[/]{3}tmp[/]film[/]generated[/]scripts[/]drift[.]ts$/mu,
   );
   // Singular on both counters, so the message is read rather than assumed.
-  attribution = { attributed: 1, records: 1, refused: [] };
+  attribution = { attributed: 1, linked: 0, records: 1, refused: [] };
   assert.equal(measureCoverage(dependencies({ status: 0 }, [])), 0);
   assert.match(
     output.join("\n"),
     /coverage attribution: 1 generated script entry in 1 record file credited/u,
   );
-  attribution = { attributed: 0, records: 0, refused: [] };
+  attribution = { attributed: 0, linked: 0, records: 0, refused: [] };
   reconciliation = { failure: null, groups: 3 };
   assert.equal(measureCoverage(dependencies({ status: 0 }, [])), 0);
   assert.match(

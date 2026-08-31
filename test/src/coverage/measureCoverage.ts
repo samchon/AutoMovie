@@ -592,6 +592,10 @@ export const measuredShapeReconciliationParts = (props: {
         path.join(ROOT, "test", "node_modules", "c8", "bin", "c8.js"),
         "report",
         "--all",
+        // Filter after remapping, so a build whose own source map names a
+        // measured source is judged by that source rather than dropped for the
+        // path it was loaded from.
+        "--exclude-after-remap",
         ...SOURCES.flatMap((source) => ["--src", source]),
         ...INCLUDES.flatMap((include) => ["--include", include]),
         "--exclude",
@@ -659,6 +663,7 @@ export const measuredScaffoldAttribution = (
         .replaceAll("\\", "/")
         .toLowerCase()
         .includes(ROOT.replaceAll("\\", "/").toLowerCase()),
+    root: ROOT,
     sources: attributableScaffoldSources({
       rendered: renderScaffold({ name: "coverage-attribution" }),
       scaffoldRoot: scaffoldAssetDirectory(),
@@ -696,6 +701,7 @@ export const measureCoverage = (
       [
         path.join(ROOT, "test", "node_modules", "c8", "bin", "c8.js"),
         "--all",
+        "--exclude-after-remap",
         ...SOURCES.flatMap((source) => ["--src", source]),
         ...INCLUDES.flatMap((include) => ["--include", include]),
         "--exclude",
@@ -769,7 +775,8 @@ export const measureCoverage = (
       `coverage attribution: ${attribution.attributed} generated script ` +
         `${attribution.attributed === 1 ? "entry" : "entries"} in ` +
         `${attribution.records} record ${attribution.records === 1 ? "file" : "files"} ` +
-        `credited to the repository source whose bytes they ran` +
+        `credited to the repository source whose bytes they ran, ` +
+        `${attribution.linked} vanished linked build${attribution.linked === 1 ? "" : "s"} re-addressed` +
         (attribution.refused.length === 0
           ? ""
           : `, ${attribution.refused.length} refused for bytes no repository source vouches for`),
