@@ -215,15 +215,60 @@ export const unionEntryByLine = <T extends ICoverageEntry>(
 };
 
 /** Per file, every group's reading folded together by position. */
-export const unionEntries = <T extends ICoverageEntry>(
+/** A file the union wrote with fewer covered positions than a candidate had. */
+export interface IUnionShortfall {
+  /** The best any single candidate reading reported. */
+  best: number;
+  /** What the union wrote. */
+  chosen: number;
+  file: string;
+}
+
+/**
+ * Whether the union ever wrote less than the best reading it was given.
+ *
+ * The union folds by line onto a base structure, so a position the base does
+ * not carry cannot be lifted into it however well another reading covered it.
+ * That is a real way to lose, and until now nothing said when it happened: the
+ * gate refused files whose changed lines a scoped run reads at 99.67% and
+ * nobody could tell whether the union had lost them or never seen them.
+ *
+ * A shortfall is not proof of which, but it is the difference between the two,
+ * and it costs one pass over what the union already computed.
+ */
+export const unionShortfalls = <T extends ICoverageEntry>(
+  grouped: ReadonlyMap<string, readonly T[]>,
+  united: Readonly<Record<string, T>>,
+): IUnionShortfall[] => {
+  const shortfalls: IUnionShortfall[] = [];
+  for (const [file, entries] of grouped) {
+    const chosen = united[file];
+    if (chosen === undefined) continue;
+    const best = Math.max(...entries.map((entry) => coveredPositions(entry)));
+    const written = coveredPositions(chosen);
+    if (written < best) shortfalls.push({ best, chosen: written, file });
+  }
+  return shortfalls.sort(
+    (left, right) => right.best - right.chosen - (left.best - left.chosen),
+  );
+};
+
+/** Group every report's entries by file, keeping each reading separate. */
+export const groupEntriesByFile = <T extends ICoverageEntry>(
   reports: ReadonlyArray<Record<string, T>>,
-): Record<string, T> => {
+): Map<string, T[]> => {
   const grouped = new Map<string, T[]>();
   for (const report of reports)
     for (const [file, entry] of Object.entries(report))
       grouped.set(file, [...(grouped.get(file) ?? []), entry]);
+  return grouped;
+};
+
+export const unionEntries = <T extends ICoverageEntry>(
+  reports: ReadonlyArray<Record<string, T>>,
+): Record<string, T> => {
   const united: Record<string, T> = {};
-  for (const [file, entries] of grouped) {
+  for (const [file, entries] of groupEntriesByFile(reports)) {
     const merged = unionEntryByLine(entries);
     if (merged !== undefined) united[file] = merged;
   }
@@ -274,6 +319,8 @@ export interface IShapeReconciliation {
   failure: string | null;
   /** How many shape-consistent groups the records fell into. */
   groups: number;
+  /** Files the union wrote with fewer covered positions than a reading had. */
+  shortfalls?: IUnionShortfall[];
 }
 
 /**
@@ -339,8 +386,12 @@ export const reconcileCoverageShapes = (props: {
   // could not put them back. Measured on both, in that order, after the second
   // one made this claim's own JSDoc false.
   const merged = props.readReport(props.reportDirectory);
-  props.writeReport(
-    unionEntries(merged === null ? reports : [...reports, merged]),
-  );
-  return { failure: null, groups: groups.length };
+  const candidates = merged === null ? reports : [...reports, merged];
+  const united = unionEntries(candidates);
+  props.writeReport(united);
+  return {
+    failure: null,
+    groups: groups.length,
+    shortfalls: unionShortfalls(groupEntriesByFile(candidates), united),
+  };
 };

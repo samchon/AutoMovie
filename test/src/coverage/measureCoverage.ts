@@ -786,6 +786,12 @@ export const measureCoverage = (
       dependencies.log(`INSTRUMENT FAILURE: ${reconciliation.failure}`);
       return 2;
     }
+    // A file the union wrote worse than a reading it was given is the union
+    // losing, and it used to be indistinguishable from a file nothing covered.
+    for (const shortfall of reconciliation.shortfalls ?? [])
+      dependencies.log(
+        `UNION SHORTFALL: ${shortfall.file} was written at ${shortfall.chosen} covered positions where a reading had ${shortfall.best}`,
+      );
     dependencies.log(
       `coverage groups: ${reconciliation.groups} shape-consistent record ` +
         (reconciliation.groups === 1
