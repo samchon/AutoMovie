@@ -77,9 +77,12 @@ export const test_workspace_coverage_instrument_disagreement = (): void => {
       },
     };
 
+    // Both source lines are named as changed, so #2163's demand rule excuses
+    // nothing here and this case stays about what it is about: an instrument
+    // artifact is filed as a disagreement rather than as a gap or a debt.
     const result = inspectChangedCoverage({
       root,
-      files: new Map([[relative, new Set<number>()]]),
+      files: new Map([[relative, new Set([1, 2])]]),
       divergent: [],
       coverage,
       measuredSources: {
@@ -116,7 +119,7 @@ export const test_workspace_coverage_instrument_disagreement = (): void => {
     // One artifact reads in the singular, which is a different sentence.
     const single = inspectChangedCoverage({
       root,
-      files: new Map([[relative, new Set<number>()]]),
+      files: new Map([[relative, new Set([1, 2])]]),
       divergent: [],
       coverage: {
         [file]: {

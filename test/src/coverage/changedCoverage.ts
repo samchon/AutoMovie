@@ -438,12 +438,11 @@ export const inspectChangedCoverage = (props: {
     let secondReadings = 0;
     for (const [id, entry] of Object.entries(data.fnMap ?? {})) {
       const covered = (data.f?.[id] ?? 0) > 0;
-      if (
-        spanIsDemanded({ order, span: entry?.loc ?? entry?.decl }) === false
-      ) {
-        if (covered === false) inheritedGaps.functions++;
-        continue;
-      }
+      // The artifact question comes before the demand question. A second
+      // reading of a function that ran is not a gap on any line, so asking
+      // first whether the change occupies it would file an instrument artifact
+      // as inherited debt: a number somebody could later be asked to pay down,
+      // for code that is already tested.
       if (
         covered === false &&
         functionGapIsReal({
@@ -453,6 +452,12 @@ export const inspectChangedCoverage = (props: {
         }) === false
       ) {
         secondReadings++;
+        continue;
+      }
+      if (
+        spanIsDemanded({ order, span: entry?.loc ?? entry?.decl }) === false
+      ) {
+        if (covered === false) inheritedGaps.functions++;
         continue;
       }
       count("functions", covered);
