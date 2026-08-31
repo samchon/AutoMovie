@@ -91,6 +91,60 @@ const assertBuildExperimentalCommandRefusals = async (): Promise<void> => {
   const module = await loadBuildModule<IExperimentalModule>("experimental.ts");
   const { EXPERIMENTAL_ROOT } = module;
   const run = runner(module);
+
+  // What this repository decides about the install, read without running one.
+  // npm's resolver is not ours to verify, and an install that takes minutes to
+  // report what a string already says is time spent learning nothing.
+  TestValidator.equals(
+    "the install request names the installer, its flags and its directory",
+    {
+      posix: module.experimentalInstallRequest("/sandbox/one", "linux"),
+      windows: module.experimentalInstallRequest("C:/sandbox/two", "win32"),
+    },
+    {
+      posix: {
+        argv: ["install", "--no-audit", "--no-fund"],
+        command: "npm",
+        options: { cwd: "/sandbox/one", shell: false, stdio: "inherit" },
+      },
+      windows: {
+        argv: ["install", "--no-audit", "--no-fund"],
+        command: "npm",
+        options: { cwd: "C:/sandbox/two", shell: true, stdio: "inherit" },
+      },
+    },
+  );
+
+  const launched: Array<{ argv: readonly string[]; command: string }> = [];
+  TestValidator.equals(
+    "the install reports exactly what the installer reported",
+    {
+      succeeded: module.runExperimentalInstall(
+        "/sandbox/one",
+        (command, argv) => {
+          launched.push({ argv, command });
+          return { status: 0 };
+        },
+      ),
+      refused: module.runExperimentalInstall("/sandbox/one", () => ({
+        status: 7,
+      })),
+      // A signalled installer has no status, and reading that as success would
+      // call a sandbox ready that never installed anything.
+      signalled: module.runExperimentalInstall("/sandbox/one", () => ({
+        status: null,
+      })),
+      launched,
+    },
+    {
+      succeeded: 0,
+      refused: 7,
+      signalled: null,
+      launched: [
+        { argv: ["install", "--no-audit", "--no-fund"], command: "npm" },
+      ],
+    },
+  );
   const empty = run([]);
   const shortHelp = run(["-h"]);
   const longHelp = run(["name", "--help"]);

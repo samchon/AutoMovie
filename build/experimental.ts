@@ -88,14 +88,61 @@ export interface IExperimentalWriter {
   write(message: string): unknown;
 }
 
+/**
+ * The install this command runs, stated as the request it makes.
+ *
+ * `npm` rather than `pnpm` because `pnpm pack` rewrites a packed package's own
+ * `workspace:^` ranges into plain semver, and npm satisfies those transitive
+ * ranges from the directly installed siblings while pnpm does not.
+ *
+ * Split from the call so what this repository decides -- the installer, its
+ * flags, the directory it runs in, and the shell only Windows needs -- can be
+ * read without running an install. npm's own resolver is not this repository's
+ * to verify, and a test that installs to find that out spends minutes learning
+ * nothing about AutoMovie.
+ */
+export const experimentalInstallRequest = (
+  target: string,
+  platform: string = process.platform,
+): {
+  argv: readonly string[];
+  command: string;
+  options: { cwd: string; shell: boolean; stdio: "inherit" };
+} => ({
+  argv: ["install", "--no-audit", "--no-fund"],
+  command: "npm",
+  options: { cwd: target, shell: platform === "win32", stdio: "inherit" },
+});
+
+/**
+ * Run one install request and report exactly what the process reported.
+ *
+ * The launcher is an input so the status this returns is an ordinary case. A
+ * signalled installer reports a null status, and a caller that read that as
+ * success would call a sandbox ready that never installed anything; that
+ * mapping is this repository's to state and is stated here rather than left to
+ * a test that would have to install to reach it.
+ */
+export const runExperimentalInstall = (
+  target: string,
+  // `spawnSync` itself rather than an arrow that forwards to it. An arrow here
+  // is a function body no test can reach without running a real install, so it
+  // would sit uncovered forever on the one line this module exists to avoid
+  // executing. Taking a mutable `argv` is what lets the launcher be named
+  // directly, and the spread that makes one happens at the call below.
+  launch: (
+    command: string,
+    argv: string[],
+    options: { cwd: string; shell: boolean; stdio: "inherit" },
+  ) => { status: number | null } = spawnSync,
+): number | null => {
+  const request = experimentalInstallRequest(target);
+  return launch(request.command, [...request.argv], request.options).status;
+};
+
 export const experimentalDependencies: IExperimentalDependencies = {
   pack: packWorkspace,
-  install: (target) =>
-    spawnSync("npm", ["install", "--no-audit", "--no-fund"], {
-      cwd: target,
-      stdio: "inherit",
-      shell: process.platform === "win32",
-    }).status,
+  install: (target) => runExperimentalInstall(target),
 };
 
 /** Where every sandbox lives, and the only directory one may be written into. */
