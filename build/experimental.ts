@@ -125,15 +125,19 @@ export const experimentalInstallRequest = (
  */
 export const runExperimentalInstall = (
   target: string,
+  // `spawnSync` itself rather than an arrow that forwards to it. An arrow here
+  // is a function body no test can reach without running a real install, so it
+  // would sit uncovered forever on the one line this module exists to avoid
+  // executing. Taking a mutable `argv` is what lets the launcher be named
+  // directly, and the spread that makes one happens at the call below.
   launch: (
     command: string,
-    argv: readonly string[],
+    argv: string[],
     options: { cwd: string; shell: boolean; stdio: "inherit" },
-  ) => { status: number | null } = (command, argv, options) =>
-    spawnSync(command, [...argv], options),
+  ) => { status: number | null } = spawnSync,
 ): number | null => {
   const request = experimentalInstallRequest(target);
-  return launch(request.command, request.argv, request.options).status;
+  return launch(request.command, [...request.argv], request.options).status;
 };
 
 export const experimentalDependencies: IExperimentalDependencies = {
