@@ -655,8 +655,14 @@ export const reconcileMeasuredShapes = (
 /** The creditable scaffold population, re-checked per run rather than assumed. */
 export const measuredScaffoldAttribution = (
   directory: string,
-): IAttributionPass =>
-  attributeGeneratedRecords({
+): IAttributionPass => {
+  const rendered = renderScaffold({ name: "coverage-attribution" });
+  return attributeGeneratedRecords({
+    // Every TypeScript asset the scaffold ships, so one whose bytes drifted is
+    // still recognised and refused by name rather than skipped in silence.
+    candidates: new Set(
+      Object.keys(rendered).filter((one) => /\.[cm]?tsx?$/u.test(one)),
+    ),
     directory,
     isRepository: (url) =>
       url
@@ -665,10 +671,11 @@ export const measuredScaffoldAttribution = (
         .includes(ROOT.replaceAll("\\", "/").toLowerCase()),
     root: ROOT,
     sources: attributableScaffoldSources({
-      rendered: renderScaffold({ name: "coverage-attribution" }),
+      rendered,
       scaffoldRoot: scaffoldAssetDirectory(),
     }),
   });
+};
 
 export const coverageMeasurementDependencies: ICoverageMeasurementDependencies =
   {

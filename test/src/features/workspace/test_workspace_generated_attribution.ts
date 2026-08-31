@@ -56,6 +56,21 @@ export const test_workspace_generated_attribution = (): void => {
       directory: generatedScaffoldKey("file:///tmp/project/scripts"),
       nested: generatedScaffoldKey("file:///tmp/scripts/inner/deep.ts"),
       other: generatedScaffoldKey("file:///tmp/project/docs/plan.md"),
+      // Given the creditable set, the longest tail that names one wins. A tail
+      // alone cannot say where the generated root ends, and the scaffold ships
+      // 88 TypeScript assets of which 28 sit outside `scripts/`.
+      outside: generatedScaffoldKey(
+        "file:///tmp/film/src/examples/buildings.ts",
+        new Set(["src/examples/buildings.ts", "examples/buildings.ts"]),
+      ),
+      root: generatedScaffoldKey(
+        "file:///tmp/film/vite.config.ts",
+        new Set(["vite.config.ts"]),
+      ),
+      unknown: generatedScaffoldKey(
+        "file:///tmp/film/src/other.ts",
+        new Set(["src/examples/buildings.ts"]),
+      ),
     },
     {
       script: "scripts/capture-browser.ts",
@@ -64,6 +79,9 @@ export const test_workspace_generated_attribution = (): void => {
       directory: undefined,
       nested: undefined,
       other: undefined,
+      outside: "src/examples/buildings.ts",
+      root: "vite.config.ts",
+      unknown: undefined,
     },
   );
 
@@ -74,6 +92,7 @@ export const test_workspace_generated_attribution = (): void => {
     const identical = "export const value = 1;\n";
     fs.writeFileSync(path.join(scaffold, "scripts", "same.ts"), identical);
     fs.writeFileSync(path.join(scaffold, "scripts", "drift.ts"), identical);
+    fs.writeFileSync(path.join(scaffold, "vite.config.ts"), identical);
 
     const sources = attributableScaffoldSources({
       rendered: {
@@ -84,8 +103,10 @@ export const test_workspace_generated_attribution = (): void => {
         "scripts/drift.ts": "export const value = 2;\n",
         // Named by the render and absent from the tree.
         "scripts/absent.ts": identical,
-        // Not a script, so never a candidate however it reads.
+        // Not TypeScript, so never a candidate however it reads.
         "package.json": identical,
+        // Outside `scripts/`, which the narrower first rule never admitted.
+        "vite.config.ts": identical,
       },
       scaffoldRoot: scaffold,
     });
@@ -100,7 +121,7 @@ export const test_workspace_generated_attribution = (): void => {
         differing: digestText("a\n") === digestText("b\n"),
       },
       {
-        admitted: ["scripts/same.ts"],
+        admitted: ["scripts/same.ts", "vite.config.ts"],
         target: path.join(scaffold, "scripts", "same.ts"),
         endings: true,
         differing: false,
@@ -145,6 +166,14 @@ export const test_workspace_generated_attribution = (): void => {
       },
     };
     const outcome = attributeRecordUrls({
+      // Every asset the scaffold ships, creditable or not: `drift.ts` is one
+      // whose bytes moved, and it has to be recognised so it can be refused by
+      // name rather than skipped as if it were somebody else's file.
+      candidates: new Set([
+        ...sources.keys(),
+        "scripts/drift.ts",
+        "scripts/absent.ts",
+      ]),
       isRepository: (url) => url === repositoryUrl,
       record,
       sources,
@@ -322,8 +351,13 @@ export const test_workspace_generated_attribution = (): void => {
 
     // And the wiring itself, against the real scaffold rather than a fixture:
     // `capture-browser.ts` is one of the twelve that read zero percent, and
-    // this is the pass that gives it back its address. A name the scaffold does
-    // not ship is refused in the same call, so the credit is watched declining.
+    // this is the pass that gives it back its address.
+    //
+    // A name the scaffold does not ship travels in the same record and is left
+    // exactly as it is. It is not refused, because refusing is a claim about an
+    // asset this repository ships whose bytes moved, and this is somebody
+    // else's file. The decline is watched on `drift.ts` above, where the asset
+    // is ours and the bytes are not.
     const scaffolded = path.join(root, "scaffolded");
     fs.mkdirSync(scaffolded);
     const child = (name: string): string =>
@@ -357,7 +391,7 @@ export const test_workspace_generated_attribution = (): void => {
       {
         attributed: 1,
         records: 1,
-        refused: [child("no-such-scaffold-script.ts")],
+        refused: [],
         first: true,
         second: child("no-such-scaffold-script.ts"),
       },

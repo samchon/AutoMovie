@@ -42,10 +42,32 @@ export const digestText = (text: string): string =>
     .update(text.replaceAll("\r\n", "\n"))
     .digest("hex");
 
-/** The scaffold-relative key a generated script URL would have come from. */
-export const generatedScaffoldKey = (url: string): string | undefined => {
-  const match = /\/(scripts\/[A-Za-z0-9._-]+\.[cm]?tsx?)$/u.exec(url);
-  return match?.[1];
+/**
+ * The scaffold-relative key a generated URL would have come from.
+ *
+ * The longest tail of the URL that names a creditable asset, because a tail
+ * alone cannot say where the generated project's root ends. `.../src/examples/
+ * buildings.ts` has four tails and only one of them is a scaffold asset.
+ *
+ * This began as `scripts/<name>` and that was too narrow by twenty-eight files.
+ * The scaffold ships 88 TypeScript assets and every one of them renders byte
+ * for byte, but `vite.config.ts`, `repaintSelectionReviews.ts` and the whole of
+ * `src/examples` sit outside `scripts/` and were never candidates.
+ */
+export const generatedScaffoldKey = (
+  url: string,
+  creditable?: ReadonlyMap<string, unknown> | ReadonlySet<string>,
+): string | undefined => {
+  const parts = url.replaceAll("\\", "/").split("/");
+  for (let index = 1; index < parts.length; index++) {
+    const tail = parts.slice(index).join("/");
+    if (creditable === undefined) {
+      if (/^scripts\/[A-Za-z0-9._-]+\.[cm]?tsx?$/u.test(tail)) return tail;
+      continue;
+    }
+    if (creditable.has(tail)) return tail;
+  }
+  return undefined;
 };
 
 /**
@@ -63,7 +85,7 @@ export const attributableScaffoldSources = (props: {
   const read = props.read ?? ((file: string) => fs.readFileSync(file, "utf8"));
   const admitted = new Map<string, string>();
   for (const [key, content] of Object.entries(props.rendered)) {
-    if (key.startsWith("scripts/") === false) continue;
+    if (/\.[cm]?tsx?$/u.test(key) === false) continue;
     const source = path.join(props.scaffoldRoot, key);
     let text;
     try {
@@ -132,13 +154,22 @@ const attributeSourceMap = (props: {
   if (Array.isArray(listed) === false) return;
   for (const [index, one] of listed.entries()) {
     if (typeof one !== "string") continue;
-    const key = generatedScaffoldKey(one);
+    const key = generatedScaffoldKey(one, props.sources);
     const target = key === undefined ? undefined : props.sources.get(key);
     if (target !== undefined) listed[index] = pathToRecordUrl(target);
   }
 };
 
 export const attributeRecordUrls = (props: {
+  /**
+   * Every scaffold asset the URL shape may name, creditable or not.
+   *
+   * Kept apart from `sources` so a byte that drifted is still recognised as a
+   * scaffold asset and refused by name. Folding the two would have turned the
+   * refusal into a silent skip, and a credit nobody watches decline is a credit
+   * nobody watches.
+   */
+  candidates?: ReadonlySet<string>;
   isRepository: (url: string) => boolean;
   record: {
     result?: Array<{ url?: string }>;
@@ -148,11 +179,12 @@ export const attributeRecordUrls = (props: {
 }): IAttributionOutcome => {
   const refused: string[] = [];
   let attributed = 0;
+  const candidates = props.candidates ?? new Set(props.sources.keys());
   const cache = props.record["source-map-cache"];
   for (const entry of props.record.result ?? []) {
     const url = entry.url;
     if (typeof url !== "string" || props.isRepository(url)) continue;
-    const key = generatedScaffoldKey(url);
+    const key = generatedScaffoldKey(url, candidates);
     if (key === undefined) continue;
     const source = props.sources.get(key);
     if (source === undefined) {
@@ -312,6 +344,7 @@ export interface IAttributionPass {
  * time a later freshness check would read as a change.
  */
 export const attributeGeneratedRecords = (props: {
+  candidates?: ReadonlySet<string>;
   directory: string;
   exists?: (file: string) => boolean;
   isRepository: (url: string) => boolean;
@@ -347,6 +380,7 @@ export const attributeGeneratedRecords = (props: {
       continue;
     }
     const outcome = attributeRecordUrls({
+      candidates: props.candidates,
       isRepository: props.isRepository,
       record,
       sources: props.sources,
