@@ -735,12 +735,25 @@ export const reconcileMeasuredShapes = (
 /** Where a path is printed the way every other line prints one. */
 const slashOf = (file: string): string => file.replaceAll("\\", "/");
 
-/** Every measured source the report carries, read from the report itself. */
-const measuredReportedSources = (): string[] => {
+/**
+ * Every measured source the report carries, read from the report itself.
+ *
+ * The directory is a parameter so this can be read against a report that is
+ * there and one that is not. It is the only way in: the measurement injects
+ * `neverRecorded`, so a private helper reachable only through the shipped
+ * dependency would never run under test, which is the shape this branch's own
+ * commits keep catching elsewhere.
+ */
+export const measuredReportedSources = (
+  reportDirectory: string = REPORT,
+): string[] => {
   try {
     return Object.keys(
       JSON.parse(
-        fs.readFileSync(path.join(REPORT, "coverage-final.json"), "utf8"),
+        fs.readFileSync(
+          path.join(reportDirectory, "coverage-final.json"),
+          "utf8",
+        ),
       ) as Record<string, unknown>,
     );
   } catch {

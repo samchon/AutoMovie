@@ -39,6 +39,7 @@ import {
   coverageSourceRoots,
   coverageTemporaryDirectory,
   measureCoverage,
+  measuredReportedSources,
   removeCoverageTemporaryDirectory,
   writeMeasuredLines,
   writeMeasuredSources,
@@ -1080,6 +1081,38 @@ test("classifies every raw coverage-record boundary without guessing", () => {
       coverageNeverRecorded({ directory: scripts, reported: [missing] }).length,
       0,
     );
+    // A query-suffixed URL is a record of the file it names, so the plain form
+    // is what the comparison uses. Counting it as a different file would put a
+    // loaded source on the never-loaded list.
+    fs.writeFileSync(
+      path.join(scripts, "queried.json"),
+      JSON.stringify({
+        result: [{ url: `${pathToFileURL(existing).href}?namespace=17881` }],
+      }),
+    );
+    assert.deepEqual(
+      coverageNeverRecorded({ directory: scripts, reported: [existing] }),
+      [],
+    );
+    fs.rmSync(path.join(scripts, "queried.json"));
+
+    // The report's own file list, read where it is and where it is not. The
+    // measurement injects `neverRecorded`, so this is the only way this runs.
+    const reportDirectory = path.join(root, "report-probe");
+    fs.mkdirSync(reportDirectory, { recursive: true });
+    fs.writeFileSync(
+      path.join(reportDirectory, "coverage-final.json"),
+      JSON.stringify({ [existing]: {}, [missing]: {} }),
+    );
+    assert.deepEqual(measuredReportedSources(reportDirectory), [
+      existing,
+      missing,
+    ]);
+    assert.deepEqual(
+      measuredReportedSources(path.join(root, "no-report-here")),
+      [],
+    );
+
     // A directory that does not exist names nothing, which is a different
     // finding from every measured source being absent from it.
     assert.deepEqual(
