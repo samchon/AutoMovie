@@ -78,8 +78,11 @@ export const requestedScenarioTerms = (
   ];
   const found: Array<{ source: string; term: string }> = [];
   for (const relative of sources) {
+    // Read without asking whether the file is there. All three are committed,
+    // so a guard here is an alternative nothing can reach, and if one of them
+    // ever goes missing that is the finding rather than something to skip: the
+    // read fails naming the path, and the pinned term list fails beside it.
     const file = path.join(root, relative);
-    if (fs.existsSync(file) === false) continue;
     for (const match of read(file).matchAll(
       /--include\s+(test_[A-Za-z0-9_]+)/gu,
     ))
