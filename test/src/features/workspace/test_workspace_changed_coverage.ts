@@ -1315,9 +1315,16 @@ test("runs the coverage orchestrator through injectable child dependencies", () 
   const output: string[] = [];
   // A shape correction that cannot be produced is an instrument failure, not a
   // quiet fall back to the merge it was going to replace.
-  let reconciliation: { failure: string | null; groups: number } = {
+  let reconciliation: {
+    failure: string | null;
+    groups: number;
+    shortfalls?: Array<{ file: string; lost: number[] }>;
+  } = {
     failure: null,
     groups: 1,
+    // What the union lost, which the run names rather than counts. A file that
+    // lost nothing prints no line at all, and both shapes are read below.
+    shortfalls: [{ file: "packages/x/src/one.ts", lost: [7, 8] }],
   };
   // What the run says about crediting a generated project's execution back to
   // the source it copied, so both the silent case and the refusing one are read
@@ -1458,6 +1465,10 @@ test("runs the coverage orchestrator through injectable child dependencies", () 
   assert.ok(output.some((line) => line.includes("collector did not launch")));
   assert.ok(output.some((line) => line.includes("sample.ts")));
   assert.ok(output.some((line) => line.includes("coverage records")));
+  assert.match(
+    output.join("\n"),
+    /^UNION SHORTFALL: packages\/x\/src\/one\.ts lost 2 covered lines a reading had \(7, 8\)$/mu,
+  );
   // The vanished measured source is named rather than only counted, because a
   // count of dropped readings is exactly as unusable as the count it came from.
   assert.match(
