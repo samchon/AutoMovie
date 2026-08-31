@@ -313,13 +313,17 @@ test("requires 100 percent of every touched file, not only changed lines", () =>
     };
     statementHits[1] = 1;
     const green = inspectChangedCoverage({ ...fixture, divergent: [] });
+    // One statement, not two: statement 1 sits on line 1 and this change
+    // occupies line 2. It is covered either way, so it changes no verdict here
+    // -- it changes what the totals claim to have measured, which is the point.
     assert.deepEqual(green.totals, {
-      statements: { covered: 2, total: 2 },
-      lines: { covered: 2, total: 2 },
+      statements: { covered: 1, total: 1 },
+      lines: { covered: 1, total: 1 },
       branches: { covered: 2, total: 2 },
       functions: { covered: 1, total: 1 },
     });
     assert.deepEqual(green.gaps, []);
+    assert.deepEqual(green.inherited, []);
     assert.deepEqual(green.instrumentFailures, []);
     assert.deepEqual(green.files, [
       { file: fixture.relative, totals: green.totals },
@@ -331,13 +335,71 @@ test("requires 100 percent of every touched file, not only changed lines", () =>
     branchHits[0][1] = 0;
     const red = inspectChangedCoverage({ ...fixture, divergent: [] });
     assert.deepEqual(red.totals, {
-      statements: { covered: 0, total: 2 },
-      lines: { covered: 0, total: 2 },
+      statements: { covered: 0, total: 1 },
+      lines: { covered: 0, total: 1 },
       branches: { covered: 1, total: 2 },
       functions: { covered: 0, total: 1 },
     });
-    assert.equal(red.gaps.length, 6);
-    assert.match(red.gaps.join("\n"), /:1 uncovered statement/u);
+    assert.match(red.gaps.join("\n"), /:2 uncovered statement/u);
+    // Statement 1 sits on line 1, which this change did not touch. It is
+    // uncovered in exactly the same reading, and it is excused and said rather
+    // than refused: the toll on an unrelated change is what #2163 removed.
+    assert.equal(
+      red.gaps.some((gap) => gap.includes(":1 ")),
+      false,
+    );
+    assert.deepEqual(red.inherited, [
+      `INHERITED GAP: ${fixture.relative} carries 1 statement, 0 branches, 0` +
+        " functions uncovered on lines this change did not touch; closing them" +
+        " is its own work",
+    ]);
+    // And the same file whose diff added no line at all -- a hunk that only
+    // deletes, which `parseChangedLines` reports as a touched file with an
+    // empty line set. Nothing is demanded, so nothing is refused, and every
+    // uncovered position is stated instead. A run reporting no gap and no
+    // inherited population would be the failure this pair exists to tell apart.
+    const deletion = inspectChangedCoverage({
+      ...fixture,
+      divergent: [],
+      files: new Map([[fixture.relative, new Set<number>()]]),
+    });
+    assert.deepEqual(deletion.gaps, []);
+    // A function entry anchored only at its declaration, which is a shape the
+    // transpile produces: the demand is placed from `decl` when `loc` is
+    // absent, so an entry the change occupies is still asked for and one it
+    // does not occupy is still excused. The address degrades to `?` because
+    // only `loc` carries a position to report, which is the honest limit.
+    const declarationOnly = (lines: Set<number>) =>
+      inspectChangedCoverage({
+        ...fixture,
+        divergent: [],
+        files: new Map([[fixture.relative, lines]]),
+        coverage: {
+          [fixture.file]: {
+            ...fixture.data,
+            fnMap: { 0: { name: "value", decl: { start: { line: 2 } } } },
+            f: { 0: 0 },
+          },
+        },
+      });
+    assert.deepEqual(
+      declarationOnly(new Set([2])).gaps.filter((gap) =>
+        gap.includes("function"),
+      ),
+      [`${fixture.relative}:? uncovered function value`],
+    );
+    const elsewhere = declarationOnly(new Set([1]));
+    assert.deepEqual(
+      elsewhere.gaps.filter((gap) => gap.includes("function")),
+      [],
+    );
+    assert.equal(elsewhere.inherited.length, 1);
+
+    assert.deepEqual(deletion.inherited, [
+      `INHERITED GAP: ${fixture.relative} carries 2 statements, 1 branch, 1` +
+        " function uncovered on lines this change did not touch; closing them" +
+        " is its own work",
+    ]);
     assert.match(red.gaps.join("\n"), /uncovered line/u);
     assert.match(red.gaps.join("\n"), /uncovered function value/u);
     assert.match(red.gaps.join("\n"), /uncovered branch cond-expr\[1\]/u);
@@ -464,7 +526,14 @@ test("handles comment-only files and sparse Istanbul maps without false green", 
       },
     };
     fixture.data.b = undefined;
-    const sparse = inspectChangedCoverage({ ...fixture, divergent: [] });
+    // Both lines of the fixture are named as changed, so nothing here is
+    // excused by #2163's demand rule and this case stays about what it is
+    // about: how a sparse Istanbul map reads.
+    const touched = {
+      ...fixture,
+      files: new Map([[fixture.relative, new Set([1, 2])]]),
+    };
+    const sparse = inspectChangedCoverage({ ...touched, divergent: [] });
     assert.deepEqual(sparse.instrumentFailures, []);
     assert.deepEqual(sparse.totals, {
       statements: { covered: 0, total: 4 },
@@ -486,7 +555,7 @@ test("handles comment-only files and sparse Istanbul maps without false green", 
     fixture.data.statementMap = undefined;
     fixture.data.fnMap = undefined;
     fixture.data.branchMap = undefined;
-    const emptyMaps = inspectChangedCoverage({ ...fixture, divergent: [] });
+    const emptyMaps = inspectChangedCoverage({ ...touched, divergent: [] });
     assert.deepEqual(emptyMaps.totals, {
       statements: { covered: 0, total: 0 },
       lines: { covered: 0, total: 0 },
@@ -885,6 +954,7 @@ test("reports totals, gaps, and instrument failures separately", () => {
         },
       ],
       gaps: ["a.ts:1 uncovered line"],
+      inherited: ["INHERITED GAP: d.ts carries 3 statements"],
       instrumentFailures: ["b.ts: stale"],
       disagreements: ["c.ts: 2 function entries are a second reading"],
     },
@@ -897,9 +967,13 @@ test("reports totals, gaps, and instrument failures separately", () => {
   assert.match(output[2], /^a\.ts: statements/u);
   // A disagreement is stated before the gaps it would otherwise have been
   // counted among, so a reader meets the reason before the list.
-  assert.match(output[3], /^INSTRUMENT DISAGREEMENT: c\.ts: 2 function/u);
-  assert.match(output[4], /^COVERAGE GAP:/u);
-  assert.match(output[5], /^INSTRUMENT FAILURE:/u);
+  // The excused population is stated before the refusals, because a reader
+  // deciding whether the verdict is honest needs to know what was not demanded
+  // before reading what was.
+  assert.match(output[3], /^INHERITED GAP: d\.ts carries 3 statements$/u);
+  assert.match(output[4], /^INSTRUMENT DISAGREEMENT: c\.ts: 2 function/u);
+  assert.match(output[5], /^COVERAGE GAP:/u);
+  assert.match(output[6], /^INSTRUMENT FAILURE:/u);
 });
 
 test("records exact source identity and line counts beside a coverage report", () => {
@@ -1147,7 +1221,9 @@ test("executes type-only TypeScript and exposes CommonJS helper attribution", ()
     writeMeasuredSources(commonJs.report);
     const commonJsResult = inspectChangedCoverage({
       root,
-      files: new Map([[relative, new Set()]]),
+      // Both authored lines, so the whole transpiled artifact is demanded and
+      // the helper attribution below is a verdict rather than an excuse.
+      files: new Map([[relative, new Set([1, 2])]]),
       divergent: [],
       coverage: commonJs.coverage,
       measuredSources: readUnknownRecord(
@@ -1203,7 +1279,9 @@ test("executes type-only TypeScript and exposes CommonJS helper attribution", ()
     const snapshots = readUnknownRecord(path.join(report, MEASURED_SOURCES));
     const result = inspectChangedCoverage({
       root,
-      files: new Map([[relative, new Set()]]),
+      // Both authored lines, so the whole transpiled artifact is demanded and
+      // the helper attribution below is a verdict rather than an excuse.
+      files: new Map([[relative, new Set([1, 2])]]),
       divergent: [],
       coverage,
       measuredSources: snapshots,
