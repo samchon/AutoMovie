@@ -63,8 +63,8 @@ const workspacePackageRoot = (name: string, subject: string): string => {
   return path.dirname(manifest);
 };
 
-/** The `@automovie/*` packages one workspace package declares it needs. */
-const workspaceDependencies = (packageRoot: string): string[] => {
+/** Every package one workspace package declares it needs, workspace or not. */
+const declaredDependencies = (packageRoot: string): string[] => {
   const manifest: unknown = JSON.parse(
     fs.readFileSync(path.join(packageRoot, "package.json"), "utf8"),
   );
@@ -78,9 +78,47 @@ const workspaceDependencies = (packageRoot: string): string[] => {
       ...Object.keys(declared.dependencies ?? {}),
       ...Object.keys(declared.peerDependencies ?? {}),
     ]),
-  ]
-    .filter((name) => name.startsWith("@automovie/"))
-    .sort((left, right) => left.localeCompare(right));
+  ].sort((left, right) => left.localeCompare(right));
+};
+
+/**
+ * Install one package a facade needs, without following its own tree.
+ *
+ * A symlinked package resolves its dependencies through its realpath, so the
+ * repository answers for it and nothing has to be installed. A facade is a real
+ * directory inside the fixture, so that walk ends at the fixture and every
+ * dependency it declares has to be there: `@automovie/production`'s built
+ * compiler requires `typescript-compiler`, and moving it into the fixture is
+ * what took that away.
+ *
+ * One level is enough. What is linked here is a junction, so its own
+ * dependencies resolve through the repository exactly as they did before.
+ */
+const linkDeclaredDependency = (props: {
+  name: string;
+  project: string;
+}): void => {
+  const target = path.join(
+    props.project,
+    "node_modules",
+    ...props.name.split("/"),
+  );
+  if (fs.existsSync(target)) return;
+  let packageRoot: string;
+  try {
+    packageRoot = workspacePackageRoot(props.name, "Generated consumer");
+  } catch {
+    // A dependency this repository does not install is not this linker's to
+    // invent. The fixture will refuse when it reaches for it, naming the
+    // package, which is a better failure than one invented here.
+    return;
+  }
+  fs.mkdirSync(path.dirname(target), { recursive: true });
+  fs.symlinkSync(
+    packageRoot,
+    target,
+    process.platform === "win32" ? "junction" : "dir",
+  );
 };
 
 /** Rebuild one workspace package whose emit no longer answers for its source. */
@@ -172,12 +210,15 @@ export const linkGeneratedWorkspacePackage = (props: {
   // package the lists had missed. So the closure is installed rather than
   // enumerated, which is also what makes the next such dependency arrive
   // without a fixture edit.
-  for (const dependency of workspaceDependencies(packageRoot))
-    linkGeneratedWorkspacePackage({
-      name: dependency,
-      project: props.project,
-      subject: props.subject,
-    });
+  for (const dependency of declaredDependencies(packageRoot))
+    if (dependency.startsWith("@automovie/"))
+      linkGeneratedWorkspacePackage({
+        name: dependency,
+        project: props.project,
+        subject: props.subject,
+      });
+    else if (BUILT_FACADE_PACKAGES.has(props.name))
+      linkDeclaredDependency({ name: dependency, project: props.project });
   if (BUILT_FACADE_PACKAGES.has(props.name) === false) {
     fs.symlinkSync(
       packageRoot,
