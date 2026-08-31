@@ -776,7 +776,8 @@ export const measureCoverage = (
         `${attribution.attributed === 1 ? "entry" : "entries"} in ` +
         `${attribution.records} record ${attribution.records === 1 ? "file" : "files"} ` +
         `credited to the repository source whose bytes they ran, ` +
-        `${attribution.linked} vanished linked build${attribution.linked === 1 ? "" : "s"} re-addressed` +
+        `${attribution.linked} vanished linked build${attribution.linked === 1 ? "" : "s"} and ` +
+        `${attribution.queried} query-suffixed reading${attribution.queried === 1 ? "" : "s"} re-addressed` +
         (attribution.refused.length === 0
           ? ""
           : `, ${attribution.refused.length} refused for bytes no repository source vouches for`),

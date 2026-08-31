@@ -8,12 +8,14 @@ import {
   attributableScaffoldSources,
   attributeGeneratedRecords,
   attributeLinkedLibraries,
+  attributeLoaderQueries,
   attributeRecordUrls,
   digestText,
   generatedScaffoldKey,
   linkedWorkspaceLibraryPath,
   pathToRecordUrl,
   recordUrlToPath,
+  strippedLoaderQuery,
 } from "../../coverage/generatedAttribution";
 import { measuredScaffoldAttribution } from "../../coverage/measureCoverage";
 
@@ -276,10 +278,16 @@ export const test_workspace_generated_attribution = (): void => {
         }),
       },
       {
-        pass: { attributed: 1, linked: 0, records: 1, refused: [] },
+        pass: { attributed: 1, linked: 0, queried: 0, records: 1, refused: [] },
         written: ["one.json"],
         untouched: { result: [{ url: "file:///tmp/other.js" }] },
-        absent: { attributed: 0, linked: 0, records: 0, refused: [] },
+        absent: {
+          attributed: 0,
+          linked: 0,
+          queried: 0,
+          records: 0,
+          refused: [],
+        },
       },
     );
 
@@ -301,7 +309,13 @@ export const test_workspace_generated_attribution = (): void => {
         ),
       },
       {
-        again: { attributed: 0, linked: 0, records: 0, refused: [] },
+        again: {
+          attributed: 0,
+          linked: 0,
+          queried: 0,
+          records: 0,
+          refused: [],
+        },
         stored: { result: [{ url: repositoryUrl }] },
       },
     );
@@ -440,6 +454,47 @@ export const test_workspace_generated_attribution = (): void => {
         second: pathToRecordUrl(fixture("present.js")),
         third: fixtureLib.replace("/evidence/", "/no-such-package/"),
         fourth: pathToRecordUrl(path.join(root, "unrelated.js")),
+      },
+    );
+    // `tsImport` appends `?namespace=<id>` so two loads of one file stay
+    // distinct, and V8 records that URL verbatim. Turned back into a path it
+    // names a file no filesystem has, so c8 drops the whole reading. The run
+    // had been printing these among its `gone from disk at report time` count
+    // for its whole life: `build/experimental.ts%3Fnamespace=...`.
+    const plain = path.join(root, "plain.ts");
+    fs.writeFileSync(plain, "export const value = 1;\n");
+    const queried = {
+      result: [
+        { url: `${pathToRecordUrl(plain)}?namespace=17881` },
+        { url: `${pathToRecordUrl(plain)}#fragment` },
+        // A suffix whose plain form is a file nobody has: it keeps its own
+        // address and stays visible as missing rather than being invented.
+        { url: `${pathToRecordUrl(path.join(root, "absent.ts"))}?namespace=1` },
+        { url: pathToRecordUrl(plain) },
+        { url: "node:fs" },
+      ],
+    };
+    TestValidator.equals(
+      "a loader's query is dropped only when the plain file is really there",
+      {
+        stripped: strippedLoaderQuery("file:///a/b.ts?x=1"),
+        fragment: strippedLoaderQuery("file:///a/b.ts#y"),
+        none: strippedLoaderQuery("file:///a/b.ts"),
+        moved: attributeLoaderQueries({ record: queried }),
+        urls: queried.result.map((one) => one.url),
+      },
+      {
+        stripped: "file:///a/b.ts",
+        fragment: "file:///a/b.ts",
+        none: undefined,
+        moved: 2,
+        urls: [
+          pathToRecordUrl(plain),
+          pathToRecordUrl(plain),
+          `${pathToRecordUrl(path.join(root, "absent.ts"))}?namespace=1`,
+          pathToRecordUrl(plain),
+          "node:fs",
+        ],
       },
     );
   } finally {

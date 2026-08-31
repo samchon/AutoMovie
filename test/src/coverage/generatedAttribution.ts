@@ -240,11 +240,62 @@ export const attributeLinkedLibraries = (props: {
   return attributed;
 };
 
+/**
+ * The same script, addressed without the loader's query.
+ *
+ * `tsImport` appends `?namespace=<id>` to a module URL so two loads of one file
+ * stay distinct, and V8 records that URL verbatim. Turned back into a path it
+ * names `build/experimental.ts?namespace=1`, which no filesystem has, so c8
+ * cannot read the script and drops the whole reading.
+ *
+ * The run printed this for its whole life as part of `gone from disk at report
+ * time` and it was the third member of a family: a scaffold copy executed at a
+ * temporary path (#2185), a linked build deleted with its fixture (#2201), and
+ * a real repository source addressed with a suffix. In each the code ran and
+ * the measurement landed somewhere nobody reads.
+ *
+ * Only a URL whose stripped form is a file that exists is moved, so a genuine
+ * query-bearing address that names nothing keeps its own address and stays
+ * visible as missing.
+ */
+export const strippedLoaderQuery = (url: string): string | undefined => {
+  const cut = url.search(/[?#]/u);
+  if (cut === -1) return undefined;
+  return url.slice(0, cut);
+};
+
+/** Re-address every query-suffixed reading in one record to its plain file. */
+export const attributeLoaderQueries = (props: {
+  exists?: (file: string) => boolean;
+  record: { result?: Array<{ url?: string }> };
+}): number => {
+  const exists = props.exists ?? ((file: string) => fs.existsSync(file));
+  let attributed = 0;
+  for (const entry of props.record.result ?? []) {
+    const url = entry.url;
+    if (typeof url !== "string" || url.startsWith("file:") === false) continue;
+    const plain = strippedLoaderQuery(url);
+    if (plain === undefined) continue;
+    let target;
+    try {
+      target = fileURLToPath(plain);
+    } catch {
+      continue;
+    }
+    if (exists(target) === false) continue;
+    entry.url = plain;
+    attributed++;
+  }
+  return attributed;
+};
+
 export interface IAttributionPass {
   /** Generated URLs credited to a repository source, across every record. */
   attributed: number;
   /** Vanished linked workspace builds re-addressed to the repository's copy. */
   linked: number;
+  /** Query-suffixed readings re-addressed to the plain file they name. */
+  queried: number;
   /** Records whose bytes were rewritten. */
   records: number;
   /** Distinct generated URLs no repository source vouched for. */
@@ -278,12 +329,13 @@ export const attributeGeneratedRecords = (props: {
   const refused = new Set<string>();
   let attributed = 0;
   let linked = 0;
+  let queried = 0;
   let records = 0;
   let entries: string[];
   try {
     entries = list(props.directory);
   } catch {
-    return { attributed, linked, records, refused: [] };
+    return { attributed, linked, queried, records, refused: [] };
   }
   for (const entry of entries) {
     if (entry.endsWith(".json") === false) continue;
@@ -309,7 +361,9 @@ export const attributeGeneratedRecords = (props: {
             root: props.root,
           });
     linked += moved;
-    if (outcome.attributed === 0 && moved === 0) continue;
+    const plain = attributeLoaderQueries({ exists: props.exists, record });
+    queried += plain;
+    if (outcome.attributed === 0 && moved === 0 && plain === 0) continue;
     attributed += outcome.attributed;
     records++;
     write(file, JSON.stringify(record));
@@ -317,6 +371,7 @@ export const attributeGeneratedRecords = (props: {
   return {
     attributed,
     linked,
+    queried,
     records,
     refused: [...refused].sort((left, right) => left.localeCompare(right)),
   };
