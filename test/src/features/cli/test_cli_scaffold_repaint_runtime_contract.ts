@@ -1232,6 +1232,44 @@ export const test_cli_scaffold_repaint_runtime_contract =
         },
       );
 
+      // The measurement `review-verification/measurements.md` tells an author
+      // to run. `npm run texture:scale` is wired, is documented, and no test
+      // had ever run it once, so its charged lines were ordinary debt rather
+      // than a reading that lost its address. It rides here because the script
+      // requires the project state to be `current` and the compile above just
+      // made it so; a fixture of its own would pay for a second compile to
+      // reach the same condition.
+      const textureScale = runGenerated(
+        fixture.root,
+        "scripts/measureTextureScale.ts",
+        [],
+        true,
+      );
+      const textureScaleOutput = generatedOutput(textureScale);
+      TestValidator.equals(
+        "the documented texture-scale measurement runs and reports its own census",
+        {
+          status: textureScale.status,
+          // The census line is unconditional, so its absence is the script
+          // failing to reach its own end rather than a fixture with nothing to
+          // measure. Whether this fixture declares a checkable coordinate
+          // source is not this test's claim: both endings are honest readings
+          // and the script says which one it took.
+          census:
+            /measured \d+ model\(s\), \d+ part\(s\), \d+ carrying texture coordinates; \d+ structured texture binding\(s\), \d+ of them declaring a checkable coordinate source/u.test(
+              textureScaleOutput,
+            ),
+          verdict:
+            textureScaleOutput.includes(
+              "no binding declared a checkable coordinate source",
+            ) ||
+            /every one of those \d+ claim\(s\) agrees with the surface it is bound to/u.test(
+              textureScaleOutput,
+            ),
+        },
+        { status: 0, census: true, verdict: true },
+      );
+
       // The one action that still needs its own process: it asks the CLI entry
       // whether a refusal becomes a non-zero exit and a printed diagnostic.
       // Everything after it asks the command contract instead, and rides in one
