@@ -100,6 +100,44 @@ export interface IAttributionOutcome {
  * URL it belongs to, because c8 looks the cache up by url and a rewritten url
  * with a stranded cache entry reads as a file with no map at all.
  */
+/** One `source-map-cache` value, as V8 writes it. */
+interface ISourceMapEntry {
+  data?: { sources?: unknown[] };
+  url?: unknown;
+}
+
+/**
+ * Move a cache entry, and everything inside it that still names the copy.
+ *
+ * Rewriting only the record's `url` is not enough, and believing it was is what
+ * made the first attempt report twelve credited entries while the scaffold
+ * still read zero. c8 resolves a range through the source map, and the map
+ * carries its own `url` and its own `sources`, so those decide the address the
+ * report finally uses. The record's url decides which map is consulted; the
+ * map decides where the coverage lands.
+ */
+const attributeSourceMap = (props: {
+  cache: Record<string, unknown>;
+  from: string;
+  sources: ReadonlyMap<string, string>;
+  to: string;
+}): void => {
+  if (Object.hasOwn(props.cache, props.from) === false) return;
+  const entry = props.cache[props.from] as ISourceMapEntry | null;
+  props.cache[props.to] = entry;
+  delete props.cache[props.from];
+  if (typeof entry !== "object" || entry === null) return;
+  if (typeof entry.url === "string") entry.url = props.to;
+  const listed = entry.data?.sources;
+  if (Array.isArray(listed) === false) return;
+  for (const [index, one] of listed.entries()) {
+    if (typeof one !== "string") continue;
+    const key = generatedScaffoldKey(one);
+    const target = key === undefined ? undefined : props.sources.get(key);
+    if (target !== undefined) listed[index] = pathToRecordUrl(target);
+  }
+};
+
 export const attributeRecordUrls = (props: {
   isRepository: (url: string) => boolean;
   record: {
@@ -122,10 +160,13 @@ export const attributeRecordUrls = (props: {
       continue;
     }
     const replacement = pathToRecordUrl(source);
-    if (cache !== undefined && Object.hasOwn(cache, url)) {
-      cache[replacement] = cache[url];
-      delete cache[url];
-    }
+    if (cache !== undefined)
+      attributeSourceMap({
+        cache,
+        from: url,
+        sources: props.sources,
+        to: replacement,
+      });
     entry.url = replacement;
     attributed++;
   }
