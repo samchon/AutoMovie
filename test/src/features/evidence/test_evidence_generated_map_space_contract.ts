@@ -342,6 +342,137 @@ const replaceOnce = (source: string, before: string, after: string): string => {
   return `${source.slice(0, first)}${after}${source.slice(first + before.length)}`;
 };
 
+/**
+ * The answers a target gets from each owner that carries it.
+ *
+ * Thirteen targets are cited by more than one owner here, and every one of them
+ * used to receive the same sentence from all of them. `evidence-reason-shared`
+ * refuses that now, and it is right to: the shared `population-variety` answer
+ * read "This layer has one owner, so its endings cannot differ from a
+ * sibling's", which cannot be true of the map layer and the space layer at once
+ * while standing word for word on both.
+ *
+ * A fixture that authors evidence is authoring evidence. It is held to the rule
+ * it exists to exercise, and writing four answers is what proves the rule can
+ * be satisfied rather than only enforced.
+ */
+const OWNER_TARGET_REASONS: Readonly<
+  Record<EvidenceOwner, Readonly<Record<string, string>>>
+> = {
+  map: {
+    "population-variety":
+      "The map layer ends on a site interface, and the space layer ends on a circulation route; this owner is the only one of the two whose boundary is stated in world coordinates rather than in room-relative ones.",
+    "purpose-fit":
+      "The map supplies the site polygon and road-access node that the building space consumes, which is the interface this delivery needs before any footprint can be placed.",
+    "layer-boundary":
+      "The map owns the site boundary and the external road, and stops at the access node; what happens past that node belongs to the space owner.",
+    "production-language":
+      "The map states its extent, boundary, and access identities in the declared English working language while keeping metre coordinates exact.",
+    "proportionate-development":
+      "One unit develops the site interface to the detail the building space consumes and no further: extent, polygon, road, access node.",
+    "scope-preservation":
+      "The map keeps the complete world extent, site polygon, external road, and access node without deferring any of them to the space owner.",
+    "substantive-completion":
+      "The map states a 200 by 200 metre extent, a 40 by 30 metre site polygon, a road, and a named access point as coordinates rather than as a promise.",
+    "machine-default":
+      "The map uses the world, site, road, and access-node identifiers directly rather than describing them as a kind of place.",
+    "evidence-content-conformance":
+      "Every annotation on the map names an extent, polygon vertex, road terminus, or access-node coordinate the unit actually contains.",
+    "declared-basis":
+      "The map traces its extent and metre frame to settings and leaves only the polygon, road and access decisions local.",
+    "source-scope-preservation":
+      "`createSiteMap` keeps the whole site interface it is assigned and constructs no building topology.",
+    "source-substantive-completion":
+      "`createSiteMap` returns the polygon, road and access node as constructed values rather than as a stub a consumer must finish.",
+    "source-evidence-content-conformance":
+      "Every annotation on `createSiteMap` names a value the function actually returns.",
+  },
+  "map-source": {
+    "population-variety":
+      "This source owner differs from its design owner in what it can be falsified by: the design is read, and this is executed and its returned polygon, road and access node compared.",
+    "purpose-fit":
+      "`createSiteMap` exists so the reviewed site interface is a value a consumer receives rather than a document a consumer reads.",
+    "layer-boundary":
+      "`createSiteMap` constructs the map's own artifacts and imports nothing from the space source.",
+    "production-language":
+      "`createSiteMap` names its identifiers and metre values in the declared working language without abbreviating them.",
+    "proportionate-development":
+      "`createSiteMap` builds exactly the interface the building space consumes and adds no unused world detail.",
+    "scope-preservation":
+      "`createSiteMap` realizes the whole reviewed map unit and leaves none of it to its caller.",
+    "substantive-completion":
+      "`createSiteMap` is a complete constructor: every value the design states is present in what it returns.",
+    "machine-default":
+      "`createSiteMap` uses the design's own identifiers as its own rather than re-coining them.",
+    "evidence-content-conformance":
+      "Each annotation names a constructed value rather than a design intention.",
+    "declared-basis":
+      "`createSiteMap` derives its frame from settings and its polygon from the map design it cites.",
+    "source-scope-preservation":
+      "`createSiteMap` keeps the whole site interface it is assigned and constructs no building topology.",
+    "source-substantive-completion":
+      "`createSiteMap` returns the polygon, road and access node as constructed values rather than as a stub a consumer must finish.",
+    "source-evidence-content-conformance":
+      "Every annotation on `createSiteMap` names a value the function actually returns.",
+  },
+  space: {
+    "population-variety":
+      "The space layer ends on a continuous route from an access node it did not define, which is a different kind of ending from the map's: this owner's boundary is inherited rather than declared.",
+    "purpose-fit":
+      "The space supplies the footprint, envelope opening, room and route that turn the map's access node into somewhere a person can arrive.",
+    "layer-boundary":
+      "The space owns the building and the circulation inside the adopted boundary, and restates neither the road nor the world coordinates the map fixed.",
+    "production-language":
+      "The space states its footprint, opening and route in the declared English working language while keeping clear dimensions exact.",
+    "proportionate-development":
+      "One unit develops the building topology to the detail its downstream consumer needs: footprint, opening, room, route.",
+    "scope-preservation":
+      "The space keeps the complete footprint, opening, room and route assigned to it and hides no map decision inside them.",
+    "substantive-completion":
+      "The space states clear dimensions, an opening, a room and a continuous route as an artifact rather than as a heading.",
+    "machine-default":
+      "The space uses the building, room and route identifiers directly rather than describing them as a kind of space.",
+    "evidence-content-conformance":
+      "Every annotation on the space names a footprint vertex, opening width, room extent, or route segment the unit actually contains.",
+    "declared-basis":
+      "The space traces its boundary and access identity to the map and leaves only its footprint, opening and route decisions local.",
+    "source-scope-preservation":
+      "`createBuildingSpace` keeps the whole building topology it is assigned and constructs no site interface.",
+    "source-substantive-completion":
+      "`createBuildingSpace` returns the footprint, opening, room and route as constructed values rather than as a stub.",
+    "source-evidence-content-conformance":
+      "Every annotation on `createBuildingSpace` names a value the function actually returns.",
+  },
+  "space-source": {
+    "population-variety":
+      "This source owner differs from its design owner in what it can be falsified by: the design is read, and this is executed and its returned footprint, opening and route walked.",
+    "purpose-fit":
+      "`createBuildingSpace` exists so the reviewed building topology is a value a consumer receives rather than a document a consumer reads.",
+    "layer-boundary":
+      "`createBuildingSpace` consumes the access node by identity and constructs nothing the map source already owns.",
+    "production-language":
+      "`createBuildingSpace` names its identifiers and metre values in the declared working language without abbreviating them.",
+    "proportionate-development":
+      "`createBuildingSpace` builds exactly the topology the review walks and adds no unused interior detail.",
+    "scope-preservation":
+      "`createBuildingSpace` realizes the whole reviewed space unit and leaves none of it to its caller.",
+    "substantive-completion":
+      "`createBuildingSpace` is a complete constructor: every value the design states is present in what it returns.",
+    "machine-default":
+      "`createBuildingSpace` uses the design's own identifiers as its own rather than re-coining them.",
+    "evidence-content-conformance":
+      "Each annotation names a constructed value rather than a design intention.",
+    "declared-basis":
+      "`createBuildingSpace` derives its boundary from the map and its route from the space design it cites.",
+    "source-scope-preservation":
+      "`createBuildingSpace` keeps the whole building topology it is assigned and constructs no site interface.",
+    "source-substantive-completion":
+      "`createBuildingSpace` returns the footprint, opening, room and route as constructed values rather than as a stub.",
+    "source-evidence-content-conformance":
+      "Every annotation on `createBuildingSpace` names a value the function actually returns.",
+  },
+};
+
 const anchorOf = (target: string): string =>
   target.includes("#") ? target.slice(target.indexOf("#") + 1) : target;
 
@@ -365,7 +496,11 @@ const reasonOf = (owner: EvidenceOwner, target: string): string => {
     return "createSiteMap has exactly one design owner: the complete maps/world.md file.";
   if (target === "spaces/building.md")
     return "createBuildingSpace has exactly one design owner: the complete spaces/building.md file.";
-  const reason = TARGET_REASONS[anchorOf(target)];
+  const anchor = anchorOf(target);
+  // An owner-specific answer first: a target cited by more than one owner gets
+  // one sentence per owner, because a sentence standing word for word on two
+  // hosts states nothing about either and the shipped graph refuses it.
+  const reason = OWNER_TARGET_REASONS[owner][anchor] ?? TARGET_REASONS[anchor];
   assert.ok(reason, `No evidence reason exists for ${target}.`);
   return reason;
 };
