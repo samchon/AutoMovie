@@ -128,6 +128,15 @@ export const libraryAuthoring = (props: {
   anchors?: readonly string[];
   digest?: string;
   paths?: readonly string[];
+  /**
+   * What the design owner's own source binding is, when it is not the ordinary
+   * one.
+   *
+   * `none` is a branch whose source has not been started, and `empty` is a
+   * binding whose selector matches no file. Both are states the compiler skips
+   * rather than charges, and neither had a fixture until #2196.
+   */
+  binding?: "empty" | "none";
 }): IAutoMovieProductionEvidence => {
   const sourceBinding = {
     branch: "spaceSources",
@@ -159,7 +168,12 @@ export const libraryAuthoring = (props: {
             digest: props.digest ?? "a".repeat(64),
           }),
         ),
-        sourceBinding,
+        sourceBinding:
+          props.binding === "none"
+            ? null
+            : props.binding === "empty"
+              ? { ...sourceBinding, paths: [] }
+              : sourceBinding,
       },
     ],
     contracts: [],
