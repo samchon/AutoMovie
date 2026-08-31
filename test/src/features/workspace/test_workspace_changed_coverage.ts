@@ -31,6 +31,7 @@ import {
   MEASURED_SOURCES,
   coverageIncludes,
   coverageMissingScripts,
+  coverageNeverRecorded,
   coverageRecordCount,
   coverageRecords,
   coverageScriptShapes,
@@ -1058,6 +1059,37 @@ test("classifies every raw coverage-record boundary without guessing", () => {
         ],
       }),
     );
+    // Which measured sources no record names at all. `--all` reports every
+    // include match whether it loaded or not, so a zero-percent file is either
+    // untested or ran somewhere the report could not follow, and only the
+    // records tell those apart. Three proxies for this question gave three
+    // different answers; a record is not a proxy.
+    assert.deepEqual(
+      coverageNeverRecorded({
+        directory: scripts,
+        reported: [existing, missing, path.join(root, "never-loaded.ts")],
+      }),
+      [path.join(root, "never-loaded.ts")],
+    );
+    // `missing` is deliberately not on that list, and the difference is the
+    // whole point of having two diagnostics. It appears in a record, so a
+    // process did load it; it is gone from disk, so the report could not read
+    // it back. `coverageMissingScripts` names that one. A file in no record is
+    // a third thing again: nothing ever loaded it.
+    assert.equal(
+      coverageNeverRecorded({ directory: scripts, reported: [missing] }).length,
+      0,
+    );
+    // A directory that does not exist names nothing, which is a different
+    // finding from every measured source being absent from it.
+    assert.deepEqual(
+      coverageNeverRecorded({
+        directory: path.join(root, "absent"),
+        reported: [existing],
+      }),
+      [],
+    );
+
     // The count and the part of it that can be acted on. A vanished temporary
     // is ordinary; a vanished measured source is a reading of charged code that
     // the report dropped, and only the second kind is worth a name.
