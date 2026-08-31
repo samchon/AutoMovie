@@ -46,8 +46,14 @@ export const scriptShape = (script: {
  * Measured on this repository: `builtEnvironment.ts` appears in two raw records
  * of one suite run with 127 and 241 function entries. Reported together, c8
  * returns 90.93 percent. Reported apart, the two groups return 100 percent and
- * 32.56 percent — so the merge of a complete reading and a partial one is worse
- * than the complete one, which a union can never be.
+ * 32.56 percent, so for that file the merge is worse than one of its parts.
+ *
+ * It is not worse for every file, and reading it that way was the mistake this
+ * split first made. `build/experimental.ts` appears four times in one run
+ * carrying three shapes, and c8 folds all four to 302 of 304 statements while
+ * splitting them reached 184. Splitting is therefore a candidate reading rather
+ * than a correction, and `unionEntries` is given c8's own report alongside the
+ * groups so the fullest of them wins.
  *
  * The grouping is greedy and first-fit, which is enough because the number of
  * groups is bounded by the largest number of shapes any one script was read in,
@@ -291,6 +297,8 @@ export const reconcileCoverageShapes = (props: {
   mkdir: (directory: string) => void;
   readReport: (directory: string) => Record<string, ICoverageEntry> | null;
   report: (temporary: string, reports: string) => number;
+  /** Where the run's own merged report already sits, read as one more reading. */
+  reportDirectory: string;
   temporary: string;
   writeReport: (entries: Record<string, ICoverageEntry>) => void;
 }): IShapeReconciliation => {
@@ -320,6 +328,19 @@ export const reconcileCoverageShapes = (props: {
       };
     reports.push(read);
   }
-  props.writeReport(unionEntries(reports));
+  // The report c8 already wrote is a candidate too, and taking the fuller of
+  // the two is what makes this never worse than the merge it replaces.
+  //
+  // Splitting by shape assumed a differing shape means a lossy merge. That is
+  // true of `builtEnvironment.ts`, where c8 folds a complete reading and a
+  // partial one into 90.93 percent. It is false of `build/experimental.ts`,
+  // whose four records carry three shapes and which c8 merges to 302 of 304
+  // statements -- there the split produced three partial groups and the fold
+  // could not put them back. Measured on both, in that order, after the second
+  // one made this claim's own JSDoc false.
+  const merged = props.readReport(props.reportDirectory);
+  props.writeReport(
+    unionEntries(merged === null ? reports : [...reports, merged]),
+  );
   return { failure: null, groups: groups.length };
 };
