@@ -65,7 +65,10 @@ const carries = (
  *
  * Scenarios:
  *
- * 1. A build that throws is `source-execution-failed`, naming the export.
+ * 1. A build that throws is `source-execution-failed`, naming the export, and a
+ *    build that throws something with no `message` is read the same way. The
+ *    compiler stringifies those two through different arms, and only the
+ *    `Error` arm had ever been taken.
  * 2. A build that never returns is `source-execution-timeout` at the sandbox's
  *    own limit rather than hanging the compile.
  * 3. A build returning a thenable is `source-export-invalid`, because a
@@ -81,6 +84,14 @@ export const test_production_library_source_refusals = (): void => {
   const thrown = refuse({
     source: owner(`() => {
     throw new Error("the hall is not ready");
+  }`),
+  });
+  // Not an `Error`, so `"message" in error` is false and the value itself is
+  // what has to be stringified. A module can throw anything, and a compiler
+  // that read only `error.message` would report `undefined` for this one.
+  const thrownString = refuse({
+    source: owner(`() => {
+    throw "the hall is not ready";
   }`),
   });
   const looping = refuse({
@@ -121,6 +132,15 @@ export const hall = {
           ),
       ],
       [
+        "a build throwing something with no message is stringified whole",
+        () =>
+          carries(
+            thrownString,
+            "source-execution-failed",
+            "the hall is not ready",
+          ),
+      ],
+      [
         "a build that never returns is stopped by the sandbox limit",
         () => carries(looping, "source-execution-timeout", "timed out"),
       ],
@@ -158,6 +178,7 @@ export const hall = {
     ]),
     {
       "a throwing build names its export and its file": true,
+      "a build throwing something with no message is stringified whole": true,
       "a build that never returns is stopped by the sandbox limit": true,
       "a thenable result is refused rather than awaited": true,
       "a result that is not a contribution is refused against the schema": true,
