@@ -1355,6 +1355,39 @@ export const test_cli_scaffold_repaint_runtime_contract =
         },
       );
 
+      // The first of the commands that opens a capture host, and the only one
+      // of those four a fixture without a browser can answer for. It reads as
+      // loaded by no process in the whole suite, which for a command whose
+      // whole job is to tell an author what is wrong with their capture
+      // runtime is worse than untested: nobody had seen it diagnose anything.
+      //
+      // No browser is installed here, so the honest answer is a refusal, and
+      // what makes the refusal worth having is that it names the command to
+      // run next. A doctor that reports a fault without saying what to do
+      // about it has not finished its job, and that sentence is the assertion.
+      const doctor = runGenerated(
+        fixture.root,
+        "scripts/capture-doctor.ts",
+        [],
+        true,
+      );
+      const doctorOutput = generatedOutput(doctor);
+      TestValidator.equals(
+        "the capture doctor diagnoses a missing browser and names the remedy",
+        {
+          status: doctor.status,
+          named: doctorOutput.includes(
+            "Package-owned Chromium is not installed for this project",
+          ),
+          remedy: doctorOutput.includes("npm run capture:install"),
+          // And it says to come back, so the author is not left holding a
+          // half-finished instruction.
+          returns:
+            [...doctorOutput.matchAll(/npm run capture:doctor/gu)].length >= 1,
+        },
+        { status: 1, named: true, remedy: true, returns: true },
+      );
+
       // The one action that still needs its own process: it asks the CLI entry
       // whether a refusal becomes a non-zero exit and a printed diagnostic.
       // Everything after it asks the command contract instead, and rides in one
