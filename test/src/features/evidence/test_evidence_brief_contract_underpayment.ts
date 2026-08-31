@@ -103,6 +103,7 @@ const CHECKLISTS = [
 ] as const;
 const OBLIGATIONS = [
   "obligations/core/common.md#purpose-fit",
+  "obligations/core/common.md#population-variety",
   "obligations/core/common.md#layer-boundary",
   "obligations/core/common.md#production-language",
   "obligations/core/common.md#proportionate-development",

@@ -124,6 +124,7 @@ const COMMON_PRINCIPLES = [
 ] as const;
 const COMMON_OBLIGATIONS = [
   "obligations/core/common.md#purpose-fit",
+  "obligations/core/common.md#population-variety",
   "obligations/core/common.md#layer-boundary",
   "obligations/core/common.md#production-language",
   "obligations/core/common.md#proportionate-development",
@@ -223,6 +224,8 @@ const SPACE_SOURCE_TARGETS = [
 ] as const;
 
 const TARGET_REASONS: Readonly<Record<string, string>> = {
+  "population-variety":
+    "This layer has one owner, so its endings cannot differ from a sibling's; what the item asks is answered by the boundary it closes on being the one no other layer of this production states.",
   "scope-preservation":
     "The owner keeps the complete boundary, access, topology, or realization assigned to it without hiding a sibling decision.",
   "substantive-completion":

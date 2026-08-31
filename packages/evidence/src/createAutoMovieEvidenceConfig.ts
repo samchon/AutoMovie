@@ -503,6 +503,7 @@ const EXPECTED_CONTRACTS = [
     file: "obligations/core/common.md",
     anchors: [
       "purpose-fit",
+      "population-variety",
       "layer-boundary",
       "production-language",
       "proportionate-development",
@@ -3096,7 +3097,10 @@ const sharedClaimBindings = (graph: IProductionGraph): IBranchClaim[] => [
 const referencedMarkdownBranch = (
   reference: ITtscEvidenceGraphMarkdownReference,
 ): MarkdownLayer | undefined => {
-  if (evidenceRoot(reference) !== DOCS) return undefined;
+  // No root guard. Every reference this walks declares `docs`, so a guard on
+  // that would be an alternative nothing reaches, and the lookup below already
+  // answers `undefined` for any first segment that is not a layer name --
+  // which is what a reference rooted elsewhere would produce anyway.
   const roots = new Set(
     reference.files.map((file) => normalizeGlob(file).split("/")[0]!),
   );
