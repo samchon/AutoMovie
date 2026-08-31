@@ -10,7 +10,7 @@ Judge this by what the file population actually includes and omits. The author m
 
 Review question: which file roles does this population need, and what later decision or delivered observation would become underdetermined if each role disappeared?
 
-This item asks why a file as a whole is needed. Specialist addressability obligations govern independent ownership by authored units, the common scope-preservation principle governs each unit's required scope, and narrative unit function governs the need for an individual narrative unit.
+This item asks why a file as a whole is needed. Specialist addressability obligations govern independent ownership by authored units, the common scope-preservation principle governs each unit's required scope, narrative unit function governs the need for an individual narrative unit, and population variety governs how the files that are needed differ from one another.
 
 Sources: [Jakobson on the dominant that orders the functions of other elements](https://archive.org/details/readingsinrussia0000mate); [Burton and Poster on the distinct work done by beginnings, endings, tension, and pace](https://www.cambridge.org/core/books/abs/book-you-need-to-read-to-write-the-book-you-want-to-write/beginnings-and-endings-tension-and-pace/7B84CB546C696FD1B6A8AB753522B42C)
 
