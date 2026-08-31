@@ -128,7 +128,13 @@ export const test_workspace_generated_attribution = (): void => {
       // twelve entries and left the report at zero.
       "source-map-cache": {
         [generated("same.ts")]: {
-          data: { sources: [generated("same.ts"), "file:///elsewhere.ts"] },
+          // A creditable source, one naming nothing creditable, and one that
+          // is not a string at all: V8 writes `null` into `sources` for a
+          // section it could not resolve, and a walk that assumed strings
+          // would have thrown on it.
+          data: {
+            sources: [generated("same.ts"), "file:///elsewhere.ts", null],
+          },
           lineLengths: [24],
           url: generated("same.ts"),
         },
@@ -164,14 +170,14 @@ export const test_workspace_generated_attribution = (): void => {
     // own url follows the record's, its creditable source is re-addressed, and
     // a source naming nothing creditable is left exactly as it was.
     const moved = record["source-map-cache"]?.[repositoryUrl] as {
-      data: { sources: string[] };
+      data: { sources: Array<string | null> };
       url: string;
     };
     TestValidator.equals(
       "the map's own url and creditable sources are re-addressed with it",
       { sources: moved.data.sources, url: moved.url },
       {
-        sources: [repositoryUrl, "file:///elsewhere.ts"],
+        sources: [repositoryUrl, "file:///elsewhere.ts", null],
         url: repositoryUrl,
       },
     );
