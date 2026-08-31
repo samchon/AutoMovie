@@ -47,7 +47,19 @@ export interface ICoverageRecords {
 }
 
 export interface ICoverageMissingScripts {
+  /** Every URL whose file the report will not find. */
   missing: number;
+  /**
+   * The measured sources among them, named.
+   *
+   * The count alone cannot be acted on. A vanished temporary script is
+   * ordinary -- a generated project's own files are deleted with the fixture --
+   * and a vanished measured source is a reading of code this repository charges
+   * for, dropped because c8 could not read the file to place its ranges. The
+   * run printed 219 gone and said nothing about which kind they were, so the
+   * number had never been worth reading either way.
+   */
+  measured: string[];
   urls: number;
 }
 
@@ -180,13 +192,15 @@ export const coverageRecordCount = (directory: string): number =>
  */
 export const coverageMissingScripts = (
   directory: string,
+  isMeasured: (url: string) => boolean = (url) =>
+    isMeasuredScriptUrl(url, SOURCES, ROOT.replaceAll("\\", "/").toLowerCase()),
 ): ICoverageMissingScripts => {
   const urls = new Set<string>();
   let entries: string[];
   try {
     entries = fs.readdirSync(directory);
   } catch {
-    return { urls: 0, missing: 0 };
+    return { measured: [], missing: 0, urls: 0 };
   }
   for (const entry of entries) {
     if (entry.endsWith(".json") === false) continue;
@@ -203,6 +217,7 @@ export const coverageMissingScripts = (
         urls.add(script.url);
   }
   let missing = 0;
+  const measured: string[] = [];
   for (const url of urls) {
     let target;
     try {
@@ -212,9 +227,15 @@ export const coverageMissingScripts = (
       // so as an absence would be a guess rather than a reading.
       continue;
     }
-    if (fs.existsSync(target) === false) missing++;
+    if (fs.existsSync(target) !== false) continue;
+    missing++;
+    if (isMeasured(url)) measured.push(url);
   }
-  return { urls: urls.size, missing };
+  return {
+    measured: measured.sort((left, right) => left.localeCompare(right)),
+    missing,
+    urls: urls.size,
+  };
 };
 
 /**
@@ -808,8 +829,14 @@ export const measureCoverage = (
     );
     dependencies.log(
       `coverage scripts: ${scripts.urls} distinct file URLs, ` +
-        `${scripts.missing} of them gone from disk at report time`,
+        `${scripts.missing} of them gone from disk at report time, ` +
+        `${scripts.measured.length} of those a measured source`,
     );
+    // A vanished measured source is a reading of charged code that c8 dropped
+    // because it could not read the file to place the ranges. Named, because a
+    // count of them is exactly as unusable as the count they came from.
+    for (const url of scripts.measured)
+      dependencies.log(`MEASURED SOURCE GONE AT REPORT TIME: ${url}`);
     const shapes = dependencies.scriptShapes(temporary);
     dependencies.log(
       `coverage shapes: ${shapes.reread} scripts were read by more than one ` +

@@ -1017,7 +1017,11 @@ test("classifies every raw coverage-record boundary without guessing", () => {
       coverageSourceHostDirectory(),
     );
     const absent = path.join(root, "absent");
-    assert.deepEqual(coverageMissingScripts(absent), { urls: 0, missing: 0 });
+    assert.deepEqual(coverageMissingScripts(absent), {
+      measured: [],
+      missing: 0,
+      urls: 0,
+    });
     assert.deepEqual(coverageScriptShapes(absent), {
       urls: 0,
       reread: 0,
@@ -1054,10 +1058,17 @@ test("classifies every raw coverage-record boundary without guessing", () => {
         ],
       }),
     );
+    // The count and the part of it that can be acted on. A vanished temporary
+    // is ordinary; a vanished measured source is a reading of charged code that
+    // the report dropped, and only the second kind is worth a name.
     assert.deepEqual(coverageMissingScripts(scripts), {
-      urls: 3,
+      measured: [],
       missing: 1,
+      urls: 3,
     });
+    assert.deepEqual(coverageMissingScripts(scripts, () => true).measured, [
+      pathToFileURL(missing).href,
+    ]);
 
     const shapes = path.join(root, "shapes");
     fs.mkdirSync(shapes);
@@ -1365,7 +1376,11 @@ test("runs the coverage orchestrator through injectable child dependencies", () 
     writeSources: () => output.push("sources"),
     records: () => ({ count: 2, parsed: 2, results: 4, bytes: 128 }),
     reconcile: () => reconciliation,
-    missingScripts: () => ({ urls: 3, missing: 1 }),
+    missingScripts: () => ({
+      measured: ["file:///repo/packages/x/src/gone.ts"],
+      missing: 1,
+      urls: 3,
+    }),
     scriptShapes: () => ({
       urls: 3,
       reread: 2,
@@ -1443,6 +1458,16 @@ test("runs the coverage orchestrator through injectable child dependencies", () 
   assert.ok(output.some((line) => line.includes("collector did not launch")));
   assert.ok(output.some((line) => line.includes("sample.ts")));
   assert.ok(output.some((line) => line.includes("coverage records")));
+  // The vanished measured source is named rather than only counted, because a
+  // count of dropped readings is exactly as unusable as the count it came from.
+  assert.match(
+    output.join("\n"),
+    /coverage scripts: 3 distinct file URLs, 1 of them gone from disk at report time, 1 of those a measured source/u,
+  );
+  assert.match(
+    output.join("\n"),
+    /^MEASURED SOURCE GONE AT REPORT TIME: file:\/\/\/repo\/packages\/x\/src\/gone\.ts$/mu,
+  );
   assert.ok(roots.every((directory) => fs.existsSync(directory) === false));
 });
 
