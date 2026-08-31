@@ -13,6 +13,7 @@ import {
   pathToRecordUrl,
   recordUrlToPath,
 } from "../../coverage/generatedAttribution";
+import { measuredScaffoldAttribution } from "../../coverage/measureCoverage";
 
 /**
  * A generated project's execution is credited only to bytes it actually ran.
@@ -192,6 +193,72 @@ export const test_workspace_generated_attribution = (): void => {
         written: ["one.json"],
         untouched: { result: [{ url: "file:///tmp/other.js" }] },
         absent: { attributed: 0, records: 0, refused: [] },
+      },
+    );
+
+    // The same directory again with nothing injected, so the reading, listing
+    // and writing this actually ships with are the ones that run. `one.json`
+    // already names the repository, so the second pass credits nothing and
+    // leaves it alone, which is the idempotence the measurement depends on.
+    const again = attributeGeneratedRecords({
+      directory,
+      isRepository: (url) => url === repositoryUrl,
+      sources,
+    });
+    TestValidator.equals(
+      "the shipped reader, lister and writer run and a credited record is final",
+      {
+        again,
+        stored: JSON.parse(
+          fs.readFileSync(path.join(directory, "one.json"), "utf8"),
+        ),
+      },
+      {
+        again: { attributed: 0, records: 0, refused: [] },
+        stored: { result: [{ url: repositoryUrl }] },
+      },
+    );
+
+    // And the wiring itself, against the real scaffold rather than a fixture:
+    // `capture-browser.ts` is one of the twelve that read zero percent, and
+    // this is the pass that gives it back its address. A name the scaffold does
+    // not ship is refused in the same call, so the credit is watched declining.
+    const scaffolded = path.join(root, "scaffolded");
+    fs.mkdirSync(scaffolded);
+    const child = (name: string): string =>
+      pathToFileURL(
+        path.join(os.tmpdir(), "automovie-film", "generated", "scripts", name),
+      ).href;
+    fs.writeFileSync(
+      path.join(scaffolded, "coverage-0.json"),
+      JSON.stringify({
+        result: [
+          { url: child("capture-browser.ts") },
+          { url: child("no-such-scaffold-script.ts") },
+        ],
+      }),
+    );
+    const wiring = measuredScaffoldAttribution(scaffolded);
+    const credited = JSON.parse(
+      fs.readFileSync(path.join(scaffolded, "coverage-0.json"), "utf8"),
+    ) as { result: Array<{ url: string }> };
+    TestValidator.equals(
+      "a real scaffold script is credited to its repository source",
+      {
+        attributed: wiring.attributed,
+        records: wiring.records,
+        refused: wiring.refused,
+        first: recordUrlToPath(credited.result[0]!.url)
+          .replaceAll("\\", "/")
+          .endsWith("packages/template/scaffold/scripts/capture-browser.ts"),
+        second: credited.result[1]!.url,
+      },
+      {
+        attributed: 1,
+        records: 1,
+        refused: [child("no-such-scaffold-script.ts")],
+        first: true,
+        second: child("no-such-scaffold-script.ts"),
       },
     );
   } finally {
