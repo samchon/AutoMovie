@@ -115,7 +115,7 @@ export const mostCoveredEntries = <T extends ICoverageEntry>(
 };
 
 /** Which source lines one entry says ran, per kind of position. */
-const coveredLines = (
+export const coveredLines = (
   entry: ICoverageEntry,
 ): {
   branches: Set<number>;
@@ -215,13 +215,11 @@ export const unionEntryByLine = <T extends ICoverageEntry>(
 };
 
 /** Per file, every group's reading folded together by position. */
-/** A file the union wrote with fewer covered positions than a candidate had. */
+/** A file the union wrote without a line one of its readings had covered. */
 export interface IUnionShortfall {
-  /** The best any single candidate reading reported. */
-  best: number;
-  /** What the union wrote. */
-  chosen: number;
   file: string;
+  /** Source lines a reading covered and the written entry does not. */
+  lost: number[];
 }
 
 /**
@@ -235,22 +233,40 @@ export interface IUnionShortfall {
  *
  * A shortfall is not proof of which, but it is the difference between the two,
  * and it costs one pass over what the union already computed.
+ *
+ * Lines rather than counts. A count says how much was covered and the gate asks
+ * which lines were, so a base whose own hits are many and whose structure
+ * misses the few another reading had would report an equal or higher count
+ * while losing exactly the positions somebody is about to be charged for.
  */
 export const unionShortfalls = <T extends ICoverageEntry>(
   grouped: ReadonlyMap<string, readonly T[]>,
   united: Readonly<Record<string, T>>,
 ): IUnionShortfall[] => {
+  const allLines = (entry: ICoverageEntry): Set<number> => {
+    const kinds = coveredLines(entry);
+    return new Set([
+      ...kinds.statements,
+      ...kinds.functions,
+      ...kinds.branches,
+    ]);
+  };
   const shortfalls: IUnionShortfall[] = [];
   for (const [file, entries] of grouped) {
     const chosen = united[file];
     if (chosen === undefined) continue;
-    const best = Math.max(...entries.map((entry) => coveredPositions(entry)));
-    const written = coveredPositions(chosen);
-    if (written < best) shortfalls.push({ best, chosen: written, file });
+    const written = allLines(chosen);
+    const lost = new Set<number>();
+    for (const entry of entries)
+      for (const line of allLines(entry))
+        if (written.has(line) === false) lost.add(line);
+    if (lost.size !== 0)
+      shortfalls.push({
+        file,
+        lost: [...lost].sort((left, right) => left - right),
+      });
   }
-  return shortfalls.sort(
-    (left, right) => right.best - right.chosen - (left.best - left.chosen),
-  );
+  return shortfalls.sort((left, right) => right.lost.length - left.lost.length);
 };
 
 /** Group every report's entries by file, keeping each reading separate. */

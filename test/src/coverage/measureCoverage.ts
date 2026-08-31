@@ -790,7 +790,7 @@ export const measureCoverage = (
     // losing, and it used to be indistinguishable from a file nothing covered.
     for (const shortfall of reconciliation.shortfalls ?? [])
       dependencies.log(
-        `UNION SHORTFALL: ${shortfall.file} was written at ${shortfall.chosen} covered positions where a reading had ${shortfall.best}`,
+        `UNION SHORTFALL: ${shortfall.file} lost ${shortfall.lost.length} covered ${shortfall.lost.length === 1 ? "line" : "lines"} a reading had (${shortfall.lost.slice(0, 12).join(", ")})`,
       );
     dependencies.log(
       `coverage groups: ${reconciliation.groups} shape-consistent record ` +

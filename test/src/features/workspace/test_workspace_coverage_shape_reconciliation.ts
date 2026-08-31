@@ -266,16 +266,26 @@ export const test_workspace_coverage_shape_reconciliation = (): void => {
         // numbers when it did not.
         quiet: succeeded.result.shortfalls,
         // The same question asked of the fold directly, with a base that
-        // carries positions the other reading does not: a line only the shorter
-        // reading covered has nowhere to land, and that is the union losing
-        // rather than nothing having covered the file. Until this the two were
-        // the same silence.
+        // carries positions the other reading does not: lines 1 and 2 were
+        // covered by a reading and the written entry has neither, so they are
+        // named. Counting would have missed this, because the base's own three
+        // positions outnumber the two it lost.
         losing: unionShortfalls(
           new Map([
             [
               "one.ts",
               [
-                entry({ 0: 1, 1: 1 }),
+                {
+                  b: {},
+                  branchMap: {},
+                  f: {},
+                  fnMap: {},
+                  s: { 0: 1, 1: 1 },
+                  statementMap: {
+                    0: { start: { line: 1 } },
+                    1: { start: { line: 2 } },
+                  },
+                },
                 {
                   b: {},
                   branchMap: {},
@@ -293,7 +303,16 @@ export const test_workspace_coverage_shape_reconciliation = (): void => {
             // A file the union never wrote is not a file it lost.
             ["absent.ts", [entry({ 0: 1 })]],
           ]),
-          { "one.ts": { s: { 0: 0, 1: 0, 2: 1 } } },
+          {
+            "one.ts": {
+              s: { 0: 0, 1: 0, 2: 1 },
+              statementMap: {
+                0: { start: { line: 20 } },
+                1: { start: { line: 21 } },
+                2: { start: { line: 22 } },
+              },
+            },
+          },
         ),
         reportFailed: reportFailed.result,
         reportFailedWrote: reportFailed.written,
@@ -303,7 +322,7 @@ export const test_workspace_coverage_shape_reconciliation = (): void => {
       {
         succeeded: { failure: null, groups: 2, shortfalls: [] },
         quiet: [],
-        losing: [{ best: 2, chosen: 1, file: "one.ts" }],
+        losing: [{ file: "one.ts", lost: [1, 2] }],
         written: { "one.ts": entry({ 0: 1, 1: 1 }) },
         withMerged: { "one.ts": entry({ 0: 1, 1: 1, 2: 1 }) },
         reportFailed: {
