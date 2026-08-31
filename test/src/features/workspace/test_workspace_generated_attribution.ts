@@ -450,6 +450,13 @@ export const test_workspace_generated_attribution = (): void => {
         // Vanished, and the repository has no counterpart to move it to.
         { url: fixtureLib.replace("/evidence/", "/no-such-package/") },
         { url: pathToRecordUrl(path.join(root, "unrelated.js")) },
+        // Two readings that carry no address to move: an entry V8 wrote with
+        // no url at all, and one whose url no filesystem can resolve. Both are
+        // ordinary records rather than errors.
+        {},
+        {
+          url: `file://[invalid/node_modules/@automovie/evidence/lib/x.js`,
+        },
       ],
     };
     const slashed = (one: string): string => one.replaceAll("\\", "/");
@@ -479,6 +486,8 @@ export const test_workspace_generated_attribution = (): void => {
         second: linkedRecord.result[1]!.url,
         third: linkedRecord.result[2]!.url,
         fourth: linkedRecord.result[3]!.url,
+        fifth: linkedRecord.result[4]!.url,
+        sixth: linkedRecord.result[5]!.url,
       },
       {
         moved: 1,
@@ -488,6 +497,8 @@ export const test_workspace_generated_attribution = (): void => {
         second: pathToRecordUrl(fixture("present.js")),
         third: fixtureLib.replace("/evidence/", "/no-such-package/"),
         fourth: pathToRecordUrl(path.join(root, "unrelated.js")),
+        fifth: undefined,
+        sixth: "file://[invalid/node_modules/@automovie/evidence/lib/x.js",
       },
     );
     // `tsImport` appends `?namespace=<id>` so two loads of one file stay
