@@ -1388,7 +1388,7 @@ test("runs the coverage orchestrator through injectable child dependencies", () 
   // the shape of every run before a generated project ran at all.
   assert.match(
     output.join("\n"),
-    /coverage attribution: 0 generated script entries in 0 record files credited to the repository source whose bytes they ran$/mu,
+    /coverage attribution: 0 generated script entries in 0 record files credited to the repository source whose bytes they ran, 0 vanished linked builds and 0 query-suffixed readings re-addressed$/mu,
   );
   // And a run that credited some and refused one. The refusal is named at its
   // own address rather than folded into the count, because the whole point of
@@ -1403,7 +1403,7 @@ test("runs the coverage orchestrator through injectable child dependencies", () 
   assert.equal(measureCoverage(dependencies({ status: 0 }, [])), 0);
   assert.match(
     output.join("\n"),
-    /coverage attribution: 12 generated script entries in 3 record files credited to the repository source whose bytes they ran, 1 refused for bytes no repository source vouches for$/mu,
+    /coverage attribution: 12 generated script entries in 3 record files credited to the repository source whose bytes they ran, 0 vanished linked builds and 0 query-suffixed readings re-addressed, 1 refused for bytes no repository source vouches for$/mu,
   );
   assert.match(
     output.join("\n"),
