@@ -20,6 +20,7 @@ import {
 } from "./executableEmission";
 import { COVERAGE_REPORT_DIRECTORY, MEASURED_SOURCES } from "./measureCoverage";
 import {
+  branchGapIsReal,
   functionGapIsReal,
   positionsPastEndOfFile,
 } from "./reportCoverageGaps";
@@ -429,6 +430,7 @@ export const inspectChangedCoverage = (props: {
     // already read this file, so a guard here would be an alternative nothing
     // can reach and could only be covered by pretending.
     const text = fs.readFileSync(file, "utf8");
+    const sourceLines = text.split("\n");
     const ranNames = new Set(
       Object.entries(data.fnMap ?? {})
         .filter(([id]) => (data.f?.[id] ?? 0) > 0)
@@ -471,11 +473,26 @@ export const inspectChangedCoverage = (props: {
         `${relative}: ${secondReadings} function ${secondReadings === 1 ? "entry is" : "entries are"} a second reading of a function that ran, not an untested one`,
       );
 
+    let artifactBranches = 0;
     for (const [id, entry] of Object.entries(data.branchMap ?? {})) {
       const locations = entry?.locations ?? [];
       const hits = data.b?.[id] ?? [];
       for (const [index, location] of locations.entries()) {
         const covered = (hits[index] ?? 0) > 0;
+        // Artifact before demand, for the reason the function loop above
+        // states: an instrument artifact sitting on a line this change did not
+        // touch would otherwise be filed as inherited debt, a number somebody
+        // could later be asked to pay down for a branch nobody wrote.
+        if (
+          covered === false &&
+          branchGapIsReal({
+            source: sourceLines,
+            span: location ?? entry?.loc,
+          }) === false
+        ) {
+          artifactBranches++;
+          continue;
+        }
         if (spanIsDemanded({ order, span: location ?? entry?.loc }) === false) {
           if (covered === false) inheritedGaps.branches++;
           continue;
@@ -487,6 +504,10 @@ export const inspectChangedCoverage = (props: {
           );
       }
     }
+    if (artifactBranches !== 0)
+      disagreements.push(
+        `${relative}: ${artifactBranches} branch ${artifactBranches === 1 ? "location covers" : "locations cover"} nothing but whitespace, which is a position the instrument invented rather than a branch this file has`,
+      );
     if (inheritedGapsAreEmpty(inheritedGaps) === false)
       inherited.push(
         describeInheritedGaps({ file: relative, gaps: inheritedGaps }),

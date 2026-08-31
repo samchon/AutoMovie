@@ -1,6 +1,7 @@
 import { TestValidator } from "@nestia/e2e";
 
 import {
+  branchGapIsReal,
   functionGapIsReal,
   functionPositionConfirmed,
   lineCount,
@@ -44,6 +45,15 @@ interface IAnswers {
   fresh: boolean;
   ranElsewhere: boolean;
   neverWritten: boolean;
+  calledOnly: boolean;
+  declaredMethod: boolean;
+  declaredConst: boolean;
+  longerName: boolean;
+  indentBranch: boolean;
+  realBranch: boolean;
+  spanningBranch: boolean;
+  unreadableBranch: boolean;
+  columnlessBranch: boolean;
   anonymous: boolean;
   unreadable: boolean;
   confirmed: boolean;
@@ -120,6 +130,54 @@ export const test_workspace_coverage_gap_attribution = (): void => {
       "builtEnvironmentUnclaimedElements",
     ]),
     neverWritten: real("__setModuleDefault", []),
+    // A file that only ever calls somebody else's method contains that
+    // method's name and declares nothing. This is the exact shape that
+    // charged `libraryObservationRequirements.ts` for an emitted `get`.
+    calledOnly: real("get", [], "const n = waived.get(id) ?? 0;"),
+    // And its twin, which is what keeps the narrowing from hiding real code:
+    // the same name declared as a method, and declared as a binding. Both are
+    // still gaps. Without these two the rule could be replaced by a constant
+    // `false` and nothing here would notice.
+    declaredMethod: real(
+      "get",
+      [],
+      "const store = { get(id) { return id; } };",
+    ),
+    declaredConst: real("get", [], "const get = (id) => id;"),
+    // A whole-identifier match, so a longer name never answers for a shorter
+    // one. `getter` alone leaves `get` undeclared.
+    longerName: real("get", [], "const getter = (id) => id;"),
+    // The branch twin of the same fault. `libraryObservationRequirements.ts`
+    // was charged `branch@21:0-2`, and columns 0 to 2 of that line are the two
+    // spaces indenting a template literal. Nobody writes a branch in an indent.
+    indentBranch: branchGapIsReal({
+      // The indent is the whole of what matters here; the rest of the line
+      // stands in for the template literal the real file carries, without
+      // writing an interpolation inside a plain string.
+      source: ["const a = 1;", "  spaceSubject(environment, space);"],
+      span: { start: { line: 2, column: 0 }, end: { line: 2, column: 2 } },
+    }),
+    // And the branch that must survive it, on the same line shape: a span
+    // covering code is kept, so the rule cannot be replaced by a constant.
+    realBranch: branchGapIsReal({
+      source: ["const a = b ?? c;"],
+      span: { start: { line: 1, column: 10 }, end: { line: 1, column: 16 } },
+    }),
+    // Three shapes this declines to judge, each kept for the same reason an
+    // unreadable file keeps all of its entries: a span across two lines, a file
+    // the report outlived, and a location with no columns to slice.
+    spanningBranch: branchGapIsReal({
+      source: ["  ", "  "],
+      span: { start: { line: 1, column: 0 }, end: { line: 2, column: 2 } },
+    }),
+    unreadableBranch: branchGapIsReal({
+      source: null,
+      span: { start: { line: 1, column: 0 }, end: { line: 1, column: 2 } },
+    }),
+    columnlessBranch: branchGapIsReal({
+      source: ["  "],
+      span: { start: { line: 1 }, end: { line: 1 } },
+    }),
     anonymous: real("(anonymous_12)", []),
     unreadable: real("__setModuleDefault", [], null),
     noRecord: measuredLineCount(null, "a.ts"),
@@ -154,6 +212,42 @@ export const test_workspace_coverage_gap_attribution = (): void => {
       [
         "and neither is a name this repository never wrote",
         () => answers.neverWritten === false,
+      ],
+      [
+        "a name this file only calls on another object is not a declaration",
+        () => answers.calledOnly === false,
+      ],
+      [
+        "the same name declared as a method is still a gap",
+        () => answers.declaredMethod === true,
+      ],
+      [
+        "and so is the same name declared as a binding",
+        () => answers.declaredConst === true,
+      ],
+      [
+        "a longer identifier does not answer for the name inside it",
+        () => answers.longerName === false,
+      ],
+      [
+        "a branch whose whole span is an indent is not a branch",
+        () => answers.indentBranch === false,
+      ],
+      [
+        "a branch whose span covers code still is",
+        () => answers.realBranch === true,
+      ],
+      [
+        "a span across two lines is judged by nothing",
+        () => answers.spanningBranch === true,
+      ],
+      [
+        "and so is one whose file the report outlived",
+        () => answers.unreadableBranch === true,
+      ],
+      [
+        "and so is one with no columns to slice",
+        () => answers.columnlessBranch === true,
       ],
       [
         "an anonymous entry is kept, because nothing can be looked for",
@@ -209,6 +303,15 @@ export const test_workspace_coverage_gap_attribution = (): void => {
       "an ordinary zero-hit name is a gap": true,
       "a name that ran under another entry is not": true,
       "and neither is a name this repository never wrote": true,
+      "a name this file only calls on another object is not a declaration": true,
+      "the same name declared as a method is still a gap": true,
+      "and so is the same name declared as a binding": true,
+      "a longer identifier does not answer for the name inside it": true,
+      "a branch whose whole span is an indent is not a branch": true,
+      "a branch whose span covers code still is": true,
+      "a span across two lines is judged by nothing": true,
+      "and so is one whose file the report outlived": true,
+      "and so is one with no columns to slice": true,
       "an anonymous entry is kept, because nothing can be looked for": true,
       "a file the report outlived is kept whole": true,
       "no record judges nothing": true,
