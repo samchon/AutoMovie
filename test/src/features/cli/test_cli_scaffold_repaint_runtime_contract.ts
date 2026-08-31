@@ -345,6 +345,67 @@ const runGeneratedFast = (
   args: readonly string[] = [],
 ): IGeneratedCommand => runGenerated(project, script, args);
 
+interface IRenderActionResult {
+  error: string;
+  out: string;
+  status: number;
+}
+
+/**
+ * Run several render actions in one generated child instead of one child each.
+ *
+ * Every generated command pays a full compile of this repository's TypeScript
+ * surface, and the shared transpile cache does not make the next one cheaper:
+ * measured at 25.0 and 26.0 seconds for two consecutive `scripts/compile.ts`
+ * runs of one fixture. Twenty children were twenty compiles, and this one test
+ * spent 1,971 seconds across the two CI runners -- 46 percent of the whole
+ * suite's test time.
+ *
+ * What a separate child proves is the CLI entry: that `scripts/render.ts` maps
+ * a refusal to a non-zero exit and prints the diagnostic. That is proved once,
+ * by the invalid action, and `scripts/render.ts` is three lines over
+ * `runNodeProductionRender`. What the remaining actions assert is the command
+ * contract -- which action refuses, which succeeds, and what each prints --
+ * and that contract does not change with the number of processes carrying it.
+ *
+ * Each action keeps its own result. The command signals a refusal by throwing,
+ * so the driver catches per action: a later action cannot hide an earlier one's
+ * failure, and the message is reported at the action that raised it.
+ */
+const installGeneratedRenderDriver = (root: string): void => {
+  fs.writeFileSync(
+    path.join(root, "scripts", "__renderActions.ts"),
+    fs.readFileSync(
+      path.join(__dirname, "assets", "renderActionsDriver.ts.txt"),
+      "utf8",
+    ),
+    "utf8",
+  );
+};
+
+/** The per-action results one driver child reported, in the order asked. */
+const runGeneratedRenderActions = (
+  project: string,
+  actions: ReadonlyArray<readonly string[]>,
+): IRenderActionResult[] => {
+  const command = runGenerated(project, "scripts/__renderActions.ts", [
+    JSON.stringify(actions),
+  ]);
+  const marker = "__RENDER_ACTIONS__";
+  const index = command.stderr.lastIndexOf(marker);
+  if (index < 0)
+    throw new Error(
+      [
+        "The generated render driver reported nothing.",
+        command.stdout,
+        command.stderr,
+      ].join("\n"),
+    );
+  return JSON.parse(
+    command.stderr.slice(index + marker.length),
+  ) as IRenderActionResult[];
+};
+
 const readGeneratedJson = <T>(label: string, command: IGeneratedCommand): T => {
   try {
     return JSON.parse(command.stdout) as T;
@@ -1209,24 +1270,33 @@ export const test_cli_scaffold_repaint_runtime_contract =
         },
       );
 
+      // The one action that still needs its own process: it asks the CLI entry
+      // whether a refusal becomes a non-zero exit and a printed diagnostic.
+      // Everything after it asks the command contract instead, and rides in one
+      // driver child rather than five more compiles.
       const invalid = runGeneratedFast(fixture.root, "scripts/render.ts", [
         "unknown",
       ]);
+      // Installed before the compile, not after. A generated project's input
+      // fingerprint covers its own scripts, so adding one afterwards makes the
+      // manifest stale and every later action refuses -- which is the product
+      // refusing correctly, and the constraint any batching has to obey.
+      installGeneratedRenderDriver(fixture.root);
       const compiled = runGeneratedFast(fixture.root, "scripts/compile.ts");
-      const status = runGeneratedFast(fixture.root, "scripts/render.ts", [
-        "status",
-      ]);
-      const verified = runGeneratedFast(fixture.root, "scripts/render.ts", [
-        "verify",
-      ]);
-      const finalized = runGeneratedFast(fixture.root, "scripts/render.ts", [
-        "finalize",
-      ]);
-      const dryGc = runGeneratedFast(fixture.root, "scripts/render.ts", ["gc"]);
-      const appliedGc = runGeneratedFast(fixture.root, "scripts/render.ts", [
-        "gc",
-        "--apply",
-      ]);
+      const [status, verified, finalized, dryGc, appliedGc] =
+        runGeneratedRenderActions(fixture.root, [
+          ["status"],
+          ["verify"],
+          ["finalize"],
+          ["gc"],
+          ["gc", "--apply"],
+        ]) as [
+          IRenderActionResult,
+          IRenderActionResult,
+          IRenderActionResult,
+          IRenderActionResult,
+          IRenderActionResult,
+        ];
       if (compiled.status !== 0)
         throw new Error(
           `Generated no-plugin compile failed: ${compiled.stdout}\n${compiled.stderr}`,
@@ -1244,9 +1314,8 @@ export const test_cli_scaffold_repaint_runtime_contract =
         if (result.status !== 0)
           throw new Error(
             [
-              `Generated render ${label} exited ${result.status}.`,
-              result.stdout,
-              result.stderr,
+              `Generated render ${label} refused: ${result.error}`,
+              result.out,
             ].join("\n"),
           );
       TestValidator.equals(
@@ -1266,8 +1335,8 @@ export const test_cli_scaffold_repaint_runtime_contract =
           finalizeRefusal: finalized.status !== 0,
           dryGcStatus: dryGc.status === 0,
           appliedGcStatus: appliedGc.status === 0,
-          dryGcPublication: dryGc.stdout.includes('"applied": false'),
-          appliedGcPublication: appliedGc.stdout.includes('"applied": true'),
+          dryGcPublication: dryGc.out.includes('"applied": false'),
+          appliedGcPublication: appliedGc.out.includes('"applied": true'),
         },
         {
           invalidStatus: true,
