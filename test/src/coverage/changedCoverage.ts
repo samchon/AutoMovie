@@ -7,6 +7,13 @@ import process from "node:process";
 
 import { describeThrown } from "../integrity/contractOwnership";
 import {
+  type IInheritedGaps,
+  changedOrder,
+  describeInheritedGaps,
+  inheritedGapsAreEmpty,
+  spanIsDemanded,
+} from "./changedLineDemand";
+import {
   emitsNoExecutableStatement,
   excuseNonExecutableGaps,
   repositoryEmitProbe,
@@ -67,6 +74,8 @@ export interface IChangedCoverageInspection {
   disagreements: string[];
   files: Array<{ file: string; totals: ICoverageTotals }>;
   gaps: string[];
+  /** Excused populations, one line per file that carries one. */
+  inherited: string[];
   instrumentFailures: string[];
   totals: ICoverageTotals;
 }
@@ -313,6 +322,7 @@ export const inspectChangedCoverage = (props: {
       `${file}: index and worktree contain different snapshots; stage the final file or restore one side before measuring`,
   );
   const gaps = [];
+  const inherited: string[] = [];
   const createTotals = (): ICoverageTotals => ({
     statements: { covered: 0, total: 0 },
     lines: { covered: 0, total: 0 },
@@ -322,7 +332,7 @@ export const inspectChangedCoverage = (props: {
   const totals = createTotals();
   const files: Array<{ file: string; totals: ICoverageTotals }> = [];
 
-  for (const [relative] of [...props.files].sort(([left], [right]) =>
+  for (const [relative, lines] of [...props.files].sort(([left], [right]) =>
     left.localeCompare(right),
   )) {
     if (isAuthoredExecutableSource(relative) === false) continue;
@@ -364,6 +374,12 @@ export const inspectChangedCoverage = (props: {
       continue;
     }
     const fileTotals = createTotals();
+    const order = changedOrder(lines);
+    const inheritedGaps: IInheritedGaps = {
+      branches: 0,
+      functions: 0,
+      statements: 0,
+    };
     const count = (metric: Metric, covered: boolean): void => {
       totals[metric].total++;
       fileTotals[metric].total++;
@@ -377,6 +393,10 @@ export const inspectChangedCoverage = (props: {
     for (const [id, span] of Object.entries(data.statementMap ?? {})) {
       const line = span?.start?.line;
       const hits = data.s?.[id] ?? 0;
+      if (spanIsDemanded({ order, span }) === false) {
+        if (hits === 0) inheritedGaps.statements++;
+        continue;
+      }
       count("statements", hits > 0);
       if (hits === 0)
         gaps.push(
@@ -419,6 +439,12 @@ export const inspectChangedCoverage = (props: {
     for (const [id, entry] of Object.entries(data.fnMap ?? {})) {
       const covered = (data.f?.[id] ?? 0) > 0;
       if (
+        spanIsDemanded({ order, span: entry?.loc ?? entry?.decl }) === false
+      ) {
+        if (covered === false) inheritedGaps.functions++;
+        continue;
+      }
+      if (
         covered === false &&
         functionGapIsReal({
           covered: ranNames,
@@ -445,6 +471,10 @@ export const inspectChangedCoverage = (props: {
       const hits = data.b?.[id] ?? [];
       for (const [index, location] of locations.entries()) {
         const covered = (hits[index] ?? 0) > 0;
+        if (spanIsDemanded({ order, span: location ?? entry?.loc }) === false) {
+          if (covered === false) inheritedGaps.branches++;
+          continue;
+        }
         count("branches", covered);
         if (covered === false)
           gaps.push(
@@ -452,9 +482,20 @@ export const inspectChangedCoverage = (props: {
           );
       }
     }
+    if (inheritedGapsAreEmpty(inheritedGaps) === false)
+      inherited.push(
+        describeInheritedGaps({ file: relative, gaps: inheritedGaps }),
+      );
     files.push({ file: relative, totals: fileTotals });
   }
-  return { totals, files, gaps, instrumentFailures, disagreements };
+  return {
+    totals,
+    files,
+    gaps,
+    inherited,
+    instrumentFailures,
+    disagreements,
+  };
 };
 
 /** Print a human-readable changed-coverage verdict. */
@@ -467,12 +508,13 @@ export const reportChangedCoverage = (
     `Changed coverage base ${changes.base} (${changes.mergeBase}); local population: ${changes.staged} staged, ${changes.worktree} worktree, ${changes.untracked} untracked paths.`,
   );
   write(
-    `Changed-file executable coverage: statements ${result.totals.statements.covered}/${result.totals.statements.total}, branches ${result.totals.branches.covered}/${result.totals.branches.total}, functions ${result.totals.functions.covered}/${result.totals.functions.total}, lines ${result.totals.lines.covered}/${result.totals.lines.total}.`,
+    `Changed-line executable coverage: statements ${result.totals.statements.covered}/${result.totals.statements.total}, branches ${result.totals.branches.covered}/${result.totals.branches.total}, functions ${result.totals.functions.covered}/${result.totals.functions.total}, lines ${result.totals.lines.covered}/${result.totals.lines.total}.`,
   );
   for (const entry of result.files)
     write(
       `${entry.file}: statements ${entry.totals.statements.covered}/${entry.totals.statements.total}, branches ${entry.totals.branches.covered}/${entry.totals.branches.total}, functions ${entry.totals.functions.covered}/${entry.totals.functions.total}, lines ${entry.totals.lines.covered}/${entry.totals.lines.total}.`,
     );
+  for (const line of result.inherited) write(line);
   for (const disagreement of result.disagreements)
     write(`INSTRUMENT DISAGREEMENT: ${disagreement}`);
   for (const gap of result.gaps) write(`COVERAGE GAP: ${gap}`);
