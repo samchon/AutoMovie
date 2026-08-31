@@ -542,6 +542,37 @@ export const test_workspace_generated_attribution = (): void => {
         ],
       },
     );
+
+    // A `file:` URL whose plain form is not a path at all. Stripping the suffix
+    // is a string operation and resolving the result is not, so a malformed
+    // authority reaches the resolver and throws there. Read with the real
+    // `exists` this proves nothing -- a URL that throws and a URL whose file is
+    // absent are both left alone, so the reading passes whether the resolver
+    // throws or not. Holding `exists` true is what separates them: every other
+    // query-suffixed URL is moved under it, and this one still is not.
+    const unresolvable = { result: [{ url: "file://[invalid?namespace=1" }] };
+    const resolvable = {
+      result: [{ url: `${pathToRecordUrl(plain)}?namespace=2` }],
+    };
+    TestValidator.equals(
+      "a query whose plain form will not resolve is left where it stands",
+      {
+        thrown: attributeLoaderQueries({
+          exists: () => true,
+          record: unresolvable,
+        }),
+        kept: unresolvable.result[0]!.url,
+        moved: attributeLoaderQueries({
+          exists: () => true,
+          record: resolvable,
+        }),
+      },
+      {
+        thrown: 0,
+        kept: "file://[invalid?namespace=1",
+        moved: 1,
+      },
+    );
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
   }
