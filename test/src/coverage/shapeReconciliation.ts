@@ -291,6 +291,8 @@ export const reconcileCoverageShapes = (props: {
   mkdir: (directory: string) => void;
   readReport: (directory: string) => Record<string, ICoverageEntry> | null;
   report: (temporary: string, reports: string) => number;
+  /** Where the run's own merged report already sits, read as one more reading. */
+  reportDirectory: string;
   temporary: string;
   writeReport: (entries: Record<string, ICoverageEntry>) => void;
 }): IShapeReconciliation => {
@@ -320,6 +322,19 @@ export const reconcileCoverageShapes = (props: {
       };
     reports.push(read);
   }
-  props.writeReport(unionEntries(reports));
+  // The report c8 already wrote is a candidate too, and taking the fuller of
+  // the two is what makes this never worse than the merge it replaces.
+  //
+  // Splitting by shape assumed a differing shape means a lossy merge. That is
+  // true of `builtEnvironment.ts`, where c8 folds a complete reading and a
+  // partial one into 90.93 percent. It is false of `build/experimental.ts`,
+  // whose four records carry three shapes and which c8 merges to 302 of 304
+  // statements -- there the split produced three partial groups and the fold
+  // could not put them back. Measured on both, in that order, after the second
+  // one made this claim's own JSDoc false.
+  const merged = props.readReport(props.reportDirectory);
+  props.writeReport(
+    unionEntries(merged === null ? reports : [...reports, merged]),
+  );
   return { failure: null, groups: groups.length };
 };

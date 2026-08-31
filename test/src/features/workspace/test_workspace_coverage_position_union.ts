@@ -212,6 +212,50 @@ export const test_workspace_coverage_position_union = (): void => {
     },
   );
 
+  // Splitting by shape assumed a differing shape means a lossy merge. It is
+  // true of one measured file and false of another: c8 folds three shapes of
+  // `build/experimental.ts` to 302 of 304 statements, where splitting them into
+  // groups and folding back reached only 184. So the report c8 already wrote is
+  // one more reading, and taking the fullest of all of them is what makes this
+  // never worse than the merge it replaces.
+  const groupA: ICoverageEntry = {
+    b: {},
+    branchMap: {},
+    f: {},
+    fnMap: {},
+    s: { 0: 1, 1: 0, 2: 0 },
+    statementMap: { 0: span(1), 1: span(2), 2: span(3) },
+  };
+  const groupB: ICoverageEntry = {
+    b: {},
+    branchMap: {},
+    f: {},
+    fnMap: {},
+    s: { 0: 0, 1: 1, 2: 0 },
+    statementMap: { 0: span(1), 1: span(2), 2: span(3) },
+  };
+  const alreadyMerged: ICoverageEntry = {
+    b: {},
+    branchMap: {},
+    f: {},
+    fnMap: {},
+    s: { 0: 1, 1: 1, 2: 1 },
+    statementMap: { 0: span(1), 1: span(2), 2: span(3) },
+  };
+  TestValidator.equals(
+    "a merge the groups cannot beat is kept rather than replaced",
+    {
+      groupsAlone: unionEntryByLine([groupA, groupB])?.s,
+      withMerged: unionEntryByLine([groupA, groupB, alreadyMerged])?.s,
+    },
+    {
+      // Lines 1 and 2 ran in some group; line 3 ran in neither, and only the
+      // merged reading saw it.
+      groupsAlone: { 0: 1, 1: 1, 2: 0 },
+      withMerged: { 0: 1, 1: 1, 2: 1 },
+    },
+  );
+
   TestValidator.equals(
     "files fold independently and nothing is invented",
     {

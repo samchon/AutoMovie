@@ -564,6 +564,7 @@ export const measuredShapeReconciliationParts = (props: {
 }): Parameters<typeof reconcileCoverageShapes>[0] => ({
   copy: (from, to) => fs.copyFileSync(from, to),
   groupRoot: props.groupRoot,
+  reportDirectory: props.reportDirectory,
   measured: (url) =>
     isMeasuredScriptUrl(url, SOURCES, ROOT.replaceAll("\\", "/").toLowerCase()),
   mkdir: (directory) => fs.mkdirSync(directory, { recursive: true }),

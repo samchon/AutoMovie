@@ -209,6 +209,8 @@ export const test_workspace_coverage_shape_reconciliation = (): void => {
         mkdir: (target) => fs.mkdirSync(target, { recursive: true }),
         readReport,
         report,
+        // No merged report of its own, so the fold has only the groups.
+        reportDirectory: path.join(directory, "absent-report"),
         temporary: directory,
         writeReport: (entries) => {
           written = entries;
@@ -220,6 +222,15 @@ export const test_workspace_coverage_shape_reconciliation = (): void => {
     const succeeded = run(
       () => 0,
       (target) => reports[path.basename(target)] ?? null,
+    );
+    // The same run with a merged report present. It is one more reading, so a
+    // line only c8's own merge saw survives into what is written.
+    const withMerged = run(
+      () => 0,
+      (target) =>
+        path.basename(target) === "absent-report"
+          ? { "one.ts": entry({ 0: 1, 1: 0, 2: 1 }) }
+          : (reports[path.basename(target)] ?? null),
     );
     const reportFailed = run(
       (_records, target) => (path.basename(target) === "report-1" ? 3 : 0),
@@ -237,6 +248,7 @@ export const test_workspace_coverage_shape_reconciliation = (): void => {
       mkdir: () => undefined,
       readReport: () => null,
       report: () => 0,
+      reportDirectory: path.join(directory, "absent-report"),
       temporary: directory,
       writeReport: () => {
         throw new Error("a single group must write no corrected report");
@@ -248,6 +260,7 @@ export const test_workspace_coverage_shape_reconciliation = (): void => {
       {
         succeeded: succeeded.result,
         written: succeeded.written,
+        withMerged: withMerged.written,
         reportFailed: reportFailed.result,
         reportFailedWrote: reportFailed.written,
         readFailed: readFailed.result,
@@ -256,6 +269,7 @@ export const test_workspace_coverage_shape_reconciliation = (): void => {
       {
         succeeded: { failure: null, groups: 2 },
         written: { "one.ts": entry({ 0: 1, 1: 1 }) },
+        withMerged: { "one.ts": entry({ 0: 1, 1: 1, 2: 1 }) },
         reportFailed: {
           failure: "shape group 1 could not be reported (status 3)",
           groups: 2,
