@@ -46,8 +46,14 @@ export const scriptShape = (script: {
  * Measured on this repository: `builtEnvironment.ts` appears in two raw records
  * of one suite run with 127 and 241 function entries. Reported together, c8
  * returns 90.93 percent. Reported apart, the two groups return 100 percent and
- * 32.56 percent — so the merge of a complete reading and a partial one is worse
- * than the complete one, which a union can never be.
+ * 32.56 percent, so for that file the merge is worse than one of its parts.
+ *
+ * It is not worse for every file, and reading it that way was the mistake this
+ * split first made. `build/experimental.ts` appears four times in one run
+ * carrying three shapes, and c8 folds all four to 302 of 304 statements while
+ * splitting them reached 184. Splitting is therefore a candidate reading rather
+ * than a correction, and `unionEntries` is given c8's own report alongside the
+ * groups so the fullest of them wins.
  *
  * The grouping is greedy and first-fit, which is enough because the number of
  * groups is bounded by the largest number of shapes any one script was read in,
