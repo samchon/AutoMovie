@@ -290,6 +290,7 @@ const runGenerated = (
   args: readonly string[] = [],
   plugins = false,
 ): IGeneratedCommand => {
+  const started = Date.now();
   const result = spawnSync(
     process.execPath,
     [
@@ -321,11 +322,40 @@ const runGenerated = (
       ].join("\n"),
       { cause: result.error },
     );
+  // What each child costs, said rather than inferred.
+  //
+  // This scenario is the single most expensive one the suite runs, and #2167
+  // reduced its children from twenty to sixteen on the assumption that the
+  // count was the lever. It may not be: there is one fixture here, not one per
+  // child, and every child shares this run's transpile cache, so the second
+  // child onward should be paying for something other than a cold compile.
+  // Nobody can say which without the number, and the number costs one line.
+  GENERATED_COST.push({
+    elapsed: Date.now() - started,
+    label: [script, ...args].join(" "),
+  });
   return {
     status: result.status,
     stderr: result.stderr,
     stdout: result.stdout,
   };
+};
+
+/** Every generated child this run spawned, with what it cost. */
+const GENERATED_COST: Array<{ elapsed: number; label: string }> = [];
+
+/** Print the per-child costs newest last, with their total. */
+const reportGeneratedChildCost = (
+  write: (line: string) => void = console.log,
+): void => {
+  const total = GENERATED_COST.reduce((sum, one) => sum + one.elapsed, 0);
+  for (const [index, one] of GENERATED_COST.entries())
+    write(
+      `generated child ${String(index + 1).padStart(2)}: ${String(one.elapsed).padStart(6)} ms  ${one.label}`,
+    );
+  write(
+    `generated children: ${GENERATED_COST.length} spawned, ${total} ms total, ${GENERATED_COST.length === 0 ? 0 : Math.round(total / GENERATED_COST.length)} ms mean`,
+  );
 };
 
 /**
@@ -1827,6 +1857,10 @@ export const test_cli_scaffold_repaint_runtime_contract =
       failure = { error };
       throw error;
     } finally {
+      // Printed on a passing run as well as a failing one: this is the most
+      // expensive scenario in the suite and the number is why anyone would
+      // work on it next.
+      reportGeneratedChildCost();
       if (fixture.preserve === false)
         preserveCliHarnessCleanup(failure, [
           {
