@@ -30,14 +30,18 @@ import {
   MEASURED_LINES,
   MEASURED_SOURCES,
   coverageIncludes,
+  coverageMeasurementDependencies,
   coverageMissingScripts,
+  coverageNeverRecorded,
   coverageRecordCount,
   coverageRecords,
   coverageScriptShapes,
   coverageSourceHostDirectory,
   coverageSourceRoots,
   coverageTemporaryDirectory,
+  coverageUnloadedSources,
   measureCoverage,
+  measuredReportedSources,
   removeCoverageTemporaryDirectory,
   writeMeasuredLines,
   writeMeasuredSources,
@@ -1017,7 +1021,11 @@ test("classifies every raw coverage-record boundary without guessing", () => {
       coverageSourceHostDirectory(),
     );
     const absent = path.join(root, "absent");
-    assert.deepEqual(coverageMissingScripts(absent), { urls: 0, missing: 0 });
+    assert.deepEqual(coverageMissingScripts(absent), {
+      measured: [],
+      missing: 0,
+      urls: 0,
+    });
     assert.deepEqual(coverageScriptShapes(absent), {
       urls: 0,
       reread: 0,
@@ -1054,10 +1062,111 @@ test("classifies every raw coverage-record boundary without guessing", () => {
         ],
       }),
     );
+    // Which measured sources no record names at all. `--all` reports every
+    // include match whether it loaded or not, so a zero-percent file is either
+    // untested or ran somewhere the report could not follow, and only the
+    // records tell those apart. Three proxies for this question gave three
+    // different answers; a record is not a proxy.
+    assert.deepEqual(
+      coverageNeverRecorded({
+        directory: scripts,
+        reported: [existing, missing, path.join(root, "never-loaded.ts")],
+      }),
+      [path.join(root, "never-loaded.ts")],
+    );
+    // `missing` is deliberately not on that list, and the difference is the
+    // whole point of having two diagnostics. It appears in a record, so a
+    // process did load it; it is gone from disk, so the report could not read
+    // it back. `coverageMissingScripts` names that one. A file in no record is
+    // a third thing again: nothing ever loaded it.
+    assert.equal(
+      coverageNeverRecorded({ directory: scripts, reported: [missing] }).length,
+      0,
+    );
+    // A query-suffixed URL is a record of the file it names, so the plain form
+    // is what the comparison uses. Counting it as a different file would put a
+    // loaded source on the never-loaded list.
+    fs.writeFileSync(
+      path.join(scripts, "queried.json"),
+      JSON.stringify({
+        result: [{ url: `${pathToFileURL(existing).href}?namespace=17881` }],
+      }),
+    );
+    assert.deepEqual(
+      coverageNeverRecorded({ directory: scripts, reported: [existing] }),
+      [],
+    );
+    fs.rmSync(path.join(scripts, "queried.json"));
+
+    // The report's own file list, read where it is and where it is not. The
+    // measurement injects `neverRecorded`, so this is the only way this runs.
+    const reportDirectory = path.join(root, "report-probe");
+    fs.mkdirSync(reportDirectory, { recursive: true });
+    fs.writeFileSync(
+      path.join(reportDirectory, "coverage-final.json"),
+      JSON.stringify({ [existing]: {}, [missing]: {} }),
+    );
+    assert.deepEqual(measuredReportedSources(reportDirectory), [
+      existing,
+      missing,
+    ]);
+    assert.deepEqual(
+      measuredReportedSources(path.join(root, "no-report-here")),
+      [],
+    );
+
+    // A directory that does not exist names nothing, which is a different
+    // finding from every measured source being absent from it.
+    assert.deepEqual(
+      coverageNeverRecorded({
+        directory: path.join(root, "absent"),
+        reported: [existing],
+      }),
+      [],
+    );
+
+    // The composition itself, against a report this owns. Of the two sources
+    // the seeded report carries, the one these records name drops out and the
+    // one they do not is returned -- which is the whole reading, and the one a
+    // composition run against whatever report happens to be on disk cannot
+    // make. That is why the directory is a parameter here and not only on the
+    // reader beneath it.
+    const neverLoaded = path.join(root, "never-loaded.ts");
+    const compositionReport = path.join(root, "report-composition");
+    fs.mkdirSync(compositionReport, { recursive: true });
+    fs.writeFileSync(
+      path.join(compositionReport, "coverage-final.json"),
+      JSON.stringify({ [existing]: {}, [neverLoaded]: {} }),
+    );
+    assert.deepEqual(
+      coverageUnloadedSources({
+        directory: scripts,
+        reportDirectory: compositionReport,
+      }),
+      [neverLoaded],
+    );
+
+    // And the wiring the measurement actually ships. Every reading above
+    // injects `neverRecorded`, so the lambda that runs in CI was never read,
+    // which is exactly what the changed-line demand charged. A directory with
+    // no records at all leaves every measured source unloaded, whatever the
+    // default report turns out to hold.
+    assert.deepEqual(
+      coverageMeasurementDependencies.neverRecorded(path.join(root, "absent")),
+      [],
+    );
+
+    // The count and the part of it that can be acted on. A vanished temporary
+    // is ordinary; a vanished measured source is a reading of charged code that
+    // the report dropped, and only the second kind is worth a name.
     assert.deepEqual(coverageMissingScripts(scripts), {
-      urls: 3,
+      measured: [],
       missing: 1,
+      urls: 3,
     });
+    assert.deepEqual(coverageMissingScripts(scripts, () => true).measured, [
+      pathToFileURL(missing).href,
+    ]);
 
     const shapes = path.join(root, "shapes");
     fs.mkdirSync(shapes);
@@ -1304,9 +1413,23 @@ test("runs the coverage orchestrator through injectable child dependencies", () 
   const output: string[] = [];
   // A shape correction that cannot be produced is an instrument failure, not a
   // quiet fall back to the merge it was going to replace.
-  let reconciliation: { failure: string | null; groups: number } = {
+  let reconciliation: {
+    failure: string | null;
+    groups: number;
+    shortfalls?: Array<{ file: string; lost: number[] }>;
+  } = {
     failure: null,
     groups: 1,
+    // What the union lost, which the run names rather than counts. A file that
+    // lost nothing prints no line at all, and both shapes are read below.
+    shortfalls: [
+      { file: "packages/x/src/one.ts", lost: [7, 8] },
+      // One line lost reads differently from two, and a run that only ever
+      // loses several never says so. The number is the whole finding here, and
+      // a line reading "lost 1 covered lines" is a report that has stopped
+      // being read carefully.
+      { file: "packages/x/src/two.ts", lost: [4] },
+    ],
   };
   // What the run says about crediting a generated project's execution back to
   // the source it copied, so both the silent case and the refusing one are read
@@ -1321,6 +1444,12 @@ test("runs the coverage orchestrator through injectable child dependencies", () 
     sample: string[],
   ): ICoverageMeasurementDependencies => ({
     attribute: () => attribution,
+    // Two measured sources no process loaded, so the run names them rather
+    // than leaving a zero-percent file to be read as untested code.
+    neverRecorded: () => [
+      "D:/repo/packages/x/src/never.ts",
+      "D:/repo/packages/x/src/quiet.ts",
+    ],
     temporaryDirectory: () => {
       const directory = fs.mkdtempSync(
         path.join(os.tmpdir(), "automovie-coverage-measure-"),
@@ -1365,7 +1494,11 @@ test("runs the coverage orchestrator through injectable child dependencies", () 
     writeSources: () => output.push("sources"),
     records: () => ({ count: 2, parsed: 2, results: 4, bytes: 128 }),
     reconcile: () => reconciliation,
-    missingScripts: () => ({ urls: 3, missing: 1 }),
+    missingScripts: () => ({
+      measured: ["file:///repo/packages/x/src/gone.ts"],
+      missing: 1,
+      urls: 3,
+    }),
     scriptShapes: () => ({
       urls: 3,
       reread: 2,
@@ -1443,6 +1576,32 @@ test("runs the coverage orchestrator through injectable child dependencies", () 
   assert.ok(output.some((line) => line.includes("collector did not launch")));
   assert.ok(output.some((line) => line.includes("sample.ts")));
   assert.ok(output.some((line) => line.includes("coverage records")));
+  assert.match(
+    output.join("\n"),
+    /coverage never loaded: 2 measured sources were in no record/u,
+  );
+  assert.match(
+    output.join("\n"),
+    /^NO PROCESS LOADED: D:\/repo\/packages\/x\/src\/never\.ts$/mu,
+  );
+  assert.match(
+    output.join("\n"),
+    /^UNION SHORTFALL: packages\/x\/src\/one\.ts lost 2 covered lines a reading had \(7, 8\)$/mu,
+  );
+  assert.match(
+    output.join("\n"),
+    /^UNION SHORTFALL: packages\/x\/src\/two\.ts lost 1 covered line a reading had \(4\)$/mu,
+  );
+  // The vanished measured source is named rather than only counted, because a
+  // count of dropped readings is exactly as unusable as the count it came from.
+  assert.match(
+    output.join("\n"),
+    /coverage scripts: 3 distinct file URLs, 1 of them gone from disk at report time, 1 of those a measured source/u,
+  );
+  assert.match(
+    output.join("\n"),
+    /^MEASURED SOURCE GONE AT REPORT TIME: file:\/\/\/repo\/packages\/x\/src\/gone\.ts$/mu,
+  );
   assert.ok(roots.every((directory) => fs.existsSync(directory) === false));
 });
 

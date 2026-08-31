@@ -115,7 +115,7 @@ export const mostCoveredEntries = <T extends ICoverageEntry>(
 };
 
 /** Which source lines one entry says ran, per kind of position. */
-const coveredLines = (
+export const coveredLines = (
   entry: ICoverageEntry,
 ): {
   branches: Set<number>;
@@ -215,15 +215,76 @@ export const unionEntryByLine = <T extends ICoverageEntry>(
 };
 
 /** Per file, every group's reading folded together by position. */
-export const unionEntries = <T extends ICoverageEntry>(
+/** A file the union wrote without a line one of its readings had covered. */
+export interface IUnionShortfall {
+  file: string;
+  /** Source lines a reading covered and the written entry does not. */
+  lost: number[];
+}
+
+/**
+ * Whether the union ever wrote less than the best reading it was given.
+ *
+ * The union folds by line onto a base structure, so a position the base does
+ * not carry cannot be lifted into it however well another reading covered it.
+ * That is a real way to lose, and until now nothing said when it happened: the
+ * gate refused files whose changed lines a scoped run reads at 99.67% and
+ * nobody could tell whether the union had lost them or never seen them.
+ *
+ * A shortfall is not proof of which, but it is the difference between the two,
+ * and it costs one pass over what the union already computed.
+ *
+ * Lines rather than counts. A count says how much was covered and the gate asks
+ * which lines were, so a base whose own hits are many and whose structure
+ * misses the few another reading had would report an equal or higher count
+ * while losing exactly the positions somebody is about to be charged for.
+ */
+export const unionShortfalls = <T extends ICoverageEntry>(
+  grouped: ReadonlyMap<string, readonly T[]>,
+  united: Readonly<Record<string, T>>,
+): IUnionShortfall[] => {
+  const allLines = (entry: ICoverageEntry): Set<number> => {
+    const kinds = coveredLines(entry);
+    return new Set([
+      ...kinds.statements,
+      ...kinds.functions,
+      ...kinds.branches,
+    ]);
+  };
+  const shortfalls: IUnionShortfall[] = [];
+  for (const [file, entries] of grouped) {
+    const chosen = united[file];
+    if (chosen === undefined) continue;
+    const written = allLines(chosen);
+    const lost = new Set<number>();
+    for (const entry of entries)
+      for (const line of allLines(entry))
+        if (written.has(line) === false) lost.add(line);
+    if (lost.size !== 0)
+      shortfalls.push({
+        file,
+        lost: [...lost].sort((left, right) => left - right),
+      });
+  }
+  return shortfalls.sort((left, right) => right.lost.length - left.lost.length);
+};
+
+/** Group every report's entries by file, keeping each reading separate. */
+export const groupEntriesByFile = <T extends ICoverageEntry>(
   reports: ReadonlyArray<Record<string, T>>,
-): Record<string, T> => {
+): Map<string, T[]> => {
   const grouped = new Map<string, T[]>();
   for (const report of reports)
     for (const [file, entry] of Object.entries(report))
       grouped.set(file, [...(grouped.get(file) ?? []), entry]);
+  return grouped;
+};
+
+export const unionEntries = <T extends ICoverageEntry>(
+  reports: ReadonlyArray<Record<string, T>>,
+): Record<string, T> => {
   const united: Record<string, T> = {};
-  for (const [file, entries] of grouped) {
+  for (const [file, entries] of groupEntriesByFile(reports)) {
     const merged = unionEntryByLine(entries);
     if (merged !== undefined) united[file] = merged;
   }
@@ -274,6 +335,8 @@ export interface IShapeReconciliation {
   failure: string | null;
   /** How many shape-consistent groups the records fell into. */
   groups: number;
+  /** Files the union wrote with fewer covered positions than a reading had. */
+  shortfalls?: IUnionShortfall[];
 }
 
 /**
@@ -339,8 +402,12 @@ export const reconcileCoverageShapes = (props: {
   // could not put them back. Measured on both, in that order, after the second
   // one made this claim's own JSDoc false.
   const merged = props.readReport(props.reportDirectory);
-  props.writeReport(
-    unionEntries(merged === null ? reports : [...reports, merged]),
-  );
-  return { failure: null, groups: groups.length };
+  const candidates = merged === null ? reports : [...reports, merged];
+  const united = unionEntries(candidates);
+  props.writeReport(united);
+  return {
+    failure: null,
+    groups: groups.length,
+    shortfalls: unionShortfalls(groupEntriesByFile(candidates), united),
+  };
 };

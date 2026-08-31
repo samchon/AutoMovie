@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "layoutVersion": 1,
+  "productions": [
+    "@automovie/station"
+  ],
+  "incarnations": {
+    "@automovie/station": "2d17365b-7b26-4fc5-90a6-283434f1b74c"
+  }
+}

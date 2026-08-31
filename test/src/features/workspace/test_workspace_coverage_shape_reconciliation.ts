@@ -16,6 +16,7 @@ import {
   readRecordShapes,
   reconcileCoverageShapes,
   scriptShape,
+  unionShortfalls,
 } from "../../coverage/shapeReconciliation";
 
 const ROOT = path.resolve(__dirname, "../../../..");
@@ -261,13 +262,67 @@ export const test_workspace_coverage_shape_reconciliation = (): void => {
         succeeded: succeeded.result,
         written: succeeded.written,
         withMerged: withMerged.written,
+        // Silent when the union kept everything, and naming the file with both
+        // numbers when it did not.
+        quiet: succeeded.result.shortfalls,
+        // The same question asked of the fold directly, with a base that
+        // carries positions the other reading does not: lines 1 and 2 were
+        // covered by a reading and the written entry has neither, so they are
+        // named. Counting would have missed this, because the base's own three
+        // positions outnumber the two it lost.
+        losing: unionShortfalls(
+          new Map([
+            [
+              "one.ts",
+              [
+                {
+                  b: {},
+                  branchMap: {},
+                  f: {},
+                  fnMap: {},
+                  s: { 0: 1, 1: 1 },
+                  statementMap: {
+                    0: { start: { line: 1 } },
+                    1: { start: { line: 2 } },
+                  },
+                },
+                {
+                  b: {},
+                  branchMap: {},
+                  f: {},
+                  fnMap: {},
+                  s: { 0: 0, 1: 0, 2: 1 },
+                  statementMap: {
+                    0: { start: { line: 20 } },
+                    1: { start: { line: 21 } },
+                    2: { start: { line: 22 } },
+                  },
+                },
+              ],
+            ],
+            // A file the union never wrote is not a file it lost.
+            ["absent.ts", [entry({ 0: 1 })]],
+          ]),
+          {
+            "one.ts": {
+              s: { 0: 0, 1: 0, 2: 1 },
+              statementMap: {
+                0: { start: { line: 20 } },
+                1: { start: { line: 21 } },
+                2: { start: { line: 22 } },
+              },
+            },
+          },
+        ),
         reportFailed: reportFailed.result,
         reportFailedWrote: reportFailed.written,
         readFailed: readFailed.result,
         single,
       },
       {
-        succeeded: { failure: null, groups: 2 },
+        succeeded: { failure: null, groups: 2, shortfalls: [] },
+        quiet: [],
+        losing: [{ file: "one.ts", lost: [1, 2] }],
         written: { "one.ts": entry({ 0: 1, 1: 1 }) },
         withMerged: { "one.ts": entry({ 0: 1, 1: 1, 2: 1 }) },
         reportFailed: {
