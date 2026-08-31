@@ -621,6 +621,57 @@ test("an invented branch position is named rather than charged", () => {
       1,
     );
     assert.match(result.gaps.join("\n"), /:2 uncovered branch cond-expr\[0\]/u);
+    // A second reading of the same file, with two invented positions instead
+    // of one and a third that ran. The plural is not decoration: a run that
+    // only ever drops one never says so, and a line reading "1 branch
+    // locations cover" is a report that has stopped being read carefully.
+    //
+    // The covered artifact is the other half of the same rule. A location that
+    // ran is not a gap on any line, so the filter is never consulted for it --
+    // asking would spend a source read to answer a question nobody asked, and
+    // would drop a covered reading out of the totals it belongs in.
+    fixture.data.branchMap = {
+      invented: {
+        type: "if",
+        loc: { start: { line: 2, column: 0 }, end: { line: 2, column: 2 } },
+        locations: [
+          { start: { line: 2, column: 0 }, end: { line: 2, column: 2 } },
+        ],
+      },
+      inventedToo: {
+        type: "if",
+        loc: { start: { line: 2, column: 0 }, end: { line: 2, column: 1 } },
+        locations: [
+          { start: { line: 2, column: 0 }, end: { line: 2, column: 1 } },
+        ],
+      },
+      inventedButRan: {
+        type: "if",
+        loc: { start: { line: 2, column: 1 }, end: { line: 2, column: 2 } },
+        locations: [
+          { start: { line: 2, column: 1 }, end: { line: 2, column: 2 } },
+        ],
+      },
+      real: {
+        type: "cond-expr",
+        loc: { start: { line: 2, column: 16 }, end: { line: 2, column: 29 } },
+        locations: [
+          { start: { line: 2, column: 24 }, end: { line: 2, column: 25 } },
+        ],
+      },
+    };
+    fixture.data.b = {
+      invented: [0],
+      inventedToo: [0],
+      inventedButRan: [1],
+      real: [0],
+    };
+    const plural = inspectChangedCoverage({ ...touched, divergent: [] });
+    assert.deepEqual(plural.disagreements, [
+      `${fixture.relative}: 2 branch locations cover nothing but whitespace, which is a position the instrument invented rather than a branch this file has`,
+    ]);
+    // The one that ran stays in the totals beside the one somebody wrote.
+    assert.deepEqual(plural.totals.branches, { covered: 1, total: 2 });
   } finally {
     fs.rmSync(fixture.root, { recursive: true, force: true });
   }

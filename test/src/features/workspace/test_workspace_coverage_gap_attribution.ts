@@ -54,6 +54,7 @@ interface IAnswers {
   spanningBranch: boolean;
   unreadableBranch: boolean;
   columnlessBranch: boolean;
+  halfColumnedBranch: boolean;
   anonymous: boolean;
   unreadable: boolean;
   confirmed: boolean;
@@ -178,6 +179,12 @@ export const test_workspace_coverage_gap_attribution = (): void => {
       source: ["  "],
       span: { start: { line: 1 }, end: { line: 1 } },
     }),
+    // Half a pair of columns is no pair. Reading it as one would slice to the
+    // end of the line and call an indent whatever follows it.
+    halfColumnedBranch: branchGapIsReal({
+      source: ["  const a = 1;"],
+      span: { start: { line: 1, column: 0 }, end: { line: 1 } },
+    }),
     anonymous: real("(anonymous_12)", []),
     unreadable: real("__setModuleDefault", [], null),
     noRecord: measuredLineCount(null, "a.ts"),
@@ -250,6 +257,10 @@ export const test_workspace_coverage_gap_attribution = (): void => {
         () => answers.columnlessBranch === true,
       ],
       [
+        "and so is one carrying only half a pair of them",
+        () => answers.halfColumnedBranch === true,
+      ],
+      [
         "an anonymous entry is kept, because nothing can be looked for",
         () => answers.anonymous === true,
       ],
@@ -312,6 +323,7 @@ export const test_workspace_coverage_gap_attribution = (): void => {
       "a span across two lines is judged by nothing": true,
       "and so is one whose file the report outlived": true,
       "and so is one with no columns to slice": true,
+      "and so is one carrying only half a pair of them": true,
       "an anonymous entry is kept, because nothing can be looked for": true,
       "a file the report outlived is kept whole": true,
       "no record judges nothing": true,
