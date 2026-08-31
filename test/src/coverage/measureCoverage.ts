@@ -90,6 +90,8 @@ export interface ICoverageSpawnResult {
 export interface ICoverageMeasurementDependencies {
   /** Re-address a generated project's execution to the source it copied. */
   attribute: (directory: string) => IAttributionPass;
+  /** Measured sources that appear in no record this run wrote. */
+  neverRecorded: (directory: string) => string[];
   environment: NodeJS.ProcessEnv;
   log: (line: string) => void;
   mkdir: (directory: string, options: { recursive: true }) => unknown;
@@ -308,6 +310,67 @@ export const isMeasuredScriptUrl = (
       return lowered === repository || lowered.startsWith(`${repository}/`);
     return lowered.includes(root.toLowerCase());
   });
+};
+
+/**
+ * Measured sources that appear in no record at all.
+ *
+ * `--all` puts every include match in the report whether it loaded or not, so a
+ * file reading zero percent may be untested code or may be code that ran and
+ * was addressed somewhere the report could not follow. The report cannot tell
+ * them apart and neither could this repository: three separate ways of counting
+ * "does any test run this script" -- names mentioned in test files, the script
+ * passed as an argument, URLs in one cached record directory -- gave three
+ * different answers, and the disagreement was the point. Each counted a proxy.
+ *
+ * A record is not a proxy. If a URL for a file is in no record the process
+ * never loaded it, and if one is there it did. That is the only reading of
+ * "nothing runs this" this measurement can honestly make, so it is the one it
+ * makes.
+ */
+export const coverageNeverRecorded = (props: {
+  directory: string;
+  reported: readonly string[];
+}): string[] => {
+  const seen = new Set<string>();
+  let entries: string[];
+  try {
+    entries = fs.readdirSync(props.directory);
+  } catch {
+    return [];
+  }
+  for (const entry of entries) {
+    if (entry.endsWith(".json") === false) continue;
+    let record: IRawCoverageRecord;
+    try {
+      record = JSON.parse(
+        fs.readFileSync(path.join(props.directory, entry), "utf8"),
+      ) as IRawCoverageRecord;
+    } catch {
+      continue;
+    }
+    for (const script of Array.isArray(record.result) ? record.result : []) {
+      const url = script.url;
+      if (typeof url !== "string" || url.startsWith("file:") === false)
+        continue;
+      const cut = url.search(/[?#]/u);
+      try {
+        seen.add(
+          fileURLToPath(cut === -1 ? url : url.slice(0, cut))
+            .replaceAll("\\", "/")
+            .toLowerCase(),
+        );
+      } catch {
+        // A URL this cannot resolve names no file, which is a different
+        // finding and one `coverageMissingScripts` already reports.
+      }
+    }
+  }
+  return props.reported
+    .filter(
+      (file) => seen.has(file.replaceAll("\\", "/").toLowerCase()) === false,
+    )
+    .sort((left, right) => left.localeCompare(right));
 };
 
 export const coverageScriptShapes = (
@@ -669,6 +732,23 @@ export const reconcileMeasuredShapes = (
   }
 };
 
+/** Where a path is printed the way every other line prints one. */
+const slashOf = (file: string): string => file.replaceAll("\\", "/");
+
+/** Every measured source the report carries, read from the report itself. */
+const measuredReportedSources = (): string[] => {
+  try {
+    return Object.keys(
+      JSON.parse(
+        fs.readFileSync(path.join(REPORT, "coverage-final.json"), "utf8"),
+      ) as Record<string, unknown>,
+    );
+  } catch {
+    // No report is a different failure, and one the caller already reports.
+    return [];
+  }
+};
+
 /** The creditable scaffold population, re-checked per run rather than assumed. */
 export const measuredScaffoldAttribution = (
   directory: string,
@@ -689,6 +769,11 @@ export const measuredScaffoldAttribution = (
 export const coverageMeasurementDependencies: ICoverageMeasurementDependencies =
   {
     attribute: measuredScaffoldAttribution,
+    neverRecorded: (directory) =>
+      coverageNeverRecorded({
+        directory,
+        reported: measuredReportedSources(),
+      }),
     temporaryDirectory: coverageTemporaryDirectory,
     sourceHostDirectory: coverageSourceHostDirectory,
     mkdir: fs.mkdirSync,
@@ -837,6 +922,15 @@ export const measureCoverage = (
     // count of them is exactly as unusable as the count they came from.
     for (const url of scripts.measured)
       dependencies.log(`MEASURED SOURCE GONE AT REPORT TIME: ${url}`);
+    // Which measured sources no process ever loaded. `--all` reports every
+    // include match, so a zero-percent file is either untested or ran somewhere
+    // the report could not follow, and only the records tell them apart.
+    const never = dependencies.neverRecorded(temporary);
+    dependencies.log(
+      `coverage never loaded: ${never.length} measured ${never.length === 1 ? "source was" : "sources were"} in no record`,
+    );
+    for (const file of never)
+      dependencies.log(`NO PROCESS LOADED: ${slashOf(file)}`);
     const shapes = dependencies.scriptShapes(temporary);
     dependencies.log(
       `coverage shapes: ${shapes.reread} scripts were read by more than one ` +

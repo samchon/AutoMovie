@@ -1339,6 +1339,12 @@ test("runs the coverage orchestrator through injectable child dependencies", () 
     sample: string[],
   ): ICoverageMeasurementDependencies => ({
     attribute: () => attribution,
+    // Two measured sources no process loaded, so the run names them rather
+    // than leaving a zero-percent file to be read as untested code.
+    neverRecorded: () => [
+      "D:/repo/packages/x/src/never.ts",
+      "D:/repo/packages/x/src/quiet.ts",
+    ],
     temporaryDirectory: () => {
       const directory = fs.mkdtempSync(
         path.join(os.tmpdir(), "automovie-coverage-measure-"),
@@ -1465,6 +1471,14 @@ test("runs the coverage orchestrator through injectable child dependencies", () 
   assert.ok(output.some((line) => line.includes("collector did not launch")));
   assert.ok(output.some((line) => line.includes("sample.ts")));
   assert.ok(output.some((line) => line.includes("coverage records")));
+  assert.match(
+    output.join("\n"),
+    /coverage never loaded: 2 measured sources were in no record/u,
+  );
+  assert.match(
+    output.join("\n"),
+    /^NO PROCESS LOADED: D:\/repo\/packages\/x\/src\/never\.ts$/mu,
+  );
   assert.match(
     output.join("\n"),
     /^UNION SHORTFALL: packages\/x\/src\/one\.ts lost 2 covered lines a reading had \(7, 8\)$/mu,
