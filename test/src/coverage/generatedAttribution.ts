@@ -42,10 +42,32 @@ export const digestText = (text: string): string =>
     .update(text.replaceAll("\r\n", "\n"))
     .digest("hex");
 
-/** The scaffold-relative key a generated script URL would have come from. */
-export const generatedScaffoldKey = (url: string): string | undefined => {
-  const match = /\/(scripts\/[A-Za-z0-9._-]+\.[cm]?tsx?)$/u.exec(url);
-  return match?.[1];
+/**
+ * The scaffold-relative key a generated URL would have come from.
+ *
+ * The longest tail of the URL that names a creditable asset, because a tail
+ * alone cannot say where the generated project's root ends. `.../src/examples/
+ * buildings.ts` has four tails and only one of them is a scaffold asset.
+ *
+ * This began as `scripts/<name>` and that was too narrow by twenty-eight files.
+ * The scaffold ships 88 TypeScript assets and every one of them renders byte
+ * for byte, but `vite.config.ts`, `repaintSelectionReviews.ts` and the whole of
+ * `src/examples` sit outside `scripts/` and were never candidates.
+ */
+export const generatedScaffoldKey = (
+  url: string,
+  creditable?: ReadonlyMap<string, unknown> | ReadonlySet<string>,
+): string | undefined => {
+  const parts = url.replaceAll("\\", "/").split("/");
+  for (let index = 1; index < parts.length; index++) {
+    const tail = parts.slice(index).join("/");
+    if (creditable === undefined) {
+      if (/^scripts\/[A-Za-z0-9._-]+\.[cm]?tsx?$/u.test(tail)) return tail;
+      continue;
+    }
+    if (creditable.has(tail)) return tail;
+  }
+  return undefined;
 };
 
 /**
@@ -63,7 +85,7 @@ export const attributableScaffoldSources = (props: {
   const read = props.read ?? ((file: string) => fs.readFileSync(file, "utf8"));
   const admitted = new Map<string, string>();
   for (const [key, content] of Object.entries(props.rendered)) {
-    if (key.startsWith("scripts/") === false) continue;
+    if (/\.[cm]?tsx?$/u.test(key) === false) continue;
     const source = path.join(props.scaffoldRoot, key);
     let text;
     try {
@@ -132,13 +154,22 @@ const attributeSourceMap = (props: {
   if (Array.isArray(listed) === false) return;
   for (const [index, one] of listed.entries()) {
     if (typeof one !== "string") continue;
-    const key = generatedScaffoldKey(one);
+    const key = generatedScaffoldKey(one, props.sources);
     const target = key === undefined ? undefined : props.sources.get(key);
     if (target !== undefined) listed[index] = pathToRecordUrl(target);
   }
 };
 
 export const attributeRecordUrls = (props: {
+  /**
+   * Every scaffold asset the URL shape may name, creditable or not.
+   *
+   * Kept apart from `sources` so a byte that drifted is still recognised as a
+   * scaffold asset and refused by name. Folding the two would have turned the
+   * refusal into a silent skip, and a credit nobody watches decline is a credit
+   * nobody watches.
+   */
+  candidates?: ReadonlySet<string>;
   isRepository: (url: string) => boolean;
   record: {
     result?: Array<{ url?: string }>;
@@ -148,11 +179,12 @@ export const attributeRecordUrls = (props: {
 }): IAttributionOutcome => {
   const refused: string[] = [];
   let attributed = 0;
+  const candidates = props.candidates ?? new Set(props.sources.keys());
   const cache = props.record["source-map-cache"];
   for (const entry of props.record.result ?? []) {
     const url = entry.url;
     if (typeof url !== "string" || props.isRepository(url)) continue;
-    const key = generatedScaffoldKey(url);
+    const key = generatedScaffoldKey(url, candidates);
     if (key === undefined) continue;
     const source = props.sources.get(key);
     if (source === undefined) {
@@ -176,9 +208,126 @@ export const attributeRecordUrls = (props: {
 /** Read one record back, so a caller never has to know the encoding. */
 export const recordUrlToPath = (url: string): string => fileURLToPath(url);
 
+/**
+ * The repository file a vanished fixture-linked workspace build came from.
+ *
+ * A generated project receives the repository's built packages by copy:
+ * `linkWorkspacePackage` rebuilds a stale one, then `fs.cpSync(build, target)`.
+ * The child then requires that copy, and V8 records it at the fixture's own
+ * path. The fixture is deleted on the way out, so by the time the report runs
+ * the file is gone -- which is what the run has been printing all along as
+ * `219 of them gone from disk at report time`.
+ *
+ * c8 must read a script to place its ranges. A script it cannot read is not
+ * merely unmapped: the whole reading is dropped, and its source map with it, so
+ * nothing reaches the `src` the map names. That is why `--exclude-after-remap`
+ * alone moved nothing when it was tried: the flag reorders filtering, and the
+ * reading here dies of absence rather than of filtering.
+ *
+ * Re-addressing it to the repository's own copy of the same build is what makes
+ * the file readable again. The bytes are the same bytes: the copy is taken from
+ * `packages/<name>/lib` in the same run, and #2183's freshness gate refuses a
+ * build older than the source it claims to be.
+ */
+export const linkedWorkspaceLibraryPath = (props: {
+  root: string;
+  url: string;
+}): string | undefined => {
+  const match = /\/node_modules\/@automovie\/([a-z0-9-]+)\/lib\/(.+)$/u.exec(
+    props.url.replaceAll("\\", "/"),
+  );
+  if (match === null) return undefined;
+  return path.join(props.root, "packages", match[1]!, "lib", match[2]!);
+};
+
+/**
+ * Re-address every vanished linked build in one record to the repository's.
+ *
+ * Only a URL whose file is actually gone is moved. A linked build that still
+ * exists is readable where it stands, and moving it would claim the two are the
+ * same copy on no evidence beyond the path shape.
+ */
+export const attributeLinkedLibraries = (props: {
+  exists?: (file: string) => boolean;
+  record: { result?: Array<{ url?: string }> };
+  root: string;
+}): number => {
+  const exists = props.exists ?? ((file: string) => fs.existsSync(file));
+  let attributed = 0;
+  for (const entry of props.record.result ?? []) {
+    const url = entry.url;
+    if (typeof url !== "string") continue;
+    const target = linkedWorkspaceLibraryPath({ root: props.root, url });
+    if (target === undefined) continue;
+    let vanished;
+    try {
+      vanished = exists(fileURLToPath(url)) === false;
+    } catch {
+      continue;
+    }
+    if (vanished === false || exists(target) === false) continue;
+    entry.url = pathToRecordUrl(target);
+    attributed++;
+  }
+  return attributed;
+};
+
+/**
+ * The same script, addressed without the loader's query.
+ *
+ * `tsImport` appends `?namespace=<id>` to a module URL so two loads of one file
+ * stay distinct, and V8 records that URL verbatim. Turned back into a path it
+ * names `build/experimental.ts?namespace=1`, which no filesystem has, so c8
+ * cannot read the script and drops the whole reading.
+ *
+ * The run printed this for its whole life as part of `gone from disk at report
+ * time` and it was the third member of a family: a scaffold copy executed at a
+ * temporary path (#2185), a linked build deleted with its fixture (#2201), and
+ * a real repository source addressed with a suffix. In each the code ran and
+ * the measurement landed somewhere nobody reads.
+ *
+ * Only a URL whose stripped form is a file that exists is moved, so a genuine
+ * query-bearing address that names nothing keeps its own address and stays
+ * visible as missing.
+ */
+export const strippedLoaderQuery = (url: string): string | undefined => {
+  const cut = url.search(/[?#]/u);
+  if (cut === -1) return undefined;
+  return url.slice(0, cut);
+};
+
+/** Re-address every query-suffixed reading in one record to its plain file. */
+export const attributeLoaderQueries = (props: {
+  exists?: (file: string) => boolean;
+  record: { result?: Array<{ url?: string }> };
+}): number => {
+  const exists = props.exists ?? ((file: string) => fs.existsSync(file));
+  let attributed = 0;
+  for (const entry of props.record.result ?? []) {
+    const url = entry.url;
+    if (typeof url !== "string" || url.startsWith("file:") === false) continue;
+    const plain = strippedLoaderQuery(url);
+    if (plain === undefined) continue;
+    let target;
+    try {
+      target = fileURLToPath(plain);
+    } catch {
+      continue;
+    }
+    if (exists(target) === false) continue;
+    entry.url = plain;
+    attributed++;
+  }
+  return attributed;
+};
+
 export interface IAttributionPass {
   /** Generated URLs credited to a repository source, across every record. */
   attributed: number;
+  /** Vanished linked workspace builds re-addressed to the repository's copy. */
+  linked: number;
+  /** Query-suffixed readings re-addressed to the plain file they name. */
+  queried: number;
   /** Records whose bytes were rewritten. */
   records: number;
   /** Distinct generated URLs no repository source vouched for. */
@@ -195,10 +344,13 @@ export interface IAttributionPass {
  * time a later freshness check would read as a change.
  */
 export const attributeGeneratedRecords = (props: {
+  candidates?: ReadonlySet<string>;
   directory: string;
+  exists?: (file: string) => boolean;
   isRepository: (url: string) => boolean;
   list?: (directory: string) => string[];
   read?: (file: string) => string;
+  root?: string;
   sources: ReadonlyMap<string, string>;
   write?: (file: string, text: string) => void;
 }): IAttributionPass => {
@@ -209,12 +361,14 @@ export const attributeGeneratedRecords = (props: {
     ((file: string, text: string) => fs.writeFileSync(file, text, "utf8"));
   const refused = new Set<string>();
   let attributed = 0;
+  let linked = 0;
+  let queried = 0;
   let records = 0;
   let entries: string[];
   try {
     entries = list(props.directory);
   } catch {
-    return { attributed, records, refused: [] };
+    return { attributed, linked, queried, records, refused: [] };
   }
   for (const entry of entries) {
     if (entry.endsWith(".json") === false) continue;
@@ -226,18 +380,32 @@ export const attributeGeneratedRecords = (props: {
       continue;
     }
     const outcome = attributeRecordUrls({
+      candidates: props.candidates,
       isRepository: props.isRepository,
       record,
       sources: props.sources,
     });
     for (const url of outcome.refused) refused.add(url);
-    if (outcome.attributed === 0) continue;
+    const moved =
+      props.root === undefined
+        ? 0
+        : attributeLinkedLibraries({
+            exists: props.exists,
+            record,
+            root: props.root,
+          });
+    linked += moved;
+    const plain = attributeLoaderQueries({ exists: props.exists, record });
+    queried += plain;
+    if (outcome.attributed === 0 && moved === 0 && plain === 0) continue;
     attributed += outcome.attributed;
     records++;
     write(file, JSON.stringify(record));
   }
   return {
     attributed,
+    linked,
+    queried,
     records,
     refused: [...refused].sort((left, right) => left.localeCompare(right)),
   };

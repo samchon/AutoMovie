@@ -1436,9 +1436,11 @@ test("runs the coverage orchestrator through injectable child dependencies", () 
   // through `measureCoverage` rather than only through the pass itself.
   let attribution: {
     attributed: number;
+    linked: number;
+    queried: number;
     records: number;
     refused: string[];
-  } = { attributed: 0, records: 0, refused: [] };
+  } = { attributed: 0, linked: 0, queried: 0, records: 0, refused: [] };
   const dependencies = (
     result: ICoverageSpawnResult,
     sample: string[],
@@ -1519,33 +1521,47 @@ test("runs the coverage orchestrator through injectable child dependencies", () 
   // the shape of every run before a generated project ran at all.
   assert.match(
     output.join("\n"),
-    /coverage attribution: 0 generated script entries in 0 record files credited to the repository source whose bytes they ran$/mu,
+    /coverage attribution: 0 generated script entries in 0 record files credited to the repository source whose bytes they ran, 0 vanished linked builds and 0 query-suffixed readings re-addressed$/mu,
   );
   // And a run that credited some and refused one. The refusal is named at its
   // own address rather than folded into the count, because the whole point of
   // refusing is that somebody can go and look at what ran.
   attribution = {
     attributed: 12,
+    linked: 0,
+    queried: 0,
     records: 3,
     refused: ["file:///tmp/film/generated/scripts/drift.ts"],
   };
   assert.equal(measureCoverage(dependencies({ status: 0 }, [])), 0);
   assert.match(
     output.join("\n"),
-    /coverage attribution: 12 generated script entries in 3 record files credited to the repository source whose bytes they ran, 1 refused for bytes no repository source vouches for$/mu,
+    /coverage attribution: 12 generated script entries in 3 record files credited to the repository source whose bytes they ran, 0 vanished linked builds and 0 query-suffixed readings re-addressed, 1 refused for bytes no repository source vouches for$/mu,
   );
   assert.match(
     output.join("\n"),
     /^UNATTRIBUTED GENERATED SCRIPT: file:[/]{3}tmp[/]film[/]generated[/]scripts[/]drift[.]ts$/mu,
   );
   // Singular on both counters, so the message is read rather than assumed.
-  attribution = { attributed: 1, records: 1, refused: [] };
+  attribution = {
+    attributed: 1,
+    linked: 0,
+    queried: 0,
+    records: 1,
+    refused: [],
+  };
   assert.equal(measureCoverage(dependencies({ status: 0 }, [])), 0);
   assert.match(
     output.join("\n"),
     /coverage attribution: 1 generated script entry in 1 record file credited/u,
   );
-  attribution = { attributed: 0, records: 0, refused: [] };
+  attribution = {
+    attributed: 0,
+    linked: 0,
+    queried: 0,
+    records: 0,
+    refused: [],
+  };
   reconciliation = { failure: null, groups: 3 };
   assert.equal(measureCoverage(dependencies({ status: 0 }, [])), 0);
   assert.match(

@@ -676,6 +676,10 @@ export const measuredShapeReconciliationParts = (props: {
         path.join(ROOT, "test", "node_modules", "c8", "bin", "c8.js"),
         "report",
         "--all",
+        // Filter after remapping, so a build whose own source map names a
+        // measured source is judged by that source rather than dropped for the
+        // path it was loaded from.
+        "--exclude-after-remap",
         ...SOURCES.flatMap((source) => ["--src", source]),
         ...INCLUDES.flatMap((include) => ["--include", include]),
         "--exclude",
@@ -785,19 +789,27 @@ export const coverageUnloadedSources = (props: {
 /** The creditable scaffold population, re-checked per run rather than assumed. */
 export const measuredScaffoldAttribution = (
   directory: string,
-): IAttributionPass =>
-  attributeGeneratedRecords({
+): IAttributionPass => {
+  const rendered = renderScaffold({ name: "coverage-attribution" });
+  return attributeGeneratedRecords({
+    // Every TypeScript asset the scaffold ships, so one whose bytes drifted is
+    // still recognised and refused by name rather than skipped in silence.
+    candidates: new Set(
+      Object.keys(rendered).filter((one) => /\.[cm]?tsx?$/u.test(one)),
+    ),
     directory,
     isRepository: (url) =>
       url
         .replaceAll("\\", "/")
         .toLowerCase()
         .includes(ROOT.replaceAll("\\", "/").toLowerCase()),
+    root: ROOT,
     sources: attributableScaffoldSources({
-      rendered: renderScaffold({ name: "coverage-attribution" }),
+      rendered,
       scaffoldRoot: scaffoldAssetDirectory(),
     }),
   });
+};
 
 export const coverageMeasurementDependencies: ICoverageMeasurementDependencies =
   {
@@ -831,6 +843,7 @@ export const measureCoverage = (
       [
         path.join(ROOT, "test", "node_modules", "c8", "bin", "c8.js"),
         "--all",
+        "--exclude-after-remap",
         ...SOURCES.flatMap((source) => ["--src", source]),
         ...INCLUDES.flatMap((include) => ["--include", include]),
         "--exclude",
@@ -904,7 +917,9 @@ export const measureCoverage = (
       `coverage attribution: ${attribution.attributed} generated script ` +
         `${attribution.attributed === 1 ? "entry" : "entries"} in ` +
         `${attribution.records} record ${attribution.records === 1 ? "file" : "files"} ` +
-        `credited to the repository source whose bytes they ran` +
+        `credited to the repository source whose bytes they ran, ` +
+        `${attribution.linked} vanished linked build${attribution.linked === 1 ? "" : "s"} and ` +
+        `${attribution.queried} query-suffixed reading${attribution.queried === 1 ? "" : "s"} re-addressed` +
         (attribution.refused.length === 0
           ? ""
           : `, ${attribution.refused.length} refused for bytes no repository source vouches for`),
