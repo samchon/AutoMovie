@@ -17,7 +17,7 @@ import {
 } from "@automovie/interface";
 import fs from "node:fs";
 import path from "node:path";
-import { PNG } from "pngjs";
+import type { PNG } from "pngjs";
 import typia from "typia";
 
 import { acquireCommitLock, releaseCommitLock } from "../project/commitLock";
@@ -29,6 +29,7 @@ import {
   digestAutoMovieBytes,
   encodeAutoMoviePathSegment,
 } from "./contentIdentity";
+import { residentPngJs } from "./residentCodecs";
 
 /**
  * Project-relative directory every subject observation artifact is written to.
@@ -791,7 +792,7 @@ export class AutoMovieProductionSubjectInspectionService {
       try {
         if (drawn.bytes.length === 0)
           throw new Error("the inspection instrument returned zero bytes");
-        png = PNG.sync.read(Buffer.from(drawn.bytes));
+        png = residentPngJs().PNG.sync.read(Buffer.from(drawn.bytes));
       } catch (error) {
         return refuse(
           "capture-png-invalid",

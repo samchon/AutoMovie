@@ -17,6 +17,7 @@ import path from "node:path";
 import { pathToFileURL } from "node:url";
 
 import { preserveCliHarnessCleanup } from "./CliHarnessCleanup";
+import { linkGeneratedWorkspacePackage } from "./GeneratedWorkspaceLink";
 
 interface IAuditRecord {
   globalFrame: number;
@@ -144,20 +145,12 @@ const throwsWith = (task: () => unknown, text: string): boolean => {
   }
 };
 
-const linkWorkspacePackage = (project: string, name: string): void => {
-  const packageRoot = path.dirname(
-    createRequire(__filename).resolve(`${name}/package.json`),
-  );
-  const target = path.join(project, "node_modules", ...name.split("/"));
-  fs.mkdirSync(path.dirname(target), { recursive: true });
-  fs.symlinkSync(
-    packageRoot,
-    target,
-    process.platform === "win32" ? "junction" : "dir",
-  );
-  if (!fs.statSync(target).isDirectory())
-    throw new Error(`Fixture package link did not resolve: ${name}.`);
-};
+const linkWorkspacePackage = (project: string, name: string): void =>
+  linkGeneratedWorkspacePackage({
+    name,
+    project,
+    subject: "Fixture package link",
+  });
 
 /**
  * A generated render job compares actual scene counts and publishes semantic

@@ -8,6 +8,7 @@ import path from "node:path";
 
 import { throwsError } from "../internal/predicates";
 import { preserveCliRootFixtureCleanup } from "./CliRootFixtureCleanup";
+import { linkGeneratedWorkspacePackage } from "./GeneratedWorkspaceLink";
 
 interface IClosureSnapshot {
   identity: IAutoMovieCaptureRuntimeIdentity["runtimeClosure"];
@@ -35,21 +36,12 @@ const PACKAGES = [
   "vite",
 ] as const;
 
-const linkWorkspacePackage = (project: string, name: string): void => {
-  const manifest = createRequire(__filename)
-    .resolve.paths(name)
-    ?.map((base) => path.join(base, ...name.split("/"), "package.json"))
-    .find((candidate) => fs.existsSync(candidate));
-  if (manifest === undefined)
-    throw new Error(`Capture runtime package root did not resolve: ${name}.`);
-  const target = path.join(project, "node_modules", ...name.split("/"));
-  fs.mkdirSync(path.dirname(target), { recursive: true });
-  fs.symlinkSync(
-    path.dirname(manifest),
-    target,
-    process.platform === "win32" ? "junction" : "dir",
-  );
-};
+const linkWorkspacePackage = (project: string, name: string): void =>
+  linkGeneratedWorkspacePackage({
+    name,
+    project,
+    subject: "Capture runtime package root",
+  });
 
 const writeRuntimeGraph = (
   root: string,

@@ -10,6 +10,7 @@ import * as ts from "typescript-compiler";
 
 import { namedFacts, throwsError } from "../internal/predicates";
 import { preserveCliRootFixtureCleanup } from "./CliRootFixtureCleanup";
+import { linkGeneratedWorkspacePackage } from "./GeneratedWorkspaceLink";
 
 interface IRuntimePackageSnapshot {
   assets: Array<{ digest: `sha256:${string}`; path: string }>;
@@ -78,19 +79,21 @@ const packageRoot = (name: string): string => {
   return fs.realpathSync(path.dirname(manifest));
 };
 
-const linkWorkspacePackage = (project: string, name: string): void => {
-  const target = path.join(project, "node_modules", ...name.split("/"));
-  fs.mkdirSync(path.dirname(target), { recursive: true });
-  fs.symlinkSync(
-    packageRoot(name),
-    target,
-    process.platform === "win32" ? "junction" : "dir",
-  );
-};
+const linkWorkspacePackage = (project: string, name: string): void =>
+  linkGeneratedWorkspacePackage({
+    name,
+    project,
+    subject: "Sound runtime package",
+  });
 
 const copyWorkspacePackage = (project: string, name: string): string => {
   const target = path.join(project, "node_modules", ...name.split("/"));
   fs.mkdirSync(path.dirname(target), { recursive: true });
+  // Remove whatever stands there first. A generated consumer now receives the
+  // dependency closure a registry install would bring, so this path can meet a
+  // junction rather than an empty slot -- and copying onto a junction writes
+  // through it, into the repository's own package.
+  fs.rmSync(target, { force: true, recursive: true });
   fs.cpSync(packageRoot(name), target, { dereference: true, recursive: true });
   return fs.realpathSync(target);
 };

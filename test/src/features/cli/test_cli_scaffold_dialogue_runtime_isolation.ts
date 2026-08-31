@@ -7,11 +7,11 @@ import type { IAutoMovieProductionRenderJobPlan } from "@automovie/production";
 import { renderScaffold, writeFiles } from "@automovie/template";
 import { TestValidator } from "@nestia/e2e";
 import fs from "node:fs";
-import { createRequire } from "node:module";
 import os from "node:os";
 import path from "node:path";
 
 import { preserveCliHarnessCleanup } from "./CliHarnessCleanup";
+import { linkGeneratedWorkspacePackage } from "./GeneratedWorkspaceLink";
 
 interface IDialogueRuntime {
   version: 1;
@@ -137,21 +137,12 @@ interface IRuntimeModules {
   }>;
 }
 
-const linkWorkspacePackage = (project: string, name: string): void => {
-  const manifest = createRequire(__filename)
-    .resolve.paths(name)
-    ?.map((base) => path.join(base, ...name.split("/"), "package.json"))
-    .find((candidate) => fs.existsSync(candidate));
-  if (manifest === undefined)
-    throw new Error(`Dialogue runtime package root did not resolve: ${name}.`);
-  const target = path.join(project, "node_modules", ...name.split("/"));
-  fs.mkdirSync(path.dirname(target), { recursive: true });
-  fs.symlinkSync(
-    path.dirname(manifest),
-    target,
-    process.platform === "win32" ? "junction" : "dir",
-  );
-};
+const linkWorkspacePackage = (project: string, name: string): void =>
+  linkGeneratedWorkspacePackage({
+    name,
+    project,
+    subject: "Dialogue runtime package root",
+  });
 
 const loadModules = (root: string): IRuntimeModules => {
   const scripts = path.join(root, "scripts");

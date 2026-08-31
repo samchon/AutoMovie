@@ -211,11 +211,21 @@ const FILM_SOURCE_EXPORT = "film";
  *
  * @author Samchon
  */
-export const AUTOMOVIE_PRODUCTION_COMPILER_VERSION = (
-  require(path.join(__dirname, "..", "..", "package.json")) as {
-    version: string;
-  }
-).version;
+export const AUTOMOVIE_PRODUCTION_COMPILER_VERSION =
+  // A static specifier rather than a path built at run time. Both resolve to
+  // this package's own manifest from `src/production` and from the emitted
+  // `lib/production`, so the two shapes agree -- but only the static one
+  // survives bundling, and a generated project bundles this package. Built
+  // from `__dirname`, the specifier resolved against the bundle's own
+  // directory instead: the generated project's `package.json` sits exactly
+  // where the walk lands, so the identity took the consumer's version and
+  // reported no error at all. Rollup refuses the dynamic form outright, which
+  // is how a silently wrong version finally became a failure.
+  (
+    require("../../package.json") as {
+      version: string;
+    }
+  ).version;
 
 /**
  * Deterministic source compiler and generated-ownership gate.

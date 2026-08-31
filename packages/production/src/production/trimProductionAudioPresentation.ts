@@ -1,4 +1,6 @@
-import { BoxParser, createFile } from "mp4box";
+import type { createFile } from "mp4box";
+
+import { residentMp4Box } from "./residentCodecs";
 
 /**
  * Add one ISO edit that removes Opus encoder priming and tail padding while
@@ -42,8 +44,9 @@ export const trimProductionAudioPresentation = (props: {
     | undefined;
   if (movieHeader === undefined)
     throw new Error("Audio presentation trim requires a movie header.");
-  const edit = track.addBox(new BoxParser.box.edts());
-  const list = edit.addBox(new BoxParser.box.elst());
+  const boxes = residentMp4Box().BoxParser;
+  const edit = track.addBox(new boxes.box.edts());
+  const list = edit.addBox(new boxes.box.elst());
   list.entries = [
     {
       segment_duration: segmentDuration,
