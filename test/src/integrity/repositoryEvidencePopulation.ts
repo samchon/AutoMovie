@@ -38,6 +38,8 @@ export interface IEvidencePopulationClaim {
 
 export interface IEvidencePopulationGraph {
   carrierFiles: number;
+  /** Selected sources carrying no citation at all. */
+  unpaid: number;
   carriers: number;
   claims: IEvidencePopulationClaim[];
   package: string;
@@ -222,6 +224,75 @@ export const evidenceCarriers = (
 };
 
 /**
+ * Selected sources that answer nothing, pinned per package.
+ *
+ * The evidence-graph skill settles which of #2171's two forks this is. It
+ * forbids the other outright -- "Select the complete public export surface
+ * rather than narrowing files or symbol kinds to avoid obligations" -- and
+ * names where the missing half belongs: "`evidence/graph` runs its obligation
+ * from the reference toward the claim, so a new file carrying a wrong citation
+ * is an error while a new file carrying none at all is silent... Until the
+ * contributor grows a per-host lower bound, that bound belongs to a structural
+ * guard... Record the unpaid edge instead of reporting the population as
+ * self-enforcing."
+ *
+ * This is that guard and that record. Measured on the tree that added it:
+ *
+ * | package | selected | answering | unpaid |
+ * | --- | --- | --- | --- |
+ * | `production` | 58 | 11 | 47 |
+ * | `playground` | 25 | 1 | 24 |
+ * | `engine` | 219 | 216 | 3 |
+ *
+ * and every one of the other ten packages at zero, which is the reason the rule
+ * is stated as a rule rather than an aspiration: eleven of thirteen packages
+ * already meet it. `production` carries the largest surfaces in the repository
+ * among the unpaid -- a 1,767-line oracle service, a 1,260-line repaint
+ * service, a 1,233-line legacy importer -- so `requirements/repaint/*` reads
+ * green from three citing files while the repaint service answers nothing.
+ *
+ * A count, deliberately, and never a list of file names. A name list makes
+ * "owes no evidence" the standing answer for the file that joins it and reports
+ * nothing when one does; a count refuses the next unpaid file the moment it
+ * arrives. It is compared for equality rather than as a ceiling, because the
+ * skill asks the same of the reachability ledger: "any increase, decrease,
+ * target substitution, or reclassification requires the ledger to be reread and
+ * updated rather than drifting silently." Paying one of these down is a change
+ * to this number, made deliberately, in the commit that pays it.
+ *
+ * Resumption: the debt closes when each package's authored surfaces cite the
+ * requirements they implement. That is its own work, not a toll on the next
+ * unrelated change, and it is owned by #2171 rather than absorbed here.
+ */
+export const ACCEPTED_UNPAID_HOSTS: Readonly<Record<string, number>> = {
+  engine: 3,
+  playground: 24,
+  production: 47,
+};
+
+/**
+ * Compare one package's unpaid population against the pinned ledger.
+ *
+ * Both directions are diagnosed. A rise is new debt; a fall is a payment the
+ * ledger has not recorded, and letting it pass silently is how a pinned number
+ * stops meaning anything.
+ */
+export const unpaidHostDiagnostic = (props: {
+  accepted: number;
+  package: string;
+  unpaid: number;
+}): string | undefined => {
+  if (props.unpaid === props.accepted) return undefined;
+  const subject =
+    props.unpaid === 1
+      ? "1 selected source answers"
+      : `${props.unpaid} selected sources answer`;
+  return props.unpaid > props.accepted
+    ? `${props.package}: ${subject} nothing, ${props.accepted} accepted; a selected host owes a citation`
+    : `${props.package}: ${subject} nothing where ${props.accepted} are accepted; record the payment in ACCEPTED_UNPAID_HOSTS`;
+};
+
+/**
  * Measure the configured repository graphs without turning a lint pass into an
  * opaque boolean. The TypeScript compiler remains the authority for graph
  * cardinality; this guard makes the selected source and real citation
@@ -306,10 +377,18 @@ export const inspectRepositoryEvidencePopulations = (
       };
     });
 
+    const unpaid = population.files.length - carrierFiles.size;
+    const unpaidDiagnostic = unpaidHostDiagnostic({
+      accepted: ACCEPTED_UNPAID_HOSTS[definition.package] ?? 0,
+      package: definition.package,
+      unpaid,
+    });
+    if (unpaidDiagnostic !== undefined) diagnostics.push(unpaidDiagnostic);
     graphs.push({
       package: definition.package,
       sources: population.files.length,
       carrierFiles: carrierFiles.size,
+      unpaid,
       carriers: population.carriers.length,
       claims,
     });
@@ -330,11 +409,21 @@ export const inspectRepositoryEvidencePopulations = (
       diagnostics.push(
         `${name}: evidence/graph is enabled and selected no citation host`,
       );
+    const answering = new Set(
+      population.carriers.map((carrier) => carrier.file),
+    ).size;
+    const unpaid = population.files.length - answering;
+    const unpaidDiagnostic = unpaidHostDiagnostic({
+      accepted: ACCEPTED_UNPAID_HOSTS[name] ?? 0,
+      package: name,
+      unpaid,
+    });
+    if (unpaidDiagnostic !== undefined) diagnostics.push(unpaidDiagnostic);
     graphs.push({
       package: name,
       sources: population.files.length,
-      carrierFiles: new Set(population.carriers.map((carrier) => carrier.file))
-        .size,
+      carrierFiles: answering,
+      unpaid,
       carriers: population.carriers.length,
       claims: [],
     });
@@ -349,7 +438,7 @@ export const reportRepositoryEvidencePopulations = (
 ): void => {
   for (const graph of result.graphs) {
     write(
-      `${graph.package}: ${graph.sources} source files, ${graph.carrierFiles} carrier files, ${graph.carriers} JSDoc carriers`,
+      `${graph.package}: ${graph.sources} source files, ${graph.carrierFiles} carrier files, ${graph.carriers} JSDoc carriers, ${graph.unpaid} answering nothing`,
     );
     for (const claim of graph.claims)
       write(

@@ -15,10 +15,24 @@ import type { ITtscLintConfig } from "@ttsc/lint";
  *
  * The consequence is worth seeing rather than inferring. Measured on this
  * package, eleven of fifty-eight selected sources carry a citation, and the
- * repository population gate now prints that ratio for every package that runs
- * this graph. Requiring the other forty-seven to speak would buy package-
- * boundary restatement rather than semantic inspection, which is the same
- * reason `evidence/review` stays off on this graph.
+ * repository population gate prints that ratio for every package that runs
+ * this graph.
+ *
+ * That ratio is debt, not designed silence, and this comment used to argue the
+ * opposite -- that requiring the other forty-seven to speak would buy package-
+ * boundary restatement rather than inspection. Two measurements refuse the
+ * argument. Eleven of the thirteen packages running this graph answer for
+ * everything they select, `interface` across 160 sources and `engine` across
+ * 216, so payment at this scale is evidently not restatement. And the largest
+ * unpaid surfaces here are implementations of listed targets rather than
+ * sources with no target to implement: `requirements/repaint/*` reads green
+ * from three citing files while the 1,260-line repaint service, the 1,767-line
+ * oracle service and the 1,233-line legacy importer answer nothing.
+ *
+ * So the forty-seven are recorded as unpaid rather than reclassified. The count
+ * is pinned in `ACCEPTED_UNPAID_HOSTS` and refused if it rises, which is the
+ * per-host lower bound the evidence-graph skill assigns to a structural guard,
+ * and #2171 owns paying it down.
  */
 const publicSurface = ["src/**/*.ts", "!src/**/index.ts"];
 
