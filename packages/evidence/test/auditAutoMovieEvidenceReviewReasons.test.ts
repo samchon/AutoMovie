@@ -162,6 +162,118 @@ const fixtureDocuments = (
         : [];
     });
 
+/**
+ * Two hosts answering one target with one sentence, and the three boundaries
+ * that are not that.
+ *
+ * Measured before this refusal existed, `test/fixtures/completed-film` carried
+ * 82 of them; the corpus check below is what keeps that at zero.
+ */
+const testCrossHostSharedReason = (): void => {
+  const shared = "The unit fixes the ground origin and the raised endpoint.";
+  const host = (title: string, anchor: string, tag: string) => `
+# Film
+
+## ${title} {#${anchor}}
+
+<!--
+${tag}
+-->
+`;
+  const message = rejectionMessage([
+    document(
+      host(
+        "One",
+        "one",
+        `@evidence principles/core/common.md#scope-preservation ${shared}`,
+      ),
+      "docs/models/a.md",
+    ),
+    document(
+      host(
+        "Two",
+        "two",
+        `@evidence principles/core/common.md#scope-preservation ${shared}`,
+      ),
+      "docs/models/b.md",
+    ),
+  ]);
+  assert.match(
+    message,
+    /docs\/models\/b\.md:7 \[evidence-reason-shared\] principles\/core\/common\.md#scope-preservation \(docs\/models\/b\.md#two\)/u,
+  );
+  assert.match(message, /word for word the one docs\/models\/a\.md:7 gives/u);
+
+  // A different target, which is the sibling defect and carries its own code.
+  assert.doesNotThrow(() =>
+    assertAutoMovieEvidenceReviewReasons([
+      document(
+        host(
+          "One",
+          "one",
+          `@evidence principles/core/common.md#scope-preservation ${shared}`,
+        ),
+        "docs/models/c.md",
+      ),
+      document(
+        host(
+          "Two",
+          "two",
+          `@evidence principles/core/common.md#machine-default ${shared}`,
+        ),
+        "docs/models/d.md",
+      ),
+    ]),
+  );
+
+  // Refusing a target and answering it are different claims that may honestly
+  // read alike, so the exclusion flag is part of the identity.
+  assert.doesNotThrow(() =>
+    assertAutoMovieEvidenceReviewReasons([
+      document(
+        host(
+          "One",
+          "one",
+          `@evidence principles/core/common.md#scope-preservation ${shared}`,
+        ),
+        "docs/models/e.md",
+      ),
+      document(
+        host(
+          "Two",
+          "two",
+          `@evidenceExclude principles/core/common.md#scope-preservation ${shared}`,
+        ),
+        "docs/models/f.md",
+      ),
+    ]),
+  );
+
+  // And one word apart, which passes. Stating the limit rather than hiding it:
+  // the exchange test is a reviewer's duty and this is only its cheapest
+  // mechanical floor.
+  assert.doesNotThrow(() =>
+    assertAutoMovieEvidenceReviewReasons([
+      document(
+        host(
+          "One",
+          "one",
+          `@evidence principles/core/common.md#scope-preservation ${shared}`,
+        ),
+        "docs/models/g.md",
+      ),
+      document(
+        host(
+          "Two",
+          "two",
+          "@evidence principles/core/common.md#scope-preservation The unit fixes the ground origin and the lowered endpoint.",
+        ),
+        "docs/models/h.md",
+      ),
+    ]),
+  );
+};
+
 const testCompletedFilmCorpus = (): void => {
   const fixture = path.resolve(
     import.meta.dirname,
@@ -169,7 +281,7 @@ const testCompletedFilmCorpus = (): void => {
   );
   assert.doesNotThrow(
     () => assertAutoMovieEvidenceReviewReasons(fixtureDocuments(fixture)),
-    "the complete historical production must contain zero mechanical restatements and zero same-host review reuse",
+    "the complete historical production must contain zero mechanical restatements, zero same-host review reuse, and no reason shared word for word by two hosts answering one target",
   );
 };
 
@@ -178,4 +290,5 @@ testHostLocalReuse();
 testTargetInterpolationReuse();
 testAcceptedBoundaries();
 testAssertion();
+testCrossHostSharedReason();
 testCompletedFilmCorpus();
