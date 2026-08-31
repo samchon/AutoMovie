@@ -120,11 +120,18 @@ export const test_workspace_coverage_position_union = (): void => {
   );
 
   // Positions with no counter beside them: a map naming an identifier the hit
-  // record never mentions. It reads as unrun, and folds like anything else.
+  // record never mentions. It reads as unrun, so it does not become the base --
+  // that is what keeps an `--all` entry for a file a group never loaded, whose
+  // positions are one per source line including comments, from deciding the
+  // structure. `base` ran, so `base` stays the structure and this reading
+  // contributes only the lines it saw run, which is none.
   const uncounted: ICoverageEntry = {
     // Two ways a branch position arrives with no counter: a hit list shorter
     // than its locations, and an identifier the hit record never names.
+    // One position that ran, so this reading outranks `base` and becomes the
+    // structure; the rest arrive with no counter beside them.
     b: { 1: [] },
+    s: { 0: 1 },
     // Plus a branch that names no locations at all, which folds to no
     // positions rather than to a position nobody can point at.
     branchMap: {
@@ -152,10 +159,56 @@ export const test_workspace_coverage_position_union = (): void => {
       ])?.b,
     },
     {
-      statements: { 0: 1 },
+      // `base`'s own structure and hits, unchanged: the unrun reading adds no
+      // line, and its four positions do not replace three that ran.
+      statements: { 0: 1, 1: 0, 2: 0, 3: 1 },
       functions: { 0: 1 },
       branches: { 0: [1], 1: [1], 2: [] },
-      recordless: { 0: [1] },
+      recordless: { 0: [1, 0] },
+    },
+  );
+
+  // The `--all` shape: an entry for a file this group never loaded, carrying one
+  // position per source line -- comments and blanks among them -- with nothing
+  // run. It has the most positions of anything here and must still lose, or the
+  // fold would report every comment as an uncovered statement.
+  const synthesized: ICoverageEntry = {
+    b: {},
+    branchMap: {},
+    f: { 0: 0 },
+    fnMap: { 0: { loc: span(5) } },
+    s: { 0: 0, 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 },
+    statementMap: {
+      0: span(1),
+      1: span(2),
+      2: span(3),
+      3: span(4),
+      4: span(5),
+      5: span(6),
+    },
+  };
+  TestValidator.equals(
+    "a reading that ran outranks a larger one that did not",
+    {
+      structure: Object.keys(
+        unionEntryByLine([synthesized, base])?.statementMap ?? {},
+      ),
+      statements: unionEntryByLine([synthesized, base])?.s,
+      // With nothing that ran, the largest reading is still the only structure
+      // available, so it is taken rather than refused.
+      aloneStructure: Object.keys(
+        unionEntryByLine([thin, synthesized])?.statementMap ?? {},
+      ),
+      // The same comparison with the arrival order reversed.
+      reversed: Object.keys(
+        unionEntryByLine([base, synthesized])?.statementMap ?? {},
+      ),
+    },
+    {
+      structure: ["0", "1", "2"],
+      statements: { 0: 3, 1: 0, 2: 0 },
+      aloneStructure: ["0", "1", "2", "3", "4", "5"],
+      reversed: ["0", "1", "2"],
     },
   );
 
