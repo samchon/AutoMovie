@@ -19,7 +19,6 @@ import { createRequire } from "node:module";
 import os from "node:os";
 import path from "node:path";
 
-import { builtOutputIsStale } from "../internal/builtPackageFreshness";
 import { renderCompletedFilmFixture } from "../internal/completedFilmFixture";
 import {
   testCaptureRuntimeIdentity,
@@ -30,6 +29,7 @@ import {
   productionPng,
 } from "../production/productionMediaFixtures";
 import { preserveCliHarnessCleanup } from "./CliHarnessCleanup";
+import { linkGeneratedWorkspacePackage } from "./GeneratedWorkspaceLink";
 
 interface IGeneratedCommand {
   status: number | null;
@@ -150,86 +150,8 @@ const installAuthoredEvidencePopulation = (
   );
 };
 
-const linkWorkspacePackage = (project: string, name: string): void => {
-  const manifest = createRequire(__filename)
-    .resolve.paths(name)
-    ?.map((base) => path.join(base, ...name.split("/"), "package.json"))
-    .find((candidate) => fs.existsSync(candidate));
-  if (manifest === undefined)
-    throw new Error(`Fixture package root did not resolve: ${name}.`);
-  const packageRoot = path.dirname(manifest);
-  const target = path.join(project, "node_modules", ...name.split("/"));
-  fs.mkdirSync(path.dirname(target), { recursive: true });
-  if (name === "@automovie/evidence") {
-    const build = path.join(packageRoot, "lib");
-    if (
-      builtOutputIsStale({ output: path.join(build, "index.js"), packageRoot })
-    ) {
-      const command =
-        process.platform === "win32"
-          ? {
-              executable: process.env.ComSpec ?? "cmd.exe",
-              arguments: [
-                "/d",
-                "/s",
-                "/c",
-                "pnpm --filter @automovie/evidence build",
-              ],
-            }
-          : {
-              executable: "pnpm",
-              arguments: ["--filter", "@automovie/evidence", "build"],
-            };
-      const result = spawnSync(command.executable, command.arguments, {
-        cwd: REPOSITORY_ROOT,
-        encoding: "utf8",
-        env: { ...process.env, FORCE_COLOR: "0" },
-        maxBuffer: 64 * 1024 * 1024,
-      });
-      if (result.error !== undefined) throw result.error;
-      if (result.status !== 0 || result.signal !== null)
-        throw new Error(
-          [
-            `Building the generated consumer's @automovie/evidence facade exited ${result.status ?? `by ${result.signal}`}.`,
-            result.stdout,
-            result.stderr,
-          ].join("\n"),
-        );
-    }
-    if (fs.existsSync(path.join(build, "index.d.ts")) === false)
-      throw new Error(
-        "The canonical @automovie/evidence build omitted its public declarations.",
-      );
-    fs.mkdirSync(target, { recursive: true });
-    fs.cpSync(build, path.join(target, "lib"), { recursive: true });
-    fs.writeFileSync(
-      path.join(target, "package.json"),
-      `${JSON.stringify(
-        {
-          name: "@automovie/evidence",
-          version: "0.1.0",
-          main: "./lib/index.js",
-          types: "./lib/index.d.ts",
-          exports: {
-            ".": {
-              types: "./lib/index.d.ts",
-              default: "./lib/index.js",
-            },
-          },
-        },
-        null,
-        2,
-      )}\n`,
-      "utf8",
-    );
-    return;
-  }
-  fs.symlinkSync(
-    packageRoot,
-    target,
-    process.platform === "win32" ? "junction" : "dir",
-  );
-};
+const linkWorkspacePackage = (project: string, name: string): void =>
+  linkGeneratedWorkspacePackage({ name, project, subject: "Fixture package" });
 
 /**
  * The environment a real user's shell would hand a generated project.
@@ -1204,6 +1126,13 @@ export const test_cli_scaffold_repaint_runtime_contract =
         "playwright",
         "pngjs",
         "three",
+        // What a real generated project installs. The fixture had only the
+        // repository's 5.9 alias, and `ttsc` wants the native compiler; while
+        // `@automovie/production` was a symlink to the workspace, resolution
+        // walked out of it and found the repository's own 7.0. Handing over the
+        // published shape closes that walk, and the borrowed compiler became a
+        // missing one.
+        "typescript",
         "typescript-compiler",
         "vite",
       ])

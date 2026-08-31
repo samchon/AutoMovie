@@ -2,9 +2,10 @@ import {
   IAutoMovieProductionDeliverable,
   IAutoMovieProductionMediaProbe,
 } from "@automovie/interface";
-import { MP4BoxBuffer, Movie, Track, createFile } from "mp4box";
+import type { Movie, Track, createFile } from "mp4box";
 import { TextDecoder } from "node:util";
-import { PNG } from "pngjs";
+
+import { residentMp4Box, residentPngJs } from "./residentCodecs";
 
 /**
  * Parse renderer-owned bytes instead of trusting manifest media claims.
@@ -23,7 +24,7 @@ export const probeProductionMedia = (props: {
       throw new Error(
         `${props.kind} output declares "${props.mediaType}", but this image requires image/png bytes.`,
       );
-    const png = PNG.sync.read(Buffer.from(props.bytes));
+    const png = residentPngJs().PNG.sync.read(Buffer.from(props.bytes));
     return { kind: "png", width: png.width, height: png.height };
   }
   if (props.kind === "audio-mix" && props.mediaType === "application/json") {
@@ -332,7 +333,7 @@ const parseMp4 = (
     throw new Error(
       "MP4 output has no leading ISO base-media compatible brand box.",
     );
-  const file = createFile();
+  const file = residentMp4Box().createFile();
   const errors: string[] = [];
   let ready: Movie | null = null;
   file.onError = (module, message) => {
@@ -343,7 +344,10 @@ const parseMp4 = (
   };
   try {
     const copy = Uint8Array.from(bytes).buffer;
-    file.appendBuffer(MP4BoxBuffer.fromArrayBuffer(copy, 0), true);
+    file.appendBuffer(
+      residentMp4Box().MP4BoxBuffer.fromArrayBuffer(copy, 0),
+      true,
+    );
     file.flush();
   } catch (error) {
     throw new Error(`MP4 parser rejected output: ${String(error)}`);

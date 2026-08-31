@@ -47,7 +47,7 @@ import {
 } from "@automovie/interface";
 import fs from "node:fs";
 import path from "node:path";
-import { PNG } from "pngjs";
+import type { PNG } from "pngjs";
 import typia from "typia";
 
 import {
@@ -65,6 +65,7 @@ import {
 import { readAutoMovieFilmTimeline } from "./filmTimeline";
 import { materializeFormationSlot } from "./materializeProduction";
 import { productionRenderTargetFingerprint } from "./renderIdentity";
+import { residentPngJs } from "./residentCodecs";
 
 /**
  * Read-only current compiler status used to refuse stale oracle answers.
@@ -1011,7 +1012,7 @@ export class AutoMovieProductionOracleService {
     try {
       if (captured.bytes.length === 0)
         throw new Error("capture returned zero bytes");
-      png = PNG.sync.read(Buffer.from(captured.bytes));
+      png = residentPngJs().PNG.sync.read(Buffer.from(captured.bytes));
     } catch (error) {
       return previewFailure(
         generated.inputFingerprint,

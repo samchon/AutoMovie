@@ -7,6 +7,7 @@ import path from "node:path";
 
 import { namedFacts, throwsError } from "../internal/predicates";
 import { preserveCliRootFixtureCleanup } from "./CliRootFixtureCleanup";
+import { linkGeneratedWorkspacePackage } from "./GeneratedWorkspaceLink";
 
 interface IRenderGcTargetSnapshot {
   bytes: number;
@@ -66,25 +67,12 @@ interface ICacheLifecycleModule {
   ): Result;
 }
 
-const packageRoot = (name: string): string => {
-  const manifest = createRequire(__filename)
-    .resolve.paths(name)
-    ?.map((base) => path.join(base, ...name.split("/"), "package.json"))
-    .find((candidate) => fs.existsSync(candidate));
-  if (manifest === undefined)
-    throw new Error(`Sound cache package root did not resolve: ${name}.`);
-  return fs.realpathSync(path.dirname(manifest));
-};
-
-const linkWorkspacePackage = (project: string, name: string): void => {
-  const target = path.join(project, "node_modules", ...name.split("/"));
-  fs.mkdirSync(path.dirname(target), { recursive: true });
-  fs.symlinkSync(
-    packageRoot(name),
-    target,
-    process.platform === "win32" ? "junction" : "dir",
-  );
-};
+const linkWorkspacePackage = (project: string, name: string): void =>
+  linkGeneratedWorkspacePackage({
+    name,
+    project,
+    subject: "Sound cache package",
+  });
 
 const census = (root: string, directory = root): string[] =>
   fs

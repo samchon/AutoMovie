@@ -267,7 +267,13 @@ export const evidenceCarriers = (
 export const ACCEPTED_UNPAID_HOSTS: Readonly<Record<string, number>> = {
   engine: 3,
   playground: 24,
-  production: 47,
+  // 48 rather than 47 since `residentCodecs.ts` joined: it defers the media
+  // codec load until a resident generation is bound, and no specification
+  // states that deferral, so it answers nothing for the same reason the other
+  // forty-seven do. Reaching for a nearby anchor would have failed the
+  // exchange test -- "supplies the parsers the inspection reads" stays true on
+  // every module that touches them.
+  production: 48,
 };
 
 /**

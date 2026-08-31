@@ -103,7 +103,7 @@ test("reports the real production and playground populations", () => {
     result.graphs
       .filter((graph) => graph.package === "production")
       .map((graph) => [graph.sources, graph.carrierFiles, graph.unpaid]),
-    [[58, 11, 47]],
+    [[59, 11, 48]],
   );
   // Eleven of thirteen packages already answer everything they select, which is
   // why the rule is a rule. Read from the same measurement rather than listed.
@@ -115,28 +115,28 @@ test("reports the real production and playground populations", () => {
     [
       ["engine", 3],
       ["playground", 24],
-      ["production", 47],
+      ["production", 48],
     ],
   );
   assert.deepEqual(ACCEPTED_UNPAID_HOSTS, {
     engine: 3,
     playground: 24,
-    production: 47,
+    production: 48,
   });
   // And the comparison itself, in all three directions. A rise is new debt; a
   // fall is a payment the ledger has not recorded, and passing that silently is
   // how a pinned number stops meaning anything.
   assert.deepEqual(
     [
-      unpaidHostDiagnostic({ accepted: 47, package: "production", unpaid: 47 }),
-      unpaidHostDiagnostic({ accepted: 47, package: "production", unpaid: 48 }),
-      unpaidHostDiagnostic({ accepted: 47, package: "production", unpaid: 46 }),
+      unpaidHostDiagnostic({ accepted: 48, package: "production", unpaid: 48 }),
+      unpaidHostDiagnostic({ accepted: 48, package: "production", unpaid: 49 }),
+      unpaidHostDiagnostic({ accepted: 48, package: "production", unpaid: 47 }),
       unpaidHostDiagnostic({ accepted: 0, package: "render", unpaid: 1 }),
     ],
     [
       undefined,
-      "production: 48 selected sources answer nothing, 47 accepted; a selected host owes a citation",
-      "production: 46 selected sources answer nothing where 47 are accepted; record the payment in ACCEPTED_UNPAID_HOSTS",
+      "production: 49 selected sources answer nothing, 48 accepted; a selected host owes a citation",
+      "production: 47 selected sources answer nothing where 48 are accepted; record the payment in ACCEPTED_UNPAID_HOSTS",
       "render: 1 selected source answers nothing, 0 accepted; a selected host owes a citation",
     ],
   );
