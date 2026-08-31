@@ -30,6 +30,7 @@ import {
   MEASURED_LINES,
   MEASURED_SOURCES,
   coverageIncludes,
+  coverageMeasurementDependencies,
   coverageMissingScripts,
   coverageNeverRecorded,
   coverageRecordCount,
@@ -38,6 +39,7 @@ import {
   coverageSourceHostDirectory,
   coverageSourceRoots,
   coverageTemporaryDirectory,
+  coverageUnloadedSources,
   measureCoverage,
   measuredReportedSources,
   removeCoverageTemporaryDirectory,
@@ -1123,6 +1125,37 @@ test("classifies every raw coverage-record boundary without guessing", () => {
       [],
     );
 
+    // The composition itself, against a report this owns. Of the two sources
+    // the seeded report carries, the one these records name drops out and the
+    // one they do not is returned -- which is the whole reading, and the one a
+    // composition run against whatever report happens to be on disk cannot
+    // make. That is why the directory is a parameter here and not only on the
+    // reader beneath it.
+    const neverLoaded = path.join(root, "never-loaded.ts");
+    const compositionReport = path.join(root, "report-composition");
+    fs.mkdirSync(compositionReport, { recursive: true });
+    fs.writeFileSync(
+      path.join(compositionReport, "coverage-final.json"),
+      JSON.stringify({ [existing]: {}, [neverLoaded]: {} }),
+    );
+    assert.deepEqual(
+      coverageUnloadedSources({
+        directory: scripts,
+        reportDirectory: compositionReport,
+      }),
+      [neverLoaded],
+    );
+
+    // And the wiring the measurement actually ships. Every reading above
+    // injects `neverRecorded`, so the lambda that runs in CI was never read,
+    // which is exactly what the changed-line demand charged. A directory with
+    // no records at all leaves every measured source unloaded, whatever the
+    // default report turns out to hold.
+    assert.deepEqual(
+      coverageMeasurementDependencies.neverRecorded(path.join(root, "absent")),
+      [],
+    );
+
     // The count and the part of it that can be acted on. A vanished temporary
     // is ordinary; a vanished measured source is a reading of charged code that
     // the report dropped, and only the second kind is worth a name.
@@ -1389,7 +1422,14 @@ test("runs the coverage orchestrator through injectable child dependencies", () 
     groups: 1,
     // What the union lost, which the run names rather than counts. A file that
     // lost nothing prints no line at all, and both shapes are read below.
-    shortfalls: [{ file: "packages/x/src/one.ts", lost: [7, 8] }],
+    shortfalls: [
+      { file: "packages/x/src/one.ts", lost: [7, 8] },
+      // One line lost reads differently from two, and a run that only ever
+      // loses several never says so. The number is the whole finding here, and
+      // a line reading "lost 1 covered lines" is a report that has stopped
+      // being read carefully.
+      { file: "packages/x/src/two.ts", lost: [4] },
+    ],
   };
   // What the run says about crediting a generated project's execution back to
   // the source it copied, so both the silent case and the refusing one are read
@@ -1547,6 +1587,10 @@ test("runs the coverage orchestrator through injectable child dependencies", () 
   assert.match(
     output.join("\n"),
     /^UNION SHORTFALL: packages\/x\/src\/one\.ts lost 2 covered lines a reading had \(7, 8\)$/mu,
+  );
+  assert.match(
+    output.join("\n"),
+    /^UNION SHORTFALL: packages\/x\/src\/two\.ts lost 1 covered line a reading had \(4\)$/mu,
   );
   // The vanished measured source is named rather than only counted, because a
   // count of dropped readings is exactly as unusable as the count it came from.

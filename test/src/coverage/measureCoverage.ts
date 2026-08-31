@@ -762,6 +762,26 @@ export const measuredReportedSources = (
   }
 };
 
+/**
+ * Measured sources this run's records never named, read against a given report.
+ *
+ * The two readings this composes are each exercised directly, and composing
+ * them inside the shipped dependency put the composition itself out of reach:
+ * the measurement injects `neverRecorded`, so nothing under test ever ran the
+ * pair together and the changed-line demand charged the lambda that did. The
+ * report directory is a parameter for the same reason its reader takes one --
+ * a composition that can only be run against whatever report happens to be on
+ * disk asserts nothing on a checkout that has none.
+ */
+export const coverageUnloadedSources = (props: {
+  directory: string;
+  reportDirectory?: string;
+}): string[] =>
+  coverageNeverRecorded({
+    directory: props.directory,
+    reported: measuredReportedSources(props.reportDirectory),
+  });
+
 /** The creditable scaffold population, re-checked per run rather than assumed. */
 export const measuredScaffoldAttribution = (
   directory: string,
@@ -782,11 +802,7 @@ export const measuredScaffoldAttribution = (
 export const coverageMeasurementDependencies: ICoverageMeasurementDependencies =
   {
     attribute: measuredScaffoldAttribution,
-    neverRecorded: (directory) =>
-      coverageNeverRecorded({
-        directory,
-        reported: measuredReportedSources(),
-      }),
+    neverRecorded: (directory) => coverageUnloadedSources({ directory }),
     temporaryDirectory: coverageTemporaryDirectory,
     sourceHostDirectory: coverageSourceHostDirectory,
     mkdir: fs.mkdirSync,
