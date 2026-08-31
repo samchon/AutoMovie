@@ -571,6 +571,61 @@ test("handles comment-only files and sparse Istanbul maps without false green", 
   }
 });
 
+test("an invented branch position is named rather than charged", () => {
+  const fixture = coveredFixture();
+  try {
+    // A file whose second line is indented, so a span can be written that
+    // covers the indent and nothing else. That is the shape the instrument
+    // actually produced: `libraryObservationRequirements.ts` was charged
+    // `branch@21:0-2`, and columns 0 to 2 of that line are two spaces.
+    const text = "const first = true;\n  const value = first ? 1 : 2;\n";
+    fs.writeFileSync(fixture.file, text);
+    fixture.data.statementMap = {};
+    fixture.data.s = {};
+    fixture.data.fnMap = {};
+    fixture.data.f = {};
+    fixture.data.branchMap = {
+      invented: {
+        type: "if",
+        loc: { start: { line: 2, column: 0 }, end: { line: 2, column: 2 } },
+        locations: [
+          { start: { line: 2, column: 0 }, end: { line: 2, column: 2 } },
+        ],
+      },
+      // Written by hand on the same line, so the two differ in nothing but
+      // what their spans cover. Without it the filter could answer `false`
+      // to everything and this case would still pass.
+      real: {
+        type: "cond-expr",
+        loc: { start: { line: 2, column: 16 }, end: { line: 2, column: 29 } },
+        locations: [
+          { start: { line: 2, column: 24 }, end: { line: 2, column: 25 } },
+        ],
+      },
+    };
+    fixture.data.b = { invented: [0], real: [0] };
+    const touched = {
+      ...fixture,
+      files: new Map([[fixture.relative, new Set([1, 2])]]),
+      measuredSources: {
+        [fixture.file]: { lines: 2, sha256: hash(text) },
+      },
+    };
+    const result = inspectChangedCoverage({ ...touched, divergent: [] });
+    assert.deepEqual(result.totals.branches, { covered: 0, total: 1 });
+    assert.deepEqual(result.disagreements, [
+      `${fixture.relative}: 1 branch location covers nothing but whitespace, which is a position the instrument invented rather than a branch this file has`,
+    ]);
+    assert.equal(
+      result.gaps.filter((gap) => gap.includes("uncovered branch")).length,
+      1,
+    );
+    assert.match(result.gaps.join("\n"), /:2 uncovered branch cond-expr\[0\]/u);
+  } finally {
+    fs.rmSync(fixture.root, { recursive: true, force: true });
+  }
+});
+
 const git = (root: string, arguments_: string[]): string => {
   const result = spawnSync("git", arguments_, {
     cwd: root,
