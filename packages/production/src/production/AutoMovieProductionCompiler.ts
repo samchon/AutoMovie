@@ -211,7 +211,7 @@ const FILM_SOURCE_EXPORT = "film";
  *
  * @author Samchon
  */
-export const AUTOMOVIE_PRODUCTION_COMPILER_VERSION = (
+export const AUTOMOVIE_PRODUCTION_COMPILER_VERSION =
   // A static specifier rather than a path built at run time. Both resolve to
   // this package's own manifest from `src/production` and from the emitted
   // `lib/production`, so the two shapes agree -- but only the static one
@@ -221,10 +221,11 @@ export const AUTOMOVIE_PRODUCTION_COMPILER_VERSION = (
   // where the walk lands, so the identity took the consumer's version and
   // reported no error at all. Rollup refuses the dynamic form outright, which
   // is how a silently wrong version finally became a failure.
-  require("../../package.json") as {
-    version: string;
-  }
-).version;
+  (
+    require("../../package.json") as {
+      version: string;
+    }
+  ).version;
 
 /**
  * Deterministic source compiler and generated-ownership gate.
