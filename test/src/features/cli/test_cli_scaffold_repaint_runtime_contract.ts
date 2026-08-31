@@ -1270,6 +1270,91 @@ export const test_cli_scaffold_repaint_runtime_contract =
         { status: 0, census: true, verdict: true },
       );
 
+      // The rest of the documented commands that need no browser. Ten of the
+      // scaffold's commands read as never loaded by any process in the whole
+      // suite, and these are the four a headless fixture can answer for; the
+      // others open a capture host and belong with the GPU path.
+      //
+      // Order is part of the contract rather than a convenience. `design`
+      // rewrites `production.json`, which makes the compile fingerprint stale,
+      // and every command that requires current state refuses after it -- which
+      // is the product refusing correctly. Running them in the other order was
+      // how that was learned: `building:report` answered
+      // `current-compile-invalid, compile-fingerprint-stale`, naming the
+      // command to run first.
+      const buildingReport = runGenerated(
+        fixture.root,
+        "scripts/deriveBuilding.ts",
+        [],
+        true,
+      );
+      const exampleArtifact = runGenerated(
+        fixture.root,
+        "scripts/deriveExampleArtifact.ts",
+        [],
+        true,
+      );
+      const verifyRun = runGenerated(
+        fixture.root,
+        "scripts/verify.ts",
+        [],
+        true,
+      );
+      const emittedDesign = runGenerated(
+        fixture.root,
+        "scripts/emitDesign.ts",
+        [],
+        true,
+      );
+      const verifiedOutput = generatedOutput(verifyRun);
+      // `verify` prints a verdict rather than a message, and its exit code is
+      // that verdict's own `success`. This fixture has no render deliverable,
+      // so the honest answer here is a refusal carrying the reason -- and the
+      // pair is what the assertion reads, because a script that printed a
+      // verdict and exited on a different code would be the defect.
+      const verdict = JSON.parse(
+        verifiedOutput.slice(verifiedOutput.indexOf("{")),
+      ) as {
+        compiler?: { inputFingerprint?: string };
+        diagnostics?: Array<{ code?: string }>;
+        success?: boolean;
+      };
+      TestValidator.equals(
+        "every documented headless command runs and answers in its own shape",
+        {
+          buildingStatus: buildingReport.status,
+          exampleStatus: exampleArtifact.status,
+          exampleWrote:
+            /updated automovie\/derived\/examples\/[^ ]+ \(sha256:[0-9a-f]{64}\)/u.test(
+              generatedOutput(exampleArtifact),
+            ),
+          designStatus: emittedDesign.status,
+          designNamedProduction:
+            generatedOutput(emittedDesign).includes("production.json"),
+          verifyAgrees:
+            verdict.success === (verifyRun.status === 0) ||
+            verdict.success === undefined,
+          verifyFingerprinted: (
+            verdict.compiler?.inputFingerprint ?? ""
+          ).startsWith("sha256:"),
+          verifyReasoned:
+            verdict.success === true ||
+            (verdict.diagnostics ?? []).some(
+              (one) => typeof one?.code === "string",
+            ),
+        },
+        {
+          buildingStatus: 0,
+          exampleStatus: 0,
+          exampleWrote: true,
+          designStatus: 0,
+          designNamedProduction: true,
+          verifyAgrees: true,
+          verifyFingerprinted: true,
+          verifyReasoned: true,
+        },
+      );
+
       // The one action that still needs its own process: it asks the CLI entry
       // whether a refusal becomes a non-zero exit and a printed diagnostic.
       // Everything after it asks the command contract instead, and rides in one
