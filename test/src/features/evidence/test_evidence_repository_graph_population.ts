@@ -4,12 +4,14 @@ import os from "node:os";
 import path from "node:path";
 
 import {
+  ACCEPTED_UNPAID_HOSTS,
   GRAPH_DEFINITIONS,
   evidenceCarriers,
   graphEnabledPackages,
   inspectRepositoryEvidencePopulations,
   reportRepositoryEvidencePopulations,
   runRepositoryEvidencePopulationGate,
+  unpaidHostDiagnostic,
 } from "../../integrity/repositoryEvidencePopulation";
 
 interface IScenario {
@@ -93,14 +95,50 @@ test("reports the real production and playground populations", () => {
     "template",
     "viewer",
   ]);
-  // The ratio the gate now prints. It refuses only a package that selected no
-  // host at all, because selection is not obligation -- but an eleven-of-
-  // fifty-eight population is a fact a reader should meet without asking.
+  // The ratio the gate prints, and the debt it now refuses to let grow. The
+  // evidence-graph skill settles #2171's fork against narrowing the population,
+  // so eleven of fifty-eight answering is debt rather than design, and the
+  // pinned count is what keeps the fifty-ninth unpaid file from being silent.
   assert.deepEqual(
     result.graphs
       .filter((graph) => graph.package === "production")
-      .map((graph) => [graph.sources, graph.carrierFiles]),
-    [[58, 11]],
+      .map((graph) => [graph.sources, graph.carrierFiles, graph.unpaid]),
+    [[58, 11, 47]],
+  );
+  // Eleven of thirteen packages already answer everything they select, which is
+  // why the rule is a rule. Read from the same measurement rather than listed.
+  assert.deepEqual(
+    result.graphs
+      .filter((graph) => graph.unpaid !== 0)
+      .map((graph) => [graph.package, graph.unpaid])
+      .sort(([left], [right]) => String(left).localeCompare(String(right))),
+    [
+      ["engine", 3],
+      ["playground", 24],
+      ["production", 47],
+    ],
+  );
+  assert.deepEqual(ACCEPTED_UNPAID_HOSTS, {
+    engine: 3,
+    playground: 24,
+    production: 47,
+  });
+  // And the comparison itself, in all three directions. A rise is new debt; a
+  // fall is a payment the ledger has not recorded, and passing that silently is
+  // how a pinned number stops meaning anything.
+  assert.deepEqual(
+    [
+      unpaidHostDiagnostic({ accepted: 47, package: "production", unpaid: 47 }),
+      unpaidHostDiagnostic({ accepted: 47, package: "production", unpaid: 48 }),
+      unpaidHostDiagnostic({ accepted: 47, package: "production", unpaid: 46 }),
+      unpaidHostDiagnostic({ accepted: 0, package: "render", unpaid: 1 }),
+    ],
+    [
+      undefined,
+      "production: 48 selected sources answer nothing, 47 accepted; a selected host owes a citation",
+      "production: 46 selected sources answer nothing where 47 are accepted; record the payment in ACCEPTED_UNPAID_HOSTS",
+      "render: 1 selected source answers nothing, 0 accepted; a selected host owes a citation",
+    ],
   );
   // The gate's accepting exit, pinned beside the refusals below. A gate only
   // ever watched refusing is one nobody has watched agree, and this is the
@@ -128,9 +166,15 @@ test("reports the real production and playground populations", () => {
       ["export const value = 1;", ""].join("\n"),
       "utf8",
     );
+    // Two refusals on a real tree, not a hand-called predicate: the widened
+    // selection check, and #2171's per-host bound reading the same package.
+    // This is the guard made to fail, which is what makes it a running check.
     assert.deepEqual(
       inspectRepositoryEvidencePopulations(tree, []).diagnostics,
-      ["quiet: evidence/graph is enabled and selected no citation host"],
+      [
+        "quiet: evidence/graph is enabled and selected no citation host",
+        "quiet: 1 selected source answers nothing, 0 accepted; a selected host owes a citation",
+      ],
     );
     // A root with no packages at all answers with none rather than throwing:
     // the derivation is asked about whatever root the caller points at.
@@ -216,6 +260,7 @@ test("reports actual carrier and claim populations", () => {
         package: "sample",
         sources: 1,
         carrierFiles: 1,
+        unpaid: 0,
         carriers: 1,
         claims: [
           {
@@ -257,6 +302,7 @@ test("refuses an empty, disconnected, or incomplete graph", () => {
       "sample: claim 'sample claim' omits 'requirements/sample.md'",
       "sample: claim 'sample claim' has no citation host",
       "sample: claim 'sample claim' has no positive citation",
+      "sample: 1 selected source answers nothing, 0 accepted; a selected host owes a citation",
     ]);
     const output: string[] = [];
     reportRepositoryEvidencePopulations(result, (line) => output.push(line));

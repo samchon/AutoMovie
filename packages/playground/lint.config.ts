@@ -7,6 +7,14 @@ import type { ITtscLintConfig } from "@ttsc/lint";
  * Every source module is selected. The film demonstration pays the executable
  * prototype units this application actually renders and explicitly declines
  * the downstream-fidelity units that remain outside a local viewer demo.
+ *
+ * One of the twenty-five selected modules does that paying. The other
+ * twenty-four answer nothing, and that is recorded as debt rather than read as
+ * a smaller surface earning a smaller duty -- the evidence-graph skill answers
+ * that reading directly: "Neither a removed transport boundary nor an
+ * application's smaller surface excuses its public exports from requirement and
+ * specification traceability." The count is pinned in `ACCEPTED_UNPAID_HOSTS`
+ * and refused if it rises; #2171 owns paying it down.
  */
 const graph: ITtscEvidenceGraphConfig = {
   claims: [
