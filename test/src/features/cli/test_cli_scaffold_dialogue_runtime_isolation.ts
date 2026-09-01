@@ -53,6 +53,7 @@ interface IRuntimeModules {
     base: string,
     target: string,
   ): null | { pcm: Uint8Array; receipt: Uint8Array };
+  inspectProductionSubject: (input: unknown) => Promise<unknown>;
   createProductionCaptureDialogueRuntime(props: {
     capture: unknown;
     productionId: string;
@@ -153,6 +154,7 @@ const loadModules = (root: string): IRuntimeModules => {
   const scripts = path.join(root, "scripts");
   return {
     ...(require(path.join(scripts, "capture.ts")) as object),
+    ...(require(path.join(scripts, "inspectSubject.ts")) as object),
     ...(require(path.join(scripts, "captureDialogueRuntime.ts")) as object),
     ...(require(path.join(scripts, "dialogueCacheSnapshot.ts")) as object),
     ...(require(path.join(scripts, "generatedShotPlugin.ts")) as object),
@@ -348,6 +350,34 @@ export const test_cli_scaffold_dialogue_runtime_isolation =
         },
         { built: true },
       );
+      // The instrument the product names, loaded from the project that ships
+      // it. When a project supplies none, subject inspection refuses with a
+      // message naming this file: "The scaffold ships one at
+      // `scripts/inspectSubject.ts`; pass that, or another
+      // AutoMovieProductionSubjectInspection, to the call that reached here."
+      //
+      // Nothing connected the two. The three cases that construct the
+      // inspection service pass their own doubles, and a double stays true
+      // wherever it is moved, so the sentence the product prints was an
+      // instruction nobody had ever followed -- and the day the adapter
+      // signature moved away from the shipped instrument, the only thing that
+      // would notice is an author reading a refusal that no longer works.
+      //
+      // Loading it is the whole reading. Calling it opens a dev server and a
+      // browser to answer, which is a capture host and a different question;
+      // what is asked here is whether the file the message names still exports
+      // the callable shape the seat takes.
+      TestValidator.equals(
+        "the scaffold ships the inspection instrument its own refusal names",
+        {
+          exported: typeof first.inspectProductionSubject === "function",
+          // One argument, because an instrument taking none would satisfy a
+          // structural check and answer nothing.
+          arity: first.inspectProductionSubject.length,
+        },
+        { exported: true, arity: 1 },
+      );
+
       const cropA = { left: 0, top: 0.1, right: 0.8, bottom: 1 };
       const cropB = { left: 0.2, top: 0, right: 1, bottom: 0.9 };
       await captureA.installDialogue(dialogueA);
