@@ -1294,6 +1294,14 @@ export const test_cli_scaffold_repaint_runtime_contract =
         [],
         true,
       );
+      // `lint` belongs with these rather than after `design`, for the reason
+      // the order comment above gives: run once the design has been rewritten
+      // it answers `generated-manifest-stale`, which is a true reading of a
+      // stale project and a useless one about the command. Here it judges the
+      // project this fixture actually compiled. It costs 36 seconds, not the
+      // 106 it cost before a generated consumer stopped type-checking every
+      // workspace source tree it imports.
+      const linted = runGenerated(fixture.root, "scripts/lint.ts", [], true);
       const verifyRun = runGenerated(
         fixture.root,
         "scripts/verify.ts",
@@ -1319,6 +1327,11 @@ export const test_cli_scaffold_repaint_runtime_contract =
         diagnostics?: Array<{ code?: string }>;
         success?: boolean;
       };
+      const lintText = generatedOutput(linted);
+      const lintVerdict = JSON.parse(lintText.slice(lintText.indexOf("{"))) as {
+        compiler?: { inputFingerprint?: string };
+        success?: boolean;
+      };
       TestValidator.equals(
         "every documented headless command runs and answers in its own shape",
         {
@@ -1337,6 +1350,13 @@ export const test_cli_scaffold_repaint_runtime_contract =
           verifyFingerprinted: (
             verdict.compiler?.inputFingerprint ?? ""
           ).startsWith("sha256:"),
+          // `lint` answers in the same shape, so it is read the same way: a
+          // verdict whose exit code is its own `success`, carrying the
+          // fingerprint it judged.
+          lintAgrees: lintVerdict.success === (linted.status === 0),
+          lintFingerprinted: (
+            lintVerdict.compiler?.inputFingerprint ?? ""
+          ).startsWith("sha256:"),
           verifyReasoned:
             verdict.success === true ||
             (verdict.diagnostics ?? []).some(
@@ -1351,6 +1371,8 @@ export const test_cli_scaffold_repaint_runtime_contract =
           designNamedProduction: true,
           verifyAgrees: true,
           verifyFingerprinted: true,
+          lintAgrees: true,
+          lintFingerprinted: true,
           verifyReasoned: true,
         },
       );
