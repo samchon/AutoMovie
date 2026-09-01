@@ -285,4 +285,86 @@ export const test_production_library_observation_population = (): void => {
       stray: 0,
     },
   );
+
+  // An opening that operates is judged in its own states, in the travel between
+  // them, and where its leaf meets its frame. A still frame answers none of the
+  // three alone: a door photographed open and closed proves nothing about the
+  // arc between, and one photographed only mid-swing never says it shuts.
+  const operable = rectangularBuilding();
+  operable.openings[0]!.operation = {
+    panels: [
+      {
+        id: "leaf",
+        element: "house-root",
+        width: 1,
+        height: 2.1,
+        motion: {
+          kind: "revolute",
+          axis: { x: 0, y: 1, z: 0 },
+          pivot: { x: 1.5, y: 0, z: 0 },
+          min: 0,
+          max: 90,
+        },
+      },
+    ],
+    states: [
+      { id: "closed", panels: [{ panel: "leaf", value: 0 }] },
+      { id: "ajar", panels: [{ panel: "leaf", value: 30 }] },
+      { id: "open", panels: [{ panel: "leaf", value: 90 }] },
+    ],
+    state: "closed",
+    hardware: [],
+  };
+  const operableRequired = derive([operable]);
+  TestValidator.equals(
+    "an operable opening is judged in its states, its travels, and its contact",
+    {
+      derived: operableRequired
+        .filter((entry) => entry.role.startsWith("operation-"))
+        .map((entry) => [entry.id, entry.role]),
+      // Three states and two travels between them, not three states and three
+      // pairs: the states are declared in the order the opening passes through
+      // them, so charging every combination would ask for a swing from closed
+      // to closed and read as thoroughness.
+      transitions: operableRequired.filter(
+        (entry) => entry.role === "operation-transition",
+      ).length,
+      // The building profile is untouched. A fixed cut declares no operation
+      // and is passed over rather than charged an empty state, which is what
+      // the unmodified fixture proves by deriving none of these at all.
+      fixed: derive([rectangularBuilding()]).filter((entry) =>
+        entry.role.startsWith("operation-"),
+      ).length,
+    },
+    {
+      derived: [
+        [
+          "operation:hall-house/door-main/operation-contact/leaf",
+          "operation-contact",
+        ],
+        [
+          "operation:hall-house/door-main/operation-state/ajar",
+          "operation-state",
+        ],
+        [
+          "operation:hall-house/door-main/operation-state/closed",
+          "operation-state",
+        ],
+        [
+          "operation:hall-house/door-main/operation-state/open",
+          "operation-state",
+        ],
+        [
+          "operation:hall-house/door-main/operation-transition/ajar->open",
+          "operation-transition",
+        ],
+        [
+          "operation:hall-house/door-main/operation-transition/closed->ajar",
+          "operation-transition",
+        ],
+      ],
+      transitions: 2,
+      fixed: 0,
+    },
+  );
 };
