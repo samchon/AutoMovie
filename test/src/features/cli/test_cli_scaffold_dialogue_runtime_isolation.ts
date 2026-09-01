@@ -53,6 +53,11 @@ interface IRuntimeModules {
     base: string,
     target: string,
   ): null | { pcm: Uint8Array; receipt: Uint8Array };
+  createProductionCaptureDialogueRuntime(props: {
+    capture: unknown;
+    productionId: string;
+    root: string;
+  }): { prepare: () => Promise<unknown> };
   createProductionFrameCaptureRuntime(): ICaptureRuntime;
   generatedShotPlugin(
     root: string,
@@ -148,6 +153,7 @@ const loadModules = (root: string): IRuntimeModules => {
   const scripts = path.join(root, "scripts");
   return {
     ...(require(path.join(scripts, "capture.ts")) as object),
+    ...(require(path.join(scripts, "captureDialogueRuntime.ts")) as object),
     ...(require(path.join(scripts, "dialogueCacheSnapshot.ts")) as object),
     ...(require(path.join(scripts, "generatedShotPlugin.ts")) as object),
     ...(require(path.join(scripts, "productionRuntimeState.ts")) as object),
@@ -318,6 +324,30 @@ export const test_cli_scaffold_dialogue_runtime_isolation =
       const dialogueB = dialogueRuntime("B", 48);
       const captureA = first.createProductionFrameCaptureRuntime();
       const captureB = second.createProductionFrameCaptureRuntime();
+      // The production an author has before they have authored anything. The
+      // capture dialogue owner reads its own design for three optional
+      // decisions -- dialogue synthesis, live wearable soft bodies, speaker
+      // bindings -- and falls back for each. Every fixture in this repository
+      // supplies all three, so the fallbacks had never run, and the state that
+      // exercises them is the first state a project is ever in.
+      //
+      // An unregistered id is the honest way to reach it: `productionDesign`
+      // answers `null` for a production that has authored none, which is the
+      // same `null` a brand-new project hands over. Constructing the owner is
+      // the whole reading -- `prepare()` opens a compile and this production
+      // has none, and it is the construction that consults the design.
+      const undesigned = first.createProductionCaptureDialogueRuntime({
+        capture: first.createProductionFrameCaptureRuntime(),
+        productionId: "never-authored",
+        root: firstRoot,
+      });
+      TestValidator.equals(
+        "a production with no authored design still builds its dialogue owner",
+        {
+          built: typeof undesigned.prepare === "function",
+        },
+        { built: true },
+      );
       const cropA = { left: 0, top: 0.1, right: 0.8, bottom: 1 };
       const cropB = { left: 0.2, top: 0, right: 1, bottom: 0.9 };
       await captureA.installDialogue(dialogueA);
