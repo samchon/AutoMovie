@@ -534,6 +534,23 @@ export const test_cli_scaffold_dialogue_runtime_isolation =
         },
       );
 
+      // And the route with nothing wrong with it. A valid production id and a
+      // valid artifact id walk past both guards to the compiled root, and the
+      // answer is 404 rather than 400: this project has compiled no such
+      // artifact, which is a different fact from a request nobody could read.
+      //
+      // Telling those two apart is the whole of what the handler's catch
+      // decides, and no fixture had ever taken the passing side of it.
+      const absentArtifact = await artifact(
+        "dialogue-proxy",
+        "/__automovie/shots/opening.json",
+      );
+      TestValidator.equals(
+        "an artifact this project never compiled is missing, not malformed",
+        { answer: absentArtifact },
+        { answer: "404 compiled viewer artifact not found" },
+      );
+
       // The generated render CLI's own option check, which is pure reading
       // in front of every capture seal. An author who mistypes a flag gets the
       // flag they typed back, by name, rather than a default silently chosen
