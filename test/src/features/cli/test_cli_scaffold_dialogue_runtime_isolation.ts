@@ -53,6 +53,8 @@ interface IRuntimeModules {
     base: string,
     target: string,
   ): null | { pcm: Uint8Array; receipt: Uint8Array };
+  inspectProductionSubject: (input: unknown) => Promise<unknown>;
+  parseCaptureBrowserConfig: (value: unknown) => unknown;
   createProductionCaptureDialogueRuntime(props: {
     capture: unknown;
     productionId: string;
@@ -153,6 +155,8 @@ const loadModules = (root: string): IRuntimeModules => {
   const scripts = path.join(root, "scripts");
   return {
     ...(require(path.join(scripts, "capture.ts")) as object),
+    ...(require(path.join(scripts, "inspectSubject.ts")) as object),
+    ...(require(path.join(scripts, "capture-browser.ts")) as object),
     ...(require(path.join(scripts, "captureDialogueRuntime.ts")) as object),
     ...(require(path.join(scripts, "dialogueCacheSnapshot.ts")) as object),
     ...(require(path.join(scripts, "generatedShotPlugin.ts")) as object),
@@ -348,6 +352,181 @@ export const test_cli_scaffold_dialogue_runtime_isolation =
         },
         { built: true },
       );
+      // The instrument the product names, loaded from the project that ships
+      // it. When a project supplies none, subject inspection refuses with a
+      // message naming this file: "The scaffold ships one at
+      // `scripts/inspectSubject.ts`; pass that, or another
+      // AutoMovieProductionSubjectInspection, to the call that reached here."
+      //
+      // Nothing connected the two. The three cases that construct the
+      // inspection service pass their own doubles, and a double stays true
+      // wherever it is moved, so the sentence the product prints was an
+      // instruction nobody had ever followed -- and the day the adapter
+      // signature moved away from the shipped instrument, the only thing that
+      // would notice is an author reading a refusal that no longer works.
+      //
+      // Loading it is the whole reading. Calling it opens a dev server and a
+      // browser to answer, which is a capture host and a different question;
+      // what is asked here is whether the file the message names still exports
+      // the callable shape the seat takes.
+      TestValidator.equals(
+        "the scaffold ships the inspection instrument its own refusal names",
+        {
+          exported: typeof first.inspectProductionSubject === "function",
+          // One argument, because an instrument taking none would satisfy a
+          // structural check and answer nothing.
+          arity: first.inspectProductionSubject.length,
+        },
+        { exported: true, arity: 1 },
+      );
+
+      // The host boundary's own refusal, which is pure reading and sits in
+      // front of every seal the capture path carries. A host that asked for a
+      // specific browser and silently got another one would be capturing
+      // through an instrument nobody selected, so the parser enumerates what it
+      // accepts and names what it will not take.
+      const rejected = ((value: unknown): string => {
+        try {
+          first.parseCaptureBrowserConfig(value);
+          return "accepted";
+        } catch (error) {
+          return error instanceof Error ? error.message : String(error);
+        }
+      })({ source: "some-other-browser" });
+      TestValidator.equals(
+        "the capture browser selection refuses a source it does not ship",
+        {
+          named: rejected.includes("Invalid capture browser selection"),
+          // And it says what it does take, so the author is not left guessing
+          // which spelling was wanted.
+          enumerated: rejected.includes("playwright-chromium"),
+        },
+        { named: true, enumerated: true },
+      );
+
+      // The generated viewer config, loaded rather than started. Its own
+      // module level is ordinary imports; everything that touches a capture
+      // host lives inside the function it hands to Vite, and that function is
+      // not called until a server starts.
+      //
+      // That deferral is the contract worth holding: written as a literal the
+      // closure check would run at import time, in every consumer that so much
+      // as reads the config -- including this one.
+      const viteConfig = require(path.join(firstRoot, "vite.config.ts")) as {
+        default: unknown;
+      };
+      TestValidator.equals(
+        "the generated viewer config defers everything that needs a capture host",
+        { deferred: typeof viteConfig.default === "function" },
+        { deferred: true },
+      );
+
+      // The artifact route, which is a second handler of this plugin and the
+      // one that judges the production id. The runtime endpoint above resolves
+      // a padded id because it never reaches this guard; here a padded id is
+      // refused, and so is an artifact id that is not a trimmed name.
+      //
+      // Both refusals are pure reading in front of every capture seal, and
+      // neither had been asked. An id that resolved into a neighbouring
+      // directory is the fault they exist to stop.
+      const artifact = async (
+        productionId: string,
+        url: string,
+      ): Promise<string> => {
+        let middleware:
+          | ((
+              request: { url: string },
+              response: {
+                statusCode: number;
+                setHeader(name: string, value: string): void;
+                end(value: string | Uint8Array): void;
+              },
+              next: () => void,
+            ) => void)
+          | undefined;
+        first
+          .generatedShotPlugin(firstRoot, productionId, {
+            deliveryCrop: () => null,
+            dialogue: () => null,
+          })
+          .configureServer({
+            middlewares: {
+              use: (candidate: typeof middleware) => {
+                middleware = candidate;
+              },
+            },
+          });
+        if (middleware === undefined) throw new Error("no middleware");
+        const handler = middleware;
+        return new Promise<string>((resolve) => {
+          const response = {
+            statusCode: 0,
+            setHeader: () => undefined,
+            end: (value: unknown) =>
+              resolve(String(response.statusCode) + " " + String(value)),
+          };
+          handler({ url }, response as never, () => resolve("next"));
+        }).catch((error: unknown) =>
+          error instanceof Error ? error.message : String(error),
+        );
+      };
+      const paddedArtifact = await artifact(
+        " dialogue-proxy ",
+        "/__automovie/film.json",
+      );
+      const paddedArtifactId = await artifact(
+        "dialogue-proxy",
+        "/__automovie/shots/%20opening%20.json",
+      );
+      TestValidator.equals(
+        "the artifact route refuses a padded production id and a padded artifact id",
+        {
+          // Both refusals print one sentence; the status code is what tells
+          // them apart. A padded production id is a bad request, not a
+          // missing file, and answering 404 would send an author looking for
+          // an artifact that was never the problem.
+          production: paddedArtifact.startsWith("400 "),
+          productionNamed: paddedArtifact.includes(
+            "invalid compiled viewer artifact request",
+          ),
+          artifact: paddedArtifactId.includes(
+            "invalid compiled viewer artifact request",
+          ),
+        },
+        { production: true, productionNamed: true, artifact: true },
+      );
+
+      // The third route, which serves compiled assets and authorizes each one
+      // against the project asset manifest before handing over bytes. It walks
+      // a path traversal check first: a segment that is empty, a dot, a double
+      // dot, or carries a backslash never reaches the manifest at all.
+      //
+      // No fixture had asked either half. Both are pure reading in front of
+      // every capture seal, and an asset route that resolved ".." would be
+      // serving the machine rather than the production.
+      const traversal = await artifact(
+        "dialogue-proxy",
+        "/__automovie/assets/../secrets.bin",
+      );
+      const unlisted = await artifact(
+        "dialogue-proxy",
+        "/__automovie/assets/never-registered.bin",
+      );
+      TestValidator.equals(
+        "the asset route refuses a traversal and an asset its manifest never listed",
+        {
+          // Both answer 400 with one sentence. Neither is a missing file: a
+          // traversal never becomes a filesystem read, and an unregistered
+          // asset is refused before whatever sits at that path is opened.
+          traversal,
+          unlisted,
+        },
+        {
+          traversal: "400 invalid registered asset request",
+          unlisted: "400 invalid registered asset request",
+        },
+      );
+
       const cropA = { left: 0, top: 0.1, right: 0.8, bottom: 1 };
       const cropB = { left: 0.2, top: 0, right: 1, bottom: 0.9 };
       await captureA.installDialogue(dialogueA);
