@@ -130,6 +130,13 @@ export type AutoMovieLibraryReviewEvidence =
  * map nobody looked at is a map nobody authored. A material claiming none of
  * the three owes exactly one observation, and that is the honest number.
  *
+ * A connector is the systems branch's own subject and is judged the way an
+ * opening is, with one addition. Its landings are where a carriage meets a
+ * floor, which is the failure a route drawing cannot show and a state still
+ * cannot either: a lift whose car stops a step below the slab is correct in
+ * every state and wrong at every landing. A connector that declares no
+ * operation is a stair, and it still owes its landings.
+ *
  * @evidence requirements/review/subject-inspection.md#review-subject-viewpoint-ownership Names each role the derived population charges a library owner for.
  * @evidence specifications/review-and-acceptance/subject-surface-and-inspection.md#review-system-subject-viewpoint-plan Types the closed role set the topology derivation partitions by.
  * @author Samchon
@@ -153,6 +160,10 @@ export type AutoMovieLibraryObservationRole =
   | "material-texture"
   | "material-transmission"
   | "roof"
+  | "service-carriage"
+  | "service-landing"
+  | "service-state"
+  | "service-transition"
   | "underside";
 
 /**

@@ -25,6 +25,10 @@ const operationSubject = (environment: string, opening: string): string =>
 const instanceSubject = (environment: string, set: string): string =>
   `instance:${environment}/${set}`;
 
+/** Stable compiled subject address of one circulation connector. */
+const serviceSubject = (environment: string, connector: string): string =>
+  `service:${environment}/${connector}`;
+
 /** Stable compiled subject address of one material as one model wears it. */
 const materialSubject = (
   environment: string,
@@ -266,6 +270,75 @@ export const autoMovieLibraryObservationRequirements = (
         ] as const)
           if (binding !== null) push("material-texture", map);
       }
+    }
+  }
+  // A connector is the systems branch's own coupled subject. It is judged the
+  // way an opening is -- each state, each adjacency between them, each moving
+  // part -- with one addition that has no analogue there. A landing is where a
+  // carriage meets a floor, and that is the failure neither a route drawing nor
+  // a state still can show: a lift whose car stops a step below the slab is
+  // correct in every state and wrong at every landing.
+  //
+  // A connector declaring no operation is a stair. It has no states and no
+  // carriages and it still owes its landings, because the step a stair lands on
+  // is the same question.
+  for (const environment of environments) {
+    const buildingOfSpace = new Map<string, string>();
+    for (const unit of builtEnvironmentBuildingCensus(environment))
+      for (const space of unit.spaces) buildingOfSpace.set(space, unit.building);
+    for (const connector of environment.connectors) {
+      // The connector is attributed to the building it starts in, falling back
+      // to the one it arrives at, so a connector entering a building from
+      // outside is still answered for by the building it serves. One joining no
+      // building's space is skipped rather than attributed to an arbitrary unit.
+      const building =
+        buildingOfSpace.get(connector.from) ?? buildingOfSpace.get(connector.to);
+      if (building === undefined) continue;
+      const subject = serviceSubject(environment.id, connector.id);
+      const push = (
+        role: AutoMovieLibraryObservationRole,
+        origin: string,
+      ): void => {
+        required.push({
+          id: `${subject}/${role}/${origin}`,
+          role,
+          subject,
+          building,
+          origin,
+          // What is fixed here is which landing or travel must be opened, not
+          // where the eye stands.
+          pose: null,
+        });
+      };
+      // A connector that names its landings is answered at each of them. One
+      // that names none still joins two spaces, and those two ends are the
+      // landings it has.
+      //
+      // A landing is addressed by its space and its height together, because a
+      // lift serving one atrium at three levels lands three times in the same
+      // space and the space alone would name one observation for all three --
+      // the two upper landings would vanish into the lower one and the review
+      // would read complete having looked at one floor.
+      const landings =
+        connector.landings === undefined || connector.landings.length === 0
+          ? // With no landings declared there is nothing to tell one end from
+            // the other by, and a connector may join a space to itself, so the
+            // end is named by which end it is.
+            [`${connector.from}@from`, `${connector.to}@to`]
+          : connector.landings.map(
+              (landing) => `${landing.space}@${landing.at}`,
+            );
+      for (const landing of landings) push("service-landing", landing);
+      const operation = connector.operation;
+      if (operation === undefined) continue;
+      for (const state of operation.states) push("service-state", state.id);
+      for (let index = 1; index < operation.states.length; index += 1)
+        push(
+          "service-transition",
+          `${operation.states[index - 1]!.id}->${operation.states[index]!.id}`,
+        );
+      for (const carriage of operation.carriages)
+        push("service-carriage", carriage.id);
     }
   }
   return required.sort((left, right) => compareCodeUnits(left.id, right.id));

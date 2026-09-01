@@ -479,4 +479,133 @@ export const test_production_library_observation_population = (): void => {
       unplaced: 0,
     },
   );
+
+  // A connector is the systems branch's own coupled subject. Its landings are
+  // where a carriage meets a floor, which is the failure neither a route
+  // drawing nor a state still can show.
+  const served = rectangularBuilding();
+  served.connectors = [
+    {
+      id: "lift",
+      kind: "lift",
+      from: "hall",
+      to: "hall",
+      bidirectional: true,
+      route: [
+        { x: 0, y: 0, z: 0 },
+        { x: 0, y: 3, z: 0 },
+      ],
+      elements: [],
+      landings: [
+        { space: "hall", at: 0 },
+        { space: "hall", at: 1 },
+      ],
+      operation: {
+        carriages: [
+          {
+            id: "car",
+            element: "car-box",
+            motion: {
+              kind: "prismatic",
+              axis: { x: 0, y: 1, z: 0 },
+              min: 0,
+              max: 3,
+            },
+          },
+        ],
+        states: [
+          { id: "lower", carriages: [], drive: "still" },
+          { id: "rising", carriages: [], drive: "forward" },
+          { id: "upper", carriages: [], drive: "still" },
+        ],
+        state: "lower",
+      },
+    },
+  ];
+  // A stair declares no operation and names no landings. It still joins two
+  // spaces, and those two ends are the landings it has.
+  const stepped = rectangularBuilding();
+  stepped.connectors = [
+    {
+      id: "stair",
+      kind: "stair",
+      from: "hall",
+      to: "hall",
+      bidirectional: true,
+      route: [
+        { x: 0, y: 0, z: 0 },
+        { x: 0, y: 3, z: 0 },
+      ],
+      elements: [],
+    },
+  ];
+  // Joining no building's space, so it is skipped rather than attributed to a
+  // unit that does not serve it.
+  const detached = rectangularBuilding();
+  detached.connectors = [
+    {
+      id: "path",
+      kind: "ramp",
+      from: "courtyard",
+      to: "lane",
+      bidirectional: true,
+      route: [
+        { x: 0, y: 0, z: 0 },
+        { x: 4, y: 0, z: 0 },
+      ],
+      elements: [],
+    },
+  ];
+
+  const servedRequired = derive([served]);
+  TestValidator.equals(
+    "a connector is judged at every landing, state, adjacency, and carriage",
+    {
+      derived: servedRequired
+        .filter((entry) => entry.role.startsWith("service-"))
+        .map((entry) => [entry.id, entry.role, entry.building]),
+      envelope: servedRequired.length - derive([rectangularBuilding()]).length,
+      // A stair has no states and no carriages and still owes its two ends.
+      stair: derive([stepped])
+        .filter((entry) => entry.role.startsWith("service-"))
+        .map((entry) => entry.id),
+      detached: derive([detached]).filter((entry) =>
+        entry.role.startsWith("service-"),
+      ).length,
+    },
+    {
+      derived: [
+        ["service:hall-house/lift/service-carriage/car", "service-carriage", "house"],
+        [
+          "service:hall-house/lift/service-landing/hall@0",
+          "service-landing",
+          "house",
+        ],
+        [
+          "service:hall-house/lift/service-landing/hall@1",
+          "service-landing",
+          "house",
+        ],
+        ["service:hall-house/lift/service-state/lower", "service-state", "house"],
+        ["service:hall-house/lift/service-state/rising", "service-state", "house"],
+        ["service:hall-house/lift/service-state/upper", "service-state", "house"],
+        [
+          "service:hall-house/lift/service-transition/lower->rising",
+          "service-transition",
+          "house",
+        ],
+        [
+          "service:hall-house/lift/service-transition/rising->upper",
+          "service-transition",
+          "house",
+        ],
+      ],
+      envelope: 8,
+      stair: [
+        "service:hall-house/stair/service-landing/hall@from",
+        "service:hall-house/stair/service-landing/hall@to",
+      ],
+      detached: 0,
+    },
+  );
 };
