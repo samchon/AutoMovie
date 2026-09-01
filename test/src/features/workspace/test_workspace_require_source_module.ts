@@ -48,20 +48,17 @@ const refuses = (
  */
 export const test_workspace_require_source_module = (): void => {
   const real = requireSourceModule<{
-    readCatalogVersion: unknown;
-  }>(
-    path.join(ROOT, "packages/production/src/production/contentIdentity.ts"),
-    ["digestAutoMovieBytes"],
-  );
+    digestAutoMovieBytes: unknown;
+  }>(path.join(ROOT, "packages/production/src/production/contentIdentity.ts"), [
+    "digestAutoMovieBytes",
+  ]);
 
   TestValidator.equals(
     "a module loaded by path is proved to be the module that path names",
     namedFacts([
       [
         "aRealModuleLoads",
-        () =>
-          typeof (real as unknown as Record<string, unknown>)
-            .digestAutoMovieBytes === "function",
+        () => typeof real.digestAutoMovieBytes === "function",
       ],
       [
         // The module require answers with here carries AUTOMOVIE_TEMPLATE_VERSIONS

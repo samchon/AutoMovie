@@ -227,7 +227,8 @@ export const autoMovieLibraryObservationRequirements = (
     );
     const buildingOfSpace = new Map<string, string>();
     for (const unit of builtEnvironmentBuildingCensus(environment))
-      for (const space of unit.spaces) buildingOfSpace.set(space, unit.building);
+      for (const space of unit.spaces)
+        buildingOfSpace.set(space, unit.building);
     const seen = new Set<string>();
     for (const element of environment.elements) {
       if (element.model === null || element.space === null) continue;
@@ -259,8 +260,7 @@ export const autoMovieLibraryObservationRequirements = (
         };
         push("material-response", material.id);
         if (material.emissive !== null) push("material-emission", material.id);
-        if (material.opacity < 1)
-          push("material-transmission", material.id);
+        if (material.opacity < 1) push("material-transmission", material.id);
         for (const [map, binding] of [
           ["baseColor", material.baseColorTexture],
           ["emissive", material.emissiveTexture ?? null],
@@ -285,14 +285,16 @@ export const autoMovieLibraryObservationRequirements = (
   for (const environment of environments) {
     const buildingOfSpace = new Map<string, string>();
     for (const unit of builtEnvironmentBuildingCensus(environment))
-      for (const space of unit.spaces) buildingOfSpace.set(space, unit.building);
+      for (const space of unit.spaces)
+        buildingOfSpace.set(space, unit.building);
     for (const connector of environment.connectors) {
       // The connector is attributed to the building it starts in, falling back
       // to the one it arrives at, so a connector entering a building from
       // outside is still answered for by the building it serves. One joining no
       // building's space is skipped rather than attributed to an arbitrary unit.
       const building =
-        buildingOfSpace.get(connector.from) ?? buildingOfSpace.get(connector.to);
+        buildingOfSpace.get(connector.from) ??
+        buildingOfSpace.get(connector.to);
       if (building === undefined) continue;
       const subject = serviceSubject(environment.id, connector.id);
       const push = (
