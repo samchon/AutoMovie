@@ -132,11 +132,24 @@ const canonical = (value: string): string => slash(path.resolve(value));
  * carries all four, three of them below 100%) and they were unjudged, which is
  * the one shape where a gate can be edited freely while reporting green.
  *
+ * The scaffold's examples are named for the opposite reason: they are the one
+ * authored tree this repository compiles and never runs, on purpose. The
+ * scaffold's own AGENTS.md settles what they are -- "src/examples is reading
+ * material, not a library or evidence population" -- and an author moves a
+ * technique out of them into its owning branch rather than importing them.
+ * Every generated project type-checks them, because `src` is in its tsconfig
+ * include, so they are gated by the compile that is their actual contract. A
+ * line-coverage obligation on them would be satisfiable only by a test that
+ * executed reading material, which is a test of nothing, and unsatisfied it
+ * reported fourteen files no process had ever loaded.
+ *
  * The directory names that stay unconditional are the ones no authored source
  * ever legitimately sits under.
  */
 export const isAuthoredExecutableSource = (relative: string): boolean => {
   const target = slash(relative);
+  if (target.startsWith("packages/template/scaffold/src/examples/"))
+    return false;
   const typedRepositoryTool =
     target.startsWith("test/src/coverage/") ||
     target.startsWith("test/src/integrity/");

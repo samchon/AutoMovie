@@ -161,6 +161,24 @@ test("parses new-side diff lines and recognizes authored executable source", () 
     true,
   );
   assert.equal(isAuthoredExecutableSource("packages/cli/src/other.ts"), true);
+  // The scaffold's examples are compiled by every generated project and run by
+  // none, so the compile is their gate. The boundary is stated from both sides:
+  // one file inside is out, and the branch source beside it that an author is
+  // told to move a technique into stays in.
+  assert.equal(
+    isAuthoredExecutableSource(
+      "packages/template/scaffold/src/examples/buildings.ts",
+    ),
+    false,
+  );
+  assert.equal(
+    isAuthoredExecutableSource("packages/template/scaffold/src/spaces/hall.ts"),
+    true,
+  );
+  assert.equal(
+    isAuthoredExecutableSource("packages/template/scaffold/scripts/verify.ts"),
+    true,
+  );
   assert.equal(isAuthoredExecutableSource("build/tgz.ts"), true);
   assert.equal(isAuthoredExecutableSource("config/lint.config.ts"), true);
   assert.equal(isAuthoredExecutableSource("lint.config.ts"), true);
