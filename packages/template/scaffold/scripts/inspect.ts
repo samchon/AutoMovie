@@ -50,7 +50,8 @@ const one = (name: string): string | undefined => {
       found.push(value);
       index += 1;
     }
-  if (found.length > 1) throw new Error(`${name} may be supplied exactly once.`);
+  if (found.length > 1)
+    throw new Error(`${name} may be supplied exactly once.`);
   return found[0];
 };
 
