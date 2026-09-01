@@ -1068,6 +1068,40 @@ export const test_cli_scaffold_library_review_command = (): void => {
     const mismatchedTurntableUnchanged =
       fs.readFileSync(modelPlanPath, "utf8") === currentModelPlan;
 
+    // The refusal above proves the command rejects a model the plan never
+    // named. Recording the one it did name is the only way a turntable receipt
+    // comes to exist, and a turntable receipt is the only receipt whose
+    // currency the compiler answers by asking its own library-path binding
+    // whether that model exists. Every other fixture stops short of this, so
+    // the binding sits beside the film path's -- identical, covered -- and
+    // never runs.
+    command.runLibraryReviewCommand({
+      argv: [
+        "record",
+        "--owner",
+        modelOwner,
+        "--observation",
+        "whole-model",
+        "--runtime",
+        "automovie-library-probe:v1",
+        "--verdict",
+        "passed",
+        "--turntable",
+        "soloist",
+      ],
+      root: fixture.root,
+      productionId: "fixture-film",
+      evidence: modelEvidence,
+      read: readAutoMovieProductionEvidence,
+    });
+    const turntableRecorded = libraryDiagnostics({
+      root: fixture.root,
+      authoring: readAutoMovieProductionEvidence({
+        root: fixture.root,
+        productionEvidence: modelEvidence,
+      }),
+    });
+
     TestValidator.equals(
       "generated library plans and receipts close the actual compiler consumer",
       namedFacts([
@@ -1157,6 +1191,29 @@ export const test_cli_scaffold_library_review_command = (): void => {
           "mismatchedTurntableRefusedWithoutMutation",
           () => mismatchedTurntableRefused && mismatchedTurntableUnchanged,
         ],
+        [
+          // The receipt the command wrote is real: the plan named "soloist",
+          // the record names "soloist", and the compiler read it rather than
+          // reporting the observation unpaid. What it then answers is that a
+          // turntable receipt is only current while the canonical views behind
+          // it are on disk, and this fixture captured none. That is the whole
+          // difference between a receipt existing and a receipt being true.
+          "turntableReceiptJudgedByItsViews",
+          () =>
+            turntableRecorded.some(
+              (entry) =>
+                entry.target ===
+                  "library:models:docs/models/owner.md#models-delivery:whole-model" &&
+                entry.message.includes(
+                  "does not reopen as the exact current turntable evidence",
+                ),
+            ) &&
+            turntableRecorded.some(
+              (entry) =>
+                entry.target.includes("whole-model") &&
+                entry.message.includes("has no turntable receipt"),
+            ) === false,
+        ],
         ["modelWithoutTurntableRefused", () => modelWithoutTurntableRefused],
         ["inspectAndRecordEmitResults", () => outputCount === 2],
       ]),
@@ -1177,6 +1234,7 @@ export const test_cli_scaffold_library_review_command = (): void => {
         staleReceiptRetainedAlongsideCurrent: true,
         malformedPlanRefusedWithoutMutation: true,
         mismatchedTurntableRefusedWithoutMutation: true,
+        turntableReceiptJudgedByItsViews: true,
         modelWithoutTurntableRefused: true,
         inspectAndRecordEmitResults: true,
       },

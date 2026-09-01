@@ -37,6 +37,21 @@ export const LIBRARY_SECOND_OWNER = `${LIBRARY_DESIGN}#${LIBRARY_SECOND_ANCHOR}`
 /** Adjacent finite observation plan for that owner. */
 export const LIBRARY_PLAN = "docs/spaces/hall.review.json";
 
+/** The design host of the opt-in models branch. */
+export const LIBRARY_MODEL_DESIGN = "docs/models/bench.md";
+
+/** The reviewed delivery anchor that models design host publishes. */
+export const LIBRARY_MODEL_ANCHOR = "bench-delivery";
+
+/** The address the models design owner is registered and diagnosed at. */
+export const LIBRARY_MODEL_OWNER = `${LIBRARY_MODEL_DESIGN}#${LIBRARY_MODEL_ANCHOR}`;
+
+/** Where that owner's review plan and its receipts live. */
+export const LIBRARY_MODEL_PLAN = "docs/models/bench.review.json";
+
+/** The source file the models design owner binds. */
+export const LIBRARY_MODEL_SOURCE = "src/models/bench.ts";
+
 /** The one source file the fixture's reviewed space branch selects. */
 export const LIBRARY_SOURCE = "src/spaces/hall.ts";
 
@@ -159,7 +174,26 @@ export const libraryAuthoring = (props: {
    * rather than charges, and neither had a fixture until #2196.
    */
   binding?: "empty" | "none";
+  /**
+   * Whether a models design branch joins the spaces one.
+   *
+   * Only a models owner may plan a turntable observation; every other branch is
+   * refused that evidence kind by domain. The library compile path binds its
+   * own `modelExists`, `rigged`, and `fingerprint` for exactly that case, and
+   * with no models branch anywhere in the fixtures those three bindings were
+   * asserted by nothing.
+   */
+  models?: boolean;
 }): IAutoMovieProductionEvidence => {
+  const modelSourceBinding = {
+    branch: "modelSources",
+    stage: "review",
+    enforced: true,
+    root: "src",
+    files: ["src/models/**/*.ts"],
+    symbols: ["models"],
+    paths: [LIBRARY_MODEL_SOURCE],
+  };
   const sourceBinding = {
     branch: "spaceSources",
     stage: "review",
@@ -177,6 +211,15 @@ export const libraryAuthoring = (props: {
     manifest: { kind: "library" },
     designBranches: [
       { branch: "spaces", designStage: "review", sourceBinding },
+      ...(props.models === true
+        ? [
+            {
+              branch: "models",
+              designStage: "review",
+              sourceBinding: modelSourceBinding,
+            },
+          ]
+        : []),
     ],
     designOwners: [
       {
@@ -197,6 +240,23 @@ export const libraryAuthoring = (props: {
               ? { ...sourceBinding, paths: [] }
               : sourceBinding,
       },
+      ...(props.models === true
+        ? [
+            {
+              branch: "models",
+              path: LIBRARY_MODEL_DESIGN,
+              title: "bench design",
+              units: [
+                {
+                  anchor: LIBRARY_MODEL_ANCHOR,
+                  title: `${LIBRARY_MODEL_ANCHOR} delivery`,
+                  digest: "b".repeat(64),
+                },
+              ],
+              sourceBinding: modelSourceBinding,
+            },
+          ]
+        : []),
     ],
     contracts: [],
   } as unknown as IAutoMovieProductionEvidence;
@@ -239,17 +299,6 @@ export const libraryFixture = (
               sources: [LIBRARY_SOURCE],
               observations: [
                 { id: "plan-section-elevation", evidence: "artifact" },
-                // A model observation, so a compile through this fixture asks the
-                // compiler whether the model it names exists. That binding --
-                // the library path's own, distinct from the film path's --
-                // was reached by no test: every case that judged the consumer
-                // passed its own double, and a double stays true wherever it
-                // is moved.
-                {
-                  id: "plan-model-turntable",
-                  evidence: "turntable",
-                  model: LIBRARY_MODEL,
-                },
               ],
               receipts: [],
             },

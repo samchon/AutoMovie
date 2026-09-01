@@ -1241,7 +1241,18 @@ export class AutoMovieProductionCompiler {
           environmentsOf.get(JSON.stringify([branch, owner])) ?? [],
         modelExists: (model) => models.has(model),
         rigged: (model) => (models.get(model)?.skeleton ?? null) !== null,
-        fingerprint: () => null,
+        // A library publishes models, so an asset render target resolves here
+        // exactly as it does on the film path: the generated manifest above
+        // carries the models/<id>.json entry the fingerprint reads, and the
+        // project answers the content inputs. Returning null unconditionally
+        // made every turntable receipt permanently uncurrent -- a plan could
+        // name one, the record command could write one, and the compiler would
+        // answer "does not reopen" forever -- and it made the modelExists
+        // binding beside it a question whose answer nothing could observe.
+        fingerprint: (target) =>
+          manifest === null
+            ? null
+            : productionRenderTargetFingerprint(this.project, manifest, target),
         captured: (target, digest) =>
           this.project.capturedRenderViews(target, digest),
       }),
