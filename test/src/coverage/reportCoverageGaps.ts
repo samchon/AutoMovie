@@ -42,7 +42,22 @@ type Writer = (line: string) => void;
  * Both tests are provable rather than heuristic, which is the whole of why they
  * are the two used. A name with a covered entry beside it demonstrably ran, so
  * the zero entry is a second reading of one function. A name the file does not
- * contain is not a function the file declares. Neither can hide a real gap.
+ * declare is not a function the file declares. Neither can hide a real gap.
+ *
+ * "Does not contain" was the first spelling of the second test and it was too
+ * loose by exactly one shape: a file that only ever *calls* somebody else's
+ * method contains that method's name. `libraryObservationRequirements.ts` was
+ * charged for an emitted `get` because it writes `waivedCounts.get(...)` four
+ * times, and a `Map`'s method is not a function that file declares any more
+ * than a name it never writes at all. So the reading is now "appears somewhere
+ * other than after a dot", which is the narrowest change that separates the two
+ * -- a declaration never sits behind a member access, whatever else it looks
+ * like.
+ *
+ * It stays deliberately conservative in the other direction. A name written in
+ * a comment or a string counts as declared, so the gap survives; narrowing
+ * further would mean parsing, and a rule that hides a real gap to tidy a false
+ * one is worse than the false one.
  *
  * What is deliberately **not** filtered is a zero-hit entry whose reported line
  * does not define it while the file declares the name elsewhere. The position is
@@ -55,7 +70,50 @@ export const functionGapIsReal = (props: IFunctionGapProps): boolean => {
   const name = props.name;
   if (typeof name !== "string" || name.startsWith("(anonymous")) return true;
   if (props.covered.has(name)) return false;
-  return props.text === null || props.text.includes(name);
+  return props.text === null || fileDeclaresName(props.text, name);
+};
+
+/**
+ * Whether a name appears anywhere other than behind a member access.
+ *
+ * The identifier is matched whole, so `getter` never answers for `get`, and an
+ * occurrence preceded by `.` or `?.` is passed over because that position is a
+ * call on somebody else's object rather than a declaration on this one.
+ */
+export const fileDeclaresName = (text: string, name: string): boolean => {
+  const escaped = name.replaceAll(/[.*+?^${}()|[\]\\]/gu, "\\$&");
+  return new RegExp(`(?<![.\\w$])${escaped}(?![\\w$])`, "u").test(text);
+};
+
+/**
+ * Whether a zero-hit branch location is a branch this file actually has.
+ *
+ * The function filter's twin, and provable in the same way. A branch has no
+ * name to look for, so the question asked instead is what the reported span
+ * covers: `libraryObservationRequirements.ts` was charged for `branch@21:0-2`,
+ * and columns 0 to 2 of line 21 are the two spaces that indent a template
+ * literal. Nobody writes a branch in an indent. It is the same source-map
+ * inversion that puts an emitted helper's name onto an `import {` line, landing
+ * on a position instead of a name.
+ *
+ * Whitespace is the whole of the test, which is what keeps it from hiding
+ * anything: a branch somebody wrote covers code, and a span covering code is
+ * kept whatever else it looks like. A span this cannot read -- the file is
+ * gone, the line is past its end, the columns are missing -- is kept too, for
+ * the same reason an unreadable file keeps all of its entries.
+ */
+export const branchGapIsReal = (props: {
+  source: string[] | null;
+  span: ICoverageSpan | undefined;
+}): boolean => {
+  const start = props.span?.start;
+  const end = props.span?.end;
+  if (props.source === null) return true;
+  if (start?.line === undefined || start.line !== end?.line) return true;
+  const line = props.source[start.line - 1];
+  if (typeof line !== "string") return true;
+  if (start.column === undefined || end.column === undefined) return true;
+  return line.slice(start.column, end.column).trim() !== "";
 };
 
 /**

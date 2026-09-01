@@ -571,6 +571,155 @@ test("handles comment-only files and sparse Istanbul maps without false green", 
   }
 });
 
+test("an invented branch position is named rather than charged", () => {
+  const fixture = coveredFixture();
+  try {
+    // A file whose second line is indented, so a span can be written that
+    // covers the indent and nothing else. That is the shape the instrument
+    // actually produced: `libraryObservationRequirements.ts` was charged
+    // `branch@21:0-2`, and columns 0 to 2 of that line are two spaces.
+    const text = "const first = true;\n  const value = first ? 1 : 2;\n";
+    fs.writeFileSync(fixture.file, text);
+    fixture.data.statementMap = {};
+    fixture.data.s = {};
+    fixture.data.fnMap = {};
+    fixture.data.f = {};
+    fixture.data.branchMap = {
+      invented: {
+        type: "if",
+        loc: { start: { line: 2, column: 0 }, end: { line: 2, column: 2 } },
+        locations: [
+          { start: { line: 2, column: 0 }, end: { line: 2, column: 2 } },
+        ],
+      },
+      // Written by hand on the same line, so the two differ in nothing but
+      // what their spans cover. Without it the filter could answer `false`
+      // to everything and this case would still pass.
+      real: {
+        type: "cond-expr",
+        loc: { start: { line: 2, column: 16 }, end: { line: 2, column: 29 } },
+        locations: [
+          { start: { line: 2, column: 24 }, end: { line: 2, column: 25 } },
+        ],
+      },
+    };
+    fixture.data.b = { invented: [0], real: [0] };
+    const touched = {
+      ...fixture,
+      files: new Map([[fixture.relative, new Set([1, 2])]]),
+      measuredSources: {
+        [fixture.file]: { lines: 2, sha256: hash(text) },
+      },
+    };
+    const result = inspectChangedCoverage({ ...touched, divergent: [] });
+    assert.deepEqual(result.totals.branches, { covered: 0, total: 1 });
+    assert.deepEqual(result.disagreements, [
+      `${fixture.relative}: 1 branch location covers nothing but whitespace, which is a position the instrument invented rather than a branch this file has`,
+    ]);
+    assert.equal(
+      result.gaps.filter((gap) => gap.includes("uncovered branch")).length,
+      1,
+    );
+    assert.match(result.gaps.join("\n"), /:2 uncovered branch cond-expr\[0\]/u);
+    // A second reading of the same file, with two invented positions instead
+    // of one and a third that ran. The plural is not decoration: a run that
+    // only ever drops one never says so, and a line reading "1 branch
+    // locations cover" is a report that has stopped being read carefully.
+    //
+    // The covered artifact is the other half of the same rule. A location that
+    // ran is not a gap on any line, so the filter is never consulted for it --
+    // asking would spend a source read to answer a question nobody asked, and
+    // would drop a covered reading out of the totals it belongs in.
+    fixture.data.branchMap = {
+      invented: {
+        type: "if",
+        loc: { start: { line: 2, column: 0 }, end: { line: 2, column: 2 } },
+        locations: [
+          { start: { line: 2, column: 0 }, end: { line: 2, column: 2 } },
+        ],
+      },
+      inventedToo: {
+        type: "if",
+        loc: { start: { line: 2, column: 0 }, end: { line: 2, column: 1 } },
+        locations: [
+          { start: { line: 2, column: 0 }, end: { line: 2, column: 1 } },
+        ],
+      },
+      inventedButRan: {
+        type: "if",
+        loc: { start: { line: 2, column: 1 }, end: { line: 2, column: 2 } },
+        locations: [
+          { start: { line: 2, column: 1 }, end: { line: 2, column: 2 } },
+        ],
+      },
+      real: {
+        type: "cond-expr",
+        loc: { start: { line: 2, column: 16 }, end: { line: 2, column: 29 } },
+        locations: [
+          { start: { line: 2, column: 24 }, end: { line: 2, column: 25 } },
+        ],
+      },
+    };
+    fixture.data.b = {
+      invented: [0],
+      inventedToo: [0],
+      inventedButRan: [1],
+      real: [0],
+    };
+    const plural = inspectChangedCoverage({ ...touched, divergent: [] });
+    assert.deepEqual(plural.disagreements, [
+      `${fixture.relative}: 2 branch locations cover nothing but whitespace, which is a position the instrument invented rather than a branch this file has`,
+    ]);
+    // The one that ran stays in the totals beside the one somebody wrote.
+    assert.deepEqual(plural.totals.branches, { covered: 1, total: 2 });
+    // The two readings left, each a shape the fixtures above never produce.
+    //
+    // A location the map simply does not carry: `locations` is what the tool
+    // writes per branch, and a hole in it is answered by the entry's own `loc`
+    // rather than by nothing. Every case above carries its locations, so that
+    // fallback had never run.
+    //
+    // And a line the source does not have: a span can name line 9 of a
+    // two-line file, which is the same instrument fault as an invented column
+    // wearing a different shape. It is declined rather than dropped, because a
+    // file that cannot answer for a position is not evidence that the position
+    // was invented -- and the gap stays listed with its position distrusted.
+    fixture.data.branchMap = {
+      missingLocation: {
+        type: "if",
+        loc: { start: { line: 2, column: 0 }, end: { line: 2, column: 2 } },
+        locations: [undefined as unknown as { start: object; end: object }],
+      },
+      pastEnd: {
+        type: "if",
+        loc: { start: { line: 9, column: 0 }, end: { line: 9, column: 2 } },
+        locations: [
+          { start: { line: 9, column: 0 }, end: { line: 9, column: 2 } },
+        ],
+      },
+    };
+    fixture.data.b = { missingLocation: [0], pastEnd: [0] };
+    const ragged = inspectChangedCoverage({
+      ...touched,
+      divergent: [],
+      files: new Map([[fixture.relative, new Set([1, 2, 9])]]),
+      // The measurement recorded nine lines and the file on disk has two,
+      // which is what a report outliving an edit looks like. Without it the
+      // past-end refusal fires first and the branch loop is never reached --
+      // that refusal is about a length the record can vouch for, and this is
+      // about a line the file cannot answer for.
+      measuredSources: { [fixture.file]: { lines: 9, sha256: hash(text) } },
+    });
+    assert.deepEqual(ragged.disagreements, [
+      `${fixture.relative}: 1 branch location covers nothing but whitespace, which is a position the instrument invented rather than a branch this file has`,
+    ]);
+    assert.deepEqual(ragged.totals.branches, { covered: 0, total: 1 });
+    assert.match(ragged.gaps.join("\n"), /:9 uncovered branch if\[0\]/u);
+  } finally {
+    fs.rmSync(fixture.root, { recursive: true, force: true });
+  }
+});
+
 const git = (root: string, arguments_: string[]): string => {
   const result = spawnSync("git", arguments_, {
     cwd: root,
