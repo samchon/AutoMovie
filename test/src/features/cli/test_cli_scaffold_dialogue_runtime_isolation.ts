@@ -421,6 +421,81 @@ export const test_cli_scaffold_dialogue_runtime_isolation =
         { deferred: true },
       );
 
+      // The artifact route, which is a second handler of this plugin and the
+      // one that judges the production id. The runtime endpoint above resolves
+      // a padded id because it never reaches this guard; here a padded id is
+      // refused, and so is an artifact id that is not a trimmed name.
+      //
+      // Both refusals are pure reading in front of every capture seal, and
+      // neither had been asked. An id that resolved into a neighbouring
+      // directory is the fault they exist to stop.
+      const artifact = async (
+        productionId: string,
+        url: string,
+      ): Promise<string> => {
+        let middleware:
+          | ((
+              request: { url: string },
+              response: {
+                statusCode: number;
+                setHeader(name: string, value: string): void;
+                end(value: string | Uint8Array): void;
+              },
+              next: () => void,
+            ) => void)
+          | undefined;
+        first
+          .generatedShotPlugin(firstRoot, productionId, {
+            deliveryCrop: () => null,
+            dialogue: () => null,
+          })
+          .configureServer({
+            middlewares: {
+              use: (candidate: typeof middleware) => {
+                middleware = candidate;
+              },
+            },
+          });
+        if (middleware === undefined) throw new Error("no middleware");
+        const handler = middleware;
+        return new Promise<string>((resolve) => {
+          const response = {
+            statusCode: 0,
+            setHeader: () => undefined,
+            end: (value: unknown) =>
+              resolve(String(response.statusCode) + " " + String(value)),
+          };
+          handler({ url }, response as never, () => resolve("next"));
+        }).catch((error: unknown) =>
+          error instanceof Error ? error.message : String(error),
+        );
+      };
+      const paddedArtifact = await artifact(
+        " dialogue-proxy ",
+        "/__automovie/film.json",
+      );
+      const paddedArtifactId = await artifact(
+        "dialogue-proxy",
+        "/__automovie/shots/%20opening%20.json",
+      );
+      TestValidator.equals(
+        "the artifact route refuses a padded production id and a padded artifact id",
+        {
+          // Both refusals print one sentence; the status code is what tells
+          // them apart. A padded production id is a bad request, not a
+          // missing file, and answering 404 would send an author looking for
+          // an artifact that was never the problem.
+          production: paddedArtifact.startsWith("400 "),
+          productionNamed: paddedArtifact.includes(
+            "invalid compiled viewer artifact request",
+          ),
+          artifact: paddedArtifactId.includes(
+            "invalid compiled viewer artifact request",
+          ),
+        },
+        { production: true, productionNamed: true, artifact: true },
+      );
+
       const cropA = { left: 0, top: 0.1, right: 0.8, bottom: 1 };
       const cropB = { left: 0.2, top: 0, right: 1, bottom: 0.9 };
       await captureA.installDialogue(dialogueA);
