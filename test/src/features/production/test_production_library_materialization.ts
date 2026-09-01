@@ -9,6 +9,7 @@ import { TestValidator } from "@nestia/e2e";
 import { namedFacts } from "../internal/predicates";
 import {
   LIBRARY_ANCHOR,
+  LIBRARY_MODEL,
   LIBRARY_OWNER,
   LIBRARY_SECOND_ANCHOR,
   LIBRARY_SECOND_OWNER,
@@ -72,6 +73,7 @@ export const test_production_library_materialization = (): void => {
   const fixture = libraryFixture();
   try {
     const first = run({ root: fixture.root, materialize: true });
+
     const production = AutoMovieProductionProject.openReadOnly(
       fixture.root,
     ).productionId;
@@ -110,7 +112,17 @@ export const test_production_library_materialization = (): void => {
               .map((file) => `${file.path}:${file.status}`)
               .sort((left, right) => (left < right ? -1 : left > right ? 1 : 0))
               .join(",") ===
-            "library/environments/hall-house.json:created,library/index.json:created",
+            [
+              "library/environments/hall-house.json:created",
+              // The owner delivers one model beside its building, so the compile
+              // publishes it too. A library that returned a model and wrote
+              // only its buildings would leave the model unreachable to every
+              // consumer that reads the published index.
+              "models/hall-bench.json:created",
+              "library/index.json:created",
+            ]
+              .sort((left, right) => (left < right ? -1 : left > right ? 1 : 0))
+              .join(","),
         ],
         [
           "which are the exact compiler-owned bytes on disk",
@@ -174,7 +186,10 @@ export const test_production_library_materialization = (): void => {
             source: LIBRARY_SOURCE,
             export: "hall",
             environments: ["hall-house"],
-            models: [],
+            // The owner delivers one model beside its building, and the
+            // published index names it: a consumer reading the index is how a
+            // model becomes reachable at all.
+            models: [LIBRARY_MODEL],
             digested: true,
           },
         ],
@@ -239,6 +254,7 @@ export const test_production_library_materialization = (): void => {
         published: [
           "library/environments/hall-house.json",
           "library/index.json",
+          "models/" + LIBRARY_MODEL + ".json",
         ],
       },
     );

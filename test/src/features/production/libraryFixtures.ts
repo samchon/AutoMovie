@@ -4,6 +4,7 @@ import { AutoMovieProductionProject } from "@automovie/production";
 import fs from "node:fs";
 import path from "node:path";
 
+import { drawingBoxModel } from "../internal/drawingFixtures";
 import { rectangularBuilding } from "../internal/envelopeFixtures";
 import { productionFixture } from "./productionFixtures";
 
@@ -12,6 +13,17 @@ export const LIBRARY_DESIGN = "docs/spaces/hall.md";
 
 /** Exact H2 anchor the fixture's source registration realizes. */
 export const LIBRARY_ANCHOR = "hall-delivery";
+
+/**
+ * One model this library owner delivers, so a plan can observe it.
+ *
+ * A turntable observation is the only kind that names a model, and it is the
+ * only path on which the compiler asks its own binding whether that model
+ * exists. Without a delivered model no fixture reaches that question, and the
+ * library compile path's binding sits beside the film path's -- covered --
+ * looking exactly like it and never running.
+ */
+export const LIBRARY_MODEL = "hall-bench";
 
 /** Stable owner address every fixture diagnostic and receipt is written at. */
 export const LIBRARY_OWNER = `${LIBRARY_DESIGN}#${LIBRARY_ANCHOR}`;
@@ -67,11 +79,21 @@ export const librarySourceModule = (props: {
 
 const HALL = ${JSON.stringify(props.environment ?? rectangularBuilding(), null, 2)};
 
+const BENCH = ${JSON.stringify(
+    drawingBoxModel({
+      id: LIBRARY_MODEL,
+      shape: { type: "box", width: 1.6, height: 0.45, depth: 0.4 },
+      material: "bench-oak",
+    }),
+    null,
+    2,
+  )};
+
 ${owner(
   props.exportName ?? "hall",
   props.design ?? LIBRARY_OWNER,
   props.environmentId ?? (props.environment ?? rectangularBuilding()).id,
-  props.models ?? "[]",
+  props.models ?? "[BENCH]",
 )}
 ${
   props.second === undefined
@@ -217,6 +239,17 @@ export const libraryFixture = (
               sources: [LIBRARY_SOURCE],
               observations: [
                 { id: "plan-section-elevation", evidence: "artifact" },
+                // A model observation, so a compile through this fixture asks the
+                // compiler whether the model it names exists. That binding --
+                // the library path's own, distinct from the film path's --
+                // was reached by no test: every case that judged the consumer
+                // passed its own double, and a double stays true wherever it
+                // is moved.
+                {
+                  id: "plan-model-turntable",
+                  evidence: "turntable",
+                  model: LIBRARY_MODEL,
+                },
               ],
               receipts: [],
             },
