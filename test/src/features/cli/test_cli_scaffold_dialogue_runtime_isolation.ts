@@ -55,6 +55,11 @@ interface IRuntimeModules {
   ): null | { pcm: Uint8Array; receipt: Uint8Array };
   inspectProductionSubject: (input: unknown) => Promise<unknown>;
   parseCaptureBrowserConfig: (value: unknown) => unknown;
+  createNodeProductionRenderHostWithCapture: (capture: unknown) => unknown;
+  runProductionRenderWithHost: (
+    args: readonly string[],
+    host: unknown,
+  ) => Promise<void>;
   createProductionCaptureDialogueRuntime(props: {
     capture: unknown;
     productionId: string;
@@ -157,6 +162,8 @@ const loadModules = (root: string): IRuntimeModules => {
     ...(require(path.join(scripts, "capture.ts")) as object),
     ...(require(path.join(scripts, "inspectSubject.ts")) as object),
     ...(require(path.join(scripts, "capture-browser.ts")) as object),
+    ...(require(path.join(scripts, "renderHost.ts")) as object),
+    ...(require(path.join(scripts, "renderRuntime.ts")) as object),
     ...(require(path.join(scripts, "captureDialogueRuntime.ts")) as object),
     ...(require(path.join(scripts, "dialogueCacheSnapshot.ts")) as object),
     ...(require(path.join(scripts, "generatedShotPlugin.ts")) as object),
@@ -525,6 +532,29 @@ export const test_cli_scaffold_dialogue_runtime_isolation =
           traversal: "400 invalid registered asset request",
           unlisted: "400 invalid registered asset request",
         },
+      );
+
+      // The generated render CLI's own option check, which is pure reading
+      // in front of every capture seal. An author who mistypes a flag gets the
+      // flag they typed back, by name, rather than a default silently chosen
+      // for them -- a render that quietly used a tier or a deliverable nobody
+      // asked for is the fault this refusal exists to stop.
+      const renderHost = first.createNodeProductionRenderHostWithCapture(
+        first.createProductionFrameCaptureRuntime(),
+      );
+      const unknownOption = await first
+        .runProductionRenderWithHost(
+          ["status", "--production", "x"],
+          renderHost,
+        )
+        .then(() => "resolved")
+        .catch((error: unknown) =>
+          error instanceof Error ? error.message : String(error),
+        );
+      TestValidator.equals(
+        "the generated render command names the option it does not take",
+        { answer: unknownOption },
+        { answer: 'Unknown render option "--production".' },
       );
 
       const cropA = { left: 0, top: 0.1, right: 0.8, bottom: 1 };
