@@ -60,6 +60,23 @@ const derive = unit.autoMovieLibraryObservationRequirements;
  * 6. No environments derive no observations, which is a fact about what was
  *    compiled rather than a complete review.
  */
+/** One minimal placed set; only the fields the derivation reads carry meaning. */
+const instanceSet = (id: string) => ({
+  id,
+  modelRecipe: `recipe-${id}`,
+  count: 4,
+  layout: {
+    kind: "grid" as const,
+    rows: 2,
+    columns: 2,
+    spacing: { x: 1, z: 1 },
+  },
+  anchor: { x: 0, y: 0, z: 0 },
+  facingDeg: 0,
+  seed: 1,
+  variation: { scale: { min: 1, max: 1 }, palette: [], traits: [] },
+});
+
 export const test_production_library_observation_population = (): void => {
   const required = derive([rectangularBuilding()]);
 
@@ -196,6 +213,76 @@ export const test_production_library_observation_population = (): void => {
     {
       "two units each own their setting view": true,
       "and no compiled topology derives no observation": true,
+    },
+  );
+
+  // An instance set standing in a building's space adds three questions and no
+  // one of them substitutes for another: the population is the only view where
+  // density and layout can be wrong, the member is the only one close enough to
+  // judge the prototype being repeated, and the contact is the only one that
+  // shows an instance meeting the surface it stands on.
+  const placed = rectangularBuilding();
+  placed.populations = [
+    {
+      space: "hall",
+      prototypeBounds: {
+        min: { x: -1, y: 0, z: -1 },
+        max: { x: 1, y: 1, z: 1 },
+      },
+      set: instanceSet("benches"),
+    },
+  ];
+  const stray = rectangularBuilding();
+  stray.populations = [
+    {
+      space: "courtyard",
+      prototypeBounds: {
+        min: { x: -1, y: 0, z: -1 },
+        max: { x: 1, y: 1, z: 1 },
+      },
+      set: instanceSet("planters"),
+    },
+  ];
+  const placedRequired = derive([placed]);
+  TestValidator.equals(
+    "a placed instance set is judged as a population, a member, and a contact",
+    {
+      derived: placedRequired
+        .filter((entry) => entry.role.startsWith("instance-"))
+        .map((entry) => [entry.id, entry.role, entry.building, entry.origin]),
+      // The building profile is untouched: adding a set asks new questions and
+      // takes none away, which is the property the whole derivation exists for.
+      envelope: placedRequired.length - derive([rectangularBuilding()]).length,
+      // A population standing in no building's space belongs to the
+      // environment rather than to a unit, and attaching it to an arbitrary
+      // one would make that owner answer for placement it does not own.
+      stray: derive([stray]).filter((entry) =>
+        entry.role.startsWith("instance-"),
+      ).length,
+    },
+    {
+      derived: [
+        [
+          "instance:hall-house/benches/instance-contact",
+          "instance-contact",
+          "house",
+          "hall",
+        ],
+        [
+          "instance:hall-house/benches/instance-member",
+          "instance-member",
+          "house",
+          "hall",
+        ],
+        [
+          "instance:hall-house/benches/instance-population",
+          "instance-population",
+          "house",
+          "hall",
+        ],
+      ],
+      envelope: 3,
+      stray: 0,
     },
   );
 };

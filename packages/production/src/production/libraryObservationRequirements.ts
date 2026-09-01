@@ -17,6 +17,10 @@ import { compareCodeUnits } from "./contentIdentity";
 const buildingSubject = (environment: string, unit: string): string =>
   `building:${environment}/${unit}`;
 
+/** Stable compiled subject address of one placed instance population. */
+const instanceSubject = (environment: string, set: string): string =>
+  `instance:${environment}/${set}`;
+
 /** Stable compiled subject address of one logical space. */
 const spaceSubject = (environment: string, space: string): string =>
   `space:${environment}/${space}`;
@@ -104,6 +108,46 @@ export const autoMovieLibraryObservationRequirements = (
           });
         }
     }
+  // An instance set is judged three ways and no one of them substitutes for
+  // another. The population view is the only place density and layout can be
+  // wrong; the member view is the only one close enough to judge the prototype
+  // being repeated; and the contact view is the only one that shows an instance
+  // meeting the surface it stands on, which is where a set that floats or sinks
+  // gives itself away.
+  //
+  // The set is attributed to the building whose space holds it, because a
+  // review is counted per owner and a population standing in no building's
+  // space belongs to the environment rather than to a unit. Those are skipped
+  // here rather than invented: attaching them to an arbitrary unit would make
+  // one owner answer for placement it does not own.
+  for (const environment of environments) {
+    const buildingOfSpace = new Map<string, string>();
+    for (const unit of builtEnvironmentBuildingCensus(environment))
+      for (const space of unit.spaces)
+        buildingOfSpace.set(space, unit.building);
+    for (const population of environment.populations ?? []) {
+      const building = buildingOfSpace.get(population.space);
+      if (building === undefined) continue;
+      const subject = instanceSubject(environment.id, population.set.id);
+      for (const role of [
+        "instance-population",
+        "instance-member",
+        "instance-contact",
+      ] as const)
+        required.push({
+          id: `${subject}/${role}`,
+          role,
+          subject,
+          building,
+          origin: population.space,
+          // Every instance observation is framed from the set's own placed
+          // extent, the way an exterior building view is framed from the
+          // envelope. What is fixed here is which question must be opened, not
+          // where the eye stands to answer it.
+          pose: null,
+        });
+    }
+  }
   return required.sort((left, right) => compareCodeUnits(left.id, right.id));
 };
 
