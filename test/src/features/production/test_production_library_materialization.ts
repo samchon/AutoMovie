@@ -6,6 +6,7 @@ import {
 } from "@automovie/production";
 import { TestValidator } from "@nestia/e2e";
 
+import { rectangularBuilding } from "../internal/envelopeFixtures";
 import { namedFacts } from "../internal/predicates";
 import {
   LIBRARY_ANCHOR,
@@ -507,6 +508,91 @@ export const test_production_library_materialization = (): void => {
     withModel.dispose();
     duplicateModel.dispose();
     invalidModel.dispose();
+  }
+
+  // A library owner's source is one module only because every fixture so far
+  // wrote one. The compiler links, inspects, and transpiles each imported module
+  // beside the entry, and none of that ran: the loop over imports had nothing to
+  // iterate, so a helper that fails inspection would have reached publication
+  // unexamined.
+  const imports = libraryFixture({
+    "src/shared/hall.ts": [
+      "export const hallId = () => \"hall-house\";",
+      "",
+    ].join("\n"),
+    [LIBRARY_SOURCE]: [
+      'import type { IAutoMovieLibrarySourceOwner } from "@automovie/interface";',
+      "",
+      'import { hallId } from "../shared/hall";',
+      "",
+      `const HALL = ${JSON.stringify(rectangularBuilding(), null, 2)};`,
+      "",
+      "export const hall = {",
+      `  design: ${JSON.stringify(LIBRARY_OWNER)},`,
+      "  build: () => ({",
+      "    environments: [{ ...HALL, id: hallId() }],",
+      "    models: [],",
+      "  }),",
+      "} satisfies IAutoMovieLibrarySourceOwner;",
+      "",
+    ].join("\n"),
+  });
+  // The same shape with a helper the source inspection refuses. The entry is
+  // untouched, so a refusal here can only have come from reading the import.
+  const badImport = libraryFixture({
+    "src/shared/hall.ts": [
+      "export const hallId = () => {",
+      "  // A clock is the plainest thing deterministic source may not read.",
+      "  return Date.now() > 0 ? \"hall-house\" : \"hall-house\";",
+      "};",
+      "",
+    ].join("\n"),
+    [LIBRARY_SOURCE]: [
+      'import type { IAutoMovieLibrarySourceOwner } from "@automovie/interface";',
+      "",
+      'import { hallId } from "../shared/hall";',
+      "",
+      `const HALL = ${JSON.stringify(rectangularBuilding(), null, 2)};`,
+      "",
+      "export const hall = {",
+      `  design: ${JSON.stringify(LIBRARY_OWNER)},`,
+      "  build: () => ({",
+      "    environments: [{ ...HALL, id: hallId() }],",
+      "    models: [],",
+      "  }),",
+      "} satisfies IAutoMovieLibrarySourceOwner;",
+      "",
+    ].join("\n"),
+  });
+  try {
+    const linkedCompile = run({ root: imports.root, materialize: true });
+    const refusedCompile = run({ root: badImport.root, materialize: true });
+    TestValidator.equals(
+      "an owner's imported module is linked, inspected, and transpiled beside it",
+      namedFacts([
+        [
+          "the import compiles and publishes what the helper named",
+          () =>
+            linkedCompile.success &&
+            imports.generated("library/environments/hall-house.json") !== null,
+        ],
+        [
+          "and a helper the inspection refuses is named at its own path",
+          () =>
+            refusedCompile.success === false &&
+            refusedCompile.diagnostics.some(
+              (diagnostic) => diagnostic.path === "src/shared/hall.ts",
+            ),
+        ],
+      ]),
+      {
+        "the import compiles and publishes what the helper named": true,
+        "and a helper the inspection refuses is named at its own path": true,
+      },
+    );
+  } finally {
+    imports.dispose();
+    badImport.dispose();
   }
 
   TestValidator.equals(

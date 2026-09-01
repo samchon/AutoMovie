@@ -181,17 +181,31 @@ const materialized = (): IAutoMovieBuiltEnvironment[] => {
  * drawn from, and a report that silently preferred the other would describe a
  * building nobody photographed.
  */
-const environments: IAutoMovieBuiltEnvironment[] = (() => {
-  const union = new Map<string, IAutoMovieBuiltEnvironment>();
+interface IBuildingRecord {
+  environment: IAutoMovieBuiltEnvironment;
+  /**
+   * Whether a shot stages this building, or only a library publishes it.
+   *
+   * The two are not interchangeable to a reviewer. A staged building has frames
+   * a delivery review can open; a materialized one has none, and every claim
+   * about how it looks rests on the drawings this report derives. Reporting
+   * both under one heading would let a reader carry a staged building's
+   * evidence over to one nobody has photographed.
+   */
+  source: "materialized" | "staged";
+}
+
+const environments: IBuildingRecord[] = (() => {
+  const union = new Map<string, IBuildingRecord>();
   for (const environment of materialized())
-    union.set(environment.id, environment);
+    union.set(environment.id, { environment, source: "materialized" });
   for (const environment of staged(
     (shot) => shot.builtEnvironments,
     "built environment",
   ))
-    union.set(environment.id, environment);
+    union.set(environment.id, { environment, source: "staged" });
   return [...union.values()].sort((left, right) =>
-    compareCodeUnits(left.id, right.id),
+    compareCodeUnits(left.environment.id, right.environment.id),
   );
 })();
 
@@ -279,7 +293,7 @@ if (environments.length === 0)
     "no built environment is staged or materialized by this production, so there is nothing to draw, count or study. Contribute one from a shot's source and compile before deriving.\n",
   );
 
-for (const environment of environments) {
+for (const { environment, source } of environments) {
   const report = deriveAutoMovieBuildingReport({
     environment,
     revision: state.generated.manifest.inputFingerprint,
@@ -304,14 +318,29 @@ for (const environment of environments) {
   );
 
   process.stdout.write(
-    `${environment.id}: ${report.sheets.length} sheet(s), ${report.schedules
+    `${environment.id} (${source}): ${report.sheets.length} sheet(s), ${report.schedules
       .map((schedule) => `${schedule.total} ${schedule.subject}(s)`)
       .join(", ")}, ${report.quantities.findings.length} quantity subject(s), ${
       report.services.length
     } network(s), ${report.runs.length} analysis run(s)\n`,
   );
   process.stdout.write(
-    `${environment.id}: ${report.gaps.length} declared gap(s)\n`,
+    `${environment.id} (${source}): ${report.gaps.length} declared gap(s)\n`,
   );
   announce(report.gaps);
 }
+
+// The tally a reviewer reads before deciding what a claim about this production
+// may rest on. A materialized building has no frames at all, so a review citing
+// one has to cite these drawings; saying so once here is cheaper than
+// rediscovering it per building. With nothing to report the line above already
+// said so, and a tally of zeroes beside it would only invite reading it as a
+// result.
+if (environments.length !== 0)
+  process.stdout.write(
+    `${environments.length} building record(s): ${
+      environments.filter((entry) => entry.source === "staged").length
+    } staged by a shot, ${
+      environments.filter((entry) => entry.source === "materialized").length
+    } materialized by a library and photographed by nothing\n`,
+  );
