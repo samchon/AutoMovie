@@ -120,6 +120,16 @@ export type AutoMovieLibraryReviewEvidence =
  * proves nothing about the arc between, and one photographed only mid-swing
  * never says it shuts.
  *
+ * A material is judged by what it declares about itself, which is why its four
+ * roles are not a fixed set every material owes. Response is owed by all of
+ * them: metalness and roughness only read under a light that moves, and one
+ * still of a flat panel says nothing about either. The other three are owed
+ * only by a material that claims the property -- an emissive surface adds
+ * light and a lit view cannot tell it from a bright base colour; a surface
+ * below full opacity is judged by what stands behind it; and a bound texture
+ * map nobody looked at is a map nobody authored. A material claiming none of
+ * the three owes exactly one observation, and that is the honest number.
+ *
  * @evidence requirements/review/subject-inspection.md#review-subject-viewpoint-ownership Names each role the derived population charges a library owner for.
  * @evidence specifications/review-and-acceptance/subject-surface-and-inspection.md#review-system-subject-viewpoint-plan Types the closed role set the topology derivation partitions by.
  * @author Samchon
@@ -138,6 +148,10 @@ export type AutoMovieLibraryObservationRole =
   | "interior-center"
   | "interior-corner"
   | "interior-threshold"
+  | "material-emission"
+  | "material-response"
+  | "material-texture"
+  | "material-transmission"
   | "roof"
   | "underside";
 

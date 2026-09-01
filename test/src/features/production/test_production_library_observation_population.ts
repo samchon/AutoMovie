@@ -61,6 +61,32 @@ const derive = unit.autoMovieLibraryObservationRequirements;
  *    compiled rather than a complete review.
  */
 /** One minimal placed set; only the fields the derivation reads carry meaning. */
+/** One opaque untextured material, so a case adds only what it declares. */
+const material = (id: string) => ({
+  id,
+  name: null,
+  baseColor: { r: 0.5, g: 0.5, b: 0.5, a: null, hex: null },
+  metallic: 0,
+  roughness: 1,
+  emissive: null,
+  opacity: 1,
+  baseColorTexture: null,
+});
+
+/** One element wearing one model, standing in one space or nowhere. */
+const element = (id: string, model: string, space: string | null) => ({
+  id,
+  kind: "prop",
+  parent: null,
+  transform: {
+    translation: { x: 0, y: 0, z: 0 },
+    rotation: { x: 0, y: 0, z: 0, w: 1 },
+    scale: { x: 1, y: 1, z: 1 },
+  },
+  model,
+  space,
+});
+
 const instanceSet = (id: string) => ({
   id,
   modelRecipe: `recipe-${id}`,
@@ -365,6 +391,92 @@ export const test_production_library_observation_population = (): void => {
       ],
       transitions: 2,
       fixed: 0,
+    },
+  );
+
+  // A material is reached through the element that wears it: the element stands
+  // in a space, the space belongs to a unit, and the model it wears carries the
+  // surfaces that unit shows. What each material owes is read off its own
+  // declaration, so a flat opaque panel owes one observation and a lit pane
+  // below full opacity wearing a normal map owes four.
+  const surfaced = rectangularBuilding();
+  surfaced.models = [
+    {
+      id: "pane",
+      name: null,
+      origin: "generated",
+      skeleton: null,
+      materials: [
+        material("plaster"),
+        {
+          ...material("glass"),
+          emissive: { r: 0.1, g: 0.1, b: 0.1, a: null, hex: null },
+          opacity: 0.4,
+          normalTexture: "tex-normal",
+        },
+      ],
+      parts: [],
+      asset: null,
+      body: null,
+    },
+  ];
+  surfaced.elements = [
+    element("pane-a", "pane", "hall"),
+    // The same model in the same building twice. One surface is one thing to
+    // look at, and charging it per placement would fill the denominator with
+    // repeats of the same answer.
+    element("pane-b", "pane", "hall"),
+    // Worn by nothing that stands anywhere, so it is skipped rather than
+    // attributed to a unit that does not show it.
+    element("pane-loose", "pane", null),
+  ];
+  const unplaced = rectangularBuilding();
+  unplaced.models = surfaced.models;
+  unplaced.elements = [element("pane-c", "pane", "courtyard")];
+
+  const surfacedRequired = derive([surfaced]);
+  TestValidator.equals(
+    "a material is charged for exactly what it declares about itself",
+    {
+      derived: surfacedRequired
+        .filter((entry) => entry.role.startsWith("material-"))
+        .map((entry) => [entry.id, entry.role, entry.building]),
+      // Adding surfaces asks new questions and takes none away.
+      envelope: surfacedRequired.length - derive([rectangularBuilding()]).length,
+      unplaced: derive([unplaced]).filter((entry) =>
+        entry.role.startsWith("material-"),
+      ).length,
+    },
+    {
+      derived: [
+        [
+          "material:hall-house/pane/glass/material-emission/glass",
+          "material-emission",
+          "house",
+        ],
+        [
+          "material:hall-house/pane/glass/material-response/glass",
+          "material-response",
+          "house",
+        ],
+        [
+          "material:hall-house/pane/glass/material-texture/normal",
+          "material-texture",
+          "house",
+        ],
+        [
+          "material:hall-house/pane/glass/material-transmission/glass",
+          "material-transmission",
+          "house",
+        ],
+        [
+          "material:hall-house/pane/plaster/material-response/plaster",
+          "material-response",
+          "house",
+        ],
+      ],
+      envelope: 5,
+      unplaced: 0,
     },
   );
 };

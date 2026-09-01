@@ -25,6 +25,13 @@ const operationSubject = (environment: string, opening: string): string =>
 const instanceSubject = (environment: string, set: string): string =>
   `instance:${environment}/${set}`;
 
+/** Stable compiled subject address of one material as one model wears it. */
+const materialSubject = (
+  environment: string,
+  model: string,
+  material: string,
+): string => `material:${environment}/${model}/${material}`;
+
 /** Stable compiled subject address of one logical space. */
 const spaceSubject = (environment: string, space: string): string =>
   `space:${environment}/${space}`;
@@ -198,6 +205,67 @@ export const autoMovieLibraryObservationRequirements = (
           `${operation.states[index - 1]!.id}->${operation.states[index]!.id}`,
         );
       for (const panel of operation.panels) push("operation-contact", panel.id);
+    }
+  }
+  // A material is reached the way anything else in a building is reached: an
+  // element stands in a space, the space belongs to a unit, and the element
+  // wears a model whose materials are the surfaces that unit shows. A model
+  // published but placed in no building is skipped rather than attributed to an
+  // arbitrary unit, exactly as a population standing in no building's space is.
+  //
+  // What each material owes is read off its own declaration rather than fixed
+  // in advance, so a flat opaque panel owes one observation and a lit glass
+  // pane wearing three maps owes six. A fixed set would either charge the panel
+  // for views that show nothing or let the pane pass on views nobody took.
+  for (const environment of environments) {
+    const modelsById = new Map(
+      environment.models.map((model) => [model.id, model]),
+    );
+    const buildingOfSpace = new Map<string, string>();
+    for (const unit of builtEnvironmentBuildingCensus(environment))
+      for (const space of unit.spaces) buildingOfSpace.set(space, unit.building);
+    const seen = new Set<string>();
+    for (const element of environment.elements) {
+      if (element.model === null || element.space === null) continue;
+      const building = buildingOfSpace.get(element.space);
+      const model = modelsById.get(element.model);
+      if (building === undefined || model === undefined) continue;
+      for (const material of model.materials) {
+        const subject = materialSubject(environment.id, model.id, material.id);
+        // One material worn by many elements of one building is one surface to
+        // look at, not one per element. Charging it per placement would inflate
+        // the denominator with repeats of the same answer.
+        if (seen.has(`${building} ${subject}`)) continue;
+        seen.add(`${building} ${subject}`);
+        const push = (
+          role: AutoMovieLibraryObservationRole,
+          origin: string,
+        ): void => {
+          required.push({
+            id: `${subject}/${role}/${origin}`,
+            role,
+            subject,
+            building,
+            origin,
+            // A material is a surface rather than a room, so there is no
+            // interior eye to prove. The framing comes from the element that
+            // wears it, which the subject address already names.
+            pose: null,
+          });
+        };
+        push("material-response", material.id);
+        if (material.emissive !== null) push("material-emission", material.id);
+        if (material.opacity < 1)
+          push("material-transmission", material.id);
+        for (const [map, binding] of [
+          ["baseColor", material.baseColorTexture],
+          ["emissive", material.emissiveTexture ?? null],
+          ["metallicRoughness", material.metallicRoughnessTexture ?? null],
+          ["normal", material.normalTexture ?? null],
+          ["occlusion", material.occlusionTexture ?? null],
+        ] as const)
+          if (binding !== null) push("material-texture", map);
+      }
     }
   }
   return required.sort((left, right) => compareCodeUnits(left.id, right.id));
