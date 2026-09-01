@@ -1,3 +1,4 @@
+import { readAutoMovieProductionEvidence } from "@automovie/evidence";
 import type {
   IAutoMovieBuiltEnvironment,
   IAutoMovieCompiledShotSource,
@@ -6,6 +7,8 @@ import type {
   IAutoMovieWaterFeature,
 } from "@automovie/interface";
 import {
+  AutoMovieProductionProject,
+  autoMovieMaterializedLibraryEnvironments,
   encodeAutoMoviePathSegment,
   findAutoMovieProjectRoot,
 } from "@automovie/production";
@@ -16,6 +19,7 @@ import {
 import fs from "node:fs";
 import path from "node:path";
 
+import { productionEvidence } from "../lint.config";
 import {
   type IAutoMovieBuildingGap,
   deriveAutoMovieBuildingReport,
@@ -120,10 +124,77 @@ const staged = <T extends { id: string }>(
     .sort((left, right) => compareCodeUnits(left.id, right.id));
 };
 
-const environments: IAutoMovieBuiltEnvironment[] = staged(
-  (shot) => shot.builtEnvironments,
-  "built environment",
-);
+/**
+ * Every built environment this project's last compile published, by its own id.
+ *
+ * A shot stages an environment to photograph it; a library materializes one as
+ * the delivered work itself. This report counted only the first, so a library
+ * production -- the shape that delivers buildings and no timeline at all --
+ * read as having nothing to draw, count or state. The author of four buildings
+ * would run the report and be told their production stages no built
+ * environment, which is true and useless.
+ *
+ * Read through the same published index the review command reads, so the
+ * report and the review gate describe one set of buildings rather than two. A
+ * library that has published nothing yields none rather than failing: the
+ * index is absent before the first materialization, and an author who has not
+ * reached that point is not in error.
+ */
+const materialized = (): IAutoMovieBuiltEnvironment[] => {
+  const found = new Map<string, IAutoMovieBuiltEnvironment>();
+  try {
+    const project = AutoMovieProductionProject.openReadOnly(
+      projectRoot,
+      productionId,
+    );
+    const authoring = readAutoMovieProductionEvidence({
+      root: projectRoot,
+      productionEvidence,
+    });
+    const resolve = autoMovieMaterializedLibraryEnvironments({
+      read: (relative) => project.readGeneratedFile(relative),
+    });
+    for (const owner of authoring.designOwners)
+      for (const unit of owner.units)
+        for (const environment of resolve({
+          branch: owner.branch,
+          owner: owner.path,
+          anchor: unit.anchor,
+        }))
+          found.set(environment.id, environment);
+  } catch {
+    // A project with no published library index, or none this reader can open,
+    // materializes nothing. That is the ordinary state of a film production
+    // and of a library before its first compile, and neither is an error this
+    // report should raise on the author's behalf.
+    return [];
+  }
+  return [...found.values()];
+};
+
+/**
+ * Staged and materialized environments together, each id carried once.
+ *
+ * A production may hold both: a library owner publishes a building and a shot
+ * stages the same one to film it. The id is the identity, so the union is
+ * taken by id and the staged record wins -- it is the one a frame was actually
+ * drawn from, and a report that silently preferred the other would describe a
+ * building nobody photographed.
+ */
+const environments: IAutoMovieBuiltEnvironment[] = (() => {
+  const union = new Map<string, IAutoMovieBuiltEnvironment>();
+  for (const environment of materialized())
+    union.set(environment.id, environment);
+  for (const environment of staged(
+    (shot) => shot.builtEnvironments,
+    "built environment",
+  ))
+    union.set(environment.id, environment);
+  return [...union.values()].sort((left, right) =>
+    compareCodeUnits(left.id, right.id),
+  );
+})();
+
 const serviceNetworks: IAutoMovieServiceNetwork[] = staged(
   (shot) => shot.serviceNetworks,
   "service network",
@@ -205,7 +276,7 @@ const announce = (gaps: readonly IAutoMovieBuildingGap[]): void => {
 
 if (environments.length === 0)
   process.stdout.write(
-    "no built environment is staged by this production, so there is nothing to draw, count or study. Contribute one from a shot's source and compile before deriving.\n",
+    "no built environment is staged or materialized by this production, so there is nothing to draw, count or study. Contribute one from a shot's source and compile before deriving.\n",
   );
 
 for (const environment of environments) {

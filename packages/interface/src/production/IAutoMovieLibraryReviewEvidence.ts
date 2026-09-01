@@ -110,6 +110,16 @@ export type AutoMovieLibraryReviewEvidence =
  * broken prototype, and one photographed only up close hides that it was
  * scattered into a wall.
  *
+ * An operable opening adds three more, and a still frame answers none of them
+ * alone. A state view is the opening standing in one of its own named states,
+ * which is the only place a leaf that never reaches closed can be seen. A
+ * transition view is the travel between two states, which is where a panel
+ * that sweeps through its own frame gives itself away and which no pair of end
+ * states shows. A contact view is where leaf meets frame, the only place a
+ * seal that does not meet is visible. A door photographed open and closed
+ * proves nothing about the arc between, and one photographed only mid-swing
+ * never says it shuts.
+ *
  * @evidence requirements/review/subject-inspection.md#review-subject-viewpoint-ownership Names each role the derived population charges a library owner for.
  * @evidence specifications/review-and-acceptance/subject-surface-and-inspection.md#review-system-subject-viewpoint-plan Types the closed role set the topology derivation partitions by.
  * @author Samchon
@@ -122,6 +132,9 @@ export type AutoMovieLibraryObservationRole =
   | "instance-contact"
   | "instance-member"
   | "instance-population"
+  | "operation-contact"
+  | "operation-state"
+  | "operation-transition"
   | "interior-center"
   | "interior-corner"
   | "interior-threshold"

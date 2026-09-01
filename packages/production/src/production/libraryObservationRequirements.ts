@@ -17,6 +17,10 @@ import { compareCodeUnits } from "./contentIdentity";
 const buildingSubject = (environment: string, unit: string): string =>
   `building:${environment}/${unit}`;
 
+/** Stable compiled subject address of one operable opening. */
+const operationSubject = (environment: string, opening: string): string =>
+  `operation:${environment}/${opening}`;
+
 /** Stable compiled subject address of one placed instance population. */
 const instanceSubject = (environment: string, set: string): string =>
   `instance:${environment}/${set}`;
@@ -146,6 +150,54 @@ export const autoMovieLibraryObservationRequirements = (
           // where the eye stands to answer it.
           pose: null,
         });
+    }
+  }
+  // An opening that operates is judged in its own states, in the travel between
+  // them, and where its leaf meets its frame. A still frame answers none of the
+  // three alone: a door photographed open and closed proves nothing about the
+  // arc between, and one photographed only mid-swing never says it shuts.
+  //
+  // The transitions are the adjacent pairs of the declared state order, not
+  // every combination. An opening declares its states in the order it passes
+  // through them, so the pairs are the travels that exist; charging every pair
+  // would ask for a swing from closed to closed and read as thoroughness.
+  //
+  // A fixed cut -- an arch, a permanently open passage -- declares no
+  // operation, and it is passed over rather than charged an empty state.
+  for (const environment of environments) {
+    const buildingOfOpening = new Map<string, string>();
+    for (const unit of builtEnvironmentBuildingCensus(environment))
+      for (const opening of unit.entrances)
+        buildingOfOpening.set(opening, unit.building);
+    for (const opening of environment.openings) {
+      const operation = opening.operation;
+      if (operation === undefined) continue;
+      const building = buildingOfOpening.get(opening.id);
+      if (building === undefined) continue;
+      const subject = operationSubject(environment.id, opening.id);
+      const push = (
+        role: AutoMovieLibraryObservationRole,
+        origin: string,
+      ): void => {
+        required.push({
+          id: `${subject}/${role}/${origin}`,
+          role,
+          subject,
+          building,
+          origin,
+          // An operation is framed from the opening's own extent, the way an
+          // exterior building view is framed from the envelope. What is fixed
+          // here is which travel must be opened, not where the eye stands.
+          pose: null,
+        });
+      };
+      for (const state of operation.states) push("operation-state", state.id);
+      for (let index = 1; index < operation.states.length; index += 1)
+        push(
+          "operation-transition",
+          `${operation.states[index - 1]!.id}->${operation.states[index]!.id}`,
+        );
+      for (const panel of operation.panels) push("operation-contact", panel.id);
     }
   }
   return required.sort((left, right) => compareCodeUnits(left.id, right.id));
