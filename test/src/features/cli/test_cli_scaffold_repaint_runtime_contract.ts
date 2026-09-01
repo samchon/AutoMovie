@@ -1302,6 +1302,48 @@ export const test_cli_scaffold_repaint_runtime_contract =
       // 106 it cost before a generated consumer stopped type-checking every
       // workspace source tree it imports.
       const linted = runGenerated(fixture.root, "scripts/lint.ts", [], true);
+      // The command that hands the shipped instrument to the shipped service.
+      // Until it existed the product printed "pass that" and no way to follow
+      // it, and every test that built the service passed its own double -- so
+      // the two ends could drift apart and nothing would notice.
+      //
+      // What is read here is that the wiring is live: the call reaches the
+      // service, the service answers in its own shape, and the verdict is the
+      // exit code. This fixture's design moved after its last compile, so the
+      // honest answer is a refusal naming that, and a command that printed a
+      // refusal while exiting zero would be the defect.
+      const inspected = runGenerated(
+        fixture.root,
+        "scripts/inspect.ts",
+        ["--shot", "opening", "--subject", "model:soloist"],
+        true,
+      );
+      const inspectedOutput = generatedOutput(inspected);
+      const inspectedAnswer = JSON.parse(
+        inspectedOutput.slice(inspectedOutput.indexOf("{")),
+      ) as {
+        diagnostics?: Array<{ code?: string }>;
+        inspected?: boolean;
+        target?: { shot?: string; subject?: string };
+      };
+      TestValidator.equals(
+        "the inspect command reaches the service and its verdict is its exit code",
+        {
+          agrees: inspectedAnswer.inspected === (inspected.status === 0),
+          // It answered about what was asked rather than about something else.
+          asked:
+            inspectedAnswer.target?.shot === "opening" &&
+            inspectedAnswer.target?.subject === "model:soloist",
+          // A refusal names a reason. Which reason is this fixture's business,
+          // not this scenario's.
+          reasoned:
+            inspectedAnswer.inspected === true ||
+            (inspectedAnswer.diagnostics ?? []).some(
+              (one) => typeof one?.code === "string",
+            ),
+        },
+        { agrees: true, asked: true, reasoned: true },
+      );
       const verifyRun = runGenerated(
         fixture.root,
         "scripts/verify.ts",
