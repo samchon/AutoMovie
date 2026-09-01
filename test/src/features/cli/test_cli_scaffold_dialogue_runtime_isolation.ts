@@ -404,6 +404,23 @@ export const test_cli_scaffold_dialogue_runtime_isolation =
         { named: true, enumerated: true },
       );
 
+      // The generated viewer config, loaded rather than started. Its own
+      // module level is ordinary imports; everything that touches a capture
+      // host lives inside the function it hands to Vite, and that function is
+      // not called until a server starts.
+      //
+      // That deferral is the contract worth holding: written as a literal the
+      // closure check would run at import time, in every consumer that so much
+      // as reads the config -- including this one.
+      const viteConfig = require(path.join(firstRoot, "vite.config.ts")) as {
+        default: unknown;
+      };
+      TestValidator.equals(
+        "the generated viewer config defers everything that needs a capture host",
+        { deferred: typeof viteConfig.default === "function" },
+        { deferred: true },
+      );
+
       const cropA = { left: 0, top: 0.1, right: 0.8, bottom: 1 };
       const cropB = { left: 0.2, top: 0, right: 1, bottom: 0.9 };
       await captureA.installDialogue(dialogueA);
