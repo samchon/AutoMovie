@@ -13,6 +13,7 @@ import fs from "node:fs";
 import path from "node:path";
 
 import { namedFacts } from "../internal/predicates";
+import { requireSourceModule } from "../internal/requireSourceModule";
 import {
   productionCompileSucceeded,
   productionFixture,
@@ -30,26 +31,28 @@ const lintConfigPath = path.resolve(
   __dirname,
   "../../../../packages/template/scaffold/lint.config.ts",
 );
-const command = require(commandPath) as {
-  runLibraryReviewCommand: (props: {
-    argv: readonly string[];
-    root: string;
-    productionId: string;
-    evidence: IAutoMovieEvidenceConfigProps;
-    read: typeof readAutoMovieProductionEvidence;
-    output?: (value: unknown) => void;
-  }) => unknown;
+type RunLibraryReviewCommand = (props: {
+  argv: readonly string[];
+  root: string;
+  productionId: string;
+  evidence: IAutoMovieEvidenceConfigProps;
+  read: typeof readAutoMovieProductionEvidence;
+  output?: (value: unknown) => void;
+}) => unknown;
+
+const command = requireSourceModule<{
+  runLibraryReviewCommand: RunLibraryReviewCommand;
   runLibraryReviewCli: (props: {
     argv: readonly string[];
     evidence: IAutoMovieEvidenceConfigProps;
     productionId: string;
     read: typeof readAutoMovieProductionEvidence;
     root: string;
-    run: typeof command.runLibraryReviewCommand;
+    run: RunLibraryReviewCommand;
     stderr: (value: string) => void;
     stdout: (value: string) => void;
   }) => number;
-};
+}>(commandPath, ["runLibraryReviewCommand", "runLibraryReviewCli"]);
 
 const nonError = (message: string): Error => message as unknown as Error;
 

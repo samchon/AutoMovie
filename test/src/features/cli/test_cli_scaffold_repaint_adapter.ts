@@ -5,15 +5,16 @@ import fs from "node:fs";
 import path from "node:path";
 
 import { namedFacts } from "../internal/predicates";
+import { requireSourceModule } from "../internal/requireSourceModule";
 
 const adapterPath = path.resolve(
   __dirname,
   "../../../../packages/template/scaffold/scripts/repaintAdapter.ts",
 );
 
-const adapter = require(adapterPath) as {
+const adapter = requireSourceModule<{
   repaintProductionShot: AutoMovieProductionShotRepaint;
-};
+}>(adapterPath, ["repaintProductionShot"]);
 
 /**
  * The shipped repaint adapter refuses by name instead of fabricating output.

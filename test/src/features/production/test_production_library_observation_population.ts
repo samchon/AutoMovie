@@ -10,20 +10,22 @@ import {
   rectangularBuilding,
 } from "../internal/envelopeFixtures";
 import { namedFacts, vclose } from "../internal/predicates";
+import { requireSourceModule } from "../internal/requireSourceModule";
 
 /**
  * Load the derivation from source; the library review gate is its consumer.
  */
-const unit = require(
+const unit = requireSourceModule<{
+  autoMovieLibraryObservationRequirements: (
+    environments: readonly IAutoMovieBuiltEnvironment[],
+  ) => IAutoMovieLibraryRequiredObservation[];
+}>(
   path.resolve(
     __dirname,
     "../../../../packages/production/src/production/libraryObservationRequirements.ts",
   ),
-) as {
-  autoMovieLibraryObservationRequirements: (
-    environments: readonly IAutoMovieBuiltEnvironment[],
-  ) => IAutoMovieLibraryRequiredObservation[];
-};
+  ["autoMovieLibraryObservationRequirements"],
+);
 const derive = unit.autoMovieLibraryObservationRequirements;
 
 /**
@@ -442,7 +444,8 @@ export const test_production_library_observation_population = (): void => {
         .filter((entry) => entry.role.startsWith("material-"))
         .map((entry) => [entry.id, entry.role, entry.building]),
       // Adding surfaces asks new questions and takes none away.
-      envelope: surfacedRequired.length - derive([rectangularBuilding()]).length,
+      envelope:
+        surfacedRequired.length - derive([rectangularBuilding()]).length,
       unplaced: derive([unplaced]).filter((entry) =>
         entry.role.startsWith("material-"),
       ).length,
@@ -575,7 +578,11 @@ export const test_production_library_observation_population = (): void => {
     },
     {
       derived: [
-        ["service:hall-house/lift/service-carriage/car", "service-carriage", "house"],
+        [
+          "service:hall-house/lift/service-carriage/car",
+          "service-carriage",
+          "house",
+        ],
         [
           "service:hall-house/lift/service-landing/hall@0",
           "service-landing",
@@ -586,9 +593,21 @@ export const test_production_library_observation_population = (): void => {
           "service-landing",
           "house",
         ],
-        ["service:hall-house/lift/service-state/lower", "service-state", "house"],
-        ["service:hall-house/lift/service-state/rising", "service-state", "house"],
-        ["service:hall-house/lift/service-state/upper", "service-state", "house"],
+        [
+          "service:hall-house/lift/service-state/lower",
+          "service-state",
+          "house",
+        ],
+        [
+          "service:hall-house/lift/service-state/rising",
+          "service-state",
+          "house",
+        ],
+        [
+          "service:hall-house/lift/service-state/upper",
+          "service-state",
+          "house",
+        ],
         [
           "service:hall-house/lift/service-transition/lower->rising",
           "service-transition",

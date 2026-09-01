@@ -490,7 +490,7 @@ export const test_evidence_completed_film_authored_population = (): void => {
         "  (name) => names.includes(name) === false,",
         ");",
         "if (unnamed.length !== 0)",
-        '  throw new Error(',
+        "  throw new Error(",
         '    "The focused authored-population regression names " +',
         "      names.length +",
         '      " claims and the active graph declares " +',

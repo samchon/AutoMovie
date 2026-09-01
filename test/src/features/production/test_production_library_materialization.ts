@@ -517,7 +517,7 @@ export const test_production_library_materialization = (): void => {
   // unexamined.
   const imports = libraryFixture({
     "src/shared/hall.ts": [
-      "export const hallId = () => \"hall-house\";",
+      'export const hallId = () => "hall-house";',
       "",
     ].join("\n"),
     [LIBRARY_SOURCE]: [
@@ -543,7 +543,7 @@ export const test_production_library_materialization = (): void => {
     "src/shared/hall.ts": [
       "export const hallId = () => {",
       "  // A clock is the plainest thing deterministic source may not read.",
-      "  return Date.now() > 0 ? \"hall-house\" : \"hall-house\";",
+      '  return Date.now() > 0 ? "hall-house" : "hall-house";',
       "};",
       "",
     ].join("\n"),

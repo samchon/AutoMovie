@@ -7,21 +7,23 @@ import { TestValidator } from "@nestia/e2e";
 import path from "node:path";
 
 import { namedFacts } from "../internal/predicates";
+import { requireSourceModule } from "../internal/requireSourceModule";
 
 /** Load the receipt gate from source; the library review consumer calls it. */
-const unit = require(
-  path.resolve(
-    __dirname,
-    "../../../../packages/production/src/production/libraryObservationRequirements.ts",
-  ),
-) as {
+const unit = requireSourceModule<{
   libraryObservationReceiptDiagnostics: (props: {
     target: string;
     path: string | null;
     required: readonly IAutoMovieLibraryRequiredObservation[];
     receipts: readonly IAutoMovieLibraryReviewObservationReceipt[];
   }) => IAutoMovieDiagnostic[];
-};
+}>(
+  path.resolve(
+    __dirname,
+    "../../../../packages/production/src/production/libraryObservationRequirements.ts",
+  ),
+  ["libraryObservationReceiptDiagnostics"],
+);
 
 const OWNER = "library:main:docs/design/hall.md#hall";
 

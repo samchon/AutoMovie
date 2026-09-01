@@ -9,13 +9,9 @@ import { TestValidator } from "@nestia/e2e";
 import path from "node:path";
 
 import { namedFacts } from "../internal/predicates";
+import { requireSourceModule } from "../internal/requireSourceModule";
 
-const unit = require(
-  path.resolve(
-    __dirname,
-    "../../../../packages/production/src/production/libraryReviewEvidenceDiagnostics.ts",
-  ),
-) as {
+const unit = requireSourceModule<{
   libraryReviewEvidenceDiagnostics: (props: {
     kind: "brief" | "film" | "library";
     scope: "design" | "source" | "review" | "final";
@@ -30,7 +26,13 @@ const unit = require(
     target: string;
     message: string;
   }>;
-};
+}>(
+  path.resolve(
+    __dirname,
+    "../../../../packages/production/src/production/libraryReviewEvidenceDiagnostics.ts",
+  ),
+  ["libraryReviewEvidenceDiagnostics"],
+);
 const { libraryReviewEvidenceDiagnostics } = unit;
 
 type Digest = AutoMovieContentDigest;

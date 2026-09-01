@@ -38,8 +38,6 @@ const WORKSPACE = [
   "",
 ].join("\n");
 
-
-
 /**
  * The scaffold's baked dependency versions come from this repository's own
  * manifests, by a rule this repository wrote.
@@ -132,9 +130,7 @@ export const test_build_template_catalog_versions = async (): Promise<void> => {
         "everyOverriddenKeyIsProduced",
         () =>
           unit.WORKSPACE_TEMPLATE_VERSION_KEYS.length !== 0 &&
-          unit.WORKSPACE_TEMPLATE_VERSION_KEYS.every(
-            (key) => key in resolved,
-          ),
+          unit.WORKSPACE_TEMPLATE_VERSION_KEYS.every((key) => key in resolved),
       ],
     ]),
     {

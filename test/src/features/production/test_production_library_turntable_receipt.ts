@@ -12,6 +12,7 @@ import { TestValidator } from "@nestia/e2e";
 import path from "node:path";
 
 import { namedFacts } from "../internal/predicates";
+import { requireSourceModule } from "../internal/requireSourceModule";
 import {
   LIBRARY_MODEL,
   LIBRARY_MODEL_ANCHOR,
@@ -24,18 +25,19 @@ import {
   librarySourceModule,
 } from "./libraryFixtures";
 
-const consumer = require(
-  path.resolve(
-    __dirname,
-    "../../../../packages/production/src/production/libraryReviewEvidenceConsumer.ts",
-  ),
-) as {
+const consumer = requireSourceModule<{
   readAutoMovieLibraryReviewRequirements: (props: {
     authoring: IAutoMovieProductionEvidence;
     project: unknown;
     compileFingerprint: AutoMovieContentDigest;
   }) => IAutoMovieLibraryReviewPopulation;
-};
+}>(
+  path.resolve(
+    __dirname,
+    "../../../../packages/production/src/production/libraryReviewEvidenceConsumer.ts",
+  ),
+  ["readAutoMovieLibraryReviewRequirements"],
+);
 
 /** The one model the models design owner delivers, as its source publishes it. */
 const BENCH = {
@@ -142,9 +144,10 @@ export const test_production_library_turntable_receipt = (): void => {
         authoring,
       )
         .lint({ scope: "review" })
-        .diagnostics.filter((entry) =>
-          entry.target.includes("plan-model-turntable") ||
-          entry.target === `asset:${LIBRARY_MODEL}`,
+        .diagnostics.filter(
+          (entry) =>
+            entry.target.includes("plan-model-turntable") ||
+            entry.target === `asset:${LIBRARY_MODEL}`,
         );
     const unpaid = lint();
 
@@ -183,8 +186,7 @@ export const test_production_library_turntable_receipt = (): void => {
     const says = (
       diagnostics: readonly IAutoMovieDiagnostic[],
       fragment: string,
-    ): boolean =>
-      diagnostics.some((entry) => entry.message.includes(fragment));
+    ): boolean => diagnostics.some((entry) => entry.message.includes(fragment));
 
     TestValidator.equals(
       "a library compile judges its own turntable receipt through its own bindings",

@@ -8,6 +8,7 @@ import { TestValidator } from "@nestia/e2e";
 import path from "node:path";
 
 import { namedFacts } from "../internal/predicates";
+import { requireSourceModule } from "../internal/requireSourceModule";
 import {
   LIBRARY_OWNER,
   LIBRARY_PLAN,
@@ -16,12 +17,7 @@ import {
   libraryFixture,
 } from "./libraryFixtures";
 
-const command = require(
-  path.resolve(
-    __dirname,
-    "../../../../packages/template/scaffold/scripts/library-review.ts",
-  ),
-) as {
+const command = requireSourceModule<{
   runLibraryReviewCommand: (props: {
     argv: readonly string[];
     root: string;
@@ -29,7 +25,13 @@ const command = require(
     evidence: Record<string, never>;
     read: typeof readAutoMovieProductionEvidence;
   }) => IAutoMovieLibraryReviewPopulation;
-};
+}>(
+  path.resolve(
+    __dirname,
+    "../../../../packages/template/scaffold/scripts/library-review.ts",
+  ),
+  ["runLibraryReviewCommand"],
+);
 
 /** The exact owner address every derived refusal and requirement is written at. */
 const OWNER = `library:spaces:${LIBRARY_OWNER}`;

@@ -7,6 +7,7 @@ import { TestValidator } from "@nestia/e2e";
 import path from "node:path";
 
 import { namedFacts } from "../internal/predicates";
+import { requireSourceModule } from "../internal/requireSourceModule";
 
 /**
  * Load private diagnostic units from source without making them public API.
@@ -16,12 +17,7 @@ import { namedFacts } from "../internal/predicates";
  * type checking, and avoids depending on a pre-existing `packages/production/lib`
  * build in a clean checkout.
  */
-const proseUnits = require(
-  path.resolve(
-    __dirname,
-    "../../../../packages/production/src/production/screenplayProseDiagnostics.ts",
-  ),
-) as {
+const proseUnits = requireSourceModule<{
   parseScreenplayProse: (content: string) => Array<{
     id: string;
     title: string;
@@ -31,20 +27,27 @@ const proseUnits = require(
     screenplay: IAutoMovieScreenplayIndex | null;
     read: (relativePath: string) => string | null;
   }) => IAutoMovieDiagnostic[];
-};
-const timingUnits = require(
+}>(
   path.resolve(
     __dirname,
-    "../../../../packages/production/src/production/screenplayTimingDiagnostics.ts",
+    "../../../../packages/production/src/production/screenplayProseDiagnostics.ts",
   ),
-) as {
+  ["parseScreenplayProse", "screenplayProseDiagnostics"],
+);
+const timingUnits = requireSourceModule<{
   screenplayTimingDiagnostics: (props: {
     contracts: ReadonlyMap<string, IAutoMovieShotContract>;
     read: (relativePath: string) => string | null;
     scope: "design" | "source" | "review" | "final";
     screenplay: IAutoMovieScreenplayIndex | null;
   }) => IAutoMovieDiagnostic[];
-};
+}>(
+  path.resolve(
+    __dirname,
+    "../../../../packages/production/src/production/screenplayTimingDiagnostics.ts",
+  ),
+  ["screenplayTimingDiagnostics"],
+);
 const { parseScreenplayProse, screenplayProseDiagnostics } = proseUnits;
 const { screenplayTimingDiagnostics } = timingUnits;
 

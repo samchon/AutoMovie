@@ -3,6 +3,7 @@ import { TestValidator } from "@nestia/e2e";
 import path from "node:path";
 
 import { namedFacts } from "../internal/predicates";
+import { requireSourceModule } from "../internal/requireSourceModule";
 
 /**
  * Load the declared view set from source without making it public API.
@@ -11,12 +12,7 @@ import { namedFacts } from "../internal/predicates";
  * so it is a consumed internal rather than an export; resolving it here through
  * the launcher's own require hook keeps it that way.
  */
-const unit = require(
-  path.resolve(
-    __dirname,
-    "../../../../packages/production/src/production/assetReviewViews.ts",
-  ),
-) as {
+const unit = requireSourceModule<{
   autoMovieAssetReviewViews: (props: { rigged: boolean }) => Array<{
     id: string;
     angleDeg: number;
@@ -24,7 +20,13 @@ const unit = require(
     pose: "rest" | "rom-extremes";
     pass: AutoMovieGuidePass;
   }>;
-};
+}>(
+  path.resolve(
+    __dirname,
+    "../../../../packages/production/src/production/assetReviewViews.ts",
+  ),
+  ["autoMovieAssetReviewViews"],
+);
 const autoMovieAssetReviewViews = unit.autoMovieAssetReviewViews;
 
 /**

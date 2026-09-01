@@ -19,6 +19,7 @@ import { TestValidator } from "@nestia/e2e";
 import path from "node:path";
 
 import { namedFacts } from "../internal/predicates";
+import { requireSourceModule } from "../internal/requireSourceModule";
 import { productionFixture } from "./productionFixtures";
 
 interface ConsumerProps {
@@ -37,12 +38,7 @@ interface ConsumerProps {
   ) => ReadonlyArray<{ time: number; pass: AutoMovieGuidePass }>;
 }
 
-const consumer = require(
-  path.resolve(
-    __dirname,
-    "../../../../packages/production/src/production/libraryReviewEvidenceConsumer.ts",
-  ),
-) as {
+const consumer = requireSourceModule<{
   readAutoMovieLibraryReviewRequirements: (props: {
     authoring: IAutoMovieProductionEvidence;
     project: IAutoMovieLibraryReviewProjectReader;
@@ -51,17 +47,27 @@ const consumer = require(
   libraryReviewEvidenceConsumerDiagnostics: (
     props: ConsumerProps,
   ) => IAutoMovieDiagnostic[];
-};
+}>(
+  path.resolve(
+    __dirname,
+    "../../../../packages/production/src/production/libraryReviewEvidenceConsumer.ts",
+  ),
+  [
+    "readAutoMovieLibraryReviewRequirements",
+    "libraryReviewEvidenceConsumerDiagnostics",
+  ],
+);
 
-const contentIdentity = require(
+const contentIdentity = requireSourceModule<{
+  canonicalAutoMovieJsonBytes: (value: unknown) => Uint8Array;
+  digestAutoMovieBytes: (bytes: Uint8Array) => AutoMovieContentDigest;
+}>(
   path.resolve(
     __dirname,
     "../../../../packages/production/src/production/contentIdentity.ts",
   ),
-) as {
-  canonicalAutoMovieJsonBytes: (value: unknown) => Uint8Array;
-  digestAutoMovieBytes: (bytes: Uint8Array) => AutoMovieContentDigest;
-};
+  ["canonicalAutoMovieJsonBytes", "digestAutoMovieBytes"],
+);
 
 const digest = (digit: string): AutoMovieContentDigest =>
   `sha256:${digit.repeat(64)}` as AutoMovieContentDigest;

@@ -2,6 +2,7 @@ import { TestValidator } from "@nestia/e2e";
 import path from "node:path";
 
 import { namedFacts, throwsError } from "../internal/predicates";
+import { requireSourceModule } from "../internal/requireSourceModule";
 
 const hostBoundaryPath = path.resolve(
   __dirname,
@@ -17,7 +18,7 @@ type CaptureBrowser =
       executablePath: string;
     };
 
-const boundary = require(hostBoundaryPath) as {
+const boundary = requireSourceModule<{
   AUTOMOVIE_DEFAULT_CAPTURE_BROWSER: CaptureBrowser;
   AUTOMOVIE_DEFAULT_VIEWER_HOST: string;
   AUTOMOVIE_DEFAULT_VIEWER_BASE_PATH: string;
@@ -30,7 +31,14 @@ const boundary = require(hostBoundaryPath) as {
   readAutoMovieHostViewerBasePath: (
     environment: Readonly<Record<string, string | undefined>>,
   ) => string;
-};
+}>(hostBoundaryPath, [
+  "AUTOMOVIE_DEFAULT_CAPTURE_BROWSER",
+  "AUTOMOVIE_DEFAULT_VIEWER_HOST",
+  "AUTOMOVIE_DEFAULT_VIEWER_BASE_PATH",
+  "readAutoMovieHostCaptureBrowser",
+  "readAutoMovieHostViewerHost",
+  "readAutoMovieHostViewerBasePath",
+]);
 
 /**
  * The host boundary a generated project reads instead of a project-owned

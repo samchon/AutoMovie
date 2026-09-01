@@ -10,13 +10,9 @@ import path from "node:path";
 
 import { rectangularBuilding } from "../internal/envelopeFixtures";
 import { namedFacts } from "../internal/predicates";
+import { requireSourceModule } from "../internal/requireSourceModule";
 
-const consumer = require(
-  path.resolve(
-    __dirname,
-    "../../../../packages/production/src/production/libraryReviewEvidenceConsumer.ts",
-  ),
-) as {
+const consumer = requireSourceModule<{
   readAutoMovieLibraryReviewRequirements: (props: {
     authoring: IAutoMovieProductionEvidence;
     project: IAutoMovieLibraryReviewProjectReader;
@@ -27,7 +23,13 @@ const consumer = require(
       anchor: string;
     }) => readonly IAutoMovieBuiltEnvironment[];
   }) => IAutoMovieLibraryReviewPopulation;
-};
+}>(
+  path.resolve(
+    __dirname,
+    "../../../../packages/production/src/production/libraryReviewEvidenceConsumer.ts",
+  ),
+  ["readAutoMovieLibraryReviewRequirements"],
+);
 
 const ROOT = "C:/automovie-library";
 const DESIGN = "docs/spaces/hall.md";

@@ -9,14 +9,10 @@ import path from "node:path";
 
 import { rectangularBuilding } from "../internal/envelopeFixtures";
 import { namedFacts } from "../internal/predicates";
+import { requireSourceModule } from "../internal/requireSourceModule";
 
 /** Load the closure gate from source; the library review consumer calls it. */
-const unit = require(
-  path.resolve(
-    __dirname,
-    "../../../../packages/production/src/production/libraryObservationRequirements.ts",
-  ),
-) as {
+const unit = requireSourceModule<{
   autoMovieLibraryObservationRequirements: (
     environments: readonly IAutoMovieBuiltEnvironment[],
   ) => IAutoMovieLibraryRequiredObservation[];
@@ -27,7 +23,16 @@ const unit = require(
     declared: readonly string[];
     waivers: readonly IAutoMovieLibraryReviewWaiver[];
   }) => IAutoMovieDiagnostic[];
-};
+}>(
+  path.resolve(
+    __dirname,
+    "../../../../packages/production/src/production/libraryObservationRequirements.ts",
+  ),
+  [
+    "autoMovieLibraryObservationRequirements",
+    "libraryObservationClosureDiagnostics",
+  ],
+);
 
 /**
  * A plan may add questions to the derived population and may never remove one.

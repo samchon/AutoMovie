@@ -4,16 +4,20 @@ import os from "node:os";
 import path from "node:path";
 
 import { namedFacts, throwsError } from "../internal/predicates";
+import { requireSourceModule } from "../internal/requireSourceModule";
 
 const projectIdentityPath = path.resolve(
   __dirname,
   "../../../../packages/template/scaffold/scripts/projectIdentity.ts",
 );
 
-const identity = require(projectIdentityPath) as {
+const identity = requireSourceModule<{
   readAutoMovieProjectProductionId: (root: string) => string;
   currentAutoMovieProductionId: () => string;
-};
+}>(projectIdentityPath, [
+  "readAutoMovieProjectProductionId",
+  "currentAutoMovieProductionId",
+]);
 
 interface IProjectIdentityFailure {
   error: unknown;
