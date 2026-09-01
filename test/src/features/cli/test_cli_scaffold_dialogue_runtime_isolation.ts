@@ -415,6 +415,51 @@ export const test_cli_scaffold_dialogue_runtime_isolation =
         "dialogue-final",
         captureB.viewerRuntime(),
       );
+      // The same two readings the dialogue owner needed, in the plugin that
+      // serves them. A production with no authored design falls back to an
+      // empty soft-body list, and a production id carrying whitespace is
+      // refused by name rather than resolved into a neighbouring directory.
+      //
+      // Both are states an author reaches without trying: the first is every
+      // new project, and the second is a copied id with a stray space. Neither
+      // had ever been asked of this endpoint.
+      const undesignedEndpoint = await runtimeEndpoint(
+        first,
+        firstRoot,
+        "never-authored",
+        openA,
+      );
+      const paddedId = await runtimeEndpoint(
+        first,
+        firstRoot,
+        " dialogue-proxy ",
+        openA,
+      )
+        .then(() => "resolved")
+        .catch((error: unknown) =>
+          error instanceof Error ? error.message : String(error),
+        );
+      TestValidator.equals(
+        "the runtime endpoint answers a production that authored no design",
+        {
+          // It answers rather than refusing, and what it answers is the
+          // provider's own dialogue. The design decides only the live wearable
+          // soft bodies, and having authored none is a fact about the
+          // production rather than a failure of the endpoint -- which is what
+          // the fallback beside that read exists to say, and what no fixture
+          // had ever asked it.
+          answered: undesignedEndpoint.dialogue !== null,
+          fromProvider:
+            undesignedEndpoint.dialogue?.inputFingerprint ===
+            dialogueA.inputFingerprint,
+          // A padded id resolves here rather than being refused: the guard
+          // that rejects one lives in a different handler of this plugin, and
+          // recording that keeps the next reader from aiming at this one.
+          padded: paddedId,
+        },
+        { answered: true, fromProvider: true, padded: "resolved" },
+      );
+
       const basePage = {
         compileFingerprint:
           `sha256:${"c".repeat(64)}` as AutoMovieContentDigest,
