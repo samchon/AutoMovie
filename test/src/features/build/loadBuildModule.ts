@@ -103,12 +103,13 @@ export interface IExperimentalModule {
  * that reaches for it, which is loud enough: the alternative is a second surface
  * declaration that has to be kept in step with this one.
  *
- * The `require(absolutePath)` route the suite uses for modules inside its own
- * program must not be taken here. Measured against `packages/template/build`:
- * requiring `syncVersions.ts` returned `templateVersions.ts`'s exports and never
- * ran syncVersions' body, and requiring `templateVersions.ts` returned the
- * generated `packages/template/src/templateVersions.ts` instead. Both answered
- * with a module, neither answered with the one named, and nothing said so.
+ * `requireSourceModule` is the wrong door for these. Measured against
+ * `packages/template/build`: requiring `syncVersions.ts` returned
+ * `templateVersions.ts`'s exports and never ran syncVersions' body, and
+ * requiring `templateVersions.ts` returned the generated
+ * `packages/template/src/templateVersions.ts` instead. Both answered with a
+ * module, neither with the one named. The guard catches exactly that, which is
+ * why it exists, but a caught refusal is not a loaded module: this route is.
  */
 export const loadRepositoryModule = async <T>(relative: string): Promise<T> =>
   (await tsImport(pathToFileURL(path.join(ROOT, relative)).href, {

@@ -60,11 +60,11 @@ const WORKSPACE = [
  *    overrides is one the resolver actually produced.
  */
 export const test_build_template_catalog_versions = async (): Promise<void> => {
-  // `packages/template` declares no `"type": "module"`, so this file is CommonJS
-  // and the ESM namespace carries its exports under `default`. The repository's
-  // root build tools are ESM and carry theirs directly, which is why the loader
-  // does not unwrap on everyone's behalf: it would hide the difference and leave
-  // a caller reading `undefined` off the wrong half.
+  // Measured: this module's exports arrive under `default`, while the
+  // repository's root build tools loaded through the same helper carry theirs
+  // directly. The loader does not unwrap on everyone's behalf -- that would hide
+  // the difference and leave a caller reading `undefined` off the wrong half --
+  // so the caller that knows which shape it gets says so here.
   const loaded = await loadRepositoryModule<
     ITemplateVersionsModule & { default?: ITemplateVersionsModule }
   >("packages/template/build/templateVersions.ts");
