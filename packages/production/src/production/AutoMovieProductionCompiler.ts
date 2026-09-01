@@ -1381,12 +1381,18 @@ export class AutoMovieProductionCompiler {
     target: string;
   }): boolean {
     const before = props.diagnostics.length;
+    // The path is sliced and printed without a fallback because the two
+    // validators below build every violation path from `$input.` and neither
+    // ever reports at the bare root: a contribution that is not a record at all
+    // is refused earlier, by the shape check on what `build()` returned, with a
+    // message of its own. A fallback for the empty remainder was a second
+    // sentence for a case that cannot arrive here, and no test could reach it.
     const report = (violation: IAutoMovieConstraintViolation): void => {
       props.diagnostics.push(
         autoMovieSourceContentDiagnostic({
           finding: autoMovieSourceContentFinding(
             violation,
-            `Library owner "${props.registration.design}" publishes ${violation.path.slice("$input".length) || "a record"} that ${violation.expected}. Correct ${props.source} before compiling.`,
+            `Library owner "${props.registration.design}" publishes ${violation.path.slice("$input".length)} that ${violation.expected}. Correct ${props.source} before compiling.`,
           ),
           target: props.target,
           path: props.source,
