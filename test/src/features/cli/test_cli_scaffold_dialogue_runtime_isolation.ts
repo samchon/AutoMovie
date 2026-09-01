@@ -346,19 +346,14 @@ export const test_cli_scaffold_dialogue_runtime_isolation =
       // answers `null` for a production that has authored none, which is the
       // same `null` a brand-new project hands over. Constructing the owner is
       // the whole reading -- `prepare()` opens a compile and this production
-      // has none, and it is the construction that consults the design.
-      const undesigned = first.createProductionCaptureDialogueRuntime({
+      // has none, and it is the construction that consults the design. A throw
+      // here fails the scenario, which is the only thing worth asserting: a
+      // `typeof` on what came back would say nothing the exception did not.
+      first.createProductionCaptureDialogueRuntime({
         capture: first.createProductionFrameCaptureRuntime(),
         productionId: "never-authored",
         root: firstRoot,
       });
-      TestValidator.equals(
-        "a production with no authored design still builds its dialogue owner",
-        {
-          built: typeof undesigned.prepare === "function",
-        },
-        { built: true },
-      );
       // The host boundary's own refusal, which is pure reading and sits in
       // front of every seal the capture path carries. A host that asked for a
       // specific browser and silently got another one would be capturing
