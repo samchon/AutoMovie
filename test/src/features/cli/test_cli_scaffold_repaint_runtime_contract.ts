@@ -1410,6 +1410,44 @@ export const test_cli_scaffold_repaint_runtime_contract =
         { status: 1, named: true, remedy: true, returns: true },
       );
 
+      // The last two documented commands, read for what they answer without a
+      // capture host. "Requires a browser" was taken for "cannot be tested",
+      // and that step does not follow: a command that needs a host still runs
+      // everything up to the point of needing one, and what it does there is
+      // the contract an author meets first. `capture:doctor` proved it -- its
+      // refusal path is tested and its charge fell from nine lines to four.
+      //
+      // Here that point is argument validation. An author who types
+      // `npm run preview` with nothing after it is told exactly what to pass,
+      // and a command that answered with a stack trace or a usage-free
+      // non-zero exit would be failing them at the first step.
+      const previewed = runGenerated(
+        fixture.root,
+        "scripts/preview.ts",
+        [],
+        true,
+      );
+      const spun = runGenerated(fixture.root, "scripts/turntable.ts", [], true);
+      TestValidator.equals(
+        "a capture command with no argument names the argument it needs",
+        {
+          previewStatus: previewed.status,
+          previewNames: generatedOutput(previewed).includes(
+            "preview requires --shot <authored-shot-id>",
+          ),
+          turntableStatus: spun.status,
+          turntableNames: generatedOutput(spun).includes(
+            "turntable requires --asset <compiled-model-id>",
+          ),
+        },
+        {
+          previewStatus: 1,
+          previewNames: true,
+          turntableStatus: 1,
+          turntableNames: true,
+        },
+      );
+
       // The one action that still needs its own process: it asks the CLI entry
       // whether a refusal becomes a non-zero exit and a printed diagnostic.
       // Everything after it asks the command contract instead, and rides in one
