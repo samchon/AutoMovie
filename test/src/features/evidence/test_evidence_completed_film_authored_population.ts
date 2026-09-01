@@ -418,13 +418,6 @@ export const test_evidence_completed_film_authored_population = (): void => {
     );
 
     TestValidator.equals(
-      "the focused regression names every authored claim",
-      namedFacts([["15 names", () => AUTHORED_CLAIM_NAMES.length === 15]]),
-      {
-        "15 names": true,
-      },
-    );
-    TestValidator.equals(
       "the completed fixture authored host population is pinned",
       headingCounts(fixture),
       { h2: 49, h3: 4, h4: 8 },
@@ -479,6 +472,33 @@ export const test_evidence_completed_film_authored_population = (): void => {
         '    throw new Error("Expected one current authored claim named " + name + "; received " + matches.length + ".");',
         "  return matches[0]!;",
         "});",
+        // The list above is closed in one direction only: a renamed or removed
+        // claim fails the lookup, and a claim the product gains does not. The
+        // regression says it names every authored claim, so it has to be able
+        // to notice a sixteenth. An authored-population claim is a markdown
+        // claim the active state enables that selects no file under
+        // `docs/contracts`, which is where the separate discovery audit lives.
+        "const authored = full.claims.flatMap((claim) =>",
+        '  claim.type === "markdown" &&',
+        "  claim.disabled !== true &&",
+        "  claim.name !== undefined &&",
+        '  claim.files.every((file) => file.startsWith("contracts/") === false)',
+        "    ? [claim.name]",
+        "    : [],",
+        ");",
+        "const unnamed = authored.filter(",
+        "  (name) => names.includes(name) === false,",
+        ");",
+        "if (unnamed.length !== 0)",
+        '  throw new Error(',
+        '    "The focused authored-population regression names " +',
+        "      names.length +",
+        '      " claims and the active graph declares " +',
+        "      authored.length +",
+        '      ". Unnamed: " +',
+        '      unnamed.join("; ") +',
+        '      ".",',
+        "  );",
         "const graph = { claims };",
         "",
         "export default {",
