@@ -54,6 +54,7 @@ interface IRuntimeModules {
     target: string,
   ): null | { pcm: Uint8Array; receipt: Uint8Array };
   inspectProductionSubject: (input: unknown) => Promise<unknown>;
+  parseCaptureBrowserConfig: (value: unknown) => unknown;
   createProductionCaptureDialogueRuntime(props: {
     capture: unknown;
     productionId: string;
@@ -155,6 +156,7 @@ const loadModules = (root: string): IRuntimeModules => {
   return {
     ...(require(path.join(scripts, "capture.ts")) as object),
     ...(require(path.join(scripts, "inspectSubject.ts")) as object),
+    ...(require(path.join(scripts, "capture-browser.ts")) as object),
     ...(require(path.join(scripts, "captureDialogueRuntime.ts")) as object),
     ...(require(path.join(scripts, "dialogueCacheSnapshot.ts")) as object),
     ...(require(path.join(scripts, "generatedShotPlugin.ts")) as object),
@@ -376,6 +378,30 @@ export const test_cli_scaffold_dialogue_runtime_isolation =
           arity: first.inspectProductionSubject.length,
         },
         { exported: true, arity: 1 },
+      );
+
+      // The host boundary's own refusal, which is pure reading and sits in
+      // front of every seal the capture path carries. A host that asked for a
+      // specific browser and silently got another one would be capturing
+      // through an instrument nobody selected, so the parser enumerates what it
+      // accepts and names what it will not take.
+      const rejected = ((value: unknown): string => {
+        try {
+          first.parseCaptureBrowserConfig(value);
+          return "accepted";
+        } catch (error) {
+          return error instanceof Error ? error.message : String(error);
+        }
+      })({ source: "some-other-browser" });
+      TestValidator.equals(
+        "the capture browser selection refuses a source it does not ship",
+        {
+          named: rejected.includes("Invalid capture browser selection"),
+          // And it says what it does take, so the author is not left guessing
+          // which spelling was wanted.
+          enumerated: rejected.includes("playwright-chromium"),
+        },
+        { named: true, enumerated: true },
       );
 
       const cropA = { left: 0, top: 0.1, right: 0.8, bottom: 1 };
