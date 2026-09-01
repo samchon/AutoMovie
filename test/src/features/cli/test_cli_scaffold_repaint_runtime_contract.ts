@@ -1461,14 +1461,16 @@ export const test_cli_scaffold_repaint_runtime_contract =
       // refusing correctly, and the constraint any batching has to obey.
       installGeneratedRenderDriver(fixture.root);
       const compiled = runGeneratedFast(fixture.root, "scripts/compile.ts");
-      const [status, verified, finalized, dryGc, appliedGc] =
+      const [status, verified, finalized, dryGc, appliedGc, proxyPlan] =
         runGeneratedRenderActions(fixture.root, [
           ["status"],
           ["verify"],
           ["finalize"],
           ["gc"],
           ["gc", "--apply"],
+          ["plan", "--tier", "proxy"],
         ]) as [
+          IRenderActionResult,
           IRenderActionResult,
           IRenderActionResult,
           IRenderActionResult,
@@ -1496,6 +1498,26 @@ export const test_cli_scaffold_repaint_runtime_contract =
               result.out,
             ].join("\n"),
           );
+      // A proxy-tier plan asks for the other side of the render tier choice,
+      // and it reaches the same wall the capture commands do: a plan is drawn
+      // by a capture host, so without one it refuses. The contract is the one
+      // #2214 fixed in place for `preview` and `turntable` -- the refusal
+      // names the fault and the remedy rather than dying on a stack trace --
+      // and it is read here for the render path too, which is where an author
+      // meets it first.
+      TestValidator.equals(
+        "a proxy-tier plan refuses without a capture runtime and names the remedy",
+        {
+          status: proxyPlan.status,
+          named: String(proxyPlan.error ?? "").includes(
+            "Package-owned Chromium is not installed for this project",
+          ),
+          remedy: String(proxyPlan.error ?? "").includes(
+            "npm run capture:install",
+          ),
+        },
+        { status: 1, named: true, remedy: true },
+      );
       TestValidator.equals(
         "generated compile and render actions keep explicit refusal and cleanup outcomes",
         {
