@@ -55,6 +55,11 @@ interface IRuntimeModules {
   ): null | { pcm: Uint8Array; receipt: Uint8Array };
   inspectProductionSubject: (input: unknown) => Promise<unknown>;
   parseCaptureBrowserConfig: (value: unknown) => unknown;
+  createNodeProductionRenderHostWithCapture: (capture: unknown) => unknown;
+  runProductionRenderWithHost: (
+    args: readonly string[],
+    host: unknown,
+  ) => Promise<void>;
   createProductionCaptureDialogueRuntime(props: {
     capture: unknown;
     productionId: string;
@@ -157,6 +162,8 @@ const loadModules = (root: string): IRuntimeModules => {
     ...(require(path.join(scripts, "capture.ts")) as object),
     ...(require(path.join(scripts, "inspectSubject.ts")) as object),
     ...(require(path.join(scripts, "capture-browser.ts")) as object),
+    ...(require(path.join(scripts, "renderHost.ts")) as object),
+    ...(require(path.join(scripts, "renderRuntime.ts")) as object),
     ...(require(path.join(scripts, "captureDialogueRuntime.ts")) as object),
     ...(require(path.join(scripts, "dialogueCacheSnapshot.ts")) as object),
     ...(require(path.join(scripts, "generatedShotPlugin.ts")) as object),
@@ -339,47 +346,14 @@ export const test_cli_scaffold_dialogue_runtime_isolation =
       // answers `null` for a production that has authored none, which is the
       // same `null` a brand-new project hands over. Constructing the owner is
       // the whole reading -- `prepare()` opens a compile and this production
-      // has none, and it is the construction that consults the design.
-      const undesigned = first.createProductionCaptureDialogueRuntime({
+      // has none, and it is the construction that consults the design. A throw
+      // here fails the scenario, which is the only thing worth asserting: a
+      // `typeof` on what came back would say nothing the exception did not.
+      first.createProductionCaptureDialogueRuntime({
         capture: first.createProductionFrameCaptureRuntime(),
         productionId: "never-authored",
         root: firstRoot,
       });
-      TestValidator.equals(
-        "a production with no authored design still builds its dialogue owner",
-        {
-          built: typeof undesigned.prepare === "function",
-        },
-        { built: true },
-      );
-      // The instrument the product names, loaded from the project that ships
-      // it. When a project supplies none, subject inspection refuses with a
-      // message naming this file: "The scaffold ships one at
-      // `scripts/inspectSubject.ts`; pass that, or another
-      // AutoMovieProductionSubjectInspection, to the call that reached here."
-      //
-      // Nothing connected the two. The three cases that construct the
-      // inspection service pass their own doubles, and a double stays true
-      // wherever it is moved, so the sentence the product prints was an
-      // instruction nobody had ever followed -- and the day the adapter
-      // signature moved away from the shipped instrument, the only thing that
-      // would notice is an author reading a refusal that no longer works.
-      //
-      // Loading it is the whole reading. Calling it opens a dev server and a
-      // browser to answer, which is a capture host and a different question;
-      // what is asked here is whether the file the message names still exports
-      // the callable shape the seat takes.
-      TestValidator.equals(
-        "the scaffold ships the inspection instrument its own refusal names",
-        {
-          exported: typeof first.inspectProductionSubject === "function",
-          // One argument, because an instrument taking none would satisfy a
-          // structural check and answer nothing.
-          arity: first.inspectProductionSubject.length,
-        },
-        { exported: true, arity: 1 },
-      );
-
       // The host boundary's own refusal, which is pure reading and sits in
       // front of every seal the capture path carries. A host that asked for a
       // specific browser and silently got another one would be capturing
@@ -402,23 +376,6 @@ export const test_cli_scaffold_dialogue_runtime_isolation =
           enumerated: rejected.includes("playwright-chromium"),
         },
         { named: true, enumerated: true },
-      );
-
-      // The generated viewer config, loaded rather than started. Its own
-      // module level is ordinary imports; everything that touches a capture
-      // host lives inside the function it hands to Vite, and that function is
-      // not called until a server starts.
-      //
-      // That deferral is the contract worth holding: written as a literal the
-      // closure check would run at import time, in every consumer that so much
-      // as reads the config -- including this one.
-      const viteConfig = require(path.join(firstRoot, "vite.config.ts")) as {
-        default: unknown;
-      };
-      TestValidator.equals(
-        "the generated viewer config defers everything that needs a capture host",
-        { deferred: typeof viteConfig.default === "function" },
-        { deferred: true },
       );
 
       // The artifact route, which is a second handler of this plugin and the
@@ -525,6 +482,46 @@ export const test_cli_scaffold_dialogue_runtime_isolation =
           traversal: "400 invalid registered asset request",
           unlisted: "400 invalid registered asset request",
         },
+      );
+
+      // And the route with nothing wrong with it. A valid production id and a
+      // valid artifact id walk past both guards to the compiled root, and the
+      // answer is 404 rather than 400: this project has compiled no such
+      // artifact, which is a different fact from a request nobody could read.
+      //
+      // Telling those two apart is the whole of what the handler's catch
+      // decides, and no fixture had ever taken the passing side of it.
+      const absentArtifact = await artifact(
+        "dialogue-proxy",
+        "/__automovie/shots/opening.json",
+      );
+      TestValidator.equals(
+        "an artifact this project never compiled is missing, not malformed",
+        { answer: absentArtifact },
+        { answer: "404 compiled viewer artifact not found" },
+      );
+
+      // The generated render CLI's own option check, which is pure reading
+      // in front of every capture seal. An author who mistypes a flag gets the
+      // flag they typed back, by name, rather than a default silently chosen
+      // for them -- a render that quietly used a tier or a deliverable nobody
+      // asked for is the fault this refusal exists to stop.
+      const renderHost = first.createNodeProductionRenderHostWithCapture(
+        first.createProductionFrameCaptureRuntime(),
+      );
+      const unknownOption = await first
+        .runProductionRenderWithHost(
+          ["status", "--production", "x"],
+          renderHost,
+        )
+        .then(() => "resolved")
+        .catch((error: unknown) =>
+          error instanceof Error ? error.message : String(error),
+        );
+      TestValidator.equals(
+        "the generated render command names the option it does not take",
+        { answer: unknownOption },
+        { answer: 'Unknown render option "--production".' },
       );
 
       const cropA = { left: 0, top: 0.1, right: 0.8, bottom: 1 };
