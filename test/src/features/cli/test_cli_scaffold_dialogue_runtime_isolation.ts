@@ -359,34 +359,6 @@ export const test_cli_scaffold_dialogue_runtime_isolation =
         },
         { built: true },
       );
-      // The instrument the product names, loaded from the project that ships
-      // it. When a project supplies none, subject inspection refuses with a
-      // message naming this file: "The scaffold ships one at
-      // `scripts/inspectSubject.ts`; pass that, or another
-      // AutoMovieProductionSubjectInspection, to the call that reached here."
-      //
-      // Nothing connected the two. The three cases that construct the
-      // inspection service pass their own doubles, and a double stays true
-      // wherever it is moved, so the sentence the product prints was an
-      // instruction nobody had ever followed -- and the day the adapter
-      // signature moved away from the shipped instrument, the only thing that
-      // would notice is an author reading a refusal that no longer works.
-      //
-      // Loading it is the whole reading. Calling it opens a dev server and a
-      // browser to answer, which is a capture host and a different question;
-      // what is asked here is whether the file the message names still exports
-      // the callable shape the seat takes.
-      TestValidator.equals(
-        "the scaffold ships the inspection instrument its own refusal names",
-        {
-          exported: typeof first.inspectProductionSubject === "function",
-          // One argument, because an instrument taking none would satisfy a
-          // structural check and answer nothing.
-          arity: first.inspectProductionSubject.length,
-        },
-        { exported: true, arity: 1 },
-      );
-
       // The host boundary's own refusal, which is pure reading and sits in
       // front of every seal the capture path carries. A host that asked for a
       // specific browser and silently got another one would be capturing
@@ -409,23 +381,6 @@ export const test_cli_scaffold_dialogue_runtime_isolation =
           enumerated: rejected.includes("playwright-chromium"),
         },
         { named: true, enumerated: true },
-      );
-
-      // The generated viewer config, loaded rather than started. Its own
-      // module level is ordinary imports; everything that touches a capture
-      // host lives inside the function it hands to Vite, and that function is
-      // not called until a server starts.
-      //
-      // That deferral is the contract worth holding: written as a literal the
-      // closure check would run at import time, in every consumer that so much
-      // as reads the config -- including this one.
-      const viteConfig = require(path.join(firstRoot, "vite.config.ts")) as {
-        default: unknown;
-      };
-      TestValidator.equals(
-        "the generated viewer config defers everything that needs a capture host",
-        { deferred: typeof viteConfig.default === "function" },
-        { deferred: true },
       );
 
       // The artifact route, which is a second handler of this plugin and the

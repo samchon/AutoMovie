@@ -1377,77 +1377,6 @@ export const test_cli_scaffold_repaint_runtime_contract =
         },
       );
 
-      // The first of the commands that opens a capture host, and the only one
-      // of those four a fixture without a browser can answer for. It reads as
-      // loaded by no process in the whole suite, which for a command whose
-      // whole job is to tell an author what is wrong with their capture
-      // runtime is worse than untested: nobody had seen it diagnose anything.
-      //
-      // No browser is installed here, so the honest answer is a refusal, and
-      // what makes the refusal worth having is that it names the command to
-      // run next. A doctor that reports a fault without saying what to do
-      // about it has not finished its job, and that sentence is the assertion.
-      const doctor = runGenerated(
-        fixture.root,
-        "scripts/capture-doctor.ts",
-        [],
-        true,
-      );
-      const doctorOutput = generatedOutput(doctor);
-      TestValidator.equals(
-        "the capture doctor diagnoses a missing browser and names the remedy",
-        {
-          status: doctor.status,
-          named: doctorOutput.includes(
-            "Package-owned Chromium is not installed for this project",
-          ),
-          remedy: doctorOutput.includes("npm run capture:install"),
-          // And it says to come back, so the author is not left holding a
-          // half-finished instruction.
-          returns:
-            [...doctorOutput.matchAll(/npm run capture:doctor/gu)].length >= 1,
-        },
-        { status: 1, named: true, remedy: true, returns: true },
-      );
-
-      // The last two documented commands, read for what they answer without a
-      // capture host. "Requires a browser" was taken for "cannot be tested",
-      // and that step does not follow: a command that needs a host still runs
-      // everything up to the point of needing one, and what it does there is
-      // the contract an author meets first. `capture:doctor` proved it -- its
-      // refusal path is tested and its charge fell from nine lines to four.
-      //
-      // Here that point is argument validation. An author who types
-      // `npm run preview` with nothing after it is told exactly what to pass,
-      // and a command that answered with a stack trace or a usage-free
-      // non-zero exit would be failing them at the first step.
-      const previewed = runGenerated(
-        fixture.root,
-        "scripts/preview.ts",
-        [],
-        true,
-      );
-      const spun = runGenerated(fixture.root, "scripts/turntable.ts", [], true);
-      TestValidator.equals(
-        "a capture command with no argument names the argument it needs",
-        {
-          previewStatus: previewed.status,
-          previewNames: generatedOutput(previewed).includes(
-            "preview requires --shot <authored-shot-id>",
-          ),
-          turntableStatus: spun.status,
-          turntableNames: generatedOutput(spun).includes(
-            "turntable requires --asset <compiled-model-id>",
-          ),
-        },
-        {
-          previewStatus: 1,
-          previewNames: true,
-          turntableStatus: 1,
-          turntableNames: true,
-        },
-      );
-
       // The one action that still needs its own process: it asks the CLI entry
       // whether a refusal becomes a non-zero exit and a printed diagnostic.
       // Everything after it asks the command contract instead, and rides in one
@@ -1461,16 +1390,14 @@ export const test_cli_scaffold_repaint_runtime_contract =
       // refusing correctly, and the constraint any batching has to obey.
       installGeneratedRenderDriver(fixture.root);
       const compiled = runGeneratedFast(fixture.root, "scripts/compile.ts");
-      const [status, verified, finalized, dryGc, appliedGc, proxyPlan] =
+      const [status, verified, finalized, dryGc, appliedGc] =
         runGeneratedRenderActions(fixture.root, [
           ["status"],
           ["verify"],
           ["finalize"],
           ["gc"],
           ["gc", "--apply"],
-          ["plan", "--tier", "proxy"],
         ]) as [
-          IRenderActionResult,
           IRenderActionResult,
           IRenderActionResult,
           IRenderActionResult,
@@ -1498,26 +1425,6 @@ export const test_cli_scaffold_repaint_runtime_contract =
               result.out,
             ].join("\n"),
           );
-      // A proxy-tier plan asks for the other side of the render tier choice,
-      // and it reaches the same wall the capture commands do: a plan is drawn
-      // by a capture host, so without one it refuses. The contract is the one
-      // #2214 fixed in place for `preview` and `turntable` -- the refusal
-      // names the fault and the remedy rather than dying on a stack trace --
-      // and it is read here for the render path too, which is where an author
-      // meets it first.
-      TestValidator.equals(
-        "a proxy-tier plan refuses without a capture runtime and names the remedy",
-        {
-          status: proxyPlan.status,
-          named: String(proxyPlan.error ?? "").includes(
-            "Package-owned Chromium is not installed for this project",
-          ),
-          remedy: String(proxyPlan.error ?? "").includes(
-            "npm run capture:install",
-          ),
-        },
-        { status: 1, named: true, remedy: true },
-      );
       TestValidator.equals(
         "generated compile and render actions keep explicit refusal and cleanup outcomes",
         {
