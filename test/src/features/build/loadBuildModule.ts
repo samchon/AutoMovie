@@ -102,9 +102,19 @@ export interface IExperimentalModule {
  * renamed or removed export arrives as `undefined` and fails the first scenario
  * that reaches for it, which is loud enough: the alternative is a second surface
  * declaration that has to be kept in step with this one.
+ *
+ * The `require(absolutePath)` route the suite uses for modules inside its own
+ * program must not be taken here. Measured against `packages/template/build`:
+ * requiring `syncVersions.ts` returned `templateVersions.ts`'s exports and never
+ * ran syncVersions' body, and requiring `templateVersions.ts` returned the
+ * generated `packages/template/src/templateVersions.ts` instead. Both answered
+ * with a module, neither answered with the one named, and nothing said so.
  */
-export const loadBuildModule = async <T>(file: string): Promise<T> =>
-  (await tsImport(pathToFileURL(path.join(ROOT, "build", file)).href, {
+export const loadRepositoryModule = async <T>(relative: string): Promise<T> =>
+  (await tsImport(pathToFileURL(path.join(ROOT, relative)).href, {
     parentURL: pathToFileURL(__filename).href,
     tsconfig: false,
   })) as T;
+
+export const loadBuildModule = async <T>(file: string): Promise<T> =>
+  loadRepositoryModule<T>(path.join("build", file));
