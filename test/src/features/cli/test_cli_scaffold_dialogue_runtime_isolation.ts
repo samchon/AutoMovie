@@ -496,6 +496,37 @@ export const test_cli_scaffold_dialogue_runtime_isolation =
         { production: true, productionNamed: true, artifact: true },
       );
 
+      // The third route, which serves compiled assets and authorizes each one
+      // against the project asset manifest before handing over bytes. It walks
+      // a path traversal check first: a segment that is empty, a dot, a double
+      // dot, or carries a backslash never reaches the manifest at all.
+      //
+      // No fixture had asked either half. Both are pure reading in front of
+      // every capture seal, and an asset route that resolved ".." would be
+      // serving the machine rather than the production.
+      const traversal = await artifact(
+        "dialogue-proxy",
+        "/__automovie/assets/../secrets.bin",
+      );
+      const unlisted = await artifact(
+        "dialogue-proxy",
+        "/__automovie/assets/never-registered.bin",
+      );
+      TestValidator.equals(
+        "the asset route refuses a traversal and an asset its manifest never listed",
+        {
+          // Both answer 400 with one sentence. Neither is a missing file: a
+          // traversal never becomes a filesystem read, and an unregistered
+          // asset is refused before whatever sits at that path is opened.
+          traversal,
+          unlisted,
+        },
+        {
+          traversal: "400 invalid registered asset request",
+          unlisted: "400 invalid registered asset request",
+        },
+      );
+
       const cropA = { left: 0, top: 0.1, right: 0.8, bottom: 1 };
       const cropB = { left: 0.2, top: 0, right: 1, bottom: 0.9 };
       await captureA.installDialogue(dialogueA);
