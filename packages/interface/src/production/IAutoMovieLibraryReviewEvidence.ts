@@ -100,6 +100,16 @@ export type AutoMovieLibraryReviewEvidence =
  * two elevations hide between them, a corner cannot show the room behind the
  * wall, and one room's interior says nothing about its siblings.
  *
+ * An instance set adds three of its own, and they divide the same way. The
+ * population view is the whole set where it stands, which is the only place
+ * density and layout can be wrong; a member view is one instance close enough
+ * to judge the prototype it repeats, which the population view is too far away
+ * to show; and a contact view is where an instance meets the surface it sits
+ * on, which is where a set that floats or sinks gives itself away and which
+ * neither of the other two frames. A set photographed only as a crowd hides a
+ * broken prototype, and one photographed only up close hides that it was
+ * scattered into a wall.
+ *
  * @evidence requirements/review/subject-inspection.md#review-subject-viewpoint-ownership Names each role the derived population charges a library owner for.
  * @evidence specifications/review-and-acceptance/subject-surface-and-inspection.md#review-system-subject-viewpoint-plan Types the closed role set the topology derivation partitions by.
  * @author Samchon
@@ -109,6 +119,9 @@ export type AutoMovieLibraryObservationRole =
   | "corner"
   | "entrance"
   | "facade"
+  | "instance-contact"
+  | "instance-member"
+  | "instance-population"
   | "interior-center"
   | "interior-corner"
   | "interior-threshold"
