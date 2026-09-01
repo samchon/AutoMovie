@@ -16,6 +16,7 @@ import {
   readAutoMovieHostViewerBasePath,
   readAutoMovieHostViewerHost,
 } from "./hostBoundary";
+import { pageKey, pageSubject } from "./inspectionPageKey";
 
 interface InspectionSession {
   server: Awaited<ReturnType<typeof createServer>>;
@@ -123,48 +124,6 @@ const inspectionSession = async (
     throw error;
   }
 };
-
-/**
- * Everything that decides whether one open page can answer the next viewpoint.
- *
- * The compile fingerprint and the artifact revision are both in it. A sweep
- * whose source moved underneath it is a set of pictures of two different models
- * with nothing in the individual images saying so, and the runtime refuses
- * that sweep after the fact; keeping both in the key means the page never
- * serves the mixed frame in the first place.
- */
-/**
- * The shot a page stands for, without the state it was opened at.
- *
- * Two pages under this one identity are the same thing at two compiles, and
- * only the newer one can still be asked for a frame.
- *
- * The subject is deliberately not in it. Staging the compiled shot is what a
- * page costs, and the page draws any subject standing in that shot, so keying
- * by subject rebuilt one 14 MB scene per subject: 4.3 of the 6.2 seconds one
- * observation took, and 70% of a whole production's sweep (`#1956`).
- */
-const pageSubject = (
-  input: Parameters<AutoMovieProductionSubjectInspection>[0],
-): string =>
-  JSON.stringify({
-    productionId: input.productionId,
-    shot: input.target.shot,
-    width: input.width,
-    height: input.height,
-  });
-
-const pageKey = (
-  input: Parameters<AutoMovieProductionSubjectInspection>[0],
-): string =>
-  JSON.stringify({
-    productionId: input.productionId,
-    compileFingerprint: input.compileFingerprint,
-    revision: input.revision,
-    shot: input.target.shot,
-    width: input.width,
-    height: input.height,
-  });
 
 const inspectionPage = (
   session: InspectionSession,
