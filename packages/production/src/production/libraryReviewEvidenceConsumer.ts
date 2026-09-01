@@ -28,6 +28,7 @@ import {
 import {
   autoMovieLibraryObservationRequirements,
   libraryObservationClosureDiagnostics,
+  libraryObservationReceiptDiagnostics,
 } from "./libraryObservationRequirements";
 import { libraryReviewEvidenceDiagnostics } from "./libraryReviewEvidenceDiagnostics";
 import { assetReviewEvidenceDiagnostics } from "./reviewEvidenceDiagnostics";
@@ -419,6 +420,17 @@ const resolvePopulation = (
           required,
           declared: observations.map((observation) => observation.id),
           waivers: plan.waivers ?? [],
+        }),
+      );
+      // What the plan owes is one question and what came back is another. The
+      // closure above judges the first from ids alone; this judges the second
+      // from what each receipt says about where it stood and what it read.
+      output.diagnostics.push(
+        ...libraryObservationReceiptDiagnostics({
+          target: `library:${owner.branch}:${address}`,
+          path: relative,
+          required,
+          receipts: plan.receipts,
         }),
       );
       output.required.push(

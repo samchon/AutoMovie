@@ -7,6 +7,7 @@ import type {
   IAutoMovieBuiltEnvironment,
   IAutoMovieDiagnostic,
   IAutoMovieLibraryRequiredObservation,
+  IAutoMovieLibraryReviewObservationReceipt,
   IAutoMovieLibraryReviewWaiver,
 } from "@automovie/interface";
 
@@ -251,6 +252,97 @@ export const libraryObservationClosureDiagnostics = (props: {
           target: address,
           path: props.path,
           message: `Library observation "${entry.id}" is an interior view of "${entry.subject}", and no eye could be placed inside that space's own stated volume. Correct the space's cells or shell so the observation can be taken from inside the room; a camera outside it photographs the far side of its walls.`,
+        }),
+      );
+  }
+  return diagnostics;
+};
+
+/**
+ * Refuse a receipt that does not say where it stood or what it read.
+ *
+ * The closure gate above judges the plan: which observations an owner owes and
+ * which it opens. This judges what came back. A receipt names the observation
+ * it pays and carries bytes, and until it carries a pose it never says the
+ * bytes were drawn from the place the observation is about — an interior view
+ * taken from the corridor outside is indistinguishable from one taken inside
+ * the room, and being inside the room is the entire claim that observation
+ * makes.
+ *
+ * Three refusals, each naming its own address.
+ *
+ * An interior receipt with no pose is the one that matters: it is the shape
+ * every receipt had before this gate existed, and reading it as "anywhere" is
+ * how a sweep that circled a building from outside pays for its rooms.
+ *
+ * A receipt whose pose stands in a different space than the requirement proved
+ * is the same failure wearing a coordinate: the eye was somewhere, and not
+ * where the topology said an eye could stand for this question.
+ *
+ * A passed receipt carrying no measurement at all is a photograph with a
+ * verdict attached. Empty is legitimate — some observations answer with the
+ * picture alone — so this refuses only the pair the plan itself declared
+ * measurable, which is why the requirement's own role decides rather than a
+ * blanket count.
+ *
+ * @evidence requirements/review/subject-inspection.md#review-subject-viewpoint-ownership Binds a paid observation to the place it was drawn from.
+ * @evidence specifications/review-and-acceptance/subject-surface-and-inspection.md#review-system-subject-viewpoint-plan Makes a receipt state its own viewpoint rather than inherit the requirement's.
+ * @author Samchon
+ */
+export const libraryObservationReceiptDiagnostics = (props: {
+  /** Stable `library:<branch>:<document>#<anchor>` owner address. */
+  target: string;
+  /** Adjacent plan path named by every refusal, or null. */
+  path: string | null;
+  /** Observations the compiled topology requires of this owner. */
+  required: readonly IAutoMovieLibraryRequiredObservation[];
+  /** Receipts the plan carries for this owner. */
+  receipts: readonly IAutoMovieLibraryReviewObservationReceipt[];
+}): IAutoMovieDiagnostic[] => {
+  const diagnostics: IAutoMovieDiagnostic[] = [];
+  const requiredById = new Map(
+    props.required.map((entry) => [entry.id, entry] as const),
+  );
+  for (const receipt of props.receipts) {
+    const requirement = requiredById.get(receipt.observation);
+    if (requirement === undefined) continue;
+    const address = `${props.target}:${receipt.observation}`;
+    const interior = requirement.role.startsWith("interior-");
+    if (interior && receipt.pose === null) {
+      diagnostics.push(
+        refuse({
+          target: address,
+          path: props.path,
+          message: `Library observation receipt for "${receipt.observation}" is an interior view of "${requirement.subject}" and states no camera pose, so nothing says the eye stood inside the space rather than outside it. Record the pose the instrument actually used.`,
+        }),
+      );
+      continue;
+    }
+    if (
+      interior &&
+      requirement.pose !== null &&
+      receipt.pose !== null &&
+      receipt.pose.space !== requirement.pose.space
+    ) {
+      diagnostics.push(
+        refuse({
+          target: address,
+          path: props.path,
+          message: `Library observation receipt for "${receipt.observation}" was drawn from space "${String(receipt.pose.space)}" where the topology proved an eye for "${String(requirement.pose.space)}". One room's interior says nothing about its siblings.`,
+        }),
+      );
+      continue;
+    }
+    if (
+      receipt.verdict === "passed" &&
+      requirement.role === "interior-threshold" &&
+      Object.keys(receipt.measurements).length === 0
+    )
+      diagnostics.push(
+        refuse({
+          target: address,
+          path: props.path,
+          message: `Library observation receipt for "${receipt.observation}" passed a threshold observation of "${requirement.subject}" without reading a single measurement, so the receipt is a picture with a verdict attached. A threshold is measured, not merely looked at.`,
         }),
       );
   }

@@ -246,6 +246,35 @@ export interface IAutoMovieLibraryReviewObservationReceipt {
   identity: IAutoMovieLibraryReviewOwnerIdentity;
   /** Named tool and runtime version that produced the observation. */
   runtimeIdentity: string;
+  /**
+   * Where the eye actually stood, or null for an exterior observation.
+   *
+   * The requirement carries the pose an interior observation was *proved* to
+   * admit; this carries the pose the instrument actually used. Without it a
+   * receipt says which question it answered and never from where, so an
+   * interior observation drawn from the corridor outside is indistinguishable
+   * from one drawn inside the room — and being inside the room is the entire
+   * claim that observation makes.
+   *
+   * Null on an exterior observation for the reason the requirement gives: the
+   * frame comes from the subject's own extent, so there is no chosen point to
+   * report. Null on an interior one is a receipt that never says where it
+   * stood, and is refused rather than read as "anywhere".
+   */
+  pose: IAutoMovieLibraryObservationPose | null;
+  /**
+   * What the observation read, keyed by measurement name.
+   *
+   * A picture proves the eye was somewhere; it does not say what was taken
+   * from it. An observation that reports a clear height, a sill line, or a
+   * tread depth is making a claim a later reader can check against the model,
+   * and one that reports nothing is a photograph with a verdict attached.
+   *
+   * Empty is a legitimate reading for an observation whose whole answer is the
+   * picture, and it is written rather than omitted so a reader can tell "read
+   * nothing" from "an older receipt that could not say".
+   */
+  measurements: Readonly<Record<string, number>>;
   /** Actual terminal result; only one current passed receipt completes review. */
   verdict: "failed" | "not-run" | "passed" | "unsupported";
 }
