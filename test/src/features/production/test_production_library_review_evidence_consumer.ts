@@ -265,6 +265,13 @@ const payPlans = (
         evidence: evidenceFor(branch),
         identity: requirement.identity,
         runtimeIdentity: "playwright:chromium:1",
+        // These owners carry no building topology, so every observation they
+        // owe is exterior and the honest pose is none. Both fields are written
+        // rather than omitted: the gate reads a missing pose on an interior
+        // observation as a receipt that never said where it stood, and this
+        // fixture is saying it stood nowhere in particular.
+        pose: null,
+        measurements: {},
         verdict: "passed",
       },
     ];

@@ -86,6 +86,12 @@ const receipt = (
           },
   identity: subject.identity,
   runtimeIdentity: "tool:runtime:v1",
+  // These owners are exterior by construction, so the honest pose is none and
+  // the honest measurement set is empty. Both are written rather than omitted:
+  // a receipt that cannot say where it stood is a different fact from one that
+  // stood nowhere in particular, and this fixture is the second.
+  pose: null,
+  measurements: {},
   verdict: "passed",
   resident: true,
   ...props,
