@@ -672,6 +672,49 @@ test("an invented branch position is named rather than charged", () => {
     ]);
     // The one that ran stays in the totals beside the one somebody wrote.
     assert.deepEqual(plural.totals.branches, { covered: 1, total: 2 });
+    // The two readings left, each a shape the fixtures above never produce.
+    //
+    // A location the map simply does not carry: `locations` is what the tool
+    // writes per branch, and a hole in it is answered by the entry's own `loc`
+    // rather than by nothing. Every case above carries its locations, so that
+    // fallback had never run.
+    //
+    // And a line the source does not have: a span can name line 9 of a
+    // two-line file, which is the same instrument fault as an invented column
+    // wearing a different shape. It is declined rather than dropped, because a
+    // file that cannot answer for a position is not evidence that the position
+    // was invented -- and the gap stays listed with its position distrusted.
+    fixture.data.branchMap = {
+      missingLocation: {
+        type: "if",
+        loc: { start: { line: 2, column: 0 }, end: { line: 2, column: 2 } },
+        locations: [undefined as unknown as { start: object; end: object }],
+      },
+      pastEnd: {
+        type: "if",
+        loc: { start: { line: 9, column: 0 }, end: { line: 9, column: 2 } },
+        locations: [
+          { start: { line: 9, column: 0 }, end: { line: 9, column: 2 } },
+        ],
+      },
+    };
+    fixture.data.b = { missingLocation: [0], pastEnd: [0] };
+    const ragged = inspectChangedCoverage({
+      ...touched,
+      divergent: [],
+      files: new Map([[fixture.relative, new Set([1, 2, 9])]]),
+      // The measurement recorded nine lines and the file on disk has two,
+      // which is what a report outliving an edit looks like. Without it the
+      // past-end refusal fires first and the branch loop is never reached --
+      // that refusal is about a length the record can vouch for, and this is
+      // about a line the file cannot answer for.
+      measuredSources: { [fixture.file]: { lines: 9, sha256: hash(text) } },
+    });
+    assert.deepEqual(ragged.disagreements, [
+      `${fixture.relative}: 1 branch location covers nothing but whitespace, which is a position the instrument invented rather than a branch this file has`,
+    ]);
+    assert.deepEqual(ragged.totals.branches, { covered: 0, total: 1 });
+    assert.match(ragged.gaps.join("\n"), /:9 uncovered branch if\[0\]/u);
   } finally {
     fs.rmSync(fixture.root, { recursive: true, force: true });
   }
