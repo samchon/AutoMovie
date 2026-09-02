@@ -19,6 +19,9 @@ const unit = requireSourceModule<{
     dep: string;
     workspace: string;
   }) => string;
+  renderAutoMovieTemplateVersionsModule: (
+    versions: Readonly<Record<string, string>>,
+  ) => string;
   resolveTemplateVersions: () => Record<string, string>;
   WORKSPACE_TEMPLATE_VERSION_KEYS: readonly string[];
 }>(
@@ -28,6 +31,7 @@ const unit = requireSourceModule<{
   ),
   [
     "readCatalogVersion",
+    "renderAutoMovieTemplateVersionsModule",
     "resolveTemplateVersions",
     "WORKSPACE_TEMPLATE_VERSION_KEYS",
   ],
@@ -137,6 +141,20 @@ export const test_build_template_catalog_versions = (): void => {
         },
       ],
       [
+        // Unquoted identifier keys and double-quoted values. `JSON.stringify`
+        // quotes its keys, and this repository's own `format:check` would then
+        // flag the result of every sync -- a build step whose output the
+        // formatter rejects is a build step that fails on the next commit.
+        "theEmittedModuleIsAlreadyFormatted",
+        () =>
+          unit
+            .renderAutoMovieTemplateVersionsModule({ three: "^0.180.0" })
+            .includes('  three: "^0.180.0",') &&
+          unit
+            .renderAutoMovieTemplateVersionsModule({ three: "^0.180.0" })
+            .includes('"three"') === false,
+      ],
+      [
         // A key a workspace-local consumer overrides with `workspace:^` has to
         // be one the resolver produces, or the override replaces nothing.
         "everyOverriddenKeyIsProduced",
@@ -159,6 +177,7 @@ export const test_build_template_catalog_versions = (): void => {
       unknownDependencyRefused: true,
       danglingAliasRefused: true,
       theRealWorkspaceResolves: true,
+      theEmittedModuleIsAlreadyFormatted: true,
       everyOverriddenKeyIsProduced: true,
     },
   );
