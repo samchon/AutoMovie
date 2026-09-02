@@ -31,6 +31,16 @@ const unit = requireSourceModule<{
   describeAutoMovieBuildingRecords: (
     records: readonly IBuildingRecord[],
   ) => string;
+  describeAutoMovieBuildingReport: (props: {
+    gaps: number;
+    id: string;
+    networks: number;
+    quantitySubjects: number;
+    runs: number;
+    schedules: ReadonlyArray<{ subject: string; total: number }>;
+    sheets: number;
+    source: "materialized" | "staged";
+  }) => readonly [string, string];
 }>(
   path.resolve(
     __dirname,
@@ -40,6 +50,7 @@ const unit = requireSourceModule<{
     "collectAutoMovieBuildingRecords",
     "collectAutoMovieMaterializedEnvironments",
     "describeAutoMovieBuildingRecords",
+    "describeAutoMovieBuildingReport",
   ],
 );
 
@@ -148,6 +159,34 @@ export const test_cli_scaffold_building_records = (): void => {
           }).length === 1,
       ],
       [
+        // The provenance is repeated per building on purpose: a reader scanning
+        // one id must not have to hold the run's tally in their head to know
+        // whether frames exist for the building in front of them. And the gap
+        // count is its own line, because a statement about what the report
+        // could not do reads wrongly when queued behind five about what it did.
+        "eachBuildingIsDescribedWithItsProvenanceAndItsGapsApart",
+        () => {
+          const [derived, gaps] = unit.describeAutoMovieBuildingReport({
+            gaps: 2,
+            id: "hall-house",
+            networks: 1,
+            quantitySubjects: 3,
+            runs: 4,
+            schedules: [
+              { subject: "room", total: 2 },
+              { subject: "opening", total: 5 },
+            ],
+            sheets: 6,
+            source: "materialized",
+          });
+          return (
+            derived ===
+              "hall-house (materialized): 6 sheet(s), 2 room(s), 5 opening(s), 3 quantity subject(s), 1 network(s), 4 analysis run(s)" &&
+            gaps === "hall-house (materialized): 2 declared gap(s)"
+          );
+        },
+      ],
+      [
         "theTallyNamesBothCountsIncludingTheZero",
         () =>
           unit.describeAutoMovieBuildingRecords(mixed) ===
@@ -167,6 +206,7 @@ export const test_cli_scaffold_building_records = (): void => {
       theOrderIsByIdSoAnUnchangedProductionRedrawsTheSame: true,
       eachOwnerIsAddressedByItsFullPathAndAnchor: true,
       oneBuildingIdIsGatheredOnce: true,
+      eachBuildingIsDescribedWithItsProvenanceAndItsGapsApart: true,
       theTallyNamesBothCountsIncludingTheZero: true,
     },
   );

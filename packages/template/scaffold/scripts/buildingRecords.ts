@@ -101,3 +101,33 @@ export const collectAutoMovieMaterializedEnvironments = (props: {
         found.set(environment.id, environment);
   return [...found.values()];
 };
+
+/**
+ * The two lines a reviewer reads about one building.
+ *
+ * Beside {@link describeAutoMovieBuildingRecords}, which says the same thing
+ * for the run as a whole. The provenance is repeated per building on purpose:
+ * a reader scanning one id must not have to hold the run's tally in their head
+ * to know whether frames exist for the building in front of them.
+ *
+ * A count of gaps is separated from the counts of what was derived, because a
+ * gap is a statement about what this report could not do and reads wrongly when
+ * queued behind five numbers about what it did.
+ */
+export const describeAutoMovieBuildingReport = (props: {
+  gaps: number;
+  id: string;
+  networks: number;
+  quantitySubjects: number;
+  runs: number;
+  schedules: ReadonlyArray<{ subject: string; total: number }>;
+  sheets: number;
+  source: "materialized" | "staged";
+}): readonly [string, string] => [
+  `${props.id} (${props.source}): ${props.sheets} sheet(s), ${props.schedules
+    .map((schedule) => `${schedule.total} ${schedule.subject}(s)`)
+    .join(", ")}, ${props.quantitySubjects} quantity subject(s), ${
+    props.networks
+  } network(s), ${props.runs} analysis run(s)`,
+  `${props.id} (${props.source}): ${props.gaps} declared gap(s)`,
+];

@@ -24,6 +24,7 @@ import {
   collectAutoMovieBuildingRecords,
   collectAutoMovieMaterializedEnvironments,
   describeAutoMovieBuildingRecords,
+  describeAutoMovieBuildingReport,
 } from "./buildingRecords";
 import {
   type IAutoMovieBuildingGap,
@@ -284,16 +285,17 @@ for (const { environment, source } of environments) {
     `${JSON.stringify(report, null, 2)}\n`,
   );
 
-  process.stdout.write(
-    `${environment.id} (${source}): ${report.sheets.length} sheet(s), ${report.schedules
-      .map((schedule) => `${schedule.total} ${schedule.subject}(s)`)
-      .join(", ")}, ${report.quantities.findings.length} quantity subject(s), ${
-      report.services.length
-    } network(s), ${report.runs.length} analysis run(s)\n`,
-  );
-  process.stdout.write(
-    `${environment.id} (${source}): ${report.gaps.length} declared gap(s)\n`,
-  );
+  for (const line of describeAutoMovieBuildingReport({
+    gaps: report.gaps.length,
+    id: environment.id,
+    networks: report.services.length,
+    quantitySubjects: report.quantities.findings.length,
+    runs: report.runs.length,
+    schedules: report.schedules,
+    sheets: report.sheets.length,
+    source,
+  }))
+    process.stdout.write(line + NEWLINE);
   announce(report.gaps);
 }
 
