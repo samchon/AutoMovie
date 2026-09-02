@@ -147,39 +147,45 @@ const staged = <T extends { id: string }>(
  * reached that point is not in error.
  */
 const materialized = (): IAutoMovieBuiltEnvironment[] => {
-  const found = new Map<string, IAutoMovieBuiltEnvironment>();
+  // Only the two reads are guarded. A project with no compiler-owned tree, or
+  // none this reader can open, materializes nothing -- that is the ordinary
+  // state of a film production and of a library before its first compile, and
+  // neither is an error this report should raise on the author's behalf.
+  //
+  // The resolution below is deliberately outside that guard. The reader refuses
+  // an owner addressed without its anchor, and this command passed exactly that
+  // for as long as the defect stood; catching it here would swallow the one
+  // sentence that says so and put the silence straight back.
+  let resolve: ReturnType<typeof autoMovieMaterializedLibraryEnvironments>;
+  let owners: ReturnType<
+    typeof readAutoMovieProductionEvidence
+  >["designOwners"];
   try {
     const project = AutoMovieProductionProject.openReadOnly(
       projectRoot,
       productionId,
     );
-    const authoring = readAutoMovieProductionEvidence({
+    owners = readAutoMovieProductionEvidence({
       root: projectRoot,
       productionEvidence,
-    });
-    const resolve = autoMovieMaterializedLibraryEnvironments({
+    }).designOwners;
+    resolve = autoMovieMaterializedLibraryEnvironments({
       read: (relative) => project.readGeneratedFile(relative),
     });
-    for (const owner of authoring.designOwners)
-      for (const unit of owner.units)
-        // The design owner's full address, which is how the published index
-        // is keyed and how every other caller of this reader addresses it.
-        // Passing the document path alone matched nothing, every time, so this
-        // report read no materialized building for as long as that stood while
-        // reporting that it had looked.
-        for (const environment of resolve({
-          branch: owner.branch,
-          owner: `${owner.path}#${unit.anchor}`,
-          anchor: unit.anchor,
-        }))
-          found.set(environment.id, environment);
   } catch {
-    // A project with no published library index, or none this reader can open,
-    // materializes nothing. That is the ordinary state of a film production
-    // and of a library before its first compile, and neither is an error this
-    // report should raise on the author's behalf.
     return [];
   }
+  const found = new Map<string, IAutoMovieBuiltEnvironment>();
+  for (const owner of owners)
+    for (const unit of owner.units)
+      // The design owner's full address, which is how the published index is
+      // keyed and how every other caller of this reader addresses it.
+      for (const environment of resolve({
+        branch: owner.branch,
+        owner: `${owner.path}#${unit.anchor}`,
+        anchor: unit.anchor,
+      }))
+        found.set(environment.id, environment);
   return [...found.values()];
 };
 
