@@ -152,13 +152,15 @@ test("parses new-side diff lines and recognizes authored executable source", () 
     isAuthoredExecutableSource("packages/production/lint.config.ts"),
     true,
   );
+  // The playground is a demonstration a person opens, governed by the contract
+  // graph and not by line coverage. Its own config goes with it.
   assert.equal(
     isAuthoredExecutableSource("packages/playground/lint.config.ts"),
-    true,
+    false,
   );
   assert.equal(
     isAuthoredExecutableSource("packages/playground/src/film-view.ts"),
-    true,
+    false,
   );
   assert.equal(isAuthoredExecutableSource("packages/cli/src/other.ts"), true);
   // The scaffold's examples are compiled by every generated project and run by
@@ -188,6 +190,16 @@ test("parses new-side diff lines and recognizes authored executable source", () 
   );
   assert.equal(
     isAuthoredExecutableSource("packages/playground/scripts/build-cat.ts"),
+    false,
+  );
+  // The boundary is one package, not a shape. Another package's own
+  // `lint.config.ts` and `scripts/` stay in.
+  assert.equal(
+    isAuthoredExecutableSource("packages/production/lint.config.ts"),
+    true,
+  );
+  assert.equal(
+    isAuthoredExecutableSource("packages/engine/scripts/generate.ts"),
     true,
   );
   assert.equal(

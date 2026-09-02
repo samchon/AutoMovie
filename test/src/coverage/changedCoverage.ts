@@ -132,6 +132,16 @@ const canonical = (value: string): string => slash(path.resolve(value));
  * carries all four, three of them below 100%) and they were unjudged, which is
  * the one shape where a gate can be edited freely while reporting green.
  *
+ * The playground is named because nothing in this repository executes it. It is
+ * a demonstration a person opens in a browser: `private`, depended on by no
+ * package, run by no generated child, and shipped to nobody. It is not
+ * ungoverned -- twenty-four of its hosts answer the contract graph, and that
+ * population is asserted -- but the obligation it answers is the graph's, not
+ * line coverage's. Meeting the second would take either a person with a browser
+ * or a suite that drives a demo, and the second makes the demo a product
+ * surface with its own test burden, which is the opposite of what a demo is
+ * for. Unmet, it reported thirty-four files no process had ever loaded.
+ *
  * The scaffold's examples are named for the opposite reason: they are the one
  * authored tree this repository compiles and never runs, on purpose. The
  * scaffold's own AGENTS.md settles what they are -- "src/examples is reading
@@ -148,7 +158,10 @@ const canonical = (value: string): string => slash(path.resolve(value));
  */
 export const isAuthoredExecutableSource = (relative: string): boolean => {
   const target = slash(relative);
-  if (target.startsWith("packages/template/scaffold/src/examples/"))
+  if (
+    target.startsWith("packages/template/scaffold/src/examples/") ||
+    target.startsWith("packages/playground/")
+  )
     return false;
   const typedRepositoryTool =
     target.startsWith("test/src/coverage/") ||
