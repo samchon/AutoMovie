@@ -985,6 +985,17 @@ export const autoMovieMaterializedLibraryEnvironments = (props: {
     // gate reports at its own address; here it is simply an empty population.
   }
   return (request) => {
+    // The index is keyed by the design owner's full `path#anchor` address, and
+    // a request carrying the document path alone matched nothing -- every time,
+    // for every owner, in silence. `building:report` passed the path and read
+    // no materialized building for as long as that stood, while reporting that
+    // it had looked. An empty answer is a real one for an owner that published
+    // nothing, so it cannot also mean "you addressed this wrongly"; that has to
+    // be said separately or it is never said at all.
+    if (request.owner.includes("#") === false)
+      throw new Error(
+        `Materialized library environments are addressed by the design owner's "path#anchor", not by "${request.owner}" alone.`,
+      );
     const ids = published.get(JSON.stringify([request.branch, request.owner]));
     if (ids === undefined) return [];
     const environments: IAutoMovieBuiltEnvironment[] = [];

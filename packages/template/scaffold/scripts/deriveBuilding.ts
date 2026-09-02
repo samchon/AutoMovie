@@ -162,9 +162,14 @@ const materialized = (): IAutoMovieBuiltEnvironment[] => {
     });
     for (const owner of authoring.designOwners)
       for (const unit of owner.units)
+        // The design owner's full address, which is how the published index
+        // is keyed and how every other caller of this reader addresses it.
+        // Passing the document path alone matched nothing, every time, so this
+        // report read no materialized building for as long as that stood while
+        // reporting that it had looked.
         for (const environment of resolve({
           branch: owner.branch,
-          owner: owner.path,
+          owner: `${owner.path}#${unit.anchor}`,
           anchor: unit.anchor,
         }))
           found.set(environment.id, environment);
