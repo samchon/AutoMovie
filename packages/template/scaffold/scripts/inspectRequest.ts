@@ -29,6 +29,15 @@ export interface IAutoMovieInspectRequest {
   width: number | undefined;
 }
 
+const INSPECT_OPTIONS = new Set([
+  "--shot",
+  "--subject",
+  "--azimuth-count",
+  "--elevations-deg",
+  "--height",
+  "--width",
+]);
+
 /**
  * The one value given for a flag, or undefined when it was not given.
  *
@@ -53,13 +62,17 @@ const one = (argv: readonly string[], name: string): string | undefined => {
   return found[0];
 };
 
-/** One whole number, because a fractional azimuth or pixel is not a thing. */
+/** One positive whole number, because a fractional or empty sample is not a view. */
 const count = (argv: readonly string[], name: string): number | undefined => {
   const value = one(argv, name);
   if (value === undefined) return undefined;
   const parsed = Number(value);
-  if (Number.isFinite(parsed) === false || Number.isInteger(parsed) === false)
-    throw new Error(`${name} must be one whole number.`);
+  if (
+    Number.isFinite(parsed) === false ||
+    Number.isInteger(parsed) === false ||
+    parsed <= 0
+  )
+    throw new Error(`${name} must be one positive whole number.`);
   return parsed;
 };
 
@@ -67,6 +80,14 @@ const count = (argv: readonly string[], name: string): number | undefined => {
 export const readAutoMovieInspectRequest = (
   argv: readonly string[],
 ): IAutoMovieInspectRequest => {
+  for (let index = 0; index < argv.length; index += 2) {
+    const name = argv[index]!;
+    if (INSPECT_OPTIONS.has(name) === false)
+      throw new Error(`Unknown inspect option ${JSON.stringify(name)}.`);
+    const value = argv[index + 1];
+    if (value === undefined || value.startsWith("--"))
+      throw new Error(`${name} requires one value.`);
+  }
   const shot = one(argv, "--shot");
   if (shot === undefined || shot.trim() === "")
     throw new Error("inspect requires --shot <compiled-shot-id>.");
@@ -82,7 +103,10 @@ export const readAutoMovieInspectRequest = (
     elevationsDeg: one(argv, "--elevations-deg")
       ?.split(",")
       .map((value) => {
-        const parsed = Number(value.trim());
+        const trimmed = value.trim();
+        const parsed = Number(trimmed);
+        if (trimmed === "")
+          throw new Error("--elevations-deg must be comma-separated numbers.");
         if (Number.isFinite(parsed) === false)
           throw new Error("--elevations-deg must be comma-separated numbers.");
         return parsed;

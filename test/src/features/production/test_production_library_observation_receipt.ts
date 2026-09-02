@@ -6,11 +6,11 @@ import type {
 import { TestValidator } from "@nestia/e2e";
 import path from "node:path";
 
+import { loadSourceModule } from "../internal/loadSourceModule";
 import { namedFacts } from "../internal/predicates";
-import { requireSourceModule } from "../internal/requireSourceModule";
 
 /** Load the receipt gate from source; the library review consumer calls it. */
-const unit = requireSourceModule<{
+const unit = loadSourceModule<{
   libraryObservationReceiptDiagnostics: (props: {
     target: string;
     path: string | null;
@@ -22,7 +22,6 @@ const unit = requireSourceModule<{
     __dirname,
     "../../../../packages/production/src/production/libraryObservationRequirements.ts",
   ),
-  ["libraryObservationReceiptDiagnostics"],
 );
 
 const OWNER = "library:main:docs/design/hall.md#hall";
@@ -49,9 +48,12 @@ const requirement = (props: {
 });
 
 const receipt = (props: {
+  direction?: { x: number; y: number; z: number };
   measurements?: Readonly<Record<string, number>>;
   observation: string;
+  position?: { x: number; y: number; z: number };
   space?: string | null;
+  target?: { x: number; y: number; z: number };
   verdict?: IAutoMovieLibraryReviewObservationReceipt["verdict"];
 }): IAutoMovieLibraryReviewObservationReceipt => ({
   observation: props.observation,
@@ -71,9 +73,9 @@ const receipt = (props: {
     props.space === undefined || props.space === null
       ? null
       : {
-          position: { x: 0, y: 1.6, z: 0 },
-          direction: { x: 0, y: 0, z: 1 },
-          target: { x: 0, y: 1.6, z: 4 },
+          position: props.position ?? { x: 0, y: 1.6, z: 0 },
+          direction: props.direction ?? { x: 0, y: 0, z: 1 },
+          target: props.target ?? { x: 0, y: 1.6, z: 4 },
           space: props.space,
         },
   measurements: props.measurements ?? {},
@@ -142,6 +144,16 @@ export const test_production_library_observation_receipt = (): void => {
     required: [interior],
     receipts: [receipt({ observation: interior.id, space: "hall/annex" })],
   });
+  const wrongPose = run({
+    required: [interior],
+    receipts: [
+      receipt({
+        observation: interior.id,
+        position: { x: 20, y: 1.6, z: 0 },
+        space: "hall/main",
+      }),
+    ],
+  });
 
   TestValidator.equals(
     "a receipt that never says where it stood is refused by name",
@@ -170,6 +182,12 @@ export const test_production_library_observation_receipt = (): void => {
           wrongRoom[0]!.message.includes("hall/annex") &&
           wrongRoom[0]!.message.includes("hall/main"),
       ],
+      [
+        "aPoseElsewhereInTheNamedRoomIsRefused",
+        () =>
+          wrongPose.length === 1 &&
+          wrongPose[0]!.message.includes("topology-derived camera pose"),
+      ],
     ]),
     namedFacts([
       ["one refusal, not a count", () => true],
@@ -177,6 +195,7 @@ export const test_production_library_observation_receipt = (): void => {
       ["the address is the observation inside its owner", () => true],
       ["a receipt from another room is refused too", () => true],
       ["and the refusal names both spaces", () => true],
+      ["aPoseElsewhereInTheNamedRoomIsRefused", () => true],
     ]),
   );
 
@@ -195,6 +214,10 @@ export const test_production_library_observation_receipt = (): void => {
         required: [facade],
         receipts: [receipt({ observation: facade.id })],
       }).length,
+      exteriorWithAuthoredEye: run({
+        required: [facade],
+        receipts: [receipt({ observation: facade.id, space: "hall/main" })],
+      }).length,
       // The closure gate owns an observation this owner never required; this
       // one passes over it rather than refusing the same thing twice.
       unrequired: run({
@@ -204,7 +227,7 @@ export const test_production_library_observation_receipt = (): void => {
         ],
       }).length,
     },
-    { proved: 0, exterior: 0, unrequired: 0 },
+    { proved: 0, exterior: 0, exteriorWithAuthoredEye: 1, unrequired: 0 },
   );
 
   const unmeasured = run({
@@ -241,7 +264,23 @@ export const test_production_library_observation_receipt = (): void => {
           }),
         ],
       }).length,
+      invalidMeasurementName: run({
+        required: [threshold],
+        receipts: [
+          receipt({
+            measurements: { " ": 0.92 },
+            observation: threshold.id,
+            space: "hall/main",
+          }),
+        ],
+      }).length,
     },
-    { refused: true, named: true, measured: 0, notRun: 0 },
+    {
+      refused: true,
+      named: true,
+      measured: 0,
+      notRun: 0,
+      invalidMeasurementName: 1,
+    },
   );
 };

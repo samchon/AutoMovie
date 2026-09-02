@@ -4,7 +4,6 @@ import {
 } from "@automovie/evidence";
 import type {
   AutoMovieLibraryReviewEvidence,
-  IAutoMovieLibraryObservationPose,
   IAutoMovieLibraryReviewObservationPlan,
   IAutoMovieLibraryReviewOwnerIdentity,
   IAutoMovieLibraryReviewPlanFile,
@@ -23,6 +22,11 @@ import { randomUUID } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 
+import {
+  readAutoMovieObservationMeasurements,
+  readAutoMovieObservationPose,
+} from "./libraryReviewRequest";
+
 type Verdict = "failed" | "not-run" | "passed" | "unsupported";
 
 const values = (argv: readonly string[], name: string): string[] => {
@@ -32,95 +36,6 @@ const values = (argv: readonly string[], name: string): string[] => {
       output.push(argv[index + 1]!);
       index += 1;
     }
-  return output;
-};
-
-/**
- * Read the pose the instrument actually used, or none for an exterior view.
- *
- * Parsed rather than defaulted. An interior receipt that states no pose is
- * refused at review, so an author who meant to record one and mistyped the
- * value should learn it here, at the moment the observation is offered, rather
- * than from a review gate reading a plan file that quietly says nothing.
- *
- * Each vector is three finite numbers and the space is a nonblank name or
- * null. A coordinate that is not finite would travel into the plan file and
- * come back out as a pose nobody can compare against a room volume.
- */
-const readObservationPose = (
-  value: string | undefined,
-): IAutoMovieLibraryObservationPose | null => {
-  if (value === undefined) return null;
-  const shape =
-    "--pose must be one JSON object stating position, direction, target and space.";
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(value);
-  } catch {
-    throw new Error(shape);
-  }
-  if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed))
-    throw new Error(shape);
-  const record = parsed as Record<string, unknown>;
-  const vector = (name: string): { x: number; y: number; z: number } => {
-    const candidate = record[name];
-    if (
-      typeof candidate !== "object" ||
-      candidate === null ||
-      Array.isArray(candidate)
-    )
-      throw new Error(`--pose ${name} must be one { x, y, z } object.`);
-    const axes = candidate as Record<string, unknown>;
-    const read = (axis: "x" | "y" | "z"): number => {
-      const component = axes[axis];
-      if (typeof component !== "number" || Number.isFinite(component) === false)
-        throw new Error(`--pose ${name}.${axis} must be one finite number.`);
-      return component;
-    };
-    return { x: read("x"), y: read("y"), z: read("z") };
-  };
-  const space = record.space;
-  if (
-    space !== null &&
-    (typeof space !== "string" || space.trim() !== space || space === "")
-  )
-    throw new Error("--pose space must be one nonblank space name or null.");
-  return {
-    position: vector("position"),
-    direction: vector("direction"),
-    target: vector("target"),
-    space,
-  };
-};
-
-/**
- * Read what the observation measured, keyed by measurement name.
- *
- * Empty is a legitimate answer for an observation whose whole result is the
- * picture, so an omitted flag records an empty set rather than refusing. What
- * is refused is a reading that is not a number: a measurement offered as text
- * cannot be compared to a model, and storing it would put a claim in the plan
- * file that no later reader can check.
- */
-const readObservationMeasurements = (
-  value: string | undefined,
-): Record<string, number> => {
-  if (value === undefined) return {};
-  const shape = "--measurements must be one JSON object of named numbers.";
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(value);
-  } catch {
-    throw new Error(shape);
-  }
-  if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed))
-    throw new Error(shape);
-  const output: Record<string, number> = {};
-  for (const [name, reading] of Object.entries(parsed)) {
-    if (typeof reading !== "number" || Number.isFinite(reading) === false)
-      throw new Error(`--measurements ${name} must be one finite number.`);
-    output[name] = reading;
-  }
   return output;
 };
 
@@ -475,8 +390,8 @@ export const runLibraryReviewCommand = (props: {
   // defaulted, so a malformed value is refused by name at the moment it is
   // offered instead of reaching the plan file as something the review gate
   // then has to interpret.
-  const pose = readObservationPose(one(props.argv, "--pose", false));
-  const measurements = readObservationMeasurements(
+  const pose = readAutoMovieObservationPose(one(props.argv, "--pose", false));
+  const measurements = readAutoMovieObservationMeasurements(
     one(props.argv, "--measurements", false),
   );
   const owner = population.owners.find((entry) => entry.owner === requested);

@@ -422,17 +422,29 @@ const resolvePopulation = (
         id: observation.id,
         evidence: observation.evidence,
       }));
-      const required = autoMovieLibraryObservationRequirements(
+      const environments =
         props.environments?.({
           branch: owner.branch,
           owner: address,
           anchor: unit.anchor,
-        }) ?? [],
+        }) ?? [];
+      const contexts =
         props.contexts?.({
           branch: owner.branch,
           owner: address,
           anchor: unit.anchor,
-        }) ?? [],
+        }) ?? [];
+      if (owner.branch === "maps" && contexts.length === 0)
+        output.diagnostics.push(
+          missing({
+            target: `library:${owner.branch}:${address}`,
+            path: relative,
+            message: `Library map owner "${address}" published no environment context, so the compiler cannot derive any map observation from the world this owner adopted. Return the adopted context from this owner's build result before review.`,
+          }),
+        );
+      const required = autoMovieLibraryObservationRequirements(
+        environments,
+        contexts,
       );
       output.diagnostics.push(
         ...libraryObservationClosureDiagnostics({

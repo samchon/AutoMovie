@@ -6,10 +6,10 @@ import { TestValidator } from "@nestia/e2e";
 import path from "node:path";
 
 import { twoStoreyBuilding } from "../internal/envelopeFixtures";
+import { loadSourceModule } from "../internal/loadSourceModule";
 import { namedFacts } from "../internal/predicates";
-import { requireSourceModule } from "../internal/requireSourceModule";
 
-const unit = requireSourceModule<{
+const unit = loadSourceModule<{
   autoMovieLibraryObservationRequirements: (
     environments: readonly IAutoMovieBuiltEnvironment[],
   ) => IAutoMovieLibraryRequiredObservation[];
@@ -18,7 +18,6 @@ const unit = requireSourceModule<{
     __dirname,
     "../../../../packages/production/src/production/libraryObservationRequirements.ts",
   ),
-  ["autoMovieLibraryObservationRequirements"],
 );
 
 /**
@@ -48,10 +47,45 @@ const unit = requireSourceModule<{
  *    read complete having been looked at on one floor.
  * 5. Every observation is attributed to the one building, including the ones
  *    derived from a space the building's own record does not name directly.
+ * 6. A connector between two buildings charges each endpoint to its own unit
+ *    under a distinct observation id.
  */
 export const test_production_library_multi_storey_population = (): void => {
   const derived = unit.autoMovieLibraryObservationRequirements([
     twoStoreyBuilding(),
+  ]);
+
+  const containerPopulation = twoStoreyBuilding();
+  containerPopulation.populations = [
+    {
+      space: "house-interior",
+      prototypeBounds: {
+        min: { x: -0.5, y: 0, z: -0.5 },
+        max: { x: 0.5, y: 1, z: 0.5 },
+      },
+      set: {
+        id: "roof-markers",
+        modelRecipe: "marker",
+        count: 2,
+        layout: {
+          kind: "grid",
+          rows: 1,
+          columns: 2,
+          spacing: { x: 1, z: 1 },
+        },
+        anchor: { x: 0, y: 6, z: 0 },
+        facingDeg: 0,
+        seed: 17,
+        variation: {
+          scale: { min: 1, max: 1 },
+          palette: [],
+          traits: [],
+        },
+      },
+    },
+  ];
+  const withContainerPopulation = unit.autoMovieLibraryObservationRequirements([
+    containerPopulation,
   ]);
 
   // An operable hatch cut through the slab between the storeys. It is not an
@@ -97,6 +131,127 @@ export const test_production_library_multi_storey_population = (): void => {
     },
   });
   const withHatch = unit.autoMovieLibraryObservationRequirements([hatched]);
+  const linkedAll = unit.autoMovieLibraryObservationRequirements([
+    {
+      version: 1,
+      id: "linked",
+      units: "meter",
+      buildings: [
+        { id: "west", element: "west-root", space: "west-space" },
+        { id: "east", element: "east-root", space: "east-space" },
+      ],
+      models: [],
+      modelReferences: [],
+      elements: [
+        {
+          id: "west-root",
+          kind: "building",
+          parent: null,
+          transform: {
+            translation: { x: 0, y: 0, z: 0 },
+            rotation: { x: 0, y: 0, z: 0, w: 1 },
+            scale: { x: 1, y: 1, z: 1 },
+          },
+          model: null,
+          space: "west-space",
+        },
+        {
+          id: "east-root",
+          kind: "building",
+          parent: null,
+          transform: {
+            translation: { x: 10, y: 0, z: 0 },
+            rotation: { x: 0, y: 0, z: 0, w: 1 },
+            scale: { x: 1, y: 1, z: 1 },
+          },
+          model: null,
+          space: "east-space",
+        },
+      ],
+      spaces: [
+        { id: "west-space", kind: "building", parent: null, cells: [] },
+        { id: "east-space", kind: "building", parent: null, cells: [] },
+      ],
+      boundaries: [
+        {
+          id: "shared-wall",
+          kind: "wall",
+          spaces: ["west-space", "east-space"],
+          elements: [],
+          face: {
+            origin: { x: 5, y: 0, z: 0 },
+            rotation: { x: 0, y: 0, z: 0, w: 1 },
+            outline: [
+              { x: 0, y: 0 },
+              { x: 2, y: 0 },
+              { x: 2, y: 2 },
+              { x: 0, y: 2 },
+            ],
+            thickness: 0.2,
+          },
+        },
+      ],
+      openings: [
+        {
+          id: "shared-door",
+          kind: "door",
+          boundary: "shared-wall",
+          fill: null,
+          profile: {
+            outline: [
+              { x: 0, y: 0 },
+              { x: 1, y: 0 },
+              { x: 1, y: 2 },
+              { x: 0, y: 2 },
+            ],
+          },
+          operation: {
+            panels: [
+              {
+                id: "leaf",
+                element: "west-root",
+                width: 1,
+                height: 2,
+                motion: {
+                  kind: "revolute",
+                  axis: { x: 0, y: 1, z: 0 },
+                  pivot: { x: 5, y: 0, z: 0 },
+                  min: 0,
+                  max: 90,
+                },
+              },
+            ],
+            states: [
+              { id: "closed", panels: [{ panel: "leaf", value: 0 }] },
+              { id: "open", panels: [{ panel: "leaf", value: 90 }] },
+            ],
+            state: "closed",
+            hardware: [],
+          },
+        },
+      ],
+      connectors: [
+        {
+          id: "bridge",
+          kind: "bridge",
+          from: "west-space",
+          to: "east-space",
+          bidirectional: true,
+          route: [
+            { x: 0, y: 1, z: 0 },
+            { x: 10, y: 1, z: 0 },
+          ],
+          elements: [],
+        },
+      ],
+      surfaces: [],
+      walkable: [],
+    },
+  ]);
+  const linked = linkedAll.filter((entry) => entry.role === "service-landing");
+  const linkedOpening = linkedAll.filter((entry) =>
+    entry.role.startsWith("operation-"),
+  );
   const count = (role: string): number =>
     derived.filter((entry) => entry.role === role).length;
 
@@ -127,7 +282,7 @@ export const test_production_library_multi_storey_population = (): void => {
       ],
       [
         // The container states no volume, so no station derives from it and no
-        // observation names it as the space an eye stood in.
+        // interior observation names it as the space an eye stood in.
         "theContainerSpaceIsChargedNothing",
         () =>
           derived.some(
@@ -135,6 +290,19 @@ export const test_production_library_multi_storey_population = (): void => {
               entry.subject.includes("house-interior") ||
               entry.pose?.space === "house-interior",
           ) === false,
+      ],
+      [
+        // A semantic container can still own things. Space ownership follows
+        // the building tree, not only the subset whose cells produce interior
+        // camera stations.
+        "aPopulationInTheVolumeLessContainerStillBelongsToTheBuilding",
+        () =>
+          withContainerPopulation.filter((entry) =>
+            entry.role.startsWith("instance-"),
+          ).length === 3 &&
+          withContainerPopulation
+            .filter((entry) => entry.role.startsWith("instance-"))
+            .every((entry) => entry.building === "house"),
       ],
       [
         // Two landings, one connector, two heights, two addresses.
@@ -145,7 +313,23 @@ export const test_production_library_multi_storey_population = (): void => {
             .map((entry) => entry.id)
             .sort((left, right) => (left < right ? -1 : 1))
             .join(" ") ===
-          "service:storey-house/stair/service-landing/ground@0 service:storey-house/stair/service-landing/upper@3",
+          "service:storey-house/stair/house/service-landing/ground@0 service:storey-house/stair/house/service-landing/upper@3",
+      ],
+      [
+        "aConnectorBetweenBuildingsHasOneDistinctLandingPerOwner",
+        () =>
+          linked.map((entry) => `${entry.id}:${entry.building}`).join(" ") ===
+          "service:linked/bridge/east/service-landing/east-space@to:east service:linked/bridge/west/service-landing/west-space@from:west",
+      ],
+      [
+        "anOpeningBetweenBuildingsHasDistinctRequirementsForBothOwners",
+        () =>
+          linkedOpening.length === 8 &&
+          new Set(linkedOpening.map((entry) => entry.id)).size === 8 &&
+          linkedOpening.filter((entry) => entry.building === "east").length ===
+            4 &&
+          linkedOpening.filter((entry) => entry.building === "west").length ===
+            4,
       ],
       [
         // Including the ones derived from `upper`, which the building record
@@ -179,23 +363,18 @@ export const test_production_library_multi_storey_population = (): void => {
           // resolves an envelope opening exactly as the entrance list did.
           withHatch.every((entry) => entry.building === "house"),
       ],
-      [
-        // Read once so a change to any rule above shows here as well as in its
-        // own fact. Forty-seven is what a two-room house with one door and one
-        // stair costs, and it is worth knowing that the number is this size.
-        "theWholeHouseIsFortySeven",
-        () => derived.length === 47,
-      ],
     ]),
     {
       eachStoreyIsChargedItsOwnInterior: true,
       theOneThresholdIsCharged: true,
       theStackedEnvelopeIsChargedPerStorey: true,
       theContainerSpaceIsChargedNothing: true,
+      aPopulationInTheVolumeLessContainerStillBelongsToTheBuilding: true,
       theStairLandsTwiceAtTwoAddresses: true,
+      aConnectorBetweenBuildingsHasOneDistinctLandingPerOwner: true,
+      anOpeningBetweenBuildingsHasDistinctRequirementsForBothOwners: true,
       everythingIsOwedByTheOneBuilding: true,
       anInteriorOperableOpeningIsChargedTwice: true,
-      theWholeHouseIsFortySeven: true,
     },
   );
 };

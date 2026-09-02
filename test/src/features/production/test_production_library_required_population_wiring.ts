@@ -2,6 +2,7 @@ import type { IAutoMovieProductionEvidence } from "@automovie/evidence";
 import type {
   AutoMovieContentDigest,
   IAutoMovieBuiltEnvironment,
+  IAutoMovieEnvironmentContext,
   IAutoMovieLibraryReviewPopulation,
   IAutoMovieLibraryReviewProjectReader,
 } from "@automovie/interface";
@@ -9,10 +10,10 @@ import { TestValidator } from "@nestia/e2e";
 import path from "node:path";
 
 import { rectangularBuilding } from "../internal/envelopeFixtures";
+import { loadSourceModule } from "../internal/loadSourceModule";
 import { namedFacts } from "../internal/predicates";
-import { requireSourceModule } from "../internal/requireSourceModule";
 
-const consumer = requireSourceModule<{
+const consumer = loadSourceModule<{
   readAutoMovieLibraryReviewRequirements: (props: {
     authoring: IAutoMovieProductionEvidence;
     project: IAutoMovieLibraryReviewProjectReader;
@@ -22,13 +23,17 @@ const consumer = requireSourceModule<{
       owner: string;
       anchor: string;
     }) => readonly IAutoMovieBuiltEnvironment[];
+    contexts?: (props: {
+      branch: string;
+      owner: string;
+      anchor: string;
+    }) => readonly IAutoMovieEnvironmentContext[];
   }) => IAutoMovieLibraryReviewPopulation;
 }>(
   path.resolve(
     __dirname,
     "../../../../packages/production/src/production/libraryReviewEvidenceConsumer.ts",
   ),
-  ["readAutoMovieLibraryReviewRequirements"],
 );
 
 const ROOT = "C:/automovie-library";
@@ -113,6 +118,11 @@ export const test_production_library_required_population_wiring = (): void => {
   const withoutBuilding = consumer.readAutoMovieLibraryReviewRequirements({
     authoring: authoring(),
     project: project(),
+    compileFingerprint: COMPILE,
+  });
+  const mapWithoutContext = consumer.readAutoMovieLibraryReviewRequirements({
+    authoring: mapAuthoring(),
+    project: mapProject(),
     compileFingerprint: COMPILE,
   });
 
@@ -232,6 +242,30 @@ export const test_production_library_required_population_wiring = (): void => {
       "and the four-part identity is the same either way": true,
     },
   );
+
+  TestValidator.equals(
+    "a map owner cannot complete against an empty derived population",
+    namedFacts([
+      [
+        "theOwnerOwesNoInventedObservation",
+        () => mapWithoutContext.required.length === 0,
+      ],
+      [
+        "theMissingAdoptedWorldIsRefused",
+        () =>
+          mapWithoutContext.diagnostics.some(
+            (diagnostic) =>
+              diagnostic.target ===
+                "library:maps:docs/maps/site.md#site-delivery" &&
+              diagnostic.message.includes("published no environment context"),
+          ),
+      ],
+    ]),
+    {
+      theOwnerOwesNoInventedObservation: true,
+      theMissingAdoptedWorldIsRefused: true,
+    },
+  );
 };
 
 /** One reviewed library carrying a single spaces owner. */
@@ -268,6 +302,70 @@ const authoring = (): IAutoMovieProductionEvidence => {
     contracts: [],
   } as unknown as IAutoMovieProductionEvidence;
 };
+
+/** One reviewed map owner whose source has not yet published its world. */
+const mapAuthoring = (): IAutoMovieProductionEvidence => {
+  const sourceBinding = {
+    branch: "mapSources",
+    stage: "review",
+    enforced: true,
+    root: "src",
+    files: ["src/maps/**/*.ts"],
+    symbols: ["maps"],
+    paths: ["src/maps/site.ts"],
+  };
+  return {
+    root: ROOT,
+    packageName: "library-test",
+    description: "library map test",
+    configuration: {},
+    manifest: { kind: "library" },
+    designBranches: [{ branch: "maps", designStage: "review", sourceBinding }],
+    designOwners: [
+      {
+        branch: "maps",
+        path: "docs/maps/site.md",
+        title: "site design",
+        units: [
+          {
+            anchor: "site-delivery",
+            title: "site delivery",
+            digest: "b".repeat(64),
+          },
+        ],
+        sourceBinding,
+      },
+    ],
+    contracts: [],
+  } as unknown as IAutoMovieProductionEvidence;
+};
+
+/** The map owner's source and adjacent empty observation plan. */
+const mapProject = (): IAutoMovieLibraryReviewProjectReader => ({
+  root: ROOT,
+  readProseDocument: (relative) =>
+    relative === "docs/maps/site.review.json"
+      ? JSON.stringify({
+          version: 1,
+          units: [
+            {
+              anchor: "site-delivery",
+              sources: ["src/maps/site.ts"],
+              observations: [],
+              receipts: [],
+            },
+          ],
+        })
+      : null,
+  readRenderFile: (relative) => {
+    throw new Error(`missing render ${relative}`);
+  },
+  readSource: (relative) => {
+    if (relative !== "src/maps/site.ts")
+      throw new Error(`missing source ${relative}`);
+    return Buffer.from("export const site = true;\n", "utf8");
+  },
+});
 
 /** A reader holding that owner's one source file and one observation plan. */
 const project = (

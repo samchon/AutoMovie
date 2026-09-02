@@ -9,13 +9,13 @@ import {
   lFootprintBuilding,
   rectangularBuilding,
 } from "../internal/envelopeFixtures";
+import { loadSourceModule } from "../internal/loadSourceModule";
 import { namedFacts, vclose } from "../internal/predicates";
-import { requireSourceModule } from "../internal/requireSourceModule";
 
 /**
  * Load the derivation from source; the library review gate is its consumer.
  */
-const unit = requireSourceModule<{
+const unit = loadSourceModule<{
   autoMovieLibraryObservationRequirements: (
     environments: readonly IAutoMovieBuiltEnvironment[],
   ) => IAutoMovieLibraryRequiredObservation[];
@@ -24,7 +24,6 @@ const unit = requireSourceModule<{
     __dirname,
     "../../../../packages/production/src/production/libraryObservationRequirements.ts",
   ),
-  ["autoMovieLibraryObservationRequirements"],
 );
 const derive = unit.autoMovieLibraryObservationRequirements;
 
@@ -398,27 +397,27 @@ export const test_production_library_observation_population = (): void => {
     {
       derived: [
         [
-          "operation:hall-house/door-main/operation-contact/leaf",
+          "operation:hall-house/door-main/house/operation-contact/leaf",
           "operation-contact",
         ],
         [
-          "operation:hall-house/door-main/operation-state/ajar",
+          "operation:hall-house/door-main/house/operation-state/ajar",
           "operation-state",
         ],
         [
-          "operation:hall-house/door-main/operation-state/closed",
+          "operation:hall-house/door-main/house/operation-state/closed",
           "operation-state",
         ],
         [
-          "operation:hall-house/door-main/operation-state/open",
+          "operation:hall-house/door-main/house/operation-state/open",
           "operation-state",
         ],
         [
-          "operation:hall-house/door-main/operation-transition/ajar->open",
+          "operation:hall-house/door-main/house/operation-transition/ajar->open",
           "operation-transition",
         ],
         [
-          "operation:hall-house/door-main/operation-transition/closed->ajar",
+          "operation:hall-house/door-main/house/operation-transition/closed->ajar",
           "operation-transition",
         ],
       ],
@@ -611,50 +610,50 @@ export const test_production_library_observation_population = (): void => {
     {
       derived: [
         [
-          "service:hall-house/lift/service-carriage/car",
+          "service:hall-house/lift/house/service-carriage/car",
           "service-carriage",
           "house",
         ],
         [
-          "service:hall-house/lift/service-landing/hall@0",
+          "service:hall-house/lift/house/service-landing/hall@0",
           "service-landing",
           "house",
         ],
         [
-          "service:hall-house/lift/service-landing/hall@1",
+          "service:hall-house/lift/house/service-landing/hall@1",
           "service-landing",
           "house",
         ],
         [
-          "service:hall-house/lift/service-state/lower",
+          "service:hall-house/lift/house/service-state/lower",
           "service-state",
           "house",
         ],
         [
-          "service:hall-house/lift/service-state/rising",
+          "service:hall-house/lift/house/service-state/rising",
           "service-state",
           "house",
         ],
         [
-          "service:hall-house/lift/service-state/upper",
+          "service:hall-house/lift/house/service-state/upper",
           "service-state",
           "house",
         ],
         [
-          "service:hall-house/lift/service-transition/lower->rising",
+          "service:hall-house/lift/house/service-transition/lower->rising",
           "service-transition",
           "house",
         ],
         [
-          "service:hall-house/lift/service-transition/rising->upper",
+          "service:hall-house/lift/house/service-transition/rising->upper",
           "service-transition",
           "house",
         ],
       ],
       envelope: 8,
       stair: [
-        "service:hall-house/stair/service-landing/hall@from",
-        "service:hall-house/stair/service-landing/hall@to",
+        "service:hall-house/stair/house/service-landing/hall@from",
+        "service:hall-house/stair/house/service-landing/hall@to",
       ],
       detached: 0,
     },

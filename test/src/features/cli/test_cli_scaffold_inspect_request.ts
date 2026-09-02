@@ -1,8 +1,8 @@
 import { TestValidator } from "@nestia/e2e";
 import path from "node:path";
 
+import { loadSourceModule } from "../internal/loadSourceModule";
 import { namedFacts } from "../internal/predicates";
-import { requireSourceModule } from "../internal/requireSourceModule";
 
 interface IInspectRequest {
   shot: string;
@@ -13,14 +13,13 @@ interface IInspectRequest {
   width: number | undefined;
 }
 
-const unit = requireSourceModule<{
+const unit = loadSourceModule<{
   readAutoMovieInspectRequest: (argv: readonly string[]) => IInspectRequest;
 }>(
   path.resolve(
     __dirname,
     "../../../../packages/template/scaffold/scripts/inspectRequest.ts",
   ),
-  ["readAutoMovieInspectRequest"],
 );
 
 const read = (...argv: readonly string[]): IInspectRequest =>
@@ -57,8 +56,9 @@ const MINIMUM = ["--shot", "opening", "--subject", "space:hall-house/hall"];
  *    answers to one question is a mistake and picking either hides it.
  * 5. A flag whose value is another flag is refused, so `--shot --subject x`
  *    does not inspect a shot named `--subject`.
- * 6. A fractional or non-numeric count is refused, and so is an elevation list
- *    with an entry that is not a number.
+ * 6. A non-positive, fractional, or non-numeric count is refused, and so is an
+ *    elevation list with a blank or non-numeric entry.
+ * 7. An unknown option is refused rather than silently discarded.
  */
 export const test_cli_scaffold_inspect_request = (): void => {
   const minimal = read(...MINIMUM);
@@ -133,24 +133,40 @@ export const test_cli_scaffold_inspect_request = (): void => {
           ) && refuses([...MINIMUM, "--width"], "--width requires one value"),
       ],
       [
-        "aCountThatIsNotAWholeNumberIsRefused",
+        "aCountThatIsNotAPositiveWholeNumberIsRefused",
         () =>
           refuses(
+            [...MINIMUM, "--azimuth-count", "0"],
+            "--azimuth-count must be one positive whole number",
+          ) &&
+          refuses(
+            [...MINIMUM, "--width", "-1"],
+            "--width must be one positive whole number",
+          ) &&
+          refuses(
             [...MINIMUM, "--azimuth-count", "12.5"],
-            "--azimuth-count must be one whole number",
+            "--azimuth-count must be one positive whole number",
           ) &&
           refuses(
             [...MINIMUM, "--height", "tall"],
-            "--height must be one whole number",
+            "--height must be one positive whole number",
           ),
       ],
       [
         "anElevationThatIsNotANumberIsRefused",
         () =>
           refuses(
+            [...MINIMUM, "--elevations-deg", "0,"],
+            "--elevations-deg must be comma-separated numbers",
+          ) &&
+          refuses(
             [...MINIMUM, "--elevations-deg", "0,up"],
             "--elevations-deg must be comma-separated numbers",
           ),
+      ],
+      [
+        "anUnknownOptionIsRefused",
+        () => refuses([...MINIMUM, "--widht", "800"], "Unknown inspect option"),
       ],
     ]),
     {
@@ -160,8 +176,9 @@ export const test_cli_scaffold_inspect_request = (): void => {
       aBlankRequiredFlagIsRefusedByName: true,
       aRepeatedFlagIsRefused: true,
       aFlagWhoseValueIsAnotherFlagIsRefused: true,
-      aCountThatIsNotAWholeNumberIsRefused: true,
+      aCountThatIsNotAPositiveWholeNumberIsRefused: true,
       anElevationThatIsNotANumberIsRefused: true,
+      anUnknownOptionIsRefused: true,
     },
   );
 };

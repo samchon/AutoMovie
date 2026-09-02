@@ -1,5 +1,6 @@
 import {
   builtEnvironmentBuildingCensus,
+  builtEnvironmentDescendantSpaces,
   builtSpaceObservationStations,
 } from "@automovie/engine";
 import type {
@@ -32,10 +33,10 @@ const instanceSubject = (environment: string, set: string): string =>
 /**
  * Which building unit each logical space belongs to.
  *
- * Three derivations below attribute their subject through this map -- an
- * instance set to the building whose space holds it, a material to the building
- * whose element wears it, a connector to the building it starts in -- and each
- * built its own copy. Three copies of one rule is three chances for them to
+ * Four derivations below attribute their subject through this map: an instance
+ * set to the building whose space holds it, an opening through its boundary, a
+ * material through the element that wears it, and a connector through its
+ * landings. Separate copies of one rule are separate chances for them to
  * disagree about who owns a space, and an owner is what a review is counted
  * per, so the disagreement would be silent and would land in the denominator.
  */
@@ -43,8 +44,12 @@ const spaceOwners = (
   environment: IAutoMovieBuiltEnvironment,
 ): ReadonlyMap<string, string> => {
   const owners = new Map<string, string>();
-  for (const unit of builtEnvironmentBuildingCensus(environment))
-    for (const space of unit.spaces) owners.set(space, unit.building);
+  for (const building of environment.buildings)
+    for (const space of builtEnvironmentDescendantSpaces(
+      environment,
+      building.space,
+    ))
+      owners.set(space, building.id);
   return owners;
 };
 
@@ -62,6 +67,11 @@ const materialSubject = (
 /** Stable compiled subject address of one logical space. */
 const spaceSubject = (environment: string, space: string): string =>
   `space:${environment}/${space}`;
+
+const sameVector = (
+  left: { x: number; y: number; z: number },
+  right: { x: number; y: number; z: number },
+): boolean => left.x === right.x && left.y === right.y && left.z === right.z;
 
 /** Which observation role one derived interior station answers. */
 const stationRole = (
@@ -221,8 +231,8 @@ export const autoMovieLibraryObservationRequirements = (
   // openings, so attributing by entrance charged the front door and silently
   // charged nothing for every interior door, hatch and shutter in the building
   // -- which in a house is most of them. A boundary names the space it encloses
-  // or the two it separates, and the building that owns that space is the one
-  // that owes the view.
+  // or the two it separates, and every building that owns one of those spaces
+  // owes its own view.
   for (const environment of environments) {
     const buildingOfSpace = spaceOwners(environment);
     const boundariesById = new Map(
@@ -231,38 +241,45 @@ export const autoMovieLibraryObservationRequirements = (
     for (const opening of environment.openings) {
       const operation = opening.operation;
       if (operation === undefined) continue;
-      const building = (boundariesById.get(opening.boundary)?.spaces ?? [])
-        .map((space) => buildingOfSpace.get(space))
-        .find((owner) => owner !== undefined);
+      const buildings = [
+        ...new Set(
+          (boundariesById.get(opening.boundary)?.spaces ?? [])
+            .map((space) => buildingOfSpace.get(space))
+            .filter((owner): owner is string => owner !== undefined),
+        ),
+      ];
       // A boundary bounding no building's space -- a site gate, a freestanding
       // screen -- belongs to the environment rather than to a unit, and
       // attaching it to an arbitrary one would make that owner answer for a
       // thing it does not contain.
-      if (building === undefined) continue;
+      if (buildings.length === 0) continue;
       const subject = operationSubject(environment.id, opening.id);
-      const push = (
-        role: AutoMovieLibraryObservationRole,
-        origin: string,
-      ): void => {
-        required.push({
-          id: `${subject}/${role}/${origin}`,
-          role,
-          subject,
-          building,
-          origin,
-          // An operation is framed from the opening's own extent, the way an
-          // exterior building view is framed from the envelope. What is fixed
-          // here is which travel must be opened, not where the eye stands.
-          pose: null,
-        });
-      };
-      for (const state of operation.states) push("operation-state", state.id);
-      for (let index = 1; index < operation.states.length; index += 1)
-        push(
-          "operation-transition",
-          `${operation.states[index - 1]!.id}->${operation.states[index]!.id}`,
-        );
-      for (const panel of operation.panels) push("operation-contact", panel.id);
+      for (const building of buildings) {
+        const push = (
+          role: AutoMovieLibraryObservationRole,
+          origin: string,
+        ): void => {
+          required.push({
+            id: `${subject}/${building}/${role}/${origin}`,
+            role,
+            subject,
+            building,
+            origin,
+            // An operation is framed from the opening's own extent, the way an
+            // exterior building view is framed from the envelope. What is fixed
+            // here is which travel must be opened, not where the eye stands.
+            pose: null,
+          });
+        };
+        for (const state of operation.states) push("operation-state", state.id);
+        for (let index = 1; index < operation.states.length; index += 1)
+          push(
+            "operation-transition",
+            `${operation.states[index - 1]!.id}->${operation.states[index]!.id}`,
+          );
+        for (const panel of operation.panels)
+          push("operation-contact", panel.id);
+      }
     }
   }
   // A material is reached the way anything else in a building is reached: an
@@ -296,8 +313,8 @@ export const autoMovieLibraryObservationRequirements = (
         // One material worn by many elements of one building is one surface to
         // look at, not one per element. Charging it per placement would inflate
         // the denominator with repeats of the same answer.
-        if (seen.has(`${building} ${subject}`)) continue;
-        seen.add(`${building} ${subject}`);
+        if (seen.has(`${building}\0${subject}`)) continue;
+        seen.add(`${building}\0${subject}`);
         const push = (
           role: AutoMovieLibraryObservationRole,
           origin: string,
@@ -347,6 +364,7 @@ export const autoMovieLibraryObservationRequirements = (
   // skipped, exactly as a population standing nowhere already was.
   for (const environment of environments) {
     const census = builtEnvironmentBuildingCensus(environment);
+    const buildingOfSpace = spaceOwners(environment);
     // Read connector-first so every building that lists it is reached without
     // a lookup that could miss. A census unit lists ids drawn from this same
     // array, so a lookup by id could never fail here, and a guard for that
@@ -361,7 +379,7 @@ export const autoMovieLibraryObservationRequirements = (
           origin: string,
         ): void => {
           required.push({
-            id: `${subject}/${role}/${origin}`,
+            id: `${subject}/${unit.building}/${role}/${origin}`,
             role,
             subject,
             building: unit.building,
@@ -380,16 +398,23 @@ export const autoMovieLibraryObservationRequirements = (
         // same space and the space alone would name one observation for all
         // three -- the two upper landings would vanish into the lower one and
         // the review would read complete having looked at one floor.
-        const landings =
+        const landings = (
           connector.landings === undefined || connector.landings.length === 0
             ? // With no landings declared there is nothing to tell one end from
               // the other by, and a connector may join a space to itself, so
               // the end is named by which end it is.
-              [`${connector.from}@from`, `${connector.to}@to`]
-            : connector.landings.map(
-                (landing) => `${landing.space}@${landing.at}`,
-              );
-        for (const landing of landings) push("service-landing", landing);
+              [
+                { space: connector.from, origin: `${connector.from}@from` },
+                { space: connector.to, origin: `${connector.to}@to` },
+              ]
+            : connector.landings.map((landing) => ({
+                space: landing.space,
+                origin: `${landing.space}@${landing.at}`,
+              }))
+        ).filter(
+          (landing) => buildingOfSpace.get(landing.space) === unit.building,
+        );
+        for (const landing of landings) push("service-landing", landing.origin);
         const operation = connector.operation;
         if (operation === undefined) continue;
         for (const state of operation.states) push("service-state", state.id);
@@ -567,7 +592,7 @@ export const libraryObservationClosureDiagnostics = (props: {
  * the room, and being inside the room is the entire claim that observation
  * makes.
  *
- * Three refusals, each naming its own address.
+ * Each refusal names its own address.
  *
  * An interior receipt with no pose is the one that matters: it is the shape
  * every receipt had before this gate existed, and reading it as "anywhere" is
@@ -582,6 +607,10 @@ export const libraryObservationClosureDiagnostics = (props: {
  * picture alone — so this refuses only the pair the plan itself declared
  * measurable, which is why the requirement's own role decides rather than a
  * blanket count.
+ *
+ * An exterior observation supplies no authored eye, and every measurement has
+ * a nonblank name and finite value. These are checked again here because a
+ * tracked plan may be edited without the command that normally parses them.
  *
  * @evidence requirements/review/subject-inspection.md#review-subject-viewpoint-ownership Binds a paid observation to the place it was drawn from.
  * @evidence specifications/review-and-acceptance/subject-surface-and-inspection.md#review-system-subject-viewpoint-plan Makes a receipt state its own viewpoint rather than inherit the requirement's.
@@ -606,6 +635,16 @@ export const libraryObservationReceiptDiagnostics = (props: {
     if (requirement === undefined) continue;
     const address = `${props.target}:${receipt.observation}`;
     const interior = requirement.role.startsWith("interior-");
+    if (interior === false && receipt.pose !== null) {
+      diagnostics.push(
+        refuse({
+          target: address,
+          path: props.path,
+          message: `Library observation receipt for "${receipt.observation}" supplies a camera pose for "${requirement.subject}", whose required observation is framed from the subject's own extent. Record null rather than an unrelated authored eye.`,
+        }),
+      );
+      continue;
+    }
     if (interior && receipt.pose === null) {
       diagnostics.push(
         refuse({
@@ -632,6 +671,24 @@ export const libraryObservationReceiptDiagnostics = (props: {
       continue;
     }
     if (
+      interior &&
+      requirement.pose !== null &&
+      receipt.pose !== null &&
+      (sameVector(receipt.pose.position, requirement.pose.position) === false ||
+        sameVector(receipt.pose.direction, requirement.pose.direction) ===
+          false ||
+        sameVector(receipt.pose.target, requirement.pose.target) === false)
+    ) {
+      diagnostics.push(
+        refuse({
+          target: address,
+          path: props.path,
+          message: `Library observation receipt for "${receipt.observation}" does not match the topology-derived camera pose for "${requirement.subject}". Record the exact position, direction and target the required observation used.`,
+        }),
+      );
+      continue;
+    }
+    if (
       receipt.verdict === "passed" &&
       requirement.role === "interior-threshold" &&
       Object.keys(receipt.measurements).length === 0
@@ -641,6 +698,18 @@ export const libraryObservationReceiptDiagnostics = (props: {
           target: address,
           path: props.path,
           message: `Library observation receipt for "${receipt.observation}" passed a threshold observation of "${requirement.subject}" without reading a single measurement, so the receipt is a picture with a verdict attached. A threshold is measured, not merely looked at.`,
+        }),
+      );
+    const invalidMeasurement = Object.entries(receipt.measurements).find(
+      ([name, value]) =>
+        name.trim() !== name || name === "" || Number.isFinite(value) === false,
+    );
+    if (invalidMeasurement !== undefined)
+      diagnostics.push(
+        refuse({
+          target: address,
+          path: props.path,
+          message: `Library observation receipt for "${receipt.observation}" carries invalid measurement ${JSON.stringify(invalidMeasurement[0])}. Measurement names must be nonblank and values must be finite numbers.`,
         }),
       );
   }
