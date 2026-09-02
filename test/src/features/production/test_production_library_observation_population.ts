@@ -369,6 +369,8 @@ export const test_production_library_observation_population = (): void => {
     id: "site-gate",
     boundary: "gate-panel",
   });
+  const missingBoundary = structuredClone(operable);
+  missingBoundary.openings[0]!.boundary = "missing-boundary";
 
   const operableRequired = derive([operable]);
   TestValidator.equals(
@@ -383,6 +385,9 @@ export const test_production_library_observation_population = (): void => {
       // to closed and read as thoroughness.
       detached: derive([detachedGate]).filter((entry) =>
         entry.subject.includes("site-gate"),
+      ).length,
+      missingBoundary: derive([missingBoundary]).filter((entry) =>
+        entry.role.startsWith("operation-"),
       ).length,
       transitions: operableRequired.filter(
         (entry) => entry.role === "operation-transition",
@@ -422,6 +427,7 @@ export const test_production_library_observation_population = (): void => {
         ],
       ],
       detached: 0,
+      missingBoundary: 0,
       transitions: 2,
       fixed: 0,
     },
