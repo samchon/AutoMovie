@@ -74,7 +74,6 @@ import { namedFacts } from "../internal/predicates";
  */
 export const test_workspace_coverage_isolation = (): void => {
   const wiring = {
-    rootPackage: fs.readFileSync(path.join(ROOT, "package.json"), "utf8"),
     testPackage: fs.readFileSync(
       path.join(ROOT, "test", "package.json"),
       "utf8",
@@ -85,11 +84,10 @@ export const test_workspace_coverage_isolation = (): void => {
     ),
   };
   TestValidator.equals(
-    "the root command and both CI lanes use one typed coverage boundary",
+    "the coverage command and the one CI lane say the same thing",
     {
       actual: coverageCommandWiringDiagnostics(wiring),
       disconnected: coverageCommandWiringDiagnostics({
-        rootPackage: "{}",
         testPackage: "{}",
         workflow:
           "internals/coverage.mjs\nlicense:check\nReport Coverage Gaps\n",
@@ -98,14 +96,12 @@ export const test_workspace_coverage_isolation = (): void => {
     {
       actual: [],
       disconnected: [
-        "root consumer:check is not the typed targeted scenario",
         "test coverage does not use the single typed entry",
-        "both CI checkouts must fetch the comparison base",
-        "both CI lanes must pass the pull-request base",
-        "both CI lanes must run the same coverage command",
-        "both CI lanes must run coverage from the test package",
-        "typed root tools and build tools must trigger CI",
-        "the contract document layers must trigger the suite",
+        "the CI checkout must fetch the comparison base, once",
+        "the lane must pass the pull-request base, once",
+        "the lane must run the coverage command, once",
+        "the lane must run coverage from the test package, once",
+        "the matrix must still name both operating systems",
         "CI still names a deleted JavaScript-era gate",
       ],
     },

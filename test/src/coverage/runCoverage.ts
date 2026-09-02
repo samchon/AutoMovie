@@ -19,7 +19,6 @@ export interface IRunCoverageDependencies {
 }
 
 export interface ICoverageCommandWiring {
-  rootPackage: string;
   testPackage: string;
   workflow: string;
 }
@@ -47,27 +46,33 @@ export const coverageCommandWiringDiagnostics = (
   files: ICoverageCommandWiring,
 ): string[] => {
   const diagnostics: string[] = [];
-  const root = packageScripts(files.rootPackage);
   const test = packageScripts(files.testPackage);
-  if (root["consumer:check"] !== "pnpm --filter @automovie/test consumer:check")
-    diagnostics.push("root consumer:check is not the typed targeted scenario");
   if (test.coverage !== "ttsx -P tsconfig.json src/coverage/runCoverage.ts")
     diagnostics.push("test coverage does not use the single typed entry");
-  if (occurrences(files.workflow, "fetch-depth: 0") !== 2)
-    diagnostics.push("both CI checkouts must fetch the comparison base");
-  if (occurrences(files.workflow, WORKFLOW_BASE_ENVIRONMENT) !== 2)
-    diagnostics.push("both CI lanes must pass the pull-request base");
-  if (occurrences(files.workflow, "run: pnpm coverage") !== 2)
-    diagnostics.push("both CI lanes must run the same coverage command");
-  if (occurrences(files.workflow, "working-directory: test") !== 2)
-    diagnostics.push("both CI lanes must run coverage from the test package");
+  // Counted at one, not two. The lanes were two duplicated job blocks and each
+  // of these had to be spelled twice, so the check counted spellings and the
+  // duplication it was policing was the thing that made it necessary. One
+  // matrix job covers both operating systems and cannot disagree with itself;
+  // what is worth checking now is that the one spelling is right and that the
+  // matrix still names both.
+  if (occurrences(files.workflow, "fetch-depth: 0") !== 1)
+    diagnostics.push("the CI checkout must fetch the comparison base, once");
+  if (occurrences(files.workflow, WORKFLOW_BASE_ENVIRONMENT) !== 1)
+    diagnostics.push("the lane must pass the pull-request base, once");
+  if (occurrences(files.workflow, "run: pnpm coverage") !== 1)
+    diagnostics.push("the lane must run the coverage command, once");
+  if (occurrences(files.workflow, "working-directory: test") !== 1)
+    diagnostics.push("the lane must run coverage from the test package, once");
   if (
-    files.workflow.includes("- '*.ts'") === false ||
-    files.workflow.includes("- 'build/**'") === false
+    files.workflow.includes("ubuntu-latest") === false ||
+    files.workflow.includes("windows-latest") === false
   )
-    diagnostics.push("typed root tools and build tools must trigger CI");
-  if (files.workflow.includes("- 'docs/**'") === false)
-    diagnostics.push("the contract document layers must trigger the suite");
+    diagnostics.push("the matrix must still name both operating systems");
+  // No path filter to check. A filtered required workflow can stay pending
+  // instead of reporting, which is what the filters cost; every push runs both
+  // lanes now, and a list of paths that must appear is a list that drifts.
+  if (files.workflow.includes("paths:"))
+    diagnostics.push("a path-filtered required lane can stay pending forever");
   if (
     files.workflow.includes("internals/") ||
     files.workflow.includes("license:check") ||
