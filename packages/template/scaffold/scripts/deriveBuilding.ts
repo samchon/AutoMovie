@@ -28,6 +28,7 @@ import {
   describeAutoMovieBuildingReport,
 } from "./buildingRecords";
 import { deriveAutoMovieBuildingReport } from "./buildingReport";
+import { planAutoMovieBuildingSidecars } from "./buildingSidecars";
 import { productionBuildingStudies } from "./productionStudies";
 import { readAutoMovieProjectProductionId } from "./projectIdentity";
 
@@ -237,19 +238,12 @@ for (const { environment, source } of environments) {
     context: state.generated.design.production.environmentContext ?? null,
     studies: productionBuildingStudies,
   });
-  const directory = path.join(
-    reportRoot,
-    encodeAutoMoviePathSegment(environment.id),
-  );
-  for (const sheet of report.sheets)
-    emit(
-      path.join(directory, `${encodeAutoMoviePathSegment(sheet.view.id)}.svg`),
-      `${sheet.svg}\n`,
-    );
-  emit(
-    path.join(directory, "report.json"),
-    `${JSON.stringify(report, null, 2)}\n`,
-  );
+  for (const sidecar of planAutoMovieBuildingSidecars({
+    encode: encodeAutoMoviePathSegment,
+    id: environment.id,
+    report,
+  }))
+    emit(path.join(reportRoot, ...sidecar.segments), sidecar.text);
 
   for (const line of describeAutoMovieBuildingReport({
     gaps: report.gaps.length,
