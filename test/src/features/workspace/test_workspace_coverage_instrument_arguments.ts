@@ -33,7 +33,6 @@ import { namedFacts } from "../internal/predicates";
 export const test_workspace_coverage_instrument_arguments = (): void => {
   let handed: string[] = [];
   const fakes = (status: number | null) => ({
-    attributeless: true,
     environment: {} as NodeJS.ProcessEnv,
     log: () => {},
     mkdir: () => undefined,
