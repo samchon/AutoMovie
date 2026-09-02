@@ -22,6 +22,7 @@ import path from "node:path";
 import { productionEvidence } from "../lint.config";
 import {
   collectAutoMovieBuildingRecords,
+  collectAutoMovieMaterializedEnvironments,
   describeAutoMovieBuildingRecords,
 } from "./buildingRecords";
 import {
@@ -175,18 +176,7 @@ const materialized = (): IAutoMovieBuiltEnvironment[] => {
   } catch {
     return [];
   }
-  const found = new Map<string, IAutoMovieBuiltEnvironment>();
-  for (const owner of owners)
-    for (const unit of owner.units)
-      // The design owner's full address, which is how the published index is
-      // keyed and how every other caller of this reader addresses it.
-      for (const environment of resolve({
-        branch: owner.branch,
-        owner: `${owner.path}#${unit.anchor}`,
-        anchor: unit.anchor,
-      }))
-        found.set(environment.id, environment);
-  return [...found.values()];
+  return collectAutoMovieMaterializedEnvironments({ owners, resolve });
 };
 
 const environments = collectAutoMovieBuildingRecords({

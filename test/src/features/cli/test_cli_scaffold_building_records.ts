@@ -16,6 +16,18 @@ const unit = requireSourceModule<{
     materialized: readonly IAutoMovieBuiltEnvironment[];
     staged: readonly IAutoMovieBuiltEnvironment[];
   }) => IBuildingRecord[];
+  collectAutoMovieMaterializedEnvironments: (props: {
+    owners: ReadonlyArray<{
+      branch: string;
+      path: string;
+      units: ReadonlyArray<{ anchor: string }>;
+    }>;
+    resolve: (request: {
+      branch: string;
+      owner: string;
+      anchor: string;
+    }) => readonly IAutoMovieBuiltEnvironment[];
+  }) => IAutoMovieBuiltEnvironment[];
   describeAutoMovieBuildingRecords: (
     records: readonly IBuildingRecord[],
   ) => string;
@@ -24,7 +36,11 @@ const unit = requireSourceModule<{
     __dirname,
     "../../../../packages/template/scaffold/scripts/buildingRecords.ts",
   ),
-  ["collectAutoMovieBuildingRecords", "describeAutoMovieBuildingRecords"],
+  [
+    "collectAutoMovieBuildingRecords",
+    "collectAutoMovieMaterializedEnvironments",
+    "describeAutoMovieBuildingRecords",
+  ],
 );
 
 /** One building record under a chosen id, with a marker to tell copies apart. */
@@ -92,6 +108,46 @@ export const test_cli_scaffold_building_records = (): void => {
           ),
       ],
       [
+        // The address every other caller of the reader uses. Passing the
+        // document path alone matched nothing, every time, in silence -- which
+        // is what this command did until it was measured.
+        "eachOwnerIsAddressedByItsFullPathAndAnchor",
+        () => {
+          const asked: string[] = [];
+          unit.collectAutoMovieMaterializedEnvironments({
+            owners: [
+              {
+                branch: "spaces",
+                path: "docs/spaces/hall.md",
+                units: [{ anchor: "hall-delivery" }, { anchor: "hall-annex" }],
+              },
+            ],
+            resolve: (request) => {
+              asked.push(request.owner);
+              return [];
+            },
+          });
+          return (
+            asked.join(" ") ===
+            "docs/spaces/hall.md#hall-delivery docs/spaces/hall.md#hall-annex"
+          );
+        },
+      ],
+      [
+        // Two owners naming one building id. The compiler refuses duplicate
+        // publication at its own address; a report that drew both would put one
+        // sheet on the page twice and double its take-off.
+        "oneBuildingIdIsGatheredOnce",
+        () =>
+          unit.collectAutoMovieMaterializedEnvironments({
+            owners: [
+              { branch: "spaces", path: "a.md", units: [{ anchor: "one" }] },
+              { branch: "spaces", path: "b.md", units: [{ anchor: "two" }] },
+            ],
+            resolve: () => [named("hall", "d")],
+          }).length === 1,
+      ],
+      [
         "theTallyNamesBothCountsIncludingTheZero",
         () =>
           unit.describeAutoMovieBuildingRecords(mixed) ===
@@ -109,6 +165,8 @@ export const test_cli_scaffold_building_records = (): void => {
       eachProvenanceIsCarriedOnItsOwnRecord: true,
       theStagedRecordWinsTheCollision: true,
       theOrderIsByIdSoAnUnchangedProductionRedrawsTheSame: true,
+      eachOwnerIsAddressedByItsFullPathAndAnchor: true,
+      oneBuildingIdIsGatheredOnce: true,
       theTallyNamesBothCountsIncludingTheZero: true,
     },
   );

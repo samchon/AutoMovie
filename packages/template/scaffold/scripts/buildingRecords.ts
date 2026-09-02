@@ -60,3 +60,44 @@ export const describeAutoMovieBuildingRecords = (
   } staged by a shot, ${
     records.filter((entry) => entry.source === "materialized").length
   } materialized by a library and photographed by nothing`;
+
+/**
+ * Every building a library published, gathered across its design owners.
+ *
+ * Split from the command for the same reason the union is: `deriveBuilding.ts`
+ * opens project state at module level and refuses unless it is current, so
+ * nothing could load it to see how an owner is addressed, and the address it
+ * passed was wrong for as long as that stood.
+ *
+ * The address is the owner's full `path#anchor`, which is how the published
+ * index is keyed and how every other caller of the reader addresses it. Passing
+ * the document path alone matched nothing, every time, in silence.
+ *
+ * Two owners publishing one building id carry it once. A library owner may name
+ * a building another owner also names -- the compiler refuses that as duplicate
+ * publication at its own address -- and a report that drew both would put one
+ * sheet on the page twice and double its take-off.
+ */
+export const collectAutoMovieMaterializedEnvironments = (props: {
+  owners: ReadonlyArray<{
+    branch: string;
+    path: string;
+    units: ReadonlyArray<{ anchor: string }>;
+  }>;
+  resolve: (request: {
+    branch: string;
+    owner: string;
+    anchor: string;
+  }) => readonly IAutoMovieBuiltEnvironment[];
+}): IAutoMovieBuiltEnvironment[] => {
+  const found = new Map<string, IAutoMovieBuiltEnvironment>();
+  for (const owner of props.owners)
+    for (const unit of owner.units)
+      for (const environment of props.resolve({
+        branch: owner.branch,
+        owner: `${owner.path}#${unit.anchor}`,
+        anchor: unit.anchor,
+      }))
+        found.set(environment.id, environment);
+  return [...found.values()];
+};
