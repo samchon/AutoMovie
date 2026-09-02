@@ -111,7 +111,11 @@ export const autoMovieLibraryObservationRequirements = (
       role: "map-datum",
       subject,
       building: null,
-      origin: "north",
+      // The whole datum, not the north alone. It is the north the work is
+      // oriented to and the ground its elevations are measured from, and an
+      // origin naming half of it sends a reader to check the half that was
+      // right.
+      origin: "datum",
       pose: null,
     });
   }

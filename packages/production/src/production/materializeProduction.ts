@@ -853,7 +853,17 @@ export interface IAutoMovieMaterializedLibraryResult {
   /** Digest of the normalized source bytes that were executed. */
   sourceDigest: AutoMovieContentDigest;
   /** Exact validated contribution that export returned. */
-  contribution: IAutoMovieLibraryContribution;
+  /**
+   * What the owner's build function returned, with `contexts` already decided.
+   *
+   * Definite here where the contract leaves it optional. The compiler is this
+   * type's only producer and normalizes at the registration boundary, so a
+   * second `?? []` on this side would be a branch no run can take -- which is
+   * what it became the moment that normalization landed.
+   */
+  contribution: IAutoMovieLibraryContribution & {
+    contexts: IAutoMovieEnvironmentContext[];
+  };
 }
 
 /**
@@ -919,7 +929,7 @@ export const materializeAutoMovieLibraryFiles = (props: {
       // context is not a thing in the world the environments describe; it is
       // the world they are described against, and one adopted context may be
       // the ground several owners' buildings stand on.
-      for (const context of result.contribution.contexts ?? [])
+      for (const context of result.contribution.contexts)
         put(
           `library/contexts/${encodeAutoMoviePathSegment(context.id)}.json`,
           context,
@@ -936,7 +946,7 @@ export const materializeAutoMovieLibraryFiles = (props: {
         models: result.contribution.models
           .map((model) => model.id)
           .sort(compareCodeUnits),
-        contexts: (result.contribution.contexts ?? [])
+        contexts: result.contribution.contexts
           .map((context) => context.id)
           .sort(compareCodeUnits),
       };

@@ -59,6 +59,11 @@ const unit = requireSourceModule<{
  * 3. The refusal names the subject and omits the building clause, because a map
  *    requirement descends from no building and a reader told the building is
  *    `site` would go looking for a building by that name.
+ * 4. Neighbouring masses and declared instants add nothing. The record calls
+ *    occluders read-only, never owned geometry, and charging an owner to
+ *    photograph what it does not own is a reason that stops being true on
+ *    another host; instants are weather, which the requirement does not name
+ *    among the six things a map observation must be able to falsify.
  */
 export const test_production_library_map_population = (): void => {
   const context = analysisContext();
@@ -86,7 +91,7 @@ export const test_production_library_map_population = (): void => {
         () =>
           mapOnly
             .map((entry) => `${entry.role} ${entry.subject} ${entry.origin}`)
-            .join(" ") === "map-datum map:site north",
+            .join(" ") === "map-datum map:site datum",
       ],
       [
         // The design carries one context for the whole production and nobody
@@ -95,6 +100,28 @@ export const test_production_library_map_population = (): void => {
         "anOwnerThatAdoptedNoWorldOwesNoMapObservation",
         () =>
           buildingOnly.some((entry) => entry.role === "map-datum") === false,
+      ],
+      [
+        // A world with three instants and two neighbouring masses owes one
+        // observation, the same as a bare one. A role derived from a
+        // definition this deriver invented would measure the deriver.
+        "aCrowdedWorldOwesNoMoreThanABareOne",
+        () =>
+          unit.autoMovieLibraryObservationRequirements(
+            [],
+            [
+              analysisContext({
+                occluders: [
+                  {
+                    id: "neighbour-tower",
+                    kind: "neighbour-tower",
+                    planes: [],
+                  },
+                  { id: "boundary-wall", kind: "boundary-wall", planes: [] },
+                ],
+              }),
+            ],
+          ).length === mapOnly.length,
       ],
       [
         "adoptingAWorldAddsExactlyOneToWhatABuildingCharges",
@@ -124,6 +151,7 @@ export const test_production_library_map_population = (): void => {
     {
       anAdoptedWorldIsOneObservationOfItsDatum: true,
       anOwnerThatAdoptedNoWorldOwesNoMapObservation: true,
+      aCrowdedWorldOwesNoMoreThanABareOne: true,
       adoptingAWorldAddsExactlyOneToWhatABuildingCharges: true,
       aMapRequirementDescendsFromNoBuilding: true,
       theRefusalNamesTheSubjectAndClaimsNoBuilding: true,

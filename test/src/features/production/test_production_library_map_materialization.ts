@@ -41,7 +41,10 @@ import {
  *    index is validated exactly, so a required field would have failed the
  *    whole document and handed both commands an empty population -- silently,
  *    which is the exact failure this field was added to end.
- * 5. Two owners adopting one context id are refused. Two answers to "what is
+ * 5. Two owners adopting one context id are refused.
+ * 6. A world that is not a world is refused where it was returned. The
+ *    compiler validates a contributed context the way it validates a building
+ *    and a model, and nothing had ever handed it a bad one. Two answers to "what is
  *    north here" cannot both stand, and a report reading whichever landed
  *    second would measure one owner's work against the other's world.
  */
@@ -160,6 +163,31 @@ export const test_production_library_map_materialization = (): void => {
       "an index from before contexts existed still answers both readers",
       { buildings: older.length !== 0, worlds: olderContexts.length },
       { buildings: true, worlds: 0 },
+    );
+
+    fixture.write(
+      LIBRARY_SOURCE,
+      librarySourceModule({
+        // A north of no length. Every direction in a context is a direction,
+        // and one that points nowhere makes every elevation drawn against it
+        // arbitrary rather than wrong in a way anybody could see.
+        contexts: JSON.stringify([{ ...context, north: { x: 0, y: 0, z: 0 } }]),
+      }),
+    );
+    const malformed = new AutoMovieProductionCompiler(
+      AutoMovieProductionProject.open(fixture.root),
+      libraryAuthoring({ root: fixture.root }),
+    ).compile({ scope: "source" });
+
+    TestValidator.equals(
+      "a world that is not a world is refused where it was returned",
+      {
+        refused: malformed.success === false,
+        named: malformed.diagnostics.some((diagnostic) =>
+          diagnostic.message.includes("north"),
+        ),
+      },
+      { refused: true, named: true },
     );
 
     const collided = new AutoMovieProductionCompiler(
