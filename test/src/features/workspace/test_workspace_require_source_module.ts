@@ -54,9 +54,9 @@ const refuses = (
  */
 export const test_workspace_require_source_module = (): void => {
   const real = requireSourceModule<{
-    digestAutoMovieBytes: unknown;
-  }>(path.join(ROOT, "packages/production/src/production/contentIdentity.ts"), [
-    "digestAutoMovieBytes",
+    sceneFogTransmittance: unknown;
+  }>(path.join(ROOT, "packages/engine/src/scene/atmosphere.ts"), [
+    "sceneFogTransmittance",
   ]);
 
   TestValidator.equals(
@@ -64,26 +64,28 @@ export const test_workspace_require_source_module = (): void => {
     namedFacts([
       [
         "aRealModuleLoads",
-        () => typeof real.digestAutoMovieBytes === "function",
+        () => typeof real.sceneFogTransmittance === "function",
       ],
       [
         // Nothing at this path exports that name, on any platform.
         "aNameNoModuleExportsIsRefused",
         () =>
           refuses(
-            "packages/production/src/production/contentIdentity.ts",
+            "packages/engine/src/scene/atmosphere.ts",
             ["thisIsNotExportedByAnyModule"],
             "is not the module this path names",
           ),
       ],
       [
         // The barrel carries it and declares none of it. Only the second arm
-        // can see that, and it is the same shape a wrong module presents.
+        // can see that, and it is the same shape a wrong module presents. A
+        // one-line barrel over a forty-line module, because the point is the
+        // re-export and not the size of what is behind it.
         "aReExportedNameIsRefused",
         () =>
           refuses(
-            "packages/production/src/index.ts",
-            ["AutoMovieProductionCompiler"],
+            "packages/engine/src/scene/index.ts",
+            ["sceneFogTransmittance"],
             "came from somewhere else",
           ),
       ],
@@ -91,7 +93,7 @@ export const test_workspace_require_source_module = (): void => {
         "namingNoExportIsRefused",
         () =>
           refuses(
-            "packages/production/src/production/contentIdentity.ts",
+            "packages/engine/src/scene/atmosphere.ts",
             [],
             "would prove nothing",
           ),
