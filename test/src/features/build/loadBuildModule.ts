@@ -103,19 +103,18 @@ export interface IExperimentalModule {
  * that reaches for it, which is loud enough: the alternative is a second surface
  * declaration that has to be kept in step with this one.
  *
- * `requireSourceModule` is the wrong door for these. Measured against
- * `packages/template/build`: requiring `syncVersions.ts` returned
- * `templateVersions.ts`'s exports and never ran syncVersions' body, and
- * requiring `templateVersions.ts` returned the generated
- * `packages/template/src/templateVersions.ts` instead. Both answered with a
- * module, neither with the one named. The guard catches exactly that, which is
- * why it exists, but a caught refusal is not a loaded module: this route is.
+ * Kept to `build/*.ts` on purpose. A general repository loader on this route
+ * was tried and withdrawn: `tsx` installs process-wide ESM hooks, and pointing
+ * it at a CommonJS module under `packages/` left the loader in a state that
+ * broke nine later scenarios in CI with `resolveSync() is not implemented` and
+ * `Expected a string, an ArrayBuffer, or a TypedArray`. The two root build
+ * tools have loaded through it for a long time without that, so the route is
+ * sound for what it was built for and is not a door to widen. A module
+ * elsewhere in the repository is reached by `requireSourceModule`, which proves
+ * it is the module the path names.
  */
-export const loadRepositoryModule = async <T>(relative: string): Promise<T> =>
-  (await tsImport(pathToFileURL(path.join(ROOT, relative)).href, {
+export const loadBuildModule = async <T>(file: string): Promise<T> =>
+  (await tsImport(pathToFileURL(path.join(ROOT, "build", file)).href, {
     parentURL: pathToFileURL(__filename).href,
     tsconfig: false,
   })) as T;
-
-export const loadBuildModule = async <T>(file: string): Promise<T> =>
-  loadRepositoryModule<T>(path.join("build", file));

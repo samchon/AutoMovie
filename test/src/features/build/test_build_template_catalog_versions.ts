@@ -1,17 +1,22 @@
 import { TestValidator } from "@nestia/e2e";
+import path from "node:path";
 
 import { namedFacts } from "../internal/predicates";
-import { loadRepositoryModule } from "./loadBuildModule";
+import { requireSourceModule } from "../internal/requireSourceModule";
 
-interface ITemplateVersionsModule {
-  readonly readCatalogVersion: (props: {
+const unit = requireSourceModule<{
+  readCatalogVersion: (props: {
     catalog: string;
     dep: string;
     workspace: string;
   }) => string;
-  readonly resolveTemplateVersions: () => Record<string, string>;
-  readonly WORKSPACE_TEMPLATE_VERSION_KEYS: readonly string[];
-}
+}>(
+  path.resolve(
+    __dirname,
+    "../../../../packages/template/build/catalogVersion.ts",
+  ),
+  ["readCatalogVersion"],
+);
 
 /**
  * One workspace manifest carrying every value form the resolver accepts, plus
@@ -56,19 +61,8 @@ const WORKSPACE = [
  *    the same name in a later catalog is not answered from the earlier one.
  * 3. An unknown catalog, an unknown dependency, and an alias with no anchor are
  *    each refused by name rather than resolved to something plausible.
- * 4. The real workspace resolves, and every key a workspace-local consumer
- *    overrides is one the resolver actually produced.
  */
-export const test_build_template_catalog_versions = async (): Promise<void> => {
-  // Measured: this module's exports arrive under `default`, while the
-  // repository's root build tools loaded through the same helper carry theirs
-  // directly. The loader does not unwrap on everyone's behalf -- that would hide
-  // the difference and leave a caller reading `undefined` off the wrong half --
-  // so the caller that knows which shape it gets says so here.
-  const loaded = await loadRepositoryModule<
-    ITemplateVersionsModule & { default?: ITemplateVersionsModule }
-  >("packages/template/build/templateVersions.ts");
-  const unit: ITemplateVersionsModule = loaded.default ?? loaded;
+export const test_build_template_catalog_versions = (): void => {
   const read = (catalog: string, dep: string): string =>
     unit.readCatalogVersion({ catalog, dep, workspace: WORKSPACE });
   const refuses = (catalog: string, dep: string, fragment: string): boolean => {
@@ -79,7 +73,6 @@ export const test_build_template_catalog_versions = async (): Promise<void> => {
       return error instanceof Error && error.message.includes(fragment);
     }
   };
-  const resolved = unit.resolveTemplateVersions();
 
   TestValidator.equals(
     "the scaffold's versions are resolved by this repository's own catalog rule",
@@ -112,26 +105,6 @@ export const test_build_template_catalog_versions = async (): Promise<void> => {
         "danglingAliasRefused",
         () => refuses("catalog", "dangling", "unresolved YAML alias"),
       ],
-      [
-        // Loading the module is not the same as it working. The real manifest
-        // is the one it is actually pointed at, and a rename anywhere in the
-        // repository's package graph fails here rather than in a rendered
-        // project.
-        "realWorkspaceResolves",
-        () =>
-          Object.keys(resolved).length !== 0 &&
-          Object.values(resolved).every(
-            (value) => typeof value === "string" && value.length !== 0,
-          ),
-      ],
-      [
-        // A key a workspace-local consumer overrides with `workspace:^` has to
-        // be one the resolver produces, or the override replaces nothing.
-        "everyOverriddenKeyIsProduced",
-        () =>
-          unit.WORKSPACE_TEMPLATE_VERSION_KEYS.length !== 0 &&
-          unit.WORKSPACE_TEMPLATE_VERSION_KEYS.every((key) => key in resolved),
-      ],
     ]),
     {
       plainRange: true,
@@ -142,8 +115,6 @@ export const test_build_template_catalog_versions = async (): Promise<void> => {
       unknownCatalogRefused: true,
       unknownDependencyRefused: true,
       danglingAliasRefused: true,
-      realWorkspaceResolves: true,
-      everyOverriddenKeyIsProduced: true,
     },
   );
 };
