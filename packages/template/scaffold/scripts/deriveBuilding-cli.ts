@@ -1,4 +1,8 @@
 import { readAutoMovieProductionEvidence } from "@automovie/evidence";
+import {
+  loadAutoMovieProjectState,
+  requireCurrentAutoMovieProjectState,
+} from "automovie";
 
 import { productionEvidence } from "../lint.config";
 import { runAutoMovieBuildingDerivation } from "./deriveBuilding";
@@ -14,9 +18,14 @@ import { currentAutoMovieProductionId } from "./projectIdentity";
  * beside it, which is exactly the part a test would have to fake to reach the
  * other half.
  */
+const productionId = currentAutoMovieProductionId();
+
 runAutoMovieBuildingDerivation({
   evidence: productionEvidence,
-  productionId: currentAutoMovieProductionId(),
+  productionId,
   read: readAutoMovieProductionEvidence,
   root: process.cwd(),
+  state: requireCurrentAutoMovieProjectState(
+    loadAutoMovieProjectState({ root: process.cwd(), productionId }),
+  ),
 });

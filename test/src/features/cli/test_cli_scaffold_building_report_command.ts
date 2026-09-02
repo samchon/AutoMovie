@@ -20,6 +20,7 @@ const command = requireSourceModule<{
     read: () => unknown;
     write?: (file: string, text: string) => void;
     say?: (line: string) => void;
+    state: unknown;
   }) => void;
 }>(
   path.resolve(
@@ -66,10 +67,22 @@ export const test_cli_scaffold_building_report_command = (): void => {
       productionId: AutoMovieProductionProject.openReadOnly(fixture.root)
         .productionId,
       read: () => authoring,
+      // Supplied rather than loaded, which is what the injection is for. A
+      // library has no shot, so the staged half is empty and everything drawn
+      // comes from the published index; refusing a stale project is the entry
+      // file's job and not this derivation's.
+      state: {
+        root: fixture.root,
+        generated: {
+          shots: [],
+          manifest: { inputFingerprint: `sha256:${"0".repeat(64)}` },
+          design: { production: {} },
+        },
+      },
       root: fixture.root,
       say: (line) => void said.push(line),
       write: (file) =>
-        void written.push(file.split(/[\/]/u).slice(-2).join("/")),
+        void written.push(file.split(/[\\/]/u).slice(-2).join("/")),
     });
 
     TestValidator.equals(

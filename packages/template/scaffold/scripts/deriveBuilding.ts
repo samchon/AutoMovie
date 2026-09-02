@@ -14,10 +14,6 @@ import {
   autoMovieMaterializedLibraryEnvironments,
   encodeAutoMoviePathSegment,
 } from "@automovie/production";
-import {
-  loadAutoMovieProjectState,
-  requireCurrentAutoMovieProjectState,
-} from "automovie";
 import fs from "node:fs";
 import path from "node:path";
 
@@ -90,17 +86,28 @@ export const runAutoMovieBuildingDerivation = (props: {
   write?: (file: string, text: string) => void;
   /** Where a line goes. */
   say?: (line: string) => void;
+  /**
+   * The project's current compiled state.
+   *
+   * Passed in rather than loaded here, and stated structurally, so this file
+   * needs nothing the generated project's own runtime supplies. It is exactly
+   * what the derivation reads and nothing else: the entry beside this one loads
+   * it and refuses a stale or uncompiled project before calling.
+   */
+  state: {
+    root: string;
+    generated: {
+      shots: Iterable<readonly [string, IAutoMovieCompiledShotSource]>;
+      manifest: { inputFingerprint: string };
+      design: { production: { environmentContext?: unknown } };
+    };
+  };
 }): void => {
   const projectRoot = props.root;
   const productionId = props.productionId;
   const say =
     props.say ?? ((line: string) => void process.stdout.write(line + NEWLINE));
-  const state = requireCurrentAutoMovieProjectState(
-    loadAutoMovieProjectState({
-      root: projectRoot,
-      productionId,
-    }),
-  );
+  const state = props.state;
 
   const NEWLINE = String.fromCharCode(10);
 
