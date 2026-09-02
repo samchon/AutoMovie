@@ -1225,6 +1225,20 @@ export class AutoMovieProductionCompiler {
         ...this.generatedOwnershipDiagnostics(manifest, materialize),
       );
 
+    // Decided once, here, rather than inside the callback. A design-scope
+    // compile publishes nothing, so there is no generated manifest to resolve a
+    // render target against -- but asking that question inside the callback
+    // asked it where nothing ever asks: measured, no scope reaches the callback
+    // while the manifest is null, because the consumer only wants a fingerprint
+    // when it is judging a receipt or an asset review and neither runs in
+    // design scope. The branch was real and unreachable at once. Bound here it
+    // is taken by every compile, in the scope that decides it.
+    const renderTargetFingerprint =
+      manifest === null
+        ? (): null => null
+        : (target: IAutoMovieRenderBundleManifest["target"]) =>
+            productionRenderTargetFingerprint(this.project, manifest, target);
+
     const environmentsOf = new Map(
       results.map((result) => [
         JSON.stringify([result.branch, result.owner]),
@@ -1249,10 +1263,7 @@ export class AutoMovieProductionCompiler {
         // name one, the record command could write one, and the compiler would
         // answer "does not reopen" forever -- and it made the modelExists
         // binding beside it a question whose answer nothing could observe.
-        fingerprint: (target) =>
-          manifest === null
-            ? null
-            : productionRenderTargetFingerprint(this.project, manifest, target),
+        fingerprint: renderTargetFingerprint,
         captured: (target, digest) =>
           this.project.capturedRenderViews(target, digest),
       }),

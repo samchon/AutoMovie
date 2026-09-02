@@ -999,6 +999,114 @@ export const test_cli_scaffold_library_review_command = (): void => {
     recordSpace("passed");
     const afterSecondPass = spaceVerdicts();
 
+    // What a receipt says about where it stood and what it read. Both flags
+    // were shipped and no scenario passed either, so every refusal in their
+    // parsers -- and the shape they store on success -- was written and never
+    // read.
+    const POSE = JSON.stringify({
+      position: { x: 1, y: 1.6, z: 2 },
+      direction: { x: 0, y: 0, z: -1 },
+      target: { x: 1, y: 1.6, z: 0 },
+      space: "hall",
+    });
+    const recordAtPose = (extra: readonly string[]): readonly string[] => [
+      "record",
+      "--owner",
+      ownerAddress(currentAuthoring, "spaces"),
+      "--observation",
+      observationId("spaces"),
+      "--runtime",
+      "automovie-library-probe:v1",
+      "--verdict",
+      "passed",
+      "--artifact-project",
+      "observations/space.svg",
+      ...extra,
+    ];
+    command.runLibraryReviewCommand({
+      argv: recordAtPose([
+        "--pose",
+        POSE,
+        "--measurements",
+        JSON.stringify({ clearWidth: 0.9, clearHeight: 2.1 }),
+      ]),
+      root: fixture.root,
+      productionId: "fixture-film",
+      evidence,
+      read: readAutoMovieProductionEvidence,
+    });
+    const storedReceipt = (
+      JSON.parse(fs.readFileSync(spacePlanPath, "utf8")) as {
+        units: Array<{
+          receipts: Array<{
+            verdict: string;
+            pose: unknown;
+            measurements: Record<string, number>;
+          }>;
+        }>;
+      }
+    ).units
+      .flatMap((unit) => unit.receipts)
+      .filter((receipt) => receipt.verdict === "passed")
+      .at(-1);
+    const poseRefused = (
+      [
+        [["--pose", "{"], "--pose must be one JSON object"],
+        [
+          // The space name is read before any component, so this case has to
+          // carry a valid one or it is refused for the space instead and the
+          // component rule is never reached. Written the other way first, and
+          // it passed for the wrong reason.
+          [
+            "--pose",
+            JSON.stringify({
+              position: 1,
+              direction: { x: 0, y: 0, z: -1 },
+              target: { x: 0, y: 0, z: 0 },
+              space: "hall",
+            }),
+          ],
+          "--pose position must be one { x, y, z } object",
+        ],
+        [
+          [
+            "--pose",
+            JSON.stringify({
+              position: { x: 1, y: 1, z: "near" },
+              direction: { x: 0, y: 0, z: -1 },
+              target: { x: 0, y: 0, z: 0 },
+              space: "hall",
+            }),
+          ],
+          "--pose position",
+        ],
+        [
+          [
+            "--pose",
+            JSON.stringify({
+              position: { x: 1, y: 1, z: 1 },
+              direction: { x: 0, y: 0, z: -1 },
+              target: { x: 0, y: 0, z: 0 },
+              space: "  ",
+            }),
+          ],
+          "--pose space must be",
+        ],
+        [["--measurements", "["], "--measurements must be one JSON object"],
+        [
+          ["--measurements", JSON.stringify({ clearWidth: "wide" })],
+          "--measurements clearWidth must be one finite number",
+        ],
+      ] as ReadonlyArray<readonly [readonly string[], string]>
+    ).map(([extra, message]) =>
+      commandRefuses({
+        argv: recordAtPose(extra),
+        root: fixture.root,
+        evidence,
+        message,
+      }),
+    );
+
     const currentSpacePlan = fs.readFileSync(spacePlanPath, "utf8");
     const malformedSpacePlan = `${JSON.stringify(
       {
@@ -1233,6 +1341,22 @@ export const test_cli_scaffold_library_review_command = (): void => {
           () => malformedPlanRefused && malformedPlanUnchanged,
         ],
         [
+          "poseAndMeasurementsAreStoredAsGiven",
+          () =>
+            JSON.stringify(storedReceipt?.pose) === POSE &&
+            storedReceipt?.measurements.clearWidth === 0.9 &&
+            storedReceipt?.measurements.clearHeight === 2.1,
+        ],
+        [
+          // Malformed JSON, a component that is not an object, an axis that is
+          // not a number, a blank space name, a measurement set that is not an
+          // object, and a reading offered as text. Each is refused by name
+          // rather than stored, because a claim no later reader can check is
+          // worse in the file than absent.
+          "everyMalformedPoseOrMeasurementIsRefusedByName",
+          () => poseRefused.every((refused) => refused),
+        ],
+        [
           // The failure replaced the accepted receipt and then survived two
           // repairs. Three records, two receipts, and the failed one is still
           // there to read.
@@ -1301,6 +1425,8 @@ export const test_cli_scaffold_library_review_command = (): void => {
         planIdentityRetainsStaleReceipt: true,
         staleReceiptRetainedAlongsideCurrent: true,
         malformedPlanRefusedWithoutMutation: true,
+        poseAndMeasurementsAreStoredAsGiven: true,
+        everyMalformedPoseOrMeasurementIsRefusedByName: true,
         aRecordedFailureSurvivesBeingPutRight: true,
         mismatchedTurntableRefusedWithoutMutation: true,
         turntableReceiptJudgedByItsViews: true,

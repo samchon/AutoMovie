@@ -181,6 +181,19 @@ export const test_production_library_turntable_receipt = (): void => {
       return lint();
     };
     const published = pay(LIBRARY_MODEL);
+    // A design-scope compile publishes nothing, so it has no generated manifest
+    // to resolve a render target against and binds a fingerprint that answers
+    // none. It is the scope that takes that branch, and it still reports the
+    // population: design does not enforce receipts, so the paid turntable is
+    // neither charged nor judged here.
+    const designScope = new AutoMovieProductionCompiler(
+      AutoMovieProductionProject.openReadOnly(fixture.root),
+      authoring,
+    )
+      .lint({ scope: "design" })
+      .diagnostics.filter((entry) =>
+        entry.target.includes("plan-model-turntable"),
+      );
     const absent = pay("no-such-model");
 
     const says = (
@@ -201,6 +214,10 @@ export const test_production_library_turntable_receipt = (): void => {
           () =>
             says(published, "has no turntable receipt") === false &&
             says(published, "is stale") === false,
+        ],
+        [
+          "designScopeBindsNoFingerprintAndChargesNothing",
+          () => designScope.length === 0,
         ],
         [
           "aReceiptNamingAnotherModelIsRefused",
@@ -226,6 +243,7 @@ export const test_production_library_turntable_receipt = (): void => {
         theSourceCompileSucceeded: true,
         aPlannedTurntableWithNoReceiptIsUnpaid: true,
         aCurrentIdentityIsReadRatherThanReportedMissing: true,
+        designScopeBindsNoFingerprintAndChargesNothing: true,
         aReceiptNamingAnotherModelIsRefused: true,
         theOwedTurntableViewsAreNamed: true,
       },
