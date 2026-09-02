@@ -120,8 +120,20 @@ export const test_cli_scaffold_building_derivation = (): void => {
                 ? `w:${action.sidecar!.segments.join("/")}`
                 : `s:${action.line!.slice(0, 5)}`,
             )
-            .join(" ") ===
-          "w:annex/plan-level-0.svg w:annex/report.json s:annex s:annex s:  par w:hall/plan-level-0.svg w:hall/report.json s:hall s:hall s:  par s:2 bui",
+            .join("|") ===
+          [
+            "w:annex/plan-level-0.svg",
+            "w:annex/report.json",
+            "s:annex",
+            "s:annex",
+            "s:  par",
+            "w:hall/plan-level-0.svg",
+            "w:hall/report.json",
+            "s:hall ",
+            "s:hall ",
+            "s:  par",
+            "s:2 bui",
+          ].join("|"),
       ],
       [
         "theRunsTallyIsSaidOnceAndLast",
