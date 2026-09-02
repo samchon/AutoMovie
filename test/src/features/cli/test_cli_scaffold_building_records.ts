@@ -31,6 +31,14 @@ const unit = requireSourceModule<{
   describeAutoMovieBuildingRecords: (
     records: readonly IBuildingRecord[],
   ) => string;
+  describeAutoMovieBuildingGaps: (
+    gaps: ReadonlyArray<{
+      status: string;
+      subject: string;
+      reason: string;
+      remedy: string;
+    }>,
+  ) => string[];
   describeAutoMovieBuildingReport: (props: {
     gaps: number;
     id: string;
@@ -49,10 +57,21 @@ const unit = requireSourceModule<{
   [
     "collectAutoMovieBuildingRecords",
     "collectAutoMovieMaterializedEnvironments",
+    "describeAutoMovieBuildingGaps",
     "describeAutoMovieBuildingRecords",
     "describeAutoMovieBuildingReport",
   ],
 );
+
+const NEWLINE = String.fromCharCode(10);
+
+/** One gap of the kind every sheet declares, so copies of it can be counted. */
+const LIMIT = {
+  status: "partial",
+  subject: "west-elevation",
+  reason: "no wall build-up is stated",
+  remedy: "state one in materials",
+};
 
 /** One building record under a chosen id, with a marker to tell copies apart. */
 const named = (id: string, door: string): IAutoMovieBuiltEnvironment => {
@@ -187,6 +206,47 @@ export const test_cli_scaffold_building_records = (): void => {
         },
       ],
       [
+        // Every sheet declares the same three limits of the drawing
+        // derivation, so a work of two units prints thirty-six copies of them
+        // unless they are collapsed, and the gaps actually about this building
+        // disappear underneath.
+        "aLimitEveryArtifactDeclaresIsPrintedOnceAndCounted",
+        () =>
+          unit
+            .describeAutoMovieBuildingGaps([
+              LIMIT,
+              { ...LIMIT, subject: "north-elevation" },
+              { ...LIMIT, subject: "section-a" },
+            ])
+            .join("") ===
+          `  partial west-elevation (and 2 more like it): no wall build-up is stated${NEWLINE}    remedy: state one in materials`,
+      ],
+      [
+        // The subject is deliberately outside the key: it is what the row
+        // names, and folding by it would split the constant limits back into
+        // one row per sheet, which is the thing being collapsed.
+        "twoGapsThatSayDifferentThingsStayTwoRows",
+        () =>
+          unit.describeAutoMovieBuildingGaps([
+            LIMIT,
+            { ...LIMIT, reason: "no opening schedule exists" },
+          ]).length === 2,
+      ],
+      [
+        // A reader compares this against the sidecar's own rows, so the order
+        // is first-seen; sorting would make the two listings unalignable.
+        "theOrderIsTheOrderTheArtifactsRaisedThem",
+        () =>
+          unit
+            .describeAutoMovieBuildingGaps([
+              { ...LIMIT, reason: "second" },
+              { ...LIMIT, reason: "first" },
+              { ...LIMIT, reason: "second" },
+            ])
+            .map((line) => line.split(": ")[1]?.split(NEWLINE)[0])
+            .join(" ") === "second first",
+      ],
+      [
         "theTallyNamesBothCountsIncludingTheZero",
         () =>
           unit.describeAutoMovieBuildingRecords(mixed) ===
@@ -207,6 +267,9 @@ export const test_cli_scaffold_building_records = (): void => {
       eachOwnerIsAddressedByItsFullPathAndAnchor: true,
       oneBuildingIdIsGatheredOnce: true,
       eachBuildingIsDescribedWithItsProvenanceAndItsGapsApart: true,
+      aLimitEveryArtifactDeclaresIsPrintedOnceAndCounted: true,
+      twoGapsThatSayDifferentThingsStayTwoRows: true,
+      theOrderIsTheOrderTheArtifactsRaisedThem: true,
       theTallyNamesBothCountsIncludingTheZero: true,
     },
   );

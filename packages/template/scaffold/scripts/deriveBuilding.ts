@@ -23,13 +23,11 @@ import { productionEvidence } from "../lint.config";
 import {
   collectAutoMovieBuildingRecords,
   collectAutoMovieMaterializedEnvironments,
+  describeAutoMovieBuildingGaps,
   describeAutoMovieBuildingRecords,
   describeAutoMovieBuildingReport,
 } from "./buildingRecords";
-import {
-  type IAutoMovieBuildingGap,
-  deriveAutoMovieBuildingReport,
-} from "./buildingReport";
+import { deriveAutoMovieBuildingReport } from "./buildingReport";
 import { productionBuildingStudies } from "./productionStudies";
 import { readAutoMovieProjectProductionId } from "./projectIdentity";
 
@@ -224,38 +222,6 @@ const emit = (file: string, text: string): void => {
   process.stdout.write(`wrote ${relative}\n`);
 };
 
-/**
- * Print each gap once, with its remedy and how many artifacts declared it.
- *
- * Every sheet declares the same three limits of the drawing derivation, so a
- * work of two units prints thirty-six copies of them unless they are collapsed,
- * and the gaps that are actually about this building disappear underneath. The
- * sidecar still carries every row beside the artifact that raised it; this is
- * the reading, and the remedy is half of what a gap is for.
- */
-const announce = (gaps: readonly IAutoMovieBuildingGap[]): void => {
-  const counted = new Map<
-    string,
-    { gap: IAutoMovieBuildingGap; count: number }
-  >();
-  for (const gap of gaps) {
-    // Keyed by what the gap says rather than by the artifact it came from: the
-    // three constant limits of the drawing derivation carry identical text on
-    // every sheet, while a gap naming this building's own spaces or openings
-    // differs and stays its own row.
-    const key = `${gap.status}\n${gap.reason}\n${gap.remedy}`;
-    const seen = counted.get(key);
-    if (seen === undefined) counted.set(key, { gap, count: 1 });
-    else ++seen.count;
-  }
-  for (const entry of counted.values())
-    process.stdout.write(
-      `  ${entry.gap.status} ${entry.gap.subject}${
-        entry.count === 1 ? "" : ` (and ${entry.count - 1} more like it)`
-      }: ${entry.gap.reason}\n    remedy: ${entry.gap.remedy}\n`,
-    );
-};
-
 if (environments.length === 0)
   process.stdout.write(
     "no built environment is staged or materialized by this production, so there is nothing to draw, count or study. Contribute one from a shot's source and compile before deriving.\n",
@@ -296,7 +262,8 @@ for (const { environment, source } of environments) {
     source,
   }))
     process.stdout.write(line + NEWLINE);
-  announce(report.gaps);
+  for (const line of describeAutoMovieBuildingGaps(report.gaps))
+    process.stdout.write(line + NEWLINE);
 }
 
 // The tally a reviewer reads before deciding what a claim about this production

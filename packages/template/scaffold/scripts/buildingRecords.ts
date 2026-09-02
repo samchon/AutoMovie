@@ -131,3 +131,61 @@ export const describeAutoMovieBuildingReport = (props: {
   } network(s), ${props.runs} analysis run(s)`,
   `${props.id} (${props.source}): ${props.gaps} declared gap(s)`,
 ];
+
+/**
+ * One gap this report declared, in the words a reader acts on.
+ *
+ * Structurally `IAutoMovieDrawingGap`, restated here so the collapse below can
+ * be read without a compiled project: the script that used to own it opens
+ * project state at module level and refuses unless it is current.
+ */
+export interface IAutoMovieDescribableGap {
+  status: string;
+  subject: string;
+  reason: string;
+  remedy: string;
+}
+
+/**
+ * Print each gap once, with its remedy and how many artifacts declared it.
+ *
+ * Every sheet declares the same three limits of the drawing derivation, so a
+ * work of two units prints thirty-six copies of them unless they are collapsed,
+ * and the gaps that are actually about this building disappear underneath. The
+ * sidecar still carries every row beside the artifact that raised it; this is
+ * the reading, and the remedy is half of what a gap is for.
+ *
+ * Keyed by what the gap says rather than by the artifact it came from. The
+ * three constant limits carry identical text on every sheet, while a gap naming
+ * this building's own spaces or openings differs and stays its own row. The
+ * subject is deliberately outside the key: it is what the first row names, and
+ * folding by it would split the constant limits back into one row per sheet,
+ * which is the thing being collapsed.
+ *
+ * First-seen order, not sorted. A reader compares this against the sidecar's
+ * own rows, and re-ordering them would make the two listings unalignable.
+ */
+export const describeAutoMovieBuildingGaps = (
+  gaps: readonly IAutoMovieDescribableGap[],
+): string[] => {
+  const counted = new Map<
+    string,
+    { gap: IAutoMovieDescribableGap; count: number }
+  >();
+  for (const gap of gaps) {
+    const key = [gap.status, gap.reason, gap.remedy].join(
+      String.fromCharCode(0),
+    );
+    const seen = counted.get(key);
+    if (seen === undefined) counted.set(key, { gap, count: 1 });
+    else ++seen.count;
+  }
+  return [...counted.values()].map(
+    (entry) =>
+      `  ${entry.gap.status} ${entry.gap.subject}${
+        entry.count === 1 ? "" : ` (and ${entry.count - 1} more like it)`
+      }: ${entry.gap.reason}${String.fromCharCode(10)}    remedy: ${
+        entry.gap.remedy
+      }`,
+  );
+};
