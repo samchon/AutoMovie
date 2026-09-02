@@ -957,6 +957,48 @@ export const test_cli_scaffold_library_review_command = (): void => {
       "spaces",
       "owner.review.json",
     );
+    // A failure is evidence and stays. Re-running an unchanged observation and
+    // passing it must not erase the failure an author recorded, because the
+    // earlier version of this rule dropped every same-identity receipt and did
+    // exactly that -- the record of what went wrong vanished from the file the
+    // moment it was put right, and nothing said so.
+    const recordSpace = (verdict: string): void => {
+      command.runLibraryReviewCommand({
+        argv: [
+          "record",
+          "--owner",
+          ownerAddress(currentAuthoring, "spaces"),
+          "--observation",
+          observationId("spaces"),
+          "--runtime",
+          "automovie-library-probe:v1",
+          "--verdict",
+          verdict,
+          "--artifact-project",
+          "observations/space.svg",
+        ],
+        root: fixture.root,
+        productionId: "fixture-film",
+        evidence,
+        read: readAutoMovieProductionEvidence,
+      });
+    };
+    const spaceVerdicts = (): string[] =>
+      (
+        JSON.parse(fs.readFileSync(spacePlanPath, "utf8")) as {
+          units: Array<{ receipts: Array<{ verdict: string }> }>;
+        }
+      ).units.flatMap((unit) =>
+        unit.receipts.map((receipt) => receipt.verdict),
+      );
+    // One passed receipt already stands from the paid loop above.
+    recordSpace("failed");
+    const afterFailure = spaceVerdicts();
+    recordSpace("passed");
+    const afterRepair = spaceVerdicts();
+    recordSpace("passed");
+    const afterSecondPass = spaceVerdicts();
+
     const currentSpacePlan = fs.readFileSync(spacePlanPath, "utf8");
     const malformedSpacePlan = `${JSON.stringify(
       {
@@ -1191,6 +1233,29 @@ export const test_cli_scaffold_library_review_command = (): void => {
           () => malformedPlanRefused && malformedPlanUnchanged,
         ],
         [
+          // The failure replaced the accepted receipt and then survived two
+          // repairs. Three records, two receipts, and the failed one is still
+          // there to read.
+          "aRecordedFailureSurvivesBeingPutRight",
+          () => {
+            const failures = (verdicts: readonly string[]): number =>
+              verdicts.filter((verdict) => verdict === "failed").length;
+            return (
+              // Recording the failure appended it rather than replacing the
+              // accepted receipt that stood.
+              failures(afterFailure) === 1 &&
+              afterFailure.at(-1) === "failed" &&
+              // Repairing appended a pass and left the failure where it was.
+              failures(afterRepair) === 1 &&
+              afterRepair.length === afterFailure.length + 1 &&
+              // Passing again replaced that pass rather than growing the file,
+              // and still did not touch the failure.
+              failures(afterSecondPass) === 1 &&
+              afterSecondPass.length === afterRepair.length
+            );
+          },
+        ],
+        [
           "mismatchedTurntableRefusedWithoutMutation",
           () => mismatchedTurntableRefused && mismatchedTurntableUnchanged,
         ],
@@ -1236,6 +1301,7 @@ export const test_cli_scaffold_library_review_command = (): void => {
         planIdentityRetainsStaleReceipt: true,
         staleReceiptRetainedAlongsideCurrent: true,
         malformedPlanRefusedWithoutMutation: true,
+        aRecordedFailureSurvivesBeingPutRight: true,
         mismatchedTurntableRefusedWithoutMutation: true,
         turntableReceiptJudgedByItsViews: true,
         modelWithoutTurntableRefused: true,
