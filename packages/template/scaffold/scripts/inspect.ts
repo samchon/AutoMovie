@@ -4,6 +4,7 @@ import {
   findAutoMovieProjectRoot,
 } from "@automovie/production";
 
+import { readAutoMovieInspectRequest } from "./inspectRequest";
 import { inspectProductionSubject } from "./inspectSubject";
 import { readAutoMovieProjectProductionId } from "./projectIdentity";
 
@@ -39,39 +40,7 @@ import { readAutoMovieProjectProductionId } from "./projectIdentity";
 const projectRoot = findAutoMovieProjectRoot(process.cwd());
 const productionId = readAutoMovieProjectProductionId(projectRoot);
 
-const one = (name: string): string | undefined => {
-  const argv = process.argv.slice(2);
-  const found: string[] = [];
-  for (let index = 0; index < argv.length; index += 1)
-    if (argv[index] === name) {
-      const value = argv[index + 1];
-      if (value === undefined || value.startsWith("--"))
-        throw new Error(`${name} requires one value.`);
-      found.push(value);
-      index += 1;
-    }
-  if (found.length > 1)
-    throw new Error(`${name} may be supplied exactly once.`);
-  return found[0];
-};
-
-const count = (name: string): number | undefined => {
-  const value = one(name);
-  if (value === undefined) return undefined;
-  const parsed = Number(value);
-  if (Number.isFinite(parsed) === false || Number.isInteger(parsed) === false)
-    throw new Error(`${name} must be one whole number.`);
-  return parsed;
-};
-
-const shot = one("--shot");
-if (shot === undefined || shot.trim() === "")
-  throw new Error("inspect requires --shot <compiled-shot-id>.");
-const subject = one("--subject");
-if (subject === undefined || subject.trim() === "")
-  throw new Error(
-    "inspect requires --subject <kind:id>, the same stable id the compiled shot queries hand back.",
-  );
+const request = readAutoMovieInspectRequest(process.argv.slice(2));
 
 // The capture host is left unset on purpose. This command draws through the
 // inspection instrument, not through the delivery frame capture, and handing
@@ -85,21 +54,10 @@ const context = new AutoMovieProductionContext(
 const inspection = new AutoMovieProductionSubjectInspectionService(
   inspectProductionSubject,
 );
-const answer = await inspection.inspect(context.forProduction(productionId), {
-  shot,
-  subject,
-  azimuthCount: count("--azimuth-count"),
-  elevationsDeg: one("--elevations-deg")
-    ?.split(",")
-    .map((value) => {
-      const parsed = Number(value.trim());
-      if (Number.isFinite(parsed) === false)
-        throw new Error("--elevations-deg must be comma-separated numbers.");
-      return parsed;
-    }),
-  height: count("--height"),
-  width: count("--width"),
-});
+const answer = await inspection.inspect(
+  context.forProduction(productionId),
+  request,
+);
 process.stdout.write(`${JSON.stringify(answer, null, 2)}\n`);
 // The verdict is the exit code, so a shell that runs this in a chain stops on a
 // refusal rather than reading a printed failure as a success.

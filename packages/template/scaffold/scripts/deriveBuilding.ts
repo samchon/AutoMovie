@@ -21,6 +21,10 @@ import path from "node:path";
 
 import { productionEvidence } from "../lint.config";
 import {
+  collectAutoMovieBuildingRecords,
+  describeAutoMovieBuildingRecords,
+} from "./buildingRecords";
+import {
   type IAutoMovieBuildingGap,
   deriveAutoMovieBuildingReport,
 } from "./buildingReport";
@@ -83,6 +87,8 @@ const state = requireCurrentAutoMovieProjectState(
     productionId,
   }),
 );
+
+const NEWLINE = String.fromCharCode(10);
 
 const compareCodeUnits = (left: string, right: string): number =>
   left < right ? -1 : left > right ? 1 : 0;
@@ -172,42 +178,10 @@ const materialized = (): IAutoMovieBuiltEnvironment[] => {
   return [...found.values()];
 };
 
-/**
- * Staged and materialized environments together, each id carried once.
- *
- * A production may hold both: a library owner publishes a building and a shot
- * stages the same one to film it. The id is the identity, so the union is
- * taken by id and the staged record wins -- it is the one a frame was actually
- * drawn from, and a report that silently preferred the other would describe a
- * building nobody photographed.
- */
-interface IBuildingRecord {
-  environment: IAutoMovieBuiltEnvironment;
-  /**
-   * Whether a shot stages this building, or only a library publishes it.
-   *
-   * The two are not interchangeable to a reviewer. A staged building has frames
-   * a delivery review can open; a materialized one has none, and every claim
-   * about how it looks rests on the drawings this report derives. Reporting
-   * both under one heading would let a reader carry a staged building's
-   * evidence over to one nobody has photographed.
-   */
-  source: "materialized" | "staged";
-}
-
-const environments: IBuildingRecord[] = (() => {
-  const union = new Map<string, IBuildingRecord>();
-  for (const environment of materialized())
-    union.set(environment.id, { environment, source: "materialized" });
-  for (const environment of staged(
-    (shot) => shot.builtEnvironments,
-    "built environment",
-  ))
-    union.set(environment.id, { environment, source: "staged" });
-  return [...union.values()].sort((left, right) =>
-    compareCodeUnits(left.environment.id, right.environment.id),
-  );
-})();
+const environments = collectAutoMovieBuildingRecords({
+  materialized: materialized(),
+  staged: staged((shot) => shot.builtEnvironments, "built environment"),
+});
 
 const serviceNetworks: IAutoMovieServiceNetwork[] = staged(
   (shot) => shot.serviceNetworks,
@@ -338,9 +312,5 @@ for (const { environment, source } of environments) {
 // result.
 if (environments.length !== 0)
   process.stdout.write(
-    `${environments.length} building record(s): ${
-      environments.filter((entry) => entry.source === "staged").length
-    } staged by a shot, ${
-      environments.filter((entry) => entry.source === "materialized").length
-    } materialized by a library and photographed by nothing\n`,
+    describeAutoMovieBuildingRecords(environments) + NEWLINE,
   );
