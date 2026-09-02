@@ -37,12 +37,11 @@ export const collectAutoMovieBuildingRecords = (props: {
     union.set(environment.id, { environment, source: "materialized" });
   for (const environment of props.staged)
     union.set(environment.id, { environment, source: "staged" });
+  // Two-way, because the map above is keyed by id: no two records here can
+  // share one, so a comparator with an equality arm would carry a branch that
+  // no run can take. Unique keys make `<` a total order on its own.
   return [...union.values()].sort((left, right) =>
-    left.environment.id < right.environment.id
-      ? -1
-      : left.environment.id > right.environment.id
-        ? 1
-        : 0,
+    left.environment.id < right.environment.id ? -1 : 1,
   );
 };
 
