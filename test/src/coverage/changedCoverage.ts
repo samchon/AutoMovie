@@ -166,14 +166,28 @@ const canonical = (value: string): string => slash(path.resolve(value));
  * a diagnostic. One source, consumed twice, is what keeps them from drifting.
  */
 export const UNEXECUTED_AUTHORED_ROOTS: readonly string[] = [
+  "build/",
   "packages/playground/",
-  "packages/template/scaffold/src/examples/",
+  "packages/template/scaffold/",
 ];
+
+/**
+ * A declaration this repository reads rather than a program it runs.
+ *
+ * A lint configuration, a bundler configuration and an evidence exclusion list
+ * are answered by whatever loads them, and what they say is checked by the
+ * thing they configure failing. Measuring them asks a test to import a
+ * configuration for no reason but the number, which is the same trade as
+ * asserting the contents of a `package.json`.
+ */
+const DECLARATION_FILE =
+  /(?:^|\/)(?:lint\.config|vite\.config)\.[cm]?ts$|EvidenceExclusions\.ts$/u;
 
 export const isAuthoredExecutableSource = (relative: string): boolean => {
   const target = slash(relative);
   if (UNEXECUTED_AUTHORED_ROOTS.some((root) => target.startsWith(root)))
     return false;
+  if (DECLARATION_FILE.test(target)) return false;
   const typedRepositoryTool =
     target.startsWith("test/src/coverage/") ||
     target.startsWith("test/src/integrity/");

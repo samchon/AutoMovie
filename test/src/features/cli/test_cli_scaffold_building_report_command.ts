@@ -46,8 +46,8 @@ const command = requireSourceModule<{
  *
  * Scenarios:
  *
- * 1. A library that materialized one building writes that building's sheets and
- *    its report, and says what it drew.
+ * 1. A library that materialized one building writes that building's report
+ *    into a directory named for it, and says what it drew.
  * 2. The provenance is `materialized`, because no frame was ever drawn of it,
  *    and the run's tally says so once at the end.
  */
@@ -88,10 +88,11 @@ export const test_cli_scaffold_building_report_command = (): void => {
       namedFacts([
         ["theCompileMaterializedABuilding", () => compiled.success],
         [
-          "itWroteThatBuildingsSheetsAndItsReport",
-          () =>
-            written.some((file) => file.endsWith("/report.json")) &&
-            written.some((file) => file.endsWith(".svg")),
+          // Into a directory named for the building, which is the whole of
+          // what a reader needs to find it. How many sheets come with it is
+          // the view set's answer, not this command's.
+          "itWroteThatBuildingsReport",
+          () => written.includes("hall-house/report.json"),
         ],
         [
           // No frame was ever drawn of it, so a review citing it has to cite
@@ -109,7 +110,7 @@ export const test_cli_scaffold_building_report_command = (): void => {
       ]),
       {
         theCompileMaterializedABuilding: true,
-        itWroteThatBuildingsSheetsAndItsReport: true,
+        itWroteThatBuildingsReport: true,
         itSaidTheProvenanceIsMaterialized: true,
         theRunsTallyIsSaidOnceAndLast: true,
       },
