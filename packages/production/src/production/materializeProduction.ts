@@ -15,6 +15,7 @@ import {
   IAutoMovieCompiledFormation,
   IAutoMovieCompiledInstanceSet,
   IAutoMovieCompiledShotSource,
+  IAutoMovieEnvironmentContext,
   IAutoMovieFormationDesign,
   IAutoMovieFormationSlot,
   IAutoMovieGeneratedCollisionProxy,
@@ -852,14 +853,24 @@ export interface IAutoMovieMaterializedLibraryResult {
   /** Digest of the normalized source bytes that were executed. */
   sourceDigest: AutoMovieContentDigest;
   /** Exact validated contribution that export returned. */
-  contribution: IAutoMovieLibraryContribution;
+  /**
+   * What the owner's build function returned, with `contexts` already decided.
+   *
+   * Definite here where the contract leaves it optional. The compiler is this
+   * type's only producer and normalizes at the registration boundary, so a
+   * second `?? []` on this side would be a branch no run can take -- which is
+   * what it became the moment that normalization landed.
+   */
+  contribution: IAutoMovieLibraryContribution & {
+    contexts: IAutoMovieEnvironmentContext[];
+  };
 }
 
 /**
  * Turn every executed library owner into compiler-owned bytes and one index.
  *
- * A library publishes what a film publishes for the same two things and at the
- * same addresses: a model lands under `models/` so the fixed turntable set and
+ * A library publishes what a film publishes for the two things a film also has
+ * and at the same addresses: a model lands under `models/` so the fixed turntable set and
  * the rig test read it exactly as they read a film's, and a built environment
  * lands under `library/environments/` because a film has no equivalent to
  * reuse. The index beside them is the part a film does not need at all: without
@@ -914,6 +925,15 @@ export const materializeAutoMovieLibraryFiles = (props: {
         );
       for (const model of result.contribution.models)
         put(`models/${encodeAutoMoviePathSegment(model.id)}.json`, model);
+      // Under their own directory rather than beside the environments. A
+      // context is not a thing in the world the environments describe; it is
+      // the world they are described against, and one adopted context may be
+      // the ground several owners' buildings stand on.
+      for (const context of result.contribution.contexts)
+        put(
+          `library/contexts/${encodeAutoMoviePathSegment(context.id)}.json`,
+          context,
+        );
       return {
         branch: result.branch,
         owner: result.owner,
@@ -925,6 +945,9 @@ export const materializeAutoMovieLibraryFiles = (props: {
           .sort(compareCodeUnits),
         models: result.contribution.models
           .map((model) => model.id)
+          .sort(compareCodeUnits),
+        contexts: result.contribution.contexts
+          .map((context) => context.id)
           .sort(compareCodeUnits),
       };
     });
@@ -967,7 +990,69 @@ export const autoMovieMaterializedLibraryEnvironments = (props: {
   branch: string;
   owner: string;
   anchor: string;
-}) => readonly IAutoMovieBuiltEnvironment[]) => {
+}) => readonly IAutoMovieBuiltEnvironment[]) =>
+  materializedLibraryReader<IAutoMovieBuiltEnvironment>({
+    read: props.read,
+    select: (owner) => owner.environments,
+    file: (id) => `library/environments/${encodeAutoMoviePathSegment(id)}.json`,
+    validate: (value) =>
+      typia.validateEquals<IAutoMovieBuiltEnvironment>(value),
+    what: "environments",
+  });
+
+/**
+ * Reopen the worlds a library compile published, addressed by design owner.
+ *
+ * Beside {@link autoMovieMaterializedLibraryEnvironments} and through the same
+ * index, because a map owner is measured the way a space owner is: against
+ * what it contributed, not against what the production happens to carry. The
+ * production design also holds one context for the whole production, and that
+ * one belongs to nobody -- two map owners would each owe its every instant, and
+ * one adopted world would be paid for twice.
+ *
+ * @evidence requirements/review/subject-inspection.md#review-library-delivery-coverage Reopens the adopted world a map owner published so its observation population is derived from what that owner contributed.
+ * @evidence specifications/review-and-acceptance/subject-surface-and-inspection.md#review-system-library-delivery-coverage Reads the per-owner context ids the same compile wrote rather than re-executing source.
+ * @author Samchon
+ */
+export const autoMovieMaterializedLibraryContexts = (props: {
+  /** Read one generated-root-relative file, throwing when it is absent. */
+  read: (relativePath: string) => Uint8Array;
+}): ((request: {
+  branch: string;
+  owner: string;
+  anchor: string;
+}) => readonly IAutoMovieEnvironmentContext[]) =>
+  materializedLibraryReader<IAutoMovieEnvironmentContext>({
+    read: props.read,
+    select: (owner) => owner.contexts,
+    file: (id) => `library/contexts/${encodeAutoMoviePathSegment(id)}.json`,
+    validate: (value) =>
+      typia.validateEquals<IAutoMovieEnvironmentContext>(value),
+    what: "contexts",
+  });
+
+/**
+ * One reading of the published index, for one kind of published artifact.
+ *
+ * The two readers differ in three values and in nothing else, and the parts
+ * they share are the parts that were wrong: the index is keyed by the design
+ * owner's full `path#anchor` address, and a request carrying the document path
+ * alone matched nothing -- every time, for every owner, in silence. Written
+ * twice, that defect would have had two places to be reintroduced.
+ */
+const materializedLibraryReader = <T>(props: {
+  read: (relativePath: string) => Uint8Array;
+  select: (
+    owner: IAutoMovieMaterializedLibraryOwner,
+  ) => readonly string[] | undefined;
+  file: (id: string) => string;
+  validate: (value: unknown) => typia.IValidation<T>;
+  what: string;
+}): ((request: {
+  branch: string;
+  owner: string;
+  anchor: string;
+}) => readonly T[]) => {
   const published = new Map<string, string[]>();
   try {
     const index = typia.validateEquals<IAutoMovieMaterializedLibrary>(
@@ -978,33 +1063,36 @@ export const autoMovieMaterializedLibraryEnvironments = (props: {
     if (index.success === true)
       for (const owner of index.data.owners)
         published.set(JSON.stringify([owner.branch, owner.owner]), [
-          ...owner.environments,
+          ...(props.select(owner) ?? []),
         ]);
   } catch {
     // An absent or unreadable index is an uncompiled project, which the compile
     // gate reports at its own address; here it is simply an empty population.
   }
   return (request) => {
+    // An empty answer is a real one for an owner that published nothing, so it
+    // cannot also mean "you addressed this wrongly"; that has to be said
+    // separately or it is never said at all. `building:report` passed the
+    // document path alone and read no materialized building for as long as that
+    // stood, while reporting that it had looked.
+    if (request.owner.includes("#") === false)
+      throw new Error(
+        `Materialized library ${props.what} are addressed by the design owner's "path#anchor", not by "${request.owner}" alone.`,
+      );
     const ids = published.get(JSON.stringify([request.branch, request.owner]));
     if (ids === undefined) return [];
-    const environments: IAutoMovieBuiltEnvironment[] = [];
+    const found: T[] = [];
     for (const id of ids)
       try {
-        const validation = typia.validateEquals<IAutoMovieBuiltEnvironment>(
-          JSON.parse(
-            Buffer.from(
-              props.read(
-                `library/environments/${encodeAutoMoviePathSegment(id)}.json`,
-              ),
-            ).toString("utf8"),
-          ) as unknown,
+        const validation = props.validate(
+          JSON.parse(Buffer.from(props.read(props.file(id))).toString("utf8")),
         );
-        if (validation.success === true) environments.push(validation.data);
+        if (validation.success === true) found.push(validation.data);
       } catch {
         // A published path the tree no longer carries is generated-output
         // tampering, which `generated-tampered` names at that exact file.
       }
-    return environments;
+    return found;
   };
 };
 

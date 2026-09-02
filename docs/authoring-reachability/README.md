@@ -48,9 +48,9 @@ Correspondence는 해당 family의 결정을 저자가 어느 계약 owner와 �
 
 25개 family는 저작 계약으로 도달하고 2개는 host 또는 harness가 소유한다. 저작 owner가 없는 family edge와 whole-family 의도적 제외는 현재 모두 0개다. 이후 부재 분류를 사용하려면 `families.json`에 이유와 재개 조건을 함께 적어야 한다.
 
-## 미지급 수와 gate
+## 미지급 수와 검토
 
-`pnpm --dir test start -- --include test_evidence_authoring_reachability`는 미지급 family 수 0을 정확히 고정한다. family가 늘거나 분류가 빠지거나 대응 path와 anchor가 사라지거나 debt가 다시 생기면 ledger를 다시 판단하기 전까지 실패한다. 지급된 edge도 조용히 예전 baseline 아래에 숨을 수 없다.
+family가 늘거나 분류가 바뀌거나 대응 path와 anchor가 사라지면 이 ledger와 실제 계약 owner를 함께 다시 읽는다. 저장소 파일과 현재 개수를 복제하는 구조 테스트로 이 판단을 대신하지 않는다.
 
 Specification fragment debt도 같은 방식으로 센다. 현재 `@evidenceObligation` target-anchor와 id 쌍 46개는 source의 고유 `@evidencePart` 쌍 46개와 정확히 대응하며 미지급 fragment는 0개다.
 
@@ -60,7 +60,7 @@ Specification fragment debt도 같은 방식으로 센다. 현재 `@evidenceObli
 
 Repository requirement-specification-source graph에서는 `evidence/review`를 켜지 않는다. 현재 package source에 실제로 적힌 관계는 `@evidence` 13,924개와 `@evidenceExclude` 7,591개, 합계 21,515개다. specification의 positive 관계 2,626개를 합치면 repository graph에는 positive 16,550개와 exclusion 7,591개, 합계 24,141개가 있다. 실제 companion review tag는 0개다. source 제외 사유 7,591개는 1,190종이고 상위 20종이 4,010개(52.83%)를 차지하며, 최다 사유 하나가 1,743회 쓰인다. 24,141개의 companion 문장을 일괄 요구하면 target별 의미 검토보다 package boundary의 기계적 재진술을 늘린다.
 
-이 결정은 review를 생략한다는 뜻이 아니다. `evidence/graph`가 resolved target과 population을 검사하고 `evidence/documented`가 public carrier를 유지하며 `evidence/todo`가 선언된 미구현 계약을 거부한다. `test/src/integrity/contractOwnership.ts`는 contract owner와 fragment declaration을 추적하고, typed `test_evidence_authoring_reachability`는 family owner와 정확한 unpaid fragment target 집합을 추적한다. 변경자는 evidence-graph skill과 review skill에 따라 실제 host, target, 이유와 consequence를 읽고, source를 바꾸면 development skill의 테스트와 100% per-file coverage 의무를 진다. 이 조합도 산문의 의미를 자동 증명하지는 않으므로 Self-Review가 최종 owner다.
+이 결정은 review를 생략한다는 뜻이 아니다. `evidence/graph`가 resolved target과 population을 검사하고 `evidence/documented`가 public carrier를 유지하며 `evidence/todo`가 선언된 미구현 계약을 거부한다. `test/src/integrity/contractOwnership.ts`는 contract owner와 fragment declaration을 추적한다. 변경자는 evidence-graph skill과 review skill에 따라 실제 host, target, 이유와 consequence를 읽고, source를 바꾸면 development skill의 테스트와 변경 줄 100% coverage 의무를 진다. 이 조합도 산문의 의미를 자동 증명하지는 않으므로 Self-Review가 최종 owner다.
 
 생성 production의 review stage는 별도 그래프다. 작품의 선택된 저작 모집단에서 관계를 실질적으로 검사하는 절차이므로 repository-wide source edge 수와 같은 이유로 자동 해제하지 않는다. 다만 changed relationship만 고르고, 구체적인 검사 기록을 보존하며, 복제 acknowledgement를 거부하는 review mechanism이 생기면 repository 정책도 다시 판단한다. Gate는 lint config가 이 기록과 다르게 `evidence/review`를 켜는 것을 거부한다.
 

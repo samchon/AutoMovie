@@ -58,4 +58,4 @@ Read [Texture scale](../review-verification/measurements.md#texture-scale) when 
 
 Read the reported census or empty-population state; command availability and exit code alone never complete the review set.
 
-A library-only space branch has no shot artifact for `building:report`; use other exact observations or a production-owned offline script instead of creating a dummy shot.
+A library-only space branch is drawn by `building:report` from what it materialized, so it needs no shot; never create a dummy one to make the command run. What it does not have is frames, and the report says so in its own tally, which is what a review citing a materialized building has to cite.

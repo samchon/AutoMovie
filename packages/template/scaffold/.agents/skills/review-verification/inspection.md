@@ -6,6 +6,12 @@ The engine queries run in a project script under `scripts/`, where the whole of 
 
 This ground is divided, and no document on it substitutes for another. This one answers what a compiled subject is, how two compiled artifacts differ, and what one subject looks like from an eye the inspection chose. The visual change report answers which already-rendered views moved between two revisions, as digests. A verdict is produced in the evidence citation on the source that claims the unit is realized, and no question answered here produces one.
 
+## Ask the shipped command first
+
+`npm run inspect -- --shot <compiled-shot-id> --subject <kind:id>` opens one compiled subject through the instrument this project already ships and prints what it found. Everything below is how that instrument is built and what its answers mean; reach for the API when you are asking something the command does not, not to repeat what it does.
+
+It does not let you choose the viewpoints, and that is the property that makes an inspection worth anything: an author who could pick the angles could pick flattering ones. `--azimuth-count`, `--elevations-deg`, `--width`, and `--height` exist for a subject the derived sweep genuinely cannot frame, and each has a working default. The observation bytes land under `automovie/inspections`, outside the render root a delivery review reads, because an inspection is not a frame and must never be mistaken for one.
+
 ## Choose the artifact and revision
 
 Load and narrow current project state with `loadAutoMovieProjectState` and `requireCurrentAutoMovieProjectState` from `automovie`; [Ownership](../source-authoring/ownership.md) owns that reader and its refusals. Narrowing is not politeness. A stale compile describes a design that no longer exists, and requiring `current` is what makes an inspection a fact about the same bytes a frame would be drawn from.

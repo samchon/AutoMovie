@@ -9,7 +9,7 @@
   },
   "scripts": {
     "prepare": "pnpm run build:versions",
-    "build:versions": "ttsx -P tsconfig.json --no-plugins build/syncVersions.ts",
+    "build:versions": "ttsx -P tsconfig.json --no-plugins build/resolveTemplateVersions.ts",
     "build": "pnpm run build:versions && rimraf lib && ttsc && tsc --emitDeclarationOnly",
     "prepack": "pnpm run build"
   },

@@ -8,15 +8,11 @@ import { TestValidator } from "@nestia/e2e";
 import path from "node:path";
 
 import { rectangularBuilding } from "../internal/envelopeFixtures";
+import { loadSourceModule } from "../internal/loadSourceModule";
 import { namedFacts } from "../internal/predicates";
 
 /** Load the closure gate from source; the library review consumer calls it. */
-const unit = require(
-  path.resolve(
-    __dirname,
-    "../../../../packages/production/src/production/libraryObservationRequirements.ts",
-  ),
-) as {
+const unit = loadSourceModule<{
   autoMovieLibraryObservationRequirements: (
     environments: readonly IAutoMovieBuiltEnvironment[],
   ) => IAutoMovieLibraryRequiredObservation[];
@@ -27,7 +23,12 @@ const unit = require(
     declared: readonly string[];
     waivers: readonly IAutoMovieLibraryReviewWaiver[];
   }) => IAutoMovieDiagnostic[];
-};
+}>(
+  path.resolve(
+    __dirname,
+    "../../../../packages/production/src/production/libraryObservationRequirements.ts",
+  ),
+);
 
 /**
  * A plan may add questions to the derived population and may never remove one.
@@ -123,6 +124,28 @@ export const test_production_library_observation_closure = (): void => {
       namesItsOrigin: true,
       namesItsSubject: true,
     },
+  );
+
+  // A space, material or service subject is addressed by the environment and
+  // the thing itself -- `space:hall-house/lobby` -- so the building it sits in
+  // is nowhere in the address. The requirement carries it separately, and until
+  // it reached this message nothing read it: an author told they owe an
+  // observation of one material as one model wears it could not tell which
+  // building to walk into, and an attribution derived wrongly said nothing.
+  const offBuilding = required.find(
+    (entry) => entry.subject.includes(`/${entry.building}`) === false,
+  );
+  TestValidator.equals(
+    "a subject whose address omits its building is refused naming that building",
+    {
+      exists: offBuilding !== undefined,
+      namesItsBuilding:
+        close({
+          declared: every.filter((id) => id !== offBuilding?.id),
+        })[0]?.message.includes(`in building "${offBuilding?.building}"`) ??
+        false,
+    },
+    { exists: true, namesItsBuilding: true },
   );
 
   TestValidator.equals(

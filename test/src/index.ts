@@ -65,7 +65,7 @@ async function main(): Promise<void> {
     console.log(chalk.red("\nSCENARIO SELECTION:"));
     for (const diagnostic of selection)
       console.log(chalk.red(`  ${diagnostic}`));
-    process.exit(-1);
+    process.exit(1);
   }
 
   const failures = report.executions.filter((e) => e.error !== null);
@@ -81,7 +81,7 @@ async function main(): Promise<void> {
       console.log(chalk.red(`\n● ${f.name}`));
       console.log(f.error);
     }
-    process.exit(-1);
+    process.exit(1);
   }
   console.log(chalk.green("All tests passed."));
 }
@@ -90,5 +90,5 @@ process.on("uncaughtException", (e) => console.log("uncaught", e));
 process.on("unhandledRejection", (e) => console.log("rejection", e));
 main().catch((e: unknown) => {
   console.log("critical error", e);
-  process.exit(-1);
+  process.exit(1);
 });

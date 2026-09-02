@@ -6,9 +6,11 @@ import {
 } from "@automovie/production";
 import { TestValidator } from "@nestia/e2e";
 
+import { rectangularBuilding } from "../internal/envelopeFixtures";
 import { namedFacts } from "../internal/predicates";
 import {
   LIBRARY_ANCHOR,
+  LIBRARY_MODEL,
   LIBRARY_OWNER,
   LIBRARY_SECOND_ANCHOR,
   LIBRARY_SECOND_OWNER,
@@ -72,6 +74,7 @@ export const test_production_library_materialization = (): void => {
   const fixture = libraryFixture();
   try {
     const first = run({ root: fixture.root, materialize: true });
+
     const production = AutoMovieProductionProject.openReadOnly(
       fixture.root,
     ).productionId;
@@ -110,7 +113,17 @@ export const test_production_library_materialization = (): void => {
               .map((file) => `${file.path}:${file.status}`)
               .sort((left, right) => (left < right ? -1 : left > right ? 1 : 0))
               .join(",") ===
-            "library/environments/hall-house.json:created,library/index.json:created",
+            [
+              "library/environments/hall-house.json:created",
+              // The owner delivers one model beside its building, so the compile
+              // publishes it too. A library that returned a model and wrote
+              // only its buildings would leave the model unreachable to every
+              // consumer that reads the published index.
+              "models/hall-bench.json:created",
+              "library/index.json:created",
+            ]
+              .sort((left, right) => (left < right ? -1 : left > right ? 1 : 0))
+              .join(","),
         ],
         [
           "which are the exact compiler-owned bytes on disk",
@@ -174,7 +187,10 @@ export const test_production_library_materialization = (): void => {
             source: LIBRARY_SOURCE,
             export: "hall",
             environments: ["hall-house"],
-            models: [],
+            // The owner delivers one model beside its building, and the
+            // published index names it: a consumer reading the index is how a
+            // model becomes reachable at all.
+            models: [LIBRARY_MODEL],
             digested: true,
           },
         ],
@@ -239,6 +255,7 @@ export const test_production_library_materialization = (): void => {
         published: [
           "library/environments/hall-house.json",
           "library/index.json",
+          "models/" + LIBRARY_MODEL + ".json",
         ],
       },
     );
@@ -328,6 +345,21 @@ export const test_production_library_materialization = (): void => {
       models: `[${libraryModelLiteral(" ")}]`,
     }),
   });
+  // Every other refusal names a field inside the contribution. This one is
+  // wrong at the root -- `build()` hands back a list where a contribution
+  // belongs -- and the message has a separate half for that, because there is
+  // no field path to print.
+  const invalidContribution = libraryFixture({
+    [LIBRARY_SOURCE]: [
+      'import type { IAutoMovieLibrarySourceOwner } from "@automovie/interface";',
+      "",
+      "export const hall = {",
+      `  design: ${JSON.stringify(LIBRARY_OWNER)},`,
+      "  build: () => [] as unknown,",
+      "} as unknown as IAutoMovieLibrarySourceOwner;",
+      "",
+    ].join(String.fromCharCode(10)),
+  });
   try {
     const unknown = run({ root: unknownAddress.root, materialize: false });
     const duplicated = run({ root: duplicateOwner.root, materialize: false });
@@ -337,6 +369,10 @@ export const test_production_library_materialization = (): void => {
       anchors: [LIBRARY_ANCHOR, LIBRARY_SECOND_ANCHOR],
     });
     const invalid = run({ root: invalidBuilding.root, materialize: false });
+    const rootless = run({
+      root: invalidContribution.root,
+      materialize: false,
+    });
     // Compiled rather than linted, because a project whose compiler-owned tree
     // has never been written is refused for its missing manifest whatever else
     // is wrong with it. What this case is about is the category of one
@@ -465,6 +501,23 @@ export const test_production_library_materialization = (): void => {
             ),
         ],
         [
+          // Every other refusal names a field inside a contributed record.
+          // This one is wrong where the contribution itself is: `build()` hands
+          // back a list, so neither `environments` nor `models` is there to
+          // read, and both are named rather than one standing for the other.
+          "a contribution that is not a contribution is refused at its own shape",
+          () =>
+            ["environments", "models"].every((field) =>
+              rootless.diagnostics.some(
+                (diagnostic) =>
+                  diagnostic.message.includes(`$input.${field} expects`) &&
+                  diagnostic.message.includes(
+                    "Fix the returned library contribution in src/spaces/hall.ts",
+                  ),
+              ),
+            ),
+        ],
+        [
           "and a model the engine rejects blocks the compile",
           () =>
             rejectedModel.success === false &&
@@ -479,6 +532,7 @@ export const test_production_library_materialization = (): void => {
         "the model is written under the compiled model namespace": true,
         "attributed to the owner whose export returned it": true,
         "two owners publishing one model id is refused": true,
+        "a contribution that is not a contribution is refused at its own shape": true,
         "and a model the engine rejects blocks the compile": true,
       },
     );
@@ -487,10 +541,96 @@ export const test_production_library_materialization = (): void => {
     duplicateOwner.dispose();
     duplicateEnvironment.dispose();
     invalidBuilding.dispose();
+    invalidContribution.dispose();
     noOwner.dispose();
     withModel.dispose();
     duplicateModel.dispose();
     invalidModel.dispose();
+  }
+
+  // A library owner's source is one module only because every fixture so far
+  // wrote one. The compiler links, inspects, and transpiles each imported module
+  // beside the entry, and none of that ran: the loop over imports had nothing to
+  // iterate, so a helper that fails inspection would have reached publication
+  // unexamined.
+  const imports = libraryFixture({
+    "src/shared/hall.ts": [
+      'export const hallId = () => "hall-house";',
+      "",
+    ].join("\n"),
+    [LIBRARY_SOURCE]: [
+      'import type { IAutoMovieLibrarySourceOwner } from "@automovie/interface";',
+      "",
+      'import { hallId } from "../shared/hall";',
+      "",
+      `const HALL = ${JSON.stringify(rectangularBuilding(), null, 2)};`,
+      "",
+      "export const hall = {",
+      `  design: ${JSON.stringify(LIBRARY_OWNER)},`,
+      "  build: () => ({",
+      "    environments: [{ ...HALL, id: hallId() }],",
+      "    models: [],",
+      "  }),",
+      "} satisfies IAutoMovieLibrarySourceOwner;",
+      "",
+    ].join("\n"),
+  });
+  // The same shape with a helper the source inspection refuses. The entry is
+  // untouched, so a refusal here can only have come from reading the import.
+  const badImport = libraryFixture({
+    "src/shared/hall.ts": [
+      "export const hallId = () => {",
+      "  // A clock is the plainest thing deterministic source may not read.",
+      '  return Date.now() > 0 ? "hall-house" : "hall-house";',
+      "};",
+      "",
+    ].join("\n"),
+    [LIBRARY_SOURCE]: [
+      'import type { IAutoMovieLibrarySourceOwner } from "@automovie/interface";',
+      "",
+      'import { hallId } from "../shared/hall";',
+      "",
+      `const HALL = ${JSON.stringify(rectangularBuilding(), null, 2)};`,
+      "",
+      "export const hall = {",
+      `  design: ${JSON.stringify(LIBRARY_OWNER)},`,
+      "  build: () => ({",
+      "    environments: [{ ...HALL, id: hallId() }],",
+      "    models: [],",
+      "  }),",
+      "} satisfies IAutoMovieLibrarySourceOwner;",
+      "",
+    ].join("\n"),
+  });
+  try {
+    const linkedCompile = run({ root: imports.root, materialize: true });
+    const refusedCompile = run({ root: badImport.root, materialize: true });
+    TestValidator.equals(
+      "an owner's imported module is linked, inspected, and transpiled beside it",
+      namedFacts([
+        [
+          "the import compiles and publishes what the helper named",
+          () =>
+            linkedCompile.success &&
+            imports.generated("library/environments/hall-house.json") !== null,
+        ],
+        [
+          "and a helper the inspection refuses is named at its own path",
+          () =>
+            refusedCompile.success === false &&
+            refusedCompile.diagnostics.some(
+              (diagnostic) => diagnostic.path === "src/shared/hall.ts",
+            ),
+        ],
+      ]),
+      {
+        "the import compiles and publishes what the helper named": true,
+        "and a helper the inspection refuses is named at its own path": true,
+      },
+    );
+  } finally {
+    imports.dispose();
+    badImport.dispose();
   }
 
   TestValidator.equals(

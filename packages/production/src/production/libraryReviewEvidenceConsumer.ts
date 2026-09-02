@@ -7,6 +7,7 @@ import type {
   AutoMovieGuidePass,
   IAutoMovieBuiltEnvironment,
   IAutoMovieDiagnostic,
+  IAutoMovieEnvironmentContext,
   IAutoMovieLibraryReviewOwnerIdentity,
   IAutoMovieLibraryReviewPlanFile,
   IAutoMovieLibraryReviewPopulation,
@@ -28,6 +29,7 @@ import {
 import {
   autoMovieLibraryObservationRequirements,
   libraryObservationClosureDiagnostics,
+  libraryObservationReceiptDiagnostics,
 } from "./libraryObservationRequirements";
 import { libraryReviewEvidenceDiagnostics } from "./libraryReviewEvidenceDiagnostics";
 import { assetReviewEvidenceDiagnostics } from "./reviewEvidenceDiagnostics";
@@ -52,6 +54,21 @@ interface ILibraryReviewResolverProps {
     owner: string;
     anchor: string;
   }) => readonly IAutoMovieBuiltEnvironment[];
+  /**
+   * The adopted worlds one owner published, resolved the same way.
+   *
+   * Separate from {@link environments} because they are separate publications:
+   * a map owner contributes a context and no environment, a space owner the
+   * reverse, and an owner that publishes neither is charged by neither. Absent
+   * for the same reason the environments resolver is -- withheld, the map
+   * population is the empty set, which is exactly what a shrunk plan looks like
+   * from here.
+   */
+  contexts?: (props: {
+    branch: string;
+    owner: string;
+    anchor: string;
+  }) => readonly IAutoMovieEnvironmentContext[];
 }
 
 interface ILibraryReviewConsumerProps extends ILibraryReviewResolverProps {
@@ -405,12 +422,29 @@ const resolvePopulation = (
         id: observation.id,
         evidence: observation.evidence,
       }));
-      const required = autoMovieLibraryObservationRequirements(
+      const environments =
         props.environments?.({
           branch: owner.branch,
           owner: address,
           anchor: unit.anchor,
-        }) ?? [],
+        }) ?? [];
+      const contexts =
+        props.contexts?.({
+          branch: owner.branch,
+          owner: address,
+          anchor: unit.anchor,
+        }) ?? [];
+      if (owner.branch === "maps" && contexts.length === 0)
+        output.diagnostics.push(
+          missing({
+            target: `library:${owner.branch}:${address}`,
+            path: relative,
+            message: `Library map owner "${address}" published no environment context, so the compiler cannot derive any map observation from the world this owner adopted. Return the adopted context from this owner's build result before review.`,
+          }),
+        );
+      const required = autoMovieLibraryObservationRequirements(
+        environments,
+        contexts,
       );
       output.diagnostics.push(
         ...libraryObservationClosureDiagnostics({
@@ -419,6 +453,17 @@ const resolvePopulation = (
           required,
           declared: observations.map((observation) => observation.id),
           waivers: plan.waivers ?? [],
+        }),
+      );
+      // What the plan owes is one question and what came back is another. The
+      // closure above judges the first from ids alone; this judges the second
+      // from what each receipt says about where it stood and what it read.
+      output.diagnostics.push(
+        ...libraryObservationReceiptDiagnostics({
+          target: `library:${owner.branch}:${address}`,
+          path: relative,
+          required,
+          receipts: plan.receipts,
         }),
       );
       output.required.push(

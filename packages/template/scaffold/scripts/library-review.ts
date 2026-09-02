@@ -11,6 +11,7 @@ import type {
 import {
   AutoMovieProductionCompiler,
   AutoMovieProductionProject,
+  autoMovieMaterializedLibraryContexts,
   autoMovieMaterializedLibraryEnvironments,
   canonicalAutoMovieJsonBytes,
   digestAutoMovieBytes,
@@ -20,6 +21,11 @@ import {
 import { randomUUID } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
+
+import {
+  readAutoMovieObservationMeasurements,
+  readAutoMovieObservationPose,
+} from "./libraryReviewRequest";
 
 type Verdict = "failed" | "not-run" | "passed" | "unsupported";
 
@@ -81,6 +87,8 @@ const actionArguments = {
     "--artifact-render",
     "--facts-file",
     "--turntable",
+    "--pose",
+    "--measurements",
   ]),
 } as const;
 
@@ -349,6 +357,13 @@ export const runLibraryReviewCommand = (props: {
     environments: autoMovieMaterializedLibraryEnvironments({
       read: (relative) => project.readGeneratedFile(relative),
     }),
+    // And the worlds it adopted. A map owner publishes no building at all, so
+    // without these it would be reported as owing only what its author already
+    // wrote down -- which is what "an empty population passes every check that
+    // compares against it" looks like from the author's side.
+    contexts: autoMovieMaterializedLibraryContexts({
+      read: (relative) => project.readGeneratedFile(relative),
+    }),
   });
   if (action === "inspect") {
     props.output?.(population);
@@ -368,6 +383,17 @@ export const runLibraryReviewCommand = (props: {
   const verdict = one(props.argv, "--verdict") as Verdict;
   if (!["failed", "not-run", "passed", "unsupported"].includes(verdict))
     throw new Error(`Unsupported terminal verdict ${JSON.stringify(verdict)}.`);
+  // Where the eye stood and what it read. An interior observation whose
+  // receipt states no pose is refused at review, because a picture drawn from
+  // the corridor outside carries the same bytes as one drawn inside the room
+  // and only the pose tells them apart. Both are parsed here rather than
+  // defaulted, so a malformed value is refused by name at the moment it is
+  // offered instead of reaching the plan file as something the review gate
+  // then has to interpret.
+  const pose = readAutoMovieObservationPose(one(props.argv, "--pose", false));
+  const measurements = readAutoMovieObservationMeasurements(
+    one(props.argv, "--measurements", false),
+  );
   const owner = population.owners.find((entry) => entry.owner === requested);
   const requirement = owner?.observations.find(
     (entry) => entry.id === observation,
@@ -411,6 +437,8 @@ export const runLibraryReviewCommand = (props: {
       evidence,
       identity: owner.identity,
       runtimeIdentity,
+      pose,
+      measurements,
       verdict,
     },
   ];

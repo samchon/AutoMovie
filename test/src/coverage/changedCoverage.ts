@@ -132,11 +132,80 @@ const canonical = (value: string): string => slash(path.resolve(value));
  * carries all four, three of them below 100%) and they were unjudged, which is
  * the one shape where a gate can be edited freely while reporting green.
  *
+ * The playground is named because nothing in this repository executes it. It is
+ * a demonstration a person opens in a browser: `private`, depended on by no
+ * package, run by no generated child, and shipped to nobody. It is not
+ * ungoverned -- twenty-four of its hosts answer the contract graph, and that
+ * population is asserted -- but the obligation it answers is the graph's, not
+ * line coverage's. Meeting the second would take either a person with a browser
+ * or a suite that drives a demo, and the second makes the demo a product
+ * surface with its own test burden, which is the opposite of what a demo is
+ * for. Unmet, it reported thirty-four files no process had ever loaded.
+ *
+ * The scaffold's examples are named for the opposite reason: they are the one
+ * authored tree this repository compiles and never runs, on purpose. The
+ * scaffold's own AGENTS.md settles what they are -- "src/examples is reading
+ * material, not a library or evidence population" -- and an author moves a
+ * technique out of them into its owning branch rather than importing them.
+ * Every generated project type-checks them, because `src` is in its tsconfig
+ * include, so they are gated by the compile that is their actual contract. A
+ * line-coverage obligation on them would be satisfiable only by a test that
+ * executed reading material, which is a test of nothing, and unsatisfied it
+ * reported fourteen files no process had ever loaded.
+ *
  * The directory names that stay unconditional are the ones no authored source
  * ever legitimately sits under.
  */
+/**
+ * Source roots deliberately outside this repository's unit-test coverage.
+ *
+ * Exported because the measurement has to agree. `coverageIncludes` states the
+ * same population in c8's own vocabulary, and a file one list admits while the
+ * other refuses is the fault `runCoveragePopulationGate` exists to catch: a
+ * file measured but never judged can be edited to any coverage at all without
+ * a diagnostic. One source, consumed twice, is what keeps them from drifting.
+ */
+export const UNMEASURED_SOURCE_ROOTS: readonly string[] = [
+  "build/",
+  "packages/cli/",
+  "packages/playground/",
+  "packages/template/build/",
+  "packages/template/scaffold/",
+];
+
+/**
+ * A declaration this repository reads rather than a program it runs.
+ *
+ * A lint configuration, a bundler configuration and an evidence exclusion list
+ * are answered by whatever loads them, and what they say is checked by the
+ * thing they configure failing. Measuring them asks a test to import a
+ * configuration for no reason but the number, which is the same trade as
+ * asserting the contents of a `package.json`.
+ */
+const DECLARATION_FILE =
+  /(?:^|\/)(?:lint\.config|vite\.config)\.[cm]?ts$|EvidenceExclusions\.ts$/u;
+
+/**
+ * The same rule as a glob, for the instrument that cannot read a regular
+ * expression.
+ *
+ * Spelled here beside the rule it mirrors rather than beside the command that
+ * consumes it. The gate exists to catch the two populations disagreeing, and it
+ * caught exactly that when the judging half learned this rule and the measuring
+ * half did not: `INSTRUMENT FAILURE: packages/render/lint.config.ts: the
+ * measurement takes this source and the changed-file gate never judges it`.
+ */
+export const UNJUDGED_DECLARATION_GLOBS: readonly string[] = [
+  "**/lint.config.ts",
+  "**/vite.config.ts",
+  "**/*EvidenceExclusions.ts",
+];
+
 export const isAuthoredExecutableSource = (relative: string): boolean => {
   const target = slash(relative);
+  if (UNMEASURED_SOURCE_ROOTS.some((root) => target.startsWith(root)))
+    return false;
+  if (DECLARATION_FILE.test(target)) return false;
   const typedRepositoryTool =
     target.startsWith("test/src/coverage/") ||
     target.startsWith("test/src/integrity/");

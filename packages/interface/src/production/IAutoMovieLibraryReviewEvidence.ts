@@ -100,6 +100,54 @@ export type AutoMovieLibraryReviewEvidence =
  * two elevations hide between them, a corner cannot show the room behind the
  * wall, and one room's interior says nothing about its siblings.
  *
+ * An instance set adds three of its own, and they divide the same way. The
+ * population view is the whole set where it stands, which is the only place
+ * density and layout can be wrong; a member view is one instance close enough
+ * to judge the prototype it repeats, which the population view is too far away
+ * to show; and a contact view is where an instance meets the surface it sits
+ * on, which is where a set that floats or sinks gives itself away and which
+ * neither of the other two frames. A set photographed only as a crowd hides a
+ * broken prototype, and one photographed only up close hides that it was
+ * scattered into a wall.
+ *
+ * An operable opening adds three more, and a still frame answers none of them
+ * alone. A state view is the opening standing in one of its own named states,
+ * which is the only place a leaf that never reaches closed can be seen. A
+ * transition view is the travel between two states, which is where a panel
+ * that sweeps through its own frame gives itself away and which no pair of end
+ * states shows. A contact view is where leaf meets frame, the only place a
+ * seal that does not meet is visible. A door photographed open and closed
+ * proves nothing about the arc between, and one photographed only mid-swing
+ * never says it shuts.
+ *
+ * A material is judged by what it declares about itself, which is why its four
+ * roles are not a fixed set every material owes. Response is owed by all of
+ * them: metalness and roughness only read under a light that moves, and one
+ * still of a flat panel says nothing about either. The other three are owed
+ * only by a material that claims the property -- an emissive surface adds
+ * light and a lit view cannot tell it from a bright base colour; a surface
+ * below full opacity is judged by what stands behind it; and a bound texture
+ * map nobody looked at is a map nobody authored. A material claiming none of
+ * the three owes exactly one observation, and that is the honest number.
+ *
+ * A map owner is judged against the world it adopted rather than against a
+ * thing standing in one, and it owes exactly one observation of it. The datum
+ * is the north the work is oriented to and the ground its elevations are
+ * measured from, and it is the only part of the adopted world this contract
+ * carries: a plan drawn against the wrong north is correct in every dimension
+ * and wrong in every relation to the sun, and nothing in a building's own
+ * topology can say so. Extent, water, network and site interface are named by
+ * the same requirement and have no compiled place yet, so they are absent here
+ * rather than approximated -- a role derived from a definition this deriver
+ * invented would measure the deriver, not the author.
+ *
+ * A connector is the systems branch's own subject and is judged the way an
+ * opening is, with one addition. Its landings are where a carriage meets a
+ * floor, which is the failure a route drawing cannot show and a state still
+ * cannot either: a lift whose car stops a step below the slab is correct in
+ * every state and wrong at every landing. A connector that declares no
+ * operation is a stair, and it still owes its landings.
+ *
  * @evidence requirements/review/subject-inspection.md#review-subject-viewpoint-ownership Names each role the derived population charges a library owner for.
  * @evidence specifications/review-and-acceptance/subject-surface-and-inspection.md#review-system-subject-viewpoint-plan Types the closed role set the topology derivation partitions by.
  * @author Samchon
@@ -109,10 +157,25 @@ export type AutoMovieLibraryObservationRole =
   | "corner"
   | "entrance"
   | "facade"
+  | "instance-contact"
+  | "instance-member"
+  | "instance-population"
+  | "operation-contact"
+  | "operation-state"
+  | "operation-transition"
   | "interior-center"
   | "interior-corner"
   | "interior-threshold"
+  | "map-datum"
+  | "material-emission"
+  | "material-response"
+  | "material-texture"
+  | "material-transmission"
   | "roof"
+  | "service-carriage"
+  | "service-landing"
+  | "service-state"
+  | "service-transition"
   | "underside";
 
 /**
@@ -151,8 +214,21 @@ export interface IAutoMovieLibraryRequiredObservation {
   role: AutoMovieLibraryObservationRole;
   /** Stable compiled subject address the observation opens. */
   subject: string;
-  /** Building unit the requirement descends from. */
-  building: string;
+  /**
+   * Building unit the requirement descends from, or null.
+   *
+   * Not derivable from {@link subject}: a building observation is addressed
+   * `building:<environment>/<unit>`, but a space, material, operation or
+   * service subject is addressed by the environment and the thing itself, so
+   * the building it sits in is nowhere in the address. The derivation walks
+   * element -> space -> building to find it, and that walk is the fact.
+   *
+   * Null for a map requirement, which descends from the adopted world rather
+   * than from anything standing in one. It is null rather than the context id
+   * because a reader told the building is `site-north` would go looking for a
+   * building by that name.
+   */
+  building: string | null;
   /** Topology address the requirement was derived from. */
   origin: string;
   /**
@@ -246,6 +322,35 @@ export interface IAutoMovieLibraryReviewObservationReceipt {
   identity: IAutoMovieLibraryReviewOwnerIdentity;
   /** Named tool and runtime version that produced the observation. */
   runtimeIdentity: string;
+  /**
+   * Where the eye actually stood, or null for an exterior observation.
+   *
+   * The requirement carries the pose an interior observation was *proved* to
+   * admit; this carries the pose the instrument actually used. Without it a
+   * receipt says which question it answered and never from where, so an
+   * interior observation drawn from the corridor outside is indistinguishable
+   * from one drawn inside the room, and being inside the room is the entire
+   * claim that observation makes.
+   *
+   * Null on an exterior observation for the reason the requirement gives: the
+   * frame comes from the subject's own extent, so there is no chosen point to
+   * report. Null on an interior one is a receipt that never says where it
+   * stood, and is refused rather than read as "anywhere".
+   */
+  pose: IAutoMovieLibraryObservationPose | null;
+  /**
+   * What the observation read, keyed by measurement name.
+   *
+   * A picture proves the eye was somewhere; it does not say what was taken
+   * from it. An observation that reports a clear height, a sill line, or a
+   * tread depth is making a claim a later reader can check against the model,
+   * and one that reports nothing is a photograph with a verdict attached.
+   *
+   * Empty is a legitimate reading for an observation whose whole answer is the
+   * picture, and it is written rather than omitted so a reader can tell "read
+   * nothing" from "an older receipt that could not say".
+   */
+  measurements: Readonly<Record<string, number>>;
   /** Actual terminal result; only one current passed receipt completes review. */
   verdict: "failed" | "not-run" | "passed" | "unsupported";
 }

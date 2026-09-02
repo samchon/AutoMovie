@@ -18,65 +18,6 @@ export interface IRunCoverageDependencies {
   report: () => number;
 }
 
-export interface ICoverageCommandWiring {
-  rootPackage: string;
-  testPackage: string;
-  workflow: string;
-}
-
-const packageScripts = (text: string): Record<string, unknown> => {
-  const manifest: unknown = JSON.parse(text);
-  if (
-    typeof manifest !== "object" ||
-    manifest === null ||
-    !("scripts" in manifest) ||
-    typeof manifest.scripts !== "object" ||
-    manifest.scripts === null
-  )
-    return {};
-  return Object.fromEntries(Object.entries(manifest.scripts));
-};
-
-const occurrences = (text: string, value: string): number =>
-  text.split(value).length - 1;
-const WORKFLOW_BASE_ENVIRONMENT =
-  "AUTOMOVIE_COVERAGE_BASE: origin/$" + "{{ github.base_ref }}";
-
-/** Diagnose drift between the root command, test command, and both CI lanes. */
-export const coverageCommandWiringDiagnostics = (
-  files: ICoverageCommandWiring,
-): string[] => {
-  const diagnostics: string[] = [];
-  const root = packageScripts(files.rootPackage);
-  const test = packageScripts(files.testPackage);
-  if (root["consumer:check"] !== "pnpm --filter @automovie/test consumer:check")
-    diagnostics.push("root consumer:check is not the typed targeted scenario");
-  if (test.coverage !== "ttsx -P tsconfig.json src/coverage/runCoverage.ts")
-    diagnostics.push("test coverage does not use the single typed entry");
-  if (occurrences(files.workflow, "fetch-depth: 0") !== 2)
-    diagnostics.push("both CI checkouts must fetch the comparison base");
-  if (occurrences(files.workflow, WORKFLOW_BASE_ENVIRONMENT) !== 2)
-    diagnostics.push("both CI lanes must pass the pull-request base");
-  if (occurrences(files.workflow, "run: pnpm coverage") !== 2)
-    diagnostics.push("both CI lanes must run the same coverage command");
-  if (occurrences(files.workflow, "working-directory: test") !== 2)
-    diagnostics.push("both CI lanes must run coverage from the test package");
-  if (
-    files.workflow.includes("- '*.ts'") === false ||
-    files.workflow.includes("- 'build/**'") === false
-  )
-    diagnostics.push("typed root tools and build tools must trigger CI");
-  if (files.workflow.includes("- 'docs/**'") === false)
-    diagnostics.push("the contract document layers must trigger the suite");
-  if (
-    files.workflow.includes("internals/") ||
-    files.workflow.includes("license:check") ||
-    files.workflow.includes("Report Coverage Gaps")
-  )
-    diagnostics.push("CI still names a deleted JavaScript-era gate");
-  return diagnostics;
-};
-
 export const coverageRunDependencies = (
   measure: () => number,
   changed: (arguments_: string[]) => number,

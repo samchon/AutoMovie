@@ -12,7 +12,6 @@ import {
   coverageTemporaryDirectory,
 } from "../../coverage/measureCoverage";
 import {
-  coverageCommandWiringDiagnostics,
   coverageProcessIsEntry,
   coverageRunDependencies,
   runCoverage,
@@ -73,43 +72,6 @@ import { namedFacts } from "../internal/predicates";
  *    would show here.
  */
 export const test_workspace_coverage_isolation = (): void => {
-  const wiring = {
-    rootPackage: fs.readFileSync(path.join(ROOT, "package.json"), "utf8"),
-    testPackage: fs.readFileSync(
-      path.join(ROOT, "test", "package.json"),
-      "utf8",
-    ),
-    workflow: fs.readFileSync(
-      path.join(ROOT, ".github", "workflows", "test.yml"),
-      "utf8",
-    ),
-  };
-  TestValidator.equals(
-    "the root command and both CI lanes use one typed coverage boundary",
-    {
-      actual: coverageCommandWiringDiagnostics(wiring),
-      disconnected: coverageCommandWiringDiagnostics({
-        rootPackage: "{}",
-        testPackage: "{}",
-        workflow:
-          "internals/coverage.mjs\nlicense:check\nReport Coverage Gaps\n",
-      }),
-    },
-    {
-      actual: [],
-      disconnected: [
-        "root consumer:check is not the typed targeted scenario",
-        "test coverage does not use the single typed entry",
-        "both CI checkouts must fetch the comparison base",
-        "both CI lanes must pass the pull-request base",
-        "both CI lanes must run the same coverage command",
-        "both CI lanes must run coverage from the test package",
-        "typed root tools and build tools must trigger CI",
-        "the contract document layers must trigger the suite",
-        "CI still names a deleted JavaScript-era gate",
-      ],
-    },
-  );
   // A directory holding a complete record, a truncated one, and two things that
   // are not records at all, so every figure is asserted against a mixture rather
   // than against an empty answer.

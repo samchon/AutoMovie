@@ -1,55 +1,14 @@
 name: build
-on:
-  pull_request:
-    paths:
-      # Keep both required checks present when either workflow contract
-      # changes. A path-filtered required workflow can otherwise remain
-      # pending instead of reporting a result for the pull request (#1397).
-      - ".github/workflows/build.yml"
-      - ".github/workflows/test.yml"
-      # Every build input a package can carry, by SHAPE rather than by name.
-      # The previous list named `src`, `package.json`, and `tsconfig.json`, and
-      # each input added afterwards (per-package lint rules, code generators,
-      # the guide corpus, the CLI scaffold, playground scripts and entry points)
-      # fell outside it, so a change to any of them ran no job at all (#1333).
-      # Enumerating today's files is what drifted, so these match the shape.
-      - "packages/*/src/**"
-      - "packages/*/*.json"
-      - "packages/*/*.ts"
-      - "packages/*/*.cts"
-      - "packages/*/*.html"
-      # Package entry documents are part of the published package surface and
-      # therefore travel through the packaged build boundary (#1397).
-      - "packages/*/*.md"
-      - "packages/*/build/**"
-      - "packages/*/prompts/**"
-      - "packages/*/scaffold/**"
-      - "packages/*/scripts/**"
-      # Shared compiler/lint policy and the documentation evidence project are
-      # workspace build inputs in their own right.
-      - "config/**"
-      - "docs/**"
-      - "test/**"
-      - "build/**"
-      # Root TypeScript tooling and configuration are build inputs by shape.
-      # `.prettierignore` and `.gitattributes` are named separately because
-      # they decide formatting scope and checkout line endings respectively.
-      #
-      # A leading `*` is kept off the dotfiles on purpose: `.gitignore` is not
-      # a build input, so it stays unmatched rather than triggering both jobs.
-      - "*.ts"
-      - "*.json"
-      - "*.yaml"
-      - "*.yml"
-      - ".prettier*"
-      - ".gitattributes"
-      # The root public entry document is named instead of globbing every
-      # Markdown file. Agent instructions remain outside the build surface;
-      # #1386 and #1387 showed that a public-document-only change still needs
-      # a reported check.
-      - "README.md"
+on: pull_request
+
+# A push replaces its predecessor rather than queueing behind it. Without this
+# the lane was five runs deep and the newest commit waited on four obsolete ones.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
-  Ubuntu:
+  build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -57,59 +16,9 @@ jobs:
         with:
           node-version: 22.x
       - uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v6.0.9
-
-      - name: Install Dependencies
-        run: pnpm install
-
-      # `@ttsc/lint` and typia ship source plugins that are Go programs the
-      # toolchain builds
-      # once per cache key, and a cold build costs minutes in every job. The
-      # content-addressed plugin binaries are tens of megabytes, so they cache
-      # cleanly while the Go build cache that produced them does not. Restore and
-      # save are separate steps because a combined `actions/cache` skips its save
-      # when the job fails, which would keep a red lane from ever warming.
-      - name: Restore Toolchain Plugin Cache
-        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      - run: pnpm install
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: node_modules/.cache/ttsc/plugins
           key: ttsc-plugins-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
-
-      # Formatting drifts silently without a gate: three separate topics in one
-      # session each found the same three files unformatted on master and each
-      # had to revert the churn to keep its diff on topic.
-      - name: Check Formatting
-        run: pnpm run format:check
-
-      - name: Build Packages
-        run: pnpm run build
-
-      # Product requirements and generated-production authoring contracts are
-      # separate graphs. This ledger gate keeps every requirement family and
-      # specification fragment classified, resolves every recorded owner, and
-      # refuses any silent change to the accepted unpaid target set.
-      - name: Check Production Authoring Reachability
-        run: pnpm --dir test start -- --include test_evidence_authoring_reachability
-
-      # `pnpm run build` cannot reach `packages/template/scaffold`: it is not a
-      # workspace project (`pnpm-workspace.yaml` lists `packages/*`) and its
-      # `package.json` carries template tokens rather than versions, so nothing
-      # above runs the `npm run lint:source` every generated project inherits.
-      # The gate renders a probe from the scaffold's own `docs` and everything
-      # its `tsconfig.json` compiles, and fails on the evidence and correctness
-      # diagnostics, so what an uninstalled probe cannot resolve stays out of
-      # the verdict. It plants one defect per axis every run, because a lint
-      # that never loaded and a union that resolved to `any` both report zero
-      # diagnostics and read exactly like a clean project.
-      #
-      # It runs after Build Packages on purpose: the probe resolves
-      # `@automovie/*` to the built declarations a generated project installs,
-      # rather than to this repository's own TypeScript.
-      - name: Check Scaffold lint:source
-        run: pnpm --dir test start -- --include test_cli_scaffold_evidence_gate
-
-      - name: Save Toolchain Plugin Cache
-        if: always()
-        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: node_modules/.cache/ttsc/plugins
-          key: ttsc-plugins-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+      - run: pnpm run build

@@ -64,6 +64,7 @@ import {
   IAutoMovieDesignLineage,
   IAutoMovieDesignReference,
   IAutoMovieDiagnostic,
+  IAutoMovieEnvironmentContext,
   IAutoMovieExternalMotionBasis,
   IAutoMovieExternalMotionConversionReceipt,
   IAutoMovieExternalMotionLossEntry,
@@ -1088,6 +1089,11 @@ export class AutoMovieProductionCompiler {
     const results: IAutoMovieMaterializedLibraryResult[] = [];
     const registeredBy = new Map<string, string>();
     const environmentOwner = new Map<string, string>();
+    // Claimed like the other two, though a context is the world rather than a
+    // thing in it. Two map owners adopting one id are two answers to "what is
+    // north here", and the report that read whichever landed second would be
+    // measuring one owner's work against the other's world.
+    const contextOwner = new Map<string, string>();
     const models = new Map<string, IAutoMovieModel>();
     const modelOwner = new Map<string, string>();
     if (input.scope !== "design")
@@ -1135,6 +1141,7 @@ export class AutoMovieProductionCompiler {
           const accepted = this.acceptLibraryContribution({
             context,
             diagnostics,
+            contextOwner,
             environmentOwner,
             modelOwner,
             models,
@@ -1225,10 +1232,30 @@ export class AutoMovieProductionCompiler {
         ...this.generatedOwnershipDiagnostics(manifest, materialize),
       );
 
+    // Decided once, here, rather than inside the callback. A design-scope
+    // compile publishes nothing, so there is no generated manifest to resolve a
+    // render target against -- but asking that question inside the callback
+    // asked it where nothing ever asks: measured, no scope reaches the callback
+    // while the manifest is null, because the consumer only wants a fingerprint
+    // when it is judging a receipt or an asset review and neither runs in
+    // design scope. The branch was real and unreachable at once. Bound here it
+    // is taken by every compile, in the scope that decides it.
+    const renderTargetFingerprint =
+      manifest === null
+        ? (): null => null
+        : (target: IAutoMovieRenderBundleManifest["target"]) =>
+            productionRenderTargetFingerprint(this.project, manifest, target);
+
     const environmentsOf = new Map(
       results.map((result) => [
         JSON.stringify([result.branch, result.owner]),
         result.contribution.environments,
+      ]),
+    );
+    const contextsOf = new Map(
+      results.map((result) => [
+        JSON.stringify([result.branch, result.owner]),
+        result.contribution.contexts,
       ]),
     );
     diagnostics.push(
@@ -1239,9 +1266,19 @@ export class AutoMovieProductionCompiler {
         compileFingerprint: inputFingerprint,
         environments: ({ branch, owner }) =>
           environmentsOf.get(JSON.stringify([branch, owner])) ?? [],
+        contexts: ({ branch, owner }) =>
+          contextsOf.get(JSON.stringify([branch, owner])) ?? [],
         modelExists: (model) => models.has(model),
         rigged: (model) => (models.get(model)?.skeleton ?? null) !== null,
-        fingerprint: () => null,
+        // A library publishes models, so an asset render target resolves here
+        // exactly as it does on the film path: the generated manifest above
+        // carries the models/<id>.json entry the fingerprint reads, and the
+        // project answers the content inputs. Returning null unconditionally
+        // made every turntable receipt permanently uncurrent -- a plan could
+        // name one, the record command could write one, and the compiler would
+        // answer "does not reopen" forever -- and it made the modelExists
+        // binding beside it a question whose answer nothing could observe.
+        fingerprint: renderTargetFingerprint,
         captured: (target, digest) =>
           this.project.capturedRenderViews(target, digest),
       }),
@@ -1361,6 +1398,7 @@ export class AutoMovieProductionCompiler {
    */
   private acceptLibraryContribution(props: {
     context: IAutoMovieLibraryBuildContext;
+    contextOwner: Map<string, string>;
     diagnostics: IAutoMovieDiagnostic[];
     environmentOwner: Map<string, string>;
     modelOwner: Map<string, string>;
@@ -1370,12 +1408,18 @@ export class AutoMovieProductionCompiler {
     target: string;
   }): boolean {
     const before = props.diagnostics.length;
+    // The path is sliced and printed without a fallback because the two
+    // validators below build every violation path from `$input.` and neither
+    // ever reports at the bare root: a contribution that is not a record at all
+    // is refused earlier, by the shape check on what `build()` returned, with a
+    // message of its own. A fallback for the empty remainder was a second
+    // sentence for a case that cannot arrive here, and no test could reach it.
     const report = (violation: IAutoMovieConstraintViolation): void => {
       props.diagnostics.push(
         autoMovieSourceContentDiagnostic({
           finding: autoMovieSourceContentFinding(
             violation,
-            `Library owner "${props.registration.design}" publishes ${violation.path.slice("$input".length) || "a record"} that ${violation.expected}. Correct ${props.source} before compiling.`,
+            `Library owner "${props.registration.design}" publishes ${violation.path.slice("$input".length)} that ${violation.expected}. Correct ${props.source} before compiling.`,
           ),
           target: props.target,
           path: props.source,
@@ -1416,6 +1460,13 @@ export class AutoMovieProductionCompiler {
         report(violation);
       if (claim(props.modelOwner, model.id, "model"))
         props.models.set(model.id, model);
+    }
+    for (const context of props.registration.contribution.contexts) {
+      for (const violation of autoMovieValidationFindings(
+        validateAutoMovieEnvironmentContext({ context }),
+      ))
+        report(violation);
+      claim(props.contextOwner, context.id, "environment context");
     }
     return props.diagnostics
       .slice(before)
@@ -4257,8 +4308,17 @@ interface ICompiledLibraryOwnerRegistration {
   export: string;
   /** Exact design-document and H2 address the export registered. */
   design: string;
-  /** Validated contribution the export's build function returned. */
-  contribution: IAutoMovieLibraryContribution;
+  /**
+   * Validated contribution the export's build function returned.
+   *
+   * `contexts` is definite here where the contract leaves it optional. The
+   * contract is optional so a library source written before the field existed
+   * still satisfies the shape; inside the compile every reader is owed a list,
+   * and three of them were each deciding that for themselves.
+   */
+  contribution: IAutoMovieLibraryContribution & {
+    contexts: IAutoMovieEnvironmentContext[];
+  };
 }
 
 /**
@@ -4404,7 +4464,15 @@ const compileLibrarySource = (props: {
       registrations.push({
         export: entry.name,
         design: entry.design,
-        contribution: validation.data,
+        // Normalized once, here, where every executed owner passes. `contexts`
+        // is optional on the contract so a library source written before it
+        // existed still satisfies the shape; every reader after this point is
+        // owed a list, and three of them were each deciding that for
+        // themselves.
+        contribution: {
+          ...validation.data,
+          contexts: validation.data.contexts ?? [],
+        },
       });
     }
   } catch (error) {

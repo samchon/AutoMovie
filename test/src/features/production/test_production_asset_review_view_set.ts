@@ -2,6 +2,7 @@ import type { AutoMovieGuidePass } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 import path from "node:path";
 
+import { loadSourceModule } from "../internal/loadSourceModule";
 import { namedFacts } from "../internal/predicates";
 
 /**
@@ -11,12 +12,7 @@ import { namedFacts } from "../internal/predicates";
  * so it is a consumed internal rather than an export; resolving it here through
  * the launcher's own require hook keeps it that way.
  */
-const unit = require(
-  path.resolve(
-    __dirname,
-    "../../../../packages/production/src/production/assetReviewViews.ts",
-  ),
-) as {
+const unit = loadSourceModule<{
   autoMovieAssetReviewViews: (props: { rigged: boolean }) => Array<{
     id: string;
     angleDeg: number;
@@ -24,7 +20,12 @@ const unit = require(
     pose: "rest" | "rom-extremes";
     pass: AutoMovieGuidePass;
   }>;
-};
+}>(
+  path.resolve(
+    __dirname,
+    "../../../../packages/production/src/production/assetReviewViews.ts",
+  ),
+);
 const autoMovieAssetReviewViews = unit.autoMovieAssetReviewViews;
 
 /**
