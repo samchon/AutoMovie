@@ -20,7 +20,6 @@
 // resolve that exact path; a concurrent run therefore still overwrites the
 // report, which is last-writer-wins rather than corruption — the file is one
 // run's complete result instead of a mixture of two.
-import { renderScaffold, scaffoldAssetDirectory } from "@automovie/template";
 import { spawnSync } from "node:child_process";
 import crypto from "node:crypto";
 import fs from "node:fs";
@@ -28,11 +27,6 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { UNEXECUTED_AUTHORED_ROOTS } from "./changedCoverage";
-import {
-  type IAttributionPass,
-  attributableScaffoldSources,
-  attributeGeneratedRecords,
-} from "./generatedAttribution";
 import { lineCount } from "./reportCoverageGaps";
 import {
   type ICoverageEntry,
@@ -89,8 +83,6 @@ export interface ICoverageSpawnResult {
 }
 
 export interface ICoverageMeasurementDependencies {
-  /** Re-address a generated project's execution to the source it copied. */
-  attribute: (directory: string) => IAttributionPass;
   /** Measured sources that appear in no record this run wrote. */
   neverRecorded: (directory: string) => string[];
   environment: NodeJS.ProcessEnv;
@@ -796,34 +788,8 @@ export const coverageUnloadedSources = (props: {
     reported: measuredReportedSources(props.reportDirectory),
   });
 
-/** The creditable scaffold population, re-checked per run rather than assumed. */
-export const measuredScaffoldAttribution = (
-  directory: string,
-): IAttributionPass => {
-  const rendered = renderScaffold({ name: "coverage-attribution" });
-  return attributeGeneratedRecords({
-    // Every TypeScript asset the scaffold ships, so one whose bytes drifted is
-    // still recognised and refused by name rather than skipped in silence.
-    candidates: new Set(
-      Object.keys(rendered).filter((one) => /\.[cm]?tsx?$/u.test(one)),
-    ),
-    directory,
-    isRepository: (url) =>
-      url
-        .replaceAll("\\", "/")
-        .toLowerCase()
-        .includes(ROOT.replaceAll("\\", "/").toLowerCase()),
-    root: ROOT,
-    sources: attributableScaffoldSources({
-      rendered,
-      scaffoldRoot: scaffoldAssetDirectory(),
-    }),
-  });
-};
-
 export const coverageMeasurementDependencies: ICoverageMeasurementDependencies =
   {
-    attribute: measuredScaffoldAttribution,
     neverRecorded: (directory) => coverageUnloadedSources({ directory }),
     temporaryDirectory: coverageTemporaryDirectory,
     sourceHostDirectory: coverageSourceHostDirectory,
@@ -921,25 +887,6 @@ export const measureCoverage = (
     // and does not reach the total. The remaining numbers separate a record
     // caught mid-write from a merge that drops complete ones, and they cost one
     // directory read on a step that already took minutes.
-    // Address before correcting. Twelve scaffold scripts read zero percent
-    // because a generated copy of each is what ran, at a path the report's own
-    // filter drops and the fixture deletes; re-addressing them has to happen
-    // while the raw records are still raw, because the shape grouping and the
-    // report both key on the URL.
-    const attribution = dependencies.attribute(temporary);
-    dependencies.log(
-      `coverage attribution: ${attribution.attributed} generated script ` +
-        `${attribution.attributed === 1 ? "entry" : "entries"} in ` +
-        `${attribution.records} record ${attribution.records === 1 ? "file" : "files"} ` +
-        `credited to the repository source whose bytes they ran, ` +
-        `${attribution.linked} vanished linked build${attribution.linked === 1 ? "" : "s"} and ` +
-        `${attribution.queried} query-suffixed reading${attribution.queried === 1 ? "" : "s"} re-addressed` +
-        (attribution.refused.length === 0
-          ? ""
-          : `, ${attribution.refused.length} refused for bytes no repository source vouches for`),
-    );
-    for (const url of attribution.refused)
-      dependencies.log(`UNATTRIBUTED GENERATED SCRIPT: ${url}`);
     // Correct the merge before anything reads it. c8 writes one entry per
     // source path, and when two processes saw one source in two emitted forms
     // that entry is worse than the better of the two -- measured here at 90.93
