@@ -8,16 +8,12 @@ import path from "node:path";
  * passed`, and exited 0. Four callers depend on that filter and each is the
  * only place its check runs:
  *
- * | caller | term |
- * | --- | --- |
- * | `.github/workflows/build.yml` | `test_evidence_authoring_reachability` |
- * | `.github/workflows/build.yml` | `test_cli_scaffold_evidence_gate` |
- * | `test/package.json` | `test_lint_plugin_walking_skeleton...` |
- * | `test/package.json` | `test_workspace_public_api_consumers...` |
- *
- * Rename or delete a scenario and its check switches off silently, with a green
- * lane and nothing anywhere saying that nothing ran. This is the ninth time
- * this campaign has met a check reporting success while measuring nothing.
+ * Rename or delete a scenario and any command that names it switches off
+ * silently, with a green lane and nothing anywhere saying that nothing ran.
+ * This is the ninth time this campaign has met a check reporting success while
+ * measuring nothing, and it caught the tenth: deleting the scenario `pnpm run
+ * build` chained as `consumer:check` failed the build here rather than passing
+ * over an empty selection.
  *
  * Each requested term is judged on its own rather than the selection as a
  * whole, because `--include a b` where only `a` matches still runs something

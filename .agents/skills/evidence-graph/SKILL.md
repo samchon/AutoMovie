@@ -59,7 +59,6 @@ A derived population makes a carrier's citations checked; it does not make citat
 
 The repository contract and a generated production's authoring contract remain separate graphs. Do not manufacture one citation per requirement unit between them. [The authoring-reachability ledger](../../../docs/authoring-reachability/README.md) instead maps every requirement family to the production contract or procedure that gives its decisions an author, or to one of three explicit absence classes: unpaid authoring edge, host-owned behavior, or intentional exclusion with a resumption condition.
 
-Run `pnpm --dir test start -- --include test_evidence_authoring_reachability` whenever a requirement family, the shared production-contract inventory, or a mapped authoring path changes. The typed test requires complete family inventory, verifies current H3 and shared H2 populations, resolves every recorded path and anchor, and pins the accepted unpaid counts and exact fragment target set. It does not demand zero debt while an accepted follow-up owns that debt, but any increase, decrease, target substitution, or reclassification requires the ledger to be reread and updated rather than drifting silently.
 
 ## Every public package participates
 
@@ -93,7 +92,7 @@ Leave a fragment nobody implements undeclared rather than excluding it. An exclu
 
 Migrate by touching. Every unit starts in the ledger's `legacy` snapshot with its digest, and editing that unit moves its prose away from the digest, which is what surfaces it to the next author of that unit rather than arriving as one repository-wide red gate. What surfaces is a number, not a refusal: the check reports it under `stale` and still exits zero, exactly as the counting rule above requires. Read that count when you touch a legacy unit and decide whether this is the change that should declare its owners; nothing will stop you either way, and a declaration written to clear a diagnostic is the outcome the counting rule exists to avoid.
 
-`test_evidence_authoring_reachability` compares every specification `@evidenceObligation` target-anchor and id against source `@evidencePart` pairs, rejects orphan source parts, and pins both the current unpaid total and exact target set. The pin counts debt instead of declaring it implemented. Read every unpaid fragment when its specification or claimant changes, pay it with a truthful source owner when one exists, and update the accepted set and count in the same decision.
+The authoring-reachability ledger under `docs/authoring-reachability` compares every specification `@evidenceObligation` target-anchor and id against source `@evidencePart` pairs, rejects orphan source parts, and pins both the current unpaid total and exact target set. The pin counts debt instead of declaring it implemented. Read every unpaid fragment when its specification or claimant changes, pay it with a truthful source owner when one exists, and update the accepted set and count in the same decision.
 
 ## Stable document identities
 
