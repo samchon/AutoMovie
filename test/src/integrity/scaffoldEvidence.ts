@@ -596,6 +596,8 @@ const contractAnchors = (relative: string): string[] =>
       .matchAll(/^## .+ \{#(?<anchor>[^}]+)\}$/gmu),
   ].map((match) => `${relative}#${match.groups!.anchor!}`);
 
+const NEWLINE = String.fromCharCode(10);
+
 const activeSettingsConfig = (config: string): string => {
   const kindSelector = "  kind: null,";
   const settingsSelector = '  settings: "disabled",';
@@ -609,6 +611,47 @@ const activeSettingsConfig = (config: string): string => {
   return config
     .replace(kindSelector, '  kind: "library",')
     .replace(settingsSelector, '  settings: "evidence",');
+};
+
+/**
+ * Turn on the second design field, after the settings probes have run.
+ *
+ * Separate from the settings switch because the underpayment probes between
+ * them prove an isolated diagnostic, and a shared discovery answer removed
+ * while two layers are active is under-paid by both -- one diagnostic per
+ * layer, which is the product being right and the probe's "isolated" reading
+ * being about a one-layer population.
+ */
+const activeSpacesConfig = (config: string): string => {
+  const spacesSelector = '  spaces: "disabled",';
+  if (config.split(spacesSelector).length !== 2)
+    throw new Error(
+      "The scaffold spaces selector changed; update the paid spaces probe before trusting this gate.",
+    );
+  return config.replace(spacesSelector, '  spaces: "evidence",');
+};
+
+/**
+ * Why one paid space H2 answers one space principle.
+ *
+ * Separate from the settings reasons because the anchors are separate, and
+ * because a reason that fit both layers would be the generic reason the
+ * exchange test refuses: it would survive being moved to the other host.
+ */
+const paidSpacePrincipleReason = (
+  target: string,
+  unit: ISettingsUnit,
+): string => {
+  const anchor = target.slice(target.indexOf("#") + 1);
+  if (anchor === "space-information-structure")
+    return `${unit.title} is one addressable H2 holding one bounded spatial decision of the probe hall, with its status stated before the decision.`;
+  if (anchor === "space-topology")
+    return `${unit.title} states containment and adjacency before any dimension, so the hall's arrangement is decided where a measurement cannot decide it.`;
+  if (anchor === "space-boundary-authority")
+    return `${unit.title} names the one boundary record that owns each separation it mentions, so no second document can claim the same wall.`;
+  if (anchor === "space-verification-address")
+    return `${unit.title} states its spatial claim at an address an observation can be taken at, rather than as a quality of the hall as a whole.`;
+  throw new Error(`No paid-probe space reason owns ${target}.`);
 };
 
 const paidPrincipleReason = (target: string, unit: ISettingsUnit): string => {
@@ -681,6 +724,130 @@ const obligationUnderpayment = (
  * negative discovery audit. Settings has no inherited file relationship to
  * pay.
  */
+
+/**
+ * Turn the probe into a two-field library and pay the second field too.
+ *
+ * The settings population above proves the machine on one field. One field is
+ * not the population rule: a payment shape that works where sixteen obligations
+ * live under one layer may not work where five live under another, and until a
+ * second field is paid by the same machine the rule is a claim about settings
+ * wearing the name of a rule.
+ *
+ * Run after the underpayment probes, because a shared discovery answer removed
+ * while two layers are active is under-paid by both, one diagnostic per layer.
+ * That is the product being right; the probes' isolated reading is about a
+ * one-layer population.
+ */
+const activatePaidSpaces = (): void => {
+  const configFile = path.join(PROBE, "lint.config.ts");
+  fs.writeFileSync(
+    configFile,
+    activeSpacesConfig(fs.readFileSync(configFile, "utf8")),
+    "utf8",
+  );
+  const principleTargets = [
+    ...contractAnchors("principles/core/common.md"),
+    ...contractAnchors("principles/core/settings.md"),
+  ];
+  const spacePrincipleTargets = contractAnchors("principles/design/spaces.md");
+  const spaceObligationTargets = contractAnchors(
+    "obligations/design/spaces.md",
+  );
+  /**
+   * One paid space H2 per space obligation, describing one hall.
+   *
+   * The five obligations divide a building into five questions -- what is
+   * addressable, how it is arranged, where inside meets outside, how a body
+   * moves through it, and what would falsify the answer -- so the payment is a
+   * description of the probe's own hall rather than five inventions. That is
+   * what lets it be truthful: a disposable calibration hall really does have
+   * these five aspects, and each H2 states the one it owns.
+   */
+  const spaceUnits: ISettingsUnit[] = [
+    {
+      anchor: "probe-addressable-spatial-decisions",
+      title: "Probe addressable spatial decisions",
+      obligations: [
+        "obligations/design/spaces.md#addressable-spatial-decisions",
+      ],
+      body: "Five independently addressable H2 owners divide this hall's spatial contract, one per space obligation, so a later reader corrects one decision without reopening the other four.",
+    },
+    {
+      anchor: "probe-space-reference-topology",
+      title: "Probe space reference and topology",
+      obligations: ["obligations/design/spaces.md#space-reference-topology"],
+      body: "One right-handed Y-up metre frame holds one building unit containing one room, and the containment is stated before any dimension of it.",
+    },
+    {
+      anchor: "probe-space-envelope-interface",
+      title: "Probe exterior and interior interface",
+      obligations: ["obligations/design/spaces.md#space-envelope-interface"],
+      body: "Four wall boundaries, one roof and one floor slab enclose the room, and each separation is owned by exactly one boundary record that the openings cut through.",
+    },
+    {
+      anchor: "probe-space-access-circulation",
+      title: "Probe access, circulation, and clearance",
+      obligations: ["obligations/design/spaces.md#space-access-circulation"],
+      body: "One door through the south wall is the room's only entrance, and its clear width and height are stated where an observation taken at that threshold can read them.",
+    },
+    {
+      anchor: "probe-space-review-set",
+      title: "Probe space review set",
+      obligations: ["obligations/design/spaces.md#space-review-set"],
+      body: "The compiled topology derives this hall's review set, so the owner enumerates no smaller building than the one it published and each unopened address is refused at its own name.",
+    },
+  ];
+
+  assertOwnedObligations(spaceObligationTargets, spaceUnits);
+  const spaceBody = [
+    "# Active spaces graph probe",
+    "",
+    "Every fact below is a production invention valid only inside this disposable compiler calibration hall.",
+    "",
+    ...spaceUnits.flatMap((unit) => [
+      `## ${unit.title} {#${unit.anchor}}`,
+      "",
+      "<!--",
+      ...principleTargets.map(
+        (item) => `@evidence ${item} ${paidPrincipleReason(item, unit)}`,
+      ),
+      ...spacePrincipleTargets.map(
+        (item) => `@evidence ${item} ${paidSpacePrincipleReason(item, unit)}`,
+      ),
+      ...unit.obligations.map((item) => evidenceObligationLine(item, unit)),
+      "-->",
+      "",
+      "**Status:** production invention, disposable compiler calibration.",
+      "",
+      unit.body,
+      "",
+    ]),
+  ].join(NEWLINE);
+  const spaceTarget = path.join(PROBE, "docs", "spaces", "production.md");
+  fs.mkdirSync(path.dirname(spaceTarget), { recursive: true });
+  fs.writeFileSync(spaceTarget, spaceBody, "utf8");
+
+  const discoveryFile = path.join(PROBE, "docs", "contracts", "index.md");
+  const index = fs.readFileSync(discoveryFile, "utf8");
+  const closer = "-->";
+  if (index.split(closer).length < 2)
+    throw new Error(
+      "The paid contract index lost its evidence preamble; the spaces audit has nowhere to go.",
+    );
+  fs.writeFileSync(
+    discoveryFile,
+    index.replace(
+      closer,
+      [
+        `@evidenceExclude discovery/design/spaces.md#work-specific-space-requirements ${"The probe examined its calibration hall's one room, one entrance and six enclosing boundaries against the shared space rules and retained no work-specific spatial requirement: every decision this hall makes is already owned by a shared rule, and inventing a local one would give the probe a contract nothing consumes."}`,
+        "",
+      ].join(NEWLINE) + closer,
+    ),
+    "utf8",
+  );
+};
+
 const activatePaidSettings = (): { underpayments: IUnderpayment[] } => {
   const configFile = path.join(PROBE, "lint.config.ts");
   const config = fs.readFileSync(configFile, "utf8");
@@ -1720,6 +1887,11 @@ const main = (): void => {
       ` active graph: removed ${underpayment.target} was rejected by evidence/graph`,
     ]);
   }
+
+  activatePaidSpaces();
+  const paidSpacesRun = compile();
+  assertPaidCompile(paidSpacesRun);
+  report([" active graph: paid spaces population passed beside settings"]);
   render();
   report([
     "",
