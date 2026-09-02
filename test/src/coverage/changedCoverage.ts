@@ -156,12 +156,23 @@ const canonical = (value: string): string => slash(path.resolve(value));
  * The directory names that stay unconditional are the ones no authored source
  * ever legitimately sits under.
  */
+/**
+ * Roots this repository authors, compiles, and deliberately never executes.
+ *
+ * Exported because the measurement has to agree. `coverageIncludes` states the
+ * same population in c8's own vocabulary, and a file one list admits while the
+ * other refuses is the fault `runCoveragePopulationGate` exists to catch: a
+ * file measured but never judged can be edited to any coverage at all without
+ * a diagnostic. One source, consumed twice, is what keeps them from drifting.
+ */
+export const UNEXECUTED_AUTHORED_ROOTS: readonly string[] = [
+  "packages/playground/",
+  "packages/template/scaffold/src/examples/",
+];
+
 export const isAuthoredExecutableSource = (relative: string): boolean => {
   const target = slash(relative);
-  if (
-    target.startsWith("packages/template/scaffold/src/examples/") ||
-    target.startsWith("packages/playground/")
-  )
+  if (UNEXECUTED_AUTHORED_ROOTS.some((root) => target.startsWith(root)))
     return false;
   const typedRepositoryTool =
     target.startsWith("test/src/coverage/") ||
