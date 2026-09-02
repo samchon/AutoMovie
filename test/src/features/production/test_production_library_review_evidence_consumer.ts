@@ -6,6 +6,7 @@ import type {
   AutoMovieContentDigest,
   AutoMovieGuidePass,
   IAutoMovieDiagnostic,
+  IAutoMovieEnvironmentContext,
   IAutoMovieLibraryReviewPopulation,
   IAutoMovieLibraryReviewProjectReader,
   IAutoMovieRenderBundleManifest,
@@ -18,6 +19,7 @@ import {
 import { TestValidator } from "@nestia/e2e";
 import path from "node:path";
 
+import { analysisContext } from "../internal/analysisFixtures";
 import { loadSourceModule } from "../internal/loadSourceModule";
 import { namedFacts } from "../internal/predicates";
 import { productionFixture } from "./productionFixtures";
@@ -36,6 +38,11 @@ interface ConsumerProps {
     target: IAutoMovieRenderBundleManifest["target"],
     fingerprint: AutoMovieContentDigest,
   ) => ReadonlyArray<{ time: number; pass: AutoMovieGuidePass }>;
+  contexts?: (props: {
+    branch: string;
+    owner: string;
+    anchor: string;
+  }) => readonly IAutoMovieEnvironmentContext[];
 }
 
 const consumer = loadSourceModule<{
@@ -43,6 +50,11 @@ const consumer = loadSourceModule<{
     authoring: IAutoMovieProductionEvidence;
     project: IAutoMovieLibraryReviewProjectReader;
     compileFingerprint: AutoMovieContentDigest;
+    contexts?: (props: {
+      branch: string;
+      owner: string;
+      anchor: string;
+    }) => readonly IAutoMovieEnvironmentContext[];
   }) => IAutoMovieLibraryReviewPopulation;
   libraryReviewEvidenceConsumerDiagnostics: (
     props: ConsumerProps,
@@ -167,7 +179,7 @@ const project = (): MutableProject => {
 const observation = (branch: string) => {
   if (branch === "maps")
     return {
-      id: "map-plan-section-elevation-traversal-extent",
+      id: "map:library-map/datum",
       evidence: "facts",
     };
   if (branch === "models")
@@ -296,6 +308,8 @@ const props = (
     { time: 0, pass: "beauty" },
     { time: 0, pass: "outline" },
   ],
+  contexts: ({ branch }) =>
+    branch === "maps" ? [analysisContext({ id: "library-map" })] : [],
 });
 
 const diagnose = (

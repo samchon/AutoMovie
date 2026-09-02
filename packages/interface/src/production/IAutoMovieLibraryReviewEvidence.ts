@@ -329,7 +329,7 @@ export interface IAutoMovieLibraryReviewObservationReceipt {
    * admit; this carries the pose the instrument actually used. Without it a
    * receipt says which question it answered and never from where, so an
    * interior observation drawn from the corridor outside is indistinguishable
-   * from one drawn inside the room — and being inside the room is the entire
+   * from one drawn inside the room, and being inside the room is the entire
    * claim that observation makes.
    *
    * Null on an exterior observation for the reason the requirement gives: the

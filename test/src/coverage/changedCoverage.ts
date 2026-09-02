@@ -167,7 +167,9 @@ const canonical = (value: string): string => slash(path.resolve(value));
  */
 export const UNMEASURED_SOURCE_ROOTS: readonly string[] = [
   "build/",
+  "packages/cli/",
   "packages/playground/",
+  "packages/template/build/",
   "packages/template/scaffold/",
 ];
 

@@ -587,7 +587,7 @@ export const libraryObservationClosureDiagnostics = (props: {
  * The closure gate above judges the plan: which observations an owner owes and
  * which it opens. This judges what came back. A receipt names the observation
  * it pays and carries bytes, and until it carries a pose it never says the
- * bytes were drawn from the place the observation is about — an interior view
+ * bytes were drawn from the place the observation is about: an interior view
  * taken from the corridor outside is indistinguishable from one taken inside
  * the room, and being inside the room is the entire claim that observation
  * makes.
@@ -603,8 +603,8 @@ export const libraryObservationClosureDiagnostics = (props: {
  * where the topology said an eye could stand for this question.
  *
  * A passed receipt carrying no measurement at all is a photograph with a
- * verdict attached. Empty is legitimate — some observations answer with the
- * picture alone — so this refuses only the pair the plan itself declared
+ * verdict attached. Empty is legitimate: some observations answer with the
+ * picture alone, so this refuses only the pair the plan itself declared
  * measurable, which is why the requirement's own role decides rather than a
  * blanket count.
  *
