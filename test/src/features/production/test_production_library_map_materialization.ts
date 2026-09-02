@@ -11,6 +11,7 @@ import {
   LIBRARY_ANCHOR,
   LIBRARY_DESIGN,
   LIBRARY_SECOND_ANCHOR,
+  LIBRARY_SECOND_OWNER,
   LIBRARY_SOURCE,
   libraryAuthoring,
   libraryFixture,
@@ -35,6 +36,9 @@ import {
  *    other's world.
  * 3. The address refusal names contexts rather than environments, so an author
  *    who passed a document path alone is told which reader refused them.
+ * 4. Two owners adopting one context id are refused. Two answers to "what is
+ *    north here" cannot both stand, and a report reading whichever landed
+ *    second would measure one owner's work against the other's world.
  */
 export const test_production_library_map_materialization = (): void => {
   const fixture = libraryFixture();
@@ -108,6 +112,39 @@ export const test_production_library_map_materialization = (): void => {
         anOwnerThatAdoptedNoneReadsNone: true,
         anOwnerAddressedWithoutItsAnchorIsRefusedAsContexts: true,
       },
+    );
+    const collided = new AutoMovieProductionCompiler(
+      AutoMovieProductionProject.open(fixture.root),
+      libraryAuthoring({
+        root: fixture.root,
+        anchors: [LIBRARY_ANCHOR, LIBRARY_SECOND_ANCHOR],
+      }),
+    );
+    fixture.write(
+      LIBRARY_SOURCE,
+      librarySourceModule({
+        contexts: JSON.stringify([context]),
+        second: {
+          exportName: "annex",
+          design: LIBRARY_SECOND_OWNER,
+          environmentId: "hall-annex",
+          contexts: JSON.stringify([context]),
+        },
+      }),
+    );
+    const clash = collided.compile({ scope: "source" });
+
+    TestValidator.equals(
+      "one adopted world is published by one owner",
+      {
+        refused: clash.success === false,
+        named: clash.diagnostics.some((diagnostic) =>
+          diagnostic.message.includes(
+            'Library environment context "hall-site"',
+          ),
+        ),
+      },
+      { refused: true, named: true },
     );
   } finally {
     fixture.dispose();

@@ -77,6 +77,8 @@ export const librarySourceModule = (props: {
     design: string;
     environmentId: string;
     models?: string;
+    /** Raw literal for the second owner's adopted worlds. */
+    contexts?: string;
   };
 }): string => {
   const owner = (
@@ -124,6 +126,9 @@ ${
         props.second.design,
         props.second.environmentId,
         props.second.models ?? "[]",
+        props.second.contexts === undefined
+          ? ""
+          : `${String.fromCharCode(10)}    contexts: ${props.second.contexts},`,
       )
 }
 `;
