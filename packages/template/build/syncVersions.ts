@@ -4,13 +4,13 @@
 // published package at build time, since the standalone package cannot read the
 // workspace catalog at runtime). Run from `build` and `prepare`.
 //
-// The resolution rules live in templateVersions.ts so the repository-local
+// The resolution rules live in resolveTemplateVersions.ts so the repository-local
 // experimental sandbox generator reads the same values instead of parsing this
 // script's own output back out.
 import { writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 
-import { resolveTemplateVersions } from "./templateVersions";
+import { resolveTemplateVersions } from "./resolveTemplateVersions";
 
 const HERE = __dirname;
 

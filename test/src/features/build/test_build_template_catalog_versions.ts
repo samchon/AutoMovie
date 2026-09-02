@@ -4,18 +4,33 @@ import path from "node:path";
 import { namedFacts } from "../internal/predicates";
 import { requireSourceModule } from "../internal/requireSourceModule";
 
+/**
+ * The resolver that turns this repository's manifests into the scaffold's
+ * baked versions.
+ *
+ * One file with no relative import of its own, which is what a path require
+ * needs here: measured on #2224, requiring a module that imports a sibling
+ * answers with the sibling instead. The parser and the resolution live together
+ * for that reason, and the guard proves which module arrived either way.
+ */
 const unit = requireSourceModule<{
   readCatalogVersion: (props: {
     catalog: string;
     dep: string;
     workspace: string;
   }) => string;
+  resolveTemplateVersions: () => Record<string, string>;
+  WORKSPACE_TEMPLATE_VERSION_KEYS: readonly string[];
 }>(
   path.resolve(
     __dirname,
-    "../../../../packages/template/build/catalogVersion.ts",
+    "../../../../packages/template/build/resolveTemplateVersions.ts",
   ),
-  ["readCatalogVersion"],
+  [
+    "readCatalogVersion",
+    "resolveTemplateVersions",
+    "WORKSPACE_TEMPLATE_VERSION_KEYS",
+  ],
 );
 
 /**
@@ -105,6 +120,34 @@ export const test_build_template_catalog_versions = (): void => {
         "danglingAliasRefused",
         () => refuses("catalog", "dangling", "unresolved YAML alias"),
       ],
+      [
+        // Loading the module is not the same as it working. The manifest it is
+        // actually pointed at is this repository's own, and a package rename
+        // anywhere in the workspace graph fails here rather than in a rendered
+        // project.
+        "theRealWorkspaceResolves",
+        () => {
+          const resolved = unit.resolveTemplateVersions();
+          return (
+            Object.keys(resolved).length !== 0 &&
+            Object.values(resolved).every(
+              (value) => typeof value === "string" && value.length !== 0,
+            )
+          );
+        },
+      ],
+      [
+        // A key a workspace-local consumer overrides with `workspace:^` has to
+        // be one the resolver produces, or the override replaces nothing.
+        "everyOverriddenKeyIsProduced",
+        () => {
+          const resolved = unit.resolveTemplateVersions();
+          return (
+            unit.WORKSPACE_TEMPLATE_VERSION_KEYS.length !== 0 &&
+            unit.WORKSPACE_TEMPLATE_VERSION_KEYS.every((key) => key in resolved)
+          );
+        },
+      ],
     ]),
     {
       plainRange: true,
@@ -115,6 +158,8 @@ export const test_build_template_catalog_versions = (): void => {
       unknownCatalogRefused: true,
       unknownDependencyRefused: true,
       danglingAliasRefused: true,
+      theRealWorkspaceResolves: true,
+      everyOverriddenKeyIsProduced: true,
     },
   );
 };
