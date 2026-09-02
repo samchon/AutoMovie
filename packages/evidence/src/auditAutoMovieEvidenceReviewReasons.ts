@@ -9,7 +9,10 @@ interface IAutoMovieEvidenceReviewDocument {
 /** A review-reason defect that can be decided without judging prose quality. */
 interface IAutoMovieEvidenceReviewReasonDiagnostic {
   /** Stable machine-readable defect kind. */
-  code: "evidence-review-restatement" | "evidence-review-reused";
+  code:
+    | "evidence-reason-shared"
+    | "evidence-review-restatement"
+    | "evidence-review-reused";
   /** Repository-relative document containing the review. */
   path: string;
   /** Markdown unit or TypeScript documentation block carrying the review. */
@@ -52,6 +55,50 @@ const annotationText = (line: string): string =>
     .replace(/\s*-->$/u, "")
     .replace(/^\*\s?/u, "")
     .trim();
+
+/**
+ * Rejoin an annotation with the lines its formatter wrapped it onto.
+ *
+ * A JSDoc reason long enough to wrap is stored as several ` * ` lines, and a
+ * reader taking only the first of them sees a fragment. That is not a cosmetic
+ * loss: `@evidence obligations/design/motion-sources.md#design-owned-transition
+ * Implements` is what four separate motion sources look like once truncated,
+ * and comparing those fragments finds four hosts saying one thing when in fact
+ * they say `only the cited advance endpoints and ease-in-out path`, `only the
+ * cited endpoints, spatial relation, and ease-out path`, `only the cited
+ * constant endpoints and linear phase`, and `the exact endpoint owned by the
+ * cited motion design`.
+ *
+ * It cuts the other way too. Every comparison in this audit was reading
+ * truncated reasons, so two genuinely copied wrapped reasons agreed on their
+ * first fragment and were caught for the wrong evidence, while two that
+ * diverged only after the wrap were never compared at all.
+ *
+ * A continuation is any following line inside the same block that carries text
+ * and does not begin a new annotation. Both block terminators stop it: the
+ * closing marker of a documentation comment, and the `-->` of a Markdown
+ * comment, each reduce to nothing once the leading marker is stripped.
+ */
+const joinWrappedAnnotations = (lines: readonly string[]): string[] => {
+  const joined = [...lines];
+  for (let index = 0; index < joined.length; index++) {
+    if (annotationOf(joined[index]!) === null) continue;
+    let cursor = index + 1;
+    while (cursor < joined.length) {
+      const candidate = joined[cursor]!;
+      if (/^\s*\*\//u.test(candidate)) break;
+      const text = annotationText(candidate);
+      if (text.length === 0 || text === "/") break;
+      if (annotationOf(candidate) !== null) break;
+      if (/^\s*(?:#{1,6}\s|```|~~~)/u.test(candidate.trim())) break;
+      joined[index] = `${joined[index]!.replace(/\s+$/u, "")} ${text}`;
+      joined[cursor] = "";
+      cursor++;
+    }
+    index = cursor - 1;
+  }
+  return joined;
+};
 
 const annotationOf = (line: string): IAnnotation | null => {
   const text = annotationText(line);
@@ -113,25 +160,66 @@ const markdownHost = (path: string, heading: string): string => {
 };
 
 /**
- * Find evidence reviews that merely repeat an adjacent acknowledgement or
- * reuse one observation for different targets on the same authored host.
+ * The identity a shared reason is keyed by: what is being said, about what.
+ *
+ * Exclusions and acknowledgements are kept apart because refusing a target and
+ * answering it are different claims that may honestly read alike, and the
+ * target is part of the key because one sentence answering two targets is a
+ * different defect with its own diagnostic.
+ */
+const sharedKey = (annotation: IAnnotation): string =>
+  [
+    annotation.exclusion ? "exclude" : "answer",
+    annotation.review ? "review" : "acknowledge",
+    annotation.target,
+    normalizedReason(withoutMechanicalReviewLead(annotation.reason)),
+  ].join("\0");
+
+/**
+ * Find evidence reviews that merely repeat an adjacent acknowledgement, reuse
+ * one observation for different targets on the same authored host, or answer
+ * one target from two hosts with the same sentence.
  *
  * This audit is deliberately stateless. It does not validate fingerprints,
  * decide whether a review is insightful, or recreate the retired review
  * ledger. It rejects only relationships that current strings can disprove.
  *
+ * The third form is the exchange test at its weakest and most mechanical.
+ * That test asks whether a reason stays true when moved to another host, and
+ * treats a reason that survives the move as no reason at all. A reason already
+ * standing word for word on two hosts does not need to be moved to fail it.
+ *
+ * Measured before this refusal existed, `test/fixtures/completed-film` carried
+ * 146 of 1,529 acknowledgements -- 9.5% -- on 71 sentences each shared by two
+ * hosts answering one target, plus 10 reviews on 3. Every one of them read as
+ * a restatement of the obligation rather than as anything about its own host:
+ * "Blocking representation identifies its represented owner and central model
+ * decision" is equally true of the soloist and of the gate, which is exactly
+ * why it says nothing about either.
+ *
+ * This does not decide meaning and does not replace the exchange test, which a
+ * reviewer still owes: change one word and this passes. What it closes is the
+ * cheapest way the duty gets faked, and it closes it for every production that
+ * inherits this package rather than for this repository alone.
  */
 const auditAutoMovieEvidenceReviewReasons = (
   documents: readonly IAutoMovieEvidenceReviewDocument[],
 ): IAutoMovieEvidenceReviewReasonDiagnostic[] => {
   const diagnostics: IAutoMovieEvidenceReviewReasonDiagnostic[] = [];
+  // Across documents, so two files answering one target identically are caught.
+  // The per-host `observations` map below cannot see this: it is keyed by host
+  // precisely to ask the different question of one host reusing a sentence.
+  const shared = new Map<
+    string,
+    { host: string; line: number; path: string }
+  >();
   for (const document of documents) {
     const markdown = /\.md$/iu.test(document.path);
     let fenced = false;
     let host = `${document.path}::file`;
     let pending: IPendingAcknowledgement | null = null;
     const observations = new Map<string, IReviewOccurrence>();
-    const lines = document.source.split(/\r?\n/u);
+    const lines = joinWrappedAnnotations(document.source.split(/\r?\n/u));
     for (let index = 0; index < lines.length; index++) {
       const line = lines[index]!;
       if (markdown && MARKDOWN_FENCE.test(line)) {
@@ -156,6 +244,22 @@ const auditAutoMovieEvidenceReviewReasons = (
         pending = null;
         continue;
       }
+      const sharing = shared.get(sharedKey(annotation));
+      if (sharing === undefined)
+        shared.set(sharedKey(annotation), {
+          host,
+          line: index + 1,
+          path: document.path,
+        });
+      else if (sharing.host !== host)
+        diagnostics.push({
+          code: "evidence-reason-shared",
+          path: document.path,
+          host,
+          line: index + 1,
+          target: annotation.target,
+          message: `Reason is word for word the one ${sharing.path}:${sharing.line} gives for the same target on host ${JSON.stringify(sharing.host)}; a sentence true of both hosts states nothing about either, so say what this host does.`,
+        });
       if (annotation.review === false) {
         pending = { ...annotation, line: index + 1 };
         continue;

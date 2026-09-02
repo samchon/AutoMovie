@@ -1,0 +1,413 @@
+import fs from "node:fs";
+import path from "node:path";
+
+/**
+ * One raw V8 record, reduced to the shape it saw each script in.
+ *
+ * The shape is the record's own account of a script's function layout. Two
+ * records that saw one URL with different layouts saw two different emitted
+ * forms of the same source, and their range offsets are not comparable.
+ */
+export interface IRecordShapes {
+  file: string;
+  urls: ReadonlyMap<string, string>;
+}
+
+export interface ICoverageSpan {
+  start?: { line?: number };
+}
+
+export interface ICoverageEntry {
+  b?: Record<string, number[]>;
+  branchMap?: Record<string, { locations?: ICoverageSpan[] }>;
+  f?: Record<string, number>;
+  fnMap?: Record<string, { loc?: ICoverageSpan }>;
+  s?: Record<string, number>;
+  statementMap?: Record<string, ICoverageSpan>;
+}
+
+/** The signature a record gives one script, as `coverageScriptShapes` spells it. */
+export const scriptShape = (script: {
+  functions?: Array<{
+    functionName?: string;
+    ranges?: Array<{ startOffset?: number }>;
+  }>;
+}): string =>
+  (script.functions ?? [])
+    .map(
+      (fn) => `${fn.functionName ?? ""}:${fn.ranges?.[0]?.startOffset ?? -1}`,
+    )
+    .sort((left, right) => left.localeCompare(right))
+    .join(",");
+
+/**
+ * Split records so no group holds two readings of one script.
+ *
+ * Measured on this repository: `builtEnvironment.ts` appears in two raw records
+ * of one suite run with 127 and 241 function entries. Reported together, c8
+ * returns 90.93 percent. Reported apart, the two groups return 100 percent and
+ * 32.56 percent, so for that file the merge is worse than one of its parts.
+ *
+ * It is not worse for every file, and reading it that way was the mistake this
+ * split first made. `build/experimental.ts` appears four times in one run
+ * carrying three shapes, and c8 folds all four to 302 of 304 statements while
+ * splitting them reached 184. Splitting is therefore a candidate reading rather
+ * than a correction, and `unionEntries` is given c8's own report alongside the
+ * groups so the fullest of them wins.
+ *
+ * The grouping is greedy and first-fit, which is enough because the number of
+ * groups is bounded by the largest number of shapes any one script was read in,
+ * and a record joins the first group that has no quarrel with it. Order is the
+ * caller's, so the same records always partition the same way.
+ */
+export const partitionByShape = (
+  records: readonly IRecordShapes[],
+): string[][] => {
+  const groups: Array<{ files: string[]; urls: Map<string, string> }> = [];
+  for (const record of records) {
+    const fits = (group: { urls: Map<string, string> }): boolean =>
+      [...record.urls].every(
+        ([url, shape]) => (group.urls.get(url) ?? shape) === shape,
+      );
+    const found = groups.find(fits);
+    const target = found ?? { files: [], urls: new Map<string, string>() };
+    if (found === undefined) groups.push(target);
+    target.files.push(record.file);
+    for (const [url, shape] of record.urls) target.urls.set(url, shape);
+  }
+  return groups.map((group) => group.files);
+};
+
+/** How many executable positions one report entry says actually ran. */
+export const coveredPositions = (entry: ICoverageEntry): number =>
+  Object.values(entry.s ?? {}).filter((hits) => hits > 0).length +
+  Object.values(entry.f ?? {}).filter((hits) => hits > 0).length +
+  Object.values(entry.b ?? {})
+    .flat()
+    .filter((hits) => hits > 0).length;
+
+/**
+ * Per file, the reading that saw the most of it actually run.
+ *
+ * Each group's report is a truthful account of what its own processes executed,
+ * so the fullest one never claims a position no process reached. It can still
+ * fall short of a true union when two shapes ran disjoint halves, which is why
+ * this is stated as the best available reading rather than the exact one — but
+ * it is never worse than the merge it replaces, and on the measured case it is
+ * exact.
+ *
+ * A file only one group knows about is taken from that group unchanged.
+ */
+export const mostCoveredEntries = <T extends ICoverageEntry>(
+  reports: ReadonlyArray<Record<string, T>>,
+): Record<string, T> => {
+  const best: Record<string, T> = {};
+  for (const report of reports)
+    for (const [file, entry] of Object.entries(report)) {
+      const standing = best[file];
+      if (
+        standing === undefined ||
+        coveredPositions(entry) > coveredPositions(standing)
+      )
+        best[file] = entry;
+    }
+  return best;
+};
+
+/** Which source lines one entry says ran, per kind of position. */
+export const coveredLines = (
+  entry: ICoverageEntry,
+): {
+  branches: Set<number>;
+  functions: Set<number>;
+  statements: Set<number>;
+} => {
+  const statements = new Set<number>();
+  const functions = new Set<number>();
+  const branches = new Set<number>();
+  for (const [id, span] of Object.entries(entry.statementMap ?? {}))
+    if ((entry.s?.[id] ?? 0) > 0 && typeof span?.start?.line === "number")
+      statements.add(span.start.line);
+  for (const [id, span] of Object.entries(entry.fnMap ?? {}))
+    if ((entry.f?.[id] ?? 0) > 0 && typeof span?.loc?.start?.line === "number")
+      functions.add(span.loc.start.line);
+  for (const [id, span] of Object.entries(entry.branchMap ?? {})) {
+    const hits = entry.b?.[id] ?? [];
+    for (const [index, location] of (span?.locations ?? []).entries())
+      if ((hits[index] ?? 0) > 0 && typeof location?.start?.line === "number")
+        branches.add(location.start.line);
+  }
+  return { branches, functions, statements };
+};
+
+/**
+ * One entry's positions, marked covered wherever any group saw that line run.
+ *
+ * Taking the fullest single reading is not a union, and the shortfall was
+ * measured: `build/experimental.ts` reads 99.61 percent under the build tests
+ * and about 70 under the full suite, because a record carrying its coverage is
+ * assigned to a group by some unrelated file's shape conflict and its half is
+ * never added to the other's. Positions are what the two halves have in common:
+ * identifiers differ between shapes, line numbers do not.
+ *
+ * The base is the reading with the most positions, so the structure this
+ * returns is one c8 actually produced rather than a shape assembled here. A
+ * position keeps its own hits when it has them and otherwise takes a single hit
+ * from the line, so nothing is marked run that no process ran.
+ *
+ * The granularity is the line, which is the honest limit: two statements on one
+ * line cannot be told apart, and one of them covered marks both. Recording that
+ * is better than claiming an exactness the identifiers cannot support.
+ */
+export const unionEntryByLine = <T extends ICoverageEntry>(
+  entries: readonly T[],
+): T | undefined => {
+  // Most positions, and on a tie the reading that saw the most of them run. An
+  // entry carrying no position map cannot be folded at all, so without the
+  // tiebreak the base among such entries would be whichever arrived first.
+  // A reading that ran outranks one that did not, whatever their sizes.
+  //
+  // `--all` writes an entry for a file a group never loaded, and that entry has
+  // one position per source line -- comment and blank lines included -- with no
+  // hits anywhere. Ranked by positions alone it beats every real reading, and
+  // the fold then carries the real hits onto a structure in which every comment
+  // is an uncovered statement. Measured on `build/experimental.ts`: 49 lines
+  // read as uncovered under the full suite, line 1 among them, while the file's
+  // own tests read it at 99 percent.
+  //
+  // Among readings that ran, more positions is still the better structure, and
+  // coverage breaks a tie so entries carrying no position map at all are not
+  // ordered by arrival.
+  const rank = (entry: T): readonly [number, number, number] => [
+    coveredPositions(entry) > 0 ? 1 : 0,
+    Object.keys(entry.statementMap ?? {}).length,
+    coveredPositions(entry),
+  ];
+  const base = entries.reduce<T | undefined>((standing, entry) => {
+    if (standing === undefined) return entry;
+    const [ran, positions, covered] = rank(entry);
+    const [heldRan, held, heldCovered] = rank(standing);
+    if (ran !== heldRan) return ran > heldRan ? entry : standing;
+    return positions > held || (positions === held && covered > heldCovered)
+      ? entry
+      : standing;
+  }, undefined);
+  if (base === undefined) return undefined;
+  const lines = entries.map(coveredLines);
+  const ran = (kind: "branches" | "functions" | "statements", line: unknown) =>
+    typeof line === "number" && lines.some((set) => set[kind].has(line));
+  const s = { ...(base.s ?? {}) };
+  for (const [id, span] of Object.entries(base.statementMap ?? {}))
+    if ((s[id] ?? 0) === 0 && ran("statements", span?.start?.line)) s[id] = 1;
+  const f = { ...(base.f ?? {}) };
+  for (const [id, span] of Object.entries(base.fnMap ?? {}))
+    if ((f[id] ?? 0) === 0 && ran("functions", span?.loc?.start?.line))
+      f[id] = 1;
+  const b: Record<string, number[]> = {};
+  for (const [id, span] of Object.entries(base.branchMap ?? {}))
+    b[id] = (span?.locations ?? []).map((location, index) => {
+      const hits = base.b?.[id]?.[index] ?? 0;
+      return hits > 0 || ran("branches", location?.start?.line)
+        ? Math.max(hits, 1)
+        : 0;
+    });
+  return { ...base, b: { ...(base.b ?? {}), ...b }, f, s };
+};
+
+/** Per file, every group's reading folded together by position. */
+/** A file the union wrote without a line one of its readings had covered. */
+export interface IUnionShortfall {
+  file: string;
+  /** Source lines a reading covered and the written entry does not. */
+  lost: number[];
+}
+
+/**
+ * Whether the union ever wrote less than the best reading it was given.
+ *
+ * The union folds by line onto a base structure, so a position the base does
+ * not carry cannot be lifted into it however well another reading covered it.
+ * That is a real way to lose, and until now nothing said when it happened: the
+ * gate refused files whose changed lines a scoped run reads at 99.67% and
+ * nobody could tell whether the union had lost them or never seen them.
+ *
+ * A shortfall is not proof of which, but it is the difference between the two,
+ * and it costs one pass over what the union already computed.
+ *
+ * Lines rather than counts. A count says how much was covered and the gate asks
+ * which lines were, so a base whose own hits are many and whose structure
+ * misses the few another reading had would report an equal or higher count
+ * while losing exactly the positions somebody is about to be charged for.
+ */
+export const unionShortfalls = <T extends ICoverageEntry>(
+  grouped: ReadonlyMap<string, readonly T[]>,
+  united: Readonly<Record<string, T>>,
+): IUnionShortfall[] => {
+  const allLines = (entry: ICoverageEntry): Set<number> => {
+    const kinds = coveredLines(entry);
+    return new Set([
+      ...kinds.statements,
+      ...kinds.functions,
+      ...kinds.branches,
+    ]);
+  };
+  const shortfalls: IUnionShortfall[] = [];
+  for (const [file, entries] of grouped) {
+    const chosen = united[file];
+    if (chosen === undefined) continue;
+    const written = allLines(chosen);
+    const lost = new Set<number>();
+    for (const entry of entries)
+      for (const line of allLines(entry))
+        if (written.has(line) === false) lost.add(line);
+    if (lost.size !== 0)
+      shortfalls.push({
+        file,
+        lost: [...lost].sort((left, right) => left - right),
+      });
+  }
+  return shortfalls.sort((left, right) => right.lost.length - left.lost.length);
+};
+
+/** Group every report's entries by file, keeping each reading separate. */
+export const groupEntriesByFile = <T extends ICoverageEntry>(
+  reports: ReadonlyArray<Record<string, T>>,
+): Map<string, T[]> => {
+  const grouped = new Map<string, T[]>();
+  for (const report of reports)
+    for (const [file, entry] of Object.entries(report))
+      grouped.set(file, [...(grouped.get(file) ?? []), entry]);
+  return grouped;
+};
+
+export const unionEntries = <T extends ICoverageEntry>(
+  reports: ReadonlyArray<Record<string, T>>,
+): Record<string, T> => {
+  const united: Record<string, T> = {};
+  for (const [file, entries] of groupEntriesByFile(reports)) {
+    const merged = unionEntryByLine(entries);
+    if (merged !== undefined) united[file] = merged;
+  }
+  return united;
+};
+
+/** Every raw record in a temp directory, reduced to its per-script shapes. */
+export const readRecordShapes = (
+  directory: string,
+  measured: (url: string) => boolean,
+): IRecordShapes[] => {
+  const records: IRecordShapes[] = [];
+  for (const entry of fs
+    .readdirSync(directory)
+    .sort((left, right) => Number(left > right) - Number(left < right))) {
+    if (entry.endsWith(".json") === false) continue;
+    let parsed: {
+      result?: Array<{
+        functions?: Array<{
+          functionName?: string;
+          ranges?: Array<{ startOffset?: number }>;
+        }>;
+        url?: string;
+      }>;
+    };
+    try {
+      parsed = JSON.parse(
+        fs.readFileSync(path.join(directory, entry), "utf8"),
+      ) as typeof parsed;
+    } catch {
+      // A record caught mid-write says nothing about any shape. Skipping it
+      // here changes no verdict: c8 will not read it either.
+      continue;
+    }
+    const urls = new Map<string, string>();
+    for (const script of parsed.result ?? []) {
+      const url = script.url;
+      if (typeof url !== "string" || measured(url) === false) continue;
+      urls.set(url, scriptShape(script));
+    }
+    if (urls.size !== 0) records.push({ file: entry, urls });
+  }
+  return records;
+};
+
+export interface IShapeReconciliation {
+  /** Why no corrected report was written, or null when one was. */
+  failure: string | null;
+  /** How many shape-consistent groups the records fell into. */
+  groups: number;
+  /** Files the union wrote with fewer covered positions than a reading had. */
+  shortfalls?: IUnionShortfall[];
+}
+
+/**
+ * Replace a lossy merge with the fullest reading each file actually got.
+ *
+ * c8 writes one entry per source path, and when two processes saw one source in
+ * two emitted forms the entry it writes is worse than the better of the two.
+ * The raw records are still on disk at this point, so the run can ask each
+ * shape-consistent group of them for its own report and keep, per file, the
+ * reading that saw the most of it run.
+ *
+ * One group means nothing was read twice and the merge had nothing to lose, so
+ * the report c8 already wrote stands untouched. A group whose report cannot be
+ * produced or read stops the correction and says why: a partial correction
+ * would be a third reading with no account of itself.
+ */
+export const reconcileCoverageShapes = (props: {
+  copy: (from: string, to: string) => void;
+  groupRoot: string;
+  measured: (url: string) => boolean;
+  mkdir: (directory: string) => void;
+  readReport: (directory: string) => Record<string, ICoverageEntry> | null;
+  report: (temporary: string, reports: string) => number;
+  /** Where the run's own merged report already sits, read as one more reading. */
+  reportDirectory: string;
+  temporary: string;
+  writeReport: (entries: Record<string, ICoverageEntry>) => void;
+}): IShapeReconciliation => {
+  const groups = partitionByShape(
+    readRecordShapes(props.temporary, props.measured),
+  );
+  if (groups.length < 2) return { failure: null, groups: groups.length };
+  const reports: Array<Record<string, ICoverageEntry>> = [];
+  for (const [index, files] of groups.entries()) {
+    const temporary = path.join(props.groupRoot, `shape-${index}`);
+    const reports_ = path.join(props.groupRoot, `report-${index}`);
+    props.mkdir(temporary);
+    props.mkdir(reports_);
+    for (const file of files)
+      props.copy(path.join(props.temporary, file), path.join(temporary, file));
+    const status = props.report(temporary, reports_);
+    if (status !== 0)
+      return {
+        failure: `shape group ${index} could not be reported (status ${status})`,
+        groups: groups.length,
+      };
+    const read = props.readReport(reports_);
+    if (read === null)
+      return {
+        failure: `shape group ${index} wrote no readable report`,
+        groups: groups.length,
+      };
+    reports.push(read);
+  }
+  // The report c8 already wrote is a candidate too, and taking the fuller of
+  // the two is what makes this never worse than the merge it replaces.
+  //
+  // Splitting by shape assumed a differing shape means a lossy merge. That is
+  // true of `builtEnvironment.ts`, where c8 folds a complete reading and a
+  // partial one into 90.93 percent. It is false of `build/experimental.ts`,
+  // whose four records carry three shapes and which c8 merges to 302 of 304
+  // statements -- there the split produced three partial groups and the fold
+  // could not put them back. Measured on both, in that order, after the second
+  // one made this claim's own JSDoc false.
+  const merged = props.readReport(props.reportDirectory);
+  const candidates = merged === null ? reports : [...reports, merged];
+  const united = unionEntries(candidates);
+  props.writeReport(united);
+  return {
+    failure: null,
+    groups: groups.length,
+    shortfalls: unionShortfalls(groupEntriesByFile(candidates), united),
+  };
+};

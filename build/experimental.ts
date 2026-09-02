@@ -24,7 +24,7 @@ import * as path from "node:path";
 
 import { renderScaffold } from "../packages/template/src/renderScaffold";
 import { writeFiles } from "../packages/template/src/writeFiles";
-import { PACKAGES, packWorkspace } from "./tgz";
+import { PACKAGES, isProcessEntry, packWorkspace } from "./tgz";
 
 const ROOT = path.resolve(__dirname, "..");
 
@@ -88,14 +88,88 @@ export interface IExperimentalWriter {
   write(message: string): unknown;
 }
 
+/**
+ * The install this command runs, stated as the request it makes.
+ *
+ * `npm` rather than `pnpm` because `pnpm pack` rewrites a packed package's own
+ * `workspace:^` ranges into plain semver, and npm satisfies those transitive
+ * ranges from the directly installed siblings while pnpm does not.
+ *
+ * Split from the call so what this repository decides -- the installer, its
+ * flags, the directory it runs in, and the shell only Windows needs -- can be
+ * read without running an install. npm's own resolver is not this repository's
+ * to verify, and a test that installs to find that out spends minutes learning
+ * nothing about AutoMovie.
+ */
+export const experimentalInstallRequest = (
+  target: string,
+  platform: string = process.platform,
+): {
+  argv: readonly string[];
+  command: string;
+  options: { cwd: string; shell: boolean; stdio: "inherit" };
+} => ({
+  argv: ["install", "--no-audit", "--no-fund"],
+  command: "npm",
+  options: { cwd: target, shell: platform === "win32", stdio: "inherit" },
+});
+
+/**
+ * Run one install request and report exactly what the process reported.
+ *
+ * The launcher is an input so the status this returns is an ordinary case. A
+ * signalled installer reports a null status, and a caller that read that as
+ * success would call a sandbox ready that never installed anything; that
+ * mapping is this repository's to state and is stated here rather than left to
+ * a test that would have to install to reach it.
+ */
+export const runExperimentalInstall = (
+  target: string,
+  // `spawnSync` itself rather than an arrow that forwards to it. An arrow here
+  // is a function body no test can reach without running a real install, so it
+  // would sit uncovered forever on the one line this module exists to avoid
+  // executing. Taking a mutable `argv` is what lets the launcher be named
+  // directly, and the spread that makes one happens at the call below.
+  launch: (
+    command: string,
+    argv: string[],
+    options: { cwd: string; shell: boolean; stdio: "inherit" },
+  ) => { status: number | null } = spawnSync,
+): number | null => {
+  const request = experimentalInstallRequest(target);
+  return launch(request.command, [...request.argv], request.options).status;
+};
+
 export const experimentalDependencies: IExperimentalDependencies = {
   pack: packWorkspace,
-  install: (target) =>
-    spawnSync("npm", ["install", "--no-audit", "--no-fund"], {
-      cwd: target,
-      stdio: "inherit",
-      shell: process.platform === "win32",
-    }).status,
+  install: (target) => runExperimentalInstall(target),
+};
+
+/** Where every sandbox lives, and the only directory one may be written into. */
+export const EXPERIMENTAL_ROOT = path.join(ROOT, "experimental");
+
+/**
+ * Resolve `experimental/<name>`, refusing any name that does not land directly
+ * inside `experimental/`.
+ *
+ * The portability rule belongs to `renderScaffold`, which owns what a project
+ * name may be. What it cannot own is where this command writes, because
+ * `--refresh` never calls it: `pnpm run experimental .. --refresh` resolved to
+ * the repository root, rewrote the repository's own `package.json`, and exited
+ * 0, and with the install enabled it first packed ten tarballs into whatever
+ * directory the traversal reached. Containment is therefore checked here, once,
+ * before anything is packed, written, or installed, and it holds for every name
+ * shape a traversal can take: `..`, `a/b`, a backslash segment on Windows, an
+ * absolute path, and the empty string, all of which resolve to a path whose
+ * parent is not `experimental/`.
+ */
+export const sandboxTarget = (name: string): string => {
+  const target = path.resolve(EXPERIMENTAL_ROOT, name);
+  if (path.dirname(target) !== EXPERIMENTAL_ROOT)
+    throw new Error(
+      `experimental name "${name}" must be one directory segment inside experimental/`,
+    );
+  return target;
 };
 
 export const runExperimental = (
@@ -114,7 +188,15 @@ export const runExperimental = (
     return 1;
   }
   try {
-    const target = path.join(ROOT, "experimental", name);
+    const target = sandboxTarget(name);
+    // `--refresh` repacks and reinstalls without re-rendering the scaffold, so
+    // a package fix reaches a sandbox whose production is mid-flight. Without
+    // it the only way to pick up a change is `--force`, which rewrites every
+    // scaffold-managed file and can destroy exactly the authored configuration,
+    // guides, scripts, viewer changes, and package wiring the experiment exists
+    // to exercise.
+    const refresh = args.includes("--refresh");
+
     // Refuse a non-empty directory, not merely an existing one, matching the
     // CLI's own `--force` semantics. Deleting a sandbox on Windows routinely
     // leaves the directory behind once its `node_modules` links are gone, and
@@ -123,36 +205,49 @@ export const runExperimental = (
       fs.existsSync(target) &&
       fs.readdirSync(target).length !== 0 &&
       args.includes("--force") === false &&
-      args.includes("--refresh") === false
+      refresh === false
     )
       throw new Error(
         `experimental/${name} is not empty. Pass --force to render over it, or remove it first.`,
       );
 
-    // Packing writes into the target, so it precedes the render that fills it.
+    // Everything decidable from the request alone is decided before the pack,
+    // because packing runs each workspace package's build and costs minutes.
+    // The previous order paid that first and refused afterwards, which left ten
+    // tarballs under a directory the command then declined to use: a refresh of
+    // a sandbox that does not exist, and a render under a name `renderScaffold`
+    // refuses, both went that way.
+    const manifest = path.join(target, "package.json");
+    if (refresh && fs.existsSync(manifest) === false)
+      throw new Error(
+        `experimental/${name} has no package.json to refresh. Create it first.`,
+      );
+
+    // Rendering is what enforces the scaffold's own name rule, so it runs
+    // before the pack as well. Nothing reaches disk here; `writeFiles` below
+    // still runs after the pack that fills the same directory.
+    const files = refresh ? undefined : renderScaffold({ name });
+
     const install = args.includes("--no-install") === false;
     const specifiers = install ? dependencies.pack(target) : {};
 
-    // `--refresh` repacks and reinstalls without re-rendering the scaffold, so
-    // a package fix reaches a sandbox whose production is mid-flight. Without
-    // it the only way to pick up a change is `--force`, which rewrites every
-    // scaffold-managed file and can destroy exactly the authored configuration,
-    // guides, scripts, viewer changes, and package wiring the experiment exists
-    // to exercise.
-    if (args.includes("--refresh")) {
-      const manifest = path.join(target, "package.json");
-      if (fs.existsSync(manifest) === false)
-        throw new Error(
-          `experimental/${name} has no package.json to refresh. Create it first.`,
-        );
+    if (files === undefined) {
       fs.writeFileSync(
         manifest,
         sandboxManifest(fs.readFileSync(manifest, "utf8"), specifiers),
         "utf8",
       );
-      output.write(`Refreshed experimental/${name} against the pack\n`);
+      // Say which of the two happened. `--refresh --no-install` leaves the
+      // specifiers empty, so the rewrite preserves the pins the manifest
+      // already carried; reporting that as a refresh against the pack tells an
+      // experimenter their package change reached the sandbox when nothing was
+      // packed at all, which is the one thing this command exists to answer.
+      output.write(
+        install
+          ? `Refreshed experimental/${name} against the pack\n`
+          : `Rewrote experimental/${name}'s manifest; --no-install packed nothing\n`,
+      );
     } else {
-      const files = renderScaffold({ name });
       files["package.json"] = sandboxManifest(
         files["package.json"],
         specifiers,
@@ -175,13 +270,9 @@ export const runExperimental = (
       `\nDrive it with Claude Code:\n` +
         `  cd experimental/${name}\n` +
         `  claude\n\n` +
-        `Drive it with Codex:
-` +
-        `  cd experimental/${name}
-` +
-        `  codex
-
-` +
+        `Drive it with Codex:\n` +
+        `  cd experimental/${name}\n` +
+        `  codex\n\n` +
         `The sandbox installs packed working-tree tarballs, so after changing a\n` +
         `package under packages/ rerun this command with --refresh, which repacks\n` +
         `and reinstalls without rewriting scaffold-managed work in progress.\n` +
@@ -196,5 +287,22 @@ export const runExperimental = (
   }
 };
 
-if (path.resolve(process.argv[1] ?? "") === path.resolve(__filename))
-  process.exitCode = runExperimental(process.argv.slice(2));
+/** Publish the command's status to the process, isolated so it can be observed. */
+export const setExperimentalExitCode = (code: number): void => {
+  process.exitCode = code;
+};
+
+/** Run the sandbox command only when this module is the process entry. */
+export const runExperimentalCli = (
+  entry: boolean,
+  args: readonly string[],
+  setExitCode: (code: number) => void,
+): void => {
+  if (entry) setExitCode(runExperimental(args));
+};
+
+runExperimentalCli(
+  isProcessEntry(process.argv[1], __filename),
+  process.argv.slice(2),
+  setExperimentalExitCode,
+);

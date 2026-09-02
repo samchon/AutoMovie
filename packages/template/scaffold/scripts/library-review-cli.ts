@@ -1,13 +1,16 @@
 import { readAutoMovieProductionEvidence } from "@automovie/evidence";
 
-import config from "../automovie.config";
 import { productionEvidence } from "../lint.config";
 import { runLibraryReviewCli, runLibraryReviewCommand } from "./library-review";
+import { currentAutoMovieProductionId } from "./projectIdentity";
+
+/** The production namespace this project declares in its own package manifest. */
+const productionId = currentAutoMovieProductionId();
 
 process.exitCode = runLibraryReviewCli({
   argv: process.argv.slice(2),
   evidence: productionEvidence,
-  productionId: config.productionId,
+  productionId,
   read: readAutoMovieProductionEvidence,
   root: process.cwd(),
   run: runLibraryReviewCommand,

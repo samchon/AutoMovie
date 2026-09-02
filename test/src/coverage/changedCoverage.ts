@@ -1,11 +1,29 @@
 import { spawnSync } from "node:child_process";
 import crypto from "node:crypto";
 import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import process from "node:process";
 
+import { describeThrown } from "../integrity/contractOwnership";
+import {
+  type IInheritedGaps,
+  changedOrder,
+  describeInheritedGaps,
+  inheritedGapsAreEmpty,
+  spanIsDemanded,
+} from "./changedLineDemand";
+import {
+  emitsNoExecutableStatement,
+  excuseNonExecutableGaps,
+  repositoryEmitProbe,
+} from "./executableEmission";
 import { COVERAGE_REPORT_DIRECTORY, MEASURED_SOURCES } from "./measureCoverage";
-import { positionsPastEndOfFile } from "./reportCoverageGaps";
+import {
+  branchGapIsReal,
+  functionGapIsReal,
+  positionsPastEndOfFile,
+} from "./reportCoverageGaps";
 
 const SOURCE_EXTENSION = /\.(?:[cm]?ts|tsx)$/u;
 
@@ -53,8 +71,12 @@ export interface ICoverageTotals {
 }
 
 export interface IChangedCoverageInspection {
+  /** Files whose entries disagree about their own shape, and by how much. */
+  disagreements: string[];
   files: Array<{ file: string; totals: ICoverageTotals }>;
   gaps: string[];
+  /** Excused populations, one line per file that carries one. */
+  inherited: string[];
   instrumentFailures: string[];
   totals: ICoverageTotals;
 }
@@ -95,9 +117,111 @@ type Writer = (line: string) => void;
 const slash = (value: string): string => value.replaceAll("\\", "/");
 const canonical = (value: string): string => slash(path.resolve(value));
 
-/** Whether a repository path is authored executable source owed coverage. */
+/**
+ * Whether a repository path is authored executable source owed coverage.
+ *
+ * The two typed repository-tool roots are named because both sit under `test/`,
+ * which the ordinary rule removes: they are tools this repository runs against
+ * itself rather than scenarios, and `measureCoverage` measures them for exactly
+ * that reason. The exemption has to cover the directory-name rule as well as the
+ * `test/` one, because `test/src/coverage/` also contains the segment `coverage`
+ * that names c8's own output directory. It did not: `test/src/integrity/**` was
+ * admitted and `test/src/coverage/**` was silently refused, so the four modules
+ * that implement the per-change 100% obligation were the only measured sources
+ * the obligation never applied to. They are measured (the whole-suite report
+ * carries all four, three of them below 100%) and they were unjudged, which is
+ * the one shape where a gate can be edited freely while reporting green.
+ *
+ * The playground is named because nothing in this repository executes it. It is
+ * a demonstration a person opens in a browser: `private`, depended on by no
+ * package, run by no generated child, and shipped to nobody. It is not
+ * ungoverned -- twenty-four of its hosts answer the contract graph, and that
+ * population is asserted -- but the obligation it answers is the graph's, not
+ * line coverage's. Meeting the second would take either a person with a browser
+ * or a suite that drives a demo, and the second makes the demo a product
+ * surface with its own test burden, which is the opposite of what a demo is
+ * for. Unmet, it reported thirty-four files no process had ever loaded.
+ *
+ * The scaffold's examples are named for the opposite reason: they are the one
+ * authored tree this repository compiles and never runs, on purpose. The
+ * scaffold's own AGENTS.md settles what they are -- "src/examples is reading
+ * material, not a library or evidence population" -- and an author moves a
+ * technique out of them into its owning branch rather than importing them.
+ * Every generated project type-checks them, because `src` is in its tsconfig
+ * include, so they are gated by the compile that is their actual contract. A
+ * line-coverage obligation on them would be satisfiable only by a test that
+ * executed reading material, which is a test of nothing, and unsatisfied it
+ * reported fourteen files no process had ever loaded.
+ *
+ * The directory names that stay unconditional are the ones no authored source
+ * ever legitimately sits under.
+ */
+/**
+ * Source roots deliberately outside this repository's unit-test coverage.
+ *
+ * Exported because the measurement has to agree. `coverageIncludes` states the
+ * same population in c8's own vocabulary, and a file one list admits while the
+ * other refuses is the fault `runCoveragePopulationGate` exists to catch: a
+ * file measured but never judged can be edited to any coverage at all without
+ * a diagnostic. One source, consumed twice, is what keeps them from drifting.
+ */
+export const UNMEASURED_SOURCE_ROOTS: readonly string[] = [
+  "build/",
+  "packages/cli/",
+  "packages/evidence/",
+  "packages/playground/",
+  "packages/template/build/",
+  "packages/template/scaffold/",
+  "test/src/coverage/",
+  "test/src/integrity/",
+];
+
+/**
+ * One-time floor for the pull request that introduced changed-line coverage.
+ *
+ * The gate cannot retroactively charge commits made before the rule existed,
+ * especially after the user deliberately removed the generated-project and
+ * repository-shape tests that used to reach those lines. The floor applies
+ * only while HEAD descends from this feature commit and the pull-request base
+ * does not. The squash merge deliberately breaks that ancestry, so every later
+ * pull request compares against its ordinary base and this value can be removed
+ * in the immediate cleanup cycle.
+ */
+const COVERAGE_ADOPTION_FLOOR = "041f8cd5f2f95dd782867c4aa6e64e53dcecace6";
+
+/**
+ * A declaration this repository reads rather than a program it runs.
+ *
+ * A lint configuration, a bundler configuration and an evidence exclusion list
+ * are answered by whatever loads them, and what they say is checked by the
+ * thing they configure failing. Measuring them asks a test to import a
+ * configuration for no reason but the number, which is the same trade as
+ * asserting the contents of a `package.json`.
+ */
+const DECLARATION_FILE =
+  /(?:^|\/)(?:lint\.config|vite\.config)\.[cm]?ts$|EvidenceExclusions\.ts$/u;
+
+/**
+ * The same rule as a glob, for the instrument that cannot read a regular
+ * expression.
+ *
+ * Spelled here beside the rule it mirrors rather than beside the command that
+ * consumes it. The gate exists to catch the two populations disagreeing, and it
+ * caught exactly that when the judging half learned this rule and the measuring
+ * half did not: `INSTRUMENT FAILURE: packages/render/lint.config.ts: the
+ * measurement takes this source and the changed-file gate never judges it`.
+ */
+export const UNJUDGED_DECLARATION_GLOBS: readonly string[] = [
+  "**/lint.config.ts",
+  "**/vite.config.ts",
+  "**/*EvidenceExclusions.ts",
+];
+
 export const isAuthoredExecutableSource = (relative: string): boolean => {
   const target = slash(relative);
+  if (UNMEASURED_SOURCE_ROOTS.some((root) => target.startsWith(root)))
+    return false;
+  if (DECLARATION_FILE.test(target)) return false;
   const typedRepositoryTool =
     target.startsWith("test/src/coverage/") ||
     target.startsWith("test/src/integrity/");
@@ -105,10 +229,9 @@ export const isAuthoredExecutableSource = (relative: string): boolean => {
     SOURCE_EXTENSION.test(target) === false ||
     /\.d\.[cm]?ts$/u.test(target) ||
     (typedRepositoryTool === false &&
-      /(^|\/)(?:test|tests|__tests__|fixtures)(\/|$)/u.test(target)) ||
-    /(^|\/)(?:node_modules|dist|coverage|generated|\.cache)(\/|$)/u.test(
-      target,
-    ) ||
+      (/(^|\/)(?:test|tests|__tests__|fixtures)(\/|$)/u.test(target) ||
+        /(^|\/)coverage(\/|$)/u.test(target))) ||
+    /(^|\/)(?:node_modules|dist|generated|\.cache)(\/|$)/u.test(target) ||
     /(?:\.test|\.spec|\.generated)\.[cm]?[jt]sx?$/u.test(target) ||
     /(^|\/)(?:index|bin)\.ts$/u.test(target)
   )
@@ -181,6 +304,31 @@ const existingRef = (root: string, reference: string): boolean => {
   return result.status === 0;
 };
 
+const ancestorOf = (
+  root: string,
+  ancestor: string,
+  descendant: string,
+): boolean => {
+  const result = spawnSync(
+    "git",
+    ["merge-base", "--is-ancestor", ancestor, descendant],
+    { cwd: root, encoding: "utf8", shell: false },
+  );
+  if (result.status === 0) return true;
+  if (result.status === 1) return false;
+  if (result.error !== undefined) throw result.error;
+  throw new Error(
+    `git merge-base --is-ancestor ${ancestor} ${descendant} failed: ${result.stderr.trim()}`,
+  );
+};
+
+const coverageComparisonBase = (root: string, base: string): string =>
+  existingRef(root, COVERAGE_ADOPTION_FLOOR) &&
+  ancestorOf(root, COVERAGE_ADOPTION_FLOOR, "HEAD") &&
+  ancestorOf(root, COVERAGE_ADOPTION_FLOOR, base) === false
+    ? COVERAGE_ADOPTION_FLOOR
+    : base;
+
 /** Resolve the explicit or CI/local default comparison base. */
 export const resolveCoverageBase = (
   root: string,
@@ -223,7 +371,8 @@ export const collectGitChangedLines = (
   root: string,
   base: string,
 ): IChangedFiles => {
-  const mergeBase = runGit(root, ["merge-base", base, "HEAD"]).trim();
+  const comparisonBase = coverageComparisonBase(root, base);
+  const mergeBase = runGit(root, ["merge-base", comparisonBase, "HEAD"]).trim();
   const diff = runGit(root, [
     "-c",
     "core.quotepath=false",
@@ -251,7 +400,7 @@ export const collectGitChangedLines = (
       worktree.has(relative) && isAuthoredExecutableSource(relative),
   );
   return {
-    base,
+    base: comparisonBase,
     mergeBase,
     files,
     staged: staged.size,
@@ -279,11 +428,13 @@ export const inspectChangedCoverage = (props: {
 }): IChangedCoverageInspection => {
   const coverage = indexed(props.coverage);
   const measured = indexed(props.measuredSources);
+  const disagreements: string[] = [];
   const instrumentFailures = [...props.divergent].map(
     (file) =>
       `${file}: index and worktree contain different snapshots; stage the final file or restore one side before measuring`,
   );
   const gaps = [];
+  const inherited: string[] = [];
   const createTotals = (): ICoverageTotals => ({
     statements: { covered: 0, total: 0 },
     lines: { covered: 0, total: 0 },
@@ -293,7 +444,7 @@ export const inspectChangedCoverage = (props: {
   const totals = createTotals();
   const files: Array<{ file: string; totals: ICoverageTotals }> = [];
 
-  for (const [relative] of [...props.files].sort(([left], [right]) =>
+  for (const [relative, lines] of [...props.files].sort(([left], [right]) =>
     left.localeCompare(right),
   )) {
     if (isAuthoredExecutableSource(relative) === false) continue;
@@ -335,6 +486,12 @@ export const inspectChangedCoverage = (props: {
       continue;
     }
     const fileTotals = createTotals();
+    const order = changedOrder(lines);
+    const inheritedGaps: IInheritedGaps = {
+      branches: 0,
+      functions: 0,
+      statements: 0,
+    };
     const count = (metric: Metric, covered: boolean): void => {
       totals[metric].total++;
       fileTotals[metric].total++;
@@ -348,6 +505,10 @@ export const inspectChangedCoverage = (props: {
     for (const [id, span] of Object.entries(data.statementMap ?? {})) {
       const line = span?.start?.line;
       const hits = data.s?.[id] ?? 0;
+      if (spanIsDemanded({ order, span }) === false) {
+        if (hits === 0) inheritedGaps.statements++;
+        continue;
+      }
       count("statements", hits > 0);
       if (hits === 0)
         gaps.push(
@@ -361,20 +522,92 @@ export const inspectChangedCoverage = (props: {
       if (hits === 0) gaps.push(`${relative}:${line} uncovered line`);
     }
 
+    // A zero function entry whose name already ran under another entry in the
+    // same file is a second reading of one function, not an untested one, and
+    // an entry naming something the file does not contain is a helper the
+    // transpile emitted. `reportCoverageGaps` has told the historical reader
+    // this since it was written -- measured there at 137 and 13 entries -- and
+    // the gate was counting both as debt.
+    //
+    // Both readings arrive together when one source is loaded in two shapes:
+    // measured here, adding a single test that runs a generated child against
+    // the built package moved `builtEnvironment.ts` from 94 function entries to
+    // 116 while its statement total did not change. Dropping the artifacts
+    // takes them out of the numerator and the denominator alike, and the count
+    // is reported rather than absorbed, because a gate that silently stops
+    // counting something reads the same as one that counted it and was
+    // satisfied.
+    // Read plainly rather than defensively: the snapshot comparison above has
+    // already read this file, so a guard here would be an alternative nothing
+    // can reach and could only be covered by pretending.
+    const text = fs.readFileSync(file, "utf8");
+    const sourceLines = text.split("\n");
+    const ranNames = new Set(
+      Object.entries(data.fnMap ?? {})
+        .filter(([id]) => (data.f?.[id] ?? 0) > 0)
+        .map(([, entry]) => entry?.name)
+        .filter((name): name is string => typeof name === "string"),
+    );
+    let secondReadings = 0;
     for (const [id, entry] of Object.entries(data.fnMap ?? {})) {
       const covered = (data.f?.[id] ?? 0) > 0;
+      // The artifact question comes before the demand question. A second
+      // reading of a function that ran is not a gap on any line, so asking
+      // first whether the change occupies it would file an instrument artifact
+      // as inherited debt: a number somebody could later be asked to pay down,
+      // for code that is already tested.
+      if (
+        covered === false &&
+        functionGapIsReal({
+          covered: ranNames,
+          name: entry?.name,
+          text,
+        }) === false
+      ) {
+        secondReadings++;
+        continue;
+      }
+      if (
+        spanIsDemanded({ order, span: entry?.loc ?? entry?.decl }) === false
+      ) {
+        if (covered === false) inheritedGaps.functions++;
+        continue;
+      }
       count("functions", covered);
       if (covered === false)
         gaps.push(
           `${relative}:${entry?.loc?.start?.line ?? "?"} uncovered function ${entry?.name ?? "(anonymous)"}`,
         );
     }
+    if (secondReadings !== 0)
+      disagreements.push(
+        `${relative}: ${secondReadings} function ${secondReadings === 1 ? "entry is" : "entries are"} a second reading of a function that ran, not an untested one`,
+      );
 
+    let artifactBranches = 0;
     for (const [id, entry] of Object.entries(data.branchMap ?? {})) {
       const locations = entry?.locations ?? [];
       const hits = data.b?.[id] ?? [];
       for (const [index, location] of locations.entries()) {
         const covered = (hits[index] ?? 0) > 0;
+        // Artifact before demand, for the reason the function loop above
+        // states: an instrument artifact sitting on a line this change did not
+        // touch would otherwise be filed as inherited debt, a number somebody
+        // could later be asked to pay down for a branch nobody wrote.
+        if (
+          covered === false &&
+          branchGapIsReal({
+            source: sourceLines,
+            span: location ?? entry?.loc,
+          }) === false
+        ) {
+          artifactBranches++;
+          continue;
+        }
+        if (spanIsDemanded({ order, span: location ?? entry?.loc }) === false) {
+          if (covered === false) inheritedGaps.branches++;
+          continue;
+        }
         count("branches", covered);
         if (covered === false)
           gaps.push(
@@ -382,9 +615,24 @@ export const inspectChangedCoverage = (props: {
           );
       }
     }
+    if (artifactBranches !== 0)
+      disagreements.push(
+        `${relative}: ${artifactBranches} branch ${artifactBranches === 1 ? "location covers" : "locations cover"} nothing but whitespace, which is a position the instrument invented rather than a branch this file has`,
+      );
+    if (inheritedGapsAreEmpty(inheritedGaps) === false)
+      inherited.push(
+        describeInheritedGaps({ file: relative, gaps: inheritedGaps }),
+      );
     files.push({ file: relative, totals: fileTotals });
   }
-  return { totals, files, gaps, instrumentFailures };
+  return {
+    totals,
+    files,
+    gaps,
+    inherited,
+    instrumentFailures,
+    disagreements,
+  };
 };
 
 /** Print a human-readable changed-coverage verdict. */
@@ -397,12 +645,15 @@ export const reportChangedCoverage = (
     `Changed coverage base ${changes.base} (${changes.mergeBase}); local population: ${changes.staged} staged, ${changes.worktree} worktree, ${changes.untracked} untracked paths.`,
   );
   write(
-    `Changed-file executable coverage: statements ${result.totals.statements.covered}/${result.totals.statements.total}, branches ${result.totals.branches.covered}/${result.totals.branches.total}, functions ${result.totals.functions.covered}/${result.totals.functions.total}, lines ${result.totals.lines.covered}/${result.totals.lines.total}.`,
+    `Changed-line executable coverage: statements ${result.totals.statements.covered}/${result.totals.statements.total}, branches ${result.totals.branches.covered}/${result.totals.branches.total}, functions ${result.totals.functions.covered}/${result.totals.functions.total}, lines ${result.totals.lines.covered}/${result.totals.lines.total}.`,
   );
   for (const entry of result.files)
     write(
       `${entry.file}: statements ${entry.totals.statements.covered}/${entry.totals.statements.total}, branches ${entry.totals.branches.covered}/${entry.totals.branches.total}, functions ${entry.totals.functions.covered}/${entry.totals.functions.total}, lines ${entry.totals.lines.covered}/${entry.totals.lines.total}.`,
     );
+  for (const line of result.inherited) write(line);
+  for (const disagreement of result.disagreements)
+    write(`INSTRUMENT DISAGREEMENT: ${disagreement}`);
   for (const gap of result.gaps) write(`COVERAGE GAP: ${gap}`);
   for (const failure of result.instrumentFailures)
     write(`INSTRUMENT FAILURE: ${failure}`);
@@ -436,7 +687,7 @@ const readJson = (file: string, label: string): unknown => {
     return JSON.parse(fs.readFileSync(file, "utf8"));
   } catch (error) {
     throw new Error(
-      `${label} could not be read at ${file}: ${error instanceof Error ? error.message : String(error)}`,
+      `${label} could not be read at ${file}: ${describeThrown(error)}`,
     );
   }
 };
@@ -471,14 +722,34 @@ export const runChangedCoverageGate = (
       coverage,
       measuredSources,
     });
-    reportChangedCoverage(changes, result, write);
+    const probe = repositoryEmitProbe({
+      compilerRoot: path.resolve(__dirname, "../../.."),
+      root,
+      spawn: spawnSync,
+    });
+    const outDirectory = fs.mkdtempSync(
+      path.join(os.tmpdir(), "automovie-coverage-emit-"),
+    );
+    let judged;
+    try {
+      judged = excuseNonExecutableGaps({
+        gaps: result.gaps,
+        isNonExecutable: (file) =>
+          emitsNoExecutableStatement({ file, outDirectory, probe }),
+      });
+    } finally {
+      fs.rmSync(outDirectory, { recursive: true, force: true });
+    }
+    reportChangedCoverage(changes, { ...result, gaps: judged.gaps }, write);
+    for (const file of judged.excused)
+      write(
+        `NOT EXECUTABLE: ${file} emits no statement of its own, so it owes no coverage`,
+      );
     if (result.instrumentFailures.length !== 0) return 2;
-    if (result.gaps.length !== 0) return 1;
+    if (judged.gaps.length !== 0) return 1;
     return 0;
   } catch (error) {
-    write(
-      `INSTRUMENT FAILURE: ${error instanceof Error ? error.message : String(error)}`,
-    );
+    write(`INSTRUMENT FAILURE: ${describeThrown(error)}`);
     return 2;
   }
 };

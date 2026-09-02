@@ -6,6 +6,7 @@ import type {
   AutoMovieContentDigest,
   AutoMovieGuidePass,
   IAutoMovieDiagnostic,
+  IAutoMovieEnvironmentContext,
   IAutoMovieLibraryReviewPopulation,
   IAutoMovieLibraryReviewProjectReader,
   IAutoMovieRenderBundleManifest,
@@ -18,6 +19,8 @@ import {
 import { TestValidator } from "@nestia/e2e";
 import path from "node:path";
 
+import { analysisContext } from "../internal/analysisFixtures";
+import { loadSourceModule } from "../internal/loadSourceModule";
 import { namedFacts } from "../internal/predicates";
 import { productionFixture } from "./productionFixtures";
 
@@ -35,33 +38,43 @@ interface ConsumerProps {
     target: IAutoMovieRenderBundleManifest["target"],
     fingerprint: AutoMovieContentDigest,
   ) => ReadonlyArray<{ time: number; pass: AutoMovieGuidePass }>;
+  contexts?: (props: {
+    branch: string;
+    owner: string;
+    anchor: string;
+  }) => readonly IAutoMovieEnvironmentContext[];
 }
 
-const consumer = require(
-  path.resolve(
-    __dirname,
-    "../../../../packages/production/src/production/libraryReviewEvidenceConsumer.ts",
-  ),
-) as {
+const consumer = loadSourceModule<{
   readAutoMovieLibraryReviewRequirements: (props: {
     authoring: IAutoMovieProductionEvidence;
     project: IAutoMovieLibraryReviewProjectReader;
     compileFingerprint: AutoMovieContentDigest;
+    contexts?: (props: {
+      branch: string;
+      owner: string;
+      anchor: string;
+    }) => readonly IAutoMovieEnvironmentContext[];
   }) => IAutoMovieLibraryReviewPopulation;
   libraryReviewEvidenceConsumerDiagnostics: (
     props: ConsumerProps,
   ) => IAutoMovieDiagnostic[];
-};
+}>(
+  path.resolve(
+    __dirname,
+    "../../../../packages/production/src/production/libraryReviewEvidenceConsumer.ts",
+  ),
+);
 
-const contentIdentity = require(
+const contentIdentity = loadSourceModule<{
+  canonicalAutoMovieJsonBytes: (value: unknown) => Uint8Array;
+  digestAutoMovieBytes: (bytes: Uint8Array) => AutoMovieContentDigest;
+}>(
   path.resolve(
     __dirname,
     "../../../../packages/production/src/production/contentIdentity.ts",
   ),
-) as {
-  canonicalAutoMovieJsonBytes: (value: unknown) => Uint8Array;
-  digestAutoMovieBytes: (bytes: Uint8Array) => AutoMovieContentDigest;
-};
+);
 
 const digest = (digit: string): AutoMovieContentDigest =>
   `sha256:${digit.repeat(64)}` as AutoMovieContentDigest;
@@ -166,7 +179,7 @@ const project = (): MutableProject => {
 const observation = (branch: string) => {
   if (branch === "maps")
     return {
-      id: "map-plan-section-elevation-traversal-extent",
+      id: "map:library-map/datum",
       evidence: "facts",
     };
   if (branch === "models")
@@ -265,6 +278,13 @@ const payPlans = (
         evidence: evidenceFor(branch),
         identity: requirement.identity,
         runtimeIdentity: "playwright:chromium:1",
+        // These owners carry no building topology, so every observation they
+        // owe is exterior and the honest pose is none. Both fields are written
+        // rather than omitted: the gate reads a missing pose on an interior
+        // observation as a receipt that never said where it stood, and this
+        // fixture is saying it stood nowhere in particular.
+        pose: null,
+        measurements: {},
         verdict: "passed",
       },
     ];
@@ -288,6 +308,8 @@ const props = (
     { time: 0, pass: "beauty" },
     { time: 0, pass: "outline" },
   ],
+  contexts: ({ branch }) =>
+    branch === "maps" ? [analysisContext({ id: "library-map" })] : [],
 });
 
 const diagnose = (

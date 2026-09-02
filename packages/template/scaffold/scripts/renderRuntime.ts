@@ -1,23 +1,28 @@
 import { readAutoMovieProductionEvidence } from "@automovie/evidence";
 import {
+  AutoMovieProductionProject,
   type IAutoMovieProductionRenderTier,
   digestAutoMovieBytes,
   encodeAutoMoviePathSegment,
   readAutoMovieProductionOwnedFile,
   runProductionRenderJob,
 } from "@automovie/production";
+import { createRequire } from "node:module";
 import path from "node:path";
 
-import config from "../automovie.config";
 import { productionEvidence } from "../lint.config";
+import { repaintSelectionReviews } from "../repaintSelectionReviews";
 import { inspectPublishedProxyBundle } from "./assertProxyBundle";
 import { preserveProductionEncoderCleanup } from "./preserveProductionEncoderCleanup";
 import {
   type IAutoMovieProductionRepaintSelection,
+  productionRepaintInput,
   readProductionDialogueSynthesis,
+  readProductionRenderTiers,
   readProductionRepaintSelection,
   readProductionSpeakerBindings,
 } from "./productionConfiguration";
+import { readAutoMovieProjectProductionId } from "./projectIdentity";
 import { publishProxyBundle } from "./publishProxyBundle";
 import {
   type IProductionRenderInvocationObservationState,
@@ -74,13 +79,19 @@ const executeProductionRenderCommand = async (
   renderHost: IProductionRenderHost,
 ): Promise<void> => {
   const root = renderHost.root;
-  const productionId = config.productionId;
+  const productionId = readAutoMovieProjectProductionId(root);
   const authoringEvidence = readAutoMovieProductionEvidence({
     root,
     productionEvidence,
   });
+  /** Every delivery decision this render obeys, read from its own design. */
+  const design = AutoMovieProductionProject.productionDesign(
+    root,
+    productionId,
+  );
+  const renderTiers = readProductionRenderTiers(design?.renderTiers);
   const renderTier: IAutoMovieProductionRenderTier =
-    command.tier === "proxy" ? config.render.proxy : config.render.final;
+    command.tier === "proxy" ? renderTiers.proxy : renderTiers.final;
   const renderChunkFrames = command.chunkFrames;
   const productionSegment = encodeAutoMoviePathSegment(productionId);
   const renderLivenessScope = digestAutoMovieBytes(
@@ -103,7 +114,9 @@ const executeProductionRenderCommand = async (
   /** Read every reviewed repaint choice before a render path can use it. */
   const productionRepaintSelection =
     (): IAutoMovieProductionRepaintSelection | null =>
-      readProductionRepaintSelection(config.visual.repaint);
+      readProductionRepaintSelection(
+        productionRepaintInput(design?.repaint, repaintSelectionReviews),
+      );
   const renderObservations: IProductionRenderInvocationObservationState = {
     audits: [],
     maskSidecars: [],
@@ -266,24 +279,24 @@ const executeProductionRenderCommand = async (
 
   const soundRuntime = createProductionSoundRuntime({
     dialogueSelection: readProductionDialogueSynthesis(
-      config.sound.dialogueSynthesis,
+      design?.sound?.dialogueSynthesis ?? null,
     ),
     host: renderHost,
-    liveWearableSoftBodies: config.simulation.liveWearableSoftBodies,
+    liveWearableSoftBodies: design?.simulation?.liveWearableSoftBodies ?? [],
     productionStateRoot,
     progress: renderProgress,
     speakerBindings: readProductionSpeakerBindings(
-      config.sound.speakerBindings,
+      design?.sound?.speakerBindings ?? [],
     ),
   });
   const gcRuntime = createProductionRenderGarbageRuntime({
     captureTarget: captureRenderGcTarget,
     compareCodeUnits,
-    finalTier: config.render.final,
+    finalTier: renderTiers.final,
     host: renderHost,
     productionId,
     productionStateRoot,
-    proxyTier: config.render.proxy,
+    proxyTier: renderTiers.proxy,
     readRendererJson,
     removeTarget: removeCapturedRenderGcTarget,
     renderJobRoot,
@@ -299,7 +312,12 @@ const executeProductionRenderCommand = async (
     authoringEvidence,
     captureCurrentChunkPointer: gcRuntime.captureCurrentChunkPointer,
     compareCodeUnits,
-    h264Entry: require.resolve("h264-mp4-encoder"),
+    // A generated project is `"type": "module"`, so `require` is not defined in
+    // this scope and the bare call threw `ReferenceError` the moment anything
+    // reached it. It is a lazy field on the planning runtime, so `status`,
+    // `verify` and `finalize` never touched it and only `render gc` did, which
+    // is why one command failed while its siblings passed.
+    h264Entry: createRequire(import.meta.url).resolve("h264-mp4-encoder"),
     host: renderHost,
     output,
     planPath,

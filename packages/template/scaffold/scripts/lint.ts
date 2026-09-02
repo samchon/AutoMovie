@@ -4,8 +4,11 @@ import {
   AutoMovieProductionProject,
 } from "@automovie/production";
 
-import config from "../automovie.config";
 import { productionEvidence } from "../lint.config";
+import { currentAutoMovieProductionId } from "./projectIdentity";
+
+/** The production namespace this project declares in its own package manifest. */
+const productionId = currentAutoMovieProductionId();
 
 /**
  * The scope this lint runs at, `review` unless `--scope <name>` says otherwise.
@@ -45,10 +48,7 @@ const scope = ((): "design" | "source" | "review" | "final" => {
   process.exit(1);
 })();
 
-const project = AutoMovieProductionProject.open(
-  process.cwd(),
-  config.productionId,
-);
+const project = AutoMovieProductionProject.open(process.cwd(), productionId);
 const authoringEvidence = readAutoMovieProductionEvidence({
   root: process.cwd(),
   productionEvidence,

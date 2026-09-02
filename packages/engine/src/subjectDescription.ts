@@ -14,7 +14,12 @@ import {
   IAutoMovieVector3,
 } from "@automovie/interface";
 
-import { builtEnvironmentSpaceContentBounds } from "./architecture";
+import {
+  builtEnvironmentDescendantSpaces,
+  builtEnvironmentElementBounds,
+  builtEnvironmentSpaceContentBounds,
+  builtInstanceSetPlacementBounds,
+} from "./architecture";
 import { tessellate } from "./geometry";
 import { resolvePose } from "./kinematics";
 import { Matrix4, Quaternion, seededValue } from "./math";
@@ -63,6 +68,12 @@ export const describeAutoMovieSubjects = (
         descriptions.push(describeElementGroup(context, environment, element));
     for (const space of environment.spaces)
       descriptions.push(describeSpace(context, environment, space));
+    // The unit itself. A work holds several independently placed buildings, and
+    // neither the scene walk nor the space tree ever names one: the scene knows
+    // nodes and the space tree knows rooms, so without this the only thing a
+    // reviewer could not address was the whole building.
+    for (const building of environment.buildings)
+      descriptions.push(describeBuilding(context, environment, building));
   }
   return descriptions.sort((left, right) =>
     compareAutoMovieRenderIds(left.id, right.id),
@@ -144,6 +155,11 @@ export const describeAutoMovieSubject = (
       (candidate) => spaceId(environment.id, candidate.id) === subjectId,
     );
     if (space !== undefined) return describeSpace(context, environment, space);
+    const building = environment.buildings.find(
+      (candidate) => buildingId(environment.id, candidate.id) === subjectId,
+    );
+    if (building !== undefined)
+      return describeBuilding(context, environment, building);
   }
   throw new Error(`Compiled subject "${subjectId}" does not exist.`);
 };
@@ -523,6 +539,109 @@ const describeSpace = (
   ]),
 });
 
+/**
+ * Every element descending from one building unit's root, the root included.
+ *
+ * `IAutoMovieBuiltEnvironment.buildings` states that ownership is total: every
+ * element descends from exactly one unit's root. So the walk is the census of
+ * the unit, and the space tree is only an index over it -- an exterior wall, a
+ * foundation and a structural frame are claimed by no room at all.
+ */
+const buildingElements = (
+  environment: IAutoMovieBuiltEnvironment,
+  root: string,
+): string[] => {
+  const children = new Map<string | null, string[]>();
+  for (const element of environment.elements)
+    children.set(element.parent, [
+      ...(children.get(element.parent) ?? []),
+      element.id,
+    ]);
+  const output: string[] = [];
+  const walk = (id: string): void => {
+    output.push(id);
+    for (const child of children.get(id) ?? []) walk(child);
+  };
+  walk(root);
+  return output;
+};
+
+const describeBuilding = (
+  context: IDescriptionContext,
+  environment: IAutoMovieBuiltEnvironment,
+  building: IAutoMovieBuiltEnvironment["buildings"][number],
+): IAutoMovieSubjectDescription => {
+  // The unit's own extent, measured over every element it owns rather than
+  // over the rooms it contains. A room-by-room union would leave out exactly
+  // the envelope that makes a building readable from outside.
+  //
+  // The compact populations its rooms hold are folded in for the opposite
+  // reason: a space already answers for the sets placed in it, so a unit whose
+  // only content is a repeated population would otherwise measure nothing while
+  // every room under it measured a box.
+  let content: { min: IAutoMovieVector3; max: IAutoMovieVector3 } | null = null;
+  const include = (box: {
+    min: IAutoMovieVector3;
+    max: IAutoMovieVector3;
+  }): void => {
+    content =
+      content === null
+        ? box
+        : {
+            min: {
+              x: Math.min(content.min.x, box.min.x),
+              y: Math.min(content.min.y, box.min.y),
+              z: Math.min(content.min.z, box.min.z),
+            },
+            max: {
+              x: Math.max(content.max.x, box.max.x),
+              y: Math.max(content.max.y, box.max.y),
+              z: Math.max(content.max.z, box.max.z),
+            },
+          };
+  };
+  for (const id of buildingElements(environment, building.element)) {
+    const box = builtEnvironmentElementBounds(environment, id);
+    if (box !== null) include(box);
+  }
+  const rooms = builtEnvironmentDescendantSpaces(environment, building.space);
+  for (const population of environment.populations ?? [])
+    if (rooms.includes(population.space))
+      include(
+        builtInstanceSetPlacementBounds(
+          population.set,
+          population.prototypeBounds,
+        ),
+      );
+  return {
+    version: 1,
+    revision: context.artifact.revision,
+    id: buildingId(environment.id, building.id),
+    kind: "building",
+    semanticKind: "building",
+    name: building.id,
+    prototype: null,
+    placement: buildingId(environment.id, building.id),
+    owner: null,
+    model: null,
+    space: null,
+    transform: null,
+    bounds: {
+      declared: null,
+      content,
+      coordinateSpace: "world",
+    },
+    materials: [],
+    // The two roots a walk of this unit starts from: the element hierarchy that
+    // covers it and the space tree that indexes it. Naming both is what keeps
+    // the envelope reachable from the unit without pretending a room owns it.
+    members: summarizeMembers(context, [
+      elementId(`${environment.id}/${building.element}`),
+      spaceId(environment.id, building.space),
+    ]),
+  };
+};
+
 const prototypeId = (model: string): string => `prototype:${model}`;
 const prototypePartId = (model: string, part: string): string =>
   `prototype-part:${model}/${part}`;
@@ -532,6 +651,8 @@ const elementPartId = (node: string, part: string): string =>
 const instanceSetId = (set: string): string => `instance-set:${set}`;
 const spaceId = (environment: string, space: string): string =>
   `space:${environment}/${space}`;
+const buildingId = (environment: string, building: string): string =>
+  `building:${environment}/${building}`;
 
 const summarizeMembers = (
   context: IDescriptionContext,

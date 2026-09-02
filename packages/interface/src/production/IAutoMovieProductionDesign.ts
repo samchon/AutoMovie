@@ -12,9 +12,17 @@ import { AutoMovieHumanoidBone } from "../skeleton";
 import type { IAutoMovieExternalMotionAdoption } from "./IAutoMovieAssetManifest";
 import type {
   IAutoMovieAcousticResponseProfile,
+  IAutoMovieProductionTtsReceipt,
   IAutoMovieSoundPropagationProfile,
 } from "./IAutoMovieProductionSound";
 import { IAutoMovieSceneEvidence } from "./IAutoMovieScreenplayIndex";
+import type {
+  IAutoMovieRepaintExecutionPolicy,
+  IAutoMovieRepaintGeneratorAdoption,
+  IAutoMovieRepaintParameters,
+  IAutoMovieRepaintReferenceInput,
+  IAutoMovieRepaintRequestEvidence,
+} from "./capture/IAutoMovieRepaintShot";
 
 /**
  * A SHA-256 value computed by AutoMovie from authoritative project bytes.
@@ -354,19 +362,183 @@ export interface IAutoMovieProductionDesign {
    */
   captionReadabilityProfiles?: IAutoMovieCaptionReadabilityProfile[];
   /**
-   * Optional production-owned propagation and room-response choices.
+   * Optional production-owned propagation, room-response, and dialogue
+   * choices.
    *
-   * Omission preserves the legacy dry path. The engine does not choose a
-   * physical profile, external provider, adopted asset, or room mapping.
+   * Omitting propagation or the room response preserves the legacy dry path.
+   * The engine does not choose a physical profile, external provider, adopted
+   * asset, or room mapping.
+   *
+   * The same record carries the two dialogue decisions nothing else can make
+   * for the production: which generator it adopted under which reviewed rights,
+   * and which compiled actor each screenplay speaker performs through.
    *
    * @evidence requirements/sound/spatialization-and-propagation.md#sound-direct-path Makes propagation an explicit production input rather than an engine default.
    * @evidence specifications/simulation-effects-and-sound/ambience-music-spatial-and-acoustics.md#spatial-direct-path-and-output-mapping Carries only selected bounded models into deterministic planning.
+   * @evidence requirements/sound/sources-and-external-assets.md#sound-source-provenance Keeps the adopted generator's provider, model, version, rights, and reviewed terms date with the production that chose them.
+   * @evidence specifications/simulation-effects-and-sound/scope-tiers-and-identities.md#external-result-provider-neutrality Types the adoption as provider-neutral authored data that a credential can neither supply nor start.
+   * @evidence requirements/sound/dialogue-voice-and-visemes.md#sound-lipsync-join Names the actor whose performance shares the film interval with the voice rather than inferring one from cast order.
+   * @evidence specifications/simulation-effects-and-sound/sound-sources-events-dialogue-and-foley.md#dialogue-lipsync-join-and-seek Supplies the join key the viseme evaluation resolves at a target film time.
    */
   sound?: {
     /** Selected direct-path propagation model. */
     propagation?: IAutoMovieSoundPropagationProfile;
     /** Selected bounded derived or externally adopted room-response source. */
     acousticResponse?: IAutoMovieAcousticResponseProfile;
+    /**
+     * The exact dialogue generator this production adopted, if any.
+     *
+     * The choice of a voice is a delivery decision the production makes and
+     * answers for, so it is stated here beside the rest of the design rather
+     * than in a runtime declaration that no reviewed document owns. The record
+     * carries no credential: it names where the generator came from, which
+     * rights and terms were reviewed on which calendar day, the authored cost
+     * basis, and why this production needs synthesized dialogue at all.
+     *
+     * The host runtime narrows this to the adapter it actually implements and
+     * refuses a provider, model revision, dtype, or device it cannot produce;
+     * this contract stays provider-neutral so the decision is portable.
+     * Omission means the production synthesizes no dialogue.
+     */
+    dialogueSynthesis?: {
+      /** Non-blank generator identity the host runtime must implement. */
+      provider: string;
+      /** Non-blank exact model repository or local tool identity. */
+      model: string;
+      /** Non-blank immutable model revision. */
+      modelRevision: string;
+      /** Non-blank weight quantization the adopted revision was taken at. */
+      dtype: string;
+      /** Non-blank execution device the adoption was reviewed for. */
+      device: string;
+      /** Non-blank voice identity inside that model revision. */
+      voice: string;
+      /** Finite speaking rate strictly above zero. */
+      speed: number;
+      /** Reviewed source, rights, terms date, cost, and consumer reason. */
+      generatorProvenance: IAutoMovieProductionTtsReceipt["generatorProvenance"];
+    };
+    /**
+     * Joins from a screenplay speaker identity to the compiled actor whose
+     * mouth performs that line.
+     *
+     * The screenplay names who speaks and source names the actor node, and
+     * nothing between them is inferable: cast order and a similar name are
+     * both wrong answers. Stating the join in the design is what lets the
+     * compiler refuse a speaker with no line, a duplicate identity, and an
+     * actor absent from the shot the line lands in.
+     *
+     * A binding is for an audible identity with a mouth on screen. An
+     * off-screen narrator or machine voice still needs a settings owner and a
+     * screenplay source, but it has no actor to bind. Omission means the
+     * production binds no speaker to a mouth.
+     */
+    speakerBindings?: Array<{
+      /** Non-blank speaker identity carried by the dialogue line. */
+      speaker: string;
+      /** Non-blank compiled actor node id that owns the mouth layer. */
+      actor: string;
+    }>;
+  };
+  /**
+   * The proxy and final visual deliverables this production renders at.
+   *
+   * A tier is a delivery contract rather than a filename: the raster scale and
+   * the frame decimation say what the review pass and the final pass actually
+   * are, and a proxy that succeeded is not clearance for the final. Declaring
+   * both here keeps the pair addressable by the same design revision every
+   * other delivery decision is read from.
+   *
+   * Optional and purely additive: a production declaring none is rendered at
+   * the host's shipped review and delivery tiers, exactly as it was before the
+   * field existed.
+   *
+   * @evidence requirements/production-design/scope-and-source-of-truth.md#production-design-source-ownership Keeps the review and delivery raster a tracked design decision rather than an input a render command supplies on the production's behalf.
+   * @evidence specifications/narrative-and-intent/design-authority-and-visual-language.md#narrative-intent-design-authority-boundary Types the tier pair as part of the canonical design record its downstream render consumers read.
+   */
+  renderTiers?: {
+    /**
+     * Review tier, which must be cheaper than the final one in at least one of
+     * its two axes. A proxy that reduces neither is refused rather than run.
+     */
+    proxy: {
+      /** Stable tier identity used in slots, chunks, and publication paths. */
+      kind: "proxy";
+      /** Output raster multiplier in `(0, 1]`. */
+      resolutionScale: number;
+      /** Keep every Nth source frame; an integer from 1 through 16. */
+      frameStep: number;
+    };
+    /** Delivery tier; `resolutionScale` and `frameStep` are exactly one. */
+    final: {
+      /** Stable tier identity used in slots, chunks, and publication paths. */
+      kind: "final";
+      /** Output raster multiplier; exactly one at the final tier. */
+      resolutionScale: number;
+      /** Source frame stride; exactly one at the final tier. */
+      frameStep: number;
+    };
+  };
+  /**
+   * The appearance rendition this production adopted, and its exact requests.
+   *
+   * A repaint is a derived appearance over deterministic truth, so what it may
+   * do has to be decided before anything is drawn: which generator, on which
+   * execution boundary, under which bounded retry and cost policy, and with
+   * which exact prompt, seed, preservation strength, and role-specific
+   * references per shot. Holding that here means a request cannot appear as an
+   * ephemeral command-line override, and a changed request stales the compile
+   * that consumed it.
+   *
+   * The post-generation selection review is deliberately not part of this
+   * record: reviewing a candidate must not stale the deterministic render that
+   * produced it, so the host joins that observation by shot from its own
+   * control-plane sidecar. Omission means deterministic visual delivery.
+   *
+   * @evidence requirements/repaint/providers-models-and-credentials.md#repaint-execution-boundary Keeps the chosen generator and its execution boundary an authored production decision rather than host state.
+   * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-repaint-execution-eligibility Supplies the one adoption record an executor is allowed to bind an adapter to.
+   * @evidence requirements/repaint/retries-seeds-and-variation.md#repaint-retry-budget-stop Makes attempts, timeout, elapsed time, cost, retryability, and deterministic backoff authored inputs rather than hidden host behavior.
+   * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-repaint-attempt-selection Types the bounded policy consumed before an external call and reread when a candidate is selected.
+   * @evidence requirements/repaint/source-frames-and-reference-locking.md#repaint-reference-roles Locks each shot prompt, seed, preservation strength, and role-specific reference to the shot it was reviewed for.
+   * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-repaint-controls-references Types the controls and references one request carries into execution.
+   */
+  repaint?: {
+    /** Adopted runtime identity and reviewed rights for the generator. */
+    generator: IAutoMovieRepaintGeneratorAdoption;
+    /** Bounded attempts, timeouts, cost, backoff, and retryable failures. */
+    executionPolicy: IAutoMovieRepaintExecutionPolicy;
+    /** One immutable reviewed request per delivered shot, unique by shot. */
+    requests: Array<{
+      /** Authored shot id this request repaints. */
+      shot: string;
+      /** Prompt, seed, preservation strength, and optional scalar controls. */
+      parameters: IAutoMovieRepaintParameters;
+      /** At least one manifest-registered role-specific reference. */
+      references: IAutoMovieRepaintReferenceInput[];
+      /** Stable addresses of the owners this request answers to. */
+      evidence: IAutoMovieRepaintRequestEvidence;
+    }>;
+  };
+  /**
+   * Soft-body domains this production admits to a live moving-boundary solve.
+   *
+   * A moving anchor or a body capsule makes a domain expensive in a way a
+   * static one is not, so which domains are worth that cost is a production
+   * decision rather than a solver default. The list is production-wide, so a
+   * domain may be absent from a shot that does not stage it; across every
+   * compiled shot, however, this set must equal the set of domains that
+   * actually declare a moving boundary, and list order is the stable subject
+   * budget order every shot shares.
+   *
+   * Omission admits none. That is correct for a production staging no
+   * moving-boundary domain, and refused for one that stages any.
+   *
+   * @evidence requirements/effects-and-simulation/soft-bodies-and-deformation.md#effects-soft-anchors Separates the domains whose anchors move with a performance from the static ones, which is exactly what admission costs.
+   * @evidence specifications/simulation-effects-and-sound/soft-bodies-and-deformation.md#soft-static-moving-anchor-input Types the production-wide selection the solver reads before it samples an owner pose at a fixed-step boundary.
+   */
+  simulation?: {
+    /** Unique, non-blank, trimmed domain ids in stable budget order. */
+    liveWearableSoftBodies: string[];
   };
   /**
    * Read-only site context every environmental analysis is measured against.

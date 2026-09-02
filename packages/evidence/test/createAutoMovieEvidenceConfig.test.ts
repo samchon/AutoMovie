@@ -1624,6 +1624,50 @@ export const review = true;
     true,
   );
 
+  // A design layer promoted over an active but unreviewed foundation reads
+  // complete while paying nothing for it, because `designFoundations` withholds
+  // a foundation's units until the foundation itself is in review.
+  const spacesBeforeMaps = root();
+  assert.equal(
+    throws(
+      () =>
+        createAutoMovieEvidenceConfig({
+          ...disabled(spacesBeforeMaps),
+          kind: "library",
+          settings: "review",
+          maps: "evidence",
+          spaces: "review",
+        }),
+      "spaces cannot enter review before maps is in review",
+    ),
+    true,
+  );
+
+  // The same rule must not deadlock the one mutual pair in the foundation
+  // table. `motions` and `systems` name each other, so neither can be reviewed
+  // first; gating review entry rather than draft entry lets both be written
+  // against one another and promoted together in a single declaration.
+  const mutualPromotion = root();
+  assert.equal(
+    throws(
+      () =>
+        createAutoMovieEvidenceConfig({
+          ...disabled(mutualPromotion),
+          kind: "library",
+          settings: "review",
+          maps: "review",
+          models: "review",
+          spaces: "review",
+          materials: "review",
+          instances: "review",
+          motions: "review",
+          systems: "review",
+        }),
+      "cannot enter review before",
+    ),
+    false,
+  );
+
   const filmWithBrief = root();
   write(filmWithBrief, "docs/settings/production.md", "## Scope {#scope}\n");
   write(

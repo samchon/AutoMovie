@@ -349,11 +349,7 @@ export class AutoMovieProductionProject {
       "productions",
       this.productionSegment,
     );
-    this.productionDesignRoot = path.join(
-      this.automovieRoot,
-      "design",
-      this.productionSegment,
-    );
+    this.productionDesignRoot = productionDesignRootOf(root, this.productionId);
     this.sharedDesignRoot = path.join(this.automovieRoot, "design", "shared");
     this.revisionPath = path.join(this.productionStateRoot, "revision.json");
     this.lockPath = path.join(this.productionStateRoot, "revision.lock");
@@ -828,6 +824,34 @@ export class AutoMovieProductionProject {
     } finally {
       releaseProductionRootNamespace(lease);
     }
+  }
+
+  /**
+   * Read one production's own design record without opening project state.
+   *
+   * The design record is where a production states the decisions it answers
+   * for, so a consumer that needs one of them before anything has been opened
+   * for writing asks the design rather than a second declaration beside it.
+   * This reads exactly that one file under the same physical fence the project
+   * reads it through, creates nothing, and takes no lock.
+   *
+   * A project that has emitted no design record has authored no such decision,
+   * which is `null` rather than a fault: each reader of an optional decision
+   * then falls back to its shipped default instead of inventing a value. A
+   * resident record that does not validate is still an error, because a
+   * decision nobody can read is not the same as a decision nobody made.
+   */
+  public static productionDesign(
+    rootDirectory: string,
+    productionId: string,
+  ): IAutoMovieProductionDesign | null {
+    const root = path.resolve(rootDirectory);
+    const rootReal = fs.realpathSync(root);
+    return readOwnedTypedJson(
+      rootReal,
+      path.join(productionDesignRootOf(root, productionId), "production.json"),
+      validateProductionDesign,
+    );
   }
 
   /**
@@ -3940,6 +3964,16 @@ const importedLegacyOf = (
 const PROJECT_LAYOUT_LABEL = "the AutoMovie project layout";
 
 /**
+ * Where one production's own authored design records live.
+ *
+ * The instance path and the state-free static reader resolve the same
+ * directory through this one function, so a project cannot be opened against
+ * one design tree and read against another.
+ */
+const productionDesignRootOf = (root: string, productionId: string): string =>
+  path.join(root, "automovie", "design", encodeId(productionId));
+
+/**
  * The project ownership layout, which is the harness's own fixed shape rather
  * than a per-project declaration.
  *
@@ -3954,12 +3988,7 @@ const PROJECT_LAYOUT = {
   formatVersion: 2,
   sourceRoots: ["src"],
   contentRoots: ["viewer", "scripts", "public"],
-  contentFiles: [
-    "automovie.config.ts",
-    "vite.config.ts",
-    "package.json",
-    "package-lock.json",
-  ],
+  contentFiles: ["vite.config.ts", "package.json", "package-lock.json"],
   generatedRoot: "generated",
   renderRoot: "renders",
   assetManifest: "automovie/assets.json",

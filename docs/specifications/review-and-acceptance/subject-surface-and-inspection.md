@@ -25,12 +25,21 @@ Resolver는 제품이 공개한 주체 검사 target을 안정된 주체 record�
 
 ### 시점 Plan의 소유 {#review-system-subject-viewpoint-plan}
 
+<!-- @evidenceObligation viewpoint-plan-record 시점 plan이 담는 내용과 결정적 identity·순서, 그리고 authored camera·shot 경계·film time을 입력으로 받지 않는다는 것. -->
+<!-- @evidenceObligation delivery-evidence-separation 주체 관찰이 delivery evidence 개체군에 들어가지 않고, 주체를 담은 shot frame이 그 주체의 표본으로 계상되지 않는다는 것. -->
+<!-- @evidenceObligation topology-derived-population required 개체군을 compiled topology에서 파생하는 것과 노출·facade/roof/underside·exterior/reentrant corner 분류 규칙. -->
+<!-- @evidenceObligation interior-station-containment interior station이 그 space 자신의 진술된 volume 안에 있음을 증명하는 것과, 증명하지 못한 station을 identity만 남긴 채 미해결로 보고하는 것. -->
+<!-- @evidenceObligation population-non-shrinkable 호출자가 station을 더할 수는 있어도 뺄 수 없다는 것과, 같은 record가 어느 호출자에게나 같은 station identity와 순서를 만든다는 것. -->
 <!-- @evidence requirements/review/subject-inspection.md#review-subject-viewpoint-ownership 검사가 시점을 소유한다는 불변식을 viewpoint plan으로 고정한다. -->
 <!-- @evidence requirements/acceptance/review-surfaces-and-sampling.md#acceptance-spatial-view-sampling 형상, 접촉, occlusion과 deformation을 드러내는 각도와 구조 view를 요구한다. -->
 
 주체 검사의 viewpoint plan은 주체 identity, 각 시점의 방향과 거리, projection, 적용 pose와 state, 필요한 render pass와 결정적 시점 선택 규칙을 가진다. Plan은 저작된 camera, shot 경계와 film time을 입력으로 받지 않으며 같은 입력과 plan은 같은 시점 identity와 순서를 만든다.
 
 Frame과 구간 표면은 반대로 저작된 camera state를 그대로 사용하고 자체 시점을 선택하지 않는다. 주체 검사가 만든 관찰은 delivery evidence population에 들어가지 않으며, 주체를 담은 shot frame은 그 주체의 viewpoint plan을 충족한 표본으로 계상되지 않는다.
+
+Required viewpoint 개체군은 caller input이 아니라 compiled topology에서 파생한다. Bounded rigid subject는 여섯 canonical face와 서로 반대인 두 oblique을 지불하고, 건물 unit은 자기 envelope에서, volume을 진술한 각 logical space는 자기 interior에서 개체군을 얻는다. 노출 여부는 하나의 space만 감싸는 separation인지로 정하고, facade·roof·underside 구분은 그 separation의 outward normal이 수평보다 수직에 가까운지로 정하며, corner의 exterior·reentrant 구분은 두 facade가 만나는 점에서 각 facade의 몸이 다른 facade의 outward plane 뒤에 있는지로 정한다. 각 space는 자기 interior centre에서 네 cardinal station, 자기 extent의 네 corner에서 안쪽을 향한 station, 자기 boundary에 뚫린 opening마다 threshold station 하나를 얻는다.
+
+Interior station의 position은 그 space 자신의 진술된 volume 안에 있음이 증명된 점이어야 한다. 증명하지 못한 station은 개체군에서 사라지지 않고 identity만 남긴 채 미해결로 보고되며, 호출자 입력은 station을 더할 수 있고 뺄 수 없다. 같은 record는 어느 호출자에게나 같은 station identity와 같은 순서를 만든다.
 
 ### 주체 검사의 요청 표면 {#review-system-subject-inspection-reach}
 
@@ -82,4 +91,6 @@ Shot render, rendition 교체와 delivery 재생성은 주체 freshness key에 �
 
 Library review resolver는 동일한 typed authoring declaration에서 active design branch, reviewed source binding, exact design document와 H2 digest를 읽고, 별도 domain 목록 없이 map·model·space·material·instance·motion·system owner 개체군을 만든다. Active branch는 owner가 0개여도 보존되어 empty population을 실패시키며, disabled branch와 selected binding 밖 파일은 filesystem residue만으로 승격하지 않는다. Map owner는 current extent와 coordinate, terrain·water·network·site interface를 plan·section·elevation·traversal 같은 declared finite observation으로 닫는다. Film과 brief는 이 resolver를 사용하지 않고 compiled shot·formation·model consumer에서 기존 review 개체군을 계산한다.
 
-각 H2에 인접한 versioned plan은 manifest-derived source population 안의 exact source subset과 finite observation id·kind를 선언한다. Owner freshness identity는 H2 digest, normalized selected source bytes, compile fingerprint와 receipt를 제외한 canonical plan digest로 구성한다. Artifact receipt는 project text 또는 render bytes의 digest를, facts receipt는 canonical structured-fact digest를, model turntable receipt는 compiler가 정한 current whole-model view 집합과 적용 가능한 rig range를 다시 연다. 모든 receipt는 observation runtime identity와 passed, failed, unsupported 또는 not-run verdict를 가지며 current identity에 정확히 하나의 reopened passed receipt가 없으면 `review-evidence-missing`이다. Plan/receipt file은 물리 관찰의 locator이고 approval, waiver 또는 finding lifecycle ledger가 아니다.
+Library compiler는 review 이전에 그 개체군의 재료를 만든다. `design` 위의 모든 scope에서 reviewed source binding이 선택한 각 파일을 film shot source와 같은 deterministic sandbox에서 link·inspect·transpile·evaluate하고, `design`과 `build`를 가진 각 export를 하나의 exact design document/H2 주소에 묶는다. Active 선언이 소유하지 않는 주소, 한 owner를 등록하는 두 export, 두 owner가 발행한 같은 artifact id는 각각 자기 주소에서 거부한다. 반환된 built environment와 model은 shot source와 같은 engine validator를 통과해야 하며, 통과한 결과만 compiler-owned bytes로 원자적으로 발행된다. 발행물은 generated manifest에 소유·digest·source target으로 등재되어 stale과 tamper가 film 경로와 동일하게 판정되고, lint scope는 같은 기대 bytes를 검증하되 쓰지 않는다. 발행된 owner 색인은 각 artifact를 그것을 만든 branch, H2, source 파일, export와 source digest에 연결하므로, offline 관찰 명령이 source를 다시 실행하지 않고 compiler와 같은 required 개체군을 얻는다.
+
+각 H2에 인접한 versioned plan은 manifest-derived source population 안의 exact source subset과 finite observation id·kind를 선언한다. Owner freshness identity는 H2 digest, normalized selected source bytes, compile fingerprint와 receipt를 제외한 canonical plan digest로 구성한다. Artifact receipt는 project text 또는 render bytes의 digest를, facts receipt는 canonical structured-fact digest를, model turntable receipt는 compiler가 정한 current whole-model view 집합과 적용 가능한 rig range를 다시 연다. 모든 receipt는 observation runtime identity와 passed, failed, unsupported 또는 not-run verdict를 가지며 current identity에 정확히 하나의 reopened passed receipt가 없으면 `review-evidence-missing`이다. 모호함은 current identity의 passed receipt 수로 센다. 같은 identity의 non-passed receipt는 관찰 history로 보존되어 완료를 만들지 않고 완료를 무효화하지도 않으므로, 새 결과를 기록하는 경로는 현재 accepted된 passed receipt만 대체하고 실패·미지원·미실행 기록은 삭제하지 않는다. Plan/receipt file은 물리 관찰의 locator이고 approval, waiver 또는 finding lifecycle ledger가 아니다.

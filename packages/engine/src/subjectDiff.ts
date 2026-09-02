@@ -166,6 +166,20 @@ const shapeState = (
       variation: set.variation,
     };
   }
+  // A building unit's shape is the unit record: which element hierarchy covers
+  // it and which space tree indexes it. Its extent is not read here, because
+  // the elements it is measured over are subjects of their own and report their
+  // own movement; a unit would otherwise be reported as reshaped every time one
+  // wall it owns moved a millimetre.
+  if (description.kind === "building")
+    return artifact.compiled
+      .builtEnvironments!.flatMap((environment) =>
+        environment.buildings.map((building) => ({ environment, building })),
+      )
+      .find(
+        ({ environment, building }) =>
+          `building:${environment.id}/${building.id}` === description.id,
+      )!.building;
   return artifact.compiled
     .builtEnvironments!.flatMap((environment) =>
       environment.spaces.map((space) => ({ environment, space })),

@@ -71,7 +71,7 @@ export interface IAutoMovieAssetTurntableView {
  * exact view set, and reproducing it by hand is where a reviewer silently
  * skipped the angle that would have shown the defect.
  *
- * @evidence requirements/agent-authoring/knowledge-boundary.md#agent-host-evidence Exposes `IAutoMovieCaptureTurntable` as the portable data boundary for the agent mcp host evidence requirement.
+ * @evidence requirements/agent-authoring/knowledge-boundary.md#agent-host-evidence Exposes `IAutoMovieCaptureTurntable` as the portable data boundary for the agent host evidence requirement.
  * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-host-evidence-output Types `IAutoMovieCaptureTurntable` for the spec authoring host evidence output system contract.
  * @author Samchon
  */
@@ -79,28 +79,28 @@ export interface IAutoMovieCaptureTurntable {
   /**
    * True only when every required view committed verified current pixels.
    *
-   * @evidence requirements/agent-authoring/knowledge-boundary.md#agent-host-evidence Exposes this field as the portable data boundary for the agent mcp host evidence requirement.
+   * @evidence requirements/agent-authoring/knowledge-boundary.md#agent-host-evidence Exposes this field as the portable data boundary for the agent host evidence requirement.
    * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-host-evidence-output Types this field for the spec authoring host evidence output system contract.
    */
   captured: boolean;
   /**
    * Production namespace used for the attempt.
    *
-   * @evidence requirements/agent-authoring/knowledge-boundary.md#agent-host-evidence Exposes this field as the portable data boundary for the agent mcp host evidence requirement.
+   * @evidence requirements/agent-authoring/knowledge-boundary.md#agent-host-evidence Exposes this field as the portable data boundary for the agent host evidence requirement.
    * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-host-evidence-output Types this field for the spec authoring host evidence output system contract.
    */
   productionId: string;
   /**
    * Review surface whose current evidence changed, or null when none did.
    *
-   * @evidence requirements/agent-authoring/knowledge-boundary.md#agent-host-evidence Exposes this field as the portable data boundary for the agent mcp host evidence requirement.
+   * @evidence requirements/agent-authoring/knowledge-boundary.md#agent-host-evidence Exposes this field as the portable data boundary for the agent host evidence requirement.
    * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-host-evidence-output Types this field for the spec authoring host evidence output system contract.
    */
   reviewTarget: IAutoMovieReviewTarget | null;
   /**
    * Every required view in canonical order, captured or not.
    *
-   * @evidence requirements/agent-authoring/knowledge-boundary.md#agent-host-evidence Exposes this field as the portable data boundary for the agent mcp host evidence requirement.
+   * @evidence requirements/agent-authoring/knowledge-boundary.md#agent-host-evidence Exposes this field as the portable data boundary for the agent host evidence requirement.
    * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-host-evidence-output Types this field for the spec authoring host evidence output system contract.
    */
   views: IAutoMovieAssetTurntableView[];
@@ -111,7 +111,7 @@ export interface IAutoMovieCaptureTurntable {
    * view; a diagnostic targeting the bare asset id refused the whole request
    * before any view was opened.
    *
-   * @evidence requirements/agent-authoring/knowledge-boundary.md#agent-host-evidence Exposes the refusal as the portable data boundary for the agent mcp host evidence requirement.
+   * @evidence requirements/agent-authoring/knowledge-boundary.md#agent-host-evidence Exposes the refusal as the portable data boundary for the agent host evidence requirement.
    * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-host-evidence-output Types the refusal for the spec authoring host evidence output system contract.
    */
   diagnostics: IAutoMovieDiagnostic[];

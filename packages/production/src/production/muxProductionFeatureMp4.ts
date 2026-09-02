@@ -1,9 +1,7 @@
 import type { IAutoMovieFilmTimeline } from "@automovie/interface";
-import {
-  type Box,
-  DataStream,
+import type {
+  Box,
   IsoFileOptions,
-  MP4BoxBuffer,
   Movie,
   Sample,
   Track,
@@ -14,6 +12,7 @@ import {
   probeProductionMedia,
   probeProductionVideoMp4,
 } from "./probeProductionMedia";
+import { residentMp4Box } from "./residentCodecs";
 import { trimProductionAudioPresentation } from "./trimProductionAudioPresentation";
 
 /**
@@ -41,7 +40,7 @@ export const muxProductionFeatureMp4 = (props: {
     throw new Error(
       "Feature mux requires byte sources with exactly equal track runtimes.",
     );
-  const output = createFile();
+  const output = residentMp4Box().createFile();
   output.init({
     brands: ["isom", "iso2", "mp41", "Opus"],
     timescale: videoTrack.timescale,
@@ -93,7 +92,7 @@ export const conformProductionRenditionVideoMp4 = (props: {
 }): Uint8Array => {
   const { parsed, first, description, sampleDuration, mediaDuration } =
     productionRenditionVideoPlan(props);
-  const output = createFile();
+  const output = residentMp4Box().createFile();
   output.init({
     brands: ["isom", "iso2", "mp41"],
     timescale: first.track.timescale,
@@ -474,7 +473,7 @@ const openProductionChunkVideo = (
     throw new Error(
       "Assembled chunk video duration exceeds the exact MP4 clock range.",
     );
-  const file = createFile();
+  const file = residentMp4Box().createFile();
   file.init({
     brands: ["isom", "iso2", "mp41"],
     timescale: reference.timescale,
@@ -764,7 +763,7 @@ const sampleDescription = (
 
 /** Canonicalize a parsed sample-description box without parser object identity. */
 const serializeDescriptionBox = (box: Box): Uint8Array => {
-  const stream = new DataStream();
+  const stream = new (residentMp4Box().DataStream)();
   box.write(stream);
   return new Uint8Array(stream.buffer);
 };
@@ -842,7 +841,7 @@ const sampleOptions = (
 const parseMp4 = (
   bytes: Uint8Array,
 ): { file: ReturnType<typeof createFile>; movie: Movie } => {
-  const file = createFile();
+  const file = residentMp4Box().createFile();
   let movie: Movie | null = null;
   const errors: string[] = [];
   file.onReady = (value) => {
@@ -852,7 +851,10 @@ const parseMp4 = (
     errors.push(`${module}: ${message}`);
   };
   file.appendBuffer(
-    MP4BoxBuffer.fromArrayBuffer(Uint8Array.from(bytes).buffer, 0),
+    residentMp4Box().MP4BoxBuffer.fromArrayBuffer(
+      Uint8Array.from(bytes).buffer,
+      0,
+    ),
     true,
   );
   file.flush();

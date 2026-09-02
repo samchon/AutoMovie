@@ -27,10 +27,29 @@ import type { AutoMovieModelArchetypeRegistry } from "./productionArchetypes";
 import { productionRenderTargetFingerprint } from "./renderIdentity";
 import type { IAutoMovieProductionDesignGraph } from "./validateProductionDesign";
 
-const PROJECT_MARKERS = [
-  "automovie.config.ts",
-  "automovie/manifest.json",
-] as const;
+/**
+ * What makes a directory the root of one generated production project.
+ *
+ * Both markers already exist for reasons of their own, which is the point: the
+ * walk reads the project's own identity rather than a reserved state directory
+ * it would then have to create in order to be found. `package.json` names the
+ * project and the production namespace derived from it, and `lint.config.ts`
+ * is the one typed declaration of the production's kind, populations, stages,
+ * and graph. Requiring both is what keeps a host seed inside an ordinary Node
+ * package from resolving to that package and having production state written
+ * underneath it.
+ *
+ * Neither marker is a place a decision could hide. `automovie.config.ts` was
+ * the second marker until the delivery decisions it carried moved onto the
+ * production design record they always belonged to, and there is no file left
+ * whose only job is to be found.
+ *
+ * `automovie/manifest.json` used to stand in for either of them. It no longer
+ * does: that path is the legacy v1 layout, which is import input rather than a
+ * shape any current project is asked to carry, so discovery must not depend on
+ * a state tree existing before the project can be opened.
+ */
+const PROJECT_MARKERS = ["package.json", "lint.config.ts"] as const;
 
 /**
  * Exact grapheme implementation this package can evaluate.
@@ -61,7 +80,7 @@ export const findAutoMovieProjectRoot = (
       : resolved;
   for (;;) {
     if (
-      PROJECT_MARKERS.some((marker) =>
+      PROJECT_MARKERS.every((marker) =>
         fs.existsSync(path.join(current, ...marker.split("/"))),
       )
     )
@@ -69,7 +88,7 @@ export const findAutoMovieProjectRoot = (
     const parent = path.dirname(current);
     if (parent === current)
       throw new Error(
-        `No AutoMovie workspace marker was found above host seed "${resolved}". Run inside a scaffold containing automovie.config.ts, or initialize automovie/manifest.json first.`,
+        `No AutoMovie project was found above host seed "${resolved}". Run inside a generated project that carries both ${PROJECT_MARKERS.join(" and ")}.`,
       );
     current = parent;
   }
@@ -135,6 +154,16 @@ export const compileAutoMovieProduction = (props: {
   scope: IAutoMovieCompileProjectInput["scope"];
   /** Archetype catalogue this production registers. */
   archetypes?: AutoMovieModelArchetypeRegistry;
+  /**
+   * Exact graph-derived authoring identity, required to compile a library.
+   *
+   * The compiler chooses its shape from this declaration, so a library
+   * compiled without it takes the film path and is refused for a design tree
+   * it was never going to have. A film or brief may omit it, which is why it
+   * stays optional rather than becoming a required argument on the one entry
+   * every generated project calls.
+   */
+  authoringEvidence?: IAutoMovieProductionEvidence;
 }): IAutoMovieCompileProjectOutput =>
   openAutoMovieProduction(props).compiler.compile({ scope: props.scope });
 

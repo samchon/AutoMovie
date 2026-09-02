@@ -39,7 +39,7 @@ A campaign owner pushes its own commits. It stages explicit paths, never `git ad
 
 ## Watch Checks After Every Push
 
-After every push, watch `gh pr checks <PR>` until each check settles. On failure, fetch the job log, diagnose the real cause, fix it in place, push a new commit, and let the checks resume. Both `build` and `test` must pass; do not treat a green unrelated job as acceptance for a failed required surface. `test` fails on a failing scenario, not on coverage: the coverage obligation is per change and the author reads the reported gaps, which the development skill explains.
+After every push, watch `gh pr checks <PR>` until each check settles. On failure, fetch the job log, diagnose the real cause, fix it in place, push a new commit, and let the checks resume. Both `build` and `test` must pass; do not treat a green unrelated job as acceptance for a failed required surface. `test` fails on a failing scenario **and on coverage**: #2153 made the per-change obligation a hard failure condition, so the lane exits 1 on a reported gap and 2 on an instrument failure. Read the gaps the way the development skill explains, and read them knowing that a whole-suite per-file figure is a lower bound: confirm a gap with a scoped run before chasing it. A file the lane refuses may be fully covered, which was measured on this repository and is #2163's.
 
 A campaign implementation cycle reads CI once per settled head instead, under its own development procedure. Its intermediate commits are not gates, and its merge still requires the settled head's green required checks.
 
@@ -47,6 +47,6 @@ A campaign implementation cycle reads CI once per settled head instead, under it
 
 When the user explicitly asks to merge, or a standing autonomous mandate authorizes it, and every required check passes, squash-merge the PR (matching the repo's linear history) and delete the branch.
 
-If CI is red because code, tests, build, formatting, or generated artifacts failed, fix the PR and wait for green.
+If CI is red because code, tests, build, formatting, generated artifacts, or changed coverage failed, fix the PR and wait for green. A coverage refusal the scoped run contradicts is still red, and still not yours to merge over: report it and hand the measurement to the issue that owns the gate.
 
 If CI cannot start or finish for external repository infrastructure reasons outside the topic's code scope (for example billing, service outage, missing runner capacity, or permissions), report the exact blocker, document the local verification in the PR, and merge only after the user explicitly repeats the merge instruction. Do not force-merge against GitHub branch protection; if GitHub refuses the merge, report the blocker.

@@ -35,7 +35,7 @@ Read each applicable sibling document in full before acting:
 - [Settings](settings.md) owns delivery, canon, subjects, capabilities, constraints, and shared conventions.
 - [Treatments](treatments.md), [scripts](scripts.md), and [screenplays](screenplays.md) own the film-only refinement ladder.
 - [Direct briefs](briefs.md) owns bounded audiovisual delivery that needs no independent narrative ladder.
-- [Production configuration](configuration.md) explains the current authored runtime choices; read it before source authorship while that surface exists.
+- [Production delivery decisions](configuration.md) explains the delivery, repaint, dialogue, and simulation fields of the design record; read it before source authorship.
 
 Map, model, space, material, instance, motion, and system design plus TypeScript implementation belong to [Source authoring](../source-authoring/SKILL.md). Contract inventory, citations, stages, and fingerprints belong to [Evidence graph](../evidence-graph/SKILL.md). Review, capture, inspection, and final acceptance belong to [Review verification](../review-verification/SKILL.md).
 

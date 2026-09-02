@@ -12,7 +12,7 @@ import {
   coverageTemporaryDirectory,
 } from "../../coverage/measureCoverage";
 import {
-  coverageCommandWiringDiagnostics,
+  coverageProcessIsEntry,
   coverageRunDependencies,
   runCoverage,
   runCoverageCli,
@@ -63,44 +63,15 @@ import { namedFacts } from "../internal/predicates";
  *    is the difference the next question turns on, and a walk that counted a
  *    stray note, a nested directory, or a truncated record as usable would
  *    answer neither question.
+ * 5. The one command runs measure, report, population and changed in that order,
+ *    stops at the first refusal, and keeps an instrument fault a different exit
+ *    status from a coverage gap. The population step is pinned between the
+ *    report and the changed gate because a disagreeing population makes the
+ *    changed gate's verdict describe a set other than the one it names, and both
+ *    of its statuses are pinned so a step wired to a gate that cannot refuse
+ *    would show here.
  */
 export const test_workspace_coverage_isolation = (): void => {
-  const wiring = {
-    rootPackage: fs.readFileSync(path.join(ROOT, "package.json"), "utf8"),
-    testPackage: fs.readFileSync(
-      path.join(ROOT, "test", "package.json"),
-      "utf8",
-    ),
-    workflow: fs.readFileSync(
-      path.join(ROOT, ".github", "workflows", "test.yml"),
-      "utf8",
-    ),
-  };
-  TestValidator.equals(
-    "the root command and both CI lanes use one typed coverage boundary",
-    {
-      actual: coverageCommandWiringDiagnostics(wiring),
-      disconnected: coverageCommandWiringDiagnostics({
-        rootPackage: "{}",
-        testPackage: "{}",
-        workflow:
-          "internals/coverage.mjs\nlicense:check\nReport Coverage Gaps\n",
-      }),
-    },
-    {
-      actual: [],
-      disconnected: [
-        "root consumer:check is not the typed targeted scenario",
-        "test coverage does not use the single typed entry",
-        "both CI checkouts must fetch the comparison base",
-        "both CI lanes must pass the pull-request base",
-        "both CI lanes must run the same coverage command",
-        "both CI lanes must run coverage from the test package",
-        "typed root tools and build tools must trigger CI",
-        "CI still names a deleted JavaScript-era gate",
-      ],
-    },
-  );
   // A directory holding a complete record, a truncated one, and two things that
   // are not records at all, so every figure is asserted against a mixture rather
   // than against an empty answer.
@@ -152,7 +123,29 @@ export const test_workspace_coverage_isolation = (): void => {
   );
   fs.writeFileSync(
     path.join(shaped, "coverage-2-2-0.json"),
-    JSON.stringify({ result: [shape(64)] }),
+    // A malformed `file:` URL, which is the case that proves the census skips
+    // an unusable record instead of throwing out of the whole walk and losing
+    // every record behind it. The parse is deliberately host-neutral, so a
+    // POSIX-shaped URL on Windows is measured rather than skipped; only a URL
+    // that is not a URL fails here.
+    JSON.stringify({ result: [shape(64), { url: "file://[invalid" }] }),
+  );
+
+  // Both host shapes of a `file:` URL, so the drive-letter arm and the POSIX
+  // arm are each decided on every platform. `pathToFileURL` produces only the
+  // running host's shape, so a run on one platform would leave the other arm
+  // undecided, which is what CI reported against `measureCoverage.ts`.
+  const hostShapes = fs.mkdtempSync(
+    path.join(os.tmpdir(), "automovie-coverage-hosts-"),
+  );
+  fs.writeFileSync(
+    path.join(hostShapes, "coverage-3-1-0.json"),
+    JSON.stringify({
+      result: [
+        { url: "file:///D:/repo/packages/engine/src/windows.ts" },
+        { url: "file:///home/runner/packages/engine/src/posix.ts" },
+      ],
+    }),
   );
 
   const drawn = {
@@ -164,9 +157,11 @@ export const test_workspace_coverage_isolation = (): void => {
     scripts: coverageMissingScripts(records),
     shapes: coverageScriptShapes(shaped),
     narrow: coverageScriptShapes(shaped, ["packages/face/src"]),
+    hosts: coverageScriptShapes(hostShapes, ["packages/engine/src"]).urls,
   };
   fs.rmSync(records, { recursive: true, force: true });
   fs.rmSync(shaped, { recursive: true, force: true });
+  fs.rmSync(hostShapes, { recursive: true, force: true });
 
   const parent = path.join(ROOT, "node_modules", ".cache", "automovie-c8");
 
@@ -194,6 +189,10 @@ export const test_workspace_coverage_isolation = (): void => {
       [
         "a source outside the measured set is not counted at all",
         () => drawn.narrow.urls === 0 && drawn.narrow.disagreeing === 0,
+      ],
+      [
+        "both host shapes of a file URL are measured on either platform",
+        () => drawn.hosts === 2,
       ],
       ["two draws in one process differ", () => drawn.first !== drawn.second],
       [
@@ -255,6 +254,7 @@ export const test_workspace_coverage_isolation = (): void => {
       "a source read in two shapes is counted as both reread and disagreeing": true,
       "and named, so the figure it spoils can be found": true,
       "a source outside the measured set is not counted at all": true,
+      "both host shapes of a file URL are measured on either platform": true,
       "two draws in one process differ": true,
       "both sit under the coverage cache": true,
       "neither is the shared parent itself": true,
@@ -277,49 +277,61 @@ export const test_workspace_coverage_isolation = (): void => {
       return 0;
     },
     () => (order.push("report"), 0),
+    () => (order.push("population"), 0),
   );
   const green = runCoverage(["--base", "origin/master"], dependencies);
+  const unreached = (step: string, after: string): (() => never) => {
+    return () => {
+      throw new Error(`${step} ran after ${after}`);
+    };
+  };
   const ordinaryRed = runCoverage([], {
     measure: () => 1,
-    report: () => {
-      throw new Error("report ran after a failed measurement");
-    },
-    changed: () => {
-      throw new Error("changed gate ran after a failed measurement");
-    },
+    report: unreached("report", "a failed measurement"),
+    population: unreached("population gate", "a failed measurement"),
+    changed: unreached("changed gate", "a failed measurement"),
   });
   const measurementInstrumentRed = runCoverage([], {
     measure: () => 2,
-    report: () => {
-      throw new Error("report ran after an invalid measurement");
-    },
-    changed: () => {
-      throw new Error("changed gate ran after an invalid measurement");
-    },
+    report: unreached("report", "an invalid measurement"),
+    population: unreached("population gate", "an invalid measurement"),
+    changed: unreached("changed gate", "an invalid measurement"),
   });
   const instrumentRed = runCoverage([], {
     measure: () => 0,
     report: () => 2,
-    changed: () => {
-      throw new Error("changed gate ran after an invalid report");
-    },
+    population: unreached("population gate", "an invalid report"),
+    changed: unreached("changed gate", "an invalid report"),
+  });
+  const populationInstrumentRed = runCoverage([], {
+    measure: () => 0,
+    report: () => 0,
+    population: () => 2,
+    changed: unreached("changed gate", "a disagreeing population"),
+  });
+  const populationOrdinaryRed = runCoverage([], {
+    measure: () => 0,
+    report: () => 0,
+    population: () => 1,
+    changed: unreached("changed gate", "a refused population"),
   });
   const changedRed = runCoverage([], {
     measure: () => 0,
     report: () => 0,
+    population: () => 0,
     changed: () => 2,
   });
   const coverageGap = runCoverage([], {
     measure: () => 0,
     report: () => 0,
+    population: () => 0,
     changed: () => 1,
   });
   const reportGap = runCoverage([], {
     measure: () => 0,
     report: () => 1,
-    changed: () => {
-      throw new Error("changed gate ran after a failed report");
-    },
+    population: unreached("population gate", "a failed report"),
+    changed: unreached("changed gate", "a failed report"),
   });
   const cliStatuses: number[] = [];
   runCoverageCli(false, [], dependencies, (status) => cliStatuses.push(status));
@@ -329,6 +341,7 @@ export const test_workspace_coverage_isolation = (): void => {
     {
       measure: () => 0,
       report: () => 0,
+      population: () => 0,
       changed: () => 0,
     },
     (status) => cliStatuses.push(status),
@@ -337,6 +350,18 @@ export const test_workspace_coverage_isolation = (): void => {
   setCoverageExitStatus(0);
   const directExitStatus = process.exitCode;
   process.exitCode = previousExitStatus;
+  // The two `runCoverageCli` calls above pin the unit with both booleans, which
+  // is what let the real defect hide: the call site passed
+  // `require.main === module`, always false under `ttsx`, so the covered unit
+  // sat behind a wiring nothing could reach and the command measured nothing
+  // while exiting 0. Pin the binding itself, both ways.
+  const entryDecision = {
+    own: coverageProcessIsEntry(
+      path.resolve(__dirname, "../../coverage/runCoverage.ts"),
+    ),
+    launcher: coverageProcessIsEntry(path.resolve(__dirname, "../../index.ts")),
+    absent: coverageProcessIsEntry(undefined),
+  };
   TestValidator.equals(
     "one typed coverage command preserves order and failure classes",
     {
@@ -346,24 +371,30 @@ export const test_workspace_coverage_isolation = (): void => {
       ordinaryRed,
       measurementInstrumentRed,
       instrumentRed,
+      populationInstrumentRed,
+      populationOrdinaryRed,
       changedRed,
       coverageGap,
       reportGap,
       cliStatuses,
       directExitStatus,
+      entryDecision,
     },
     {
       green: 0,
-      order: ["measure", "report", "changed"],
+      order: ["measure", "report", "population", "changed"],
       arguments_: ["--base", "origin/master"],
       ordinaryRed: 1,
       measurementInstrumentRed: 2,
       instrumentRed: 2,
+      populationInstrumentRed: 2,
+      populationOrdinaryRed: 1,
       changedRed: 2,
       coverageGap: 1,
       reportGap: 1,
       cliStatuses: [0],
       directExitStatus: 0,
+      entryDecision: { own: true, launcher: false, absent: false },
     },
   );
 };

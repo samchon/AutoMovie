@@ -7,7 +7,6 @@ import path from "node:path";
 import type { Page } from "playwright";
 import type { ViteDevServer } from "vite";
 
-import config from "../automovie.config";
 import {
   type IAutoMovieCaptureBrowserSession,
   inspectCaptureGraphics,
@@ -18,6 +17,11 @@ import {
   type IGeneratedShotRuntimeProvider,
   generatedShotPlugin,
 } from "./generatedShotPlugin";
+import {
+  readAutoMovieHostCaptureBrowser,
+  readAutoMovieHostViewerBasePath,
+  readAutoMovieHostViewerHost,
+} from "./hostBoundary";
 import {
   type IAutoMovieProductionDialogueRuntime,
   cloneProductionDeliveryCrop,
@@ -148,9 +152,11 @@ const startSession = async (
   productionId: string,
 ): Promise<CaptureSession> => {
   const runtimeProvider = productionFrameViewerRuntime(state);
+  const browser = readAutoMovieHostCaptureBrowser(process.env);
+  const viewerHost = readAutoMovieHostViewerHost(process.env);
   const closure = inspectCurrentCaptureRuntimeClosure({
     projectRoot,
-    config: config.capture.browser,
+    config: browser,
   });
   if (closure.status === "not-ready") throw new Error(closure.correction);
   closure.assertCurrent();
@@ -162,7 +168,7 @@ const startSession = async (
     logLevel: "silent",
     plugins: [generatedShotPlugin(projectRoot, productionId, runtimeProvider)],
     resolve: { dedupe: ["three"] },
-    server: { host: config.viewer.host, port: 0, strictPort: false },
+    server: { host: viewerHost, port: 0, strictPort: false },
   });
   try {
     await server.listen();
@@ -173,18 +179,14 @@ const startSession = async (
       typeof address === "string"
     )
       throw new Error("Vite did not expose a numeric local address.");
-    const launched = await launchCaptureBrowser(
-      projectRoot,
-      config.capture.browser,
-      closure,
-    );
+    const launched = await launchCaptureBrowser(projectRoot, browser, closure);
     launched.assertRuntimeCurrent();
     return {
       server,
       browser: launched.browser,
       runtime: launched.runtime,
       assertRuntimeCurrent: launched.assertRuntimeCurrent,
-      origin: `http://${config.viewer.host}:${address.port}`,
+      origin: `http://${viewerHost}:${address.port}`,
       pages: new Map(),
     };
   } catch (error) {
@@ -310,7 +312,10 @@ const capturePage = (
     page.on("pageerror", (error) =>
       diagnostics.push(`pageerror: ${error.message}`),
     );
-    const url = new URL(config.viewer.basePath, session.origin);
+    const url = new URL(
+      readAutoMovieHostViewerBasePath(process.env),
+      session.origin,
+    );
     if (input.target.kind === "shot") {
       url.searchParams.set("shot", input.target.id);
       // The shot page reads this and hands it to the compiled shot runtime,

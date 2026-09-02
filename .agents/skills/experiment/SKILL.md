@@ -66,6 +66,8 @@ Drive the agent turn by turn when you need to play the user across a longer sess
 
 Read [steering.md](steering.md) before driving a session that will run for hours instead of for one prompt. A long session accepts no input while a turn is running, shares the machine with whatever else is running on it, and reports on itself faster than it produces, so the operational rules for keeping one on course are their own document.
 
+Read [comparison.md](comparison.md) before running several productions against one harness at the same time in order to compare them. Several sessions are not one session repeated: the harness has to be frozen before the first writer starts, judgment has to be separated from commissioning, and the comparison itself is a surface no per-production review covers.
+
 ## Read The Result
 
 Judge against what the experiment set out to answer, and say plainly when the run did not settle it.

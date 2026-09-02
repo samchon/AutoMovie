@@ -3,7 +3,6 @@ import path from "node:path";
 import type { Page } from "playwright";
 import { createServer } from "vite";
 
-import config from "../automovie.config";
 import type { IAutoMovieInspectionAnswer } from "../viewer/src/inspection";
 import {
   type IAutoMovieCaptureBrowserSession,
@@ -12,6 +11,12 @@ import {
   preserveCaptureBrowserCleanup,
 } from "./capture-browser";
 import { generatedShotPlugin } from "./generatedShotPlugin";
+import {
+  readAutoMovieHostCaptureBrowser,
+  readAutoMovieHostViewerBasePath,
+  readAutoMovieHostViewerHost,
+} from "./hostBoundary";
+import { pageKey, pageSubject } from "./inspectionPageKey";
 
 interface InspectionSession {
   server: Awaited<ReturnType<typeof createServer>>;
@@ -49,13 +54,14 @@ const startSession = async (
   projectRoot: string,
   productionId: string,
 ): Promise<InspectionSession> => {
+  const viewerHost = readAutoMovieHostViewerHost(process.env);
   const server = await createServer({
     root: projectRoot,
     configFile: false,
     logLevel: "silent",
     plugins: [generatedShotPlugin(projectRoot, productionId)],
     resolve: { dedupe: ["three"] },
-    server: { host: config.viewer.host, port: 0, strictPort: false },
+    server: { host: viewerHost, port: 0, strictPort: false },
   });
   try {
     await server.listen();
@@ -68,12 +74,12 @@ const startSession = async (
       throw new Error("Vite did not expose a numeric local address.");
     const launched = await launchCaptureBrowser(
       projectRoot,
-      config.capture.browser,
+      readAutoMovieHostCaptureBrowser(process.env),
     );
     return {
       server,
       browser: launched.browser,
-      origin: `http://${config.viewer.host}:${address.port}`,
+      origin: `http://${viewerHost}:${address.port}`,
       pages: new Map(),
     };
   } catch (error) {
@@ -119,48 +125,6 @@ const inspectionSession = async (
   }
 };
 
-/**
- * Everything that decides whether one open page can answer the next viewpoint.
- *
- * The compile fingerprint and the artifact revision are both in it. A sweep
- * whose source moved underneath it is a set of pictures of two different models
- * with nothing in the individual images saying so, and the runtime refuses
- * that sweep after the fact; keeping both in the key means the page never
- * serves the mixed frame in the first place.
- */
-/**
- * The shot a page stands for, without the state it was opened at.
- *
- * Two pages under this one identity are the same thing at two compiles, and
- * only the newer one can still be asked for a frame.
- *
- * The subject is deliberately not in it. Staging the compiled shot is what a
- * page costs, and the page draws any subject standing in that shot, so keying
- * by subject rebuilt one 14 MB scene per subject: 4.3 of the 6.2 seconds one
- * observation took, and 70% of a whole production's sweep (`#1956`).
- */
-const pageSubject = (
-  input: Parameters<AutoMovieProductionSubjectInspection>[0],
-): string =>
-  JSON.stringify({
-    productionId: input.productionId,
-    shot: input.target.shot,
-    width: input.width,
-    height: input.height,
-  });
-
-const pageKey = (
-  input: Parameters<AutoMovieProductionSubjectInspection>[0],
-): string =>
-  JSON.stringify({
-    productionId: input.productionId,
-    compileFingerprint: input.compileFingerprint,
-    revision: input.revision,
-    shot: input.target.shot,
-    width: input.width,
-    height: input.height,
-  });
-
 const inspectionPage = (
   session: InspectionSession,
   input: Parameters<AutoMovieProductionSubjectInspection>[0],
@@ -196,19 +160,14 @@ const inspectionPage = (
     );
     const url = new URL(
       "inspection.html",
-      // The trailing slash is forced rather than assumed. `basePath` is a
-      // project-editable setting and the delivery capture navigates to it
-      // directly, so `/viewer` and `/viewer/` behave identically there; this
-      // page is a SIBLING of that base, and URL resolution drops the last
-      // segment of a base that does not end in one. Measured: `/viewer`
-      // resolves to `/inspection.html`, which 404s and surfaces as "the page
-      // never became ready" rather than as a configuration fault.
-      new URL(
-        config.viewer.basePath.endsWith("/")
-          ? config.viewer.basePath
-          : `${config.viewer.basePath}/`,
-        session.origin,
-      ),
+      // The host boundary hands back a directory path, trailing slash and all,
+      // which is what makes this join safe. The delivery capture navigates to
+      // the base directly, so `/viewer` and `/viewer/` behave identically
+      // there; this page is a SIBLING of that base, and URL resolution drops
+      // the last segment of a base that does not end in one. Measured:
+      // `/viewer` resolves to `/inspection.html`, which 404s and surfaces as
+      // "the page never became ready" rather than as a host-input fault.
+      new URL(readAutoMovieHostViewerBasePath(process.env), session.origin),
     );
     url.searchParams.set("shot", input.target.shot);
     url.searchParams.set("revision", input.revision);
@@ -252,18 +211,19 @@ const inspectionPage = (
 /**
  * Draw one named subject from one inspection-owned pose.
  *
- * This is the host half of `inspectSubject`: without it the tool refuses with
- * `capture-host-unavailable`, which is honest and blind. The runtime owns
- * the viewpoint plan, the projection and where the bytes are published; this
- * adapter owns nothing but "stage that subject, aim there, hand back the
- * canvas". Every framing decision arrives in `pose` and none is taken here, so
- * an agent naming a subject through the tool and a reviewer opening
- * `viewer/subject.html` on the same subject are looking through one eye.
+ * This is the host half of subject inspection: without it the inspection
+ * service refuses with `capture-host-unavailable`, which is honest and blind.
+ * The service owns the viewpoint plan, the projection and where the bytes are
+ * published; this adapter owns nothing but "stage that subject, aim there, hand
+ * back the canvas". Every framing decision arrives in `pose` and none is taken
+ * here, so an author who passes this adapter to the inspection service and a
+ * reviewer opening `viewer/subject.html` on the same subject are looking
+ * through one eye.
  *
  * Nothing it returns is delivery evidence. It produces no renderer identity, no
- * target fingerprint and no render bundle, and it writes no file; the surface
- * publishes the bytes under `automovie/inspections`, outside the render root a
- * delivery review reads.
+ * target fingerprint and no render bundle, and it writes no file; the inspection
+ * service publishes the bytes under `automovie/inspections`, outside the render
+ * root a delivery review reads.
  */
 export const inspectProductionSubject: AutoMovieProductionSubjectInspection =
   async (input) => {

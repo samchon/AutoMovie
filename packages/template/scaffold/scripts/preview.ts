@@ -4,9 +4,12 @@ import {
   captureAutoMovieProductionFrame,
 } from "@automovie/production";
 
-import config from "../automovie.config";
 import { createProductionFrameCaptureRuntime } from "./capture";
 import { createProductionCaptureDialogueRuntime } from "./captureDialogueRuntime";
+import { currentAutoMovieProductionId } from "./projectIdentity";
+
+/** The production namespace this project declares in its own package manifest. */
+const productionId = currentAutoMovieProductionId();
 
 const args = process.argv.slice(2);
 const options = new Map<string, string>();
@@ -49,13 +52,13 @@ const height =
 const captureRuntime = createProductionFrameCaptureRuntime();
 const dialogueRuntime = createProductionCaptureDialogueRuntime({
   capture: captureRuntime,
-  productionId: config.productionId,
+  productionId,
   root: process.cwd(),
 });
 const context = new AutoMovieProductionContext(
   captureRuntime.capture,
   process.cwd(),
-  config.productionId,
+  productionId,
 );
 let captureFailure: { error: unknown } | undefined;
 try {
@@ -63,7 +66,7 @@ try {
   const output = await captureAutoMovieProductionFrame(context, {
     target: {
       kind: "shot",
-      productionId: config.productionId,
+      productionId,
       id: shot,
       time,
       pass,

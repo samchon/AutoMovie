@@ -3,7 +3,7 @@
   "contractInventory": {
     "discovery": 17,
     "principles": 83,
-    "obligations": 108
+    "obligations": 109
   },
   "acceptedDebt": {
     "unpaidAuthoringFamilies": 0,
@@ -17,8 +17,7 @@
       ".agents/skills/review/SKILL.md",
       ".agents/skills/development/SKILL.md",
       ".agents/skills/evidence-graph/SKILL.md",
-      "test/src/integrity/contractOwnership.ts",
-      "test/src/integrity/authoringReachability.ts"
+      "test/src/integrity/contractOwnership.ts"
     ],
     "reconsiderWhen": "Reconsider when review can select changed semantic relationships, preserve concrete observations, and reject copied acknowledgements without requiring one companion sentence for every graph edge."
   },

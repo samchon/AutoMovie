@@ -1,12 +1,19 @@
-import config from "../automovie.config";
+import { AutoMovieProductionProject } from "@automovie/production";
+
+import { repaintSelectionReviews } from "../repaintSelectionReviews";
 import { createProductionFrameCaptureRuntime } from "./capture";
 import { createProductionCaptureDialogueRuntime } from "./captureDialogueRuntime";
+import { productionRepaintInput } from "./productionConfiguration";
+import { currentAutoMovieProductionId } from "./projectIdentity";
 import { repaintProductionShot } from "./repaintAdapter";
 import { createProductionRepaintCancellationRuntime } from "./repaintCancellationRuntime";
 import {
   createNodeProductionRepaintHost,
   runProductionRepaintCommand,
 } from "./repaintCommand";
+
+/** The production namespace this project declares in its own package manifest. */
+const productionId = currentAutoMovieProductionId();
 
 /**
  * Derive one shot's repainted rendition from its deterministic source.
@@ -31,33 +38,44 @@ import {
  * advances the active pointer; reverse moves it to a prior verified candidate.
  * Deterministic truth retains its own receipts throughout those transitions.
  */
-await runProductionRepaintCommand(process.argv.slice(2), config, () => {
-  const captureRuntime = createProductionFrameCaptureRuntime();
-  const cancellation = createProductionRepaintCancellationRuntime(process);
-  const dialogueRuntime = createProductionCaptureDialogueRuntime({
-    capture: captureRuntime,
-    productionId: config.productionId,
-    root: process.cwd(),
-  });
-  const host = createNodeProductionRepaintHost({
-    adapter: repaintProductionShot,
-    capture: captureRuntime.capture,
-    closeCapture: (failure) =>
-      cancellation.closeCapture(failure, captureRuntime.close),
-    root: process.cwd(),
-    signal: cancellation.signal,
-    setExitCode: (value) => {
-      process.exitCode = value;
-    },
-    stdout: (value) => process.stdout.write(value),
-  });
-  cancellation.attach();
-  return {
-    ...host,
-    serve: async (invocation) => {
-      if (invocation.kind === "reroll" || invocation.kind === "retry")
-        await dialogueRuntime.prepare();
-      return host.serve(invocation);
-    },
-  };
-});
+await runProductionRepaintCommand(
+  process.argv.slice(2),
+  {
+    productionId,
+    repaint: productionRepaintInput(
+      AutoMovieProductionProject.productionDesign(process.cwd(), productionId)
+        ?.repaint,
+      repaintSelectionReviews,
+    ),
+  },
+  () => {
+    const captureRuntime = createProductionFrameCaptureRuntime();
+    const cancellation = createProductionRepaintCancellationRuntime(process);
+    const dialogueRuntime = createProductionCaptureDialogueRuntime({
+      capture: captureRuntime,
+      productionId,
+      root: process.cwd(),
+    });
+    const host = createNodeProductionRepaintHost({
+      adapter: repaintProductionShot,
+      capture: captureRuntime.capture,
+      closeCapture: (failure) =>
+        cancellation.closeCapture(failure, captureRuntime.close),
+      root: process.cwd(),
+      signal: cancellation.signal,
+      setExitCode: (value) => {
+        process.exitCode = value;
+      },
+      stdout: (value) => process.stdout.write(value),
+    });
+    cancellation.attach();
+    return {
+      ...host,
+      serve: async (invocation) => {
+        if (invocation.kind === "reroll" || invocation.kind === "retry")
+          await dialogueRuntime.prepare();
+        return host.serve(invocation);
+      },
+    };
+  },
+);

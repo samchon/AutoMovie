@@ -14,7 +14,6 @@ import {
   findAutoMovieProjectRoot,
 } from "@automovie/production";
 
-import config from "../automovie.config";
 import { chorus } from "../src/formations/chorus";
 import { production } from "../src/production";
 import {
@@ -26,11 +25,15 @@ import {
 import { chorusFar, chorusHero, chorusNear } from "../src/units/chorusHero";
 import { soloist } from "../src/units/soloist";
 import { plaza } from "../src/world/plaza";
+import { readAutoMovieProjectProductionId } from "./projectIdentity";
+
+/** The project this invocation belongs to, found from the host's own seed. */
+const projectRoot = findAutoMovieProjectRoot(process.cwd());
 
 /** Repository-only emitter that keeps the completed regression film derivable. */
 const project = AutoMovieProductionProject.open(
-  findAutoMovieProjectRoot(process.cwd()),
-  config.productionId,
+  projectRoot,
+  readAutoMovieProjectProductionId(projectRoot),
   createAutoMovieArchetypeRegistry(AUTOMOVIE_PRIMITIVE_ARCHETYPES),
 );
 

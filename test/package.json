@@ -8,8 +8,6 @@
     "build": "ttsc -p tsconfig.json --noEmit",
     "start": "ttsx -P tsconfig.json src/index.ts",
     "start:fast": "ttsx -P tsconfig.json src/index.ts --exclude test_lint_plugin_walking_skeleton",
-    "start:subprocess": "ttsx -P tsconfig.json src/index.ts --include test_lint_plugin_walking_skeleton",
-    "consumer:check": "ttsx -P tsconfig.json src/index.ts --include test_workspace_public_api_consumers",
     "coverage": "ttsx -P tsconfig.json src/coverage/runCoverage.ts"
   },
   "author": "Samchon",

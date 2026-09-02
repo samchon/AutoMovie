@@ -70,6 +70,25 @@ const PART_TARGET =
 const UNIT_TARGET =
   /^(requirements|specifications)\/(?:[A-Za-z0-9._-]+\/)*[A-Za-z0-9._-]+\.md#[a-z0-9-]+$/;
 
+/**
+ * The sentence a thrown value contributes to a diagnostic.
+ *
+ * Written inline it was three copies of one branch whose `String` alternative
+ * nothing in this repository can reach, which is a defensive path that can only
+ * ever be covered by pretending. As one function it is an ordinary unit with an
+ * ordinary pair of cases. An `Error` contributes its message rather than its
+ * class name, so a command's stderr stays the diagnostic rather than
+ * `ContractOwnershipError: ` followed by it.
+ *
+ * The changed-coverage and coverage-population gates state the same sentence,
+ * and they import it from here rather than restating it. `isProcessEntry` is
+ * duplicated in `build/tgz.ts` because that file is outside this package's
+ * `tsconfig.json` root and cannot share a definition; these three callers are
+ * all inside `test/src`, so no such boundary excuses a second copy.
+ */
+export const describeThrown = (error: unknown): string =>
+  error instanceof Error ? error.message : String(error);
+
 /** A deterministic failure from the contract-ownership gate. */
 export class ContractOwnershipError extends Error {
   public readonly diagnostics: readonly string[];
@@ -251,7 +270,21 @@ const countStaleLegacy = (
       units.has(target) && units.get(target)!.digest !== digest,
   ).length;
 
-/** Return the declared or migration status of every unit in one layer. */
+/**
+ * Return the declared or migration status of every unit in one layer.
+ *
+ * A legacy unit whose prose has moved reports `stale` rather than `legacy`, so
+ * the drift `check` counts can also be named. The count on its own says how much
+ * debt this change disturbed and not which debt, and the rule that reads it
+ * ("read that count when you touch a legacy unit and decide whether this is the
+ * change that should declare its owners") cannot be followed without the
+ * identities. Finding two moved units among fifty-one otherwise costs a
+ * throwaway script that re-derives every digest at the merge base.
+ *
+ * `--owner legacy` still selects the whole recorded debt, drifted or not,
+ * because a stale unit has not stopped being legacy; `--owner stale` narrows it
+ * to the units this working tree moved.
+ */
 export const queryContractOwnership = (
   root: string,
   layer: ContractLayer,
@@ -260,10 +293,14 @@ export const queryContractOwnership = (
   assertLayer(layer);
   inspectContractOwnership(root);
   const ledger = loadLedger(root, layer);
+  const units = collectContractUnits(root, layer);
   const results: IContractOwnershipQuery[] = [];
-  for (const target of Object.keys(ledger.legacy)) {
-    if (owner === undefined || owner === "legacy") {
-      results.push({ target, status: "legacy" });
+  for (const [target, digest] of Object.entries(ledger.legacy)) {
+    // `inspectContractOwnership` above already refused a ledger entry naming a
+    // unit the documents do not have, so every recorded target resolves here.
+    const status = units.get(target)!.digest === digest ? "legacy" : "stale";
+    if (owner === undefined || owner === "legacy" || owner === status) {
+      results.push({ target, status });
     }
   }
   for (const [target, declaration] of Object.entries(ledger.declarations)) {
@@ -282,8 +319,10 @@ export const queryContractOwnership = (
       }
       continue;
     }
+    // `inspectContractOwnership` above accepted the ledger, so a specification
+    // declaration that is not structural carries obligations.
     for (const [obligation, record] of Object.entries(
-      declaration.obligations ?? {},
+      declaration.obligations!,
     )) {
       if (record.owner !== undefined && ownerMatches(record.owner, owner)) {
         results.push({
@@ -436,8 +475,21 @@ const validateSupplies = (
   packages: PackageDirectories,
   diagnostics: Diagnostics,
 ): void => {
-  const specifications = ledgers.get("specifications")!.declarations;
-  const requirements = ledgers.get("requirements")!.declarations;
+  // A ledger whose declarations are not an object has already been reported by
+  // `validateLayer`, which stops reading it at that point. This pass runs after
+  // that one regardless, so it has to stop reading it too: walking the missing
+  // map turned a hand-edited ledger's honest diagnostic into `Cannot convert
+  // undefined or null to object`, which names neither the file nor the fault.
+  const declarationsOf = (
+    layer: ContractLayer,
+  ): Record<string, IContractDeclaration> => {
+    const declarations: unknown = ledgers.get(layer)!.declarations;
+    return plainObject(declarations)
+      ? (declarations as Record<string, IContractDeclaration>)
+      : {};
+  };
+  const specifications = declarationsOf("specifications");
+  const requirements = declarationsOf("requirements");
   const obligations = new Map<string, IContractOwner | undefined>();
   for (const [target, declaration] of Object.entries(specifications)) {
     for (const [id, record] of Object.entries(declaration.obligations ?? {})) {
@@ -660,7 +712,7 @@ const loadLedger = (root: string, layer: ContractLayer): IContractLedger => {
     ) as IContractLedger;
   } catch (error) {
     throw new ContractOwnershipError([
-      `cannot parse ownership ledger '${slash(path.relative(root, location))}': ${error instanceof Error ? error.message : String(error)}`,
+      `cannot parse ownership ledger '${slash(path.relative(root, location))}': ${describeThrown(error)}`,
     ]);
   }
 };
@@ -701,7 +753,9 @@ const ownerMatches = (owner: IContractOwner, query?: string): boolean =>
   query === undefined || query === ownerIdentity(owner);
 
 const ownerIdentity = (owner: IContractOwner): string =>
-  owner.kind === "package" ? (owner.package ?? "package") : owner.kind;
+  // Only reachable after `inspectContractOwnership` accepted the ledger, which
+  // refuses a package owner whose `package` is not a string.
+  owner.kind === "package" ? owner.package! : owner.kind;
 
 const childDirectories = (directory: string): string[] => {
   try {
@@ -744,8 +798,7 @@ const capture = <Value>(
   } catch (error) {
     if (error instanceof ContractOwnershipError)
       diagnostics.push(...error.diagnostics);
-    else
-      diagnostics.push(error instanceof Error ? error.message : String(error));
+    else diagnostics.push(describeThrown(error));
     return undefined;
   }
 };
@@ -812,12 +865,40 @@ export const runContractOwnership = (
     }
     return 0;
   } catch (error) {
-    errorOutput.write(
-      `${error instanceof Error ? error.message : String(error)}\n`,
-    );
+    errorOutput.write(`${describeThrown(error)}\n`);
     return 1;
   }
 };
 
-if (path.resolve(process.argv[1] ?? "") === path.resolve(__filename))
-  process.exitCode = runContractOwnership(process.argv.slice(2));
+/**
+ * Whether the process was started on this module rather than on an importer.
+ *
+ * Split out for the same reason the coverage command's entry predicate was: an
+ * `if` at module scope is a branch only a real invocation can take, so the
+ * binding between the command and its own resolved path is the one part of the
+ * wiring nothing can inspect. Here it is a value, and the wrapper below is a
+ * unit both booleans can be handed.
+ */
+export const contractOwnershipProcessIsEntry = (
+  entry: string | undefined,
+): boolean => path.resolve(entry ?? "") === path.resolve(__filename);
+
+/** Execute the command only for the direct TypeScript entry module. */
+export const runContractOwnershipCli = (
+  isEntry: boolean,
+  run: () => number,
+  setExitStatus: (status: number) => void,
+): void => {
+  if (isEntry === false) return;
+  setExitStatus(run());
+};
+
+export const setContractOwnershipExitStatus = (status: number): void => {
+  process.exitCode = status;
+};
+
+runContractOwnershipCli(
+  contractOwnershipProcessIsEntry(process.argv[1]),
+  runContractOwnership.bind(undefined, process.argv.slice(2)),
+  setContractOwnershipExitStatus,
+);

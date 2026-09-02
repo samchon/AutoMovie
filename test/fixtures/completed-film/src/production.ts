@@ -1,7 +1,5 @@
 import type { IAutoMovieProductionDesign } from "@automovie/interface";
 
-import config from "../automovie.config";
-
 /**
  * The production-owned clear color used by every viewer surface.
  *
@@ -122,26 +120,25 @@ export const PRODUCTION_BACKGROUND = "#182235";
  *   only the authored production-wide palette, silhouette, scale, background,
  *   and deterministic fidelity values.
  * @evidenceReview obligations/delivery/production-sources.md#shared-visual-grammar #af7c4d8 Read obligations/delivery/production-sources.md#shared-visual-grammar and production; confirmed subject materials stay in model sources while this record faithfully serializes the shared palette, silhouette, scale, background, and deterministic fidelity tier without adding an aesthetic choice.
- * @evidence principles/core/source-units.md#source-scope-preservation production keeps responsibility for the exported production source owner and its declared value or behavior in this declaration; the implementation fragment { id: config.productionId, /** * The starter is titled after itself. * * Derived rather than spelled out, because a title that repeated the name in * its own string would be introduces no second creative owner.
+ * @evidence principles/core/source-units.md#source-scope-preservation production keeps responsibility for the exported production source owner and its declared value or behavior in this declaration; the implementation fragment { id: "{{name}}", /** * The starter is titled after itself. * * Derived rather than spelled out, because a title that repeated the name in * its own string would be introduces no second creative owner.
  * @evidenceReview principles/core/source-units.md#source-scope-preservation #e4bc845 I compared the complete production declaration and implementation with the settings-owned identity, timing, frame, output, and runtime policy; the implemented value, branches, and source-local calls stay inside that named responsibility and leave none of its cited behavior unpaid.
- * @evidence principles/core/source-units.md#source-substantive-completion production is a usable source artifact for the exported production source owner and its declared value or behavior; it is implemented directly as { id: config.productionId, /** * The starter is titled after itself. * * Derived rather than spelled out, because a title that repeated the name in * its own string would be rather than as a placeholder or future-work wrapper.
+ * @evidence principles/core/source-units.md#source-substantive-completion production is a usable source artifact for the exported production source owner and its declared value or behavior; it is implemented directly as { id: "{{name}}", /** * The starter is titled after itself. * * Derived rather than spelled out, because a title that repeated the name in * its own string would be rather than as a placeholder or future-work wrapper.
  * @evidenceReview principles/core/source-units.md#source-substantive-completion #e9c974f I traced the applicable production signature, initializer, type surface, branches, returns, and failures; together they provide a complete deterministic value or operation that its consumer can use without inventing another boundary.
- * @evidence principles/core/source-units.md#source-evidence-content-conformance The production annotations name the settings-owned identity, timing, frame, output, and runtime policy, and the implementation fragment { id: config.productionId, /** * The starter is titled after itself. * * Derived rather than spelled out, because a title that repeated the name in * its own string would be is the concrete state or behavior by which this declaration establishes those relationships.
+ * @evidence principles/core/source-units.md#source-evidence-content-conformance The production annotations name the settings-owned identity, timing, frame, output, and runtime policy, and the implementation fragment { id: "{{name}}", /** * The starter is titled after itself. * * Derived rather than spelled out, because a title that repeated the name in * its own string would be is the concrete state or behavior by which this declaration establishes those relationships.
  * @evidenceReview principles/core/source-units.md#source-evidence-content-conformance #b63c520 I reread every citation on production against the whole declaration and its source-local calls; each stated parent, role, refusal, and result is present in code and no annotation claims a different owner.
- * @evidenceExclude upstream/delivery/production-sources.md#settings-revision-from-production-source-work Implementing production tested the settings-owned identity, timing, frame, output, and runtime policy through the exported production source owner and its declared value or behavior; the implementation fragment { id: config.productionId, /** * The starter is titled after itself. * * Derived rather than spelled out, because a title that repeated the name in * its own string would be shows the authored inputs, interfaces, limits, and result were sufficient, so source work exposed no upstream defect.
+ * @evidenceExclude upstream/delivery/production-sources.md#settings-revision-from-production-source-work Implementing production tested the settings-owned identity, timing, frame, output, and runtime policy through the exported production source owner and its declared value or behavior; the implementation fragment { id: "{{name}}", /** * The starter is titled after itself. * * Derived rather than spelled out, because a title that repeated the name in * its own string would be shows the authored inputs, interfaces, limits, and result were sufficient, so source work exposed no upstream defect.
  * @evidenceExcludeReview upstream/delivery/production-sources.md#settings-revision-from-production-source-work #b78cab8 I compared the complete production implementation with its actual reviewed parent, including its applicable inputs, derived values, boundary behavior, and returned state; it required no code-local repair to the parent decision.
  */
 export const production = {
-  id: config.productionId,
+  id: "{{name}}",
   /**
    * The starter is titled after itself.
    *
-   * Derived rather than spelled out, because a title that repeated the name in
-   * its own string would be the same name written twice. Give the film a title
-   * of its own here the moment it has one; nothing downstream reads this as an
-   * identity.
+   * The starter has no title of its own yet, so it carries its own name. Give
+   * the film a real title here the moment it has one; nothing downstream reads
+   * this as an identity.
    */
-  title: config.productionId,
+  title: "{{name}}",
   /**
    * The promise every sequence answers for, quoted from the document that owns
    * it.

@@ -3,6 +3,7 @@ import type {
   AutoMovieRepaintReferenceRole,
   IAutoMovieCompiledShotSource,
   IAutoMovieFilmTimeline,
+  IAutoMovieProductionDesign,
   IAutoMovieProductionDialogueLine,
   IAutoMovieProductionTtsReceipt,
   IAutoMovieRepaintExecutionPolicy,
@@ -21,16 +22,6 @@ import {
   canonicalizeAutoMovieJson,
 } from "@automovie/production";
 
-/** Browser-selection wiring shared without importing the executable capture host. */
-export type AutoMovieCaptureBrowserConfig =
-  | { source: "playwright-chromium" }
-  | { source: "system-channel"; channel: "chrome" | "msedge" }
-  | {
-      source: "configured-executable";
-      product: "chromium" | "chrome" | "msedge";
-      executablePath: string;
-    };
-
 /** Kokoro adapter identity implemented by the shipped render runtime. */
 export const AUTOMOVIE_DIALOGUE_PROVIDER = "kokoro-local-v1" as const;
 /** Exact model repository implemented by the shipped render runtime. */
@@ -46,7 +37,7 @@ export const AUTOMOVIE_DIALOGUE_DEVICE = "cpu" as const;
  * Authored adoption facts for an external generator used by this production.
  *
  * The record contains no credential. It answers the same source, rights, cost,
- * and consumer questions for generated sound that `automovie/assets.json`
+ * and consumer questions for generated sound that the project asset manifest
  * answers for distributable input bytes and that a repaint adapter must answer
  * for generated pictures.
  */
@@ -106,31 +97,104 @@ export type AutoMovieProductionRepaintCommand =
   | { kind: "selection"; shot: string; attemptId: string }
   | { kind: "reversal"; shot: string; attemptId: string };
 
-/** Complete generated-project configuration, separating wiring from choices. */
-export interface IAutoMovieProductionConfiguration {
-  /** Stable production namespace used by project scripts. */
-  productionId: string;
-  /** Pure browser-launch wiring. */
-  capture: { browser: AutoMovieCaptureBrowserConfig };
-  /** Authored delivery tiers implementing the settings delivery contract. */
-  render: {
-    proxy: IAutoMovieProductionRenderTier & { kind: "proxy" };
-    final: IAutoMovieProductionRenderTier & { kind: "final" };
-  };
-  /** Authored appearance rendition selection and exact reviewed requests. */
-  visual: {
-    repaint: IAutoMovieProductionRepaintSelection | null;
-  };
-  /** Authored dialogue generation and settings-subject joins. */
-  sound: {
-    dialogueSynthesis: IAutoMovieDialogueSynthesisSelection | null;
-    speakerBindings: readonly IAutoMovieDialogueSpeakerBinding[];
-  };
-  /** Authored admission order for expensive moving-boundary solves. */
-  simulation: { liveWearableSoftBodies: readonly string[] };
-  /** Pure local viewer-server wiring. */
-  viewer: { host: string; basePath: string };
+/** The proxy and final tiers one production renders at. */
+export interface IAutoMovieProductionRenderTiers {
+  proxy: IAutoMovieProductionRenderTier & { kind: "proxy" };
+  final: IAutoMovieProductionRenderTier & { kind: "final" };
 }
+
+/**
+ * The review and delivery tiers a production renders at until it declares its
+ * own pair on its design record.
+ *
+ * A blank project has no design record, so it has authored no tier. Falling
+ * back here keeps `npm run render` usable before the first `npm run design`
+ * without any file standing in for a decision nobody has made: the moment the
+ * production declares `renderTiers`, that declaration wins outright.
+ */
+export const AUTOMOVIE_SHIPPED_RENDER_TIERS = {
+  proxy: { kind: "proxy", resolutionScale: 0.5, frameStep: 2 },
+  final: { kind: "final", resolutionScale: 1, frameStep: 1 },
+} as const satisfies IAutoMovieProductionRenderTiers;
+
+/**
+ * Read the production's own delivery tiers, or the shipped pair when it
+ * declares none.
+ *
+ * TypeScript settles the shape of a design record this project emitted itself.
+ * This parser settles the shape of the record actually resident on disk, which
+ * a hand edit, a partial write, or an older emitter can disagree with, before
+ * a raster or a frame clock is derived from it.
+ */
+export const readProductionRenderTiers = (
+  selected: unknown,
+): IAutoMovieProductionRenderTiers => {
+  if (selected === undefined || selected === null)
+    return structuredClone(AUTOMOVIE_SHIPPED_RENDER_TIERS);
+  const value = exactObject(selected, "renderTiers", ["proxy", "final"]);
+  return {
+    proxy: readProductionRenderTier(value.proxy, "renderTiers.proxy", "proxy"),
+    final: readProductionRenderTier(value.final, "renderTiers.final", "final"),
+  };
+};
+
+const readProductionRenderTier = <Kind extends "proxy" | "final">(
+  input: unknown,
+  label: string,
+  kind: Kind,
+): IAutoMovieProductionRenderTier & { kind: Kind } => {
+  const value = exactObject(input, label, [
+    "kind",
+    "resolutionScale",
+    "frameStep",
+  ]);
+  if (value.kind !== kind) throw new Error(`${label}.kind must be "${kind}".`);
+  if (
+    typeof value.resolutionScale !== "number" ||
+    Number.isFinite(value.resolutionScale) === false
+  )
+    throw new Error(`${label}.resolutionScale must be a finite number.`);
+  if (Number.isSafeInteger(value.frameStep) === false)
+    throw new Error(`${label}.frameStep must be a safe integer.`);
+  return {
+    kind,
+    resolutionScale: value.resolutionScale,
+    frameStep: value.frameStep as number,
+  };
+};
+
+/**
+ * Join this production's reviewed repaint requests with the candidate reviews
+ * that were written after their bytes existed.
+ *
+ * The request is design: changing a prompt, a seed, or a reference is a change
+ * to what the production asks for, and it must stale the compile that consumed
+ * it. The post-generation review is not: it is an observation of a candidate
+ * the current source already produced, and recording what you saw must not
+ * invalidate the render you saw it in. So the two live apart and meet here, at
+ * the one place a repaint operation reads them together.
+ */
+export const productionRepaintInput = (
+  repaint: IAutoMovieProductionDesign["repaint"],
+  reviews: Readonly<
+    Record<string, IAutoMovieProductionRepaintSelectionReview>
+  > = {},
+): unknown =>
+  repaint === undefined
+    ? null
+    : {
+        generator: repaint.generator,
+        executionPolicy: repaint.executionPolicy,
+        requests: repaint.requests.map((request) => ({
+          shot: request.shot,
+          parameters: request.parameters,
+          references: request.references,
+          evidence: request.evidence,
+          selectionReview: Object.hasOwn(reviews, request.shot)
+            ? reviews[request.shot]
+            : null,
+        })),
+      };
 
 /** Read one explicit generator adoption without accepting hidden parameters. */
 export const readProductionDialogueSynthesis = (
@@ -254,19 +318,18 @@ export const readProductionRepaintSelection = (
   occurredAt: Date | string = new Date(),
 ): IAutoMovieProductionRepaintSelection | null => {
   if (selected === null) return null;
-  const value = exactObject(selected, "visual.repaint", [
+  const value = exactObject(selected, "repaint", [
     "generator",
     "executionPolicy",
     "requests",
   ]);
-  const generatorValue = exactObject(
-    value.generator,
-    "visual.repaint.generator",
-    ["runtimeIdentity", "generatorProvenance"],
-  );
+  const generatorValue = exactObject(value.generator, "repaint.generator", [
+    "runtimeIdentity",
+    "generatorProvenance",
+  ]);
   const runtime = exactObject(
     generatorValue.runtimeIdentity,
-    "visual.repaint.generator.runtimeIdentity",
+    "repaint.generator.runtimeIdentity",
     ["protocolVersion", "provider", "model", "version", "execution"],
   );
   if (
@@ -276,43 +339,40 @@ export const readProductionRepaintSelection = (
       runtime.execution !== "other")
   )
     throw new Error(
-      "visual.repaint.generator.runtimeIdentity requires repaint protocol v1 and a local, api, or other execution boundary.",
+      "repaint.generator.runtimeIdentity requires repaint protocol v1 and a local, api, or other execution boundary.",
     );
   const generator: IAutoMovieRepaintGeneratorAdoption = {
     runtimeIdentity: {
       protocolVersion: runtime.protocolVersion,
       provider: nonBlank(
         runtime.provider,
-        "visual.repaint.generator.runtimeIdentity.provider",
+        "repaint.generator.runtimeIdentity.provider",
       ),
-      model: nonBlank(
-        runtime.model,
-        "visual.repaint.generator.runtimeIdentity.model",
-      ),
+      model: nonBlank(runtime.model, "repaint.generator.runtimeIdentity.model"),
       version: nonBlank(
         runtime.version,
-        "visual.repaint.generator.runtimeIdentity.version",
+        "repaint.generator.runtimeIdentity.version",
       ),
       execution: runtime.execution,
     },
     generatorProvenance: readExternalGeneratorProvenance(
       generatorValue.generatorProvenance,
-      "visual.repaint.generator.generatorProvenance",
+      "repaint.generator.generatorProvenance",
       "repaint",
       occurredAt,
     ),
   };
   const executionPolicy = readRepaintExecutionPolicy(
     value.executionPolicy,
-    "visual.repaint.executionPolicy",
+    "repaint.executionPolicy",
   );
   if (Array.isArray(value.requests) === false || value.requests.length === 0)
     throw new Error(
-      "visual.repaint.requests must be a non-empty array for a selected repaint generator.",
+      "repaint.requests must be a non-empty array for a selected repaint generator.",
     );
   const shots = new Set<string>();
   const requests = value.requests.map((request, index) => {
-    const label = `visual.repaint.requests[${index}]`;
+    const label = `repaint.requests[${index}]`;
     const record = exactObject(request, label, [
       "shot",
       "parameters",
@@ -322,7 +382,7 @@ export const readProductionRepaintSelection = (
     ]);
     const shot = nonBlank(record.shot, `${label}.shot`);
     if (shots.has(shot))
-      throw new Error(`visual.repaint.requests repeats shot "${shot}".`);
+      throw new Error(`repaint.requests repeats shot "${shot}".`);
     shots.add(shot);
     return {
       shot,
@@ -351,7 +411,7 @@ export const readProductionRepaintSelection = (
             request.evidence.continuity))
     )
       throw new Error(
-        `visual.repaint.requests[${index}] must pair a film continuity evidence address with the same reviewed baseline, or use null for both outside film continuity.`,
+        `repaint.requests[${index}] must pair a film continuity evidence address with the same reviewed baseline, or use null for both outside film continuity.`,
       );
   }
   return { generator, executionPolicy, requests };
@@ -368,13 +428,13 @@ export const assertProductionRepaintSelection = (props: {
   if (props.visualDelivery === "deterministic") {
     if (selected !== null)
       throw new Error(
-        "visual.repaint selects a generator and requests for a deterministic visual delivery.",
+        "repaint selects a generator and requests for a deterministic visual delivery.",
       );
     return null;
   }
   if (selected === null)
     throw new Error(
-      "A repainted visual delivery requires an explicit visual.repaint generator and reviewed request for every compiled shot.",
+      "A repainted visual delivery requires an explicit repaint generator and reviewed request for every compiled shot.",
     );
   const missingReview = selected.requests.find(
     (request) => request.selectionReview === null,
@@ -405,7 +465,7 @@ export const assertProductionRepaintSelection = (props: {
     compiled.some((shot, index) => shot !== configured[index])
   )
     throw new Error(
-      `visual.repaint.requests must exactly equal the compiled repaint shot set; configured: ${configured.join(", ") || "none"}; compiled: ${compiled.join(", ") || "none"}.`,
+      `repaint.requests must exactly equal the compiled repaint shot set; configured: ${configured.join(", ") || "none"}; compiled: ${compiled.join(", ") || "none"}.`,
     );
   return selected;
 };
@@ -423,13 +483,13 @@ export const selectProductionRepaintRequest = (
   const repaint = readProductionRepaintSelection(selected, occurredAt);
   if (repaint === null)
     throw new Error(
-      "This production has no reviewed visual.repaint generator or requests.",
+      "This production has no reviewed repaint generator or requests.",
     );
   const id = nonBlank(shot, "repaint shot");
   const request = repaint.requests.find((candidate) => candidate.shot === id);
   if (request === undefined)
     throw new Error(
-      `Shot "${id}" has no reviewed visual.repaint request in automovie.config.ts.`,
+      `Shot "${id}" has no reviewed repaint request on this production's design record.`,
     );
   return {
     generator: repaint.generator,
@@ -479,7 +539,7 @@ export const assertProductionRepaintReceiptAdoption = (props: {
   const selected = readProductionRepaintSelection(props.selected);
   if (selected === null)
     throw new Error(
-      "Repaint receipt adoption requires a reviewed visual.repaint selection.",
+      "Repaint receipt adoption requires a reviewed repaint selection.",
     );
   const configuredShots = new Set(
     selected.requests.map((request) => request.shot),
@@ -518,7 +578,7 @@ export const assertProductionRepaintCandidateAdoption = (props: {
   );
   if (selected === null)
     throw new Error(
-      "Repaint candidate adoption requires a reviewed visual.repaint selection.",
+      "Repaint candidate adoption requires a reviewed repaint selection.",
     );
   assertRepaintReceiptMatchesSelection(selected, props.receipt);
 };

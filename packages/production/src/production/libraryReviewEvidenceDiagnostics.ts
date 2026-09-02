@@ -44,6 +44,12 @@ const observationKey = (
  * path, exit code, or receipt assertion cannot declare itself current.
  * Historical receipts remain visible to classify a missing observation as
  * stale without being promoted to the current generation.
+ *
+ * Completion is exactly one reopened passed receipt at the current identity.
+ * Failed, unsupported, not-run and runtime-unidentified results at that same
+ * identity are history: they never complete an observation and they never make
+ * a completed one ambiguous, so recording a failure is not a state an author
+ * has to delete its way out of.
  */
 export function libraryReviewEvidenceDiagnostics(props: {
   /** Production shape selected by the derived authoring binding. */
@@ -221,17 +227,25 @@ export function libraryReviewEvidenceDiagnostics(props: {
         continue;
       }
 
+      // Exactly one current passed receipt, not exactly one current receipt.
+      // The stricter rule counted a retained failure as ambiguity, so the only
+      // way to go green after a failed observation was to delete it, and the
+      // CLI's receipt path did exactly that. A failure is evidence: it stays
+      // beside the pass that superseded it and is simply not the accepted one.
+      //
+      // What stays exact is the accepted set. Two passed receipts at one
+      // identity are still two answers to one question, whichever evidence kind
+      // each of them claims, so ambiguity is counted over the passed receipts
+      // rather than over every receipt the plan has ever carried.
+      const accepted = currentIdentity.filter(
+        (receipt) => receipt.verdict === "passed",
+      );
       const conclusive = reopened.filter(
         (receipt) =>
           receipt.runtimeIdentity.trim().length !== 0 &&
           receipt.verdict === "passed",
       );
-      if (
-        currentIdentity.length !== 1 ||
-        correctlyTyped.length !== 1 ||
-        reopened.length !== 1 ||
-        conclusive.length !== 1
-      ) {
+      if (accepted.length !== 1 || conclusive.length !== 1) {
         const verdicts = reopened
           .map((receipt) =>
             receipt.runtimeIdentity.trim().length === 0

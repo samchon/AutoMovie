@@ -27,7 +27,7 @@ A colour means nothing without the document that names it. The palette is the si
 
 ## The whole asset turntable in one call
 
-`npm run turntable -- --asset <id>` captures the complete view set an asset review is judged from: the four horizontal quarters at fifteen degrees, the steep `outline` pass overhead, and a rigged model's `rom-extremes` pose. The set belongs to the contract rather than to the request, which is the point of it. An asset covered from the angles its author chose is an asset whose back nobody looked at.
+`npm run turntable -- --asset <id>` captures the complete view set an asset review is judged from: the six canonical faces, two opposing oblique perspectives, the steep `outline` pass overhead, and a rigged model's `rom-extremes` pose. Front, rear, left and right are taken straight on, top and bottom as steeply as this surface's own elevation interval admits, and the two obliques a half turn apart so that no corner of the subject survives both. The set belongs to the contract rather than to the request, which is the point of it. An asset covered from the angles its author chose is an asset whose back nobody looked at.
 
 Every view runs through the same path `npm run preview` uses, so each one carries the same receipt and the same refusals. What comes back is a ledger, not six receipts: `views` lists every required view in canonical order with the project-relative `frame` it committed, or `null` where that view was refused, and `captured` is true only when every one of them committed. A refused view is named by the diagnostic whose target reads `<asset>#<view id>`.
 
@@ -46,7 +46,7 @@ Only that exact receipt-backed frame may be cited in review. Never cite a consol
 
 ## Refusal catalog
 
-Refusals arrive in two shapes and only one of them carries diagnostics. A refusal that can be attributed to your target returns `captured:false` with its diagnostics in the payload; the catalog below lists those. A refusal of the call itself is thrown and reaches you as an the script surface error text block with no payload at all: `"capture requires a current source compile"`, `"Capture requires a production frame format"`, and a commit-lock failure while the render bundle is written. the evidence citation and the evidence citation also throw every production-resolution failure that `npm run preview` reports as a diagnostic. An error block means nothing was attempted and nothing was measured, so read its prose and satisfy the named precondition instead of hunting for a diagnostic list that does not exist.
+Refusals arrive in two shapes and only one of them carries diagnostics. A refusal that can be attributed to your target returns `captured:false` with its diagnostics in the payload; the catalog below lists those. A refusal of the call itself is thrown, so it reaches you as the command's error text with no payload at all: `"Capture requires a current source compile"`, `"Capture requires a production frame format"`, and a commit-lock failure while the render bundle is written. `npm run preview` and `npm run turntable` run through the same capture path, so both raise those preconditions the same way. A thrown error means nothing was attempted and nothing was measured, so read its prose and satisfy the named precondition instead of hunting for a diagnostic list that does not exist.
 
 - Production invalid or unregistered: choose a trimmed registered namespace; do not retry with filesystem paths.
 - Registry unavailable or target missing: correct source/design and run the ordinary compile command.

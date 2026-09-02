@@ -32,9 +32,9 @@ import { autoMovieRenderBudgetRefusal } from "@automovie/render";
 import path from "node:path";
 import { isDeepStrictEqual } from "node:util";
 
-import config from "../automovie.config";
 import { PRODUCTION_DELIVERY_TONE_MAPPING } from "./capture";
 import { inspectCurrentCaptureRuntimeClosure } from "./capture-browser";
+import { readAutoMovieHostCaptureBrowser } from "./hostBoundary";
 import { listRenderAttempts } from "./renderAttemptSnapshot";
 import {
   assessProductionRenderBudget,
@@ -649,7 +649,7 @@ export const createProductionRenderPlanningRuntime = (props: {
       };
     const capture = inspectCurrentCaptureRuntimeClosure({
       projectRoot: root,
-      config: config.capture.browser,
+      config: readAutoMovieHostCaptureBrowser(process.env),
     });
     if (capture.status === "not-ready")
       return {

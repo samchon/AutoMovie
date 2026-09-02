@@ -12,6 +12,8 @@ Every rendered project is self-contained:
 - `.agents/skills/{production-lifecycle,evidence-graph,source-authoring,review-verification}` exposes four distinct authoring triggers with conditionally loaded sibling procedures;
 - `AGENTS.md` routes those skills, while `CLAUDE.md` only imports the provider-neutral router.
 
+`renderScaffold` hands over authored content only. A `node_modules`, `.git`, or `.cache` directory in the scaffold, and any file carrying a compiler-output shape, are working artifacts of whoever ran a tool in that directory rather than project inputs, and none of them reaches a generated project. That exclusion is load-bearing rather than tidy: the repository ignores the paths a stray type-check emits under the scaffold, so nothing else in the toolchain can see one, and a generated project's loader prefers an emitted `.js` to the `.ts` beside it.
+
 Generated graph evaluation never resolves evidence targets from `node_modules/@automovie/template`. The package ships the scaffold bytes that become project-owned inputs; `@automovie/evidence` supplies the reusable graph mechanics that validate those local inputs.
 
 The scaffold deliberately contains no production content and no provider-specific hook. Compiler, lint, sync, capture, and verify commands enforce their own ownership and validity boundaries.

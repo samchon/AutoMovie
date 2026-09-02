@@ -6,7 +6,6 @@ import {
 } from "@automovie/production";
 import path from "node:path";
 
-import config from "../automovie.config";
 import type { IProductionFrameCaptureRuntime } from "./capture";
 import {
   readProductionDialogueSynthesis,
@@ -51,12 +50,17 @@ export const createProductionCaptureDialogueRuntime = (props: {
 }): IProductionCaptureDialogueRuntime => {
   const root = path.resolve(props.root);
   const host = createNodeProductionRenderHostWithCapture(props.capture);
+  /** The sound decisions this production authored, read from its own design. */
+  const design = AutoMovieProductionProject.productionDesign(
+    root,
+    props.productionId,
+  );
   const sound = createProductionSoundRuntime({
     dialogueSelection: readProductionDialogueSynthesis(
-      config.sound.dialogueSynthesis,
+      design?.sound?.dialogueSynthesis ?? null,
     ),
     host,
-    liveWearableSoftBodies: config.simulation.liveWearableSoftBodies,
+    liveWearableSoftBodies: design?.simulation?.liveWearableSoftBodies ?? [],
     productionStateRoot: path.join(
       root,
       "automovie",
@@ -65,7 +69,7 @@ export const createProductionCaptureDialogueRuntime = (props: {
     ),
     progress: props.progress ?? (() => undefined),
     speakerBindings: readProductionSpeakerBindings(
-      config.sound.speakerBindings,
+      design?.sound?.speakerBindings ?? [],
     ),
   });
   return {

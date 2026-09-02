@@ -1,49 +1,21 @@
 name: test
-on:
-  pull_request:
-    paths:
-      # Keep both required checks present when either workflow contract
-      # changes. A path-filtered required workflow can otherwise remain
-      # pending instead of reporting a result for the pull request (#1397).
-      - '.github/workflows/build.yml'
-      - '.github/workflows/test.yml'
-      # Matched by SHAPE, mirroring build.yml. The suite reads more than `src`:
-      # the per-package lint ruleset `ttsc` enforces before a scenario runs, the
-      # generators whose output it asserts, the guide corpus `prepare` bakes
-      # into a pinned constant, and the scaffold `test_cli_scaffold` reads from
-      # disk. None of those triggered a run before (#1333).
-      - 'packages/*/src/**'
-      - 'packages/*/*.json'
-      - 'packages/*/*.ts'
-      - 'packages/*/*.cts'
-      - 'packages/*/*.html'
-      # Package entry documents are part of the published package surface and
-      # therefore travel through the packaged test boundary (#1397).
-      - 'packages/*/*.md'
-      - 'packages/*/build/**'
-      - 'packages/*/prompts/**'
-      - 'packages/*/scaffold/**'
-      - 'packages/*/scripts/**'
-      # Shared compiler/lint policy is a direct test input.
-      - 'config/**'
-      - 'test/**'
-      # Root tooling configuration directly affects test installation and
-      # execution (#1335).
-      - '*.json'
-      - '*.ts'
-      - '*.yaml'
-      - '*.yml'
-      - 'build/**'
-      - '.prettier*'
-      - '.gitattributes'
-      # The root public entry document is named rather than globbing all
-      # Markdown because agent instructions are not test inputs. #1386 and
-      # #1387 showed that a public-document-only change still needs a reported
-      # check.
-      - 'README.md'
+on: pull_request
+
+# A push replaces its predecessor rather than queueing behind it. Without this
+# the lane was five runs deep and the newest commit waited on four obsolete ones.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
-  Ubuntu:
-    runs-on: ubuntu-latest
+  test:
+    strategy:
+      fail-fast: false
+      # NTFS supplies the case-insensitive path-identity half of the lint
+      # contributor contract; Ubuntu retains the case-sensitive twin.
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -52,77 +24,12 @@ jobs:
         with:
           node-version: 22.x
       - uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v6.0.9
-
-      - name: Install Dependencies
-        run: pnpm install
-
-      # `@ttsc/lint` and typia ship source plugins that are Go programs the
-      # toolchain builds
-      # once per cache key, and a cold build costs minutes in every job. The
-      # content-addressed plugin binaries are tens of megabytes, so they cache
-      # cleanly while the Go build cache that produced them does not. Restore and
-      # save are separate steps because a combined `actions/cache` skips its save
-      # when the job fails, which would keep a red lane from ever warming.
-      - name: Restore Toolchain Plugin Cache
-        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      - run: pnpm install
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: node_modules/.cache/ttsc/plugins
           key: ttsc-plugins-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
-
-      # One typed command executes every scenario, writes the historical gap
-      # report, and then refuses any touched authored source below whole-file
-      # 100% coverage or missing exact instrumentation.
-      - name: Run Tests and Enforce Coverage
+      - run: pnpm coverage
+        working-directory: test
         env:
           AUTOMOVIE_COVERAGE_BASE: origin/${{ github.base_ref }}
-        run: pnpm coverage
-        working-directory: test
-
-      - name: Save Toolchain Plugin Cache
-        if: always()
-        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: node_modules/.cache/ttsc/plugins
-          key: ttsc-plugins-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
-
-  Windows:
-    # NTFS supplies the case-insensitive path-identity half of the lint
-    # contributor contract; Ubuntu retains the case-sensitive twin above.
-    runs-on: windows-latest
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          fetch-depth: 0
-      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
-        with:
-          node-version: 22.x
-      - uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v6.0.9
-
-      - name: Install Dependencies
-        run: pnpm install
-
-      # `@ttsc/lint` and typia ship source plugins that are Go programs the
-      # toolchain builds
-      # once per cache key, and a cold build costs minutes in every job. The
-      # content-addressed plugin binaries are tens of megabytes, so they cache
-      # cleanly while the Go build cache that produced them does not. Restore and
-      # save are separate steps because a combined `actions/cache` skips its save
-      # when the job fails, which would keep a red lane from ever warming.
-      - name: Restore Toolchain Plugin Cache
-        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: node_modules/.cache/ttsc/plugins
-          key: ttsc-plugins-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
-
-      - name: Run Tests and Enforce Coverage
-        env:
-          AUTOMOVIE_COVERAGE_BASE: origin/${{ github.base_ref }}
-        run: pnpm coverage
-        working-directory: test
-
-      - name: Save Toolchain Plugin Cache
-        if: always()
-        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: node_modules/.cache/ttsc/plugins
-          key: ttsc-plugins-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}

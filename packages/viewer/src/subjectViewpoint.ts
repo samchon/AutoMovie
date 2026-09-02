@@ -318,6 +318,7 @@ export interface IAutoMovieViewerSubjectView {
    *
    * @evidence requirements/review/subject-inspection.md#review-subject-viewpoint-ownership `deliveryEvidence` marks a subject observation as something that cannot be offered as delivery evidence.
    * @evidence specifications/review-and-acceptance/subject-surface-and-inspection.md#review-system-subject-viewpoint-plan `deliveryEvidence` keeps subject observations out of the delivery evidence population the specification separates.
+   * @evidencePart specifications/review-and-acceptance/subject-surface-and-inspection.md#review-system-subject-viewpoint-plan::delivery-evidence-separation
    */
   deliveryEvidence: false;
 }
@@ -498,6 +499,7 @@ const SUBJECT_KINDS: ReadonlySet<string> = new Set<AutoMovieViewerSubjectKind>([
  *
  * @evidence requirements/review/subject-inspection.md#review-subject-coverage `autoMovieViewerTurntableViewpoints` declares the planned viewpoint population of one subject inspection so observed coverage can be counted against it.
  * @evidence specifications/review-and-acceptance/subject-surface-and-inspection.md#review-system-subject-viewpoint-plan `autoMovieViewerTurntableViewpoints` implements the deterministic viewpoint selection rule, producing the same identities and order for the same inputs.
+ * @evidencePart specifications/review-and-acceptance/subject-surface-and-inspection.md#review-system-subject-viewpoint-plan::viewpoint-plan-record
  * @author Samchon
  */
 export const autoMovieViewerTurntableViewpoints = (

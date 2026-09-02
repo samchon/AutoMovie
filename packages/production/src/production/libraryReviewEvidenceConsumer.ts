@@ -5,7 +5,9 @@ import type {
 import type {
   AutoMovieContentDigest,
   AutoMovieGuidePass,
+  IAutoMovieBuiltEnvironment,
   IAutoMovieDiagnostic,
+  IAutoMovieEnvironmentContext,
   IAutoMovieLibraryReviewOwnerIdentity,
   IAutoMovieLibraryReviewPlanFile,
   IAutoMovieLibraryReviewPopulation,
@@ -24,16 +26,53 @@ import {
   fingerprintAutoMovieFields,
   normalizeAutoMovieSource,
 } from "./contentIdentity";
+import {
+  autoMovieLibraryObservationRequirements,
+  libraryObservationClosureDiagnostics,
+  libraryObservationReceiptDiagnostics,
+} from "./libraryObservationRequirements";
 import { libraryReviewEvidenceDiagnostics } from "./libraryReviewEvidenceDiagnostics";
 import { assetReviewEvidenceDiagnostics } from "./reviewEvidenceDiagnostics";
 
 type CompileScope = "design" | "source" | "review" | "final";
 
-interface ILibraryReviewConsumerProps {
+interface ILibraryReviewResolverProps {
   authoring: IAutoMovieProductionEvidence;
   project: IAutoMovieLibraryReviewProjectReader;
-  scope: CompileScope;
   compileFingerprint: AutoMovieContentDigest;
+  /**
+   * Building topology one exact design owner materialized, if any.
+   *
+   * Optional because a caller holding no materialized artifact has none to
+   * hand over, not because the derived population is optional. A caller that
+   * does hold one must supply it: the required observations of an owner whose
+   * environments are withheld are the empty set, and an empty set is exactly
+   * what a shrunk plan looks like from here.
+   */
+  environments?: (props: {
+    branch: string;
+    owner: string;
+    anchor: string;
+  }) => readonly IAutoMovieBuiltEnvironment[];
+  /**
+   * The adopted worlds one owner published, resolved the same way.
+   *
+   * Separate from {@link environments} because they are separate publications:
+   * a map owner contributes a context and no environment, a space owner the
+   * reverse, and an owner that publishes neither is charged by neither. Absent
+   * for the same reason the environments resolver is -- withheld, the map
+   * population is the empty set, which is exactly what a shrunk plan looks like
+   * from here.
+   */
+  contexts?: (props: {
+    branch: string;
+    owner: string;
+    anchor: string;
+  }) => readonly IAutoMovieEnvironmentContext[];
+}
+
+interface ILibraryReviewConsumerProps extends ILibraryReviewResolverProps {
+  scope: CompileScope;
   modelExists: (model: string) => boolean;
   rigged: (model: string) => boolean;
   fingerprint: (
@@ -43,12 +82,6 @@ interface ILibraryReviewConsumerProps {
     target: IAutoMovieRenderBundleManifest["target"],
     fingerprint: AutoMovieContentDigest,
   ) => ReadonlyArray<{ time: number; pass: AutoMovieGuidePass }>;
-}
-
-interface ILibraryReviewResolverProps {
-  authoring: IAutoMovieProductionEvidence;
-  project: IAutoMovieLibraryReviewProjectReader;
-  compileFingerprint: AutoMovieContentDigest;
 }
 
 /** One review-phase refusal at the exact library authoring address. */
@@ -257,6 +290,12 @@ const identityOf = (props: {
       );
     }
   }
+  const waivers = [...(props.plan.waivers ?? [])].sort((left, right) =>
+    compareCodeUnits(
+      JSON.stringify([left.observation, left.ground, left.disclosedBy]),
+      JSON.stringify([right.observation, right.ground, right.disclosedBy]),
+    ),
+  );
   const observations = [...props.plan.observations].sort((left, right) =>
     compareCodeUnits(
       JSON.stringify([left.id, left.evidence, left.model ?? null]),
@@ -272,6 +311,7 @@ const identityOf = (props: {
         anchor: props.unit.anchor,
         sources: [...seen].sort(compareCodeUnits),
         observations,
+        waivers,
       }),
     ),
   };
@@ -286,6 +326,7 @@ const resolvePopulation = (
     diagnostics: [],
     owners: [],
     receipts: [],
+    required: [],
     turntables: [],
   };
   const eligible = new Set<string>();
@@ -381,6 +422,57 @@ const resolvePopulation = (
         id: observation.id,
         evidence: observation.evidence,
       }));
+      const environments =
+        props.environments?.({
+          branch: owner.branch,
+          owner: address,
+          anchor: unit.anchor,
+        }) ?? [];
+      const contexts =
+        props.contexts?.({
+          branch: owner.branch,
+          owner: address,
+          anchor: unit.anchor,
+        }) ?? [];
+      if (owner.branch === "maps" && contexts.length === 0)
+        output.diagnostics.push(
+          missing({
+            target: `library:${owner.branch}:${address}`,
+            path: relative,
+            message: `Library map owner "${address}" published no environment context, so the compiler cannot derive any map observation from the world this owner adopted. Return the adopted context from this owner's build result before review.`,
+          }),
+        );
+      const required = autoMovieLibraryObservationRequirements(
+        environments,
+        contexts,
+      );
+      output.diagnostics.push(
+        ...libraryObservationClosureDiagnostics({
+          target: `library:${owner.branch}:${address}`,
+          path: relative,
+          required,
+          declared: observations.map((observation) => observation.id),
+          waivers: plan.waivers ?? [],
+        }),
+      );
+      // What the plan owes is one question and what came back is another. The
+      // closure above judges the first from ids alone; this judges the second
+      // from what each receipt says about where it stood and what it read.
+      output.diagnostics.push(
+        ...libraryObservationReceiptDiagnostics({
+          target: `library:${owner.branch}:${address}`,
+          path: relative,
+          required,
+          receipts: plan.receipts,
+        }),
+      );
+      output.required.push(
+        ...required.map((entry) => ({
+          branch: owner.branch,
+          owner: address,
+          ...entry,
+        })),
+      );
       output.owners.push({
         branch: owner.branch,
         owner: address,
@@ -469,6 +561,14 @@ const resolvePopulation = (
  * The function intentionally returns an empty population for film and brief,
  * whose review denominator continues to come from compiled consumers.
  *
+ * `required` carries the half of the denominator nobody authors. Given the
+ * building topology an owner materialized, it names every exposed facade, every
+ * corner those facades meet at, every roof, underside and opening of the
+ * envelope, the unit's own setting view, and the interior stations of each of
+ * its rooms, each with the point an eye was proved to stand at. A plan may add
+ * observations to that population and may never remove one; an addressed waiver
+ * is the only way a derived observation goes unopened.
+ *
  * @evidence requirements/review/subject-inspection.md#review-subject-evidence Binds each library observation to the current design, source, compile, and plan identities.
  * @evidence requirements/review/subject-inspection.md#review-library-delivery-coverage Exposes the exact graph-derived owner and finite observation populations without promoting inactive residue.
  * @evidence specifications/review-and-acceptance/subject-surface-and-inspection.md#review-system-subject-freshness Derives the current freshness identity before an observation receipt is written.
@@ -488,6 +588,7 @@ export const readAutoMovieLibraryReviewRequirements = (
         diagnostics: [],
         owners: [],
         receipts: [],
+        required: [],
         turntables: [],
       };
 

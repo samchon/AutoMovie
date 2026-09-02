@@ -266,7 +266,7 @@ export class CaptureExecutableTouchedError extends CaptureExecutableInstructedEr
  * wait — so the remaining causes are the ones that do not stop on their own.
  */
 const PERSISTENT_INSTRUCTION =
-  "Exclude this directory from your antivirus and search indexer, or set capture.browser to a system channel in automovie.config.ts, then run npm run capture:doctor again.";
+  "Exclude this directory from your antivirus and search indexer, or run with AUTOMOVIE_CAPTURE_BROWSER=chrome to use a system channel, then run npm run capture:doctor again.";
 
 export interface ISettledCaptureExecutable<T> {
   /** Acquisitions spent, `1` when nothing was in the way. */

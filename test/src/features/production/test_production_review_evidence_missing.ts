@@ -8,6 +8,7 @@ import type {
 import { TestValidator } from "@nestia/e2e";
 import path from "node:path";
 
+import { loadSourceModule } from "../internal/loadSourceModule";
 import { namedFacts } from "../internal/predicates";
 
 /**
@@ -17,12 +18,7 @@ import { namedFacts } from "../internal/predicates";
  * runtime keeps the package source outside this test package's `rootDir` and
  * avoids depending on a pre-existing `packages/production/lib` build.
  */
-const unit = require(
-  path.resolve(
-    __dirname,
-    "../../../../packages/production/src/production/reviewEvidenceDiagnostics.ts",
-  ),
-) as {
+const unit = loadSourceModule<{
   consumedModelIds: (
     graph: {
       models: ReadonlyMap<string, { lod: Array<{ recipe: string }> }>;
@@ -58,7 +54,12 @@ const unit = require(
       fingerprint: AutoMovieContentDigest,
     ) => ReadonlyArray<{ time: number; pass: AutoMovieGuidePass }>;
   }) => IAutoMovieDiagnostic[];
-};
+}>(
+  path.resolve(
+    __dirname,
+    "../../../../packages/production/src/production/reviewEvidenceDiagnostics.ts",
+  ),
+);
 const {
   assetReviewEvidenceDiagnostics,
   consumedModelIds,

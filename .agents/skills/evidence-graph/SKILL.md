@@ -53,13 +53,12 @@ Write each whole-population exclusion as a negative pattern beside the positive 
 
 Derive a domain-partitioned population by subtraction. A specialized claim may name the stable files assigned to its domain, but one residual claim starts from the complete source glob and subtracts those assignments. A new source then answers for the residual domain until someone deliberately assigns it elsewhere. Pattern order decides the result: `@ttsc/evidence` evaluates left to right and a later positive pattern re-admits what an earlier negative removed, so a claim that adds one file back to a residual writes it after the spread rather than before it.
 
-A derived population makes a carrier's citations checked; it does not make citations mandatory. `evidence/graph` runs its obligation from the reference toward the claim, so a new file carrying a wrong citation is an error while a new file carrying none at all is silent. `singleEvidencePerSymbol` does not close that gap, because it demands exactly one unit per host where this repository's hosts answer for several. Until the contributor grows a per-host lower bound, that bound belongs to a structural guard, and `#1900` deliberately removed the repository-shape test class that would host one. Record the unpaid edge instead of reporting the population as self-enforcing.
+A derived population makes a carrier's citations checked; it does not make citations mandatory. `evidence/graph` runs its obligation from the reference toward the claim, so a new file carrying a wrong citation is an error while a new file carrying none at all is silent. `singleEvidencePerSymbol` does not close that gap, because it demands exactly one unit per host where this repository's hosts answer for several. Do not replace that missing semantic judgment with a repository-shape test that reads source paths or counts current citations. Self-Review must inspect every changed public carrier and reject an unpaid one from the actual contract it implements.
 
 ## Measure production authoring reachability
 
 The repository contract and a generated production's authoring contract remain separate graphs. Do not manufacture one citation per requirement unit between them. [The authoring-reachability ledger](../../../docs/authoring-reachability/README.md) instead maps every requirement family to the production contract or procedure that gives its decisions an author, or to one of three explicit absence classes: unpaid authoring edge, host-owned behavior, or intentional exclusion with a resumption condition.
 
-Run `pnpm --dir test start -- --include test_evidence_authoring_reachability` whenever a requirement family, the shared production-contract inventory, or a mapped authoring path changes. The typed test requires complete family inventory, verifies current H3 and shared H2 populations, resolves every recorded path and anchor, and pins the accepted unpaid counts and exact fragment target set. It does not demand zero debt while an accepted follow-up owns that debt, but any increase, decrease, target substitution, or reclassification requires the ledger to be reread and updated rather than drifting silently.
 
 ## Every public package participates
 
@@ -77,7 +76,7 @@ Split a specification unit into obligations rather than letting several partial 
 
 Migrate rather than re-baseline. Initialization snapshots the existing corpus into `legacy` and refuses to overwrite a ledger that exists, so accrued debt cannot be laundered by taking a fresh snapshot. What the gate refuses afterwards is a decision somebody made: a unit that appears with no owner, and a ledger entry whose unit is gone. The debt can therefore shrink or hold, never quietly grow.
 
-Count drift, do not refuse it. A legacy unit is exactly the unit nobody has been able to assign, so failing an unrelated prose edit until someone names an owner buys a declaration written to clear a diagnostic, and a manufactured owner is worse than a counted debt. The check reports `stale` beside `legacy` for the units whose prose moved since the snapshot. `pnpm --dir test exec ttsx -P tsconfig.json src/integrity/contractOwnership.ts query --root .. --layer <requirements|specifications> --owner <package|project-source|excluded|structural|legacy>` answers who owns what without reading prose.
+Count drift, do not refuse it. A legacy unit is exactly the unit nobody has been able to assign, so failing an unrelated prose edit until someone names an owner buys a declaration written to clear a diagnostic, and a manufactured owner is worse than a counted debt. The check reports `stale` beside `legacy` for the units whose prose moved since the snapshot. `pnpm --dir test exec ttsx -P tsconfig.json src/integrity/contractOwnership.ts query --root .. --layer <requirements|specifications> --owner <package|project-source|excluded|structural|legacy|stale>` answers who owns what without reading prose. A legacy unit whose prose has moved answers to `stale` as well as to `legacy`, so the drift count the check reports can also be named.
 
 ## Partition a unit that several claimants share
 
@@ -93,7 +92,7 @@ Leave a fragment nobody implements undeclared rather than excluding it. An exclu
 
 Migrate by touching. Every unit starts in the ledger's `legacy` snapshot with its digest, and editing that unit moves its prose away from the digest, which is what surfaces it to the next author of that unit rather than arriving as one repository-wide red gate. What surfaces is a number, not a refusal: the check reports it under `stale` and still exits zero, exactly as the counting rule above requires. Read that count when you touch a legacy unit and decide whether this is the change that should declare its owners; nothing will stop you either way, and a declaration written to clear a diagnostic is the outcome the counting rule exists to avoid.
 
-`test_evidence_authoring_reachability` compares every specification `@evidenceObligation` target-anchor and id against source `@evidencePart` pairs, rejects orphan source parts, and pins both the current unpaid total and exact target set. The pin counts debt instead of declaring it implemented. Read every unpaid fragment when its specification or claimant changes, pay it with a truthful source owner when one exists, and update the accepted set and count in the same decision.
+The authoring-reachability ledger under `docs/authoring-reachability` compares every specification `@evidenceObligation` target-anchor and id against source `@evidencePart` pairs, rejects orphan source parts, and pins both the current unpaid total and exact target set. The pin counts debt instead of declaring it implemented. Read every unpaid fragment when its specification or claimant changes, pay it with a truthful source owner when one exists, and update the accepted set and count in the same decision.
 
 ## Stable document identities
 
@@ -125,7 +124,7 @@ export function sampleTimeline(): void;
 
 Resolve targets from the active claim's `root`, files, and symbol selectors. Copying a path from another project or claim is not evidence that it resolves here.
 
-Make every reason state why this claimant answers for that target. A restatement of the heading, an ownership assertion, or a sentence written only to silence a diagnostic is not a reason.
+Make every reason state why this claimant answers for that target. A restatement of the heading, an ownership assertion, or a sentence written only to silence a diagnostic is not a reason. Test it by exchange: read this claimant's sentence against a sibling that answers the same target, and the sibling's against this one. If neither becomes false, neither was written about the export it sits on. Counting the export's members or lines describes its size rather than what the target required, and a statement about how something is written -- an identifier, a number, a path -- must use the export's own rendering, because reading the export is the only check this graph has.
 
 Use `@evidenceExclude` only when the selected claim intentionally owes no relationship to the target. State the specific boundary and why no implementation belongs there. An exclusion is not positive implementation evidence and must not satisfy a reference configured with `noEvidenceExclude`.
 

@@ -4,8 +4,6 @@
     "lib": ["ESNext", "DOM", "DOM.Iterable"],
     "module": "esnext",
     "moduleResolution": "bundler",
-    "allowJs": true,
-    "checkJs": true,
     "esModuleInterop": true,
     "resolveJsonModule": true,
     "newLine": "lf",
@@ -18,11 +16,9 @@
   "include": [
     "src",
     "scripts",
-    "test",
     "vendor/sharp-disabled/index.ts",
     "viewer/src",
     "repaintSelectionReviews.ts",
-    "automovie.config.ts",
     "vite.config.ts",
     "lint.config.ts"
   ]

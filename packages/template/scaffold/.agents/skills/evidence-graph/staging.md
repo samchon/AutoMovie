@@ -51,6 +51,12 @@ Use configured evidence roots such as `settings/...`, `models/...`, `motions/...
 
 A reason names the host event, decision, limit, transition, implementation, or observable result that would be false without the target. A target-name paraphrase, `uses this setting`, `implements this rule`, and a copied reason are not evidence.
 
+Test a reason by exchange rather than by reading it alone. Take the sentence this host gave and read it against a sibling host that answers the same target, then take the sibling's sentence and read it against this host. If neither becomes false, neither was written about the host it sits on, and both are generic however specific the wording looks. A detail lifted from the host does not by itself survive the exchange: when the sentence around the detail would hold equally with any other detail from any sibling, the frame is the reason and the detail is decoration.
+
+Counting the host is a description of its size, not a statement about what the target required. `four facades and nine rooms`, `nine viewpoints`, `three shots` are true of every host shaped like this one. Write instead what this host does that a sibling does not, in the terms the target names.
+
+When a statement turns on how something is written rather than on what it is -- a number, a dimension, an identifier, a title, a quoted line -- give the host's own rendering. A host whose source reads `1.6` is not addressed by a reason that says `160cm`, and one whose only mention of a station sits in a heading has not realized that station in its body. The fact may well be present, but a claim recorded in a notation the host never uses cannot be checked by reading the host, which is the only check this graph has.
+
 ## Transitions
 
 Move a layer from `disabled` to `draft` only after its initially applicable discovery targets have been searched against the declared production and answered in `docs/contracts`: a retained rule file with its enforcing additive claim, or a concrete truthful negative on `index.md`. Add the layer's non-empty authored hosts as the transition begins. A layer forbidden by the selected shape remains disabled with neither authored hosts nor a running discovery claim.
@@ -60,6 +66,10 @@ Move a layer from `draft` to `evidence` only after the full layer has a complete
 Move the layer to `review` only after all shared and production-specific claim batches are complete and the production source lint is clean. Commit that evidence state before review. Review each relationship independently under [Review](../review-verification/review.md), copy only compiler-issued fingerprints, and compile again.
 
 A child may enter `draft` only after every direct parent is in `review`. Research, when present, is an additional reviewed parent of authored documents. Shots wait for reviewed screenplay or brief and for the reviewed source corresponding to every active map, model, space, material, instance, motion, and system branch. Production source waits for settings. Film source waits for production source and shots.
+
+A design layer may enter `review` only after every active design layer it is founded on is also in `review`. Spaces are founded on maps, models on spaces, materials on models and spaces, instances on maps, models, spaces and materials, and motions and systems on each other and on all four. A foundation contributes none of its units until it is itself reviewed, so reviewing a layer ahead of its foundation records a completion that paid nothing for the parent it depends on. A foundation left `disabled` is not demanded: a library that delivers spaces without a map branch owes no map references.
+
+This gate is on entering `review` rather than on entering `draft` because motions and systems are founded on each other. Write both against one another through `draft` and `evidence`, then promote both to `review` in one declaration; that is the only order in which each is reviewed with the other's reviewed units available.
 
 `@automovie/evidence` checks non-empty host populations, required anchors, named source owners, production-kind exclusions, flat treatment topology, treatment coverage, and exact script-to-screenplay delivery identities from the declaration before lint. Keep every project-specific selector and additive claim in the one typed `lint.config.ts` declaration that also turns that value into the graph lint configuration. Preserve the typed declaration, additive `claims`, layer grouping, host-independent ordering, and mixed-state tests.
 

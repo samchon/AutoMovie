@@ -28,6 +28,7 @@ import { tessellate } from "../geometry/tessellate";
 import { Matrix4 } from "../math/Matrix4";
 import { Quaternion } from "../math/Quaternion";
 import { Vector3 } from "../math/Vector3";
+import { compareAutoMovieRenderIds } from "../render/renderDigest";
 import { IAutoMovieSubjectContribution } from "../subject";
 import { validateModel } from "../validation/validateModel";
 import { validateSpace } from "../validation/validateSpace";
@@ -2867,6 +2868,32 @@ const applyCarriageState = (
     if (entry === undefined) continue;
     deltas.set(carriage.element, travelDelta(carriage.motion, entry.value));
   }
+};
+
+/**
+ * Every logical space under one space, including that space itself.
+ *
+ * The containment fold every other query here performs, exposed once rather
+ * than copied. A caller asking what a storey holds, what a building unit owns,
+ * or which rooms a derived review population must charge for was otherwise
+ * rewriting this walk, and two walks over one hierarchy are two answers that
+ * eventually disagree.
+ *
+ * Sorted, because a population is compared and printed rather than only tested
+ * for membership.
+ *
+ * @evidence requirements/interior/scope-and-host-boundary.md#interior-current-product-scope `builtEnvironmentDescendantSpaces` names every logical space under one space. This ensures authored building-interior state remains explicit and reviewable within its supported host boundary.
+ * @evidence specifications/interior-space/scope-and-host.md#interior-space-building-interior-boundary `builtEnvironmentDescendantSpaces` resolves the descendant space population the engine folds ownership, topology, and geometry over inside one building-interior boundary.
+ * @author Samchon
+ */
+export const builtEnvironmentDescendantSpaces = (
+  environment: IAutoMovieBuiltEnvironment,
+  spaceId: string,
+): string[] => {
+  requireSpace(environment, spaceId);
+  return [...descendantSpaces(environment.spaces, spaceId)].sort(
+    compareAutoMovieRenderIds,
+  );
 };
 
 const descendantSpaces = (

@@ -2612,6 +2612,12 @@
         "package": "@automovie/interface"
       }
     },
+    "requirements/review/subject-inspection.md#review-subject-viewpoint-ownership": {
+      "owner": {
+        "kind": "package",
+        "package": "@automovie/production"
+      }
+    },
     "requirements/sound/dialogue-voice-and-visemes.md#sound-dialogue-refusal": {
       "owner": {
         "kind": "package",
@@ -4663,7 +4669,6 @@
     "requirements/review/subject-inspection.md#review-subject-coverage": "sha256:cfd94a8104c57c0e2614cd6e96a41782dbfd8bee3a59d697ec07fd4fbf812727",
     "requirements/review/subject-inspection.md#review-subject-identity": "sha256:7568b3ff09f6b0f5ba7c81f7fd3bf9b02cff8ae934b1b21f7388b496b76e7d96",
     "requirements/review/subject-inspection.md#review-subject-inspection": "sha256:d1463a8da12737dba17b4c1d1a1503461e02e49296b578c6f65ec35ea47cba9b",
-    "requirements/review/subject-inspection.md#review-subject-viewpoint-ownership": "sha256:bb39490ccc46b810e3eb7bd4e3335e5b28a424e14d74d0e2cf3d9357f0c94ff2",
     "requirements/review/visual-change-reporting.md#review-visual-change-catalog-identity": "sha256:e5b96955fba593a3094214f75c9e6dbbc81db3baefb02b84ad5d0e530c8147a1",
     "requirements/review/visual-change-reporting.md#review-visual-change-digest-reuse": "sha256:84d0eceeb539ebd4165a29d180ce455b8e8a06dc0a0c894219d9963db2776d1e",
     "requirements/review/visual-change-reporting.md#review-visual-change-evidence-boundary": "sha256:e31d0d096624421586f6fb987a8d2b4d8f5224da34d229fc5b825979ebec6db4",

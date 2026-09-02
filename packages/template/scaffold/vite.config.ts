@@ -1,23 +1,28 @@
 import { defineConfig } from "vite";
 
-import config from "./automovie.config";
 import { createProductionFrameCaptureRuntime } from "./scripts/capture";
 import { inspectCurrentCaptureRuntimeClosure } from "./scripts/capture-browser";
 import { createProductionCaptureDialogueRuntime } from "./scripts/captureDialogueRuntime";
 import { generatedShotPlugin } from "./scripts/generatedShotPlugin";
+import {
+  readAutoMovieHostCaptureBrowser,
+  readAutoMovieHostViewerHost,
+} from "./scripts/hostBoundary";
+import { currentAutoMovieProductionId } from "./scripts/projectIdentity";
 
 /** Local deterministic viewer; generated artifacts remain ordinary files. */
 export default defineConfig(async () => {
+  const productionId = currentAutoMovieProductionId();
   const closure = inspectCurrentCaptureRuntimeClosure({
     projectRoot: process.cwd(),
-    config: config.capture.browser,
+    config: readAutoMovieHostCaptureBrowser(process.env),
   });
   if (closure.status === "not-ready") throw new Error(closure.correction);
   closure.assertCurrent();
   const captureRuntime = createProductionFrameCaptureRuntime();
   const dialogueRuntime = createProductionCaptureDialogueRuntime({
     capture: captureRuntime,
-    productionId: config.productionId,
+    productionId,
     root: process.cwd(),
   });
   await dialogueRuntime.prepare();
@@ -25,7 +30,7 @@ export default defineConfig(async () => {
   return {
     root: ".",
     plugins: [
-      generatedShotPlugin(process.cwd(), config.productionId, {
+      generatedShotPlugin(process.cwd(), productionId, {
         dialogue: captureRuntime.dialogue,
         deliveryCrop: captureRuntime.deliveryCrop,
         prepare: async () => {
@@ -39,7 +44,7 @@ export default defineConfig(async () => {
       dedupe: ["three"],
     },
     server: {
-      host: config.viewer.host,
+      host: readAutoMovieHostViewerHost(process.env),
       watch: {
         // A production authors its images into `assets/` while this server is
         // watching the same tree, so the watcher will meet a half-written PNG

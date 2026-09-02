@@ -8,14 +8,10 @@ import type {
 import { TestValidator } from "@nestia/e2e";
 import path from "node:path";
 
+import { loadSourceModule } from "../internal/loadSourceModule";
 import { namedFacts } from "../internal/predicates";
 
-const unit = require(
-  path.resolve(
-    __dirname,
-    "../../../../packages/production/src/production/libraryReviewEvidenceDiagnostics.ts",
-  ),
-) as {
+const unit = loadSourceModule<{
   libraryReviewEvidenceDiagnostics: (props: {
     kind: "brief" | "film" | "library";
     scope: "design" | "source" | "review" | "final";
@@ -30,7 +26,12 @@ const unit = require(
     target: string;
     message: string;
   }>;
-};
+}>(
+  path.resolve(
+    __dirname,
+    "../../../../packages/production/src/production/libraryReviewEvidenceDiagnostics.ts",
+  ),
+);
 const { libraryReviewEvidenceDiagnostics } = unit;
 
 type Digest = AutoMovieContentDigest;
@@ -86,6 +87,12 @@ const receipt = (
           },
   identity: subject.identity,
   runtimeIdentity: "tool:runtime:v1",
+  // These owners are exterior by construction, so the honest pose is none and
+  // the honest measurement set is empty. Both are written rather than omitted:
+  // a receipt that cannot say where it stood is a different fact from one that
+  // stood nowhere in particular, and this fixture is the second.
+  pose: null,
+  measurements: {},
   verdict: "passed",
   resident: true,
   ...props,

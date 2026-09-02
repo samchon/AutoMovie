@@ -4,7 +4,7 @@ import {
 } from "@automovie/production";
 
 import {
-  type IAutoMovieProductionConfiguration,
+  type IAutoMovieProductionRepaintSelection,
   assertProductionRepaintCandidateAdoption,
   readProductionRepaintCommand,
   selectProductionRepaintCandidateReview,
@@ -19,15 +19,9 @@ type RepaintOutput = Awaited<
 export interface IProductionRepaintInvocation {
   kind: "reroll" | "retry" | "selection" | "reversal";
   productionId: string;
-  generator: NonNullable<
-    IAutoMovieProductionConfiguration["visual"]["repaint"]
-  >["generator"];
-  executionPolicy: NonNullable<
-    IAutoMovieProductionConfiguration["visual"]["repaint"]
-  >["executionPolicy"];
-  request: NonNullable<
-    IAutoMovieProductionConfiguration["visual"]["repaint"]
-  >["requests"][number];
+  generator: IAutoMovieProductionRepaintSelection["generator"];
+  executionPolicy: IAutoMovieProductionRepaintSelection["executionPolicy"];
+  request: IAutoMovieProductionRepaintSelection["requests"][number];
   requestId?: string;
   attemptId?: string;
 }
@@ -42,13 +36,23 @@ export interface IProductionRepaintHost {
 /** Execute one reviewed shot request and preserve cleanup failure semantics. */
 export const runProductionRepaintCommand = async (
   args: readonly string[],
-  config: IAutoMovieProductionConfiguration,
+  authored: {
+    /** The production namespace the reviewed request belongs to. */
+    productionId: string;
+    /**
+     * This production's own reviewed repaint adoption, or null for none.
+     *
+     * Resident bytes rather than a compile-time literal, so the parser below
+     * settles its shape before an operation reads a prompt out of it.
+     */
+    repaint: unknown;
+  },
   createHost: () => IProductionRepaintHost,
   occurredAt: Date | string = new Date(),
 ): Promise<void> => {
   const command = readProductionRepaintCommand(args);
   const selected = selectProductionRepaintRequest(
-    config.visual.repaint,
+    authored.repaint,
     command.shot,
     occurredAt,
   );
@@ -59,7 +63,7 @@ export const runProductionRepaintCommand = async (
       kind: command.kind,
       generator: selected.generator,
       executionPolicy: selected.executionPolicy,
-      productionId: config.productionId,
+      productionId: authored.productionId,
       request: selected.request,
       ...(command.kind === "retry"
         ? { requestId: command.requestId }
