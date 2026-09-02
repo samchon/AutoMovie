@@ -207,12 +207,17 @@ export const runAutoMovieBuildingDerivation = (props: {
    * print one log and a reader comparing them is comparing the derivation rather
    * than the separator their operating system happened to use.
    */
-  const emit = (file: string, text: string): void => {
-    fs.mkdirSync(path.dirname(file), { recursive: true });
-    fs.writeFileSync(file, text, "utf8");
-    const relative = path.relative(state.root, file).split(path.sep).join("/");
-    process.stdout.write(`wrote ${relative}\n`);
-  };
+  const emit =
+    props.write ??
+    ((file: string, text: string): void => {
+      fs.mkdirSync(path.dirname(file), { recursive: true });
+      fs.writeFileSync(file, text, "utf8");
+      const relative = path
+        .relative(state.root, file)
+        .split(path.sep)
+        .join("/");
+      say(`wrote ${relative}`);
+    });
 
   for (const action of deriveAutoMovieBuildingActions({
     encode: encodeAutoMoviePathSegment,

@@ -489,7 +489,7 @@ export const coverageSourceRoots = ["."];
  * {@link runCoveragePopulationGate} is what keeps this honest, by refusing any
  * run where a file one population admits the other does not.
  *
- * What this list does not say is what `UNEXECUTED_AUTHORED_ROOTS` says: two
+ * What this list does not say is what `UNEXECUTED_AUTHORED_ROOTS` says: the
  * roots this repository authors, compiles, and never runs. They are excluded
  * from the measurement by that same constant rather than by a second spelling
  * here, because a second spelling is how the two populations drifted before.
