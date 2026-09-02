@@ -1032,7 +1032,9 @@ export const autoMovieMaterializedLibraryContexts = (props: {
  */
 const materializedLibraryReader = <T>(props: {
   read: (relativePath: string) => Uint8Array;
-  select: (owner: IAutoMovieMaterializedLibraryOwner) => readonly string[];
+  select: (
+    owner: IAutoMovieMaterializedLibraryOwner,
+  ) => readonly string[] | undefined;
   file: (id: string) => string;
   validate: (value: unknown) => typia.IValidation<T>;
   what: string;
@@ -1051,7 +1053,7 @@ const materializedLibraryReader = <T>(props: {
     if (index.success === true)
       for (const owner of index.data.owners)
         published.set(JSON.stringify([owner.branch, owner.owner]), [
-          ...props.select(owner),
+          ...(props.select(owner) ?? []),
         ]);
   } catch {
     // An absent or unreadable index is an uncompiled project, which the compile

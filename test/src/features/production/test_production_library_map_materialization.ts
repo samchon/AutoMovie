@@ -2,6 +2,7 @@ import {
   AutoMovieProductionCompiler,
   AutoMovieProductionProject,
   autoMovieMaterializedLibraryContexts,
+  autoMovieMaterializedLibraryEnvironments,
 } from "@automovie/production";
 import { TestValidator } from "@nestia/e2e";
 
@@ -36,7 +37,11 @@ import {
  *    other's world.
  * 3. The address refusal names contexts rather than environments, so an author
  *    who passed a document path alone is told which reader refused them.
- * 4. Two owners adopting one context id are refused. Two answers to "what is
+ * 4. An index written before contexts existed still yields its buildings. The
+ *    index is validated exactly, so a required field would have failed the
+ *    whole document and handed both commands an empty population -- silently,
+ *    which is the exact failure this field was added to end.
+ * 5. Two owners adopting one context id are refused. Two answers to "what is
  *    north here" cannot both stand, and a report reading whichever landed
  *    second would measure one owner's work against the other's world.
  */
@@ -113,6 +118,33 @@ export const test_production_library_map_materialization = (): void => {
         anOwnerAddressedWithoutItsAnchorIsRefusedAsContexts: true,
       },
     );
+    const index = JSON.parse(
+      Buffer.from(
+        AutoMovieProductionProject.openReadOnly(fixture.root).readGeneratedFile(
+          "library/index.json",
+        ),
+      ).toString("utf8"),
+    ) as { owners: Array<Record<string, unknown>> };
+    for (const owner of index.owners) delete owner.contexts;
+    const older = autoMovieMaterializedLibraryEnvironments({
+      read: (relative) =>
+        relative === "library/index.json"
+          ? Buffer.from(JSON.stringify(index))
+          : AutoMovieProductionProject.openReadOnly(
+              fixture.root,
+            ).readGeneratedFile(relative),
+    })({
+      branch: "spaces",
+      owner: `${LIBRARY_DESIGN}#${LIBRARY_ANCHOR}`,
+      anchor: LIBRARY_ANCHOR,
+    });
+
+    TestValidator.equals(
+      "an index from before contexts existed still yields its buildings",
+      older.length !== 0,
+      true,
+    );
+
     const collided = new AutoMovieProductionCompiler(
       AutoMovieProductionProject.open(fixture.root),
       libraryAuthoring({

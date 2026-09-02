@@ -119,11 +119,14 @@ export interface IAutoMovieMaterializedLibraryOwner {
   /**
    * Ids of the environment contexts this owner published, in code-unit order.
    *
-   * Required here where the contribution's own list is optional: this index is
-   * compiler-written on every compile, so an owner that adopted no world says
-   * so with an empty list rather than by an absence a reader has to interpret.
+   * Optional for the reader's sake, not the writer's. Every compile writes it,
+   * so a current index always carries it; but the index is validated exactly,
+   * and an index written before this field existed would fail that validation
+   * as a whole -- taking the environments down with it and handing
+   * `building:report` and `library:review` an empty population, silently, which
+   * is the exact failure this field was added to end.
    */
-  contexts: string[];
+  contexts?: string[];
 }
 
 /**
