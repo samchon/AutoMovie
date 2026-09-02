@@ -14,7 +14,6 @@ import {
 
 const command = requireSourceModule<{
   runAutoMovieBuildingDerivation: (props: {
-    root: string;
     productionId: string;
     evidence: unknown;
     read: () => unknown;
@@ -79,7 +78,6 @@ export const test_cli_scaffold_building_report_command = (): void => {
           design: { production: {} },
         },
       },
-      root: fixture.root,
       say: (line) => void said.push(line),
       write: (file) =>
         void written.push(file.split(/[\\/]/u).slice(-2).join("/")),

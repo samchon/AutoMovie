@@ -74,8 +74,6 @@ import { productionBuildingStudies } from "./productionStudies";
  * stale folder yourself.
  */
 export const runAutoMovieBuildingDerivation = (props: {
-  /** Project root whose current compiled state is drawn. */
-  root: string;
   /** Production namespace that project declares. */
   productionId: string;
   /** Authoring declaration the design owners are read through. */
@@ -103,7 +101,10 @@ export const runAutoMovieBuildingDerivation = (props: {
     };
   };
 }): void => {
-  const projectRoot = props.root;
+  // One root, taken from the state. Two -- a caller's and the state's -- can
+  // disagree, and a report drawn from one tree into another tree's directory is
+  // exactly the kind of result nobody can trace.
+  const projectRoot = props.state.root;
   const productionId = props.productionId;
   const say =
     props.say ?? ((line: string) => void process.stdout.write(line + NEWLINE));

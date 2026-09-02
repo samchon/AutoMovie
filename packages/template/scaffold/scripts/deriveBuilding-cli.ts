@@ -24,7 +24,6 @@ runAutoMovieBuildingDerivation({
   evidence: productionEvidence,
   productionId,
   read: readAutoMovieProductionEvidence,
-  root: process.cwd(),
   state: requireCurrentAutoMovieProjectState(
     loadAutoMovieProjectState({ root: process.cwd(), productionId }),
   ),
