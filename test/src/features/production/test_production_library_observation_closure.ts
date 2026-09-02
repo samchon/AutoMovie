@@ -130,6 +130,28 @@ export const test_production_library_observation_closure = (): void => {
     },
   );
 
+  // A space, material or service subject is addressed by the environment and
+  // the thing itself -- `space:hall-house/lobby` -- so the building it sits in
+  // is nowhere in the address. The requirement carries it separately, and until
+  // it reached this message nothing read it: an author told they owe an
+  // observation of one material as one model wears it could not tell which
+  // building to walk into, and an attribution derived wrongly said nothing.
+  const offBuilding = required.find(
+    (entry) => entry.subject.includes(`/${entry.building}`) === false,
+  );
+  TestValidator.equals(
+    "a subject whose address omits its building is refused naming that building",
+    {
+      exists: offBuilding !== undefined,
+      namesItsBuilding:
+        close({
+          declared: every.filter((id) => id !== offBuilding?.id),
+        })[0]?.message.includes(`in building "${offBuilding?.building}"`) ??
+        false,
+    },
+    { exists: true, namesItsBuilding: true },
+  );
+
   TestValidator.equals(
     "an addressed waiver excuses it and a malformed one never does",
     namedFacts([

@@ -515,7 +515,7 @@ export const libraryObservationClosureDiagnostics = (props: {
           refuse({
             target: address,
             path: props.path,
-            message: `Library design owner "${props.target}" owes ${entry.role} observation "${entry.id}", derived from ${JSON.stringify(entry.origin)} of compiled subject "${entry.subject}". Declare it or record an addressed waiver; the plan may add observations to the derived population and may never remove one.`,
+            message: `Library design owner "${props.target}" owes ${entry.role} observation "${entry.id}", derived from ${JSON.stringify(entry.origin)} of compiled subject "${entry.subject}" in building "${entry.building}". Declare it or record an addressed waiver; the plan may add observations to the derived population and may never remove one.`,
           }),
         );
       continue;
