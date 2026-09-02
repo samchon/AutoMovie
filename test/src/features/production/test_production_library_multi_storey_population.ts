@@ -53,6 +53,50 @@ export const test_production_library_multi_storey_population = (): void => {
   const derived = unit.autoMovieLibraryObservationRequirements([
     twoStoreyBuilding(),
   ]);
+
+  // An operable hatch cut through the slab between the storeys. It is not an
+  // entrance -- nothing enters the building through it -- and attributing an
+  // opening by the building's entrance list therefore charged nothing for it,
+  // which in a house is what happens to most of the doors.
+  const hatched = twoStoreyBuilding();
+  hatched.openings.push({
+    id: "loft-hatch",
+    kind: "hatch",
+    boundary: "storey-slab",
+    fill: null,
+    profile: {
+      outline: [
+        { x: 1, y: 1 },
+        { x: 2, y: 1 },
+        { x: 2, y: 2 },
+        { x: 1, y: 2 },
+      ],
+    },
+    operation: {
+      panels: [
+        {
+          id: "lid",
+          element: "house-root",
+          width: 1,
+          height: 1,
+          motion: {
+            kind: "revolute",
+            axis: { x: 1, y: 0, z: 0 },
+            pivot: { x: 1, y: 3, z: 1 },
+            min: 0,
+            max: 90,
+          },
+        },
+      ],
+      states: [
+        { id: "shut", panels: [{ panel: "lid", value: 0 }] },
+        { id: "lifted", panels: [{ panel: "lid", value: 90 }] },
+      ],
+      state: "shut",
+      hardware: [],
+    },
+  });
+  const withHatch = unit.autoMovieLibraryObservationRequirements([hatched]);
   const count = (role: string): number =>
     derived.filter((entry) => entry.role === role).length;
 
@@ -110,6 +154,32 @@ export const test_production_library_multi_storey_population = (): void => {
         () => derived.every((entry) => entry.building === "house"),
       ],
       [
+        // Six, in two kinds. Four are the hatch as a working thing -- two
+        // states, the one travel between them, and the panel that moves -- and
+        // those are the four that were charged to nothing before, because the
+        // hatch is not an entrance and the attribution read the entrance list.
+        // The other two are the hatch as a way through: a threshold station
+        // from each storey it joins, which the interior derivation charges for
+        // any opening either room can be looked at through.
+        "anInteriorOperableOpeningIsChargedTwice",
+        () =>
+          withHatch.length === derived.length + 6 &&
+          withHatch.filter(
+            (entry) =>
+              entry.role.startsWith("operation-") &&
+              entry.subject.includes("loft-hatch"),
+          ).length === 4 &&
+          withHatch
+            .filter((entry) => entry.id.includes("threshold-loft-hatch"))
+            .map((entry) => entry.subject)
+            .sort((left, right) => (left < right ? -1 : 1))
+            .join(" ") ===
+            "space:storey-house/ground space:storey-house/upper" &&
+          // The front door is unaffected: attributing by the boundary's space
+          // resolves an envelope opening exactly as the entrance list did.
+          withHatch.every((entry) => entry.building === "house"),
+      ],
+      [
         // Read once so a change to any rule above shows here as well as in its
         // own fact. Forty-seven is what a two-room house with one door and one
         // stair costs, and it is worth knowing that the number is this size.
@@ -124,6 +194,7 @@ export const test_production_library_multi_storey_population = (): void => {
       theContainerSpaceIsChargedNothing: true,
       theStairLandsTwiceAtTwoAddresses: true,
       everythingIsOwedByTheOneBuilding: true,
+      anInteriorOperableOpeningIsChargedTwice: true,
       theWholeHouseIsFortySeven: true,
     },
   );

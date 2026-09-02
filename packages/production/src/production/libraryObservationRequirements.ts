@@ -191,15 +191,29 @@ export const autoMovieLibraryObservationRequirements = (
   //
   // A fixed cut -- an arch, a permanently open passage -- declares no
   // operation, and it is passed over rather than charged an empty state.
+  //
+  // Which building answers for an opening is read from the boundary it is cut
+  // through, not from the building's entrance list. Entrances are the envelope
+  // openings, so attributing by entrance charged the front door and silently
+  // charged nothing for every interior door, hatch and shutter in the building
+  // -- which in a house is most of them. A boundary names the space it encloses
+  // or the two it separates, and the building that owns that space is the one
+  // that owes the view.
   for (const environment of environments) {
-    const buildingOfOpening = new Map<string, string>();
-    for (const unit of builtEnvironmentBuildingCensus(environment))
-      for (const opening of unit.entrances)
-        buildingOfOpening.set(opening, unit.building);
+    const buildingOfSpace = spaceOwners(environment);
+    const boundariesById = new Map(
+      environment.boundaries.map((boundary) => [boundary.id, boundary]),
+    );
     for (const opening of environment.openings) {
       const operation = opening.operation;
       if (operation === undefined) continue;
-      const building = buildingOfOpening.get(opening.id);
+      const building = (boundariesById.get(opening.boundary)?.spaces ?? [])
+        .map((space) => buildingOfSpace.get(space))
+        .find((owner) => owner !== undefined);
+      // A boundary bounding no building's space -- a site gate, a freestanding
+      // screen -- belongs to the environment rather than to a unit, and
+      // attaching it to an arbitrary one would make that owner answer for a
+      // thing it does not contain.
       if (building === undefined) continue;
       const subject = operationSubject(environment.id, opening.id);
       const push = (
@@ -308,13 +322,15 @@ export const autoMovieLibraryObservationRequirements = (
   // -- and one that stops in no building's space is listed by no unit and so is
   // skipped, exactly as a population standing nowhere already was.
   for (const environment of environments) {
-    const connectorsById = new Map(
-      environment.connectors.map((connector) => [connector.id, connector]),
-    );
-    for (const unit of builtEnvironmentBuildingCensus(environment))
-      for (const id of unit.connectors) {
-        const connector = connectorsById.get(id);
-        if (connector === undefined) continue;
+    const census = builtEnvironmentBuildingCensus(environment);
+    // Read connector-first so every building that lists it is reached without
+    // a lookup that could miss. A census unit lists ids drawn from this same
+    // array, so a lookup by id could never fail here, and a guard for that
+    // would be a branch no run can take.
+    for (const connector of environment.connectors)
+      for (const unit of census.filter((entry) =>
+        entry.connectors.includes(connector.id),
+      )) {
         const subject = serviceSubject(environment.id, connector.id);
         const push = (
           role: AutoMovieLibraryObservationRole,
