@@ -69,6 +69,8 @@ export const librarySourceModule = (props: {
   environment?: IAutoMovieBuiltEnvironment;
   environmentId?: string;
   exportName?: string;
+  /** Raw literal for the first owner's adopted worlds, when it adopts any. */
+  contexts?: string;
   models?: string;
   second?: {
     exportName: string;
@@ -82,12 +84,13 @@ export const librarySourceModule = (props: {
     design: string,
     id: string,
     models: string,
+    contexts = "",
   ): string =>
     `export const ${name} = {
   design: ${JSON.stringify(design)},
   build: () => ({
     environments: [{ ...HALL, id: ${JSON.stringify(id)} }],
-    models: ${models},
+    models: ${models},${contexts}
   }),
 } satisfies IAutoMovieLibrarySourceOwner;`;
   return `import type { IAutoMovieLibrarySourceOwner } from "@automovie/interface";
@@ -109,6 +112,9 @@ ${owner(
   props.design ?? LIBRARY_OWNER,
   props.environmentId ?? (props.environment ?? rectangularBuilding()).id,
   props.models ?? "[BENCH]",
+  props.contexts === undefined
+    ? ""
+    : `${String.fromCharCode(10)}    contexts: ${props.contexts},`,
 )}
 ${
   props.second === undefined

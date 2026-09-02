@@ -6,6 +6,7 @@ import type {
   AutoMovieLibraryObservationRole,
   IAutoMovieBuiltEnvironment,
   IAutoMovieDiagnostic,
+  IAutoMovieEnvironmentContext,
   IAutoMovieLibraryRequiredObservation,
   IAutoMovieLibraryReviewObservationReceipt,
   IAutoMovieLibraryReviewWaiver,
@@ -16,6 +17,9 @@ import { compareCodeUnits } from "./contentIdentity";
 /** Stable compiled subject address of one building unit aggregate. */
 const buildingSubject = (environment: string, unit: string): string =>
   `building:${environment}/${unit}`;
+
+/** Stable compiled subject address of one adopted environment context. */
+const mapSubject = (context: string): string => `map:${context}`;
 
 /** Stable compiled subject address of one operable opening. */
 const operationSubject = (environment: string, opening: string): string =>
@@ -93,8 +97,24 @@ const stationRole = (
  */
 export const autoMovieLibraryObservationRequirements = (
   environments: readonly IAutoMovieBuiltEnvironment[],
+  contexts: readonly IAutoMovieEnvironmentContext[] = [],
 ): IAutoMovieLibraryRequiredObservation[] => {
   const required: IAutoMovieLibraryRequiredObservation[] = [];
+  // One per adopted world, before the buildings standing in it. A map owner
+  // publishes contexts and no environment, so this is the whole of its
+  // population; a space owner publishes environments and no context, so this
+  // loop runs zero times and charges it nothing.
+  for (const context of contexts) {
+    const subject = mapSubject(context.id);
+    required.push({
+      id: `${subject}/datum`,
+      role: "map-datum",
+      subject,
+      building: null,
+      origin: "north",
+      pose: null,
+    });
+  }
   for (const environment of environments)
     for (const unit of builtEnvironmentBuildingCensus(environment)) {
       const subject = buildingSubject(environment.id, unit.building);
@@ -515,7 +535,7 @@ export const libraryObservationClosureDiagnostics = (props: {
           refuse({
             target: address,
             path: props.path,
-            message: `Library design owner "${props.target}" owes ${entry.role} observation "${entry.id}", derived from ${JSON.stringify(entry.origin)} of compiled subject "${entry.subject}" in building "${entry.building}". Declare it or record an addressed waiver; the plan may add observations to the derived population and may never remove one.`,
+            message: `Library design owner "${props.target}" owes ${entry.role} observation "${entry.id}", derived from ${JSON.stringify(entry.origin)} of compiled subject "${entry.subject}"${entry.building === null ? "" : ` in building "${entry.building}"`}. Declare it or record an addressed waiver; the plan may add observations to the derived population and may never remove one.`,
           }),
         );
       continue;

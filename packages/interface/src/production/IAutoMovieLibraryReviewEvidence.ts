@@ -130,6 +130,17 @@ export type AutoMovieLibraryReviewEvidence =
  * map nobody looked at is a map nobody authored. A material claiming none of
  * the three owes exactly one observation, and that is the honest number.
  *
+ * A map owner is judged against the world it adopted rather than against a
+ * thing standing in one, and it owes exactly one observation of it. The datum
+ * is the north the work is oriented to and the ground its elevations are
+ * measured from, and it is the only part of the adopted world this contract
+ * carries: a plan drawn against the wrong north is correct in every dimension
+ * and wrong in every relation to the sun, and nothing in a building's own
+ * topology can say so. Extent, water, network and site interface are named by
+ * the same requirement and have no compiled place yet, so they are absent here
+ * rather than approximated -- a role derived from a definition this deriver
+ * invented would measure the deriver, not the author.
+ *
  * A connector is the systems branch's own subject and is judged the way an
  * opening is, with one addition. Its landings are where a carriage meets a
  * floor, which is the failure a route drawing cannot show and a state still
@@ -155,6 +166,7 @@ export type AutoMovieLibraryObservationRole =
   | "interior-center"
   | "interior-corner"
   | "interior-threshold"
+  | "map-datum"
   | "material-emission"
   | "material-response"
   | "material-texture"
@@ -202,8 +214,21 @@ export interface IAutoMovieLibraryRequiredObservation {
   role: AutoMovieLibraryObservationRole;
   /** Stable compiled subject address the observation opens. */
   subject: string;
-  /** Building unit the requirement descends from. */
-  building: string;
+  /**
+   * Building unit the requirement descends from, or null.
+   *
+   * Not derivable from {@link subject}: a building observation is addressed
+   * `building:<environment>/<unit>`, but a space, material, operation or
+   * service subject is addressed by the environment and the thing itself, so
+   * the building it sits in is nowhere in the address. The derivation walks
+   * element -> space -> building to find it, and that walk is the fact.
+   *
+   * Null for a map requirement, which descends from the adopted world rather
+   * than from anything standing in one. It is null rather than the context id
+   * because a reader told the building is `site-north` would go looking for a
+   * building by that name.
+   */
+  building: string | null;
   /** Topology address the requirement was derived from. */
   origin: string;
   /**

@@ -1088,6 +1088,11 @@ export class AutoMovieProductionCompiler {
     const results: IAutoMovieMaterializedLibraryResult[] = [];
     const registeredBy = new Map<string, string>();
     const environmentOwner = new Map<string, string>();
+    // Claimed like the other two, though a context is the world rather than a
+    // thing in it. Two map owners adopting one id are two answers to "what is
+    // north here", and the report that read whichever landed second would be
+    // measuring one owner's work against the other's world.
+    const contextOwner = new Map<string, string>();
     const models = new Map<string, IAutoMovieModel>();
     const modelOwner = new Map<string, string>();
     if (input.scope !== "design")
@@ -1135,6 +1140,7 @@ export class AutoMovieProductionCompiler {
           const accepted = this.acceptLibraryContribution({
             context,
             diagnostics,
+            contextOwner,
             environmentOwner,
             modelOwner,
             models,
@@ -1245,6 +1251,12 @@ export class AutoMovieProductionCompiler {
         result.contribution.environments,
       ]),
     );
+    const contextsOf = new Map(
+      results.map((result) => [
+        JSON.stringify([result.branch, result.owner]),
+        result.contribution.contexts ?? [],
+      ]),
+    );
     diagnostics.push(
       ...libraryReviewEvidenceConsumerDiagnostics({
         authoring,
@@ -1253,6 +1265,8 @@ export class AutoMovieProductionCompiler {
         compileFingerprint: inputFingerprint,
         environments: ({ branch, owner }) =>
           environmentsOf.get(JSON.stringify([branch, owner])) ?? [],
+        contexts: ({ branch, owner }) =>
+          contextsOf.get(JSON.stringify([branch, owner])) ?? [],
         modelExists: (model) => models.has(model),
         rigged: (model) => (models.get(model)?.skeleton ?? null) !== null,
         // A library publishes models, so an asset render target resolves here
@@ -1383,6 +1397,7 @@ export class AutoMovieProductionCompiler {
    */
   private acceptLibraryContribution(props: {
     context: IAutoMovieLibraryBuildContext;
+    contextOwner: Map<string, string>;
     diagnostics: IAutoMovieDiagnostic[];
     environmentOwner: Map<string, string>;
     modelOwner: Map<string, string>;
@@ -1444,6 +1459,13 @@ export class AutoMovieProductionCompiler {
         report(violation);
       if (claim(props.modelOwner, model.id, "model"))
         props.models.set(model.id, model);
+    }
+    for (const context of props.registration.contribution.contexts ?? []) {
+      for (const violation of autoMovieValidationFindings(
+        validateAutoMovieEnvironmentContext({ context }),
+      ))
+        report(violation);
+      claim(props.contextOwner, context.id, "environment context");
     }
     return props.diagnostics
       .slice(before)

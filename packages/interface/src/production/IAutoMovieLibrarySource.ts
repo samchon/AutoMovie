@@ -1,3 +1,4 @@
+import { IAutoMovieEnvironmentContext } from "../analysis/IAutoMovieEnvironmentContext";
 import { IAutoMovieBuiltEnvironment } from "../architecture/IAutoMovieBuiltEnvironment";
 import { IAutoMovieModel } from "../model/IAutoMovieModel";
 import { AutoMovieContentDigest } from "./IAutoMovieProductionDesign";
@@ -29,12 +30,20 @@ export interface IAutoMovieLibraryBuildContext {
 /**
  * What one library source owner hands back to the compiler.
  *
- * The two payloads are the two a consumer already reads. A built environment
- * becomes the compiled topology the required observation population is derived
- * from, and a model becomes the compiled recipe a canonical turntable is judged
- * against. A domain with nothing of either to publish still returns both arrays
- * empty and is still executed, because running the module is what proves it is
+ * Every payload is one a consumer already reads. A built environment becomes
+ * the compiled topology the required observation population is derived from, a
+ * model becomes the compiled recipe a canonical turntable is judged against,
+ * and an adopted environment context becomes the world a map owner is measured
+ * against. A domain with nothing to publish still returns the arrays empty and
+ * is still executed, because running the module is what proves it is
  * deterministic, resolvable and current.
+ *
+ * `contexts` is optional where the other two are required, and the asymmetry is
+ * the upgrade rather than a preference: every library source written before it
+ * existed returns the two, and a project that has not been touched since is not
+ * in error. An absent list and an empty one say the same thing here -- this
+ * owner adopted no world -- because a map owner that adopted one has no reason
+ * to omit it.
  *
  * @evidence requirements/agent-authoring/source-owned-loop.md#agent-source-result-link Fixes the exact result a library source revision is allowed to produce.
  * @evidence specifications/authoring-and-authority/source-authority-and-derivation.md#spec-authoring-source-derivation-state Types the derived library state one executed source revision is allowed to produce.
@@ -45,6 +54,18 @@ export interface IAutoMovieLibraryContribution {
   environments: IAutoMovieBuiltEnvironment[];
   /** Reusable models this owner publishes, in author order. */
   models: IAutoMovieModel[];
+  /**
+   * Adopted environment contexts this owner publishes, in author order.
+   *
+   * A map owner adopts the world its work is designed against -- the north it
+   * is oriented to, the ground its elevations are measured from, and the
+   * instants it is answered at. Until this existed the production design
+   * carried exactly one context for the whole production and no owner
+   * contributed it, so no map owner could be measured against anything: the
+   * derived population was empty and an empty population passes every check
+   * that compares against it.
+   */
+  contexts?: IAutoMovieEnvironmentContext[];
 }
 
 /**
@@ -95,6 +116,14 @@ export interface IAutoMovieMaterializedLibraryOwner {
   environments: string[];
   /** Ids of the models this owner published, in code-unit order. */
   models: string[];
+  /**
+   * Ids of the environment contexts this owner published, in code-unit order.
+   *
+   * Required here where the contribution's own list is optional: this index is
+   * compiler-written on every compile, so an owner that adopted no world says
+   * so with an empty list rather than by an absence a reader has to interpret.
+   */
+  contexts: string[];
 }
 
 /**

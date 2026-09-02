@@ -12,6 +12,7 @@ import type {
 import {
   AutoMovieProductionCompiler,
   AutoMovieProductionProject,
+  autoMovieMaterializedLibraryContexts,
   autoMovieMaterializedLibraryEnvironments,
   canonicalAutoMovieJsonBytes,
   digestAutoMovieBytes,
@@ -439,6 +440,13 @@ export const runLibraryReviewCommand = (props: {
     // wrote down, while the compiler charges it every facade, corner and room
     // its topology derives, and the two answers would disagree at review.
     environments: autoMovieMaterializedLibraryEnvironments({
+      read: (relative) => project.readGeneratedFile(relative),
+    }),
+    // And the worlds it adopted. A map owner publishes no building at all, so
+    // without these it would be reported as owing only what its author already
+    // wrote down -- which is what "an empty population passes every check that
+    // compares against it" looks like from the author's side.
+    contexts: autoMovieMaterializedLibraryContexts({
       read: (relative) => project.readGeneratedFile(relative),
     }),
   });

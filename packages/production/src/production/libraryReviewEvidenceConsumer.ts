@@ -7,6 +7,7 @@ import type {
   AutoMovieGuidePass,
   IAutoMovieBuiltEnvironment,
   IAutoMovieDiagnostic,
+  IAutoMovieEnvironmentContext,
   IAutoMovieLibraryReviewOwnerIdentity,
   IAutoMovieLibraryReviewPlanFile,
   IAutoMovieLibraryReviewPopulation,
@@ -53,6 +54,21 @@ interface ILibraryReviewResolverProps {
     owner: string;
     anchor: string;
   }) => readonly IAutoMovieBuiltEnvironment[];
+  /**
+   * The adopted worlds one owner published, resolved the same way.
+   *
+   * Separate from {@link environments} because they are separate publications:
+   * a map owner contributes a context and no environment, a space owner the
+   * reverse, and an owner that publishes neither is charged by neither. Absent
+   * for the same reason the environments resolver is -- withheld, the map
+   * population is the empty set, which is exactly what a shrunk plan looks like
+   * from here.
+   */
+  contexts?: (props: {
+    branch: string;
+    owner: string;
+    anchor: string;
+  }) => readonly IAutoMovieEnvironmentContext[];
 }
 
 interface ILibraryReviewConsumerProps extends ILibraryReviewResolverProps {
@@ -408,6 +424,11 @@ const resolvePopulation = (
       }));
       const required = autoMovieLibraryObservationRequirements(
         props.environments?.({
+          branch: owner.branch,
+          owner: address,
+          anchor: unit.anchor,
+        }) ?? [],
+        props.contexts?.({
           branch: owner.branch,
           owner: address,
           anchor: unit.anchor,
