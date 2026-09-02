@@ -25,6 +25,25 @@ const operationSubject = (environment: string, opening: string): string =>
 const instanceSubject = (environment: string, set: string): string =>
   `instance:${environment}/${set}`;
 
+/**
+ * Which building unit each logical space belongs to.
+ *
+ * Three derivations below attribute their subject through this map -- an
+ * instance set to the building whose space holds it, a material to the building
+ * whose element wears it, a connector to the building it starts in -- and each
+ * built its own copy. Three copies of one rule is three chances for them to
+ * disagree about who owns a space, and an owner is what a review is counted
+ * per, so the disagreement would be silent and would land in the denominator.
+ */
+const spaceOwners = (
+  environment: IAutoMovieBuiltEnvironment,
+): ReadonlyMap<string, string> => {
+  const owners = new Map<string, string>();
+  for (const unit of builtEnvironmentBuildingCensus(environment))
+    for (const space of unit.spaces) owners.set(space, unit.building);
+  return owners;
+};
+
 /** Stable compiled subject address of one circulation connector. */
 const serviceSubject = (environment: string, connector: string): string =>
   `service:${environment}/${connector}`;
@@ -136,10 +155,7 @@ export const autoMovieLibraryObservationRequirements = (
   // here rather than invented: attaching them to an arbitrary unit would make
   // one owner answer for placement it does not own.
   for (const environment of environments) {
-    const buildingOfSpace = new Map<string, string>();
-    for (const unit of builtEnvironmentBuildingCensus(environment))
-      for (const space of unit.spaces)
-        buildingOfSpace.set(space, unit.building);
+    const buildingOfSpace = spaceOwners(environment);
     for (const population of environment.populations ?? []) {
       const building = buildingOfSpace.get(population.space);
       if (building === undefined) continue;
@@ -225,10 +241,7 @@ export const autoMovieLibraryObservationRequirements = (
     const modelsById = new Map(
       environment.models.map((model) => [model.id, model]),
     );
-    const buildingOfSpace = new Map<string, string>();
-    for (const unit of builtEnvironmentBuildingCensus(environment))
-      for (const space of unit.spaces)
-        buildingOfSpace.set(space, unit.building);
+    const buildingOfSpace = spaceOwners(environment);
     const seen = new Set<string>();
     for (const element of environment.elements) {
       if (element.model === null || element.space === null) continue;
@@ -288,10 +301,7 @@ export const autoMovieLibraryObservationRequirements = (
   // carriages and it still owes its landings, because the step a stair lands on
   // is the same question.
   for (const environment of environments) {
-    const buildingOfSpace = new Map<string, string>();
-    for (const unit of builtEnvironmentBuildingCensus(environment))
-      for (const space of unit.spaces)
-        buildingOfSpace.set(space, unit.building);
+    const buildingOfSpace = spaceOwners(environment);
     for (const connector of environment.connectors) {
       // The connector is attributed to the building it starts in, falling back
       // to the one it arrives at, so a connector entering a building from
