@@ -343,6 +343,34 @@ export const test_production_library_observation_population = (): void => {
     state: "closed",
     hardware: [],
   };
+  // The same operation on a boundary that bounds no building's space -- a site
+  // gate, a freestanding screen. It belongs to the environment rather than to a
+  // unit, and attaching it to an arbitrary one would make that owner answer for
+  // a thing it does not contain.
+  const detachedGate = rectangularBuilding();
+  detachedGate.boundaries.push({
+    id: "gate-panel",
+    kind: "gate",
+    spaces: ["courtyard"],
+    elements: [],
+    face: {
+      origin: { x: 8, y: 0, z: 0 },
+      rotation: { x: 0, y: 0, z: 0, w: 1 },
+      outline: [
+        { x: 0, y: 0 },
+        { x: 2, y: 0 },
+        { x: 2, y: 2 },
+        { x: 0, y: 2 },
+      ],
+      thickness: 0.1,
+    },
+  });
+  detachedGate.openings.push({
+    ...operable.openings[0]!,
+    id: "site-gate",
+    boundary: "gate-panel",
+  });
+
   const operableRequired = derive([operable]);
   TestValidator.equals(
     "an operable opening is judged in its states, its travels, and its contact",
@@ -354,6 +382,9 @@ export const test_production_library_observation_population = (): void => {
       // pairs: the states are declared in the order the opening passes through
       // them, so charging every combination would ask for a swing from closed
       // to closed and read as thoroughness.
+      detached: derive([detachedGate]).filter((entry) =>
+        entry.subject.includes("site-gate"),
+      ).length,
       transitions: operableRequired.filter(
         (entry) => entry.role === "operation-transition",
       ).length,
@@ -391,6 +422,7 @@ export const test_production_library_observation_population = (): void => {
           "operation-transition",
         ],
       ],
+      detached: 0,
       transitions: 2,
       fixed: 0,
     },
