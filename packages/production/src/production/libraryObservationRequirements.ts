@@ -233,6 +233,11 @@ export const autoMovieLibraryObservationRequirements = (
     for (const element of environment.elements) {
       if (element.model === null || element.space === null) continue;
       const building = buildingOfSpace.get(element.space);
+      // An element may cite a runtime model this record does not own -- that is
+      // what `modelReferences` is for, and the validator accepts it. Its
+      // materials are not here to be named, so nothing is derived for it. That
+      // is a skip rather than a gap: charging an observation for a surface this
+      // record cannot describe would invent the surface.
       const model = modelsById.get(element.model);
       if (building === undefined || model === undefined) continue;
       for (const material of model.materials) {
