@@ -86,7 +86,7 @@ npx automovie verify
 npx automovie migrate <directory> [--dry-run | --rollback]
 ```
 
-`start` refuses a non-empty directory unless `--force`. The scaffolded project's `@automovie/*` dependency versions are baked in at build time from this repo's own catalog (`build/syncVersions.ts`), so a generated project never drifts from the engine it targets.
+`start` refuses a non-empty directory unless `--force`. The scaffolded project's `@automovie/*` dependency versions are baked in at build time from this repo's own catalog (`packages/template/build/resolveTemplateVersions.ts`), so a generated project never drifts from the engine it targets.
 
 `migrate --dry-run` validates legacy v1 storage from a temporary copy and prints the immutable byte inventory, production and shot drafts, source TODOs, and warnings without touching the project. Plain `migrate` atomically adds only tracked `automovie` provenance; it never rewrites legacy files or guesses the missing creative TypeScript. `--rollback` removes that state only while no production work has changed it. The import plan fingerprints the pre-import `src`, `generated`, and `renders` baselines, and rollback restores the complete applied state if removing any newly created empty directory fails. Baselines include empty subdirectory topology as well as file bytes, and the project root stays locked until rollback either completes or restores `automovie`.
 
