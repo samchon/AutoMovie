@@ -148,35 +148,27 @@ const staged = <T extends { id: string }>(
  * reached that point is not in error.
  */
 const materialized = (): IAutoMovieBuiltEnvironment[] => {
-  // Only the two reads are guarded. A project with no compiler-owned tree, or
-  // none this reader can open, materializes nothing -- that is the ordinary
-  // state of a film production and of a library before its first compile, and
-  // neither is an error this report should raise on the author's behalf.
-  //
-  // The resolution below is deliberately outside that guard. The reader refuses
-  // an owner addressed without its anchor, and this command passed exactly that
-  // for as long as the defect stood; catching it here would swallow the one
-  // sentence that says so and put the silence straight back.
-  let resolve: ReturnType<typeof autoMovieMaterializedLibraryEnvironments>;
-  let owners: ReturnType<
-    typeof readAutoMovieProductionEvidence
-  >["designOwners"];
-  try {
-    const project = AutoMovieProductionProject.openReadOnly(
-      projectRoot,
-      productionId,
-    );
-    owners = readAutoMovieProductionEvidence({
+  // No guard around these two reads. The cases one would catch -- a project
+  // with no compiler-owned tree, a library before its first compile -- are
+  // both refused above this line already: `requireCurrentAutoMovieProjectState`
+  // runs at module level and stops an uncompiled or stale project, and
+  // importing `../lint.config` validates the evidence declaration before this
+  // file runs at all. A catch here would be a branch no run can take, and it
+  // would swallow the reader's own refusal of an owner addressed without its
+  // anchor -- which is exactly the defect this command carried in silence.
+  const project = AutoMovieProductionProject.openReadOnly(
+    projectRoot,
+    productionId,
+  );
+  return collectAutoMovieMaterializedEnvironments({
+    owners: readAutoMovieProductionEvidence({
       root: projectRoot,
       productionEvidence,
-    }).designOwners;
-    resolve = autoMovieMaterializedLibraryEnvironments({
+    }).designOwners,
+    resolve: autoMovieMaterializedLibraryEnvironments({
       read: (relative) => project.readGeneratedFile(relative),
-    });
-  } catch {
-    return [];
-  }
-  return collectAutoMovieMaterializedEnvironments({ owners, resolve });
+    }),
+  });
 };
 
 const environments = collectAutoMovieBuildingRecords({
