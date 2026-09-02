@@ -543,7 +543,7 @@ const describedSubject = (
   // Remembered per page, not per subject: two pages of one node are two
   // answers, and keying them together would hand the second reader the first
   // reader's rows.
-  const key = `${compiledId} ${memberOffset}`;
+  const key = `${compiledId}\0${memberOffset}`;
   const remembered = described.get(key);
   if (remembered !== undefined) return remembered;
   let answer: IAutoMovieSubjectDescription | Error;
