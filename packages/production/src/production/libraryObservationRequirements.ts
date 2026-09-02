@@ -300,63 +300,67 @@ export const autoMovieLibraryObservationRequirements = (
   // A connector declaring no operation is a stair. It has no states and no
   // carriages and it still owes its landings, because the step a stair lands on
   // is the same question.
+  //
+  // Which building answers for it is the census's answer, not a second rule
+  // here: a unit lists the connectors that stop in its own spaces, counting
+  // every landing rather than only the two ends. A connector serving two
+  // buildings is therefore owed by both, which is right -- each is served by it
+  // -- and one that stops in no building's space is listed by no unit and so is
+  // skipped, exactly as a population standing nowhere already was.
   for (const environment of environments) {
-    const buildingOfSpace = spaceOwners(environment);
-    for (const connector of environment.connectors) {
-      // The connector is attributed to the building it starts in, falling back
-      // to the one it arrives at, so a connector entering a building from
-      // outside is still answered for by the building it serves. One joining no
-      // building's space is skipped rather than attributed to an arbitrary unit.
-      const building =
-        buildingOfSpace.get(connector.from) ??
-        buildingOfSpace.get(connector.to);
-      if (building === undefined) continue;
-      const subject = serviceSubject(environment.id, connector.id);
-      const push = (
-        role: AutoMovieLibraryObservationRole,
-        origin: string,
-      ): void => {
-        required.push({
-          id: `${subject}/${role}/${origin}`,
-          role,
-          subject,
-          building,
-          origin,
-          // What is fixed here is which landing or travel must be opened, not
-          // where the eye stands.
-          pose: null,
-        });
-      };
-      // A connector that names its landings is answered at each of them. One
-      // that names none still joins two spaces, and those two ends are the
-      // landings it has.
-      //
-      // A landing is addressed by its space and its height together, because a
-      // lift serving one atrium at three levels lands three times in the same
-      // space and the space alone would name one observation for all three --
-      // the two upper landings would vanish into the lower one and the review
-      // would read complete having looked at one floor.
-      const landings =
-        connector.landings === undefined || connector.landings.length === 0
-          ? // With no landings declared there is nothing to tell one end from
-            // the other by, and a connector may join a space to itself, so the
-            // end is named by which end it is.
-            [`${connector.from}@from`, `${connector.to}@to`]
-          : connector.landings.map(
-              (landing) => `${landing.space}@${landing.at}`,
-            );
-      for (const landing of landings) push("service-landing", landing);
-      const operation = connector.operation;
-      if (operation === undefined) continue;
-      for (const state of operation.states) push("service-state", state.id);
-      for (let index = 1; index < operation.states.length; index += 1)
-        push(
-          "service-transition",
-          `${operation.states[index - 1]!.id}->${operation.states[index]!.id}`,
-        );
-      for (const carriage of operation.carriages)
-        push("service-carriage", carriage.id);
-    }
+    const connectorsById = new Map(
+      environment.connectors.map((connector) => [connector.id, connector]),
+    );
+    for (const unit of builtEnvironmentBuildingCensus(environment))
+      for (const id of unit.connectors) {
+        const connector = connectorsById.get(id);
+        if (connector === undefined) continue;
+        const subject = serviceSubject(environment.id, connector.id);
+        const push = (
+          role: AutoMovieLibraryObservationRole,
+          origin: string,
+        ): void => {
+          required.push({
+            id: `${subject}/${role}/${origin}`,
+            role,
+            subject,
+            building: unit.building,
+            origin,
+            // What is fixed here is which landing or travel must be opened, not
+            // where the eye stands.
+            pose: null,
+          });
+        };
+        // A connector that names its landings is answered at each of them. One
+        // that names none still joins two spaces, and those two ends are the
+        // landings it has.
+        //
+        // A landing is addressed by its space and its height together, because
+        // a lift serving one atrium at three levels lands three times in the
+        // same space and the space alone would name one observation for all
+        // three -- the two upper landings would vanish into the lower one and
+        // the review would read complete having looked at one floor.
+        const landings =
+          connector.landings === undefined || connector.landings.length === 0
+            ? // With no landings declared there is nothing to tell one end from
+              // the other by, and a connector may join a space to itself, so
+              // the end is named by which end it is.
+              [`${connector.from}@from`, `${connector.to}@to`]
+            : connector.landings.map(
+                (landing) => `${landing.space}@${landing.at}`,
+              );
+        for (const landing of landings) push("service-landing", landing);
+        const operation = connector.operation;
+        if (operation === undefined) continue;
+        for (const state of operation.states) push("service-state", state.id);
+        for (let index = 1; index < operation.states.length; index += 1)
+          push(
+            "service-transition",
+            `${operation.states[index - 1]!.id}->${operation.states[index]!.id}`,
+          );
+        for (const carriage of operation.carriages)
+          push("service-carriage", carriage.id);
+      }
   }
   return required.sort((left, right) => compareCodeUnits(left.id, right.id));
 };
