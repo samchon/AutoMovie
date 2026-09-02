@@ -26,7 +26,10 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { UNEXECUTED_AUTHORED_ROOTS } from "./changedCoverage";
+import {
+  UNEXECUTED_AUTHORED_ROOTS,
+  UNJUDGED_DECLARATION_GLOBS,
+} from "./changedCoverage";
 import { lineCount } from "./reportCoverageGaps";
 import {
   type ICoverageEntry,
@@ -688,6 +691,7 @@ export const measuredShapeReconciliationParts = (props: {
           "--exclude",
           `${root}**`,
         ]),
+        ...UNJUDGED_DECLARATION_GLOBS.flatMap((glob) => ["--exclude", glob]),
         "--extension",
         ".ts",
         "--extension",
@@ -830,6 +834,7 @@ export const measureCoverage = (
           "--exclude",
           `${root}**`,
         ]),
+        ...UNJUDGED_DECLARATION_GLOBS.flatMap((glob) => ["--exclude", glob]),
         "--extension",
         ".ts",
         "--extension",

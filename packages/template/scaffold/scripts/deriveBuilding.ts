@@ -5,6 +5,7 @@ import type {
 import type {
   IAutoMovieBuiltEnvironment,
   IAutoMovieCompiledShotSource,
+  IAutoMovieEnvironmentContext,
   IAutoMovieFluidDomain,
   IAutoMovieServiceNetwork,
   IAutoMovieWaterFeature,
@@ -97,7 +98,9 @@ export const runAutoMovieBuildingDerivation = (props: {
     generated: {
       shots: Iterable<readonly [string, IAutoMovieCompiledShotSource]>;
       manifest: { inputFingerprint: string };
-      design: { production: { environmentContext?: unknown } };
+      design: {
+        production: { environmentContext?: IAutoMovieEnvironmentContext };
+      };
     };
   };
 }): void => {

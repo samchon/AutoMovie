@@ -1,6 +1,9 @@
 import { TestValidator } from "@nestia/e2e";
 
-import { isAuthoredExecutableSource } from "../../coverage/changedCoverage";
+import {
+  UNJUDGED_DECLARATION_GLOBS,
+  isAuthoredExecutableSource,
+} from "../../coverage/changedCoverage";
 import { namedFacts } from "../internal/predicates";
 
 /**
@@ -59,6 +62,23 @@ export const test_workspace_authored_executable_source = (): void => {
           ) === false,
       ],
       [
+        // The gate exists to catch the two populations disagreeing, and it
+        // caught exactly that: the judging half learned this rule and the
+        // measuring half did not, so c8 took `packages/render/lint.config.ts`
+        // and nothing judged it. One rule, two spellings, and the glob half is
+        // checked against the same files the regex half decides.
+        "theMeasurementIsToldTheSameRule",
+        () =>
+          UNJUDGED_DECLARATION_GLOBS.every(
+            (glob) =>
+              isAuthoredExecutableSource(
+                glob
+                  .replace("**/", "packages/engine/src/")
+                  .replace("*", "Engine"),
+              ) === false,
+          ) && UNJUDGED_DECLARATION_GLOBS.length === 3,
+      ],
+      [
         // The name has to be the whole file, not a fragment of one: a module
         // that merely mentions a configuration in its name is a program.
         "aSourceFileNamedAfterAConfigurationIsStillMeasured",
@@ -73,6 +93,7 @@ export const test_workspace_authored_executable_source = (): void => {
       theScaffoldIsShippedRatherThanRunHere: true,
       thisRepositorysOwnPackagingToolingIsNotMeasured: true,
       aDeclarationIsNotAProgram: true,
+      theMeasurementIsToldTheSameRule: true,
       aSourceFileNamedAfterAConfigurationIsStillMeasured: true,
     },
   );

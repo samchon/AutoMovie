@@ -183,6 +183,22 @@ export const UNEXECUTED_AUTHORED_ROOTS: readonly string[] = [
 const DECLARATION_FILE =
   /(?:^|\/)(?:lint\.config|vite\.config)\.[cm]?ts$|EvidenceExclusions\.ts$/u;
 
+/**
+ * The same rule as a glob, for the instrument that cannot read a regular
+ * expression.
+ *
+ * Spelled here beside the rule it mirrors rather than beside the command that
+ * consumes it. The gate exists to catch the two populations disagreeing, and it
+ * caught exactly that when the judging half learned this rule and the measuring
+ * half did not: `INSTRUMENT FAILURE: packages/render/lint.config.ts: the
+ * measurement takes this source and the changed-file gate never judges it`.
+ */
+export const UNJUDGED_DECLARATION_GLOBS: readonly string[] = [
+  "**/lint.config.ts",
+  "**/vite.config.ts",
+  "**/*EvidenceExclusions.ts",
+];
+
 export const isAuthoredExecutableSource = (relative: string): boolean => {
   const target = slash(relative);
   if (UNEXECUTED_AUTHORED_ROOTS.some((root) => target.startsWith(root)))
