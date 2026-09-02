@@ -8,8 +8,8 @@ import type {
 import { TestValidator } from "@nestia/e2e";
 import path from "node:path";
 
+import { loadSourceModule } from "../internal/loadSourceModule";
 import { namedFacts } from "../internal/predicates";
-import { requireSourceModule } from "../internal/requireSourceModule";
 
 /**
  * Load the diagnostic unit from source without making it public API.
@@ -18,7 +18,7 @@ import { requireSourceModule } from "../internal/requireSourceModule";
  * runtime keeps the package source outside this test package's `rootDir` and
  * avoids depending on a pre-existing `packages/production/lib` build.
  */
-const unit = requireSourceModule<{
+const unit = loadSourceModule<{
   consumedModelIds: (
     graph: {
       models: ReadonlyMap<string, { lod: Array<{ recipe: string }> }>;
@@ -59,11 +59,6 @@ const unit = requireSourceModule<{
     __dirname,
     "../../../../packages/production/src/production/reviewEvidenceDiagnostics.ts",
   ),
-  [
-    "consumedModelIds",
-    "assetReviewEvidenceDiagnostics",
-    "reviewEvidenceDiagnostics",
-  ],
 );
 const {
   assetReviewEvidenceDiagnostics,

@@ -3,15 +3,15 @@ import { TestValidator } from "@nestia/e2e";
 import path from "node:path";
 
 import { rectangularBuilding } from "../internal/envelopeFixtures";
+import { loadSourceModule } from "../internal/loadSourceModule";
 import { namedFacts } from "../internal/predicates";
-import { requireSourceModule } from "../internal/requireSourceModule";
 
 interface IBuildingRecord {
   environment: IAutoMovieBuiltEnvironment;
   source: "materialized" | "staged";
 }
 
-const unit = requireSourceModule<{
+const unit = loadSourceModule<{
   collectAutoMovieBuildingRecords: (props: {
     materialized: readonly IAutoMovieBuiltEnvironment[];
     staged: readonly IAutoMovieBuiltEnvironment[];
@@ -54,13 +54,6 @@ const unit = requireSourceModule<{
     __dirname,
     "../../../../packages/template/scaffold/scripts/buildingRecords.ts",
   ),
-  [
-    "collectAutoMovieBuildingRecords",
-    "collectAutoMovieMaterializedEnvironments",
-    "describeAutoMovieBuildingGaps",
-    "describeAutoMovieBuildingRecords",
-    "describeAutoMovieBuildingReport",
-  ],
 );
 
 const NEWLINE = String.fromCharCode(10);

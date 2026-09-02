@@ -157,7 +157,7 @@ const canonical = (value: string): string => slash(path.resolve(value));
  * ever legitimately sits under.
  */
 /**
- * Roots this repository authors, compiles, and deliberately never executes.
+ * Source roots deliberately outside this repository's unit-test coverage.
  *
  * Exported because the measurement has to agree. `coverageIncludes` states the
  * same population in c8's own vocabulary, and a file one list admits while the
@@ -165,7 +165,7 @@ const canonical = (value: string): string => slash(path.resolve(value));
  * file measured but never judged can be edited to any coverage at all without
  * a diagnostic. One source, consumed twice, is what keeps them from drifting.
  */
-export const UNEXECUTED_AUTHORED_ROOTS: readonly string[] = [
+export const UNMEASURED_SOURCE_ROOTS: readonly string[] = [
   "build/",
   "packages/playground/",
   "packages/template/scaffold/",
@@ -201,7 +201,7 @@ export const UNJUDGED_DECLARATION_GLOBS: readonly string[] = [
 
 export const isAuthoredExecutableSource = (relative: string): boolean => {
   const target = slash(relative);
-  if (UNEXECUTED_AUTHORED_ROOTS.some((root) => target.startsWith(root)))
+  if (UNMEASURED_SOURCE_ROOTS.some((root) => target.startsWith(root)))
     return false;
   if (DECLARATION_FILE.test(target)) return false;
   const typedRepositoryTool =

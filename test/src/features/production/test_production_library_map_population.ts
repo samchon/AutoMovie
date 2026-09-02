@@ -8,10 +8,10 @@ import path from "node:path";
 
 import { analysisContext } from "../internal/analysisFixtures";
 import { rectangularBuilding } from "../internal/envelopeFixtures";
+import { loadSourceModule } from "../internal/loadSourceModule";
 import { namedFacts } from "../internal/predicates";
-import { requireSourceModule } from "../internal/requireSourceModule";
 
-const unit = requireSourceModule<{
+const unit = loadSourceModule<{
   autoMovieLibraryObservationRequirements: (
     environments: readonly IAutoMovieBuiltEnvironment[],
     contexts?: readonly IAutoMovieEnvironmentContext[],
@@ -28,10 +28,6 @@ const unit = requireSourceModule<{
     __dirname,
     "../../../../packages/production/src/production/libraryObservationRequirements.ts",
   ),
-  [
-    "autoMovieLibraryObservationRequirements",
-    "libraryObservationClosureDiagnostics",
-  ],
 );
 
 /**

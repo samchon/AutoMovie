@@ -7,8 +7,8 @@ import { AutoMovieProductionProject } from "@automovie/production";
 import { TestValidator } from "@nestia/e2e";
 import path from "node:path";
 
+import { loadSourceModule } from "../internal/loadSourceModule";
 import { namedFacts } from "../internal/predicates";
-import { requireSourceModule } from "../internal/requireSourceModule";
 import {
   LIBRARY_PLAN,
   LIBRARY_SOURCE,
@@ -17,7 +17,7 @@ import {
   librarySourceModule,
 } from "./libraryFixtures";
 
-const consumer = requireSourceModule<{
+const consumer = loadSourceModule<{
   readAutoMovieLibraryReviewRequirements: (props: {
     authoring: IAutoMovieProductionEvidence;
     project: unknown;
@@ -28,7 +28,6 @@ const consumer = requireSourceModule<{
     __dirname,
     "../../../../packages/production/src/production/libraryReviewEvidenceConsumer.ts",
   ),
-  ["readAutoMovieLibraryReviewRequirements"],
 );
 
 const COMPILE = `sha256:${"1".repeat(64)}` as AutoMovieContentDigest;

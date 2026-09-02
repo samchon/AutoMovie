@@ -8,11 +8,11 @@ import { TestValidator } from "@nestia/e2e";
 import path from "node:path";
 
 import { rectangularBuilding } from "../internal/envelopeFixtures";
+import { loadSourceModule } from "../internal/loadSourceModule";
 import { namedFacts } from "../internal/predicates";
-import { requireSourceModule } from "../internal/requireSourceModule";
 
 /** Load the closure gate from source; the library review consumer calls it. */
-const unit = requireSourceModule<{
+const unit = loadSourceModule<{
   autoMovieLibraryObservationRequirements: (
     environments: readonly IAutoMovieBuiltEnvironment[],
   ) => IAutoMovieLibraryRequiredObservation[];
@@ -28,10 +28,6 @@ const unit = requireSourceModule<{
     __dirname,
     "../../../../packages/production/src/production/libraryObservationRequirements.ts",
   ),
-  [
-    "autoMovieLibraryObservationRequirements",
-    "libraryObservationClosureDiagnostics",
-  ],
 );
 
 /**

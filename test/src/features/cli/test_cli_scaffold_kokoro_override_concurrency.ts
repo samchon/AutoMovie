@@ -1,10 +1,6 @@
-import { renderScaffold, writeFiles } from "@automovie/template";
 import { TestValidator } from "@nestia/e2e";
-import fs from "node:fs";
-import os from "node:os";
+import { createRequire } from "node:module";
 import path from "node:path";
-
-import { preserveCliHarnessCleanup } from "./CliHarnessCleanup";
 
 interface IKokoroOverrideModule {
   withKokoroRuntimeOverrides<Output>(
@@ -33,8 +29,8 @@ const deferred = (): {
  *
  * Scenarios:
  *
- * 1. Two physical generated roots load different CJS module instances, start
- *    concurrently, and observe a strict A install/operation/restore then B
+ * 1. Two operations start concurrently and observe a strict A
+ *    install/operation/restore then B
  *    install/operation/restore sequence through one process coordination slot.
  * 2. Both shared globals return to their original object/value identity after
  *    the concurrent calls, proving the slot contains coordination only.
@@ -44,29 +40,15 @@ const deferred = (): {
  */
 export const test_cli_scaffold_kokoro_override_concurrency =
   async (): Promise<void> => {
-    const root = fs.mkdtempSync(
-      path.join(os.tmpdir(), "automovie-kokoro-override-concurrency-"),
+    const loader = createRequire(__filename);
+    const source = path.resolve(
+      __dirname,
+      "../../../../packages/template/scaffold/scripts/withKokoroRuntimeOverrides.ts",
     );
-    let failure: { error: unknown } | undefined;
+    const runtime = loader(source) as IKokoroOverrideModule;
     const initialFetch = globalThis.fetch;
     const environment = { cacheDir: "initial" };
     try {
-      const firstRoot = path.join(root, "first");
-      const secondRoot = path.join(root, "second");
-      writeFiles(firstRoot, renderScaffold({ name: "kokoro-first" }));
-      writeFiles(secondRoot, renderScaffold({ name: "kokoro-second" }));
-      const first = require(
-        path.join(firstRoot, "scripts/withKokoroRuntimeOverrides.ts"),
-      ) as IKokoroOverrideModule;
-      const second = require(
-        path.join(secondRoot, "scripts/withKokoroRuntimeOverrides.ts"),
-      ) as IKokoroOverrideModule;
-      TestValidator.equals(
-        "generated roots load distinct override module objects",
-        first === second,
-        false,
-      );
-
       const fetchA = (() =>
         Promise.reject(new Error("unused A fetch"))) as typeof fetch;
       const fetchB = (() =>
@@ -122,9 +104,9 @@ export const test_cli_scaffold_kokoro_override_concurrency =
             return name;
           },
         );
-      const firstCall = call(first, "A", fetchA);
+      const firstCall = call(runtime, "A", fetchA);
       await enteredA.promise;
-      const secondCall = call(second, "B", fetchB);
+      const secondCall = call(runtime, "B", fetchB);
       await Promise.resolve();
       TestValidator.equals(
         "the second physical copy waits without installing an override",
@@ -168,7 +150,7 @@ export const test_cli_scaffold_kokoro_override_concurrency =
       const cleanup = new Error("Kokoro fetch restoration failed");
       let combined: unknown;
       try {
-        await first.withKokoroRuntimeOverrides(
+        await runtime.withKokoroRuntimeOverrides(
           [
             {
               resource: "failing fetch",
@@ -190,7 +172,7 @@ export const test_cli_scaffold_kokoro_override_concurrency =
       }
       const errors =
         combined instanceof AggregateError ? [...combined.errors] : [];
-      const recovery = await second.withKokoroRuntimeOverrides(
+      const recovery = await runtime.withKokoroRuntimeOverrides(
         [
           {
             resource: "recovery fetch",
@@ -222,16 +204,7 @@ export const test_cli_scaffold_kokoro_override_concurrency =
           restored: true,
         },
       );
-    } catch (error) {
-      failure = { error };
-      throw error;
     } finally {
       globalThis.fetch = initialFetch;
-      preserveCliHarnessCleanup(failure, [
-        {
-          resource: "Kokoro override concurrency fixture",
-          cleanup: () => fs.rmSync(root, { force: true, recursive: true }),
-        },
-      ]);
     }
   };

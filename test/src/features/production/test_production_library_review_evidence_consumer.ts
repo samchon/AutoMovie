@@ -18,8 +18,8 @@ import {
 import { TestValidator } from "@nestia/e2e";
 import path from "node:path";
 
+import { loadSourceModule } from "../internal/loadSourceModule";
 import { namedFacts } from "../internal/predicates";
-import { requireSourceModule } from "../internal/requireSourceModule";
 import { productionFixture } from "./productionFixtures";
 
 interface ConsumerProps {
@@ -38,7 +38,7 @@ interface ConsumerProps {
   ) => ReadonlyArray<{ time: number; pass: AutoMovieGuidePass }>;
 }
 
-const consumer = requireSourceModule<{
+const consumer = loadSourceModule<{
   readAutoMovieLibraryReviewRequirements: (props: {
     authoring: IAutoMovieProductionEvidence;
     project: IAutoMovieLibraryReviewProjectReader;
@@ -52,13 +52,9 @@ const consumer = requireSourceModule<{
     __dirname,
     "../../../../packages/production/src/production/libraryReviewEvidenceConsumer.ts",
   ),
-  [
-    "readAutoMovieLibraryReviewRequirements",
-    "libraryReviewEvidenceConsumerDiagnostics",
-  ],
 );
 
-const contentIdentity = requireSourceModule<{
+const contentIdentity = loadSourceModule<{
   canonicalAutoMovieJsonBytes: (value: unknown) => Uint8Array;
   digestAutoMovieBytes: (bytes: Uint8Array) => AutoMovieContentDigest;
 }>(
@@ -66,7 +62,6 @@ const contentIdentity = requireSourceModule<{
     __dirname,
     "../../../../packages/production/src/production/contentIdentity.ts",
   ),
-  ["canonicalAutoMovieJsonBytes", "digestAutoMovieBytes"],
 );
 
 const digest = (digit: string): AutoMovieContentDigest =>

@@ -8,10 +8,10 @@ import type {
 import { TestValidator } from "@nestia/e2e";
 import path from "node:path";
 
+import { loadSourceModule } from "../internal/loadSourceModule";
 import { namedFacts } from "../internal/predicates";
-import { requireSourceModule } from "../internal/requireSourceModule";
 
-const unit = requireSourceModule<{
+const unit = loadSourceModule<{
   libraryReviewEvidenceDiagnostics: (props: {
     kind: "brief" | "film" | "library";
     scope: "design" | "source" | "review" | "final";
@@ -31,7 +31,6 @@ const unit = requireSourceModule<{
     __dirname,
     "../../../../packages/production/src/production/libraryReviewEvidenceDiagnostics.ts",
   ),
-  ["libraryReviewEvidenceDiagnostics"],
 );
 const { libraryReviewEvidenceDiagnostics } = unit;
 

@@ -2,10 +2,10 @@ import { encodeAutoMoviePathSegment } from "@automovie/production";
 import { TestValidator } from "@nestia/e2e";
 import path from "node:path";
 
+import { loadSourceModule } from "../internal/loadSourceModule";
 import { namedFacts } from "../internal/predicates";
-import { requireSourceModule } from "../internal/requireSourceModule";
 
-const unit = requireSourceModule<{
+const unit = loadSourceModule<{
   planAutoMovieBuildingSidecars: (props: {
     encode: (segment: string) => string;
     id: string;
@@ -16,7 +16,6 @@ const unit = requireSourceModule<{
     __dirname,
     "../../../../packages/template/scaffold/scripts/buildingSidecars.ts",
   ),
-  ["planAutoMovieBuildingSidecars"],
 );
 
 const NEWLINE = String.fromCharCode(10);

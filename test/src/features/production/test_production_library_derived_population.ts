@@ -7,8 +7,8 @@ import {
 import { TestValidator } from "@nestia/e2e";
 import path from "node:path";
 
+import { loadSourceModule } from "../internal/loadSourceModule";
 import { namedFacts } from "../internal/predicates";
-import { requireSourceModule } from "../internal/requireSourceModule";
 import {
   LIBRARY_OWNER,
   LIBRARY_PLAN,
@@ -17,7 +17,7 @@ import {
   libraryFixture,
 } from "./libraryFixtures";
 
-const command = requireSourceModule<{
+const command = loadSourceModule<{
   runLibraryReviewCommand: (props: {
     argv: readonly string[];
     root: string;
@@ -30,7 +30,6 @@ const command = requireSourceModule<{
     __dirname,
     "../../../../packages/template/scaffold/scripts/library-review.ts",
   ),
-  ["runLibraryReviewCommand"],
 );
 
 /** The exact owner address every derived refusal and requirement is written at. */

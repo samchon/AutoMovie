@@ -2,8 +2,8 @@ import { TestValidator } from "@nestia/e2e";
 import path from "node:path";
 
 import { rectangularBuilding } from "../internal/envelopeFixtures";
+import { loadSourceModule } from "../internal/loadSourceModule";
 import { namedFacts } from "../internal/predicates";
-import { requireSourceModule } from "../internal/requireSourceModule";
 
 interface IAction {
   kind: "write" | "say";
@@ -11,7 +11,7 @@ interface IAction {
   line?: string;
 }
 
-const unit = requireSourceModule<{
+const unit = loadSourceModule<{
   collectAutoMovieStagedRecords: <T extends { id: string }>(props: {
     shots: ReadonlyArray<readonly [string, unknown]>;
     select: (compiled: never) => readonly T[] | undefined;
@@ -31,7 +31,6 @@ const unit = requireSourceModule<{
     __dirname,
     "../../../../packages/template/scaffold/scripts/buildingDerivation.ts",
   ),
-  ["collectAutoMovieStagedRecords", "deriveAutoMovieBuildingActions"],
 );
 
 const REPORT = {

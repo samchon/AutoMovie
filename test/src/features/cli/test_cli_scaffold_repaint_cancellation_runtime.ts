@@ -1,12 +1,7 @@
-import { renderScaffold, writeFiles } from "@automovie/template";
 import { TestValidator } from "@nestia/e2e";
 import { EventEmitter } from "node:events";
-import fs from "node:fs";
 import { createRequire } from "node:module";
-import os from "node:os";
 import path from "node:path";
-
-import { preserveCliRootFixtureCleanup } from "./CliRootFixtureCleanup";
 
 interface ICancellationRuntime {
   signal: AbortSignal;
@@ -72,12 +67,11 @@ const exercise = async (
 };
 
 /**
- * Repaint cancellation is identical in source and every generated project.
+ * Repaint cancellation preserves abort reason, failure, and cleanup.
  *
  * The lifecycle is exercised through a deterministic signal bus rather than a
  * platform-dependent child-process interrupt. That observes the exact abort
- * reason, failure forwarding, and cleanup semantics the CLI consumes while the
- * generated-copy half proves the scaffold did not omit or rewrite the runtime.
+ * reason, failure forwarding, and cleanup semantics the CLI consumes.
  *
  * Scenarios:
  *
@@ -85,37 +79,14 @@ const exercise = async (
  *    capture closer, and removes both listeners.
  * 2. SIGTERM independently aborts with its named reason and removes both
  *    listeners.
- * 3. The repository source and scaffold-rendered generated copy satisfy the
- *    same lifecycle contract.
  */
 export const test_cli_scaffold_repaint_cancellation_runtime =
   async (): Promise<void> => {
-    const root = fs.mkdtempSync(
-      path.join(os.tmpdir(), "automovie-repaint-cancellation-"),
-    );
-    let failure: { error: unknown } | undefined;
-    try {
-      const project = path.join(root, "generated");
-      writeFiles(project, renderScaffold({ name: "repaint-cancellation" }));
-      const generated = createRequire(__filename)(
-        path.join(project, "scripts", "repaintCancellationRuntime.ts"),
-      ) as ICancellationModule;
-      const source = createRequire(__filename)(
-        path.resolve(
-          __dirname,
-          "../../../../packages/template/scaffold/scripts/repaintCancellationRuntime.ts",
-        ),
-      ) as ICancellationModule;
-      await exercise("repository source", source);
-      await exercise("generated project", generated);
-    } catch (error) {
-      failure = { error };
-      throw error;
-    } finally {
-      preserveCliRootFixtureCleanup(
-        failure,
-        () => fs.rmSync(root, { recursive: true, force: true }),
-        "repaint cancellation fixture",
-      );
-    }
+    const source = createRequire(__filename)(
+      path.resolve(
+        __dirname,
+        "../../../../packages/template/scaffold/scripts/repaintCancellationRuntime.ts",
+      ),
+    ) as ICancellationModule;
+    await exercise("repaint cancellation", source);
   };

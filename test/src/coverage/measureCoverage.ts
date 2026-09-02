@@ -27,8 +27,8 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import {
-  UNEXECUTED_AUTHORED_ROOTS,
   UNJUDGED_DECLARATION_GLOBS,
+  UNMEASURED_SOURCE_ROOTS,
 } from "./changedCoverage";
 import { lineCount } from "./reportCoverageGaps";
 import {
@@ -484,10 +484,11 @@ export const coverageSourceRoots = ["."];
  * {@link runCoveragePopulationGate} is what keeps this honest, by refusing any
  * run where a file one population admits the other does not.
  *
- * What this list does not say is what `UNEXECUTED_AUTHORED_ROOTS` says: the
- * roots this repository authors, compiles, and never runs. They are excluded
- * from the measurement by that same constant rather than by a second spelling
- * here, because a second spelling is how the two populations drifted before.
+ * What this list does not say is what `UNMEASURED_SOURCE_ROOTS` says: the roots
+ * this repository deliberately leaves outside its unit-test coverage
+ * population. They are excluded from the measurement by that same constant
+ * rather than by a second spelling here, because a second spelling is how the
+ * two populations drifted before.
  */
 export const coverageIncludes = [
   "*.ts",
@@ -813,7 +814,7 @@ export const coverageInstrumentPopulation = (): string[] => [
   "**/index.ts",
   "--exclude",
   "**/bin.ts",
-  ...UNEXECUTED_AUTHORED_ROOTS.flatMap((root) => ["--exclude", `${root}**`]),
+  ...UNMEASURED_SOURCE_ROOTS.flatMap((root) => ["--exclude", `${root}**`]),
   ...UNJUDGED_DECLARATION_GLOBS.flatMap((glob) => ["--exclude", glob]),
   "--extension",
   ".ts",

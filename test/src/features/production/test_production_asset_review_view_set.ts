@@ -2,8 +2,8 @@ import type { AutoMovieGuidePass } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 import path from "node:path";
 
+import { loadSourceModule } from "../internal/loadSourceModule";
 import { namedFacts } from "../internal/predicates";
-import { requireSourceModule } from "../internal/requireSourceModule";
 
 /**
  * Load the declared view set from source without making it public API.
@@ -12,7 +12,7 @@ import { requireSourceModule } from "../internal/requireSourceModule";
  * so it is a consumed internal rather than an export; resolving it here through
  * the launcher's own require hook keeps it that way.
  */
-const unit = requireSourceModule<{
+const unit = loadSourceModule<{
   autoMovieAssetReviewViews: (props: { rigged: boolean }) => Array<{
     id: string;
     angleDeg: number;
@@ -25,7 +25,6 @@ const unit = requireSourceModule<{
     __dirname,
     "../../../../packages/production/src/production/assetReviewViews.ts",
   ),
-  ["autoMovieAssetReviewViews"],
 );
 const autoMovieAssetReviewViews = unit.autoMovieAssetReviewViews;
 

@@ -6,8 +6,8 @@ import type {
 import { TestValidator } from "@nestia/e2e";
 import path from "node:path";
 
+import { loadSourceModule } from "../internal/loadSourceModule";
 import { namedFacts } from "../internal/predicates";
-import { requireSourceModule } from "../internal/requireSourceModule";
 
 /**
  * Load private diagnostic units from source without making them public API.
@@ -17,7 +17,7 @@ import { requireSourceModule } from "../internal/requireSourceModule";
  * type checking, and avoids depending on a pre-existing `packages/production/lib`
  * build in a clean checkout.
  */
-const proseUnits = requireSourceModule<{
+const proseUnits = loadSourceModule<{
   parseScreenplayProse: (content: string) => Array<{
     id: string;
     title: string;
@@ -32,9 +32,8 @@ const proseUnits = requireSourceModule<{
     __dirname,
     "../../../../packages/production/src/production/screenplayProseDiagnostics.ts",
   ),
-  ["parseScreenplayProse", "screenplayProseDiagnostics"],
 );
-const timingUnits = requireSourceModule<{
+const timingUnits = loadSourceModule<{
   screenplayTimingDiagnostics: (props: {
     contracts: ReadonlyMap<string, IAutoMovieShotContract>;
     read: (relativePath: string) => string | null;
@@ -46,7 +45,6 @@ const timingUnits = requireSourceModule<{
     __dirname,
     "../../../../packages/production/src/production/screenplayTimingDiagnostics.ts",
   ),
-  ["screenplayTimingDiagnostics"],
 );
 const { parseScreenplayProse, screenplayProseDiagnostics } = proseUnits;
 const { screenplayTimingDiagnostics } = timingUnits;

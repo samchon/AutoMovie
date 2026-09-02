@@ -175,11 +175,8 @@ export const renderAutoMovieTemplateVersionsModule = (
 /**
  * Write that module, when this file is the process entry.
  *
- * Guarded so importing it -- which is how its rules are read -- does not write
- * a file. The emit and the resolution live together because a path require of
- * a module that imports a sibling answers with the sibling here (#2224), so a
- * two-file arrangement leaves the importing half unreadable, and the rules in
- * it unread.
+ * Guarded so importing the resolver does not write a file. The build command
+ * executes this entry directly when it intends to regenerate the module.
  */
 if (
   process.argv[1] !== undefined &&

@@ -1,8 +1,8 @@
 import { TestValidator } from "@nestia/e2e";
 import path from "node:path";
 
+import { loadSourceModule } from "../internal/loadSourceModule";
 import { namedFacts } from "../internal/predicates";
-import { requireSourceModule } from "../internal/requireSourceModule";
 
 interface IInspectionInput {
   productionId: string;
@@ -13,7 +13,7 @@ interface IInspectionInput {
   height: number;
 }
 
-const keys = requireSourceModule<{
+const keys = loadSourceModule<{
   pageKey: (input: IInspectionInput) => string;
   pageSubject: (input: IInspectionInput) => string;
 }>(
@@ -21,7 +21,6 @@ const keys = requireSourceModule<{
     __dirname,
     "../../../../packages/template/scaffold/scripts/inspectionPageKey.ts",
   ),
-  ["pageKey", "pageSubject"],
 );
 
 const input = (

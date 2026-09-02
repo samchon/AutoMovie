@@ -1,19 +1,9 @@
-import fs from "node:fs";
-import path from "node:path";
-
 /**
  * Refuse a scenario filter that selected nothing.
  *
  * `--include test_this_does_not_exist` printed `0/0 passed`, `All tests
- * passed`, and exited 0. Four callers depend on that filter and each is the
- * only place its check runs:
- *
- * Rename or delete a scenario and any command that names it switches off
- * silently, with a green lane and nothing anywhere saying that nothing ran.
- * This is the ninth time this campaign has met a check reporting success while
- * measuring nothing, and it caught the tenth: deleting the scenario `pnpm run
- * build` chained as `consumer:check` failed the build here rather than passing
- * over an empty selection.
+ * passed`, and exited 0. A caller asking for a named subset must not receive a
+ * green result when that subset does not exist.
  *
  * Each requested term is judged on its own rather than the selection as a
  * whole, because `--include a b` where only `a` matches still runs something
@@ -60,29 +50,4 @@ export const scenarioSelectionDiagnostics = (
       `the requested filter selected none of the ${selection.discovered.length} discovered scenarios`,
     );
   return diagnostics;
-};
-
-/** Every `--include` term the repository's own commands depend on. */
-export const requestedScenarioTerms = (
-  root: string,
-  read: (file: string) => string = (file) => fs.readFileSync(file, "utf8"),
-): Array<{ source: string; term: string }> => {
-  const sources = [
-    ".github/workflows/build.yml",
-    ".github/workflows/test.yml",
-    "test/package.json",
-  ];
-  const found: Array<{ source: string; term: string }> = [];
-  for (const relative of sources) {
-    // Read without asking whether the file is there. All three are committed,
-    // so a guard here is an alternative nothing can reach, and if one of them
-    // ever goes missing that is the finding rather than something to skip: the
-    // read fails naming the path, and the pinned term list fails beside it.
-    const file = path.join(root, relative);
-    for (const match of read(file).matchAll(
-      /--include\s+(test_[A-Za-z0-9_]+)/gu,
-    ))
-      found.push({ source: relative, term: match[1]! });
-  }
-  return found;
 };
