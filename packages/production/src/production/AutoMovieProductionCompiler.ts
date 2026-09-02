@@ -64,6 +64,7 @@ import {
   IAutoMovieDesignLineage,
   IAutoMovieDesignReference,
   IAutoMovieDiagnostic,
+  IAutoMovieEnvironmentContext,
   IAutoMovieExternalMotionBasis,
   IAutoMovieExternalMotionConversionReceipt,
   IAutoMovieExternalMotionLossEntry,
@@ -1254,7 +1255,7 @@ export class AutoMovieProductionCompiler {
     const contextsOf = new Map(
       results.map((result) => [
         JSON.stringify([result.branch, result.owner]),
-        result.contribution.contexts ?? [],
+        result.contribution.contexts,
       ]),
     );
     diagnostics.push(
@@ -1460,7 +1461,7 @@ export class AutoMovieProductionCompiler {
       if (claim(props.modelOwner, model.id, "model"))
         props.models.set(model.id, model);
     }
-    for (const context of props.registration.contribution.contexts ?? []) {
+    for (const context of props.registration.contribution.contexts) {
       for (const violation of autoMovieValidationFindings(
         validateAutoMovieEnvironmentContext({ context }),
       ))
@@ -4307,8 +4308,17 @@ interface ICompiledLibraryOwnerRegistration {
   export: string;
   /** Exact design-document and H2 address the export registered. */
   design: string;
-  /** Validated contribution the export's build function returned. */
-  contribution: IAutoMovieLibraryContribution;
+  /**
+   * Validated contribution the export's build function returned.
+   *
+   * `contexts` is definite here where the contract leaves it optional. The
+   * contract is optional so a library source written before the field existed
+   * still satisfies the shape; inside the compile every reader is owed a list,
+   * and three of them were each deciding that for themselves.
+   */
+  contribution: IAutoMovieLibraryContribution & {
+    contexts: IAutoMovieEnvironmentContext[];
+  };
 }
 
 /**
@@ -4454,7 +4464,15 @@ const compileLibrarySource = (props: {
       registrations.push({
         export: entry.name,
         design: entry.design,
-        contribution: validation.data,
+        // Normalized once, here, where every executed owner passes. `contexts`
+        // is optional on the contract so a library source written before it
+        // existed still satisfies the shape; every reader after this point is
+        // owed a list, and three of them were each deciding that for
+        // themselves.
+        contribution: {
+          ...validation.data,
+          contexts: validation.data.contexts ?? [],
+        },
       });
     }
   } catch (error) {
