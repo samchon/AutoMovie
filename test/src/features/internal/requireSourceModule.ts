@@ -31,6 +31,16 @@ import fs from "node:fs";
  *
  * Type-only exports are invisible at run time and cannot be named here. Pass
  * the values the scenario actually calls.
+ *
+ * The declaration check reads `export const|let|var|function|class <name>`, so
+ * a module that declares a value and exports it separately as `export { name }`
+ * is refused even though it does declare it. That is a false refusal and it is
+ * left standing rather than papered over, because the pattern that would admit
+ * it is one character away from the pattern that admits `export { name } from
+ * "./elsewhere"`, which is the re-export this must keep refusing. It is loud
+ * when it happens -- the message names the file and the export -- and no module
+ * this suite loads by path is written that way. Widen it only with a case for
+ * both forms.
  */
 export const requireSourceModule = <T>(
   file: string,
