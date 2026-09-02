@@ -139,10 +139,27 @@ export const test_production_library_map_materialization = (): void => {
       anchor: LIBRARY_ANCHOR,
     });
 
+    // And the same index read for contexts yields none rather than throwing.
+    // That is the upgrade a map owner actually meets: an owner whose index
+    // entry predates the field is an owner that adopted no world, which is a
+    // real answer, not a fault.
+    const olderContexts = autoMovieMaterializedLibraryContexts({
+      read: (relative) =>
+        relative === "library/index.json"
+          ? Buffer.from(JSON.stringify(index))
+          : AutoMovieProductionProject.openReadOnly(
+              fixture.root,
+            ).readGeneratedFile(relative),
+    })({
+      branch: "spaces",
+      owner: `${LIBRARY_DESIGN}#${LIBRARY_ANCHOR}`,
+      anchor: LIBRARY_ANCHOR,
+    });
+
     TestValidator.equals(
-      "an index from before contexts existed still yields its buildings",
-      older.length !== 0,
-      true,
+      "an index from before contexts existed still answers both readers",
+      { buildings: older.length !== 0, worlds: olderContexts.length },
+      { buildings: true, worlds: 0 },
     );
 
     const collided = new AutoMovieProductionCompiler(

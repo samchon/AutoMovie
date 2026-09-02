@@ -681,25 +681,7 @@ export const measuredShapeReconciliationParts = (props: {
         // measured source is judged by that source rather than dropped for the
         // path it was loaded from.
         "--exclude-after-remap",
-        ...SOURCES.flatMap((source) => ["--src", source]),
-        ...INCLUDES.flatMap((include) => ["--include", include]),
-        "--exclude",
-        "**/index.ts",
-        "--exclude",
-        "**/bin.ts",
-        ...UNEXECUTED_AUTHORED_ROOTS.flatMap((root) => [
-          "--exclude",
-          `${root}**`,
-        ]),
-        ...UNJUDGED_DECLARATION_GLOBS.flatMap((glob) => ["--exclude", glob]),
-        "--extension",
-        ".ts",
-        "--extension",
-        ".tsx",
-        "--extension",
-        ".cts",
-        "--extension",
-        ".mts",
+        ...coverageInstrumentPopulation(),
         "--temp-directory",
         records,
         "--reports-dir",
@@ -810,6 +792,39 @@ export const coverageMeasurementDependencies: ICoverageMeasurementDependencies =
     environment: process.env,
   };
 
+/**
+ * Which sources the instrument takes, and which it leaves alone.
+ *
+ * Spelled once for the two spawns that need it -- the run and the report --
+ * because it is the half that can be wrong on its own and it was written out
+ * twice. The population gate exists to catch this list disagreeing with
+ * `isAuthoredExecutableSource`, and it caught exactly that: the judging half
+ * learned a lint config is a declaration and this half did not, so c8 kept
+ * instrumenting `packages/render/lint.config.ts` and nothing judged it. A list
+ * with two spellings has two places to drift from.
+ *
+ * The spawns around it launch the suite, so nothing in the suite can run them.
+ * The list lived where no test could read it, which is how it drifted.
+ */
+export const coverageInstrumentPopulation = (): string[] => [
+  ...SOURCES.flatMap((source) => ["--src", source]),
+  ...INCLUDES.flatMap((include) => ["--include", include]),
+  "--exclude",
+  "**/index.ts",
+  "--exclude",
+  "**/bin.ts",
+  ...UNEXECUTED_AUTHORED_ROOTS.flatMap((root) => ["--exclude", `${root}**`]),
+  ...UNJUDGED_DECLARATION_GLOBS.flatMap((glob) => ["--exclude", glob]),
+  "--extension",
+  ".ts",
+  "--extension",
+  ".tsx",
+  "--extension",
+  ".cts",
+  "--extension",
+  ".mts",
+];
+
 export const measureCoverage = (
   dependencies: ICoverageMeasurementDependencies,
 ): number => {
@@ -824,25 +839,7 @@ export const measureCoverage = (
         path.join(ROOT, "test", "node_modules", "c8", "bin", "c8.js"),
         "--all",
         "--exclude-after-remap",
-        ...SOURCES.flatMap((source) => ["--src", source]),
-        ...INCLUDES.flatMap((include) => ["--include", include]),
-        "--exclude",
-        "**/index.ts",
-        "--exclude",
-        "**/bin.ts",
-        ...UNEXECUTED_AUTHORED_ROOTS.flatMap((root) => [
-          "--exclude",
-          `${root}**`,
-        ]),
-        ...UNJUDGED_DECLARATION_GLOBS.flatMap((glob) => ["--exclude", glob]),
-        "--extension",
-        ".ts",
-        "--extension",
-        ".tsx",
-        "--extension",
-        ".cts",
-        "--extension",
-        ".mts",
+        ...coverageInstrumentPopulation(),
         "--temp-directory",
         temporary,
         "--reports-dir",

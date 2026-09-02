@@ -4,6 +4,7 @@ import {
   UNJUDGED_DECLARATION_GLOBS,
   isAuthoredExecutableSource,
 } from "../../coverage/changedCoverage";
+import { coverageInstrumentPopulation } from "../../coverage/measureCoverage";
 import { namedFacts } from "../internal/predicates";
 
 /**
@@ -79,6 +80,23 @@ export const test_workspace_authored_executable_source = (): void => {
           ) && UNJUDGED_DECLARATION_GLOBS.length === 3,
       ],
       [
+        // The two spawns that need this list -- the run and the report -- read
+        // one spelling of it, and every root the gate refuses to judge is in
+        // it. A list with two spellings has two places to drift from, and this
+        // one drifted: c8 kept instrumenting `packages/render/lint.config.ts`
+        // while nothing judged it.
+        "theInstrumentIsToldEveryRuleTheGateKnows",
+        () => {
+          const args = coverageInstrumentPopulation();
+          return (
+            UNJUDGED_DECLARATION_GLOBS.every((glob) => args.includes(glob)) &&
+            args.includes("packages/template/scaffold/**") &&
+            args.includes("build/**") &&
+            args.includes("packages/playground/**")
+          );
+        },
+      ],
+      [
         // The name has to be the whole file, not a fragment of one: a module
         // that merely mentions a configuration in its name is a program.
         "aSourceFileNamedAfterAConfigurationIsStillMeasured",
@@ -94,6 +112,7 @@ export const test_workspace_authored_executable_source = (): void => {
       thisRepositorysOwnPackagingToolingIsNotMeasured: true,
       aDeclarationIsNotAProgram: true,
       theMeasurementIsToldTheSameRule: true,
+      theInstrumentIsToldEveryRuleTheGateKnows: true,
       aSourceFileNamedAfterAConfigurationIsStillMeasured: true,
     },
   );
