@@ -6,11 +6,11 @@ Both commands refuse missing or stale generated state. Compile again before meas
 
 ## Building reports
 
-Run `npm run building:report` when the compiled shots stage a built environment whose spatial or system review needs drawings, schedules, quantities, services, or declared performance studies. The command collects every staged building once by id and refuses two different records under one id instead of choosing one by shot order.
+Run `npm run building:report` when a compiled building's spatial or system review needs drawings, schedules, quantities, services, or declared performance studies. The command collects every building this production holds: the ones compiled shots stage, and the ones a library materialized as the delivered work itself. It takes each once by id and refuses two different records under one id instead of choosing one by shot order; where a shot and a library carry the same id, the staged record wins, because that is the one a frame was drawn from.
 
 Each building writes deterministic SVG sheets and `report.json` under `reports/<building>/`. Read the room schedule's declared volume box and measured content box as separate facts: the first says what the space claims to contain, while the second says what its staged members actually occupy. Read every declared gap with its status, reason, and remedy. A gap may name an unsupported derivation or a study that could run but lacks a production input; neither is repaired by editing the report.
 
-The command exits successfully when no built environment is staged and says that there was nothing to draw, count, or study. That is a truthful empty population, not a clean building review. A library-only production has no shot artifact for this command to inspect, so do not stage a dummy shot to make the command run. Satisfy that library branch with other exact observations or a production-owned offline script over its current design records.
+The command exits successfully when no built environment is staged or materialized and says that there was nothing to draw, count, or study. That is a truthful empty population, not a clean building review. It also tallies the two provenances apart, and the difference is what a citation may rest on: a staged building has frames a delivery review can open, while a materialized one has none, so a claim about how it looks rests on these drawings and nothing else. Never stage a dummy shot to make a library building look photographed.
 
 Reports are tracked sidecars worth comparing across revisions, but they remain derivations. Correct the design or declared study inputs and run the command again instead of hand-editing a sheet or report.
 
