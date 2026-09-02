@@ -1378,6 +1378,15 @@ export const test_cli_scaffold_repaint_runtime_contract =
         "every documented headless command runs and answers in its own shape",
         {
           buildingStatus: buildingReport.status,
+          // The one command in this block whose answer was read as an exit
+          // code alone. This fixture is a completed film that stages no built
+          // environment, so the honest answer is the empty population, and it
+          // says which two provenances it looked for -- a shot staging one and
+          // a library materializing one -- rather than reporting nothing at
+          // all. An exit code cannot tell that from a report of four buildings.
+          buildingProvenance: generatedOutput(buildingReport).includes(
+            "no built environment is staged or materialized by this production, so there is nothing to draw, count or study.",
+          ),
           exampleStatus: exampleArtifact.status,
           exampleWrote:
             /updated automovie\/derived\/examples\/[^ ]+ \(sha256:[0-9a-f]{64}\)/u.test(
@@ -1407,6 +1416,7 @@ export const test_cli_scaffold_repaint_runtime_contract =
         },
         {
           buildingStatus: 0,
+          buildingProvenance: true,
           exampleStatus: 0,
           exampleWrote: true,
           designStatus: 0,

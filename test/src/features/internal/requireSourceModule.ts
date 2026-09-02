@@ -23,6 +23,12 @@ import fs from "node:fs";
  * first would have to have been written with the same export names in the same
  * file to satisfy the second.
  *
+ * The second direction means a name the file only re-exports does not count. A
+ * barrel is refused here on purpose: `export * from "./elsewhere"` tells you
+ * nothing about which file answered, which is the one thing this is for. Name a
+ * value the file itself declares, and reach a re-exported one through the
+ * package's own entry point like any other consumer.
+ *
  * Type-only exports are invisible at run time and cannot be named here. Pass
  * the values the scenario actually calls.
  */
