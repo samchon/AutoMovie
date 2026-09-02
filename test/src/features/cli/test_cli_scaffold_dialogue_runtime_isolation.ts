@@ -160,6 +160,13 @@ const loadModules = (root: string): IRuntimeModules => {
   const scripts = path.join(root, "scripts");
   return {
     ...(require(path.join(scripts, "capture.ts")) as object),
+    // The three modules this project ships so its browser-bound commands can
+    // give up their decisions. They carry no Vite and no Playwright, which is
+    // the whole point of them, and a rendered project that did not receive one
+    // would fail its own command at run time with nothing here having said so.
+    ...(require(path.join(scripts, "buildingRecords.ts")) as object),
+    ...(require(path.join(scripts, "inspectRequest.ts")) as object),
+    ...(require(path.join(scripts, "inspectionPageKey.ts")) as object),
     ...(require(path.join(scripts, "inspectSubject.ts")) as object),
     ...(require(path.join(scripts, "capture-browser.ts")) as object),
     ...(require(path.join(scripts, "renderHost.ts")) as object),
