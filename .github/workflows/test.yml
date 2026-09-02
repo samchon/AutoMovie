@@ -1,5 +1,12 @@
 name: test
 on: pull_request
+
+# A push replaces its predecessor rather than queueing behind it. Without this
+# the lane was five runs deep and the newest commit waited on four obsolete ones.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   test:
     strategy:
