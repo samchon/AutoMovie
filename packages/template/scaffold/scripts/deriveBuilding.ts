@@ -21,14 +21,15 @@ import path from "node:path";
 
 import { productionEvidence } from "../lint.config";
 import {
+  collectAutoMovieStagedRecords,
+  deriveAutoMovieBuildingActions,
+} from "./buildingDerivation";
+import {
   collectAutoMovieBuildingRecords,
   collectAutoMovieMaterializedEnvironments,
-  describeAutoMovieBuildingGaps,
   describeAutoMovieBuildingRecords,
-  describeAutoMovieBuildingReport,
 } from "./buildingRecords";
 import { deriveAutoMovieBuildingReport } from "./buildingReport";
-import { planAutoMovieBuildingSidecars } from "./buildingSidecars";
 import { productionBuildingStudies } from "./productionStudies";
 import { readAutoMovieProjectProductionId } from "./projectIdentity";
 
@@ -94,42 +95,15 @@ const NEWLINE = String.fromCharCode(10);
 const compareCodeUnits = (left: string, right: string): number =>
   left < right ? -1 : left > right ? 1 : 0;
 
-/**
- * Collect one fold from every compiled shot, one record per id.
- *
- * Two shots staging one building carry one record each, and they are the same
- * record: the compiler copies the source's own declaration into every artifact
- * that stages it. So the id is the identity, and deriving both copies would put
- * one sheet on the page twice and make the take-off double the concrete.
- *
- * Two _different_ records wearing one id is a different fact, and this refuses
- * rather than picking. The compiler publishes building ids across shots but
- * does not compare the records behind them, so a divergence reaches here
- * intact; a document silently derived from whichever shot happened to be read
- * first is exactly the kind of evidence nobody can act on.
- */
 const staged = <T extends { id: string }>(
   select: (shot: IAutoMovieCompiledShotSource) => readonly T[] | undefined,
   what: string,
-): T[] => {
-  const found = new Map<string, { record: T; from: string; json: string }>();
-  for (const [shot, compiled] of state.generated.shots)
-    for (const record of select(compiled) ?? []) {
-      const json = JSON.stringify(record);
-      const seen = found.get(record.id);
-      if (seen === undefined) {
-        found.set(record.id, { record, from: shot, json });
-        continue;
-      }
-      if (seen.json !== json)
-        throw new Error(
-          `shots "${seen.from}" and "${shot}" stage two different ${what} records under the id "${record.id}". One id is one record; rename one of them, or share the subject that emits it.`,
-        );
-    }
-  return [...found.values()]
-    .map((entry) => entry.record)
-    .sort((left, right) => compareCodeUnits(left.id, right.id));
-};
+): T[] =>
+  collectAutoMovieStagedRecords({
+    shots: [...state.generated.shots],
+    select: select as (compiled: never) => readonly T[] | undefined,
+    what,
+  });
 
 /**
  * Every built environment this project's last compile published, by its own id.
@@ -223,50 +197,24 @@ const emit = (file: string, text: string): void => {
   process.stdout.write(`wrote ${relative}\n`);
 };
 
-if (environments.length === 0)
-  process.stdout.write(
-    "no built environment is staged or materialized by this production, so there is nothing to draw, count or study. Contribute one from a shot's source and compile before deriving.\n",
-  );
-
-for (const { environment, source } of environments) {
-  const report = deriveAutoMovieBuildingReport({
-    environment,
-    revision: state.generated.manifest.inputFingerprint,
-    serviceNetworks,
-    fluidDomains,
-    waterFeatures,
-    context: state.generated.design.production.environmentContext ?? null,
-    studies: productionBuildingStudies,
-  });
-  for (const sidecar of planAutoMovieBuildingSidecars({
-    encode: encodeAutoMoviePathSegment,
-    id: environment.id,
-    report,
-  }))
-    emit(path.join(reportRoot, ...sidecar.segments), sidecar.text);
-
-  for (const line of describeAutoMovieBuildingReport({
-    gaps: report.gaps.length,
-    id: environment.id,
-    networks: report.services.length,
-    quantitySubjects: report.quantities.findings.length,
-    runs: report.runs.length,
-    schedules: report.schedules,
-    sheets: report.sheets.length,
-    source,
-  }))
-    process.stdout.write(line + NEWLINE);
-  for (const line of describeAutoMovieBuildingGaps(report.gaps))
-    process.stdout.write(line + NEWLINE);
-}
-
-// The tally a reviewer reads before deciding what a claim about this production
-// may rest on. A materialized building has no frames at all, so a review citing
-// one has to cite these drawings; saying so once here is cheaper than
-// rediscovering it per building. With nothing to report the line above already
-// said so, and a tally of zeroes beside it would only invite reading it as a
-// result.
-if (environments.length !== 0)
-  process.stdout.write(
-    describeAutoMovieBuildingRecords(environments) + NEWLINE,
-  );
+for (const action of deriveAutoMovieBuildingActions({
+  encode: encodeAutoMoviePathSegment,
+  records: environments,
+  report: ({ environment }) =>
+    deriveAutoMovieBuildingReport({
+      environment,
+      revision: state.generated.manifest.inputFingerprint,
+      serviceNetworks,
+      fluidDomains,
+      waterFeatures,
+      context: state.generated.design.production.environmentContext ?? null,
+      studies: productionBuildingStudies,
+    }),
+  tally: describeAutoMovieBuildingRecords,
+}))
+  if (action.kind === "write")
+    emit(
+      path.join(reportRoot, ...action.sidecar.segments),
+      action.sidecar.text,
+    );
+  else process.stdout.write(action.line + NEWLINE);
