@@ -177,19 +177,6 @@ export const UNMEASURED_SOURCE_ROOTS: readonly string[] = [
 ];
 
 /**
- * One-time floor for the pull request that introduced changed-line coverage.
- *
- * The gate cannot retroactively charge commits made before the rule existed,
- * especially after the user deliberately removed the generated-project and
- * repository-shape tests that used to reach those lines. The floor applies
- * only while HEAD descends from this feature commit and the pull-request base
- * does not. The squash merge deliberately breaks that ancestry, so every later
- * pull request compares against its ordinary base and this value can be removed
- * in the immediate cleanup cycle.
- */
-const COVERAGE_ADOPTION_FLOOR = "041f8cd5f2f95dd782867c4aa6e64e53dcecace6";
-
-/**
  * A declaration this repository reads rather than a program it runs.
  *
  * A lint configuration, a bundler configuration and an evidence exclusion list
@@ -304,31 +291,6 @@ const existingRef = (root: string, reference: string): boolean => {
   return result.status === 0;
 };
 
-const ancestorOf = (
-  root: string,
-  ancestor: string,
-  descendant: string,
-): boolean => {
-  const result = spawnSync(
-    "git",
-    ["merge-base", "--is-ancestor", ancestor, descendant],
-    { cwd: root, encoding: "utf8", shell: false },
-  );
-  if (result.status === 0) return true;
-  if (result.status === 1) return false;
-  if (result.error !== undefined) throw result.error;
-  throw new Error(
-    `git merge-base --is-ancestor ${ancestor} ${descendant} failed: ${result.stderr.trim()}`,
-  );
-};
-
-const coverageComparisonBase = (root: string, base: string): string =>
-  existingRef(root, COVERAGE_ADOPTION_FLOOR) &&
-  ancestorOf(root, COVERAGE_ADOPTION_FLOOR, "HEAD") &&
-  ancestorOf(root, COVERAGE_ADOPTION_FLOOR, base) === false
-    ? COVERAGE_ADOPTION_FLOOR
-    : base;
-
 /** Resolve the explicit or CI/local default comparison base. */
 export const resolveCoverageBase = (
   root: string,
@@ -371,8 +333,7 @@ export const collectGitChangedLines = (
   root: string,
   base: string,
 ): IChangedFiles => {
-  const comparisonBase = coverageComparisonBase(root, base);
-  const mergeBase = runGit(root, ["merge-base", comparisonBase, "HEAD"]).trim();
+  const mergeBase = runGit(root, ["merge-base", base, "HEAD"]).trim();
   const diff = runGit(root, [
     "-c",
     "core.quotepath=false",
@@ -400,7 +361,7 @@ export const collectGitChangedLines = (
       worktree.has(relative) && isAuthoredExecutableSource(relative),
   );
   return {
-    base: comparisonBase,
+    base,
     mergeBase,
     files,
     staged: staged.size,
