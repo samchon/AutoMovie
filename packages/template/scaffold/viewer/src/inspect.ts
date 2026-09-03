@@ -236,8 +236,8 @@ function frame(elapsed: number): boolean {
   // Clamped because a backgrounded tab comes back with one enormous delta,
   // which would fling the eye across the set before it drew again. What the
   // clamp costs is charged to the readout rather than absorbed silently:
-  // `flightSpeedReadout` is handed the same budget and the same frames, so the speed
-  // it prints is the speed this line integrates.
+  // `flightSpeedReadout` receives the same budget and the same frames, so the
+  // speed it prints is the speed this line integrates.
   const real = Math.max(elapsed - lastElapsed, 0);
   const delta = Math.min(real, MAX_FRAME_SECONDS);
   lastElapsed = elapsed;
