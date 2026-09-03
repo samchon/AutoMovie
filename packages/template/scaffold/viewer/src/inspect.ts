@@ -21,6 +21,7 @@ import { applyRendererEnvironment, mountViewer } from "@automovie/viewer";
 import * as THREE from "three";
 
 import type { IAutoMovieProductionViewerRuntime } from "../../scripts/productionRuntimeState";
+import { flightSpeedReadout } from "./flightSpeedReadout";
 import { createCompiledShotRuntime } from "./shotRuntime";
 import { VIEWER_BACKGROUND, viewerDocument } from "./viewerDocument";
 
@@ -55,7 +56,7 @@ const MAX_FRAME_SECONDS = 0.1;
 
 /**
  * Frames the speed line measures the eye's real pace over; see
- * {@link speedReadout}.
+ * {@link flightSpeedReadout}.
  *
  * The window is counted in frames rather than in seconds so that one enormous
  * interval can be dropped from a known population rather than from however many
@@ -231,91 +232,12 @@ function heading(radians: number): number {
   );
 }
 
-/**
- * The speed line: the pace the eye was asked for, and the pace it is actually
- * keeping when those are not the same number.
- *
- * {@link MAX_FRAME_SECONDS} is what separates them. A frame that cost more than
- * the budget still carries the eye only a budget's worth, so on a set heavy
- * enough to draw at three frames a second an eye told to fly at 4 m/s covers
- * about a metre in that second. That was always true of a flight over a large
- * building; what was missing was any way to read it off the page, and an
- * operator who multiplied the printed speed by the seconds held arrived at a
- * coordinate the eye had never been to. A page whose whole purpose is to let a
- * fault be reported by coordinate cannot be wrong about how its coordinates are
- * reached.
- *
- * The pace is the share of real time the frames just drawn actually carried the
- * eye: what each of them integrated, over what each of them cost. That share is
- * the travel over those frames by definition rather than a summary of them, and
- * flying the page is how it was settled. A first attempt read the pace off the
- * MEDIAN frame and was refuted in both directions at once: at a stuttering
- * 4 fps it printed 1.61 m/s for an eye covering 0.88, and at a median frame of
- * 58 ms it printed no deficit at all while three fifths of the travel was gone.
- * A frame rate that alternates has no typical frame, and a summary that names
- * one describes neither half.
- *
- * What the sum is right about is the window it read. Measured against the eye's
- * own travel over the same frames, it came within 0.3% at sixty frames a second
- * and within 3.4% on a load that was costing half the travel — against the 49%
- * the asked-for speed was wrong by on that same flight. What it cannot do is
- * see past its own window: a rate that swings frame to frame is a rate fifteen
- * frames lag, and there the reading drifts to around one part in seven. The
- * window is not tuned against that, because a set that is heavy is heavy in
- * every frame, and the rate that swings was an induced one.
- *
- * The single largest interval is dropped before summing, and that is the whole
- * reason the sum is safe to take. A backgrounded tab returns with one enormous
- * gap — the event {@link MAX_FRAME_SECONDS} exists for — and averaging it in
- * would report a stall that never happened. Dropping one is enough because a
- * return is one gap; a set that is genuinely slow is slow in every frame, and
- * loses only its worst to the trim.
- *
- * Both numbers are printed, and only once they differ at the precision the line
- * shows. The asked-for speed is the one `Q` and `E` move and the flown speed is
- * the one a distance is computed from, so an operator who wants a metre a
- * second on a heavy set raises the first until the second reads what was
- * wanted. Frames inside the budget cost nothing, so they print one number and
- * no explanation of a limit that is not biting.
- */
-function speedReadout(
-  speed: number,
-  frames: readonly number[],
-  budgetSeconds: number,
-): string {
-  const asked = speed.toFixed(2);
-  const largest = Math.max(...frames, 0);
-  let dropped = false;
-  let real = 0;
-  let carried = 0;
-  let counted = 0;
-  for (const interval of frames) {
-    if (dropped === false && interval === largest) {
-      dropped = true;
-      continue;
-    }
-    real += interval;
-    carried += Math.min(interval, budgetSeconds);
-    counted += 1;
-  }
-  // Too few frames to tell a slow one from a gap, or none of them has yet
-  // lasted any time at all: the first frame arrives at elapsed zero.
-  if (real <= 0) return `${asked}m/s`;
-  // Never above one, because a frame carries the eye for no longer than it
-  // lasted. An eye inside the budget therefore reports its own speed by
-  // arithmetic rather than by a guard that could be forgotten.
-  const flown = (speed * (carried / real)).toFixed(2);
-  return flown === asked
-    ? `${asked}m/s`
-    : `${asked}m/s (flying ${flown}m/s at ${(counted / real).toFixed(1)}fps)`;
-}
-
 function frame(elapsed: number): boolean {
   // Clamped because a backgrounded tab comes back with one enormous delta,
   // which would fling the eye across the set before it drew again. What the
   // clamp costs is charged to the readout rather than absorbed silently:
-  // `speedReadout` is handed the same budget and the same frames, so the speed
-  // it prints is the speed this line integrates.
+  // `flightSpeedReadout` receives the same budget and the same frames, so the
+  // speed it prints is the speed this line integrates.
   const real = Math.max(elapsed - lastElapsed, 0);
   const delta = Math.min(real, MAX_FRAME_SECONDS);
   lastElapsed = elapsed;
@@ -361,6 +283,6 @@ function frame(elapsed: number): boolean {
     `  yaw=${heading(yaw).toFixed(1)}°` +
     ` pitch=${THREE.MathUtils.radToDeg(pitch).toFixed(1)}°` +
     `  fov=${eye.fov.toFixed(1)}°` +
-    `  speed=${speedReadout(speed, frameSeconds, MAX_FRAME_SECONDS)}`;
+    `  speed=${flightSpeedReadout(speed, frameSeconds, MAX_FRAME_SECONDS)}`;
   return true;
 }

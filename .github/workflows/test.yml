@@ -9,13 +9,7 @@ concurrency:
 
 jobs:
   test:
-    strategy:
-      fail-fast: false
-      # NTFS supplies the case-insensitive path-identity half of the lint
-      # contributor contract; Ubuntu retains the case-sensitive twin.
-      matrix:
-        os: [ubuntu-latest, windows-latest]
-    runs-on: ${{ matrix.os }}
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:

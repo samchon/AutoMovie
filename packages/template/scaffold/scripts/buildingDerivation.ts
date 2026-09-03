@@ -1,10 +1,12 @@
-import type { IAutoMovieBuildingRecord } from "./buildingRecords";
 import {
+  type IAutoMovieBuildingRecord,
   describeAutoMovieBuildingGaps,
   describeAutoMovieBuildingReport,
 } from "./buildingRecords";
-import type { IAutoMovieBuildingSidecar } from "./buildingSidecars";
-import { planAutoMovieBuildingSidecars } from "./buildingSidecars";
+import {
+  type IAutoMovieBuildingSidecar,
+  planAutoMovieBuildingSidecars,
+} from "./buildingSidecars";
 
 /** One thing the derivation does: a file it writes, or a line it says. */
 export type IAutoMovieBuildingAction =
