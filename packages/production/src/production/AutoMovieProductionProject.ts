@@ -3083,7 +3083,7 @@ export class AutoMovieProductionProject {
       identity: validation.data.publication,
       plan,
     });
-    if (planCurrent() === false)
+    if (planCurrent() !== true)
       throw new AutoMovieProductionInputRaceError(
         "The render plan changed before its manifest-only ledger could be committed.",
       );
@@ -3171,10 +3171,10 @@ export class AutoMovieProductionProject {
           content: serializeJson(receipt),
         },
       ],
-      () => payloadCurrent() && planCurrent(),
+      () => payloadCurrent() && planCurrent() === true,
       this.lastReadRevision_,
       () => {
-        if (payloadCurrent() === false || planCurrent() === false)
+        if (payloadCurrent() === false || planCurrent() !== true)
           throw new AutoMovieProductionInputRaceError(
             "A terminal deliverable or render plan changed while its manifest-only ledger was committed.",
           );
@@ -3216,7 +3216,7 @@ export class AutoMovieProductionProject {
       identity: validation.data.publication,
       plan: props.plan,
     });
-    if (props.planCurrent() === false)
+    if (props.planCurrent() !== true)
       throw new AutoMovieProductionInputRaceError(
         "The render plan changed before terminal publication began.",
       );
@@ -3304,7 +3304,7 @@ export class AutoMovieProductionProject {
     ];
     return this.commitFiles(
       writes,
-      () => props.inputCurrent?.() !== false && props.planCurrent(),
+      () => props.inputCurrent?.() !== false && props.planCurrent() === true,
       props.expectedRevision ?? this.lastReadRevision_,
       () => {
         for (const deliverable of validation.data.deliverables)
@@ -3349,7 +3349,7 @@ export class AutoMovieProductionProject {
                 `Committed terminal file "${file.path}" changed during the final compiler gate.`,
               );
           }
-        if (props.inputCurrent?.() === false || props.planCurrent() === false)
+        if (props.inputCurrent?.() === false || props.planCurrent() !== true)
           throw new AutoMovieProductionInputRaceError(
             "Production inputs or the render-plan generation changed during the staged terminal publication final gate.",
           );
