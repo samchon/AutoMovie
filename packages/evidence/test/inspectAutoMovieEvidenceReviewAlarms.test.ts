@@ -10,7 +10,8 @@ import { inspectAutoMovieEvidenceReviewAlarms } from "../src/inspectAutoMovieEvi
  * 1. Quoted facts, paths, and numbers collapse into one repeated layer frame.
  * 2. Two host-specific observations remain below the alarm boundary.
  * 3. A target's exact Review question is reported only when targets are supplied.
- * 4. A threshold below two is refused because it cannot describe repetition.
+ * 4. Account frames remain partitioned by their owned layer.
+ * 5. A threshold below two is refused because it cannot describe repetition.
  */
 const target = {
   path: "docs/principles/core/common.md",
@@ -81,6 +82,35 @@ const pasted = inspectAutoMovieEvidenceReviewAlarms({
 });
 assert.equal(pasted.alarms.length, 1);
 assert.equal(pasted.alarms[0]!.code, "evidence-review-question-paste");
+
+const accountHost = (layer: string, question: string) => ({
+  path: `docs/accounts/${layer}/core-common.md`,
+  source: [
+    `# ${layer} account`,
+    "",
+    `## Scope {#${layer}-scope}`,
+    "",
+    "<!--",
+    `@evidenceReview obligations/core/common.md#scope #${layer} ${question}`,
+    "-->",
+  ].join("\n"),
+});
+assert.deepEqual(
+  inspectAutoMovieEvidenceReviewAlarms({
+    documents: [
+      accountHost("models", "I compared `one` with models/a.md#form."),
+      accountHost("spaces", "I compared `two` with spaces/a.md#form."),
+    ],
+    targets: [
+      {
+        path: "docs/obligations/core/common.md",
+        source: "## Scope {#scope}\n\nReview question:\n",
+      },
+    ],
+    frameThreshold: 2,
+  }),
+  { alarms: [], questionPasteChecked: true },
+);
 
 assert.throws(
   () =>
