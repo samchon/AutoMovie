@@ -141,6 +141,12 @@ import { designReferenceDiagnostics } from "./designReferenceDiagnostics";
 import { filmGrammarDiagnostics } from "./filmGrammarDiagnostics";
 import { readAutoMovieFilmTimeline } from "./filmTimeline";
 import { autoMovieLibraryArtifactSourceTargets } from "./libraryArtifactTargets";
+import {
+  IAutoMovieLibraryAuthoringSnapshot,
+  captureAutoMovieLibraryAuthoringSnapshot,
+  createAutoMovieLibrarySourceExecutionPlan,
+  sameAutoMovieLibraryAuthoringSnapshot,
+} from "./libraryAuthoringSnapshot";
 import { autoMovieLibraryContributionDiagnostics } from "./libraryContributionContract";
 import { libraryReviewEvidenceConsumerDiagnostics } from "./libraryReviewEvidenceConsumer";
 import {
@@ -251,6 +257,7 @@ export class AutoMovieProductionCompiler {
   public constructor(
     private readonly project: AutoMovieProductionProject,
     private readonly authoringEvidence?: IAutoMovieProductionEvidence,
+    private readonly currentAuthoringEvidence?: () => IAutoMovieProductionEvidence,
   ) {}
 
   /**
@@ -1137,15 +1144,32 @@ export class AutoMovieProductionCompiler {
   ): IAutoMovieCompileProjectOutput {
     const authoring = this.authoringEvidence!;
     const inputRevision = this.project.revision();
-    const sources = [
-      ...new Set(
-        authoring.designOwners.flatMap(
-          (owner) => owner.sourceBinding?.paths ?? [],
-        ),
-      ),
-    ].sort(compareCodeUnits);
-    const inputFingerprint = this.libraryInputFingerprint(authoring, sources);
+    const snapshot = captureAutoMovieLibraryAuthoringSnapshot({
+      root: this.project.root,
+      evidence: authoring,
+      readSource: (source) => this.project.readSource(source),
+    });
+    const requireReviewed = input.scope === "review" || input.scope === "final";
+    const execution = createAutoMovieLibrarySourceExecutionPlan(
+      snapshot,
+      requireReviewed,
+    );
+    const sources = snapshot.sources.map((source) => source.path);
+    const inputFingerprint = this.libraryInputFingerprint(snapshot);
     const diagnostics: IAutoMovieDiagnostic[] = [];
+    if (input.scope !== "design")
+      diagnostics.push(
+        ...execution.problems.map(
+          (message): IAutoMovieDiagnostic => ({
+            code: "source-owner-mismatch",
+            category: "error",
+            phase: "source",
+            target: "library-source-owners",
+            path: null,
+            message,
+          }),
+        ),
+      );
 
     // The exact addresses a source registration is allowed to name. A library
     // owner declares which reviewed decision it realizes; anything else is a
@@ -1163,6 +1187,17 @@ export class AutoMovieProductionCompiler {
           anchor: unit.anchor,
         });
         sourceBranchByDesign.set(address, owner.sourceBinding?.branch ?? "");
+      }
+    for (const entry of execution.entries)
+      if (entry.branch === "productionSources") {
+        const separator = entry.owner.lastIndexOf("#");
+        units.set(entry.owner, {
+          production: this.project.productionId,
+          branch: entry.branch,
+          design: entry.owner.slice(0, separator),
+          anchor: entry.owner.slice(separator + 1),
+        });
+        sourceBranchByDesign.set(entry.owner, entry.branch);
       }
 
     const results: IAutoMovieMaterializedLibraryResult[] = [];
@@ -1205,8 +1240,7 @@ export class AutoMovieProductionCompiler {
               exportName,
               owner: design,
               sourceDigest,
-              requireReviewed:
-                input.scope === "review" || input.scope === "final",
+              requireReviewed,
             }),
         });
         diagnostics.push(...compiled.diagnostics);
@@ -1229,17 +1263,25 @@ export class AutoMovieProductionCompiler {
             registration.design,
             `${source}#${registration.export}`,
           );
-          const accepted = this.acceptLibraryContribution({
-            context,
-            diagnostics,
-            contextOwner,
-            environmentOwner,
-            modelOwner,
-            models,
-            registration,
-            source,
-            target,
-          });
+          const accepted =
+            context.branch === "productionSources"
+              ? this.acceptLibraryProductionContribution({
+                  diagnostics,
+                  registration,
+                  source,
+                  target,
+                })
+              : this.acceptLibraryContribution({
+                  context,
+                  diagnostics,
+                  contextOwner,
+                  environmentOwner,
+                  modelOwner,
+                  models,
+                  registration,
+                  source,
+                  target,
+                });
           if (accepted === false) continue;
           results.push({
             branch: context.branch,
@@ -1251,6 +1293,21 @@ export class AutoMovieProductionCompiler {
           });
         }
       }
+
+    if (input.scope !== "design")
+      for (const entry of execution.entries)
+        if (
+          entry.branch === "productionSources" &&
+          registeredBy.has(entry.owner) === false
+        )
+          diagnostics.push({
+            code: "source-export-missing",
+            category: requireReviewed ? "error" : "warning",
+            phase: "source",
+            target: `library:productionSources:${entry.owner}`,
+            path: entry.sourcePath,
+            message: `Production source "${entry.sourcePath}#${entry.exportName}" did not register its exact settings owner "${entry.owner}" as a zero-payload library delivery. Export one synchronous IAutoMovieLibrarySourceOwner for that address.`,
+          });
 
     // An owner whose branch already has source and no registration is an
     // unrealized decision. It warns while source is being written, because that
@@ -1379,8 +1436,21 @@ export class AutoMovieProductionCompiler {
     );
     diagnostics.sort(compareDiagnostics);
 
-    const inputCurrent = (): boolean =>
-      this.libraryInputFingerprint(authoring, sources) === inputFingerprint;
+    const inputCurrent = (): boolean => {
+      if (this.currentAuthoringEvidence === undefined) return false;
+      try {
+        return sameAutoMovieLibraryAuthoringSnapshot(
+          snapshot,
+          captureAutoMovieLibraryAuthoringSnapshot({
+            root: this.project.root,
+            evidence: this.currentAuthoringEvidence(),
+            readSource: (source) => this.project.readSource(source),
+          }),
+        );
+      } catch {
+        return false;
+      }
+    };
     const compiler = {
       version: AUTOMOVIE_PRODUCTION_COMPILER_VERSION,
       inputFingerprint,
@@ -1448,37 +1518,42 @@ export class AutoMovieProductionCompiler {
    * concurrent edit.
    */
   private libraryInputFingerprint(
-    authoring: IAutoMovieProductionEvidence,
-    sources: readonly string[],
+    snapshot: IAutoMovieLibraryAuthoringSnapshot,
   ): AutoMovieContentDigest {
-    const fields: IAutoMovieFingerprintField[] = [
+    return fingerprintAutoMovieFields([
       {
         role: "library:compiler",
         kind: AUTOMOVIE_PRODUCTION_COMPILER_PROTOCOL,
         payload: canonicalAutoMovieJsonBytes({
           version: AUTOMOVIE_PRODUCTION_COMPILER_VERSION,
-          manifest: authoring.manifest,
-          designBranches: authoring.designBranches,
-          designOwners: authoring.designOwners,
-          sourceOwners: authoring.sourceOwners,
+          authoringSnapshot: snapshot.digest,
         }),
       },
-    ];
-    for (const source of sources)
-      try {
-        fields.push({
-          role: `library:source:${source}`,
-          kind: "typescript",
-          payload: normalizeAutoMovieSource(this.project.readSource(source)),
-        });
-      } catch {
-        fields.push({
-          role: `library:source:${source}`,
-          kind: "absent",
-          payload: new Uint8Array(),
-        });
-      }
-    return fingerprintAutoMovieFields(fields);
+    ]);
+  }
+
+  /** Admit settings serialization only as a zero-payload lineage result. */
+  private acceptLibraryProductionContribution(props: {
+    diagnostics: IAutoMovieDiagnostic[];
+    registration: ICompiledLibraryOwnerRegistration;
+    source: string;
+    target: string;
+  }): boolean {
+    const contribution = props.registration.contribution;
+    const populations =
+      contribution.environments.length +
+      contribution.models.length +
+      contribution.contexts.length;
+    if (populations === 0) return true;
+    props.diagnostics.push({
+      code: "source-export-invalid",
+      category: "error",
+      phase: "source",
+      target: props.target,
+      path: props.source,
+      message: `Production source export "${props.registration.export}" serializes settings and must return empty environments, models, and contexts. Publish semantic artifacts from their reviewed design-source owner instead.`,
+    });
+    return false;
   }
 
   /**

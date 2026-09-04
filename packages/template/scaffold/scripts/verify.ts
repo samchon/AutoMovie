@@ -14,14 +14,16 @@ const project = AutoMovieProductionProject.openReadOnly(
   process.cwd(),
   productionId,
 );
-const authoringEvidence = readAutoMovieProductionEvidence({
-  root: process.cwd(),
-  productionEvidence,
-});
-const output = new AutoMovieProductionCompiler(project, authoringEvidence).lint(
-  {
-    scope: "final",
-  },
-);
+const currentAuthoringEvidence = () =>
+  readAutoMovieProductionEvidence({
+    root: process.cwd(),
+    productionEvidence,
+  });
+const authoringEvidence = currentAuthoringEvidence();
+const output = new AutoMovieProductionCompiler(
+  project,
+  authoringEvidence,
+  currentAuthoringEvidence,
+).lint({ scope: "final" });
 process.stdout.write(`${JSON.stringify(output, null, 2)}\n`);
 if (output.success === false) process.exitCode = 1;

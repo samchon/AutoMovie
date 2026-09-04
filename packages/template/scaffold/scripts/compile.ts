@@ -39,10 +39,9 @@ const archetypes = createAutoMovieArchetypeRegistry(
  * case where two true paths compare unequal.
  */
 const root = productionEvidence.location;
-const authoringEvidence = readAutoMovieProductionEvidence({
-  root,
-  productionEvidence,
-});
+const currentAuthoringEvidence = () =>
+  readAutoMovieProductionEvidence({ root, productionEvidence });
+const authoringEvidence = currentAuthoringEvidence();
 
 const output = compileAutoMovieProduction({
   projectRoot: root,
@@ -50,6 +49,7 @@ const output = compileAutoMovieProduction({
   scope: "source",
   archetypes,
   authoringEvidence,
+  currentAuthoringEvidence,
 });
 process.stdout.write(`${JSON.stringify(output, null, 2)}\n`);
 if (output.success === false) process.exitCode = 1;

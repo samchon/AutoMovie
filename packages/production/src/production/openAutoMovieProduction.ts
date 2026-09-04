@@ -125,6 +125,8 @@ export const openAutoMovieProduction = (props: {
   archetypes?: AutoMovieModelArchetypeRegistry;
   /** Exact graph-derived authoring identity for review and final gates. */
   authoringEvidence?: IAutoMovieProductionEvidence;
+  /** Fresh graph reader used by every atomic currentness confirmation. */
+  currentAuthoringEvidence?: () => IAutoMovieProductionEvidence;
 }): IAutoMovieProductionServices => {
   const project = AutoMovieProductionProject.open(
     findAutoMovieProjectRoot(props.projectRoot),
@@ -134,10 +136,12 @@ export const openAutoMovieProduction = (props: {
   const statusCompiler = new AutoMovieProductionCompiler(
     project,
     props.authoringEvidence,
+    props.currentAuthoringEvidence,
   );
   const compiler = new AutoMovieProductionCompiler(
     project,
     props.authoringEvidence,
+    props.currentAuthoringEvidence,
   );
   return {
     project,
@@ -171,6 +175,8 @@ export const compileAutoMovieProduction = (props: {
    * every generated project calls.
    */
   authoringEvidence?: IAutoMovieProductionEvidence;
+  /** Fresh graph reader used by every atomic currentness confirmation. */
+  currentAuthoringEvidence?: () => IAutoMovieProductionEvidence;
 }): IAutoMovieCompileProjectOutput =>
   openAutoMovieProduction(props).compiler.compile({ scope: props.scope });
 

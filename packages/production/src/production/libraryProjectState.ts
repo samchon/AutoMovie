@@ -168,7 +168,9 @@ export const inspectAutoMovieLibraryProjectState = (props: {
           (unit) => `${candidate.path}#${unit.anchor}` === owner.owner,
         ),
     );
-    const sourceBranch = designOwner?.sourceBinding?.branch ?? null;
+    const sourceBranch =
+      designOwner?.sourceBinding?.branch ??
+      (owner.branch === "productionSources" ? owner.branch : null);
     publishedOwners.add(
       JSON.stringify([sourceBranch, owner.owner, owner.source, owner.export]),
     );
