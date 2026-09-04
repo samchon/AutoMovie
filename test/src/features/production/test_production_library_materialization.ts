@@ -244,8 +244,7 @@ export const test_production_library_materialization = (): void => {
       productionId: production,
       scope: "source",
       authoringEvidence: libraryAuthoring({ root: fixture.root }),
-      currentAuthoringEvidence: () =>
-        libraryAuthoring({ root: fixture.root }),
+      currentAuthoringEvidence: () => libraryAuthoring({ root: fixture.root }),
     });
     TestValidator.equals(
       "the package compile entry reaches the library path too",
