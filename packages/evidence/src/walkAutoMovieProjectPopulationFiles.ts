@@ -4,16 +4,7 @@ import path from "node:path";
 const projectPopulationBoundaryDiagnostic =
   "project evidence populations contain only real files and directories inside the project root";
 
-/**
- * The filesystem facts that give one project-owned evidence file a unique
- * physical identity.
- *
- * @evidence requirements/production-evidence/graph.md#agent-production-evidence-physical-integrity Makes one regular, non-linked directory entry the admissible evidence-file identity.
- * @evidence specifications/production-evidence/graph.md#spec-authoring-production-evidence-physical-integrity Supplies the lstat facts used by every project population and package-manifest reader.
- * @evidencePart specifications/production-evidence/graph.md#spec-authoring-production-evidence-physical-integrity::physical-population-integrity Keeps hardlinks, symbolic links, and special files outside the project-owned graph.
- * @author Samchon
- */
-export interface IAutoMovieEvidencePhysicalFile {
+interface IAutoMovieEvidencePhysicalFile {
   /** Whether lstat classified the entry as a regular file. */
   isFile(): boolean;
   /** Whether lstat classified the entry as a symbolic link. */

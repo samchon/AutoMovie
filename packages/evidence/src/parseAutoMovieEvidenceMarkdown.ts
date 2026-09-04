@@ -1,11 +1,4 @@
-/**
- * One visible ATX heading in an evidence-controlled Markdown document.
- *
- * @evidence requirements/production-evidence/graph.md#agent-production-evidence-physical-integrity Gives every visible heading one stable source address without admitting examples or comments as owners.
- * @evidence specifications/production-evidence/graph.md#spec-authoring-production-evidence-physical-integrity Carries the depth, title, anchor, and line used to inventory an actual Markdown target.
- * @author Samchon
- */
-export interface IAutoMovieEvidenceMarkdownHeading {
+interface IAutoMovieEvidenceMarkdownHeading {
   /** Explicit anchor without the leading hash, when the heading declares one. */
   anchor: string | undefined;
   /** ATX heading depth from one through six. */

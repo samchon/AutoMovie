@@ -1,9 +1,6 @@
 import assert from "node:assert/strict";
 
-import {
-  type IAutoMovieEvidencePhysicalFile,
-  isAutoMovieEvidencePhysicalFile,
-} from "../src/walkAutoMovieProjectPopulationFiles";
+import { isAutoMovieEvidencePhysicalFile } from "../src/walkAutoMovieProjectPopulationFiles";
 
 /**
  * Project evidence admits exactly one pathname for one regular file.
@@ -18,6 +15,14 @@ const testWalkAutoMovieProjectPopulationFiles = (): void => {
   assert.equal(isAutoMovieEvidencePhysicalFile(entry("file", 1)), true);
   assert.equal(isAutoMovieEvidencePhysicalFile(entry("file", 1n)), true);
   assert.equal(isAutoMovieEvidencePhysicalFile(entry("file", 2n)), false);
+  assert.equal(
+    isAutoMovieEvidencePhysicalFile({
+      isFile: () => true,
+      isSymbolicLink: () => true,
+      nlink: 1,
+    }),
+    false,
+  );
   assert.equal(isAutoMovieEvidencePhysicalFile(entry("symlink", 1)), false);
   assert.equal(isAutoMovieEvidencePhysicalFile(entry("directory", 1)), false);
   assert.equal(isAutoMovieEvidencePhysicalFile(entry("special", 1)), false);
@@ -26,7 +31,7 @@ const testWalkAutoMovieProjectPopulationFiles = (): void => {
 const entry = (
   kind: "directory" | "file" | "special" | "symlink",
   nlink: number | bigint,
-): IAutoMovieEvidencePhysicalFile => ({
+) => ({
   isFile: () => kind === "file",
   isSymbolicLink: () => kind === "symlink",
   nlink,

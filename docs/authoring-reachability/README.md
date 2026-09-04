@@ -58,7 +58,7 @@ Specification fragment debt도 같은 방식으로 센다. 현재 `@evidenceObli
 
 ## 저장소 evidence review 정책
 
-Repository requirement-specification-source graph에서는 `evidence/review`를 켜지 않는다. 2026-09-04 B24 변경 tree의 package source에는 `@evidence` 13,938개와 `@evidenceExclude` 7,591개, 합계 21,529개가 있다. specification의 positive 관계 2,626개를 합치면 repository graph에는 positive 16,564개와 exclusion 7,591개, 합계 24,155개가 있다. 실제 companion review tag는 0개다. Source 제외 사유의 종류와 분포는 이번 판단의 자동 입력이 아니며, 24,155개의 companion 문장을 일괄 요구하면 target별 의미 검토보다 package boundary의 기계적 재진술을 늘린다는 결론만 유지한다.
+Repository requirement-specification-source graph에서는 `evidence/review`를 켜지 않는다. 2026-09-04 B24 변경 tree의 package source에는 `@evidence` 13,934개와 `@evidenceExclude` 7,591개, 합계 21,525개가 있다. specification의 positive 관계 2,626개를 합치면 repository graph에는 positive 16,560개와 exclusion 7,591개, 합계 24,151개가 있다. 실제 companion review tag는 0개다. Source 제외 사유의 종류와 분포는 이번 판단의 자동 입력이 아니며, 24,151개의 companion 문장을 일괄 요구하면 target별 의미 검토보다 package boundary의 기계적 재진술을 늘린다는 결론만 유지한다.
 
 이 결정은 review를 생략한다는 뜻이 아니다. `evidence/graph`가 resolved target과 population을 검사하고 `evidence/documented`가 public carrier를 유지하며 `evidence/todo`가 선언된 미구현 계약을 거부한다. `test/src/integrity/contractOwnership.ts`는 사람이 owner와 fragment declaration을 조사할 때 실행하는 query를 제공한다. 변경자는 evidence-graph skill과 review skill에 따라 실제 host, target, 이유와 consequence를 읽고, source를 바꾸면 development skill의 테스트와 변경 줄 100% coverage 의무를 진다. 관계 선택이 바뀌면 선택된 public carrier에서 실제 citation 하나를 임시로 제거하여 package build가 실패하는지 확인하고 즉시 복원하는 disposable canary를 함께 수행한다. 이 조합도 산문의 의미를 자동 증명하지는 않으므로 Self-Review가 최종 owner다.
 
