@@ -14,7 +14,7 @@ export interface IScaffoldPublicationEntry {
    * @evidence requirements/operations-and-recovery/idempotency-and-side-effects.md#operations-idempotent-deterministic-results Pins the bytes reused by one deterministic publication attempt.
    * @evidence specifications/execution-and-recovery/retry-backoff-and-idempotency.md#execution-deterministic-result-reuse Prevents a retry from rebuilding different bytes from mutable text.
    */
-  bytes: Uint8Array;
+  bytes: readonly number[];
   /**
    * Portable authored path used in diagnostics and receipts.
    *
@@ -159,7 +159,7 @@ export const planScaffoldPublication = (props: {
     )
       throw new Error(`refusing to write outside "${root}": ${relative}`);
     return Object.freeze({
-      bytes: Uint8Array.from(Buffer.from(content, "utf8")),
+      bytes: Object.freeze(Array.from(Buffer.from(content, "utf8"))),
       relative,
       target,
     });
@@ -201,8 +201,17 @@ export const publishScaffoldCandidate = (props: {
   candidate: readonly IScaffoldPublicationEntry[];
   publish: (entry: IScaffoldPublicationEntry) => ScaffoldFilePublicationOutcome;
 }): IScaffoldPublicationReceipt => {
+  const planned = Object.freeze(
+    props.candidate.map((entry) =>
+      Object.freeze({
+        bytes: Object.freeze([...entry.bytes]),
+        relative: entry.relative,
+        target: entry.target,
+      }),
+    ),
+  );
   const completed: IScaffoldPublicationEntry[] = [];
-  for (const entry of props.candidate) {
+  for (const entry of planned) {
     const outcome = props.publish(entry);
     if (outcome.status === "completed") {
       if (outcome.parentIdentity.length === 0)
@@ -217,7 +226,7 @@ export const publishScaffoldCandidate = (props: {
       (outcome.parentIdentity.length === 0 ||
         Number.isSafeInteger(outcome.bytesWritten) === false ||
         outcome.bytesWritten < 0 ||
-        outcome.bytesWritten > entry.bytes.byteLength)
+        outcome.bytesWritten > entry.bytes.length)
     )
       throw new Error(
         `partial scaffold publication has invalid bound state: ${entry.relative}`,
@@ -225,7 +234,7 @@ export const publishScaffoldCandidate = (props: {
     return {
       completed: Object.freeze(completed),
       failure: { entry, outcome },
-      planned: props.candidate,
+      planned,
       status:
         outcome.status === "refused" && completed.length === 0
           ? "refused"
@@ -235,7 +244,7 @@ export const publishScaffoldCandidate = (props: {
   return {
     completed: Object.freeze(completed),
     failure: null,
-    planned: props.candidate,
+    planned,
     status: "completed",
   };
 };

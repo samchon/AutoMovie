@@ -49,14 +49,14 @@ export const resolveAutoMovieCatalogVersion = (props: {
     throw new Error(
       `${context} has invalid YAML: ${document.errors[0]!.message}`,
     );
-  const root = requireMapping(document.contents, document, context, "document");
+  const root = requireMapping(document.contents, context, "document");
   const catalogs = requireDirect(
     root,
     "catalogs",
     context,
     "top-level mapping",
   );
-  const catalogsMap = requireMapping(catalogs, document, context, "catalogs");
+  const catalogsMap = requireMapping(catalogs, context, "catalogs");
   const catalog = requireDirect(
     catalogsMap,
     props.catalog,
@@ -65,7 +65,6 @@ export const resolveAutoMovieCatalogVersion = (props: {
   );
   const catalogMap = requireMapping(
     catalog,
-    document,
     context,
     `catalog "${props.catalog}"`,
   );
@@ -85,14 +84,12 @@ export const resolveAutoMovieCatalogVersion = (props: {
 
 const requireMapping = (
   node: Node | null,
-  document: Document,
   context: string,
   owner: string,
 ): YAMLMap => {
-  const resolved = resolveNode(node, document, context);
-  if (isMap(resolved) === false)
+  if (isMap(node) === false)
     throw new Error(`${context} requires ${owner} to be a mapping`);
-  return resolved;
+  return node;
 };
 
 const requireDirect = (

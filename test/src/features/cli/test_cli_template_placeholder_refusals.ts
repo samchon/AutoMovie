@@ -8,7 +8,8 @@ import { TestValidator } from "@nestia/e2e";
  *
  * 1. Literal text and repeated known placeholders render in source order.
  * 2. Unknown, empty, whitespace, malformed, nested, unmatched-opening, and
- *    unmatched-closing forms are refused before a rendered payload is returned.
+ *    unmatched-closing forms, plus replacement text containing delimiters, are
+ *    refused before a rendered payload is returned.
  * 3. Empty input and delimiter-like single braces remain ordinary literal text.
  */
 export const test_cli_template_placeholder_refusals = (): void => {
@@ -38,6 +39,14 @@ export const test_cli_template_placeholder_refusals = (): void => {
       refusal("prefix {{name"),
       refusal("prefix }} suffix"),
       refusal("{{name}} }}"),
+      (() => {
+        try {
+          renderTemplate("{{name}}", { name: "{{nested}}" });
+          return "accepted";
+        } catch (error) {
+          return error instanceof Error ? error.message : String(error);
+        }
+      })(),
     ],
     [
       "unknown scaffold variable: {{missing}}",
@@ -48,6 +57,7 @@ export const test_cli_template_placeholder_refusals = (): void => {
       "unmatched scaffold placeholder opening delimiter at offset 7",
       "unmatched scaffold placeholder closing delimiter at offset 7",
       "unmatched scaffold placeholder closing delimiter at offset 9",
+      "scaffold variable {{name}} expands to placeholder syntax",
     ],
   );
   TestValidator.equals(

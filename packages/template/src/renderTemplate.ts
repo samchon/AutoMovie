@@ -41,6 +41,10 @@ export const renderTemplate = (
     const value = variables[key];
     if (value === undefined)
       throw new Error(`unknown scaffold variable: {{${key}}}`);
+    if (value.includes("{{") || value.includes("}}"))
+      throw new Error(
+        `scaffold variable {{${key}}} expands to placeholder syntax`,
+      );
     rendered += value;
     cursor = end + 2;
   }
