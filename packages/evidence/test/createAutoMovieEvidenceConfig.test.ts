@@ -1082,7 +1082,11 @@ export const review = true;
       ]);
       assert.equal(account?.symbol, "h2");
       assert.equal(referenceTo(account, obligation)?.uniqueEvidence, true);
-      const population = referenceTo(account, `${layer}/**/*.md`);
+      const population = referencesOf(account).find(
+        (reference) =>
+          reference.type === "markdown" &&
+          reference.files.every((file) => file.startsWith(`${layer}/`)),
+      );
       assert.equal(population?.checklist, true);
       assert.equal(population?.noEvidenceExclude, true);
     }
@@ -2776,7 +2780,9 @@ export const review = true;
     "the system source branch is not wired",
   );
   const systemObligation = branchGraph.claims.find((claim) =>
-    claim.name?.includes("systems H2 units answer their principle checklists"),
+    claim.name?.includes(
+      "systems population accounts answer each obligations/design/systems.md",
+    ),
   );
   assert.equal(
     referenceTo(systemObligation, "obligations/design/systems.md")
@@ -2785,7 +2791,9 @@ export const review = true;
     "required non-motion layer obligations must refuse exclusions",
   );
   const motionObligation = branchGraph.claims.find((claim) =>
-    claim.name?.includes("motions H2 units answer their principle checklists"),
+    claim.name?.includes(
+      "motions population accounts answer each obligations/design/motions.md",
+    ),
   );
   assert.equal(
     referenceTo(motionObligation, "obligations/design/motions.md")

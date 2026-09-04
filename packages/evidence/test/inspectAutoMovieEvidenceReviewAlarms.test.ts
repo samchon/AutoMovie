@@ -11,7 +11,8 @@ import { inspectAutoMovieEvidenceReviewAlarms } from "../src/inspectAutoMovieEvi
  * 2. Two host-specific observations remain below the alarm boundary.
  * 3. A target's exact Review question is reported only when targets are supplied.
  * 4. Account frames remain partitioned by their owned layer.
- * 5. A threshold below two is refused because it cannot describe repetition.
+ * 5. Threshold-minus-one, keyword reuse, and acknowledgement/exclusion twins stay green.
+ * 6. A threshold below two is refused because it cannot describe repetition.
  */
 const target = {
   path: "docs/principles/core/common.md",
@@ -110,6 +111,47 @@ assert.deepEqual(
     frameThreshold: 2,
   }),
   { alarms: [], questionPasteChecked: true },
+);
+
+const belowThreshold = inspectAutoMovieEvidenceReviewAlarms({
+  documents: [
+    host(7, "I compared `left` with models/a.md#form and found 12 edges."),
+    host(8, "I compared `right` with models/b.md#form and found 18 edges."),
+  ],
+  targets: [target],
+  frameThreshold: 3,
+});
+assert.deepEqual(belowThreshold.alarms, []);
+assert.deepEqual(
+  inspectAutoMovieEvidenceReviewAlarms({
+    documents: [
+      host(9, "This unit preserves scope when its concrete shell disappears."),
+    ],
+    targets: [target],
+  }).alarms,
+  [],
+);
+const exclusion = (index: number) => ({
+  path: `src/models/${index}.ts`,
+  source: [
+    "/**",
+    ` * @evidenceExcludeReview principles/core/common.md#scope-preservation #exclude${index} I compared \`profile ${index}\` with models/${index}.md#form and found ${index} edges.`,
+    " */",
+    `export const model${index} = true;`,
+  ].join("\n"),
+});
+assert.deepEqual(
+  inspectAutoMovieEvidenceReviewAlarms({
+    documents: [
+      host(
+        10,
+        "I compared `profile 10` with models/10.md#form and found 10 edges.",
+      ),
+      exclusion(10),
+    ],
+    frameThreshold: 2,
+  }).alarms,
+  [],
 );
 
 assert.throws(
