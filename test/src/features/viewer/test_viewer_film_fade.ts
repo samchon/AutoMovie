@@ -27,10 +27,13 @@ const fakeRenderer = (width = 64, height = 32, antialias = true) => {
   const opacities: number[] = [];
   const clearColors: Array<{ color: number; alpha: number }> = [];
   const restorationAttempts = { autoClear: 0, color: 0, target: 0 };
-  let failAutoClear: unknown;
-  let failColor: unknown;
+  let failAutoClear: Error | undefined;
+  let failColor: Error | undefined;
   let failTarget:
-    | { value: THREE.WebGLRenderTarget | null; error: unknown }
+    | { value: THREE.WebGLRenderTarget | null; error: Error }
+    | undefined;
+  let targetFailureOnRender:
+    | { value: THREE.WebGLRenderTarget | null; error: Error }
     | undefined;
   const renderer = {
     get autoClear(): boolean {
@@ -72,6 +75,10 @@ const fakeRenderer = (width = 64, height = 32, antialias = true) => {
       const material = mesh?.material;
       if (material instanceof THREE.MeshBasicMaterial)
         opacities.push(material.opacity);
+      if (targetFailureOnRender !== undefined) {
+        failTarget = targetFailureOnRender;
+        targetFailureOnRender = undefined;
+      }
     },
   } as unknown as THREE.WebGLRenderer;
   return {
@@ -87,14 +94,17 @@ const fakeRenderer = (width = 64, height = 32, antialias = true) => {
       clearColor: clearColor.getHex(),
       clearAlpha,
     }),
-    failAutoClear: (error: unknown) => {
+    failAutoClear: (error: Error) => {
       failAutoClear = error;
     },
-    failColor: (error: unknown) => {
+    failColor: (error: Error) => {
       failColor = error;
     },
-    failTarget: (value: THREE.WebGLRenderTarget | null, error: unknown) => {
-      failTarget = { value, error };
+    failTargetAfterRender: (
+      value: THREE.WebGLRenderTarget | null,
+      error: Error,
+    ) => {
+      targetFailureOnRender = { value, error };
     },
   };
 };
@@ -301,9 +311,17 @@ export const test_viewer_film_fade = (): void => {
   const priorTarget = new THREE.WebGLRenderTarget(2, 2);
   target.renderer.setRenderTarget(priorTarget);
   const targetFailure = new Error("target restoration failed");
-  target.failTarget(priorTarget, targetFailure);
+  target.failTargetAfterRender(priorTarget, targetFailure);
   const targetCaught = captureError(() =>
     renderFadeToBlackFrame(target.renderer, () => undefined, 0.5),
+  );
+  const multiple = fakeRenderer();
+  const multipleAuto = new Error("multiple autoClear failed");
+  const multipleColor = new Error("multiple clear color failed");
+  multiple.failAutoClear(multipleAuto);
+  multiple.failColor(multipleColor);
+  const multipleCaught = captureError(() =>
+    renderFadeToBlackFrame(multiple.renderer, () => undefined, 0.5),
   );
   const combined = fakeRenderer();
   const combinedPrimary = new Error("combined render failed");
@@ -339,6 +357,13 @@ export const test_viewer_film_fade = (): void => {
       ["target", () => targetCaught === targetFailure],
       ["targetAttempt", () => target.restorationAttempts.target === 1],
       [
+        "multiple",
+        () =>
+          multipleCaught instanceof AggregateError &&
+          multipleCaught.errors[0] === multipleAuto &&
+          multipleCaught.errors[1] === multipleColor,
+      ],
+      [
         "combined",
         () =>
           combinedCaught instanceof AggregateError &&
@@ -357,6 +382,7 @@ export const test_viewer_film_fade = (): void => {
       colorAttempt: true,
       target: true,
       targetAttempt: true,
+      multiple: true,
       combined: true,
       invalidWeight: true,
     },

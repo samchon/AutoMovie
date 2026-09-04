@@ -138,7 +138,10 @@ export const materializeProductionFilmEffects = (props: {
   shotEffects?: readonly IAutoMovieShotEffectFilmInterval[];
 }): IAutoMovieCompiledFilmEffect[] => {
   validateIdentity(props.identity);
-  const frameRate = canonicalProductionFrameRate(props.frameRate);
+  const frameRate = validatedFrameRate(
+    props.frameRate,
+    "film-effect-input-invalid",
+  );
   const recipes = uniqueMap(
     props.world.effectRecipes,
     "recipe",
@@ -146,6 +149,7 @@ export const materializeProductionFilmEffects = (props: {
   );
   const zones = uniqueMap(props.world.effectZones, "zone", (value) => value.id);
   validateShotIntervals(props.shotEffects ?? []);
+  const cueIds = new Set<string>();
   return [...props.effects]
     .sort(
       (left, right) =>
@@ -154,6 +158,12 @@ export const materializeProductionFilmEffects = (props: {
     )
     .map((cue): IAutoMovieCompiledFilmEffect => {
       validateCue(cue);
+      if (cueIds.has(cue.id))
+        throw new AutoMovieFilmEffectRuntimeError(
+          "film-effect-input-invalid",
+          `Film effect cue id "${cue.id}" must be unique.`,
+        );
+      cueIds.add(cue.id);
       const zone = zones.get(cue.zone);
       if (zone === undefined)
         throw new AutoMovieFilmEffectRuntimeError(
@@ -343,7 +353,10 @@ const validateRuntime = (
       "film-effect-runtime-invalid",
       `Film effect runtime "${runtime.effect.id}" has an unsupported version, owner, clock, or interval.`,
     );
-  const frameRate = canonicalProductionFrameRate(runtime.frameRate);
+  const frameRate = validatedFrameRate(
+    runtime.frameRate,
+    "film-effect-runtime-invalid",
+  );
   const effectCore = { ...runtime.effect, digest: undefined };
   const expectedEffectDigest = digestAutoMovieBytes(
     canonicalAutoMovieJsonBytes(effectCore),
@@ -398,6 +411,20 @@ const frameSeconds = (
   frame: number,
   frameRate: IAutoMovieProductionFrameRate,
 ): number => (frame * frameRate.denominator) / frameRate.numerator;
+
+const validatedFrameRate = (
+  frameRate: number | IAutoMovieProductionFrameRate,
+  code: "film-effect-input-invalid" | "film-effect-runtime-invalid",
+): IAutoMovieProductionFrameRate => {
+  try {
+    return canonicalProductionFrameRate(frameRate);
+  } catch {
+    throw new AutoMovieFilmEffectRuntimeError(
+      code,
+      "Film effect frame rate must be a positive exact rational identity.",
+    );
+  }
+};
 
 const seedOf = (value: unknown): number =>
   Number.parseInt(

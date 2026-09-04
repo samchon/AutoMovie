@@ -122,6 +122,12 @@ export const test_production_film_effect_runtime = (): void => {
     effects: runtime,
     timelineFrame: 24,
   });
+  const withDistance = sampleProductionFilmEffects({
+    identity: current,
+    effects: runtime,
+    timelineFrame: 24,
+    cameraDistance: 5,
+  });
   const rematerialized = materializeProductionFilmEffects({
     identity: current,
     frameRate: 24,
@@ -156,6 +162,10 @@ export const test_production_film_effect_runtime = (): void => {
         () => JSON.stringify(runtime) === JSON.stringify(rematerialized),
       ],
       [
+        "validDistance",
+        () => JSON.stringify(withDistance) === JSON.stringify(repeated),
+      ],
+      [
         "zoneRevisionChangesDigest",
         () => runtime[0]?.digest !== revised[0]?.digest,
       ],
@@ -171,6 +181,7 @@ export const test_production_film_effect_runtime = (): void => {
       fixedStep: true,
       repeatedSeek: true,
       repeatedMaterialization: true,
+      validDistance: true,
       zoneRevisionChangesDigest: true,
     },
   );
@@ -258,6 +269,39 @@ export const test_production_film_effect_runtime = (): void => {
       effects: [{ ...cues()[0]!, intensity: Number.NaN }],
     }),
   );
+  const duplicateCue = captureError(() =>
+    materializeProductionFilmEffects({
+      identity: current,
+      frameRate: 24,
+      world: world(),
+      effects: [cues()[0]!, structuredClone(cues()[0]!)],
+    }),
+  );
+  const invalidFrameRate = captureError(() =>
+    materializeProductionFilmEffects({
+      identity: current,
+      frameRate: 0,
+      world: world(),
+      effects: cues(),
+    }),
+  );
+  const invalidShotInterval = captureError(() =>
+    materializeProductionFilmEffects({
+      identity: current,
+      frameRate: 24,
+      world: world(),
+      effects: cues(),
+      shotEffects: [
+        {
+          cue: "shot-fog",
+          shot: "shot-a",
+          zone: "courtyard-fog",
+          startFrame: 12,
+          endFrame: 12,
+        },
+      ],
+    }),
+  );
   const stale = captureError(() =>
     sampleProductionFilmEffects({
       identity: { ...current, editFingerprint: digest("c") },
@@ -275,6 +319,37 @@ export const test_production_film_effect_runtime = (): void => {
         },
       ],
       timelineFrame: 12,
+    }),
+  );
+  const invalidRuntimeRate = captureError(() =>
+    sampleProductionFilmEffects({
+      identity: current,
+      effects: [
+        {
+          ...runtime[0]!,
+          frameRate: { numerator: 0, denominator: 1 },
+        },
+      ],
+      timelineFrame: 12,
+    }),
+  );
+  const blankIdentity = captureError(() =>
+    materializeProductionFilmEffects({
+      identity: { ...current, production: "" },
+      frameRate: 24,
+      world: world(),
+      effects: cues(),
+    }),
+  );
+  const badDigest = captureError(() =>
+    materializeProductionFilmEffects({
+      identity: {
+        ...current,
+        compileFingerprint: "not-a-digest" as `sha256:${string}`,
+      },
+      frameRate: 24,
+      world: world(),
+      effects: cues(),
     }),
   );
   const unsupported = captureError(() =>
@@ -306,8 +381,14 @@ export const test_production_film_effect_runtime = (): void => {
       missingRecipe,
       duplicateRecipe,
       invalidCue,
+      duplicateCue,
+      invalidFrameRate,
+      invalidShotInterval,
       stale,
       altered,
+      invalidRuntimeRate,
+      blankIdentity,
+      badDigest,
       unsupported,
       invalidFrame,
       invalidDistance,
@@ -319,8 +400,14 @@ export const test_production_film_effect_runtime = (): void => {
       "film-effect-recipe-missing",
       "film-effect-input-invalid",
       "film-effect-input-invalid",
+      "film-effect-input-invalid",
+      "film-effect-input-invalid",
+      "film-effect-input-invalid",
       "film-effect-runtime-stale",
       "film-effect-runtime-invalid",
+      "film-effect-runtime-invalid",
+      "film-effect-input-invalid",
+      "film-effect-input-invalid",
       "film-effect-runtime-invalid",
       "film-effect-input-invalid",
       "film-effect-input-invalid",
