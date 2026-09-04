@@ -7,10 +7,11 @@ import type {
   IAutoMovieDerivedArtifactSource,
 } from "@automovie/interface";
 import { randomUUID } from "node:crypto";
-import fs from "node:fs";
+import type { Stats } from "node:fs";
 import path from "node:path";
 
 import { acquireCommitLock, releaseCommitLock } from "../project/commitLock";
+import { autoMovieFileSystem as fileSystem } from "../project/fileSystem";
 import {
   type IAutoMovieFingerprintField,
   compareCodeUnits,
@@ -893,7 +894,7 @@ const physicalProjectRoot = (
       code,
       `Derived artifact root "${root}" must be one existing physical directory.`,
     );
-  const real = fs.realpathSync(resolved);
+  const real = fileSystem.realpathSync(resolved);
   if (path.relative(real, resolved) !== "")
     throw new AutoMovieDerivedArtifactGenerationError(
       code,
@@ -915,13 +916,13 @@ const resolveCanonical = (root: string, relative: string): string => {
 
 const readPhysicalFile = (root: string, file: string): Uint8Array => {
   assertPhysicalDirectory(root, path.dirname(file));
-  const linked = fs.lstatSync(file);
+  const linked = fileSystem.lstatSync(file);
   if (linked.isSymbolicLink() || linked.isFile() === false)
     throw new Error(`Owned file "${file}" is not a physical regular file.`);
-  const real = fs.realpathSync(file);
+  const real = fileSystem.realpathSync(file);
   if (isInside(root, real) === false)
     throw new Error(`Owned file "${file}" escapes the physical project root.`);
-  return fs.readFileSync(real);
+  return fileSystem.readFileSync(real);
 };
 
 const sameResidentBytes = (
@@ -949,12 +950,12 @@ const writePhysicalFileAtomic = (
   );
   let published = false;
   try {
-    const descriptor = fs.openSync(temporary, "wx");
+    const descriptor = fileSystem.openSync(temporary, "wx");
     try {
-      fs.writeFileSync(descriptor, bytes);
-      fs.fsyncSync(descriptor);
+      fileSystem.writeFileSync(descriptor, bytes);
+      fileSystem.fsyncSync(descriptor);
     } finally {
-      fs.closeSync(descriptor);
+      fileSystem.closeSync(descriptor);
     }
     if (directoryIdentity(root) !== rootIdentity)
       throw new Error(
@@ -962,12 +963,12 @@ const writePhysicalFileAtomic = (
       );
     assertDirectoryAncestry(ancestry);
     assertPhysicalLeaf(root, file);
-    fs.renameSync(temporary, file);
+    fileSystem.renameSync(temporary, file);
     published = true;
     assertDirectoryAncestry(ancestry);
     assertPhysicalLeaf(root, file);
   } finally {
-    if (published === false) fs.rmSync(temporary, { force: true });
+    if (published === false) fileSystem.rmSync(temporary, { force: true });
   }
 };
 
@@ -983,13 +984,13 @@ const ensurePhysicalDirectory = (root: string, directory: string): void => {
   for (const segment of relative.split(path.sep)) {
     current = path.join(current, segment);
     const linked = lstatOrNull(current);
-    if (linked === null) fs.mkdirSync(current);
-    const resident = fs.lstatSync(current);
+    if (linked === null) fileSystem.mkdirSync(current);
+    const resident = fileSystem.lstatSync(current);
     if (resident.isSymbolicLink() || resident.isDirectory() === false)
       throw new Error(
         `Owned directory "${current}" is not a physical directory.`,
       );
-    if (isInside(root, fs.realpathSync(current)) === false)
+    if (isInside(root, fileSystem.realpathSync(current)) === false)
       throw new Error(`Owned directory "${current}" escapes project root.`);
   }
 };
@@ -1013,7 +1014,7 @@ const assertPhysicalDirectory = (root: string, directory: string): void => {
       throw new Error(
         `Owned directory "${current}" is not a physical directory.`,
       );
-    if (isInside(root, fs.realpathSync(current)) === false)
+    if (isInside(root, fileSystem.realpathSync(current)) === false)
       throw new Error(`Owned directory "${current}" escapes project root.`);
   }
 };
@@ -1024,7 +1025,7 @@ const assertPhysicalLeaf = (root: string, file: string): void => {
   if (linked === null) return;
   if (linked.isSymbolicLink() || linked.isFile() === false)
     throw new Error(`Owned output "${file}" is not a physical regular file.`);
-  if (isInside(root, fs.realpathSync(file)) === false)
+  if (isInside(root, fileSystem.realpathSync(file)) === false)
     throw new Error(`Owned output "${file}" escapes project root.`);
 };
 
@@ -1058,16 +1059,16 @@ const assertDirectoryAncestry = (
 };
 
 const directoryIdentity = (directory: string): string => {
-  const linked = fs.lstatSync(directory);
+  const linked = fileSystem.lstatSync(directory);
   if (linked.isSymbolicLink() || linked.isDirectory() === false)
     throw new Error(`Owned directory "${directory}" is not physical.`);
-  const status = fs.statSync(directory, { bigint: true });
+  const status = fileSystem.statSync(directory, { bigint: true });
   return `${status.dev}\0${status.ino}`;
 };
 
-const lstatOrNull = (file: string): fs.Stats | null => {
+const lstatOrNull = (file: string): Stats | null => {
   try {
-    return fs.lstatSync(file);
+    return fileSystem.lstatSync(file);
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code === "ENOENT") return null;
     throw error;

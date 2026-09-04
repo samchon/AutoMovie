@@ -5,8 +5,8 @@ import type {
 } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 import path from "node:path";
-import { pathToFileURL } from "node:url";
 
+import { loadSourceModule } from "../internal/loadSourceModule";
 import { namedFacts, throwsError } from "../internal/predicates";
 
 interface IRenderTier {
@@ -120,11 +120,7 @@ export const test_cli_scaffold_delivery_design = async (): Promise<void> => {
     __dirname,
     "../../../../packages/template/scaffold/scripts/productionConfiguration.ts",
   );
-  const delivery = (
-    process.env.AUTOMOVIE_ISSUE_2151_ESM === "1"
-      ? await import(pathToFileURL(moduleSource).href)
-      : require(moduleSource)
-  ) as IDeliveryModule;
+  const delivery = loadSourceModule<IDeliveryModule>(moduleSource);
 
   const shipped = delivery.AUTOMOVIE_SHIPPED_RENDER_TIERS;
   const declared = {

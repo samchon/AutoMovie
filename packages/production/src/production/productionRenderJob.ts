@@ -6,8 +6,9 @@ import {
   IAutoMovieProductionDesign,
 } from "@automovie/interface";
 import { createHash } from "node:crypto";
-import fs from "node:fs";
 import path from "node:path";
+
+import { autoMovieFileSystem as fileSystem } from "../project/fileSystem";
 
 /**
  * Package-owned encoder identity fenced into every chunk.
@@ -939,7 +940,7 @@ const closeProductionOwnedDescriptor = (
   target: string,
 ): void => {
   try {
-    fs.closeSync(descriptor);
+    fileSystem.closeSync(descriptor);
   } catch (closeFailure) {
     if (failure === undefined) throw closeFailure;
     throw new ProductionOwnedDescriptorCleanupError(
@@ -1040,7 +1041,7 @@ export function readAutoMovieProductionOwnedFile(props: {
     }
     throw error;
   }
-  const descriptor = fs.openSync(target, "r");
+  const descriptor = fileSystem.openSync(target, "r");
   let failure: IProductionOwnedDescriptorFailure | undefined;
   try {
     const openedIdentity = productionOwnedDescriptorIdentity(
@@ -1053,7 +1054,7 @@ export function readAutoMovieProductionOwnedFile(props: {
         throw new Error(
           `Production-owned path "${target}" changed physical identity while it was read.`,
         );
-      const residentDescriptor = fs.openSync(target, "r");
+      const residentDescriptor = fileSystem.openSync(target, "r");
       let residentFailure: IProductionOwnedDescriptorFailure | undefined;
       try {
         if (
@@ -1075,7 +1076,7 @@ export function readAutoMovieProductionOwnedFile(props: {
       }
     };
     assertResidentFile();
-    const bytes = fs.readFileSync(descriptor);
+    const bytes = fileSystem.readFileSync(descriptor);
     assertResidentFile();
     return bytes;
   } catch (error) {
@@ -1274,7 +1275,7 @@ interface IProductionOwnedPathIdentity {
 }
 
 const productionOwnedDirectoryIdentity = (directory: string): string => {
-  const linked = fs.lstatSync(directory, { bigint: true });
+  const linked = fileSystem.lstatSync(directory, { bigint: true });
   if (linked.isSymbolicLink() || linked.isDirectory() === false)
     throw new Error(
       `Production-owned directory "${directory}" is not a physical directory.`,
@@ -1283,7 +1284,7 @@ const productionOwnedDirectoryIdentity = (directory: string): string => {
 };
 
 const productionOwnedFileIdentity = (file: string): string => {
-  const linked = fs.lstatSync(file, { bigint: true });
+  const linked = fileSystem.lstatSync(file, { bigint: true });
   if (linked.isSymbolicLink() || linked.isFile() === false)
     throw new Error(`Production-owned path "${file}" is not a physical file.`);
   return `${linked.dev}\0${linked.ino}`;
@@ -1293,7 +1294,7 @@ const productionOwnedDescriptorIdentity = (
   file: string,
   descriptor: number,
 ): string => {
-  const opened = fs.fstatSync(descriptor, { bigint: true });
+  const opened = fileSystem.fstatSync(descriptor, { bigint: true });
   if (opened.isFile() === false)
     throw new Error(`Production-owned path "${file}" is not a physical file.`);
   return `${opened.dev}\0${opened.ino}`;

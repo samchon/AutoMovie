@@ -4,6 +4,7 @@ import fs from "node:fs";
 import path from "node:path";
 
 import { namedFacts } from "../internal/predicates";
+import { isolatedFileSystemTest } from "../internal/testFileSystem";
 import { productionFixture } from "./productionFixtures";
 
 /**
@@ -45,159 +46,161 @@ import { productionFixture } from "./productionFixtures";
  * 4. A final attempt that changes from contention to an unrelated failure
  *    preserves that last refusal instead of misreporting exhausted contention.
  */
-export const test_production_project_atomic_contention = (): void => {
-  const fixture = productionFixture();
-  const nativeRename = fs.renameSync;
-  try {
-    const target = path.resolve(
-      path.join(fixture.root, "automovie/productions.json"),
-    );
-    const isTarget = (destination: fs.PathLike): boolean =>
-      path.resolve(destination.toString()) === target;
+export const test_production_project_atomic_contention = isolatedFileSystemTest(
+  (fileSystem): void => {
+    const fixture = productionFixture();
+    const nativeRename = fs.renameSync;
+    try {
+      const target = path.resolve(
+        path.join(fixture.root, "automovie/productions.json"),
+      );
+      const isTarget = (destination: fs.PathLike): boolean =>
+        path.resolve(destination.toString()) === target;
 
-    const contended = (code: string): NodeJS.ErrnoException =>
-      Object.assign(
-        new Error(
-          `${code}: operation not permitted, rename to ${path.basename(target)}`,
-        ),
-        { code },
+      const contended = (code: string): NodeJS.ErrnoException =>
+        Object.assign(
+          new Error(
+            `${code}: operation not permitted, rename to ${path.basename(target)}`,
+          ),
+          { code },
+        );
+
+      /**
+       * Hold the target's publish `failures` times, then let it through.
+       *
+       * `attempts` counts every rename onto the target and `landed` records the
+       * count at the moment the first one succeeded. Opening a project publishes
+       * the registry more than once, so a bare total would pin how many times
+       * `open` happens to write rather than the retry policy this case is about.
+       */
+      const patch = (
+        failures: number,
+        code: string,
+      ): { attempts: () => number; landed: () => number } => {
+        let attempts = 0;
+        let landed = 0;
+        fileSystem.renameSync = ((from: fs.PathLike, to: fs.PathLike) => {
+          if (isTarget(to) === false) return nativeRename(from, to);
+          attempts += 1;
+          if (attempts <= failures) throw contended(code);
+          if (landed === 0) landed = attempts;
+          return nativeRename(from, to);
+        }) as typeof fs.renameSync;
+        return { attempts: () => attempts, landed: () => landed };
+      };
+
+      const survived = patch(2, "EPERM");
+      AutoMovieProductionProject.open(fixture.root, PRODUCTION);
+      TestValidator.equals(
+        "a publish held twice lands on its third attempt",
+        survived.landed(),
+        3,
+      );
+      TestValidator.equals(
+        "the publish that landed left valid state and no temporary",
+        namedFacts([
+          [
+            "the published file is valid json rather than a torn write",
+            () =>
+              (
+                JSON.parse(fs.readFileSync(target, "utf8")) as {
+                  productions?: unknown;
+                }
+              ).productions instanceof Array,
+          ],
+          [
+            "no temporary was left behind",
+            () =>
+              fs
+                .readdirSync(path.dirname(target))
+                .some((entry) => entry.includes(".tmp.")) === false,
+          ],
+        ]),
+        {
+          "the published file is valid json rather than a torn write": true,
+          "no temporary was left behind": true,
+        },
       );
 
-    /**
-     * Hold the target's publish `failures` times, then let it through.
-     *
-     * `attempts` counts every rename onto the target and `landed` records the
-     * count at the moment the first one succeeded. Opening a project publishes
-     * the registry more than once, so a bare total would pin how many times
-     * `open` happens to write rather than the retry policy this case is about.
-     */
-    const patch = (
-      failures: number,
-      code: string,
-    ): { attempts: () => number; landed: () => number } => {
-      let attempts = 0;
-      let landed = 0;
-      fs.renameSync = ((from: fs.PathLike, to: fs.PathLike) => {
+      const foreign = patch(Number.MAX_SAFE_INTEGER, "ENOSPC");
+      TestValidator.equals(
+        "a code the publish does not understand is refused on the first attempt",
+        namedFacts([
+          [
+            "it surfaces unchanged",
+            () =>
+              refusal(() =>
+                AutoMovieProductionProject.open(fixture.root, PRODUCTION),
+              )?.code === "ENOSPC",
+          ],
+          ["it was never retried", () => foreign.attempts() === 1],
+        ]),
+        { "it surfaces unchanged": true, "it was never retried": true },
+      );
+
+      const exhausted = patch(Number.MAX_SAFE_INTEGER, "EBUSY");
+      const gave = refusal(() =>
+        AutoMovieProductionProject.open(fixture.root, PRODUCTION),
+      );
+      TestValidator.equals(
+        "a contended publish that never lands names the file and keeps the cause",
+        namedFacts([
+          ["every attempt was spent", () => exhausted.attempts() === 5],
+          [
+            "it aggregates rather than substitutes",
+            () => gave instanceof AggregateError,
+          ],
+          [
+            "the original error is carried",
+            () =>
+              gave instanceof AggregateError &&
+              (gave.errors[0] as NodeJS.ErrnoException | undefined)?.code ===
+                "EBUSY",
+          ],
+          [
+            "the message names the file that did not land",
+            () => (gave?.message ?? "").includes("productions.json"),
+          ],
+          [
+            "the message says the project may now describe an older input",
+            () =>
+              (gave?.message ?? "").includes(
+                "may still describe an input it no longer has",
+              ),
+          ],
+        ]),
+        {
+          "every attempt was spent": true,
+          "it aggregates rather than substitutes": true,
+          "the original error is carried": true,
+          "the message names the file that did not land": true,
+          "the message says the project may now describe an older input": true,
+        },
+      );
+
+      let changedAttempts = 0;
+      fileSystem.renameSync = ((from: fs.PathLike, to: fs.PathLike) => {
         if (isTarget(to) === false) return nativeRename(from, to);
-        attempts += 1;
-        if (attempts <= failures) throw contended(code);
-        if (landed === 0) landed = attempts;
-        return nativeRename(from, to);
+        changedAttempts += 1;
+        throw contended(changedAttempts < 5 ? "EBUSY" : "ENOSPC");
       }) as typeof fs.renameSync;
-      return { attempts: () => attempts, landed: () => landed };
-    };
-
-    const survived = patch(2, "EPERM");
-    AutoMovieProductionProject.open(fixture.root, PRODUCTION);
-    TestValidator.equals(
-      "a publish held twice lands on its third attempt",
-      survived.landed(),
-      3,
-    );
-    TestValidator.equals(
-      "the publish that landed left valid state and no temporary",
-      namedFacts([
-        [
-          "the published file is valid json rather than a torn write",
-          () =>
-            (
-              JSON.parse(fs.readFileSync(target, "utf8")) as {
-                productions?: unknown;
-              }
-            ).productions instanceof Array,
-        ],
-        [
-          "no temporary was left behind",
-          () =>
-            fs
-              .readdirSync(path.dirname(target))
-              .some((entry) => entry.includes(".tmp.")) === false,
-        ],
-      ]),
-      {
-        "the published file is valid json rather than a torn write": true,
-        "no temporary was left behind": true,
-      },
-    );
-
-    const foreign = patch(Number.MAX_SAFE_INTEGER, "ENOSPC");
-    TestValidator.equals(
-      "a code the publish does not understand is refused on the first attempt",
-      namedFacts([
-        [
-          "it surfaces unchanged",
-          () =>
-            refusal(() =>
-              AutoMovieProductionProject.open(fixture.root, PRODUCTION),
-            )?.code === "ENOSPC",
-        ],
-        ["it was never retried", () => foreign.attempts() === 1],
-      ]),
-      { "it surfaces unchanged": true, "it was never retried": true },
-    );
-
-    const exhausted = patch(Number.MAX_SAFE_INTEGER, "EBUSY");
-    const gave = refusal(() =>
-      AutoMovieProductionProject.open(fixture.root, PRODUCTION),
-    );
-    TestValidator.equals(
-      "a contended publish that never lands names the file and keeps the cause",
-      namedFacts([
-        ["every attempt was spent", () => exhausted.attempts() === 5],
-        [
-          "it aggregates rather than substitutes",
-          () => gave instanceof AggregateError,
-        ],
-        [
-          "the original error is carried",
-          () =>
-            gave instanceof AggregateError &&
-            (gave.errors[0] as NodeJS.ErrnoException | undefined)?.code ===
-              "EBUSY",
-        ],
-        [
-          "the message names the file that did not land",
-          () => (gave?.message ?? "").includes("productions.json"),
-        ],
-        [
-          "the message says the project may now describe an older input",
-          () =>
-            (gave?.message ?? "").includes(
-              "may still describe an input it no longer has",
-            ),
-        ],
-      ]),
-      {
-        "every attempt was spent": true,
-        "it aggregates rather than substitutes": true,
-        "the original error is carried": true,
-        "the message names the file that did not land": true,
-        "the message says the project may now describe an older input": true,
-      },
-    );
-
-    let changedAttempts = 0;
-    fs.renameSync = ((from: fs.PathLike, to: fs.PathLike) => {
-      if (isTarget(to) === false) return nativeRename(from, to);
-      changedAttempts += 1;
-      throw contended(changedAttempts < 5 ? "EBUSY" : "ENOSPC");
-    }) as typeof fs.renameSync;
-    const changed = refusal(() =>
-      AutoMovieProductionProject.open(fixture.root, PRODUCTION),
-    );
-    TestValidator.equals(
-      "a final non-contention failure remains the actual refusal",
-      {
-        attempts: changedAttempts,
-        code: changed?.code,
-      },
-      { attempts: 5, code: "ENOSPC" },
-    );
-  } finally {
-    fs.renameSync = nativeRename;
-    fixture.dispose();
-  }
-};
+      const changed = refusal(() =>
+        AutoMovieProductionProject.open(fixture.root, PRODUCTION),
+      );
+      TestValidator.equals(
+        "a final non-contention failure remains the actual refusal",
+        {
+          attempts: changedAttempts,
+          code: changed?.code,
+        },
+        { attempts: 5, code: "ENOSPC" },
+      );
+    } finally {
+      fileSystem.renameSync = nativeRename;
+      fixture.dispose();
+    }
+  },
+);
 
 /** The production `productionFixture` renders. */
 const PRODUCTION = "fixture-film";

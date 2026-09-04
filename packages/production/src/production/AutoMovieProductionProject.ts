@@ -26,11 +26,12 @@ import {
   IAutoMovieWorldDesign,
 } from "@automovie/interface";
 import { randomUUID } from "node:crypto";
-import fs from "node:fs";
+import type { BigIntStats, Stats } from "node:fs";
 import path from "node:path";
 import typia, { IValidation } from "typia";
 
 import { acquireCommitLock, releaseCommitLock } from "../project/commitLock";
+import { autoMovieFileSystem as fileSystem } from "../project/fileSystem";
 import {
   advanceAutoMovieProjectRevision,
   decodeAutoMovieProjectRevision,
@@ -215,7 +216,7 @@ const closeRenderFileDescriptor = (
   relativePath: string,
 ): void => {
   try {
-    fs.closeSync(descriptor);
+    fileSystem.closeSync(descriptor);
   } catch (closeFailure) {
     if (failure === undefined) throw closeFailure;
     throw new RenderFileDescriptorCleanupError(
@@ -298,7 +299,7 @@ export class AutoMovieProductionProject {
     public readonly archetypes: AutoMovieModelArchetypeRegistry = AUTOMOVIE_REGISTERED_ARCHETYPES,
   ) {
     this.readOnly_ = readOnly;
-    this.rootReal = fs.realpathSync(root);
+    this.rootReal = fileSystem.realpathSync(root);
     this.rootDevice = rootIdentity.device;
     this.rootInode = rootIdentity.inode;
     this.automovieRoot = path.join(root, "automovie");
@@ -317,7 +318,9 @@ export class AutoMovieProductionProject {
         `Reserved AutoMovie state root "${this.automovieRoot}" is missing or not a directory. Open a complete physical project before read-only verification.`,
       );
     if (readOnly === false) this.mkdirOwned(this.automovieRoot);
-    const stateIdentity = fs.statSync(this.automovieRoot, { bigint: true });
+    const stateIdentity = fileSystem.statSync(this.automovieRoot, {
+      bigint: true,
+    });
     this.automovieIdentity = fileIdentityKey(stateIdentity);
     const incarnation = readOwnedJson(this.rootReal, this.incarnationPath);
     if (incarnation === undefined) {
@@ -398,7 +401,7 @@ export class AutoMovieProductionProject {
     this.assertWritable();
     this.assertProjectRootIdentity();
     assertPhysicalDirectoryAncestors(this.rootReal, directory, true);
-    fs.mkdirSync(directory, {
+    fileSystem.mkdirSync(directory, {
       recursive: true,
     });
     assertPhysicalDirectoryAncestors(this.rootReal, directory, false);
@@ -640,7 +643,8 @@ export class AutoMovieProductionProject {
       if (
         linked === null ||
         linked.isSymbolicLink() ||
-        fileIdentityKey(fs.statSync(file, { bigint: true })) !== identity
+        fileIdentityKey(fileSystem.statSync(file, { bigint: true })) !==
+          identity
       )
         throw new AutoMovieProductionInputRaceError(
           `Legacy migration entry "${file}" changed physical identity. No stale-path rollback may touch its replacement.`,
@@ -664,10 +668,10 @@ export class AutoMovieProductionProject {
             `Legacy production path "${move.source}" is a symlink or junction. Replace it with project-owned files before migration.`,
           );
         const identity = fileIdentityKey(
-          fs.statSync(move.source, { bigint: true }),
+          fileSystem.statSync(move.source, { bigint: true }),
         );
         const stagedPath = path.join(temporary, String(index).padStart(2, "0"));
-        fs.renameSync(move.source, stagedPath);
+        fileSystem.renameSync(move.source, stagedPath);
         assertResidentMove(stagedPath, identity);
         staged.push({ ...move, temporary: stagedPath, identity });
       }
@@ -683,7 +687,7 @@ export class AutoMovieProductionProject {
           this.rootReal,
           path.dirname(move.destination),
         );
-        fs.renameSync(move.temporary, move.destination);
+        fileSystem.renameSync(move.temporary, move.destination);
         assertPhysicalDirectoryAncestry(move.destinationParent);
         assertResidentMove(move.destination, move.identity);
         published.push(move);
@@ -731,29 +735,29 @@ export class AutoMovieProductionProject {
         assertPhysicalDirectoryAncestry(move.destinationParent!);
         assertResidentMove(move.destination, move.identity);
         if (lstatOrNull(move.temporary) === null)
-          fs.renameSync(move.destination, move.temporary);
+          fileSystem.renameSync(move.destination, move.temporary);
         assertResidentMove(move.temporary, move.identity);
         if (
           path.dirname(move.destination) === move.source &&
           lstatOrNull(move.source)?.isDirectory() === true &&
-          fs.readdirSync(move.source).length === 0
+          fileSystem.readdirSync(move.source).length === 0
         )
-          fs.rmdirSync(move.source);
+          fileSystem.rmdirSync(move.source);
       }
       for (const move of [...staged].reverse()) {
         const existing = lstatOrNull(move.source);
         if (
           existing?.isDirectory() === true &&
-          fs.readdirSync(move.source).length === 0
+          fileSystem.readdirSync(move.source).length === 0
         )
-          fs.rmdirSync(move.source);
+          fileSystem.rmdirSync(move.source);
         if (
           lstatOrNull(move.source) === null &&
           lstatOrNull(move.temporary) !== null
         ) {
           this.mkdirOwned(path.dirname(move.source));
           assertResidentMove(move.temporary, move.identity);
-          fs.renameSync(move.temporary, move.source);
+          fileSystem.renameSync(move.temporary, move.source);
           assertResidentMove(move.source, move.identity);
         }
       }
@@ -761,7 +765,8 @@ export class AutoMovieProductionProject {
     } finally {
       try {
         assertPhysicalDirectoryAncestry(temporaryAncestry);
-        if (fs.readdirSync(temporary).length === 0) fs.rmdirSync(temporary);
+        if (fileSystem.readdirSync(temporary).length === 0)
+          fileSystem.rmdirSync(temporary);
       } catch {
         // A replacement temporary root is not ours to inspect or remove.
       }
@@ -850,7 +855,7 @@ export class AutoMovieProductionProject {
     productionId: string,
   ): IAutoMovieProductionDesign | null {
     const root = path.resolve(rootDirectory);
-    const rootReal = fs.realpathSync(root);
+    const rootReal = fileSystem.realpathSync(root);
     return readOwnedTypedJson(
       rootReal,
       path.join(productionDesignRootOf(root, productionId), "production.json"),
@@ -863,7 +868,7 @@ export class AutoMovieProductionProject {
    */
   public static registeredProductionIds(rootDirectory: string): string[] {
     const root = path.resolve(rootDirectory);
-    const rootReal = fs.realpathSync(root);
+    const rootReal = fileSystem.realpathSync(root);
     const registryPath = path.join(rootReal, "automovie", "productions.json");
     return validateProductionRegistry(
       readOwnedJson(rootReal, registryPath),
@@ -946,7 +951,7 @@ export class AutoMovieProductionProject {
       source: boolean,
       render: boolean,
     ): void => {
-      const realDirectory = fs.realpathSync(directory);
+      const realDirectory = fileSystem.realpathSync(directory);
       if (
         isInside(this.rootReal, realDirectory) === false ||
         isInside(physicalRoot, realDirectory) === false
@@ -958,14 +963,14 @@ export class AutoMovieProductionProject {
         .readdirSync(directory, { withFileTypes: true })
         .sort((left, right) => compareCodeUnits(left.name, right.name))) {
         const absolute = path.join(directory, entry.name);
-        const linked = fs.lstatSync(absolute);
+        const linked = fileSystem.lstatSync(absolute);
         if (linked.isSymbolicLink())
           throw new Error(
             `Declared content path "${relativeToRoot(this.root, absolute)}" is a symlink or junction. Replace it with physical project content before compilation.`,
           );
         if (linked.isDirectory()) visit(absolute, physicalRoot, source, render);
         else if (linked.isFile()) {
-          const real = fs.realpathSync(absolute);
+          const real = fileSystem.realpathSync(absolute);
           if (
             isInside(this.rootReal, real) === false ||
             isInside(physicalRoot, real) === false
@@ -998,7 +1003,7 @@ export class AutoMovieProductionProject {
         throw new Error(
           `Declared content root "${relativeRoot}" must be a physical project directory before compilation.`,
         );
-      const physicalRoot = fs.realpathSync(absolute);
+      const physicalRoot = fileSystem.realpathSync(absolute);
       if (isInside(this.rootReal, physicalRoot) === false)
         throw new Error(
           `Declared content root "${relativeRoot}" escapes the production project through a directory junction. Move it into a physical project directory before compilation.`,
@@ -1016,7 +1021,7 @@ export class AutoMovieProductionProject {
         throw new Error(
           `Declared content file "${relativeFile}" must be a physical regular file before compilation.`,
         );
-      const real = fs.realpathSync(absolute);
+      const real = fileSystem.realpathSync(absolute);
       if (isInside(this.rootReal, real) === false)
         throw new Error(
           `Declared content file "${relativeFile}" escapes the production project through a directory junction. Move it into a physical project directory before compilation.`,
@@ -1039,7 +1044,7 @@ export class AutoMovieProductionProject {
           throw new Error(
             `Declared asset manifest "${relativeFile}" must be a physical regular file before compilation.`,
           );
-        const real = fs.realpathSync(absolute);
+        const real = fileSystem.realpathSync(absolute);
         if (isInside(this.rootReal, real) === false)
           throw new Error(
             `Declared asset manifest "${relativeFile}" escapes the production project through a junction. Move it into the physical automovie directory before compilation.`,
@@ -1414,7 +1419,8 @@ export class AutoMovieProductionProject {
       if (
         linked === null ||
         linked.isSymbolicLink() ||
-        fileIdentityKey(fs.statSync(file, { bigint: true })) !== identity
+        fileIdentityKey(fileSystem.statSync(file, { bigint: true })) !==
+          identity
       )
         throw new AutoMovieProductionInputRaceError(
           `Production erase entry "${file}" changed physical identity. No stale-path cleanup may touch its replacement.`,
@@ -1443,7 +1449,7 @@ export class AutoMovieProductionProject {
       assertProductionRootNamespaceLease(lease);
       this.assertIncarnation();
       const residentStateIdentity = fileIdentityKey(
-        fs.statSync(this.productionStateRoot, { bigint: true }),
+        fileSystem.statSync(this.productionStateRoot, { bigint: true }),
       );
       productionStateIdentity = residentStateIdentity;
       const registry = validateProductionRegistry(
@@ -1481,12 +1487,14 @@ export class AutoMovieProductionProject {
           throw new Error(
             `Production erase refused unsafe namespace "${source}". Replace links and reopen before retrying.`,
           );
-        const identity = fileIdentityKey(fs.statSync(source, { bigint: true }));
+        const identity = fileIdentityKey(
+          fileSystem.statSync(source, { bigint: true }),
+        );
         const destination = path.join(
           quarantine,
           String(moved.length).padStart(2, "0"),
         );
-        fs.renameSync(source, destination);
+        fileSystem.renameSync(source, destination);
         assertResidentEntry(destination, identity);
         moved.push({ from: source, to: destination, identity });
       }
@@ -1506,7 +1514,7 @@ export class AutoMovieProductionProject {
         assertEraseFence,
         () => {
           auditIdentity = fileIdentityKey(
-            fs.statSync(auditPath, { bigint: true }),
+            fileSystem.statSync(auditPath, { bigint: true }),
           );
         },
       );
@@ -1554,7 +1562,7 @@ export class AutoMovieProductionProject {
                 `Production erase source "${entry.from}" was replaced before rollback. The quarantined original was left untouched.`,
               );
             this.mkdirOwned(path.dirname(entry.from));
-            fs.renameSync(entry.to, entry.from);
+            fileSystem.renameSync(entry.to, entry.from);
             assertResidentEntry(entry.from, entry.identity);
           } catch (rollbackError) {
             rollbackErrors.push(rollbackError);
@@ -1563,7 +1571,7 @@ export class AutoMovieProductionProject {
           try {
             assertEraseFence();
             assertResidentEntry(auditPath, auditIdentity);
-            fs.rmSync(auditPath);
+            fileSystem.rmSync(auditPath);
           } catch (rollbackError) {
             rollbackErrors.push(rollbackError);
           }
@@ -1597,14 +1605,14 @@ export class AutoMovieProductionProject {
             committedErase.fence.state,
           );
           const stateDestination = path.join(quarantine, "state");
-          fs.renameSync(this.productionStateRoot, stateDestination);
+          fileSystem.renameSync(this.productionStateRoot, stateDestination);
           assertResidentEntry(stateDestination, committedErase.fence.state);
-          fs.rmSync(quarantine, { force: true, recursive: true });
+          fileSystem.rmSync(quarantine, { force: true, recursive: true });
         } else if (registryPublished === false && quarantineAncestry !== null)
           try {
             assertPhysicalDirectoryAncestry(quarantineAncestry);
-            if (fs.readdirSync(quarantine).length === 0)
-              fs.rmdirSync(quarantine);
+            if (fileSystem.readdirSync(quarantine).length === 0)
+              fileSystem.rmdirSync(quarantine);
           } catch {
             // A replacement quarantine is not ours to inspect or remove.
           }
@@ -1624,12 +1632,12 @@ export class AutoMovieProductionProject {
    */
   public readSource(relativePath: string): Uint8Array {
     const file = this.resolveSourcePath(relativePath);
-    if (fs.existsSync(file) === false)
+    if (fileSystem.existsSync(file) === false)
       throw new AutoMovieProductionSourcePathError(
         "missing",
         `Source "${relativePath}" does not exist. Create it under a configured source root before compilation.`,
       );
-    const real = fs.realpathSync(file);
+    const real = fileSystem.realpathSync(file);
     if (this.isInSourceRoot(real) === false)
       throw new AutoMovieProductionSourcePathError(
         "outside-root",
@@ -1735,8 +1743,8 @@ export class AutoMovieProductionProject {
       throw new Error(
         `Generated file "${relativePath}" is a symlink or junction. Remove that link before compilation.`,
       );
-    const real = fs.realpathSync(file);
-    if (isInside(fs.realpathSync(root), real) === false)
+    const real = fileSystem.realpathSync(file);
+    if (isInside(fileSystem.realpathSync(root), real) === false)
       throw new Error(
         `Generated file "${relativePath}" escapes the compiler-owned root through a symlink or junction. Remove that link before compilation.`,
       );
@@ -1771,7 +1779,8 @@ export class AutoMovieProductionProject {
     }
     const linked = lstatOrNull(file);
     if (linked === null || linked.isFile() === false) return null;
-    if (isInside(this.rootReal, fs.realpathSync(file)) === false) return null;
+    if (isInside(this.rootReal, fileSystem.realpathSync(file)) === false)
+      return null;
     return Buffer.from(
       readAutoMovieProductionOwnedFile({
         root: this.rootReal,
@@ -1808,7 +1817,7 @@ export class AutoMovieProductionProject {
       );
     let descriptor: number;
     try {
-      descriptor = fs.openSync(file, "r");
+      descriptor = fileSystem.openSync(file, "r");
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code === "ENOENT")
         throw new Error(`Render file "${relativePath}" does not exist.`);
@@ -1817,19 +1826,21 @@ export class AutoMovieProductionProject {
     let failure: IRenderFileDescriptorFailure | undefined;
     let bytes: Uint8Array | undefined;
     try {
-      const opened = fs.fstatSync(descriptor, { bigint: true });
+      const opened = fileSystem.fstatSync(descriptor, { bigint: true });
       const assertResidentFile = (): void => {
         assertPhysicalDirectoryAncestry(ancestry);
-        const currentLink = fs.lstatSync(file);
+        const currentLink = fileSystem.lstatSync(file);
         if (currentLink.isSymbolicLink() || currentLink.isFile() === false)
           throw new Error(
             `Render file "${relativePath}" changed into a link or non-file while it was read.`,
           );
-        const real = fs.realpathSync(file);
-        const residentDescriptor = fs.openSync(real, "r");
+        const real = fileSystem.realpathSync(file);
+        const residentDescriptor = fileSystem.openSync(real, "r");
         let residentFailure: IRenderFileDescriptorFailure | undefined;
         try {
-          const resident = fs.fstatSync(residentDescriptor, { bigint: true });
+          const resident = fileSystem.fstatSync(residentDescriptor, {
+            bigint: true,
+          });
           if (fileIdentityKey(resident) !== fileIdentityKey(opened))
             throw new Error(
               `Render file "${relativePath}" changed physical identity inside the render root. Re-render it inside the owned output root.`,
@@ -1846,7 +1857,7 @@ export class AutoMovieProductionProject {
         }
       };
       assertResidentFile();
-      bytes = fs.readFileSync(descriptor);
+      bytes = fileSystem.readFileSync(descriptor);
       assertResidentFile();
     } catch (error) {
       failure = { error };
@@ -1963,7 +1974,7 @@ export class AutoMovieProductionProject {
       request,
     );
     if (lstatOrNull(directory) === null) return [];
-    if (fs.lstatSync(directory).isSymbolicLink())
+    if (fileSystem.lstatSync(directory).isSymbolicLink())
       throw new Error("Repaint attempt directory must not be a link.");
     const attempts = fs
       .readdirSync(directory, { withFileTypes: true })
@@ -2268,7 +2279,7 @@ export class AutoMovieProductionProject {
     const selectedShots = shots === undefined ? null : new Set(shots);
     const directory = path.join(this.productionStateRoot, "renditions");
     if (lstatOrNull(directory) === null) return [];
-    if (fs.lstatSync(directory).isSymbolicLink())
+    if (fileSystem.lstatSync(directory).isSymbolicLink())
       throw new Error("Repaint candidate directory must not be a link.");
     const receipts: IAutoMovieRepaintReceipt[] = [];
     for (const entry of fs
@@ -2878,7 +2889,9 @@ export class AutoMovieProductionProject {
     const linked = lstatOrNull(directory);
     if (linked === null || linked.isDirectory() === false) return [];
     const views: Array<{ time: number; pass: AutoMovieGuidePass }> = [];
-    for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
+    for (const entry of fileSystem.readdirSync(directory, {
+      withFileTypes: true,
+    })) {
       if (entry.isDirectory() === false) continue;
       const manifest = this.verifiedRenderManifest(
         path.join(directory, entry.name, "manifest.json"),
@@ -3263,7 +3276,7 @@ export class AutoMovieProductionProject {
           const absolute = resolveInside(this.generatedRoot(), relativePath);
           const content = Buffer.from(bytes);
           if (
-            fs.existsSync(absolute) === false ||
+            fileSystem.existsSync(absolute) === false ||
             Buffer.from(this.readGeneratedFile(relativePath)).equals(
               content,
             ) === false
@@ -3565,7 +3578,7 @@ export class AutoMovieProductionProject {
   private isInSourceRoot(candidate: string): boolean {
     return this.manifest_.sourceRoots.some((root) => {
       const directory = this.resolveOwnedDirectory(root);
-      return isInside(fs.realpathSync(directory), candidate);
+      return isInside(fileSystem.realpathSync(directory), candidate);
     });
   }
 
@@ -3593,7 +3606,7 @@ export class AutoMovieProductionProject {
       linked.isSymbolicLink() ||
       linked.isDirectory() === false
         ? null
-        : fs.statSync(this.root, { bigint: true });
+        : fileSystem.statSync(this.root, { bigint: true });
     if (
       current === null ||
       current.dev.toString() !== this.rootDevice ||
@@ -3873,7 +3886,7 @@ export class AutoMovieProductionProject {
           .readdirSync(directory, { withFileTypes: true })
           .sort((left, right) => compareCodeUnits(left.name, right.name))) {
           const absolute = path.join(directory, entry.name);
-          const status = fs.lstatSync(absolute);
+          const status = fileSystem.lstatSync(absolute);
           if (status.isDirectory()) visit(absolute);
           else actualPaths.push(normalizeSlash(path.relative(root, absolute)));
         }
@@ -4215,7 +4228,7 @@ const validateRealOwnershipLayout = (
       throw new Error(
         `Invalid production manifest "${file}": contentRoots[${index}] "${relative}" must be a physical project directory rather than a link or a file.`,
       );
-    const real = fs.realpathSync(absolute);
+    const real = fileSystem.realpathSync(absolute);
     if (isInside(rootReal, real) === false)
       throw new Error(
         `Invalid production manifest "${file}": contentRoots[${index}] "${relative}" escapes the project through a directory junction.`,
@@ -4734,13 +4747,13 @@ const runContendedAtomic = <T>(step: () => T, describe: () => string): T => {
 
 const renameContendedAtomic = (from: string, to: string): void =>
   runContendedAtomic(
-    () => fs.renameSync(from, to),
+    () => fileSystem.renameSync(from, to),
     () => `Production atomic publish of "${to}" failed`,
   );
 
 const removeContendedAtomic = (file: string): void =>
   runContendedAtomic(
-    () => fs.rmSync(file, { force: true }),
+    () => fileSystem.rmSync(file, { force: true }),
     () => `Production atomic removal of "${file}" failed`,
   );
 
@@ -4765,11 +4778,11 @@ const writeAtomic = (
   beforePublish: () => void = () => undefined,
   afterPublish: () => void = () => undefined,
 ): void => {
-  fs.mkdirSync(path.dirname(file), { recursive: true });
+  fileSystem.mkdirSync(path.dirname(file), { recursive: true });
   const temporary = temporaryPath(file, "tmp");
   let failure: IProductionAtomicFailure | undefined;
   try {
-    fs.writeFileSync(temporary, content);
+    fileSystem.writeFileSync(temporary, content);
     beforePublish();
     renameContendedAtomic(temporary, file);
     afterPublish();
@@ -4812,9 +4825,9 @@ const writeJsonAtomic = (
 ): void =>
   writeAtomic(file, Buffer.from(serializeJson(value), "utf8"), beforePublish);
 
-const lstatOrNull = (file: string): fs.Stats | null => {
+const lstatOrNull = (file: string): Stats | null => {
   try {
-    return fs.lstatSync(file);
+    return fileSystem.lstatSync(file);
   } catch (error) {
     if (
       typeof error === "object" &&
@@ -4850,7 +4863,7 @@ const physicalDirectoryIdentityOrNull = (
     linked.isDirectory() === false
   )
     return null;
-  const status = fs.statSync(directory, { bigint: true });
+  const status = fileSystem.statSync(directory, { bigint: true });
   return {
     device: status.dev.toString(),
     inode: status.ino.toString(),
@@ -4904,7 +4917,7 @@ const assertPhysicalDirectoryAncestry = (
     );
 };
 
-const fileIdentityKey = (status: fs.BigIntStats): string =>
+const fileIdentityKey = (status: BigIntStats): string =>
   `${status.dev}\0${status.ino}`;
 
 const directoryIdentityKey = (identity: IPhysicalDirectoryIdentity): string =>
@@ -4917,7 +4930,7 @@ const assertOwnedRegularFile = (rootReal: string, file: string): void => {
     throw new Error(
       `Owned file "${file}" is a symlink. Replace it with a project-local regular file.`,
     );
-  const real = fs.realpathSync(file);
+  const real = fileSystem.realpathSync(file);
   if (isInside(rootReal, real) === false)
     throw new Error(
       `Owned file "${file}" escapes the production root. Replace the link with a project-local file.`,
@@ -4977,7 +4990,7 @@ const isUuid = (value: unknown): value is string =>
 const projectIdOf = (root: string): string => {
   try {
     const declared: unknown = JSON.parse(
-      fs.readFileSync(path.join(root, "package.json"), "utf8"),
+      fileSystem.readFileSync(path.join(root, "package.json"), "utf8"),
     );
     const name = (declared as { name?: unknown } | null)?.name;
     if (typeof name === "string" && name.trim().length > 0) return name.trim();
@@ -5085,8 +5098,9 @@ const assertRealAncestorInside = (
   candidate: string,
 ): string => {
   let existing = candidate;
-  while (fs.existsSync(existing) === false) existing = path.dirname(existing);
-  const real = fs.realpathSync(existing);
+  while (fileSystem.existsSync(existing) === false)
+    existing = path.dirname(existing);
+  const real = fileSystem.realpathSync(existing);
   if (isInside(rootReal, real) === false)
     throw new Error(
       `Owned path "${candidate}" escapes the production root through "${existing}". Replace the symlink or junction with a project-local directory.`,
@@ -5133,7 +5147,7 @@ const assertOwnedRootDirectory = (
 };
 
 const ownedRootReal = (projectRootReal: string, directory: string): string => {
-  const linked = fs.lstatSync(directory);
+  const linked = fileSystem.lstatSync(directory);
   if (linked.isSymbolicLink() || linked.isDirectory() === false)
     throw new Error(
       `Owned root "${directory}" was replaced by a symlink, junction, or non-directory. Restore its physical project directory.`,

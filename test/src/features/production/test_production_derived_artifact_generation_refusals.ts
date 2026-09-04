@@ -13,6 +13,7 @@ import {
   writeDerivedFixtureFile,
   writeDerivedFixtureManifest,
 } from "../internal/derivedArtifactFixtures";
+import { isolatedFileSystemTest } from "../internal/testFileSystem";
 
 const generationCode = (task: () => unknown): string | null => {
   try {
@@ -27,7 +28,7 @@ const generationCode = (task: () => unknown): string | null => {
 
 /** Explicit generation fails closed before publishing incomplete or unsafe state. */
 export const test_production_derived_artifact_generation_refusals =
-  (): void => {
+  isolatedFileSystemTest((fileSystem): void => {
     withDerivedArtifactFixture((fixture) => {
       const valid = () =>
         generateAutoMovieDerivedArtifact({
@@ -355,7 +356,10 @@ export const test_production_derived_artifact_generation_refusals =
         );
       } finally {
         fs.rmSync(generatorDirectory, { recursive: true, force: true });
-        fs.rmSync(externalGeneratorDirectory, { recursive: true, force: true });
+        fs.rmSync(externalGeneratorDirectory, {
+          recursive: true,
+          force: true,
+        });
         writeDerivedFixtureFile(
           fixture.root,
           fixture.generator,
@@ -363,7 +367,7 @@ export const test_production_derived_artifact_generation_refusals =
         );
       }
       const originalRename = fs.renameSync;
-      fs.renameSync = ((
+      fileSystem.renameSync = ((
         source: fs.PathLike,
         destination: fs.PathLike,
       ): void => {
@@ -387,7 +391,7 @@ export const test_production_derived_artifact_generation_refusals =
           "publication-failed",
         );
       } finally {
-        fs.renameSync = originalRename;
+        fileSystem.renameSync = originalRename;
       }
       TestValidator.equals(
         "failed artifact rename preserves old output",
@@ -412,7 +416,10 @@ export const test_production_derived_artifact_generation_refusals =
         generationCode(valid),
         "manifest-malformed",
       );
-      writeDerivedFixtureManifest(fixture.root, { version: 2, artifacts: [] });
+      writeDerivedFixtureManifest(fixture.root, {
+        version: 2,
+        artifacts: [],
+      });
       TestValidator.equals(
         "wrong resident ledger version blocks generation",
         generationCode(valid),
@@ -495,4 +502,4 @@ export const test_production_derived_artifact_generation_refusals =
     } finally {
       fs.rmSync(rootFile, { force: true });
     }
-  };
+  });

@@ -12,7 +12,7 @@ import {
 } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
-import { namedFacts, nclose, throwsError } from "../internal/predicates";
+import { namedFacts, nclose, throwsError } from "./predicates";
 
 const IDENTITY: IAutoMovieTransform = {
   translation: { x: 0, y: 0, z: 0 },
@@ -91,7 +91,7 @@ const driven = (
  * 4. Malformed sampled TRS overrides reject before blend or slerp math can consume
  *    missing, extra, or array-like components.
  */
-export const test_resolve_drivers_copy = (): void => {
+export const runResolveDriversCopyScenario = (): void => {
   // 1. full copy from rest
   const owner = node("o", {
     translation: { x: 1, y: 0, z: 0 },
@@ -333,7 +333,7 @@ export const test_resolve_drivers_copy = (): void => {
  *    width gate the source side already had. A scalar pointer output keeps
  *    working (every other scenario here).
  */
-export const test_resolve_drivers_driven = (): void => {
+export const runResolveDriversDrivenScenario = (): void => {
   const run = (d: IAutoMovieDrivenDriver, src?: number): number[] => {
     const sampled =
       src === undefined ? seed([]) : seed([["ptr:/in", ptr("/in"), [src]]]);
@@ -695,7 +695,7 @@ export const test_resolve_drivers_driven = (): void => {
  * 3. An `aim` driver is returned in `deferred` and never written.
  * 4. An unknown driver discriminator rejects instead of being silently deferred.
  */
-export const test_resolve_drivers_order = (): void => {
+export const runResolveDriversOrderScenario = (): void => {
   // 1. chained, out of order
   const a = driven({
     source: ptr("/x"),
@@ -786,7 +786,7 @@ export const test_resolve_drivers_order = (): void => {
  * (a back edge onto a driver still on the stack), so resolution rejects the
  * ill-formed rig.
  */
-export const test_resolve_drivers_cycle = (): void => {
+export const runResolveDriversCycleScenario = (): void => {
   const nodes = byId(node("o"), node("s"));
   const cyclic: IAutoMovieDriver[] = [
     copy({ owner: "o", source: "s", rotation: true }),

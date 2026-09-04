@@ -3,21 +3,9 @@ import chalk from "chalk";
 import path from "node:path";
 import process from "node:process";
 
+import { createFatalTestEventHandler } from "./integrity/fatalTestEvent";
 import { scenarioSelectionDiagnostics } from "./integrity/scenarioSelection";
-
-const parseArg = (type: string): string[] => {
-  const prefix = `--${type}`;
-  const out: string[] = [];
-  const argv = process.argv;
-  for (let i = 0; i < argv.length; ++i) {
-    const a = argv[i]!;
-    if (a === prefix) {
-      for (let j = i + 1; j < argv.length && !argv[j]!.startsWith("--"); ++j)
-        out.push(argv[j]!);
-    } else if (a.startsWith(`${prefix}=`)) out.push(a.slice(prefix.length + 1));
-  }
-  return out;
-};
+import { parseScenarioSelectorArguments } from "./integrity/scenarioSelectorArguments";
 
 async function main(): Promise<void> {
   console.log("---------------------------------------------------");
@@ -25,8 +13,9 @@ async function main(): Promise<void> {
   console.log("Start", new Date().toLocaleString("en-US"));
   console.log("---------------------------------------------------");
 
-  const include = parseArg("include");
-  const exclude = parseArg("exclude");
+  const { include, exclude } = parseScenarioSelectorArguments(
+    process.argv.slice(2),
+  );
 
   // Every name the discovery offered, so a term that matched nothing can be
   // told from one that matched something the other half then removed.
@@ -86,9 +75,15 @@ async function main(): Promise<void> {
   console.log(chalk.green("All tests passed."));
 }
 
-process.on("uncaughtException", (e) => console.log("uncaught", e));
-process.on("unhandledRejection", (e) => console.log("rejection", e));
-main().catch((e: unknown) => {
-  console.log("critical error", e);
-  process.exit(1);
+const fatal = createFatalTestEventHandler({
+  report: ({ kind, diagnostic }) => console.log(kind, diagnostic),
+  writeStatus: (status) => {
+    process.exitCode = status;
+  },
 });
+
+process.on("uncaughtException", (error) => fatal("uncaught exception", error));
+process.on("unhandledRejection", (error) =>
+  fatal("unhandled rejection", error),
+);
+main().catch((error: unknown) => fatal("critical error", error));
