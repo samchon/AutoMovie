@@ -114,6 +114,7 @@ export function inspectAutoMovieEvidenceReviewAlarms(props: {
       const question = targets.get(review.target)?.question;
       if (
         question !== undefined &&
+        question !== "" &&
         normalized(review.reason).includes(question)
       )
         alarms.push(
@@ -144,9 +145,7 @@ const reviewsOf = (document: IAutoMovieEvidenceSyntaxDocument): IReview[] =>
       {
         exclusion: match[1] !== undefined,
         host: carrier.host,
-        layer:
-          /^docs\/([^/]+)\//u.exec(document.path.replaceAll("\\", "/"))?.[1] ??
-          "source",
+        layer: layerOf(document.path),
         line: carrier.line,
         path: document.path,
         reason: match[3]!,
@@ -154,6 +153,15 @@ const reviewsOf = (document: IAutoMovieEvidenceSyntaxDocument): IReview[] =>
       },
     ];
   });
+
+const layerOf = (documentPath: string): string => {
+  const parts = documentPath.replaceAll("\\", "/").split("/");
+  if (parts[0] === "docs" && parts[1] === "accounts")
+    return parts[2] ?? "accounts";
+  if (parts[0] === "docs") return parts[1] ?? "docs";
+  if (parts[0] === "src") return parts[1] ?? "source";
+  return "source";
+};
 
 const targetTexts = (
   documents: readonly IAutoMovieEvidenceSyntaxDocument[],
