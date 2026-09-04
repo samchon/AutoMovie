@@ -9,6 +9,12 @@ import { createHash } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 
+import { parseAutoMovieCaptionLanguage } from "./captionLanguage";
+import {
+  serializeAutoMovieWebVttCueText,
+  serializeAutoMovieWebVttSingleLineText,
+} from "./captionText";
+
 /**
  * Package-owned encoder identity fenced into every chunk.
  */
@@ -660,19 +666,19 @@ export const canonicalProductionWebVtt = (
       compareCodeUnits(left.id, right.id),
   );
   return [
-    `WEBVTT ${webVttPlainText(timeline.id)}`,
+    `WEBVTT ${serializeAutoMovieWebVttSingleLineText(timeline.id)}`,
     "",
     ...cues.flatMap((cue) => [
-      webVttPlainText(cue.id),
+      serializeAutoMovieWebVttSingleLineText(cue.id),
       `${webVttTime(cue.startFrame / timeline.fps)} --> ${webVttTime(
         cue.endFrame / timeline.fps,
       )}`,
-      `<lang ${webVttPlainText(cue.language)}>${
+      `<lang ${webVttCaptionLanguage(cue.language)}>${
         cue.speaker === undefined
-          ? webVttPlainText(cue.text)
-          : `<v ${webVttPlainText(cue.speaker)}>${webVttPlainText(
-              cue.text,
-            )}</v>`
+          ? serializeAutoMovieWebVttCueText(cue.text)
+          : `<v ${serializeAutoMovieWebVttSingleLineText(
+              cue.speaker,
+            )}>${serializeAutoMovieWebVttCueText(cue.text)}</v>`
       }</lang>`,
       "",
     ]),
@@ -1223,13 +1229,14 @@ const webVttTime = (seconds: number): string => {
   )}`;
 };
 
-/** Escape one authored plain-text field into a single WebVTT content line. */
-const webVttPlainText = (value: string): string =>
-  value
-    .replace(/[\u0000-\u001f\u007f]/gu, " ")
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;");
+const webVttCaptionLanguage = (value: string): string => {
+  const identity = parseAutoMovieCaptionLanguage(value);
+  if (identity === null)
+    throw new Error(
+      `Caption language "${value}" is not a well-formed RFC 5646 tag.`,
+    );
+  return serializeAutoMovieWebVttSingleLineText(identity.display);
+};
 
 const validByteFact = (fact: { digest: string; bytes: number }): boolean =>
   Number.isSafeInteger(fact.bytes) &&

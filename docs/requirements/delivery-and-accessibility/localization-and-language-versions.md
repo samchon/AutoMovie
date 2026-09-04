@@ -10,7 +10,7 @@ Source text identity, source language, translator 또는 provider, translated te
 
 ### Language Tag와 Selection {#delivery-language-selection}
 
-각 stream과 text asset은 일관된 language identity, script 또는 region 차이가 필요한 경우 그 variation, intended audience와 selection role을 가져야 한다. Unknown 또는 mixed language를 default language로 자동 분류해서는 안 된다.
+각 stream과 text asset은 RFC 5646 well-formed language tag의 retained display form과 ASCII case-insensitive identity, script 또는 region 차이가 필요한 경우 그 variation, intended audience와 selection role을 가져야 한다. Well-formed 판정은 registry membership이나 Preferred-Value replacement를 뜻하지 않는다. Unknown 또는 mixed language를 default language로 자동 분류해서는 안 된다.
 
 ### Dub와 Timing {#delivery-dub-timing}
 
