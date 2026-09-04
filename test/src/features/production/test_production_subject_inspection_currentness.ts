@@ -94,7 +94,7 @@ const observation = (props: {
         artifact,
         digest: digestAutoMovieBytes(bytes),
       },
-      pose: props.pose ?? (props.plan.poses[0]!),
+      pose: (props.pose ?? props.plan.poses[0])!,
       compileFingerprint:
         props.compileFingerprint ?? props.plan.compileFingerprint,
       planIdentity: props.plan.planIdentity,
