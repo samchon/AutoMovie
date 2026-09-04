@@ -1,11 +1,11 @@
 ---
 name: scaffold
-description: Defines how packages/template/scaffold is maintained as the self-contained authoring harness every generated project inherits verbatim, including its five trigger-partitioned contract and production skills, local contract inventory, and negative-probe and generated-consumer verification gates. Use before editing anything under packages/template/scaffold, and to reach the applicable production authoring procedure when authoring production content inside this repository.
+description: Defines how packages/template/scaffold and packages/template/language-contracts are maintained as the self-contained authoring harness every generated project inherits, including its instruction and contract materializers under packages/template/src, five trigger-partitioned contract and production skills, local contract inventory, and negative-probe and generated-consumer verification gates. Use before editing those sources, and to reach the applicable production authoring procedure when authoring production content inside this repository.
 ---
 
 # Maintaining the scaffold
 
-`packages/template/scaffold` is the empty authoring harness `automovie` stamps out. A completed regression film fixture lives outside it so generated projects inherit capability and contracts, never another production's content. Treat every scaffold change as a generated-project API change.
+`packages/template/scaffold` is the empty authoring harness `automovie` stamps out, `packages/template/language-contracts` supplies its creation-selected language module, and the instruction and contract materializers under `packages/template/src` publish both surfaces. A completed regression film fixture lives outside them so generated projects inherit capability and contracts, never another production's content. Treat every change to those sources as a generated-project API change.
 
 ## The authoring procedures live with the production
 
@@ -13,7 +13,7 @@ The contract router and procedures that author a production ship inside the scaf
 
 Read the applicable shipped [contract](../../../packages/template/scaffold/.agents/skills/contract/SKILL.md), [production lifecycle](../../../packages/template/scaffold/.agents/skills/production-lifecycle/SKILL.md), [evidence graph](../../../packages/template/scaffold/.agents/skills/evidence-graph/SKILL.md), [source authoring](../../../packages/template/scaffold/.agents/skills/source-authoring/SKILL.md), and [review verification](../../../packages/template/scaffold/.agents/skills/review-verification/SKILL.md) skills before interpreting, authoring, or reviewing production content anywhere, including a fixture or an experimental sandbox inside this repository. This maintenance skill does not restate them.
 
-Editing any document under that directory changes what every future generated project is instructed to do. Apply the [documentation skill](../documentation/SKILL.md) writing rules, verify the links resolve from a generated project rather than from this repository, and run the verification gates below.
+Editing any instruction or contract document under the scaffold or language-contract roots changes what every future generated project is instructed to do. Apply the [documentation skill](../documentation/SKILL.md) writing rules, verify the links resolve from a generated project rather than from this repository, and run the verification gates below.
 
 ## The shared contract inventory
 

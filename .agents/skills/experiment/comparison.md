@@ -37,7 +37,7 @@ The combination this separation exists to break is one agent holding commissione
 
 A gate review is not a loop-until-dry round. `PASS` ends that gate, resumes the same writer immediately, and requires no second clean audit. `FAIL` leaves the stage where it is and returns every finding in one batch, and the same writer resumes on the repair.
 
-Clean-round requirements belong to the procedures that declare them, and no gate is one of those procedures. The [review skill](../review/SKILL.md#self-review) closes a Self-Review on one complete round that finds nothing, and the [documentation skill](../documentation/SKILL.md#agent-instructions) separately requires two consecutive clean rounds over an agent-instruction diff. Demanding a duplicate clean pass at a gate uses the reviewer for nothing and pays a full corpus read for it.
+Clean-round requirements belong to the procedures that declare them, and no gate is one of those procedures. The [review skill](../review/SKILL.md#self-review) closes a Self-Review on one complete round that finds nothing, and the [documentation skill](../documentation/SKILL.md#instruction-authority) separately requires two consecutive clean rounds over an agent-instruction diff. Demanding a duplicate clean pass at a gate uses the reviewer for nothing and pays a full corpus read for it.
 
 ## Judge Each Gate By Its Own Purpose
 

@@ -16,8 +16,8 @@ Keep implementation in the base campaign's shared checkout unless the user asked
 2. Stop every discovery agent only after that empty-round gate passes.
 3. If the gate passes with no accepted issue, skip implementation and evaluate [Completion](#completion).
 4. Otherwise read the base issue campaign's [development procedure](../issue-campaign/development.md).
-5. Put every implementation-ready issue into one frozen coarse batch, create that batch's isolated worktree, branch, and empty-claim pull request, dispatch one owner per ready batch in dependency-DAG waves, complete the locally authorized gates, validate through ordinary CI, and complete the lead's [integration Self-Review](../issue-campaign/development.md#validate-with-ci-and-the-integration-self-review) over the integrated base-to-head diff.
-6. Apply that procedure's implementation, CI, merge, branch cleanup, and temporary-asset rules. Repair every red CI lane in that same pull request even when the failure predates the campaign or is unrelated to its original issues, then return here for the next parallel discovery round instead of switching to the base skill's solo discovery.
+5. Partition every implementation-ready issue into frozen coarse batches, then create each ready batch's isolated worktree, branch, and empty-claim pull request in dependency-DAG waves. Dispatch one owner per batch, complete the locally authorized gates, validate through ordinary CI, and complete the lead's [integration Self-Review](../issue-campaign/development.md#validate-with-ci-and-the-integration-self-review) over the integrated base-to-head diff.
+6. Apply that procedure's implementation, CI, merge, branch cleanup, and temporary-asset rules to each batch pull request. Repair every red CI lane in that batch's pull request even when the failure predates the campaign or is unrelated to its original issues, then return here for the next parallel discovery round instead of switching to the base skill's solo discovery.
 
 Do not infer isolated batches from quota concerns, a large issue count, or the fact that several owners implement at once. Only the user's explicit phase boundary selects them.
 
