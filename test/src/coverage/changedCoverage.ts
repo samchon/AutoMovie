@@ -192,19 +192,29 @@ export const resolveCoverageBase = (
   explicit: string | undefined,
   environment: NodeJS.ProcessEnv = process.env,
 ): string => {
-  const candidates = [
-    explicit,
-    environment.AUTOMOVIE_COVERAGE_BASE,
-    environment.GITHUB_BASE_REF === undefined
-      ? undefined
-      : `origin/${environment.GITHUB_BASE_REF}`,
-    "origin/master",
-    "master",
-  ].filter(
-    (candidate): candidate is string =>
-      typeof candidate === "string" && candidate.length !== 0,
-  );
-  for (const candidate of candidates)
+  const configured = [
+    { source: "--base", value: explicit },
+    {
+      source: "AUTOMOVIE_COVERAGE_BASE",
+      value: environment.AUTOMOVIE_COVERAGE_BASE,
+    },
+    {
+      source: "GITHUB_BASE_REF",
+      value:
+        environment.GITHUB_BASE_REF === undefined ||
+        environment.GITHUB_BASE_REF.length === 0
+          ? environment.GITHUB_BASE_REF
+          : `origin/${environment.GITHUB_BASE_REF}`,
+    },
+  ];
+  for (const candidate of configured)
+    if (candidate.value !== undefined && candidate.value.length !== 0) {
+      if (existingRef(root, candidate.value)) return candidate.value;
+      throw new Error(
+        `configured coverage base from ${candidate.source} does not resolve to a commit: ${JSON.stringify(candidate.value)}`,
+      );
+    }
+  for (const candidate of ["origin/master", "master"])
     if (existingRef(root, candidate)) return candidate;
   throw new Error(
     `no coverage comparison base exists; pass --base <ref> or set AUTOMOVIE_COVERAGE_BASE`,

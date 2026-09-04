@@ -235,7 +235,14 @@ export const buildTgz = (
 export const isProcessEntry = (
   entry: string | undefined,
   file: string,
-): boolean => entry !== undefined && path.resolve(entry) === path.resolve(file);
+): boolean => {
+  if (entry === undefined) return false;
+  const actual = path.resolve(entry);
+  const expected = path.resolve(file);
+  return process.platform === "win32"
+    ? actual.toLowerCase() === expected.toLowerCase()
+    : actual === expected;
+};
 
 /** Pack the workspace only when this module is the process entry. */
 export const buildTgzCli = (entry: boolean, run: () => unknown): void => {
