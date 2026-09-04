@@ -111,6 +111,16 @@ export const test_evidence_contract_ownership_query = (): void => {
         ].join("\n"),
       },
       {
+        path: "src/hidden-namespace.ts",
+        source: [
+          "/** @internal */",
+          "export namespace HiddenSurface {",
+          `  /** ${citation} */`,
+          "  export const nested = 1;",
+          "}",
+        ].join("\n"),
+      },
+      {
         path: "src/hash-private.ts",
         source: [
           "export class PublicOwner {",

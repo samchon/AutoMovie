@@ -300,6 +300,7 @@ const collectPublicStatementBlocks = (
   }
   for (const statement of statements) {
     if (!isPublicStatement(statement, listed)) continue;
+    if (hasHiddenDocumentation(file, statement)) continue;
     collectSupportedNodeBlocks(file, statement, symbols, blocks);
     if (ts.isModuleDeclaration(statement))
       collectPublicModuleBlocks(file, statement.body, symbols, blocks);
@@ -316,6 +317,7 @@ const collectPublicModuleBlocks = (
   if (ts.isModuleBlock(body))
     collectPublicStatementBlocks(file, body.statements, symbols, blocks);
   else if (ts.isModuleDeclaration(body)) {
+    if (hasHiddenDocumentation(file, body)) return;
     collectSupportedNodeBlocks(file, body, symbols, blocks);
     collectPublicModuleBlocks(file, body.body, symbols, blocks);
   }
@@ -441,6 +443,12 @@ const hasHiddenDocumentationTag = (comment: string): boolean =>
         line.trim().replace(/^\*\s?/u, ""),
       ),
     );
+
+const hasHiddenDocumentation = (file: ts.SourceFile, node: ts.Node): boolean =>
+  ts
+    .getJSDocCommentsAndTags(node)
+    .filter(ts.isJSDoc)
+    .some((comment) => hasHiddenDocumentationTag(comment.getFullText(file)));
 
 const stripCurrentDirectoryPrefix = (value: string): string => {
   while (value.startsWith("./")) value = value.slice(2);
