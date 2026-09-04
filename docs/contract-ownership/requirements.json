@@ -2156,6 +2156,12 @@
         "package": "automovie"
       }
     },
+    "requirements/operations-and-recovery/scope-job-identity-and-state.md#operations-requested-effective-work": {
+      "owner": {
+        "kind": "package",
+        "package": "automovie"
+      }
+    },
     "requirements/product/prototype-quality.md#product-authored-variation-determinism": {
       "owner": {
         "kind": "package",
@@ -4421,7 +4427,6 @@
     "requirements/operations-and-recovery/resource-budgets-and-backpressure.md#operations-runtime-budget-enforcement": "sha256:5333c69d0094aaef0562b45eff08c4b0fb07ccf104ec47190485ca3ec3b7782c",
     "requirements/operations-and-recovery/retention-and-cleanup.md#operations-retention-cleanup": "sha256:9933ccab68d4a51bd3f8d2b8498100a8dbba47bff0bcc8e375f3910497d2d65f",
     "requirements/operations-and-recovery/scope-job-identity-and-state.md#operations-job-identity-inputs": "sha256:9cd8bd4179e4f04d672bc5bc30771dba16d799b06b5a40d3ae43c5f903deb1f2",
-    "requirements/operations-and-recovery/scope-job-identity-and-state.md#operations-requested-effective-work": "sha256:347967ae137cbc6692798090f8d000de555c351967018b76de36364e0caeca22",
     "requirements/operations-and-recovery/scope-job-identity-and-state.md#operations-scope-job-identity": "sha256:1456b45ea6339f91cc01c616ba972fca25e31efbd6dbb9abb4b9369df977de30",
     "requirements/operations-and-recovery/scope-job-identity-and-state.md#operations-terminal-state-truth": "sha256:e4d023413ec954ada7e58b6541ecbece92438a480df6dde49245d05ecc57832a",
     "requirements/product/authorability.md#product-authorability-threshold": "sha256:4369a14170719dc0f88f4c88a73b73139b19a380b285f9cd5a76131a7c8981a4",
