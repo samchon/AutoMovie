@@ -130,7 +130,7 @@ const sharedFilesOf = (
       reference.type === "markdown" ? reference.files : [],
     )
     .filter((file) => file.startsWith(`${family}/`))
-    .sort((left, right) => left.localeCompare(right));
+    .sort();
 
 const manifestContractPaths = (
   manifest: ContractManifest,
@@ -938,7 +938,7 @@ export const review = true;
           ...(narrative ? ["principles/story/narratives.md"] : []),
           ...(inherited ? ["principles/core/inherited-units.md"] : []),
           `principles/${domain}/${contract}.md`,
-        ].sort((left, right) => left.localeCompare(right)),
+        ].sort(),
         `${layer} H${depth} must answer every applicable principle for itself`,
       );
       assert.deepEqual(
@@ -965,7 +965,7 @@ export const review = true;
               ...(layer === "research"
                 ? []
                 : [`obligations/${domain}/${contract}.md`]),
-            ].sort((left, right) => left.localeCompare(right))
+            ].sort()
           : [],
         `${layer} obligations must be covered once-plus across only its primary H2 owner population`,
       );
@@ -2423,9 +2423,7 @@ export const review = true;
     "an object library must not inherit building, narrative, or delivery branches",
   );
   assert.deepEqual(
-    manifestContractPaths(objectManifest).sort((left, right) =>
-      left.localeCompare(right),
-    ),
+    manifestContractPaths(objectManifest).sort(),
     [
       "discovery/core/common.md",
       "discovery/core/settings.md",
@@ -2443,7 +2441,7 @@ export const review = true;
       "principles/design/motions.md",
       "upstream/design/models.md",
       "upstream/design/motions.md",
-    ].sort((left, right) => left.localeCompare(right)),
+    ].sort(),
     "an object library must expose its complete core and selected design contract set",
   );
   assert.equal(
@@ -2496,7 +2494,7 @@ export const review = true;
   assert.deepEqual(
     manifestContractPaths(buildingManifest)
       .filter((contractPath) => contractPath.includes("/design/"))
-      .sort((left, right) => left.localeCompare(right)),
+      .sort(),
     [
       "discovery/design/designs.md",
       "discovery/design/instances.md",
@@ -2515,7 +2513,7 @@ export const review = true;
       "upstream/design/materials.md",
       "upstream/design/spaces.md",
       "upstream/design/systems.md",
-    ].sort((left, right) => left.localeCompare(right)),
+    ].sort(),
     "a building library must expose only its shared and selected design contracts",
   );
   assert.ok(
@@ -2808,9 +2806,7 @@ export const review = true;
   const briefManifest =
     createAutoMovieContractBindingManifest(briefDeclaration);
   assert.deepEqual(
-    manifestContractPaths(briefManifest).sort((left, right) =>
-      left.localeCompare(right),
-    ),
+    manifestContractPaths(briefManifest).sort(),
     [
       "discovery/core/common.md",
       "discovery/core/settings.md",
@@ -2830,7 +2826,7 @@ export const review = true;
       "upstream/delivery/film-sources.md",
       "upstream/delivery/production-sources.md",
       "upstream/delivery/shots.md",
-    ].sort((left, right) => left.localeCompare(right)),
+    ].sort(),
     "a direct brief must expose the complete core and delivery set without film-story contracts",
   );
   assert.ok(
