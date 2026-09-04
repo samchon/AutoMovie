@@ -127,7 +127,7 @@ const residentRuntimePackage = <Module>(
     packageName,
   });
   return loadRuntimePackageGeneration({
-    key: `${snapshot.package}\0${snapshot.root}`,
+    key: `${snapshot.package}\0${snapshot.entry}`,
     generation: snapshot.fingerprint,
     snapshot,
     assertCurrent: () => assertRuntimePackageSnapshotCurrent(snapshot),
