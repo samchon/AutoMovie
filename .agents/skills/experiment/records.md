@@ -47,7 +47,7 @@ Predeclare escalation. An ambiguous or high-impact judgment, an order-sensitive 
 
 ## Operate One Frozen Run As A State Machine
 
-One run starts at `declared` and ends in exactly one terminal state: `completed`, `failed`, `interrupted`, or `abandoned`. The only nonterminal edges are `declared -> preflight`, `preflight -> ready`, `ready -> running`, `running -> gate-review`, and `gate-review -> running`. `declared`, `preflight`, `ready`, `running`, and `gate-review` may also enter a terminal state when their work cannot continue. A stage, condition, or immutable basis never changes in place; changing one creates a successor run with a new id and an explicit predecessor link.
+One run starts at `declared` and ends in exactly one terminal state: `completed`, `failed`, `interrupted`, or `abandoned`. The allowed edges are `declared -> preflight | abandoned`, `preflight -> ready | failed | abandoned`, `ready -> running | failed | abandoned`, `running -> gate-review | failed | interrupted | abandoned`, and `gate-review -> running | completed | failed | interrupted | abandoned`. Reaching `completed` therefore requires a recorded judgment gate. A stage, condition, or immutable basis never changes in place; changing one creates a successor run with a new id and an explicit predecessor link.
 
 Each transition receipt records its id, a monotonic sequence, run id and generation, from and to states, timestamp, actor, reason, evidence identities, and result. A transition is invalid when it uses an edge not listed above, follows a terminal state, changes the frozen basis, or has no receipt. A replacement generation never covers, edits, or deletes the interrupted generation's record.
 
