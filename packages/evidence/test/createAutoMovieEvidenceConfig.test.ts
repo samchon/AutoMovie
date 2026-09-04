@@ -4,11 +4,9 @@ import {
 } from "@automovie/evidence";
 import assert from "node:assert/strict";
 import fs from "node:fs";
-import os from "node:os";
 import path from "node:path";
 
-import "./auditAutoMovieEvidenceReviewReasons.test";
-import "./readAutoMovieProductionEvidence.test";
+import { createEvidenceProjectFixture } from "./EvidenceProjectFixture";
 
 type Graph = Parameters<typeof createAutoMovieEvidenceConfig>[0];
 type Claim = NonNullable<Graph["claims"]>[number];
@@ -16,41 +14,12 @@ type ContractManifest = ReturnType<
   typeof createAutoMovieContractBindingManifest
 >;
 
-const scaffoldRoot = path.resolve(
-  import.meta.dirname,
-  "..",
-  "..",
-  "template",
-  "scaffold",
-);
-const templatePackageRoot = path.dirname(scaffoldRoot);
 const roots: string[] = [];
 
 /**
- * A disposable project that owns the shared contracts the way a real one does.
- *
- * The scaffold ships discovery, upstream, obligation, and principle inventories
- * inside the generated project's own `docs`. The fixture copies those exact
- * scaffold bytes without constructing a package-shaped dependency, proving the
- * graph has no runtime dependency on `@automovie/template` resolution.
+ * A disposable project with synthetic contract inputs owned by this test.
  */
-const root = (): string => {
-  const directory = fs.mkdtempSync(path.join(os.tmpdir(), "automovie-graph-"));
-  roots.push(directory);
-  for (const family of ["discovery", "obligations", "principles", "upstream"])
-    fs.cpSync(
-      path.join(scaffoldRoot, "docs", family),
-      path.join(directory, "docs", family),
-      { recursive: true },
-    );
-  const contractDirectory = path.join(directory, "docs", "contracts");
-  fs.mkdirSync(contractDirectory, { recursive: true });
-  fs.writeFileSync(
-    path.join(contractDirectory, "index.md"),
-    "<!-- @evidenceExclude discovery/core/common.md#shared-local-boundary This structural graph fixture retains no production-specific rule. -->\n\n# Work-specific contract audit\n",
-  );
-  return directory;
-};
+const root = (): string => createEvidenceProjectFixture(roots);
 
 /**
  * A shared contract inside the generated project's own documentation root.
@@ -64,24 +33,15 @@ const write = (location: string, relative: string, content: string): void => {
   fs.writeFileSync(file, content);
 };
 
-const externalDirectory = (name: string): string => {
-  const directory = fs.mkdtempSync(path.join(os.tmpdir(), `${name}-`));
-  roots.push(directory);
-  return directory;
-};
-
-const linkDirectory = (
-  location: string,
-  relative: string,
-  target: string,
-): void => {
-  const link = path.join(location, relative);
-  fs.mkdirSync(path.dirname(link), { recursive: true });
-  fs.symlinkSync(
-    target,
-    link,
-    process.platform === "win32" ? "junction" : "dir",
-  );
+/** Refuse to silently weaken a mutation-based arrangement. */
+const rewrite = (
+  source: string,
+  search: string | RegExp,
+  replacement: string,
+): string => {
+  const rewritten = source.replace(search, replacement);
+  assert.notEqual(rewritten, source, "the fixture mutation anchor must exist");
+  return rewritten;
 };
 
 /** Write a shared contract into the generated project's local inventory. */
@@ -691,16 +651,6 @@ export const review = true;
 
   const empty = root();
   const graph = createAutoMovieEvidenceConfig(disabled(empty));
-  assert.deepEqual(
-    Object.fromEntries(
-      ["markdown", "typescript"].map((type) => [
-        type,
-        graph.claims.filter((claim) => claim.type === type).length,
-      ]),
-    ),
-    { markdown: 35, typescript: 19 },
-    "the disabled graph keeps all 35 authored/population claims and all 19 source/canary claims instead of silently dropping an empty population",
-  );
   assert.equal(
     new Set(graph.claims.map((claim) => claim.name)).size,
     graph.claims.length,
@@ -801,55 +751,7 @@ export const review = true;
       ["type", "property", "function"],
       `${sourceClaim} must select exported types as well as values; removing type must reopen this canary`,
     );
-  const sharedFiles = (directory: string, prefix = ""): string[] =>
-    fs.readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
-      const relative = prefix === "" ? entry.name : `${prefix}/${entry.name}`;
-      return entry.isDirectory()
-        ? sharedFiles(path.join(directory, entry.name), relative)
-        : entry.name.endsWith(".md")
-          ? [relative]
-          : [];
-    });
-  const sharedContractFiles = [
-    "discovery",
-    "obligations",
-    "principles",
-    "upstream",
-  ]
-    .flatMap((family) =>
-      sharedFiles(path.join(scaffoldRoot, "docs", family)).map(
-        (file) => `${family}/${file}`,
-      ),
-    )
-    .sort();
   write(empty, "docs/settings/production.md", "## Scope {#scope}\n");
-  const contractFilmGraph = createAutoMovieEvidenceConfig({
-    ...disabled(empty),
-    kind: "film",
-    settings: "draft",
-  });
-  const wiredSharedContractFiles = [
-    ...new Set(
-      [graph, contractFilmGraph].flatMap((configured) =>
-        configured.claims.flatMap((claim) =>
-          referencesOf(claim).flatMap((reference) =>
-            reference.type === "markdown"
-              ? reference.files.filter((file) =>
-                  /^(?:discovery|obligations|principles|upstream)\//u.test(
-                    file,
-                  ),
-                )
-              : [],
-          ),
-        ),
-      ),
-    ),
-  ].sort();
-  assert.deepEqual(
-    wiredSharedContractFiles,
-    sharedContractFiles,
-    "every published discovery, upstream, principle, and obligation file must govern at least one shared graph claim",
-  );
   for (const [layer, expected] of Object.entries({
     settings: ["discovery/core/common.md", "discovery/core/settings.md"],
     research: ["discovery/core/common.md"],
@@ -2958,12 +2860,14 @@ export const review = true;
   const malformedContract = root();
   fs.writeFileSync(
     contract(malformedContract, "docs/principles/core/common.md"),
-    fs
-      .readFileSync(
+    rewrite(
+      fs.readFileSync(
         contract(malformedContract, "docs/principles/core/common.md"),
         "utf8",
-      )
-      .replace("Review question:", "Unrouted question:"),
+      ),
+      "Review question:",
+      "Unrouted question:",
+    ),
   );
   assert.equal(
     throws(
@@ -2980,9 +2884,11 @@ export const review = true;
   );
   fs.writeFileSync(
     commentedCommon,
-    fs
-      .readFileSync(commentedCommon, "utf8")
-      .replace(/^(Review question:.*)$/mu, "<!-- $1 -->"),
+    rewrite(
+      fs.readFileSync(commentedCommon, "utf8"),
+      /^(Review question:.*)$/mu,
+      "<!-- $1 -->",
+    ),
   );
   assert.equal(
     throws(
@@ -2999,9 +2905,11 @@ export const review = true;
   );
   fs.writeFileSync(
     fencedCommon,
-    fs
-      .readFileSync(fencedCommon, "utf8")
-      .replace(/^(Sources:.*)$/mu, "~~~text\n$1\n~~~"),
+    rewrite(
+      fs.readFileSync(fencedCommon, "utf8"),
+      /^(Sources:.*)$/mu,
+      "~~~text\n$1\n~~~",
+    ),
   );
   assert.equal(
     throws(
@@ -3014,12 +2922,14 @@ export const review = true;
   const duplicateContractAnchor = root();
   fs.writeFileSync(
     contract(duplicateContractAnchor, "docs/principles/core/settings.md"),
-    fs
-      .readFileSync(
+    rewrite(
+      fs.readFileSync(
         contract(duplicateContractAnchor, "docs/principles/core/settings.md"),
         "utf8",
-      )
-      .replace("{#information-structure}", "{#scope-preservation}"),
+      ),
+      "{#information-structure}",
+      "{#scope-preservation}",
+    ),
   );
   assert.equal(
     throws(
@@ -3032,12 +2942,14 @@ export const review = true;
   const duplicateContractTitle = root();
   fs.writeFileSync(
     contract(duplicateContractTitle, "docs/principles/core/settings.md"),
-    fs
-      .readFileSync(
+    rewrite(
+      fs.readFileSync(
         contract(duplicateContractTitle, "docs/principles/core/settings.md"),
         "utf8",
-      )
-      .replace("## Information structure", "## Declared scope preservation"),
+      ),
+      "## Information structure",
+      "## Declared scope preservation",
+    ),
   );
   assert.equal(
     throws(
@@ -3050,12 +2962,14 @@ export const review = true;
   const trailingContractProse = root();
   fs.writeFileSync(
     contract(trailingContractProse, "docs/principles/core/common.md"),
-    fs
-      .readFileSync(
+    rewrite(
+      fs.readFileSync(
         contract(trailingContractProse, "docs/principles/core/common.md"),
         "utf8",
-      )
-      .replace(/^(Sources: .+)$/mu, "$1\n\nTrailing contract prose."),
+      ),
+      /^(Sources: .+)$/mu,
+      "$1\n\nTrailing contract prose.",
+    ),
   );
   assert.equal(
     throws(
@@ -3068,12 +2982,14 @@ export const review = true;
   const missingContractTitle = root();
   fs.writeFileSync(
     contract(missingContractTitle, "docs/principles/core/common.md"),
-    fs
-      .readFileSync(
+    rewrite(
+      fs.readFileSync(
         contract(missingContractTitle, "docs/principles/core/common.md"),
         "utf8",
-      )
-      .replace("# Common principles", "Common principles"),
+      ),
+      "# Common principles",
+      "Common principles",
+    ),
   );
   assert.equal(
     throws(
@@ -3102,15 +3018,14 @@ export const review = true;
   const nestedContractTarget = root();
   fs.writeFileSync(
     contract(nestedContractTarget, "docs/principles/core/common.md"),
-    fs
-      .readFileSync(
+    rewrite(
+      fs.readFileSync(
         contract(nestedContractTarget, "docs/principles/core/common.md"),
         "utf8",
-      )
-      .replace(
-        "Review question: which promised subject",
-        "### Hidden subtarget\n\nReview question: which promised subject",
       ),
+      /^(Review question:.*)$/mu,
+      "### Hidden subtarget\n\n$1",
+    ),
   );
   assert.equal(
     throws(
@@ -3123,12 +3038,14 @@ export const review = true;
   const unanchoredContractTarget = root();
   fs.writeFileSync(
     contract(unanchoredContractTarget, "docs/principles/core/common.md"),
-    fs
-      .readFileSync(
+    rewrite(
+      fs.readFileSync(
         contract(unanchoredContractTarget, "docs/principles/core/common.md"),
         "utf8",
-      )
-      .replace(" {#scope-preservation}", ""),
+      ),
+      " {#scope-preservation}",
+      "",
+    ),
   );
   assert.equal(
     throws(
@@ -3141,12 +3058,14 @@ export const review = true;
   const duplicateContractUnitAnchor = root();
   fs.writeFileSync(
     contract(duplicateContractUnitAnchor, "docs/principles/core/common.md"),
-    fs
-      .readFileSync(
+    rewrite(
+      fs.readFileSync(
         contract(duplicateContractUnitAnchor, "docs/principles/core/common.md"),
         "utf8",
-      )
-      .replace("{#substantive-completion}", "{#scope-preservation}"),
+      ),
+      "{#substantive-completion}",
+      "{#scope-preservation}",
+    ),
   );
   assert.equal(
     throws(
@@ -3160,12 +3079,14 @@ export const review = true;
   const scopelessContractTarget = root();
   fs.writeFileSync(
     contract(scopelessContractTarget, "docs/principles/core/common.md"),
-    fs
-      .readFileSync(
+    rewrite(
+      fs.readFileSync(
         contract(scopelessContractTarget, "docs/principles/core/common.md"),
         "utf8",
-      )
-      .replace(/\n\nCriteria every authored[^\n]+\n\n/u, "\n\n"),
+      ),
+      "\n\nSynthetic scope for principles/core/common.md.\n\n",
+      "\n\n",
+    ),
   );
   assert.equal(
     throws(
@@ -3184,12 +3105,11 @@ export const review = true;
     const common = contract(falseScopeTarget, "docs/principles/core/common.md");
     fs.writeFileSync(
       common,
-      fs
-        .readFileSync(common, "utf8")
-        .replace(
-          /\n\nCriteria every authored[^\n]+\n\n/u,
-          `\n\n${falseScope}\n\n`,
-        ),
+      rewrite(
+        fs.readFileSync(common, "utf8"),
+        "\n\nSynthetic scope for principles/core/common.md.\n\n",
+        `\n\n${falseScope}\n\n`,
+      ),
     );
     assert.equal(
       throws(
@@ -3261,12 +3181,11 @@ export const review = true;
   );
   fs.writeFileSync(
     settingsDiscovery,
-    fs
-      .readFileSync(settingsDiscovery, "utf8")
-      .replace(
-        "{#planned-delivery-backcast}",
-        "{#renamed-planned-delivery-backcast}",
-      ),
+    rewrite(
+      fs.readFileSync(settingsDiscovery, "utf8"),
+      "{#planned-delivery-backcast}",
+      "{#renamed-planned-delivery-backcast}",
+    ),
   );
   assert.equal(
     throws(
@@ -3309,9 +3228,11 @@ export const review = true;
   );
   fs.writeFileSync(
     removedCommon,
-    fs
-      .readFileSync(removedCommon, "utf8")
-      .replace(/\n## Declared basis \{#declared-basis\}[\s\S]*$/u, "\n"),
+    rewrite(
+      fs.readFileSync(removedCommon, "utf8"),
+      /\n## Declared basis \{#declared-basis\}[\s\S]*$/u,
+      "\n",
+    ),
   );
   assert.equal(
     throws(
@@ -3328,9 +3249,11 @@ export const review = true;
   );
   fs.writeFileSync(
     renamedCommon,
-    fs
-      .readFileSync(renamedCommon, "utf8")
-      .replace("{#declared-basis}", "{#renamed-declared-basis}"),
+    rewrite(
+      fs.readFileSync(renamedCommon, "utf8"),
+      "{#declared-basis}",
+      "{#renamed-declared-basis}",
+    ),
   );
   assert.equal(
     throws(
@@ -3531,10 +3454,8 @@ export const review = true;
   write(
     recursiveContractEvidence,
     "docs/contracts/principles-common.md",
-    `<!-- @evidence discovery/core/common.md#shared-local-boundary The production audit retained this exact local rule. -->\n${target(
-      "Recursive contract",
-      "recursive-contract",
-    ).replace(
+    `<!-- @evidence discovery/core/common.md#shared-local-boundary The production audit retained this exact local rule. -->\n${rewrite(
+      target("Recursive contract", "recursive-contract"),
       "Selected hosts preserve",
       "<!-- @evidence discovery/core/common.md#shared-local-boundary A target unit cannot host its own graph evidence. -->\n\nSelected hosts preserve",
     )}`,
@@ -3743,7 +3664,8 @@ export const review = true;
   write(
     malformedProductionTarget,
     "docs/contracts/tone.md",
-    localTarget("Tone", "tone").replace(
+    rewrite(
+      localTarget("Tone", "tone"),
       "Review question:",
       "Unrouted question:",
     ),
@@ -4166,321 +4088,6 @@ export const review = true;
   const examples = root();
   write(examples, "src/examples/props.ts", "export const example = 1;");
   assert.doesNotThrow(() => createAutoMovieEvidenceConfig(disabled(examples)));
-
-  const physicalBoundaryDiagnostic =
-    "project evidence populations contain only real files and directories inside the project root";
-
-  const linkedDesignRoot = root();
-  write(linkedDesignRoot, "docs/settings/production.md", "## Scope {#scope}\n");
-  const externalDesign = externalDirectory("automovie-linked-design");
-  write(externalDesign, "owner.md", "## Owner {#owner}\n");
-  linkDirectory(linkedDesignRoot, "docs/models", externalDesign);
-  assert.equal(
-    throws(
-      () =>
-        createAutoMovieEvidenceConfig({
-          ...disabled(linkedDesignRoot),
-          kind: "library",
-          settings: "review",
-          models: "draft",
-        }),
-      physicalBoundaryDiagnostic,
-    ),
-    true,
-    "an active design population root cannot be a junction or symlink",
-  );
-
-  const linkedStoryRoot = root();
-  write(linkedStoryRoot, "docs/settings/production.md", "## Scope {#scope}\n");
-  const externalStory = externalDirectory("automovie-linked-story");
-  write(
-    externalStory,
-    "001-event.md",
-    "# Event\n\n## Change {#event-change}\n",
-  );
-  linkDirectory(linkedStoryRoot, "docs/treatments", externalStory);
-  assert.equal(
-    throws(
-      () =>
-        createAutoMovieEvidenceConfig({
-          ...disabled(linkedStoryRoot),
-          kind: "film",
-          settings: "review",
-          treatments: "draft",
-        }),
-      physicalBoundaryDiagnostic,
-    ),
-    true,
-    "an active story population root cannot leave the project through a link",
-  );
-
-  const linkedDeliveryRoot = root();
-  write(
-    linkedDeliveryRoot,
-    "docs/settings/production.md",
-    "## Scope {#scope}\n",
-  );
-  const externalDelivery = externalDirectory("automovie-linked-delivery");
-  write(
-    externalDelivery,
-    "001-delivery.md",
-    "## Delivery {#delivery}\n### Shot {#shot}\n#### Observation {#observation}\n",
-  );
-  linkDirectory(linkedDeliveryRoot, "docs/briefs", externalDelivery);
-  assert.equal(
-    throws(
-      () =>
-        createAutoMovieEvidenceConfig({
-          ...disabled(linkedDeliveryRoot),
-          kind: "brief",
-          settings: "review",
-          briefs: "draft",
-        }),
-      physicalBoundaryDiagnostic,
-    ),
-    true,
-    "an active delivery population root cannot leave the project through a link",
-  );
-
-  const nestedLinkRoot = root();
-  write(nestedLinkRoot, "docs/settings/production.md", "## Scope {#scope}\n");
-  write(nestedLinkRoot, "docs/models/owner.md", "## Owner {#owner}\n");
-  const externalSibling = externalDirectory("automovie-linked-sibling");
-  write(externalSibling, "hidden.md", "## Hidden {#hidden}\n");
-  linkDirectory(nestedLinkRoot, "docs/models/linked", externalSibling);
-  assert.equal(
-    throws(
-      () =>
-        createAutoMovieEvidenceConfig({
-          ...disabled(nestedLinkRoot),
-          kind: "library",
-          settings: "review",
-          models: "draft",
-        }),
-      physicalBoundaryDiagnostic,
-    ),
-    true,
-    "a nested link cannot disappear from an otherwise valid active population",
-  );
-
-  const linkedContractsRoot = root();
-  fs.rmSync(path.join(linkedContractsRoot, "docs", "contracts"), {
-    recursive: true,
-  });
-  const externalContracts = externalDirectory("automovie-linked-contracts");
-  write(
-    externalContracts,
-    "index.md",
-    "<!-- @evidenceExclude discovery/core/common.md#shared-local-boundary The exact local risks are covered by shared contracts. -->\n\n# Work-specific contract audit\n",
-  );
-  linkDirectory(linkedContractsRoot, "docs/contracts", externalContracts);
-  write(
-    linkedContractsRoot,
-    "docs/settings/production.md",
-    "## Scope {#scope}\n",
-  );
-  assert.equal(
-    throws(
-      () =>
-        createAutoMovieEvidenceConfig({
-          ...disabled(linkedContractsRoot),
-          kind: "library",
-          settings: "draft",
-        }),
-      physicalBoundaryDiagnostic,
-    ),
-    true,
-    "the flat local-contract inventory cannot be supplied through a link",
-  );
-
-  const linkedSourceRoot = root();
-  write(linkedSourceRoot, "docs/settings/production.md", "## Scope {#scope}\n");
-  write(linkedSourceRoot, "docs/models/owner.md", "## Owner {#owner}\n");
-  const externalSource = externalDirectory("automovie-linked-source");
-  write(externalSource, "owner.ts", "export class Owner {}\n");
-  linkDirectory(linkedSourceRoot, "src/models", externalSource);
-  assert.equal(
-    throws(
-      () =>
-        createAutoMovieEvidenceConfig({
-          ...disabled(linkedSourceRoot),
-          kind: "library",
-          settings: "review",
-          models: "review",
-          modelSources: "draft",
-        }),
-      physicalBoundaryDiagnostic,
-    ),
-    true,
-    "a selected source population cannot be supplied through a link",
-  );
-
-  const linkedDependencyConsumer = root();
-  const linkedTemplate = path.join(
-    linkedDependencyConsumer,
-    "node_modules",
-    "@automovie",
-    "template",
-  );
-  fs.rmSync(linkedTemplate, { force: true, recursive: true });
-  linkDirectory(
-    linkedDependencyConsumer,
-    "node_modules/@automovie/template",
-    templatePackageRoot,
-  );
-  write(linkedDependencyConsumer, "host.ts", "export const host = true;\n");
-  assert.doesNotThrow(
-    () =>
-      createAutoMovieEvidenceConfig({
-        ...disabled(linkedDependencyConsumer),
-        claims: [
-          {
-            name: "a broad local population still excludes dependencies",
-            type: "typescript",
-            root: ".",
-            files: ["host.ts"],
-            symbol: "property",
-            reference: {
-              type: "typescript",
-              package: "@automovie/template",
-              files: ["index.ts"],
-              symbol: "property",
-            },
-          },
-        ],
-      }),
-    "a referenced dependency package may remain a workspace link",
-  );
-
-  const inactiveLinkedDesign = root();
-  const inactiveDesignTarget = externalDirectory(
-    "automovie-inactive-linked-design",
-  );
-  write(inactiveDesignTarget, "residue.md", "inactive\n");
-  linkDirectory(inactiveLinkedDesign, "docs/models", inactiveDesignTarget);
-  assert.equal(
-    throws(
-      () => createAutoMovieEvidenceConfig(disabled(inactiveLinkedDesign)),
-      physicalBoundaryDiagnostic,
-    ),
-    true,
-    "a disabled design branch cannot hide linked residue",
-  );
-
-  const inactiveLinkedStory = root();
-  const inactiveStoryTarget = externalDirectory(
-    "automovie-inactive-linked-story",
-  );
-  write(inactiveStoryTarget, "001-residue.md", "inactive\n");
-  linkDirectory(inactiveLinkedStory, "docs/treatments", inactiveStoryTarget);
-  assert.equal(
-    throws(
-      () => createAutoMovieEvidenceConfig(disabled(inactiveLinkedStory)),
-      physicalBoundaryDiagnostic,
-    ),
-    true,
-    "a disabled story branch cannot hide linked residue",
-  );
-
-  const inactiveNestedSource = root();
-  fs.mkdirSync(path.join(inactiveNestedSource, "src", "models"), {
-    recursive: true,
-  });
-  const inactiveSourceTarget = externalDirectory(
-    "automovie-inactive-linked-source",
-  );
-  write(inactiveSourceTarget, "residue.ts", "export const residue = true;\n");
-  linkDirectory(
-    inactiveNestedSource,
-    "src/models/linked",
-    inactiveSourceTarget,
-  );
-  assert.equal(
-    throws(
-      () => createAutoMovieEvidenceConfig(disabled(inactiveNestedSource)),
-      physicalBoundaryDiagnostic,
-    ),
-    true,
-    "a disabled source branch cannot hide a nested linked residue",
-  );
-
-  const linkedProjectTarget = root();
-  const linkedProjectParent = externalDirectory("automovie-linked-project");
-  linkDirectory(linkedProjectParent, "project", linkedProjectTarget);
-  assert.equal(
-    throws(
-      () =>
-        createAutoMovieEvidenceConfig(
-          disabled(path.join(linkedProjectParent, "project")),
-        ),
-      physicalBoundaryDiagnostic,
-    ),
-    true,
-    "the declared project root itself cannot be a junction or symlink",
-  );
-
-  const escapingClaimRoot = root();
-  const externalClaim = externalDirectory("automovie-external-claim");
-  write(externalClaim, "host.md", "# Host\n");
-  assert.equal(
-    throws(
-      () =>
-        createAutoMovieEvidenceConfig({
-          ...disabled(escapingClaimRoot),
-          claims: [
-            {
-              name: "an additive claim cannot escape the project",
-              type: "markdown",
-              root: externalClaim,
-              files: ["*.md"],
-              reference: {
-                type: "markdown",
-                root: externalClaim,
-                files: ["*.md"],
-              },
-            },
-          ],
-        }),
-      physicalBoundaryDiagnostic,
-    ),
-    true,
-    "a project-local additive population cannot escape the declared root",
-  );
-
-  const linkedClaimAncestor = root();
-  const externalClaimAncestor = externalDirectory(
-    "automovie-linked-claim-ancestor",
-  );
-  fs.mkdirSync(path.join(linkedClaimAncestor, "population"));
-  linkDirectory(
-    linkedClaimAncestor,
-    "population/linked",
-    externalClaimAncestor,
-  );
-  assert.equal(
-    throws(
-      () =>
-        createAutoMovieEvidenceConfig({
-          ...disabled(linkedClaimAncestor),
-          claims: [
-            {
-              name: "an absent host below a link cannot disappear",
-              type: "markdown",
-              root: "population/linked/missing",
-              files: ["*.md"],
-              reference: {
-                type: "markdown",
-                root: "docs",
-                files: ["contracts/index.md"],
-              },
-            },
-          ],
-        }),
-      physicalBoundaryDiagnostic,
-    ),
-    true,
-    "an absent population below a linked ancestor still fails closed",
-  );
 
   const { claims: omittedClaims, ...withoutClaims } = disabled(root());
   void omittedClaims;

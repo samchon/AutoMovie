@@ -8,5 +8,5 @@
     "rootDir": ".",
     "types": ["node"]
   },
-  "files": ["test/createAutoMovieEvidenceConfig.test.ts"]
+  "files": ["test/index.ts"]
 }

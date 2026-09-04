@@ -3,13 +3,23 @@ import { createHash } from "node:crypto";
 import * as fs from "node:fs";
 import * as path from "node:path";
 
-const ROOT = path.resolve(__dirname, "..");
+import {
+  AUTOMOVIE_PACKAGE_INVENTORY,
+  type IWorkspacePackage,
+  type IWorkspacePackageManifest,
+  planWorkspacePackageInventory,
+} from "./workspacePackageInventory";
 
-export interface IWorkspacePackage {
-  readonly key: string;
-  readonly directory: string;
-  readonly name: string;
-}
+export {
+  AUTOMOVIE_PACKAGE_INVENTORY,
+  planWorkspacePackageInventory,
+} from "./workspacePackageInventory";
+export type {
+  IWorkspacePackage,
+  IWorkspacePackageManifest,
+} from "./workspacePackageInventory";
+
+const ROOT = path.resolve(__dirname, "..");
 
 export interface IPackWorkspaceDependencies {
   readonly remove: (directory: string) => void;
@@ -67,6 +77,46 @@ export const packWorkspaceDependencies: IPackWorkspaceDependencies = {
   write: (message) => process.stdout.write(message),
 };
 
+/** Read every direct `packages/*` manifest before archive planning. */
+const workspacePackageManifests = (): IWorkspacePackageManifest[] =>
+  fs
+    .readdirSync(path.join(ROOT, "packages"), { withFileTypes: true })
+    .filter((entry) => entry.isDirectory())
+    .sort((left, right) => left.name.localeCompare(right.name))
+    .flatMap((entry) => {
+      const manifestPath = path.join(
+        ROOT,
+        "packages",
+        entry.name,
+        "package.json",
+      );
+      if (fs.existsSync(manifestPath) === false) return [];
+      const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf8")) as {
+        name?: unknown;
+        private?: unknown;
+      };
+      return [
+        {
+          directory: entry.name,
+          name: typeof manifest.name === "string" ? manifest.name : "",
+          private: manifest.private === true,
+        },
+      ];
+    });
+
+/** The declared archive population reconciled with every `packages/*` manifest. */
+export const WORKSPACE_PACKAGE_INVENTORY_PLAN = planWorkspacePackageInventory({
+  declarations: AUTOMOVIE_PACKAGE_INVENTORY,
+  manifests: workspacePackageManifests(),
+});
+
+if (WORKSPACE_PACKAGE_INVENTORY_PLAN.diagnostics.length !== 0)
+  throw new Error(
+    `Workspace package inventory refused:\n${WORKSPACE_PACKAGE_INVENTORY_PLAN.diagnostics
+      .map(({ code, subject }) => `${code}: ${subject}`)
+      .join("\n")}`,
+  );
+
 /**
  * The workspace packages a sandbox installs, dependencies before consumers.
  *
@@ -76,21 +126,12 @@ export const packWorkspaceDependencies: IPackWorkspaceDependencies = {
  * because the two stopped agreeing: the command-line package lives in
  * `packages/cli` and publishes as `automovie`. Deriving one from the other
  * looked for a tarball nobody produces and pinned a dependency nobody
- * publishes. The closure matters because `pnpm pack` rewrites a `workspace:^` range
- * to a plain semver one: any member left unpacked would be resolved from the
- * public registry at a version this monorepo has never published.
+ * publishes. The closure matters because `pnpm pack` rewrites a `workspace:^`
+ * range to a plain semver one: any member left unpacked would be resolved from
+ * the public registry at a version this monorepo has never published.
  */
 export const PACKAGES: readonly IWorkspacePackage[] = Object.freeze([
-  { key: "interface", directory: "interface", name: "@automovie/interface" },
-  { key: "engine", directory: "engine", name: "@automovie/engine" },
-  { key: "archetypes", directory: "archetypes", name: "@automovie/archetypes" },
-  { key: "evidence", directory: "evidence", name: "@automovie/evidence" },
-  { key: "render", directory: "render", name: "@automovie/render" },
-  { key: "ingest", directory: "ingest", name: "@automovie/ingest" },
-  { key: "viewer", directory: "viewer", name: "@automovie/viewer" },
-  { key: "production", directory: "production", name: "@automovie/production" },
-  { key: "template", directory: "template", name: "@automovie/template" },
-  { key: "cli", directory: "cli", name: "automovie" },
+  ...WORKSPACE_PACKAGE_INVENTORY_PLAN.packages,
 ]);
 
 /** Where a sandbox keeps the tarballs it installs from. */
