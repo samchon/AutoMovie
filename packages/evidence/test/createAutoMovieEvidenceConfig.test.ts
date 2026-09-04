@@ -16,6 +16,10 @@ type Claim = NonNullable<Graph["claims"]>[number];
 type ContractManifest = ReturnType<
   typeof createAutoMovieContractBindingManifest
 >;
+type ResetScope = Extract<
+  AutoMoviePopulationScope,
+  { mode: "complete-production-reset" }
+>;
 
 const roots: string[] = [];
 
@@ -99,7 +103,7 @@ const disabled = (location: string): Graph => ({
 const filmResetScope = (
   location: string,
   hosts: readonly string[],
-): AutoMoviePopulationScope => ({
+): ResetScope => ({
   mode: "complete-production-reset",
   owner: "test-owner",
   transition: {
@@ -122,7 +126,7 @@ const filmResetScope = (
 const libraryResetScope = (
   location: string,
   hosts: readonly string[],
-): AutoMoviePopulationScope => ({
+): ResetScope => ({
   mode: "complete-production-reset",
   owner: "test-owner",
   transition: {
@@ -531,18 +535,37 @@ export const review = true;
     "src/models/subject.ts",
     "/** @evidence models/subject.md#subject Retained pilot source. */\nexport class Subject {}\n",
   );
+  const libraryResetPopulation = libraryResetScope(resetRoot, [
+    "docs/models/subject.md",
+    "src/models/subject.ts",
+  ]);
   const resetDeclaration: Graph = {
     ...disabled(resetRoot),
     kind: "library",
-    populationScope: libraryResetScope(resetRoot, [
-      "docs/models/subject.md",
-      "src/models/subject.ts",
-    ]),
+    populationScope: libraryResetPopulation,
     settings: "review",
     models: "draft",
     modelSources: "draft",
   };
   assert.doesNotThrow(() => createAutoMovieEvidenceConfig(resetDeclaration));
+  assert.equal(
+    throws(
+      () =>
+        createAutoMovieEvidenceConfig({
+          ...resetDeclaration,
+          populationScope: {
+            ...libraryResetPopulation,
+            transition: {
+              ...libraryResetPopulation.transition,
+              reviewedPairs: null,
+            },
+          } as unknown as AutoMoviePopulationScope,
+        }),
+      "requires one exact reviewed design/source pair",
+    ),
+    true,
+    "malformed reset pairs must reach the canonical transition diagnostic",
+  );
   write(
     resetRoot,
     "docs/maps/sibling.md",
