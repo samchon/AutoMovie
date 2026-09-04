@@ -13,6 +13,10 @@ export const AUTOMOVIE_COMPILE_FINGERPRINT_PROTOCOL =
 export const AUTOMOVIE_SOURCE_NORMALIZATION_PROTOCOL =
   "automovie.source-normalization.v2";
 
+/** Historical lossy source normalization accepted only for migration. */
+export const AUTOMOVIE_LEGACY_SOURCE_NORMALIZATION_PROTOCOL =
+  "automovie.source-normalization.v1";
+
 /** Current structured-value canonicalization algorithm. */
 export const AUTOMOVIE_CANONICAL_JSON_PROTOCOL = "automovie.canonical-json.v2";
 
@@ -67,6 +71,17 @@ export interface IAutoMovieSourceIdentity {
   /** SHA-256 of {@link normalized}. */
   semanticDigest: AutoMovieContentDigest;
 }
+
+/** Outcome of verifying and, when possible, migrating a source identity. */
+export type IAutoMovieSourceIdentityVerification =
+  | { status: "current"; current: IAutoMovieSourceIdentity }
+  | {
+      status: "migrated";
+      legacyDigest: AutoMovieContentDigest;
+      current: IAutoMovieSourceIdentity;
+    }
+  | { status: "stale" }
+  | { status: "unverifiable"; reason: string };
 
 /** Versioned identity of one admitted structured value. */
 export interface IAutoMovieCanonicalJsonIdentity {
@@ -145,6 +160,53 @@ export const normalizeAutoMovieSourceIdentity = (props: {
     rawDigest: digestAutoMovieBytes(props.bytes),
     normalized,
     semanticDigest: digestAutoMovieBytes(normalized),
+  };
+};
+
+/**
+ * Verify an explicitly versioned source identity from its recoverable bytes.
+ *
+ * @evidence requirements/evidence-and-provenance/canonical-digests-and-content-identity.md#integrity-algorithm-change-and-collision Refuses to relabel a lossy or unknown source identity as current.
+ * @evidence specifications/evidence-and-provenance/canonical-digests-and-content-identity.md#evp-algorithm-migration-collision Preserves the historical result while deriving a separate strict current identity.
+ */
+export const verifyAutoMovieSourceIdentity = (props: {
+  /** Source-relative pathname named by strict-decoding refusals. */
+  path: string;
+  /** Original source bytes; a bare semantic digest cannot be migrated safely. */
+  bytes?: Uint8Array;
+  /** Protocol declared by the persisted semantic identity. */
+  protocol: string;
+  /** Semantic digest produced under that protocol. */
+  digest: AutoMovieContentDigest;
+}): IAutoMovieSourceIdentityVerification => {
+  if (props.bytes === undefined)
+    return {
+      status: "unverifiable",
+      reason: "Original source bytes are required to verify source identity.",
+    };
+  let current: IAutoMovieSourceIdentity;
+  try {
+    current = normalizeAutoMovieSourceIdentity({
+      path: props.path,
+      bytes: props.bytes,
+    });
+  } catch (error) {
+    return { status: "unverifiable", reason: String(error) };
+  }
+  if (props.protocol === AUTOMOVIE_SOURCE_NORMALIZATION_PROTOCOL)
+    return current.semanticDigest === props.digest
+      ? { status: "current", current }
+      : { status: "stale" };
+  if (props.protocol === AUTOMOVIE_LEGACY_SOURCE_NORMALIZATION_PROTOCOL) {
+    const legacyDigest = digestAutoMovieBytes(
+      legacyNormalizeAutoMovieSource(props.bytes),
+    );
+    if (legacyDigest !== props.digest) return { status: "stale" };
+    return { status: "migrated", legacyDigest, current };
+  }
+  return {
+    status: "unverifiable",
+    reason: `Unknown source normalization protocol ${JSON.stringify(props.protocol)}.`,
   };
 };
 
@@ -447,6 +509,13 @@ const assertScalarString = (value: string, role: string): void => {
         `a lone surrogate occurs in ${role}`,
       );
   }
+};
+
+/** Exact lossy predecessor used only to verify a declared v1 source digest. */
+const legacyNormalizeAutoMovieSource = (source: Uint8Array): Uint8Array => {
+  let text = Buffer.from(source).toString("utf8");
+  if (text.charCodeAt(0) === 0xfeff) text = text.slice(1);
+  return Buffer.from(text.replace(/\r\n?/g, "\n"), "utf8");
 };
 
 /** Exact predecessor algorithm, used only to verify a declared v1 digest. */
