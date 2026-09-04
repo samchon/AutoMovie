@@ -12,6 +12,22 @@ type MarkdownSymbol = Extract<
   { type: "markdown" }
 >["symbol"];
 
+const PRODUCTION_CONTRACT_LAYERS = [
+  "briefs",
+  "instances",
+  "maps",
+  "materials",
+  "models",
+  "motions",
+  "research",
+  "screenplays",
+  "scripts",
+  "settings",
+  "spaces",
+  "systems",
+  "treatments",
+] as const;
+
 /**
  * Authored Markdown layer that may answer a production-local contract.
  *
@@ -19,19 +35,7 @@ type MarkdownSymbol = Extract<
  * @evidence specifications/production-evidence/input.md#spec-authoring-production-evidence-input-state Defines the closed local-claim layer vocabulary.
  */
 export type AutoMovieProductionContractLayer =
-  | "briefs"
-  | "instances"
-  | "maps"
-  | "materials"
-  | "models"
-  | "motions"
-  | "research"
-  | "screenplays"
-  | "scripts"
-  | "settings"
-  | "spaces"
-  | "systems"
-  | "treatments";
+  (typeof PRODUCTION_CONTRACT_LAYERS)[number];
 
 /**
  * Additive graph claim retaining its project-specific binding identity.
@@ -163,6 +167,10 @@ function createClaim(
   const name: string = props.name.trim();
   if (name.length === 0)
     throw new Error("A production-local contract claim requires a name.");
+  if (!(PRODUCTION_CONTRACT_LAYERS as readonly unknown[]).includes(props.layer))
+    throw new Error(
+      `A production-local contract claim has unsupported layer ${String(props.layer)}.`,
+    );
 
   const files: string[] = [...props.files];
   requirePositivePopulation(files, "host");
@@ -253,7 +261,7 @@ function validateContractPath(
     resolved
       .split("/")
       .some((part) => part === "" || part === "." || part === "..") ||
-    !/^docs\/contracts\/[^/]+\.md$/u.test(resolved) ||
+    !/^docs\/contracts\/[A-Za-z0-9][A-Za-z0-9._-]*\.md$/u.test(resolved) ||
     resolved.endsWith("/index.md")
   )
     throw new Error(

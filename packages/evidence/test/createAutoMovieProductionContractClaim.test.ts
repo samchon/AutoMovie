@@ -192,6 +192,15 @@ assert.throws(
 );
 assert.throws(
   () =>
+    createAutoMovieProductionObligationClaim({
+      ...base,
+      layer: "unknown",
+      files: ["unknown/**/*.md"],
+    } as never),
+  /unsupported layer unknown/u,
+);
+assert.throws(
+  () =>
     createAutoMovieProductionPrincipleClaim({
       ...base,
       symbol: "file",
@@ -248,6 +257,14 @@ assert.throws(
     createAutoMovieProductionPrincipleClaim({
       ...base,
       document: "contracts\\local.md",
+    }),
+  /flat docs\/contracts\/\*\.md target/u,
+);
+assert.throws(
+  () =>
+    createAutoMovieProductionPrincipleClaim({
+      ...base,
+      document: "contracts/*.md",
     }),
   /flat docs\/contracts\/\*\.md target/u,
 );
