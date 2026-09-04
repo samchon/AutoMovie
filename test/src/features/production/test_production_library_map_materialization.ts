@@ -9,11 +9,12 @@ import { TestValidator } from "@nestia/e2e";
 import { analysisContext } from "../internal/analysisFixtures";
 import { namedFacts } from "../internal/predicates";
 import {
-  LIBRARY_ANCHOR,
-  LIBRARY_DESIGN,
-  LIBRARY_SECOND_ANCHOR,
-  LIBRARY_SECOND_OWNER,
-  LIBRARY_SOURCE,
+  LIBRARY_MAP_ANCHOR,
+  LIBRARY_MAP_DESIGN,
+  LIBRARY_MAP_OWNER,
+  LIBRARY_MAP_SECOND_ANCHOR,
+  LIBRARY_MAP_SECOND_OWNER,
+  LIBRARY_MAP_SOURCE,
   libraryAuthoring,
   libraryFixture,
   librarySourceModule,
@@ -53,12 +54,16 @@ export const test_production_library_map_materialization = (): void => {
   try {
     const context = analysisContext({ id: "hall-site" });
     fixture.write(
-      LIBRARY_SOURCE,
-      librarySourceModule({ contexts: JSON.stringify([context]) }),
+      LIBRARY_MAP_SOURCE,
+      librarySourceModule({
+        design: LIBRARY_MAP_OWNER,
+        environments: "[]",
+        contexts: JSON.stringify([context]),
+      }),
     );
     const compiled = new AutoMovieProductionCompiler(
       AutoMovieProductionProject.open(fixture.root),
-      libraryAuthoring({ root: fixture.root }),
+      libraryAuthoring({ root: fixture.root, branch: "maps" }),
     ).compile({ scope: "source" });
     const resolve = autoMovieMaterializedLibraryContexts({
       read: (relative) =>
@@ -67,9 +72,9 @@ export const test_production_library_map_materialization = (): void => {
         ),
     });
     const published = resolve({
-      branch: "spaces",
-      owner: `${LIBRARY_DESIGN}#${LIBRARY_ANCHOR}`,
-      anchor: LIBRARY_ANCHOR,
+      branch: "maps",
+      owner: LIBRARY_MAP_OWNER,
+      anchor: LIBRARY_MAP_ANCHOR,
     });
 
     TestValidator.equals(
@@ -87,9 +92,9 @@ export const test_production_library_map_materialization = (): void => {
           "anOwnerThatAdoptedNoneReadsNone",
           () =>
             resolve({
-              branch: "spaces",
-              owner: `${LIBRARY_DESIGN}#${LIBRARY_SECOND_ANCHOR}`,
-              anchor: LIBRARY_SECOND_ANCHOR,
+              branch: "maps",
+              owner: LIBRARY_MAP_SECOND_OWNER,
+              anchor: LIBRARY_MAP_SECOND_ANCHOR,
             }).length === 0,
         ],
         [
@@ -100,9 +105,9 @@ export const test_production_library_map_materialization = (): void => {
           () => {
             try {
               resolve({
-                branch: "spaces",
-                owner: LIBRARY_DESIGN,
-                anchor: LIBRARY_ANCHOR,
+                branch: "maps",
+                owner: LIBRARY_MAP_DESIGN,
+                anchor: LIBRARY_MAP_ANCHOR,
               });
               return false;
             } catch (error) {
@@ -137,9 +142,9 @@ export const test_production_library_map_materialization = (): void => {
               fixture.root,
             ).readGeneratedFile(relative),
     })({
-      branch: "spaces",
-      owner: `${LIBRARY_DESIGN}#${LIBRARY_ANCHOR}`,
-      anchor: LIBRARY_ANCHOR,
+      branch: "maps",
+      owner: LIBRARY_MAP_OWNER,
+      anchor: LIBRARY_MAP_ANCHOR,
     });
 
     // And the same index read for contexts yields none rather than throwing.
@@ -154,9 +159,9 @@ export const test_production_library_map_materialization = (): void => {
               fixture.root,
             ).readGeneratedFile(relative),
     })({
-      branch: "spaces",
-      owner: `${LIBRARY_DESIGN}#${LIBRARY_ANCHOR}`,
-      anchor: LIBRARY_ANCHOR,
+      branch: "maps",
+      owner: LIBRARY_MAP_OWNER,
+      anchor: LIBRARY_MAP_ANCHOR,
     });
 
     TestValidator.equals(
@@ -166,8 +171,10 @@ export const test_production_library_map_materialization = (): void => {
     );
 
     fixture.write(
-      LIBRARY_SOURCE,
+      LIBRARY_MAP_SOURCE,
       librarySourceModule({
+        design: LIBRARY_MAP_OWNER,
+        environments: "[]",
         // A north of no length. Every direction in a context is a direction,
         // and one that points nowhere makes every elevation drawn against it
         // arbitrary rather than wrong in a way anybody could see.
@@ -176,7 +183,7 @@ export const test_production_library_map_materialization = (): void => {
     );
     const malformed = new AutoMovieProductionCompiler(
       AutoMovieProductionProject.open(fixture.root),
-      libraryAuthoring({ root: fixture.root }),
+      libraryAuthoring({ root: fixture.root, branch: "maps" }),
     ).compile({ scope: "source" });
 
     TestValidator.equals(
@@ -190,23 +197,27 @@ export const test_production_library_map_materialization = (): void => {
       { refused: true, named: true },
     );
 
+    fixture.write(
+      LIBRARY_MAP_SOURCE,
+      librarySourceModule({
+        design: LIBRARY_MAP_OWNER,
+        environments: "[]",
+        contexts: JSON.stringify([context]),
+        second: {
+          exportName: "annex",
+          design: LIBRARY_MAP_SECOND_OWNER,
+          environmentId: "hall-annex",
+          environments: "[]",
+          contexts: JSON.stringify([context]),
+        },
+      }),
+    );
     const collided = new AutoMovieProductionCompiler(
       AutoMovieProductionProject.open(fixture.root),
       libraryAuthoring({
         root: fixture.root,
-        anchors: [LIBRARY_ANCHOR, LIBRARY_SECOND_ANCHOR],
-      }),
-    );
-    fixture.write(
-      LIBRARY_SOURCE,
-      librarySourceModule({
-        contexts: JSON.stringify([context]),
-        second: {
-          exportName: "annex",
-          design: LIBRARY_SECOND_OWNER,
-          environmentId: "hall-annex",
-          contexts: JSON.stringify([context]),
-        },
+        branch: "maps",
+        anchors: [LIBRARY_MAP_ANCHOR, LIBRARY_MAP_SECOND_ANCHOR],
       }),
     );
     const clash = collided.compile({ scope: "source" });

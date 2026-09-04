@@ -311,7 +311,7 @@ try {
   write(
     brief,
     "docs/briefs/delivery.md",
-    "# Delivery\n\n## Sequence {#sequence}\n\n### Opening {#opening}\n\nOne opening shot.\n",
+    "# Delivery\n\n## Sequence {#sequence}\n\n### Opening {#opening}\n\n#### Beat {#opening-beat}\n\nOne opening shot.\n",
   );
   write(
     brief,
