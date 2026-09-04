@@ -1,3 +1,4 @@
+import type { AutoMovieProductionLanguage as ProductionLanguage } from "@automovie/evidence";
 import { TestValidator } from "@nestia/e2e";
 import { createHash } from "node:crypto";
 import path from "node:path";
@@ -31,6 +32,22 @@ interface IPackWorkspaceResult {
   readonly specifiers: Readonly<Record<string, string>>;
 }
 
+type ExperimentalArguments =
+  | {
+      readonly force: boolean;
+      readonly install: boolean;
+      readonly language: ProductionLanguage;
+      readonly name: string;
+      readonly refresh: false;
+    }
+  | {
+      readonly force: false;
+      readonly install: boolean;
+      readonly language?: ProductionLanguage;
+      readonly name: string;
+      readonly refresh: true;
+    };
+
 const { buildTgz, packWorkspace } = loadSourceModule<{
   buildTgz: (
     root: string,
@@ -47,13 +64,17 @@ const { buildTgz, packWorkspace } = loadSourceModule<{
 const {
   experimentalInstallFailureMessage,
   experimentalScaffoldRequest,
+  readExperimentalArguments,
   sandboxManifest,
 } = loadSourceModule<{
   experimentalInstallFailureMessage: (name: string, refresh: boolean) => string;
   experimentalScaffoldRequest: (
-    name: string,
-    refresh: boolean,
-  ) => { readonly language: "english"; readonly name: string } | undefined;
+    request: ExperimentalArguments,
+    baselineSource?: string,
+  ) =>
+    | { readonly language: ProductionLanguage; readonly name: string }
+    | undefined;
+  readExperimentalArguments: (args: readonly string[]) => ExperimentalArguments;
   sandboxManifest: (
     rendered: string,
     specifiers: Readonly<Record<string, string>>,
@@ -155,6 +176,14 @@ const virtualPackWorkspace = (failPackage?: string): IVirtualPackWorkspace => {
 const digest = (value: string): string =>
   createHash("sha256").update(value).digest("hex").slice(0, 12);
 
+const baseline = (language: ProductionLanguage): string =>
+  JSON.stringify({
+    files: [],
+    language,
+    protocol: "automovie.contract-baseline.v1",
+    version: "0.1.0",
+  });
+
 /**
  * Experimental packages activate only after one complete immutable generation.
  *
@@ -169,10 +198,13 @@ const digest = (value: string): string =>
  *    the predecessor generation and every byte it carried.
  * 4. The standalone TGZ command reports the generation it actually produced,
  *    rather than a legacy mutable directory name.
- * 5. Creation selects the English scaffold explicitly, refresh selects no
- *    scaffold at all, and the two install failures prescribe non-destructive
- *    recovery for their respective states.
- * 6. Rewriting refresh pins preserves authored manifest fields outside the
+ * 5. Creation requires exactly one supported language and passes each of the
+ *    four canonical selections to the scaffold without a default.
+ * 6. Refresh reads its frozen baseline language, renders no scaffold, and
+ *    refuses an argv selection that would change the existing language.
+ * 7. The two install failures prescribe non-destructive recovery for their
+ *    respective states.
+ * 8. Rewriting refresh pins preserves authored manifest fields outside the
  *    workspace package dependency it intentionally changes.
  */
 export const test_workspace_experimental_package_generation = (): void => {
@@ -230,6 +262,65 @@ export const test_workspace_experimental_package_generation = (): void => {
     name: string;
     scripts: Record<string, string>;
   };
+  const languages: readonly ProductionLanguage[] = [
+    "chinese",
+    "english",
+    "japanese",
+    "korean",
+  ];
+  const creationLanguages = languages.map((language) => {
+    const request = readExperimentalArguments([
+      "--language",
+      language,
+      "sample",
+    ]);
+    return request.refresh
+      ? "refresh"
+      : experimentalScaffoldRequest(request)?.language;
+  });
+  const missingLanguage = throwsError(
+    () => readExperimentalArguments(["sample"]),
+    ["requires --language"],
+  );
+  const unsupportedLanguage = throwsError(
+    () => readExperimentalArguments(["sample", "--language", "unsupported"]),
+    ["Unsupported experimental production language", "unsupported"],
+  );
+  const duplicateLanguage = throwsError(
+    () =>
+      readExperimentalArguments([
+        "sample",
+        "--language",
+        "english",
+        "--language",
+        "korean",
+      ]),
+    ["--language may be supplied only once"],
+  );
+  const refresh = readExperimentalArguments(["sample", "--refresh"]);
+  const confirmedRefresh = readExperimentalArguments([
+    "sample",
+    "--refresh",
+    "--language",
+    "english",
+  ]);
+  const changedRefreshLanguage = throwsError(
+    () =>
+      experimentalScaffoldRequest(
+        readExperimentalArguments([
+          "sample",
+          "--refresh",
+          "--language",
+          "korean",
+        ]),
+        baseline("english"),
+      ),
+    ["uses english", "cannot change it to korean"],
+  );
+  const missingRefreshBaseline = throwsError(
+    () => experimentalScaffoldRequest(refresh),
+    ["has no frozen contract baseline"],
+  );
 
   TestValidator.equals(
     "experimental package generations are failure-atomic and refresh-safe",
@@ -289,11 +380,22 @@ export const test_workspace_experimental_package_generation = (): void => {
             `TGZ packages built under ${first.directory}\n`,
       ],
       [
-        "creation selects English while refresh performs no render",
+        "creation requires and preserves each canonical language",
         () =>
-          JSON.stringify(experimentalScaffoldRequest("sample", false)) ===
-            JSON.stringify({ language: "english", name: "sample" }) &&
-          experimentalScaffoldRequest("sample", true) === undefined,
+          JSON.stringify(creationLanguages) === JSON.stringify(languages) &&
+          missingLanguage &&
+          unsupportedLanguage &&
+          duplicateLanguage,
+      ],
+      [
+        "refresh preserves its frozen language and performs no render",
+        () =>
+          experimentalScaffoldRequest(refresh, baseline("english")) ===
+            undefined &&
+          experimentalScaffoldRequest(confirmedRefresh, baseline("english")) ===
+            undefined &&
+          changedRefreshLanguage &&
+          missingRefreshBaseline,
       ],
       [
         "install recovery preserves an existing authored sandbox",
@@ -325,7 +427,8 @@ export const test_workspace_experimental_package_generation = (): void => {
       "failure preserves the predecessor generation": true,
       "failure removes staging and no predecessor": true,
       "the TGZ command reports the produced generation": true,
-      "creation selects English while refresh performs no render": true,
+      "creation requires and preserves each canonical language": true,
+      "refresh preserves its frozen language and performs no render": true,
       "install recovery preserves an existing authored sandbox": true,
       "refresh changes only the selected package pin": true,
     },
