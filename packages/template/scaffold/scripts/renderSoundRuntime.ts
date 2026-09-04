@@ -72,10 +72,7 @@ import {
   ensureRenderPhysicalDirectory,
 } from "./renderGcSnapshot";
 import type { IProductionRenderHost } from "./renderHost";
-import {
-  type IRuntimePackageGenerationHandle,
-  loadRuntimePackageGeneration,
-} from "./runtimePackageGeneration";
+import { loadResidentRuntimePackage } from "./runtimePackageGeneration";
 import {
   type IRuntimePackageSnapshot,
   type RuntimePackageAssetSelection,
@@ -114,27 +111,6 @@ export interface IPreparedProductionSoundRuntime {
 
 class ProductionRuntimeClosureError extends AggregateError {}
 class ProductionDialogueCacheObservationError extends Error {}
-
-const residentRequire = createRequire(import.meta.url);
-
-/** Snapshot and bind a package generation before Node is allowed to load it. */
-const residentRuntimePackage = <Module>(
-  packageName: string,
-): IRuntimePackageGenerationHandle<IRuntimePackageSnapshot, Module> => {
-  const snapshot = snapshotRuntimePackage({
-    entry: residentRequire.resolve(packageName),
-    moduleClosure: true,
-    packageName,
-  });
-  return loadRuntimePackageGeneration({
-    key: `${snapshot.package}\0${snapshot.entry}`,
-    generation: snapshot.fingerprint,
-    snapshot,
-    assertCurrent: () => assertRuntimePackageSnapshotCurrent(snapshot),
-    observeCache: () => residentRequire.cache[snapshot.entry],
-    load: () => residentRequire(snapshot.entry) as Module,
-  });
-};
 
 /** Revalidate one runtime closure without replacing an operation failure. */
 export const runWithProductionRuntimeClosure = async <Output>(
@@ -517,10 +493,14 @@ export const createProductionSoundRuntime = (props: {
       frameSize: 960,
     },
     mux: packageSnapshotIdentity(
-      residentRuntimePackage<typeof import("mp4box")>("mp4box").snapshot,
+      loadResidentRuntimePackage<typeof import("mp4box")>({
+        packageName: "mp4box",
+      }).snapshot,
     ),
     evidencePng: packageSnapshotIdentity(
-      residentRuntimePackage<typeof import("pngjs")>("pngjs").snapshot,
+      loadResidentRuntimePackage<typeof import("pngjs")>({
+        packageName: "pngjs",
+      }).snapshot,
     ),
     tts: (() => {
       if (props.dialogueSelection === null) return null;
@@ -1251,6 +1231,7 @@ export const createProductionSoundRuntime = (props: {
 
 /** Own the production's H.264 and Opus resources for one invocation. */
 export const createProductionRenderEncoderRuntime = (props: {
+  assertRuntimePackagesCurrent: () => void;
   createMp4File: IProductionRenderHost["createMp4File"];
   h264Module: IProductionRenderHost["h264Module"];
   preserveCleanup: (
@@ -1259,13 +1240,16 @@ export const createProductionRenderEncoderRuntime = (props: {
   ) => void;
   productionEncoderIdentity: (fps: number) => unknown;
 }): IProductionRenderEncoderRuntime => {
-  const { BoxParser } =
-    residentRuntimePackage<typeof import("mp4box")>("mp4box").module;
-  const { PNG } =
-    residentRuntimePackage<typeof import("pngjs")>("pngjs").module;
+  const { BoxParser } = loadResidentRuntimePackage<typeof import("mp4box")>({
+    packageName: "mp4box",
+  }).module;
+  const { PNG } = loadResidentRuntimePackage<typeof import("pngjs")>({
+    packageName: "pngjs",
+  }).module;
   const assertCurrentEncoder = (
     plan: IAutoMovieProductionRenderJobPlan,
   ): void => {
+    props.assertRuntimePackagesCurrent();
     if (
       isDeepStrictEqual(
         props.productionEncoderIdentity(plan.frameFormat.fps),
@@ -1278,122 +1262,134 @@ export const createProductionRenderEncoderRuntime = (props: {
   };
   return {
     assertCurrent: assertCurrentEncoder,
-    encodeOpus: async (pcm) => {
-      const opus = snapshotRuntimePackage({
-        entry: fileURLToPath(import.meta.resolve("libopus-wasm")),
-        moduleClosure: true,
-        packageName: "libopus-wasm",
-      });
-      const sampleFrames = pcm.length / 2;
-      const { codedSampleFrames, packets, primingSamples } =
-        await encodeOpusGeneration({
-          package: {
-            contentFingerprint: opus.contentFingerprint,
-            entry: opus.entry,
-            fingerprint: opus.fingerprint,
-            packageName: opus.package,
-          },
-          pcm,
-        });
-      assertRuntimePackageSnapshotCurrent(opus);
-      const description = new BoxParser.box.dOps();
-      description.Version = 0;
-      description.OutputChannelCount = 2;
-      description.PreSkip = primingSamples;
-      description.InputSampleRate = 48_000;
-      description.OutputGain = 0;
-      description.ChannelMappingFamily = 0;
-      description.StreamCount = 1;
-      description.CoupledCount = 1;
-      description.ChannelMapping = [];
-      const file = props.createMp4File();
-      file.init({
-        brands: ["isom", "iso2", "mp41", "Opus"],
-        timescale: 48_000,
-        duration: codedSampleFrames,
-      });
-      const track = file.addTrack({
-        type: "Opus",
-        hdlr: "soun",
-        name: "AutoMovie deterministic Opus mix",
-        timescale: 48_000,
-        media_duration: codedSampleFrames,
-        duration: codedSampleFrames,
-        samplerate: 48_000,
-        channel_count: 2,
-        samplesize: 16,
-        description_boxes: [description],
-      });
-      for (const packet of packets)
-        file.addSample(track, packet.bytes, {
-          duration: packet.duration,
-          dts: packet.dts,
-          cts: packet.dts,
-          is_sync: true,
-        });
-      trimProductionAudioPresentation({
-        file,
-        track,
-        mediaTimescale: 48_000,
-        movieTimescale: 48_000,
-        primingSamples,
-        presentationSamples: sampleFrames,
-      });
-      return new Uint8Array(file.getBuffer().buffer);
-    },
-    encodePngFrames: async (produceFrames, plan) => {
-      assertCurrentEncoder(plan);
-      const module = props.h264Module;
-      const createEncoder =
-        typeof module.createH264MP4Encoder === "function"
-          ? module.createH264MP4Encoder
-          : module.default?.createH264MP4Encoder;
-      if (createEncoder === undefined)
-        throw new Error(
-          "The installed h264-mp4-encoder package exposes no createH264MP4Encoder factory. Reinstall the pinned encoder before rendering.",
-        );
-      const encoder = await createEncoder();
-      let initialized = false;
-      let finalizeAttempted = false;
-      let failure: { error: unknown } | undefined;
-      let output = new Uint8Array();
-      try {
-        encoder.width = plan.frameFormat.width;
-        encoder.height = plan.frameFormat.height;
-        encoder.frameRate = plan.frameFormat.fps;
-        encoder.quantizationParameter =
-          plan.runtimeIdentity.encoder.arguments.quantizationParameter;
-        encoder.speed = plan.runtimeIdentity.encoder.arguments.speed;
-        encoder.groupOfPictures =
-          plan.runtimeIdentity.encoder.arguments.groupOfPictures;
-        encoder.initialize();
-        initialized = true;
-        await produceFrames((frame) => {
-          const png = PNG.sync.read(Buffer.from(frame));
-          encoder.addFrameRgba(new Uint8Array(png.data));
-        });
-        finalizeAttempted = true;
-        encoder.finalize();
-        output = Uint8Array.from(encoder.FS.readFile(encoder.outputFilename));
-      } catch (error) {
-        failure = { error };
-      }
-      props.preserveCleanup(failure, [
-        ...(initialized && finalizeAttempted === false
-          ? [
-              {
-                resource: "H.264 encoder finalizer",
-                cleanup: (): void => {
-                  finalizeAttempted = true;
-                  encoder.finalize();
-                },
+    encodeOpus: (pcm) =>
+      runWithProductionRuntimeClosure(
+        props.assertRuntimePackagesCurrent,
+        async () => {
+          const opus = snapshotRuntimePackage({
+            entry: fileURLToPath(import.meta.resolve("libopus-wasm")),
+            moduleClosure: true,
+            packageName: "libopus-wasm",
+          });
+          const sampleFrames = pcm.length / 2;
+          const { codedSampleFrames, packets, primingSamples } =
+            await encodeOpusGeneration({
+              package: {
+                contentFingerprint: opus.contentFingerprint,
+                entry: opus.entry,
+                fingerprint: opus.fingerprint,
+                packageName: opus.package,
               },
-            ]
-          : []),
-        { resource: "H.264 encoder", cleanup: (): void => encoder.delete() },
-      ]);
-      return output;
-    },
+              pcm,
+            });
+          assertRuntimePackageSnapshotCurrent(opus);
+          const description = new BoxParser.box.dOps();
+          description.Version = 0;
+          description.OutputChannelCount = 2;
+          description.PreSkip = primingSamples;
+          description.InputSampleRate = 48_000;
+          description.OutputGain = 0;
+          description.ChannelMappingFamily = 0;
+          description.StreamCount = 1;
+          description.CoupledCount = 1;
+          description.ChannelMapping = [];
+          const file = props.createMp4File();
+          file.init({
+            brands: ["isom", "iso2", "mp41", "Opus"],
+            timescale: 48_000,
+            duration: codedSampleFrames,
+          });
+          const track = file.addTrack({
+            type: "Opus",
+            hdlr: "soun",
+            name: "AutoMovie deterministic Opus mix",
+            timescale: 48_000,
+            media_duration: codedSampleFrames,
+            duration: codedSampleFrames,
+            samplerate: 48_000,
+            channel_count: 2,
+            samplesize: 16,
+            description_boxes: [description],
+          });
+          for (const packet of packets)
+            file.addSample(track, packet.bytes, {
+              duration: packet.duration,
+              dts: packet.dts,
+              cts: packet.dts,
+              is_sync: true,
+            });
+          trimProductionAudioPresentation({
+            file,
+            track,
+            mediaTimescale: 48_000,
+            movieTimescale: 48_000,
+            primingSamples,
+            presentationSamples: sampleFrames,
+          });
+          return new Uint8Array(file.getBuffer().buffer);
+        },
+      ),
+    encodePngFrames: (produceFrames, plan) =>
+      runWithProductionRuntimeClosure(
+        () => assertCurrentEncoder(plan),
+        async () => {
+          const module = props.h264Module;
+          const createEncoder =
+            typeof module.createH264MP4Encoder === "function"
+              ? module.createH264MP4Encoder
+              : module.default?.createH264MP4Encoder;
+          if (createEncoder === undefined)
+            throw new Error(
+              "The installed h264-mp4-encoder package exposes no createH264MP4Encoder factory. Reinstall the pinned encoder before rendering.",
+            );
+          const encoder = await createEncoder();
+          let initialized = false;
+          let finalizeAttempted = false;
+          let failure: { error: unknown } | undefined;
+          let output = new Uint8Array();
+          try {
+            encoder.width = plan.frameFormat.width;
+            encoder.height = plan.frameFormat.height;
+            encoder.frameRate = plan.frameFormat.fps;
+            encoder.quantizationParameter =
+              plan.runtimeIdentity.encoder.arguments.quantizationParameter;
+            encoder.speed = plan.runtimeIdentity.encoder.arguments.speed;
+            encoder.groupOfPictures =
+              plan.runtimeIdentity.encoder.arguments.groupOfPictures;
+            encoder.initialize();
+            initialized = true;
+            await produceFrames((frame) => {
+              const png = PNG.sync.read(Buffer.from(frame));
+              encoder.addFrameRgba(new Uint8Array(png.data));
+            });
+            finalizeAttempted = true;
+            encoder.finalize();
+            output = Uint8Array.from(
+              encoder.FS.readFile(encoder.outputFilename),
+            );
+          } catch (error) {
+            failure = { error };
+          }
+          props.preserveCleanup(failure, [
+            ...(initialized && finalizeAttempted === false
+              ? [
+                  {
+                    resource: "H.264 encoder finalizer",
+                    cleanup: (): void => {
+                      finalizeAttempted = true;
+                      encoder.finalize();
+                    },
+                  },
+                ]
+              : []),
+            {
+              resource: "H.264 encoder",
+              cleanup: (): void => encoder.delete(),
+            },
+          ]);
+          return output;
+        },
+      ),
   };
 };
 
@@ -1493,8 +1489,9 @@ export const encodeProductionSoundRaster = (raster: {
   height: number;
   rgba: Uint8Array;
 }): Uint8Array => {
-  const { PNG } =
-    residentRuntimePackage<typeof import("pngjs")>("pngjs").module;
+  const { PNG } = loadResidentRuntimePackage<typeof import("pngjs")>({
+    packageName: "pngjs",
+  }).module;
   const png = new PNG({ width: raster.width, height: raster.height });
   png.data = Buffer.from(raster.rgba);
   return PNG.sync.write(png);

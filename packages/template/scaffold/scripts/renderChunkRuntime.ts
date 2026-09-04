@@ -17,7 +17,7 @@ import {
   productionRenderLayersForPass,
 } from "@automovie/production";
 import path from "node:path";
-import { PNG } from "pngjs";
+import type { PNG } from "pngjs";
 
 import {
   type IOwnedRenderAttemptSnapshot,
@@ -38,6 +38,7 @@ import type {
   IProductionMaskSidecarPublication,
   IProductionRenderObservationAudit,
 } from "./renderObservationAudit";
+import { runWithProductionRuntimeClosure } from "./renderSoundRuntime";
 import {
   type IRenderChunkTemporaryTree,
   assertRenderChunkTemporaryTree,
@@ -287,6 +288,7 @@ export interface IProductionRenderInvocationObservationState {
 
 /** Capture, encode, verify, and atomically publish one render chunk. */
 export const createProductionRenderChunkCaptureRuntime = (props: {
+  assertRuntimePackagesCurrent: () => void;
   capture: IProductionRenderHost["capture"];
   captureCompleted: (root: string, target: string) => IRenderGcTargetSnapshot;
   capturePointer: (
@@ -329,6 +331,7 @@ export const createProductionRenderChunkCaptureRuntime = (props: {
     state: IProductionRenderInvocationObservationState;
   };
   pid: number;
+  pngModule: IProductionRenderHost["pngModule"];
   productionId: string;
   publication: {
     publish: (props: {
@@ -363,204 +366,219 @@ export const createProductionRenderChunkCaptureRuntime = (props: {
     >,
   ) => Promise<IAutoMovieProductionRenderChunkReceipt>;
 } => ({
-  render: async (plan, chunk, reports) => {
-    const pointer = props.capturePointer(chunk);
-    const existing = await props.current(plan, chunk, pointer);
-    if (existing !== null) return existing.receipt;
-    const attempt = props.lease.begin(chunk);
-    if (pointer !== null) props.publication.removePointer(pointer);
-    const temporaryOwnership = props.createTemporary({
-      name: `${chunk.id.slice(7)}.${props.randomUuid()}.${props.pid}`,
-      state: attempt.snapshot.base,
-    });
-    const temporary = temporaryOwnership.path;
-    const frameReceipts: IAutoMovieProductionRenderChunkReceipt["frames"] = [];
-    const frameBytes: Uint8Array[] = [];
-    const writtenFiles: Array<{
-      relative: string;
-      snapshot: IRenderGcTargetSnapshot;
-    }> = [];
-    for (const sample of chunk.frames) {
-      const images: Array<{ image: PNG; weight: number }> = [];
-      const layers = productionRenderLayersForPass(sample, chunk.pass);
-      for (const [layerIndex, layer] of layers.entries()) {
-        const captured = await props.capture(
-          productionRenderFrameCaptureInput({
-            root: props.root,
-            productionId: props.productionId,
-            plan,
-            shot: layer.shot,
-            sourceFrame: layer.sourceFrame,
-            sourceFps: plan.sourceFrameFormat.fps,
-            sample,
-            pass: chunk.pass,
-          }),
-        );
-        assertProductionRenderDialogueRuntimeIdentity({
-          boundary: `chunk ${chunk.slot} frame ${sample.globalFrame} layer ${layerIndex} pass ${chunk.pass}`,
-          expected: plan.runtimeIdentity.dialogueRuntimeIdentity,
-          observed: captured.dialogueRuntimeIdentity,
+  render: (plan, chunk, reports) =>
+    runWithProductionRuntimeClosure(
+      props.assertRuntimePackagesCurrent,
+      async () => {
+        const { PNG } = props.pngModule;
+        const pointer = props.capturePointer(chunk);
+        const existing = await props.current(plan, chunk, pointer);
+        if (existing !== null) return existing.receipt;
+        const attempt = props.lease.begin(chunk);
+        if (pointer !== null) props.publication.removePointer(pointer);
+        const temporaryOwnership = props.createTemporary({
+          name: `${chunk.id.slice(7)}.${props.randomUuid()}.${props.pid}`,
+          state: attempt.snapshot.base,
         });
-        if (
-          canonicalAutoMovieCaptureRuntimeIdentity(captured.runtimeIdentity) !==
-          canonicalAutoMovieCaptureRuntimeIdentity(plan.runtimeIdentity.capture)
-        )
-          throw new Error(
-            `Capture runtime changed while rendering "${chunk.slot}". Replan before mixing renderer identities.`,
-          );
-        const report: AutoMovieCaptureObservation<IAutoMovieRenderReport> =
-          reports.get(layer.shot) ?? {
-            status: "not-run",
-            reason: `render budget preflight published no assessment for shot "${layer.shot}"`,
-          };
-        props.observations.state.audits.push(
-          props.observations.audit({
-            globalFrame: sample.globalFrame,
-            observation: captured.observation,
-            pass: chunk.pass,
-            report,
-            shot: layer.shot,
-          }),
-        );
-        const maskSidecar = props.observations.publishMask({
-          chunk: chunk.id,
-          shot: layer.shot,
-          sidecar: captured.maskSidecar,
-          stateRoot: props.stateRoot,
-        });
-        props.observations.state.maskSidecars.push(
-          maskSidecar.status === "available"
-            ? {
-                globalFrame: sample.globalFrame,
-                pass: chunk.pass,
+        const temporary = temporaryOwnership.path;
+        const frameReceipts: IAutoMovieProductionRenderChunkReceipt["frames"] =
+          [];
+        const frameBytes: Uint8Array[] = [];
+        const writtenFiles: Array<{
+          relative: string;
+          snapshot: IRenderGcTargetSnapshot;
+        }> = [];
+        for (const sample of chunk.frames) {
+          const images: Array<{ image: PNG; weight: number }> = [];
+          const layers = productionRenderLayersForPass(sample, chunk.pass);
+          for (const [layerIndex, layer] of layers.entries()) {
+            const captured = await props.capture(
+              productionRenderFrameCaptureInput({
+                root: props.root,
+                productionId: props.productionId,
+                plan,
                 shot: layer.shot,
-                status: "available",
-                ...maskSidecar.value,
-                path: normalizeSlash(
-                  path.relative(props.root, maskSidecar.value.path),
-                ),
-              }
-            : {
-                globalFrame: sample.globalFrame,
+                sourceFrame: layer.sourceFrame,
+                sourceFps: plan.sourceFrameFormat.fps,
+                sample,
                 pass: chunk.pass,
-                shot: layer.shot,
+              }),
+            );
+            assertProductionRenderDialogueRuntimeIdentity({
+              boundary: `chunk ${chunk.slot} frame ${sample.globalFrame} layer ${layerIndex} pass ${chunk.pass}`,
+              expected: plan.runtimeIdentity.dialogueRuntimeIdentity,
+              observed: captured.dialogueRuntimeIdentity,
+            });
+            if (
+              canonicalAutoMovieCaptureRuntimeIdentity(
+                captured.runtimeIdentity,
+              ) !==
+              canonicalAutoMovieCaptureRuntimeIdentity(
+                plan.runtimeIdentity.capture,
+              )
+            )
+              throw new Error(
+                `Capture runtime changed while rendering "${chunk.slot}". Replan before mixing renderer identities.`,
+              );
+            const report: AutoMovieCaptureObservation<IAutoMovieRenderReport> =
+              reports.get(layer.shot) ?? {
                 status: "not-run",
-                reason: maskSidecar.reason,
-              },
-        );
-        if (chunk.pass === "mask" && maskSidecar.status === "not-run")
-          throw new Error(
-            `Semantic mask sidecar was not produced for shot "${layer.shot}" at frame ${sample.globalFrame}: ${maskSidecar.reason}`,
+                reason: `render budget preflight published no assessment for shot "${layer.shot}"`,
+              };
+            props.observations.state.audits.push(
+              props.observations.audit({
+                globalFrame: sample.globalFrame,
+                observation: captured.observation,
+                pass: chunk.pass,
+                report,
+                shot: layer.shot,
+              }),
+            );
+            const maskSidecar = props.observations.publishMask({
+              chunk: chunk.id,
+              shot: layer.shot,
+              sidecar: captured.maskSidecar,
+              stateRoot: props.stateRoot,
+            });
+            props.observations.state.maskSidecars.push(
+              maskSidecar.status === "available"
+                ? {
+                    globalFrame: sample.globalFrame,
+                    pass: chunk.pass,
+                    shot: layer.shot,
+                    status: "available",
+                    ...maskSidecar.value,
+                    path: normalizeSlash(
+                      path.relative(props.root, maskSidecar.value.path),
+                    ),
+                  }
+                : {
+                    globalFrame: sample.globalFrame,
+                    pass: chunk.pass,
+                    shot: layer.shot,
+                    status: "not-run",
+                    reason: maskSidecar.reason,
+                  },
+            );
+            if (chunk.pass === "mask" && maskSidecar.status === "not-run")
+              throw new Error(
+                `Semantic mask sidecar was not produced for shot "${layer.shot}" at frame ${sample.globalFrame}: ${maskSidecar.reason}`,
+              );
+            const image = PNG.sync.read(Buffer.from(captured.bytes));
+            if (
+              captured.width !== plan.frameFormat.width ||
+              captured.height !== plan.frameFormat.height ||
+              image.width !== plan.frameFormat.width ||
+              image.height !== plan.frameFormat.height
+            )
+              throw new Error(
+                `Capture for frame ${sample.globalFrame} reports ${captured.width}x${captured.height} and decodes as ${image.width}x${image.height}; expected ${plan.frameFormat.width}x${plan.frameFormat.height}.`,
+              );
+            if (hasProductionVisiblePixelVariance(image) === false)
+              throw new Error(
+                `Capture for frame ${sample.globalFrame} has no visible pixel variance. Fix the camera, lighting, scene, or pass before rendering.`,
+              );
+            images.push({ image, weight: layer.weight });
+          }
+          const bytes = compositeProductionCaptureLayers(
+            images,
+            plan.frameFormat.width,
+            plan.frameFormat.height,
+            props.pngModule,
           );
-        const image = PNG.sync.read(Buffer.from(captured.bytes));
+          const relative = `frame_${String(sample.globalFrame).padStart(
+            8,
+            "0",
+          )}.${chunk.pass}.png`;
+          writtenFiles.push({
+            relative,
+            snapshot: props.write({
+              bytes,
+              file: path.join(temporary, relative),
+              ownership: temporaryOwnership,
+            }),
+          });
+          const probe = probeProductionMedia({
+            kind: "preview",
+            mediaType: "image/png",
+            bytes,
+          });
+          if (probe.kind !== "png")
+            throw new Error(
+              `Frame ${sample.globalFrame} did not decode as PNG.`,
+            );
+          frameBytes.push(bytes);
+          frameReceipts.push({
+            globalFrame: sample.globalFrame,
+            path: relative,
+            digest: digestAutoMovieBytes(bytes),
+            bytes: bytes.length,
+            width: probe.width,
+            height: probe.height,
+          });
+        }
+        const encodedBytes = await props.encode(frameBytes, plan);
+        const encodedPath = "chunk.mp4";
+        writtenFiles.push({
+          relative: encodedPath,
+          snapshot: props.write({
+            bytes: encodedBytes,
+            file: path.join(temporary, encodedPath),
+            ownership: temporaryOwnership,
+          }),
+        });
+        const encodedProbe = probeProductionVideoMp4(encodedBytes);
         if (
-          captured.width !== plan.frameFormat.width ||
-          captured.height !== plan.frameFormat.height ||
-          image.width !== plan.frameFormat.width ||
-          image.height !== plan.frameFormat.height
+          encodedProbe.kind !== "video" ||
+          encodedProbe.frameCount !== chunk.frames.length ||
+          encodedProbe.width !== plan.frameFormat.width ||
+          encodedProbe.height !== plan.frameFormat.height ||
+          Math.abs(encodedProbe.fps - plan.frameFormat.fps) > 1e-9
         )
           throw new Error(
-            `Capture for frame ${sample.globalFrame} reports ${captured.width}x${captured.height} and decodes as ${image.width}x${image.height}; expected ${plan.frameFormat.width}x${plan.frameFormat.height}.`,
+            `Encoded chunk "${chunk.slot}" failed frame-count, raster, or frame-clock probe.`,
           );
-        if (hasProductionVisiblePixelVariance(image) === false)
+        const receipt: IAutoMovieProductionRenderChunkReceipt = {
+          version: 1,
+          slot: chunk.slot,
+          chunk: chunk.id,
+          frames: frameReceipts,
+          encoded: {
+            path: encodedPath,
+            digest: digestAutoMovieBytes(encodedBytes),
+            bytes: encodedBytes.length,
+          },
+        };
+        assertRenderChunkTemporaryTree(temporaryOwnership);
+        for (const written of writtenFiles)
+          assertCapturedRenderTarget(written.snapshot);
+        const completedTree = props.captureCompleted(props.root, temporary);
+        if (
+          completedTree.kind !== "directory" ||
+          completedTree.targetIdentity !== temporaryOwnership.tree.identity
+        )
           throw new Error(
-            `Capture for frame ${sample.globalFrame} has no visible pixel variance. Fix the camera, lighting, scene, or pass before rendering.`,
+            "Render chunk completed tree changed physical identity.",
           );
-        images.push({ image, weight: layer.weight });
-      }
-      const bytes = compositeProductionCaptureLayers(
-        images,
-        plan.frameFormat.width,
-        plan.frameFormat.height,
-      );
-      const relative = `frame_${String(sample.globalFrame).padStart(
-        8,
-        "0",
-      )}.${chunk.pass}.png`;
-      writtenFiles.push({
-        relative,
-        snapshot: props.write({
-          bytes,
-          file: path.join(temporary, relative),
-          ownership: temporaryOwnership,
-        }),
-      });
-      const probe = probeProductionMedia({
-        kind: "preview",
-        mediaType: "image/png",
-        bytes,
-      });
-      if (probe.kind !== "png")
-        throw new Error(`Frame ${sample.globalFrame} did not decode as PNG.`);
-      frameBytes.push(bytes);
-      frameReceipts.push({
-        globalFrame: sample.globalFrame,
-        path: relative,
-        digest: digestAutoMovieBytes(bytes),
-        bytes: bytes.length,
-        width: probe.width,
-        height: probe.height,
-      });
-    }
-    const encodedBytes = await props.encode(frameBytes, plan);
-    const encodedPath = "chunk.mp4";
-    writtenFiles.push({
-      relative: encodedPath,
-      snapshot: props.write({
-        bytes: encodedBytes,
-        file: path.join(temporary, encodedPath),
-        ownership: temporaryOwnership,
-      }),
-    });
-    const encodedProbe = probeProductionVideoMp4(encodedBytes);
-    if (
-      encodedProbe.kind !== "video" ||
-      encodedProbe.frameCount !== chunk.frames.length ||
-      encodedProbe.width !== plan.frameFormat.width ||
-      encodedProbe.height !== plan.frameFormat.height ||
-      Math.abs(encodedProbe.fps - plan.frameFormat.fps) > 1e-9
-    )
-      throw new Error(
-        `Encoded chunk "${chunk.slot}" failed frame-count, raster, or frame-clock probe.`,
-      );
-    const receipt: IAutoMovieProductionRenderChunkReceipt = {
-      version: 1,
-      slot: chunk.slot,
-      chunk: chunk.id,
-      frames: frameReceipts,
-      encoded: {
-        path: encodedPath,
-        digest: digestAutoMovieBytes(encodedBytes),
-        bytes: encodedBytes.length,
+        for (const written of writtenFiles)
+          assertCapturedRenderGcFileEntry({
+            directory: completedTree,
+            file: written.snapshot,
+            relative: written.relative,
+          });
+        assertRenderChunkTemporaryTree(temporaryOwnership);
+        const published = props.publication.publish({
+          chunk: chunk.id,
+          receipt,
+          root: props.root,
+          scope: props.renderLivenessScope,
+          tier: props.tier,
+          tree: completedTree,
+        });
+        props.lease.complete(chunk);
+        return published.publication.receipt;
       },
-    };
-    assertRenderChunkTemporaryTree(temporaryOwnership);
-    for (const written of writtenFiles)
-      assertCapturedRenderTarget(written.snapshot);
-    const completedTree = props.captureCompleted(props.root, temporary);
-    if (
-      completedTree.kind !== "directory" ||
-      completedTree.targetIdentity !== temporaryOwnership.tree.identity
-    )
-      throw new Error("Render chunk completed tree changed physical identity.");
-    for (const written of writtenFiles)
-      assertCapturedRenderGcFileEntry({
-        directory: completedTree,
-        file: written.snapshot,
-        relative: written.relative,
-      });
-    assertRenderChunkTemporaryTree(temporaryOwnership);
-    const published = props.publication.publish({
-      chunk: chunk.id,
-      receipt,
-      root: props.root,
-      scope: props.renderLivenessScope,
-      tier: props.tier,
-      tree: completedTree,
-    });
-    props.lease.complete(chunk);
-    return published.publication.receipt;
-  },
+    ),
 });
 
 /** Preserve the original opaque weighted-RGB capture composition contract. */
@@ -568,7 +586,9 @@ export const compositeProductionCaptureLayers = (
   layers: Array<{ image: PNG; weight: number }>,
   width: number,
   height: number,
+  pngModule: IProductionRenderHost["pngModule"],
 ): Uint8Array => {
+  const { PNG } = pngModule;
   const output = new PNG({ width, height });
   for (let offset = 0; offset < output.data.length; offset += 4) {
     for (let channel = 0; channel < 3; ++channel)

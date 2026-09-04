@@ -61,11 +61,6 @@ import {
   verifyCurrentProductionRender,
 } from "./renderReadOnlyRuntime";
 import type { IProductionSoundRuntime } from "./renderSoundRuntime";
-import {
-  assertRuntimePackageSnapshotCurrent,
-  bindRuntimePackageSnapshotGeneration,
-  snapshotRuntimePackage,
-} from "./runtimePackageSnapshot";
 
 export interface IProductionDeliveryToneCheck {
   requested: IAutoMovieRenderSpec["toneMapping"];
@@ -136,7 +131,6 @@ export const createProductionRenderPlanningRuntime = (props: {
     chunk: IAutoMovieProductionRenderChunk,
   ) => IRenderGcTargetSnapshot | null;
   compareCodeUnits: (left: string, right: string) => number;
-  h264Entry: string;
   host: IProductionRenderHost;
   output: (value: unknown) => void;
   planPath: string;
@@ -551,11 +545,8 @@ export const createProductionRenderPlanningRuntime = (props: {
     }));
 
   const snapshotProductionEncoderIdentity = (fps: number) => {
-    const snapshot = snapshotRuntimePackage({
-      entry: props.h264Entry,
-      moduleClosure: true,
-      packageName: "h264-mp4-encoder",
-    });
+    renderHost.assertRuntimePackagesCurrent();
+    const snapshot = renderHost.h264Snapshot;
     const encoder: IAutoMovieProductionEncoderIdentity = {
       package: snapshot.package,
       version: snapshot.version,
@@ -569,8 +560,7 @@ export const createProductionRenderPlanningRuntime = (props: {
     };
     return {
       identity: encoder,
-      assertCurrent: () => assertRuntimePackageSnapshotCurrent(snapshot),
-      bindCurrent: () => bindRuntimePackageSnapshotGeneration(snapshot),
+      assertCurrent: renderHost.assertRuntimePackagesCurrent,
     };
   };
 
@@ -578,7 +568,6 @@ export const createProductionRenderPlanningRuntime = (props: {
     fps: number,
   ): IAutoMovieProductionEncoderIdentity => {
     const snapshot = snapshotProductionEncoderIdentity(fps);
-    snapshot.bindCurrent();
     return snapshot.identity;
   };
 
