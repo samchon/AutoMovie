@@ -279,14 +279,14 @@ export const test_production_semantic_mask_evidence = (): void => {
   );
 
   const invalidPaths = [
-    "",
-    "semantic\\mask.json",
-    "/semantic/mask.json",
-    "C:/semantic/mask.json",
-    "semantic//mask.json",
-    "semantic/./mask.json",
-    "semantic/../mask.json",
-  ];
+    ["blank", ""],
+    ["backslash", "semantic\\mask.json"],
+    ["rooted", "/semantic/mask.json"],
+    ["drive", "C:/semantic/mask.json"],
+    ["empty segment", "semantic//mask.json"],
+    ["dot segment", "semantic/./mask.json"],
+    ["parent segment", "semantic/../mask.json"],
+  ] as const;
   TestValidator.equals(
     "receipt creation refuses malformed frame, path, and sidecar bytes",
     {
@@ -307,11 +307,14 @@ export const test_production_semantic_mask_evidence = (): void => {
           }),
         "non-negative safe integer",
       ),
-      invalidPaths: invalidPaths.every((path) =>
-        throwsError(
-          () => createReceipt({ evidence, sidecarBytes, path }),
-          "portable relative path",
-        ),
+      invalidPaths: Object.fromEntries(
+        invalidPaths.map(([name, path]) => [
+          name,
+          throwsError(
+            () => createReceipt({ evidence, sidecarBytes, path }),
+            "portable relative path",
+          ),
+        ]),
       ),
       wrongBytes: throwsError(
         () => createReceipt({ evidence, sidecarBytes: bytes("{}\n") }),
@@ -322,7 +325,9 @@ export const test_production_semantic_mask_evidence = (): void => {
       negativeFrame: true,
       fractionalFrame: true,
       unsafeFrame: true,
-      invalidPaths: true,
+      invalidPaths: Object.fromEntries(
+        invalidPaths.map(([name]) => [name, true]),
+      ),
       wrongBytes: true,
     },
   );
