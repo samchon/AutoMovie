@@ -102,20 +102,54 @@ export const test_workspace_package_inventory = (): void => {
 
   const duplicates = planWorkspacePackageInventory({
     declarations: [
-      declaration("same-directory", "directory-one", "@example/directory-one"),
-      declaration("same-directory", "directory-two", "@example/directory-two"),
-      declaration("same-name-one", "name-one", "@example/same-name"),
-      declaration("same-name-two", "name-two", "@example/same-name"),
+      declaration(
+        "same-declaration-directory",
+        "directory-one",
+        "@example/directory-one",
+      ),
+      declaration(
+        "same-declaration-directory",
+        "directory-two",
+        "@example/directory-two",
+      ),
+      declaration(
+        "same-declaration-name-one",
+        "name-one",
+        "@example/same-declaration-name",
+      ),
+      declaration(
+        "same-declaration-name-two",
+        "name-two",
+        "@example/same-declaration-name",
+      ),
       declaration("same-key-one", "same-key", "@example/same-key-one"),
       declaration("same-key-two", "same-key", "@example/same-key-two"),
+      declaration(
+        "same-manifest-directory",
+        "manifest-directory",
+        "@example/manifest-directory",
+      ),
+      declaration(
+        "same-manifest-name-one",
+        "manifest-name-one",
+        "@example/manifest-name-one",
+      ),
+      declaration(
+        "same-manifest-name-two",
+        "manifest-name-two",
+        "@example/manifest-name-two",
+      ),
     ],
     manifests: [
-      manifest("same-directory", "@example/directory-one"),
-      manifest("same-directory", "@example/directory-two"),
-      manifest("same-name-one", "@example/same-name"),
-      manifest("same-name-two", "@example/same-name"),
+      manifest("same-declaration-directory", "@example/directory-one"),
+      manifest("same-declaration-name-one", "@example/actual-name-one"),
+      manifest("same-declaration-name-two", "@example/actual-name-two"),
       manifest("same-key-one", "@example/same-key-one"),
       manifest("same-key-two", "@example/same-key-two"),
+      manifest("same-manifest-directory", "@example/manifest-directory"),
+      manifest("same-manifest-directory", "@example/manifest-directory-copy"),
+      manifest("same-manifest-name-one", "@example/shared-manifest-name"),
+      manifest("same-manifest-name-two", "@example/shared-manifest-name"),
     ],
   });
   TestValidator.equals("duplicate identities", duplicates, {
@@ -124,12 +158,21 @@ export const test_workspace_package_inventory = (): void => {
     diagnostics: [
       {
         code: "duplicate-declaration-directory",
-        subject: "same-directory",
+        subject: "same-declaration-directory",
       },
-      { code: "duplicate-declaration-name", subject: "@example/same-name" },
+      {
+        code: "duplicate-declaration-name",
+        subject: "@example/same-declaration-name",
+      },
       { code: "duplicate-declaration-key", subject: "same-key" },
-      { code: "duplicate-manifest-directory", subject: "same-directory" },
-      { code: "duplicate-manifest-name", subject: "@example/same-name" },
+      {
+        code: "duplicate-manifest-directory",
+        subject: "same-manifest-directory",
+      },
+      {
+        code: "duplicate-manifest-name",
+        subject: "@example/shared-manifest-name",
+      },
     ],
   });
 

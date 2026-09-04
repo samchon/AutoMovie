@@ -187,6 +187,8 @@ export const planWorkspacePackageInventory = (props: {
   const diagnostics: IWorkspacePackageInventoryDiagnostic[] = [];
   const packages: IWorkspacePackage[] = [];
   const excluded: IWorkspacePackageExclusion[] = [];
+  const missingDirectories = new Set<string>();
+  const undeclaredDirectories = new Set<string>();
 
   for (const [subject, count] of declarationDirectories)
     if (count > 1)
@@ -207,11 +209,13 @@ export const planWorkspacePackageInventory = (props: {
   for (const declaration of props.declarations) {
     const manifest = manifestsByDirectory.get(declaration.directory);
     if (manifest === undefined) {
-      if (!repeated(declarationDirectories, declaration.directory))
+      if (!missingDirectories.has(declaration.directory)) {
+        missingDirectories.add(declaration.directory);
         diagnostics.push({
           code: "missing-workspace-package",
           subject: declaration.directory,
         });
+      }
       continue;
     }
     if (
@@ -251,13 +255,14 @@ export const planWorkspacePackageInventory = (props: {
   for (const manifest of props.manifests)
     if (
       !declaredDirectories.has(manifest.directory) &&
-      !repeated(manifestDirectories, manifest.directory) &&
-      !repeated(manifestNames, manifest.name)
-    )
+      !undeclaredDirectories.has(manifest.directory)
+    ) {
+      undeclaredDirectories.add(manifest.directory);
       diagnostics.push({
         code: "undeclared-workspace-package",
         subject: manifest.directory,
       });
+    }
 
   return { packages, excluded, diagnostics };
 };
