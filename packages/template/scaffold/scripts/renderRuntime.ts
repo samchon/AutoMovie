@@ -332,7 +332,7 @@ const executeProductionRenderCommand = async (
   });
   const publicationRuntime = createProductionRenderPublicationRuntime({
     assertCurrentEncoder: encoderRuntime.assertCurrent,
-    currentChunk: planningRuntime.currentChunkPublication,
+    inspectChunk: planningRuntime.inspectChunkPublication,
     ensureDirectory: ensureRenderPhysicalDirectory,
     filesystem: renderHost.filesystem,
     inspectProxy: inspectPublishedProxyBundle,

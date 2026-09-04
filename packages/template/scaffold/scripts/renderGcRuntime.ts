@@ -311,41 +311,80 @@ export const createProductionRenderGarbageRuntime = (props: {
       for (const entry of renderHost.filesystem
         .readdirSync(proxyRoot, { withFileTypes: true })
         .sort((left, right) => compareCodeUnits(left.name, right.name))) {
-        if (
-          entry.isSymbolicLink() ||
-          (entry.isDirectory() === false && entry.isFile() === false) ||
-          /^[0-9a-f]{64}$/u.test(entry.name) === false
-        )
+        if (/^[0-9a-f]{64}$/u.test(entry.name) === false)
           continue;
         const target = path.join(proxyRoot, entry.name);
         const relative = normalizeSlash(path.relative(renderRoot, target));
         const logical = `publication/${relative}`;
+        if (
+          entry.isSymbolicLink() ||
+          (entry.isDirectory() === false && entry.isFile() === false)
+        ) {
+          candidates.push({
+            path: logical,
+            kind: "publication",
+            digest: null,
+            bytes: null,
+            generation: null,
+            observation: {
+              state: "unsafe-locator",
+              authority: "none",
+              reason:
+                "the proxy publication locator is not one resident physical file or directory",
+            },
+          });
+          sweptPublicationTargets.add(relative);
+          continue;
+        }
         const retainedByManifest = [...publicationPaths].some(
           (file) => file === logical || file.startsWith(`${logical}/`),
         );
         let integrityFailed = false;
-        const adjudicated = captureProxyPublicationGcTarget({
-          renderRoot,
-          target,
-          judge: (snapshot, evidence) => {
-            try {
-              const receipt = inspectCapturedProxyBundle(snapshot, evidence);
-              return (
-                currentProxy !== undefined &&
-                entry.name ===
-                  renderPublicationFingerprint(currentProxy).slice(7) &&
-                receipt.publicationFingerprint ===
-                  renderPublicationFingerprint(currentProxy) &&
-                receipt.compileFingerprint ===
-                  currentProxy.compileFingerprint &&
-                receipt.editFingerprint === currentProxy.editFingerprint
-              );
-            } catch {
-              integrityFailed = true;
-              return false;
-            }
-          },
-        });
+        let adjudicated: {
+          snapshot: IRenderGcTargetSnapshot;
+          value: boolean;
+        };
+        try {
+          adjudicated = captureProxyPublicationGcTarget({
+            renderRoot,
+            target,
+            judge: (snapshot, evidence) => {
+              try {
+                const receipt = inspectCapturedProxyBundle(snapshot, evidence);
+                return (
+                  currentProxy !== undefined &&
+                  entry.name ===
+                    renderPublicationFingerprint(currentProxy).slice(7) &&
+                  receipt.publicationFingerprint ===
+                    renderPublicationFingerprint(currentProxy) &&
+                  receipt.compileFingerprint ===
+                    currentProxy.compileFingerprint &&
+                  receipt.editFingerprint === currentProxy.editFingerprint
+                );
+              } catch {
+                integrityFailed = true;
+                return false;
+              }
+            },
+          });
+        } catch {
+          candidates.push({
+            path: logical,
+            kind: "publication",
+            digest: null,
+            bytes: null,
+            generation: null,
+            observation: {
+              state: "unavailable",
+              authority: "none",
+              reason:
+                "the proxy publication generation could not be captured consistently",
+            },
+          });
+          if (entry.isDirectory()) sweptPublicationRoots.push(`${relative}/`);
+          else sweptPublicationTargets.add(relative);
+          continue;
+        }
         const current = adjudicated.value;
         if (current) {
           if (adjudicated.snapshot.kind === "file")
@@ -392,8 +431,9 @@ export const createProductionRenderGarbageRuntime = (props: {
         else sweptPublicationRoots.push(`${relative}/`);
       }
     }
-    if (renderHost.filesystem.existsSync(renderRoot))
-      for (const file of physicalFiles(renderRoot)) {
+    const unsafePublicationTargets: string[] = [];
+    if (renderHost.filesystem.existsSync(renderRoot)) {
+      for (const file of physicalFiles(renderRoot, unsafePublicationTargets)) {
         const relative = normalizeSlash(path.relative(renderRoot, file));
         if (isRenderGcPreservedPath(relative)) continue;
         if (sweptPublicationTargets.has(relative)) continue;
@@ -407,12 +447,45 @@ export const createProductionRenderGarbageRuntime = (props: {
           generation: null,
           observation: null,
         };
-        const snapshot = props.captureTarget(renderRoot, file);
+        let snapshot: IRenderGcTargetSnapshot;
+        try {
+          snapshot = props.captureTarget(renderRoot, file);
+        } catch {
+          candidate.observation = {
+            state: "unavailable",
+            authority: "none",
+            reason:
+              "the publication target could not be captured consistently",
+          };
+          candidates.push(candidate);
+          continue;
+        }
         candidate.bytes = snapshot.bytes;
         candidate.generation = snapshot.targetIdentity;
         candidates.push(candidate);
         candidateSnapshots.set(gcCandidateKey(candidate), snapshot);
       }
+      for (const target of unsafePublicationTargets) {
+        const relative = normalizeSlash(path.relative(renderRoot, target));
+        if (isRenderGcPreservedPath(relative)) continue;
+        if (sweptPublicationTargets.has(relative)) continue;
+        if (sweptPublicationRoots.some((root) => relative.startsWith(root)))
+          continue;
+        candidates.push({
+          path: `publication/${relative}`,
+          kind: "publication",
+          digest: null,
+          bytes: null,
+          generation: null,
+          observation: {
+            state: "unsafe-locator",
+            authority: "none",
+            reason:
+              "the publication locator is a symbolic link and remains outside automatic cleanup authority",
+          },
+        });
+      }
+    }
     const plan = planProductionRenderGc({
       plans,
       publicationPaths: [...publicationPaths],
@@ -534,15 +607,23 @@ export const createProductionRenderGarbageRuntime = (props: {
     }
   };
 
-  const physicalFiles = (directory: string): string[] => {
+  const physicalFiles = (
+    directory: string,
+    unsafeLocators?: string[],
+  ): string[] => {
     const output: string[] = [];
     for (const entry of renderHost.filesystem
       .readdirSync(directory, { withFileTypes: true })
       .sort((left, right) => compareCodeUnits(left.name, right.name))) {
       const target = path.join(directory, entry.name);
-      if (entry.isSymbolicLink())
-        throw new Error(`Render GC refuses linked publication "${target}".`);
-      if (entry.isDirectory()) output.push(...physicalFiles(target));
+      if (entry.isSymbolicLink()) {
+        if (unsafeLocators === undefined)
+          throw new Error(`Render GC refuses linked publication "${target}".`);
+        unsafeLocators.push(target);
+        continue;
+      }
+      if (entry.isDirectory())
+        output.push(...physicalFiles(target, unsafeLocators));
       else if (entry.isFile()) output.push(target);
     }
     return output;

@@ -44,9 +44,9 @@ import {
 } from "./productionConfiguration";
 import { assertProductionSoundRenderClock } from "./productionRuntime";
 import {
-  type ICurrentRenderChunkPublication,
   consumeCurrentRenderChunkFrames,
 } from "./renderChunkSnapshot";
+import type { IProductionRenderChunkInspection } from "./renderPlanningRuntime";
 import { productionRenderFrameCaptureInput } from "./renderFrameCaptureInput";
 import type { IProductionRenderHost } from "./renderHost";
 import type { createProductionRenderPlanningRuntime } from "./renderPlanningRuntime";
@@ -89,10 +89,10 @@ export interface IProductionRenderPublicationRuntime {
 /** Own immutable proxy publication and current chunk assembly. */
 export const createProductionRenderPublicationRuntime = (props: {
   assertCurrentEncoder: (plan: IAutoMovieProductionRenderJobPlan) => void;
-  currentChunk: (
+  inspectChunk: (
     plan: IAutoMovieProductionRenderJobPlan,
     chunk: IAutoMovieProductionRenderChunk,
-  ) => ICurrentRenderChunkPublication | null;
+  ) => IProductionRenderChunkInspection;
   ensureDirectory: (root: string, relative: string) => string;
   filesystem: Pick<typeof import("node:fs"), "existsSync" | "readdirSync">;
   inspectProxy: (
@@ -120,12 +120,10 @@ export const createProductionRenderPublicationRuntime = (props: {
     return assembleProductionChunkVideoMp4({
       chunks: (function* () {
         for (const chunk of ordered) {
-          const current = props.currentChunk(plan, chunk);
-          if (current === null)
-            throw new Error(
-              `Chunk "${chunk.slot}" changed after final status verification. Reverify or rerender it before finalizing.`,
-            );
-          yield current.encoded;
+          const inspection = props.inspectChunk(plan, chunk);
+          if (inspection.current === null)
+            throw new Error(inspection.finding.reason);
+          yield inspection.current.encoded;
         }
       })(),
       frameFormat: plan.frameFormat,
@@ -337,16 +335,20 @@ export const createProductionRenderFinalizationRuntime = (props: {
         )
         .map((deliverable) => deliverable.id),
     );
-    if (
-      status.some(
-        (item) =>
-          requiredVideo.has(
-            plan.chunks.find((chunk) => chunk.slot === item.slot)!.deliverable,
-          ) && item.status !== "complete",
-      )
-    )
+    const blockingStatus = status.filter(
+      (item) =>
+        requiredVideo.has(
+          plan.chunks.find((chunk) => chunk.slot === item.slot)!.deliverable,
+        ) && item.status !== "complete",
+    );
+    if (blockingStatus.length !== 0)
       throw new Error(
-        "Final publication requires every required current chunk complete. Run render status and run first.",
+        [
+          "Final publication requires every required current chunk complete:",
+          ...blockingStatus.map(
+            (item) => `  ${item.slot}: ${item.artifact.reason}`,
+          ),
+        ].join("\n"),
       );
     const completeSlots = new Set(
       status
@@ -481,12 +483,13 @@ export const createProductionRenderFinalizationRuntime = (props: {
         for (const chunk of [...deliverableChunks].sort(
           (left, right) => left.frameStart - right.frameStart,
         )) {
-          const current = await planningRuntime.currentChunk(plan, chunk);
-          if (current === null)
-            throw new Error(
-              `Guide-pass chunk "${chunk.slot}" changed before control-frame publication.`,
-            );
-          consumeCurrentRenderChunkFrames(current, (frame) =>
+          const inspection = planningRuntime.inspectChunkPublication(
+            plan,
+            chunk,
+          );
+          if (inspection.current === null)
+            throw new Error(inspection.finding.reason);
+          consumeCurrentRenderChunkFrames(inspection.current, (frame) =>
             owned.set(
               `frames/${passes[0]}/frame_${String(
                 frame.receipt.globalFrame,
