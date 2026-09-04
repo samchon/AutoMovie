@@ -15,6 +15,7 @@ const video = (): IAutoMovieProductionVideoProbe => ({
   runtimeSeconds: 1,
   frameCount: 24,
   fps: 24,
+  frameRate: { numerator: 24, denominator: 1 },
   brands: { major: "isom", compatible: ["isom"] },
   coded: { width: 16, height: 16 },
   trackDisplay: { width16_16: 1_048_576, height16_16: 1_048_576 },

@@ -14,6 +14,7 @@ const video = (): IAutoMovieProductionVideoProbe => ({
   runtimeSeconds: 1,
   frameCount: 24,
   fps: 24,
+  frameRate: { numerator: 24, denominator: 1 },
   brands: { major: "isom", compatible: ["isom", "iso2", "avc1", "mp41"] },
   coded: { width: 16, height: 16 },
   trackDisplay: { width16_16: 16 * 65_536, height16_16: 16 * 65_536 },
@@ -160,6 +161,7 @@ export const test_production_video_profile = (): void => {
       "color.resolved.kind",
       (value) => (value.color.resolved = { kind: "absent" }),
     ],
+    ["frameRate", (value) => (value.frameRate.denominator = 2)],
     ["frameRate", (value) => (value.samples.duration = 3_754)],
     [
       "pixelAspect",

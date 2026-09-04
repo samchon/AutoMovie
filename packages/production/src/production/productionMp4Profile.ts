@@ -303,7 +303,8 @@ export const assertProductionVideoProfile = (props: {
   comparisons.push([
     "frameRate",
     true,
-    equalProductionFrameRates(expected.frameRate, actualRate),
+    equalProductionFrameRates(expected.frameRate, actualRate) &&
+      equalProductionFrameRates(actual.frameRate, actualRate),
   ]);
   if (actual.pixelAspect.kind === "explicit")
     comparisons.push([
