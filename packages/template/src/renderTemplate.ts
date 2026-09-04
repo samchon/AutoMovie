@@ -38,9 +38,9 @@ export const renderTemplate = (
       throw new Error(`whitespace scaffold placeholder: {{${key}}}`);
     if (/^[A-Za-z0-9:_@./-]+$/u.test(key) === false)
       throw new Error(`malformed scaffold placeholder: {{${key}}}`);
-    const value = variables[key];
-    if (value === undefined)
+    if (Object.prototype.hasOwnProperty.call(variables, key) === false)
       throw new Error(`unknown scaffold variable: {{${key}}}`);
+    const value = variables[key]!;
     if (value.includes("{{") || value.includes("}}"))
       throw new Error(
         `scaffold variable {{${key}}} expands to placeholder syntax`,

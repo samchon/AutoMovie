@@ -32,6 +32,7 @@ export const test_cli_template_placeholder_refusals = (): void => {
     "every invalid placeholder class is refused distinctly",
     [
       refusal("{{missing}}"),
+      refusal("{{toString}}"),
       refusal("{{}}"),
       refusal("{{   }}"),
       refusal("{{bad key}}"),
@@ -58,6 +59,7 @@ export const test_cli_template_placeholder_refusals = (): void => {
     ],
     [
       "unknown scaffold variable: {{missing}}",
+      "unknown scaffold variable: {{toString}}",
       "empty scaffold placeholder: {{}}",
       "whitespace scaffold placeholder: {{   }}",
       "malformed scaffold placeholder: {{bad key}}",
@@ -68,6 +70,13 @@ export const test_cli_template_placeholder_refusals = (): void => {
       "scaffold variable {{name}} expands to placeholder syntax",
       "scaffold variable {{name}} expands to placeholder syntax",
     ],
+  );
+  const magicVariables = Object.create(null) as Record<string, string>;
+  magicVariables.__proto__ = "literal";
+  TestValidator.equals(
+    "an explicitly declared magic key remains a variable",
+    renderTemplate("{{__proto__}}", magicVariables),
+    "literal",
   );
   TestValidator.equals(
     "empty input and single braces remain literal",
