@@ -3272,7 +3272,7 @@ const topologyOf = (
       })),
     ),
   ];
-  const active = new Map(
+  const active = new Map<string, boolean>(
     branches.map((branch) => [branch.name, branch.active]),
   );
   const declarations: IAutoMovieEvidenceTopologyDeclaration[] = expected.map(
