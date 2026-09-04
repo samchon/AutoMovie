@@ -75,7 +75,7 @@ const load = (
  * 4. A load failure before cache admission rolls back for a safe retry, while
  *    a failure that leaves a cache entry poisons the process generation.
  * 5. An operation revalidates before and after execution, preserving operation
- *    then postcheck errors when both occur.
+ *    then postcheck errors when both occur, and never starts from stale bytes.
  */
 export const test_cli_scaffold_runtime_package_generation =
   async (): Promise<void> => {
@@ -219,6 +219,21 @@ export const test_cli_scaffold_runtime_package_generation =
       operationHandle,
       (module) => module.execution + 1,
     );
+    operationState.snapshot.current = false;
+    let staleOperationRan = false;
+    const stalePrecheck = await rejectsError(async () => {
+      await runRuntimePackageGeneration(operationHandle, () => {
+        staleOperationRan = true;
+      });
+    }, "snapshot generation changed");
+    operationState.snapshot.current = true;
+    const operationOnly = await rejectsError(
+      () =>
+        runRuntimePackageGeneration(operationHandle, () => {
+          throw new Error("operation-only failure");
+        }),
+      "operation-only failure",
+    );
     let combined: unknown;
     try {
       await runRuntimePackageGeneration(operationHandle, () => {
@@ -233,6 +248,9 @@ export const test_cli_scaffold_runtime_package_generation =
       "operations are fenced on both sides and preserve dual failure order",
       {
         success,
+        stalePrecheck,
+        staleOperationRan,
+        operationOnly,
         aggregate: combined instanceof AggregateError,
         messages: errors.map((error) =>
           error instanceof Error ? error.message : String(error),
@@ -240,6 +258,9 @@ export const test_cli_scaffold_runtime_package_generation =
       },
       {
         success: 2,
+        stalePrecheck: true,
+        staleOperationRan: false,
+        operationOnly: true,
         aggregate: true,
         messages: ["operation failed", "snapshot generation changed"],
       },

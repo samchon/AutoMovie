@@ -11,15 +11,16 @@ export interface IRuntimePackageGenerationHandle<Snapshot, Module> {
 }
 
 interface IRuntimePackageGenerationEntry<Snapshot, Module, CacheToken> {
-  cacheToken?: CacheToken;
   generation: string;
   handle?: IRuntimePackageGenerationHandle<Snapshot, Module>;
   state: "loading" | "loaded" | "poisoned";
 }
 
+const registryEntries = Symbol("runtime-package-generation-entries");
+
 /** Isolated generation registry used by tests and explicitly isolated hosts. */
 export interface IRuntimePackageGenerationRegistry {
-  entries: Map<
+  [registryEntries]: Map<
     string,
     IRuntimePackageGenerationEntry<unknown, unknown, unknown>
   >;
@@ -27,7 +28,7 @@ export interface IRuntimePackageGenerationRegistry {
 
 /** Create an empty module-generation registry. */
 export const createRuntimePackageGenerationRegistry =
-  (): IRuntimePackageGenerationRegistry => ({ entries: new Map() });
+  (): IRuntimePackageGenerationRegistry => ({ [registryEntries]: new Map() });
 
 const registrySymbol = Symbol.for("automovie.runtime-package-loader.v1");
 const sharedRegistry = (() => {
@@ -66,7 +67,7 @@ export const loadRuntimePackageGeneration = <
     throw new Error("Runtime package generation identity is invalid.");
   props.assertCurrent();
   const registry = props.registry ?? sharedRegistry;
-  const prior = registry.entries.get(props.key) as
+  const prior = registry[registryEntries].get(props.key) as
     | IRuntimePackageGenerationEntry<Snapshot, Module, CacheToken>
     | undefined;
   if (prior !== undefined) {
@@ -94,12 +95,13 @@ export const loadRuntimePackageGeneration = <
     generation: props.generation,
     state: "loading",
   };
-  registry.entries.set(props.key, entry);
+  registry[registryEntries].set(props.key, entry);
   let module: Module;
   try {
     module = props.load();
   } catch (error) {
-    if (props.observeCache() === undefined) registry.entries.delete(props.key);
+    if (props.observeCache() === undefined)
+      registry[registryEntries].delete(props.key);
     else entry.state = "poisoned";
     throw error;
   }
@@ -111,7 +113,6 @@ export const loadRuntimePackageGeneration = <
       `Runtime package generation "${props.key}" loaded without an observable cache entry. Start a new process before retrying.`,
     );
   }
-  entry.cacheToken = cacheToken;
   try {
     props.assertCurrent();
   } catch (error) {
@@ -125,7 +126,7 @@ export const loadRuntimePackageGeneration = <
     assertCurrent: () => {
       props.assertCurrent();
       if (
-        registry.entries.get(props.key) !== entry ||
+        registry[registryEntries].get(props.key) !== entry ||
         entry.state !== "loaded" ||
         props.observeCache() !== cacheToken
       )

@@ -71,6 +71,11 @@ export const test_production_render_dialogue_runtime_identity = (): void => {
         caught.message.includes("chunk feature:0 frame 12 layer 1 beauty"),
       secretAbsent:
         caught instanceof Error && caught.message.includes(secret) === false,
+      exactCanonicalMismatch:
+        name !== "different" ||
+        (caught instanceof Error &&
+          caught.message.includes(`expected ${expected}`) &&
+          caught.message.includes(`observed ${digest("b")}`)),
     };
   });
   TestValidator.equals(
@@ -80,6 +85,7 @@ export const test_production_render_dialogue_runtime_identity = (): void => {
       name,
       refused: true,
       secretAbsent: true,
+      exactCanonicalMismatch: true,
     })),
   );
 

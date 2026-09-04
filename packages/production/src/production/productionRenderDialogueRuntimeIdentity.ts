@@ -35,7 +35,7 @@ export const assertProductionRenderDialogueRuntimeIdentity = (props: {
     );
   if (props.observed !== props.expected)
     throw new Error(
-      `Capture dialogue runtime identity differs from the render plan at ${props.boundary}. Replan before rendering.`,
+      `Capture dialogue runtime identity differs from the render plan at ${props.boundary}: expected ${props.expected ?? "null"}, observed ${props.observed ?? "null"}. Replan before rendering.`,
     );
   return props.observed;
 };
