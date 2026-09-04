@@ -193,6 +193,7 @@ import {
 import { resolveAutoMovieSourceOwnerBinding } from "./sourceOwnerBinding";
 import { createAutoMovieSourceRuntimeModelRegistry } from "./sourceRuntimeModelRegistry";
 import { storySyncDiagnostics } from "./storySyncDiagnostics";
+import { resolveAutoMovieTimedAuthoringKind } from "./timedAuthoringKind";
 import {
   IAutoMovieProductionDesignGraph,
   validateAutoMovieProductionGraph,
@@ -316,6 +317,9 @@ export class AutoMovieProductionCompiler {
   ): IAutoMovieCompileProjectOutput {
     if (this.authoringEvidence?.manifest.kind === "library")
       return this.runLibrary(input, materialize);
+    const timedAuthoring = resolveAutoMovieTimedAuthoringKind(
+      this.authoringEvidence,
+    )!;
     const graph = this.project.graph();
     const inputRevision = this.project.revision();
     const projectManifest = this.project.manifest();
@@ -816,30 +820,46 @@ export class AutoMovieProductionCompiler {
         ...this.generatedOwnershipDiagnostics(manifest, materialize),
       );
     const screenplay = this.project.screenplayIndex();
+    if (timedAuthoring.kind === "brief" && screenplay !== null)
+      diagnostics.push({
+        code: "screenplay-index-forbidden",
+        category: "error",
+        phase: "design",
+        target: "screenplay",
+        path: null,
+        message:
+          "A direct brief cannot carry a film screenplay index. Remove the forbidden narrative residue and keep delivery, shot, and observation ownership in the reviewed brief.",
+      });
+    if (timedAuthoring.screenplayRequired)
+      diagnostics.push(
+        ...screenplayResidencyDiagnostics({
+          contracts: graph.shots,
+          screenplay,
+        }),
+        ...screenplayLedgerDiagnostics({
+          acceptance: graph.acceptance,
+          contracts: graph.shots,
+          screenplay,
+          designRecordPath: (target) => this.project.designRecordPath(target),
+        }),
+        ...screenplayProseDiagnostics({
+          screenplay,
+          read: (relative) => this.project.readProseDocument(relative),
+        }),
+        ...screenplayTimingDiagnostics({
+          contracts: graph.shots,
+          read: (relative) => this.project.readProseDocument(relative),
+          scope: input.scope,
+          screenplay,
+        }),
+      );
     diagnostics.push(
-      ...screenplayResidencyDiagnostics({ contracts: graph.shots, screenplay }),
-      ...screenplayLedgerDiagnostics({
-        acceptance: graph.acceptance,
-        contracts: graph.shots,
-        screenplay,
-        designRecordPath: (target) => this.project.designRecordPath(target),
-      }),
-      ...screenplayProseDiagnostics({
-        screenplay,
-        read: (relative) => this.project.readProseDocument(relative),
-      }),
-      ...screenplayTimingDiagnostics({
-        contracts: graph.shots,
-        read: (relative) => this.project.readProseDocument(relative),
-        scope: input.scope,
-        screenplay,
-      }),
       ...shotDeterminismDiagnostics({
         contracts: graph.shots,
         read: (relative) => this.project.readProseDocument(relative),
       }),
     );
-    if (input.scope !== "design")
+    if (input.scope !== "design" && timedAuthoring.screenplayRequired)
       diagnostics.push(
         ...screenplayCoverageDiagnostics({
           acceptance: graph.acceptance,

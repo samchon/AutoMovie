@@ -273,6 +273,7 @@ export const AUTOMOVIE_DIAGNOSTIC_CODES = [
   "screenplay-heading-repeated",
   "screenplay-heading-retitled",
   "screenplay-heading-unindexed",
+  "screenplay-index-forbidden",
   "screenplay-index-missing",
   "screenplay-lock-orphaned",
   "screenplay-lock-renumbered",
