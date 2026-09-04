@@ -50,7 +50,7 @@ const SEMANTIC_MASK_PROTOCOL = "automovie.semantic-mask.v2";
 /** A typed internal refusal carried across the verifier boundary. */
 class AutoMovieSemanticMaskVerificationError extends Error {
   public constructor(
-    public readonly reason: "unsupported" | "digest-mismatch",
+    public readonly reason: "unsupported" | "invalid" | "digest-mismatch",
     message: string,
   ) {
     super(message);
@@ -68,7 +68,7 @@ class AutoMovieSemanticMaskVerificationError extends Error {
  */
 export const autoMovieSemanticMaskVerificationFailure = (
   error: unknown,
-): "unsupported" | "digest-mismatch" | null =>
+): "unsupported" | "invalid" | "digest-mismatch" | null =>
   error instanceof AutoMovieSemanticMaskVerificationError ? error.reason : null;
 
 /**
@@ -100,6 +100,14 @@ export const digestAutoMovieSemanticMask = (
 export const verifyAutoMovieSemanticMask = (
   mask: IAutoMovieSemanticMask,
 ): void => {
+  const record = semanticMaskRecord(mask, "mask");
+  if (
+    Object.hasOwn(record, "version") === false ||
+    Object.hasOwn(record, "protocol") === false
+  )
+    invalidSemanticMask(
+      "semantic mask requires explicit version and protocol fields",
+    );
   const version = mask.version as number;
   const protocol = mask.protocol as string;
   if (version !== SEMANTIC_MASK_VERSION || protocol !== SEMANTIC_MASK_PROTOCOL)
@@ -107,12 +115,87 @@ export const verifyAutoMovieSemanticMask = (
       "unsupported",
       `unsupported semantic mask ${String(version)}/${protocol}; expected ${SEMANTIC_MASK_VERSION}/${SEMANTIC_MASK_PROTOCOL}`,
     );
+  verifySemanticMaskSchema(record);
   const expected = digestAutoMovieSemanticMask(mask);
   if (mask.digest !== expected)
     throw new AutoMovieSemanticMaskVerificationError(
       "digest-mismatch",
       `semantic mask digest mismatch: declared ${mask.digest}, canonical ${expected}`,
     );
+};
+
+/** Refuse unknown or missing fields before canonical projection can erase them. */
+const verifySemanticMaskSchema = (mask: Record<string, unknown>): void => {
+  exactSemanticMaskKeys(
+    mask,
+    ["version", "protocol", "background", "entries", "unaddressed", "digest"],
+    "mask",
+  );
+  const entries = semanticMaskArray(mask.entries, "entries");
+  const unaddressed = semanticMaskArray(mask.unaddressed, "unaddressed gaps");
+  for (const [index, value] of entries.entries()) {
+    const entry = semanticMaskRecord(value, `entry ${index}`);
+    exactSemanticMaskKeys(
+      entry,
+      ["id", "kind", "label", "color", "owner", "nodes", "slot"],
+      `entry ${index}`,
+    );
+    if (!Array.isArray(entry.nodes))
+      invalidSemanticMask(
+        `semantic mask entry ${index} nodes must be an array`,
+      );
+    if (entry.slot !== null)
+      exactSemanticMaskKeys(
+        semanticMaskRecord(entry.slot, `entry ${index} slot`),
+        ["instanceSet", "index"],
+        `entry ${index} slot`,
+      );
+  }
+  for (const [index, value] of unaddressed.entries())
+    exactSemanticMaskKeys(
+      semanticMaskRecord(value, `gap ${index}`),
+      ["instanceSet", "slots", "reason", "remedy"],
+      `gap ${index}`,
+    );
+};
+
+/** Read one runtime semantic collection without letting a cast erase shape. */
+const semanticMaskArray = (value: unknown, name: string): unknown[] => {
+  if (!Array.isArray(value))
+    invalidSemanticMask(`semantic mask ${name} must be an array`);
+  return value as unknown[];
+};
+
+/** Read one runtime semantic value as an exact record. */
+const semanticMaskRecord = (
+  value: unknown,
+  name: string,
+): Record<string, unknown> => {
+  if (value === null || typeof value !== "object" || Array.isArray(value))
+    invalidSemanticMask(`semantic mask ${name} must be an object`);
+  return value as Record<string, unknown>;
+};
+
+/** Compare one semantic record's complete key set without normalizing it. */
+const exactSemanticMaskKeys = (
+  value: Record<string, unknown>,
+  expected: readonly string[],
+  name: string,
+): void => {
+  const actual = Object.keys(value).sort(compareAutoMovieRenderIds);
+  const canonical = [...expected].sort(compareAutoMovieRenderIds);
+  if (
+    actual.length !== canonical.length ||
+    actual.some((key, index) => key !== canonical[index])
+  )
+    invalidSemanticMask(
+      `semantic mask ${name} keys are invalid; expected ${canonical.join(", ")}`,
+    );
+};
+
+/** Raise one typed current-schema refusal. */
+const invalidSemanticMask = (message: string): never => {
+  throw new AutoMovieSemanticMaskVerificationError("invalid", message);
 };
 
 /**

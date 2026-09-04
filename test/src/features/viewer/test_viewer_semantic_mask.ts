@@ -108,7 +108,9 @@ export const test_viewer_semantic_mask = (): void => {
       door: colorOf("element:tower/hall-door-leaf"),
       prop: colorOf("node:lantern"),
       ground: colorOf("node:tower-ground"),
-      batch: colorOf("instance-set:windows"),
+      // Three multiplies this base by `instanceColor`; a slotted batch must use
+      // white or every semantic colour is darkened into a different identity.
+      batch: "#FFFFFF",
       orphan: mask.background,
       // Eight drawables the design names, plus the three further shapes the
       // instance-set group holds.
@@ -166,9 +168,19 @@ export const test_viewer_semantic_mask = (): void => {
       .fromBufferAttribute(mesh.instanceColor!, index)
       .getHexString()
       .toUpperCase()}`;
-  const slotHex = (index: number): string => instanceHex(built.batch, index);
+  const effectiveInstanceHex = (
+    mesh: THREE.InstancedMesh,
+    index: number,
+  ): string =>
+    `#${new THREE.Color()
+      .fromBufferAttribute(mesh.instanceColor!, index)
+      .multiply((mesh.material as THREE.MeshBasicMaterial).color)
+      .getHexString()
+      .toUpperCase()}`;
+  const slotHex = (index: number): string =>
+    effectiveInstanceHex(built.batch, index);
   TestValidator.equals(
-    "each repeated slot carries its own colour in the instance attribute",
+    "base-material multiplication renders each repeated slot's exact colour",
     [slotHex(0), slotHex(1), slotHex(2), slotHex(3)],
     [
       colorOf("instance-slot:windows#0"),
@@ -180,11 +192,15 @@ export const test_viewer_semantic_mask = (): void => {
   TestValidator.equals(
     "slot colours are created where none existed, and unslotted batches keep the set colour",
     {
-      created: instanceHex(built.bare, 0),
+      createdAttribute: instanceHex(built.bare, 0),
+      createdPixel: effectiveInstanceHex(built.bare, 0),
+      createdBase: hex(built.bare),
       unslotted: hex(built.unslotted),
     },
     {
-      created: colorOf("instance-slot:windows#1"),
+      createdAttribute: colorOf("instance-slot:windows#1"),
+      createdPixel: colorOf("instance-slot:windows#1"),
+      createdBase: "#FFFFFF",
       unslotted: colorOf("instance-set:windows"),
     },
   );

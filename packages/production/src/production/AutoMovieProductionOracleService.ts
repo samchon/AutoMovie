@@ -1185,6 +1185,7 @@ export class AutoMovieProductionOracleService {
         : [
             createAutoMovieProductionSemanticMaskReceipt({
               frame: index,
+              expectedShot: input.target.id,
               evidence: semanticSidecar.evidence,
               sidecar: semanticSidecar,
             }),

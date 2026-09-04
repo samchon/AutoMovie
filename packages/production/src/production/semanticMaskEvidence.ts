@@ -148,13 +148,14 @@ export const classifyAutoMovieProductionSemanticMaskEvidence = (props: {
  */
 export const createAutoMovieProductionSemanticMaskReceipt = (props: {
   frame: number;
+  expectedShot: string;
   evidence: IAutoMovieProductionSemanticMaskEvidence;
   sidecar: { path: string; bytes: Uint8Array };
 }): IAutoMovieProductionSemanticMaskReceipt => {
   verifyFrame(props.frame);
   verifyAutoMovieProductionSemanticMaskEvidence({
     evidence: props.evidence,
-    expectedShot: props.evidence.shot,
+    expectedShot: props.expectedShot,
   });
   verifySidecarPath(props.sidecar.path);
   const expected = Buffer.from(
@@ -239,6 +240,7 @@ export const verifyAutoMovieProductionSemanticMaskReceipt = (props: {
     );
   const recreated = createAutoMovieProductionSemanticMaskReceipt({
     frame: props.expectedFrame,
+    expectedShot: props.expectedShot,
     evidence: props.evidence,
     sidecar: props.resident,
   });

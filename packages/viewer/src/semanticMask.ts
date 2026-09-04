@@ -129,13 +129,6 @@ export const autoMovieSemanticMaskOf = (
     | undefined) ?? null;
 
 /**
- * How completely one palette and one built scene account for each other.
- *
- * @evidence requirements/rendering/passes-channels-and-products.md#rendering-identity-mask-channels Makes this public surface part of the stable identity-mask channel.
- * @evidence specifications/editorial-render-and-delivery/render-products-visibility-and-color.md#spec-render-pass-products Implements that channel as a structural render product.
- * @author Samchon
- */
-/**
  * Hold one palette against one built scene, in both directions.
  *
  * This is the join the pipeline was missing. The mask is derived from the
@@ -303,14 +296,24 @@ export const applyAutoMovieSemanticMask = (props: {
       return;
     }
     ++painted;
-    mesh.material = materialOf(entry.color, formationCycleOf(mesh));
-    if (entry.kind !== "instance-set") return;
+    const cycle = formationCycleOf(mesh);
+    if (entry.kind !== "instance-set") {
+      mesh.material = materialOf(entry.color, cycle);
+      return;
+    }
     const instanced = mesh as THREE.InstancedMesh;
-    if (instanced.isInstancedMesh !== true) return;
+    if (instanced.isInstancedMesh !== true) {
+      mesh.material = materialOf(entry.color, cycle);
+      return;
+    }
     const slots = instanced.userData.automovieSlots as number[] | undefined;
-    if (slots === undefined || slots.length === 0) return;
-    // Per-slot identity: the batch material stays white and three multiplies it
-    // by the instance colour, so each slot renders its own exact palette value.
+    if (slots === undefined || slots.length === 0) {
+      mesh.material = materialOf(entry.color, cycle);
+      return;
+    }
+    // Three multiplies the base material by `instanceColor`. White is therefore
+    // the only base that renders each slot's exact assigned palette value.
+    mesh.material = materialOf("#FFFFFF", cycle);
     const previous = instanced.instanceColor;
     colors.push({
       mesh: instanced,

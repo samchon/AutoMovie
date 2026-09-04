@@ -37,8 +37,8 @@ import { throwsError } from "../internal/predicates";
  *    distinct statuses and messages.
  * 4. Evidence refuses non-exact keys, blank or unsorted ids, duplicate ids, and
  *    negative, fractional, or unsafe unnamed-mesh counts.
- * 5. Receipt creation refuses a malformed frame, escaping path, or bytes that
- *    do not exactly equal the canonical current sidecar.
+ * 5. Receipt creation refuses foreign-shot evidence, a malformed frame,
+ *    escaping path, or bytes that do not equal the canonical current sidecar.
  * 6. Reopening refuses historical schema, foreign frame/pass/shot/path,
  *    changed resident bytes, and stale semantic digest or coverage.
  * 7. Repeating the same shot and palette at another frame yields a separate
@@ -54,6 +54,7 @@ export const test_production_semantic_mask_evidence = (): void => {
   });
   const receipt = createAutoMovieProductionSemanticMaskReceipt({
     frame: 0,
+    expectedShot: "opening",
     evidence,
     sidecar: { path: "semantic/opening.mask.json", bytes: sidecarBytes },
   });
@@ -303,7 +304,7 @@ export const test_production_semantic_mask_evidence = (): void => {
     ["parent segment", "semantic/../mask.json"],
   ] as const;
   TestValidator.equals(
-    "receipt creation refuses malformed frame, path, and sidecar bytes",
+    "receipt creation refuses foreign evidence, malformed frame, path, and sidecar bytes",
     {
       negativeFrame: throwsError(
         () => createReceipt({ frame: -1, evidence, sidecarBytes }),
@@ -335,6 +336,15 @@ export const test_production_semantic_mask_evidence = (): void => {
         () => createReceipt({ evidence, sidecarBytes: bytes("{}\n") }),
         "do not match its canonical palette",
       ),
+      foreignEvidence: throwsError(
+        () =>
+          createReceipt({
+            evidence: { ...evidence, shot: "closing" },
+            expectedShot: "opening",
+            sidecarBytes,
+          }),
+        'foreign semantic evidence for shot "closing"; expected "opening"',
+      ),
     },
     {
       negativeFrame: true,
@@ -344,6 +354,7 @@ export const test_production_semantic_mask_evidence = (): void => {
         invalidPaths.map(([name]) => [name, true]),
       ),
       wrongBytes: true,
+      foreignEvidence: true,
     },
   );
 
@@ -668,11 +679,13 @@ const withCoverage = (
 const createReceipt = (props: {
   evidence: IAutoMovieProductionSemanticMaskEvidence;
   sidecarBytes: Uint8Array;
+  expectedShot?: string;
   frame?: number;
   path?: string;
 }): IAutoMovieProductionSemanticMaskReceipt =>
   createAutoMovieProductionSemanticMaskReceipt({
     frame: props.frame ?? 0,
+    expectedShot: props.expectedShot ?? "opening",
     evidence: props.evidence,
     sidecar: {
       path: props.path ?? "semantic/opening.mask.json",

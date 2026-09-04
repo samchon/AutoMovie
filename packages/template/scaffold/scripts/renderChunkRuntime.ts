@@ -559,6 +559,7 @@ export const createProductionRenderChunkCaptureRuntime = (props: {
               semanticMasks.push(
                 createAutoMovieProductionSemanticMaskReceipt({
                   frame: sample.globalFrame,
+                  expectedShot: layer.shot,
                   evidence: semanticStatus.evidence,
                   sidecar: { path: relativeSidecar, bytes: sidecarBytes },
                 }),

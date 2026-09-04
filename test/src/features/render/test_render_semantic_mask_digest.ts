@@ -1,5 +1,6 @@
 import {
   AUTOMOVIE_RENDER_METRICS,
+  autoMovieSemanticMaskVerificationFailure,
   digestAutoMovieSemanticMask,
   evaluateAutoMovieRenderBudget,
   renderAutoMovieSemanticMaskSidecar,
@@ -33,7 +34,11 @@ import { throwsError } from "../internal/predicates";
  *    and serializer.
  * 6. Historical v1 and unknown version/protocol pairs are refused rather than
  *    reinterpreted as current evidence.
- * 7. Two otherwise identical render reports inherit different mask and report
+ * 7. Unknown and missing fields at every v2 record boundary are refused even
+ *    when the malformed projection carries its own recomputed digest.
+ * 8. Non-object masks, absent discriminators, and wrong collection/member
+ *    shapes are typed as invalid before digest comparison.
+ * 9. Two otherwise identical render reports inherit different mask and report
  *    identities when only the sealed semantic payload changes.
  */
 export const test_render_semantic_mask_digest = (): void => {
@@ -197,6 +202,51 @@ export const test_render_semantic_mask_digest = (): void => {
     { historical: true, unknown: true },
   );
 
+  const malformed = malformedCurrentMasks(mask);
+  TestValidator.equals(
+    "a self-consistent digest cannot authorize an inexact current schema",
+    Object.fromEntries(
+      malformed.map(([name, candidate, boundary]) => [
+        name,
+        {
+          reason: verificationFailure(candidate),
+          boundary: throwsError(
+            () => verifyAutoMovieSemanticMask(candidate),
+            boundary,
+          ),
+        },
+      ]),
+    ),
+    Object.fromEntries(
+      malformed.map(([name]) => [
+        name,
+        { reason: "invalid" as const, boundary: true },
+      ]),
+    ),
+  );
+  const malformedShapes = malformedShapeMasks(mask);
+  TestValidator.equals(
+    "wrong current-schema shapes fail at their exact structural boundary",
+    Object.fromEntries(
+      malformedShapes.map(([name, candidate, boundary]) => [
+        name,
+        {
+          reason: verificationFailure(candidate),
+          boundary: throwsError(
+            () => verifyAutoMovieSemanticMask(candidate),
+            boundary,
+          ),
+        },
+      ]),
+    ),
+    Object.fromEntries(
+      malformedShapes.map(([name]) => [
+        name,
+        { reason: "invalid" as const, boundary: true },
+      ]),
+    ),
+  );
+
   const reports = [mask, editEntry(mask, { owner: "space:hall" })].map(
     (candidate) => report(candidate),
   );
@@ -270,6 +320,177 @@ const payload = (
   entries: mask.entries,
   unaddressed: mask.unaddressed,
 });
+
+/** Current masks whose malformed projections each carry their own digest. */
+const malformedCurrentMasks = (
+  mask: IAutoMovieSemanticMask,
+): ReadonlyArray<readonly [string, IAutoMovieSemanticMask, string]> => {
+  const entry = mask.entries[1]!;
+  const slot = entry.slot!;
+  const gap = mask.unaddressed[0]!;
+  return [
+    [
+      "unknown root field",
+      sealUnchecked({ ...payload(mask), future: true }),
+      "mask keys",
+    ],
+    [
+      "missing root field",
+      sealUnchecked(renameKey(payload(mask), "background", "backdrop")),
+      "mask keys",
+    ],
+    [
+      "unknown entry field",
+      sealUnchecked({
+        ...payload(mask),
+        entries: [{ ...mask.entries[0]!, future: true }, entry],
+      }),
+      "entry 0 keys",
+    ],
+    [
+      "missing entry field",
+      sealUnchecked({
+        ...payload(mask),
+        entries: [renameKey(mask.entries[0]!, "owner", "parent"), entry],
+      }),
+      "entry 0 keys",
+    ],
+    [
+      "unknown slot field",
+      sealUnchecked({
+        ...payload(mask),
+        entries: [
+          mask.entries[0]!,
+          { ...entry, slot: { ...slot, future: true } },
+        ],
+      }),
+      "entry 1 slot keys",
+    ],
+    [
+      "missing slot field",
+      sealUnchecked({
+        ...payload(mask),
+        entries: [
+          mask.entries[0]!,
+          { ...entry, slot: renameKey(slot, "index", "slot") },
+        ],
+      }),
+      "entry 1 slot keys",
+    ],
+    [
+      "unknown gap field",
+      sealUnchecked({
+        ...payload(mask),
+        unaddressed: [{ ...gap, future: true }, ...mask.unaddressed.slice(1)],
+      }),
+      "gap 0 keys",
+    ],
+    [
+      "missing gap field",
+      sealUnchecked({
+        ...payload(mask),
+        unaddressed: [
+          renameKey(gap, "remedy", "resolution"),
+          ...mask.unaddressed.slice(1),
+        ],
+      }),
+      "gap 0 keys",
+    ],
+  ];
+};
+
+/** Current-discriminator records with wrong runtime collection/member shapes. */
+const malformedShapeMasks = (
+  mask: IAutoMovieSemanticMask,
+): ReadonlyArray<readonly [string, IAutoMovieSemanticMask, string]> => [
+  ["null mask", null as unknown as IAutoMovieSemanticMask, "must be an object"],
+  ["array mask", [] as unknown as IAutoMovieSemanticMask, "must be an object"],
+  [
+    "missing version",
+    renameKey(mask, "version", "schema") as unknown as IAutoMovieSemanticMask,
+    "requires explicit version and protocol",
+  ],
+  [
+    "missing protocol",
+    renameKey(mask, "protocol", "format") as unknown as IAutoMovieSemanticMask,
+    "requires explicit version and protocol",
+  ],
+  [
+    "entries are not an array",
+    { ...mask, entries: {} } as unknown as IAutoMovieSemanticMask,
+    "entries must be an array",
+  ],
+  [
+    "gaps are not an array",
+    { ...mask, unaddressed: {} } as unknown as IAutoMovieSemanticMask,
+    "unaddressed gaps must be an array",
+  ],
+  [
+    "entry is not an object",
+    { ...mask, entries: [null] } as unknown as IAutoMovieSemanticMask,
+    "entry 0 must be an object",
+  ],
+  [
+    "entry nodes are not an array",
+    {
+      ...mask,
+      entries: [{ ...mask.entries[0]!, nodes: {} }],
+    } as unknown as IAutoMovieSemanticMask,
+    "entry 0 nodes must be an array",
+  ],
+  [
+    "slot is not an object",
+    {
+      ...mask,
+      entries: [
+        {
+          ...mask.entries[1]!,
+          slot: 1,
+        } as unknown as IAutoMovieSemanticMaskEntry,
+      ],
+    },
+    "entry 0 slot must be an object",
+  ],
+  [
+    "gap is not an object",
+    { ...mask, unaddressed: [null] } as unknown as IAutoMovieSemanticMask,
+    "gap 0 must be an object",
+  ],
+];
+
+/** Seal one intentionally malformed runtime record through canonical projection. */
+const sealUnchecked = (
+  value: Record<string, unknown>,
+): IAutoMovieSemanticMask =>
+  ({
+    ...value,
+    digest: digestAutoMovieSemanticMask(value as never),
+  }) as unknown as IAutoMovieSemanticMask;
+
+/** Rename one own key while preserving the record's key count. */
+const renameKey = (
+  value: object,
+  from: string,
+  to: string,
+): Record<string, unknown> =>
+  Object.fromEntries(
+    Object.entries(value).map(([key, member]) => [
+      key === from ? to : key,
+      member,
+    ]),
+  );
+
+/** Return the verifier's stable typed refusal for one candidate. */
+const verificationFailure = (
+  mask: IAutoMovieSemanticMask,
+): ReturnType<typeof autoMovieSemanticMaskVerificationFailure> => {
+  try {
+    verifyAutoMovieSemanticMask(mask);
+    return null;
+  } catch (error) {
+    return autoMovieSemanticMaskVerificationFailure(error);
+  }
+};
 
 /** Replace one field of the instanced-slot entry and reseal it. */
 const editEntry = (
