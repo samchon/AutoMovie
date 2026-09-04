@@ -46,9 +46,9 @@ Project reader는 같은 문서 모집단을 semantic alarm inspector에도 전�
 
 <!-- @evidence requirements/production-evidence/graph.md#agent-production-evidence-physical-integrity 선택이 실제 대상을 하나만 지배하고 비활성 잔여물을 함께 막게 한다. -->
 
-팩터리는 glob으로 Markdown과 TypeScript host를 열거하고 활성 분기의 최소 host 수, 비활성 분기의 잔여물, 명시적 H2 anchor, 중복 target identity, 각 source 파일의 구체적인 named export owner를 그래프 생성 전에 검사한다. `treatments`는 중첩·index가 없는 평면 번호 event 파일이고 각 H2가 한 사건이다. `scripts`와 `screenplays`는 번호 delivery-group 디렉터리와 H1 전용 `index.md`, 번호 unit 파일의 H2/H3/H4 구조를 사용한다. 모든 script와 screenplay 파일 host 및 H2/H3/H4 단위는 treatment H2를 직접 완전 피복하고, screenplay는 대응 script의 group-index H1, unit 파일과 H1, 동일 깊이 lineage와 순서를 정확히 보존한다. 반환된 claim은 lint가 실제 export와 annotation을 선택하여 각 상속 단위가 한 개 이상의 실제 부모를 갖게 하고, 디자인 owner마다 정확히 한 디자인 파일, shot·acceptance owner마다 한 screenplay scene 또는 brief shot, 완전한 target coverage와 단계별 review cardinality를 검사하게 한다.
+팩터리는 glob으로 Markdown과 TypeScript host를 열거하고 활성 분기의 최소 host 수, 비활성 분기의 잔여물, 명시적 H2 anchor, 중복 target identity, 각 source 파일의 구체적인 named export owner를 그래프 생성 전에 검사한다. 프로젝트 입력은 `lstat` 기준 regular file이고 symlink가 아니며 `nlink === 1`일 때만 읽는다. 이 판정은 문서·source 모집단과 package identity manifest에 동일하게 적용하여 hardlink 별칭이 별도 계약, source 또는 owner identity로 들어오는 것을 거부한다. `treatments`는 중첩·index가 없는 평면 번호 event 파일이고 각 H2가 한 사건이다. `scripts`와 `screenplays`는 번호 delivery-group 디렉터리와 H1 전용 `index.md`, 번호 unit 파일의 H2/H3/H4 구조를 사용한다. 모든 script와 screenplay 파일 host 및 H2/H3/H4 단위는 treatment H2를 직접 완전 피복하고, screenplay는 대응 script의 group-index H1, unit 파일과 H1, 동일 깊이 lineage와 순서를 정확히 보존한다. 반환된 claim은 lint가 실제 export와 annotation을 선택하여 각 상속 단위가 한 개 이상의 실제 부모를 갖게 하고, 디자인 owner마다 정확히 한 디자인 파일, shot·acceptance owner마다 한 screenplay scene 또는 brief shot, 완전한 target coverage와 단계별 review cardinality를 검사하게 한다.
 
-<!-- @evidenceObligation physical-population-integrity 실제 파일 모집단에서 검증하는 host 수, 잔여물, identity, 소유 cardinality와 계보. -->
+<!-- @evidenceObligation physical-population-integrity 실제 파일 모집단과 package manifest에서 검증하는 단일 물리 identity, host 수, 잔여물, 소유 cardinality와 계보. -->
 
 ### 공통 그래프 뒤의 로컬 합성 {#spec-authoring-production-evidence-additive-extension}
 

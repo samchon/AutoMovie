@@ -12,7 +12,10 @@
   },
   "repositoryReviewPolicy": {
     "evidenceReview": "disabled",
-    "reason": "The current repository requirement-specification-source graph has 24,026 written evidence relationships. Requiring one companion review tag per relationship would turn review into repeated acknowledgement instead of semantic inspection.",
+    "measurementBasis": "42610d6f2a9f5c3ab9ef39f74e039720fe6ae2fb plus the B24 candidate tree",
+    "measuredAt": "2026-09-04",
+    "writtenRelationships": 24151,
+    "reason": "The measured repository requirement-specification-source graph has 24,151 written evidence relationships. Requiring one companion review tag per relationship would turn review into repeated acknowledgement instead of semantic inspection.",
     "substitutes": [
       ".agents/skills/review/SKILL.md",
       ".agents/skills/development/SKILL.md",

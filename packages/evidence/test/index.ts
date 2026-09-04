@@ -14,3 +14,4 @@ import "./parseAutoMovieEvidenceSyntax.test";
 import "./readAutoMovieContractRules.test";
 import "./readAutoMovieProductionEvidence.test";
 import "./verifyAutoMovieEvidenceMetadataRewrite.test";
+import "./walkAutoMovieProjectPopulationFiles.test";

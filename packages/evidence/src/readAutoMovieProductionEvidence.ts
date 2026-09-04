@@ -11,12 +11,16 @@ import {
   type IAutoMovieEvidenceReviewAlarmReport,
   inspectAutoMovieEvidenceReviewAlarms,
 } from "./inspectAutoMovieEvidenceReviewAlarms";
+import { parseAutoMovieEvidenceMarkdownHeadings } from "./parseAutoMovieEvidenceMarkdown";
 import { projectAutoMovieMarkdownSyntax } from "./parseAutoMovieEvidenceSyntax";
 import {
   type IAutoMovieContractRule,
   readAutoMovieContractRules,
 } from "./readAutoMovieContractRules";
-import { walkAutoMovieProjectPopulationFiles } from "./walkAutoMovieProjectPopulationFiles";
+import {
+  isAutoMovieEvidencePhysicalFile,
+  walkAutoMovieProjectPopulationFiles,
+} from "./walkAutoMovieProjectPopulationFiles";
 
 /**
  * One exact H2 unit carried by a production-owned contract or design owner.
@@ -642,9 +646,15 @@ const markdownSourceOwnerTargets = (
 const readPackageIdentity = (
   root: string,
 ): { packageName: string; description: string } => {
-  const manifest = JSON.parse(
-    fs.readFileSync(path.join(root, "package.json"), "utf8"),
-  ) as { name?: unknown; description?: unknown };
+  const location = path.join(root, "package.json");
+  if (!isAutoMovieEvidencePhysicalFile(fs.lstatSync(location)))
+    throw new Error(
+      `${location}: package identity must be one unlinked regular file.`,
+    );
+  const manifest = JSON.parse(fs.readFileSync(location, "utf8")) as {
+    name?: unknown;
+    description?: unknown;
+  };
   if (typeof manifest.name !== "string" || manifest.name.trim() === "")
     throw new Error(`${root}: package.json declares no package name.`);
   return {
@@ -699,7 +709,7 @@ const readMarkdownDocument = (
 ): IMarkdownDocument => {
   const source = fs.readFileSync(file, "utf8").replaceAll("\r\n", "\n");
   const lines = source.split("\n");
-  const headings = markdownHeadings(source);
+  const headings = parseAutoMovieEvidenceMarkdownHeadings(source);
   const h1 = headings.find((heading) => heading.depth === 1)!;
   const h2 = headings.filter((heading) => heading.depth === 2);
   return {
@@ -821,7 +831,6 @@ const visibleMarkdownLines = (source: string): readonly string[] =>
     path: "document.md",
     source,
   }).visibleLines;
-
 /** Resolve manifest source globs without walking unrelated project trees. */
 const resolvePopulationFiles = (
   projectRoot: string,

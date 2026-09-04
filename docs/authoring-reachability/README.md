@@ -1,10 +1,10 @@
 # 저작 도달 가능성
 
-AutoMovie의 제품 요구와 생성 프로젝트의 저작 계약은 서로 다른 그래프다. 제품 요구는 저장소가 제공해야 할 능력을 정하고, 저작 계약은 한 production의 저자가 무엇을 결정하고 증명해야 하는지 정한다. 둘을 1,982개의 개별 인용으로 억지로 연결하지 않는다. 이 문서는 요구 family마다 저작자가 도달하는 owner가 있는지 판정하고, 기계 판정의 원본은 [families.json](./families.json)에 둔다.
+AutoMovie의 제품 요구와 생성 프로젝트의 저작 계약은 서로 다른 그래프다. 제품 요구는 저장소가 제공해야 할 능력을 정하고, 저작 계약은 한 production의 저자가 무엇을 결정하고 증명해야 하는지 정한다. 둘을 1,982개의 개별 인용으로 억지로 연결하지 않는다. 이 문서는 요구 family마다 저작자가 도달하는 owner가 있는지 판정하고, [families.json](./families.json)은 그 수동 판정의 구조화된 스냅숏만 보존한다. 현재 어떤 자동 gate나 runtime consumer도 이 파일을 읽지 않는다.
 
 ## 현재 모집단
 
-2026-09-04 현재 `docs/requirements/`에는 27개 family와 명시 anchor가 있는 H3 unit 1,982개가 있다. `packages/template/scaffold/docs/`에는 discovery 17개, principle 81개, obligation 109개로 H2 207개가 있다. 저작 계약에서 `requirements/`를 직접 인용한 경우와 요구 문서에서 discovery, principle, obligation을 직접 인용한 경우는 모두 0건이다. Evidence conformance는 host가 자기 annotation의 진실을 다시 인증하는 principle이 아니라 evidence-graph의 단일 owner map과 review-verification의 독립 semantic-review 절차가 맡는다.
+2026-09-04에 B24의 직접 predecessor `42610d6f2a9f5c3ab9ef39f74e039720fe6ae2fb`에서 시작한 변경 tree를 다시 셌다. `docs/requirements/`에는 27개 family와 명시 anchor가 있는 H3 unit 1,982개가 있다. `packages/template/scaffold/docs/`에는 discovery 17개, principle 83개, obligation 109개로 H2 209개가 있다. 저작 계약에서 `requirements/`를 직접 인용한 경우와 요구 문서에서 discovery, principle, obligation을 직접 인용한 경우는 모두 0건이다. Evidence conformance는 host가 자기 annotation의 진실을 다시 인증하는 principle이 아니라 evidence-graph의 단일 owner map과 review-verification의 독립 semantic-review 절차가 맡는다.
 
 Correspondence는 해당 family의 결정을 저자가 어느 계약 owner와 절차에서 만나게 되는지 말한다. 이것은 그 family의 모든 H3가 이미 구현되었다거나 하나의 계약 항목이 모든 세부 요구를 대신한다는 주장이 아니다. 부재는 다음 세 종류로만 기록한다.
 
@@ -50,19 +50,19 @@ Correspondence는 해당 family의 결정을 저자가 어느 계약 owner와 �
 
 ## 미지급 수와 검토
 
-family가 늘거나 분류가 바뀌거나 대응 path와 anchor가 사라지면 이 ledger와 실제 계약 owner를 함께 다시 읽는다. 저장소 파일과 현재 개수를 복제하는 구조 테스트로 이 판단을 대신하지 않는다.
+family가 늘거나 분류가 바뀌거나 대응 path와 anchor가 사라지면 evidence-graph Self-Review owner가 이 ledger와 실제 계약 owner를 함께 다시 읽는다. 저장소 파일과 현재 개수를 복제하는 구조 테스트로 이 판단을 대신하지 않는다. Contract owner를 찾을 때는 `pnpm --dir test exec ttsx -P tsconfig.json src/integrity/contractOwnership.ts query --root .. --layer <requirements|specifications> --owner <package|project-source|excluded|structural|legacy|stale>`를 사용한다. 이 명령은 workspace manifest의 실제 package identity, 주석과 fence를 제외한 Markdown heading, package별 `lint.config.ts`가 선택한 public TypeScript carrier를 같은 입력으로 해석하는 수동 질의이며 CI gate가 아니다.
 
 Specification fragment debt도 같은 방식으로 센다. 현재 `@evidenceObligation` target-anchor와 id 쌍 46개는 source의 고유 `@evidencePart` 쌍 46개와 정확히 대응하며 미지급 fragment는 0개다.
 
-게이트가 고정하는 것은 **미지급 수 0**이고, 위 46은 그 시점의 스냅숏이다. 짝을 이룬 쌍이 늘어도 게이트는 통과하므로, 쌍을 더한 주기는 이 수를 직접 다시 재야 한다. 실제로 #2162 주기가 다섯 쌍을 더하는 동안 이 문단은 41에 머물렀고, 통합 라운드가 다시 세기 전까지 아무것도 실패하지 않았다.
+이 문서가 기록하는 것은 **미지급 수 0**이고, 위 46은 그 시점의 수동 스냅숏이다. 짝을 이룬 쌍이 늘어도 자동으로 이 숫자를 갱신하는 consumer는 없으므로, 쌍을 더한 주기의 Self-Review가 직접 다시 세야 한다. 실제로 #2162 주기가 다섯 쌍을 더하는 동안 이 문단은 41에 머물렀고, 통합 라운드가 다시 세기 전까지 아무것도 실패하지 않았다.
 
 ## 저장소 evidence review 정책
 
-Repository requirement-specification-source graph에서는 `evidence/review`를 켜지 않는다. 현재 package source에 실제로 적힌 관계는 `@evidence` 13,924개와 `@evidenceExclude` 7,591개, 합계 21,515개다. specification의 positive 관계 2,626개를 합치면 repository graph에는 positive 16,550개와 exclusion 7,591개, 합계 24,141개가 있다. 실제 companion review tag는 0개다. source 제외 사유 7,591개는 1,190종이고 상위 20종이 4,010개(52.83%)를 차지하며, 최다 사유 하나가 1,743회 쓰인다. 24,141개의 companion 문장을 일괄 요구하면 target별 의미 검토보다 package boundary의 기계적 재진술을 늘린다.
+Repository requirement-specification-source graph에서는 `evidence/review`를 켜지 않는다. 2026-09-04 B24 변경 tree의 package source에는 `@evidence` 13,934개와 `@evidenceExclude` 7,591개, 합계 21,525개가 있다. specification의 positive 관계 2,626개를 합치면 repository graph에는 positive 16,560개와 exclusion 7,591개, 합계 24,151개가 있다. 실제 companion review tag는 0개다. Source 제외 사유의 종류와 분포는 이번 판단의 자동 입력이 아니며, 24,151개의 companion 문장을 일괄 요구하면 target별 의미 검토보다 package boundary의 기계적 재진술을 늘린다는 결론만 유지한다.
 
-이 결정은 review를 생략한다는 뜻이 아니다. `evidence/graph`가 resolved target과 population을 검사하고 `evidence/documented`가 public carrier를 유지하며 `evidence/todo`가 선언된 미구현 계약을 거부한다. `test/src/integrity/contractOwnership.ts`는 contract owner와 fragment declaration을 추적한다. 변경자는 evidence-graph skill과 review skill에 따라 실제 host, target, 이유와 consequence를 읽고, source를 바꾸면 development skill의 테스트와 변경 줄 100% coverage 의무를 진다. 이 조합도 산문의 의미를 자동 증명하지는 않으므로 Self-Review가 최종 owner다.
+이 결정은 review를 생략한다는 뜻이 아니다. `evidence/graph`가 resolved target과 population을 검사하고 `evidence/documented`가 public carrier를 유지하며 `evidence/todo`가 선언된 미구현 계약을 거부한다. `test/src/integrity/contractOwnership.ts`는 사람이 owner와 fragment declaration을 조사할 때 실행하는 query를 제공한다. 변경자는 evidence-graph skill과 review skill에 따라 실제 host, target, 이유와 consequence를 읽고, source를 바꾸면 development skill의 테스트와 변경 줄 100% coverage 의무를 진다. 관계 선택이 바뀌면 선택된 public carrier에서 실제 citation 하나를 임시로 제거하여 package build가 실패하는지 확인하고 즉시 복원하는 disposable canary를 함께 수행한다. 이 조합도 산문의 의미를 자동 증명하지는 않으므로 Self-Review가 최종 owner다.
 
-생성 production의 review stage는 별도 그래프다. 작품의 선택된 저작 모집단에서 관계를 실질적으로 검사하는 절차이므로 repository-wide source edge 수와 같은 이유로 자동 해제하지 않는다. 다만 changed relationship만 고르고, 구체적인 검사 기록을 보존하며, 복제 acknowledgement를 거부하는 review mechanism이 생기면 repository 정책도 다시 판단한다. Gate는 lint config가 이 기록과 다르게 `evidence/review`를 켜는 것을 거부한다.
+생성 production의 review stage는 별도 그래프다. 작품의 선택된 저작 모집단에서 관계를 실질적으로 검사하는 절차이므로 repository-wide source edge 수와 같은 이유로 자동 해제하지 않는다. Changed relationship만 고르고, 구체적인 검사 기록을 보존하며, 복제 acknowledgement를 거부하는 review mechanism이 생기면 repository 정책도 다시 판단한다. 현재 repository lint config와 이 수동 기록의 일치를 검사하는 별도 gate는 없다.
 
 ## 기존 건물 실험 적용
 

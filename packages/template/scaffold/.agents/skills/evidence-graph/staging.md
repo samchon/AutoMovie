@@ -53,6 +53,8 @@ Put a contract file's discovery answer in one HTML comment before its first H1, 
 
 Use configured evidence roots such as `settings/...`, `models/...`, `motions/...`, `treatments/...`, `scripts/...`, `screenplays/...`, shared `discovery/...`, `principles/...`, and `obligations/...`, or the root declared by a production-specific claim. These `scripts/...` evidence references resolve under `docs/scripts`; the generated project's root `scripts/` directory contains executable tooling and is not an evidence root. Do not prefix a target with `docs/` unless that claim's root requires it. Every Markdown target unit has a stable explicit anchor.
 
+When a physical-input boundary changes, create a disposable generated consumer and replace either its `package.json` or one governed input with a hardlink. Verify that both lint and the evidence reader refuse the linked identity, then remove only the exact link after confirming the disposable root and target.
+
 A reason names the host event, decision, limit, transition, implementation, or observable result that would be false without the target. A target-name paraphrase, `uses this setting`, `implements this rule`, and a copied reason are not evidence.
 
 Test a reason by exchange rather than by reading it alone. Take the sentence this host gave and read it against a sibling host that answers the same target, then take the sibling's sentence and read it against this host. If neither becomes false, neither was written about the host it sits on, and both are generic however specific the wording looks. A detail lifted from the host does not by itself survive the exchange: when the sentence around the detail would hold equally with any other detail from any sibling, the frame is the reason and the detail is decoration.
