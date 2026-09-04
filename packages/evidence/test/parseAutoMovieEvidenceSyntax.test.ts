@@ -108,6 +108,7 @@ const typescript = [
   "/**",
   " * @evidence contracts/a.md#one This declaration owns",
   " * the complete wrapped reason.",
+  " * @author Contract Author",
   " */",
   "export const owner = true;",
   "export class PublicOwner {",

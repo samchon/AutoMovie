@@ -262,8 +262,14 @@ const libraryHost = {
 };
 const librarySourceHost = {
   path: "src/models/Subject.ts",
-  source:
-    "/** @evidence docs/models/001-model.md#form Retained source metadata. */ export class Subject {}\n",
+  source: [
+    "/**",
+    " * @evidence docs/models/001-model.md#form Retained source metadata.",
+    " * @author Model Author",
+    " */",
+    "export class Subject {}",
+    "",
+  ].join("\n"),
 };
 const libraryReceipt: IAutoMovieLibraryPopulationTransitionReceipt = {
   version: 1,
@@ -358,6 +364,27 @@ assert.throws(
           source: librarySourceHost.source.replace(
             "class Subject",
             "class Actor",
+          ),
+        },
+      ],
+    }),
+  /authored body changed/u,
+);
+assert.throws(
+  () =>
+    validateAutoMoviePopulationTransition({
+      kind: "library",
+      productionLocation: "C:\\productions\\library",
+      owner: "asset-author",
+      receipt: libraryReceipt,
+      stages: { models: "draft", modelSources: "draft" },
+      hosts: [
+        libraryHost,
+        {
+          ...librarySourceHost,
+          source: librarySourceHost.source.replace(
+            "Model Author",
+            "Different Author",
           ),
         },
       ],

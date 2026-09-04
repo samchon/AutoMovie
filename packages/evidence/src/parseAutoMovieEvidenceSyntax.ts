@@ -287,7 +287,8 @@ function annotationLines(
     while (
       cursor < lines.length &&
       lines[cursor]!.length !== 0 &&
-      !ANNOTATION.test(lines[cursor]!)
+      !ANNOTATION.test(lines[cursor]!) &&
+      !/^@\S/u.test(lines[cursor]!)
     ) {
       joined += ` ${lines[cursor]!}`;
       cursor++;
