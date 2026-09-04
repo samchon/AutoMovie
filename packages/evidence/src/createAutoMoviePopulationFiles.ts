@@ -19,7 +19,7 @@ export function createAutoMoviePopulationFiles(
   layer: AutoMoviePopulationLayer,
   scope: AutoMoviePopulationScope,
 ): string[] {
-  if (layer === "treatments") return ["treatments/???-*.md"];
+  if (layer === "treatments") return ["treatments/*.md"];
   if (layer !== "scripts" && layer !== "screenplays")
     throw new Error(`Unsupported scoped authored layer ${String(layer)}.`);
 
