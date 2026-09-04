@@ -16,6 +16,7 @@ import {
   type IAutoMovieProductionRenderJobPlan,
   type IAutoMovieProductionRenderRuntimeIdentity,
   type IAutoMovieProductionRenderTier,
+  assertProductionRenderDialogueRuntimeIdentity,
   captureAutoMovieProductionFrame,
   encodeAutoMoviePathSegment,
   openAutoMovieProduction,
@@ -35,6 +36,7 @@ import { isDeepStrictEqual } from "node:util";
 import { PRODUCTION_DELIVERY_TONE_MAPPING } from "./capture";
 import { inspectCurrentCaptureRuntimeClosure } from "./capture-browser";
 import { readAutoMovieHostCaptureBrowser } from "./hostBoundary";
+import { productionDialogueRuntimeIdentity } from "./productionRuntime";
 import { listRenderAttempts } from "./renderAttemptSnapshot";
 import {
   assessProductionRenderBudget,
@@ -59,11 +61,6 @@ import {
   verifyCurrentProductionRender,
 } from "./renderReadOnlyRuntime";
 import type { IProductionSoundRuntime } from "./renderSoundRuntime";
-import {
-  assertRuntimePackageSnapshotCurrent,
-  bindRuntimePackageSnapshotGeneration,
-  snapshotRuntimePackage,
-} from "./runtimePackageSnapshot";
 
 export interface IProductionDeliveryToneCheck {
   requested: IAutoMovieRenderSpec["toneMapping"];
@@ -134,7 +131,6 @@ export const createProductionRenderPlanningRuntime = (props: {
     chunk: IAutoMovieProductionRenderChunk,
   ) => IRenderGcTargetSnapshot | null;
   compareCodeUnits: (left: string, right: string) => number;
-  h264Entry: string;
   host: IProductionRenderHost;
   output: (value: unknown) => void;
   planPath: string;
@@ -549,11 +545,8 @@ export const createProductionRenderPlanningRuntime = (props: {
     }));
 
   const snapshotProductionEncoderIdentity = (fps: number) => {
-    const snapshot = snapshotRuntimePackage({
-      entry: props.h264Entry,
-      moduleClosure: true,
-      packageName: "h264-mp4-encoder",
-    });
+    renderHost.assertRuntimePackagesCurrent();
+    const snapshot = renderHost.h264Generation.snapshot;
     const encoder: IAutoMovieProductionEncoderIdentity = {
       package: snapshot.package,
       version: snapshot.version,
@@ -567,8 +560,7 @@ export const createProductionRenderPlanningRuntime = (props: {
     };
     return {
       identity: encoder,
-      assertCurrent: () => assertRuntimePackageSnapshotCurrent(snapshot),
-      bindCurrent: () => bindRuntimePackageSnapshotGeneration(snapshot),
+      assertCurrent: renderHost.assertRuntimePackagesCurrent,
     };
   };
 
@@ -576,7 +568,6 @@ export const createProductionRenderPlanningRuntime = (props: {
     fps: number,
   ): IAutoMovieProductionEncoderIdentity => {
     const snapshot = snapshotProductionEncoderIdentity(fps);
-    snapshot.bindCurrent();
     return snapshot.identity;
   };
 
@@ -669,8 +660,12 @@ export const createProductionRenderPlanningRuntime = (props: {
       plan.runtimeIdentity as Partial<IAutoMovieProductionRenderRuntimeIdentity> | null;
     if (
       stored === null ||
-      stored.protocolVersion !== "automovie.production-render-runtime.v2" ||
+      stored.protocolVersion !== "automovie.production-render-runtime.v3" ||
       stored.sourceDigest !== sound.sourceDigest ||
+      stored.dialogueRuntimeIdentity !==
+        (sound.plan.dialogue.length === 0
+          ? null
+          : productionDialogueRuntimeIdentity(sound.dialogueRuntime)) ||
       isDeepStrictEqual(stored.capture?.runtimeClosure, capture.identity) ===
         false ||
       isDeepStrictEqual(stored.encoder, encoder.identity) === false
@@ -716,13 +711,23 @@ export const createProductionRenderPlanningRuntime = (props: {
       width: props.width,
       height: props.height,
     });
+    const dialogueRuntimeIdentity =
+      preparedSound.plan.dialogue.length === 0
+        ? null
+        : productionDialogueRuntimeIdentity(preparedSound.dialogueRuntime);
+    assertProductionRenderDialogueRuntimeIdentity({
+      boundary: "render planning preflight",
+      expected: dialogueRuntimeIdentity,
+      observed: preflight.dialogueRuntimeIdentity,
+    });
     return {
-      protocolVersion: "automovie.production-render-runtime.v2",
+      protocolVersion: "automovie.production-render-runtime.v3",
       sourceDigest: soundRuntime.sourceDigest(
         props.project,
         props.timeline,
         preparedSound.dialogueRuntime,
       ),
+      dialogueRuntimeIdentity,
       capture: preflight.runtimeIdentity,
       encoder: productionEncoderIdentity(props.fps),
     };

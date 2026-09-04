@@ -49,11 +49,19 @@ export interface IAutoMovieProductionRenderRuntimeIdentity {
   /**
    * Render-runtime identity schema.
    */
-  protocolVersion: "automovie.production-render-runtime.v2";
+  protocolVersion: "automovie.production-render-runtime.v3";
   /**
    * Digest of declared viewer, capture, asset, and package input bytes.
    */
   sourceDigest: AutoMovieContentDigest;
+  /**
+   * Final-byte dialogue and viseme runtime installed for every capture, or null
+   * when the planned production is deliberately silent.
+   *
+   * @evidence requirements/production-design/continuity-change-and-deliverables.md#production-design-deliverable-freshness Identifies the current dialogue derivation required by every planned frame capture.
+   * @evidence specifications/narrative-and-intent/budgets-continuity-and-deliverables.md#narrative-intent-deliverable-authority-gaps Carries the renderer input identity required to classify every derived capture as current or stale.
+   */
+  dialogueRuntimeIdentity: AutoMovieContentDigest | null;
   /**
    * Package-owned browser and graphics identity.
    */
@@ -378,6 +386,13 @@ export const planProductionRenderJob = (props: {
   if (validDigest(props.runtimeIdentity.sourceDigest) === false)
     throw new Error(
       "Render runtime sourceDigest must be one current SHA-256 content identity.",
+    );
+  if (
+    props.runtimeIdentity.dialogueRuntimeIdentity !== null &&
+    validDigest(props.runtimeIdentity.dialogueRuntimeIdentity) === false
+  )
+    throw new Error(
+      "Render runtime dialogueRuntimeIdentity must be null or one current SHA-256 content identity.",
     );
   const tier = normalizeRenderTier(props.tier);
   const frameFormat = resolveProductionRenderTierFrameFormat(
