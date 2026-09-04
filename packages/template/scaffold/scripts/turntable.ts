@@ -4,7 +4,10 @@ import {
 } from "@automovie/production";
 
 import { createProductionFrameCaptureRuntime } from "./capture";
+import { readAutoMovieTurntableArguments } from "./commandArguments";
 import { currentAutoMovieProductionId } from "./projectIdentity";
+
+const request = readAutoMovieTurntableArguments(process.argv.slice(2));
 
 /** The production namespace this project declares in its own package manifest. */
 const productionId = currentAutoMovieProductionId();
@@ -22,29 +25,6 @@ const productionId = currentAutoMovieProductionId();
  * fingerprint. A model whose design or source moved owes the set again; its
  * previous frames stay on disk and do not count.
  */
-const args = process.argv.slice(2);
-const options = new Map<string, string>();
-const positional: string[] = [];
-for (let index = 0; index < args.length; ++index) {
-  const argument = args[index]!;
-  if (argument.startsWith("--")) {
-    const value = args[++index];
-    if (value === undefined || value.startsWith("--"))
-      throw new Error(`${argument} requires a value.`);
-    options.set(argument, value);
-  } else positional.push(argument);
-}
-const asset = options.get("--asset") ?? positional[0];
-if (asset === undefined || asset.trim() === "")
-  throw new Error("turntable requires --asset <compiled-model-id>.");
-const width =
-  options.get("--width") === undefined
-    ? undefined
-    : Number(options.get("--width"));
-const height =
-  options.get("--height") === undefined
-    ? undefined
-    : Number(options.get("--height"));
 const captureRuntime = createProductionFrameCaptureRuntime();
 const context = new AutoMovieProductionContext(
   captureRuntime.capture,
@@ -54,10 +34,10 @@ const context = new AutoMovieProductionContext(
 let captureFailure: { error: unknown } | undefined;
 try {
   const output = await captureAutoMovieProductionTurntable(context, {
-    asset,
+    asset: request.asset,
     productionId,
-    width,
-    height,
+    width: request.width,
+    height: request.height,
   });
   process.stdout.write(`${JSON.stringify(output, null, 2)}\n`);
   if (output.captured === false) process.exitCode = 1;
