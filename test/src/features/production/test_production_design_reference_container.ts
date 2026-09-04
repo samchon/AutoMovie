@@ -230,6 +230,24 @@ export const test_production_design_reference_container = (): void => {
         utf8('<svg xmlns="http://www.w3.org/2000/svg">\uffff</svg>'),
       ),
       refuses(
+        "late-declaration.svg",
+        utf8(
+          '<!-- first --><?xml version="1.0"?><svg xmlns="http://www.w3.org/2000/svg"/>',
+        ),
+      ),
+      refuses(
+        "encoding-declaration.svg",
+        utf8(
+          '<?xml version="1.0" encoding="UTF-16"?><svg xmlns="http://www.w3.org/2000/svg"/>',
+        ),
+      ),
+      inspect(
+        "nbsp-bounds.svg",
+        utf8(
+          '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0\u00a00\u00a01\u00a01"/>',
+        ),
+      ),
+      refuses(
         "encoding.svg",
         new Uint8Array([
           ...utf8('<svg xmlns="http://www.w3.org/2000/svg">'),
@@ -255,6 +273,9 @@ export const test_production_design_reference_container = (): void => {
       true,
       true,
       true,
+      true,
+      true,
+      { media: "image/svg+xml" },
       { media: "image/svg+xml", width: 1, height: 1 },
     ],
   );

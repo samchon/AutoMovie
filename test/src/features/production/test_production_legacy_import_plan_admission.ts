@@ -171,8 +171,26 @@ export const test_production_legacy_import_plan_admission = (): void => {
         value.rollbackBaseline[0]!.files[0]!.path = "src/nested";
         refingerprint(value);
       }),
+      rejected((value) => {
+        value.rollbackBaseline[0]!.files[0]!.path = "src/NESTED";
+        refingerprint(value);
+      }),
     ],
-    [false, false, false, true, true, true, true, true, true, true, true, true],
+    [
+      false,
+      false,
+      false,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+    ],
   );
   const changed = clone();
   changed.productionDraft.title = "Re-derived";

@@ -594,6 +594,7 @@ const skipXmlMisc = (
   allowDeclaration = false,
 ): number => {
   let cursor = skipXmlSpace(text, offset);
+  if (cursor !== offset) allowDeclaration = false;
   while (text.startsWith("<?", cursor) || text.startsWith("<!--", cursor)) {
     const comment = text.startsWith("<!--", cursor);
     const closing = comment ? "-->" : "?>";
@@ -608,8 +609,8 @@ const skipXmlMisc = (
         text.slice(cursor + 2, end),
         allowDeclaration,
       );
-      allowDeclaration = false;
     }
+    allowDeclaration = false;
     cursor = skipXmlSpace(text, end + closing.length);
   }
   return cursor;
@@ -647,14 +648,14 @@ const validateXmlInstruction = (
 ): void => {
   validateXmlCharacters(path, body);
   const target = /^([A-Za-z_][\w.:-]*)(?:[ \t\r\n]|$)/.exec(body)?.[1];
+  const declaration =
+    /^xml[ \t\r\n]+version[ \t\r\n]*=[ \t\r\n]*(["'])1\.0\1(?:[ \t\r\n]+encoding[ \t\r\n]*=[ \t\r\n]*(["'])utf-8\2)?(?:[ \t\r\n]+standalone[ \t\r\n]*=[ \t\r\n]*(["'])(?:yes|no)\3)?[ \t\r\n]*$/i.test(
+      body,
+    );
   if (
     target === undefined ||
     (target.toLowerCase() === "xml" &&
-      (target !== "xml" ||
-        !allowDeclaration ||
-        !/^xml[ \t\r\n]+version[ \t\r\n]*=[ \t\r\n]*(["'])1\.0\1(?:[ \t\r\n]+(?:encoding|standalone)[ \t\r\n]*=[\s\S]*)?$/.test(
-          body,
-        )))
+      (target !== "xml" || !allowDeclaration || !declaration))
   )
     throw invalid(path, "XML", "instruction", "invalid processing instruction");
 };
@@ -664,9 +665,8 @@ const svgExtent = (
 ): IDesignReferenceExtent => {
   const viewBox = attributes.get("viewBox");
   if (viewBox !== undefined) {
-    const fields = viewBox
-      .trim()
-      .split(/[\s,]+/)
+    const fields = trimXmlSpace(viewBox)
+      .split(/[ \t\r\n,]+/)
       .map(Number);
     if (
       fields.length === 4 &&
@@ -685,7 +685,7 @@ const svgExtent = (
 
 const svgLength = (raw: string | undefined): number | null => {
   if (raw === undefined) return null;
-  const spelling = raw.trim().replace(/px$/, "");
+  const spelling = trimXmlSpace(raw).replace(/px$/, "");
   const value = Number(spelling);
   return spelling !== "" && Number.isFinite(value) && value > 0 ? value : null;
 };
@@ -694,14 +694,15 @@ const inspectDxf = (path: string, text: string): boolean => {
   const lines = text.replace(/\r\n?/g, "\n").split("\n");
   if (lines.at(-1) === "") lines.pop();
   const candidate = lines.some(
-    (line) => line.trim() === "SECTION" || line.trim() === "$ACADVER",
+    (line) =>
+      trimDxfField(line) === "SECTION" || trimDxfField(line) === "$ACADVER",
   );
   if (!candidate) return false;
   if (lines.length % 2 !== 0)
     throw invalid(path, "DXF", "records", "a group code has no value");
   const records: Array<readonly [number, string]> = [];
   for (let index = 0; index < lines.length; index += 2) {
-    const spelling = lines[index]!.trim();
+    const spelling = trimDxfField(lines[index]!);
     const code = Number(spelling);
     if (!/^\d+$/.test(spelling) || !Number.isInteger(code) || code > 1071)
       throw invalid(
@@ -710,7 +711,7 @@ const inspectDxf = (path: string, text: string): boolean => {
         "records",
         `invalid group code at line ${index + 1}`,
       );
-    records.push([code, lines[index + 1]!.trim()]);
+    records.push([code, trimDxfField(lines[index + 1]!)]);
   }
   let cursor = 0;
   let sections = 0;
@@ -823,4 +824,8 @@ const skipXmlSpace = (text: string, offset: number): number => {
     offset += 1;
   return offset;
 };
+const trimXmlSpace = (value: string): string =>
+  value.replace(/^[ \t\r\n]+|[ \t\r\n]+$/g, "");
+const trimDxfField = (value: string): string =>
+  value.replace(/^[ \t]+|[ \t]+$/g, "");
 const hex = (value: number): string => value.toString(16).padStart(2, "0");
