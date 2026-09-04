@@ -1221,21 +1221,43 @@ export interface IAutoMovieProductionRenditionDelivery {
 }
 
 /**
- * Aggregate final-delivery ledger bound to one current compile.
+ * Recomputable identity of one exact render-plan generation and runtime.
  *
- * @evidence requirements/delivery-and-accessibility/captions-subtitles-and-cues.md#delivery-caption-readability-profile Exposes `IAutoMovieProductionRenderManifest` as the portable data boundary for the delivery caption readability profile requirement.
- * @evidence specifications/editorial-render-and-delivery/delivery-audio-text-and-localization.md#spec-delivery-caption-readability-profile Types `IAutoMovieProductionRenderManifest` for the spec delivery caption readability profile system contract.
+ * @evidence requirements/rendering/headless-and-platform-determinism.md#rendering-runtime-identity Preserves the complete runtime closure that produced a publication.
+ * @evidence requirements/production-design/continuity-change-and-deliverables.md#production-design-deliverable-provenance Preserves the exact plan provenance beside delivered bytes.
+ * @evidence specifications/editorial-render-and-delivery/delivery-package-provenance-and-publication.md#spec-delivery-provenance-integrity Makes publication identity structured and independently recomputable.
+ * @evidence specifications/execution-and-recovery/artifacts-and-atomic-publication.md#execution-publication-preconditions Supplies the candidate identity checked at publication boundaries.
  */
 export interface IAutoMovieProductionPublicationIdentity {
-  /** Closed identity protocol. */
+  /**
+   * Closed identity protocol.
+   * @evidence requirements/rendering/scope-and-artifact-identity.md#rendering-artifact-invalidation Versions the identity whose changes invalidate prior outputs.
+   * @evidence specifications/editorial-render-and-delivery/delivery-package-provenance-and-publication.md#spec-delivery-provenance-integrity Closes the recomputation protocol.
+   */
   protocolVersion: "automovie.production-publication.v3";
-  /** Production namespace whose plan produced the publication. */
+  /**
+   * Production namespace whose plan produced the publication.
+   * @evidence requirements/production-design/continuity-change-and-deliverables.md#production-design-deliverable-provenance Joins delivery provenance to its production.
+   * @evidence specifications/editorial-render-and-delivery/delivery-package-provenance-and-publication.md#spec-delivery-provenance-integrity Prevents cross-production adoption.
+   */
   productionId: string;
-  /** Exact compiler input used by the plan. */
+  /**
+   * Exact compiler input used by the plan.
+   * @evidence requirements/rendering/scope-and-artifact-identity.md#rendering-artifact-invalidation Invalidates delivery after compiler-input change.
+   * @evidence specifications/execution-and-recovery/artifacts-and-atomic-publication.md#execution-publication-preconditions Supplies the input precondition.
+   */
   compileFingerprint: AutoMovieContentDigest;
-  /** Exact compiler-owned edit used by the plan. */
+  /**
+   * Exact compiler-owned edit used by the plan.
+   * @evidence requirements/production-design/continuity-change-and-deliverables.md#production-design-deliverable-provenance Records the editorial generation.
+   * @evidence specifications/editorial-render-and-delivery/delivery-package-provenance-and-publication.md#spec-delivery-provenance-integrity Binds the package to one edit.
+   */
   editFingerprint: AutoMovieContentDigest;
-  /** Complete installed capture, dialogue, and encoder closure. */
+  /**
+   * Complete installed capture, dialogue, and encoder closure.
+   * @evidence requirements/rendering/headless-and-platform-determinism.md#rendering-runtime-identity Preserves runtime identity.
+   * @evidence specifications/editorial-render-and-delivery/delivery-package-provenance-and-publication.md#spec-delivery-provenance-integrity Makes runtime provenance inspectable.
+   */
   runtimeIdentity: {
     protocolVersion: "automovie.production-render-runtime.v3";
     sourceDigest: AutoMovieContentDigest;
@@ -1253,33 +1275,65 @@ export interface IAutoMovieProductionPublicationIdentity {
       };
     };
   };
-  /** Proxy or final policy, compared only with the same tier. */
+  /**
+   * Proxy or final policy, compared only with the same tier.
+   * @evidence requirements/rendering/scope-and-artifact-identity.md#rendering-artifact-invalidation Makes tier-policy change invalidate that tier.
+   * @evidence specifications/editorial-render-and-delivery/delivery-package-provenance-and-publication.md#spec-delivery-publication-retention Keeps proxy and final histories independent.
+   */
   tier: {
     kind: "proxy" | "final";
     resolutionScale: number;
     frameStep: number;
   };
-  /** Compiler-owned full-rate format. */
+  /**
+   * Compiler-owned full-rate format.
+   * @evidence requirements/rendering/scope-and-artifact-identity.md#rendering-artifact-invalidation Includes source format in invalidation.
+   * @evidence specifications/editorial-render-and-delivery/delivery-package-provenance-and-publication.md#spec-delivery-provenance-integrity Records the source picture contract.
+   */
   sourceFrameFormat: IAutoMovieProductionDesign["frameFormat"];
-  /** Exact tier output format. */
+  /**
+   * Exact tier output format.
+   * @evidence requirements/rendering/scope-and-artifact-identity.md#rendering-artifact-invalidation Includes output format in invalidation.
+   * @evidence specifications/editorial-render-and-delivery/delivery-package-provenance-and-publication.md#spec-delivery-provenance-integrity Records the delivered picture contract.
+   */
   frameFormat: IAutoMovieProductionDesign["frameFormat"];
-  /** Tier output frame count. */
+  /**
+   * Tier output frame count.
+   * @evidence requirements/rendering/scope-and-artifact-identity.md#rendering-artifact-invalidation Includes extent in invalidation.
+   * @evidence specifications/execution-and-recovery/artifacts-and-atomic-publication.md#execution-publication-preconditions Records the complete planned extent.
+   */
   totalFrames: number;
-  /** Maximum planned chunk span. */
+  /**
+   * Maximum planned chunk span.
+   * @evidence requirements/rendering/scope-and-artifact-identity.md#rendering-artifact-invalidation Includes chunking policy in identity.
+   * @evidence specifications/execution-and-recovery/artifacts-and-atomic-publication.md#execution-publication-preconditions Records the candidate plan partition.
+   */
   chunkFrames: number;
-  /** Canonical chunk identity projection in plan order. */
+  /**
+   * Canonical chunk identity projection in plan order.
+   * @evidence requirements/rendering/scope-and-artifact-identity.md#rendering-missing-artifact-refusal Requires the complete chunk population.
+   * @evidence specifications/validation-and-diagnostics/partial-artifacts-and-refusal.md#validation-resume-verified-artifacts Allows reuse only from verified chunks.
+   */
   chunks: Array<{
     slot: string;
     id: AutoMovieContentDigest;
     pass: string;
   }>;
-  /** Canonical identities of every non-video publication track. */
+  /**
+   * Canonical identities of every non-video publication track.
+   * @evidence requirements/rendering/scope-and-artifact-identity.md#rendering-artifact-invalidation Includes every track dependency in invalidation.
+   * @evidence specifications/editorial-render-and-delivery/delivery-package-provenance-and-publication.md#spec-delivery-provenance-integrity Completes package provenance beyond picture chunks.
+   */
   tracks: {
     captions: AutoMovieContentDigest;
     audio: AutoMovieContentDigest;
     audioAssets: AutoMovieContentDigest;
   };
-  /** Digest of the canonical identity fields above. */
+  /**
+   * Digest of the canonical identity fields above.
+   * @evidence requirements/production-design/continuity-change-and-deliverables.md#production-design-deliverable-provenance Makes provenance compactly comparable.
+   * @evidence specifications/editorial-render-and-delivery/delivery-package-provenance-and-publication.md#spec-delivery-provenance-integrity Requires independent recomputation from structured fields.
+   */
   fingerprint: AutoMovieContentDigest;
 }
 
@@ -1295,24 +1349,28 @@ export interface IAutoMovieProductionRenderManifest {
   /**
    * Aggregate manifest format.
    *
-   * @evidence requirements/delivery-and-accessibility/captions-subtitles-and-cues.md#delivery-caption-readability-profile Exposes `version` as the portable data boundary for the delivery caption readability profile requirement.
-   * @evidence specifications/editorial-render-and-delivery/delivery-audio-text-and-localization.md#spec-delivery-caption-readability-profile Types `version` for the spec delivery caption readability profile system contract.
+   * @evidence requirements/rendering/scope-and-artifact-identity.md#rendering-artifact-invalidation Versions the plan-bound manifest contract.
+   * @evidence specifications/editorial-render-and-delivery/delivery-package-provenance-and-publication.md#spec-delivery-provenance-integrity Selects the structured-provenance schema.
    */
   version: 2;
   /**
    * Exact compiler input that produced every listed output.
    *
-   * @evidence requirements/delivery-and-accessibility/captions-subtitles-and-cues.md#delivery-caption-readability-profile Exposes `compileFingerprint` as the portable data boundary for the delivery caption readability profile requirement.
-   * @evidence specifications/editorial-render-and-delivery/delivery-audio-text-and-localization.md#spec-delivery-caption-readability-profile Types `compileFingerprint` for the spec delivery caption readability profile system contract.
+   * @evidence requirements/rendering/scope-and-artifact-identity.md#rendering-artifact-invalidation Invalidates the manifest after compiler-input change.
+   * @evidence specifications/execution-and-recovery/artifacts-and-atomic-publication.md#execution-publication-preconditions Supplies the compiler-input precondition.
    */
   compileFingerprint: AutoMovieContentDigest;
-  /** Structured and self-verifying render-plan identity. */
+  /**
+   * Structured and self-verifying render-plan identity.
+   * @evidence requirements/rendering/headless-and-platform-determinism.md#rendering-runtime-identity Carries the runtime closure.
+   * @evidence specifications/editorial-render-and-delivery/delivery-package-provenance-and-publication.md#spec-delivery-provenance-integrity Supports independent recomputation.
+   */
   publication: IAutoMovieProductionPublicationIdentity;
   /**
    * Materialized required and optional deliverables.
    *
-   * @evidence requirements/delivery-and-accessibility/captions-subtitles-and-cues.md#delivery-caption-readability-profile Exposes `deliverables` as the portable data boundary for the delivery caption readability profile requirement.
-   * @evidence specifications/editorial-render-and-delivery/delivery-audio-text-and-localization.md#spec-delivery-caption-readability-profile Types `deliverables` for the spec delivery caption readability profile system contract.
+   * @evidence requirements/rendering/scope-and-artifact-identity.md#rendering-missing-artifact-refusal Enumerates every required delivered artifact.
+   * @evidence specifications/validation-and-diagnostics/partial-artifacts-and-refusal.md#validation-preserve-previous-complete Refuses partial replacement of the complete package.
    */
   deliverables: IAutoMovieProductionRenderedDeliverable[];
 }
@@ -1769,22 +1827,22 @@ export type IAutoMovieProductionMediaProbe =
 /**
  * One file record independently derived by the renderer-owned receipt gate.
  *
- * @evidence requirements/motion/external-motion-inputs.md#motion-external-adoption-receipt Exposes `IAutoMovieProductionRenderReceiptFile` as the portable data boundary for the motion external adoption receipt requirement.
- * @evidence specifications/performance-motion-and-staging/motion-sampling-and-composition.md#performance-motion-external-adoption-receipt Types `IAutoMovieProductionRenderReceiptFile` for the performance motion external adoption receipt system contract.
+ * @evidence requirements/rendering/scope-and-artifact-identity.md#rendering-missing-artifact-refusal Records the exact byte population needed to refuse incomplete delivery.
+ * @evidence specifications/validation-and-diagnostics/partial-artifacts-and-refusal.md#validation-resume-verified-artifacts Supplies independently verified file facts for reuse.
  */
 export interface IAutoMovieProductionRenderReceiptFile extends IAutoMovieProductionDeliverableFile {
   /**
    * Deliverable that exclusively owns this path.
    *
-   * @evidence requirements/motion/external-motion-inputs.md#motion-external-adoption-receipt Exposes `deliverable` as the portable data boundary for the motion external adoption receipt requirement.
-   * @evidence specifications/performance-motion-and-staging/motion-sampling-and-composition.md#performance-motion-external-adoption-receipt Types `deliverable` for the performance motion external adoption receipt system contract.
+   * @evidence requirements/production-design/continuity-change-and-deliverables.md#production-design-deliverable-provenance Preserves ownership of each delivered byte.
+   * @evidence specifications/editorial-render-and-delivery/delivery-package-provenance-and-publication.md#spec-delivery-provenance-integrity Joins each receipt row to its deliverable.
    */
   deliverable: string;
   /**
    * Parser-derived media facts.
    *
-   * @evidence requirements/motion/external-motion-inputs.md#motion-external-adoption-receipt Exposes `probe` as the portable data boundary for the motion external adoption receipt requirement.
-   * @evidence specifications/performance-motion-and-staging/motion-sampling-and-composition.md#performance-motion-external-adoption-receipt Types `probe` for the performance motion external adoption receipt system contract.
+   * @evidence requirements/rendering/scope-and-artifact-identity.md#rendering-missing-artifact-refusal Requires parser-derived facts, not mere path existence.
+   * @evidence specifications/validation-and-diagnostics/partial-artifacts-and-refusal.md#validation-resume-verified-artifacts Supplies facts used to admit verified reuse.
    */
   probe: IAutoMovieProductionMediaProbe;
 }
@@ -1792,31 +1850,35 @@ export interface IAutoMovieProductionRenderReceiptFile extends IAutoMovieProduct
 /**
  * Renderer-owned aggregate receipt bound to current output bytes.
  *
- * @evidence requirements/motion/external-motion-inputs.md#motion-external-adoption-receipt Exposes `IAutoMovieProductionRenderReceipt` as the portable data boundary for the motion external adoption receipt requirement.
- * @evidence specifications/performance-motion-and-staging/motion-sampling-and-composition.md#performance-motion-external-adoption-receipt Types `IAutoMovieProductionRenderReceipt` for the performance motion external adoption receipt system contract.
+ * @evidence requirements/production-design/continuity-change-and-deliverables.md#production-design-deliverable-provenance Preserves renderer-owned evidence for the final package.
+ * @evidence specifications/execution-and-recovery/artifacts-and-atomic-publication.md#execution-atomic-current-commit Binds manifest, receipt, and bytes to one current commit.
  */
 export interface IAutoMovieProductionRenderReceipt {
   /**
    * Receipt format.
    *
-   * @evidence requirements/motion/external-motion-inputs.md#motion-external-adoption-receipt Exposes `version` as the portable data boundary for the motion external adoption receipt requirement.
-   * @evidence specifications/performance-motion-and-staging/motion-sampling-and-composition.md#performance-motion-external-adoption-receipt Types `version` for the performance motion external adoption receipt system contract.
+   * @evidence requirements/rendering/scope-and-artifact-identity.md#rendering-artifact-invalidation Versions the plan-bound receipt contract.
+   * @evidence specifications/editorial-render-and-delivery/delivery-package-provenance-and-publication.md#spec-delivery-provenance-integrity Selects the publication-fingerprint receipt schema.
    */
   version: 4;
   /**
    * Exact digest of the active production's tracked render manifest.
    *
-   * @evidence requirements/motion/external-motion-inputs.md#motion-external-adoption-receipt Exposes `manifestDigest` as the portable data boundary for the motion external adoption receipt requirement.
-   * @evidence specifications/performance-motion-and-staging/motion-sampling-and-composition.md#performance-motion-external-adoption-receipt Types `manifestDigest` for the performance motion external adoption receipt system contract.
+   * @evidence requirements/rendering/scope-and-artifact-identity.md#rendering-artifact-invalidation Detects manifest-byte change.
+   * @evidence specifications/execution-and-recovery/artifacts-and-atomic-publication.md#execution-atomic-current-commit Joins the receipt to the committed manifest bytes.
    */
   manifestDigest: AutoMovieContentDigest;
-  /** Exact recomputed publication identity carried by the manifest. */
+  /**
+   * Exact recomputed publication identity carried by the manifest.
+   * @evidence requirements/rendering/headless-and-platform-determinism.md#rendering-runtime-identity Carries the runtime-bound publication digest.
+   * @evidence specifications/editorial-render-and-delivery/delivery-package-provenance-and-publication.md#spec-delivery-provenance-integrity Joins the independently parsed receipt and manifest identities.
+   */
   publicationFingerprint: AutoMovieContentDigest;
   /**
    * Exact byte and media probes in canonical path order.
    *
-   * @evidence requirements/motion/external-motion-inputs.md#motion-external-adoption-receipt Exposes `files` as the portable data boundary for the motion external adoption receipt requirement.
-   * @evidence specifications/performance-motion-and-staging/motion-sampling-and-composition.md#performance-motion-external-adoption-receipt Types `files` for the performance motion external adoption receipt system contract.
+   * @evidence requirements/rendering/scope-and-artifact-identity.md#rendering-missing-artifact-refusal Requires the exact complete delivered-file population.
+   * @evidence specifications/validation-and-diagnostics/partial-artifacts-and-refusal.md#validation-resume-verified-artifacts Allows reuse only after all receipt rows verify.
    */
   files: IAutoMovieProductionRenderReceiptFile[];
 }

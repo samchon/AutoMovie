@@ -3069,6 +3069,7 @@ export class AutoMovieProductionProject {
   public commitProductionRenderManifest(
     manifest: IAutoMovieProductionRenderManifest,
     plan: IAutoMovieProductionRenderJobPlan,
+    planCurrent: () => boolean,
   ): number {
     const validation =
       typia.validateEquals<IAutoMovieProductionRenderManifest>(manifest);
@@ -3082,6 +3083,10 @@ export class AutoMovieProductionProject {
       identity: validation.data.publication,
       plan,
     });
+    if (planCurrent() === false)
+      throw new AutoMovieProductionInputRaceError(
+        "The render plan changed before its manifest-only ledger could be committed.",
+      );
     if (
       this.generatedManifest()?.inputFingerprint !==
       publication.compileFingerprint
@@ -3166,12 +3171,12 @@ export class AutoMovieProductionProject {
           content: serializeJson(receipt),
         },
       ],
-      payloadCurrent,
+      () => payloadCurrent() && planCurrent(),
       this.lastReadRevision_,
       () => {
-        if (payloadCurrent() === false)
+        if (payloadCurrent() === false || planCurrent() === false)
           throw new AutoMovieProductionInputRaceError(
-            "A terminal deliverable changed while its manifest-only ledger was committed.",
+            "A terminal deliverable or render plan changed while its manifest-only ledger was committed.",
           );
       },
     );
@@ -3193,7 +3198,7 @@ export class AutoMovieProductionProject {
     files: ReadonlyMap<string, Uint8Array>;
     manifest: IAutoMovieProductionRenderManifest;
     plan: IAutoMovieProductionRenderJobPlan;
-    planCurrent?: () => boolean;
+    planCurrent: () => boolean;
     inputCurrent?: () => boolean;
     publicationCurrent?: () => void;
     expectedRevision?: number;
@@ -3211,6 +3216,10 @@ export class AutoMovieProductionProject {
       identity: validation.data.publication,
       plan: props.plan,
     });
+    if (props.planCurrent() === false)
+      throw new AutoMovieProductionInputRaceError(
+        "The render plan changed before terminal publication began.",
+      );
     if (
       this.generatedManifest()?.inputFingerprint !==
       validation.data.compileFingerprint
@@ -3295,7 +3304,7 @@ export class AutoMovieProductionProject {
     ];
     return this.commitFiles(
       writes,
-      () => props.inputCurrent?.() !== false && props.planCurrent?.() !== false,
+      () => props.inputCurrent?.() !== false && props.planCurrent(),
       props.expectedRevision ?? this.lastReadRevision_,
       () => {
         for (const deliverable of validation.data.deliverables)
@@ -3340,7 +3349,7 @@ export class AutoMovieProductionProject {
                 `Committed terminal file "${file.path}" changed during the final compiler gate.`,
               );
           }
-        if (props.inputCurrent?.() === false || props.planCurrent?.() === false)
+        if (props.inputCurrent?.() === false || props.planCurrent() === false)
           throw new AutoMovieProductionInputRaceError(
             "Production inputs or the render-plan generation changed during the staged terminal publication final gate.",
           );

@@ -173,6 +173,7 @@ import {
   resolveProductionPngProfile,
 } from "./productionPngPicture";
 import { canonicalProductionWebVtt } from "./productionRenderJob";
+import { parseProductionRenderPublicationIdentity } from "./productionRenderPublicationIdentity";
 import { productionRenderTargetFingerprint } from "./renderIdentity";
 import {
   assetReviewEvidenceDiagnostics,
@@ -8853,7 +8854,7 @@ const finalDeliverableDiagnostics = (
   }
   if (
     receipt === null ||
-    receipt.version !== 3 ||
+    receipt.version !== 4 ||
     receipt.manifestDigest !== manifestDigest
   )
     return [
@@ -8888,6 +8889,33 @@ const finalDeliverableDiagnostics = (
       ),
     ];
   }
+  let publication: ReturnType<typeof parseProductionRenderPublicationIdentity>;
+  try {
+    publication = parseProductionRenderPublicationIdentity(
+      manifest.publication,
+    );
+  } catch (error) {
+    return [
+      renderDeliverableDiagnostic(
+        "render-deliverable-invalid",
+        production.id,
+        `${errorMessage(error)} Recreate the final publication from the current render plan.`,
+      ),
+    ];
+  }
+  if (
+    publication.productionId !== production.id ||
+    publication.tier.kind !== "final" ||
+    publication.compileFingerprint !== manifest.compileFingerprint ||
+    receipt.publicationFingerprint !== publication.fingerprint
+  )
+    return [
+      renderDeliverableDiagnostic(
+        "render-deliverable-stale",
+        production.id,
+        "The final manifest and renderer-owned receipt do not carry one matching final-tier render-plan identity. Replan and republish the current production.",
+      ),
+    ];
   if (manifest.compileFingerprint !== inputFingerprint)
     return [
       renderDeliverableDiagnostic(
