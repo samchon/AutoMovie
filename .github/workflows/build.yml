@@ -1,5 +1,12 @@
 name: build
-on: pull_request
+on:
+  pull_request:
+  push:
+    branches:
+      - master
+
+permissions:
+  contents: read
 
 # A push replaces its predecessor rather than queueing behind it. Without this
 # the lane was five runs deep and the newest commit waited on four obsolete ones.
@@ -10,8 +17,23 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+      - name: Validate incoming diff
+        env:
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          PUSH_BASE_SHA: ${{ github.event.before }}
+          PUSH_HEAD_SHA: ${{ github.sha }}
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            git diff --check "$PR_BASE_SHA...$PR_HEAD_SHA"
+          else
+            git diff --check "$PUSH_BASE_SHA...$PUSH_HEAD_SHA"
+          fi
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: 22.x
@@ -22,3 +44,13 @@ jobs:
           path: node_modules/.cache/ttsc/plugins
           key: ttsc-plugins-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
       - run: pnpm run build
+      - run: pnpm run build:tgz
+      - name: Verify validation left the checkout clean
+        run: |
+          git diff --check HEAD --
+          git diff --exit-code HEAD --
+          untracked="$(git ls-files --others --exclude-standard)"
+          if [ -n "$untracked" ]; then
+            printf '%s\n' "$untracked"
+            exit 1
+          fi
