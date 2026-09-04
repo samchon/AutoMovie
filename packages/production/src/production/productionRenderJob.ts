@@ -76,8 +76,8 @@ export interface IAutoMovieProductionRenderRuntimeIdentity {
    * Final-byte dialogue and viseme runtime installed for every capture, or null
    * when the planned production is deliberately silent.
    *
-   * @evidence requirements/sound/dialogue-voice-and-visemes.md#sound-dialogue-final-bytes-authority Carries the exact dialogue bytes that own every final-frame phoneme state.
-   * @evidence specifications/simulation-effects-and-sound/sound-sources-events-dialogue-and-foley.md#dialogue-voice-consistency-and-phoneme-state Identifies the adopted dialogue generation whose timing and visemes the render consumes.
+   * @evidence requirements/production-design/continuity-change-and-deliverables.md#production-design-deliverable-freshness Identifies the current dialogue derivation required by every planned frame capture.
+   * @evidence specifications/narrative-and-intent/budgets-continuity-and-deliverables.md#narrative-intent-deliverable-provenance-handoff Carries the renderer input identity that the captured visual artifact and final handoff must retain.
    */
   dialogueRuntimeIdentity: AutoMovieContentDigest | null;
   /**
