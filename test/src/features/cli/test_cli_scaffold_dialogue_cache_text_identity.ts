@@ -302,6 +302,10 @@ export const test_cli_scaffold_dialogue_cache_text_identity = (): void => {
     ],
     [
       "unsafe-locator-or-foreign-generation",
+      Object.assign(new Error("too many symbolic links"), { code: "ELOOP" }),
+    ],
+    [
+      "unsafe-locator-or-foreign-generation",
       new Error("Render GC content changed while read."),
     ],
     ["integrity-failed", new Error("invalid exact inventory")],

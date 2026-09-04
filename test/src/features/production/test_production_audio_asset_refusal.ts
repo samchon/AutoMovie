@@ -101,6 +101,29 @@ export const test_production_audio_asset_refusal = (): void => {
           ),
       ],
       [
+        "terminalBytesCannotImpersonateAChunkHeader",
+        () =>
+          refuses(
+            productionWav({
+              channels: [[0]],
+              terminalBytes: Uint8Array.of(0),
+            }),
+            ["[chunk-header]"],
+          ),
+      ],
+      [
+        "anOddFinalChunkRequiresItsAlignmentByte",
+        () =>
+          refuses(
+            productionWav({
+              declaredChannels: 1,
+              data: Uint8Array.of(0),
+              omitFinalChunkPadding: true,
+            }),
+            ["[chunk-extent]"],
+          ),
+      ],
+      [
         "aContainerWithoutAFormatChunkIsRefused",
         () =>
           refuses(productionWav({ omitFormatChunk: true }), [
@@ -126,6 +149,18 @@ export const test_production_audio_asset_refusal = (): void => {
             [
               'declares 22 extensible bytes but its "fmt " chunk carries only 0',
             ],
+          ),
+      ],
+      [
+        "anExtensibleHeaderWithoutCbSizeIsRefused",
+        () =>
+          refuses(
+            productionWav({
+              formatTag: 0xfffe,
+              formatChunkSize: 16,
+              channels: [[0]],
+            }),
+            ["[extensible.cbSize]", "cannot carry cbSize"],
           ),
       ],
       [
@@ -271,6 +306,18 @@ export const test_production_audio_asset_refusal = (): void => {
           ),
       ],
       [
+        "anUnknownCanonicalSubformatTagIsRefused",
+        () =>
+          refuses(
+            productionWav({
+              formatTag: 0xfffe,
+              subFormatTag: 2,
+              channels: [[0]],
+            }),
+            ["[unsupported-wave-subformat]"],
+          ),
+      ],
+      [
         "anInvalidValidBitRangeIsRefused",
         () =>
           refuses(
@@ -382,9 +429,12 @@ export const test_production_audio_asset_refusal = (): void => {
       anotherContainerIsRefusedByWhatItIs: true,
       aRiffWhoseFormIsNotWaveIsRefusedByItsForm: true,
       aTruncatedChunkIsRefusedWithBothCounts: true,
+      terminalBytesCannotImpersonateAChunkHeader: true,
+      anOddFinalChunkRequiresItsAlignmentByte: true,
       aContainerWithoutAFormatChunkIsRefused: true,
       aFormatChunkTooShortToDeclareItsFieldsIsRefused: true,
       anExtensibleHeaderWithoutRoomForItsSubFormatIsRefused: true,
+      anExtensibleHeaderWithoutCbSizeIsRefused: true,
       eightBitPcmIsRefusedByItsDepth: true,
       sixtyFourBitFloatIsRefusedByItsDepth: true,
       anEntirelyDifferentEncodingIsRefusedByItsFormatTag: true,
@@ -401,6 +451,7 @@ export const test_production_audio_asset_refusal = (): void => {
       aWrongBlockAlignmentIsRefused: true,
       aWrongAverageByteRateIsRefused: true,
       aForeignSubformatGuidIsRefused: true,
+      anUnknownCanonicalSubformatTagIsRefused: true,
       anInvalidValidBitRangeIsRefused: true,
       aShortExtensibleDeclarationIsRefused: true,
       aLegalUnsupportedPrecisionIsDistinguished: true,
