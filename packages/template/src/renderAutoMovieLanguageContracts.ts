@@ -6,6 +6,12 @@ import {
 import * as fs from "node:fs";
 import * as path from "node:path";
 
+const LANGUAGE_CONTRACT_FILES = [
+  "discovery/signals.md",
+  "obligations/common.md",
+  "principles/common.md",
+] as const;
+
 /**
  * Absolute directory containing the package-private language packs.
  *
@@ -79,7 +85,15 @@ export const renderAutoMovieLanguageContracts = (props: {
     }
   };
   walk(selected);
-  if (Object.keys(files).length === 0)
-    throw new Error(`${props.language}: bundled language contract is empty.`);
+  const actual = Object.keys(files).map((file) =>
+    file.slice("docs/language/".length),
+  );
+  if (
+    actual.length !== LANGUAGE_CONTRACT_FILES.length ||
+    actual.some((file, index) => file !== LANGUAGE_CONTRACT_FILES[index])
+  )
+    throw new Error(
+      `${props.language}: bundled language contract must contain exactly ${LANGUAGE_CONTRACT_FILES.join(", ")}; received ${actual.join(", ") || "(empty)"}.`,
+    );
   return files;
 };

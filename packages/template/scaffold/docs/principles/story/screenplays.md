@@ -26,7 +26,7 @@ Every screenplay H2, H3, and H4 sustains the production-recognizable expressive 
 
 Review question: what relation among image, text, sound, silence, action, and transition makes this unit belong recognizably to this production, and what authored change justifies each departure?
 
-This item owns the screenplay's patterned expressive stance. The common production-language obligation owns the working language of the authored document, the common machine-default principle owns whether the writing was decided at all, dialogue and sound voice owns the identity and relational function of particular sources, audiovisual selection owns whether each perceptible detail earns inclusion, and settings own the production-wide grammar this layer realizes.
+This item owns the screenplay's patterned expressive stance. The common production-language obligation owns the working language of the authored document, the composition-safe defaults own whether local rhetorical choices perform literal work, dialogue and sound voice owns the identity and relational function of particular sources, audiovisual selection owns whether each perceptible detail earns inclusion, and settings own the production-wide grammar this layer realizes.
 
 Sources: [Bordwell on films as patterned systems that guide spectator construction](https://www.routledge.com/Narration-in-the-Fiction-Film/Bordwell/p/book/9780415018777); [Chion on sound and image forming one audiovisual mode of perception](https://cup.columbia.edu/book/audio-vision-sound-on-screen/9780231185882/)
 
@@ -114,11 +114,15 @@ The authored screenplay remains a master-scene audience contract: headings ident
 
 Review question: which screenplay statement selects a shooting implementation that an equivalent realization should remain free to choose?
 
+Sources: [Academy Nicholl screenplay formatting resources](https://www.oscars.org/nicholl/screenwriting-resources); [Final Draft screenplay formatting elements](https://www.finaldraft.com/learn/screenplay-formatting-elements/)
+
 ## Scene semantic completion {#screenplay-scene-completion}
 
 A scene is complete only when its entry, progression, consequential exchange, exit, audiovisual content, and inherited narrative effects jointly determine what an independent shot author must realize. Valid headings and blocks do not make a scene complete when one of those semantic decisions is absent.
 
 Review question: which formally valid scene still requires a downstream author to invent its action, exchange, audience effect, or exit?
+
+Sources: [Academy Nicholl screenplay formatting resources](https://www.oscars.org/nicholl/screenwriting-resources); [NASA systems engineering handbook on verification-ready requirements](https://www.nasa.gov/reference/systems-engineering-handbook/)
 
 ## Locked revision identity {#screenplay-locked-revision}
 
@@ -126,8 +130,12 @@ Every reviewed screenplay population identifies the exact revision whose units, 
 
 Review question: which downstream result claims a reviewed screenplay while reading content from another revision?
 
+Sources: [Final Draft on scene numbering and revision practice](https://kb.finaldraft.com/hc/en-us/articles/27810301418132-How-do-I-number-scenes); [NASA systems engineering handbook on configuration identity](https://www.nasa.gov/reference/systems-engineering-handbook/)
+
 ## Heading identity axes {#screenplay-heading-identity}
 
 Each scene heading carries the stable scene identity and the authored location, interior or exterior condition where relevant, story-time condition, and continuity boundary needed to distinguish it. A conventional label is not accepted when its axes conflict with the scene body or source ancestry.
 
 Review question: which heading axis is missing or inconsistent enough that two readers could bind the scene to different story states?
+
+Sources: [Final Draft screenplay formatting elements](https://www.finaldraft.com/learn/screenplay-formatting-elements/); [Academy Nicholl screenplay formatting resources](https://www.oscars.org/nicholl/screenwriting-resources)

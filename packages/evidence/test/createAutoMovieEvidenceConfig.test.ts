@@ -201,6 +201,95 @@ const manifestContractPaths = (
 
 try {
   const scopeRoot = root();
+  assert.equal(
+    throws(
+      () =>
+        createAutoMovieEvidenceConfig({
+          ...disabled(scopeRoot),
+          language: "french" as never,
+        }),
+      "Unsupported production language",
+    ),
+    true,
+  );
+  assert.equal(
+    throws(
+      () =>
+        createAutoMovieEvidenceConfig({
+          ...disabled(scopeRoot),
+          language: "chinese",
+        }),
+      "mismatched structured rule identity",
+    ),
+    true,
+  );
+  const missingLanguageContract = root();
+  fs.rmSync(
+    path.join(
+      missingLanguageContract,
+      "docs/language/discovery/signals.md",
+    ),
+  );
+  assert.equal(
+    throws(
+      () => createAutoMovieEvidenceConfig(disabled(missingLanguageContract)),
+      "language contract must contain exactly",
+    ),
+    true,
+  );
+  const residualLanguageContract = root();
+  write(
+    residualLanguageContract,
+    "docs/language/principles/residue.md",
+    target("Residual language", "residual-language"),
+  );
+  assert.equal(
+    throws(
+      () => createAutoMovieEvidenceConfig(disabled(residualLanguageContract)),
+      "language contract must contain exactly",
+    ),
+    true,
+  );
+  const invalidDefaultRoute = root();
+  const defaultFile = path.join(
+    invalidDefaultRoute,
+    "docs/principles/core/defaults.md",
+  );
+  fs.writeFileSync(
+    defaultFile,
+    rewrite(
+      fs.readFileSync(defaultFile, "utf8"),
+      '"safeApplication": "composition-safe"',
+      '"safeApplication": "early"',
+    ),
+  );
+  assert.equal(
+    throws(
+      () => createAutoMovieEvidenceConfig(disabled(invalidDefaultRoute)),
+      "invalid safe application",
+    ),
+    true,
+  );
+  const missingClosingRoute = root();
+  const narrativeFile = path.join(
+    missingClosingRoute,
+    "docs/principles/story/narratives.md",
+  );
+  fs.writeFileSync(
+    narrativeFile,
+    rewrite(
+      fs.readFileSync(narrativeFile, "utf8"),
+      /```contract-rule\n\{\n  "id": "sh-closing-line-contribution"[\s\S]*?\n```\n\n/u,
+      "",
+    ),
+  );
+  assert.equal(
+    throws(
+      () => createAutoMovieEvidenceConfig(disabled(missingClosingRoute)),
+      "sh-closing-line-contribution: expected one structured composition-safe contract rule",
+    ),
+    true,
+  );
   const missingScope = disabled(scopeRoot) as Partial<Graph>;
   delete missingScope.populationScope;
   assert.equal(
@@ -745,6 +834,68 @@ export const review = true;
           claims: null,
         } as unknown as Graph),
       "claims must be an array",
+    ),
+    true,
+  );
+
+  const missingAccount = root();
+  write(missingAccount, "docs/settings/production.md", "## Scope {#scope}\n");
+  fs.unlinkSync(
+    path.join(missingAccount, "docs/accounts/settings/core-common.md"),
+  );
+  assert.equal(
+    throws(
+      () =>
+        createAutoMovieEvidenceConfig({
+          ...disabled(missingAccount),
+          kind: "library",
+          settings: "evidence",
+        }),
+      "without its population account",
+    ),
+    true,
+  );
+
+  const wrongLayerAccount = root();
+  write(
+    wrongLayerAccount,
+    "docs/settings/production.md",
+    "## Scope {#scope}\n",
+  );
+  write(
+    wrongLayerAccount,
+    "docs/accounts/settings/design-models.md",
+    "## Wrong layer {#wrong-layer}\n",
+  );
+  assert.equal(
+    throws(
+      () =>
+        createAutoMovieEvidenceConfig({
+          ...disabled(wrongLayerAccount),
+          kind: "library",
+          settings: "evidence",
+        }),
+      "population accounts contain unowned files",
+    ),
+    true,
+  );
+
+  const partialAccount = root();
+  write(partialAccount, "docs/settings/production.md", "## Scope {#scope}\n");
+  write(
+    partialAccount,
+    "docs/accounts/settings/core-common.md",
+    "# Partial account\n\n## One owner {#one-owner}\n",
+  );
+  assert.equal(
+    throws(
+      () =>
+        createAutoMovieEvidenceConfig({
+          ...disabled(partialAccount),
+          kind: "library",
+          settings: "evidence",
+        }),
+      "population account has 1 H2 owners for 5",
     ),
     true,
   );
@@ -2690,11 +2841,16 @@ export const review = true;
       "discovery/design/designs.md",
       "discovery/design/models.md",
       "discovery/design/motions.md",
+      "language/discovery/signals.md",
+      "language/obligations/common.md",
+      "language/principles/common.md",
       "obligations/core/common.md",
+      "obligations/core/defaults.md",
       "obligations/core/settings.md",
       "obligations/design/models.md",
       "obligations/design/motions.md",
       "principles/core/common.md",
+      "principles/core/defaults.md",
       "principles/core/inherited-units.md",
       "principles/core/settings.md",
       "principles/design/models.md",
@@ -3075,13 +3231,18 @@ export const review = true;
       "discovery/core/common.md",
       "discovery/core/settings.md",
       "discovery/delivery/briefs.md",
+      "language/discovery/signals.md",
+      "language/obligations/common.md",
+      "language/principles/common.md",
       "obligations/core/common.md",
+      "obligations/core/defaults.md",
       "obligations/core/settings.md",
       "obligations/delivery/briefs.md",
       "obligations/delivery/film-sources.md",
       "obligations/delivery/production-sources.md",
       "obligations/delivery/shots.md",
       "principles/core/common.md",
+      "principles/core/defaults.md",
       "principles/core/inherited-units.md",
       "principles/core/settings.md",
       "principles/core/source-units.md",

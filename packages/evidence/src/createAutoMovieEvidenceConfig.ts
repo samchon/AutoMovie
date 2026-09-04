@@ -34,6 +34,7 @@ import {
   parseAutoMovieEvidenceSyntax,
   projectAutoMovieMarkdownSyntax,
 } from "./parseAutoMovieEvidenceSyntax";
+import { readAutoMovieContractRules } from "./readAutoMovieContractRules";
 import { walkAutoMovieProjectPopulationFiles } from "./walkAutoMovieProjectPopulationFiles";
 
 /**
@@ -579,6 +580,7 @@ const EXPECTED_CONTRACTS = [
       "instance-identity-transform",
       "instance-variation-tiers",
       "instance-placement-review",
+      "instance-prop-set-dressing-account",
     ],
   },
   {
@@ -614,6 +616,7 @@ const EXPECTED_CONTRACTS = [
       "reference-scale",
       "articulation-ownership",
       "model-review-set",
+      "model-representation-completion",
     ],
   },
   {
@@ -796,6 +799,7 @@ const EXPECTED_CONTRACTS = [
       "instance-prototype-boundary",
       "instance-derivation-authority",
       "instance-verification-address",
+      "instance-prop-set-dressing-boundary",
     ],
   },
   {
@@ -844,6 +848,8 @@ const EXPECTED_CONTRACTS = [
       "representation-contract",
       "spatial-convention",
       "reviewable-structure",
+      "model-observable-style-basis",
+      "model-scale-layer-completion",
     ],
   },
   {
@@ -1785,7 +1791,10 @@ const assertSourceExportsAreEvidenceAddressable = (
   }
 };
 
-const validateContracts = (location: string): ITargetIdentityRegistry => {
+const validateContracts = (
+  location: string,
+  language: AutoMovieProductionLanguage,
+): ITargetIdentityRegistry => {
   const root = path.resolve(location, sharedDocsRoot(location));
   const actual = [
     ...walkFiles(path.join(root, "discovery"), ".md"),
@@ -1842,7 +1851,88 @@ const validateContracts = (location: string): ITargetIdentityRegistry => {
         `${relative} H2 inventory changed without graph wiring. Received [${receivedAnchors.join(", ")}], expected [${expectedAnchors.join(", ")}].`,
       );
   }
+  validateStructuredSharedRules(root);
+  validateLanguageContract(root, language);
   return { anchors, titles };
+};
+
+/** Validate exact routing metadata for the shared rules whose timing is binding. */
+const validateStructuredSharedRules = (root: string): void => {
+  const principles = readAutoMovieContractRules(path.join(root, "principles"), {
+    requireEveryH2In: ["core/defaults.md"],
+  });
+  const obligations = readAutoMovieContractRules(path.join(root, "obligations"), {
+    requireEveryH2In: ["core/defaults.md"],
+  });
+  const expected = new Map<string, string>([
+    ["sh-purposeful-enumeration", "composition-safe"],
+    ["sh-earned-significance", "composition-safe"],
+    ["sh-responsive-qualification", "composition-safe"],
+    ["sh-functional-formatting", "composition-safe"],
+    ["sh-material-contrast", "composition-safe"],
+    ["sh-closing-line-contribution", "composition-safe"],
+    ["sh-recurrent-frame-distribution", "post-draft-frequency"],
+    ["sh-surface-cadence-distribution", "population-distribution"],
+  ]);
+  const received = new Map(
+    [...principles, ...obligations].map((rule) => [
+      rule.metadata.id,
+      rule.metadata.safeApplication,
+    ]),
+  );
+  for (const [id, application] of expected)
+    if (received.get(id) !== application)
+      throw new Error(
+        `${id}: expected one structured ${application} contract rule.`,
+      );
+};
+
+/** Refuse an omitted, residual, or metadata-mismatched selected language pack. */
+const validateLanguageContract = (
+  root: string,
+  language: AutoMovieProductionLanguage,
+): void => {
+  const languageRoot = path.join(root, "language");
+  const expectedFiles = [
+    "discovery/signals.md",
+    "obligations/common.md",
+    "principles/common.md",
+  ];
+  const actualFiles = walkFiles(languageRoot, ".md")
+    .map((file) => posix(path.relative(languageRoot, file)))
+    .sort(compareCodeUnits);
+  if (
+    actualFiles.length !== expectedFiles.length ||
+    actualFiles.some((file, index) => file !== expectedFiles[index])
+  )
+    throw new Error(
+      `Selected ${language} language contract must contain exactly [${expectedFiles.join(", ")}]; received [${actualFiles.join(", ")}].`,
+    );
+  const expectedRules = [
+    [`${language}-work-specific-conditions`, "observation-only"],
+    [`${language}-population-${language === "english" ? "register-frame" : "interference"}-account`, "population-distribution"],
+    [`${language}-audience-language-access`, "population-distribution"],
+    [
+      language === "english"
+        ? "english-idiomatic-relation"
+        : `${language}-contextual-relation`,
+      "composition-safe",
+    ],
+    [`${language}-register-ownership`, "composition-safe"],
+  ] as const;
+  const rules = readAutoMovieContractRules(languageRoot, {
+    requireEveryH2In: expectedFiles,
+  });
+  const routes = new Map(
+    rules.map((rule) => [rule.metadata.id, rule.metadata.safeApplication]),
+  );
+  if (
+    rules.length !== expectedRules.length ||
+    expectedRules.some(([id, application]) => routes.get(id) !== application)
+  )
+    throw new Error(
+      `Selected ${language} language contract carries an incomplete or mismatched structured rule identity.`,
+    );
 };
 
 /**
@@ -2402,6 +2492,61 @@ const markdownPopulationFiles = (
       )
     : walkProjectFiles(graph, path.join(graph.location, DOCS, layer), ".md");
 
+/** Refuse an enabled population account with no exact physical H2 owners. */
+const validatePopulationAccountHosts = (graph: IProductionGraph): void => {
+  for (const layer of Object.keys(MARKDOWN) as MarkdownLayer[]) {
+    if (!MARKDOWN[layer].obligation || !requiresEvidence(graph[layer]))
+      continue;
+    const claims = createAutoMoviePopulationAccountClaims({
+      layer,
+      populationFiles: authoredPopulationFiles(graph, layer),
+      obligationFiles: populationObligations(graph, layer),
+      enabled: true,
+      requireReview: requiresReview(graph[layer]),
+    });
+    const allowed = new Set([
+      ...claims.flatMap((claim) => claim.files),
+      ...(layer === "settings" ? ["accounts/settings/story-subjects.md"] : []),
+    ]);
+    const residents = walkProjectFiles(
+      graph,
+      path.join(graph.location, DOCS, "accounts", layer),
+      ".md",
+    ).map((file) =>
+      posix(path.relative(path.join(graph.location, DOCS), file)),
+    );
+    const unexpected = residents.filter((file) => !allowed.has(file));
+    if (unexpected.length !== 0)
+      throw new Error(
+        `${layer} population accounts contain unowned files: ${unexpected.join(", ")}.`,
+      );
+    for (const claim of claims) {
+      const relative = claim.files[0]!;
+      const file = path.join(graph.location, DOCS, relative);
+      if (!fs.existsSync(file))
+        throw new Error(
+          `${relative}: ${layer} cannot enter ${graph[layer]} without its population account.`,
+        );
+      const references = Array.isArray(claim.reference)
+        ? claim.reference
+        : [claim.reference];
+      const obligation = references.find(
+        (reference) =>
+          reference.type === "markdown" &&
+          reference.files[0]?.startsWith("obligations/") === true,
+      ) as ITtscEvidenceGraphMarkdownReference;
+      const target = EXPECTED_CONTRACTS.find(
+        (contract) => contract.file === obligation.files[0],
+      )!;
+      const units = markdownIdentities(file, [2]);
+      if (units.length !== target.anchors.length)
+        throw new Error(
+          `${relative}: population account has ${units.length} H2 owners for ${target.anchors.length} ${obligation.files[0]} obligations.`,
+        );
+    }
+  }
+};
+
 const NUMBERED_NARRATIVE_NAME = /^\d{3}-[a-z0-9]+(?:-[a-z0-9]+)*$/u;
 
 const narrativeH1 = (file: string): string => {
@@ -2548,6 +2693,7 @@ const resetTransitionHosts = (
 };
 
 const validateHosts = (graph: IProductionGraph): void => {
+  validatePopulationAccountHosts(graph);
   validateNarrativePopulationTopology(graph);
   const identities = new Map<MarkdownLayer, Map<string, IHeadingIdentity[]>>();
   const titles = new Map<MarkdownLayer, Map<string, string>>();
@@ -3266,7 +3412,7 @@ const validateProductionGraph = (
   validateDeclaration(graph);
   validateProjectPopulationBoundary(graph);
   validateReviewReasons(graph);
-  const targetIdentities = validateContracts(graph.location);
+  const targetIdentities = validateContracts(graph.location, graph.language);
   validateStages(graph);
   if (graph.populationScope.mode === "complete-production-reset") {
     const stages = Object.fromEntries(
