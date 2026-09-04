@@ -1,3 +1,4 @@
+import { readAutoMovieProductionEvidence } from "@automovie/evidence";
 import type { IAutoMovieModel } from "@automovie/interface";
 import { findAutoMovieProjectRoot } from "@automovie/production";
 import {
@@ -5,6 +6,7 @@ import {
   requireCurrentAutoMovieProjectState,
 } from "automovie";
 
+import { productionEvidence } from "../lint.config";
 import { assertAutoMovieNoArguments } from "./commandArguments";
 import { readAutoMovieProjectProductionId } from "./projectIdentity";
 import {
@@ -20,6 +22,9 @@ const projectRoot = findAutoMovieProjectRoot(process.cwd());
 
 /** The production namespace that project declares in its own package manifest. */
 const productionId = readAutoMovieProjectProductionId(projectRoot);
+const currentAuthoringEvidence = () =>
+  readAutoMovieProductionEvidence({ root: projectRoot, productionEvidence });
+const authoringEvidence = currentAuthoringEvidence();
 
 /**
  * Measure the texture scale of every model this build produced.
@@ -56,6 +61,8 @@ const state = requireCurrentAutoMovieProjectState(
   loadAutoMovieProjectState({
     root: projectRoot,
     productionId,
+    authoringEvidence,
+    currentAuthoringEvidence,
   }),
 );
 

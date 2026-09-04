@@ -96,10 +96,16 @@ export const runAutoMovieBuildingDerivation = (props: {
   state: {
     root: string;
     generated: {
+      kind: "brief" | "film" | "library";
       shots: Iterable<readonly [string, IAutoMovieCompiledShotSource]>;
+      libraryEnvironments: Iterable<
+        readonly [string, IAutoMovieBuiltEnvironment]
+      >;
       manifest: { inputFingerprint: string };
       design: {
-        production: { environmentContext?: IAutoMovieEnvironmentContext };
+        production: {
+          environmentContext?: IAutoMovieEnvironmentContext;
+        } | null;
       };
     };
   };
@@ -142,6 +148,10 @@ export const runAutoMovieBuildingDerivation = (props: {
    * reached that point is not in error.
    */
   const materialized = (): IAutoMovieBuiltEnvironment[] => {
+    if (state.generated.kind === "library")
+      return [...state.generated.libraryEnvironments].map(
+        ([, environment]) => environment,
+      );
     // No guard around these two reads. The cases one would catch -- a project
     // with no compiler-owned tree, a library before its first compile -- are
     // both refused above this line already: `requireCurrentAutoMovieProjectState`
@@ -232,7 +242,7 @@ export const runAutoMovieBuildingDerivation = (props: {
         serviceNetworks,
         fluidDomains,
         waterFeatures,
-        context: state.generated.design.production.environmentContext ?? null,
+        context: state.generated.design.production?.environmentContext ?? null,
         studies: productionBuildingStudies,
       }),
     tally: describeAutoMovieBuildingRecords,
