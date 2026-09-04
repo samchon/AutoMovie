@@ -21,7 +21,7 @@ interface INativeScenario {
   finalSizeDelta?: bigint;
   fsyncFails?: boolean;
   parentIdentity?: string;
-  parentAdoptionFails?: boolean;
+  parentCloseFails?: boolean;
   parentFstatFails?: boolean;
   parentIsDirectory?: boolean;
   parentOpen?: "fail" | "invalid" | "null" | "ok";
@@ -171,10 +171,12 @@ const execute = (scenario: INativeScenario) => {
         ? null
         : 100n,
   );
-  const closeHandle = callable(() => !scenario.childCloseFails);
+  const closeHandle = callable((...arguments_: unknown[]) =>
+    arguments_[0] === 100n
+      ? !scenario.parentCloseFails
+      : !scenario.childCloseFails,
+  );
   const openOsHandle = callable((...arguments_: unknown[]) => {
-    const handle = arguments_[0] as bigint;
-    if (handle === 100n) return scenario.parentAdoptionFails ? -1 : 10;
     childAdoptions++;
     if (scenario.childAdoptionFails && childAdoptions === 1) return -1;
     if (scenario.residentAdoptionFails && childAdoptions > 1) return -1;
@@ -190,6 +192,19 @@ const execute = (scenario: INativeScenario) => {
     output[0] = 101n;
     return 0;
   });
+  const getFileInformation = callable((...arguments_: unknown[]) => {
+    if (scenario.parentFstatFails) return false;
+    const information = arguments_[1] as Record<string, number>;
+    const [volume, fileIndex] = (scenario.parentIdentity ?? "1:2")
+      .split(":")
+      .map(Number);
+    information.dwFileAttributes =
+      scenario.parentIsDirectory === false ? 0 : 0x10;
+    information.dwVolumeSerialNumber = volume!;
+    information.nFileIndexHigh = Math.floor(fileIndex! / 0x1_0000_0000);
+    information.nFileIndexLow = fileIndex! >>> 0;
+    return true;
+  });
   const library = (name: string | null) => ({
     func: (...arguments_: unknown[]) => {
       const declaration = arguments_.map(String).join(" ");
@@ -197,6 +212,8 @@ const execute = (scenario: INativeScenario) => {
         return declaration.includes("openat") ? posixOpenAt : posixOpen;
       if (declaration.includes("CreateFileW")) return createFile;
       if (declaration.includes("CloseHandle")) return closeHandle;
+      if (declaration.includes("GetFileInformationByHandle"))
+        return getFileInformation;
       if (declaration.includes("GetLastError"))
         return callable(() => scenario.errno ?? 3);
       if (declaration.includes("_open_osfhandle")) return openOsHandle;
@@ -259,7 +276,7 @@ export const test_cli_scaffold_native_adapter = (): void => {
     { errno: 4390, parentOpen: "invalid", platform: "win32" },
     { parentOpen: "null", platform: "win32" },
     { errno: 5, parentOpen: "invalid", platform: "win32" },
-    { parentAdoptionFails: true, platform: "win32" },
+    { parentFstatFails: true, platform: "win32" },
     { platform: "win32", target: "competitor" },
     { platform: "win32", target: "create-failed" },
     { childAdoptionFails: true, platform: "win32", target: "ok" },
@@ -289,6 +306,13 @@ export const test_cli_scaffold_native_adapter = (): void => {
     { closeFails: new Set([11]), platform: "linux", target: "ok" },
     { closeFails: new Set([12]), platform: "linux", target: "ok" },
     { closeFails: new Set([10]), platform: "linux", target: "ok" },
+    { parentCloseFails: true, platform: "win32", target: "ok" },
+    {
+      parentCloseFails: true,
+      parentIdentity: "1:9",
+      platform: "win32",
+      target: "ok",
+    },
     {
       closeFails: new Set([10]),
       parentIdentity: "1:9",
@@ -302,7 +326,7 @@ export const test_cli_scaffold_native_adapter = (): void => {
     },
     {
       childAdoptionFails: true,
-      closeFails: new Set([10]),
+      parentCloseFails: true,
       platform: "win32",
       target: "ok",
     },
@@ -319,6 +343,60 @@ export const test_cli_scaffold_native_adapter = (): void => {
     { constantsMissing: "O_CLOEXEC", platform: "darwin", target: "ok" },
   ];
   const outcomes = cases.map(execute);
+  const expected = [
+    "completed",
+    "completed",
+    "refused:parent-changed",
+    "refused:parent-changed",
+    "refused:parent-changed",
+    "refused:create-failed",
+    "refused:parent-changed",
+    "refused:parent-changed",
+    "refused:target-competitor",
+    "refused:create-failed",
+    "refused:parent-changed",
+    "refused:parent-changed",
+    "refused:parent-changed",
+    "refused:parent-changed",
+    "refused:create-failed",
+    "refused:create-failed",
+    "refused:target-competitor",
+    "refused:create-failed",
+    "partial:3",
+    "partial:3",
+    "partial:3",
+    "partial:3",
+    "partial:0",
+    "partial:0",
+    "partial:0",
+    "partial:0",
+    "partial:3",
+    "partial:3",
+    "partial:3",
+    "partial:3",
+    "partial:3",
+    "partial:3",
+    "partial:3",
+    "partial:3",
+    "partial:3",
+    "partial:3",
+    "refused:parent-changed",
+    "refused:parent-changed",
+    "refused:target-competitor",
+    "partial:0",
+    "refused:create-failed",
+    "refused:create-failed",
+    "refused:create-failed",
+    "completed",
+    "completed",
+    "refused:create-failed",
+  ] as const;
+  const summarize = (outcome: (typeof outcomes)[number]["first"]): string =>
+    outcome.status === "refused"
+      ? `${outcome.status}:${outcome.reason}`
+      : outcome.status === "partial"
+        ? `${outcome.status}:${outcome.bytesWritten}`
+        : outcome.status;
   const competitorReason = (platform: NodeJS.Platform): string => {
     const outcome = outcomes.find(
       ({ first }, index) =>
@@ -353,6 +431,11 @@ export const test_cli_scaffold_native_adapter = (): void => {
         (second === null ||
           ["completed", "partial", "refused"].includes(second.status)),
     ),
+  );
+  TestValidator.equals(
+    "every native branch preserves its exact effect class",
+    outcomes.map(({ first }) => summarize(first)),
+    expected,
   );
   TestValidator.predicate(
     "invalid native requests refuse before a platform capability is acquired",
