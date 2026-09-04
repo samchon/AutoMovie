@@ -7,6 +7,7 @@ import {
   placeFormationSlot,
   projectToNdc,
   reachPose,
+  renderAutoMovieSemanticMaskSidecar,
   resolveAutoMovieDeliveryCrop,
   resolveCameraAt,
   resolvePose,
@@ -66,6 +67,10 @@ import { readAutoMovieFilmTimeline } from "./filmTimeline";
 import { materializeFormationSlot } from "./materializeProduction";
 import { productionRenderTargetFingerprint } from "./renderIdentity";
 import { residentPngJs } from "./residentCodecs";
+import {
+  classifyAutoMovieProductionSemanticMaskEvidence,
+  createAutoMovieProductionSemanticMaskReceipt,
+} from "./semanticMaskEvidence";
 
 /**
  * Read-only current compiler status used to refuse stale oracle answers.
@@ -1050,6 +1055,26 @@ export class AutoMovieProductionOracleService {
         "capture-dialogue-identity-invalid",
         "A non-shot capture must not claim a dialogue runtime identity. Clear the capture host dialogue state and capture the asset again.",
       );
+    const semanticStatus =
+      input.target.kind === "shot"
+        ? classifyAutoMovieProductionSemanticMaskEvidence({
+            observation: captured.semanticMask,
+            expectedShot: input.target.id,
+          })
+        : captured.semanticMask.status === "not-run"
+          ? null
+          : { status: "foreign" as const };
+    if (
+      semanticStatus !== null &&
+      semanticStatus.status !== "complete" &&
+      semanticStatus.status !== "incomplete" &&
+      (pass === "mask" || captured.semanticMask.status === "available")
+    )
+      return previewFailure(
+        generated.inputFingerprint,
+        "capture-failed",
+        `The capture host returned ${semanticStatus.status} semantic evidence${"reason" in semanticStatus ? `: ${semanticStatus.reason}` : "."} Correct the capture host and capture this frame again.`,
+      );
     if (
       captured.width !== width ||
       captured.height !== height ||
@@ -1104,6 +1129,30 @@ export class AutoMovieProductionOracleService {
       width,
       height,
     };
+    const semanticSidecar =
+      pass === "mask" &&
+      semanticStatus !== null &&
+      (semanticStatus.status === "complete" ||
+        semanticStatus.status === "incomplete")
+        ? {
+            path: `preview/frame_${String(index).padStart(6, "0")}.mask.json`,
+            bytes: Buffer.from(
+              renderAutoMovieSemanticMaskSidecar(semanticStatus.evidence.mask),
+              "utf8",
+            ),
+            evidence: semanticStatus.evidence,
+          }
+        : null;
+    if (
+      input.target.kind === "shot" &&
+      pass === "mask" &&
+      semanticSidecar === null
+    )
+      return previewFailure(
+        generated.inputFingerprint,
+        "capture-failed",
+        "A shot mask frame has no reopenable same-shot semantic evidence. Correct the capture host and capture it again.",
+      );
     const retained = retainedBundleFrames(
       this.project,
       bundleRoot,
@@ -1121,8 +1170,31 @@ export class AutoMovieProductionOracleService {
       (left, right) =>
         left.index - right.index || compareCodeUnits(left.pass, right.pass),
     );
+    const priorManifest = this.project.verifiedRenderManifest(
+      path.join(bundleRoot, "manifest.json"),
+    );
+    const retainedKeys = new Set(
+      retained.map((frame) => `${frame.index}\u0000${frame.pass}`),
+    );
+    const semanticMasks = [
+      ...(priorManifest?.semanticMasks.filter((record) =>
+        retainedKeys.has(`${record.frame}\u0000${record.pass}`),
+      ) ?? []),
+      ...(semanticSidecar === null
+        ? []
+        : [
+            createAutoMovieProductionSemanticMaskReceipt({
+              frame: index,
+              evidence: semanticSidecar.evidence,
+              sidecar: semanticSidecar,
+            }),
+          ]),
+    ].sort(
+      (left, right) =>
+        left.frame - right.frame || compareCodeUnits(left.shot, right.shot),
+    );
     const manifest: IAutoMovieRenderBundleManifest = {
-      version: 5,
+      version: 6,
       target: input.target,
       compileFingerprint: generated.inputFingerprint,
       dialogueRuntimeIdentity,
@@ -1130,11 +1202,17 @@ export class AutoMovieProductionOracleService {
       targetFingerprint,
       renderSpec,
       frames,
+      semanticMasks,
     };
     try {
       this.project.commitRenderBundle(
         relativeBundle,
-        new Map([[relativeFrame, bytes]]),
+        new Map([
+          [relativeFrame, bytes],
+          ...(semanticSidecar === null
+            ? []
+            : ([[semanticSidecar.path, semanticSidecar.bytes]] as const)),
+        ]),
         manifest,
         captureInputsCurrent,
       );

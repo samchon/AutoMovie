@@ -11,6 +11,7 @@ import {
   IAutoMovieCaptureRuntimeIdentity,
   IAutoMovieFilmTimeline,
   IAutoMovieProductionDesign,
+  IAutoMovieSemanticMaskReceipt,
 } from "@automovie/interface";
 import fs from "node:fs";
 import path from "node:path";
@@ -289,7 +290,7 @@ export interface IAutoMovieProductionRenderChunkReceipt {
   /**
    * Receipt schema.
    */
-  version: 1;
+  version: 2;
   /**
    * Stable operational slot.
    */
@@ -302,6 +303,8 @@ export interface IAutoMovieProductionRenderChunkReceipt {
    * Ordered byte facts for the full frame range.
    */
   frames: IAutoMovieProductionRenderedFrameReceipt[];
+  /** Complete semantic dependencies for every shot layer of a mask frame. */
+  semanticMasks: IAutoMovieSemanticMaskReceipt[];
   /**
    * Parser-verified chunk MP4.
    */
@@ -778,12 +781,26 @@ export const productionRenderChunkStatuses = (props: {
     const attempt =
       slotAttempts.find((item) => item.chunk === chunk.id) ??
       slotAttempts.at(-1);
-    if (receipt?.chunk === chunk.id)
-      return status(
-        chunk,
-        "complete",
-        "Verify current bytes, then reuse this chunk.",
-      );
+    if (receipt?.chunk === chunk.id) {
+      try {
+        verifyProductionRenderChunkReceipt({
+          plan: props.plan,
+          chunk,
+          receipt,
+        });
+        return status(
+          chunk,
+          "complete",
+          "Verify current bytes, then reuse this chunk.",
+        );
+      } catch (error) {
+        return status(
+          chunk,
+          "failed",
+          `${error instanceof Error ? error.message : String(error)} Rerender this chunk.`,
+        );
+      }
+    }
     if (attempt?.chunk === chunk.id)
       return status(
         chunk,
@@ -816,7 +833,7 @@ export const verifyProductionRenderChunkReceipt = (props: {
 }): void => {
   const { plan, chunk, receipt } = props;
   if (
-    receipt.version !== 1 ||
+    receipt.version !== 2 ||
     receipt.slot !== chunk.slot ||
     receipt.chunk !== chunk.id
   )
@@ -839,6 +856,56 @@ export const verifyProductionRenderChunkReceipt = (props: {
   });
   if (validByteFact(receipt.encoded) === false)
     throw new Error(`Chunk "${chunk.slot}" has no verified encoded output.`);
+  const expectedSemantic =
+    chunk.pass === "mask"
+      ? chunk.frames.flatMap((frame) =>
+          productionRenderLayersForPass(frame, chunk.pass).map((layer) => ({
+            frame: frame.globalFrame,
+            shot: layer.shot,
+          })),
+        )
+      : [];
+  if (receipt.semanticMasks.length !== expectedSemantic.length)
+    throw new Error(
+      `Chunk "${chunk.slot}" has ${receipt.semanticMasks.length} semantic records; expected ${expectedSemantic.length}.`,
+    );
+  receipt.semanticMasks.forEach((semantic, index) => {
+    const expected = expectedSemantic[index]!;
+    if (
+      semantic.version !== 1 ||
+      semantic.pass !== "mask" ||
+      semantic.frame !== expected.frame ||
+      semantic.shot !== expected.shot ||
+      validByteFact(semantic.sidecar) === false ||
+      validSemanticPath(semantic.sidecar.path) === false ||
+      /^sha256:[0-9a-f]{64}$/u.test(semantic.semanticDigest) === false ||
+      semantic.coverage.unresolved.some(
+        (id, unresolvedIndex) =>
+          id.trim().length === 0 ||
+          (unresolvedIndex !== 0 &&
+            semantic.coverage.unresolved[unresolvedIndex - 1]! >= id),
+      ) ||
+      semantic.coverage.unresolved.length !== 0 ||
+      Number.isSafeInteger(semantic.coverage.unaddressed) === false ||
+      semantic.coverage.unaddressed !== 0
+    )
+      throw new Error(
+        `Chunk "${chunk.slot}" semantic record ${index} is missing, foreign, incomplete, or invalid.`,
+      );
+  });
+};
+
+const validSemanticPath = (candidate: string): boolean => {
+  const segments = candidate.split("/");
+  return (
+    candidate.trim().length !== 0 &&
+    candidate.startsWith("/") === false &&
+    candidate.includes("\\") === false &&
+    /^[A-Za-z]:/u.test(candidate) === false &&
+    segments.every(
+      (segment) => segment !== "" && segment !== "." && segment !== "..",
+    )
+  );
 };
 
 interface IProductionRenderChunkFailure {

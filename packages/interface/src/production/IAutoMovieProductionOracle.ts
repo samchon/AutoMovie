@@ -5,7 +5,10 @@ import {
 } from "../cinematics";
 import { IAutoMovieVector3 } from "../geometry";
 import { IAutoMovieRenderObservation } from "../render/IAutoMovieRenderObservation";
-import { IAutoMovieSemanticMask } from "../render/IAutoMovieSemanticMask";
+import {
+  IAutoMovieSemanticMaskEvidence,
+  IAutoMovieSemanticMaskReceipt,
+} from "../render/IAutoMovieSemanticMask";
 import {
   AutoMovieFilmTime,
   IAutoMovieDiagnostic,
@@ -513,7 +516,7 @@ export interface IAutoMovieRenderBundleManifest {
    * @evidence requirements/agent-authoring/knowledge-boundary.md#agent-content-supply-refusal Exposes `version` as the portable data boundary for the agent content supply refusal requirement.
    * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-content-side-effect-invariant Types `version` for the spec authoring tool content side effect invariant system contract.
    */
-  version: 5;
+  version: 6;
   /**
    * Asset, shot, sequence, or film render target.
    *
@@ -619,6 +622,8 @@ export interface IAutoMovieRenderBundleManifest {
     /** Pixel height. */
     height: number;
   }>;
+  /** Complete semantic dependencies of mask frames in this bundle. */
+  semanticMasks: IAutoMovieSemanticMaskReceipt[];
 }
 
 /**
@@ -680,9 +685,6 @@ export type AutoMovieProductionFrameCapture = (
    * selected capture path could not obtain them.
    */
   observation: AutoMovieCaptureObservation<IAutoMovieRenderObservation>;
-  /**
-   * Semantic mask palette sidecar for the same shot capture, or an explicit
-   * reason it was not produced.
-   */
-  maskSidecar: AutoMovieCaptureObservation<IAutoMovieSemanticMask>;
+  /** Atomic same-shot palette and runtime coverage, or explicit absence. */
+  semanticMask: AutoMovieCaptureObservation<IAutoMovieSemanticMaskEvidence>;
 }>;

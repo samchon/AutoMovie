@@ -1,8 +1,8 @@
 import type {
   AutoMovieGuidePass,
   IAutoMovieRenderObservation,
+  IAutoMovieSemanticMaskCoverage,
 } from "@automovie/interface";
-import type { IAutoMovieSemanticMaskCoverage } from "@automovie/viewer";
 
 /** Neutral viewer chrome, not a production-owned lighting or art decision. */
 export const VIEWER_BACKGROUND = 0x202020;

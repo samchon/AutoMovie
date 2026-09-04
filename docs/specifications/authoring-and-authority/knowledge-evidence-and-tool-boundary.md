@@ -28,7 +28,7 @@ Host는 지원되는 기법, local 또는 external execution, 품질 tier와 par
 <!-- @evidence requirements/agent-authoring/knowledge-boundary.md#agent-host-evidence 이 출력이 actual project와 target 실행에서 나온 digest-bound receipt를 요구한다. -->
 <!-- @evidence requirements/agent-authoring/roles-and-authorities.md#agent-evidence-producer-authority 이 출력이 요청자의 주장이나 오래된 파일을 current evidence로 승격하지 못하게 한다. -->
 
-Evidence 요청은 exact target, source 또는 compile identity와 observation parameter를 입력으로 받는다. 성공 출력은 observed target, snapped parameter, host runtime identity, input fingerprint, output digest와 receipt를 포함하며 refusal은 evidence payload를 제공하지 않는다.
+Evidence 요청은 exact target, source 또는 compile identity와 observation parameter를 입력으로 받는다. 성공 출력은 observed target, snapped parameter, host runtime identity, input fingerprint, output digest와 receipt를 포함하며 refusal은 evidence payload를 제공하지 않는다. Shot mask 출력은 palette와 runtime coverage를 하나의 versioned observation으로 만들고 receipt가 resident sidecar와 semantic digest를 exact frame·shot에 결속한다. Asset turntable의 legacy mask ramp는 compiled shot semantic evidence가 아니며 명시적 not-run 경계를 유지한다.
 
 ### 저작 상태 불변식 {#spec-authoring-tool-authoring-invariant}
 

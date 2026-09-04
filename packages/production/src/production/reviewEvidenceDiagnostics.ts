@@ -59,7 +59,11 @@ export const reviewEvidenceDiagnostics = (props: {
   captured: (
     target: IAutoMovieRenderBundleManifest["target"],
     fingerprint: AutoMovieContentDigest,
-  ) => ReadonlyArray<{ time: number; pass: AutoMovieGuidePass }>;
+  ) => ReadonlyArray<{
+    time: number;
+    pass: AutoMovieGuidePass;
+    semanticCoverage?: { unresolved: string[]; unaddressed: number };
+  }>;
 }): IAutoMovieDiagnostic[] => {
   if (props.scope !== "review" && props.scope !== "final") return [];
   const diagnostics: IAutoMovieDiagnostic[] = [];
@@ -81,9 +85,16 @@ export const reviewEvidenceDiagnostics = (props: {
         Math.round(time * props.fps),
         Math.floor(contract.durationSeconds * props.fps),
       );
+    const captured = props.captured(target, fingerprint);
     const held = new Set(
-      props
-        .captured(target, fingerprint)
+      captured
+        .filter(
+          (view) =>
+            view.pass !== "mask" ||
+            (view.semanticCoverage !== undefined &&
+              view.semanticCoverage.unresolved.length === 0 &&
+              view.semanticCoverage.unaddressed === 0),
+        )
         .map((view) => viewKey(snap(view.time), view.pass)),
     );
     const missing = owed.filter(
@@ -98,10 +109,35 @@ export const reviewEvidenceDiagnostics = (props: {
       path: null,
       message: `Shot "${id}" is being reviewed without the evidence its own contract declares. ${describe(
         missing,
-      )} Evidence is read at this shot's current fingerprint ${fingerprint}, so a frame drawn before the shot last moved is still on disk and still does not count. Capture what is named above, then say what it showed in the evidence citation on the source that realizes this shot.`,
+      )}${describeIncompleteSemanticCoverage(captured)} Evidence is read at this shot's current fingerprint ${fingerprint}, so a frame drawn before the shot last moved is still on disk and still does not count. Capture what is named above, then say what it showed in the evidence citation on the source that realizes this shot.`,
     });
   }
   return diagnostics;
+};
+
+const describeIncompleteSemanticCoverage = (
+  captured: ReadonlyArray<{
+    pass: AutoMovieGuidePass;
+    semanticCoverage?: { unresolved: string[]; unaddressed: number };
+  }>,
+): string => {
+  const incomplete = captured.filter(
+    (view) =>
+      view.pass === "mask" &&
+      view.semanticCoverage !== undefined &&
+      (view.semanticCoverage.unresolved.length !== 0 ||
+        view.semanticCoverage.unaddressed !== 0),
+  );
+  if (incomplete.length === 0) return "";
+  const unresolved = [
+    ...new Set(incomplete.flatMap((view) => view.semanticCoverage!.unresolved)),
+  ].sort(compareCodeUnits);
+  const unaddressed = Math.max(
+    ...incomplete.map((view) => view.semanticCoverage!.unaddressed),
+  );
+  return ` Current mask evidence remains incomplete: unresolved ids [${unresolved.join(
+    ", ",
+  )}] and ${unaddressed} unnamed meshes.`;
 };
 
 /**

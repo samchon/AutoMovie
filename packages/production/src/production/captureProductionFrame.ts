@@ -121,7 +121,7 @@ export const captureAutoMovieProductionFrame = async (
         ? { kind: "shot", id: props.target.id }
         : { kind: "asset", id: props.target.id },
     receipt: {
-      version: 1,
+      version: 2,
       productionId: services.project.productionId,
       target: captureTargetOf(
         services.project.productionId,
@@ -133,6 +133,13 @@ export const captureAutoMovieProductionFrame = async (
       rendererIdentity: manifest.rendererIdentity,
       bundle: preview.renderBundle,
       outputDigest: frame.digest,
+      semanticMask:
+        frame.pass === "mask" && manifest.target.kind === "shot"
+          ? (manifest.semanticMasks.find(
+              (record) =>
+                record.frame === frame.index && record.pass === frame.pass,
+            ) ?? null)
+          : null,
     },
     frame: {
       index: frame.index,
@@ -239,7 +246,15 @@ const reopensThroughReceipt = (props: {
           candidate.digest === frame.digest &&
           candidate.width === frame.width &&
           candidate.height === frame.height,
-      )
+      ) &&
+      (frame.pass !== "mask" ||
+        manifest.target.kind !== "shot" ||
+        manifest.semanticMasks.some(
+          (semantic) =>
+            semantic.frame === frame.index &&
+            semantic.pass === frame.pass &&
+            semantic.shot === target.id,
+        ))
     );
   } catch {
     return false;

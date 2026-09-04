@@ -2,6 +2,7 @@ import { resolveProductionFrameRate } from "@automovie/engine";
 import type {
   AutoMovieContentDigest,
   IAutoMovieProductionFrameRate,
+  IAutoMovieSemanticMask,
 } from "@automovie/interface";
 import {
   type AutoMovieLocalProcessOwnerObservation,
@@ -15,6 +16,7 @@ import {
   probeProductionMedia,
   probeProductionVideoMp4,
   resolveProductionVideoProfile,
+  verifyAutoMovieProductionSemanticMaskReceipt,
 } from "@automovie/production";
 import { randomUUID } from "node:crypto";
 import fs from "node:fs";
@@ -281,6 +283,26 @@ export const loadCapturedRenderChunkPublication = (
     digestAutoMovieBytes(encoded) !== publication.receipt.encoded.digest
   )
     throw new Error("Render chunk MP4 differs from its receipt.");
+  for (const semantic of publication.receipt.semanticMasks) {
+    const sidecar = readRenderChunkPublicationFile(
+      publication,
+      semantic.sidecar.path,
+    );
+    verifyAutoMovieProductionSemanticMaskReceipt({
+      receipt: semantic,
+      expectedFrame: semantic.frame,
+      expectedShot: semantic.shot,
+      evidence: {
+        version: 1,
+        shot: semantic.shot,
+        mask: JSON.parse(
+          Buffer.from(sidecar).toString("utf8"),
+        ) as IAutoMovieSemanticMask,
+        coverage: semantic.coverage,
+      },
+      resident: { path: semantic.sidecar.path, bytes: sidecar },
+    });
+  }
   assertRenderChunkPublication(publication);
   return {
     encoded,
@@ -734,12 +756,14 @@ const parsePublicationReceipt = (
     receipt.publication.treeIdentity.length === 0 ||
     CONTENT_DIGEST_PATTERN.test(receipt.publication.contentFingerprint) ===
       false ||
-    receipt.version !== 1 ||
+    receipt.version !== 2 ||
     typeof receipt.slot !== "string" ||
     receipt.slot.length === 0 ||
     Array.isArray(receipt.frames) === false ||
     receipt.frames.length === 0 ||
     receipt.frames.every(validFrameReceipt) === false ||
+    Array.isArray(receipt.semanticMasks) === false ||
+    receipt.semanticMasks.every(validSemanticReceipt) === false ||
     typeof receipt.encoded !== "object" ||
     receipt.encoded === null ||
     isRenderChunkRelativePath(receipt.encoded.path) === false ||
@@ -748,12 +772,30 @@ const parsePublicationReceipt = (
     receipt.encoded.bytes <= 0
   )
     throw new Error("Render chunk pointer has an invalid receipt.");
-  const files = [
+  const payloads = [
     receipt.encoded.path,
     ...receipt.frames.map((frame) => frame.path),
   ];
-  if (new Set(files).size !== files.length)
+  if (new Set(payloads).size !== payloads.length)
     throw new Error("Render chunk pointer repeats a payload path.");
+  const semanticPaths = new Map<
+    string,
+    { bytes: number; digest: AutoMovieContentDigest }
+  >();
+  for (const semantic of receipt.semanticMasks) {
+    if (payloads.includes(semantic.sidecar.path))
+      throw new Error(
+        "Render chunk semantic sidecar replaces another payload.",
+      );
+    const previous = semanticPaths.get(semantic.sidecar.path);
+    if (
+      previous !== undefined &&
+      (previous.bytes !== semantic.sidecar.bytes ||
+        previous.digest !== semantic.sidecar.digest)
+    )
+      throw new Error("Render chunk repeats a semantic path with other bytes.");
+    semanticPaths.set(semantic.sidecar.path, semantic.sidecar);
+  }
   return receipt;
 };
 
@@ -775,6 +817,33 @@ const validFrameReceipt = (
   Number.isSafeInteger(value.height) &&
   value.height > 0;
 
+const validSemanticReceipt = (
+  value: IAutoMovieProductionRenderChunkReceipt["semanticMasks"][number],
+): boolean =>
+  typeof value === "object" &&
+  value !== null &&
+  value.version === 1 &&
+  Number.isSafeInteger(value.frame) &&
+  value.frame >= 0 &&
+  value.pass === "mask" &&
+  typeof value.shot === "string" &&
+  value.shot.trim().length !== 0 &&
+  validByteFact(value.sidecar) &&
+  CONTENT_DIGEST_PATTERN.test(value.semanticDigest) &&
+  Array.isArray(value.coverage.unresolved) &&
+  Number.isSafeInteger(value.coverage.unaddressed) &&
+  value.coverage.unaddressed >= 0;
+
+const validByteFact = (value: {
+  path: string;
+  digest: AutoMovieContentDigest;
+  bytes: number;
+}): boolean =>
+  isRenderChunkRelativePath(value.path) &&
+  CONTENT_DIGEST_PATTERN.test(value.digest) &&
+  Number.isSafeInteger(value.bytes) &&
+  value.bytes > 0;
+
 const assertReceiptInventory = (
   tree: IRenderGcTargetSnapshot,
   receipt: RenderChunkPublicationReceipt,
@@ -784,6 +853,8 @@ const assertReceiptInventory = (
     { bytes: number; digest: AutoMovieContentDigest }
   >([[receipt.encoded.path, receipt.encoded]]);
   for (const frame of receipt.frames) files.set(frame.path, frame);
+  for (const semantic of receipt.semanticMasks)
+    files.set(semantic.sidecar.path, semantic.sidecar);
   const directories = new Set([""]);
   for (const relative of files.keys()) {
     const segments = relative.split("/");

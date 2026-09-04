@@ -54,6 +54,7 @@ export * from "./production/repaintExecution";
 export * from "./production/renditionIdentity";
 export * from "./production/renderIdentity";
 export * from "./production/rootNamespaceLock";
+export * from "./production/semanticMaskEvidence";
 export * from "./production/sandboxEngineBridge";
 export * from "./production/sandboxEngineSurface";
 export * from "./production/sourceContentDiagnostics";

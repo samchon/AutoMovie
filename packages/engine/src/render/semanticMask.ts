@@ -1,4 +1,5 @@
 import {
+  AutoMovieContentDigest,
   IAutoMovieBuiltEnvironment,
   IAutoMovieSemanticMask,
   IAutoMovieSemanticMaskEntry,
@@ -39,6 +40,80 @@ export const AUTOMOVIE_SEMANTIC_MASK_COLORS = 0xffffff;
  * @evidence specifications/editorial-render-and-delivery/render-products-visibility-and-color.md#spec-render-pass-products Keeps the structural pass finite while guaranteeing a distinct non-background colour for every admitted entry.
  */
 export const AUTOMOVIE_SEMANTIC_MASK_MAX_ENTRIES = 65536;
+
+/** Current full-payload semantic-mask format. */
+const SEMANTIC_MASK_VERSION = 2;
+
+/** Domain separator for the current full-payload semantic-mask format. */
+const SEMANTIC_MASK_PROTOCOL = "automovie.semantic-mask.v2";
+
+/** A typed internal refusal carried across the verifier boundary. */
+class AutoMovieSemanticMaskVerificationError extends Error {
+  public constructor(
+    public readonly reason: "unsupported" | "digest-mismatch",
+    message: string,
+  ) {
+    super(message);
+  }
+}
+
+/**
+ * Return the typed reason from a semantic-mask verifier refusal.
+ *
+ * Receipt consumers use this instead of parsing error prose, while unrelated
+ * exceptions remain distinguishable as `null`.
+ *
+ * @evidence requirements/rendering/passes-channels-and-products.md#rendering-identity-mask-channels Distinguishes historical palette compatibility from a current payload whose declared identity is false.
+ * @evidence specifications/editorial-render-and-delivery/render-products-visibility-and-color.md#spec-render-pass-products Exposes the stable refusal classification consumed by semantic product receipts.
+ */
+export const autoMovieSemanticMaskVerificationFailure = (
+  error: unknown,
+): "unsupported" | "digest-mismatch" | null =>
+  error instanceof AutoMovieSemanticMaskVerificationError ? error.reason : null;
+
+/**
+ * Return the digest of one mask's complete canonical payload.
+ *
+ * Every semantic field participates, while collection order does not. Entries,
+ * their node joins, and bounded-palette gaps are sorted by their stable ids
+ * before an explicit-field-order JSON document is hashed. The self-declared
+ * digest is deliberately absent from that document.
+ *
+ * @evidence requirements/rendering/passes-channels-and-products.md#rendering-identity-mask-channels Binds the complete stable owner, instance, and drawable mapping behind an identity-mask product.
+ * @evidence specifications/editorial-render-and-delivery/render-products-visibility-and-color.md#spec-render-pass-products Makes the versioned semantic dependency closure, rather than an abbreviated palette row, determine product identity.
+ */
+export const digestAutoMovieSemanticMask = (
+  mask: Omit<IAutoMovieSemanticMask, "digest">,
+): AutoMovieContentDigest =>
+  autoMovieRenderDigest(JSON.stringify(canonicalSemanticMaskPayload(mask)));
+
+/**
+ * Refuse a historical, foreign, or self-inconsistent semantic mask.
+ *
+ * This verifies current format identity and the complete canonical payload
+ * digest. Semantic graph validity remains the derivation owner's concern, so a
+ * consumer cannot accidentally reinterpret a v1 sidecar as current v2 evidence.
+ *
+ * @evidence requirements/rendering/passes-channels-and-products.md#rendering-identity-mask-channels Refuses an identity sidecar whose declared identity does not seal the mapping used to interpret its pixels.
+ * @evidence specifications/editorial-render-and-delivery/render-products-visibility-and-color.md#spec-render-pass-products Enforces the current semantic-channel compatibility and payload-identity boundary at consumption.
+ */
+export const verifyAutoMovieSemanticMask = (
+  mask: IAutoMovieSemanticMask,
+): void => {
+  const version = mask.version as number;
+  const protocol = mask.protocol as string;
+  if (version !== SEMANTIC_MASK_VERSION || protocol !== SEMANTIC_MASK_PROTOCOL)
+    throw new AutoMovieSemanticMaskVerificationError(
+      "unsupported",
+      `unsupported semantic mask ${String(version)}/${protocol}; expected ${SEMANTIC_MASK_VERSION}/${SEMANTIC_MASK_PROTOCOL}`,
+    );
+  const expected = digestAutoMovieSemanticMask(mask);
+  if (mask.digest !== expected)
+    throw new AutoMovieSemanticMaskVerificationError(
+      "digest-mismatch",
+      `semantic mask digest mismatch: declared ${mask.digest}, canonical ${expected}`,
+    );
+};
 
 /**
  * Derive the stable semantic palette for one render subject.
@@ -99,19 +174,14 @@ export const deriveAutoMovieSemanticMask = (
     );
   const slots = collectSlotClaims(subject, claims.length);
   const entries = allocate([...claims, ...slots.claims]);
-  return {
-    version: 1,
-    protocol: "automovie.semantic-mask.v1",
+  const payload: Omit<IAutoMovieSemanticMask, "digest"> = {
+    version: SEMANTIC_MASK_VERSION as IAutoMovieSemanticMask["version"],
+    protocol: SEMANTIC_MASK_PROTOCOL as IAutoMovieSemanticMask["protocol"],
     background: "#000000",
     entries,
     unaddressed: slots.unaddressed,
-    digest: autoMovieRenderDigest(
-      [
-        "automovie.semantic-mask.v1",
-        ...entries.map((entry) => `${entry.id}\t${entry.kind}\t${entry.color}`),
-      ].join("\n"),
-    ),
   };
+  return { ...payload, digest: digestAutoMovieSemanticMask(payload) };
 };
 
 /**
@@ -131,7 +201,50 @@ export const deriveAutoMovieSemanticMask = (
  */
 export const renderAutoMovieSemanticMaskSidecar = (
   mask: IAutoMovieSemanticMask,
-): string => `${JSON.stringify(mask, null, 2)}\n`;
+): string => {
+  verifyAutoMovieSemanticMask(mask);
+  return `${JSON.stringify(
+    { ...canonicalSemanticMaskPayload(mask), digest: mask.digest },
+    null,
+    2,
+  )}\n`;
+};
+
+/** Complete mask payload in its one portable field and collection order. */
+const canonicalSemanticMaskPayload = (
+  mask: Omit<IAutoMovieSemanticMask, "digest">,
+): Omit<IAutoMovieSemanticMask, "digest"> => ({
+  version: mask.version,
+  protocol: mask.protocol,
+  background: mask.background,
+  entries: [...mask.entries]
+    .sort((left, right) => compareAutoMovieRenderIds(left.id, right.id))
+    .map((entry) => ({
+      id: entry.id,
+      kind: entry.kind,
+      label: entry.label,
+      color: entry.color,
+      owner: entry.owner,
+      nodes: [...entry.nodes].sort(compareAutoMovieRenderIds),
+      slot:
+        entry.slot === null
+          ? null
+          : {
+              instanceSet: entry.slot.instanceSet,
+              index: entry.slot.index,
+            },
+    })),
+  unaddressed: [...mask.unaddressed]
+    .sort((left, right) =>
+      compareAutoMovieRenderIds(left.instanceSet, right.instanceSet),
+    )
+    .map((gap) => ({
+      instanceSet: gap.instanceSet,
+      slots: gap.slots,
+      reason: gap.reason,
+      remedy: gap.remedy,
+    })),
+});
 
 /** One entity awaiting a colour. */
 interface IClaim {

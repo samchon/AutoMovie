@@ -198,6 +198,21 @@ export const productionRepaintStructuralControls = (
         "beauty"
       > => pass !== "beauty",
     )
+    .filter(
+      (pass) =>
+        pass !== "mask" ||
+        manifest.frames
+          .filter((frame) => frame.pass === "mask")
+          .every((frame) =>
+            manifest.semanticMasks.some(
+              (semantic) =>
+                semantic.frame === frame.index &&
+                semantic.pass === frame.pass &&
+                semantic.coverage.unresolved.length === 0 &&
+                semantic.coverage.unaddressed === 0,
+            ),
+          ),
+    )
     .sort(compareCodeUnits)
     .map((pass) => ({
       pass,

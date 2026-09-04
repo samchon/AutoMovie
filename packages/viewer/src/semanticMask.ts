@@ -1,5 +1,6 @@
 import { autoMovieSemanticMaskNodeIndex } from "@automovie/engine";
 import {
+  IAutoMovieSemanticMaskCoverage as AutoMovieSemanticMaskCoverage,
   IAutoMovieScene,
   IAutoMovieSemanticMask,
   IAutoMovieSemanticMaskEntry,
@@ -11,6 +12,8 @@ import {
   applyFormationCycleMaterial,
   formationCycleOf,
 } from "./formationCycle";
+
+export type { IAutoMovieSemanticMaskCoverage } from "@automovie/interface";
 
 /**
  * A reversible semantic-mask override, restored exactly like a render mode.
@@ -132,32 +135,6 @@ export const autoMovieSemanticMaskOf = (
  * @evidence specifications/editorial-render-and-delivery/render-products-visibility-and-color.md#spec-render-pass-products Implements that channel as a structural render product.
  * @author Samchon
  */
-export interface IAutoMovieSemanticMaskCoverage {
-  /**
-   * Semantic ids that name a drawable this scene does not hold, ascending: what
-   * the production declared and the viewer never built.
-   *
-   * @evidence requirements/rendering/passes-channels-and-products.md#rendering-identity-mask-channels Makes this public surface part of the stable identity-mask channel.
-   * @evidence specifications/editorial-render-and-delivery/render-products-visibility-and-color.md#spec-render-pass-products Implements that channel as a structural render product.
-   */
-  unresolved: string[];
-
-  /**
-   * Meshes in the scene that no entry claims: what the viewer built and the
-   * palette cannot name.
-   *
-   * A mask frame paints these the reserved background, so they vanish rather
-   * than mislead, and this count is the only thing that says they vanished.
-   * Zero is a real answer and means the palette named every mesh; above zero,
-   * the two populations that land here today are a formation's anonymous
-   * members and an effect's particles, which the palette does not address yet.
-   *
-   * @evidence requirements/rendering/passes-channels-and-products.md#rendering-identity-mask-channels Makes this public surface part of the stable identity-mask channel.
-   * @evidence specifications/editorial-render-and-delivery/render-products-visibility-and-color.md#spec-render-pass-products Implements that channel as a structural render product.
-   */
-  unaddressed: number;
-}
-
 /**
  * Hold one palette against one built scene, in both directions.
  *
@@ -190,7 +167,7 @@ export const auditAutoMovieSemanticMaskScene = (props: {
   design: IAutoMovieScene;
   /** Palette derived from the same production. */
   mask: IAutoMovieSemanticMask;
-}): IAutoMovieSemanticMaskCoverage => {
+}): AutoMovieSemanticMaskCoverage => {
   const roots = maskRoots(props);
   let unaddressed = 0;
   props.scene.traverse((object) => {
