@@ -1,5 +1,17 @@
-import fs from "node:fs";
+import { projectAutoMovieMarkdownSyntax } from "@automovie/evidence";
 import path from "node:path";
+import { isMap, parseDocument } from "yaml";
+
+const AUTO_MOVIE_SKILL_NAMES = [
+  "contract",
+  "evidence-graph",
+  "production-lifecycle",
+  "review-verification",
+  "source-authoring",
+] as const;
+const AUTO_MOVIE_SKILL_NAME_SET: ReadonlySet<string> = new Set(
+  AUTO_MOVIE_SKILL_NAMES,
+);
 
 /**
  * One synthetic project-root-relative Markdown source.
@@ -32,25 +44,47 @@ export const validateAutoMovieInstructionLink = (
   const source = normalizeSourcePath(sourcePath);
   if (!files.has(source))
     throw new Error(`${source}: instruction route source is not published.`);
-  if (/^[A-Za-z]:[\\/]/u.test(destination))
+  const separator = destination.indexOf("#");
+  const encodedRoute =
+    separator === -1 ? destination : destination.slice(0, separator);
+  const encodedAnchor =
+    separator === -1 ? undefined : destination.slice(separator + 1);
+  let route: string;
+  let anchor: string | undefined;
+  try {
+    route = decodeURIComponent(encodedRoute);
+    anchor =
+      encodedAnchor === undefined
+        ? undefined
+        : decodeURIComponent(encodedAnchor);
+  } catch {
+    throw new Error(
+      `${source}: instruction route is not valid percent-encoded text: ${destination}.`,
+    );
+  }
+  if (path.win32.isAbsolute(route) || path.posix.isAbsolute(route))
     throw new Error(
       `${source}: instruction route escapes its project root: ${destination}.`,
     );
-  if (/^[A-Za-z][A-Za-z0-9+.-]*:/u.test(destination)) return;
-  const [encodedRoute, encodedAnchor] = destination.split("#", 2);
-  const route = decodeURIComponent(encodedRoute ?? "");
-  const anchor =
-    encodedAnchor === undefined ? undefined : decodeURIComponent(encodedAnchor);
+  const scheme = /^([A-Za-z][A-Za-z0-9+.-]*):/u.exec(route)?.[1];
+  if (scheme !== undefined) {
+    if (scheme.toLowerCase() === "http" || scheme.toLowerCase() === "https")
+      return;
+    throw new Error(
+      `${source}: instruction route uses unsupported scheme ${scheme}: ${destination}.`,
+    );
+  }
+  const portableRoute = route.replaceAll("\\", "/");
   const resolved =
-    route === ""
+    portableRoute === ""
       ? source
       : path.posix.normalize(
-          path.posix.join(path.posix.dirname(source), route),
+          path.posix.join(path.posix.dirname(source), portableRoute),
         );
   if (
     resolved === ".." ||
     resolved.startsWith("../") ||
-    path.posix.isAbsolute(route)
+    path.posix.isAbsolute(portableRoute)
   )
     throw new Error(
       `${source}: instruction route escapes its project root: ${destination}.`,
@@ -75,6 +109,21 @@ export const validateAutoMovieInstructionLink = (
   }
 };
 
+/** Validate every Markdown link carried by one instruction document. */
+export const validateAutoMovieInstructionDocumentLinks = (
+  sources: readonly IAutoMovieInstructionMarkdownSource[],
+  sourcePath: string,
+): void => {
+  const source = normalizeSourcePath(sourcePath);
+  const markdown = sources.find(
+    (candidate) => normalizeSourcePath(candidate.path) === source,
+  )?.content;
+  if (markdown === undefined)
+    throw new Error(`${source}: instruction route source is not published.`);
+  for (const match of markdown.matchAll(/\[[^\]]*\]\(([^)]+)\)/gu))
+    validateAutoMovieInstructionLink(sources, source, match[1]!);
+};
+
 /**
  * Validate every installed `SKILL.md` as an H1-only root-bound router.
  *
@@ -89,60 +138,54 @@ export const validateAutoMovieInstructionLink = (
 export const validateAutoMovieSkillRouterLinks = (
   sources: readonly IAutoMovieInstructionMarkdownSource[],
 ): void => {
-  const files = new Map(
-    sources.map((source) => [normalizeSourcePath(source.path), source.content]),
+  const files = new Map<string, string>();
+  for (const source of sources) {
+    const normalized = normalizeSourcePath(source.path);
+    if (files.has(normalized))
+      throw new Error(`${normalized}: instruction source is duplicated.`);
+    files.set(normalized, source.content);
+  }
+  const skillFiles = [...files].filter(([file]) =>
+    file.startsWith(".agents/skills/"),
   );
-  const routers = [...files].filter(([file]) => file.endsWith("/SKILL.md"));
-  if (routers.length === 0) throw new Error("no SKILL.md router is installed.");
-  for (const [file, markdown] of routers) {
-    const headings = visibleLines(markdown).filter((line) =>
+  const expected = new Set(
+    AUTO_MOVIE_SKILL_NAMES.map((name) => `.agents/skills/${name}/SKILL.md`),
+  );
+  for (const [file] of skillFiles) {
+    const name = file.split("/")[2];
+    if (
+      name === undefined ||
+      !AUTO_MOVIE_SKILL_NAME_SET.has(name) ||
+      (file.endsWith("/SKILL.md") && !expected.has(file))
+    )
+      throw new Error(`${file}: unexpected production skill path.`);
+  }
+  for (const file of expected) {
+    const markdown = files.get(file);
+    if (markdown === undefined)
+      throw new Error(`${file}: required production skill router is missing.`);
+    const name = file.split("/")[2]!;
+    const body = validateSkillFrontmatter(file, markdown, name);
+    const headings = visibleLines(body).filter((line) =>
       /^#{1,6}\s+\S/u.test(line),
     );
     if (headings.length !== 1 || !headings[0]!.startsWith("# "))
       throw new Error(
         `${file}: every SKILL.md is an H1-only index and router.`,
       );
-    for (const match of markdown.matchAll(/\[[^\]]*\]\(([^)]+)\)/gu))
+    for (const match of body.matchAll(/\[[^\]]*\]\(([^)]+)\)/gu))
       validateAutoMovieInstructionLink(sources, file, match[1]!);
   }
 };
 
-/**
- * Validate the physical scaffold source before publishing any instruction.
- *
- * @evidence requirements/agent-authoring/capability-discovery.md#agent-topic-document-discovery Refuses a physical shipped router that cannot discover its promised procedure.
- * @evidence specifications/authoring-and-authority/capability-and-content-boundary.md#spec-authoring-capability-input-output Applies the synthetic publication boundary to the exact scaffold bytes before they are copied.
- */
-export const validateAutoMovieSkillRouters = (root: string): void => {
-  const boundary = path.resolve(root);
-  const sources: IAutoMovieInstructionMarkdownSource[] = [];
-  const visit = (directory: string): void => {
-    for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
-      const target = path.join(directory, entry.name);
-      if (entry.isSymbolicLink())
-        throw new Error(
-          `${target}: instruction sources may not contain links.`,
-        );
-      if (entry.isDirectory()) visit(target);
-      else if (entry.isFile() && entry.name.endsWith(".md"))
-        sources.push({
-          path: path.relative(boundary, target).replaceAll("\\", "/"),
-          content: fs.readFileSync(target, "utf8"),
-        });
-    }
-  };
-  visit(boundary);
-  validateAutoMovieSkillRouterLinks(sources);
-};
-
 const markdownAnchors = (markdown: string): ReadonlySet<string> => {
-  const anchors = new Set(
-    [...markdown.matchAll(/\{#([^{}\s]+)\}/gu)].map((entry) => entry[1]!),
-  );
+  const anchors = new Set<string>();
   const occurrences = new Map<string, number>();
   for (const line of visibleLines(markdown)) {
-    const match = /^#{1,6}\s+(.+?)\s*#*\s*$/u.exec(line);
+    const match = /^ {0,3}#{1,6}\s+(.+?)\s*#*\s*$/u.exec(line);
     if (match === null) continue;
+    const explicit = /\s+\{#([^{}\s]+)\}\s*$/u.exec(match[1]!)?.[1];
+    if (explicit !== undefined) anchors.add(explicit);
     const heading = match[1]!
       .replace(/\s+\{#[^{}\s]+\}\s*$/u, "")
       .trim()
@@ -163,6 +206,38 @@ const markdownAnchors = (markdown: string): ReadonlySet<string> => {
   return anchors;
 };
 
+const validateSkillFrontmatter = (
+  file: string,
+  markdown: string,
+  expectedName: string,
+): string => {
+  const lines = markdown.split(/\r?\n/u);
+  if (lines[0] !== "---")
+    throw new Error(`${file}: production skill frontmatter is missing.`);
+  const end = lines.indexOf("---", 1);
+  if (end === -1)
+    throw new Error(`${file}: production skill frontmatter is unterminated.`);
+  const frontmatter = parseDocument(lines.slice(1, end).join("\n"), {
+    prettyErrors: false,
+    strict: true,
+    uniqueKeys: true,
+  });
+  const diagnostic = frontmatter.errors[0] ?? frontmatter.warnings[0];
+  if (diagnostic !== undefined)
+    throw new Error(
+      `${file}: production skill frontmatter is invalid: ${diagnostic.message}`,
+    );
+  if (!isMap(frontmatter.contents))
+    throw new Error(`${file}: production skill frontmatter must be a mapping.`);
+  const name: unknown = frontmatter.contents.get("name");
+  if (name !== expectedName)
+    throw new Error(`${file}: production skill name must be ${expectedName}.`);
+  const description: unknown = frontmatter.contents.get("description");
+  if (typeof description !== "string" || description.trim() === "")
+    throw new Error(`${file}: production skill description is missing.`);
+  return lines.slice(end + 1).join("\n");
+};
+
 const normalizeSourcePath = (value: string): string => {
   const normalized = path.posix.normalize(value.replaceAll("\\", "/"));
   if (
@@ -178,20 +253,8 @@ const normalizeSourcePath = (value: string): string => {
 };
 
 const visibleLines = (markdown: string): readonly string[] => {
-  let fenced = false;
-  let comment = false;
-  return markdown.split(/\r?\n/u).map((line) => {
-    if (/^\s*(```|~~~)/u.test(line)) {
-      fenced = !fenced;
-      return "";
-    }
-    if (fenced) return "";
-    const projected = line.replace(/<!--[\s\S]*?-->/gu, "");
-    if (comment) {
-      if (line.includes("-->")) comment = false;
-      return "";
-    }
-    if (line.includes("<!--") && !line.includes("-->")) comment = true;
-    return projected;
-  });
+  return projectAutoMovieMarkdownSyntax({
+    path: "instruction.md",
+    source: markdown,
+  }).visibleLines;
 };

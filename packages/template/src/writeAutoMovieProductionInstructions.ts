@@ -5,9 +5,8 @@ import {
 import fs from "node:fs";
 import path from "node:path";
 
-import { renderAutoMovieProductionRouter } from "./renderAutoMovieProductionRouter";
+import { renderAutoMovieProductionInstructionCandidate } from "./renderAutoMovieProductionRouter";
 import { scaffoldAssetDirectory } from "./renderScaffold";
-import { validateAutoMovieSkillRouters } from "./validateAutoMovieSkillRouters";
 import { ScaffoldPublicationError, publishFiles } from "./writeFiles";
 
 /**
@@ -44,20 +43,6 @@ export const writeAutoMovieProductionInstructions = (props: {
       `${sourceSkills}: the installed production skills are missing.`,
     );
   assertInstructionSourceIsPhysical(sourceSkills);
-  validateAutoMovieSkillRouters(scaffoldRoot);
-  for (const name of [
-    "contract",
-    "evidence-graph",
-    "production-lifecycle",
-    "review-verification",
-    "source-authoring",
-  ]) {
-    const entry = path.join(sourceSkills, name, "SKILL.md");
-    if (!fs.lstatSync(entry, { throwIfNoEntry: false })?.isFile())
-      throw new Error(
-        `${entry}: the installed ${name} skill entry point is missing.`,
-      );
-  }
   if (fs.realpathSync(root) === fs.realpathSync(scaffoldRoot))
     throw new Error(
       `${root}: a scaffold source cannot synchronize instructions into itself.`,
@@ -74,20 +59,50 @@ export const writeAutoMovieProductionInstructions = (props: {
     root,
     productionEvidence: props.productionEvidence,
   });
-  const files: Record<string, string> = {
-    "AGENTS.md": renderAutoMovieProductionRouter(identity),
-    "CLAUDE.md": "@AGENTS.md\n",
-  };
+  const sources = Object.create(null) as Record<string, string>;
   collectInstructionFiles({
     directory: sourceSkills,
-    files,
+    files: sources,
     relative: path.join(".agents", "skills"),
+  });
+  for (const relative of new Set([
+    "docs/README.md",
+    ...identity.contracts.map((contract) => contract.path),
+    ...identity.designOwners.map((owner) => owner.path),
+  ]))
+    collectProjectInstructionTarget(root, relative, sources);
+  const files = renderAutoMovieProductionInstructionCandidate({
+    evidence: identity,
+    sources,
   });
   const receipt = publishFiles(root, files, { force: true });
   if (receipt.status !== "completed")
     throw new ScaffoldPublicationError(receipt);
   removeStaleInstructionEntries(targetSkills, new Set(Object.keys(files)));
   return [targetSkills, agents, claude];
+};
+
+/** Add one dynamic project document addressed by the generated root router. */
+const collectProjectInstructionTarget = (
+  root: string,
+  relative: string,
+  files: Record<string, string>,
+): void => {
+  const target = path.resolve(root, relative);
+  const contained = path.relative(root, target);
+  if (
+    contained === "" ||
+    contained === ".." ||
+    contained.startsWith(`..${path.sep}`) ||
+    path.isAbsolute(contained)
+  )
+    throw new Error(
+      `${relative}: instruction target escapes the project root.`,
+    );
+  const metadata = fs.lstatSync(target, { throwIfNoEntry: false });
+  if (metadata === undefined || metadata.isSymbolicLink() || !metadata.isFile())
+    throw new Error(`${relative}: instruction target is not a physical file.`);
+  files[relative.replaceAll("\\", "/")] = fs.readFileSync(target, "utf8");
 };
 
 /** Read the whole installed instruction candidate before target mutation. */

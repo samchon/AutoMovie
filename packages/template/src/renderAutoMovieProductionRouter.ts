@@ -1,4 +1,11 @@
 import type { IAutoMovieProductionEvidence } from "@automovie/evidence";
+import path from "node:path";
+
+import {
+  type IAutoMovieInstructionMarkdownSource,
+  validateAutoMovieInstructionDocumentLinks,
+  validateAutoMovieSkillRouterLinks,
+} from "./validateAutoMovieSkillRouters";
 
 type AutoMovieProductionRouterEvidence = Pick<
   IAutoMovieProductionEvidence,
@@ -9,6 +16,8 @@ type AutoMovieProductionRouterEvidence = Pick<
     "bindings" | "branches" | "kind" | "language" | "populationScope"
   >;
 };
+
+const SKILL_PREFIX = ".agents/skills/";
 
 /**
  * Render one generated project's root instruction router from tracked facts.
@@ -85,11 +94,10 @@ It is generated from the installed scaffold by \`npm run sync\` and is not track
 ## Procedure
 
 - [Contract index](.agents/skills/contract/SKILL.md) locates the project-local shared, language, and production-owned contract questions selected below.
-- [Production lifecycle](.agents/skills/production-lifecycle/SKILL.md) owns shape selection, research, settings, pilots, treatments, scripts, screenplays, and briefs.
+- [Production lifecycle](.agents/skills/production-lifecycle/SKILL.md) owns shape selection and the authored lifecycle selected below.
 - [Evidence graph](.agents/skills/evidence-graph/SKILL.md) owns the local contract inventory, claims, stages, citations, exclusions, and fingerprints.
 - [Source authoring](.agents/skills/source-authoring/SKILL.md) owns design branches, TypeScript, geometry, rigs, motion, spatial design, and compilation.
 - [Review verification](.agents/skills/review-verification/SKILL.md) owns Self-Review, viewer inspection, capture, measurements, and final acceptance.
-${shapeProcedureLine(evidence.manifest.kind)}
 
 ## Active design owners
 
@@ -120,6 +128,69 @@ Start the coding-agent session from this project root. Codex reads this \`AGENTS
 - \`npm run book -- --layer <layer> --title <title>\` binds any supported authored layer into one deterministic reader-facing Markdown file under the ignored \`artifacts\` directory. It preserves numbered script/screenplay groups, keeps other layers flat, removes evidence comments and citation anchors, and preserves visible prose and headings.
 - \`npm run compile\` is the only command that may update compiler-owned output.
 `;
+};
+
+/**
+ * Render and validate the complete generated instruction candidate.
+ *
+ * Initial scaffold creation and every later synchronization call this same
+ * pure boundary. The supplied publication contains the installed skill bytes
+ * and every dynamic project document linked by the rendered root router; the
+ * returned candidate contains only the generated instruction surface.
+ *
+ * @evidence requirements/agent-authoring/project-ownership.md#agent-portable-authoring Derives one provider-neutral instruction surface from explicit project-owned facts.
+ * @evidence requirements/agent-authoring/capability-discovery.md#agent-topic-document-discovery Refuses an instruction candidate whose root or shipped skill routes cannot reach their advertised targets.
+ * @evidence specifications/authoring-and-authority/source-authority-and-derivation.md#spec-authoring-source-input Uses the same explicit instruction-source population for initial creation and synchronization.
+ * @evidence specifications/authoring-and-authority/capability-and-content-boundary.md#spec-authoring-capability-input-output Publishes only the routed capability instructions selected from that complete candidate.
+ */
+export const renderAutoMovieProductionInstructionCandidate = (props: {
+  /** Project identity and live contract projection rendered into AGENTS.md. */
+  evidence: AutoMovieProductionRouterEvidence;
+  /** Complete project-root-relative source population available to links. */
+  sources: Readonly<Record<string, string>>;
+}): Record<string, string> => {
+  const available = new Map<string, string>();
+  for (const [path, content] of Object.entries(props.sources)) {
+    const normalized = normalizeInstructionPath(path);
+    if (available.has(normalized))
+      throw new Error(`${normalized}: instruction source is duplicated.`);
+    available.set(normalized, content);
+  }
+
+  const candidate = Object.create(null) as Record<string, string>;
+  for (const [path, content] of available)
+    if (path.startsWith(SKILL_PREFIX)) candidate[path] = content;
+  candidate["AGENTS.md"] = renderAutoMovieProductionRouter(props.evidence);
+  candidate["CLAUDE.md"] = "@AGENTS.md\n";
+
+  const publication = new Map(available);
+  for (const [path, content] of Object.entries(candidate))
+    publication.set(path, content);
+  const sources = [...publication].map(
+    ([path, content]): IAutoMovieInstructionMarkdownSource => ({
+      path,
+      content,
+    }),
+  );
+  validateAutoMovieSkillRouterLinks(sources);
+  validateAutoMovieInstructionDocumentLinks(sources, "AGENTS.md");
+  return candidate;
+};
+
+const normalizeInstructionPath = (value: string): string =>
+  assertInstructionPath(path.posix.normalize(value.replaceAll("\\", "/")));
+
+const assertInstructionPath = (value: string): string => {
+  if (
+    value === "." ||
+    value === ".." ||
+    value.startsWith("../") ||
+    path.posix.isAbsolute(value)
+  )
+    throw new Error(
+      `${value}: instruction source path escapes its project root.`,
+    );
+  return value;
 };
 
 /** Render one complete factory-derived host-to-target relationship. */
@@ -175,28 +246,12 @@ const shapeProcedure = (
 ): string => {
   switch (kind) {
     case "film":
-      return "This is a film: author the narrative ladder, then shots and the final film source; selected design branches remain independent inputs.";
+      return "Production kind `film`; follow the [film procedure](.agents/skills/production-lifecycle/production-kinds.md#film).";
     case "brief":
-      return "This is a direct brief: author one bounded delivery and observation hierarchy through its shot and final film source.";
+      return "Production kind `brief`; follow the [brief procedure](.agents/skills/production-lifecycle/production-kinds.md#brief).";
     case "library":
-      return "This is a library: author settings plus only the selected design and matching source branches.";
+      return "Production kind `library`; follow the [library procedure](.agents/skills/production-lifecycle/production-kinds.md#library).";
     case null:
-      return "No production kind is selected. Choose film, brief, or library in `lint.config.ts` before authoring a downstream branch.";
-  }
-};
-
-/** Render the selected shape's procedure without naming an inactive shape. */
-const shapeProcedureLine = (
-  kind: AutoMovieProductionRouterEvidence["manifest"]["kind"],
-): string => {
-  switch (kind) {
-    case "film":
-      return "- Follow `settings -> treatments -> scripts -> screenplays -> shots -> filmSources`; reviewed `productionSources` remains its parallel serialized input.";
-    case "brief":
-      return "- Follow `settings -> briefs -> shots -> filmSources`; reviewed `productionSources` remains its parallel serialized input.";
-    case "library":
-      return "- Follow settings plus each active design owner into its matching source branch; review closes on the exact delivered owner population.";
-    case null:
-      return "- Select a production kind before beginning a downstream procedure.";
+      return "No production kind is selected. Choose it through [Production kinds](.agents/skills/production-lifecycle/production-kinds.md) and record it in `lint.config.ts` before authoring a downstream branch.";
   }
 };

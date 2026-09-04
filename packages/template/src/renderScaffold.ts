@@ -10,7 +10,7 @@ import {
   renderAutoMovieContractBaseline,
 } from "./productionMaintenance";
 import { renderAutoMovieLanguageContracts } from "./renderAutoMovieLanguageContracts";
-import { renderAutoMovieProductionRouter } from "./renderAutoMovieProductionRouter";
+import { renderAutoMovieProductionInstructionCandidate } from "./renderAutoMovieProductionRouter";
 import { renderTemplate } from "./renderTemplate";
 import { AUTOMOVIE_TEMPLATE_VERSIONS } from "./templateVersions";
 
@@ -415,10 +415,8 @@ export const renderScaffold = (
     description?: string;
   };
   const blank = createBlankAutoMovieProductionEvidence(root, props.language);
-  Object.defineProperty(files, "AGENTS.md", {
-    configurable: true,
-    enumerable: true,
-    value: renderAutoMovieProductionRouter({
+  const instructions = renderAutoMovieProductionInstructionCandidate({
+    evidence: {
       packageName: manifest.name,
       description: manifest.description?.trim() ?? "",
       manifest: {
@@ -430,16 +428,23 @@ export const renderScaffold = (
       },
       designOwners: [],
       contracts: [],
-    }),
-    writable: true,
+    },
+    sources: files,
   });
+  for (const [relative, content] of Object.entries(instructions))
+    Object.defineProperty(files, relative, {
+      configurable: true,
+      enumerable: true,
+      value: content,
+      writable: true,
+    });
   Object.defineProperty(files, AUTO_MOVIE_CONTRACT_BASELINE_PATH, {
     configurable: true,
     enumerable: true,
     value: renderAutoMovieContractBaseline({
       files,
       language: props.language,
-      version: AUTOMOVIE_TEMPLATE_VERSIONS.evidence!,
+      version: AUTOMOVIE_TEMPLATE_VERSIONS.template!.replace(/^[~^]/u, ""),
     }),
     writable: true,
   });
