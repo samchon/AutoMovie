@@ -154,8 +154,8 @@ export const captureAutoMovieLibraryAuthoringSnapshot = (props: {
     root,
     packageName: props.evidence.packageName,
     kind: "library" as const,
-    configuration: props.evidence.configuration,
-    manifest: props.evidence.manifest,
+    configuration: structuredClone(props.evidence.configuration),
+    manifest: structuredClone(props.evidence.manifest),
     designBranches: sortedDesignBranches(props.evidence.designBranches),
     designOwners: sortedDesignOwners(props.evidence.designOwners),
     sourceOwners: sortedSourceOwners(
@@ -280,6 +280,7 @@ const sortedDesignOwners = (
   [...owners]
     .map((owner) => ({
       ...owner,
+      units: owner.units.map((unit) => ({ ...unit })),
       sourceBinding: canonicalSourceBinding(owner.sourceBinding),
     }))
     .sort((left, right) =>
@@ -292,24 +293,26 @@ const sortedDesignOwners = (
 const sortedSourceOwners = (
   owners: readonly IAutoMovieProductionEvidenceSourceOwnerBinding[],
 ): readonly IAutoMovieProductionEvidenceSourceOwnerBinding[] =>
-  [...owners].sort((left, right) =>
-    compareCodeUnits(
-      JSON.stringify([
-        left.branch,
-        left.sourcePath,
-        left.exportName,
-        left.targetPath,
-        left.targetAnchor,
-      ]),
-      JSON.stringify([
-        right.branch,
-        right.sourcePath,
-        right.exportName,
-        right.targetPath,
-        right.targetAnchor,
-      ]),
-    ),
-  );
+  owners
+    .map((owner) => ({ ...owner }))
+    .sort((left, right) =>
+      compareCodeUnits(
+        JSON.stringify([
+          left.branch,
+          left.sourcePath,
+          left.exportName,
+          left.targetPath,
+          left.targetAnchor,
+        ]),
+        JSON.stringify([
+          right.branch,
+          right.sourcePath,
+          right.exportName,
+          right.targetPath,
+          right.targetAnchor,
+        ]),
+      ),
+    );
 
 const activePaths = (
   binding: IAutoMovieProductionEvidenceSourceBinding | null,

@@ -1195,13 +1195,22 @@ export class AutoMovieProductionCompiler {
     input: IAutoMovieCompileProjectInput,
     materialize: boolean,
   ): IAutoMovieCompileProjectOutput {
-    const authoring = this.authoringEvidence!;
+    const authoring =
+      this.currentAuthoringEvidence?.() ?? this.authoringEvidence!;
     const inputRevision = this.project.revision();
     const snapshot = captureAutoMovieLibraryAuthoringSnapshot({
       root: this.project.root,
       evidence: authoring,
       readSource: (source) => this.project.readSource(source),
     });
+    const snapshotAuthoring: IAutoMovieProductionEvidence = {
+      ...authoring,
+      configuration: snapshot.configuration,
+      manifest: snapshot.manifest,
+      designBranches: snapshot.designBranches,
+      designOwners: snapshot.designOwners,
+      sourceOwners: snapshot.sourceOwners,
+    };
     const requireReviewed = input.scope === "review" || input.scope === "final";
     const execution = createAutoMovieLibrarySourceExecutionPlan(
       snapshot,
@@ -1230,7 +1239,7 @@ export class AutoMovieProductionCompiler {
     // how an unreviewed artifact ships.
     const units = new Map<string, IAutoMovieLibraryBuildContext>();
     const sourceBranchByDesign = new Map<string, string>();
-    for (const owner of authoring.designOwners)
+    for (const owner of snapshotAuthoring.designOwners)
       for (const unit of owner.units) {
         const address = `${owner.path}#${unit.anchor}`;
         units.set(address, {
@@ -1287,7 +1296,7 @@ export class AutoMovieProductionCompiler {
           context: (design) => units.get(design) ?? null,
           admit: (exportName, design) =>
             resolveAutoMovieSourceOwnerBinding({
-              bindings: authoring.sourceOwners,
+              bindings: snapshotAuthoring.sourceOwners,
               branch: sourceBranchByDesign.get(design) ?? "",
               sourcePath: source,
               exportName,
@@ -1368,8 +1377,8 @@ export class AutoMovieProductionCompiler {
     // where a design document with nothing behind it is the exact thing the
     // library gate exists to refuse.
     if (input.scope !== "design")
-      for (const owner of [...authoring.designOwners].sort((left, right) =>
-        compareCodeUnits(left.path, right.path),
+      for (const owner of [...snapshotAuthoring.designOwners].sort(
+        (left, right) => compareCodeUnits(left.path, right.path),
       )) {
         // A branch that has not started its source yet owes no registration,
         // and neither does one whose binding selects no file. The owner is read
@@ -1464,7 +1473,7 @@ export class AutoMovieProductionCompiler {
     );
     diagnostics.push(
       ...libraryReviewEvidenceConsumerDiagnostics({
-        authoring,
+        authoring: snapshotAuthoring,
         project: this.project,
         scope: input.scope,
         compileFingerprint: inputFingerprint,

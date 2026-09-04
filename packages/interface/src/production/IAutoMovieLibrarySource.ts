@@ -73,7 +73,7 @@ export interface IAutoMovieLibraryContribution {
 }
 
 /**
- * One named export a library source module registers as a design owner.
+ * One named export a library source module registers as an authored owner.
  *
  * The registration names the reviewed H2 it realizes, which is what lets a
  * compiled artifact be attributed to a design decision without a second table
@@ -89,9 +89,10 @@ export interface IAutoMovieLibrarySourceOwner {
    * Exact `docs/<branch>/<document>.md#<anchor>` address this export realizes.
    *
    * The address is the registration. A spelling that is not an active design
-   * owner unit is refused by name rather than ignored, because a module that
-   * builds a building nobody asked for publishes an artifact no review owes an
-   * observation on.
+   * owner unit or reviewed production-settings delivery is refused by name
+   * rather than ignored. Production settings use the same registration with
+   * an empty semantic contribution so their executed revision is attributable
+   * without pretending settings own a model, environment, or context.
    */
   design: string;
   /** Build this owner's contribution deterministically from its own address. */

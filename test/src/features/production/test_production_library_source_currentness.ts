@@ -168,10 +168,11 @@ export const test_production_library_source_currentness = (): void => {
         })),
       })),
     };
+    let graphReads = 0;
     const raced = new AutoMovieProductionCompiler(
       AutoMovieProductionProject.open(staleGraph.root),
       initialEvidence,
-      () => changedEvidence,
+      () => (++graphReads === 1 ? initialEvidence : changedEvidence),
     ).compile({ scope: "source" });
     const unguarded = new AutoMovieProductionCompiler(
       AutoMovieProductionProject.open(noProvider.root),
