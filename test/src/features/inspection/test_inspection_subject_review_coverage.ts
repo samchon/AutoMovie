@@ -261,6 +261,8 @@ export const test_inspection_subject_review_coverage = (): void => {
     { ...observation("front"), digest: " " },
     { ...observation("front"), target: null },
     { ...observation("front"), pose: null },
+    { ...observation("front"), pose: 7 },
+    { ...observation("front"), pose: [] },
     { ...observation("front"), runtimeIdentity: null },
     { ...observation("front"), deliveryEvidence: true },
   ]);

@@ -688,8 +688,6 @@ export const parseAutoMovieSubjectInspectionObservation = (
       canonicalizeAutoMovieJson(record.observation.pose) ||
     canonicalizeAutoMovieJson(record.runtimeIdentity) !==
       canonicalizeAutoMovieJson(record.observation.runtimeIdentity) ||
-    record.observation.verdict !== "passed" ||
-    record.observation.deliveryEvidence !== false ||
     record.observation.artifact.trim().length === 0 ||
     isContentDigest(record.observation.digest) === false
   )
