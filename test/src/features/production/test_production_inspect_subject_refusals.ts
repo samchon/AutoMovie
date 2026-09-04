@@ -200,7 +200,10 @@ export const test_production_inspect_subject_refusals =
       );
 
       const throwing = await new AutoMovieProductionSubjectInspectionService(
-        () => Promise.reject("the inspection browser closed"),
+        () => {
+          // eslint-disable-next-line typescript/only-throw-error -- the adapter boundary must preserve non-Error host failures too
+          throw "the inspection browser closed";
+        },
       ).inspect(services, target);
       const undecodable = await new AutoMovieProductionSubjectInspectionService(
         fixedInstrument(new Uint8Array()),
