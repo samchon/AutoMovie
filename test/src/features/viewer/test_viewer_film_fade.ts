@@ -25,6 +25,7 @@ const fakeRenderer = (width = 64, height = 32, antialias = true) => {
   let clearAlpha = 0.4;
   const targets: Array<THREE.WebGLRenderTarget | null> = [];
   const opacities: number[] = [];
+  const toneMapped: boolean[] = [];
   const clearColors: Array<{ color: number; alpha: number }> = [];
   const restorationAttempts = { autoClear: 0, color: 0, target: 0 };
   let failAutoClear: Error | undefined;
@@ -75,6 +76,8 @@ const fakeRenderer = (width = 64, height = 32, antialias = true) => {
       const material = mesh?.material;
       if (material instanceof THREE.MeshBasicMaterial)
         opacities.push(material.opacity);
+      if (material instanceof THREE.MeshBasicMaterial)
+        toneMapped.push(material.toneMapped);
       if (targetFailureOnRender !== undefined) {
         failTarget = targetFailureOnRender;
         targetFailureOnRender = undefined;
@@ -86,6 +89,7 @@ const fakeRenderer = (width = 64, height = 32, antialias = true) => {
     size,
     targets,
     opacities,
+    toneMapped,
     clearColors,
     restorationAttempts,
     state: () => ({
@@ -211,6 +215,10 @@ export const test_viewer_film_fade = (): void => {
         () => JSON.stringify(first.opacities) === JSON.stringify([0, 0.5, 1]),
       ],
       [
+        "noSecondToneMap",
+        () => first.toneMapped.every((value) => value === false),
+      ],
+      [
         "blackClear",
         () =>
           first.clearColors.some(
@@ -242,6 +250,7 @@ export const test_viewer_film_fade = (): void => {
     {
       callbacks: true,
       weights: true,
+      noSecondToneMap: true,
       blackClear: true,
       targetReused: true,
       rendererLocal: true,

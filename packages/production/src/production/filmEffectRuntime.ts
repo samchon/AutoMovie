@@ -25,6 +25,7 @@ import {
  *
  * @evidence requirements/effects-and-simulation/scope-and-simulation-tiers.md#effects-authoring-control Keeps shot and film ownership explicit before runtime materialization.
  * @evidence specifications/simulation-effects-and-sound/scope-tiers-and-identities.md#effect-tier-state-machine Refuses overlapping owners instead of selecting a last writer.
+ * @author Samchon
  */
 export interface IAutoMovieShotEffectFilmInterval {
   /** Stable shot-owned cue id. */
@@ -51,6 +52,7 @@ export interface IAutoMovieShotEffectFilmInterval {
  * @evidence requirements/effects-and-simulation/clock-seek-and-determinism.md#effects-film-time-mapping Fixes effect activity to the compiler-owned full-rate frame.
  * @evidence specifications/simulation-effects-and-sound/scope-tiers-and-identities.md#effect-tier-state-machine Preserves one explicit film owner around the existing compiled effect stream.
  * @evidence specifications/simulation-effects-and-sound/clocks-ordering-seek-and-checkpoints.md#effect-film-time-step-boundary Maps the exact frame boundary once onto the effect clock.
+ * @author Samchon
  */
 export interface IAutoMovieCompiledFilmEffect {
   /** Film-effect runtime format. */
@@ -81,6 +83,8 @@ export interface IAutoMovieCompiledFilmEffect {
 
 /**
  * Current identities required when sampling a persisted film effect.
+ *
+ * @author Samchon
  */
 export interface IAutoMovieFilmEffectCurrentIdentity {
   /** Current production identity. */
@@ -95,6 +99,8 @@ export interface IAutoMovieFilmEffectCurrentIdentity {
 
 /**
  * One film-owned effect and its deterministic engine sample.
+ *
+ * @author Samchon
  */
 export interface IAutoMovieProductionFilmEffectSample {
   /** Persisted film-owned runtime identity. */
@@ -357,6 +363,21 @@ const validateRuntime = (
     runtime.frameRate,
     "film-effect-runtime-invalid",
   );
+  if (
+    runtime.frameRate.numerator !== frameRate.numerator ||
+    runtime.frameRate.denominator !== frameRate.denominator ||
+    runtime.effect.version !== 1 ||
+    runtime.effect.id.trim().length === 0 ||
+    runtime.effect.zone.trim().length === 0 ||
+    runtime.effect.intensity.from !== runtime.effect.intensity.to ||
+    Number.isFinite(runtime.effect.intensity.from) === false ||
+    runtime.effect.intensity.from < 0 ||
+    runtime.effect.intensity.from > 1
+  )
+    throw new AutoMovieFilmEffectRuntimeError(
+      "film-effect-runtime-invalid",
+      `Film effect runtime "${runtime.effect.id}" has a noncanonical frame rate or malformed inner film effect.`,
+    );
   const effectCore = { ...runtime.effect, digest: undefined };
   const expectedEffectDigest = digestAutoMovieBytes(
     canonicalAutoMovieJsonBytes(effectCore),

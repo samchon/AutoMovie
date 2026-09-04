@@ -5,6 +5,7 @@ import * as THREE from "three";
  *
  * @evidence requirements/rendering/frame-schedules-and-sampling.md#rendering-state-sampling Keeps the compiler-owned layer weight intact at the viewer boundary.
  * @evidence specifications/editorial-render-and-delivery/render-schedule-state-and-headless.md#spec-render-frame-schedule Selects composition from the already sampled frame rather than resampling an edit.
+ * @author Samchon
  */
 export interface IAutoMovieFilmBeautyLayer {
   /** Linear beauty contribution in `[0, 1]`. */
@@ -63,7 +64,7 @@ export const resolveAutoMovieFilmBeautyComposition = <
       ? { kind: "direct", layer: layers[0]! }
       : { kind: "fade", layer: layers[0]!, weight: layers[0]!.weight };
   const [outgoing, incoming] = layers as readonly [Layer, Layer];
-  if (Math.abs(outgoing.weight + incoming.weight - 1) > 1e-12)
+  if (outgoing.weight + incoming.weight !== 1)
     throw new Error(
       `Film dissolve layer weights must sum to one, but received ${outgoing.weight} and ${incoming.weight}.`,
     );
@@ -116,6 +117,7 @@ export const renderFadeToBlackFrame = (
       transparent: true,
       depthTest: false,
       depthWrite: false,
+      toneMapped: false,
     });
     const quadGeometry = new THREE.PlaneGeometry(2, 2);
     const quadScene = new THREE.Scene();
@@ -131,7 +133,7 @@ export const renderFadeToBlackFrame = (
   } else if (state.target.width !== size.x || state.target.height !== size.y)
     state.target.setSize(size.x, size.y);
 
-  const previousTarget = renderer.getRenderTarget?.() ?? null;
+  const previousTarget = renderer.getRenderTarget();
   const previousAutoClear = renderer.autoClear;
   const previousClearColor = renderer.getClearColor(new THREE.Color()).clone();
   const previousClearAlpha = renderer.getClearAlpha();

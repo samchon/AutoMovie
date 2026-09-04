@@ -333,6 +333,33 @@ export const test_production_film_effect_runtime = (): void => {
       timelineFrame: 12,
     }),
   );
+  const noncanonicalRuntimeRate = captureError(() =>
+    sampleProductionFilmEffects({
+      identity: current,
+      effects: [
+        {
+          ...runtime[0]!,
+          frameRate: { numerator: 48, denominator: 2 },
+        },
+      ],
+      timelineFrame: 12,
+    }),
+  );
+  const malformedInner = captureError(() =>
+    sampleProductionFilmEffects({
+      identity: current,
+      effects: [
+        {
+          ...runtime[0]!,
+          effect: {
+            ...runtime[0]!.effect,
+            intensity: { from: 0.6, to: 0.5 },
+          },
+        },
+      ],
+      timelineFrame: 12,
+    }),
+  );
   const blankIdentity = captureError(() =>
     materializeProductionFilmEffects({
       identity: { ...current, production: "" },
@@ -387,6 +414,8 @@ export const test_production_film_effect_runtime = (): void => {
       stale,
       altered,
       invalidRuntimeRate,
+      noncanonicalRuntimeRate,
+      malformedInner,
       blankIdentity,
       badDigest,
       unsupported,
@@ -404,6 +433,8 @@ export const test_production_film_effect_runtime = (): void => {
       "film-effect-input-invalid",
       "film-effect-input-invalid",
       "film-effect-runtime-stale",
+      "film-effect-runtime-invalid",
+      "film-effect-runtime-invalid",
       "film-effect-runtime-invalid",
       "film-effect-runtime-invalid",
       "film-effect-input-invalid",
