@@ -50,8 +50,8 @@ jobs:
           AUTOMOVIE_COVERAGE_BASE: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
       - name: Verify validation left the checkout clean
         run: |
-          git diff --check
-          git diff --exit-code
+          git diff --check HEAD --
+          git diff --exit-code HEAD --
           untracked="$(git ls-files --others --exclude-standard)"
           if [ -n "$untracked" ]; then
             printf '%s\n' "$untracked"

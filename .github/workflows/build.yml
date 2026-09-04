@@ -47,8 +47,8 @@ jobs:
       - run: pnpm run build:tgz
       - name: Verify validation left the checkout clean
         run: |
-          git diff --check
-          git diff --exit-code
+          git diff --check HEAD --
+          git diff --exit-code HEAD --
           untracked="$(git ls-files --others --exclude-standard)"
           if [ -n "$untracked" ]; then
             printf '%s\n' "$untracked"
