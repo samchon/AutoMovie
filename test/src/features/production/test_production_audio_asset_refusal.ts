@@ -19,7 +19,7 @@ const refuses = (
 
 /** What every refusal names, so a rejected asset says what to convert it to. */
 const SUPPORTED =
-  'Supported audio assets are RIFF/WAVE ("*.wav") containers carrying 16-bit PCM or 32-bit IEEE float samples, mono or stereo.';
+  'Supported audio assets are RIFF/WAVE ("*.wav") containers carrying 16-bit PCM or 32-bit IEEE float samples, mono front-center or stereo front-left/front-right.';
 
 /**
  * One well-formed 16-bit PCM mono asset, the twin every refusal is one step
@@ -124,7 +124,7 @@ export const test_production_audio_asset_refusal = (): void => {
               channels: [[0]],
             }),
             [
-              'declares an extensible WAVE format in a "fmt " chunk of 18 bytes, which is too small to carry its 40-byte sub-format',
+              'declares 22 extensible bytes but its "fmt " chunk carries only 0',
             ],
           ),
       ],
@@ -217,6 +217,154 @@ export const test_production_audio_asset_refusal = (): void => {
         "aFractionalDecodeRateIsRefusedTheSameWay",
         () => refuses(VALID, ["cannot be decoded at 48000.5 Hz"], 48_000.5),
       ],
+      [
+        "aWrongRiffExtentIsRefused",
+        () =>
+          refuses(productionWav({ channels: [[0]], declaredRiffSize: 4 }), [
+            "[riff-size]",
+          ]),
+      ],
+      [
+        "aDuplicateFormatChunkIsRefused",
+        () =>
+          refuses(
+            productionWav({ channels: [[0]], duplicateFormatChunk: true }),
+            ["[duplicate-fmt]"],
+          ),
+      ],
+      [
+        "aDuplicateDataChunkIsRefused",
+        () =>
+          refuses(
+            productionWav({ channels: [[0]], duplicateDataChunk: true }),
+            ["[duplicate-data]"],
+          ),
+      ],
+      [
+        "aWrongBlockAlignmentIsRefused",
+        () =>
+          refuses(productionWav({ channels: [[0]], blockAlign: 4 }), [
+            "[block-align]",
+          ]),
+      ],
+      [
+        "aWrongAverageByteRateIsRefused",
+        () =>
+          refuses(
+            productionWav({
+              channels: [[0]],
+              averageBytesPerSecond: 123,
+            }),
+            ["[average-bytes-per-second]"],
+          ),
+      ],
+      [
+        "aForeignSubformatGuidIsRefused",
+        () =>
+          refuses(
+            productionWav({
+              formatTag: 0xfffe,
+              channels: [[0]],
+              subFormatGuidTail: new Uint8Array(14),
+            }),
+            ["[unsupported-wave-subformat]"],
+          ),
+      ],
+      [
+        "anInvalidValidBitRangeIsRefused",
+        () =>
+          refuses(
+            productionWav({
+              formatTag: 0xfffe,
+              channels: [[0]],
+              validBitsPerSample: 0,
+            }),
+            ["[extensible.valid-bits]"],
+          ),
+      ],
+      [
+        "aShortExtensibleDeclarationIsRefused",
+        () =>
+          refuses(
+            productionWav({
+              formatTag: 0xfffe,
+              channels: [[0]],
+              extensionBytes: 20,
+            }),
+            ["[extensible.cbSize]"],
+          ),
+      ],
+      [
+        "aLegalUnsupportedPrecisionIsDistinguished",
+        () =>
+          refuses(
+            productionWav({
+              formatTag: 0xfffe,
+              channels: [[0]],
+              validBitsPerSample: 12,
+            }),
+            ["[unsupported-wave-precision]"],
+          ),
+      ],
+      [
+        "aMaskCountMismatchIsRefused",
+        () =>
+          refuses(
+            productionWav({
+              formatTag: 0xfffe,
+              channels: [[0], [0]],
+              channelMask: 0x1,
+            }),
+            ["[wave-channel-mask-count]"],
+          ),
+      ],
+      [
+        "unsupportedSpeakerLayoutsAreRefused",
+        () =>
+          [0, 0x5, 0xc].every((channelMask) =>
+            refuses(
+              productionWav({
+                formatTag: 0xfffe,
+                channels: [[0], [0]],
+                channelMask,
+              }),
+              [
+                "[unsupported-wave-layout]",
+                `0x${channelMask.toString(16).padStart(8, "0")}`,
+              ],
+            ),
+          ),
+      ],
+      [
+        "nonFiniteFloatPcmIsRefusedAtItsPosition",
+        () =>
+          refuses(
+            productionWav({
+              formatTag: 3,
+              bitsPerSample: 32,
+              channels: [[0, Number.NaN]],
+            }),
+            ["[non-finite-pcm]", "frame 1, channel 0"],
+          ),
+      ],
+      [
+        "everyNonFinitePositionAndStereoChannelIsRefused",
+        () =>
+          [
+            [[Number.NaN, 0, 0]],
+            [[0, Infinity, 0]],
+            [[0, 0, -Infinity]],
+            [
+              [0, 0],
+              [0, Number.NaN],
+            ],
+          ].every((channels) =>
+            refuses(
+              productionWav({ formatTag: 3, bitsPerSample: 32, channels }),
+              ["[non-finite-pcm]"],
+            ),
+          ),
+      ],
       // The negative twin: the same well-formed bytes every case above is one
       // step from decode, so the refusals above are about their inputs.
       [
@@ -247,6 +395,19 @@ export const test_production_audio_asset_refusal = (): void => {
       anAssetCarryingNoFramesIsRefused: true,
       aZeroDecodeRateIsRefusedBeforeAnyByteIsRead: true,
       aFractionalDecodeRateIsRefusedTheSameWay: true,
+      aWrongRiffExtentIsRefused: true,
+      aDuplicateFormatChunkIsRefused: true,
+      aDuplicateDataChunkIsRefused: true,
+      aWrongBlockAlignmentIsRefused: true,
+      aWrongAverageByteRateIsRefused: true,
+      aForeignSubformatGuidIsRefused: true,
+      anInvalidValidBitRangeIsRefused: true,
+      aShortExtensibleDeclarationIsRefused: true,
+      aLegalUnsupportedPrecisionIsDistinguished: true,
+      aMaskCountMismatchIsRefused: true,
+      unsupportedSpeakerLayoutsAreRefused: true,
+      nonFiniteFloatPcmIsRefusedAtItsPosition: true,
+      everyNonFinitePositionAndStereoChannelIsRefused: true,
       andTheWellFormedTwinStillDecodes: true,
     },
   );

@@ -281,6 +281,16 @@ export const renderProductionSound = (props: {
    */
   assets?: ReadonlyMap<string, Float32Array>;
 }): IAutoMovieRenderedProductionSound => {
+  for (const asset of new Set(props.plan.cues.map((cue) => cue.asset))) {
+    const source = props.assets?.get(asset);
+    if (source !== undefined)
+      assertFiniteProductionPcm(source, `audio asset "${asset}"`);
+  }
+  for (const line of new Set(props.plan.dialogue.map((line) => line.id))) {
+    const source = props.dialogue?.get(line);
+    if (source !== undefined)
+      assertFiniteProductionPcm(source, `dialogue line "${line}"`);
+  }
   const sampleFrames = frameToSample(props.plan, props.plan.totalFrames);
   const pcm = new Float32Array(sampleFrames * 2);
   for (const event of props.plan.events) {
@@ -318,6 +328,7 @@ export const renderProductionSound = (props: {
       pcm[(start + index) * 2 + 1] += value;
     }
   }
+  assertFiniteProductionPcm(pcm, "generated production mix");
   let peak = 0;
   for (const value of pcm) peak = Math.max(peak, Math.abs(value));
   if (peak > 0.95) {
@@ -326,6 +337,20 @@ export const renderProductionSound = (props: {
       pcm[index] = Math.fround(pcm[index]! * scale);
   }
   return { pcm, analysis: analyzeProductionSound(props.plan, pcm) };
+};
+
+/** Refuse an adopted PCM generation before interpolation or numeric evidence. */
+const assertFiniteProductionPcm = (
+  samples: Float32Array,
+  source: string,
+): void => {
+  if (samples.length === 0)
+    throw new Error(`Production sound ${source} supplied empty PCM.`);
+  for (let index = 0; index < samples.length; ++index)
+    if (Number.isFinite(samples[index]) === false)
+      throw new Error(
+        `Production sound ${source} contains a non-finite PCM sample at index ${index}.`,
+      );
 };
 
 /**

@@ -258,11 +258,21 @@ export const productionWav = (props: {
   formatTag?: number;
   /** Leading tag of an extensible header's sub-format GUID. */
   subFormatTag?: number;
+  /** Extensible valid precision; defaults to the container depth. */
+  validBitsPerSample?: number;
+  /** Extensible extension byte count; defaults to the required 22. */
+  extensionBytes?: number;
+  /** Extensible speaker mask; defaults to FC mono or FL/FR stereo. */
+  channelMask?: number;
+  /** Optional replacement for the final fourteen canonical GUID bytes. */
+  subFormatGuidTail?: Uint8Array;
   /** Declared bit depth; 32 encodes float samples, anything else int16. */
   bitsPerSample?: number;
   /** Declared channel count; defaults to how many channels were supplied. */
   declaredChannels?: number;
   sampleRate?: number;
+  blockAlign?: number;
+  averageBytesPerSecond?: number;
   /** One sample array per channel, all of the same length. */
   channels?: readonly (readonly number[])[];
   /** Exact data-chunk payload, replacing the encoded channels. */
@@ -277,6 +287,9 @@ export const productionWav = (props: {
   metadata?: boolean;
   omitFormatChunk?: boolean;
   omitDataChunk?: boolean;
+  duplicateFormatChunk?: boolean;
+  duplicateDataChunk?: boolean;
+  declaredRiffSize?: number;
 }): Uint8Array => {
   const formatTag = props.formatTag ?? 1;
   const bitsPerSample = props.bitsPerSample ?? 16;
@@ -288,7 +301,8 @@ export const productionWav = (props: {
     props.formatChunkSize ?? (formatTag === 0xfffe ? 40 : 16);
   const format = new Uint8Array(formatChunkSize);
   const formatView = new DataView(format.buffer);
-  const blockAlign = Math.trunc((declaredChannels * bitsPerSample) / 8);
+  const blockAlign =
+    props.blockAlign ?? Math.trunc((declaredChannels * bitsPerSample) / 8);
   // A deliberately short format chunk still carries every declared field that
   // fits in it, so a "too short" case is short and otherwise well formed.
   const put16 = (at: number, value: number): void => {
@@ -300,14 +314,27 @@ export const productionWav = (props: {
   put16(0, formatTag);
   put16(2, declaredChannels);
   put32(4, sampleRate);
-  put32(8, sampleRate * blockAlign);
+  put32(8, props.averageBytesPerSecond ?? sampleRate * blockAlign);
   put16(12, blockAlign);
   put16(14, bitsPerSample);
   if (formatTag === 0xfffe) {
-    put16(16, 22);
-    put16(18, bitsPerSample);
-    put32(20, 0);
+    put16(16, props.extensionBytes ?? 22);
+    put16(18, props.validBitsPerSample ?? bitsPerSample);
+    put32(
+      20,
+      props.channelMask ?? (declaredChannels === 1 ? 0x0000_0004 : 0x0000_0003),
+    );
     put16(24, props.subFormatTag ?? 1);
+    const tail =
+      props.subFormatGuidTail ??
+      Uint8Array.from([
+        0, 0, 0, 0, 0x10, 0, 0x80, 0, 0, 0xaa, 0, 0x38, 0x9b, 0x71,
+      ]);
+    if (formatChunkSize > 26)
+      format.set(
+        tail.subarray(0, Math.min(tail.length, formatChunkSize - 26)),
+        26,
+      );
   }
   const chunks: Array<{
     id: string;
@@ -318,12 +345,15 @@ export const productionWav = (props: {
     chunks.push({ id: "LIST", payload: Buffer.from("INFOfixture", "utf8") });
   if (props.omitFormatChunk !== true)
     chunks.push({ id: "fmt ", payload: format });
+  if (props.duplicateFormatChunk === true)
+    chunks.push({ id: "fmt ", payload: format });
   if (props.omitDataChunk !== true)
     chunks.push({
       id: "data",
       payload,
       declaredSize: props.declaredDataSize,
     });
+  if (props.duplicateDataChunk === true) chunks.push({ id: "data", payload });
   const padded = (length: number): number => length + (length % 2);
   const riffSize = chunks.reduce(
     (total, chunk) => total + 8 + padded(chunk.payload.length),
@@ -332,7 +362,7 @@ export const productionWav = (props: {
   const bytes = new Uint8Array(8 + riffSize);
   const view = new DataView(bytes.buffer);
   writeWavTag(bytes, 0, "RIFF");
-  view.setUint32(4, riffSize, true);
+  view.setUint32(4, props.declaredRiffSize ?? riffSize, true);
   writeWavTag(bytes, 8, props.form ?? "WAVE");
   let cursor = 12;
   for (const chunk of chunks) {

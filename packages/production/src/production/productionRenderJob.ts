@@ -8,6 +8,12 @@ import {
 import { createHash } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
+import { isDeepStrictEqual } from "node:util";
+
+import type {
+  IAutoMovieProductionAudioProcessing,
+  IAutoMovieProductionWaveSourceFormat,
+} from "./decodeProductionAudioAsset";
 
 import { parseAutoMovieCaptionLanguage } from "./captionLanguage";
 import {
@@ -337,7 +343,7 @@ export interface IAutoMovieProductionRenderChunkStatus {
 /**
  * Parser/preflight identity for one compiler-declared audio source asset.
  */
-export interface IAutoMovieProductionAudioAssetIdentity {
+interface IAutoMovieProductionAudioAssetIdentityBase {
   /**
    * Project-relative compiler-declared asset path.
    */
@@ -359,6 +365,24 @@ export interface IAutoMovieProductionAudioAssetIdentity {
    */
   channels: number;
 }
+
+/**
+ * Exact source-format or placeholder provenance carried by one audio asset.
+ *
+ * @evidence requirements/sound/sources-and-external-assets.md#sound-decode-contract Carries the format facts verified before a cue is admitted to the plan.
+ * @evidence requirements/sound/sources-and-external-assets.md#sound-derived-source-closure Retains the exact processing lineage beside immutable source identity.
+ * @evidence specifications/interchange-and-adoption/media-inspection-boundaries.md#interchange-audio-inspection Prevents a count-only projection from erasing ordered channel semantics.
+ */
+export type IAutoMovieProductionAudioAssetIdentity =
+  IAutoMovieProductionAudioAssetIdentityBase &
+    (
+      | { kind: "placeholder-audio-stem" }
+      | {
+          kind: "wave";
+          sourceFormat: IAutoMovieProductionWaveSourceFormat;
+          processing: IAutoMovieProductionAudioProcessing;
+        }
+    );
 
 /**
  * Build content-addressed chunks from the compiler-owned film edit.
@@ -1203,7 +1227,10 @@ const normalizeAudioAssets = (
         Number.isSafeInteger(asset.sampleRate) === false ||
         asset.sampleRate <= 0 ||
         Number.isSafeInteger(asset.channels) === false ||
-        asset.channels <= 0
+        asset.channels <= 0 ||
+        (asset.kind === "placeholder-audio-stem" &&
+          (asset.sampleRate !== 48_000 || asset.channels !== 2)) ||
+        (asset.kind === "wave" && validWaveAudioIdentity(asset) === false)
       )
         throw new Error(
           `Audio asset "${asset.path}" has invalid identity, duration, sample rate, channels, or duplicate ownership.`,
@@ -1212,6 +1239,53 @@ const normalizeAudioAssets = (
       return structuredClone(asset);
     });
   return output;
+};
+
+const validWaveAudioIdentity = (
+  asset: Extract<IAutoMovieProductionAudioAssetIdentity, { kind: "wave" }>,
+): boolean => {
+  const source = asset.sourceFormat;
+  const processing = asset.processing;
+  const expectedSpeakers =
+    asset.channels === 1 ? ["front-center"] : ["front-left", "front-right"];
+  const expectedMatrix = asset.channels === 1 ? [[1]] : [[0.5, 0.5]];
+  const resampled = processing.outputSampleRate !== asset.sampleRate;
+  const expectedKind =
+    asset.channels === 1
+      ? resampled
+        ? "resample"
+        : "copy"
+      : resampled
+        ? "downmix-resample"
+        : "downmix";
+  return (
+    (asset.channels === 1 || asset.channels === 2) &&
+    source.kind === "wave" &&
+    source.sampleRate === asset.sampleRate &&
+    source.channels === asset.channels &&
+    (source.encoding === "pcm-s16le"
+      ? source.containerBits === 16 && source.validBits === 16
+      : source.encoding === "float-f32le" &&
+        source.containerBits === 32 &&
+        source.validBits === 32) &&
+    source.layout.kind === (asset.channels === 1 ? "mono" : "stereo") &&
+    isDeepStrictEqual(source.layout.speakers, expectedSpeakers) &&
+    (source.layout.source === "legacy-default"
+      ? source.header === "wave-format-ex" &&
+        source.layout.mask === null &&
+        source.subFormatGuid === null
+      : source.header === "wave-format-extensible" &&
+        source.layout.mask === (asset.channels === 1 ? 0x4 : 0x3) &&
+        source.subFormatGuid ===
+          (source.encoding === "pcm-s16le"
+            ? "00000001-0000-0010-8000-00aa00389b71"
+            : "00000003-0000-0010-8000-00aa00389b71")) &&
+    processing.kind === expectedKind &&
+    processing.outputChannels === 1 &&
+    Number.isSafeInteger(processing.outputSampleRate) &&
+    processing.outputSampleRate > 0 &&
+    isDeepStrictEqual(processing.matrix, expectedMatrix)
+  );
 };
 
 const webVttTime = (seconds: number): string => {

@@ -87,6 +87,24 @@ export const test_production_audio_asset_decode = (): void => {
       channels: [[0, 16_384, -32_768, 8_192]],
     }),
   );
+  const extensibleFloatStereo = decode(
+    productionWav({
+      formatTag: 0xfffe,
+      subFormatTag: 3,
+      bitsPerSample: 32,
+      channels: [
+        [0.25, -0.5],
+        [0.75, 0.5],
+      ],
+    }),
+  );
+  const finiteBoundaries = decode(
+    productionWav({
+      formatTag: 3,
+      bitsPerSample: 32,
+      channels: [[-0, 1.401298464324817e-45, 3.4028234663852886e38]],
+    }),
+  );
   const resampled = decode(
     productionWav({
       sampleRate: 24_000,
@@ -100,6 +118,24 @@ export const test_production_audio_asset_decode = (): void => {
       ["itReadsTheDeclaredRate", () => monoPcm.sourceSampleRate === PLAN_RATE],
       ["itReadsTheDeclaredChannelCount", () => monoPcm.sourceChannels === 1],
       ["itCountsTheSourceFrames", () => monoPcm.sourceFrames === 4],
+      [
+        "legacyMonoPreservesItsDefaultFrontCenterFacts",
+        () =>
+          monoPcm.sourceFormat.header === "wave-format-ex" &&
+          monoPcm.sourceFormat.encoding === "pcm-s16le" &&
+          monoPcm.sourceFormat.containerBits === 16 &&
+          monoPcm.sourceFormat.validBits === 16 &&
+          monoPcm.sourceFormat.layout.source === "legacy-default" &&
+          monoPcm.sourceFormat.layout.speakers[0] === "front-center" &&
+          monoPcm.sourceFormat.subFormatGuid === null,
+      ],
+      [
+        "exactRateMonoDeclaresCopyLineage",
+        () =>
+          monoPcm.processing.kind === "copy" &&
+          monoPcm.processing.outputSampleRate === PLAN_RATE &&
+          monoPcm.processing.matrix[0]?.[0] === 1,
+      ],
       [
         "itDerivesTheRuntimeFromThoseFrames",
         () => nclose(monoPcm.durationSeconds, 4 / PLAN_RATE, 1e-12),
@@ -136,14 +172,37 @@ export const test_production_audio_asset_decode = (): void => {
       ["soAnOpposedPairCancels", () => nclose(stereoPcm.samples[1]!, 0, 1e-9)],
       [
         "thirtyTwoBitFloatSamplesDecodeAsWritten",
-        () => nclose(float.samples[1]!, -0.75, 1e-9),
+        () =>
+          nclose(float.samples[1]!, -0.75, 1e-9) &&
+          float.sourceFormat.encoding === "float-f32le",
       ],
       [
         "anExtensibleHeaderDecodesAsItsSubFormat",
         () =>
+          extensible.sourceFormat.subFormatGuid ===
+            "00000001-0000-0010-8000-00aa00389b71" &&
+          extensible.sourceFormat.layout.mask === 0x4 &&
           [...extensible.samples].every((sample, index) =>
             nclose(sample, monoPcm.samples[index]!, 1e-9),
           ),
+      ],
+      [
+        "extensibleFloatStereoPreservesLayoutAndDownmix",
+        () =>
+          extensibleFloatStereo.sourceFormat.encoding === "float-f32le" &&
+          extensibleFloatStereo.sourceFormat.layout.speakers.join("|") ===
+            "front-left|front-right" &&
+          extensibleFloatStereo.processing.kind === "downmix" &&
+          extensibleFloatStereo.processing.matrix[0]?.join("|") === "0.5|0.5" &&
+          nclose(extensibleFloatStereo.samples[0]!, 0.5, 1e-9) &&
+          nclose(extensibleFloatStereo.samples[1]!, 0, 1e-9),
+      ],
+      [
+        "finiteFloatBoundariesRemainAdmissible",
+        () =>
+          Object.is(finiteBoundaries.samples[0], -0) &&
+          finiteBoundaries.samples[1] === 1.401298464324817e-45 &&
+          finiteBoundaries.samples[2] === 3.4028234663852886e38,
       ],
       [
         "aFileAtAnotherRateStretchesByTheRateRatio",
@@ -169,11 +228,20 @@ export const test_production_audio_asset_decode = (): void => {
         "andTheReportedRuntimeStaysTheFilesOwn",
         () => nclose(resampled.durationSeconds, 4 / 24_000, 1e-12),
       ],
+      [
+        "resamplingIsNamedSeparatelyFromSourceFacts",
+        () =>
+          resampled.processing.kind === "resample" &&
+          resampled.sourceFormat.sampleRate === 24_000 &&
+          resampled.processing.outputSampleRate === PLAN_RATE,
+      ],
     ]),
     {
       itReadsTheDeclaredRate: true,
       itReadsTheDeclaredChannelCount: true,
       itCountsTheSourceFrames: true,
+      legacyMonoPreservesItsDefaultFrontCenterFacts: true,
+      exactRateMonoDeclaresCopyLineage: true,
       itDerivesTheRuntimeFromThoseFrames: true,
       itScalesSixteenBitCodesToUnitFloats: true,
       andFullScaleNegativeIsExactlyMinusOne: true,
@@ -183,11 +251,14 @@ export const test_production_audio_asset_decode = (): void => {
       soAnOpposedPairCancels: true,
       thirtyTwoBitFloatSamplesDecodeAsWritten: true,
       anExtensibleHeaderDecodesAsItsSubFormat: true,
+      extensibleFloatStereoPreservesLayoutAndDownmix: true,
+      finiteFloatBoundariesRemainAdmissible: true,
       aFileAtAnotherRateStretchesByTheRateRatio: true,
       andInterpolatesBetweenItsSourceSamples: true,
       andHoldsTheLastSamplePastTheEnd: true,
       whileTheReportedRateStaysTheFilesOwn: true,
       andTheReportedRuntimeStaysTheFilesOwn: true,
+      resamplingIsNamedSeparatelyFromSourceFacts: true,
     },
   );
 };

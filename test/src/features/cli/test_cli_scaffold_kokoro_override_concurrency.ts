@@ -1,210 +1,168 @@
+import { env } from "@huggingface/transformers";
 import { TestValidator } from "@nestia/e2e";
 import { createRequire } from "node:module";
 import path from "node:path";
 
-interface IKokoroOverrideModule {
-  withKokoroRuntimeOverrides<Output>(
-    overrides: Array<{
-      resource: string;
-      install(): unknown;
-      restore(): unknown;
-    }>,
-    operation: () => Output | Promise<Output>,
-  ): Promise<Output>;
+interface IKokoroLoaderModule {
+  loadKokoroRuntime<Model, Tokenizer, Runtime>(props: {
+    factories: {
+      loadModel: (
+        model: string,
+        options: Record<string, unknown>,
+      ) => Promise<Model>;
+      loadTokenizer: (
+        model: string,
+        options: Record<string, unknown>,
+      ) => Promise<Tokenizer>;
+      construct: (model: Model, tokenizer: Tokenizer) => Runtime;
+    };
+    model: string;
+    revision: string;
+    cacheRoot: string;
+    dtype: string;
+    device: string | null;
+    progressCallback?: (progress: unknown) => void;
+  }): Promise<Runtime>;
 }
 
-const deferred = (): {
-  promise: Promise<null>;
-  resolve(): void;
-} => {
-  let release = (): void => undefined;
-  const promise = new Promise<null>((resolve) => {
-    release = () => resolve(null);
-  });
-  return { promise, resolve: release };
-};
+const { loadKokoroRuntime } = createRequire(__filename)(
+  path.resolve(
+    __dirname,
+    "../../../../packages/template/scaffold/scripts/loadKokoroRuntime.ts",
+  ),
+) as IKokoroLoaderModule;
 
-/**
- * Kokoro's unavoidable process overrides serialize across generated copies.
- *
- * Scenarios:
- *
- * 1. Two operations start concurrently and observe a strict A
- *    install/operation/restore then B
- *    install/operation/restore sequence through one process coordination slot.
- * 2. Both shared globals return to their original object/value identity after
- *    the concurrent calls, proving the slot contains coordination only.
- * 3. An operation failure plus restoration failure preserves primary then
- *    cleanup order and primary cause, releases the FIFO permit, and allows a
- *    subsequent call from the other physical copy to restore globals again.
- */
+/** Request-local Kokoro loads overlap without changing parent process globals. */
 export const test_cli_scaffold_kokoro_override_concurrency =
   async (): Promise<void> => {
-    const loader = createRequire(__filename);
-    const source = path.resolve(
-      __dirname,
-      "../../../../packages/template/scaffold/scripts/withKokoroRuntimeOverrides.ts",
+    const originalFetch = globalThis.fetch;
+    const originalSymbols = Object.getOwnPropertySymbols(globalThis);
+    const originalCacheDir = env.cacheDir;
+    const observed: Array<{ kind: string; model: string; options: unknown }> =
+      [];
+    const progress = {
+      A: (_value: unknown): void => undefined,
+      B: (_value: unknown): void => undefined,
+    };
+    const load = (name: "A" | "B") =>
+      loadKokoroRuntime({
+        factories: {
+          loadModel: async (model, options) => {
+            observed.push({ kind: `${name}.model`, model, options });
+            await Promise.resolve();
+            return `${name}.model`;
+          },
+          loadTokenizer: async (model, options) => {
+            observed.push({ kind: `${name}.tokenizer`, model, options });
+            await Promise.resolve();
+            return `${name}.tokenizer`;
+          },
+          construct: (model, tokenizer) => ({ model, tokenizer }),
+        },
+        model: `owner/model-${name}`,
+        revision: `revision-${name}`,
+        cacheRoot: `state/model-${name}`,
+        dtype: name === "A" ? "fp32" : "q8",
+        device: name === "A" ? "cpu" : "wasm",
+        progressCallback: progress[name],
+      });
+    TestValidator.equals(
+      "concurrent loads preserve request-local model inputs",
+      await Promise.all([load("A"), load("B")]),
+      [
+        { model: "A.model", tokenizer: "A.tokenizer" },
+        { model: "B.model", tokenizer: "B.tokenizer" },
+      ],
     );
-    const runtime = loader(source) as IKokoroOverrideModule;
-    const initialFetch = globalThis.fetch;
-    const environment = { cacheDir: "initial" };
-    try {
-      const fetchA = (() =>
-        Promise.reject(new Error("unused A fetch"))) as typeof fetch;
-      const fetchB = (() =>
-        Promise.reject(new Error("unused B fetch"))) as typeof fetch;
-      const events: string[] = [];
-      const enteredA = deferred();
-      const releaseA = deferred();
-      const call = (
-        module: IKokoroOverrideModule,
-        name: "A" | "B",
-        selectedFetch: typeof fetch,
-      ): Promise<string> =>
-        module.withKokoroRuntimeOverrides(
-          [
-            {
-              resource: `${name} cache`,
-              install: () => {
-                events.push(`${name}.install.cache`);
-                environment.cacheDir = name;
-              },
-              restore: () => {
-                events.push(`${name}.restore.cache`);
-                environment.cacheDir = "initial";
-              },
-            },
-            {
-              resource: `${name} fetch`,
-              install: () => {
-                events.push(`${name}.install.fetch`);
-                globalThis.fetch = selectedFetch;
-              },
-              restore: () => {
-                events.push(`${name}.restore.fetch`);
-                globalThis.fetch = initialFetch;
-              },
-            },
-          ],
-          async () => {
-            events.push(`${name}.operation.start`);
-            if (name === "A") {
-              enteredA.resolve();
-              await releaseA.promise;
-            }
-            TestValidator.equals(
-              `${name} owns both globals throughout its operation`,
-              {
-                cache: environment.cacheDir,
-                fetch: globalThis.fetch === selectedFetch,
-              },
-              { cache: name, fetch: true },
-            );
-            events.push(`${name}.operation.complete`);
-            return name;
-          },
-        );
-      const firstCall = call(runtime, "A", fetchA);
-      await enteredA.promise;
-      const secondCall = call(runtime, "B", fetchB);
-      await Promise.resolve();
-      TestValidator.equals(
-        "the second physical copy waits without installing an override",
-        events,
-        ["A.install.cache", "A.install.fetch", "A.operation.start"],
-      );
-      releaseA.resolve();
-      TestValidator.equals(
-        "both physical copies complete in strict FIFO order",
-        await Promise.all([firstCall, secondCall]),
-        ["A", "B"],
-      );
-      TestValidator.equals(
-        "the serialized operation and restoration order is exact",
-        events,
-        [
-          "A.install.cache",
-          "A.install.fetch",
-          "A.operation.start",
-          "A.operation.complete",
-          "A.restore.cache",
-          "A.restore.fetch",
-          "B.install.cache",
-          "B.install.fetch",
-          "B.operation.start",
-          "B.operation.complete",
-          "B.restore.cache",
-          "B.restore.fetch",
-        ],
-      );
-      TestValidator.equals(
-        "the original globals are restored after both copies",
+    TestValidator.equals(
+      "model and tokenizer receive each load's revision and cache",
+      observed,
+      [
         {
-          cache: environment.cacheDir,
-          fetchIdentity: globalThis.fetch === initialFetch,
+          kind: "A.model",
+          model: "owner/model-A",
+          options: {
+            revision: "revision-A",
+            cache_dir: "state/model-A",
+            progress_callback: progress.A,
+            dtype: "fp32",
+            device: "cpu",
+          },
         },
-        { cache: "initial", fetchIdentity: true },
-      );
+        {
+          kind: "A.tokenizer",
+          model: "owner/model-A",
+          options: {
+            revision: "revision-A",
+            cache_dir: "state/model-A",
+            progress_callback: progress.A,
+          },
+        },
+        {
+          kind: "B.model",
+          model: "owner/model-B",
+          options: {
+            revision: "revision-B",
+            cache_dir: "state/model-B",
+            progress_callback: progress.B,
+            dtype: "q8",
+            device: "wasm",
+          },
+        },
+        {
+          kind: "B.tokenizer",
+          model: "owner/model-B",
+          options: {
+            revision: "revision-B",
+            cache_dir: "state/model-B",
+            progress_callback: progress.B,
+          },
+        },
+      ],
+    );
+    TestValidator.equals(
+      "parent fetch and global symbol inventory remain unchanged",
+      {
+        fetch: globalThis.fetch === originalFetch,
+        cacheDir: env.cacheDir,
+        symbols: Object.getOwnPropertySymbols(globalThis),
+      },
+      { fetch: true, cacheDir: originalCacheDir, symbols: originalSymbols },
+    );
 
-      const primary = new Error("Kokoro operation failed");
-      const cleanup = new Error("Kokoro fetch restoration failed");
-      let combined: unknown;
+    for (const stage of ["model", "tokenizer", "constructor"] as const) {
+      const expected = new Error(`${stage} failed`);
+      let received: unknown;
       try {
-        await runtime.withKokoroRuntimeOverrides(
-          [
-            {
-              resource: "failing fetch",
-              install: () => {
-                globalThis.fetch = fetchA;
-              },
-              restore: () => {
-                globalThis.fetch = initialFetch;
-                throw cleanup;
-              },
+        await loadKokoroRuntime({
+          factories: {
+            loadModel: async () => {
+              if (stage === "model") throw expected;
+              return "model";
             },
-          ],
-          () => {
-            throw primary;
+            loadTokenizer: async () => {
+              if (stage === "tokenizer") throw expected;
+              return "tokenizer";
+            },
+            construct: () => {
+              if (stage === "constructor") throw expected;
+              return "runtime";
+            },
           },
-        );
+          model: "owner/model",
+          revision: "revision",
+          cacheRoot: "state/model",
+          dtype: "fp32",
+          device: "cpu",
+          progressCallback: () => undefined,
+        });
       } catch (error) {
-        combined = error;
+        received = error;
       }
-      const errors =
-        combined instanceof AggregateError ? [...combined.errors] : [];
-      const recovery = await runtime.withKokoroRuntimeOverrides(
-        [
-          {
-            resource: "recovery fetch",
-            install: () => {
-              globalThis.fetch = fetchB;
-            },
-            restore: () => {
-              globalThis.fetch = initialFetch;
-            },
-          },
-        ],
-        () => globalThis.fetch === fetchB,
-      );
       TestValidator.equals(
-        "failure order, permit release, and final global restoration are exact",
-        {
-          aggregate: combined instanceof AggregateError,
-          cause:
-            combined instanceof AggregateError ? combined.cause : undefined,
-          errors,
-          recovery,
-          restored: globalThis.fetch === initialFetch,
-        },
-        {
-          aggregate: true,
-          cause: primary,
-          errors: [primary, cleanup],
-          recovery: true,
-          restored: true,
-        },
+        `${stage} failure retains identity`,
+        received,
+        expected,
       );
-    } finally {
-      globalThis.fetch = initialFetch;
     }
   };
