@@ -8,10 +8,8 @@ import type { IAutoMovieProductionEvidenceSourceOwnerBinding } from "@automovie/
  * population, and the source digest is checked against the bytes about to run.
  * Review and final callers additionally require the current reviewed edge.
  *
- * @evidence requirements/agent-authoring/source-owned-loop.md#agent-source-result-link Binds execution and result attribution to the exact reviewed source export and owner.
- * @evidence requirements/agent-authoring/source-owned-loop.md#agent-change-impact-visibility Refuses a source revision or owner edge that differs from the graph-selected current input.
- * @evidence specifications/authoring-and-authority/source-authority-and-derivation.md#spec-authoring-derivation-output-lineage Resolves target, source path, export, and source digest as one derivation identity.
- * @evidence specifications/authoring-and-authority/source-authority-and-derivation.md#spec-authoring-source-ownership-failure Fails closed when the executed edge is absent, ambiguous, stale, mismatched, or unreviewed at a review gate.
+ * @evidence requirements/review/subject-inspection.md#review-subject-evidence Binds execution and result attribution to the exact reviewed source export and refuses a stale or mismatched owner edge.
+ * @evidence specifications/review-and-acceptance/subject-surface-and-inspection.md#review-system-subject-freshness Resolves target, source path, export, and source digest as one current identity and fails closed when it is absent, ambiguous, stale, mismatched, or unreviewed.
  * @author Samchon
  */
 export const resolveAutoMovieSourceOwnerBinding = (props: {
