@@ -2,7 +2,16 @@ import fs from "node:fs";
 import path from "node:path";
 
 import { describeThrown } from "../integrity/contractOwnership";
-import { isAuthoredExecutableSource, runGit } from "./changedCoverage";
+import { runGit } from "./changedCoverage";
+import {
+  canonicalCoveragePath,
+  isAuthoredExecutableSource,
+} from "./coverageIdentity";
+import {
+  type ICoveragePublication,
+  loadCoveragePublication,
+  publicationReport,
+} from "./coveragePublication";
 
 type Writer = (line: string) => void;
 
@@ -75,25 +84,39 @@ export const inspectCoveragePopulation = (props: {
   measured: readonly string[];
   root: string;
 }): ICoveragePopulationInspection => {
-  const known = new Set(props.candidates.map(slash));
-  const measured = new Set<string>();
+  const known = new Map<string, string>(
+    props.candidates.map(
+      (file) =>
+        [
+          canonicalCoveragePath(path.resolve(props.root, file)),
+          slash(file),
+        ] as const,
+    ),
+  );
+  const measured = new Map<string, string>();
   for (const file of props.measured) {
     const relative = slash(path.relative(props.root, file));
     if (relative.length === 0 || relative.startsWith("../")) continue;
-    measured.add(relative);
+    measured.set(canonicalCoveragePath(file), relative);
   }
-  const obliged = [...known]
+  const obliged = [...known.values()]
     .filter(isAuthoredExecutableSource)
     .filter((file) => fs.existsSync(path.resolve(props.root, file)))
     .sort(byCodeUnit);
   return {
     obliged: obliged.length,
     measured: measured.size,
-    unmeasured: obliged.filter((file) => measured.has(file) === false),
+    unmeasured: obliged.filter(
+      (file) =>
+        measured.has(canonicalCoveragePath(path.resolve(props.root, file))) ===
+        false,
+    ),
     unjudged: [...measured]
-      .filter(
-        (file) => known.has(file) && isAuthoredExecutableSource(file) === false,
+      .map(([identity, relative]) => known.get(identity) ?? relative)
+      .filter((file) =>
+        known.has(canonicalCoveragePath(path.resolve(props.root, file))),
       )
+      .filter((file) => isAuthoredExecutableSource(file) === false)
       .sort(byCodeUnit),
   };
 };
@@ -116,8 +139,7 @@ export const reportCoveragePopulation = (
     );
 };
 
-const readCoverageKeys = (reportDirectory: string): string[] => {
-  const report = path.join(reportDirectory, "coverage-final.json");
+const readCoverageKeys = (report: string): string[] => {
   const parsed: unknown = JSON.parse(fs.readFileSync(report, "utf8"));
   if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed))
     throw new Error(`${report} does not contain a coverage object`);
@@ -135,17 +157,26 @@ const readCoverageKeys = (reportDirectory: string): string[] => {
  * from a coverage gap.
  */
 export const runCoveragePopulationGate = (options: {
-  reportDirectory: string;
+  publication?: ICoveragePublication;
+  reportDirectory?: string;
   root: string;
   write?: Writer;
 }): number => {
   const write = options.write ?? console.log;
   try {
     const root = path.resolve(options.root);
+    let publication = options.publication;
+    if (publication === undefined) {
+      if (options.reportDirectory === undefined)
+        throw new Error("coverage population requires an explicit publication");
+      publication = loadCoveragePublication(
+        path.resolve(options.reportDirectory),
+      );
+    }
     const result = inspectCoveragePopulation({
       root,
       candidates: repositoryCandidates(root),
-      measured: readCoverageKeys(path.resolve(options.reportDirectory)),
+      measured: readCoverageKeys(publicationReport(publication)),
     });
     reportCoveragePopulation(result, write);
     return result.unmeasured.length + result.unjudged.length === 0 ? 0 : 2;

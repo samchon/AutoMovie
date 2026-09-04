@@ -14,28 +14,36 @@ import {
   spanIsDemanded,
 } from "./changedLineDemand";
 import {
+  type ICoveragePosition,
+  type ICoverageSpan,
+  type IMeasuredSource,
+  canonicalCoveragePath,
+  functionIdentity,
+  isAuthoredExecutableSource,
+} from "./coverageIdentity";
+import {
+  type ICoveragePublication,
+  loadCoveragePublication,
+  publicationReport,
+} from "./coveragePublication";
+import {
   emitsNoExecutableStatement,
   excuseNonExecutableGaps,
   repositoryEmitProbe,
 } from "./executableEmission";
-import { COVERAGE_REPORT_DIRECTORY, MEASURED_SOURCES } from "./measureCoverage";
 import {
   branchGapIsReal,
   functionGapIsReal,
   positionsPastEndOfFile,
 } from "./reportCoverageGaps";
 
-const SOURCE_EXTENSION = /\.(?:[cm]?ts|tsx)$/u;
+export {
+  UNJUDGED_DECLARATION_GLOBS,
+  UNMEASURED_SOURCE_ROOTS,
+  isAuthoredExecutableSource,
+} from "./coverageIdentity";
 
-export interface ICoveragePosition {
-  column?: number;
-  line?: number;
-}
-
-export interface ICoverageSpan {
-  end?: ICoveragePosition;
-  start?: ICoveragePosition;
-}
+export type { ICoveragePosition, ICoverageSpan, IMeasuredSource };
 
 export interface IIstanbulFileCoverage {
   b?: Record<string, number[]>;
@@ -51,11 +59,6 @@ export interface IIstanbulFileCoverage {
   path?: string;
   s?: Record<string, number>;
   statementMap?: Record<string, ICoverageSpan>;
-}
-
-export interface IMeasuredSource {
-  lines: number;
-  sha256: string;
 }
 
 export interface ICoverageMetric {
@@ -88,6 +91,7 @@ export interface IChangedFiles {
   mergeBase: string;
   staged: number;
   untracked: number;
+  wholeFiles: Set<string>;
   worktree: number;
 }
 
@@ -115,116 +119,7 @@ type Metric = keyof ICoverageTotals;
 type Writer = (line: string) => void;
 
 const slash = (value: string): string => value.replaceAll("\\", "/");
-const canonical = (value: string): string => slash(path.resolve(value));
-
-/**
- * Whether a repository path is authored executable source owed coverage.
- *
- * The two typed repository-tool roots are named because both sit under `test/`,
- * which the ordinary rule removes: they are tools this repository runs against
- * itself rather than scenarios, and `measureCoverage` measures them for exactly
- * that reason. The exemption has to cover the directory-name rule as well as the
- * `test/` one, because `test/src/coverage/` also contains the segment `coverage`
- * that names c8's own output directory. It did not: `test/src/integrity/**` was
- * admitted and `test/src/coverage/**` was silently refused, so the four modules
- * that implement the per-change 100% obligation were the only measured sources
- * the obligation never applied to. They are measured (the whole-suite report
- * carries all four, three of them below 100%) and they were unjudged, which is
- * the one shape where a gate can be edited freely while reporting green.
- *
- * The playground is named because nothing in this repository executes it. It is
- * a demonstration a person opens in a browser: `private`, depended on by no
- * package, run by no generated child, and shipped to nobody. It is not
- * ungoverned -- twenty-four of its hosts answer the contract graph, and that
- * population is asserted -- but the obligation it answers is the graph's, not
- * line coverage's. Meeting the second would take either a person with a browser
- * or a suite that drives a demo, and the second makes the demo a product
- * surface with its own test burden, which is the opposite of what a demo is
- * for. Unmet, it reported thirty-four files no process had ever loaded.
- *
- * The scaffold's examples are named for the opposite reason: they are the one
- * authored tree this repository compiles and never runs, on purpose. The
- * scaffold's own AGENTS.md settles what they are -- "src/examples is reading
- * material, not a library or evidence population" -- and an author moves a
- * technique out of them into its owning branch rather than importing them.
- * Every generated project type-checks them, because `src` is in its tsconfig
- * include, so they are gated by the compile that is their actual contract. A
- * line-coverage obligation on them would be satisfiable only by a test that
- * executed reading material, which is a test of nothing, and unsatisfied it
- * reported fourteen files no process had ever loaded.
- *
- * The directory names that stay unconditional are the ones no authored source
- * ever legitimately sits under.
- */
-/**
- * Source roots deliberately outside this repository's unit-test coverage.
- *
- * Exported because the measurement has to agree. `coverageIncludes` states the
- * same population in c8's own vocabulary, and a file one list admits while the
- * other refuses is the fault `runCoveragePopulationGate` exists to catch: a
- * file measured but never judged can be edited to any coverage at all without
- * a diagnostic. One source, consumed twice, is what keeps them from drifting.
- */
-export const UNMEASURED_SOURCE_ROOTS: readonly string[] = [
-  "build/",
-  "packages/cli/",
-  "packages/evidence/",
-  "packages/playground/",
-  "packages/template/build/",
-  "packages/template/scaffold/",
-  "test/src/coverage/",
-  "test/src/integrity/",
-];
-
-/**
- * A declaration this repository reads rather than a program it runs.
- *
- * A lint configuration, a bundler configuration and an evidence exclusion list
- * are answered by whatever loads them, and what they say is checked by the
- * thing they configure failing. Measuring them asks a test to import a
- * configuration for no reason but the number, which is the same trade as
- * asserting the contents of a `package.json`.
- */
-const DECLARATION_FILE =
-  /(?:^|\/)(?:lint\.config|vite\.config)\.[cm]?ts$|EvidenceExclusions\.ts$/u;
-
-/**
- * The same rule as a glob, for the instrument that cannot read a regular
- * expression.
- *
- * Spelled here beside the rule it mirrors rather than beside the command that
- * consumes it. The gate exists to catch the two populations disagreeing, and it
- * caught exactly that when the judging half learned this rule and the measuring
- * half did not: `INSTRUMENT FAILURE: packages/render/lint.config.ts: the
- * measurement takes this source and the changed-file gate never judges it`.
- */
-export const UNJUDGED_DECLARATION_GLOBS: readonly string[] = [
-  "**/lint.config.ts",
-  "**/vite.config.ts",
-  "**/*EvidenceExclusions.ts",
-];
-
-export const isAuthoredExecutableSource = (relative: string): boolean => {
-  const target = slash(relative);
-  if (UNMEASURED_SOURCE_ROOTS.some((root) => target.startsWith(root)))
-    return false;
-  if (DECLARATION_FILE.test(target)) return false;
-  const typedRepositoryTool =
-    target.startsWith("test/src/coverage/") ||
-    target.startsWith("test/src/integrity/");
-  if (
-    SOURCE_EXTENSION.test(target) === false ||
-    /\.d\.[cm]?ts$/u.test(target) ||
-    (typedRepositoryTool === false &&
-      (/(^|\/)(?:test|tests|__tests__|fixtures)(\/|$)/u.test(target) ||
-        /(^|\/)coverage(\/|$)/u.test(target))) ||
-    /(^|\/)(?:node_modules|dist|generated|\.cache)(\/|$)/u.test(target) ||
-    /(?:\.test|\.spec|\.generated)\.[cm]?[jt]sx?$/u.test(target) ||
-    /(^|\/)(?:index|bin)\.ts$/u.test(target)
-  )
-    return false;
-  return true;
-};
+const canonical = canonicalCoveragePath;
 
 const diffPath = (line: string): string | null => {
   const encoded = line.slice(4).split("\t", 1)[0];
@@ -353,8 +248,10 @@ export const collectGitChangedLines = (
   const untracked = nulSet(
     runGit(root, ["ls-files", "--others", "--exclude-standard", "-z"]),
   );
+  const wholeFiles = new Set<string>();
   for (const relative of untracked) {
     files.set(relative, new Set());
+    if (isAuthoredExecutableSource(relative)) wholeFiles.add(relative);
   }
   const divergent = [...staged].filter(
     (relative) =>
@@ -367,6 +264,7 @@ export const collectGitChangedLines = (
     staged: staged.size,
     worktree: worktree.size,
     untracked: untracked.size,
+    wholeFiles,
     divergent,
   };
 };
@@ -386,6 +284,7 @@ export const inspectChangedCoverage = (props: {
   files: Map<string, Set<number>>;
   measuredSources: Record<string, unknown>;
   root: string;
+  wholeFiles?: ReadonlySet<string>;
 }): IChangedCoverageInspection => {
   const coverage = indexed(props.coverage);
   const measured = indexed(props.measuredSources);
@@ -448,6 +347,7 @@ export const inspectChangedCoverage = (props: {
     }
     const fileTotals = createTotals();
     const order = changedOrder(lines);
+    const wholeFile = props.wholeFiles?.has(relative) === true;
     const inheritedGaps: IInheritedGaps = {
       branches: 0,
       functions: 0,
@@ -466,7 +366,7 @@ export const inspectChangedCoverage = (props: {
     for (const [id, span] of Object.entries(data.statementMap ?? {})) {
       const line = span?.start?.line;
       const hits = data.s?.[id] ?? 0;
-      if (spanIsDemanded({ order, span }) === false) {
+      if (spanIsDemanded({ order, span, wholeFile }) === false) {
         if (hits === 0) inheritedGaps.statements++;
         continue;
       }
@@ -503,11 +403,11 @@ export const inspectChangedCoverage = (props: {
     // can reach and could only be covered by pretending.
     const text = fs.readFileSync(file, "utf8");
     const sourceLines = text.split("\n");
-    const ranNames = new Set(
+    const ranFunctions = new Set(
       Object.entries(data.fnMap ?? {})
         .filter(([id]) => (data.f?.[id] ?? 0) > 0)
-        .map(([, entry]) => entry?.name)
-        .filter((name): name is string => typeof name === "string"),
+        .map(([, entry]) => functionIdentity(entry))
+        .filter((identity): identity is string => identity !== null),
     );
     let secondReadings = 0;
     for (const [id, entry] of Object.entries(data.fnMap ?? {})) {
@@ -520,8 +420,8 @@ export const inspectChangedCoverage = (props: {
       if (
         covered === false &&
         functionGapIsReal({
-          covered: ranNames,
-          name: entry?.name,
+          covered: ranFunctions,
+          definition: entry,
           text,
         }) === false
       ) {
@@ -529,7 +429,11 @@ export const inspectChangedCoverage = (props: {
         continue;
       }
       if (
-        spanIsDemanded({ order, span: entry?.loc ?? entry?.decl }) === false
+        spanIsDemanded({
+          order,
+          span: entry?.loc ?? entry?.decl,
+          wholeFile,
+        }) === false
       ) {
         if (covered === false) inheritedGaps.functions++;
         continue;
@@ -565,7 +469,13 @@ export const inspectChangedCoverage = (props: {
           artifactBranches++;
           continue;
         }
-        if (spanIsDemanded({ order, span: location ?? entry?.loc }) === false) {
+        if (
+          spanIsDemanded({
+            order,
+            span: location ?? entry?.loc,
+            wholeFile,
+          }) === false
+        ) {
           if (covered === false) inheritedGaps.branches++;
           continue;
         }
@@ -655,6 +565,7 @@ const readJson = (file: string, label: string): unknown => {
 
 export const runChangedCoverageGate = (
   arguments_: string[],
+  publication?: ICoveragePublication,
   environment: NodeJS.ProcessEnv = process.env,
   write: Writer = console.log,
 ): number => {
@@ -663,25 +574,32 @@ export const runChangedCoverageGate = (
     const root = path.resolve(
       options.root ?? path.resolve(__dirname, "../../.."),
     );
-    const reportDirectory = path.resolve(
-      options.reportDirectory ?? COVERAGE_REPORT_DIRECTORY,
-    );
+    if (publication !== undefined && options.reportDirectory !== undefined)
+      throw new Error(
+        "--report-directory cannot replace an explicit run publication",
+      );
+    let owned = publication;
+    if (owned === undefined) {
+      if (options.reportDirectory === undefined)
+        throw new Error(
+          "changed coverage requires an explicit run publication or --report-directory",
+        );
+      owned = loadCoveragePublication(path.resolve(options.reportDirectory));
+    }
     const base = resolveCoverageBase(root, options.base, environment);
     const changes = collectGitChangedLines(root, base);
     const coverage = readJson(
-      path.join(reportDirectory, "coverage-final.json"),
+      publicationReport(owned),
       "coverage report",
     ) as Record<string, IIstanbulFileCoverage>;
-    const measuredSources = readJson(
-      path.join(reportDirectory, MEASURED_SOURCES),
-      "measured-source snapshot",
-    ) as Record<string, unknown>;
+    const measuredSources = owned.sources;
     const result = inspectChangedCoverage({
       root,
       files: changes.files,
       divergent: changes.divergent,
       coverage,
       measuredSources,
+      wholeFiles: changes.wholeFiles,
     });
     const probe = repositoryEmitProbe({
       compilerRoot: path.resolve(__dirname, "../../.."),
