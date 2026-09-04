@@ -3507,6 +3507,34 @@ export const review = true;
     true,
   );
 
+  const retiredSourceConformanceTarget = root();
+  const retiredSourceUnits = contract(
+    retiredSourceConformanceTarget,
+    "docs/principles/core/source-units.md",
+  );
+  fs.appendFileSync(
+    retiredSourceUnits,
+    [
+      "",
+      "## Source-owner evidence-content conformance {#source-evidence-content-conformance}",
+      "",
+      "Semantic judgment cannot be restored as a source owner certifying its own evidence.",
+      "",
+      "Review question: does this source owner certify its own evidence truth?",
+      "",
+      "Sources: synthetic retired-target migration probe.",
+      "",
+    ].join("\n"),
+  );
+  assert.equal(
+    throws(
+      () =>
+        createAutoMovieEvidenceConfig(disabled(retiredSourceConformanceTarget)),
+      "H2 inventory changed without graph wiring",
+    ),
+    true,
+  );
+
   const removedContractUnit = root();
   const removedCommon = contract(
     removedContractUnit,
