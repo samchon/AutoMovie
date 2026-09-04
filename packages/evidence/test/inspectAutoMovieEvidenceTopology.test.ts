@@ -103,10 +103,22 @@ const diagnostics = inspectAutoMovieEvidenceTopology({
       reason: "stale row",
     },
     {
+      provider: "maps",
+      consumer: "models",
+      status: "uses",
+      reason: "The disabled model consumer retained a map edge.",
+    },
+    {
       provider: "ghost",
       consumer: "spaces",
       status: "uses",
       reason: "unknown row",
+    },
+    {
+      provider: "maps",
+      consumer: "ghost",
+      status: "uses",
+      reason: "unknown consumer",
     },
   ],
 });
@@ -166,4 +178,12 @@ assert.equal(
     ],
   })[0]!.code,
   "wrong-order",
+);
+assert.deepEqual(
+  inspectAutoMovieEvidenceTopology({
+    branches: [{ name: "settings", active: true, order: 0 }],
+    expected: [{ provider: "settings", consumer: "ghost" }],
+    declarations: [],
+  }),
+  [],
 );
