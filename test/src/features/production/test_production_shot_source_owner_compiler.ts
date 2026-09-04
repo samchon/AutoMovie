@@ -55,6 +55,22 @@ export const test_production_shot_source_owner_compiler = (): void => {
       ...runtimeBinding,
       exportName: "answer",
     };
+    const filmPath = "src/film.ts";
+    const filmTargetPath = "docs/screenplays/film.md";
+    const filmTargetAnchor = "film";
+    const filmBinding = {
+      ...runtimeBinding,
+      branch: "filmSources",
+      sourcePath: filmPath,
+      exportName: "film",
+      sourceDigest: digestAutoMovieBytes(
+        normalizeAutoMovieSource(
+          fs.readFileSync(path.join(fixture.root, filmPath)),
+        ),
+      ),
+      targetPath: filmTargetPath,
+      targetAnchor: filmTargetAnchor,
+    };
     const authoring = {
       root: fixture.root,
       packageName: "shot-owner-fixture",
@@ -63,7 +79,7 @@ export const test_production_shot_source_owner_compiler = (): void => {
       manifest: { kind: "film" },
       designBranches: [],
       designOwners: [],
-      sourceOwners: [runtimeBinding, acceptanceBinding],
+      sourceOwners: [runtimeBinding, acceptanceBinding, filmBinding],
       contracts: [],
     } as unknown as IAutoMovieProductionEvidence;
     const compiled = new AutoMovieProductionCompiler(
@@ -77,9 +93,20 @@ export const test_production_shot_source_owner_compiler = (): void => {
           ),
         ) as IAutoMovieCompiledShotSource)
       : null;
+    const film = compiled.success
+      ? (JSON.parse(
+          Buffer.from(
+            project.readGeneratedFile("contracts/film-edit.json"),
+          ).toString("utf8"),
+        ) as { source: { target?: string } })
+      : null;
     const refused = new AutoMovieProductionCompiler(project, {
       ...authoring,
-      sourceOwners: [acceptanceBinding],
+      sourceOwners: [acceptanceBinding, filmBinding],
+    }).compile({ scope: "source" });
+    const refusedFilm = new AutoMovieProductionCompiler(project, {
+      ...authoring,
+      sourceOwners: [runtimeBinding, acceptanceBinding],
     }).compile({ scope: "source" });
 
     TestValidator.equals(
@@ -106,6 +133,10 @@ export const test_production_shot_source_owner_compiler = (): void => {
               `${targetPath}#${targetAnchor}`,
         ],
         [
+          "theFilmBuildAlsoCarriesItsSelectedTarget",
+          () => film?.source.target === `${filmTargetPath}#${filmTargetAnchor}`,
+        ],
+        [
           "aStoredPointerOutsideTheSelectedExportPopulationIsRefused",
           () =>
             refused.success === false &&
@@ -116,12 +147,25 @@ export const test_production_shot_source_owner_compiler = (): void => {
                 diagnostic.message.includes("has no graph-selected owner edge"),
             ),
         ],
+        [
+          "aFilmOutsideItsSelectedExportPopulationIsRefused",
+          () =>
+            refusedFilm.success === false &&
+            refusedFilm.diagnostics.some(
+              (diagnostic) =>
+                diagnostic.code === "source-owner-mismatch" &&
+                diagnostic.target === "film" &&
+                diagnostic.path === filmPath,
+            ),
+        ],
       ]),
       {
         theExactRuntimeBindingCompiles: true,
         theGeneratedShotCarriesPathExportDigestAndTarget: true,
         aReviewedSiblingIsAttributionRatherThanTheRuntimeEntry: true,
+        theFilmBuildAlsoCarriesItsSelectedTarget: true,
         aStoredPointerOutsideTheSelectedExportPopulationIsRefused: true,
+        aFilmOutsideItsSelectedExportPopulationIsRefused: true,
       },
     );
   } finally {

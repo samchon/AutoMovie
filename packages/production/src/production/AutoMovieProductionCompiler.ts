@@ -423,6 +423,9 @@ export class AutoMovieProductionCompiler {
     > = {};
     let filmSource: Uint8Array | null = null;
     let filmSourceDigest: AutoMovieContentDigest | null = null;
+    let filmSourceOwner:
+      | IAutoMovieProductionEvidence["sourceOwners"][number]
+      | null = null;
     if (input.scope !== "design" && designReady) {
       runtimeModels = new Map(
         materializeProductionModels(graph.models, externalModels, archetypes),
@@ -506,6 +509,7 @@ export class AutoMovieProductionCompiler {
       designReady &&
       derivedArtifactsReady &&
       filmSource !== null &&
+      filmSourceDigest !== null &&
       contentInputs !== undefined
     ) {
       filmContext = {
@@ -515,11 +519,36 @@ export class AutoMovieProductionCompiler {
         derivedArtifacts,
         effectZones: graph.world!.effectZones,
       };
-      filmEditSource = compileFilmEditSource({
-        source: Buffer.from(filmSource).toString("utf8"),
-        readSource: readLinkedSource,
-        context: filmContext,
-      });
+      const requireReviewed =
+        input.scope === "review" || input.scope === "final";
+      const owner =
+        this.authoringEvidence !== undefined || requireReviewed
+          ? resolveAutoMovieSourceOwnerBinding({
+              bindings: this.authoringEvidence?.sourceOwners,
+              branch: "filmSources",
+              sourcePath: FILM_SOURCE_PATH,
+              exportName: FILM_SOURCE_EXPORT,
+              sourceDigest: filmSourceDigest,
+              requireReviewed,
+            })
+          : null;
+      if (owner !== null && owner.success === false)
+        diagnostics.push({
+          code: "source-owner-mismatch",
+          category: "error",
+          phase: "source",
+          target: "film",
+          path: FILM_SOURCE_PATH,
+          message: owner.message,
+        });
+      else {
+        filmSourceOwner = owner?.success === true ? owner.binding : null;
+        filmEditSource = compileFilmEditSource({
+          source: Buffer.from(filmSource).toString("utf8"),
+          readSource: readLinkedSource,
+          context: filmContext,
+        });
+      }
     }
 
     if (input.scope !== "design" && designReady && derivedArtifactsReady) {
@@ -729,6 +758,7 @@ export class AutoMovieProductionCompiler {
             compiledFilm,
             filmSourceDigest,
             inputFingerprint,
+            filmSourceOwner,
           );
     const inputCurrent = (): boolean =>
       `${this.project.revision()}\0${currentAutoMovieProductionCompilerInputFingerprint(this.project, input.scope)}\0${this.project.revision()}` ===
@@ -8664,6 +8694,7 @@ const materializeFilmArtifacts = (
   draft: ICompiledFilmDraft,
   sourceDigest: AutoMovieContentDigest,
   inputFingerprint: AutoMovieContentDigest,
+  sourceOwner: IAutoMovieProductionEvidence["sourceOwners"][number] | null,
 ): {
   edit: IAutoMovieCompiledFilmEdit;
   timeline: IAutoMovieFilmTimeline;
@@ -8676,6 +8707,11 @@ const materializeFilmArtifacts = (
       path: FILM_SOURCE_PATH,
       export: FILM_SOURCE_EXPORT,
       digest: sourceDigest,
+      ...(sourceOwner === null
+        ? {}
+        : {
+            target: `${sourceOwner.targetPath}#${sourceOwner.targetAnchor}`,
+          }),
     },
     edit: draft.edit,
   },
