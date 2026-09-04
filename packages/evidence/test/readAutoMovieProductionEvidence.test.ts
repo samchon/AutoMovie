@@ -24,7 +24,7 @@ const roots: string[] = [];
  *    name fail before either can become a router or review denominator.
  */
 try {
-  const project = createProject("reader-library");
+  const project = createProject();
   write(
     project,
     "package.json",
@@ -268,8 +268,8 @@ try {
   for (const root of roots) fs.rmSync(root, { force: true, recursive: true });
 }
 
-/** Create a generated project with its scaffold-local contract inventory. */
-function createProject(_name: string): string {
+/** Create a generated project with a synthetic local contract inventory. */
+function createProject(): string {
   return createEvidenceProjectFixture(roots);
 }
 
