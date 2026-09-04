@@ -141,7 +141,7 @@ export const classifyAutoMovieProductionSemanticMaskEvidence = (props: {
       status: "unsupported",
       reason: `unsupported semantic evidence version ${String(evidence.version)}; expected 1`,
     };
-  if (evidence.shot !== props.expectedShot)
+  if (nonBlank(evidence.shot) && evidence.shot !== props.expectedShot)
     return {
       status: "foreign",
       reason: `foreign semantic evidence for shot "${evidence.shot}"; expected "${props.expectedShot}"`,

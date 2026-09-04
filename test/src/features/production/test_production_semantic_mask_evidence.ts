@@ -165,6 +165,13 @@ export const test_production_semantic_mask_evidence = (): void => {
       observation,
       expectedShot: "closing",
     }),
+    blankShot: classifyAutoMovieProductionSemanticMaskEvidence({
+      observation: {
+        status: "available",
+        value: { ...evidence, shot: " " },
+      },
+      expectedShot: "opening",
+    }),
     invalid: classifyAutoMovieProductionSemanticMaskEvidence({
       observation: {
         status: "available",
@@ -191,6 +198,7 @@ export const test_production_semantic_mask_evidence = (): void => {
       unsupportedEnvelope: "unsupported",
       invalidCoverage: "invalid",
       foreign: "foreign",
+      blankShot: "invalid",
       invalid: "invalid",
     },
   );
