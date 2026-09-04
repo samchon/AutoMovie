@@ -1,5 +1,7 @@
 import { TestValidator } from "@nestia/e2e";
+import path from "node:path";
 
+import { loadSourceModule } from "../internal/loadSourceModule";
 import { namedFacts, rejectsError, throwsError } from "../internal/predicates";
 
 interface IGenerationSnapshot {
@@ -7,6 +9,34 @@ interface IGenerationSnapshot {
   generation: string;
   key: string;
 }
+
+interface IGenerationHandle<Snapshot, Module> {
+  assertCurrent: () => void;
+  module: Module;
+  snapshot: Snapshot;
+}
+
+const unit = loadSourceModule<{
+  createRuntimePackageGenerationRegistry: () => object;
+  loadRuntimePackageGeneration: <Snapshot, Module, CacheToken>(props: {
+    key: string;
+    generation: string;
+    snapshot: Snapshot;
+    assertCurrent: () => void;
+    observeCache: () => CacheToken | undefined;
+    load: () => Module;
+    registry?: object;
+  }) => IGenerationHandle<Snapshot, Module>;
+  runRuntimePackageGeneration: <Snapshot, Module, Output>(
+    handle: IGenerationHandle<Snapshot, Module>,
+    operation: (module: Module) => Output | Promise<Output>,
+  ) => Promise<Output>;
+}>(
+  path.resolve(
+    __dirname,
+    "../../../../packages/template/scaffold/scripts/runtimePackageGeneration.ts",
+  ),
+);
 
 /**
  * A runtime package is executable only through the cache generation admitted
@@ -33,14 +63,13 @@ export const test_cli_scaffold_runtime_package_generation =
       createRuntimePackageGenerationRegistry,
       loadRuntimePackageGeneration,
       runRuntimePackageGeneration,
-    } =
-      await import("../../../../packages/template/scaffold/scripts/runtimePackageGeneration.ts");
+    } = unit;
     const fixture = (key = "codec\0/root/a", generation = "generation-a") => ({
       cache: undefined as { identity: string } | undefined,
       loads: 0,
       registry: createRuntimePackageGenerationRegistry(),
       snapshot: {
-        current: true,
+        current: true as boolean,
         generation,
         key,
       } satisfies IGenerationSnapshot,
