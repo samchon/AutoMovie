@@ -10,10 +10,11 @@ import * as path from "node:path";
 
 type FakeSchedule =
   | "complete"
+  | "complete-after-parent-change"
   | "create-failed"
   | "parent-changed"
   | "target-competitor"
-  | { bytesWritten: number; kind: "partial" };
+  | { bytesWritten: number; error: string; kind: "partial" };
 
 interface IFakePublishedFile {
   bytes: readonly number[];
@@ -65,7 +66,10 @@ class FakeParentPublicationCapability implements IScaffoldParentPublicationCapab
     };
     parent.set(request.childName, file);
     this.writeCount++;
-    if (this.schedule === "complete") {
+    if (
+      this.schedule === "complete" ||
+      this.schedule === "complete-after-parent-change"
+    ) {
       file.bytes = [...request.bytes];
       return {
         parentIdentity: request.expectedParentIdentity,
@@ -75,7 +79,7 @@ class FakeParentPublicationCapability implements IScaffoldParentPublicationCapab
     file.bytes = request.bytes.slice(0, this.schedule.bytesWritten);
     return {
       bytesWritten: this.schedule.bytesWritten,
-      error: "write stopped",
+      error: this.schedule.error,
       parentIdentity: request.expectedParentIdentity,
       status: "partial",
     };
@@ -155,6 +159,38 @@ export const test_cli_scaffold_parent_publication = (): void => {
     },
   );
 
+  const changedAfterBinding = new FakeParentPublicationCapability(
+    "complete-after-parent-change",
+  );
+  TestValidator.equals(
+    "a successor after binding receives no create or write",
+    {
+      external: changedAfterBinding.inventory(externalIdentity),
+      owned: (() => {
+        const outcome = attempt(changedAfterBinding);
+        return {
+          inventory: changedAfterBinding.inventory(parent.identity),
+          outcome,
+        };
+      })(),
+      sideEffects: {
+        cleanup: changedAfterBinding.cleanupCount,
+        create: changedAfterBinding.createCount,
+        write: changedAfterBinding.writeCount,
+      },
+    },
+    {
+      external: [],
+      owned: {
+        inventory: [
+          ["entry.txt", { bytes: [0, 127, 255], identity: "slot-1" }],
+        ],
+        outcome: { parentIdentity: parent.identity, status: "completed" },
+      },
+      sideEffects: { cleanup: 0, create: 1, write: 1 },
+    },
+  );
+
   const parentChanged = new FakeParentPublicationCapability("parent-changed");
   const createFailed = new FakeParentPublicationCapability("create-failed");
   const competitor = new FakeParentPublicationCapability("target-competitor");
@@ -199,34 +235,46 @@ export const test_cli_scaffold_parent_publication = (): void => {
     ],
   );
 
-  const partialCapability = new FakeParentPublicationCapability({
-    bytesWritten: 2,
-    kind: "partial",
-  });
-  const partial = attempt(partialCapability);
+  const partials = [
+    { bytesWritten: 0, error: "first write stopped", kind: "partial" },
+    { bytesWritten: 2, error: "middle write stopped", kind: "partial" },
+    { bytesWritten: 3, error: "close failed", kind: "partial" },
+  ] satisfies FakeSchedule[];
   TestValidator.equals(
-    "descriptor-bound partial state retains its physical owner",
-    {
-      external: partialCapability.inventory(externalIdentity),
-      owned: partialCapability.inventory(parent.identity),
-      result: partial,
-      sideEffects: {
-        cleanup: partialCapability.cleanupCount,
-        create: partialCapability.createCount,
-        write: partialCapability.writeCount,
-      },
-    },
-    {
+    "descriptor-bound partial states retain their exact physical extent",
+    partials.map((schedule) => {
+      const capability = new FakeParentPublicationCapability(schedule);
+      const result = attempt(capability);
+      return {
+        external: capability.inventory(externalIdentity),
+        owned: capability.inventory(parent.identity),
+        result,
+        sideEffects: {
+          cleanup: capability.cleanupCount,
+          create: capability.createCount,
+          write: capability.writeCount,
+        },
+      };
+    }),
+    partials.map((schedule) => ({
       external: [],
-      owned: [["entry.txt", { bytes: [0, 127], identity: "slot-1" }]],
+      owned: [
+        [
+          "entry.txt",
+          {
+            bytes: [0, 127, 255].slice(0, schedule.bytesWritten),
+            identity: "slot-1",
+          },
+        ],
+      ],
       result: {
-        bytesWritten: 2,
-        error: "write stopped",
+        bytesWritten: schedule.bytesWritten,
+        error: schedule.error,
         parentIdentity: parent.identity,
         status: "partial",
       },
       sideEffects: { cleanup: 0, create: 1, write: 1 },
-    },
+    })),
   );
 
   const invalid = (props: {
