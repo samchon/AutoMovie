@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 
-import { describeThrown } from "../integrity/contractOwnership";
+import { describeThrown } from "../integrity/describeThrown";
 import { runGit } from "./changedCoverage";
 import {
   canonicalCoveragePath,

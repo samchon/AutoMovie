@@ -5,7 +5,7 @@ import os from "node:os";
 import path from "node:path";
 import process from "node:process";
 
-import { describeThrown } from "../integrity/contractOwnership";
+import { describeThrown } from "../integrity/describeThrown";
 import {
   type IInheritedGaps,
   changedOrder,
