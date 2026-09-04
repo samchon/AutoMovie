@@ -651,9 +651,10 @@ const createWindowsLibrary = (foreign: typeof koffi): IWindowsLibrary => {
       "uint32_t",
     ]),
     objectAttributesType,
-    openOsHandle: runtime.func(
-      "int _open_osfhandle(intptr_t handle, int flags)",
-    ) as IWindowsLibrary["openOsHandle"],
+    openOsHandle: runtime.func("_open_osfhandle", "int", [
+      handleType,
+      "int",
+    ]) as IWindowsLibrary["openOsHandle"],
   };
 };
 
