@@ -1,6 +1,10 @@
 #!/usr/bin/env node
 import { AutoMovieLegacyImporter } from "@automovie/production";
-import { publishFiles, renderScaffold } from "@automovie/template";
+import {
+  ScaffoldPublicationError,
+  publishFiles,
+  renderScaffold,
+} from "@automovie/template";
 import { spawnSync } from "node:child_process";
 import * as fs from "node:fs";
 import * as path from "node:path";
@@ -568,26 +572,8 @@ export const run = (argv: readonly string[]): number => {
       }
       const files = renderScaffold({ name: projectNameOf(targetDir) });
       const receipt = publishFiles(targetDir, files, { force: command.force });
-      if (receipt.status !== "completed") {
-        const failure = receipt.failure!;
-        const outcome = failure.outcome;
-        throw new Error(
-          `scaffold publication ${receipt.status}: ${JSON.stringify({
-            bytesWritten:
-              outcome.status === "partial" ? outcome.bytesWritten : undefined,
-            completed: receipt.completed.map(({ entry, parentIdentity }) => ({
-              parentIdentity,
-              relative: entry.relative,
-            })),
-            parentIdentity:
-              outcome.status === "partial" ? outcome.parentIdentity : undefined,
-            reason: outcome.status === "refused" ? outcome.reason : undefined,
-            relative: failure.entry.relative,
-            status: outcome.status,
-          })}`,
-          { cause: outcome.error },
-        );
-      }
+      if (receipt.status !== "completed")
+        throw new ScaffoldPublicationError(receipt);
       const written = receipt.completed.map(({ entry }) => entry.target);
       process.stdout.write(
         `Scaffolded ${written.length} files into ${targetDir}\n\n` +
