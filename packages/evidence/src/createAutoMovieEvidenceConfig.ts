@@ -580,6 +580,7 @@ const EXPECTED_CONTRACTS = [
       "instance-identity-transform",
       "instance-variation-tiers",
       "instance-placement-review",
+      "instance-prop-set-dressing-account",
     ],
   },
   {
@@ -615,6 +616,7 @@ const EXPECTED_CONTRACTS = [
       "reference-scale",
       "articulation-ownership",
       "model-review-set",
+      "model-representation-completion",
     ],
   },
   {
@@ -794,6 +796,7 @@ const EXPECTED_CONTRACTS = [
       "instance-prototype-boundary",
       "instance-derivation-authority",
       "instance-verification-address",
+      "instance-prop-set-dressing-boundary",
     ],
   },
   {
@@ -842,6 +845,8 @@ const EXPECTED_CONTRACTS = [
       "representation-contract",
       "spatial-convention",
       "reviewable-structure",
+      "model-observable-style-basis",
+      "model-scale-layer-completion",
     ],
   },
   {
@@ -1853,9 +1858,12 @@ const validateStructuredSharedRules = (root: string): void => {
   const principles = readAutoMovieContractRules(path.join(root, "principles"), {
     requireEveryH2In: ["core/defaults.md"],
   });
-  const obligations = readAutoMovieContractRules(path.join(root, "obligations"), {
-    requireEveryH2In: ["core/defaults.md"],
-  });
+  const obligations = readAutoMovieContractRules(
+    path.join(root, "obligations"),
+    {
+      requireEveryH2In: ["core/defaults.md"],
+    },
+  );
   const expected = new Map<string, string>([
     ["sh-purposeful-enumeration", "composition-safe"],
     ["sh-earned-significance", "composition-safe"],
@@ -1902,7 +1910,10 @@ const validateLanguageContract = (
     );
   const expectedRules = [
     [`${language}-work-specific-conditions`, "observation-only"],
-    [`${language}-population-${language === "english" ? "register-frame" : "interference"}-account`, "population-distribution"],
+    [
+      `${language}-population-${language === "english" ? "register-frame" : "interference"}-account`,
+      "population-distribution",
+    ],
     [`${language}-audience-language-access`, "population-distribution"],
     [
       language === "english"
@@ -2496,6 +2507,22 @@ const validatePopulationAccountHosts = (graph: IProductionGraph): void => {
       enabled: true,
       requireReview: requiresReview(graph[layer]),
     });
+    const allowed = new Set([
+      ...claims.flatMap((claim) => claim.files),
+      ...(layer === "settings" ? ["accounts/settings/story-subjects.md"] : []),
+    ]);
+    const residents = walkProjectFiles(
+      graph,
+      path.join(graph.location, DOCS, "accounts", layer),
+      ".md",
+    ).map((file) =>
+      posix(path.relative(path.join(graph.location, DOCS), file)),
+    );
+    const unexpected = residents.filter((file) => !allowed.has(file));
+    if (unexpected.length !== 0)
+      throw new Error(
+        `${layer} population accounts contain unowned files: ${unexpected.join(", ")}.`,
+      );
     for (const claim of claims) {
       const relative = claim.files[0]!;
       const file = path.join(graph.location, DOCS, relative);
@@ -3648,6 +3675,8 @@ export const createAutoMovieContractBindingManifest = (
  * @evidence requirements/production-evidence/graph.md#agent-production-evidence-physical-integrity Validates real target identities, hosts, owners, and lineage before returning a graph.
  * @evidence requirements/production-evidence/graph.md#agent-production-evidence-additive-extension Appends production-owned claims without exposing a replacement seam for the shared graph.
  * @evidence requirements/production-evidence/graph.md#agent-production-evidence-deterministic-result Produces one deterministic graph or fails with the concrete contradictory state.
+ * @evidence requirements/agent-authoring/capability-discovery.md#agent-production-language-contract Validates and routes the one selected language module.
+ * @evidence requirements/story/coverage-and-acceptance.md#story-authoring-contract-discriminators Selects distinct unit, population, screenplay, and design contract targets.
  * @evidence specifications/production-evidence/README.md#production-evidence-specifications Implements the shared construction and validation boundary for generated projects.
  * @evidence specifications/production-evidence/graph.md#spec-authoring-production-evidence-shared-contract Reads and validates the fixed shared contract inventory before constructing claims.
  * @evidence specifications/production-evidence/graph.md#spec-authoring-production-evidence-discovery Wires common, settings, design-shared, design-layer, film, narrative-layer, and brief discovery targets to each active layer's flat work-specific contract population while research remains common-only.
@@ -3655,6 +3684,8 @@ export const createAutoMovieContractBindingManifest = (
  * @evidence specifications/production-evidence/graph.md#spec-authoring-production-evidence-physical-integrity Enumerates actual non-linked project populations and enforces flat treatment events, grouped script and screenplay units, direct treatment coverage, and exact same-depth screenplay lineage.
  * @evidence specifications/production-evidence/graph.md#spec-authoring-production-evidence-additive-extension Constructs shared claims first and composes local claims after them.
  * @evidence specifications/production-evidence/graph.md#spec-authoring-production-evidence-deterministic-result Uses deterministic identities and ordering and returns no partial graph after a validation failure.
+ * @evidence specifications/authoring-and-authority/capability-and-content-boundary.md#spec-authoring-production-language-module Refuses incomplete, residual, or identity-mismatched language contracts.
+ * @evidence specifications/narrative-and-intent/scene-coverage-and-acceptance.md#narrative-intent-authoring-contract-discriminators Routes each semantic discriminator to its exact authored or population host.
  * @evidencePart specifications/production-evidence/graph.md#spec-authoring-production-evidence-shared-contract::shared-contract Validates the canonical common document and H2 inventory before building shared claims.
  * @evidencePart specifications/production-evidence/graph.md#spec-authoring-production-evidence-discovery::discovery-coverage Adds draft-active contract discovery coverage with reviewed, index-only exclusions for a true no-result.
  * @evidencePart specifications/production-evidence/graph.md#spec-authoring-production-evidence-shape-stage::shape-stage-machine Enforces production-kind compatibility, lifecycle order, and parent review prerequisites.

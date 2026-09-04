@@ -18,6 +18,8 @@ Every enumerated member changes the set by contributing a distinct class, operat
 
 Review question: which member can disappear without losing a distinction or operation, and what material difference should own its place?
 
+Sources: [Purdue OWL on sentence-pattern monotony](https://owl.purdue.edu/owl/general_writing/academic_writing/sentence_variety/similar_sentence_patterns_or_rhythms.html)
+
 ## Earned significance {#earned-significance}
 
 ```contract-rule
@@ -33,6 +35,8 @@ Review question: which member can disappear without losing a distinction or oper
 A modifier that claims consequence or interpretation names an observable action, relation, result, or constraint established by the material. It cannot manufacture importance that the unit has not earned.
 
 Review question: which significance-claiming modifier can disappear without losing an event, relation, observation, or decision?
+
+Sources: [Purdue OWL on participial function](https://owl.purdue.edu/owl/general_writing/mechanics/gerunds_participles_and_infinitives/participles.html)
 
 ## Responsive qualification {#responsive-qualification}
 
@@ -50,6 +54,8 @@ A qualification preserves a real uncertainty, exception, viewpoint, tolerance, o
 
 Review question: which qualification changes nothing an intended reader may infer, and which actual boundary should replace it?
 
+Sources: [UNC Writing Center on meaningful qualifiers](https://writingcenter.unc.edu/tips-and-tools/qualifiers/)
+
 ## Functional formatting {#functional-formatting}
 
 ```contract-rule
@@ -65,6 +71,8 @@ Review question: which qualification changes nothing an intended reader may infe
 Typography and punctuation mark a specific interruption, hierarchy, embedded document, accessibility state, or formal turn. A chosen system and a necessary technical notation pass; a mark that can disappear without loss does not.
 
 Review question: which formatting mark names no distinction owned by this unit or the production's declared system?
+
+Sources: [Chicago Manual of Style punctuation guidance](https://www.chicagomanualofstyle.org/qanda/data/faq/topics/Punctuation.html)
 
 ## Material contrast {#contrastive-definition}
 

@@ -4,6 +4,8 @@ Screenplays belong only to a film. Mirror the reviewed script delivery partition
 
 Write the final human-readable audiovisual contract. Preserve the script's decisive action, physical progression, exchange, timing boundary, and exit, then choose the visible action, audience-facing text, dialogue, sound, silence, perceptual access, rhythm, implication, and production-recognizable audiovisual voice that make the beat ready for independent shot and edit realization. Do not transcribe staging notes or hide missing narrative mechanics beneath camera language.
 
+Keep a master-scene contract distinct from a shooting implementation. A valid heading and block hierarchy establishes formal validity only; each scene must also close its entry, action, exchange, audience effect, and exit semantically. Preserve the reviewed screenplay revision and every heading's scene, place, interior/exterior, time, and continuity axes, and invalidate downstream mappings after a substantive revision instead of letting renumbering or formatting disguise changed content.
+
 An H4 is the smallest lineage and authoring boundary. It need not become a visible card or cut. Preserve identity even when the final edit presents adjacent beats continuously.
 
 Before final expression, rerun the [production-specific contract](../evidence-graph/work-specific.md) pass with the `discovery/core/common.md`, `discovery/story/films.md`, and `discovery/story/screenplays.md` targets, and implement each retained expressive result in its target and claim. No example in the shared documents is a style inventory.
