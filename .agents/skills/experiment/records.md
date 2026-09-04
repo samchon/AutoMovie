@@ -47,9 +47,9 @@ Predeclare escalation. An ambiguous or high-impact judgment, an order-sensitive 
 
 ## Operate One Frozen Run As A State Machine
 
-One run progresses through `declared`, `preflight`, `ready`, `running`, `gate-review`, and exactly one terminal state: `completed`, `failed`, `interrupted`, or `abandoned`. `running` and `gate-review` may alternate only through receipts that preserve the stage identity. A stage, condition, or immutable basis never changes in place; changing one creates a successor run with a new id and an explicit predecessor link.
+One run starts at `declared` and ends in exactly one terminal state: `completed`, `failed`, `interrupted`, or `abandoned`. The only nonterminal edges are `declared -> preflight`, `preflight -> ready`, `ready -> running`, `running -> gate-review`, and `gate-review -> running`. `declared`, `preflight`, `ready`, `running`, and `gate-review` may also enter a terminal state when their work cannot continue. A stage, condition, or immutable basis never changes in place; changing one creates a successor run with a new id and an explicit predecessor link.
 
-Each transition receipt records a monotonic sequence, run id and generation, from and to states, timestamp, actor, reason, evidence identities, and result. A transition is invalid when it skips preflight, moves backwards, follows a terminal state, changes the frozen basis, or has no receipt. A replacement generation never covers, edits, or deletes the interrupted generation's record.
+Each transition receipt records a monotonic sequence, run id and generation, from and to states, timestamp, actor, reason, evidence identities, and result. A transition is invalid when it uses an edge not listed above, follows a terminal state, changes the frozen basis, or has no receipt. A replacement generation never covers, edits, or deletes the interrupted generation's record.
 
 The observer samples every active unit on a predeclared cadence and timer. Each liveness receipt records the process identity and creation time, transcript growth, artifact signal chosen from the turn's requested deliverable, last progress time, timer deadline, and one disposition: `alive`, `idle`, `stalled`, `finished`, or `unknown`. A timer expiry without a recorded disposition is an operational failure. Writer self-report and a wrapper notification are observations, not terminal evidence.
 

@@ -61,9 +61,19 @@ assignees: ""
 
 - Coordinator, writers, reviewers, and one liveness observer:
 - Preflight result, including model availability, root isolation, path budget, process ownership, and observation instrument:
-- Ordered transition receipts (`sequence`, run/generation, from/to, time, actor, reason, evidence, result):
-- Liveness cadence, timer, artifact signal, and receipts:
-- Intervention receipts opened before action and closed after action:
+
+| Sequence | Run/generation | From | To | Timestamp | Actor | Reason | Evidence | Result |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| unverified | unverified | declared | preflight | unverified | unverified | unverified | unverified | unverified |
+
+| Run/generation | Sample time | Process identity/created | Transcript growth | Artifact signal/progress time | Timer deadline | Disposition |
+| --- | --- | --- | --- | --- | --- | --- |
+| unverified | unverified | unverified | unverified | unverified | unverified | unknown |
+
+| Intervention id | Opened before action | Run/generation | Owner/reason/evidence | Intended action | Closed after action | Result/state | Process and cleanup evidence |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| unverified | unverified | unverified | unverified | unverified | unverified | unverified | unverified |
+
 - Interrupted generations and replacement notices:
 - Planned and actual runtime/resource use:
 - Terminal state and close audit of processes, sessions, sandboxes, temporary paths, registrations, receipts, timers, retained artifacts, and privacy dispositions:
