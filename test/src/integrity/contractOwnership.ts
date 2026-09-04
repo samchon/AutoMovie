@@ -2,7 +2,7 @@ import { parseAutoMovieEvidenceMarkdownHeadings } from "@automovie/evidence";
 import { createHash } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
-import ts from "typescript";
+import * as ts from "typescript-compiler";
 
 const LAYERS = ["requirements", "specifications"] as const;
 export type ContractLayer = (typeof LAYERS)[number];
