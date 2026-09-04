@@ -200,9 +200,7 @@ export const test_production_inspect_subject_refusals =
       );
 
       const throwing = await new AutoMovieProductionSubjectInspectionService(
-        () => {
-          throw new Error("the inspection browser closed");
-        },
+        () => Promise.reject("the inspection browser closed"),
       ).inspect(services, target);
       const undecodable = await new AutoMovieProductionSubjectInspectionService(
         fixedInstrument(new Uint8Array()),
@@ -271,7 +269,7 @@ export const test_production_inspect_subject_refusals =
             height: input.height,
             runtimeIdentity: testCaptureRuntimeIdentity(),
             assertRuntimeCurrent: () => {
-              throw "runtime moved before publication";
+              throw new Error("runtime moved before publication");
             },
           }),
         ).inspect(services, target);
