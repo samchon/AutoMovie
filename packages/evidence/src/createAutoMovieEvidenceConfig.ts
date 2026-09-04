@@ -14,7 +14,10 @@ import { validateAutoMoviePopulationTransition } from "./AutoMoviePopulationTran
 import { assertAutoMovieEvidenceSyntax } from "./assertAutoMovieEvidenceSyntax";
 import { assertAutoMovieEvidenceReviewReasons } from "./auditAutoMovieEvidenceReviewReasons";
 import { createAutoMoviePopulationFiles } from "./createAutoMoviePopulationFiles";
-import type { AutoMovieProductionContractClaim } from "./createAutoMovieProductionContractClaim";
+import type {
+  AutoMovieProductionContractClaim,
+  AutoMovieProductionContractLayer,
+} from "./createAutoMovieProductionContractClaim";
 import {
   parseAutoMovieEvidenceSyntax,
   projectAutoMovieMarkdownSyntax,
@@ -210,7 +213,7 @@ interface IAutoMovieContractBindingManifest {
 
 interface IAutoMovieLocalContractProjection {
   claim: string;
-  layer: string;
+  layer: AutoMovieProductionContractLayer;
   stage: Stage;
   enforced: boolean;
   populationScope: AutoMoviePopulationScope;
