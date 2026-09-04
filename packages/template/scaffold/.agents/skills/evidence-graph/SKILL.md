@@ -5,9 +5,9 @@ description: Defines this generated project's self-contained contract inventory 
 
 # Evidence graph
 
-The complete contract inventory lives in this project's `docs/{discovery,upstream,obligations,principles}` tree. `lint.config.ts` is the single typed declaration of production kind, population scope, branch stages, custom claims, and the resulting graph. No installed package path, secondary evidence config, or hidden provider hook owns part of this contract.
+The complete contract inventory lives in this project's `docs/{discovery,upstream,obligations,principles}` tree plus the one selected `docs/language` module. `lint.config.ts` is the single typed declaration of production kind, language, population scope, branch stages, custom claims, and the resulting graph. No installed package path, secondary evidence config, or hidden provider hook owns part of this contract.
 
-Read `lint.config.ts`, `docs/README.md`, the active host population, and every selected target before changing a governed artifact. Reusable graph mechanics come from `@automovie/evidence`; the generated project owns the target bytes and may update them only as an explicit contract revision with every consequence traced.
+Read `lint.config.ts`, `docs/README.md`, the selected language module, the active host population, and every selected target before changing a governed artifact. Reusable graph mechanics come from `@automovie/evidence`; the generated project owns the target bytes and may update them only as an explicit contract revision with every consequence traced.
 
 ## Required routes
 

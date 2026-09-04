@@ -77,3 +77,9 @@ Verdict는 criterion version, exact target와 story revision, observed evidence 
 <!-- @evidence requirements/acceptance/uncertainty-and-partial-success.md#acceptance-criterion-verdicts pass, fail, indeterminate, not-run, unsupported와 stale을 보존한다. -->
 
 Final story acceptance는 current logline, 선택된 treatment와 alternative, scene coverage, chronology, causal chain, character와 relation state, dialogue variant, theme promise와 ending을 같은 revision closure로 판정한다. 필수 gap, conflict, stale evidence, indeterminate, not-run 또는 unsupported criterion이 있으면 결과는 partial 또는 해당 미완료 상태이고 complete로 승격되지 않는다.
+
+### 저작 계약의 분리된 판정 {#narrative-intent-authoring-contract-discriminators}
+
+<!-- @evidence requirements/story/coverage-and-acceptance.md#story-authoring-contract-discriminators 단위·population 적용 시점과 screenplay·design의 서로 다른 완료·표현·identity 책임을 독립적으로 판정하게 한다. -->
+
+Composition-safe target은 현재 저작 단위 하나의 literal body만으로 판정하고 recurrent-frame과 cadence target은 완성 population의 실제 membership을 비교한 뒤에만 판정한다. Narrative account는 기여, 연결, continuity, 시간, speech, voice와 pacing의 실패 집합을 각각 유지한다. Screenplay account는 parse 가능한 heading/block과 의미상 완성된 scene, master-scene 내용과 shooting 선택, current locked revision과 downstream mapping을 독립 판정하며, design account는 관찰 가능한 style 결정, scale·layer completion과 prop·set-dressing·space owner를 실제 사용 책임으로 구분한다.

@@ -1,5 +1,7 @@
 # Contract targets
 
+The four shared contract directories and the one selected `docs/language` module are this generated project's exact scaffold-owned inventory. Every authored route selects the language discovery signal, its composition-safe principles per unit, and its obligations only after the complete population exists.
+
 `docs/discovery` defines open production-specific searches, `docs/upstream` records what each inheriting unit learned by testing its actual parents, `docs/principles` defines the no-exclusion checklist every selected authored H2, H3, or H4 answers for itself, and `docs/obligations` defines roles covered one or more times across a layer's H2 owner population or a source layer's selected export population. Those four directories are this generated project's exact scaffold-owned contract inventory. This production keeps every additional rule it adopts for itself as one flat file directly under `docs/contracts`; the graph refuses a nested contract, an unwired local target, an enabled local target reference with an empty population, a host-side evidence tag inside a target H2, and an H2 title or anchor duplicated anywhere in the shared-plus-local target inventory.
 
 The production design record is compiler-owned JSON, not an evidence-document host. A reviewed settings, research, or design H2 owns each delivery, repaint, dialogue, or simulation decision, the governed source that `scripts/emitDesign.ts` reads is where that decision is written, and `scripts/productionConfiguration.ts` refuses runtime drift, hidden fields, and inconsistent compiled consumers in the emitted record. Do not move ownership into a JSDoc beside the emitted field or add a design record to a Markdown claim population.
@@ -13,6 +15,8 @@ One target owns one concern. Conditional manifestations may stay together only w
 Reusable targets must be independent of one production's subject, genre, characters, ending, assets, and implementation. A candidate without that generality stays under `docs/contracts` or in `.wiki`. A target states observable success, representative failure, and the upstream repair required when failure reveals an earlier owner. It does not prescribe a fixed count unless the underlying contract requires one.
 
 ## Discovery
+
+Every active authored population selects `language/discovery/signals.md` in addition to its language-neutral discovery files. Another language pack is neither a fallback nor an admissible extra target.
 
 Each discovery H2 owns an open search whose result cannot be enumerated before reading the production. Its host is the production-specific contract population `docs/contracts/*.md`, not an authored settings, research, design, narrative, or brief unit. A retained result is answered by the contract file that states the adopted rule. Asking an authored unit to testify about the contract lets a rule remain prose instead of becoming an enforced target.
 

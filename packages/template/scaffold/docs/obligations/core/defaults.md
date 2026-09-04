@@ -18,6 +18,8 @@ Group repeated contrasts, qualifications, enumerations, transitions, predicates,
 
 Review question: which frame recurs across unlike material, which complete membership establishes the pattern, and what production-owned function protects any retained use?
 
+Sources: [Padmakumar and He on measured diversity loss in model-assisted writing](https://arxiv.org/abs/2309.05196)
+
 ## Surface cadence distribution {#surface-cadence-distribution}
 
 ```contract-rule

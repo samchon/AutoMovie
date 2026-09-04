@@ -1,6 +1,5 @@
 import {
   AUTO_MOVIE_PRODUCTION_LANGUAGES,
-  type AutoMovieProductionLanguage,
   isAutoMovieProductionLanguage,
 } from "@automovie/evidence";
 import * as fs from "node:fs";
@@ -16,7 +15,10 @@ const LANGUAGE_CONTRACT_FILES = [
  * Absolute directory containing the package-private language packs.
  *
  * @evidence requirements/agent-authoring/capability-discovery.md#agent-topic-document-discovery Locates the installed language-specific authoring guidance.
+ * @evidence requirements/agent-authoring/capability-discovery.md#agent-production-language-contract Locates only the package-private supported module source.
  * @evidence specifications/authoring-and-authority/capability-and-content-boundary.md#spec-authoring-capability-input-output Exposes the reusable language-pack source without making it production content.
+ * @evidence specifications/authoring-and-authority/capability-and-content-boundary.md#spec-authoring-production-language-module Provides the physical source for exact selected-module materialization.
+ * @author Samchon
  */
 export const autoMovieLanguageContractsDirectory = (
   moduleDirectory: string = __dirname,
@@ -39,9 +41,12 @@ export const autoMovieLanguageContractsDirectory = (
  * silently retain rules for another language.
  *
  * @evidence requirements/agent-authoring/capability-discovery.md#agent-topic-document-discovery Publishes only the selected language's discoverable contracts.
+ * @evidence requirements/agent-authoring/capability-discovery.md#agent-production-language-contract Publishes exactly one selected language module and refuses residue.
  * @evidence requirements/agent-authoring/project-ownership.md#agent-portable-authoring Materializes the chosen language rules as ordinary project-local documents.
  * @evidence specifications/authoring-and-authority/capability-and-content-boundary.md#spec-authoring-capability-input-output Derives one complete language module from explicit selection.
  * @evidence specifications/authoring-and-authority/source-authority-and-derivation.md#spec-authoring-source-input Makes the language identity part of deterministic scaffold derivation.
+ * @evidence specifications/authoring-and-authority/capability-and-content-boundary.md#spec-authoring-production-language-module Enforces the module's exact physical file identity.
+ * @author Samchon
  */
 export const renderAutoMovieLanguageContracts = (props: {
   language: string;
