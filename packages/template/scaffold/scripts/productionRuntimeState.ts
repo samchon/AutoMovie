@@ -1,6 +1,7 @@
 import type { IAutoMovieDialogueVisemeTimeline } from "@automovie/engine";
 import type {
   AutoMovieContentDigest,
+  IAutoMovieCompiledFilmEffect,
   IAutoMovieDeliveryCrop,
   IAutoMovieFilmTimeline,
   IAutoMovieProductionFrameRate,
@@ -39,6 +40,8 @@ export interface IAutoMovieProductionViewerRuntime {
   deliveryCrop: IAutoMovieDeliveryCrop | null;
   /** Exact authored live-soft admission order. */
   liveWearableSoftBodies: string[];
+  /** Current compiler-owned film-global effect runtimes. */
+  filmEffects: IAutoMovieCompiledFilmEffect[];
 }
 
 /** Clone one delivery crop without sharing mutable authoring input. */

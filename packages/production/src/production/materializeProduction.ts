@@ -769,12 +769,18 @@ export const materializeCompiledShot = (props: {
  * Materialize shot-local cues into compiler-owned deterministic streams.
  */
 export const materializeCompiledEffects = (props: {
-  contract: IAutoMovieShotContract;
   world?: IAutoMovieWorldDesign;
   fps?: number;
+  fixedStepSeconds?: number;
+  seedOwner?: unknown;
+  contract?: IAutoMovieShotContract;
   cues: NonNullable<IAutoMovieShotSourceOutput["effectCues"]>;
 }): IAutoMovieCompiledEffect[] => {
   if (props.world === undefined) return [];
+  if (props.contract === undefined && props.seedOwner === undefined)
+    throw new Error(
+      "Effect materialization requires an explicit shot contract or seed owner.",
+    );
   const recipes = new Map(
     props.world.effectRecipes.map((recipe) => [recipe.id, recipe]),
   );
@@ -786,13 +792,23 @@ export const materializeCompiledEffects = (props: {
       const recipe = zone === undefined ? undefined : recipes.get(zone.recipe);
       if (zone === undefined || recipe === undefined) return [];
       const seedDigest = digestAutoMovieBytes(
-        canonicalAutoMovieJsonBytes({
-          protocol: "automovie.effect-stream.v1",
-          shot: props.contract.id,
-          cue: cue.id,
-          recipeSeed: recipe.seed,
-          zoneSeed: zone.seed,
-        }),
+        canonicalAutoMovieJsonBytes(
+          props.seedOwner === undefined
+            ? {
+                protocol: "automovie.effect-stream.v1",
+                shot: props.contract!.id,
+                cue: cue.id,
+                recipeSeed: recipe.seed,
+                zoneSeed: zone.seed,
+              }
+            : {
+                protocol: "automovie.film-effect-seed.v1",
+                owner: props.seedOwner,
+                cue: cue.id,
+                recipe,
+                zone,
+              },
+        ),
       );
       const core = {
         version: 1 as const,
@@ -806,7 +822,7 @@ export const materializeCompiledEffects = (props: {
         end: cue.end,
         intensity: structuredClone(cue.intensity),
         ...(cue.event === undefined ? {} : { event: cue.event }),
-        fixedStepSeconds: 1 / (props.fps ?? 24),
+        fixedStepSeconds: props.fixedStepSeconds ?? 1 / (props.fps ?? 24),
       };
       return [
         {

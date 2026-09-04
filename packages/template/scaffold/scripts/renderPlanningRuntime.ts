@@ -21,6 +21,7 @@ import {
   openAutoMovieProduction,
   planProductionRenderJob,
   productionRenderChunkStatuses,
+  readAutoMovieFilmEffects,
   readAutoMovieFilmTimeline,
   resolveProductionRenderTierFrameFormat,
   sampleProductionRenderFrame,
@@ -369,6 +370,10 @@ export const createProductionRenderPlanningRuntime = (props: {
     });
     const planned = planProductionRenderJob({
       timeline,
+      effects: readAutoMovieFilmEffects(
+        project,
+        compiled.compiler.inputFingerprint,
+      ),
       production: graph.production,
       audioAssets: soundRuntime.audioAssets(project, timeline),
       runtimeIdentity,
@@ -608,6 +613,7 @@ export const createProductionRenderPlanningRuntime = (props: {
     });
     return {
       timeline,
+      effects: readAutoMovieFilmEffects(project, plan.compileFingerprint),
       production,
       runtimeIdentity,
       sourceFingerprints: renderShotFingerprints(project, timeline),

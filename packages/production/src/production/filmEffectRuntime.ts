@@ -1,11 +1,12 @@
 import {
   IAutoMovieEffectSample,
   canonicalProductionFrameRate,
+  productionFrameBoundaryToSeconds,
   sampleCompiledEffect,
 } from "@automovie/engine";
 import {
   AutoMovieContentDigest,
-  IAutoMovieCompiledEffect,
+  IAutoMovieCompiledFilmEffect,
   IAutoMovieFilmTimeline,
   IAutoMovieProductionFrameRate,
   IAutoMovieWorldDesign,
@@ -15,6 +16,7 @@ import {
   canonicalAutoMovieJsonBytes,
   digestAutoMovieBytes,
 } from "./contentIdentity";
+import { materializeCompiledEffects } from "./materializeProduction";
 
 /**
  * One shot-owned effect interval projected onto the film clock.
@@ -38,47 +40,6 @@ export interface IAutoMovieShotEffectFilmInterval {
   startFrame: number;
   /** Exclusive film-global frame. */
   endFrame: number;
-}
-
-/**
- * One compiler-owned film effect with an explicit owner and full-rate clock.
- *
- * The inner effect remains the existing bounded engine stream. This wrapper
- * adds the film owner, current compiler identities and exact frame interval so
- * a proxy, final capture, or viewer cannot reinterpret it on a tier-local
- * output clock.
- *
- * @evidence requirements/effects-and-simulation/scope-and-simulation-tiers.md#effects-authoring-control Carries an accepted film-global cue to the existing bounded runtime.
- * @evidence requirements/effects-and-simulation/clock-seek-and-determinism.md#effects-film-time-mapping Fixes effect activity to the compiler-owned full-rate frame.
- * @evidence specifications/simulation-effects-and-sound/scope-tiers-and-identities.md#effect-tier-state-machine Preserves one explicit film owner around the existing compiled effect stream.
- * @evidence specifications/simulation-effects-and-sound/clocks-ordering-seek-and-checkpoints.md#effect-film-time-step-boundary Maps the exact frame boundary once onto the effect clock.
- * @author Samchon
- */
-export interface IAutoMovieCompiledFilmEffect {
-  /** Film-effect runtime format. */
-  version: 1;
-  /** Explicit authority discriminator. */
-  owner: "film";
-  /** Explicit clock discriminator. */
-  clock: "timeline-frame";
-  /** Current production identity. */
-  production: string;
-  /** Current compiler-owned film identity. */
-  film: string;
-  /** Current aggregate compiler input. */
-  compileFingerprint: AutoMovieContentDigest;
-  /** Current normalized edit identity. */
-  editFingerprint: AutoMovieContentDigest;
-  /** Exact reduced production frame rate. */
-  frameRate: IAutoMovieProductionFrameRate;
-  /** Inclusive film-global frame. */
-  startFrame: number;
-  /** Exclusive film-global frame. */
-  endFrame: number;
-  /** Existing bounded effect stream sampled by the engine and viewer. */
-  effect: IAutoMovieCompiledEffect;
-  /** Digest of every field above. */
-  digest: AutoMovieContentDigest;
 }
 
 /**
@@ -127,6 +88,28 @@ export class AutoMovieFilmEffectRuntimeError extends Error {
     this.name = "AutoMovieFilmEffectRuntimeError";
   }
 }
+
+/**
+ * Identify the normalized edit state shared by planning and film effects.
+ *
+ * @evidence requirements/effects-and-simulation/clock-seek-and-determinism.md#effects-seek-reconstruction Binds persisted film effects to the exact current normalized edit.
+ * @evidence specifications/simulation-effects-and-sound/clocks-ordering-seek-and-checkpoints.md#arbitrary-seek-reconstruction-contract Gives compiler materialization and render planning one edit-identity algorithm.
+ */
+export const productionFilmEffectEditFingerprint = (
+  timeline: IAutoMovieFilmTimeline,
+): AutoMovieContentDigest =>
+  digestAutoMovieBytes(
+    canonicalAutoMovieJsonBytes({
+      protocol: "automovie.production-render-edit.v2",
+      id: timeline.id,
+      fps: timeline.fps,
+      frameRate: timeline.frameRate,
+      totalFrames: timeline.totalFrames,
+      segments: timeline.segments,
+      omissions: timeline.omissions,
+      tracks: timeline.tracks,
+    }),
+  );
 
 /**
  * Materialize normalized film cues into current, deterministic effect streams.
@@ -194,30 +177,28 @@ export const materializeProductionFilmEffects = (props: {
           "film-effect-owner-conflict",
           `Film effect cue "${cue.id}" and shot effect cue "${conflict.cue}" on shot "${conflict.shot}" both own zone "${cue.zone}" during frames ${Math.max(cue.startFrame, conflict.startFrame)}..${Math.min(endFrame, conflict.endFrame)}.`,
         );
-      const effectCore: Omit<IAutoMovieCompiledEffect, "digest"> = {
-        version: 1,
-        id: cue.id,
-        zone: zone.id,
-        kind: recipe.kind,
-        bounds: structuredClone(zone.bounds),
-        seed: seedOf({
-          protocol: "automovie.film-effect-seed.v1",
+      const [effect] = materializeCompiledEffects({
+        world: props.world,
+        fixedStepSeconds: frameRate.denominator / frameRate.numerator,
+        seedOwner: {
           production: props.identity.production,
           film: props.identity.film,
-          cue: cue.id,
-          recipe,
-          zone,
-        }),
-        recipe: structuredClone(recipe),
-        start: frameSeconds(cue.startFrame, frameRate),
-        end: frameSeconds(endFrame, frameRate),
-        intensity: { from: cue.intensity, to: cue.intensity },
-        fixedStepSeconds: frameRate.denominator / frameRate.numerator,
-      };
-      const effect: IAutoMovieCompiledEffect = {
-        ...effectCore,
-        digest: digestAutoMovieBytes(canonicalAutoMovieJsonBytes(effectCore)),
-      };
+        },
+        cues: [
+          {
+            id: cue.id,
+            zone: cue.zone,
+            start: frameSeconds(cue.startFrame, frameRate),
+            end: frameSeconds(endFrame, frameRate),
+            intensity: { from: cue.intensity, to: cue.intensity },
+          },
+        ],
+      });
+      if (effect === undefined)
+        throw new AutoMovieFilmEffectRuntimeError(
+          "film-effect-runtime-invalid",
+          `Film effect cue "${cue.id}" did not materialize its validated zone and recipe.`,
+        );
       const core: Omit<IAutoMovieCompiledFilmEffect, "digest"> = {
         version: 1,
         owner: "film",
@@ -431,7 +412,7 @@ const uniqueMap = <T>(
 const frameSeconds = (
   frame: number,
   frameRate: IAutoMovieProductionFrameRate,
-): number => (frame * frameRate.denominator) / frameRate.numerator;
+): number => productionFrameBoundaryToSeconds({ frame, frameRate });
 
 const validatedFrameRate = (
   frameRate: number | IAutoMovieProductionFrameRate,
@@ -446,12 +427,6 @@ const validatedFrameRate = (
     );
   }
 };
-
-const seedOf = (value: unknown): number =>
-  Number.parseInt(
-    digestAutoMovieBytes(canonicalAutoMovieJsonBytes(value)).slice(7, 20),
-    16,
-  );
 
 const validDigest = (value: string): boolean =>
   /^sha256:[0-9a-f]{64}$/.test(value);

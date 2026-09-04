@@ -1,6 +1,7 @@
 import * as THREE from "three";
 
 import { disposeCrossDissolve } from "./applyDissolve";
+import { disposeFadeToBlack } from "./applyFade";
 
 /**
  * Release a viewer's renderer AND the auxiliary GPU state frames created for
@@ -14,6 +15,7 @@ import { disposeCrossDissolve } from "./applyDissolve";
  */
 export const releaseViewerRenderer = (renderer: THREE.WebGLRenderer): void => {
   disposeCrossDissolve(renderer);
+  disposeFadeToBlack(renderer);
   renderer.dispose();
 };
 

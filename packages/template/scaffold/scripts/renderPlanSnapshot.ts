@@ -503,7 +503,7 @@ const encodeRenderPlanRanges = (
   const tier = source.tier;
   const frameFormat = source.frameFormat;
   if (
-    source.version !== 3 ||
+    source.version !== 4 ||
     Array.isArray(source.chunks) === false ||
     isRecord(tier) === false ||
     isRecord(frameFormat) === false

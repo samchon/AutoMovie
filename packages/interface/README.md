@@ -1,5 +1,9 @@
 # `@automovie/interface`
 
+## 필름 전역 효과 런타임
+
+`IAutoMovieCompiledFilmEffect`는 기존의 결정론적 효과 스트림에 필름 소유자, 전체 해상도 타임라인 프레임 시계, 현재 컴파일 및 편집 식별자를 결합한다. 프록시와 최종 렌더러는 이 동일한 공개 DTO를 사용하며 샷 로컬 효과를 대체하지 않는다.
+
 ## Film-grammar intent
 
 `IAutoMovieShotContract.styleIntent` is a unique list of deliberate editorial

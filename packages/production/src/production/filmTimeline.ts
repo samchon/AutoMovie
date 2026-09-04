@@ -1,6 +1,7 @@
 import {
   AutoMovieContentDigest,
   AutoMovieGuidePass,
+  IAutoMovieCompiledFilmEffect,
   IAutoMovieFilmTimeline,
   IAutoMovieFilmTimelineSegment,
   IAutoMovieGeneratedManifest,
@@ -126,3 +127,39 @@ export const readAutoMovieFilmTimeline = (
     fingerprint,
     read: (file) => project.readGeneratedFile(file),
   });
+
+/**
+ * Read and validate the current compiler-owned film effect runtime artifact.
+ *
+ * @evidence requirements/effects-and-simulation/scope-and-simulation-tiers.md#effects-authoring-control Reopens executable film effects through the same generated-manifest ownership gate as the timeline.
+ * @evidence specifications/simulation-effects-and-sound/scope-tiers-and-identities.md#effect-tier-state-machine Refuses missing, changed, malformed, or stale film-owner state at the consumer boundary.
+ */
+export const readAutoMovieFilmEffects = (
+  project: AutoMovieProductionProject,
+  fingerprint: AutoMovieContentDigest,
+): IAutoMovieCompiledFilmEffect[] => {
+  const manifest = project.generatedManifest();
+  const entry = manifest?.files.find(
+    (file) => file.path === "film-effects.json",
+  );
+  if (manifest?.inputFingerprint !== fingerprint || entry === undefined)
+    throw new Error(
+      "Compiler-owned film effects are missing or changed after compilation. Run the scaffold source compile command.",
+    );
+  const bytes = project.readGeneratedFile(entry.path);
+  if (digestAutoMovieBytes(bytes) !== entry.digest)
+    throw new Error(
+      "Compiler-owned film effect bytes differ from the generated manifest. Run the scaffold source compile command.",
+    );
+  const validation = typia.validateEquals<IAutoMovieCompiledFilmEffect[]>(
+    JSON.parse(Buffer.from(bytes).toString("utf8")) as unknown,
+  );
+  if (
+    validation.success === false ||
+    validation.data.some((effect) => effect.compileFingerprint !== fingerprint)
+  )
+    throw new Error(
+      "Compiler-owned film effects are invalid or stale. Run the scaffold source compile command.",
+    );
+  return validation.data;
+};
