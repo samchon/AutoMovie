@@ -319,6 +319,15 @@ export const publishScaffoldCandidate = (props: {
       continue;
     }
     if (
+      outcome.status === "refused" &&
+      outcome.reason !== "create-failed" &&
+      outcome.reason !== "parent-changed" &&
+      outcome.reason !== "target-competitor"
+    )
+      throw new Error(
+        `refused scaffold publication has invalid reason: ${entry.relative}`,
+      );
+    if (
       outcome.status === "partial" &&
       (outcome.parentIdentity.length === 0 ||
         Number.isSafeInteger(outcome.bytesWritten) === false ||

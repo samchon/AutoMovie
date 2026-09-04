@@ -165,6 +165,11 @@ export const test_cli_scaffold_publication_receipt = (): void => {
         error: "stopped",
         parentIdentity: "parent-1",
       }),
+      invalid({
+        error: "stopped",
+        reason: "unknown",
+        status: "refused",
+      } as unknown as ScaffoldFilePublicationOutcome),
     ].every((message) => message !== "accepted"),
   );
 
