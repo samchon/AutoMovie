@@ -48,6 +48,24 @@ const SEMANTIC_MASK_VERSION = 2;
 const SEMANTIC_MASK_PROTOCOL = "automovie.semantic-mask.v2";
 
 /**
+ * A current semantic sidecar failed its version or self-digest boundary.
+ *
+ * The reason is typed so receipt consumers can preserve unsupported history
+ * separately from tampered current evidence without parsing error prose.
+ *
+ * @evidence requirements/rendering/passes-channels-and-products.md#rendering-identity-mask-channels Distinguishes historical palette compatibility from a current payload whose declared identity is false.
+ * @evidence specifications/editorial-render-and-delivery/render-products-visibility-and-color.md#spec-render-pass-products Exposes the stable refusal classification consumed by semantic product receipts.
+ */
+export class AutoMovieSemanticMaskVerificationError extends Error {
+  public constructor(
+    public readonly reason: "unsupported" | "digest-mismatch",
+    message: string,
+  ) {
+    super(message);
+  }
+}
+
+/**
  * Return the digest of one mask's complete canonical payload.
  *
  * Every semantic field participates, while collection order does not. Entries,
@@ -79,12 +97,14 @@ export const verifyAutoMovieSemanticMask = (
   const version = mask.version as number;
   const protocol = mask.protocol as string;
   if (version !== SEMANTIC_MASK_VERSION || protocol !== SEMANTIC_MASK_PROTOCOL)
-    throw new Error(
+    throw new AutoMovieSemanticMaskVerificationError(
+      "unsupported",
       `unsupported semantic mask ${String(version)}/${protocol}; expected ${SEMANTIC_MASK_VERSION}/${SEMANTIC_MASK_PROTOCOL}`,
     );
   const expected = digestAutoMovieSemanticMask(mask);
   if (mask.digest !== expected)
-    throw new Error(
+    throw new AutoMovieSemanticMaskVerificationError(
+      "digest-mismatch",
       `semantic mask digest mismatch: declared ${mask.digest}, canonical ${expected}`,
     );
 };

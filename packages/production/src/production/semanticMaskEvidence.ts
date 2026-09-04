@@ -1,4 +1,5 @@
 import {
+  AutoMovieSemanticMaskVerificationError,
   renderAutoMovieSemanticMaskSidecar,
   verifyAutoMovieSemanticMask,
 } from "@automovie/engine";
@@ -135,14 +136,10 @@ export const classifyAutoMovieProductionSemanticMaskEvidence = (props: {
           reason: "semantic evidence not-run reason must be non-blank",
         };
   const evidence = props.observation.value;
-  if (
-    evidence.version !== 1 ||
-    (evidence.mask.version as number) !== 2 ||
-    (evidence.mask.protocol as string) !== "automovie.semantic-mask.v2"
-  )
+  if (evidence.version !== 1)
     return {
       status: "unsupported",
-      reason: `unsupported semantic evidence ${String(evidence.version)}/${String(evidence.mask.version)}/${String(evidence.mask.protocol)}; expected 1/2/automovie.semantic-mask.v2`,
+      reason: `unsupported semantic evidence version ${String(evidence.version)}; expected 1`,
     };
   if (evidence.shot !== props.expectedShot)
     return {
@@ -155,7 +152,14 @@ export const classifyAutoMovieProductionSemanticMaskEvidence = (props: {
       expectedShot: props.expectedShot,
     });
   } catch (error) {
-    return { status: "invalid", reason: (error as Error).message };
+    return {
+      status:
+        error instanceof AutoMovieSemanticMaskVerificationError &&
+        error.reason === "unsupported"
+          ? "unsupported"
+          : "invalid",
+      reason: (error as Error).message,
+    };
   }
   if (
     evidence.coverage.unresolved.length !== 0 ||

@@ -128,10 +128,6 @@ export const test_production_semantic_mask_evidence = (): void => {
     version: 1,
     protocol: "automovie.semantic-mask.v1",
   } as unknown as IAutoMovieSemanticMask;
-  const unknownMask = {
-    ...evidence.mask,
-    protocol: "automovie.semantic-mask.v99",
-  } as unknown as IAutoMovieSemanticMask;
   const classifications = {
     notRun: classifyAutoMovieProductionSemanticMaskEvidence({
       observation: { status: "not-run", reason: "host lacked mask hook" },
@@ -155,10 +151,13 @@ export const test_production_semantic_mask_evidence = (): void => {
       },
       expectedShot: "opening",
     }),
-    unsupportedProtocol: classifyAutoMovieProductionSemanticMaskEvidence({
+    invalidCoverage: classifyAutoMovieProductionSemanticMaskEvidence({
       observation: {
         status: "available",
-        value: { ...evidence, mask: unknownMask },
+        value: withCoverage(evidence, {
+          unresolved: ["node:z", "node:a"],
+          unaddressed: 0,
+        }),
       },
       expectedShot: "opening",
     }),
@@ -190,7 +189,7 @@ export const test_production_semantic_mask_evidence = (): void => {
       blankNotRun: "invalid",
       unsupported: "unsupported",
       unsupportedEnvelope: "unsupported",
-      unsupportedProtocol: "unsupported",
+      invalidCoverage: "invalid",
       foreign: "foreign",
       invalid: "invalid",
     },
