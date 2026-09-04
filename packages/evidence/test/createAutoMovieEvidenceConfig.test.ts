@@ -2061,7 +2061,9 @@ export const review = true;
   });
   assert.deepEqual(
     researchEvidenceGraph.claims
-      .filter((claim) => claim.name.startsWith("research population accounts"))
+      .filter((claim) =>
+        (claim.name ?? "").startsWith("research population accounts"),
+      )
       .map((claim) => claim.name),
     [
       "research population accounts answer each obligations/core/common.md obligation once",

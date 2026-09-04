@@ -12,8 +12,8 @@ import {
 /**
  * Project-relative location of the installed scaffold contract generation.
  *
- * @evidence requirements/operations-and-recovery/contract-migration.md#operations-contract-baseline-identity Makes the baseline discoverable without inspecting authored contract prose.
- * @evidence specifications/execution-and-recovery/contract-migration.md#execution-contract-baseline-identity Names the portable receipt consumed by compatibility planning.
+ * @evidence requirements/operations-and-recovery/contract-baseline.md#operations-contract-baseline-identity Makes the baseline discoverable without inspecting authored contract prose.
+ * @evidence specifications/execution-and-recovery/contract-baseline.md#execution-contract-baseline-identity Names the portable receipt consumed by compatibility planning.
  */
 export const AUTO_MOVIE_CONTRACT_BASELINE_PATH =
   "automovie/contracts-baseline.json";
@@ -21,8 +21,8 @@ export const AUTO_MOVIE_CONTRACT_BASELINE_PATH =
 /**
  * Select the exact scaffold-owned contract bytes from rendered project files.
  *
- * @evidence requirements/operations-and-recovery/contract-migration.md#operations-contract-baseline-identity Supplies the complete target inventory used by migration validation.
- * @evidence specifications/execution-and-recovery/contract-migration.md#execution-contract-baseline-identity Separates scaffold contracts from authored project documents.
+ * @evidence requirements/operations-and-recovery/contract-baseline.md#operations-contract-baseline-identity Supplies the complete target inventory used by migration validation.
+ * @evidence specifications/execution-and-recovery/contract-baseline.md#execution-contract-baseline-identity Separates scaffold contracts from authored project documents.
  */
 export const autoMovieContractTargetSources = (
   files: Readonly<Record<string, string>>,
@@ -36,8 +36,8 @@ export const autoMovieContractTargetSources = (
 /**
  * Render the portable baseline receipt installed in every new project.
  *
- * @evidence requirements/operations-and-recovery/contract-migration.md#operations-contract-baseline-identity Preserves the immutable source generation used by a future migration.
- * @evidence specifications/execution-and-recovery/contract-migration.md#execution-contract-baseline-identity Serializes the exact path, anchor, and digest inventory beside the project.
+ * @evidence requirements/operations-and-recovery/contract-baseline.md#operations-contract-baseline-identity Preserves the immutable source generation used by a future migration.
+ * @evidence specifications/execution-and-recovery/contract-baseline.md#execution-contract-baseline-identity Serializes the exact path, anchor, and digest inventory beside the project.
  */
 export const renderAutoMovieContractBaseline = (props: {
   files: Readonly<Record<string, string>>;

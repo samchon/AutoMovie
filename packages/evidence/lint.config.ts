@@ -91,7 +91,11 @@ const graph: ITtscEvidenceGraphConfig = {
       reference: {
         type: "markdown",
         root: "../../docs",
-        files: ["requirements/operations-and-recovery/contract-migration.md"],
+        files: [
+          "requirements/operations-and-recovery/contract-baseline.md",
+          "requirements/operations-and-recovery/contract-migration-plan.md",
+          "requirements/operations-and-recovery/contract-migration-publication.md",
+        ],
         symbol: "h3",
       },
     },
@@ -103,7 +107,11 @@ const graph: ITtscEvidenceGraphConfig = {
       reference: {
         type: "markdown",
         root: "../../docs",
-        files: ["specifications/execution-and-recovery/contract-migration.md"],
+        files: [
+          "specifications/execution-and-recovery/contract-baseline.md",
+          "specifications/execution-and-recovery/contract-migration-plan.md",
+          "specifications/execution-and-recovery/contract-migration-publication.md",
+        ],
         symbol: "h3",
       },
     },
