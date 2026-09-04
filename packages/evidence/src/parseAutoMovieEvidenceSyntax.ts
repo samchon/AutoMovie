@@ -438,7 +438,7 @@ function visibleMarkdownLines(source: string): string[] {
       output.push("");
       continue;
     }
-    output.push(projectedLine);
+    output.push(projectedLine.trim().length === 0 ? "" : projectedLine);
   }
   return output;
 }
