@@ -131,7 +131,7 @@ export const test_production_repaint_visual_delivery = (): void => {
         policy: { ...policy, transitions: [] },
         currentObservationDigest: policy.observationDigest,
       }).diagnostics,
-      allRepainted: planAutoMovieVisualDelivery({
+      allRepaintedMissingObservation: planAutoMovieVisualDelivery({
         timeline,
         lanes: normalizeAutoMovieVisualDeliveryLanes({
           timeline,
@@ -142,6 +142,17 @@ export const test_production_repaint_visual_delivery = (): void => {
         policy: null,
         currentObservationDigest: null,
       }).diagnostics,
+      allRepainted: planAutoMovieVisualDelivery({
+        timeline,
+        lanes: normalizeAutoMovieVisualDeliveryLanes({
+          timeline,
+          visualDelivery: "repainted",
+          deterministic: () => deterministic,
+          repaint: () => repaint,
+        }),
+        policy: null,
+        currentObservationDigest: policy.observationDigest,
+      }).diagnostics,
     },
     {
       mixed: { segments: lanes, diagnostics: [] },
@@ -151,7 +162,11 @@ export const test_production_repaint_visual_delivery = (): void => {
       noPolicy: ["visual-lane-policy-missing"],
       staleObservation: ["visual-lane-transition-invalid"],
       allDeterministic: [],
-      allDeterministicWithPolicy: ["visual-lane-transition-invalid"],
+      allDeterministicWithPolicy: [
+        "visual-lane-observation-invalid",
+        "visual-lane-transition-invalid",
+      ],
+      allRepaintedMissingObservation: ["visual-lane-observation-invalid"],
       allRepainted: [],
     },
   );

@@ -75,7 +75,7 @@ export interface IAutoMovieRepaintRecordInspection<T> {
  * Classified refusal thrown by one physical repaint-record reader.
  *
  * The message is deliberately not part of the persisted finding. Callers
- * provide one reviewed recovery sentence, so a filesystem path, provider
+ * receive a built-in recovery sentence, so a filesystem path, provider
  * response, or credential-bearing payload cannot escape through diagnostics.
  *
  * @evidence requirements/repaint/identity-and-provenance.md#repaint-provenance-refusal Preserves why one persisted repaint record was refused without turning the refusal into absence.
@@ -173,12 +173,11 @@ const safeClassifiedError = (
     const classified = {
       stage: error.stage,
       failure: error.failure,
-      recovery: error.recovery,
+      recovery: recoveryFor(error.failure),
     };
     return INSPECTION_STAGES.has(classified.stage) &&
       CLASSIFIED_FAILURES.has(classified.failure) &&
-      classified.recovery.trim().length > 0 &&
-      classified.recovery === classified.recovery.trim()
+      classified.recovery.length > 0
       ? classified
       : null;
   } catch {

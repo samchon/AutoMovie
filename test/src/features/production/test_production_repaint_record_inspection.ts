@@ -4,6 +4,8 @@ import {
 } from "@automovie/production";
 import { TestValidator } from "@nestia/e2e";
 
+import { throwsError } from "../internal/predicates";
+
 /**
  * Repaint inspection preserves valid siblings and exact safe failure classes.
  *
@@ -31,7 +33,10 @@ export const test_production_repaint_record_inspection = (): void => {
       if (target.recordId.startsWith("valid")) return target.recordId;
       if (target.recordId === "missing") return null;
       if (target.recordId === "stale")
-        throw new AutoMovieRepaintRecordInspectionError("currentness", "stale");
+        throw Object.assign(
+          new AutoMovieRepaintRecordInspectionError("currentness", "stale"),
+          { recovery: "secret-token" },
+        );
       if (target.recordId === "schema")
         throw new AutoMovieRepaintRecordInspectionError(
           "receipt",
@@ -136,12 +141,13 @@ export const test_production_repaint_record_inspection = (): void => {
       ],
     },
   );
-  TestValidator.error(
+  TestValidator.predicate(
     "malformed target is refused before any reader call",
-    () =>
+    throwsError(() =>
       inspectAutoMovieRepaintRecords({
         targets: [{ kind: "candidate", shot: " ", recordId: "x" }],
         inspect: () => "unreachable",
       }),
+    ),
   );
 };

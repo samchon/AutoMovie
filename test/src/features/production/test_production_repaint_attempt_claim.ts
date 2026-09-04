@@ -5,6 +5,8 @@ import {
 } from "@automovie/production";
 import { TestValidator } from "@nestia/e2e";
 
+import { rejectsError } from "../internal/predicates";
+
 const digest = `sha256:${"1".repeat(64)}` as const;
 const claim = (requestId: string): IAutoMovieRepaintAttemptClaim => ({
   version: 1,
@@ -55,7 +57,7 @@ export const test_production_repaint_attempt_claim =
     });
     const independent = await executeClaimedAutoMovieRepaintAttempt({
       claim: claim("request-b"),
-      acquire: () => ({ status: "acquired" }),
+      acquire: async () => ({ status: "acquired" }),
       execute: async () => ++calls,
       settle: (_claim, settlement) => settlements.push(settlement),
     });
@@ -68,6 +70,25 @@ export const test_production_repaint_attempt_claim =
       },
       settle: (_claim, settlement) => settlements.push(settlement),
     });
+    const rejected = await rejectsError(async () => {
+      await executeClaimedAutoMovieRepaintAttempt({
+        claim: claim("request-d"),
+        acquire: () => ({ status: "acquired" }),
+        execute: async () => {
+          ++calls;
+          throw new Error("provider rejected");
+        },
+        settle: (_claim, settlement) => settlements.push(settlement),
+      });
+    }, "provider rejected");
+    const malformed = await rejectsError(async () => {
+      await executeClaimedAutoMovieRepaintAttempt({
+        claim: { ...claim("request-e"), attemptOrdinal: 0 },
+        acquire: () => ({ status: "acquired" }),
+        execute: async () => ++calls,
+        settle: (_claim, settlement) => settlements.push(settlement),
+      });
+    }, "identity is malformed");
     TestValidator.equals(
       "only acquired independent claims dispatch and every dispatch settles truthfully",
       {
@@ -76,6 +97,8 @@ export const test_production_repaint_attempt_claim =
         changed,
         independent,
         unknown,
+        rejected,
+        malformed,
         calls,
         settlements,
       },
@@ -84,9 +107,14 @@ export const test_production_repaint_attempt_claim =
         duplicate: { status: "already-active", ownerAttemptId: "owner" },
         changed: { status: "prefix-changed" },
         independent: { status: "completed", value: 2 },
-        unknown: { status: "unknown-outcome" },
-        calls: 3,
-        settlements: ["fulfilled", "fulfilled", "unknown-outcome"],
+        unknown: {
+          status: "unknown-outcome",
+          ownerAttemptId: "request-c-attempt",
+        },
+        rejected: true,
+        malformed: true,
+        calls: 4,
+        settlements: ["fulfilled", "fulfilled", "unknown-outcome", "rejected"],
       },
     );
   };

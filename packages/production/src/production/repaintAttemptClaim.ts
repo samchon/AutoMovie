@@ -70,7 +70,9 @@ export const executeClaimedAutoMovieRepaintAttempt = async <T>(props: {
   claim: IAutoMovieRepaintAttemptClaim;
   acquire: (
     claim: IAutoMovieRepaintAttemptClaim,
-  ) => AutoMovieRepaintClaimAdmission;
+  ) =>
+    | AutoMovieRepaintClaimAdmission
+    | PromiseLike<AutoMovieRepaintClaimAdmission>;
   execute: () => Promise<T>;
   settle: (
     claim: IAutoMovieRepaintAttemptClaim,
@@ -78,7 +80,7 @@ export const executeClaimedAutoMovieRepaintAttempt = async <T>(props: {
   ) => unknown;
 }): Promise<AutoMovieRepaintClaimedDispatch<T>> => {
   const claim = validatedClaim(props.claim);
-  const admission = props.acquire(structuredClone(claim));
+  const admission = await props.acquire(structuredClone(claim));
   if (admission.status !== "acquired") return structuredClone(admission);
   let value: T;
   try {
@@ -86,7 +88,7 @@ export const executeClaimedAutoMovieRepaintAttempt = async <T>(props: {
   } catch (error) {
     if (safeUnknownOutcome(error)) {
       await props.settle(structuredClone(claim), "unknown-outcome");
-      return { status: "unknown-outcome" };
+      return { status: "unknown-outcome", ownerAttemptId: claim.attemptId };
     }
     await props.settle(structuredClone(claim), "rejected");
     throw error;

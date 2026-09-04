@@ -67,6 +67,7 @@ export interface IAutoMovieMixedVisualDeliveryPolicy {
 export type AutoMovieVisualDeliveryDiagnostic =
   | "visual-lane-population-invalid"
   | "visual-lane-source-invalid"
+  | "visual-lane-observation-invalid"
   | "visual-lane-policy-missing"
   | "visual-lane-transition-invalid";
 
@@ -108,6 +109,14 @@ export const planAutoMovieVisualDelivery = (props: {
     diagnostics.push("visual-lane-population-invalid");
   if (props.lanes.some((lane) => !safeValidLane(lane)))
     diagnostics.push("visual-lane-source-invalid");
+  const hasRepaint = props.lanes.some((lane) => lane.lane === "repainted");
+  if (
+    (hasRepaint &&
+      (props.currentObservationDigest === null ||
+        !isDigest(props.currentObservationDigest))) ||
+    (!hasRepaint && props.currentObservationDigest !== null)
+  )
+    diagnostics.push("visual-lane-observation-invalid");
   const mixed = new Set(props.lanes.map((lane) => lane.lane)).size > 1;
   const crossings = props.lanes.slice(1).flatMap((lane, index) => {
     const previous = props.lanes[index]!;
