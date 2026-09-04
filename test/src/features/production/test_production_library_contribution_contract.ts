@@ -67,9 +67,7 @@ export const test_production_library_contribution_contract = (): void => {
           autoMovieLibraryContributionDiagnostics("models", {
             ...model,
             environments: space.environments,
-          }).some((message) =>
-            message.includes("belongs to the environments"),
-          ) &&
+          }).some((message) => message.includes("belongs to the spaces")) &&
           autoMovieLibraryContributionDiagnostics("spaces", {
             ...space,
             contexts: map.contexts,
