@@ -1083,7 +1083,11 @@ export const review = true;
       ]);
       assert.equal(account?.symbol, "h2");
       assert.equal(referenceTo(account, obligation)?.uniqueEvidence, true);
-      const population = referenceTo(account, `${layer}/**/*.md`);
+      const population = referencesOf(account).find(
+        (reference) =>
+          reference.type === "markdown" &&
+          reference.files.every((file) => file.startsWith(`${layer}/`)),
+      );
       assert.equal(population?.checklist, true);
       assert.equal(population?.noEvidenceExclude, true);
     }
@@ -2777,7 +2781,9 @@ export const review = true;
     "the system source branch is not wired",
   );
   const systemObligation = branchGraph.claims.find((claim) =>
-    claim.name?.includes("systems H2 units answer their principle checklists"),
+    claim.name?.includes(
+      "systems population accounts answer each obligations/design/systems.md",
+    ),
   );
   assert.equal(
     referenceTo(systemObligation, "obligations/design/systems.md")
@@ -2786,7 +2792,9 @@ export const review = true;
     "required non-motion layer obligations must refuse exclusions",
   );
   const motionObligation = branchGraph.claims.find((claim) =>
-    claim.name?.includes("motions H2 units answer their principle checklists"),
+    claim.name?.includes(
+      "motions population accounts answer each obligations/design/motions.md",
+    ),
   );
   assert.equal(
     referenceTo(motionObligation, "obligations/design/motions.md")
@@ -3477,6 +3485,65 @@ export const review = true;
     true,
   );
 
+  const retiredConformanceTarget = root();
+  const retiredCommon = contract(
+    retiredConformanceTarget,
+    "docs/principles/core/common.md",
+  );
+  fs.writeFileSync(
+    retiredCommon,
+    rewrite(
+      fs.readFileSync(retiredCommon, "utf8"),
+      "## Declared basis {#declared-basis}",
+      [
+        "## Evidence-content conformance {#evidence-content-conformance}",
+        "",
+        "Semantic judgment cannot be restored as a self-certified principle.",
+        "",
+        "Review question: does this host certify its own evidence truth?",
+        "",
+        "Sources: synthetic retired-target migration probe.",
+        "",
+        "## Declared basis {#declared-basis}",
+      ].join("\n"),
+    ),
+  );
+  assert.equal(
+    throws(
+      () => createAutoMovieEvidenceConfig(disabled(retiredConformanceTarget)),
+      "H2 inventory changed without graph wiring",
+    ),
+    true,
+  );
+
+  const retiredSourceConformanceTarget = root();
+  const retiredSourceUnits = contract(
+    retiredSourceConformanceTarget,
+    "docs/principles/core/source-units.md",
+  );
+  fs.appendFileSync(
+    retiredSourceUnits,
+    [
+      "",
+      "## Source-owner evidence-content conformance {#source-evidence-content-conformance}",
+      "",
+      "Semantic judgment cannot be restored as a source owner certifying its own evidence.",
+      "",
+      "Review question: does this source owner certify its own evidence truth?",
+      "",
+      "Sources: synthetic retired-target migration probe.",
+      "",
+    ].join("\n"),
+  );
+  assert.equal(
+    throws(
+      () =>
+        createAutoMovieEvidenceConfig(disabled(retiredSourceConformanceTarget)),
+      "H2 inventory changed without graph wiring",
+    ),
+    true,
+  );
+
   const removedContractUnit = root();
   const removedCommon = contract(
     removedContractUnit,
@@ -3696,7 +3763,10 @@ export const review = true;
   write(
     scatteredContractExclusion,
     "docs/contracts/principles-common.md",
-    `<!-- @evidenceExcludeReview discovery/core/common.md#shared-local-boundary #abcdef0 This reviewed negative is scattered. -->\n${target("Scattered contract", "scattered-contract")}`,
+    `<!--
+@evidenceExclude discovery/core/common.md#shared-local-boundary This negative is scattered.
+@evidenceExcludeReview discovery/core/common.md#shared-local-boundary #abcdef0 This reviewed negative is scattered.
+-->\n${target("Scattered contract", "scattered-contract")}`,
   );
   assert.equal(
     throws(

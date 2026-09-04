@@ -719,18 +719,13 @@ const EXPECTED_CONTRACTS = [
       "scope-preservation",
       "substantive-completion",
       "machine-default",
-      "evidence-content-conformance",
       "declared-basis",
     ],
   },
   {
     domain: "core",
     file: "principles/core/source-units.md",
-    anchors: [
-      "source-scope-preservation",
-      "source-substantive-completion",
-      "source-evidence-content-conformance",
-    ],
+    anchors: ["source-scope-preservation", "source-substantive-completion"],
   },
   {
     domain: "delivery",
@@ -3284,7 +3279,7 @@ const topologyOf = (
       })),
     ),
   ];
-  const active = new Map(
+  const active = new Map<string, boolean>(
     branches.map((branch) => [branch.name, branch.active]),
   );
   const declarations: IAutoMovieEvidenceTopologyDeclaration[] = expected.map(

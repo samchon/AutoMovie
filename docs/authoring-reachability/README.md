@@ -4,7 +4,7 @@ AutoMovie의 제품 요구와 생성 프로젝트의 저작 계약은 서로 다
 
 ## 현재 모집단
 
-2026-09-04에 B24의 직접 predecessor `42610d6f2a9f5c3ab9ef39f74e039720fe6ae2fb`에서 시작한 변경 tree를 다시 셌다. `docs/requirements/`에는 27개 family와 명시 anchor가 있는 H3 unit 1,982개가 있다. `packages/template/scaffold/docs/`에는 discovery 17개, principle 83개, obligation 109개로 H2 209개가 있다. 저작 계약에서 `requirements/`를 직접 인용한 경우와 요구 문서에서 discovery, principle, obligation을 직접 인용한 경우는 모두 0건이다.
+2026-09-04에 B24의 직접 predecessor `42610d6f2a9f5c3ab9ef39f74e039720fe6ae2fb`에서 시작한 변경 tree를 다시 셌다. `docs/requirements/`에는 27개 family와 명시 anchor가 있는 H3 unit 1,982개가 있다. `packages/template/scaffold/docs/`에는 discovery 17개, principle 83개, obligation 109개로 H2 209개가 있다. 저작 계약에서 `requirements/`를 직접 인용한 경우와 요구 문서에서 discovery, principle, obligation을 직접 인용한 경우는 모두 0건이다. Evidence conformance는 host가 자기 annotation의 진실을 다시 인증하는 principle이 아니라 evidence-graph의 단일 owner map과 review-verification의 독립 semantic-review 절차가 맡는다.
 
 Correspondence는 해당 family의 결정을 저자가 어느 계약 owner와 절차에서 만나게 되는지 말한다. 이것은 그 family의 모든 H3가 이미 구현되었다거나 하나의 계약 항목이 모든 세부 요구를 대신한다는 주장이 아니다. 부재는 다음 세 종류로만 기록한다.
 
@@ -66,7 +66,7 @@ Repository requirement-specification-source graph에서는 `evidence/review`를 
 
 ## 기존 건물 실험 적용
 
-[modern-suburban-house baseline](../../.agents/skills/experiment/baselines/modern-suburban-house.md)과 #1952에 교차표를 적용했다. 제외된 벤치마크 #2110을 다시 실행하지 않고 이미 기록된 brief, compiled counts, report와 driver 관찰만 사용했다.
+[modern-suburban-house baseline](../../experiments/baselines/modern-suburban-house.md)과 #1952에 교차표를 적용했다. 제외된 벤치마크 #2110을 다시 실행하지 않고 이미 기록된 brief, compiled counts, report와 driver 관찰만 사용했다.
 
 | 관찰 | 교차표 판정 |
 | --- | --- |

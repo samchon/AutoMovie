@@ -80,6 +80,7 @@ export interface IAutoMovieEvidenceTopologyDiagnostic {
  * @evidence requirements/production-evidence/graph.md#agent-production-evidence-deterministic-result Reports every missing, extra, stale, or misordered relationship in stable order.
  * @evidence specifications/production-evidence/graph.md#spec-authoring-production-evidence-shape-stage Validates provider and consumer state against the declared production branches.
  * @evidence specifications/production-evidence/graph.md#spec-authoring-production-evidence-deterministic-result Produces a complete diagnostic set instead of accepting a partial topology.
+ * @author Samchon
  */
 export function inspectAutoMovieEvidenceTopology(props: {
   branches: readonly IAutoMovieEvidenceTopologyBranch[];
@@ -170,12 +171,17 @@ export function inspectAutoMovieEvidenceTopology(props: {
     const declaration = declarations.get(
       identity(edge.provider, edge.consumer),
     );
-    if (provider.active && consumer.active && declaration?.status !== "uses")
+    if (
+      declaration === undefined ||
+      (provider.active && consumer.active && declaration.status !== "uses")
+    )
       diagnostics.push(
         diagnostic(
           "missing-consumer",
           edge,
-          `${edge.consumer} does not account for active foundation ${edge.provider}.`,
+          declaration === undefined
+            ? `${edge.consumer} does not declare foundation ${edge.provider} as used or inapplicable.`
+            : `${edge.consumer} does not account for active foundation ${edge.provider}.`,
         ),
       );
   }

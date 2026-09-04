@@ -773,10 +773,6 @@ const CONTRACTS: readonly IContractFixture[] = [
         anchor: "machine-default",
       },
       {
-        title: "Evidence-content conformance",
-        anchor: "evidence-content-conformance",
-      },
-      {
         title: "Declared basis",
         anchor: "declared-basis",
       },
@@ -851,10 +847,6 @@ const CONTRACTS: readonly IContractFixture[] = [
       {
         title: "Source-owner substantive completion",
         anchor: "source-substantive-completion",
-      },
-      {
-        title: "Source-owner evidence-content conformance",
-        anchor: "source-evidence-content-conformance",
       },
     ],
   },

@@ -2,7 +2,7 @@
   "version": 1,
   "contractInventory": {
     "discovery": 17,
-    "principles": 83,
+    "principles": 81,
     "obligations": 109
   },
   "acceptedDebt": {
@@ -30,12 +30,12 @@
       "requirementUnits": 76,
       "classification": "authoring-contract",
       "correspondences": [
-        "packages/template/scaffold/docs/principles/core/common.md#evidence-content-conformance",
         "packages/template/scaffold/docs/obligations/delivery/briefs.md#observable-progression",
         "packages/template/scaffold/docs/obligations/delivery/shots.md#acceptance-travels-with-delivery"
       ],
       "workflow": [
-        "packages/template/scaffold/.agents/skills/review-verification/review.md"
+        "packages/template/scaffold/.agents/skills/review-verification/review.md",
+        "packages/template/scaffold/.agents/skills/review-verification/semantic-review.md"
       ],
       "reason": "Criteria become falsifying brief or shot observations, and the review procedure owns evidence, findings, and verdicts."
     },
@@ -148,14 +148,15 @@
       "requirementUnits": 36,
       "classification": "authoring-contract",
       "correspondences": [
-        "packages/template/scaffold/docs/principles/core/common.md#evidence-content-conformance",
         "packages/template/scaffold/docs/principles/core/common.md#declared-basis"
       ],
       "workflow": [
         "packages/template/scaffold/.agents/skills/evidence-graph/staging.md",
+        "packages/template/scaffold/.agents/skills/evidence-graph/conformance.md",
+        "packages/template/scaffold/.agents/skills/review-verification/semantic-review.md",
         "packages/template/scaffold/.agents/skills/review-verification/debugging.md"
       ],
-      "reason": "The author consumes deterministic diagnostics through evidence staging and debugging while common principles forbid concealing their causes with evidence prose."
+      "reason": "The author consumes deterministic diagnostics through evidence staging and debugging, then routes any semantic content defect through the conformance owner map and independent semantic-review procedure."
     },
     {
       "family": "editorial",
@@ -194,13 +195,14 @@
       "requirementUnits": 51,
       "classification": "authoring-contract",
       "correspondences": [
-        "packages/template/scaffold/docs/principles/core/common.md#evidence-content-conformance",
         "packages/template/scaffold/docs/principles/core/common.md#declared-basis",
         "packages/template/scaffold/docs/principles/core/research.md#source-identity",
         "packages/template/scaffold/docs/principles/core/settings.md#fact-status"
       ],
       "workflow": [
         "packages/template/scaffold/.agents/skills/evidence-graph/staging.md",
+        "packages/template/scaffold/.agents/skills/evidence-graph/conformance.md",
+        "packages/template/scaffold/.agents/skills/review-verification/semantic-review.md",
         "packages/template/scaffold/.agents/skills/production-lifecycle/research.md"
       ],
       "reason": "Research and settings own source status and production facts while evidence staging owns citations, fingerprints, and review state."
@@ -382,12 +384,13 @@
       "requirementUnits": 7,
       "classification": "authoring-contract",
       "correspondences": [
-        "packages/template/scaffold/docs/principles/core/common.md#evidence-content-conformance",
         "packages/template/scaffold/docs/principles/core/common.md#scope-preservation"
       ],
       "workflow": [
         "packages/template/scaffold/.agents/skills/evidence-graph/contract-targets.md",
-        "packages/template/scaffold/.agents/skills/evidence-graph/staging.md"
+        "packages/template/scaffold/.agents/skills/evidence-graph/staging.md",
+        "packages/template/scaffold/.agents/skills/evidence-graph/conformance.md",
+        "packages/template/scaffold/.agents/skills/review-verification/semantic-review.md"
       ],
       "reason": "The reusable graph is itself exposed through the contract-target inventory and the staged production-owned evidence procedure."
     },

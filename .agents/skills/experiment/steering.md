@@ -4,6 +4,8 @@ Read this document when the experiment is driven by a Claude Code or Codex sessi
 
 [briefing.md](briefing.md) owns what goes into the brief and into every message after it. This document owns how the session itself is driven.
 
+[records.md](records.md#operate-one-frozen-run-as-a-state-machine) owns the lifecycle state and receipts. Before launch, intervention, replacement, or cleanup, record the transition there; live process evidence never substitutes for that durable order.
+
 ## A Turn Is The Unit Of Work
 
 `codex exec resume <session-uuid> "<message>"` runs exactly one turn and exits. Two readings of the process table are therefore both wrong: a live process is not proof the agent is working, and an exited process is not proof it has stopped.
