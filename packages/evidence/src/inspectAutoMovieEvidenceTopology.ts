@@ -1,4 +1,10 @@
-/** One branch participating in a declared authoring foundation topology. */
+/**
+ * One branch participating in a declared authoring foundation topology.
+ *
+ * @evidence requirements/production-evidence/graph.md#agent-production-evidence-shape-stage Makes branch activity and authoring order explicit topology inputs.
+ * @evidence specifications/production-evidence/graph.md#spec-authoring-production-evidence-shape-stage Represents one branch in the selected production state machine.
+ * @author Samchon
+ */
 export interface IAutoMovieEvidenceTopologyBranch {
   /** Stable branch name. */
   name: string;
@@ -8,7 +14,13 @@ export interface IAutoMovieEvidenceTopologyBranch {
   order: number;
 }
 
-/** One canonical provider-to-consumer relationship. */
+/**
+ * One canonical provider-to-consumer relationship.
+ *
+ * @evidence requirements/production-evidence/graph.md#agent-production-evidence-shared-contract Keeps foundation ownership in the shared topology instead of copied prose.
+ * @evidence specifications/production-evidence/graph.md#spec-authoring-production-evidence-shared-contract Defines one expected foundation edge and its coordinated-stage exception.
+ * @author Samchon
+ */
 export interface IAutoMovieEvidenceTopologyEdge {
   /** Foundation branch whose reviewed population is consumed. */
   provider: string;
@@ -18,7 +30,13 @@ export interface IAutoMovieEvidenceTopologyEdge {
   simultaneous?: boolean;
 }
 
-/** One account-owned declaration of a foundation relationship or absence. */
+/**
+ * One account-owned declaration of a foundation relationship or absence.
+ *
+ * @evidence requirements/production-evidence/graph.md#agent-production-evidence-shared-contract Makes a population account the visible owner of one foundation decision.
+ * @evidence specifications/production-evidence/graph.md#spec-authoring-production-evidence-shared-contract Distinguishes a positive consumer from a reviewed inapplicable edge.
+ * @author Samchon
+ */
 export interface IAutoMovieEvidenceTopologyDeclaration {
   /** Foundation branch named by the account. */
   provider: string;
@@ -30,7 +48,13 @@ export interface IAutoMovieEvidenceTopologyDeclaration {
   reason: string;
 }
 
-/** One deterministic structural defect in a topology account. */
+/**
+ * One deterministic structural defect in a topology account.
+ *
+ * @evidence requirements/production-evidence/graph.md#agent-production-evidence-deterministic-result Names the exact edge and repair direction for every topology defect.
+ * @evidence specifications/production-evidence/graph.md#spec-authoring-production-evidence-deterministic-result Defines the closed diagnostic result emitted before graph publication.
+ * @author Samchon
+ */
 export interface IAutoMovieEvidenceTopologyDiagnostic {
   /** Stable defect identity. */
   code:

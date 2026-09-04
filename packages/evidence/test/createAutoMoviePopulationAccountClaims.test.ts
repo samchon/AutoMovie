@@ -2,6 +2,15 @@ import assert from "node:assert/strict";
 
 import { createAutoMoviePopulationAccountClaims } from "../src/createAutoMoviePopulationAccountClaims";
 
+/**
+ * Population accounts own whole-layer obligations without weakening unit reach.
+ *
+ * Scenarios:
+ *
+ * 1. Two obligation families create two exact account claims in stable order.
+ * 2. Disabled accounts preserve their full future relationship while not enforcing it.
+ * 3. Invalid layers, empty populations, foreign paths, and duplicates fail closed.
+ */
 const claims = createAutoMoviePopulationAccountClaims({
   layer: "treatments",
   populationFiles: ["treatments/*.md"],
