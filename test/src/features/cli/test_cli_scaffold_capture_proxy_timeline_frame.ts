@@ -1,7 +1,30 @@
 import type { IAutoMovieProductionRenderJobPlan } from "@automovie/production";
 import { TestValidator } from "@nestia/e2e";
+import path from "node:path";
 
-import { productionRenderFrameCaptureInput } from "../../../../packages/template/scaffold/scripts/renderFrameCaptureInput";
+import { loadSourceModule } from "../internal/loadSourceModule";
+
+const { productionRenderFrameCaptureInput } = loadSourceModule<{
+  productionRenderFrameCaptureInput: (
+    props: ParametersProductionRenderFrameCaptureInput,
+  ) => unknown;
+}>(
+  path.resolve(
+    __dirname,
+    "../../../../packages/template/scaffold/scripts/renderFrameCaptureInput.ts",
+  ),
+);
+
+type ParametersProductionRenderFrameCaptureInput = {
+  root: string;
+  productionId: string;
+  plan: IAutoMovieProductionRenderJobPlan;
+  shot: string;
+  sourceFrame: number;
+  sourceFps: number;
+  sample: { timelineFrame: number };
+  pass: "pose" | "depth" | "id";
+};
 
 /**
  * Validate that proxy capture dialogue uses the sampled film clock.
@@ -23,7 +46,7 @@ export const test_cli_scaffold_capture_proxy_timeline_frame = (): void => {
         height: 1_080,
         fps: 24,
         colorSpace: "srgb",
-        crop: { x: 0.1, y: 0.2, width: 0.7, height: 0.6 },
+        crop: { left: 0.1, top: 0.2, right: 0.8, bottom: 0.8 },
       },
     } as unknown as IAutoMovieProductionRenderJobPlan,
     shot: "shot-a",
@@ -45,7 +68,7 @@ export const test_cli_scaffold_capture_proxy_timeline_frame = (): void => {
       pass: "pose",
       width: 1_920,
       height: 1_080,
-      crop: { x: 0.1, y: 0.2, width: 0.7, height: 0.6 },
+      crop: { left: 0.1, top: 0.2, right: 0.8, bottom: 0.8 },
     },
   );
   TestValidator.equals(
