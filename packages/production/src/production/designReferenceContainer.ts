@@ -451,6 +451,8 @@ const readStartTag = (
 ): IStartTag | null => {
   const name = /^<([A-Za-z_][\w.:-]*)/.exec(text.slice(offset));
   if (name === null) return null;
+  if (!isXmlQualifiedName(name[1]!))
+    throw invalid(path, "SVG", "name", `invalid qualified name ${name[1]}`);
   let cursor = offset + name[0].length;
   const attributes = new Map<string, string>();
   while (true) {
@@ -474,6 +476,13 @@ const readStartTag = (
         "SVG",
         "root",
         `malformed root attribute at character ${cursor}`,
+      );
+    if (!isXmlQualifiedName(attribute[1]!))
+      throw invalid(
+        path,
+        "SVG",
+        "name",
+        `invalid qualified name ${attribute[1]}`,
       );
     if (attributes.has(attribute[1]!))
       throw invalid(
@@ -535,8 +544,15 @@ const validateXmlClosure = (
       cursor = end + 2;
       continue;
     }
-    const close = /^<\/([A-Za-z_][\w.:-]*)\s*>/.exec(text.slice(open));
+    const close = /^<\/([A-Za-z_][\w.:-]*)[ \t\r\n]*>/.exec(text.slice(open));
     if (close !== null) {
+      if (!isXmlQualifiedName(close[1]!))
+        throw invalid(
+          path,
+          "SVG",
+          "name",
+          `invalid qualified name ${close[1]}`,
+        );
       if (stack.pop() !== close[1])
         throw invalid(
           path,
@@ -607,9 +623,22 @@ const validateXmlCharacterData = (path: string, value: string): void => {
 };
 
 const validateXmlCharacters = (path: string, value: string): void => {
-  if (/[\u0000-\u0008\u000b\u000c\u000e-\u001f]/.test(value))
-    throw invalid(path, "XML", "character", "invalid XML character");
+  for (const character of value)
+    if (!isXmlCharacter(character.codePointAt(0)!))
+      throw invalid(path, "XML", "character", "invalid XML character");
 };
+
+const isXmlCharacter = (scalar: number): boolean =>
+  scalar === 0x09 ||
+  scalar === 0x0a ||
+  scalar === 0x0d ||
+  (scalar >= 0x20 && scalar <= 0xd7ff) ||
+  (scalar >= 0xe000 && scalar <= 0xfffd) ||
+  (scalar >= 0x10000 && scalar <= 0x10ffff);
+
+const isXmlQualifiedName = (value: string): boolean =>
+  value.split(":").length <= 2 &&
+  value.split(":").every((part) => /^[A-Za-z_][\w.-]*$/.test(part));
 
 const validateXmlInstruction = (
   path: string,
@@ -623,7 +652,7 @@ const validateXmlInstruction = (
     (target.toLowerCase() === "xml" &&
       (target !== "xml" ||
         !allowDeclaration ||
-        !/^xml[ \t\r\n]+version[ \t\r\n]*=[ \t\r\n]*(["'])(?:1\.0|1\.1)\1(?:[ \t\r\n]+(?:encoding|standalone)[ \t\r\n]*=[\s\S]*)?$/.test(
+        !/^xml[ \t\r\n]+version[ \t\r\n]*=[ \t\r\n]*(["'])1\.0\1(?:[ \t\r\n]+(?:encoding|standalone)[ \t\r\n]*=[\s\S]*)?$/.test(
           body,
         )))
   )
@@ -745,12 +774,7 @@ const decodeXmlAttribute = (path: string, value: string): string => {
       reference.slice(reference.startsWith("&#x") ? 3 : 2, -1),
       reference.startsWith("&#x") ? 16 : 10,
     );
-    if (
-      !Number.isInteger(scalar) ||
-      scalar <= 0 ||
-      scalar > 0x10ffff ||
-      (scalar >= 0xd800 && scalar <= 0xdfff)
-    )
+    if (!Number.isInteger(scalar) || !isXmlCharacter(scalar))
       throw invalid(
         path,
         "SVG",

@@ -218,6 +218,18 @@ export const test_production_design_reference_container = (): void => {
         utf8('<svg xmlns="http://www.w3.org/2000/svg"/><?xml version="1.0"?>'),
       ),
       refuses(
+        "qualified-name.svg",
+        utf8('<svg xmlns="http://www.w3.org/2000/svg"><a:b:c/></svg>'),
+      ),
+      refuses(
+        "character-reference.svg",
+        utf8('<svg xmlns="http://www.w3.org/2000/svg">&#11;</svg>'),
+      ),
+      refuses(
+        "non-character.svg",
+        utf8('<svg xmlns="http://www.w3.org/2000/svg">\uffff</svg>'),
+      ),
+      refuses(
         "encoding.svg",
         new Uint8Array([
           ...utf8('<svg xmlns="http://www.w3.org/2000/svg">'),
@@ -234,6 +246,9 @@ export const test_production_design_reference_container = (): void => {
       ),
     ],
     [
+      true,
+      true,
+      true,
       true,
       true,
       true,
