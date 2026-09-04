@@ -211,11 +211,20 @@ const chunkShape = (
  *    nothing, an odd authored raster, a timeline whose clock disagrees with the
  *    production, a shot with no compiler-owned source fingerprint, an audio cue
  *    with no verified asset, and a guide-pass request naming two passes.
- * 7. Changing only the normalized crop invalidates every chunk identity while
+ * 7. A canonical voiced dialogue identity is preserved while malformed
+ *    dialogue identities refuse rather than being treated as silence.
+ * 8. Changing only the normalized crop invalidates every chunk identity while
  *    preserving the raster, clock, and exact crop in both frame formats.
  */
 export const test_production_render_job_plan = (): void => {
   const final = plan({});
+  const voicedDialogueIdentity = digest("f");
+  const voiced = plan({
+    runtimeIdentity: {
+      ...RUNTIME_IDENTITY,
+      dialogueRuntimeIdentity: voicedDialogueIdentity,
+    },
+  });
   TestValidator.equals(
     "the final tier renders the authored contract without economising it",
     {
@@ -227,6 +236,7 @@ export const test_production_render_job_plan = (): void => {
       totalFrames: final.totalFrames,
       chunkFrames: final.chunkFrames,
       compileFingerprint: final.compileFingerprint,
+      voicedDialogueIdentity: voiced.runtimeIdentity.dialogueRuntimeIdentity,
     },
     {
       version: 3,
@@ -242,6 +252,7 @@ export const test_production_render_job_plan = (): void => {
       totalFrames: 12,
       chunkFrames: 5,
       compileFingerprint: digest("d"),
+      voicedDialogueIdentity,
     },
   );
   const croppedProduction = PRODUCTION();
