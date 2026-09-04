@@ -137,6 +137,7 @@ const inspectJpeg = (props: {
   let cursor = 2;
   let width: number | undefined;
   let height: number | undefined;
+  let frameComponents: Set<number> | undefined;
   let scans = 0;
   let entropyBytes = 0;
   while (cursor < bytes.length) {
@@ -213,13 +214,25 @@ const inspectJpeg = (props: {
       if (size < 8)
         throw invalid(props.path, "JPEG", "frame", "frame header is too small");
       const components = bytes[payload + 5]!;
-      if (size !== 8 + 3 * components)
+      if (components === 0 || size !== 8 + 3 * components)
         throw invalid(
           props.path,
           "JPEG",
           "frame",
           "frame component table is truncated",
         );
+      frameComponents = new Set<number>();
+      for (let index = 0; index < components; ++index) {
+        const identifier = bytes[payload + 6 + 3 * index]!;
+        if (frameComponents.has(identifier))
+          throw invalid(
+            props.path,
+            "JPEG",
+            "frame",
+            "frame component identifiers must be unique",
+          );
+        frameComponents.add(identifier);
+      }
       height = readU16(bytes, payload + 1);
       width = readU16(bytes, payload + 3);
       if (width === 0 || height === 0)
@@ -234,13 +247,22 @@ const inspectJpeg = (props: {
           "scan",
           "scan precedes the supported frame header",
         );
-      if (size < 6 || size !== 6 + 2 * bytes[payload]!)
+      const components = bytes[payload]!;
+      if (components === 0 || size !== 6 + 2 * components)
         throw invalid(
           props.path,
           "JPEG",
           "scan",
           "scan component table is truncated",
         );
+      for (let index = 0; index < components; ++index)
+        if (!frameComponents!.has(bytes[payload + 1 + 2 * index]!))
+          throw invalid(
+            props.path,
+            "JPEG",
+            "scan",
+            "scan references a component absent from the frame",
+          );
       scans += 1;
       const start = cursor;
       while (cursor < bytes.length) {
@@ -305,18 +327,87 @@ const inspectPdf = (props: {
       "startxref does not identify an xref table",
     );
   const trailer = text.slice(offset, closure.index);
-  if (
-    !/^xref\b[\s\S]*\btrailer\s*<<[\s\S]*\/Root\s+\d+\s+\d+\s+R[\s\S]*>>/.test(
-      trailer,
-    )
-  )
+  const xref = inspectClassicPdfXref(trailer);
+  if (xref === null)
     throw invalid(
       props.path,
       "PDF",
       "trailer",
       "xref and Root trailer are incomplete",
     );
+  const root = xref.entries.get(xref.root.object);
+  const rootObject =
+    root === undefined
+      ? null
+      : new RegExp(
+          `^${xref.root.object}[ \\t]+${xref.root.generation}[ \\t]+obj\\b([\\s\\S]*?)\\bendobj\\b`,
+        ).exec(text.slice(root.offset));
+  if (
+    root === undefined ||
+    root.inUse === false ||
+    root.generation !== xref.root.generation ||
+    rootObject === null ||
+    !/\/Type[ \t\r\n]+\/Catalog\b/.test(rootObject[1]!)
+  )
+    throw invalid(
+      props.path,
+      "PDF",
+      "Root",
+      "the Root reference has no matching in-use xref object",
+    );
   return { media: "application/pdf" };
+};
+
+interface IPdfXrefEntry {
+  offset: number;
+  generation: number;
+  inUse: boolean;
+}
+
+const inspectClassicPdfXref = (
+  text: string,
+): {
+  entries: Map<number, IPdfXrefEntry>;
+  root: { object: number; generation: number };
+} | null => {
+  const normalized = text.replace(/\r\n?/g, "\n");
+  const trailer = /\ntrailer[ \t\n]*<<([\s\S]*)>>[ \t\n]*$/.exec(normalized);
+  if (trailer === null) return null;
+  const lines = normalized.slice(0, trailer.index).split("\n");
+  if (lines.shift() !== "xref") return null;
+  const entries = new Map<number, IPdfXrefEntry>();
+  while (lines.length !== 0) {
+    const heading = /^(\d+)[ \t]+(\d+)$/.exec(lines.shift()!);
+    if (heading === null) return null;
+    const first = Number(heading[1]);
+    const count = Number(heading[2]);
+    if (
+      !Number.isSafeInteger(first) ||
+      !Number.isSafeInteger(count) ||
+      count < 1
+    )
+      return null;
+    for (let index = 0; index < count; ++index) {
+      const entry = /^(\d{10})[ \t]+(\d{5})[ \t]+([nf])[ \t]*$/.exec(
+        lines.shift() ?? "",
+      );
+      if (entry === null || entries.has(first + index)) return null;
+      entries.set(first + index, {
+        offset: Number(entry[1]),
+        generation: Number(entry[2]),
+        inUse: entry[3] === "n",
+      });
+    }
+  }
+  const root = /\/Root[ \t\r\n]+(\d+)[ \t\r\n]+(\d+)[ \t\r\n]+R\b/.exec(
+    trailer[1]!,
+  );
+  return root === null
+    ? null
+    : {
+        entries,
+        root: { object: Number(root[1]), generation: Number(root[2]) },
+      };
 };
 
 interface IXmlRoot {
@@ -326,7 +417,7 @@ interface IXmlRoot {
 }
 
 const inspectXmlRoot = (path: string, text: string): IXmlRoot | null => {
-  const cursor = skipXmlMisc(path, text, 0);
+  const cursor = skipXmlMisc(path, text, 0, true);
   if (text[cursor] !== "<") return null;
   if (text.startsWith("<!", cursor))
     throw invalid(
@@ -363,7 +454,7 @@ const readStartTag = (
   let cursor = offset + name[0].length;
   const attributes = new Map<string, string>();
   while (true) {
-    cursor = skipSpace(text, cursor);
+    cursor = skipXmlSpace(text, cursor);
     if (text.startsWith("/>", cursor))
       return { name: name[1]!, attributes, end: cursor + 2, selfClosing: true };
     if (text[cursor] === ">")
@@ -373,9 +464,10 @@ const readStartTag = (
         end: cursor + 1,
         selfClosing: false,
       };
-    const attribute = /^([A-Za-z_][\w.:-]*)\s*=\s*(["'])([\s\S]*?)\2/.exec(
-      text.slice(cursor),
-    );
+    const attribute =
+      /^([A-Za-z_][\w.:-]*)[ \t\r\n]*=[ \t\r\n]*(["'])([\s\S]*?)\2/.exec(
+        text.slice(cursor),
+      );
     if (attribute === null)
       throw invalid(
         path,
@@ -431,6 +523,7 @@ const validateXmlClosure = (
     if (text.startsWith("<![CDATA[", open)) {
       const end = text.indexOf("]]>", open + 9);
       if (end < 0) throw invalid(path, "SVG", "closure", "unterminated CDATA");
+      validateXmlCharacters(path, text.slice(open + 9, end));
       cursor = end + 3;
       continue;
     }
@@ -438,6 +531,7 @@ const validateXmlClosure = (
       const end = text.indexOf("?>", open + 2);
       if (end < 0)
         throw invalid(path, "SVG", "closure", "unterminated instruction");
+      validateXmlInstruction(path, text.slice(open + 2, end), false);
       cursor = end + 2;
       continue;
     }
@@ -477,8 +571,13 @@ const validateXmlClosure = (
   throw invalid(path, "SVG", "closure", "root element is not closed");
 };
 
-const skipXmlMisc = (path: string, text: string, offset: number): number => {
-  let cursor = skipSpace(text, offset);
+const skipXmlMisc = (
+  path: string,
+  text: string,
+  offset: number,
+  allowDeclaration = false,
+): number => {
+  let cursor = skipXmlSpace(text, offset);
   while (text.startsWith("<?", cursor) || text.startsWith("<!--", cursor)) {
     const comment = text.startsWith("<!--", cursor);
     const closing = comment ? "-->" : "?>";
@@ -486,15 +585,49 @@ const skipXmlMisc = (path: string, text: string, offset: number): number => {
     if (end < 0) throw invalid(path, "XML", "misc", `unterminated ${closing}`);
     if (comment && text.slice(cursor + 4, end).includes("--"))
       throw invalid(path, "XML", "comment", "comment body contains --");
-    cursor = skipSpace(text, end + closing.length);
+    if (comment) validateXmlCharacters(path, text.slice(cursor + 4, end));
+    else {
+      validateXmlInstruction(
+        path,
+        text.slice(cursor + 2, end),
+        allowDeclaration,
+      );
+      allowDeclaration = false;
+    }
+    cursor = skipXmlSpace(text, end + closing.length);
   }
   return cursor;
 };
 
 const validateXmlCharacterData = (path: string, value: string): void => {
-  if (/]]>|[\u0000-\u0008\u000b\u000c\u000e-\u001f]/.test(value))
+  if (value.includes("]]>"))
     throw invalid(path, "SVG", "text", "invalid XML character data");
+  validateXmlCharacters(path, value);
   decodeXmlAttribute(path, value);
+};
+
+const validateXmlCharacters = (path: string, value: string): void => {
+  if (/[\u0000-\u0008\u000b\u000c\u000e-\u001f]/.test(value))
+    throw invalid(path, "XML", "character", "invalid XML character");
+};
+
+const validateXmlInstruction = (
+  path: string,
+  body: string,
+  allowDeclaration: boolean,
+): void => {
+  validateXmlCharacters(path, body);
+  const target = /^([A-Za-z_][\w.:-]*)(?:[ \t\r\n]|$)/.exec(body)?.[1];
+  if (
+    target === undefined ||
+    (target.toLowerCase() === "xml" &&
+      (target !== "xml" ||
+        !allowDeclaration ||
+        !/^xml[ \t\r\n]+version[ \t\r\n]*=[ \t\r\n]*(["'])(?:1\.0|1\.1)\1(?:[ \t\r\n]+(?:encoding|standalone)[ \t\r\n]*=[\s\S]*)?$/.test(
+          body,
+        )))
+  )
+    throw invalid(path, "XML", "instruction", "invalid processing instruction");
 };
 
 const svgExtent = (
@@ -539,8 +672,9 @@ const inspectDxf = (path: string, text: string): boolean => {
     throw invalid(path, "DXF", "records", "a group code has no value");
   const records: Array<readonly [number, string]> = [];
   for (let index = 0; index < lines.length; index += 2) {
-    const code = Number(lines[index]!.trim());
-    if (!Number.isInteger(code))
+    const spelling = lines[index]!.trim();
+    const code = Number(spelling);
+    if (!/^\d+$/.test(spelling) || !Number.isInteger(code) || code > 1071)
       throw invalid(
         path,
         "DXF",
@@ -568,8 +702,11 @@ const inspectDxf = (path: string, text: string): boolean => {
     while (
       cursor < records.length &&
       !(records[cursor]![0] === 0 && records[cursor]![1] === "ENDSEC")
-    )
+    ) {
+      if (records[cursor]![0] === 0 && records[cursor]![1] === "SECTION")
+        throw invalid(path, "DXF", "section", "SECTION records cannot nest");
       cursor += 1;
+    }
     if (cursor >= records.length)
       throw invalid(path, "DXF", "closure", "SECTION is missing ENDSEC");
     cursor += 1;
@@ -590,6 +727,7 @@ const inspectDxf = (path: string, text: string): boolean => {
 };
 
 const decodeXmlAttribute = (path: string, value: string): string => {
+  validateXmlCharacters(path, value);
   const entity = /&(?:amp|lt|gt|quot|apos|#\d+|#x[0-9a-fA-F]+);/g;
   if (/[<&]/.test(value.replace(entity, "")))
     throw invalid(path, "SVG", "attribute", "unescaped markup in attribute");
@@ -651,8 +789,14 @@ const readU32 = (bytes: Uint8Array, offset: number): number =>
   );
 const ascii = (bytes: Uint8Array, offset: number, length: number): string =>
   Buffer.from(bytes.subarray(offset, offset + length)).toString("ascii");
-const skipSpace = (text: string, offset: number): number => {
-  while (/\s/.test(text[offset] ?? "")) offset += 1;
+const skipXmlSpace = (text: string, offset: number): number => {
+  while (
+    text[offset] === " " ||
+    text[offset] === "\t" ||
+    text[offset] === "\r" ||
+    text[offset] === "\n"
+  )
+    offset += 1;
   return offset;
 };
 const hex = (value: number): string => value.toString(16).padStart(2, "0");
