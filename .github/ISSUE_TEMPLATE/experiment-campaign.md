@@ -40,7 +40,7 @@ assignees: ""
 | Policy and readable/write roots | unverified | unverified | unverified | unverified |
 | Inputs and references | unverified | unverified | unverified | unverified |
 | Runtime and resource envelope | unverified | unverified | unverified | unverified |
-| Path budget and longest resolved path | unverified | unverified | unverified | unverified |
+| Windows `MAX_PATH`/long-path mode, path budget, and longest resolved path | unverified | unverified | unverified | unverified |
 
 - Retrieval mode (`disabled`, `controlled`, or `open`), allowed/denied domains, and exposure policy:
 - Sanitized retrieval receipts (query, URL, timestamp, actor, purpose, disposition):
@@ -62,13 +62,13 @@ assignees: ""
 - Coordinator, writers, reviewers, and one liveness observer:
 - Preflight result, including model availability, root isolation, path budget, process ownership, and observation instrument:
 
-| Sequence | Run/generation | From | To | Timestamp | Actor | Reason | Evidence | Result |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| unverified | unverified | declared | preflight | unverified | unverified | unverified | unverified | unverified |
+| Receipt id | Sequence | Run/generation | From | To | Timestamp | Actor | Reason | Evidence | Result |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| unverified | unverified | unverified | declared | preflight | unverified | unverified | unverified | unverified | unverified |
 
-| Run/generation | Sample time | Process identity/created | Transcript growth | Artifact signal/progress time | Timer deadline | Disposition |
-| --- | --- | --- | --- | --- | --- | --- |
-| unverified | unverified | unverified | unverified | unverified | unverified | unknown |
+| Receipt id | Run/generation | Sample time | Process identity/created | Transcript growth | Artifact signal/progress time | Timer deadline | Disposition |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| unverified | unverified | unverified | unverified | unverified | unverified | unverified | unknown |
 
 | Intervention id | Opened before action | Run/generation | Owner/reason/evidence | Intended action | Closed after action | Result/state | Process and cleanup evidence |
 | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -80,9 +80,9 @@ assignees: ""
 
 ## Observations and verdicts
 
-| Gate or claim | Artifact and stage | Evidence | Verdict | Reason | Next action | Escalation |
-| --- | --- | --- | --- | --- | --- | --- |
-| unverified | unverified | unverified | INCONCLUSIVE | unverified | unverified | unverified |
+| Verdict id | Run/generation and operation receipt | Gate or claim | Artifact and stage | Evidence | Verdict | Reason | Next action | Escalation |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| unverified | unverified | unverified | unverified | unverified | INCONCLUSIVE | unverified | unverified | unverified |
 
 - Writer variance:
 - Judge variance on unchanged evidence:

@@ -6,7 +6,7 @@ Start from the repository's [experiment campaign issue template](../../../.githu
 
 ## Freeze Identity Before Launch
 
-Give the campaign, every subject, condition, experimental unit, run, and record a stable id. A run records one `subjectId`, one `conditionId`, and one `replicateId`; the replicate id is unique inside that subject and condition. A different subject is a different experimental unit, not another replicate of the same condition.
+Give the campaign, every subject, condition, experimental unit, run, record, and receipt a stable id. A run records one `subjectId`, one `conditionId`, and one `replicateId`; the replicate id is unique inside that subject and condition. A different subject is a different experimental unit, not another replicate of the same condition.
 
 Freeze and digest the brief, repository head, packed package set, harness and skill revisions, model, reasoning effort, tool versions, policy, working and readable roots, network mode, input bytes, outcome rubric, observation plan, and planned runtime and resource envelope. Record the actual model, effort, tools, roots, network behavior, elapsed time, and resource use beside the plan. An unsupported or unreadable actual value is `unverified` with the reason, never a copy of the plan.
 
@@ -14,7 +14,7 @@ Use `disabled`, `controlled`, or `open` as the retrieval mode. A controlled or o
 
 Retain only observable trajectory material: user and assistant messages, visible tool calls and results, timestamps, and process outcomes. The trajectory manifest records the source, format version, byte length, digest, first and last timestamp, storage location, retention period, access boundary, redactions, and privacy disposition. Hidden reasoning is excluded. A copied or redacted trajectory gets a transfer receipt that binds source and destination digests and states every transformation.
 
-Run preflight against the exact launch paths and runtime. On Windows, record the effective path limit, the longest resolved sandbox, temporary, artifact, and session path, and the remaining headroom; refuse launch when the harness cannot prove that every planned path fits. Also prove that the readable root excludes this repository and its history when experimental blindness depends on that isolation.
+Run preflight against the exact launch paths and runtime. On Windows, record whether legacy `MAX_PATH` or long-path-aware behavior applies, the effective path limit, the longest resolved sandbox, temporary, artifact, and session path, and the remaining headroom; refuse launch when the harness cannot prove that every planned path fits. Also prove that the readable root excludes this repository and its history when experimental blindness depends on that isolation.
 
 ## Declare The Causal Ceiling
 
@@ -49,9 +49,9 @@ Predeclare escalation. An ambiguous or high-impact judgment, an order-sensitive 
 
 One run starts at `declared` and ends in exactly one terminal state: `completed`, `failed`, `interrupted`, or `abandoned`. The only nonterminal edges are `declared -> preflight`, `preflight -> ready`, `ready -> running`, `running -> gate-review`, and `gate-review -> running`. `declared`, `preflight`, `ready`, `running`, and `gate-review` may also enter a terminal state when their work cannot continue. A stage, condition, or immutable basis never changes in place; changing one creates a successor run with a new id and an explicit predecessor link.
 
-Each transition receipt records a monotonic sequence, run id and generation, from and to states, timestamp, actor, reason, evidence identities, and result. A transition is invalid when it uses an edge not listed above, follows a terminal state, changes the frozen basis, or has no receipt. A replacement generation never covers, edits, or deletes the interrupted generation's record.
+Each transition receipt records its id, a monotonic sequence, run id and generation, from and to states, timestamp, actor, reason, evidence identities, and result. A transition is invalid when it uses an edge not listed above, follows a terminal state, changes the frozen basis, or has no receipt. A replacement generation never covers, edits, or deletes the interrupted generation's record.
 
-The observer samples every active unit on a predeclared cadence and timer. Each liveness receipt records the process identity and creation time, transcript growth, artifact signal chosen from the turn's requested deliverable, last progress time, timer deadline, and one disposition: `alive`, `idle`, `stalled`, `finished`, or `unknown`. A timer expiry without a recorded disposition is an operational failure. Writer self-report and a wrapper notification are observations, not terminal evidence.
+The observer samples every active unit on a predeclared cadence and timer. Each liveness receipt records its id, the process identity and creation time, transcript growth, artifact signal chosen from the turn's requested deliverable, last progress time, timer deadline, and one disposition: `alive`, `idle`, `stalled`, `finished`, or `unknown`. A timer expiry without a recorded disposition is an operational failure. Writer self-report and a wrapper notification are observations, not terminal evidence.
 
 Create an intervention receipt before acting. It names the run and generation, owner, timestamp, evidence, reason, intended action, affected process or artifact identities, and recovery boundary. Close it afterwards with the exact action, result, terminal or successor state, process exit evidence, preserved artifacts, and cleanup result. A silent kill, restart, stage mutation, or replacement is invalid even when the replacement succeeds.
 
