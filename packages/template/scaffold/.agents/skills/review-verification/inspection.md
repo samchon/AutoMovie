@@ -87,7 +87,12 @@ Movement covers transform, owner, space, and referenced-prototype placement stat
 
 ## Ask the host for pictures
 
-The queries above say what a subject is. A description will not tell you that it looks wrong, and the page that would show you is a page you cannot open. Subject inspection is that half: name a `shot` and a `subject` id, and the project's own instrument derives a viewpoint plan from the subject's own measured box, has the viewer draw every viewpoint in it, and returns the plan, each resolved pose, the artifact path and digest of each picture, and a coverage record over its own plan. The sweep also publishes what it saw: a `plan.json` naming the viewpoint population, written before the first picture is drawn, and beside each picture a receipt carrying that observation and the revision it was taken at. A citation can then point at that publication, which is what makes a subject reviewable at all; [Debugging](debugging.md) owns what it does and does not discharge.
+The queries above say what a subject is.
+A description will not tell you that it looks wrong, and the page that would show you is a page you cannot open.
+Subject inspection is that half: name a `shot` and a `subject` id, and the project's own instrument derives a viewpoint plan from the subject's own measured box, has the viewer draw every viewpoint in it, and returns the plan, each resolved pose, the artifact path and digest of each picture, and a coverage record over its own plan.
+The sweep publishes `plan.json` before the first picture, an append-only `attempts.json`, and one passed receipt beside each picture.
+That receipt names the production and exact target, revision, compile and whole-plan identities, viewpoint and pose, artifact digest, terminal pass, and the actual browser-and-graphics runtime.
+A citation can then point at that publication, which is what makes a subject reviewable at all; [Debugging](debugging.md) owns what it does and does not discharge.
 
 Sweep by shot. Staging the compiled shot is what an observation costs, and the host draws every subject standing in one shot from one staged page, so twenty subjects of a shot cost one scene build and twenty draws rather than twenty of each. Nothing about the observations changes: each is resolved, framed, and sectioned from its own subject, and the section rides the eye it was taken from. Ordering a sweep by shot is the difference between minutes and an afternoon on a production with hundreds of authored things.
 
@@ -97,9 +102,20 @@ Framing comes from the subject's own `bounds`, so a mullion a few centimetres ac
 
 The turntable is inspection's to decide rather than your guesswork. `azimuthCount`, `elevationsDeg`, `distanceFactor`, `width` and `height` are optional overrides that all have working defaults, and each is range-checked, so an azimuth count, elevation ring, or distance factor outside what the plan admits is refused as invalid input rather than clamped silently. An elevation that would drive the eye underground is the exception, and it is raised: a turntable angle is measured from the subject's centre, a room standing on the ground has its centre well above it, and a low ring therefore digs. The eye is not taken below the floor, and the floor is world zero unless the subject's own box reaches lower, in which case the box's own bottom is the limit. Elevations that land on one angle collapse into one viewpoint, so the returned `plan` can be shorter than the list you sent. Read the plan you got back, never the one you asked for.
 
-An observation is not a frame, and that separation is structural rather than a rule anyone has to remember. Artifacts are written to `automovie/inspections/<production>/<shot>/<subject>/<viewpoint>.png`, outside the render root a delivery review reads when it collects frame evidence, so an inspection picture cannot enter that population however a caller describes it. The returned object carries `deliveryEvidence` typed as the literal `false`, so a consumer requiring delivery evidence does not compile against it; a case proves that with `@ts-expect-error` rather than with prose. The scaffold leaves that directory untracked, so a sweep travels in no commit; it is working state of one checkout, and a review reads it from the working tree where it was drawn. Deleting or replacing a picture withdraws it, because a receipt answers for its artifact only while that artifact still hashes to the digest recorded in it.
+An observation is not a frame, and that separation is structural rather than a rule anyone has to remember.
+Artifacts are written to `automovie/inspections/<production>/<shot>/<subject>/<plan identity>/attempt-<n>/<viewpoint>.png`, outside the render root a delivery review reads when it collects frame evidence, so an inspection picture cannot enter that population however a caller describes it.
+The returned object carries `deliveryEvidence` typed as the literal `false`, so a consumer requiring delivery evidence does not compile against it; a case proves that with `@ts-expect-error` rather than with prose.
+The scaffold leaves that directory untracked, so a sweep travels in no commit; it is working state of one checkout, and a review reads it from the working tree where it was drawn.
+Deleting or replacing a picture withdraws it, because a receipt answers for its artifact only while that artifact still hashes to the digest recorded in it.
 
-That is also why inspection is not another `npm run preview` target. A capture receipt binds render bundle, target fingerprint, renderer identity and review target, and every one of those is a delivery-lineage claim, so an inspection frame arriving through that adapter would come out in exactly the shape a shot review can consume. The whole point of a subject observation is that it cannot be.
+Currentness is measured, not inferred from package versions or a successful page load.
+The inspection host retains the capture launch closure, asserts that closure before and after page setup and every draw, inspects the actual WebGL identity, and gives both to the production service.
+If the closure moves, graphics cannot be identified, the persisted JSON is malformed, duplicate-keyed, or not strict UTF-8, or any plan, pose, locator, digest, runtime, or terminal-status join disagrees, recapture the whole subject under a stable host; do not cite the surviving prefix as current coverage.
+Previous failed, unsupported, not-run, and runtime-unidentified attempts remain in the journal and do not erase a separately reopened current pass.
+
+That is also why inspection is not another `npm run preview` target.
+A delivery capture receipt combines runtime identity with a render bundle, target fingerprint, and review target; those delivery-lineage fields would make an inspection frame consumable as a shot review.
+A subject observation carries the same truthful runtime freshness but none of those delivery fields, which is the point of the separate adapter.
 
 `inspected: true` means every planned viewpoint produced a verified picture; the first one that did not returns a refusal instead, so a partial sweep is never reported as an inspection. Read the refusals literally.
 

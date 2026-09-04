@@ -1,5 +1,7 @@
 import { IAutoMovieVector3 } from "../geometry/IAutoMovieVector3";
 import { IAutoMovieCompiledFormation } from "./IAutoMovieProductionCompiler";
+import { AutoMovieContentDigest } from "./IAutoMovieProductionDesign";
+import { IAutoMovieCaptureRuntimeIdentity } from "./IAutoMovieProductionOracle";
 import {
   IAutoMovieSubjectDescription,
   IAutoMovieSubjectMemberSummary,
@@ -45,6 +47,30 @@ export interface IAutoMovieSubjectReviewViewpoint {
 }
 
 /**
+ * Exact inspection camera state that produced one subject observation.
+ *
+ * @evidence requirements/review/subject-inspection.md#review-subject-evidence Makes the observed pose part of the reopenable subject receipt rather than an unrecorded host choice.
+ * @evidence specifications/review-and-acceptance/subject-surface-and-inspection.md#review-system-subject-observation Types the exact coordinate space, eye, target, lens and clipping state paired with a subject artifact.
+ * @author Samchon
+ */
+export interface IAutoMovieSubjectReviewPose {
+  /** Coordinate basis shared by the eye and target. */
+  coordinateSpace: "model" | "world";
+  /** Eye position in metres. */
+  position: IAutoMovieVector3;
+  /** Point the eye looks at, in metres. */
+  target: IAutoMovieVector3;
+  /** Vertical field of view in degrees. */
+  fovDeg: number;
+  /** Viewport width divided by height. */
+  aspect: number;
+  /** Near clip distance in metres. */
+  near: number;
+  /** Far clip distance in metres. */
+  far: number;
+}
+
+/**
  * Receipt for one subject observation made from an inspection-owned viewpoint.
  *
  * The `kind` discriminator deliberately differs from frame evidence. A shot
@@ -62,16 +88,32 @@ export interface IAutoMovieSubjectReviewViewpoint {
 export interface IAutoMovieSubjectReviewObservation {
   /** Evidence discriminator; a frame receipt has another kind. */
   kind: "subject-view";
+  /** Production namespace that owns the inspection. */
+  productionId: string;
+  /** Exact artifact-qualified subject target. */
+  target: IAutoMovieSubjectReviewTarget;
   /** Exact compiled subject identity observed. */
   subject: string;
   /** Compiled artifact revision from which the observation was rendered. */
   revision: string;
+  /** Current source compile identity used for the observation. */
+  compileFingerprint: AutoMovieContentDigest;
+  /** Canonical identity of the exact ordered plan and its poses. */
+  planIdentity: AutoMovieContentDigest;
   /** Required viewpoint identity this observation answers. */
   viewpoint: string;
+  /** Exact camera state used to draw the artifact. */
+  pose: IAutoMovieSubjectReviewPose;
+  /** Complete actual capture runtime, including the inspected graphics. */
+  runtimeIdentity: IAutoMovieCaptureRuntimeIdentity;
   /** Stable identity of the image or inspection artifact. */
   artifact: string;
   /** Content digest of the exact inspected artifact. */
-  digest: string;
+  digest: AutoMovieContentDigest;
+  /** Only a terminal passed observation can satisfy coverage. */
+  verdict: "passed";
+  /** Subject inspection is never delivery evidence. */
+  deliveryEvidence: false;
 }
 
 /**

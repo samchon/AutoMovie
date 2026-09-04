@@ -40,9 +40,13 @@ Frame과 구간 검토는 반대로 저작된 camera를 그대로 물려받아�
 
 ### 주체 검토의 Evidence와 Freshness {#review-subject-evidence}
 
-주체 검토 evidence는 관찰한 주체 identity와 compiled revision, compile fingerprint, 전체 required viewpoint plan, 각 관찰의 실제 pose, artifact identity와 digest를 함께 가져야 한다. Plan은 각 viewpoint identity의 direction, distance, projection, pose와 state를 선언하고 실제 관찰 집합과 분리되어야 한다. 필수 시점을 관찰하지 못했으면 그 범위는 pass가 될 수 없으며 not-run, unsupported, indeterminate 또는 partial 가운데 실제 원인을 표시해야 한다.
+주체 검토 evidence는 production과 관찰한 주체 target·identity, compiled revision, compile fingerprint, 전체 required viewpoint plan identity, 각 관찰의 실제 pose, artifact identity와 digest, 실제 browser·graphics runtime identity와 terminal passed verdict를 함께 가져야 한다.
+Plan은 각 viewpoint identity의 direction, distance, projection, pose와 state를 선언하고 실제 관찰 집합과 분리되어야 한다.
+필수 시점을 관찰하지 못했거나 capture runtime을 식별하거나 관찰 전후에 current임을 확인하지 못했으면 그 범위는 pass가 될 수 없으며 not-run, unsupported, runtime-unidentified, indeterminate 또는 partial 가운데 실제 원인을 표시해야 한다.
 
-주체 또는 구성요소가 바뀌어 새 compiled revision이나 compile fingerprint가 발행되거나, required viewpoint plan의 identity 또는 관찰 조건이 바뀌면 이전 관찰은 current가 아니다. 현재 plan을 먼저 게시하고 그 plan의 모든 시점을 새 observation sweep으로 생산해야 한다. Shot을 다시 render했다는 사실은 주체 검토를 current로 만들지 않고, 주체 검토를 다시 수행했다는 사실은 그 주체가 등장하는 frame 판정을 current로 만들지 않는다.
+주체 또는 구성요소가 바뀌어 새 compiled revision이나 compile fingerprint가 발행되거나, required viewpoint plan의 identity, exact pose, 관찰 artifact bytes 또는 capture runtime identity가 바뀌면 이전 관찰은 current가 아니다.
+현재 plan을 먼저 게시하고 그 plan의 모든 시점을 같은 current runtime에서 새 observation sweep으로 생산해야 한다.
+Shot을 다시 render했다는 사실은 주체 검토를 current로 만들지 않고, 주체 검토를 다시 수행했다는 사실은 그 주체가 등장하는 frame 판정을 current로 만들지 않는다.
 
 ### 주체 Coverage {#review-subject-coverage}
 
