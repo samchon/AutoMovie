@@ -14,6 +14,7 @@ import { namedFacts } from "../internal/predicates";
 import {
   productionCompileSucceeded,
   productionFixture,
+  rewriteSource,
 } from "./productionFixtures";
 
 /**
@@ -29,12 +30,13 @@ export const test_production_shot_source_owner_compiler = (): void => {
   try {
     const project = AutoMovieProductionProject.open(fixture.root);
     const contract = project.graph().shots.get("opening")!;
+    const shotFile = path.join(
+      fixture.root,
+      ...contract.source.module.split("/"),
+    );
+    const authoredShot = fs.readFileSync(shotFile, "utf8");
     const sourceDigest = digestAutoMovieBytes(
-      normalizeAutoMovieSource(
-        fs.readFileSync(
-          path.join(fixture.root, ...contract.source.module.split("/")),
-        ),
-      ),
+      normalizeAutoMovieSource(Buffer.from(authoredShot)),
     );
     const targetPath = "docs/screenplays/opening.md";
     const targetAnchor = "opening";
@@ -58,15 +60,15 @@ export const test_production_shot_source_owner_compiler = (): void => {
     const filmPath = "src/film.ts";
     const filmTargetPath = "docs/screenplays/film.md";
     const filmTargetAnchor = "film";
+    const filmFile = path.join(fixture.root, filmPath);
+    const authoredFilm = fs.readFileSync(filmFile, "utf8");
     const filmBinding = {
       ...runtimeBinding,
       branch: "filmSources",
       sourcePath: filmPath,
       exportName: "film",
       sourceDigest: digestAutoMovieBytes(
-        normalizeAutoMovieSource(
-          fs.readFileSync(path.join(fixture.root, filmPath)),
-        ),
+        normalizeAutoMovieSource(Buffer.from(authoredFilm)),
       ),
       targetPath: filmTargetPath,
       targetAnchor: filmTargetAnchor,
@@ -100,10 +102,27 @@ export const test_production_shot_source_owner_compiler = (): void => {
           ).toString("utf8"),
         ) as { source: { target?: string } })
       : null;
+    fs.writeFileSync(
+      shotFile,
+      rewriteSource(
+        authoredShot,
+        "): IAutoMovieProductionShotProgram => {",
+        '): IAutoMovieProductionShotProgram => {\n  throw new Error("shot owner gate executed the builder");',
+      ),
+    );
     const refused = new AutoMovieProductionCompiler(project, {
       ...authoring,
       sourceOwners: [acceptanceBinding, filmBinding],
     }).compile({ scope: "source" });
+    fs.writeFileSync(shotFile, authoredShot);
+    fs.writeFileSync(
+      filmFile,
+      rewriteSource(
+        authoredFilm,
+        "  build(context) {",
+        '  build(context) {\n    throw new Error("film owner gate executed the builder");',
+      ),
+    );
     const refusedFilm = new AutoMovieProductionCompiler(project, {
       ...authoring,
       sourceOwners: [runtimeBinding, acceptanceBinding],
@@ -145,6 +164,11 @@ export const test_production_shot_source_owner_compiler = (): void => {
                 diagnostic.code === "source-owner-mismatch" &&
                 diagnostic.path === contract.source.module &&
                 diagnostic.message.includes("has no graph-selected owner edge"),
+            ) &&
+            refused.diagnostics.every(
+              (diagnostic) =>
+                diagnostic.message.includes("shot owner gate executed") ===
+                false,
             ),
         ],
         [
@@ -156,6 +180,11 @@ export const test_production_shot_source_owner_compiler = (): void => {
                 diagnostic.code === "source-owner-mismatch" &&
                 diagnostic.target === "film" &&
                 diagnostic.path === filmPath,
+            ) &&
+            refusedFilm.diagnostics.every(
+              (diagnostic) =>
+                diagnostic.message.includes("film owner gate executed") ===
+                false,
             ),
         ],
       ]),
