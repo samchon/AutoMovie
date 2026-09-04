@@ -411,8 +411,10 @@ function visibleMarkdownLines(source: string): string[] {
   }
   const output: string[] = [];
   let fence: { character: "`" | "~"; length: number } | undefined;
-  for (const sourceLine of projected.split(/\r\n|\r|\n/u)) {
-    const marker = /^ {0,3}(`{3,}|~{3,})(.*)$/u.exec(sourceLine);
+  const sourceLines = source.split(/\r\n|\r|\n/u);
+  const projectedLines = projected.split(/\r\n|\r|\n/u);
+  for (const [index, projectedLine] of projectedLines.entries()) {
+    const marker = /^ {0,3}(`{3,}|~{3,})(.*)$/u.exec(projectedLine);
     if (fence !== undefined) {
       if (
         marker !== null &&
@@ -424,7 +426,7 @@ function visibleMarkdownLines(source: string): string[] {
       output.push("");
       continue;
     }
-    if (/^(?: {4}|\t)/u.test(sourceLine)) {
+    if (/^(?: {4}|\t)/u.test(sourceLines[index]!)) {
       output.push("");
       continue;
     }
@@ -436,7 +438,7 @@ function visibleMarkdownLines(source: string): string[] {
       output.push("");
       continue;
     }
-    output.push(sourceLine);
+    output.push(projectedLine.trim().length === 0 ? "" : projectedLine);
   }
   return output;
 }
