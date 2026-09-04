@@ -140,9 +140,7 @@ export class AutoMovieDesignDerivationError extends Error {
 export const autoMovieDesignDerivationBasisDigest = (
   basis: IAutoMovieDesignDerivationBasis,
 ): AutoMovieContentDigest =>
-  digestAutoMovieBytes(
-    canonicalAutoMovieJsonBytes(canonicalBasis(basis, true)),
-  );
+  digestAutoMovieBytes(canonicalAutoMovieJsonBytes(canonicalBasis(basis)));
 
 /**
  * Evaluate one frozen design plan twice and return a staged complete candidate.
@@ -306,18 +304,24 @@ export const inspectAutoMovieDesignDerivation = (props: {
 
 const canonicalBasis = (
   basis: IAutoMovieDesignDerivationBasis,
-  validate: boolean,
 ): IAutoMovieDesignDerivationBasis => {
-  if (validate) {
-    if (basis.protocol !== AUTOMOVIE_DESIGN_DERIVATION_PROTOCOL)
-      throw new Error(`Unsupported design basis protocol "${basis.protocol}".`);
-    assertRelativePath(basis.recordPath);
-    assertRelativePath(basis.emitter.path);
-    assertRelativePath(basis.source.path);
-  }
-  const dependencies = [...basis.dependencies].sort((left, right) =>
-    compareCodeUnits(left.path, right.path),
-  );
+  if (basis.protocol !== AUTOMOVIE_DESIGN_DERIVATION_PROTOCOL)
+    throw new Error(`Unsupported design basis protocol "${basis.protocol}".`);
+  assertIdentity("production", basis.production);
+  assertIdentity("target", basis.target);
+  assertRelativePath(basis.recordPath);
+  assertRelativePath(basis.emitter.path);
+  assertDigest("emitter", basis.emitter.digest);
+  assertRelativePath(basis.source.path);
+  assertIdentity("source export", basis.source.export);
+  if (basis.source.selector !== null)
+    assertIdentity("source selector", basis.source.selector);
+  assertIdentity("production tool version", basis.tool.production);
+  assertIdentity("TypeScript tool version", basis.tool.typescript);
+  assertIdentity("Node.js tool version", basis.tool.node);
+  const dependencies = [...basis.dependencies]
+    .map((dependency) => ({ ...dependency }))
+    .sort((left, right) => compareCodeUnits(left.path, right.path));
   if (
     new Set(dependencies.map((entry) => entry.path)).size !==
     dependencies.length
@@ -325,15 +329,24 @@ const canonicalBasis = (
     throw new Error(
       `Design target "${basis.target}" repeats a dependency path.`,
     );
-  for (const dependency of dependencies) assertRelativePath(dependency.path);
-  return { ...basis, dependencies };
+  for (const dependency of dependencies) {
+    assertRelativePath(dependency.path);
+    assertDigest("dependency", dependency.digest);
+  }
+  return {
+    ...basis,
+    emitter: { ...basis.emitter },
+    source: { ...basis.source },
+    dependencies,
+    tool: { ...basis.tool },
+  };
 };
 
 const canonicalBases = (
   bases: readonly IAutoMovieDesignDerivationBasis[],
 ): readonly IAutoMovieDesignDerivationBasis[] => {
   const output = bases
-    .map((basis) => canonicalBasis(basis, true))
+    .map((basis) => canonicalBasis(basis))
     .sort((left, right) => compareCodeUnits(left.target, right.target));
   if (new Set(output.map((basis) => basis.target)).size !== output.length)
     throw new Error("Design producer basis repeats a target identity.");
@@ -347,9 +360,9 @@ const canonicalBases = (
 const canonicalOutputs = (
   outputs: readonly { target: string; recordPath: string; bytes: Uint8Array }[],
 ): readonly { target: string; recordPath: string; bytes: Uint8Array }[] => {
-  const sorted = [...outputs].sort((left, right) =>
-    compareCodeUnits(left.target, right.target),
-  );
+  const sorted = outputs
+    .map((output) => ({ ...output, bytes: Buffer.from(output.bytes) }))
+    .sort((left, right) => compareCodeUnits(left.target, right.target));
   if (new Set(sorted.map((output) => output.target)).size !== sorted.length)
     throw new AutoMovieDesignDerivationError(
       "design-derivation-nondeterministic",
@@ -371,7 +384,7 @@ const canonicalRecords = (
     throw new Error("Design-derivation manifest repeats a record path.");
   for (const record of sorted) {
     assertRelativePath(record.recordPath);
-    canonicalBasis(record.basis, true);
+    canonicalBasis(record.basis);
   }
   return sorted;
 };
@@ -396,6 +409,7 @@ const outputMismatch = (
 
 const assertRelativePath = (value: string): void => {
   if (
+    typeof value !== "string" ||
     value.length === 0 ||
     value.includes("\\") ||
     value.startsWith("/") ||
@@ -407,6 +421,19 @@ const assertRelativePath = (value: string): void => {
     throw new Error(
       `Design derivation path "${value}" is not a canonical project-relative POSIX path.`,
     );
+};
+
+const assertIdentity = (label: string, value: string): void => {
+  if (typeof value !== "string" || value.trim() === "")
+    throw new Error(`Design derivation ${label} is empty or malformed.`);
+};
+
+const assertDigest = (label: string, value: AutoMovieContentDigest): void => {
+  if (
+    typeof value !== "string" ||
+    /^sha256:[0-9a-f]{64}$/u.test(value) === false
+  )
+    throw new Error(`Design derivation ${label} digest is malformed.`);
 };
 
 const errorMessage = (error: unknown): string =>

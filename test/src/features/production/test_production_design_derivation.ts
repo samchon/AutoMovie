@@ -68,6 +68,15 @@ export const test_production_design_derivation = (): void => {
         }),
       "different canonical bytes",
     );
+  const sharedBytes = Buffer.from('{"value":1}');
+  let sharedEvaluation = 0;
+  const mutableBasis = basis();
+  const frozenCandidate = createAutoMovieDesignDerivationCandidate({
+    bases: [mutableBasis],
+    evaluate: () => output(),
+    currentBases: () => [mutableBasis],
+  });
+  mutableBasis.source.export = "mutated-after-candidate";
   TestValidator.equals(
     "design producer closure and candidate transaction are exact",
     namedFacts([
@@ -115,6 +124,35 @@ export const test_production_design_derivation = (): void => {
       ],
       ["sameBasisMismatchRefused", nondeterministic],
       [
+        "sharedOutputBufferCannotHideMismatch",
+        () =>
+          throwsError(
+            () =>
+              createAutoMovieDesignDerivationCandidate({
+                bases: [initialBasis],
+                evaluate: () => {
+                  sharedBytes[sharedBytes.length - 2] =
+                    ++sharedEvaluation === 1 ? 49 : 50;
+                  return [
+                    {
+                      target: "production",
+                      recordPath: "automovie/design/film/production.json",
+                      bytes: sharedBytes,
+                    },
+                  ];
+                },
+                currentBases: () => [initialBasis],
+              }),
+            "different canonical bytes",
+          ),
+      ],
+      [
+        "candidateBasisIsFrozen",
+        () =>
+          frozenCandidate.manifest.records[0]?.basis.source.export ===
+          "production",
+      ],
+      [
         "basisRaceRefused",
         () =>
           throwsError(
@@ -143,6 +181,24 @@ export const test_production_design_derivation = (): void => {
           ),
       ],
       [
+        "wrongTargetMappingRefused",
+        () =>
+          throwsError(
+            () =>
+              createAutoMovieDesignDerivationCandidate({
+                bases: [initialBasis],
+                evaluate: () => [
+                  {
+                    ...output()[0]!,
+                    target: "other",
+                  },
+                ],
+                currentBases: () => [initialBasis],
+              }),
+            "no exact declared record-path mapping",
+          ),
+      ],
+      [
         "duplicateBasisRefused",
         () =>
           throwsError(
@@ -165,6 +221,40 @@ export const test_production_design_derivation = (): void => {
               ),
             "not a canonical",
           ),
+      ],
+      [
+        "malformedBasisRefused",
+        () =>
+          throwsError(
+            () =>
+              autoMovieDesignDerivationBasisDigest(
+                basis({
+                  emitter: {
+                    path: "scripts/emitDesign.ts",
+                    digest: digest("Z"),
+                  },
+                }),
+              ),
+            "digest is malformed",
+          ),
+      ],
+      [
+        "invalidLiveBasisRefusedAsRace",
+        () => {
+          try {
+            createAutoMovieDesignDerivationCandidate({
+              bases: [initialBasis],
+              evaluate: () => output(),
+              currentBases: () => [basis({ target: " " })],
+            });
+            return false;
+          } catch (error) {
+            return (
+              error instanceof AutoMovieDesignDerivationError &&
+              error.code === "design-derivation-basis-changed"
+            );
+          }
+        },
       ],
       [
         "typedFailureCarriesCode",
@@ -215,6 +305,15 @@ export const test_production_design_derivation = (): void => {
           })[0]?.code === "design-derivation-output-stale",
       ],
       [
+        "missingOutputDetected",
+        () =>
+          inspectAutoMovieDesignDerivation({
+            manifest: candidate.manifest,
+            bases: [initialBasis],
+            readOutput: () => null,
+          })[0]?.code === "design-derivation-output-stale",
+      ],
+      [
         "missingTargetDetected",
         () =>
           inspectAutoMovieDesignDerivation({
@@ -255,14 +354,20 @@ export const test_production_design_derivation = (): void => {
       toolChangesBasis: true,
       candidateStagesOutput: true,
       sameBasisMismatchRefused: true,
+      sharedOutputBufferCannotHideMismatch: true,
+      candidateBasisIsFrozen: true,
       basisRaceRefused: true,
       targetSetRefused: true,
+      wrongTargetMappingRefused: true,
       duplicateBasisRefused: true,
       unsafePathRefused: true,
+      malformedBasisRefused: true,
+      invalidLiveBasisRefusedAsRace: true,
       typedFailureCarriesCode: true,
       currentInspectionPasses: true,
       basisStaleDetected: true,
       outputStaleDetected: true,
+      missingOutputDetected: true,
       missingTargetDetected: true,
       malformedManifestDetected: true,
       duplicateManifestDetected: true,

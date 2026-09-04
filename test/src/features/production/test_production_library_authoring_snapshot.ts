@@ -150,7 +150,10 @@ export const test_production_library_authoring_snapshot = (): void => {
     snapshot(
       {
         ...base,
-        sourceOwners: [sourceOwner, sourceOwner],
+        sourceOwners: [
+          sourceOwner,
+          { ...sourceOwner, targetAnchor: "competing-owner" },
+        ],
       },
       { [LIBRARY_SOURCE]: SOURCE },
     ),

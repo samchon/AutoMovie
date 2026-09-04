@@ -198,8 +198,6 @@ export const createAutoMovieLibrarySourceExecutionPlan = (
       binding.branch,
       binding.sourcePath,
       binding.exportName,
-      binding.targetPath,
-      binding.targetAnchor,
     ]);
     if (identities.has(identity)) {
       problems.push(
