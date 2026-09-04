@@ -5,7 +5,10 @@ import {
 } from "@automovie/production";
 
 import { productionEvidence } from "../lint.config";
+import { assertAutoMovieNoArguments } from "./commandArguments";
 import { currentAutoMovieProductionId } from "./projectIdentity";
+
+assertAutoMovieNoArguments("verify", process.argv.slice(2));
 
 /** The production namespace this project declares in its own package manifest. */
 const productionId = currentAutoMovieProductionId();

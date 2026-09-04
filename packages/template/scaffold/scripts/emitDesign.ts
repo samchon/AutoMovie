@@ -14,7 +14,10 @@ import {
   findAutoMovieProjectRoot,
 } from "@automovie/production";
 
+import { assertAutoMovieNoArguments } from "./commandArguments";
 import { readAutoMovieProjectProductionId } from "./projectIdentity";
+
+assertAutoMovieNoArguments("design", process.argv.slice(2));
 
 /** The project this invocation belongs to, found from the host's own seed. */
 const projectRoot = findAutoMovieProjectRoot(process.cwd());

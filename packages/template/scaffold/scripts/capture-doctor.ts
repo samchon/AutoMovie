@@ -8,7 +8,10 @@ import {
   launchCaptureBrowser,
 } from "./capture-browser";
 import { settleCaptureExecutableTouch } from "./captureExecutableSnapshot";
+import { assertAutoMovieNoArguments } from "./commandArguments";
 import { readAutoMovieHostCaptureBrowser } from "./hostBoundary";
+
+assertAutoMovieNoArguments("capture:doctor", process.argv.slice(2));
 
 interface CaptureDoctorFailure {
   error: unknown;

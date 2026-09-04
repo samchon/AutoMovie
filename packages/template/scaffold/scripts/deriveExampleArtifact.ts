@@ -3,6 +3,10 @@ import {
   generateAutoMovieDerivedArtifact,
 } from "@automovie/production";
 
+import { assertAutoMovieNoArguments } from "./commandArguments";
+
+assertAutoMovieNoArguments("derive:example", process.argv.slice(2));
+
 /**
  * Explicit deterministic precomputation, run by `npm run derive:example`.
  *
