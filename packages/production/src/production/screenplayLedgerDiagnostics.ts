@@ -166,11 +166,36 @@ export const screenplayLedgerDiagnostics = (props: {
         "screenplay-scene-location-absent",
         `Active scene "${scene.id}" cites location "${scene.location}", which the catalog does not declare. A place downstream design cannot resolve is not grounded. Add the location to the catalog or cite an existing one, then compile again.`,
       );
+    if (blank(scene.storyTime))
+      refuse(
+        "screenplay-scene-story-time-absent",
+        `Active scene "${scene.id}" has no story-time identity. Use an exact relation or the explicit "unknown" state; an empty value cannot join authoritative prose, then compile again.`,
+      );
+    const participantKeys = new Set<string>();
+    for (const participant of scene.participants) {
+      const key = `${participant.id}\u0000${participant.mode}`;
+      if (blank(participant.id))
+        refuse(
+          "screenplay-scene-participant-invalid",
+          `Active scene "${scene.id}" has a ${participant.mode} participant with a blank identity. Name the stable story subject or remove the membership, then compile again.`,
+        );
+      if (participantKeys.has(key))
+        refuse(
+          "screenplay-scene-participant-invalid",
+          `Active scene "${scene.id}" repeats ${participant.mode} participant "${participant.id}". One scene-local identity and mode pair appears once, then compile again.`,
+        );
+      participantKeys.add(key);
+    }
     scene.covers.forEach((coverage, coverIndex) => {
       if (blank(coverage.reason))
         refuse(
           "screenplay-cover-unreasoned",
           `Scene "${scene.id}" cover at index ${coverIndex} states no reason. Traceability has no WHY column. State why this scene owns the exact beat and compile again.`,
+        );
+      if (blank(coverage.id))
+        refuse(
+          "screenplay-cover-unpromised",
+          `Scene "${scene.id}" cover at index ${coverIndex} has no treatment beat identity. Name the exact beat id alongside its verbatim prose, then compile again.`,
         );
       if (beatsByText.has(coverage.beat) === false)
         refuse(

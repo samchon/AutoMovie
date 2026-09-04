@@ -34,6 +34,7 @@ const geometryProofPassed = (props: {
   if (
     contract === undefined ||
     realization === undefined ||
+    realization.shot !== props.proof.shot ||
     contract.evidence?.some((evidence) => evidence.claim === props.claim) !==
       true
   )
@@ -188,11 +189,47 @@ export const screenplayCrossRecordDiagnostics = (props: {
     const cited = scenario?.evidence?.some(
       (evidence) => evidence.claim === claim.id,
     );
+    const criterionShot =
+      scenario?.criterion.kind === "frame" ||
+      scenario?.criterion.kind === "event"
+        ? scenario.criterion.shot
+        : undefined;
+    const scenarioShot =
+      scenario?.target.kind === "shot" ? scenario.target.id : criterionShot;
+    const criterionTargetMatches =
+      scenario !== undefined &&
+      (scenario.criterion.kind === "frame" ||
+      scenario.criterion.kind === "event"
+        ? scenario.target.kind === "shot"
+          ? criterionShot === undefined || criterionShot === scenario.target.id
+          : criterionShot !== undefined
+        : true);
+    const targetCurrent =
+      scenario !== undefined &&
+      (scenario.target.kind === "shot"
+        ? props.realizations.get(scenario.target.id)?.shot ===
+          scenario.target.id
+        : scenario.target.id === props.expectedProduction &&
+          (scenarioShot === undefined ||
+            props.realizations.get(scenarioShot)?.shot === scenarioShot));
+    const frameExists =
+      scenario?.criterion.kind === "frame" && scenarioShot !== undefined
+        ? props.graph.shots
+            .get(scenarioShot)
+            ?.reviewFrames.some(
+              (frame) => frame.id === scenario.criterion.frame,
+            ) === true
+        : false;
     const ownerMatches =
       claim.proof.owner === "frame-review"
-        ? scenario?.criterion.kind === "frame"
-        : scenario?.required === true;
-    if (scenario === undefined || cited !== true || ownerMatches !== true) {
+        ? scenario?.required === true && criterionTargetMatches && frameExists
+        : scenario?.required === true && criterionTargetMatches;
+    if (
+      scenario === undefined ||
+      cited !== true ||
+      ownerMatches !== true ||
+      targetCurrent !== true
+    ) {
       refuse(
         "screenplay-continuity-proof-absent",
         `Continuity claim "${claim.id}" selects ${claim.proof.owner} scenario "${claim.proof.scenario}", but no matching scenario both cites the claim and carries that proof family. Correct the scenario, criterion and citation, then compile again.`,

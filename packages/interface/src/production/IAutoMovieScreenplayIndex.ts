@@ -168,6 +168,7 @@ export interface IAutoMovieSceneDisposition {
  *
  * @evidence requirements/story/scenes-and-observable-action.md#story-scene-participant-modes Preserves every promised way a subject can participate in one scene.
  * @evidence specifications/narrative-and-intent/story-authority-and-hierarchy.md#narrative-intent-scene-prose-index Types the closed participant vocabulary used by the prose authority join.
+ * @author Samchon
  */
 export type AutoMovieScreenplayParticipantMode =
   | "on-screen"
@@ -182,6 +183,7 @@ export type AutoMovieScreenplayParticipantMode =
  *
  * @evidence requirements/story/scenes-and-observable-action.md#story-scene-participant-modes Separates stable participant identity from its scene-local mode.
  * @evidence specifications/narrative-and-intent/story-authority-and-hierarchy.md#narrative-intent-scene-prose-index Types the exact participant pair compared between index and prose.
+ * @author Samchon
  */
 export interface IAutoMovieScreenplayParticipant {
   /** Stable character, faction, object or environmental identity. */
@@ -447,7 +449,7 @@ export interface IAutoMovieScreenplayIndex {
    * @evidence requirements/story/scenes-and-observable-action.md#story-screenplay-index-prose Exposes `version` as the portable data boundary for the story screenplay index prose requirement.
    * @evidence specifications/narrative-and-intent/story-authority-and-hierarchy.md#narrative-intent-scene-prose-index Types `version` for the narrative intent scene prose index system contract.
    */
-  version: 1;
+  version: 2;
   /**
    * Exact active production id.
    *

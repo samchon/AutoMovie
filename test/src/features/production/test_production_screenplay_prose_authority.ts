@@ -22,7 +22,7 @@ const { screenplayProseDiagnostics } = loadSourceModule<{
 
 const base = (): IAutoMovieScreenplayIndex =>
   ({
-    version: 1,
+    version: 2,
     production: "authority",
     treatment: {
       path: "docs/treatment.md",

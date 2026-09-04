@@ -50,7 +50,7 @@ const contract = (): IAutoMovieShotContract =>
     closing: [],
     camera: {},
     events: [],
-    reviewFrames: [],
+    reviewFrames: [{ id: "FRAME-1", time: 2, passes: ["beauty"] }],
   }) as unknown as IAutoMovieShotContract;
 
 const realization = (passed = true): IAutoMovieCompiledContractRealization =>
@@ -64,9 +64,27 @@ const realization = (passed = true): IAutoMovieCompiledContractRealization =>
     formations: [],
   }) as IAutoMovieCompiledContractRealization;
 
+const geometryRealization = (
+  kind: "opening" | "closing" | "event" | "formation",
+): IAutoMovieCompiledContractRealization =>
+  ({
+    ...realization(),
+    opening: kind === "opening" ? realization().opening : [],
+    closing:
+      kind === "closing"
+        ? [{ id: "STATE-1", predicates: [], passed: true }]
+        : [],
+    events:
+      kind === "event" ? [{ id: "STATE-1", predicates: [], passed: true }] : [],
+    formations:
+      kind === "formation"
+        ? [{ id: "STATE-1", predicates: [], passed: true }]
+        : [],
+  }) as IAutoMovieCompiledContractRealization;
+
 const screenplay = (): IAutoMovieScreenplayIndex =>
   ({
-    version: 1,
+    version: 2,
     production: "PRODUCTION-1",
     treatment: { path: "treatment.md", sequences: [] },
     screenplay: {
@@ -159,6 +177,18 @@ const run = (props?: {
 
 const copy = (): IAutoMovieScreenplayIndex => structuredClone(screenplay());
 
+const geometryProof = (
+  kind: "opening" | "closing" | "event" | "formation",
+): IAutoMovieScreenplayIndex => {
+  const index = copy();
+  index.continuity[0]!.proof = {
+    owner: "geometry",
+    shot: "SHOT-1",
+    outcome: { kind, id: "STATE-1" },
+  };
+  return index;
+};
+
 /**
  * Prove the screenplay against active production, design and current evidence.
  *
@@ -194,6 +224,9 @@ export const test_production_screenplay_cross_record = (): void => {
   unboundShot.participants = [{ kind: "actor", id: "MODEL-OTHER" }];
   const noCitation = contract();
   noCitation.evidence = [{ scene: "SCN-1" }];
+  const noShots = copy();
+  noShots.screenplay.lock = null;
+  noShots.continuity = [];
   const reviewProof = copy();
   reviewProof.continuity[0]!.verification = "frame-review";
   reviewProof.continuity[0]!.proof = {
@@ -218,6 +251,37 @@ export const test_production_screenplay_cross_record = (): void => {
       },
     ],
   ]);
+  const reviewScenario = reviewGraph.acceptance.get("ACCEPT-1")!;
+  const reviewVariant = (
+    patch: Partial<IAutoMovieAcceptanceScenario>,
+  ): IGraph => ({
+    ...reviewGraph,
+    acceptance: new Map([["ACCEPT-1", { ...reviewScenario, ...patch }]]),
+  });
+  const acceptanceProof = copy();
+  acceptanceProof.continuity[0]!.verification = "acceptance";
+  acceptanceProof.continuity[0]!.proof = {
+    owner: "acceptance",
+    scenario: "ACCEPT-1",
+  };
+  const acceptanceGraph = graph();
+  acceptanceGraph.acceptance = new Map([
+    [
+      "ACCEPT-1",
+      {
+        id: "ACCEPT-1",
+        target: { kind: "film", id: "PRODUCTION-1" },
+        criterion: {
+          kind: "metric",
+          metric: "runtime-seconds",
+          operator: ">=",
+          value: 1,
+        },
+        required: true,
+        evidence: [{ scene: "SCN-1", claim: "CLAIM-1" }],
+      },
+    ],
+  ]);
   const code = (diagnostics: IAutoMovieDiagnostic[], value: string): boolean =>
     diagnostics.some((diagnostic) => diagnostic.code === value);
 
@@ -226,6 +290,15 @@ export const test_production_screenplay_cross_record = (): void => {
     namedFacts([
       ["nullIndexIsEmpty", () => run({ screenplay: null }).length === 0],
       ["exactCrossRecordPasses", () => run().length === 0],
+      [
+        "noShotNeedsNoLock",
+        () =>
+          run({
+            screenplay: noShots,
+            graph: { ...graph(), shots: new Map() },
+            realization: null,
+          }).length === 0,
+      ],
       [
         "productionIdentityIsExact",
         () =>
@@ -292,8 +365,117 @@ export const test_production_screenplay_cross_record = (): void => {
           ),
       ],
       [
+        "closingGeometryProofPasses",
+        () =>
+          run({
+            screenplay: geometryProof("closing"),
+            realization: geometryRealization("closing"),
+          }).length === 0,
+      ],
+      [
+        "eventGeometryProofPasses",
+        () =>
+          run({
+            screenplay: geometryProof("event"),
+            realization: geometryRealization("event"),
+          }).length === 0,
+      ],
+      [
+        "formationGeometryProofPasses",
+        () =>
+          run({
+            screenplay: geometryProof("formation"),
+            realization: geometryRealization("formation"),
+          }).length === 0,
+      ],
+      [
+        "geometryProofCannotBorrowShotIdentity",
+        () =>
+          code(
+            run({
+              realization: {
+                ...realization(),
+                shot: "SHOT-OTHER",
+              },
+            }),
+            "screenplay-continuity-proof-absent",
+          ),
+      ],
+      [
         "reviewProofWithCurrentEvidencePasses",
         () => run({ screenplay: reviewProof, graph: reviewGraph }).length === 0,
+      ],
+      [
+        "optionalScenarioCannotProveClaim",
+        () =>
+          code(
+            run({
+              screenplay: reviewProof,
+              graph: reviewVariant({ required: false }),
+            }),
+            "screenplay-continuity-proof-absent",
+          ),
+      ],
+      [
+        "wrongCriterionCannotProveFrameReview",
+        () =>
+          code(
+            run({
+              screenplay: reviewProof,
+              graph: reviewVariant({
+                criterion: {
+                  kind: "metric",
+                  metric: "runtime-seconds",
+                  operator: ">=",
+                  value: 1,
+                },
+              }),
+            }),
+            "screenplay-continuity-proof-absent",
+          ),
+      ],
+      [
+        "wrongTargetCannotProveClaim",
+        () =>
+          code(
+            run({
+              screenplay: reviewProof,
+              graph: reviewVariant({
+                target: { kind: "shot", id: "SHOT-MISSING" },
+              }),
+            }),
+            "screenplay-continuity-proof-absent",
+          ),
+      ],
+      [
+        "conflictingCriterionShotCannotProveClaim",
+        () =>
+          code(
+            run({
+              screenplay: reviewProof,
+              graph: reviewVariant({
+                criterion: {
+                  kind: "frame",
+                  frame: "FRAME-1",
+                  pass: "beauty",
+                  expectation: "The state is visible.",
+                  shot: "SHOT-OTHER",
+                },
+              }),
+            }),
+            "screenplay-continuity-proof-absent",
+          ),
+      ],
+      [
+        "nonCitingScenarioCannotProveClaim",
+        () =>
+          code(
+            run({
+              screenplay: reviewProof,
+              graph: reviewVariant({ evidence: [{ scene: "SCN-1" }] }),
+            }),
+            "screenplay-continuity-proof-absent",
+          ),
       ],
       [
         "historicalReviewProofIsStale",
@@ -307,10 +489,43 @@ export const test_production_screenplay_cross_record = (): void => {
             "screenplay-continuity-proof-not-current",
           ),
       ],
+      [
+        "requiredAcceptanceProofPasses",
+        () =>
+          run({
+            screenplay: acceptanceProof,
+            graph: acceptanceGraph,
+          }).length === 0,
+      ],
+      [
+        "acceptanceProofNeedsExactFilm",
+        () => {
+          const scenario = acceptanceGraph.acceptance.get("ACCEPT-1")!;
+          return code(
+            run({
+              screenplay: acceptanceProof,
+              graph: {
+                ...acceptanceGraph,
+                acceptance: new Map([
+                  [
+                    "ACCEPT-1",
+                    {
+                      ...scenario,
+                      target: { kind: "film", id: "PRODUCTION-OTHER" },
+                    },
+                  ],
+                ]),
+              },
+            }),
+            "screenplay-continuity-proof-absent",
+          );
+        },
+      ],
     ]),
     {
       nullIndexIsEmpty: true,
       exactCrossRecordPasses: true,
+      noShotNeedsNoLock: true,
       productionIdentityIsExact: true,
       firstShotRequiresLock: true,
       requiredBindingCannotBeEmpty: true,
@@ -320,8 +535,19 @@ export const test_production_screenplay_cross_record = (): void => {
       shotParticipantMustBeCast: true,
       geometryProofNeedsClaimCitation: true,
       geometryProofMustPass: true,
+      closingGeometryProofPasses: true,
+      eventGeometryProofPasses: true,
+      formationGeometryProofPasses: true,
+      geometryProofCannotBorrowShotIdentity: true,
       reviewProofWithCurrentEvidencePasses: true,
+      optionalScenarioCannotProveClaim: true,
+      wrongCriterionCannotProveFrameReview: true,
+      wrongTargetCannotProveClaim: true,
+      conflictingCriterionShotCannotProveClaim: true,
+      nonCitingScenarioCannotProveClaim: true,
       historicalReviewProofIsStale: true,
+      requiredAcceptanceProofPasses: true,
+      acceptanceProofNeedsExactFilm: true,
     },
   );
 };

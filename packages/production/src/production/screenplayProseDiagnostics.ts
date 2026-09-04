@@ -70,6 +70,8 @@ const TIMING_WORDS: Readonly<Record<string, number>> = {
 
 const TIMING_OCCURRENCE =
   /(^|[^\w.-])((?:\d+(?:\.\d+)?|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|a[ \t]+quarter|quarter|half|three[ \t]+quarters))(?:[ \t]*-[ \t]*|[ \t]+)seconds?\b(?:[ \t]*\{@timing[ \t]+([^}\r\n]+)\})?/giu;
+const TIMING_RANGE_START =
+  /(^|[^\w.-])((?:\d+(?:\.\d+)?|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|a[ \t]+quarter|quarter|half|three[ \t]+quarters))[ \t]*(?:and|to|-)[ \t]*(?:\d+(?:\.\d+)?|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|a[ \t]+quarter|quarter|half|three[ \t]+quarters)(?:[ \t]*-[ \t]*|[ \t]+)seconds?\b/giu;
 
 /**
  * Markdown lines that can make an audience-facing prose claim.
@@ -155,6 +157,9 @@ export const authoredScreenplayMarkdownLines = (content: string): string[] => {
 const comparableProse = (value: string): string =>
   value.split(/\s+/u).filter(Boolean).join(" ");
 
+const compareCodeUnits = (left: string, right: string): number =>
+  left < right ? -1 : left > right ? 1 : 0;
+
 const timingSeconds = (value: string): number => {
   const normalized = value.toLowerCase().replace(/[ \t]+/gu, " ");
   return TIMING_WORDS[normalized] ?? Number(normalized);
@@ -162,12 +167,21 @@ const timingSeconds = (value: string): number => {
 
 export const parseScreenplayTimingOccurrences = (
   body: string,
-): IAutoMovieParsedScreenplayTimingOccurrence[] =>
-  [...body.replace(/[*_`]/gu, "").matchAll(TIMING_OCCURRENCE)].map((match) => ({
-    text: match[2]!,
-    seconds: timingSeconds(match[2]!),
-    selector: match[3]?.trim() ?? null,
-  }));
+): IAutoMovieParsedScreenplayTimingOccurrence[] => {
+  const prose = body.replace(/[*_`]/gu, "");
+  return [
+    ...[...prose.matchAll(TIMING_OCCURRENCE)].map((match) => ({
+      text: match[2]!,
+      seconds: timingSeconds(match[2]!),
+      selector: match[3]?.trim() ?? null,
+    })),
+    ...[...prose.matchAll(TIMING_RANGE_START)].map((match) => ({
+      text: match[2]!,
+      seconds: timingSeconds(match[2]!),
+      selector: null,
+    })),
+  ];
+};
 
 const parseAuthority = (
   lines: string[],
@@ -475,13 +489,13 @@ export const screenplayProseDiagnostics = (props: {
       );
     const participantKey = (
       participant: IAutoMovieScreenplayParticipant,
-    ): string => `${participant.id}:${participant.mode}`;
+    ): string => `${participant.id}\u0000${participant.mode}`;
     const indexedParticipants = scene.participants
       .map(participantKey)
-      .sort((left, right) => left.localeCompare(right));
+      .sort(compareCodeUnits);
     const proseParticipants = entry.authority.participants
       .map(participantKey)
-      .sort((left, right) => left.localeCompare(right));
+      .sort(compareCodeUnits);
     if (
       indexedParticipants.length !== proseParticipants.length ||
       indexedParticipants.some(
@@ -495,10 +509,8 @@ export const screenplayProseDiagnostics = (props: {
       );
     const indexedBeats = scene.covers
       .map((coverage) => coverage.id)
-      .sort((left, right) => left.localeCompare(right));
-    const proseBeats = [...entry.authority.beats].sort((left, right) =>
-      left.localeCompare(right),
-    );
+      .sort(compareCodeUnits);
+    const proseBeats = [...entry.authority.beats].sort(compareCodeUnits);
     if (
       indexedBeats.length !== proseBeats.length ||
       indexedBeats.some((beat, index) => beat !== proseBeats[index])

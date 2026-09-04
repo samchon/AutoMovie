@@ -297,6 +297,8 @@ export const AUTOMOVIE_DIAGNOSTIC_CODES = [
   "screenplay-scene-location-absent",
   "screenplay-scene-location-conflict",
   "screenplay-scene-participant-conflict",
+  "screenplay-scene-participant-invalid",
+  "screenplay-scene-story-time-absent",
   "screenplay-scene-story-time-conflict",
   "screenplay-scene-timing-unrealized",
   "screenplay-scene-unedited",

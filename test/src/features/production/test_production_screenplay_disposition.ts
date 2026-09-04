@@ -45,7 +45,7 @@ const scene = (
 
 const index = (value: IAutoMovieScreenplayScene): IAutoMovieScreenplayIndex =>
   ({
-    version: 1,
+    version: 2,
     production: "disposition",
     treatment: { path: "treatment.md", sequences: [] },
     screenplay: { path: "screenplay.md", lock: null, scenes: [value] },

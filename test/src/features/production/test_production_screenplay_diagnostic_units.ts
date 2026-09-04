@@ -66,7 +66,7 @@ const screenplay = (props?: {
   sequences?: IAutoMovieScreenplayIndex["treatment"]["sequences"];
 }): IAutoMovieScreenplayIndex =>
   ({
-    version: 1,
+    version: 2,
     production: "diagnostic-units",
     treatment: {
       path: "docs/combined.md",
