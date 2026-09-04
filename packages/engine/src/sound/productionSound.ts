@@ -196,6 +196,7 @@ export const deriveProductionSoundPlan = (props: {
     version: 1,
     inputFingerprint: props.timeline.inputFingerprint,
     fps: props.timeline.fps,
+    frameRate: props.timeline.frameRate,
     totalFrames: props.timeline.totalFrames,
     sampleRate: 48_000,
     channels: 2,
