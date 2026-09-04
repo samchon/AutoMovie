@@ -1,7 +1,11 @@
 import fs from "node:fs";
 import path from "node:path";
 
-import { type ICoverageSpan, functionIdentity } from "./coverageIdentity";
+import {
+  type ICoverageSpan,
+  canonicalCoveragePath,
+  functionIdentity,
+} from "./coverageIdentity";
 
 interface IIstanbulFileCoverage {
   b: Record<string, number[]>;
@@ -213,7 +217,13 @@ export const measuredLineCount = (
   record: Record<string, unknown> | null | undefined,
   file: string,
 ): number | null => {
-  const value = record?.[file];
+  const direct = record?.[file];
+  const value =
+    direct ??
+    Object.entries(record ?? {}).find(
+      ([candidate]) =>
+        canonicalCoveragePath(candidate) === canonicalCoveragePath(file),
+    )?.[1];
   if (typeof value === "number") return value;
   return typeof value === "object" &&
     value !== null &&

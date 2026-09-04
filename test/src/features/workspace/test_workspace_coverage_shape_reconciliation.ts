@@ -259,6 +259,24 @@ export const test_workspace_coverage_shape_reconciliation = (): void => {
         throw new Error("a single group must write no corrected report");
       },
     });
+    const singleUnidentifiable = reconcileCoverageShapes({
+      copy: () => undefined,
+      groupRoot,
+      measured: () => false,
+      mkdir: () => undefined,
+      readReport: () => ({
+        "one.ts": {
+          s: { 0: 1 },
+          statementMap: { 0: { start: { line: 1 } } },
+        },
+      }),
+      report: () => 0,
+      reportDirectory: path.join(directory, "single-report"),
+      temporary: directory,
+      writeReport: () => {
+        throw new Error("a single group must write no corrected report");
+      },
+    });
 
     TestValidator.equals(
       "a correction is written only when every group answered",
@@ -341,6 +359,7 @@ export const test_workspace_coverage_shape_reconciliation = (): void => {
         reportFailedWrote: reportFailed.written,
         readFailed: readFailed.result,
         single,
+        singleUnidentifiable,
       },
       {
         succeeded: { failure: null, groups: 2, shortfalls: [] },
@@ -366,6 +385,13 @@ export const test_workspace_coverage_shape_reconciliation = (): void => {
           groups: 2,
         },
         single: { failure: null, groups: 0 },
+        singleUnidentifiable: {
+          failure: null,
+          groups: 0,
+          shortfalls: [
+            { file: "one.ts", lost: ["unidentifiable:0:statement:0"] },
+          ],
+        },
       },
     );
 

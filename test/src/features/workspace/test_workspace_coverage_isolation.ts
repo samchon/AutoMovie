@@ -6,6 +6,7 @@ import { pathToFileURL } from "node:url";
 
 import {
   coverageMissingScripts,
+  coverageNeverRecorded,
   coverageRecordCount,
   coverageRecords,
   coverageRunPaths,
@@ -174,6 +175,19 @@ export const test_workspace_coverage_isolation = (): void => {
           "/home/runner",
         ),
       ),
+    nonFile: isMeasuredScriptUrl(
+      "https://example.com/D:/repo/packages/engine/src/remote.ts",
+      ["."],
+      "d:/repo",
+    ),
+    mappedSeen: coverageNeverRecorded({
+      directory: records,
+      identity: (url) =>
+        url === pathToFileURL(present).href
+          ? path.join(ROOT, "packages", "engine", "src", "mapped.ts")
+          : null,
+      reported: [path.join(ROOT, "packages", "engine", "src", "mapped.ts")],
+    }),
   };
   fs.rmSync(records, { recursive: true, force: true });
   fs.rmSync(shaped, { recursive: true, force: true });
@@ -209,6 +223,11 @@ export const test_workspace_coverage_isolation = (): void => {
       [
         "both host shapes of a file URL are measured on either platform",
         () => drawn.hosts === 2,
+      ],
+      ["non-file URLs have no source identity", () => drawn.nonFile === false],
+      [
+        "source-mapped raw URLs satisfy authored report identity",
+        () => drawn.mappedSeen.length === 0,
       ],
       ["two draws in one process differ", () => drawn.first !== drawn.second],
       [
@@ -279,6 +298,8 @@ export const test_workspace_coverage_isolation = (): void => {
       "and named, so the figure it spoils can be found": true,
       "a source outside the measured set is not counted at all": true,
       "both host shapes of a file URL are measured on either platform": true,
+      "non-file URLs have no source identity": true,
+      "source-mapped raw URLs satisfy authored report identity": true,
       "two draws in one process differ": true,
       "one run owns raw report and source-host paths together": true,
       "both sit under the coverage cache": true,
@@ -386,6 +407,24 @@ export const test_workspace_coverage_isolation = (): void => {
     changed: unreached("changed gate", "a failed report"),
     cleanup: () => undefined,
   });
+  const thrownMeasurement = runCoverage([], {
+    measure: () => {
+      throw new Error("measurement failed before returning a status");
+    },
+    report: unreached("report", "a thrown measurement"),
+    population: unreached("population gate", "a thrown measurement"),
+    changed: unreached("changed gate", "a thrown measurement"),
+    cleanup: unreached("cleanup", "a thrown measurement"),
+  });
+  const thrownCleanup = runCoverage([], {
+    measure: () => measured(0),
+    report: () => 0,
+    population: () => 0,
+    changed: () => 0,
+    cleanup: () => {
+      throw new Error("cleanup failed");
+    },
+  });
   const cliStatuses: number[] = [];
   runCoverageCli(false, [], dependencies, (status) => cliStatuses.push(status));
   runCoverageCli(
@@ -433,6 +472,8 @@ export const test_workspace_coverage_isolation = (): void => {
       changedRed,
       coverageGap,
       reportGap,
+      thrownMeasurement,
+      thrownCleanup,
       cliStatuses,
       directExitStatus,
       entryDecision,
@@ -450,6 +491,8 @@ export const test_workspace_coverage_isolation = (): void => {
       changedRed: 2,
       coverageGap: 1,
       reportGap: 1,
+      thrownMeasurement: 2,
+      thrownCleanup: 2,
       cliStatuses: [0],
       directExitStatus: 0,
       entryDecision: { own: true, launcher: false, absent: false },

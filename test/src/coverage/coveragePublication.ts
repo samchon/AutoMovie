@@ -4,6 +4,7 @@ import path from "node:path";
 
 import {
   type IMeasuredSource,
+  canonicalCoveragePath,
   isAuthoredExecutableSource,
   readMeasuredSource,
   sameMeasuredSources,
@@ -37,8 +38,6 @@ export interface ICoverageSnapshotInspection {
   published: Record<string, IMeasuredSource>;
 }
 
-const canonical = (file: string): string =>
-  path.resolve(file).replaceAll("\\", "/");
 const byCodeUnit = (left: string, right: string): number =>
   Number(left > right) - Number(left < right);
 const freezeSources = (
@@ -76,17 +75,17 @@ export const inspectCoverageSnapshot = (props: {
 }): ICoverageSnapshotInspection => {
   const snapshot = new Map(
     Object.entries(props.snapshot).map(([file, identity]) => [
-      canonical(file),
+      canonicalCoveragePath(file),
       identity,
     ]),
   );
   const current = new Map(
     Object.entries(props.current).map(([file, identity]) => [
-      canonical(file),
+      canonicalCoveragePath(file),
       identity,
     ]),
   );
-  const report = new Set(props.reportFiles.map(canonical));
+  const report = new Set(props.reportFiles.map(canonicalCoveragePath));
   const failures: string[] = [];
   for (const file of [...snapshot.keys()].sort(byCodeUnit)) {
     if (report.has(file) === false)
@@ -100,6 +99,9 @@ export const inspectCoverageSnapshot = (props: {
     else if (before.lines !== after.lines || before.sha256 !== after.sha256)
       failures.push(`${file}: measured source bytes changed during the run`);
   }
+  for (const file of [...current.keys()].sort(byCodeUnit))
+    if (snapshot.has(file) === false)
+      failures.push(`${file}: measured source appeared during the run`);
   for (const file of [...report].sort(byCodeUnit))
     if (snapshot.has(file) === false)
       failures.push(

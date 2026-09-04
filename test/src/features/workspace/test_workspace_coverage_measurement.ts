@@ -92,6 +92,11 @@ export const test_workspace_coverage_measurement = (): void => {
     reportFiles: [SOURCE],
     snapshot: { [SOURCE]: A },
   });
+  const appeared = inspectCoverageSnapshot({
+    current: { [SOURCE]: A, "/repo/packages/engine/src/appeared.ts": A },
+    reportFiles: [SOURCE],
+    snapshot: { [SOURCE]: A },
+  });
 
   TestValidator.equals(
     "measurement validity and publication are one fail-closed decision",
@@ -182,6 +187,12 @@ export const test_workspace_coverage_measurement = (): void => {
           disappeared.failures[0]?.includes("disappeared") === true &&
           Object.keys(disappeared.published).length === 0,
       ],
+      [
+        "appeared source prevents every sidecar",
+        () =>
+          appeared.failures[0]?.includes("appeared") === true &&
+          Object.keys(appeared.published).length === 0,
+      ],
     ]),
     Object.fromEntries(
       [
@@ -206,6 +217,7 @@ export const test_workspace_coverage_measurement = (): void => {
         "missing report source is named",
         "unexpected report source is named",
         "disappeared source prevents every sidecar",
+        "appeared source prevents every sidecar",
       ].map((key) => [key, true]),
     ),
   );

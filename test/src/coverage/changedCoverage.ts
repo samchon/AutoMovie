@@ -17,6 +17,7 @@ import {
   type ICoveragePosition,
   type ICoverageSpan,
   type IMeasuredSource,
+  canonicalCoveragePath,
   functionIdentity,
   isAuthoredExecutableSource,
 } from "./coverageIdentity";
@@ -118,7 +119,7 @@ type Metric = keyof ICoverageTotals;
 type Writer = (line: string) => void;
 
 const slash = (value: string): string => value.replaceAll("\\", "/");
-const canonical = (value: string): string => slash(path.resolve(value));
+const canonical = canonicalCoveragePath;
 
 const diffPath = (line: string): string | null => {
   const encoded = line.slice(4).split("\t", 1)[0];

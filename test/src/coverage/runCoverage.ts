@@ -53,22 +53,36 @@ export const runCoverage = (
   arguments_: string[],
   dependencies: IRunCoverageDependencies,
 ): number => {
-  const measurement = dependencies.measure();
+  let measurement: ICoverageMeasurementResult;
+  try {
+    measurement = dependencies.measure();
+  } catch {
+    return 2;
+  }
   if (measurement.status !== 0) return measurement.status === 2 ? 2 : 1;
   const publication = measurement.publication;
   if (publication === undefined) return 2;
+  let status = 2;
   try {
     const report = dependencies.report(publication);
-    if (report !== 0) return report === 2 ? 2 : 1;
-    const population = dependencies.population(publication);
-    if (population !== 0) return population === 2 ? 2 : 1;
-    const changed = dependencies.changed(arguments_, publication);
-    return changed === 2 ? 2 : changed === 0 ? 0 : 1;
+    if (report !== 0) status = report === 2 ? 2 : 1;
+    else {
+      const population = dependencies.population(publication);
+      if (population !== 0) status = population === 2 ? 2 : 1;
+      else {
+        const changed = dependencies.changed(arguments_, publication);
+        status = changed === 2 ? 2 : changed === 0 ? 0 : 1;
+      }
+    }
+  } catch {
+    status = 2;
+  }
+  try {
+    dependencies.cleanup(publication);
   } catch {
     return 2;
-  } finally {
-    dependencies.cleanup(publication);
   }
+  return status;
 };
 
 type ExitStatusWriter = (status: number) => void;

@@ -2,7 +2,11 @@ import fs from "node:fs";
 import path from "node:path";
 
 import { describeThrown } from "../integrity/contractOwnership";
-import { isAuthoredExecutableSource, runGit } from "./changedCoverage";
+import { runGit } from "./changedCoverage";
+import {
+  canonicalCoveragePath,
+  isAuthoredExecutableSource,
+} from "./coverageIdentity";
 import {
   type ICoveragePublication,
   loadCoveragePublication,
@@ -80,25 +84,39 @@ export const inspectCoveragePopulation = (props: {
   measured: readonly string[];
   root: string;
 }): ICoveragePopulationInspection => {
-  const known = new Set(props.candidates.map(slash));
-  const measured = new Set<string>();
+  const known = new Map<string, string>(
+    props.candidates.map(
+      (file) =>
+        [
+          canonicalCoveragePath(path.resolve(props.root, file)),
+          slash(file),
+        ] as const,
+    ),
+  );
+  const measured = new Map<string, string>();
   for (const file of props.measured) {
     const relative = slash(path.relative(props.root, file));
     if (relative.length === 0 || relative.startsWith("../")) continue;
-    measured.add(relative);
+    measured.set(canonicalCoveragePath(file), relative);
   }
-  const obliged = [...known]
+  const obliged = [...known.values()]
     .filter(isAuthoredExecutableSource)
     .filter((file) => fs.existsSync(path.resolve(props.root, file)))
     .sort(byCodeUnit);
   return {
     obliged: obliged.length,
     measured: measured.size,
-    unmeasured: obliged.filter((file) => measured.has(file) === false),
+    unmeasured: obliged.filter(
+      (file) =>
+        measured.has(canonicalCoveragePath(path.resolve(props.root, file))) ===
+        false,
+    ),
     unjudged: [...measured]
-      .filter(
-        (file) => known.has(file) && isAuthoredExecutableSource(file) === false,
+      .map(([identity, relative]) => known.get(identity) ?? relative)
+      .filter((file) =>
+        known.has(canonicalCoveragePath(path.resolve(props.root, file))),
       )
+      .filter((file) => isAuthoredExecutableSource(file) === false)
       .sort(byCodeUnit),
   };
 };

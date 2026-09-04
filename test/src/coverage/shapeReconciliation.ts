@@ -213,11 +213,9 @@ export const unidentifiableCoveredPositions = (
  * The base is the reading with the most positions, so the structure this
  * returns is one c8 actually produced rather than a shape assembled here. A
  * position keeps its own hits when it has them and otherwise takes a single hit
- * from the line, so nothing is marked run that no process ran.
- *
- * The granularity is the line, which is the honest limit: two statements on one
- * line cannot be told apart, and one of them covered marks both. Recording that
- * is better than claiming an exactness the identifiers cannot support.
+ * only from a reading with the same complete kind-specific identity. Two
+ * statements on one line, same-name functions at different declarations, and
+ * distinct branch arms therefore never lend coverage to one another.
  */
 export const unionEntryByLine = <T extends ICoverageEntry>(
   entries: readonly T[],
@@ -289,8 +287,9 @@ export interface IUnionShortfall {
 /**
  * Whether the union ever wrote less than the best reading it was given.
  *
- * The union folds by line onto a base structure, so a position the base does
- * not carry cannot be lifted into it however well another reading covered it.
+ * The union folds exact identities onto a base structure, so a position the
+ * base does not carry cannot be lifted into it however well another reading
+ * covered it.
  * That is a real way to lose, and until now nothing said when it happened: the
  * gate refused files whose changed lines a scoped run reads at 99.67% and
  * nobody could tell whether the union had lost them or never seen them.
@@ -437,7 +436,14 @@ export const reconcileCoverageShapes = (props: {
   const groups = partitionByShape(
     readRecordShapes(props.temporary, props.measured),
   );
-  if (groups.length < 2) return { failure: null, groups: groups.length };
+  if (groups.length < 2) {
+    const merged = props.readReport(props.reportDirectory);
+    if (merged === null) return { failure: null, groups: groups.length };
+    const shortfalls = unionShortfalls(groupEntriesByFile([merged]), merged);
+    return shortfalls.length === 0
+      ? { failure: null, groups: groups.length }
+      : { failure: null, groups: groups.length, shortfalls };
+  }
   const reports: Array<Record<string, ICoverageEntry>> = [];
   for (const [index, files] of groups.entries()) {
     const temporary = path.join(props.groupRoot, `shape-${index}`);

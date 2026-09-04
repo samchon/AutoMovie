@@ -149,6 +149,7 @@ export const coverageSourceAttribution = (props: {
     const relative = slash(path.relative(props.repository, target));
     if (
       relative.length !== 0 &&
+      path.isAbsolute(relative) === false &&
       relative.startsWith("../") === false &&
       isAuthoredExecutableSource(relative)
     )
@@ -162,6 +163,7 @@ export const coverageSourceAttribution = (props: {
     const relative = slash(path.relative(props.repository, source));
     if (
       relative.length !== 0 &&
+      path.isAbsolute(relative) === false &&
       relative.startsWith("../") === false &&
       isAuthoredExecutableSource(relative)
     )

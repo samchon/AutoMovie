@@ -15,11 +15,9 @@
 // than reporting them. That is the only reason the instrument's fault surfaced
 // instead of entering the record as two mysterious regressions.
 //
-// So the temporary directory is per-run and removed afterwards. The report
-// directory stays where it is, because the typed report and changed-source gate
-// resolve that exact path; a concurrent run therefore still overwrites the
-// report, which is last-writer-wins rather than corruption — the file is one
-// run's complete result instead of a mixture of two.
+// Raw records, report, source host and sidecars share one private run root. The
+// exact immutable publication is passed to every consumer, then the whole root
+// is removed; concurrent runs neither overwrite nor consume each other.
 import { spawnSync } from "node:child_process";
 import crypto from "node:crypto";
 import fs from "node:fs";
@@ -334,6 +332,8 @@ export const measuredScriptIdentity = (
   let target: string;
   try {
     const parsed = new URL(url);
+    if (parsed.protocol !== "file:" || parsed.hostname.length !== 0)
+      return null;
     const decoded = decodeURIComponent(parsed.pathname);
     // A leading slash belongs to a POSIX path and precedes a Windows drive
     // letter; keep the first and drop the second.
@@ -471,6 +471,7 @@ export const measuredRawScriptIdentity = (
  */
 export const coverageNeverRecorded = (props: {
   directory: string;
+  identity?: (url: string) => string | null;
   reported: readonly string[];
 }): string[] => {
   const seen = new Set<string>();
@@ -496,11 +497,11 @@ export const coverageNeverRecorded = (props: {
         continue;
       const cut = url.search(/[?#]/u);
       try {
-        seen.add(
-          fileURLToPath(cut === -1 ? url : url.slice(0, cut))
-            .replaceAll("\\", "/")
-            .toLowerCase(),
-        );
+        const identity =
+          props.identity === undefined
+            ? fileURLToPath(cut === -1 ? url : url.slice(0, cut))
+            : props.identity(url);
+        if (identity !== null) seen.add(canonicalCoveragePath(identity));
       } catch {
         // A URL this cannot resolve names no file, which is a different
         // finding and one `coverageMissingScripts` already reports.
@@ -508,9 +509,7 @@ export const coverageNeverRecorded = (props: {
     }
   }
   return props.reported
-    .filter(
-      (file) => seen.has(file.replaceAll("\\", "/").toLowerCase()) === false,
-    )
+    .filter((file) => seen.has(canonicalCoveragePath(file)) === false)
     .sort((left, right) => left.localeCompare(right));
 };
 
@@ -846,6 +845,7 @@ export const coverageUnloadedSources = (props: {
 }): string[] =>
   coverageNeverRecorded({
     directory: props.directory,
+    identity: (url) => measuredRawScriptIdentity(url, SOURCES, ROOT),
     reported: measuredReportedSources(props.reportDirectory),
   });
 
