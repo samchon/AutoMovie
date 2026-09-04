@@ -203,9 +203,9 @@ import {
  * motion rather than written down beside it -- so a v7 reader would look for
  * that one where it is no longer written.
  *
- * Version 10 adds the exact graph-selected source owner to compiled shot and
- * film artifacts, so a version 9 reader cannot assume source path and digest
- * alone identify the authored target that was admitted.
+ * Version 10 adds the exact graph-selected source owner to compiled shot
+ * artifacts, so a version 9 reader cannot assume source path and digest alone
+ * identify the authored target that was admitted.
  *
  * @author Samchon
  */
@@ -309,6 +309,7 @@ export class AutoMovieProductionCompiler {
     if (this.authoringEvidence?.manifest.kind === "library")
       return this.runLibrary(input, materialize);
     const graph = this.project.graph();
+    const screenplay = this.project.screenplayIndex();
     const inputRevision = this.project.revision();
     const projectManifest = this.project.manifest();
     const archetypes = this.project.archetypes;
@@ -427,9 +428,6 @@ export class AutoMovieProductionCompiler {
     > = {};
     let filmSource: Uint8Array | null = null;
     let filmSourceDigest: AutoMovieContentDigest | null = null;
-    let filmSourceOwner:
-      | IAutoMovieProductionEvidence["sourceOwners"][number]
-      | null = null;
     if (input.scope !== "design" && designReady) {
       runtimeModels = new Map(
         materializeProductionModels(graph.models, externalModels, archetypes),
@@ -513,7 +511,6 @@ export class AutoMovieProductionCompiler {
       designReady &&
       derivedArtifactsReady &&
       filmSource !== null &&
-      filmSourceDigest !== null &&
       contentInputs !== undefined
     ) {
       filmContext = {
@@ -523,36 +520,11 @@ export class AutoMovieProductionCompiler {
         derivedArtifacts,
         effectZones: graph.world!.effectZones,
       };
-      const requireReviewed =
-        input.scope === "review" || input.scope === "final";
-      const owner =
-        this.authoringEvidence !== undefined || requireReviewed
-          ? resolveAutoMovieSourceOwnerBinding({
-              bindings: this.authoringEvidence?.sourceOwners,
-              branch: "filmSources",
-              sourcePath: FILM_SOURCE_PATH,
-              exportName: FILM_SOURCE_EXPORT,
-              sourceDigest: filmSourceDigest,
-              requireReviewed,
-            })
-          : null;
-      if (owner !== null && owner.success === false)
-        diagnostics.push({
-          code: "source-owner-mismatch",
-          category: "error",
-          phase: "source",
-          target: "film",
-          path: FILM_SOURCE_PATH,
-          message: owner.message,
-        });
-      else {
-        filmSourceOwner = owner?.success === true ? owner.binding : null;
-        filmEditSource = compileFilmEditSource({
-          source: Buffer.from(filmSource).toString("utf8"),
-          readSource: readLinkedSource,
-          context: filmContext,
-        });
-      }
+      filmEditSource = compileFilmEditSource({
+        source: Buffer.from(filmSource).toString("utf8"),
+        readSource: readLinkedSource,
+        context: filmContext,
+      });
     }
 
     if (input.scope !== "design" && designReady && derivedArtifactsReady) {
@@ -573,6 +545,7 @@ export class AutoMovieProductionCompiler {
                   branch: "shots",
                   sourcePath: entry.contract.source.module,
                   exportName: entry.contract.source.export,
+                  owner: shotSourceOwnerTarget(entry.contract, screenplay),
                   sourceDigest: digestAutoMovieBytes(normalized),
                   requireReviewed,
                 })
@@ -761,7 +734,6 @@ export class AutoMovieProductionCompiler {
             compiledFilm,
             filmSourceDigest,
             inputFingerprint,
-            filmSourceOwner,
           );
     const inputCurrent = (): boolean =>
       `${this.project.revision()}\0${currentAutoMovieProductionCompilerInputFingerprint(this.project, input.scope)}\0${this.project.revision()}` ===
@@ -806,7 +778,6 @@ export class AutoMovieProductionCompiler {
       diagnostics.push(
         ...this.generatedOwnershipDiagnostics(manifest, materialize),
       );
-    const screenplay = this.project.screenplayIndex();
     diagnostics.push(
       ...screenplayResidencyDiagnostics({ contracts: graph.shots, screenplay }),
       ...screenplayLedgerDiagnostics({
@@ -1853,6 +1824,29 @@ interface ICompiledVideoClosing extends IShotCompileEntry {
   placementIndex: number;
   closing: IAutoMovieBeatEndState | null;
 }
+
+/** Resolve one shot contract's screenplay or direct-brief H3 owner address. */
+const shotSourceOwnerTarget = (
+  contract: IAutoMovieShotContract,
+  screenplay: IAutoMovieScreenplayIndex | null,
+): string | undefined => {
+  if (screenplay === null) return undefined;
+  const scenes = new Map(
+    screenplay.screenplay.scenes.map((scene) => [scene.id, scene] as const),
+  );
+  const targets = [
+    ...new Set(
+      (contract.evidence ?? []).flatMap((citation) => {
+        const scene = scenes.get(citation.scene);
+        if (scene === undefined || scene.status !== "active") return [];
+        return [
+          `${scene.path ?? screenplay.screenplay.path}#${scene.id.toLowerCase()}`,
+        ];
+      }),
+    ),
+  ];
+  return targets.length === 1 ? targets[0] : undefined;
+};
 
 /**
  * Compile placed shots in film order, then every remaining graph shot in its
@@ -8697,7 +8691,6 @@ const materializeFilmArtifacts = (
   draft: ICompiledFilmDraft,
   sourceDigest: AutoMovieContentDigest,
   inputFingerprint: AutoMovieContentDigest,
-  sourceOwner: IAutoMovieProductionEvidence["sourceOwners"][number] | null,
 ): {
   edit: IAutoMovieCompiledFilmEdit;
   timeline: IAutoMovieFilmTimeline;
@@ -8710,11 +8703,6 @@ const materializeFilmArtifacts = (
       path: FILM_SOURCE_PATH,
       export: FILM_SOURCE_EXPORT,
       digest: sourceDigest,
-      ...(sourceOwner === null
-        ? {}
-        : {
-            target: `${sourceOwner.targetPath}#${sourceOwner.targetAnchor}`,
-          }),
     },
     edit: draft.edit,
   },

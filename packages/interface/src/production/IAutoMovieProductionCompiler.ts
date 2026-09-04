@@ -2000,8 +2000,6 @@ export interface IAutoMovieCompiledFilmEdit {
     export: string;
     /** Digest of normalized TypeScript source. */
     digest: AutoMovieContentDigest;
-    /** Exact graph-selected authored target, when authoring evidence was supplied. */
-    target?: string;
   };
   /**
    * Strict authored edit returned by the deterministic sandbox.

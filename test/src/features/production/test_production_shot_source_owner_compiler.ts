@@ -38,8 +38,12 @@ export const test_production_shot_source_owner_compiler = (): void => {
     const sourceDigest = digestAutoMovieBytes(
       normalizeAutoMovieSource(Buffer.from(authoredShot)),
     );
-    const targetPath = "docs/screenplays/opening.md";
-    const targetAnchor = "opening";
+    const screenplay = project.screenplayIndex()!;
+    const scene = screenplay.screenplay.scenes.find(
+      (candidate) => candidate.id === contract.evidence?.[0]?.scene,
+    )!;
+    const targetPath = scene.path ?? screenplay.screenplay.path;
+    const targetAnchor = scene.id.toLowerCase();
     const runtimeBinding = {
       branch: "shots",
       stage: "review",
@@ -57,22 +61,6 @@ export const test_production_shot_source_owner_compiler = (): void => {
       ...runtimeBinding,
       exportName: "answer",
     };
-    const filmPath = "src/film.ts";
-    const filmTargetPath = "docs/screenplays/film.md";
-    const filmTargetAnchor = "film";
-    const filmFile = path.join(fixture.root, filmPath);
-    const authoredFilm = fs.readFileSync(filmFile, "utf8");
-    const filmBinding = {
-      ...runtimeBinding,
-      branch: "filmSources",
-      sourcePath: filmPath,
-      exportName: "film",
-      sourceDigest: digestAutoMovieBytes(
-        normalizeAutoMovieSource(Buffer.from(authoredFilm)),
-      ),
-      targetPath: filmTargetPath,
-      targetAnchor: filmTargetAnchor,
-    };
     const authoring = {
       root: fixture.root,
       packageName: "shot-owner-fixture",
@@ -81,7 +69,7 @@ export const test_production_shot_source_owner_compiler = (): void => {
       manifest: { kind: "film" },
       designBranches: [],
       designOwners: [],
-      sourceOwners: [runtimeBinding, acceptanceBinding, filmBinding],
+      sourceOwners: [runtimeBinding, acceptanceBinding],
       contracts: [],
     } as unknown as IAutoMovieProductionEvidence;
     const compiled = new AutoMovieProductionCompiler(
@@ -95,13 +83,6 @@ export const test_production_shot_source_owner_compiler = (): void => {
           ),
         ) as IAutoMovieCompiledShotSource)
       : null;
-    const film = compiled.success
-      ? (JSON.parse(
-          Buffer.from(
-            project.readGeneratedFile("contracts/film-edit.json"),
-          ).toString("utf8"),
-        ) as { source: { target?: string } })
-      : null;
     fs.writeFileSync(
       shotFile,
       rewriteSource(
@@ -112,21 +93,16 @@ export const test_production_shot_source_owner_compiler = (): void => {
     );
     const refused = new AutoMovieProductionCompiler(project, {
       ...authoring,
-      sourceOwners: [acceptanceBinding, filmBinding],
+      sourceOwners: [acceptanceBinding],
+    }).compile({ scope: "source" });
+    const wrongTarget = new AutoMovieProductionCompiler(project, {
+      ...authoring,
+      sourceOwners: [
+        { ...runtimeBinding, targetAnchor: `${targetAnchor}-other` },
+        acceptanceBinding,
+      ],
     }).compile({ scope: "source" });
     fs.writeFileSync(shotFile, authoredShot);
-    fs.writeFileSync(
-      filmFile,
-      rewriteSource(
-        authoredFilm,
-        "  build(context) {",
-        '  build(context) {\n    throw new Error("film owner gate executed the builder");',
-      ),
-    );
-    const refusedFilm = new AutoMovieProductionCompiler(project, {
-      ...authoring,
-      sourceOwners: [runtimeBinding, acceptanceBinding],
-    }).compile({ scope: "source" });
 
     TestValidator.equals(
       "the graph-selected runtime export is admitted and carried separately from acceptance attribution",
@@ -152,10 +128,6 @@ export const test_production_shot_source_owner_compiler = (): void => {
               `${targetPath}#${targetAnchor}`,
         ],
         [
-          "theFilmBuildAlsoCarriesItsSelectedTarget",
-          () => film?.source.target === `${filmTargetPath}#${filmTargetAnchor}`,
-        ],
-        [
           "aStoredPointerOutsideTheSelectedExportPopulationIsRefused",
           () =>
             refused.success === false &&
@@ -172,18 +144,17 @@ export const test_production_shot_source_owner_compiler = (): void => {
             ),
         ],
         [
-          "aFilmOutsideItsSelectedExportPopulationIsRefused",
+          "aReviewedExportForAnotherSceneCannotBorrowTheStoredPointer",
           () =>
-            refusedFilm.success === false &&
-            refusedFilm.diagnostics.some(
+            wrongTarget.success === false &&
+            wrongTarget.diagnostics.some(
               (diagnostic) =>
                 diagnostic.code === "source-owner-mismatch" &&
-                diagnostic.target === "film" &&
-                diagnostic.path === filmPath,
+                diagnostic.message.includes("not runtime owner"),
             ) &&
-            refusedFilm.diagnostics.every(
+            wrongTarget.diagnostics.every(
               (diagnostic) =>
-                diagnostic.message.includes("film owner gate executed") ===
+                diagnostic.message.includes("shot owner gate executed") ===
                 false,
             ),
         ],
@@ -192,9 +163,8 @@ export const test_production_shot_source_owner_compiler = (): void => {
         theExactRuntimeBindingCompiles: true,
         theGeneratedShotCarriesPathExportDigestAndTarget: true,
         aReviewedSiblingIsAttributionRatherThanTheRuntimeEntry: true,
-        theFilmBuildAlsoCarriesItsSelectedTarget: true,
         aStoredPointerOutsideTheSelectedExportPopulationIsRefused: true,
-        aFilmOutsideItsSelectedExportPopulationIsRefused: true,
+        aReviewedExportForAnotherSceneCannotBorrowTheStoredPointer: true,
       },
     );
   } finally {
