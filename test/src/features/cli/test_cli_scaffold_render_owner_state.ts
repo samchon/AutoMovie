@@ -175,6 +175,18 @@ export const test_cli_scaffold_render_owner_state = async (): Promise<void> => {
   fs.mkdirSync(scaffoldNodeModules, { recursive: true });
   const removeScaffoldPng = fs.existsSync(scaffoldPng) === false;
   if (removeScaffoldPng) fs.symlinkSync(installedPng, scaffoldPng, "junction");
+  const cleanupScaffoldDependency = (): void => {
+    if (removeScaffoldPng) {
+      if (
+        fs.lstatSync(scaffoldPng).isSymbolicLink() === false ||
+        fs.realpathSync.native(scaffoldPng) !==
+          fs.realpathSync.native(installedPng)
+      )
+        throw new Error("Scaffold PNG test dependency changed before cleanup.");
+      fs.unlinkSync(scaffoldPng);
+    }
+    if (removeScaffoldNodeModules) fs.rmdirSync(scaffoldNodeModules);
+  };
   let chunkRuntime: RenderChunkRuntimeModule;
   let dependencyLoadFailure: IScaffoldDependencyLoadFailure | undefined;
   try {
@@ -188,20 +200,10 @@ export const test_cli_scaffold_render_owner_state = async (): Promise<void> => {
     dependencyLoadFailure = { error };
     throw error;
   } finally {
-    preserveScaffoldDependencyCleanup(dependencyLoadFailure, () => {
-      if (removeScaffoldPng) {
-        if (
-          fs.lstatSync(scaffoldPng).isSymbolicLink() === false ||
-          fs.realpathSync.native(scaffoldPng) !==
-            fs.realpathSync.native(installedPng)
-        )
-          throw new Error(
-            "Scaffold PNG test dependency changed before cleanup.",
-          );
-        fs.unlinkSync(scaffoldPng);
-      }
-      if (removeScaffoldNodeModules) fs.rmdirSync(scaffoldNodeModules);
-    });
+    preserveScaffoldDependencyCleanup(
+      dependencyLoadFailure,
+      cleanupScaffoldDependency,
+    );
   }
   const chunkSnapshot = loadSourceModule<RenderChunkSnapshotModule>(
     path.resolve(
