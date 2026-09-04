@@ -12,23 +12,54 @@ import { TestValidator } from "@nestia/e2e";
 import fs from "node:fs";
 import path from "node:path";
 
-import { chorus } from "../../../fixtures/completed-film/src/formations/chorus";
-import { production } from "../../../fixtures/completed-film/src/production";
-import {
-  answer,
-  answerAcceptance,
-  opening,
-  openingAcceptance,
-} from "../../../fixtures/completed-film/src/shots/opening";
-import {
-  chorusFar,
-  chorusHero,
-  chorusNear,
-} from "../../../fixtures/completed-film/src/units/chorusHero";
-import { soloist } from "../../../fixtures/completed-film/src/units/soloist";
-import { plaza } from "../../../fixtures/completed-film/src/world/plaza";
+import { loadSourceModule } from "../internal/loadSourceModule";
 import { namedFacts } from "../internal/predicates";
 import { completedProductionFixture } from "./productionFixtures";
+
+type DesignOwner = { id: string; design: () => unknown };
+const { chorus } = loadSourceModule<{ chorus: DesignOwner }>(
+  path.resolve(
+    __dirname,
+    "../../../fixtures/completed-film/src/formations/chorus.ts",
+  ),
+);
+const { production } = loadSourceModule<{ production: { id: string } }>(
+  path.resolve(__dirname, "../../../fixtures/completed-film/src/production.ts"),
+);
+const { answer, answerAcceptance, opening, openingAcceptance } =
+  loadSourceModule<{
+    answer: { id: string; contract: IAutoMovieDefinedShotContract };
+    answerAcceptance: Array<{ id: string }>;
+    opening: { id: string; contract: IAutoMovieDefinedShotContract };
+    openingAcceptance: Array<{ id: string }>;
+  }>(
+    path.resolve(
+      __dirname,
+      "../../../fixtures/completed-film/src/shots/opening.ts",
+    ),
+  );
+const { chorusFar, chorusHero, chorusNear } = loadSourceModule<{
+  chorusFar: DesignOwner;
+  chorusHero: DesignOwner;
+  chorusNear: DesignOwner;
+}>(
+  path.resolve(
+    __dirname,
+    "../../../fixtures/completed-film/src/units/chorusHero.ts",
+  ),
+);
+const { soloist } = loadSourceModule<{ soloist: DesignOwner }>(
+  path.resolve(
+    __dirname,
+    "../../../fixtures/completed-film/src/units/soloist.ts",
+  ),
+);
+const { plaza } = loadSourceModule<{ plaza: { design: () => unknown } }>(
+  path.resolve(
+    __dirname,
+    "../../../fixtures/completed-film/src/world/plaza.ts",
+  ),
+);
 
 interface DerivedDesignRecord {
   target: IAutoMovieDesignTarget;

@@ -45,6 +45,7 @@ const WAVE_AUDIO_ASSET = {
   path: "assets/audio/tone.wav",
   digest: digest("c"),
   durationSeconds: 0.5,
+  sourceFrames: 24_000,
   sampleRate: 48_000,
   channels: 2,
   kind: "wave",
@@ -72,11 +73,27 @@ const WAVE_AUDIO_ASSET = {
   },
 } as const satisfies IAutoMovieProductionAudioAssetIdentity;
 
+const RESAMPLED_WAVE_AUDIO_ASSET = {
+  ...WAVE_AUDIO_ASSET,
+  sourceFrames: 12_000,
+  sampleRate: 24_000,
+  sourceFormat: {
+    ...WAVE_AUDIO_ASSET.sourceFormat,
+    sampleRate: 24_000,
+  },
+  processing: {
+    ...WAVE_AUDIO_ASSET.processing,
+    kind: "downmix-resample",
+    outputSampleRate: 48_000,
+  },
+} as const satisfies IAutoMovieProductionAudioAssetIdentity;
+
 const AUDIO_ASSET = {
   kind: "placeholder-audio-stem",
   path: "assets/audio/tone.wav",
   digest: digest("c"),
   durationSeconds: 0.5,
+  sourceFrames: 24_000,
   sampleRate: 48_000,
   channels: 2,
 } as const;
@@ -547,8 +564,11 @@ export const test_production_render_job_plan = (): void => {
   );
   TestValidator.equals(
     "WAVE source facts and processing survive render planning",
-    plan({ audioAssets: [WAVE_AUDIO_ASSET] }).tracks.audioAssets,
-    [WAVE_AUDIO_ASSET],
+    [
+      plan({ audioAssets: [WAVE_AUDIO_ASSET] }).tracks.audioAssets[0],
+      plan({ audioAssets: [RESAMPLED_WAVE_AUDIO_ASSET] }).tracks.audioAssets[0],
+    ],
+    [WAVE_AUDIO_ASSET, RESAMPLED_WAVE_AUDIO_ASSET],
   );
 
   TestValidator.equals(
@@ -671,6 +691,33 @@ export const test_production_render_job_plan = (): void => {
           ),
       ],
       [
+        "sourceFrameMismatch",
+        () =>
+          throwsError(
+            () =>
+              plan({
+                audioAssets: [
+                  {
+                    ...AUDIO_ASSET,
+                    sourceFrames: AUDIO_ASSET.sourceFrames + 1,
+                  },
+                ],
+              }),
+            "invalid identity, duration, sample rate, channels, or duplicate ownership",
+          ),
+      ],
+      [
+        "durationFrameMismatch",
+        () =>
+          throwsError(
+            () =>
+              plan({
+                audioAssets: [{ ...AUDIO_ASSET, durationSeconds: 0.25 }],
+              }),
+            "invalid identity, duration, sample rate, channels, or duplicate ownership",
+          ),
+      ],
+      [
         "contradictoryWaveLayout",
         () =>
           throwsError(
@@ -750,6 +797,25 @@ export const test_production_render_job_plan = (): void => {
           ),
       ],
       [
+        "nonCanonicalWaveOutputRate",
+        () =>
+          throwsError(
+            () =>
+              plan({
+                audioAssets: [
+                  {
+                    ...RESAMPLED_WAVE_AUDIO_ASSET,
+                    processing: {
+                      ...RESAMPLED_WAVE_AUDIO_ASSET.processing,
+                      outputSampleRate: 24_000,
+                    },
+                  },
+                ],
+              }),
+            "invalid identity, duration, sample rate, channels, or duplicate ownership",
+          ),
+      ],
+      [
         "ambiguousGuidePass",
         () =>
           throwsError(
@@ -769,10 +835,13 @@ export const test_production_render_job_plan = (): void => {
       clockDisagreement: true,
       unfingerprintedShot: true,
       unverifiedAudio: true,
+      sourceFrameMismatch: true,
+      durationFrameMismatch: true,
       contradictoryWaveLayout: true,
       unknownAudioKind: true,
       unknownWaveEncoding: true,
       unknownWaveLayoutSource: true,
+      nonCanonicalWaveOutputRate: true,
       ambiguousGuidePass: true,
     },
   );

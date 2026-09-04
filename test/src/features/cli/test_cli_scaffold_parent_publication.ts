@@ -271,7 +271,7 @@ export const test_cli_scaffold_parent_publication = (): void => {
         bytesWritten: schedule.bytesWritten,
         error: schedule.error,
         parentIdentity: parent.identity,
-        status: "partial",
+        status: "partial" as const,
       },
       sideEffects: { cleanup: 0, create: 1, write: 1 },
     })),

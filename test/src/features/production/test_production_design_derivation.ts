@@ -1,15 +1,60 @@
 import type { AutoMovieContentDigest } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
+import path from "node:path";
 
-import {
+import { loadSourceModule } from "../internal/loadSourceModule";
+import { namedFacts, throwsError } from "../internal/predicates";
+
+interface IAutoMovieDesignDerivationBasis {
+  protocol: string;
+  production: string;
+  target: string;
+  recordPath: string;
+  emitter: { path: string; digest: AutoMovieContentDigest };
+  source: { path: string; export: string; selector: string | null };
+  dependencies: Array<{ path: string; digest: AutoMovieContentDigest }>;
+  tool: { production: string; typescript: string; node: string };
+}
+interface IDerivationCandidate {
+  outputs: ReadonlyMap<string, Uint8Array>;
+  manifest: {
+    records: Array<{ basis: IAutoMovieDesignDerivationBasis }>;
+  };
+}
+const {
   AUTOMOVIE_DESIGN_DERIVATION_PROTOCOL,
   AutoMovieDesignDerivationError,
-  IAutoMovieDesignDerivationBasis,
   autoMovieDesignDerivationBasisDigest,
   createAutoMovieDesignDerivationCandidate,
   inspectAutoMovieDesignDerivation,
-} from "../../../../packages/production/src/production/designDerivation";
-import { namedFacts, throwsError } from "../internal/predicates";
+} = loadSourceModule<{
+  AUTOMOVIE_DESIGN_DERIVATION_PROTOCOL: string;
+  AutoMovieDesignDerivationError: new (
+    ...args: unknown[]
+  ) => Error & { code: string };
+  autoMovieDesignDerivationBasisDigest: (
+    basis: IAutoMovieDesignDerivationBasis,
+  ) => AutoMovieContentDigest;
+  createAutoMovieDesignDerivationCandidate: (props: {
+    bases: readonly IAutoMovieDesignDerivationBasis[];
+    evaluate: () => Array<{
+      target: string;
+      recordPath: string;
+      bytes: Uint8Array;
+    }>;
+    currentBases: () => readonly IAutoMovieDesignDerivationBasis[];
+  }) => IDerivationCandidate;
+  inspectAutoMovieDesignDerivation: (props: {
+    manifest: IDerivationCandidate["manifest"] | null;
+    bases: readonly IAutoMovieDesignDerivationBasis[];
+    readOutput: (path: string) => Uint8Array | null;
+  }) => Array<{ code: string }>;
+}>(
+  path.resolve(
+    __dirname,
+    "../../../../packages/production/src/production/designDerivation.ts",
+  ),
+);
 
 const digest = (digit: string): AutoMovieContentDigest =>
   `sha256:${digit.repeat(64)}` as AutoMovieContentDigest;

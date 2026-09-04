@@ -1,15 +1,12 @@
 import type { IAutoMovieProductionEvidence } from "@automovie/evidence";
-import { TestValidator } from "@nestia/e2e";
-
 import {
   digestAutoMovieBytes,
   normalizeAutoMovieSource,
-} from "../../../../packages/production/src/production/contentIdentity";
-import {
-  captureAutoMovieLibraryAuthoringSnapshot,
-  createAutoMovieLibrarySourceExecutionPlan,
-  sameAutoMovieLibraryAuthoringSnapshot,
-} from "../../../../packages/production/src/production/libraryAuthoringSnapshot";
+} from "@automovie/production";
+import { TestValidator } from "@nestia/e2e";
+import path from "node:path";
+
+import { loadSourceModule } from "../internal/loadSourceModule";
 import { namedFacts, throwsError } from "../internal/predicates";
 import {
   LIBRARY_ANCHOR,
@@ -17,6 +14,35 @@ import {
   LIBRARY_SOURCE,
   libraryAuthoring,
 } from "./libraryFixtures";
+
+type Snapshot = { digest: string };
+const {
+  captureAutoMovieLibraryAuthoringSnapshot,
+  createAutoMovieLibrarySourceExecutionPlan,
+  sameAutoMovieLibraryAuthoringSnapshot,
+} = loadSourceModule<{
+  captureAutoMovieLibraryAuthoringSnapshot: (props: {
+    root: string;
+    evidence: IAutoMovieProductionEvidence;
+    readSource: (file: string) => Uint8Array;
+  }) => Snapshot;
+  createAutoMovieLibrarySourceExecutionPlan: (
+    snapshot: Snapshot,
+    requireReview?: boolean,
+  ) => {
+    entries: Array<{ branch: string }>;
+    problems: string[];
+  };
+  sameAutoMovieLibraryAuthoringSnapshot: (
+    left: Snapshot,
+    right: Snapshot,
+  ) => boolean;
+}>(
+  path.resolve(
+    __dirname,
+    "../../../../packages/production/src/production/libraryAuthoringSnapshot.ts",
+  ),
+);
 
 const ROOT = "C:/automovie/library-snapshot";
 const SOURCE = "export const hall = 1;\n";

@@ -7,7 +7,6 @@ import {
   canonicalCoveragePath,
   isAuthoredExecutableSource,
   readMeasuredSource,
-  sameMeasuredSources,
   sourceDigest,
 } from "./coverageIdentity";
 
@@ -172,8 +171,3 @@ export const loadCoveragePublication = (
     sources: freezeSources(sources),
   });
 };
-
-export const publicationSourcesAreCurrent = (props: {
-  current: Readonly<Record<string, IMeasuredSource>>;
-  publication: ICoveragePublication;
-}): boolean => sameMeasuredSources(props.current, props.publication.sources);

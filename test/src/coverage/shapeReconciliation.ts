@@ -95,60 +95,6 @@ export const coveredPositions = (entry: ICoverageEntry): number =>
     .flat()
     .filter((hits) => hits > 0).length;
 
-/**
- * Per file, the reading that saw the most of it actually run.
- *
- * Each group's report is a truthful account of what its own processes executed,
- * so the fullest one never claims a position no process reached. It can still
- * fall short of a true union when two shapes ran disjoint halves, which is why
- * this is stated as the best available reading rather than the exact one — but
- * it is never worse than the merge it replaces, and on the measured case it is
- * exact.
- *
- * A file only one group knows about is taken from that group unchanged.
- */
-export const mostCoveredEntries = <T extends ICoverageEntry>(
-  reports: ReadonlyArray<Record<string, T>>,
-): Record<string, T> => {
-  const best: Record<string, T> = {};
-  for (const report of reports)
-    for (const [file, entry] of Object.entries(report)) {
-      const standing = best[file];
-      if (
-        standing === undefined ||
-        coveredPositions(entry) > coveredPositions(standing)
-      )
-        best[file] = entry;
-    }
-  return best;
-};
-
-/** Which source lines one entry says ran, per kind of position. */
-export const coveredLines = (
-  entry: ICoverageEntry,
-): {
-  branches: Set<number>;
-  functions: Set<number>;
-  statements: Set<number>;
-} => {
-  const statements = new Set<number>();
-  const functions = new Set<number>();
-  const branches = new Set<number>();
-  for (const [id, span] of Object.entries(entry.statementMap ?? {}))
-    if ((entry.s?.[id] ?? 0) > 0 && typeof span?.start?.line === "number")
-      statements.add(span.start.line);
-  for (const [id, span] of Object.entries(entry.fnMap ?? {}))
-    if ((entry.f?.[id] ?? 0) > 0 && typeof span?.loc?.start?.line === "number")
-      functions.add(span.loc.start.line);
-  for (const [id, span] of Object.entries(entry.branchMap ?? {})) {
-    const hits = entry.b?.[id] ?? [];
-    for (const [index, location] of (span?.locations ?? []).entries())
-      if ((hits[index] ?? 0) > 0 && typeof location?.start?.line === "number")
-        branches.add(location.start.line);
-  }
-  return { branches, functions, statements };
-};
-
 /** Exact declaration/position identities one reading says ran. */
 export const coveredIdentities = (
   entry: ICoverageEntry,

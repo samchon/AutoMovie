@@ -27,9 +27,6 @@ export const UNJUDGED_DECLARATION_GLOBS: readonly string[] = [
 ];
 
 const slash = (value: string): string => value.replaceAll("\\", "/");
-const byCodeUnit = (left: string, right: string): number =>
-  Number(left > right) - Number(left < right);
-
 /** Preserve case where the host filesystem does, fold only on Windows. */
 export const canonicalCoveragePath = (
   value: string,
@@ -177,23 +174,6 @@ export const coverageSourceAttribution = (props: {
     identity: null,
     reason: candidates.size > 1 ? "ambiguous" : "excluded",
   };
-};
-
-export const sameMeasuredSources = (
-  left: Readonly<Record<string, IMeasuredSource>>,
-  right: Readonly<Record<string, IMeasuredSource>>,
-): boolean => {
-  const leftKeys = Object.keys(left).sort(byCodeUnit);
-  const rightKeys = Object.keys(right).sort(byCodeUnit);
-  return (
-    leftKeys.length === rightKeys.length &&
-    leftKeys.every(
-      (key, index) =>
-        key === rightKeys[index] &&
-        left[key]?.lines === right[key]?.lines &&
-        left[key]?.sha256 === right[key]?.sha256,
-    )
-  );
 };
 
 export const readMeasuredSource = (file: string): IMeasuredSource => {

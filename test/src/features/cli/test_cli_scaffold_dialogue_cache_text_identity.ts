@@ -291,6 +291,16 @@ export const test_cli_scaffold_dialogue_cache_text_identity = (): void => {
     ],
     ["current", "integrity-failed"],
   );
+  TestValidator.equals(
+    "a stale record at the current target is an integrity failure, not a cache miss",
+    inspectProductionDialogueCache({
+      identity: identity("other"),
+      runtimeAssets,
+      selection,
+      read: () => currentSnapshot,
+    }).status,
+    "integrity-failed",
+  );
   for (const [status, failure] of [
     [
       "unavailable",

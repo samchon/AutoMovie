@@ -1,12 +1,28 @@
 import { TestValidator } from "@nestia/e2e";
+import path from "node:path";
 
-import {
+import { loadSourceModule } from "../internal/loadSourceModule";
+import { namedFacts } from "../internal/predicates";
+
+type Rule = {
+  emDash: "allow" | "forbid";
+  emoji: "allow" | "forbid";
+  spacedDoubleHyphen: "allow" | "forbid";
+};
+type InspectProps = { file: string; rule: Rule; source: string };
+const {
   AUTOMOVIE_PROSE_VOICE_RULE,
   inspectAutoMovieProseVoice,
   isAutoMovieProseVoicePath,
   repairAutoMovieProseVoice,
-} from "../../../../build/proseVoice";
-import { namedFacts } from "../internal/predicates";
+} = loadSourceModule<{
+  AUTOMOVIE_PROSE_VOICE_RULE: Rule;
+  inspectAutoMovieProseVoice: (
+    props: InspectProps,
+  ) => Array<{ kind: "emoji" | "em-dash" | "spaced-double-hyphen" }>;
+  isAutoMovieProseVoicePath: (relative: string) => boolean;
+  repairAutoMovieProseVoice: (props: InspectProps) => string;
+}>(path.resolve(__dirname, "../../../../build/proseVoice.ts"));
 
 /** Exercise the complete Markdown and TypeScript lexical boundary. */
 export const test_workspace_prose_voice = (): void => {
@@ -49,7 +65,7 @@ export const test_workspace_prose_voice = (): void => {
         () =>
           markdown
             .map((entry) => entry.kind)
-            .sort()
+            .sort((left, right) => Number(left > right) - Number(left < right))
             .join(",") === "em-dash,emoji,spaced-double-hyphen",
       ],
       ["Markdown code stays excluded", () => markdown.length === 3],
@@ -59,7 +75,7 @@ export const test_workspace_prose_voice = (): void => {
         () =>
           typescript
             .map((entry) => entry.kind)
-            .sort()
+            .sort((left, right) => Number(left > right) - Number(left < right))
             .join(",") === "em-dash,emoji,spaced-double-hyphen",
       ],
       [

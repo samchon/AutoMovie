@@ -225,10 +225,7 @@ try {
   );
   const missingLanguageContract = root();
   fs.rmSync(
-    path.join(
-      missingLanguageContract,
-      "docs/language/discovery/signals.md",
-    ),
+    path.join(missingLanguageContract, "docs/language/discovery/signals.md"),
   );
   assert.equal(
     throws(

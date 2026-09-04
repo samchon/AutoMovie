@@ -2287,6 +2287,20 @@ export const test_production_repaint_generator_adoption =
         },
         {
           ...accepted.receipt,
+          generatorProvenance: {
+            ...accepted.receipt.generatorProvenance,
+            source: "https://user:secret@models.example/repaint",
+          },
+        },
+        {
+          ...accepted.receipt,
+          generatorProvenance: {
+            ...accepted.receipt.generatorProvenance,
+            license: "https://[invalid",
+          },
+        },
+        {
+          ...accepted.receipt,
           parameters: {
             ...accepted.receipt.parameters,
             prompt: ` ${accepted.receipt.parameters.prompt}`,

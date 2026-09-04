@@ -162,6 +162,21 @@ export const test_production_chunk_video_assembly = async (): Promise<void> => {
       bytes: index === 1 ? chunks[index]! : assembled,
     })),
   });
+  const mixedClockRefusal = throwsError(() => {
+    const changedTimeline = {
+      ...rangeTimeline(),
+      fps: 2.000001,
+      frameRate: { numerator: 2_000_001, denominator: 1_000_000 },
+    };
+    conformProductionVisualDeliveryVideoMp4({
+      timeline: changedTimeline,
+      sources: changedTimeline.segments.map((segment, index) => ({
+        occurrence: productionVisualDeliveryOccurrence(segment, index),
+        lane: index === 1 ? ("repainted" as const) : ("deterministic" as const),
+        bytes: index === 1 ? chunks[index]! : assembled,
+      })),
+    });
+  }, "unsupported-video-profile.frameRate");
   TestValidator.equals(
     "a many-chunk assembly carries every source sample onto one continuous clock",
     namedFacts([
@@ -197,6 +212,7 @@ export const test_production_chunk_video_assembly = async (): Promise<void> => {
           return true;
         },
       ],
+      ["mixedLanesRequireTheExactRationalClock", () => mixedClockRefusal],
     ]),
     {
       theAssemblyCoversEveryFrame: true,
@@ -207,6 +223,7 @@ export const test_production_chunk_video_assembly = async (): Promise<void> => {
       theAssemblyIsSampleIdenticalToTheSameRangesConformed: true,
       theAssemblyIsNotOneChunkVerbatim: true,
       explicitMixedLanesPreserveTheSameSamples: true,
+      mixedLanesRequireTheExactRationalClock: true,
     },
   );
 

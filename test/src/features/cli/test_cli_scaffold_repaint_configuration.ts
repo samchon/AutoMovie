@@ -41,6 +41,10 @@ interface IRepaintSelection {
 }
 
 interface IConfigurationModule {
+  readProductionDialogueSynthesis: (
+    selected: unknown,
+    occurredAt?: Date | string,
+  ) => unknown;
   readProductionRepaintSelection: (
     selected: unknown,
     occurredAt?: Date | string,
@@ -361,6 +365,68 @@ export const test_cli_scaffold_repaint_configuration =
 
     const runtime = authored.generator.runtimeIdentity;
     const provenance = authored.generator.generatorProvenance;
+    const dialogue = {
+      provider: "kokoro-local-v1",
+      model: "onnx-community/Kokoro-82M-v1.0-ONNX",
+      modelRevision: "1939ad2a8e416c0acfeecc08a694d14ef25f2231",
+      dtype: "q8",
+      device: "cpu",
+      voice: "af_heart",
+      speed: 1,
+      generatorProvenance: {
+        source: "https://models.example/kokoro",
+        license: "Apache-2.0",
+        termsCheckedAt: "2026-08-28",
+        cost: "local compute",
+        consumer: {
+          kind: "dialogue-synthesis",
+          reason: "the screenplay contains authored dialogue",
+        },
+      },
+    } as const;
+    TestValidator.equals(
+      "dialogue provenance admits a credential-free URL and non-URL license identifier",
+      configuration.readProductionDialogueSynthesis(dialogue, OCCURRED_AT),
+      dialogue,
+    );
+    TestValidator.predicate(
+      "dialogue provenance refuses credential-bearing and malformed absolute locators",
+      [
+        {
+          ...dialogue,
+          generatorProvenance: {
+            ...dialogue.generatorProvenance,
+            source: "https://user:secret@models.example/kokoro",
+          },
+        },
+        {
+          ...dialogue,
+          generatorProvenance: {
+            ...dialogue.generatorProvenance,
+            source: "https://[invalid",
+          },
+        },
+        {
+          ...dialogue,
+          generatorProvenance: {
+            ...dialogue.generatorProvenance,
+            license: "https://user:secret@licenses.example/kokoro",
+          },
+        },
+        {
+          ...dialogue,
+          generatorProvenance: {
+            ...dialogue.generatorProvenance,
+            license: "https://[invalid",
+          },
+        },
+      ].every(
+        (value) =>
+          messageOf(() =>
+            configuration.readProductionDialogueSynthesis(value, OCCURRED_AT),
+          ) !== null,
+      ),
+    );
     const exactAndGeneratorFailures: unknown[] = [
       undefined,
       [],
@@ -406,7 +472,11 @@ export const test_cli_scaffold_repaint_configuration =
       ...[
         ["source", ""],
         ["source", " padded "],
+        ["source", "https://user:secret@models.example/repaint"],
+        ["source", "https://[invalid"],
         ["license", ""],
+        ["license", "https://user:secret@licenses.example/repaint"],
+        ["license", "https://[invalid"],
         ["termsCheckedAt", "today"],
         ["termsCheckedAt", "2026-02-30"],
         ["cost", ""],

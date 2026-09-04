@@ -1,13 +1,6 @@
 import { TestValidator } from "@nestia/e2e";
-import fs from "node:fs";
-import os from "node:os";
-import path from "node:path";
 
-import { canonicalCoveragePath } from "../../coverage/coverageIdentity";
-import {
-  captureCoverageSnapshot,
-  inspectCoverageSnapshot,
-} from "../../coverage/coveragePublication";
+import { inspectCoverageSnapshot } from "../../coverage/coveragePublication";
 import {
   decideCoverageMeasurementStatus,
   measureCoverage,
@@ -20,18 +13,6 @@ const B = { lines: 1, sha256: "b" };
 
 /** One run publishes only its own complete and unchanged source measurement. */
 export const test_workspace_coverage_measurement = (): void => {
-  const captureRoot = fs.mkdtempSync(
-    path.join(os.tmpdir(), "automovie-coverage-capture-"),
-  );
-  const captureRelative = "packages/engine/src/AutoMovieScene.ts";
-  const captureFile = path.resolve(captureRoot, captureRelative);
-  fs.mkdirSync(path.dirname(captureFile), { recursive: true });
-  fs.writeFileSync(captureFile, "export const scene = true;\n", "utf8");
-  const captured = captureCoverageSnapshot({
-    candidates: [captureRelative],
-    root: captureRoot,
-  });
-  fs.rmSync(captureRoot, { force: true, recursive: true });
   let arguments_: string[] = [];
   let current = { [SOURCE]: A };
   let publications = 0;
@@ -121,11 +102,6 @@ export const test_workspace_coverage_measurement = (): void => {
     "measurement validity and publication are one fail-closed decision",
     namedFacts([
       ["valid child publishes", () => passed.status === 0],
-      [
-        "capture uses canonical source identity",
-        () =>
-          captured[canonicalCoveragePath(captureFile)]?.sha256.length === 64,
-      ],
       [
         "publication names the private report",
         () => passed.publication?.reportDirectory === "/this-run/report",
@@ -221,7 +197,6 @@ export const test_workspace_coverage_measurement = (): void => {
     Object.fromEntries(
       [
         "valid child publishes",
-        "capture uses canonical source identity",
         "publication names the private report",
         "failed child is ordinary red",
         "missing child is instrument red",

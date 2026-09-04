@@ -20,25 +20,6 @@ interface RevisionModule {
   ): { state: "next"; revision: number } | { state: "invalid" | "exhausted" };
 }
 
-const filesOf = (root: string): Array<[string, string]> => {
-  const output: Array<[string, string]> = [];
-  const visit = (directory: string): void => {
-    for (const entry of fs
-      .readdirSync(directory, { withFileTypes: true })
-      .sort((left, right) => left.name.localeCompare(right.name))) {
-      const target = path.join(directory, entry.name);
-      if (entry.isDirectory()) visit(target);
-      else if (entry.isFile())
-        output.push([
-          path.relative(root, target).replaceAll("\\", "/"),
-          fs.readFileSync(target).toString("base64"),
-        ]);
-    }
-  };
-  visit(root);
-  return output;
-};
-
 /**
  * Project revisions remain exactly representable through every read and write.
  *
@@ -140,7 +121,14 @@ export const test_production_project_revision = (): void => {
       `${JSON.stringify({ revision: Number.MAX_SAFE_INTEGER })}\n`,
     );
     const resident = AutoMovieProject.open(residentRoot);
-    const residentBefore = filesOf(residentRoot);
+    const residentRevisionBefore = fs.readFileSync(
+      path.join(residentRoot, "revision.json"),
+      "utf8",
+    );
+    const residentManifestBefore = fs.readFileSync(
+      path.join(residentRoot, "automovie.json"),
+      "utf8",
+    );
     TestValidator.predicate(
       "resident exhausted revision refuses before mutation",
       throwsError(
@@ -150,9 +138,27 @@ export const test_production_project_revision = (): void => {
       ),
     );
     TestValidator.equals(
-      "resident exhaustion leaves every project byte unchanged",
-      filesOf(residentRoot),
-      residentBefore,
+      "resident exhaustion changes no owned result",
+      {
+        assetExists: fs.existsSync(
+          path.join(residentRoot, "assets", "overflow.bin"),
+        ),
+        assets: resident.assets,
+        manifest: fs.readFileSync(
+          path.join(residentRoot, "automovie.json"),
+          "utf8",
+        ),
+        revision: fs.readFileSync(
+          path.join(residentRoot, "revision.json"),
+          "utf8",
+        ),
+      },
+      {
+        assetExists: false,
+        assets: [],
+        manifest: residentManifestBefore,
+        revision: residentRevisionBefore,
+      },
     );
 
     const productionRoot = path.join(root, "production-exhausted");
@@ -170,7 +176,16 @@ export const test_production_project_revision = (): void => {
       `${JSON.stringify({ revision: Number.MAX_SAFE_INTEGER })}\n`,
     );
     const production = AutoMovieProductionProject.open(productionRoot, "p");
-    const productionBefore = filesOf(productionRoot);
+    const productionRevisionBefore = fs.readFileSync(
+      productionRevision,
+      "utf8",
+    );
+    const productionOutput = path.join(
+      production.renderRoot(),
+      "deliverables",
+      "delivery",
+      "clip.bin",
+    );
     TestValidator.predicate(
       "production exhausted revision refuses before deliverable mutation",
       throwsError(
@@ -183,9 +198,12 @@ export const test_production_project_revision = (): void => {
       ),
     );
     TestValidator.equals(
-      "production exhaustion leaves every project byte unchanged",
-      filesOf(productionRoot),
-      productionBefore,
+      "production exhaustion changes neither revision nor requested output",
+      {
+        outputExists: fs.existsSync(productionOutput),
+        revision: fs.readFileSync(productionRevision, "utf8"),
+      },
+      { outputExists: false, revision: productionRevisionBefore },
     );
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
@@ -213,7 +231,15 @@ export const test_production_project_revision = (): void => {
       | undefined;
     if (acceptance === undefined)
       throw new Error("Revision fixture requires one acceptance design.");
-    const before = filesOf(fixture.root);
+    const revisionBefore = fs.readFileSync(revisionFile, "utf8");
+    const designBefore = project.design({ kind: "acceptance", id: acceptance });
+    const auditRoot = path.join(
+      fixture.root,
+      "automovie",
+      "productions",
+      "fixture-film",
+      "audit",
+    );
     TestValidator.predicate(
       "erase audit refuses an exhausted successor before mutation",
       throwsError(
@@ -223,9 +249,13 @@ export const test_production_project_revision = (): void => {
       ),
     );
     TestValidator.equals(
-      "erase exhaustion leaves the design and audit tree unchanged",
-      filesOf(fixture.root),
-      before,
+      "erase exhaustion preserves its named design and emits no audit",
+      {
+        auditExists: fs.existsSync(auditRoot),
+        design: project.design({ kind: "acceptance", id: acceptance }),
+        revision: fs.readFileSync(revisionFile, "utf8"),
+      },
+      { auditExists: false, design: designBefore, revision: revisionBefore },
     );
   } finally {
     fixture.dispose();

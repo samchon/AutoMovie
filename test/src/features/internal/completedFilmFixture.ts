@@ -13,7 +13,7 @@ const FIXTURE = path.resolve(__dirname, "../../../fixtures/completed-film");
 export const completedFilmEvidenceConfig = (
   root: string,
 ): IAutoMovieEvidenceConfigProps => ({
-  ...createBlankAutoMovieProductionEvidence(root, "en"),
+  ...createBlankAutoMovieProductionEvidence(root, "english"),
   kind: "film",
   settings: "review",
   models: "review",
@@ -54,9 +54,10 @@ export const renderCompletedFilmFixture = (
   name: string,
   scaffold: (props: {
     name: string;
+    language: "english";
   }) => Record<string, string> = renderScaffold,
 ): Record<string, string> => {
-  const rendered = scaffold({ name });
+  const rendered = scaffold({ name, language: "english" });
   for (const absolute of files(FIXTURE)) {
     const legacyRelative = path
       .relative(FIXTURE, absolute)

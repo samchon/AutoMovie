@@ -3,9 +3,9 @@ import type {
   IAutoMovieGeneratedManifest,
   IAutoMovieMaterializedLibrary,
 } from "@automovie/interface";
+import { inspectAutoMovieLibraryProjectState } from "@automovie/production";
 import { TestValidator } from "@nestia/e2e";
 
-import { inspectAutoMovieLibraryProjectState } from "../../../../packages/production/src/production/libraryProjectState";
 import { namedFacts } from "../internal/predicates";
 import {
   LIBRARY_ANCHOR,

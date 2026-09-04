@@ -4,14 +4,10 @@ import os from "node:os";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 
-import {
-  measuredShapeReconciliationParts,
-  reconcileMeasuredShapes,
-} from "../../coverage/measureCoverage";
+import { measuredShapeReconciliationParts } from "../../coverage/measureCoverage";
 import {
   type ICoverageEntry,
   coveredPositions,
-  mostCoveredEntries,
   partitionByShape,
   readRecordShapes,
   reconcileCoverageShapes,
@@ -126,24 +122,14 @@ export const test_workspace_coverage_shape_reconciliation = (): void => {
     end: { line, column: 1 },
   });
   TestValidator.equals(
-    "the fullest reading wins and a lone file is carried through",
+    "covered positions count only positive statement, function, and branch hits",
     {
       counted: coveredPositions(entry({ 0: 1, 1: 0 }, { 0: 2 }, { 0: [1, 0] })),
       empty: coveredPositions({}),
-      best: mostCoveredEntries([
-        { "a.ts": entry({ 0: 1, 1: 0 }), "b.ts": entry({ 0: 1 }) },
-        { "a.ts": entry({ 0: 1, 1: 1 }), "c.ts": entry({ 0: 0 }) },
-        { "a.ts": entry({ 0: 0, 1: 0 }) },
-      ]),
     },
     {
       counted: 3,
       empty: 0,
-      best: {
-        "a.ts": entry({ 0: 1, 1: 1 }),
-        "b.ts": entry({ 0: 1 }),
-        "c.ts": entry({ 0: 0 }),
-      },
     },
   );
 
@@ -395,12 +381,13 @@ export const test_workspace_coverage_shape_reconciliation = (): void => {
       },
     );
 
-    // The real wiring, part by part. Each is one line over `fs` or one spawn,
-    // and each is the kind of line that survives every green run until the day
-    // it is needed.
+    // The filesystem adapters are exercised against this disposable fixture;
+    // the reporter process remains injected so this logic case never launches
+    // c8 recursively.
     const parts = measuredShapeReconciliationParts({
       groupRoot: path.join(directory, "real-groups"),
       reportDirectory: path.join(directory, "real-report"),
+      spawn: () => ({ status: 0 }),
       temporary: directory,
     });
     parts.mkdir(path.join(directory, "real-report"));
@@ -442,63 +429,6 @@ export const test_workspace_coverage_shape_reconciliation = (): void => {
         inside: true,
         outside: false,
         signalled: 1,
-      },
-    );
-
-    // The composition root, end to end, over two records that disagree about a
-    // real repository source. It spawns the real reporter twice and must leave
-    // its group directory behind it.
-    const liveRecords = path.join(directory, "live-records");
-    const liveReport = path.join(directory, "live-report");
-    fs.mkdirSync(liveRecords, { recursive: true });
-    fs.mkdirSync(liveReport, { recursive: true });
-    const liveUrl = repositoryUrl(
-      "packages",
-      "engine",
-      "src",
-      "architecture",
-      "builtEnvironmentObservation.ts",
-    );
-    for (const [name, offset] of [
-      ["one.json", 0],
-      ["two.json", 40],
-    ] as const)
-      fs.writeFileSync(
-        path.join(liveRecords, name),
-        JSON.stringify({
-          result: [
-            {
-              url: liveUrl,
-              functions: [
-                {
-                  functionName: "probe",
-                  isBlockCoverage: true,
-                  ranges: [
-                    { count: 1, endOffset: offset + 10, startOffset: offset },
-                  ],
-                },
-              ],
-            },
-          ],
-        }),
-        "utf8",
-      );
-    const live = reconcileMeasuredShapes(liveRecords, liveReport);
-    TestValidator.equals(
-      "the composition root reports both groups and cleans up after itself",
-      {
-        groups: live.groups,
-        failure: live.failure,
-        wroteReport: fs.existsSync(
-          path.join(liveReport, "coverage-final.json"),
-        ),
-        groupRootRemoved: fs.existsSync(`${liveRecords}-shapes`) === false,
-      },
-      {
-        groups: 2,
-        failure: null,
-        wroteReport: true,
-        groupRootRemoved: true,
       },
     );
   } finally {

@@ -271,27 +271,30 @@ export const test_production_render_gc = async (): Promise<void> => {
       publicationPaths,
       candidates: [entry],
     });
-    return ([
-      ["retain", result.retain],
-      ["remove", result.remove],
-      ["quarantine", result.quarantine],
-      ["manual-adjudication", result.manualAdjudication],
-    ] as const).find(([, set]) => set.length === 1)![0];
+    return (
+      [
+        ["retain", result.retain],
+        ["remove", result.remove],
+        ["quarantine", result.quarantine],
+        ["manual-adjudication", result.manualAdjudication],
+      ] as const
+    ).find(([, set]) => set.length === 1)![0];
   };
   TestValidator.equals(
     "every render-artifact state has one fail-closed cleanup disposition",
     {
-      current: disposition(
-        observed("publication/current", "current", "none"),
-        ["publication/current"],
-      ),
+      current: disposition(observed("publication/current", "current", "none"), [
+        "publication/current",
+      ]),
       currentWithoutReference: disposition(
         observed("publication/unreferenced-current", "current", "none"),
       ),
-      absent: disposition(observed("publication/absent", "absent", "none", {
-        bytes: null,
-        generation: null,
-      })),
+      absent: disposition(
+        observed("publication/absent", "absent", "none", {
+          bytes: null,
+          generation: null,
+        }),
+      ),
       stale: disposition(
         observed("publication/stale", "verified-stale", "exact-remove"),
       ),
@@ -396,13 +399,7 @@ export const test_production_render_gc = async (): Promise<void> => {
     "every typed failure stage survives one reasoned cleanup decision",
     stages.map((stage) =>
       disposition(
-        observed(
-          `publication/stage-${stage}`,
-          "current",
-          "none",
-          {},
-          stage,
-        ),
+        observed(`publication/stage-${stage}`, "current", "none", {}, stage),
         [`publication/stage-${stage}`],
       ),
     ),

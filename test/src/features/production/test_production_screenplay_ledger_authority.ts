@@ -62,7 +62,9 @@ const index = (): IAutoMovieScreenplayIndex => ({
       {
         id: "CHAR-1",
         name: "Character",
-        evidence: [{ scene: "SCN-1" }],
+        evidence: [
+          { scene: "SCN-1", reason: "The scene names the character." },
+        ],
         bindings: [],
       },
     ],
@@ -71,7 +73,7 @@ const index = (): IAutoMovieScreenplayIndex => ({
       {
         id: "LOC-1",
         name: "Location",
-        evidence: [{ scene: "SCN-1" }],
+        evidence: [{ scene: "SCN-1", reason: "The scene names the location." }],
         bindings: [],
       },
     ],
@@ -81,8 +83,8 @@ const index = (): IAutoMovieScreenplayIndex => ({
 
 const run = (screenplay: IAutoMovieScreenplayIndex): IAutoMovieDiagnostic[] =>
   screenplayLedgerDiagnostics({
-    acceptance: new Map(),
-    contracts: new Map(),
+    acceptance: new Map<string, never>(),
+    contracts: new Map<string, never>(),
     screenplay,
     designRecordPath: () => "design.json",
   });

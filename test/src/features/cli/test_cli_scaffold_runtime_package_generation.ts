@@ -335,6 +335,29 @@ export const test_cli_scaffold_runtime_package_generation =
       combined = error;
     }
     const errors = combined instanceof AggregateError ? combined.errors : [];
+    operationState.snapshot.current = true;
+    let undefinedThrown = false;
+    let undefinedFailure: unknown = "not-thrown";
+    try {
+      await runRuntimePackageGeneration(operationHandle, () => {
+        // eslint-disable-next-line typescript/only-throw-error -- the runtime boundary must preserve even an undefined host failure
+        throw undefined;
+      });
+    } catch (error) {
+      undefinedThrown = true;
+      undefinedFailure = error;
+    }
+    operationState.snapshot.current = true;
+    let undefinedCombined: unknown;
+    try {
+      await runRuntimePackageGeneration(operationHandle, () => {
+        operationState.snapshot.current = false;
+        // eslint-disable-next-line typescript/only-throw-error -- the aggregate must retain an undefined operation failure
+        throw undefined;
+      });
+    } catch (error) {
+      undefinedCombined = error;
+    }
     TestValidator.equals(
       "operations are fenced on both sides and preserve dual failure order",
       {
@@ -346,6 +369,17 @@ export const test_cli_scaffold_runtime_package_generation =
         messages: errors.map((error) =>
           error instanceof Error ? error.message : String(error),
         ),
+        undefinedThrown,
+        undefinedFailure,
+        undefinedAggregate: undefinedCombined instanceof AggregateError,
+        undefinedCause:
+          undefinedCombined instanceof AggregateError
+            ? undefinedCombined.cause
+            : "not-aggregate",
+        undefinedFirst:
+          undefinedCombined instanceof AggregateError
+            ? undefinedCombined.errors[0]
+            : "not-aggregate",
       },
       {
         success: 2,
@@ -354,6 +388,11 @@ export const test_cli_scaffold_runtime_package_generation =
         operationOnly: true,
         aggregate: true,
         messages: ["operation failed", "snapshot generation changed"],
+        undefinedThrown: true,
+        undefinedFailure: undefined,
+        undefinedAggregate: true,
+        undefinedCause: undefined,
+        undefinedFirst: undefined,
       },
     );
 

@@ -1,7 +1,24 @@
 import type { IAutoMovieProductionEvidence } from "@automovie/evidence";
 import { TestValidator } from "@nestia/e2e";
+import path from "node:path";
 
-import { resolveAutoMovieTimedAuthoringKind } from "../../../../packages/production/src/production/timedAuthoringKind";
+import { loadSourceModule } from "../internal/loadSourceModule";
+
+const { resolveAutoMovieTimedAuthoringKind } = loadSourceModule<{
+  resolveAutoMovieTimedAuthoringKind: (
+    evidence: IAutoMovieProductionEvidence | undefined,
+  ) => {
+    kind: "brief" | "film" | "legacy-film";
+    ownerBranch: "briefs" | "screenplays";
+    screenplayRequired: boolean;
+    evidenceBound: boolean;
+  } | null;
+}>(
+  path.resolve(
+    __dirname,
+    "../../../../packages/production/src/production/timedAuthoringKind.ts",
+  ),
+);
 
 const evidence = (kind: "brief" | "film" | "library") =>
   ({ manifest: { kind } }) as IAutoMovieProductionEvidence;

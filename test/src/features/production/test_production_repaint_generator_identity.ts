@@ -131,7 +131,17 @@ export const test_production_repaint_generator_identity = (): void => {
     { ...provenance, credential: "must-not-enter-provenance" },
     { ...provenance, source: "" },
     { ...provenance, source: " padded " },
+    {
+      ...provenance,
+      source: "https://user:secret@models.example/repaint-model",
+    },
+    { ...provenance, source: "https://[invalid" },
     { ...provenance, license: "" },
+    {
+      ...provenance,
+      license: "https://license-user:secret@licenses.example/repaint",
+    },
+    { ...provenance, license: "https://[invalid" },
     { ...provenance, termsCheckedAt: "today" },
     { ...provenance, termsCheckedAt: "2026-02-30" },
     { ...provenance, cost: "" },

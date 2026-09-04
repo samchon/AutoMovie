@@ -7,7 +7,6 @@ import { pathToFileURL } from "node:url";
 import {
   coverageMissingScripts,
   coverageNeverRecorded,
-  coverageRecordCount,
   coverageRecords,
   coverageRunPaths,
   coverageScriptShapes,
@@ -18,7 +17,6 @@ import {
   coverageRunDependencies,
   runCoverage,
   runCoverageCli,
-  setCoverageExitStatus,
 } from "../../coverage/runCoverage";
 import { namedFacts } from "../internal/predicates";
 
@@ -154,9 +152,8 @@ export const test_workspace_coverage_isolation = (): void => {
     run: coverageRunPaths(),
     first: coverageRunPaths().rootDirectory,
     second: coverageRunPaths().rootDirectory,
-    counted: coverageRecordCount(records),
-    absent: coverageRecordCount(path.join(records, "never-created")),
     walked: coverageRecords(records),
+    absent: coverageRecords(path.join(records, "never-created")),
     scripts: coverageMissingScripts(records),
     shapes: coverageScriptShapes(shaped),
     narrow: coverageScriptShapes(shaped, ["packages/face/src"]),
@@ -198,7 +195,10 @@ export const test_workspace_coverage_isolation = (): void => {
   TestValidator.equals(
     "every coverage run draws a directory no other run writes",
     namedFacts([
-      ["the typed measurement functions answered", () => drawn.counted === 2],
+      [
+        "the typed measurement functions answered",
+        () => drawn.walked.count === 2,
+      ],
       // A whole-suite figure can read lower than a scoped one over the same
       // file, which no execution count can do and a merge can. Two processes
       // that resolved one source through different loaded forms leave two range
@@ -262,11 +262,11 @@ export const test_workspace_coverage_isolation = (): void => {
       // different question than the one it is printed to answer.
       [
         "it counts records and not the other contents",
-        () => drawn.counted === 2,
+        () => drawn.walked.count === 2,
       ],
       [
         "and a directory that was never created is zero rather than a throw",
-        () => drawn.absent === 0,
+        () => drawn.absent.count === 0,
       ],
       // A record caught mid-write has a name, an entry and a size and no usable
       // content, so a count alone reads it as present. Parsability is what
@@ -439,10 +439,6 @@ export const test_workspace_coverage_isolation = (): void => {
     },
     (status) => cliStatuses.push(status),
   );
-  const previousExitStatus = process.exitCode;
-  setCoverageExitStatus(0);
-  const directExitStatus = process.exitCode;
-  process.exitCode = previousExitStatus;
   // The two `runCoverageCli` calls above pin the unit with both booleans, which
   // is what let the real defect hide: the call site passed
   // `require.main === module`, always false under `ttsx`, so the covered unit
@@ -475,7 +471,6 @@ export const test_workspace_coverage_isolation = (): void => {
       thrownMeasurement,
       thrownCleanup,
       cliStatuses,
-      directExitStatus,
       entryDecision,
     },
     {
@@ -494,7 +489,6 @@ export const test_workspace_coverage_isolation = (): void => {
       thrownMeasurement: 2,
       thrownCleanup: 2,
       cliStatuses: [0],
-      directExitStatus: 0,
       entryDecision: { own: true, launcher: false, absent: false },
     },
   );

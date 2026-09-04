@@ -172,26 +172,6 @@ export const coverageRunPaths = (): ICoverageRunPaths => {
   };
 };
 
-/*
- * One run's own scratch directory, exported so the invariant can be tested.
- *
- * The process id alone is not enough. It is recycled, and a run killed before
- * its cleanup leaves a directory behind for whichever later process happens to
- * draw the same number — which is the stale-merge half of the same defect, and
- * would reappear the first time a run were interrupted. The random suffix is
- * what makes two calls distinct even inside one process, which is the property
- * `test_workspace_coverage_isolation` actually measures.
- */
-/**
- * How many per-process coverage records a run left in its own directory.
- *
- * Counts the files V8 writes, one per process that exited under the collector,
- * and nothing else: the directory is this run's alone, so anything that is not
- * a record is not part of this measurement.
- */
-export const coverageRecordCount = (directory: string): number =>
-  coverageRecords(directory).count;
-
 /**
  * What a run's own record directory holds, counted three ways.
  *

@@ -1,7 +1,12 @@
 import {
   acquireCommitLock,
+  currentAutoMovieLocalProcessOwner,
+  describeCommitLockHolder,
   inspectCommitLock,
+  isAutoMovieLocalProcessOwner,
+  observeAutoMovieLocalProcessOwner,
   releaseCommitLock,
+  withAutoMovieLocalProcessQuery,
 } from "@automovie/production";
 import { TestValidator } from "@nestia/e2e";
 import fs from "node:fs";
@@ -9,6 +14,10 @@ import os from "node:os";
 import path from "node:path";
 
 import { loadSourceModule } from "../internal/loadSourceModule";
+import {
+  createTestFileSystem,
+  withTestFileSystem,
+} from "../internal/testFileSystem";
 
 interface ILocalOwner {
   host: string;
@@ -26,16 +35,6 @@ type LocalOwnerObservation =
       owner: ILocalOwner | null;
       reason: "invalid-owner" | "process-query-unavailable";
     };
-
-interface OwnerModule {
-  currentAutoMovieLocalProcessOwner(): ILocalOwner;
-  isAutoMovieLocalProcessOwner(value: unknown): value is ILocalOwner;
-  observeAutoMovieLocalProcessOwner(props: {
-    owner: unknown;
-    current: ILocalOwner;
-    query: (pid: number, signal: 0) => unknown;
-  }): LocalOwnerObservation;
-}
 
 interface RenderOwnerModule {
   observeRenderOwnerRecovery(props: {
@@ -55,22 +54,6 @@ const GENERATION_B = "22222222-2222-4222-8222-222222222222";
 const platformError = (code: string): Error =>
   Object.assign(new Error(code), { code });
 
-const withCommitProcessQuery = <T>(
-  query: (pid: number, signal: 0) => unknown,
-  task: () => T,
-): T => {
-  const original = process.kill;
-  process.kill = ((pid: number, signal?: NodeJS.Signals | number): true => {
-    query(pid, signal as 0);
-    return true;
-  }) as typeof process.kill;
-  try {
-    return task();
-  } finally {
-    process.kill = original;
-  }
-};
-
 /**
  * Local owner claims never exceed process-generation evidence.
  *
@@ -86,16 +69,10 @@ const withCommitProcessQuery = <T>(
  * 4. The temporary-tree owner suffix round-trips the complete descriptor and
  *    rejects malformed or non-canonical encodings.
  * 5. Commit inspection returns `null` only for genuine absence, preserves an
- *    unreadable path as unknown, validates timestamp and owner fields before a
- *    query, and recognizes this exact process generation.
+ *    unreadable path as unknown, validates owner fields before a query, and a
+ *    failed release read restores re-entrant ownership after an exact retry.
  */
 export const test_production_local_process_owner = (): void => {
-  const ownerModule = loadSourceModule<OwnerModule>(
-    path.resolve(
-      __dirname,
-      "../../../../packages/production/src/project/localProcessOwner.ts",
-    ),
-  );
   const renderOwnerModule = loadSourceModule<RenderOwnerModule>(
     path.resolve(
       __dirname,
@@ -110,8 +87,8 @@ export const test_production_local_process_owner = (): void => {
   );
 
   const current = { host: "host-a", pid: 17, generation: GENERATION_A };
-  const stableA = ownerModule.currentAutoMovieLocalProcessOwner();
-  const stableB = ownerModule.currentAutoMovieLocalProcessOwner();
+  const stableA = currentAutoMovieLocalProcessOwner();
+  const stableB = currentAutoMovieLocalProcessOwner();
   TestValidator.equals(
     "current process generation is stable",
     stableB,
@@ -119,8 +96,30 @@ export const test_production_local_process_owner = (): void => {
   );
   TestValidator.equals(
     "current process owner is valid",
-    ownerModule.isAutoMovieLocalProcessOwner(stableA),
+    isAutoMovieLocalProcessOwner(stableA),
     true,
+  );
+  TestValidator.equals(
+    "host identity admits the 255-byte boundary and refuses longer or control-bearing names",
+    [
+      isAutoMovieLocalProcessOwner({
+        ...current,
+        host: "h".repeat(255),
+      }),
+      isAutoMovieLocalProcessOwner({
+        ...current,
+        host: "h".repeat(256),
+      }),
+      isAutoMovieLocalProcessOwner({
+        ...current,
+        host: "bad\nhost",
+      }),
+      isAutoMovieLocalProcessOwner({
+        ...current,
+        host: "bad\u2028host",
+      }),
+    ],
+    [true, false, false, false],
   );
 
   let invalidQueries = 0;
@@ -129,6 +128,8 @@ export const test_production_local_process_owner = (): void => {
     {},
     { host: "", pid: 1, generation: GENERATION_A },
     { host: " host-a", pid: 1, generation: GENERATION_A },
+    { host: "h".repeat(256), pid: 1, generation: GENERATION_A },
+    { host: "bad\nhost", pid: 1, generation: GENERATION_A },
     { host: "host-a", pid: 0, generation: GENERATION_A },
     { host: "host-a", pid: -1, generation: GENERATION_A },
     { host: "host-a", pid: 1.5, generation: GENERATION_A },
@@ -143,7 +144,7 @@ export const test_production_local_process_owner = (): void => {
   TestValidator.equals(
     "malformed owners refuse as unknown",
     malformed.map((owner) =>
-      ownerModule.observeAutoMovieLocalProcessOwner({
+      observeAutoMovieLocalProcessOwner({
         owner,
         current,
         query: () => {
@@ -164,7 +165,7 @@ export const test_production_local_process_owner = (): void => {
   );
   TestValidator.equals(
     "an invalid observing owner also refuses before query",
-    ownerModule.observeAutoMovieLocalProcessOwner({
+    observeAutoMovieLocalProcessOwner({
       owner: current,
       current: { ...current, pid: 0 },
       query: () => {
@@ -178,7 +179,7 @@ export const test_production_local_process_owner = (): void => {
   const observe = (
     owner: unknown,
     query: (pid: number, signal: 0) => unknown,
-  ) => ownerModule.observeAutoMovieLocalProcessOwner({ owner, current, query });
+  ) => observeAutoMovieLocalProcessOwner({ owner, current, query });
   const anotherPid = { ...current, pid: 23 };
   const reusedPid = { ...current, generation: GENERATION_B };
   const maxPid = { ...current, pid: Number.MAX_SAFE_INTEGER };
@@ -205,6 +206,15 @@ export const test_production_local_process_owner = (): void => {
       observe(anotherPid, () => {
         throw platformError("EIO");
       }),
+      observe(anotherPid, () => {
+        const hostile = new Error("hostile query failure");
+        Object.defineProperty(hostile, "code", {
+          get: () => {
+            throw new Error("code unavailable");
+          },
+        });
+        throw hostile;
+      }),
     ].map((result) => result.state),
     [
       "same-owner",
@@ -213,6 +223,7 @@ export const test_production_local_process_owner = (): void => {
       "occupied-or-reused",
       "occupied-or-reused",
       "occupied-or-reused",
+      "unknown",
       "unknown",
       "unknown",
     ],
@@ -266,6 +277,14 @@ export const test_production_local_process_owner = (): void => {
     "temporary owner suffix round trips",
     renderProcessOwnerModule.parseRenderProcessOwnerSuffix(suffix),
     current,
+  );
+  TestValidator.predicate(
+    "foreign host diagnostics JSON-escape valid punctuation",
+    describeCommitLockHolder({
+      path: "synthetic.lock",
+      owner: { ...current, host: 'host-"quoted"', at: Date.now() },
+      state: "elsewhere",
+    }).includes('host "host-\\"quoted\\""'),
   );
   TestValidator.equals(
     "malformed temporary owner suffixes refuse",
@@ -348,63 +367,39 @@ export const test_production_local_process_owner = (): void => {
       nonce: "0",
     })}`;
     fs.writeFileSync(observed, observedToken);
+    const inspectWith = (query: (pid: number, signal: 0) => unknown) =>
+      withAutoMovieLocalProcessQuery(
+        query,
+        () => inspectCommitLock(observed)?.state,
+      );
     TestValidator.equals(
-      "commit inspection preserves all injected process observations",
+      "commit inspection preserves injected process observations",
       [
-        withCommitProcessQuery(
-          () => undefined,
-          () => inspectCommitLock(observed)?.state,
-        ),
-        withCommitProcessQuery(
-          () => {
-            throw platformError("EPERM");
-          },
-          () => inspectCommitLock(observed)?.state,
-        ),
-        withCommitProcessQuery(
-          () => {
-            throw platformError("ESRCH");
-          },
-          () => inspectCommitLock(observed)?.state,
-        ),
-        withCommitProcessQuery(
-          () => {
-            throw platformError("EINVAL");
-          },
-          () => inspectCommitLock(observed)?.state,
-        ),
+        inspectWith(() => undefined),
+        inspectWith(() => {
+          throw platformError("EPERM");
+        }),
+        inspectWith(() => {
+          throw platformError("ESRCH");
+        }),
+        inspectWith(() => {
+          throw platformError("EINVAL");
+        }),
       ],
       ["occupied-or-reused", "occupied-or-reused", "absent", "unknown"],
     );
-
-    let malformedCommitQueries = 0;
-    withCommitProcessQuery(
-      () => ++malformedCommitQueries,
-      () => inspectCommitLock(path.join(root, "invalid-0.lock")),
-    );
-    TestValidator.equals(
-      "malformed commit owner refuses before process query",
-      malformedCommitQueries,
-      0,
-    );
-
-    const reclaimed = withCommitProcessQuery(
+    const reclaimed = withAutoMovieLocalProcessQuery(
       () => {
         throw platformError("ESRCH");
       },
       () => acquireCommitLock(observed),
     );
     TestValidator.predicate(
-      "commit acquisition replaces an unchanged twice-absent owner",
+      "commit acquisition replaces only an unchanged twice-absent owner",
       reclaimed !== observedToken &&
         fs.readFileSync(observed, "utf8") === reclaimed,
     );
     releaseCommitLock(observed, reclaimed);
-    TestValidator.equals(
-      "reclaimed commit lock releases by its successor token",
-      fs.existsSync(observed),
-      false,
-    );
 
     const same = path.join(root, "same.lock");
     fs.writeFileSync(
@@ -415,6 +410,36 @@ export const test_production_local_process_owner = (): void => {
       "commit lock recognizes this exact process generation",
       inspectCommitLock(same),
       { path: same, owner: { ...stableA, at: 0 }, state: "same-owner" },
+    );
+
+    const retry = path.join(root, "release-retry.lock");
+    const retryToken = acquireCommitLock(retry);
+    const nativeLstat = fs.lstatSync;
+    let lstatCalls = 0;
+    const injected = createTestFileSystem({
+      lstatSync: ((...args: unknown[]) => {
+        if (++lstatCalls === 1) throw platformError("EIO");
+        return Reflect.apply(nativeLstat, fs, args);
+      }) as typeof fs.lstatSync,
+    });
+    withTestFileSystem(injected.fileSystem, () =>
+      releaseCommitLock(retry, retryToken),
+    );
+    const reentered = acquireCommitLock(retry);
+    TestValidator.equals(
+      "a failed release read restores ownership only after an exact fresh read",
+      {
+        sameToken: reentered === retryToken,
+        resident: fs.readFileSync(retry, "utf8") === retryToken,
+        retried: lstatCalls > 1,
+      },
+      { sameToken: true, resident: true, retried: true },
+    );
+    releaseCommitLock(retry, reentered);
+    TestValidator.equals(
+      "the restored pending owner removes the exact resident on its next release",
+      fs.existsSync(retry),
+      false,
     );
   } finally {
     fs.rmSync(root, { recursive: true, force: true });

@@ -78,6 +78,7 @@ export const test_production_asset_url_admission = (): void => {
       "https://us%65r:sec%72et@assets.example/image.png",
       { field: "original", reason: "credential-bearing" },
     ],
+    ["https://[invalid", { field: "original", reason: "malformed" }],
     ["not a url", { field: "original", reason: "malformed" }],
     [
       "file:///assets/image.png",
@@ -114,11 +115,15 @@ export const test_production_asset_url_admission = (): void => {
         ...generated,
         license: { ...generated.license, url: licenseSecret },
       }),
+      admission.assetUrlAdmissionRefusal(
+        withUrls(fetched.original.url, "https://[invalid"),
+      ),
       admission.assetUrlAdmissionRefusal(generated),
     ],
     [
       { field: "license", reason: "credential-bearing" },
       { field: "license", reason: "credential-bearing" },
+      { field: "license", reason: "malformed" },
       null,
     ],
   );
@@ -173,20 +178,18 @@ export const test_production_asset_url_admission = (): void => {
           provenance: rejectedSource.diagnostics.some(
             (entry) => entry.code === "asset-provenance-incomplete",
           ),
-          materialized: rejectedSource.materialized,
         },
         license: {
           success: rejectedLicense.success,
           provenance: rejectedLicense.diagnostics.some(
             (entry) => entry.code === "asset-provenance-incomplete",
           ),
-          materialized: rejectedLicense.materialized,
         },
       },
       {
         cleanProvenanceRefusal: false,
-        source: { success: false, provenance: true, materialized: [] },
-        license: { success: false, provenance: true, materialized: [] },
+        source: { success: false, provenance: true },
+        license: { success: false, provenance: true },
       },
     );
     TestValidator.predicate(

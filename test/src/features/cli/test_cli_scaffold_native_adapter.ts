@@ -178,7 +178,7 @@ const execute = (scenario: INativeScenario) => {
       ? !scenario.parentCloseFails
       : !scenario.childCloseFails,
   );
-  const openOsHandle = callable((...arguments_: unknown[]) => {
+  const openOsHandle = callable(() => {
     childAdoptions++;
     if (scenario.childAdoptionThrows && childAdoptions === 1)
       throw new Error("child adoption threw");
@@ -398,7 +398,7 @@ export const test_cli_scaffold_native_adapter = (): void => {
     "completed",
     "completed",
     "refused:create-failed",
-  ] as const;
+  ];
   const summarize = (outcome: (typeof outcomes)[number]["first"]): string =>
     outcome.status === "refused"
       ? `${outcome.status}:${outcome.reason}`

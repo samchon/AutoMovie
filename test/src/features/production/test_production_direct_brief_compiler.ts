@@ -1,4 +1,8 @@
-import type { IAutoMovieProductionEvidence } from "@automovie/evidence";
+import {
+  type IAutoMovieProductionEvidence,
+  createAutoMovieContractBindingManifest,
+  createBlankAutoMovieProductionEvidence,
+} from "@automovie/evidence";
 import {
   AutoMovieProductionCompiler,
   AutoMovieProductionProject,
@@ -16,6 +20,10 @@ const evidence = (
   root: string,
   kind: "brief" | "film",
 ): IAutoMovieProductionEvidence => {
+  const configuration = {
+    ...createBlankAutoMovieProductionEvidence(root, "english"),
+    kind,
+  };
   const owner = (props: {
     branch: "filmSources" | "shots";
     sourcePath: string;
@@ -45,8 +53,8 @@ const evidence = (
     root,
     packageName: "fixture-film",
     description: "timed compiler fixture",
-    configuration: {},
-    manifest: { kind },
+    configuration,
+    manifest: createAutoMovieContractBindingManifest(configuration),
     designBranches: [],
     designOwners: [],
     sourceOwners: [
@@ -64,7 +72,9 @@ const evidence = (
       }),
     ],
     contracts: [],
-  } as IAutoMovieProductionEvidence;
+    contractRules: [],
+    reviewAlarms: { alarms: [], questionPasteChecked: false },
+  };
 };
 
 /**

@@ -8,11 +8,7 @@ import {
 import { TestValidator } from "@nestia/e2e";
 
 import { namedFacts } from "../internal/predicates";
-import {
-  LIBRARY_SOURCE,
-  libraryAuthoring,
-  libraryFixture,
-} from "./libraryFixtures";
+import { libraryAuthoring, libraryFixture } from "./libraryFixtures";
 
 const PRODUCTION_SOURCE = "src/production/delivery.ts";
 const PRODUCTION_OWNER = "docs/settings/production.md#delivery";

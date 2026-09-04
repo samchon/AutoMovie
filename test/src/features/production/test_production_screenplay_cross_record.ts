@@ -40,7 +40,13 @@ const contract = (): IAutoMovieShotContract =>
     id: "SHOT-1",
     beat: "BEAT-1",
     source: { module: "src/shots/one.ts", export: "one" },
-    evidence: [{ scene: "SCN-1", claim: "CLAIM-1" }],
+    evidence: [
+      {
+        scene: "SCN-1",
+        claim: "CLAIM-1",
+        reason: "The scene carries the claim.",
+      },
+    ],
     durationSeconds: 4,
     participants: [
       { kind: "actor", id: "MODEL-1" },
@@ -75,10 +81,20 @@ const geometryRealization = (
         ? [{ id: "STATE-1", predicates: [], passed: true }]
         : [],
     events:
-      kind === "event" ? [{ id: "STATE-1", predicates: [], passed: true }] : [],
+      kind === "event"
+        ? [{ id: "STATE-1", time: 2, predicates: [], passed: true }]
+        : [],
     formations:
       kind === "formation"
-        ? [{ id: "STATE-1", predicates: [], passed: true }]
+        ? [
+            {
+              id: "STATE-1",
+              count: 1,
+              min: { x: 0, y: 0, z: 0 },
+              max: { x: 1, y: 1, z: 1 },
+              passed: true,
+            },
+          ]
         : [],
   }) as IAutoMovieCompiledContractRealization;
 
@@ -112,7 +128,9 @@ const screenplay = (): IAutoMovieScreenplayIndex =>
         {
           id: "CHARACTER-1",
           name: "Character",
-          evidence: [{ scene: "SCN-1" }],
+          evidence: [
+            { scene: "SCN-1", reason: "The scene names the character." },
+          ],
           bindings: [{ kind: "model", id: "MODEL-1" }],
         },
       ],
@@ -120,7 +138,9 @@ const screenplay = (): IAutoMovieScreenplayIndex =>
         {
           id: "FACTION-1",
           name: "Faction",
-          evidence: [{ scene: "SCN-1" }],
+          evidence: [
+            { scene: "SCN-1", reason: "The scene names the faction." },
+          ],
           bindings: [{ kind: "formation", id: "FORMATION-1" }],
         },
       ],
@@ -128,7 +148,9 @@ const screenplay = (): IAutoMovieScreenplayIndex =>
         {
           id: "LOCATION-1",
           name: "Location",
-          evidence: [{ scene: "SCN-1" }],
+          evidence: [
+            { scene: "SCN-1", reason: "The scene names the location." },
+          ],
           bindings: [{ kind: "world-landmark", id: "LANDMARK-1" }],
         },
       ],
@@ -143,7 +165,12 @@ const screenplay = (): IAutoMovieScreenplayIndex =>
           shot: "SHOT-1",
           outcome: { kind: "opening", id: "STATE-1" },
         },
-        evidence: [{ scene: "SCN-1" }],
+        evidence: [
+          {
+            scene: "SCN-1",
+            reason: "The continuity state belongs to the scene.",
+          },
+        ],
       },
     ],
   }) as IAutoMovieScreenplayIndex;
@@ -217,13 +244,17 @@ export const test_production_screenplay_cross_record = (): void => {
   repeatedTarget.catalog.characters.push({
     id: "CHARACTER-2",
     name: "Second",
-    evidence: [{ scene: "SCN-1" }],
+    evidence: [
+      { scene: "SCN-1", reason: "The second character belongs to the scene." },
+    ],
     bindings: [{ kind: "model", id: "MODEL-1" }],
   });
   const unboundShot = contract();
   unboundShot.participants = [{ kind: "actor", id: "MODEL-OTHER" }];
   const noCitation = contract();
-  noCitation.evidence = [{ scene: "SCN-1" }];
+  noCitation.evidence = [
+    { scene: "SCN-1", reason: "This contract deliberately cites no claim." },
+  ];
   const noShots = copy();
   noShots.screenplay.lock = null;
   noShots.continuity = [];
@@ -247,7 +278,13 @@ export const test_production_screenplay_cross_record = (): void => {
           expectation: "The state is visible.",
         },
         required: true,
-        evidence: [{ scene: "SCN-1", claim: "CLAIM-1" }],
+        evidence: [
+          {
+            scene: "SCN-1",
+            claim: "CLAIM-1",
+            reason: "The review scenario proves the claim.",
+          },
+        ],
       },
     ],
   ]);
@@ -278,7 +315,13 @@ export const test_production_screenplay_cross_record = (): void => {
           value: 1,
         },
         required: true,
-        evidence: [{ scene: "SCN-1", claim: "CLAIM-1" }],
+        evidence: [
+          {
+            scene: "SCN-1",
+            claim: "CLAIM-1",
+            reason: "The acceptance scenario proves the claim.",
+          },
+        ],
       },
     ],
   ]);
@@ -472,7 +515,14 @@ export const test_production_screenplay_cross_record = (): void => {
           code(
             run({
               screenplay: reviewProof,
-              graph: reviewVariant({ evidence: [{ scene: "SCN-1" }] }),
+              graph: reviewVariant({
+                evidence: [
+                  {
+                    scene: "SCN-1",
+                    reason: "This scenario deliberately cites no claim.",
+                  },
+                ],
+              }),
             }),
             "screenplay-continuity-proof-absent",
           ),

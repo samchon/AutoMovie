@@ -2,6 +2,8 @@ import type { AutoMovieContentDigest } from "@automovie/interface";
 import {
   type IAutoMovieProductionRenderJobPlan,
   assertProductionRenderPublicationCurrent,
+  canonicalAutoMovieJsonBytes,
+  digestAutoMovieBytes,
   parseProductionRenderPublicationIdentity,
   productionRenderPublicationIdentity,
 } from "@automovie/production";
@@ -17,7 +19,7 @@ const plan = (
   kind: "proxy" | "final",
   sourceDigest: AutoMovieContentDigest = digest("1"),
 ): IAutoMovieProductionRenderJobPlan => ({
-  version: 3,
+  version: 4,
   productionId: "publication-film",
   compileFingerprint: digest("2"),
   editFingerprint: digest("3"),
@@ -69,7 +71,7 @@ const plan = (
       frames: [],
     },
   ],
-  tracks: { captions: "WEBVTT\n", audio: [], audioAssets: [] },
+  tracks: { captions: "WEBVTT\n", audio: [], audioAssets: [], effects: [] },
 });
 
 /**
@@ -130,6 +132,27 @@ export const test_production_publication_runtime_identity = (): void => {
           }, "does not match the current final render plan"),
       ],
       [
+        "effectDrift",
+        () =>
+          throwsError(() => {
+            const { fingerprint: _fingerprint, ...basis } = finalIdentity;
+            const changedBasis = {
+              ...basis,
+              tracks: { ...basis.tracks, effects: digest("9") },
+            };
+            const changed = {
+              ...changedBasis,
+              fingerprint: digestAutoMovieBytes(
+                canonicalAutoMovieJsonBytes(changedBasis),
+              ),
+            };
+            assertProductionRenderPublicationCurrent({
+              identity: changed,
+              plan: finalPlan,
+            });
+          }, "does not match the current final render plan"),
+      ],
+      [
         "forgedFingerprint",
         () =>
           throwsError(
@@ -166,6 +189,7 @@ export const test_production_publication_runtime_identity = (): void => {
     {
       runtimeDrift: true,
       chunkFrameDrift: true,
+      effectDrift: true,
       forgedFingerprint: true,
       missingRuntime: true,
       unknownField: true,

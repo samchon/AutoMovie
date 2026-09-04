@@ -817,13 +817,13 @@ const CONTRACTS: readonly IContractFixture[] = [
         title: "Layer-substantive completion",
         anchor: "substantive-completion",
       },
-        {
-          title: "Evidence-content conformance",
-          anchor: "evidence-content-conformance",
-        },
-        {
-          title: "Machine default",
-          anchor: "machine-default",
+      {
+        title: "Evidence-content conformance",
+        anchor: "evidence-content-conformance",
+      },
+      {
+        title: "Machine default",
+        anchor: "machine-default",
       },
       {
         title: "Declared basis",
