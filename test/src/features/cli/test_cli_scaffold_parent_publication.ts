@@ -265,7 +265,7 @@ export const test_cli_scaffold_parent_publication = (): void => {
             bytes: [0, 127, 255].slice(0, schedule.bytesWritten),
             identity: "slot-1",
           },
-        ],
+        ] satisfies [string, IFakePublishedFile],
       ],
       result: {
         bytesWritten: schedule.bytesWritten,

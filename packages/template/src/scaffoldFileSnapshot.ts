@@ -398,7 +398,8 @@ const overwriteScaffoldFile = (props: {
     });
   }
   const progress = { bytesWritten: 0 };
-  let failure: unknown | undefined;
+  let failure: unknown = undefined;
+  let mutated = false;
   let completedSnapshot: IScaffoldFileSnapshot | null = null;
   try {
     const opened = fs.fstatSync(descriptor, { bigint: true });
@@ -410,6 +411,7 @@ const overwriteScaffoldFile = (props: {
     );
     assertScaffoldOwnership(props.base, props.parent);
     fs.ftruncateSync(descriptor, 0);
+    mutated = true;
     writeScaffoldDescriptor(descriptor, props.target, props.bytes, progress);
     const completed = fs.fstatSync(descriptor, { bigint: true });
     if (completed.size !== BigInt(props.bytes.byteLength))
@@ -451,6 +453,12 @@ const overwriteScaffoldFile = (props: {
     } catch (error) {
       failure = error;
     }
+  if (failure !== undefined && mutated === false)
+    return Object.freeze({
+      error: failure,
+      reason: "create-failed" as const,
+      status: "refused" as const,
+    });
   return failure === undefined
     ? Object.freeze({
         parentIdentity: props.parent.identity,
@@ -572,7 +580,7 @@ const writeScaffoldDescriptor = (
 };
 
 const combineScaffoldFailures = (
-  first: unknown | undefined,
+  first: unknown,
   second: unknown,
   resource: string,
 ): unknown =>

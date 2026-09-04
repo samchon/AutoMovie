@@ -1,5 +1,7 @@
+import { listAutoMovieDiagnosticCatalog } from "@automovie/production";
 import {
   renderScaffold,
+  validateAutoMovieInstructionLink,
   validateAutoMovieSkillRouterLinks,
 } from "@automovie/template";
 import { TestValidator } from "@nestia/e2e";
@@ -29,7 +31,7 @@ export const test_cli_scaffold_skill_router_links = (): void => {
     {
       path: ".agents/skills/topic/SKILL.md",
       content:
-        "---\nname: topic\n---\n\n# Topic\n\nRead [index](index.md#route) and [docs](../../../docs/README.md).\n",
+        "---\nname: topic\n---\n\n# Topic\n\nRead [this route](#topic), [index](index.md#route), and [docs](../../../docs/README.md).\n",
     },
     {
       path: ".agents/skills/topic/index.md",
@@ -41,13 +43,21 @@ export const test_cli_scaffold_skill_router_links = (): void => {
   TestValidator.predicate(
     "the rendered blank scaffold carries only valid skill routers",
     (() => {
-      const scaffold = renderScaffold({ name: "router-film", language: "english" });
+      const scaffold = renderScaffold({
+        name: "router-film",
+        language: "english",
+      });
+      const sources = Object.entries(scaffold)
+        .filter(([file]) => file.endsWith(".md"))
+        .map(([path, content]) => ({ path, content }));
       try {
-        validateAutoMovieSkillRouterLinks(
-          Object.entries(scaffold)
-            .filter(([file]) => file.endsWith(".md"))
-            .map(([path, content]) => ({ path, content })),
-        );
+        validateAutoMovieSkillRouterLinks(sources);
+        for (const entry of listAutoMovieDiagnosticCatalog())
+          validateAutoMovieInstructionLink(
+            sources,
+            "AGENTS.md",
+            entry.reference.path,
+          );
         return true;
       } catch {
         return false;
@@ -60,6 +70,10 @@ export const test_cli_scaffold_skill_router_links = (): void => {
       escape: messageOf([
         ...valid.slice(1),
         { path: ".agents/skills/topic/SKILL.md", content: "# Topic\n\n[bad](../../../../outside.md)\n" },
+      ]).includes("escapes its project root"),
+      drive: messageOf([
+        ...valid.slice(1),
+        { path: ".agents/skills/topic/SKILL.md", content: "# Topic\n\n[bad](C:/outside.md)\n" },
       ]).includes("escapes its project root"),
       file: messageOf([
         ...valid.slice(1),
@@ -80,6 +94,7 @@ export const test_cli_scaffold_skill_router_links = (): void => {
     },
     {
       escape: true,
+      drive: true,
       file: true,
       anchor: true,
       directoryAnchor: true,

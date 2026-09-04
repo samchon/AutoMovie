@@ -3,7 +3,7 @@
 Scaffold an [automovie](https://github.com/samchon/automovie) project.
 
 ```bash
-npx create-automovie my-film
+npx create-automovie my-film --language english
 npx automovie migrate legacy-film --dry-run
 npx automovie migrate legacy-film
 ```
@@ -11,7 +11,7 @@ npx automovie migrate legacy-film
 Lays down an empty production-authoring scaffold with both ways to drive the engine:
 
 - ordinary Markdown for settings, design, and prose contracts, plus TypeScript for their source owners, shots, motion, effects, and tests;
-- a shipped authoring skill under `.agents/skills/production/` that teaches how to author each layer, and the shared contracts the evidence graph cites; and
+- five shipped routers under `.agents/skills/` that locate the contract inventory, production lifecycle, evidence graph, source-authoring procedure, and review-verification procedure; and
 - a local viewer and Playwright capture path that render compiler-owned output.
 
 The coding agent owns `src`, `docs`, `test`, `public`, the production-owned emitter, and the hand-authored screenplay index. That emitter materializes the other tracked `automovie/design` records; correct source and regenerate them rather than editing derived records. AutoMovie owns `generated`, compiler and render state, fingerprints, and receipts. The scaffold keeps long-form authoring in files rather than in anything a model would have to serialize through a call, and it contains no pre-authored production or inherited evidence tags.

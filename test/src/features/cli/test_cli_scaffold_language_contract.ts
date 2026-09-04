@@ -1,8 +1,10 @@
+import { createBlankAutoMovieProductionEvidence } from "@automovie/evidence";
 import {
   AUTO_MOVIE_PRODUCTION_LANGUAGES,
   autoMovieLanguageContractsDirectory,
   renderAutoMovieLanguageContracts,
   renderScaffold,
+  writeAutoMovieProductionInstructions,
 } from "@automovie/template";
 import { TestValidator } from "@nestia/e2e";
 import * as fs from "node:fs";
@@ -113,6 +115,27 @@ export const test_cli_scaffold_language_contract = (): void => {
         `${language} declaration`,
         scaffold["lint.config.ts"]!.includes(`language: "${language}"`),
       );
+      if (language === "english") {
+        const project = path.join(root, "first-sync");
+        for (const [relative, content] of Object.entries(scaffold)) {
+          const target = path.join(project, relative);
+          fs.mkdirSync(path.dirname(target), { recursive: true });
+          fs.writeFileSync(target, content);
+        }
+        const first = fs.readFileSync(path.join(project, "AGENTS.md"), "utf8");
+        writeAutoMovieProductionInstructions({
+          root: project,
+          productionEvidence: createBlankAutoMovieProductionEvidence(
+            project,
+            language,
+          ),
+        });
+        TestValidator.equals(
+          "first instruction render equals first synchronization",
+          fs.readFileSync(path.join(project, "AGENTS.md"), "utf8"),
+          first,
+        );
+      }
     }
 
     TestValidator.error("unknown language", () =>

@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import path from "node:path";
 
 import {
   createAutoMovieContractBindingManifest,
@@ -6,12 +7,10 @@ import {
 } from "../src";
 
 /** The blank declaration is complete, explicit, and selects no graph branch. */
-const blank = createBlankAutoMovieProductionEvidence(
-  "/project",
-  "english",
-);
+const location = path.resolve(".");
+const blank = createBlankAutoMovieProductionEvidence(location, "english");
 const entries = Object.entries(blank);
-assert.equal(blank.location, "/project");
+assert.equal(blank.location, location);
 assert.equal(blank.language, "english");
 assert.equal(blank.kind, null);
 assert.deepEqual(blank.populationScope, { mode: "complete-production" });
