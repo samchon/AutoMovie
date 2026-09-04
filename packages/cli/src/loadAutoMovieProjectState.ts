@@ -23,6 +23,7 @@ import {
   AutoMovieProductionProject,
   IAutoMovieProductionDesignGraph,
   digestAutoMovieBytes,
+  encodeAutoMoviePathSegment,
   inspectAutoMovieLibraryProjectState,
 } from "@automovie/production";
 import path from "node:path";
@@ -790,6 +791,30 @@ export const loadAutoMovieProjectState = (
         });
       else runtimeModels.set(model.id, model);
     }
+    if (library !== null)
+      for (const owner of library.owners) {
+        for (const id of owner.environments)
+          if (libraryEnvironments.has(id) === false)
+            problems.push({
+              code: "library-owner-mismatch",
+              path: `library/environments/${encodeAutoMoviePathSegment(id)}.json`,
+              message: `Library index environment "${id}" does not match the id inside its digest-verified record.`,
+            });
+        for (const id of owner.contexts ?? [])
+          if (libraryContexts.has(id) === false)
+            problems.push({
+              code: "library-owner-mismatch",
+              path: `library/contexts/${encodeAutoMoviePathSegment(id)}.json`,
+              message: `Library index context "${id}" does not match the id inside its digest-verified record.`,
+            });
+        for (const id of owner.models)
+          if (runtimeModels.has(id) === false)
+            problems.push({
+              code: "library-owner-mismatch",
+              path: `models/${encodeAutoMoviePathSegment(id)}.json`,
+              message: `Library index model "${id}" does not match the id inside its digest-verified record.`,
+            });
+      }
   } else if (
     manifest !== null &&
     manifest.files.some(
