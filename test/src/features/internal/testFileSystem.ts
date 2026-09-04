@@ -36,7 +36,7 @@ export const createTestFileSystem = (
       Reflect.get(faults, property),
     ]),
   );
-  const fileSystem = new Proxy(fs, {
+  const fileSystem = new Proxy({} as typeof fs, {
     get: (target, property) => {
       const value = overrides.has(property)
         ? overrides.get(property)

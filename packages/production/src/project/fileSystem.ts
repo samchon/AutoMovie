@@ -17,7 +17,10 @@ export const withAutoMovieFileSystem = <T>(
 ): T => storage.run(fileSystem, task);
 
 /** Namespace-compatible dispatcher used by production modules. */
-export const autoMovieFileSystem: AutoMovieFileSystem = new Proxy(fs, {
-  get: (_target, property) =>
-    Reflect.get(currentAutoMovieFileSystem(), property),
-});
+export const autoMovieFileSystem: AutoMovieFileSystem = new Proxy(
+  {} as AutoMovieFileSystem,
+  {
+    get: (_target, property) =>
+      Reflect.get(currentAutoMovieFileSystem(), property),
+  },
+);
