@@ -66,7 +66,7 @@ Repository requirement-specification-source graph에서는 `evidence/review`를 
 
 ## 기존 건물 실험 적용
 
-[modern-suburban-house baseline](../../.agents/skills/experiment/baselines/modern-suburban-house.md)과 #1952에 교차표를 적용했다. 제외된 벤치마크 #2110을 다시 실행하지 않고 이미 기록된 brief, compiled counts, report와 driver 관찰만 사용했다.
+[modern-suburban-house baseline](../../experiments/baselines/modern-suburban-house.md)과 #1952에 교차표를 적용했다. 제외된 벤치마크 #2110을 다시 실행하지 않고 이미 기록된 brief, compiled counts, report와 driver 관찰만 사용했다.
 
 | 관찰 | 교차표 판정 |
 | --- | --- |
