@@ -26,7 +26,7 @@ Every screenplay H2, H3, and H4 sustains the production-recognizable expressive 
 
 Review question: what relation among image, text, sound, silence, action, and transition makes this unit belong recognizably to this production, and what authored change justifies each departure?
 
-This item owns the screenplay's patterned expressive stance. The common production-language obligation owns the working language of the authored document, the common machine-default principle owns whether the writing was decided at all, dialogue and sound voice owns the identity and relational function of particular sources, audiovisual selection owns whether each perceptible detail earns inclusion, and settings own the production-wide grammar this layer realizes.
+This item owns the screenplay's patterned expressive stance. The common production-language obligation owns the working language of the authored document, the composition-safe defaults own whether local rhetorical choices perform literal work, dialogue and sound voice owns the identity and relational function of particular sources, audiovisual selection owns whether each perceptible detail earns inclusion, and settings own the production-wide grammar this layer realizes.
 
 Sources: [Bordwell on films as patterned systems that guide spectator construction](https://www.routledge.com/Narration-in-the-Fiction-Film/Bordwell/p/book/9780415018777); [Chion on sound and image forming one audiovisual mode of perception](https://cup.columbia.edu/book/audio-vision-sound-on-screen/9780231185882/)
 

@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import { AutoMovieLegacyImporter } from "@automovie/production";
 import {
+  type AutoMovieProductionLanguage,
   isAutoMovieProductionLanguage,
   renderScaffold,
   writeFiles,
@@ -56,6 +57,46 @@ const projectNameOf = (targetDir: string): string =>
     .toLowerCase()
     .replace(/[^a-z0-9._-]+/g, "-")
     .replace(/^[-.]+|[-.]+$/g, "") || "automovie-project";
+
+/** Parse the closed start-command surface without mistaking option values for paths. */
+const parseStartArguments = (
+  args: readonly string[],
+): {
+  directory: string;
+  force: boolean;
+  language: AutoMovieProductionLanguage;
+} => {
+  let directory: string | undefined;
+  let force = false;
+  let language: string | undefined;
+  for (let index = 0; index < args.length; index++) {
+    const argument = args[index]!;
+    if (argument === "--force") {
+      if (force) throw new Error("start accepts --force at most once.");
+      force = true;
+    } else if (argument === "--language") {
+      if (language !== undefined)
+        throw new Error("start accepts exactly one --language selection.");
+      const selected = args[++index];
+      if (selected === undefined || selected.startsWith("-"))
+        throw new Error(
+          "start requires --language with one of chinese, english, japanese, or korean.",
+        );
+      language = selected;
+    } else if (argument.startsWith("-"))
+      throw new Error(`start does not support option ${argument}.`);
+    else if (directory !== undefined)
+      throw new Error("start accepts exactly one target directory.");
+    else directory = argument;
+  }
+  if (directory === undefined)
+    throw new Error("start needs a target directory.");
+  if (language === undefined || !isAutoMovieProductionLanguage(language))
+    throw new Error(
+      "start requires --language with one of chinese, english, japanese, or korean.",
+    );
+  return { directory, force, language };
+};
 
 /**
  * The `automovie` CLI entry: parse argv, render the scaffold, and write it to
@@ -560,7 +601,17 @@ export const run = (argv: readonly string[]): number => {
     return 1;
   }
 
-  const dir = rest.find((arg) => !arg.startsWith("-"));
+  let start: ReturnType<typeof parseStartArguments> | undefined;
+  try {
+    start = command === "start" ? parseStartArguments(rest) : undefined;
+  } catch (error) {
+    process.stderr.write(
+      `${error instanceof Error ? error.message : String(error)}\n`,
+    );
+    return 1;
+  }
+  const dir =
+    start?.directory ?? rest.find((argument) => !argument.startsWith("-"));
   if (dir === undefined) {
     process.stderr.write(`${command} needs a target directory\n\n${USAGE}`);
     return 1;
@@ -580,20 +631,12 @@ export const run = (argv: readonly string[]): number => {
       process.stdout.write(`${JSON.stringify(output, null, 2)}\n`);
       return 0;
     }
-    const languageIndex = rest.indexOf("--language");
-    const language = languageIndex < 0 ? undefined : rest[languageIndex + 1];
-    if (language === undefined || !isAutoMovieProductionLanguage(language))
-      throw new Error(
-        "start requires --language with one of chinese, english, japanese, or korean.",
-      );
-    if (rest.indexOf("--language", languageIndex + 1) >= 0)
-      throw new Error("start accepts exactly one --language selection.");
     const files = renderScaffold({
       name: projectNameOf(targetDir),
-      language,
+      language: start!.language,
     });
     const written = writeFiles(targetDir, files, {
-      force: rest.includes("--force"),
+      force: start!.force,
     });
     process.stdout.write(
       `Scaffolded ${written.length} files into ${targetDir}\n\n` +

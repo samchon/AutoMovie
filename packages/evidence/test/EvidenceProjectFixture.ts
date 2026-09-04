@@ -1496,6 +1496,7 @@ export const createEvidenceProjectFixture = (roots: string[]): string => {
         ...contract.units.flatMap((unit) => [
           `## ${unit.title} {#${unit.anchor}}`,
           "",
+          ...structuredRuleLines(contract.path, unit.anchor),
           `Synthetic contract input for ${unit.anchor}.`,
           "",
           `Review question: does the host answer ${unit.anchor}?`,
@@ -1551,6 +1552,7 @@ export const createEvidenceProjectFixture = (roots: string[]): string => {
         ...contract.units.flatMap((unit) => [
           `## ${unit.title} {#${unit.anchor}}`,
           "",
+          ...structuredRuleLines(contract.path, unit.anchor),
           `Synthetic language contract input for ${unit.anchor}.`,
           "",
         ]),
@@ -1566,4 +1568,47 @@ export const createEvidenceProjectFixture = (roots: string[]): string => {
     "utf8",
   );
   return directory;
+};
+
+/** Emit metadata only for the scaffold routes whose application time is binding. */
+const structuredRuleLines = (relative: string, anchor: string): string[] => {
+  const sharedDefault =
+    relative === "principles/core/defaults.md" ||
+    (relative === "principles/story/narratives.md" &&
+      anchor === "closing-line-contribution");
+  const populationDefault = relative === "obligations/core/defaults.md";
+  const languageRule = relative.startsWith("language/");
+  if (!sharedDefault && !populationDefault && !languageRule) return [];
+  const safeApplication = sharedDefault
+    ? "composition-safe"
+    : populationDefault
+      ? anchor === "recurrent-frame-distribution"
+        ? "post-draft-frequency"
+        : "population-distribution"
+      : relative.startsWith("language/discovery/")
+        ? "observation-only"
+        : relative.startsWith("language/obligations/")
+          ? "population-distribution"
+          : "composition-safe";
+  const id = languageRule
+    ? anchor
+    : anchor === "contrastive-definition"
+      ? "sh-material-contrast"
+      : `sh-${anchor}`;
+  return [
+    "```contract-rule",
+    JSON.stringify(
+      {
+        id,
+        status: "active",
+        safeApplication,
+        timing: "synthetic contract routing boundary",
+        sourceIdentity: "fixture@1",
+      },
+      null,
+      2,
+    ),
+    "```",
+    "",
+  ];
 };

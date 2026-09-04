@@ -201,6 +201,95 @@ const manifestContractPaths = (
 
 try {
   const scopeRoot = root();
+  assert.equal(
+    throws(
+      () =>
+        createAutoMovieEvidenceConfig({
+          ...disabled(scopeRoot),
+          language: "french" as never,
+        }),
+      "Unsupported production language",
+    ),
+    true,
+  );
+  assert.equal(
+    throws(
+      () =>
+        createAutoMovieEvidenceConfig({
+          ...disabled(scopeRoot),
+          language: "chinese",
+        }),
+      "mismatched structured rule identity",
+    ),
+    true,
+  );
+  const missingLanguageContract = root();
+  fs.rmSync(
+    path.join(
+      missingLanguageContract,
+      "docs/language/discovery/signals.md",
+    ),
+  );
+  assert.equal(
+    throws(
+      () => createAutoMovieEvidenceConfig(disabled(missingLanguageContract)),
+      "language contract must contain exactly",
+    ),
+    true,
+  );
+  const residualLanguageContract = root();
+  write(
+    residualLanguageContract,
+    "docs/language/principles/residue.md",
+    target("Residual language", "residual-language"),
+  );
+  assert.equal(
+    throws(
+      () => createAutoMovieEvidenceConfig(disabled(residualLanguageContract)),
+      "language contract must contain exactly",
+    ),
+    true,
+  );
+  const invalidDefaultRoute = root();
+  const defaultFile = path.join(
+    invalidDefaultRoute,
+    "docs/principles/core/defaults.md",
+  );
+  fs.writeFileSync(
+    defaultFile,
+    rewrite(
+      fs.readFileSync(defaultFile, "utf8"),
+      '"safeApplication": "composition-safe"',
+      '"safeApplication": "early"',
+    ),
+  );
+  assert.equal(
+    throws(
+      () => createAutoMovieEvidenceConfig(disabled(invalidDefaultRoute)),
+      "invalid safe application",
+    ),
+    true,
+  );
+  const missingClosingRoute = root();
+  const narrativeFile = path.join(
+    missingClosingRoute,
+    "docs/principles/story/narratives.md",
+  );
+  fs.writeFileSync(
+    narrativeFile,
+    rewrite(
+      fs.readFileSync(narrativeFile, "utf8"),
+      /```contract-rule\n\{\n  "id": "sh-closing-line-contribution"[\s\S]*?\n```\n\n/u,
+      "",
+    ),
+  );
+  assert.equal(
+    throws(
+      () => createAutoMovieEvidenceConfig(disabled(missingClosingRoute)),
+      "sh-closing-line-contribution: expected one structured composition-safe contract rule",
+    ),
+    true,
+  );
   const missingScope = disabled(scopeRoot) as Partial<Graph>;
   delete missingScope.populationScope;
   assert.equal(
@@ -3704,7 +3793,10 @@ export const review = true;
   write(
     scatteredContractExclusion,
     "docs/contracts/principles-common.md",
-    `<!-- @evidenceExcludeReview discovery/core/common.md#shared-local-boundary #abcdef0 This reviewed negative is scattered. -->\n${target("Scattered contract", "scattered-contract")}`,
+    `<!--
+@evidenceExclude discovery/core/common.md#shared-local-boundary This negative is scattered.
+@evidenceExcludeReview discovery/core/common.md#shared-local-boundary #abcdef0 This reviewed negative is scattered.
+-->\n${target("Scattered contract", "scattered-contract")}`,
   );
   assert.equal(
     throws(
