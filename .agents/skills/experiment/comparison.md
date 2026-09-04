@@ -4,7 +4,7 @@ Read this document when one run puts several productions under one harness at th
 
 Two failures make a comparison worthless, and both are cheap to prevent and impossible to repair afterwards: a harness that moved between two productions, and a verdict issued by the agent that commissioned the work.
 
-A comparison run is still an experiment, so [Read The Result](SKILL.md#read-the-result) and [Run The Same Brief Twice](briefing.md#run-the-same-brief-twice) apply unchanged. Several productions do not add up to a control.
+A comparison run is still an experiment, so [Read The Result](SKILL.md#read-the-result), [Run The Same Brief Twice](briefing.md#run-the-same-brief-twice), and the [campaign record](records.md) apply unchanged. Several productions do not add up to a control.
 
 ## Fix The Harness Before The First Writer Starts
 
@@ -75,6 +75,8 @@ Element counts, prototype counts, and elapsed time tell you where to look. They 
 
 Without a control, report the run as exploratory and say so. [Carry The Numbers Forward As Evidence](briefing.md#carry-the-numbers-forward-as-evidence) states the same limit for a single run, and several runs sharing one harness do not manufacture the control that none of them had.
 
+Different subjects are separate experimental units, not replicates of one condition. Same-subject repeated runs can establish only `consistency-only` or `variability-found`. A `controlled-comparison` requires independent repetition on both sides of a predeclared comparator, exactly one `changedAxis`, and an otherwise frozen basis. [records.md](records.md#declare-the-causal-ceiling) owns the complete matrix and the rule against a fixed global sample size or metric.
+
 ## The Cross-Work Review Is Its Own Surface
 
 A per-production review never substitutes for the comparison. Each writer's reviewer read one unit, so anything that appears only between units is invisible to all of them: a harness defect every writer worked around differently, a contract every writer read the same wrong way, an instruction that was clear to three and ambiguous to the fourth.
@@ -91,7 +93,7 @@ The coordinator closes the run by reading all productions as one surface in one 
 | Ownership | Two units contend over one file, one config key, or one scratch name | Every shared resource on the machine is prefixed by its owner, and [One Machine, Several Campaigns](steering.md#one-machine-several-campaigns) applies in full |
 | Gate | The reviewer is asked for a second clean pass and finds nothing twice | One invocation, one complete pass, then `PASS` or a single batched `FAIL` |
 | Gate | A run stops because an early artifact was judged against a late gate | Each gate judges only what its own transition is for |
-| Record | The result dies with the sandbox | Operational status goes to the ignored `.wiki`, durable conclusions to the issue, and a baseline to the tracked [baselines directory](baselines/README.md) in its fixed format before the sandbox is deleted |
+| Record | The result dies with the sandbox | Operational status goes to the ignored `.wiki`, durable conclusions to the issue, and a baseline to the tracked [baseline directory](../../../experiments/baselines/README.md) in its fixed format before the sandbox is deleted |
 | Record | A number in prose disagrees with the artifact it came from | Re-count when you move a number into prose, and cite what you re-counted from |
 
 ## What Is Not Imported

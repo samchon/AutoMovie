@@ -107,13 +107,15 @@ That campaign closed when both lists were empty against all ten references, the 
 
 ## Run The Same Brief Twice
 
-Run the same brief a second time in a fresh sandbox, byte for byte identical, before concluding anything about the product.
+Run the same brief a second time in a fresh sandbox, byte for byte identical, before treating a single run as a stable product observation.
 
-A conclusion drawn from one run cannot be separated from that run's character. The second run is what tells a habit of this agent apart from something the brief induced or the product forced.
+A second run can expose variability and can disprove a universal account of what the writer always does. Agreement means only that the behavior was consistent under the observed condition. It does not distinguish writer habit from something the brief, model, harness, or product induced. [The causal ceiling](records.md#declare-the-causal-ceiling) requires a predeclared comparator and one changed axis before any causal contrast.
 
-In that campaign the second run disproved the observer's hypothesis. It was about to conclude that the authoring agent hand-expands grids instead of programming them, and the reproduction derived room boundaries from dimensions without being told to and parameterised the spiral stair from the start. The narrow conclusion that survived, that derivation stops one level up, was a far more accurate description of the product.
+In that campaign the second run disproved the observer's universal hypothesis. It was about to conclude that the authoring agent always hand-expands grids instead of programming them, and the reproduction derived room boundaries from dimensions without being told to and parameterised the spiral stair from the start. The surviving observation was narrower: the two runs differed in where derivation stopped. Neither run identified the cause of that difference.
 
 Byte for byte identical is why the brief is a file. An agent that received half of its brief in conversation cannot be rerun, and neither can one whose brief was edited mid-run. [Read The Result](SKILL.md#read-the-result) requires reproduction before belief for a single result, and a benchmark's conclusion is a result of the same kind.
+
+Different subjects are different experimental units, even when they share a harness and brief shape. They do not increase the replicate count for one condition. There is no fixed run count beyond the two-run reproduction probe: record the sample-size rationale and lower the claim when the observations cannot support it.
 
 ## Keep The Roles Apart
 
