@@ -26,20 +26,25 @@ export const validateAutoMovieInstructionLink = (
   sourcePath: string,
   destination: string,
 ): void => {
-  if (/^[A-Za-z][A-Za-z0-9+.-]*:/u.test(destination)) return;
   const files = new Map(
     sources.map((source) => [normalizeSourcePath(source.path), source.content]),
   );
   const source = normalizeSourcePath(sourcePath);
   if (!files.has(source))
     throw new Error(`${source}: instruction route source is not published.`);
+  if (/^[A-Za-z]:[\\/]/u.test(destination))
+    throw new Error(
+      `${source}: instruction route escapes its project root: ${destination}.`,
+    );
+  if (/^[A-Za-z][A-Za-z0-9+.-]*:/u.test(destination)) return;
   const [encodedRoute, encodedAnchor] = destination.split("#", 2);
   const route = decodeURIComponent(encodedRoute ?? "");
   const anchor =
     encodedAnchor === undefined ? undefined : decodeURIComponent(encodedAnchor);
-  const resolved = path.posix.normalize(
-    path.posix.join(path.posix.dirname(source), route),
-  );
+  const resolved =
+    route === ""
+      ? source
+      : path.posix.normalize(path.posix.join(path.posix.dirname(source), route));
   if (
     resolved === ".." ||
     resolved.startsWith("../") ||

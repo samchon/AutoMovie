@@ -31,7 +31,7 @@ export const test_cli_scaffold_skill_router_links = (): void => {
     {
       path: ".agents/skills/topic/SKILL.md",
       content:
-        "---\nname: topic\n---\n\n# Topic\n\nRead [index](index.md#route) and [docs](../../../docs/README.md).\n",
+        "---\nname: topic\n---\n\n# Topic\n\nRead [this route](#topic), [index](index.md#route), and [docs](../../../docs/README.md).\n",
     },
     {
       path: ".agents/skills/topic/index.md",
@@ -71,6 +71,10 @@ export const test_cli_scaffold_skill_router_links = (): void => {
         ...valid.slice(1),
         { path: ".agents/skills/topic/SKILL.md", content: "# Topic\n\n[bad](../../../../outside.md)\n" },
       ]).includes("escapes its project root"),
+      drive: messageOf([
+        ...valid.slice(1),
+        { path: ".agents/skills/topic/SKILL.md", content: "# Topic\n\n[bad](C:/outside.md)\n" },
+      ]).includes("escapes its project root"),
       file: messageOf([
         ...valid.slice(1),
         { path: ".agents/skills/topic/SKILL.md", content: "# Topic\n\n[bad](missing.md)\n" },
@@ -90,6 +94,7 @@ export const test_cli_scaffold_skill_router_links = (): void => {
     },
     {
       escape: true,
+      drive: true,
       file: true,
       anchor: true,
       directoryAnchor: true,
