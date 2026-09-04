@@ -106,6 +106,16 @@ for (const after of [
 assert.throws(
   () =>
     verifyAutoMovieEvidenceMetadataRewrite({
+      path: "docs/contracts/local.md",
+      before: source("#abcdef0"),
+      after: source("#abcdef0").replace("Exact acknowledgement.", ""),
+      ownership: "comments",
+    }),
+  /changed an unowned evidence field/u,
+);
+assert.throws(
+  () =>
+    verifyAutoMovieEvidenceMetadataRewrite({
       path: "../local.md",
       before: source("#abcdef0"),
       after: source("#1234567"),
