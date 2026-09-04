@@ -26,8 +26,10 @@ const principle = createAutoMovieProductionPrincipleClaim({
     "contracts/principles-dialogue-register.md",
   ],
   files: ["screenplays/**/*.md"],
+  layer: "screenplays",
   symbol: ["h2", "h3"],
   stage: "review",
+  populationScope: { mode: "complete-production" },
 });
 assert.deepEqual(principle, {
   name: "every screenplay unit preserves the work's local visual grammar",
@@ -36,6 +38,12 @@ assert.deepEqual(principle, {
   files: ["screenplays/**/*.md"],
   symbol: ["h2", "h3"],
   disabled: false,
+  autoMovieBinding: {
+    layer: "screenplays",
+    populationScope: { mode: "complete-production" },
+    stage: "review",
+    disposition: "binding",
+  },
   reference: [
     {
       type: "markdown",
@@ -63,8 +71,10 @@ const obligation = createAutoMovieProductionObligationClaim({
   document: "delivery-roles.md",
   documentRoot: "docs/contracts",
   files: ["settings/**/*.md"],
+  layer: "settings",
   symbol: "h2",
   stage: "evidence",
+  populationScope: { mode: "complete-production" },
 });
 assert.deepEqual(obligation, {
   name: "the settings population establishes the local delivery roles",
@@ -73,6 +83,12 @@ assert.deepEqual(obligation, {
   files: ["settings/**/*.md"],
   symbol: "h2",
   disabled: false,
+  autoMovieBinding: {
+    layer: "settings",
+    populationScope: { mode: "complete-production" },
+    stage: "evidence",
+    disposition: "binding",
+  },
   reference: [
     {
       type: "markdown",
@@ -91,26 +107,34 @@ for (const stage of ["disabled", "draft"] as const)
       name: `${stage} local principle`,
       document: "contracts/principles-local.md",
       files: ["models/**/*.md"],
+      layer: "models",
       stage,
+      symbol: "h2",
+      populationScope: { mode: "complete-production" },
     }).disabled,
     true,
   );
-assert.equal(
-  createAutoMovieProductionObligationClaim({
-    name: "scope-inapplicable local obligation",
-    document: "contracts/obligations-scale.md",
-    files: ["spaces/**/*.md"],
-    stage: "review",
-    inapplicable: true,
-  }).disabled,
-  true,
-);
+const inapplicable = createAutoMovieProductionObligationClaim({
+  name: "scope-inapplicable local obligation",
+  document: "contracts/obligations-scale.md",
+  files: ["spaces/**/*.md"],
+  layer: "spaces",
+  stage: "review",
+  symbol: "h2",
+  populationScope: { mode: "first-pilot" },
+  inapplicable: true,
+});
+assert.equal(inapplicable.disabled, true);
+assert.equal(inapplicable.autoMovieBinding.disposition, "inapplicable");
 
 const base = {
   name: "local contract",
   document: "contracts/local.md",
   files: ["settings/**/*.md"],
+  layer: "settings" as const,
   stage: "evidence" as const,
+  symbol: "h2" as const,
+  populationScope: { mode: "complete-production" } as const,
 };
 assert.throws(
   () => createAutoMovieProductionPrincipleClaim({ ...base, name: "  " }),
@@ -165,6 +189,62 @@ assert.throws(
       typeof createAutoMovieProductionObligationClaim
     >[0]),
   /unsupported host stage "complete"/u,
+);
+assert.throws(
+  () =>
+    createAutoMovieProductionPrincipleClaim({
+      ...base,
+      symbol: "file",
+    }),
+  /selects only H2, H3, or H4/u,
+);
+assert.throws(
+  () =>
+    createAutoMovieProductionObligationClaim({
+      ...base,
+      symbol: ["h2", "h3"],
+    }),
+  /selects only H2 primary owners/u,
+);
+assert.throws(
+  () =>
+    createAutoMovieProductionObligationClaim({
+      ...base,
+      inapplicable: true,
+    }),
+  /only to a first-pilot population/u,
+);
+assert.throws(
+  () =>
+    createAutoMovieProductionPrincipleClaim({
+      ...base,
+      files: ["models/**/*.md"],
+    }),
+  /host outside that layer/u,
+);
+assert.throws(
+  () =>
+    createAutoMovieProductionPrincipleClaim({
+      ...base,
+      document: "contracts/index.md",
+    }),
+  /flat docs\/contracts\/\*\.md target/u,
+);
+assert.throws(
+  () =>
+    createAutoMovieProductionPrincipleClaim({
+      ...base,
+      document: "contracts\\local.md",
+    }),
+  /flat docs\/contracts\/\*\.md target/u,
+);
+assert.throws(
+  () =>
+    createAutoMovieProductionPrincipleClaim({
+      ...base,
+      files: ["settings/**/*.md", "settings/**/*.md"],
+    }),
+  /duplicate pattern/u,
 );
 
 process.stdout.write("production-local contract claim helpers passed\n");

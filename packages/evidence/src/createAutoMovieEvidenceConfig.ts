@@ -6,11 +6,16 @@ import {
 } from "@ttsc/evidence";
 import fs from "node:fs";
 import path from "node:path";
+import { isDeepStrictEqual } from "node:util";
 import ts from "typescript-compiler";
 
 import type { AutoMoviePopulationScope } from "./AutoMoviePopulationScope";
+import { validateAutoMoviePopulationTransition } from "./AutoMoviePopulationTransition";
+import { assertAutoMovieEvidenceSyntax } from "./assertAutoMovieEvidenceSyntax";
 import { assertAutoMovieEvidenceReviewReasons } from "./auditAutoMovieEvidenceReviewReasons";
 import { createAutoMoviePopulationFiles } from "./createAutoMoviePopulationFiles";
+import type { AutoMovieProductionContractClaim } from "./createAutoMovieProductionContractClaim";
+import { projectAutoMovieMarkdownSyntax } from "./parseAutoMovieEvidenceSyntax";
 import { walkAutoMovieProjectPopulationFiles } from "./walkAutoMovieProjectPopulationFiles";
 
 /**
@@ -193,6 +198,28 @@ interface IAutoMovieContractBindingManifest {
           files: readonly string[];
           symbols: readonly string[];
         };
+  }[];
+  /** Positive production-local contract bindings retained with their layer. */
+  localBindings: readonly IAutoMovieLocalContractProjection[];
+  /** Explicit inapplicable local-contract declarations retained for audit only. */
+  localAudits: readonly IAutoMovieLocalContractProjection[];
+}
+
+interface IAutoMovieLocalContractProjection {
+  claim: string;
+  layer: string;
+  stage: Stage;
+  enforced: boolean;
+  populationScope: AutoMoviePopulationScope;
+  host: {
+    root: string;
+    files: readonly string[];
+    symbols: readonly string[];
+  };
+  targets: readonly {
+    root: string;
+    files: readonly string[];
+    symbols: readonly string[];
   }[];
 }
 
@@ -1082,7 +1109,11 @@ const validatePopulationScope = (graph: IProductionGraph): void => {
       `Unsupported production population scope ${describeDeclarationValue(mode)}.`,
     );
   const allowed = new Set(
-    mode === "first-pilot" ? ["mode", "partitionGroup"] : ["mode"],
+    mode === "first-pilot"
+      ? ["mode", "partitionGroup"]
+      : mode === "complete-production-reset"
+        ? ["mode", "owner", "transition"]
+        : ["mode"],
   );
   const unexpected = Object.keys(declaration).filter(
     (key) => !allowed.has(key),
@@ -1096,6 +1127,21 @@ const validatePopulationScope = (graph: IProductionGraph): void => {
     if (graph.kind !== "film" && graph.kind !== "library")
       throw new Error(
         "complete-production-reset is available only after a film or library pilot.",
+      );
+    if (
+      typeof declaration.owner !== "string" ||
+      declaration.owner.trim() === ""
+    )
+      throw new Error(
+        "A complete-production-reset requires a non-empty owner.",
+      );
+    if (
+      declaration.transition === null ||
+      typeof declaration.transition !== "object" ||
+      Array.isArray(declaration.transition)
+    )
+      throw new Error(
+        "A complete-production-reset requires a transition receipt object.",
       );
     return;
   }
@@ -1114,6 +1160,31 @@ const validatePopulationScope = (graph: IProductionGraph): void => {
     return;
   }
   throw new Error("first-pilot is available only for a film or library.");
+};
+
+/** Refuse a production-local claim detached from this graph declaration. */
+const validateLocalClaims = (graph: IProductionGraph): void => {
+  for (const raw of graph.claims ?? []) {
+    const claim = raw as Partial<AutoMovieProductionContractClaim>;
+    if (claim.autoMovieBinding === undefined) continue;
+    const binding = claim.autoMovieBinding;
+    if (
+      raw.type !== "markdown" ||
+      binding === null ||
+      typeof binding !== "object" ||
+      !Object.hasOwn(MARKDOWN, binding.layer) ||
+      binding.stage !== graph[binding.layer] ||
+      !isDeepStrictEqual(binding.populationScope, graph.populationScope) ||
+      (binding.disposition !== "binding" &&
+        binding.disposition !== "inapplicable") ||
+      (binding.disposition === "inapplicable" &&
+        (binding.populationScope?.mode !== "first-pilot" ||
+          raw.disabled !== true))
+    )
+      throw new Error(
+        `Production-local claim ${JSON.stringify(raw.name)} does not match its declared layer, stage, population scope, or disposition.`,
+      );
+  }
 };
 
 const validateDeclaration = (graph: IProductionGraph): void => {
@@ -1152,6 +1223,7 @@ const validateDeclaration = (graph: IProductionGraph): void => {
     throw new Error(
       "Production evidence claims must be an array when present.",
     );
+  validateLocalClaims(graph);
 };
 
 const walkFiles = (root: string, extension: ".md" | ".ts"): string[] => {
@@ -1194,12 +1266,12 @@ const validateReviewReasons = (graph: IProductionGraph): void => {
     ...walkProjectFiles(graph, path.join(graph.location, DOCS), ".md"),
     ...walkProjectFiles(graph, path.join(graph.location, "src"), ".ts"),
   ];
-  assertAutoMovieEvidenceReviewReasons(
-    files.map((file) => ({
-      path: posix(path.relative(graph.location, file)),
-      source: fs.readFileSync(file, "utf8"),
-    })),
-  );
+  const documents = files.map((file) => ({
+    path: posix(path.relative(graph.location, file)),
+    source: fs.readFileSync(file, "utf8"),
+  }));
+  assertAutoMovieEvidenceSyntax(documents);
+  assertAutoMovieEvidenceReviewReasons(documents);
 };
 
 interface IHeadingIdentity {
@@ -1225,57 +1297,11 @@ interface ITargetIdentityRegistry {
 const normalizeTargetTitle = (title: string): string =>
   title.trim().toLowerCase().replace(/\s+/gu, " ");
 
-const visibleMarkdownLines = (source: string): string[] => {
-  const output: string[] = [];
-  let fence: { character: "`" | "~"; length: number } | undefined;
-  let htmlComment = false;
-  for (const sourceLine of source.split(/\r?\n/u)) {
-    if (fence !== undefined) {
-      if (
-        new RegExp(
-          `^ {0,3}${fence.character}{${fence.length},}[ \\t]*$`,
-          "u",
-        ).test(sourceLine)
-      )
-        fence = undefined;
-      output.push("");
-      continue;
-    }
-    let line = "";
-    for (let cursor = 0; cursor < sourceLine.length; ) {
-      if (htmlComment) {
-        const close = sourceLine.indexOf("-->", cursor);
-        if (close === -1) {
-          line += " ".repeat(sourceLine.length - cursor);
-          break;
-        }
-        line += " ".repeat(close + 3 - cursor);
-        cursor = close + 3;
-        htmlComment = false;
-      } else {
-        const open = sourceLine.indexOf("<!--", cursor);
-        if (open === -1) {
-          line += sourceLine.slice(cursor);
-          break;
-        }
-        line += sourceLine.slice(cursor, open) + "    ";
-        cursor = open + 4;
-        htmlComment = true;
-      }
-    }
-    const marker = /^ {0,3}(`{3,}|~{3,})/u.exec(line)?.[1];
-    if (marker !== undefined) {
-      fence = {
-        character: marker[0] as "`" | "~",
-        length: marker.length,
-      };
-      output.push("");
-      continue;
-    }
-    output.push(line);
-  }
-  return output;
-};
+const visibleMarkdownLines = (source: string): readonly string[] =>
+  projectAutoMovieMarkdownSyntax({
+    path: "document.md",
+    source,
+  }).visibleLines;
 
 const markdownHeadings = (file: string): IMarkdownHeading[] => {
   const output: IMarkdownHeading[] = [];
@@ -2399,6 +2425,36 @@ const acceptsResetEvidenceTags = (
   );
 };
 
+/** Exact host population whose passed-pilot tags may survive one reset. */
+const resetTransitionHosts = (
+  graph: IProductionGraph,
+): readonly { path: string; source: string }[] => {
+  if (graph.populationScope.mode !== "complete-production-reset") return [];
+  const files =
+    graph.kind === "film"
+      ? ["treatments", "scripts", "screenplays"].flatMap((layer) =>
+          walkProjectFiles(
+            graph,
+            path.join(graph.location, DOCS, layer),
+            ".md",
+          ),
+        )
+      : graph.populationScope.transition.kind === "library"
+        ? graph.populationScope.transition.reviewedPairs.flatMap((pair) => [
+            ...walkProjectFiles(
+              graph,
+              path.join(graph.location, DOCS, pair.design),
+              ".md",
+            ),
+            ...populationFiles(graph, SOURCES[pair.source].files, ".ts"),
+          ])
+        : [];
+  return [...new Set(files)].sort(compareCodeUnits).map((file) => ({
+    path: posix(path.relative(graph.location, file)),
+    source: fs.readFileSync(file, "utf8"),
+  }));
+};
+
 const validateHosts = (graph: IProductionGraph): void => {
   validateNarrativePopulationTopology(graph);
   const identities = new Map<MarkdownLayer, Map<string, IHeadingIdentity[]>>();
@@ -3082,6 +3138,22 @@ const validateProductionGraph = (
   validateReviewReasons(graph);
   const targetIdentities = validateContracts(graph.location);
   validateStages(graph);
+  if (graph.populationScope.mode === "complete-production-reset") {
+    const stages = Object.fromEntries(
+      [
+        ...(Object.keys(MARKDOWN) as MarkdownLayer[]),
+        ...(Object.keys(SOURCES) as SourceLayer[]),
+      ].map((branch) => [branch, graph[branch]]),
+    );
+    validateAutoMoviePopulationTransition({
+      kind: graph.kind as "film" | "library",
+      productionLocation: graph.location,
+      owner: graph.populationScope.owner,
+      receipt: graph.populationScope.transition,
+      stages,
+      hosts: resetTransitionHosts(graph),
+    });
+  }
   validateHosts(graph);
   validateWorkSpecificContracts(graph);
   validateProductionTargets(graph, targetIdentities);
@@ -3193,11 +3265,46 @@ export const createAutoMovieContractBindingManifest = (
       });
     }
   }
+  const localBindings: IAutoMovieLocalContractProjection[] = [];
+  const localAudits: IAutoMovieLocalContractProjection[] = [];
+  for (const raw of graph.claims ?? []) {
+    const claim = raw as Partial<AutoMovieProductionContractClaim>;
+    if (claim.autoMovieBinding === undefined) continue;
+    const references = (
+      Array.isArray(claim.reference) ? claim.reference : [claim.reference]
+    ).filter(
+      (reference): reference is ITtscEvidenceGraphMarkdownReference =>
+        reference?.type === "markdown",
+    );
+    const projection: IAutoMovieLocalContractProjection = {
+      claim: claim.name ?? "",
+      layer: claim.autoMovieBinding.layer,
+      stage: claim.autoMovieBinding.stage,
+      enforced: raw.disabled !== true,
+      populationScope: claim.autoMovieBinding.populationScope,
+      host: {
+        root: evidenceRoot(raw),
+        files: [...raw.files],
+        symbols: symbolsOf(raw.symbol as string | readonly string[]),
+      },
+      targets: references.map((reference) => ({
+        root: evidenceRoot(reference),
+        files: [...reference.files],
+        symbols: symbolsOf(reference.symbol as string | readonly string[]),
+      })),
+    };
+    (claim.autoMovieBinding.disposition === "binding"
+      ? localBindings
+      : localAudits
+    ).push(projection);
+  }
   return {
     kind: graph.kind,
     populationScope: graph.populationScope,
     branches,
     bindings,
+    localBindings,
+    localAudits,
   };
 };
 

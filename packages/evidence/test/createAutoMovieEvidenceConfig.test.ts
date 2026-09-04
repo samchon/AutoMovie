@@ -1,6 +1,9 @@
 import {
+  type AutoMoviePopulationScope,
   createAutoMovieContractBindingManifest,
   createAutoMovieEvidenceConfig,
+  createAutoMovieProductionPrincipleClaim,
+  createAutoMovieRetainedPilotHost,
 } from "@automovie/evidence";
 import assert from "node:assert/strict";
 import fs from "node:fs";
@@ -89,6 +92,52 @@ const disabled = (location: string): Graph => ({
   productionSources: "disabled",
   filmSources: "disabled",
   claims: [],
+});
+
+/** Create a typed film reset predecessor over already-written retained hosts. */
+const filmResetScope = (
+  location: string,
+  hosts: readonly string[],
+): AutoMoviePopulationScope => ({
+  mode: "complete-production-reset",
+  owner: "test-owner",
+  transition: {
+    version: 1,
+    kind: "film",
+    productionLocation: location,
+    owner: "test-owner",
+    pilotScope: { mode: "first-pilot", partitionGroup: "001-delivery" },
+    reviewedBranches: ["treatments", "scripts", "screenplays"],
+    retainedHosts: hosts.map((relative) =>
+      createAutoMovieRetainedPilotHost({
+        path: relative.replaceAll("\\", "/"),
+        source: fs.readFileSync(path.join(location, relative), "utf8"),
+      }),
+    ),
+  },
+});
+
+/** Create a typed library reset predecessor for the first model pair. */
+const libraryResetScope = (
+  location: string,
+  hosts: readonly string[],
+): AutoMoviePopulationScope => ({
+  mode: "complete-production-reset",
+  owner: "test-owner",
+  transition: {
+    version: 1,
+    kind: "library",
+    productionLocation: location,
+    owner: "test-owner",
+    pilotScope: { mode: "first-pilot" },
+    reviewedPairs: [{ design: "models", source: "modelSources" }],
+    retainedHosts: hosts.map((relative) =>
+      createAutoMovieRetainedPilotHost({
+        path: relative.replaceAll("\\", "/"),
+        source: fs.readFileSync(path.join(location, relative), "utf8"),
+      }),
+    ),
+  },
 });
 
 const throws = (task: () => unknown, fragment: string): boolean => {
@@ -234,7 +283,7 @@ try {
           ...disabled(scopeRoot),
           kind: "brief",
           populationScope: { mode: "complete-production-reset" },
-        }),
+        } as unknown as Graph),
       "complete-production-reset is available only after a film or library pilot",
     ),
     true,
@@ -257,7 +306,7 @@ try {
         createAutoMovieEvidenceConfig({
           ...disabled(scopeRoot),
           kind: "film",
-          populationScope: { mode: "complete-production-reset" },
+          populationScope: filmResetScope(scopeRoot, []),
         }),
       "treatments, scripts, and screenplays to reset together to draft",
     ),
@@ -463,7 +512,10 @@ export const review = true;
   const resetDeclaration: Graph = {
     ...disabled(resetRoot),
     kind: "library",
-    populationScope: { mode: "complete-production-reset" },
+    populationScope: libraryResetScope(resetRoot, [
+      "docs/models/subject.md",
+      "src/models/subject.ts",
+    ]),
     settings: "review",
     models: "draft",
     modelSources: "draft",
@@ -501,11 +553,14 @@ export const review = true;
       "# Unit\n\n## Sequence {#sequence}\n### Scene {#scene}\n#### Beat {#beat}\n",
     );
   }
+  const filmResetPopulation = filmResetScope(filmReset, [
+    "docs/treatments/001-event.md",
+  ]);
   assert.doesNotThrow(() =>
     createAutoMovieEvidenceConfig({
       ...disabled(filmReset),
       kind: "film",
-      populationScope: { mode: "complete-production-reset" },
+      populationScope: filmResetPopulation,
       settings: "review",
       treatments: "draft",
       scripts: "draft",
@@ -523,7 +578,7 @@ export const review = true;
         createAutoMovieEvidenceConfig({
           ...disabled(filmReset),
           kind: "film",
-          populationScope: { mode: "complete-production-reset" },
+          populationScope: filmResetPopulation,
           settings: "review",
           maps: "draft",
           treatments: "draft",
@@ -552,7 +607,7 @@ export const review = true;
         createAutoMovieEvidenceConfig({
           ...disabled(scopeRoot),
           kind: "library",
-          populationScope: { mode: "complete-production-reset" },
+          populationScope: libraryResetScope(scopeRoot, []),
         }),
       "requires at least one matching design and source branch in draft",
     ),
@@ -1114,6 +1169,88 @@ export const review = true;
     productionOwnedClaim,
     "production claims must append after, not replace, the shared graph",
   );
+
+  const localBinding = root();
+  write(
+    localBinding,
+    "docs/settings/production.md",
+    "# Settings\n\n## Scope {#scope}\n\nOne exact scope.\n",
+  );
+  write(
+    localBinding,
+    "docs/contracts/tone.md",
+    localTarget("Local tone", "local-tone"),
+  );
+  const localClaim = createAutoMovieProductionPrincipleClaim({
+    name: "settings preserve the local tone",
+    document: "contracts/tone.md",
+    files: ["settings/**/*.md"],
+    layer: "settings",
+    stage: "evidence",
+    symbol: "h2",
+    populationScope: { mode: "complete-production" },
+  });
+  const localDeclaration: Graph = {
+    ...disabled(localBinding),
+    kind: "library",
+    settings: "evidence",
+    claims: [localClaim],
+  };
+  assert.deepEqual(
+    createAutoMovieContractBindingManifest(localDeclaration).localBindings,
+    [
+      {
+        claim: "settings preserve the local tone",
+        layer: "settings",
+        stage: "evidence",
+        enforced: true,
+        populationScope: { mode: "complete-production" },
+        host: {
+          root: "docs",
+          files: ["settings/**/*.md"],
+          symbols: ["h2"],
+        },
+        targets: [
+          {
+            root: "docs",
+            files: ["contracts/tone.md"],
+            symbols: ["h2"],
+          },
+        ],
+      },
+    ],
+    "the manifest must retain exact project-local binding identity and stage",
+  );
+  assert.deepEqual(
+    createAutoMovieContractBindingManifest(localDeclaration).localAudits,
+    [],
+  );
+  for (const malformedBinding of [
+    null,
+    { ...localClaim.autoMovieBinding, stage: "draft" },
+    {
+      ...localClaim.autoMovieBinding,
+      populationScope: { mode: "first-pilot" },
+    },
+    { ...localClaim.autoMovieBinding, disposition: "unknown" },
+  ])
+    assert.equal(
+      throws(
+        () =>
+          createAutoMovieEvidenceConfig({
+            ...localDeclaration,
+            claims: [
+              {
+                ...localClaim,
+                autoMovieBinding: malformedBinding,
+              } as unknown as Claim,
+            ],
+          }),
+        "does not match its declared layer, stage, population scope, or disposition",
+      ),
+      true,
+      "detached project-local binding metadata must fail closed",
+    );
 
   const unselected = root();
   write(unselected, "docs/settings/production.md", "## Scope {#scope}\n");

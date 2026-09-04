@@ -122,6 +122,14 @@ const testAcceptedBoundaries = (): void => {
 `),
     ]),
   );
+  assert.doesNotThrow(() =>
+    assertAutoMovieEvidenceReviewReasons([
+      document(
+        "<!-- @evidenceReview contracts/local.md#rule malformed -->",
+        "docs/models/malformed.md",
+      ),
+    ]),
+  );
 };
 
 const testAssertion = (): void => {
@@ -249,9 +257,31 @@ ${tag}
   );
 };
 
+/** Native carrier syntax does not hide or manufacture shared reasons. */
+const testNativeCarrierBoundaries = (): void => {
+  const tag =
+    "@evidence principles/core/common.md#scope-preservation The unit owns its silhouette.";
+  const message = rejectionMessage([
+    document(
+      ["````text", "~~~", "```", `<!-- ${tag} -->`].join("\n"),
+      "docs/models/a.md",
+    ),
+    document(`<!-- ${tag} -->`, "docs/models/b.md"),
+  ]);
+  assert.match(message, /evidence-reason-shared/u);
+
+  assert.doesNotThrow(() =>
+    assertAutoMovieEvidenceReviewReasons([
+      document(`export const sample = \`${tag}\`;`, "src/models/a.ts"),
+      document(`export const sample = \`${tag}\`;`, "src/models/b.ts"),
+    ]),
+  );
+};
+
 testRestatementForms();
 testHostLocalReuse();
 testTargetInterpolationReuse();
 testAcceptedBoundaries();
 testAssertion();
 testCrossHostSharedReason();
+testNativeCarrierBoundaries();

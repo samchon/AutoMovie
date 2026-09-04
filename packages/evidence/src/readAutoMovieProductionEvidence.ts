@@ -6,6 +6,11 @@ import {
   type IAutoMovieEvidenceConfigProps,
   createAutoMovieContractBindingManifest,
 } from "./createAutoMovieEvidenceConfig";
+import { projectAutoMovieMarkdownSyntax } from "./parseAutoMovieEvidenceSyntax";
+import {
+  type IAutoMovieContractRule,
+  readAutoMovieContractRules,
+} from "./readAutoMovieContractRules";
 import { walkAutoMovieProjectPopulationFiles } from "./walkAutoMovieProjectPopulationFiles";
 
 /**
@@ -136,6 +141,8 @@ export interface IAutoMovieProductionEvidence {
   designOwners: readonly IAutoMovieProductionEvidenceDesignOwner[];
   /** Exact flat project-local contract inventory. */
   contracts: readonly IAutoMovieProductionEvidenceContract[];
+  /** Complete structured local rule inventory, including held and rejected rules. */
+  contractRules: readonly IAutoMovieContractRule[];
 }
 
 interface IMarkdownDocument {
@@ -238,6 +245,9 @@ export const readAutoMovieProductionEvidence = (props: {
     designBranches: branches,
     designOwners,
     contracts,
+    contractRules: readAutoMovieContractRules(
+      path.join(root, "docs", "contracts"),
+    ),
   };
 };
 
@@ -350,57 +360,11 @@ const markdownHeadings = (source: string): IMarkdownHeading[] => {
 };
 
 /** Blank Markdown comments and fenced code without changing line addresses. */
-const visibleMarkdownLines = (source: string): string[] => {
-  const output: string[] = [];
-  let fence: { character: "`" | "~"; length: number } | undefined;
-  let htmlComment = false;
-  for (const sourceLine of source.split(/\r?\n/u)) {
-    if (fence !== undefined) {
-      if (
-        new RegExp(
-          `^ {0,3}${fence.character}{${fence.length},}[ \\t]*$`,
-          "u",
-        ).test(sourceLine)
-      )
-        fence = undefined;
-      output.push("");
-      continue;
-    }
-    let line = "";
-    for (let cursor = 0; cursor < sourceLine.length; ) {
-      if (htmlComment) {
-        const close = sourceLine.indexOf("-->", cursor);
-        if (close === -1) {
-          line += " ".repeat(sourceLine.length - cursor);
-          break;
-        }
-        line += " ".repeat(close + 3 - cursor);
-        cursor = close + 3;
-        htmlComment = false;
-      } else {
-        const open = sourceLine.indexOf("<!--", cursor);
-        if (open === -1) {
-          line += sourceLine.slice(cursor);
-          break;
-        }
-        line += `${sourceLine.slice(cursor, open)}    `;
-        cursor = open + 4;
-        htmlComment = true;
-      }
-    }
-    const marker = /^ {0,3}(`{3,}|~{3,})/u.exec(line)?.[1];
-    if (marker !== undefined) {
-      fence = {
-        character: marker[0] as "`" | "~",
-        length: marker.length,
-      };
-      output.push("");
-      continue;
-    }
-    output.push(line);
-  }
-  return output;
-};
+const visibleMarkdownLines = (source: string): readonly string[] =>
+  projectAutoMovieMarkdownSyntax({
+    path: "document.md",
+    source,
+  }).visibleLines;
 
 /** Resolve manifest source globs without walking unrelated project trees. */
 const resolvePopulationFiles = (

@@ -83,6 +83,16 @@ try {
       "",
       "## Profile {#profile}",
       "",
+      "```contract-rule",
+      JSON.stringify({
+        id: "reviewed-model-profile",
+        status: "active",
+        safeApplication: "composition-safe",
+        timing: "before model composition",
+        sourceIdentity: "production-decision-v1",
+      }),
+      "```",
+      "",
       "Every model keeps its reviewed profile.",
       "",
       "Review question: does the selected model preserve its reviewed profile?",
@@ -198,6 +208,21 @@ try {
       },
     ],
   );
+  assert.deepEqual(first.contractRules, [
+    {
+      address: "visual.md#profile",
+      anchor: "profile",
+      heading: "Profile",
+      file: "visual.md",
+      metadata: {
+        id: "reviewed-model-profile",
+        status: "active",
+        safeApplication: "composition-safe",
+        timing: "before model composition",
+        sourceIdentity: "production-decision-v1",
+      },
+    },
+  ]);
   assert.deepEqual(
     readAutoMovieProductionEvidence({
       root: project,
