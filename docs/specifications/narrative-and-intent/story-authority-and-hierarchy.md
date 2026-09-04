@@ -62,6 +62,8 @@ Sequence는 목적, 시작과 종료 조건, 포함 beat, 앞뒤 관계, coverag
 
 Authoritative prose는 heading, 행동과 dialogue를 소유하고 index는 stable scene identity를 prose, sequence와 beat에 연결한다. Index가 prose를 다시 요약하여 서로 다른 사실 owner가 되어서는 안 되며 heading, 장소, 시간, 참여자 또는 포함 beat 충돌은 source-authority failure로 출력한다.
 
+각 script와 screenplay group index의 managed block은 canonical filename order의 unit link와 unit H1 label만 포함한다. Generation과 check는 동일한 pure rendering result를 사용하고, 반복 generation은 byte-identical하며, managed delimiter 밖의 authored content는 보존한다.
+
 ## 형식과 Content 경계 {#narrative-intent-story-form-content-boundary}
 
 ### Unknown과 Review 상태 {#narrative-intent-story-unknown-review-state}

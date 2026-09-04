@@ -14,6 +14,8 @@ Discovery proves that each active Markdown layer audited the actual production i
 
 Film treatments are flat numbered event files with required H1 titles, H2 units only, and no delivery group. Scripts partition those events independently into grouped H2/H3/H4 delivery units, and screenplays preserve the script delivery groups, index and unit titles, filenames, anchors, nesting, and order exactly. Both scripts and screenplays retain direct many-to-many treatment coverage. Keep screenplay beat text and `SCN-*` identities aligned with the hand-authored screenplay index; after shots exist, preserve deleted numbers as `OMITTED` and use alpha insertion ids.
 
+`npm run toc` regenerates only the marked link block in every script and screenplay group index from numbered unit filenames and their H1 titles. `npm run toc -- --check` is the read-only freshness gate. After an AutoMovie package upgrade, `npm run contracts:migrate -- --dry-run` compares the installed scaffold contract baseline with the recorded generation; plain `npm run contracts:migrate` applies only conflict-free baseline bytes and leaves local edits, removed anchors, and ambiguous renames for explicit adjudication.
+
 Every distributable file matched by the asset lint configuration belongs in `automovie/assets.json`. Record its source URL, license, original/current SHA-256, processing chain, and reasoned use before referencing it. External glTF, GLB, and VRM entries also require explicit ingest, LOD, collision, and measurement-proxy decisions. Changed or unregistered bytes fail lint and compilation; ingestion itself remains a pure fixed-byte conversion.
 
 ## First run

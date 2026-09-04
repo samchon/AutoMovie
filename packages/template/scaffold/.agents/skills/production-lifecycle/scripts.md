@@ -8,6 +8,8 @@ Settle the complete delivery partition before writing any script body. Writing t
 
 Author a partition map that lists every delivery-group directory and H1 title, every script filename and H1 title beneath it, the ordered H2/H3/H4 identities inside each file, and every treatment H2 each script unit realizes. A treatment event may run across several script units and one script unit may braid several treatment events.
 
+After adding, removing, renaming, or reordering a numbered unit, run `npm run toc` to regenerate the managed links in every script and screenplay index. Run `npm run toc -- --check` before advancing evidence; it compares the same canonical bytes without writing and refuses missing, extra, duplicate, mistargeted, or misordered links.
+
 The map must satisfy four conditions before drafting begins:
 
 - **Coverage.** Every treatment H2 in the active population is realized by the script population at every governed script depth. A treatment event nothing cites has been dropped, and the graph refuses it.

@@ -28,6 +28,8 @@
     "render": "ttsx --cache-dir node_modules/.cache/ttsc -P tsconfig.json scripts/render.ts",
     "repaint": "ttsx --cache-dir node_modules/.cache/ttsc -P tsconfig.json scripts/repaint.ts",
     "sync": "automovie sync",
+    "toc": "automovie toc",
+    "contracts:migrate": "automovie contracts migrate",
     "texture:scale": "ttsx --cache-dir node_modules/.cache/ttsc -P tsconfig.json scripts/measureTextureScale.ts",
     "turntable": "ttsx --cache-dir node_modules/.cache/ttsc -P tsconfig.json scripts/turntable.ts",
     "verify": "ttsx --cache-dir node_modules/.cache/ttsc -P tsconfig.json scripts/verify.ts",

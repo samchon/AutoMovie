@@ -6,6 +6,8 @@ Scaffold an [automovie](https://github.com/samchon/automovie) project.
 npx create-automovie my-film --language english
 npx automovie migrate legacy-film --dry-run
 npx automovie migrate legacy-film
+npx automovie contracts migrate --dry-run
+npx automovie toc --check
 ```
 
 Lays down an empty production-authoring scaffold with both ways to drive the engine:
@@ -84,15 +86,19 @@ npx create-automovie <directory> [--force]
 npx automovie start <directory> [--force]
 npx automovie sync
 npx automovie verify
+npx automovie contracts migrate [--dry-run]
+npx automovie toc [--check]
 npx automovie migrate <directory> [--dry-run | --rollback]
 npx automovie render <all|plan|run|status|verify|finalize|gc> [options]
 ```
 
-Each invocation is one closed command request. Help and version flags are standalone; `start` accepts exactly one directory and at most one `--force`; `migrate` accepts exactly one directory and at most one of `--dry-run` or `--rollback`; and `sync` and `verify` accept no arguments. Render `all` and `run` accept `--chunk-frames <positive-integer>`, `--deliverable <id>`, `--tier <proxy|final>`, and `--workers <positive-integer>`; `plan` accepts `--chunk-frames` and `--tier`; `status`, `verify`, and `finalize` accept `--tier`; and `gc` accepts only the valueless `--apply`. Unknown, repeated, inapplicable, missing, blank, or extra arguments are rejected before a target is resolved, a project is opened, a child process is started, or any state can be changed.
+Each invocation is one closed command request. Help and version flags are standalone; `start` accepts exactly one directory and at most one `--force`; `migrate` accepts exactly one directory and at most one of `--dry-run` or `--rollback`; `contracts migrate` accepts only `--dry-run`; `toc` accepts only `--check`; and `sync` and `verify` accept no arguments. Render `all` and `run` accept `--chunk-frames <positive-integer>`, `--deliverable <id>`, `--tier <proxy|final>`, and `--workers <positive-integer>`; `plan` accepts `--chunk-frames` and `--tier`; `status`, `verify`, and `finalize` accept `--tier`; and `gc` accepts only the valueless `--apply`. Unknown, repeated, inapplicable, missing, blank, or extra arguments are rejected before a target is resolved, a project is opened, a child process is started, or any state can be changed.
 
 `start` refuses a non-empty directory unless `--force`. The scaffolded project's `@automovie/*` dependency versions are baked in at build time from this repo's own catalog (`packages/template/build/resolveTemplateVersions.ts`), so a generated project never drifts from the engine it targets.
 
 `migrate --dry-run` validates legacy v1 storage from a temporary copy and prints the immutable byte inventory, production and shot drafts, source TODOs, and warnings without touching the project. Plain `migrate` atomically adds only tracked `automovie` provenance; it never rewrites legacy files or guesses the missing creative TypeScript. `--rollback` removes that state only while no production work has changed it. The import plan fingerprints the pre-import `src`, `generated`, and `renders` baselines, and rollback restores the complete applied state if removing any newly created empty directory fails. Baselines include empty subdirectory topology as well as file bytes, and the project root stays locked until rollback either completes or restores `automovie`.
+
+`contracts migrate --dry-run` compares the project's recorded scaffold-contract generation, current bytes, and the installed target generation through one immutable plan. Plain apply consumes that same plan. Exact unmodified additions and revisions are applied, while local edits, removed contracts or anchors, ambiguous renames, missing sources, and target collisions remain explicit conflicts. `toc` derives the managed script and screenplay index links from numbered unit filenames and H1 titles; `--check` reports stale canonical bytes without writing.
 
 ## API
 

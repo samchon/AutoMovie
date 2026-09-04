@@ -28,6 +28,8 @@ type AutoMovieCommand =
       directory: string;
       mode: "apply" | "dry-run" | "rollback";
     }
+  | { command: "contracts"; action: "migrate"; dryRun: boolean }
+  | { command: "toc"; check: boolean }
   | { command: "sync" }
   | { command: "verify" }
   | { command: "render"; arguments: readonly string[] };
@@ -88,7 +90,8 @@ const startArguments = (
   for (let index = 0; index < args.length; ++index) {
     const token = args[index]!;
     if (token === "--force") {
-      if (force) throw new Error("--force may be supplied only once for start.");
+      if (force)
+        throw new Error("--force may be supplied only once for start.");
       force = true;
     } else if (token === "--language") {
       if (language !== undefined)
@@ -230,6 +233,26 @@ export const readAutoMovieCommandArguments = (
           ? ("dry-run" as const)
           : ("apply" as const),
     } as const;
+  }
+  if (command === "contracts") {
+    const [action, ...options] = rest;
+    if (action !== "migrate")
+      throw new Error('contracts needs the "migrate" action.');
+    if (
+      options.some((option) => option !== "--dry-run") ||
+      options.filter((option) => option === "--dry-run").length > 1
+    )
+      throw new Error("contracts migrate accepts --dry-run at most once.");
+    return {
+      command,
+      action,
+      dryRun: options.includes("--dry-run"),
+    } as const;
+  }
+  if (command === "toc") {
+    if (rest.some((option) => option !== "--check") || rest.length > 1)
+      throw new Error("toc accepts --check at most once.");
+    return { command, check: rest.includes("--check") } as const;
   }
   if (command === "sync" || command === "verify") {
     if (rest.length !== 0) throw new Error(`${command} takes no arguments.`);

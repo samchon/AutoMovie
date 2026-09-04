@@ -18,6 +18,8 @@ type CommandPlan =
       directory: string;
       mode: "apply" | "dry-run" | "rollback";
     }
+  | { command: "contracts"; action: "migrate"; dryRun: boolean }
+  | { command: "toc"; check: boolean }
   | { command: "sync" | "verify" }
   | { command: "render"; arguments: readonly string[] };
 
@@ -122,6 +124,21 @@ export const test_cli_command_arguments = (): void => {
           refuses(["verify", "--force"], "verify takes no arguments"),
       ],
       [
+        "maintenanceCommandsConsumeOneClosedMode",
+        () =>
+          JSON.stringify(read("contracts", "migrate", "--dry-run")) ===
+            JSON.stringify({
+              command: "contracts",
+              action: "migrate",
+              dryRun: true,
+            }) &&
+          JSON.stringify(read("toc", "--check")) ===
+            JSON.stringify({ command: "toc", check: true }) &&
+          refuses(["contracts"], "migrate") &&
+          refuses(["contracts", "migrate", "--check"], "--dry-run") &&
+          refuses(["toc", "--check", "--check"], "at most once"),
+      ],
+      [
         "renderConsumesTheGeneratedRunnerGrammar",
         () =>
           render.command === "render" &&
@@ -150,12 +167,27 @@ export const test_cli_command_arguments = (): void => {
         "unknownDuplicateInapplicableAndExtraTokensAreRefused",
         () =>
           refuses(["launch", "film"], "Unknown command") &&
-          refuses(["start", "film", "--language", "english", "--dryrun"], "start option") &&
-          refuses(["start", "film", "--language", "english", "--dry-run"], "start option") &&
+          refuses(
+            ["start", "film", "--language", "english", "--dryrun"],
+            "start option",
+          ) &&
+          refuses(
+            ["start", "film", "--language", "english", "--dry-run"],
+            "start option",
+          ) &&
           refuses(["start", "-h"], "start option") &&
-          refuses(["start", "film", "--language", "english", "--force", "--force"], "only once") &&
-          refuses(["start", "film", "--language", "english", "--language", "korean"], "only once") &&
-          refuses(["start", "film", "--language", "english", "other"], "received 2") &&
+          refuses(
+            ["start", "film", "--language", "english", "--force", "--force"],
+            "only once",
+          ) &&
+          refuses(
+            ["start", "film", "--language", "english", "--language", "korean"],
+            "only once",
+          ) &&
+          refuses(
+            ["start", "film", "--language", "english", "other"],
+            "received 2",
+          ) &&
           refuses(["migrate", "film", "--force"], "migrate option") &&
           refuses(["migrate", "film", "--dry-run", "--dry-run"], "only once") &&
           refuses(["migrate", "film", "--dry-run", "--rollback"], "only one") &&
@@ -167,8 +199,14 @@ export const test_cli_command_arguments = (): void => {
           refuses(["start"], "requires --language") &&
           refuses(["start", "film"], "requires --language") &&
           refuses(["start", "film", "--language"], "requires a value") &&
-          refuses(["start", "film", "--language", "french"], "requires --language") &&
-          refuses(["start", "  ", "--language", "english"], "non-blank target") &&
+          refuses(
+            ["start", "film", "--language", "french"],
+            "requires --language",
+          ) &&
+          refuses(
+            ["start", "  ", "--language", "english"],
+            "non-blank target",
+          ) &&
           refuses(["migrate"], "non-blank target"),
       ],
       [
@@ -211,6 +249,7 @@ export const test_cli_command_arguments = (): void => {
       startConsumesItsDirectoryAndOptionalFlag: true,
       migrateResolvesExactlyOneMode: true,
       zeroArgumentCommandsConsumeNothingElse: true,
+      maintenanceCommandsConsumeOneClosedMode: true,
       renderConsumesTheGeneratedRunnerGrammar: true,
       unknownDuplicateInapplicableAndExtraTokensAreRefused: true,
       missingAndBlankDirectoriesAreRefused: true,

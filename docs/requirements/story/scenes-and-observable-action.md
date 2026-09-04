@@ -42,6 +42,8 @@ Scene은 안정 identity와 사람이 읽는 순서 번호를 구분하고, prod
 
 Screenplay index와 catalogue는 stable scene identity를 authoritative prose, sequence와 beat에 연결해야 하며 행동과 dialogue를 축약한 두 번째 screenplay가 되지 않아야 한다. Index와 prose가 heading, 장소, 시간, 참여자 또는 포함 beat에 대해 충돌하면 어느 쪽도 조용히 덮어쓰지 않고 source authority finding으로 보고해야 한다.
 
+Script와 screenplay의 delivery-group index는 numbered unit filename과 H1에서 생성한 canonical ordered link block을 가져야 한다. 같은 renderer의 check mode는 missing, extra, duplicate, wrong-order, wrong-target와 malformed block을 거부하고 authored prose는 unit file에 그대로 남겨야 한다.
+
 ### 참여자와 등장 방식 {#story-scene-participant-modes}
 
 Scene은 on-screen actor, off-screen speaker, crowd, object, environmental agent와 referenced-only entity를 구분할 수 있어야 한다. 실제로 참여하지 않는 인물을 cast list에 넣었다는 이유로 scene action의 performer로 간주하지 않아야 한다.

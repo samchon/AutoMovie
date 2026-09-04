@@ -2,6 +2,8 @@
 
 Screenplays belong only to a film. Mirror the reviewed script delivery partition in `docs/screenplays`: preserve every delivery-group directory, index H1, unit filename and H1, and exact H2/H3/H4 identity, nesting, and order.
 
+Run `npm run toc` after the mirrored inventory changes and `npm run toc -- --check` before advancing evidence. The generated managed block links units in canonical filename order; prose remains in the unit files and never moves into the index.
+
 Write the final human-readable audiovisual contract. Preserve the script's decisive action, physical progression, exchange, timing boundary, and exit, then choose the visible action, audience-facing text, dialogue, sound, silence, perceptual access, rhythm, implication, and production-recognizable audiovisual voice that make the beat ready for independent shot and edit realization. Do not transcribe staging notes or hide missing narrative mechanics beneath camera language.
 
 Keep a master-scene contract distinct from a shooting implementation. A valid heading and block hierarchy establishes formal validity only; each scene must also close its entry, action, exchange, audience effect, and exit semantically. Preserve the reviewed screenplay revision and every heading's scene, place, interior/exterior, time, and continuity axes, and invalidate downstream mappings after a substantive revision instead of letting renumbering or formatting disguise changed content.

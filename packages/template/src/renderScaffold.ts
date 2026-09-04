@@ -5,6 +5,10 @@ import {
 import * as fs from "node:fs";
 import * as path from "node:path";
 
+import {
+  AUTO_MOVIE_CONTRACT_BASELINE_PATH,
+  renderAutoMovieContractBaseline,
+} from "./productionMaintenance";
 import { renderAutoMovieLanguageContracts } from "./renderAutoMovieLanguageContracts";
 import { renderAutoMovieProductionRouter } from "./renderAutoMovieProductionRouter";
 import { renderTemplate } from "./renderTemplate";
@@ -399,8 +403,8 @@ export const renderScaffold = (
   const files = renderScaffoldEntries(
     [
       ...listFiles(root).map((relative) => ({
-      content: fs.readFileSync(path.join(root, relative), "utf8"),
-      relative,
+        content: fs.readFileSync(path.join(root, relative), "utf8"),
+        relative,
       })),
       ...languageEntries,
     ],
@@ -426,6 +430,16 @@ export const renderScaffold = (
       },
       designOwners: [],
       contracts: [],
+    }),
+    writable: true,
+  });
+  Object.defineProperty(files, AUTO_MOVIE_CONTRACT_BASELINE_PATH, {
+    configurable: true,
+    enumerable: true,
+    value: renderAutoMovieContractBaseline({
+      files,
+      language: props.language,
+      version: AUTOMOVIE_TEMPLATE_VERSIONS.evidence!,
     }),
     writable: true,
   });

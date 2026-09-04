@@ -6,6 +6,7 @@ export {
   isAutoMovieProductionLanguage,
 } from "@automovie/evidence";
 export * from "./renderAutoMovieProductionRouter";
+export * from "./productionMaintenance";
 export * from "./renderTemplate";
 export * from "./resolveAutoMovieCatalogVersion";
 /** @internal */

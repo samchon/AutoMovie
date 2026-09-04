@@ -1,11 +1,12 @@
 import "./AutoMoviePopulationTransition.test";
 import "./assertAutoMovieEvidenceSyntax.test";
 import "./auditAutoMovieEvidenceReviewReasons.test";
+import "./contractMigrationAndDeliveryToc.test";
 import "./createAutoMovieEvidenceConfig.test";
-import "./createBlankAutoMovieProductionEvidence.test";
 import "./createAutoMoviePopulationAccountClaims.test";
 import "./createAutoMoviePopulationFiles.test";
 import "./createAutoMovieProductionContractClaim.test";
+import "./createBlankAutoMovieProductionEvidence.test";
 import "./inspectAutoMovieEvidenceReviewAlarms.test";
 import "./inspectAutoMovieEvidenceTopology.test";
 import "./measureAutoMovieAuthoredText.test";
