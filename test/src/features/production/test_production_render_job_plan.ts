@@ -522,6 +522,21 @@ export const test_production_render_job_plan = (): void => {
           ),
       ],
       [
+        "dialogueRuntimeDigest",
+        () =>
+          throwsError(
+            () =>
+              plan({
+                runtimeIdentity: {
+                  ...RUNTIME_IDENTITY,
+                  dialogueRuntimeIdentity:
+                    "sha256:not-a-digest" as AutoMovieContentDigest,
+                },
+              }),
+            "dialogueRuntimeIdentity must be null or one current SHA-256 content identity",
+          ),
+      ],
+      [
         "indivisibleStep",
         () =>
           throwsError(
@@ -612,6 +627,7 @@ export const test_production_render_job_plan = (): void => {
     {
       chunkFrames: true,
       runtimeDigest: true,
+      dialogueRuntimeDigest: true,
       indivisibleStep: true,
       economisedFinal: true,
       reductionlessProxy: true,
