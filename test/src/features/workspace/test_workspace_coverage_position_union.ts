@@ -21,12 +21,10 @@ import {
  * for the same records read together, and the difference is the thirteen
  * statements no single group saw all of.
  *
- * Positions are what two shapes have in common. Identifiers differ between
- * emitted forms and cannot be matched; line numbers are the source's own and
- * can. The granularity is therefore the line, which is the honest limit: two
- * statements on one line cannot be told apart, and one of them covered marks
- * both. Saying that is better than claiming an exactness the identifiers do not
- * support.
+ * Positions are what two shapes have in common. Report-local numeric ids differ
+ * between emitted forms, so the fold matches the complete source span instead:
+ * kind, start/end line and column, plus function declaration/name or branch
+ * parent and arm. Two positions on one line therefore remain independent.
  *
  * Scenarios:
  *
@@ -42,7 +40,20 @@ import {
  *    invented entry.
  */
 export const test_workspace_coverage_position_union = (): void => {
-  const span = (line: number) => ({ start: { line } });
+  const span = (line: number, column: number = 0) => ({
+    start: { line, column },
+    end: { line, column: column + 1 },
+  });
+  const fn = (name: string, line: number) => ({
+    name,
+    decl: span(line),
+    loc: span(line),
+  });
+  const branch = (locations: ReturnType<typeof span>[]) => ({
+    type: "if",
+    loc: span(locations[0]?.start.line ?? 0),
+    locations,
+  });
   const thin: ICoverageEntry = {
     b: {},
     branchMap: {},
@@ -53,18 +64,18 @@ export const test_workspace_coverage_position_union = (): void => {
   };
   const base: ICoverageEntry = {
     b: { 0: [1, 0] },
-    branchMap: { 0: { locations: [span(9), span(10)] } },
+    branchMap: { 0: branch([span(9), span(10)]) },
     f: { 0: 2, 1: 0 },
-    fnMap: { 0: { loc: span(5) }, 1: { loc: span(6) } },
+    fnMap: { 0: fn("first", 5), 1: fn("second", 6) },
     s: { 0: 3, 1: 0, 2: 0 },
     statementMap: { 0: span(1), 1: span(2), 2: span(3) },
   };
   const sibling: ICoverageEntry = {
     // A different emitted form: the same lines, different identifiers.
     b: { 7: [0, 4] },
-    branchMap: { 7: { locations: [span(9), span(10)] } },
+    branchMap: { 7: branch([span(9), span(10)]) },
     f: { 9: 1 },
-    fnMap: { 9: { loc: span(6) } },
+    fnMap: { 9: fn("second", 6) },
     s: { 4: 1 },
     statementMap: { 4: span(2) },
   };
@@ -85,6 +96,27 @@ export const test_workspace_coverage_position_union = (): void => {
       branches: { 0: [1, 1] },
       structure: ["0", "1", "2"],
     },
+  );
+
+  const collisions = unionEntryByLine([
+    base,
+    {
+      b: { 4: [1] },
+      branchMap: { 4: branch([span(10, 8)]) },
+      f: { 4: 1 },
+      fnMap: { 4: fn("second", 60) },
+      s: { 4: 1 },
+      statementMap: { 4: span(2, 8) },
+    },
+  ]);
+  TestValidator.equals(
+    "same-line and same-name collisions do not transfer hits",
+    {
+      statement: collisions?.s?.[1],
+      function: collisions?.f?.[1],
+      branch: collisions?.b?.[0]?.[1],
+    },
+    { statement: 0, function: 0, branch: 0 },
   );
 
   // A reading c8 wrote before it knew the shape: no maps at all, a span with no
@@ -159,11 +191,11 @@ export const test_workspace_coverage_position_union = (): void => {
       ])?.b,
     },
     {
-      // `base`'s own structure and hits, unchanged: the unrun reading adds no
-      // line, and its four positions do not replace three that ran.
-      statements: { 0: 1, 1: 0, 2: 0, 3: 1 },
-      functions: { 0: 1 },
-      branches: { 0: [1], 1: [1], 2: [] },
+      // The larger reading is the structure, but incomplete identities borrow
+      // no hits from positions that merely share their source line.
+      statements: { 0: 1 },
+      functions: {},
+      branches: { 0: [0], 1: [0], 2: [] },
       recordless: { 0: [1, 0] },
     },
   );

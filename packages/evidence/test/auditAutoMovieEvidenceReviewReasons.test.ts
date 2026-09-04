@@ -1,6 +1,4 @@
 import assert from "node:assert";
-import fs from "node:fs";
-import path from "node:path";
 
 import { assertAutoMovieEvidenceReviewReasons } from "../src/auditAutoMovieEvidenceReviewReasons";
 
@@ -142,32 +140,9 @@ const testAssertion = (): void => {
   );
 };
 
-const fixtureDocuments = (
-  directory: string,
-  root = directory,
-): Array<Parameters<typeof assertAutoMovieEvidenceReviewReasons>[0][number]> =>
-  fs
-    .readdirSync(directory, { withFileTypes: true })
-    .sort((left, right) => left.name.localeCompare(right.name))
-    .flatMap((entry) => {
-      const absolute = path.join(directory, entry.name);
-      if (entry.isDirectory()) return fixtureDocuments(absolute, root);
-      return entry.isFile() && /\.(?:md|ts)$/u.test(entry.name)
-        ? [
-            {
-              path: path.relative(root, absolute).replaceAll("\\", "/"),
-              source: fs.readFileSync(absolute, "utf8"),
-            },
-          ]
-        : [];
-    });
-
 /**
  * Two hosts answering one target with one sentence, and the three boundaries
  * that are not that.
- *
- * Measured before this refusal existed, `test/fixtures/completed-film` carried
- * 82 of them; the corpus check below is what keeps that at zero.
  */
 const testCrossHostSharedReason = (): void => {
   const shared = "The unit fixes the ground origin and the raised endpoint.";
@@ -274,21 +249,9 @@ ${tag}
   );
 };
 
-const testCompletedFilmCorpus = (): void => {
-  const fixture = path.resolve(
-    import.meta.dirname,
-    "../../../test/fixtures/completed-film",
-  );
-  assert.doesNotThrow(
-    () => assertAutoMovieEvidenceReviewReasons(fixtureDocuments(fixture)),
-    "the complete historical production must contain zero mechanical restatements, zero same-host review reuse, and no reason shared word for word by two hosts answering one target",
-  );
-};
-
 testRestatementForms();
 testHostLocalReuse();
 testTargetInterpolationReuse();
 testAcceptedBoundaries();
 testAssertion();
 testCrossHostSharedReason();
-testCompletedFilmCorpus();

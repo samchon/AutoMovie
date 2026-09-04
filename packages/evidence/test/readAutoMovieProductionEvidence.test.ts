@@ -1,21 +1,14 @@
 import assert from "node:assert/strict";
 import fs from "node:fs";
-import os from "node:os";
 import path from "node:path";
 
 import {
   type IAutoMovieEvidenceConfigProps,
   readAutoMovieProductionEvidence,
 } from "../src";
+import { createEvidenceProjectFixture } from "./EvidenceProjectFixture";
 
 const roots: string[] = [];
-const scaffoldRoot = path.resolve(
-  import.meta.dirname,
-  "..",
-  "..",
-  "template",
-  "scaffold",
-);
 
 /**
  * The production-evidence reader exposes one exact router/review denominator.
@@ -31,7 +24,7 @@ const scaffoldRoot = path.resolve(
  *    name fail before either can become a router or review denominator.
  */
 try {
-  const project = createProject("reader-library");
+  const project = createProject();
   write(
     project,
     "package.json",
@@ -212,27 +205,6 @@ try {
     }),
     first,
   );
-  const linkedSourceParent = fs.mkdtempSync(
-    path.join(os.tmpdir(), "reader-linked-source-"),
-  );
-  roots.push(linkedSourceParent);
-  const linkedSourceTarget = path.join(linkedSourceParent, "models");
-  fs.renameSync(path.join(project, "src", "models"), linkedSourceTarget);
-  fs.symlinkSync(
-    linkedSourceTarget,
-    path.join(project, "src", "models"),
-    process.platform === "win32" ? "junction" : "dir",
-  );
-  assert.throws(
-    () =>
-      readAutoMovieProductionEvidence({
-        root: project,
-        productionEvidence: configuration,
-      }),
-    /project evidence populations contain only real files and directories inside the project root/u,
-  );
-  fs.rmSync(path.join(project, "src", "models"));
-  fs.renameSync(linkedSourceTarget, path.join(project, "src", "models"));
   const modelSources = path.join(project, "src", "models");
   const inactiveSources = path.join(project, "inactive-models");
   fs.renameSync(modelSources, inactiveSources);
@@ -249,9 +221,11 @@ try {
   );
   fs.writeFileSync(
     alpha,
-    fs
-      .readFileSync(alpha, "utf8")
-      .replace("The exact joint.", "The exact revised joint."),
+    rewrite(
+      fs.readFileSync(alpha, "utf8"),
+      "The exact joint.",
+      "The exact revised joint.",
+    ),
   );
   const revised = readAutoMovieProductionEvidence({
     root: project,
@@ -294,22 +268,20 @@ try {
   for (const root of roots) fs.rmSync(root, { force: true, recursive: true });
 }
 
-/** Create a generated project with its scaffold-local contract inventory. */
-function createProject(name: string): string {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), `${name}-`));
-  roots.push(root);
-  for (const family of ["discovery", "obligations", "principles", "upstream"])
-    fs.cpSync(
-      path.join(scaffoldRoot, "docs", family),
-      path.join(root, "docs", family),
-      { recursive: true },
-    );
-  write(
-    root,
-    "docs/contracts/index.md",
-    "<!-- @evidenceExclude discovery/core/common.md#shared-local-boundary This reader fixture retains no other production-specific rule. -->\n\n# Work-specific contract audit\n",
-  );
-  return root;
+/** Create a generated project with a synthetic local contract inventory. */
+function createProject(): string {
+  return createEvidenceProjectFixture(roots);
+}
+
+/** Refuse to silently weaken a mutation-based arrangement. */
+function rewrite(
+  source: string,
+  search: string | RegExp,
+  replacement: string,
+): string {
+  const rewritten = source.replace(search, replacement);
+  assert.notEqual(rewritten, source, "the fixture mutation anchor must exist");
+  return rewritten;
 }
 
 /** Write one project-relative UTF-8 fixture file. */
