@@ -373,8 +373,8 @@ const CONTRACTS: readonly IContractFixture[] = [
         anchor: "instance-placement-review",
       },
       {
-        title: "Prop and set-dressing account",
-        anchor: "instance-prop-set-dressing-account",
+        title: "Set-dressing membership and placement",
+        anchor: "instance-set-dressing-placement",
       },
     ],
   },
@@ -519,6 +519,10 @@ const CONTRACTS: readonly IContractFixture[] = [
       {
         title: "Model review set",
         anchor: "model-review-set",
+      },
+      {
+        title: "Story prop representation",
+        anchor: "model-story-prop-representation",
       },
       {
         title: "Representation completion account",
@@ -944,8 +948,8 @@ const CONTRACTS: readonly IContractFixture[] = [
         anchor: "instance-verification-address",
       },
       {
-        title: "Prop and set-dressing boundary",
-        anchor: "instance-prop-set-dressing-boundary",
+        title: "Dressing placement boundary",
+        anchor: "instance-dressing-placement-boundary",
       },
     ],
   },
@@ -1210,10 +1214,6 @@ const CONTRACTS: readonly IContractFixture[] = [
       {
         title: "Scene semantic completion",
         anchor: "screenplay-scene-completion",
-      },
-      {
-        title: "Locked revision identity",
-        anchor: "screenplay-locked-revision",
       },
       {
         title: "Heading identity axes",

@@ -114,11 +114,11 @@ const sharedTargetIdentities = (): ReservedTarget[] => {
  * silently retain rules for another language.
  *
  * @evidence requirements/agent-authoring/capability-discovery.md#agent-topic-document-discovery Publishes only the selected language's discoverable contracts.
- * @evidence requirements/agent-authoring/capability-discovery.md#agent-production-language-contract Publishes exactly one selected language module and refuses residue.
+ * @evidence requirements/agent-authoring/production-language.md#agent-production-language-contract Publishes exactly one selected language module and refuses residue.
  * @evidence requirements/agent-authoring/project-ownership.md#agent-portable-authoring Materializes the chosen language rules as ordinary project-local documents.
  * @evidence specifications/authoring-and-authority/capability-and-content-boundary.md#spec-authoring-capability-input-output Derives one complete language module from explicit selection.
  * @evidence specifications/authoring-and-authority/source-authority-and-derivation.md#spec-authoring-source-input Makes the language identity part of deterministic scaffold derivation.
- * @evidence specifications/authoring-and-authority/capability-and-content-boundary.md#spec-authoring-production-language-module Enforces the module's exact physical file identity.
+ * @evidence specifications/authoring-and-authority/production-language.md#spec-authoring-production-language-module Enforces the module's exact physical file identity.
  * @author Samchon
  */
 export const renderAutoMovieLanguageContracts = (props: {

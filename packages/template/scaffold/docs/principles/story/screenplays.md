@@ -124,14 +124,6 @@ Review question: which formally valid scene still requires a downstream author t
 
 Sources: [Academy Nicholl screenplay formatting resources](https://www.oscars.org/nicholl/screenwriting-resources); [NASA systems engineering handbook on verification-ready requirements](https://www.nasa.gov/reference/systems-engineering-handbook/)
 
-## Locked revision identity {#screenplay-locked-revision}
-
-Every reviewed screenplay population identifies the exact revision whose units, headings, content, timing, and ancestry were accepted. A later rewrite is a new revision that invalidates dependent review, shot, and edit evidence; formatting or renumbering does not silently mutate a locked revision.
-
-Review question: which downstream result claims a reviewed screenplay while reading content from another revision?
-
-Sources: [Final Draft on scene numbering and revision practice](https://kb.finaldraft.com/hc/en-us/articles/27810301418132-How-do-I-number-scenes); [NASA systems engineering handbook on configuration identity](https://www.nasa.gov/reference/systems-engineering-handbook/)
-
 ## Heading identity axes {#screenplay-heading-identity}
 
 Each scene heading carries the stable scene identity and the authored location, interior or exterior condition where relevant, story-time condition, and continuity boundary needed to distinguish it. A conventional label is not accepted when its axes conflict with the scene body or source ancestry.

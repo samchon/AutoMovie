@@ -1,10 +1,8 @@
 /**
  * Production-authoring languages with a complete bundled contract pack.
  *
- * @evidence requirements/agent-authoring/capability-discovery.md#agent-topic-document-discovery Names the exact language-specific authoring routes the scaffold can publish.
- * @evidence requirements/agent-authoring/capability-discovery.md#agent-production-language-contract Defines the closed creation-time language selection.
- * @evidence specifications/authoring-and-authority/capability-and-content-boundary.md#spec-authoring-capability-state Exposes the finite language-contract capability inventory without supplying production content.
- * @evidence specifications/authoring-and-authority/capability-and-content-boundary.md#spec-authoring-production-language-module Defines the exact supported module vocabulary.
+ * @evidence requirements/agent-authoring/production-language.md#agent-production-language-contract Defines the exact supported creation-time choices without a host default.
+ * @evidence specifications/authoring-and-authority/production-language.md#spec-authoring-production-language-module Owns the canonical tuple consumed by every language selector.
  * @author Samchon
  */
 export const AUTO_MOVIE_PRODUCTION_LANGUAGES = [
@@ -17,10 +15,8 @@ export const AUTO_MOVIE_PRODUCTION_LANGUAGES = [
 /**
  * One exact language contract selected by a generated production.
  *
- * @evidence requirements/agent-authoring/project-ownership.md#agent-portable-authoring Keeps the selected authoring language in portable tracked input.
- * @evidence requirements/agent-authoring/capability-discovery.md#agent-production-language-contract Keeps the choice to one supported production language.
- * @evidence specifications/authoring-and-authority/source-authority-and-derivation.md#spec-authoring-source-input Makes language selection an explicit source input rather than a host default.
- * @evidence specifications/authoring-and-authority/capability-and-content-boundary.md#spec-authoring-production-language-module Carries the closed module selection into scaffold derivation.
+ * @evidence requirements/agent-authoring/production-language.md#agent-production-language-contract Carries one supported language identity through tracked project input.
+ * @evidence specifications/authoring-and-authority/production-language.md#spec-authoring-production-language-module Types exactly one member of the canonical module inventory.
  * @author Samchon
  */
 export type AutoMovieProductionLanguage =
@@ -29,10 +25,8 @@ export type AutoMovieProductionLanguage =
 /**
  * True when a value selects one complete bundled language contract.
  *
- * @evidence requirements/agent-authoring/capability-discovery.md#agent-choice-surface-discovery Refuses an unknown language rather than routing to an undeclared authoring surface.
- * @evidence requirements/agent-authoring/capability-discovery.md#agent-production-language-contract Rejects values outside the supported production-language modules.
- * @evidence specifications/authoring-and-authority/capability-and-content-boundary.md#spec-authoring-capability-failure-gap Distinguishes a supported contract pack from an unavailable language capability.
- * @evidence specifications/authoring-and-authority/capability-and-content-boundary.md#spec-authoring-production-language-module Implements the closed language-module predicate.
+ * @evidence requirements/agent-authoring/production-language.md#agent-production-language-contract Refuses values outside the supported production-language modules.
+ * @evidence specifications/authoring-and-authority/production-language.md#spec-authoring-production-language-module Implements the closed predicate against the canonical tuple.
  * @author Samchon
  */
 export const isAutoMovieProductionLanguage = (

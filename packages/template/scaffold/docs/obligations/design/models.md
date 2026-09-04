@@ -44,6 +44,14 @@ Review question: which repeated views make regressions comparable across model r
 
 Sources: [Academy Digital Source Master project](https://www.oscars.org/science-technology/sci-tech-projects/academy-digital-source-master)
 
+## Story prop representation {#model-story-prop-representation}
+
+The complete model population identifies every staged object whose action, contact, state change, continuity fact, or audience inference matters as a story prop. Each prop retains one reviewed representation identity, applicable articulation or state interface, scale relation and observable review owner independently of whether an instance population places it.
+
+Review question: which interacted object is treated as anonymous dressing even though a named action, contact, state, continuity fact, or audience inference depends on its stable representation?
+
+Sources: [StudioBinder guide to script breakdown elements](https://www.studiobinder.com/blog/the-complete-guide-to-mastering-script-breakdown-elements/); [OpenUSD on model and asset identity](https://openusd.org/release/glossary.html)
+
 ## Representation completion account {#model-representation-completion}
 
 The complete model population accounts for every promised representation layer, shared scale relation, hierarchy boundary, stable surface or articulation interface, declared limitation, and observable acceptance owner. It reports separately whether the representation is structurally valid and whether it is semantically complete for its consumers; neither verdict implies the other.

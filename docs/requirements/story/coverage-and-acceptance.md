@@ -52,10 +52,6 @@ Event 존재, timing, state와 coverage처럼 구조적으로 판정 가능한 �
 
 Acceptance 대상이나 required criteria가 비어 있는 경우 자동 성공하지 않고 왜 빈 범위가 유효한지 명시적으로 확인해야 한다. 지원되지 않거나 실행하지 않은 검사는 `unsupported` 또는 `not-run`으로 드러나야 하며 통과와 구분되어야 한다.
 
-### 저작 계약 판별자 {#story-authoring-contract-discriminators}
-
-공통 저작 계약은 한 단위에서 판정할 수 있는 목적 있는 선택과 완성 population에서만 판정할 수 있는 반복·분포를 구분해야 한다. 서사 population은 단위 기여, 순서 연결, 상태와 인물 continuity, 시간 gear, speech, voice frame와 pacing을 각각 비교하고, screenplay와 design은 형식 유효성과 의미 완성, master-scene과 shooting 책임, 잠긴 revision과 heading 축, prop과 set dressing, style 근거, scale과 layer 완성을 서로 대신하지 않는 판별자로 검토할 수 있어야 한다.
-
 ### 최종 이야기 Acceptance {#story-final-acceptance}
 
 최종 story acceptance는 current logline, 선택된 treatment와 승인된 alternative 조합, 전체 scene coverage, chronology, causal chain, character와 relation state, dialogue version, theme promises와 ending을 같은 revision에서 판정해야 한다. 미해결 필수 gap이나 stale evidence가 있으면 완료로 제시하지 않아야 한다.

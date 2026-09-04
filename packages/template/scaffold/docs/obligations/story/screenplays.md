@@ -22,8 +22,8 @@ Sources: [Academy Nicholl screenplay formatting resources](https://www.oscars.or
 
 ## Revision and realization handoff {#screenplay-revision-realization-handoff}
 
-Every shot and film-source owner consumes one locked screenplay revision and records the exact scene identities it realizes. Renumbered, split, merged, revised, or retired scenes invalidate dependent mappings until they are explicitly reconciled.
+The complete screenplay population identifies the exact locked revision whose units, headings, content, timing, ancestry, and scene identities were reviewed. Every shot and film-source owner consumes that revision and records the exact scene identities it realizes. Renumbered, split, merged, revised, or retired scenes create a successor revision and invalidate dependent review, shot, edit, and delivery mappings until they are explicitly reconciled; formatting or renumbering never mutates the locked identity in place.
 
-Review question: which downstream mapping survives only because a changed screenplay identity was treated as the same reviewed input?
+Review question: which review or downstream mapping survives only because changed screenplay content or identity was treated as the same locked revision?
 
 Sources: [Final Draft on scene numbering and revision practice](https://kb.finaldraft.com/hc/en-us/articles/27810301418132-How-do-I-number-scenes); [NASA systems engineering handbook on configuration identity](https://www.nasa.gov/reference/systems-engineering-handbook/)

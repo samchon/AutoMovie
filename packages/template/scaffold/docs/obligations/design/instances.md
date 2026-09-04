@@ -42,10 +42,10 @@ Review question: which deterministic probe exposes collision, drift, unstable me
 
 Sources: [NASA on requirement-specific verification methods and evidence](https://www.nasa.gov/reference/system-engineering-handbook-appendix/)
 
-## Prop and set-dressing account {#instance-prop-set-dressing-account}
+## Set-dressing membership and placement {#instance-set-dressing-placement}
 
-The complete instance population classifies every staged object whose identity matters as a story prop, set dressing, a space-owned structural element, or another explicit owner. Props retain action, contact, state, and continuity identity; dressing retains its place, period, access, activity, or visual purpose without being treated as an anonymous substitute for a prop.
+The complete instance population accounts for repeated or grouped set dressing, its prototype membership, stable member identities, placement rule and place, period, access, activity, or visual purpose. A member whose action, contact, state change, continuity fact, or audience inference matters is not discharged as dressing; it cites the separately reviewed prop model identity and preserves that identity through placement.
 
-Review question: which staged member is misclassified, and what observable action, continuity, spatial, or visual responsibility gives it the correct owner?
+Review question: which dressing member lacks a placement purpose or prototype membership, and which supposed dressing member actually carries a prop action or continuity identity?
 
 Sources: [StudioBinder guide to script breakdown elements](https://www.studiobinder.com/blog/the-complete-guide-to-mastering-script-breakdown-elements/); [OpenUSD scenegraph instancing](https://openusd.org/release/api/_usd__page__scenegraph_instancing.html)

@@ -23,7 +23,3 @@
 ### 현재 능력과 gap의 구분 {#agent-capability-gap-discovery}
 
 문서화된 요구사항, 구현된 능력, 아직 구현되지 않은 gap을 구분하여 저자가 존재하지 않는 surface를 있다고 믿거나 현재 가능한 조합을 놓치지 않게 해야 한다.
-
-### 제작 언어 계약 선택 {#agent-production-language-contract}
-
-Project 생성은 지원하는 제작 언어 하나를 명시적으로 선택하고 그 언어의 탐색 질문, 단위 원칙과 완성 population 의무만 project 안에 설치해야 한다. 선택 누락, 지원하지 않는 언어와 다른 언어 module의 잔존을 거부하고, 선택한 언어 identity를 같은 typed 설정과 저작 router에서 확인할 수 있어야 한다.

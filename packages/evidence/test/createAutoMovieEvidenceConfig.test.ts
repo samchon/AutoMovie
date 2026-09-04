@@ -2059,6 +2059,17 @@ export const review = true;
     research: "review",
     settings: "evidence",
   });
+  assert.deepEqual(
+    researchEvidenceGraph.claims
+      .filter((claim) => claim.name.startsWith("research population accounts"))
+      .map((claim) => claim.name),
+    [
+      "research population accounts answer each obligations/core/common.md obligation once",
+      "research population accounts answer each obligations/core/defaults.md obligation once",
+      "research population accounts answer each language/obligations/common.md obligation once",
+    ],
+    "research owes common defaults and selected-language obligations without inventing a design-specific account",
+  );
   const researchEvidenceClaim = researchEvidenceGraph.claims.find(
     (claim) =>
       claim.name ===
