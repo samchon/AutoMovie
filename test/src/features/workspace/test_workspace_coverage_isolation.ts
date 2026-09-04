@@ -165,7 +165,7 @@ export const test_workspace_coverage_isolation = (): void => {
         isMeasuredScriptUrl(
           "file:///D:/repo/packages/engine/src/windows.ts",
           ["."],
-          "d:/repo",
+          "D:/repo",
         ),
       ) +
       Number(
