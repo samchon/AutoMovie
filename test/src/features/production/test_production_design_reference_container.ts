@@ -314,6 +314,14 @@ export const test_production_design_reference_container = (): void => {
     Buffer.from(pdf()).toString("latin1").replace("/Catalog", "/Pages"),
     "latin1",
   );
+  const missingPdfSize = Buffer.from(
+    Buffer.from(pdf()).toString("latin1").replace("/Size 2 ", ""),
+    "latin1",
+  );
+  const shortPdfSize = Buffer.from(
+    Buffer.from(pdf()).toString("latin1").replace("/Size 2", "/Size 1"),
+    "latin1",
+  );
   TestValidator.equals(
     "prefix PDF and token-only or unclosed DXF remain refusals",
     [
@@ -323,6 +331,8 @@ export const test_production_design_reference_container = (): void => {
       refuses("offset.pdf", wrongPdfOffset),
       refuses("count.pdf", wrongPdfCount),
       refuses("root-type.pdf", wrongPdfRootType),
+      refuses("missing-size.pdf", missingPdfSize),
+      refuses("short-size.pdf", shortPdfSize),
       refuses("memo.dxf", utf8("memo: $ACADVER means version")),
       refuses("open.dxf", utf8("0\nSECTION\n2\nHEADER\n0\nEOF")),
       refuses(
@@ -336,6 +346,6 @@ export const test_production_design_reference_container = (): void => {
         ),
       ),
     ],
-    [true, true, true, true, true, true, true, true, true, true],
+    [true, true, true, true, true, true, true, true, true, true, true, true],
   );
 };

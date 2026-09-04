@@ -399,15 +399,29 @@ const inspectClassicPdfXref = (
       });
     }
   }
-  const root = /\/Root[ \t\r\n]+(\d+)[ \t\r\n]+(\d+)[ \t\r\n]+R\b/.exec(
-    trailer[1]!,
-  );
-  return root === null
-    ? null
-    : {
-        entries,
-        root: { object: Number(root[1]), generation: Number(root[2]) },
-      };
+  const dictionary = trailer[1]!;
+  const roots = [
+    ...dictionary.matchAll(
+      /\/Root[ \t\r\n]+(\d+)[ \t\r\n]+(\d+)[ \t\r\n]+R\b/g,
+    ),
+  ];
+  const sizes = [...dictionary.matchAll(/\/Size[ \t\r\n]+(\d+)\b/g)];
+  if (roots.length !== 1 || sizes.length !== 1) return null;
+  const root = {
+    object: Number(roots[0]![1]),
+    generation: Number(roots[0]![2]),
+  };
+  const size = Number(sizes[0]![1]);
+  if (
+    !Number.isSafeInteger(root.object) ||
+    !Number.isSafeInteger(root.generation) ||
+    !Number.isSafeInteger(size) ||
+    size < 1 ||
+    root.object >= size ||
+    [...entries.keys()].some((object) => object >= size)
+  )
+    return null;
+  return { entries, root };
 };
 
 interface IXmlRoot {
