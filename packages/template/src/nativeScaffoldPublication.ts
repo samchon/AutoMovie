@@ -13,6 +13,7 @@ interface IBoundParent {
 
 type ICreateResult =
   | { descriptor: number; status: "opened" }
+  | { error: unknown; status: "partial" }
   | {
       error: unknown;
       reason: "create-failed" | "target-competitor";
@@ -23,6 +24,13 @@ class ScaffoldParentChangedError extends Error {
   public constructor(message: string, options?: ErrorOptions) {
     super(message, options);
     this.name = "ScaffoldParentChangedError";
+  }
+}
+
+class ScaffoldCreatedSlotError extends Error {
+  public constructor(message: string, options?: ErrorOptions) {
+    super(message, options);
+    this.name = "ScaffoldCreatedSlotError";
   }
 }
 
@@ -85,6 +93,20 @@ export const publishNativeScaffoldFile = (
       error = combineFailures(error, closeError, "scaffold parent close");
     }
     return Object.freeze({ ...creation, error });
+  }
+  if (creation.status === "partial") {
+    let error = creation.error;
+    try {
+      parent.close();
+    } catch (closeError) {
+      error = combineFailures(error, closeError, "scaffold parent close");
+    }
+    return Object.freeze({
+      bytesWritten: 0,
+      error,
+      parentIdentity: request.expectedParentIdentity,
+      status: "partial",
+    });
   }
 
   const source = Buffer.from(request.bytes);
@@ -388,8 +410,25 @@ const openWindowsParent = (parentPath: string): IBoundParent => {
     const childDescriptor = windows.openOsHandle(childRaw, 0x8002);
     if (childDescriptor < 0) {
       const code = koffi.errno();
-      windows.closeHandle(childRaw);
-      throw nativeError("unable to adopt scaffold child handle", code);
+      let error: unknown = nativeError(
+        "unable to adopt scaffold child handle",
+        code,
+      );
+      if (windows.closeHandle(childRaw) === false)
+        error = combineFailures(
+          error,
+          nativeError(
+            "unable to close unadopted scaffold child",
+            windows.getLastError(),
+          ),
+          "unadopted scaffold child",
+        );
+      if (disposition === 0x2)
+        throw new ScaffoldCreatedSlotError(
+          "scaffold slot was created before descriptor adoption failed",
+          { cause: error },
+        );
+      throw error;
     }
     return { descriptor: childDescriptor, status };
   };
@@ -401,6 +440,8 @@ const openWindowsParent = (parentPath: string): IBoundParent => {
       try {
         created = openChild(childName, 0x2);
       } catch (error) {
+        if (error instanceof ScaffoldCreatedSlotError)
+          return { error, status: "partial" };
         return { error, reason: "create-failed", status: "refused" };
       }
       if (created.descriptor !== undefined)

@@ -123,7 +123,9 @@ const removeStaleInstructionEntries = (
 ): void => {
   const root = path.dirname(path.dirname(targetSkills));
   const desired = new Set(
-    [...desiredFiles].map((entry) => path.resolve(root, entry).toLowerCase()),
+    [...desiredFiles].map((entry) =>
+      canonicalInstructionPath(path.resolve(root, entry)),
+    ),
   );
   const visit = (directory: string): void => {
     if (!fs.existsSync(directory)) return;
@@ -132,12 +134,15 @@ const removeStaleInstructionEntries = (
       if (entry.isDirectory()) {
         visit(target);
         if (fs.readdirSync(target).length === 0) fs.rmdirSync(target);
-      } else if (!desired.has(path.resolve(target).toLowerCase()))
+      } else if (!desired.has(canonicalInstructionPath(path.resolve(target))))
         fs.rmSync(target, { force: true });
     }
   };
   visit(targetSkills);
 };
+
+const canonicalInstructionPath = (target: string): string =>
+  process.platform === "win32" ? target.toLowerCase() : target;
 
 /** Refuse a generated-project root that aliases or is not a directory. */
 const assertManagedRootIsPhysical = (root: string): void => {
