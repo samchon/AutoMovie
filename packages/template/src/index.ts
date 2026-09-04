@@ -12,5 +12,6 @@ export * from "./nativeScaffoldPublication";
 export * from "./scaffoldFileSnapshot";
 export * from "./scaffoldPublication";
 export * from "./templateVersions";
+export * from "./validateAutoMovieSkillRouters";
 export * from "./writeFiles";
 export * from "./writeAutoMovieProductionInstructions";

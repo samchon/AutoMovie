@@ -1,5 +1,6 @@
 import {
   type IAutoMovieEvidenceConfigProps,
+  createBlankAutoMovieProductionEvidence,
   createAutoMovieEvidenceConfig,
   evidence,
 } from "@automovie/evidence";
@@ -19,34 +20,10 @@ import { fileURLToPath } from "node:url";
  * as the parallel serialized input to filmSources.
  */
 export const productionEvidence = {
-  location: fileURLToPath(new URL(".", import.meta.url)),
-  kind: null,
-  language: "{{language}}",
-  populationScope: { mode: "complete-production" },
-  settings: "disabled",
-  research: "disabled",
-  maps: "disabled",
-  models: "disabled",
-  spaces: "disabled",
-  materials: "disabled",
-  instances: "disabled",
-  motions: "disabled",
-  systems: "disabled",
-  treatments: "disabled",
-  scripts: "disabled",
-  screenplays: "disabled",
-  briefs: "disabled",
-  mapSources: "disabled",
-  modelSources: "disabled",
-  spaceSources: "disabled",
-  materialSources: "disabled",
-  instanceSources: "disabled",
-  motionSources: "disabled",
-  systemSources: "disabled",
-  shots: "disabled",
-  productionSources: "disabled",
-  filmSources: "disabled",
-  claims: [],
+  ...createBlankAutoMovieProductionEvidence(
+    fileURLToPath(new URL(".", import.meta.url)),
+    "{{language}}",
+  ),
 } satisfies IAutoMovieEvidenceConfigProps;
 
 const graph = createAutoMovieEvidenceConfig(productionEvidence);

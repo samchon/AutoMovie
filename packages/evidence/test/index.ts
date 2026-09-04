@@ -2,6 +2,7 @@ import "./AutoMoviePopulationTransition.test";
 import "./assertAutoMovieEvidenceSyntax.test";
 import "./auditAutoMovieEvidenceReviewReasons.test";
 import "./createAutoMovieEvidenceConfig.test";
+import "./createBlankAutoMovieProductionEvidence.test";
 import "./createAutoMoviePopulationAccountClaims.test";
 import "./createAutoMoviePopulationFiles.test";
 import "./createAutoMovieProductionContractClaim.test";

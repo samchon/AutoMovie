@@ -6,6 +6,7 @@ export * from "./AutoMoviePopulationTransition";
 export * from "./assertAutoMovieEvidenceSyntax";
 export * from "./createAutoMoviePopulationFiles";
 export * from "./createAutoMovieEvidenceConfig";
+export * from "./createBlankAutoMovieProductionEvidence";
 export * from "./createAutoMoviePopulationAccountClaims";
 export * from "./createAutoMovieProductionContractClaim";
 export * from "./measureAutoMovieAuthoredText";

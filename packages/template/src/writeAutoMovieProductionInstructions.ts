@@ -7,6 +7,7 @@ import path from "node:path";
 
 import { renderAutoMovieProductionRouter } from "./renderAutoMovieProductionRouter";
 import { scaffoldAssetDirectory } from "./renderScaffold";
+import { validateAutoMovieSkillRouters } from "./validateAutoMovieSkillRouters";
 import { ScaffoldPublicationError, publishFiles } from "./writeFiles";
 
 /**
@@ -43,7 +44,9 @@ export const writeAutoMovieProductionInstructions = (props: {
       `${sourceSkills}: the installed production skills are missing.`,
     );
   assertInstructionSourceIsPhysical(sourceSkills);
+  validateAutoMovieSkillRouters(scaffoldRoot);
   for (const name of [
+    "contract",
     "evidence-graph",
     "production-lifecycle",
     "review-verification",

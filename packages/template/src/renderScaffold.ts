@@ -1,8 +1,13 @@
-import type { AutoMovieProductionLanguage } from "@automovie/evidence";
+import {
+  type AutoMovieProductionLanguage,
+  createAutoMovieContractBindingManifest,
+  createBlankAutoMovieProductionEvidence,
+} from "@automovie/evidence";
 import * as fs from "node:fs";
 import * as path from "node:path";
 
 import { renderAutoMovieLanguageContracts } from "./renderAutoMovieLanguageContracts";
+import { renderAutoMovieProductionRouter } from "./renderAutoMovieProductionRouter";
 import { renderTemplate } from "./renderTemplate";
 import { AUTOMOVIE_TEMPLATE_VERSIONS } from "./templateVersions";
 
@@ -392,7 +397,7 @@ export const renderScaffold = (
   const languageEntries = Object.entries(
     renderAutoMovieLanguageContracts({ language: props.language }),
   ).map(([relative, content]) => ({ content, relative }));
-  return renderScaffoldEntries(
+  const files = renderScaffoldEntries(
     [
       ...listFiles(root).map((relative) => ({
       content: fs.readFileSync(path.join(root, relative), "utf8"),
@@ -402,4 +407,23 @@ export const renderScaffold = (
     ],
     variables,
   );
+  const manifest = JSON.parse(files["package.json"]!) as {
+    name: string;
+    description?: string;
+  };
+  Object.defineProperty(files, "AGENTS.md", {
+    configurable: true,
+    enumerable: true,
+    value: renderAutoMovieProductionRouter({
+      packageName: manifest.name,
+      description: manifest.description?.trim() ?? "",
+      manifest: createAutoMovieContractBindingManifest(
+        createBlankAutoMovieProductionEvidence(".", props.language),
+      ),
+      designOwners: [],
+      contracts: [],
+    }),
+    writable: true,
+  });
+  return files;
 };

@@ -7,7 +7,12 @@ import { namedFacts } from "../internal/predicates";
 type CommandPlan =
   | { command: "help" }
   | { command: "version" }
-  | { command: "start"; directory: string; force: boolean }
+  | {
+      command: "start";
+      directory: string;
+      force: boolean;
+      language: "chinese" | "english" | "japanese" | "korean";
+    }
   | {
       command: "migrate";
       directory: string;
@@ -38,7 +43,7 @@ const refuses = (args: readonly string[], fragment: string): boolean => {
 
 /** The root CLI consumes one complete command before dispatching any work. */
 export const test_cli_command_arguments = (): void => {
-  const start = read("start", "--force", "film");
+  const start = read("start", "--force", "film", "--language", "english");
   const migrate = [
     read("migrate", "film"),
     read("migrate", "--dry-run", "film"),
@@ -58,7 +63,7 @@ export const test_cli_command_arguments = (): void => {
   );
   let dispatches = 0;
   const dispatched = unit.dispatchAutoMovieCommandArguments(
-    ["start", "film"],
+    ["start", "film", "--language", "english"],
     (command) => {
       ++dispatches;
       return command;
@@ -66,7 +71,7 @@ export const test_cli_command_arguments = (): void => {
   );
   try {
     unit.dispatchAutoMovieCommandArguments(
-      ["start", "film", "--dryrun"],
+      ["start", "film", "--language", "english", "--dryrun"],
       () => ++dispatches,
     );
   } catch {}
@@ -91,11 +96,13 @@ export const test_cli_command_arguments = (): void => {
           start.command === "start" &&
           start.directory === "film" &&
           start.force &&
-          JSON.stringify(read("start", "film")) ===
+          start.language === "english" &&
+          JSON.stringify(read("start", "film", "--language", "korean")) ===
             JSON.stringify({
               command: "start",
               directory: "film",
               force: false,
+              language: "korean",
             }),
       ],
       [
@@ -143,11 +150,12 @@ export const test_cli_command_arguments = (): void => {
         "unknownDuplicateInapplicableAndExtraTokensAreRefused",
         () =>
           refuses(["launch", "film"], "Unknown command") &&
-          refuses(["start", "film", "--dryrun"], "start option") &&
-          refuses(["start", "film", "--dry-run"], "start option") &&
+          refuses(["start", "film", "--language", "english", "--dryrun"], "start option") &&
+          refuses(["start", "film", "--language", "english", "--dry-run"], "start option") &&
           refuses(["start", "-h"], "start option") &&
-          refuses(["start", "film", "--force", "--force"], "only once") &&
-          refuses(["start", "film", "other"], "received 2") &&
+          refuses(["start", "film", "--language", "english", "--force", "--force"], "only once") &&
+          refuses(["start", "film", "--language", "english", "--language", "korean"], "only once") &&
+          refuses(["start", "film", "--language", "english", "other"], "received 2") &&
           refuses(["migrate", "film", "--force"], "migrate option") &&
           refuses(["migrate", "film", "--dry-run", "--dry-run"], "only once") &&
           refuses(["migrate", "film", "--dry-run", "--rollback"], "only one") &&
@@ -156,8 +164,11 @@ export const test_cli_command_arguments = (): void => {
       [
         "missingAndBlankDirectoriesAreRefused",
         () =>
-          refuses(["start"], "non-blank target") &&
-          refuses(["start", "  "], "non-blank target") &&
+          refuses(["start"], "requires --language") &&
+          refuses(["start", "film"], "requires --language") &&
+          refuses(["start", "film", "--language"], "requires a value") &&
+          refuses(["start", "film", "--language", "french"], "requires --language") &&
+          refuses(["start", "  ", "--language", "english"], "non-blank target") &&
           refuses(["migrate"], "non-blank target"),
       ],
       [
