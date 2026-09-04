@@ -74,12 +74,17 @@ export const generatedShotPlugin = (
               throw new Error(
                 "Production runtime requires current compiler-owned artifacts.",
               );
+            const production = project.graph().production;
+            if (production === null)
+              throw new Error(
+                "Production runtime requires a current production design.",
+              );
             const timeline = readAutoMovieFilmTimeline(
               project,
               manifest.inputFingerprint,
             );
             const filmEffectIdentity = {
-              production: productionId,
+              production: production.id,
               film: timeline.id,
               compileFingerprint: manifest.inputFingerprint,
               editFingerprint: productionFilmEffectEditFingerprint(timeline),
@@ -101,8 +106,7 @@ export const generatedShotPlugin = (
                 runtimeProvider.deliveryCrop(),
               ),
               liveWearableSoftBodies: readProductionLiveWearableSoftBodies(
-                project.graph().production?.simulation
-                  ?.liveWearableSoftBodies ?? [],
+                production.simulation?.liveWearableSoftBodies ?? [],
               ),
               filmEffects,
               filmEffectIdentity,
