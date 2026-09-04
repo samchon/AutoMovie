@@ -8,6 +8,7 @@ import {
   type IAutoMovieProductionRenderChunk,
   type IAutoMovieProductionRenderChunkReceipt,
   type IAutoMovieProductionRenderJobPlan,
+  assertProductionRenderDialogueRuntimeIdentity,
   canonicalAutoMovieCaptureRuntimeIdentity,
   digestAutoMovieBytes,
   encodeAutoMoviePathSegment,
@@ -381,7 +382,8 @@ export const createProductionRenderChunkCaptureRuntime = (props: {
     }> = [];
     for (const sample of chunk.frames) {
       const images: Array<{ image: PNG; weight: number }> = [];
-      for (const layer of productionRenderLayersForPass(sample, chunk.pass)) {
+      const layers = productionRenderLayersForPass(sample, chunk.pass);
+      for (const [layerIndex, layer] of layers.entries()) {
         const captured = await props.capture(
           productionRenderFrameCaptureInput({
             root: props.root,
@@ -394,6 +396,11 @@ export const createProductionRenderChunkCaptureRuntime = (props: {
             pass: chunk.pass,
           }),
         );
+        assertProductionRenderDialogueRuntimeIdentity({
+          boundary: `chunk ${chunk.slot} frame ${sample.globalFrame} layer ${layerIndex} pass ${chunk.pass}`,
+          expected: plan.runtimeIdentity.dialogueRuntimeIdentity,
+          observed: captured.dialogueRuntimeIdentity,
+        });
         if (
           canonicalAutoMovieCaptureRuntimeIdentity(captured.runtimeIdentity) !==
           canonicalAutoMovieCaptureRuntimeIdentity(plan.runtimeIdentity.capture)

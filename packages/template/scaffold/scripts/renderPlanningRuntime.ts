@@ -16,6 +16,7 @@ import {
   type IAutoMovieProductionRenderJobPlan,
   type IAutoMovieProductionRenderRuntimeIdentity,
   type IAutoMovieProductionRenderTier,
+  assertProductionRenderDialogueRuntimeIdentity,
   captureAutoMovieProductionFrame,
   encodeAutoMoviePathSegment,
   openAutoMovieProduction,
@@ -35,6 +36,7 @@ import { isDeepStrictEqual } from "node:util";
 import { PRODUCTION_DELIVERY_TONE_MAPPING } from "./capture";
 import { inspectCurrentCaptureRuntimeClosure } from "./capture-browser";
 import { readAutoMovieHostCaptureBrowser } from "./hostBoundary";
+import { productionDialogueRuntimeIdentity } from "./productionRuntime";
 import { listRenderAttempts } from "./renderAttemptSnapshot";
 import {
   assessProductionRenderBudget,
@@ -669,8 +671,12 @@ export const createProductionRenderPlanningRuntime = (props: {
       plan.runtimeIdentity as Partial<IAutoMovieProductionRenderRuntimeIdentity> | null;
     if (
       stored === null ||
-      stored.protocolVersion !== "automovie.production-render-runtime.v2" ||
+      stored.protocolVersion !== "automovie.production-render-runtime.v3" ||
       stored.sourceDigest !== sound.sourceDigest ||
+      stored.dialogueRuntimeIdentity !==
+        (sound.plan.dialogue.length === 0
+          ? null
+          : productionDialogueRuntimeIdentity(sound.dialogueRuntime)) ||
       isDeepStrictEqual(stored.capture?.runtimeClosure, capture.identity) ===
         false ||
       isDeepStrictEqual(stored.encoder, encoder.identity) === false
@@ -716,13 +722,23 @@ export const createProductionRenderPlanningRuntime = (props: {
       width: props.width,
       height: props.height,
     });
+    const dialogueRuntimeIdentity =
+      preparedSound.plan.dialogue.length === 0
+        ? null
+        : productionDialogueRuntimeIdentity(preparedSound.dialogueRuntime);
+    assertProductionRenderDialogueRuntimeIdentity({
+      boundary: "render planning preflight",
+      expected: dialogueRuntimeIdentity,
+      observed: preflight.dialogueRuntimeIdentity,
+    });
     return {
-      protocolVersion: "automovie.production-render-runtime.v2",
+      protocolVersion: "automovie.production-render-runtime.v3",
       sourceDigest: soundRuntime.sourceDigest(
         props.project,
         props.timeline,
         preparedSound.dialogueRuntime,
       ),
+      dialogueRuntimeIdentity,
       capture: preflight.runtimeIdentity,
       encoder: productionEncoderIdentity(props.fps),
     };

@@ -61,11 +61,19 @@ export interface IAutoMovieProductionRenderRuntimeIdentity {
   /**
    * Render-runtime identity schema.
    */
-  protocolVersion: "automovie.production-render-runtime.v2";
+  protocolVersion: "automovie.production-render-runtime.v3";
   /**
    * Digest of declared viewer, capture, asset, and package input bytes.
    */
   sourceDigest: AutoMovieContentDigest;
+  /**
+   * Final-byte dialogue and viseme runtime installed for every capture, or null
+   * when the planned production is deliberately silent.
+   *
+   * @evidence requirements/sound/dialogue-voice-and-visemes.md#sound-dialogue-final-bytes-authority Carries the exact dialogue bytes that own every final-frame phoneme state.
+   * @evidence specifications/simulation-effects-and-sound/sound-sources-events-dialogue-and-foley.md#dialogue-voice-consistency-and-phoneme-state Identifies the adopted dialogue generation whose timing and visemes the render consumes.
+   */
+  dialogueRuntimeIdentity: AutoMovieContentDigest | null;
   /**
    * Package-owned browser and graphics identity.
    */
@@ -408,6 +416,13 @@ export const planProductionRenderJob = (props: {
   if (validDigest(props.runtimeIdentity.sourceDigest) === false)
     throw new Error(
       "Render runtime sourceDigest must be one current SHA-256 content identity.",
+    );
+  if (
+    props.runtimeIdentity.dialogueRuntimeIdentity !== null &&
+    validDigest(props.runtimeIdentity.dialogueRuntimeIdentity) === false
+  )
+    throw new Error(
+      "Render runtime dialogueRuntimeIdentity must be null or one current SHA-256 content identity.",
     );
   const tier = normalizeRenderTier(props.tier);
   const frameFormat = resolveProductionRenderTierFrameFormat(

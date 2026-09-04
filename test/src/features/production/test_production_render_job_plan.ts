@@ -23,7 +23,8 @@ const digest = (fill: string): AutoMovieContentDigest =>
   `sha256:${fill.repeat(64).slice(0, 64)}`;
 
 const RUNTIME_IDENTITY = {
-  protocolVersion: "automovie.production-render-runtime.v2",
+  protocolVersion: "automovie.production-render-runtime.v3",
+  dialogueRuntimeIdentity: null,
   sourceDigest: digest("a"),
   capture: testCaptureRuntimeIdentity(),
   encoder: {
@@ -182,7 +183,7 @@ const plan = (props: {
   audioAssets?: readonly IAutoMovieProductionAudioAssetIdentity[];
   guidePasses?: readonly ["pose" | "depth", ...("pose" | "depth")[]];
   sourceFingerprints?: Readonly<Record<string, AutoMovieContentDigest>>;
-  runtimeIdentity?: typeof RUNTIME_IDENTITY;
+  runtimeIdentity?: IAutoMovieProductionRenderJobPlan["runtimeIdentity"];
 }): IAutoMovieProductionRenderJobPlan =>
   planProductionRenderJob({
     timeline: props.timeline ?? TIMELINE(),
@@ -559,6 +560,21 @@ export const test_production_render_job_plan = (): void => {
           ),
       ],
       [
+        "dialogueRuntimeDigest",
+        () =>
+          throwsError(
+            () =>
+              plan({
+                runtimeIdentity: {
+                  ...RUNTIME_IDENTITY,
+                  dialogueRuntimeIdentity:
+                    "sha256:not-a-digest" as AutoMovieContentDigest,
+                },
+              }),
+            "dialogueRuntimeIdentity must be null or one current SHA-256 content identity",
+          ),
+      ],
+      [
         "indivisibleStep",
         () =>
           throwsError(
@@ -671,6 +687,7 @@ export const test_production_render_job_plan = (): void => {
     {
       chunkFrames: true,
       runtimeDigest: true,
+      dialogueRuntimeDigest: true,
       indivisibleStep: true,
       economisedFinal: true,
       reductionlessProxy: true,

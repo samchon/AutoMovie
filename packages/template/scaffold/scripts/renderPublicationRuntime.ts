@@ -13,6 +13,7 @@ import {
   type IAutoMovieProductionRenderChunk,
   type IAutoMovieProductionRenderJobPlan,
   assembleProductionChunkVideoMp4,
+  assertProductionRenderDialogueRuntimeIdentity,
   canonicalAutoMovieCaptureRuntimeIdentity,
   canonicalAutoMovieJsonBytes,
   conformProductionRenditionVideoMp4,
@@ -554,6 +555,11 @@ export const createProductionRenderFinalizationRuntime = (props: {
             pass: "beauty",
           }),
         );
+        assertProductionRenderDialogueRuntimeIdentity({
+          boundary: `final preview ${deliverable.id}`,
+          expected: plan.runtimeIdentity.dialogueRuntimeIdentity,
+          observed: captured.dialogueRuntimeIdentity,
+        });
         if (
           canonicalAutoMovieCaptureRuntimeIdentity(captured.runtimeIdentity) !==
           canonicalAutoMovieCaptureRuntimeIdentity(plan.runtimeIdentity.capture)
