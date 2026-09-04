@@ -316,7 +316,7 @@ try {
   write(
     brief,
     "src/shots/delivery.ts",
-    "/** @evidence briefs/delivery.md#opening Realizes the exact opening. */\nexport const opening = (): void => undefined;\n",
+    "/** @evidence briefs/delivery.md#opening-beat Realizes the exact opening beat. */\nexport const opening = (): void => undefined;\n",
   );
   const briefEvidence = readAutoMovieProductionEvidence({
     root: brief,
@@ -340,7 +340,7 @@ try {
         branch: "shots",
         sourcePath: "src/shots/delivery.ts",
         exportName: "opening",
-        target: "docs/briefs/delivery.md#opening",
+        target: "docs/briefs/delivery.md#opening-beat",
       },
     ],
   );

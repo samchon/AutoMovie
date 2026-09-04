@@ -308,9 +308,8 @@ const sourceOwnerBindingsOf = (
       binding.relationship !== "lineage" ||
       binding.host.type !== "typescript" ||
       binding.target.type !== "population" ||
-      binding.target.symbols.some(
-        (symbol) => symbol === "h2" || symbol === "h3",
-      ) === false
+      binding.target.symbols.some((symbol) => /^h[234]$/u.test(symbol)) ===
+        false
     )
       continue;
     const targetSymbols = new Set(binding.target.symbols);
