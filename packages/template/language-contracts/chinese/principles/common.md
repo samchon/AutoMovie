@@ -6,8 +6,12 @@
 
 审读问题：哪个句子把具体关系藏在翻译腔或抽象中文框架后，迫使读者重新推断？
 
+来源：[国家语言资源监测与研究中心](http://www.cncorpus.org/)；[W3C 语言声明](https://www.w3.org/International/questions/qa-html-language-declarations)
+
 ## 语域的所有者 {#chinese-register-ownership}
 
 措辞、句法、称谓、方言和专业语域的每次变化，都应由说话者、关系、文档形式、受众、时代或作品决定来负责。仅为显得精致或戏剧化而加入的变化没有所有者。
 
 审读问题：每个偏离既定中文语域的变化由谁选择，又服务于什么关系和效果？
+
+来源：[国家语言资源监测与研究中心](http://www.cncorpus.org/)；[W3C 语言声明](https://www.w3.org/International/questions/qa-html-language-declarations)
