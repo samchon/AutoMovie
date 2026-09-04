@@ -2650,16 +2650,17 @@ export class AutoMovieProductionProject {
         try {
           this.assertCurrentRepaintReceipt(receipt, output);
         } catch (error) {
-          const stale =
-            error instanceof AutoMovieProductionInputRaceError ||
-            safeProjectErrorMessage(error).toLowerCase().includes("stale");
+          const classified = classifyCurrentRepaintReceiptError(error);
           findings.push({
             target,
-            stage: stale ? "currentness" : "output",
-            failure: stale ? "stale" : "render-corrupt",
-            recovery: stale
-              ? "Regenerate the record from current production inputs."
-              : "Restore or regenerate the exact rendition bytes.",
+            stage: classified.stage,
+            failure: classified.failure,
+            recovery:
+              classified.failure === "stale"
+                ? "Regenerate the record from current production inputs."
+                : classified.failure === "identity-invalid"
+                  ? "Restore the record at its canonical identity."
+                  : "Restore or regenerate the exact rendition bytes.",
           });
           continue;
         }
@@ -2991,12 +2992,10 @@ export class AutoMovieProductionProject {
       try {
         this.assertCurrentRepaintReceipt(receipt, output);
       } catch (error) {
-        const stale =
-          error instanceof AutoMovieProductionInputRaceError ||
-          safeProjectErrorMessage(error).toLowerCase().includes("stale");
+        const classified = classifyCurrentRepaintReceiptError(error);
         throw new AutoMovieRepaintRecordInspectionError(
-          stale ? "currentness" : "output",
-          stale ? "stale" : "render-corrupt",
+          classified.stage,
+          classified.failure,
         );
       }
       selected ??= receipt;
@@ -5665,6 +5664,36 @@ const safeProjectErrorMessage = (error: unknown): string => {
   } catch {
     return "";
   }
+};
+
+const classifyCurrentRepaintReceiptError = (
+  error: unknown,
+): {
+  stage: "receipt" | "currentness" | "output";
+  failure: "identity-invalid" | "stale" | "render-corrupt";
+} => {
+  const message = safeProjectErrorMessage(error).toLowerCase();
+  let inputRace = false;
+  try {
+    inputRace = error instanceof AutoMovieProductionInputRaceError;
+  } catch {
+    inputRace = false;
+  }
+  if (
+    inputRace ||
+    message.includes("stale") ||
+    message.includes("current compiler input")
+  )
+    return { stage: "currentness", failure: "stale" };
+  if (
+    message.includes("identity") ||
+    message.includes("receipt") ||
+    message.includes("attempt ledger") ||
+    message.includes("execution policy") ||
+    message.includes("reference")
+  )
+    return { stage: "receipt", failure: "identity-invalid" };
+  return { stage: "output", failure: "render-corrupt" };
 };
 
 const assertRealAncestorInside = (
