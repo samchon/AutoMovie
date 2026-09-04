@@ -173,11 +173,10 @@ export type IAutoMovieSubjectInspectionPose = IAutoMovieSubjectReviewPose;
  * Host instrument that answers one inspection pose with PNG bytes.
  *
  * It is deliberately a second adapter beside the delivery frame capture rather
- * than a third target on it. A delivery capture carries a renderer identity, a
- * target fingerprint and a content-addressed render bundle because a delivered
- * frame has to be reopenable as the thing that was delivered; an inspection
- * image has none of those obligations and must not be able to acquire them by
- * travelling the same path. Separating the instrument makes a subject image
+ * than a third target on it. Both report their exact runtime identity because
+ * neither can make historical pixels current, but only delivery capture owns a
+ * target fingerprint and content-addressed render bundle. Separating the
+ * instrument keeps a subject image reopenable for its own plan while making it
  * structurally incapable of arriving with a delivery receipt attached.
  *
  * @author Samchon

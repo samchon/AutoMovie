@@ -113,7 +113,9 @@ The inspection host retains the capture launch closure, asserts that closure bef
 If the closure moves, graphics cannot be identified, the persisted JSON is malformed, duplicate-keyed, or not strict UTF-8, or any plan, pose, locator, digest, runtime, or terminal-status join disagrees, recapture the whole subject under a stable host; do not cite the surviving prefix as current coverage.
 Previous failed, unsupported, not-run, and runtime-unidentified attempts remain in the journal and do not erase a separately reopened current pass.
 
-That is also why inspection is not another `npm run preview` target. A capture receipt binds render bundle, target fingerprint, renderer identity and review target, and every one of those is a delivery-lineage claim, so an inspection frame arriving through that adapter would come out in exactly the shape a shot review can consume. The whole point of a subject observation is that it cannot be.
+That is also why inspection is not another `npm run preview` target.
+A delivery capture receipt combines runtime identity with a render bundle, target fingerprint, and review target; those delivery-lineage fields would make an inspection frame consumable as a shot review.
+A subject observation carries the same truthful runtime freshness but none of those delivery fields, which is the point of the separate adapter.
 
 `inspected: true` means every planned viewpoint produced a verified picture; the first one that did not returns a refusal instead, so a partial sweep is never reported as an inspection. Read the refusals literally.
 

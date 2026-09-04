@@ -50,11 +50,12 @@ let sessionIdentity: string | null = null;
  *
  * It is a second server and a second browser beside the delivery capture
  * session on purpose, and not because sharing one would be hard. A delivery
- * capture page carries a renderer identity and a tone-mapping curve in its own
- * reuse key, and an inspection page carries neither; folding the two caches
- * together is how an inspection frame would eventually be served from a page a
- * delivery asked for, or the reverse. The session is built on first use, so a
- * host nobody asks for a subject never pays for it.
+ * capture page carries a delivery target and tone-mapping curve in its reuse
+ * key, while an inspection page carries a subject target and compile identity;
+ * folding the two caches together is how an inspection frame would eventually
+ * be served from a page a delivery asked for, or the reverse. Both report the
+ * actual renderer identity of their separate session. The inspection session
+ * is built on first use, so a host nobody asks for a subject never pays for it.
  */
 const startSession = async (
   projectRoot: string,
