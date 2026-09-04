@@ -116,7 +116,9 @@ export const test_render_semantic_mask_digest = (): void => {
     },
   );
 
-  const entry = mask.entries[0]!;
+  const entry = mask.entries.find(
+    (candidate) => candidate.id === "instance-slot:windows#0",
+  )!;
   const changed = {
     label: editEntry(mask, { label: "clerestory" }).digest,
     owner: editEntry(mask, { owner: "space:hall" }).digest,
@@ -268,17 +270,18 @@ const payload = (
   unaddressed: mask.unaddressed,
 });
 
-/** Replace one field of the first canonical entry and reseal it. */
+/** Replace one field of the instanced-slot entry and reseal it. */
 const editEntry = (
   mask: IAutoMovieSemanticMask,
   replacement: Partial<IAutoMovieSemanticMaskEntry>,
 ): IAutoMovieSemanticMask =>
   seal({
     ...payload(mask),
-    entries: [
-      { ...mask.entries[0]!, ...replacement },
-      ...mask.entries.slice(1),
-    ],
+    entries: mask.entries.map((entry) =>
+      entry.id === "instance-slot:windows#0"
+        ? { ...entry, ...replacement }
+        : entry,
+    ),
   });
 
 /** Replace one field of the first canonical bounded-palette gap and reseal it. */

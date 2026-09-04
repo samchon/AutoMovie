@@ -149,9 +149,6 @@ export const deriveAutoMovieSemanticMask = (
   const slots = collectSlotClaims(subject, claims.length);
   const entries = allocate([...claims, ...slots.claims]);
   const payload: Omit<IAutoMovieSemanticMask, "digest"> = {
-    // The interface contract is updated on the main-owned integration surface
-    // with this implementation. The assertions keep this owner branch isolated
-    // without weakening the runtime compatibility boundary.
     version: SEMANTIC_MASK_VERSION as IAutoMovieSemanticMask["version"],
     protocol: SEMANTIC_MASK_PROTOCOL as IAutoMovieSemanticMask["protocol"],
     background: "#000000",

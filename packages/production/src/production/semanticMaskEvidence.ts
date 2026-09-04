@@ -134,23 +134,29 @@ export const classifyAutoMovieProductionSemanticMaskEvidence = (props: {
           status: "invalid",
           reason: "semantic evidence not-run reason must be non-blank",
         };
+  const evidence = props.observation.value;
+  if (
+    evidence.version !== 1 ||
+    (evidence.mask.version as number) !== 2 ||
+    (evidence.mask.protocol as string) !== "automovie.semantic-mask.v2"
+  )
+    return {
+      status: "unsupported",
+      reason: `unsupported semantic evidence ${String(evidence.version)}/${String(evidence.mask.version)}/${String(evidence.mask.protocol)}; expected 1/2/automovie.semantic-mask.v2`,
+    };
+  if (evidence.shot !== props.expectedShot)
+    return {
+      status: "foreign",
+      reason: `foreign semantic evidence for shot "${evidence.shot}"; expected "${props.expectedShot}"`,
+    };
   try {
     verifyAutoMovieProductionSemanticMaskEvidence({
-      evidence: props.observation.value,
+      evidence,
       expectedShot: props.expectedShot,
     });
   } catch (error) {
-    const reason = (error as Error).message;
-    return {
-      status: reason.startsWith("unsupported semantic")
-        ? "unsupported"
-        : reason.startsWith("foreign semantic")
-          ? "foreign"
-          : "invalid",
-      reason,
-    };
+    return { status: "invalid", reason: (error as Error).message };
   }
-  const evidence = props.observation.value;
   if (
     evidence.coverage.unresolved.length !== 0 ||
     evidence.coverage.unaddressed !== 0
