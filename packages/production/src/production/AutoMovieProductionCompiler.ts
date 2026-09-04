@@ -4669,10 +4669,13 @@ const compileLibrarySource = (props: {
         ...validation.data,
         contexts: validation.data.contexts ?? [],
       };
-      const contributionDiagnostics = autoMovieLibraryContributionDiagnostics(
-        context.branch,
-        contribution,
-      );
+      const contributionDiagnostics =
+        context.branch === "productionSources"
+          ? []
+          : autoMovieLibraryContributionDiagnostics(
+              context.branch,
+              contribution,
+            );
       for (const message of contributionDiagnostics)
         diagnostics.push({
           code: "source-export-invalid",
