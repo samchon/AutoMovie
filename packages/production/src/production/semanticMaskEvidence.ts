@@ -1,5 +1,5 @@
 import {
-  AutoMovieSemanticMaskVerificationError,
+  autoMovieSemanticMaskVerificationFailure,
   renderAutoMovieSemanticMaskSidecar,
   verifyAutoMovieSemanticMask,
 } from "@automovie/engine";
@@ -154,8 +154,7 @@ export const classifyAutoMovieProductionSemanticMaskEvidence = (props: {
   } catch (error) {
     return {
       status:
-        error instanceof AutoMovieSemanticMaskVerificationError &&
-        error.reason === "unsupported"
+        autoMovieSemanticMaskVerificationFailure(error) === "unsupported"
           ? "unsupported"
           : "invalid",
       reason: (error as Error).message,

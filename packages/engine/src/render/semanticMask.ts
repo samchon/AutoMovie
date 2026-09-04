@@ -47,16 +47,8 @@ const SEMANTIC_MASK_VERSION = 2;
 /** Domain separator for the current full-payload semantic-mask format. */
 const SEMANTIC_MASK_PROTOCOL = "automovie.semantic-mask.v2";
 
-/**
- * A current semantic sidecar failed its version or self-digest boundary.
- *
- * The reason is typed so receipt consumers can preserve unsupported history
- * separately from tampered current evidence without parsing error prose.
- *
- * @evidence requirements/rendering/passes-channels-and-products.md#rendering-identity-mask-channels Distinguishes historical palette compatibility from a current payload whose declared identity is false.
- * @evidence specifications/editorial-render-and-delivery/render-products-visibility-and-color.md#spec-render-pass-products Exposes the stable refusal classification consumed by semantic product receipts.
- */
-export class AutoMovieSemanticMaskVerificationError extends Error {
+/** A typed internal refusal carried across the verifier boundary. */
+class AutoMovieSemanticMaskVerificationError extends Error {
   public constructor(
     public readonly reason: "unsupported" | "digest-mismatch",
     message: string,
@@ -64,6 +56,20 @@ export class AutoMovieSemanticMaskVerificationError extends Error {
     super(message);
   }
 }
+
+/**
+ * Return the typed reason from a semantic-mask verifier refusal.
+ *
+ * Receipt consumers use this instead of parsing error prose, while unrelated
+ * exceptions remain distinguishable as `null`.
+ *
+ * @evidence requirements/rendering/passes-channels-and-products.md#rendering-identity-mask-channels Distinguishes historical palette compatibility from a current payload whose declared identity is false.
+ * @evidence specifications/editorial-render-and-delivery/render-products-visibility-and-color.md#spec-render-pass-products Exposes the stable refusal classification consumed by semantic product receipts.
+ */
+export const autoMovieSemanticMaskVerificationFailure = (
+  error: unknown,
+): "unsupported" | "digest-mismatch" | null =>
+  error instanceof AutoMovieSemanticMaskVerificationError ? error.reason : null;
 
 /**
  * Return the digest of one mask's complete canonical payload.
