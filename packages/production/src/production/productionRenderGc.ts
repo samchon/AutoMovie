@@ -71,6 +71,18 @@ export type AutoMovieProductionRenderCleanupAuthority =
   | "exact-remove"
   | "exact-quarantine";
 
+/** Inspection boundary that produced one render-artifact finding. */
+export type AutoMovieProductionRenderArtifactStage =
+  | "absence"
+  | "locator"
+  | "capture"
+  | "receipt"
+  | "inventory"
+  | "media"
+  | "currentness"
+  | "ownership"
+  | "reference";
+
 /**
  * One sanitized finding produced without collapsing uncertainty to stale.
  *
@@ -80,6 +92,7 @@ export type AutoMovieProductionRenderCleanupAuthority =
 export interface IAutoMovieProductionRenderCleanupObservation {
   state: AutoMovieProductionRenderArtifactState;
   authority: AutoMovieProductionRenderCleanupAuthority;
+  stage: AutoMovieProductionRenderArtifactStage;
   reason: string;
 }
 
@@ -92,6 +105,7 @@ export interface IAutoMovieProductionRenderCleanupObservation {
 export interface IAutoMovieProductionRenderCleanupDecision {
   candidate: IAutoMovieProductionRenderGcCandidate;
   state: AutoMovieProductionRenderArtifactState;
+  stage: AutoMovieProductionRenderArtifactStage;
   reason: string;
 }
 
@@ -232,6 +246,7 @@ export const planProductionRenderGc = (props: {
       (candidate.observation !== null &&
         (isRenderCleanupState(candidate.observation.state) === false ||
           isRenderCleanupAuthority(candidate.observation.authority) === false ||
+          isRenderCleanupStage(candidate.observation.stage) === false ||
           candidate.observation.reason.trim().length === 0 ||
           /[\r\n\0]/u.test(candidate.observation.reason))) ||
       ((candidate.kind === "chunk" ||
@@ -281,16 +296,19 @@ export const planProductionRenderGc = (props: {
         ? {
             state: "current" as const,
             authority: "none" as const,
+            stage: "reference" as const,
             reason: "the current plan or aggregate publication marks this exact target",
           }
         : {
             state: "verified-stale" as const,
             authority: "exact-remove" as const,
+            stage: "reference" as const,
             reason: "no current plan, authenticated chunk pair, cache generation, or publication references this exact target",
           });
     const decision: IAutoMovieProductionRenderCleanupDecision = {
       candidate: normalized,
       state: observation.state,
+      stage: observation.stage,
       reason: observation.reason,
     };
     const exactGeneration =
@@ -396,6 +414,19 @@ const isRenderCleanupAuthority = (
   value === "none" ||
   value === "exact-remove" ||
   value === "exact-quarantine";
+
+const isRenderCleanupStage = (
+  value: unknown,
+): value is AutoMovieProductionRenderArtifactStage =>
+  value === "absence" ||
+  value === "locator" ||
+  value === "capture" ||
+  value === "receipt" ||
+  value === "inventory" ||
+  value === "media" ||
+  value === "currentness" ||
+  value === "ownership" ||
+  value === "reference";
 
 function canonicalRelativePath(value: string): string {
   if (

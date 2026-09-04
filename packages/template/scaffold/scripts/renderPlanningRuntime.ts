@@ -12,6 +12,7 @@ import {
   AutoMovieProductionProject,
   type IAutoMovieProductionEncoderIdentity,
   type AutoMovieProductionRenderArtifactState,
+  type AutoMovieProductionRenderArtifactStage,
   type AutoMovieProductionRenderCleanupAuthority,
   type IAutoMovieProductionRenderChunk,
   type IAutoMovieProductionRenderChunkReceipt,
@@ -76,6 +77,7 @@ export interface IProductionRenderChunkFinding {
   authority: AutoMovieProductionRenderCleanupAuthority;
   generation: string | null;
   reason: string;
+  stage: AutoMovieProductionRenderArtifactStage;
   state: AutoMovieProductionRenderArtifactState;
   target: string;
 }
@@ -517,6 +519,7 @@ export const createProductionRenderPlanningRuntime = (props: {
             locator === "unsafe"
               ? `Chunk "${chunk.slot}" pointer locator is unsafe. Preserve it and manually adjudicate the locator before retrying.`
               : `Chunk "${chunk.slot}" pointer could not be inspected. Preserve it and manually adjudicate availability before retrying.`,
+          stage: locator === "unsafe" ? "locator" : "capture",
           state: locator === "unsafe" ? "unsafe-locator" : "unavailable",
           target,
         },
@@ -530,6 +533,7 @@ export const createProductionRenderPlanningRuntime = (props: {
           authority: "none",
           generation: null,
           reason: `Chunk "${chunk.slot}" has no publication pointer and may be rendered.`,
+          stage: "absence",
           state: "absent",
           target,
         },
@@ -557,6 +561,7 @@ export const createProductionRenderPlanningRuntime = (props: {
           authority: "none",
           generation: currentPointer.targetIdentity,
           reason: `Chunk "${chunk.slot}" publication did not authenticate a readable receipt-bound generation. Preserve it for manual adjudication.`,
+          stage: "receipt",
           state: "integrity-failed",
           target,
         },
@@ -570,6 +575,7 @@ export const createProductionRenderPlanningRuntime = (props: {
           authority: "exact-remove",
           generation: currentPointer.targetIdentity,
           reason: `Chunk "${chunk.slot}" publication is an exact verified stale generation. Render cleanup may remove only this captured pointer.`,
+          stage: "currentness",
           state: "verified-stale",
           target,
         },
@@ -582,6 +588,7 @@ export const createProductionRenderPlanningRuntime = (props: {
           authority: "exact-quarantine",
           generation: currentPointer.targetIdentity,
           reason: `Chunk "${chunk.slot}" bytes fail the declared PNG or MP4 media contract. Quarantine only this captured pointer before rerendering.`,
+          stage: "media",
           state: "integrity-failed",
           target,
         },
@@ -593,6 +600,7 @@ export const createProductionRenderPlanningRuntime = (props: {
         authority: "none",
         generation: currentPointer.targetIdentity,
         reason: `Chunk "${chunk.slot}" publication is current and must be retained.`,
+        stage: "currentness",
         state: "current",
         target,
       },

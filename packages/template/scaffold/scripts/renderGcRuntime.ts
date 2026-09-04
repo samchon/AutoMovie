@@ -240,6 +240,7 @@ export const createProductionRenderGarbageRuntime = (props: {
         const observation = {
           state: inspection.finding.state,
           authority: inspection.finding.authority,
+          stage: inspection.finding.stage,
           reason: inspection.finding.reason,
         };
         pointer.candidate.observation = observation;
@@ -325,6 +326,7 @@ export const createProductionRenderGarbageRuntime = (props: {
           ? {
               state: "observation-conflict",
               authority: "none",
+              stage: "reference",
               reason:
                 "the quarantine marker does not bind one unique preserved generation",
             }
@@ -360,6 +362,7 @@ export const createProductionRenderGarbageRuntime = (props: {
             observation: {
               state: "unsafe-locator",
               authority: "none",
+              stage: "locator",
               reason:
                 "the proxy publication locator is not one resident physical file or directory",
             },
@@ -408,6 +411,7 @@ export const createProductionRenderGarbageRuntime = (props: {
             observation: {
               state: "unavailable",
               authority: "none",
+              stage: "capture",
               reason:
                 "the proxy publication generation could not be captured consistently",
             },
@@ -443,6 +447,7 @@ export const createProductionRenderGarbageRuntime = (props: {
             ? {
                 state: "observation-conflict",
                 authority: "none",
+                stage: "reference",
                 reason:
                   "the aggregate manifest references a proxy bundle that did not verify as current",
               }
@@ -450,6 +455,7 @@ export const createProductionRenderGarbageRuntime = (props: {
               ? {
                   state: "integrity-failed",
                   authority: "exact-quarantine",
+                  stage: "inventory",
                   reason:
                     "the proxy bundle failed receipt, inventory, or digest verification",
                 }
@@ -485,6 +491,7 @@ export const createProductionRenderGarbageRuntime = (props: {
           candidate.observation = {
             state: "unavailable",
             authority: "none",
+            stage: "capture",
             reason:
               "the publication target could not be captured consistently",
           };
@@ -511,6 +518,7 @@ export const createProductionRenderGarbageRuntime = (props: {
           observation: {
             state: "unsafe-locator",
             authority: "none",
+            stage: "locator",
             reason:
               "the publication locator is a symbolic link and remains outside automatic cleanup authority",
           },

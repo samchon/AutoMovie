@@ -246,12 +246,20 @@ export const test_production_render_gc = async (): Promise<void> => {
       IAutoMovieProductionRenderGcCandidate["observation"]
     >["authority"],
     overrides: Partial<IAutoMovieProductionRenderGcCandidate> = {},
+    stage: NonNullable<
+      IAutoMovieProductionRenderGcCandidate["observation"]
+    >["stage"] = "currentness",
   ): IAutoMovieProductionRenderGcCandidate =>
     candidate({
       path,
       kind: "publication",
       digest: null,
-      observation: { state, authority, reason: `${state} reason` },
+      observation: {
+        state,
+        authority,
+        stage,
+        reason: `${state} reason`,
+      },
       ...overrides,
     });
   const disposition = (
@@ -373,6 +381,33 @@ export const test_production_render_gc = async (): Promise<void> => {
       "refuse",
     ],
   );
+  const stages = [
+    "absence",
+    "locator",
+    "capture",
+    "receipt",
+    "inventory",
+    "media",
+    "currentness",
+    "ownership",
+    "reference",
+  ] as const;
+  TestValidator.equals(
+    "every typed failure stage survives one reasoned cleanup decision",
+    stages.map((stage) =>
+      disposition(
+        observed(
+          `publication/stage-${stage}`,
+          "current",
+          "none",
+          {},
+          stage,
+        ),
+        [`publication/stage-${stage}`],
+      ),
+    ),
+    stages.map(() => "retain"),
+  );
   TestValidator.equals(
     "an unknown artifact state is refused before an adapter can run",
     throwsError(
@@ -420,6 +455,7 @@ export const test_production_render_gc = async (): Promise<void> => {
             observation: {
               state: "unknown" as "current",
               authority: "none",
+              stage: "currentness",
               reason: "unknown",
             },
           }),
@@ -431,7 +467,20 @@ export const test_production_render_gc = async (): Promise<void> => {
             observation: {
               state: "current",
               authority: "delete" as "none",
+              stage: "currentness",
               reason: "bad authority",
+            },
+          }),
+      ],
+      [
+        "unknown stage",
+        () =>
+          invalidCandidate({
+            observation: {
+              state: "current",
+              authority: "none",
+              stage: "unknown" as "currentness",
+              reason: "bad stage",
             },
           }),
       ],
@@ -439,7 +488,12 @@ export const test_production_render_gc = async (): Promise<void> => {
         "empty observation reason",
         () =>
           invalidCandidate({
-            observation: { state: "current", authority: "none", reason: "" },
+            observation: {
+              state: "current",
+              authority: "none",
+              stage: "currentness",
+              reason: "",
+            },
           }),
       ],
       [
@@ -449,6 +503,7 @@ export const test_production_render_gc = async (): Promise<void> => {
             observation: {
               state: "current",
               authority: "none",
+              stage: "currentness",
               reason: "unsafe\nreason",
             },
           }),

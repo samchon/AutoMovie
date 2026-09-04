@@ -429,6 +429,7 @@ export const inventoryRenderChunkGarbage = (props: {
           observation: {
             state: unsafe ? "unsafe-locator" : "unavailable",
             authority: "none",
+            stage: unsafe ? "locator" : "capture",
             reason: unsafe
               ? "the chunk pointer locator is a symbolic link and remains outside automatic cleanup authority"
               : "the chunk pointer generation could not be captured consistently",
@@ -458,6 +459,7 @@ export const inventoryRenderChunkGarbage = (props: {
       candidate.observation = {
         state: "integrity-failed",
         authority: "exact-quarantine",
+        stage: "receipt",
         reason:
           "the captured chunk pointer did not authenticate one complete receipt-bound tree",
       };
@@ -475,6 +477,7 @@ export const inventoryRenderChunkGarbage = (props: {
       entries.at(-1)!.candidate.observation = {
         state: "unsafe-locator",
         authority: "none",
+        stage: "locator",
         reason:
           "the captured chunk pointer names a tree outside its exact digest namespace",
       };
@@ -485,6 +488,7 @@ export const inventoryRenderChunkGarbage = (props: {
       entries.at(-1)!.candidate.observation = {
         state: "observation-conflict",
         authority: "none",
+        stage: "reference",
         reason:
           "multiple captured chunk pointers claim the same publication tree",
       };
@@ -496,6 +500,7 @@ export const inventoryRenderChunkGarbage = (props: {
     let observation: IAutoMovieProductionRenderCleanupObservation | null = {
       state: "verified-stale",
       authority: "exact-remove",
+      stage: "currentness",
       reason:
         "the readable receipt-bound chunk generation is not the current plan generation",
     };
@@ -539,6 +544,7 @@ export const inventoryRenderChunkGarbage = (props: {
               ? {
                   state: "observation-conflict",
                   authority: "none",
+                  stage: "reference",
                   reason:
                     "an unresolved pointer shares this digest, so the tree is not proven stale",
                 }
@@ -548,6 +554,7 @@ export const inventoryRenderChunkGarbage = (props: {
               : {
                   state: "observation-conflict",
                   authority: "none",
+                  stage: "capture",
                   reason:
                     "the recaptured tree differs from the generation observed through its pointer",
                 },
@@ -563,6 +570,7 @@ export const inventoryRenderChunkGarbage = (props: {
           candidate.observation = {
             state: "foreign-generation",
             authority: "none",
+            stage: "ownership",
             reason:
               "the temporary tree owner is not proved reclaimable by this process generation",
           };
