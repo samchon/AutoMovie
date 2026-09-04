@@ -1,6 +1,7 @@
 import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
+import ts from "typescript-compiler";
 
 import {
   type IAutoMovieEvidenceConfigProps,
@@ -50,6 +51,40 @@ export interface IAutoMovieProductionEvidenceSourceBinding {
   symbols: readonly string[];
   /** Existing project-relative source files selected by the manifest globs. */
   paths: readonly string[];
+}
+
+/**
+ * One graph-selected source export and the exact authored unit it realizes.
+ *
+ * @evidence requirements/production-evidence/README.md#production-evidence-requirements Exposes an executable source owner through the reusable production-evidence view.
+ * @evidence requirements/production-evidence/input.md#agent-production-evidence-visible-selection Carries the selected export, target, source digest, stage, and review state together.
+ * @evidence specifications/production-evidence/README.md#production-evidence-specifications Carries one reusable resolved source-owner edge in the visible declaration projection.
+ * @evidence specifications/production-evidence/input.md#spec-authoring-production-evidence-input-state Represents one exact graph-selected export-to-authored-unit binding.
+ * @author Samchon
+ */
+export interface IAutoMovieProductionEvidenceSourceOwnerBinding {
+  /** Source branch that selected this edge. */
+  branch: string;
+  /** Current lifecycle stage of that source branch. */
+  stage: string;
+  /** Whether the graph currently enforces this relationship. */
+  enforced: boolean;
+  /** Exact graph relationship carried into runtime admission. */
+  relationship: "lineage";
+  /** Canonical project-relative POSIX source path. */
+  sourcePath: string;
+  /** Named top-level export that carries the citation. */
+  exportName: string;
+  /** Evidence symbol kind of that export. */
+  symbolKind: "function" | "property" | "type";
+  /** SHA-256 of the normalized source bytes inspected for this edge. */
+  sourceDigest: string;
+  /** Canonical project-relative POSIX authored target path. */
+  targetPath: string;
+  /** Exact explicit target anchor without `#`. */
+  targetAnchor: string;
+  /** Whether a review-stage edge carries the current target fingerprint. */
+  reviewed: boolean;
 }
 
 /**
@@ -134,6 +169,8 @@ export interface IAutoMovieProductionEvidence {
   designBranches: readonly IAutoMovieProductionEvidenceDesignBranch[];
   /** Exact active design owner denominator and its source lineage. */
   designOwners: readonly IAutoMovieProductionEvidenceDesignOwner[];
+  /** Exact graph-selected export-to-owner edges available to compilation. */
+  sourceOwners: readonly IAutoMovieProductionEvidenceSourceOwnerBinding[];
   /** Exact flat project-local contract inventory. */
   contracts: readonly IAutoMovieProductionEvidenceContract[];
 }
@@ -142,6 +179,20 @@ interface IMarkdownDocument {
   path: string;
   title: string;
   units: IAutoMovieProductionEvidenceUnit[];
+}
+
+interface IMarkdownSourceOwnerTarget {
+  anchor: string;
+  depth: number;
+  fingerprint: string;
+  path: string;
+  relativeTarget: string;
+}
+
+interface ISourceOwnerExport {
+  exportName: string;
+  node: ts.Node;
+  symbolKind: "function" | "property" | "type";
 }
 
 /**
@@ -218,6 +269,7 @@ export const readAutoMovieProductionEvidence = (props: {
     }
   }
   designOwners.sort((left, right) => compareCodeUnits(left.path, right.path));
+  const sourceOwners = sourceOwnerBindingsOf(root, manifest.bindings);
 
   const contracts = listMarkdownFiles(
     root,
@@ -237,8 +289,307 @@ export const readAutoMovieProductionEvidence = (props: {
     manifest,
     designBranches: branches,
     designOwners,
+    sourceOwners,
     contracts,
   };
+};
+
+/** Resolve the runtime-bearing lineage edges selected by the live manifest. */
+const sourceOwnerBindingsOf = (
+  root: string,
+  bindings: ReturnType<
+    typeof createAutoMovieContractBindingManifest
+  >["bindings"],
+): IAutoMovieProductionEvidenceSourceOwnerBinding[] => {
+  const output: IAutoMovieProductionEvidenceSourceOwnerBinding[] = [];
+  const seen = new Set<string>();
+  for (const binding of bindings) {
+    if (
+      binding.relationship !== "lineage" ||
+      binding.host.type !== "typescript" ||
+      binding.target.type !== "population" ||
+      binding.target.symbols.some(
+        (symbol) => symbol === "h2" || symbol === "h3",
+      ) === false
+    )
+      continue;
+    const targetSymbols = new Set(binding.target.symbols);
+    const targets = new Map<string, IMarkdownSourceOwnerTarget>();
+    for (const file of resolvePopulationFiles(
+      root,
+      binding.target.root,
+      binding.target.files,
+      ".md",
+    )) {
+      const absolute = path.resolve(root, file);
+      for (const target of markdownSourceOwnerTargets(
+        root,
+        binding.target.root,
+        absolute,
+      ))
+        if (targetSymbols.has(`h${target.depth}`))
+          targets.set(target.relativeTarget, target);
+    }
+    for (const sourcePath of resolvePopulationFiles(
+      root,
+      binding.host.root,
+      binding.host.files,
+    )) {
+      const source = readNormalizedSource(path.resolve(root, sourcePath));
+      const sourceDigest = `sha256:${crypto
+        .createHash("sha256")
+        .update(source)
+        .digest("hex")}`;
+      const parsed = ts.createSourceFile(
+        sourcePath,
+        source,
+        ts.ScriptTarget.Latest,
+        true,
+        ts.ScriptKind.TS,
+      );
+      for (const owner of exportedSourceOwners(parsed)) {
+        if (binding.host.symbols.includes(owner.symbolKind) === false) continue;
+        const tags = jsDocTagsOf(owner.node);
+        const reviews = new Map(
+          tags
+            .filter((tag) => tag.name === "evidenceReview")
+            .flatMap((tag) => {
+              const [target, fingerprint] = tag.comment.split(/\s+/u);
+              return target === undefined || fingerprint === undefined
+                ? []
+                : [[target, fingerprint.replace(/^#/u, "")] as const];
+            }),
+        );
+        for (const tag of tags.filter((tag) => tag.name === "evidence")) {
+          const cited = tag.comment.split(/\s+/u)[0];
+          if (cited === undefined) continue;
+          const target = targets.get(cited);
+          if (target === undefined) continue;
+          const identity = JSON.stringify([
+            binding.branch,
+            sourcePath,
+            owner.exportName,
+            target.relativeTarget,
+          ]);
+          if (seen.has(identity)) continue;
+          seen.add(identity);
+          output.push({
+            branch: binding.branch,
+            stage: binding.stage,
+            enforced: binding.enforced,
+            relationship: "lineage",
+            sourcePath,
+            exportName: owner.exportName,
+            symbolKind: owner.symbolKind,
+            sourceDigest,
+            targetPath: target.path,
+            targetAnchor: target.anchor,
+            reviewed:
+              binding.stage === "review" &&
+              reviews.get(target.relativeTarget) === target.fingerprint,
+          });
+        }
+      }
+    }
+  }
+  return output.sort((left, right) =>
+    compareCodeUnits(
+      JSON.stringify([
+        left.branch,
+        left.sourcePath,
+        left.exportName,
+        left.targetPath,
+        left.targetAnchor,
+      ]),
+      JSON.stringify([
+        right.branch,
+        right.sourcePath,
+        right.exportName,
+        right.targetPath,
+        right.targetAnchor,
+      ]),
+    ),
+  );
+};
+
+/** Read source in the same BOM and line-ending form the compiler executes. */
+const readNormalizedSource = (file: string): string => {
+  let source = fs.readFileSync(file, "utf8");
+  if (source.charCodeAt(0) === 0xfeff) source = source.slice(1);
+  return source.replace(/\r\n?/gu, "\n");
+};
+
+/** Enumerate named top-level exports with their evidence symbol identity. */
+const exportedSourceOwners = (source: ts.SourceFile): ISourceOwnerExport[] => {
+  const local = new Map<string, Omit<ISourceOwnerExport, "exportName">>();
+  const aliases = new Map<string, string>();
+  const modifiers = (node: ts.Node): readonly ts.Modifier[] =>
+    ts.canHaveModifiers(node) ? (ts.getModifiers(node) ?? []) : [];
+  const directlyExported = (node: ts.Node): boolean =>
+    modifiers(node).some(
+      (modifier) => modifier.kind === ts.SyntaxKind.ExportKeyword,
+    );
+  for (const statement of source.statements) {
+    if (
+      ts.isExportDeclaration(statement) &&
+      statement.moduleSpecifier === undefined &&
+      statement.exportClause !== undefined &&
+      ts.isNamedExports(statement.exportClause)
+    )
+      for (const element of statement.exportClause.elements)
+        if (!element.isTypeOnly)
+          aliases.set(
+            (element.propertyName ?? element.name).text,
+            element.name.text,
+          );
+    if (ts.isVariableStatement(statement))
+      for (const declaration of statement.declarationList.declarations)
+        if (ts.isIdentifier(declaration.name))
+          local.set(declaration.name.text, {
+            node: statement,
+            symbolKind: "property",
+          });
+    if (ts.isFunctionDeclaration(statement) && statement.name !== undefined)
+      local.set(statement.name.text, {
+        node: statement,
+        symbolKind: "function",
+      });
+    if (
+      (ts.isClassDeclaration(statement) ||
+        ts.isInterfaceDeclaration(statement) ||
+        ts.isTypeAliasDeclaration(statement)) &&
+      statement.name !== undefined
+    )
+      local.set(statement.name.text, { node: statement, symbolKind: "type" });
+  }
+  const output: ISourceOwnerExport[] = [];
+  for (const statement of source.statements) {
+    if (!directlyExported(statement)) continue;
+    if (ts.isVariableStatement(statement))
+      for (const declaration of statement.declarationList.declarations)
+        if (ts.isIdentifier(declaration.name)) {
+          const entry = local.get(declaration.name.text)!;
+          output.push({ ...entry, exportName: declaration.name.text });
+        } else if (
+          (ts.isFunctionDeclaration(statement) ||
+            ts.isClassDeclaration(statement) ||
+            ts.isInterfaceDeclaration(statement) ||
+            ts.isTypeAliasDeclaration(statement)) &&
+          statement.name !== undefined
+        ) {
+          const entry = local.get(statement.name.text)!;
+          output.push({ ...entry, exportName: statement.name.text });
+        }
+  }
+  for (const [name, exported] of aliases) {
+    const entry = local.get(name);
+    if (entry !== undefined) output.push({ ...entry, exportName: exported });
+  }
+  return output.sort((left, right) =>
+    compareCodeUnits(left.exportName, right.exportName),
+  );
+};
+
+/** Read parser-owned custom JSDoc tags without scanning comment-shaped text. */
+const jsDocTagsOf = (node: ts.Node): Array<{ name: string; comment: string }> =>
+  ts.getJSDocTags(node).map((tag) => ({
+    name: tag.tagName.text,
+    comment:
+      typeof tag.comment === "string"
+        ? tag.comment.trim()
+        : (tag.comment ?? [])
+            .map((part) => part.text)
+            .join("")
+            .trim(),
+  }));
+
+/** Materialize exact Markdown target identities and current fingerprints. */
+const markdownSourceOwnerTargets = (
+  projectRoot: string,
+  populationRoot: string,
+  file: string,
+): IMarkdownSourceOwnerTarget[] => {
+  const source = fs.readFileSync(file, "utf8").replace(/\r\n?/gu, "\n");
+  const headings = markdownHeadings(source);
+  const digestLines = markdownFingerprintLines(source);
+  const relative = posix(
+    path.relative(path.resolve(projectRoot, populationRoot), file),
+  );
+  const units: Array<
+    IMarkdownHeading & {
+      digest: string;
+      parent: number | undefined;
+      target: string;
+    }
+  > = [];
+  const owned = new Map<number, string[]>();
+  const headingsByLine = new Map(
+    headings.map((heading) => [heading.line, heading]),
+  );
+  const stack: number[] = [];
+  let current: number | undefined;
+  for (let line = 1; line <= digestLines.length; ++line) {
+    const heading = headingsByLine.get(line);
+    if (heading !== undefined) {
+      while (
+        stack.length !== 0 &&
+        units[stack[stack.length - 1]!]!.depth >= heading.depth
+      )
+        stack.pop();
+      if (heading.depth <= 4 && heading.anchor !== undefined) {
+        current = units.length;
+        units.push({
+          ...heading,
+          digest: "",
+          parent: stack[stack.length - 1],
+          target: `${relative}#${heading.anchor}`,
+        });
+        stack.push(current);
+      } else current = stack[stack.length - 1];
+    }
+    const content = digestLines[line - 1];
+    if (current !== undefined && content !== null)
+      owned.set(current, [...(owned.get(current) ?? []), content]);
+  }
+  for (const [index, unit] of units.entries()) {
+    const content = (owned.get(index) ?? [])
+      .map((line) => line.trimEnd())
+      .join("\n")
+      .replace(/(?:\n[ \t]*)+$/gu, "");
+    unit.digest = crypto.createHash("sha256").update(content).digest("hex");
+  }
+  return units
+    .map((unit, index) => ({ unit, index }))
+    .filter(({ unit }) => unit.anchor !== undefined)
+    .map(({ unit, index }) => {
+      const scope = units
+        .map((candidate, candidateIndex) => ({ candidate, candidateIndex }))
+        .filter(({ candidateIndex }) => {
+          let cursor: number | undefined = candidateIndex;
+          while (cursor !== undefined) {
+            if (cursor === index) return true;
+            cursor = units[cursor]!.parent;
+          }
+          return false;
+        })
+        .map(({ candidate }) => candidate)
+        .sort((left, right) =>
+          compareCodeUnits(
+            `${left.target}\0h${left.depth}\0${left.digest}`,
+            `${right.target}\0h${right.depth}\0${right.digest}`,
+          ),
+        );
+      const composite = crypto.createHash("sha256");
+      for (const entry of scope)
+        composite.update(`${entry.target}\0h${entry.depth}\0${entry.digest}\0`);
+      return {
+        path: posix(path.relative(projectRoot, file)),
+        anchor: unit.anchor!,
+        depth: unit.depth,
+        relativeTarget: unit.target,
+        fingerprint: composite.digest("hex").slice(0, 7),
+      };
+    });
 };
 
 /** Read the tracked package identity without inventing a missing description. */
@@ -336,15 +687,80 @@ interface IMarkdownHeading {
 const markdownHeadings = (source: string): IMarkdownHeading[] => {
   const output: IMarkdownHeading[] = [];
   for (const [index, line] of visibleMarkdownLines(source).entries()) {
-    const heading = /^(#{1,6})(?!#)\s+(\S.*)$/u.exec(line);
+    const heading = /^ {0,3}(#{1,6})(?!#)(?:[ \t]+(.*)|[ \t]*)$/u.exec(line);
     if (heading === null) continue;
-    const anchored = /[ \t]+\{#([^{}\s]+)\}[ \t]*$/u.exec(heading[2]!);
+    let rawTitle = (heading[2] ?? "").trim();
+    const withoutClosingHashes = rawTitle.replace(/[ \t]+#+[ \t]*$/u, "");
+    if (withoutClosingHashes !== rawTitle)
+      rawTitle = withoutClosingHashes.trim();
+    const anchored = /[ \t]+\{#([A-Za-z0-9][A-Za-z0-9._:-]*)\}[ \t]*$/u.exec(
+      rawTitle,
+    );
+    const title = rawTitle
+      .replace(/[ \t]+\{#[A-Za-z0-9][A-Za-z0-9._:-]*\}[ \t]*$/u, "")
+      .trim();
     output.push({
-      anchor: anchored?.[1],
+      anchor: anchored?.[1] ?? (markdownSlug(title) || undefined),
       depth: heading[1]!.length,
       line: index + 1,
-      title: heading[2]!.replace(/[ \t]+\{#[^{}\s]+\}[ \t]*$/u, ""),
+      title,
     });
+  }
+  return output;
+};
+
+/** Derive the same Unicode-aware implicit anchor used by evidence targets. */
+const markdownSlug = (title: string): string => {
+  let output = "";
+  let hyphen = false;
+  for (const character of title.toLowerCase())
+    if (/^[\p{L}\p{N}_]$/u.test(character)) {
+      output += character;
+      hyphen = false;
+    } else if (
+      (character === "-" || /^\s$/u.test(character)) &&
+      output !== ""
+    ) {
+      if (hyphen === false) output += "-";
+      hyphen = true;
+    }
+  return output.replace(/-$/u, "");
+};
+
+/** Preserve authored Markdown content while removing exact tag positions. */
+const markdownFingerprintLines = (source: string): Array<string | null> => {
+  const output: Array<string | null> = [];
+  let fence: { character: "`" | "~"; length: number } | undefined;
+  let htmlComment = false;
+  for (const sourceLine of source.split("\n")) {
+    if (fence !== undefined) {
+      output.push(sourceLine);
+      if (
+        new RegExp(
+          `^ {0,3}${fence.character}{${fence.length},}[ \\t]*$`,
+          "u",
+        ).test(sourceLine)
+      )
+        fence = undefined;
+      continue;
+    }
+    const marker = /^ {0,3}(`{3,}|~{3,})/u.exec(sourceLine)?.[1];
+    if (marker !== undefined) {
+      fence = {
+        character: marker[0] as "`" | "~",
+        length: marker.length,
+      };
+      output.push(sourceLine);
+      continue;
+    }
+    const trimmed = sourceLine.trimStart();
+    if (htmlComment || trimmed.startsWith("<!--")) {
+      if (sourceLine.includes("-->")) htmlComment = false;
+      else htmlComment = true;
+      output.push(null);
+      continue;
+    }
+    output.push(sourceLine.replace(/<!--.*?-->/gu, ""));
   }
   return output;
 };
@@ -407,12 +823,13 @@ const resolvePopulationFiles = (
   projectRoot: string,
   populationRoot: string,
   patterns: readonly string[],
+  extension = ".ts",
 ): string[] => {
   const root = path.resolve(projectRoot, populationRoot);
   const candidates = walkAutoMovieProjectPopulationFiles(
     projectRoot,
     root,
-    ".ts",
+    extension,
   );
   const selected = new Set(
     fs

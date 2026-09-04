@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 
@@ -20,7 +21,8 @@ const roots: string[] = [];
  *    flat local contracts in deterministic code-unit order.
  * 2. Comments and fenced examples cannot manufacture owner headings, while a
  *    change inside one H2 changes only that unit's digest.
- * 3. A declaration rooted at another project and a manifest without a package
+ * 3. A direct brief exposes its graph-selected shot export and exact H3 owner.
+ * 4. A declaration rooted at another project and a manifest without a package
  *    name fail before either can become a router or review denominator.
  */
 try {
@@ -70,8 +72,23 @@ try {
       "",
     ].join("\n"),
   );
-  write(project, "src/models/z.ts", "export class Z {}\n");
-  write(project, "src/models/nested/a.ts", "export class A {}\n");
+  write(
+    project,
+    "src/models/z.ts",
+    `\ufeff${"/**\n * @evidence models/zeta.md#zeta-form Realizes the reviewed zeta form.\n * @evidenceReview models/zeta.md#zeta-form #9782bb7 Read the form and checked this export.\n */\nclass Z {}\nexport { Z as Zeta };\n".replaceAll("\n", "\r\n")}`,
+  );
+  write(
+    project,
+    "src/models/nested/a.ts",
+    [
+      "/**",
+      " * @evidence models/alpha.md#shell Realizes the reviewed shell.",
+      " * @evidence models/alpha.md#joint Realizes the reviewed joint.",
+      " */",
+      "export class A {}",
+      "",
+    ].join("\n"),
+  );
   write(
     project,
     "docs/contracts/visual.md",
@@ -145,6 +162,19 @@ try {
       },
     ],
   );
+  assert.equal(
+    first.sourceOwners.find((owner) => owner.exportName === "Zeta")
+      ?.sourceDigest,
+    `sha256:${crypto
+      .createHash("sha256")
+      .update(
+        fs
+          .readFileSync(path.join(project, "src/models/z.ts"), "utf8")
+          .replace(/^\ufeff/u, "")
+          .replace(/\r\n?/gu, "\n"),
+      )
+      .digest("hex")}`,
+  );
   assert.deepEqual(
     first.designOwners.map((owner) => ({
       branch: owner.branch,
@@ -180,6 +210,54 @@ try {
     ],
   );
   assert.deepEqual(
+    first.sourceOwners.map((owner) => ({
+      branch: owner.branch,
+      sourcePath: owner.sourcePath,
+      exportName: owner.exportName,
+      symbolKind: owner.symbolKind,
+      target: `${owner.targetPath}#${owner.targetAnchor}`,
+      stage: owner.stage,
+      enforced: owner.enforced,
+      reviewed: owner.reviewed,
+      digested: /^sha256:[a-f0-9]{64}$/u.test(owner.sourceDigest),
+    })),
+    [
+      {
+        branch: "modelSources",
+        sourcePath: "src/models/nested/a.ts",
+        exportName: "A",
+        symbolKind: "type",
+        target: "docs/models/alpha.md#joint",
+        stage: "draft",
+        enforced: false,
+        reviewed: false,
+        digested: true,
+      },
+      {
+        branch: "modelSources",
+        sourcePath: "src/models/nested/a.ts",
+        exportName: "A",
+        symbolKind: "type",
+        target: "docs/models/alpha.md#shell",
+        stage: "draft",
+        enforced: false,
+        reviewed: false,
+        digested: true,
+      },
+      {
+        branch: "modelSources",
+        sourcePath: "src/models/z.ts",
+        exportName: "Zeta",
+        symbolKind: "type",
+        target: "docs/models/zeta.md#zeta-form",
+        stage: "draft",
+        enforced: false,
+        reviewed: false,
+        digested: true,
+      },
+    ],
+  );
+  assert.deepEqual(
     first.contracts.map((contract) => ({
       path: contract.path,
       title: contract.title,
@@ -205,6 +283,68 @@ try {
     }),
     first,
   );
+  const reviewed = readAutoMovieProductionEvidence({
+    root: project,
+    productionEvidence: { ...configuration, modelSources: "review" },
+  });
+  assert.equal(
+    reviewed.sourceOwners.find((owner) => owner.exportName === "Zeta")
+      ?.reviewed,
+    true,
+  );
+  assert.equal(
+    reviewed.sourceOwners.find((owner) => owner.exportName === "A")?.reviewed,
+    false,
+  );
+
+  const brief = createProject();
+  write(
+    brief,
+    "package.json",
+    JSON.stringify({ name: "reader-brief", description: "One brief." }),
+  );
+  write(
+    brief,
+    "docs/settings/production.md",
+    "# Production settings\n\n## Delivery {#delivery}\n\nOne direct brief.\n",
+  );
+  write(
+    brief,
+    "docs/briefs/delivery.md",
+    "# Delivery\n\n## Sequence {#sequence}\n\n### Opening {#opening}\n\nOne opening shot.\n",
+  );
+  write(
+    brief,
+    "src/shots/delivery.ts",
+    "/** @evidence briefs/delivery.md#opening Realizes the exact opening. */\nexport const opening = (): void => undefined;\n",
+  );
+  const briefEvidence = readAutoMovieProductionEvidence({
+    root: brief,
+    productionEvidence: {
+      ...disabled(brief),
+      kind: "brief",
+      settings: "review",
+      briefs: "review",
+      shots: "draft",
+    },
+  });
+  assert.deepEqual(
+    briefEvidence.sourceOwners.map((owner) => ({
+      branch: owner.branch,
+      sourcePath: owner.sourcePath,
+      exportName: owner.exportName,
+      target: `${owner.targetPath}#${owner.targetAnchor}`,
+    })),
+    [
+      {
+        branch: "shots",
+        sourcePath: "src/shots/delivery.ts",
+        exportName: "opening",
+        target: "docs/briefs/delivery.md#opening",
+      },
+    ],
+  );
+
   const modelSources = path.join(project, "src", "models");
   const inactiveSources = path.join(project, "inactive-models");
   fs.renameSync(modelSources, inactiveSources);
