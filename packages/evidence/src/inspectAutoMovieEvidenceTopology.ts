@@ -80,6 +80,7 @@ export interface IAutoMovieEvidenceTopologyDiagnostic {
  * @evidence requirements/production-evidence/graph.md#agent-production-evidence-deterministic-result Reports every missing, extra, stale, or misordered relationship in stable order.
  * @evidence specifications/production-evidence/graph.md#spec-authoring-production-evidence-shape-stage Validates provider and consumer state against the declared production branches.
  * @evidence specifications/production-evidence/graph.md#spec-authoring-production-evidence-deterministic-result Produces a complete diagnostic set instead of accepting a partial topology.
+ * @author Samchon
  */
 export function inspectAutoMovieEvidenceTopology(props: {
   branches: readonly IAutoMovieEvidenceTopologyBranch[];
