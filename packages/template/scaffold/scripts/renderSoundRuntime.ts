@@ -58,10 +58,13 @@ import {
 } from "./renderGcSnapshot";
 import type { IProductionRenderHost } from "./renderHost";
 import {
+  type IRuntimePackageGenerationHandle,
+  loadRuntimePackageGeneration,
+} from "./runtimePackageGeneration";
+import {
   type IRuntimePackageSnapshot,
   type RuntimePackageAssetSelection,
   assertRuntimePackageSnapshotCurrent,
-  bindRuntimePackageSnapshotGeneration,
   snapshotRuntimePackage,
 } from "./runtimePackageSnapshot";
 import { withKokoroRuntimeOverrides } from "./withKokoroRuntimeOverrides";
@@ -102,38 +105,25 @@ export interface IProductionDialogueCacheIdentity {
 
 class ProductionRuntimeClosureError extends AggregateError {}
 
-interface IResidentRuntimePackage<Module> {
-  module: Module;
-  snapshot: IRuntimePackageSnapshot;
-}
-
 const residentRequire = createRequire(import.meta.url);
-const residentRuntimePackages = new Map<
-  string,
-  IResidentRuntimePackage<unknown>
->();
 
 /** Snapshot and bind a package generation before Node is allowed to load it. */
 const residentRuntimePackage = <Module>(
   packageName: string,
-): IResidentRuntimePackage<Module> => {
-  const existing = residentRuntimePackages.get(packageName);
-  if (existing !== undefined) {
-    assertRuntimePackageSnapshotCurrent(existing.snapshot);
-    return existing as IResidentRuntimePackage<Module>;
-  }
+): IRuntimePackageGenerationHandle<IRuntimePackageSnapshot, Module> => {
   const snapshot = snapshotRuntimePackage({
     entry: residentRequire.resolve(packageName),
     moduleClosure: true,
     packageName,
   });
-  bindRuntimePackageSnapshotGeneration(snapshot);
-  const loaded = {
-    module: residentRequire(packageName) as Module,
+  return loadRuntimePackageGeneration({
+    key: `${snapshot.package}\0${snapshot.root}`,
+    generation: snapshot.fingerprint,
     snapshot,
-  };
-  residentRuntimePackages.set(packageName, loaded);
-  return loaded;
+    assertCurrent: () => assertRuntimePackageSnapshotCurrent(snapshot),
+    observeCache: () => residentRequire.cache[snapshot.entry],
+    load: () => residentRequire(snapshot.entry) as Module,
+  });
 };
 
 /** Revalidate one runtime closure without replacing an operation failure. */
@@ -454,7 +444,6 @@ export const createProductionSoundRuntime = (props: {
       packageExports: options.packageExports,
       packageName,
     });
-    bindRuntimePackageSnapshotGeneration(snapshot);
     packageSnapshots.set(key, snapshot);
     return snapshot;
   };
