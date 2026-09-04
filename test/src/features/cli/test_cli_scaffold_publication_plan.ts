@@ -50,8 +50,9 @@ export const test_cli_scaffold_publication_plan = (): void => {
     "every invalid candidate is refused before publication",
     [
       refusal({ bad: 1 } as unknown as Record<string, string>),
-      refusal({ ["bad\0path"]: "x" }),
+      refusal({ "bad\0path": "x" }),
       refusal({ ".": "x" }),
+      refusal({ "..": "x" }),
       refusal({ "../escape": "x" }),
       refusal({ "A/file": "x", "a/FILE": "y" }),
       refusal({ parent: "x", "parent/child": "y" }),

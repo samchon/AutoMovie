@@ -9,14 +9,13 @@ import {
 } from "yaml";
 
 /**
- * The pnpm workspace catalog lookup whose mapping ownership is resolved before
- * a dependency specifier is accepted.
+ * Explicit inputs for one pnpm workspace catalog lookup.
  *
- * @evidence requirements/agent-authoring/project-ownership.md#agent-portable-authoring Resolves the generated project's pinned dependency input from the declared workspace catalog rather than a similarly named mapping.
- * @evidence specifications/authoring-and-authority/source-authority-and-derivation.md#spec-authoring-source-input Interprets the workspace YAML document and accepts only the requested direct string scalar as derivation input.
+ * @evidence requirements/agent-authoring/project-ownership.md#agent-portable-authoring Carries the exact workspace, catalog, and dependency identities that determine a generated project's pinned dependency input.
+ * @evidence specifications/authoring-and-authority/source-authority-and-derivation.md#spec-authoring-source-input Defines the complete declared source boundary for catalog derivation.
  * @author Samchon
  */
-export const resolveAutoMovieCatalogVersion = (props: {
+export interface IAutoMovieCatalogVersionProps {
   /**
    * Direct child mapping selected below the top-level `catalogs` mapping.
    *
@@ -38,7 +37,19 @@ export const resolveAutoMovieCatalogVersion = (props: {
    * @evidence specifications/authoring-and-authority/source-authority-and-derivation.md#spec-authoring-source-input Supplies the complete syntax needed to interpret mappings, scalars, anchors, aliases, comments, and duplicates.
    */
   workspace: string;
-}): string => {
+}
+
+/**
+ * The pnpm workspace catalog lookup whose mapping ownership is resolved before
+ * a dependency specifier is accepted.
+ *
+ * @evidence requirements/agent-authoring/project-ownership.md#agent-portable-authoring Resolves the generated project's pinned dependency input from the declared workspace catalog rather than a similarly named mapping.
+ * @evidence specifications/authoring-and-authority/source-authority-and-derivation.md#spec-authoring-source-input Interprets the workspace YAML document and accepts only the requested direct string scalar as derivation input.
+ * @author Samchon
+ */
+export const resolveAutoMovieCatalogVersion = (
+  props: IAutoMovieCatalogVersionProps,
+): string => {
   const context = `catalog "${props.catalog}" dependency "${props.dependency}"`;
   const document = parseDocument(props.workspace, {
     prettyErrors: false,

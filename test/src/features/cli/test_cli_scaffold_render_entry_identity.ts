@@ -55,11 +55,20 @@ export const test_cli_scaffold_render_entry_identity = (): void => {
   );
   TestValidator.equals(
     "token convergence is refused before map construction",
-    refusal([
-      { relative: "{{name}}/README.md", content: "one" },
-      { relative: "film/README.md", content: "two" },
-    ]),
-    'scaffold sources collide at rendered path "film/README.md": "film/README.md", "{{name}}/README.md"',
+    [
+      refusal([
+        { relative: "{{name}}/README.md", content: "one" },
+        { relative: "film/README.md", content: "two" },
+      ]),
+      refusal([
+        { relative: "same", content: "one" },
+        { relative: "same", content: "two" },
+      ]),
+    ],
+    [
+      'scaffold sources collide at rendered path "film/README.md": "film/README.md", "{{name}}/README.md"',
+      'scaffold sources collide at rendered path "same": "same", "same"',
+    ],
   );
 
   const prototype = renderScaffoldEntries(

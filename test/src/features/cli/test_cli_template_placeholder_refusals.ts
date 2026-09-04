@@ -47,6 +47,14 @@ export const test_cli_template_placeholder_refusals = (): void => {
           return error instanceof Error ? error.message : String(error);
         }
       })(),
+      (() => {
+        try {
+          renderTemplate("{{name}}", { name: "nested}}" });
+          return "accepted";
+        } catch (error) {
+          return error instanceof Error ? error.message : String(error);
+        }
+      })(),
     ],
     [
       "unknown scaffold variable: {{missing}}",
@@ -57,6 +65,7 @@ export const test_cli_template_placeholder_refusals = (): void => {
       "unmatched scaffold placeholder opening delimiter at offset 7",
       "unmatched scaffold placeholder closing delimiter at offset 7",
       "unmatched scaffold placeholder closing delimiter at offset 9",
+      "scaffold variable {{name}} expands to placeholder syntax",
       "scaffold variable {{name}} expands to placeholder syntax",
     ],
   );

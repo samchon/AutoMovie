@@ -40,14 +40,30 @@ export const test_template_catalog_resolution = (): void => {
       resolve(
         "catalogs:\n  media:\n    shared: &shared ^1.2.3\n    lib: *shared",
       ),
+      resolve(
+        "catalogs:\n  media:\n    shared: &__proto__ ^1.2.3\n    lib: *__proto__",
+      ),
       resolve("catalogs:\r\n  media:\r\n    lib: ^1.2.3\r\n"),
       resolve(
         "catalogs:\n  media:\n    __proto__: '^1.2.3'",
         "media",
         "__proto__",
       ),
+      resolve(
+        "catalogs:\n  ? [not, scalar]\n  : ignored\n  media:\n    lib: ^1.2.3",
+      ),
     ],
-    ["^1.2.3", "^1.2.3", "^1.2.3", "^1.2.3", "^1.2.3", "^1.2.3", "^1.2.3"],
+    [
+      "^1.2.3",
+      "^1.2.3",
+      "^1.2.3",
+      "^1.2.3",
+      "^1.2.3",
+      "^1.2.3",
+      "^1.2.3",
+      "^1.2.3",
+      "^1.2.3",
+    ],
   );
 
   TestValidator.equals(

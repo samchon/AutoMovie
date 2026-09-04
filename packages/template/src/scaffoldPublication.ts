@@ -32,6 +32,92 @@ export interface IScaffoldPublicationEntry {
 }
 
 /**
+ * Complete, read-back-verified publication in the captured parent.
+ *
+ * @evidence requirements/operations-and-recovery/idempotency-and-side-effects.md#operations-idempotent-deterministic-results Identifies one exact completed result and its physical owner.
+ * @evidence specifications/execution-and-recovery/retry-backoff-and-idempotency.md#execution-deterministic-result-reuse Supplies the verified result generation eligible for reuse.
+ * @author Samchon
+ */
+export interface IScaffoldCompletedFilePublicationOutcome {
+  /**
+   * Captured physical parent generation used by the native operation.
+   *
+   * @evidence requirements/operations-and-recovery/idempotency-and-side-effects.md#operations-idempotent-deterministic-results Identifies the physical owner of the completed result.
+   * @evidence specifications/execution-and-recovery/retry-backoff-and-idempotency.md#execution-deterministic-result-reuse Proves completion occurred in the generation selected for reuse.
+   */
+  parentIdentity: string;
+  /**
+   * Complete outcome discriminator.
+   *
+   * @evidence requirements/operations-and-recovery/idempotency-and-side-effects.md#operations-idempotent-deterministic-results Separates a verified complete result from every unfinished state.
+   * @evidence specifications/execution-and-recovery/retry-backoff-and-idempotency.md#execution-deterministic-result-reuse Permits reuse only for the completed arm.
+   */
+  status: "completed";
+}
+
+/**
+ * Refusal before a final slot was created.
+ *
+ * @evidence requirements/operations-and-recovery/idempotency-and-side-effects.md#operations-compensation-reconciliation Records confirmed absence separately from any partial side effect.
+ * @evidence specifications/execution-and-recovery/retry-backoff-and-idempotency.md#execution-compensation-adoption Prevents a zero-publication refusal from being adopted as output.
+ * @author Samchon
+ */
+export interface IScaffoldRefusedFilePublicationOutcome {
+  /**
+   * Exact native or validation cause retained for the caller.
+   *
+   * @evidence requirements/operations-and-recovery/idempotency-and-side-effects.md#operations-compensation-reconciliation Retains why publication stopped before producing an effect.
+   * @evidence specifications/execution-and-recovery/retry-backoff-and-idempotency.md#execution-compensation-adoption Distinguishes refusal from a result eligible for adoption.
+   */
+  error: unknown;
+  /**
+   * Zero-publication outcome discriminator.
+   *
+   * @evidence requirements/operations-and-recovery/idempotency-and-side-effects.md#operations-compensation-reconciliation Makes confirmed absence explicit in reconciliation.
+   * @evidence specifications/execution-and-recovery/retry-backoff-and-idempotency.md#execution-compensation-adoption Excludes the target from partial-result adoption.
+   */
+  status: "refused";
+}
+
+/**
+ * A final slot that exists in the captured parent but is not complete.
+ *
+ * @evidence requirements/operations-and-recovery/idempotency-and-side-effects.md#operations-compensation-reconciliation Records the exact bound partial side effect requiring reconciliation.
+ * @evidence specifications/execution-and-recovery/retry-backoff-and-idempotency.md#execution-compensation-adoption Supplies the partial result that may be adopted or abandoned explicitly.
+ * @author Samchon
+ */
+export interface IScaffoldPartialFilePublicationOutcome {
+  /**
+   * Number of candidate bytes known to have reached the bound slot.
+   *
+   * @evidence requirements/operations-and-recovery/idempotency-and-side-effects.md#operations-compensation-reconciliation Measures the partial effect without guessing from a reopened path.
+   * @evidence specifications/execution-and-recovery/retry-backoff-and-idempotency.md#execution-compensation-adoption Supplies the exact extent considered for recovery or adoption.
+   */
+  bytesWritten: number;
+  /**
+   * Exact native or validation cause retained for the caller.
+   *
+   * @evidence requirements/operations-and-recovery/idempotency-and-side-effects.md#operations-compensation-reconciliation Retains the failure paired with the measured partial effect.
+   * @evidence specifications/execution-and-recovery/retry-backoff-and-idempotency.md#execution-compensation-adoption Keeps recovery tied to the observed failure rather than a reconstructed guess.
+   */
+  error: unknown;
+  /**
+   * Captured physical parent generation containing the partial slot.
+   *
+   * @evidence requirements/operations-and-recovery/idempotency-and-side-effects.md#operations-compensation-reconciliation Names the generation that owns the partial effect.
+   * @evidence specifications/execution-and-recovery/retry-backoff-and-idempotency.md#execution-compensation-adoption Prevents recovery from following a successor pathname generation.
+   */
+  parentIdentity: string;
+  /**
+   * Bound partial outcome discriminator.
+   *
+   * @evidence requirements/operations-and-recovery/idempotency-and-side-effects.md#operations-compensation-reconciliation Separates an observed partial side effect from absence and completion.
+   * @evidence specifications/execution-and-recovery/retry-backoff-and-idempotency.md#execution-compensation-adoption Selects the result class requiring an explicit adoption decision.
+   */
+  status: "partial";
+}
+
+/**
  * Outcome reported by the parent-bound adapter for one candidate entry.
  *
  * The adapter reports rather than throws because a thrown I/O error cannot say
@@ -43,53 +129,9 @@ export interface IScaffoldPublicationEntry {
  * @author Samchon
  */
 export type ScaffoldFilePublicationOutcome =
-  | {
-      /** Complete, read-back-verified publication in the captured parent. */
-      status: "completed";
-      /**
-       * Captured physical parent generation used by the native operation.
-       *
-       * @evidence requirements/operations-and-recovery/idempotency-and-side-effects.md#operations-idempotent-deterministic-results Identifies the physical owner of the completed result.
-       * @evidence specifications/execution-and-recovery/retry-backoff-and-idempotency.md#execution-deterministic-result-reuse Proves completion occurred in the generation selected for reuse.
-       */
-      parentIdentity: string;
-    }
-  | {
-      /** Refusal before a final slot was created. */
-      status: "refused";
-      /**
-       * Exact native or validation cause retained for the caller.
-       *
-       * @evidence requirements/operations-and-recovery/idempotency-and-side-effects.md#operations-compensation-reconciliation Retains why publication stopped before producing an effect.
-       * @evidence specifications/execution-and-recovery/retry-backoff-and-idempotency.md#execution-compensation-adoption Distinguishes refusal from a result eligible for adoption.
-       */
-      error: unknown;
-    }
-  | {
-      /** A final slot exists in the captured parent but is not complete. */
-      status: "partial";
-      /**
-       * Number of candidate bytes known to have reached the bound slot.
-       *
-       * @evidence requirements/operations-and-recovery/idempotency-and-side-effects.md#operations-compensation-reconciliation Measures the partial effect without guessing from a reopened path.
-       * @evidence specifications/execution-and-recovery/retry-backoff-and-idempotency.md#execution-compensation-adoption Supplies the exact extent considered for recovery or adoption.
-       */
-      bytesWritten: number;
-      /**
-       * Exact native or validation cause retained for the caller.
-       *
-       * @evidence requirements/operations-and-recovery/idempotency-and-side-effects.md#operations-compensation-reconciliation Retains the failure paired with the measured partial effect.
-       * @evidence specifications/execution-and-recovery/retry-backoff-and-idempotency.md#execution-compensation-adoption Keeps recovery tied to the observed failure rather than a reconstructed guess.
-       */
-      error: unknown;
-      /**
-       * Captured physical parent generation containing the partial slot.
-       *
-       * @evidence requirements/operations-and-recovery/idempotency-and-side-effects.md#operations-compensation-reconciliation Names the generation that owns the partial effect.
-       * @evidence specifications/execution-and-recovery/retry-backoff-and-idempotency.md#execution-compensation-adoption Prevents recovery from following a successor pathname generation.
-       */
-      parentIdentity: string;
-    };
+  | IScaffoldCompletedFilePublicationOutcome
+  | IScaffoldRefusedFilePublicationOutcome
+  | IScaffoldPartialFilePublicationOutcome;
 
 /**
  * One completed candidate entry paired with the physical parent generation
