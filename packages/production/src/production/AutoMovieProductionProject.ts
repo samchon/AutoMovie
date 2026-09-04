@@ -2046,6 +2046,16 @@ export class AutoMovieProductionProject {
     inputCurrent?: () => boolean,
   ): number {
     this.assertRepaintAttempt(attempt);
+    if (attempt.availableOutput?.receipt !== undefined) {
+      const raw = this.repaintRawOutput(attempt.requestId, attempt.attemptId);
+      if (
+        raw.receipt.digest !== attempt.availableOutput.digest ||
+        raw.receipt.bytes !== attempt.availableOutput.bytes
+      )
+        throw new Error(
+          `Repaint attempt "${attempt.attemptId}" does not cite its exact resident raw output revision.`,
+        );
+    }
     const relative = repaintAttemptPath(attempt.requestId, attempt.attemptId);
     if (this.readTrackedStateFile(relative) !== null)
       throw new Error(`Repaint attempt "${attempt.attemptId}" already exists.`);
