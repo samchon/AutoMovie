@@ -51,6 +51,10 @@ export const test_production_source_owner_binding = (): void => {
     namedFacts([
       ["exactEdgeResolves", () => resolve().success],
       [
+        "shotEntryUsesSelectedOwnerWithoutRuntimeClaim",
+        () => resolve({ owner: undefined }).success,
+      ],
+      [
         "missingEdgeIsDistinct",
         () => resolve({ bindings: [] }).reason === "missing",
       ],
@@ -93,6 +97,7 @@ export const test_production_source_owner_binding = (): void => {
     ]),
     {
       exactEdgeResolves: true,
+      shotEntryUsesSelectedOwnerWithoutRuntimeClaim: true,
       missingEdgeIsDistinct: true,
       ambiguousEdgeIsDistinct: true,
       swappedOwnerIsDistinct: true,

@@ -191,7 +191,7 @@ interface IMarkdownSourceOwnerTarget {
 
 interface ISourceOwnerExport {
   exportName: string;
-  node: ts.Node;
+  nodes: readonly ts.Node[];
   symbolKind: "function" | "property" | "type";
 }
 
@@ -349,17 +349,16 @@ const sourceOwnerBindingsOf = (
       );
       for (const owner of exportedSourceOwners(parsed)) {
         if (binding.host.symbols.includes(owner.symbolKind) === false) continue;
-        const tags = jsDocTagsOf(owner.node);
-        const reviews = new Map(
-          tags
-            .filter((tag) => tag.name === "evidenceReview")
-            .flatMap((tag) => {
-              const [target, fingerprint] = tag.comment.split(/\s+/u);
-              return target === undefined || fingerprint === undefined
-                ? []
-                : [[target, fingerprint.replace(/^#/u, "")] as const];
-            }),
-        );
+        const tags = jsDocTagsOf(owner.nodes);
+        const reviews = new Map<string, string[]>();
+        for (const tag of tags.filter((tag) => tag.name === "evidenceReview")) {
+          const [target, fingerprint] = tag.comment.split(/\s+/u);
+          if (target === undefined || fingerprint === undefined) continue;
+          reviews.set(target, [
+            ...(reviews.get(target) ?? []),
+            fingerprint.replace(/^#/u, ""),
+          ]);
+        }
         for (const tag of tags.filter((tag) => tag.name === "evidence")) {
           const cited = tag.comment.split(/\s+/u)[0];
           if (cited === undefined) continue;
@@ -386,7 +385,8 @@ const sourceOwnerBindingsOf = (
             targetAnchor: target.anchor,
             reviewed:
               binding.stage === "review" &&
-              reviews.get(target.relativeTarget) === target.fingerprint,
+              reviews.get(target.relativeTarget)?.length === 1 &&
+              reviews.get(target.relativeTarget)?.[0] === target.fingerprint,
           });
         }
       }
@@ -421,14 +421,30 @@ const readNormalizedSource = (file: string): string => {
 
 /** Enumerate named top-level exports with their evidence symbol identity. */
 const exportedSourceOwners = (source: ts.SourceFile): ISourceOwnerExport[] => {
-  const local = new Map<string, Omit<ISourceOwnerExport, "exportName">>();
-  const aliases = new Map<string, string>();
+  const local = new Map<
+    string,
+    { nodes: ts.Node[]; symbolKind: ISourceOwnerExport["symbolKind"] }
+  >();
+  const exposed = new Map<string, string>();
   const modifiers = (node: ts.Node): readonly ts.Modifier[] =>
     ts.canHaveModifiers(node) ? (ts.getModifiers(node) ?? []) : [];
   const directlyExported = (node: ts.Node): boolean =>
     modifiers(node).some(
       (modifier) => modifier.kind === ts.SyntaxKind.ExportKeyword,
     );
+  const defaultExported = (node: ts.Node): boolean =>
+    modifiers(node).some(
+      (modifier) => modifier.kind === ts.SyntaxKind.DefaultKeyword,
+    );
+  const remember = (
+    name: string,
+    node: ts.Node,
+    symbolKind: ISourceOwnerExport["symbolKind"],
+  ): void => {
+    const present = local.get(name);
+    if (present === undefined) local.set(name, { nodes: [node], symbolKind });
+    else present.nodes.push(node);
+  };
   for (const statement of source.statements) {
     if (
       ts.isExportDeclaration(statement) &&
@@ -438,70 +454,64 @@ const exportedSourceOwners = (source: ts.SourceFile): ISourceOwnerExport[] => {
     )
       for (const element of statement.exportClause.elements)
         if (!element.isTypeOnly)
-          aliases.set(
-            (element.propertyName ?? element.name).text,
+          exposed.set(
             element.name.text,
+            (element.propertyName ?? element.name).text,
           );
     if (ts.isVariableStatement(statement))
       for (const declaration of statement.declarationList.declarations)
-        if (ts.isIdentifier(declaration.name))
-          local.set(declaration.name.text, {
-            node: statement,
-            symbolKind: "property",
-          });
-    if (ts.isFunctionDeclaration(statement) && statement.name !== undefined)
-      local.set(statement.name.text, {
-        node: statement,
-        symbolKind: "function",
-      });
-    if (
-      (ts.isClassDeclaration(statement) ||
-        ts.isInterfaceDeclaration(statement) ||
-        ts.isTypeAliasDeclaration(statement)) &&
-      statement.name !== undefined
-    )
-      local.set(statement.name.text, { node: statement, symbolKind: "type" });
-  }
-  const output: ISourceOwnerExport[] = [];
-  for (const statement of source.statements) {
-    if (!directlyExported(statement)) continue;
-    if (ts.isVariableStatement(statement))
-      for (const declaration of statement.declarationList.declarations)
         if (ts.isIdentifier(declaration.name)) {
-          const entry = local.get(declaration.name.text)!;
-          output.push({ ...entry, exportName: declaration.name.text });
-        } else if (
-          (ts.isFunctionDeclaration(statement) ||
-            ts.isClassDeclaration(statement) ||
-            ts.isInterfaceDeclaration(statement) ||
-            ts.isTypeAliasDeclaration(statement)) &&
-          statement.name !== undefined
-        ) {
-          const entry = local.get(statement.name.text)!;
-          output.push({ ...entry, exportName: statement.name.text });
+          remember(declaration.name.text, statement, "property");
+          if (directlyExported(statement))
+            exposed.set(declaration.name.text, declaration.name.text);
         }
+    if (ts.isFunctionDeclaration(statement)) {
+      const localName = statement.name?.text ?? `\0default:${statement.pos}`;
+      remember(localName, statement, "function");
+      if (directlyExported(statement))
+        exposed.set(
+          defaultExported(statement) ? "default" : localName,
+          localName,
+        );
+    }
+    if (
+      ts.isClassDeclaration(statement) ||
+      ts.isInterfaceDeclaration(statement) ||
+      ts.isTypeAliasDeclaration(statement)
+    ) {
+      const localName = statement.name?.text ?? `\0default:${statement.pos}`;
+      remember(localName, statement, "type");
+      if (directlyExported(statement))
+        exposed.set(
+          defaultExported(statement) ? "default" : localName,
+          localName,
+        );
+    }
   }
-  for (const [name, exported] of aliases) {
-    const entry = local.get(name);
-    if (entry !== undefined) output.push({ ...entry, exportName: exported });
-  }
-  return output.sort((left, right) =>
-    compareCodeUnits(left.exportName, right.exportName),
-  );
+  return [...exposed]
+    .flatMap(([exportName, localName]) => {
+      const entry = local.get(localName);
+      return entry === undefined ? [] : [{ ...entry, exportName }];
+    })
+    .sort((left, right) => compareCodeUnits(left.exportName, right.exportName));
 };
 
 /** Read parser-owned custom JSDoc tags without scanning comment-shaped text. */
-const jsDocTagsOf = (node: ts.Node): Array<{ name: string; comment: string }> =>
-  ts.getJSDocTags(node).map((tag) => ({
-    name: tag.tagName.text,
-    comment:
-      typeof tag.comment === "string"
-        ? tag.comment.trim()
-        : (tag.comment ?? [])
-            .map((part) => part.text)
-            .join("")
-            .trim(),
-  }));
+const jsDocTagsOf = (
+  nodes: readonly ts.Node[],
+): Array<{ name: string; comment: string }> =>
+  nodes.flatMap((node) =>
+    ts.getJSDocTags(node).map((tag) => ({
+      name: tag.tagName.text,
+      comment:
+        typeof tag.comment === "string"
+          ? tag.comment.trim()
+          : (tag.comment ?? [])
+              .map((part) => part.text)
+              .join("")
+              .trim(),
+    })),
+  );
 
 /** Materialize exact Markdown target identities and current fingerprints. */
 const markdownSourceOwnerTargets = (
@@ -693,11 +703,11 @@ const markdownHeadings = (source: string): IMarkdownHeading[] => {
     const withoutClosingHashes = rawTitle.replace(/[ \t]+#+[ \t]*$/u, "");
     if (withoutClosingHashes !== rawTitle)
       rawTitle = withoutClosingHashes.trim();
-    const anchored = /[ \t]+\{#([A-Za-z0-9][A-Za-z0-9._:-]*)\}[ \t]*$/u.exec(
+    const anchored = /[ \t]*\{#([A-Za-z0-9][A-Za-z0-9._:-]*)\}[ \t]*$/u.exec(
       rawTitle,
     );
     const title = rawTitle
-      .replace(/[ \t]+\{#[A-Za-z0-9][A-Za-z0-9._:-]*\}[ \t]*$/u, "")
+      .replace(/[ \t]*\{#[A-Za-z0-9][A-Za-z0-9._:-]*\}[ \t]*$/u, "")
       .trim();
     output.push({
       anchor: anchored?.[1] ?? (markdownSlug(title) || undefined),
@@ -823,7 +833,7 @@ const resolvePopulationFiles = (
   projectRoot: string,
   populationRoot: string,
   patterns: readonly string[],
-  extension = ".ts",
+  extension: ".md" | ".ts" = ".ts",
 ): string[] => {
   const root = path.resolve(projectRoot, populationRoot);
   const candidates = walkAutoMovieProjectPopulationFiles(

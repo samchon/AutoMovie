@@ -66,7 +66,7 @@ export const autoMovieLibraryContributionDiagnostics = (
   for (const [name, population] of Object.entries(populations))
     if (name !== expected && population.length !== 0)
       diagnostics.push(
-        `Library source branch "${branch}" returned ${population.length} ${name}, but that payload belongs to the ${name === "contexts" ? "maps" : name} branch rather than this owner.`,
+        `Library source branch "${branch}" returned ${population.length} ${name}, but that payload belongs to the ${name === "contexts" ? "maps" : name === "environments" ? "spaces" : "models"} branch rather than this owner.`,
       );
   return diagnostics;
 };
