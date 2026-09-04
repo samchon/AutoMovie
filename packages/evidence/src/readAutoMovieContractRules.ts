@@ -70,9 +70,7 @@ export interface IAutoMovieContractRule {
  * must carry metadata without turning the whole inherited corpus into a
  * migration prerequisite.
  *
- * @evidence requirements/production-evidence/input.md#agent-production-evidence-visible-selection Makes machine-routed local rule state an explicit, project-owned input.
  * @evidence requirements/production-evidence/graph.md#agent-production-evidence-additive-extension Keeps optional structured rules additive to prose contracts and shared claims.
- * @evidence specifications/production-evidence/input.md#spec-authoring-production-evidence-input-state Defines the closed status and safe-application vocabulary read from a local contract.
  * @evidence specifications/production-evidence/graph.md#spec-authoring-production-evidence-additive-extension Returns only validated active, held, or rejected local rule declarations.
  */
 export function readAutoMovieContractRules(
