@@ -504,7 +504,7 @@ export const planProductionRenderJob = (props: {
       compileFingerprint: props.timeline.inputFingerprint,
       editFingerprint,
     },
-    effects: structuredClone(props.effects),
+    effects: props.effects.map((effect) => structuredClone(effect)),
     timelineFrame: 0,
   });
   const frames = Array.from(
@@ -605,7 +605,7 @@ export const planProductionRenderJob = (props: {
       captions: canonicalProductionWebVtt(props.timeline),
       audio: structuredClone(props.timeline.tracks.audio),
       audioAssets,
-      effects: structuredClone(props.effects),
+      effects: props.effects.map((effect) => structuredClone(effect)),
     },
   };
 };

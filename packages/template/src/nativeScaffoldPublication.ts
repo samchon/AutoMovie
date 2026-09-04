@@ -490,7 +490,7 @@ const openWindowsParent = (
           "scaffold slot was created before descriptor adoption failed",
           { cause: failure },
         );
-      throw failure;
+      throw nativeFailure(failure);
     }
     if (childDescriptor < 0) {
       const code = environment.foreign.errno();
@@ -759,7 +759,7 @@ const assertBoundResident = (
       "resident scaffold descriptor close",
     );
   }
-  if (failure !== undefined) throw failure;
+  if (failure !== undefined) throw nativeFailure(failure);
 };
 
 const assertDescriptorBytes = (
@@ -808,6 +808,11 @@ const physicalVersion = (status: fs.BigIntStats): string =>
 
 const nativeError = (message: string, code: number): Error =>
   new Error(`${message} (native code ${code})`);
+
+const nativeFailure = (failure: unknown): Error =>
+  failure instanceof Error
+    ? failure
+    : new Error("Native scaffold publication failed.", { cause: failure });
 
 const combineFailures = (
   first: unknown,

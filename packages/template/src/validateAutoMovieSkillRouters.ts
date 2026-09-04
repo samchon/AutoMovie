@@ -147,7 +147,9 @@ const markdownAnchors = (markdown: string): ReadonlySet<string> => {
       .replace(/\s+\{#[^{}\s]+\}\s*$/u, "")
       .trim()
       .toLowerCase()
-      .replace(/[^\p{L}\p{N}\s_-]/gu, "")
+      .replace(/[^\p{L}\p{N}\s-]/gu, (character) =>
+        character === "_" ? "_" : "",
+      )
       .replace(/\s+/gu, "-");
     const occurrence = occurrences.get(base) ?? 0;
     occurrences.set(base, occurrence + 1);

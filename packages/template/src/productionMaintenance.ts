@@ -81,7 +81,9 @@ export const planAutoMovieProjectDeliveryTocs = (props: {
         .map((path) => path.slice(prefix.length).split("/")[0]!)
         .filter((group) => group.length !== 0),
     );
-    for (const group of [...groups].sort()) {
+    for (const group of [...groups].sort((left, right) =>
+      left < right ? -1 : left > right ? 1 : 0,
+    )) {
       const indexPath = `${prefix}${group}/index.md`;
       const indexSource = props.files[indexPath];
       if (indexSource === undefined) continue;

@@ -23,11 +23,7 @@ const LANGUAGE_CONTRACT_FILES = [
 export const autoMovieLanguageContractsDirectory = (
   moduleDirectory: string = __dirname,
 ): string => {
-  const directory = path.resolve(
-    moduleDirectory,
-    "../..",
-    "language-contracts",
-  );
+  const directory = path.resolve(moduleDirectory, "..", "language-contracts");
   if (!fs.lstatSync(directory, { throwIfNoEntry: false })?.isDirectory())
     throw new Error(`language contract assets are missing: ${directory}`);
   return directory;

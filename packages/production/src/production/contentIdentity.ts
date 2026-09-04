@@ -512,7 +512,7 @@ const assertScalarString = (value: string, role: string): void => {
     if (unit >= 0xd800 && unit <= 0xdbff) {
       if (index + 1 >= value.length)
         throw new AutoMovieCanonicalJsonError(
-          "non-scalar-string",
+          "invalid-unicode",
           `${role} ends with a lone high surrogate`,
         );
       const trail = value.charCodeAt(index + 1);

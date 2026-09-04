@@ -391,7 +391,7 @@ export const screenplayProseDiagnostics = (props: {
   for (const scene of screenplay.screenplay.scenes)
     if (scene.path !== undefined && scene.path.trim().length !== 0)
       owned.set(scene.id, scene.path);
-  const headings = new Map<string, IMarkdownScene[]>();
+  const headings = new Map<string, IAutoMovieParsedScreenplayScene[]>();
   const headingPath = new Map<string, string>();
   const collect = (documentPath: string, only?: string): void => {
     const content = read(documentPath);

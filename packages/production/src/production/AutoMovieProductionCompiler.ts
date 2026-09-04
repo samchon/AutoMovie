@@ -1231,7 +1231,13 @@ export class AutoMovieProductionCompiler {
     materialize: boolean,
   ): IAutoMovieCompileProjectOutput {
     const authoring =
-      this.currentAuthoringEvidence?.() ?? this.authoringEvidence!;
+      this.currentAuthoringEvidence === undefined
+        ? this.authoringEvidence
+        : this.currentAuthoringEvidence();
+    if (authoring === undefined)
+      throw new Error(
+        "Library compilation requires current authoring evidence.",
+      );
     const inputRevision = this.project.revision();
     const snapshot = captureAutoMovieLibraryAuthoringSnapshot({
       root: this.project.root,
