@@ -703,11 +703,11 @@ const markdownHeadings = (source: string): IMarkdownHeading[] => {
     const withoutClosingHashes = rawTitle.replace(/[ \t]+#+[ \t]*$/u, "");
     if (withoutClosingHashes !== rawTitle)
       rawTitle = withoutClosingHashes.trim();
-    const anchored = /[ \t]+\{#([A-Za-z0-9][A-Za-z0-9._:-]*)\}[ \t]*$/u.exec(
+    const anchored = /[ \t]*\{#([A-Za-z0-9][A-Za-z0-9._:-]*)\}[ \t]*$/u.exec(
       rawTitle,
     );
     const title = rawTitle
-      .replace(/[ \t]+\{#[A-Za-z0-9][A-Za-z0-9._:-]*\}[ \t]*$/u, "")
+      .replace(/[ \t]*\{#[A-Za-z0-9][A-Za-z0-9._:-]*\}[ \t]*$/u, "")
       .trim();
     output.push({
       anchor: anchored?.[1] ?? (markdownSlug(title) || undefined),
