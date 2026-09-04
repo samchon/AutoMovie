@@ -1082,7 +1082,11 @@ export const review = true;
       ]);
       assert.equal(account?.symbol, "h2");
       assert.equal(referenceTo(account, obligation)?.uniqueEvidence, true);
-      const population = referenceTo(account, `${layer}/**/*.md`);
+      const population = referencesOf(account).find(
+        (reference) =>
+          reference.type === "markdown" &&
+          reference.files.every((file) => file.startsWith(`${layer}/`)),
+      );
       assert.equal(population?.checklist, true);
       assert.equal(population?.noEvidenceExclude, true);
     }
