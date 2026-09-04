@@ -48,15 +48,26 @@ export const test_cli_scaffold_publication_receipt = (): void => {
     "a complete candidate records every exact completed entry",
     {
       calls: completed.calls,
-      completed: completed.receipt.completed.map((entry) => entry.relative),
+      completed: completed.receipt.completed.map((result) => ({
+        parent: result.parentIdentity,
+        relative: result.entry.relative,
+      })),
       failure: completed.receipt.failure,
+      frozen:
+        Object.isFrozen(completed.receipt) &&
+        Object.isFrozen(completed.receipt.completed) &&
+        completed.receipt.completed.every(Object.isFrozen),
       planned: completed.receipt.planned.map((entry) => entry.relative),
       status: completed.receipt.status,
     },
     {
       calls: ["a.txt", "b.txt"],
-      completed: ["a.txt", "b.txt"],
+      completed: [
+        { parent: "parent-1", relative: "a.txt" },
+        { parent: "parent-1", relative: "b.txt" },
+      ],
       failure: null,
+      frozen: true,
       planned: ["a.txt", "b.txt"],
       status: "completed",
     },
@@ -83,6 +94,10 @@ export const test_cli_scaffold_publication_receipt = (): void => {
       {
         completed: firstRefusal.receipt.completed.length,
         failed: firstRefusal.receipt.failure?.entry.relative,
+        frozen:
+          Object.isFrozen(firstRefusal.receipt) &&
+          Object.isFrozen(firstRefusal.receipt.failure) &&
+          Object.isFrozen(firstRefusal.receipt.failure?.outcome),
         status: firstRefusal.receipt.status,
       },
       {
@@ -100,7 +115,7 @@ export const test_cli_scaffold_publication_receipt = (): void => {
       },
     ],
     [
-      { completed: 0, failed: "a.txt", status: "refused" },
+      { completed: 0, failed: "a.txt", frozen: true, status: "refused" },
       { completed: 1, failed: "b.txt", status: "partial" },
       { bytes: 1, completed: 0, status: "partial" },
     ],

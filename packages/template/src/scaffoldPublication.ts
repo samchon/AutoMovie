@@ -92,6 +92,55 @@ export type ScaffoldFilePublicationOutcome =
     };
 
 /**
+ * One completed candidate entry paired with the physical parent generation
+ * that received it.
+ *
+ * @evidence requirements/operations-and-recovery/idempotency-and-side-effects.md#operations-compensation-reconciliation Keeps a completed side effect attached to the generation that actually owns it.
+ * @evidence specifications/execution-and-recovery/retry-backoff-and-idempotency.md#execution-compensation-adoption Gives adoption the exact completed target and physical owner.
+ * @author Samchon
+ */
+export interface IScaffoldCompletedPublication {
+  /**
+   * Candidate entry whose exact bytes passed final readback.
+   *
+   * @evidence requirements/operations-and-recovery/idempotency-and-side-effects.md#operations-idempotent-deterministic-results Retains the verified logical result beside its physical owner.
+   * @evidence specifications/execution-and-recovery/retry-backoff-and-idempotency.md#execution-deterministic-result-reuse Supplies the exact completed candidate identity for reuse.
+   */
+  entry: IScaffoldPublicationEntry;
+  /**
+   * Captured physical parent generation containing the completed entry.
+   *
+   * @evidence requirements/operations-and-recovery/idempotency-and-side-effects.md#operations-compensation-reconciliation Prevents a completed result from being attributed to a successor pathname.
+   * @evidence specifications/execution-and-recovery/retry-backoff-and-idempotency.md#execution-compensation-adoption Binds adoption to the generation that produced the verified result.
+   */
+  parentIdentity: string;
+}
+
+/**
+ * The first candidate entry that did not complete and its observed result.
+ *
+ * @evidence requirements/operations-and-recovery/idempotency-and-side-effects.md#operations-compensation-reconciliation Preserves the exact stopping point and failure class for reconciliation.
+ * @evidence specifications/execution-and-recovery/retry-backoff-and-idempotency.md#execution-compensation-adoption Gives recovery one explicit unfinished entry and outcome.
+ * @author Samchon
+ */
+export interface IScaffoldPublicationFailure {
+  /**
+   * Candidate entry where publication stopped.
+   *
+   * @evidence requirements/operations-and-recovery/idempotency-and-side-effects.md#operations-compensation-reconciliation Names the original side effect identity requiring reconciliation.
+   * @evidence specifications/execution-and-recovery/retry-backoff-and-idempotency.md#execution-compensation-adoption Carries the target considered for recovery.
+   */
+  entry: IScaffoldPublicationEntry;
+  /**
+   * Zero-publication or bound-partial result observed at that entry.
+   *
+   * @evidence requirements/operations-and-recovery/idempotency-and-side-effects.md#operations-compensation-reconciliation Separates absence from a partial side effect before recovery.
+   * @evidence specifications/execution-and-recovery/retry-backoff-and-idempotency.md#execution-compensation-adoption Provides the exact effect class recovery may adopt or abandon.
+   */
+  outcome: Exclude<ScaffoldFilePublicationOutcome, { status: "completed" }>;
+}
+
+/**
  * Complete observable result of attempting one immutable candidate.
  *
  * @evidence requirements/operations-and-recovery/idempotency-and-side-effects.md#operations-compensation-reconciliation Records every completed entry and the exact stopping entry so recovery never guesses which mutable pathname to remove.
@@ -105,17 +154,14 @@ export interface IScaffoldPublicationReceipt {
    * @evidence requirements/operations-and-recovery/idempotency-and-side-effects.md#operations-compensation-reconciliation Records the exact completed prefix that recovery must preserve.
    * @evidence specifications/execution-and-recovery/retry-backoff-and-idempotency.md#execution-compensation-adoption Identifies which results are candidates for adoption rather than cleanup.
    */
-  completed: readonly IScaffoldPublicationEntry[];
+  completed: readonly IScaffoldCompletedPublication[];
   /**
    * Stopping entry and its exact one-file outcome, or `null` on success.
    *
    * @evidence requirements/operations-and-recovery/idempotency-and-side-effects.md#operations-compensation-reconciliation Couples the first unfinished target to its observed effect class.
    * @evidence specifications/execution-and-recovery/retry-backoff-and-idempotency.md#execution-compensation-adoption Makes the recovery input explicit and generation-aware.
    */
-  failure: {
-    entry: IScaffoldPublicationEntry;
-    outcome: Exclude<ScaffoldFilePublicationOutcome, { status: "completed" }>;
-  } | null;
+  failure: IScaffoldPublicationFailure | null;
   /**
    * Complete candidate attempted by this receipt.
    *
@@ -210,7 +256,7 @@ export const publishScaffoldCandidate = (props: {
       }),
     ),
   );
-  const completed: IScaffoldPublicationEntry[] = [];
+  const completed: IScaffoldCompletedPublication[] = [];
   for (const entry of planned) {
     const outcome = props.publish(entry);
     if (outcome.status === "completed") {
@@ -218,7 +264,9 @@ export const publishScaffoldCandidate = (props: {
         throw new Error(
           `completed scaffold publication omitted parent identity: ${entry.relative}`,
         );
-      completed.push(entry);
+      completed.push(
+        Object.freeze({ entry, parentIdentity: outcome.parentIdentity }),
+      );
       continue;
     }
     if (
@@ -231,22 +279,22 @@ export const publishScaffoldCandidate = (props: {
       throw new Error(
         `partial scaffold publication has invalid bound state: ${entry.relative}`,
       );
-    return {
+    return Object.freeze({
       completed: Object.freeze(completed),
-      failure: { entry, outcome },
+      failure: Object.freeze({ entry, outcome: Object.freeze({ ...outcome }) }),
       planned,
       status:
         outcome.status === "refused" && completed.length === 0
           ? "refused"
           : "partial",
-    };
+    });
   }
-  return {
+  return Object.freeze({
     completed: Object.freeze(completed),
     failure: null,
     planned,
     status: "completed",
-  };
+  });
 };
 
 const canonicalScaffoldPath = (value: string): string => value.toLowerCase();
