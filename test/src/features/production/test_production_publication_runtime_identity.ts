@@ -57,7 +57,18 @@ const plan = (
   },
   totalFrames: 24,
   chunkFrames: 12,
-  chunks: [],
+  chunks: [
+    {
+      slot: "feature-main/beauty/0-24",
+      id: digest("8"),
+      deliverable: "feature-main",
+      kind: "feature",
+      pass: "beauty",
+      frameStart: 0,
+      frameEndExclusive: 24,
+      frames: [],
+    },
+  ],
   tracks: { captions: "WEBVTT\n", audio: [], audioAssets: [] },
 });
 
@@ -107,6 +118,18 @@ export const test_production_publication_runtime_identity = (): void => {
           ),
       ],
       [
+        "chunkFrameDrift",
+        () =>
+          throwsError(() => {
+            const changed = structuredClone(finalPlan);
+            changed.chunks[0]!.frameEndExclusive = 23;
+            assertProductionRenderPublicationCurrent({
+              identity: finalIdentity,
+              plan: changed,
+            });
+          }, "does not match the current final render plan"),
+      ],
+      [
         "forgedFingerprint",
         () =>
           throwsError(
@@ -142,6 +165,7 @@ export const test_production_publication_runtime_identity = (): void => {
     ]),
     {
       runtimeDrift: true,
+      chunkFrameDrift: true,
       forgedFingerprint: true,
       missingRuntime: true,
       unknownField: true,

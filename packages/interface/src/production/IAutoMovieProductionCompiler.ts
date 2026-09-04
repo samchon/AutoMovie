@@ -1236,6 +1236,12 @@ export interface IAutoMovieProductionPublicationIdentity {
    */
   protocolVersion: "automovie.production-publication.v3";
   /**
+   * Persisted render-plan schema.
+   * @evidence requirements/rendering/scope-and-artifact-identity.md#rendering-artifact-invalidation Invalidates publications across plan-schema changes.
+   * @evidence specifications/editorial-render-and-delivery/delivery-package-provenance-and-publication.md#spec-delivery-provenance-integrity Identifies the plan projection being recomputed.
+   */
+  planVersion: 3;
+  /**
    * Production namespace whose plan produced the publication.
    * @evidence requirements/production-design/continuity-change-and-deliverables.md#production-design-deliverable-provenance Joins delivery provenance to its production.
    * @evidence specifications/editorial-render-and-delivery/delivery-package-provenance-and-publication.md#spec-delivery-provenance-integrity Prevents cross-production adoption.
@@ -1317,7 +1323,12 @@ export interface IAutoMovieProductionPublicationIdentity {
   chunks: Array<{
     slot: string;
     id: AutoMovieContentDigest;
+    deliverable: string;
+    kind: "feature" | "guide-pass";
     pass: string;
+    frameStart: number;
+    frameEndExclusive: number;
+    frames: AutoMovieContentDigest;
   }>;
   /**
    * Canonical identities of every non-video publication track.

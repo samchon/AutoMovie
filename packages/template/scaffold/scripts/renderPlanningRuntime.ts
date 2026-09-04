@@ -3,6 +3,8 @@ import type {
   AutoMovieCaptureObservation,
   AutoMovieContentDigest,
   IAutoMovieCaptureFrame,
+  IAutoMovieProductionRenderManifest,
+  IAutoMovieProductionRenderReceipt,
   IAutoMovieRenderReport,
   IAutoMovieRenderSpec,
 } from "@automovie/interface";
@@ -17,11 +19,14 @@ import {
   type IAutoMovieProductionRenderRuntimeIdentity,
   type IAutoMovieProductionRenderTier,
   assertProductionRenderDialogueRuntimeIdentity,
+  assertProductionRenderPublicationCurrent,
   captureAutoMovieProductionFrame,
+  digestAutoMovieBytes,
   encodeAutoMoviePathSegment,
   openAutoMovieProduction,
   planProductionRenderJob,
   productionRenderChunkStatuses,
+  productionRenderPublicationIdentity,
   readAutoMovieFilmTimeline,
   resolveProductionRenderTierFrameFormat,
   sampleProductionRenderFrame,
@@ -436,6 +441,72 @@ export const createProductionRenderPlanningRuntime = (props: {
     });
   };
 
+  /** Compare the terminal ledger with the current final plan for status only. */
+  const finalPublicationStatus = (
+    plan: IAutoMovieProductionRenderJobPlan,
+  ): Array<{
+    slot: string;
+    chunk: AutoMovieContentDigest;
+    status: "planned" | "complete" | "stale";
+    correction: string;
+  }> => {
+    if (plan.tier.kind !== "final") return [];
+    const expected = productionRenderPublicationIdentity(plan);
+    const project = AutoMovieProductionProject.openReadOnly(root, productionId);
+    const manifestBytes = project.readTrackedStateFile("render-manifest.json");
+    const receiptBytes = project.readTrackedStateFile(
+      "render-manifest-receipt.json",
+    );
+    if (manifestBytes === null || receiptBytes === null)
+      return [
+        {
+          slot: "publication/final",
+          chunk: expected.fingerprint,
+          status: "planned",
+          correction:
+            "Current final chunks have not been published. Run automovie render finalize after every required chunk is complete.",
+        },
+      ];
+    try {
+      const manifest = JSON.parse(
+        Buffer.from(manifestBytes).toString("utf8"),
+      ) as IAutoMovieProductionRenderManifest;
+      const receipt = JSON.parse(
+        Buffer.from(receiptBytes).toString("utf8"),
+      ) as IAutoMovieProductionRenderReceipt;
+      const identity = assertProductionRenderPublicationCurrent({
+        identity: manifest.publication,
+        plan,
+      });
+      if (
+        manifest.version !== 2 ||
+        receipt.version !== 4 ||
+        receipt.manifestDigest !== digestAutoMovieBytes(manifestBytes) ||
+        receipt.publicationFingerprint !== identity.fingerprint
+      )
+        throw new Error(
+          "The manifest and renderer receipt do not carry one matching current publication identity.",
+        );
+      return [
+        {
+          slot: "publication/final",
+          chunk: identity.fingerprint,
+          status: "complete",
+          correction: "No correction required.",
+        },
+      ];
+    } catch (error) {
+      return [
+        {
+          slot: "publication/final",
+          chunk: expected.fingerprint,
+          status: "stale",
+          correction: `${error instanceof Error ? error.message : String(error)} Re-run automovie render finalize for the current final plan.`,
+        },
+      ];
+    }
+  };
+
   const currentReceipt = async (
     plan: IAutoMovieProductionRenderJobPlan,
     chunk: IAutoMovieProductionRenderChunk,
@@ -751,6 +822,10 @@ export const createProductionRenderPlanningRuntime = (props: {
         inspectInputs: inspectCurrentRenderPlanInputs,
         output,
         readPlan,
+        reportStatus: async (plan) => [
+          ...(await renderStatus(plan)),
+          ...finalPublicationStatus(plan),
+        ],
         renderStatus,
         runtimeIdentitiesEqual: isDeepStrictEqual,
         sourceFingerprint,

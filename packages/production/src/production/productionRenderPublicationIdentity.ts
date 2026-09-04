@@ -22,6 +22,7 @@ const publicationBasis = (
   plan: IAutoMovieProductionRenderJobPlan,
 ): PublicationBasis => ({
   protocolVersion: "automovie.production-publication.v3",
+  planVersion: plan.version,
   productionId: plan.productionId,
   compileFingerprint: plan.compileFingerprint,
   editFingerprint: plan.editFingerprint,
@@ -34,7 +35,12 @@ const publicationBasis = (
   chunks: plan.chunks.map((chunk) => ({
     slot: chunk.slot,
     id: chunk.id,
+    deliverable: chunk.deliverable,
+    kind: chunk.kind,
     pass: chunk.pass,
+    frameStart: chunk.frameStart,
+    frameEndExclusive: chunk.frameEndExclusive,
+    frames: digestValue(chunk.frames),
   })),
   tracks: {
     captions: digestValue(plan.tracks.captions),
