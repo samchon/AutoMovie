@@ -32,6 +32,12 @@ Options:
   --force             Scaffold into a non-empty directory (start only).
   --dry-run           Print the immutable legacy import plan (migrate only).
   --rollback          Remove one untouched import (migrate only).
+  --chunk-frames <n>  Positive render chunk size (all, plan, or run only).
+  --deliverable <id>  Render one deliverable (all or run only).
+  --tier <name>       Select proxy or final (all, plan, run, status, verify,
+                      or finalize only).
+  --workers <n>       Positive render worker count (all or run only).
+  --apply             Apply render garbage collection (gc only).
   -h, --help          Show this help as a standalone request.
   -v, --version       Print the version as a standalone request.
 `;
