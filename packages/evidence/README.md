@@ -29,7 +29,7 @@ Evidence conformance는 저술 host가 자기 annotation을 다시 인증하는 
 | `createAutoMoviePopulationAccountClaims` | 계층별 obligation과 완전한 저술 H2 모집단을 묶는 전용 account claim을 만든다. |
 | `inspectAutoMovieEvidenceTopology` | settings와 design foundation의 provider-consumer-status-reason 행렬을 검사한다. |
 | `inspectAutoMovieEvidenceReviewAlarms` | 반복 review frame과 target 질문 복사를 비차단 Self-Review alarm으로 관찰한다. |
-| `readAutoMovieProductionEvidence` | 같은 선언에서 topology와 semantic review alarm을 포함한 저작 표면을 읽는다. |
+| `readAutoMovieProductionEvidence` | 같은 선언에서 topology와 semantic review alarm, 활성 owner와 authored unit, graph가 선택한 source path/export/target/digest/review edge를 하나의 runtime carrier로 읽는다. |
 | `evidence` | 단일 typed `lint.config.ts`에서 쓸 `@ttsc/evidence` lint plugin을 내보낸다. |
 
 ## 경계

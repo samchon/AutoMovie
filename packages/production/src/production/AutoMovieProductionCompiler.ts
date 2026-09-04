@@ -87,7 +87,6 @@ import {
   IAutoMovieLibraryBuildContext,
   IAutoMovieLibraryContribution,
   IAutoMovieMaterializedFile,
-  IAutoMovieMaterializedLibrary,
   IAutoMovieModel,
   IAutoMovieModelProxyAsset,
   IAutoMovieModelRecipe,
@@ -145,6 +144,14 @@ import { inspectAutoMovieDerivedArtifacts } from "./derivedArtifacts";
 import { designReferenceDiagnostics } from "./designReferenceDiagnostics";
 import { filmGrammarDiagnostics } from "./filmGrammarDiagnostics";
 import { readAutoMovieFilmTimeline } from "./filmTimeline";
+import { autoMovieLibraryArtifactSourceTargets } from "./libraryArtifactTargets";
+import {
+  IAutoMovieLibraryAuthoringSnapshot,
+  captureAutoMovieLibraryAuthoringSnapshot,
+  createAutoMovieLibrarySourceExecutionPlan,
+  sameAutoMovieLibraryAuthoringSnapshot,
+} from "./libraryAuthoringSnapshot";
+import { autoMovieLibraryContributionDiagnostics } from "./libraryContributionContract";
 import { libraryReviewEvidenceConsumerDiagnostics } from "./libraryReviewEvidenceConsumer";
 import {
   AUTOMOVIE_SANDBOX_MODULE_EXPORTS,
@@ -210,7 +217,10 @@ import {
   autoMovieSourceContentFinding,
   autoMovieValidationFindings,
 } from "./sourceContentDiagnostics";
+import { resolveAutoMovieSourceOwnerBinding } from "./sourceOwnerBinding";
+import { createAutoMovieSourceRuntimeModelRegistry } from "./sourceRuntimeModelRegistry";
 import { storySyncDiagnostics } from "./storySyncDiagnostics";
+import { resolveAutoMovieTimedAuthoringKind } from "./timedAuthoringKind";
 import {
   IAutoMovieProductionDesignGraph,
   validateAutoMovieProductionGraph,
@@ -229,9 +239,13 @@ import { verifyProductionNonVideoDeliverables } from "./verifyProductionNonVideo
  * motion rather than written down beside it -- so a v7 reader would look for
  * that one where it is no longer written.
  *
+ * Version 10 adds the exact graph-selected source owner to compiled shot
+ * artifacts, so a version 9 reader cannot assume source path and digest alone
+ * identify the authored target that was admitted.
+ *
  * @author Samchon
  */
-export const AUTOMOVIE_PRODUCTION_COMPILER_PROTOCOL = "automovie.compiler.v9";
+export const AUTOMOVIE_PRODUCTION_COMPILER_PROTOCOL = "automovie.compiler.v10";
 
 const FILM_SOURCE_PATH = "src/film.ts";
 const FILM_SOURCE_EXPORT = "film";
@@ -275,6 +289,7 @@ export class AutoMovieProductionCompiler {
   public constructor(
     private readonly project: AutoMovieProductionProject,
     private readonly authoringEvidence?: IAutoMovieProductionEvidence,
+    private readonly currentAuthoringEvidence?: () => IAutoMovieProductionEvidence,
   ) {}
 
   /**
@@ -330,7 +345,11 @@ export class AutoMovieProductionCompiler {
   ): IAutoMovieCompileProjectOutput {
     if (this.authoringEvidence?.manifest.kind === "library")
       return this.runLibrary(input, materialize);
+    const timedAuthoring = resolveAutoMovieTimedAuthoringKind(
+      this.authoringEvidence,
+    )!;
     const graph = this.project.graph();
+    const screenplay = this.project.screenplayIndex();
     const inputRevision = this.project.revision();
     const projectManifest = this.project.manifest();
     const archetypes = this.project.archetypes;
@@ -354,6 +373,14 @@ export class AutoMovieProductionCompiler {
         normalizeAutoMovieSource(this.project.readSource(relative)),
       ).toString("utf8");
     const sourceFields: IAutoMovieFingerprintField[] = [];
+    if (this.authoringEvidence !== undefined)
+      sourceFields.push({
+        role: "source:owner-bindings",
+        kind: "application/json",
+        payload: canonicalAutoMovieJsonBytes(
+          this.authoringEvidence.sourceOwners ?? [],
+        ),
+      });
     const contentFields: IAutoMovieFingerprintField[] = [];
     let contentInputs: IAutoMovieProductionContentInput[] | undefined;
     let declaredAssets: string[] = [];
@@ -549,6 +576,31 @@ export class AutoMovieProductionCompiler {
         const normalized = shotSources.get(entry.id);
         let closing: IAutoMovieBeatEndState | null = null;
         if (normalized !== undefined) {
+          const requireReviewed =
+            input.scope === "review" || input.scope === "final";
+          const owner =
+            this.authoringEvidence !== undefined || requireReviewed
+              ? resolveAutoMovieSourceOwnerBinding({
+                  bindings: this.authoringEvidence?.sourceOwners,
+                  branch: "shots",
+                  sourcePath: entry.contract.source.module,
+                  exportName: entry.contract.source.export,
+                  owner: shotSourceOwnerTarget(entry.contract, screenplay),
+                  sourceDigest: digestAutoMovieBytes(normalized),
+                  requireReviewed,
+                })
+              : null;
+          if (owner !== null && owner.success === false) {
+            diagnostics.push({
+              code: "source-owner-mismatch",
+              category: "error",
+              phase: "source",
+              target: entry.id,
+              path: entry.contract.source.module,
+              message: owner.message,
+            });
+            continue;
+          }
           const previous =
             previousVideo !== null &&
             entry.placement !== null &&
@@ -617,7 +669,45 @@ export class AutoMovieProductionCompiler {
               ...realized.diagnostics,
             ];
             diagnostics.push(...postDiagnostics);
-            compiled.set(entry.id, materialized.value);
+            const binding = owner?.success === true ? owner.binding : null;
+            const target =
+              binding === null
+                ? null
+                : `${binding.targetPath}#${binding.targetAnchor}`;
+            compiled.set(entry.id, {
+              ...materialized.value,
+              ...(binding === null
+                ? {}
+                : {
+                    sourceOwner: {
+                      branch: binding.branch,
+                      path: binding.sourcePath,
+                      export: binding.exportName,
+                      digest: binding.sourceDigest,
+                      target: target!,
+                    },
+                    acceptanceSources: (
+                      this.authoringEvidence?.sourceOwners ?? []
+                    )
+                      .filter(
+                        (candidate) =>
+                          candidate.branch === "shots" &&
+                          candidate.reviewed &&
+                          `${candidate.targetPath}#${candidate.targetAnchor}` ===
+                            target &&
+                          !(
+                            candidate.sourcePath === binding.sourcePath &&
+                            candidate.exportName === binding.exportName
+                          ),
+                      )
+                      .map((candidate) => ({
+                        path: candidate.sourcePath,
+                        export: candidate.exportName,
+                        digest: candidate.sourceDigest,
+                        target: target!,
+                      })),
+                  }),
+            });
             for (const conversion of result.conversions)
               externalMotionConversions.set(conversion.adoption, conversion);
             realizations.set(entry.id, realized.realization);
@@ -728,31 +818,46 @@ export class AutoMovieProductionCompiler {
       diagnostics.push(
         ...this.generatedOwnershipDiagnostics(manifest, materialize),
       );
-    const screenplay = this.project.screenplayIndex();
+    if (timedAuthoring.kind === "brief" && screenplay !== null)
+      diagnostics.push({
+        code: "screenplay-index-forbidden",
+        category: "error",
+        phase: "design",
+        target: "screenplay",
+        path: null,
+        message:
+          "A direct brief cannot carry a film screenplay index. Remove the forbidden narrative residue and keep delivery, shot, and observation ownership in the reviewed brief.",
+      });
+    if (timedAuthoring.screenplayRequired)
+      diagnostics.push(
+        ...screenplayResidencyDiagnostics({
+          contracts: graph.shots,
+          screenplay,
+        }),
+        ...screenplayLedgerDiagnostics({
+          acceptance: graph.acceptance,
+          contracts: graph.shots,
+          screenplay,
+          designRecordPath: (target) => this.project.designRecordPath(target),
+        }),
+        ...screenplayProseDiagnostics({
+          screenplay,
+          read: (relative) => this.project.readProseDocument(relative),
+        }),
+        ...screenplayTimingDiagnostics({
+          contracts: graph.shots,
+          read: (relative) => this.project.readProseDocument(relative),
+          scope: input.scope,
+          screenplay,
+        }),
+      );
     diagnostics.push(
-      ...screenplayResidencyDiagnostics({ contracts: graph.shots, screenplay }),
-      ...screenplayLedgerDiagnostics({
-        acceptance: graph.acceptance,
-        contracts: graph.shots,
-        screenplay,
-        designRecordPath: (target) => this.project.designRecordPath(target),
-      }),
-      ...screenplayProseDiagnostics({
-        screenplay,
-        read: (relative) => this.project.readProseDocument(relative),
-      }),
-      ...screenplayTimingDiagnostics({
-        contracts: graph.shots,
-        read: (relative) => this.project.readProseDocument(relative),
-        scope: input.scope,
-        screenplay,
-      }),
       ...shotDeterminismDiagnostics({
         contracts: graph.shots,
         read: (relative) => this.project.readProseDocument(relative),
       }),
     );
-    if (input.scope !== "design")
+    if (input.scope !== "design" && timedAuthoring.screenplayRequired)
       diagnostics.push(
         ...screenplayCoverageDiagnostics({
           acceptance: graph.acceptance,
@@ -1091,31 +1196,72 @@ export class AutoMovieProductionCompiler {
     input: IAutoMovieCompileProjectInput,
     materialize: boolean,
   ): IAutoMovieCompileProjectOutput {
-    const authoring = this.authoringEvidence!;
+    const authoring =
+      this.currentAuthoringEvidence?.() ?? this.authoringEvidence!;
     const inputRevision = this.project.revision();
-    const sources = [
-      ...new Set(
-        authoring.designOwners.flatMap(
-          (owner) => owner.sourceBinding?.paths ?? [],
-        ),
-      ),
-    ].sort(compareCodeUnits);
-    const inputFingerprint = this.libraryInputFingerprint(authoring, sources);
+    const snapshot = captureAutoMovieLibraryAuthoringSnapshot({
+      root: this.project.root,
+      evidence: authoring,
+      readSource: (source) => this.project.readSource(source),
+    });
+    const snapshotAuthoring: IAutoMovieProductionEvidence = {
+      ...authoring,
+      configuration: snapshot.configuration,
+      manifest: snapshot.manifest,
+      designBranches: snapshot.designBranches,
+      designOwners: snapshot.designOwners,
+      sourceOwners: snapshot.sourceOwners,
+    };
+    const requireReviewed = input.scope === "review" || input.scope === "final";
+    const execution = createAutoMovieLibrarySourceExecutionPlan(
+      snapshot,
+      requireReviewed,
+    );
+    const sources = snapshot.sources.map((source) => source.path);
+    const inputFingerprint = this.libraryInputFingerprint(snapshot);
     const diagnostics: IAutoMovieDiagnostic[] = [];
+    if (input.scope !== "design")
+      diagnostics.push(
+        ...execution.problems.map(
+          (message): IAutoMovieDiagnostic => ({
+            code: "source-owner-mismatch",
+            category: "error",
+            phase: "source",
+            target: "library-source-owners",
+            path: null,
+            message,
+          }),
+        ),
+      );
 
     // The exact addresses a source registration is allowed to name. A library
     // owner declares which reviewed decision it realizes; anything else is a
     // building nobody asked for, and a review that never charges it is exactly
     // how an unreviewed artifact ships.
     const units = new Map<string, IAutoMovieLibraryBuildContext>();
-    for (const owner of authoring.designOwners)
-      for (const unit of owner.units)
-        units.set(`${owner.path}#${unit.anchor}`, {
+    const sourceBranchByDesign = new Map<string, string>();
+    for (const owner of snapshotAuthoring.designOwners)
+      for (const unit of owner.units) {
+        const address = `${owner.path}#${unit.anchor}`;
+        units.set(address, {
           production: this.project.productionId,
           branch: owner.branch,
           design: owner.path,
           anchor: unit.anchor,
         });
+        sourceBranchByDesign.set(address, owner.sourceBinding?.branch ?? "");
+      }
+    for (const entry of execution.entries)
+      if (entry.branch === "productionSources") {
+        const separator = entry.owner.lastIndexOf("#");
+        units.set(entry.owner, {
+          production: this.project.productionId,
+          branch: entry.branch,
+          design: entry.owner.slice(0, separator),
+          anchor: entry.owner.slice(separator + 1),
+        });
+        sourceBranchByDesign.set(entry.owner, entry.branch);
+      }
 
     const results: IAutoMovieMaterializedLibraryResult[] = [];
     const registeredBy = new Map<string, string>();
@@ -1143,11 +1289,22 @@ export class AutoMovieProductionCompiler {
           });
         }
         if (text === null) continue;
+        const sourceDigest = digestAutoMovieBytes(Buffer.from(text, "utf8"));
         const compiled = compileLibrarySource({
           path: source,
           source: text,
           readSource: (relative) => this.readLibrarySource(relative),
           context: (design) => units.get(design) ?? null,
+          admit: (exportName, design) =>
+            resolveAutoMovieSourceOwnerBinding({
+              bindings: snapshotAuthoring.sourceOwners,
+              branch: sourceBranchByDesign.get(design) ?? "",
+              sourcePath: source,
+              exportName,
+              owner: design,
+              sourceDigest,
+              requireReviewed,
+            }),
         });
         diagnostics.push(...compiled.diagnostics);
         for (const registration of compiled.registrations) {
@@ -1169,17 +1326,25 @@ export class AutoMovieProductionCompiler {
             registration.design,
             `${source}#${registration.export}`,
           );
-          const accepted = this.acceptLibraryContribution({
-            context,
-            diagnostics,
-            contextOwner,
-            environmentOwner,
-            modelOwner,
-            models,
-            registration,
-            source,
-            target,
-          });
+          const accepted =
+            context.branch === "productionSources"
+              ? this.acceptLibraryProductionContribution({
+                  diagnostics,
+                  registration,
+                  source,
+                  target,
+                })
+              : this.acceptLibraryContribution({
+                  context,
+                  diagnostics,
+                  contextOwner,
+                  environmentOwner,
+                  modelOwner,
+                  models,
+                  registration,
+                  source,
+                  target,
+                });
           if (accepted === false) continue;
           results.push({
             branch: context.branch,
@@ -1192,14 +1357,29 @@ export class AutoMovieProductionCompiler {
         }
       }
 
+    if (input.scope !== "design")
+      for (const entry of execution.entries)
+        if (
+          entry.branch === "productionSources" &&
+          registeredBy.has(entry.owner) === false
+        )
+          diagnostics.push({
+            code: "source-export-missing",
+            category: requireReviewed ? "error" : "warning",
+            phase: "source",
+            target: `library:productionSources:${entry.owner}`,
+            path: entry.sourcePath,
+            message: `Production source "${entry.sourcePath}#${entry.exportName}" did not register its exact settings owner "${entry.owner}" as a zero-payload library delivery. Export one synchronous IAutoMovieLibrarySourceOwner for that address.`,
+          });
+
     // An owner whose branch already has source and no registration is an
     // unrealized decision. It warns while source is being written, because that
     // is the ordinary state of a branch in progress, and blocks from review on,
     // where a design document with nothing behind it is the exact thing the
     // library gate exists to refuse.
     if (input.scope !== "design")
-      for (const owner of [...authoring.designOwners].sort((left, right) =>
-        compareCodeUnits(left.path, right.path),
+      for (const owner of [...snapshotAuthoring.designOwners].sort(
+        (left, right) => compareCodeUnits(left.path, right.path),
       )) {
         // A branch that has not started its source yet owes no registration,
         // and neither does one whose binding selects no file. The owner is read
@@ -1243,7 +1423,10 @@ export class AutoMovieProductionCompiler {
               path: file,
               owner: "compiler" as const,
               digest: digestAutoMovieBytes(bytes),
-              sourceTargets: libraryTargetsOf(file, publication.index),
+              sourceTargets: autoMovieLibraryArtifactSourceTargets(
+                file,
+                publication.index,
+              ),
             }))
             .sort((left, right) => compareCodeUnits(left.path, right.path));
     const manifest: IAutoMovieGeneratedManifest | null =
@@ -1291,7 +1474,7 @@ export class AutoMovieProductionCompiler {
     );
     diagnostics.push(
       ...libraryReviewEvidenceConsumerDiagnostics({
-        authoring,
+        authoring: snapshotAuthoring,
         project: this.project,
         scope: input.scope,
         compileFingerprint: inputFingerprint,
@@ -1316,8 +1499,21 @@ export class AutoMovieProductionCompiler {
     );
     diagnostics.sort(compareDiagnostics);
 
-    const inputCurrent = (): boolean =>
-      this.libraryInputFingerprint(authoring, sources) === inputFingerprint;
+    const inputCurrent = (): boolean => {
+      if (this.currentAuthoringEvidence === undefined) return false;
+      try {
+        return sameAutoMovieLibraryAuthoringSnapshot(
+          snapshot,
+          captureAutoMovieLibraryAuthoringSnapshot({
+            root: this.project.root,
+            evidence: this.currentAuthoringEvidence(),
+            readSource: (source) => this.project.readSource(source),
+          }),
+        );
+      } catch {
+        return false;
+      }
+    };
     const compiler = {
       version: AUTOMOVIE_PRODUCTION_COMPILER_VERSION,
       inputFingerprint,
@@ -1385,36 +1581,42 @@ export class AutoMovieProductionCompiler {
    * concurrent edit.
    */
   private libraryInputFingerprint(
-    authoring: IAutoMovieProductionEvidence,
-    sources: readonly string[],
+    snapshot: IAutoMovieLibraryAuthoringSnapshot,
   ): AutoMovieContentDigest {
-    const fields: IAutoMovieFingerprintField[] = [
+    return fingerprintAutoMovieFields([
       {
         role: "library:compiler",
         kind: AUTOMOVIE_PRODUCTION_COMPILER_PROTOCOL,
         payload: canonicalAutoMovieJsonBytes({
           version: AUTOMOVIE_PRODUCTION_COMPILER_VERSION,
-          manifest: authoring.manifest,
-          designBranches: authoring.designBranches,
-          designOwners: authoring.designOwners,
+          authoringSnapshot: snapshot.digest,
         }),
       },
-    ];
-    for (const source of sources)
-      try {
-        fields.push({
-          role: `library:source:${source}`,
-          kind: "typescript",
-          payload: normalizeAutoMovieSource(this.project.readSource(source)),
-        });
-      } catch {
-        fields.push({
-          role: `library:source:${source}`,
-          kind: "absent",
-          payload: new Uint8Array(),
-        });
-      }
-    return fingerprintAutoMovieFields(fields);
+    ]);
+  }
+
+  /** Admit settings serialization only as a zero-payload lineage result. */
+  private acceptLibraryProductionContribution(props: {
+    diagnostics: IAutoMovieDiagnostic[];
+    registration: ICompiledLibraryOwnerRegistration;
+    source: string;
+    target: string;
+  }): boolean {
+    const contribution = props.registration.contribution;
+    const populations =
+      contribution.environments.length +
+      contribution.models.length +
+      contribution.contexts.length;
+    if (populations === 0) return true;
+    props.diagnostics.push({
+      code: "source-export-invalid",
+      category: "error",
+      phase: "source",
+      target: props.target,
+      path: props.source,
+      message: `Production source export "${props.registration.export}" serializes settings and must return empty environments, models, and contexts. Publish semantic artifacts from their reviewed design-source owner instead.`,
+    });
+    return false;
   }
 
   /**
@@ -1757,6 +1959,29 @@ interface ICompiledVideoClosing extends IShotCompileEntry {
   placementIndex: number;
   closing: IAutoMovieBeatEndState | null;
 }
+
+/** Resolve one shot contract's screenplay or direct-brief H3 owner address. */
+const shotSourceOwnerTarget = (
+  contract: IAutoMovieShotContract,
+  screenplay: IAutoMovieScreenplayIndex | null,
+): string | undefined => {
+  if (screenplay === null) return undefined;
+  const scenes = new Map(
+    screenplay.screenplay.scenes.map((scene) => [scene.id, scene] as const),
+  );
+  const targets = [
+    ...new Set(
+      (contract.evidence ?? []).flatMap((citation) => {
+        const scene = scenes.get(citation.scene);
+        if (scene === undefined || scene.status !== "active") return [];
+        return [
+          `${scene.path ?? screenplay.screenplay.path}#${scene.id.toLowerCase()}`,
+        ];
+      }),
+    ),
+  ];
+  return targets.length === 1 ? targets[0] : undefined;
+};
 
 /**
  * Compile placed shots in film order, then every remaining graph shot in its
@@ -2864,7 +3089,7 @@ const compileShotSource = (
       // validator, and be dropped here without a word.
       objectMotions: shotProgram.objectMotions,
       props: shotProgram.props,
-      models: Object.values(sourceRuntime.runtimeModels),
+      models: sourceRuntime.models,
       previous: props.previous ?? undefined,
     },
   });
@@ -2961,6 +3186,9 @@ const resolveExternalMotionClips = (props: {
   const clips: IAutoMovieMotion[] = [];
   const conversions: ICompilerExternalMotionConversionDraft[] = [];
   const diagnostics: IAutoMovieDiagnostic[] = [];
+  const modelRegistry = createAutoMovieSourceRuntimeModelRegistry(
+    props.runtimeModels,
+  );
   const authoredClipIds = new Set(
     (props.program.clips ?? []).map((clip) => clip.id),
   );
@@ -2981,7 +3209,7 @@ const resolveExternalMotionClips = (props: {
       (candidate) => candidate.node === declaration.actor,
     );
     const targetModel =
-      actor === undefined ? undefined : props.runtimeModels[actor.model];
+      actor === undefined ? undefined : modelRegistry.resolve(actor.model);
     const targetSkeleton = targetModel?.skeleton ?? null;
     if (actor === undefined || targetSkeleton === null) {
       diagnostics.push({
@@ -3627,6 +3855,7 @@ const boundFolds = (
 
 interface ISourceRuntime {
   runtimeModels: Readonly<Record<string, IAutoMovieModel>>;
+  models: IAutoMovieModel[];
   authoredModels: IAutoMovieModel[];
   diagnostics: IAutoMovieDiagnostic[];
 }
@@ -3641,12 +3870,12 @@ const sourceRuntimeOf = (props: {
   const diagnostics: IAutoMovieDiagnostic[] = [];
   const authoredModels: IAutoMovieModel[] = [];
   const authoredDigests = new Map<string, AutoMovieContentDigest>();
-  const runtimeModels: Record<string, IAutoMovieModel> = {
-    ...props.runtimeModels,
-  };
+  const registry = createAutoMovieSourceRuntimeModelRegistry(
+    props.runtimeModels,
+  );
   const runtimeIds = new Set([
-    ...Object.keys(props.runtimeModels),
-    ...Object.values(props.runtimeModels).map((model) => model.id),
+    ...registry.keys(),
+    ...registry.values().map((model) => model.id),
   ]);
 
   const report = (message: string): void => {
@@ -3710,12 +3939,7 @@ const sourceRuntimeOf = (props: {
           `${modelPath}.origin is "${model.origin}". Shot source may create generated geometry only; register imported asset bytes in the production model registry and cite that runtime id.`,
         );
     } else {
-      const registered = runtimeIds.has(modelRef)
-        ? (props.runtimeModels[modelRef] ??
-          Object.values(props.runtimeModels).find(
-            (candidate) => candidate.id === modelRef,
-          ))
-        : undefined;
+      const registered = registry.resolve(modelRef);
       if (registered === undefined)
         report(
           `${modelPath} cites modelRef "${modelRef}", which does not resolve to a compiler-owned runtime model. Register the asset or model recipe, or drop the reference.`,
@@ -3758,7 +3982,7 @@ const sourceRuntimeOf = (props: {
     )
       return;
     authoredModels.push(model);
-    runtimeModels[model.id] = model;
+    registry.define(model.id, model);
   };
 
   (props.program.models ?? []).forEach((model, index) =>
@@ -3783,7 +4007,7 @@ const sourceRuntimeOf = (props: {
       acceptModel(model, `${environmentPath}.models[${modelIndex}]`),
     );
     environment.modelReferences.forEach((id, referenceIndex) => {
-      if (!runtimeIds.has(id))
+      if (registry.resolve(id) === undefined)
         report(
           `${environmentPath}.modelReferences[${referenceIndex}] "${id}" does not resolve to a compiler-owned runtime model. Register the asset/model recipe or remove the reference.`,
         );
@@ -3825,8 +4049,8 @@ const sourceRuntimeOf = (props: {
     );
 
   const available = new Set([
-    ...Object.keys(runtimeModels),
-    ...Object.values(runtimeModels).map((model) => model.id),
+    ...registry.keys(),
+    ...registry.values().map((model) => model.id),
   ]);
   (props.program.stage.set ?? []).forEach((piece, index) => {
     if (!available.has(piece.model))
@@ -3835,7 +4059,12 @@ const sourceRuntimeOf = (props: {
       );
   });
 
-  return { runtimeModels, authoredModels, diagnostics };
+  return {
+    runtimeModels: registry.record,
+    models: registry.values(),
+    authoredModels,
+    diagnostics,
+  };
 };
 
 const contractOfRegistration = (
@@ -3862,13 +4091,15 @@ const actorRuntimeOf = (
   const diagnostics: IAutoMovieDiagnostic[] = [];
   const actors = new Map<string, IAutoMovieActorContext>();
   const models = new Map<string, IAutoMovieModel>();
+  const modelRegistry =
+    createAutoMovieSourceRuntimeModelRegistry(runtimeModels);
   const stageActors = new Map(
     program.stage.actors.map((actor) => [actor.node, actor]),
   );
   program.actors.forEach((actor, index) => {
     const path = `$program.actors[${index}]`;
     const staged = stageActors.get(actor.node);
-    const model = runtimeModels[actor.model];
+    const model = modelRegistry.resolve(actor.model);
     const gaitNames = new Set<string>();
     const gaits =
       model?.profiles
@@ -4314,25 +4545,6 @@ const compileDeterministicSource = <T>(
  * the environment or model inside it, so the index the same publication just
  * produced is what says whose it is; nothing has to be parsed out of a path.
  */
-const libraryTargetsOf = (
-  file: string,
-  index: IAutoMovieMaterializedLibrary,
-): string[] => {
-  for (const owner of index.owners) {
-    const target = `library:${owner.branch}:${owner.owner}`;
-    for (const environment of owner.environments)
-      if (
-        file ===
-        `library/environments/${encodeAutoMoviePathSegment(environment)}.json`
-      )
-        return [target];
-    for (const model of owner.models)
-      if (file === `models/${encodeAutoMoviePathSegment(model)}.json`)
-        return [target];
-  }
-  return ["library"];
-};
-
 /** One owner registration a library source module exported and returned. */
 interface ICompiledLibraryOwnerRegistration {
   /** Named export the registration was found under. */
@@ -4417,6 +4629,11 @@ const compileLibrarySource = (props: {
   readSource: (relativePath: string) => string;
   /** Build context for an address the active authoring population owns. */
   context: (design: string) => IAutoMovieLibraryBuildContext | null;
+  /** Admit the exact graph-selected owner edge before invoking build(). */
+  admit: (
+    exportName: string,
+    design: string,
+  ) => ReturnType<typeof resolveAutoMovieSourceOwnerBinding>;
 }): {
   registrations: ICompiledLibraryOwnerRegistration[];
   diagnostics: IAutoMovieDiagnostic[];
@@ -4458,6 +4675,18 @@ const compileLibrarySource = (props: {
         });
         continue;
       }
+      const admission = props.admit(entry.name, entry.design);
+      if (admission.success === false) {
+        diagnostics.push({
+          code: "source-owner-mismatch",
+          category: "error",
+          phase: "source",
+          target: `${target}:${entry.name}`,
+          path: props.path,
+          message: admission.message,
+        });
+        continue;
+      }
       sandbox.__automovieContextJson = JSON.stringify(context);
       sandbox.__automovieExportName = entry.name;
       new vm.Script(LIBRARY_INVOCATION, {
@@ -4492,6 +4721,27 @@ const compileLibrarySource = (props: {
           });
         continue;
       }
+      const contribution = {
+        ...validation.data,
+        contexts: validation.data.contexts ?? [],
+      };
+      const contributionDiagnostics =
+        context.branch === "productionSources"
+          ? []
+          : autoMovieLibraryContributionDiagnostics(
+              context.branch,
+              contribution,
+            );
+      for (const message of contributionDiagnostics)
+        diagnostics.push({
+          code: "source-export-invalid",
+          category: "error",
+          phase: "source",
+          target: `${target}:${entry.name}`,
+          path: props.path,
+          message,
+        });
+      if (contributionDiagnostics.length !== 0) continue;
       registrations.push({
         export: entry.name,
         design: entry.design,
@@ -4500,10 +4750,7 @@ const compileLibrarySource = (props: {
         // existed still satisfies the shape; every reader after this point is
         // owed a list, and three of them were each deciding that for
         // themselves.
-        contribution: {
-          ...validation.data,
-          contexts: validation.data.contexts ?? [],
-        },
+        contribution,
       });
     }
   } catch (error) {

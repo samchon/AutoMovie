@@ -183,6 +183,9 @@ importers:
       '@automovie/engine':
         specifier: workspace:^
         version: link:../engine
+      '@automovie/evidence':
+        specifier: workspace:^
+        version: link:../evidence
       '@automovie/interface':
         specifier: workspace:^
         version: link:../interface
@@ -196,9 +199,6 @@ importers:
         specifier: catalog:samchon
         version: 13.2.0(@types/node@22.19.20)(ttsc@0.28.1)
     devDependencies:
-      '@automovie/evidence':
-        specifier: workspace:^
-        version: link:../evidence
       '@automovie/viewer':
         specifier: workspace:^
         version: link:../viewer

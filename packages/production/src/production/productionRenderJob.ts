@@ -12,7 +12,6 @@ import {
   IAutoMovieFilmTimeline,
   IAutoMovieProductionDesign,
 } from "@automovie/interface";
-import { createHash } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 
@@ -21,6 +20,11 @@ import {
   serializeAutoMovieWebVttCueText,
   serializeAutoMovieWebVttSingleLineText,
 } from "./captionText";
+import {
+  canonicalAutoMovieJsonBytes,
+  canonicalizeAutoMovieJson,
+  digestAutoMovieBytes,
+} from "./contentIdentity";
 
 /**
  * Package-owned encoder identity fenced into every chunk.
@@ -576,7 +580,10 @@ export const verifyProductionRenderJobPlan = (props: {
     guidePasses: props.guidePasses,
     tier: props.plan.tier,
   });
-  if (canonicalJson(props.plan) !== canonicalJson(expected))
+  if (
+    canonicalizeAutoMovieJson(props.plan) !==
+    canonicalizeAutoMovieJson(expected)
+  )
     throw new Error(
       "Stored render plan differs from the current compiler-owned timeline and render inputs. Run automovie render plan, then rerender only changed chunk identities.",
     );
@@ -1285,30 +1292,7 @@ const validDigest = (value: string): boolean =>
   /^sha256:[0-9a-f]{64}$/.test(value);
 
 const digestJson = (value: unknown): AutoMovieContentDigest =>
-  `sha256:${createHash("sha256")
-    .update(Buffer.from(canonicalJson(value), "utf8"))
-    .digest("hex")}`;
-
-const canonicalJson = (value: unknown): string => {
-  if (value === null || typeof value === "boolean" || typeof value === "string")
-    return JSON.stringify(value);
-  if (typeof value === "number") {
-    if (Number.isFinite(value) === false)
-      throw new Error("Render identity refuses non-finite numbers.");
-    return JSON.stringify(value);
-  }
-  if (Array.isArray(value))
-    return `[${value.map((item) => canonicalJson(item)).join(",")}]`;
-  if (typeof value === "object") {
-    const record = value as Record<string, unknown>;
-    return `{${Object.keys(record)
-      .filter((key) => record[key] !== undefined)
-      .sort(compareCodeUnits)
-      .map((key) => `${JSON.stringify(key)}:${canonicalJson(record[key])}`)
-      .join(",")}}`;
-  }
-  throw new Error("Render identity requires JSON-compatible values.");
-};
+  digestAutoMovieBytes(canonicalAutoMovieJsonBytes(value));
 
 const compareCodeUnits = (left: string, right: string): number =>
   left < right ? -1 : left > right ? 1 : 0;

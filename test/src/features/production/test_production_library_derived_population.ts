@@ -84,14 +84,18 @@ export const test_production_library_derived_population = (): void => {
           })) as unknown as typeof readAutoMovieProductionEvidence,
       });
     const before = inspect();
+    const currentAuthoringEvidence = () =>
+      libraryAuthoring({ root: fixture.root });
     const compiled = new AutoMovieProductionCompiler(
       AutoMovieProductionProject.open(fixture.root),
-      libraryAuthoring({ root: fixture.root }),
+      currentAuthoringEvidence(),
+      currentAuthoringEvidence,
     ).compile({ scope: "source" });
     const after = inspect();
     const reviewed = new AutoMovieProductionCompiler(
       AutoMovieProductionProject.openReadOnly(fixture.root),
-      libraryAuthoring({ root: fixture.root }),
+      currentAuthoringEvidence(),
+      currentAuthoringEvidence,
     ).lint({ scope: "review" });
     // Only the refusals the derivation produced. The plan's own observation is
     // also refused at review, for having no receipt rather than for being
@@ -207,7 +211,8 @@ export const test_production_library_derived_population = (): void => {
     fixture.write(LIBRARY_PLAN, `${JSON.stringify(plan, null, 2)}\n`);
     const opened = new AutoMovieProductionCompiler(
       AutoMovieProductionProject.openReadOnly(fixture.root),
-      libraryAuthoring({ root: fixture.root }),
+      currentAuthoringEvidence(),
+      currentAuthoringEvidence,
     ).lint({ scope: "review" });
     const unopened = (
       diagnostics: readonly { target: string; message: string }[],

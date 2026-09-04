@@ -1,6 +1,10 @@
 import type { IAutoMovieProductionEvidence } from "@automovie/evidence";
 import type { IAutoMovieBuiltEnvironment } from "@automovie/interface";
-import { AutoMovieProductionProject } from "@automovie/production";
+import {
+  AutoMovieProductionProject,
+  digestAutoMovieBytes,
+  normalizeAutoMovieSource,
+} from "@automovie/production";
 import fs from "node:fs";
 import path from "node:path";
 
@@ -55,6 +59,24 @@ export const LIBRARY_MODEL_SOURCE = "src/models/bench.ts";
 /** The one source file the fixture's reviewed space branch selects. */
 export const LIBRARY_SOURCE = "src/spaces/hall.ts";
 
+/** The map design host used by context-only contribution scenarios. */
+export const LIBRARY_MAP_DESIGN = "docs/maps/site.md";
+
+/** The reviewed map H2 that owns the fixture context. */
+export const LIBRARY_MAP_ANCHOR = "site-context";
+
+/** Exact map owner address. */
+export const LIBRARY_MAP_OWNER = `${LIBRARY_MAP_DESIGN}#${LIBRARY_MAP_ANCHOR}`;
+
+/** Adjacent map owner used by duplicate-context cases. */
+export const LIBRARY_MAP_SECOND_ANCHOR = "site-annex";
+
+/** Exact adjacent map owner address. */
+export const LIBRARY_MAP_SECOND_OWNER = `${LIBRARY_MAP_DESIGN}#${LIBRARY_MAP_SECOND_ANCHOR}`;
+
+/** The map source selected independently from the spaces source. */
+export const LIBRARY_MAP_SOURCE = "src/maps/site.ts";
+
 /**
  * A library source module publishing one hand-typed building.
  *
@@ -71,11 +93,15 @@ export const librarySourceModule = (props: {
   exportName?: string;
   /** Raw literal for the first owner's adopted worlds, when it adopts any. */
   contexts?: string;
+  /** Raw literal for the first owner's built environments. */
+  environments?: string;
   models?: string;
   second?: {
     exportName: string;
     design: string;
     environmentId: string;
+    /** Raw literal for the second owner's built environments. */
+    environments?: string;
     models?: string;
     /** Raw literal for the second owner's adopted worlds. */
     contexts?: string;
@@ -84,14 +110,14 @@ export const librarySourceModule = (props: {
   const owner = (
     name: string,
     design: string,
-    id: string,
+    environments: string,
     models: string,
     contexts = "",
   ): string =>
     `export const ${name} = {
   design: ${JSON.stringify(design)},
   build: () => ({
-    environments: [{ ...HALL, id: ${JSON.stringify(id)} }],
+    environments: ${environments},
     models: ${models},${contexts}
   }),
 } satisfies IAutoMovieLibrarySourceOwner;`;
@@ -112,8 +138,11 @@ const BENCH = ${JSON.stringify(
 ${owner(
   props.exportName ?? "hall",
   props.design ?? LIBRARY_OWNER,
-  props.environmentId ?? (props.environment ?? rectangularBuilding()).id,
-  props.models ?? "[BENCH]",
+  props.environments ??
+    `[{ ...HALL, id: ${JSON.stringify(
+      props.environmentId ?? (props.environment ?? rectangularBuilding()).id,
+    )} }]`,
+  props.models ?? "[]",
   props.contexts === undefined
     ? ""
     : `${String.fromCharCode(10)}    contexts: ${props.contexts},`,
@@ -124,7 +153,8 @@ ${
     : owner(
         props.second.exportName,
         props.second.design,
-        props.second.environmentId,
+        props.second.environments ??
+          `[{ ...HALL, id: ${JSON.stringify(props.second.environmentId)} }]`,
         props.second.models ?? "[]",
         props.second.contexts === undefined
           ? ""
@@ -168,9 +198,23 @@ export const libraryModelLiteral = (id: string): string =>
     2,
   );
 
+/** One models-branch owner that publishes only its semantic model carrier. */
+export const libraryModelSourceModule = (props: {
+  models: string;
+  design?: string;
+  exportName?: string;
+}): string => `import type { IAutoMovieLibrarySourceOwner } from "@automovie/interface";
+
+export const ${props.exportName ?? "models"} = {
+  design: ${JSON.stringify(props.design ?? LIBRARY_MODEL_OWNER)},
+  build: () => ({ environments: [], models: ${props.models} }),
+} satisfies IAutoMovieLibrarySourceOwner;
+`;
+
 /** One reviewed space branch carrying exactly one design owner and source. */
 export const libraryAuthoring = (props: {
   root: string;
+  branch?: "maps" | "spaces";
   design?: string;
   anchor?: string;
   anchors?: readonly string[];
@@ -196,6 +240,11 @@ export const libraryAuthoring = (props: {
    */
   models?: boolean;
 }): IAutoMovieProductionEvidence => {
+  const branch = props.branch ?? "spaces";
+  const design =
+    props.design ?? (branch === "maps" ? LIBRARY_MAP_DESIGN : LIBRARY_DESIGN);
+  const source = branch === "maps" ? LIBRARY_MAP_SOURCE : LIBRARY_SOURCE;
+  const sourceBranch = branch === "maps" ? "mapSources" : "spaceSources";
   const modelSourceBinding = {
     branch: "modelSources",
     stage: "review",
@@ -206,14 +255,38 @@ export const libraryAuthoring = (props: {
     paths: [LIBRARY_MODEL_SOURCE],
   };
   const sourceBinding = {
-    branch: "spaceSources",
+    branch: sourceBranch,
     stage: "review",
     enforced: true,
     root: "src",
-    files: ["src/spaces/**/*.ts"],
-    symbols: ["spaces"],
-    paths: props.paths ?? [LIBRARY_SOURCE],
+    files: [branch === "maps" ? "src/maps/**/*.ts" : "src/spaces/**/*.ts"],
+    symbols: [branch],
+    paths: props.paths ?? [source],
   };
+  const anchors = props.anchors ?? [
+    props.anchor ?? (branch === "maps" ? LIBRARY_MAP_ANCHOR : LIBRARY_ANCHOR),
+  ];
+  const ownerAddresses = new Set(
+    anchors.map((anchor) => `${design}#${anchor}`),
+  );
+  const sourceOwners = [
+    ...(props.binding === "none" || props.binding === "empty"
+      ? []
+      : sourceOwnerFixtures({
+          root: props.root,
+          source,
+          sourceBranch,
+          owners: ownerAddresses,
+        })),
+    ...(props.models === true
+      ? sourceOwnerFixtures({
+          root: props.root,
+          source: LIBRARY_MODEL_SOURCE,
+          sourceBranch: "modelSources",
+          owners: new Set([LIBRARY_MODEL_OWNER]),
+        })
+      : []),
+  ];
   return {
     root: props.root,
     packageName: "library-fixture",
@@ -221,7 +294,7 @@ export const libraryAuthoring = (props: {
     configuration: {},
     manifest: { kind: "library" },
     designBranches: [
-      { branch: "spaces", designStage: "review", sourceBinding },
+      { branch, designStage: "review", sourceBinding },
       ...(props.models === true
         ? [
             {
@@ -234,16 +307,14 @@ export const libraryAuthoring = (props: {
     ],
     designOwners: [
       {
-        branch: "spaces",
-        path: props.design ?? LIBRARY_DESIGN,
+        branch,
+        path: design,
         title: "hall design",
-        units: (props.anchors ?? [props.anchor ?? LIBRARY_ANCHOR]).map(
-          (anchor) => ({
-            anchor,
-            title: `${anchor} delivery`,
-            digest: props.digest ?? "a".repeat(64),
-          }),
-        ),
+        units: anchors.map((anchor) => ({
+          anchor,
+          title: `${anchor} delivery`,
+          digest: props.digest ?? "a".repeat(64),
+        })),
         sourceBinding:
           props.binding === "none"
             ? null
@@ -269,8 +340,44 @@ export const libraryAuthoring = (props: {
           ]
         : []),
     ],
+    sourceOwners,
     contracts: [],
   } as unknown as IAutoMovieProductionEvidence;
+};
+
+/** Build exact graph-edge fixtures from named owner exports in one source. */
+const sourceOwnerFixtures = (props: {
+  root: string;
+  source: string;
+  sourceBranch: string;
+  owners: ReadonlySet<string>;
+}): IAutoMovieProductionEvidence["sourceOwners"] => {
+  const file = path.join(props.root, ...props.source.split("/"));
+  if (!fs.existsSync(file)) return [];
+  const bytes = normalizeAutoMovieSource(fs.readFileSync(file));
+  const text = Buffer.from(bytes).toString("utf8");
+  const output: IAutoMovieProductionEvidence["sourceOwners"][number][] = [];
+  const declarations =
+    /export const ([A-Za-z_$][A-Za-z0-9_$]*)\s*=\s*\{\s*design:\s*("(?:[^"\\]|\\.)*")/gu;
+  for (const match of text.matchAll(declarations)) {
+    const owner = JSON.parse(match[2]!) as string;
+    if (!props.owners.has(owner)) continue;
+    const separator = owner.lastIndexOf("#");
+    output.push({
+      branch: props.sourceBranch,
+      stage: "review",
+      enforced: true,
+      relationship: "lineage",
+      sourcePath: props.source,
+      exportName: match[1]!,
+      symbolKind: "property",
+      sourceDigest: digestAutoMovieBytes(bytes),
+      targetPath: owner.slice(0, separator),
+      targetAnchor: owner.slice(separator + 1),
+      reviewed: true,
+    });
+  }
+  return output;
 };
 
 /**
