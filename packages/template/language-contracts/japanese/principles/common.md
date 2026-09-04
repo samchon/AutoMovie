@@ -6,8 +6,12 @@
 
 レビュー質問: どの文が具体的な関係を翻訳調または抽象的な日本語の骨格に隠し、読者に再推論を強いているか。
 
+出典: [国立国語研究所](https://www.ninjal.ac.jp/); [W3C の言語宣言](https://www.w3.org/International/questions/qa-html-language-declarations)
+
 ## 待遇と文体の所有者 {#japanese-register-ownership}
 
 敬語、文末、語彙、語順、方言、専門的レジスターの変化には、話者、関係、文書形式、読者、時代、作品上の決定のいずれかが所有者として存在する。洗練や劇性だけを装う変化には所有者がない。
 
 レビュー質問: 既存の日本語レジスターから外れる各変化を、誰がどの関係と効果のために選んだか。
+
+出典: [国立国語研究所](https://www.ninjal.ac.jp/); [W3C の言語宣言](https://www.w3.org/International/questions/qa-html-language-declarations)

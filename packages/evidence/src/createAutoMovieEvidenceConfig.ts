@@ -17,11 +17,19 @@ import {
 } from "./AutoMovieProductionLanguage";
 import { assertAutoMovieEvidenceSyntax } from "./assertAutoMovieEvidenceSyntax";
 import { assertAutoMovieEvidenceReviewReasons } from "./auditAutoMovieEvidenceReviewReasons";
+import { createAutoMoviePopulationAccountClaims } from "./createAutoMoviePopulationAccountClaims";
 import { createAutoMoviePopulationFiles } from "./createAutoMoviePopulationFiles";
 import type {
   AutoMovieProductionContractClaim,
   AutoMovieProductionContractLayer,
 } from "./createAutoMovieProductionContractClaim";
+import {
+  type IAutoMovieEvidenceTopologyBranch,
+  type IAutoMovieEvidenceTopologyDeclaration,
+  type IAutoMovieEvidenceTopologyDiagnostic,
+  type IAutoMovieEvidenceTopologyEdge,
+  inspectAutoMovieEvidenceTopology,
+} from "./inspectAutoMovieEvidenceTopology";
 import {
   parseAutoMovieEvidenceSyntax,
   projectAutoMovieMarkdownSyntax,
@@ -159,7 +167,8 @@ type ContractRelationship =
   | "checklist"
   | "distributed-coverage"
   | "foundation"
-  | "lineage";
+  | "lineage"
+  | "population-account";
 
 /**
  * The common-contract routes selected by one production declaration.
@@ -217,6 +226,13 @@ interface IAutoMovieContractBindingManifest {
   localBindings: readonly IAutoMovieLocalContractProjection[];
   /** Explicit inapplicable local-contract declarations retained for audit only. */
   localAudits: readonly IAutoMovieLocalContractProjection[];
+  /** Canonical provider-consumer matrix and its deterministic audit. */
+  topology: {
+    branches: readonly IAutoMovieEvidenceTopologyBranch[];
+    expected: readonly IAutoMovieEvidenceTopologyEdge[];
+    declarations: readonly IAutoMovieEvidenceTopologyDeclaration[];
+    diagnostics: readonly IAutoMovieEvidenceTopologyDiagnostic[];
+  };
 }
 
 interface IAutoMovieLocalContractProjection {
@@ -544,11 +560,15 @@ const EXPECTED_CONTRACTS = [
     file: "obligations/core/common.md",
     anchors: [
       "purpose-fit",
-      "population-variety",
       "layer-boundary",
       "production-language",
       "proportionate-development",
     ],
+  },
+  {
+    domain: "core",
+    file: "obligations/core/defaults.md",
+    anchors: ["recurrent-frame-distribution", "surface-cadence-distribution"],
   },
   {
     domain: "design",
@@ -610,7 +630,17 @@ const EXPECTED_CONTRACTS = [
   {
     domain: "story",
     file: "obligations/story/narratives.md",
-    anchors: ["unit-addressability"],
+    anchors: [
+      "unit-addressability",
+      "unit-contribution-distribution",
+      "sequence-connection",
+      "state-continuity-distribution",
+      "character-continuity-distribution",
+      "temporal-gear-distribution",
+      "speech-distribution",
+      "voice-frame-distribution",
+      "pacing-arrangement",
+    ],
   },
   {
     domain: "story",
@@ -620,7 +650,11 @@ const EXPECTED_CONTRACTS = [
   {
     domain: "story",
     file: "obligations/story/screenplays.md",
-    anchors: ["realization-ready-contract"],
+    anchors: [
+      "realization-ready-contract",
+      "screenplay-format-scene-completeness",
+      "screenplay-revision-realization-handoff",
+    ],
   },
   {
     domain: "core",
@@ -702,9 +736,19 @@ const EXPECTED_CONTRACTS = [
     anchors: [
       "scope-preservation",
       "substantive-completion",
-      "machine-default",
       "evidence-content-conformance",
       "declared-basis",
+    ],
+  },
+  {
+    domain: "core",
+    file: "principles/core/defaults.md",
+    anchors: [
+      "purposeful-enumeration",
+      "earned-significance",
+      "responsive-qualification",
+      "functional-formatting",
+      "contrastive-definition",
     ],
   },
   {
@@ -834,6 +878,7 @@ const EXPECTED_CONTRACTS = [
       "character-continuity",
       "information-entry",
       "specificity",
+      "closing-line-contribution",
       "parent-differentiation",
       "drive-to-turn",
       "unit-identity",
@@ -886,6 +931,10 @@ const EXPECTED_CONTRACTS = [
       "emotional-grounding",
       "audiovisual-selection",
       "timing-allocation",
+      "master-scene-shooting-boundary",
+      "screenplay-scene-completion",
+      "screenplay-locked-revision",
+      "screenplay-heading-identity",
     ],
   },
   {
@@ -2457,25 +2506,41 @@ const resetTransitionHosts = (
   graph: IProductionGraph,
 ): readonly { path: string; source: string }[] => {
   if (graph.populationScope.mode !== "complete-production-reset") return [];
-  const files =
-    graph.kind === "film"
-      ? ["treatments", "scripts", "screenplays"].flatMap((layer) =>
-          walkProjectFiles(
-            graph,
-            path.join(graph.location, DOCS, layer),
-            ".md",
-          ),
-        )
-      : graph.populationScope.transition.kind === "library"
-        ? graph.populationScope.transition.reviewedPairs.flatMap((pair) => [
-            ...walkProjectFiles(
-              graph,
-              path.join(graph.location, DOCS, pair.design),
-              ".md",
-            ),
-            ...populationFiles(graph, SOURCES[pair.source].files, ".ts"),
-          ])
-        : [];
+  let files: readonly string[] = [];
+  if (graph.kind === "film")
+    files = ["treatments", "scripts", "screenplays"].flatMap((layer) =>
+      walkProjectFiles(graph, path.join(graph.location, DOCS, layer), ".md"),
+    );
+  else if (graph.populationScope.transition.kind === "library") {
+    const pairs: readonly unknown[] = Array.isArray(
+      graph.populationScope.transition.reviewedPairs,
+    )
+      ? graph.populationScope.transition.reviewedPairs
+      : [];
+    files = pairs.flatMap((value) => {
+      if (value === null || typeof value !== "object") return [];
+      const pair = value as { design?: string; source?: string };
+      if (
+        typeof pair.design !== "string" ||
+        typeof pair.source !== "string" ||
+        !Object.hasOwn(SOURCES, pair.source) ||
+        SOURCES[pair.source as SourceLayer].design !== pair.design
+      )
+        return [];
+      return [
+        ...walkProjectFiles(
+          graph,
+          path.join(graph.location, DOCS, pair.design),
+          ".md",
+        ),
+        ...populationFiles(
+          graph,
+          SOURCES[pair.source as SourceLayer].files,
+          ".ts",
+        ),
+      ];
+    });
+  }
   return [...new Set(files)].sort(compareCodeUnits).map((file) => ({
     path: posix(path.relative(graph.location, file)),
     source: fs.readFileSync(file, "utf8"),
@@ -2673,34 +2738,22 @@ const upstreamReference = (
 ): ITtscEvidenceGraphReference =>
   sharedReference(shared, "upstream", file, review, true, true);
 
-/**
- * What each operative subject owner must settle, for a film only.
- *
- * `obligations/core/settings.md#operative-subject-inventory` accounts for the
- * population; these roles are the depth that inventory deliberately does not
- * require. A brief answers one bounded observation and a library exports design
- * branches, so neither owes a cast this deep, and a film that genuinely owes
- * none of it is a brief that chose the wrong shape.
- *
- * These are obligations, so exclusion stays closed. An observational or
- * non-human film still gives each applicable role a concrete settings owner;
- * absence of a relationship is content that owner states, not evidence that
- * the role may disappear from the population.
- */
-const subjectObligation = (
-  shared: string,
-  review: boolean,
-): ITtscEvidenceGraphReference =>
-  obligationReference(shared, "subjects.md", review);
-
 const discoveryReferences = (
   shared: string,
   layer: MarkdownLayer,
   review: boolean,
-): ITtscEvidenceGraphReference[] =>
-  DISCOVERY_TARGETS[layer].map((target) =>
+): ITtscEvidenceGraphReference[] => [
+  ...DISCOVERY_TARGETS[layer].map((target) =>
     sharedReference(shared, "discovery", `${target}.md`, review, false, true),
-  );
+  ),
+  {
+    type: "markdown",
+    root: DOCS,
+    files: ["language/discovery/signals.md"],
+    symbol: "h2",
+    requireReview: review,
+  },
+];
 
 /**
  * Makes one active layer's work-specific contract answer its discovery duties.
@@ -2794,6 +2847,34 @@ const branchClaims = (
   ...claims: ITtscEvidenceGraphClaim[]
 ): IBranchClaim[] => claims.map((claim) => ({ branch, claim }));
 
+/** Shared obligations compared once by a branch-level account population. */
+const populationObligations = (
+  graph: IProductionGraph,
+  layer: MarkdownLayer,
+): string[] => {
+  if (!MARKDOWN[layer].obligation) return [];
+  const domain: ContractDomain =
+    layer === "settings"
+      ? "core"
+      : layer === "briefs"
+        ? "delivery"
+        : ["treatments", "scripts", "screenplays"].includes(layer)
+          ? "story"
+          : "design";
+  return [
+    "obligations/core/common.md",
+    "obligations/core/defaults.md",
+    "language/obligations/common.md",
+    ...(["treatments", "scripts", "screenplays"].includes(layer)
+      ? ["obligations/story/narratives.md"]
+      : []),
+    `obligations/${domain}/${MARKDOWN[layer].principle}`,
+    ...(layer === "settings" && graph.kind === "film"
+      ? ["obligations/story/subjects.md"]
+      : []),
+  ];
+};
+
 const authoredClaims = (graph: IProductionGraph): IBranchClaim[] => {
   const shared = sharedDocsRoot(graph.location);
   const claims: IBranchClaim[] = [];
@@ -2801,7 +2882,32 @@ const authoredClaims = (graph: IProductionGraph): IBranchClaim[] => {
     const stage = graph[name];
     const review = requiresReview(stage);
     claims.push(...branchClaims(name, discoveryClaim(graph, name)));
-    const principles = [principleReference(shared, "common.md", review)];
+    if (MARKDOWN[name].obligation)
+      claims.push(
+        ...branchClaims(
+          name,
+          ...createAutoMoviePopulationAccountClaims({
+            layer: name,
+            populationFiles: authoredPopulationFiles(graph, name),
+            obligationFiles: populationObligations(graph, name),
+            enabled: requiresEvidence(stage),
+            requireReview: review,
+          }),
+        ),
+      );
+    const principles = [
+      principleReference(shared, "common.md", review),
+      principleReference(shared, "defaults.md", review),
+      {
+        type: "markdown" as const,
+        root: DOCS,
+        files: ["language/principles/common.md"],
+        symbol: "h2" as const,
+        checklist: true,
+        noEvidenceExclude: true,
+        requireReview: review,
+      },
+    ];
     if (["treatments", "scripts", "screenplays"].includes(name))
       principles.push(principleReference(shared, "narratives.md", review));
     if (
@@ -2846,17 +2952,6 @@ const authoredClaims = (graph: IProductionGraph): IBranchClaim[] => {
       const references: ITtscEvidenceGraphReference[] = [...principles];
       if (!["settings", "research"].includes(name))
         references.push(upstreamReference(shared, `${name}.md`, review));
-      if (symbol === 2) {
-        references.push(obligationReference(shared, "common.md", review));
-        if (["treatments", "scripts", "screenplays"].includes(name))
-          references.push(obligationReference(shared, "narratives.md", review));
-        if (MARKDOWN[name].obligation)
-          references.push(
-            obligationReference(shared, MARKDOWN[name].principle, review),
-          );
-        if (name === "settings" && graph.kind === "film")
-          references.push(subjectObligation(shared, review));
-      }
       if (!["settings", "research"].includes(name))
         references.push(...referencesPerFile(graph, "settings", "h2", review));
       references.push(...designFoundations(graph, name, review));
@@ -2870,7 +2965,7 @@ const authoredClaims = (graph: IProductionGraph): IBranchClaim[] => {
         ...branchClaims(name, {
           name:
             symbol === 2
-              ? `${name} H2 units answer their principle checklists, cover the layer's obligations, and account for inherited work`
+              ? `${name} H2 units answer their principle checklists and account for inherited work`
               : `${name} H${symbol} units answer their principle checklists and account for inherited work`,
           type: "markdown",
           root: DOCS,
@@ -3147,6 +3242,11 @@ const relationshipOf = (
       ? "checklist"
       : "distributed-coverage";
   if (
+    binding.claim.type === "markdown" &&
+    binding.claim.files.every((file) => file.startsWith("accounts/"))
+  )
+    return "population-account";
+  if (
     reference.type === "markdown" &&
     (reference.uniqueEvidence === true ||
       reference.singleEvidencePerSymbol === true)
@@ -3194,6 +3294,82 @@ const sharedClaimBindings = (graph: IProductionGraph): IBranchClaim[] => [
   ...authoredClaims(graph),
   ...sourceClaims(graph),
 ];
+
+const TOPOLOGY_ORDER: Readonly<Record<MarkdownLayer, number>> = {
+  settings: 0,
+  research: 1,
+  maps: 1,
+  spaces: 2,
+  models: 3,
+  materials: 4,
+  instances: 5,
+  motions: 6,
+  systems: 6,
+  treatments: 1,
+  scripts: 2,
+  screenplays: 3,
+  briefs: 7,
+};
+
+/** Project the complete selected foundation matrix and audit it in one pass. */
+const topologyOf = (
+  graph: IProductionGraph,
+): IAutoMovieContractBindingManifest["topology"] => {
+  const branches = (Object.keys(MARKDOWN) as MarkdownLayer[]).map((name) => ({
+    name,
+    active: isActive(graph[name]),
+    order: TOPOLOGY_ORDER[name],
+  }));
+  const expected: IAutoMovieEvidenceTopologyEdge[] = [
+    ...(Object.keys(MARKDOWN) as MarkdownLayer[])
+      .filter((consumer) => !["settings", "research"].includes(consumer))
+      .map((consumer) => ({ provider: "settings", consumer })),
+    ...(
+      Object.entries(DESIGN_FOUNDATIONS) as [
+        MarkdownLayer,
+        readonly DesignLayer[],
+      ][]
+    ).flatMap(([consumer, providers]) =>
+      providers.map((provider) => ({
+        provider,
+        consumer,
+        simultaneous:
+          (provider === "motions" && consumer === "systems") ||
+          (provider === "systems" && consumer === "motions"),
+      })),
+    ),
+  ];
+  const active = new Map<string, boolean>(
+    branches.map((branch) => [branch.name, branch.active]),
+  );
+  const declarations: IAutoMovieEvidenceTopologyDeclaration[] = expected.map(
+    (edge) => {
+      const status =
+        active.get(edge.provider) === true && active.get(edge.consumer) === true
+          ? "uses"
+          : "inapplicable";
+      return {
+        provider: edge.provider,
+        consumer: edge.consumer,
+        status,
+        reason:
+          status === "uses"
+            ? `${edge.consumer} consumes the selected ${edge.provider} foundation population.`
+            : `${edge.consumer} or its ${edge.provider} foundation is outside the selected production population.`,
+      };
+    },
+  );
+  return {
+    branches,
+    expected,
+    declarations,
+    diagnostics: inspectAutoMovieEvidenceTopology({
+      branches,
+      expected,
+      declarations,
+    }),
+  };
+};
 
 /** The authored Markdown branch selected by a project-local population. */
 const referencedMarkdownBranch = (
@@ -3336,6 +3512,7 @@ export const createAutoMovieContractBindingManifest = (
     bindings,
     localBindings,
     localAudits,
+    topology: topologyOf(graph),
   };
 };
 

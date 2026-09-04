@@ -6,8 +6,12 @@
 
 审读问题：哪一种中文框架无功能地主导了不同素材，哪些具体成员足以证明这一判断？
 
+来源：[Padmakumar 与 He 的模型辅助写作多样性研究](https://arxiv.org/abs/2309.05196)；[国家语言资源监测与研究中心](http://www.cncorpus.org/)
+
 ## 受众语言可达性 {#chinese-audience-language-access}
 
 完整文本应让目标读者识别未解释的语言切换、专业词、时代用语、字幕、引文和翻译版本的含义、来源与状态，同时不抹除作品决定保留的差异。
 
 审读问题：哪一个中文语言边界使目标读者无法理解制作决定，或无法识别它的来源与状态？
+
+来源：[W3C 语言协商](https://www.w3.org/International/questions/qa-lang-priorities)；[W3C TTML2](https://www.w3.org/TR/ttml2/)
