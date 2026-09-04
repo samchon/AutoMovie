@@ -16,7 +16,9 @@ interface IRuntimePackageGenerationEntry<Snapshot, Module> {
   state: "loading" | "loaded" | "poisoned";
 }
 
-const registryEntries = Symbol("runtime-package-generation-entries");
+const registryEntries = Symbol.for(
+  "automovie.runtime-package-loader.entries.v1",
+);
 
 /** Isolated generation registry used by tests and explicitly isolated hosts. */
 export interface IRuntimePackageGenerationRegistry {

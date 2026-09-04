@@ -33,6 +33,11 @@ import {
   publishDialogueCache,
 } from "./dialogueCacheSnapshot";
 import {
+  type IKokoroGenerationWorker,
+  type IKokoroGenerationWorkerPackage,
+  createKokoroGenerationWorker,
+} from "./kokoroGenerationWorker";
+import {
   type IAutoMovieDialogueSynthesisSelection,
   AUTOMOVIE_DIALOGUE_MODEL_REVISION as KOKORO_MODEL_REVISION,
   assertProductionDialogueSynthesis,
@@ -67,7 +72,6 @@ import {
   assertRuntimePackageSnapshotCurrent,
   snapshotRuntimePackage,
 } from "./runtimePackageSnapshot";
-import { withKokoroRuntimeOverrides } from "./withKokoroRuntimeOverrides";
 
 export interface IProductionRenderEncoderRuntime {
   assertCurrent: (plan: IAutoMovieProductionRenderJobPlan) => void;
@@ -465,9 +469,8 @@ export const createProductionSoundRuntime = (props: {
       packageExports: true,
     });
 
-  const onnxRuntimeNodeIdentity = (): ReturnType<
-    typeof packageSnapshotIdentity
-  > & {
+  const onnxRuntimeNodePackage = (): {
+    snapshot: IRuntimePackageSnapshot;
     nativeAssets: IAutoMovieProductionTtsReceipt["runtimeAssets"];
   } => {
     const relative = [
@@ -493,11 +496,23 @@ export const createProductionSoundRuntime = (props: {
         `ONNX Runtime Node native backend is empty for ${props.host.platform}/${props.host.arch}.`,
       );
     return {
-      ...packageSnapshotIdentity(snapshot),
+      snapshot,
       nativeAssets: snapshot.assets.map((asset) => ({
         path: `package:onnxruntime-node/${asset.path}`,
         digest: asset.digest,
       })),
+    };
+  };
+
+  const onnxRuntimeNodeIdentity = (): ReturnType<
+    typeof packageSnapshotIdentity
+  > & {
+    nativeAssets: IAutoMovieProductionTtsReceipt["runtimeAssets"];
+  } => {
+    const runtime = onnxRuntimeNodePackage();
+    return {
+      ...packageSnapshotIdentity(runtime.snapshot),
+      nativeAssets: runtime.nativeAssets,
     };
   };
 
@@ -624,6 +639,52 @@ export const createProductionSoundRuntime = (props: {
     ];
   };
 
+  const kokoroGenerationWorkerPackages = (
+    voiceId: string,
+  ): IKokoroGenerationWorkerPackage[] => {
+    const voiceRelative = `voices/${voiceId}.bin`;
+    const kokoroAssets = [{ kind: "file", relative: voiceRelative } as const];
+    const kokoro = resolvedPackageSnapshot("kokoro-js", kokoroAssets);
+    const transformers = resolvedPackageSnapshot("@huggingface/transformers");
+    const onnx = onnxRuntimeNodePackage();
+    const phonemizer = resolvedDependencySnapshot(kokoro, "phonemizer");
+    const onnxCommon = resolvedDependencySnapshot(
+      transformers,
+      "onnxruntime-common",
+    );
+    const sharp = resolvedPackageSnapshot("sharp");
+    const declaration = (
+      snapshot: IRuntimePackageSnapshot,
+      options: Pick<
+        IKokoroGenerationWorkerPackage,
+        "assets" | "packageExports"
+      > = {},
+    ): IKokoroGenerationWorkerPackage => ({
+      ...options,
+      contentFingerprint: snapshot.contentFingerprint,
+      entry: snapshot.entry,
+      fingerprint: snapshot.fingerprint,
+      moduleClosure: true,
+      packageName: snapshot.package,
+    });
+    const nativeRelative = [
+      "bin",
+      "napi-v3",
+      props.host.platform,
+      props.host.arch,
+    ].join("/");
+    return [
+      declaration(kokoro, { assets: kokoroAssets }),
+      declaration(transformers),
+      declaration(onnx.snapshot, {
+        assets: [{ kind: "tree", relative: nativeRelative }],
+      }),
+      declaration(phonemizer, { packageExports: true }),
+      declaration(onnxCommon, { packageExports: true }),
+      declaration(sharp),
+    ];
+  };
+
   interface IKokoroCacheRecord {
     version: typeof PRODUCTION_DIALOGUE_CACHE_VERSION;
     cacheKey: AutoMovieContentDigest;
@@ -640,25 +701,8 @@ export const createProductionSoundRuntime = (props: {
     runtimeAssets: IAutoMovieProductionTtsReceipt["runtimeAssets"];
   }
 
-  interface IKokoroRuntime {
-    stream(
-      text: IKokoroTextSplitter,
-      options: { voice: string; speed: number },
-    ): AsyncIterable<{
-      text: string;
-      phonemes: string;
-      audio: { audio: Float32Array; sampling_rate: number };
-    }>;
-  }
-
-  interface IKokoroTextSplitter extends AsyncIterable<string> {
-    push(...texts: string[]): void;
-    close(): void;
-  }
-
   interface IKokoroLoadedRuntime {
-    runtime: IKokoroRuntime;
-    createTextSplitter(): IKokoroTextSplitter;
+    runtime: IKokoroGenerationWorker;
     runtimeAssets: IAutoMovieProductionTtsReceipt["runtimeAssets"];
   }
 
@@ -759,86 +803,35 @@ export const createProductionSoundRuntime = (props: {
       model: selection.model,
       revision: selection.modelRevision,
     });
-    const [{ KokoroTTS, TextSplitterStream }, { env }] = await Promise.all([
-      import("kokoro-js"),
-      import("@huggingface/transformers"),
-    ]);
-    const previous = { cacheDir: env.cacheDir, fetch: globalThis.fetch };
-    const fetcher = globalThis.fetch.bind(globalThis);
-    const pinnedFetch: typeof globalThis.fetch = async (input, init) => {
-      const source =
-        typeof input === "string"
-          ? input
-          : input instanceof URL
-            ? input.href
-            : input.url;
-      const marker = `huggingface.co/${selection.model}/resolve/`;
-      const markerIndex = source.indexOf(marker);
-      if (markerIndex < 0) return fetcher(input, init);
-      const suffix = source.slice(markerIndex + marker.length);
-      const separator = suffix.indexOf("/");
-      if (separator < 0)
-        throw new Error(`Kokoro model URL has no asset path: ${source}`);
-      const pinned =
-        source.slice(0, markerIndex + marker.length) +
-        selection.modelRevision +
-        suffix.slice(separator);
-      const request =
-        typeof input === "object" &&
-        input !== null &&
-        "url" in input &&
-        input instanceof Request
-          ? new Request(pinned, input)
-          : pinned;
-      return fetcher(request, init);
-    };
-    return withKokoroRuntimeOverrides(
-      [
-        {
-          resource: "Transformers cache directory",
-          install: () => {
-            env.cacheDir = modelCacheRoot;
-          },
-          restore: () => {
-            env.cacheDir = previous.cacheDir;
-          },
-        },
-        {
-          resource: "global fetch",
-          install: () => {
-            globalThis.fetch = pinnedFetch;
-          },
-          restore: () => {
-            globalThis.fetch = previous.fetch;
-          },
-        },
-      ],
-      async () => {
-        const loaded = await KokoroTTS.from_pretrained(selection.model, {
-          dtype: selection.dtype,
-          device: selection.device,
-        });
-        assertCurrentRuntimePackages();
-        const modelSnapshot = captureKokoroModelCache(modelCacheRoot);
-        const modelAssets = kokoroModelCacheAssets(modelSnapshot);
-        if (modelAssets.length === 0)
-          throw new Error(
-            "Pinned Kokoro load produced no revision-scoped model cache assets.",
-          );
-        props.progress("sound.model.load.complete", {
-          model: selection.model,
-          revision: selection.modelRevision,
-        });
-        const output = {
-          runtime: loaded as unknown as IKokoroRuntime,
-          createTextSplitter: () => new TextSplitterStream(),
-          runtimeAssets: [...baseRuntimeAssets, ...modelAssets],
-        };
-        assertCurrentRuntimePackages();
-        if (modelSnapshot !== null) assertCapturedRenderTarget(modelSnapshot);
-        return output;
+    const runtime = await createKokoroGenerationWorker({
+      cacheRoot: modelCacheRoot,
+      packages: kokoroGenerationWorkerPackages(selection.voice),
+      selection: {
+        device: selection.device,
+        dtype: selection.dtype,
+        model: selection.model,
+        modelRevision: selection.modelRevision,
       },
-    );
+    });
+    assertCurrentRuntimePackages();
+    const modelSnapshot = captureKokoroModelCache(modelCacheRoot);
+    const modelAssets = kokoroModelCacheAssets(modelSnapshot);
+    if (modelAssets.length === 0) {
+      await runtime.close();
+      throw new Error(
+        "Pinned Kokoro load produced no revision-scoped model cache assets.",
+      );
+    }
+    props.progress("sound.model.load.complete", {
+      model: selection.model,
+      revision: selection.modelRevision,
+    });
+    assertCurrentRuntimePackages();
+    if (modelSnapshot !== null) assertCapturedRenderTarget(modelSnapshot);
+    return {
+      runtime,
+      runtimeAssets: [...baseRuntimeAssets, ...modelAssets],
+    };
   };
 
   const synthesizeProductionDialogue = async (
@@ -873,151 +866,173 @@ export const createProductionSoundRuntime = (props: {
         baseRuntimeAssets,
         selection,
       ));
-    let runtimeAssets = [
-      ...baseRuntimeAssets,
-      ...kokoroModelCacheAssets(captureKokoroModelCache(modelCacheRoot)),
-    ];
-    if (
-      plan.dialogue.length > 0 &&
-      runtimeAssets.length === baseRuntimeAssets.length
-    )
-      runtimeAssets = (await currentRuntime()).runtimeAssets;
-    for (const line of plan.dialogue) {
-      props.progress("sound.dialogue.start", { line: line.id });
-      const cacheIdentity = (
-        assets: IAutoMovieProductionTtsReceipt["runtimeAssets"],
-      ) =>
-        productionDialogueCacheIdentity({
-          cacheRoot,
-          selection,
-          text: line.text,
-          language: line.language,
-          speaker: line.speaker ?? null,
-          runtimeAssets: assets,
-        });
-      const resolved = await resolveProductionDialogueCache({
-        assets: runtimeAssets,
-        identify: cacheIdentity,
-        load: currentRuntime,
-        read: (identity, assets) => {
-          try {
-            const captured = captureExistingDialogueCache(
-              cacheRoot,
-              identity.path,
-            );
-            return captured === null
-              ? undefined
-              : validatedDialogueCache(
-                  captured,
-                  identity.key,
-                  assets,
-                  selection,
-                );
-          } catch {
-            return undefined;
-          }
-        },
-        runtimeAssets: (loaded) => loaded.runtimeAssets,
-      });
-      runtimeAssets = resolved.assets;
-      const identity = resolved.identity;
-      let cached = resolved.cached;
-      let loadedRuntime = resolved.runtime;
-      if (cached === undefined) {
-        loadedRuntime ??= await currentRuntime();
-        const dialogueText = loadedRuntime.createTextSplitter();
-        dialogueText.push(line.text);
-        dialogueText.close();
-        const generatedAt = new Date(props.host.now()).toISOString();
-        assertAutoMovieExternalGeneratorTermsAt({
-          termsCheckedAt: selection.generatorProvenance.termsCheckedAt,
-          occurredAt: generatedAt,
-          label: "Kokoro dialogue generation generatorProvenance",
-        });
-        const chunks: Float32Array[] = [];
-        const phonemes: string[] = [];
-        const phonemeChunks: IKokoroCacheRecord["phonemeChunks"] = [];
-        let sourceSampleRate: number | undefined;
-        let sourceOffset = 0;
-        const stream = loadedRuntime.runtime.stream(dialogueText, {
-          voice: selection.voice,
-          speed: selection.speed,
-        });
-        for await (const chunk of stream) {
-          if (
-            Number.isSafeInteger(chunk.audio.sampling_rate) === false ||
-            chunk.audio.sampling_rate <= 0
-          )
-            throw new Error(
-              `Kokoro line "${line.id}" returned an invalid PCM sample rate.`,
-            );
-          if (
-            sourceSampleRate !== undefined &&
-            sourceSampleRate !== chunk.audio.sampling_rate
-          )
-            throw new Error(
-              `Kokoro line "${line.id}" changed PCM sample rate mid-stream.`,
-            );
-          sourceSampleRate = chunk.audio.sampling_rate;
-          const audio = Float32Array.from(chunk.audio.audio);
-          if (audio.length === 0)
-            throw new Error(
-              `Kokoro line "${line.id}" returned an empty PCM chunk.`,
-            );
-          chunks.push(audio);
-          phonemes.push(chunk.phonemes);
-          phonemeChunks.push({
-            phonemes: chunk.phonemes,
-            startSample: sourceOffset,
-            endSample: sourceOffset + audio.length,
+    let failure: { error: unknown } | undefined;
+    try {
+      let runtimeAssets = [
+        ...baseRuntimeAssets,
+        ...kokoroModelCacheAssets(captureKokoroModelCache(modelCacheRoot)),
+      ];
+      if (
+        plan.dialogue.length > 0 &&
+        runtimeAssets.length === baseRuntimeAssets.length
+      )
+        runtimeAssets = (await currentRuntime()).runtimeAssets;
+      for (const line of plan.dialogue) {
+        props.progress("sound.dialogue.start", { line: line.id });
+        const cacheIdentity = (
+          assets: IAutoMovieProductionTtsReceipt["runtimeAssets"],
+        ) =>
+          productionDialogueCacheIdentity({
+            cacheRoot,
+            selection,
+            text: line.text,
+            language: line.language,
+            speaker: line.speaker ?? null,
+            runtimeAssets: assets,
           });
-          sourceOffset += audio.length;
-        }
-        if (sourceSampleRate === undefined || chunks.length === 0)
-          throw new Error(`Kokoro synthesized no PCM for line "${line.id}".`);
-        const samples = concatenateProductionFloat32(chunks);
-        const bytes = new Uint8Array(
-          samples.buffer,
-          samples.byteOffset,
-          samples.byteLength,
-        );
-        const record: IKokoroCacheRecord = {
-          version: PRODUCTION_DIALOGUE_CACHE_VERSION,
-          cacheKey: identity.key,
-          model: selection.model,
-          modelRevision: selection.modelRevision,
-          voice: selection.voice,
-          generatorProvenance: selection.generatorProvenance,
-          generatedAt,
-          sourceSampleRate,
-          sourceSamples: samples.length,
-          pcmDigest: digestAutoMovieBytes(bytes),
-          phonemes: phonemes.join(""),
-          phonemeChunks,
-          runtimeAssets,
-        };
-        const published = publishDialogueCache({
-          base: cacheRoot,
-          pcm: bytes,
-          receipt: Buffer.from(`${JSON.stringify(record, null, 2)}\n`, "utf8"),
-          target: identity.path,
+        const resolved = await resolveProductionDialogueCache({
+          assets: runtimeAssets,
+          identify: cacheIdentity,
+          load: currentRuntime,
+          read: (identity, assets) => {
+            try {
+              const captured = captureExistingDialogueCache(
+                cacheRoot,
+                identity.path,
+              );
+              return captured === null
+                ? undefined
+                : validatedDialogueCache(
+                    captured,
+                    identity.key,
+                    assets,
+                    selection,
+                  );
+            } catch {
+              return undefined;
+            }
+          },
+          runtimeAssets: (loaded) => loaded.runtimeAssets,
         });
-        cached = validatedDialogueCache(
-          published,
-          identity.key,
-          runtimeAssets,
-          selection,
-        );
-        if (cached === undefined)
-          throw new Error(
-            `Published Kokoro cache generation for line "${line.id}" is invalid.`,
+        runtimeAssets = resolved.assets;
+        const identity = resolved.identity;
+        let cached = resolved.cached;
+        let loadedRuntime = resolved.runtime;
+        if (cached === undefined) {
+          loadedRuntime ??= await currentRuntime();
+          const generatedAt = new Date(props.host.now()).toISOString();
+          assertAutoMovieExternalGeneratorTermsAt({
+            termsCheckedAt: selection.generatorProvenance.termsCheckedAt,
+            occurredAt: generatedAt,
+            label: "Kokoro dialogue generation generatorProvenance",
+          });
+          const chunks: Float32Array[] = [];
+          const phonemes: string[] = [];
+          const phonemeChunks: IKokoroCacheRecord["phonemeChunks"] = [];
+          let sourceSampleRate: number | undefined;
+          let sourceOffset = 0;
+          const generated = await loadedRuntime.runtime.synthesize({
+            text: line.text,
+            voice: selection.voice,
+            speed: selection.speed,
+          });
+          for (const chunk of generated) {
+            if (
+              Number.isSafeInteger(chunk.sampleRate) === false ||
+              chunk.sampleRate <= 0
+            )
+              throw new Error(
+                `Kokoro line "${line.id}" returned an invalid PCM sample rate.`,
+              );
+            if (
+              sourceSampleRate !== undefined &&
+              sourceSampleRate !== chunk.sampleRate
+            )
+              throw new Error(
+                `Kokoro line "${line.id}" changed PCM sample rate mid-stream.`,
+              );
+            sourceSampleRate = chunk.sampleRate;
+            const audio = Float32Array.from(chunk.audio);
+            if (audio.length === 0)
+              throw new Error(
+                `Kokoro line "${line.id}" returned an empty PCM chunk.`,
+              );
+            chunks.push(audio);
+            phonemes.push(chunk.phonemes);
+            phonemeChunks.push({
+              phonemes: chunk.phonemes,
+              startSample: sourceOffset,
+              endSample: sourceOffset + audio.length,
+            });
+            sourceOffset += audio.length;
+          }
+          if (sourceSampleRate === undefined || chunks.length === 0)
+            throw new Error(`Kokoro synthesized no PCM for line "${line.id}".`);
+          const samples = concatenateProductionFloat32(chunks);
+          const bytes = new Uint8Array(
+            samples.buffer,
+            samples.byteOffset,
+            samples.byteLength,
           );
+          const record: IKokoroCacheRecord = {
+            version: PRODUCTION_DIALOGUE_CACHE_VERSION,
+            cacheKey: identity.key,
+            model: selection.model,
+            modelRevision: selection.modelRevision,
+            voice: selection.voice,
+            generatorProvenance: selection.generatorProvenance,
+            generatedAt,
+            sourceSampleRate,
+            sourceSamples: samples.length,
+            pcmDigest: digestAutoMovieBytes(bytes),
+            phonemes: phonemes.join(""),
+            phonemeChunks,
+            runtimeAssets,
+          };
+          const published = publishDialogueCache({
+            base: cacheRoot,
+            pcm: bytes,
+            receipt: Buffer.from(
+              `${JSON.stringify(record, null, 2)}\n`,
+              "utf8",
+            ),
+            target: identity.path,
+          });
+          cached = validatedDialogueCache(
+            published,
+            identity.key,
+            runtimeAssets,
+            selection,
+          );
+          if (cached === undefined)
+            throw new Error(
+              `Published Kokoro cache generation for line "${line.id}" is invalid.`,
+            );
+        }
+        pcm.set(line.id, cached.samples);
+        receipts.push(dialogueReceipt(line, cached));
+        props.progress("sound.dialogue.complete", { line: line.id });
       }
-      pcm.set(line.id, cached.samples);
-      receipts.push(dialogueReceipt(line, cached));
-      props.progress("sound.dialogue.complete", { line: line.id });
+      return { pcm, receipts };
+    } catch (error) {
+      failure = { error };
+      throw error;
+    } finally {
+      const loaded =
+        runtime === undefined
+          ? undefined
+          : await runtime.catch(() => undefined);
+      if (loaded !== undefined)
+        try {
+          await loaded.runtime.close();
+        } catch (closeError) {
+          if (failure === undefined) throw closeError;
+          throw new ProductionRuntimeClosureError(
+            [failure.error, closeError],
+            "Kokoro generation worker cleanup failed after dialogue synthesis failed.",
+          );
+        }
     }
-    return { pcm, receipts };
   };
 
   const readProductionCompiledShots = (
