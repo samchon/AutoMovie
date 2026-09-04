@@ -140,7 +140,7 @@ export const test_evidence_contract_ownership_query = (): void => {
     ],
     [
       {
-        files: ["src/**/*.ts", "!src/private.ts"],
+        files: ["src/**/*.ts", "!src/private.ts", "!src/other.ts"],
         symbols: ["property"],
         references: [
           {
