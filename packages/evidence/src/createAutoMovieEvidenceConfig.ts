@@ -6,11 +6,34 @@ import {
 } from "@ttsc/evidence";
 import fs from "node:fs";
 import path from "node:path";
+import { isDeepStrictEqual } from "node:util";
 import ts from "typescript-compiler";
 
 import type { AutoMoviePopulationScope } from "./AutoMoviePopulationScope";
+import { validateAutoMoviePopulationTransition } from "./AutoMoviePopulationTransition";
+import {
+  type AutoMovieProductionLanguage,
+  isAutoMovieProductionLanguage,
+} from "./AutoMovieProductionLanguage";
+import { assertAutoMovieEvidenceSyntax } from "./assertAutoMovieEvidenceSyntax";
 import { assertAutoMovieEvidenceReviewReasons } from "./auditAutoMovieEvidenceReviewReasons";
+import { createAutoMoviePopulationAccountClaims } from "./createAutoMoviePopulationAccountClaims";
 import { createAutoMoviePopulationFiles } from "./createAutoMoviePopulationFiles";
+import type {
+  AutoMovieProductionContractClaim,
+  AutoMovieProductionContractLayer,
+} from "./createAutoMovieProductionContractClaim";
+import {
+  type IAutoMovieEvidenceTopologyBranch,
+  type IAutoMovieEvidenceTopologyDeclaration,
+  type IAutoMovieEvidenceTopologyDiagnostic,
+  type IAutoMovieEvidenceTopologyEdge,
+  inspectAutoMovieEvidenceTopology,
+} from "./inspectAutoMovieEvidenceTopology";
+import {
+  parseAutoMovieEvidenceSyntax,
+  projectAutoMovieMarkdownSyntax,
+} from "./parseAutoMovieEvidenceSyntax";
 import { walkAutoMovieProjectPopulationFiles } from "./walkAutoMovieProjectPopulationFiles";
 
 /**
@@ -56,6 +79,8 @@ export interface IAutoMovieEvidenceConfigProps {
   location: string;
   /** Mutually exclusive production shape, or null before selection. */
   kind: ProductionKind | null;
+  /** Exact bundled language contract selected for authored documents. */
+  language: AutoMovieProductionLanguage;
   /** Exact complete, first-pilot, or post-pilot-reset host population. */
   populationScope: AutoMoviePopulationScope;
   /** Canonical production-settings document stage. */
@@ -142,7 +167,8 @@ type ContractRelationship =
   | "checklist"
   | "distributed-coverage"
   | "foundation"
-  | "lineage";
+  | "lineage"
+  | "population-account";
 
 /**
  * The common-contract routes selected by one production declaration.
@@ -156,6 +182,8 @@ type ContractRelationship =
 interface IAutoMovieContractBindingManifest {
   /** Selected production shape, or null before any branch can be active. */
   kind: ProductionKind | null;
+  /** Exact project-local language contract selected for every authored branch. */
+  language: AutoMovieProductionLanguage;
   /** Exact authored population selected by the project declaration. */
   populationScope: AutoMoviePopulationScope;
   /** Active authored and source branches in deterministic factory order. */
@@ -193,6 +221,35 @@ interface IAutoMovieContractBindingManifest {
           files: readonly string[];
           symbols: readonly string[];
         };
+  }[];
+  /** Positive production-local contract bindings retained with their layer. */
+  localBindings: readonly IAutoMovieLocalContractProjection[];
+  /** Explicit inapplicable local-contract declarations retained for audit only. */
+  localAudits: readonly IAutoMovieLocalContractProjection[];
+  /** Canonical provider-consumer matrix and its deterministic audit. */
+  topology: {
+    branches: readonly IAutoMovieEvidenceTopologyBranch[];
+    expected: readonly IAutoMovieEvidenceTopologyEdge[];
+    declarations: readonly IAutoMovieEvidenceTopologyDeclaration[];
+    diagnostics: readonly IAutoMovieEvidenceTopologyDiagnostic[];
+  };
+}
+
+interface IAutoMovieLocalContractProjection {
+  claim: string;
+  layer: AutoMovieProductionContractLayer;
+  stage: Stage;
+  enforced: boolean;
+  populationScope: AutoMoviePopulationScope;
+  host: {
+    root: string;
+    files: readonly string[];
+    symbols: readonly string[];
+  };
+  targets: readonly {
+    root: string;
+    files: readonly string[];
+    symbols: readonly string[];
   }[];
 }
 
@@ -1082,7 +1139,11 @@ const validatePopulationScope = (graph: IProductionGraph): void => {
       `Unsupported production population scope ${describeDeclarationValue(mode)}.`,
     );
   const allowed = new Set(
-    mode === "first-pilot" ? ["mode", "partitionGroup"] : ["mode"],
+    mode === "first-pilot"
+      ? ["mode", "partitionGroup"]
+      : mode === "complete-production-reset"
+        ? ["mode", "owner", "transition"]
+        : ["mode"],
   );
   const unexpected = Object.keys(declaration).filter(
     (key) => !allowed.has(key),
@@ -1096,6 +1157,21 @@ const validatePopulationScope = (graph: IProductionGraph): void => {
     if (graph.kind !== "film" && graph.kind !== "library")
       throw new Error(
         "complete-production-reset is available only after a film or library pilot.",
+      );
+    if (
+      typeof declaration.owner !== "string" ||
+      declaration.owner.trim() === ""
+    )
+      throw new Error(
+        "A complete-production-reset requires a non-empty owner.",
+      );
+    if (
+      declaration.transition === null ||
+      typeof declaration.transition !== "object" ||
+      Array.isArray(declaration.transition)
+    )
+      throw new Error(
+        "A complete-production-reset requires a transition receipt object.",
       );
     return;
   }
@@ -1114,6 +1190,35 @@ const validatePopulationScope = (graph: IProductionGraph): void => {
     return;
   }
   throw new Error("first-pilot is available only for a film or library.");
+};
+
+/** Refuse a production-local claim detached from this graph declaration. */
+const validateLocalClaims = (graph: IProductionGraph): void => {
+  for (const raw of graph.claims ?? []) {
+    const claim = raw as Partial<AutoMovieProductionContractClaim>;
+    if (claim.autoMovieBinding === undefined) continue;
+    const binding = claim.autoMovieBinding;
+    if (
+      raw.type !== "markdown" ||
+      binding === null ||
+      typeof binding !== "object" ||
+      !Object.hasOwn(MARKDOWN, binding.layer) ||
+      binding.stage !== graph[binding.layer] ||
+      !isDeepStrictEqual(binding.populationScope, graph.populationScope) ||
+      (binding.disposition !== "binding" &&
+        binding.disposition !== "inapplicable") ||
+      (raw.disabled === true) !==
+        (binding.stage === "disabled" ||
+          binding.stage === "draft" ||
+          binding.disposition === "inapplicable") ||
+      (binding.disposition === "inapplicable" &&
+        (binding.populationScope?.mode !== "first-pilot" ||
+          raw.disabled !== true))
+    )
+      throw new Error(
+        `Production-local claim ${JSON.stringify(raw.name)} does not match its declared layer, stage, population scope, or disposition.`,
+      );
+  }
 };
 
 const validateDeclaration = (graph: IProductionGraph): void => {
@@ -1137,6 +1242,10 @@ const validateDeclaration = (graph: IProductionGraph): void => {
     throw new Error(
       `Unsupported production kind ${describeDeclarationValue(kind)}.`,
     );
+  if (!isAutoMovieProductionLanguage(graph.language))
+    throw new Error(
+      `Unsupported production language ${describeDeclarationValue(graph.language)}.`,
+    );
   validatePopulationScope(graph);
   for (const name of [
     ...(Object.keys(MARKDOWN) as MarkdownLayer[]),
@@ -1152,6 +1261,7 @@ const validateDeclaration = (graph: IProductionGraph): void => {
     throw new Error(
       "Production evidence claims must be an array when present.",
     );
+  validateLocalClaims(graph);
 };
 
 const walkFiles = (root: string, extension: ".md" | ".ts"): string[] => {
@@ -1194,12 +1304,12 @@ const validateReviewReasons = (graph: IProductionGraph): void => {
     ...walkProjectFiles(graph, path.join(graph.location, DOCS), ".md"),
     ...walkProjectFiles(graph, path.join(graph.location, "src"), ".ts"),
   ];
-  assertAutoMovieEvidenceReviewReasons(
-    files.map((file) => ({
-      path: posix(path.relative(graph.location, file)),
-      source: fs.readFileSync(file, "utf8"),
-    })),
-  );
+  const documents = files.map((file) => ({
+    path: posix(path.relative(graph.location, file)),
+    source: fs.readFileSync(file, "utf8"),
+  }));
+  assertAutoMovieEvidenceSyntax(documents);
+  assertAutoMovieEvidenceReviewReasons(documents);
 };
 
 interface IHeadingIdentity {
@@ -1225,57 +1335,11 @@ interface ITargetIdentityRegistry {
 const normalizeTargetTitle = (title: string): string =>
   title.trim().toLowerCase().replace(/\s+/gu, " ");
 
-const visibleMarkdownLines = (source: string): string[] => {
-  const output: string[] = [];
-  let fence: { character: "`" | "~"; length: number } | undefined;
-  let htmlComment = false;
-  for (const sourceLine of source.split(/\r?\n/u)) {
-    if (fence !== undefined) {
-      if (
-        new RegExp(
-          `^ {0,3}${fence.character}{${fence.length},}[ \\t]*$`,
-          "u",
-        ).test(sourceLine)
-      )
-        fence = undefined;
-      output.push("");
-      continue;
-    }
-    let line = "";
-    for (let cursor = 0; cursor < sourceLine.length; ) {
-      if (htmlComment) {
-        const close = sourceLine.indexOf("-->", cursor);
-        if (close === -1) {
-          line += " ".repeat(sourceLine.length - cursor);
-          break;
-        }
-        line += " ".repeat(close + 3 - cursor);
-        cursor = close + 3;
-        htmlComment = false;
-      } else {
-        const open = sourceLine.indexOf("<!--", cursor);
-        if (open === -1) {
-          line += sourceLine.slice(cursor);
-          break;
-        }
-        line += sourceLine.slice(cursor, open) + "    ";
-        cursor = open + 4;
-        htmlComment = true;
-      }
-    }
-    const marker = /^ {0,3}(`{3,}|~{3,})/u.exec(line)?.[1];
-    if (marker !== undefined) {
-      fence = {
-        character: marker[0] as "`" | "~",
-        length: marker.length,
-      };
-      output.push("");
-      continue;
-    }
-    output.push(line);
-  }
-  return output;
-};
+const visibleMarkdownLines = (source: string): readonly string[] =>
+  projectAutoMovieMarkdownSyntax({
+    path: "document.md",
+    source,
+  }).visibleLines;
 
 const markdownHeadings = (file: string): IMarkdownHeading[] => {
   const output: IMarkdownHeading[] = [];
@@ -1361,7 +1425,6 @@ const markdownIdentities = (
   return output;
 };
 
-const EVIDENCE_TAG = /@evidence[A-Za-z]*\b/u;
 const POSITIVE_EVIDENCE_TAG = /@evidence(?!Exclude)[A-Za-z]*\b/u;
 const EXCLUSION_TAG = /@evidenceExclude[A-Za-z]*\b/u;
 const DISCOVERY_EVIDENCE_TAG = /@evidence\s+discovery\/[\w./#-]+/u;
@@ -1714,8 +1777,7 @@ const validateContracts = (location: string): ITargetIdentityRegistry => {
   for (const [index, relative] of actual.entries()) {
     const file = path.join(root, relative);
     const source = fs.readFileSync(file, "utf8");
-    const prose = source.replace(/`[^`\r\n]*`/gu, "");
-    if (EVIDENCE_TAG.test(prose))
+    if (parseAutoMovieEvidenceSyntax({ path: relative, source }).length !== 0)
       throw new Error(
         `${relative} is a shared target and must not carry host-side @evidence tags.`,
       );
@@ -1790,6 +1852,13 @@ const validateWorkSpecificContracts = (graph: IProductionGraph): void => {
     const relative = `${CONTRACTS}/${entry.name}`;
     const file = path.join(root, entry.name);
     const source = fs.readFileSync(file, "utf8");
+    const annotations = parseAutoMovieEvidenceSyntax({
+      path: relative,
+      source,
+    });
+    const evidence = annotations
+      .map((annotation) => annotation.text)
+      .join("\n");
     const headings = markdownHeadings(file);
     const h1 = headings.filter((heading) => heading.depth === 1);
     const h1Offset = source.search(/^#(?!#)[ \t]+\S/mu);
@@ -1802,17 +1871,17 @@ const validateWorkSpecificContracts = (graph: IProductionGraph): void => {
       throw new Error(
         `${relative} must begin with one H1 after a comment-only evidence preamble.`,
       );
-    if (EVIDENCE_TAG.test(source.slice(h1Offset)))
+    if (annotations.some((annotation) => annotation.line >= h1[0]!.line))
       throw new Error(
         `${relative} may carry discovery host tags only in its comment preamble before H1.`,
       );
-    for (const match of source.matchAll(EVIDENCE_TARGET))
+    for (const match of evidence.matchAll(EVIDENCE_TARGET))
       if (match[1]?.startsWith("discovery/") !== true)
         throw new Error(
           `${relative} may host only discovery evidence before its H1; received ${match[1]}.`,
         );
     if (relative === CONTRACT_INDEX) {
-      if (POSITIVE_EVIDENCE_TAG.test(source))
+      if (POSITIVE_EVIDENCE_TAG.test(evidence))
         throw new Error(
           `${CONTRACT_INDEX} carries truthful discovery negatives and nothing positive.`,
         );
@@ -1820,16 +1889,16 @@ const validateWorkSpecificContracts = (graph: IProductionGraph): void => {
         throw new Error(
           `${CONTRACT_INDEX} carries the truthful negative ledger and no contract target H2.`,
         );
-      if (!DISCOVERY_EXCLUSION_TAG.test(source))
+      if (!DISCOVERY_EXCLUSION_TAG.test(evidence))
         throw new Error(
           `${CONTRACT_INDEX} must record at least one truthful discovery negative.`,
         );
     } else {
-      if (EXCLUSION_TAG.test(source))
+      if (EXCLUSION_TAG.test(evidence))
         throw new Error(
           `${relative} cannot scatter a discovery exclusion outside ${CONTRACT_INDEX}.`,
         );
-      if (!DISCOVERY_EVIDENCE_TAG.test(source))
+      if (!DISCOVERY_EVIDENCE_TAG.test(evidence))
         throw new Error(
           `${relative} must adopt at least one retained discovery rule.`,
         );
@@ -2399,6 +2468,52 @@ const acceptsResetEvidenceTags = (
   );
 };
 
+/** Exact host population whose passed-pilot tags may survive one reset. */
+const resetTransitionHosts = (
+  graph: IProductionGraph,
+): readonly { path: string; source: string }[] => {
+  if (graph.populationScope.mode !== "complete-production-reset") return [];
+  let files: readonly string[] = [];
+  if (graph.kind === "film")
+    files = ["treatments", "scripts", "screenplays"].flatMap((layer) =>
+      walkProjectFiles(graph, path.join(graph.location, DOCS, layer), ".md"),
+    );
+  else if (graph.populationScope.transition.kind === "library") {
+    const pairs: readonly unknown[] = Array.isArray(
+      graph.populationScope.transition.reviewedPairs,
+    )
+      ? graph.populationScope.transition.reviewedPairs
+      : [];
+    files = pairs.flatMap((value) => {
+      if (value === null || typeof value !== "object") return [];
+      const pair = value as { design?: string; source?: string };
+      if (
+        typeof pair.design !== "string" ||
+        typeof pair.source !== "string" ||
+        !Object.hasOwn(SOURCES, pair.source) ||
+        SOURCES[pair.source as SourceLayer].design !== pair.design
+      )
+        return [];
+      return [
+        ...walkProjectFiles(
+          graph,
+          path.join(graph.location, DOCS, pair.design),
+          ".md",
+        ),
+        ...populationFiles(
+          graph,
+          SOURCES[pair.source as SourceLayer].files,
+          ".ts",
+        ),
+      ];
+    });
+  }
+  return [...new Set(files)].sort(compareCodeUnits).map((file) => ({
+    path: posix(path.relative(graph.location, file)),
+    source: fs.readFileSync(file, "utf8"),
+  }));
+};
+
 const validateHosts = (graph: IProductionGraph): void => {
   validateNarrativePopulationTopology(graph);
   const identities = new Map<MarkdownLayer, Map<string, IHeadingIdentity[]>>();
@@ -2426,7 +2541,10 @@ const validateHosts = (graph: IProductionGraph): void => {
       const source = fs.readFileSync(file, "utf8");
       if (
         stage === "draft" &&
-        EVIDENCE_TAG.test(source) &&
+        parseAutoMovieEvidenceSyntax({
+          path: posix(path.relative(graph.location, file)),
+          source,
+        }).length !== 0 &&
         !acceptsResetEvidenceTags(graph, name)
       )
         throw new Error(
@@ -2468,7 +2586,7 @@ const validateHosts = (graph: IProductionGraph): void => {
       assertSourceExportsAreEvidenceAddressable(relative, file, source);
       if (
         stage === "draft" &&
-        EVIDENCE_TAG.test(source) &&
+        parseAutoMovieEvidenceSyntax({ path: relative, source }).length !== 0 &&
         !acceptsResetEvidenceTags(graph, name)
       )
         throw new Error(
@@ -2587,26 +2705,6 @@ const upstreamReference = (
 ): ITtscEvidenceGraphReference =>
   sharedReference(shared, "upstream", file, review, true, true);
 
-/**
- * What each operative subject owner must settle, for a film only.
- *
- * `obligations/core/settings.md#operative-subject-inventory` accounts for the
- * population; these roles are the depth that inventory deliberately does not
- * require. A brief answers one bounded observation and a library exports design
- * branches, so neither owes a cast this deep, and a film that genuinely owes
- * none of it is a brief that chose the wrong shape.
- *
- * These are obligations, so exclusion stays closed. An observational or
- * non-human film still gives each applicable role a concrete settings owner;
- * absence of a relationship is content that owner states, not evidence that
- * the role may disappear from the population.
- */
-const subjectObligation = (
-  shared: string,
-  review: boolean,
-): ITtscEvidenceGraphReference =>
-  obligationReference(shared, "subjects.md", review);
-
 const discoveryReferences = (
   shared: string,
   layer: MarkdownLayer,
@@ -2708,6 +2806,32 @@ const branchClaims = (
   ...claims: ITtscEvidenceGraphClaim[]
 ): IBranchClaim[] => claims.map((claim) => ({ branch, claim }));
 
+/** Shared obligations compared once by a branch-level account population. */
+const populationObligations = (
+  graph: IProductionGraph,
+  layer: MarkdownLayer,
+): string[] => {
+  if (!MARKDOWN[layer].obligation) return [];
+  const domain: ContractDomain =
+    layer === "settings"
+      ? "core"
+      : layer === "briefs"
+        ? "delivery"
+        : ["treatments", "scripts", "screenplays"].includes(layer)
+          ? "story"
+          : "design";
+  return [
+    "obligations/core/common.md",
+    ...(["treatments", "scripts", "screenplays"].includes(layer)
+      ? ["obligations/story/narratives.md"]
+      : []),
+    `obligations/${domain}/${MARKDOWN[layer].principle}`,
+    ...(layer === "settings" && graph.kind === "film"
+      ? ["obligations/story/subjects.md"]
+      : []),
+  ];
+};
+
 const authoredClaims = (graph: IProductionGraph): IBranchClaim[] => {
   const shared = sharedDocsRoot(graph.location);
   const claims: IBranchClaim[] = [];
@@ -2715,6 +2839,19 @@ const authoredClaims = (graph: IProductionGraph): IBranchClaim[] => {
     const stage = graph[name];
     const review = requiresReview(stage);
     claims.push(...branchClaims(name, discoveryClaim(graph, name)));
+    if (MARKDOWN[name].obligation)
+      claims.push(
+        ...branchClaims(
+          name,
+          ...createAutoMoviePopulationAccountClaims({
+            layer: name,
+            populationFiles: authoredPopulationFiles(graph, name),
+            obligationFiles: populationObligations(graph, name),
+            enabled: requiresEvidence(stage),
+            requireReview: review,
+          }),
+        ),
+      );
     const principles = [principleReference(shared, "common.md", review)];
     if (["treatments", "scripts", "screenplays"].includes(name))
       principles.push(principleReference(shared, "narratives.md", review));
@@ -2760,17 +2897,6 @@ const authoredClaims = (graph: IProductionGraph): IBranchClaim[] => {
       const references: ITtscEvidenceGraphReference[] = [...principles];
       if (!["settings", "research"].includes(name))
         references.push(upstreamReference(shared, `${name}.md`, review));
-      if (symbol === 2) {
-        references.push(obligationReference(shared, "common.md", review));
-        if (["treatments", "scripts", "screenplays"].includes(name))
-          references.push(obligationReference(shared, "narratives.md", review));
-        if (MARKDOWN[name].obligation)
-          references.push(
-            obligationReference(shared, MARKDOWN[name].principle, review),
-          );
-        if (name === "settings" && graph.kind === "film")
-          references.push(subjectObligation(shared, review));
-      }
       if (!["settings", "research"].includes(name))
         references.push(...referencesPerFile(graph, "settings", "h2", review));
       references.push(...designFoundations(graph, name, review));
@@ -2784,7 +2910,7 @@ const authoredClaims = (graph: IProductionGraph): IBranchClaim[] => {
         ...branchClaims(name, {
           name:
             symbol === 2
-              ? `${name} H2 units answer their principle checklists, cover the layer's obligations, and account for inherited work`
+              ? `${name} H2 units answer their principle checklists and account for inherited work`
               : `${name} H${symbol} units answer their principle checklists and account for inherited work`,
           type: "markdown",
           root: DOCS,
@@ -3061,6 +3187,11 @@ const relationshipOf = (
       ? "checklist"
       : "distributed-coverage";
   if (
+    binding.claim.type === "markdown" &&
+    binding.claim.files.every((file) => file.startsWith("accounts/"))
+  )
+    return "population-account";
+  if (
     reference.type === "markdown" &&
     (reference.uniqueEvidence === true ||
       reference.singleEvidencePerSymbol === true)
@@ -3082,6 +3213,22 @@ const validateProductionGraph = (
   validateReviewReasons(graph);
   const targetIdentities = validateContracts(graph.location);
   validateStages(graph);
+  if (graph.populationScope.mode === "complete-production-reset") {
+    const stages = Object.fromEntries(
+      [
+        ...(Object.keys(MARKDOWN) as MarkdownLayer[]),
+        ...(Object.keys(SOURCES) as SourceLayer[]),
+      ].map((branch) => [branch, graph[branch]]),
+    );
+    validateAutoMoviePopulationTransition({
+      kind: graph.kind as "film" | "library",
+      productionLocation: graph.location,
+      owner: graph.populationScope.owner,
+      receipt: graph.populationScope.transition,
+      stages,
+      hosts: resetTransitionHosts(graph),
+    });
+  }
   validateHosts(graph);
   validateWorkSpecificContracts(graph);
   validateProductionTargets(graph, targetIdentities);
@@ -3092,6 +3239,82 @@ const sharedClaimBindings = (graph: IProductionGraph): IBranchClaim[] => [
   ...authoredClaims(graph),
   ...sourceClaims(graph),
 ];
+
+const TOPOLOGY_ORDER: Readonly<Record<MarkdownLayer, number>> = {
+  settings: 0,
+  research: 1,
+  maps: 1,
+  spaces: 2,
+  models: 3,
+  materials: 4,
+  instances: 5,
+  motions: 6,
+  systems: 6,
+  treatments: 1,
+  scripts: 2,
+  screenplays: 3,
+  briefs: 7,
+};
+
+/** Project the complete selected foundation matrix and audit it in one pass. */
+const topologyOf = (
+  graph: IProductionGraph,
+): IAutoMovieContractBindingManifest["topology"] => {
+  const branches = (Object.keys(MARKDOWN) as MarkdownLayer[]).map((name) => ({
+    name,
+    active: isActive(graph[name]),
+    order: TOPOLOGY_ORDER[name],
+  }));
+  const expected: IAutoMovieEvidenceTopologyEdge[] = [
+    ...(Object.keys(MARKDOWN) as MarkdownLayer[])
+      .filter((consumer) => !["settings", "research"].includes(consumer))
+      .map((consumer) => ({ provider: "settings", consumer })),
+    ...(
+      Object.entries(DESIGN_FOUNDATIONS) as [
+        MarkdownLayer,
+        readonly DesignLayer[],
+      ][]
+    ).flatMap(([consumer, providers]) =>
+      providers.map((provider) => ({
+        provider,
+        consumer,
+        simultaneous:
+          (provider === "motions" && consumer === "systems") ||
+          (provider === "systems" && consumer === "motions"),
+      })),
+    ),
+  ];
+  const active = new Map(
+    branches.map((branch) => [branch.name, branch.active]),
+  );
+  const declarations: IAutoMovieEvidenceTopologyDeclaration[] = expected.map(
+    (edge) => {
+      const status =
+        active.get(edge.provider) === true && active.get(edge.consumer) === true
+          ? "uses"
+          : "inapplicable";
+      return {
+        provider: edge.provider,
+        consumer: edge.consumer,
+        status,
+        reason:
+          status === "uses"
+            ? `${edge.consumer} consumes the selected ${edge.provider} foundation population.`
+            : `${edge.consumer} or its ${edge.provider} foundation is outside the selected production population.`,
+      };
+    },
+  );
+  return {
+    branches,
+    expected,
+    declarations,
+    diagnostics: inspectAutoMovieEvidenceTopology({
+      branches,
+      expected,
+      declarations,
+    }),
+  };
+};
 
 /** The authored Markdown branch selected by a project-local population. */
 const referencedMarkdownBranch = (
@@ -3193,11 +3416,48 @@ export const createAutoMovieContractBindingManifest = (
       });
     }
   }
+  const localBindings: IAutoMovieLocalContractProjection[] = [];
+  const localAudits: IAutoMovieLocalContractProjection[] = [];
+  for (const raw of graph.claims ?? []) {
+    const claim = raw as Partial<AutoMovieProductionContractClaim>;
+    if (claim.autoMovieBinding === undefined) continue;
+    const references = (
+      Array.isArray(claim.reference) ? claim.reference : [claim.reference]
+    ).filter(
+      (reference): reference is ITtscEvidenceGraphMarkdownReference =>
+        reference?.type === "markdown",
+    );
+    const projection: IAutoMovieLocalContractProjection = {
+      claim: claim.name ?? "",
+      layer: claim.autoMovieBinding.layer,
+      stage: claim.autoMovieBinding.stage,
+      enforced: raw.disabled !== true,
+      populationScope: claim.autoMovieBinding.populationScope,
+      host: {
+        root: evidenceRoot(raw),
+        files: [...raw.files],
+        symbols: symbolsOf(raw.symbol as string | readonly string[]),
+      },
+      targets: references.map((reference) => ({
+        root: evidenceRoot(reference),
+        files: [...reference.files],
+        symbols: symbolsOf(reference.symbol as string | readonly string[]),
+      })),
+    };
+    (claim.autoMovieBinding.disposition === "binding"
+      ? localBindings
+      : localAudits
+    ).push(projection);
+  }
   return {
     kind: graph.kind,
+    language: graph.language,
     populationScope: graph.populationScope,
     branches,
     bindings,
+    localBindings,
+    localAudits,
+    topology: topologyOf(graph),
   };
 };
 

@@ -60,6 +60,8 @@ try {
       "",
       "## Shell {#shell}",
       "",
+      "<!-- @evidenceReview contracts/visual.md#profile #reader-test does the selected model preserve its reviewed profile? -->",
+      "",
       "The exact shell.",
       "",
       "The shell detail.",
@@ -82,6 +84,16 @@ try {
       "This target governs the exact model profile selected by this production.",
       "",
       "## Profile {#profile}",
+      "",
+      "```contract-rule",
+      JSON.stringify({
+        id: "reviewed-model-profile",
+        status: "active",
+        safeApplication: "composition-safe",
+        timing: "before model composition",
+        sourceIdentity: "production-decision-v1",
+      }),
+      "```",
       "",
       "Every model keeps its reviewed profile.",
       "",
@@ -127,6 +139,28 @@ try {
   assert.equal(first.description, "An exact model library.");
   assert.equal(first.configuration, configuration);
   assert.equal(first.manifest.kind, "library");
+  assert.deepEqual(first.manifest.topology.diagnostics, []);
+  assert.equal(
+    first.manifest.topology.declarations.find(
+      (edge) => edge.provider === "settings" && edge.consumer === "models",
+    )?.status,
+    "uses",
+  );
+  assert.equal(first.reviewAlarms.questionPasteChecked, true);
+  assert.deepEqual(
+    first.reviewAlarms.alarms.map((alarm) => [
+      alarm.code,
+      alarm.path,
+      alarm.host,
+    ]),
+    [
+      [
+        "evidence-review-question-paste",
+        "docs/models/alpha.md",
+        "docs/models/alpha.md#shell",
+      ],
+    ],
+  );
   assert.deepEqual(
     first.designBranches.map((branch) => ({
       branch: branch.branch,
@@ -198,6 +232,21 @@ try {
       },
     ],
   );
+  assert.deepEqual(first.contractRules, [
+    {
+      address: "visual.md#profile",
+      anchor: "profile",
+      heading: "Profile",
+      file: "visual.md",
+      metadata: {
+        id: "reviewed-model-profile",
+        status: "active",
+        safeApplication: "composition-safe",
+        timing: "before model composition",
+        sourceIdentity: "production-decision-v1",
+      },
+    },
+  ]);
   assert.deepEqual(
     readAutoMovieProductionEvidence({
       root: project,
@@ -296,6 +345,7 @@ function disabled(location: string): IAutoMovieEvidenceConfigProps {
   return {
     location,
     kind: null,
+    language: "english",
     populationScope: { mode: "complete-production" },
     settings: "disabled",
     research: "disabled",

@@ -107,3 +107,27 @@ Review question: can shot and edit source recover every render-critical time wit
 This item owns numeric audience timing. Narrative unit identity owns the stable H2/H3/H4 addresses, motion documents own reusable transition time, and film source owns global mapping.
 
 Sources: [Web Animations timing model](https://www.w3.org/TR/web-animations-1/#timing-model); [SMPTE standards overview for time and synchronization](https://www.smpte.org/standards)
+
+## Master-scene and shooting boundary {#master-scene-shooting-boundary}
+
+The authored screenplay remains a master-scene audience contract: headings identify narrative place and time, and blocks identify final visible, written, and audible content. Camera position, lens, lighting solution, take numbering, source calls, and edit mapping remain downstream unless the audience-visible fact itself depends on them.
+
+Review question: which screenplay statement selects a shooting implementation that an equivalent realization should remain free to choose?
+
+## Scene semantic completion {#screenplay-scene-completion}
+
+A scene is complete only when its entry, progression, consequential exchange, exit, audiovisual content, and inherited narrative effects jointly determine what an independent shot author must realize. Valid headings and blocks do not make a scene complete when one of those semantic decisions is absent.
+
+Review question: which formally valid scene still requires a downstream author to invent its action, exchange, audience effect, or exit?
+
+## Locked revision identity {#screenplay-locked-revision}
+
+Every reviewed screenplay population identifies the exact revision whose units, headings, content, timing, and ancestry were accepted. A later rewrite is a new revision that invalidates dependent review, shot, and edit evidence; formatting or renumbering does not silently mutate a locked revision.
+
+Review question: which downstream result claims a reviewed screenplay while reading content from another revision?
+
+## Heading identity axes {#screenplay-heading-identity}
+
+Each scene heading carries the stable scene identity and the authored location, interior or exterior condition where relevant, story-time condition, and continuity boundary needed to distinguish it. A conventional label is not accepted when its axes conflict with the scene body or source ancestry.
+
+Review question: which heading axis is missing or inconsistent enough that two readers could bind the scene to different story states?

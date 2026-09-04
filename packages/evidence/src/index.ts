@@ -1,10 +1,21 @@
 /** AutoMovie production evidence graph construction and validation. */
 export * from "./AutoMoviePopulationLayer";
 export * from "./AutoMoviePopulationScope";
+export * from "./AutoMovieProductionLanguage";
+export * from "./AutoMoviePopulationTransition";
+export * from "./assertAutoMovieEvidenceSyntax";
 export * from "./createAutoMoviePopulationFiles";
 export * from "./createAutoMovieEvidenceConfig";
+export * from "./createBlankAutoMovieProductionEvidence";
+export * from "./createAutoMoviePopulationAccountClaims";
 export * from "./createAutoMovieProductionContractClaim";
 export * from "./parseAutoMovieEvidenceMarkdown";
+export * from "./measureAutoMovieAuthoredText";
+export * from "./inspectAutoMovieEvidenceReviewAlarms";
+export * from "./inspectAutoMovieEvidenceTopology";
+export * from "./parseAutoMovieEvidenceSyntax";
+export * from "./readAutoMovieContractRules";
 export * from "./readAutoMovieProductionEvidence";
+export * from "./verifyAutoMovieEvidenceMetadataRewrite";
 export * from "./walkAutoMovieProjectPopulationFiles";
 export { evidence } from "@ttsc/evidence";

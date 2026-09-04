@@ -11,6 +11,14 @@ import {
   isAutoMovieEvidencePhysicalFile,
   walkAutoMovieProjectPopulationFiles,
 } from "./walkAutoMovieProjectPopulationFiles";
+import {
+  type IAutoMovieEvidenceReviewAlarmReport,
+  inspectAutoMovieEvidenceReviewAlarms,
+} from "./inspectAutoMovieEvidenceReviewAlarms";
+import {
+  type IAutoMovieContractRule,
+  readAutoMovieContractRules,
+} from "./readAutoMovieContractRules";
 
 /**
  * One exact H2 unit carried by a production-owned contract or design owner.
@@ -140,6 +148,10 @@ export interface IAutoMovieProductionEvidence {
   designOwners: readonly IAutoMovieProductionEvidenceDesignOwner[];
   /** Exact flat project-local contract inventory. */
   contracts: readonly IAutoMovieProductionEvidenceContract[];
+  /** Complete structured local rule inventory, including held and rejected rules. */
+  contractRules: readonly IAutoMovieContractRule[];
+  /** Non-gating semantic alarms that require a fresh evidence Self-Review. */
+  reviewAlarms: IAutoMovieEvidenceReviewAlarmReport;
 }
 
 interface IMarkdownDocument {
@@ -233,6 +245,16 @@ export const readAutoMovieProductionEvidence = (props: {
       title: document.title,
       items: document.units,
     }));
+  const evidenceDocuments = (extension: ".md" | ".ts", directory: string) =>
+    walkAutoMovieProjectPopulationFiles(
+      root,
+      path.join(root, directory),
+      extension,
+    ).map((file) => ({
+      path: posix(path.relative(root, file)),
+      source: fs.readFileSync(file, "utf8"),
+    }));
+  const targetDocuments = evidenceDocuments(".md", "docs");
 
   return {
     root,
@@ -242,6 +264,13 @@ export const readAutoMovieProductionEvidence = (props: {
     designBranches: branches,
     designOwners,
     contracts,
+    contractRules: readAutoMovieContractRules(
+      path.join(root, "docs", "contracts"),
+    ),
+    reviewAlarms: inspectAutoMovieEvidenceReviewAlarms({
+      documents: [...targetDocuments, ...evidenceDocuments(".ts", "src")],
+      targets: targetDocuments,
+    }),
   };
 };
 

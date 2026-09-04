@@ -1,5 +1,10 @@
 import type { IAutoMovieProductionEvidence } from "@automovie/evidence";
 
+type AutoMovieProductionRouterEvidence = Pick<
+  IAutoMovieProductionEvidence,
+  "contracts" | "description" | "designOwners" | "manifest" | "packageName"
+>;
+
 /**
  * Render one generated project's root instruction router from tracked facts.
  *
@@ -16,7 +21,7 @@ import type { IAutoMovieProductionEvidence } from "@automovie/evidence";
  * @evidence specifications/authoring-and-authority/capability-and-content-boundary.md#spec-authoring-capability-input-output Emits reusable routing guidance while leaving every production decision in project-owned source.
  */
 export const renderAutoMovieProductionRouter = (
-  evidence: IAutoMovieProductionEvidence,
+  evidence: AutoMovieProductionRouterEvidence,
 ): string => {
   const description =
     evidence.description === "" ? "" : `\n${evidence.description}\n`;
@@ -73,6 +78,7 @@ It is generated from the installed scaffold by \`npm run sync\` and is not track
 
 ## Procedure
 
+- [Contract index](.agents/skills/contract/SKILL.md) locates the project-local shared, language, and production-owned contract questions selected below.
 - [Production lifecycle](.agents/skills/production-lifecycle/SKILL.md) owns shape selection, research, settings, pilots, treatments, scripts, screenplays, and briefs.
 - [Evidence graph](.agents/skills/evidence-graph/SKILL.md) owns the local contract inventory, claims, stages, citations, exclusions, and fingerprints.
 - [Source authoring](.agents/skills/source-authoring/SKILL.md) owns design branches, TypeScript, geometry, rigs, motion, spatial design, and compilation.
@@ -103,7 +109,7 @@ Start the coding-agent session from this project root. Codex reads this \`AGENTS
 
 ## Commands
 
-- \`npm run sync\` overwrites this router and the four shipped skills from the installed template while preserving every tracked production fact.
+- \`npm run sync\` overwrites this router and the five shipped skills from the installed template while preserving every tracked production fact.
 - \`npm run lint:source\` checks TypeScript; \`npm run lint\` checks the evidence graph and production review gate.
 - \`npm run book -- --layer <layer> --title <title>\` binds any supported authored layer into one deterministic reader-facing Markdown file under the ignored \`artifacts\` directory. It preserves numbered script/screenplay groups, keeps other layers flat, removes evidence comments and citation anchors, and preserves visible prose and headings.
 - \`npm run compile\` is the only command that may update compiler-owned output.
@@ -112,7 +118,7 @@ Start the coding-agent session from this project root. Codex reads this \`AGENTS
 
 /** Render one complete factory-derived host-to-target relationship. */
 const renderManifestBinding = (
-  binding: IAutoMovieProductionEvidence["manifest"]["bindings"][number],
+  binding: AutoMovieProductionRouterEvidence["manifest"]["bindings"][number],
 ): string => {
   const targetBinding = binding.target;
   const target =
@@ -159,7 +165,7 @@ const markdownLink = (title: string, file: string, anchor?: string): string => {
 
 /** Explain only the selected production shape, never the other two shapes. */
 const shapeProcedure = (
-  kind: IAutoMovieProductionEvidence["manifest"]["kind"],
+  kind: AutoMovieProductionRouterEvidence["manifest"]["kind"],
 ): string => {
   switch (kind) {
     case "film":
@@ -175,7 +181,7 @@ const shapeProcedure = (
 
 /** Render the selected shape's procedure without naming an inactive shape. */
 const shapeProcedureLine = (
-  kind: IAutoMovieProductionEvidence["manifest"]["kind"],
+  kind: AutoMovieProductionRouterEvidence["manifest"]["kind"],
 ): string => {
   switch (kind) {
     case "film":

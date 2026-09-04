@@ -20,4 +20,4 @@ The scaffold deliberately contains no production content and no provider-specifi
 
 ## Public API
 
-`renderScaffold` returns a deterministic project-relative file map, `writeFiles` materializes it without overwriting resident files, and `writeAutoMovieProductionInstructions` replaces only the ignored generated instruction surface. The package also exports the router renderer and scaffold snapshot helpers used by those operations.
+`renderScaffold` returns a deterministic project-relative file map. `publishFiles` validates and freezes that complete candidate, then returns a receipt naming every completed file and the first refused or parent-bound partial effect; `writeFiles` preserves the throwing compatibility API. New slots are created through Koffi-backed POSIX `openat` or Windows `NtCreateFile` parent-handle-relative adapters, so neither creation nor verification follows a successor child pathname. `writeAutoMovieProductionInstructions` uses the same candidate-and-receipt boundary and removes stale generated doctrine only after the desired candidate completes. The package also exports the router renderer and scaffold snapshot helpers used by those operations.

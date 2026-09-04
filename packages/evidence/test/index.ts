@@ -1,6 +1,16 @@
+import "./AutoMoviePopulationTransition.test";
+import "./assertAutoMovieEvidenceSyntax.test";
 import "./auditAutoMovieEvidenceReviewReasons.test";
 import "./createAutoMovieEvidenceConfig.test";
+import "./createBlankAutoMovieProductionEvidence.test";
+import "./createAutoMoviePopulationAccountClaims.test";
 import "./createAutoMoviePopulationFiles.test";
 import "./createAutoMovieProductionContractClaim.test";
+import "./inspectAutoMovieEvidenceReviewAlarms.test";
+import "./inspectAutoMovieEvidenceTopology.test";
+import "./measureAutoMovieAuthoredText.test";
+import "./parseAutoMovieEvidenceSyntax.test";
+import "./readAutoMovieContractRules.test";
 import "./readAutoMovieProductionEvidence.test";
 import "./walkAutoMovieProjectPopulationFiles.test";
+import "./verifyAutoMovieEvidenceMetadataRewrite.test";

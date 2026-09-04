@@ -226,7 +226,9 @@ export const runExperimental = (
     // Rendering is what enforces the scaffold's own name rule, so it runs
     // before the pack as well. Nothing reaches disk here; `writeFiles` below
     // still runs after the pack that fills the same directory.
-    const files = refresh ? undefined : renderScaffold({ name });
+    const files = refresh
+      ? undefined
+      : renderScaffold({ name, language: "english" });
 
     const install = args.includes("--no-install") === false;
     const specifiers = install ? dependencies.pack(target) : {};
