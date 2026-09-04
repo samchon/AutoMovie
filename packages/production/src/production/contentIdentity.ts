@@ -2,12 +2,6 @@ import { AutoMovieContentDigest } from "@automovie/interface";
 import { createHash } from "node:crypto";
 
 /**
- * Versioned review-fingerprint protocol.
- */
-export const AUTOMOVIE_REVIEW_FINGERPRINT_PROTOCOL =
-  "automovie.review.fingerprint.v4";
-
-/**
  * Versioned production-compiler input protocol.
  */
 export const AUTOMOVIE_COMPILE_FINGERPRINT_PROTOCOL =
