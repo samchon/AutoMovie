@@ -391,15 +391,9 @@ export class AutoMovieProductionCompiler {
       Buffer.from(
         normalizeAutoMovieSource(this.project.readSource(relative)),
       ).toString("utf8");
-    const sourceFields: IAutoMovieFingerprintField[] = [];
-    if (this.authoringEvidence !== undefined)
-      sourceFields.push({
-        role: "source:owner-bindings",
-        kind: "application/json",
-        payload: canonicalAutoMovieJsonBytes(
-          this.authoringEvidence.sourceOwners ?? [],
-        ),
-      });
+    const sourceFields: IAutoMovieFingerprintField[] = [
+      ...authoringEvidenceFingerprintFields(this.authoringEvidence),
+    ];
     const contentFields: IAutoMovieFingerprintField[] = [];
     let contentInputs: IAutoMovieProductionContentInput[] | undefined;
     let declaredAssets: string[] = [];
@@ -808,9 +802,20 @@ export class AutoMovieProductionCompiler {
           ),
         );
       }
-    const inputCurrent = (): boolean =>
-      `${this.project.revision()}\0${currentAutoMovieProductionCompilerInputFingerprint(this.project, input.scope)}\0${this.project.revision()}` ===
-      `${inputRevision}\0${inputFingerprint}\0${inputRevision}`;
+    const inputCurrent = (): boolean => {
+      try {
+        const currentAuthoring =
+          this.currentAuthoringEvidence === undefined
+            ? this.authoringEvidence
+            : this.currentAuthoringEvidence();
+        return (
+          `${this.project.revision()}\0${currentAutoMovieProductionCompilerInputFingerprintWithEvidence(this.project, input.scope, currentAuthoring)}\0${this.project.revision()}` ===
+          `${inputRevision}\0${inputFingerprint}\0${inputRevision}`
+        );
+      } catch {
+        return false;
+      }
+    };
     const files =
       input.scope === "design"
         ? null
@@ -8674,19 +8679,34 @@ const productionCompilerInputFingerprint = (
 /**
  * Re-derive the current compiler-input identity without compiling or writing.
  *
- * Guarded publications use this inside the commit lock to prove that the
- * design, source, and declared-content bytes still match the snapshot they
- * intend to publish.
+ * Callers without authoring evidence use this project-only projection. The
+ * compiler feeds its initial and freshly read evidence through the companion
+ * below, so guarded publication compares the same owner-binding field on both
+ * sides of the commit lock.
  *
  * @author Samchon
  */
 export const currentAutoMovieProductionCompilerInputFingerprint = (
   project: AutoMovieProductionProject,
   scope: IAutoMovieCompileProjectInput["scope"],
+): AutoMovieContentDigest | null =>
+  currentAutoMovieProductionCompilerInputFingerprintWithEvidence(
+    project,
+    scope,
+    undefined,
+  );
+
+/** Re-derive a compiler identity with the authoring evidence it consumed. */
+const currentAutoMovieProductionCompilerInputFingerprintWithEvidence = (
+  project: AutoMovieProductionProject,
+  scope: IAutoMovieCompileProjectInput["scope"],
+  authoringEvidence: IAutoMovieProductionEvidence | undefined,
 ): AutoMovieContentDigest | null => {
   try {
     const graph = project.graph();
-    const sourceFields: IAutoMovieFingerprintField[] = [];
+    const sourceFields: IAutoMovieFingerprintField[] = [
+      ...authoringEvidenceFingerprintFields(authoringEvidence),
+    ];
     for (const [id, contract] of graph.shots) {
       if (scope === "design") {
         sourceFields.push({
@@ -8764,6 +8784,20 @@ export const currentAutoMovieProductionCompilerInputFingerprint = (
     return null;
   }
 };
+
+/** Bind a compile snapshot to the exact graph-selected source-owner edges. */
+const authoringEvidenceFingerprintFields = (
+  evidence: IAutoMovieProductionEvidence | undefined,
+): IAutoMovieFingerprintField[] =>
+  evidence === undefined
+    ? []
+    : [
+        {
+          role: "source:owner-bindings",
+          kind: "application/json",
+          payload: canonicalAutoMovieJsonBytes(evidence.sourceOwners ?? []),
+        },
+      ];
 
 const designFingerprintFields = (
   graph: ReturnType<AutoMovieProductionProject["graph"]>,

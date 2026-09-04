@@ -24,6 +24,11 @@ import {
  * proves the compiler asks it before executing a shot and carries the answer
  * into the generated artifact. A second reviewed export on the same authored
  * target is acceptance attribution, not another runtime entry.
+ *
+ * The initial and current compiler fingerprints use the same owner-binding
+ * population. A changed source remains a source-owner diagnostic, while a
+ * binding returned only by the fresh evidence reader invalidates the atomic
+ * compiler snapshot without being misreported as a source defect.
  */
 export const test_production_shot_source_owner_compiler = (): void => {
   const fixture = productionFixture();
@@ -72,9 +77,11 @@ export const test_production_shot_source_owner_compiler = (): void => {
       sourceOwners: [runtimeBinding, acceptanceBinding],
       contracts: [],
     } as unknown as IAutoMovieProductionEvidence;
+    let currentAuthoring: IAutoMovieProductionEvidence = authoring;
     const compiled = new AutoMovieProductionCompiler(
       project,
       authoring,
+      () => currentAuthoring,
     ).compile({ scope: "source" });
     const output = compiled.success
       ? (JSON.parse(
@@ -91,6 +98,32 @@ export const test_production_shot_source_owner_compiler = (): void => {
         '): IAutoMovieProductionShotProgram => {\n  throw new Error("shot owner gate executed the builder");',
       ),
     );
+    const changedSource = new AutoMovieProductionCompiler(
+      project,
+      authoring,
+      () => authoring,
+    ).lint({ scope: "source" });
+    fs.writeFileSync(shotFile, authoredShot);
+
+    const evidenceChanged = new AutoMovieProductionCompiler(
+      project,
+      authoring,
+      () => currentAuthoring,
+    );
+    currentAuthoring = {
+      ...authoring,
+      sourceOwners: [{ ...runtimeBinding, reviewed: false }, acceptanceBinding],
+    };
+    const changedEvidence = evidenceChanged.lint({ scope: "source" });
+    currentAuthoring = authoring;
+    const unreadableEvidence = new AutoMovieProductionCompiler(
+      project,
+      authoring,
+      () => {
+        throw new Error("fresh evidence is unreadable");
+      },
+    ).lint({ scope: "source" });
+
     const refused = new AutoMovieProductionCompiler(project, {
       ...authoring,
       sourceOwners: [acceptanceBinding],
@@ -102,7 +135,6 @@ export const test_production_shot_source_owner_compiler = (): void => {
         acceptanceBinding,
       ],
     }).compile({ scope: "source" });
-    fs.writeFileSync(shotFile, authoredShot);
 
     TestValidator.equals(
       "the graph-selected runtime export is admitted and carried separately from acceptance attribution",
@@ -144,6 +176,40 @@ export const test_production_shot_source_owner_compiler = (): void => {
             ),
         ],
         [
+          "aSourceMutationBelongsToTheSourceOwner",
+          () =>
+            changedSource.success === false &&
+            changedSource.diagnostics.some(
+              (diagnostic) =>
+                diagnostic.code === "source-owner-mismatch" &&
+                diagnostic.path === contract.source.module,
+            ) &&
+            changedSource.diagnostics.every(
+              (diagnostic) => diagnostic.code !== "compile-input-changed",
+            ),
+        ],
+        [
+          "anOwnerBindingMutationInvalidatesTheCompileSnapshot",
+          () =>
+            changedEvidence.success === false &&
+            changedEvidence.diagnostics.some(
+              (diagnostic) =>
+                diagnostic.code === "compile-input-changed" &&
+                diagnostic.target === "compiler-input",
+            ) &&
+            changedEvidence.diagnostics.every(
+              (diagnostic) => diagnostic.code !== "source-owner-mismatch",
+            ),
+        ],
+        [
+          "anUnreadableCurrentEvidenceSnapshotIsRefused",
+          () =>
+            unreadableEvidence.success === false &&
+            unreadableEvidence.diagnostics.some(
+              (diagnostic) => diagnostic.code === "compile-input-changed",
+            ),
+        ],
+        [
           "aReviewedExportForAnotherSceneCannotBorrowTheStoredPointer",
           () =>
             wrongTarget.success === false &&
@@ -164,6 +230,9 @@ export const test_production_shot_source_owner_compiler = (): void => {
         theGeneratedShotCarriesPathExportDigestAndTarget: true,
         aReviewedSiblingIsAttributionRatherThanTheRuntimeEntry: true,
         aStoredPointerOutsideTheSelectedExportPopulationIsRefused: true,
+        aSourceMutationBelongsToTheSourceOwner: true,
+        anOwnerBindingMutationInvalidatesTheCompileSnapshot: true,
+        anUnreadableCurrentEvidenceSnapshotIsRefused: true,
         aReviewedExportForAnotherSceneCannotBorrowTheStoredPointer: true,
       },
     );
