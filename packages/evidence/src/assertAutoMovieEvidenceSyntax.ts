@@ -13,7 +13,7 @@ interface IParsedAnnotation {
 const ACKNOWLEDGEMENT = /^@evidence(Exclude)?\s+(\S+)\s+(\S(?:.*\S)?)$/u;
 const REVIEW =
   /^@evidence(Exclude)?Review\s+(\S+)\s+(#[0-9a-f]{7})\s+(\S(?:.*\S)?)$/u;
-const EXTRA_FINGERPRINT = /(?:^|\s)#[0-9a-f]{7}(?:\s|$)/u;
+const FINGERPRINT_TOKEN = /(?:^|\s)#[0-9a-f]{7}(?=\s|$)/gu;
 
 /**
  * Refuses deterministic contradictions in native evidence declarations.
@@ -49,11 +49,7 @@ export function assertAutoMovieEvidenceSyntax(
         );
       if (
         parsed.kind === "review" &&
-        EXTRA_FINGERPRINT.test(
-          annotation.text.slice(
-            annotation.text.indexOf(parsed.fingerprint!) + 8,
-          ),
-        )
+        (annotation.text.match(FINGERPRINT_TOKEN)?.length ?? 0) > 1
       )
         diagnostics.push(
           `${address} [evidence-fingerprint-extra] a review carries more than one fingerprint token.`,
