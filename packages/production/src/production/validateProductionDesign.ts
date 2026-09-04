@@ -17,6 +17,7 @@ import {
 } from "@automovie/interface";
 import path from "node:path";
 
+import { parseAutoMovieCaptionLanguage } from "./captionLanguage";
 import {
   compareCodeUnits,
   encodeAutoMoviePathSegment,
@@ -470,27 +471,37 @@ export const validateAutoMovieProductionGraph = (
         file,
         "captionReadabilityProfiles",
       );
-      unique(
+      text(
         diagnostics,
-        captionLanguages,
         profile.language,
         target,
         file,
         "captionReadabilityProfiles.language",
       );
-      text(
+      const languageIdentity = parseAutoMovieCaptionLanguage(profile.language);
+      if (languageIdentity === null)
+        invalid(
+          diagnostics,
+          "design-reference-invalid",
+          target,
+          file,
+          `Caption readability profile "${profile.id}" language "${profile.language}" is not a well-formed RFC 5646 tag. Correct its language without inferring a replacement.`,
+        );
+      else if (captionLanguages.has(languageIdentity.comparisonKey))
+        invalid(
+          diagnostics,
+          "design-duplicate-id",
+          target,
+          file,
+          `Caption readability profile language "${profile.language}" duplicates an existing language by ASCII case-insensitive identity. Keep one profile for that language identity.`,
+        );
+      else captionLanguages.add(languageIdentity.comparisonKey);
+      validateCaptionGraphemeSegmentationIdentity(
         diagnostics,
-        profile.segmentation.algorithm,
+        profile.segmentation,
+        profile.id,
         target,
         file,
-        `captionReadabilityProfiles.${profile.id}.segmentation.algorithm`,
-      );
-      text(
-        diagnostics,
-        profile.segmentation.version,
-        target,
-        file,
-        `captionReadabilityProfiles.${profile.id}.segmentation.version`,
       );
       if (!Number.isSafeInteger(profile.version) || profile.version <= 0)
         invalid(
@@ -3162,6 +3173,109 @@ const text = (
       target,
       file,
       `${field} must contain non-whitespace text. Fix ${field} in its design setter.`,
+    );
+};
+
+const validateCaptionGraphemeSegmentationIdentity = (
+  diagnostics: IAutoMovieDiagnostic[],
+  value: unknown,
+  profileId: string,
+  target: string,
+  file: string,
+): void => {
+  const field = `captionReadabilityProfiles.${profileId}.segmentation`;
+  if (typeof value !== "object" || value === null) {
+    invalid(
+      diagnostics,
+      "design-reference-invalid",
+      target,
+      file,
+      `${field} must carry a complete grapheme segmentation identity. Copy a supported package identity or declare another complete runtime identity.`,
+    );
+    return;
+  }
+  const identity = value as Record<string, unknown>;
+  if (typeof identity.algorithm === "string")
+    text(diagnostics, identity.algorithm, target, file, `${field}.algorithm`);
+  else
+    invalid(
+      diagnostics,
+      "design-reference-invalid",
+      target,
+      file,
+      `${field}.algorithm must be non-blank text.`,
+    );
+  if (typeof identity.version === "string")
+    text(diagnostics, identity.version, target, file, `${field}.version`);
+  else
+    invalid(
+      diagnostics,
+      "design-reference-invalid",
+      target,
+      file,
+      `${field}.version must be non-blank text.`,
+    );
+  if (identity.granularity !== "grapheme")
+    invalid(
+      diagnostics,
+      "design-reference-invalid",
+      target,
+      file,
+      `${field}.granularity must be "grapheme".`,
+    );
+  if (typeof identity.locale !== "object" || identity.locale === null) {
+    invalid(
+      diagnostics,
+      "design-reference-invalid",
+      target,
+      file,
+      `${field}.locale must declare requested-resolved or locale-neutral execution.`,
+    );
+    return;
+  }
+  const locale = identity.locale as Record<string, unknown>;
+  if (locale.kind === "locale-neutral") return;
+  if (locale.kind !== "requested-resolved") {
+    invalid(
+      diagnostics,
+      "design-reference-invalid",
+      target,
+      file,
+      `${field}.locale.kind must be "requested-resolved" or "locale-neutral".`,
+    );
+    return;
+  }
+  if (typeof locale.requested === "string")
+    text(
+      diagnostics,
+      locale.requested,
+      target,
+      file,
+      `${field}.locale.requested`,
+    );
+  else
+    invalid(
+      diagnostics,
+      "design-reference-invalid",
+      target,
+      file,
+      `${field}.locale.requested must be non-blank text.`,
+    );
+  if (typeof locale.resolved === "string")
+    text(
+      diagnostics,
+      locale.resolved,
+      target,
+      file,
+      `${field}.locale.resolved`,
+    );
+  else
+    invalid(
+      diagnostics,
+      "design-reference-invalid",
+      target,
+      file,
+      `${field}.locale.resolved must be non-blank text.`,
     );
 };
 

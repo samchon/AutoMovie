@@ -112,6 +112,26 @@ export const test_production_canonical_json_protocol = (): void => {
   );
   const legacyValue = { b: 2, a: 1 };
   const legacyDigest = digestAutoMovieBytes(Buffer.from('{"a":1,"b":2}'));
+  const migratedSparse = verifyAutoMovieCanonicalJsonIdentity({
+    value: new Array(1),
+    protocol: AUTOMOVIE_LEGACY_CANONICAL_JSON_PROTOCOL,
+    digest: digestAutoMovieBytes(Buffer.from("[]")),
+  });
+  TestValidator.equals(
+    "a recoverable sparse v1 identity preserves old identity and derives v2",
+    migratedSparse.status === "migrated"
+      ? [
+          migratedSparse.legacyDigest,
+          Buffer.from(migratedSparse.current.bytes).toString("utf8"),
+          migratedSparse.current.protocol,
+        ]
+      : migratedSparse,
+    [
+      digestAutoMovieBytes(Buffer.from("[]")),
+      "[null]",
+      AUTOMOVIE_CANONICAL_JSON_PROTOCOL,
+    ],
+  );
   TestValidator.equals(
     "current, stale, migrated and unverifiable states are disjoint",
     [

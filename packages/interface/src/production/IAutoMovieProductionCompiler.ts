@@ -42,6 +42,7 @@ import type { IAutoMovieDerivedArtifactSource } from "./IAutoMovieDerivedArtifac
 import {
   AutoMovieContentDigest,
   AutoMovieFormationCapability,
+  IAutoMovieCaptionGraphemeSegmentationIdentity,
   IAutoMovieDesignTarget,
   IAutoMovieEffectRecipe,
   IAutoMovieFormationDesign,
@@ -1598,7 +1599,10 @@ export interface IAutoMovieAudioCue {
  * One plain-text caption cue from which renderers may derive WebVTT.
  *
  * @evidence requirements/delivery-and-accessibility/captions-subtitles-and-cues.md#delivery-caption-readability-profile Exposes `IAutoMovieCaptionCue` as the portable data boundary for the delivery caption readability profile requirement.
+ * @evidence requirements/delivery-and-accessibility/captions-subtitles-and-cues.md#delivery-cue-text-language Preserves authored line presentation through measurement and selectable delivery.
+ * @evidence requirements/delivery-and-accessibility/localization-and-language-versions.md#delivery-language-selection Carries one retained RFC 5646 display form with case-insensitive identity.
  * @evidence specifications/editorial-render-and-delivery/delivery-audio-text-and-localization.md#spec-delivery-caption-readability-profile Types `IAutoMovieCaptionCue` for the spec delivery caption readability profile system contract.
+ * @evidence specifications/editorial-render-and-delivery/delivery-audio-text-and-localization.md#spec-delivery-localization Applies one language identity across cue validation, lookup, and serialization.
  */
 export interface IAutoMovieCaptionCue {
   /**
@@ -1609,17 +1613,21 @@ export interface IAutoMovieCaptionCue {
    */
   id: string;
   /**
-   * Non-blank plain text.
+   * Non-blank plain text whose authored CR, LF, and CRLF line presentation is
+   * preserved canonically by readability and selectable delivery.
    *
    * @evidence requirements/delivery-and-accessibility/captions-subtitles-and-cues.md#delivery-caption-readability-profile Exposes `text` as the portable data boundary for the delivery caption readability profile requirement.
+   * @evidence requirements/delivery-and-accessibility/captions-subtitles-and-cues.md#delivery-cue-text-language Keeps legal tab and authored line boundaries while prohibited controls are handled explicitly.
    * @evidence specifications/editorial-render-and-delivery/delivery-audio-text-and-localization.md#spec-delivery-caption-readability-profile Types `text` for the spec delivery caption readability profile system contract.
    */
   text: string;
   /**
-   * Non-blank BCP-47-style language tag.
+   * RFC 5646 well-formed language tag in retained display form.
    *
    * @evidence requirements/delivery-and-accessibility/captions-subtitles-and-cues.md#delivery-caption-readability-profile Exposes `language` as the portable data boundary for the delivery caption readability profile requirement.
+   * @evidence requirements/delivery-and-accessibility/localization-and-language-versions.md#delivery-language-selection Keeps case-insensitive language identity separate from authored display spelling.
    * @evidence specifications/editorial-render-and-delivery/delivery-audio-text-and-localization.md#spec-delivery-caption-readability-profile Types `language` for the spec delivery caption readability profile system contract.
+   * @evidence specifications/editorial-render-and-delivery/delivery-audio-text-and-localization.md#spec-delivery-localization Uses RFC 5646 syntax without registry canonicalization or inference.
    */
   language: string;
   /**
@@ -1649,7 +1657,7 @@ export interface IAutoMovieCaptionCue {
  * Effective readability measurements for one compiled caption cue.
  *
  * @evidence requirements/delivery-and-accessibility/captions-subtitles-and-cues.md#delivery-caption-readability-profile Reports grapheme, line, duration, and gap facts even when no profile can judge them.
- * @evidence specifications/editorial-render-and-delivery/delivery-audio-text-and-localization.md#spec-delivery-caption-readability-profile Carries measurements separately from the optional verdict.
+ * @evidence specifications/editorial-render-and-delivery/delivery-audio-text-and-localization.md#spec-delivery-caption-readability-measurement Carries actual measurement identity separately from the optional verdict.
  * @author Samchon
  */
 export interface IAutoMovieCaptionReadabilityMeasurement {
@@ -1667,6 +1675,13 @@ export interface IAutoMovieCaptionReadabilityMeasurement {
    * @evidence specifications/editorial-render-and-delivery/delivery-audio-text-and-localization.md#spec-delivery-caption-readability-profile Separates language-specific measurement populations.
    */
   language: string;
+  /**
+   * Complete identity of the runtime that produced these measurements.
+   *
+   * @evidence requirements/delivery-and-accessibility/captions-subtitles-and-cues.md#delivery-caption-readability-profile Reports the actual segmentation basis even when no profile can judge it.
+   * @evidence specifications/editorial-render-and-delivery/delivery-audio-text-and-localization.md#spec-delivery-caption-readability-measurement Keeps requested and executed segmentation identities distinct.
+   */
+  segmentation: IAutoMovieCaptionGraphemeSegmentationIdentity;
   /**
    * Displayed grapheme-cluster count after markup removal.
    *
@@ -1715,7 +1730,7 @@ export interface IAutoMovieCaptionReadabilityMeasurement {
  * Profile-backed verdict or explicit measure-only outcome for one caption cue.
  *
  * @evidence requirements/delivery-and-accessibility/captions-subtitles-and-cues.md#delivery-caption-readability-profile Keeps missing profile separate from a passing verdict.
- * @evidence specifications/editorial-render-and-delivery/delivery-audio-text-and-localization.md#spec-delivery-caption-readability-profile Evaluates only a production-selected profile and otherwise records `not-run`.
+ * @evidence specifications/editorial-render-and-delivery/delivery-audio-text-and-localization.md#spec-delivery-caption-readability-measurement Evaluates only an exact requested-to-actual identity match and otherwise records `not-run`.
  */
 export type IAutoMovieCaptionReadabilityOutcome =
   | {
@@ -1723,13 +1738,8 @@ export type IAutoMovieCaptionReadabilityOutcome =
       status: "evaluated";
       /** Exact production profile id. */
       profile: string;
-      /** Requested segmentation algorithm and version used for measurement. */
-      segmentation: {
-        /** Requested algorithm identity. */
-        algorithm: string;
-        /** Requested algorithm or segmentation-data revision. */
-        version: string;
-      };
+      /** Complete segmentation identity selected by the production profile. */
+      segmentation: IAutoMovieCaptionGraphemeSegmentationIdentity;
       /** Whether every profile-declared boundary passed. */
       passed: boolean;
       /** Stable names of boundaries exceeded by this cue. */
@@ -1745,12 +1755,7 @@ export type IAutoMovieCaptionReadabilityOutcome =
       /** No production profile judged the measurement. */
       status: "not-run";
       /** Requested segmentation identity, or null when no profile was declared. */
-      segmentation: {
-        /** Requested algorithm identity. */
-        algorithm: string;
-        /** Requested algorithm or segmentation-data revision. */
-        version: string;
-      } | null;
+      segmentation: IAutoMovieCaptionGraphemeSegmentationIdentity | null;
       /** Exact reason a verdict was not computed. */
       reason:
         | "caption-readability-profile-not-declared"
@@ -1761,7 +1766,7 @@ export type IAutoMovieCaptionReadabilityOutcome =
  * Readability report kept outside the byte-stable compiled edit.
  *
  * @evidence requirements/delivery-and-accessibility/captions-subtitles-and-cues.md#delivery-caption-readability-profile Reports metrics without modifying legacy caption output when no profile exists.
- * @evidence specifications/editorial-render-and-delivery/delivery-audio-text-and-localization.md#spec-delivery-caption-readability-profile Joins each measurement to its evaluated or not-run outcome.
+ * @evidence specifications/editorial-render-and-delivery/delivery-audio-text-and-localization.md#spec-delivery-caption-readability-measurement Joins each actual identity and measurement to its evaluated or not-run outcome.
  * @author Samchon
  */
 export interface IAutoMovieCaptionReadabilityReport {
@@ -1771,7 +1776,7 @@ export interface IAutoMovieCaptionReadabilityReport {
    * @evidence requirements/delivery-and-accessibility/captions-subtitles-and-cues.md#delivery-caption-readability-profile Versions the measurement and outcome record.
    * @evidence specifications/editorial-render-and-delivery/delivery-audio-text-and-localization.md#spec-delivery-caption-readability-profile Makes report interpretation explicit.
    */
-  version: 1;
+  version: 2;
   /**
    * Cue reports in canonical film and cue order.
    *

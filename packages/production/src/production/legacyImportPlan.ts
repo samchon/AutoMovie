@@ -120,11 +120,18 @@ const assertBaseline = (
     (entry) =>
       entry.kind === "project" && isBaselinePath(entry.path, expectedPath),
   );
-  const directories = new Set(baseline.directories);
-  if (baseline.files.some((entry) => directories.has(entry.path)))
-    throw new AutoMovieLegacyImportPlanError(
-      `${expectedPath} baseline cannot describe one path as both file and directory`,
-    );
+  const occupied = new Set<string>();
+  for (const path of [
+    ...baseline.directories,
+    ...baseline.files.map((entry) => entry.path),
+  ]) {
+    const lower = path.toLowerCase();
+    if (occupied.has(lower))
+      throw new AutoMovieLegacyImportPlanError(
+        `${expectedPath} baseline paths collide by case or file kind`,
+      );
+    occupied.add(lower);
+  }
 };
 
 const assertInventory = (

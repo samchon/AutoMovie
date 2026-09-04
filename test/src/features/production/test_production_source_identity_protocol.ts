@@ -1,8 +1,11 @@
 import {
+  AUTOMOVIE_LEGACY_SOURCE_NORMALIZATION_PROTOCOL,
   AUTOMOVIE_SOURCE_NORMALIZATION_PROTOCOL,
   AutoMovieUtf8Error,
+  digestAutoMovieBytes,
   normalizeAutoMovieSource,
   normalizeAutoMovieSourceIdentity,
+  verifyAutoMovieSourceIdentity,
 } from "@automovie/production";
 import { TestValidator } from "@nestia/e2e";
 
@@ -57,5 +60,62 @@ export const test_production_source_identity_protocol = (): void => {
       throwsUtf8(new Uint8Array([0xed, 0xa0, 0x80])),
     ],
     [true, true, true, true],
+  );
+  const legacyBytes = Buffer.from("\ufeffa\r\nb\r", "utf8");
+  const legacyDigest = digestAutoMovieBytes(Buffer.from("a\nb\n", "utf8"));
+  TestValidator.equals(
+    "current, stale, migrated and unverifiable source states are disjoint",
+    [
+      verifyAutoMovieSourceIdentity({
+        path: "src/shot.ts",
+        bytes: legacyBytes,
+        protocol: AUTOMOVIE_SOURCE_NORMALIZATION_PROTOCOL,
+        digest: bomCrlf.semanticDigest,
+      }).status,
+      verifyAutoMovieSourceIdentity({
+        path: "src/shot.ts",
+        bytes: legacyBytes,
+        protocol: AUTOMOVIE_SOURCE_NORMALIZATION_PROTOCOL,
+        digest: digestAutoMovieBytes(Buffer.from("stale")),
+      }).status,
+      verifyAutoMovieSourceIdentity({
+        path: "src/shot.ts",
+        bytes: legacyBytes,
+        protocol: AUTOMOVIE_LEGACY_SOURCE_NORMALIZATION_PROTOCOL,
+        digest: legacyDigest,
+      }).status,
+      verifyAutoMovieSourceIdentity({
+        path: "src/shot.ts",
+        bytes: legacyBytes,
+        protocol: AUTOMOVIE_LEGACY_SOURCE_NORMALIZATION_PROTOCOL,
+        digest: digestAutoMovieBytes(Buffer.from("stale")),
+      }).status,
+      verifyAutoMovieSourceIdentity({
+        path: "src/shot.ts",
+        protocol: AUTOMOVIE_LEGACY_SOURCE_NORMALIZATION_PROTOCOL,
+        digest: legacyDigest,
+      }).status,
+      verifyAutoMovieSourceIdentity({
+        path: "src/shot.ts",
+        bytes: new Uint8Array([0x80]),
+        protocol: AUTOMOVIE_LEGACY_SOURCE_NORMALIZATION_PROTOCOL,
+        digest: digestAutoMovieBytes(Buffer.from("\ufffd", "utf8")),
+      }).status,
+      verifyAutoMovieSourceIdentity({
+        path: "src/shot.ts",
+        bytes: legacyBytes,
+        protocol: "unknown",
+        digest: legacyDigest,
+      }).status,
+    ],
+    [
+      "current",
+      "stale",
+      "migrated",
+      "stale",
+      "unverifiable",
+      "unverifiable",
+      "unverifiable",
+    ],
   );
 };

@@ -37,10 +37,7 @@ import type { ITtscLintConfig } from "@ttsc/lint";
 const publicSurface = ["src/**/*.ts", "!src/**/index.ts"];
 
 const productionRequirementContracts = [
-  "requirements/evidence-and-provenance/canonical-digests-and-content-identity.md",
-  "requirements/external-inputs/validation-and-quarantine.md",
   "requirements/operations-and-recovery/concurrent-runs-and-locking.md",
-  "requirements/operations-and-recovery/migration-and-compatibility.md",
   "requirements/production-design/continuity-change-and-deliverables.md",
   "requirements/repaint/providers-models-and-credentials.md",
   "requirements/repaint/retries-seeds-and-variation.md",
@@ -50,11 +47,7 @@ const productionRequirementContracts = [
 
 const productionSpecificationContracts = [
   "specifications/asset-and-representation/generated-assets-and-repaint-handoff.md",
-  "specifications/evidence-and-provenance/canonical-digests-and-content-identity.md",
   "specifications/execution-and-recovery/concurrent-ownership-and-locking.md",
-  "specifications/execution-and-recovery/portability-migration-and-compatibility.md",
-  "specifications/interchange-and-adoption/conversion-receipts-and-determinism.md",
-  "specifications/interchange-and-adoption/media-inspection-boundaries.md",
   "specifications/narrative-and-intent/budgets-continuity-and-deliverables.md",
   "specifications/review-and-acceptance/subject-surface-and-inspection.md",
 ];

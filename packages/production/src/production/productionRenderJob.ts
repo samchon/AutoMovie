@@ -5,9 +5,19 @@ import {
   IAutoMovieFilmTimeline,
   IAutoMovieProductionDesign,
 } from "@automovie/interface";
-import { createHash } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
+
+import { parseAutoMovieCaptionLanguage } from "./captionLanguage";
+import {
+  serializeAutoMovieWebVttCueText,
+  serializeAutoMovieWebVttSingleLineText,
+} from "./captionText";
+import {
+  canonicalAutoMovieJsonBytes,
+  canonicalizeAutoMovieJson,
+  digestAutoMovieBytes,
+} from "./contentIdentity";
 
 /**
  * Package-owned encoder identity fenced into every chunk.
@@ -548,7 +558,10 @@ export const verifyProductionRenderJobPlan = (props: {
     guidePasses: props.guidePasses,
     tier: props.plan.tier,
   });
-  if (canonicalJson(props.plan) !== canonicalJson(expected))
+  if (
+    canonicalizeAutoMovieJson(props.plan) !==
+    canonicalizeAutoMovieJson(expected)
+  )
     throw new Error(
       "Stored render plan differs from the current compiler-owned timeline and render inputs. Run automovie render plan, then rerender only changed chunk identities.",
     );
@@ -660,19 +673,19 @@ export const canonicalProductionWebVtt = (
       compareCodeUnits(left.id, right.id),
   );
   return [
-    `WEBVTT ${webVttPlainText(timeline.id)}`,
+    `WEBVTT ${serializeAutoMovieWebVttSingleLineText(timeline.id)}`,
     "",
     ...cues.flatMap((cue) => [
-      webVttPlainText(cue.id),
+      serializeAutoMovieWebVttSingleLineText(cue.id),
       `${webVttTime(cue.startFrame / timeline.fps)} --> ${webVttTime(
         cue.endFrame / timeline.fps,
       )}`,
-      `<lang ${webVttPlainText(cue.language)}>${
+      `<lang ${webVttCaptionLanguage(cue.language)}>${
         cue.speaker === undefined
-          ? webVttPlainText(cue.text)
-          : `<v ${webVttPlainText(cue.speaker)}>${webVttPlainText(
-              cue.text,
-            )}</v>`
+          ? serializeAutoMovieWebVttCueText(cue.text)
+          : `<v ${serializeAutoMovieWebVttSingleLineText(
+              cue.speaker,
+            )}>${serializeAutoMovieWebVttCueText(cue.text)}</v>`
       }</lang>`,
       "",
     ]),
@@ -1223,13 +1236,14 @@ const webVttTime = (seconds: number): string => {
   )}`;
 };
 
-/** Escape one authored plain-text field into a single WebVTT content line. */
-const webVttPlainText = (value: string): string =>
-  value
-    .replace(/[\u0000-\u001f\u007f]/gu, " ")
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;");
+const webVttCaptionLanguage = (value: string): string => {
+  const identity = parseAutoMovieCaptionLanguage(value);
+  if (identity === null)
+    throw new Error(
+      `Caption language "${value}" is not a well-formed RFC 5646 tag.`,
+    );
+  return serializeAutoMovieWebVttSingleLineText(identity.display);
+};
 
 const validByteFact = (fact: { digest: string; bytes: number }): boolean =>
   Number.isSafeInteger(fact.bytes) &&
@@ -1240,30 +1254,7 @@ const validDigest = (value: string): boolean =>
   /^sha256:[0-9a-f]{64}$/.test(value);
 
 const digestJson = (value: unknown): AutoMovieContentDigest =>
-  `sha256:${createHash("sha256")
-    .update(Buffer.from(canonicalJson(value), "utf8"))
-    .digest("hex")}`;
-
-const canonicalJson = (value: unknown): string => {
-  if (value === null || typeof value === "boolean" || typeof value === "string")
-    return JSON.stringify(value);
-  if (typeof value === "number") {
-    if (Number.isFinite(value) === false)
-      throw new Error("Render identity refuses non-finite numbers.");
-    return JSON.stringify(value);
-  }
-  if (Array.isArray(value))
-    return `[${value.map((item) => canonicalJson(item)).join(",")}]`;
-  if (typeof value === "object") {
-    const record = value as Record<string, unknown>;
-    return `{${Object.keys(record)
-      .filter((key) => record[key] !== undefined)
-      .sort(compareCodeUnits)
-      .map((key) => `${JSON.stringify(key)}:${canonicalJson(record[key])}`)
-      .join(",")}}`;
-  }
-  throw new Error("Render identity requires JSON-compatible values.");
-};
+  digestAutoMovieBytes(canonicalAutoMovieJsonBytes(value));
 
 const compareCodeUnits = (left: string, right: string): number =>
   left < right ? -1 : left > right ? 1 : 0;
