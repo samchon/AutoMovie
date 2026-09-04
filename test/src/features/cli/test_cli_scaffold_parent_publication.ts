@@ -8,6 +8,90 @@ import {
 import { TestValidator } from "@nestia/e2e";
 import * as path from "node:path";
 
+type FakeSchedule =
+  | "complete"
+  | "create-failed"
+  | "parent-changed"
+  | "target-competitor"
+  | { bytesWritten: number; kind: "partial" };
+
+interface IFakePublishedFile {
+  bytes: readonly number[];
+  identity: string;
+}
+
+class FakeParentPublicationCapability implements IScaffoldParentPublicationCapability {
+  public cleanupCount = 0;
+  public createCount = 0;
+  public request: IScaffoldParentPublicationRequest | undefined;
+  public writeCount = 0;
+  private readonly files = new Map<string, Map<string, IFakePublishedFile>>();
+
+  public constructor(private readonly schedule: FakeSchedule) {}
+
+  public inventory(parentIdentity: string): [string, IFakePublishedFile][] {
+    return [...(this.files.get(parentIdentity)?.entries() ?? [])];
+  }
+
+  public publish(
+    request: IScaffoldParentPublicationRequest,
+  ): ScaffoldFilePublicationOutcome {
+    this.request = request;
+    if (this.schedule === "parent-changed")
+      return {
+        error: "parent changed before create",
+        reason: "parent-changed",
+        status: "refused",
+      };
+    if (this.schedule === "target-competitor")
+      return {
+        error: "target competitor",
+        reason: "target-competitor",
+        status: "refused",
+      };
+    if (this.schedule === "create-failed")
+      return {
+        error: "native create failed",
+        reason: "create-failed",
+        status: "refused",
+      };
+
+    const parent = this.files.get(request.expectedParentIdentity) ?? new Map();
+    this.files.set(request.expectedParentIdentity, parent);
+    this.createCount++;
+    const file: IFakePublishedFile = {
+      bytes: [],
+      identity: `slot-${this.createCount}`,
+    };
+    parent.set(request.childName, file);
+    this.writeCount++;
+    if (this.schedule === "complete") {
+      file.bytes = [...request.bytes];
+      return {
+        parentIdentity: request.expectedParentIdentity,
+        status: "completed",
+      };
+    }
+    file.bytes = request.bytes.slice(0, this.schedule.bytesWritten);
+    return {
+      bytesWritten: this.schedule.bytesWritten,
+      error: "write stopped",
+      parentIdentity: request.expectedParentIdentity,
+      status: "partial",
+    };
+  }
+
+  public seed(
+    parentIdentity: string,
+    childName: string,
+    file: IFakePublishedFile,
+  ): void {
+    const parent = this.files.get(parentIdentity) ?? new Map();
+    this.files.set(parentIdentity, parent);
+    parent.set(childName, file);
+  }
+}
+
 /**
  * One-file publication admits only a truthful parent-bound native outcome.
  *
@@ -28,49 +112,38 @@ export const test_cli_scaffold_parent_publication = (): void => {
     real: path.resolve("synthetic-parent"),
   };
   const target = path.join(parent.path, "entry.txt");
+  const externalIdentity = "volume:parent-2";
   const attempt = (
-    outcome: ScaffoldFilePublicationOutcome,
-  ): {
-    calls: number;
-    request: IScaffoldParentPublicationRequest;
-    result: ScaffoldFilePublicationOutcome;
-  } => {
-    let calls = 0;
-    let request: IScaffoldParentPublicationRequest | undefined;
-    const capability: IScaffoldParentPublicationCapability = {
-      publish: (value) => {
-        calls++;
-        request = value;
-        return outcome;
-      },
-    };
-    const result = publishScaffoldFileToCapturedParent({
+    capability: IScaffoldParentPublicationCapability,
+  ): ScaffoldFilePublicationOutcome =>
+    publishScaffoldFileToCapturedParent({
       bytes: [0, 127, 255],
       capability,
       parent,
       target,
     });
-    return { calls, request: request!, result };
-  };
 
-  const complete = attempt({
-    parentIdentity: parent.identity,
-    status: "completed",
-  });
+  const completeCapability = new FakeParentPublicationCapability("complete");
+  const complete = attempt(completeCapability);
   TestValidator.equals(
     "complete publication enters one closed native parent capability",
     {
-      calls: complete.calls,
       frozen:
-        Object.isFrozen(complete.request) &&
-        Object.isFrozen(complete.request.bytes) &&
-        Object.isFrozen(complete.result),
-      request: complete.request,
-      result: complete.result,
+        Object.isFrozen(completeCapability.request) &&
+        Object.isFrozen(completeCapability.request?.bytes) &&
+        Object.isFrozen(complete),
+      inventory: completeCapability.inventory(parent.identity),
+      request: completeCapability.request,
+      result: complete,
+      sideEffects: {
+        cleanup: completeCapability.cleanupCount,
+        create: completeCapability.createCount,
+        write: completeCapability.writeCount,
+      },
     },
     {
-      calls: 1,
       frozen: true,
+      inventory: [["entry.txt", { bytes: [0, 127, 255], identity: "slot-1" }]],
       request: {
         bytes: [0, 127, 255],
         childName: "entry.txt",
@@ -78,49 +151,81 @@ export const test_cli_scaffold_parent_publication = (): void => {
         parentPath: parent.path,
       },
       result: { parentIdentity: parent.identity, status: "completed" },
+      sideEffects: { cleanup: 0, create: 1, write: 1 },
     },
   );
 
-  const refusals = [
-    "parent-changed",
-    "target-competitor",
-    "create-failed",
-  ] as const;
+  const parentChanged = new FakeParentPublicationCapability("parent-changed");
+  const createFailed = new FakeParentPublicationCapability("create-failed");
+  const competitor = new FakeParentPublicationCapability("target-competitor");
+  competitor.seed(parent.identity, "entry.txt", {
+    bytes: [9, 9],
+    identity: "competitor-1",
+  });
+  const refused = [parentChanged, createFailed, competitor].map(
+    (capability) => ({ capability, outcome: attempt(capability) }),
+  );
   TestValidator.equals(
     "pre-create native decisions remain zero-publication refusals",
-    refusals.map((reason) => {
-      const counters = { cleanup: 0, create: 0, write: 0 };
-      const refused = attempt({ error: reason, reason, status: "refused" });
-      return {
-        calls: refused.calls,
-        counters,
-        reason:
-          refused.result.status === "refused"
-            ? refused.result.reason
-            : "not-refused",
-      };
-    }),
-    refusals.map((reason) => ({
-      calls: 1,
-      counters: { cleanup: 0, create: 0, write: 0 },
-      reason,
+    refused.map(({ capability, outcome }) => ({
+      external: capability.inventory(externalIdentity),
+      owned: capability.inventory(parent.identity),
+      reason: outcome.status === "refused" ? outcome.reason : "not-refused",
+      sideEffects: {
+        cleanup: capability.cleanupCount,
+        create: capability.createCount,
+        write: capability.writeCount,
+      },
     })),
+    [
+      {
+        external: [],
+        owned: [],
+        reason: "parent-changed",
+        sideEffects: { cleanup: 0, create: 0, write: 0 },
+      },
+      {
+        external: [],
+        owned: [],
+        reason: "create-failed",
+        sideEffects: { cleanup: 0, create: 0, write: 0 },
+      },
+      {
+        external: [],
+        owned: [["entry.txt", { bytes: [9, 9], identity: "competitor-1" }]],
+        reason: "target-competitor",
+        sideEffects: { cleanup: 0, create: 0, write: 0 },
+      },
+    ],
   );
 
-  const partial = attempt({
+  const partialCapability = new FakeParentPublicationCapability({
     bytesWritten: 2,
-    error: "write stopped",
-    parentIdentity: parent.identity,
-    status: "partial",
+    kind: "partial",
   });
+  const partial = attempt(partialCapability);
   TestValidator.equals(
     "descriptor-bound partial state retains its physical owner",
-    partial.result,
     {
-      bytesWritten: 2,
-      error: "write stopped",
-      parentIdentity: parent.identity,
-      status: "partial",
+      external: partialCapability.inventory(externalIdentity),
+      owned: partialCapability.inventory(parent.identity),
+      result: partial,
+      sideEffects: {
+        cleanup: partialCapability.cleanupCount,
+        create: partialCapability.createCount,
+        write: partialCapability.writeCount,
+      },
+    },
+    {
+      external: [],
+      owned: [["entry.txt", { bytes: [0, 127], identity: "slot-1" }]],
+      result: {
+        bytesWritten: 2,
+        error: "write stopped",
+        parentIdentity: parent.identity,
+        status: "partial",
+      },
+      sideEffects: { cleanup: 0, create: 1, write: 1 },
     },
   );
 
