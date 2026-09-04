@@ -1,4 +1,6 @@
 import {
+  canonicalProductionFrameRate,
+  equalProductionFrameRates,
   productionFrameIntervalToGridTicks,
   resolveProductionFrameRate,
 } from "@automovie/engine";
@@ -394,13 +396,18 @@ export const planProductionRenderJob = (props: {
     props.production.frameFormat,
     tier,
   );
+  const outputRate = resolveProductionFrameRate(frameFormat);
   if (frameFormat.width % 2 !== 0 || frameFormat.height % 2 !== 0)
     throw new Error(
       "The production H.264 render adapter requires even width and height.",
     );
+  const timelineRate = resolveProductionFrameRate(props.timeline);
+  const productionRate = resolveProductionFrameRate(
+    props.production.frameFormat,
+  );
   if (
     props.timeline.id !== props.production.id ||
-    props.timeline.fps !== props.production.frameFormat.fps ||
+    equalProductionFrameRates(timelineRate, productionRate) === false ||
     props.timeline.totalFrames !==
       Math.round(
         props.production.targetRuntimeSeconds *
@@ -428,9 +435,10 @@ export const planProductionRenderJob = (props: {
   }
   const legacyGuidePasses = normalizeGuidePasses(props.guidePasses ?? ["pose"]);
   const editFingerprint = digestJson({
-    protocol: "automovie.production-render-edit.v1",
+    protocol: "automovie.production-render-edit.v2",
     id: props.timeline.id,
     fps: props.timeline.fps,
+    frameRate: props.timeline.frameRate,
     totalFrames: props.timeline.totalFrames,
     segments: props.timeline.segments,
     omissions: props.timeline.omissions,
@@ -444,7 +452,8 @@ export const planProductionRenderJob = (props: {
         ...sampleProductionRenderFrame(props.timeline, timelineFrame),
         globalFrame: outputFrame,
         timelineFrame,
-        timeSeconds: outputFrame / frameFormat.fps,
+        timeSeconds:
+          (outputFrame * outputRate.denominator) / outputRate.numerator,
       };
     },
   );
@@ -1154,10 +1163,16 @@ export const resolveProductionRenderTierFrameFormat = (
   if (normalized.kind === "final") return structuredClone(source);
   const even = (value: number): number =>
     Math.max(2, Math.floor((value * normalized.resolutionScale) / 2) * 2);
+  const sourceRate = resolveProductionFrameRate(source);
+  const frameRate = canonicalProductionFrameRate({
+    numerator: sourceRate.numerator,
+    denominator: sourceRate.denominator * normalized.frameStep,
+  });
   return {
     width: even(source.width),
     height: even(source.height),
-    fps: source.fps / normalized.frameStep,
+    fps: frameRate.numerator / frameRate.denominator,
+    frameRate,
     colorSpace: source.colorSpace,
     ...(source.crop === undefined
       ? {}
