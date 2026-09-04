@@ -22,3 +22,16 @@ jobs:
           path: node_modules/.cache/ttsc/plugins
           key: ttsc-plugins-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
       - run: pnpm run build
+  scaffold-parent-successor:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 22.x
+      - uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v6.0.9
+      - run: pnpm install
+      - run: pnpm run probe:scaffold-parent

@@ -47,6 +47,7 @@
   },
   "dependencies": {
     "@automovie/evidence": "workspace:^",
+    "koffi": "^3.2.1",
     "yaml": "^2.9.0"
   },
   "devDependencies": {

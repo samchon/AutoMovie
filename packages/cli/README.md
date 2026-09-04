@@ -105,7 +105,7 @@ const files = renderScaffold({ name: "my-film" }); // { "package.json": "...", .
 writeFiles("./my-film", files);
 ```
 
-Scaffold materialization captures one ordinary physical target directory and every descendant parent generation. Newly created directories accept only an identity-fenced empty generation, and new files reserve their final path through descriptor-bound `O_EXCL`; `force` overwrites only the exact captured ordinary single-link file descriptor, while linked roots, linked parents or files, hard-linked files, non-empty directory successors, normalized target collisions, and concurrent pathname successors fail closed without cleanup, including after descriptor close.
+Scaffold materialization validates and freezes the complete candidate before mutation, captures one ordinary physical target directory and every descendant parent generation, and reports the exact completed prefix or stopping effect. Newly created directories accept only an identity-fenced empty generation, and new files reserve their final slot relative to a held parent handle through POSIX `openat` or Windows `NtCreateFile` exclusive creation. `force` overwrites only the exact captured ordinary single-link file descriptor, while linked roots, linked parents or files, hard-linked files, non-empty directory successors, normalized target collisions, and concurrent pathname successors fail closed without cleanup, including after descriptor close.
 
 Ordinary Node scripts can also load the current tracked design and the last compiler-owned snapshot:
 

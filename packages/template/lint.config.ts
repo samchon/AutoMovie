@@ -14,6 +14,7 @@ const authoringSurface = [
   "src/**/*.ts",
   "!src/**/index.ts",
   "!src/writeFiles.ts",
+  "!src/nativeScaffoldPublication.ts",
   "!src/scaffoldFileSnapshot.ts",
   "!src/scaffoldPublication.ts",
 ];
@@ -27,6 +28,7 @@ const authoringSurface = [
  */
 const writeSurface = [
   "src/writeFiles.ts",
+  "src/nativeScaffoldPublication.ts",
   "src/scaffoldFileSnapshot.ts",
   "src/scaffoldPublication.ts",
 ];

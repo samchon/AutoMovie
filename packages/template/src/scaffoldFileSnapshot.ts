@@ -1,6 +1,7 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 
+import { publishNativeScaffoldFile } from "./nativeScaffoldPublication";
 import type { ScaffoldFilePublicationOutcome } from "./scaffoldPublication";
 
 /**
@@ -354,7 +355,7 @@ export const writeScaffoldFile = (props: {
   force: boolean;
   parent: IScaffoldPhysicalDirectory;
   target: string;
-}): void => {
+}): ScaffoldFilePublicationOutcome => {
   const absolute = path.resolve(props.target);
   if (path.dirname(absolute) !== props.parent.path)
     throw new Error(`scaffold file changed declared parent: ${absolute}`);
@@ -368,61 +369,15 @@ export const writeScaffoldFile = (props: {
       existing = null;
     }
     if (existing !== null) {
-      overwriteScaffoldFile({ ...props, existing });
-      return;
+      return overwriteScaffoldFile({ ...props, existing });
     }
   }
-  createScaffoldFile(props);
-};
-
-const createScaffoldFile = (props: {
-  base: IScaffoldPhysicalDirectory;
-  bytes: Uint8Array;
-  parent: IScaffoldPhysicalDirectory;
-  target: string;
-}): void => {
-  const descriptor = fs.openSync(props.target, "wx+");
-  let failure: IScaffoldDescriptorFailure | undefined;
-  let completedSnapshot: IScaffoldFileSnapshot | null = null;
-  try {
-    const opened = fs.fstatSync(descriptor, { bigint: true });
-    assertOrdinarySingleLinkFile(opened, props.target);
-    assertScaffoldOwnership(props.base, props.parent);
-    assertScaffoldFileDescriptor(
-      captureScaffoldFile(props.target),
-      descriptor,
-      physicalVersion(opened),
-    );
-    writeScaffoldDescriptor(descriptor, props.target, props.bytes);
-    const completed = fs.fstatSync(descriptor, { bigint: true });
-    if (completed.size !== BigInt(props.bytes.byteLength))
-      throw new Error(`scaffold file changed final size: ${props.target}`);
-    assertScaffoldFileDescriptor(
-      captureScaffoldFile(props.target),
-      descriptor,
-      physicalVersion(completed),
-    );
-    assertScaffoldDescriptorBytes(descriptor, props.target, props.bytes);
-    const finalStatus = fs.fstatSync(descriptor, { bigint: true });
-    if (writtenVersion(finalStatus) !== writtenVersion(completed))
-      throw new Error(
-        `scaffold file changed after final readback: ${props.target}`,
-      );
-    completedSnapshot = captureScaffoldFile(props.target);
-    assertScaffoldFileDescriptor(
-      completedSnapshot,
-      descriptor,
-      physicalVersion(finalStatus),
-    );
-    assertScaffoldOwnership(props.base, props.parent);
-  } catch (error) {
-    failure = { error };
-    throw error;
-  } finally {
-    closeScaffoldDescriptor(descriptor, failure, "created scaffold file");
-  }
-  assertScaffoldFileSnapshot(completedSnapshot!);
-  assertScaffoldOwnership(props.base, props.parent);
+  return publishScaffoldFileToCapturedParent({
+    bytes: props.bytes,
+    capability: { publish: publishNativeScaffoldFile },
+    parent: props.parent,
+    target: absolute,
+  });
 };
 
 const overwriteScaffoldFile = (props: {
@@ -431,9 +386,15 @@ const overwriteScaffoldFile = (props: {
   existing: IScaffoldFileSnapshot;
   parent: IScaffoldPhysicalDirectory;
   target: string;
-}): void => {
-  const descriptor = fs.openSync(props.target, "r+");
-  let failure: IScaffoldDescriptorFailure | undefined;
+}): ScaffoldFilePublicationOutcome => {
+  let descriptor: number;
+  try {
+    descriptor = fs.openSync(props.target, "r+");
+  } catch (error) {
+    return Object.freeze({ error, reason: "create-failed", status: "refused" });
+  }
+  const progress = { bytesWritten: 0 };
+  let failure: unknown | undefined;
   let completedSnapshot: IScaffoldFileSnapshot | null = null;
   try {
     const opened = fs.fstatSync(descriptor, { bigint: true });
@@ -445,7 +406,7 @@ const overwriteScaffoldFile = (props: {
     );
     assertScaffoldOwnership(props.base, props.parent);
     fs.ftruncateSync(descriptor, 0);
-    writeScaffoldDescriptor(descriptor, props.target, props.bytes);
+    writeScaffoldDescriptor(descriptor, props.target, props.bytes, progress);
     const completed = fs.fstatSync(descriptor, { bigint: true });
     if (completed.size !== BigInt(props.bytes.byteLength))
       throw new Error(`scaffold file changed final size: ${props.target}`);
@@ -468,13 +429,35 @@ const overwriteScaffoldFile = (props: {
     );
     assertScaffoldOwnership(props.base, props.parent);
   } catch (error) {
-    failure = { error };
-    throw error;
-  } finally {
-    closeScaffoldDescriptor(descriptor, failure, "overwritten scaffold file");
+    failure = error;
   }
-  assertScaffoldFileSnapshot(completedSnapshot!);
-  assertScaffoldOwnership(props.base, props.parent);
+  try {
+    fs.closeSync(descriptor);
+  } catch (closeError) {
+    failure = combineScaffoldFailures(
+      failure,
+      closeError,
+      "overwritten scaffold file",
+    );
+  }
+  if (failure === undefined)
+    try {
+      assertScaffoldFileSnapshot(completedSnapshot!);
+      assertScaffoldOwnership(props.base, props.parent);
+    } catch (error) {
+      failure = error;
+    }
+  return failure === undefined
+    ? Object.freeze({
+        parentIdentity: props.parent.identity,
+        status: "completed",
+      })
+    : Object.freeze({
+        bytesWritten: progress.bytesWritten,
+        error: failure,
+        parentIdentity: props.parent.identity,
+        status: "partial",
+      });
 };
 
 const captureScaffoldFile = (file: string): IScaffoldFileSnapshot => {
@@ -563,6 +546,7 @@ const writeScaffoldDescriptor = (
   descriptor: number,
   target: string,
   bytes: Uint8Array,
+  progress?: { bytesWritten: number },
 ): void => {
   const source = Buffer.from(bytes);
   let offset = 0;
@@ -577,10 +561,23 @@ const writeScaffoldDescriptor = (
     if (written === 0)
       throw new Error(`scaffold file stopped while written: ${target}`);
     offset += written;
+    if (progress !== undefined) progress.bytesWritten = offset;
   }
   fs.fsyncSync(descriptor);
   assertScaffoldDescriptorBytes(descriptor, target, source);
 };
+
+const combineScaffoldFailures = (
+  first: unknown | undefined,
+  second: unknown,
+  resource: string,
+): unknown =>
+  first === undefined
+    ? second
+    : new AggregateError(
+        [...(first instanceof AggregateError ? first.errors : [first]), second],
+        `${resource} close failed after publication failure`,
+      );
 
 const assertScaffoldDescriptorBytes = (
   descriptor: number,

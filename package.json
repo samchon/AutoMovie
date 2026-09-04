@@ -10,7 +10,8 @@
     "test": "pnpm --filter @automovie/test build && pnpm --filter @automovie/test start",
     "experimental": "ttsx -P config/tsconfig.json --no-plugins --types node build/experimental.ts --",
     "format": "prettier --write \"**/*.{ts,cts,mts}\"",
-    "format:check": "prettier --check \"**/*.{ts,cts,mts}\""
+    "format:check": "prettier --check \"**/*.{ts,cts,mts}\"",
+    "probe:scaffold-parent": "ttsx -P config/tsconfig.json --no-plugins --types node build/probeScaffoldParentPublication.ts"
   },
   "keywords": [
     "coding-agent",
