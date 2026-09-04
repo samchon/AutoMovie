@@ -787,7 +787,10 @@ export class AutoMovieProductionRepaintService {
             );
           }
         },
-        onAttempt: () => undefined,
+        onAttempt: (attempt) => {
+          services.project.commitRepaintAttempt(attempt, inputCurrent);
+          currentRequestId = requestId;
+        },
       });
     } catch (error) {
       return failure(
@@ -798,20 +801,11 @@ export class AutoMovieProductionRepaintService {
         ),
       );
     }
-    try {
-      for (const attempt of execution.attempts) {
-        services.project.commitRepaintAttempt(attempt);
-        currentRequestId = requestId;
-      }
-    } catch (error) {
+    if (execution.stop === "observer-failed")
       return failure(
         "repaint-commit-refused",
-        safeRepaintDiagnosticMessage(
-          error,
-          "Repaint terminal attempts could not be committed safely.",
-        ),
+        `Repaint terminal attempt "${execution.attempts.at(-1)?.attemptId ?? "unknown"}" could not be committed; no retry or candidate publication was started.`,
       );
-    }
     if (execution.accepted === null)
       return failure(
         execution.attempts.at(-1)?.status === "stale"

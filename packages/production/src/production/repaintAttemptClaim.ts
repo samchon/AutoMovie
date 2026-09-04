@@ -1,0 +1,108 @@
+import { AutoMovieContentDigest } from "@automovie/interface";
+
+/** Immutable request-prefix claim held before an external repaint side effect. */
+export interface IAutoMovieRepaintAttemptClaim {
+  version: 1;
+  productionId: string;
+  shot: string;
+  requestId: string;
+  requestFingerprint: AutoMovieContentDigest;
+  attemptOrdinal: number;
+  attemptId: string;
+  prefixDigest: AutoMovieContentDigest;
+  generation: number;
+  claimedAt: string;
+}
+
+/** Atomic admission result returned by the project-owned claim store. */
+export type AutoMovieRepaintClaimAdmission =
+  | { status: "acquired" }
+  | { status: "already-active"; ownerAttemptId: string }
+  | { status: "prefix-changed" }
+  | { status: "unknown-outcome"; ownerAttemptId: string };
+
+/** Terminal claim state written after the adapter boundary settles. */
+export type AutoMovieRepaintClaimSettlement =
+  | "fulfilled"
+  | "rejected"
+  | "unknown-outcome";
+
+/** Result of one request-scoped claimed dispatch. */
+export type AutoMovieRepaintClaimedDispatch<T> =
+  | { status: "completed"; value: T }
+  | {
+      status: Exclude<AutoMovieRepaintClaimAdmission["status"], "acquired">;
+    };
+
+/** Error identifying a timed-out adapter whose external outcome is unknown. */
+export class AutoMovieRepaintUnknownOutcomeError extends Error {}
+
+/**
+ * Reserve one exact next attempt before invoking an external repaint adapter.
+ *
+ * @evidence requirements/repaint/retries-seeds-and-variation.md#repaint-retry-request-boundary Prevents concurrent retries from dispatching the same immutable request prefix twice.
+ * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-repaint-attempt-selection Binds atomic admission to the request fingerprint, journal prefix, next ordinal, attempt identity, and claim generation.
+ */
+export const executeClaimedAutoMovieRepaintAttempt = async <T>(props: {
+  claim: IAutoMovieRepaintAttemptClaim;
+  acquire: (
+    claim: IAutoMovieRepaintAttemptClaim,
+  ) => AutoMovieRepaintClaimAdmission;
+  execute: () => Promise<T>;
+  settle: (
+    claim: IAutoMovieRepaintAttemptClaim,
+    settlement: AutoMovieRepaintClaimSettlement,
+  ) => void | Promise<void>;
+}): Promise<AutoMovieRepaintClaimedDispatch<T>> => {
+  const claim = validatedClaim(props.claim);
+  const admission = props.acquire(structuredClone(claim));
+  if (admission.status !== "acquired") return { status: admission.status };
+  try {
+    const value = await props.execute();
+    await props.settle(structuredClone(claim), "fulfilled");
+    return { status: "completed", value };
+  } catch (error) {
+    if (safeUnknownOutcome(error)) {
+      await props.settle(structuredClone(claim), "unknown-outcome");
+      return { status: "unknown-outcome" };
+    }
+    await props.settle(structuredClone(claim), "rejected");
+    throw error;
+  }
+};
+
+const validatedClaim = (
+  claim: IAutoMovieRepaintAttemptClaim,
+): IAutoMovieRepaintAttemptClaim => {
+  if (
+    claim.version !== 1 ||
+    [claim.productionId, claim.shot, claim.requestId, claim.attemptId].some(
+      (value) =>
+        typeof value !== "string" ||
+        value.trim().length === 0 ||
+        value !== value.trim(),
+    ) ||
+    /^sha256:[0-9a-f]{64}$/u.test(claim.requestFingerprint) === false ||
+    /^sha256:[0-9a-f]{64}$/u.test(claim.prefixDigest) === false ||
+    Number.isSafeInteger(claim.attemptOrdinal) === false ||
+    claim.attemptOrdinal <= 0 ||
+    Number.isSafeInteger(claim.generation) === false ||
+    claim.generation <= 0
+  )
+    throw new Error("Repaint attempt claim identity is malformed.");
+  const claimedAt = new Date(claim.claimedAt);
+  if (
+    Number.isNaN(claimedAt.getTime()) ||
+    claimedAt.toISOString() !== claim.claimedAt
+  )
+    throw new Error("Repaint attempt claim requires an exact UTC instant.");
+  return structuredClone(claim);
+};
+
+const safeUnknownOutcome = (error: unknown): boolean => {
+  try {
+    return error instanceof AutoMovieRepaintUnknownOutcomeError;
+  } catch {
+    return false;
+  }
+};

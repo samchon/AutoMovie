@@ -91,6 +91,7 @@ interface IAutoMovieRepaintExecutionResult<T> {
     | "attempts-exhausted"
     | "backoff-failed"
     | "not-retryable"
+    | "outcome-unknown"
     | "observer-failed";
 }
 
@@ -156,7 +157,7 @@ export const executeAutoMovieRepaintRequest = async <T>(props: {
     costUnits: number;
     availableOutput: IAutoMovieRepaintAttemptOutput | null;
   }>;
-  onAttempt: (attempt: IAutoMovieRepaintAttemptRecord) => void;
+  onAttempt: (attempt: IAutoMovieRepaintAttemptRecord) => void | Promise<void>;
 }): Promise<IAutoMovieRepaintExecutionResult<T>> => {
   assertAutoMovieRepaintExecutionPolicy(props.policy);
   assertRepaintExecutionIdentity(props);
@@ -182,9 +183,11 @@ export const executeAutoMovieRepaintRequest = async <T>(props: {
     return current;
   };
   const attempts: IAutoMovieRepaintAttemptRecord[] = [];
-  const notifyAttempt = (attempt: IAutoMovieRepaintAttemptRecord): boolean => {
+  const notifyAttempt = async (
+    attempt: IAutoMovieRepaintAttemptRecord,
+  ): Promise<boolean> => {
     try {
-      props.onAttempt(structuredClone(attempt));
+      await props.onAttempt(structuredClone(attempt));
       return true;
     } catch {
       return false;
@@ -247,11 +250,22 @@ export const executeAutoMovieRepaintRequest = async <T>(props: {
     const timeoutMs = Math.min(props.policy.attemptTimeoutMs, remainingElapsed);
     let timeout: ReturnType<typeof setTimeout> | undefined;
     let timedOut = false;
+    let adapterSettled = false;
     let disclosedCostUnits = 0;
     let disclosedOutput: IAutoMovieRepaintAttemptOutput | null = null;
     try {
+      const adapter = props.execute(controller.signal).then(
+        (value) => {
+          adapterSettled = true;
+          return value;
+        },
+        (error: unknown) => {
+          adapterSettled = true;
+          throw error;
+        },
+      );
       const outcome = await Promise.race([
-        props.execute(controller.signal),
+        adapter,
         new Promise<never>((resolve, reject) => {
           void resolve;
           timeout = setTimeout(() => {
@@ -351,7 +365,7 @@ export const executeAutoMovieRepaintRequest = async <T>(props: {
           availableOutput: disclosedOutput,
         });
         attempts.push(attempt);
-        if (notifyAttempt(attempt) === false)
+        if ((await notifyAttempt(attempt)) === false)
           return result(props.requestId, attempts, null, "observer-failed");
         return result(props.requestId, attempts, null, "cost-exhausted");
       }
@@ -374,7 +388,7 @@ export const executeAutoMovieRepaintRequest = async <T>(props: {
         availableOutput: disclosedOutput,
       });
       attempts.push(attempt);
-      if (notifyAttempt(attempt) === false)
+      if ((await notifyAttempt(attempt)) === false)
         return result(props.requestId, attempts, null, "observer-failed");
       return result(props.requestId, attempts, { value, attempt }, "accepted");
     } catch (error) {
@@ -403,36 +417,47 @@ export const executeAutoMovieRepaintRequest = async <T>(props: {
         timeoutDisclosure === null
           ? null
           : repaintAttemptErrorDisclosure(timeoutDisclosure);
-      const classified = clockFailed
-        ? requestCancelled()
-          ? ({
-              failureClass: "cancelled",
-              status: "cancelled",
-              message: "Repaint request was cancelled.",
-              costUnits: disclosedCostUnits,
-              availableOutput: disclosedOutput,
-            } satisfies IClassifiedRepaintFailure)
-          : ({
-              failureClass: "internal",
-              status: "failed",
-              message: terminalClockError!.message,
-              costUnits: disclosedCostUnits,
-              availableOutput: disclosedOutput,
-            } satisfies IClassifiedRepaintFailure)
-        : classifyFailure(
-            deadlineExceeded &&
-              safeTimeoutDisclosure?.failureClass !== "timeout"
-              ? new AutoMovieRepaintAttemptError(
-                  "timeout",
-                  `Repaint attempt exceeded ${timeoutMs}ms.`,
-                  safeTimeoutDisclosure?.costUnits ?? 0,
-                  safeTimeoutDisclosure?.availableOutput ?? null,
-                )
-              : terminalError,
-            props.signal,
-          );
+      const externalOutcomeUnknown = timedOut && adapterSettled === false;
+      const classified = externalOutcomeUnknown
+        ? ({
+            failureClass: "internal",
+            status: "failed",
+            message:
+              "Repaint adapter did not acknowledge cancellation; external outcome requires reconciliation before retry.",
+            costUnits: disclosedCostUnits,
+            availableOutput: disclosedOutput,
+          } satisfies IClassifiedRepaintFailure)
+        : clockFailed
+          ? requestCancelled()
+            ? ({
+                failureClass: "cancelled",
+                status: "cancelled",
+                message: "Repaint request was cancelled.",
+                costUnits: disclosedCostUnits,
+                availableOutput: disclosedOutput,
+              } satisfies IClassifiedRepaintFailure)
+            : ({
+                failureClass: "internal",
+                status: "failed",
+                message: terminalClockError!.message,
+                costUnits: disclosedCostUnits,
+                availableOutput: disclosedOutput,
+              } satisfies IClassifiedRepaintFailure)
+          : classifyFailure(
+              deadlineExceeded &&
+                safeTimeoutDisclosure?.failureClass !== "timeout"
+                ? new AutoMovieRepaintAttemptError(
+                    "timeout",
+                    `Repaint attempt exceeded ${timeoutMs}ms.`,
+                    safeTimeoutDisclosure?.costUnits ?? 0,
+                    safeTimeoutDisclosure?.availableOutput ?? null,
+                  )
+                : terminalError,
+              props.signal,
+            );
       spent += classified.costUnits;
       const retryable =
+        externalOutcomeUnknown === false &&
         clockFailed === false &&
         classified.status === "failed" &&
         props.policy.retryableFailures.some(
@@ -461,8 +486,10 @@ export const executeAutoMovieRepaintRequest = async <T>(props: {
         availableOutput: classified.availableOutput,
       });
       attempts.push(attempt);
-      if (notifyAttempt(attempt) === false)
+      if ((await notifyAttempt(attempt)) === false)
         return result(props.requestId, attempts, null, "observer-failed");
+      if (externalOutcomeUnknown)
+        return result(props.requestId, attempts, null, "outcome-unknown");
       if (classified.status === "cancelled")
         return result(props.requestId, attempts, null, "cancelled");
       if (retryable === false)
