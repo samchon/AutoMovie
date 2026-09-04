@@ -23,6 +23,7 @@ import {
   openAutoMovieProduction,
   probeProductionMedia,
   productionPublicationInputFingerprint,
+  productionRenderPublicationIdentity,
   readAutoMovieFilmTimeline,
   sampleProductionRenderFrame,
 } from "@automovie/production";
@@ -54,29 +55,7 @@ import {
 export const productionRenderPublicationFingerprint = (
   plan: IAutoMovieProductionRenderJobPlan,
 ): AutoMovieContentDigest =>
-  digestAutoMovieBytes(
-    Buffer.from(
-      JSON.stringify({
-        protocol: "automovie.production-publication.v2",
-        productionId: plan.productionId,
-        compileFingerprint: plan.compileFingerprint,
-        editFingerprint: plan.editFingerprint,
-        runtimeIdentity: plan.runtimeIdentity,
-        tier: plan.tier,
-        sourceFrameFormat: plan.sourceFrameFormat,
-        frameFormat: plan.frameFormat,
-        totalFrames: plan.totalFrames,
-        chunkFrames: plan.chunkFrames,
-        chunks: plan.chunks.map((chunk) => ({
-          slot: chunk.slot,
-          id: chunk.id,
-          pass: chunk.pass,
-        })),
-        tracks: plan.tracks,
-      }),
-      "utf8",
-    ),
-  );
+  productionRenderPublicationIdentity(plan).fingerprint;
 
 export interface IProductionRenderPublicationRuntime {
   assembleChunkVideo: (
@@ -185,6 +164,11 @@ export const createProductionRenderPublicationRuntime = (props: {
   publishProxy: (plan, publication, manifest, project) => {
     const renderRoot = project.renderRoot();
     const fingerprint = props.publicationFingerprint(plan);
+    const publicationIdentity = productionRenderPublicationIdentity(plan);
+    if (fingerprint !== publicationIdentity.fingerprint)
+      throw new Error(
+        "Proxy publication fingerprint differs from the canonical render-plan identity.",
+      );
     const publicationSegment = fingerprint.slice(7);
     const bundle = ["deliverables", "proxy", publicationSegment].join("/");
     const parent = props.ensureDirectory(renderRoot, "deliverables/proxy");
@@ -195,6 +179,7 @@ export const createProductionRenderPublicationRuntime = (props: {
           version: 1,
           tier: plan.tier,
           publicationFingerprint: fingerprint,
+          publicationIdentity,
           compileFingerprint: plan.compileFingerprint,
           editFingerprint: plan.editFingerprint,
           frameFormat: plan.frameFormat,
@@ -366,8 +351,9 @@ export const createProductionRenderFinalizationRuntime = (props: {
     );
     const publication = new Map<string, Uint8Array>();
     const manifest: IAutoMovieProductionRenderManifest = {
-      version: 1,
+      version: 2,
       compileFingerprint: plan.compileFingerprint,
+      publication: productionRenderPublicationIdentity(plan),
       deliverables: [],
     };
     let soundPromise: Promise<IProductionSoundBundle> | undefined;
@@ -657,6 +643,11 @@ export const createProductionRenderFinalizationRuntime = (props: {
     const revision = project.commitProductionPublication({
       files: publication,
       manifest,
+      plan,
+      planCurrent: () => {
+        planningRuntime.assertPlanCurrent(plan);
+        return true;
+      },
       inputCurrent: () =>
         productionPublicationInputFingerprint(
           AutoMovieProductionProject.openReadOnly(root, productionId),

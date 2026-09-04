@@ -734,6 +734,7 @@ export const createProductionRenderPlanningRuntime = (props: {
   };
 
   return {
+    assertPlanCurrent,
     captureReviewEvidence,
     currentChunk,
     currentChunkPublication,

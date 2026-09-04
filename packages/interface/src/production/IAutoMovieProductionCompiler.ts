@@ -55,7 +55,10 @@ import {
   IAutoMovieShotPredicate,
   IAutoMovieWorldDesign,
 } from "./IAutoMovieProductionDesign";
-import type { IAutoMovieRenderBundleManifest } from "./IAutoMovieProductionOracle";
+import type {
+  IAutoMovieCaptureRuntimeIdentity,
+  IAutoMovieRenderBundleManifest,
+} from "./IAutoMovieProductionOracle";
 import type { IAutoMovieProductionSoundEvidence } from "./IAutoMovieProductionSound";
 import type { IAutoMovieSubjectReviewTarget } from "./IAutoMovieSubjectReview";
 
@@ -1223,6 +1226,71 @@ export interface IAutoMovieProductionRenditionDelivery {
  * @evidence requirements/delivery-and-accessibility/captions-subtitles-and-cues.md#delivery-caption-readability-profile Exposes `IAutoMovieProductionRenderManifest` as the portable data boundary for the delivery caption readability profile requirement.
  * @evidence specifications/editorial-render-and-delivery/delivery-audio-text-and-localization.md#spec-delivery-caption-readability-profile Types `IAutoMovieProductionRenderManifest` for the spec delivery caption readability profile system contract.
  */
+export interface IAutoMovieProductionPublicationIdentity {
+  /** Closed identity protocol. */
+  protocolVersion: "automovie.production-publication.v3";
+  /** Production namespace whose plan produced the publication. */
+  productionId: string;
+  /** Exact compiler input used by the plan. */
+  compileFingerprint: AutoMovieContentDigest;
+  /** Exact compiler-owned edit used by the plan. */
+  editFingerprint: AutoMovieContentDigest;
+  /** Complete installed capture, dialogue, and encoder closure. */
+  runtimeIdentity: {
+    protocolVersion: "automovie.production-render-runtime.v3";
+    sourceDigest: AutoMovieContentDigest;
+    dialogueRuntimeIdentity: AutoMovieContentDigest | null;
+    capture: IAutoMovieCaptureRuntimeIdentity;
+    encoder: {
+      package: string;
+      version: string;
+      closureDigest: AutoMovieContentDigest;
+      codec: "h264";
+      arguments: {
+        quantizationParameter: number;
+        speed: number;
+        groupOfPictures: number;
+      };
+    };
+  };
+  /** Proxy or final policy, compared only with the same tier. */
+  tier: {
+    kind: "proxy" | "final";
+    resolutionScale: number;
+    frameStep: number;
+  };
+  /** Compiler-owned full-rate format. */
+  sourceFrameFormat: IAutoMovieProductionDesign["frameFormat"];
+  /** Exact tier output format. */
+  frameFormat: IAutoMovieProductionDesign["frameFormat"];
+  /** Tier output frame count. */
+  totalFrames: number;
+  /** Maximum planned chunk span. */
+  chunkFrames: number;
+  /** Canonical chunk identity projection in plan order. */
+  chunks: Array<{
+    slot: string;
+    id: AutoMovieContentDigest;
+    pass: string;
+  }>;
+  /** Canonical identities of every non-video publication track. */
+  tracks: {
+    captions: AutoMovieContentDigest;
+    audio: AutoMovieContentDigest;
+    audioAssets: AutoMovieContentDigest;
+  };
+  /** Digest of the canonical identity fields above. */
+  fingerprint: AutoMovieContentDigest;
+}
+
+/**
+ * Aggregate final-delivery ledger bound to one exact render-plan runtime.
+ *
+ * @evidence requirements/rendering/scope-and-artifact-identity.md#rendering-artifact-invalidation Makes any plan or runtime-closure change invalidate the aggregate publication.
+ * @evidence requirements/production-design/continuity-change-and-deliverables.md#production-design-deliverable-provenance Preserves the exact render-plan provenance beside delivered bytes.
+ * @evidence specifications/editorial-render-and-delivery/delivery-package-provenance-and-publication.md#spec-delivery-provenance-integrity Carries a recomputable structured publication identity rather than trusting an opaque path.
+ * @evidence specifications/execution-and-recovery/artifacts-and-atomic-publication.md#execution-publication-preconditions Supplies the exact candidate generation checked at the terminal commit boundary.
+ */
 export interface IAutoMovieProductionRenderManifest {
   /**
    * Aggregate manifest format.
@@ -1230,7 +1298,7 @@ export interface IAutoMovieProductionRenderManifest {
    * @evidence requirements/delivery-and-accessibility/captions-subtitles-and-cues.md#delivery-caption-readability-profile Exposes `version` as the portable data boundary for the delivery caption readability profile requirement.
    * @evidence specifications/editorial-render-and-delivery/delivery-audio-text-and-localization.md#spec-delivery-caption-readability-profile Types `version` for the spec delivery caption readability profile system contract.
    */
-  version: 1;
+  version: 2;
   /**
    * Exact compiler input that produced every listed output.
    *
@@ -1238,6 +1306,8 @@ export interface IAutoMovieProductionRenderManifest {
    * @evidence specifications/editorial-render-and-delivery/delivery-audio-text-and-localization.md#spec-delivery-caption-readability-profile Types `compileFingerprint` for the spec delivery caption readability profile system contract.
    */
   compileFingerprint: AutoMovieContentDigest;
+  /** Structured and self-verifying render-plan identity. */
+  publication: IAutoMovieProductionPublicationIdentity;
   /**
    * Materialized required and optional deliverables.
    *
@@ -1726,7 +1796,7 @@ export interface IAutoMovieProductionRenderReceipt {
    * @evidence requirements/motion/external-motion-inputs.md#motion-external-adoption-receipt Exposes `version` as the portable data boundary for the motion external adoption receipt requirement.
    * @evidence specifications/performance-motion-and-staging/motion-sampling-and-composition.md#performance-motion-external-adoption-receipt Types `version` for the performance motion external adoption receipt system contract.
    */
-  version: 3;
+  version: 4;
   /**
    * Exact digest of the active production's tracked render manifest.
    *
@@ -1734,6 +1804,8 @@ export interface IAutoMovieProductionRenderReceipt {
    * @evidence specifications/performance-motion-and-staging/motion-sampling-and-composition.md#performance-motion-external-adoption-receipt Types `manifestDigest` for the performance motion external adoption receipt system contract.
    */
   manifestDigest: AutoMovieContentDigest;
+  /** Exact recomputed publication identity carried by the manifest. */
+  publicationFingerprint: AutoMovieContentDigest;
   /**
    * Exact byte and media probes in canonical path order.
    *

@@ -1,11 +1,14 @@
 import type {
   AutoMovieContentDigest,
+  IAutoMovieProductionPublicationIdentity,
   IAutoMovieProductionRenderManifest,
 } from "@automovie/interface";
 import {
   type IAutoMovieProductionRenderJobPlan,
   type IAutoMovieProductionRenderTier,
+  canonicalAutoMovieJsonBytes,
   digestAutoMovieBytes,
+  parseProductionRenderPublicationIdentity,
   readAutoMovieProductionOwnedFile,
 } from "@automovie/production";
 import fs from "node:fs";
@@ -53,6 +56,7 @@ export interface IVerifiedProxyPublication {
   frameFormat: IAutoMovieProductionRenderJobPlan["frameFormat"];
   manifest: IAutoMovieProductionRenderManifest;
   publicationFingerprint: AutoMovieContentDigest;
+  publicationIdentity: IAutoMovieProductionPublicationIdentity;
   sourceFrameFormat: IAutoMovieProductionRenderJobPlan["sourceFrameFormat"];
   tier: IAutoMovieProductionRenderTier;
   totalFrames: number;
@@ -261,6 +265,9 @@ const parseProxyPublication = (
   if (isRecord(value) === false)
     throw new Error("Proxy publication receipt is not an object.");
   const receipt = value as Record<string, unknown>;
+  const publicationIdentity = parseProductionRenderPublicationIdentity(
+    receipt.publicationIdentity,
+  );
   if (
     receipt.version !== 1 ||
     validDigest(receipt.publicationFingerprint) === false ||
@@ -273,12 +280,23 @@ const parseProxyPublication = (
     Number.isSafeInteger(receipt.totalFrames) === false ||
     receipt.totalFrames <= 0 ||
     isRecord(receipt.manifest) === false ||
-    receipt.manifest.version !== 1 ||
+    receipt.manifest.version !== 2 ||
     receipt.manifest.compileFingerprint !== receipt.compileFingerprint ||
+    receipt.publicationFingerprint !== publicationIdentity.fingerprint ||
+    publicationIdentity.tier.kind !== "proxy" ||
+    publicationIdentity.compileFingerprint !== receipt.compileFingerprint ||
+    publicationIdentity.editFingerprint !== receipt.editFingerprint ||
+    Buffer.from(
+      canonicalAutoMovieJsonBytes(receipt.manifest.publication),
+    ).equals(Buffer.from(canonicalAutoMovieJsonBytes(publicationIdentity))) ===
+      false ||
     Array.isArray(receipt.manifest.deliverables) === false
   )
     throw new Error("Proxy publication receipt has an invalid identity.");
-  return value as unknown as IVerifiedProxyPublication;
+  return {
+    ...(value as Omit<IVerifiedProxyPublication, "publicationIdentity">),
+    publicationIdentity,
+  };
 };
 
 const proxyManifestFiles = (
