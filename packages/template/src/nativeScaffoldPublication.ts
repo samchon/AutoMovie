@@ -70,6 +70,23 @@ const publishNativeScaffoldFileWithEnvironment = (
   request: IScaffoldParentPublicationRequest,
   environment: INativeEnvironment,
 ): ScaffoldFilePublicationOutcome => {
+  if (
+    request.childName.length === 0 ||
+    request.childName === "." ||
+    request.childName === ".." ||
+    request.childName.includes("\0") ||
+    request.childName.includes("/") ||
+    request.childName.includes("\\") ||
+    request.expectedParentIdentity.length === 0 ||
+    request.bytes.some(
+      (byte) => Number.isSafeInteger(byte) === false || byte < 0 || byte > 0xff,
+    )
+  )
+    return Object.freeze({
+      error: new Error("invalid native scaffold publication request"),
+      reason: "create-failed" as const,
+      status: "refused" as const,
+    });
   let parent: IBoundParent;
   try {
     parent = openBoundParent(request, environment);
@@ -127,7 +144,7 @@ const publishNativeScaffoldFileWithEnvironment = (
   const source = Buffer.from(request.bytes);
   const descriptor = creation.descriptor;
   let bytesWritten = 0;
-  let failure: unknown | undefined;
+  let failure: unknown = undefined;
   let completedVersion: string | undefined;
   try {
     const opened = environment.fileSystem.fstatSync(descriptor, {
@@ -567,7 +584,7 @@ const createWindowsLibrary = (foreign: typeof koffi): IWindowsLibrary => {
       "uint32_t __stdcall GetLastError(void)",
     ) as IWindowsLibrary["getLastError"],
     handleType,
-    ntCreateFile: ntdll.func("NtCreateFile", "int32_t", [
+    ntCreateFile: ntdll.func("__stdcall", "NtCreateFile", "int32_t", [
       foreign.out(foreign.pointer(handleType)),
       "uint32_t",
       foreign.pointer(objectAttributesType),
@@ -633,7 +650,7 @@ const assertBoundResident = (
   expectedVersion: string,
 ): void => {
   const descriptor = parent.openResident(childName);
-  let failure: unknown | undefined;
+  let failure: unknown = undefined;
   try {
     const status = environment.fileSystem.fstatSync(descriptor, {
       bigint: true,
@@ -645,19 +662,17 @@ const assertBoundResident = (
       );
   } catch (error) {
     failure = error;
-    throw error;
-  } finally {
-    try {
-      environment.fileSystem.closeSync(descriptor);
-    } catch (closeError) {
-      if (failure === undefined) throw closeError;
-      throw combineFailures(
-        failure,
-        closeError,
-        "resident scaffold descriptor close",
-      );
-    }
   }
+  try {
+    environment.fileSystem.closeSync(descriptor);
+  } catch (closeError) {
+    failure = combineFailures(
+      failure,
+      closeError,
+      "resident scaffold descriptor close",
+    );
+  }
+  if (failure !== undefined) throw failure;
 };
 
 const assertDescriptorBytes = (
@@ -708,7 +723,7 @@ const nativeError = (message: string, code: number): Error =>
   new Error(`${message} (native code ${code})`);
 
 const combineFailures = (
-  first: unknown | undefined,
+  first: unknown,
   second: unknown,
   resource: string,
 ): unknown =>
