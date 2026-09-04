@@ -9,8 +9,10 @@ import type { ScaffoldFilePublicationOutcome } from "./scaffoldPublication";
  * The adapter must open the parent without following a link, prove
  * `expectedParentIdentity`, create `childName` relative to that held native
  * handle with exclusive/no-follow semantics, and own descriptor write, sync,
- * readback, final-status, and close reporting. It must never retry through
- * `parentPath`, reopen the child pathname, or delete a reported partial slot.
+ * readback, one-link and held-parent-relative resident-identity verification,
+ * final-status, and close reporting. It must never retry through `parentPath`,
+ * reopen through a mutable absolute child pathname, or delete a reported
+ * partial slot.
  *
  * @evidence requirements/operations-and-recovery/idempotency-and-side-effects.md#operations-idempotent-deterministic-results Binds exact candidate bytes to one captured physical parent generation.
  * @evidence specifications/execution-and-recovery/retry-backoff-and-idempotency.md#execution-deterministic-result-reuse Makes the native parent capability and candidate bytes the closed reuse input.
@@ -53,7 +55,8 @@ export interface IScaffoldParentPublicationRequest {
  * A supported adapter returns `refused` only when it knows no slot was
  * created. Once a descriptor is secured, every failure is `partial`, with the
  * exact bound parent identity and byte count; only verified write/readback,
- * final status, and close may return `completed`.
+ * one-link and held-parent-relative resident identity, final status, and close
+ * may return `completed`.
  *
  * @evidence requirements/operations-and-recovery/idempotency-and-side-effects.md#operations-compensation-reconciliation Reports absence and bound partial state without pathname cleanup.
  * @evidence specifications/execution-and-recovery/retry-backoff-and-idempotency.md#execution-compensation-adoption Supplies the exact one-slot result that candidate recovery consumes.
