@@ -43,7 +43,6 @@ const productionRequirementContracts = [
   "requirements/repaint/retries-seeds-and-variation.md",
   "requirements/repaint/sequence-continuity-and-publication.md",
   "requirements/review/subject-inspection.md",
-  "requirements/sound/dialogue-voice-and-visemes.md",
 ];
 
 const productionSpecificationContracts = [
@@ -51,7 +50,6 @@ const productionSpecificationContracts = [
   "specifications/execution-and-recovery/concurrent-ownership-and-locking.md",
   "specifications/narrative-and-intent/budgets-continuity-and-deliverables.md",
   "specifications/review-and-acceptance/subject-surface-and-inspection.md",
-  "specifications/simulation-effects-and-sound/sound-sources-events-dialogue-and-foley.md",
 ];
 
 const graph: ITtscEvidenceGraphConfig = {
