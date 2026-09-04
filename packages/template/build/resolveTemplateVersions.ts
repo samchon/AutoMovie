@@ -27,8 +27,8 @@ const workspaceYaml = (): string =>
 /**
  * Resolve one catalog entry out of a workspace manifest given as text.
  *
- * Split from the read so the rule this repository owns -- indentation scoping,
- * anchor stripping, alias resolution, and the three refusals -- can be driven
+ * Split from the read so the rule this repository owns -- mapping scope,
+ * scalar and alias resolution, and explicit refusals -- can be driven
  * over a manifest written for the case, rather than only over the one manifest
  * this repository happens to hold today. Asserting against that manifest would
  * pin its current versions and say nothing about the parser: bumping a

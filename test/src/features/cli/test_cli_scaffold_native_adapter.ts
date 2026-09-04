@@ -11,7 +11,9 @@ type NativeEnvironmentProps = Parameters<
 
 interface INativeScenario {
   childAdoptionFails?: boolean;
+  childAdoptionThrows?: boolean;
   childCloseFails?: boolean;
+  childHandleInvalid?: boolean;
   childIsFile?: boolean;
   childLinks?: bigint;
   closeFails?: ReadonlySet<number>;
@@ -178,6 +180,8 @@ const execute = (scenario: INativeScenario) => {
   );
   const openOsHandle = callable((...arguments_: unknown[]) => {
     childAdoptions++;
+    if (scenario.childAdoptionThrows && childAdoptions === 1)
+      throw new Error("child adoption threw");
     if (scenario.childAdoptionFails && childAdoptions === 1) return -1;
     if (scenario.residentAdoptionFails && childAdoptions > 1) return -1;
     return childAdoptions === 1 ? 11 : 12;
@@ -189,7 +193,7 @@ const execute = (scenario: INativeScenario) => {
       return 0xc0000035 | 0;
     if (disposition === 2 && scenario.target === "create-failed") return -1;
     if (disposition === 1 && scenario.residentOpenFails) return -1;
-    output[0] = 101n;
+    output[0] = scenario.childHandleInvalid ? null : 101n;
     return 0;
   });
   const getFileInformation = callable((...arguments_: unknown[]) => {
@@ -280,6 +284,8 @@ export const test_cli_scaffold_native_adapter = (): void => {
     { platform: "win32", target: "competitor" },
     { platform: "win32", target: "create-failed" },
     { childAdoptionFails: true, platform: "win32", target: "ok" },
+    { childAdoptionThrows: true, platform: "win32", target: "ok" },
+    { childHandleInvalid: true, platform: "win32", target: "ok" },
     {
       childAdoptionFails: true,
       childCloseFails: true,
@@ -362,8 +368,10 @@ export const test_cli_scaffold_native_adapter = (): void => {
     "refused:create-failed",
     "refused:target-competitor",
     "refused:create-failed",
-    "partial:3",
-    "partial:3",
+    "partial:0",
+    "partial:0",
+    "partial:0",
+    "partial:0",
     "partial:3",
     "partial:3",
     "partial:0",

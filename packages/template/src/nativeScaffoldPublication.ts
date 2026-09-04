@@ -458,7 +458,40 @@ const openWindowsParent = (
     );
     if (status < 0) return { status };
     const childRaw = output[0];
-    const childDescriptor = windows.openOsHandle(childRaw, 0x8002);
+    let childDescriptor: number;
+    try {
+      if (
+        invalidWindowsHandle(environment.foreign, childRaw, windows.handleType)
+      )
+        throw new Error("native create returned an invalid scaffold child");
+      childDescriptor = windows.openOsHandle(childRaw, 0x8002);
+    } catch (error) {
+      let failure = error;
+      if (childRaw !== null)
+        try {
+          if (windows.closeHandle(childRaw) === false)
+            failure = combineFailures(
+              failure,
+              nativeError(
+                "unable to close unadopted scaffold child",
+                windows.getLastError(),
+              ),
+              "unadopted scaffold child",
+            );
+        } catch (closeError) {
+          failure = combineFailures(
+            failure,
+            closeError,
+            "unadopted scaffold child",
+          );
+        }
+      if (disposition === 0x2)
+        throw new ScaffoldCreatedSlotError(
+          "scaffold slot was created before descriptor adoption failed",
+          { cause: failure },
+        );
+      throw failure;
+    }
     if (childDescriptor < 0) {
       const code = environment.foreign.errno();
       let error: unknown = nativeError(
@@ -651,9 +684,10 @@ const createWindowsLibrary = (foreign: typeof koffi): IWindowsLibrary => {
       "uint32_t",
     ]),
     objectAttributesType,
-    openOsHandle: runtime.func(
-      "int _open_osfhandle(intptr_t handle, int flags)",
-    ) as IWindowsLibrary["openOsHandle"],
+    openOsHandle: runtime.func("_open_osfhandle", "int", [
+      handleType,
+      "int",
+    ]) as IWindowsLibrary["openOsHandle"],
   };
 };
 
