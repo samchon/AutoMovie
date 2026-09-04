@@ -25,6 +25,12 @@ assert.doesNotThrow(() =>
         "@evidenceReview contracts/local.md#rule #abcdef0 Comparison found the exact owner.",
       ].join("\n"),
     ),
+    markdown(
+      [
+        "@evidence contracts/local.md#abcdef0 The host implements the hexadecimal anchor.",
+        "@evidenceReview contracts/local.md#abcdef0 #abcdef0 Comparison found the exact hexadecimal owner.",
+      ].join("\n"),
+    ),
     {
       path: "src/inert.ts",
       source:
