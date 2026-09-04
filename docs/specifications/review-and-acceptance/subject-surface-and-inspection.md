@@ -85,6 +85,8 @@ Shot render, rendition 교체와 delivery 재생성은 주체 freshness key에 �
 
 ### Library 전달 관찰 집계 {#review-system-library-delivery-coverage}
 
+Compiler는 graph-selected owner edge를 실행 전에 확인하고, maps/contexts, models/models, spaces/environments의 branch별 nonempty 결과만 materialize한다. Empty, cross-branch, unsupported 결과는 completed owner나 review denominator가 되지 않으며, 각 environment, model, context 파일의 generated manifest target은 materialized owner index의 정확히 하나인 branch/H2로 역해석되어야 한다.
+
 <!-- @evidenceObligation library-delivery-observation-closure The production consumer closes every graph-derived map, model, space, material, instance, motion, and system delivery owner against its exact current plan, source, compile, runtime, evidence, and terminal-verdict identity. -->
 
 <!-- @evidence requirements/review/subject-inspection.md#review-library-delivery-coverage Library의 graph-selected 전달 owner와 branch별 유한 current observation을 review denominator로 고정한다. -->

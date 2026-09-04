@@ -1,7 +1,7 @@
 import type { IAutoMovieLibraryContribution } from "@automovie/interface";
+import { autoMovieLibraryContributionDiagnostics } from "@automovie/production";
 import { TestValidator } from "@nestia/e2e";
 
-import { autoMovieLibraryContributionDiagnostics } from "../../../../packages/production/src/production/libraryContributionContract";
 import { analysisContext } from "../internal/analysisFixtures";
 import { drawingBoxModel } from "../internal/drawingFixtures";
 import { rectangularBuilding } from "../internal/envelopeFixtures";

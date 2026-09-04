@@ -181,6 +181,16 @@
         }
       }
     },
+    "specifications/execution-and-recovery/state-machine-and-admission.md#execution-admission-decision": {
+      "obligations": {
+        "admission-decision": {
+          "owner": {
+            "kind": "package",
+            "package": "automovie"
+          }
+        }
+      }
+    },
     "specifications/interior-space/README.md#interior-space-specification-scope": {
       "structural": {
         "reason": "This README heading defines the interior specification collection and routes to independently payable descendant documents without adding a separate system operation."
@@ -986,7 +996,6 @@
     "specifications/execution-and-recovery/scope-and-execution-identities.md#execution-logical-job-identity": "sha256:9541c2298a797a7ec542981c7a5125139d816fc8824c6013cfaba2d6ca202b00",
     "specifications/execution-and-recovery/scope-and-execution-identities.md#execution-record-input-output": "sha256:773bc2e02dbddedc219e9004c7e2fd6423f54ec203f5f6cea63fedd36678f1d7",
     "specifications/execution-and-recovery/scope-and-execution-identities.md#execution-scope-boundary": "sha256:6cd9fe0f0778ceb2b18f88c15983214fd09eb2efe1e2d2264e941013af6d000d",
-    "specifications/execution-and-recovery/state-machine-and-admission.md#execution-admission-decision": "sha256:aa2cf776e4bf317f60cbb998d399ed82b7c945031291780bd4b00083ead3e3da",
     "specifications/execution-and-recovery/state-machine-and-admission.md#execution-admission-input": "sha256:0af87559ec57dea19f952781a1773f9f1ec5c75574a70902cf1244476ea9aad5",
     "specifications/execution-and-recovery/state-machine-and-admission.md#execution-allowed-state-transitions": "sha256:5f51539cf90dc3feb80a6c7f499c94f1d1cf566a32a397017ebfe224df8249b3",
     "specifications/execution-and-recovery/state-machine-and-admission.md#execution-job-attempt-state": "sha256:1f30bc3556b760c052041c3c45399a67b9e84ac64e876d4d44e3685c502e0237",

@@ -10,6 +10,7 @@ import { rectangularBuilding } from "../internal/envelopeFixtures";
 import { namedFacts } from "../internal/predicates";
 import {
   LIBRARY_ANCHOR,
+  LIBRARY_DESIGN,
   LIBRARY_MODEL_OWNER,
   LIBRARY_MODEL_SOURCE,
   LIBRARY_OWNER,

@@ -1,7 +1,7 @@
 import type { IAutoMovieProductionEvidenceSourceOwnerBinding } from "@automovie/evidence";
+import { resolveAutoMovieSourceOwnerBinding } from "@automovie/production";
 import { TestValidator } from "@nestia/e2e";
 
-import { resolveAutoMovieSourceOwnerBinding } from "../../../../packages/production/src/production/sourceOwnerBinding";
 import { namedFacts } from "../internal/predicates";
 
 /**
@@ -59,6 +59,10 @@ export const test_production_source_owner_binding = (): void => {
         () => resolve({ bindings: [] }).reason === "missing",
       ],
       [
+        "missingCarrierFailsWithoutThrowing",
+        () => resolve({ bindings: undefined }).reason === "missing",
+      ],
+      [
         "ambiguousEdgeIsDistinct",
         () => resolve({ bindings: [binding, binding] }).reason === "ambiguous",
       ],
@@ -99,6 +103,7 @@ export const test_production_source_owner_binding = (): void => {
       exactEdgeResolves: true,
       shotEntryUsesSelectedOwnerWithoutRuntimeClaim: true,
       missingEdgeIsDistinct: true,
+      missingCarrierFailsWithoutThrowing: true,
       ambiguousEdgeIsDistinct: true,
       swappedOwnerIsDistinct: true,
       staleSourceIsDistinct: true,

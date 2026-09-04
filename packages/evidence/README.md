@@ -24,6 +24,7 @@ Discovery는 저술 unit에 반복하는 checklist나 H2 모집단 coverage가 �
 | `IAutoMovieEvidenceConfigProps` | 제작 종류, 분기 단계, 위치와 추가 claim을 선언한다. |
 | `AutoMovieProductionKind` | 상호 배타적인 `film`, `brief`, `library` 형태를 정의한다. |
 | `AutoMovieEvidenceStage` | `disabled -> draft -> evidence -> review` 생명주기를 정의한다. |
+| `readAutoMovieProductionEvidence` | 활성 owner와 authored unit, 그리고 graph가 선택한 정확한 source path/export/target/digest/review edge를 하나의 runtime carrier로 읽는다. |
 | `evidence` | 단일 typed `lint.config.ts`에서 쓸 `@ttsc/evidence` lint plugin을 내보낸다. |
 
 ## 경계

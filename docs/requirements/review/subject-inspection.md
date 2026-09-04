@@ -52,6 +52,8 @@ Frame과 구간 검토는 반대로 저작된 camera를 그대로 물려받아�
 
 ### Library 전달 개체군 {#review-library-delivery-coverage}
 
+Library owner의 완료 결과는 현재 공개 carrier가 존재하는 branch에 한정한다. Map owner는 하나 이상의 context, model owner는 하나 이상의 model, space owner는 하나 이상의 built environment를 반환하고 다른 branch의 carrier는 비워야 한다. Material, instance, motion, system source는 독립 carrier가 생기기 전에는 다른 owner 결과 안에 중첩해 완료로 승격하지 않는다.
+
 Library 검토는 shot에 등장한 항목이 아니라 evidence graph가 선택한 active reviewed design/source branch의 exact design owner와 H2를 전달 개체군으로 사용해야 한다. 선택된 branch의 owner 개체군이 비었거나 owner의 유한 관찰 계획, current source·compiled identity, 실제 artifact 또는 structured facts, tool/runtime identity와 terminal verdict 가운데 하나라도 없으면 review와 final은 실패해야 한다. Map은 current world extent·coordinate·terrain·water·network·site interface를 반증할 수 있는 plan·section·elevation·traversal 관찰을, model은 current compiled asset의 고정 whole-model turntable과 적용 가능한 rig range를 사용해야 한다. Space·material·instance·motion·system은 각각 plan·section·elevation·perspective·traversal, surface·channel·scale, membership·placement·clearance, endpoint·phase·contact·transition, finite-state·stress·budget·terminal-state 가운데 선언한 유한 집합을 사용해야 한다. Film과 brief에서 실제 consumer가 사용하지 않은 inventory, disabled branch와 delivery scope 밖 residue는 이 개체군에 들어오지 않아야 한다.
 
 Library 전달 개체군의 compiled topology는 실제로 실행된 library source의 산출물이어야 한다. Active reviewed design branch의 각 owner는 자기 reviewed design H2를 지목하는 source export를 가져야 하고, compiler는 그 source를 실행해 결과를 검증한 뒤 compiler-owned artifact로 원자적으로 발행해야 하며, 발행된 artifact와 그 소유 관계를 offline 관찰 명령이 같은 주소로 다시 열 수 있어야 한다. Source가 존재하는데 어떤 export도 그 H2를 realize하지 않으면 review와 final은 실패해야 한다. Source bytes만 fingerprint하고 아무것도 만들지 않은 상태를 전달로 간주해서는 안 되며, 어떤 required 관찰도 파생되지 않는 빈 개체군을 완료로 보고해서도 안 된다.

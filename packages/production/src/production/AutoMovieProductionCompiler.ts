@@ -83,7 +83,6 @@ import {
   IAutoMovieLibraryBuildContext,
   IAutoMovieLibraryContribution,
   IAutoMovieMaterializedFile,
-  IAutoMovieMaterializedLibrary,
   IAutoMovieModel,
   IAutoMovieModelProxyAsset,
   IAutoMovieModelRecipe,
@@ -646,7 +645,7 @@ export class AutoMovieProductionCompiler {
                       branch: binding.branch,
                       path: binding.sourcePath,
                       export: binding.exportName,
-                      digest: binding.sourceDigest,
+                      digest: binding.sourceDigest as AutoMovieContentDigest,
                       target: target!,
                     },
                     acceptanceSources: (
@@ -666,7 +665,8 @@ export class AutoMovieProductionCompiler {
                       .map((candidate) => ({
                         path: candidate.sourcePath,
                         export: candidate.exportName,
-                        digest: candidate.sourceDigest,
+                        digest:
+                          candidate.sourceDigest as AutoMovieContentDigest,
                         target: target!,
                       })),
                   }),
