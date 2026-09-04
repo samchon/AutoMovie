@@ -69,6 +69,7 @@ const REVIEW = /^@evidence(Exclude)?Review\s+(\S+)\s+#[^\s]+\s+(.+?)\s*$/u;
  *
  * @evidence requirements/production-evidence/graph.md#agent-production-evidence-deterministic-result Makes semantic review repetition visible without turning a corpus-tuned count into a pass/fail gate.
  * @evidence specifications/production-evidence/graph.md#spec-authoring-production-evidence-deterministic-result Normalizes interchangeable slots and reports stable locations for fresh human review.
+ * @author Samchon
  */
 export function inspectAutoMovieEvidenceReviewAlarms(props: {
   documents: readonly IAutoMovieEvidenceSyntaxDocument[];
