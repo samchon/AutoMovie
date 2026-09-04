@@ -5,12 +5,15 @@ import {
   requireCurrentAutoMovieProjectState,
 } from "automovie";
 
+import { assertAutoMovieNoArguments } from "./commandArguments";
 import { readAutoMovieProjectProductionId } from "./projectIdentity";
 import {
   type IAutoMovieTextureScaleSubject,
   autoMovieTextureScaleLines,
   deriveAutoMovieTextureScaleReport,
 } from "./textureScaleReport";
+
+assertAutoMovieNoArguments("texture:scale", process.argv.slice(2));
 
 /** The project this invocation belongs to, found from the host's own seed. */
 const projectRoot = findAutoMovieProjectRoot(process.cwd());

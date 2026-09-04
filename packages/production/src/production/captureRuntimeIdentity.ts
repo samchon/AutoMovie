@@ -10,7 +10,7 @@ import {
  * Current structured capture-runtime identity protocol.
  */
 export const AUTOMOVIE_CAPTURE_RUNTIME_IDENTITY_PROTOCOL =
-  "automovie.capture-runtime.v2";
+  "automovie.capture-runtime.v2" satisfies IAutoMovieCaptureRuntimeIdentity["protocolVersion"];
 
 /**
  * Validate and canonically encode one capture runtime identity.
@@ -18,6 +18,15 @@ export const AUTOMOVIE_CAPTURE_RUNTIME_IDENTITY_PROTOCOL =
 export const canonicalAutoMovieCaptureRuntimeIdentity = (
   identity: IAutoMovieCaptureRuntimeIdentity,
 ): string => {
+  if (
+    (identity as { protocolVersion?: unknown }).protocolVersion !==
+    AUTOMOVIE_CAPTURE_RUNTIME_IDENTITY_PROTOCOL
+  )
+    throw new Error(
+      `Unsupported AutoMovie capture runtime identity protocol ${JSON.stringify(
+        (identity as { protocolVersion?: unknown }).protocolVersion,
+      )}; expected ${AUTOMOVIE_CAPTURE_RUNTIME_IDENTITY_PROTOCOL}.`,
+    );
   const validation =
     typia.validateEquals<IAutoMovieCaptureRuntimeIdentity>(identity);
   if (validation.success === false)
@@ -177,6 +186,17 @@ export const parseAutoMovieCaptureRuntimeIdentity = (
       `Capture runtime identity is not JSON: ${String(error)}. Return canonical structured identity from the capture adapter.`,
     );
   }
+  if (value === null || typeof value !== "object" || Array.isArray(value))
+    throw new Error(
+      "Capture runtime identity must decode to one versioned JSON object.",
+    );
+  const protocolVersion = (value as Record<string, unknown>).protocolVersion;
+  if (protocolVersion !== AUTOMOVIE_CAPTURE_RUNTIME_IDENTITY_PROTOCOL)
+    throw new Error(
+      `Unsupported AutoMovie capture runtime identity protocol ${JSON.stringify(
+        protocolVersion,
+      )}; expected ${AUTOMOVIE_CAPTURE_RUNTIME_IDENTITY_PROTOCOL}.`,
+    );
   const canonical = canonicalAutoMovieCaptureRuntimeIdentity(
     value as IAutoMovieCaptureRuntimeIdentity,
   );
