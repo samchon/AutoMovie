@@ -158,4 +158,29 @@ export const test_production_png_picture_probe = (): void => {
       malformed: true,
     },
   );
+  const profileSubstitutions = [
+    ["bitDepth", { ...rgba, bitDepth: 16 }],
+    ["alpha", { ...rgba, alpha: "none" as const }],
+    ["interlace", { ...rgba, interlace: "adam7" as const }],
+    ["colorSpace", { ...rgba, colorSpace: "icc" as const }],
+    [
+      "pixelAspect",
+      {
+        ...rgba,
+        pixelAspect: {
+          kind: "explicit" as const,
+          x: 2,
+          y: 1,
+          unit: 0 as const,
+        },
+      },
+    ],
+    ["orientation", { ...rgba, orientation: "metadata-present" as const }],
+  ] as const;
+  TestValidator.predicate(
+    "every planned picture fact has an independent refusing twin",
+    profileSubstitutions.every(([field, actual]) =>
+      refused(() => assertProductionPngPicture({ profile, actual }), field),
+    ),
+  );
 };
