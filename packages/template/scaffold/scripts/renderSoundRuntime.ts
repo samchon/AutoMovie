@@ -903,10 +903,24 @@ export const createProductionSoundRuntime = (props: {
           phonemeChunks,
           runtimeAssets,
         };
+        const receipt = Buffer.from(
+          `${JSON.stringify(record, null, 2)}\n`,
+          "utf8",
+        );
+        const stagedValidation = validateProductionDialogueCache({
+          snapshot: { pcm: bytes, receipt },
+          identity,
+          runtimeAssets,
+          selection,
+        });
+        if (stagedValidation.status !== "current")
+          throw new Error(
+            `Kokoro generation for line "${line.id}" failed cache protocol validation before publication: ${stagedValidation.reason}.`,
+          );
         const published = publishDialogueCache({
           base: cacheRoot,
           pcm: bytes,
-          receipt: Buffer.from(`${JSON.stringify(record, null, 2)}\n`, "utf8"),
+          receipt,
           target: identity.path,
         });
         const validation = validateProductionDialogueCache({
