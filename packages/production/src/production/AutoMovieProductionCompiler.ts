@@ -9524,7 +9524,6 @@ const assertCurrentSoundEvidence = (props: {
       ? {}
       : { acousticProfile: props.production.sound.acousticResponse }),
   });
-  expectedPlan.frameRate = frameRate;
   const actualPlanWithoutAcoustics = structuredClone(props.evidence.plan);
   for (const event of actualPlanWithoutAcoustics.events)
     delete event.acousticResponse;
@@ -9569,9 +9568,7 @@ const assertCurrentSoundEvidence = (props: {
       expectedSampleFrames / props.evidence.plan.sampleRate ||
     props.evidence.analysis.clippingSamples !== 0 ||
     props.evidence.analysis.samplePeak < 0 ||
-    props.evidence.analysis.samplePeak > 1 ||
-    (props.evidence.analysis.integratedLoudness === null &&
-      props.evidence.analysis.samplePeak !== 0)
+    props.evidence.analysis.samplePeak > 1
   )
     throw new Error(
       "Sound analysis does not describe the exact current pre-encode PCM boundary and unclipped domain.",

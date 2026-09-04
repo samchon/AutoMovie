@@ -451,24 +451,32 @@ export const test_production_media_probe = async (): Promise<void> => {
   TestValidator.equals(
     "a feature requires and preserves exact-runtime H.264 plus stereo Opus",
     namedFacts([
-      ["featureKindVideo", () => feature.kind === "video"],
+      ["featureKindFeature", () => feature.kind === "feature"],
       [
         "featureFrameCount",
-        () => feature.kind === "video" && feature.frameCount === 4,
+        () => feature.kind === "feature" && feature.video.frameCount === 4,
       ],
-      ["featureFps", () => feature.kind === "video" && feature.fps === 24],
+      [
+        "featureFps",
+        () => feature.kind === "feature" && feature.video.fps === 24,
+      ],
       [
         "MathAbsFeature",
         () =>
-          feature.kind === "video" &&
-          Math.abs(feature.runtimeSeconds - 4 / 24) < 1e-9,
+          feature.kind === "feature" &&
+          Math.abs(feature.video.runtimeSeconds - 4 / 24) < 1e-9,
+      ],
+      [
+        "featureAudioOpus",
+        () => feature.kind === "feature" && feature.audio.codec === "opus",
       ],
     ]),
     {
-      featureKindVideo: true,
+      featureKindFeature: true,
       featureFrameCount: true,
       featureFps: true,
       MathAbsFeature: true,
+      featureAudioOpus: true,
     },
   );
   TestValidator.predicate(
@@ -529,7 +537,7 @@ export const test_production_media_probe = async (): Promise<void> => {
           video,
           audio: productionOpusMp4(8_000, 1),
         }),
-      "48 kHz stereo",
+      "unsupported-audio-profile.channels",
     ),
   );
   const editFile = createFile();
