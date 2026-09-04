@@ -35,8 +35,6 @@ export type AutoMovieLeadingBomPolicy = "preserve" | "strip" | "reject";
 /**
  * Strictly decode one UTF-8 record without replacement characters.
  *
- * @evidence requirements/evidence-and-provenance/canonical-digests-and-content-identity.md#integrity-structured-canonicalization Refuses ambiguous text bytes before they can acquire semantic identity.
- * @evidence specifications/evidence-and-provenance/canonical-digests-and-content-identity.md#evp-structured-canonicalization Makes the UTF-8 decision explicit and deterministic at byte ingress.
  */
 export const decodeAutoMovieUtf8 = (props: {
   /** Logical record or asset named by any refusal. */

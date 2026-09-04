@@ -43,8 +43,6 @@ const JPEG_FRAME_MARKERS = new Set([
 /**
  * Admit one design reference only after its complete supported profile parses.
  *
- * @evidence requirements/external-inputs/validation-and-quarantine.md#external-validation-structure-semantics Separates a signature candidate from parser-confirmed container facts.
- * @evidence specifications/interchange-and-adoption/media-inspection-boundaries.md#interchange-design-drawing-inspection Withholds reference evidence until the supported container profile closes.
  */
 export const inspectAutoMovieDesignReferenceContainer = (props: {
   path: string;

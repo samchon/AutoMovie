@@ -38,8 +38,6 @@ export class AutoMovieStructuredJsonError extends Error {
  * object scope. A duplicate is refused before any last-wins object can escape
  * to schema validation.
  *
- * @evidence requirements/evidence-and-provenance/canonical-digests-and-content-identity.md#integrity-structured-canonicalization Rejects malformed encoding and duplicate decoded names before schema interpretation.
- * @evidence specifications/interchange-and-adoption/conversion-receipts-and-determinism.md#interchange-canonical-receipt-result Gives persistent records a single duplicate-safe materialization owner.
  */
 export const parseAutoMovieStructuredJson = (props: {
   /** Logical record named by refusals. */

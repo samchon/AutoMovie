@@ -29,8 +29,6 @@ export class AutoMovieLegacyImportPlanError extends Error {
 /**
  * Fingerprint every semantic plan member except the fingerprint itself.
  *
- * @evidence requirements/operations-and-recovery/migration-and-compatibility.md#operations-resume-compatibility-classification Makes legacy provenance identity cover the complete admitted plan.
- * @evidence specifications/execution-and-recovery/portability-migration-and-compatibility.md#execution-resume-compatibility Uses one deterministic identity owner at apply and reopen.
  */
 export const fingerprintAutoMovieLegacyImportPlan = (
   plan: IAutoMovieLegacyImportPlan,
@@ -52,8 +50,6 @@ export const fingerprintAutoMovieLegacyImportPlan = (
 /**
  * Admit the full plan shape, runtime refinements, baseline and fingerprint.
  *
- * @evidence requirements/operations-and-recovery/migration-and-compatibility.md#operations-resume-compatibility-classification Refuses incompatible or stale present migration provenance instead of projecting one convenient field.
- * @evidence specifications/execution-and-recovery/portability-migration-and-compatibility.md#execution-resume-compatibility Gives apply and reopen the same semantic compatibility decision.
  */
 export const assertAutoMovieLegacyImportPlan = (
   value: unknown,
