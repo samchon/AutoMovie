@@ -37,6 +37,7 @@ import {
 import { autoMovieRenderBudgetRefusal } from "@automovie/render";
 import path from "node:path";
 import { isDeepStrictEqual } from "node:util";
+import typia from "typia";
 
 import { inspectPublishedProxyBundle } from "./assertProxyBundle";
 import { PRODUCTION_DELIVERY_TONE_MAPPING } from "./capture";
@@ -513,12 +514,20 @@ export const createProductionRenderPlanningRuntime = (props: {
         },
       ];
     try {
-      const manifest = JSON.parse(
-        Buffer.from(manifestBytes).toString("utf8"),
-      ) as IAutoMovieProductionRenderManifest;
-      const receipt = JSON.parse(
-        Buffer.from(receiptBytes).toString("utf8"),
-      ) as IAutoMovieProductionRenderReceipt;
+      const manifestValidation =
+        typia.validateEquals<IAutoMovieProductionRenderManifest>(
+          JSON.parse(Buffer.from(manifestBytes).toString("utf8")) as unknown,
+        );
+      const receiptValidation =
+        typia.validateEquals<IAutoMovieProductionRenderReceipt>(
+          JSON.parse(Buffer.from(receiptBytes).toString("utf8")) as unknown,
+        );
+      if (manifestValidation.success === false)
+        throw new Error("The final render manifest schema is invalid.");
+      if (receiptValidation.success === false)
+        throw new Error("The final renderer receipt schema is invalid.");
+      const manifest = manifestValidation.data;
+      const receipt = receiptValidation.data;
       const identity = assertProductionRenderPublicationCurrent({
         identity: manifest.publication,
         plan,

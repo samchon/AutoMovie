@@ -3079,10 +3079,15 @@ export class AutoMovieProductionProject {
           .map((error) => `${error.path} expects ${error.expected}`)
           .join("; ")}.`,
       );
+    const candidate = structuredClone(validation.data);
     const publication = assertProductionRenderPublicationCurrent({
-      identity: validation.data.publication,
+      identity: candidate.publication,
       plan,
     });
+    if (candidate.compileFingerprint !== publication.compileFingerprint)
+      throw new Error(
+        "The aggregate render manifest compile fingerprint differs from its publication identity.",
+      );
     if (planCurrent() !== true)
       throw new AutoMovieProductionInputRaceError(
         "The render plan changed before its manifest-only ledger could be committed.",
@@ -3094,10 +3099,10 @@ export class AutoMovieProductionProject {
       throw new AutoMovieProductionInputRaceError(
         "The aggregate render manifest does not target the current compiler input.",
       );
-    const content = serializeJson(validation.data);
+    const content = serializeJson(candidate);
     const paths = new Set<string>();
     const receiptFiles: IAutoMovieProductionRenderReceipt["files"] = [];
-    for (const deliverable of validation.data.deliverables)
+    for (const deliverable of candidate.deliverables)
       for (const file of deliverable.files) {
         const portable = normalizeSlash(file.path).toLowerCase();
         if (paths.has(portable))
@@ -3212,17 +3217,22 @@ export class AutoMovieProductionProject {
           .map((error) => `${error.path} expects ${error.expected}`)
           .join("; ")}.`,
       );
+    const candidate = structuredClone(validation.data);
     const publication = assertProductionRenderPublicationCurrent({
-      identity: validation.data.publication,
+      identity: candidate.publication,
       plan: props.plan,
     });
+    if (candidate.compileFingerprint !== publication.compileFingerprint)
+      throw new Error(
+        "The terminal render manifest compile fingerprint differs from its publication identity.",
+      );
     if (props.planCurrent() !== true)
       throw new AutoMovieProductionInputRaceError(
         "The render plan changed before terminal publication began.",
       );
     if (
       this.generatedManifest()?.inputFingerprint !==
-      validation.data.compileFingerprint
+      candidate.compileFingerprint
     )
       throw new AutoMovieProductionInputRaceError(
         "The terminal publication does not target the current compiler input. Replan and rerender before finalizing.",
@@ -3241,7 +3251,7 @@ export class AutoMovieProductionProject {
     }
     const receiptFiles: IAutoMovieProductionRenderReceipt["files"] = [];
     const claimed = new Set<string>();
-    for (const deliverable of validation.data.deliverables)
+    for (const deliverable of candidate.deliverables)
       for (const file of deliverable.files) {
         const normalized = normalizeSlash(file.path).toLowerCase();
         if (claimed.has(normalized))
@@ -3274,7 +3284,7 @@ export class AutoMovieProductionProject {
         `Terminal publication supplied ${files.size} files but the manifest claims ${claimed.size}. Remove unclaimed bytes.`,
       );
     receiptFiles.sort((left, right) => compareCodeUnits(left.path, right.path));
-    const manifestContent = serializeJson(validation.data);
+    const manifestContent = serializeJson(candidate);
     const receiptContent = serializeJson({
       version: 4,
       manifestDigest: digestAutoMovieBytes(
@@ -3284,7 +3294,7 @@ export class AutoMovieProductionProject {
       files: receiptFiles,
     } satisfies IAutoMovieProductionRenderReceipt);
     const writes: IStagedFile[] = [
-      ...validation.data.deliverables.flatMap((deliverable) =>
+      ...candidate.deliverables.flatMap((deliverable) =>
         deliverable.files.map((file) => ({
           path: resolveInside(this.renderRoot(), file.path),
           content: files.get(normalizeSlash(file.path).toLowerCase())!,
@@ -3307,7 +3317,7 @@ export class AutoMovieProductionProject {
       () => props.inputCurrent?.() !== false && props.planCurrent() === true,
       props.expectedRevision ?? this.lastReadRevision_,
       () => {
-        for (const deliverable of validation.data.deliverables)
+        for (const deliverable of candidate.deliverables)
           for (const file of deliverable.files) {
             const bytes = this.readRenderFile(file.path);
             if (
@@ -3338,7 +3348,7 @@ export class AutoMovieProductionProject {
             "Terminal render manifest or receipt changed after publication.",
           );
         props.publicationCurrent?.();
-        for (const deliverable of validation.data.deliverables)
+        for (const deliverable of candidate.deliverables)
           for (const file of deliverable.files) {
             const bytes = this.readRenderFile(file.path);
             if (
