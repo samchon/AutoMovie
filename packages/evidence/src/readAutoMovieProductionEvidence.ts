@@ -569,10 +569,9 @@ const markdownSourceOwnerTargets = (
       owned.set(current, [...(owned.get(current) ?? []), content]);
   }
   for (const [index, unit] of units.entries()) {
-    const content = (owned.get(index) ?? [])
-      .map((line) => line.trimEnd())
-      .join("\n")
-      .replace(/(?:\n[ \t]*)+$/gu, "");
+    const contentLines = (owned.get(index) ?? []).map((line) => line.trimEnd());
+    while (contentLines[contentLines.length - 1] === "") contentLines.pop();
+    const content = contentLines.join("\n");
     unit.digest = crypto.createHash("sha256").update(content).digest("hex");
   }
   return units
@@ -731,7 +730,11 @@ const markdownSlug = (title: string): string => {
   let output = "";
   let hyphen = false;
   for (const character of title.toLowerCase())
-    if (/^[\p{L}\p{N}_]$/u.test(character)) {
+    if (
+      /^\p{L}$/u.test(character) ||
+      /^\p{N}$/u.test(character) ||
+      character === "_"
+    ) {
       output += character;
       hyphen = false;
     } else if (
