@@ -555,6 +555,15 @@ export const createProductionRenderFinalizationRuntime = (props: {
           });
           const baseline = productionRepaintSequenceBaseline();
           const observation = productionRepaintSequenceObservation();
+          let observationArtifactDigest: AutoMovieContentDigest | null = null;
+          if (observation !== null)
+            try {
+              observationArtifactDigest = digestAutoMovieBytes(
+                project.readRenderFile(observation.artifact.path),
+              );
+            } catch {
+              observationArtifactDigest = null;
+            }
           const observationDigest =
             observation === null
               ? null
@@ -572,6 +581,7 @@ export const createProductionRenderFinalizationRuntime = (props: {
                 ),
                 baseline,
                 members,
+                artifactDigest: observationArtifactDigest,
               }).length !== 0)
           )
             throw new Error(

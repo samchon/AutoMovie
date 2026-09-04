@@ -68,6 +68,7 @@ export const test_production_repaint_sequence_observation = (): void => {
       compileFingerprint: typeof observation.compileFingerprint;
       baseline: typeof baseline;
       members: typeof members;
+      artifactDigest: typeof observation.artifact.digest;
     }> = {},
   ) =>
     autoMovieRepaintSequenceObservationDiagnostics({
@@ -78,6 +79,7 @@ export const test_production_repaint_sequence_observation = (): void => {
       timelineFingerprint: observation.timelineFingerprint,
       baseline: current.baseline ?? baseline,
       members: current.members ?? members,
+      artifactDigest: current.artifactDigest ?? observation.artifact.digest,
     });
   const replaced = structuredClone(members);
   replaced[1]!.selectionId = "selection-b2";
@@ -94,6 +96,7 @@ export const test_production_repaint_sequence_observation = (): void => {
       baseline: diagnose({
         baseline: { ...baseline, version: "v2" },
       }),
+      artifact: diagnose({ artifactDigest: digest("9") }),
       failed: diagnose({ observation: failed }),
       oneShot: autoMovieRepaintSequenceObservationDiagnostics({
         observation: {
@@ -108,6 +111,7 @@ export const test_production_repaint_sequence_observation = (): void => {
         timelineFingerprint: observation.timelineFingerprint,
         baseline,
         members: [members[0]!],
+        artifactDigest: observation.artifact.digest,
       }),
     },
     {
@@ -115,6 +119,7 @@ export const test_production_repaint_sequence_observation = (): void => {
       replaced: ["observation-member-set-stale"],
       compile: ["observation-basis-stale"],
       baseline: ["observation-basis-stale"],
+      artifact: ["observation-artifact-stale"],
       failed: ["observation-incomplete"],
       oneShot: [],
     },

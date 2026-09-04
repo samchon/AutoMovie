@@ -26,6 +26,7 @@ export type AutoMovieRepaintObservationDiagnostic =
   | "observation-schema-invalid"
   | "observation-member-set-stale"
   | "observation-basis-stale"
+  | "observation-artifact-stale"
   | "observation-incomplete";
 
 /**
@@ -54,6 +55,7 @@ export const autoMovieRepaintSequenceObservationDiagnostics = (props: {
   timelineFingerprint: AutoMovieContentDigest;
   baseline: IAutoMovieRepaintSequenceObservation["baseline"];
   members: readonly IAutoMovieRepaintObservationMember[];
+  artifactDigest: AutoMovieContentDigest | null;
 }): AutoMovieRepaintObservationDiagnostic[] => {
   const diagnostics: AutoMovieRepaintObservationDiagnostic[] = [];
   try {
@@ -82,6 +84,8 @@ export const autoMovieRepaintSequenceObservationDiagnostics = (props: {
     canonical(props.observation.baseline) !== canonical(props.baseline)
   )
     diagnostics.push("observation-basis-stale");
+  if (props.artifactDigest !== props.observation.artifact.digest)
+    diagnostics.push("observation-artifact-stale");
   if (
     props.observation.status !== "completed" ||
     Object.values(props.observation.verdicts).some(

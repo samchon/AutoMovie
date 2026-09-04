@@ -9281,6 +9281,15 @@ const appendRenditionDeliveryDiagnostics = (
             ),
             baseline: observation.baseline,
             members,
+            artifactDigest: (() => {
+              try {
+                return digestAutoMovieBytes(
+                  project.readRenderFile(observation.artifact.path),
+                );
+              } catch {
+                return null;
+              }
+            })(),
           }).length !== 0)
     )
       throw new Error(
