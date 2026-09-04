@@ -748,6 +748,44 @@ export const review = true;
     true,
   );
 
+  const missingAccount = root();
+  write(missingAccount, "docs/settings/production.md", "## Scope {#scope}\n");
+  fs.unlinkSync(
+    path.join(missingAccount, "docs/accounts/settings/core-common.md"),
+  );
+  assert.equal(
+    throws(
+      () =>
+        createAutoMovieEvidenceConfig({
+          ...disabled(missingAccount),
+          kind: "library",
+          settings: "evidence",
+        }),
+      "without its population account",
+    ),
+    true,
+  );
+
+  const partialAccount = root();
+  write(partialAccount, "docs/settings/production.md", "## Scope {#scope}\n");
+  write(
+    partialAccount,
+    "docs/accounts/settings/core-common.md",
+    "# Partial account\n\n## One owner {#one-owner}\n",
+  );
+  assert.equal(
+    throws(
+      () =>
+        createAutoMovieEvidenceConfig({
+          ...disabled(partialAccount),
+          kind: "library",
+          settings: "evidence",
+        }),
+      "population account has 1 H2 owners for 5",
+    ),
+    true,
+  );
+
   const empty = root();
   const graph = createAutoMovieEvidenceConfig(disabled(empty));
   assert.equal(
