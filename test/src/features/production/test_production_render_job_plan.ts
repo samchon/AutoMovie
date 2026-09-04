@@ -660,6 +660,63 @@ export const test_production_render_job_plan = (): void => {
           ),
       ],
       [
+        "unknownAudioKind",
+        () =>
+          throwsError(
+            () =>
+              plan({
+                audioAssets: [
+                  {
+                    ...AUDIO_ASSET,
+                    kind: "unknown-audio" as never,
+                  },
+                ],
+              }),
+            "invalid identity, duration, sample rate, channels, or duplicate ownership",
+          ),
+      ],
+      [
+        "unknownWaveEncoding",
+        () =>
+          throwsError(
+            () =>
+              plan({
+                audioAssets: [
+                  {
+                    ...WAVE_AUDIO_ASSET,
+                    sourceFormat: {
+                      ...WAVE_AUDIO_ASSET.sourceFormat,
+                      encoding: "unknown-encoding" as never,
+                    },
+                  },
+                ],
+              }),
+            "invalid identity, duration, sample rate, channels, or duplicate ownership",
+          ),
+      ],
+      [
+        "unknownWaveLayoutSource",
+        () =>
+          throwsError(
+            () =>
+              plan({
+                audioAssets: [
+                  {
+                    ...WAVE_AUDIO_ASSET,
+                    sourceFormat: {
+                      ...WAVE_AUDIO_ASSET.sourceFormat,
+                      layout: {
+                        ...WAVE_AUDIO_ASSET.sourceFormat.layout,
+                        source: "unknown-layout-source" as never,
+                      },
+                    },
+                  },
+                ],
+              }),
+            "invalid identity, duration, sample rate, channels, or duplicate ownership",
+          ),
+      ],
+      [
         "ambiguousGuidePass",
         () =>
           throwsError(
@@ -679,6 +736,9 @@ export const test_production_render_job_plan = (): void => {
       unfingerprintedShot: true,
       unverifiedAudio: true,
       contradictoryWaveLayout: true,
+      unknownAudioKind: true,
+      unknownWaveEncoding: true,
+      unknownWaveLayoutSource: true,
       ambiguousGuidePass: true,
     },
   );

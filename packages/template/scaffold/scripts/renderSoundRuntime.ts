@@ -679,7 +679,7 @@ export const createProductionSoundRuntime = (props: {
     >,
   ): Error =>
     new ProductionDialogueCacheObservationError(
-      `Dialogue cache observation failed for line "${line}" at generation ${finding.identity.key}: ${
+      `Dialogue cache observation failed at stage "cache-read" for line "${line}", target "${finding.identity.path}", generation ${finding.identity.key}: ${
         finding.status === "integrity-failed" ? finding.reason : finding.status
       }. Preserve the generation and recover or quarantine it manually.`,
       "error" in finding ? { cause: finding.error } : undefined,

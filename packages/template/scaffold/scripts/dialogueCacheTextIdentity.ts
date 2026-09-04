@@ -147,10 +147,16 @@ export const classifyProductionDialogueCacheObservation = (
     return "unavailable";
   if (code === "ELOOP") return "unsafe-locator-or-foreign-generation";
   const message = error instanceof Error ? error.message : "";
-  if (/symbolic|junction|reparse|foreign|outside|physical/i.test(message))
+  if (
+    /symbolic|junction|reparse|linked|foreign|outside|escapes|ownership|physical|changed|different file|differs from its captured bytes/i.test(
+      message,
+    )
+  )
     return "unsafe-locator-or-foreign-generation";
   if (
-    /inventory|receipt|pcm|digest|byte length|not a .*directory/i.test(message)
+    /inventory|receipt|pcm|digest|byte length|read boundary|not a .*directory/i.test(
+      message,
+    )
   )
     return "integrity-failed";
   return "unknown-observation";
@@ -162,6 +168,8 @@ const UNAVAILABLE_OBSERVATION_CODES = new Set([
   "EBUSY",
   "EMFILE",
   "ENFILE",
+  "EIO",
+  "ENOMEM",
 ]);
 
 /** Validate request, phoneme, PCM, producer, and runtime closure as one value. */

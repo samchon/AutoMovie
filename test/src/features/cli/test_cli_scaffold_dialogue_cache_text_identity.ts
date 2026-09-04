@@ -300,7 +300,13 @@ export const test_cli_scaffold_dialogue_cache_text_identity = (): void => {
       "unsafe-locator-or-foreign-generation",
       new Error("symbolic link escaped cache ownership"),
     ],
+    [
+      "unsafe-locator-or-foreign-generation",
+      new Error("Render GC content changed while read."),
+    ],
     ["integrity-failed", new Error("invalid exact inventory")],
+    ["integrity-failed", new Error("receipt exceeds its read boundary")],
+    ["unavailable", Object.assign(new Error("I/O failure"), { code: "EIO" })],
     ["unknown-observation", new Error("unexpected observer failure")],
   ] as const) {
     const finding = inspectProductionDialogueCache({
