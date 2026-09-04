@@ -10,7 +10,7 @@ export interface IRuntimePackageGenerationHandle<Snapshot, Module> {
   snapshot: Snapshot;
 }
 
-interface IRuntimePackageGenerationEntry<Snapshot, Module, CacheToken> {
+interface IRuntimePackageGenerationEntry<Snapshot, Module> {
   generation: string;
   handle?: IRuntimePackageGenerationHandle<Snapshot, Module>;
   state: "loading" | "loaded" | "poisoned";
@@ -22,7 +22,7 @@ const registryEntries = Symbol("runtime-package-generation-entries");
 export interface IRuntimePackageGenerationRegistry {
   [registryEntries]: Map<
     string,
-    IRuntimePackageGenerationEntry<unknown, unknown, unknown>
+    IRuntimePackageGenerationEntry<unknown, unknown>
   >;
 }
 
@@ -68,7 +68,7 @@ export const loadRuntimePackageGeneration = <
   props.assertCurrent();
   const registry = props.registry ?? sharedRegistry;
   const prior = registry[registryEntries].get(props.key) as
-    | IRuntimePackageGenerationEntry<Snapshot, Module, CacheToken>
+    | IRuntimePackageGenerationEntry<Snapshot, Module>
     | undefined;
   if (prior !== undefined) {
     if (prior.generation !== props.generation)
@@ -91,7 +91,7 @@ export const loadRuntimePackageGeneration = <
       `Runtime package generation "${props.key}" was already present in the module cache before it was snapshotted. Start a new process before retrying.`,
     );
 
-  const entry: IRuntimePackageGenerationEntry<Snapshot, Module, CacheToken> = {
+  const entry: IRuntimePackageGenerationEntry<Snapshot, Module> = {
     generation: props.generation,
     state: "loading",
   };

@@ -73,12 +73,47 @@ const load = (
  *    module.
  * 3. Equal versions at different physical roots remain independent keys.
  * 4. A load failure before cache admission rolls back for a safe retry, while
- *    a failure that leaves a cache entry poisons the process generation.
+ *    a failure or snapshot change that leaves a cache entry poisons the
+ *    process generation.
  * 5. An operation revalidates before and after execution, preserving operation
  *    then postcheck errors when both occur, and never starts from stale bytes.
  */
 export const test_cli_scaffold_runtime_package_generation =
   async (): Promise<void> => {
+    const invalid = fixture();
+    TestValidator.equals(
+      "empty physical keys and generations are never admitted",
+      {
+        key: throwsError(
+          () =>
+            loadRuntimePackageGeneration({
+              key: "",
+              generation: invalid.snapshot.generation,
+              snapshot: invalid.snapshot,
+              assertCurrent: () => undefined,
+              observeCache: () => invalid.cache,
+              load: () => ({ execution: 1 }),
+              registry: invalid.registry,
+            }),
+          "generation identity is invalid",
+        ),
+        generation: throwsError(
+          () =>
+            loadRuntimePackageGeneration({
+              key: invalid.snapshot.key,
+              generation: "",
+              snapshot: invalid.snapshot,
+              assertCurrent: () => undefined,
+              observeCache: () => invalid.cache,
+              load: () => ({ execution: 1 }),
+              registry: invalid.registry,
+            }),
+          "generation identity is invalid",
+        ),
+      },
+      { key: true, generation: true },
+    );
+
     const stable = fixture();
     const first = load(stable);
     const reused = load(stable);
@@ -174,6 +209,32 @@ export const test_cli_scaffold_runtime_package_generation =
       () => load(poisoned),
       "unattributable resident cache entry",
     );
+    const changedDuringLoad = fixture("codec\0/root/changed-during-load");
+    const changedDuringLoadRefusal = throwsError(
+      () =>
+        loadRuntimePackageGeneration({
+          key: changedDuringLoad.snapshot.key,
+          generation: changedDuringLoad.snapshot.generation,
+          snapshot: changedDuringLoad.snapshot,
+          assertCurrent: () => {
+            if (changedDuringLoad.snapshot.current === false)
+              throw new Error("snapshot changed during load");
+          },
+          observeCache: () => changedDuringLoad.cache,
+          load: () => {
+            changedDuringLoad.cache = { identity: "loaded-before-change" };
+            changedDuringLoad.snapshot.current = false;
+            return { execution: 1 };
+          },
+          registry: changedDuringLoad.registry,
+        }),
+      "snapshot changed during load",
+    );
+    changedDuringLoad.snapshot.current = true;
+    const changedDuringLoadPoisoned = throwsError(
+      () => load(changedDuringLoad),
+      "unattributable resident cache entry",
+    );
     TestValidator.equals(
       "only a cache-free load failure permits retry",
       {
@@ -183,6 +244,8 @@ export const test_cli_scaffold_runtime_package_generation =
         failedAfterCache,
         poisonedRefusal,
         poisonedLoads: poisoned.loads,
+        changedDuringLoadRefusal,
+        changedDuringLoadPoisoned,
       },
       {
         failedBeforeCache: true,
@@ -191,6 +254,8 @@ export const test_cli_scaffold_runtime_package_generation =
         failedAfterCache: true,
         poisonedRefusal: true,
         poisonedLoads: 1,
+        changedDuringLoadRefusal: true,
+        changedDuringLoadPoisoned: true,
       },
     );
 
