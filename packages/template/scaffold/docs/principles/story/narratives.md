@@ -20,7 +20,7 @@ Review question: by what specific relation does this unit arrive from its predec
 
 This item owns the relation between narrative units. `state-continuity` owns the correctness of inherited facts, and `treatments.md#information-design` owns production-wide disclosure order.
 
-Sources: [Trabasso and van den Broek on causal networks and recall](https://doi.org/10.1016/0749-596X%2885%2990049-X); [Zwaan, Langston, and Graesser on event-indexing dimensions](https://doi.org/10.1111/j.1467-9280.1995.tb00513.x); [Wisconsin Writing Center on cohesion beyond simple causation](https://writing.wisc.edu/handbook/style/connectingideas/)
+Sources: [Trabasso and van den Broek on causal networks and recall](https://doi.org/10.1016/0749-596X%2885%2990049-X); [Zwaan, Langston, and Graesser on event-indexing dimensions](https://doi.org/10.1111/j.1467-9280.1995.tb00513.x); [Harvard Writing Center on transitions as relations between ideas](https://writingcenter.fas.harvard.edu/transitions)
 
 ## State continuity {#horizontal-state-continuity}
 
