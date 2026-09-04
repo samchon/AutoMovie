@@ -7238,12 +7238,23 @@ const compilerAssetInventory = (
     };
   }
 
+  const records = validation.data.assets;
+  validation.data.assets = [];
+  for (const asset of records) {
+    const refusal = assetUrlAdmissionRefusal(asset);
+    if (refusal === null) {
+      validation.data.assets.push(asset);
+      continue;
+    }
+    diagnostic(
+      "asset-provenance-incomplete",
+      asset.path,
+      `Asset "${asset.path}" ${refusal.field} URL is ${refusal.reason}. Use one credential-free HTTP(S) locator and correct the distribution ledger before compiling.`,
+    );
+  }
   const content = new Map(inputs.map((entry) => [entry.path, entry]));
   const paths = new Map<string, string>();
-  const admittedRecords = validation.data.assets.filter(
-    (asset) => assetUrlAdmissionRefusal(asset) === null,
-  );
-  const assets = admittedRecords
+  const assets = validation.data.assets
     .filter((asset) =>
       asset.uses.some((use) => use.production === productionId),
     )
@@ -7275,7 +7286,7 @@ const compilerAssetInventory = (
     string,
     Omit<IAutoMovieExternalModelRuntimeBinding, "asset" | "lod">
   >();
-  for (const asset of admittedRecords) {
+  for (const asset of validation.data.assets) {
     if (asset.motion === undefined) continue;
     const resident = content.get(asset.path);
     if (
@@ -7293,7 +7304,7 @@ const compilerAssetInventory = (
         profile: asset.motion.ingestProfile,
         resolveResource: (uri) => {
           const resource = externalModelResourcePath(asset.path, uri);
-          const resourceRecord = admittedRecords.find(
+          const resourceRecord = validation.data.assets.find(
             (candidate) => candidate.path === resource,
           );
           const resourceInput = content.get(resource);
@@ -7367,7 +7378,6 @@ const compilerAssetInventory = (
     }
   }
   for (const asset of validation.data.assets) {
-    const urlRefusal = assetUrlAdmissionRefusal(asset);
     const folded = asset.path.toLowerCase();
     const prior = paths.get(folded);
     if (
@@ -7397,7 +7407,6 @@ const compilerAssetInventory = (
       isSha256Digest(asset.digest) === false ||
       assetAcquisitionIncomplete(asset) ||
       asset.license.identifier.trim().length === 0 ||
-      urlRefusal !== null ||
       asset.uses.length === 0 ||
       asset.uses.some(assetUseIncomplete) ||
       asset.processing.some(assetProcessingStepIncomplete)
@@ -7413,7 +7422,6 @@ const compilerAssetInventory = (
         asset.path,
         `Asset "${asset.path}" differs from the digest it was acquired or generated at but records no processing steps. Record the reproducible transformation chain before compiling.`,
       );
-    if (urlRefusal !== null) continue;
     if (
       asset.model !== undefined &&
       (asset.model.ingestProfile.trim().length === 0 ||
@@ -7435,7 +7443,7 @@ const compilerAssetInventory = (
         `External glTF-family asset "${asset.path}" must declare either model ingest/LOD/proxy provenance or motion ingest/take provenance before compiling.`,
       );
   }
-  for (const asset of admittedRecords) {
+  for (const asset of validation.data.assets) {
     const activeUses = asset.uses.filter(
       (use) => use.production === productionId,
     );
@@ -7458,7 +7466,7 @@ const compilerAssetInventory = (
       if (
         assetConsumerExists(
           graph,
-          admittedRecords,
+          validation.data.assets,
           asset.path,
           use.consumer,
         ) === false
@@ -7491,7 +7499,9 @@ const compilerAssetInventory = (
         lod.level !== "hero" &&
         (target === undefined ||
           hasActiveAssetUse(
-            admittedRecords.find((candidate) => candidate.path === target),
+            validation.data.assets.find(
+              (candidate) => candidate.path === target,
+            ),
             productionId,
             "model-resource",
             asset.path,
@@ -7531,7 +7541,7 @@ const compilerAssetInventory = (
           profile: asset.model.ingestProfile,
           resolveResource: (uri) => {
             const resource = externalModelResourcePath(asset.path, uri);
-            const resourceRecord = admittedRecords.find(
+            const resourceRecord = validation.data.assets.find(
               (candidate) => candidate.path === resource,
             );
             const resourceInput = content.get(resource);
@@ -7591,7 +7601,7 @@ const compilerAssetInventory = (
     const collision = resolveExternalCollisionProxy({
       owner: asset.path,
       reference: asset.model.collisionProxy,
-      records: admittedRecords,
+      records: validation.data.assets,
       content,
       productionId,
       diagnostic,
@@ -7599,7 +7609,7 @@ const compilerAssetInventory = (
     const measurement = resolveExternalMeasurementProxy({
       owner: asset.path,
       reference: asset.model.measurementProxy,
-      records: admittedRecords,
+      records: validation.data.assets,
       content,
       productionId,
       diagnostic,
@@ -7609,7 +7619,7 @@ const compilerAssetInventory = (
       asset.model.measurementProxy,
     ])
       if (reference.kind === "asset") {
-        const proxyRecord = admittedRecords.find(
+        const proxyRecord = validation.data.assets.find(
           (candidate) => candidate.path === reference.asset,
         );
         if (proxyRecord !== undefined)
@@ -7637,7 +7647,7 @@ const compilerAssetInventory = (
         measurement,
       });
   }
-  for (const resource of admittedRecords)
+  for (const resource of validation.data.assets)
     for (const use of resource.uses)
       if (
         use.production === productionId &&
@@ -7667,7 +7677,9 @@ const compilerAssetInventory = (
   >();
   for (const [id, model] of graph.models) {
     if (model.asset === undefined) continue;
-    const record = admittedRecords.find((asset) => asset.path === model.asset);
+    const record = validation.data.assets.find(
+      (asset) => asset.path === model.asset,
+    );
     if (
       isExternalModelAsset(model.asset) === false ||
       record === undefined ||
@@ -7691,7 +7703,7 @@ const compilerAssetInventory = (
       external !== undefined
     ) {
       const levels = record.model.lod.flatMap((lod) => {
-        const levelRecord = admittedRecords.find(
+        const levelRecord = validation.data.assets.find(
           (candidate) => candidate.path === lod.asset,
         );
         const level = externalByAsset.get(lod.asset);
@@ -7781,7 +7793,7 @@ const compilerAssetInventory = (
       continue;
     }
     externalMotionClips.set(declaration.clip, declaration.id);
-    const record = admittedRecords.find(
+    const record = validation.data.assets.find(
       (asset) => asset.path === declaration.asset,
     );
     const input = content.get(declaration.asset);
@@ -7871,7 +7883,7 @@ const compilerAssetInventory = (
   refuseUnsupportedExternalInstancing(graph, externalModels, diagnostic);
   return {
     assets,
-    records: admittedRecords,
+    records: validation.data.assets,
     externalModels,
     externalMotions,
     diagnostics,
