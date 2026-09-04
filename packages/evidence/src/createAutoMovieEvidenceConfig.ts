@@ -2364,6 +2364,22 @@ const validatePopulationAccountHosts = (graph: IProductionGraph): void => {
       enabled: true,
       requireReview: requiresReview(graph[layer]),
     });
+    const allowed = new Set([
+      ...claims.flatMap((claim) => claim.files),
+      ...(layer === "settings" ? ["accounts/settings/story-subjects.md"] : []),
+    ]);
+    const residents = walkProjectFiles(
+      graph,
+      path.join(graph.location, DOCS, "accounts", layer),
+      ".md",
+    ).map((file) =>
+      posix(path.relative(path.join(graph.location, DOCS), file)),
+    );
+    const unexpected = residents.filter((file) => !allowed.has(file));
+    if (unexpected.length !== 0)
+      throw new Error(
+        `${layer} population accounts contain unowned files: ${unexpected.join(", ")}.`,
+      );
     for (const claim of claims) {
       const relative = claim.files[0]!;
       const file = path.join(graph.location, DOCS, relative);
