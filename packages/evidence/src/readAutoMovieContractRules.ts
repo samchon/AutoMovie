@@ -161,11 +161,20 @@ function rulesOfFile(
   return headings.flatMap((heading, index) => {
     const end = headings[index + 1]?.line ?? rawLines.length + 1;
     const body = rawLines.slice(heading.line, end - 1).join("\n");
+    const openings = [...body.matchAll(/^ {0,3}```contract-rule[ \t]*$/gmu)];
+    if (openings.length > 1)
+      throw new Error(
+        `${relative}#${heading.anchor}: an H2 may declare only one contract-rule JSON block.`,
+      );
     const block =
       /^\s*```contract-rule[ \t]*\n(?<json>[\s\S]*?)\n```[ \t]*(?:\n|$)/u.exec(
         body,
       );
     if (block?.groups?.json === undefined) {
+      if (openings.length !== 0)
+        throw new Error(
+          `${relative}#${heading.anchor}: a contract-rule JSON block must immediately follow its H2.`,
+        );
       if (required)
         throw new Error(
           `${relative}#${heading.anchor}: every selected H2 requires an immediate contract-rule JSON block.`,

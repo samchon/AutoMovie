@@ -51,7 +51,7 @@ interface ICommentRegion {
   text: string;
 }
 
-const ANNOTATION = /^@evidence(?:Exclude)?(?:Review)?\b/u;
+const ANNOTATION = /^@evidence(?:Exclude(?:Review)?|Part|Review)?\b/u;
 const HEADING = /^(#{1,6})(?!#)\s+(\S.*)$/u;
 const ANCHOR = /[ \t]+\{#([^{}\s]+)\}[ \t]*$/u;
 
@@ -100,7 +100,9 @@ export function projectAutoMovieMarkdownSyntax(
   const annotations = markdownCommentRegions(document.source)
     .filter((region) => region.closed)
     .flatMap((region) => {
-      const heading = headings.findLast((entry) => entry.line < region.line);
+      const heading = [...headings]
+        .reverse()
+        .find((entry) => entry.line < region.line);
       const host =
         heading === undefined
           ? `${document.path}::file`
@@ -216,6 +218,9 @@ function isPublicTypeScriptNode(
   ) {
     if (
       current.kind === ts.SyntaxKind.Block ||
+      (current.parent.kind === ts.SyntaxKind.ModuleBlock &&
+        !hasModifier(current, ts.SyntaxKind.ExportKeyword)) ||
+      isPrivateNamedNode(current) ||
       hasModifier(current, ts.SyntaxKind.PrivateKeyword) ||
       hasModifier(current, ts.SyntaxKind.ProtectedKeyword)
     )
@@ -228,6 +233,12 @@ function isPublicTypeScriptNode(
       hasModifier(current, ts.SyntaxKind.DefaultKeyword) ||
       topLevelDeclarationNames(current).some((name) => localExports.has(name)))
   );
+}
+
+/** Recognize ECMAScript `#private` declarations without a private modifier. */
+function isPrivateNamedNode(node: ts.Node): boolean {
+  const name = (node as ts.Node & { name?: ts.Node }).name;
+  return name !== undefined && ts.isPrivateIdentifier(name);
 }
 
 /** Read names that a local named-export declaration can expose. */
@@ -287,7 +298,8 @@ function annotationLines(
     while (
       cursor < lines.length &&
       lines[cursor]!.length !== 0 &&
-      !ANNOTATION.test(lines[cursor]!)
+      !ANNOTATION.test(lines[cursor]!) &&
+      !/^@\S/u.test(lines[cursor]!)
     ) {
       joined += ` ${lines[cursor]!}`;
       cursor++;

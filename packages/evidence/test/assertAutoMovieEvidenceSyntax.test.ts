@@ -30,6 +30,11 @@ assert.doesNotThrow(() =>
       source:
         "const sample = `@evidence contracts/local.md#rule not a carrier`;\n",
     },
+    {
+      path: "src/fragment.ts",
+      source:
+        "/** @evidencePart contracts/local.md#rule::fragment Exact fragment. */\nexport const fragment = true;\n",
+    },
   ]),
 );
 
