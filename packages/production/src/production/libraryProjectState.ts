@@ -150,9 +150,17 @@ export const inspectAutoMovieLibraryProjectState = (props: {
     ]),
   );
   const artifactOwners = new Map<string, string>();
+  const indexedOwners = new Set<string>();
   const publishedOwners = new Set<string>();
   for (const owner of index.owners) {
     const ownerIdentity = `${owner.branch}:${owner.owner}`;
+    if (indexedOwners.has(ownerIdentity))
+      problems.push({
+        code: "library-owner-mismatch",
+        path: "library/index.json",
+        message: `Library design owner "${ownerIdentity}" appears more than once in the materialized index. One reviewed owner must resolve to one exact source export.`,
+      });
+    else indexedOwners.add(ownerIdentity);
     const designOwner = evidence.designOwners.find(
       (candidate) =>
         candidate.branch === owner.branch &&
@@ -223,7 +231,7 @@ export const inspectAutoMovieLibraryProjectState = (props: {
         path: file.path,
         message: `Generated file "${file.path}" is not owned by the selected library index.`,
       });
-  return { index, problems };
+  return { index: problems.length === 0 ? index : null, problems };
 };
 
 const ownerArtifactPaths = (

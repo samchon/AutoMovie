@@ -177,6 +177,38 @@ export const test_production_library_project_state = (): void => {
           }).problems.some((problem) => problem.path === "models/bench.json"),
       ],
       [
+        "duplicateDesignOwnerRejected",
+        () => {
+          const result = inspect({
+            evidence,
+            library: {
+              ...index,
+              owners: [
+                {
+                  ...index.owners[0]!,
+                  environments: [],
+                  models: [],
+                  contexts: [],
+                },
+                {
+                  ...index.owners[0]!,
+                  export: "annex",
+                  environments: [],
+                  models: [],
+                  contexts: [],
+                },
+              ],
+            },
+          });
+          return (
+            result.index === null &&
+            result.problems.some((problem) =>
+              problem.message.includes("appears more than once"),
+            )
+          );
+        },
+      ],
+      [
         "malformedIndexRejected",
         () =>
           inspect({ evidence, library: { version: 2 } }).problems[0]?.code ===
@@ -209,6 +241,7 @@ export const test_production_library_project_state = (): void => {
       indexIdentityRejected: true,
       ownerDigestRejected: true,
       duplicateArtifactOwnerRejected: true,
+      duplicateDesignOwnerRejected: true,
       malformedIndexRejected: true,
       duplicateJsonMemberRejected: true,
     },

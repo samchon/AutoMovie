@@ -2,6 +2,7 @@ import type {
   IAutoMovieProductionEvidence,
   IAutoMovieProductionEvidenceDesignBranch,
   IAutoMovieProductionEvidenceDesignOwner,
+  IAutoMovieProductionEvidenceSourceBinding,
   IAutoMovieProductionEvidenceSourceOwnerBinding,
 } from "@automovie/evidence";
 import type { AutoMovieContentDigest } from "@automovie/interface";
@@ -127,11 +128,11 @@ export const captureAutoMovieLibraryAuthoringSnapshot = (props: {
 
   const paths = new Set<string>();
   for (const branch of props.evidence.designBranches)
-    for (const source of branch.sourceBinding?.paths ?? []) paths.add(source);
+    for (const source of activePaths(branch.sourceBinding)) paths.add(source);
   for (const owner of props.evidence.designOwners)
-    for (const source of owner.sourceBinding?.paths ?? []) paths.add(source);
+    for (const source of activePaths(owner.sourceBinding)) paths.add(source);
   for (const owner of props.evidence.sourceOwners ?? [])
-    paths.add(owner.sourcePath);
+    if (owner.enforced) paths.add(owner.sourcePath);
 
   const sources = [...paths]
     .sort(compareCodeUnits)
@@ -157,7 +158,9 @@ export const captureAutoMovieLibraryAuthoringSnapshot = (props: {
     manifest: props.evidence.manifest,
     designBranches: sortedDesignBranches(props.evidence.designBranches),
     designOwners: sortedDesignOwners(props.evidence.designOwners),
-    sourceOwners: sortedSourceOwners(props.evidence.sourceOwners ?? []),
+    sourceOwners: sortedSourceOwners(
+      (props.evidence.sourceOwners ?? []).filter((owner) => owner.enforced),
+    ),
     sources,
   };
   return {
@@ -186,6 +189,7 @@ export const sameAutoMovieLibraryAuthoringSnapshot = (
  */
 export const createAutoMovieLibrarySourceExecutionPlan = (
   snapshot: IAutoMovieLibraryAuthoringSnapshot,
+  requireReviewed: boolean = true,
 ): IAutoMovieLibrarySourceExecutionPlan => {
   const sourceDigests = new Map(
     snapshot.sources.map((source) => [source.path, source.digest]),
@@ -219,7 +223,10 @@ export const createAutoMovieLibrarySourceExecutionPlan = (
       );
       continue;
     }
-    if (binding.enforced === false || binding.reviewed === false) {
+    if (
+      binding.enforced === false ||
+      (requireReviewed && binding.reviewed === false)
+    ) {
       problems.push(
         `Library source "${binding.sourcePath}#${binding.exportName}" has no current enforced reviewed owner edge.`,
       );
@@ -263,15 +270,7 @@ const sortedDesignBranches = (
   [...branches]
     .map((branch) => ({
       ...branch,
-      sourceBinding:
-        branch.sourceBinding === null
-          ? null
-          : {
-              ...branch.sourceBinding,
-              files: [...branch.sourceBinding.files].sort(compareCodeUnits),
-              paths: [...branch.sourceBinding.paths].sort(compareCodeUnits),
-              symbols: [...branch.sourceBinding.symbols].sort(compareCodeUnits),
-            },
+      sourceBinding: canonicalSourceBinding(branch.sourceBinding),
     }))
     .sort((left, right) => compareCodeUnits(left.branch, right.branch));
 
@@ -281,15 +280,7 @@ const sortedDesignOwners = (
   [...owners]
     .map((owner) => ({
       ...owner,
-      sourceBinding:
-        owner.sourceBinding === null
-          ? null
-          : {
-              ...owner.sourceBinding,
-              files: [...owner.sourceBinding.files].sort(compareCodeUnits),
-              paths: [...owner.sourceBinding.paths].sort(compareCodeUnits),
-              symbols: [...owner.sourceBinding.symbols].sort(compareCodeUnits),
-            },
+      sourceBinding: canonicalSourceBinding(owner.sourceBinding),
     }))
     .sort((left, right) =>
       compareCodeUnits(
@@ -319,3 +310,22 @@ const sortedSourceOwners = (
       ]),
     ),
   );
+
+const activePaths = (
+  binding: IAutoMovieProductionEvidenceSourceBinding | null,
+): readonly string[] =>
+  binding !== null && binding.enforced ? binding.paths : [];
+
+const canonicalSourceBinding = (
+  binding: IAutoMovieProductionEvidenceSourceBinding | null,
+): IAutoMovieProductionEvidenceSourceBinding | null =>
+  binding === null
+    ? null
+    : {
+        ...binding,
+        files: [...binding.files].sort(compareCodeUnits),
+        paths: binding.enforced
+          ? [...binding.paths].sort(compareCodeUnits)
+          : [],
+        symbols: [...binding.symbols].sort(compareCodeUnits),
+      };

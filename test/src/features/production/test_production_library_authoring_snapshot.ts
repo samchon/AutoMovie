@@ -146,6 +146,16 @@ export const test_production_library_authoring_snapshot = (): void => {
       { [LIBRARY_SOURCE]: SOURCE },
     ),
   );
+  const sourceStageExecution = createAutoMovieLibrarySourceExecutionPlan(
+    snapshot(
+      {
+        ...base,
+        sourceOwners: [{ ...sourceOwner, reviewed: false }],
+      },
+      { [LIBRARY_SOURCE]: SOURCE },
+    ),
+    false,
+  );
   const duplicateExecution = createAutoMovieLibrarySourceExecutionPlan(
     snapshot(
       {
@@ -158,6 +168,32 @@ export const test_production_library_authoring_snapshot = (): void => {
       { [LIBRARY_SOURCE]: SOURCE },
     ),
   );
+  const disabled = {
+    ...base,
+    designBranches: base.designBranches.map((branch) => ({
+      ...branch,
+      sourceBinding:
+        branch.sourceBinding === null
+          ? null
+          : {
+              ...branch.sourceBinding,
+              enforced: false,
+              paths: ["src/spaces/disabled.ts"],
+            },
+    })),
+    designOwners: base.designOwners.map((owner) => ({
+      ...owner,
+      sourceBinding:
+        owner.sourceBinding === null
+          ? null
+          : {
+              ...owner.sourceBinding,
+              enforced: false,
+              paths: ["src/spaces/disabled.ts"],
+            },
+    })),
+    sourceOwners: [{ ...sourceOwner, enforced: false }],
+  };
   TestValidator.equals(
     "library snapshot is complete, canonical, and freshly comparable",
     namedFacts([
@@ -168,6 +204,12 @@ export const test_production_library_authoring_snapshot = (): void => {
       ["ownerDigestChanges", () => initial.digest !== changedOwner.digest],
       ["stageChanges", () => initial.digest !== changedStage.digest],
       ["ownerPopulationChanges", () => initial.digest !== added.digest],
+      [
+        "disabledSourceBytesIgnored",
+        () =>
+          snapshot(disabled, { "src/spaces/disabled.ts": "first" }).digest ===
+          snapshot(disabled, { "src/spaces/disabled.ts": "second" }).digest,
+      ],
       [
         "sourceBytesChange",
         () =>
@@ -243,6 +285,12 @@ export const test_production_library_authoring_snapshot = (): void => {
           ),
       ],
       [
+        "sourceStageAllowsUnreviewed",
+        () =>
+          sourceStageExecution.entries.length === 1 &&
+          sourceStageExecution.problems.length === 0,
+      ],
+      [
         "duplicateOwnerRefused",
         () =>
           duplicateExecution.entries.length === 0 &&
@@ -256,6 +304,7 @@ export const test_production_library_authoring_snapshot = (): void => {
       ownerDigestChanges: true,
       stageChanges: true,
       ownerPopulationChanges: true,
+      disabledSourceBytesIgnored: true,
       sourceBytesChange: true,
       missingSourceChanges: true,
       rootMismatchRefused: true,
@@ -265,6 +314,7 @@ export const test_production_library_authoring_snapshot = (): void => {
       staleSourceRefused: true,
       missingSourceRefused: true,
       unreviewedSourceRefused: true,
+      sourceStageAllowsUnreviewed: true,
       duplicateOwnerRefused: true,
     },
   );
