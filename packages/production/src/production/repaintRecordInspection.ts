@@ -86,10 +86,7 @@ export class AutoMovieRepaintRecordInspectionError extends Error {
 
   public constructor(
     public readonly stage: AutoMovieRepaintRecordInspectionStage,
-    public readonly failure: Exclude<
-      AutoMovieRepaintRecordFailureClass,
-      "absent" | "unavailable"
-    >,
+    public readonly failure: AutoMovieRepaintRecordFailureClass,
   ) {
     super(`Repaint ${stage} inspection failed as ${failure}.`);
     if (
@@ -161,10 +158,7 @@ const safeClassifiedError = (
   error: unknown,
 ): {
   stage: AutoMovieRepaintRecordInspectionStage;
-  failure: Exclude<
-    AutoMovieRepaintRecordFailureClass,
-    "absent" | "unavailable"
-  >;
+  failure: AutoMovieRepaintRecordFailureClass;
   recovery: string;
 } | null => {
   try {
@@ -193,29 +187,27 @@ const INSPECTION_STAGES = new Set<AutoMovieRepaintRecordInspectionStage>([
   "currentness",
   "output",
 ]);
-const CLASSIFIED_FAILURES = new Set<
-  Exclude<AutoMovieRepaintRecordFailureClass, "absent" | "unavailable">
->([
+const CLASSIFIED_FAILURES = new Set<AutoMovieRepaintRecordFailureClass>([
+  "absent",
   "schema-invalid",
   "identity-invalid",
   "stale",
   "unsafe-locator",
+  "unavailable",
   "render-corrupt",
 ]);
 
-const recoveryFor = (
-  failure: Exclude<
-    AutoMovieRepaintRecordFailureClass,
-    "absent" | "unavailable"
-  >,
-): string =>
+const recoveryFor = (failure: AutoMovieRepaintRecordFailureClass): string =>
   ({
+    absent: "Create or restore the requested record, then inspect it again.",
     "schema-invalid":
       "Replace the record with one matching the current schema.",
     "identity-invalid": "Restore the record at its canonical identity.",
     stale: "Regenerate the record from current production inputs.",
     "unsafe-locator":
       "Replace linked or escaping state with an owned tracked record.",
+    unavailable:
+      "Restore access to the tracked repaint state, then inspect it again.",
     "render-corrupt": "Restore or regenerate the exact rendition bytes.",
   })[failure];
 

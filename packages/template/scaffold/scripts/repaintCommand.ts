@@ -105,7 +105,7 @@ export const createNodeProductionRepaintHost = (props: {
       const candidate = inspection.records
         .map((record) => record.value)
         .find((receipt) => receipt.attemptId === invocation.attemptId);
-      if (inspection.findings.length !== 0)
+      if (candidate === undefined && inspection.findings.length !== 0)
         return repaintSelectionRefusal(
           invocation,
           null,

@@ -19,6 +19,8 @@ export const test_production_repaint_record_inspection = (): void => {
   const targets = [
     { kind: "rendition" as const, shot: "b", recordId: "valid-b" },
     { kind: "candidate" as const, shot: "a", recordId: "missing" },
+    { kind: "candidate" as const, shot: "a", recordId: "linked-missing" },
+    { kind: "candidate" as const, shot: "a", recordId: "unavailable" },
     { kind: "candidate" as const, shot: "b", recordId: "valid-a" },
     { kind: "candidate" as const, shot: "a", recordId: "stale" },
     { kind: "candidate" as const, shot: "a", recordId: "schema" },
@@ -32,6 +34,13 @@ export const test_production_repaint_record_inspection = (): void => {
     inspect: (target) => {
       if (target.recordId.startsWith("valid")) return target.recordId;
       if (target.recordId === "missing") return null;
+      if (target.recordId === "linked-missing")
+        throw new AutoMovieRepaintRecordInspectionError("selection", "absent");
+      if (target.recordId === "unavailable")
+        throw new AutoMovieRepaintRecordInspectionError(
+          "receipt",
+          "unavailable",
+        );
       if (target.recordId === "stale")
         throw Object.assign(
           new AutoMovieRepaintRecordInspectionError("currentness", "stale"),
@@ -98,6 +107,13 @@ export const test_production_repaint_record_inspection = (): void => {
         },
         {
           shot: "a",
+          record: "linked-missing",
+          stage: "selection",
+          failure: "absent",
+          leaksSecret: false,
+        },
+        {
+          shot: "a",
           record: "missing",
           stage: "receipt",
           failure: "absent",
@@ -115,6 +131,13 @@ export const test_production_repaint_record_inspection = (): void => {
           record: "stale",
           stage: "currentness",
           failure: "stale",
+          leaksSecret: false,
+        },
+        {
+          shot: "a",
+          record: "unavailable",
+          stage: "receipt",
+          failure: "unavailable",
           leaksSecret: false,
         },
         {
