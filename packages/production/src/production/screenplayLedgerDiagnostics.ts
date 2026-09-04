@@ -72,6 +72,7 @@ export const screenplayLedgerDiagnostics = (props: {
 
   // --- Treatment -----------------------------------------------------------
   const beatsByText = new Map<string, string>();
+  const beatsById = new Map<string, string>();
   const beatIds = new Set<string>();
   if (screenplay.treatment.sequences.length === 0)
     refuse(
@@ -110,6 +111,7 @@ export const screenplayLedgerDiagnostics = (props: {
         );
       beatIds.add(beat.id);
       beatsByText.set(beat.text, beat.id);
+      beatsById.set(beat.id, beat.text);
     });
   });
 
@@ -176,6 +178,12 @@ export const screenplayLedgerDiagnostics = (props: {
           `Scene "${scene.id}" covers prose the treatment index does not promise verbatim: "${coverage.beat}". Coverage that paraphrases proves nothing was carried forward. Copy the exact beat text or index the promise, then compile again.`,
         );
       else coveredBeats.add(coverage.beat);
+      const indexedBeat = beatsById.get(coverage.id);
+      if (indexedBeat === undefined || indexedBeat !== coverage.beat)
+        refuse(
+          "screenplay-cover-unpromised",
+          `Scene "${scene.id}" covers beat id "${coverage.id}" with prose that does not belong to that exact treatment beat. Stable identity and verbatim prose must name the same promise. Correct both fields from the treatment owner, then compile again.`,
+        );
     });
   });
   for (const [text, id] of beatsByText)
