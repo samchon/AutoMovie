@@ -7,7 +7,6 @@
   "scripts": {
     "build": "ttsc -p tsconfig.json --noEmit",
     "start": "ttsx -P tsconfig.json src/index.ts",
-    "start:fast": "ttsx -P tsconfig.json src/index.ts --exclude test_lint_plugin_walking_skeleton",
     "coverage": "ttsx -P tsconfig.json src/coverage/runCoverage.ts"
   },
   "author": "Samchon",

@@ -15,7 +15,11 @@ export interface IFatalTestEventDependencies {
 
 const diagnosticOf = (value: unknown): string => {
   if (value instanceof Error)
-    return value.stack ?? `${value.name}: ${value.message}`;
+    try {
+      return value.stack ?? `${value.name}: ${value.message}`;
+    } catch {
+      return "[unprintable fatal value]";
+    }
   if (typeof value === "string") return value;
   try {
     const encoded = JSON.stringify(value);

@@ -792,11 +792,11 @@ export const runResolveDriversCycleScenario = (): void => {
     copy({ owner: "o", source: "s", rotation: true }),
     copy({ owner: "s", source: "o", rotation: true }),
   ];
-  let threw = false;
-  try {
-    resolveDrivers(cyclic, seed([]), nodes);
-  } catch {
-    threw = true;
-  }
-  TestValidator.equals("cyclic drivers throw", threw, true);
+  TestValidator.predicate(
+    "cyclic drivers throw their dependency diagnostic",
+    throwsError(
+      () => resolveDrivers(cyclic, seed([]), nodes),
+      "driver dependency cycle",
+    ),
+  );
 };

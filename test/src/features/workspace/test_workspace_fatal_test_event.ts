@@ -46,18 +46,29 @@ export const test_workspace_fatal_test_event = (): void => {
 
   const stackless = new Error("stackless");
   stackless.stack = undefined;
+  const hostileError = new Error("hostile");
+  Object.defineProperty(hostileError, "stack", {
+    get: () => {
+      throw new Error("stack unavailable");
+    },
+  });
   TestValidator.equals(
     "every fatal kind has a normalized diagnostic",
     [
       capture("unhandled rejection", "rejected"),
       capture("critical error", { answer: 42 }),
       capture("uncaught exception", stackless),
+      capture("uncaught exception", hostileError),
       capture("critical error", undefined),
     ],
     [
       { kind: "unhandled rejection", diagnostic: "rejected" },
       { kind: "critical error", diagnostic: '{"answer":42}' },
       { kind: "uncaught exception", diagnostic: "Error: stackless" },
+      {
+        kind: "uncaught exception",
+        diagnostic: "[unprintable fatal value]",
+      },
       { kind: "critical error", diagnostic: "undefined" },
     ],
   );
