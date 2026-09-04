@@ -45,6 +45,10 @@ export const test_production_source_owner_binding = (): void => {
       requireReviewed: true,
       ...overrides,
     });
+  const adjacent = {
+    ...binding,
+    targetAnchor: "annex",
+  };
 
   TestValidator.equals(
     "source owner binding admits exactly one current reviewed edge",
@@ -65,6 +69,10 @@ export const test_production_source_owner_binding = (): void => {
       [
         "ambiguousEdgeIsDistinct",
         () => resolve({ bindings: [binding, binding] }).reason === "ambiguous",
+      ],
+      [
+        "runtimeOwnerCannotDisambiguateSeveralTargets",
+        () => resolve({ bindings: [binding, adjacent] }).reason === "ambiguous",
       ],
       [
         "swappedOwnerIsDistinct",
@@ -105,6 +113,7 @@ export const test_production_source_owner_binding = (): void => {
       missingEdgeIsDistinct: true,
       missingCarrierFailsWithoutThrowing: true,
       ambiguousEdgeIsDistinct: true,
+      runtimeOwnerCannotDisambiguateSeveralTargets: true,
       swappedOwnerIsDistinct: true,
       staleSourceIsDistinct: true,
       unreviewedEdgeBlocksReview: true,
