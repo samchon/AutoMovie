@@ -352,16 +352,23 @@ const sourceOwnerBindingsOf = (
         const tags = jsDocTagsOf(owner.nodes);
         const reviews = new Map<string, string[]>();
         for (const tag of tags.filter((tag) => tag.name === "evidenceReview")) {
-          const [target, fingerprint] = tag.comment.split(/\s+/u);
-          if (target === undefined || fingerprint === undefined) continue;
+          const [target, fingerprint, ...description] =
+            tag.comment.split(/\s+/u);
+          if (
+            target === undefined ||
+            fingerprint === undefined ||
+            /^#[0-9a-f]{7}$/u.test(fingerprint) === false ||
+            description.length === 0
+          )
+            continue;
           reviews.set(target, [
             ...(reviews.get(target) ?? []),
-            fingerprint.replace(/^#/u, ""),
+            fingerprint.slice(1),
           ]);
         }
         for (const tag of tags.filter((tag) => tag.name === "evidence")) {
-          const cited = tag.comment.split(/\s+/u)[0];
-          if (cited === undefined) continue;
+          const [cited, ...reason] = tag.comment.split(/\s+/u);
+          if (cited === undefined || reason.length === 0) continue;
           const target = targets.get(cited);
           if (target === undefined) continue;
           const identity = JSON.stringify([
