@@ -1,3 +1,5 @@
 # The call
 
-- [001 — The cue](001-cue.md)
+<!-- automovie:toc:start -->
+- [The cue](./001-cue.md)
+<!-- automovie:toc:end -->
