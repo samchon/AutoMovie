@@ -13,6 +13,7 @@ import path from "node:path";
 import { productionEvidence } from "../lint.config";
 import {
   repaintSelectionReviews,
+  repaintSequenceBaseline,
   repaintSequenceObservation,
 } from "../repaintSelectionReviews";
 import { inspectPublishedProxyBundle } from "./assertProxyBundle";
@@ -357,6 +358,7 @@ const executeProductionRenderCommand = async (
     progress: renderProgress,
     publication: publicationRuntime,
     repaintSelection: productionRepaintSelection,
+    repaintSequenceBaseline: () => repaintSequenceBaseline,
     repaintSequenceObservation: () => repaintSequenceObservation,
     root,
     sound: soundRuntime,

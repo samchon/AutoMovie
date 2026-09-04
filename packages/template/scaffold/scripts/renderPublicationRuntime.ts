@@ -256,6 +256,9 @@ export const createProductionRenderFinalizationRuntime = (props: {
   ) => void;
   publication: IProductionRenderPublicationRuntime;
   repaintSelection: () => IAutoMovieProductionRepaintSelection | null;
+  repaintSequenceBaseline: () =>
+    | IAutoMovieRepaintSequenceObservation["baseline"]
+    | null;
   repaintSequenceObservation: () => IAutoMovieRepaintSequenceObservation | null;
   root: string;
   sound: IProductionSoundRuntime;
@@ -264,6 +267,7 @@ export const createProductionRenderFinalizationRuntime = (props: {
   const planningRuntime = props.planning;
   const productionId = props.productionId;
   const productionRepaintSelection = props.repaintSelection;
+  const productionRepaintSequenceBaseline = props.repaintSequenceBaseline;
   const productionRepaintSequenceObservation = props.repaintSequenceObservation;
   const publicationRuntime = props.publication;
   const renderHost = props.host;
@@ -549,6 +553,7 @@ export const createProductionRenderFinalizationRuntime = (props: {
               selectionDigest: selection.selectionDigest,
             };
           });
+          const baseline = productionRepaintSequenceBaseline();
           const observation = productionRepaintSequenceObservation();
           const observationDigest =
             observation === null
@@ -556,7 +561,8 @@ export const createProductionRenderFinalizationRuntime = (props: {
               : digestAutoMovieBytes(canonicalAutoMovieJsonBytes(observation));
           if (
             lanes.some((lane) => lane.lane === "repainted") &&
-            (observation === null ||
+            (baseline === null ||
+              observation === null ||
               autoMovieRepaintSequenceObservationDiagnostics({
                 observation,
                 productionId,
@@ -564,12 +570,19 @@ export const createProductionRenderFinalizationRuntime = (props: {
                 timelineFingerprint: digestAutoMovieBytes(
                   canonicalAutoMovieJsonBytes(timeline),
                 ),
-                baseline: observation.baseline,
+                baseline,
                 members,
               }).length !== 0)
           )
             throw new Error(
               "Final visual delivery requires one current completed five-pass aggregate sequence observation.",
+            );
+          if (
+            lanes.every((lane) => lane.lane === "deterministic") &&
+            baseline !== null
+          )
+            throw new Error(
+              "All-deterministic visual delivery must not invent a repaint sequence baseline.",
             );
           const deliveryPlan = planAutoMovieVisualDelivery({
             timeline: timelineOccurrences,
