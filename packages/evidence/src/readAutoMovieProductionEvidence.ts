@@ -6,6 +6,10 @@ import {
   type IAutoMovieEvidenceConfigProps,
   createAutoMovieContractBindingManifest,
 } from "./createAutoMovieEvidenceConfig";
+import {
+  type IAutoMovieEvidenceReviewAlarmReport,
+  inspectAutoMovieEvidenceReviewAlarms,
+} from "./inspectAutoMovieEvidenceReviewAlarms";
 import { projectAutoMovieMarkdownSyntax } from "./parseAutoMovieEvidenceSyntax";
 import {
   type IAutoMovieContractRule,
@@ -143,6 +147,8 @@ export interface IAutoMovieProductionEvidence {
   contracts: readonly IAutoMovieProductionEvidenceContract[];
   /** Complete structured local rule inventory, including held and rejected rules. */
   contractRules: readonly IAutoMovieContractRule[];
+  /** Non-gating semantic alarms that require a fresh evidence Self-Review. */
+  reviewAlarms: IAutoMovieEvidenceReviewAlarmReport;
 }
 
 interface IMarkdownDocument {
@@ -236,6 +242,16 @@ export const readAutoMovieProductionEvidence = (props: {
       title: document.title,
       items: document.units,
     }));
+  const evidenceDocuments = (extension: ".md" | ".ts", directory: string) =>
+    walkAutoMovieProjectPopulationFiles(
+      root,
+      path.join(root, directory),
+      extension,
+    ).map((file) => ({
+      path: posix(path.relative(root, file)),
+      source: fs.readFileSync(file, "utf8"),
+    }));
+  const targetDocuments = evidenceDocuments(".md", "docs");
 
   return {
     root,
@@ -248,6 +264,10 @@ export const readAutoMovieProductionEvidence = (props: {
     contractRules: readAutoMovieContractRules(
       path.join(root, "docs", "contracts"),
     ),
+    reviewAlarms: inspectAutoMovieEvidenceReviewAlarms({
+      documents: [...targetDocuments, ...evidenceDocuments(".ts", "src")],
+      targets: targetDocuments,
+    }),
   };
 };
 
