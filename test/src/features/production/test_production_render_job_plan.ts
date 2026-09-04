@@ -4,6 +4,7 @@ import {
   IAutoMovieProductionDesign,
 } from "@automovie/interface";
 import {
+  type IAutoMovieProductionAudioAssetIdentity,
   IAutoMovieProductionRenderJobPlan,
   IAutoMovieProductionRenderTier,
   planProductionRenderJob,
@@ -22,7 +23,8 @@ const digest = (fill: string): AutoMovieContentDigest =>
   `sha256:${fill.repeat(64).slice(0, 64)}`;
 
 const RUNTIME_IDENTITY = {
-  protocolVersion: "automovie.production-render-runtime.v2",
+  protocolVersion: "automovie.production-render-runtime.v3",
+  dialogueRuntimeIdentity: null,
   sourceDigest: digest("a"),
   capture: testCaptureRuntimeIdentity(),
   encoder: {
@@ -38,7 +40,39 @@ const RUNTIME_IDENTITY = {
   },
 } as const;
 
+const WAVE_AUDIO_ASSET = {
+  path: "assets/audio/tone.wav",
+  digest: digest("c"),
+  durationSeconds: 0.5,
+  sampleRate: 48_000,
+  channels: 2,
+  kind: "wave",
+  sourceFormat: {
+    kind: "wave",
+    header: "wave-format-extensible",
+    encoding: "pcm-s16le",
+    containerBits: 16,
+    validBits: 16,
+    sampleRate: 48_000,
+    channels: 2,
+    layout: {
+      kind: "stereo",
+      speakers: ["front-left", "front-right"],
+      source: "channel-mask",
+      mask: 0x3,
+    },
+    subFormatGuid: "00000001-0000-0010-8000-00aa00389b71",
+  },
+  processing: {
+    kind: "downmix",
+    outputChannels: 1,
+    outputSampleRate: 48_000,
+    matrix: [[0.5, 0.5]],
+  },
+} as const satisfies IAutoMovieProductionAudioAssetIdentity;
+
 const AUDIO_ASSET = {
+  kind: "placeholder-audio-stem",
   path: "assets/audio/tone.wav",
   digest: digest("c"),
   durationSeconds: 0.5,
@@ -146,10 +180,10 @@ const plan = (props: {
   chunkFrames?: number;
   timeline?: IAutoMovieFilmTimeline;
   production?: IAutoMovieProductionDesign;
-  audioAssets?: readonly (typeof AUDIO_ASSET)[];
+  audioAssets?: readonly IAutoMovieProductionAudioAssetIdentity[];
   guidePasses?: readonly ["pose" | "depth", ...("pose" | "depth")[]];
   sourceFingerprints?: Readonly<Record<string, AutoMovieContentDigest>>;
-  runtimeIdentity?: typeof RUNTIME_IDENTITY;
+  runtimeIdentity?: IAutoMovieProductionRenderJobPlan["runtimeIdentity"];
 }): IAutoMovieProductionRenderJobPlan =>
   planProductionRenderJob({
     timeline: props.timeline ?? TIMELINE(),
@@ -210,11 +244,20 @@ const chunkShape = (
  *    nothing, an odd authored raster, a timeline whose clock disagrees with the
  *    production, a shot with no compiler-owned source fingerprint, an audio cue
  *    with no verified asset, and a guide-pass request naming two passes.
- * 7. Changing only the normalized crop invalidates every chunk identity while
+ * 7. A canonical voiced dialogue identity is preserved while malformed
+ *    dialogue identities refuse rather than being treated as silence.
+ * 8. Changing only the normalized crop invalidates every chunk identity while
  *    preserving the raster, clock, and exact crop in both frame formats.
  */
 export const test_production_render_job_plan = (): void => {
   const final = plan({});
+  const voicedDialogueIdentity = digest("f");
+  const voiced = plan({
+    runtimeIdentity: {
+      ...RUNTIME_IDENTITY,
+      dialogueRuntimeIdentity: voicedDialogueIdentity,
+    },
+  });
   TestValidator.equals(
     "the final tier renders the authored contract without economising it",
     {
@@ -226,6 +269,7 @@ export const test_production_render_job_plan = (): void => {
       totalFrames: final.totalFrames,
       chunkFrames: final.chunkFrames,
       compileFingerprint: final.compileFingerprint,
+      voicedDialogueIdentity: voiced.runtimeIdentity.dialogueRuntimeIdentity,
     },
     {
       version: 3,
@@ -241,6 +285,7 @@ export const test_production_render_job_plan = (): void => {
       totalFrames: 12,
       chunkFrames: 5,
       compileFingerprint: digest("d"),
+      voicedDialogueIdentity,
     },
   );
   const croppedProduction = PRODUCTION();
@@ -494,6 +539,11 @@ export const test_production_render_job_plan = (): void => {
       audio: ["tone"],
     },
   );
+  TestValidator.equals(
+    "WAVE source facts and processing survive render planning",
+    plan({ audioAssets: [WAVE_AUDIO_ASSET] }).tracks.audioAssets,
+    [WAVE_AUDIO_ASSET],
+  );
 
   TestValidator.equals(
     "every planning input a worker cannot recover from is refused by name",
@@ -518,6 +568,21 @@ export const test_production_render_job_plan = (): void => {
                 },
               }),
             "one current SHA-256 content identity",
+          ),
+      ],
+      [
+        "dialogueRuntimeDigest",
+        () =>
+          throwsError(
+            () =>
+              plan({
+                runtimeIdentity: {
+                  ...RUNTIME_IDENTITY,
+                  dialogueRuntimeIdentity:
+                    "sha256:not-a-digest" as AutoMovieContentDigest,
+                },
+              }),
+            "dialogueRuntimeIdentity must be null or one current SHA-256 content identity",
           ),
       ],
       [
@@ -600,6 +665,85 @@ export const test_production_render_job_plan = (): void => {
           ),
       ],
       [
+        "contradictoryWaveLayout",
+        () =>
+          throwsError(
+            () =>
+              plan({
+                audioAssets: [
+                  {
+                    ...WAVE_AUDIO_ASSET,
+                    sourceFormat: {
+                      ...WAVE_AUDIO_ASSET.sourceFormat,
+                      layout: {
+                        ...WAVE_AUDIO_ASSET.sourceFormat.layout,
+                        mask: 0x5,
+                      },
+                    },
+                  },
+                ],
+              }),
+            "invalid identity, duration, sample rate, channels, or duplicate ownership",
+          ),
+      ],
+      [
+        "unknownAudioKind",
+        () =>
+          throwsError(
+            () =>
+              plan({
+                audioAssets: [
+                  {
+                    ...AUDIO_ASSET,
+                    kind: "unknown-audio" as never,
+                  },
+                ],
+              }),
+            "invalid identity, duration, sample rate, channels, or duplicate ownership",
+          ),
+      ],
+      [
+        "unknownWaveEncoding",
+        () =>
+          throwsError(
+            () =>
+              plan({
+                audioAssets: [
+                  {
+                    ...WAVE_AUDIO_ASSET,
+                    sourceFormat: {
+                      ...WAVE_AUDIO_ASSET.sourceFormat,
+                      encoding: "unknown-encoding" as never,
+                    },
+                  },
+                ],
+              }),
+            "invalid identity, duration, sample rate, channels, or duplicate ownership",
+          ),
+      ],
+      [
+        "unknownWaveLayoutSource",
+        () =>
+          throwsError(
+            () =>
+              plan({
+                audioAssets: [
+                  {
+                    ...WAVE_AUDIO_ASSET,
+                    sourceFormat: {
+                      ...WAVE_AUDIO_ASSET.sourceFormat,
+                      layout: {
+                        ...WAVE_AUDIO_ASSET.sourceFormat.layout,
+                        source: "unknown-layout-source" as never,
+                      },
+                    },
+                  },
+                ],
+              }),
+            "invalid identity, duration, sample rate, channels, or duplicate ownership",
+          ),
+      ],
+      [
         "ambiguousGuidePass",
         () =>
           throwsError(
@@ -611,6 +755,7 @@ export const test_production_render_job_plan = (): void => {
     {
       chunkFrames: true,
       runtimeDigest: true,
+      dialogueRuntimeDigest: true,
       indivisibleStep: true,
       economisedFinal: true,
       reductionlessProxy: true,
@@ -618,6 +763,10 @@ export const test_production_render_job_plan = (): void => {
       clockDisagreement: true,
       unfingerprintedShot: true,
       unverifiedAudio: true,
+      contradictoryWaveLayout: true,
+      unknownAudioKind: true,
+      unknownWaveEncoding: true,
+      unknownWaveLayoutSource: true,
       ambiguousGuidePass: true,
     },
   );

@@ -183,7 +183,14 @@ import {
   assertProductionPngPicture,
   resolveProductionPngProfile,
 } from "./productionPngPicture";
-import { canonicalProductionWebVtt } from "./productionRenderJob";
+import {
+  type IAutoMovieProductionRenderJobPlan,
+  canonicalProductionWebVtt,
+} from "./productionRenderJob";
+import {
+  assertProductionRenderPublicationCurrent,
+  parseProductionRenderPublicationIdentity,
+} from "./productionRenderPublicationIdentity";
 import { productionRenderTargetFingerprint } from "./renderIdentity";
 import {
   planAutoMovieVisualDelivery,
@@ -290,6 +297,7 @@ export class AutoMovieProductionCompiler {
     private readonly project: AutoMovieProductionProject,
     private readonly authoringEvidence?: IAutoMovieProductionEvidence,
     private readonly currentAuthoringEvidence?: () => IAutoMovieProductionEvidence,
+    private readonly finalRenderPlan?: IAutoMovieProductionRenderJobPlan,
   ) {}
 
   /**
@@ -949,6 +957,7 @@ export class AutoMovieProductionCompiler {
           inputFingerprint,
           graph.shots,
           compiled,
+          this.finalRenderPlan,
         ),
       );
     // Close the loop between what the compiled production SAMPLES and what its
@@ -9092,6 +9101,7 @@ const finalDeliverableDiagnostics = (
   inputFingerprint: AutoMovieContentDigest,
   contracts: ReadonlyMap<string, IAutoMovieShotContract>,
   compiled: ReadonlyMap<string, IAutoMovieCompiledShotSource>,
+  currentPlan?: IAutoMovieProductionRenderJobPlan,
 ): IAutoMovieDiagnostic[] => {
   if (production === null) return [];
   let bytes: Uint8Array | null;
@@ -9130,7 +9140,7 @@ const finalDeliverableDiagnostics = (
   }
   if (
     receipt === null ||
-    receipt.version !== 3 ||
+    receipt.version !== 4 ||
     receipt.manifestDigest !== manifestDigest
   )
     return [
@@ -9165,6 +9175,37 @@ const finalDeliverableDiagnostics = (
       ),
     ];
   }
+  let publication: ReturnType<typeof parseProductionRenderPublicationIdentity>;
+  try {
+    publication =
+      currentPlan === undefined
+        ? parseProductionRenderPublicationIdentity(manifest.publication)
+        : assertProductionRenderPublicationCurrent({
+            identity: manifest.publication,
+            plan: currentPlan,
+          });
+  } catch (error) {
+    return [
+      renderDeliverableDiagnostic(
+        "render-deliverable-invalid",
+        production.id,
+        `${errorMessage(error)} Recreate the final publication from the current render plan.`,
+      ),
+    ];
+  }
+  if (
+    publication.productionId !== production.id ||
+    publication.tier.kind !== "final" ||
+    publication.compileFingerprint !== manifest.compileFingerprint ||
+    receipt.publicationFingerprint !== publication.fingerprint
+  )
+    return [
+      renderDeliverableDiagnostic(
+        "render-deliverable-stale",
+        production.id,
+        "The final manifest and renderer-owned receipt do not carry one matching final-tier render-plan identity. Replan and republish the current production.",
+      ),
+    ];
   if (manifest.compileFingerprint !== inputFingerprint)
     return [
       renderDeliverableDiagnostic(

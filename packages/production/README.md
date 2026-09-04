@@ -50,6 +50,12 @@ they are not test-only helpers.
 | `listAutoMovieDiagnosticCatalog` | Lists the stable diagnostic catalog used by offline project tooling. |
 | `findAutoMovieDiagnosticCatalogEntry` | Resolves one diagnostic code to its remediation contract. |
 | `assertProductionFeatureUsesRenditionVideo` | Refuses production features that bypass the canonical rendition video. |
+| `assertProductionRenderDialogueRuntimeIdentity` | Refuses a capture whose final-byte dialogue generation differs from the versioned render plan. |
+| `productionRenderPublicationIdentity` | Projects an exact final or proxy render plan into a structured, independently recomputable publication identity. |
+| `parseProductionRenderPublicationIdentity` | Strictly parses and recomputes stored publication provenance before reuse. |
+| `assertProductionRenderPublicationCurrent` | Compares stored provenance with the current same-tier render plan. |
+| `captureProductionPayloadSnapshot` | Captures exact retained or terminal payload bytes for guarded publication. |
+| `isProductionPayloadSnapshotCurrent` | Detects deletion, replacement, or in-place byte mutation across a publication transaction. |
 | `readAutoMovieSubjectInspection` | Reads and validates one committed subject-inspection receipt. |
 | `compareAutoMovieVisualRevisions` | Compares two visual-revision receipts for review tooling. |
 

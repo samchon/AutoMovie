@@ -59,16 +59,6 @@ const observations = new WeakMap<
   IRuntimePackageSnapshot,
   IRuntimePackageObservation
 >();
-const generationRegistrySymbol = Symbol.for(
-  "automovie.runtime-package-generation.v1",
-);
-const generationRegistry = (() => {
-  const owner = globalThis as typeof globalThis & {
-    [generationRegistrySymbol]?: Map<string, string>;
-  };
-  return (owner[generationRegistrySymbol] ??= new Map<string, string>());
-})();
-
 /** Capture one package identity and selected runtime bytes as one snapshot. */
 export const snapshotRuntimePackage = (props: {
   assets?: readonly RuntimePackageAssetSelection[];
@@ -212,20 +202,6 @@ export const assertRuntimePackageSnapshotCurrent = (
   for (const file of observation.files) assertPhysicalFile(file);
   for (const tree of observation.trees) assertTree(observation.root, tree);
   assertPhysicalDirectory(observation.root, "runtime package root");
-};
-
-/** Bind one Node module cache to the package generation first loaded through it. */
-export const bindRuntimePackageSnapshotGeneration = (
-  snapshot: IRuntimePackageSnapshot,
-): void => {
-  assertRuntimePackageSnapshotCurrent(snapshot);
-  const key = `${snapshot.package}\0${snapshot.root}`;
-  const resident = generationRegistry.get(key);
-  if (resident !== undefined && resident !== snapshot.fingerprint)
-    throw new Error(
-      `Runtime package "${snapshot.package}" changed after its resident module generation was bound. Start a new process with the current installation.`,
-    );
-  generationRegistry.set(key, snapshot.fingerprint);
 };
 
 const deriveModuleClosure = (
