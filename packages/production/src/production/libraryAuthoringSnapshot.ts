@@ -18,7 +18,11 @@ import {
 export const AUTOMOVIE_LIBRARY_AUTHORING_SNAPSHOT_PROTOCOL =
   "automovie.library-authoring-snapshot.v1" as const;
 
-/** One current source selected by the authoring graph. */
+/**
+ * One current source selected by the authoring graph.
+ *
+ * @author Samchon
+ */
 export interface IAutoMovieLibraryAuthoringSourceSnapshot {
   /** Canonical project-relative POSIX path. */
   path: string;
@@ -26,7 +30,11 @@ export interface IAutoMovieLibraryAuthoringSourceSnapshot {
   digest: AutoMovieContentDigest | null;
 }
 
-/** Canonical graph and source identity acquired at one point in time. */
+/**
+ * Canonical graph and source identity acquired at one point in time.
+ *
+ * @author Samchon
+ */
 export interface IAutoMovieLibraryAuthoringSnapshot {
   version: 1;
   protocol: typeof AUTOMOVIE_LIBRARY_AUTHORING_SNAPSHOT_PROTOCOL;

@@ -17,7 +17,7 @@ import {
 const hash = (digit: string): AutoMovieContentDigest =>
   `sha256:${digit.repeat(64)}` as AutoMovieContentDigest;
 const owner = {
-  branch: "spaces",
+  branch: "spaceSources",
   stage: "review",
   enforced: true,
   relationship: "lineage" as const,
@@ -170,8 +170,8 @@ export const test_production_library_project_state = (): void => {
             library: {
               ...index,
               owners: [
-                index.owners[0]!,
                 { ...index.owners[0]!, export: "annex" },
+                index.owners[0]!,
               ],
             },
           }).problems.some((problem) => problem.path === "models/bench.json"),

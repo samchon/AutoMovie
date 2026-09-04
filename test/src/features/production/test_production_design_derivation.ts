@@ -1,3 +1,4 @@
+import type { AutoMovieContentDigest } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
 import {
@@ -10,7 +11,8 @@ import {
 } from "../../../../packages/production/src/production/designDerivation";
 import { namedFacts, throwsError } from "../internal/predicates";
 
-const digest = (digit: string) => `sha256:${digit.repeat(64)}` as const;
+const digest = (digit: string): AutoMovieContentDigest =>
+  `sha256:${digit.repeat(64)}` as AutoMovieContentDigest;
 const basis = (
   overrides: Partial<IAutoMovieDesignDerivationBasis> = {},
 ): IAutoMovieDesignDerivationBasis => ({

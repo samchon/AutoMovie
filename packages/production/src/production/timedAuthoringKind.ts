@@ -1,10 +1,15 @@
 import type { IAutoMovieProductionEvidence } from "@automovie/evidence";
 
-/** Compiler ownership mode for one graph-selected timed production. */
+/**
+ * Compiler ownership mode for one graph-selected timed production.
+ *
+ * @author Samchon
+ */
 export interface IAutoMovieTimedAuthoringKind {
-  kind: "brief" | "film";
+  kind: "brief" | "film" | "legacy-film";
   ownerBranch: "briefs" | "screenplays";
   screenplayRequired: boolean;
+  evidenceBound: boolean;
 }
 
 /**
@@ -24,10 +29,19 @@ export const resolveAutoMovieTimedAuthoringKind = (
       kind,
       ownerBranch: "briefs",
       screenplayRequired: false,
+      evidenceBound: true,
     };
-  return {
-    kind: "film",
-    ownerBranch: "screenplays",
-    screenplayRequired: true,
-  };
+  return kind === "film"
+    ? {
+        kind,
+        ownerBranch: "screenplays",
+        screenplayRequired: true,
+        evidenceBound: true,
+      }
+    : {
+        kind: "legacy-film",
+        ownerBranch: "screenplays",
+        screenplayRequired: true,
+        evidenceBound: false,
+      };
 };

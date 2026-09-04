@@ -2,7 +2,11 @@ import { AutoMovieProductionProject } from "@automovie/production";
 import fs from "node:fs";
 import path from "node:path";
 
-/** Why the generated host selected one stable production namespace. */
+/**
+ * Why the generated host selected one stable production namespace.
+ *
+ * @author Samchon
+ */
 export type IAutoMovieProjectProductionSelection =
   | { kind: "fresh-seed"; productionId: string }
   | { kind: "registered"; productionId: string };
@@ -117,9 +121,16 @@ const hasProductionOwnedState = (root: string): boolean => {
       return true;
   const design = path.join(automovie, "design");
   if (fs.existsSync(design) === false) return false;
-  return fs
-    .readdirSync(design, { withFileTypes: true })
-    .some((entry) => entry.name !== ".gitkeep" && entry.name !== "shared");
+  return fs.readdirSync(design, { withFileTypes: true }).some(
+    (entry) =>
+      entry.name !== ".gitkeep" &&
+      (entry.name !== "shared" ||
+        fs
+          .readdirSync(path.join(design, entry.name), {
+            withFileTypes: true,
+          })
+          .some((child) => child.name !== ".gitkeep")),
+  );
 };
 
 const errorMessage = (error: unknown): string =>

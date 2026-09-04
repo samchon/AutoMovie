@@ -10,12 +10,21 @@ import {
 export const AUTOMOVIE_DESIGN_DERIVATION_PROTOCOL =
   "automovie.design-derivation.v1" as const;
 
+/**
+ * One project-relative input in a design producer closure.
+ *
+ * @author Samchon
+ */
 export interface IAutoMovieDesignDerivationDependency {
   path: string;
   digest: AutoMovieContentDigest;
 }
 
-/** Exact producer closure of one emitted design record. */
+/**
+ * Exact producer closure of one emitted design record.
+ *
+ * @author Samchon
+ */
 export interface IAutoMovieDesignDerivationBasis {
   protocol: typeof AUTOMOVIE_DESIGN_DERIVATION_PROTOCOL;
   production: string;
@@ -35,6 +44,11 @@ export interface IAutoMovieDesignDerivationBasis {
   };
 }
 
+/**
+ * Manifest entry connecting one resident design record to its producer basis.
+ *
+ * @author Samchon
+ */
 export interface IAutoMovieDesignDerivationRecord {
   target: string;
   recordPath: string;
@@ -43,12 +57,22 @@ export interface IAutoMovieDesignDerivationRecord {
   outputDigest: AutoMovieContentDigest;
 }
 
+/**
+ * Complete target inventory published by one design generation transaction.
+ *
+ * @author Samchon
+ */
 export interface IAutoMovieDesignDerivationManifest {
   version: 1;
   protocol: typeof AUTOMOVIE_DESIGN_DERIVATION_PROTOCOL;
   records: readonly IAutoMovieDesignDerivationRecord[];
 }
 
+/**
+ * Stable design derivation refusal categories.
+ *
+ * @author Samchon
+ */
 export type AutoMovieDesignDerivationFailureCode =
   | "design-derivation-basis-changed"
   | "design-derivation-manifest-malformed"
@@ -56,6 +80,11 @@ export type AutoMovieDesignDerivationFailureCode =
   | "design-derivation-output-stale"
   | "design-derivation-stale";
 
+/**
+ * One currentness problem on a resident design record or manifest.
+ *
+ * @author Samchon
+ */
 export interface IAutoMovieDesignDerivationProblem {
   code: AutoMovieDesignDerivationFailureCode;
   target: string;
@@ -63,6 +92,11 @@ export interface IAutoMovieDesignDerivationProblem {
   message: string;
 }
 
+/**
+ * Typed refusal raised before any design candidate may be published.
+ *
+ * @author Samchon
+ */
 export class AutoMovieDesignDerivationError extends Error {
   public constructor(
     public readonly code: AutoMovieDesignDerivationFailureCode,
@@ -96,7 +130,7 @@ export const autoMovieDesignDerivationBasisDigest = (
  */
 export const createAutoMovieDesignDerivationCandidate = (props: {
   bases: readonly IAutoMovieDesignDerivationBasis[];
-  evaluate: () => readonly {
+  evaluate: (bases: readonly IAutoMovieDesignDerivationBasis[]) => readonly {
     target: string;
     recordPath: string;
     bytes: Uint8Array;
@@ -107,15 +141,23 @@ export const createAutoMovieDesignDerivationCandidate = (props: {
   outputs: ReadonlyMap<string, Uint8Array>;
 } => {
   const bases = canonicalBases(props.bases);
-  const first = canonicalOutputs(props.evaluate());
-  const second = canonicalOutputs(props.evaluate());
+  const first = canonicalOutputs(props.evaluate(structuredClone(bases)));
+  const second = canonicalOutputs(props.evaluate(structuredClone(bases)));
   const mismatch = outputMismatch(first, second);
   if (mismatch !== null)
     throw new AutoMovieDesignDerivationError(
       "design-derivation-nondeterministic",
       `Design target ${mismatch} produced different canonical bytes from the same frozen basis. No design record was published.`,
     );
-  const live = canonicalBases(props.currentBases());
+  let live: readonly IAutoMovieDesignDerivationBasis[];
+  try {
+    live = canonicalBases(props.currentBases());
+  } catch (error) {
+    throw new AutoMovieDesignDerivationError(
+      "design-derivation-basis-changed",
+      `The live design producer closure became invalid during generation (${errorMessage(error)}). Run the explicit design command again.`,
+    );
+  }
   if (
     Buffer.from(canonicalAutoMovieJsonBytes(bases)).equals(
       Buffer.from(canonicalAutoMovieJsonBytes(live)),
@@ -197,6 +239,10 @@ export const inspectAutoMovieDesignDerivation = (props: {
     if (
       basis === undefined ||
       basis.recordPath !== record.recordPath ||
+      record.basis.target !== record.target ||
+      record.basis.recordPath !== record.recordPath ||
+      autoMovieDesignDerivationBasisDigest(record.basis) !==
+        record.basisDigest ||
       autoMovieDesignDerivationBasisDigest(basis) !== record.basisDigest
     ) {
       problems.push({
@@ -294,6 +340,10 @@ const canonicalRecords = (
     throw new Error("Design-derivation manifest repeats a target identity.");
   if (new Set(sorted.map((record) => record.recordPath)).size !== sorted.length)
     throw new Error("Design-derivation manifest repeats a record path.");
+  for (const record of sorted) {
+    assertRelativePath(record.recordPath);
+    canonicalBasis(record.basis, true);
+  }
   return sorted;
 };
 

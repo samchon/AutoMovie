@@ -12,6 +12,11 @@ import {
 } from "./contentIdentity";
 import { parseAutoMovieStructuredJson } from "./duplicateAwareJson";
 
+/**
+ * Stable strict library-state refusal categories.
+ *
+ * @author Samchon
+ */
 export type AutoMovieLibraryProjectStateProblemCode =
   | "authoring-evidence-required"
   | "generated-file-missing"
@@ -19,13 +24,22 @@ export type AutoMovieLibraryProjectStateProblemCode =
   | "library-index-invalid"
   | "library-owner-mismatch";
 
+/**
+ * One exact reason a library publication cannot become current state.
+ *
+ * @author Samchon
+ */
 export interface IAutoMovieLibraryProjectStateProblem {
   code: AutoMovieLibraryProjectStateProblemCode;
   path: string | null;
   message: string;
 }
 
-/** Strict result of reopening one compiler-owned library publication. */
+/**
+ * Strict result of reopening one compiler-owned library publication.
+ *
+ * @author Samchon
+ */
 export interface IAutoMovieLibraryProjectStateInspection {
   index: IAutoMovieMaterializedLibrary | null;
   problems: readonly IAutoMovieLibraryProjectStateProblem[];
@@ -66,12 +80,6 @@ export const inspectAutoMovieLibraryProjectState = (props: {
         },
       ],
     };
-  if (evidence.packageName !== props.production)
-    problems.push({
-      code: "library-owner-mismatch",
-      path: "library/index.json",
-      message: `Library evidence names package "${evidence.packageName}", not selected production "${props.production}".`,
-    });
   const manifestPaths = new Set(props.manifest.files.map((file) => file.path));
   const timedResidue = props.manifest.files.find(
     (file) =>
@@ -137,15 +145,28 @@ export const inspectAutoMovieLibraryProjectState = (props: {
     ]),
   );
   const artifactOwners = new Map<string, string>();
+  const publishedOwners = new Set<string>();
   for (const owner of index.owners) {
     const ownerIdentity = `${owner.branch}:${owner.owner}`;
+    const designOwner = evidence.designOwners.find(
+      (candidate) =>
+        candidate.branch === owner.branch &&
+        candidate.units.some(
+          (unit) => `${candidate.path}#${unit.anchor}` === owner.owner,
+        ),
+    );
+    const sourceBranch = designOwner?.sourceBinding?.branch ?? null;
+    publishedOwners.add(
+      JSON.stringify([sourceBranch, owner.owner, owner.source, owner.export]),
+    );
     const binding = bindings.get(
-      JSON.stringify([owner.branch, owner.owner, owner.source, owner.export]),
+      JSON.stringify([sourceBranch, owner.owner, owner.source, owner.export]),
     );
     if (
       binding === undefined ||
       binding.sourceDigest !== owner.sourceDigest ||
-      binding.enforced === false
+      binding.enforced === false ||
+      binding.reviewed === false
     )
       problems.push({
         code: "library-owner-mismatch",
@@ -172,6 +193,31 @@ export const inspectAutoMovieLibraryProjectState = (props: {
         });
     }
   }
+  for (const binding of evidence.sourceOwners ?? []) {
+    if (binding.enforced === false || binding.reviewed === false) continue;
+    const identity = JSON.stringify([
+      binding.branch,
+      `${binding.targetPath}#${binding.targetAnchor}`,
+      binding.sourcePath,
+      binding.exportName,
+    ]);
+    if (publishedOwners.has(identity) === false)
+      problems.push({
+        code: "library-owner-mismatch",
+        path: "library/index.json",
+        message: `Reviewed source export "${binding.sourcePath}#${binding.exportName}" has no exact owner entry in the materialized library index.`,
+      });
+  }
+  for (const file of props.manifest.files)
+    if (
+      file.path !== "library/index.json" &&
+      artifactOwners.has(file.path) === false
+    )
+      problems.push({
+        code: "generated-shape-mismatch",
+        path: file.path,
+        message: `Generated file "${file.path}" is not owned by the selected library index.`,
+      });
   return { index, problems };
 };
 
@@ -197,6 +243,13 @@ const parseIndex = (bytes: Uint8Array): IAutoMovieMaterializedLibrary => {
   });
   if (isRecord(value) === false || value.version !== 1)
     throw new Error("Library index is not a supported version-1 object.");
+  assertExactKeys(value, [
+    "compiler",
+    "inputFingerprint",
+    "owners",
+    "production",
+    "version",
+  ]);
   if (
     typeof value.compiler !== "string" ||
     typeof value.production !== "string" ||
@@ -210,17 +263,20 @@ const parseIndex = (bytes: Uint8Array): IAutoMovieMaterializedLibrary => {
   );
   if (new Set(identities).size !== identities.length)
     throw new Error("Library index repeats an owner identity.");
+  const sortedOwners = [...owners].sort((left, right) =>
+    compareCodeUnits(
+      JSON.stringify([left.branch, left.owner, left.source, left.export]),
+      JSON.stringify([right.branch, right.owner, right.source, right.export]),
+    ),
+  );
+  if (JSON.stringify(owners) !== JSON.stringify(sortedOwners))
+    throw new Error("Library index owners are not in canonical order.");
   return {
     version: 1,
     compiler: value.compiler,
     production: value.production,
     inputFingerprint: value.inputFingerprint,
-    owners: owners.sort((left, right) =>
-      compareCodeUnits(
-        JSON.stringify([left.branch, left.owner, left.source, left.export]),
-        JSON.stringify([right.branch, right.owner, right.source, right.export]),
-      ),
-    ),
+    owners,
   };
 };
 
@@ -240,6 +296,16 @@ const parseOwner = (
     isStringArray(value.contexts) === false
   )
     throw new Error(`Library index owner ${index} is malformed.`);
+  assertExactKeys(value, [
+    "branch",
+    "contexts",
+    "environments",
+    "export",
+    "models",
+    "owner",
+    "source",
+    "sourceDigest",
+  ]);
   return {
     branch: value.branch,
     owner: value.owner,
@@ -255,7 +321,26 @@ const parseOwner = (
 const unique = (values: string[], owner: number, kind: string): string[] => {
   if (new Set(values).size !== values.length)
     throw new Error(`Library index owner ${owner} repeats a ${kind} id.`);
-  return [...values].sort(compareCodeUnits);
+  const sorted = [...values].sort(compareCodeUnits);
+  if (JSON.stringify(values) !== JSON.stringify(sorted))
+    throw new Error(
+      `Library index owner ${owner} ${kind} ids are not in canonical order.`,
+    );
+  return values;
+};
+
+const assertExactKeys = (
+  value: Record<string, unknown>,
+  expected: readonly string[],
+): void => {
+  const actual = Object.keys(value).sort(compareCodeUnits);
+  if (
+    JSON.stringify(actual) !==
+    JSON.stringify([...expected].sort(compareCodeUnits))
+  )
+    throw new Error(
+      `Library index object has unexpected or missing members: ${actual.join(", ") || "<none>"}.`,
+    );
 };
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
