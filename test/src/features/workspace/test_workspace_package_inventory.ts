@@ -1,16 +1,29 @@
 import { TestValidator } from "@nestia/e2e";
 
-import {
-  IWorkspacePackageDeclaration,
-  IWorkspacePackageManifest,
-  planWorkspacePackageInventory,
-} from "../../../../build/workspacePackageInventory";
+const inventoryModule = [
+  "..",
+  "..",
+  "..",
+  "..",
+  "build",
+  "workspacePackageInventory",
+].join("/");
+const planWorkspacePackageInventory = (
+  require(inventoryModule) as {
+    readonly planWorkspacePackageInventory: (props: unknown) => unknown;
+  }
+).planWorkspacePackageInventory;
 
 const declaration = (
   directory: string,
   key: string = directory,
   name: string = `@example/${directory}`,
-): IWorkspacePackageDeclaration => ({
+): {
+  readonly key: string;
+  readonly directory: string;
+  readonly name: string;
+  readonly disposition: "pack";
+} => ({
   key,
   directory,
   name,
@@ -21,7 +34,11 @@ const manifest = (
   directory: string,
   name: string = `@example/${directory}`,
   privatePackage: boolean = false,
-): IWorkspacePackageManifest => ({
+): {
+  readonly directory: string;
+  readonly name: string;
+  readonly private: boolean;
+} => ({
   directory,
   name,
   private: privatePackage,
