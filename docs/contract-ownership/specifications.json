@@ -107,6 +107,16 @@
         }
       }
     },
+    "specifications/authoring-and-authority/source-authority-and-derivation.md#spec-authoring-derivation-output-lineage": {
+      "obligations": {
+        "source-owner-output-lineage": {
+          "owner": {
+            "kind": "package",
+            "package": "@automovie/production"
+          }
+        }
+      }
+    },
     "specifications/camera-light-and-visibility/visibility-and-image-space-observation.md#clv-clipping-clearance-evaluation": {
       "obligations": {
         "boundary-inclusion-tolerance": {
@@ -600,7 +610,6 @@
     "specifications/authoring-and-authority/prototype-determinism-and-fidelity.md#spec-authoring-prototype-exclusion-compatibility": "sha256:5b7af60e14b22f367ff381b1e587d5ee78215754f91e9bc031944c5dd1260b80",
     "specifications/authoring-and-authority/prototype-determinism-and-fidelity.md#spec-authoring-structural-output-invariant": "sha256:84f0012e79fe70b49c1cf55d33fdcf8367fcb5effd9fcfba6a55bd867c35ceb7",
     "specifications/authoring-and-authority/source-authority-and-derivation.md#spec-authoring-change-impact-report": "sha256:56758ff49fd032d7c15dc6c9dab5b56fe12427c1cf16435cf34102d2252a6368",
-    "specifications/authoring-and-authority/source-authority-and-derivation.md#spec-authoring-derivation-output-lineage": "sha256:e5659cd83761a1346afa000bc78c3e576ae30643038e984db8cb8d973a12067e",
     "specifications/authoring-and-authority/source-authority-and-derivation.md#spec-authoring-source-authority-boundary": "sha256:86f5fab9f8d5c99836c6cbc4fbd705d42d9dd23c25025383623352f5e8f81449",
     "specifications/authoring-and-authority/source-authority-and-derivation.md#spec-authoring-source-change-impact-invariant": "sha256:d300fe0a1ebb48b201831b7c33539d7585c1dd54b27588bc8ab446cc77a8346e",
     "specifications/authoring-and-authority/source-authority-and-derivation.md#spec-authoring-source-derivation-state": "sha256:926cd16b514a6088c421779be8a466e8a40ff894d1d621fdc6e874d4c9b5f378",
