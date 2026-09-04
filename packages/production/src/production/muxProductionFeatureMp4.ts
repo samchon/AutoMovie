@@ -121,9 +121,11 @@ export const normalizeProductionH264Mp4 = (bytes: Uint8Array): Uint8Array => {
     height: track.video!.height,
     language: track.language,
     description_boxes: [
-      ...description.boxes.filter((box) => box.type !== "colr"),
-      productionSrgbColorBox(),
-    ] as BoxKind[],
+      ...description.boxes
+        .filter((box) => box.type !== "colr")
+        .map((box) => box as unknown as BoxKind),
+      productionSrgbColorBox() as unknown as BoxKind,
+    ],
   });
   for (const sample of samples)
     output.addSample(
@@ -382,11 +384,25 @@ export const conformProductionVisualDeliveryVideoMp4 = (props: {
   if (frame !== props.timeline.totalFrames)
     throw new Error("Visual delivery sources do not cover the current film.");
   const bytes = new Uint8Array(output.getBuffer().buffer);
-  probeProductionVideoMp4(bytes);
+  const conformed = probeProductionVideoMp4(bytes);
+  if (
+    conformed.width !== first.probe.width ||
+    conformed.height !== first.probe.height ||
+    conformed.frameCount !== props.timeline.totalFrames ||
+    Math.abs(conformed.fps - first.probe.fps) > 1e-9 ||
+    Math.abs(conformed.runtimeSeconds - props.timeline.runtimeSeconds) > 1e-9
+  )
+    throw new Error(
+      "Visual delivery conform changed the exact film presentation contract.",
+    );
   return bytes;
 };
 
-/** Stable identity of one current timeline occurrence. */
+/**
+ * Stable identity of one current timeline occurrence.
+ * @evidence requirements/repaint/sequence-continuity-and-publication.md#repaint-mixed-delivery Keeps repeated shot labels occurrence-addressed.
+ * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-repaint-failure-publication Gives config, conform, manifest, and reopen one join key.
+ */
 export const productionVisualDeliveryOccurrence = (
   segment: IAutoMovieFilmTimeline["segments"][number],
   index: number,

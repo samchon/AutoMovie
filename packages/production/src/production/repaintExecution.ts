@@ -67,6 +67,8 @@ export class AutoMovieRepaintAttemptError extends Error {
     public readonly costUnits: number = 0,
     /** @evidence requirements/repaint/retries-seeds-and-variation.md#repaint-attempt-failure-provenance Preserves a partial digest without accepting it. */
     public readonly availableOutput: IAutoMovieRepaintAttemptOutput | null = null,
+    /** Runtime-only bytes the host must quarantine before journaling this error. */
+    public readonly rawOutput?: { bytes: Uint8Array; mediaType: string },
   ) {
     super(message);
   }
@@ -163,7 +165,10 @@ export const executeAutoMovieRepaintRequest = async <T>(props: {
     costUnits: number;
     availableOutput: IAutoMovieRepaintAttemptOutput | null;
   }>;
-  onAttempt: (attempt: IAutoMovieRepaintAttemptRecord) => unknown;
+  onAttempt: (
+    attempt: IAutoMovieRepaintAttemptRecord,
+    observation: { externalOutcome: "settled" | "unknown" },
+  ) => unknown;
 }): Promise<IAutoMovieRepaintExecutionResult<T>> => {
   assertAutoMovieRepaintExecutionPolicy(props.policy);
   assertRepaintExecutionIdentity(props);
@@ -191,9 +196,10 @@ export const executeAutoMovieRepaintRequest = async <T>(props: {
   const attempts: IAutoMovieRepaintAttemptRecord[] = [];
   const notifyAttempt = async (
     attempt: IAutoMovieRepaintAttemptRecord,
+    externalOutcome: "settled" | "unknown" = "settled",
   ): Promise<boolean> => {
     try {
-      await props.onAttempt(structuredClone(attempt));
+      await props.onAttempt(structuredClone(attempt), { externalOutcome });
       return true;
     } catch {
       return false;
@@ -502,7 +508,12 @@ export const executeAutoMovieRepaintRequest = async <T>(props: {
         availableOutput: classified.availableOutput,
       });
       attempts.push(attempt);
-      if ((await notifyAttempt(attempt)) === false)
+      if (
+        (await notifyAttempt(
+          attempt,
+          externalOutcomeUnknown ? "unknown" : "settled",
+        )) === false
+      )
         return result(props.requestId, attempts, null, "observer-failed");
       if (externalOutcomeUnknown)
         return result(props.requestId, attempts, null, "outcome-unknown");

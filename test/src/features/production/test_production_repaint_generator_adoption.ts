@@ -15,6 +15,7 @@ import {
   AutoMovieProductionInputRaceError,
   AutoMovieProductionProject,
   AutoMovieProductionRepaintService,
+  AutoMovieRepaintAttemptError,
   type IAutoMovieProductionServices,
   type IAutoMovieRepaintAttemptRecord,
   canonicalAutoMovieRepaintRuntimeIdentity,
@@ -959,6 +960,58 @@ export const test_production_repaint_generator_adoption =
         "adapter failures retain one specific refusal across thrown values",
         adapterFailures.map(codeOf),
         ["repaint-failed", "repaint-failed"],
+      );
+      const partialAttempts: IAutoMovieRepaintAttemptRecord[] = [];
+      const partialPublications: Array<{
+        receipt: { disposition: string; path: string };
+        bytes: Uint8Array;
+      }> = [];
+      const partial = await repaint(
+        scenarioServices(runnable, {
+          project: {
+            commitRepaintAttempt: (attempt: IAutoMovieRepaintAttemptRecord) => {
+              partialAttempts.push(structuredClone(attempt));
+              return 1;
+            },
+            commitRepaintRawOutput: (publication: {
+              receipt: { disposition: string; path: string };
+              bytes: Uint8Array;
+            }) => {
+              partialPublications.push(structuredClone(publication));
+              return 1;
+            },
+          },
+        }),
+        {
+          adapter: async () => {
+            throw new AutoMovieRepaintAttemptError(
+              "transport",
+              "provider disclosed a partial output",
+              2,
+              null,
+              { bytes: generatedBytes, mediaType: "video/mp4" },
+            );
+          },
+        },
+      );
+      TestValidator.equals(
+        "adapter-disclosed partial bytes are quarantined before terminal journaling",
+        {
+          code: codeOf(partial),
+          disposition: partialPublications[0]?.receipt.disposition,
+          bytes: partialPublications[0]?.bytes.length,
+          journalBytes: partialAttempts[0]?.availableOutput?.bytes,
+          journalReceiptMatches:
+            partialAttempts[0]?.availableOutput?.receipt ===
+            `renditions/raw/${partialAttempts[0]?.requestId}/${partialAttempts[0]?.attemptId}/receipt.json`,
+        },
+        {
+          code: "repaint-failed",
+          disposition: "partial",
+          bytes: generatedBytes.length,
+          journalBytes: generatedBytes.length,
+          journalReceiptMatches: true,
+        },
       );
       const currentCompile = runnable.compileStatus();
       if (currentCompile.success === false)

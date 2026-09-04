@@ -789,36 +789,78 @@ export class AutoMovieProductionRepaintService {
           return admission.status === "acquired";
         },
         execute: async (signal, attemptId) => {
-          const generated = await this.adapter!({
-            signal,
-            projectRoot: services.project.root,
-            productionId: services.project.productionId,
-            compileFingerprint: registry.inputFingerprint,
-            shot: requestedShot,
-            source: {
-              bundle: source.bundle,
-              manifest: structuredClone(source.manifest),
-              fingerprint: sourceRenderFingerprint,
-              frames: source.frames.map((frame) => ({
-                index: frame.index,
-                time: frame.time,
-                pass: frame.pass,
-                digest: frame.digest,
-                bytes: services.project.readRenderFile(
-                  normalizeSlash(path.join(source.bundle, frame.path)),
+          let generated: Awaited<ReturnType<AutoMovieProductionShotRepaint>>;
+          try {
+            generated = await this.adapter!({
+              signal,
+              projectRoot: services.project.root,
+              productionId: services.project.productionId,
+              compileFingerprint: registry.inputFingerprint,
+              shot: requestedShot,
+              source: {
+                bundle: source.bundle,
+                manifest: structuredClone(source.manifest),
+                fingerprint: sourceRenderFingerprint,
+                frames: source.frames.map((frame) => ({
+                  index: frame.index,
+                  time: frame.time,
+                  pass: frame.pass,
+                  digest: frame.digest,
+                  bytes: services.project.readRenderFile(
+                    normalizeSlash(path.join(source.bundle, frame.path)),
+                  ),
+                })),
+                captureRuntime: parseAutoMovieCaptureRuntimeIdentity(
+                  source.manifest.rendererIdentity,
                 ),
-              })),
-              captureRuntime: parseAutoMovieCaptureRuntimeIdentity(
-                source.manifest.rendererIdentity,
-              ),
-            },
-            references: structuredClone(references.values),
-            parameters: structuredClone(request.parameters),
-          });
+              },
+              references: structuredClone(references.values),
+              parameters: structuredClone(request.parameters),
+            });
+          } catch (error) {
+            if (
+              error instanceof AutoMovieRepaintAttemptError &&
+              error.rawOutput !== undefined
+            ) {
+              const publication = planAutoMovieRepaintRawOutput({
+                productionId: services.project.productionId,
+                shot: requestedShot,
+                requestId,
+                attemptId,
+                bytes: error.rawOutput.bytes,
+                mediaType: error.rawOutput.mediaType,
+                disposition: signal.aborted ? "cancelled" : "partial",
+                retainedAt: repaintRuntimeInstant(
+                  now(),
+                  "partial raw output retention",
+                ).toISOString(),
+                maximumBytes: REPAINT_RAW_OUTPUT_MAXIMUM_BYTES,
+              });
+              services.project.commitRepaintRawOutput(
+                publication,
+                inputCurrent,
+              );
+              throw new AutoMovieRepaintAttemptError(
+                error.failureClass,
+                error.message,
+                error.costUnits,
+                {
+                  digest: publication.receipt.digest,
+                  bytes: publication.receipt.bytes,
+                  receipt: productionRepaintRawOutputReceiptPath(
+                    requestId,
+                    attemptId,
+                  ),
+                },
+              );
+            }
+            throw error;
+          }
           let costUnits = 0;
           let availableOutput: {
             digest: AutoMovieContentDigest;
             bytes: number;
+            receipt?: string;
           } | null = null;
           let inputStaleError: AutoMovieRepaintAttemptError | undefined;
           let rawRetained = false;
@@ -987,7 +1029,7 @@ export class AutoMovieProductionRepaintService {
             );
           }
         },
-        onAttempt: (attempt) => {
+        onAttempt: (attempt, observation) => {
           services.project.commitRepaintAttempt(attempt, inputCurrent);
           const claim = claims.get(attempt.attemptId);
           if (claim === undefined)
@@ -996,9 +1038,7 @@ export class AutoMovieProductionRepaintService {
             );
           services.project.settleRepaintAttemptClaim(
             claim,
-            attempt.failure?.message.includes(
-              "external outcome requires reconciliation",
-            ) === true
+            observation.externalOutcome === "unknown"
               ? "unknown-outcome"
               : attempt.status === "succeeded"
                 ? "fulfilled"

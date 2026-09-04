@@ -1160,8 +1160,8 @@ export interface IAutoMovieProductionRenderedDeliverable {
 /**
  * One exact delivered occurrence and its lane-specific source identity.
  *
- * @evidence requirements/delivery-and-accessibility/captions-subtitles-and-cues.md#delivery-caption-readability-profile Exposes `IAutoMovieProductionRenditionDeliveryShot` as the portable data boundary for the delivery caption readability profile requirement.
- * @evidence specifications/editorial-render-and-delivery/delivery-audio-text-and-localization.md#spec-delivery-caption-readability-profile Types `IAutoMovieProductionRenditionDeliveryShot` for the spec delivery caption readability profile system contract.
+ * @evidence requirements/repaint/sequence-continuity-and-publication.md#repaint-mixed-delivery Preserves one explicit occurrence lane and its source provenance.
+ * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-repaint-failure-publication Types the exact final-conform occurrence join.
  */
 export type IAutoMovieProductionRenditionDeliveryShot = {
   /**
@@ -1173,29 +1173,29 @@ export type IAutoMovieProductionRenditionDeliveryShot = {
   /**
    * Exact compiled shot id.
    *
-   * @evidence requirements/delivery-and-accessibility/captions-subtitles-and-cues.md#delivery-caption-readability-profile Exposes `shot` as the portable data boundary for the delivery caption readability profile requirement.
-   * @evidence specifications/editorial-render-and-delivery/delivery-audio-text-and-localization.md#spec-delivery-caption-readability-profile Types `shot` for the spec delivery caption readability profile system contract.
+   * @evidence requirements/repaint/sequence-continuity-and-publication.md#repaint-mixed-delivery Identifies the shot behind this exact occurrence.
+   * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-repaint-failure-publication Binds delivery provenance to its compiled shot.
    */
   shot: string;
   /**
-   * Render-root-relative immutable repaint output.
+   * Render-root-relative immutable visual source.
    *
-   * @evidence requirements/delivery-and-accessibility/captions-subtitles-and-cues.md#delivery-caption-readability-profile Exposes `path` as the portable data boundary for the delivery caption readability profile requirement.
-   * @evidence specifications/editorial-render-and-delivery/delivery-audio-text-and-localization.md#spec-delivery-caption-readability-profile Types `path` for the spec delivery caption readability profile system contract.
+   * @evidence requirements/repaint/sequence-continuity-and-publication.md#repaint-mixed-delivery Keeps the chosen lane source explicit.
+   * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-repaint-failure-publication Names the exact source consumed by final conform.
    */
   path: string;
   /**
-   * Exact current repaint output digest.
+   * Exact current visual source digest.
    *
-   * @evidence requirements/delivery-and-accessibility/captions-subtitles-and-cues.md#delivery-caption-readability-profile Exposes `digest` as the portable data boundary for the delivery caption readability profile requirement.
-   * @evidence specifications/editorial-render-and-delivery/delivery-audio-text-and-localization.md#spec-delivery-caption-readability-profile Types `digest` for the spec delivery caption readability profile system contract.
+   * @evidence requirements/repaint/sequence-continuity-and-publication.md#repaint-mixed-delivery Prevents a lane source from changing after review.
+   * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-repaint-failure-publication Seals the conformed source bytes.
    */
   digest: AutoMovieContentDigest;
   /**
-   * Digest of the canonical immutable repaint receipt.
+   * Digest of the canonical immutable receipt, or null for deterministic pixels.
    *
-   * @evidence requirements/delivery-and-accessibility/captions-subtitles-and-cues.md#delivery-caption-readability-profile Exposes `receiptDigest` as the portable data boundary for the delivery caption readability profile requirement.
-   * @evidence specifications/editorial-render-and-delivery/delivery-audio-text-and-localization.md#spec-delivery-caption-readability-profile Types `receiptDigest` for the spec delivery caption readability profile system contract.
+   * @evidence requirements/repaint/sequence-continuity-and-publication.md#repaint-publication-gate Preserves whether selected repaint lineage exists.
+   * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-repaint-failure-publication Seals the candidate receipt consumed by final conform.
    */
 } & (
   | {
@@ -1233,17 +1233,17 @@ export type IAutoMovieProductionRenditionDeliveryShot = {
 /**
  * Review and receipt provenance for one repainted feature delivery.
  *
- * @evidence requirements/delivery-and-accessibility/captions-subtitles-and-cues.md#delivery-caption-readability-profile Exposes `IAutoMovieProductionRenditionDelivery` as the portable data boundary for the delivery caption readability profile requirement.
- * @evidence specifications/editorial-render-and-delivery/delivery-audio-text-and-localization.md#spec-delivery-caption-readability-profile Types `IAutoMovieProductionRenditionDelivery` for the spec delivery caption readability profile system contract.
+ * @evidence requirements/repaint/sequence-continuity-and-publication.md#repaint-publication-gate Seals the current member set and aggregate observation into final delivery.
+ * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-repaint-failure-publication Types the portable readback provenance boundary.
  */
 export interface IAutoMovieProductionRenditionDelivery {
   /** Versioned occurrence-lane provenance protocol. */
   version: 2;
   /**
-   * Explicit selected visual layer.
+   * Versioned explicit visual-lane provenance kind.
    *
-   * @evidence requirements/delivery-and-accessibility/captions-subtitles-and-cues.md#delivery-caption-readability-profile Exposes `kind` as the portable data boundary for the delivery caption readability profile requirement.
-   * @evidence specifications/editorial-render-and-delivery/delivery-audio-text-and-localization.md#spec-delivery-caption-readability-profile Types `kind` for the spec delivery caption readability profile system contract.
+   * @evidence requirements/repaint/sequence-continuity-and-publication.md#repaint-publication-gate Prevents older inferred-rendition manifests from masquerading as explicit delivery.
+   * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-repaint-failure-publication Discriminates the occurrence-lane readback protocol.
    */
   kind: "visual-lanes";
   /** Digest of the canonical ordered occurrence-member population. */
@@ -1253,15 +1253,19 @@ export interface IAutoMovieProductionRenditionDelivery {
   /** Full observation needed for parser-only readback, null for all-deterministic. */
   observation: IAutoMovieRepaintSequenceObservation | null;
   /**
-   * Every shot rendition consumed by the current film timeline.
+   * Every visual occurrence consumed by the current film timeline.
    *
-   * @evidence requirements/delivery-and-accessibility/captions-subtitles-and-cues.md#delivery-caption-readability-profile Exposes `shots` as the portable data boundary for the delivery caption readability profile requirement.
-   * @evidence specifications/editorial-render-and-delivery/delivery-audio-text-and-localization.md#spec-delivery-caption-readability-profile Types `shots` for the spec delivery caption readability profile system contract.
+   * @evidence requirements/repaint/sequence-continuity-and-publication.md#repaint-mixed-delivery Requires complete ordered lane membership.
+   * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-repaint-failure-publication Preserves the exact final-conform population.
    */
   shots: IAutoMovieProductionRenditionDeliveryShot[];
 }
 
-/** Exact deterministic or selected-repaint member of one sequence observation. */
+/**
+ * Exact deterministic or selected-repaint member of one sequence observation.
+ * @evidence requirements/repaint/sequence-continuity-and-publication.md#repaint-temporal-artifacts Seals every ordered occurrence observed together.
+ * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-repaint-structure-continuity Preserves lane-specific member identity.
+ */
 export type IAutoMovieRepaintObservationMember =
   | {
       occurrence: string;
@@ -1281,14 +1285,22 @@ export type IAutoMovieRepaintObservationMember =
       selectionDigest: AutoMovieContentDigest;
     };
 
-/** Independent truth value for one aggregate temporal review axis. */
+/**
+ * Independent truth value for one aggregate temporal review axis.
+ * @evidence requirements/repaint/sequence-continuity-and-publication.md#repaint-temporal-artifacts Preserves failed, unperformed, and unsupported truth.
+ * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-repaint-structure-continuity Reserves publication for current passing verdicts.
+ */
 export type AutoMovieRepaintObservationVerdict =
   | "pass"
   | "fail"
   | "not-run"
   | "unsupported";
 
-/** Versioned aggregate observation over one exact current visual member set. */
+/**
+ * Versioned aggregate observation over one exact current visual member set.
+ * @evidence requirements/repaint/sequence-continuity-and-publication.md#repaint-continuity-baseline-changes Binds compile, timeline, baseline, active set, playback, and verdicts.
+ * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-repaint-structure-continuity Supplies the complete parser-verifiable sequence receipt.
+ */
 export interface IAutoMovieRepaintSequenceObservation {
   version: 1;
   productionId: string;
