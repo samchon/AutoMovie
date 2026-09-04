@@ -4,17 +4,6 @@ import path from "node:path";
 
 import { loadSourceModule } from "../internal/loadSourceModule";
 
-const { productionRenderFrameCaptureInput } = loadSourceModule<{
-  productionRenderFrameCaptureInput: (
-    props: ParametersProductionRenderFrameCaptureInput,
-  ) => unknown;
-}>(
-  path.resolve(
-    __dirname,
-    "../../../../packages/template/scaffold/scripts/renderFrameCaptureInput.ts",
-  ),
-);
-
 type ParametersProductionRenderFrameCaptureInput = {
   root: string;
   productionId: string;
@@ -36,6 +25,16 @@ type ParametersProductionRenderFrameCaptureInput = {
  *    output slot 3 never leaks into the renderer's global-frame input.
  */
 export const test_cli_scaffold_capture_proxy_timeline_frame = (): void => {
+  const { productionRenderFrameCaptureInput } = loadSourceModule<{
+    productionRenderFrameCaptureInput: (
+      props: ParametersProductionRenderFrameCaptureInput,
+    ) => unknown;
+  }>(
+    path.resolve(
+      __dirname,
+      "../../../../packages/template/scaffold/scripts/renderFrameCaptureInput.ts",
+    ),
+  );
   const request = productionRenderFrameCaptureInput({
     root: "C:/project",
     productionId: "film",

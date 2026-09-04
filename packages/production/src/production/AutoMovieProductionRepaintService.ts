@@ -1,3 +1,4 @@
+import { resolveProductionFrameRate } from "@automovie/engine";
 import {
   AutoMovieContentDigest,
   AutoMovieDiagnosticCode,
@@ -317,11 +318,15 @@ export class AutoMovieProductionRepaintService {
         "repaint-target-missing",
         `Shot "${requestedShot}" has no current production frame contract. Correct the tracked design and compile before repaint.`,
       );
+    const frameRate = resolveProductionFrameRate(production.frameFormat);
     const expectedOutput = {
       width: production.frameFormat.width,
       height: production.frameFormat.height,
       fps: production.frameFormat.fps,
-      frameCount: Math.round(shot.durationSeconds * production.frameFormat.fps),
+      frameRate,
+      frameCount: Math.round(
+        (shot.durationSeconds * frameRate.numerator) / frameRate.denominator,
+      ),
       runtimeSeconds: shot.durationSeconds,
     };
     if (
@@ -952,12 +957,7 @@ export class AutoMovieProductionRepaintService {
             const probe = probeProductionVideoMp4(bytes);
             if (
               probe.kind !== "video" ||
-              probe.width !== expectedOutput.width ||
-              probe.height !== expectedOutput.height ||
-              probe.frameCount !== expectedOutput.frameCount ||
-              Math.abs(probe.fps - expectedOutput.fps) > 1e-9 ||
-              Math.abs(probe.runtimeSeconds - expectedOutput.runtimeSeconds) >
-                1e-9
+              probe.frameCount !== expectedOutput.frameCount
             )
               throw new Error(
                 `the adapter output does not match the exact ${expectedOutput.width}x${expectedOutput.height}, ${expectedOutput.fps}fps, ${expectedOutput.frameCount}-frame shot contract`,

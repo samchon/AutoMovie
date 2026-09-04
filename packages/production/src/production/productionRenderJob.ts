@@ -1,6 +1,7 @@
 import {
   canonicalProductionFrameRate,
   equalProductionFrameRates,
+  productionFrameBoundaryToGridTick,
   productionFrameIntervalToGridTicks,
   resolveProductionFrameRate,
 } from "@automovie/engine";
@@ -408,11 +409,9 @@ export const planProductionRenderJob = (props: {
   if (
     props.timeline.id !== props.production.id ||
     equalProductionFrameRates(timelineRate, productionRate) === false ||
-    props.timeline.totalFrames !==
-      Math.round(
-        props.production.targetRuntimeSeconds *
-          props.production.frameFormat.fps,
-      )
+    props.production.targetRuntimeSeconds !==
+      (props.timeline.totalFrames * productionRate.denominator) /
+        productionRate.numerator
   )
     throw new Error(
       "The film edit differs from the production identity, frame clock, or runtime. Recompile before planning.",
@@ -424,10 +423,20 @@ export const planProductionRenderJob = (props: {
   const audioAssets = normalizeAudioAssets(props.audioAssets);
   for (const cue of props.timeline.tracks.audio) {
     const asset = audioAssets.find((candidate) => candidate.path === cue.asset);
+    const expectedSamples =
+      asset === undefined
+        ? null
+        : productionFrameBoundaryToGridTick({
+            frame: cue.sourceDurationFrames,
+            frameRate: timelineRate,
+            ticksPerSecond: asset.sampleRate,
+            rounding: "nearest",
+          });
     if (
       asset === undefined ||
-      Math.round(asset.durationSeconds * props.timeline.fps) !==
-        cue.sourceDurationFrames
+      Number.isSafeInteger(asset.durationSeconds * asset.sampleRate) ===
+        false ||
+      asset.durationSeconds * asset.sampleRate !== expectedSamples
     )
       throw new Error(
         `Audio cue "${cue.id}" lacks one digest-, format-, and duration-verified source asset.`,
@@ -1117,12 +1126,15 @@ const frame = (
   timeline: IAutoMovieFilmTimeline,
   globalFrame: number,
   layers: IAutoMovieProductionRenderLayer[],
-): IAutoMovieProductionRenderFrame => ({
-  globalFrame,
-  timelineFrame: globalFrame,
-  timeSeconds: globalFrame / timeline.fps,
-  layers,
-});
+): IAutoMovieProductionRenderFrame => {
+  const frameRate = resolveProductionFrameRate(timeline);
+  return {
+    globalFrame,
+    timelineFrame: globalFrame,
+    timeSeconds: (globalFrame * frameRate.denominator) / frameRate.numerator,
+    layers,
+  };
+};
 
 const normalizeRenderTier = (
   tier: IAutoMovieProductionRenderTier | undefined,
