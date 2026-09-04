@@ -50,6 +50,7 @@ they are not test-only helpers.
 | `listAutoMovieDiagnosticCatalog` | Lists the stable diagnostic catalog used by offline project tooling. |
 | `findAutoMovieDiagnosticCatalogEntry` | Resolves one diagnostic code to its remediation contract. |
 | `assertProductionFeatureUsesRenditionVideo` | Refuses production features that bypass the canonical rendition video. |
+| `assertProductionRenderDialogueRuntimeIdentity` | Refuses a capture whose final-byte dialogue generation differs from the versioned render plan. |
 | `readAutoMovieSubjectInspection` | Reads and validates one committed subject-inspection receipt. |
 | `compareAutoMovieVisualRevisions` | Compares two visual-revision receipts for review tooling. |
 
