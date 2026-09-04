@@ -12,6 +12,8 @@ Scene은 무엇이 일어나야 하는지 소유하되 shot count, lens, camera 
 
 Scene heading과 scene index는 같은 장소와 시간 조건을 가리켜야 하며 충돌할 경우 어느 source가 권위인지 식별할 수 있어야 한다. CONTINUOUS, LATER, SAME MOMENT와 같은 관계는 이전 scene과의 실제 story-time 관계를 가져야 한다.
 
+Screenplay prose에서 초 단위 시간을 주장할 때는 그 표현이 어느 shot duration, event boundary 또는 review frame을 가리키는지 같은 위치에서 명시해야 한다. 같은 숫자가 다른 shot에 존재한다는 사실, 단어형이나 분수형 표현, scene 밖의 숫자는 그 소유 관계를 대신하지 않는다.
+
 ### 입장과 퇴장 State {#story-scene-entry-exit-state}
 
 인물, prop, 공간, light, sound와 damage의 시작 state와 scene 뒤 넘겨주는 state를 추적하여 edit 경계에서 임의 reset이 일어나지 않아야 한다.
@@ -44,6 +46,8 @@ Screenplay index와 catalogue는 stable scene identity를 authoritative prose, s
 
 Script와 screenplay의 delivery-group index는 numbered unit filename과 H1에서 생성한 canonical ordered link block을 가져야 한다. 같은 renderer의 check mode는 missing, extra, duplicate, wrong-order, wrong-target와 malformed block을 거부하고 authored prose는 unit file에 그대로 남겨야 한다.
 
+활성 scene의 prose는 기계가 읽을 수 있는 bounded authority carrier로 location identity, story-time identity, participant identity와 mode, 포함 beat identity를 선언해야 한다. 이 carrier는 action과 dialogue의 요약이 아니며 index의 join projection과 정확히 일치해야 한다. 주석, fenced example 또는 다른 scene의 같은 문장은 carrier나 beat evidence로 인정하지 않는다.
+
 ### 참여자와 등장 방식 {#story-scene-participant-modes}
 
 Scene은 on-screen actor, off-screen speaker, crowd, object, environmental agent와 referenced-only entity를 구분할 수 있어야 한다. 실제로 참여하지 않는 인물을 cast list에 넣었다는 이유로 scene action의 performer로 간주하지 않아야 한다.
@@ -51,6 +55,8 @@ Scene은 on-screen actor, off-screen speaker, crowd, object, environmental agent
 ### Scene의 국소 Dramatic Arc {#story-scene-local-arc}
 
 Scene은 local want 또는 question, resistance, turn과 exit value 중 작품 형식에 필요한 관계를 식별할 수 있어야 한다. 시작과 끝의 story value가 동일한 관찰 장면은 정보, 분위기, 리듬 또는 setup 중 어떤 목적을 소유하는지 설명할 수 있어야 한다.
+
+Scene disposition은 screenplay, production, edit 중 정확히 한 phase의 coverage에서만 해당 scene을 제외하며 비어 있지 않은 이유를 가진다. `OMITTED` tombstone은 모든 phase에서 제외되는 영구 identity이고 별도 disposition을 가지지 않는다. 어떤 phase에서 제외되었다고 선언한 scene을 그 phase의 prose, realization, observation 또는 edit가 다시 포함하면 서로 모순된 기록으로 거부한다.
 
 ### Scene 의존 대상 {#story-scene-subject-dependencies}
 
