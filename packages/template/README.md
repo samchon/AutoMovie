@@ -9,7 +9,7 @@ Every rendered project is self-contained:
 - `docs/{discovery,upstream,obligations,principles}` contains the complete reusable evidence target inventory;
 - `docs/contracts` contains production-specific additive targets;
 - one typed `lint.config.ts` owns the production shape, population scope, branch stages, local claims, and evidence graph;
-- `.agents/skills/{contract,production-lifecycle,evidence-graph,source-authoring,review-verification}` exposes five distinct authoring triggers with conditionally loaded sibling procedures;
+- `.agents/skills/{contract,production-lifecycle,evidence-graph,source-authoring,review-verification}` exposes five distinct contract and authoring triggers with conditionally loaded sibling procedures;
 - `AGENTS.md` routes those skills, while `CLAUDE.md` only imports the provider-neutral router.
 
 `renderScaffold` hands over authored content only. A `node_modules`, `.git`, or `.cache` directory in the scaffold, and any file carrying a compiler-output shape, are working artifacts of whoever ran a tool in that directory rather than project inputs, and none of them reaches a generated project. That exclusion is load-bearing rather than tidy: the repository ignores the paths a stray type-check emits under the scaffold, so nothing else in the toolchain can see one, and a generated project's loader prefers an emitted `.js` to the `.ts` beside it.

@@ -11,6 +11,7 @@ export * from "./createAutoMoviePopulationAccountClaims";
 export * from "./createAutoMovieProductionContractClaim";
 export * from "./contractMigration";
 export * from "./deliveryToc";
+export * from "./parseAutoMovieEvidenceMarkdown";
 export * from "./measureAutoMovieAuthoredText";
 export * from "./inspectAutoMovieEvidenceReviewAlarms";
 export * from "./inspectAutoMovieEvidenceTopology";

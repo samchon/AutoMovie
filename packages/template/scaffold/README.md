@@ -77,7 +77,7 @@ Open every PNG the contract names, and say what each one showed in the evidence 
 
 ## Begin the production
 
-The scaffold ships five independently discoverable authoring skills. `.agents/skills/contract/SKILL.md` locates project-local contract questions, `production-lifecycle/SKILL.md` owns shape and narrative lifecycle, `evidence-graph/SKILL.md` owns contracts and graph stages, `source-authoring/SKILL.md` owns TypeScript and geometry realization, and `review-verification/SKILL.md` owns Self-Review, viewer evidence, and final acceptance. `AGENTS.md` routes to all five, and each skill routes conditionally needed sibling documents one level deep.
+The scaffold ships five independently discoverable contract and authoring skills. `.agents/skills/contract/SKILL.md` locates the project-local contract inventory, `production-lifecycle/SKILL.md` owns shape and narrative lifecycle, `evidence-graph/SKILL.md` owns graph mechanics and stages, `source-authoring/SKILL.md` owns TypeScript and geometry realization, and `review-verification/SKILL.md` owns Self-Review, viewer evidence, and final acceptance. `AGENTS.md` routes to all five, and each skill routes conditionally needed sibling documents one level deep.
 
 Select the kind and begin research or settings at draft. Review settings before activating design or narrative children. For each applicable design branch, review its Markdown before activating matching source. Film shots wait for reviewed screenplays, brief shots wait for reviewed briefs, and both wait for the reviewed source corresponding to every active design branch.
 
