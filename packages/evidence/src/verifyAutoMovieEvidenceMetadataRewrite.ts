@@ -58,6 +58,10 @@ const REVIEW_FINGERPRINT =
   /^(@evidence(?:Exclude)?Review\s+\S+\s+)#[0-9a-f]{7}(\s+\S[\s\S]*)$/u;
 const DECLARATION_IDENTITY =
   /^(@evidence(?:Exclude(?:Review)?|Part|Review)?)\s+(\S+)/u;
+const ACKNOWLEDGEMENT_DECLARATION =
+  /^@evidence(?:Exclude|Part)?\s+\S+\s+\S(?:[\s\S]*\S)?$/u;
+const REVIEW_DECLARATION =
+  /^@evidence(?:Exclude)?Review\s+\S+\s+#[0-9a-f]{7}\s+\S(?:[\s\S]*\S)?$/u;
 
 /**
  * Proves that one evidence metadata rewrite preserves authored work.
@@ -150,6 +154,8 @@ function ownedChange(
   const beforeIdentity = DECLARATION_IDENTITY.exec(before);
   const afterIdentity = DECLARATION_IDENTITY.exec(after);
   if (
+    !isWellFormedDeclaration(before) ||
+    !isWellFormedDeclaration(after) ||
     beforeIdentity === null ||
     afterIdentity === null ||
     beforeIdentity[1] !== afterIdentity[1] ||
@@ -165,5 +171,12 @@ function ownedChange(
   return (
     before.replace(REVIEW_FINGERPRINT, "$1#<fingerprint>$2") ===
     after.replace(REVIEW_FINGERPRINT, "$1#<fingerprint>$2")
+  );
+}
+
+/** Require the minimum native tokens whose preservation this verifier proves. */
+function isWellFormedDeclaration(value: string): boolean {
+  return (
+    ACKNOWLEDGEMENT_DECLARATION.test(value) || REVIEW_DECLARATION.test(value)
   );
 }
