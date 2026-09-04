@@ -163,9 +163,11 @@ export const test_production_asset_url_admission = (): void => {
       asset.license.url = licenseSecret;
     });
     TestValidator.equals(
-      "compiler accepts the clean twin and refuses source and license credentials without publication",
+      "compiler keeps the clean twin URL-admissible and refuses source and license credentials without publication",
       {
-        clean: clean.success,
+        cleanProvenanceRefusal: clean.diagnostics.some(
+          (entry) => entry.code === "asset-provenance-incomplete",
+        ),
         source: {
           success: rejectedSource.success,
           provenance: rejectedSource.diagnostics.some(
@@ -182,7 +184,7 @@ export const test_production_asset_url_admission = (): void => {
         },
       },
       {
-        clean: true,
+        cleanProvenanceRefusal: false,
         source: { success: false, provenance: true, materialized: [] },
         license: { success: false, provenance: true, materialized: [] },
       },
