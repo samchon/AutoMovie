@@ -1,6 +1,6 @@
 ---
 name: scaffold
-description: Defines how packages/template/scaffold is maintained as the self-contained authoring harness every generated project inherits verbatim, including its four trigger-partitioned production skills, local contract inventory, and negative-probe and generated-consumer verification gates. Use before editing anything under packages/template/scaffold, and to reach the applicable production authoring procedure when authoring production content inside this repository.
+description: Defines how packages/template/scaffold is maintained as the self-contained authoring harness every generated project inherits verbatim, including its five trigger-partitioned contract and production skills, local contract inventory, and negative-probe and generated-consumer verification gates. Use before editing anything under packages/template/scaffold, and to reach the applicable production authoring procedure when authoring production content inside this repository.
 ---
 
 # Maintaining the scaffold
@@ -9,9 +9,9 @@ description: Defines how packages/template/scaffold is maintained as the self-co
 
 ## The authoring procedures live with the production
 
-The procedures that author a production ship inside the scaffold as `production-lifecycle`, `evidence-graph`, `source-authoring`, and `review-verification`. A generated project therefore holds its own trigger-partitioned authoring doctrine, and this repository holds exactly one copy of each concern.
+The contract router and procedures that author a production ship inside the scaffold as `contract`, `production-lifecycle`, `evidence-graph`, `source-authoring`, and `review-verification`. A generated project therefore holds its own trigger-partitioned authoring doctrine, and this repository holds exactly one copy of each concern.
 
-Read the applicable shipped [production lifecycle](../../../packages/template/scaffold/.agents/skills/production-lifecycle/SKILL.md), [evidence graph](../../../packages/template/scaffold/.agents/skills/evidence-graph/SKILL.md), [source authoring](../../../packages/template/scaffold/.agents/skills/source-authoring/SKILL.md), and [review verification](../../../packages/template/scaffold/.agents/skills/review-verification/SKILL.md) skills before authoring or reviewing production content anywhere, including a fixture or an experimental sandbox inside this repository. This maintenance skill does not restate them.
+Read the applicable shipped [contract](../../../packages/template/scaffold/.agents/skills/contract/SKILL.md), [production lifecycle](../../../packages/template/scaffold/.agents/skills/production-lifecycle/SKILL.md), [evidence graph](../../../packages/template/scaffold/.agents/skills/evidence-graph/SKILL.md), [source authoring](../../../packages/template/scaffold/.agents/skills/source-authoring/SKILL.md), and [review verification](../../../packages/template/scaffold/.agents/skills/review-verification/SKILL.md) skills before interpreting, authoring, or reviewing production content anywhere, including a fixture or an experimental sandbox inside this repository. This maintenance skill does not restate them.
 
 Editing any document under that directory changes what every future generated project is instructed to do. Apply the [documentation skill](../documentation/SKILL.md) writing rules, verify the links resolve from a generated project rather than from this repository, and run the verification gates below.
 
@@ -37,13 +37,9 @@ Retire an item when it is wrong, absorbed, or inapplicable. Inconvenience to one
 
 ## Verification
 
-After topology, contract, or citation changes, run the scaffold evidence gate. Falsify each new edge or refusal with a disposable negative probe, restore it, and require the normal graph to pass. Build and test the repository, generate a fresh scaffold from packed packages, and prove that its source lint and canaries pass while production design and compile refuse the unselected blank state. Compile the repository-only completed fixture to preserve production regression coverage. Measure every changed executable scaffold source at 100% statements, branches, functions, and lines.
+After topology, contract, or citation changes, run the scaffold evidence gate. Falsify each new edge or refusal with a disposable negative probe, restore it, and require the normal graph to pass. Build and test the repository, generate a fresh scaffold from packed packages, and prove that its source lint and canaries pass while production design and compile refuse the unselected blank state. Compile the repository-only completed fixture to preserve production regression coverage. Measure every executable position changed in scaffold source at 100% statements, branches, functions, and lines.
 
-Instruction synchronization is an overwrite contract.
-In a fresh generated project, select representative production shapes through the tracked `lint.config.ts`, run `npm run sync`, and prove that stale `AGENTS.md`, `CLAUDE.md`, and `.agents/skills` content disappears while tracked package, contract, document, and source bytes do not change.
-Run sync twice and require byte-identical generated instructions.
-Verify that the root `AGENTS.md` names only the selected shape and exact active owners, that `CLAUDE.md` contains only `@AGENTS.md`, and that the generated instruction paths are ignored.
-Perform this check from the fresh project root so the expected Codex entry point and Claude Code import resolve there; a parent checkout's `AGENTS.md` is not evidence that the generated project's instructions load.
+Instruction synchronization is an overwrite contract. In a fresh generated project, select representative production shapes through the tracked `lint.config.ts`, run `npm run sync`, and prove that stale `AGENTS.md`, `CLAUDE.md`, and `.agents/skills` content disappears while tracked package, contract, document, and source bytes do not change. Run sync twice and require byte-identical generated instructions. Verify that the root `AGENTS.md` names only the selected shape and exact active owners, that `CLAUDE.md` contains only `@AGENTS.md`, and that the generated instruction paths are ignored. Perform this check from the fresh project root so the expected Codex entry point and Claude Code import resolve there; a parent checkout's `AGENTS.md` is not evidence that the generated project's instructions load.
 
 For render, pose, expression, geometry, material, or motion changes, also follow the applicable [3D modeling](../3d-modeling/SKILL.md) and [viewer verification](../viewer-verification/SKILL.md) skills.
 

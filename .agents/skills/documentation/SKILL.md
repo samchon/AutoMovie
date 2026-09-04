@@ -16,7 +16,7 @@ description: Defines the .wiki/ working knowledge base, package README, code JSD
 
 ## Package READMEs
 
-Each package's `README.md` is Korean and practical: what it is, why it exists, the domain folders or public surface, and the conventions a contributor needs. Point to `.wiki/` for the deeper design rather than restating it.
+Each package's `README.md` is English and practical: what it is, why it exists, the domain folders or public surface, and the conventions a contributor needs. It must stand alone from the ignored `.wiki`; link durable architecture to committed requirements, specifications, JSDoc, or another tracked owner instead of a private working path.
 
 When a README falls inside a committed requirement or specification population, its participation is owned by the [evidence graph skill](../evidence-graph/SKILL.md). Do not remove it from that population by filename while editing prose or use documentation structure alone to decide an evidence exclusion.
 
@@ -40,6 +40,24 @@ When a public export participates in the committed contract graph, preserve and 
 Give every instruction one semantic owner and link to it elsewhere. A capability router belongs in `SKILL.md`; a substantial conditional phase belongs in one directly linked sibling Markdown file. A phase document owns one stage of one workflow, while a rule shared by every phase stays in the router. Do not create nested skill directories, `agents/openai.yaml`, or unreferenced examples and metadata.
 
 Before creating, moving, splitting, renaming, or editing an agent instruction, classify whether the rule is global behavior, a skill trigger, a shared procedure, a conditional phase, a product contract, or working knowledge. Do not copy a completion condition into several owners. Preserve necessary context, authority, stop conditions, and failure guards while removing ceremony and repeated conclusions.
+
+## Instruction authority
+
+Give every instruction one canonical semantic owner. Edit that owner first, then make every caller a link, trigger, or exact handoff sentence that adds only the caller's context.
+
+| Instruction surface | Canonical ownership |
+| --- | --- |
+| Root `AGENTS.md` | Repository-wide attitude and the skill trigger index. Its H2 surface is `Attitude`, `Skills`, and `Maintenance`; it does not restate skill procedures. |
+| Repository `.agents/skills/<name>/SKILL.md` | One concern's trigger, exclusions, shared invariants, and direct routes. The directory and frontmatter `name` agree; substantial conditional phases live in directly linked one-level sibling documents. |
+| Documentation skill | Instruction classification, writing form, link integrity, package README and JSDoc form, and instruction-diff review. |
+| Development skill | Source and test rules, consequence analysis, the exact changed-position coverage obligation, validation, and change integrity. |
+| Review skill | Whole-surface, fresh-round review semantics and Self-Review. Campaign procedures name when those rounds run without redefining them. |
+| Issue-campaign skills | Discovery, publication, implementation ownership, DAG dispatch, integration, and completion. The base campaign owns the ordinary shared-checkout topology; the multi-agent campaign owns only its explicitly selected isolated topology. |
+| Pull-request skill | Branch, commit, push, check, merge, and cleanup behavior. Other skills state when a remote action is due and link to this owner. |
+| Scaffold maintenance and shipped skills | The generated project's contract and authoring doctrine. The scaffold ships the `contract`, `production-lifecycle`, `evidence-graph`, `source-authoring`, and `review-verification` routers; repository instructions point to them instead of copying their production procedure. |
+| Product contracts, package READMEs, and public JSDoc | Product promises, system contracts, package use, and public API meaning. Instructions route work to those owners and do not become a second contract corpus. |
+
+When a procedure crosses owners, write the handoff as the condition, the named destination, and what authority transfers. Do not copy the destination's completion rule, test matrix, command list, or failure policy into the caller. A user-selected workflow may override an execution detail for that run; record the override in the run or pull-request chronology rather than rewriting a durable repository rule.
 
 Review every changed instruction literally with its linked callers and described implementation. Check frontmatter, directory and `name` agreement, trigger scope, links, unique ownership, prose-line form, and contradictory or duplicate completion points. After corrections stop, require two consecutive complete instruction-diff rounds with no finding and no edit before final repository gates.
 

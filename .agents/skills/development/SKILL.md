@@ -11,7 +11,7 @@ description: Defines automovie implementation rules, testing standards, the alwa
 - [Work Rules](#work-rules)
 - [Consequence Analysis](#consequence-analysis)
 - [Testing](#testing)
-- [Coverage is always 100%](#coverage-is-always-100)
+- [Coverage is 100% on what you write](#coverage-is-100-on-what-you-write)
 - [Validation](#validation)
 - [Change Integrity](#change-integrity)
 
