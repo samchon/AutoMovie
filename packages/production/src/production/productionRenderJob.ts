@@ -1243,6 +1243,7 @@ const normalizeAudioAssets = (
         asset.sampleRate <= 0 ||
         Number.isSafeInteger(asset.channels) === false ||
         asset.channels <= 0 ||
+        (asset.kind !== "placeholder-audio-stem" && asset.kind !== "wave") ||
         (asset.kind === "placeholder-audio-stem" &&
           (asset.sampleRate !== 48_000 || asset.channels !== 2)) ||
         (asset.kind === "wave" && validWaveAudioIdentity(asset) === false)
@@ -1289,7 +1290,8 @@ const validWaveAudioIdentity = (
       ? source.header === "wave-format-ex" &&
         source.layout.mask === null &&
         source.subFormatGuid === null
-      : source.header === "wave-format-extensible" &&
+      : source.layout.source === "channel-mask" &&
+        source.header === "wave-format-extensible" &&
         source.layout.mask === (asset.channels === 1 ? 0x4 : 0x3) &&
         source.subFormatGuid ===
           (source.encoding === "pcm-s16le"
