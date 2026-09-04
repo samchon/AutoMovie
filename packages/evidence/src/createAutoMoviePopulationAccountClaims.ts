@@ -46,6 +46,16 @@ export function createAutoMoviePopulationAccountClaims(
     throw new Error(
       `${props.layer} population accounts require authored H2 files.`,
     );
+  const population = new Set<string>();
+  for (const file of props.populationFiles) {
+    if (!file.startsWith(`${props.layer}/`))
+      throw new Error(
+        `${props.layer} population account cannot select another layer through ${JSON.stringify(file)}.`,
+      );
+    if (population.has(file))
+      throw new Error(`${props.layer} repeats population file ${file}.`);
+    population.add(file);
+  }
   const seen = new Set<string>();
   return props.obligationFiles.map((file) => {
     if (
