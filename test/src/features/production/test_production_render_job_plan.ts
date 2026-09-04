@@ -150,7 +150,7 @@ const plan = (props: {
   audioAssets?: readonly (typeof AUDIO_ASSET)[];
   guidePasses?: readonly ["pose" | "depth", ...("pose" | "depth")[]];
   sourceFingerprints?: Readonly<Record<string, AutoMovieContentDigest>>;
-  runtimeIdentity?: typeof RUNTIME_IDENTITY;
+  runtimeIdentity?: IAutoMovieProductionRenderJobPlan["runtimeIdentity"];
 }): IAutoMovieProductionRenderJobPlan =>
   planProductionRenderJob({
     timeline: props.timeline ?? TIMELINE(),

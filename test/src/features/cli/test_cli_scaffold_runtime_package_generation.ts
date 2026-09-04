@@ -1,11 +1,5 @@
 import { TestValidator } from "@nestia/e2e";
 
-import {
-  type IRuntimePackageGenerationRegistry,
-  createRuntimePackageGenerationRegistry,
-  loadRuntimePackageGeneration,
-  runRuntimePackageGeneration,
-} from "../../../../packages/template/scaffold/scripts/runtimePackageGeneration";
 import { namedFacts, rejectsError, throwsError } from "../internal/predicates";
 
 interface IGenerationSnapshot {
@@ -13,51 +7,6 @@ interface IGenerationSnapshot {
   generation: string;
   key: string;
 }
-
-interface IGenerationFixture {
-  cache: { identity: string } | undefined;
-  loads: number;
-  registry: IRuntimePackageGenerationRegistry;
-  snapshot: IGenerationSnapshot;
-}
-
-const fixture = (
-  key = "codec\0/root/a",
-  generation = "generation-a",
-): IGenerationFixture => ({
-  cache: undefined,
-  loads: 0,
-  registry: createRuntimePackageGenerationRegistry(),
-  snapshot: { current: true, generation, key },
-});
-
-const load = (
-  state: IGenerationFixture,
-  behavior:
-    | "success"
-    | "failure-before-cache"
-    | "failure-after-cache" = "success",
-) =>
-  loadRuntimePackageGeneration({
-    key: state.snapshot.key,
-    generation: state.snapshot.generation,
-    snapshot: state.snapshot,
-    assertCurrent: () => {
-      if (state.snapshot.current === false)
-        throw new Error("snapshot generation changed");
-    },
-    observeCache: () => state.cache,
-    load: () => {
-      state.loads++;
-      if (behavior === "failure-before-cache")
-        throw new Error("loader failed before cache admission");
-      state.cache = { identity: `${state.snapshot.key}:${state.loads}` };
-      if (behavior === "failure-after-cache")
-        throw new Error("loader failed after cache admission");
-      return { execution: state.loads };
-    },
-    registry: state.registry,
-  });
 
 /**
  * A runtime package is executable only through the cache generation admitted
@@ -80,6 +29,49 @@ const load = (
  */
 export const test_cli_scaffold_runtime_package_generation =
   async (): Promise<void> => {
+    const {
+      createRuntimePackageGenerationRegistry,
+      loadRuntimePackageGeneration,
+      runRuntimePackageGeneration,
+    } =
+      await import("../../../../packages/template/scaffold/scripts/runtimePackageGeneration.ts");
+    const fixture = (key = "codec\0/root/a", generation = "generation-a") => ({
+      cache: undefined as { identity: string } | undefined,
+      loads: 0,
+      registry: createRuntimePackageGenerationRegistry(),
+      snapshot: {
+        current: true,
+        generation,
+        key,
+      } satisfies IGenerationSnapshot,
+    });
+    const load = (
+      state: ReturnType<typeof fixture>,
+      behavior:
+        | "success"
+        | "failure-before-cache"
+        | "failure-after-cache" = "success",
+    ) =>
+      loadRuntimePackageGeneration({
+        key: state.snapshot.key,
+        generation: state.snapshot.generation,
+        snapshot: state.snapshot,
+        assertCurrent: () => {
+          if (state.snapshot.current === false)
+            throw new Error("snapshot generation changed");
+        },
+        observeCache: () => state.cache,
+        load: () => {
+          state.loads++;
+          if (behavior === "failure-before-cache")
+            throw new Error("loader failed before cache admission");
+          state.cache = { identity: `${state.snapshot.key}:${state.loads}` };
+          if (behavior === "failure-after-cache")
+            throw new Error("loader failed after cache admission");
+          return { execution: state.loads };
+        },
+        registry: state.registry,
+      });
     const invalid = fixture();
     TestValidator.equals(
       "empty physical keys and generations are never admitted",
