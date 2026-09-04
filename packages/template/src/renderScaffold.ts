@@ -9,10 +9,10 @@ import { AUTOMOVIE_TEMPLATE_VERSIONS } from "./templateVersions";
  * `.npmrc` files from a published package, so the assets ship without dots and
  * the rendered keys restore them.
  */
-const RENAME: Record<string, string> = {
-  gitignore: ".gitignore",
-  npmrc: ".npmrc",
-};
+const RENAME = new Map<string, string>([
+  ["gitignore", ".gitignore"],
+  ["npmrc", ".npmrc"],
+]);
 
 /**
  * Project-owned values interpolated into the scaffold's `{{...}}` tokens.
@@ -85,7 +85,7 @@ const renderKey = (
   variables: Readonly<Record<string, string>>,
 ): string => {
   const dir = path.dirname(relative);
-  const base = RENAME[path.basename(relative)] ?? path.basename(relative);
+  const base = RENAME.get(path.basename(relative)) ?? path.basename(relative);
   return renderTemplate(
     toPosix(dir === "." ? base : path.join(dir, base)),
     variables,
