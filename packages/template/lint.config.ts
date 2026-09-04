@@ -15,6 +15,7 @@ const authoringSurface = [
   "!src/**/index.ts",
   "!src/writeFiles.ts",
   "!src/scaffoldFileSnapshot.ts",
+  "!src/scaffoldPublication.ts",
 ];
 
 /**
@@ -24,7 +25,11 @@ const authoringSurface = [
  * user already owns, which is an operations-and-recovery contract rather than
  * an authoring contract.
  */
-const writeSurface = ["src/writeFiles.ts", "src/scaffoldFileSnapshot.ts"];
+const writeSurface = [
+  "src/writeFiles.ts",
+  "src/scaffoldFileSnapshot.ts",
+  "src/scaffoldPublication.ts",
+];
 
 const graph: ITtscEvidenceGraphConfig = {
   claims: [

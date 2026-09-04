@@ -1,0 +1,58 @@
+import { renderTemplate } from "@automovie/template";
+import { TestValidator } from "@nestia/e2e";
+
+/**
+ * Template rendering accepts only complete, named, declared placeholders.
+ *
+ * Scenarios:
+ *
+ * 1. Literal text and repeated known placeholders render in source order.
+ * 2. Unknown, empty, whitespace, malformed, nested, unmatched-opening, and
+ *    unmatched-closing forms are refused before a rendered payload is returned.
+ * 3. Empty input and delimiter-like single braces remain ordinary literal text.
+ */
+export const test_cli_template_placeholder_refusals = (): void => {
+  const variables = { name: "film", "version:engine": "^1.2.3" };
+  const refusal = (content: string): string => {
+    try {
+      renderTemplate(content, variables);
+      return "accepted";
+    } catch (error) {
+      return error instanceof Error ? error.message : String(error);
+    }
+  };
+
+  TestValidator.equals(
+    "known placeholders render without residue",
+    renderTemplate("{{name}}/{{version:engine}}/{{name}}", variables),
+    "film/^1.2.3/film",
+  );
+  TestValidator.equals(
+    "every invalid placeholder class is refused distinctly",
+    [
+      refusal("{{missing}}"),
+      refusal("{{}}"),
+      refusal("{{   }}"),
+      refusal("{{bad key}}"),
+      refusal("{{outer{{inner}}"),
+      refusal("prefix {{name"),
+      refusal("prefix }} suffix"),
+      refusal("{{name}} }}"),
+    ],
+    [
+      "unknown scaffold variable: {{missing}}",
+      "empty scaffold placeholder: {{}}",
+      "whitespace scaffold placeholder: {{   }}",
+      "malformed scaffold placeholder: {{bad key}}",
+      "malformed scaffold placeholder: {{outer{{inner}}",
+      "unmatched scaffold placeholder opening delimiter at offset 7",
+      "unmatched scaffold placeholder closing delimiter at offset 7",
+      "unmatched scaffold placeholder closing delimiter at offset 9",
+    ],
+  );
+  TestValidator.equals(
+    "empty input and single braces remain literal",
+    [renderTemplate("", variables), renderTemplate("{name} } {", variables)],
+    ["", "{name} } {"],
+  );
+};

@@ -489,6 +489,9 @@ importers:
       '@automovie/evidence':
         specifier: workspace:^
         version: link:../evidence
+      yaml:
+        specifier: ^2.9.0
+        version: 2.9.0
     devDependencies:
       '@automovie/archetypes':
         specifier: workspace:^

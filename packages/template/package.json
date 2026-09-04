@@ -46,7 +46,8 @@
     }
   },
   "dependencies": {
-    "@automovie/evidence": "workspace:^"
+    "@automovie/evidence": "workspace:^",
+    "yaml": "^2.9.0"
   },
   "devDependencies": {
     "@automovie/archetypes": "workspace:^",

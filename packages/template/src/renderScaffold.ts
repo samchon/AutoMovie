@@ -32,6 +32,34 @@ export interface IAutoMovieScaffoldProps {
 }
 
 /**
+ * One authored scaffold input before its path and bytes are rendered.
+ *
+ * Keeping the source-relative identity until the complete candidate is
+ * validated lets the renderer name both owners of a colliding output instead
+ * of silently retaining whichever one happened to be assigned last.
+ *
+ * @evidence requirements/agent-authoring/project-ownership.md#agent-portable-authoring Keeps every authored scaffold source distinct until its portable output identity is proved.
+ * @evidence specifications/authoring-and-authority/source-authority-and-derivation.md#spec-authoring-source-input Carries source identity beside the bytes and path derived from that source.
+ * @author Samchon
+ */
+export interface IAutoMovieScaffoldSourceEntry {
+  /**
+   * Text bytes before line-ending normalization and template rendering.
+   *
+   * @evidence requirements/agent-authoring/project-ownership.md#agent-portable-authoring Makes the authored scaffold text an explicit portable input.
+   * @evidence specifications/authoring-and-authority/source-authority-and-derivation.md#spec-authoring-source-input Supplies the exact source text to deterministic derivation.
+   */
+  content: string;
+  /**
+   * Scaffold-root-relative source path before stand-in renaming and rendering.
+   *
+   * @evidence requirements/agent-authoring/project-ownership.md#agent-portable-authoring Preserves the project-relative owner of every rendered file.
+   * @evidence specifications/authoring-and-authority/source-authority-and-derivation.md#spec-authoring-source-input Retains source identity until output injectivity is validated.
+   */
+  relative: string;
+}
+
+/**
  * Normalize `\r\n` → `\n` so the scaffold emits identical bytes on every host
  * (a Windows checkout with `core.autocrlf` would otherwise ship CRLF and drift
  * from the scaffold's own `lf` convention). The tree is text-only, so this is
@@ -127,6 +155,58 @@ const listFiles = (root: string): string[] => {
   };
   walk(root);
   return out;
+};
+
+/**
+ * Render an explicit source inventory only after proving that every source has
+ * one distinct output path.
+ *
+ * The returned object has no prototype, so names such as `__proto__` remain
+ * ordinary enumerable file identities. Exact output collisions are reported
+ * from sorted source identities, making the refusal independent of traversal
+ * order.
+ *
+ * @evidence requirements/agent-authoring/project-ownership.md#agent-portable-authoring Produces one deterministic portable file identity for every authored scaffold source.
+ * @evidence specifications/authoring-and-authority/source-authority-and-derivation.md#spec-authoring-source-input Rejects a derivation that would merge two distinct source identities into one output.
+ * @author Samchon
+ */
+export const renderScaffoldEntries = (
+  entries: readonly IAutoMovieScaffoldSourceEntry[],
+  variables: Readonly<Record<string, string>>,
+): Record<string, string> => {
+  const rendered = entries.map((entry) => ({
+    content: renderTemplate(normalizeLineEndings(entry.content), variables),
+    relative: renderKey(entry.relative, variables),
+    source: toPosix(entry.relative),
+  }));
+  const ordered = [...rendered].sort((left, right) =>
+    left.relative < right.relative
+      ? -1
+      : left.relative > right.relative
+        ? 1
+        : left.source < right.source
+          ? -1
+          : left.source > right.source
+            ? 1
+            : 0,
+  );
+  for (let index = 1; index < ordered.length; index++) {
+    const previous = ordered[index - 1]!;
+    const current = ordered[index]!;
+    if (previous.relative === current.relative)
+      throw new Error(
+        `scaffold sources collide at rendered path "${current.relative}": "${previous.source}", "${current.source}"`,
+      );
+  }
+  const files = Object.create(null) as Record<string, string>;
+  for (const entry of rendered)
+    Object.defineProperty(files, entry.relative, {
+      configurable: true,
+      enumerable: true,
+      value: entry.content,
+      writable: true,
+    });
+  return files;
 };
 
 /**
@@ -305,11 +385,11 @@ export const renderScaffold = (
     variables[`version:${key}`] = value;
 
   const root = scaffoldAssetDirectory();
-  const files: Record<string, string> = {};
-  for (const relative of listFiles(root))
-    files[renderKey(relative, variables)] = renderTemplate(
-      normalizeLineEndings(fs.readFileSync(path.join(root, relative), "utf8")),
-      variables,
-    );
-  return files;
+  return renderScaffoldEntries(
+    listFiles(root).map((relative) => ({
+      content: fs.readFileSync(path.join(root, relative), "utf8"),
+      relative,
+    })),
+    variables,
+  );
 };
