@@ -1545,6 +1545,12 @@ export interface IAutoMovieProductionVideoProbe {
    */
   fps: number;
   /**
+   * Canonical reduced rate parsed from the sample clock.
+   * @evidence requirements/delivery-and-accessibility/frame-rate-timebase-and-timecode.md#delivery-rational-frame-rate Preserves the exact final picture rate instead of only its decimal projection.
+   * @evidence specifications/editorial-render-and-delivery/delivery-profiles-time-and-picture.md#spec-delivery-timecode-sync Supplies the canonical parsed numerator and denominator.
+   */
+  frameRate: IAutoMovieProductionFrameRate;
+  /**
    * Parsed major and compatible brands.
    * @evidence requirements/delivery-and-accessibility/containers-codecs-and-media-facts.md#delivery-container-metadata Preserves the final container brands.
    * @evidence specifications/editorial-render-and-delivery/delivery-profiles-time-and-picture.md#spec-delivery-container-media-facts Supplies the parsed brand set.
