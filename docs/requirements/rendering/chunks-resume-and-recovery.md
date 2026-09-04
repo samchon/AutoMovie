@@ -20,9 +20,13 @@ Chunk는 final product와 분리된 temporary 또는 isolated destination에서 
 
 동일 output에 대한 concurrent job은 expected identity와 ownership 또는 동등한 precondition으로 조정되어야 한다. 서로 다른 identity가 같은 path를 덮어쓰거나 오래된 worker가 새 결과를 current로 승격해서는 안 된다.
 
+Local worker ownership은 bare PID가 아니라 host·PID·process generation 전체를 기록해야 한다. PID occupancy는 recorded worker와 동일성을 증명하지 않으며, session, GC guard, chunk claim, attempt와 temporary tree가 서로 다른 owner 의미를 사용해서는 안 된다.
+
 ### Failure Recovery {#rendering-failure-recovery}
 
 Runtime crash, timeout, cancellation, storage exhaustion, missing frame, encode failure와 worker loss에서 검증 완료된 atomic chunks의 정확한 범위를 보존해야 한다. Unsafe lock stealing이나 불명확한 process 상태에서 재개하지 말고 orphan을 격리하고 ownership을 확인해야 한다.
+
+Worker-loss recovery는 같은 complete owner를 독립적으로 두 번 확인하여 모두 absent이고 그 사이 exact claim 또는 artifact generation이 바뀌지 않았을 때만 reclaim해야 한다. Reused PID, 다른 host, malformed owner와 query failure에서는 chunk, attempt와 temporary evidence를 보존해야 한다.
 
 ### Retry Identity {#rendering-retry-identity}
 

@@ -1,5 +1,7 @@
 import type { AutoMovieContentDigest } from "@automovie/interface";
 import {
+  type AutoMovieLocalProcessOwnerObservation,
+  type IAutoMovieLocalProcessOwner,
   type IAutoMovieProductionRenderChunk,
   type IAutoMovieProductionRenderChunkReceipt,
   type IAutoMovieProductionRenderGcCandidate,
@@ -23,6 +25,8 @@ import {
   readCapturedRenderGcFile,
   removeCapturedRenderGcTarget,
 } from "./renderGcSnapshot";
+import { observeRenderOwnerRecovery } from "./renderOwnerState";
+import { parseRenderProcessOwnerSuffix } from "./renderProcessOwner";
 
 const CONTENT_DIGEST_PATTERN = /^sha256:[0-9a-f]{64}$/u;
 const SCOPE_PATTERN = /^[0-9a-f]{64}$/u;
@@ -368,7 +372,9 @@ export const inventoryRenderChunkGarbage = (props: {
     receipt: IAutoMovieProductionRenderChunkReceipt,
   ) => void;
   chunks: ReadonlyMap<AutoMovieContentDigest, IAutoMovieProductionRenderChunk>;
-  processAlive: (pid: number) => boolean;
+  observeProcessOwner: (
+    owner: unknown,
+  ) => AutoMovieLocalProcessOwnerObservation;
   renderJobRoot: string;
   root: string;
   scope: string;
@@ -416,10 +422,11 @@ export const inventoryRenderChunkGarbage = (props: {
       const publication = captureRenderChunkPublicationFromPointer(pointer);
       const temporaryRoot = path.join(props.renderJobRoot, props.tier, "tmp");
       const treeName = path.basename(publication.tree.target);
+      const treeIdentity = renderChunkTemporaryTreeIdentity(treeName);
       if (
         path.dirname(publication.tree.target) !== temporaryRoot ||
-        new RegExp(`^${match[1]}\\.[^.]+\\.\\d+$`, "u").test(treeName) ===
-          false ||
+        treeIdentity === null ||
+        treeIdentity.digest !== match[1] ||
         authenticatedTrees.has(publication.tree.target)
       )
         continue;
@@ -447,14 +454,23 @@ export const inventoryRenderChunkGarbage = (props: {
     for (const entry of fs
       .readdirSync(temporaryRoot, { withFileTypes: true })
       .sort((left, right) => compareCodeUnits(left.name, right.name))) {
-      const match = /^([0-9a-f]{64})\.[^.]+\.(\d+)$/u.exec(entry.name);
-      if (match === null) continue;
+      const identity = renderChunkTemporaryTreeIdentity(entry.name);
+      if (identity === null) continue;
       const target = path.join(temporaryRoot, entry.name);
-      const authenticated = authenticatedTrees.get(target);
-      if (authenticated === undefined && props.processAlive(Number(match[2])))
-        continue;
       const snapshot = captureRenderGcTarget(props.renderJobRoot, target);
-      const digest = `sha256:${match[1]}` as AutoMovieContentDigest;
+      const authenticated = authenticatedTrees.get(target);
+      if (authenticated === undefined) {
+        if (
+          observeRenderOwnerRecovery({
+            between: () => assertCapturedRenderTarget(snapshot),
+            observe: props.observeProcessOwner,
+            owner: identity.owner,
+          }).state !== "reclaimable"
+        )
+          continue;
+        assertCapturedRenderTarget(snapshot);
+      }
+      const digest = `sha256:${identity.digest}` as AutoMovieContentDigest;
       const candidate: IAutoMovieProductionRenderGcCandidate = {
         path: `${props.tier}/tmp/${entry.name}`,
         kind: "chunk-tree",
@@ -475,6 +491,18 @@ export const inventoryRenderChunkGarbage = (props: {
     entries,
     retainedChunkPaths: [...retainedChunkPaths].sort(compareCodeUnits),
   };
+};
+
+const renderChunkTemporaryTreeIdentity = (
+  name: string,
+): {
+  digest: string;
+  owner: IAutoMovieLocalProcessOwner;
+} | null => {
+  const match = /^([0-9a-f]{64})\.([^.]+)\.(.+)$/u.exec(name);
+  if (match === null) return null;
+  const owner = parseRenderProcessOwnerSuffix(match[3]);
+  return owner === null ? null : { digest: match[1], owner };
 };
 
 const exactTreeContent = (
@@ -558,7 +586,12 @@ export const removeCapturedRenderChunkPointer = (
 const parsePublicationReceipt = (
   bytes: Uint8Array,
 ): RenderChunkPublicationReceipt => {
-  const value = JSON.parse(Buffer.from(bytes).toString("utf8")) as unknown;
+  let value: unknown;
+  try {
+    value = JSON.parse(Buffer.from(bytes).toString("utf8")) as unknown;
+  } catch {
+    throw new Error("Render chunk pointer has no trustworthy receipt.");
+  }
   if (
     typeof value !== "object" ||
     value === null ||

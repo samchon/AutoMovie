@@ -1,3 +1,10 @@
+import {
+  type AutoMovieLocalProcessOwnerObservation,
+  type IAutoMovieLocalProcessOwner,
+  currentAutoMovieLocalProcessOwner,
+  isAutoMovieLocalProcessOwner,
+  observeAutoMovieLocalProcessOwner,
+} from "@automovie/production";
 import type * as HME from "h264-mp4-encoder";
 import { randomUUID } from "node:crypto";
 import fs from "node:fs";
@@ -36,6 +43,7 @@ export interface IProductionRenderHost {
   >;
   filesystem: typeof fs;
   now: () => number;
+  owner: IAutoMovieLocalProcessOwner;
   pid: number;
   platform: NodeJS.Platform;
   pngGeneration: IRuntimePackageGenerationHandle<
@@ -43,6 +51,9 @@ export interface IProductionRenderHost {
     PngModule
   >;
   processAlive: (pid: number) => boolean;
+  observeProcessOwner: (
+    owner: unknown,
+  ) => AutoMovieLocalProcessOwnerObservation;
   randomUuid: () => string;
   root: string;
   setExitCode: (value: number) => void;
@@ -61,7 +72,7 @@ export interface IProductionRenderHostSystem {
   filesystem: typeof fs;
   kill: (pid: number, signal: 0) => true;
   now: () => number;
-  pid: number;
+  owner: IAutoMovieLocalProcessOwner;
   platform: NodeJS.Platform;
   pngGeneration: IProductionRenderHost["pngGeneration"];
   randomUuid: () => string;
@@ -71,47 +82,49 @@ export interface IProductionRenderHostSystem {
   stdout: (value: string) => void;
 }
 
-/** Resolve process liveness without treating an access refusal as death. */
-export const productionRenderProcessAlive = (
-  pid: number,
+/** Resolve one render owner without treating PID occupancy as generation proof. */
+export const productionRenderProcessOwnerObservation = (
+  owner: unknown,
+  current: IAutoMovieLocalProcessOwner,
   kill: IProductionRenderHostSystem["kill"],
-): boolean => {
-  try {
-    kill(pid, 0);
-    return true;
-  } catch (error) {
-    return (error as NodeJS.ErrnoException).code === "EPERM";
-  }
-};
+): AutoMovieLocalProcessOwnerObservation =>
+  observeAutoMovieLocalProcessOwner({ owner, current, query: kill });
 
 /** Bind an explicit host system to one production-render invocation. */
 export const createProductionRenderHost = (
   system: IProductionRenderHostSystem,
-): IProductionRenderHost => ({
-  arch: system.arch,
-  assertRuntimePackagesCurrent: () => {
-    system.h264Generation.assertCurrent();
-    system.mp4Generation.assertCurrent();
-    system.pngGeneration.assertCurrent();
-  },
-  capture: system.capture,
-  captureMetrics: system.captureMetrics,
-  closeCapture: system.closeCapture,
-  installDialogue: system.installDialogue,
-  h264Generation: system.h264Generation,
-  mp4Generation: system.mp4Generation,
-  filesystem: system.filesystem,
-  now: system.now,
-  pid: system.pid,
-  platform: system.platform,
-  pngGeneration: system.pngGeneration,
-  processAlive: (pid) => productionRenderProcessAlive(pid, system.kill),
-  randomUuid: system.randomUuid,
-  root: system.root,
-  setExitCode: system.setExitCode,
-  stderr: system.stderr,
-  stdout: system.stdout,
-});
+): IProductionRenderHost => {
+  if (isAutoMovieLocalProcessOwner(system.owner) === false)
+    throw new Error("Production render host process owner is invalid.");
+  return {
+    arch: system.arch,
+    assertRuntimePackagesCurrent: () => {
+      system.h264Generation.assertCurrent();
+      system.mp4Generation.assertCurrent();
+      system.pngGeneration.assertCurrent();
+    },
+    capture: system.capture,
+    captureMetrics: system.captureMetrics,
+    closeCapture: system.closeCapture,
+    installDialogue: system.installDialogue,
+    h264Generation: system.h264Generation,
+    mp4Generation: system.mp4Generation,
+    filesystem: system.filesystem,
+    now: system.now,
+    owner: system.owner,
+    pid: system.owner.pid,
+    platform: system.platform,
+    observeProcessOwner: (owner) =>
+      productionRenderProcessOwnerObservation(owner, system.owner, system.kill),
+    pngGeneration: system.pngGeneration,
+    processAlive: (pid) => productionRenderProcessAlive(pid, system.kill),
+    randomUuid: system.randomUuid,
+    root: system.root,
+    setExitCode: system.setExitCode,
+    stderr: system.stderr,
+    stdout: system.stdout,
+  };
+};
 
 /** Bind the real Node, capture, encoder, and filesystem for one invocation. */
 export const createNodeProductionRenderHost = (): IProductionRenderHost =>
@@ -143,7 +156,7 @@ export const createNodeProductionRenderHostWithCapture = (
     filesystem: fs,
     kill: (pid, signal) => process.kill(pid, signal),
     now: Date.now,
-    pid: process.pid,
+    owner: currentAutoMovieLocalProcessOwner(),
     platform: process.platform,
     pngGeneration: png,
     randomUuid: randomUUID,

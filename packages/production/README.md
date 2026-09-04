@@ -53,6 +53,8 @@ they are not test-only helpers.
 | `assertProductionRenderDialogueRuntimeIdentity` | Refuses a capture whose final-byte dialogue generation differs from the versioned render plan. |
 | `readAutoMovieSubjectInspection` | Reads and validates one committed subject-inspection receipt. |
 | `compareAutoMovieVisualRevisions` | Compares two visual-revision receipts for review tooling. |
+| `decodeAutoMovieProjectRevision` / `advanceAutoMovieProjectRevision` | Validate the one non-negative safe-integer revision domain and compute an exact successor before mutation. |
+| `currentAutoMovieLocalProcessOwner` / `observeAutoMovieLocalProcessOwner` | Persist a per-process generation and distinguish absence from PID occupancy, reuse, remote hosts, and unavailable observations. |
 
 ## Migration
 

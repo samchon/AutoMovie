@@ -107,11 +107,9 @@ export const createProductionRenderPublicationRuntime = (props: {
   publishProxyBundle: (props: {
     expected: ReadonlyMap<string, Uint8Array>;
     parent: string;
-    processAlive: (pid: number) => boolean;
     renderRoot: string;
     target: string;
   }) => { reused: boolean };
-  processAlive: (pid: number) => boolean;
 }): IProductionRenderPublicationRuntime => ({
   assembleChunkVideo: (plan, chunks) => {
     if (chunks.length === 0) throw new Error("No current chunks to encode.");
@@ -212,7 +210,6 @@ export const createProductionRenderPublicationRuntime = (props: {
     const published = props.publishProxyBundle({
       expected: files,
       parent,
-      processAlive: props.processAlive,
       renderRoot,
       target,
     });

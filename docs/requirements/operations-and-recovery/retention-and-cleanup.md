@@ -16,6 +16,8 @@ Operator는 cleanup 전에 대상 identity, 분류, 크기, 마지막 사용, �
 
 Cleanup은 active writer, reader, transfer와 publication이 사용하는 대상을 건너뛰거나 안전하게 조정하고, liveness를 확인할 수 없으면 삭제보다 보존을 선택해야 한다.
 
+Local process가 소유한 session, chunk, attempt와 temporary tree는 complete host·PID·process generation으로 식별하고, 같은 descriptor를 두 번 관찰하여 모두 absent임을 증명하기 전에는 reclaim하지 않아야 한다. PID가 점유되었거나 재사용되었을 수 있는 상태, 다른 host, malformed owner와 조회 오류는 cleanup 대상이 아니라 retained conflict다.
+
 ### 삭제 결과와 Tombstone {#operations-cleanup-deletion-record}
 
 Cleanup 결과는 삭제, 실패, 보류와 이미 없음 상태를 구분하고 대상 identity, 권한, 시각, 정책과 오류를 기록하여 사라진 artifact를 정상 생성되지 않은 것으로 오해하지 않게 해야 한다.

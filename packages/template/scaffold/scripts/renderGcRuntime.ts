@@ -1,11 +1,13 @@
 import type { AutoMovieContentDigest } from "@automovie/interface";
 import {
   AutoMovieProductionProject,
+  type IAutoMovieLocalProcessOwner,
   type IAutoMovieProductionRenderChunk,
   type IAutoMovieProductionRenderChunkReceipt,
   type IAutoMovieProductionRenderGcCandidate,
   type IAutoMovieProductionRenderJobPlan,
   type IAutoMovieProductionRenderTier,
+  isAutoMovieLocalProcessOwner,
   planProductionRenderGc,
   readAutoMovieFilmTimeline,
   verifyProductionRenderChunkReceipt,
@@ -19,6 +21,7 @@ import { listRenderAttempts } from "./renderAttemptSnapshot";
 import {
   type IRenderChunkLockOwner,
   RENDER_LOCK_JSON_MAX_BYTES,
+  isRenderChunkLockOwner,
 } from "./renderChunkRuntime";
 import {
   captureRenderChunkPublicationFromPointer,
@@ -32,6 +35,7 @@ import {
   RENDER_GC_QUARANTINE_EVIDENCE_DIRECTORY,
   RENDER_GC_REMOVAL_STAGING_DIRECTORY,
   assertCapturedRenderGcFileEntry,
+  assertCapturedRenderTarget,
   captureRenderGcTarget,
   ensureRenderPhysicalDirectory,
   inventoryRenderQuarantineCandidates,
@@ -46,7 +50,9 @@ import {
   acquireRenderGcLease,
   preserveRenderLivenessLease,
 } from "./renderLiveness";
+import { observeRenderOwnerRecovery } from "./renderOwnerState";
 import { captureExistingRenderPlan } from "./renderPlanSnapshot";
+import { parseRenderProcessOwnerSuffix } from "./renderProcessOwner";
 import type { IProductionSoundRuntime } from "./renderSoundRuntime";
 import { inventoryProductionSoundCaches } from "./soundCacheSnapshot";
 
@@ -123,8 +129,8 @@ export const createProductionRenderGarbageRuntime = (props: {
       acquire: () =>
         acquireRenderGcLease({
           coordinationRoot: root,
-          pid: renderHost.pid,
-          processAlive: renderHost.processAlive,
+          observeProcessOwner: renderHost.observeProcessOwner,
+          owner: renderHost.owner,
           scope: renderLivenessScope,
         }),
       assertNoLiveWorkers: assertNoLiveRenderWorkers,
@@ -206,7 +212,7 @@ export const createProductionRenderGarbageRuntime = (props: {
           });
         },
         chunks: tierChunks,
-        processAlive: renderHost.processAlive,
+        observeProcessOwner: renderHost.observeProcessOwner,
         renderJobRoot,
         root,
         scope: renderLivenessScope,
@@ -435,22 +441,35 @@ export const createProductionRenderGarbageRuntime = (props: {
             snapshot,
             RENDER_LOCK_JSON_MAX_BYTES,
           );
-          if (
-            Number.isSafeInteger(owner.pid) &&
-            renderHost.processAlive(owner.pid)
-          )
+          if (isRenderChunkLockOwner(owner) === false)
             throw new Error(
-              `Render GC --apply refuses live ${tier} worker ${owner.pid} at "${file}". Wait for that worker or stop it explicitly.`,
+              `Render GC --apply refuses ${tier} worker at "${file}" because its owner record is invalid.`,
+            );
+          const recovery = observeRenderOwnerRecovery({
+            between: () => assertCapturedRenderTarget(snapshot),
+            observe: renderHost.observeProcessOwner,
+            owner: owner.owner,
+          });
+          if (recovery.state !== "reclaimable")
+            throw new Error(
+              `Render GC --apply refuses ${tier} worker ${owner.owner.pid} at "${file}" because its owner is ${recovery.observation.state}.`,
             );
         }
       const attempts = path.join(tierRoot, "attempts");
       for (const captured of listRenderAttempts(tierRoot, attempts)) {
         const attempt = captured.record;
         const file = captured.snapshot.target;
-        if (attempt.state === "running" && renderHost.processAlive(attempt.pid))
-          throw new Error(
-            `Render GC --apply refuses live ${tier} attempt ${attempt.pid} at "${file}". Wait for that worker or stop it explicitly.`,
-          );
+        if (attempt.state === "running") {
+          const recovery = observeRenderOwnerRecovery({
+            between: () => assertCapturedRenderTarget(captured.snapshot),
+            observe: renderHost.observeProcessOwner,
+            owner: attempt.owner,
+          });
+          if (recovery.state !== "reclaimable")
+            throw new Error(
+              `Render GC --apply refuses ${tier} attempt ${attempt.owner.pid} at "${file}" because its owner is ${recovery.observation.state}.`,
+            );
+        }
       }
     }
   };
@@ -486,11 +505,16 @@ export const createProductionRenderGarbageRuntime = (props: {
           .filter((candidate) => candidate.name.endsWith(".candidate"))
           .sort((left, right) => compareCodeUnits(left.name, right.name))) {
           const target = path.join(locks, slot.name, entry.name);
-          const match = /^claim\.(\d+)\.[^.]+\.lock\.candidate$/u.exec(
-            entry.name,
+          const snapshot = captureAbandonedRenderStateTarget(
+            target,
+            (captured) => {
+              const candidate = readCapturedRenderJson<IRenderChunkLockOwner>(
+                captured,
+                RENDER_LOCK_JSON_MAX_BYTES,
+              );
+              return isRenderChunkLockOwner(candidate) ? candidate.owner : null;
+            },
           );
-          const pid = Number(match?.[1]);
-          const snapshot = captureAbandonedRenderStateTarget(target, pid);
           if (snapshot === null) continue;
           quarantine(target, "abandoned-lock-candidate", snapshot);
         }
@@ -500,8 +524,12 @@ export const createProductionRenderGarbageRuntime = (props: {
       .readdirSync(directory, { withFileTypes: true })
       .sort((left, right) => compareCodeUnits(left.name, right.name))) {
       const target = path.join(directory, entry.name);
-      const pid = Number(entry.name.split(".").at(-1));
-      const snapshot = captureAbandonedRenderStateTarget(target, pid);
+      const identity = temporaryTreeOwner(entry.name);
+      if (identity === null) continue;
+      const snapshot = captureAbandonedRenderStateTarget(
+        target,
+        () => identity,
+      );
       if (snapshot === null) continue;
       if (currentPublicationProtectsTree(currentChunks, entry.name, snapshot))
         continue;
@@ -642,30 +670,46 @@ export const createProductionRenderGarbageRuntime = (props: {
 
   const captureAbandonedRenderStateTarget = (
     target: string,
-    pid: number,
+    ownerOf: (snapshot: IRenderGcTargetSnapshot) => unknown,
   ): IRenderGcTargetSnapshot | null => {
-    const validPid = Number.isSafeInteger(pid) && pid > 0;
-    if (validPid && renderHost.processAlive(pid)) return null;
-    let snapshot: IRenderGcTargetSnapshot | null;
     try {
-      snapshot = captureExistingRenderStateTarget(target);
-    } catch (error) {
-      if (validPid && renderHost.processAlive(pid)) return null;
-      throw error;
+      const snapshot = captureExistingRenderStateTarget(target);
+      if (snapshot === null) return null;
+      const owner = ownerOf(snapshot);
+      if (isAutoMovieLocalProcessOwner(owner) === false) return null;
+      if (
+        observeRenderOwnerRecovery({
+          between: () => assertCapturedRenderTarget(snapshot),
+          observe: renderHost.observeProcessOwner,
+          owner,
+        }).state !== "reclaimable"
+      )
+        return null;
+      assertCapturedRenderTarget(snapshot);
+      return snapshot;
+    } catch {
+      return null;
     }
-    if (validPid && renderHost.processAlive(pid)) return null;
-    return snapshot;
+  };
+
+  const temporaryTreeOwner = (
+    name: string,
+  ): IAutoMovieLocalProcessOwner | null => {
+    const match = /^[0-9a-f]{64}\.[^.]+\.(.+)$/u.exec(name);
+    return match === null ? null : parseRenderProcessOwnerSuffix(match[1]);
   };
 
   const readCapturedRenderJson = <T>(
     snapshot: IRenderGcTargetSnapshot,
     maximumBytes: number = snapshot.bytes,
-  ): T =>
-    JSON.parse(
-      Buffer.from(readCapturedRenderGcFile(snapshot, maximumBytes)).toString(
-        "utf8",
-      ),
-    ) as T;
+  ): T => {
+    const bytes = readCapturedRenderGcFile(snapshot, maximumBytes);
+    try {
+      return JSON.parse(Buffer.from(bytes).toString("utf8")) as T;
+    } catch {
+      throw new Error("Captured render JSON is unreadable.");
+    }
+  };
 
   const removeOwnedChunkClaim = (
     snapshot: IRenderGcTargetSnapshot,

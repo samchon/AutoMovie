@@ -1,5 +1,10 @@
 import type { AutoMovieContentDigest } from "@automovie/interface";
-import { compareCodeUnits } from "@automovie/production";
+import {
+  type AutoMovieLocalProcessOwnerObservation,
+  type IAutoMovieLocalProcessOwner,
+  compareCodeUnits,
+  isAutoMovieLocalProcessOwner,
+} from "@automovie/production";
 import { randomUUID } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
@@ -15,17 +20,18 @@ import {
   readCapturedRenderGcFile,
   removeCapturedRenderGcTarget,
 } from "./renderGcSnapshot";
+import { observeRenderOwnerRecovery } from "./renderOwnerState";
 
 const RENDER_ATTEMPT_JSON_MAX_BYTES = 64 * 1024;
 
 /** One attempt record authenticated by the random token of its held lock. */
 export interface IRenderAttemptRecord {
-  version: 1;
+  version: 2;
   slot: string;
   chunk: AutoMovieContentDigest;
   state: "running" | "failed";
   correction: string;
-  pid: number;
+  owner: IAutoMovieLocalProcessOwner;
   token: string;
 }
 
@@ -38,7 +44,7 @@ export interface IRenderAttemptSnapshot {
 /** Exact held chunk-lock generation authorizing attempt mutation. */
 export interface IRenderAttemptLockOwner {
   chunk: AutoMovieContentDigest;
-  pid: number;
+  owner: IAutoMovieLocalProcessOwner;
   snapshot: IRenderGcTargetSnapshot;
   token: string;
 }
@@ -53,15 +59,18 @@ export const beginRenderAttempt = (props: {
   base: string;
   chunk: AutoMovieContentDigest;
   lock: IRenderAttemptLockOwner;
-  pid: number;
-  processAlive: (pid: number) => boolean;
+  observeProcessOwner: (
+    owner: unknown,
+  ) => AutoMovieLocalProcessOwnerObservation;
+  owner: IAutoMovieLocalProcessOwner;
   slot: string;
   target: string;
   token: string;
 }): IOwnedRenderAttemptSnapshot => {
   if (
     props.lock.chunk !== props.chunk ||
-    props.lock.pid !== props.pid ||
+    props.observeProcessOwner(props.lock.owner).state !== "same-owner" ||
+    props.observeProcessOwner(props.owner).state !== "same-owner" ||
     props.lock.token !== props.token ||
     props.lock.snapshot.base.path !== path.resolve(props.base) ||
     inside(
@@ -96,25 +105,29 @@ export const beginRenderAttempt = (props: {
     const captured = readRenderAttempt(existing);
     assertOwnership();
     if (captured.record.state === "running") {
-      if (props.processAlive(captured.record.pid))
+      const recovery = observeRenderOwnerRecovery({
+        between: () => {
+          assertOwnership();
+          assertSnapshotCurrent(captured.snapshot);
+        },
+        observe: props.observeProcessOwner,
+        owner: captured.record.owner,
+      });
+      if (recovery.state !== "reclaimable")
         throw new Error(
-          `Render attempt "${props.target}" is still owned by live process ${captured.record.pid}.`,
+          `Render attempt "${props.target}" cannot be replaced because owner ${captured.record.owner.pid} is ${recovery.observation.state}.`,
         );
       assertOwnership();
-      if (props.processAlive(captured.record.pid))
-        throw new Error(
-          `Render attempt "${props.target}" became live during stale recovery.`,
-        );
     }
     predecessor = captured.snapshot;
   }
   const record: IRenderAttemptRecord = {
-    version: 1,
+    version: 2,
     slot: props.slot,
     chunk: props.chunk,
     state: "running",
     correction: "",
-    pid: props.pid,
+    owner: props.owner,
     token: props.token,
   };
   assertRenderAttemptRecord(record);
@@ -209,18 +222,32 @@ export const assertRenderAttemptLockOwner = (
     current.contentFingerprint !== lock.snapshot.contentFingerprint
   )
     throw new Error("Render attempt chunk lock changed physical generation.");
-  const owner = JSON.parse(
-    Buffer.from(
-      readCapturedRenderGcFile(lock.snapshot, RENDER_ATTEMPT_JSON_MAX_BYTES),
-    ).toString("utf8"),
-  ) as unknown;
+  const ownerBytes = readCapturedRenderGcFile(
+    lock.snapshot,
+    RENDER_ATTEMPT_JSON_MAX_BYTES,
+  );
+  let owner: unknown;
+  try {
+    owner = JSON.parse(Buffer.from(ownerBytes).toString("utf8")) as unknown;
+  } catch {
+    throw new Error("Render attempt chunk lock owner bytes are unreadable.");
+  }
   if (
     typeof owner !== "object" ||
     owner === null ||
     Array.isArray(owner) ||
-    Object.keys(owner).sort(compareCodeUnits).join(",") !== "chunk,pid,token" ||
+    Object.keys(owner).sort(compareCodeUnits).join(",") !==
+      "chunk,owner,token,version" ||
+    (owner as { version?: unknown }).version !== 2 ||
     (owner as { chunk?: unknown }).chunk !== lock.chunk ||
-    (owner as { pid?: unknown }).pid !== lock.pid ||
+    isAutoMovieLocalProcessOwner((owner as { owner?: unknown }).owner) ===
+      false ||
+    (owner as { owner: IAutoMovieLocalProcessOwner }).owner.host !==
+      lock.owner.host ||
+    (owner as { owner: IAutoMovieLocalProcessOwner }).owner.pid !==
+      lock.owner.pid ||
+    (owner as { owner: IAutoMovieLocalProcessOwner }).owner.generation !==
+      lock.owner.generation ||
     (owner as { token?: unknown }).token !== lock.token
   )
     throw new Error("Render attempt chunk lock owner bytes changed.");
@@ -232,11 +259,16 @@ export const readRenderAttempt = (
 ): IRenderAttemptSnapshot => {
   if (snapshot.kind !== "file")
     throw new Error(`Render attempt "${snapshot.target}" is not a file.`);
-  const record = JSON.parse(
-    Buffer.from(
-      readCapturedRenderGcFile(snapshot, RENDER_ATTEMPT_JSON_MAX_BYTES),
-    ).toString("utf8"),
-  ) as unknown;
+  const bytes = readCapturedRenderGcFile(
+    snapshot,
+    RENDER_ATTEMPT_JSON_MAX_BYTES,
+  );
+  let record: unknown;
+  try {
+    record = JSON.parse(Buffer.from(bytes).toString("utf8")) as unknown;
+  } catch {
+    throw new Error("Render attempt record is unreadable.");
+  }
   assertRenderAttemptRecord(record);
   return { record, snapshot };
 };
@@ -357,8 +389,8 @@ const assertRenderAttemptRecord: (
     value === null ||
     Array.isArray(value) ||
     Object.keys(value).sort(compareCodeUnits).join(",") !==
-      "chunk,correction,pid,slot,state,token,version" ||
-    (value as { version?: unknown }).version !== 1 ||
+      "chunk,correction,owner,slot,state,token,version" ||
+    (value as { version?: unknown }).version !== 2 ||
     typeof (value as { slot?: unknown }).slot !== "string" ||
     (value as { slot: string }).slot.length === 0 ||
     typeof (value as { chunk?: unknown }).chunk !== "string" ||
@@ -367,8 +399,8 @@ const assertRenderAttemptRecord: (
     ((value as { state?: unknown }).state !== "running" &&
       (value as { state?: unknown }).state !== "failed") ||
     typeof (value as { correction?: unknown }).correction !== "string" ||
-    Number.isSafeInteger((value as { pid?: unknown }).pid) === false ||
-    (value as { pid: number }).pid <= 0 ||
+    isAutoMovieLocalProcessOwner((value as { owner?: unknown }).owner) ===
+      false ||
     typeof (value as { token?: unknown }).token !== "string" ||
     /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/u.test(
       (value as { token: string }).token,

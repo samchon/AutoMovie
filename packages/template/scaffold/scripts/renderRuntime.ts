@@ -137,8 +137,8 @@ const executeProductionRenderCommand = async (
     }
     const session = acquireRenderSessionLease({
       coordinationRoot: root,
-      pid: renderHost.pid,
-      processAlive: renderHost.processAlive,
+      observeProcessOwner: renderHost.observeProcessOwner,
+      owner: renderHost.owner,
       scope: renderLivenessScope,
       tier: renderTier.kind,
     });
@@ -335,7 +335,6 @@ const executeProductionRenderCommand = async (
     ensureDirectory: ensureRenderPhysicalDirectory,
     filesystem: renderHost.filesystem,
     inspectProxy: inspectPublishedProxyBundle,
-    processAlive: renderHost.processAlive,
     publicationFingerprint: productionRenderPublicationFingerprint,
     publishProxyBundle,
   });
@@ -376,8 +375,8 @@ const executeProductionRenderCommand = async (
       publishMask: publishProductionMaskSidecar,
       state: renderObservations,
     },
-    pid: renderHost.pid,
     pngGeneration: renderHost.pngGeneration,
+    owner: renderHost.owner,
     productionId,
     publication: {
       publish: publishRenderChunkSnapshot,

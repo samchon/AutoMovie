@@ -29,6 +29,8 @@ Cleanup은 inventory snapshot과 policy identity를 입력으로 받아 remove, 
 
 Apply는 cleanup plan의 inventory generation, active ownership, reference graph와 target identity를 다시 확인해야 한다. Active or ambiguous use가 있거나 target이 successor generation으로 바뀌면 해당 candidate를 skipped-conflict로 남기고 sibling candidate에 대한 판단을 재사용하지 않는다.
 
+Render session, GC guard, chunk claim, running attempt와 worker temporary tree는 versioned record에 complete host·PID·process generation을 저장한다. Reclaim은 같은 validated owner에 대한 두 independent `absent` observations와 그 사이 exact target recapture가 모두 일치할 때만 가능하며, occupied-or-reused, same-owner, elsewhere, malformed 또는 query-unavailable state는 candidate를 보존하고 apply를 fail closed한다.
+
 ### Deletion Outcome과 Tombstone {#execution-deletion-outcome-tombstone}
 
 <!-- @evidence requirements/operations-and-recovery/retention-and-cleanup.md#operations-cleanup-deletion-record 삭제, 실패, 보류와 already-absent를 구분하고 대상과 권한을 기록한다. -->
