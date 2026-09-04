@@ -9,6 +9,8 @@ import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
 
+import { run as runCli } from "../../../../packages/cli/src/bin";
+
 /**
  * The scaffold publishes exactly one complete, supported language pack.
  *
@@ -22,6 +24,70 @@ import * as path from "node:path";
 export const test_cli_scaffold_language_contract = (): void => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "automovie-language-"));
   try {
+    const cliTarget = path.join(root, "option-first");
+    TestValidator.equals(
+      "option value is not mistaken for the target directory",
+      runCli([
+        process.execPath,
+        "automovie",
+        "start",
+        "--language",
+        "english",
+        "--force",
+        cliTarget,
+      ]),
+      0,
+    );
+    for (const [name, args] of [
+      ["missing target", ["--language", "english"]],
+      ["missing language", [path.join(root, "missing-language")]],
+      [
+        "duplicate language",
+        [
+          path.join(root, "duplicate-language"),
+          "--language",
+          "english",
+          "--language",
+          "korean",
+        ],
+      ],
+      [
+        "duplicate force",
+        [
+          path.join(root, "duplicate-force"),
+          "--language",
+          "english",
+          "--force",
+          "--force",
+        ],
+      ],
+      [
+        "extra target",
+        [
+          path.join(root, "first-target"),
+          path.join(root, "second-target"),
+          "--language",
+          "english",
+        ],
+      ],
+      [
+        "unknown option",
+        [path.join(root, "unknown-option"), "--language", "english", "--x"],
+      ],
+      [
+        "missing language value",
+        [path.join(root, "missing-value"), "--language", "--force"],
+      ],
+      [
+        "unknown language",
+        [path.join(root, "unknown-language"), "--language", "french"],
+      ],
+    ] as const)
+      TestValidator.equals(
+        name,
+        runCli([process.execPath, "automovie", "start", ...args]),
+        1,
+      );
     for (const language of AUTO_MOVIE_PRODUCTION_LANGUAGES) {
       const rendered = renderAutoMovieLanguageContracts({ language });
       TestValidator.equals(`${language} paths`, Object.keys(rendered), [
@@ -64,26 +130,43 @@ export const test_cli_scaffold_language_contract = (): void => {
         contractsRoot: synthetic,
       }),
     );
-    fs.writeFileSync(path.join(synthetic, "english", "root.md"), "root\r\n");
-    fs.mkdirSync(path.join(synthetic, "english", "nested"));
+    fs.mkdirSync(path.join(synthetic, "english", "discovery"));
+    fs.mkdirSync(path.join(synthetic, "english", "obligations"));
+    fs.mkdirSync(path.join(synthetic, "english", "principles"));
     fs.writeFileSync(
-      path.join(synthetic, "english", "nested", "leaf.md"),
-      "leaf\r\n",
+      path.join(synthetic, "english", "discovery", "signals.md"),
+      "signals\r\n",
+    );
+    fs.writeFileSync(
+      path.join(synthetic, "english", "obligations", "common.md"),
+      "obligations\r\n",
+    );
+    fs.writeFileSync(
+      path.join(synthetic, "english", "principles", "common.md"),
+      "principles\r\n",
     );
     TestValidator.equals(
-      "recursive normalized pack",
+      "exact normalized pack",
       renderAutoMovieLanguageContracts({
         language: "english",
         contractsRoot: synthetic,
       }),
       {
-        "docs/language/nested/leaf.md": "leaf\n",
-        "docs/language/root.md": "root\n",
+        "docs/language/discovery/signals.md": "signals\n",
+        "docs/language/obligations/common.md": "obligations\n",
+        "docs/language/principles/common.md": "principles\n",
       },
+    );
+    fs.writeFileSync(path.join(synthetic, "english", "residue.md"), "extra\n");
+    TestValidator.error("residual pack member", () =>
+      renderAutoMovieLanguageContracts({
+        language: "english",
+        contractsRoot: synthetic,
+      }),
     );
     fs.mkdirSync(path.join(synthetic, "korean"));
     fs.symlinkSync(
-      path.join(synthetic, "english", "root.md"),
+      path.join(synthetic, "english", "discovery", "signals.md"),
       path.join(synthetic, "korean", "linked.md"),
     );
     TestValidator.error("linked pack member", () =>
