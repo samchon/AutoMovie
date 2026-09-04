@@ -1149,8 +1149,18 @@ export const review = true;
           reference.type === "markdown" &&
           reference.files.every((file) => file.startsWith(`${layer}/`)),
       );
-      assert.equal(population?.checklist, true);
-      assert.equal(population?.noEvidenceExclude, true);
+      assert.equal(
+        population !== undefined && "checklist" in population
+          ? population.checklist
+          : undefined,
+        true,
+      );
+      assert.equal(
+        population !== undefined && "noEvidenceExclude" in population
+          ? population.noEvidenceExclude
+          : undefined,
+        true,
+      );
     }
   }
   const briefH2 = graph.claims.find(
