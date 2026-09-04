@@ -179,10 +179,6 @@ const CONTRACTS: readonly IContractFixture[] = [
         anchor: "purpose-fit",
       },
       {
-        title: "Population variety",
-        anchor: "population-variety",
-      },
-      {
         title: "Layer boundary",
         anchor: "layer-boundary",
       },
@@ -193,6 +189,20 @@ const CONTRACTS: readonly IContractFixture[] = [
       {
         title: "Proportionate development",
         anchor: "proportionate-development",
+      },
+    ],
+  },
+  {
+    path: "obligations/core/defaults.md",
+    title: "Post-draft anti-default obligations",
+    units: [
+      {
+        title: "Recurrent frame distribution",
+        anchor: "recurrent-frame-distribution",
+      },
+      {
+        title: "Surface cadence distribution",
+        anchor: "surface-cadence-distribution",
       },
     ],
   },
@@ -666,6 +676,29 @@ const CONTRACTS: readonly IContractFixture[] = [
         title: "Unit addressability",
         anchor: "unit-addressability",
       },
+      {
+        title: "Unit contribution distribution",
+        anchor: "unit-contribution-distribution",
+      },
+      { title: "Sequence connection", anchor: "sequence-connection" },
+      {
+        title: "State continuity distribution",
+        anchor: "state-continuity-distribution",
+      },
+      {
+        title: "Character continuity distribution",
+        anchor: "character-continuity-distribution",
+      },
+      {
+        title: "Temporal gear distribution",
+        anchor: "temporal-gear-distribution",
+      },
+      { title: "Speech distribution", anchor: "speech-distribution" },
+      {
+        title: "Voice-frame distribution",
+        anchor: "voice-frame-distribution",
+      },
+      { title: "Pacing arrangement", anchor: "pacing-arrangement" },
     ],
   },
   {
@@ -675,6 +708,14 @@ const CONTRACTS: readonly IContractFixture[] = [
       {
         title: "Realization-ready contract",
         anchor: "realization-ready-contract",
+      },
+      {
+        title: "Format and scene completeness",
+        anchor: "screenplay-format-scene-completeness",
+      },
+      {
+        title: "Revision and realization handoff",
+        anchor: "screenplay-revision-realization-handoff",
       },
     ],
   },
@@ -769,10 +810,6 @@ const CONTRACTS: readonly IContractFixture[] = [
         anchor: "substantive-completion",
       },
       {
-        title: "Machine default",
-        anchor: "machine-default",
-      },
-      {
         title: "Evidence-content conformance",
         anchor: "evidence-content-conformance",
       },
@@ -780,6 +817,20 @@ const CONTRACTS: readonly IContractFixture[] = [
         title: "Declared basis",
         anchor: "declared-basis",
       },
+    ],
+  },
+  {
+    path: "principles/core/defaults.md",
+    title: "Composition-safe anti-default principles",
+    units: [
+      { title: "Purposeful enumeration", anchor: "purposeful-enumeration" },
+      { title: "Earned significance", anchor: "earned-significance" },
+      {
+        title: "Responsive qualification",
+        anchor: "responsive-qualification",
+      },
+      { title: "Functional formatting", anchor: "functional-formatting" },
+      { title: "Material contrast", anchor: "contrastive-definition" },
     ],
   },
   {
@@ -1067,6 +1118,10 @@ const CONTRACTS: readonly IContractFixture[] = [
         anchor: "specificity",
       },
       {
+        title: "Closing-line contribution",
+        anchor: "closing-line-contribution",
+      },
+      {
         title: "Parent differentiation",
         anchor: "parent-differentiation",
       },
@@ -1135,6 +1190,22 @@ const CONTRACTS: readonly IContractFixture[] = [
       {
         title: "Timing allocation",
         anchor: "timing-allocation",
+      },
+      {
+        title: "Master-scene and shooting boundary",
+        anchor: "master-scene-shooting-boundary",
+      },
+      {
+        title: "Scene semantic completion",
+        anchor: "screenplay-scene-completion",
+      },
+      {
+        title: "Locked revision identity",
+        anchor: "screenplay-locked-revision",
+      },
+      {
+        title: "Heading identity axes",
+        anchor: "screenplay-heading-identity",
       },
     ],
   },
@@ -1425,11 +1496,64 @@ export const createEvidenceProjectFixture = (roots: string[]): string => {
         ...contract.units.flatMap((unit) => [
           `## ${unit.title} {#${unit.anchor}}`,
           "",
+          ...structuredRuleLines(contract.path, unit.anchor),
           `Synthetic contract input for ${unit.anchor}.`,
           "",
           `Review question: does the host answer ${unit.anchor}?`,
           "",
           `Sources: synthetic package test input for ${unit.anchor}.`,
+          "",
+        ]),
+      ].join("\n"),
+      "utf8",
+    );
+  }
+  for (const contract of [
+    {
+      path: "language/discovery/signals.md",
+      title: "English discovery signals",
+      units: [
+        {
+          title: "Work-specific English conditions",
+          anchor: "english-work-specific-conditions",
+        },
+      ],
+    },
+    {
+      path: "language/principles/common.md",
+      title: "English principles",
+      units: [
+        { title: "Idiomatic relation", anchor: "english-idiomatic-relation" },
+        { title: "Register ownership", anchor: "english-register-ownership" },
+      ],
+    },
+    {
+      path: "language/obligations/common.md",
+      title: "English obligations",
+      units: [
+        {
+          title: "Population register and frame account",
+          anchor: "english-population-register-frame-account",
+        },
+        {
+          title: "Audience language access",
+          anchor: "english-audience-language-access",
+        },
+      ],
+    },
+  ] as const) {
+    const file = path.join(directory, "docs", contract.path);
+    fs.mkdirSync(path.dirname(file), { recursive: true });
+    fs.writeFileSync(
+      file,
+      [
+        `# ${contract.title}`,
+        "",
+        ...contract.units.flatMap((unit) => [
+          `## ${unit.title} {#${unit.anchor}}`,
+          "",
+          ...structuredRuleLines(contract.path, unit.anchor),
+          `Synthetic language contract input for ${unit.anchor}.`,
           "",
         ]),
       ].join("\n"),
@@ -1444,4 +1568,47 @@ export const createEvidenceProjectFixture = (roots: string[]): string => {
     "utf8",
   );
   return directory;
+};
+
+/** Emit metadata only for the scaffold routes whose application time is binding. */
+const structuredRuleLines = (relative: string, anchor: string): string[] => {
+  const sharedDefault =
+    relative === "principles/core/defaults.md" ||
+    (relative === "principles/story/narratives.md" &&
+      anchor === "closing-line-contribution");
+  const populationDefault = relative === "obligations/core/defaults.md";
+  const languageRule = relative.startsWith("language/");
+  if (!sharedDefault && !populationDefault && !languageRule) return [];
+  const safeApplication = sharedDefault
+    ? "composition-safe"
+    : populationDefault
+      ? anchor === "recurrent-frame-distribution"
+        ? "post-draft-frequency"
+        : "population-distribution"
+      : relative.startsWith("language/discovery/")
+        ? "observation-only"
+        : relative.startsWith("language/obligations/")
+          ? "population-distribution"
+          : "composition-safe";
+  const id = languageRule
+    ? anchor
+    : anchor === "contrastive-definition"
+      ? "sh-material-contrast"
+      : `sh-${anchor}`;
+  return [
+    "```contract-rule",
+    JSON.stringify(
+      {
+        id,
+        status: "active",
+        safeApplication,
+        timing: "synthetic contract routing boundary",
+        sourceIdentity: "fixture@1",
+      },
+      null,
+      2,
+    ),
+    "```",
+    "",
+  ];
 };

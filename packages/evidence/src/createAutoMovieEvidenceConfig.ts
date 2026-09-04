@@ -34,6 +34,7 @@ import {
   parseAutoMovieEvidenceSyntax,
   projectAutoMovieMarkdownSyntax,
 } from "./parseAutoMovieEvidenceSyntax";
+import { readAutoMovieContractRules } from "./readAutoMovieContractRules";
 import { walkAutoMovieProjectPopulationFiles } from "./walkAutoMovieProjectPopulationFiles";
 
 /**
@@ -560,11 +561,15 @@ const EXPECTED_CONTRACTS = [
     file: "obligations/core/common.md",
     anchors: [
       "purpose-fit",
-      "population-variety",
       "layer-boundary",
       "production-language",
       "proportionate-development",
     ],
+  },
+  {
+    domain: "core",
+    file: "obligations/core/defaults.md",
+    anchors: ["recurrent-frame-distribution", "surface-cadence-distribution"],
   },
   {
     domain: "design",
@@ -626,7 +631,17 @@ const EXPECTED_CONTRACTS = [
   {
     domain: "story",
     file: "obligations/story/narratives.md",
-    anchors: ["unit-addressability"],
+    anchors: [
+      "unit-addressability",
+      "unit-contribution-distribution",
+      "sequence-connection",
+      "state-continuity-distribution",
+      "character-continuity-distribution",
+      "temporal-gear-distribution",
+      "speech-distribution",
+      "voice-frame-distribution",
+      "pacing-arrangement",
+    ],
   },
   {
     domain: "story",
@@ -636,7 +651,11 @@ const EXPECTED_CONTRACTS = [
   {
     domain: "story",
     file: "obligations/story/screenplays.md",
-    anchors: ["realization-ready-contract"],
+    anchors: [
+      "realization-ready-contract",
+      "screenplay-format-scene-completeness",
+      "screenplay-revision-realization-handoff",
+    ],
   },
   {
     domain: "core",
@@ -718,9 +737,19 @@ const EXPECTED_CONTRACTS = [
     anchors: [
       "scope-preservation",
       "substantive-completion",
-      "machine-default",
       "evidence-content-conformance",
       "declared-basis",
+    ],
+  },
+  {
+    domain: "core",
+    file: "principles/core/defaults.md",
+    anchors: [
+      "purposeful-enumeration",
+      "earned-significance",
+      "responsive-qualification",
+      "functional-formatting",
+      "contrastive-definition",
     ],
   },
   {
@@ -850,6 +879,7 @@ const EXPECTED_CONTRACTS = [
       "character-continuity",
       "information-entry",
       "specificity",
+      "closing-line-contribution",
       "parent-differentiation",
       "drive-to-turn",
       "unit-identity",
@@ -902,6 +932,10 @@ const EXPECTED_CONTRACTS = [
       "emotional-grounding",
       "audiovisual-selection",
       "timing-allocation",
+      "master-scene-shooting-boundary",
+      "screenplay-scene-completion",
+      "screenplay-locked-revision",
+      "screenplay-heading-identity",
     ],
   },
   {
@@ -1752,7 +1786,10 @@ const assertSourceExportsAreEvidenceAddressable = (
   }
 };
 
-const validateContracts = (location: string): ITargetIdentityRegistry => {
+const validateContracts = (
+  location: string,
+  language: AutoMovieProductionLanguage,
+): ITargetIdentityRegistry => {
   const root = path.resolve(location, sharedDocsRoot(location));
   const actual = [
     ...walkFiles(path.join(root, "discovery"), ".md"),
@@ -1809,7 +1846,88 @@ const validateContracts = (location: string): ITargetIdentityRegistry => {
         `${relative} H2 inventory changed without graph wiring. Received [${receivedAnchors.join(", ")}], expected [${expectedAnchors.join(", ")}].`,
       );
   }
+  validateStructuredSharedRules(root);
+  validateLanguageContract(root, language);
   return { anchors, titles };
+};
+
+/** Validate exact routing metadata for the shared rules whose timing is binding. */
+const validateStructuredSharedRules = (root: string): void => {
+  const principles = readAutoMovieContractRules(path.join(root, "principles"), {
+    requireEveryH2In: ["core/defaults.md"],
+  });
+  const obligations = readAutoMovieContractRules(path.join(root, "obligations"), {
+    requireEveryH2In: ["core/defaults.md"],
+  });
+  const expected = new Map<string, string>([
+    ["sh-purposeful-enumeration", "composition-safe"],
+    ["sh-earned-significance", "composition-safe"],
+    ["sh-responsive-qualification", "composition-safe"],
+    ["sh-functional-formatting", "composition-safe"],
+    ["sh-material-contrast", "composition-safe"],
+    ["sh-closing-line-contribution", "composition-safe"],
+    ["sh-recurrent-frame-distribution", "post-draft-frequency"],
+    ["sh-surface-cadence-distribution", "population-distribution"],
+  ]);
+  const received = new Map(
+    [...principles, ...obligations].map((rule) => [
+      rule.metadata.id,
+      rule.metadata.safeApplication,
+    ]),
+  );
+  for (const [id, application] of expected)
+    if (received.get(id) !== application)
+      throw new Error(
+        `${id}: expected one structured ${application} contract rule.`,
+      );
+};
+
+/** Refuse an omitted, residual, or metadata-mismatched selected language pack. */
+const validateLanguageContract = (
+  root: string,
+  language: AutoMovieProductionLanguage,
+): void => {
+  const languageRoot = path.join(root, "language");
+  const expectedFiles = [
+    "discovery/signals.md",
+    "obligations/common.md",
+    "principles/common.md",
+  ];
+  const actualFiles = walkFiles(languageRoot, ".md")
+    .map((file) => posix(path.relative(languageRoot, file)))
+    .sort(compareCodeUnits);
+  if (
+    actualFiles.length !== expectedFiles.length ||
+    actualFiles.some((file, index) => file !== expectedFiles[index])
+  )
+    throw new Error(
+      `Selected ${language} language contract must contain exactly [${expectedFiles.join(", ")}]; received [${actualFiles.join(", ")}].`,
+    );
+  const expectedRules = [
+    [`${language}-work-specific-conditions`, "observation-only"],
+    [`${language}-population-${language === "english" ? "register-frame" : "interference"}-account`, "population-distribution"],
+    [`${language}-audience-language-access`, "population-distribution"],
+    [
+      language === "english"
+        ? "english-idiomatic-relation"
+        : `${language}-contextual-relation`,
+      "composition-safe",
+    ],
+    [`${language}-register-ownership`, "composition-safe"],
+  ] as const;
+  const rules = readAutoMovieContractRules(languageRoot, {
+    requireEveryH2In: expectedFiles,
+  });
+  const routes = new Map(
+    rules.map((rule) => [rule.metadata.id, rule.metadata.safeApplication]),
+  );
+  if (
+    rules.length !== expectedRules.length ||
+    expectedRules.some(([id, application]) => routes.get(id) !== application)
+  )
+    throw new Error(
+      `Selected ${language} language contract carries an incomplete or mismatched structured rule identity.`,
+    );
 };
 
 /**
@@ -2709,10 +2827,18 @@ const discoveryReferences = (
   shared: string,
   layer: MarkdownLayer,
   review: boolean,
-): ITtscEvidenceGraphReference[] =>
-  DISCOVERY_TARGETS[layer].map((target) =>
+): ITtscEvidenceGraphReference[] => [
+  ...DISCOVERY_TARGETS[layer].map((target) =>
     sharedReference(shared, "discovery", `${target}.md`, review, false, true),
-  );
+  ),
+  {
+    type: "markdown",
+    root: DOCS,
+    files: ["language/discovery/signals.md"],
+    symbol: "h2",
+    requireReview: review,
+  },
+];
 
 /**
  * Makes one active layer's work-specific contract answer its discovery duties.
@@ -2822,6 +2948,8 @@ const populationObligations = (
           : "design";
   return [
     "obligations/core/common.md",
+    "obligations/core/defaults.md",
+    "language/obligations/common.md",
     ...(["treatments", "scripts", "screenplays"].includes(layer)
       ? ["obligations/story/narratives.md"]
       : []),
@@ -2852,7 +2980,19 @@ const authoredClaims = (graph: IProductionGraph): IBranchClaim[] => {
           }),
         ),
       );
-    const principles = [principleReference(shared, "common.md", review)];
+    const principles = [
+      principleReference(shared, "common.md", review),
+      principleReference(shared, "defaults.md", review),
+      {
+        type: "markdown" as const,
+        root: DOCS,
+        files: ["language/principles/common.md"],
+        symbol: "h2" as const,
+        checklist: true,
+        noEvidenceExclude: true,
+        requireReview: review,
+      },
+    ];
     if (["treatments", "scripts", "screenplays"].includes(name))
       principles.push(principleReference(shared, "narratives.md", review));
     if (
@@ -3211,7 +3351,7 @@ const validateProductionGraph = (
   validateDeclaration(graph);
   validateProjectPopulationBoundary(graph);
   validateReviewReasons(graph);
-  const targetIdentities = validateContracts(graph.location);
+  const targetIdentities = validateContracts(graph.location, graph.language);
   validateStages(graph);
   if (graph.populationScope.mode === "complete-production-reset") {
     const stages = Object.fromEntries(
@@ -3284,7 +3424,7 @@ const topologyOf = (
       })),
     ),
   ];
-  const active = new Map(
+  const active = new Map<string, boolean>(
     branches.map((branch) => [branch.name, branch.active]),
   );
   const declarations: IAutoMovieEvidenceTopologyDeclaration[] = expected.map(

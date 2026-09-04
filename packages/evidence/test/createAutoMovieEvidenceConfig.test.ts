@@ -201,6 +201,95 @@ const manifestContractPaths = (
 
 try {
   const scopeRoot = root();
+  assert.equal(
+    throws(
+      () =>
+        createAutoMovieEvidenceConfig({
+          ...disabled(scopeRoot),
+          language: "french" as never,
+        }),
+      "Unsupported production language",
+    ),
+    true,
+  );
+  assert.equal(
+    throws(
+      () =>
+        createAutoMovieEvidenceConfig({
+          ...disabled(scopeRoot),
+          language: "chinese",
+        }),
+      "mismatched structured rule identity",
+    ),
+    true,
+  );
+  const missingLanguageContract = root();
+  fs.rmSync(
+    path.join(
+      missingLanguageContract,
+      "docs/language/discovery/signals.md",
+    ),
+  );
+  assert.equal(
+    throws(
+      () => createAutoMovieEvidenceConfig(disabled(missingLanguageContract)),
+      "language contract must contain exactly",
+    ),
+    true,
+  );
+  const residualLanguageContract = root();
+  write(
+    residualLanguageContract,
+    "docs/language/principles/residue.md",
+    target("Residual language", "residual-language"),
+  );
+  assert.equal(
+    throws(
+      () => createAutoMovieEvidenceConfig(disabled(residualLanguageContract)),
+      "language contract must contain exactly",
+    ),
+    true,
+  );
+  const invalidDefaultRoute = root();
+  const defaultFile = path.join(
+    invalidDefaultRoute,
+    "docs/principles/core/defaults.md",
+  );
+  fs.writeFileSync(
+    defaultFile,
+    rewrite(
+      fs.readFileSync(defaultFile, "utf8"),
+      '"safeApplication": "composition-safe"',
+      '"safeApplication": "early"',
+    ),
+  );
+  assert.equal(
+    throws(
+      () => createAutoMovieEvidenceConfig(disabled(invalidDefaultRoute)),
+      "invalid safe application",
+    ),
+    true,
+  );
+  const missingClosingRoute = root();
+  const narrativeFile = path.join(
+    missingClosingRoute,
+    "docs/principles/story/narratives.md",
+  );
+  fs.writeFileSync(
+    narrativeFile,
+    rewrite(
+      fs.readFileSync(narrativeFile, "utf8"),
+      /```contract-rule\n\{\n  "id": "sh-closing-line-contribution"[\s\S]*?\n```\n\n/u,
+      "",
+    ),
+  );
+  assert.equal(
+    throws(
+      () => createAutoMovieEvidenceConfig(disabled(missingClosingRoute)),
+      "sh-closing-line-contribution: expected one structured composition-safe contract rule",
+    ),
+    true,
+  );
   const missingScope = disabled(scopeRoot) as Partial<Graph>;
   delete missingScope.populationScope;
   assert.equal(
@@ -1083,7 +1172,11 @@ export const review = true;
       ]);
       assert.equal(account?.symbol, "h2");
       assert.equal(referenceTo(account, obligation)?.uniqueEvidence, true);
-      const population = referenceTo(account, `${layer}/**/*.md`);
+      const population = referencesOf(account).find(
+        (reference) =>
+          reference.type === "markdown" &&
+          reference.files.every((file) => file.startsWith(`${layer}/`)),
+      );
       assert.equal(population?.checklist, true);
       assert.equal(population?.noEvidenceExclude, true);
     }
@@ -2777,7 +2870,9 @@ export const review = true;
     "the system source branch is not wired",
   );
   const systemObligation = branchGraph.claims.find((claim) =>
-    claim.name?.includes("systems H2 units answer their principle checklists"),
+    claim.name?.includes(
+      "systems population accounts answer each obligations/design/systems.md",
+    ),
   );
   assert.equal(
     referenceTo(systemObligation, "obligations/design/systems.md")
@@ -2786,7 +2881,9 @@ export const review = true;
     "required non-motion layer obligations must refuse exclusions",
   );
   const motionObligation = branchGraph.claims.find((claim) =>
-    claim.name?.includes("motions H2 units answer their principle checklists"),
+    claim.name?.includes(
+      "motions population accounts answer each obligations/design/motions.md",
+    ),
   );
   assert.equal(
     referenceTo(motionObligation, "obligations/design/motions.md")

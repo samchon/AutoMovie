@@ -34,6 +34,7 @@ export interface IAutoMoviePopulationAccountClaimsProps {
  * @evidence requirements/production-evidence/graph.md#agent-production-evidence-deterministic-result Derives one stable account owner per obligation document without changing graph cardinality.
  * @evidence specifications/production-evidence/graph.md#spec-authoring-production-evidence-shared-contract Separates whole-population comparison hosts from unit-local evidence carriers.
  * @evidence specifications/production-evidence/graph.md#spec-authoring-production-evidence-deterministic-result Emits account claims in caller-declared obligation order with exact-one ownership.
+ * @author Samchon
  */
 export function createAutoMoviePopulationAccountClaims(
   props: IAutoMoviePopulationAccountClaimsProps,
