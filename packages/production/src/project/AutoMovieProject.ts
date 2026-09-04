@@ -693,7 +693,7 @@ export class AutoMovieProject {
     // whose result varies with the host locale/ICU build and can even return 0
     // for distinct Unicode-equivalent names). Distinct filenames are never
     // equal, so both comparator arms are reachable and none needs a c8-ignore.
-    return fs
+    return fileSystem
       .readdirSync(path.join(this.root, "renders"))
       .sort(compareCodeUnits)
       .filter((name) => !owned(name))
@@ -746,7 +746,7 @@ export class AutoMovieProject {
   ): T[] {
     const base = path.join(this.root, dir);
     const out: T[] = [];
-    for (const name of fs
+    for (const name of fileSystem
       .readdirSync(base)
       .filter((name) => name.endsWith(".json"))
       .sort(compareCodeUnits)) {

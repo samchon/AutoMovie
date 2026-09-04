@@ -959,7 +959,7 @@ export class AutoMovieProductionProject {
         throw new Error(
           `Declared content directory "${relativeToRoot(this.root, directory)}" escapes its verified physical project root. Replace the junction with physical project content.`,
         );
-      for (const entry of fs
+      for (const entry of fileSystem
         .readdirSync(directory, { withFileTypes: true })
         .sort((left, right) => compareCodeUnits(left.name, right.name))) {
         const absolute = path.join(directory, entry.name);
@@ -1976,7 +1976,7 @@ export class AutoMovieProductionProject {
     if (lstatOrNull(directory) === null) return [];
     if (fileSystem.lstatSync(directory).isSymbolicLink())
       throw new Error("Repaint attempt directory must not be a link.");
-    const attempts = fs
+    const attempts = fileSystem
       .readdirSync(directory, { withFileTypes: true })
       .filter((entry) => entry.name.endsWith(".json"))
       .sort((left, right) => compareCodeUnits(left.name, right.name))
@@ -2282,7 +2282,7 @@ export class AutoMovieProductionProject {
     if (fileSystem.lstatSync(directory).isSymbolicLink())
       throw new Error("Repaint candidate directory must not be a link.");
     const receipts: IAutoMovieRepaintReceipt[] = [];
-    for (const entry of fs
+    for (const entry of fileSystem
       .readdirSync(directory, { withFileTypes: true })
       .sort((left, right) => compareCodeUnits(left.name, right.name))) {
       if (entry.isFile() === false || entry.name.endsWith(".json") === false)
@@ -3541,7 +3541,7 @@ export class AutoMovieProductionProject {
     const absolute = directory;
     const stateRootReal = ownedRootReal(this.rootReal, this.automovieRoot);
     const output = new Map<string, T>();
-    for (const entry of fs
+    for (const entry of fileSystem
       .readdirSync(absolute, { withFileTypes: true })
       .filter(
         (item) =>
@@ -3882,7 +3882,7 @@ export class AutoMovieProductionProject {
       const root = this.generatedRoot();
       const actualPaths: string[] = [];
       const visit = (directory: string): void => {
-        for (const entry of fs
+        for (const entry of fileSystem
           .readdirSync(directory, { withFileTypes: true })
           .sort((left, right) => compareCodeUnits(left.name, right.name))) {
           const absolute = path.join(directory, entry.name);

@@ -772,7 +772,7 @@ const collectDirectory = (
     throw new Error(
       `Legacy inventory directory "${absolute}" must be a physical directory.`,
     );
-  for (const entry of fs
+  for (const entry of fileSystem
     .readdirSync(absolute, { withFileTypes: true })
     .sort((left, right) => compareCodeUnits(left.name, right.name))) {
     const child = `${relative}/${entry.name}`;
