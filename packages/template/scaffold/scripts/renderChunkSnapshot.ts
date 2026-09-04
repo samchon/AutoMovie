@@ -415,6 +415,8 @@ export const inventoryRenderChunkGarbage = (props: {
         kind: "chunk-pointer",
         digest,
         bytes: pointer.bytes,
+        generation: pointer.targetIdentity,
+        observation: null,
       },
       snapshot: pointer,
     });
@@ -446,7 +448,13 @@ export const inventoryRenderChunkGarbage = (props: {
         tree: publication.tree,
       });
     } catch {
-      // An invalid pointer remains an independently removable candidate.
+      const candidate = entries.at(-1)!.candidate;
+      candidate.observation = {
+        state: "integrity-failed",
+        authority: "exact-quarantine",
+        reason:
+          "the captured chunk pointer did not authenticate one complete receipt-bound tree",
+      };
     }
   }
   const temporaryRoot = path.join(props.renderJobRoot, props.tier, "tmp");
@@ -476,6 +484,8 @@ export const inventoryRenderChunkGarbage = (props: {
         kind: "chunk-tree",
         digest,
         bytes: snapshot.bytes,
+        generation: snapshot.targetIdentity,
+        observation: null,
       };
       entries.push({ candidate, snapshot });
       if (

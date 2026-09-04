@@ -52,6 +52,7 @@ import {
 } from "./renderLiveness";
 import { observeRenderOwnerRecovery } from "./renderOwnerState";
 import { captureExistingRenderPlan } from "./renderPlanSnapshot";
+import type { IProductionRenderChunkInspection } from "./renderPlanningRuntime";
 import { parseRenderProcessOwnerSuffix } from "./renderProcessOwner";
 import type { IProductionSoundRuntime } from "./renderSoundRuntime";
 import { inventoryProductionSoundCaches } from "./soundCacheSnapshot";
@@ -87,6 +88,11 @@ export const createProductionRenderGarbageRuntime = (props: {
   compareCodeUnits: (left: string, right: string) => number;
   finalTier: IAutoMovieProductionRenderTier;
   host: IProductionRenderHost;
+  inspectChunk: (
+    plan: IAutoMovieProductionRenderJobPlan,
+    chunk: IAutoMovieProductionRenderChunk,
+    pointer: IRenderGcTargetSnapshot,
+  ) => IProductionRenderChunkInspection;
   productionId: string;
   productionStateRoot: string;
   proxyTier: IAutoMovieProductionRenderTier;
@@ -239,10 +245,13 @@ export const createProductionRenderGarbageRuntime = (props: {
             path: `${tier}/chunks/${entry.name}`,
             kind: "chunk",
             digest: `sha256:${entry.name}`,
-            bytes: 0,
+            bytes: null,
+            generation: null,
+            observation: null,
           };
           const snapshot = props.captureTarget(renderJobRoot, target);
           candidate.bytes = snapshot.bytes;
+          candidate.generation = snapshot.targetIdentity;
           candidates.push(candidate);
           candidateSnapshots.set(gcCandidateKey(candidate), snapshot);
         }
@@ -257,12 +266,15 @@ export const createProductionRenderGarbageRuntime = (props: {
             path: `${tier}/quarantine/${entry.name}`,
             kind: "quarantine",
             digest: null,
-            bytes: 0,
+            bytes: null,
+            generation: null,
+            observation: null,
           };
           const snapshot = props.captureTarget(
             path.join(renderJobRoot, tier),
             target,
           );
+          candidate.generation = snapshot.targetIdentity;
           quarantineEntries.push({ candidate, snapshot });
         }
     }
@@ -277,6 +289,15 @@ export const createProductionRenderGarbageRuntime = (props: {
         throw new Error("Render quarantine inventory lost its candidate.");
       const key = gcCandidateKey(entry.candidate);
       entry.candidate.bytes = inventory.bytes;
+      entry.candidate.observation =
+        inventory.evidence === null
+          ? {
+              state: "observation-conflict",
+              authority: "none",
+              reason:
+                "the quarantine marker does not bind one unique preserved generation",
+            }
+          : null;
       candidates.push(entry.candidate);
       candidateSnapshots.set(key, inventory.marker);
       if (inventory.evidence !== null)
@@ -302,18 +323,17 @@ export const createProductionRenderGarbageRuntime = (props: {
         const retainedByManifest = [...publicationPaths].some(
           (file) => file === logical || file.startsWith(`${logical}/`),
         );
+        let integrityFailed = false;
         const adjudicated = captureProxyPublicationGcTarget({
           renderRoot,
           target,
           judge: (snapshot, evidence) => {
-            if (
-              currentProxy === undefined ||
-              entry.name !== renderPublicationFingerprint(currentProxy).slice(7)
-            )
-              return false;
             try {
               const receipt = inspectCapturedProxyBundle(snapshot, evidence);
               return (
+                currentProxy !== undefined &&
+                entry.name ===
+                  renderPublicationFingerprint(currentProxy).slice(7) &&
                 receipt.publicationFingerprint ===
                   renderPublicationFingerprint(currentProxy) &&
                 receipt.compileFingerprint ===
@@ -321,36 +341,50 @@ export const createProductionRenderGarbageRuntime = (props: {
                 receipt.editFingerprint === currentProxy.editFingerprint
               );
             } catch {
+              integrityFailed = true;
               return false;
             }
           },
         });
         const current = adjudicated.value;
-        if (current || retainedByManifest) {
-          if (current) {
-            if (adjudicated.snapshot.kind === "file")
-              publicationPaths.add(logical);
-            else
-              for (const entry of adjudicated.snapshot.entries) {
-                if (entry.kind !== "file") continue;
-                const file = path.join(
-                  adjudicated.snapshot.target,
-                  ...entry.path.split("/"),
-                );
-                publicationPaths.add(
-                  `publication/${normalizeSlash(path.relative(renderRoot, file))}`,
-                );
-              }
-          }
+        if (current) {
+          if (adjudicated.snapshot.kind === "file")
+            publicationPaths.add(logical);
+          else
+            for (const entry of adjudicated.snapshot.entries) {
+              if (entry.kind !== "file") continue;
+              const file = path.join(
+                adjudicated.snapshot.target,
+                ...entry.path.split("/"),
+              );
+              publicationPaths.add(
+                `publication/${normalizeSlash(path.relative(renderRoot, file))}`,
+              );
+            }
           continue;
         }
         const candidate: IAutoMovieProductionRenderGcCandidate = {
           path: logical,
           kind: "publication",
           digest: null,
-          bytes: 0,
+          bytes: adjudicated.snapshot.bytes,
+          generation: adjudicated.snapshot.targetIdentity,
+          observation: retainedByManifest
+            ? {
+                state: "observation-conflict",
+                authority: "none",
+                reason:
+                  "the aggregate manifest references a proxy bundle that did not verify as current",
+              }
+            : integrityFailed
+              ? {
+                  state: "integrity-failed",
+                  authority: "exact-quarantine",
+                  reason:
+                    "the proxy bundle failed receipt, inventory, or digest verification",
+                }
+              : null,
         };
-        candidate.bytes = adjudicated.snapshot.bytes;
         candidates.push(candidate);
         candidateSnapshots.set(gcCandidateKey(candidate), adjudicated.snapshot);
         if (adjudicated.snapshot.kind === "file")
@@ -369,10 +403,13 @@ export const createProductionRenderGarbageRuntime = (props: {
           path: `publication/${relative}`,
           kind: "publication",
           digest: null,
-          bytes: 0,
+          bytes: null,
+          generation: null,
+          observation: null,
         };
         const snapshot = props.captureTarget(renderRoot, file);
         candidate.bytes = snapshot.bytes;
+        candidate.generation = snapshot.targetIdentity;
         candidates.push(candidate);
         candidateSnapshots.set(gcCandidateKey(candidate), snapshot);
       }
@@ -386,7 +423,8 @@ export const createProductionRenderGarbageRuntime = (props: {
     soundRetention.assertCurrent();
     if (apply) {
       const quarantines = new Map<string, string>();
-      for (const candidate of plan.remove) {
+      for (const decision of plan.remove) {
+        const candidate = decision.candidate;
         const snapshot = candidateSnapshots.get(gcCandidateKey(candidate));
         if (snapshot === undefined)
           throw new Error(
@@ -417,6 +455,28 @@ export const createProductionRenderGarbageRuntime = (props: {
             quarantine,
             snapshot,
           });
+      }
+      for (const decision of plan.quarantine) {
+        const candidate = decision.candidate;
+        const snapshot = candidateSnapshots.get(gcCandidateKey(candidate));
+        if (snapshot === undefined)
+          throw new Error(
+            `GC quarantine candidate "${candidate.path}" has no matching inventory snapshot.`,
+          );
+        const preserved = ensureRenderPhysicalDirectory(
+          snapshot.base.path,
+          RENDER_GC_QUARANTINE_EVIDENCE_DIRECTORY,
+        );
+        const markers = ensureRenderPhysicalDirectory(
+          snapshot.base.path,
+          "quarantine",
+        );
+        quarantineCapturedRenderTarget({
+          destination: path.join(markers, `${renderHost.randomUuid()}.json`),
+          isolated: path.join(preserved, renderHost.randomUuid()),
+          quarantine: preserved,
+          snapshot,
+        });
       }
     }
     soundRetention.assertCurrent();
@@ -538,8 +598,9 @@ export const createProductionRenderGarbageRuntime = (props: {
   };
 
   const quarantineStaleSlotOutputs = (
-    chunks: readonly IAutoMovieProductionRenderChunk[],
+    plan: IAutoMovieProductionRenderJobPlan,
   ): void => {
+    const chunks = plan.chunks;
     const currentIds = new Set(chunks.map((chunk) => chunk.id));
     const currentChunks = new Map(
       chunks.map((chunk) => [chunk.slot, chunk.id]),
@@ -566,6 +627,16 @@ export const createProductionRenderGarbageRuntime = (props: {
         throw error;
       }
       let current = false;
+      const expected = currentIds.has(digest)
+        ? chunks.find((chunk) => chunk.id === digest)
+        : undefined;
+      if (expected !== undefined) {
+        const inspection = props.inspectChunk(plan, expected, pointerSnapshot);
+        if (inspection.finding.state === "current") continue;
+        if (inspection.finding.state !== "verified-stale") continue;
+        removeCapturedRenderChunkPointer(pointerSnapshot);
+        continue;
+      }
       try {
         const publication =
           captureRenderChunkPublicationFromPointer(pointerSnapshot);
@@ -574,7 +645,9 @@ export const createProductionRenderGarbageRuntime = (props: {
           publication.receipt.chunk === digest &&
           currentChunks.get(publication.receipt.slot) === digest;
       } catch {
-        current = false;
+        // A pointer that cannot authenticate its generation is unresolved. It
+        // remains in place so render cannot reinterpret it as absence.
+        continue;
       }
       if (current === false) removeCapturedRenderChunkPointer(pointerSnapshot);
     }

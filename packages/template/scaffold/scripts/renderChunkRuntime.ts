@@ -17,6 +17,7 @@ import {
   isAutoMovieLocalProcessOwner,
   probeProductionMedia,
   probeProductionVideoMp4,
+  productionRenderMaterializationDecision,
   productionRenderLayersForPass,
 } from "@automovie/production";
 import path from "node:path";
@@ -28,7 +29,6 @@ import {
   completeRenderAttempt,
   failRenderAttempt,
 } from "./renderAttemptSnapshot";
-import type { ICurrentRenderChunkPublication } from "./renderChunkSnapshot";
 import { productionRenderFrameCaptureInput } from "./renderFrameCaptureInput";
 import {
   type IRenderGcTargetSnapshot,
@@ -37,6 +37,7 @@ import {
   createRenderGcFileSnapshot,
 } from "./renderGcSnapshot";
 import type { IProductionRenderHost } from "./renderHost";
+import type { IProductionRenderChunkInspection } from "./renderPlanningRuntime";
 import type {
   IProductionMaskSidecarPublication,
   IProductionRenderObservationAudit,
@@ -342,18 +343,14 @@ export interface IProductionRenderInvocationObservationState {
 export const createProductionRenderChunkCaptureRuntime = (props: {
   capture: IProductionRenderHost["capture"];
   captureCompleted: (root: string, target: string) => IRenderGcTargetSnapshot;
-  capturePointer: (
-    chunk: IAutoMovieProductionRenderChunk,
-  ) => IRenderGcTargetSnapshot | null;
   createTemporary: (props: {
     name: string;
     state: IRenderGcTargetSnapshot["base"];
   }) => IRenderChunkTemporaryTree;
-  current: (
+  inspect: (
     plan: IAutoMovieProductionRenderJobPlan,
     chunk: IAutoMovieProductionRenderChunk,
-    pointer: IRenderGcTargetSnapshot | null,
-  ) => Promise<ICurrentRenderChunkPublication | null>;
+  ) => Promise<IProductionRenderChunkInspection>;
   encode: (
     frames: readonly Uint8Array[],
     plan: IAutoMovieProductionRenderJobPlan,
@@ -395,7 +392,6 @@ export const createProductionRenderChunkCaptureRuntime = (props: {
     }) => {
       publication: { receipt: IAutoMovieProductionRenderChunkReceipt };
     };
-    removePointer: (pointer: IRenderGcTargetSnapshot) => void;
   };
   renderLivenessScope: string;
   randomUuid: () => string;
@@ -422,11 +418,20 @@ export const createProductionRenderChunkCaptureRuntime = (props: {
       props.pngGeneration.assertCurrent,
       async () => {
         const { PNG } = props.pngGeneration.module;
-        const pointer = props.capturePointer(chunk);
-        const existing = await props.current(plan, chunk, pointer);
-        if (existing !== null) return existing.receipt;
+        const inspection = await props.inspect(plan, chunk);
+        const materialization = productionRenderMaterializationDecision(
+          inspection.finding.state,
+        );
+        if (materialization === "reuse") {
+          if (inspection.current === null)
+            throw new Error(
+              `Chunk "${chunk.slot}" current finding has no verified publication.`,
+            );
+          return inspection.current.receipt;
+        }
+        if (materialization === "refuse")
+          throw new Error(inspection.finding.reason);
         const attempt = props.lease.begin(chunk);
-        if (pointer !== null) props.publication.removePointer(pointer);
         const temporaryOwnership = props.createTemporary({
           name: `${chunk.id.slice(7)}.${props.randomUuid()}.${renderProcessOwnerSuffix(props.owner)}`,
           state: attempt.snapshot.base,

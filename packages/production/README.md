@@ -55,6 +55,7 @@ they are not test-only helpers.
 | `compareAutoMovieVisualRevisions` | Compares two visual-revision receipts for review tooling. |
 | `decodeAutoMovieProjectRevision` / `advanceAutoMovieProjectRevision` | Validate the one non-negative safe-integer revision domain and compute an exact successor before mutation. |
 | `currentAutoMovieLocalProcessOwner` / `observeAutoMovieLocalProcessOwner` | Persist a per-process generation and distinguish absence from PID occupancy, reuse, remote hosts, and unavailable observations. |
+| `planProductionRenderGc` | Produces deterministic retain, remove, quarantine, and manual-adjudication sets without treating an unreadable render generation as absent or stale. |
 
 ## Migration
 

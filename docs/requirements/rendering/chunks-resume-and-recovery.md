@@ -12,6 +12,8 @@ Chunk는 전체 schedule의 겹치지 않는 완전한 partition이어야 하며
 
 현재 expected identity와 일치하고 bytes, digest, dimensions, channel과 receipt가 검증된 output만 재사용해야 한다. Partial, stale, corrupt, missing 또는 unverified output은 exact affected work unit만 다시 materialize해야 한다.
 
+기존 pointer나 publication을 읽을 수 없거나 integrity, locator, ownership 또는 observation이 모순되면 그 generation은 missing으로 취급하지 않아야 한다. 명시적 cleanup 판정이 exact remove 또는 quarantine 권한을 확정하기 전에는 자동 재사용, overwrite와 rerender를 모두 막고 원래 target, captured generation, reason과 evidence를 보존해야 한다.
+
 ### Atomic Publication {#rendering-atomic-publication}
 
 Chunk는 final product와 분리된 temporary 또는 isolated destination에서 모든 expected output을 쓰고 검증한 뒤 원자적으로 current로 publish해야 한다. Half-written frame, incomplete sequence와 receipt 없는 bytes를 다른 job이나 viewer가 current로 보아서는 안 된다.

@@ -69,6 +69,8 @@ const inventoryCacheRoot = (props: {
           kind: props.kind,
           digest: snapshot.contentFingerprint,
           bytes: snapshot.bytes,
+          generation: snapshot.targetIdentity,
+          observation: null,
         },
         snapshot,
       } satisfies IProductionSoundCacheCandidate;
