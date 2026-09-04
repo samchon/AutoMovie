@@ -14,7 +14,7 @@ Color, alpha, depth, normal, motion-like vector, object id와 metadata-like chan
 
 ### Identity와 Mask {#rendering-identity-mask-channels}
 
-Identity channel은 source owner와 instance를 안정적으로 구분하고 같은 input closure에서 frame과 chunk에 걸쳐 같은 mapping을 사용해야 한다. Anti-aliased boundary, transparent surface, occlusion과 background가 mask 판정에 미치는 규칙을 선언해야 한다.
+Identity channel은 source owner와 instance를 안정적으로 구분하고 같은 input closure에서 frame과 chunk에 걸쳐 같은 mapping을 사용해야 한다. Palette identity는 digest 자신을 제외한 version, protocol, background, 모든 entry field와 bounded gap을 canonical하게 결속해야 한다. Mask frame은 같은 shot에서 관찰한 palette와 runtime coverage 및 resident sidecar bytes를 하나의 receipt dependency로 보존하며, unresolved 또는 unnamed geometry를 완전한 structural evidence로 승격하지 않아야 한다. Anti-aliased boundary, transparent surface, occlusion과 background가 mask 판정에 미치는 규칙을 선언해야 한다.
 
 ### Multi-view와 Product {#rendering-multiview-products}
 

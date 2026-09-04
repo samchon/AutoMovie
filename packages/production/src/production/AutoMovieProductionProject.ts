@@ -22,6 +22,7 @@ import {
   IAutoMovieRepaintRuntimeIdentity,
   IAutoMovieReviewTarget,
   IAutoMovieScreenplayIndex,
+  IAutoMovieSemanticMask,
   IAutoMovieShotContract,
   IAutoMovieWorldDesign,
 } from "@automovie/interface";
@@ -74,6 +75,7 @@ import {
   assertProductionRootNamespaceLease,
   releaseProductionRootNamespace,
 } from "./rootNamespaceLock";
+import { verifyAutoMovieProductionSemanticMaskReceipt } from "./semanticMaskEvidence";
 import {
   IAutoMovieProductionDesignGraph,
   validateAutoMovieProductionGraph,
@@ -2863,7 +2865,11 @@ export class AutoMovieProductionProject {
   public capturedRenderViews(
     target: IAutoMovieRenderBundleManifest["target"],
     fingerprint: AutoMovieContentDigest,
-  ): Array<{ time: number; pass: AutoMovieGuidePass }> {
+  ): Array<{
+    time: number;
+    pass: AutoMovieGuidePass;
+    semanticCoverage?: { unresolved: string[]; unaddressed: number };
+  }> {
     this.assertIncarnation();
     const root = this.renderRoot();
     const directory = path.join(
@@ -2873,15 +2879,30 @@ export class AutoMovieProductionProject {
     );
     const linked = lstatOrNull(directory);
     if (linked === null || linked.isDirectory() === false) return [];
-    const views: Array<{ time: number; pass: AutoMovieGuidePass }> = [];
+    const views: Array<{
+      time: number;
+      pass: AutoMovieGuidePass;
+      semanticCoverage?: { unresolved: string[]; unaddressed: number };
+    }> = [];
     for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
       if (entry.isDirectory() === false) continue;
       const manifest = this.verifiedRenderManifest(
         path.join(directory, entry.name, "manifest.json"),
       );
       if (manifest === null) continue;
-      for (const frame of manifest.frames)
-        views.push({ pass: frame.pass, time: frame.time });
+      for (const frame of manifest.frames) {
+        const semantic = manifest.semanticMasks.find(
+          (record) =>
+            record.frame === frame.index && record.pass === frame.pass,
+        );
+        views.push({
+          pass: frame.pass,
+          time: frame.time,
+          ...(semantic === undefined
+            ? {}
+            : { semanticCoverage: structuredClone(semantic.coverage) }),
+        });
+      }
     }
     return views;
   }
@@ -2954,6 +2975,52 @@ export class AutoMovieProductionProject {
         if (probe.width !== frame.width || probe.height !== frame.height)
           return null;
       }
+      const semanticKeys = new Set<string>();
+      for (const semantic of validation.data.semanticMasks) {
+        const key = `${semantic.frame}\u0000${semantic.pass}`;
+        if (semanticKeys.has(key)) return null;
+        semanticKeys.add(key);
+        if (
+          validation.data.target.kind !== "shot" ||
+          semantic.shot !== validation.data.target.id ||
+          validation.data.frames.some(
+            (frame) =>
+              frame.index === semantic.frame && frame.pass === semantic.pass,
+          ) === false
+        )
+          return null;
+        const absoluteSidecar = resolveInside(
+          path.dirname(manifestPath),
+          semantic.sidecar.path,
+        );
+        const sidecarBytes = this.readRenderFile(
+          normalizeSlash(path.relative(root, absoluteSidecar)),
+        );
+        const mask = JSON.parse(
+          Buffer.from(sidecarBytes).toString("utf8"),
+        ) as IAutoMovieSemanticMask;
+        verifyAutoMovieProductionSemanticMaskReceipt({
+          receipt: semantic,
+          expectedFrame: semantic.frame,
+          expectedShot: semantic.shot,
+          evidence: {
+            version: 1,
+            shot: semantic.shot,
+            mask,
+            coverage: semantic.coverage,
+          },
+          resident: { path: semantic.sidecar.path, bytes: sidecarBytes },
+        });
+      }
+      if (
+        validation.data.target.kind === "shot" &&
+        validation.data.frames.some(
+          (frame) =>
+            frame.pass === "mask" &&
+            semanticKeys.has(`${frame.index}\u0000${frame.pass}`) === false,
+        )
+      )
+        return null;
       return validation.data;
     } catch {
       return null;

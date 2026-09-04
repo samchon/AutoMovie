@@ -5,11 +5,12 @@ import {
 } from "@automovie/engine";
 import {
   AutoMovieCaptureObservation,
-  AutoMovieContentDigest,
-  IAutoMovieSemanticMask,
+  IAutoMovieSemanticMaskCoverage,
+  IAutoMovieSemanticMaskEvidence,
+  IAutoMovieSemanticMaskReceipt,
 } from "@automovie/interface";
 
-import { digestAutoMovieBytes } from "./contentIdentity";
+import { compareCodeUnits, digestAutoMovieBytes } from "./contentIdentity";
 
 /**
  * Runtime agreement between a semantic palette and the scene actually drawn.
@@ -17,12 +18,8 @@ import { digestAutoMovieBytes } from "./contentIdentity";
  * @evidence requirements/production-design/continuity-change-and-deliverables.md#production-design-deliverable-gaps Preserves unresolved declarations and unnamed runtime geometry as explicit partial-deliverable facts.
  * @evidence specifications/narrative-and-intent/budgets-continuity-and-deliverables.md#narrative-intent-deliverable-authority-gaps Carries the exact runtime gap population that prevents a structural render product from becoming complete.
  */
-export interface IAutoMovieProductionSemanticMaskCoverage {
-  /** Declared drawable ids absent from the built scene, in ascending order. */
-  unresolved: string[];
-  /** Built meshes that the palette could not name. */
-  unaddressed: number;
-}
+export type IAutoMovieProductionSemanticMaskCoverage =
+  IAutoMovieSemanticMaskCoverage;
 
 /**
  * One shot's palette and runtime coverage captured as an atomic observation.
@@ -30,16 +27,8 @@ export interface IAutoMovieProductionSemanticMaskCoverage {
  * @evidence requirements/production-design/continuity-change-and-deliverables.md#production-design-deliverable-provenance Binds the host-observed semantic payload and its runtime completeness to the exact shot it describes.
  * @evidence specifications/narrative-and-intent/budgets-continuity-and-deliverables.md#narrative-intent-deliverable-provenance-handoff Defines the semantic evidence value a manifest or render receipt must carry without separating palette from coverage.
  */
-export interface IAutoMovieProductionSemanticMaskEvidence {
-  /** Evidence envelope schema. */
-  version: 1;
-  /** Exact compiled shot whose drawn scene was audited. */
-  shot: string;
-  /** Verified current semantic palette. */
-  mask: IAutoMovieSemanticMask;
-  /** Coverage observed from the same built frame. */
-  coverage: IAutoMovieProductionSemanticMaskCoverage;
-}
+export type IAutoMovieProductionSemanticMaskEvidence =
+  IAutoMovieSemanticMaskEvidence;
 
 /**
  * Resident sidecar facts committed beside one mask image.
@@ -47,29 +36,8 @@ export interface IAutoMovieProductionSemanticMaskEvidence {
  * @evidence requirements/production-design/continuity-change-and-deliverables.md#production-design-deliverable-provenance Makes the exact sidecar bytes a content-addressed dependency of the structural image.
  * @evidence specifications/narrative-and-intent/budgets-continuity-and-deliverables.md#narrative-intent-deliverable-provenance-handoff Carries the relative location, digest, and byte count needed to reopen the semantic dependency.
  */
-export interface IAutoMovieProductionSemanticMaskReceipt {
-  /** Receipt record schema. */
-  version: 1;
-  /** Frame identity inside the preview bundle or production render. */
-  frame: number;
-  /** Structural product this record accompanies. */
-  pass: "mask";
-  /** Exact compiled shot represented by the mask product. */
-  shot: string;
-  /** Bundle- or chunk-relative canonical sidecar facts. */
-  sidecar: {
-    /** Portable relative path using forward slashes. */
-    path: string;
-    /** Digest of the exact resident UTF-8 bytes. */
-    digest: AutoMovieContentDigest;
-    /** Positive resident byte count. */
-    bytes: number;
-  };
-  /** Digest of the canonical semantic payload inside the sidecar. */
-  semanticDigest: AutoMovieContentDigest;
-  /** Runtime coverage preserved without normalizing a gap away. */
-  coverage: IAutoMovieProductionSemanticMaskCoverage;
-}
+export type IAutoMovieProductionSemanticMaskReceipt =
+  IAutoMovieSemanticMaskReceipt;
 
 /**
  * Current semantic product classification for preview, review, and render.
@@ -296,8 +264,8 @@ const exactKeys = (
   expected: readonly string[],
   name: string,
 ): void => {
-  const actual = Object.keys(value).sort();
-  const canonical = [...expected].sort();
+  const actual = Object.keys(value).sort(compareCodeUnits);
+  const canonical = [...expected].sort(compareCodeUnits);
   if (
     actual.length !== canonical.length ||
     actual.some((key, index) => key !== canonical[index])

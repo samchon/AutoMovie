@@ -40,7 +40,11 @@ const unit = loadSourceModule<{
     captured: (
       target: IAutoMovieRenderBundleManifest["target"],
       fingerprint: AutoMovieContentDigest,
-    ) => ReadonlyArray<{ time: number; pass: AutoMovieGuidePass }>;
+    ) => ReadonlyArray<{
+      time: number;
+      pass: AutoMovieGuidePass;
+      semanticCoverage?: { unresolved: string[]; unaddressed: number };
+    }>;
   }) => IAutoMovieDiagnostic[];
   reviewEvidenceDiagnostics: (props: {
     contracts: ReadonlyMap<string, IAutoMovieShotContract>;
@@ -113,7 +117,11 @@ const run = (props: {
   frames: IAutoMovieShotContract["reviewFrames"];
   fps?: number;
   scope?: "design" | "source" | "review" | "final";
-  held?: ReadonlyArray<{ time: number; pass: AutoMovieGuidePass }>;
+  held?: ReadonlyArray<{
+    time: number;
+    pass: AutoMovieGuidePass;
+    semanticCoverage?: { unresolved: string[]; unaddressed: number };
+  }>;
   fingerprint?: AutoMovieContentDigest | null;
 }): IAutoMovieDiagnostic[] =>
   reviewEvidenceDiagnostics({
@@ -219,6 +227,50 @@ export const test_production_review_evidence_missing = (): void => {
         () => missing[0]?.message.includes(FINGERPRINT) === true,
       ],
       ["completeIsSilent", () => complete.length === 0],
+      [
+        "maskNeedsCompleteSemanticEvidence",
+        () =>
+          run({
+            frames: [frame("identity", 1.5, ["mask"])],
+            held: [{ pass: "mask", time: 1.5 }],
+          }).length === 1,
+      ],
+      [
+        "maskGapRemainsNamed",
+        () => {
+          const diagnostic = run({
+            frames: [frame("identity", 1.5, ["mask"])],
+            held: [
+              {
+                pass: "mask",
+                time: 1.5,
+                semanticCoverage: {
+                  unresolved: ["node:missing"],
+                  unaddressed: 2,
+                },
+              },
+            ],
+          })[0];
+          return (
+            diagnostic?.message.includes("node:missing") === true &&
+            diagnostic.message.includes("2 unnamed meshes")
+          );
+        },
+      ],
+      [
+        "completeMaskIsHeld",
+        () =>
+          run({
+            frames: [frame("identity", 1.5, ["mask"])],
+            held: [
+              {
+                pass: "mask",
+                time: 1.5,
+                semanticCoverage: { unresolved: [], unaddressed: 0 },
+              },
+            ],
+          }).length === 0,
+      ],
       ["passIsNotInterchangeable", () => wrongPass.length === 1],
       ["timeIsNotInterchangeable", () => wrongTime.length === 1],
       [

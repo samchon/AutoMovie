@@ -1,3 +1,4 @@
+import { renderAutoMovieSemanticMaskSidecar } from "@automovie/engine";
 import type {
   AutoMovieCaptureObservation,
   AutoMovieContentDigest,
@@ -9,6 +10,8 @@ import {
   type IAutoMovieProductionRenderChunkReceipt,
   type IAutoMovieProductionRenderJobPlan,
   canonicalAutoMovieCaptureRuntimeIdentity,
+  classifyAutoMovieProductionSemanticMaskEvidence,
+  createAutoMovieProductionSemanticMaskReceipt,
   digestAutoMovieBytes,
   encodeAutoMoviePathSegment,
   probeProductionMedia,
@@ -318,9 +321,9 @@ export const createProductionRenderChunkCaptureRuntime = (props: {
     publishMask: (props: {
       chunk: AutoMovieContentDigest;
       shot: string;
-      sidecar: Awaited<
+      semanticMask: Awaited<
         ReturnType<IProductionRenderHost["capture"]>
-      >["maskSidecar"];
+      >["semanticMask"];
       stateRoot: string;
     }) =>
       | { status: "available"; value: IProductionMaskSidecarPublication }
@@ -374,6 +377,8 @@ export const createProductionRenderChunkCaptureRuntime = (props: {
     });
     const temporary = temporaryOwnership.path;
     const frameReceipts: IAutoMovieProductionRenderChunkReceipt["frames"] = [];
+    const semanticMasks: IAutoMovieProductionRenderChunkReceipt["semanticMasks"] =
+      [];
     const frameBytes: Uint8Array[] = [];
     const writtenFiles: Array<{
       relative: string;
@@ -418,7 +423,7 @@ export const createProductionRenderChunkCaptureRuntime = (props: {
         const maskSidecar = props.observations.publishMask({
           chunk: chunk.id,
           shot: layer.shot,
-          sidecar: captured.maskSidecar,
+          semanticMask: captured.semanticMask,
           stateRoot: props.stateRoot,
         });
         props.observations.state.maskSidecars.push(
@@ -441,10 +446,42 @@ export const createProductionRenderChunkCaptureRuntime = (props: {
                 reason: maskSidecar.reason,
               },
         );
-        if (chunk.pass === "mask" && maskSidecar.status === "not-run")
-          throw new Error(
-            `Semantic mask sidecar was not produced for shot "${layer.shot}" at frame ${sample.globalFrame}: ${maskSidecar.reason}`,
+        if (chunk.pass === "mask") {
+          const semanticStatus =
+            classifyAutoMovieProductionSemanticMaskEvidence({
+              observation: captured.semanticMask,
+              expectedShot: layer.shot,
+            });
+          if (semanticStatus.status !== "complete")
+            throw new Error(
+              `Semantic mask evidence for shot "${layer.shot}" at frame ${sample.globalFrame} is ${semanticStatus.status}: ${semanticStatus.reason}`,
+            );
+          const sidecarBytes = Buffer.from(
+            renderAutoMovieSemanticMaskSidecar(semanticStatus.evidence.mask),
+            "utf8",
           );
+          const relativeSidecar = `semantic/frame_${String(
+            sample.globalFrame,
+          ).padStart(
+            8,
+            "0",
+          )}.${encodeAutoMoviePathSegment(layer.shot)}.mask.json`;
+          writtenFiles.push({
+            relative: relativeSidecar,
+            snapshot: props.write({
+              bytes: sidecarBytes,
+              file: path.join(temporary, relativeSidecar),
+              ownership: temporaryOwnership,
+            }),
+          });
+          semanticMasks.push(
+            createAutoMovieProductionSemanticMaskReceipt({
+              frame: sample.globalFrame,
+              evidence: semanticStatus.evidence,
+              sidecar: { path: relativeSidecar, bytes: sidecarBytes },
+            }),
+          );
+        }
         const image = PNG.sync.read(Buffer.from(captured.bytes));
         if (
           captured.width !== plan.frameFormat.width ||
@@ -517,10 +554,11 @@ export const createProductionRenderChunkCaptureRuntime = (props: {
         `Encoded chunk "${chunk.slot}" failed frame-count, raster, or frame-clock probe.`,
       );
     const receipt: IAutoMovieProductionRenderChunkReceipt = {
-      version: 1,
+      version: 2,
       slot: chunk.slot,
       chunk: chunk.id,
       frames: frameReceipts,
+      semanticMasks,
       encoded: {
         path: encodedPath,
         digest: digestAutoMovieBytes(encodedBytes),

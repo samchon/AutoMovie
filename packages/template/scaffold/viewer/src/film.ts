@@ -8,9 +8,9 @@ import type {
   IAutoMovieCompiledShotSource,
   IAutoMovieFilmTimeline,
   IAutoMovieSemanticMask,
+  IAutoMovieSemanticMaskCoverage,
 } from "@automovie/interface";
 import {
-  type IAutoMovieSemanticMaskCoverage,
   attachAutoMovieSemanticMask,
   auditAutoMovieSemanticMaskScene,
   mountViewer,

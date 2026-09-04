@@ -2,18 +2,26 @@ import {
   digestAutoMovieSemanticMask,
   renderAutoMovieSemanticMaskSidecar,
 } from "@automovie/engine";
-import { IAutoMovieSemanticMask } from "@automovie/interface";
-import { TestValidator } from "@nestia/e2e";
-import { createHash } from "node:crypto";
-
 import {
+  AutoMovieContentDigest,
+  IAutoMovieSemanticMask,
+} from "@automovie/interface";
+import {
+  IAutoMovieProductionRenderChunk,
+  IAutoMovieProductionRenderChunkReceipt,
+  IAutoMovieProductionRenderJobPlan,
   IAutoMovieProductionSemanticMaskEvidence,
   IAutoMovieProductionSemanticMaskReceipt,
   classifyAutoMovieProductionSemanticMaskEvidence,
   createAutoMovieProductionSemanticMaskReceipt,
+  productionRenderChunkStatuses,
   verifyAutoMovieProductionSemanticMaskEvidence,
   verifyAutoMovieProductionSemanticMaskReceipt,
-} from "../../../../packages/production/src/production/semanticMaskEvidence";
+  verifyProductionRenderChunkReceipt,
+} from "@automovie/production";
+import { TestValidator } from "@nestia/e2e";
+import { createHash } from "node:crypto";
+
 import { throwsError } from "../internal/predicates";
 
 /**
@@ -521,6 +529,92 @@ export const test_production_semantic_mask_evidence = (): void => {
     { frameMoved: true, semanticHeld: true, sidecarHeld: true },
   );
 
+  const chunk = {
+    slot: "mask/00000000-00000001",
+    id: digest("a"),
+    deliverable: "semantic-guide",
+    kind: "guide-pass",
+    pass: "mask",
+    frameStart: 0,
+    frameEndExclusive: 1,
+    frames: [
+      {
+        globalFrame: 0,
+        timelineFrame: 0,
+        timeSeconds: 0,
+        layers: [{ shot: "opening", sourceFrame: 0, weight: 1 }],
+      },
+    ],
+  } satisfies IAutoMovieProductionRenderChunk;
+  const plan = {
+    frameFormat: { width: 16, height: 16, fps: 24 },
+    chunks: [chunk],
+  } as unknown as IAutoMovieProductionRenderJobPlan;
+  const chunkReceipt = {
+    version: 2,
+    slot: chunk.slot,
+    chunk: chunk.id,
+    frames: [
+      {
+        globalFrame: 0,
+        path: "frame_00000000.mask.png",
+        digest: digest("b"),
+        bytes: 1,
+        width: 16,
+        height: 16,
+      },
+    ],
+    semanticMasks: [receipt],
+    encoded: { path: "chunk.mp4", digest: digest("c"), bytes: 1 },
+  } satisfies IAutoMovieProductionRenderChunkReceipt;
+  TestValidator.equals(
+    "chunk completion requires one complete semantic receipt per mask layer",
+    {
+      verified: verifyProductionRenderChunkReceipt({
+        plan,
+        chunk,
+        receipt: chunkReceipt,
+      }),
+      status: productionRenderChunkStatuses({
+        plan,
+        receipts: [chunkReceipt],
+        attempts: [],
+      })[0]!.status,
+      historical: productionRenderChunkStatuses({
+        plan,
+        receipts: [{ ...chunkReceipt, version: 1 } as never],
+        attempts: [],
+      })[0]!.status,
+      missing: productionRenderChunkStatuses({
+        plan,
+        receipts: [{ ...chunkReceipt, semanticMasks: [] }],
+        attempts: [],
+      })[0]!.status,
+      incomplete: productionRenderChunkStatuses({
+        plan,
+        receipts: [
+          {
+            ...chunkReceipt,
+            semanticMasks: [
+              {
+                ...receipt,
+                coverage: { unresolved: ["node:missing"], unaddressed: 0 },
+              },
+            ],
+          },
+        ],
+        attempts: [],
+      })[0]!.status,
+    },
+    {
+      verified: undefined,
+      status: "complete",
+      historical: "failed",
+      missing: "failed",
+      incomplete: "failed",
+    },
+  );
+
   function reopen(overrides: {
     receipt?: IAutoMovieProductionSemanticMaskReceipt;
     evidence?: IAutoMovieProductionSemanticMaskEvidence;
@@ -619,3 +713,6 @@ const renameKey = <T extends object>(
 
 /** Exact UTF-8 bytes used by production sidecar files. */
 const bytes = (value: string): Uint8Array => Buffer.from(value, "utf8");
+
+const digest = (fill: string): AutoMovieContentDigest =>
+  `sha256:${fill.repeat(64).slice(0, 64)}`;

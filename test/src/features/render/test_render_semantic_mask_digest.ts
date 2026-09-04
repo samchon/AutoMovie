@@ -1,5 +1,6 @@
 import {
   AUTOMOVIE_RENDER_METRICS,
+  AutoMovieContentDigest,
   digestAutoMovieSemanticMask,
   evaluateAutoMovieRenderBudget,
   renderAutoMovieSemanticMaskSidecar,
@@ -78,7 +79,7 @@ export const test_render_semantic_mask_digest = (): void => {
   };
   const expectedDigest = `sha256:${createHash("sha256")
     .update(JSON.stringify(expectedPayload), "utf8")
-    .digest("hex")}`;
+    .digest("hex")}` as AutoMovieContentDigest;
   TestValidator.equals(
     "the explicit full payload is the digest preimage and sidecar body",
     {
@@ -309,7 +310,7 @@ const report = (mask: IAutoMovieSemanticMask) =>
       owners: [],
       gaps: [],
       digest: `sha256:${"1".repeat(64)}`,
-    } as IAutoMovieRenderInventory,
+    } as unknown as IAutoMovieRenderInventory,
     budget: null,
     mask,
     target: {

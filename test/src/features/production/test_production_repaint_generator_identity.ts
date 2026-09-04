@@ -439,10 +439,37 @@ export const test_production_repaint_generator_identity = (): void => {
 
   const sourceManifest = {
     frames: [
-      { path: "beauty-0.png", pass: "beauty", digest: digest("beauty-0") },
-      { path: "depth-0.png", pass: "depth", digest: digest("depth-0") },
-      { path: "depth-1.png", pass: "depth", digest: digest("depth-1") },
-      { path: "mask-0.png", pass: "mask", digest: digest("mask-0") },
+      {
+        index: 0,
+        path: "beauty-0.png",
+        pass: "beauty",
+        digest: digest("beauty-0"),
+      },
+      {
+        index: 0,
+        path: "depth-0.png",
+        pass: "depth",
+        digest: digest("depth-0"),
+      },
+      {
+        index: 1,
+        path: "depth-1.png",
+        pass: "depth",
+        digest: digest("depth-1"),
+      },
+      {
+        index: 0,
+        path: "mask-0.png",
+        pass: "mask",
+        digest: digest("mask-0"),
+      },
+    ],
+    semanticMasks: [
+      {
+        frame: 0,
+        pass: "mask",
+        coverage: { unresolved: [], unaddressed: 0 },
+      },
     ],
   } as unknown as IAutoMovieRenderBundleManifest;
   const sourceFrames = sourceManifest.frames.map(({ path, digest }) => ({
@@ -476,6 +503,13 @@ export const test_production_repaint_generator_identity = (): void => {
           ],
         }) !== sourceFingerprint,
       controls: productionRepaintStructuralControls(sourceManifest),
+      incompleteControls: productionRepaintStructuralControls({
+        ...sourceManifest,
+        semanticMasks: sourceManifest.semanticMasks.map((semantic) => ({
+          ...semantic,
+          coverage: { unresolved: ["node:missing"], unaddressed: 0 },
+        })),
+      }),
       requestStable:
         productionRepaintRequestFingerprint({
           ...outputRequest,
@@ -503,6 +537,12 @@ export const test_production_repaint_generator_identity = (): void => {
           frameDigests: [digest("depth-0"), digest("depth-1")],
         },
         { pass: "mask", frameDigests: [digest("mask-0")] },
+      ],
+      incompleteControls: [
+        {
+          pass: "depth",
+          frameDigests: [digest("depth-0"), digest("depth-1")],
+        },
       ],
       requestStable: true,
       requestChanges: true,

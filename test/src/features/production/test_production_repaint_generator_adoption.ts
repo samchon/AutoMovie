@@ -204,7 +204,7 @@ const executableServices = (props: {
       })),
   ).flat();
   const manifest = {
-    version: 5,
+    version: 6,
     target: { kind: "shot", id: input.shot },
     compileFingerprint,
     dialogueRuntimeIdentity: null,
@@ -214,6 +214,7 @@ const executableServices = (props: {
     ),
     renderSpec: { frameFormat },
     frames,
+    semanticMasks: [],
   } as IAutoMovieRenderBundleManifest;
   const bundle = path.join(props.root, "bundle");
   fs.mkdirSync(bundle, { recursive: true });
