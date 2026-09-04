@@ -284,9 +284,17 @@ export interface IAutoMovieCaptionReadabilityBoundary {
  * @evidence specifications/editorial-render-and-delivery/rational-timeline-and-composition.md#spec-editorial-rational-timeline Defines the portable numerator and denominator consumed by timeline calculations.
  */
 export interface IAutoMovieProductionFrameRate {
-  /** Positive integer numerator. */
+  /**
+   * Positive integer numerator.
+   * @evidence requirements/editorial/rational-time-and-ranges.md#editorial-rational-time-ranges Preserves the authored rate numerator.
+   * @evidence specifications/editorial-render-and-delivery/rational-timeline-and-composition.md#spec-editorial-rational-timeline Supplies the canonical clock numerator.
+   */
   numerator: number;
-  /** Positive integer denominator. */
+  /**
+   * Positive integer denominator.
+   * @evidence requirements/editorial/rational-time-and-ranges.md#editorial-rational-time-ranges Preserves the authored rate denominator.
+   * @evidence specifications/editorial-render-and-delivery/rational-timeline-and-composition.md#spec-editorial-rational-timeline Supplies the canonical clock denominator.
+   */
   denominator: number;
 }
 
@@ -628,6 +636,9 @@ export interface IAutoMovieProductionDesign {
     /**
      * Exact frame rate when `fps` is fractional. Integer legacy rates use an
      * equivalent denominator of one when this field is omitted.
+     *
+     * @evidence requirements/editorial/rational-time-and-ranges.md#editorial-rational-time-ranges Preserves the authored frame clock as an exact reduced rational identity.
+     * @evidence specifications/editorial-render-and-delivery/rational-timeline-and-composition.md#spec-editorial-rational-timeline Supplies the canonical timeline numerator and denominator.
      */
     frameRate?: IAutoMovieProductionFrameRate;
     /** Output color space. */
