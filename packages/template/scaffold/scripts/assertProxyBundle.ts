@@ -456,28 +456,34 @@ const validRendition = (
   IAutoMovieProductionRenderManifest["deliverables"][number]["rendition"]
 > =>
   isRecord(value) &&
-  value.kind === "repainted" &&
+  value.version === 2 &&
+  value.kind === "visual-lanes" &&
+  validDigest(value.memberSetDigest) &&
+  (value.observationDigest === null || validDigest(value.observationDigest)) &&
+  (value.observation === null || isRecord(value.observation)) &&
   Array.isArray(value.shots) &&
   value.shots.every(
     (shot) =>
       isRecord(shot) &&
+      typeof shot.occurrence === "string" &&
+      shot.occurrence.length > 0 &&
       typeof shot.shot === "string" &&
       shot.shot.length > 0 &&
       typeof shot.path === "string" &&
       shot.path.length > 0 &&
       validDigest(shot.digest) &&
-      validDigest(shot.receiptDigest) &&
-      validDigest(shot.sourceReviewFingerprint) &&
-      validDigest(shot.renditionReviewFingerprint),
-  ) &&
-  Array.isArray(value.aggregateReviews) &&
-  value.aggregateReviews.every(
-    (review) =>
-      isRecord(review) &&
-      (review.kind === "sequence" || review.kind === "film") &&
-      typeof review.id === "string" &&
-      review.id.length > 0 &&
-      validDigest(review.fingerprint),
+      validDigest(shot.sourceDigest) &&
+      (shot.lane === "deterministic"
+        ? shot.receiptDigest === null && shot.selectionDigest === null
+        : shot.lane === "repainted" &&
+          validDigest(shot.receiptDigest) &&
+          validDigest(shot.selectionDigest) &&
+          typeof shot.selectionId === "string" &&
+          shot.selectionId.length > 0 &&
+          typeof shot.requestId === "string" &&
+          shot.requestId.length > 0 &&
+          typeof shot.attemptId === "string" &&
+          shot.attemptId.length > 0),
   );
 
 const physicalBundle = (

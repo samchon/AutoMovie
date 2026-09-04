@@ -6,15 +6,19 @@ import {
   autoMovieModelGaits,
   compileDefinedShot,
   defineShot,
+  deriveProductionSoundPlan,
+  equalProductionFrameRates,
   formationSlotPosition,
   heightAt,
   importedNodeClipToAutoMovieMotion,
   inheritProductionLighting,
   makeActorSynthesizer,
   placeFormationSlot,
+  productionFrameBoundaryToGridTick,
   readAutoMovieImageFacts,
   realizeShotContract,
   resolveAutoMovieMaterial,
+  resolveProductionFrameRate,
   retargetHumanoidMotion,
   sampleFormationMotion,
   sampleFormationSlotMotion,
@@ -90,6 +94,7 @@ import {
   IAutoMovieMotion,
   IAutoMovieProductionDesign,
   IAutoMovieExternalMotionAdoption as IAutoMovieProductionExternalMotionAdoption,
+  IAutoMovieProductionFrameRate,
   IAutoMovieProductionManifest,
   IAutoMovieProductionMediaProbe,
   IAutoMovieProductionRenderManifest,
@@ -125,6 +130,7 @@ import {
   assetAcquisitionIncomplete,
   assetProcessingOmitted,
 } from "./assetAcquisition";
+import { parseAutoMovieCaptionLanguage } from "./captionLanguage";
 import {
   AUTOMOVIE_COMPILE_FINGERPRINT_PROTOCOL,
   IAutoMovieFingerprintField,
@@ -154,10 +160,32 @@ import {
   materializeCompiledShot,
   materializeProductionModels,
 } from "./materializeProduction";
-import { assertProductionFeatureUsesRenditionClips } from "./muxProductionFeatureMp4";
+import {
+  assertProductionFeatureUsesRenditionClips,
+  productionVisualDeliveryOccurrence,
+} from "./muxProductionFeatureMp4";
 import { probeProductionMedia } from "./probeProductionMedia";
 import { AutoMovieModelArchetypeRegistry } from "./productionArchetypes";
+import {
+  assertProductionOpusProfile,
+  assertProductionRenderedDeliverableFacts,
+  assertProductionVideoProfile,
+  resolveProductionVideoProfile,
+} from "./productionMp4Profile";
+import {
+  assertProductionPngPicture,
+  resolveProductionPngProfile,
+} from "./productionPngPicture";
+import { canonicalProductionWebVtt } from "./productionRenderJob";
 import { productionRenderTargetFingerprint } from "./renderIdentity";
+import {
+  planAutoMovieVisualDelivery,
+  productionDeterministicVisualSourceDigest,
+} from "./repaintDeliveryLane";
+import {
+  autoMovieRepaintSequenceObservationDiagnostics,
+  digestAutoMovieRepaintObservationMembers,
+} from "./repaintSequenceObservation";
 import {
   assetReviewEvidenceDiagnostics,
   consumedModelIds,
@@ -187,6 +215,7 @@ import {
   IAutoMovieProductionDesignGraph,
   validateAutoMovieProductionGraph,
 } from "./validateProductionDesign";
+import { verifyProductionNonVideoDeliverables } from "./verifyProductionNonVideoDeliverables";
 
 /**
  * Production compiler protocol embedded in generated manifests.
@@ -813,6 +842,8 @@ export class AutoMovieProductionCompiler {
           this.project,
           graph.production,
           inputFingerprint,
+          graph.shots,
+          compiled,
         ),
       );
     // Close the loop between what the compiled production SAMPLES and what its
@@ -4550,10 +4581,13 @@ const compileFilmSource = (
     return { value: null, diagnostics: source.diagnostics };
   const diagnostics = [...source.diagnostics];
   const edit = source.value;
-  const fps = props.context.production.frameFormat.fps;
+  const frameRate = resolveProductionFrameRate(
+    props.context.production.frameFormat,
+  );
+  const fps = frameRate.numerator / frameRate.denominator;
   const targetFrames = frameTime(
     { seconds: props.context.production.targetRuntimeSeconds },
-    fps,
+    frameRate,
     "production target runtime",
     diagnostics,
   );
@@ -4623,49 +4657,49 @@ const compileFilmSource = (
       );
     const sourceInFrame = frameTime(
       placement.sourceIn,
-      fps,
+      frameRate,
       `${placement.shot} sourceIn`,
       diagnostics,
     );
     const sourceOutFrame = frameTime(
       placement.sourceOut,
-      fps,
+      frameRate,
       `${placement.shot} sourceOut`,
       diagnostics,
     );
     const startFrame = frameTime(
       placement.start,
-      fps,
+      frameRate,
       `${placement.shot} global start`,
       diagnostics,
     );
     const headHandleFrames = frameTime(
       placement.handles.head,
-      fps,
+      frameRate,
       `${placement.shot} head handle`,
       diagnostics,
     );
     const tailHandleFrames = frameTime(
       placement.handles.tail,
-      fps,
+      frameRate,
       `${placement.shot} tail handle`,
       diagnostics,
     );
     const transitionIn = normalizeFilmTransition(
       placement.transitionIn,
-      fps,
+      frameRate,
       `${placement.shot} transitionIn`,
       diagnostics,
     );
     const transitionOut = normalizeFilmTransition(
       placement.transitionOut,
-      fps,
+      frameRate,
       `${placement.shot} transitionOut`,
       diagnostics,
     );
     const shotFrames = frameTime(
       { seconds: contract.durationSeconds },
-      fps,
+      frameRate,
       `${placement.shot} contract duration`,
       diagnostics,
     );
@@ -4712,7 +4746,7 @@ const compileFilmSource = (
           `Shot "${shot}" is neither placed nor explicitly omitted. Account for every current narrative shot.`,
         ),
       );
-  validateVideoTimeline(segments, props, fps, diagnostics);
+  validateVideoTimeline(segments, props, frameRate, diagnostics);
   const totalFrames =
     segments.length === 0
       ? 0
@@ -4740,15 +4774,20 @@ const compileFilmSource = (
   const audio = normalizeAudioCues(
     edit,
     props.context.assets,
-    fps,
+    frameRate,
     totalFrames,
     diagnostics,
   );
-  const captions = normalizeCaptionCues(edit, fps, totalFrames, diagnostics);
+  const captions = normalizeCaptionCues(
+    edit,
+    frameRate,
+    totalFrames,
+    diagnostics,
+  );
   const effects = normalizeEffectCues(
     edit,
     props.context.effectZones.map((zone) => zone.id),
-    fps,
+    frameRate,
     totalFrames,
     diagnostics,
   );
@@ -4778,6 +4817,7 @@ const compileFilmSource = (
             version: 1,
             id: edit.id,
             fps,
+            frameRate,
             totalFrames,
             segments,
             omissions: edit.omissions,
@@ -4802,18 +4842,25 @@ const filmDiagnostic = (
 
 const frameTime = (
   value: { frame: number } | { seconds: number },
-  fps: number,
+  frameRate: IAutoMovieProductionFrameRate,
   label: string,
   diagnostics: IAutoMovieDiagnostic[],
 ): number | null => {
-  const raw = "frame" in value ? value.frame : value.seconds * fps;
+  const raw =
+    "frame" in value
+      ? value.frame
+      : (value.seconds * frameRate.numerator) / frameRate.denominator;
   const rounded = Math.round(raw);
   if (
     Number.isFinite(raw) === false ||
     Number.isSafeInteger(rounded) === false ||
     rounded < 0 ||
-    Math.abs(raw - rounded) > Number.EPSILON * 64 * Math.max(1, Math.abs(raw))
+    ("frame" in value
+      ? value.frame !== rounded
+      : value.seconds !==
+        (rounded * frameRate.denominator) / frameRate.numerator)
   ) {
+    const fps = frameRate.numerator / frameRate.denominator;
     diagnostics.push(
       filmDiagnostic(
         "film-time-off-grid",
@@ -4827,14 +4874,14 @@ const frameTime = (
 
 const normalizeFilmTransition = (
   transition: IAutoMovieFilmEdit["tracks"]["video"][number]["transitionIn"],
-  fps: number,
+  frameRate: IAutoMovieProductionFrameRate,
   label: string,
   diagnostics: IAutoMovieDiagnostic[],
 ): IAutoMovieFilmTimeline["segments"][number]["transitionIn"] | null => {
   if (transition.kind === "cut") return { kind: "cut" };
   const durationFrames = frameTime(
     transition.duration,
-    fps,
+    frameRate,
     `${label} duration`,
     diagnostics,
   );
@@ -4858,7 +4905,7 @@ const transitionDuration = (
 const validateVideoTimeline = (
   segments: readonly IAutoMovieFilmTimeline["segments"][number][],
   props: ICompileFilmSourceProps,
-  fps: number,
+  frameRate: IAutoMovieProductionFrameRate,
   diagnostics: IAutoMovieDiagnostic[],
 ): void => {
   if (segments.length === 0) {
@@ -4932,7 +4979,7 @@ const validateVideoTimeline = (
           `Shot "${segment.shot}" starts at frame ${segment.startFrame}; transition law requires frame ${expectedStart}. Arbitrary gaps and overlaps are forbidden.`,
         ),
       );
-    validateStateContinuity(previous, segment, props, fps, diagnostics);
+    validateStateContinuity(previous, segment, props, frameRate, diagnostics);
   }
 };
 
@@ -4940,12 +4987,15 @@ const validateStateContinuity = (
   previous: IAutoMovieFilmTimeline["segments"][number],
   current: IAutoMovieFilmTimeline["segments"][number],
   props: ICompileFilmSourceProps,
-  fps: number,
+  frameRate: IAutoMovieProductionFrameRate,
   diagnostics: IAutoMovieDiagnostic[],
 ): void => {
   const previousContract = props.contracts.get(previous.shot)!;
   const currentContract = props.contracts.get(current.shot)!;
-  const previousFrames = Math.round(previousContract.durationSeconds * fps);
+  const previousFrames = Math.round(
+    (previousContract.durationSeconds * frameRate.numerator) /
+      frameRate.denominator,
+  );
   if (
     previous.sourceOutFrame !== previousFrames ||
     current.sourceInFrame !== 0
@@ -4984,7 +5034,7 @@ const validateStateContinuity = (
 const normalizeAudioCues = (
   edit: IAutoMovieFilmEdit,
   assets: readonly string[],
-  fps: number,
+  frameRate: IAutoMovieProductionFrameRate,
   totalFrames: number,
   diagnostics: IAutoMovieDiagnostic[],
 ): IAutoMovieFilmTimeline["tracks"]["audio"] => {
@@ -4994,37 +5044,37 @@ const normalizeAudioCues = (
   for (const cue of edit.tracks.audio) {
     const sourceDurationFrames = frameTime(
       cue.sourceDuration,
-      fps,
+      frameRate,
       `${cue.id} audio source duration`,
       diagnostics,
     );
     const sourceOffsetFrame = frameTime(
       cue.sourceOffset,
-      fps,
+      frameRate,
       `${cue.id} audio source offset`,
       diagnostics,
     );
     const startFrame = frameTime(
       cue.start,
-      fps,
+      frameRate,
       `${cue.id} audio start`,
       diagnostics,
     );
     const durationFrames = frameTime(
       cue.duration,
-      fps,
+      frameRate,
       `${cue.id} audio duration`,
       diagnostics,
     );
     const fadeInFrames = frameTime(
       cue.fadeIn,
-      fps,
+      frameRate,
       `${cue.id} audio fadeIn`,
       diagnostics,
     );
     const fadeOutFrames = frameTime(
       cue.fadeOut,
-      fps,
+      frameRate,
       `${cue.id} audio fadeOut`,
       diagnostics,
     );
@@ -5077,7 +5127,7 @@ const normalizeAudioCues = (
 
 const normalizeCaptionCues = (
   edit: IAutoMovieFilmEdit,
-  fps: number,
+  frameRate: IAutoMovieProductionFrameRate,
   totalFrames: number,
   diagnostics: IAutoMovieDiagnostic[],
 ): IAutoMovieFilmTimeline["tracks"]["captions"] => {
@@ -5087,13 +5137,13 @@ const normalizeCaptionCues = (
   for (const cue of edit.tracks.captions) {
     const startFrame = frameTime(
       cue.start,
-      fps,
+      frameRate,
       `${cue.id} caption start`,
       diagnostics,
     );
     const endFrame = frameTime(
       cue.end,
-      fps,
+      frameRate,
       `${cue.id} caption end`,
       diagnostics,
     );
@@ -5102,7 +5152,7 @@ const normalizeCaptionCues = (
       cue.id.trim().length === 0 ||
       ids.has(cue.id) ||
       cue.text.trim().length === 0 ||
-      /^[A-Za-z]{2,3}(?:-[A-Za-z0-9]{2,8})*$/u.test(cue.language) === false ||
+      parseAutoMovieCaptionLanguage(cue.language) === null ||
       cue.speaker?.trim().length === 0 ||
       startFrame < priorEnd ||
       endFrame <= startFrame ||
@@ -5111,7 +5161,7 @@ const normalizeCaptionCues = (
       diagnostics.push(
         filmDiagnostic(
           "film-caption-cue-invalid",
-          `Caption cue "${cue.id}" must be unique, non-overlapping, in range, plain non-blank text, and use a non-blank language/speaker identity.`,
+          `Caption cue "${cue.id}" must be unique, non-overlapping, in range, plain non-blank text, use a well-formed RFC 5646 language tag, and use a non-blank speaker identity.`,
         ),
       );
     ids.add(cue.id);
@@ -5131,7 +5181,7 @@ const normalizeCaptionCues = (
 const normalizeEffectCues = (
   edit: IAutoMovieFilmEdit,
   zones: readonly string[],
-  fps: number,
+  frameRate: IAutoMovieProductionFrameRate,
   totalFrames: number,
   diagnostics: IAutoMovieDiagnostic[],
 ): IAutoMovieFilmTimeline["tracks"]["effects"] => {
@@ -5141,13 +5191,13 @@ const normalizeEffectCues = (
   for (const cue of edit.tracks.effects) {
     const startFrame = frameTime(
       cue.start,
-      fps,
+      frameRate,
       `${cue.id} effect start`,
       diagnostics,
     );
     const durationFrames = frameTime(
       cue.duration,
-      fps,
+      frameRate,
       `${cue.id} effect duration`,
       diagnostics,
     );
@@ -8793,6 +8843,8 @@ const finalDeliverableDiagnostics = (
   project: AutoMovieProductionProject,
   production: ReturnType<AutoMovieProductionProject["graph"]>["production"],
   inputFingerprint: AutoMovieContentDigest,
+  contracts: ReadonlyMap<string, IAutoMovieShotContract>,
+  compiled: ReadonlyMap<string, IAutoMovieCompiledShotSource>,
 ): IAutoMovieDiagnostic[] => {
   if (production === null) return [];
   let bytes: Uint8Array | null;
@@ -8831,7 +8883,7 @@ const finalDeliverableDiagnostics = (
   }
   if (
     receipt === null ||
-    receipt.version !== 2 ||
+    receipt.version !== 3 ||
     receipt.manifestDigest !== manifestDigest
   )
     return [
@@ -8875,6 +8927,18 @@ const finalDeliverableDiagnostics = (
       ),
     ];
   const diagnostics: IAutoMovieDiagnostic[] = [];
+  let timeline: IAutoMovieFilmTimeline | null = null;
+  try {
+    timeline = readAutoMovieFilmTimeline(project, inputFingerprint);
+  } catch (error) {
+    diagnostics.push(
+      renderDeliverableDiagnostic(
+        "render-deliverable-stale",
+        production.id,
+        `${errorMessage(error)} Final delivery cannot be joined to the current compiled film timeline.`,
+      ),
+    );
+  }
   const declared = new Map(
     production.deliverables.map((deliverable) => [deliverable.id, deliverable]),
   );
@@ -8925,7 +8989,7 @@ const finalDeliverableDiagnostics = (
           `Deliverable "${deliverable.id}" has no output file. Render at least one owned byte artifact and record its digest and size.`,
         ),
       );
-    const probes: IAutoMovieProductionMediaProbe[] = [];
+    const observed: IAutoMovieObservedDeliverableFile[] = [];
     for (const file of deliverable.files) {
       const portablePath = normalizeSlash(file.path).toLowerCase();
       if (filePaths.has(portablePath))
@@ -9012,7 +9076,7 @@ const finalDeliverableDiagnostics = (
                 file.path,
               ),
             );
-          else probes.push(probe);
+          else observed.push({ file, bytes: actual, probe });
         }
       } catch (error) {
         diagnostics.push(
@@ -9028,8 +9092,12 @@ const finalDeliverableDiagnostics = (
     appendDeliverableTimelineDiagnostics(
       diagnostics,
       production,
+      inputFingerprint,
+      contracts,
+      compiled,
+      timeline,
       deliverable,
-      probes,
+      observed,
     );
     appendRenditionDeliveryDiagnostics(
       diagnostics,
@@ -9084,72 +9152,205 @@ const appendRenditionDeliveryDiagnostics = (
       );
     return;
   }
-  if (production.visualDelivery !== "repainted") {
-    if (deliverable.rendition !== undefined)
-      diagnostics.push(
-        renderDeliverableDiagnostic(
-          "render-rendition-provenance-invalid",
-          deliverable.id,
-          "Deterministic feature delivery must not claim repaint rendition provenance.",
-        ),
-      );
+  if (
+    production.visualDelivery === "deterministic" &&
+    deliverable.rendition === undefined
+  )
     return;
-  }
   try {
     const timeline = readAutoMovieFilmTimeline(project, inputFingerprint);
-    const shots = [
-      ...new Set(timeline.segments.map((segment) => segment.shot)),
+    const occurrences = timeline.segments.map((segment, index) => ({
+      occurrence: productionVisualDeliveryOccurrence(segment, index),
+      shot: segment.shot,
+    }));
+    const declared =
+      production.visualDelivery === "mixed"
+        ? (production.visualDeliveryLanes ?? [])
+        : occurrences.map((occurrence) => ({
+            ...occurrence,
+            lane: production.visualDelivery,
+          }));
+    const repaintShots = [
+      ...new Set(
+        declared.flatMap((lane) =>
+          lane.lane === "repainted" ? [lane.shot] : [],
+        ),
+      ),
     ];
-    const receipts = new Map(
+    const selections = new Map(
       project
-        .verifiedRepaintRenditions(shots)
-        .map((receipt) => [receipt.shot, receipt] as const),
+        .verifiedRepaintSelections(repaintShots)
+        .map((selection) => [selection.receipt.shot, selection] as const),
     );
-    const expected = {
-      kind: "repainted" as const,
-      shots: shots.map((shot) => {
-        const receipt = receipts.get(shot);
-        if (receipt === undefined)
-          throw new Error(
-            `Shot "${shot}" has no current verified repaint receipt.`,
-          );
-        return {
-          shot,
-          path: receipt.output.path,
-          digest: receipt.output.digest,
-          receiptDigest: digestAutoMovieBytes(
-            canonicalAutoMovieJsonBytes(receipt),
-          ),
-        };
-      }),
-    };
     if (
       deliverable.rendition === undefined ||
-      Buffer.from(canonicalAutoMovieJsonBytes(deliverable.rendition)).equals(
-        Buffer.from(canonicalAutoMovieJsonBytes(expected)),
-      ) === false
+      deliverable.rendition.version !== 2 ||
+      deliverable.rendition.kind !== "visual-lanes" ||
+      deliverable.rendition.shots.length !== occurrences.length
     )
       throw new Error(
-        "Feature manifest does not exactly cite the current receipt and review chain.",
+        "Feature manifest does not carry the exact current occurrence-lane protocol.",
+      );
+    const members = deliverable.rendition.shots.map((segment, index) => {
+      const occurrence = occurrences[index];
+      const lane = declared[index];
+      if (
+        occurrence === undefined ||
+        lane === undefined ||
+        segment.occurrence !== occurrence.occurrence ||
+        segment.shot !== occurrence.shot ||
+        lane.occurrence !== occurrence.occurrence ||
+        lane.shot !== occurrence.shot ||
+        segment.lane !== lane.lane
+      )
+        throw new Error(
+          `Visual lane occurrence ${index} is stale or reordered.`,
+        );
+      if (segment.lane === "deterministic") {
+        if (
+          segment.receiptDigest !== null ||
+          segment.selectionDigest !== null ||
+          segment.sourceDigest !== segment.digest ||
+          segment.path !==
+            `generated/deterministic/${encodeAutoMoviePathSegment(segment.occurrence)}` ||
+          segment.digest !==
+            productionDeterministicVisualSourceDigest({
+              compileFingerprint: inputFingerprint,
+              occurrence: segment.occurrence,
+            })
+        )
+          throw new Error(
+            `Deterministic occurrence ${index} carries repaint provenance.`,
+          );
+        return {
+          occurrence: segment.occurrence,
+          shot: segment.shot,
+          lane: "deterministic" as const,
+          sourceDigest: segment.sourceDigest,
+        };
+      }
+      const selection = selections.get(segment.shot);
+      if (
+        selection === undefined ||
+        segment.requestId !== selection.receipt.requestId ||
+        segment.attemptId !== selection.receipt.attemptId ||
+        segment.selectionId !== selection.selectionId ||
+        segment.selectionDigest !== selection.selectionDigest ||
+        segment.path !== selection.receipt.output.path ||
+        segment.digest !== selection.receipt.output.digest ||
+        segment.sourceDigest !== selection.receipt.output.digest ||
+        segment.receiptDigest !==
+          digestAutoMovieBytes(canonicalAutoMovieJsonBytes(selection.receipt))
+      )
+        throw new Error(
+          `Repaint occurrence ${index} does not cite its exact current selection chain.`,
+        );
+      return {
+        occurrence: segment.occurrence,
+        shot: segment.shot,
+        lane: "repainted" as const,
+        requestId: segment.requestId,
+        attemptId: segment.attemptId,
+        outputDigest: segment.digest,
+        candidateReceiptDigest: segment.receiptDigest,
+        selectionId: segment.selectionId,
+        selectionDigest: segment.selectionDigest,
+      };
+    });
+    if (
+      deliverable.rendition.memberSetDigest !==
+      digestAutoMovieRepaintObservationMembers(members)
+    )
+      throw new Error("Feature manifest active visual member set is stale.");
+    const observation = deliverable.rendition.observation;
+    const observationDigest =
+      observation === null
+        ? null
+        : digestAutoMovieBytes(canonicalAutoMovieJsonBytes(observation));
+    if (
+      deliverable.rendition.observationDigest !== observationDigest ||
+      (repaintShots.length === 0
+        ? observation !== null
+        : observation === null ||
+          autoMovieRepaintSequenceObservationDiagnostics({
+            observation,
+            productionId: production.id,
+            compileFingerprint: inputFingerprint,
+            timelineFingerprint: digestAutoMovieBytes(
+              canonicalAutoMovieJsonBytes(timeline),
+            ),
+            baseline: observation.baseline,
+            members,
+            artifactDigest: (() => {
+              try {
+                return digestAutoMovieBytes(
+                  project.readRenderFile(observation.artifact.path),
+                );
+              } catch {
+                return null;
+              }
+            })(),
+          }).length !== 0)
+    )
+      throw new Error(
+        "Feature manifest aggregate sequence observation is stale.",
+      );
+    const deliveryPlan = planAutoMovieVisualDelivery({
+      timeline: occurrences,
+      lanes: deliverable.rendition.shots.map((segment) =>
+        segment.lane === "deterministic"
+          ? {
+              occurrence: segment.occurrence,
+              shot: segment.shot,
+              lane: "deterministic" as const,
+              deterministic: {
+                path: segment.path,
+                digest: segment.digest,
+              },
+              repaint: null,
+            }
+          : {
+              occurrence: segment.occurrence,
+              shot: segment.shot,
+              lane: "repainted" as const,
+              deterministic: null,
+              repaint: {
+                path: segment.path,
+                digest: segment.digest,
+                receiptDigest: segment.receiptDigest,
+                selectionDigest: segment.selectionDigest,
+              },
+            },
+      ),
+      policy:
+        production.visualDelivery === "mixed"
+          ? (production.mixedVisualDeliveryPolicy ?? null)
+          : null,
+      currentObservationDigest: observationDigest,
+    });
+    if (deliveryPlan.diagnostics.length !== 0)
+      throw new Error(
+        `Feature manifest visual delivery plan is invalid: ${deliveryPlan.diagnostics.join(", ")}.`,
       );
     const feature = deliverable.files.find(
       (file) => file.mediaType === "video/mp4",
     );
     if (feature === undefined)
       throw new Error("Feature manifest has no video/mp4 output.");
-    assertProductionFeatureUsesRenditionClips({
-      feature: project.readRenderFile(feature.path),
-      timeline,
-      clips: new Map(
-        shots.map(
-          (shot) =>
-            [
+    if (declared.every((lane) => lane.lane === "repainted"))
+      assertProductionFeatureUsesRenditionClips({
+        feature: project.readRenderFile(feature.path),
+        timeline,
+        clips: new Map(
+          repaintShots.map((shot) => {
+            const selection = selections.get(shot)!;
+            return [
               shot,
-              project.readRenderFile(receipts.get(shot)!.output.path),
-            ] as const,
+              project.readRenderFile(selection.receipt.output.path),
+            ] as const;
+          }),
         ),
-      ),
-    });
+      });
   } catch (error) {
     diagnostics.push(
       renderDeliverableDiagnostic(
@@ -9161,176 +9362,468 @@ const appendRenditionDeliveryDiagnostics = (
   }
 };
 
+interface IAutoMovieObservedDeliverableFile {
+  file: IAutoMovieProductionRenderManifest["deliverables"][number]["files"][number];
+  bytes: Uint8Array;
+  probe: IAutoMovieProductionMediaProbe;
+}
+
 const appendDeliverableTimelineDiagnostics = (
   diagnostics: IAutoMovieDiagnostic[],
   production: NonNullable<
     ReturnType<AutoMovieProductionProject["graph"]>["production"]
   >,
+  inputFingerprint: AutoMovieContentDigest,
+  contracts: ReadonlyMap<string, IAutoMovieShotContract>,
+  compiled: ReadonlyMap<string, IAutoMovieCompiledShotSource>,
+  timeline: IAutoMovieFilmTimeline | null,
   deliverable: IAutoMovieProductionRenderManifest["deliverables"][number],
-  probes: readonly IAutoMovieProductionMediaProbe[],
+  observed: readonly IAutoMovieObservedDeliverableFile[],
 ): void => {
-  const timed = ["feature", "guide-pass", "captions", "audio-mix"].includes(
-    deliverable.kind,
+  if (timeline === null) return;
+  const frameRate = resolveProductionFrameRate(production.frameFormat);
+  const profile = resolveProductionVideoProfile({
+    width: production.frameFormat.width,
+    height: production.frameFormat.height,
+    frameRate,
+  });
+  const contract = production.deliverables.find(
+    (candidate) => candidate.id === deliverable.id,
   );
-  const framed =
-    deliverable.kind === "feature" || deliverable.kind === "guide-pass";
-  const encoded =
-    deliverable.kind === "feature" ||
-    deliverable.kind === "guide-pass" ||
-    deliverable.kind === "audio-mix";
-  const expectedFrames = Math.round(
-    production.targetRuntimeSeconds * production.frameFormat.fps,
-  );
-  if (
-    (timed && deliverable.runtimeSeconds !== production.targetRuntimeSeconds) ||
-    (!timed &&
-      deliverable.runtimeSeconds !== null &&
-      (Number.isFinite(deliverable.runtimeSeconds) === false ||
-        deliverable.runtimeSeconds <= 0)) ||
-    (framed && deliverable.frameCount !== expectedFrames) ||
-    (!framed &&
-      deliverable.frameCount !== null &&
-      (Number.isInteger(deliverable.frameCount) === false ||
-        deliverable.frameCount <= 0)) ||
-    (encoded &&
-      (deliverable.codec === null || deliverable.codec.trim().length === 0)) ||
-    (!encoded &&
-      deliverable.codec !== null &&
-      deliverable.codec.trim().length === 0)
-  )
+  const byProbeKind = <Kind extends IAutoMovieProductionMediaProbe["kind"]>(
+    kind: Kind,
+  ): Array<
+    IAutoMovieObservedDeliverableFile & {
+      probe: Extract<IAutoMovieProductionMediaProbe, { kind: Kind }>;
+    }
+  > =>
+    observed.filter(
+      (
+        item,
+      ): item is IAutoMovieObservedDeliverableFile & {
+        probe: Extract<IAutoMovieProductionMediaProbe, { kind: Kind }>;
+      } => item.probe.kind === kind,
+    );
+  const exactlyOne = <Item>(items: readonly Item[], label: string): Item => {
+    if (items.length !== 1)
+      throw new Error(
+        `Expected exactly one ${label}, observed ${items.length}.`,
+      );
+    return items[0]!;
+  };
+  try {
+    if (observed.length !== deliverable.files.length)
+      throw new Error(
+        "Not every manifest file passed its exact current receipt and probe comparison.",
+      );
+    if (deliverable.kind === "feature") {
+      const feature = exactlyOne(byProbeKind("feature"), "feature MP4");
+      if (observed.length !== 1 || feature.file.mediaType !== "video/mp4")
+        throw new Error("Feature delivery must own only one video/mp4 file.");
+      assertProductionRenderedDeliverableFacts({
+        kind: deliverable.kind,
+        runtimeSeconds: deliverable.runtimeSeconds,
+        frameCount: deliverable.frameCount,
+        codec: deliverable.codec,
+        expectedCaptionRuntimeSeconds: null,
+        probe: feature.probe,
+      });
+      assertProductionVideoProfile({
+        expected: profile,
+        actual: feature.probe.video,
+      });
+      assertProductionOpusProfile(feature.probe.audio);
+      assertExactAudioVideoPresentation(
+        feature.probe.video,
+        feature.probe.audio,
+      );
+      assertExactVideoTimeline(feature.probe.video, timeline);
+      return;
+    }
+    if (deliverable.kind === "guide-pass") {
+      const video = exactlyOne(byProbeKind("video"), "guide video/mp4");
+      if (video.file.mediaType !== "video/mp4")
+        throw new Error("Guide video must declare media type video/mp4.");
+      assertProductionRenderedDeliverableFacts({
+        kind: deliverable.kind,
+        runtimeSeconds: deliverable.runtimeSeconds,
+        frameCount: deliverable.frameCount,
+        codec: deliverable.codec,
+        expectedCaptionRuntimeSeconds: null,
+        probe: video.probe,
+      });
+      assertProductionVideoProfile({ expected: profile, actual: video.probe });
+      assertExactVideoTimeline(video.probe, timeline);
+      const controls = byProbeKind("png");
+      const guidePass =
+        contract?.kind === "guide-pass" ? (contract.pass ?? "pose") : "pose";
+      if (
+        controls.length !== timeline.totalFrames ||
+        observed.length !== controls.length + 1
+      )
+        throw new Error(
+          `Guide delivery requires ${timeline.totalFrames} PNG controls beside its video.`,
+        );
+      controls.forEach((control, index) => {
+        const suffix = `frames/${guidePass}/frame_${String(index).padStart(8, "0")}.png`;
+        const portablePath = normalizeSlash(control.file.path);
+        if (
+          control.file.mediaType !== "image/png" ||
+          (portablePath !== suffix &&
+            portablePath.endsWith(`/${suffix}`) === false)
+        )
+          throw new Error(
+            `Guide control ${index} must own the continuous path "${suffix}".`,
+          );
+        assertProductionPngPicture({
+          profile: resolveProductionPngProfile({
+            role: "guide-frame",
+            width: production.frameFormat.width,
+            height: production.frameFormat.height,
+          }),
+          actual: control.probe.picture,
+        });
+      });
+      return;
+    }
+    if (deliverable.kind === "preview") {
+      const pictures = byProbeKind("png");
+      if (pictures.length === 0 || pictures.length !== observed.length)
+        throw new Error(
+          "Preview delivery must own one or more PNG pictures only.",
+        );
+      assertProductionRenderedDeliverableFacts({
+        kind: deliverable.kind,
+        runtimeSeconds: deliverable.runtimeSeconds,
+        frameCount: deliverable.frameCount,
+        codec: deliverable.codec,
+        expectedCaptionRuntimeSeconds: null,
+        probe: pictures[0]!.probe,
+      });
+      for (const picture of pictures) {
+        if (picture.file.mediaType !== "image/png")
+          throw new Error("Preview picture must declare media type image/png.");
+        assertProductionPngPicture({
+          profile: resolveProductionPngProfile({
+            role: "preview",
+            width: production.frameFormat.width,
+            height: production.frameFormat.height,
+          }),
+          actual: picture.probe.picture,
+        });
+      }
+      return;
+    }
+    if (deliverable.kind === "captions") {
+      const caption = exactlyOne(byProbeKind("webvtt"), "caption WebVTT");
+      if (observed.length !== 1 || caption.file.mediaType !== "text/vtt")
+        throw new Error("Caption delivery must own only one text/vtt file.");
+      assertProductionRenderedDeliverableFacts({
+        kind: deliverable.kind,
+        runtimeSeconds: deliverable.runtimeSeconds,
+        frameCount: deliverable.frameCount,
+        codec: deliverable.codec,
+        expectedCaptionRuntimeSeconds: production.targetRuntimeSeconds,
+        probe: caption.probe,
+      });
+      verifyProductionNonVideoDeliverables({
+        caption: {
+          required: contract?.required ?? true,
+          expected: canonicalProductionWebVtt(timeline),
+          actual: caption.bytes,
+        },
+        sound: null,
+      });
+      return;
+    }
+
+    const audio = exactlyOne(byProbeKind("audio"), "audio/mp4 mix");
+    const evidence = exactlyOne(
+      byProbeKind("sound-evidence"),
+      "sound evidence JSON",
+    );
+    const pictures = byProbeKind("png");
+    if (observed.length !== 4 || pictures.length !== 2)
+      throw new Error(
+        "Audio delivery must own audio.mp4, evidence.json, waveform.png, and spectrogram.png only.",
+      );
+    if (
+      audio.file.mediaType !== "audio/mp4" ||
+      evidence.file.mediaType !== "application/json"
+    )
+      throw new Error(
+        "Audio and evidence files must declare their closed media types.",
+      );
+    assertProductionRenderedDeliverableFacts({
+      kind: deliverable.kind,
+      runtimeSeconds: deliverable.runtimeSeconds,
+      frameCount: deliverable.frameCount,
+      codec: deliverable.codec,
+      expectedCaptionRuntimeSeconds: null,
+      probe: audio.probe,
+    });
+    assertProductionOpusProfile(audio.probe);
+    assertCurrentSoundEvidence({
+      inputFingerprint,
+      production,
+      timeline,
+      contracts,
+      compiled,
+      evidence: evidence.probe.evidence,
+      evidenceBytes: evidence.bytes,
+      audio,
+    });
+    for (const picture of pictures) {
+      const name = path.posix.basename(normalizeSlash(picture.file.path));
+      const role =
+        name === "waveform.png"
+          ? "waveform"
+          : name === "spectrogram.png"
+            ? "spectrogram"
+            : null;
+      if (role === null || picture.file.mediaType !== "image/png")
+        throw new Error(
+          `Unexpected audio evidence raster "${picture.file.path}".`,
+        );
+      assertProductionPngPicture({
+        profile: resolveProductionPngProfile({ role }),
+        actual: picture.probe.picture,
+      });
+    }
+  } catch (error) {
     diagnostics.push(
       renderDeliverableDiagnostic(
-        "render-deliverable-incomplete",
+        "render-deliverable-media-mismatch",
         deliverable.id,
-        `Deliverable "${deliverable.id}" has incomplete runtime, frame-count, or codec evidence for kind "${deliverable.kind}". Match the ${production.targetRuntimeSeconds}s production clock and ${expectedFrames} frames where applicable.`,
+        `${errorMessage(error)} Re-render the declared deliverable from the current timeline and semantic plan.`,
       ),
     );
-  if (deliverable.kind === "feature" || deliverable.kind === "guide-pass") {
-    const videos = probes.filter((probe) => probe.kind === "video");
-    const video = videos.length === 1 ? videos[0] : null;
-    const controls =
-      deliverable.kind === "guide-pass"
-        ? probes.filter((probe) => probe.kind === "png")
-        : [];
-    const guideContract = production.deliverables.find(
-      (candidate) =>
-        candidate.id === deliverable.id && candidate.kind === "guide-pass",
+  }
+};
+
+const assertExactAudioVideoPresentation = (
+  video: Extract<IAutoMovieProductionMediaProbe, { kind: "video" }>,
+  audio: Extract<IAutoMovieProductionMediaProbe, { kind: "audio" }>,
+): void => {
+  const terms = [
+    video.presentation.movieDuration,
+    video.presentation.movieTimescale,
+    audio.timebase.movieDuration,
+    audio.timebase.movieTimescale,
+  ];
+  if (
+    terms.some((value) => Number.isSafeInteger(value) === false || value <= 0)
+  )
+    throw new Error(
+      "Audio/video presentation clocks are not positive safe integers.",
     );
-    const guidePass =
-      deliverable.kind === "guide-pass"
-        ? (guideContract?.pass ?? "pose")
-        : null;
-    const controlPaths =
-      guidePass === null
-        ? []
-        : deliverable.files
-            .filter((file) => file.mediaType === "image/png")
-            .map((file) => normalizeSlash(file.path));
-    const expectedControlPath = (frame: number): string =>
-      `frames/${guidePass}/frame_${String(frame).padStart(8, "0")}.png`;
-    if (
-      video?.kind !== "video" ||
-      (deliverable.kind === "feature" && probes.length !== 1) ||
-      (deliverable.kind === "guide-pass" &&
-        (controls.length !== probes.length - 1 ||
-          controlPaths.length !== expectedFrames ||
-          controlPaths.some(
-            (control, index) =>
-              control !== expectedControlPath(index) &&
-              control.endsWith(`/${expectedControlPath(index)}`) === false,
-          ) ||
-          controls.some(
-            (probe) =>
-              probe.width !== production.frameFormat.width ||
-              probe.height !== production.frameFormat.height,
-          ))) ||
-      video.width !== production.frameFormat.width ||
-      video.height !== production.frameFormat.height ||
-      video.frameCount !== expectedFrames ||
-      frameClockClose(video.fps, production.frameFormat.fps) === false ||
-      frameClockClose(video.runtimeSeconds, production.targetRuntimeSeconds) ===
-        false ||
-      deliverable.codec?.toLowerCase() !== video.codec ||
-      deliverable.frameCount !== video.frameCount ||
-      deliverable.runtimeSeconds !== video.runtimeSeconds
-    )
-      diagnostics.push(
-        renderDeliverableDiagnostic(
-          "render-deliverable-media-mismatch",
-          deliverable.id,
-          `Deliverable "${deliverable.id}" must own one parsed ${production.frameFormat.width}x${production.frameFormat.height} H.264 MP4 at ${production.frameFormat.fps}fps with ${expectedFrames} resident samples and ${production.targetRuntimeSeconds}s runtime${deliverable.kind === "guide-pass" ? `, plus exactly ${expectedFrames} continuous same-raster "${guidePass}" PNG controls` : ""}. Manifest strings cannot substitute for parser-derived media facts.`,
-        ),
+  if (
+    BigInt(video.presentation.movieDuration) *
+      BigInt(audio.timebase.movieTimescale) !==
+    BigInt(audio.timebase.movieDuration) *
+      BigInt(video.presentation.movieTimescale)
+  )
+    throw new Error(
+      "Feature audio and video do not end at the same exact rational presentation boundary.",
+    );
+};
+
+const assertExactVideoTimeline = (
+  video: Extract<IAutoMovieProductionMediaProbe, { kind: "video" }>,
+  timeline: IAutoMovieFilmTimeline,
+): void => {
+  const frameRate = resolveProductionFrameRate(timeline);
+  if (video.frameCount !== timeline.totalFrames)
+    throw new Error(
+      `Video sample count ${video.frameCount} differs from current timeline ${timeline.totalFrames}.`,
+    );
+  if (
+    BigInt(video.presentation.movieDuration) * BigInt(frameRate.numerator) !==
+    BigInt(timeline.totalFrames) *
+      BigInt(frameRate.denominator) *
+      BigInt(video.presentation.movieTimescale)
+  )
+    throw new Error(
+      "Video presentation duration does not equal the current exact frame boundary.",
+    );
+};
+
+const assertCurrentSoundEvidence = (props: {
+  inputFingerprint: AutoMovieContentDigest;
+  production: NonNullable<
+    ReturnType<AutoMovieProductionProject["graph"]>["production"]
+  >;
+  timeline: IAutoMovieFilmTimeline;
+  contracts: ReadonlyMap<string, IAutoMovieShotContract>;
+  compiled: ReadonlyMap<string, IAutoMovieCompiledShotSource>;
+  evidence: Extract<
+    IAutoMovieProductionMediaProbe,
+    { kind: "sound-evidence" }
+  >["evidence"];
+  evidenceBytes: Uint8Array;
+  audio: IAutoMovieObservedDeliverableFile & {
+    probe: Extract<IAutoMovieProductionMediaProbe, { kind: "audio" }>;
+  };
+}): void => {
+  const frameRate = resolveProductionFrameRate(props.timeline);
+  const planRate = resolveProductionFrameRate(props.evidence.plan);
+  if (
+    props.evidence.plan.inputFingerprint !== props.inputFingerprint ||
+    props.timeline.inputFingerprint !== props.inputFingerprint ||
+    props.evidence.plan.totalFrames !== props.timeline.totalFrames ||
+    equalProductionFrameRates(planRate, frameRate) === false
+  )
+    throw new Error(
+      "Sound evidence plan does not share the current compile fingerprint, exact frame rate, and total frame count.",
+    );
+  const expectedPlan = deriveProductionSoundPlan({
+    timeline: props.timeline,
+    contracts: props.contracts,
+    compiled: props.compiled,
+    ...(props.production.sound?.propagation === undefined
+      ? {}
+      : { propagationProfile: props.production.sound.propagation }),
+    ...(props.production.sound?.acousticResponse === undefined
+      ? {}
+      : { acousticProfile: props.production.sound.acousticResponse }),
+  });
+  const actualPlanWithoutAcoustics = structuredClone(props.evidence.plan);
+  for (const event of actualPlanWithoutAcoustics.events)
+    delete event.acousticResponse;
+  if (
+    Buffer.from(canonicalAutoMovieJsonBytes(actualPlanWithoutAcoustics)).equals(
+      Buffer.from(canonicalAutoMovieJsonBytes(expectedPlan)),
+    ) === false
+  )
+    throw new Error(
+      "Sound evidence does not contain the complete current compiler-derived sound plan.",
+    );
+  const acousticProfile = props.production.sound?.acousticResponse;
+  for (const event of props.evidence.plan.events) {
+    const response = event.acousticResponse;
+    if (acousticProfile === undefined && response !== undefined)
+      throw new Error(
+        `Sound event "${event.id}" carries an undeclared acoustic response.`,
       );
-  } else if (deliverable.kind === "preview") {
-    if (
-      probes.length !== deliverable.files.length ||
-      probes.some(
-        (probe) =>
-          probe.kind !== "png" ||
-          probe.width !== production.frameFormat.width ||
-          probe.height !== production.frameFormat.height,
-      )
-    )
-      diagnostics.push(
-        renderDeliverableDiagnostic(
-          "render-deliverable-media-mismatch",
-          deliverable.id,
-          `Preview deliverable "${deliverable.id}" must contain decoded PNGs at the exact ${production.frameFormat.width}x${production.frameFormat.height} production raster.`,
-        ),
+    if (acousticProfile !== undefined && response === undefined)
+      throw new Error(
+        `Sound event "${event.id}" lacks its selected acoustic response outcome.`,
       );
-  } else if (deliverable.kind === "captions") {
     if (
-      probes.length !== deliverable.files.length ||
-      probes.some(
-        (probe) =>
-          probe.kind !== "webvtt" ||
-          probe.lastCueSeconds > production.targetRuntimeSeconds,
-      )
+      response?.status === "available" &&
+      (response.profile !== acousticProfile?.id ||
+        response.inputRevision !== props.inputFingerprint)
     )
-      diagnostics.push(
-        renderDeliverableDiagnostic(
-          "render-deliverable-media-mismatch",
-          deliverable.id,
-          `Caption deliverable "${deliverable.id}" must contain parser-verified, ordered, non-empty WebVTT cues wholly inside the ${production.targetRuntimeSeconds}s production timeline.`,
-        ),
-      );
-  } else {
-    const audio = probes.filter((probe) => probe.kind === "audio");
-    const rasters = probes.filter((probe) => probe.kind === "png");
-    const evidence = probes.filter((probe) => probe.kind === "sound-evidence");
-    if (
-      audio.length !== 1 ||
-      rasters.length !== 2 ||
-      evidence.length !== 1 ||
-      frameClockClose(
-        audio[0]!.runtimeSeconds,
-        production.targetRuntimeSeconds,
-      ) === false ||
-      audio[0]!.sampleCount <= 0 ||
-      audio[0]!.channels !== 2 ||
-      audio[0]!.sampleRate !== 48_000 ||
-      /^(opus|mp4a)(?:\.|$)/i.test(audio[0]!.codec) === false ||
-      deliverable.codec !== audio[0]!.codec ||
-      deliverable.runtimeSeconds !== audio[0]!.runtimeSeconds ||
-      evidence[0]!.clippingSamples !== 0 ||
-      evidence[0]!.eventAlignmentPassed === false
-    )
-      diagnostics.push(
-        renderDeliverableDiagnostic(
-          "render-deliverable-media-mismatch",
-          deliverable.id,
-          `Audio deliverable "${deliverable.id}" must own one exact-runtime parsed audio/mp4 track, waveform and spectrogram PNGs, and parser-verified zero-clipping event-alignment evidence.`,
-        ),
+      throw new Error(
+        `Sound event "${event.id}" acoustic response is not bound to the current selected profile and compile.`,
       );
   }
+  const expectedSampleFrames = productionFrameBoundaryToGridTick({
+    frame: props.timeline.totalFrames,
+    frameRate,
+    ticksPerSecond: props.evidence.plan.sampleRate,
+    rounding: "nearest",
+  });
+  if (
+    props.evidence.analysis.sampleRate !== props.evidence.plan.sampleRate ||
+    props.evidence.analysis.sampleFrames !== expectedSampleFrames ||
+    props.evidence.analysis.runtimeSeconds !==
+      expectedSampleFrames / props.evidence.plan.sampleRate ||
+    props.evidence.analysis.clippingSamples !== 0 ||
+    props.evidence.analysis.samplePeak < 0 ||
+    props.evidence.analysis.samplePeak > 1
+  )
+    throw new Error(
+      "Sound analysis does not describe the exact current pre-encode PCM boundary and unclipped domain.",
+    );
+  const expectedEventIds = props.evidence.plan.events.map((event) => event.id);
+  const observedEventIds = props.evidence.analysis.eventAlignment.map(
+    (event) => event.id,
+  );
+  if (JSON.stringify(observedEventIds) !== JSON.stringify(expectedEventIds))
+    throw new Error(
+      "Sound analysis event identities or order differ from the current plan.",
+    );
+  props.evidence.analysis.eventAlignment.forEach((alignment, index) => {
+    const event = props.evidence.plan.events[index]!;
+    const expectedFrame =
+      event.propagation?.boundary === "trimmed-at-segment"
+        ? event.frame
+        : (event.propagation?.arrivalFrame ?? event.frame);
+    const expectedSample = productionFrameBoundaryToGridTick({
+      frame: expectedFrame,
+      frameRate,
+      ticksPerSecond: props.evidence.plan.sampleRate,
+      rounding: "nearest",
+    });
+    if (
+      alignment.expectedSeconds !==
+        expectedSample / props.evidence.plan.sampleRate ||
+      alignment.passed === false ||
+      alignment.errorFrames < 0 ||
+      alignment.errorFrames > 1
+    )
+      throw new Error(
+        `Sound analysis event "${alignment.id}" does not match its current planned boundary and passing frame gate.`,
+      );
+  });
+  const expectedTtsLines = props.evidence.plan.dialogue.map((line) => line.id);
+  const observedTtsLines = props.evidence.tts.map((receipt) => receipt.line);
+  if (JSON.stringify(observedTtsLines) !== JSON.stringify(expectedTtsLines))
+    throw new Error(
+      "Sound TTS receipt identities or order differ from current dialogue.",
+    );
+  const presentationSamples = exactPresentationTicks(
+    props.audio.probe.timebase.movieDuration,
+    props.audio.probe.timebase.movieTimescale,
+    props.audio.probe.timebase.mediaTimescale,
+  );
+  if (presentationSamples !== expectedSampleFrames)
+    throw new Error(
+      "Final Opus presentation does not end at the current pre-encode PCM boundary.",
+    );
+  verifyProductionNonVideoDeliverables({
+    caption: null,
+    sound: {
+      expectedPlan: props.evidence.plan,
+      expectedAnalysis: props.evidence.analysis,
+      expectedTts: props.evidence.tts,
+      expectedAudio: {
+        path: path.posix.basename(normalizeSlash(props.audio.file.path)),
+        mediaType: "audio/mp4",
+        bytes: props.audio.file.bytes,
+        digest: props.audio.file.digest,
+      },
+      evidence: props.evidenceBytes,
+    },
+  });
+};
+
+const exactPresentationTicks = (
+  duration: number,
+  timescale: number,
+  destinationTimescale: number,
+): number => {
+  if (
+    [duration, timescale, destinationTimescale].some(
+      (value) => Number.isSafeInteger(value) === false || value <= 0,
+    )
+  )
+    throw new Error("Presentation conversion requires positive safe integers.");
+  const numerator = BigInt(duration) * BigInt(destinationTimescale);
+  const denominator = BigInt(timescale);
+  if (numerator % denominator !== 0n)
+    throw new Error(
+      "Presentation duration is not an exact integer on the destination clock.",
+    );
+  const quotient = numerator / denominator;
+  if (quotient > BigInt(Number.MAX_SAFE_INTEGER))
+    throw new Error("Presentation duration exceeds the safe integer domain.");
+  return Number(quotient);
 };
 
 const canonicalizeProbe = (probe: IAutoMovieProductionMediaProbe): string =>
   Buffer.from(canonicalAutoMovieJsonBytes(probe)).toString("utf8");
-
-const frameClockClose = (left: number, right: number): boolean =>
-  Math.abs(left - right) <=
-  Number.EPSILON * 64 * Math.max(1, Math.abs(left), Math.abs(right));
 
 const renderDeliverableDiagnostic = (
   code: AutoMovieDiagnosticCode,

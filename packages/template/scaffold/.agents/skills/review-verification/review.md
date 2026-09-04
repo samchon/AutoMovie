@@ -26,6 +26,8 @@ Compare candidates only when they share the relevant source and intent, semantic
 
 For a visual or audible surface, inspect the exact frame for image facts, play the interval for motion, timing, transition, continuity and synchronization, and read the complete ordered work for causality, pacing, long continuity and ending state. State when a conclusion rests on samples. A sampled set never becomes whole-population coverage without a contract that justifies that inference.
 
+For a film containing any repaint lane, review the complete ordered active occurrence set as one transaction. Declare the current structured `repaintSequenceBaseline` separately, then record the current compile/timeline, that exact baseline, artifact/runtime/context, terminal status, and each flicker, identity-drift, geometry-warp, texture-crawl, and transition-mismatch verdict even when it fails. Replacing or reversing any selection, or changing any baseline field, invalidates that observation; repeat the whole-sequence playback before finalization. A mixed delivery additionally reviews every actual adjacent lane crossing, and a missing repaint source is a refusal rather than permission to fall back to deterministic pixels.
+
 ## Record findings and consequences
 
 Locate each finding at the narrowest stable address: evidence target and host, source owner, diagnostic, subject and viewpoint, frame, interval, sound or caption event, or whole-production scope. Separate the observed result, expected result, difference, production consequence, and proven cause. Do not present an inferred cause as observed fact.

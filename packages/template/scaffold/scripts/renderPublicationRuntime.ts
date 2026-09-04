@@ -1,3 +1,4 @@
+import { resolveProductionFrameRate } from "@automovie/engine";
 import type { IAutoMovieProductionEvidence } from "@automovie/evidence";
 import type {
   AutoMovieContentDigest,
@@ -6,24 +7,38 @@ import type {
   IAutoMovieProductionRenderManifest,
   IAutoMovieProductionRenditionDelivery,
   IAutoMovieRepaintReceipt,
+  IAutoMovieRepaintSequenceObservation,
 } from "@automovie/interface";
 import {
   AutoMovieProductionCompiler,
   AutoMovieProductionProject,
   type IAutoMovieProductionRenderChunk,
   type IAutoMovieProductionRenderJobPlan,
+  type IAutoMovieVisualDeliveryLane,
   assembleProductionChunkVideoMp4,
+  assertProductionOpusProfile,
+  assertProductionPngPicture,
+  assertProductionVideoProfile,
+  autoMovieRepaintSequenceObservationDiagnostics,
   canonicalAutoMovieCaptureRuntimeIdentity,
   canonicalAutoMovieJsonBytes,
-  conformProductionRenditionVideoMp4,
+  conformProductionVisualDeliveryVideoMp4,
   digestAutoMovieBytes,
+  digestAutoMovieRepaintObservationMembers,
   encodeAutoMoviePathSegment,
   muxProductionFeatureMp4,
+  normalizeAutoMovieVisualDeliveryLanes,
   openAutoMovieProduction,
+  planAutoMovieVisualDelivery,
   probeProductionMedia,
+  productionDeterministicVisualSourceDigest,
   productionPublicationInputFingerprint,
+  productionVisualDeliveryOccurrence,
   readAutoMovieFilmTimeline,
+  resolveProductionPngProfile,
+  resolveProductionVideoProfile,
   sampleProductionRenderFrame,
+  verifyProductionNonVideoDeliverables,
 } from "@automovie/production";
 import path from "node:path";
 import { isDeepStrictEqual } from "node:util";
@@ -241,6 +256,10 @@ export const createProductionRenderFinalizationRuntime = (props: {
   ) => void;
   publication: IProductionRenderPublicationRuntime;
   repaintSelection: () => IAutoMovieProductionRepaintSelection | null;
+  repaintSequenceBaseline: () =>
+    | IAutoMovieRepaintSequenceObservation["baseline"]
+    | null;
+  repaintSequenceObservation: () => IAutoMovieRepaintSequenceObservation | null;
   root: string;
   sound: IProductionSoundRuntime;
 }) => {
@@ -248,6 +267,8 @@ export const createProductionRenderFinalizationRuntime = (props: {
   const planningRuntime = props.planning;
   const productionId = props.productionId;
   const productionRepaintSelection = props.repaintSelection;
+  const productionRepaintSequenceBaseline = props.repaintSequenceBaseline;
+  const productionRepaintSequenceObservation = props.repaintSequenceObservation;
   const publicationRuntime = props.publication;
   const renderHost = props.host;
   const renderProgress = props.progress;
@@ -302,8 +323,7 @@ export const createProductionRenderFinalizationRuntime = (props: {
     if (plan.tier.kind === "final")
       publicationRuntime.assertMatchingProxy(project, plan);
     const timeline =
-      plan.tier.kind === "final" &&
-      graph.production.visualDelivery === "repainted"
+      plan.tier.kind === "final"
         ? readAutoMovieFilmTimeline(project, plan.compileFingerprint)
         : null;
     const selectedRepaint =
@@ -317,21 +337,50 @@ export const createProductionRenderFinalizationRuntime = (props: {
                 ? []
                 : [
                     ...new Set(
-                      timeline.segments.map((segment) => segment.shot),
+                      timeline.segments.flatMap((segment, index) => {
+                        const lane =
+                          graph.production!.visualDelivery === "mixed"
+                            ? graph.production!.visualDeliveryLanes?.find(
+                                (candidate) =>
+                                  candidate.occurrence ===
+                                  productionVisualDeliveryOccurrence(
+                                    segment,
+                                    index,
+                                  ),
+                              )?.lane
+                            : graph.production!.visualDelivery;
+                        return lane === "repainted" ? [segment.shot] : [];
+                      }),
                     ),
                   ],
           })
         : configuredRepaint;
-    const renditionReceipts: Map<string, IAutoMovieRepaintReceipt> =
+    const renditionSelections =
       timeline === null
         ? new Map()
         : new Map(
             project
-              .verifiedRepaintRenditions([
-                ...new Set(timeline.segments.map((segment) => segment.shot)),
-              ])
-              .map((receipt) => [receipt.shot, receipt] as const),
+              .verifiedRepaintSelections(
+                timeline.segments.flatMap((segment, index) => {
+                  const lane =
+                    graph.production!.visualDelivery === "mixed"
+                      ? graph.production!.visualDeliveryLanes?.find(
+                          (candidate) =>
+                            candidate.occurrence ===
+                            productionVisualDeliveryOccurrence(segment, index),
+                        )?.lane
+                      : graph.production!.visualDelivery;
+                  return lane === "repainted" ? [segment.shot] : [];
+                }),
+              )
+              .map((selection) => [selection.receipt.shot, selection] as const),
           );
+    const renditionReceipts: Map<string, IAutoMovieRepaintReceipt> = new Map(
+      [...renditionSelections].map(([shot, selection]) => [
+        shot,
+        selection.receipt,
+      ]),
+    );
     if (plan.tier.kind === "final" && selectedRepaint !== null)
       assertProductionRepaintReceiptAdoption({
         selected: selectedRepaint,
@@ -388,6 +437,7 @@ export const createProductionRenderFinalizationRuntime = (props: {
       })());
     const publicationSegment =
       productionRenderPublicationFingerprint(plan).slice(7);
+    const publicationFrameRate = resolveProductionFrameRate(plan.frameFormat);
     for (const deliverable of graph.production.deliverables) {
       const owned = new Map<string, Uint8Array>();
       const deliverableChunks = plan.chunks.filter(
@@ -409,25 +459,206 @@ export const createProductionRenderFinalizationRuntime = (props: {
         renderProgress("video.feature.encode.start", {
           deliverable: deliverable.id,
         });
-        const video =
-          timeline === null
-            ? publicationRuntime.assembleChunkVideo(plan, deliverableChunks)
-            : conformProductionRenditionVideoMp4({
-                timeline,
-                clips: new Map(
-                  timeline.segments.map((segment) => {
-                    const receipt = renditionReceipts.get(segment.shot);
-                    if (receipt === undefined)
-                      throw new Error(
-                        `Repainted feature delivery is missing current receipt-bound output for shot "${segment.shot}".`,
-                      );
-                    return [
-                      segment.shot,
-                      project.readRenderFile(receipt.output.path),
-                    ] as const;
+        const deterministicVideo = publicationRuntime.assembleChunkVideo(
+          plan,
+          deliverableChunks,
+        );
+        let video = deterministicVideo;
+        if (timeline !== null) {
+          const timelineOccurrences = timeline.segments.map(
+            (segment, index) => ({
+              occurrence: productionVisualDeliveryOccurrence(segment, index),
+              shot: segment.shot,
+            }),
+          );
+          const lanes: IAutoMovieVisualDeliveryLane[] =
+            graph.production.visualDelivery === "mixed"
+              ? (graph.production.visualDeliveryLanes ?? []).map((lane) => {
+                  if (lane.lane === "deterministic")
+                    return {
+                      ...lane,
+                      lane: "deterministic" as const,
+                      deterministic: {
+                        path: `generated/deterministic/${encodeAutoMoviePathSegment(lane.occurrence)}`,
+                        digest: productionDeterministicVisualSourceDigest({
+                          compileFingerprint: plan.compileFingerprint,
+                          occurrence: lane.occurrence,
+                        }),
+                      },
+                      repaint: null,
+                    };
+                  const selection = renditionSelections.get(lane.shot);
+                  if (selection === undefined)
+                    throw new Error(
+                      `Repaint occurrence "${lane.occurrence}" has no current verified selection.`,
+                    );
+                  return {
+                    ...lane,
+                    lane: "repainted" as const,
+                    deterministic: null,
+                    repaint: {
+                      path: selection.receipt.output.path,
+                      digest: selection.receipt.output.digest,
+                      receiptDigest: digestAutoMovieBytes(
+                        canonicalAutoMovieJsonBytes(selection.receipt),
+                      ),
+                      selectionDigest: selection.selectionDigest,
+                    },
+                  };
+                })
+              : normalizeAutoMovieVisualDeliveryLanes({
+                  timeline: timelineOccurrences,
+                  visualDelivery: graph.production.visualDelivery,
+                  deterministic: (occurrence) => ({
+                    path: `generated/deterministic/${encodeAutoMoviePathSegment(occurrence.occurrence)}`,
+                    digest: productionDeterministicVisualSourceDigest({
+                      compileFingerprint: plan.compileFingerprint,
+                      occurrence: occurrence.occurrence,
+                    }),
                   }),
+                  repaint: (occurrence) => {
+                    const selection = renditionSelections.get(occurrence.shot);
+                    if (selection === undefined)
+                      throw new Error(
+                        `Repaint occurrence "${occurrence.occurrence}" has no current verified selection.`,
+                      );
+                    return {
+                      path: selection.receipt.output.path,
+                      digest: selection.receipt.output.digest,
+                      receiptDigest: digestAutoMovieBytes(
+                        canonicalAutoMovieJsonBytes(selection.receipt),
+                      ),
+                      selectionDigest: selection.selectionDigest,
+                    };
+                  },
+                });
+          const members = lanes.map((lane) => {
+            if (lane.lane === "deterministic")
+              return {
+                occurrence: lane.occurrence,
+                shot: lane.shot,
+                lane: "deterministic" as const,
+                sourceDigest: lane.deterministic.digest,
+              };
+            const selection = renditionSelections.get(lane.shot)!;
+            return {
+              occurrence: lane.occurrence,
+              shot: lane.shot,
+              lane: "repainted" as const,
+              requestId: selection.receipt.requestId!,
+              attemptId: selection.receipt.attemptId,
+              outputDigest: selection.receipt.output.digest,
+              candidateReceiptDigest: lane.repaint.receiptDigest,
+              selectionId: selection.selectionId,
+              selectionDigest: selection.selectionDigest,
+            };
+          });
+          const baseline = productionRepaintSequenceBaseline();
+          const observation = productionRepaintSequenceObservation();
+          let observationArtifactDigest: AutoMovieContentDigest | null = null;
+          if (observation !== null)
+            try {
+              observationArtifactDigest = digestAutoMovieBytes(
+                project.readRenderFile(observation.artifact.path),
+              );
+            } catch {
+              observationArtifactDigest = null;
+            }
+          const observationDigest =
+            observation === null
+              ? null
+              : digestAutoMovieBytes(canonicalAutoMovieJsonBytes(observation));
+          if (
+            lanes.some((lane) => lane.lane === "repainted") &&
+            (baseline === null ||
+              observation === null ||
+              autoMovieRepaintSequenceObservationDiagnostics({
+                observation,
+                productionId,
+                compileFingerprint: plan.compileFingerprint,
+                timelineFingerprint: digestAutoMovieBytes(
+                  canonicalAutoMovieJsonBytes(timeline),
                 ),
-              });
+                baseline,
+                members,
+                artifactDigest: observationArtifactDigest,
+              }).length !== 0)
+          )
+            throw new Error(
+              "Final visual delivery requires one current completed five-pass aggregate sequence observation.",
+            );
+          if (
+            lanes.every((lane) => lane.lane === "deterministic") &&
+            baseline !== null
+          )
+            throw new Error(
+              "All-deterministic visual delivery must not invent a repaint sequence baseline.",
+            );
+          const deliveryPlan = planAutoMovieVisualDelivery({
+            timeline: timelineOccurrences,
+            lanes,
+            policy:
+              graph.production.visualDelivery === "mixed"
+                ? (graph.production.mixedVisualDeliveryPolicy ?? null)
+                : null,
+            currentObservationDigest: observationDigest,
+          });
+          if (deliveryPlan.diagnostics.length !== 0)
+            throw new Error(
+              `Visual delivery plan was refused: ${deliveryPlan.diagnostics.join(", ")}.`,
+            );
+          if (
+            deliveryPlan.segments.some(
+              (segment) => segment.lane === "repainted",
+            )
+          )
+            video = conformProductionVisualDeliveryVideoMp4({
+              timeline,
+              sources: deliveryPlan.segments.map((segment) => ({
+                occurrence: segment.occurrence,
+                lane: segment.lane,
+                bytes:
+                  segment.lane === "deterministic"
+                    ? deterministicVideo
+                    : project.readRenderFile(segment.repaint.path),
+              })),
+            });
+          rendition = {
+            version: 2,
+            kind: "visual-lanes",
+            memberSetDigest: digestAutoMovieRepaintObservationMembers(members),
+            observationDigest,
+            observation:
+              observation === null ? null : structuredClone(observation),
+            shots: deliveryPlan.segments.map((segment) => {
+              if (segment.lane === "deterministic")
+                return {
+                  occurrence: segment.occurrence,
+                  shot: segment.shot,
+                  lane: "deterministic" as const,
+                  path: segment.deterministic.path,
+                  digest: segment.deterministic.digest,
+                  sourceDigest: segment.deterministic.digest,
+                  receiptDigest: null,
+                  selectionDigest: null,
+                };
+              const selection = renditionSelections.get(segment.shot)!;
+              return {
+                occurrence: segment.occurrence,
+                shot: segment.shot,
+                lane: "repainted" as const,
+                path: segment.repaint.path,
+                digest: segment.repaint.digest,
+                sourceDigest: segment.repaint.digest,
+                receiptDigest: segment.repaint.receiptDigest,
+                selectionDigest: segment.repaint.selectionDigest,
+                selectionId: selection.selectionId,
+                requestId: selection.receipt.requestId!,
+                attemptId: selection.receipt.attemptId,
+              };
+            }),
+          };
+        }
         renderProgress("video.feature.encode.complete", {
           deliverable: deliverable.id,
         });
@@ -445,29 +676,6 @@ export const createProductionRenderFinalizationRuntime = (props: {
         renderProgress("video.feature.mux.complete", {
           deliverable: deliverable.id,
         });
-        if (timeline !== null) {
-          const shots = [
-            ...new Set(timeline.segments.map((segment) => segment.shot)),
-          ];
-          rendition = {
-            kind: "repainted",
-            shots: shots.map((shot) => {
-              const receipt = renditionReceipts.get(shot);
-              if (receipt === undefined)
-                throw new Error(
-                  `Repainted feature delivery requires a current verified repaint receipt for shot "${shot}".`,
-                );
-              return {
-                shot,
-                path: receipt.output.path,
-                digest: receipt.output.digest,
-                receiptDigest: digestAutoMovieBytes(
-                  canonicalAutoMovieJsonBytes(receipt),
-                ),
-              };
-            }),
-          };
-        }
       } else if (deliverable.kind === "guide-pass") {
         const passes = [
           ...new Set(deliverableChunks.map((chunk) => chunk.pass)),
@@ -512,31 +720,46 @@ export const createProductionRenderFinalizationRuntime = (props: {
           owned.set("captions.vtt", Buffer.from(plan.tracks.captions, "utf8"));
       } else if (deliverable.kind === "audio-mix") {
         const sound = await currentSound();
+        const audioEvidence = {
+          version: 2 as const,
+          plan: sound.plan,
+          analysis: sound.analysis,
+          tts: sound.tts,
+          audio: {
+            path: "audio.mp4",
+            mediaType: "audio/mp4" as const,
+            bytes: sound.audio.byteLength,
+            digest: digestAutoMovieBytes(sound.audio),
+          },
+          measurement: {
+            source: "pre-encode-pcm" as const,
+            algorithm: "automovie-production-sound-analysis-v1" as const,
+          },
+        };
+        verifyProductionNonVideoDeliverables({
+          caption: null,
+          sound: {
+            expectedPlan: sound.plan,
+            expectedAnalysis: sound.analysis,
+            expectedTts: sound.tts,
+            expectedAudio: audioEvidence.audio,
+            evidence: audioEvidence,
+          },
+        });
         owned.set("audio.mp4", sound.audio);
         owned.set("waveform.png", sound.waveform);
         owned.set("spectrogram.png", sound.spectrogram);
         owned.set(
           "evidence.json",
-          Buffer.from(
-            `${JSON.stringify(
-              {
-                version: 1,
-                plan: sound.plan,
-                analysis: sound.analysis,
-                tts: sound.tts,
-              },
-              null,
-              2,
-            )}\n`,
-            "utf8",
-          ),
+          Buffer.from(`${JSON.stringify(audioEvidence, null, 2)}\n`, "utf8"),
         );
       } else {
         const timeline = readAutoMovieFilmTimeline(
           project,
           plan.compileFingerprint,
         );
-        const frame = sampleProductionRenderFrame(timeline, 0).layers.at(-1)!;
+        const sample = sampleProductionRenderFrame(timeline, 0);
+        const frame = sample.layers.at(-1)!;
         const captured = await renderHost.capture(
           productionRenderFrameCaptureInput({
             root,
@@ -545,7 +768,7 @@ export const createProductionRenderFinalizationRuntime = (props: {
             shot: frame.shot,
             sourceFrame: frame.sourceFrame,
             sourceFps: timeline.fps,
-            globalFrame: 0,
+            sample,
             pass: "beauty",
           }),
         );
@@ -595,7 +818,7 @@ export const createProductionRenderFinalizationRuntime = (props: {
           mediaType,
           bytes,
         });
-        assertDeliverableProbe(deliverable.kind, probe, plan);
+        assertDeliverableProbe(deliverable.kind, name, bytes, probe, plan);
         publication.set(relative, bytes);
         files.push({
           path: relative,
@@ -605,15 +828,25 @@ export const createProductionRenderFinalizationRuntime = (props: {
           probe,
         });
       }
-      const video = files.find((file) => file.probe.kind === "video")?.probe;
-      const audio = files.find((file) => file.probe.kind === "audio")?.probe;
+      const feature = files.find(
+        (file) => file.probe.kind === "feature",
+      )?.probe;
+      const video =
+        feature?.kind === "feature"
+          ? feature.video
+          : files.find((file) => file.probe.kind === "video")?.probe;
+      const audio =
+        feature?.kind === "feature"
+          ? feature.audio
+          : files.find((file) => file.probe.kind === "audio")?.probe;
       manifest.deliverables.push({
         id: deliverable.id,
         kind: deliverable.kind,
         files: files.map(({ probe: _probe, ...file }) => file),
         runtimeSeconds:
           deliverable.kind === "captions"
-            ? plan.totalFrames / plan.frameFormat.fps
+            ? (plan.totalFrames * publicationFrameRate.denominator) /
+              publicationFrameRate.numerator
             : video?.kind === "video"
               ? video.runtimeSeconds
               : audio?.kind === "audio"
@@ -676,67 +909,104 @@ export const createProductionRenderFinalizationRuntime = (props: {
 
   const assertDeliverableProbe = (
     kind: IAutoMovieProductionDeliverable["kind"],
+    name: string,
+    bytes: Uint8Array,
     probe: IAutoMovieProductionMediaProbe,
     plan: IAutoMovieProductionRenderJobPlan,
   ): void => {
-    const runtimeSeconds = plan.totalFrames / plan.frameFormat.fps;
     if (kind === "feature" || kind === "guide-pass") {
       if (kind === "guide-pass" && probe.kind === "png") {
-        if (
-          probe.width !== plan.frameFormat.width ||
-          probe.height !== plan.frameFormat.height
-        )
-          throw new Error(
-            "Published guide frame does not match the tier raster.",
-          );
+        assertProductionPngPicture({
+          profile: resolveProductionPngProfile({
+            role: "guide-frame",
+            width: plan.frameFormat.width,
+            height: plan.frameFormat.height,
+          }),
+          actual: probe.picture,
+        });
         return;
       }
-      if (
-        probe.kind !== "video" ||
-        probe.width !== plan.frameFormat.width ||
-        probe.height !== plan.frameFormat.height ||
-        probe.frameCount !== plan.totalFrames ||
-        Math.abs(probe.fps - plan.frameFormat.fps) > 1e-9 ||
-        Math.abs(probe.runtimeSeconds - runtimeSeconds) > 1e-9
-      )
+      const video =
+        kind === "feature" && probe.kind === "feature"
+          ? probe.video
+          : kind === "guide-pass" && probe.kind === "video"
+            ? probe
+            : null;
+      if (video === null || video.frameCount !== plan.totalFrames)
         throw new Error(
           `${kind} output does not match the exact production raster, frame count, frame clock, and runtime.`,
         );
+      assertProductionVideoProfile({
+        expected: resolveProductionVideoProfile({
+          width: plan.frameFormat.width,
+          height: plan.frameFormat.height,
+          frameRate: resolveProductionFrameRate(plan.frameFormat),
+        }),
+        actual: video,
+      });
+      if (probe.kind === "feature") assertProductionOpusProfile(probe.audio);
       return;
     }
     if (kind === "preview") {
-      if (
-        probe.kind !== "png" ||
-        probe.width !== plan.frameFormat.width ||
-        probe.height !== plan.frameFormat.height
-      )
+      if (probe.kind !== "png")
         throw new Error("Preview output does not match the production raster.");
+      assertProductionPngPicture({
+        profile: resolveProductionPngProfile({
+          role: "preview",
+          width: plan.frameFormat.width,
+          height: plan.frameFormat.height,
+        }),
+        actual: probe.picture,
+      });
       return;
     }
     if (kind === "captions") {
-      if (probe.kind !== "webvtt" || probe.lastCueSeconds > runtimeSeconds)
+      if (probe.kind !== "webvtt")
         throw new Error(
           "Caption output is empty, malformed, unordered, or outside the production timeline.",
         );
+      verifyProductionNonVideoDeliverables({
+        caption: {
+          required: true,
+          expected: plan.tracks.captions,
+          actual: bytes,
+        },
+        sound: null,
+      });
       return;
     }
-    if (probe.kind === "png" || probe.kind === "sound-evidence") {
+    if (probe.kind === "png") {
+      const role =
+        name === "waveform.png"
+          ? "waveform"
+          : name === "spectrogram.png"
+            ? "spectrogram"
+            : null;
+      if (role === null)
+        throw new Error(`Audio evidence contains unexpected PNG "${name}".`);
+      assertProductionPngPicture({
+        profile: resolveProductionPngProfile({ role }),
+        actual: probe.picture,
+      });
+      return;
+    }
+    if (probe.kind === "sound-evidence") {
       if (
-        probe.kind === "sound-evidence" &&
-        (probe.clippingSamples !== 0 || probe.eventAlignmentPassed === false)
+        probe.evidence.analysis.clippingSamples !== 0 ||
+        probe.evidence.analysis.eventAlignment.some(
+          (event) => event.passed === false,
+        )
       )
         throw new Error(
           "Sound evidence reports clipping or a semantic event outside its frame gate.",
         );
       return;
     }
-    if (
-      probe.kind !== "audio" ||
-      Math.abs(probe.runtimeSeconds - runtimeSeconds) > 1e-9
-    )
+    if (probe.kind !== "audio")
       throw new Error(
         "Audio output does not contain one exact-runtime parser-verified track.",
       );
+    assertProductionOpusProfile(probe);
   };
 
   return { finalize };

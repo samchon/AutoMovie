@@ -42,7 +42,7 @@ Write speakable lines and let the user or delegated authoring agent choose a rec
 
 Preserve actual sample-clock or aligned phoneme timing from the final decoded bytes for lip sync and caption alignment. Mouth motion follows the speaker's emission interval, not a later listener-arrival frame. Caption duration and Unicode character count do not reveal pronunciation timing. Normalize level, remove unintended leading/trailing silence without cutting expressive breath, and keep dialogue intelligible over effects and music.
 
-Caption readability is evaluated only against a production-selected, versioned profile whose language, grapheme rule, rate, line, duration, and gap limits are explicit. The user or delegated authoring agent owns that profile and its thresholds. When no profile is selected, report the measured grapheme count, duration, rate, lines, and gaps with a `not-run` verdict; do not invent a default threshold or turn measure-only output into pass or fail.
+Caption readability is evaluated only against a production-selected, versioned profile whose RFC 5646 well-formed language tag, complete grapheme execution identity, rate, line, duration, and gap limits are explicit. Copy the algorithm, revision, grapheme granularity, and requested/resolved locale or locale-neutral state from `AUTOMOVIE_CAPTION_GRAPHEME_SEGMENTATION`; a mismatch remains `not-run` without fallback. Language comparison is ASCII case-insensitive while authored spelling is retained, and registry membership, Preferred-Value replacement, and language inference remain outside this validation. Readability and WebVTT consume the same authored presentation: CRLF and CR become LF, legal tabs and line breaks remain, prohibited controls are sanitized, and no automatic reflow is inferred. The user or delegated authoring agent owns that profile and its thresholds. When no profile is selected, report the actual segmentation identity, measured grapheme count, duration, rate, lines, and gaps with a `not-run` verdict; do not invent a default threshold or turn measure-only output into pass or fail.
 
 ## Mix hierarchy
 
@@ -52,7 +52,7 @@ Shape ambience across edits with L-cuts and J-cuts. Crossfade room tone where co
 
 ## Verification
 
-Probe final media facts, resident sample count, duration, channel count, sample rate, codec, and audiovisual runtime. Listen on headphones and small speakers at a stable level. Check dialogue, event sync, spatial motion, loops, clipping, accidental gaps, captions, and the first and last second of every sequence.
+Probe final media facts, resident sample count, duration, channel count, sample rate, codec, and audiovisual runtime. Derive the audio sample boundary from the exact reduced rational film rate with the shared nearest-half-up mapper; never estimate it from decimal `fps`. Listen on headphones and small speakers at a stable level. Check dialogue, event sync, spatial motion, loops, clipping, accidental gaps, captions, and the first and last second of every sequence.
 
 ## Evidence for a sound verdict
 

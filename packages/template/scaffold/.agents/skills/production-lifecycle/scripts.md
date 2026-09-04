@@ -35,6 +35,8 @@ Apply the narrative addressability obligation across the partition and the scrip
 
 ## Gate
 
+Treat every script and caption boundary as an integer frame boundary on the one authored rational production clock. Destination audio samples, WebVTT milliseconds, and MP4 ticks use the shared nearest-half-up boundary mapping; do not calculate each carrier independently from decimal `fps`.
+
 Start at `scripts: "draft"` only after treatments are in `review`. Before `evidence`, enact every H4 in order and test physical possibility, timing, resources, settings capabilities, entry and exit continuity, proportional expansion beyond its actual treatment parents, and every consequential action, exchange, knowledge change, or silence. A summary that merely says these occur is not a script.
 
 For the execution-handoff check, hand only the script to a cold reader and require a followable account of every unit as a physical event. Repair every essential execution question that reader would have to invent.

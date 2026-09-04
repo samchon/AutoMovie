@@ -1,3 +1,4 @@
+import { resolveProductionFrameRate } from "@automovie/engine";
 import type {
   AutoMovieCaptureObservation,
   AutoMovieContentDigest,
@@ -8,12 +9,14 @@ import {
   type IAutoMovieProductionRenderChunk,
   type IAutoMovieProductionRenderChunkReceipt,
   type IAutoMovieProductionRenderJobPlan,
+  assertProductionVideoProfile,
   canonicalAutoMovieCaptureRuntimeIdentity,
   digestAutoMovieBytes,
   encodeAutoMoviePathSegment,
   probeProductionMedia,
   probeProductionVideoMp4,
   productionRenderLayersForPass,
+  resolveProductionVideoProfile,
 } from "@automovie/production";
 import path from "node:path";
 import { PNG } from "pngjs";
@@ -390,7 +393,7 @@ export const createProductionRenderChunkCaptureRuntime = (props: {
             shot: layer.shot,
             sourceFrame: layer.sourceFrame,
             sourceFps: plan.sourceFrameFormat.fps,
-            globalFrame: sample.globalFrame,
+            sample,
             pass: chunk.pass,
           }),
         );
@@ -506,12 +509,18 @@ export const createProductionRenderChunkCaptureRuntime = (props: {
       }),
     });
     const encodedProbe = probeProductionVideoMp4(encodedBytes);
+    assertProductionVideoProfile({
+      expected: resolveProductionVideoProfile({
+        width: plan.frameFormat.width,
+        height: plan.frameFormat.height,
+        frameRate: resolveProductionFrameRate(plan.frameFormat),
+      }),
+      actual: encodedProbe,
+    });
     if (
-      encodedProbe.kind !== "video" ||
       encodedProbe.frameCount !== chunk.frames.length ||
       encodedProbe.width !== plan.frameFormat.width ||
-      encodedProbe.height !== plan.frameFormat.height ||
-      Math.abs(encodedProbe.fps - plan.frameFormat.fps) > 1e-9
+      encodedProbe.height !== plan.frameFormat.height
     )
       throw new Error(
         `Encoded chunk "${chunk.slot}" failed frame-count, raster, or frame-clock probe.`,
@@ -563,6 +572,7 @@ export const compositeProductionCaptureLayers = (
   height: number,
 ): Uint8Array => {
   const output = new PNG({ width, height });
+  output.gamma = 0.45455;
   for (let offset = 0; offset < output.data.length; offset += 4) {
     for (let channel = 0; channel < 3; ++channel)
       output.data[offset + channel] = Math.round(

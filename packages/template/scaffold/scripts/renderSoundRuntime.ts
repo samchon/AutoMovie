@@ -3,6 +3,7 @@ import {
   productionSoundSpectrogram,
   productionSoundWaveform,
   renderProductionSound,
+  resolveProductionFrameRate,
 } from "@automovie/engine";
 import type {
   AutoMovieContentDigest,
@@ -19,6 +20,7 @@ import {
   decodeProductionAudioAsset,
   digestAutoMovieBytes,
   encodeAutoMoviePathSegment,
+  normalizeProductionH264Mp4,
   readAutoMovieFilmTimeline,
   trimProductionAudioPresentation,
 } from "@automovie/production";
@@ -1317,6 +1319,11 @@ export const createProductionRenderEncoderRuntime = (props: {
   const assertCurrentEncoder = (
     plan: IAutoMovieProductionRenderJobPlan,
   ): void => {
+    const frameRate = resolveProductionFrameRate(plan.frameFormat);
+    if (frameRate.denominator !== 1)
+      throw new Error(
+        `The pinned H.264 encoder cannot express exact rational frame rate ${frameRate.numerator}/${frameRate.denominator}. Select a supported integer rate before rendering; rounding or decimal substitution is not permitted.`,
+      );
     if (
       isDeepStrictEqual(
         props.productionEncoderIdentity(plan.frameFormat.fps),
@@ -1471,7 +1478,9 @@ export const createProductionRenderEncoderRuntime = (props: {
         });
         finalizeAttempted = true;
         encoder.finalize();
-        output = Uint8Array.from(encoder.FS.readFile(encoder.outputFilename));
+        output = normalizeProductionH264Mp4(
+          Uint8Array.from(encoder.FS.readFile(encoder.outputFilename)),
+        );
       } catch (error) {
         failure = { error };
       }
@@ -1593,6 +1602,7 @@ export const encodeProductionSoundRaster = (raster: {
   const { PNG } =
     residentRuntimePackage<typeof import("pngjs")>("pngjs").module;
   const png = new PNG({ width: raster.width, height: raster.height });
+  png.gamma = 0.45455;
   png.data = Buffer.from(raster.rgba);
   return PNG.sync.write(png);
 };

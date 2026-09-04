@@ -1,4 +1,11 @@
 import {
+  canonicalProductionFrameRate,
+  equalProductionFrameRates,
+  productionFrameBoundaryToGridTick,
+  productionFrameIntervalToGridTicks,
+  resolveProductionFrameRate,
+} from "@automovie/engine";
+import {
   AutoMovieContentDigest,
   AutoMovieGuidePass,
   IAutoMovieCaptureRuntimeIdentity,
@@ -8,6 +15,12 @@ import {
 import { createHash } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
+
+import { parseAutoMovieCaptionLanguage } from "./captionLanguage";
+import {
+  serializeAutoMovieWebVttCueText,
+  serializeAutoMovieWebVttSingleLineText,
+} from "./captionText";
 
 /**
  * Package-owned encoder identity fenced into every chunk.
@@ -384,18 +397,21 @@ export const planProductionRenderJob = (props: {
     props.production.frameFormat,
     tier,
   );
+  const outputRate = resolveProductionFrameRate(frameFormat);
   if (frameFormat.width % 2 !== 0 || frameFormat.height % 2 !== 0)
     throw new Error(
       "The production H.264 render adapter requires even width and height.",
     );
+  const timelineRate = resolveProductionFrameRate(props.timeline);
+  const productionRate = resolveProductionFrameRate(
+    props.production.frameFormat,
+  );
   if (
     props.timeline.id !== props.production.id ||
-    props.timeline.fps !== props.production.frameFormat.fps ||
-    props.timeline.totalFrames !==
-      Math.round(
-        props.production.targetRuntimeSeconds *
-          props.production.frameFormat.fps,
-      )
+    equalProductionFrameRates(timelineRate, productionRate) === false ||
+    props.production.targetRuntimeSeconds !==
+      (props.timeline.totalFrames * productionRate.denominator) /
+        productionRate.numerator
   )
     throw new Error(
       "The film edit differs from the production identity, frame clock, or runtime. Recompile before planning.",
@@ -407,10 +423,20 @@ export const planProductionRenderJob = (props: {
   const audioAssets = normalizeAudioAssets(props.audioAssets);
   for (const cue of props.timeline.tracks.audio) {
     const asset = audioAssets.find((candidate) => candidate.path === cue.asset);
+    const expectedSamples =
+      asset === undefined
+        ? null
+        : productionFrameBoundaryToGridTick({
+            frame: cue.sourceDurationFrames,
+            frameRate: timelineRate,
+            ticksPerSecond: asset.sampleRate,
+            rounding: "nearest",
+          });
     if (
       asset === undefined ||
-      Math.round(asset.durationSeconds * props.timeline.fps) !==
-        cue.sourceDurationFrames
+      Number.isSafeInteger(asset.durationSeconds * asset.sampleRate) ===
+        false ||
+      asset.durationSeconds * asset.sampleRate !== expectedSamples
     )
       throw new Error(
         `Audio cue "${cue.id}" lacks one digest-, format-, and duration-verified source asset.`,
@@ -418,9 +444,10 @@ export const planProductionRenderJob = (props: {
   }
   const legacyGuidePasses = normalizeGuidePasses(props.guidePasses ?? ["pose"]);
   const editFingerprint = digestJson({
-    protocol: "automovie.production-render-edit.v1",
+    protocol: "automovie.production-render-edit.v2",
     id: props.timeline.id,
     fps: props.timeline.fps,
+    frameRate: props.timeline.frameRate,
     totalFrames: props.timeline.totalFrames,
     segments: props.timeline.segments,
     omissions: props.timeline.omissions,
@@ -434,7 +461,8 @@ export const planProductionRenderJob = (props: {
         ...sampleProductionRenderFrame(props.timeline, timelineFrame),
         globalFrame: outputFrame,
         timelineFrame,
-        timeSeconds: outputFrame / frameFormat.fps,
+        timeSeconds:
+          (outputFrame * outputRate.denominator) / outputRate.numerator,
       };
     },
   );
@@ -653,6 +681,7 @@ export const productionRenderLayersForPass = (
 export const canonicalProductionWebVtt = (
   timeline: IAutoMovieFilmTimeline,
 ): string => {
+  const frameRate = resolveProductionFrameRate(timeline);
   const cues = [...timeline.tracks.captions].sort(
     (left, right) =>
       left.startFrame - right.startFrame ||
@@ -660,22 +689,29 @@ export const canonicalProductionWebVtt = (
       compareCodeUnits(left.id, right.id),
   );
   return [
-    `WEBVTT ${webVttPlainText(timeline.id)}`,
+    `WEBVTT ${serializeAutoMovieWebVttSingleLineText(timeline.id)}`,
     "",
-    ...cues.flatMap((cue) => [
-      webVttPlainText(cue.id),
-      `${webVttTime(cue.startFrame / timeline.fps)} --> ${webVttTime(
-        cue.endFrame / timeline.fps,
-      )}`,
-      `<lang ${webVttPlainText(cue.language)}>${
-        cue.speaker === undefined
-          ? webVttPlainText(cue.text)
-          : `<v ${webVttPlainText(cue.speaker)}>${webVttPlainText(
-              cue.text,
-            )}</v>`
-      }</lang>`,
-      "",
-    ]),
+    ...cues.flatMap((cue) => {
+      const interval = productionFrameIntervalToGridTicks({
+        startFrame: cue.startFrame,
+        endFrame: cue.endFrame,
+        frameRate,
+        ticksPerSecond: 1_000,
+        rounding: "nearest",
+      });
+      return [
+        serializeAutoMovieWebVttSingleLineText(cue.id),
+        `${webVttTime(interval.start)} --> ${webVttTime(interval.end)}`,
+        `<lang ${webVttCaptionLanguage(cue.language)}>${
+          cue.speaker === undefined
+            ? serializeAutoMovieWebVttCueText(cue.text)
+            : `<v ${serializeAutoMovieWebVttSingleLineText(
+                cue.speaker,
+              )}>${serializeAutoMovieWebVttCueText(cue.text)}</v>`
+        }</lang>`,
+        "",
+      ];
+    }),
   ].join("\n");
 };
 
@@ -1090,12 +1126,15 @@ const frame = (
   timeline: IAutoMovieFilmTimeline,
   globalFrame: number,
   layers: IAutoMovieProductionRenderLayer[],
-): IAutoMovieProductionRenderFrame => ({
-  globalFrame,
-  timelineFrame: globalFrame,
-  timeSeconds: globalFrame / timeline.fps,
-  layers,
-});
+): IAutoMovieProductionRenderFrame => {
+  const frameRate = resolveProductionFrameRate(timeline);
+  return {
+    globalFrame,
+    timelineFrame: globalFrame,
+    timeSeconds: (globalFrame * frameRate.denominator) / frameRate.numerator,
+    layers,
+  };
+};
 
 const normalizeRenderTier = (
   tier: IAutoMovieProductionRenderTier | undefined,
@@ -1136,10 +1175,16 @@ export const resolveProductionRenderTierFrameFormat = (
   if (normalized.kind === "final") return structuredClone(source);
   const even = (value: number): number =>
     Math.max(2, Math.floor((value * normalized.resolutionScale) / 2) * 2);
+  const sourceRate = resolveProductionFrameRate(source);
+  const frameRate = canonicalProductionFrameRate({
+    numerator: sourceRate.numerator,
+    denominator: sourceRate.denominator * normalized.frameStep,
+  });
   return {
     width: even(source.width),
     height: even(source.height),
-    fps: source.fps / normalized.frameStep,
+    fps: frameRate.numerator / frameRate.denominator,
+    frameRate,
     colorSpace: source.colorSpace,
     ...(source.crop === undefined
       ? {}
@@ -1208,8 +1253,7 @@ const normalizeAudioAssets = (
   return output;
 };
 
-const webVttTime = (seconds: number): string => {
-  const milliseconds = Math.round(seconds * 1_000);
+const webVttTime = (milliseconds: number): string => {
   const hours = Math.floor(milliseconds / 3_600_000);
   const minutes = Math.floor((milliseconds % 3_600_000) / 60_000);
   const remainder = Math.floor((milliseconds % 60_000) / 1_000);
@@ -1223,13 +1267,14 @@ const webVttTime = (seconds: number): string => {
   )}`;
 };
 
-/** Escape one authored plain-text field into a single WebVTT content line. */
-const webVttPlainText = (value: string): string =>
-  value
-    .replace(/[\u0000-\u001f\u007f]/gu, " ")
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;");
+const webVttCaptionLanguage = (value: string): string => {
+  const identity = parseAutoMovieCaptionLanguage(value);
+  if (identity === null)
+    throw new Error(
+      `Caption language "${value}" is not a well-formed RFC 5646 tag.`,
+    );
+  return serializeAutoMovieWebVttSingleLineText(identity.display);
+};
 
 const validByteFact = (fact: { digest: string; bytes: number }): boolean =>
   Number.isSafeInteger(fact.bytes) &&

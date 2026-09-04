@@ -14,6 +14,10 @@ import type {
 
 import { resolveCameraAt } from "../film/cameraProjection";
 import {
+  productionFrameBoundaryToGridTick,
+  resolveProductionFrameRate,
+} from "../film/productionTimebase";
+import {
   sampleFormationMotion,
   transformFormationBounds,
   transformFormationPoint,
@@ -192,6 +196,7 @@ export const deriveProductionSoundPlan = (props: {
     version: 1,
     inputFingerprint: props.timeline.inputFingerprint,
     fps: props.timeline.fps,
+    frameRate: props.timeline.frameRate,
     totalFrames: props.timeline.totalFrames,
     sampleRate: 48_000,
     channels: 2,
@@ -277,9 +282,7 @@ export const renderProductionSound = (props: {
    */
   assets?: ReadonlyMap<string, Float32Array>;
 }): IAutoMovieRenderedProductionSound => {
-  const sampleFrames = Math.round(
-    (props.plan.totalFrames / props.plan.fps) * props.plan.sampleRate,
-  );
+  const sampleFrames = frameToSample(props.plan, props.plan.totalFrames);
   const pcm = new Float32Array(sampleFrames * 2);
   for (const event of props.plan.events) {
     const room = event.acousticResponse;
@@ -814,8 +817,10 @@ const analyzeProductionSound = (
           peakSample = sample;
         }
       }
+      const frameRate = resolveProductionFrameRate(plan);
       const errorFrames =
-        (Math.abs(peakSample - expected) * plan.fps) / plan.sampleRate;
+        (Math.abs(peakSample - expected) * frameRate.numerator) /
+        (plan.sampleRate * frameRate.denominator);
       return {
         id: event.id,
         expectedSeconds: expected / plan.sampleRate,
@@ -937,7 +942,13 @@ const resampleMono = (source: Float32Array, length: number): Float32Array => {
 const frameToSample = (
   plan: IAutoMovieProductionSoundPlan,
   frame: number,
-): number => Math.round((frame / plan.fps) * plan.sampleRate);
+): number =>
+  productionFrameBoundaryToGridTick({
+    frame,
+    frameRate: resolveProductionFrameRate(plan),
+    ticksPerSecond: plan.sampleRate,
+    rounding: "nearest",
+  });
 
 const edgeEnvelope = (index: number, length: number, edge: number): number =>
   Math.min(1, index / edge, (length - index) / edge);

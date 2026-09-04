@@ -99,10 +99,23 @@ export const createNodeProductionRepaintHost = (props: {
       invocation.productionId,
     );
     if (invocation.kind === "selection" || invocation.kind === "reversal") {
-      const candidate = context
+      const inspection = context
         .forProduction(invocation.productionId)
-        .project.verifiedRepaintCandidates([invocation.request.shot])
+        .project.inspectVerifiedRepaintCandidates([invocation.request.shot]);
+      const candidate = inspection.records
+        .map((record) => record.value)
         .find((receipt) => receipt.attemptId === invocation.attemptId);
+      if (candidate === undefined && inspection.findings.length !== 0)
+        return repaintSelectionRefusal(
+          invocation,
+          null,
+          `Repaint candidate inspection refused: ${inspection.findings
+            .map(
+              (finding) =>
+                `${finding.target.recordId}:${finding.stage}:${finding.failure}`,
+            )
+            .join(", ")}.`,
+        );
       if (candidate === undefined)
         return repaintSelectionRefusal(
           invocation,
