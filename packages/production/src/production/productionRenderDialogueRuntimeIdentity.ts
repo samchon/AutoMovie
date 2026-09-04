@@ -8,8 +8,8 @@ const isContentDigest = (value: unknown): value is AutoMovieContentDigest =>
  * Missing is never interpreted as silence because old plans did not carry this
  * identity and therefore require replanning.
  *
- * @evidence requirements/sound/dialogue-voice-and-visemes.md#sound-dialogue-final-bytes-authority Refuses a frame whose mouth state was drawn from bytes other than the planned final dialogue runtime.
- * @evidence specifications/simulation-effects-and-sound/sound-sources-events-dialogue-and-foley.md#dialogue-voice-consistency-and-phoneme-state Keeps the visible phoneme state on the exact final dialogue bytes the specification makes authoritative.
+ * @evidence requirements/production-design/continuity-change-and-deliverables.md#production-design-deliverable-freshness Refuses a frame whose mouth state was drawn from dialogue bytes outside the current render derivation.
+ * @evidence specifications/narrative-and-intent/budgets-continuity-and-deliverables.md#narrative-intent-deliverable-provenance-handoff Keeps the captured visual artifact on the renderer identity recorded by its final handoff.
  */
 export const assertProductionRenderDialogueRuntimeIdentity = (props: {
   /** Human-readable render boundary, slot, frame, layer, or preview identity. */
