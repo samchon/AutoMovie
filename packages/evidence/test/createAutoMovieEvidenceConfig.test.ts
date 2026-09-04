@@ -3380,7 +3380,7 @@ export const review = true;
   const targetTag = root();
   fs.appendFileSync(
     contract(targetTag, "docs/principles/core/common.md"),
-    "\n<!-- @evidenceExcludeReview principles/core/common.md#scope-preservation #invalid recursive -->\n",
+    "\n<!--\n@evidenceExclude principles/core/common.md#scope-preservation This target cannot exclude itself.\n@evidenceExcludeReview principles/core/common.md#scope-preservation #abcdef0 This target still cannot review its own exclusion.\n-->\n",
   );
   assert.equal(
     throws(
