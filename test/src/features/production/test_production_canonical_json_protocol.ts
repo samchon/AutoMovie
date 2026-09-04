@@ -1,5 +1,3 @@
-import { TestValidator } from "@nestia/e2e";
-
 import {
   AUTOMOVIE_CANONICAL_JSON_DOMAIN,
   AUTOMOVIE_CANONICAL_JSON_PROTOCOL,
@@ -10,7 +8,8 @@ import {
   digestAutoMovieBytes,
   identifyAutoMovieCanonicalJson,
   verifyAutoMovieCanonicalJsonIdentity,
-} from "../../../../packages/production/src/production/contentIdentity";
+} from "@automovie/production";
+import { TestValidator } from "@nestia/e2e";
 
 const throws = (task: () => unknown): boolean => {
   try {
@@ -80,6 +79,16 @@ export const test_production_canonical_json_protocol = (): void => {
       value: { b: 2, a: "😀" },
     }).digest === identity.digest,
   );
+  TestValidator.predicate(
+    "the runtime guard refuses a falsely typed historical protocol",
+    throws(() =>
+      canonicalizeAutoMovieJsonForProtocol({
+        protocol:
+          "automovie.canonical-json.v1" as typeof AUTOMOVIE_CANONICAL_JSON_PROTOCOL,
+        value: {},
+      }),
+    ),
+  );
   try {
     canonicalizeAutoMovieJson("\ud800");
   } catch (error) {
@@ -130,7 +139,25 @@ export const test_production_canonical_json_protocol = (): void => {
         protocol: "unknown",
         digest: legacyDigest,
       }).status,
+      verifyAutoMovieCanonicalJsonIdentity({
+        value: new Date(0),
+        protocol: AUTOMOVIE_CANONICAL_JSON_PROTOCOL,
+        digest: legacyDigest,
+      }).status,
+      verifyAutoMovieCanonicalJsonIdentity({
+        value: new Date(0),
+        protocol: AUTOMOVIE_LEGACY_CANONICAL_JSON_PROTOCOL,
+        digest: digestAutoMovieBytes(Buffer.from("{}")),
+      }).status,
     ],
-    ["current", "stale", "migrated", "unverifiable", "unverifiable"],
+    [
+      "current",
+      "stale",
+      "migrated",
+      "unverifiable",
+      "unverifiable",
+      "unverifiable",
+      "unverifiable",
+    ],
   );
 };

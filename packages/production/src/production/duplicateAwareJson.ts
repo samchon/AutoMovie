@@ -224,6 +224,7 @@ class JsonParser {
     characterOffset: number,
     pointer: string,
     detail: string,
+    member?: string,
   ): never {
     throw new AutoMovieStructuredJsonError(
       this.record,
@@ -231,6 +232,7 @@ class JsonParser {
       Buffer.byteLength(this.text.slice(0, characterOffset), "utf8"),
       pointer,
       detail,
+      member,
     );
   }
 }

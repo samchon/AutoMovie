@@ -1,11 +1,10 @@
-import { TestValidator } from "@nestia/e2e";
-import { PNG } from "pngjs";
-
 import {
   AutoMovieDesignReferenceContainerError,
+  AutoMovieUtf8Error,
   inspectAutoMovieDesignReferenceContainer,
-} from "../../../../packages/production/src/production/designReferenceContainer";
-import { AutoMovieUtf8Error } from "../../../../packages/production/src/production/strictUtf8";
+} from "@automovie/production";
+import { TestValidator } from "@nestia/e2e";
+import { PNG } from "pngjs";
 
 const utf8 = (text: string): Uint8Array => Buffer.from(text, "utf8");
 const segment = (marker: number, payload: readonly number[]): number[] => [
@@ -77,11 +76,9 @@ const refuses = (
 
 /** Design evidence is emitted only by parser-confirmed complete containers. */
 export const test_production_design_reference_container = (): void => {
-  const png = PNG.sync.write({
-    width: 4,
-    height: 3,
-    data: Buffer.alloc(4 * 3 * 4, 0xff),
-  });
+  const image = new PNG({ width: 4, height: 3 });
+  image.data.fill(0xff);
+  const png = PNG.sync.write(image);
   TestValidator.equals(
     "complete PNG and baseline/progressive JPEG expose their parsed extent",
     [
@@ -119,11 +116,40 @@ export const test_production_design_reference_container = (): void => {
         "no-scan.jpg",
         new Uint8Array([...jpeg().subarray(0, 15), 0xff, 0xd9]),
       ),
+      refuses(
+        "double-frame.jpg",
+        new Uint8Array([
+          ...jpeg().subarray(0, 15),
+          ...jpeg().subarray(2, 15),
+          ...jpeg().subarray(15),
+        ]),
+      ),
+      refuses(
+        "scan-first.jpg",
+        new Uint8Array([
+          0xff,
+          0xd8,
+          ...segment(0xda, [1, 1, 0, 0, 63, 0]),
+          0x11,
+          0xff,
+          0xd9,
+        ]),
+      ),
+      refuses(
+        "bad-scan.jpg",
+        new Uint8Array([
+          ...jpeg().subarray(0, 15),
+          ...segment(0xda, [2, 1, 0, 0, 63, 0]),
+          0x11,
+          0xff,
+          0xd9,
+        ]),
+      ),
     ],
-    [true, true, true],
+    [true, true, true, true, true, true],
   );
   const svg = utf8(
-    '<?xml version="1.0"?><!-- viewBox="0 0 999 999" --><svg xmlns="http://www.w3.org/2000/svg" viewBox=\'0 0 420 297\'><g><path d="M0 0"/></g></svg>',
+    '<?xml version="1.0"?><!-- viewBox="0 0 999 999" --><svg xmlns="http://www.w3.org/2000/svg" viewBox=\'0 0 420 297\'><g><path d="M0 0"/></g></svg><!-- epilog -->',
   );
   const sizedSvg = utf8(
     '<s:svg xmlns:s="http://www.w3.org/2000/svg" width="800px" height="600"><s:g/></s:svg>',
@@ -152,6 +178,12 @@ export const test_production_design_reference_container = (): void => {
         utf8('<svg xmlns="http://www.w3.org/2000/svg"><g></svg>'),
       ),
       refuses(
+        "comment.svg",
+        utf8(
+          '<svg xmlns="http://www.w3.org/2000/svg"><!-- bad--comment --></svg>',
+        ),
+      ),
+      refuses(
         "encoding.svg",
         new Uint8Array([
           ...utf8('<svg xmlns="http://www.w3.org/2000/svg">'),
@@ -167,7 +199,7 @@ export const test_production_design_reference_container = (): void => {
         ),
       ),
     ],
-    [true, true, { media: "image/svg+xml", width: 1, height: 1 }],
+    [true, true, true, { media: "image/svg+xml", width: 1, height: 1 }],
   );
   TestValidator.equals(
     "closed PDF and LF/CRLF DXF are valid but deliberately unmeasured",

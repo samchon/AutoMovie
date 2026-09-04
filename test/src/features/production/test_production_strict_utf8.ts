@@ -1,9 +1,5 @@
+import { AutoMovieUtf8Error, decodeAutoMovieUtf8 } from "@automovie/production";
 import { TestValidator } from "@nestia/e2e";
-
-import {
-  AutoMovieUtf8Error,
-  decodeAutoMovieUtf8,
-} from "../../../../packages/production/src/production/strictUtf8";
 
 const failure = (bytes: readonly number[]): unknown => {
   try {
@@ -49,9 +45,14 @@ export const test_production_strict_utf8 = (): void => {
       failure([0x81]),
       failure([0xc2]),
       failure([0xc2, 0x41]),
+      failure([0xe2, 0x41]),
+      failure([0xe2, 0x82]),
       failure([0xc0, 0x80]),
+      failure([0xe0, 0x80]),
       failure([0xed, 0xa0, 0x80]),
+      failure([0xed, 0xa0]),
       failure([0xf4, 0x90, 0x80, 0x80]),
+      failure([0xf4, 0x90]),
       failure([0xf5, 0x80, 0x80, 0x80]),
     ],
     [
@@ -59,8 +60,13 @@ export const test_production_strict_utf8 = (): void => {
       ["automovie-invalid-utf8", "src/shot.ts", 0, "isolated-continuation"],
       ["automovie-invalid-utf8", "src/shot.ts", 0, "truncated-sequence"],
       ["automovie-invalid-utf8", "src/shot.ts", 1, "invalid-continuation"],
+      ["automovie-invalid-utf8", "src/shot.ts", 1, "invalid-continuation"],
+      ["automovie-invalid-utf8", "src/shot.ts", 0, "truncated-sequence"],
+      ["automovie-invalid-utf8", "src/shot.ts", 0, "overlong-sequence"],
       ["automovie-invalid-utf8", "src/shot.ts", 0, "overlong-sequence"],
       ["automovie-invalid-utf8", "src/shot.ts", 0, "surrogate-scalar"],
+      ["automovie-invalid-utf8", "src/shot.ts", 0, "surrogate-scalar"],
+      ["automovie-invalid-utf8", "src/shot.ts", 0, "out-of-range-scalar"],
       ["automovie-invalid-utf8", "src/shot.ts", 0, "out-of-range-scalar"],
       ["automovie-invalid-utf8", "src/shot.ts", 0, "invalid-leader"],
     ],

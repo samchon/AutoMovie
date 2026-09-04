@@ -79,22 +79,24 @@ const validateUtf8 = (record: string, bytes: Uint8Array): void => {
       continue;
     }
     if (leader >= 0xe0 && leader <= 0xef) {
-      requireContinuation(record, bytes, cursor, 2);
+      requireContinuation(record, bytes, cursor, 1);
       const second = bytes[cursor + 1]!;
       if (leader === 0xe0 && second < 0xa0)
         throw new AutoMovieUtf8Error(record, cursor, "overlong-sequence");
       if (leader === 0xed && second >= 0xa0)
         throw new AutoMovieUtf8Error(record, cursor, "surrogate-scalar");
+      requireContinuation(record, bytes, cursor, 2);
       cursor += 3;
       continue;
     }
     if (leader >= 0xf0 && leader <= 0xf4) {
-      requireContinuation(record, bytes, cursor, 3);
+      requireContinuation(record, bytes, cursor, 1);
       const second = bytes[cursor + 1]!;
       if (leader === 0xf0 && second < 0x90)
         throw new AutoMovieUtf8Error(record, cursor, "overlong-sequence");
       if (leader === 0xf4 && second > 0x8f)
         throw new AutoMovieUtf8Error(record, cursor, "out-of-range-scalar");
+      requireContinuation(record, bytes, cursor, 3);
       cursor += 4;
       continue;
     }
@@ -109,10 +111,10 @@ const requireContinuation = (
   leaderOffset: number,
   count: number,
 ): void => {
-  if (leaderOffset + count >= bytes.length)
-    throw new AutoMovieUtf8Error(record, leaderOffset, "truncated-sequence");
   for (let index = 1; index <= count; ++index) {
     const offset = leaderOffset + index;
+    if (offset >= bytes.length)
+      throw new AutoMovieUtf8Error(record, leaderOffset, "truncated-sequence");
     const byte = bytes[offset]!;
     if (byte < 0x80 || byte > 0xbf)
       throw new AutoMovieUtf8Error(record, offset, "invalid-continuation");

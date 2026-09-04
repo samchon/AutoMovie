@@ -1,9 +1,8 @@
-import { TestValidator } from "@nestia/e2e";
-
 import {
   AutoMovieStructuredJsonError,
   parseAutoMovieStructuredJson,
-} from "../../../../packages/production/src/production/duplicateAwareJson";
+} from "@automovie/production";
+import { TestValidator } from "@nestia/e2e";
 
 const parse = (text: string): unknown =>
   parseAutoMovieStructuredJson({
@@ -51,6 +50,7 @@ export const test_production_structured_json_duplicate_members = (): void => {
   );
   TestValidator.predicate(
     "pathological nesting is refused by the declared parser bound",
-    Array.isArray(duplicate(`${"[".repeat(258)}0${"]".repeat(258)}`)),
+    (duplicate(`${"[".repeat(258)}0${"]".repeat(258)}`) as unknown[])[0] ===
+      "syntax",
   );
 };

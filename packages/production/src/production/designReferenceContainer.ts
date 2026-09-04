@@ -20,8 +20,11 @@ export class AutoMovieDesignReferenceContainerError extends Error {
     "automovie-design-reference-container-invalid" as const;
 
   public constructor(
+    /** Logical design-reference path being inspected. */
     public readonly path: string,
+    /** Container family selected by the observed signature or grammar. */
     public readonly family: string,
+    /** Stable parser stage at which the candidate was refused. */
     public readonly stage: string,
     detail: string,
   ) {
@@ -200,6 +203,13 @@ const inspectJpeg = (props: {
       );
     const payload = cursor + 2;
     if (JPEG_FRAME_MARKERS.has(marker)) {
+      if (width !== undefined || height !== undefined)
+        throw invalid(
+          props.path,
+          "JPEG",
+          "frame",
+          "multiple frame headers are not in the admitted profile",
+        );
       if (size < 8)
         throw invalid(props.path, "JPEG", "frame", "frame header is too small");
       const components = bytes[payload + 5]!;
@@ -217,6 +227,20 @@ const inspectJpeg = (props: {
     }
     cursor += size;
     if (marker === 0xda) {
+      if (width === undefined || height === undefined)
+        throw invalid(
+          props.path,
+          "JPEG",
+          "scan",
+          "scan precedes the supported frame header",
+        );
+      if (size < 6 || size !== 6 + 2 * bytes[payload]!)
+        throw invalid(
+          props.path,
+          "JPEG",
+          "scan",
+          "scan component table is truncated",
+        );
       scans += 1;
       const start = cursor;
       while (cursor < bytes.length) {
@@ -302,14 +326,7 @@ interface IXmlRoot {
 }
 
 const inspectXmlRoot = (path: string, text: string): IXmlRoot | null => {
-  let cursor = skipSpace(text, 0);
-  while (text.startsWith("<?", cursor) || text.startsWith("<!--", cursor)) {
-    const closing = text.startsWith("<?", cursor) ? "?>" : "-->";
-    const end = text.indexOf(closing, cursor + 2);
-    if (end < 0)
-      throw invalid(path, "XML", "prolog", `unterminated ${closing}`);
-    cursor = skipSpace(text, end + closing.length);
-  }
+  const cursor = skipXmlMisc(path, text, 0);
   if (text[cursor] !== "<") return null;
   if (text.startsWith("<!", cursor))
     throw invalid(
@@ -384,7 +401,7 @@ const validateXmlClosure = (
   root: IStartTag,
 ): void => {
   if (root.selfClosing) {
-    if (skipSpace(text, root.end) !== text.length)
+    if (skipXmlMisc(path, text, root.end) !== text.length)
       throw invalid(
         path,
         "SVG",
@@ -406,6 +423,8 @@ const validateXmlClosure = (
       const end = text.indexOf("-->", open + 4);
       if (end < 0)
         throw invalid(path, "SVG", "closure", "unterminated comment");
+      if (text.slice(open + 4, end).includes("--"))
+        throw invalid(path, "SVG", "comment", "comment body contains --");
       cursor = end + 3;
       continue;
     }
@@ -433,7 +452,7 @@ const validateXmlClosure = (
         );
       cursor = open + close[0].length;
       if (stack.length === 0) {
-        if (skipSpace(text, cursor) !== text.length)
+        if (skipXmlMisc(path, text, cursor) !== text.length)
           throw invalid(
             path,
             "SVG",
@@ -456,6 +475,20 @@ const validateXmlClosure = (
     cursor = child.end;
   }
   throw invalid(path, "SVG", "closure", "root element is not closed");
+};
+
+const skipXmlMisc = (path: string, text: string, offset: number): number => {
+  let cursor = skipSpace(text, offset);
+  while (text.startsWith("<?", cursor) || text.startsWith("<!--", cursor)) {
+    const comment = text.startsWith("<!--", cursor);
+    const closing = comment ? "-->" : "?>";
+    const end = text.indexOf(closing, cursor + 2);
+    if (end < 0) throw invalid(path, "XML", "misc", `unterminated ${closing}`);
+    if (comment && text.slice(cursor + 4, end).includes("--"))
+      throw invalid(path, "XML", "comment", "comment body contains --");
+    cursor = skipSpace(text, end + closing.length);
+  }
+  return cursor;
 };
 
 const validateXmlCharacterData = (path: string, value: string): void => {
