@@ -3704,7 +3704,10 @@ export const review = true;
   write(
     scatteredContractExclusion,
     "docs/contracts/principles-common.md",
-    `<!-- @evidenceExcludeReview discovery/core/common.md#shared-local-boundary #abcdef0 This reviewed negative is scattered. -->\n${target("Scattered contract", "scattered-contract")}`,
+    `<!--
+@evidenceExclude discovery/core/common.md#shared-local-boundary This negative is scattered.
+@evidenceExcludeReview discovery/core/common.md#shared-local-boundary #abcdef0 This reviewed negative is scattered.
+-->\n${target("Scattered contract", "scattered-contract")}`,
   );
   assert.equal(
     throws(
