@@ -56,10 +56,9 @@ export const resolveAutoMovieCatalogVersion = (
     strict: true,
     uniqueKeys: true,
   });
-  if (document.errors.length !== 0)
-    throw new Error(
-      `${context} has invalid YAML: ${document.errors[0]!.message}`,
-    );
+  const diagnostic = document.errors[0] ?? document.warnings[0];
+  if (diagnostic !== undefined)
+    throw new Error(`${context} has invalid YAML: ${diagnostic.message}`);
   const root = requireMapping(document.contents, context, "document");
   const catalogs = requireDirect(
     root,
