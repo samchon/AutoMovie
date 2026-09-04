@@ -1,28 +1,31 @@
 import fs from "node:fs";
 import path from "node:path";
 
-interface ICoveragePosition {
-  column?: number;
-  line?: number;
-}
-
-interface ICoverageSpan {
-  end?: ICoveragePosition;
-  start?: ICoveragePosition;
-}
+import {
+  type ICoverageSpan,
+  canonicalCoveragePath,
+  functionIdentity,
+} from "./coverageIdentity";
 
 interface IIstanbulFileCoverage {
   b: Record<string, number[]>;
   branchMap: Record<string, { locations: ICoverageSpan[]; type: string }>;
   f: Record<string, number>;
-  fnMap: Record<string, { loc: ICoverageSpan; name: string }>;
+  fnMap: Record<
+    string,
+    { decl?: ICoverageSpan; loc: ICoverageSpan; name: string }
+  >;
   s: Record<string, number>;
   statementMap: Record<string, ICoverageSpan>;
 }
 
 interface IFunctionGapProps {
   covered: Set<string>;
-  name: string | undefined;
+  definition: {
+    decl?: ICoverageSpan;
+    loc?: ICoverageSpan;
+    name?: string;
+  };
   text: string | null;
 }
 
@@ -67,9 +70,10 @@ type Writer = (line: string) => void;
  * line numbers to distrust.
  */
 export const functionGapIsReal = (props: IFunctionGapProps): boolean => {
-  const name = props.name;
+  const name = props.definition.name;
   if (typeof name !== "string" || name.startsWith("(anonymous")) return true;
-  if (props.covered.has(name)) return false;
+  const identity = functionIdentity(props.definition);
+  if (identity !== null && props.covered.has(identity)) return false;
   return props.text === null || fileDeclaresName(props.text, name);
 };
 
@@ -213,8 +217,20 @@ export const measuredLineCount = (
   record: Record<string, unknown> | null | undefined,
   file: string,
 ): number | null => {
-  const value = record?.[file];
-  return typeof value === "number" ? value : null;
+  const direct = record?.[file];
+  const value =
+    direct ??
+    Object.entries(record ?? {}).find(
+      ([candidate]) =>
+        canonicalCoveragePath(candidate) === canonicalCoveragePath(file),
+    )?.[1];
+  if (typeof value === "number") return value;
+  return typeof value === "object" &&
+    value !== null &&
+    "lines" in value &&
+    typeof value.lines === "number"
+    ? value.lines
+    : null;
 };
 
 /**
@@ -240,13 +256,6 @@ const readMeasuredLines = (
 };
 
 const ROOT = path.resolve(__dirname, "../../..");
-export const COVERAGE_REPORT_FILE = path.join(
-  ROOT,
-  "node_modules",
-  ".cache",
-  "automovie-c8-report",
-  "coverage-final.json",
-);
 
 const relative = (file: string): string =>
   path.relative(ROOT, file).replaceAll("\\", "/");
@@ -267,8 +276,9 @@ const location = (span: ICoverageSpan): string => {
  * repository report.
  */
 export const reportCoverageGaps = (
-  reportFile: string = COVERAGE_REPORT_FILE,
+  reportFile: string,
   write: Writer = console.log,
+  measuredSources?: Record<string, unknown>,
 ): number => {
   if (fs.existsSync(reportFile) === false) {
     write("No Istanbul coverage-final.json was produced.");
@@ -283,7 +293,7 @@ export const reportCoverageGaps = (
   let outside = 0;
   let unmeasured = 0;
   const outsideFiles: string[] = [];
-  const measuredLines = readMeasuredLines(reportFile);
+  const measuredLines = measuredSources ?? readMeasuredLines(reportFile);
   for (const [file, data] of Object.entries(coverage).sort(([left], [right]) =>
     left.localeCompare(right),
   )) {
@@ -303,13 +313,14 @@ export const reportCoverageGaps = (
     const covered = new Set(
       Object.entries(data.f)
         .filter(([, hits]) => hits > 0)
-        .map(([id]) => data.fnMap[id].name),
+        .map(([id]) => functionIdentity(data.fnMap[id]))
+        .filter((identity): identity is string => identity !== null),
     );
     const claimed = Object.entries(data.f)
       .filter(([, hits]) => hits === 0)
       .map(([id]) => data.fnMap[id]);
     const kept = claimed.filter((definition) =>
-      functionGapIsReal({ name: definition.name, covered, text }),
+      functionGapIsReal({ definition, covered, text }),
     );
     ghosts += claimed.length - kept.length;
     if (text !== null)
