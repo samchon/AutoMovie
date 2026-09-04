@@ -31,7 +31,15 @@ const audio = (): IAutoMovieProductionAudioProbe => ({
     movieTimescale: 48_000,
     mediaTimescale: 48_000,
     movieDuration: 48_000,
-    mediaDuration: 48_000,
+    mediaDuration: 48_312,
+    edits: [
+      {
+        segmentDuration: 48_000,
+        mediaTime: 312,
+        mediaRateInteger: 1,
+        mediaRateFraction: 0,
+      },
+    ],
   },
   sampleEntry: productionOpusDescription({
     boxes: [box()],
@@ -171,6 +179,9 @@ export const test_production_opus_sample_description = (): void => {
       sampleRate: malformed((value) => (value.InputSampleRate = 0)),
       gain: malformed((value) => (value.OutputGain = 32_768)),
       family: malformed((value) => (value.ChannelMappingFamily = 256)),
+      reservedFamily: malformed((value) => {
+        value.ChannelMappingFamily = 2;
+      }),
       mappingArray: malformed(
         (value) => (value.ChannelMapping = null as unknown as number[]),
       ),
@@ -205,6 +216,10 @@ export const test_production_opus_sample_description = (): void => {
         value.ChannelMappingFamily = 1;
         value.ChannelMapping = [0];
       }),
+      outOfRangeMap: malformed((value) => {
+        value.ChannelMappingFamily = 1;
+        value.ChannelMapping = [0, 2];
+      }),
     },
     {
       codec: true,
@@ -216,6 +231,7 @@ export const test_production_opus_sample_description = (): void => {
       sampleRate: true,
       gain: true,
       family: true,
+      reservedFamily: true,
       mappingArray: true,
       mappingValue: true,
       trackMismatch: true,
@@ -225,6 +241,7 @@ export const test_production_opus_sample_description = (): void => {
       coupledCount: true,
       impossibleCounts: true,
       wrongMapLength: true,
+      outOfRangeMap: true,
     },
   );
   const substitutions: Array<
@@ -279,6 +296,32 @@ export const test_production_opus_sample_description = (): void => {
     ],
     ["timebase.movieDuration", (value) => (value.timebase.movieDuration = 0)],
     ["timebase.mediaDuration", (value) => (value.timebase.mediaDuration = 0)],
+    ["timebase.edits.length", (value) => (value.timebase.edits = [])],
+    [
+      "timebase.edit.segmentDuration",
+      (value) => (value.timebase.edits[0]!.segmentDuration -= 1),
+    ],
+    [
+      "timebase.edit.mediaTime",
+      (value) => (value.timebase.edits[0]!.mediaTime = 0),
+    ],
+    [
+      "timebase.edit.mediaRateInteger",
+      (value) => (value.timebase.edits[0]!.mediaRateInteger = 0),
+    ],
+    [
+      "timebase.edit.mediaRateFraction",
+      (value) => (value.timebase.edits[0]!.mediaRateFraction = 1),
+    ],
+    [
+      "timebase.presentationSamples",
+      (value) => (value.timebase.movieTimescale = 47_999),
+    ],
+    [
+      "timebase.codedCoverage",
+      (value) => (value.timebase.mediaDuration = 48_311),
+    ],
+    ["runtimeSeconds", (value) => (value.runtimeSeconds = 2)],
   ];
   TestValidator.predicate(
     "every profile field has a one-field refusing twin",

@@ -27,7 +27,7 @@ Maintain action direction, pose phase, eyeline, prop state, light, and ambience 
 
 Rhythm emerges from shot duration, internal movement, dialogue, sound envelope, and expectation. Fast cutting cannot rescue inert shots; a long take is not automatically contemplative. Shape acceleration and deceleration against the sequence's dramatic curve. Leave room before important information to focus attention and after it to register consequence.
 
-Evaluate cuts at delivery frame rate. Snap edits to the production frame grid. Check source interval bounds, exact output frames, and transition overlap. A transition consumes time from both sides and must not erase the action or line it is meant to connect.
+Evaluate cuts at the exact reduced rational delivery frame rate and snap edits to that production frame grid. A decimal `fps` is only a display projection and must never be used to reconstruct a fractional clock. Map destination audio samples, WebVTT milliseconds, and MP4 ticks from the same integer frame boundaries with the shared nearest-half-up rule. Check source interval bounds, exact output frames, and transition overlap. A transition consumes time from both sides and must not erase the action or line it is meant to connect.
 
 ## EDL discipline
 

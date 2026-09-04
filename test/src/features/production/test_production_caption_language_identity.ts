@@ -252,6 +252,23 @@ const inspectMalformedFilmCueLanguage = (): void => {
         'Caption cue "malformed-language" must be unique, non-overlapping, in range, plain non-blank text, use a well-formed RFC 5646 language tag, and use a non-blank speaker identity.',
       ],
     );
+    fs.writeFileSync(
+      sourcePath,
+      fs
+        .readFileSync(sourcePath, "utf8")
+        .replace('language: "en-12"', 'language: "en-US"'),
+      "utf8",
+    );
+    const valid = new AutoMovieProductionCompiler(
+      AutoMovieProductionProject.open(fixture.root),
+    ).compile({ scope: "source" });
+    TestValidator.equals(
+      "film cues accept a well-formed language tag at the compiler boundary",
+      valid.diagnostics.filter(
+        (diagnostic) => diagnostic.code === "film-caption-cue-invalid",
+      ),
+      [],
+    );
   } finally {
     fixture.dispose();
   }

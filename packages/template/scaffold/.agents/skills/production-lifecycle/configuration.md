@@ -6,6 +6,8 @@ Read [`scripts/productionConfiguration.ts`](../../../scripts/productionConfigura
 
 ## Wiring and authored choices
 
+Author a fractional production rate only as a reduced positive `frameFormat.frameRate = { numerator, denominator }` beside the exactly equal `fps` display value. Never reconstruct that identity from a decimal `fps`; the current pinned integer-only encoder must refuse an unsupported rational rate before render rather than round or substitute it.
+
 Harness wiring is not on the design record at all, so there is nothing there to mistake one for. The production namespace is derived from this project's own `package.json` name by `scripts/projectIdentity.ts`, and the capture browser and local viewer server are host boundaries owned by `scripts/hostBoundary.ts`. Each of those carries a shipped default and is overridden only by an explicit input on the invoking command (`AUTOMOVIE_CAPTURE_BROWSER`, `AUTOMOVIE_CAPTURE_BROWSER_PRODUCT`, `AUTOMOVIE_CAPTURE_BROWSER_EXECUTABLE`, `AUTOMOVIE_VIEWER_HOST`, `AUTOMOVIE_VIEWER_BASE_PATH`); an unrecognized value is refused by name rather than replaced with the default. Nothing there changes what the production delivers.
 
 Do not move a production choice out to that boundary, and do not bring a host fact onto the design record.

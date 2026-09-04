@@ -62,7 +62,15 @@ const audio = (): IAutoMovieProductionAudioProbe => ({
     movieTimescale: 1_000,
     mediaTimescale: 48_000,
     movieDuration: 1_000,
-    mediaDuration: 48_000,
+    mediaDuration: 48_312,
+    edits: [
+      {
+        segmentDuration: 1_000,
+        mediaTime: 312,
+        mediaRateInteger: 1,
+        mediaRateFraction: 0,
+      },
+    ],
   },
   sampleEntry: {
     kind: "opus",

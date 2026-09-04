@@ -112,12 +112,19 @@ export const productionOpusDescription = (props: {
       },
     };
   }
+  if (family !== 1 && family !== 255)
+    throw new Error(
+      `malformed-dOps.ChannelMappingFamily: reserved family ${family} is unsupported.`,
+    );
   const streamCount = integer("StreamCount", 1, 255);
   const coupledCount = integer("CoupledCount", 0, 255);
   if (
     coupledCount > streamCount ||
     outputChannelCount !== streamCount + coupledCount ||
-    mapping.length !== outputChannelCount
+    mapping.length !== outputChannelCount ||
+    mapping.some(
+      (value) => value !== 255 && value >= streamCount + coupledCount,
+    )
   )
     throw new Error(
       "malformed-dOps.ChannelMapping: stream, coupled, channel, and mapping counts disagree.",
@@ -149,6 +156,27 @@ export const assertProductionOpusProfile = (
   actual: IAutoMovieProductionAudioProbe,
 ): void => {
   const description = actual.sampleEntry;
+  const edit = actual.timebase.edits[0];
+  const clockTerms = [
+    actual.timebase.movieTimescale,
+    actual.timebase.mediaTimescale,
+    actual.timebase.movieDuration,
+    actual.timebase.mediaDuration,
+  ];
+  const clocksSafe = clockTerms.every((value) => positiveSafeInteger(value));
+  const presentationNumerator = clocksSafe
+    ? BigInt(actual.timebase.movieDuration) *
+      BigInt(actual.timebase.mediaTimescale)
+    : 0n;
+  const presentationDenominator = clocksSafe
+    ? BigInt(actual.timebase.movieTimescale)
+    : 1n;
+  const presentationQuotient = presentationNumerator / presentationDenominator;
+  const presentationSamplesSafe =
+    clocksSafe &&
+    presentationNumerator % presentationDenominator === 0n &&
+    presentationQuotient <= BigInt(Number.MAX_SAFE_INTEGER);
+  const presentationSamples = Number(presentationQuotient);
   const comparisons: Array<[string, unknown, unknown]> = [
     ["codec", "opus", actual.codec.split(".")[0]!.toLowerCase()],
     ["channels", 2, actual.channels],
@@ -168,10 +196,44 @@ export const assertProductionOpusProfile = (
       JSON.stringify(description.channelMapping.channelOrder),
     ],
     ["dOps.preSkip", actual.primingSamples, description.preSkip],
-    ["timebase.movieTimescale", true, actual.timebase.movieTimescale > 0],
+    [
+      "timebase.movieTimescale",
+      true,
+      positiveSafeInteger(actual.timebase.movieTimescale),
+    ],
     ["timebase.mediaTimescale", 48_000, actual.timebase.mediaTimescale],
-    ["timebase.movieDuration", true, actual.timebase.movieDuration > 0],
-    ["timebase.mediaDuration", true, actual.timebase.mediaDuration > 0],
+    [
+      "timebase.movieDuration",
+      true,
+      positiveSafeInteger(actual.timebase.movieDuration),
+    ],
+    [
+      "timebase.mediaDuration",
+      true,
+      positiveSafeInteger(actual.timebase.mediaDuration),
+    ],
+    ["timebase.edits.length", 1, actual.timebase.edits.length],
+    [
+      "timebase.edit.segmentDuration",
+      actual.timebase.movieDuration,
+      edit?.segmentDuration,
+    ],
+    ["timebase.edit.mediaTime", description.preSkip, edit?.mediaTime],
+    ["timebase.edit.mediaRateInteger", 1, edit?.mediaRateInteger],
+    ["timebase.edit.mediaRateFraction", 0, edit?.mediaRateFraction],
+    ["timebase.presentationSamples", true, presentationSamplesSafe],
+    [
+      "timebase.codedCoverage",
+      true,
+      presentationSamplesSafe &&
+        actual.timebase.mediaDuration >=
+          description.preSkip + presentationSamples,
+    ],
+    [
+      "runtimeSeconds",
+      actual.timebase.movieDuration / actual.timebase.movieTimescale,
+      actual.runtimeSeconds,
+    ],
   ];
   const mismatch = comparisons.find(
     ([, expected, observed]) => expected !== observed,
@@ -424,3 +486,6 @@ export const assertProductionRenderedDeliverableFacts = (props: {
       `Render manifest ${props.kind}.${mismatch[0]} must equal its parser-derived media fact: expected ${String(mismatch[1])}, observed ${String(mismatch[2])}.`,
     );
 };
+
+const positiveSafeInteger = (value: number): boolean =>
+  Number.isSafeInteger(value) && value > 0;

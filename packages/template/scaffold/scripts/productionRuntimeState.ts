@@ -3,6 +3,7 @@ import type {
   AutoMovieContentDigest,
   IAutoMovieDeliveryCrop,
   IAutoMovieFilmTimeline,
+  IAutoMovieProductionFrameRate,
   IAutoMovieProductionTtsReceipt,
 } from "@automovie/interface";
 import { createHash } from "node:crypto";
@@ -15,6 +16,8 @@ export interface IAutoMovieProductionDialogueRuntime {
   inputFingerprint: AutoMovieContentDigest;
   /** Film frame clock used by every mouth range. */
   fps: number;
+  /** Exact rational film clock when the legacy scalar is fractional. */
+  frameRate?: IAutoMovieProductionFrameRate;
   /** Film segments needed to map a shot-local review seek onto film time. */
   segments: Array<
     Pick<
