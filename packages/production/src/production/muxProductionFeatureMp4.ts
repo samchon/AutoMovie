@@ -1,6 +1,7 @@
 import type { IAutoMovieFilmTimeline } from "@automovie/interface";
 import type {
   Box,
+  BoxKind,
   DataStream,
   IsoFileOptions,
   Movie,
@@ -122,7 +123,7 @@ export const normalizeProductionH264Mp4 = (bytes: Uint8Array): Uint8Array => {
     description_boxes: [
       ...description.boxes.filter((box) => box.type !== "colr"),
       productionSrgbColorBox(),
-    ],
+    ] as BoxKind[],
   });
   for (const sample of samples)
     output.addSample(
@@ -138,7 +139,7 @@ export const normalizeProductionH264Mp4 = (bytes: Uint8Array): Uint8Array => {
 };
 
 /** Writable nclx box because the installed parser exposes no colr writer. */
-const productionSrgbColorBox = (): Box => {
+const productionSrgbColorBox = (): BoxKind => {
   const box = new (residentMp4Box().BoxParser.box.colr)();
   box.write = function (stream: DataStream): void {
     this.size = 11;
