@@ -72,6 +72,7 @@ Use this synthetic matrix against the filled issue and records. It is a manual c
 | One exploratory run with its limitation and follow-up observation | Valid |
 | A fixed global `N` or mandatory binary metric for visual judgment | Invalid |
 | A known failed calibration artifact passed without disagreement and escalation | Invalid |
+| An order-sensitive or human-disagreeing verdict retained with both observations and a linked alternate-family or qualified-human escalation | Valid |
 | An empty `claims: []` or single-topology calibration reported as full rubric coverage | Invalid |
 | A FAIL without claim, evidence, reason, or next action | Invalid |
 | A retrieval-enabled run without policy and sanitized receipts | Invalid |

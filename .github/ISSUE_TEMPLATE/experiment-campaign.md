@@ -43,14 +43,21 @@ assignees: ""
 | Windows `MAX_PATH`/long-path mode, path budget, and longest resolved path | unverified | unverified | unverified | unverified |
 
 - Retrieval mode (`disabled`, `controlled`, or `open`), allowed/denied domains, and exposure policy:
-- Sanitized retrieval receipts (query, URL, timestamp, actor, purpose, disposition):
+
+| Retrieval receipt id | Sanitized query | Result URL | Timestamp | Actor | Purpose | Disposition |
+| --- | --- | --- | --- | --- | --- | --- |
+| unverified | unverified | unverified | unverified | unverified | unverified | unverified |
+
 - Contamination and benchmark-identity exposure:
 - Observable trajectory manifest (format/version, length, digest, timestamps, location, retention, access, redactions, privacy; hidden reasoning excluded):
-- Transfer receipts (source/destination digest and transformation):
+
+| Transfer receipt id | Source identity/digest | Destination identity/digest | Transformation | Timestamp | Actor | Privacy disposition |
+| --- | --- | --- | --- | --- | --- | --- |
+| unverified | unverified | unverified | unverified | unverified | unverified | unverified |
 
 ## Judgment calibration and escalation
 
-- Calibration corpus and qualified-human truth:
+- Calibration record id, corpus digest, and qualified-human truth:
 - Passing, known-failure, ambiguous/high-impact, and order-sensitive witnesses:
 - Original and reversed presentation results:
 - Human agreement, false PASS, false FAIL, and known blind spots:
