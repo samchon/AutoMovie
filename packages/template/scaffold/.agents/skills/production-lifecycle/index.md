@@ -14,13 +14,7 @@ Do not partition one authored layer into release and non-release populations. Tr
 
 Record authorship and assistance truthfully in Git history and durable source provenance where the production contract calls for it. Do not move process history into current canon, attribute generated output as human observation, or treat tool assistance as authority for a production fact.
 
-Choose exactly one shape in `lint.config.ts`:
-
-- a film follows `settings -> treatments -> scripts -> screenplays -> shots -> filmSources`;
-- a brief follows `settings -> briefs -> shots -> filmSources`;
-- a library follows settings plus only the design and matching source branches it delivers.
-
-Film and brief also require reviewed `productionSources` as a parallel input before `filmSources`. Runtime never chooses the production shape.
+Choose exactly one shape in `lint.config.ts`. [Production kinds](production-kinds.md) is the sole semantic owner of the film, brief, and library ladders, their parallel inputs, and their refusals. This lifecycle index routes to that decision and does not restate it.
 
 ## Generated instructions
 

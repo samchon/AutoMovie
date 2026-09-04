@@ -59,7 +59,7 @@ Never hardcode a test to the current repository shape or implementation text. A 
 
 Assert with `TestValidator.equals(title, actual, expected)` for exact values and `TestValidator.predicate(title, <boolean>)` for floats (build the boolean with the `nclose`/`vclose`/`qclose` helpers, never deep-equality on floats). Code JSDoc is English in the interia voice: a contract paragraph (what it pins and why) followed by a numbered `Scenarios:` list naming each experiment's inputs, expected result, and the branch it guards.
 
-Run with `pnpm --filter @automovie/test start`; type-check with `pnpm --filter @automovie/test build` (the suite itself runs straight through ts-node, no compile step).
+Run with `pnpm --filter @automovie/test start`; type-check with `pnpm --filter @automovie/test build` (the suite itself runs straight through `ttsx`, with no emitted compile step).
 
 **A case that arranges its own subject must fail when the arrangement fails.** A refusal case that rewrites scaffold source by string anchor, an oracle injected into a fixture, a probe spliced into a generated file: when the anchor is gone, `String.replace` returns the input and the case proceeds against unmutated material, so it does not go red, it quietly starts asserting something else. Route every such rewrite through a helper that throws when it changed nothing, rather than trusting that the anchor still exists.
 

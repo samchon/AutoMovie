@@ -10,15 +10,15 @@ No configuration file stands beside these documents and `src`. Reviewed delivery
 
 The reusable contracts those hosts answer live here too. This scaffold supplies `docs/discovery`, `docs/upstream`, `docs/principles`, and `docs/obligations`, and the graph resolves every target from this project-local root without reading an installed package. Cite them by their evidence roots (`discovery/...`, `upstream/...`, `principles/...`, `obligations/...`). Discovery states the open searches a population must run. Principles are no-exclusion checklists every selected authored H2/H3/H4 answers for itself. Authored-layer obligations are no-exclusion roles compared once by dedicated H2s under `docs/accounts/<layer>` against that layer's complete H2 population; source obligations remain coverage by the selected public-export population. Work-specific results become flat files in `docs/contracts`. A deliberate reusable-contract revision changes the local target and every affected host, router, and review together.
 
-Choose one shape in `../lint.config.ts` before authoring:
+Choose one shape in `../lint.config.ts` before authoring. The [production-kinds route](../.agents/skills/production-lifecycle/production-kinds.md) owns the exact ladders, parallel inputs, applicability tests, and refusals; this table names only the physical document owner selected by each shape:
 
-| Shape | Required authored route |
+| Shape | Physical authored owner |
 | --- | --- |
-| Film | settings -> treatments -> scripts -> screenplays -> shots -> filmSources |
-| Brief | settings -> briefs -> shots -> filmSources |
-| Library | settings plus each matching design -> source branch it delivers |
+| Film | settings, film narrative documents, shots, and film sources |
+| Brief | settings, bounded brief documents, shots, and film sources |
+| Library | settings and each matching design and source branch it delivers |
 
-For film and brief, reviewed `productionSources` is a parallel assembly input that must exist before `filmSources`; it does not interrupt the narrative-or-brief-to-shot identity ladder. Runtime alone does not choose the shape. A short or simple demonstration may be a brief when one delivery/shot/observation hierarchy completely owns it. A work whose causal, choice, or revelation structure needs independent treatment/script/screenplay refinement is a film. Design branches are orthogonal to shape:
+Runtime alone does not choose the shape. Design branches are orthogonal to shape:
 
 | Directory | Sole ownership |
 | --- | --- |
