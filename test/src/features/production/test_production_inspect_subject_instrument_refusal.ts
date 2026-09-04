@@ -108,6 +108,8 @@ export const test_production_inspect_subject_instrument_refusal =
         productionId: "fixture-film",
         shot: "opening",
         subject: SUBJECT,
+        plan: refused.planRecord!,
+        runtimeIdentity: null,
       });
 
       TestValidator.equals(
@@ -127,6 +129,7 @@ export const test_production_inspect_subject_instrument_refusal =
           asked: refusing.calls.length,
           publishedPlan: published.planned.length,
           publishedObservations: published.observations.length,
+          terminal: published.history.at(-1)?.verdict,
         },
         {
           code: "review-subject-viewpoint-unsupported",
@@ -140,6 +143,7 @@ export const test_production_inspect_subject_instrument_refusal =
           planStands: 6,
           publishedPlan: 6,
           publishedObservations: 0,
+          terminal: "unsupported",
           // One round trip, not one per planned viewpoint.
           asked: 1,
         },

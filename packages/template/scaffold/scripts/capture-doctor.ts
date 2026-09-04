@@ -7,11 +7,14 @@ import {
   launchCaptureBrowser,
 } from "./capture-browser";
 import { settleCaptureExecutableTouch } from "./captureExecutableSnapshot";
+import { assertAutoMovieNoArguments } from "./commandArguments";
 import { readAutoMovieHostCaptureBrowser } from "./hostBoundary";
 import {
   loadResidentRuntimePackage,
   runRuntimePackageGeneration,
 } from "./runtimePackageGeneration";
+
+assertAutoMovieNoArguments("capture:doctor", process.argv.slice(2));
 
 interface CaptureDoctorFailure {
   error: unknown;
