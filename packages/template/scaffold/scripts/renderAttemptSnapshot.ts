@@ -222,11 +222,16 @@ export const assertRenderAttemptLockOwner = (
     current.contentFingerprint !== lock.snapshot.contentFingerprint
   )
     throw new Error("Render attempt chunk lock changed physical generation.");
-  const owner = JSON.parse(
-    Buffer.from(
-      readCapturedRenderGcFile(lock.snapshot, RENDER_ATTEMPT_JSON_MAX_BYTES),
-    ).toString("utf8"),
-  ) as unknown;
+  const ownerBytes = readCapturedRenderGcFile(
+    lock.snapshot,
+    RENDER_ATTEMPT_JSON_MAX_BYTES,
+  );
+  let owner: unknown;
+  try {
+    owner = JSON.parse(Buffer.from(ownerBytes).toString("utf8")) as unknown;
+  } catch {
+    throw new Error("Render attempt chunk lock owner bytes are unreadable.");
+  }
   if (
     typeof owner !== "object" ||
     owner === null ||
@@ -254,11 +259,16 @@ export const readRenderAttempt = (
 ): IRenderAttemptSnapshot => {
   if (snapshot.kind !== "file")
     throw new Error(`Render attempt "${snapshot.target}" is not a file.`);
-  const record = JSON.parse(
-    Buffer.from(
-      readCapturedRenderGcFile(snapshot, RENDER_ATTEMPT_JSON_MAX_BYTES),
-    ).toString("utf8"),
-  ) as unknown;
+  const bytes = readCapturedRenderGcFile(
+    snapshot,
+    RENDER_ATTEMPT_JSON_MAX_BYTES,
+  );
+  let record: unknown;
+  try {
+    record = JSON.parse(Buffer.from(bytes).toString("utf8")) as unknown;
+  } catch {
+    throw new Error("Render attempt record is unreadable.");
+  }
   assertRenderAttemptRecord(record);
   return { record, snapshot };
 };

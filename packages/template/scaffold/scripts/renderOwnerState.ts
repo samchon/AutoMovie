@@ -1,6 +1,7 @@
-import type {
-  AutoMovieLocalProcessOwnerObservation,
-  IAutoMovieLocalProcessOwner,
+import {
+  type AutoMovieLocalProcessOwnerObservation,
+  type IAutoMovieLocalProcessOwner,
+  isAutoMovieLocalProcessOwner,
 } from "@automovie/production";
 
 /** Two independent owner observations authorizing or preserving one record. */
@@ -30,7 +31,18 @@ export const observeRenderOwnerRecovery = (props: {
     return { state: "preserved", observation: first };
   props.between?.();
   const second = props.observe(props.owner);
-  return second.state === "absent"
+  return second.state === "absent" &&
+    isAutoMovieLocalProcessOwner(props.owner) &&
+    sameRenderOwner(first.owner, props.owner) &&
+    sameRenderOwner(second.owner, props.owner)
     ? { state: "reclaimable", owner: second.owner }
     : { state: "preserved", observation: second };
 };
+
+const sameRenderOwner = (
+  left: IAutoMovieLocalProcessOwner,
+  right: IAutoMovieLocalProcessOwner,
+): boolean =>
+  left.host === right.host &&
+  left.pid === right.pid &&
+  left.generation === right.generation;

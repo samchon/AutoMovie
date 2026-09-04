@@ -304,12 +304,16 @@ const captureExisting = (
   }
 };
 
-const readOwner = (snapshot: IRenderGcTargetSnapshot): unknown =>
-  JSON.parse(
-    Buffer.from(readCapturedRenderGcFile(snapshot, LEASE_MAX_BYTES)).toString(
-      "utf8",
-    ),
-  ) as IRenderLivenessOwner;
+const readOwner = (snapshot: IRenderGcTargetSnapshot): unknown => {
+  const bytes = readCapturedRenderGcFile(snapshot, LEASE_MAX_BYTES);
+  try {
+    return JSON.parse(Buffer.from(bytes).toString("utf8")) as unknown;
+  } catch {
+    // Malformed or unstable owner bytes authorize nothing and must not leak
+    // their arbitrary payload through the JSON parser's diagnostic.
+    return null;
+  }
+};
 
 const isRenderLivenessOwner = (
   value: unknown,

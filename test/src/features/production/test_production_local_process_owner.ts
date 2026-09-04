@@ -1,4 +1,8 @@
-import { inspectCommitLock } from "@automovie/production";
+import {
+  acquireCommitLock,
+  inspectCommitLock,
+  releaseCommitLock,
+} from "@automovie/production";
 import { TestValidator } from "@nestia/e2e";
 import fs from "node:fs";
 import os from "node:os";
@@ -50,6 +54,22 @@ const GENERATION_B = "22222222-2222-4222-8222-222222222222";
 
 const platformError = (code: string): Error =>
   Object.assign(new Error(code), { code });
+
+const withCommitProcessQuery = <T>(
+  query: (pid: number, signal: 0) => unknown,
+  task: () => T,
+): T => {
+  const original = process.kill;
+  process.kill = ((pid: number, signal?: NodeJS.Signals | number): true => {
+    query(pid, signal as 0);
+    return true;
+  }) as typeof process.kill;
+  try {
+    return task();
+  } finally {
+    process.kill = original;
+  }
+};
 
 /**
  * Local owner claims never exceed process-generation evidence.
@@ -199,6 +219,10 @@ export const test_production_local_process_owner = (): void => {
   );
 
   const absent = { state: "absent", owner: anotherPid } as const;
+  const changedAbsent = {
+    state: "absent",
+    owner: { ...anotherPid, generation: GENERATION_B },
+  } as const;
   const occupied = { state: "occupied-or-reused", owner: anotherPid } as const;
   const unknown = {
     state: "unknown",
@@ -206,7 +230,9 @@ export const test_production_local_process_owner = (): void => {
     reason: "process-query-unavailable",
   } as const;
   const recovery = (
-    observations: Array<typeof absent | typeof occupied | typeof unknown>,
+    observations: Array<
+      typeof absent | typeof changedAbsent | typeof occupied | typeof unknown
+    >,
   ) => {
     let calls = 0;
     const decision = renderOwnerModule.observeRenderOwnerRecovery({
@@ -223,11 +249,13 @@ export const test_production_local_process_owner = (): void => {
       recovery([unknown]),
       recovery([absent, occupied]),
       recovery([absent, unknown]),
+      recovery([absent, changedAbsent]),
     ].map(({ decision, calls }) => ({ state: decision.state, calls })),
     [
       { state: "reclaimable", calls: 2 },
       { state: "preserved", calls: 1 },
       { state: "preserved", calls: 1 },
+      { state: "preserved", calls: 2 },
       { state: "preserved", calls: 2 },
       { state: "preserved", calls: 2 },
     ],
@@ -312,6 +340,71 @@ export const test_production_local_process_owner = (): void => {
         },
       );
     }
+
+    const observed = path.join(root, "observed.lock");
+    const observedOwner = { ...stableA, generation: GENERATION_B, at: 0 };
+    const observedToken = `automovie-commit-lock:${JSON.stringify({
+      ...observedOwner,
+      nonce: "0",
+    })}`;
+    fs.writeFileSync(observed, observedToken);
+    TestValidator.equals(
+      "commit inspection preserves all injected process observations",
+      [
+        withCommitProcessQuery(
+          () => undefined,
+          () => inspectCommitLock(observed)?.state,
+        ),
+        withCommitProcessQuery(
+          () => {
+            throw platformError("EPERM");
+          },
+          () => inspectCommitLock(observed)?.state,
+        ),
+        withCommitProcessQuery(
+          () => {
+            throw platformError("ESRCH");
+          },
+          () => inspectCommitLock(observed)?.state,
+        ),
+        withCommitProcessQuery(
+          () => {
+            throw platformError("EINVAL");
+          },
+          () => inspectCommitLock(observed)?.state,
+        ),
+      ],
+      ["occupied-or-reused", "occupied-or-reused", "absent", "unknown"],
+    );
+
+    let malformedCommitQueries = 0;
+    withCommitProcessQuery(
+      () => ++malformedCommitQueries,
+      () => inspectCommitLock(path.join(root, "invalid-0.lock")),
+    );
+    TestValidator.equals(
+      "malformed commit owner refuses before process query",
+      malformedCommitQueries,
+      0,
+    );
+
+    const reclaimed = withCommitProcessQuery(
+      () => {
+        throw platformError("ESRCH");
+      },
+      () => acquireCommitLock(observed),
+    );
+    TestValidator.predicate(
+      "commit acquisition replaces an unchanged twice-absent owner",
+      reclaimed !== observedToken &&
+        fs.readFileSync(observed, "utf8") === reclaimed,
+    );
+    releaseCommitLock(observed, reclaimed);
+    TestValidator.equals(
+      "reclaimed commit lock releases by its successor token",
+      fs.existsSync(observed),
+      false,
+    );
 
     const same = path.join(root, "same.lock");
     fs.writeFileSync(

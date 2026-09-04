@@ -586,7 +586,12 @@ export const removeCapturedRenderChunkPointer = (
 const parsePublicationReceipt = (
   bytes: Uint8Array,
 ): RenderChunkPublicationReceipt => {
-  const value = JSON.parse(Buffer.from(bytes).toString("utf8")) as unknown;
+  let value: unknown;
+  try {
+    value = JSON.parse(Buffer.from(bytes).toString("utf8")) as unknown;
+  } catch {
+    throw new Error("Render chunk pointer has no trustworthy receipt.");
+  }
   if (
     typeof value !== "object" ||
     value === null ||

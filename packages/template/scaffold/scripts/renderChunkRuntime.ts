@@ -201,7 +201,7 @@ export const createProductionRenderChunkLeaseRuntime = (props: {
         } catch (error) {
           if ((error as NodeJS.ErrnoException).code === "ENOENT") continue;
           throw new Error(
-            `Chunk lock "${file}" has no readable owner identity. Verify that no render worker owns it, then quarantine it before retrying: ${String(error)}`,
+            `Chunk lock "${file}" has no readable owner identity. Verify that no render worker owns it, then quarantine it before retrying.`,
           );
         }
         if (isRenderChunkLockOwner(owner) === false || owner.chunk !== chunk.id)

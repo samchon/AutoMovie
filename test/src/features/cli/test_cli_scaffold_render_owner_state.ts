@@ -141,11 +141,15 @@ export const test_cli_scaffold_render_owner_state = async (): Promise<void> => {
   // repository deliberately does not install its runtime dependencies below
   // packages/template/scaffold. Give this source-level consumer the same
   // package boundary for the duration of module loading.
-  const scaffoldPng = path.resolve(
+  const scaffoldNodeModules = path.resolve(
     __dirname,
-    "../../../../packages/template/node_modules/pngjs",
+    "../../../../packages/template/scaffold/node_modules",
   );
+  const scaffoldPng = path.join(scaffoldNodeModules, "pngjs");
   const installedPng = path.resolve(__dirname, "../../../node_modules/pngjs");
+  const removeScaffoldNodeModules =
+    fs.existsSync(scaffoldNodeModules) === false;
+  fs.mkdirSync(scaffoldNodeModules, { recursive: true });
   const removeScaffoldPng = fs.existsSync(scaffoldPng) === false;
   if (removeScaffoldPng) fs.symlinkSync(installedPng, scaffoldPng, "junction");
   let chunkRuntime: RenderChunkRuntimeModule;
@@ -157,8 +161,16 @@ export const test_cli_scaffold_render_owner_state = async (): Promise<void> => {
       ),
     );
   } finally {
-    if (removeScaffoldPng)
-      fs.rmSync(scaffoldPng, { force: true, recursive: true });
+    if (removeScaffoldPng) {
+      if (
+        fs.lstatSync(scaffoldPng).isSymbolicLink() === false ||
+        fs.realpathSync.native(scaffoldPng) !==
+          fs.realpathSync.native(installedPng)
+      )
+        throw new Error("Scaffold PNG test dependency changed before cleanup.");
+      fs.unlinkSync(scaffoldPng);
+    }
+    if (removeScaffoldNodeModules) fs.rmdirSync(scaffoldNodeModules);
   }
   const chunkSnapshot = loadSourceModule<RenderChunkSnapshotModule>(
     path.resolve(
@@ -331,6 +343,31 @@ export const test_cli_scaffold_render_owner_state = async (): Promise<void> => {
       { calls: 1, resident: true },
     );
     fs.rmSync(guard);
+    fs.writeFileSync(guard, '{"owner":"LIVENESS_OWNER_PAYLOAD_SENTINEL"');
+    let malformedGuardMessage = "";
+    try {
+      liveness.acquireRenderSessionLease({
+        coordinationRoot: root,
+        observeProcessOwner: observation,
+        owner: current,
+        scope,
+        tier: "proxy",
+      });
+    } catch (error) {
+      malformedGuardMessage = (error as Error).message;
+    }
+    TestValidator.equals(
+      "malformed GC bytes fail closed without exposing their payload",
+      {
+        refused: malformedGuardMessage.includes("trustworthy owner identity"),
+        leaked: malformedGuardMessage.includes(
+          "LIVENESS_OWNER_PAYLOAD_SENTINEL",
+        ),
+        resident: fs.existsSync(guard),
+      },
+      { refused: true, leaked: false, resident: true },
+    );
+    fs.rmSync(guard);
     writeGuard({ ...foreign, generation: "invalid" });
     TestValidator.equals(
       "malformed GC owner is not queried or removed",
@@ -443,6 +480,23 @@ export const test_cli_scaffold_render_owner_state = async (): Promise<void> => {
       },
       stateRoot,
     });
+    fs.writeFileSync(foreignClaim, '{"owner":"CHUNK_OWNER_PAYLOAD_SENTINEL"');
+    let malformedClaimMessage = "";
+    try {
+      await lease.acquire(chunk);
+    } catch (error) {
+      malformedClaimMessage = (error as Error).message;
+    }
+    TestValidator.equals(
+      "malformed chunk bytes fail closed without exposing their payload",
+      {
+        refused: malformedClaimMessage.includes("no readable owner identity"),
+        leaked: malformedClaimMessage.includes("CHUNK_OWNER_PAYLOAD_SENTINEL"),
+        resident: fs.existsSync(foreignClaim),
+      },
+      { refused: true, leaked: false, resident: true },
+    );
+    fs.rmSync(foreignClaim);
     writeForeignClaim();
     TestValidator.equals(
       "chunk acquisition preserves an occupied foreign generation",

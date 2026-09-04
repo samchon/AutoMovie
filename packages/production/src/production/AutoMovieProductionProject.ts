@@ -4927,8 +4927,7 @@ const assertOwnedRegularFile = (rootReal: string, file: string): void => {
 };
 
 const readRevision = (rootReal: string, file: string): number => {
-  const value =
-    lstatOrNull(file) === null ? undefined : readOwnedJson(rootReal, file);
+  const value = readOwnedJson(rootReal, file);
   const decision = decodeAutoMovieProjectRevision(value);
   if (decision.state === "invalid")
     throw new Error(

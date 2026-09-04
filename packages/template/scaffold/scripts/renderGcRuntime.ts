@@ -672,23 +672,21 @@ export const createProductionRenderGarbageRuntime = (props: {
     target: string,
     ownerOf: (snapshot: IRenderGcTargetSnapshot) => unknown,
   ): IRenderGcTargetSnapshot | null => {
-    let snapshot: IRenderGcTargetSnapshot | null;
     try {
-      snapshot = captureExistingRenderStateTarget(target);
+      const snapshot = captureExistingRenderStateTarget(target);
       if (snapshot === null) return null;
       const owner = ownerOf(snapshot);
       if (isAutoMovieLocalProcessOwner(owner) === false) return null;
-      if (renderHost.observeProcessOwner(owner).state !== "absent") return null;
-      const current = captureExistingRenderStateTarget(target);
       if (
-        current === null ||
-        current.targetIdentity !== snapshot.targetIdentity ||
-        current.contentFingerprint !== snapshot.contentFingerprint ||
-        current.namespaceFingerprint !== snapshot.namespaceFingerprint
+        observeRenderOwnerRecovery({
+          between: () => assertCapturedRenderTarget(snapshot),
+          observe: renderHost.observeProcessOwner,
+          owner,
+        }).state !== "reclaimable"
       )
         return null;
-      if (renderHost.observeProcessOwner(owner).state !== "absent") return null;
-      return current;
+      assertCapturedRenderTarget(snapshot);
+      return snapshot;
     } catch {
       return null;
     }
@@ -704,12 +702,14 @@ export const createProductionRenderGarbageRuntime = (props: {
   const readCapturedRenderJson = <T>(
     snapshot: IRenderGcTargetSnapshot,
     maximumBytes: number = snapshot.bytes,
-  ): T =>
-    JSON.parse(
-      Buffer.from(readCapturedRenderGcFile(snapshot, maximumBytes)).toString(
-        "utf8",
-      ),
-    ) as T;
+  ): T => {
+    const bytes = readCapturedRenderGcFile(snapshot, maximumBytes);
+    try {
+      return JSON.parse(Buffer.from(bytes).toString("utf8")) as T;
+    } catch {
+      throw new Error("Captured render JSON is unreadable.");
+    }
+  };
 
   const removeOwnedChunkClaim = (
     snapshot: IRenderGcTargetSnapshot,
