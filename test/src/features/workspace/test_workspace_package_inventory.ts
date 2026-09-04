@@ -58,7 +58,7 @@ export const test_workspace_package_inventory = (): void => {
   TestValidator.equals("valid inventory plan", planned, {
     packages: [
       {
-        key: "runtime",
+        key: "deliberately-wrong-runtime",
         directory: "runtime",
         name: "@example/runtime",
       },
