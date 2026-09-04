@@ -23,6 +23,7 @@ jobs:
         with:
           path: node_modules/.cache/ttsc/plugins
           key: ttsc-plugins-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+      - run: pnpm --filter @automovie/evidence test
       - run: pnpm coverage
         working-directory: test
         env:

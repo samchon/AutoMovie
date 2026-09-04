@@ -61,7 +61,7 @@ export const readAutoMovieObservationMeasurements = (
   }
   if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed))
     throw new Error(shape);
-  const output: Record<string, number> = {};
+  const entries: Array<readonly [string, number]> = [];
   for (const [name, reading] of Object.entries(parsed)) {
     if (name.trim() !== name || name === "")
       throw new Error(
@@ -69,7 +69,7 @@ export const readAutoMovieObservationMeasurements = (
       );
     if (typeof reading !== "number" || Number.isFinite(reading) === false)
       throw new Error(`--measurements ${name} must be one finite number.`);
-    output[name] = reading;
+    entries.push([name, reading]);
   }
-  return output;
+  return Object.fromEntries(entries);
 };
