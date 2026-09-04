@@ -179,11 +179,11 @@ assert.equal(
   })[0]!.code,
   "wrong-order",
 );
-assert.deepEqual(
+assert.equal(
   inspectAutoMovieEvidenceTopology({
     branches: [{ name: "settings", active: true, order: 0 }],
     expected: [{ provider: "settings", consumer: "ghost" }],
     declarations: [],
-  }),
-  [],
+  })[0]!.code,
+  "unknown-branch",
 );
