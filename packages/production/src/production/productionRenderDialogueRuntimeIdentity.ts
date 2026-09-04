@@ -9,7 +9,7 @@ const isContentDigest = (value: unknown): value is AutoMovieContentDigest =>
  * identity and therefore require replanning.
  *
  * @evidence requirements/production-design/continuity-change-and-deliverables.md#production-design-deliverable-freshness Refuses a frame whose mouth state was drawn from dialogue bytes outside the current render derivation.
- * @evidence specifications/narrative-and-intent/budgets-continuity-and-deliverables.md#narrative-intent-deliverable-provenance-handoff Keeps the captured visual artifact on the renderer identity recorded by its final handoff.
+ * @evidence specifications/narrative-and-intent/budgets-continuity-and-deliverables.md#narrative-intent-deliverable-authority-gaps Keeps the captured visual artifact on the exact current derivation required by its source authority.
  */
 export const assertProductionRenderDialogueRuntimeIdentity = (props: {
   /** Human-readable render boundary, slot, frame, layer, or preview identity. */

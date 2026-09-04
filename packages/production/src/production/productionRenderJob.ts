@@ -59,7 +59,7 @@ export interface IAutoMovieProductionRenderRuntimeIdentity {
    * when the planned production is deliberately silent.
    *
    * @evidence requirements/production-design/continuity-change-and-deliverables.md#production-design-deliverable-freshness Identifies the current dialogue derivation required by every planned frame capture.
-   * @evidence specifications/narrative-and-intent/budgets-continuity-and-deliverables.md#narrative-intent-deliverable-provenance-handoff Carries the renderer input identity that the captured visual artifact and final handoff must retain.
+   * @evidence specifications/narrative-and-intent/budgets-continuity-and-deliverables.md#narrative-intent-deliverable-authority-gaps Carries the renderer input identity required to classify every derived capture as current or stale.
    */
   dialogueRuntimeIdentity: AutoMovieContentDigest | null;
   /**
