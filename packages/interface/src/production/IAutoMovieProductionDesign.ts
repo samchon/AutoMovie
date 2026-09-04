@@ -619,6 +619,8 @@ export interface IAutoMovieProductionDesign {
    *
    * @evidence requirements/production-design/art-direction-and-visual-language.md#production-design-art-direction-exceptions Exposes `frameFormat` as the portable data boundary for the production design art direction exceptions requirement.
    * @evidence specifications/narrative-and-intent/design-authority-and-visual-language.md#narrative-intent-graphics-style-exceptions Types `frameFormat` for the narrative intent graphics style exceptions system contract.
+   * @evidence requirements/editorial/rational-time-and-ranges.md#editorial-rational-time-ranges Preserves the authored frame clock as an exact reduced rational identity.
+   * @evidence specifications/editorial-render-and-delivery/rational-timeline-and-composition.md#spec-editorial-rational-timeline Supplies the canonical timeline numerator and denominator.
    */
   frameFormat: {
     /**
@@ -636,9 +638,6 @@ export interface IAutoMovieProductionDesign {
     /**
      * Exact frame rate when `fps` is fractional. Integer legacy rates use an
      * equivalent denominator of one when this field is omitted.
-     *
-     * @evidence requirements/editorial/rational-time-and-ranges.md#editorial-rational-time-ranges Preserves the authored frame clock as an exact reduced rational identity.
-     * @evidence specifications/editorial-render-and-delivery/rational-timeline-and-composition.md#spec-editorial-rational-timeline Supplies the canonical timeline numerator and denominator.
      */
     frameRate?: IAutoMovieProductionFrameRate;
     /** Output color space. */

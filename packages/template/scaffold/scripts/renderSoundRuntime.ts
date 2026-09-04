@@ -3,6 +3,7 @@ import {
   productionSoundSpectrogram,
   productionSoundWaveform,
   renderProductionSound,
+  resolveProductionFrameRate,
 } from "@automovie/engine";
 import type {
   AutoMovieContentDigest,
@@ -1252,6 +1253,11 @@ export const createProductionRenderEncoderRuntime = (props: {
     plan: IAutoMovieProductionRenderJobPlan,
   ): void => {
     assertRuntimePackagesCurrent();
+    const frameRate = resolveProductionFrameRate(plan.frameFormat);
+    if (frameRate.denominator !== 1)
+      throw new Error(
+        `The pinned H.264 encoder cannot express exact rational frame rate ${frameRate.numerator}/${frameRate.denominator}. Select a supported integer rate before rendering; rounding or decimal substitution is not permitted.`,
+      );
     if (
       isDeepStrictEqual(
         props.productionEncoderIdentity(plan.frameFormat.fps),

@@ -1592,13 +1592,13 @@ export interface IAutoMovieProductionVideoProbe {
   codec: "h264";
   /**
    * Compatibility width projected from coded facts.
-   * @evidence requirements/delivery-and-accessibility/containers-codecs-and-media-facts.md#delivery-observed-media-facts Keeps the delivered raster observable.
+   * @evidence requirements/delivery-and-accessibility/containers-codecs-and-media-facts.md#delivery-container-metadata Keeps the delivered raster observable.
    * @evidence specifications/editorial-render-and-delivery/delivery-profiles-time-and-picture.md#spec-delivery-container-media-facts Supplies the compatibility width.
    */
   width: number;
   /**
    * Compatibility height projected from coded facts.
-   * @evidence requirements/delivery-and-accessibility/containers-codecs-and-media-facts.md#delivery-observed-media-facts Keeps the delivered raster observable.
+   * @evidence requirements/delivery-and-accessibility/containers-codecs-and-media-facts.md#delivery-container-metadata Keeps the delivered raster observable.
    * @evidence specifications/editorial-render-and-delivery/delivery-profiles-time-and-picture.md#spec-delivery-container-media-facts Supplies the compatibility height.
    */
   height: number;
@@ -1634,7 +1634,7 @@ export interface IAutoMovieProductionVideoProbe {
   brands: { major: string; compatible: string[] };
   /**
    * Parsed coded sample-entry raster.
-   * @evidence requirements/delivery-and-accessibility/containers-codecs-and-media-facts.md#delivery-observed-media-facts Preserves coded dimensions independently of display transforms.
+   * @evidence requirements/delivery-and-accessibility/containers-codecs-and-media-facts.md#delivery-container-metadata Preserves coded dimensions independently of display transforms.
    * @evidence specifications/editorial-render-and-delivery/delivery-profiles-time-and-picture.md#spec-delivery-container-media-facts Supplies the coded raster.
    */
   coded: { width: number; height: number };
