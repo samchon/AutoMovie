@@ -354,6 +354,15 @@ export const test_production_library_materialization = (): void => {
       },
     }),
   });
+  const emptySpace = libraryFixture({
+    [LIBRARY_SOURCE]: librarySourceModule({ environments: "[]" }),
+  });
+  const crossBranchSpace = libraryFixture({
+    [LIBRARY_SOURCE]: librarySourceModule({
+      environments: "[]",
+      models: `[${libraryModelLiteral("hall-cross-branch")}]`,
+    }),
+  });
   // Every other refusal names a field inside the contribution. This one is
   // wrong at the root -- `build()` hands back a list where a contribution
   // belongs -- and the message has a separate half for that, because there is
@@ -508,6 +517,11 @@ export const test_production_library_materialization = (): void => {
         })),
       },
     ).lint({ scope: "source" });
+    const empty = run({ root: emptySpace.root, materialize: false });
+    const crossBranch = run({
+      root: crossBranchSpace.root,
+      materialize: false,
+    });
 
     TestValidator.equals(
       "a published model lands where every model lands and is owned once",
@@ -571,6 +585,30 @@ export const test_production_library_materialization = (): void => {
                 diagnostic.path === LIBRARY_MODEL_SOURCE,
             ),
         ],
+        [
+          "anEmptySpaceOwnerCannotBecomeCompleted",
+          () =>
+            empty.success === false &&
+            empty.diagnostics.some(
+              (diagnostic) =>
+                diagnostic.code === "source-export-invalid" &&
+                diagnostic.message.includes(
+                  'branch "spaces" returned no environments',
+                ),
+            ),
+        ],
+        [
+          "aSpaceOwnerCannotCompleteThroughTheModelCarrier",
+          () =>
+            crossBranch.success === false &&
+            crossBranch.diagnostics.some(
+              (diagnostic) =>
+                diagnostic.code === "source-export-invalid" &&
+                diagnostic.message.includes(
+                  "payload belongs to the models branch",
+                ),
+            ),
+        ],
       ]),
       {
         "two valid owners swapped between exports are refused": true,
@@ -579,6 +617,8 @@ export const test_production_library_materialization = (): void => {
         "one model owner registered twice is refused": true,
         "a contribution that is not a contribution is refused at its own shape": true,
         "and a model the engine rejects blocks the compile": true,
+        anEmptySpaceOwnerCannotBecomeCompleted: true,
+        aSpaceOwnerCannotCompleteThroughTheModelCarrier: true,
       },
     );
   } finally {
@@ -592,6 +632,8 @@ export const test_production_library_materialization = (): void => {
     duplicateModel.dispose();
     invalidModel.dispose();
     swappedOwner.dispose();
+    emptySpace.dispose();
+    crossBranchSpace.dispose();
   }
 
   // A library owner's source is one module only because every fixture so far

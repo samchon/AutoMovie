@@ -9,6 +9,7 @@ import type { IAutoMovieProductionEvidenceSourceOwnerBinding } from "@automovie/
  * Review and final callers additionally require the current reviewed edge.
  *
  * @evidence requirements/review/subject-inspection.md#review-subject-evidence Binds execution and result attribution to the exact reviewed source export and refuses a stale or mismatched owner edge.
+ * @evidence specifications/authoring-and-authority/source-authority-and-derivation.md#spec-authoring-derivation-output-lineage Preserves the exact source and authored-target edge that compilation admits and derived output carries.
  * @evidence specifications/review-and-acceptance/subject-surface-and-inspection.md#review-system-subject-freshness Resolves target, source path, export, and source digest as one current identity and fails closed when it is absent, ambiguous, stale, mismatched, or unreviewed.
  * @author Samchon
  */
