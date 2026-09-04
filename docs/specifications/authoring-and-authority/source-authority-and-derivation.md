@@ -27,7 +27,6 @@ Source snapshot은 revision과 모든 채택 input digest로 식별된다. 파�
 
 성공한 파생 결과는 target identity, source snapshot, contract 또는 runtime identity, output digest와 검증 상태를 제공해야 한다. 이 lineage가 없는 artifact는 현재 결과로 열거나 후속 evidence의 parent로 사용할 수 없다.
 
-<!-- @evidenceObligation source-owner-output-lineage The compiler admits graph-selected source owners and carries their exact runtime and authored-target identity into derived output. -->
 
 Graph-selected TypeScript 결과는 normalized source digest뿐 아니라 실행된 project-relative path와 named export, 그 export가 인용한 정확한 Markdown target을 하나의 owner edge로 보존한다. Review와 final은 이 edge가 현재 fingerprint로 검토되지 않았거나 0개 또는 여러 개로 해석되거나 runtime이 다른 owner를 주장하면 실행과 귀속을 모두 거부한다. Helper import는 허용하지만 graph-selected top-level owner로 승격하지 않는다.
 

@@ -36,11 +36,6 @@ assert.doesNotThrow(() =>
       source:
         "const sample = `@evidence contracts/local.md#rule not a carrier`;\n",
     },
-    {
-      path: "src/fragment.ts",
-      source:
-        "/** @evidencePart contracts/local.md#rule::fragment Exact fragment. */\nexport const fragment = true;\n",
-    },
   ]),
 );
 
@@ -70,6 +65,10 @@ const failures: Array<[string, string]> = [
   ["@evidence contracts\\local.md#rule Wrong path.", "evidence-target"],
   ["@evidence C:local.md#rule Drive path.", "evidence-target"],
   ["@evidence contracts/local.md#bad--anchor Bad anchor.", "evidence-target"],
+  [
+    "@evidencePart contracts/local.md#rule::fragment Retired fragment tag.",
+    "evidence-syntax",
+  ],
   [
     "@evidenceReview contracts/local.md#rule no-hash malformed",
     "evidence-syntax",

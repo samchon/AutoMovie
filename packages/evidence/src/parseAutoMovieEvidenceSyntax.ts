@@ -51,7 +51,7 @@ interface ICommentRegion {
   text: string;
 }
 
-const ANNOTATION = /^@evidence(?:Exclude(?:Review)?|Part|Review)?\b/u;
+const ANNOTATION = /^@evidence[A-Za-z]*\b/u;
 const HEADING = /^(#{1,6})(?!#)\s+(\S.*)$/u;
 const ANCHOR = /[ \t]+\{#([^{}\s]+)\}[ \t]*$/u;
 

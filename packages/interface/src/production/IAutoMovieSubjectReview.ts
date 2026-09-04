@@ -80,9 +80,7 @@ export interface IAutoMovieSubjectReviewPose {
  * @evidence requirements/review/subject-inspection.md#review-subject-evidence Binds an observation to the subject, compiled revision, viewpoint and exact artifact that was inspected.
  * @evidence requirements/review/subject-inspection.md#review-subject-time-noninterchange Makes subject-view evidence structurally distinct from frame and range evidence.
  * @evidence specifications/review-and-acceptance/subject-surface-and-inspection.md#review-system-subject-observation Types the independently addressable subject observation record.
- * @evidencePart specifications/review-and-acceptance/subject-surface-and-inspection.md#review-system-subject-observation::subject-observation
  * @evidence specifications/review-and-acceptance/target-scope-and-context.md#review-system-presentation-context Preserves the subject, viewpoint, pose, artifact, evidence kind, runtime identity, and terminal status that bound the observation.
- * @evidencePart specifications/review-and-acceptance/target-scope-and-context.md#review-system-presentation-context::presentation-context
  * @author Samchon
  */
 export interface IAutoMovieSubjectReviewObservation {
@@ -162,7 +160,6 @@ export type AutoMovieSubjectReviewDescription =
  * @evidence requirements/review/subject-inspection.md#review-subject-viewpoint-ownership Records that viewpoint authority belongs to inspection and cannot produce delivery evidence.
  * @evidence specifications/review-and-acceptance/subject-surface-and-inspection.md#review-system-subject-record Types the resolved subject record used by review.
  * @evidence specifications/review-and-acceptance/subject-surface-and-inspection.md#review-system-subject-target-parity Gives a resolved subject target its own observation unit.
- * @evidencePart specifications/review-and-acceptance/subject-surface-and-inspection.md#review-system-subject-target-parity::subject-target-parity
  * @author Samchon
  */
 export interface IAutoMovieSubjectReviewUnit {
@@ -186,9 +183,7 @@ export interface IAutoMovieSubjectReviewUnit {
  * @evidence requirements/review/subject-inspection.md#review-subject-time-noninterchange Reports foreign evidence without counting it toward subject coverage.
  * @evidence specifications/review-and-acceptance/subject-surface-and-inspection.md#review-system-subject-coverage Types the explicit numerator, denominator, omissions and duplicate accounting of one subject review.
  * @evidence specifications/review-and-acceptance/subject-surface-and-inspection.md#review-system-subject-freshness Carries stale viewpoint identities separately from current coverage.
- * @evidencePart specifications/review-and-acceptance/subject-surface-and-inspection.md#review-system-subject-freshness::subject-freshness
  * @evidence specifications/review-and-acceptance/target-scope-and-context.md#review-system-context-unavailable Represents missing, stale, partial, not-run, and indeterminate subject context without converting it into a passing observation.
- * @evidencePart specifications/review-and-acceptance/target-scope-and-context.md#review-system-context-unavailable::context-unavailable-state
  * @author Samchon
  */
 export interface IAutoMovieSubjectReviewCoverage {

@@ -2417,7 +2417,6 @@ export class AutoMovieProductionProject {
    * @evidence requirements/repaint/sequence-continuity-and-publication.md#repaint-publication-gate Publishes an active rendition pointer only after structural, continuity, and temporal checks pass in the same guarded transaction.
    * @evidence requirements/repaint/sequence-continuity-and-publication.md#repaint-temporal-artifacts Requires hold, flicker, boil, edge-crawl, and transition-boundary playback verdicts before selection.
    * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-repaint-structure-continuity Validates structural review, continuity baseline, playback evidence, and all temporal verdicts before one rendition becomes current.
-   * @evidencePart specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-repaint-structure-continuity::selected-structure-continuity
    */
   public selectRepaintCandidate(props: {
     shot: string;

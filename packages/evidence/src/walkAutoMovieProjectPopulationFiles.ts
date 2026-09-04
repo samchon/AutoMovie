@@ -18,7 +18,6 @@ interface IAutoMovieEvidencePhysicalFile {
  *
  * @evidence requirements/production-evidence/graph.md#agent-production-evidence-physical-integrity Refuses a second pathname for the same bytes instead of counting it as an independent contract or source.
  * @evidence specifications/production-evidence/graph.md#spec-authoring-production-evidence-physical-integrity Applies one regular-file, non-symlink, single-link predicate before any project evidence bytes are read.
- * @evidencePart specifications/production-evidence/graph.md#spec-authoring-production-evidence-physical-integrity::physical-population-integrity Centralizes the physical identity decision shared by population and package-manifest readers.
  * @author Samchon
  */
 export const isAutoMovieEvidencePhysicalFile = (
@@ -34,7 +33,6 @@ export const isAutoMovieEvidencePhysicalFile = (
  *
  * @evidence requirements/production-evidence/graph.md#agent-production-evidence-physical-integrity Refuses linked, special, and project-external entries before a physical population can disappear from or enter the graph inventory.
  * @evidence specifications/production-evidence/graph.md#spec-authoring-production-evidence-physical-integrity Enumerates project-local population roots with lstat semantics while leaving the separately resolved shared-contract package outside this boundary.
- * @evidencePart specifications/production-evidence/graph.md#spec-authoring-production-evidence-physical-integrity::physical-population-integrity Makes active hosts, inactive residue, local contracts, and selected source trees one fail-closed physical inventory.
  * @author Samchon
  */
 export const walkAutoMovieProjectPopulationFiles = (

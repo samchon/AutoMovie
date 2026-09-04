@@ -4223,7 +4223,7 @@ export const review = true;
   write(
     taggedProductionTarget,
     "docs/contracts/tagged.md",
-    `<!-- @evidencePart principles/core/common.md#scope-preservation::fragment recursive -->\n${target("Tagged", "tagged")}`,
+    `<!-- @evidence principles/core/common.md#scope-preservation A production target cannot carry shared evidence before its H1. -->\n${target("Tagged", "tagged")}`,
   );
   assert.equal(
     throws(

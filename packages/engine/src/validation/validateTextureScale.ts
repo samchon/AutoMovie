@@ -72,7 +72,6 @@ const TEXTURE_SLOTS = [
  * @evidence requirements/asset-authoring/materials-and-textures.md#asset-texture-coordinates-scale `validateTextureScale` holds a declared coordinate system and real scale to the surface it is applied to, so the same declaration places the same way.
  * @evidence specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-material-texture-relations The validator checks the binding record's coordinate set and coordinate transform against the surface it joins without letting an image decide the material's scale.
  * @evidence specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-surface-coordinate-convention The validator is what holds a declared coordinate source to the surface it was bound to, so the convention is a checked contract rather than prose beside a type.
- * @evidencePart specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-surface-coordinate-convention::coordinate-source-declaration Reads the metric source as `1 / scale` metres against the surface's own span with no extent term, refuses a normalized source whose measured span exceeds one, and says nothing about an arbitrary source layout or an undeclared binding.
  * @author Samchon
  */
 export const validateTextureScale = (props: {

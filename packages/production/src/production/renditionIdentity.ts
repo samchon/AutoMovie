@@ -119,7 +119,6 @@ export const canonicalAutoMovieExternalGeneratorTermsDate = (
  *
  * @evidence requirements/repaint/providers-models-and-credentials.md#repaint-provider-terms Prevents a repaint execution from claiming terms were reviewed on a later UTC calendar day.
  * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-repaint-output-provenance Binds reviewed generator terms to the immutable execution or adoption instant retained by the receipt.
- * @evidencePart specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-repaint-output-provenance::canonical-output-provenance
  */
 export const assertAutoMovieExternalGeneratorTermsAt = (props: {
   termsCheckedAt: unknown;
@@ -229,7 +228,6 @@ export const productionRepaintStructuralControls = (
  *
  * @evidence requirements/repaint/retries-seeds-and-variation.md#repaint-attempt-failure-provenance Binds a candidate output to the complete immutable attempt request rather than an optional subset of its policy or evidence.
  * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-repaint-attempt-selection Keeps candidate identity distinct when any bounded policy or upstream evidence owner changes.
- * @evidencePart specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-repaint-attempt-selection::request-attempt-selection
  */
 export const productionRepaintOutputPath = (props: {
   shot: string;

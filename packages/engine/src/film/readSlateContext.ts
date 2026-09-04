@@ -68,7 +68,6 @@ const findUniqueOrNull = <T>(props: {
  *
  * @evidence requirements/acceptance/scope-targets-and-authority.md#acceptance-requestable-unit readSlateContext keeps the requested review unit explicit: Answer stored-context requests from the production slate. Geometry-dependent engine queries (`getReach`, `getResolvedPose`, `measureDistance`) need their own resolver inputs, so this helper intentionally covers only state already present on {@link IAutoMovieSlate}.
  * @evidence specifications/review-and-acceptance/target-scope-and-context.md#review-system-scope-selection readSlateContext realizes explicit review-scope selection: Answer stored-context requests from the production slate. Geometry-dependent engine queries (`getReach`, `getResolvedPose`, `measureDistance`) need their own resolver inputs, so this helper intentionally covers only state already present on {@link IAutoMovieSlate}.
- * @evidencePart specifications/review-and-acceptance/target-scope-and-context.md#review-system-scope-selection::scope-selection
  */
 export const readSlateContext = (
   slate: IAutoMovieSlate,

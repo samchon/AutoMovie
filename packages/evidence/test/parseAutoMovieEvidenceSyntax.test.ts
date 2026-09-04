@@ -125,7 +125,7 @@ const typescript = [
   "  /** @evidence contracts/a.md#six Namespace export. */",
   "  export const visible = true;",
   "}",
-  "/** @evidencePart contracts/a.md#seven::fragment Public fragment. */",
+  "/** @evidenceUnsupported contracts/a.md#seven Unsupported declaration. */",
   "export const fragment = true;",
   "export { laterExported };",
 ].join("\n");
@@ -160,7 +160,7 @@ assert.deepEqual(
       host: "src/owner.ts::docblock@29",
       line: 29,
       endLine: 29,
-      text: "@evidencePart contracts/a.md#seven::fragment Public fragment.",
+      text: "@evidenceUnsupported contracts/a.md#seven Unsupported declaration.",
     },
   ],
 );

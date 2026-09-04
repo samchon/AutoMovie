@@ -13,5 +13,3 @@ Film의 `first-pilot`은 `001-`로 시작하는 정확한 lower-kebab delivery-g
 `complete-production-reset`은 통과한 film pilot의 treatment·script·screenplay 분기 전체 또는 통과한 library pilot의 design/source 분기 전체를 함께 `review`에서 `draft`로 옮기는 유일한 역방향 전이다. Film reset은 세 서사 분기를 모두 `draft`로 요구하고, library reset은 실제로 짝을 이루는 design/source 분기를 함께 `draft`로 요구한다. 이 상태에서 보존한 pilot tag는 claim을 충족하지 않는 비활성 source material이고, 새 몸체는 tag 없이 작성하며, 완전한 모집단의 evidence와 review를 다시 마치기 전에는 `complete-production`으로 전환할 수 없다. 팩터리는 종류·범위·group·단계·실제 host 조합에서 부분 reset과 reset 대상이 아닌 분기의 역행을 거부한다. 이전 pilot이 실제로 두 번의 무결점 검토를 통과했는지와 일반 수정을 reset으로 가장했는지는 저장된 이력으로 추론하지 않고 authoring 절차가 검토한다.
 
 `null`은 아직 제작 종류를 선택하지 않은 빈 프로젝트 상태다. 패키지는 이 구조 밖의 설정 파일, 환경 변수나 파일 존재 여부로 누락된 입력값을 보충하지 않는다.
-
-<!-- @evidenceObligation visible-selection 제작 종류, 모집단 범위, 모든 분기 단계, 프로젝트 루트와 추가 claim을 담고 숨은 입력을 금지하는 완전한 선언. -->

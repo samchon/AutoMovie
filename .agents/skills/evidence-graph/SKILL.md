@@ -59,17 +59,13 @@ A derived population makes a carrier's citations checked; it does not make citat
 
 `@automovie/production` and `@automovie/playground` carry the same repository `evidence/graph`, `evidence/documented`, and `evidence/todo` obligations as the other public packages. Production owns the compiler, project store, capture, inspection, and render-job contracts it implements. Playground owns the durable prototype-view surface it exports. Neither a removed transport boundary nor an application's smaller surface excuses its public exports from requirement and specification traceability.
 
-## Partition a unit that several claimants share
+## Split independently payable units
 
-`evidence/graph` proves that a unit has a claimant. It does not prove that its claimants together cover the unit, so a unit one third implemented and a unit fully implemented pass identically. Prose that narrows a claim (`it does not claim camera-body clearance`) is honest and unparsed: no tool reads it, and one resolved citation counts the whole unit as realized.
+`evidence/graph` proves that a requirement or specification unit has a claimant. It does not prove that several partial claimants add up to the complete unit. When behaviors can mature, fail, or be implemented independently, give each one its own H3 with a stable anchor and let the native requirement or specification to claim to public-export triangle validate it directly.
 
-No `@ttsc/evidence` option closes this. `evidence/graph` runs its obligation from the reference toward the claim, `singleEvidencePerSymbol` demands exactly one unit per host where this repository's hosts answer for several, and `uniqueEvidence` would manufacture a false sole owner for shared implementation. Treat fragment coverage as a repository mechanism rather than a lint setting you have not found yet.
+Do not create a parallel fragment grammar, carrier tag, or ownership ledger. Those auxiliary records duplicate the Markdown unit and source citation identities, drift when either side changes, and still cannot prove semantic completeness. If several packages genuinely implement one inseparable unit, every positive citation must truthfully implement that complete unit. If none does, the unit is too broad and must be split before it is cited.
 
-Declare the partition at both contract and carrier. The specification unit enumerates its own fragments with `<!-- @evidenceObligation <id> <what the fragment is> -->` markers, because deciding where one obligation ends is human judgment that belongs beside the prose it divides. A public package owner proves each fragment by carrying `@evidence <unit>` and `@evidencePart <unit>::<id>` in one JSDoc block; two separate blocks do not aggregate into a claim.
-
-Split a unit into fragments whenever independently payable behavior can mature separately. `{#clv-clipping-clearance-evaluation}` lists `delivery crop` as one input, so the unit enumerates `delivery-raster-extent` and `delivery-crop-region` separately. The engine now owns both through distinct `@evidencePart` claims: keeping the split requires the narrower crop-region implementation to pay its own part instead of letting a true claim about the complete raster account for both, and preserves independent ownership when either behavior changes.
-
-Leave a fragment nobody implements without a matching public carrier rather than excluding it. An exclusion states that the claim intentionally owes nothing, so spending one on unfinished work restores the exact confusion between a decided boundary and an unexamined gap. An enumerated fragment with no matching `@evidencePart` carrier is visible debt; an exclusion over it is a false statement that reads green forever.
+Leave a unit nobody implements without a positive public carrier rather than excluding it. An exclusion states that the selected claim intentionally owes nothing; spending one on unfinished work confuses a decided package boundary with an unexamined product gap.
 
 ## Stable document identities
 

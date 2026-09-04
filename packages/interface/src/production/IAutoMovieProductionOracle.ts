@@ -400,7 +400,6 @@ export interface IAutoMovieCaptureRuntimeIdentity {
    *
    * @evidence requirements/acceptance/evidence-and-freshness.md#acceptance-current-historical-evidence Makes an installed renderer change a new evidence generation rather than letting historical pixels remain current.
    * @evidence specifications/review-and-acceptance/evidence-freshness-and-completeness.md#acceptance-system-current-historical-evidence Types the installed runtime closure consumed by capture freshness comparisons.
-   * @evidencePart specifications/review-and-acceptance/evidence-freshness-and-completeness.md#acceptance-system-current-historical-evidence::current-historical-closure
    */
   runtimeClosure: {
     /** Capture-closure schema and semantics. */

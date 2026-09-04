@@ -19,7 +19,6 @@ const finiteOrNull = (value: number): number | null =>
  *
  * @evidence requirements/camera/clipping-occlusion-and-spatial-constraints.md#camera-clipping-range Measures the current required camera-space range against the authored near, far, minimum bit capability, and maximum adjacent step in metres.
  * @evidence specifications/camera-light-and-visibility/visibility-and-image-space-observation.md#clv-clipping-clearance-evaluation Produces the addressed deterministic required-range depth precision report for a standard fixed-point perspective buffer.
- * @evidencePart specifications/camera-light-and-visibility/visibility-and-image-space-observation.md#clv-clipping-clearance-evaluation::depth-precision-constraint Derives the far-end adjacent fixed-point code step in camera-space metres, applies the authored minimum bit capability, and accepts exact equality with the authored maximum.
  */
 export const evaluateAutoMovieCameraDepthPrecision = (props: {
   /** Stable scene camera identity. */

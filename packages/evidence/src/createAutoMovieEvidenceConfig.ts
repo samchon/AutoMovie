@@ -44,7 +44,6 @@ import { walkAutoMovieProjectPopulationFiles } from "./walkAutoMovieProjectPopul
  * @evidence requirements/production-evidence/input.md#agent-production-evidence-visible-selection Makes the production shape one explicit value in the generated project's sole lint configuration.
  * @evidence specifications/production-evidence/README.md#production-evidence-specifications Carries the production-shape portion of the reusable configuration contract.
  * @evidence specifications/production-evidence/input.md#spec-authoring-production-evidence-input-state Supplies the declared film, brief, or library state to the reusable graph factory.
- * @evidencePart specifications/production-evidence/input.md#spec-authoring-production-evidence-input-state::visible-selection Implements the closed production-kind field of the complete visible declaration.
  */
 export type AutoMovieProductionKind = "brief" | "film" | "library";
 
@@ -55,7 +54,6 @@ export type AutoMovieProductionKind = "brief" | "film" | "library";
  * @evidence requirements/production-evidence/input.md#agent-production-evidence-visible-selection Makes every branch stage visible in the generated project's sole lint configuration.
  * @evidence specifications/production-evidence/README.md#production-evidence-specifications Carries the lifecycle portion of the reusable configuration contract.
  * @evidence specifications/production-evidence/input.md#spec-authoring-production-evidence-input-state Supplies the closed disabled, draft, evidence, and review lifecycle states.
- * @evidencePart specifications/production-evidence/input.md#spec-authoring-production-evidence-input-state::visible-selection Implements the closed lifecycle field used by every visible branch declaration.
  */
 export type AutoMovieEvidenceStage =
   | "disabled"
@@ -73,7 +71,6 @@ type Stage = AutoMovieEvidenceStage;
  * @evidence requirements/production-evidence/input.md#agent-production-evidence-visible-selection Carries the full project-owned selection without a scaffold-local configuration module or hidden host default.
  * @evidence specifications/production-evidence/README.md#production-evidence-specifications Carries every input field required to construct and validate the production graph.
  * @evidence specifications/production-evidence/input.md#spec-authoring-production-evidence-input-state Implements the exact location, kind, branch-stage, and additive-claim input state.
- * @evidencePart specifications/production-evidence/input.md#spec-authoring-production-evidence-input-state::visible-selection Implements the complete visible declaration without an external configuration seam.
  */
 export interface IAutoMovieEvidenceConfigProps {
   /** Absolute generated-project root whose physical populations are validated. */
@@ -3578,10 +3575,6 @@ const referencedMarkdownBranch = (
  * @evidence specifications/production-evidence/graph.md#spec-authoring-production-evidence-shape-stage Includes every active branch and preserves pending draft relationships beside current enforcement state.
  * @evidence specifications/production-evidence/graph.md#spec-authoring-production-evidence-physical-integrity Reuses the validated flat-treatment, grouped-delivery, direct-coverage, and same-depth lineage populations.
  * @evidence specifications/production-evidence/graph.md#spec-authoring-production-evidence-deterministic-result Preserves the canonical factory order without filesystem-dependent resorting.
- * @evidencePart specifications/production-evidence/graph.md#spec-authoring-production-evidence-shared-contract::shared-contract Resolves every public contract route through the same inventory entry that builds its graph reference.
- * @evidencePart specifications/production-evidence/graph.md#spec-authoring-production-evidence-shape-stage::shape-stage-machine Filters only disabled branches while retaining later-stage duties as unenforced routes.
- * @evidencePart specifications/production-evidence/graph.md#spec-authoring-production-evidence-physical-integrity::physical-population-integrity Runs the complete graph validation before publishing any route.
- * @evidencePart specifications/production-evidence/graph.md#spec-authoring-production-evidence-deterministic-result::deterministic-failure Returns no partial manifest after a validation failure.
  * @author Samchon
  */
 export const createAutoMovieContractBindingManifest = (
@@ -3713,12 +3706,6 @@ export const createAutoMovieContractBindingManifest = (
  * @evidence specifications/production-evidence/graph.md#spec-authoring-production-evidence-deterministic-result Uses deterministic identities and ordering and returns no partial graph after a validation failure.
  * @evidence specifications/authoring-and-authority/capability-and-content-boundary.md#spec-authoring-production-language-module Refuses incomplete, residual, or identity-mismatched language contracts.
  * @evidence specifications/narrative-and-intent/scene-coverage-and-acceptance.md#narrative-intent-authoring-contract-discriminators Routes each semantic discriminator to its exact authored or population host.
- * @evidencePart specifications/production-evidence/graph.md#spec-authoring-production-evidence-shared-contract::shared-contract Validates the canonical common document and H2 inventory before building shared claims.
- * @evidencePart specifications/production-evidence/graph.md#spec-authoring-production-evidence-discovery::discovery-coverage Adds draft-active contract discovery coverage with reviewed, index-only exclusions for a true no-result.
- * @evidencePart specifications/production-evidence/graph.md#spec-authoring-production-evidence-shape-stage::shape-stage-machine Enforces production-kind compatibility, lifecycle order, and parent review prerequisites.
- * @evidencePart specifications/production-evidence/graph.md#spec-authoring-production-evidence-physical-integrity::physical-population-integrity Validates real hosts, residue, identities, ownership cardinality, and lineage.
- * @evidencePart specifications/production-evidence/graph.md#spec-authoring-production-evidence-additive-extension::additive-local-claims Appends local claims only after the immutable shared claim population.
- * @evidencePart specifications/production-evidence/graph.md#spec-authoring-production-evidence-deterministic-result::deterministic-failure Completes every deterministic validation before returning any graph.
  * @author Samchon
  */
 export const createAutoMovieEvidenceConfig = (

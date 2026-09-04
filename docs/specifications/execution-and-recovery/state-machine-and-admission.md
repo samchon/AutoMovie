@@ -41,7 +41,6 @@ Admission은 canonical job contract, current authoritative revision, dependency 
 
 <!-- @evidence requirements/operations-and-recovery/scope-job-identity-and-state.md#operations-job-state-vocabulary 시작, 대기, 차단과 종료 상태를 모호하지 않은 결과로 반환한다. -->
 <!-- @evidence requirements/operations-and-recovery/scope-job-identity-and-state.md#operations-requested-effective-work 전체 명령 요청을 실행 전에 확정하거나 거부한다. -->
-<!-- @evidenceObligation admission-decision 실행 가능한 admission 결과와 거부된 요청의 무효과 경계를 확정한다. -->
 
 Admission output은 admitted, queued, blocked 또는 rejected와 applied policy, limiting facts, queue class, retry condition 및 decision identity를 가진다. Admitted만 execution owner를 획득할 수 있고 blocked는 충족 가능한 dependency나 capacity condition을, rejected는 입력 또는 policy를 바꾸지 않고는 진행할 수 없는 reason을 제공해야 한다.
 

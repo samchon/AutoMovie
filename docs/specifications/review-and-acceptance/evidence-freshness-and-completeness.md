@@ -34,7 +34,6 @@
 
 ### Current와 Historical Evidence {#acceptance-system-current-historical-evidence}
 
-<!-- @evidenceObligation current-historical-closure 현재 판정 closure와 보존된 historical evidence의 식별·분리. -->
 
 <!-- @evidence requirements/acceptance/evidence-and-freshness.md#acceptance-evidence-freshness Binds evidence to target, version, profile, time range and actual artifact identity. -->
 

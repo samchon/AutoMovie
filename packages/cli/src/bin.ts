@@ -8,7 +8,11 @@ import {
   ScaffoldPublicationError,
   applyAutoMovieContractMigrationPlan,
   autoMovieContractTargetSources,
+  inspectAutoMovieAuthoringReachability,
+  parseAutoMovieContractBaseline,
   planAutoMovieContractMigration,
+  planAutoMovieContractMigrationPublication,
+  planAutoMovieDeliveryTocPublication,
   planAutoMovieProjectDeliveryTocs,
   publishFiles,
   renderScaffold,
@@ -97,7 +101,6 @@ const projectNameOf = (targetDir: string): string =>
  * @evidence requirements/agent-authoring/project-ownership.md#agent-portable-authoring Emits a project reproducible from documented dependencies in a new checkout.
  * @evidence requirements/agent-authoring/project-ownership.md#agent-authoring-tool-replaceability Leaves generated source and commands usable without hidden CLI state.
  * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-boundary-compatibility Uses only the generated project's ordinary files, package scripts, and public command contract, so another tool can drive the same work.
- * @evidencePart specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-boundary-compatibility::portable-tool-boundary
  * @evidence requirements/agent-authoring/project-ownership.md#agent-ambiguous-ownership-refusal Refuses unsafe target paths and ambiguous overwrite authority.
  * @evidence requirements/product/capability-and-content.md#product-era-independent-composition Publishes reusable composition techniques rather than one era-specific production.
  * @evidence requirements/product/capability-and-content.md#product-unplanted-subject-authoring Leaves subject facts in editable generated-project source.
@@ -151,7 +154,6 @@ const projectNameOf = (targetDir: string): string =>
  * @evidence requirements/rendering/chunks-resume-and-recovery.md#rendering-chunk-assembly Dispatches verify and finalize after chunk execution.
  * @evidence requirements/rendering/chunks-resume-and-recovery.md#rendering-recovery-refusal Preserves unsafe-resume refusal from the generated script.
  * @evidence specifications/editorial-render-and-delivery/render-schedule-state-and-headless.md#spec-render-artifact-lifecycle Dispatches explicit plan, run, status, verify, and finalize phases.
- * @evidencePart specifications/editorial-render-and-delivery/render-schedule-state-and-headless.md#spec-render-artifact-lifecycle::artifact-lifecycle
  * @evidence specifications/editorial-render-and-delivery/render-budget-identity-and-recovery.md#spec-render-chunk-recovery Routes partition, resume, publication, and recovery through one generated render lifecycle.
  * @evidence specifications/editorial-render-and-delivery/render-budget-identity-and-recovery.md#spec-render-budget-preflight Dispatches render planning through the generated worst-case budget gate.
  * @evidence specifications/editorial-render-and-delivery/render-budget-identity-and-recovery.md#spec-render-frame-identity Routes materialization, verification, and finalization through content-addressed frame state.
@@ -617,6 +619,13 @@ export const run = (argv: readonly string[]): number => {
       }
 
       if (command.command === "routes") {
+        const findings = inspectAutoMovieAuthoringReachability(
+          AUTO_MOVIE_AUTHORING_REACHABILITY,
+        );
+        if (findings.length !== 0)
+          throw new Error(
+            `Authoring route matrix is invalid:\n${findings.join("\n")}`,
+          );
         process.stdout.write(
           `${JSON.stringify(
             AUTO_MOVIE_AUTHORING_REACHABILITY.filter(
@@ -638,9 +647,15 @@ export const run = (argv: readonly string[]): number => {
         });
         if (plan.diagnostics.length !== 0)
           throw new Error(plan.diagnostics.join("\n"));
-        for (const [relative, source] of Object.entries(plan.files))
-          if (files[relative] !== source)
-            fs.writeFileSync(path.join(root, relative), source, "utf8");
+        const observed = readMarkdownFiles(path.join(root, "docs"), root);
+        publishProjectCandidate(
+          root,
+          planAutoMovieDeliveryTocPublication({
+            current: files,
+            observed,
+            planned: plan.files,
+          }),
+        );
         process.stdout.write(
           `${command.check ? "Checked" : "Updated"} delivery table of contents.\n`,
         );
@@ -650,9 +665,11 @@ export const run = (argv: readonly string[]): number => {
       if (command.command === "contracts") {
         const root = process.cwd();
         const baselineFile = path.join(root, AUTO_MOVIE_CONTRACT_BASELINE_PATH);
-        const from = JSON.parse(
-          fs.readFileSync(baselineFile, "utf8"),
-        ) as IAutoMovieContractBaseline;
+        const baselineSource = readProjectTextFile(
+          root,
+          AUTO_MOVIE_CONTRACT_BASELINE_PATH,
+        );
+        const from = parseAutoMovieContractBaseline(baselineSource);
         const manifest = JSON.parse(
           fs.readFileSync(path.join(root, "package.json"), "utf8"),
         ) as { name?: string };
@@ -660,9 +677,9 @@ export const run = (argv: readonly string[]): number => {
           language: from.language,
           name: manifest.name ?? path.basename(root),
         });
-        const to = JSON.parse(
+        const to = parseAutoMovieContractBaseline(
           targetFiles[AUTO_MOVIE_CONTRACT_BASELINE_PATH]!,
-        ) as IAutoMovieContractBaseline;
+        );
         const targetSources = autoMovieContractTargetSources(targetFiles);
         const current = readContractFiles(root, from, to);
         const plan = planAutoMovieContractMigration({
@@ -675,26 +692,50 @@ export const run = (argv: readonly string[]): number => {
         if (command.dryRun) return plan.conflicts.length === 0 ? 0 : 1;
         if (plan.conflicts.length !== 0)
           throw new Error("Contract migration has unresolved conflicts.");
-        const migrated = applyAutoMovieContractMigrationPlan(plan, current);
-        for (const action of plan.actions) {
-          if (action.action === "rename" || action.action === "remove") {
-            const removed = path.join(
-              root,
-              action.action === "rename" ? action.from : action.path,
+        applyAutoMovieContractMigrationPlan(plan, current);
+        const observed = readContractFiles(root, from, to);
+        const publication = planAutoMovieContractMigrationPublication({
+          current,
+          observed,
+          plan,
+        });
+        publishProjectCandidate(root, publication.writes);
+        for (const removal of publication.removals) {
+          const source = resolveProjectFile(root, removal.path);
+          const status = fs.lstatSync(source, { bigint: true });
+          if (
+            status.isSymbolicLink() ||
+            !status.isFile() ||
+            status.nlink !== 1n ||
+            fs.readFileSync(source, "utf8") !== removal.before
+          )
+            throw new Error(
+              `Contract migration rename source changed before retirement: ${removal.path}.`,
             );
-            if (fs.existsSync(removed)) fs.unlinkSync(removed);
-          }
-          if (action.action !== "remove") {
-            const target = path.join(root, action.path);
-            fs.mkdirSync(path.dirname(target), { recursive: true });
-            fs.writeFileSync(target, migrated[action.path]!, "utf8");
-          }
+          if (readProjectTextFile(root, removal.target) !== removal.after)
+            throw new Error(
+              `Contract migration rename target changed before retirement: ${removal.target}.`,
+            );
+          fs.unlinkSync(source);
         }
-        fs.writeFileSync(
-          baselineFile,
-          targetFiles[AUTO_MOVIE_CONTRACT_BASELINE_PATH]!,
-          "utf8",
-        );
+        if (
+          readProjectTextFile(root, AUTO_MOVIE_CONTRACT_BASELINE_PATH) !==
+          baselineSource
+        )
+          throw new Error(
+            "Contract migration baseline changed before publication.",
+          );
+        publishProjectCandidate(root, {
+          [AUTO_MOVIE_CONTRACT_BASELINE_PATH]:
+            targetFiles[AUTO_MOVIE_CONTRACT_BASELINE_PATH]!,
+        });
+        if (
+          fs.readFileSync(baselineFile, "utf8") !==
+          targetFiles[AUTO_MOVIE_CONTRACT_BASELINE_PATH]
+        )
+          throw new Error(
+            "Contract migration baseline changed after publication.",
+          );
         return 0;
       }
 
@@ -768,10 +809,44 @@ const readContractFiles = (
     ...from.files.map((file) => file.path),
     ...to.files.map((file) => file.path),
   ])) {
-    const file = path.join(root, relative);
-    if (fs.existsSync(file)) files[relative] = fs.readFileSync(file, "utf8");
+    const file = resolveProjectFile(root, relative);
+    if (fs.existsSync(file))
+      files[relative] = readProjectTextFile(root, relative);
   }
   return files;
+};
+
+const resolveProjectFile = (root: string, relative: string): string => {
+  const target = path.resolve(root, relative);
+  const inside = path.relative(root, target);
+  if (
+    inside.length === 0 ||
+    inside === ".." ||
+    inside.startsWith(`..${path.sep}`) ||
+    path.isAbsolute(inside)
+  )
+    throw new Error(`Project maintenance path escapes its root: ${relative}.`);
+  return target;
+};
+
+const readProjectTextFile = (root: string, relative: string): string => {
+  const target = resolveProjectFile(root, relative);
+  const status = fs.lstatSync(target, { bigint: true });
+  if (status.isSymbolicLink() || !status.isFile() || status.nlink !== 1n)
+    throw new Error(
+      `Project maintenance input is not one physical file: ${relative}.`,
+    );
+  return fs.readFileSync(target, "utf8");
+};
+
+const publishProjectCandidate = (
+  root: string,
+  files: Readonly<Record<string, string>>,
+): void => {
+  if (Object.keys(files).length === 0) return;
+  const receipt = publishFiles(root, { ...files }, { force: true });
+  if (receipt.status !== "completed")
+    throw new ScaffoldPublicationError(receipt);
 };
 
 const runProjectScript = (
