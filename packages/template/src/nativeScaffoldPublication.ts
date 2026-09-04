@@ -70,6 +70,23 @@ const publishNativeScaffoldFileWithEnvironment = (
   request: IScaffoldParentPublicationRequest,
   environment: INativeEnvironment,
 ): ScaffoldFilePublicationOutcome => {
+  if (
+    request.childName.length === 0 ||
+    request.childName === "." ||
+    request.childName === ".." ||
+    request.childName.includes("\0") ||
+    request.childName.includes("/") ||
+    request.childName.includes("\\") ||
+    request.expectedParentIdentity.length === 0 ||
+    request.bytes.some(
+      (byte) => Number.isSafeInteger(byte) === false || byte < 0 || byte > 0xff,
+    )
+  )
+    return Object.freeze({
+      error: new Error("invalid native scaffold publication request"),
+      reason: "create-failed" as const,
+      status: "refused" as const,
+    });
   let parent: IBoundParent;
   try {
     parent = openBoundParent(request, environment);

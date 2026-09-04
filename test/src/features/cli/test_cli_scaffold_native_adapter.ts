@@ -213,6 +213,7 @@ const execute = (scenario: INativeScenario) => {
     platform: scenario.platform,
   });
   return {
+    environment,
     first: nativeScaffoldPublicationForTesting.publish(request, environment),
     second:
       scenario.target === "ok" &&
@@ -266,6 +267,23 @@ export const test_cli_scaffold_native_adapter = (): void => {
     { constantsMissing: "O_CLOEXEC", platform: "darwin", target: "ok" },
   ];
   const outcomes = cases.map(execute);
+  const invalidRequests = [
+    { ...request, childName: "" },
+    { ...request, childName: "." },
+    { ...request, childName: ".." },
+    { ...request, childName: "bad\0name" },
+    { ...request, childName: "bad/name" },
+    { ...request, childName: "bad\\name" },
+    { ...request, expectedParentIdentity: "" },
+    { ...request, bytes: [-1] },
+    { ...request, bytes: [0.5] },
+    { ...request, bytes: [256] },
+  ].map((invalid) =>
+    nativeScaffoldPublicationForTesting.publish(
+      invalid,
+      outcomes[0]!.environment,
+    ),
+  );
   TestValidator.predicate(
     "semantic native scenarios produce only closed outcome classes",
     outcomes.every(
@@ -273,6 +291,13 @@ export const test_cli_scaffold_native_adapter = (): void => {
         ["completed", "partial", "refused"].includes(first.status) &&
         (second === null ||
           ["completed", "partial", "refused"].includes(second.status)),
+    ),
+  );
+  TestValidator.predicate(
+    "invalid native requests refuse before a platform capability is acquired",
+    invalidRequests.every(
+      (outcome) =>
+        outcome.status === "refused" && outcome.reason === "create-failed",
     ),
   );
   TestValidator.equals(

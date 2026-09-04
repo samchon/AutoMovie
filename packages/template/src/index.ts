@@ -2,7 +2,8 @@ export * from "./renderScaffold";
 export * from "./renderAutoMovieProductionRouter";
 export * from "./renderTemplate";
 export * from "./resolveAutoMovieCatalogVersion";
-export * from "./nativeScaffoldPublication";
+/** @internal */
+export { nativeScaffoldPublicationForTesting } from "./nativeScaffoldPublication";
 export * from "./scaffoldFileSnapshot";
 export * from "./scaffoldPublication";
 export * from "./templateVersions";

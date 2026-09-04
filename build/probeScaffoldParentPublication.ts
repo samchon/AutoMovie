@@ -5,9 +5,9 @@ import * as path from "node:path";
 
 import {
   captureScaffoldPhysicalDirectory,
-  publishNativeScaffoldFile,
   publishScaffoldFileToCapturedParent,
 } from "../packages/template/src";
+import { publishNativeScaffoldFile } from "../packages/template/src/nativeScaffoldPublication";
 
 const temporaryRoot = fs.realpathSync(os.tmpdir());
 const scratch = fs.mkdtempSync(
