@@ -156,9 +156,7 @@ const LIBRARY_PAIRS = new Map<string, string>([
 /**
  * Creates the body and evidence identity stored for one retained pilot host.
  *
- * @evidence requirements/production-evidence/input.md#agent-production-evidence-visible-selection Makes retained pilot identity explicit rather than inferred from a current tag.
  * @evidence requirements/production-evidence/graph.md#agent-production-evidence-shape-stage Captures the exact retained-host predecessor used by reset validation.
- * @evidence specifications/production-evidence/input.md#spec-authoring-production-evidence-input-state Separates authored-body bytes from ordered evidence metadata in the reset receipt.
  * @evidence specifications/production-evidence/graph.md#spec-authoring-production-evidence-shape-stage Produces the stable body and tag identities required by the reset state machine.
  */
 export function createAutoMovieRetainedPilotHost(
@@ -184,9 +182,7 @@ export function createAutoMovieRetainedPilotHost(
 /**
  * Validates the privileged reset transition against its exact passed pilot.
  *
- * @evidence requirements/production-evidence/input.md#agent-production-evidence-visible-selection Refuses a reset whose prior pilot, production, owner, branch pair, or retained host identity is absent.
  * @evidence requirements/production-evidence/graph.md#agent-production-evidence-shape-stage Makes the only backward stage transition executable from a versioned predecessor.
- * @evidence specifications/production-evidence/input.md#spec-authoring-production-evidence-input-state Validates the closed film and library receipt variants before accepting reset state.
  * @evidence specifications/production-evidence/graph.md#spec-authoring-production-evidence-shape-stage Requires the complete film ladder or every recorded library pair to move from reviewed predecessor to current draft together.
  */
 export function validateAutoMoviePopulationTransition(

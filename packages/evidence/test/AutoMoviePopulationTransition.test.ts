@@ -129,7 +129,7 @@ assert.throws(
         receipt: {
           ...filmReceipt,
           pilotScope: { mode: "first-pilot", partitionGroup: "002-late" },
-        },
+        } as unknown as IAutoMovieFilmPopulationTransitionReceipt,
       }),
     ),
   /exact 001/u,
