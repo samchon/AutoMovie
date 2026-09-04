@@ -215,7 +215,7 @@ const executableServices = (props: {
     renderSpec: { frameFormat },
     frames,
     semanticMasks: [],
-  } as IAutoMovieRenderBundleManifest;
+  } as unknown as IAutoMovieRenderBundleManifest;
   const bundle = path.join(props.root, "bundle");
   fs.mkdirSync(bundle, { recursive: true });
   fs.writeFileSync(path.join(bundle, "manifest.json"), "{}\n", "utf8");
