@@ -3,7 +3,13 @@ import type {
   ITtscEvidenceGraphMarkdownReference,
 } from "@ttsc/evidence";
 
-/** Input for one authored layer's whole-population obligation accounts. */
+/**
+ * Input for one authored layer's whole-population obligation accounts.
+ *
+ * @evidence requirements/production-evidence/graph.md#agent-production-evidence-shared-contract Keeps the account owner, compared population, and obligation families in one graph declaration.
+ * @evidence specifications/production-evidence/graph.md#spec-authoring-production-evidence-shared-contract Defines the inputs from which exact-one account claims are derived.
+ * @author Samchon
+ */
 export interface IAutoMoviePopulationAccountClaimsProps {
   /** Authored branch whose complete H2 population is compared. */
   layer: string;

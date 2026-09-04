@@ -2,6 +2,15 @@ import assert from "node:assert/strict";
 
 import { inspectAutoMovieEvidenceTopology } from "../src/inspectAutoMovieEvidenceTopology";
 
+/**
+ * Foundation topology accounts distinguish real edges from stale declarations.
+ *
+ * Scenarios:
+ *
+ * 1. Exact active edges and one truthful inactive edge produce no diagnostic.
+ * 2. Missing, extra, duplicate, disabled, unknown, and reasonless rows are named.
+ * 3. Coordinated cycles are admitted while an ordinary reversed edge is refused.
+ */
 const branches = [
   { name: "settings", active: true, order: 0 },
   { name: "maps", active: true, order: 1 },

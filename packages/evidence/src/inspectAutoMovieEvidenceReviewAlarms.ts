@@ -4,7 +4,13 @@ import {
   projectAutoMovieMarkdownSyntax,
 } from "./parseAutoMovieEvidenceSyntax";
 
-/** One semantic-review pattern that requires literal human rereading. */
+/**
+ * One semantic-review pattern that requires literal human rereading.
+ *
+ * @evidence requirements/production-evidence/graph.md#agent-production-evidence-deterministic-result Makes the location and extent of one semantic alarm reproducible.
+ * @evidence specifications/production-evidence/graph.md#spec-authoring-production-evidence-deterministic-result Defines a non-gating observation that directs a fresh Self-Review.
+ * @author Samchon
+ */
 export interface IAutoMovieEvidenceReviewAlarm {
   /** Stable alarm class; neither class is an automatic evidence rejection. */
   code: "evidence-review-frame" | "evidence-review-question-paste";
@@ -22,7 +28,13 @@ export interface IAutoMovieEvidenceReviewAlarm {
   message: string;
 }
 
-/** Complete semantic-alarm observation for one immutable document set. */
+/**
+ * Complete semantic-alarm observation for one immutable document set.
+ *
+ * @evidence requirements/production-evidence/graph.md#agent-production-evidence-deterministic-result Reports whether both alarm discriminators were actually evaluated.
+ * @evidence specifications/production-evidence/graph.md#spec-authoring-production-evidence-deterministic-result Carries the complete ordered alarm population without assigning a verdict.
+ * @author Samchon
+ */
 export interface IAutoMovieEvidenceReviewAlarmReport {
   /** Every alarm in deterministic document order. */
   alarms: readonly IAutoMovieEvidenceReviewAlarm[];
@@ -170,13 +182,14 @@ const frameOf = (reason: string, target: ITargetText | undefined): string => {
   let value = reason
     .normalize("NFKC")
     .toLocaleLowerCase("en-US")
-    .replace(/(?:`[^`]+`|"[^"]+"|'[^']+')/gu, "<quote>")
+    .replace(/(?:`[^`]+`|"[^"]+"|“[^”]+”|‘[^’]+’)/gu, "<quote>")
     .replace(/\b[^\s"'`]+?\.(?:md|ts)(?:#[^\s"'`]+)?/giu, "<host>")
     .replace(/\b\d+(?:\.\d+)?\b/gu, "<number>");
+  value = normalized(value);
   for (const slot of [target?.question, target?.title])
     if (slot !== undefined && slot !== "")
       value = value.replaceAll(slot, "<target>");
-  return normalized(value);
+  return value;
 };
 
 const normalized = (value: string): string =>
