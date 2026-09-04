@@ -176,7 +176,9 @@ const authored = [
 ].join("\n");
 assert.equal(
   projectAutoMovieAuthoredMarkdown(authored),
-  ["# Work", "", "<!-- ordinary author note -->", "", "", "Body."].join("\n"),
+  ["# Work", "", "<!-- ordinary author note -->", "", "", "", "Body."].join(
+    "\n",
+  ),
 );
 assert.equal(
   projectAutoMovieAuthoredMarkdown(

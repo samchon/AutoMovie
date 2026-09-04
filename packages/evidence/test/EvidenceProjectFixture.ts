@@ -1493,35 +1493,41 @@ const CONTRACTS: readonly IContractFixture[] = [
   },
 ] as const;
 
+const COMMON_ACCOUNT_OBLIGATIONS = [
+  "obligations/core/common.md",
+  "obligations/core/defaults.md",
+  "language/obligations/common.md",
+] as const;
+
 const ACCOUNT_OBLIGATIONS = {
   settings: [
-    "obligations/core/common.md",
+    ...COMMON_ACCOUNT_OBLIGATIONS,
     "obligations/core/settings.md",
     "obligations/story/subjects.md",
   ],
-  maps: ["obligations/core/common.md", "obligations/design/maps.md"],
-  models: ["obligations/core/common.md", "obligations/design/models.md"],
-  spaces: ["obligations/core/common.md", "obligations/design/spaces.md"],
-  materials: ["obligations/core/common.md", "obligations/design/materials.md"],
-  instances: ["obligations/core/common.md", "obligations/design/instances.md"],
-  motions: ["obligations/core/common.md", "obligations/design/motions.md"],
-  systems: ["obligations/core/common.md", "obligations/design/systems.md"],
+  maps: [...COMMON_ACCOUNT_OBLIGATIONS, "obligations/design/maps.md"],
+  models: [...COMMON_ACCOUNT_OBLIGATIONS, "obligations/design/models.md"],
+  spaces: [...COMMON_ACCOUNT_OBLIGATIONS, "obligations/design/spaces.md"],
+  materials: [...COMMON_ACCOUNT_OBLIGATIONS, "obligations/design/materials.md"],
+  instances: [...COMMON_ACCOUNT_OBLIGATIONS, "obligations/design/instances.md"],
+  motions: [...COMMON_ACCOUNT_OBLIGATIONS, "obligations/design/motions.md"],
+  systems: [...COMMON_ACCOUNT_OBLIGATIONS, "obligations/design/systems.md"],
   treatments: [
-    "obligations/core/common.md",
+    ...COMMON_ACCOUNT_OBLIGATIONS,
     "obligations/story/narratives.md",
     "obligations/story/treatments.md",
   ],
   scripts: [
-    "obligations/core/common.md",
+    ...COMMON_ACCOUNT_OBLIGATIONS,
     "obligations/story/narratives.md",
     "obligations/story/scripts.md",
   ],
   screenplays: [
-    "obligations/core/common.md",
+    ...COMMON_ACCOUNT_OBLIGATIONS,
     "obligations/story/narratives.md",
     "obligations/story/screenplays.md",
   ],
-  briefs: ["obligations/core/common.md", "obligations/delivery/briefs.md"],
+  briefs: [...COMMON_ACCOUNT_OBLIGATIONS, "obligations/delivery/briefs.md"],
 } as const;
 
 /**
@@ -1613,9 +1619,22 @@ export const createEvidenceProjectFixture = (roots: string[]): string => {
   }
   for (const [layer, obligations] of Object.entries(ACCOUNT_OBLIGATIONS))
     for (const obligation of obligations) {
-      const contract = CONTRACTS.find(
-        (candidate) => candidate.path === obligation,
-      )!;
+      const contract =
+        obligation === "language/obligations/common.md"
+          ? {
+              title: "English obligations",
+              units: [
+                {
+                  title: "Population register and frame account",
+                  anchor: "english-population-register-frame-account",
+                },
+                {
+                  title: "Audience language access",
+                  anchor: "english-audience-language-access",
+                },
+              ],
+            }
+          : CONTRACTS.find((candidate) => candidate.path === obligation)!;
       const relative = obligation
         .replace(/^obligations\//u, "")
         .replaceAll("/", "-");

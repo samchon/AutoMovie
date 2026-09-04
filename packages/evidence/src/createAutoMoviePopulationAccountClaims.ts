@@ -60,7 +60,7 @@ export function createAutoMoviePopulationAccountClaims(
   const seen = new Set<string>();
   return props.obligationFiles.map((file) => {
     if (
-      !/^obligations\/(?:core|delivery|design|story)\/[a-z0-9-]+\.md$/u.test(
+      !/^(?:obligations\/(?:core|delivery|design|story)|language\/obligations)\/[a-z0-9-]+\.md$/u.test(
         file,
       )
     )

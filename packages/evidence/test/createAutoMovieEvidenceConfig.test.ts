@@ -892,7 +892,7 @@ export const review = true;
           kind: "library",
           settings: "evidence",
         }),
-      "population account has 1 H2 owners for 5",
+      "population account has 1 H2 owners for 4",
     ),
     true,
   );
@@ -1183,6 +1183,7 @@ export const review = true;
         sharedFilesOf(claim, "principles"),
         [
           "principles/core/common.md",
+          "principles/core/defaults.md",
           ...(narrative ? ["principles/story/narratives.md"] : []),
           ...(inherited ? ["principles/core/inherited-units.md"] : []),
           `principles/${domain}/${contract}.md`,
@@ -1285,6 +1286,7 @@ export const review = true;
       sharedFilesOf(briefUnit, "principles"),
       [
         "principles/core/common.md",
+        "principles/core/defaults.md",
         "principles/core/inherited-units.md",
         "principles/delivery/briefs.md",
       ],
@@ -2721,7 +2723,13 @@ export const review = true;
   );
   assert.deepEqual(
     new Set(branchManifest.bindings.map((binding) => binding.relationship)),
-    new Set(["checklist", "distributed-coverage", "foundation", "lineage"]),
+    new Set([
+      "checklist",
+      "distributed-coverage",
+      "foundation",
+      "lineage",
+      "population-account",
+    ]),
     "the manifest must preserve every relationship form the graph assigns",
   );
   assert.deepEqual(
@@ -2965,6 +2973,9 @@ export const review = true;
     true,
     "the population-wide motion-role obligation must refuse exclusions",
   );
+  const motionUnits = branchGraph.claims.find((claim) =>
+    claim.name?.includes("motions H2 units answer their principle checklists"),
+  );
   for (const foundation of [
     "maps",
     "models",
@@ -2974,7 +2985,7 @@ export const review = true;
     "systems",
   ])
     assert.ok(
-      referenceTo(motionObligation, `${foundation}/owner.md`),
+      referenceTo(motionUnits, `${foundation}/owner.md`),
       `motion units omitted the active ${foundation} foundation`,
     );
   for (const [host, foundations] of Object.entries({

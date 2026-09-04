@@ -1122,15 +1122,26 @@ const EXPECTED_CONTRACTS = [
 ] as const;
 
 type ExpectedContract = (typeof EXPECTED_CONTRACTS)[number];
+type ContractReference = {
+  domain: ContractDomain;
+  file: string;
+  anchors: readonly string[];
+};
 
-const contractFamily = (contract: ExpectedContract): ContractFamily =>
-  contract.file.split("/", 1)[0] as ContractFamily;
+const contractFamily = (contract: ContractReference): ContractFamily => {
+  const segments = contract.file.split("/");
+  return (
+    segments[0] === "language" ? segments[1] : segments[0]
+  ) as ContractFamily;
+};
 
-const contractBasename = (contract: ExpectedContract): string =>
+const contractBasename = (contract: ContractReference): string =>
   contract.file.slice(contract.file.lastIndexOf("/") + 1);
 
-const logicalContractPath = (contract: ExpectedContract): string =>
-  `${contractFamily(contract)}/${contract.domain}/${contractBasename(contract)}`;
+const logicalContractPath = (contract: ContractReference): string =>
+  contract.file.startsWith("language/")
+    ? contract.file
+    : `${contractFamily(contract)}/${contract.domain}/${contractBasename(contract)}`;
 
 /** Resolve every graph reference through the canonical physical inventory. */
 const expectedContract = (
@@ -2119,6 +2130,7 @@ const validateProductionTargets = (
   const reserved = new Set<string>([
     "accounts",
     "discovery",
+    "language",
     "obligations",
     "principles",
     "upstream",
@@ -2537,15 +2549,17 @@ const validatePopulationAccountHosts = (graph: IProductionGraph): void => {
       const obligation = references.find(
         (reference) =>
           reference.type === "markdown" &&
-          reference.files[0]?.startsWith("obligations/") === true,
+          (reference.files[0]?.startsWith("obligations/") === true ||
+            reference.files[0]?.startsWith("language/obligations/") === true),
       ) as ITtscEvidenceGraphMarkdownReference;
-      const target = EXPECTED_CONTRACTS.find(
-        (contract) => contract.file === obligation.files[0],
-      )!;
+      const targetUnits = markdownIdentities(
+        path.join(graph.location, DOCS, obligation.files[0]!),
+        [2],
+      );
       const units = markdownIdentities(file, [2]);
-      if (units.length !== target.anchors.length)
+      if (units.length !== targetUnits.length)
         throw new Error(
-          `${relative}: population account has ${units.length} H2 owners for ${target.anchors.length} ${obligation.files[0]} obligations.`,
+          `${relative}: population account has ${units.length} H2 owners for ${targetUnits.length} ${obligation.files[0]} obligations.`,
         );
     }
   }
@@ -3375,17 +3389,35 @@ const symbolsOf = (symbol: string | readonly string[]): string[] =>
   Array.isArray(symbol) ? [...symbol] : [symbol as string];
 
 const contractForReference = (
+  graph: IProductionGraph,
   reference: ITtscEvidenceGraphMarkdownReference,
-): ExpectedContract | undefined => {
-  return EXPECTED_CONTRACTS.find(
+): ContractReference | undefined => {
+  const expected = EXPECTED_CONTRACTS.find(
     (contract) => contract.file === reference.files[0],
   );
+  if (expected !== undefined) return expected;
+  const file = reference.files[0];
+  if (
+    file === undefined ||
+    /^language\/(?:discovery|obligations|principles)\/[a-z0-9-]+\.md$/u.test(
+      file,
+    ) === false
+  )
+    return undefined;
+  return {
+    domain: "core",
+    file,
+    anchors: markdownIdentities(
+      path.join(graph.location, evidenceRoot(reference), file),
+      [2],
+    ).map((identity) => identity.anchor),
+  };
 };
 
 const relationshipOf = (
   binding: IBranchClaim,
   reference: ITtscEvidenceGraphReference,
-  contract: ExpectedContract | undefined,
+  contract: ContractReference | undefined,
 ): ContractRelationship => {
   if (contract !== undefined)
     return ["principles", "upstream"].includes(contractFamily(contract))
@@ -3581,7 +3613,7 @@ export const createAutoMovieContractBindingManifest = (
           files: string[];
           symbol: string | string[];
         };
-      const contract = contractForReference(reference);
+      const contract = contractForReference(graph, reference);
       const referencedBranch = referencedMarkdownBranch(reference);
       if (
         contract === undefined &&
