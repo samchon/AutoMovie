@@ -75,6 +75,8 @@ This gate is on entering `review` rather than on entering `draft` because motion
 
 ## Diagnostics
 
+A diagnostic is routed through the [conformance owner map](conformance.md) before repair. The compiler owns mechanically decidable syntax, graph, attachment, and freshness failures. [Independent semantic review](../review-verification/semantic-review.md) owns truth, role, literal support, absence, and exchange judgments.
+
 A compiler diagnostic is a question about the artifact, not an instruction to add a tag.
 
 1. Stop the current evidence batch and any downstream work behind its gate.
@@ -86,7 +88,7 @@ A compiler diagnostic is a question about the artifact, not an instruction to ad
 
 Rewrite false or shallow content. Split, move, rename, merge, or replace a target whose scope is wrong. Correct only the tag when the content relationship already holds. Change config only when its intended population, stage, cardinality, exclusion, or implementation is itself wrong.
 
-Never clear a diagnostic with exaggerated evidence, copied reviews, blanket exclusions, filler, path shuffling, stage reduction, weakened populations, invented fingerprints, or a package exception. When `principles/core/common.md#evidence-content-conformance` fails, perform its halt and repair before retaining any acknowledgement.
+Never clear a diagnostic with exaggerated evidence, copied reviews, blanket exclusions, filler, path shuffling, stage reduction, weakened populations, invented fingerprints, or a package exception. Perform the owner map's halt and earliest-owner repair before retaining any acknowledgement.
 
 ## Production-specific claims
 

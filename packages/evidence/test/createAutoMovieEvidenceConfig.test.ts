@@ -3436,6 +3436,37 @@ export const review = true;
     true,
   );
 
+  const retiredConformanceTarget = root();
+  const retiredCommon = contract(
+    retiredConformanceTarget,
+    "docs/principles/core/common.md",
+  );
+  fs.writeFileSync(
+    retiredCommon,
+    rewrite(
+      fs.readFileSync(retiredCommon, "utf8"),
+      "## Declared basis {#declared-basis}",
+      [
+        "## Evidence-content conformance {#evidence-content-conformance}",
+        "",
+        "Semantic judgment cannot be restored as a self-certified principle.",
+        "",
+        "Review question: does this host certify its own evidence truth?",
+        "",
+        "Sources: synthetic retired-target migration probe.",
+        "",
+        "## Declared basis {#declared-basis}",
+      ].join("\n"),
+    ),
+  );
+  assert.equal(
+    throws(
+      () => createAutoMovieEvidenceConfig(disabled(retiredConformanceTarget)),
+      "H2 inventory changed without graph wiring",
+    ),
+    true,
+  );
+
   const removedContractUnit = root();
   const removedCommon = contract(
     removedContractUnit,

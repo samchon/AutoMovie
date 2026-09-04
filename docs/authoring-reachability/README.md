@@ -4,7 +4,7 @@ AutoMovie의 제품 요구와 생성 프로젝트의 저작 계약은 서로 다
 
 ## 현재 모집단
 
-2026-08-28 현재 `docs/requirements/`에는 27개 family와 명시 anchor가 있는 H3 unit 1,982개가 있다. `packages/template/scaffold/docs/`에는 discovery 17개, principle 83개, obligation 109개로 H2 209개가 있다. 저작 계약에서 `requirements/`를 직접 인용한 경우와 요구 문서에서 discovery, principle, obligation을 직접 인용한 경우는 모두 0건이다.
+2026-09-04 현재 `docs/requirements/`에는 27개 family와 명시 anchor가 있는 H3 unit 1,982개가 있다. `packages/template/scaffold/docs/`에는 discovery 17개, principle 81개, obligation 109개로 H2 207개가 있다. 저작 계약에서 `requirements/`를 직접 인용한 경우와 요구 문서에서 discovery, principle, obligation을 직접 인용한 경우는 모두 0건이다. Evidence conformance는 host가 자기 annotation의 진실을 다시 인증하는 principle이 아니라 evidence-graph의 단일 owner map과 review-verification의 독립 semantic-review 절차가 맡는다.
 
 Correspondence는 해당 family의 결정을 저자가 어느 계약 owner와 절차에서 만나게 되는지 말한다. 이것은 그 family의 모든 H3가 이미 구현되었다거나 하나의 계약 항목이 모든 세부 요구를 대신한다는 주장이 아니다. 부재는 다음 세 종류로만 기록한다.
 
