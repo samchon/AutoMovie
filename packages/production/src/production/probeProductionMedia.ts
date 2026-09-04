@@ -249,9 +249,7 @@ const probeAudioTrack = (
       "MP4 audio track lacks codec, duration, or channel metadata.",
     );
   const samples = verifySampleStorage(bytes, file, track);
-  const description = samples[0]!.description as {
-    width: number;
-    height: number;
+  const description = samples[0]!.description as unknown as {
     boxes?: Array<{ type?: string } & Record<string, unknown>>;
   };
   const sampleEntry = productionOpusDescription({
@@ -432,7 +430,11 @@ const probeVideoTrack = (
   )
     throw new Error("MP4 output requires one nonblank file-type brand box.");
   const ftyp = ftypBoxes[0]!;
-  const description = samples[0]!.description;
+  const description = samples[0]!.description as unknown as {
+    width: number;
+    height: number;
+    boxes?: Array<{ type?: string } & Record<string, unknown>>;
+  };
   if (
     description.width !== track.video.width ||
     description.height !== track.video.height
