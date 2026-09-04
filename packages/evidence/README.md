@@ -6,7 +6,7 @@ AutoMovie 제작 저작용 증거 계약을 재사용하는 패키지다. 하나
 
 ## 원칙과 의무
 
-Principle은 선택된 모든 저술 H2/H3/H4가 각 항목을 자기 자신에 대해 답하는 무배제 checklist다. 한 강한 단위나 파일 앞 주석이 약한 형제를 대신할 수 없다. Obligation은 한 계층의 primary H2 모집단이 항목의 의미가 요구하는 수만큼 소유자를 나누어 갖는 무배제 coverage다. 같은 obligation을 여러 계층이 선택하면 각 계층이 자기 산출물의 언어로 다시 충족하지만, H3/H4 모집단마다 같은 항목을 반복하지 않는다. TypeScript source 계약은 H2 대신 해당 family의 선택된 public export 모집단이 coverage를 진다.
+Principle은 선택된 모든 저술 H2/H3/H4가 각 항목을 자기 자신에 대해 답하는 무배제 checklist다. 한 강한 단위나 파일 앞 주석이 약한 형제를 대신할 수 없다. Obligation은 `docs/accounts/<layer>`의 전용 H2가 한 항목과 해당 계층의 완전한 H2 모집단을 함께 대조하는 무배제 coverage다. 같은 obligation을 여러 계층이 선택하면 각 계층이 자기 모집단을 독립적으로 비교하지만, 저술 단위마다 같은 항목을 반복하지 않는다. TypeScript source 계약은 account H2 대신 해당 family의 선택된 public export 모집단이 coverage를 진다.
 
 진단 방향도 반대다. 답하지 않은 principle은 그 단위가 자기 질문을 하지 않았다는 뜻이므로 그 단위를 고친다. 답하지 않은 obligation은 계층에 그 역할의 소유자가 없다는 뜻이므로 population의 소유 구조를 고친다. 모든 공용 reference는 한 builder에서 `checklist`와 exclusion 허용 여부를 명시해 이 차이를 드러낸다.
 
@@ -24,6 +24,10 @@ Discovery는 저술 unit에 반복하는 checklist나 H2 모집단 coverage가 �
 | `IAutoMovieEvidenceConfigProps` | 제작 종류, 분기 단계, 위치와 추가 claim을 선언한다. |
 | `AutoMovieProductionKind` | 상호 배타적인 `film`, `brief`, `library` 형태를 정의한다. |
 | `AutoMovieEvidenceStage` | `disabled -> draft -> evidence -> review` 생명주기를 정의한다. |
+| `createAutoMoviePopulationAccountClaims` | 계층별 obligation과 완전한 저술 H2 모집단을 묶는 전용 account claim을 만든다. |
+| `inspectAutoMovieEvidenceTopology` | settings와 design foundation의 provider-consumer-status-reason 행렬을 검사한다. |
+| `inspectAutoMovieEvidenceReviewAlarms` | 반복 review frame과 target 질문 복사를 비차단 Self-Review alarm으로 관찰한다. |
+| `readAutoMovieProductionEvidence` | 같은 선언에서 topology와 semantic review alarm을 포함한 저작 표면을 읽는다. |
 | `evidence` | 단일 typed `lint.config.ts`에서 쓸 `@ttsc/evidence` lint plugin을 내보낸다. |
 
 ## 경계
