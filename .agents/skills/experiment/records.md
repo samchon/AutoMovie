@@ -51,7 +51,7 @@ One run starts at `declared` and ends in exactly one terminal state: `completed`
 
 Each transition receipt records its id, a monotonic sequence, run id and generation, from and to states, timestamp, actor, reason, evidence identities, and result. A transition is invalid when it uses an edge not listed above, follows a terminal state, changes the frozen basis, or has no receipt. A replacement generation never covers, edits, or deletes the interrupted generation's record.
 
-The observer samples every active unit on a predeclared cadence and timer. Each liveness receipt records its id, the process identity and creation time, transcript growth, artifact signal chosen from the turn's requested deliverable, last progress time, timer deadline, and one disposition: `alive`, `idle`, `stalled`, `finished`, or `unknown`. A timer expiry without a recorded disposition is an operational failure. Writer self-report and a wrapper notification are observations, not terminal evidence.
+The observer samples every active unit on a predeclared cadence and timer. Each liveness receipt records its id and monotonic sequence, the process identity and creation time, transcript growth, artifact signal chosen from the turn's requested deliverable, last progress time, timer deadline, and one disposition: `alive`, `idle`, `stalled`, `finished`, or `unknown`. An out-of-order sample or timer expiry without a recorded disposition is an operational failure. Writer self-report and a wrapper notification are observations, not terminal evidence.
 
 Create an intervention receipt before acting. It names the run and generation, owner, timestamp, evidence, reason, intended action, affected process or artifact identities, and recovery boundary. Close it afterwards with the exact action, result, terminal or successor state, process exit evidence, preserved artifacts, and cleanup result. A silent kill, restart, stage mutation, or replacement is invalid even when the replacement succeeds.
 
@@ -79,7 +79,11 @@ Use this synthetic matrix against the filled issue and records. It is a manual c
 | A trajectory digest without retention, privacy, or hidden-reasoning exclusion | Invalid |
 | Planned values copied into missing actual fields | Invalid |
 | A run launched before preflight or a replacement that overwrites its predecessor | Invalid |
-| A timer expiry, intervention, or launched process without final disposition | Invalid |
+| An out-of-order liveness sample or timer expiry without a disposition | Invalid |
+| An intervention recorded only after the action or left without its closing half | Invalid |
+| A replacement without an interrupted predecessor and replacement notice | Invalid |
+| A planned path that exceeds the recorded effective path limit | Invalid |
+| A launched process without a final disposition or cleanup/transfer owner | Invalid |
 | A completed run with all transition, judgment, transfer, and close-audit receipts linked | Valid |
 
 Open every link, recalculate every digest and count from its named artifact, and read the record as a self-contained handoff. A field that cannot be verified is marked `unverified` with its reason. Do not repair a missing observation by inventing a value after the run.

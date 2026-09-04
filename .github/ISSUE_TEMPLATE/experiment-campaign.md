@@ -73,9 +73,9 @@ assignees: ""
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | unverified | unverified | unverified | declared | preflight | unverified | unverified | unverified | unverified | unverified |
 
-| Receipt id | Run/generation | Sample time | Process identity/created | Transcript growth | Artifact signal/progress time | Timer deadline | Disposition |
-| --- | --- | --- | --- | --- | --- | --- | --- |
-| unverified | unverified | unverified | unverified | unverified | unverified | unverified | unknown |
+| Receipt id | Sequence | Run/generation | Sample time | Process identity/created | Transcript growth | Artifact signal/progress time | Timer deadline | Disposition |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| unverified | unverified | unverified | unverified | unverified | unverified | unverified | unverified | unknown |
 
 | Intervention id | Opened before action | Run/generation | Owner/reason/evidence | Intended action | Closed after action | Result/state | Process and cleanup evidence |
 | --- | --- | --- | --- | --- | --- | --- | --- |
