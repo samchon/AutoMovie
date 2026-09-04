@@ -13,6 +13,7 @@ import {
   IAutoMovieSubjectBox,
   IAutoMovieSubjectReviewCoverage,
   IAutoMovieSubjectReviewObservation,
+  IAutoMovieSubjectReviewPose,
   IAutoMovieSubjectReviewTarget,
   IAutoMovieSubjectReviewViewpoint,
   IAutoMovieVector3,
@@ -33,6 +34,7 @@ import {
   digestAutoMovieBytes,
   encodeAutoMoviePathSegment,
 } from "./contentIdentity";
+import { parseAutoMovieStructuredJson } from "./duplicateAwareJson";
 import { readAutoMovieProductionOwnedFile } from "./productionRenderJob";
 import { residentPngJs } from "./residentCodecs";
 
@@ -165,46 +167,16 @@ const DEFAULT_ELEVATIONS_DEG: readonly number[] = [20];
  *
  * @author Samchon
  */
-export interface IAutoMovieSubjectInspectionPose {
-  /**
-   * Coordinate basis both {@link position} and {@link target} are stated in.
-   */
-  coordinateSpace: "model" | "world";
-  /**
-   * Eye position in metres.
-   */
-  position: IAutoMovieVector3;
-  /**
-   * Point the eye looks at, in metres.
-   */
-  target: IAutoMovieVector3;
-  /**
-   * Vertical field of view in degrees.
-   */
-  fovDeg: number;
-  /**
-   * Viewport width divided by height.
-   */
-  aspect: number;
-  /**
-   * Near clip distance in metres, derived from the subject's own size.
-   */
-  near: number;
-  /**
-   * Far clip distance in metres, derived from the subject's own size.
-   */
-  far: number;
-}
+export type IAutoMovieSubjectInspectionPose = IAutoMovieSubjectReviewPose;
 
 /**
  * Host instrument that answers one inspection pose with PNG bytes.
  *
  * It is deliberately a second adapter beside the delivery frame capture rather
- * than a third target on it. A delivery capture carries a renderer identity, a
- * target fingerprint and a content-addressed render bundle because a delivered
- * frame has to be reopenable as the thing that was delivered; an inspection
- * image has none of those obligations and must not be able to acquire them by
- * travelling the same path. Separating the instrument makes a subject image
+ * than a third target on it. Both report their exact runtime identity because
+ * neither can make historical pixels current, but only delivery capture owns a
+ * target fingerprint and content-addressed render bundle. Separating the
+ * instrument keeps a subject image reopenable for its own plan while making it
  * structurally incapable of arriving with a delivery receipt attached.
  *
  * @author Samchon
@@ -704,9 +676,18 @@ export const parseAutoMovieSubjectInspectionObservation = (
     Number.isSafeInteger(record.attempt) === false ||
     record.attempt <= 0 ||
     record.viewpoint !== record.observation.viewpoint ||
+    record.productionId !== record.observation.productionId ||
+    record.target.shot !== record.observation.target.shot ||
+    record.target.subject !== record.observation.target.subject ||
     record.revision !== record.observation.revision ||
+    record.compileFingerprint !== record.observation.compileFingerprint ||
+    record.planIdentity !== record.observation.planIdentity ||
     record.target.subject !== record.observation.subject ||
     record.observation.kind !== "subject-view" ||
+    canonicalizeAutoMovieJson(record.pose) !==
+      canonicalizeAutoMovieJson(record.observation.pose) ||
+    canonicalizeAutoMovieJson(record.runtimeIdentity) !==
+      canonicalizeAutoMovieJson(record.observation.runtimeIdentity) ||
     record.observation.artifact.trim().length === 0 ||
     isContentDigest(record.observation.digest) === false
   )
@@ -939,7 +920,7 @@ export class AutoMovieProductionSubjectInspectionService {
     } catch (error) {
       return refuse(
         "preview-input-invalid",
-        `${error instanceof Error ? error.message : String(error)} Correct the inspectSubject viewpoint rule.`,
+        `${inspectionErrorMessage(error)} Correct the inspectSubject viewpoint rule.`,
         { revision: resolved.revision, subject: resolved.description },
       );
     }
@@ -1035,7 +1016,7 @@ export class AutoMovieProductionSubjectInspectionService {
         return terminalRefuse(
           "failed",
           "capture-failed",
-          `${error instanceof Error ? error.message : String(error)} Correct the subject inspection instrument and retry inspectSubject.`,
+          `${inspectionErrorMessage(error)} Correct the subject inspection instrument and retry inspectSubject.`,
         );
       }
       // A working instrument saying it cannot frame this subject is the
@@ -1074,7 +1055,7 @@ export class AutoMovieProductionSubjectInspectionService {
         return terminalRefuse(
           "failed",
           "capture-failed",
-          `${error instanceof Error ? error.message : String(error)} The capture runtime changed before the subject observation could be published. Reopen the inspection host and recapture the subject.`,
+          `${inspectionErrorMessage(error)} The capture runtime changed before the subject observation could be published. Reopen the inspection host and recapture the subject.`,
         );
       }
       if (
@@ -1098,7 +1079,7 @@ export class AutoMovieProductionSubjectInspectionService {
         return terminalRefuse(
           "failed",
           "capture-png-invalid",
-          `${error instanceof Error ? error.message : String(error)}. The subject inspection instrument must return a decodable PNG.`,
+          `${inspectionErrorMessage(error)}. The subject inspection instrument must return a decodable PNG.`,
         );
       }
       if (
@@ -1129,11 +1110,19 @@ export class AutoMovieProductionSubjectInspectionService {
       const digest = digestAutoMovieBytes(bytes);
       const observation: IAutoMovieSubjectReviewObservation = {
         kind: "subject-view",
+        productionId: services.project.productionId,
+        target: planRecord.target,
         subject: resolved.description.id,
         revision: resolved.revision,
+        compileFingerprint: generated.inputFingerprint,
+        planIdentity: planRecord.planIdentity,
         viewpoint: viewpoint.id,
+        pose,
+        runtimeIdentity: drawn.runtimeIdentity,
         artifact: relative,
         digest,
+        verdict: "passed",
+        deliveryEvidence: false,
       };
       publishInspectionFile(
         services.project.root,
@@ -1167,7 +1156,7 @@ export class AutoMovieProductionSubjectInspectionService {
         return terminalRefuse(
           "failed",
           "capture-failed",
-          `${error instanceof Error ? error.message : String(error)} The capture runtime changed while the subject observation was published. Reopen the inspection host and recapture the whole subject.`,
+          `${inspectionErrorMessage(error)} The capture runtime changed while the subject observation was published. Reopen the inspection host and recapture the whole subject.`,
         );
       }
       recordInspectionObservation({
@@ -1213,21 +1202,18 @@ export class AutoMovieProductionSubjectInspectionService {
         "capture-input-changed",
         "The current subject inspection plan changed while this sweep was running. Keep its passed prefix as history and recapture the current whole plan.",
       );
+    const completedRuntime =
+      runtimeIdentity as IAutoMovieCaptureRuntimeIdentity;
+    const completedAssertion = assertRuntimeCurrent as () => void;
     try {
-      assertRuntimeCurrent?.();
+      completedAssertion();
     } catch (error) {
       return terminalRefuse(
         "failed",
         "capture-failed",
-        `${error instanceof Error ? error.message : String(error)} The capture runtime changed before the sweep receipt was finalized. Reopen the inspection host and recapture the whole subject.`,
+        `${inspectionErrorMessage(error)} The capture runtime changed before the sweep receipt was finalized. Reopen the inspection host and recapture the whole subject.`,
       );
     }
-    if (runtimeIdentity === null)
-      return terminalRefuse(
-        "runtime-unidentified",
-        "capture-failed",
-        "The subject inspection completed no runtime-identified viewpoint. Use a non-empty inspection plan and recapture the subject.",
-      );
     finishInspectionAttempt({
       root: services.project.root,
       directory,
@@ -1237,7 +1223,7 @@ export class AutoMovieProductionSubjectInspectionService {
       reason: null,
     });
     const runtimeCanonical =
-      canonicalAutoMovieCaptureRuntimeIdentity(runtimeIdentity);
+      canonicalAutoMovieCaptureRuntimeIdentity(completedRuntime);
     const coverage = foldAutoMovieSubjectReviewCoverage(
       resolved.unit,
       {
@@ -1269,7 +1255,7 @@ export class AutoMovieProductionSubjectInspectionService {
       revision: resolved.revision,
       planIdentity: planRecord.planIdentity,
       planRecord,
-      runtimeIdentity,
+      runtimeIdentity: completedRuntime,
       subject: resolved.description,
       plan,
       views,
@@ -1308,7 +1294,10 @@ const resolveSubject = (
     // answer to the caller, and a second branch saying so would only be a
     // branch no arrangement can reach.
     compiled = typia.assertEquals<IAutoMovieCompiledShotSource>(
-      JSON.parse(Buffer.from(bytes).toString("utf8")) as unknown,
+      parseAutoMovieStructuredJson({
+        record: `generated shot ${target.shot}`,
+        bytes,
+      }),
     );
   } catch {
     return null;
@@ -1458,7 +1447,10 @@ export const readAutoMovieSubjectInspection = (props: {
   let plan: IAutoMovieSubjectInspectionPlanRecord;
   try {
     plan = parseAutoMovieSubjectInspectionPlan(
-      JSON.parse(Buffer.from(planBytes).toString("utf8")) as unknown,
+      parseAutoMovieStructuredJson({
+        record: `${directory}/${AUTOMOVIE_SUBJECT_INSPECTION_PLAN_FILE}`,
+        bytes: planBytes,
+      }),
     );
   } catch {
     // v1 and every malformed/unknown version are historical, never inferred.
@@ -1479,7 +1471,10 @@ export const readAutoMovieSubjectInspection = (props: {
   let journal: IAutoMovieSubjectInspectionAttemptJournal;
   try {
     journal = parseInspectionJournal(
-      JSON.parse(Buffer.from(journalBytes).toString("utf8")) as unknown,
+      parseAutoMovieStructuredJson({
+        record: `${directory}/${inspectionJournalRelative(expected.planIdentity)}`,
+        bytes: journalBytes,
+      }),
       expected.planIdentity,
     );
   } catch {
@@ -1496,7 +1491,10 @@ export const readAutoMovieSubjectInspection = (props: {
       let record: IAutoMovieSubjectInspectionObservationRecord;
       try {
         record = parseAutoMovieSubjectInspectionObservation(
-          JSON.parse(Buffer.from(recordBytes).toString("utf8")) as unknown,
+          parseAutoMovieStructuredJson({
+            record: recordPath,
+            bytes: recordBytes,
+          }),
         );
       } catch {
         continue;
@@ -1558,7 +1556,10 @@ const publishedInspectionPlanMatches = (props: {
     });
     return (
       parseAutoMovieSubjectInspectionPlan(
-        JSON.parse(Buffer.from(bytes).toString("utf8")) as unknown,
+        parseAutoMovieStructuredJson({
+          record: `${props.directory}/${AUTOMOVIE_SUBJECT_INSPECTION_PLAN_FILE}`,
+          bytes,
+        }),
       ).planIdentity === props.planIdentity
     );
   } catch {
@@ -1614,7 +1615,10 @@ const mutateInspectionJournal = (
     let journal: IAutoMovieSubjectInspectionAttemptJournal;
     if (fs.existsSync(absolute))
       journal = parseInspectionJournal(
-        JSON.parse(fs.readFileSync(absolute, "utf8")) as unknown,
+        parseAutoMovieStructuredJson({
+          record: relative,
+          bytes: fs.readFileSync(absolute),
+        }),
         props.planIdentity,
       );
     else
@@ -1659,11 +1663,7 @@ const recordInspectionObservation = (props: {
   record: string;
 }): void =>
   mutateInspectionJournal(props, (journal) => {
-    const attempt = journal.attempts[props.attempt - 1];
-    if (attempt?.attempt !== props.attempt)
-      throw new Error(
-        `Subject-inspection attempt ${props.attempt} is absent from its journal.`,
-      );
+    const attempt = journal.attempts[props.attempt - 1]!;
     attempt.observations.push(props.record);
   });
 
@@ -1676,11 +1676,7 @@ const finishInspectionAttempt = (props: {
   reason: string | null;
 }): void =>
   mutateInspectionJournal(props, (journal) => {
-    const attempt = journal.attempts[props.attempt - 1];
-    if (attempt?.attempt !== props.attempt)
-      throw new Error(
-        `Subject-inspection attempt ${props.attempt} is absent from its journal.`,
-      );
+    const attempt = journal.attempts[props.attempt - 1]!;
     attempt.verdict = props.verdict;
     attempt.reason = props.reason;
   });
@@ -1801,3 +1797,6 @@ const hasVisiblePixelVariance = (png: PNG): boolean => {
   }
   return false;
 };
+
+const inspectionErrorMessage = (error: unknown): string =>
+  error instanceof Error ? error.message : String(error);

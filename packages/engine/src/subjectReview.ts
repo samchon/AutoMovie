@@ -254,7 +254,11 @@ const isCurrentSubjectObservation = (
     nonBlank(record.compileFingerprint) &&
     nonBlank(record.planIdentity) &&
     nonBlank(record.captureRuntimeIdentity) &&
-    record.verdict === "passed"
+    isRecord(record.pose) &&
+    isRecord(record.runtimeIdentity) &&
+    record.verdict === "passed" &&
+    record.deliveryEvidence === false &&
+    (record.target as IAutoMovieSubjectReviewTarget).subject === record.subject
   );
 };
 
@@ -276,6 +280,9 @@ const isTarget = (value: unknown): value is IAutoMovieSubjectReviewTarget => {
 
 const nonBlank = (value: unknown): value is string =>
   typeof value === "string" && value.trim().length !== 0;
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  value !== null && typeof value === "object" && Array.isArray(value) === false;
 
 const compareCodeUnits = (left: string, right: string): number =>
   left < right ? -1 : left > right ? 1 : 0;

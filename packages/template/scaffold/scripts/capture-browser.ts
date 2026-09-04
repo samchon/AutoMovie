@@ -1,5 +1,6 @@
 import type { IAutoMovieCaptureRuntimeIdentity } from "@automovie/interface";
 import {
+  AUTOMOVIE_CAPTURE_RUNTIME_IDENTITY_PROTOCOL,
   compareCodeUnits,
   digestAutoMovieBytes,
   readAutoMovieProductionOwnedFile,
@@ -142,7 +143,6 @@ export const parseCaptureBrowserConfig = (
 };
 
 const require = createRequire(import.meta.url);
-const CAPTURE_PROTOCOL = "automovie.capture-runtime.v2";
 const BROWSER_NAME = "chromium";
 const REQUESTED_BACKEND = "angle:swiftshader";
 const DEVICE_SCALE_FACTOR = 1;
@@ -1232,7 +1232,7 @@ export const launchCaptureBrowser = async (
     session = {
       browser,
       runtime: {
-        protocolVersion: CAPTURE_PROTOCOL,
+        protocolVersion: AUTOMOVIE_CAPTURE_RUNTIME_IDENTITY_PROTOCOL,
         playwright: {
           package: "playwright",
           version: metadata.packageVersion,

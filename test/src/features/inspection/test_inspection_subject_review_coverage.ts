@@ -9,6 +9,7 @@ import { TestValidator } from "@nestia/e2e";
 
 import { namedFacts, throwsError } from "../internal/predicates";
 import { subjectInspectionArtifact } from "../internal/subjectInspectionFixtures";
+import { testCaptureRuntimeIdentity } from "../production/productionFixtures";
 
 const viewpoint = (
   id: string,
@@ -28,20 +29,31 @@ const observation = (
   overrides: Partial<IAutoMovieCurrentSubjectReviewObservation> = {},
 ): IAutoMovieCurrentSubjectReviewObservation => ({
   kind: "subject-view",
-  subject: "element:castle/solar-oriel",
-  revision: "sha256:inspection-a",
-  viewpoint: viewpointId,
-  artifact: `renders/solar-oriel/${viewpointId}.png`,
-  digest: `sha256:${viewpointId}`,
   productionId: "fixture-film",
   target: {
     shot: "inspection-shot",
     subject: "element:castle/solar-oriel",
   },
+  subject: "element:castle/solar-oriel",
+  revision: "sha256:inspection-a",
   compileFingerprint: `sha256:${"a".repeat(64)}`,
   planIdentity: `sha256:${"b".repeat(64)}`,
+  viewpoint: viewpointId,
+  pose: {
+    coordinateSpace: "world",
+    position: { x: 0, y: 1, z: 3 },
+    target: { x: 0, y: 1, z: 0 },
+    fovDeg: 35,
+    aspect: 1,
+    near: 0.1,
+    far: 10,
+  },
+  runtimeIdentity: testCaptureRuntimeIdentity(),
+  artifact: `renders/solar-oriel/${viewpointId}.png`,
+  digest: `sha256:${viewpointId}`,
   captureRuntimeIdentity: '{"runtime":"current"}',
   verdict: "passed",
+  deliveryEvidence: false,
   ...overrides,
 });
 
@@ -247,6 +259,12 @@ export const test_inspection_subject_review_coverage = (): void => {
     { ...observation("front"), viewpoint: " " },
     { ...observation("front"), artifact: " " },
     { ...observation("front"), digest: " " },
+    { ...observation("front"), target: null },
+    { ...observation("front"), pose: null },
+    { ...observation("front"), pose: 7 },
+    { ...observation("front"), pose: [] },
+    { ...observation("front"), runtimeIdentity: null },
+    { ...observation("front"), deliveryEvidence: true },
   ]);
   TestValidator.equals(
     "frame and malformed evidence never satisfy subject coverage",
@@ -258,7 +276,7 @@ export const test_inspection_subject_review_coverage = (): void => {
       missing: ["front", "back"],
       stale: [],
       unplanned: [],
-      foreign: 14,
+      foreign: 15,
       duplicates: 0,
     },
   );
@@ -266,6 +284,20 @@ export const test_inspection_subject_review_coverage = (): void => {
   TestValidator.equals(
     "invalid viewpoint plans are refused at every numeric and identity boundary",
     namedFacts([
+      [
+        "invalidCurrentContext",
+        () =>
+          throwsError(
+            () =>
+              foldAutoMovieSubjectReviewCoverage(
+                unit,
+                { ...current, productionId: " " },
+                plan,
+                [],
+              ),
+            "current context",
+          ),
+      ],
       [
         "blankId",
         () =>
@@ -356,6 +388,7 @@ export const test_inspection_subject_review_coverage = (): void => {
       ],
     ]),
     {
+      invalidCurrentContext: true,
       blankId: true,
       duplicateId: true,
       zeroDistance: true,

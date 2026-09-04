@@ -23,6 +23,9 @@ vegetation, props, and debris. Grid, disk-scatter, and route layouts retain
 only count, seed, model reference, and bounded variation law. Compiled slots
 derive stable scale, palette, and numeric traits without expanding scene nodes.
 
+`IAutoMovieSubjectReviewObservation` is a portable passed receipt, not a loose image reference.
+It carries the production and exact subject target, revision, compile and whole-plan identities, viewpoint and resolved pose, artifact digest, complete capture runtime including actual graphics, and the literal non-delivery boundary needed to decide whether the observation is current.
+
 automovie의 타입 허브. 캐릭터·사물의 형상·포즈·모션·표정·머티리얼·씬과 production 증거 계약을 기술하는 모든 AST 구조체의 단일 진실 공급원이다. 코딩 에이전트는 이 타입을 tracked TypeScript에서 직접 소비한다.
 
 런타임 의존은 없다. `typia`도, `three.js`도 없다. 순수 타입 선언만 담는다. 제약은 필드 JSDoc으로 문서화하고 `@automovie/engine`의 런타임 검증기가 강제한다. 빌드 도구(`ttsc`/`typescript`/`rimraf`/`@ttsc/lint`)는 devDependency일 뿐이다.

@@ -11,6 +11,9 @@ import {
   AutoMovieProductionProject,
   type AutoMovieProductionSubjectInspection,
   AutoMovieProductionSubjectInspectionService,
+  type IAutoMovieSubjectInspectionPlanRecord,
+  autoMovieSubjectInspectionPlanIdentity,
+  canonicalAutoMovieCaptureRuntimeIdentity,
   openAutoMovieProduction,
   readAutoMovieSubjectInspection,
 } from "@automovie/production";
@@ -125,7 +128,7 @@ export const test_production_inspect_subject = async (): Promise<void> => {
         productionId: "fixture-film",
         target: { shot: "opening", subject: SUBJECT },
         subject: SUBJECT,
-        deliveryEvidence: false,
+        deliveryEvidence: false as const,
         diagnostics: [],
         plan: [
           "az000-el020",
@@ -175,10 +178,27 @@ export const test_production_inspect_subject = async (): Promise<void> => {
         ),
         quotesItsOwnBytes: view.digest === view.observation.digest,
         kind: view.observation.kind,
+        production: view.observation.productionId,
+        target: view.observation.target,
         subject: view.observation.subject,
         revision: view.observation.revision === swept.revision,
+        compile:
+          view.observation.compileFingerprint ===
+          services.project.generatedManifest()!.inputFingerprint,
+        planIdentity:
+          view.observation.planIdentity === swept.planRecord?.planIdentity,
         viewpoint: view.observation.viewpoint === view.viewpoint,
+        pose: view.observation.pose === view.pose,
+        runtime:
+          canonicalAutoMovieCaptureRuntimeIdentity(
+            view.observation.runtimeIdentity,
+          ) ===
+          canonicalAutoMovieCaptureRuntimeIdentity(
+            testCaptureRuntimeIdentity(),
+          ),
         artifact: view.observation.artifact === view.path,
+        verdict: view.observation.verdict,
+        deliveryEvidence: view.observation.deliveryEvidence,
         raster: `${view.width}x${view.height}`,
       })),
       swept.plan.map(() => ({
@@ -186,10 +206,18 @@ export const test_production_inspect_subject = async (): Promise<void> => {
         present: true,
         quotesItsOwnBytes: true,
         kind: "subject-view" as const,
+        production: "fixture-film",
+        target: { shot: "opening", subject: SUBJECT },
         subject: SUBJECT,
         revision: true,
+        compile: true,
+        planIdentity: true,
         viewpoint: true,
+        pose: true,
+        runtime: true,
         artifact: true,
+        verdict: "passed" as const,
+        deliveryEvidence: false as const,
         raster: "16x16",
       })),
     );
@@ -419,15 +447,200 @@ export const test_production_inspect_subject = async (): Promise<void> => {
       ...dug.views[0]!.path.replace(/\.png$/u, ".json").split("/"),
     );
     const receiptBytes = fs.readFileSync(receiptPath);
+    const planPath = path.join(
+      path.dirname(path.dirname(path.dirname(receiptPath))),
+      AUTOMOVIE_SUBJECT_INSPECTION_PLAN_FILE,
+    );
+    const planBytes = fs.readFileSync(planPath);
+    const journalPath = path.join(
+      path.dirname(path.dirname(receiptPath)),
+      "attempts.json",
+    );
+    const journalBytes = fs.readFileSync(journalPath);
+    const journal = JSON.parse(journalBytes.toString("utf8")) as {
+      planIdentity: string;
+      attempts: Array<{ attempt: number; observations: string[] }>;
+    };
+    const readWithJournal = (
+      mutate: (value: typeof journal) => void,
+    ): ReturnType<typeof readBack> => {
+      const value = structuredClone(journal);
+      mutate(value);
+      fs.writeFileSync(journalPath, `${JSON.stringify(value, null, 2)}\n`);
+      try {
+        return readBack();
+      } finally {
+        fs.writeFileSync(journalPath, journalBytes);
+      }
+    };
+    const invalidExpected = readAutoMovieSubjectInspection({
+      projectRoot: fixture.root,
+      productionId: "fixture-film",
+      shot: "opening",
+      subject: SUBJECT,
+      plan: {
+        ...dug.planRecord!,
+        version: 1,
+      } as unknown as IAutoMovieSubjectInspectionPlanRecord,
+      runtimeIdentity: dug.runtimeIdentity,
+    });
+    const absentDirectory = readAutoMovieSubjectInspection({
+      projectRoot: path.join(fixture.root, "absent-project"),
+      productionId: "fixture-film",
+      shot: "opening",
+      subject: SUBJECT,
+      plan: dug.planRecord!,
+      runtimeIdentity: dug.runtimeIdentity,
+    });
+    const brokenRoot = path.join(fixture.root, "broken-project");
+    fs.mkdirSync(
+      path.join(
+        brokenRoot,
+        ...`${AUTOMOVIE_SUBJECT_INSPECTION_ROOT}/fixture-film/opening/${encodeURIComponent(
+          SUBJECT,
+        )}/${AUTOMOVIE_SUBJECT_INSPECTION_PLAN_FILE}`.split("/"),
+      ),
+      { recursive: true },
+    );
+    const unreadablePlan = readAutoMovieSubjectInspection({
+      projectRoot: brokenRoot,
+      productionId: "fixture-film",
+      shot: "opening",
+      subject: SUBJECT,
+      plan: dug.planRecord!,
+      runtimeIdentity: dug.runtimeIdentity,
+    });
+    fs.writeFileSync(planPath, "{}", "utf8");
+    const malformedPlan = readBack();
+    fs.writeFileSync(
+      planPath,
+      planBytes
+        .toString("utf8")
+        .replace('"version": 2,', '"version": 2,\n  "version": 2,'),
+      "utf8",
+    );
+    const duplicatePlan = readBack();
+    fs.writeFileSync(planPath, Buffer.from([0xff]));
+    const nonUtf8Plan = readBack();
+    fs.writeFileSync(planPath, planBytes);
+    const reversed = {
+      ...dug.planRecord!,
+      planned: [...dug.planRecord!.planned].reverse(),
+      poses: [...dug.planRecord!.poses].reverse(),
+    };
+    const mismatchedPlan = readAutoMovieSubjectInspection({
+      projectRoot: fixture.root,
+      productionId: "fixture-film",
+      shot: "opening",
+      subject: SUBJECT,
+      plan: {
+        ...reversed,
+        planIdentity: autoMovieSubjectInspectionPlanIdentity(reversed),
+      },
+      runtimeIdentity: dug.runtimeIdentity,
+    });
+    fs.rmSync(journalPath);
+    const absentJournal = readBack();
+    fs.writeFileSync(journalPath, journalBytes);
+    fs.writeFileSync(journalPath, "{}", "utf8");
+    const malformedJournal = readBack();
+    fs.writeFileSync(
+      journalPath,
+      journalBytes
+        .toString("utf8")
+        .replace('"version": 1,', '"version": 1,\n  "version": 1,'),
+      "utf8",
+    );
+    const duplicateJournal = readBack();
+    let duplicateJournalMutationRejected = false;
+    try {
+      await inspection.inspect(services, {
+        shot: "opening",
+        subject: SUBJECT,
+        azimuthCount: 2,
+        elevationsDeg: [-45],
+      });
+    } catch (error) {
+      duplicateJournalMutationRejected =
+        error instanceof Error && error.message.includes("duplicate");
+    }
+    fs.writeFileSync(journalPath, journalBytes);
+    const nonCanonicalJournal = readWithJournal((value) => {
+      value.attempts[0]!.attempt = 7;
+    });
+    const foreignRecord = readWithJournal((value) => {
+      value.attempts[0]!.observations[0] = "../foreign.json";
+    });
+    const absentRecord = readWithJournal((value) => {
+      value.attempts[0]!.observations[0] = `${AUTOMOVIE_SUBJECT_INSPECTION_ROOT}/fixture-film/opening/${encodeURIComponent(
+        SUBJECT,
+      )}/${encodeURIComponent(dug.planIdentity!)}/attempt-1/absent.json`;
+    });
+    fs.writeFileSync(receiptPath, "{}", "utf8");
+    const malformedRecord = readBack();
+    fs.writeFileSync(
+      receiptPath,
+      receiptBytes
+        .toString("utf8")
+        .replace('"version": 2,', '"version": 2,\n  "version": 2,'),
+      "utf8",
+    );
+    const duplicateRecord = readBack();
+    fs.writeFileSync(receiptPath, Buffer.from([0xff]));
+    const nonUtf8Record = readBack();
+    fs.writeFileSync(receiptPath, receiptBytes);
+    TestValidator.equals(
+      "every malformed or stale persistence layer fails closed without changing the current denominator",
+      {
+        invalidExpected: invalidExpected.planned.length,
+        absentDirectory: absentDirectory.planned.length,
+        unreadablePlan: unreadablePlan.planned.length,
+        malformedPlan: malformedPlan.planned.length,
+        duplicatePlan: duplicatePlan.planned.length,
+        nonUtf8Plan: nonUtf8Plan.planned.length,
+        mismatchedPlan: mismatchedPlan.planned.length,
+        absentJournal: absentJournal.observations.length,
+        malformedJournal: malformedJournal.observations.length,
+        duplicateJournal: duplicateJournal.observations.length,
+        duplicateJournalMutationRejected,
+        nonCanonicalJournal: nonCanonicalJournal.observations.length,
+        foreignRecord: foreignRecord.observations.length,
+        absentRecord: absentRecord.observations.length,
+        malformedRecord: malformedRecord.observations.length,
+        duplicateRecord: duplicateRecord.observations.length,
+        nonUtf8Record: nonUtf8Record.observations.length,
+      },
+      {
+        invalidExpected: 0,
+        absentDirectory: 0,
+        unreadablePlan: 0,
+        malformedPlan: 0,
+        duplicatePlan: 0,
+        nonUtf8Plan: 0,
+        mismatchedPlan: dug.plan.length,
+        absentJournal: 0,
+        malformedJournal: 0,
+        duplicateJournal: 0,
+        duplicateJournalMutationRejected: true,
+        nonCanonicalJournal: 0,
+        foreignRecord: dug.plan.length - 1,
+        absentRecord: dug.plan.length - 1,
+        malformedRecord: dug.plan.length - 1,
+        duplicateRecord: dug.plan.length - 1,
+        nonUtf8Record: dug.plan.length - 1,
+      },
+    );
     const escaped = JSON.parse(receiptBytes.toString("utf8")) as {
       observation: { artifact: string };
     };
-    escaped.observation.artifact = "../foreign.png";
+    escaped.observation.artifact = `${AUTOMOVIE_SUBJECT_INSPECTION_ROOT}/fixture-film/opening/${encodeURIComponent(
+      SUBJECT,
+    )}/foreign.png`;
     fs.writeFileSync(receiptPath, `${JSON.stringify(escaped, null, 2)}\n`);
     const escapedRead = readBack();
     fs.writeFileSync(receiptPath, receiptBytes);
     TestValidator.equals(
-      "an escaping artifact locator is refused before matching foreign bytes can be opened",
+      "a foreign artifact locator is refused before matching bytes can be opened",
       escapedRead.observations.length,
       dug.plan.length - 1,
     );
