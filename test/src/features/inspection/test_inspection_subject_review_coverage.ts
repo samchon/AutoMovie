@@ -1,11 +1,10 @@
 import {
+  IAutoMovieCurrentSubjectReviewObservation,
+  IAutoMovieSubjectReviewCurrentContext,
   foldAutoMovieSubjectReviewCoverage,
   resolveAutoMovieSubjectReviewUnit,
 } from "@automovie/engine";
-import {
-  IAutoMovieSubjectReviewObservation,
-  IAutoMovieSubjectReviewViewpoint,
-} from "@automovie/interface";
+import { IAutoMovieSubjectReviewViewpoint } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
 import { namedFacts, throwsError } from "../internal/predicates";
@@ -26,14 +25,23 @@ const viewpoint = (
 
 const observation = (
   viewpointId: string,
-  overrides: Partial<IAutoMovieSubjectReviewObservation> = {},
-): IAutoMovieSubjectReviewObservation => ({
+  overrides: Partial<IAutoMovieCurrentSubjectReviewObservation> = {},
+): IAutoMovieCurrentSubjectReviewObservation => ({
   kind: "subject-view",
   subject: "element:castle/solar-oriel",
   revision: "sha256:inspection-a",
   viewpoint: viewpointId,
   artifact: `renders/solar-oriel/${viewpointId}.png`,
   digest: `sha256:${viewpointId}`,
+  productionId: "fixture-film",
+  target: {
+    shot: "inspection-shot",
+    subject: "element:castle/solar-oriel",
+  },
+  compileFingerprint: `sha256:${"a".repeat(64)}`,
+  planIdentity: `sha256:${"b".repeat(64)}`,
+  captureRuntimeIdentity: '{"runtime":"current"}',
+  verdict: "passed",
   ...overrides,
 });
 
@@ -52,6 +60,8 @@ const observation = (
  *    receipt are foreign evidence and cannot satisfy the subject denominator.
  * 4. Blank or duplicate ids, non-positive or non-finite distance, and a
  *    non-unit or non-finite direction are refused before coverage is folded.
+ * 5. Compile, plan, runtime and terminal-status twins never become current
+ *    merely because their subject revision and viewpoint still match.
  */
 export const test_inspection_subject_review_coverage = (): void => {
   const unit = resolveAutoMovieSubjectReviewUnit(subjectInspectionArtifact(), {
@@ -59,7 +69,15 @@ export const test_inspection_subject_review_coverage = (): void => {
     subject: "element:castle/solar-oriel",
   });
   const plan = [viewpoint("front"), viewpoint("back")];
-  const complete = foldAutoMovieSubjectReviewCoverage(unit, plan, [
+  const current: IAutoMovieSubjectReviewCurrentContext = {
+    productionId: "fixture-film",
+    target: unit.target,
+    revision: unit.description.revision,
+    compileFingerprint: `sha256:${"a".repeat(64)}`,
+    planIdentity: `sha256:${"b".repeat(64)}`,
+    captureRuntimeIdentity: '{"runtime":"current"}',
+  };
+  const complete = foldAutoMovieSubjectReviewCoverage(unit, current, plan, [
     observation("back"),
     observation("front"),
     observation("front"),
@@ -67,6 +85,72 @@ export const test_inspection_subject_review_coverage = (): void => {
     observation("detail-z"),
     observation("detail-a"),
   ]);
+  TestValidator.equals(
+    "coverage admits only the exact current compile, plan, runtime and passed verdict",
+    {
+      compile: foldAutoMovieSubjectReviewCoverage(unit, current, plan, [
+        observation("front", {
+          compileFingerprint: `sha256:${"c".repeat(64)}`,
+        }),
+      ]),
+      plan: foldAutoMovieSubjectReviewCoverage(unit, current, plan, [
+        observation("front", {
+          planIdentity: `sha256:${"c".repeat(64)}`,
+        }),
+      ]),
+      runtime: foldAutoMovieSubjectReviewCoverage(unit, current, plan, [
+        observation("front", {
+          captureRuntimeIdentity: '{"runtime":"old"}',
+        }),
+      ]),
+      notPassed: foldAutoMovieSubjectReviewCoverage(unit, current, plan, [
+        { ...observation("front"), verdict: "not-run" },
+      ]),
+    },
+    {
+      compile: {
+        state: "stale",
+        planned: ["front", "back"],
+        observed: [],
+        missing: ["front", "back"],
+        stale: ["front"],
+        unplanned: [],
+        foreign: 0,
+        duplicates: 0,
+      },
+      plan: {
+        state: "stale",
+        planned: ["front", "back"],
+        observed: [],
+        missing: ["front", "back"],
+        stale: ["front"],
+        unplanned: [],
+        foreign: 0,
+        duplicates: 0,
+      },
+      runtime: {
+        state: "stale",
+        planned: ["front", "back"],
+        observed: [],
+        missing: ["front", "back"],
+        stale: ["front"],
+        unplanned: [],
+        foreign: 0,
+        duplicates: 0,
+      },
+      notPassed: {
+        state: "not-run",
+        planned: ["front", "back"],
+        observed: [],
+        missing: ["front", "back"],
+        stale: [],
+        unplanned: [],
+        foreign: 1,
+        duplicates: 0,
+      },
+    },
+  );
+
   TestValidator.equals(
     "complete coverage preserves plan order without duplicate inflation",
     complete,
@@ -85,15 +169,16 @@ export const test_inspection_subject_review_coverage = (): void => {
   TestValidator.equals(
     "execution states follow the actual current viewpoint numerator",
     {
-      partial: foldAutoMovieSubjectReviewCoverage(unit, plan, [
+      partial: foldAutoMovieSubjectReviewCoverage(unit, current, plan, [
         observation("back"),
       ]),
-      stale: foldAutoMovieSubjectReviewCoverage(unit, plan, [
+      stale: foldAutoMovieSubjectReviewCoverage(unit, current, plan, [
         observation("front", { revision: "sha256:inspection-old" }),
       ]),
-      notRun: foldAutoMovieSubjectReviewCoverage(unit, plan, []),
+      notRun: foldAutoMovieSubjectReviewCoverage(unit, current, plan, []),
       indeterminate: foldAutoMovieSubjectReviewCoverage(
         unit,
+        current,
         [],
         [observation("front")],
       ),
@@ -142,7 +227,7 @@ export const test_inspection_subject_review_coverage = (): void => {
     },
   );
 
-  const foreign = foldAutoMovieSubjectReviewCoverage(unit, plan, [
+  const foreign = foldAutoMovieSubjectReviewCoverage(unit, current, plan, [
     {
       kind: "frame",
       shot: "inspection-shot",
@@ -186,7 +271,12 @@ export const test_inspection_subject_review_coverage = (): void => {
         () =>
           throwsError(
             () =>
-              foldAutoMovieSubjectReviewCoverage(unit, [viewpoint(" ")], []),
+              foldAutoMovieSubjectReviewCoverage(
+                unit,
+                current,
+                [viewpoint(" ")],
+                [],
+              ),
             "must not be blank",
           ),
       ],
@@ -197,6 +287,7 @@ export const test_inspection_subject_review_coverage = (): void => {
             () =>
               foldAutoMovieSubjectReviewCoverage(
                 unit,
+                current,
                 [viewpoint("front"), viewpoint("front")],
                 [],
               ),
@@ -210,6 +301,7 @@ export const test_inspection_subject_review_coverage = (): void => {
             () =>
               foldAutoMovieSubjectReviewCoverage(
                 unit,
+                current,
                 [viewpoint("front", { distance: 0 })],
                 [],
               ),
@@ -223,6 +315,7 @@ export const test_inspection_subject_review_coverage = (): void => {
             () =>
               foldAutoMovieSubjectReviewCoverage(
                 unit,
+                current,
                 [viewpoint("front", { distance: Number.POSITIVE_INFINITY })],
                 [],
               ),
@@ -236,6 +329,7 @@ export const test_inspection_subject_review_coverage = (): void => {
             () =>
               foldAutoMovieSubjectReviewCoverage(
                 unit,
+                current,
                 [viewpoint("front", { direction: { x: 0, y: 0, z: 2 } })],
                 [],
               ),
@@ -249,6 +343,7 @@ export const test_inspection_subject_review_coverage = (): void => {
             () =>
               foldAutoMovieSubjectReviewCoverage(
                 unit,
+                current,
                 [
                   viewpoint("front", {
                     direction: { x: Number.NaN, y: 0, z: 1 },

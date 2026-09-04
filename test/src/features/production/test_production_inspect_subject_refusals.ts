@@ -14,6 +14,7 @@ import { PNG } from "pngjs";
 import {
   productionCompileSucceeded,
   productionFixture,
+  testCaptureRuntimeIdentity,
 } from "./productionFixtures";
 import {
   inspectionPng,
@@ -45,6 +46,8 @@ const fixedInstrument =
       bytes,
       width: size?.width ?? input.width,
       height: size?.height ?? input.height,
+      runtimeIdentity: testCaptureRuntimeIdentity(),
+      assertRuntimeCurrent: () => undefined,
     });
 
 /**
@@ -210,6 +213,10 @@ export const test_production_inspect_subject_refusals =
       const featureless = await new AutoMovieProductionSubjectInspectionService(
         fixedInstrument(PNG.sync.write(blank)),
       ).inspect(services, target);
+      const unidentified =
+        await new AutoMovieProductionSubjectInspectionService(() =>
+          Promise.resolve({ runtimeUnidentified: "legacy host" }),
+        ).inspect(services, target);
       TestValidator.equals(
         "instrument output that cannot be trusted is discarded, not recorded",
         {
@@ -217,6 +224,11 @@ export const test_production_inspect_subject_refusals =
           undecodable: undecodable.diagnostics[0]?.code,
           mismatched: mismatched.diagnostics[0]?.code,
           featureless: featureless.diagnostics[0]?.code,
+          unidentified: {
+            code: unidentified.diagnostics[0]?.code,
+            reason:
+              unidentified.diagnostics[0]?.message.includes("legacy host"),
+          },
           planned: [
             throwing.plan.length,
             undecodable.plan.length,
@@ -235,6 +247,7 @@ export const test_production_inspect_subject_refusals =
           undecodable: "capture-png-invalid",
           mismatched: "capture-size-mismatch",
           featureless: "capture-png-blank",
+          unidentified: { code: "capture-failed", reason: true },
           planned: [6, 6, 6, 6],
           views: [0, 0, 0, 0],
         },
@@ -261,6 +274,8 @@ export const test_production_inspect_subject_refusals =
             bytes: inspectionPng(input.width, input.height),
             width: input.width,
             height: input.height,
+            runtimeIdentity: testCaptureRuntimeIdentity(),
+            assertRuntimeCurrent: () => undefined,
           });
         },
       ).inspect(services, target);
