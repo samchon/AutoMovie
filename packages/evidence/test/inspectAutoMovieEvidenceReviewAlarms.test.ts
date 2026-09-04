@@ -2,6 +2,16 @@ import assert from "node:assert/strict";
 
 import { inspectAutoMovieEvidenceReviewAlarms } from "../src/inspectAutoMovieEvidenceReviewAlarms";
 
+/**
+ * Semantic alarms expose suspicious review frames without deciding meaning.
+ *
+ * Scenarios:
+ *
+ * 1. Quoted facts, paths, and numbers collapse into one repeated layer frame.
+ * 2. Two host-specific observations remain below the alarm boundary.
+ * 3. A target's exact Review question is reported only when targets are supplied.
+ * 4. A threshold below two is refused because it cannot describe repetition.
+ */
 const target = {
   path: "docs/principles/core/common.md",
   source: [
