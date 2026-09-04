@@ -50,9 +50,7 @@ export interface IAutoMovieAuthoredTextDelta {
 /**
  * Measures one authored Markdown revision without structural evidence metadata.
  *
- * @evidence requirements/production-evidence/input.md#agent-production-evidence-visible-selection Makes the exact measured revision, path, source, and authored-body digest visible to its consumer.
  * @evidence requirements/production-evidence/graph.md#agent-production-evidence-deterministic-result Produces reproducible byte, word, and section observations without converting them into a semantic verdict.
- * @evidence specifications/production-evidence/input.md#spec-authoring-production-evidence-input-state Carries one immutable revision identity beside its canonical authored-body projection.
  * @evidence specifications/production-evidence/graph.md#spec-authoring-production-evidence-deterministic-result Rejects ambiguous mixed line endings and measures one canonical LF projection.
  */
 export function measureAutoMovieAuthoredText(props: {
@@ -81,7 +79,7 @@ export function measureAutoMovieAuthoredText(props: {
     sourceSha256,
     bodySha256: digest(Buffer.from(body, "utf8")),
     bytes: Buffer.byteLength(body, "utf8"),
-    words: [...body.matchAll(/[\p{L}\p{N}]+/gu)].length,
+    words: [...body.matchAll(/(?:\p{L}|\p{N})+/gu)].length,
     sections: visible.filter((line) => /^##(?!#)\s+\S/u.test(line)).length,
   };
 }
