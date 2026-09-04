@@ -143,13 +143,18 @@ const markdownAnchors = (markdown: string): ReadonlySet<string> => {
   for (const line of visibleLines(markdown)) {
     const match = /^#{1,6}\s+(.+?)\s*#*\s*$/u.exec(line);
     if (match === null) continue;
-    const base = match[1]!
+    const heading = match[1]!
       .replace(/\s+\{#[^{}\s]+\}\s*$/u, "")
       .trim()
-      .toLowerCase()
-      .replace(/[^\p{L}\p{N}\s-]/gu, (character) =>
-        character === "_" ? "_" : "",
+      .toLowerCase();
+    const base = [...heading]
+      .filter(
+        (character) =>
+          character === "_" ||
+          character === "-" ||
+          /\p{L}|\p{N}|\s/u.test(character),
       )
+      .join("")
       .replace(/\s+/gu, "-");
     const occurrence = occurrences.get(base) ?? 0;
     occurrences.set(base, occurrence + 1);
