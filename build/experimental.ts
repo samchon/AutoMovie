@@ -24,7 +24,12 @@ import * as path from "node:path";
 
 import { renderScaffold } from "../packages/template/src/renderScaffold";
 import { writeFiles } from "../packages/template/src/writeFiles";
-import { PACKAGES, isProcessEntry, packWorkspace } from "./tgz";
+import {
+  type IPackWorkspaceResult,
+  PACKAGES,
+  isProcessEntry,
+  packWorkspace,
+} from "./tgz";
 
 const ROOT = path.resolve(__dirname, "..");
 
@@ -64,12 +69,13 @@ Options:
 export const sandboxManifest = (
   rendered: string,
   specifiers: Readonly<Record<string, string>>,
+  packages: readonly (typeof PACKAGES)[number][] = PACKAGES,
 ): string => {
   const manifest = JSON.parse(rendered) as {
     dependencies: Record<string, string>;
     devDependencies?: Record<string, string>;
   };
-  for (const { key, name: dependency } of PACKAGES) {
+  for (const { key, name: dependency } of packages) {
     if (specifiers[key] === undefined) continue;
     const table = Object.hasOwn(manifest.devDependencies ?? {}, dependency)
       ? manifest.devDependencies!
@@ -80,7 +86,7 @@ export const sandboxManifest = (
 };
 
 export interface IExperimentalDependencies {
-  readonly pack: (target: string) => Record<string, string>;
+  readonly pack: (target: string) => IPackWorkspaceResult;
   readonly install: (target: string) => number | null;
 }
 
@@ -172,6 +178,22 @@ export const sandboxTarget = (name: string): string => {
   return target;
 };
 
+/** The scaffold input for creation, or no render at all during a refresh. */
+export const experimentalScaffoldRequest = (
+  name: string,
+  refresh: boolean,
+): { readonly language: "english"; readonly name: string } | undefined =>
+  refresh ? undefined : { language: "english", name };
+
+/** Recovery that preserves an authored sandbox whenever one already exists. */
+export const experimentalInstallFailureMessage = (
+  name: string,
+  refresh: boolean,
+): string =>
+  `npm install failed in experimental/${name}. Fix it there, then re-run with ${
+    refresh ? "--refresh" : "--force"
+  }.`;
+
 export const runExperimental = (
   args: readonly string[],
   dependencies: IExperimentalDependencies = experimentalDependencies,
@@ -226,12 +248,14 @@ export const runExperimental = (
     // Rendering is what enforces the scaffold's own name rule, so it runs
     // before the pack as well. Nothing reaches disk here; `writeFiles` below
     // still runs after the pack that fills the same directory.
-    const files = refresh
-      ? undefined
-      : renderScaffold({ name, language: "english" });
+    const scaffoldRequest = experimentalScaffoldRequest(name, refresh);
+    const files =
+      scaffoldRequest === undefined
+        ? undefined
+        : renderScaffold(scaffoldRequest);
 
     const install = args.includes("--no-install") === false;
-    const specifiers = install ? dependencies.pack(target) : {};
+    const specifiers = install ? dependencies.pack(target).specifiers : {};
 
     if (files === undefined) {
       fs.writeFileSync(
@@ -263,9 +287,7 @@ export const runExperimental = (
     if (install) {
       output.write("Installing the sandbox (npm install)\n");
       if (dependencies.install(target) !== 0)
-        throw new Error(
-          `npm install failed in experimental/${name}. Fix it there, then re-run with --force.`,
-        );
+        throw new Error(experimentalInstallFailureMessage(name, refresh));
     }
 
     output.write(
