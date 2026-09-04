@@ -26,7 +26,7 @@ Review 문장은 acknowledgement를 독립적으로 다시 읽은 결과를 기�
 
 ### 실제 대상과 계보의 무결성 {#agent-production-evidence-physical-integrity}
 
-활성 분기는 목적에 맞는 실제 문서 또는 source host를 하나 이상 가져야 하고, 비활성 분기는 지배 대상을 남겨서는 안 된다. 파일·제목·export identity, 단일 소유자, 관계 cardinality, 각 상속 단위의 실제 부모와 단계 간 계보는 추정한 목록이 아니라 현재 파일 트리에서 검증되어야 한다.
+활성 분기는 목적에 맞는 실제 문서 또는 source host를 하나 이상 가져야 하고, 비활성 분기는 지배 대상을 남겨서는 안 된다. 프로젝트가 소유하는 각 입력 파일은 symlink가 아닌 regular file이고 정확히 하나의 directory entry만 가져야 하며, 같은 inode를 여러 경로가 독립 계약이나 source처럼 소유하게 해서는 안 된다. 파일·제목·export identity, 단일 소유자, 관계 cardinality, 각 상속 단위의 실제 부모와 단계 간 계보는 추정한 목록이 아니라 현재 파일 트리에서 검증되어야 한다.
 
 ### 추가만 가능한 확장 {#agent-production-evidence-additive-extension}
 

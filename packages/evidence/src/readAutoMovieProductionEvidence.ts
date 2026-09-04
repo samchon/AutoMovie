@@ -6,7 +6,11 @@ import {
   type IAutoMovieEvidenceConfigProps,
   createAutoMovieContractBindingManifest,
 } from "./createAutoMovieEvidenceConfig";
-import { walkAutoMovieProjectPopulationFiles } from "./walkAutoMovieProjectPopulationFiles";
+import { parseAutoMovieEvidenceMarkdownHeadings } from "./parseAutoMovieEvidenceMarkdown";
+import {
+  isAutoMovieEvidencePhysicalFile,
+  walkAutoMovieProjectPopulationFiles,
+} from "./walkAutoMovieProjectPopulationFiles";
 
 /**
  * One exact H2 unit carried by a production-owned contract or design owner.
@@ -245,9 +249,15 @@ export const readAutoMovieProductionEvidence = (props: {
 const readPackageIdentity = (
   root: string,
 ): { packageName: string; description: string } => {
-  const manifest = JSON.parse(
-    fs.readFileSync(path.join(root, "package.json"), "utf8"),
-  ) as { name?: unknown; description?: unknown };
+  const location = path.join(root, "package.json");
+  if (!isAutoMovieEvidencePhysicalFile(fs.lstatSync(location)))
+    throw new Error(
+      `${location}: package identity must be one unlinked regular file.`,
+    );
+  const manifest = JSON.parse(fs.readFileSync(location, "utf8")) as {
+    name?: unknown;
+    description?: unknown;
+  };
   if (typeof manifest.name !== "string" || manifest.name.trim() === "")
     throw new Error(`${root}: package.json declares no package name.`);
   return {
@@ -302,7 +312,7 @@ const readMarkdownDocument = (
 ): IMarkdownDocument => {
   const source = fs.readFileSync(file, "utf8").replaceAll("\r\n", "\n");
   const lines = source.split("\n");
-  const headings = markdownHeadings(source);
+  const headings = parseAutoMovieEvidenceMarkdownHeadings(source);
   const h1 = headings.find((heading) => heading.depth === 1)!;
   const h2 = headings.filter((heading) => heading.depth === 2);
   return {
@@ -323,83 +333,6 @@ const readMarkdownDocument = (
       };
     }),
   };
-};
-
-interface IMarkdownHeading {
-  anchor: string | undefined;
-  depth: number;
-  line: number;
-  title: string;
-}
-
-/** Extract visible ATX headings while ignoring comments and fenced examples. */
-const markdownHeadings = (source: string): IMarkdownHeading[] => {
-  const output: IMarkdownHeading[] = [];
-  for (const [index, line] of visibleMarkdownLines(source).entries()) {
-    const heading = /^(#{1,6})(?!#)\s+(\S.*)$/u.exec(line);
-    if (heading === null) continue;
-    const anchored = /[ \t]+\{#([^{}\s]+)\}[ \t]*$/u.exec(heading[2]!);
-    output.push({
-      anchor: anchored?.[1],
-      depth: heading[1]!.length,
-      line: index + 1,
-      title: heading[2]!.replace(/[ \t]+\{#[^{}\s]+\}[ \t]*$/u, ""),
-    });
-  }
-  return output;
-};
-
-/** Blank Markdown comments and fenced code without changing line addresses. */
-const visibleMarkdownLines = (source: string): string[] => {
-  const output: string[] = [];
-  let fence: { character: "`" | "~"; length: number } | undefined;
-  let htmlComment = false;
-  for (const sourceLine of source.split(/\r?\n/u)) {
-    if (fence !== undefined) {
-      if (
-        new RegExp(
-          `^ {0,3}${fence.character}{${fence.length},}[ \\t]*$`,
-          "u",
-        ).test(sourceLine)
-      )
-        fence = undefined;
-      output.push("");
-      continue;
-    }
-    let line = "";
-    for (let cursor = 0; cursor < sourceLine.length; ) {
-      if (htmlComment) {
-        const close = sourceLine.indexOf("-->", cursor);
-        if (close === -1) {
-          line += " ".repeat(sourceLine.length - cursor);
-          break;
-        }
-        line += " ".repeat(close + 3 - cursor);
-        cursor = close + 3;
-        htmlComment = false;
-      } else {
-        const open = sourceLine.indexOf("<!--", cursor);
-        if (open === -1) {
-          line += sourceLine.slice(cursor);
-          break;
-        }
-        line += `${sourceLine.slice(cursor, open)}    `;
-        cursor = open + 4;
-        htmlComment = true;
-      }
-    }
-    const marker = /^ {0,3}(`{3,}|~{3,})/u.exec(line)?.[1];
-    if (marker !== undefined) {
-      fence = {
-        character: marker[0] as "`" | "~",
-        length: marker.length,
-      };
-      output.push("");
-      continue;
-    }
-    output.push(line);
-  }
-  return output;
 };
 
 /** Resolve manifest source globs without walking unrelated project trees. */

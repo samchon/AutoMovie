@@ -5,6 +5,39 @@ const projectPopulationBoundaryDiagnostic =
   "project evidence populations contain only real files and directories inside the project root";
 
 /**
+ * The filesystem facts that give one project-owned evidence file a unique
+ * physical identity.
+ *
+ * @evidence requirements/production-evidence/graph.md#agent-production-evidence-physical-integrity Makes one regular, non-linked directory entry the admissible evidence-file identity.
+ * @evidence specifications/production-evidence/graph.md#spec-authoring-production-evidence-physical-integrity Supplies the lstat facts used by every project population and package-manifest reader.
+ * @evidencePart specifications/production-evidence/graph.md#spec-authoring-production-evidence-physical-integrity::physical-population-integrity Keeps hardlinks, symbolic links, and special files outside the project-owned graph.
+ * @author Samchon
+ */
+export interface IAutoMovieEvidencePhysicalFile {
+  /** Whether lstat classified the entry as a regular file. */
+  isFile(): boolean;
+  /** Whether lstat classified the entry as a symbolic link. */
+  isSymbolicLink(): boolean;
+  /** Number of directory entries naming the same physical inode. */
+  nlink: number | bigint;
+}
+
+/**
+ * Decide whether one lstat entry is an independently owned evidence file.
+ *
+ * @evidence requirements/production-evidence/graph.md#agent-production-evidence-physical-integrity Refuses a second pathname for the same bytes instead of counting it as an independent contract or source.
+ * @evidence specifications/production-evidence/graph.md#spec-authoring-production-evidence-physical-integrity Applies one regular-file, non-symlink, single-link predicate before any project evidence bytes are read.
+ * @evidencePart specifications/production-evidence/graph.md#spec-authoring-production-evidence-physical-integrity::physical-population-integrity Centralizes the physical identity decision shared by population and package-manifest readers.
+ * @author Samchon
+ */
+export const isAutoMovieEvidencePhysicalFile = (
+  entry: IAutoMovieEvidencePhysicalFile,
+): boolean =>
+  entry.isFile() &&
+  entry.isSymbolicLink() === false &&
+  (entry.nlink === 1 || entry.nlink === 1n);
+
+/**
  * Walk one project-local evidence population without following filesystem
  * indirection or accepting an entry the graph cannot inventory.
  *
@@ -40,7 +73,7 @@ export const walkAutoMovieProjectPopulationFiles = (
 
   const output: string[] = [];
   const visit = (location: string, entry: fs.Stats): void => {
-    const regularFile = entry.isFile();
+    const regularFile = isAutoMovieEvidencePhysicalFile(entry);
     if (!entry.isDirectory() && !regularFile) fail(project, location);
     if (regularFile) {
       if (location.endsWith(extension)) output.push(location);

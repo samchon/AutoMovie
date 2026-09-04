@@ -31,3 +31,5 @@ Every governed source file declares a named exported owner and pays the exact re
 ## Verification
 
 After each complete contract pass, evidence repair, or authorized stage transition, reread the whole affected process, collect every finding, repair them at their earliest owners, and restart after an edit. One complete no-edit round closes that boundary. Run `npm run lint:source` for typed configuration and `npm run lint -- --scope source` for the live graph; use the full review gate only when the production is meant to answer it.
+
+When a physical-input boundary changes, create a disposable generated consumer and replace either its `package.json` or one governed input with a hardlink, verify that both lint and the evidence reader refuse the linked identity, then remove only the exact link after confirming the disposable root and target.
