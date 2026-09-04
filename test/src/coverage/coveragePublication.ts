@@ -62,7 +62,7 @@ export const captureCoverageSnapshot = (props: {
     if (isAuthoredExecutableSource(relative) === false) continue;
     const file = path.resolve(props.root, relative);
     if (fs.existsSync(file))
-      snapshot[canonical(file)] = readMeasuredSource(file);
+      snapshot[canonicalCoveragePath(file)] = readMeasuredSource(file);
   }
   return snapshot;
 };
@@ -85,7 +85,9 @@ export const inspectCoverageSnapshot = (props: {
       identity,
     ]),
   );
-  const report = new Set(props.reportFiles.map(canonicalCoveragePath));
+  const report = new Set(
+    props.reportFiles.map((file) => canonicalCoveragePath(file)),
+  );
   const failures: string[] = [];
   for (const file of [...snapshot.keys()].sort(byCodeUnit)) {
     if (report.has(file) === false)
