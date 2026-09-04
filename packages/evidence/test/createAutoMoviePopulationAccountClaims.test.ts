@@ -82,6 +82,28 @@ assert.throws(
   () =>
     createAutoMoviePopulationAccountClaims({
       layer: "settings",
+      populationFiles: ["models/**/*.md"],
+      obligationFiles: ["obligations/core/settings.md"],
+      enabled: true,
+      requireReview: false,
+    }),
+  /cannot select another layer/u,
+);
+assert.throws(
+  () =>
+    createAutoMoviePopulationAccountClaims({
+      layer: "settings",
+      populationFiles: ["settings/**/*.md", "settings/**/*.md"],
+      obligationFiles: ["obligations/core/settings.md"],
+      enabled: true,
+      requireReview: false,
+    }),
+  /repeats population file/u,
+);
+assert.throws(
+  () =>
+    createAutoMoviePopulationAccountClaims({
+      layer: "settings",
       populationFiles: ["settings/**/*.md"],
       obligationFiles: ["principles/core/common.md"],
       enabled: true,
