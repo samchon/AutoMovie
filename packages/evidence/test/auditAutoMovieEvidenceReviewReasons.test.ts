@@ -263,7 +263,7 @@ const testNativeCarrierBoundaries = (): void => {
     "@evidence principles/core/common.md#scope-preservation The unit owns its silhouette.";
   const message = rejectionMessage([
     document(
-      ["````text", "~~~", "```", `<!-- ${tag} -->`].join("\n"),
+      ["````text", "~~~", "```", "````", `<!-- ${tag} -->`].join("\n"),
       "docs/models/a.md",
     ),
     document(`<!-- ${tag} -->`, "docs/models/b.md"),
