@@ -1402,6 +1402,37 @@ const CONTRACTS: readonly IContractFixture[] = [
   },
 ] as const;
 
+const ACCOUNT_OBLIGATIONS = {
+  settings: [
+    "obligations/core/common.md",
+    "obligations/core/settings.md",
+    "obligations/story/subjects.md",
+  ],
+  maps: ["obligations/core/common.md", "obligations/design/maps.md"],
+  models: ["obligations/core/common.md", "obligations/design/models.md"],
+  spaces: ["obligations/core/common.md", "obligations/design/spaces.md"],
+  materials: ["obligations/core/common.md", "obligations/design/materials.md"],
+  instances: ["obligations/core/common.md", "obligations/design/instances.md"],
+  motions: ["obligations/core/common.md", "obligations/design/motions.md"],
+  systems: ["obligations/core/common.md", "obligations/design/systems.md"],
+  treatments: [
+    "obligations/core/common.md",
+    "obligations/story/narratives.md",
+    "obligations/story/treatments.md",
+  ],
+  scripts: [
+    "obligations/core/common.md",
+    "obligations/story/narratives.md",
+    "obligations/story/scripts.md",
+  ],
+  screenplays: [
+    "obligations/core/common.md",
+    "obligations/story/narratives.md",
+    "obligations/story/screenplays.md",
+  ],
+  briefs: ["obligations/core/common.md", "obligations/delivery/briefs.md"],
+} as const;
+
 /**
  * Materializes one isolated project from typed contract inputs.
  *
@@ -1436,6 +1467,31 @@ export const createEvidenceProjectFixture = (roots: string[]): string => {
       "utf8",
     );
   }
+  for (const [layer, obligations] of Object.entries(ACCOUNT_OBLIGATIONS))
+    for (const obligation of obligations) {
+      const contract = CONTRACTS.find(
+        (candidate) => candidate.path === obligation,
+      )!;
+      const relative = obligation
+        .replace(/^obligations\//u, "")
+        .replaceAll("/", "-");
+      const file = path.join(directory, "docs", "accounts", layer, relative);
+      fs.mkdirSync(path.dirname(file), { recursive: true });
+      fs.writeFileSync(
+        file,
+        [
+          `# ${layer} ${contract.title} account`,
+          "",
+          ...contract.units.flatMap((unit) => [
+            `## ${unit.title} account {#account-${unit.anchor}}`,
+            "",
+            `Synthetic population comparison for ${unit.anchor}.`,
+            "",
+          ]),
+        ].join("\n"),
+        "utf8",
+      );
+    }
   const localContracts = path.join(directory, "docs", "contracts");
   fs.mkdirSync(localContracts, { recursive: true });
   fs.writeFileSync(
