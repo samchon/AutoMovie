@@ -6,8 +6,12 @@
 
 검토 질문: 서로 다른 소재에서 기능 없이 지배하는 한국어 골격은 무엇이며 어떤 실제 구성원이 그 판정을 입증하는가?
 
+출처: [Padmakumar와 He의 모델 보조 글쓰기 다양성 연구](https://arxiv.org/abs/2309.05196); [국립국어원 한국어기초사전](https://krdict.korean.go.kr/)
+
 ## 독자 언어 접근 {#korean-audience-language-access}
 
 전체 모집단은 설명되지 않은 언어 전환, 전문어, 시대어, 자막, 인용과 번역 판본의 의미와 출처와 상태를 의도 독자가 식별하게 하되 작품이 보존하기로 한 차이를 지우지 않는다.
 
 검토 질문: 어느 한국어 경계 때문에 의도 독자가 제작 결정을 이해하거나 그 출처와 상태를 구분할 수 없는가?
+
+출처: [W3C 언어 협상 안내](https://www.w3.org/International/questions/qa-lang-priorities); [W3C TTML2](https://www.w3.org/TR/ttml2/)

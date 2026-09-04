@@ -72,6 +72,7 @@ It is generated from the installed scaffold by \`npm run sync\` and is not track
 ## This production
 
 - Package \`${evidence.packageName}\`.
+- Production authoring language \`${evidence.manifest.language}\`; its exact contract is materialized under \`docs/language\`.
 - \`lint.config.ts\` is the single typed production-kind, population-scope, branch, custom-claim, and graph declaration. Lint, sync, and final review consume the same exported value; the generated branch-and-stage view below reports it but never overrides it.
 - ${shapeProcedure(evidence.manifest.kind)}
 - ${branchLine}

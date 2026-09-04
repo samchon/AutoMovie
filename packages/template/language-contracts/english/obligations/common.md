@@ -6,8 +6,12 @@ After a layer is complete, a reviewer fluent in the declared English variety rea
 
 Review question: which English clause frame or register dominates unlike material without a shared function, and which literal members establish that finding?
 
+Sources: [British National Corpus](https://www.english-corpora.org/bnc/); [Padmakumar and He on diversity in model-assisted writing](https://arxiv.org/abs/2309.05196)
+
 ## Audience language access {#english-audience-language-access}
 
 The complete population makes unexplained code-switches, specialist terms, historical forms, captions, quotations, and translated variants accessible to the declared audience without erasing distinctions the production intends to preserve.
 
 Review question: which English-language boundary leaves an intended reader unable to identify the meaning, source, or status of a production decision?
+
+Sources: [W3C Internationalization on language negotiation](https://www.w3.org/International/questions/qa-lang-priorities); [W3C Timed Text Markup Language](https://www.w3.org/TR/ttml2/)

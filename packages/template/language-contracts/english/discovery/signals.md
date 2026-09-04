@@ -5,3 +5,5 @@
 Discover the English variety, audience, period, registers, accessibility vocabulary, dialogue conventions, and any deliberate multilingual boundary this production requires. A surface habit is only a prompt to compare literal passages; it is never an authorship detector or a universal ban.
 
 Review question: which English-language condition changes what a fluent intended reader can understand, distinguish, or experience in this production?
+
+Sources: [W3C Internationalization on declaring language](https://www.w3.org/International/questions/qa-html-language-declarations); [British National Corpus](https://www.english-corpora.org/bnc/)
