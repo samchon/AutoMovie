@@ -82,6 +82,8 @@ export const test_production_inspect_subject_absent_files =
           productionId: "fixture-film",
           shot: "opening",
           subject: SUBJECT,
+          plan: swept.planRecord!,
+          runtimeIdentity: swept.runtimeIdentity,
         });
       const whole = readBack();
 

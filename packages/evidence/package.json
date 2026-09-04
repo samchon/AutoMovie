@@ -10,7 +10,7 @@
   "scripts": {
     "build": "rimraf lib && ttsc && tsc --emitDeclarationOnly",
     "prepack": "pnpm run build",
-    "test": "ttsx --no-plugins -P tsconfig.test.json test/createAutoMovieEvidenceConfig.test.ts"
+    "test": "ttsx --no-plugins -P tsconfig.test.json test/index.ts"
   },
   "keywords": ["automovie", "evidence", "traceability"],
   "author": "Samchon",
