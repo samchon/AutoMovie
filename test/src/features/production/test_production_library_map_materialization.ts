@@ -52,6 +52,8 @@ import {
 export const test_production_library_map_materialization = (): void => {
   const fixture = libraryFixture();
   try {
+    const currentMapAuthoringEvidence = (anchors?: readonly string[]) => () =>
+      libraryAuthoring({ root: fixture.root, branch: "maps", anchors });
     const context = analysisContext({ id: "hall-site" });
     fixture.write(
       LIBRARY_MAP_SOURCE,
@@ -63,7 +65,8 @@ export const test_production_library_map_materialization = (): void => {
     );
     const compiled = new AutoMovieProductionCompiler(
       AutoMovieProductionProject.open(fixture.root),
-      libraryAuthoring({ root: fixture.root, branch: "maps" }),
+      currentMapAuthoringEvidence()(),
+      currentMapAuthoringEvidence(),
     ).compile({ scope: "source" });
     const resolve = autoMovieMaterializedLibraryContexts({
       read: (relative) =>
@@ -194,7 +197,8 @@ export const test_production_library_map_materialization = (): void => {
     );
     const malformed = new AutoMovieProductionCompiler(
       AutoMovieProductionProject.open(fixture.root),
-      libraryAuthoring({ root: fixture.root, branch: "maps" }),
+      currentMapAuthoringEvidence()(),
+      currentMapAuthoringEvidence(),
     ).compile({ scope: "source" });
 
     TestValidator.equals(
@@ -223,13 +227,14 @@ export const test_production_library_map_materialization = (): void => {
         },
       }),
     );
+    const currentCollidedAuthoringEvidence = currentMapAuthoringEvidence([
+      LIBRARY_MAP_ANCHOR,
+      LIBRARY_MAP_SECOND_ANCHOR,
+    ]);
     const collided = new AutoMovieProductionCompiler(
       AutoMovieProductionProject.open(fixture.root),
-      libraryAuthoring({
-        root: fixture.root,
-        branch: "maps",
-        anchors: [LIBRARY_MAP_ANCHOR, LIBRARY_MAP_SECOND_ANCHOR],
-      }),
+      currentCollidedAuthoringEvidence(),
+      currentCollidedAuthoringEvidence,
     );
     const clash = collided.compile({ scope: "source" });
 

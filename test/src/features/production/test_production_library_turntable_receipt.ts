@@ -132,15 +132,19 @@ export const test_production_library_turntable_receipt = (): void => {
     fixture.write(LIBRARY_SOURCE, librarySourceModule({ models: "[]" }));
     fixture.write(LIBRARY_MODEL_SOURCE, modelSourceModule());
     fixture.write(LIBRARY_MODEL_PLAN, modelPlan([]));
-    const authoring = libraryAuthoring({ root: fixture.root, models: true });
+    const currentAuthoringEvidence = () =>
+      libraryAuthoring({ root: fixture.root, models: true });
+    const authoring = currentAuthoringEvidence();
     const compiled = new AutoMovieProductionCompiler(
       AutoMovieProductionProject.open(fixture.root),
       authoring,
+      currentAuthoringEvidence,
     ).compile({ scope: "source" });
     const lint = (): IAutoMovieDiagnostic[] =>
       new AutoMovieProductionCompiler(
         AutoMovieProductionProject.openReadOnly(fixture.root),
-        authoring,
+        currentAuthoringEvidence(),
+        currentAuthoringEvidence,
       )
         .lint({ scope: "review" })
         .diagnostics.filter(
@@ -187,7 +191,8 @@ export const test_production_library_turntable_receipt = (): void => {
     // neither charged nor judged here.
     const designScope = new AutoMovieProductionCompiler(
       AutoMovieProductionProject.openReadOnly(fixture.root),
-      authoring,
+      currentAuthoringEvidence(),
+      currentAuthoringEvidence,
     )
       .lint({ scope: "design" })
       .diagnostics.filter((entry) =>

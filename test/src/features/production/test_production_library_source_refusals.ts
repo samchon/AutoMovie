@@ -33,9 +33,12 @@ const refuse = (props: {
     props.source === undefined ? {} : { [LIBRARY_SOURCE]: props.source },
   );
   try {
+    const currentAuthoringEvidence = () =>
+      libraryAuthoring({ root: fixture.root, paths: props.paths });
     return new AutoMovieProductionCompiler(
       AutoMovieProductionProject.openReadOnly(fixture.root),
-      libraryAuthoring({ root: fixture.root, paths: props.paths }),
+      currentAuthoringEvidence(),
+      currentAuthoringEvidence,
     ).lint({ scope: "source" });
   } finally {
     fixture.dispose();
