@@ -1,6 +1,10 @@
 #!/usr/bin/env node
 import { AutoMovieLegacyImporter } from "@automovie/production";
-import { renderScaffold, writeFiles } from "@automovie/template";
+import {
+  isAutoMovieProductionLanguage,
+  renderScaffold,
+  writeFiles,
+} from "@automovie/template";
 import { spawnSync } from "node:child_process";
 import * as fs from "node:fs";
 import * as path from "node:path";
@@ -8,8 +12,8 @@ import * as path from "node:path";
 const USAGE = `automovie: scaffold an automovie project
 
 Usage:
-  npx create-automovie <directory> [--force]
-  npx automovie start <directory> [--force]
+  npx create-automovie <directory> --language <chinese|english|japanese|korean> [--force]
+  npx automovie start <directory> --language <chinese|english|japanese|korean> [--force]
   npx automovie sync
   npx automovie verify
   npx automovie migrate <directory> [--dry-run | --rollback]
@@ -28,6 +32,7 @@ Commands:
 
 Options:
   --force             Scaffold into a non-empty directory.
+  --language <name>   Install exactly one production-authoring language pack.
   --dry-run           Print the immutable legacy import plan without writing.
   --rollback          Remove one still-untouched applied legacy import.
   -h, --help          Show this help.
@@ -575,7 +580,18 @@ export const run = (argv: readonly string[]): number => {
       process.stdout.write(`${JSON.stringify(output, null, 2)}\n`);
       return 0;
     }
-    const files = renderScaffold({ name: projectNameOf(targetDir) });
+    const languageIndex = rest.indexOf("--language");
+    const language = languageIndex < 0 ? undefined : rest[languageIndex + 1];
+    if (language === undefined || !isAutoMovieProductionLanguage(language))
+      throw new Error(
+        "start requires --language with one of chinese, english, japanese, or korean.",
+      );
+    if (rest.indexOf("--language", languageIndex + 1) >= 0)
+      throw new Error("start accepts exactly one --language selection.");
+    const files = renderScaffold({
+      name: projectNameOf(targetDir),
+      language,
+    });
     const written = writeFiles(targetDir, files, {
       force: rest.includes("--force"),
     });

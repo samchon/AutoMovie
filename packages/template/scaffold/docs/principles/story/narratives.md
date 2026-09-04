@@ -84,6 +84,16 @@ This item owns production-specific selection. The common machine-default princip
 
 Sources: [Boston University on creating tension through concrete action](https://www.bu.edu/articles/2019/how-to-create-suspense/); [Purdue OWL on revealing character through specific action and speech](https://owl.purdue.edu/owl/subject_specific_writing/creative_writing/writers/fiction_writing_basics/characters_and_fiction_writing1/building_and_revealing_characters.html)
 
+## Closing-line contribution {#closing-line-contribution}
+
+The final sentence or audiovisual beat of a narrative unit changes what the audience carries forward through an action, image, utterance, question, decision, disclosed limit, altered state, or purposeful formal return. A line that merely restates the unit's proposition or announces its importance contributes no closing action.
+
+Review question: what changes if the closing line is removed, and is that change established by its literal content rather than by its position?
+
+This principle judges one unit's close. `obligations/story/narratives.md#pacing-arrangement` judges allocation across the population, and `obligations/core/defaults.md#recurrent-frame-distribution` judges repeated closing frames only after the selected population is complete.
+
+Sources: [Richardson on ending and closure](https://academic.oup.com/edited-volume/61883/chapter-abstract/547759132); [Furneaux on provisional serial closure](https://www.cambridge.org/core/books/virtual-play-and-the-victorian-novel/continuation-attachment-and-william-makepeace-thackeray/85BD61006C84A23DF2563A6993771323)
+
 ## Parent differentiation {#parent-differentiation}
 
 Every narrative unit performs the work its own layer owns, and that work is legible against the units it inherits. A treatment unit turns settings constraints into a chosen narrative connection and its changed or accumulated effect. A script unit stages what its cited treatment units summarized through positions, objects, exchanges, timings, and reactions. A screenplay unit realizes what its script parent fixed through visible action, audience-facing text, dialogue, sound, silence, rhythm, implication, and aftereffect.

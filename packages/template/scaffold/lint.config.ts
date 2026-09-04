@@ -21,6 +21,7 @@ import { fileURLToPath } from "node:url";
 export const productionEvidence = {
   location: fileURLToPath(new URL(".", import.meta.url)),
   kind: null,
+  language: "{{language}}",
   populationScope: { mode: "complete-production" },
   settings: "disabled",
   research: "disabled",

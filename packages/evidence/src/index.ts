@@ -1,6 +1,7 @@
 /** AutoMovie production evidence graph construction and validation. */
 export * from "./AutoMoviePopulationLayer";
 export * from "./AutoMoviePopulationScope";
+export * from "./AutoMovieProductionLanguage";
 export * from "./AutoMoviePopulationTransition";
 export * from "./assertAutoMovieEvidenceSyntax";
 export * from "./createAutoMoviePopulationFiles";

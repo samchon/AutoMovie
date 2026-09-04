@@ -67,6 +67,7 @@ const localTarget = (title: string, anchor: string): string =>
 const disabled = (location: string): Graph => ({
   location,
   kind: null,
+  language: "english",
   populationScope: { mode: "complete-production" },
   settings: "disabled",
   research: "disabled",

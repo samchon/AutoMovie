@@ -321,6 +321,7 @@ function disabled(location: string): IAutoMovieEvidenceConfigProps {
   return {
     location,
     kind: null,
+    language: "english",
     populationScope: { mode: "complete-production" },
     settings: "disabled",
     research: "disabled",

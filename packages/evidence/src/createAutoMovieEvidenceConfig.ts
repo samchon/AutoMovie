@@ -11,6 +11,10 @@ import ts from "typescript-compiler";
 
 import type { AutoMoviePopulationScope } from "./AutoMoviePopulationScope";
 import { validateAutoMoviePopulationTransition } from "./AutoMoviePopulationTransition";
+import {
+  type AutoMovieProductionLanguage,
+  isAutoMovieProductionLanguage,
+} from "./AutoMovieProductionLanguage";
 import { assertAutoMovieEvidenceSyntax } from "./assertAutoMovieEvidenceSyntax";
 import { assertAutoMovieEvidenceReviewReasons } from "./auditAutoMovieEvidenceReviewReasons";
 import { createAutoMoviePopulationFiles } from "./createAutoMoviePopulationFiles";
@@ -67,6 +71,8 @@ export interface IAutoMovieEvidenceConfigProps {
   location: string;
   /** Mutually exclusive production shape, or null before selection. */
   kind: ProductionKind | null;
+  /** Exact bundled language contract selected for authored documents. */
+  language: AutoMovieProductionLanguage;
   /** Exact complete, first-pilot, or post-pilot-reset host population. */
   populationScope: AutoMoviePopulationScope;
   /** Canonical production-settings document stage. */
@@ -167,6 +173,8 @@ type ContractRelationship =
 interface IAutoMovieContractBindingManifest {
   /** Selected production shape, or null before any branch can be active. */
   kind: ProductionKind | null;
+  /** Exact project-local language contract selected for every authored branch. */
+  language: AutoMovieProductionLanguage;
   /** Exact authored population selected by the project declaration. */
   populationScope: AutoMoviePopulationScope;
   /** Active authored and source branches in deterministic factory order. */
@@ -1217,6 +1225,10 @@ const validateDeclaration = (graph: IProductionGraph): void => {
   if (!PRODUCTION_KINDS.includes(kind))
     throw new Error(
       `Unsupported production kind ${describeDeclarationValue(kind)}.`,
+    );
+  if (!isAutoMovieProductionLanguage(graph.language))
+    throw new Error(
+      `Unsupported production language ${describeDeclarationValue(graph.language)}.`,
     );
   validatePopulationScope(graph);
   for (const name of [
@@ -3318,6 +3330,7 @@ export const createAutoMovieContractBindingManifest = (
   }
   return {
     kind: graph.kind,
+    language: graph.language,
     populationScope: graph.populationScope,
     branches,
     bindings,

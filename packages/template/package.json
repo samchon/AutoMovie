@@ -28,6 +28,7 @@
     "build",
     "lib",
     "README.md",
+    "language-contracts",
     "scaffold",
     "src",
     "package.json",

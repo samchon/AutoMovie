@@ -1,6 +1,8 @@
+import type { AutoMovieProductionLanguage } from "@automovie/evidence";
 import * as fs from "node:fs";
 import * as path from "node:path";
 
+import { renderAutoMovieLanguageContracts } from "./renderAutoMovieLanguageContracts";
 import { renderTemplate } from "./renderTemplate";
 import { AUTOMOVIE_TEMPLATE_VERSIONS } from "./templateVersions";
 
@@ -29,6 +31,8 @@ export interface IAutoMovieScaffoldProps {
    * @evidence specifications/authoring-and-authority/source-authority-and-derivation.md#spec-authoring-source-input Makes the project identity an explicit source input to scaffold derivation.
    */
   name: string;
+  /** Exact language contract installed into `docs/language`. */
+  language: AutoMovieProductionLanguage;
 }
 
 /**
@@ -300,7 +304,7 @@ export const renderScaffold = (
     throw new Error(
       `scaffold project name "${name}" must be one portable directory segment`,
     );
-  const variables: Record<string, string> = { name };
+  const variables: Record<string, string> = { name, language: props.language };
   for (const [key, value] of Object.entries(AUTOMOVIE_TEMPLATE_VERSIONS))
     variables[`version:${key}`] = value;
 
@@ -311,5 +315,9 @@ export const renderScaffold = (
       normalizeLineEndings(fs.readFileSync(path.join(root, relative), "utf8")),
       variables,
     );
+  Object.assign(
+    files,
+    renderAutoMovieLanguageContracts({ language: props.language }),
+  );
   return files;
 };
