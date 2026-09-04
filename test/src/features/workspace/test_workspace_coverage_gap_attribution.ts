@@ -1,5 +1,6 @@
 import { TestValidator } from "@nestia/e2e";
 
+import { functionIdentity } from "../../coverage/coverageIdentity";
 import {
   branchGapIsReal,
   functionGapIsReal,
@@ -28,6 +29,7 @@ const NEWLINE = "\n";
 
 const entry = (name: string, line: number) => ({
   name,
+  decl: { start: { line, column: 0 }, end: { line, column: name.length } },
   loc: { start: { line, column: 0 }, end: { line, column: 0 } },
 });
 
@@ -44,6 +46,7 @@ interface IAnswers {
   everyMap: number;
   fresh: boolean;
   ranElsewhere: boolean;
+  sameNameElsewhere: boolean;
   neverWritten: boolean;
   calledOnly: boolean;
   declaredMethod: boolean;
@@ -74,9 +77,10 @@ interface IAnswers {
  * holding `const PLANE_NORMAL_EPSILON = 1e-12;` with zero hits, and where it is
  * defined with six.
  *
- * Both rules are provable, and that is why they are the two. A name with a
- * covered entry beside it demonstrably ran. A name the file never contains is
- * not a function the file declares. Neither can hide untested code.
+ * Both rules are provable, and that is why they are the two. The same complete
+ * name/declaration/location identity with a covered entry demonstrably ran. A
+ * name the file never contains is not a function the file declares. A repeated
+ * name at another declaration remains independent.
  *
  * The rule that was tried and rejected is the tempting one: drop an entry whose
  * reported line does not define it. It is a heuristic, and it fails in the
@@ -121,15 +125,30 @@ export const test_workspace_coverage_gap_attribution = (): void => {
   });
   const real = (
     name: string,
-    covered: string[],
+    covered: Array<ReturnType<typeof entry>>,
     body: string | null = text,
+    line: number = 5,
   ): boolean =>
-    functionGapIsReal({ name, covered: new Set(covered), text: body });
+    functionGapIsReal({
+      definition: entry(name, line),
+      covered: new Set(
+        covered
+          .map(functionIdentity)
+          .filter((identity): identity is string => identity !== null),
+      ),
+      text: body,
+    });
   const answers: IAnswers = {
     fresh: real("mountViewer", []),
     ranElsewhere: real("builtEnvironmentUnclaimedElements", [
-      "builtEnvironmentUnclaimedElements",
+      entry("builtEnvironmentUnclaimedElements", 5),
     ]),
+    sameNameElsewhere: real(
+      "builtEnvironmentUnclaimedElements",
+      [entry("builtEnvironmentUnclaimedElements", 4)],
+      text,
+      5,
+    ),
     neverWritten: real("__setModuleDefault", []),
     // A file that only ever calls somebody else's method contains that
     // method's name and declares nothing. This is the exact shape that
@@ -215,6 +234,10 @@ export const test_workspace_coverage_gap_attribution = (): void => {
       [
         "a name that ran under another entry is not",
         () => answers.ranElsewhere === false,
+      ],
+      [
+        "the same name at another declaration stays a gap",
+        () => answers.sameNameElsewhere === true,
       ],
       [
         "and neither is a name this repository never wrote",
@@ -313,6 +336,7 @@ export const test_workspace_coverage_gap_attribution = (): void => {
     {
       "an ordinary zero-hit name is a gap": true,
       "a name that ran under another entry is not": true,
+      "the same name at another declaration stays a gap": true,
       "and neither is a name this repository never wrote": true,
       "a name this file only calls on another object is not a declaration": true,
       "the same name declared as a method is still a gap": true,

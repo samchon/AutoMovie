@@ -19,7 +19,18 @@ const byCodeUnit = (left: string, right: string): number =>
 const MODULE_PREAMBLE: readonly string[] = [
   '"use strict";',
   'Object.defineProperty(exports, "__esModule", { value: true });',
+  "export {};",
 ];
+
+/** Exact compiler output name for every accepted authored source extension. */
+export const emittedModuleFilename = (file: string): string | null => {
+  const basename = path.basename(file);
+  if (basename.endsWith(".cts")) return `${basename.slice(0, -4)}.cjs`;
+  if (basename.endsWith(".mts")) return `${basename.slice(0, -4)}.mjs`;
+  if (basename.endsWith(".tsx")) return `${basename.slice(0, -4)}.js`;
+  if (basename.endsWith(".ts")) return `${basename.slice(0, -3)}.js`;
+  return null;
+};
 
 /**
  * Whatever the author wrote that survives into an emitted CommonJS module.
@@ -162,10 +173,9 @@ export const repositoryEmitProbe = (props: {
       { cwd: props.compilerRoot },
     ).status ?? 1,
   read: ({ file, outDirectory }) => {
-    const emitted = path.join(
-      outDirectory,
-      `${path.basename(file).replace(/\.[cm]?tsx?$/u, "")}.js`,
-    );
+    const filename = emittedModuleFilename(file);
+    if (filename === null) return null;
+    const emitted = path.join(outDirectory, filename);
     return fs.existsSync(emitted) ? fs.readFileSync(emitted, "utf8") : null;
   },
 });

@@ -3,6 +3,11 @@ import path from "node:path";
 
 import { describeThrown } from "../integrity/contractOwnership";
 import { isAuthoredExecutableSource, runGit } from "./changedCoverage";
+import {
+  type ICoveragePublication,
+  loadCoveragePublication,
+  publicationReport,
+} from "./coveragePublication";
 
 type Writer = (line: string) => void;
 
@@ -116,8 +121,7 @@ export const reportCoveragePopulation = (
     );
 };
 
-const readCoverageKeys = (reportDirectory: string): string[] => {
-  const report = path.join(reportDirectory, "coverage-final.json");
+const readCoverageKeys = (report: string): string[] => {
   const parsed: unknown = JSON.parse(fs.readFileSync(report, "utf8"));
   if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed))
     throw new Error(`${report} does not contain a coverage object`);
@@ -135,17 +139,26 @@ const readCoverageKeys = (reportDirectory: string): string[] => {
  * from a coverage gap.
  */
 export const runCoveragePopulationGate = (options: {
-  reportDirectory: string;
+  publication?: ICoveragePublication;
+  reportDirectory?: string;
   root: string;
   write?: Writer;
 }): number => {
   const write = options.write ?? console.log;
   try {
     const root = path.resolve(options.root);
+    let publication = options.publication;
+    if (publication === undefined) {
+      if (options.reportDirectory === undefined)
+        throw new Error("coverage population requires an explicit publication");
+      publication = loadCoveragePublication(
+        path.resolve(options.reportDirectory),
+      );
+    }
     const result = inspectCoveragePopulation({
       root,
       candidates: repositoryCandidates(root),
-      measured: readCoverageKeys(path.resolve(options.reportDirectory)),
+      measured: readCoverageKeys(publicationReport(publication)),
     });
     reportCoveragePopulation(result, write);
     return result.unmeasured.length + result.unjudged.length === 0 ? 0 : 2;

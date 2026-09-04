@@ -1,29 +1,43 @@
+import path from "node:path";
 import process from "node:process";
 
 import { isProcessEntry } from "../integrity/zeroJavaScript";
 import { runChangedCoverageGate } from "./changedCoverage";
 import { runCoveragePopulationGate } from "./coveragePopulation";
 import {
-  COVERAGE_REPORT_DIRECTORY,
+  type ICoverageMeasurementResult,
+  type ICoveragePublication,
+  publicationReport,
+} from "./coveragePublication";
+import {
   COVERAGE_ROOT,
   coverageMeasurementDependencies,
   measureCoverage,
+  removeCoverageTemporaryDirectory,
 } from "./measureCoverage";
 import { reportCoverageGaps } from "./reportCoverageGaps";
 
 export interface IRunCoverageDependencies {
-  changed: (arguments_: string[]) => number;
-  measure: () => number;
-  population: () => number;
-  report: () => number;
+  changed: (arguments_: string[], publication: ICoveragePublication) => number;
+  cleanup: (publication: ICoveragePublication) => void;
+  measure: () => ICoverageMeasurementResult;
+  population: (publication: ICoveragePublication) => number;
+  report: (publication: ICoveragePublication) => number;
 }
 
 export const coverageRunDependencies = (
-  measure: () => number,
-  changed: (arguments_: string[]) => number,
-  report: () => number,
-  population: () => number,
-): IRunCoverageDependencies => ({ changed, measure, population, report });
+  measure: () => ICoverageMeasurementResult,
+  changed: (arguments_: string[], publication: ICoveragePublication) => number,
+  report: (publication: ICoveragePublication) => number,
+  population: (publication: ICoveragePublication) => number,
+  cleanup: (publication: ICoveragePublication) => void,
+): IRunCoverageDependencies => ({
+  changed,
+  cleanup,
+  measure,
+  population,
+  report,
+});
 
 /**
  * Run the suite, the historical report, the population gate, and the
@@ -40,13 +54,21 @@ export const runCoverage = (
   dependencies: IRunCoverageDependencies,
 ): number => {
   const measurement = dependencies.measure();
-  if (measurement !== 0) return measurement === 2 ? 2 : 1;
-  const report = dependencies.report();
-  if (report !== 0) return report === 2 ? 2 : 1;
-  const population = dependencies.population();
-  if (population !== 0) return population === 2 ? 2 : 1;
-  const changed = dependencies.changed(arguments_);
-  return changed === 2 ? 2 : changed === 0 ? 0 : 1;
+  if (measurement.status !== 0) return measurement.status === 2 ? 2 : 1;
+  const publication = measurement.publication;
+  if (publication === undefined) return 2;
+  try {
+    const report = dependencies.report(publication);
+    if (report !== 0) return report === 2 ? 2 : 1;
+    const population = dependencies.population(publication);
+    if (population !== 0) return population === 2 ? 2 : 1;
+    const changed = dependencies.changed(arguments_, publication);
+    return changed === 2 ? 2 : changed === 0 ? 0 : 1;
+  } catch {
+    return 2;
+  } finally {
+    dependencies.cleanup(publication);
+  }
 };
 
 type ExitStatusWriter = (status: number) => void;
@@ -93,11 +115,18 @@ runCoverageCli(
   coverageRunDependencies(
     measureCoverage.bind(undefined, coverageMeasurementDependencies),
     runChangedCoverageGate,
-    reportCoverageGaps,
-    runCoveragePopulationGate.bind(undefined, {
-      root: COVERAGE_ROOT,
-      reportDirectory: COVERAGE_REPORT_DIRECTORY,
-    }),
+    (publication) =>
+      reportCoverageGaps(
+        publicationReport(publication),
+        console.log,
+        publication.sources,
+      ),
+    (publication) =>
+      runCoveragePopulationGate({ publication, root: COVERAGE_ROOT }),
+    (publication) =>
+      removeCoverageTemporaryDirectory(
+        path.dirname(publication.reportDirectory),
+      ),
   ),
   setCoverageExitStatus,
 );

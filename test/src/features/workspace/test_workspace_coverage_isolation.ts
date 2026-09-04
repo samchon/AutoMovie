@@ -8,8 +8,9 @@ import {
   coverageMissingScripts,
   coverageRecordCount,
   coverageRecords,
+  coverageRunPaths,
   coverageScriptShapes,
-  coverageTemporaryDirectory,
+  isMeasuredScriptUrl,
 } from "../../coverage/measureCoverage";
 import {
   coverageProcessIsEntry,
@@ -149,21 +150,36 @@ export const test_workspace_coverage_isolation = (): void => {
   );
 
   const drawn = {
-    first: coverageTemporaryDirectory(),
-    second: coverageTemporaryDirectory(),
+    run: coverageRunPaths(),
+    first: coverageRunPaths().rootDirectory,
+    second: coverageRunPaths().rootDirectory,
     counted: coverageRecordCount(records),
     absent: coverageRecordCount(path.join(records, "never-created")),
     walked: coverageRecords(records),
     scripts: coverageMissingScripts(records),
     shapes: coverageScriptShapes(shaped),
     narrow: coverageScriptShapes(shaped, ["packages/face/src"]),
-    hosts: coverageScriptShapes(hostShapes, ["packages/engine/src"]).urls,
+    hosts:
+      Number(
+        isMeasuredScriptUrl(
+          "file:///D:/repo/packages/engine/src/windows.ts",
+          ["."],
+          "d:/repo",
+        ),
+      ) +
+      Number(
+        isMeasuredScriptUrl(
+          "file:///home/runner/packages/engine/src/posix.ts",
+          ["."],
+          "/home/runner",
+        ),
+      ),
   };
   fs.rmSync(records, { recursive: true, force: true });
   fs.rmSync(shaped, { recursive: true, force: true });
   fs.rmSync(hostShapes, { recursive: true, force: true });
 
-  const parent = path.join(ROOT, "node_modules", ".cache", "automovie-c8");
+  const parent = path.join(ROOT, "node_modules", ".cache", "automovie-c8-runs");
 
   TestValidator.equals(
     "every coverage run draws a directory no other run writes",
@@ -195,6 +211,14 @@ export const test_workspace_coverage_isolation = (): void => {
         () => drawn.hosts === 2,
       ],
       ["two draws in one process differ", () => drawn.first !== drawn.second],
+      [
+        "one run owns raw report and source-host paths together",
+        () =>
+          path.dirname(drawn.run.rawDirectory) === drawn.run.rootDirectory &&
+          path.dirname(drawn.run.reportDirectory) === drawn.run.rootDirectory &&
+          path.dirname(drawn.run.sourceHostDirectory) ===
+            drawn.run.rootDirectory,
+      ],
       [
         "both sit under the coverage cache",
         () =>
@@ -256,6 +280,7 @@ export const test_workspace_coverage_isolation = (): void => {
       "a source outside the measured set is not counted at all": true,
       "both host shapes of a file URL are measured on either platform": true,
       "two draws in one process differ": true,
+      "one run owns raw report and source-host paths together": true,
       "both sit under the coverage cache": true,
       "neither is the shared parent itself": true,
       "drawing a path does not create or start a measurement": true,
@@ -269,15 +294,35 @@ export const test_workspace_coverage_isolation = (): void => {
 
   const order: string[] = [];
   const arguments_: string[] = [];
+  const receivedPublications: unknown[] = [];
+  const publication = {
+    reportDirectory: "/this-run/report",
+    reportSha256: "report",
+    sources: {},
+  };
+  const measured = (status: number) => ({
+    publication: status === 0 ? publication : undefined,
+    status,
+  });
   const dependencies = coverageRunDependencies(
-    () => (order.push("measure"), 0),
-    (received) => {
+    () => (order.push("measure"), measured(0)),
+    (received, owned) => {
       order.push("changed");
       arguments_.push(...received);
+      receivedPublications.push(owned);
       return 0;
     },
-    () => (order.push("report"), 0),
-    () => (order.push("population"), 0),
+    (owned) => {
+      order.push("report");
+      receivedPublications.push(owned);
+      return 0;
+    },
+    (owned) => {
+      order.push("population");
+      receivedPublications.push(owned);
+      return 0;
+    },
+    (owned) => (order.push("cleanup"), receivedPublications.push(owned)),
   );
   const green = runCoverage(["--base", "origin/master"], dependencies);
   const unreached = (step: string, after: string): (() => never) => {
@@ -286,52 +331,60 @@ export const test_workspace_coverage_isolation = (): void => {
     };
   };
   const ordinaryRed = runCoverage([], {
-    measure: () => 1,
+    measure: () => measured(1),
     report: unreached("report", "a failed measurement"),
     population: unreached("population gate", "a failed measurement"),
     changed: unreached("changed gate", "a failed measurement"),
+    cleanup: unreached("cleanup", "a failed measurement"),
   });
   const measurementInstrumentRed = runCoverage([], {
-    measure: () => 2,
+    measure: () => measured(2),
     report: unreached("report", "an invalid measurement"),
     population: unreached("population gate", "an invalid measurement"),
     changed: unreached("changed gate", "an invalid measurement"),
+    cleanup: unreached("cleanup", "an invalid measurement"),
   });
   const instrumentRed = runCoverage([], {
-    measure: () => 0,
+    measure: () => measured(0),
     report: () => 2,
     population: unreached("population gate", "an invalid report"),
     changed: unreached("changed gate", "an invalid report"),
+    cleanup: () => undefined,
   });
   const populationInstrumentRed = runCoverage([], {
-    measure: () => 0,
+    measure: () => measured(0),
     report: () => 0,
     population: () => 2,
     changed: unreached("changed gate", "a disagreeing population"),
+    cleanup: () => undefined,
   });
   const populationOrdinaryRed = runCoverage([], {
-    measure: () => 0,
+    measure: () => measured(0),
     report: () => 0,
     population: () => 1,
     changed: unreached("changed gate", "a refused population"),
+    cleanup: () => undefined,
   });
   const changedRed = runCoverage([], {
-    measure: () => 0,
+    measure: () => measured(0),
     report: () => 0,
     population: () => 0,
     changed: () => 2,
+    cleanup: () => undefined,
   });
   const coverageGap = runCoverage([], {
-    measure: () => 0,
+    measure: () => measured(0),
     report: () => 0,
     population: () => 0,
     changed: () => 1,
+    cleanup: () => undefined,
   });
   const reportGap = runCoverage([], {
-    measure: () => 0,
+    measure: () => measured(0),
     report: () => 1,
     population: unreached("population gate", "a failed report"),
     changed: unreached("changed gate", "a failed report"),
+    cleanup: () => undefined,
   });
   const cliStatuses: number[] = [];
   runCoverageCli(false, [], dependencies, (status) => cliStatuses.push(status));
@@ -339,10 +392,11 @@ export const test_workspace_coverage_isolation = (): void => {
     true,
     [],
     {
-      measure: () => 0,
+      measure: () => measured(0),
       report: () => 0,
       population: () => 0,
       changed: () => 0,
+      cleanup: () => undefined,
     },
     (status) => cliStatuses.push(status),
   );
@@ -368,6 +422,9 @@ export const test_workspace_coverage_isolation = (): void => {
       green,
       order,
       arguments_,
+      onePublication: receivedPublications.every(
+        (owned) => owned === publication,
+      ),
       ordinaryRed,
       measurementInstrumentRed,
       instrumentRed,
@@ -382,8 +439,9 @@ export const test_workspace_coverage_isolation = (): void => {
     },
     {
       green: 0,
-      order: ["measure", "report", "population", "changed"],
+      order: ["measure", "report", "population", "changed", "cleanup"],
       arguments_: ["--base", "origin/master"],
+      onePublication: true,
       ordinaryRed: 1,
       measurementInstrumentRed: 2,
       instrumentRed: 2,

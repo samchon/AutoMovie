@@ -78,7 +78,9 @@ export const rangeTouchesChange = (props: {
 export const spanIsDemanded = (props: {
   order: readonly number[];
   span: IChangeSpan | undefined;
+  wholeFile?: boolean;
 }): boolean => {
+  if (props.wholeFile === true) return true;
   const start = props.span?.start?.line;
   const end = props.span?.end?.line;
   if (typeof start !== "number" && typeof end !== "number") return true;

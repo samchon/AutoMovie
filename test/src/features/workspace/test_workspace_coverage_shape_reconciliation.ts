@@ -121,6 +121,10 @@ export const test_workspace_coverage_shape_reconciliation = (): void => {
     f: Record<string, number> = {},
     b: Record<string, number[]> = {},
   ): ICoverageEntry => ({ s, f, b });
+  const coverageSpan = (line: number) => ({
+    start: { line, column: 0 },
+    end: { line, column: 1 },
+  });
   TestValidator.equals(
     "the fullest reading wins and a lone file is carried through",
     {
@@ -282,8 +286,8 @@ export const test_workspace_coverage_shape_reconciliation = (): void => {
                   fnMap: {},
                   s: { 0: 1, 1: 1 },
                   statementMap: {
-                    0: { start: { line: 1 } },
-                    1: { start: { line: 2 } },
+                    0: coverageSpan(1),
+                    1: coverageSpan(2),
                   },
                 },
                 {
@@ -293,9 +297,9 @@ export const test_workspace_coverage_shape_reconciliation = (): void => {
                   fnMap: {},
                   s: { 0: 0, 1: 0, 2: 1 },
                   statementMap: {
-                    0: { start: { line: 20 } },
-                    1: { start: { line: 21 } },
-                    2: { start: { line: 22 } },
+                    0: coverageSpan(20),
+                    1: coverageSpan(21),
+                    2: coverageSpan(22),
                   },
                 },
               ],
@@ -307,10 +311,29 @@ export const test_workspace_coverage_shape_reconciliation = (): void => {
             "one.ts": {
               s: { 0: 0, 1: 0, 2: 1 },
               statementMap: {
-                0: { start: { line: 20 } },
-                1: { start: { line: 21 } },
-                2: { start: { line: 22 } },
+                0: coverageSpan(20),
+                1: coverageSpan(21),
+                2: coverageSpan(22),
               },
+            },
+          },
+        ),
+        unidentifiable: unionShortfalls(
+          new Map([
+            [
+              "one.ts",
+              [
+                {
+                  s: { 0: 1 },
+                  statementMap: { 0: { start: { line: 1 } } },
+                },
+              ],
+            ],
+          ]),
+          {
+            "one.ts": {
+              s: { 0: 1 },
+              statementMap: { 0: { start: { line: 1 } } },
             },
           },
         ),
@@ -322,7 +345,15 @@ export const test_workspace_coverage_shape_reconciliation = (): void => {
       {
         succeeded: { failure: null, groups: 2, shortfalls: [] },
         quiet: [],
-        losing: [{ file: "one.ts", lost: [1, 2] }],
+        losing: [
+          {
+            file: "one.ts",
+            lost: ["statement:1:0-1:1", "statement:2:0-2:1"],
+          },
+        ],
+        unidentifiable: [
+          { file: "one.ts", lost: ["unidentifiable:0:statement:0"] },
+        ],
         written: { "one.ts": entry({ 0: 1, 1: 1 }) },
         withMerged: { "one.ts": entry({ 0: 1, 1: 1, 2: 1 }) },
         reportFailed: {
@@ -364,9 +395,9 @@ export const test_workspace_coverage_shape_reconciliation = (): void => {
           path.join(directory, "real-records"),
           path.join(directory, "real-report"),
         ),
-        inside: parts.measured(
-          repositoryUrl("packages", "engine", "src", "x.ts"),
-        ),
+        inside:
+          parts.measured(repositoryUrl("packages", "engine", "src", "x.ts")) !==
+          false,
         outside: parts.measured("file:///elsewhere/x.ts"),
         // A signalled reporter has no status, and reading that as success
         // would correct a report from a group that never finished.

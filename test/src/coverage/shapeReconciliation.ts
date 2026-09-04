@@ -1,6 +1,13 @@
 import fs from "node:fs";
 import path from "node:path";
 
+import {
+  type ICoverageSpan,
+  branchIdentity,
+  functionIdentity,
+  statementIdentity,
+} from "./coverageIdentity";
+
 /**
  * One raw V8 record, reduced to the shape it saw each script in.
  *
@@ -13,15 +20,17 @@ export interface IRecordShapes {
   urls: ReadonlyMap<string, string>;
 }
 
-export interface ICoverageSpan {
-  start?: { line?: number };
-}
-
 export interface ICoverageEntry {
   b?: Record<string, number[]>;
-  branchMap?: Record<string, { locations?: ICoverageSpan[] }>;
+  branchMap?: Record<
+    string,
+    { loc?: ICoverageSpan; locations?: ICoverageSpan[]; type?: string }
+  >;
   f?: Record<string, number>;
-  fnMap?: Record<string, { loc?: ICoverageSpan }>;
+  fnMap?: Record<
+    string,
+    { decl?: ICoverageSpan; loc?: ICoverageSpan; name?: string }
+  >;
   s?: Record<string, number>;
   statementMap?: Record<string, ICoverageSpan>;
 }
@@ -140,8 +149,59 @@ export const coveredLines = (
   return { branches, functions, statements };
 };
 
+/** Exact declaration/position identities one reading says ran. */
+export const coveredIdentities = (
+  entry: ICoverageEntry,
+): {
+  branches: Set<string>;
+  functions: Set<string>;
+  statements: Set<string>;
+} => {
+  const statements = new Set<string>();
+  const functions = new Set<string>();
+  const branches = new Set<string>();
+  for (const [id, span] of Object.entries(entry.statementMap ?? {})) {
+    const identity = statementIdentity(span);
+    if ((entry.s?.[id] ?? 0) > 0 && identity !== null) statements.add(identity);
+  }
+  for (const [id, definition] of Object.entries(entry.fnMap ?? {})) {
+    const identity = functionIdentity(definition);
+    if ((entry.f?.[id] ?? 0) > 0 && identity !== null) functions.add(identity);
+  }
+  for (const [id, definition] of Object.entries(entry.branchMap ?? {})) {
+    const hits = entry.b?.[id] ?? [];
+    for (const [arm] of (definition.locations ?? []).entries()) {
+      const identity = branchIdentity({ arm, definition });
+      if ((hits[arm] ?? 0) > 0 && identity !== null) branches.add(identity);
+    }
+  }
+  return { branches, functions, statements };
+};
+
+/** Covered positions whose report omits part of their matching identity. */
+export const unidentifiableCoveredPositions = (
+  entry: ICoverageEntry,
+): string[] => {
+  const missing: string[] = [];
+  for (const [id, span] of Object.entries(entry.statementMap ?? {}))
+    if ((entry.s?.[id] ?? 0) > 0 && statementIdentity(span) === null)
+      missing.push(`statement:${id}`);
+  for (const [id, definition] of Object.entries(entry.fnMap ?? {}))
+    if ((entry.f?.[id] ?? 0) > 0 && functionIdentity(definition) === null)
+      missing.push(`function:${id}`);
+  for (const [id, definition] of Object.entries(entry.branchMap ?? {}))
+    for (const [arm] of (definition.locations ?? []).entries())
+      if (
+        (entry.b?.[id]?.[arm] ?? 0) > 0 &&
+        branchIdentity({ arm, definition }) === null
+      )
+        missing.push(`branch:${id}:${arm}`);
+  return missing;
+};
+
 /**
- * One entry's positions, marked covered wherever any group saw that line run.
+ * One entry's positions, marked covered only when another reading carries the
+ * same complete declaration or position identity.
  *
  * Taking the fullest single reading is not a union, and the shortfall was
  * measured: `build/experimental.ts` reads 99.61 percent under the build tests
@@ -193,33 +253,37 @@ export const unionEntryByLine = <T extends ICoverageEntry>(
       : standing;
   }, undefined);
   if (base === undefined) return undefined;
-  const lines = entries.map(coveredLines);
-  const ran = (kind: "branches" | "functions" | "statements", line: unknown) =>
-    typeof line === "number" && lines.some((set) => set[kind].has(line));
+  const identities = entries.map(coveredIdentities);
+  const ran = (
+    kind: "branches" | "functions" | "statements",
+    identity: string | null,
+  ) => identity !== null && identities.some((set) => set[kind].has(identity));
   const s = { ...(base.s ?? {}) };
   for (const [id, span] of Object.entries(base.statementMap ?? {}))
-    if ((s[id] ?? 0) === 0 && ran("statements", span?.start?.line)) s[id] = 1;
+    if ((s[id] ?? 0) === 0 && ran("statements", statementIdentity(span)))
+      s[id] = 1;
   const f = { ...(base.f ?? {}) };
-  for (const [id, span] of Object.entries(base.fnMap ?? {}))
-    if ((f[id] ?? 0) === 0 && ran("functions", span?.loc?.start?.line))
+  for (const [id, definition] of Object.entries(base.fnMap ?? {}))
+    if ((f[id] ?? 0) === 0 && ran("functions", functionIdentity(definition)))
       f[id] = 1;
   const b: Record<string, number[]> = {};
   for (const [id, span] of Object.entries(base.branchMap ?? {}))
-    b[id] = (span?.locations ?? []).map((location, index) => {
+    b[id] = (span?.locations ?? []).map((_location, index) => {
       const hits = base.b?.[id]?.[index] ?? 0;
-      return hits > 0 || ran("branches", location?.start?.line)
+      return hits > 0 ||
+        ran("branches", branchIdentity({ arm: index, definition: span }))
         ? Math.max(hits, 1)
         : 0;
     });
   return { ...base, b: { ...(base.b ?? {}), ...b }, f, s };
 };
 
-/** Per file, every group's reading folded together by position. */
-/** A file the union wrote without a line one of its readings had covered. */
+/** Per file, every group's reading folded together by exact identity. */
+/** A file the union wrote without a position one reading had covered. */
 export interface IUnionShortfall {
   file: string;
-  /** Source lines a reading covered and the written entry does not. */
-  lost: number[];
+  /** Exact identities a reading covered and the written entry does not. */
+  lost: string[];
 }
 
 /**
@@ -234,17 +298,15 @@ export interface IUnionShortfall {
  * A shortfall is not proof of which, but it is the difference between the two,
  * and it costs one pass over what the union already computed.
  *
- * Lines rather than counts. A count says how much was covered and the gate asks
- * which lines were, so a base whose own hits are many and whose structure
- * misses the few another reading had would report an equal or higher count
- * while losing exactly the positions somebody is about to be charged for.
+ * Identities rather than counts. A count says how much was covered while a
+ * complete key says exactly which declaration, statement, or branch arm was.
  */
 export const unionShortfalls = <T extends ICoverageEntry>(
   grouped: ReadonlyMap<string, readonly T[]>,
   united: Readonly<Record<string, T>>,
 ): IUnionShortfall[] => {
-  const allLines = (entry: ICoverageEntry): Set<number> => {
-    const kinds = coveredLines(entry);
+  const allIdentities = (entry: ICoverageEntry): Set<string> => {
+    const kinds = coveredIdentities(entry);
     return new Set([
       ...kinds.statements,
       ...kinds.functions,
@@ -255,15 +317,20 @@ export const unionShortfalls = <T extends ICoverageEntry>(
   for (const [file, entries] of grouped) {
     const chosen = united[file];
     if (chosen === undefined) continue;
-    const written = allLines(chosen);
-    const lost = new Set<number>();
-    for (const entry of entries)
-      for (const line of allLines(entry))
-        if (written.has(line) === false) lost.add(line);
+    const written = allIdentities(chosen);
+    const lost = new Set<string>();
+    for (const [reading, entry] of entries.entries()) {
+      for (const missing of unidentifiableCoveredPositions(entry))
+        lost.add(`unidentifiable:${reading}:${missing}`);
+      for (const identity of allIdentities(entry))
+        if (written.has(identity) === false) lost.add(identity);
+    }
     if (lost.size !== 0)
       shortfalls.push({
         file,
-        lost: [...lost].sort((left, right) => left - right),
+        lost: [...lost].sort(
+          (left, right) => Number(left > right) - Number(left < right),
+        ),
       });
   }
   return shortfalls.sort((left, right) => right.lost.length - left.lost.length);
@@ -294,7 +361,7 @@ export const unionEntries = <T extends ICoverageEntry>(
 /** Every raw record in a temp directory, reduced to its per-script shapes. */
 export const readRecordShapes = (
   directory: string,
-  measured: (url: string) => boolean,
+  measured: (url: string) => boolean | string,
 ): IRecordShapes[] => {
   const records: IRecordShapes[] = [];
   for (const entry of fs
@@ -322,8 +389,10 @@ export const readRecordShapes = (
     const urls = new Map<string, string>();
     for (const script of parsed.result ?? []) {
       const url = script.url;
-      if (typeof url !== "string" || measured(url) === false) continue;
-      urls.set(url, scriptShape(script));
+      if (typeof url !== "string") continue;
+      const identity = measured(url);
+      if (identity === false) continue;
+      urls.set(identity === true ? url : identity, scriptShape(script));
     }
     if (urls.size !== 0) records.push({ file: entry, urls });
   }
@@ -356,7 +425,7 @@ export interface IShapeReconciliation {
 export const reconcileCoverageShapes = (props: {
   copy: (from: string, to: string) => void;
   groupRoot: string;
-  measured: (url: string) => boolean;
+  measured: (url: string) => boolean | string;
   mkdir: (directory: string) => void;
   readReport: (directory: string) => Record<string, ICoverageEntry> | null;
   report: (temporary: string, reports: string) => number;

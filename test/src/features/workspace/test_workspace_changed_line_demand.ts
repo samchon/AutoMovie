@@ -79,6 +79,11 @@ export const test_workspace_changed_line_demand = (): void => {
       // An end before its start is not a range; the start alone places it.
       inverted: spanIsDemanded({ order: [10], span: span(10, 2) }),
       invertedMissed: spanIsDemanded({ order: [2], span: span(10, 2) }),
+      untrackedWholeFile: spanIsDemanded({
+        order: [],
+        span: span(10, 13),
+        wholeFile: true,
+      }),
     },
     {
       interior: true,
@@ -89,6 +94,7 @@ export const test_workspace_changed_line_demand = (): void => {
       endMissed: false,
       inverted: true,
       invertedMissed: false,
+      untrackedWholeFile: true,
     },
   );
 
