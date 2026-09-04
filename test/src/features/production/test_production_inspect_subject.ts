@@ -22,6 +22,7 @@ import { PNG } from "pngjs";
 import {
   productionCompileSucceeded,
   productionFixture,
+  testCaptureRuntimeIdentity,
 } from "./productionFixtures";
 
 const SUBJECT = "prototype:automovie:model:soloist";
@@ -52,6 +53,8 @@ export const recordingInstrument = (): {
         bytes: inspectionPng(input.width, input.height),
         width: input.width,
         height: input.height,
+        runtimeIdentity: testCaptureRuntimeIdentity(),
+        assertRuntimeCurrent: () => undefined,
       });
     },
   };
@@ -320,7 +323,7 @@ export const test_production_inspect_subject = async (): Promise<void> => {
         inspected: true,
         resolved: placedPart,
         observed: [placedPart],
-        echoedTarget: viewerKey,
+        echoedTarget: placedPart,
       },
     );
 
@@ -346,6 +349,8 @@ export const test_production_inspect_subject = async (): Promise<void> => {
         productionId: "fixture-film",
         shot: "opening",
         subject: SUBJECT,
+        plan: dug.planRecord!,
+        runtimeIdentity: dug.runtimeIdentity,
       });
     const published = readBack();
     TestValidator.equals(
@@ -362,6 +367,16 @@ export const test_production_inspect_subject = async (): Promise<void> => {
         ],
         state: foldAutoMovieSubjectReviewCoverage(
           unit,
+          {
+            productionId: "fixture-film",
+            target: { shot: "opening", subject: SUBJECT },
+            revision,
+            compileFingerprint:
+              services.project.generatedManifest()!.inputFingerprint,
+            planIdentity: dug.planIdentity!,
+            captureRuntimeIdentity:
+              published.observations[0]!.captureRuntimeIdentity,
+          },
           published.planned,
           published.observations,
         ).state,
@@ -372,6 +387,49 @@ export const test_production_inspect_subject = async (): Promise<void> => {
         revisions: [revision],
         state: "reviewed",
       },
+    );
+
+    const failedAgain = await new AutoMovieProductionSubjectInspectionService(
+      () => Promise.resolve({ refused: "current subject cannot be framed" }),
+    ).inspect(services, {
+      shot: "opening",
+      subject: SUBJECT,
+      azimuthCount: 2,
+      elevationsDeg: [-45],
+    });
+    const coexisting = readBack();
+    TestValidator.equals(
+      "a later same-plan failure remains beside, and cannot erase, current passed receipts",
+      {
+        failed: failedAgain.inspected,
+        observed: coexisting.observations.map(
+          (observation) => observation.viewpoint,
+        ),
+        history: coexisting.history.map((attempt) => attempt.verdict),
+      },
+      {
+        failed: false,
+        observed: dug.plan.map((viewpoint) => viewpoint.id),
+        history: ["passed", "unsupported"],
+      },
+    );
+
+    const receiptPath = path.join(
+      fixture.root,
+      ...dug.views[0]!.path.replace(/\.png$/u, ".json").split("/"),
+    );
+    const receiptBytes = fs.readFileSync(receiptPath);
+    const escaped = JSON.parse(receiptBytes.toString("utf8")) as {
+      observation: { artifact: string };
+    };
+    escaped.observation.artifact = "../foreign.png";
+    fs.writeFileSync(receiptPath, `${JSON.stringify(escaped, null, 2)}\n`);
+    const escapedRead = readBack();
+    fs.writeFileSync(receiptPath, receiptBytes);
+    TestValidator.equals(
+      "an escaping artifact locator is refused before matching foreign bytes can be opened",
+      escapedRead.observations.length,
+      dug.plan.length - 1,
     );
 
     const firstArtifact = path.join(
@@ -397,12 +455,32 @@ export const test_production_inspect_subject = async (): Promise<void> => {
       {
         tampered: foldAutoMovieSubjectReviewCoverage(
           unit,
+          {
+            productionId: "fixture-film",
+            target: { shot: "opening", subject: SUBJECT },
+            revision,
+            compileFingerprint:
+              services.project.generatedManifest()!.inputFingerprint,
+            planIdentity: dug.planIdentity!,
+            captureRuntimeIdentity:
+              published.observations[0]!.captureRuntimeIdentity,
+          },
           tampered.planned,
           tampered.observations,
         ).state,
         stillPlanned: tampered.planned.length,
         unplanned: foldAutoMovieSubjectReviewCoverage(
           unit,
+          {
+            productionId: "fixture-film",
+            target: { shot: "opening", subject: SUBJECT },
+            revision,
+            compileFingerprint:
+              services.project.generatedManifest()!.inputFingerprint,
+            planIdentity: dug.planIdentity!,
+            captureRuntimeIdentity:
+              published.observations[0]!.captureRuntimeIdentity,
+          },
           unplanned.planned,
           unplanned.observations,
         ).state,
@@ -413,6 +491,64 @@ export const test_production_inspect_subject = async (): Promise<void> => {
         stillPlanned: dug.plan.length,
         unplanned: "indeterminate",
         nothingRead: 0,
+      },
+    );
+
+    let middleCalls = 0;
+    const middle = await new AutoMovieProductionSubjectInspectionService(
+      (input) => {
+        ++middleCalls;
+        return Promise.resolve(
+          middleCalls === 2
+            ? { refused: "middle viewpoint unsupported" }
+            : {
+                bytes: inspectionPng(input.width, input.height),
+                width: input.width,
+                height: input.height,
+                runtimeIdentity: testCaptureRuntimeIdentity(),
+                assertRuntimeCurrent: () => undefined,
+              },
+        );
+      },
+    ).inspect(services, {
+      shot: "opening",
+      subject: SUBJECT,
+      azimuthCount: 3,
+      elevationsDeg: [0],
+    });
+    const partial = readAutoMovieSubjectInspection({
+      projectRoot: fixture.root,
+      productionId: "fixture-film",
+      shot: "opening",
+      subject: SUBJECT,
+      plan: middle.planRecord!,
+      runtimeIdentity: middle.runtimeIdentity,
+    });
+    TestValidator.equals(
+      "a middle refusal preserves the original denominator, passed prefix, and terminal reason",
+      {
+        inspected: middle.inspected,
+        returnedViews: middle.views.length,
+        planned: partial.planned.length,
+        observed: partial.observations.length,
+        terminal: partial.history.at(-1),
+      },
+      {
+        inspected: false,
+        returnedViews: 1,
+        planned: 3,
+        observed: 1,
+        terminal: {
+          attempt: 1,
+          verdict: "unsupported",
+          reason:
+            'The subject inspection instrument cannot frame compiled subject "prototype:automovie:model:soloist": middle viewpoint unsupported Report its viewpoint range as unsupported rather than as observed.',
+          observations: [
+            `${AUTOMOVIE_SUBJECT_INSPECTION_ROOT}/fixture-film/opening/${encodeURIComponent(
+              SUBJECT,
+            )}/${encodeURIComponent(middle.planIdentity!)}/attempt-1/az000-el000.json`,
+          ],
+        },
       },
     );
   } finally {

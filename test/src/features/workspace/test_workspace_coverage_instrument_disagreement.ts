@@ -17,11 +17,9 @@ import { inspectChangedCoverage } from "../../coverage/changedCoverage";
  * 4,535 to 4,124. The extra entries carry zero hits and the gate was counting
  * every one of them as untested code.
  *
- * `reportCoverageGaps` has told the historical reader how to tell those apart
- * since it was written -- a zero entry whose name already ran under another
- * entry in the same file, and an entry naming something the file does not
- * contain -- and the changed-coverage gate was not asking. This pins that it
- * now does, and that it says so out loud: the artifacts leave both the
+ * A zero entry with the same complete declaration identity as a covered entry,
+ * and an entry naming something the file does not contain, are artifacts. This
+ * pins that exact rule and that the gate says so out loud: the artifacts leave both the
  * numerator and the denominator, and their count is reported at the file's own
  * address rather than absorbed into a green.
  *
@@ -61,15 +59,15 @@ export const test_workspace_coverage_instrument_disagreement = (): void => {
         statementMap: { 0: span(1) },
         s: { 0: 1 },
         fnMap: {
-          0: { loc: span(1), name: "build" },
+          0: { decl: span(1), loc: span(1), name: "build" },
           // The same function, read again in another shape.
-          1: { loc: span(1), name: "build" },
+          1: { decl: span(1), loc: span(1), name: "build" },
           // A helper the transpile emitted; the file never contains this name.
-          2: { loc: span(1), name: "__emittedHelper" },
+          2: { decl: span(1), loc: span(1), name: "__emittedHelper" },
           // Anonymous, so nothing can be said about it either way.
-          3: { loc: span(2), name: "(anonymous_7)" },
+          3: { decl: span(2), loc: span(2), name: "(anonymous_7)" },
           // Genuinely untested, and named on a line that defines it.
-          4: { loc: span(2), name: "idle" },
+          4: { decl: span(2), loc: span(2), name: "idle" },
         },
         f: { 0: 3, 1: 0, 2: 0, 3: 0, 4: 0 },
         branchMap: {},
@@ -125,8 +123,8 @@ export const test_workspace_coverage_instrument_disagreement = (): void => {
         [file]: {
           ...coverage[file]!,
           fnMap: {
-            0: { loc: span(1), name: "build" },
-            1: { loc: span(1), name: "build" },
+            0: { decl: span(1), loc: span(1), name: "build" },
+            1: { decl: span(1), loc: span(1), name: "build" },
           },
           f: { 0: 3, 1: 0 },
         },
@@ -144,6 +142,37 @@ export const test_workspace_coverage_instrument_disagreement = (): void => {
       [
         "packages/x/src/shape.ts: 1 function entry is a second reading of a function that ran, not an untested one",
       ],
+    );
+    const untracked = inspectChangedCoverage({
+      root,
+      files: new Map([[relative, new Set()]]),
+      wholeFiles: new Set([relative]),
+      divergent: [],
+      coverage: {
+        [file]: {
+          ...coverage[file]!,
+          statementMap: { 0: span(1) },
+          s: { 0: 0 },
+          fnMap: {},
+          f: {},
+        },
+      },
+      measuredSources: {
+        [file]: {
+          lines: source.split(/\r?\n/u).length,
+          sha256: crypto.createHash("sha256").update(source).digest("hex"),
+        },
+      },
+    });
+    TestValidator.equals(
+      "a nonempty untracked authored source owes its whole file",
+      {
+        totals: untracked.totals.statements,
+        gap: untracked.gaps.includes(
+          "packages/x/src/shape.ts:1 uncovered statement",
+        ),
+      },
+      { totals: { covered: 0, total: 1 }, gap: true },
     );
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
