@@ -33,3 +33,11 @@ Every consequential population claim in the current H2 identifies the member, su
 Review question: which population claim could be false while every member or subset named by this H2 still passes?
 
 Sources: [NASA on verification methods and evidence assigned to requirements](https://www.nasa.gov/reference/system-engineering-handbook-appendix/)
+
+## Prop and set-dressing boundary {#instance-prop-set-dressing-boundary}
+
+An object is a story prop when a named action, contact, state change, continuity fact, or audience inference depends on its stable identity. Set dressing supplies place, period, activity, access, or visual organization without owning that performance state. A structural enclosure or route returns to spaces, and either class may use an instance population, but a convenient label never permits a prop to lose continuity or dressing to acquire invented dramatic agency.
+
+Review question: which exact action or continuity fact makes this member a prop, or which spatial and visual function keeps it set dressing without promoting it into a story participant?
+
+Sources: [StudioBinder guide to script breakdown elements](https://www.studiobinder.com/blog/the-complete-guide-to-mastering-script-breakdown-elements/); [OpenUSD scenegraph instancing](https://openusd.org/release/api/_usd__page__scenegraph_instancing.html)

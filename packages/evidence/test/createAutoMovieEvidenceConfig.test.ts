@@ -838,6 +838,68 @@ export const review = true;
     true,
   );
 
+  const missingAccount = root();
+  write(missingAccount, "docs/settings/production.md", "## Scope {#scope}\n");
+  fs.unlinkSync(
+    path.join(missingAccount, "docs/accounts/settings/core-common.md"),
+  );
+  assert.equal(
+    throws(
+      () =>
+        createAutoMovieEvidenceConfig({
+          ...disabled(missingAccount),
+          kind: "library",
+          settings: "evidence",
+        }),
+      "without its population account",
+    ),
+    true,
+  );
+
+  const wrongLayerAccount = root();
+  write(
+    wrongLayerAccount,
+    "docs/settings/production.md",
+    "## Scope {#scope}\n",
+  );
+  write(
+    wrongLayerAccount,
+    "docs/accounts/settings/design-models.md",
+    "## Wrong layer {#wrong-layer}\n",
+  );
+  assert.equal(
+    throws(
+      () =>
+        createAutoMovieEvidenceConfig({
+          ...disabled(wrongLayerAccount),
+          kind: "library",
+          settings: "evidence",
+        }),
+      "population accounts contain unowned files",
+    ),
+    true,
+  );
+
+  const partialAccount = root();
+  write(partialAccount, "docs/settings/production.md", "## Scope {#scope}\n");
+  write(
+    partialAccount,
+    "docs/accounts/settings/core-common.md",
+    "# Partial account\n\n## One owner {#one-owner}\n",
+  );
+  assert.equal(
+    throws(
+      () =>
+        createAutoMovieEvidenceConfig({
+          ...disabled(partialAccount),
+          kind: "library",
+          settings: "evidence",
+        }),
+      "population account has 1 H2 owners for 5",
+    ),
+    true,
+  );
+
   const empty = root();
   const graph = createAutoMovieEvidenceConfig(disabled(empty));
   assert.equal(
@@ -2779,11 +2841,16 @@ export const review = true;
       "discovery/design/designs.md",
       "discovery/design/models.md",
       "discovery/design/motions.md",
+      "language/discovery/signals.md",
+      "language/obligations/common.md",
+      "language/principles/common.md",
       "obligations/core/common.md",
+      "obligations/core/defaults.md",
       "obligations/core/settings.md",
       "obligations/design/models.md",
       "obligations/design/motions.md",
       "principles/core/common.md",
+      "principles/core/defaults.md",
       "principles/core/inherited-units.md",
       "principles/core/settings.md",
       "principles/design/models.md",
@@ -3164,13 +3231,18 @@ export const review = true;
       "discovery/core/common.md",
       "discovery/core/settings.md",
       "discovery/delivery/briefs.md",
+      "language/discovery/signals.md",
+      "language/obligations/common.md",
+      "language/principles/common.md",
       "obligations/core/common.md",
+      "obligations/core/defaults.md",
       "obligations/core/settings.md",
       "obligations/delivery/briefs.md",
       "obligations/delivery/film-sources.md",
       "obligations/delivery/production-sources.md",
       "obligations/delivery/shots.md",
       "principles/core/common.md",
+      "principles/core/defaults.md",
       "principles/core/inherited-units.md",
       "principles/core/settings.md",
       "principles/core/source-units.md",

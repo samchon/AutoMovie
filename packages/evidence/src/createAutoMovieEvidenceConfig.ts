@@ -580,6 +580,7 @@ const EXPECTED_CONTRACTS = [
       "instance-identity-transform",
       "instance-variation-tiers",
       "instance-placement-review",
+      "instance-prop-set-dressing-account",
     ],
   },
   {
@@ -615,6 +616,7 @@ const EXPECTED_CONTRACTS = [
       "reference-scale",
       "articulation-ownership",
       "model-review-set",
+      "model-representation-completion",
     ],
   },
   {
@@ -797,6 +799,7 @@ const EXPECTED_CONTRACTS = [
       "instance-prototype-boundary",
       "instance-derivation-authority",
       "instance-verification-address",
+      "instance-prop-set-dressing-boundary",
     ],
   },
   {
@@ -845,6 +848,8 @@ const EXPECTED_CONTRACTS = [
       "representation-contract",
       "spatial-convention",
       "reviewable-structure",
+      "model-observable-style-basis",
+      "model-scale-layer-completion",
     ],
   },
   {
@@ -2487,6 +2492,61 @@ const markdownPopulationFiles = (
       )
     : walkProjectFiles(graph, path.join(graph.location, DOCS, layer), ".md");
 
+/** Refuse an enabled population account with no exact physical H2 owners. */
+const validatePopulationAccountHosts = (graph: IProductionGraph): void => {
+  for (const layer of Object.keys(MARKDOWN) as MarkdownLayer[]) {
+    if (!MARKDOWN[layer].obligation || !requiresEvidence(graph[layer]))
+      continue;
+    const claims = createAutoMoviePopulationAccountClaims({
+      layer,
+      populationFiles: authoredPopulationFiles(graph, layer),
+      obligationFiles: populationObligations(graph, layer),
+      enabled: true,
+      requireReview: requiresReview(graph[layer]),
+    });
+    const allowed = new Set([
+      ...claims.flatMap((claim) => claim.files),
+      ...(layer === "settings" ? ["accounts/settings/story-subjects.md"] : []),
+    ]);
+    const residents = walkProjectFiles(
+      graph,
+      path.join(graph.location, DOCS, "accounts", layer),
+      ".md",
+    ).map((file) =>
+      posix(path.relative(path.join(graph.location, DOCS), file)),
+    );
+    const unexpected = residents.filter((file) => !allowed.has(file));
+    if (unexpected.length !== 0)
+      throw new Error(
+        `${layer} population accounts contain unowned files: ${unexpected.join(", ")}.`,
+      );
+    for (const claim of claims) {
+      const relative = claim.files[0]!;
+      const file = path.join(graph.location, DOCS, relative);
+      if (!fs.existsSync(file))
+        throw new Error(
+          `${relative}: ${layer} cannot enter ${graph[layer]} without its population account.`,
+        );
+      const references = Array.isArray(claim.reference)
+        ? claim.reference
+        : [claim.reference];
+      const obligation = references.find(
+        (reference) =>
+          reference.type === "markdown" &&
+          reference.files[0]?.startsWith("obligations/") === true,
+      ) as ITtscEvidenceGraphMarkdownReference;
+      const target = EXPECTED_CONTRACTS.find(
+        (contract) => contract.file === obligation.files[0],
+      )!;
+      const units = markdownIdentities(file, [2]);
+      if (units.length !== target.anchors.length)
+        throw new Error(
+          `${relative}: population account has ${units.length} H2 owners for ${target.anchors.length} ${obligation.files[0]} obligations.`,
+        );
+    }
+  }
+};
+
 const NUMBERED_NARRATIVE_NAME = /^\d{3}-[a-z0-9]+(?:-[a-z0-9]+)*$/u;
 
 const narrativeH1 = (file: string): string => {
@@ -2633,6 +2693,7 @@ const resetTransitionHosts = (
 };
 
 const validateHosts = (graph: IProductionGraph): void => {
+  validatePopulationAccountHosts(graph);
   validateNarrativePopulationTopology(graph);
   const identities = new Map<MarkdownLayer, Map<string, IHeadingIdentity[]>>();
   const titles = new Map<MarkdownLayer, Map<string, string>>();

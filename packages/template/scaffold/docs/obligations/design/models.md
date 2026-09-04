@@ -43,3 +43,11 @@ The model designs define a finite set of neutral views, backgrounds, and scale c
 Review question: which repeated views make regressions comparable across model revisions?
 
 Sources: [Academy Digital Source Master project](https://www.oscars.org/science-technology/sci-tech-projects/academy-digital-source-master)
+
+## Representation completion account {#model-representation-completion}
+
+The complete model population accounts for every promised representation layer, shared scale relation, hierarchy boundary, stable surface or articulation interface, declared limitation, and observable acceptance owner. It reports separately whether the representation is structurally valid and whether it is semantically complete for its consumers; neither verdict implies the other.
+
+Review question: which model passes structural validation while still leaving a promised layer, scale relation, interface, limitation, or observation without an owner?
+
+Sources: [glTF 2.0 nodes, meshes, skins, and units](https://registry.khronos.org/glTF/specs/2.0/glTF-2.0.html); [NASA systems engineering handbook on verification-ready requirements](https://www.nasa.gov/reference/systems-engineering-handbook/)
