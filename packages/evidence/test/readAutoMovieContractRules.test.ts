@@ -140,6 +140,48 @@ try {
   fs.rmSync(path.join(invalid, "malformed.md"));
   write(
     invalid,
+    "displaced.md",
+    [
+      "# Contract",
+      "",
+      "## Rule {#rule}",
+      "",
+      "Visible prose cannot precede routed metadata.",
+      "",
+      "```contract-rule",
+      '{"id":"late"}',
+      "```",
+    ].join("\n"),
+  );
+  assert.throws(
+    () => readAutoMovieContractRules(invalid),
+    /must immediately follow its H2/u,
+  );
+  fs.rmSync(path.join(invalid, "displaced.md"));
+  write(
+    invalid,
+    "duplicate.md",
+    [
+      "# Contract",
+      "",
+      "## Rule {#rule}",
+      "",
+      "```contract-rule",
+      '{"id":"first"}',
+      "```",
+      "",
+      "```contract-rule",
+      '{"id":"second"}',
+      "```",
+    ].join("\n"),
+  );
+  assert.throws(
+    () => readAutoMovieContractRules(invalid),
+    /only one contract-rule JSON block/u,
+  );
+  fs.rmSync(path.join(invalid, "duplicate.md"));
+  write(
+    invalid,
     "array.md",
     "# Contract\n\n## Rule {#rule}\n\n```contract-rule\n[]\n```\n",
   );

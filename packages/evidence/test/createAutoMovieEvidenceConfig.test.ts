@@ -366,6 +366,27 @@ export const review = true;
     ["scripts/001-first-delivery/???-*.md"],
   );
 
+  const draftCodeExample = root();
+  write(
+    draftCodeExample,
+    "docs/settings/production.md",
+    [
+      "## Scope {#scope}",
+      "",
+      "```md",
+      "<!-- @evidence contracts/example.md#rule This is only an example. -->",
+      "```",
+      "",
+    ].join("\n"),
+  );
+  assert.doesNotThrow(() =>
+    createAutoMovieEvidenceConfig({
+      ...disabled(draftCodeExample),
+      kind: "library",
+      settings: "draft",
+    }),
+  );
+
   const indexOnly = root();
   write(indexOnly, "docs/scripts/001-empty/index.md", "# Empty\n");
   assert.equal(
@@ -1225,6 +1246,51 @@ export const review = true;
     createAutoMovieContractBindingManifest(localDeclaration).localAudits,
     [],
   );
+  const pilotScope = {
+    mode: "first-pilot",
+    partitionGroup: "001-delivery",
+  } as const;
+  const localAuditClaim = createAutoMovieProductionPrincipleClaim({
+    name: "pilot records the inapplicable local tone",
+    document: "contracts/tone.md",
+    files: ["settings/**/*.md"],
+    layer: "settings",
+    stage: "draft",
+    symbol: "h2",
+    populationScope: pilotScope,
+    inapplicable: true,
+  });
+  assert.deepEqual(
+    createAutoMovieContractBindingManifest({
+      ...disabled(localBinding),
+      kind: "film",
+      populationScope: pilotScope,
+      settings: "draft",
+      claims: [localAuditClaim],
+    }).localAudits,
+    [
+      {
+        claim: "pilot records the inapplicable local tone",
+        layer: "settings",
+        stage: "draft",
+        enforced: false,
+        populationScope: pilotScope,
+        host: {
+          root: "docs",
+          files: ["settings/**/*.md"],
+          symbols: ["h2"],
+        },
+        targets: [
+          {
+            root: "docs",
+            files: ["contracts/tone.md"],
+            symbols: ["h2"],
+          },
+        ],
+      },
+    ],
+    "a pilot-only inapplicable declaration must remain an audit, not a binding",
+  );
   for (const malformedBinding of [
     null,
     { ...localClaim.autoMovieBinding, stage: "draft" },
@@ -1251,6 +1317,18 @@ export const review = true;
       true,
       "detached project-local binding metadata must fail closed",
     );
+  assert.equal(
+    throws(
+      () =>
+        createAutoMovieEvidenceConfig({
+          ...localDeclaration,
+          claims: [{ ...localClaim, disabled: true }],
+        }),
+      "does not match its declared layer, stage, population scope, or disposition",
+    ),
+    true,
+    "a positive local binding cannot be disabled independently of its stage",
+  );
 
   const unselected = root();
   write(unselected, "docs/settings/production.md", "## Scope {#scope}\n");

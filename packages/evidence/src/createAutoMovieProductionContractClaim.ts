@@ -166,12 +166,7 @@ function createClaim(
 
   const files: string[] = [...props.files];
   requirePositivePopulation(files, "host");
-  if (
-    files.some((file) => !file.replace(/^!/u, "").startsWith(`${props.layer}/`))
-  )
-    throw new Error(
-      `A production-local contract claim for ${props.layer} contains a host outside that layer.`,
-    );
+  for (const file of files) validateHostPattern(props.layer, file);
 
   const documents: string[] = Array.isArray(props.document)
     ? [...props.document]
@@ -222,6 +217,26 @@ function createClaim(
       requireReview: props.stage === "review",
     })),
   };
+}
+
+/** Keep one host glob normalized and confined to its declared authored layer. */
+function validateHostPattern(
+  layer: AutoMovieProductionContractLayer,
+  pattern: string,
+): void {
+  const file = pattern.replace(/^!/u, "");
+  if (
+    file.includes("\\") ||
+    file.startsWith("/") ||
+    /^[A-Za-z]:/u.test(file) ||
+    file
+      .split("/")
+      .some((part) => part === "" || part === "." || part === "..") ||
+    !file.startsWith(`${layer}/`)
+  )
+    throw new Error(
+      `A production-local contract claim for ${layer} contains a host outside that layer.`,
+    );
 }
 
 /** Refuse local contract selectors that do not name one flat target document. */

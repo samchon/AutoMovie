@@ -15,7 +15,10 @@ import { assertAutoMovieEvidenceSyntax } from "./assertAutoMovieEvidenceSyntax";
 import { assertAutoMovieEvidenceReviewReasons } from "./auditAutoMovieEvidenceReviewReasons";
 import { createAutoMoviePopulationFiles } from "./createAutoMoviePopulationFiles";
 import type { AutoMovieProductionContractClaim } from "./createAutoMovieProductionContractClaim";
-import { projectAutoMovieMarkdownSyntax } from "./parseAutoMovieEvidenceSyntax";
+import {
+  parseAutoMovieEvidenceSyntax,
+  projectAutoMovieMarkdownSyntax,
+} from "./parseAutoMovieEvidenceSyntax";
 import { walkAutoMovieProjectPopulationFiles } from "./walkAutoMovieProjectPopulationFiles";
 
 /**
@@ -1177,6 +1180,10 @@ const validateLocalClaims = (graph: IProductionGraph): void => {
       !isDeepStrictEqual(binding.populationScope, graph.populationScope) ||
       (binding.disposition !== "binding" &&
         binding.disposition !== "inapplicable") ||
+      raw.disabled !==
+        (binding.stage === "disabled" ||
+          binding.stage === "draft" ||
+          binding.disposition === "inapplicable") ||
       (binding.disposition === "inapplicable" &&
         (binding.populationScope?.mode !== "first-pilot" ||
           raw.disabled !== true))
@@ -1387,7 +1394,6 @@ const markdownIdentities = (
   return output;
 };
 
-const EVIDENCE_TAG = /@evidence[A-Za-z]*\b/u;
 const POSITIVE_EVIDENCE_TAG = /@evidence(?!Exclude)[A-Za-z]*\b/u;
 const EXCLUSION_TAG = /@evidenceExclude[A-Za-z]*\b/u;
 const DISCOVERY_EVIDENCE_TAG = /@evidence\s+discovery\/[\w./#-]+/u;
@@ -1740,8 +1746,7 @@ const validateContracts = (location: string): ITargetIdentityRegistry => {
   for (const [index, relative] of actual.entries()) {
     const file = path.join(root, relative);
     const source = fs.readFileSync(file, "utf8");
-    const prose = source.replace(/`[^`\r\n]*`/gu, "");
-    if (EVIDENCE_TAG.test(prose))
+    if (parseAutoMovieEvidenceSyntax({ path: relative, source }).length !== 0)
       throw new Error(
         `${relative} is a shared target and must not carry host-side @evidence tags.`,
       );
@@ -1816,6 +1821,13 @@ const validateWorkSpecificContracts = (graph: IProductionGraph): void => {
     const relative = `${CONTRACTS}/${entry.name}`;
     const file = path.join(root, entry.name);
     const source = fs.readFileSync(file, "utf8");
+    const annotations = parseAutoMovieEvidenceSyntax({
+      path: relative,
+      source,
+    });
+    const evidence = annotations
+      .map((annotation) => annotation.text)
+      .join("\n");
     const headings = markdownHeadings(file);
     const h1 = headings.filter((heading) => heading.depth === 1);
     const h1Offset = source.search(/^#(?!#)[ \t]+\S/mu);
@@ -1828,17 +1840,17 @@ const validateWorkSpecificContracts = (graph: IProductionGraph): void => {
       throw new Error(
         `${relative} must begin with one H1 after a comment-only evidence preamble.`,
       );
-    if (EVIDENCE_TAG.test(source.slice(h1Offset)))
+    if (annotations.some((annotation) => annotation.line >= h1[0]!.line))
       throw new Error(
         `${relative} may carry discovery host tags only in its comment preamble before H1.`,
       );
-    for (const match of source.matchAll(EVIDENCE_TARGET))
+    for (const match of evidence.matchAll(EVIDENCE_TARGET))
       if (match[1]?.startsWith("discovery/") !== true)
         throw new Error(
           `${relative} may host only discovery evidence before its H1; received ${match[1]}.`,
         );
     if (relative === CONTRACT_INDEX) {
-      if (POSITIVE_EVIDENCE_TAG.test(source))
+      if (POSITIVE_EVIDENCE_TAG.test(evidence))
         throw new Error(
           `${CONTRACT_INDEX} carries truthful discovery negatives and nothing positive.`,
         );
@@ -1846,16 +1858,16 @@ const validateWorkSpecificContracts = (graph: IProductionGraph): void => {
         throw new Error(
           `${CONTRACT_INDEX} carries the truthful negative ledger and no contract target H2.`,
         );
-      if (!DISCOVERY_EXCLUSION_TAG.test(source))
+      if (!DISCOVERY_EXCLUSION_TAG.test(evidence))
         throw new Error(
           `${CONTRACT_INDEX} must record at least one truthful discovery negative.`,
         );
     } else {
-      if (EXCLUSION_TAG.test(source))
+      if (EXCLUSION_TAG.test(evidence))
         throw new Error(
           `${relative} cannot scatter a discovery exclusion outside ${CONTRACT_INDEX}.`,
         );
-      if (!DISCOVERY_EVIDENCE_TAG.test(source))
+      if (!DISCOVERY_EVIDENCE_TAG.test(evidence))
         throw new Error(
           `${relative} must adopt at least one retained discovery rule.`,
         );
@@ -2482,7 +2494,10 @@ const validateHosts = (graph: IProductionGraph): void => {
       const source = fs.readFileSync(file, "utf8");
       if (
         stage === "draft" &&
-        EVIDENCE_TAG.test(source) &&
+        parseAutoMovieEvidenceSyntax({
+          path: posix(path.relative(graph.location, file)),
+          source,
+        }).length !== 0 &&
         !acceptsResetEvidenceTags(graph, name)
       )
         throw new Error(
@@ -2524,7 +2539,7 @@ const validateHosts = (graph: IProductionGraph): void => {
       assertSourceExportsAreEvidenceAddressable(relative, file, source);
       if (
         stage === "draft" &&
-        EVIDENCE_TAG.test(source) &&
+        parseAutoMovieEvidenceSyntax({ path: relative, source }).length !== 0 &&
         !acceptsResetEvidenceTags(graph, name)
       )
         throw new Error(

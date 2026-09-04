@@ -222,6 +222,19 @@ assert.throws(
     }),
   /host outside that layer/u,
 );
+for (const files of [
+  ["settings/../models/**/*.md"],
+  ["settings\\**\\*.md"],
+  ["/settings/**/*.md"],
+])
+  assert.throws(
+    () =>
+      createAutoMovieProductionPrincipleClaim({
+        ...base,
+        files,
+      }),
+    /host outside that layer/u,
+  );
 assert.throws(
   () =>
     createAutoMovieProductionPrincipleClaim({

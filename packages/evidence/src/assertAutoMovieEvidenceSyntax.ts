@@ -34,6 +34,7 @@ export function assertAutoMovieEvidenceSyntax(
   for (const document of documents) {
     const declarations = new Map<string, IParsedAnnotation>();
     for (const annotation of parseAutoMovieEvidenceSyntax(document)) {
+      if (/^@evidencePart\b/u.test(annotation.text)) continue;
       const parsed = parseAnnotation(annotation.text);
       const address = `${document.path}:${annotation.line}`;
       if (parsed === null) {

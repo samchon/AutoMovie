@@ -116,7 +116,17 @@ const typescript = [
   "  public value = true;",
   "  /** @evidence contracts/a.md#three Private member. */",
   "  private hidden = true;",
+  "  /** @evidence contracts/a.md#four Hash-private member. */",
+  "  #secret = true;",
   "}",
+  "export namespace PublicNamespace {",
+  "  /** @evidence contracts/a.md#five Namespace-private member. */",
+  "  const hidden = true;",
+  "  /** @evidence contracts/a.md#six Namespace export. */",
+  "  export const visible = true;",
+  "}",
+  "/** @evidencePart contracts/a.md#seven::fragment Public fragment. */",
+  "export const fragment = true;",
   "export { laterExported };",
 ].join("\n");
 assert.deepEqual(
@@ -135,10 +145,22 @@ assert.deepEqual(
       text: "@evidence contracts/a.md#one This declaration owns the complete wrapped reason.",
     },
     {
-      host: "src/owner.ts::docblock@15",
-      line: 15,
-      endLine: 15,
+      host: "src/owner.ts::docblock@16",
+      line: 16,
+      endLine: 16,
       text: "@evidence contracts/a.md#two Public member.",
+    },
+    {
+      host: "src/owner.ts::docblock@26",
+      line: 26,
+      endLine: 26,
+      text: "@evidence contracts/a.md#six Namespace export.",
+    },
+    {
+      host: "src/owner.ts::docblock@29",
+      line: 29,
+      endLine: 29,
+      text: "@evidencePart contracts/a.md#seven::fragment Public fragment.",
     },
   ],
 );
