@@ -38,6 +38,7 @@ import { autoMovieRenderBudgetRefusal } from "@automovie/render";
 import path from "node:path";
 import { isDeepStrictEqual } from "node:util";
 
+import { inspectPublishedProxyBundle } from "./assertProxyBundle";
 import { PRODUCTION_DELIVERY_TONE_MAPPING } from "./capture";
 import { inspectCurrentCaptureRuntimeClosure } from "./capture-browser";
 import { readAutoMovieHostCaptureBrowser } from "./hostBoundary";
@@ -442,7 +443,7 @@ export const createProductionRenderPlanningRuntime = (props: {
   };
 
   /** Compare the terminal ledger with the current final plan for status only. */
-  const finalPublicationStatus = (
+  const tierPublicationStatus = (
     plan: IAutoMovieProductionRenderJobPlan,
   ): Array<{
     slot: string;
@@ -450,9 +451,53 @@ export const createProductionRenderPlanningRuntime = (props: {
     status: "planned" | "complete" | "stale";
     correction: string;
   }> => {
-    if (plan.tier.kind !== "final") return [];
     const expected = productionRenderPublicationIdentity(plan);
     const project = AutoMovieProductionProject.openReadOnly(root, productionId);
+    if (plan.tier.kind === "proxy") {
+      const target = path.join(
+        project.renderRoot(),
+        "deliverables",
+        "proxy",
+        expected.fingerprint.slice(7),
+      );
+      if (renderHost.filesystem.existsSync(target) === false)
+        return [
+          {
+            slot: "publication/proxy",
+            chunk: expected.fingerprint,
+            status: "planned",
+            correction:
+              "Current proxy chunks have not been published. Run automovie render finalize after every required chunk is complete.",
+          },
+        ];
+      try {
+        const receipt = inspectPublishedProxyBundle(
+          project.renderRoot(),
+          target,
+        );
+        assertProductionRenderPublicationCurrent({
+          identity: receipt.publicationIdentity,
+          plan,
+        });
+        return [
+          {
+            slot: "publication/proxy",
+            chunk: expected.fingerprint,
+            status: "complete",
+            correction: "No correction required.",
+          },
+        ];
+      } catch (error) {
+        return [
+          {
+            slot: "publication/proxy",
+            chunk: expected.fingerprint,
+            status: "stale",
+            correction: `${error instanceof Error ? error.message : String(error)} Re-run automovie render finalize for the current proxy plan.`,
+          },
+        ];
+      }
+    }
     const manifestBytes = project.readTrackedStateFile("render-manifest.json");
     const receiptBytes = project.readTrackedStateFile(
       "render-manifest-receipt.json",
@@ -824,7 +869,7 @@ export const createProductionRenderPlanningRuntime = (props: {
         readPlan,
         reportStatus: async (plan) => [
           ...(await renderStatus(plan)),
-          ...finalPublicationStatus(plan),
+          ...tierPublicationStatus(plan),
         ],
         renderStatus,
         runtimeIdentitiesEqual: isDeepStrictEqual,

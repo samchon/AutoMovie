@@ -8,7 +8,7 @@ import {
   IAutoMovieDefinedShot,
   IAutoMovieShotProgram,
 } from "../authoring/IAutoMovieAuthoring";
-import { IAutoMovieShot } from "../cinematics";
+import { AutoMovieGuidePass, IAutoMovieShot } from "../cinematics";
 import { IAutoMovieClip } from "../core";
 import { IAutoMovieFluidDomain, IAutoMovieWaterFeature } from "../fluid";
 import {
@@ -1325,7 +1325,7 @@ export interface IAutoMovieProductionPublicationIdentity {
     id: AutoMovieContentDigest;
     deliverable: string;
     kind: "feature" | "guide-pass";
-    pass: string;
+    pass: AutoMovieGuidePass;
     frameStart: number;
     frameEndExclusive: number;
     frames: AutoMovieContentDigest;

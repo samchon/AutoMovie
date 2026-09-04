@@ -1,16 +1,30 @@
-import { AutoMovieContentDigest } from "@automovie/interface";
+import type { AutoMovieContentDigest } from "@automovie/interface";
 
 import { digestAutoMovieBytes } from "./contentIdentity";
 
-/** Exact byte identity captured for one publication payload member. */
+/**
+ * Exact byte identity captured for one publication payload member.
+ *
+ * @evidence requirements/rendering/scope-and-artifact-identity.md#rendering-artifact-invalidation Makes any byte change invalidate the captured member.
+ * @evidence specifications/execution-and-recovery/artifacts-and-atomic-publication.md#execution-publication-preconditions Supplies a byte-exact publication precondition.
+ */
 export interface IProductionPayloadSnapshotEntry {
+  /** Canonical publication-relative path. */
   path: string;
+  /** Digest of the exact captured bytes. */
   digest: AutoMovieContentDigest;
+  /** Exact captured byte length. */
   bytes: number;
 }
 
-/** Immutable ordered byte snapshot used by a publication transaction. */
+/**
+ * Immutable ordered byte snapshot used by a publication transaction.
+ *
+ * @evidence requirements/rendering/scope-and-artifact-identity.md#rendering-missing-artifact-refusal Requires every contributing byte member to remain present.
+ * @evidence specifications/validation-and-diagnostics/partial-artifacts-and-refusal.md#validation-preserve-previous-complete Refuses a partial candidate before it replaces the previous complete output.
+ */
 export interface IProductionPayloadSnapshot {
+  /** Complete candidate entries in caller-declared order. */
   entries: IProductionPayloadSnapshotEntry[];
 }
 

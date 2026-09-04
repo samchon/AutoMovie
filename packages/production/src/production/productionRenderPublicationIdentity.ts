@@ -1,4 +1,4 @@
-import {
+import type {
   AutoMovieContentDigest,
   IAutoMovieProductionPublicationIdentity,
 } from "@automovie/interface";
