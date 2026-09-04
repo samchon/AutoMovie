@@ -1,4 +1,6 @@
 import {
+  AUTOMOVIE_SUBJECT_INSPECTION_PLAN_FILE,
+  AUTOMOVIE_SUBJECT_INSPECTION_ROOT,
   AutoMovieProductionCompiler,
   AutoMovieProductionProject,
   type AutoMovieProductionSubjectInspection,
@@ -250,6 +252,119 @@ export const test_production_inspect_subject_refusals =
           unidentified: { code: "capture-failed", reason: true },
           planned: [6, 6, 6, 6],
           views: [0, 0, 0, 0],
+        },
+      );
+
+      const unreportedRuntime =
+        await new AutoMovieProductionSubjectInspectionService((input) =>
+          Promise.resolve({
+            bytes: inspectionPng(input.width, input.height),
+            width: input.width,
+            height: input.height,
+          }),
+        ).inspect(services, target);
+      const assertionBefore =
+        await new AutoMovieProductionSubjectInspectionService((input) =>
+          Promise.resolve({
+            bytes: inspectionPng(input.width, input.height),
+            width: input.width,
+            height: input.height,
+            runtimeIdentity: testCaptureRuntimeIdentity(),
+            assertRuntimeCurrent: () => {
+              throw "runtime moved before publication";
+            },
+          }),
+        ).inspect(services, target);
+      let runtimeDraw = 0;
+      const mixedRuntime =
+        await new AutoMovieProductionSubjectInspectionService((input) =>
+          Promise.resolve({
+            bytes: inspectionPng(input.width, input.height),
+            width: input.width,
+            height: input.height,
+            runtimeIdentity: testCaptureRuntimeIdentity(
+              `runtime-${++runtimeDraw}`,
+            ),
+            assertRuntimeCurrent: () => undefined,
+          }),
+        ).inspect(services, target);
+      let afterPublicationAssertions = 0;
+      const assertionAfter =
+        await new AutoMovieProductionSubjectInspectionService((input) =>
+          Promise.resolve({
+            bytes: inspectionPng(input.width, input.height),
+            width: input.width,
+            height: input.height,
+            runtimeIdentity: testCaptureRuntimeIdentity(),
+            assertRuntimeCurrent: () => {
+              if (++afterPublicationAssertions === 2)
+                throw new Error("runtime moved after publication");
+            },
+          }),
+        ).inspect(services, target);
+      let finalAssertions = 0;
+      const assertionAtFinal =
+        await new AutoMovieProductionSubjectInspectionService((input) =>
+          Promise.resolve({
+            bytes: inspectionPng(input.width, input.height),
+            width: input.width,
+            height: input.height,
+            runtimeIdentity: testCaptureRuntimeIdentity(),
+            assertRuntimeCurrent: () => {
+              if (++finalAssertions === 3)
+                throw new Error("runtime moved at finalization");
+            },
+          }),
+        ).inspect(services, { ...target, azimuthCount: 1 });
+      const planPath = path.join(
+        fixture.root,
+        ...`${AUTOMOVIE_SUBJECT_INSPECTION_ROOT}/fixture-film/opening/${encodeURIComponent(
+          SUBJECT,
+        )}/${AUTOMOVIE_SUBJECT_INSPECTION_PLAN_FILE}`.split("/"),
+      );
+      let planAssertions = 0;
+      const movedPlan = await new AutoMovieProductionSubjectInspectionService(
+        (input) =>
+          Promise.resolve({
+            bytes: inspectionPng(input.width, input.height),
+            width: input.width,
+            height: input.height,
+            runtimeIdentity: testCaptureRuntimeIdentity(),
+            assertRuntimeCurrent: () => {
+              if (++planAssertions === 2)
+                fs.writeFileSync(planPath, "{}", "utf8");
+            },
+          }),
+      ).inspect(services, { ...target, azimuthCount: 1 });
+      TestValidator.equals(
+        "runtime and plan movement fail at every receipt-publication boundary",
+        {
+          unreported: unreportedRuntime.diagnostics[0]?.message.includes(
+            "no runtime reason was reported",
+          ),
+          before: assertionBefore.diagnostics[0]?.message.includes(
+            "runtime moved before publication",
+          ),
+          mixed: mixedRuntime.diagnostics[0]?.message.includes(
+            "changed during the subject sweep",
+          ),
+          after: assertionAfter.diagnostics[0]?.message.includes(
+            "runtime moved after publication",
+          ),
+          final: assertionAtFinal.diagnostics[0]?.message.includes(
+            "runtime moved at finalization",
+          ),
+          plan: movedPlan.diagnostics[0]?.message.includes(
+            "plan changed while this sweep was running",
+          ),
+        },
+        {
+          unreported: true,
+          before: true,
+          mixed: true,
+          after: true,
+          final: true,
+          plan: true,
         },
       );
 

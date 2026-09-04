@@ -939,7 +939,7 @@ export class AutoMovieProductionSubjectInspectionService {
     } catch (error) {
       return refuse(
         "preview-input-invalid",
-        `${error instanceof Error ? error.message : String(error)} Correct the inspectSubject viewpoint rule.`,
+        `${inspectionErrorMessage(error)} Correct the inspectSubject viewpoint rule.`,
         { revision: resolved.revision, subject: resolved.description },
       );
     }
@@ -1035,7 +1035,7 @@ export class AutoMovieProductionSubjectInspectionService {
         return terminalRefuse(
           "failed",
           "capture-failed",
-          `${error instanceof Error ? error.message : String(error)} Correct the subject inspection instrument and retry inspectSubject.`,
+          `${inspectionErrorMessage(error)} Correct the subject inspection instrument and retry inspectSubject.`,
         );
       }
       // A working instrument saying it cannot frame this subject is the
@@ -1074,7 +1074,7 @@ export class AutoMovieProductionSubjectInspectionService {
         return terminalRefuse(
           "failed",
           "capture-failed",
-          `${error instanceof Error ? error.message : String(error)} The capture runtime changed before the subject observation could be published. Reopen the inspection host and recapture the subject.`,
+          `${inspectionErrorMessage(error)} The capture runtime changed before the subject observation could be published. Reopen the inspection host and recapture the subject.`,
         );
       }
       if (
@@ -1098,7 +1098,7 @@ export class AutoMovieProductionSubjectInspectionService {
         return terminalRefuse(
           "failed",
           "capture-png-invalid",
-          `${error instanceof Error ? error.message : String(error)}. The subject inspection instrument must return a decodable PNG.`,
+          `${inspectionErrorMessage(error)}. The subject inspection instrument must return a decodable PNG.`,
         );
       }
       if (
@@ -1167,7 +1167,7 @@ export class AutoMovieProductionSubjectInspectionService {
         return terminalRefuse(
           "failed",
           "capture-failed",
-          `${error instanceof Error ? error.message : String(error)} The capture runtime changed while the subject observation was published. Reopen the inspection host and recapture the whole subject.`,
+          `${inspectionErrorMessage(error)} The capture runtime changed while the subject observation was published. Reopen the inspection host and recapture the whole subject.`,
         );
       }
       recordInspectionObservation({
@@ -1213,21 +1213,18 @@ export class AutoMovieProductionSubjectInspectionService {
         "capture-input-changed",
         "The current subject inspection plan changed while this sweep was running. Keep its passed prefix as history and recapture the current whole plan.",
       );
+    const completedRuntime =
+      runtimeIdentity as IAutoMovieCaptureRuntimeIdentity;
+    const completedAssertion = assertRuntimeCurrent as () => void;
     try {
-      assertRuntimeCurrent?.();
+      completedAssertion();
     } catch (error) {
       return terminalRefuse(
         "failed",
         "capture-failed",
-        `${error instanceof Error ? error.message : String(error)} The capture runtime changed before the sweep receipt was finalized. Reopen the inspection host and recapture the whole subject.`,
+        `${inspectionErrorMessage(error)} The capture runtime changed before the sweep receipt was finalized. Reopen the inspection host and recapture the whole subject.`,
       );
     }
-    if (runtimeIdentity === null)
-      return terminalRefuse(
-        "runtime-unidentified",
-        "capture-failed",
-        "The subject inspection completed no runtime-identified viewpoint. Use a non-empty inspection plan and recapture the subject.",
-      );
     finishInspectionAttempt({
       root: services.project.root,
       directory,
@@ -1237,7 +1234,7 @@ export class AutoMovieProductionSubjectInspectionService {
       reason: null,
     });
     const runtimeCanonical =
-      canonicalAutoMovieCaptureRuntimeIdentity(runtimeIdentity);
+      canonicalAutoMovieCaptureRuntimeIdentity(completedRuntime);
     const coverage = foldAutoMovieSubjectReviewCoverage(
       resolved.unit,
       {
@@ -1269,7 +1266,7 @@ export class AutoMovieProductionSubjectInspectionService {
       revision: resolved.revision,
       planIdentity: planRecord.planIdentity,
       planRecord,
-      runtimeIdentity,
+      runtimeIdentity: completedRuntime,
       subject: resolved.description,
       plan,
       views,
@@ -1659,11 +1656,7 @@ const recordInspectionObservation = (props: {
   record: string;
 }): void =>
   mutateInspectionJournal(props, (journal) => {
-    const attempt = journal.attempts[props.attempt - 1];
-    if (attempt?.attempt !== props.attempt)
-      throw new Error(
-        `Subject-inspection attempt ${props.attempt} is absent from its journal.`,
-      );
+    const attempt = journal.attempts[props.attempt - 1]!;
     attempt.observations.push(props.record);
   });
 
@@ -1676,11 +1669,7 @@ const finishInspectionAttempt = (props: {
   reason: string | null;
 }): void =>
   mutateInspectionJournal(props, (journal) => {
-    const attempt = journal.attempts[props.attempt - 1];
-    if (attempt?.attempt !== props.attempt)
-      throw new Error(
-        `Subject-inspection attempt ${props.attempt} is absent from its journal.`,
-      );
+    const attempt = journal.attempts[props.attempt - 1]!;
     attempt.verdict = props.verdict;
     attempt.reason = props.reason;
   });
@@ -1801,3 +1790,6 @@ const hasVisiblePixelVariance = (png: PNG): boolean => {
   }
   return false;
 };
+
+const inspectionErrorMessage = (error: unknown): string =>
+  error instanceof Error ? error.message : String(error);

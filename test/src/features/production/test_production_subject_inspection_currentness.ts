@@ -187,6 +187,26 @@ export const test_production_subject_inspection_currentness = (): void => {
     "stale, malformed, non-passed and unsupported-version twins fail closed",
     namedFacts([
       [
+        "directOldProtocol",
+        () =>
+          throwsError(
+            () =>
+              canonicalAutoMovieCaptureRuntimeIdentity({
+                ...system,
+                protocolVersion: "automovie.capture-runtime.v1",
+              } as unknown as IAutoMovieCaptureRuntimeIdentity),
+            "Unsupported",
+          ),
+      ],
+      [
+        "scalarProtocol",
+        () =>
+          throwsError(
+            () => parseAutoMovieCaptureRuntimeIdentity("null"),
+            "versioned JSON object",
+          ),
+      ],
+      [
         "compile",
         () => {
           const stale = observation({
@@ -282,6 +302,45 @@ export const test_production_subject_inspection_currentness = (): void => {
           ),
       ],
       [
+        "planContext",
+        () =>
+          throwsError(
+            () =>
+              parseAutoMovieSubjectInspectionPlan({
+                ...currentPlan,
+                productionId: " ",
+              }),
+            "non-blank context",
+          ),
+      ],
+      [
+        "planIdentity",
+        () =>
+          throwsError(
+            () =>
+              parseAutoMovieSubjectInspectionPlan({
+                ...currentPlan,
+                planIdentity: digest("9"),
+              }),
+            "identity does not match",
+          ),
+      ],
+      [
+        "observationContext",
+        () =>
+          throwsError(
+            () =>
+              parseAutoMovieSubjectInspectionObservation({
+                ...current.record,
+                observation: {
+                  ...current.record.observation,
+                  artifact: " ",
+                },
+              }),
+            "exact passed context",
+          ),
+      ],
+      [
         "extra",
         () =>
           throwsError(
@@ -330,11 +389,16 @@ export const test_production_subject_inspection_currentness = (): void => {
     ]),
     {
       compile: true,
+      directOldProtocol: true,
+      scalarProtocol: true,
       runtime: true,
       pose: true,
       bytes: true,
       locator: true,
       v1: true,
+      planContext: true,
+      planIdentity: true,
+      observationContext: true,
       extra: true,
       notPassed: true,
       oldProtocol: true,

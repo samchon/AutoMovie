@@ -247,6 +247,7 @@ export const test_inspection_subject_review_coverage = (): void => {
     { ...observation("front"), viewpoint: " " },
     { ...observation("front"), artifact: " " },
     { ...observation("front"), digest: " " },
+    { ...observation("front"), target: null },
   ]);
   TestValidator.equals(
     "frame and malformed evidence never satisfy subject coverage",
@@ -258,7 +259,7 @@ export const test_inspection_subject_review_coverage = (): void => {
       missing: ["front", "back"],
       stale: [],
       unplanned: [],
-      foreign: 14,
+      foreign: 15,
       duplicates: 0,
     },
   );
@@ -266,6 +267,20 @@ export const test_inspection_subject_review_coverage = (): void => {
   TestValidator.equals(
     "invalid viewpoint plans are refused at every numeric and identity boundary",
     namedFacts([
+      [
+        "invalidCurrentContext",
+        () =>
+          throwsError(
+            () =>
+              foldAutoMovieSubjectReviewCoverage(
+                unit,
+                { ...current, productionId: " " },
+                plan,
+                [],
+              ),
+            "current context",
+          ),
+      ],
       [
         "blankId",
         () =>
@@ -356,6 +371,7 @@ export const test_inspection_subject_review_coverage = (): void => {
       ],
     ]),
     {
+      invalidCurrentContext: true,
       blankId: true,
       duplicateId: true,
       zeroDistance: true,
