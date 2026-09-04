@@ -813,25 +813,35 @@ export const createProductionSoundRuntime = (props: {
         modelRevision: selection.modelRevision,
       },
     });
-    assertCurrentRuntimePackages();
-    const modelSnapshot = captureKokoroModelCache(modelCacheRoot);
-    const modelAssets = kokoroModelCacheAssets(modelSnapshot);
-    if (modelAssets.length === 0) {
-      await runtime.close();
-      throw new Error(
-        "Pinned Kokoro load produced no revision-scoped model cache assets.",
-      );
+    try {
+      assertCurrentRuntimePackages();
+      const modelSnapshot = captureKokoroModelCache(modelCacheRoot);
+      const modelAssets = kokoroModelCacheAssets(modelSnapshot);
+      if (modelAssets.length === 0)
+        throw new Error(
+          "Pinned Kokoro load produced no revision-scoped model cache assets.",
+        );
+      props.progress("sound.model.load.complete", {
+        model: selection.model,
+        revision: selection.modelRevision,
+      });
+      assertCurrentRuntimePackages();
+      if (modelSnapshot !== null) assertCapturedRenderTarget(modelSnapshot);
+      return {
+        runtime,
+        runtimeAssets: [...baseRuntimeAssets, ...modelAssets],
+      };
+    } catch (error) {
+      try {
+        await runtime.close();
+      } catch (closeError) {
+        throw new ProductionRuntimeClosureError(
+          [error, closeError],
+          "Kokoro generation worker cleanup failed after model loading failed.",
+        );
+      }
+      throw error;
     }
-    props.progress("sound.model.load.complete", {
-      model: selection.model,
-      revision: selection.modelRevision,
-    });
-    assertCurrentRuntimePackages();
-    if (modelSnapshot !== null) assertCapturedRenderTarget(modelSnapshot);
-    return {
-      runtime,
-      runtimeAssets: [...baseRuntimeAssets, ...modelAssets],
-    };
   };
 
   const synthesizeProductionDialogue = async (
