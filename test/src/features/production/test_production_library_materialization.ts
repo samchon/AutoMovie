@@ -345,14 +345,20 @@ export const test_production_library_materialization = (): void => {
     }),
   });
   const swappedOwner = libraryFixture({
-    [LIBRARY_SOURCE]: librarySourceModule({
-      design: LIBRARY_SECOND_OWNER,
-      second: {
-        exportName: "annex",
-        design: LIBRARY_OWNER,
-        environmentId: "hall-annex",
-      },
-    }),
+    [LIBRARY_SOURCE]: [
+      'import type { IAutoMovieLibrarySourceOwner } from "@automovie/interface";',
+      "",
+      "export const hall = {",
+      `  design: ${JSON.stringify(LIBRARY_SECOND_OWNER)},`,
+      '  build: () => { throw new Error("library owner gate executed the builder"); },',
+      "} satisfies IAutoMovieLibrarySourceOwner;",
+      "",
+      "export const annex = {",
+      `  design: ${JSON.stringify(LIBRARY_OWNER)},`,
+      '  build: () => { throw new Error("library owner gate executed the builder"); },',
+      "} satisfies IAutoMovieLibrarySourceOwner;",
+      "",
+    ].join("\n"),
   });
   const emptySpace = libraryFixture({
     [LIBRARY_SOURCE]: librarySourceModule({ environments: "[]" }),
@@ -534,6 +540,11 @@ export const test_production_library_materialization = (): void => {
               (diagnostic) =>
                 diagnostic.code === "source-owner-mismatch" &&
                 diagnostic.message.includes("not runtime owner"),
+            ) &&
+            swapped.diagnostics.every(
+              (diagnostic) =>
+                diagnostic.message.includes("library owner gate executed") ===
+                false,
             ),
         ],
         [
