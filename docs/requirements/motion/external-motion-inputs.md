@@ -12,6 +12,8 @@
 
 Source clip identity, take, duration, timebase 또는 sample rate, unit, coordinate convention, source skeleton과 rest basis, root policy, channel list, event와 loop intent를 읽고 선택 전에 보여 줄 수 있어야 한다.
 
+이 byte inspector는 생성 project의 명명된 command 또는 public import에서 접근 가능해야 하며, exact source-order hierarchy와 rest basis를 반환하고 semantic mapping이나 adoption 결정을 대신하지 않아야 한다.
+
 ### Compatibility와 User Override {#motion-external-compatibility-override}
 
 Target control coverage, joint와 range compatibility, scale, root, contact, morph, event, interpolation와 unsupported channel을 비교하고 자동 mapping, trim, scale와 correction은 사용자가 검토, override 또는 거부할 수 있어야 한다.

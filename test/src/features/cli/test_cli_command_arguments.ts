@@ -19,7 +19,13 @@ type CommandPlan =
       mode: "apply" | "dry-run" | "rollback";
     }
   | { command: "contracts"; action: "migrate"; dryRun: boolean }
+  | {
+      command: "inspect-external";
+      path: string;
+      profile: string;
+    }
   | { command: "toc"; check: boolean }
+  | { command: "routes"; kind: "film" | "brief" | "library" }
   | { command: "sync" | "verify" }
   | { command: "render"; arguments: readonly string[] };
 
@@ -139,6 +145,48 @@ export const test_cli_command_arguments = (): void => {
           refuses(["toc", "--check", "--check"], "at most once"),
       ],
       [
+        "externalInspectionRequiresOnePathAndExplicitProfile",
+        () =>
+          JSON.stringify(
+            read(
+              "inspect-external",
+              "public/assets/walk.glb",
+              "--profile",
+              "gltf-motion-v1",
+            ),
+          ) ===
+            JSON.stringify({
+              command: "inspect-external",
+              path: "public/assets/walk.glb",
+              profile: "gltf-motion-v1",
+            }) &&
+          refuses(["inspect-external"], "exactly one source path") &&
+          refuses(["inspect-external", "a.glb"], "requires --profile") &&
+          refuses(
+            ["inspect-external", "a.glb", "--profile", "guessed"],
+            "supported ingest profile",
+          ) &&
+          refuses(
+            [
+              "inspect-external",
+              "a.glb",
+              "--profile",
+              "gltf-motion-v1",
+              "extra.glb",
+            ],
+            "received 2",
+          ),
+      ],
+      [
+        "routeMatrixRequiresOneProductionKind",
+        () =>
+          JSON.stringify(read("routes", "brief")) ===
+            JSON.stringify({ command: "routes", kind: "brief" }) &&
+          refuses(["routes"], "exactly one") &&
+          refuses(["routes", "film", "brief"], "exactly one") &&
+          refuses(["routes", "unknown"], "exactly one"),
+      ],
+      [
         "renderConsumesTheGeneratedRunnerGrammar",
         () =>
           render.command === "render" &&
@@ -250,7 +298,9 @@ export const test_cli_command_arguments = (): void => {
       migrateResolvesExactlyOneMode: true,
       zeroArgumentCommandsConsumeNothingElse: true,
       maintenanceCommandsConsumeOneClosedMode: true,
+      externalInspectionRequiresOnePathAndExplicitProfile: true,
       renderConsumesTheGeneratedRunnerGrammar: true,
+      routeMatrixRequiresOneProductionKind: true,
       unknownDuplicateInapplicableAndExtraTokensAreRefused: true,
       missingAndBlankDirectoriesAreRefused: true,
       renderRejectsEveryMalformedTokenClass: true,

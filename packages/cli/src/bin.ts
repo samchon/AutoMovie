@@ -1,6 +1,8 @@
 #!/usr/bin/env node
+import { inspectAutoMovieExternalModelBytes } from "@automovie/ingest";
 import { AutoMovieLegacyImporter } from "@automovie/production";
 import {
+  AUTO_MOVIE_AUTHORING_REACHABILITY,
   AUTO_MOVIE_CONTRACT_BASELINE_PATH,
   type IAutoMovieContractBaseline,
   applyAutoMovieContractMigrationPlan,
@@ -25,6 +27,8 @@ Usage:
   npx automovie verify
   npx automovie contracts migrate [--dry-run]
   npx automovie toc [--check]
+  npx automovie inspect-external <path> --profile <profile>
+  npx automovie routes <film|brief|library>
   npx automovie migrate <directory> [--dry-run | --rollback]
   npx automovie render <all|plan|run|status|verify|finalize|gc> [options]
 
@@ -38,6 +42,10 @@ Commands:
                       media without modifying project state.
   contracts migrate   Plan or apply a scaffold contract-baseline migration.
   toc                  Generate canonical script and screenplay index links.
+  inspect-external     Inspect exact glTF, GLB, or VRM bytes for explicit
+                       externalMotions adoption without semantic mapping.
+  routes <kind>        Print the complete owner/serializer/consumer route
+                       matrix for one production kind.
   migrate <directory> Plan or apply a non-destructive legacy v1 import.
   render <action>     Run the current project's resumable render job.
 
@@ -47,6 +55,8 @@ Options:
   --dry-run           Print the immutable legacy import plan (migrate only).
   --rollback          Remove one untouched import (migrate only).
   --check             Refuse a stale delivery table of contents (toc only).
+  --profile <name>    Select gltf-static-v1, gltf-humanoid-v1,
+                      gltf-motion-v1, or vrm-humanoid-v1.
   --chunk-frames <n>  Positive render chunk size (all, plan, or run only).
   --deliverable <id>  Render one deliverable (all or run only).
   --tier <name>       Select proxy or final (all, plan, run, status, verify,
@@ -568,6 +578,55 @@ export const run = (argv: readonly string[]): number => {
         return runProjectScript("render.ts", command.arguments);
       if (command.command === "sync" || command.command === "verify")
         return runProjectScript(`${command.command}.ts`, []);
+
+      if (command.command === "inspect-external") {
+        const root = process.cwd();
+        const source = path.resolve(root, command.path);
+        const relative = path.relative(root, source);
+        if (
+          relative === "" ||
+          relative.startsWith(`..${path.sep}`) ||
+          path.isAbsolute(relative)
+        )
+          throw new Error(
+            "inspect-external source must be a file inside the current project.",
+          );
+        const inspection = inspectAutoMovieExternalModelBytes({
+          bytes: fs.readFileSync(source),
+          path: relative.split(path.sep).join("/"),
+          profile: command.profile,
+          resolveResource: (uri) => {
+            if (/^[A-Za-z][A-Za-z0-9+.-]*:/u.test(uri)) return null;
+            const resource = path.resolve(
+              path.dirname(source),
+              decodeURIComponent(uri),
+            );
+            const resourceRelative = path.relative(root, resource);
+            if (
+              resourceRelative.startsWith(`..${path.sep}`) ||
+              path.isAbsolute(resourceRelative) ||
+              fs.existsSync(resource) === false
+            )
+              return null;
+            return fs.readFileSync(resource);
+          },
+        });
+        process.stdout.write(`${JSON.stringify(inspection, null, 2)}\n`);
+        return 0;
+      }
+
+      if (command.command === "routes") {
+        process.stdout.write(
+          `${JSON.stringify(
+            AUTO_MOVIE_AUTHORING_REACHABILITY.filter(
+              (row) => row.kind === command.kind,
+            ),
+            null,
+            2,
+          )}\n`,
+        );
+        return 0;
+      }
 
       if (command.command === "toc") {
         const root = process.cwd();

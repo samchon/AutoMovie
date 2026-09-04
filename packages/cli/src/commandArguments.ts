@@ -29,7 +29,17 @@ type AutoMovieCommand =
       mode: "apply" | "dry-run" | "rollback";
     }
   | { command: "contracts"; action: "migrate"; dryRun: boolean }
+  | {
+      command: "inspect-external";
+      path: string;
+      profile:
+        | "gltf-static-v1"
+        | "gltf-humanoid-v1"
+        | "gltf-motion-v1"
+        | "vrm-humanoid-v1";
+    }
   | { command: "toc"; check: boolean }
+  | { command: "routes"; kind: "film" | "brief" | "library" }
   | { command: "sync" }
   | { command: "verify" }
   | { command: "render"; arguments: readonly string[] };
@@ -253,6 +263,54 @@ export const readAutoMovieCommandArguments = (
     if (rest.some((option) => option !== "--check") || rest.length > 1)
       throw new Error("toc accepts --check at most once.");
     return { command, check: rest.includes("--check") } as const;
+  }
+  if (command === "inspect-external") {
+    const positionals: string[] = [];
+    let profile: string | undefined;
+    for (let index = 0; index < rest.length; ++index) {
+      const token = rest[index]!;
+      if (token === "--profile") {
+        if (profile !== undefined)
+          throw new Error("--profile may be supplied only once.");
+        profile = rest[++index];
+        if (profile === undefined || profile.startsWith("-"))
+          throw new Error("--profile requires a value.");
+      } else if (token.startsWith("-"))
+        throw new Error(
+          `Unknown or inapplicable inspect-external option "${token}".`,
+        );
+      else positionals.push(token);
+    }
+    if (positionals.length !== 1)
+      throw new Error(
+        `inspect-external accepts exactly one source path; received ${positionals.length}.`,
+      );
+    const profiles = new Set([
+      "gltf-static-v1",
+      "gltf-humanoid-v1",
+      "gltf-motion-v1",
+      "vrm-humanoid-v1",
+    ]);
+    if (profile === undefined || profiles.has(profile) === false)
+      throw new Error(
+        "inspect-external requires --profile with one supported ingest profile.",
+      );
+    return {
+      command,
+      path: positionals[0]!,
+      profile: profile as Extract<
+        AutoMovieCommand,
+        { command: "inspect-external" }
+      >["profile"],
+    } as const;
+  }
+  if (command === "routes") {
+    if (
+      rest.length !== 1 ||
+      (rest[0] !== "film" && rest[0] !== "brief" && rest[0] !== "library")
+    )
+      throw new Error("routes needs exactly one of film, brief, or library.");
+    return { command, kind: rest[0] } as const;
   }
   if (command === "sync" || command === "verify") {
     if (rest.length !== 0) throw new Error(`${command} takes no arguments.`);

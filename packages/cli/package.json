@@ -49,6 +49,7 @@
   "dependencies": {
     "@automovie/engine": "workspace:^",
     "@automovie/evidence": "workspace:^",
+    "@automovie/ingest": "workspace:^",
     "@automovie/interface": "workspace:^",
     "@automovie/production": "workspace:^",
     "@automovie/template": "workspace:^",

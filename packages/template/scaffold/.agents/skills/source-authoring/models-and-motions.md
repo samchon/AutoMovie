@@ -1,5 +1,7 @@
 # Models and motions
 
+Before authoring an `externalMotions` adoption, run `npm run external:inspect -- <project-path> --profile <profile>`. The deterministic result supplies the exact source-order node identities, hierarchy, local rest basis, dependencies, takes, channels, and timing the adoption record may name. It deliberately performs no semantic bone mapping or adoption choice; the author records those decisions in governed source and may not infer them from display names alone.
+
 Read [Rigging](rigging.md) alongside this document before changing geometry, rigs, or derived assets.
 
 ## Model decisions

@@ -186,6 +186,9 @@ importers:
       '@automovie/evidence':
         specifier: workspace:^
         version: link:../evidence
+      '@automovie/ingest':
+        specifier: workspace:^
+        version: link:../ingest
       '@automovie/interface':
         specifier: workspace:^
         version: link:../interface

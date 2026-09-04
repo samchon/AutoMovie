@@ -1,4 +1,5 @@
 export * from "./renderScaffold";
+export * from "./authoringReachability";
 export * from "./renderAutoMovieLanguageContracts";
 export {
   AUTO_MOVIE_PRODUCTION_LANGUAGES,

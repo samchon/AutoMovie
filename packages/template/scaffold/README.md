@@ -38,6 +38,8 @@ This table is the command inventory owner. Skills link here for route discovery 
 | Source validity while authoring | `npm run lint:source` |
 | Derived design and compiler state | `npm run design`, then `npm run compile` |
 | Contract migration and delivery index | `npm run contracts:migrate -- --dry-run`, `npm run contracts:migrate`, `npm run toc -- --check`, `npm run toc` |
+| External model and motion facts | `npm run external:inspect -- <project-path> --profile <gltf-static-v1|gltf-humanoid-v1|gltf-motion-v1|vrm-humanoid-v1>` |
+| Production-kind capability routes | `npm run routes -- <film|brief|library>` |
 | Capture runtime | `npm run capture:install`, then `npm run capture:doctor` |
 | Current inspection and review | `npm run inspect -- --shot <id> --subject <kind:id>`, `npm run preview -- --shot <id> --time <seconds>`, `npm run lint -- --scope review` |
 | Library observation | `npm run library:review -- inspect`, followed by the plan and record routes owned by the library review procedure |

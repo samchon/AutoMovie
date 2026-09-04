@@ -8,6 +8,8 @@ npx automovie migrate legacy-film --dry-run
 npx automovie migrate legacy-film
 npx automovie contracts migrate --dry-run
 npx automovie toc --check
+npx automovie inspect-external public/assets/walk.glb --profile gltf-motion-v1
+npx automovie routes film
 ```
 
 Lays down an empty production-authoring scaffold with both ways to drive the engine:

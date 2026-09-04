@@ -1,5 +1,7 @@
 # Production delivery decisions
 
+Run `npm run routes -- <film|brief|library>` before selecting a design field. Its typed matrix names the canonical owner, serializer, runtime/compiler consumer, and authoring route for each supported capability, or the exact reason that capability is inapplicable to the selected shape. A field absent from that matrix is not made available by mentioning it in prose.
+
 Delivery tiers, the repaint adoption and its requests, the dialogue generator and its speaker joins, and the live soft-body admission are fields of this production's design record. There is no configuration file beside `docs/` and `src/`: each of these is authored in governed source, published by `scripts/emitDesign.ts`, and read back from the compiled record, so it carries the same reviewed owner and the same staleness as the frame clock next to it.
 
 Read [`scripts/productionConfiguration.ts`](../../../scripts/productionConfiguration.ts) with the design record. TypeScript settles the shape of a record this project emitted itself; that parser settles the shape of the record actually resident on disk, which a hand edit or an older emitter can disagree with, before the runtime chooses a provider, an actor, a raster, or a live solver.
