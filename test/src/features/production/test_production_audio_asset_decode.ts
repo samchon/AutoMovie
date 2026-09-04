@@ -111,6 +111,15 @@ export const test_production_audio_asset_decode = (): void => {
       channels: [[0, 8_192, 16_384, 24_576]],
     }),
   );
+  const downmixResampled = decode(
+    productionWav({
+      sampleRate: 24_000,
+      channels: [
+        [16_384, 0],
+        [0, 16_384],
+      ],
+    }),
+  );
 
   TestValidator.equals(
     "a declared WAV asset decodes to mono samples at the plan's rate",
@@ -235,6 +244,13 @@ export const test_production_audio_asset_decode = (): void => {
           resampled.sourceFormat.sampleRate === 24_000 &&
           resampled.processing.outputSampleRate === PLAN_RATE,
       ],
+      [
+        "stereoDownmixThenResampleKeepsCombinedLineage",
+        () =>
+          downmixResampled.processing.kind === "downmix-resample" &&
+          downmixResampled.processing.matrix[0]?.join("|") === "0.5|0.5" &&
+          downmixResampled.samples.every((sample) => nclose(sample, 0.25)),
+      ],
     ]),
     {
       itReadsTheDeclaredRate: true,
@@ -259,6 +275,7 @@ export const test_production_audio_asset_decode = (): void => {
       whileTheReportedRateStaysTheFilesOwn: true,
       andTheReportedRuntimeStaysTheFilesOwn: true,
       resamplingIsNamedSeparatelyFromSourceFacts: true,
+      stereoDownmixThenResampleKeepsCombinedLineage: true,
     },
   );
 };

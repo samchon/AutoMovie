@@ -297,6 +297,10 @@ export const productionWav = (props: {
   omitDataChunk?: boolean;
   duplicateFormatChunk?: boolean;
   duplicateDataChunk?: boolean;
+  /** Omit only the final odd chunk's required word-alignment byte. */
+  omitFinalChunkPadding?: boolean;
+  /** Raw bytes included in RIFF extent after the final complete chunk. */
+  terminalBytes?: Uint8Array;
   declaredRiffSize?: number;
 }): Uint8Array => {
   const formatTag = props.formatTag ?? 1;
@@ -363,17 +367,24 @@ export const productionWav = (props: {
     });
   if (props.duplicateDataChunk === true) chunks.push({ id: "data", payload });
   const padded = (length: number): number => length + (length % 2);
-  const riffSize = chunks.reduce(
-    (total, chunk) => total + 8 + padded(chunk.payload.length),
-    4,
-  );
+  const terminalBytes = props.terminalBytes ?? new Uint8Array();
+  const chunkBytes = (chunk: (typeof chunks)[number], index: number): number =>
+    8 +
+    (props.omitFinalChunkPadding === true && index === chunks.length - 1
+      ? chunk.payload.length
+      : padded(chunk.payload.length));
+  const riffSize =
+    chunks.reduce(
+      (total, chunk, index) => total + chunkBytes(chunk, index),
+      4,
+    ) + terminalBytes.length;
   const bytes = new Uint8Array(8 + riffSize);
   const view = new DataView(bytes.buffer);
   writeWavTag(bytes, 0, "RIFF");
   view.setUint32(4, props.declaredRiffSize ?? riffSize, true);
   writeWavTag(bytes, 8, props.form ?? "WAVE");
   let cursor = 12;
-  for (const chunk of chunks) {
+  for (const [index, chunk] of chunks.entries()) {
     writeWavTag(bytes, cursor, chunk.id);
     view.setUint32(
       cursor + 4,
@@ -381,8 +392,9 @@ export const productionWav = (props: {
       true,
     );
     bytes.set(chunk.payload, cursor + 8);
-    cursor += 8 + padded(chunk.payload.length);
+    cursor += chunkBytes(chunk, index);
   }
+  bytes.set(terminalBytes, cursor);
   return bytes;
 };
 

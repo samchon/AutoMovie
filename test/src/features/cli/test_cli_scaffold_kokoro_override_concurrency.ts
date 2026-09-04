@@ -129,6 +129,31 @@ export const test_cli_scaffold_kokoro_override_concurrency =
       },
       { fetch: true, cacheDir: originalCacheDir, symbols: originalSymbols },
     );
+    const withoutProgress: Array<Record<string, unknown>> = [];
+    await loadKokoroRuntime({
+      factories: {
+        loadModel: async (_model, options) => {
+          withoutProgress.push(options);
+          return "model";
+        },
+        loadTokenizer: async (_model, options) => {
+          withoutProgress.push(options);
+          return "tokenizer";
+        },
+        construct: () => "runtime",
+      },
+      model: "owner/model",
+      revision: "revision",
+      cacheRoot: "state/model",
+      dtype: "fp32",
+      device: "cpu",
+    });
+    TestValidator.predicate(
+      "an omitted progress callback remains absent from both requests",
+      withoutProgress.every(
+        (options) => Object.hasOwn(options, "progress_callback") === false,
+      ),
+    );
 
     for (const stage of ["model", "tokenizer", "constructor"] as const) {
       const expected = new Error(`${stage} failed`);
