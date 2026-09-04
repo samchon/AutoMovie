@@ -75,7 +75,7 @@ try {
   write(
     project,
     "src/models/z.ts",
-    `\ufeff${"/**\n * @evidence models/zeta.md#zeta-form Realizes the reviewed zeta form.\n * @evidenceReview models/zeta.md#zeta-form #9782bb7 Read the form and checked this export.\n */\nclass Z {}\nexport { Z as Zeta };\n".replaceAll("\n", "\r\n")}`,
+    `\ufeff${"/**\n * @evidence models/zeta.md#zeta-form Realizes the reviewed zeta form.\n * @evidenceReview models/zeta.md#zeta-form #76e54b5 Read the form and checked this export.\n */\nclass Z {}\nexport { Z as Zeta };\n".replaceAll("\n", "\r\n")}`,
   );
   write(
     project,
@@ -114,7 +114,7 @@ try {
     kind: "library",
     settings: "review",
     models: "review",
-    modelSources: "draft",
+    modelSources: "evidence",
     claims: [
       {
         name: "models answer the local visual contract",
@@ -157,7 +157,7 @@ try {
         branch: "models",
         designStage: "review",
         sourceBranch: "modelSources",
-        sourceStage: "draft",
+        sourceStage: "evidence",
         sourcePaths: ["src/models/nested/a.ts", "src/models/z.ts"],
       },
     ],
@@ -196,7 +196,7 @@ try {
         ],
         sourceFiles: ["src/models/**/*.ts"],
         sourceSymbols: ["function", "property", "type"],
-        sourceEnforced: false,
+        sourceEnforced: true,
       },
       {
         branch: "models",
@@ -205,7 +205,7 @@ try {
         units: [["zeta-form", "Form"]],
         sourceFiles: ["src/models/**/*.ts"],
         sourceSymbols: ["function", "property", "type"],
-        sourceEnforced: false,
+        sourceEnforced: true,
       },
     ],
   );
@@ -228,8 +228,8 @@ try {
         exportName: "A",
         symbolKind: "type",
         target: "docs/models/alpha.md#joint",
-        stage: "draft",
-        enforced: false,
+        stage: "evidence",
+        enforced: true,
         reviewed: false,
         digested: true,
       },
@@ -239,8 +239,8 @@ try {
         exportName: "A",
         symbolKind: "type",
         target: "docs/models/alpha.md#shell",
-        stage: "draft",
-        enforced: false,
+        stage: "evidence",
+        enforced: true,
         reviewed: false,
         digested: true,
       },
@@ -250,8 +250,8 @@ try {
         exportName: "Zeta",
         symbolKind: "type",
         target: "docs/models/zeta.md#zeta-form",
-        stage: "draft",
-        enforced: false,
+        stage: "evidence",
+        enforced: true,
         reviewed: false,
         digested: true,
       },
@@ -325,7 +325,7 @@ try {
       kind: "brief",
       settings: "review",
       briefs: "review",
-      shots: "draft",
+      shots: "evidence",
     },
   });
   assert.deepEqual(

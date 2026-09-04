@@ -352,16 +352,23 @@ const sourceOwnerBindingsOf = (
         const tags = jsDocTagsOf(owner.nodes);
         const reviews = new Map<string, string[]>();
         for (const tag of tags.filter((tag) => tag.name === "evidenceReview")) {
-          const [target, fingerprint] = tag.comment.split(/\s+/u);
-          if (target === undefined || fingerprint === undefined) continue;
+          const [target, fingerprint, ...description] =
+            tag.comment.split(/\s+/u);
+          if (
+            target === undefined ||
+            fingerprint === undefined ||
+            /^#[0-9a-f]{7}$/u.test(fingerprint) === false ||
+            description.length === 0
+          )
+            continue;
           reviews.set(target, [
             ...(reviews.get(target) ?? []),
-            fingerprint.replace(/^#/u, ""),
+            fingerprint.slice(1),
           ]);
         }
         for (const tag of tags.filter((tag) => tag.name === "evidence")) {
-          const cited = tag.comment.split(/\s+/u)[0];
-          if (cited === undefined) continue;
+          const [cited, ...reason] = tag.comment.split(/\s+/u);
+          if (cited === undefined || reason.length === 0) continue;
           const target = targets.get(cited);
           if (target === undefined) continue;
           const identity = JSON.stringify([
@@ -562,10 +569,9 @@ const markdownSourceOwnerTargets = (
       owned.set(current, [...(owned.get(current) ?? []), content]);
   }
   for (const [index, unit] of units.entries()) {
-    const content = (owned.get(index) ?? [])
-      .map((line) => line.trimEnd())
-      .join("\n")
-      .replace(/(?:\n[ \t]*)+$/gu, "");
+    const contentLines = (owned.get(index) ?? []).map((line) => line.trimEnd());
+    while (contentLines[contentLines.length - 1] === "") contentLines.pop();
+    const content = contentLines.join("\n");
     unit.digest = crypto.createHash("sha256").update(content).digest("hex");
   }
   return units
@@ -724,7 +730,11 @@ const markdownSlug = (title: string): string => {
   let output = "";
   let hyphen = false;
   for (const character of title.toLowerCase())
-    if (/^[\p{L}\p{N}_]$/u.test(character)) {
+    if (
+      /^\p{L}$/u.test(character) ||
+      /^\p{N}$/u.test(character) ||
+      character === "_"
+    ) {
       output += character;
       hyphen = false;
     } else if (

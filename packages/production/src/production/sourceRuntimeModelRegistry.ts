@@ -9,10 +9,8 @@ import type { IAutoMovieModel } from "@automovie/interface";
  * only that population. A compiler key may differ from the contained model id,
  * so `resolve` preserves both identities without admitting inherited names.
  *
- * @evidence requirements/agent-authoring/source-owned-loop.md#agent-source-result-link Preserves every accepted source model under the exact id the source result declared.
- * @evidence requirements/agent-authoring/source-owned-loop.md#agent-change-impact-visibility Keeps runtime membership and lookup derived only from the current compiler and source model populations.
- * @evidence specifications/authoring-and-authority/source-authority-and-derivation.md#spec-authoring-derivation-output-lineage Projects accepted source models into runtime lookup and enumeration without prototype-derived entries.
- * @evidence specifications/authoring-and-authority/source-authority-and-derivation.md#spec-authoring-source-ownership-failure Leaves unavailable and shadowed model identities distinguishable at the caller's diagnostic boundary.
+ * @evidence requirements/review/subject-inspection.md#review-subject-evidence Preserves every accepted current source model under the exact id its reviewed result declared.
+ * @evidence specifications/review-and-acceptance/subject-surface-and-inspection.md#review-system-subject-freshness Projects current source models into runtime lookup and enumeration without prototype-derived or unavailable entries.
  * @author Samchon
  */
 export const createAutoMovieSourceRuntimeModelRegistry = (
