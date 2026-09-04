@@ -76,6 +76,9 @@ export const test_production_library_map_materialization = (): void => {
       owner: LIBRARY_MAP_OWNER,
       anchor: LIBRARY_MAP_ANCHOR,
     });
+    const generated = AutoMovieProductionProject.openReadOnly(
+      fixture.root,
+    ).generatedManifest();
 
     TestValidator.equals(
       "an adopted world survives the compile and reopens for its owner",
@@ -118,12 +121,20 @@ export const test_production_library_map_materialization = (): void => {
             }
           },
         ],
+        [
+          "theGeneratedContextNamesItsExactMapOwner",
+          () =>
+            generated?.files
+              .find((file) => file.path === "library/contexts/hall-site.json")
+              ?.sourceTargets.join(",") === `library:maps:${LIBRARY_MAP_OWNER}`,
+        ],
       ]),
       {
         theCompileAcceptedTheContribution: true,
         theOwnerReadsBackTheWorldItAdopted: true,
         anOwnerThatAdoptedNoneReadsNone: true,
         anOwnerAddressedWithoutItsAnchorIsRefusedAsContexts: true,
+        theGeneratedContextNamesItsExactMapOwner: true,
       },
     );
     const index = JSON.parse(
@@ -165,9 +176,9 @@ export const test_production_library_map_materialization = (): void => {
     });
 
     TestValidator.equals(
-      "an index from before contexts existed still answers both readers",
+      "a context-only index from before contexts existed still answers both readers",
       { buildings: older.length !== 0, worlds: olderContexts.length },
-      { buildings: true, worlds: 0 },
+      { buildings: false, worlds: 0 },
     );
 
     fixture.write(

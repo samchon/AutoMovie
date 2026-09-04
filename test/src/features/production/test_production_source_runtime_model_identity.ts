@@ -1,6 +1,6 @@
+import { createAutoMovieSourceRuntimeModelRegistry } from "@automovie/production";
 import { TestValidator } from "@nestia/e2e";
 
-import { createAutoMovieSourceRuntimeModelRegistry } from "../../../../packages/production/src/production/sourceRuntimeModelRegistry";
 import { drawingBoxModel } from "../internal/drawingFixtures";
 import { namedFacts } from "../internal/predicates";
 

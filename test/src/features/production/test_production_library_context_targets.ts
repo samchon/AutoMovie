@@ -1,7 +1,7 @@
 import type { IAutoMovieMaterializedLibrary } from "@automovie/interface";
+import { autoMovieLibraryArtifactSourceTargets } from "@automovie/production";
 import { TestValidator } from "@nestia/e2e";
 
-import { autoMovieLibraryArtifactSourceTargets } from "../../../../packages/production/src/production/libraryArtifactTargets";
 import { namedFacts, throwsError } from "../internal/predicates";
 
 /**

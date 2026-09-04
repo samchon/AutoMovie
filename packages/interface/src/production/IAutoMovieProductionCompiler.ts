@@ -3552,7 +3552,7 @@ export interface IAutoMovieShotSourceOutput {
  */
 export interface IAutoMovieCompiledShotSource extends IAutoMovieShotSourceOutput {
   /**
-   * Exact graph-selected source export and authored H3 carried into the
+   * Exact graph-selected source export and authored unit carried into the
    * materialized shot. Omitted only for legacy source-scope callers that did
    * not supply authoring evidence; review and final never publish without it.
    *
@@ -3567,8 +3567,11 @@ export interface IAutoMovieCompiledShotSource extends IAutoMovieShotSourceOutput
     target: string;
   };
   /**
-   * Reviewed non-entry exports bound to the same H3, retained as acceptance
+   * Reviewed non-entry exports bound to the same unit, retained as acceptance
    * attribution without executing them as shot builders.
+   *
+   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-source-result-link Keeps reviewed acceptance attribution separate from the executed runtime source.
+   * @evidence specifications/authoring-and-authority/source-authority-and-derivation.md#spec-authoring-derivation-output-lineage Carries non-entry reviewed edges without promoting them to runtime ownership.
    */
   acceptanceSources?: Array<{
     path: string;
