@@ -4,6 +4,7 @@ import fs from "node:fs";
 import {
   createTestFileSystem,
   currentTestFileSystem,
+  productionTestFileSystem,
   withTestFileSystem,
 } from "../internal/testFileSystem";
 
@@ -14,11 +15,11 @@ export const test_production_file_system_dependency =
     const observed = await Promise.all([
       withTestFileSystem(first.fileSystem, async () => {
         await Promise.resolve();
-        return currentTestFileSystem().existsSync("isolated-first");
+        return productionTestFileSystem().existsSync("isolated-first");
       }),
       withTestFileSystem(second.fileSystem, async () => {
         await Promise.resolve();
-        return currentTestFileSystem().existsSync("isolated-second");
+        return productionTestFileSystem().existsSync("isolated-second");
       }),
     ]);
     TestValidator.equals(
