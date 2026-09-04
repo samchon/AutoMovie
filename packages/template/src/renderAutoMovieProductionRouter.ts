@@ -2,8 +2,13 @@ import type { IAutoMovieProductionEvidence } from "@automovie/evidence";
 
 type AutoMovieProductionRouterEvidence = Pick<
   IAutoMovieProductionEvidence,
-  "contracts" | "description" | "designOwners" | "manifest" | "packageName"
->;
+  "contracts" | "description" | "designOwners" | "packageName"
+> & {
+  manifest: Pick<
+    IAutoMovieProductionEvidence["manifest"],
+    "bindings" | "branches" | "kind" | "language" | "populationScope"
+  >;
+};
 
 /**
  * Render one generated project's root instruction router from tracked facts.

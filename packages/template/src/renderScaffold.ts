@@ -1,6 +1,5 @@
 import {
   type AutoMovieProductionLanguage,
-  createAutoMovieContractBindingManifest,
   createBlankAutoMovieProductionEvidence,
 } from "@automovie/evidence";
 import * as fs from "node:fs";
@@ -411,15 +410,20 @@ export const renderScaffold = (
     name: string;
     description?: string;
   };
+  const blank = createBlankAutoMovieProductionEvidence(root, props.language);
   Object.defineProperty(files, "AGENTS.md", {
     configurable: true,
     enumerable: true,
     value: renderAutoMovieProductionRouter({
       packageName: manifest.name,
       description: manifest.description?.trim() ?? "",
-      manifest: createAutoMovieContractBindingManifest(
-        createBlankAutoMovieProductionEvidence(".", props.language),
-      ),
+      manifest: {
+        kind: blank.kind,
+        language: blank.language,
+        populationScope: blank.populationScope,
+        branches: [],
+        bindings: [],
+      },
       designOwners: [],
       contracts: [],
     }),
