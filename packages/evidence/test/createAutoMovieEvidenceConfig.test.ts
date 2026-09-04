@@ -16,6 +16,10 @@ type Claim = NonNullable<Graph["claims"]>[number];
 type ContractManifest = ReturnType<
   typeof createAutoMovieContractBindingManifest
 >;
+type ResetScope = Extract<
+  AutoMoviePopulationScope,
+  { mode: "complete-production-reset" }
+>;
 
 const roots: string[] = [];
 
@@ -98,7 +102,7 @@ const disabled = (location: string): Graph => ({
 const filmResetScope = (
   location: string,
   hosts: readonly string[],
-): AutoMoviePopulationScope => ({
+): ResetScope => ({
   mode: "complete-production-reset",
   owner: "test-owner",
   transition: {
@@ -121,7 +125,7 @@ const filmResetScope = (
 const libraryResetScope = (
   location: string,
   hosts: readonly string[],
-): AutoMoviePopulationScope => ({
+): ResetScope => ({
   mode: "complete-production-reset",
   owner: "test-owner",
   transition: {
