@@ -50,7 +50,7 @@ export const loadRuntimePackageGeneration = <
   Module,
   CacheToken,
 >(props: {
-  /** Stable physical package/root key. */
+  /** Stable physical package and exact loader-entry key. */
   key: string;
   /** Physical snapshot generation identity. */
   generation: string;

@@ -50,7 +50,8 @@ const unit = loadSourceModule<{
  * 2. A different disk generation, a pre-existing cache entry, a replaced cache
  *    entry, and recursive loading all refuse without adopting an unattributed
  *    module.
- * 3. Equal versions at different physical roots remain independent keys.
+ * 3. Equal versions at different physical roots or exact entries remain
+ *    independent keys.
  * 4. A load failure before cache admission rolls back for a safe retry, while
  *    a failure or snapshot change that leaves a cache entry poisons the
  *    process generation.
@@ -161,6 +162,8 @@ export const test_cli_scaffold_runtime_package_generation =
     preloaded.cache = { identity: "unowned" };
     const otherRoot = fixture("codec\0/root/b");
     const otherHandle = load(otherRoot);
+    const otherEntry = fixture("codec\0/root/a/alternate-entry");
+    const otherEntryHandle = load(otherEntry);
     const recursive = fixture("codec\0/root/recursive");
     let recursiveRefusal = false;
     loadRuntimePackageGeneration({
@@ -180,7 +183,7 @@ export const test_cli_scaffold_runtime_package_generation =
       registry: recursive.registry,
     });
     TestValidator.equals(
-      "unowned, replaced, recursive, and sibling-root generations stay distinct",
+      "unowned, replaced, recursive, sibling-root, and sibling-entry generations stay distinct",
       namedFacts([
         [
           "diskReplacement",
@@ -200,12 +203,14 @@ export const test_cli_scaffold_runtime_package_generation =
         ],
         ["recursive", () => recursiveRefusal],
         ["otherRootLoaded", () => otherHandle.module.execution === 1],
+        ["otherEntryLoaded", () => otherEntryHandle.module.execution === 1],
       ]),
       {
         diskReplacement: true,
         preloaded: true,
         recursive: true,
         otherRootLoaded: true,
+        otherEntryLoaded: true,
       },
     );
 
