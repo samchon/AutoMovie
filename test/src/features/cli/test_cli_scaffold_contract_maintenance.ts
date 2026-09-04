@@ -94,8 +94,12 @@ export const test_cli_scaffold_contract_maintenance = (): void => {
   });
   TestValidator.equals(
     "migration publication closes target bytes before mutation",
-    { removals: publication.removals, writes: { ...publication.writes } },
-    { removals: [], writes: nextSources },
+    {
+      creations: { ...publication.creations },
+      removals: publication.removals,
+      replacements: { ...publication.replacements },
+    },
+    { creations: {}, removals: [], replacements: nextSources },
   );
   TestValidator.predicate(
     "migration publication refuses a source edited after planning",
@@ -141,10 +145,12 @@ export const test_cli_scaffold_contract_maintenance = (): void => {
   TestValidator.equals(
     "rename publication writes its target before retiring the exact source",
     {
+      creations: { ...renamePublication.creations },
       removals: renamePublication.removals,
-      writes: { ...renamePublication.writes },
+      replacements: { ...renamePublication.replacements },
     },
     {
+      creations: renamedTarget,
       removals: [
         {
           after: renamedTarget["docs/discovery/core/new.md"],
@@ -153,7 +159,7 @@ export const test_cli_scaffold_contract_maintenance = (): void => {
           target: "docs/discovery/core/new.md",
         },
       ],
-      writes: renamedTarget,
+      replacements: {},
     },
   );
   const occupiedRename = { ...renamedSource, ...renamedTarget };
@@ -182,10 +188,11 @@ export const test_cli_scaffold_contract_maintenance = (): void => {
   TestValidator.equals(
     "an already published rename target is adopted without rewriting it",
     {
+      creations: Object.keys(recoveredRename.creations),
       removals: recoveredRename.removals.length,
-      writes: Object.keys(recoveredRename.writes),
+      replacements: Object.keys(recoveredRename.replacements),
     },
-    { removals: 1, writes: [] },
+    { creations: [], removals: 1, replacements: [] },
   );
 
   const validFiles = {

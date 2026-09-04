@@ -10,8 +10,8 @@ import { parseAutoMovieEvidenceMarkdownHeadings } from "./parseAutoMovieEvidence
 /**
  * One immutable shared-contract file identity recorded by a generated project.
  *
- * @evidence requirements/operations-and-recovery/contract-migration.md#operations-contract-baseline-identity Retains the exact path, digest, and anchor inventory a later migration validates.
- * @evidence specifications/execution-and-recovery/contract-migration.md#execution-contract-baseline-identity Types one baseline member compared before migration completion.
+ * @evidence requirements/operations-and-recovery/contract-baseline.md#operations-contract-baseline-identity Retains the exact path, digest, and anchor inventory a later migration validates.
+ * @evidence specifications/execution-and-recovery/contract-baseline.md#execution-contract-baseline-identity Types one baseline member compared before migration completion.
  */
 export interface IAutoMovieContractBaselineFile {
   /** Stable H2 identities present in the recorded bytes. */
@@ -25,8 +25,8 @@ export interface IAutoMovieContractBaselineFile {
 /**
  * The scaffold contract generation an existing project last adopted.
  *
- * @evidence requirements/operations-and-recovery/contract-migration.md#operations-contract-baseline-identity Makes the adopted scaffold generation explicit instead of guessing from current files.
- * @evidence specifications/execution-and-recovery/contract-migration.md#execution-contract-baseline-identity Supplies the immutable baseline side of compatibility classification.
+ * @evidence requirements/operations-and-recovery/contract-baseline.md#operations-contract-baseline-identity Makes the adopted scaffold generation explicit instead of guessing from current files.
+ * @evidence specifications/execution-and-recovery/contract-baseline.md#execution-contract-baseline-identity Supplies the immutable baseline side of compatibility classification.
  */
 export interface IAutoMovieContractBaseline {
   /** Exact shared-contract inventory in code-unit path order. */
@@ -42,8 +42,8 @@ export interface IAutoMovieContractBaseline {
 /**
  * One exact byte mutation admitted by a migration plan.
  *
- * @evidence requirements/operations-and-recovery/contract-migration.md#operations-contract-migration-plan Restricts automatic work to explicit add, rename, or write decisions.
- * @evidence specifications/execution-and-recovery/contract-migration.md#execution-contract-migration-plan Carries the before identity and target bytes needed by apply.
+ * @evidence requirements/operations-and-recovery/contract-migration-plan.md#operations-contract-migration-plan Restricts automatic work to explicit add, rename, or write decisions.
+ * @evidence specifications/execution-and-recovery/contract-migration-plan.md#execution-contract-migration-plan Carries the before identity and target bytes needed by apply.
  */
 export type AutoMovieContractMigrationAction =
   | { action: "add"; after: string; path: string }
@@ -63,15 +63,15 @@ export type AutoMovieContractMigrationAction =
 /**
  * One migration condition that requires explicit author adjudication.
  *
- * @evidence requirements/operations-and-recovery/contract-migration.md#operations-contract-migration-plan Keeps partial or ambiguous work out of a successful result.
- * @evidence specifications/execution-and-recovery/contract-migration.md#execution-contract-migration-plan Names the exact unresolved class and affected path.
+ * @evidence requirements/operations-and-recovery/contract-migration-plan.md#operations-contract-migration-plan Keeps partial or ambiguous work out of a successful result.
+ * @evidence specifications/execution-and-recovery/contract-migration-plan.md#execution-contract-migration-plan Names the exact unresolved class and affected path.
  */
 export interface IAutoMovieContractMigrationConflict {
   /**
    * Closed conflict class used by an explicit adjudication flow.
    *
-   * @evidence requirements/operations-and-recovery/contract-migration.md#operations-contract-migration-plan Separates every unresolved migration condition from successful apply.
-   * @evidence specifications/execution-and-recovery/contract-migration.md#execution-contract-migration-plan Carries the machine-readable failure class for one affected path.
+   * @evidence requirements/operations-and-recovery/contract-migration-plan.md#operations-contract-migration-plan Separates every unresolved migration condition from successful apply.
+   * @evidence specifications/execution-and-recovery/contract-migration-plan.md#execution-contract-migration-plan Carries the machine-readable failure class for one affected path.
    */
   kind:
     | "local-modification"
@@ -83,15 +83,15 @@ export interface IAutoMovieContractMigrationConflict {
   /**
    * Project-relative contract path at which the conflict was observed.
    *
-   * @evidence requirements/operations-and-recovery/contract-migration.md#operations-contract-migration-plan Addresses the exact contract requiring adjudication.
-   * @evidence specifications/execution-and-recovery/contract-migration.md#execution-contract-migration-plan Keeps a conflict inside the validated shared-contract inventory.
+   * @evidence requirements/operations-and-recovery/contract-migration-plan.md#operations-contract-migration-plan Addresses the exact contract requiring adjudication.
+   * @evidence specifications/execution-and-recovery/contract-migration-plan.md#execution-contract-migration-plan Keeps a conflict inside the validated shared-contract inventory.
    */
   path: string;
   /**
    * Human-readable reason that names the unresolved state.
    *
-   * @evidence requirements/operations-and-recovery/contract-migration.md#operations-contract-migration-plan Explains why the migration cannot claim complete success.
-   * @evidence specifications/execution-and-recovery/contract-migration.md#execution-contract-migration-plan Reports the observed mismatch beside its classification and path.
+   * @evidence requirements/operations-and-recovery/contract-migration-plan.md#operations-contract-migration-plan Explains why the migration cannot claim complete success.
+   * @evidence specifications/execution-and-recovery/contract-migration-plan.md#execution-contract-migration-plan Reports the observed mismatch beside its classification and path.
    */
   reason: string;
 }
@@ -99,43 +99,43 @@ export interface IAutoMovieContractMigrationConflict {
 /**
  * One closed migration decision reused by dry-run and apply.
  *
- * @evidence requirements/operations-and-recovery/contract-migration.md#operations-contract-migration-plan Prevents apply from silently recomputing a different migration.
- * @evidence specifications/execution-and-recovery/contract-migration.md#execution-contract-migration-plan Carries both explicit actions and unresolved conflicts between generations.
+ * @evidence requirements/operations-and-recovery/contract-migration-plan.md#operations-contract-migration-plan Prevents apply from silently recomputing a different migration.
+ * @evidence specifications/execution-and-recovery/contract-migration-plan.md#execution-contract-migration-plan Carries both explicit actions and unresolved conflicts between generations.
  */
 export interface IAutoMovieContractMigrationPlan {
   /**
    * Exact ordered mutations admitted by the planner.
    *
-   * @evidence requirements/operations-and-recovery/contract-migration.md#operations-contract-migration-plan Limits apply to the inspected conflict-free decisions.
-   * @evidence specifications/execution-and-recovery/contract-migration.md#execution-contract-migration-plan Carries add, write, and unambiguous rename actions in canonical order.
+   * @evidence requirements/operations-and-recovery/contract-migration-plan.md#operations-contract-migration-plan Limits apply to the inspected conflict-free decisions.
+   * @evidence specifications/execution-and-recovery/contract-migration-plan.md#execution-contract-migration-plan Carries add, write, and unambiguous rename actions in canonical order.
    */
   actions: readonly AutoMovieContractMigrationAction[];
   /**
    * Exact ordered conditions that prevent automatic apply.
    *
-   * @evidence requirements/operations-and-recovery/contract-migration.md#operations-contract-migration-plan Prevents a partial or ambiguous plan from becoming success.
-   * @evidence specifications/execution-and-recovery/contract-migration.md#execution-contract-migration-plan Preserves every unresolved path for explicit adjudication.
+   * @evidence requirements/operations-and-recovery/contract-migration-plan.md#operations-contract-migration-plan Prevents a partial or ambiguous plan from becoming success.
+   * @evidence specifications/execution-and-recovery/contract-migration-plan.md#execution-contract-migration-plan Preserves every unresolved path for explicit adjudication.
    */
   conflicts: readonly IAutoMovieContractMigrationConflict[];
   /**
    * Recorded scaffold contract generation being migrated.
    *
-   * @evidence requirements/operations-and-recovery/contract-migration.md#operations-contract-migration-plan Retains the predecessor identity in the plan.
-   * @evidence specifications/execution-and-recovery/contract-migration.md#execution-contract-migration-plan Names the immutable source generation.
+   * @evidence requirements/operations-and-recovery/contract-migration-plan.md#operations-contract-migration-plan Retains the predecessor identity in the plan.
+   * @evidence specifications/execution-and-recovery/contract-migration-plan.md#execution-contract-migration-plan Names the immutable source generation.
    */
   fromVersion: string;
   /**
    * Portable migration-plan protocol.
    *
-   * @evidence requirements/operations-and-recovery/contract-migration.md#operations-contract-migration-plan Makes the decision record interpretable across invocations.
-   * @evidence specifications/execution-and-recovery/contract-migration.md#execution-contract-migration-plan Identifies the supported plan shape.
+   * @evidence requirements/operations-and-recovery/contract-migration-plan.md#operations-contract-migration-plan Makes the decision record interpretable across invocations.
+   * @evidence specifications/execution-and-recovery/contract-migration-plan.md#execution-contract-migration-plan Identifies the supported plan shape.
    */
   protocol: "automovie.contract-migration-plan.v1";
   /**
    * Installed scaffold contract generation selected as the target.
    *
-   * @evidence requirements/operations-and-recovery/contract-migration.md#operations-contract-migration-plan Retains the successor identity without rewriting the predecessor plan.
-   * @evidence specifications/execution-and-recovery/contract-migration.md#execution-contract-migration-plan Names the validated target generation.
+   * @evidence requirements/operations-and-recovery/contract-migration-plan.md#operations-contract-migration-plan Retains the successor identity without rewriting the predecessor plan.
+   * @evidence specifications/execution-and-recovery/contract-migration-plan.md#execution-contract-migration-plan Names the validated target generation.
    */
   toVersion: string;
 }
@@ -167,8 +167,8 @@ const PORTABLE_RESERVED_CHARACTER = /[<>:"|?*\u0000-\u001f]/u;
  * Whether one project-relative path belongs to the portable shared-contract
  * inventory a generated project's baseline may authorize.
  *
- * @evidence requirements/operations-and-recovery/contract-migration.md#operations-contract-baseline-identity Refuses a baseline path that could address project-external or non-contract bytes.
- * @evidence specifications/execution-and-recovery/contract-migration.md#execution-contract-baseline-identity Restricts migration identities to normalized shared-contract Markdown paths.
+ * @evidence requirements/operations-and-recovery/contract-baseline.md#operations-contract-baseline-identity Refuses a baseline path that could address project-external or non-contract bytes.
+ * @evidence specifications/execution-and-recovery/contract-baseline.md#execution-contract-baseline-identity Restricts migration identities to normalized shared-contract Markdown paths.
  */
 export const isAutoMovieContractTargetPath = (value: string): boolean => {
   if (
@@ -314,8 +314,8 @@ const validateContractBaseline = (
  * Parse and validate one persisted contract baseline before any path in it is
  * used for project I/O.
  *
- * @evidence requirements/operations-and-recovery/contract-migration.md#operations-contract-baseline-identity Rejects malformed or path-escaping recorded generations before migration inspection.
- * @evidence specifications/execution-and-recovery/contract-migration.md#execution-contract-baseline-identity Produces a closed portable baseline value from untrusted JSON bytes.
+ * @evidence requirements/operations-and-recovery/contract-baseline.md#operations-contract-baseline-identity Rejects malformed or path-escaping recorded generations before migration inspection.
+ * @evidence specifications/execution-and-recovery/contract-baseline.md#execution-contract-baseline-identity Produces a closed portable baseline value from untrusted JSON bytes.
  */
 export const parseAutoMovieContractBaseline = (
   source: string,
@@ -337,8 +337,8 @@ export const parseAutoMovieContractBaseline = (
 /**
  * Build the portable baseline receipt from exact target bytes.
  *
- * @evidence requirements/operations-and-recovery/contract-migration.md#operations-contract-baseline-identity Records the complete source inventory migration will later compare.
- * @evidence specifications/execution-and-recovery/contract-migration.md#execution-contract-baseline-identity Derives stable path, anchor, and digest identities from current target bytes.
+ * @evidence requirements/operations-and-recovery/contract-baseline.md#operations-contract-baseline-identity Records the complete source inventory migration will later compare.
+ * @evidence specifications/execution-and-recovery/contract-baseline.md#execution-contract-baseline-identity Derives stable path, anchor, and digest identities from current target bytes.
  */
 export const createAutoMovieContractBaseline = (props: {
   files: Readonly<Record<string, string>>;
@@ -375,8 +375,8 @@ export const createAutoMovieContractBaseline = (props: {
  * Exact baseline bytes may be replaced. Authored divergence, anchor removal,
  * ambiguous rename identity, and occupied targets remain explicit conflicts.
  *
- * @evidence requirements/operations-and-recovery/contract-migration.md#operations-contract-migration-plan Preserves authored divergence and reports every unresolved contract identity before mutation.
- * @evidence specifications/execution-and-recovery/contract-migration.md#execution-contract-migration-plan Produces one immutable source-to-target plan whose actions retain exact source and target identities.
+ * @evidence requirements/operations-and-recovery/contract-migration-plan.md#operations-contract-migration-plan Preserves authored divergence and reports every unresolved contract identity before mutation.
+ * @evidence specifications/execution-and-recovery/contract-migration-plan.md#execution-contract-migration-plan Produces one immutable source-to-target plan whose actions retain exact source and target identities.
  */
 export const planAutoMovieContractMigration = (props: {
   current: Readonly<Record<string, string>>;
@@ -388,6 +388,14 @@ export const planAutoMovieContractMigration = (props: {
   const to = baselineMap(props.to);
   if (props.from.language !== props.to.language)
     throw new Error("Contract migration cannot change production language.");
+  if (
+    props.from.version === props.to.version &&
+    JSON.stringify(canonicalBaseline(props.from)) !==
+      JSON.stringify(canonicalBaseline(props.to))
+  )
+    throw new Error(
+      "One contract generation cannot identify different baseline inventories.",
+    );
   const targetPaths = Object.keys(props.targetSources);
   for (const relative of targetPaths) assertContractPath(relative);
   if (
@@ -555,8 +563,8 @@ export const planAutoMovieContractMigration = (props: {
 /**
  * Apply one already-decided plan to the exact current byte map.
  *
- * @evidence requirements/operations-and-recovery/contract-migration.md#operations-contract-migration-plan Refuses conflicts and changed source bytes before deriving replacement output.
- * @evidence specifications/execution-and-recovery/contract-migration.md#execution-contract-migration-plan Executes only the actions frozen by the inspected plan.
+ * @evidence requirements/operations-and-recovery/contract-migration-plan.md#operations-contract-migration-plan Refuses conflicts and changed source bytes before deriving replacement output.
+ * @evidence specifications/execution-and-recovery/contract-migration-plan.md#execution-contract-migration-plan Executes only the actions frozen by the inspected plan.
  */
 export const applyAutoMovieContractMigrationPlan = (
   plan: IAutoMovieContractMigrationPlan,
@@ -594,8 +602,8 @@ export const applyAutoMovieContractMigrationPlan = (
 /**
  * One source path retired only after its target bytes are published.
  *
- * @evidence requirements/operations-and-recovery/contract-migration.md#operations-contract-migration-publication Preserves the exact source until its validated rename target exists.
- * @evidence specifications/execution-and-recovery/contract-migration.md#execution-contract-migration-publication Carries both generations needed by target-first rename execution.
+ * @evidence requirements/operations-and-recovery/contract-migration-publication.md#operations-contract-migration-publication Preserves the exact source until its validated rename target exists.
+ * @evidence specifications/execution-and-recovery/contract-migration-publication.md#execution-contract-migration-publication Carries both generations needed by target-first rename execution.
  */
 export interface IAutoMovieContractMigrationRemoval {
   /** Exact bytes that must occupy the published rename target. */
@@ -611,14 +619,16 @@ export interface IAutoMovieContractMigrationRemoval {
 /**
  * Closed file mutations derived from a still-current migration plan.
  *
- * @evidence requirements/operations-and-recovery/contract-migration.md#operations-contract-migration-publication Separates complete target publication from later source retirement.
- * @evidence specifications/execution-and-recovery/contract-migration.md#execution-contract-migration-publication Makes the target candidate and exact rename consequences explicit before mutation.
+ * @evidence requirements/operations-and-recovery/contract-migration-publication.md#operations-contract-migration-publication Separates complete target publication from later source retirement.
+ * @evidence specifications/execution-and-recovery/contract-migration-publication.md#execution-contract-migration-publication Makes the target candidate and exact rename consequences explicit before mutation.
  */
 export interface IAutoMovieContractMigrationPublication {
+  /** New target slots that must retain exclusive no-overwrite semantics. */
+  creations: Readonly<Record<string, string>>;
   /** Rename sources retired after every target write completes. */
   removals: readonly IAutoMovieContractMigrationRemoval[];
-  /** Complete target byte candidate published before any source is retired. */
-  writes: Readonly<Record<string, string>>;
+  /** Existing exact source slots explicitly admitted for replacement. */
+  replacements: Readonly<Record<string, string>>;
 }
 
 const actionPaths = (
@@ -630,8 +640,8 @@ const actionPaths = (
  * Revalidate a migration plan against a new observation and close its complete
  * target candidate before a caller performs filesystem mutation.
  *
- * @evidence requirements/operations-and-recovery/contract-migration.md#operations-contract-migration-publication Refuses a changed source or competitor before publishing target bytes or retiring a rename source.
- * @evidence specifications/execution-and-recovery/contract-migration.md#execution-contract-migration-publication Derives target-first writes and exact rename-source retirements from one inspected plan.
+ * @evidence requirements/operations-and-recovery/contract-migration-publication.md#operations-contract-migration-publication Refuses a changed source or competitor before publishing target bytes or retiring a rename source.
+ * @evidence specifications/execution-and-recovery/contract-migration-publication.md#execution-contract-migration-publication Derives target-first writes and exact rename-source retirements from one inspected plan.
  */
 export const planAutoMovieContractMigrationPublication = (props: {
   current: Readonly<Record<string, string>>;
@@ -648,11 +658,14 @@ export const planAutoMovieContractMigrationPublication = (props: {
     props.plan,
     props.observed,
   );
-  const writes = Object.create(null) as Record<string, string>;
+  const creations = Object.create(null) as Record<string, string>;
+  const replacements = Object.create(null) as Record<string, string>;
   const removals: IAutoMovieContractMigrationRemoval[] = [];
   for (const action of props.plan.actions) {
     const source = migrated[action.path]!;
-    if (props.observed[action.path] !== source) writes[action.path] = source;
+    if (props.observed[action.path] !== source)
+      (action.action === "write" ? replacements : creations)[action.path] =
+        source;
     if (action.action === "rename")
       removals.push(
         Object.freeze({
@@ -664,7 +677,262 @@ export const planAutoMovieContractMigrationPublication = (props: {
       );
   }
   return Object.freeze({
+    creations: Object.freeze(creations),
     removals: Object.freeze(removals),
-    writes: Object.freeze(writes),
+    replacements: Object.freeze(replacements),
+  });
+};
+
+/**
+ * One target publication outcome admitted into a durable migration receipt.
+ *
+ * @evidence requirements/operations-and-recovery/contract-migration-publication.md#operations-contract-migration-publication Records the exact successor result before predecessor retirement.
+ * @evidence specifications/execution-and-recovery/contract-migration-publication.md#execution-contract-migration-publication Carries canonical before, after, source, target, and status fields for one action.
+ */
+export interface IAutoMovieContractMigrationActionOutcome {
+  /** Planned action kind. */
+  action: AutoMovieContractMigrationAction["action"];
+  /** Published target byte identity. */
+  afterSha256: string;
+  /** Previous source byte identity, or null for a new target. */
+  beforeSha256: string | null;
+  /** Rename source path, or null for add and write. */
+  from: string | null;
+  /** Published target path. */
+  path: string;
+  /** Target publication and validation completed. */
+  status: "published" | "incomplete" | "failed";
+}
+
+/**
+ * One immutable project-relative migration record ready for publication.
+ *
+ * @evidence requirements/operations-and-recovery/contract-migration-publication.md#operations-contract-migration-publication Makes each durable migration record an explicit candidate.
+ * @evidence specifications/execution-and-recovery/contract-migration-publication.md#execution-contract-migration-publication Carries canonical bytes beside their append-only project path.
+ */
+export interface IAutoMovieContractMigrationArtifact {
+  /** Append-only project-relative publication path. */
+  path: string;
+  /** Canonical UTF-8 JSON source ending in one LF. */
+  source: string;
+}
+
+/**
+ * Durable predecessor and receipt candidate published before baseline update.
+ *
+ * @evidence requirements/operations-and-recovery/contract-migration-publication.md#operations-contract-migration-publication Keeps the old baseline and successor receipt durable together before pointer replacement.
+ * @evidence specifications/execution-and-recovery/contract-migration-publication.md#execution-contract-migration-publication Defines the two append-only records consumed by baseline-last publication.
+ */
+export interface IAutoMovieContractMigrationReceiptArtifacts {
+  /** Exact predecessor baseline preserved independently of its mutable pointer. */
+  predecessor: IAutoMovieContractMigrationArtifact;
+  /** Canonical target-publication receipt. */
+  receipt: IAutoMovieContractMigrationArtifact;
+}
+
+const canonicalBaseline = (
+  baseline: IAutoMovieContractBaseline,
+): IAutoMovieContractBaseline => {
+  validateContractBaseline(baseline);
+  return {
+    files: baseline.files.map((file) => ({
+      anchors: [...file.anchors],
+      path: file.path,
+      sha256: file.sha256,
+    })),
+    language: baseline.language,
+    protocol: baseline.protocol,
+    version: baseline.version,
+  };
+};
+
+const canonicalAction = (
+  action: AutoMovieContractMigrationAction,
+): Record<string, unknown> =>
+  action.action === "add"
+    ? { action: action.action, after: action.after, path: action.path }
+    : action.action === "rename"
+      ? {
+          action: action.action,
+          beforeSha256: action.beforeSha256,
+          from: action.from,
+          path: action.path,
+        }
+      : {
+          action: action.action,
+          after: action.after,
+          beforeSha256: action.beforeSha256,
+          path: action.path,
+        };
+
+const canonicalPlan = (
+  plan: IAutoMovieContractMigrationPlan,
+): Record<string, unknown> => ({
+  actions: plan.actions.map(canonicalAction),
+  conflicts: plan.conflicts.map((conflict) => ({
+    kind: conflict.kind,
+    path: conflict.path,
+    reason: conflict.reason,
+  })),
+  fromVersion: plan.fromVersion,
+  protocol: plan.protocol,
+  toVersion: plan.toVersion,
+});
+
+const baselineIdentity = (baseline: IAutoMovieContractBaseline): string =>
+  digest(JSON.stringify(canonicalBaseline(baseline)));
+
+const observedInputIdentity = (
+  observed: Readonly<Record<string, string>>,
+): string =>
+  digest(
+    JSON.stringify(
+      Object.keys(observed)
+        .sort(compare)
+        .map((relative) => {
+          assertContractPath(relative);
+          return { path: relative, sha256: digest(observed[relative]!) };
+        }),
+    ),
+  );
+
+const expectedActionOutcomes = (props: {
+  from: Map<string, IAutoMovieContractBaselineFile>;
+  observed: Readonly<Record<string, string>>;
+  plan: IAutoMovieContractMigrationPlan;
+  to: Map<string, IAutoMovieContractBaselineFile>;
+}): IAutoMovieContractMigrationActionOutcome[] =>
+  props.plan.actions.map((action) => {
+    const target = props.to.get(action.path);
+    if (target === undefined)
+      throw new Error(
+        `Contract migration action has no target: ${action.path}.`,
+      );
+    const sourcePath = action.action === "rename" ? action.from : action.path;
+    const source = props.from.get(sourcePath);
+    if (action.action === "add") {
+      if (source !== undefined || props.observed[action.path] !== undefined)
+        throw new Error(`Contract migration add is not new: ${action.path}.`);
+    } else if (
+      source === undefined ||
+      source.sha256 !== action.beforeSha256 ||
+      props.observed[sourcePath] === undefined ||
+      digest(props.observed[sourcePath]!) !== action.beforeSha256
+    )
+      throw new Error(
+        `Contract migration action changed source: ${sourcePath}.`,
+      );
+    const afterSha256 =
+      action.action === "rename" ? action.beforeSha256 : digest(action.after);
+    if (target.sha256 !== afterSha256)
+      throw new Error(
+        `Contract migration action changed target: ${action.path}.`,
+      );
+    return {
+      action: action.action,
+      afterSha256,
+      beforeSha256: action.action === "add" ? null : action.beforeSha256,
+      from: action.action === "rename" ? action.from : null,
+      path: action.path,
+      status: "published",
+    };
+  });
+
+const canonicalOutcome = (
+  outcome: IAutoMovieContractMigrationActionOutcome,
+): IAutoMovieContractMigrationActionOutcome => ({
+  action: outcome.action,
+  afterSha256: outcome.afterSha256,
+  beforeSha256: outcome.beforeSha256,
+  from: outcome.from,
+  path: outcome.path,
+  status: outcome.status,
+});
+
+const publicationGeneration = (value: string): string => {
+  if (
+    value.length > 120 ||
+    !/^[a-z0-9]+(?:[a-z0-9.-]*[a-z0-9])?$/u.test(value) ||
+    PORTABLE_RESERVED_NAME.test(value)
+  )
+    throw new Error(
+      "Contract migration publication generation is not one portable segment.",
+    );
+  return value;
+};
+
+/**
+ * Render the append-only receipt and predecessor baseline artifacts for one
+ * completely validated successor-target publication.
+ *
+ * @evidence requirements/operations-and-recovery/contract-migration-publication.md#operations-contract-migration-publication Preserves the predecessor and exact target-publication receipt before the baseline pointer changes.
+ * @evidence specifications/execution-and-recovery/contract-migration-publication.md#execution-contract-migration-publication Derives deterministic content-addressed record paths from canonical identities and refuses incomplete validation.
+ */
+export const createAutoMovieContractMigrationReceiptArtifacts = (props: {
+  from: IAutoMovieContractBaseline;
+  observed: Readonly<Record<string, string>>;
+  outcomes: readonly IAutoMovieContractMigrationActionOutcome[];
+  plan: IAutoMovieContractMigrationPlan;
+  publicationGeneration: string;
+  to: IAutoMovieContractBaseline;
+  validation: "completed" | "incomplete" | "failed";
+}): IAutoMovieContractMigrationReceiptArtifacts => {
+  const from = baselineMap(props.from);
+  const to = baselineMap(props.to);
+  if (
+    props.validation !== "completed" ||
+    props.plan.protocol !== "automovie.contract-migration-plan.v1" ||
+    props.plan.conflicts.length !== 0 ||
+    props.plan.fromVersion !== props.from.version ||
+    props.plan.toVersion !== props.to.version ||
+    props.from.language !== props.to.language
+  )
+    throw new Error(
+      "Contract migration receipt requires one completed compatible plan.",
+    );
+  const expected = expectedActionOutcomes({
+    from,
+    observed: props.observed,
+    plan: props.plan,
+    to,
+  });
+  const outcomes = props.outcomes.map(canonicalOutcome);
+  if (
+    outcomes.some((outcome) => outcome.status !== "published") ||
+    JSON.stringify(outcomes) !== JSON.stringify(expected)
+  )
+    throw new Error(
+      "Contract migration receipt outcomes do not match the completed plan.",
+    );
+  const generation = publicationGeneration(props.publicationGeneration);
+  const fromIdentity = baselineIdentity(props.from);
+  const toIdentity = baselineIdentity(props.to);
+  const predecessorSource = `${JSON.stringify(canonicalBaseline(props.from), null, 2)}\n`;
+  const receiptSource = `${JSON.stringify(
+    {
+      actions: outcomes,
+      from: { identity: fromIdentity, version: props.from.version },
+      language: props.from.language,
+      observedInputDigest: observedInputIdentity(props.observed),
+      planDigest: digest(JSON.stringify(canonicalPlan(props.plan))),
+      protocol: "automovie.contract-migration-receipt.v1",
+      publicationGeneration: generation,
+      to: { identity: toIdentity, version: props.to.version },
+      validation: { status: "completed", targetBaselineIdentity: toIdentity },
+      version: 1,
+    },
+    null,
+    2,
+  )}\n`;
+  const root = `automovie/contract-migrations/${generation}`;
+  return freeze({
+    predecessor: {
+      path: `${root}/${fromIdentity.slice("sha256:".length)}.baseline.json`,
+      source: predecessorSource,
+    },
+    receipt: {
+      path: `${root}/${digest(receiptSource).slice("sha256:".length)}.receipt.json`,
+      source: receiptSource,
+    },
   });
 };

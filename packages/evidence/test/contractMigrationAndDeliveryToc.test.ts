@@ -5,6 +5,7 @@ import {
   AUTO_MOVIE_DELIVERY_TOC_START,
   applyAutoMovieContractMigrationPlan,
   createAutoMovieContractBaseline,
+  createAutoMovieContractMigrationReceiptArtifacts,
   isAutoMovieContractTargetPath,
   parseAutoMovieContractBaseline,
   planAutoMovieContractMigration,
@@ -27,11 +28,13 @@ const target = {
   "docs/discovery/added.md": "# Added\n\n## Added {#added}\n",
   "docs/discovery/renamed.md": original["docs/discovery/rename.md"],
 };
+const originalBaseline = baseline("1", original);
+const targetBaseline = baseline("2", target);
 const plan = planAutoMovieContractMigration({
   current: original,
-  from: baseline("1", original),
+  from: originalBaseline,
   targetSources: target,
-  to: baseline("2", target),
+  to: targetBaseline,
 });
 assert.deepEqual(
   plan.actions.map((action) => action.action),
@@ -47,6 +50,97 @@ assert.equal(
     parseAutoMovieContractBaseline(JSON.stringify(baseline("2", target))),
   ),
   true,
+);
+const outcomesOf = (
+  migration: typeof plan,
+  targetGeneration: typeof targetBaseline,
+) =>
+  migration.actions.map((action) => ({
+    action: action.action,
+    afterSha256: targetGeneration.files.find(
+      (file) => file.path === action.path,
+    )!.sha256,
+    beforeSha256: action.action === "add" ? null : action.beforeSha256,
+    from: action.action === "rename" ? action.from : null,
+    path: action.path,
+    status: "published" as const,
+  }));
+const receiptProps = {
+  from: originalBaseline,
+  observed: original,
+  outcomes: outcomesOf(plan, targetBaseline),
+  plan,
+  publicationGeneration: "generation-a",
+  to: targetBaseline,
+  validation: "completed" as const,
+};
+const receipt = createAutoMovieContractMigrationReceiptArtifacts(receiptProps);
+assert.deepEqual(
+  createAutoMovieContractMigrationReceiptArtifacts(receiptProps),
+  receipt,
+);
+assert.match(
+  receipt.predecessor.path,
+  /^automovie\/contract-migrations\/generation-a\/[0-9a-f]{64}\.baseline\.json$/u,
+);
+assert.match(
+  receipt.receipt.path,
+  /^automovie\/contract-migrations\/generation-a\/[0-9a-f]{64}\.receipt\.json$/u,
+);
+assert.equal(
+  receipt.predecessor.source,
+  `${JSON.stringify(originalBaseline, null, 2)}\n`,
+);
+assert.equal(JSON.parse(receipt.receipt.source).validation.status, "completed");
+assert.notEqual(
+  createAutoMovieContractMigrationReceiptArtifacts({
+    ...receiptProps,
+    publicationGeneration: "generation-b",
+  }).receipt.path,
+  receipt.receipt.path,
+);
+const changedTarget = {
+  ...target,
+  "docs/discovery/added.md": "# Added\n\n## Added {#added}\n\nChanged.\n",
+};
+const changedBaseline = baseline("3", changedTarget);
+const changedPlan = planAutoMovieContractMigration({
+  current: original,
+  from: originalBaseline,
+  targetSources: changedTarget,
+  to: changedBaseline,
+});
+assert.notEqual(
+  createAutoMovieContractMigrationReceiptArtifacts({
+    from: originalBaseline,
+    observed: original,
+    outcomes: outcomesOf(changedPlan, changedBaseline),
+    plan: changedPlan,
+    publicationGeneration: "generation-a",
+    to: changedBaseline,
+    validation: "completed",
+  }).receipt.path,
+  receipt.receipt.path,
+);
+assert.throws(() =>
+  createAutoMovieContractMigrationReceiptArtifacts({
+    ...receiptProps,
+    validation: "incomplete",
+  }),
+);
+assert.throws(() =>
+  createAutoMovieContractMigrationReceiptArtifacts({
+    ...receiptProps,
+    publicationGeneration: "con",
+  }),
+);
+assert.throws(() =>
+  createAutoMovieContractMigrationReceiptArtifacts({
+    ...receiptProps,
+    outcomes: receiptProps.outcomes.map((outcome, index) =>
+      index === 0 ? { ...outcome, status: "failed" as const } : outcome,
+    ),
+  }),
 );
 assert.deepEqual(
   planAutoMovieContractMigration({
@@ -124,6 +218,14 @@ assert.throws(() =>
       language: "korean",
       version: "2",
     }),
+  }),
+);
+assert.throws(() =>
+  planAutoMovieContractMigration({
+    current: original,
+    from: baseline("1", original),
+    targetSources: target,
+    to: baseline("1", target),
   }),
 );
 
