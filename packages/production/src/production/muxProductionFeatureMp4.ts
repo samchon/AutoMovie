@@ -1,6 +1,7 @@
 import type { IAutoMovieFilmTimeline } from "@automovie/interface";
 import type {
   Box,
+  DataStream,
   IsoFileOptions,
   Movie,
   Sample,
@@ -32,14 +33,26 @@ export const muxProductionFeatureMp4 = (props: {
   const audio = parseMp4(props.audio);
   const videoTrack = video.movie.videoTracks[0]!;
   const audioTrack = audio.movie.audioTracks[0]!;
+  if (videoProbe.kind !== "video" || audioProbe.kind !== "audio")
+    throw new Error("Feature mux requires one parsed video and audio track.");
   if (
-    videoProbe.kind !== "video" ||
-    audioProbe.kind !== "audio" ||
-    videoProbe.runtimeSeconds !== audioProbe.runtimeSeconds
+    exactClockProduct(
+      videoProbe.presentation.movieDuration,
+      audioProbe.timebase.movieTimescale,
+    ) !==
+    exactClockProduct(
+      audioProbe.timebase.movieDuration,
+      videoProbe.presentation.movieTimescale,
+    )
   )
     throw new Error(
       "Feature mux requires byte sources with exactly equal track runtimes.",
     );
+  const presentationSamples = exactPresentationTicks(
+    audioProbe.timebase.movieDuration,
+    audioProbe.timebase.movieTimescale,
+    audioProbe.sampleRate,
+  );
   const output = residentMp4Box().createFile();
   output.init({
     brands: ["isom", "iso2", "mp41", "Opus"],
@@ -66,9 +79,7 @@ export const muxProductionFeatureMp4 = (props: {
     mediaTimescale: audioTrack.timescale,
     movieTimescale: videoTrack.timescale,
     primingSamples: audioProbe.primingSamples,
-    presentationSamples: Math.round(
-      audioProbe.runtimeSeconds * audioProbe.sampleRate,
-    ),
+    presentationSamples,
   });
   const bytes = new Uint8Array(output.getBuffer().buffer);
   probeProductionMedia({
@@ -77,6 +88,102 @@ export const muxProductionFeatureMp4 = (props: {
     bytes,
   });
   return bytes;
+};
+
+/**
+ * Preserve one H.264 elementary stream while adding the explicit sRGB sample
+ * description required by every final production picture.
+ */
+export const normalizeProductionH264Mp4 = (bytes: Uint8Array): Uint8Array => {
+  const source = parseMp4(bytes);
+  const track = source.movie.videoTracks[0];
+  if (track === undefined || source.movie.tracks.length !== 1)
+    throw new Error("H.264 normalization requires exactly one video track.");
+  const samples = source.file.getTrackSamplesInfo(track.id);
+  if (samples.length === 0)
+    throw new Error("H.264 normalization requires resident video samples.");
+  const description = sampleDescription(samples[0]!);
+  const output = residentMp4Box().createFile();
+  output.init({
+    brands: ["isom", "iso2", "mp41"],
+    timescale: track.timescale,
+    duration: track.duration,
+  });
+  const outputTrack = output.addTrack({
+    type: description.type,
+    hdlr: "vide",
+    name: "AutoMovie explicit sRGB H.264",
+    timescale: track.timescale,
+    media_duration: track.duration,
+    duration: track.duration,
+    width: track.video!.width,
+    height: track.video!.height,
+    language: track.language,
+    description_boxes: [
+      ...description.boxes.filter((box) => box.type !== "colr"),
+      productionSrgbColorBox(),
+    ],
+  });
+  for (const sample of samples)
+    output.addSample(
+      outputTrack,
+      Uint8Array.from(
+        bytes.subarray(sample.offset, sample.offset + sample.size),
+      ),
+      sampleOptions(sample),
+    );
+  const normalized = new Uint8Array(output.getBuffer().buffer);
+  probeProductionVideoMp4(normalized);
+  return normalized;
+};
+
+/** Writable nclx box because the installed parser exposes no colr writer. */
+const productionSrgbColorBox = (): Box => {
+  const box = new (residentMp4Box().BoxParser.box.colr)();
+  box.write = function (stream: DataStream): void {
+    this.size = 11;
+    this.writeHeader(stream);
+    stream.writeString("nclx");
+    stream.writeUint16(1);
+    stream.writeUint16(13);
+    stream.writeUint16(1);
+    stream.writeUint8(0x80);
+  };
+  return box;
+};
+
+const exactClockProduct = (left: number, right: number): bigint => {
+  if (
+    Number.isSafeInteger(left) === false ||
+    left <= 0 ||
+    Number.isSafeInteger(right) === false ||
+    right <= 0
+  )
+    throw new Error("MP4 presentation clocks must be positive safe integers.");
+  return BigInt(left) * BigInt(right);
+};
+
+const exactPresentationTicks = (
+  duration: number,
+  timescale: number,
+  destinationTimescale: number,
+): number => {
+  const numerator = exactClockProduct(duration, destinationTimescale);
+  if (Number.isSafeInteger(timescale) === false || timescale <= 0)
+    throw new Error(
+      "MP4 presentation timescale must be a positive safe integer.",
+    );
+  const denominator = BigInt(timescale);
+  if (numerator % denominator !== 0n)
+    throw new Error(
+      "Audio presentation duration is not an exact integer sample boundary.",
+    );
+  const quotient = numerator / denominator;
+  if (quotient > BigInt(Number.MAX_SAFE_INTEGER))
+    throw new Error(
+      "Audio presentation sample count exceeds the safe integer domain.",
+    );
+  return Number(quotient);
 };
 
 /**

@@ -1,3 +1,4 @@
+import { resolveProductionFrameRate } from "@automovie/engine";
 import type { IAutoMovieProductionEvidence } from "@automovie/evidence";
 import type {
   AutoMovieContentDigest,
@@ -13,6 +14,9 @@ import {
   type IAutoMovieProductionRenderChunk,
   type IAutoMovieProductionRenderJobPlan,
   assembleProductionChunkVideoMp4,
+  assertProductionOpusProfile,
+  assertProductionPngPicture,
+  assertProductionVideoProfile,
   canonicalAutoMovieCaptureRuntimeIdentity,
   canonicalAutoMovieJsonBytes,
   conformProductionRenditionVideoMp4,
@@ -23,7 +27,10 @@ import {
   probeProductionMedia,
   productionPublicationInputFingerprint,
   readAutoMovieFilmTimeline,
+  resolveProductionPngProfile,
+  resolveProductionVideoProfile,
   sampleProductionRenderFrame,
+  verifyProductionNonVideoDeliverables,
 } from "@automovie/production";
 import path from "node:path";
 import { isDeepStrictEqual } from "node:util";
@@ -528,6 +535,16 @@ export const createProductionRenderFinalizationRuntime = (props: {
             algorithm: "automovie-production-sound-analysis-v1" as const,
           },
         };
+        verifyProductionNonVideoDeliverables({
+          caption: null,
+          sound: {
+            expectedPlan: sound.plan,
+            expectedAnalysis: sound.analysis,
+            expectedTts: sound.tts,
+            expectedAudio: audioEvidence.audio,
+            evidence: audioEvidence,
+          },
+        });
         owned.set("audio.mp4", sound.audio);
         owned.set("waveform.png", sound.waveform);
         owned.set("spectrogram.png", sound.spectrogram);
@@ -600,7 +617,7 @@ export const createProductionRenderFinalizationRuntime = (props: {
           mediaType,
           bytes,
         });
-        assertDeliverableProbe(deliverable.kind, probe, plan);
+        assertDeliverableProbe(deliverable.kind, name, bytes, probe, plan);
         publication.set(relative, bytes);
         files.push({
           path: relative,
@@ -610,8 +627,17 @@ export const createProductionRenderFinalizationRuntime = (props: {
           probe,
         });
       }
-      const video = files.find((file) => file.probe.kind === "video")?.probe;
-      const audio = files.find((file) => file.probe.kind === "audio")?.probe;
+      const feature = files.find(
+        (file) => file.probe.kind === "feature",
+      )?.probe;
+      const video =
+        feature?.kind === "feature"
+          ? feature.video
+          : files.find((file) => file.probe.kind === "video")?.probe;
+      const audio =
+        feature?.kind === "feature"
+          ? feature.audio
+          : files.find((file) => file.probe.kind === "audio")?.probe;
       manifest.deliverables.push({
         id: deliverable.id,
         kind: deliverable.kind,
@@ -681,70 +707,104 @@ export const createProductionRenderFinalizationRuntime = (props: {
 
   const assertDeliverableProbe = (
     kind: IAutoMovieProductionDeliverable["kind"],
+    name: string,
+    bytes: Uint8Array,
     probe: IAutoMovieProductionMediaProbe,
     plan: IAutoMovieProductionRenderJobPlan,
   ): void => {
-    const runtimeSeconds = plan.totalFrames / plan.frameFormat.fps;
     if (kind === "feature" || kind === "guide-pass") {
       if (kind === "guide-pass" && probe.kind === "png") {
-        if (
-          probe.width !== plan.frameFormat.width ||
-          probe.height !== plan.frameFormat.height
-        )
-          throw new Error(
-            "Published guide frame does not match the tier raster.",
-          );
+        assertProductionPngPicture({
+          profile: resolveProductionPngProfile({
+            role: "guide-frame",
+            width: plan.frameFormat.width,
+            height: plan.frameFormat.height,
+          }),
+          actual: probe.picture,
+        });
         return;
       }
-      if (
-        probe.kind !== "video" ||
-        probe.width !== plan.frameFormat.width ||
-        probe.height !== plan.frameFormat.height ||
-        probe.frameCount !== plan.totalFrames ||
-        Math.abs(probe.fps - plan.frameFormat.fps) > 1e-9 ||
-        Math.abs(probe.runtimeSeconds - runtimeSeconds) > 1e-9
-      )
+      const video =
+        kind === "feature" && probe.kind === "feature"
+          ? probe.video
+          : kind === "guide-pass" && probe.kind === "video"
+            ? probe
+            : null;
+      if (video === null || video.frameCount !== plan.totalFrames)
         throw new Error(
           `${kind} output does not match the exact production raster, frame count, frame clock, and runtime.`,
         );
+      assertProductionVideoProfile({
+        expected: resolveProductionVideoProfile({
+          width: plan.frameFormat.width,
+          height: plan.frameFormat.height,
+          frameRate: resolveProductionFrameRate(plan.frameFormat),
+        }),
+        actual: video,
+      });
+      if (probe.kind === "feature") assertProductionOpusProfile(probe.audio);
       return;
     }
     if (kind === "preview") {
-      if (
-        probe.kind !== "png" ||
-        probe.width !== plan.frameFormat.width ||
-        probe.height !== plan.frameFormat.height
-      )
+      if (probe.kind !== "png")
         throw new Error("Preview output does not match the production raster.");
+      assertProductionPngPicture({
+        profile: resolveProductionPngProfile({
+          role: "preview",
+          width: plan.frameFormat.width,
+          height: plan.frameFormat.height,
+        }),
+        actual: probe.picture,
+      });
       return;
     }
     if (kind === "captions") {
-      if (probe.kind !== "webvtt" || probe.lastCueSeconds > runtimeSeconds)
+      if (probe.kind !== "webvtt")
         throw new Error(
           "Caption output is empty, malformed, unordered, or outside the production timeline.",
         );
+      verifyProductionNonVideoDeliverables({
+        caption: {
+          required: true,
+          expected: plan.tracks.captions,
+          actual: bytes,
+        },
+        sound: null,
+      });
       return;
     }
-    if (probe.kind === "png" || probe.kind === "sound-evidence") {
+    if (probe.kind === "png") {
+      const role =
+        name === "waveform.png"
+          ? "waveform"
+          : name === "spectrogram.png"
+            ? "spectrogram"
+            : null;
+      if (role === null)
+        throw new Error(`Audio evidence contains unexpected PNG "${name}".`);
+      assertProductionPngPicture({
+        profile: resolveProductionPngProfile({ role }),
+        actual: probe.picture,
+      });
+      return;
+    }
+    if (probe.kind === "sound-evidence") {
       if (
-        probe.kind === "sound-evidence" &&
-        (probe.evidence.analysis.clippingSamples !== 0 ||
-          probe.evidence.analysis.eventAlignment.some(
-            (event) => event.passed === false,
-          ))
+        probe.evidence.analysis.clippingSamples !== 0 ||
+        probe.evidence.analysis.eventAlignment.some(
+          (event) => event.passed === false,
+        )
       )
         throw new Error(
           "Sound evidence reports clipping or a semantic event outside its frame gate.",
         );
       return;
     }
-    if (
-      probe.kind !== "audio" ||
-      Math.abs(probe.runtimeSeconds - runtimeSeconds) > 1e-9
-    )
+    if (probe.kind !== "audio")
       throw new Error(
         "Audio output does not contain one exact-runtime parser-verified track.",
       );
+    assertProductionOpusProfile(probe);
   };
 
   return { finalize };

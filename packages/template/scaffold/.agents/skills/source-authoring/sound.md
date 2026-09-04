@@ -52,7 +52,7 @@ Shape ambience across edits with L-cuts and J-cuts. Crossfade room tone where co
 
 ## Verification
 
-Probe final media facts, resident sample count, duration, channel count, sample rate, codec, and audiovisual runtime. Listen on headphones and small speakers at a stable level. Check dialogue, event sync, spatial motion, loops, clipping, accidental gaps, captions, and the first and last second of every sequence.
+Probe final media facts, resident sample count, duration, channel count, sample rate, codec, and audiovisual runtime. Derive the audio sample boundary from the exact reduced rational film rate with the shared nearest-half-up mapper; never estimate it from decimal `fps`. Listen on headphones and small speakers at a stable level. Check dialogue, event sync, spatial motion, loops, clipping, accidental gaps, captions, and the first and last second of every sequence.
 
 ## Evidence for a sound verdict
 

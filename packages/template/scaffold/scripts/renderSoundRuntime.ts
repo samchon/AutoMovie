@@ -19,6 +19,7 @@ import {
   decodeProductionAudioAsset,
   digestAutoMovieBytes,
   encodeAutoMoviePathSegment,
+  normalizeProductionH264Mp4,
   readAutoMovieFilmTimeline,
   trimProductionAudioPresentation,
 } from "@automovie/production";
@@ -1471,7 +1472,9 @@ export const createProductionRenderEncoderRuntime = (props: {
         });
         finalizeAttempted = true;
         encoder.finalize();
-        output = Uint8Array.from(encoder.FS.readFile(encoder.outputFilename));
+        output = normalizeProductionH264Mp4(
+          Uint8Array.from(encoder.FS.readFile(encoder.outputFilename)),
+        );
       } catch (error) {
         failure = { error };
       }
@@ -1593,6 +1596,7 @@ export const encodeProductionSoundRaster = (raster: {
   const { PNG } =
     residentRuntimePackage<typeof import("pngjs")>("pngjs").module;
   const png = new PNG({ width: raster.width, height: raster.height });
+  png.gamma = 0.45455;
   png.data = Buffer.from(raster.rgba);
   return PNG.sync.write(png);
 };
