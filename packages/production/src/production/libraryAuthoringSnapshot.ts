@@ -51,6 +51,31 @@ export interface IAutoMovieLibraryAuthoringSnapshot {
 }
 
 /**
+ * One exact graph-selected source export admitted to library execution.
+ *
+ * @author Samchon
+ */
+export interface IAutoMovieLibrarySourceExecution {
+  branch: string;
+  sourcePath: string;
+  exportName: string;
+  owner: string;
+  sourceDigest: string;
+  reviewed: boolean;
+}
+
+/**
+ * Executable source plan and every refusal found before sandbox evaluation.
+ *
+ * @author Samchon
+ */
+export interface IAutoMovieLibrarySourceExecutionPlan {
+  entries: readonly IAutoMovieLibrarySourceExecution[];
+  sources: readonly IAutoMovieLibraryAuthoringSourceSnapshot[];
+  problems: readonly string[];
+}
+
+/**
  * Acquire one complete library authoring closure from a fresh graph snapshot.
  *
  * The caller supplies source reads from the same project handle that will run
@@ -125,6 +150,93 @@ export const sameAutoMovieLibraryAuthoringSnapshot = (
   left: IAutoMovieLibraryAuthoringSnapshot,
   right: IAutoMovieLibraryAuthoringSnapshot,
 ): boolean => left.digest === right.digest;
+
+/**
+ * Bind every executable library export to the snapshot bytes it will run.
+ *
+ * Source-owner edges include design source branches and the separately
+ * selected `productionSources` branch. The plan therefore cannot silently
+ * hash a reviewed production source without executing its named export, and a
+ * stale, missing, ambiguous, or unreviewed edge stays outside `entries`.
+ *
+ * @evidence requirements/agent-authoring/source-owned-loop.md#agent-source-result-link Makes reviewed library production sources part of both execution and result attribution.
+ * @evidence specifications/authoring-and-authority/source-authority-and-derivation.md#spec-authoring-derivation-output-lineage Carries source path, named export, exact authored owner and source digest as one execution identity.
+ * @author Samchon
+ */
+export const createAutoMovieLibrarySourceExecutionPlan = (
+  snapshot: IAutoMovieLibraryAuthoringSnapshot,
+): IAutoMovieLibrarySourceExecutionPlan => {
+  const sourceDigests = new Map(
+    snapshot.sources.map((source) => [source.path, source.digest]),
+  );
+  const identities = new Set<string>();
+  const entries: IAutoMovieLibrarySourceExecution[] = [];
+  const problems: string[] = [];
+  for (const binding of snapshot.sourceOwners) {
+    const identity = JSON.stringify([
+      binding.branch,
+      binding.sourcePath,
+      binding.exportName,
+      binding.targetPath,
+      binding.targetAnchor,
+    ]);
+    if (identities.has(identity)) {
+      problems.push(
+        `Library source owner edge ${identity} is duplicated in the current authoring snapshot.`,
+      );
+      continue;
+    }
+    identities.add(identity);
+    const digest = sourceDigests.get(binding.sourcePath) ?? null;
+    if (digest === null) {
+      problems.push(
+        `Library source "${binding.sourcePath}" is selected by the authoring graph but is missing or unreadable.`,
+      );
+      continue;
+    }
+    if (digest !== binding.sourceDigest) {
+      problems.push(
+        `Library source "${binding.sourcePath}" changed after its owner edge was resolved (${binding.sourceDigest} -> ${digest}).`,
+      );
+      continue;
+    }
+    if (binding.enforced === false || binding.reviewed === false) {
+      problems.push(
+        `Library source "${binding.sourcePath}#${binding.exportName}" has no current enforced reviewed owner edge.`,
+      );
+      continue;
+    }
+    entries.push({
+      branch: binding.branch,
+      sourcePath: binding.sourcePath,
+      exportName: binding.exportName,
+      owner: `${binding.targetPath}#${binding.targetAnchor}`,
+      sourceDigest: binding.sourceDigest,
+      reviewed: binding.reviewed,
+    });
+  }
+  entries.sort((left, right) =>
+    compareCodeUnits(
+      JSON.stringify([
+        left.branch,
+        left.sourcePath,
+        left.exportName,
+        left.owner,
+      ]),
+      JSON.stringify([
+        right.branch,
+        right.sourcePath,
+        right.exportName,
+        right.owner,
+      ]),
+    ),
+  );
+  return {
+    entries: problems.length === 0 ? entries : [],
+    sources: snapshot.sources,
+    problems,
+  };
+};
 
 const sortedDesignBranches = (
   branches: readonly IAutoMovieProductionEvidenceDesignBranch[],

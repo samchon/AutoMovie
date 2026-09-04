@@ -2,7 +2,12 @@ import type { IAutoMovieProductionEvidence } from "@automovie/evidence";
 import { TestValidator } from "@nestia/e2e";
 
 import {
+  digestAutoMovieBytes,
+  normalizeAutoMovieSource,
+} from "../../../../packages/production/src/production/contentIdentity";
+import {
   captureAutoMovieLibraryAuthoringSnapshot,
+  createAutoMovieLibrarySourceExecutionPlan,
   sameAutoMovieLibraryAuthoringSnapshot,
 } from "../../../../packages/production/src/production/libraryAuthoringSnapshot";
 import { namedFacts, throwsError } from "../internal/predicates";
@@ -14,15 +19,19 @@ import {
 } from "./libraryFixtures";
 
 const ROOT = "C:/automovie/library-snapshot";
+const SOURCE = "export const hall = 1;\n";
+const SOURCE_DIGEST = digestAutoMovieBytes(
+  normalizeAutoMovieSource(Buffer.from(SOURCE)),
+);
 const sourceOwner = {
-  branch: "spaces",
+  branch: "spaceSources",
   stage: "review",
   enforced: true,
   relationship: "lineage" as const,
   sourcePath: LIBRARY_SOURCE,
   exportName: "hall",
   symbolKind: "property" as const,
-  sourceDigest: `sha256:${"1".repeat(64)}`,
+  sourceDigest: SOURCE_DIGEST,
   targetPath: LIBRARY_DESIGN,
   targetAnchor: LIBRARY_ANCHOR,
   reviewed: true,
@@ -57,7 +66,7 @@ export const test_production_library_authoring_snapshot = (): void => {
     sourceOwners: [sourceOwner],
   };
   const initial = snapshot(base, {
-    [LIBRARY_SOURCE]: "export const hall = 1;\r\n",
+    [LIBRARY_SOURCE]: SOURCE.replace("\n", "\r\n"),
   });
   const reordered = snapshot(
     {
@@ -66,7 +75,7 @@ export const test_production_library_authoring_snapshot = (): void => {
       designOwners: [...base.designOwners].reverse(),
       sourceOwners: [...base.sourceOwners].reverse(),
     },
-    { [LIBRARY_SOURCE]: "export const hall = 1;\n" },
+    { [LIBRARY_SOURCE]: SOURCE },
   );
   const changedOwner = snapshot(
     {
@@ -76,7 +85,7 @@ export const test_production_library_authoring_snapshot = (): void => {
         units: owner.units.map((unit) => ({ ...unit, digest: "b".repeat(64) })),
       })),
     },
-    { [LIBRARY_SOURCE]: "export const hall = 1;\n" },
+    { [LIBRARY_SOURCE]: SOURCE },
   );
   const changedStage = snapshot(
     {
@@ -86,7 +95,7 @@ export const test_production_library_authoring_snapshot = (): void => {
         designStage: "source",
       })),
     },
-    { [LIBRARY_SOURCE]: "export const hall = 1;\n" },
+    { [LIBRARY_SOURCE]: SOURCE },
   );
   const added = snapshot(
     {
@@ -100,6 +109,51 @@ export const test_production_library_authoring_snapshot = (): void => {
       [LIBRARY_SOURCE]: "export const hall = 1;\n",
       "src/spaces/annex.ts": "export const annex = 1;\n",
     },
+  );
+  const productionSource = "src/production/register.ts";
+  const productionText = "export const register = 1;\n";
+  const productionOwner = {
+    ...sourceOwner,
+    branch: "productionSources",
+    sourcePath: productionSource,
+    exportName: "register",
+    sourceDigest: digestAutoMovieBytes(
+      normalizeAutoMovieSource(Buffer.from(productionText)),
+    ),
+  };
+  const execution = createAutoMovieLibrarySourceExecutionPlan(initial);
+  const productionExecution = createAutoMovieLibrarySourceExecutionPlan(
+    snapshot(
+      { ...base, sourceOwners: [...base.sourceOwners, productionOwner] },
+      {
+        [LIBRARY_SOURCE]: SOURCE,
+        [productionSource]: productionText,
+      },
+    ),
+  );
+  const staleExecution = createAutoMovieLibrarySourceExecutionPlan(
+    snapshot(base, { [LIBRARY_SOURCE]: "export const hall = 2;\n" }),
+  );
+  const missingExecution = createAutoMovieLibrarySourceExecutionPlan(
+    snapshot(base, {}),
+  );
+  const unreviewedExecution = createAutoMovieLibrarySourceExecutionPlan(
+    snapshot(
+      {
+        ...base,
+        sourceOwners: [{ ...sourceOwner, reviewed: false }],
+      },
+      { [LIBRARY_SOURCE]: SOURCE },
+    ),
+  );
+  const duplicateExecution = createAutoMovieLibrarySourceExecutionPlan(
+    snapshot(
+      {
+        ...base,
+        sourceOwners: [sourceOwner, sourceOwner],
+      },
+      { [LIBRARY_SOURCE]: SOURCE },
+    ),
   );
   TestValidator.equals(
     "library snapshot is complete, canonical, and freshly comparable",
@@ -150,6 +204,49 @@ export const test_production_library_authoring_snapshot = (): void => {
             'requires kind "library"',
           ),
       ],
+      [
+        "reviewedSourceExecuted",
+        () => execution.entries.length === 1 && execution.problems.length === 0,
+      ],
+      [
+        "productionSourceExecuted",
+        () =>
+          productionExecution.entries.some(
+            (entry) => entry.branch === "productionSources",
+          ) && productionExecution.problems.length === 0,
+      ],
+      [
+        "staleSourceRefused",
+        () =>
+          staleExecution.entries.length === 0 &&
+          staleExecution.problems.some((problem) =>
+            problem.includes("changed after"),
+          ),
+      ],
+      [
+        "missingSourceRefused",
+        () =>
+          missingExecution.entries.length === 0 &&
+          missingExecution.problems.some((problem) =>
+            problem.includes("missing or unreadable"),
+          ),
+      ],
+      [
+        "unreviewedSourceRefused",
+        () =>
+          unreviewedExecution.entries.length === 0 &&
+          unreviewedExecution.problems.some((problem) =>
+            problem.includes("no current enforced reviewed owner edge"),
+          ),
+      ],
+      [
+        "duplicateOwnerRefused",
+        () =>
+          duplicateExecution.entries.length === 0 &&
+          duplicateExecution.problems.some((problem) =>
+            problem.includes("duplicated"),
+          ),
+      ],
     ]),
     {
       equivalentOrderAndEol: true,
@@ -160,6 +257,12 @@ export const test_production_library_authoring_snapshot = (): void => {
       missingSourceChanges: true,
       rootMismatchRefused: true,
       nonLibraryRefused: true,
+      reviewedSourceExecuted: true,
+      productionSourceExecuted: true,
+      staleSourceRefused: true,
+      missingSourceRefused: true,
+      unreviewedSourceRefused: true,
+      duplicateOwnerRefused: true,
     },
   );
 };
