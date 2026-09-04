@@ -22,6 +22,7 @@ import type {
   IAutoMovieProductionServices,
 } from "./AutoMovieProductionContext";
 import { AutoMovieProductionInputRaceError } from "./AutoMovieProductionProject";
+import { assetUrlAdmissionRefusal } from "./assetAcquisition";
 import { parseAutoMovieCaptureRuntimeIdentity } from "./captureRuntimeIdentity";
 import {
   canonicalizeAutoMovieJson,
@@ -1092,6 +1093,18 @@ const resolveReferences = (
         "repaint-reference-manifest-invalid",
         input.shot,
         "The current asset manifest is malformed. Correct it and compile before repaint.",
+      ),
+    };
+  if (
+    validation.data.assets.some(
+      (asset) => assetUrlAdmissionRefusal(asset) !== null,
+    )
+  )
+    return {
+      diagnostic: diagnostic(
+        "repaint-reference-manifest-invalid",
+        input.shot,
+        "The current asset manifest contains an inadmissible source or license URL. Correct it and compile before repaint.",
       ),
     };
   const seen = new Set<string>();

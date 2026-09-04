@@ -4,13 +4,44 @@ import { IAutoMovieAssetProvenance } from "@automovie/interface";
 /** A plain SHA-256 content digest as this project writes it. */
 const DIGEST_PATTERN = /^sha256:[0-9a-f]{64}$/;
 
-/** Whether a string is a URL something can actually be fetched from. */
-const isHttpUrl = (value: string): boolean => {
+type AssetUrlAdmissionRefusal = {
+  field: "original" | "license";
+  reason: "malformed" | "unsupported-protocol" | "credential-bearing";
+};
+
+/** Why one locator is not a credential-free HTTP(S) URL. */
+const httpUrlAdmissionRefusal = (
+  value: string,
+): AssetUrlAdmissionRefusal["reason"] | null => {
+  let parsed: URL;
   try {
-    return ["http:", "https:"].includes(new URL(value).protocol);
+    parsed = new URL(value);
   } catch {
-    return false;
+    return "malformed";
   }
+  if (["http:", "https:"].includes(parsed.protocol) === false)
+    return "unsupported-protocol";
+  return parsed.username.length !== 0 || parsed.password.length !== 0
+    ? "credential-bearing"
+    : null;
+};
+
+/**
+ * Refuse a fetched source or license locator before the asset is adopted.
+ *
+ * The result names only the field and failure class. It never carries the
+ * rejected locator, so a caller can diagnose the correction without copying
+ * embedded credentials into a diagnostic, receipt, or generated artifact.
+ */
+export const assetUrlAdmissionRefusal = (
+  asset: IAutoMovieAssetProvenance,
+): AssetUrlAdmissionRefusal | null => {
+  if (asset.original !== undefined) {
+    const reason = httpUrlAdmissionRefusal(asset.original.url);
+    if (reason !== null) return { field: "original", reason };
+  }
+  const reason = httpUrlAdmissionRefusal(asset.license.url);
+  return reason === null ? null : { field: "license", reason };
 };
 
 /**
@@ -44,7 +75,7 @@ export const assetAcquisitionIncomplete = (
   if (acquired !== undefined)
     return (
       DIGEST_PATTERN.test(acquired.digest) === false ||
-      isHttpUrl(acquired.url) === false
+      httpUrlAdmissionRefusal(acquired.url) !== null
     );
   return (
     validateGeneratedAcquisition({
