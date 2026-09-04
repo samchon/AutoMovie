@@ -18,17 +18,23 @@ Mutable scope는 canonical production and action range identity를 가지며 동
 
 Claim record는 protected scope, owner actor, job and attempt, generation, acquisition event, lease deadline, heartbeat sequence와 capability set을 가진다. Acquire는 expected prior generation과 conflict set을 입력으로 받고 acquired, busy or ambiguous를 출력하며 필요한 scope보다 넓은 global claim을 자동 요구하지 않는다.
 
+한 host의 process claim은 non-empty host, positive safe-integer PID와 process 시작마다 생성한 UUID generation을 하나의 owner identity로 저장한다. Reader는 exact current generation, local PID absent, local PID occupied-or-reused, elsewhere와 unknown을 구분하며, signal-zero 성공과 permission denial은 occupancy일 뿐 recorded generation의 liveness 증거가 아니다.
+
 ### Stale Claim Recovery {#execution-stale-claim-recovery}
 
 <!-- @evidence requirements/operations-and-recovery/concurrent-runs-and-locking.md#operations-stale-lock-recovery Owner 상실과 current revision을 확인한 뒤에만 stale claim을 인계한다. -->
 
 Stale 판정은 expired lease, repeated independent liveness check, owner generation과 protected state snapshot을 모두 필요로 한다. Takeover는 old generation을 fence하는 newer generation을 먼저 durable하게 만들고 abandoned attempt와 unknown artifacts를 기록하며, elapsed time 하나만으로 기존 claim을 삭제하지 않는다.
 
+Local file claim은 같은 validated owner를 두 번 조회하여 모두 `absent`이고 두 관찰 사이 exact file identity와 owner bytes가 같을 때만 reclaim할 수 있다. `same-owner`, `occupied-or-reused`, `elsewhere`, malformed owner와 query-unavailable은 takeover authority가 아니며 기존 claim 또는 artifact를 그대로 보존한다.
+
 ### Fencing과 Late Writer {#execution-fencing-late-writer}
 
 <!-- @evidence requirements/operations-and-recovery/concurrent-runs-and-locking.md#operations-late-writer-fencing 소유권을 잃거나 이전 revision을 사용한 attempt의 늦은 write를 차단한다. -->
 
 모든 mutable transition, checkpoint, artifact commit과 publication은 owner generation 및 expected target generation을 함께 검증해야 한다. Older generation은 bytes가 valid해도 current mutation을 거부당하고 output을 orphan candidate로 격리하며 successor의 state를 삭제, replace 또는 roll back할 수 없다.
+
+Project revision domain은 non-negative safe integer이며 physical absence만 legacy revision 0으로 해석한다. Writer는 expected revision equality와 exact safe-integer successor를 payload staging 또는 output callback 전에 확정하고, malformed record나 최대 revision에서는 audit pathname을 포함한 어떤 mutable byte도 쓰지 않는다.
 
 ### Deadlock과 Starvation {#execution-deadlock-starvation}
 

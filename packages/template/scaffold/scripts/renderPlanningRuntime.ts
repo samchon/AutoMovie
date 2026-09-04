@@ -13,6 +13,9 @@ import {
   AutoMovieProductionContext,
   AutoMovieProductionProject,
   type IAutoMovieProductionEncoderIdentity,
+  type AutoMovieProductionRenderArtifactState,
+  type AutoMovieProductionRenderArtifactStage,
+  type AutoMovieProductionRenderCleanupAuthority,
   type IAutoMovieProductionRenderChunk,
   type IAutoMovieProductionRenderChunkReceipt,
   type IAutoMovieProductionRenderJobPlan,
@@ -77,6 +80,21 @@ export interface IProductionDeliveryToneCheck {
   reason: string | null;
 }
 
+export interface IProductionRenderChunkFinding {
+  authority: AutoMovieProductionRenderCleanupAuthority;
+  generation: string | null;
+  reason: string;
+  stage: AutoMovieProductionRenderArtifactStage;
+  state: AutoMovieProductionRenderArtifactState;
+  target: string;
+}
+
+export interface IProductionRenderChunkInspection {
+  current: ICurrentRenderChunkPublication | null;
+  finding: IProductionRenderChunkFinding;
+  pointer: IRenderGcTargetSnapshot | null;
+}
+
 /** State that no sealed delivery curve was available to inspect. */
 export const uncheckedProductionDeliveryTone = (
   reason: string,
@@ -137,6 +155,9 @@ export const createProductionRenderPlanningRuntime = (props: {
   captureCurrentChunkPointer: (
     chunk: IAutoMovieProductionRenderChunk,
   ) => IRenderGcTargetSnapshot | null;
+  currentChunkPointerLocatorState: (
+    chunk: IAutoMovieProductionRenderChunk,
+  ) => "absent" | "resident" | "unsafe" | "unavailable";
   compareCodeUnits: (left: string, right: string) => number;
   host: IProductionRenderHost;
   output: (value: unknown) => void;
@@ -161,6 +182,7 @@ export const createProductionRenderPlanningRuntime = (props: {
   const compareCodeUnits = props.compareCodeUnits;
   const gcRuntime = {
     captureCurrentChunkPointer: props.captureCurrentChunkPointer,
+    currentChunkPointerLocatorState: props.currentChunkPointerLocatorState,
   };
   const output = props.output;
 
@@ -419,11 +441,11 @@ export const createProductionRenderPlanningRuntime = (props: {
   };
 
   const renderStatus = async (plan: IAutoMovieProductionRenderJobPlan) => {
-    const currentChunks = await Promise.all(
-      plan.chunks.map((chunk) => currentChunk(plan, chunk)),
+    const inspections = await Promise.all(
+      plan.chunks.map((chunk) => inspectChunk(plan, chunk)),
     );
-    const receipts = currentChunks.flatMap((current) =>
-      current === null ? [] : [current.receipt],
+    const receipts = inspections.flatMap((inspection) =>
+      inspection.current === null ? [] : [inspection.current.receipt],
     );
     const attempts = listRenderAttempts(
       stateRoot,
@@ -431,15 +453,18 @@ export const createProductionRenderPlanningRuntime = (props: {
     ).map((attempt) => attempt.record);
     const rows = productionRenderChunkStatuses({ plan, receipts, attempts });
     return rows.map((row, index) => {
-      if (row.status !== "complete") return row;
-      return currentChunks[index] === null
-        ? {
-            ...row,
-            status: "failed" as const,
-            correction:
-              "Chunk publication tree or receipt is partial, changed, corrupt, or parser-inconsistent. Quarantine and rerender this chunk.",
-          }
-        : row;
+      const inspection = inspections[index]!;
+      if (row.status === "complete" && inspection.current === null)
+        return {
+          ...row,
+          status: "failed" as const,
+          artifact: inspection.finding,
+          correction: inspection.finding.reason,
+        };
+      return {
+        ...row,
+        artifact: inspection.finding,
+      };
     });
   };
 
@@ -565,8 +590,8 @@ export const createProductionRenderPlanningRuntime = (props: {
     plan: IAutoMovieProductionRenderJobPlan,
     chunk: IAutoMovieProductionRenderChunk,
   ): Promise<IAutoMovieProductionRenderChunkReceipt | null> => {
-    const current = await currentChunk(plan, chunk);
-    return current?.receipt ?? null;
+    const inspection = await inspectChunk(plan, chunk);
+    return inspection.current?.receipt ?? null;
   };
 
   const currentChunk = async (
@@ -574,7 +599,7 @@ export const createProductionRenderPlanningRuntime = (props: {
     chunk: IAutoMovieProductionRenderChunk,
     pointer?: IRenderGcTargetSnapshot | null,
   ): Promise<ICurrentRenderChunkPublication | null> =>
-    currentChunkPublication(plan, chunk, pointer);
+    inspectChunkPublication(plan, chunk, pointer).current;
 
   /**
    * The synchronous core of {@link currentChunk}, so the final assembly can pull
@@ -585,23 +610,126 @@ export const createProductionRenderPlanningRuntime = (props: {
     plan: IAutoMovieProductionRenderJobPlan,
     chunk: IAutoMovieProductionRenderChunk,
     pointer?: IRenderGcTargetSnapshot | null,
-  ): ICurrentRenderChunkPublication | null => {
+  ): ICurrentRenderChunkPublication | null =>
+    inspectChunkPublication(plan, chunk, pointer).current;
+
+  const inspectChunk = async (
+    plan: IAutoMovieProductionRenderJobPlan,
+    chunk: IAutoMovieProductionRenderChunk,
+    pointer?: IRenderGcTargetSnapshot | null,
+  ): Promise<IProductionRenderChunkInspection> =>
+    inspectChunkPublication(plan, chunk, pointer);
+
+  const inspectChunkPublication = (
+    plan: IAutoMovieProductionRenderJobPlan,
+    chunk: IAutoMovieProductionRenderChunk,
+    pointer?: IRenderGcTargetSnapshot | null,
+  ): IProductionRenderChunkInspection => {
+    const target = `${plan.tier.kind}/pointers/${chunk.id.slice(7)}`;
+    let currentPointer: IRenderGcTargetSnapshot | null;
     try {
-      const currentPointer =
+      currentPointer =
         pointer === undefined
           ? gcRuntime.captureCurrentChunkPointer(chunk)
           : pointer;
-      if (currentPointer === null) return null;
-      return loadCurrentRenderChunkPublication({
-        assertReceipt: (receipt) =>
-          verifyProductionRenderChunkReceipt({ plan, chunk, receipt }),
+    } catch {
+      const locator = gcRuntime.currentChunkPointerLocatorState(chunk);
+      return {
+        current: null,
+        pointer: null,
+        finding: {
+          authority: "none",
+          generation: null,
+          reason:
+            locator === "unsafe"
+              ? `Chunk "${chunk.slot}" pointer locator is unsafe. Preserve it and manually adjudicate the locator before retrying.`
+              : `Chunk "${chunk.slot}" pointer could not be inspected. Preserve it and manually adjudicate availability before retrying.`,
+          stage: locator === "unsafe" ? "locator" : "capture",
+          state: locator === "unsafe" ? "unsafe-locator" : "unavailable",
+          target,
+        },
+      };
+    }
+    if (currentPointer === null)
+      return {
+        current: null,
+        pointer: null,
+        finding: {
+          authority: "none",
+          generation: null,
+          reason: `Chunk "${chunk.slot}" has no publication pointer and may be rendered.`,
+          stage: "absence",
+          state: "absent",
+          target,
+        },
+      };
+    let receiptFailure = false;
+    let current: ICurrentRenderChunkPublication | null;
+    try {
+      current = loadCurrentRenderChunkPublication({
+        assertReceipt: (receipt) => {
+          try {
+            verifyProductionRenderChunkReceipt({ plan, chunk, receipt });
+          } catch {
+            receiptFailure = true;
+          }
+        },
         chunk,
         frameFormat: plan.frameFormat,
         pointer: currentPointer,
       });
     } catch {
-      return null;
+      return {
+        current: null,
+        pointer: currentPointer,
+        finding: {
+          authority: "none",
+          generation: currentPointer.targetIdentity,
+          reason: `Chunk "${chunk.slot}" publication did not authenticate a readable receipt-bound generation. Preserve it for manual adjudication.`,
+          stage: "receipt",
+          state: "integrity-failed",
+          target,
+        },
+      };
     }
+    if (receiptFailure)
+      return {
+        current: null,
+        pointer: currentPointer,
+        finding: {
+          authority: "exact-remove",
+          generation: currentPointer.targetIdentity,
+          reason: `Chunk "${chunk.slot}" publication is an exact verified stale generation. Render cleanup may remove only this captured pointer.`,
+          stage: "currentness",
+          state: "verified-stale",
+          target,
+        },
+      };
+    if (current === null)
+      return {
+        current: null,
+        pointer: currentPointer,
+        finding: {
+          authority: "exact-quarantine",
+          generation: currentPointer.targetIdentity,
+          reason: `Chunk "${chunk.slot}" bytes fail the declared PNG or MP4 media contract. Quarantine only this captured pointer before rerendering.`,
+          stage: "media",
+          state: "integrity-failed",
+          target,
+        },
+      };
+    return {
+      current,
+      pointer: currentPointer,
+      finding: {
+        authority: "none",
+        generation: currentPointer.targetIdentity,
+        reason: `Chunk "${chunk.slot}" publication is current and must be retained.`,
+        stage: "currentness",
+        state: "current",
+        target,
+      },
+    };
   };
 
   const productionCaptureContext = (): AutoMovieProductionContext =>
@@ -863,6 +991,8 @@ export const createProductionRenderPlanningRuntime = (props: {
     captureReviewEvidence,
     currentChunk,
     currentChunkPublication,
+    inspectChunk,
+    inspectChunkPublication,
     currentPlan,
     currentReceipt,
     currentStoredPlan,

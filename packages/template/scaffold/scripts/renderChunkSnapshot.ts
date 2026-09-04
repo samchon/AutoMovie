@@ -4,8 +4,11 @@ import type {
   IAutoMovieProductionFrameRate,
 } from "@automovie/interface";
 import {
+  type AutoMovieLocalProcessOwnerObservation,
+  type IAutoMovieLocalProcessOwner,
   type IAutoMovieProductionRenderChunk,
   type IAutoMovieProductionRenderChunkReceipt,
+  type IAutoMovieProductionRenderCleanupObservation,
   type IAutoMovieProductionRenderGcCandidate,
   assertProductionVideoProfile,
   digestAutoMovieBytes,
@@ -29,6 +32,8 @@ import {
   readCapturedRenderGcFile,
   removeCapturedRenderGcTarget,
 } from "./renderGcSnapshot";
+import { observeRenderOwnerRecovery } from "./renderOwnerState";
+import { parseRenderProcessOwnerSuffix } from "./renderProcessOwner";
 
 const CONTENT_DIGEST_PATTERN = /^sha256:[0-9a-f]{64}$/u;
 const SCOPE_PATTERN = /^[0-9a-f]{64}$/u;
@@ -70,7 +75,7 @@ export interface ICurrentRenderChunkPublication {
 
 export interface IRenderChunkGcInventoryEntry {
   candidate: IAutoMovieProductionRenderGcCandidate;
-  snapshot: IRenderGcTargetSnapshot;
+  snapshot: IRenderGcTargetSnapshot | null;
 }
 
 /** Fingerprint physical-tree content without binding it to inode identities. */
@@ -389,7 +394,9 @@ export const inventoryRenderChunkGarbage = (props: {
     receipt: IAutoMovieProductionRenderChunkReceipt,
   ) => void;
   chunks: ReadonlyMap<AutoMovieContentDigest, IAutoMovieProductionRenderChunk>;
-  processAlive: (pid: number) => boolean;
+  observeProcessOwner: (
+    owner: unknown,
+  ) => AutoMovieLocalProcessOwnerObservation;
   renderJobRoot: string;
   root: string;
   scope: string;
@@ -407,10 +414,12 @@ export const inventoryRenderChunkGarbage = (props: {
     {
       current: boolean;
       digest: AutoMovieContentDigest;
+      observation: IAutoMovieProductionRenderCleanupObservation | null;
       pointerPath: string;
       tree: IRenderGcTargetSnapshot;
     }
   >();
+  const unresolvedDigests = new Set<AutoMovieContentDigest>();
   const pointerPattern = new RegExp(
     `^\\.automovie-chunk-${props.scope}\\.${props.tier}\\.([0-9a-f]{64})\\.publication\\.json$`,
     "u",
@@ -420,68 +429,174 @@ export const inventoryRenderChunkGarbage = (props: {
     if (match === null) continue;
     const digest = `sha256:${match[1]}` as AutoMovieContentDigest;
     const pointerPath = `${props.tier}/pointers/${match[1]}`;
-    const pointer = captureRenderGcTarget(
-      props.root,
-      path.join(props.root, name),
-    );
+    const pointerTarget = path.join(props.root, name);
+    let pointer: IRenderGcTargetSnapshot;
+    try {
+      pointer = captureRenderGcTarget(props.root, pointerTarget);
+    } catch {
+      let unsafe = false;
+      try {
+        unsafe = fs.lstatSync(pointerTarget).isSymbolicLink();
+      } catch {
+        unsafe = false;
+      }
+      entries.push({
+        candidate: {
+          path: pointerPath,
+          kind: "chunk-pointer",
+          digest,
+          bytes: null,
+          generation: null,
+          observation: {
+            state: unsafe ? "unsafe-locator" : "unavailable",
+            authority: "none",
+            stage: unsafe ? "locator" : "capture",
+            reason: unsafe
+              ? "the chunk pointer locator is a symbolic link and remains outside automatic cleanup authority"
+              : "the chunk pointer generation could not be captured consistently",
+          },
+        },
+        snapshot: null,
+      });
+      unresolvedDigests.add(digest);
+      continue;
+    }
     entries.push({
       candidate: {
         path: pointerPath,
         kind: "chunk-pointer",
         digest,
         bytes: pointer.bytes,
+        generation: pointer.targetIdentity,
+        observation: null,
       },
       snapshot: pointer,
     });
+    let publication: IRenderChunkPublicationSnapshot;
     try {
-      const publication = captureRenderChunkPublicationFromPointer(pointer);
-      const temporaryRoot = path.join(props.renderJobRoot, props.tier, "tmp");
-      const treeName = path.basename(publication.tree.target);
-      if (
-        path.dirname(publication.tree.target) !== temporaryRoot ||
-        new RegExp(`^${match[1]}\\.[^.]+\\.\\d+$`, "u").test(treeName) ===
-          false ||
-        authenticatedTrees.has(publication.tree.target)
-      )
-        continue;
-      const chunk = props.chunks.get(digest);
-      let current = false;
-      if (chunk !== undefined)
-        try {
-          props.assertReceipt(chunk, publication.receipt);
-          current = publication.receipt.slot === chunk.slot;
-        } catch {
-          current = false;
-        }
-      authenticatedTrees.set(publication.tree.target, {
-        current,
-        digest,
-        pointerPath,
-        tree: publication.tree,
-      });
+      publication = captureRenderChunkPublicationFromPointer(pointer);
     } catch {
-      // An invalid pointer remains an independently removable candidate.
+      const candidate = entries.at(-1)!.candidate;
+      candidate.observation = {
+        state: "integrity-failed",
+        authority: "exact-quarantine",
+        stage: "receipt",
+        reason:
+          "the captured chunk pointer did not authenticate one complete receipt-bound tree",
+      };
+      unresolvedDigests.add(digest);
+      continue;
     }
+    const temporaryRoot = path.join(props.renderJobRoot, props.tier, "tmp");
+    const treeName = path.basename(publication.tree.target);
+    const treeIdentity = renderChunkTemporaryTreeIdentity(treeName);
+    if (
+      path.dirname(publication.tree.target) !== temporaryRoot ||
+      treeIdentity === null ||
+      treeIdentity.digest !== match[1]
+    ) {
+      entries.at(-1)!.candidate.observation = {
+        state: "unsafe-locator",
+        authority: "none",
+        stage: "locator",
+        reason:
+          "the captured chunk pointer names a tree outside its exact digest namespace",
+      };
+      unresolvedDigests.add(digest);
+      continue;
+    }
+    if (authenticatedTrees.has(publication.tree.target)) {
+      entries.at(-1)!.candidate.observation = {
+        state: "observation-conflict",
+        authority: "none",
+        stage: "reference",
+        reason:
+          "multiple captured chunk pointers claim the same publication tree",
+      };
+      unresolvedDigests.add(digest);
+      continue;
+    }
+    const chunk = props.chunks.get(digest);
+    let current = false;
+    let observation: IAutoMovieProductionRenderCleanupObservation | null = {
+      state: "verified-stale",
+      authority: "exact-remove",
+      stage: "currentness",
+      reason:
+        "the readable receipt-bound chunk generation is not the current plan generation",
+    };
+    if (chunk !== undefined)
+      try {
+        props.assertReceipt(chunk, publication.receipt);
+        current = publication.receipt.slot === chunk.slot;
+      } catch {
+        current = false;
+      }
+    if (current) observation = null;
+    else entries.at(-1)!.candidate.observation = observation;
+    authenticatedTrees.set(publication.tree.target, {
+      current,
+      digest,
+      observation: current ? null : observation,
+      pointerPath,
+      tree: publication.tree,
+    });
   }
   const temporaryRoot = path.join(props.renderJobRoot, props.tier, "tmp");
   if (fs.existsSync(temporaryRoot))
     for (const entry of fs
       .readdirSync(temporaryRoot, { withFileTypes: true })
       .sort((left, right) => compareCodeUnits(left.name, right.name))) {
-      const match = /^([0-9a-f]{64})\.[^.]+\.(\d+)$/u.exec(entry.name);
-      if (match === null) continue;
+      const identity = renderChunkTemporaryTreeIdentity(entry.name);
+      if (identity === null) continue;
       const target = path.join(temporaryRoot, entry.name);
-      const authenticated = authenticatedTrees.get(target);
-      if (authenticated === undefined && props.processAlive(Number(match[2])))
-        continue;
       const snapshot = captureRenderGcTarget(props.renderJobRoot, target);
-      const digest = `sha256:${match[1]}` as AutoMovieContentDigest;
+      const authenticated = authenticatedTrees.get(target);
+      const digest = `sha256:${identity.digest}` as AutoMovieContentDigest;
       const candidate: IAutoMovieProductionRenderGcCandidate = {
         path: `${props.tier}/tmp/${entry.name}`,
         kind: "chunk-tree",
         digest,
         bytes: snapshot.bytes,
+        generation: snapshot.targetIdentity,
+        observation:
+          authenticated === undefined
+            ? unresolvedDigests.has(digest)
+              ? {
+                  state: "observation-conflict",
+                  authority: "none",
+                  stage: "reference",
+                  reason:
+                    "an unresolved pointer shares this digest, so the tree is not proven stale",
+                }
+              : null
+            : exactTreeContent(authenticated.tree, snapshot)
+              ? authenticated.observation
+              : {
+                  state: "observation-conflict",
+                  authority: "none",
+                  stage: "capture",
+                  reason:
+                    "the recaptured tree differs from the generation observed through its pointer",
+                },
       };
+      if (authenticated === undefined && candidate.observation === null) {
+        if (
+          observeRenderOwnerRecovery({
+            between: () => assertCapturedRenderTarget(snapshot),
+            observe: props.observeProcessOwner,
+            owner: identity.owner,
+          }).state !== "reclaimable"
+        )
+          candidate.observation = {
+            state: "foreign-generation",
+            authority: "none",
+            stage: "ownership",
+            reason:
+              "the temporary tree owner is not proved reclaimable by this process generation",
+          };
+        else assertCapturedRenderTarget(snapshot);
+      }
       entries.push({ candidate, snapshot });
       if (
         authenticated?.current === true &&
@@ -496,6 +611,18 @@ export const inventoryRenderChunkGarbage = (props: {
     entries,
     retainedChunkPaths: [...retainedChunkPaths].sort(compareCodeUnits),
   };
+};
+
+const renderChunkTemporaryTreeIdentity = (
+  name: string,
+): {
+  digest: string;
+  owner: IAutoMovieLocalProcessOwner;
+} | null => {
+  const match = /^([0-9a-f]{64})\.([^.]+)\.(.+)$/u.exec(name);
+  if (match === null) return null;
+  const owner = parseRenderProcessOwnerSuffix(match[3]);
+  return owner === null ? null : { digest: match[1], owner };
 };
 
 const exactTreeContent = (
@@ -579,7 +706,12 @@ export const removeCapturedRenderChunkPointer = (
 const parsePublicationReceipt = (
   bytes: Uint8Array,
 ): RenderChunkPublicationReceipt => {
-  const value = JSON.parse(Buffer.from(bytes).toString("utf8")) as unknown;
+  let value: unknown;
+  try {
+    value = JSON.parse(Buffer.from(bytes).toString("utf8")) as unknown;
+  } catch {
+    throw new Error("Render chunk pointer has no trustworthy receipt.");
+  }
   if (
     typeof value !== "object" ||
     value === null ||

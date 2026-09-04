@@ -33,6 +33,10 @@ import typia, { IValidation } from "typia";
 
 import { acquireCommitLock, releaseCommitLock } from "../project/commitLock";
 import {
+  advanceAutoMovieProjectRevision,
+  decodeAutoMovieProjectRevision,
+} from "../project/projectRevision";
+import {
   acceptanceAddressesShot,
   acceptanceCriterionShots,
 } from "./acceptanceScope";
@@ -1361,7 +1365,7 @@ export class AutoMovieProductionProject {
           message: `${reference} still references this design. Update that artifact before removing the design record.`,
         })),
       };
-    const nextRevision = expectedRevision + 1;
+    const nextRevision = requireNextRevision(expectedRevision);
     const revision = this.commitFiles(
       [
         { path: this.designPath(target), content: null },
@@ -4554,6 +4558,7 @@ export class AutoMovieProductionProject {
           throw new AutoMovieProductionInputRaceError(
             `Production revision changed from ${expectedRevision} to ${current}. Inspect the project again before retrying the mutation.`,
           );
+        const nextRevision = requireNextRevision(current);
         if (inputCurrent?.() === false)
           throw new AutoMovieProductionInputRaceError(
             "Production inputs changed before the guarded commit began.",
@@ -4592,7 +4597,6 @@ export class AutoMovieProductionProject {
             this.lastReadRevision_ = current;
             return current;
           }
-          const nextRevision = current + 1;
           assertProductionRootNamespaceLease(rootLease);
           this.assertIncarnation();
           writeJsonAtomic(
@@ -5750,17 +5754,22 @@ const assertOwnedRegularFile = (rootReal: string, file: string): void => {
 
 const readRevision = (rootReal: string, file: string): number => {
   const value = readOwnedJson(rootReal, file);
-  if (value === undefined) return 0;
-  const revision = (value as { revision?: unknown }).revision;
-  if (
-    typeof revision !== "number" ||
-    Number.isSafeInteger(revision) === false ||
-    revision < 0
-  )
+  const decision = decodeAutoMovieProjectRevision(value);
+  if (decision.state === "invalid")
     throw new Error(
       `Invalid production revision "${file}". Restore a non-negative safe integer revision.`,
     );
-  return revision;
+  return decision.revision;
+};
+
+const requireNextRevision = (revision: number): number => {
+  const decision = advanceAutoMovieProjectRevision(revision);
+  if (decision.state === "next") return decision.revision;
+  throw new Error(
+    decision.state === "exhausted"
+      ? "Production revision is exhausted. No production bytes were written because the store cannot publish another safe-integer revision."
+      : "Production revision is invalid. No production bytes were written.",
+  );
 };
 
 const validateIncarnation = (value: unknown, file: string): string => {

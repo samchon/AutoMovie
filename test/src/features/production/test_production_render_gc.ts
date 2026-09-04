@@ -15,11 +15,15 @@ import * as ts from "typescript-compiler";
 import { namedFacts, throwsError } from "../internal/predicates";
 
 let planProductionRenderGc: typeof import("@automovie/production").planProductionRenderGc;
+let productionRenderMaterializationDecision: typeof import("@automovie/production").productionRenderMaterializationDecision;
 
 const loadExactRenderGc = async (
   source: string,
 ): Promise<
-  Pick<typeof import("@automovie/production"), "planProductionRenderGc">
+  Pick<
+    typeof import("@automovie/production"),
+    "planProductionRenderGc" | "productionRenderMaterializationDecision"
+  >
 > => {
   const directory = fs.mkdtempSync(
     path.join(os.tmpdir(), "automovie-production-render-gc-"),
@@ -55,7 +59,7 @@ const loadExactRenderGc = async (
       tsconfig: false,
     })) as Pick<
       typeof import("@automovie/production"),
-      "planProductionRenderGc"
+      "planProductionRenderGc" | "productionRenderMaterializationDecision"
     >;
   } finally {
     fs.rmSync(directory, { force: true, recursive: true });
@@ -81,6 +85,8 @@ const candidate = (
   kind: "chunk",
   digest: digest("a"),
   bytes: 1,
+  generation: "generation-a",
+  observation: null,
   ...overrides,
 });
 
@@ -110,25 +116,27 @@ const plan = (
  * 1. Current chunks, their exact pointer/tree pair, current v5 dialogue/model
  *    generations, and manifest files are kept while stale cache, quarantine,
  *    final-tier chunk, and publication generations are sorted for removal.
- * 2. Duplicate, non-canonical, wrong-kind, wrong-digest, unsafe-byte, missing
- *    retained, unpaired, and inactive retained facts all refuse deterministically.
- * 3. The reclaim sum accepts the largest safe integer and refuses overflow.
+ * 2. Absent/current, verified-stale, integrity-failed, unsafe, foreign,
+ *    unavailable, and conflicting observations enter exactly one reasoned set.
+ * 3. Duplicate, non-canonical, wrong-kind, wrong-digest, malformed finding,
+ *    missing retained, unpaired, and inactive facts refuse deterministically.
+ * 4. The reclaim sum accepts the largest safe integer and refuses overflow.
  */
 export const test_production_render_gc = async (): Promise<void> => {
   const source = path.resolve(
     __dirname,
     "../../../../packages/production/src/production/productionRenderGc.ts",
   );
-  ({ planProductionRenderGc } =
+  ({ planProductionRenderGc, productionRenderMaterializationDecision } =
     process.env.AUTOMOVIE_EXACT_ESM_COVERAGE === "1"
       ? await loadExactRenderGc(source)
       : (createRequire(__filename)(source) as Pick<
           typeof import("@automovie/production"),
-          "planProductionRenderGc"
+          "planProductionRenderGc" | "productionRenderMaterializationDecision"
         >));
   const active = digest("a");
   const pointer = `proxy/pointers/${"a".repeat(64)}`;
-  const tree = `proxy/tmp/${"a".repeat(64)}.owner.7`;
+  const tree = `proxy/tmp/${"a".repeat(64)}.attempt.7.00000000-0000-4000-8000-000000000000.aG9zdA`;
   const currentDialogue = `audio-cache/kokoro/${"b".repeat(64)}`;
   const currentModel = "model-cache/kokoro/current-revision";
   const candidates: IAutoMovieProductionRenderGcCandidate[] = [
@@ -199,13 +207,17 @@ export const test_production_render_gc = async (): Promise<void> => {
     "the exact current generation is kept and the stale population is payable",
     {
       version: classified.version,
-      keep: classified.keep.map((entry) => entry.path),
-      remove: classified.remove.map((entry) => entry.path),
+      retain: classified.retain.map((entry) => entry.candidate.path),
+      remove: classified.remove.map((entry) => entry.candidate.path),
+      quarantine: classified.quarantine.map((entry) => entry.candidate.path),
+      manualAdjudication: classified.manualAdjudication.map(
+        (entry) => entry.candidate.path,
+      ),
       reclaimableBytes: classified.reclaimableBytes,
     },
     {
-      version: 2,
-      keep: [
+      version: 3,
+      retain: [
         currentDialogue,
         currentModel,
         `proxy/chunks/${"a".repeat(64)}`,
@@ -219,8 +231,190 @@ export const test_production_render_gc = async (): Promise<void> => {
         "proxy/quarantine/failed-owner",
         "publication/old.mp4",
       ],
+      quarantine: [],
+      manualAdjudication: [],
       reclaimableBytes: 72,
     },
+  );
+
+  const observed = (
+    path: string,
+    state: NonNullable<
+      IAutoMovieProductionRenderGcCandidate["observation"]
+    >["state"],
+    authority: NonNullable<
+      IAutoMovieProductionRenderGcCandidate["observation"]
+    >["authority"],
+    overrides: Partial<IAutoMovieProductionRenderGcCandidate> = {},
+    stage: NonNullable<
+      IAutoMovieProductionRenderGcCandidate["observation"]
+    >["stage"] = "currentness",
+  ): IAutoMovieProductionRenderGcCandidate =>
+    candidate({
+      path,
+      kind: "publication",
+      digest: null,
+      observation: {
+        state,
+        authority,
+        stage,
+        reason: `${state} reason`,
+      },
+      ...overrides,
+    });
+  const disposition = (
+    entry: IAutoMovieProductionRenderGcCandidate,
+    publicationPaths: string[] = [],
+  ): string => {
+    const result = plan({
+      plans: [],
+      publicationPaths,
+      candidates: [entry],
+    });
+    return ([
+      ["retain", result.retain],
+      ["remove", result.remove],
+      ["quarantine", result.quarantine],
+      ["manual-adjudication", result.manualAdjudication],
+    ] as const).find(([, set]) => set.length === 1)![0];
+  };
+  TestValidator.equals(
+    "every render-artifact state has one fail-closed cleanup disposition",
+    {
+      current: disposition(
+        observed("publication/current", "current", "none"),
+        ["publication/current"],
+      ),
+      currentWithoutReference: disposition(
+        observed("publication/unreferenced-current", "current", "none"),
+      ),
+      absent: disposition(observed("publication/absent", "absent", "none", {
+        bytes: null,
+        generation: null,
+      })),
+      stale: disposition(
+        observed("publication/stale", "verified-stale", "exact-remove"),
+      ),
+      staleWithoutGeneration: disposition(
+        observed(
+          "publication/stale-unproved",
+          "verified-stale",
+          "exact-remove",
+          { generation: null },
+        ),
+      ),
+      staleWithoutAuthority: disposition(
+        observed("publication/stale-unowned", "verified-stale", "none"),
+      ),
+      integrity: disposition(
+        observed(
+          "publication/integrity",
+          "integrity-failed",
+          "exact-quarantine",
+        ),
+      ),
+      integrityWithoutGeneration: disposition(
+        observed(
+          "publication/integrity-unproved",
+          "integrity-failed",
+          "exact-quarantine",
+          { bytes: null },
+        ),
+      ),
+      unsafe: disposition(
+        observed("publication/unsafe", "unsafe-locator", "none"),
+      ),
+      foreign: disposition(
+        observed("publication/foreign", "foreign-generation", "none"),
+      ),
+      unavailable: disposition(
+        observed("publication/unavailable", "unavailable", "none", {
+          bytes: null,
+          generation: null,
+        }),
+      ),
+      conflict: disposition(
+        observed("publication/conflict", "observation-conflict", "none"),
+      ),
+    },
+    {
+      current: "retain",
+      currentWithoutReference: "manual-adjudication",
+      absent: "retain",
+      stale: "remove",
+      staleWithoutGeneration: "manual-adjudication",
+      staleWithoutAuthority: "manual-adjudication",
+      integrity: "quarantine",
+      integrityWithoutGeneration: "manual-adjudication",
+      unsafe: "manual-adjudication",
+      foreign: "manual-adjudication",
+      unavailable: "manual-adjudication",
+      conflict: "manual-adjudication",
+    },
+  );
+  TestValidator.equals(
+    "only absence may materialize and only current evidence may be reused",
+    [
+      "absent",
+      "current",
+      "verified-stale",
+      "integrity-failed",
+      "unsafe-locator",
+      "foreign-generation",
+      "unavailable",
+      "observation-conflict",
+    ].map((state) =>
+      productionRenderMaterializationDecision(
+        state as NonNullable<
+          IAutoMovieProductionRenderGcCandidate["observation"]
+        >["state"],
+      ),
+    ),
+    [
+      "render",
+      "reuse",
+      "refuse",
+      "refuse",
+      "refuse",
+      "refuse",
+      "refuse",
+      "refuse",
+    ],
+  );
+  const stages = [
+    "absence",
+    "locator",
+    "capture",
+    "receipt",
+    "inventory",
+    "media",
+    "currentness",
+    "ownership",
+    "reference",
+  ] as const;
+  TestValidator.equals(
+    "every typed failure stage survives one reasoned cleanup decision",
+    stages.map((stage) =>
+      disposition(
+        observed(
+          `publication/stage-${stage}`,
+          "current",
+          "none",
+          {},
+          stage,
+        ),
+        [`publication/stage-${stage}`],
+      ),
+    ),
+    stages.map(() => "retain"),
+  );
+  TestValidator.equals(
+    "an unknown artifact state is refused before an adapter can run",
+    throwsError(
+      () => productionRenderMaterializationDecision("unknown" as "absent"),
+      "is invalid",
+    ),
+    true,
   );
 
   const invalidCandidate = (
@@ -252,6 +446,68 @@ export const test_production_render_gc = async (): Promise<void> => {
       ],
       ["fractional bytes", () => invalidCandidate({ bytes: 0.5 })],
       ["negative bytes", () => invalidCandidate({ bytes: -1 })],
+      ["blank generation", () => invalidCandidate({ generation: " " })],
+      ["unsafe generation", () => invalidCandidate({ generation: "a\n" })],
+      [
+        "unknown observation",
+        () =>
+          invalidCandidate({
+            observation: {
+              state: "unknown" as "current",
+              authority: "none",
+              stage: "currentness",
+              reason: "unknown",
+            },
+          }),
+      ],
+      [
+        "unknown authority",
+        () =>
+          invalidCandidate({
+            observation: {
+              state: "current",
+              authority: "delete" as "none",
+              stage: "currentness",
+              reason: "bad authority",
+            },
+          }),
+      ],
+      [
+        "unknown stage",
+        () =>
+          invalidCandidate({
+            observation: {
+              state: "current",
+              authority: "none",
+              stage: "unknown" as "currentness",
+              reason: "bad stage",
+            },
+          }),
+      ],
+      [
+        "empty observation reason",
+        () =>
+          invalidCandidate({
+            observation: {
+              state: "current",
+              authority: "none",
+              stage: "currentness",
+              reason: "",
+            },
+          }),
+      ],
+      [
+        "unsafe observation reason",
+        () =>
+          invalidCandidate({
+            observation: {
+              state: "current",
+              authority: "none",
+              stage: "currentness",
+              reason: "unsafe\nreason",
+            },
+          }),
+      ],
       ["chunk null digest", () => invalidCandidate({ digest: null })],
       [
         "chunk malformed digest",
@@ -344,6 +600,12 @@ export const test_production_render_gc = async (): Promise<void> => {
       "duplicate candidate": true,
       "fractional bytes": true,
       "negative bytes": true,
+      "blank generation": true,
+      "unsafe generation": true,
+      "unknown observation": true,
+      "unknown authority": true,
+      "empty observation reason": true,
+      "unsafe observation reason": true,
       "chunk null digest": true,
       "chunk malformed digest": true,
       "chunk mismatched digest": true,

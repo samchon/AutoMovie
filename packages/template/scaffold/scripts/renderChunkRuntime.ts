@@ -6,6 +6,8 @@ import type {
   IAutoMovieRenderReport,
 } from "@automovie/interface";
 import {
+  type AutoMovieLocalProcessOwnerObservation,
+  type IAutoMovieLocalProcessOwner,
   type IAutoMovieProductionRenderChunk,
   type IAutoMovieProductionRenderChunkReceipt,
   type IAutoMovieProductionRenderJobPlan,
@@ -14,8 +16,10 @@ import {
   canonicalAutoMovieCaptureRuntimeIdentity,
   digestAutoMovieBytes,
   encodeAutoMoviePathSegment,
+  isAutoMovieLocalProcessOwner,
   probeProductionMedia,
   probeProductionVideoMp4,
+  productionRenderMaterializationDecision,
   productionRenderLayersForPass,
   resolveProductionVideoProfile,
 } from "@automovie/production";
@@ -28,7 +32,6 @@ import {
   completeRenderAttempt,
   failRenderAttempt,
 } from "./renderAttemptSnapshot";
-import type { ICurrentRenderChunkPublication } from "./renderChunkSnapshot";
 import { productionRenderFrameCaptureInput } from "./renderFrameCaptureInput";
 import {
   type IRenderGcTargetSnapshot,
@@ -37,11 +40,14 @@ import {
   createRenderGcFileSnapshot,
 } from "./renderGcSnapshot";
 import type { IProductionRenderHost } from "./renderHost";
+import type { IProductionRenderChunkInspection } from "./renderPlanningRuntime";
 import type {
   IProductionMaskSidecarPublication,
   IProductionRenderObservationAudit,
 } from "./renderObservationAudit";
 import { runWithProductionRuntimeClosure } from "./renderSoundRuntime";
+import { observeRenderOwnerRecovery } from "./renderOwnerState";
+import { renderProcessOwnerSuffix } from "./renderProcessOwner";
 import {
   type IRenderChunkTemporaryTree,
   assertRenderChunkTemporaryTree,
@@ -50,19 +56,39 @@ import {
 export const RENDER_LOCK_JSON_MAX_BYTES = 64 * 1024;
 
 export interface IRenderChunkLockOwner {
+  version: 2;
   chunk: AutoMovieContentDigest;
-  pid: number;
-  /** Absent only on an older lock written before owner-checked release. */
-  token?: string;
+  owner: IAutoMovieLocalProcessOwner;
+  token: string;
 }
+
+/** Validate the complete generation-aware chunk-lock record before use. */
+export const isRenderChunkLockOwner = (
+  value: unknown,
+): value is IRenderChunkLockOwner =>
+  typeof value === "object" &&
+  value !== null &&
+  Array.isArray(value) === false &&
+  Object.keys(value).sort(compareCodeUnits).join(",") ===
+    "chunk,owner,token,version" &&
+  (value as { version?: unknown }).version === 2 &&
+  typeof (value as { chunk?: unknown }).chunk === "string" &&
+  /^sha256:[0-9a-f]{64}$/u.test((value as { chunk: string }).chunk) &&
+  isAutoMovieLocalProcessOwner((value as { owner?: unknown }).owner) &&
+  typeof (value as { token?: unknown }).token === "string" &&
+  /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/u.test(
+    (value as { token: string }).token,
+  );
 
 export interface IProductionRenderChunkLeaseHost {
   filesystem: Pick<
     typeof import("node:fs"),
     "existsSync" | "mkdirSync" | "readdirSync"
   >;
-  pid: number;
-  processAlive: (pid: number) => boolean;
+  observeProcessOwner: (
+    owner: unknown,
+  ) => AutoMovieLocalProcessOwnerObservation;
+  owner: IAutoMovieLocalProcessOwner;
   randomUuid: () => string;
 }
 
@@ -142,8 +168,9 @@ export const createProductionRenderChunkLeaseRuntime = (props: {
       return;
     }
     if (
+      isRenderChunkLockOwner(owner) === false ||
       owner.chunk !== chunk.id ||
-      owner.pid !== props.host.pid ||
+      props.host.observeProcessOwner(owner.owner).state !== "same-owner" ||
       owner.token !== token
     )
       return;
@@ -155,12 +182,15 @@ export const createProductionRenderChunkLeaseRuntime = (props: {
     const directory = lockDirectory(chunk);
     props.host.filesystem.mkdirSync(directory, { recursive: true });
     const token = props.host.randomUuid();
-    const claim = path.join(directory, `claim.${props.host.pid}.${token}.lock`);
+    const claim = path.join(
+      directory,
+      `claim.${props.host.owner.pid}.${token}.lock`,
+    );
     const claimSnapshot = createRenderGcFileSnapshot(
       props.stateRoot,
       claim,
       Buffer.from(
-        `${JSON.stringify({ chunk: chunk.id, pid: props.host.pid, token })}\n`,
+        `${JSON.stringify({ version: 2, chunk: chunk.id, owner: props.host.owner, token })}\n`,
       ),
     );
     try {
@@ -177,19 +207,41 @@ export const createProductionRenderChunkLeaseRuntime = (props: {
         } catch (error) {
           if ((error as NodeJS.ErrnoException).code === "ENOENT") continue;
           throw new Error(
-            `Chunk lock "${file}" has no readable owner identity. Verify that no render worker owns it, then quarantine it before retrying: ${String(error)}`,
+            `Chunk lock "${file}" has no readable owner identity. Verify that no render worker owns it, then quarantine it before retrying.`,
           );
         }
-        if (Number.isSafeInteger(owner.pid) === false || owner.pid <= 0)
+        if (isRenderChunkLockOwner(owner) === false || owner.chunk !== chunk.id)
           throw new Error(
-            `Chunk lock "${file}" has an invalid owner process. Verify that no render worker owns it, then quarantine it before retrying.`,
+            `Chunk lock "${file}" has an invalid owner record. Verify that no render worker owns it, then quarantine it before retrying.`,
           );
-        if (props.host.processAlive(owner.pid)) {
-          if (file !== claim) {
-            releaseOwnedClaim(chunk, token, claimSnapshot);
-            return false;
-          }
+        const first = props.host.observeProcessOwner(owner.owner);
+        if (file === claim) {
+          if (first.state !== "same-owner" || owner.token !== token)
+            throw new Error(
+              `Chunk lock claim "${claim}" changed before rendering began.`,
+            );
           continue;
+        }
+        let firstConsumed = false;
+        const recovery = observeRenderOwnerRecovery({
+          between: () => assertCapturedRenderTarget(snapshot),
+          observe: (candidate) => {
+            if (firstConsumed === false) {
+              firstConsumed = true;
+              return first;
+            }
+            return props.host.observeProcessOwner(candidate);
+          },
+          owner: owner.owner,
+        });
+        if (recovery.state !== "reclaimable") {
+          releaseOwnedClaim(chunk, token, claimSnapshot);
+          const state = recovery.observation.state;
+          if (state === "unknown" || state === "elsewhere")
+            throw new Error(
+              `Chunk lock "${file}" has ${state} owner state and cannot be reclaimed.`,
+            );
+          return false;
         }
         try {
           props.quarantine(file, "abandoned-lock", snapshot);
@@ -202,8 +254,9 @@ export const createProductionRenderChunkLeaseRuntime = (props: {
         RENDER_LOCK_JSON_MAX_BYTES,
       );
       if (
+        isRenderChunkLockOwner(owner) === false ||
         owner.chunk !== chunk.id ||
-        owner.pid !== props.host.pid ||
+        props.host.observeProcessOwner(owner.owner).state !== "same-owner" ||
         owner.token !== token
       )
         throw new Error(
@@ -237,12 +290,12 @@ export const createProductionRenderChunkLeaseRuntime = (props: {
       chunk: chunk.id,
       lock: {
         chunk: chunk.id,
-        pid: props.host.pid,
+        owner: props.host.owner,
         snapshot: held.snapshot,
         token: held.token,
       },
-      pid: props.host.pid,
-      processAlive: props.host.processAlive,
+      observeProcessOwner: props.host.observeProcessOwner,
+      owner: props.host.owner,
       slot: chunk.slot,
       target: attemptPath(chunk),
       token: held.token,
@@ -293,18 +346,14 @@ export interface IProductionRenderInvocationObservationState {
 export const createProductionRenderChunkCaptureRuntime = (props: {
   capture: IProductionRenderHost["capture"];
   captureCompleted: (root: string, target: string) => IRenderGcTargetSnapshot;
-  capturePointer: (
-    chunk: IAutoMovieProductionRenderChunk,
-  ) => IRenderGcTargetSnapshot | null;
   createTemporary: (props: {
     name: string;
     state: IRenderGcTargetSnapshot["base"];
   }) => IRenderChunkTemporaryTree;
-  current: (
+  inspect: (
     plan: IAutoMovieProductionRenderJobPlan,
     chunk: IAutoMovieProductionRenderChunk,
-    pointer: IRenderGcTargetSnapshot | null,
-  ) => Promise<ICurrentRenderChunkPublication | null>;
+  ) => Promise<IProductionRenderChunkInspection>;
   encode: (
     frames: readonly Uint8Array[],
     plan: IAutoMovieProductionRenderJobPlan,
@@ -332,8 +381,8 @@ export const createProductionRenderChunkCaptureRuntime = (props: {
       | { status: "not-run"; reason: string };
     state: IProductionRenderInvocationObservationState;
   };
-  pid: number;
   pngGeneration: IProductionRenderHost["pngGeneration"];
+  owner: IAutoMovieLocalProcessOwner;
   productionId: string;
   publication: {
     publish: (props: {
@@ -346,7 +395,6 @@ export const createProductionRenderChunkCaptureRuntime = (props: {
     }) => {
       publication: { receipt: IAutoMovieProductionRenderChunkReceipt };
     };
-    removePointer: (pointer: IRenderGcTargetSnapshot) => void;
   };
   renderLivenessScope: string;
   randomUuid: () => string;
@@ -373,13 +421,22 @@ export const createProductionRenderChunkCaptureRuntime = (props: {
       props.pngGeneration.assertCurrent,
       async () => {
         const { PNG } = props.pngGeneration.module;
-        const pointer = props.capturePointer(chunk);
-        const existing = await props.current(plan, chunk, pointer);
-        if (existing !== null) return existing.receipt;
+        const inspection = await props.inspect(plan, chunk);
+        const materialization = productionRenderMaterializationDecision(
+          inspection.finding.state,
+        );
+        if (materialization === "reuse") {
+          if (inspection.current === null)
+            throw new Error(
+              `Chunk "${chunk.slot}" current finding has no verified publication.`,
+            );
+          return inspection.current.receipt;
+        }
+        if (materialization === "refuse")
+          throw new Error(inspection.finding.reason);
         const attempt = props.lease.begin(chunk);
-        if (pointer !== null) props.publication.removePointer(pointer);
         const temporaryOwnership = props.createTemporary({
-          name: `${chunk.id.slice(7)}.${props.randomUuid()}.${props.pid}`,
+          name: `${chunk.id.slice(7)}.${props.randomUuid()}.${renderProcessOwnerSuffix(props.owner)}`,
           state: attempt.snapshot.base,
         });
         const temporary = temporaryOwnership.path;

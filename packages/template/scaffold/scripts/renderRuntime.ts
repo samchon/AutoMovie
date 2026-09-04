@@ -34,7 +34,6 @@ import {
 } from "./renderChunkRuntime";
 import {
   publishRenderChunkSnapshot,
-  removeCapturedRenderChunkPointer,
 } from "./renderChunkSnapshot";
 import {
   type IProductionRenderCommand,
@@ -141,8 +140,8 @@ const executeProductionRenderCommand = async (
     }
     const session = acquireRenderSessionLease({
       coordinationRoot: root,
-      pid: renderHost.pid,
-      processAlive: renderHost.processAlive,
+      observeProcessOwner: renderHost.observeProcessOwner,
+      owner: renderHost.owner,
       scope: renderLivenessScope,
       tier: renderTier.kind,
     });
@@ -177,7 +176,7 @@ const executeProductionRenderCommand = async (
             );
       if (action === "run" || action === "all") {
         gcRuntime.recoverAbandonedTemporaryDirectories(current.chunks);
-        gcRuntime.quarantineStaleSlotOutputs(current.chunks);
+        gcRuntime.quarantineStaleSlotOutputs(current);
         const result = await runProductionRenderJob({
           plan: current,
           workers: command.workers,
@@ -285,6 +284,8 @@ const executeProductionRenderCommand = async (
       design?.sound?.dialogueSynthesis ?? null,
     ),
     host: renderHost,
+    inspectChunk: (plan, chunk, pointer) =>
+      planningRuntime.inspectChunkPublication(plan, chunk, pointer),
     liveWearableSoftBodies: design?.simulation?.liveWearableSoftBodies ?? [],
     productionStateRoot,
     progress: renderProgress,
@@ -314,6 +315,7 @@ const executeProductionRenderCommand = async (
   const planningRuntime = createProductionRenderPlanningRuntime({
     authoringEvidence,
     captureCurrentChunkPointer: gcRuntime.captureCurrentChunkPointer,
+    currentChunkPointerLocatorState: gcRuntime.currentChunkPointerLocatorState,
     compareCodeUnits,
     host: renderHost,
     output,
@@ -335,11 +337,10 @@ const executeProductionRenderCommand = async (
   });
   const publicationRuntime = createProductionRenderPublicationRuntime({
     assertCurrentEncoder: encoderRuntime.assertCurrent,
-    currentChunk: planningRuntime.currentChunkPublication,
+    inspectChunk: planningRuntime.inspectChunkPublication,
     ensureDirectory: ensureRenderPhysicalDirectory,
     filesystem: renderHost.filesystem,
     inspectProxy: inspectPublishedProxyBundle,
-    processAlive: renderHost.processAlive,
     publicationFingerprint: productionRenderPublicationFingerprint,
     publishProxyBundle,
   });
@@ -369,9 +370,8 @@ const executeProductionRenderCommand = async (
   const chunkCapture = createProductionRenderChunkCaptureRuntime({
     capture: renderHost.capture,
     captureCompleted: captureRenderGcTarget,
-    capturePointer: gcRuntime.captureCurrentChunkPointer,
     createTemporary: createRenderChunkTemporaryTree,
-    current: planningRuntime.currentChunk,
+    inspect: planningRuntime.inspectChunk,
     encode: (frames, plan) =>
       encoderRuntime.encodePngFrames((consumeFrame) => {
         for (const frame of frames) consumeFrame(frame);
@@ -382,12 +382,11 @@ const executeProductionRenderCommand = async (
       publishMask: publishProductionMaskSidecar,
       state: renderObservations,
     },
-    pid: renderHost.pid,
     pngGeneration: renderHost.pngGeneration,
+    owner: renderHost.owner,
     productionId,
     publication: {
       publish: publishRenderChunkSnapshot,
-      removePointer: removeCapturedRenderChunkPointer,
     },
     randomUuid: renderHost.randomUuid,
     renderLivenessScope,

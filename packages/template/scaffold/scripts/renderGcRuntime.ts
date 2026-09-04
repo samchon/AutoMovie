@@ -1,11 +1,13 @@
 import type { AutoMovieContentDigest } from "@automovie/interface";
 import {
   AutoMovieProductionProject,
+  type IAutoMovieLocalProcessOwner,
   type IAutoMovieProductionRenderChunk,
   type IAutoMovieProductionRenderChunkReceipt,
   type IAutoMovieProductionRenderGcCandidate,
   type IAutoMovieProductionRenderJobPlan,
   type IAutoMovieProductionRenderTier,
+  isAutoMovieLocalProcessOwner,
   planProductionRenderGc,
   readAutoMovieFilmTimeline,
   verifyProductionRenderChunkReceipt,
@@ -19,6 +21,7 @@ import { listRenderAttempts } from "./renderAttemptSnapshot";
 import {
   type IRenderChunkLockOwner,
   RENDER_LOCK_JSON_MAX_BYTES,
+  isRenderChunkLockOwner,
 } from "./renderChunkRuntime";
 import {
   captureRenderChunkPublicationFromPointer,
@@ -32,6 +35,7 @@ import {
   RENDER_GC_QUARANTINE_EVIDENCE_DIRECTORY,
   RENDER_GC_REMOVAL_STAGING_DIRECTORY,
   assertCapturedRenderGcFileEntry,
+  assertCapturedRenderTarget,
   captureRenderGcTarget,
   ensureRenderPhysicalDirectory,
   inventoryRenderQuarantineCandidates,
@@ -46,7 +50,10 @@ import {
   acquireRenderGcLease,
   preserveRenderLivenessLease,
 } from "./renderLiveness";
+import { observeRenderOwnerRecovery } from "./renderOwnerState";
 import { captureExistingRenderPlan } from "./renderPlanSnapshot";
+import type { IProductionRenderChunkInspection } from "./renderPlanningRuntime";
+import { parseRenderProcessOwnerSuffix } from "./renderProcessOwner";
 import type { IProductionSoundRuntime } from "./renderSoundRuntime";
 import { inventoryProductionSoundCaches } from "./soundCacheSnapshot";
 
@@ -81,6 +88,11 @@ export const createProductionRenderGarbageRuntime = (props: {
   compareCodeUnits: (left: string, right: string) => number;
   finalTier: IAutoMovieProductionRenderTier;
   host: IProductionRenderHost;
+  inspectChunk: (
+    plan: IAutoMovieProductionRenderJobPlan,
+    chunk: IAutoMovieProductionRenderChunk,
+    pointer: IRenderGcTargetSnapshot,
+  ) => IProductionRenderChunkInspection;
   productionId: string;
   productionStateRoot: string;
   proxyTier: IAutoMovieProductionRenderTier;
@@ -123,8 +135,8 @@ export const createProductionRenderGarbageRuntime = (props: {
       acquire: () =>
         acquireRenderGcLease({
           coordinationRoot: root,
-          pid: renderHost.pid,
-          processAlive: renderHost.processAlive,
+          observeProcessOwner: renderHost.observeProcessOwner,
+          owner: renderHost.owner,
           scope: renderLivenessScope,
         }),
       assertNoLiveWorkers: assertNoLiveRenderWorkers,
@@ -206,17 +218,49 @@ export const createProductionRenderGarbageRuntime = (props: {
           });
         },
         chunks: tierChunks,
-        processAlive: renderHost.processAlive,
+        observeProcessOwner: renderHost.observeProcessOwner,
         renderJobRoot,
         root,
         scope: renderLivenessScope,
         tier,
       });
+      const currentPublicationPaths = new Set(
+        publicationInventory.retainedChunkPaths,
+      );
+      for (const pointer of publicationInventory.entries.filter(
+        (entry) =>
+          entry.candidate.kind === "chunk-pointer" &&
+          entry.snapshot !== null &&
+          currentPublicationPaths.has(entry.candidate.path),
+      )) {
+        const chunk = tierChunks.get(pointer.candidate.digest!);
+        if (tierPlan === undefined || chunk === undefined) continue;
+        const inspection = props.inspectChunk(tierPlan, chunk, pointer.snapshot!);
+        if (inspection.finding.state === "current") continue;
+        const observation = {
+          state: inspection.finding.state,
+          authority: inspection.finding.authority,
+          stage: inspection.finding.stage,
+          reason: inspection.finding.reason,
+        };
+        pointer.candidate.observation = observation;
+        currentPublicationPaths.delete(pointer.candidate.path);
+        for (const tree of publicationInventory.entries)
+          if (
+            tree.candidate.kind === "chunk-tree" &&
+            tree.candidate.digest === pointer.candidate.digest &&
+            currentPublicationPaths.has(tree.candidate.path)
+          ) {
+            tree.candidate.observation = observation;
+            currentPublicationPaths.delete(tree.candidate.path);
+          }
+      }
       for (const entry of publicationInventory.entries) {
         candidates.push(entry.candidate);
-        candidateSnapshots.set(gcCandidateKey(entry.candidate), entry.snapshot);
+        if (entry.snapshot !== null)
+          candidateSnapshots.set(gcCandidateKey(entry.candidate), entry.snapshot);
       }
-      for (const retained of publicationInventory.retainedChunkPaths)
+      for (const retained of currentPublicationPaths)
         retainedChunkPaths.add(retained);
       const chunks = path.join(renderJobRoot, tier, "chunks");
       if (renderHost.filesystem.existsSync(chunks))
@@ -233,10 +277,13 @@ export const createProductionRenderGarbageRuntime = (props: {
             path: `${tier}/chunks/${entry.name}`,
             kind: "chunk",
             digest: `sha256:${entry.name}`,
-            bytes: 0,
+            bytes: null,
+            generation: null,
+            observation: null,
           };
           const snapshot = props.captureTarget(renderJobRoot, target);
           candidate.bytes = snapshot.bytes;
+          candidate.generation = snapshot.targetIdentity;
           candidates.push(candidate);
           candidateSnapshots.set(gcCandidateKey(candidate), snapshot);
         }
@@ -251,12 +298,15 @@ export const createProductionRenderGarbageRuntime = (props: {
             path: `${tier}/quarantine/${entry.name}`,
             kind: "quarantine",
             digest: null,
-            bytes: 0,
+            bytes: null,
+            generation: null,
+            observation: null,
           };
           const snapshot = props.captureTarget(
             path.join(renderJobRoot, tier),
             target,
           );
+          candidate.generation = snapshot.targetIdentity;
           quarantineEntries.push({ candidate, snapshot });
         }
     }
@@ -271,6 +321,16 @@ export const createProductionRenderGarbageRuntime = (props: {
         throw new Error("Render quarantine inventory lost its candidate.");
       const key = gcCandidateKey(entry.candidate);
       entry.candidate.bytes = inventory.bytes;
+      entry.candidate.observation =
+        inventory.evidence === null
+          ? {
+              state: "observation-conflict",
+              authority: "none",
+              stage: "reference",
+              reason:
+                "the quarantine marker does not bind one unique preserved generation",
+            }
+          : null;
       candidates.push(entry.candidate);
       candidateSnapshots.set(key, inventory.marker);
       if (inventory.evidence !== null)
@@ -284,67 +344,123 @@ export const createProductionRenderGarbageRuntime = (props: {
       for (const entry of renderHost.filesystem
         .readdirSync(proxyRoot, { withFileTypes: true })
         .sort((left, right) => compareCodeUnits(left.name, right.name))) {
-        if (
-          entry.isSymbolicLink() ||
-          (entry.isDirectory() === false && entry.isFile() === false) ||
-          /^[0-9a-f]{64}$/u.test(entry.name) === false
-        )
+        if (/^[0-9a-f]{64}$/u.test(entry.name) === false)
           continue;
         const target = path.join(proxyRoot, entry.name);
         const relative = normalizeSlash(path.relative(renderRoot, target));
         const logical = `publication/${relative}`;
+        if (
+          entry.isSymbolicLink() ||
+          (entry.isDirectory() === false && entry.isFile() === false)
+        ) {
+          candidates.push({
+            path: logical,
+            kind: "publication",
+            digest: null,
+            bytes: null,
+            generation: null,
+            observation: {
+              state: "unsafe-locator",
+              authority: "none",
+              stage: "locator",
+              reason:
+                "the proxy publication locator is not one resident physical file or directory",
+            },
+          });
+          sweptPublicationTargets.add(relative);
+          continue;
+        }
         const retainedByManifest = [...publicationPaths].some(
           (file) => file === logical || file.startsWith(`${logical}/`),
         );
-        const adjudicated = captureProxyPublicationGcTarget({
-          renderRoot,
-          target,
-          judge: (snapshot, evidence) => {
-            if (
-              currentProxy === undefined ||
-              entry.name !== renderPublicationFingerprint(currentProxy).slice(7)
-            )
-              return false;
-            try {
-              const receipt = inspectCapturedProxyBundle(snapshot, evidence);
-              return (
-                receipt.publicationFingerprint ===
-                  renderPublicationFingerprint(currentProxy) &&
-                receipt.compileFingerprint ===
-                  currentProxy.compileFingerprint &&
-                receipt.editFingerprint === currentProxy.editFingerprint
-              );
-            } catch {
-              return false;
-            }
-          },
-        });
-        const current = adjudicated.value;
-        if (current || retainedByManifest) {
-          if (current) {
-            if (adjudicated.snapshot.kind === "file")
-              publicationPaths.add(logical);
-            else
-              for (const entry of adjudicated.snapshot.entries) {
-                if (entry.kind !== "file") continue;
-                const file = path.join(
-                  adjudicated.snapshot.target,
-                  ...entry.path.split("/"),
+        let integrityFailed = false;
+        let adjudicated: {
+          snapshot: IRenderGcTargetSnapshot;
+          value: boolean;
+        };
+        try {
+          adjudicated = captureProxyPublicationGcTarget({
+            renderRoot,
+            target,
+            judge: (snapshot, evidence) => {
+              try {
+                const receipt = inspectCapturedProxyBundle(snapshot, evidence);
+                return (
+                  currentProxy !== undefined &&
+                  entry.name ===
+                    renderPublicationFingerprint(currentProxy).slice(7) &&
+                  receipt.publicationFingerprint ===
+                    renderPublicationFingerprint(currentProxy) &&
+                  receipt.compileFingerprint ===
+                    currentProxy.compileFingerprint &&
+                  receipt.editFingerprint === currentProxy.editFingerprint
                 );
-                publicationPaths.add(
-                  `publication/${normalizeSlash(path.relative(renderRoot, file))}`,
-                );
+              } catch {
+                integrityFailed = true;
+                return false;
               }
-          }
+            },
+          });
+        } catch {
+          candidates.push({
+            path: logical,
+            kind: "publication",
+            digest: null,
+            bytes: null,
+            generation: null,
+            observation: {
+              state: "unavailable",
+              authority: "none",
+              stage: "capture",
+              reason:
+                "the proxy publication generation could not be captured consistently",
+            },
+          });
+          if (entry.isDirectory()) sweptPublicationRoots.push(`${relative}/`);
+          else sweptPublicationTargets.add(relative);
+          continue;
+        }
+        const current = adjudicated.value;
+        if (current) {
+          if (adjudicated.snapshot.kind === "file")
+            publicationPaths.add(logical);
+          else
+            for (const entry of adjudicated.snapshot.entries) {
+              if (entry.kind !== "file") continue;
+              const file = path.join(
+                adjudicated.snapshot.target,
+                ...entry.path.split("/"),
+              );
+              publicationPaths.add(
+                `publication/${normalizeSlash(path.relative(renderRoot, file))}`,
+              );
+            }
           continue;
         }
         const candidate: IAutoMovieProductionRenderGcCandidate = {
           path: logical,
           kind: "publication",
           digest: null,
-          bytes: 0,
+          bytes: adjudicated.snapshot.bytes,
+          generation: adjudicated.snapshot.targetIdentity,
+          observation: retainedByManifest
+            ? {
+                state: "observation-conflict",
+                authority: "none",
+                stage: "reference",
+                reason:
+                  "the aggregate manifest references a proxy bundle that did not verify as current",
+              }
+            : integrityFailed
+              ? {
+                  state: "integrity-failed",
+                  authority: "exact-quarantine",
+                  stage: "inventory",
+                  reason:
+                    "the proxy bundle failed receipt, inventory, or digest verification",
+                }
+              : null,
         };
-        candidate.bytes = adjudicated.snapshot.bytes;
         candidates.push(candidate);
         candidateSnapshots.set(gcCandidateKey(candidate), adjudicated.snapshot);
         if (adjudicated.snapshot.kind === "file")
@@ -352,8 +468,9 @@ export const createProductionRenderGarbageRuntime = (props: {
         else sweptPublicationRoots.push(`${relative}/`);
       }
     }
-    if (renderHost.filesystem.existsSync(renderRoot))
-      for (const file of physicalFiles(renderRoot)) {
+    const unsafePublicationTargets: string[] = [];
+    if (renderHost.filesystem.existsSync(renderRoot)) {
+      for (const file of physicalFiles(renderRoot, unsafePublicationTargets)) {
         const relative = normalizeSlash(path.relative(renderRoot, file));
         if (isRenderGcPreservedPath(relative)) continue;
         if (sweptPublicationTargets.has(relative)) continue;
@@ -363,13 +480,51 @@ export const createProductionRenderGarbageRuntime = (props: {
           path: `publication/${relative}`,
           kind: "publication",
           digest: null,
-          bytes: 0,
+          bytes: null,
+          generation: null,
+          observation: null,
         };
-        const snapshot = props.captureTarget(renderRoot, file);
+        let snapshot: IRenderGcTargetSnapshot;
+        try {
+          snapshot = props.captureTarget(renderRoot, file);
+        } catch {
+          candidate.observation = {
+            state: "unavailable",
+            authority: "none",
+            stage: "capture",
+            reason:
+              "the publication target could not be captured consistently",
+          };
+          candidates.push(candidate);
+          continue;
+        }
         candidate.bytes = snapshot.bytes;
+        candidate.generation = snapshot.targetIdentity;
         candidates.push(candidate);
         candidateSnapshots.set(gcCandidateKey(candidate), snapshot);
       }
+      for (const target of unsafePublicationTargets) {
+        const relative = normalizeSlash(path.relative(renderRoot, target));
+        if (isRenderGcPreservedPath(relative)) continue;
+        if (sweptPublicationTargets.has(relative)) continue;
+        if (sweptPublicationRoots.some((root) => relative.startsWith(root)))
+          continue;
+        candidates.push({
+          path: `publication/${relative}`,
+          kind: "publication",
+          digest: null,
+          bytes: null,
+          generation: null,
+          observation: {
+            state: "unsafe-locator",
+            authority: "none",
+            stage: "locator",
+            reason:
+              "the publication locator is a symbolic link and remains outside automatic cleanup authority",
+          },
+        });
+      }
+    }
     const plan = planProductionRenderGc({
       plans,
       publicationPaths: [...publicationPaths],
@@ -380,7 +535,8 @@ export const createProductionRenderGarbageRuntime = (props: {
     soundRetention.assertCurrent();
     if (apply) {
       const quarantines = new Map<string, string>();
-      for (const candidate of plan.remove) {
+      for (const decision of plan.remove) {
+        const candidate = decision.candidate;
         const snapshot = candidateSnapshots.get(gcCandidateKey(candidate));
         if (snapshot === undefined)
           throw new Error(
@@ -412,6 +568,28 @@ export const createProductionRenderGarbageRuntime = (props: {
             snapshot,
           });
       }
+      for (const decision of plan.quarantine) {
+        const candidate = decision.candidate;
+        const snapshot = candidateSnapshots.get(gcCandidateKey(candidate));
+        if (snapshot === undefined)
+          throw new Error(
+            `GC quarantine candidate "${candidate.path}" has no matching inventory snapshot.`,
+          );
+        const preserved = ensureRenderPhysicalDirectory(
+          snapshot.base.path,
+          RENDER_GC_QUARANTINE_EVIDENCE_DIRECTORY,
+        );
+        const markers = ensureRenderPhysicalDirectory(
+          snapshot.base.path,
+          "quarantine",
+        );
+        quarantineCapturedRenderTarget({
+          destination: path.join(markers, `${renderHost.randomUuid()}.json`),
+          isolated: path.join(preserved, renderHost.randomUuid()),
+          quarantine: preserved,
+          snapshot,
+        });
+      }
     }
     soundRetention.assertCurrent();
     return { applied: apply, ...plan };
@@ -435,35 +613,56 @@ export const createProductionRenderGarbageRuntime = (props: {
             snapshot,
             RENDER_LOCK_JSON_MAX_BYTES,
           );
-          if (
-            Number.isSafeInteger(owner.pid) &&
-            renderHost.processAlive(owner.pid)
-          )
+          if (isRenderChunkLockOwner(owner) === false)
             throw new Error(
-              `Render GC --apply refuses live ${tier} worker ${owner.pid} at "${file}". Wait for that worker or stop it explicitly.`,
+              `Render GC --apply refuses ${tier} worker at "${file}" because its owner record is invalid.`,
+            );
+          const recovery = observeRenderOwnerRecovery({
+            between: () => assertCapturedRenderTarget(snapshot),
+            observe: renderHost.observeProcessOwner,
+            owner: owner.owner,
+          });
+          if (recovery.state !== "reclaimable")
+            throw new Error(
+              `Render GC --apply refuses ${tier} worker ${owner.owner.pid} at "${file}" because its owner is ${recovery.observation.state}.`,
             );
         }
       const attempts = path.join(tierRoot, "attempts");
       for (const captured of listRenderAttempts(tierRoot, attempts)) {
         const attempt = captured.record;
         const file = captured.snapshot.target;
-        if (attempt.state === "running" && renderHost.processAlive(attempt.pid))
-          throw new Error(
-            `Render GC --apply refuses live ${tier} attempt ${attempt.pid} at "${file}". Wait for that worker or stop it explicitly.`,
-          );
+        if (attempt.state === "running") {
+          const recovery = observeRenderOwnerRecovery({
+            between: () => assertCapturedRenderTarget(captured.snapshot),
+            observe: renderHost.observeProcessOwner,
+            owner: attempt.owner,
+          });
+          if (recovery.state !== "reclaimable")
+            throw new Error(
+              `Render GC --apply refuses ${tier} attempt ${attempt.owner.pid} at "${file}" because its owner is ${recovery.observation.state}.`,
+            );
+        }
       }
     }
   };
 
-  const physicalFiles = (directory: string): string[] => {
+  const physicalFiles = (
+    directory: string,
+    unsafeLocators?: string[],
+  ): string[] => {
     const output: string[] = [];
     for (const entry of renderHost.filesystem
       .readdirSync(directory, { withFileTypes: true })
       .sort((left, right) => compareCodeUnits(left.name, right.name))) {
       const target = path.join(directory, entry.name);
-      if (entry.isSymbolicLink())
-        throw new Error(`Render GC refuses linked publication "${target}".`);
-      if (entry.isDirectory()) output.push(...physicalFiles(target));
+      if (entry.isSymbolicLink()) {
+        if (unsafeLocators === undefined)
+          throw new Error(`Render GC refuses linked publication "${target}".`);
+        unsafeLocators.push(target);
+        continue;
+      }
+      if (entry.isDirectory())
+        output.push(...physicalFiles(target, unsafeLocators));
       else if (entry.isFile()) output.push(target);
     }
     return output;
@@ -486,11 +685,16 @@ export const createProductionRenderGarbageRuntime = (props: {
           .filter((candidate) => candidate.name.endsWith(".candidate"))
           .sort((left, right) => compareCodeUnits(left.name, right.name))) {
           const target = path.join(locks, slot.name, entry.name);
-          const match = /^claim\.(\d+)\.[^.]+\.lock\.candidate$/u.exec(
-            entry.name,
+          const snapshot = captureAbandonedRenderStateTarget(
+            target,
+            (captured) => {
+              const candidate = readCapturedRenderJson<IRenderChunkLockOwner>(
+                captured,
+                RENDER_LOCK_JSON_MAX_BYTES,
+              );
+              return isRenderChunkLockOwner(candidate) ? candidate.owner : null;
+            },
           );
-          const pid = Number(match?.[1]);
-          const snapshot = captureAbandonedRenderStateTarget(target, pid);
           if (snapshot === null) continue;
           quarantine(target, "abandoned-lock-candidate", snapshot);
         }
@@ -500,8 +704,12 @@ export const createProductionRenderGarbageRuntime = (props: {
       .readdirSync(directory, { withFileTypes: true })
       .sort((left, right) => compareCodeUnits(left.name, right.name))) {
       const target = path.join(directory, entry.name);
-      const pid = Number(entry.name.split(".").at(-1));
-      const snapshot = captureAbandonedRenderStateTarget(target, pid);
+      const identity = temporaryTreeOwner(entry.name);
+      if (identity === null) continue;
+      const snapshot = captureAbandonedRenderStateTarget(
+        target,
+        () => identity,
+      );
       if (snapshot === null) continue;
       if (currentPublicationProtectsTree(currentChunks, entry.name, snapshot))
         continue;
@@ -510,8 +718,9 @@ export const createProductionRenderGarbageRuntime = (props: {
   };
 
   const quarantineStaleSlotOutputs = (
-    chunks: readonly IAutoMovieProductionRenderChunk[],
+    plan: IAutoMovieProductionRenderJobPlan,
   ): void => {
+    const chunks = plan.chunks;
     const currentIds = new Set(chunks.map((chunk) => chunk.id));
     const currentChunks = new Map(
       chunks.map((chunk) => [chunk.slot, chunk.id]),
@@ -538,6 +747,16 @@ export const createProductionRenderGarbageRuntime = (props: {
         throw error;
       }
       let current = false;
+      const expected = currentIds.has(digest)
+        ? chunks.find((chunk) => chunk.id === digest)
+        : undefined;
+      if (expected !== undefined) {
+        const inspection = props.inspectChunk(plan, expected, pointerSnapshot);
+        if (inspection.finding.state === "current") continue;
+        if (inspection.finding.state !== "verified-stale") continue;
+        removeCapturedRenderChunkPointer(pointerSnapshot);
+        continue;
+      }
       try {
         const publication =
           captureRenderChunkPublicationFromPointer(pointerSnapshot);
@@ -546,7 +765,9 @@ export const createProductionRenderGarbageRuntime = (props: {
           publication.receipt.chunk === digest &&
           currentChunks.get(publication.receipt.slot) === digest;
       } catch {
-        current = false;
+        // A pointer that cannot authenticate its generation is unresolved. It
+        // remains in place so render cannot reinterpret it as absence.
+        continue;
       }
       if (current === false) removeCapturedRenderChunkPointer(pointerSnapshot);
     }
@@ -598,6 +819,22 @@ export const createProductionRenderGarbageRuntime = (props: {
     }
   };
 
+  const currentChunkPointerLocatorState = (
+    chunk: IAutoMovieProductionRenderChunk,
+  ): "absent" | "resident" | "unsafe" | "unavailable" => {
+    try {
+      const status = renderHost.filesystem.lstatSync(chunkDirectory(chunk.id));
+      return status.isSymbolicLink() ||
+        (status.isFile() === false && status.isDirectory() === false)
+        ? "unsafe"
+        : "resident";
+    } catch (error) {
+      return (error as NodeJS.ErrnoException).code === "ENOENT"
+        ? "absent"
+        : "unavailable";
+    }
+  };
+
   const currentPublicationProtectsTree = (
     chunks: ReadonlyMap<
       AutoMovieContentDigest,
@@ -642,30 +879,46 @@ export const createProductionRenderGarbageRuntime = (props: {
 
   const captureAbandonedRenderStateTarget = (
     target: string,
-    pid: number,
+    ownerOf: (snapshot: IRenderGcTargetSnapshot) => unknown,
   ): IRenderGcTargetSnapshot | null => {
-    const validPid = Number.isSafeInteger(pid) && pid > 0;
-    if (validPid && renderHost.processAlive(pid)) return null;
-    let snapshot: IRenderGcTargetSnapshot | null;
     try {
-      snapshot = captureExistingRenderStateTarget(target);
-    } catch (error) {
-      if (validPid && renderHost.processAlive(pid)) return null;
-      throw error;
+      const snapshot = captureExistingRenderStateTarget(target);
+      if (snapshot === null) return null;
+      const owner = ownerOf(snapshot);
+      if (isAutoMovieLocalProcessOwner(owner) === false) return null;
+      if (
+        observeRenderOwnerRecovery({
+          between: () => assertCapturedRenderTarget(snapshot),
+          observe: renderHost.observeProcessOwner,
+          owner,
+        }).state !== "reclaimable"
+      )
+        return null;
+      assertCapturedRenderTarget(snapshot);
+      return snapshot;
+    } catch {
+      return null;
     }
-    if (validPid && renderHost.processAlive(pid)) return null;
-    return snapshot;
+  };
+
+  const temporaryTreeOwner = (
+    name: string,
+  ): IAutoMovieLocalProcessOwner | null => {
+    const match = /^[0-9a-f]{64}\.[^.]+\.(.+)$/u.exec(name);
+    return match === null ? null : parseRenderProcessOwnerSuffix(match[1]);
   };
 
   const readCapturedRenderJson = <T>(
     snapshot: IRenderGcTargetSnapshot,
     maximumBytes: number = snapshot.bytes,
-  ): T =>
-    JSON.parse(
-      Buffer.from(readCapturedRenderGcFile(snapshot, maximumBytes)).toString(
-        "utf8",
-      ),
-    ) as T;
+  ): T => {
+    const bytes = readCapturedRenderGcFile(snapshot, maximumBytes);
+    try {
+      return JSON.parse(Buffer.from(bytes).toString("utf8")) as T;
+    } catch {
+      throw new Error("Captured render JSON is unreadable.");
+    }
+  };
 
   const removeOwnedChunkClaim = (
     snapshot: IRenderGcTargetSnapshot,
@@ -736,6 +989,7 @@ export const createProductionRenderGarbageRuntime = (props: {
 
   return {
     captureCurrentChunkPointer,
+    currentChunkPointerLocatorState,
     captureExistingRenderStateTarget,
     collect: renderGarbageCollection,
     quarantine,

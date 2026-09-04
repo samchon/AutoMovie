@@ -23,11 +23,15 @@ Reference graph는 referrer identity, target generation, relation kind, created 
 
 Cleanup은 inventory snapshot과 policy identity를 입력으로 받아 remove, retain, quarantine와 manual-adjudication sets를 가진 immutable plan을 출력해야 한다. 각 candidate는 exact generation, bytes, last verified use, expiry, reference decision, deletion reversibility와 reason을 포함하고 unresolved path pattern이나 wildcard만으로 target을 표현하지 않는다.
 
+Render artifact 판정은 readable known-obsolete generation만 exact remove에 넣는다. Current와 absent는 retain하고, integrity-failed generation은 exact captured quarantine authority가 있을 때만 quarantine하며, unsafe locator, foreign generation, unavailable read, changed-during-read와 conflicting reference는 manual-adjudication에 남긴다. Aggregate manifest가 참조하는 invalid proxy와 current 이름을 가진 invalid bundle은 pathname만으로 current 또는 stale가 되지 않는다.
+
 ### Concurrent Cleanup Safety {#execution-cleanup-concurrency-safety}
 
 <!-- @evidence requirements/operations-and-recovery/retention-and-cleanup.md#operations-cleanup-concurrency-safety Active writer, reader, transfer와 publication이 쓰는 대상을 cleanup하지 않는다. -->
 
 Apply는 cleanup plan의 inventory generation, active ownership, reference graph와 target identity를 다시 확인해야 한다. Active or ambiguous use가 있거나 target이 successor generation으로 바뀌면 해당 candidate를 skipped-conflict로 남기고 sibling candidate에 대한 판단을 재사용하지 않는다.
+
+Render session, GC guard, chunk claim, running attempt와 worker temporary tree는 versioned record에 complete host·PID·process generation을 저장한다. Reclaim은 같은 validated owner에 대한 두 independent `absent` observations와 그 사이 exact target recapture가 모두 일치할 때만 가능하며, occupied-or-reused, same-owner, elsewhere, malformed 또는 query-unavailable state는 candidate를 보존하고 apply를 fail closed한다.
 
 ### Deletion Outcome과 Tombstone {#execution-deletion-outcome-tombstone}
 
