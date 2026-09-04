@@ -142,12 +142,16 @@ import { run } from "automovie";
  */
 export const runCreateAutoMovie = (
   argv: readonly string[] = process.argv,
-): number =>
-  run([
+): number => {
+  const arguments_ = argv.slice(2);
+  const standalone =
+    arguments_.length === 1 &&
+    ["-h", "--help", "-v", "--version"].includes(arguments_[0]!);
+  return run([
     argv[0] ?? process.execPath,
     "create-automovie",
-    "start",
-    ...argv.slice(2),
+    ...(standalone ? arguments_ : ["start", ...arguments_]),
   ]);
+};
 
 if (require.main === module) process.exitCode = runCreateAutoMovie();
