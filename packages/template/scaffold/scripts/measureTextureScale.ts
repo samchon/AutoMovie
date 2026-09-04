@@ -32,7 +32,7 @@ const authoringEvidence = currentAuthoringEvidence();
  * ## Why this is a script and not a compile step
  *
  * The same reason the building report is one. A finish reading at the wrong
- * size is not a compiler error — the model is well formed and the frame draws —
+ * size is not a compiler error : the model is well formed and the frame draws :
  * and the answer is not part of a frame either, so it is not compiler output.
  * Shot source cannot ask the question at all: a build function runs in a
  * deterministic no-I/O sandbox over a published engine surface that

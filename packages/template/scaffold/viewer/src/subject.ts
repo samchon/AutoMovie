@@ -12,8 +12,8 @@
  *
  * **This is an inspection tool and not a delivery path.** The eye is one this
  * page chose from the subject's own extent, so a frame it draws belongs to no
- * authored camera and is not capture evidence. The page writes nothing — no
- * file, no receipt — and it deliberately installs no `window.__automovieCapture`
+ * authored camera and is not capture evidence. The page writes nothing : no
+ * file, no receipt : and it deliberately installs no `window.__automovieCapture`
  * hook, so the capture host cannot drive it even if it is pointed here: preview
  * and render frames keep coming from `/viewer/`, composed by a shot's own
  * camera. The two caveats `inspect.html` carries apply here too: the level of
@@ -63,7 +63,7 @@ import { viewerDocument } from "./viewerDocument";
  *
  * Eight azimuths on three rings: a low one that reads a soffit, an eye-height
  * one that reads a proportion, and a raised one that reads a footprint. Cheap
- * and reproducible beats complete — the defects that survived one whole
+ * and reproducible beats complete : the defects that survived one whole
  * campaign were a wrong proportion, a missing head and a brace at the wrong
  * angle, and every one of them is visible from a horizontal sweep.
  */
@@ -119,7 +119,7 @@ const OPEN_MARK = "▾";
  * sweep mid-flight (61fed2ad): reopening one URL rebuilds the same state at the
  * same address. So a saved edit to this module, a `Back`, and a link pasted to
  * somebody else all land on the tree as it was left, and the page still writes
- * nothing — no file, no receipt, no browser storage.
+ * nothing : no file, no receipt, no browser storage.
  *
  * Compiled ids rather than viewer keys, because {@link viewerKeyOf} is lossy:
  * a placed part and a prototype's part both spell `part:`, and a node's
@@ -223,7 +223,7 @@ const requestedKey = parameters.get("subject");
  * environment binds to a space; everything else is somebody's member and is
  * reached by opening that somebody. Listing every space flat, which is what
  * this did before, put a room beside the storey that contains it and said
- * nothing about which was which — and on the medieval residence that is
+ * nothing about which was which; and on the medieval residence that is
  * fourteen of fifteen spaces standing at the top level with no parent named.
  *
  * `parent` is read from the compiled environment rather than from a
@@ -307,7 +307,7 @@ const compiledSubjectIds = (subject: IAutoMovieViewerSubject): string[] => {
  *
  * A model-space answer is refused rather than framed. The box a prototype
  * reports is measured in its own model's coordinates, so aiming a world camera
- * at it stages the world origin and shows whatever happens to stand there —
+ * at it stages the world origin and shows whatever happens to stand there;
  * agreement in form, a different thing in fact.
  */
 const resolve = (
@@ -425,7 +425,7 @@ const turntableFor = (
  * A room framed from outside is a room behind its own wall, so without this the
  * space subject would be reachable and still unreadable. The plane rides the
  * viewpoint, so turning the table turns the cut with it and a room stays open
- * from every angle it is looked at. The scene is not edited — the cut is a way
+ * from every angle it is looked at. The scene is not edited; the cut is a way
  * of looking rather than a second version of the building.
  */
 const sectionAt = (
@@ -603,8 +603,8 @@ interface ISubjectTreeRow {
 /**
  * Subject links as a tree that opens and closes one node at a time.
  *
- * A subject is a group and a group holds groups — a residence holds storeys,
- * a storey holds rooms, a room holds elements, an element holds its parts —
+ * A subject is a group and a group holds groups; a residence holds storeys,
+ * a storey holds rooms, a room holds elements, an element holds its parts;
  * and a flat list of sixty-four rows of `great-hall-chandelier-0-ring-13`
  * spells that structure in the ids and shows none of it.
  *
@@ -622,8 +622,8 @@ interface ISubjectTreeRow {
  *
  * **Every opened node states its own population**, through
  * {@link membershipLine}, because `items` is a sample. A node that turns out to
- * name nothing this shot carries — the compiled artifact lets a space list a
- * grouping element that owns no scene node, and 24 of the residence's do —
+ * name nothing this shot carries; the compiled artifact lets a space list a
+ * grouping element that owns no scene node, and 24 of the residence's do;
  * shows that refusal where its children would be, which is a cheaper way to
  * learn it than clicking through and losing the picture you were looking at.
  *
@@ -665,8 +665,8 @@ const subjectTree = (rootIds: readonly string[]): HTMLElement[] => {
    * A page rather than the whole, because the description's sample is bounded
    * and a building is flat: one measured manor is a single root owning 988
    * children, so the first page names 64 and the reviewer used to reach no
-   * further. The rest were never lost — the subject census enumerates every one
-   * — but the tree, which is how a reviewer actually looks, stopped there.
+   * further. The rest were never lost; the subject census enumerates every one
+   *; but the tree, which is how a reviewer actually looks, stopped there.
    */
   const expandFrom = (row: ISubjectTreeRow, offset: number): void => {
     const answer = describedSubject(row.compiledId, offset);
@@ -835,7 +835,7 @@ async function digestOf(text: string): Promise<string> {
  * Both ways in want it for the same reason, and only one of them used to have
  * it. On the index the anchor's own href ran instead, so a member the compiled
  * shot cannot describe landed the reviewer on a page carrying one line of
- * refusal, no tree and no link — the loss that the twist's in-place refusal was
+ * refusal, no tree and no link; the loss that the twist's in-place refusal was
  * written to avoid, reached from the other side. A tree that refuses a dead id
  * where its children would be and then hands the same id over as a live link
  * has not stopped costing the click; it has moved it one row across.
@@ -1194,8 +1194,8 @@ const openSubjectPage = async (key: string): Promise<void> => {
  *
  * The index holds no scene, so opening a subject from here is a page load
  * rather than a restage. The refusal therefore has to happen BEFORE that load:
- * a member the compiled shot does not carry — a space may list a grouping
- * element that owns no scene node, and 24 of the medieval residence's do —
+ * a member the compiled shot does not carry; a space may list a grouping
+ * element that owns no scene node, and 24 of the medieval residence's do;
  * would otherwise be discovered by the next page, which has nothing left to
  * show but the message. Asking first costs one memoised description and leaves
  * the reviewer where they were, with the twists they had opened still open,

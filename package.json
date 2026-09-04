@@ -11,6 +11,7 @@
     "experimental": "ttsx -P config/tsconfig.json --no-plugins --types node build/experimental.ts --",
     "format": "prettier --write \"**/*.{ts,cts,mts}\"",
     "format:check": "prettier --check \"**/*.{ts,cts,mts}\"",
+    "lint:voice": "ttsx -P config/tsconfig.json --no-plugins --types node build/proseVoice-cli.ts",
     "probe:scaffold-parent": "ttsx -P config/tsconfig.json --no-plugins --types node build/probeScaffoldParentPublication.ts"
   },
   "keywords": [

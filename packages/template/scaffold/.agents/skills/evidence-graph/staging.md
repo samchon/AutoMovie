@@ -61,7 +61,7 @@ Test a reason by exchange rather than by reading it alone. Take the sentence thi
 
 Counting the host is a description of its size, not a statement about what the target required. `four facades and nine rooms`, `nine viewpoints`, `three shots` are true of every host shaped like this one. Write instead what this host does that a sibling does not, in the terms the target names.
 
-When a statement turns on how something is written rather than on what it is -- a number, a dimension, an identifier, a title, a quoted line -- give the host's own rendering. A host whose source reads `1.6` is not addressed by a reason that says `160cm`, and one whose only mention of a station sits in a heading has not realized that station in its body. The fact may well be present, but a claim recorded in a notation the host never uses cannot be checked by reading the host, which is the only check this graph has.
+When a statement turns on how something is written rather than on what it is; a number, a dimension, an identifier, a title, a quoted line; give the host's own rendering. A host whose source reads `1.6` is not addressed by a reason that says `160cm`, and one whose only mention of a station sits in a heading has not realized that station in its body. The fact may well be present, but a claim recorded in a notation the host never uses cannot be checked by reading the host, which is the only check this graph has.
 
 ## Transitions
 

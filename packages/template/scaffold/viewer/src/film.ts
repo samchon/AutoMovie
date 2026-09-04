@@ -249,7 +249,7 @@ const sampleFilmFrame = (
 // its temporal dead zone until its own declaration is evaluated. Drawing the
 // first frame from anywhere above that line throws
 // `ReferenceError: Cannot access 'sampleFilmFrame' before initialization`, and
-// the page renders nothing at all -- in every generated project, since each one
+// the page renders nothing at all; in every generated project, since each one
 // inherits this file verbatim. The capture harness above only registers
 // callbacks, so it is unaffected by where it sits; this call runs immediately,
 // so it is not.

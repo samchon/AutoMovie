@@ -88,7 +88,7 @@ export interface IAutoMovieInspectionImage {
  *
  * A subject this page cannot frame is answered rather than thrown, and the
  * difference is what the staged scene costs. A throw out of the page hook says
- * the page failed, and the host discards it on that reading — correctly, since
+ * the page failed, and the host discards it on that reading : correctly, since
  * a page that lost its execution context cannot be trusted with the next
  * viewpoint. But a prototype measured in model space stands nowhere in this
  * world scene, and refusing it says nothing about the page: the scene behind it

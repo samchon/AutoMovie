@@ -19,13 +19,13 @@ Six things, all settled before the first turn, because a brief edited mid-run ca
 
 ## Say Which Source Governs When Two Disagree
 
-A brief names the subject **and** the references it is judged against, and those two disagree. Not occasionally — twice in one run, on one production, in the same shape.
+A brief names the subject **and** the references it is judged against, and those two disagree. Not occasionally : twice in one run, on one production, in the same shape.
 
-The fixed massing said "one main body, one garage, nothing else"; the reference plainly showed a chimney. Earlier, the fixed circulation named a straight flight; the reference showed a dog-leg stair. Both times the agent stopped and asked, which is the behaviour to want — it refused to resolve a contradiction in its own instructions by picking the half it preferred. Both times the driver had to adjudicate in flight, which is a decision the brief should already have made.
+The fixed massing said "one main body, one garage, nothing else"; the reference plainly showed a chimney. Earlier, the fixed circulation named a straight flight; the reference showed a dog-leg stair. Both times the agent stopped and asked, which is the behaviour to want : it refused to resolve a contradiction in its own instructions by picking the half it preferred. Both times the driver had to adjudicate in flight, which is a decision the brief should already have made.
 
 So the brief states the rule, once, in the section that fixes the massing: **which source governs, and for what.** The ruling that worked was that the fixed graph governs volumes and circulation, the reference governs everything the envelope carries, and a detail that cannot be expressed without changing the graph is a stop rather than a judgement call.
 
-Whatever the rule is, name it before the first turn. A contradiction adjudicated mid-run cannot be rerun, and an agent that meets one with no rule either stops — costing a turn — or picks, which silently makes the brief mean whatever it picked.
+Whatever the rule is, name it before the first turn. A contradiction adjudicated mid-run cannot be rerun, and an agent that meets one with no rule either stops : costing a turn : or picks, which silently makes the brief mean whatever it picked.
 
 ## Withhold The Method
 
@@ -49,7 +49,7 @@ Two consequences for a brief. A tool named once is named for the whole session, 
 
 Measuring discoverability needs a run in which the name appears in no message at all, including the ones that only list what the agent may read.
 
-**And including anything you quote back from the product.** Its own diagnostics name its tools — one refusal used to read *"Run prepareReview, correct the target, and submitReview before this compile scope"* — so relaying a diagnostic verbatim spends the measurement in the act of describing it. A driver caught that with the message already drafted: it had been analysing a contradiction between two commands' remedies, and quoting either one to the agent would have handed over two of the three names the run existed to see whether the agent could find.
+**And including anything you quote back from the product.** Its own diagnostics name its tools : one refusal used to read *"Run prepareReview, correct the target, and submitReview before this compile scope"* : so relaying a diagnostic verbatim spends the measurement in the act of describing it. A driver caught that with the message already drafted: it had been analysing a contradiction between two commands' remedies, and quoting either one to the agent would have handed over two of the three names the run existed to see whether the agent could find.
 
 The consequence is not "paraphrase the diagnostic". It is that **a finding about the product's text is the driver's to file and not the author's to be told**, and a run measuring discoverability cannot use the product's own error messages as steering material at all. Scan every outgoing message against the tool names, not only against the ones you wrote yourself.
 

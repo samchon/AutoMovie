@@ -50,7 +50,7 @@ export const treeScatter = (
  * A three-dimensional lattice: one prototype repeated on a regular grid.
  *
  * This is the layout to reach for whenever a placement is a regular repetition
- * — panels on a ceiling, modules on a wall, bays down a length — because it
+ * : panels on a ceiling, modules on a wall, bays down a length : because it
  * states the rule instead of the result. The set holds three counts and one
  * spacing no matter how many members it produces, so changing a count or the
  * spacing stays ordinary TypeScript and the compiler still keeps the result as
@@ -186,8 +186,8 @@ export const slopedFacadeWindows = (
  * An explicit transform block: a placement law written as a program.
  *
  * The compact layouts state a rule the compiler already knows. When the rule is
- * the author's own — a helix here, but equally a vault rib, a catenary, a
- * measured survey, or anything else a function can produce — this is how it is
+ * the author's own; a helix here, but equally a vault rib, a catenary, a
+ * measured survey, or anything else a function can produce; this is how it is
  * expressed without inventing new layout vocabulary: emit one exact
  * translation, unit quaternion, and per-axis scale per slot, keep a stable id
  * on each, and the whole block still compiles to bounded instance chunks.
@@ -195,7 +195,7 @@ export const slopedFacadeWindows = (
  * The law below is a helix because a helix is the shortest law to read, not
  * because a helix is what this template supplies. Its parameters are that one
  * law's degrees of freedom: replace the body with your own law and everything
- * around it — the slot loop, the stable ids, the exact per-slot transform — is
+ * around it; the slot loop, the stable ids, the exact per-slot transform; is
  * unchanged, which is the part worth copying.
  */
 export const explicitPlacementLaw = (

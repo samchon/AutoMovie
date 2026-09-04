@@ -4,7 +4,7 @@
  *
  * **This is an inspection tool and not a delivery path.** The eye is wherever a
  * hand flew it, so a frame it draws belongs to no authored camera and is not
- * capture evidence. The page writes nothing — no file, no receipt — and it
+ * capture evidence. The page writes nothing : no file, no receipt : and it
  * deliberately installs no `window.__automovieCapture` hook, so the capture
  * host cannot drive it even if it is pointed here: preview and render frames
  * keep coming from `/viewer/`, composed by a shot's own camera.

@@ -57,6 +57,9 @@ Plain and direct. State the fact and stop.
 
 - No em dashes. Use a period, comma, colon, or parentheses, whichever the sentence actually needs.
 - No emoji.
+- No spaced double hyphen in prose. CLI separators remain code and are not prose.
 - No filler adjectives: "powerful", "seamless", "robust", "effortless".
 - No AI-cliche phrasing: "not only X but also Y", "whether you're X or Y", "it's worth noting", "let's dive in", and reflexive hedging.
 - No wrap-up sentence that just restates the paragraph.
+
+`pnpm lint:voice` enforces these punctuation rules over repository instructions, package READMEs, and scaffold Markdown and TypeScript comments. It excludes Markdown code spans and fences, TypeScript literals, fixtures, and dated experiment baselines.

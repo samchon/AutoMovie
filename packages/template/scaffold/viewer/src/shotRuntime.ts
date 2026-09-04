@@ -163,7 +163,7 @@ export interface IAutoMovieCompiledShotRuntime {
    * Every instance set and formation builds its level-of-detail meshes hidden
    * and only reveals one when it is told how far away the eye is, so a scene
    * drawn straight out of this field shows the ordinary meshes and silently
-   * drops every instanced population — the laid modules, the flags, the
+   * drops every instanced population; the laid modules, the flags, the
    * boards. Call {@link IAutoMovieCompiledShotRuntime.resolveForCamera} first
    * when drawing this graph with a camera of your own; {@link render} already
    * does it for the shot's own camera.
@@ -174,8 +174,8 @@ export interface IAutoMovieCompiledShotRuntime {
    * Reveal the level of detail each population owes the given eye.
    *
    * Separated from {@link render} because looking at a shot from somewhere the
-   * shot does not go is an ordinary thing to want — a review from a fresh
-   * angle, a survey of a surface nobody authored a camera for — and the only
+   * shot does not go is an ordinary thing to want; a review from a fresh
+   * angle, a survey of a surface nobody authored a camera for; and the only
    * alternative was to draw through the shot's own camera and get the authored
    * view back every time.
    *

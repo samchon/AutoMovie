@@ -35,8 +35,8 @@ import { ExampleBuilding } from "./buildings";
  *
  * ## A plan, a section and an elevation are one projection
  *
- * They differ in two decisions — where the cut plane is, and which side of it
- * survives — so the technique below is the whole of all four conventions. Move
+ * They differ in two decisions : where the cut plane is, and which side of it
+ * survives : so the technique below is the whole of all four conventions. Move
  * `origin` up and the plan cuts higher; point `direction` sideways and the same
  * call returns a section; ask for `elevation` and nothing is cut at all.
  *
@@ -178,8 +178,8 @@ export const exampleOpeningSchedule = (): IAutoMovieDrawingSchedule =>
  * The take-off: every quantity the design can answer for, and every one it
  * cannot.
  *
- * Every number is arithmetic over authored geometry — a footprint's area, a
- * void's arc area, a route's polyline length, a cell's decomposition — so a
+ * Every number is arithmetic over authored geometry : a footprint's area, a
+ * void's arc area, a route's polyline length, a cell's decomposition : so a
  * quantity cannot fall out of date with the model it came from. Nothing is
  * looked up, defaulted, or carried over from a previous revision, and a subject
  * the design cannot support is a stated gap rather than a missing row.

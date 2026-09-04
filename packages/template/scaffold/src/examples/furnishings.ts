@@ -31,7 +31,7 @@ import type {
  * ## There is no species catalogue, and there will not be one
  *
  * A fern, a ficus, a wall of ivy and an aquatic reed differ by angles, ratios,
- * growth direction and leaf density — not by a name the engine would have to
+ * growth direction and leaf density : not by a name the engine would have to
  * recognise. Shipping a preset would be shipping content dressed as capability.
  * The numbers below are one plant's worth of those parameters, exposed as
  * `props` so the whole habit changes when one of them is edited.
@@ -183,8 +183,8 @@ export const exampleCurtainDomain = (
       gustAcceleration: 1.2,
       gustHz: 0.35,
     },
-    // Declaring `true` here would be legitimate — it states what the panel
-    // actually needs — and this tier answers `unsupported` rather than quietly
+    // Declaring `true` here would be legitimate; it states what the panel
+    // actually needs; and this tier answers `unsupported` rather than quietly
     // solving a panel that passes through itself. The answer comes from the
     // binding's lowering, not from the validator below: a domain on its own
     // validates either way, and it is `lowerSoftFurnishing` that hands back the
@@ -206,7 +206,7 @@ export const exampleCurtainDomain = (
  * Read the envelope in the **recipe's own frame**, not in the room. Growth
  * starts the trunk at the origin, and a cluster placement moves the finished
  * structure afterwards, so this box states how far the plant may reach from its
- * own base — a clipped hedge profile, a trained wall, the inside of a planter —
+ * own base; a clipped hedge profile, a trained wall, the inside of a planter;
  * and never where the bed stands. Writing the room's world coordinates here
  * would prune every member the cluster placed anywhere else down to nothing.
  *
@@ -282,7 +282,7 @@ export const examplePlantingDomain = (
     rollJitter: 0.6,
   },
   // A promise the recipe makes about itself, checked against the complete tree
-  // its own law describes — not against the pruned result, because pruning only
+  // its own law describes; not against the pruned result, because pruning only
   // ever shortens. A budget the law overruns is refused at authorship rather
   // than discovered as a frame that will not finish, so keep the headroom
   // deliberate: a cap twenty times the worst case is a number, not a promise,

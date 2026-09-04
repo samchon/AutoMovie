@@ -4,7 +4,7 @@ Capture produces actual current PNG evidence through the project's own browser. 
 
 ## Capture takes as long as it takes
 
-A registered capture browser starts, draws, and commits bytes. `npm run preview` and `npm run turntable` are synchronous, and either may legitimately run for minutes on a heavy scene or a cold browser. Whatever you drive them from -- an npm script, a measurement module, a harness of your own -- give it a deadline in the hundreds of seconds rather than the tens, and read a timeout as a fact about your caller rather than as a capture diagnostic. Nothing in the capture pipeline reports itself by timing out.
+A registered capture browser starts, draws, and commits bytes. `npm run preview` and `npm run turntable` are synchronous, and either may legitimately run for minutes on a heavy scene or a cold browser. Whatever you drive them from; an npm script, a measurement module, a harness of your own; give it a deadline in the hundreds of seconds rather than the tens, and read a timeout as a fact about your caller rather than as a capture diagnostic. Nothing in the capture pipeline reports itself by timing out.
 
 Run `capture:install` and `capture:doctor` before the first capture of a session. A missing or drifted browser is refused by name there, which is cheaper than reading it out of a failed render.
 

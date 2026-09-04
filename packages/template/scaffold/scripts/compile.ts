@@ -38,7 +38,7 @@ const archetypes = createAutoMovieArchetypeRegistry(
  * The root comes from the declaration's own `location` rather than from the
  * working directory. The reader refuses a declaration belonging to another
  * root, and a project reached through a different spelling of the same
- * directory -- a Windows short path, a symlinked checkout -- is exactly the
+ * directory; a Windows short path, a symlinked checkout; is exactly the
  * case where two true paths compare unequal.
  */
 const root = productionEvidence.location;

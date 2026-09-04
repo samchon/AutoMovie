@@ -80,7 +80,7 @@ automovie stages lights outside `nodes`, so without these a light's direction
 would be fixed for the whole film. The kind split follows the physics: a
 directional light is infinitely distant and carries no `position`, a point light
 radiates every way and carries no `rotation`, a spot carries both. `scale` is
-deliberately not an axis — a punctual light has no extent for it to mean
+deliberately not an axis : a punctual light has no extent for it to mean
 anything about. `rotation` is a `quaternion` rather than a `vec4` so the sampler
 slerps it, and its keyframes are held to unit length, the same rule the scene
 gate holds a staged transform to.
@@ -147,7 +147,7 @@ automovie의 **결정론적 엔진**. `@automovie/interface`의 AST를 받아 �
 - `validateMotion`/`validatePose`/`clampPose` + ROM: 결정론적 오라클. 무엇을 만들든 물리 진실은 엔진이 심판한다.
 - `sampleMotion`/`sampleClip`: 재생 계약. 저작한 클립을 프레임으로 샘플링한다.
 
-[`@automovie/production`](../production)은 이 엔진의 두 번째 저작 API가 아니다. generated project가 자기 스크립트로 돌리는 결정론적 실행 계층 — 컴파일러, 추적되는 프로젝트 저장소, 캡쳐, 검사, 렌더 잡 — 일 뿐이다. 러너블 스타터는 `npx create-automovie <dir>`로 만들고, generated project의 compile/lint/render/verify 명령이 같은 엔진을 호출한다.
+[`@automovie/production`](../production)은 이 엔진의 두 번째 저작 API가 아니다. generated project가 자기 스크립트로 돌리는 결정론적 실행 계층 : 컴파일러, 추적되는 프로젝트 저장소, 캡쳐, 검사, 렌더 잡 : 일 뿐이다. 러너블 스타터는 `npx create-automovie <dir>`로 만들고, generated project의 compile/lint/render/verify 명령이 같은 엔진을 호출한다.
 
 ## 모듈
 

@@ -112,7 +112,7 @@ const floorSurface = (props: {
 /**
  * A code-first building technique, deliberately not part of any production.
  *
- * The work owns two independent building units — a tower and a yawed annex —
+ * The work owns two independent building units : a tower and a yawed annex :
  * plus the sky-bridge that couples them at two different heights. Everything
  * repeated is written once: a storey's slab, its logical space, its room, its
  * door, and the stair up to it are all derived from one index, so raising
@@ -138,14 +138,14 @@ const floorSurface = (props: {
  * car and its counterweight are `carriages` travelling on one degree of freedom
  * each, and a named state places both at once and says which space the car is
  * standing at. That last field is what turns "the car is at level three" into a
- * fact the engine settles — it places the car and refuses a state whose car
- * lands outside the space it claims — while the counterweight, travelling the
+ * fact the engine settles : it places the car and refuses a state whose car
+ * lands outside the space it claims : while the counterweight, travelling the
  * other way, serves nothing and says so.
  *
  * The geometry is deliberately crude: one unit box scaled per member. What this
- * file demonstrates is the authoring technique — how a subject class composes
+ * file demonstrates is the authoring technique : how a subject class composes
  * elements, spaces, boundaries, openings, connectors and surfaces and returns a
- * typed contribution from one `render()` — not a library of parts to call. A
+ * typed contribution from one `render()` : not a library of parts to call. A
  * production models its own slabs, walls, and fittings; nothing here is meant
  * to be reused as content, and `kind` stays an open string so any period or
  * idiom is expressible without a catalogue shipped from here.
@@ -648,7 +648,7 @@ export class ExampleBuilding extends AutoMovieSubject<IAutoMovieBuiltEnvironment
         clearHeight: 2.4,
         // What a stair answers by standing still, a lift cannot. Two bodies,
         // one degree of freedom each, and named states that place both at once
-        // — the same shape the door's operation has, plus the two things only a
+        //; the same shape the door's operation has, plus the two things only a
         // run needs: where the travel leaves somebody, and which way it is
         // driven.
         operation: {
