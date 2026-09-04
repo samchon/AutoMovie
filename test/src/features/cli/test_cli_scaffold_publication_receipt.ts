@@ -74,11 +74,19 @@ export const test_cli_scaffold_publication_receipt = (): void => {
   );
 
   const firstRefusal = attempt([
-    { status: "refused", error: new Error("parent changed") },
+    {
+      status: "refused",
+      error: new Error("parent changed"),
+      reason: "parent-changed",
+    },
   ]);
   const laterRefusal = attempt([
     { status: "completed", parentIdentity: "parent-1" },
-    { status: "refused", error: new Error("competitor") },
+    {
+      status: "refused",
+      error: new Error("competitor"),
+      reason: "target-competitor",
+    },
   ]);
   const partial = attempt([
     {

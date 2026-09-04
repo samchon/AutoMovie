@@ -1,6 +1,76 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 
+import type { ScaffoldFilePublicationOutcome } from "./scaffoldPublication";
+
+/**
+ * Closed input passed to a platform adapter for one parent-bound new slot.
+ *
+ * The adapter must open the parent without following a link, prove
+ * `expectedParentIdentity`, create `childName` relative to that held native
+ * handle with exclusive/no-follow semantics, and own descriptor write, sync,
+ * readback, final-status, and close reporting. It must never retry through
+ * `parentPath`, reopen the child pathname, or delete a reported partial slot.
+ *
+ * @evidence requirements/operations-and-recovery/idempotency-and-side-effects.md#operations-idempotent-deterministic-results Binds exact candidate bytes to one captured physical parent generation.
+ * @evidence specifications/execution-and-recovery/retry-backoff-and-idempotency.md#execution-deterministic-result-reuse Makes the native parent capability and candidate bytes the closed reuse input.
+ * @author Samchon
+ */
+export interface IScaffoldParentPublicationRequest {
+  /**
+   * Exact bytes the held descriptor must write and read back.
+   *
+   * @evidence requirements/operations-and-recovery/idempotency-and-side-effects.md#operations-idempotent-deterministic-results Pins the complete deterministic value before native creation.
+   * @evidence specifications/execution-and-recovery/retry-backoff-and-idempotency.md#execution-deterministic-result-reuse Prevents a retry from rebuilding different bytes after mutation begins.
+   */
+  bytes: readonly number[];
+  /**
+   * Single child segment created relative to the held parent handle.
+   *
+   * @evidence requirements/operations-and-recovery/idempotency-and-side-effects.md#operations-duplicate-submission Names the exact slot protected by exclusive creation.
+   * @evidence specifications/execution-and-recovery/retry-backoff-and-idempotency.md#execution-duplicate-submission Keeps competitor refusal inside the captured parent.
+   */
+  childName: string;
+  /**
+   * Physical identity the opened parent handle must prove before creation.
+   *
+   * @evidence requirements/operations-and-recovery/idempotency-and-side-effects.md#operations-idempotent-deterministic-results Refuses a successor instead of publishing into its inventory.
+   * @evidence specifications/execution-and-recovery/retry-backoff-and-idempotency.md#execution-deterministic-result-reuse Allows reuse only of the captured parent generation.
+   */
+  expectedParentIdentity: string;
+  /**
+   * Path used only to acquire the parent handle whose identity is then proved.
+   *
+   * @evidence requirements/operations-and-recovery/idempotency-and-side-effects.md#operations-duplicate-submission Locates the parent capability without authorizing child creation through the mutable path.
+   * @evidence specifications/execution-and-recovery/retry-backoff-and-idempotency.md#execution-duplicate-submission Separates capability acquisition from relative exclusive creation.
+   */
+  parentPath: string;
+}
+
+/**
+ * Platform boundary for a parent-handle-relative exclusive file publication.
+ *
+ * A supported adapter returns `refused` only when it knows no slot was
+ * created. Once a descriptor is secured, every failure is `partial`, with the
+ * exact bound parent identity and byte count; only verified write/readback,
+ * final status, and close may return `completed`.
+ *
+ * @evidence requirements/operations-and-recovery/idempotency-and-side-effects.md#operations-compensation-reconciliation Reports absence and bound partial state without pathname cleanup.
+ * @evidence specifications/execution-and-recovery/retry-backoff-and-idempotency.md#execution-compensation-adoption Supplies the exact one-slot result that candidate recovery consumes.
+ * @author Samchon
+ */
+export interface IScaffoldParentPublicationCapability {
+  /**
+   * Execute one native parent-bound publication and return its truthful effect.
+   *
+   * @evidence requirements/operations-and-recovery/idempotency-and-side-effects.md#operations-compensation-reconciliation Preserves the effect boundary across native create, write, verification, and close.
+   * @evidence specifications/execution-and-recovery/retry-backoff-and-idempotency.md#execution-compensation-adoption Makes the native outcome explicit rather than reconstructing it from a pathname.
+   */
+  publish(
+    request: IScaffoldParentPublicationRequest,
+  ): ScaffoldFilePublicationOutcome;
+}
+
 /**
  * Captured physical identity of one ordinary scaffold directory generation.
  *
@@ -42,6 +112,83 @@ interface IScaffoldDescriptorFailure {
 }
 
 class ScaffoldDescriptorCleanupError extends AggregateError {}
+
+/**
+ * Publish one new scaffold file through an explicit parent-bound capability.
+ *
+ * This pure boundary closes and freezes the exact parent identity, child
+ * segment, and bytes before entering the platform adapter. It accepts a
+ * completed or partial result only when the adapter names that same parent
+ * generation, and accepts a refusal only with one of the three pre-create
+ * reasons. It performs no pathname retry and authorizes no cleanup.
+ *
+ * @evidence requirements/operations-and-recovery/idempotency-and-side-effects.md#operations-idempotent-deterministic-results Sends one immutable byte sequence to exactly the captured parent generation.
+ * @evidence specifications/execution-and-recovery/retry-backoff-and-idempotency.md#execution-deterministic-result-reuse Rejects an adapter result that cannot prove the requested parent identity.
+ * @evidence requirements/operations-and-recovery/idempotency-and-side-effects.md#operations-duplicate-submission Preserves target-competitor refusal at the native exclusive-create boundary.
+ * @evidence specifications/execution-and-recovery/retry-backoff-and-idempotency.md#execution-duplicate-submission Makes the exact relative slot the only admissible native create target.
+ * @evidence requirements/operations-and-recovery/idempotency-and-side-effects.md#operations-compensation-reconciliation Returns truthful zero-publication or bound-partial state without deleting either generation.
+ * @evidence specifications/execution-and-recovery/retry-backoff-and-idempotency.md#execution-compensation-adoption Carries the native one-slot outcome directly into candidate recovery.
+ * @author Samchon
+ */
+export const publishScaffoldFileToCapturedParent = (props: {
+  bytes: readonly number[];
+  capability: IScaffoldParentPublicationCapability;
+  parent: IScaffoldPhysicalDirectory;
+  target: string;
+}): ScaffoldFilePublicationOutcome => {
+  const target = path.resolve(props.target);
+  if (path.dirname(target) !== props.parent.path)
+    throw new Error(`scaffold file changed declared parent: ${target}`);
+  if (props.parent.identity.length === 0)
+    throw new Error(`scaffold parent omitted physical identity: ${target}`);
+  if (
+    props.bytes.some(
+      (byte) => Number.isSafeInteger(byte) === false || byte < 0 || byte > 0xff,
+    )
+  )
+    throw new Error(`scaffold file contains invalid byte values: ${target}`);
+
+  const request = Object.freeze({
+    bytes: Object.freeze([...props.bytes]),
+    childName: path.basename(target),
+    expectedParentIdentity: props.parent.identity,
+    parentPath: props.parent.path,
+  });
+  const outcome = props.capability.publish(request);
+  if (outcome.status === "refused") {
+    if (
+      outcome.reason !== "create-failed" &&
+      outcome.reason !== "parent-changed" &&
+      outcome.reason !== "target-competitor"
+    )
+      throw new Error(
+        `scaffold parent capability returned an invalid refusal: ${target}`,
+      );
+    return Object.freeze({ ...outcome });
+  }
+  if (outcome.status === "completed") {
+    if (outcome.parentIdentity !== props.parent.identity)
+      throw new Error(
+        `completed scaffold publication changed parent identity: ${target}`,
+      );
+    return Object.freeze({ ...outcome });
+  }
+  if (outcome.status === "partial") {
+    if (
+      outcome.parentIdentity !== props.parent.identity ||
+      Number.isSafeInteger(outcome.bytesWritten) === false ||
+      outcome.bytesWritten < 0 ||
+      outcome.bytesWritten > request.bytes.length
+    )
+      throw new Error(
+        `partial scaffold publication has invalid bound state: ${target}`,
+      );
+    return Object.freeze({ ...outcome });
+  }
+  throw new Error(
+    `scaffold parent capability returned an unknown outcome: ${target}`,
+  );
+};
 
 /**
  * Create or capture one ordinary scaffold base without following a linked

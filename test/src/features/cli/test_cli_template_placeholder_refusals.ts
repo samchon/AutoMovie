@@ -72,7 +72,7 @@ export const test_cli_template_placeholder_refusals = (): void => {
     ],
   );
   const magicVariables = Object.create(null) as Record<string, string>;
-  magicVariables.__proto__ = "literal";
+  Reflect.set(magicVariables, "__proto__", "literal");
   TestValidator.equals(
     "an explicitly declared magic key remains a variable",
     renderTemplate("{{__proto__}}", magicVariables),

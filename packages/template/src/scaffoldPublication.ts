@@ -71,6 +71,13 @@ export interface IScaffoldRefusedFilePublicationOutcome {
    */
   error: unknown;
   /**
+   * Native decision that proves no final slot was created.
+   *
+   * @evidence requirements/operations-and-recovery/idempotency-and-side-effects.md#operations-compensation-reconciliation Identifies the zero-effect boundary without inferring it from a mutable pathname.
+   * @evidence specifications/execution-and-recovery/retry-backoff-and-idempotency.md#execution-compensation-adoption Keeps recovery from treating a pre-create refusal as an adoptable result.
+   */
+  reason: "create-failed" | "parent-changed" | "target-competitor";
+  /**
    * Zero-publication outcome discriminator.
    *
    * @evidence requirements/operations-and-recovery/idempotency-and-side-effects.md#operations-compensation-reconciliation Makes confirmed absence explicit in reconciliation.
