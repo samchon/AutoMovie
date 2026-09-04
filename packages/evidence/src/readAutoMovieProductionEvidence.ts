@@ -78,7 +78,7 @@ export interface IAutoMovieProductionEvidenceSourceOwnerBinding {
   /** Evidence symbol kind of that export. */
   symbolKind: "function" | "property" | "type";
   /** SHA-256 of the normalized source bytes inspected for this edge. */
-  sourceDigest: string;
+  sourceDigest: `sha256:${string}`;
   /** Canonical project-relative POSIX authored target path. */
   targetPath: string;
   /** Exact explicit target anchor without `#`. */
@@ -336,7 +336,7 @@ const sourceOwnerBindingsOf = (
       binding.host.files,
     )) {
       const source = readNormalizedSource(path.resolve(root, sourcePath));
-      const sourceDigest = `sha256:${crypto
+      const sourceDigest: `sha256:${string}` = `sha256:${crypto
         .createHash("sha256")
         .update(source)
         .digest("hex")}`;

@@ -682,7 +682,7 @@ export class AutoMovieProductionCompiler {
                       branch: binding.branch,
                       path: binding.sourcePath,
                       export: binding.exportName,
-                      digest: binding.sourceDigest as AutoMovieContentDigest,
+                      digest: binding.sourceDigest,
                       target: target!,
                     },
                     acceptanceSources: (
@@ -702,8 +702,7 @@ export class AutoMovieProductionCompiler {
                       .map((candidate) => ({
                         path: candidate.sourcePath,
                         export: candidate.exportName,
-                        digest:
-                          candidate.sourceDigest as AutoMovieContentDigest,
+                        digest: candidate.sourceDigest,
                         target: target!,
                       })),
                   }),

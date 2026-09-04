@@ -22,7 +22,7 @@ export const resolveAutoMovieSourceOwnerBinding = (props: {
   exportName: string;
   /** Runtime owner claim, when this entry protocol carries one. */
   owner?: string;
-  sourceDigest: string;
+  sourceDigest: IAutoMovieProductionEvidenceSourceOwnerBinding["sourceDigest"];
   requireReviewed: boolean;
 }) => {
   const candidates = (props.bindings ?? []).filter(
