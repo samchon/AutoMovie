@@ -377,6 +377,17 @@ export const test_production_semantic_mask_evidence = (): void => {
       "receipt version 2",
     ],
     [
+      "escaping receipt path",
+      () =>
+        reopen({
+          receipt: {
+            ...receipt,
+            sidecar: { ...receipt.sidecar, path: "../opening.mask.json" },
+          },
+        }),
+      "portable relative path",
+    ],
+    [
       "foreign frame",
       () => reopen({ receipt: { ...receipt, frame: 1 } }),
       "stale semantic receipt frame",

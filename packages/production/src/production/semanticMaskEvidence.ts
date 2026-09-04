@@ -243,6 +243,7 @@ export const verifyAutoMovieProductionSemanticMaskReceipt = (props: {
   );
   exactKeys(props.receipt.sidecar, ["path", "digest", "bytes"], "sidecar");
   verifyCoverage(props.receipt.coverage);
+  verifySidecarPath(props.receipt.sidecar.path);
   if (props.receipt.version !== 1)
     throw new Error(
       `unsupported semantic receipt version ${String(props.receipt.version)}; expected 1`,
