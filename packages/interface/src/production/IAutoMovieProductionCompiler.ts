@@ -1550,6 +1550,12 @@ export interface IAutoMovieProductionAudioProbe {
     mediaTimescale: number;
     movieDuration: number;
     mediaDuration: number;
+    edits: Array<{
+      segmentDuration: number;
+      mediaTime: number;
+      mediaRateInteger: number;
+      mediaRateFraction: number;
+    }>;
   };
   /**
    * Complete parsed codec sample entry.

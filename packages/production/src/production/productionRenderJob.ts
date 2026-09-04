@@ -1,4 +1,8 @@
 import {
+  productionFrameIntervalToGridTicks,
+  resolveProductionFrameRate,
+} from "@automovie/engine";
+import {
   AutoMovieContentDigest,
   AutoMovieGuidePass,
   IAutoMovieCaptureRuntimeIdentity,
@@ -694,6 +698,7 @@ export const productionRenderLayersForPass = (
 export const canonicalProductionWebVtt = (
   timeline: IAutoMovieFilmTimeline,
 ): string => {
+  const frameRate = resolveProductionFrameRate(timeline);
   const cues = [...timeline.tracks.captions].sort(
     (left, right) =>
       left.startFrame - right.startFrame ||
@@ -703,20 +708,27 @@ export const canonicalProductionWebVtt = (
   return [
     `WEBVTT ${serializeAutoMovieWebVttSingleLineText(timeline.id)}`,
     "",
-    ...cues.flatMap((cue) => [
-      serializeAutoMovieWebVttSingleLineText(cue.id),
-      `${webVttTime(cue.startFrame / timeline.fps)} --> ${webVttTime(
-        cue.endFrame / timeline.fps,
-      )}`,
-      `<lang ${webVttCaptionLanguage(cue.language)}>${
-        cue.speaker === undefined
-          ? serializeAutoMovieWebVttCueText(cue.text)
-          : `<v ${serializeAutoMovieWebVttSingleLineText(
-              cue.speaker,
-            )}>${serializeAutoMovieWebVttCueText(cue.text)}</v>`
-      }</lang>`,
-      "",
-    ]),
+    ...cues.flatMap((cue) => {
+      const interval = productionFrameIntervalToGridTicks({
+        startFrame: cue.startFrame,
+        endFrame: cue.endFrame,
+        frameRate,
+        ticksPerSecond: 1_000,
+        rounding: "nearest",
+      });
+      return [
+        serializeAutoMovieWebVttSingleLineText(cue.id),
+        `${webVttTime(interval.start)} --> ${webVttTime(interval.end)}`,
+        `<lang ${webVttCaptionLanguage(cue.language)}>${
+          cue.speaker === undefined
+            ? serializeAutoMovieWebVttCueText(cue.text)
+            : `<v ${serializeAutoMovieWebVttSingleLineText(
+                cue.speaker,
+              )}>${serializeAutoMovieWebVttCueText(cue.text)}</v>`
+        }</lang>`,
+        "",
+      ];
+    }),
   ].join("\n");
 };
 
@@ -1301,8 +1313,7 @@ const validWaveAudioIdentity = (
   );
 };
 
-const webVttTime = (seconds: number): string => {
-  const milliseconds = Math.round(seconds * 1_000);
+const webVttTime = (milliseconds: number): string => {
   const hours = Math.floor(milliseconds / 3_600_000);
   const minutes = Math.floor((milliseconds % 3_600_000) / 60_000);
   const remainder = Math.floor((milliseconds % 60_000) / 1_000);

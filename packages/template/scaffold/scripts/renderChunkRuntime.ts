@@ -590,6 +590,7 @@ export const compositeProductionCaptureLayers = (
 ): Uint8Array => {
   const { PNG } = pngModule;
   const output = new PNG({ width, height });
+  output.gamma = 0.45455;
   for (let offset = 0; offset < output.data.length; offset += 4) {
     for (let channel = 0; channel < 3; ++channel)
       output.data[offset + channel] = Math.round(
