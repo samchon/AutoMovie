@@ -1,10 +1,19 @@
 import type { IAutoMovieCaptionReadabilityProfile } from "@automovie/interface";
-import { validateAutoMovieProductionGraph } from "@automovie/production";
+import {
+  AutoMovieProductionCompiler,
+  AutoMovieProductionProject,
+  validateAutoMovieProductionGraph,
+} from "@automovie/production";
 import { TestValidator } from "@nestia/e2e";
+import fs from "node:fs";
 import path from "node:path";
 
 import { loadSourceModule } from "../internal/loadSourceModule";
-import { productionDesign } from "./productionFixtures";
+import {
+  productionDesign,
+  productionFixture,
+  rewriteSource,
+} from "./productionFixtures";
 
 const language = loadSourceModule<{
   parseAutoMovieCaptionLanguage: (value: string) => {
@@ -67,6 +76,8 @@ const captionDiagnostics = (profiles: IAutoMovieCaptionReadabilityProfile[]) =>
  * 4. Design validation refuses malformed and case-duplicate profile languages.
  * 5. Complete requested-resolved and locale-neutral segmentation identities
  *    pass, while every incomplete discriminant and text branch is addressed.
+ * 6. Film compilation refuses a malformed cue language through the same parser
+ *    and publishes the correction at the cue diagnostic.
  */
 export const test_production_caption_language_identity = (): void => {
   const valid = [
@@ -203,4 +214,45 @@ export const test_production_caption_language_identity = (): void => {
       (diagnostic) => diagnostic.code === "design-reference-invalid",
     ),
   );
+
+  inspectMalformedFilmCueLanguage();
+};
+
+const inspectMalformedFilmCueLanguage = (): void => {
+  const fixture = productionFixture();
+  try {
+    const sourcePath = path.join(fixture.root, "src", "film.ts");
+    const source = fs.readFileSync(sourcePath, "utf8");
+    fs.writeFileSync(
+      sourcePath,
+      rewriteSource(
+        source,
+        "        captions: [],",
+        [
+          "        captions: [{",
+          '          id: "malformed-language",',
+          '          text: "Keep this authored caption.",',
+          '          language: "en-12",',
+          "          start: { frame: 0 },",
+          "          end: { frame: 20 },",
+          "        }],",
+        ].join("\n"),
+      ),
+      "utf8",
+    );
+    const output = new AutoMovieProductionCompiler(
+      AutoMovieProductionProject.open(fixture.root),
+    ).compile({ scope: "source" });
+    TestValidator.equals(
+      "film cues refuse malformed language tags at the compiler boundary",
+      output.diagnostics
+        .filter((diagnostic) => diagnostic.code === "film-caption-cue-invalid")
+        .map((diagnostic) => diagnostic.message),
+      [
+        'Caption cue "malformed-language" must be unique, non-overlapping, in range, plain non-blank text, use a well-formed RFC 5646 language tag, and use a non-blank speaker identity.',
+      ],
+    );
+  } finally {
+    fixture.dispose();
+  }
 };
