@@ -140,8 +140,6 @@ export const normalizeAutoMovieSource = (source: Uint8Array): Uint8Array => {
 /**
  * Normalize source and expose both exact-byte and semantic identities.
  *
- * @evidence requirements/evidence-and-provenance/canonical-digests-and-content-identity.md#integrity-byte-and-semantic-identity Keeps exact bytes distinct from the permitted source-text equivalence.
- * @evidence specifications/evidence-and-provenance/canonical-digests-and-content-identity.md#evp-byte-semantic-identity Binds strict decoding and normalization to an inspectable protocol.
  */
 export const normalizeAutoMovieSourceIdentity = (props: {
   /** Source-relative pathname named by any decoding refusal. */
@@ -166,8 +164,6 @@ export const normalizeAutoMovieSourceIdentity = (props: {
 /**
  * Verify an explicitly versioned source identity from its recoverable bytes.
  *
- * @evidence requirements/evidence-and-provenance/canonical-digests-and-content-identity.md#integrity-algorithm-change-and-collision Refuses to relabel a lossy or unknown source identity as current.
- * @evidence specifications/evidence-and-provenance/canonical-digests-and-content-identity.md#evp-algorithm-migration-collision Preserves the historical result while deriving a separate strict current identity.
  */
 export const verifyAutoMovieSourceIdentity = (props: {
   /** Source-relative pathname named by strict-decoding refusals. */
@@ -361,8 +357,6 @@ export const canonicalizeAutoMovieJson = (value: unknown): string => {
 /**
  * Create the current versioned canonical JSON identity.
  *
- * @evidence requirements/evidence-and-provenance/canonical-digests-and-content-identity.md#integrity-structured-canonicalization Produces identity only from the declared structured-value domain.
- * @evidence specifications/evidence-and-provenance/canonical-digests-and-content-identity.md#evp-structured-canonicalization Binds canonical bytes and digest to the exact algorithm version.
  */
 export const identifyAutoMovieCanonicalJson = (
   value: unknown,
@@ -378,8 +372,6 @@ export const identifyAutoMovieCanonicalJson = (
 /**
  * Canonicalize under an explicitly selected current protocol.
  *
- * @evidence requirements/evidence-and-provenance/canonical-digests-and-content-identity.md#integrity-structured-canonicalization Requires an explicit current protocol before emitting structured identity.
- * @evidence specifications/evidence-and-provenance/canonical-digests-and-content-identity.md#evp-structured-canonicalization Couples canonical bytes to their declared algorithm version.
  */
 export const canonicalizeAutoMovieJsonForProtocol = (props: {
   /** Required current algorithm identity. */
@@ -398,8 +390,6 @@ export const canonicalizeAutoMovieJsonForProtocol = (props: {
 /**
  * Verify an explicitly versioned JSON identity and rederive the current one.
  *
- * @evidence requirements/evidence-and-provenance/canonical-digests-and-content-identity.md#integrity-algorithm-change-and-collision Refuses to relabel unverifiable historical identity as current.
- * @evidence specifications/evidence-and-provenance/canonical-digests-and-content-identity.md#evp-algorithm-migration-collision Preserves the old result while deriving a separate current identity.
  */
 export const verifyAutoMovieCanonicalJsonIdentity = (props: {
   /** Original structured value; a bare digest cannot be migrated safely. */
