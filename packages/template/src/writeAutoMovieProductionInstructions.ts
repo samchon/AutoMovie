@@ -7,6 +7,7 @@ import path from "node:path";
 
 import { renderAutoMovieProductionRouter } from "./renderAutoMovieProductionRouter";
 import { scaffoldAssetDirectory } from "./renderScaffold";
+import { ScaffoldPublicationError, publishFiles } from "./writeFiles";
 
 /**
  * Overwrite one generated project's shared instruction surface from its template.
@@ -70,14 +71,78 @@ export const writeAutoMovieProductionInstructions = (props: {
     root,
     productionEvidence: props.productionEvidence,
   });
-  fs.rmSync(targetSkills, { force: true, recursive: true });
-  fs.mkdirSync(path.dirname(targetSkills), { recursive: true });
-  fs.cpSync(sourceSkills, targetSkills, { recursive: true });
-
-  fs.writeFileSync(agents, renderAutoMovieProductionRouter(identity), "utf8");
-  fs.writeFileSync(claude, "@AGENTS.md\n", "utf8");
+  const files: Record<string, string> = {
+    "AGENTS.md": renderAutoMovieProductionRouter(identity),
+    "CLAUDE.md": "@AGENTS.md\n",
+  };
+  collectInstructionFiles({
+    directory: sourceSkills,
+    files,
+    relative: path.join(".agents", "skills"),
+  });
+  const receipt = publishFiles(root, files, { force: true });
+  if (receipt.status !== "completed")
+    throw new ScaffoldPublicationError(receipt);
+  removeStaleInstructionEntries(targetSkills, new Set(Object.keys(files)));
   return [targetSkills, agents, claude];
 };
+
+/** Read the whole installed instruction candidate before target mutation. */
+const collectInstructionFiles = (props: {
+  directory: string;
+  files: Record<string, string>;
+  relative: string;
+}): void => {
+  for (const entry of fs
+    .readdirSync(props.directory, { withFileTypes: true })
+    .sort(
+      (left, right) =>
+        Number(left.name > right.name) - Number(left.name < right.name),
+    )) {
+    const source = path.join(props.directory, entry.name);
+    const relative = path.join(props.relative, entry.name);
+    if (entry.isDirectory())
+      collectInstructionFiles({
+        directory: source,
+        files: props.files,
+        relative,
+      });
+    else if (entry.isFile())
+      props.files[relative] = fs.readFileSync(source, "utf8");
+    else
+      throw new Error(
+        `${source}: installed production instructions must contain only physical files and directories.`,
+      );
+  }
+};
+
+/** Remove stale generated doctrine only after every desired file completed. */
+const removeStaleInstructionEntries = (
+  targetSkills: string,
+  desiredFiles: ReadonlySet<string>,
+): void => {
+  const root = path.dirname(path.dirname(targetSkills));
+  const desired = new Set(
+    [...desiredFiles].map((entry) =>
+      canonicalInstructionPath(path.resolve(root, entry)),
+    ),
+  );
+  const visit = (directory: string): void => {
+    if (!fs.existsSync(directory)) return;
+    for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
+      const target = path.join(directory, entry.name);
+      if (entry.isDirectory()) {
+        visit(target);
+        if (fs.readdirSync(target).length === 0) fs.rmdirSync(target);
+      } else if (!desired.has(canonicalInstructionPath(path.resolve(target))))
+        fs.rmSync(target, { force: true });
+    }
+  };
+  visit(targetSkills);
+};
+
+const canonicalInstructionPath = (target: string): string =>
+  process.platform === "win32" ? target.toLowerCase() : target;
 
 /** Refuse a generated-project root that aliases or is not a directory. */
 const assertManagedRootIsPhysical = (root: string): void => {

@@ -82,9 +82,13 @@ Render GC parses each valid quarantine marker relative to its proxy or final own
 ```
 npx create-automovie <directory> [--force]
 npx automovie start <directory> [--force]
+npx automovie sync
 npx automovie verify
 npx automovie migrate <directory> [--dry-run | --rollback]
+npx automovie render <all|plan|run|status|verify|finalize|gc> [options]
 ```
+
+Each invocation is one closed command request. Help and version flags are standalone; `start` accepts exactly one directory and at most one `--force`; `migrate` accepts exactly one directory and at most one of `--dry-run` or `--rollback`; and `sync` and `verify` accept no arguments. Render `all` and `run` accept `--chunk-frames <positive-integer>`, `--deliverable <id>`, `--tier <proxy|final>`, and `--workers <positive-integer>`; `plan` accepts `--chunk-frames` and `--tier`; `status`, `verify`, and `finalize` accept `--tier`; and `gc` accepts only the valueless `--apply`. Unknown, repeated, inapplicable, missing, blank, or extra arguments are rejected before a target is resolved, a project is opened, a child process is started, or any state can be changed.
 
 `start` refuses a non-empty directory unless `--force`. The scaffolded project's `@automovie/*` dependency versions are baked in at build time from this repo's own catalog (`packages/template/build/resolveTemplateVersions.ts`), so a generated project never drifts from the engine it targets.
 
@@ -101,7 +105,7 @@ const files = renderScaffold({ name: "my-film" }); // { "package.json": "...", .
 writeFiles("./my-film", files);
 ```
 
-Scaffold materialization captures one ordinary physical target directory and every descendant parent generation. Newly created directories accept only an identity-fenced empty generation, and new files reserve their final path through descriptor-bound `O_EXCL`; `force` overwrites only the exact captured ordinary single-link file descriptor, while linked roots, linked parents or files, hard-linked files, non-empty directory successors, normalized target collisions, and concurrent pathname successors fail closed without cleanup, including after descriptor close.
+Scaffold materialization validates and freezes the complete candidate before mutation, captures one ordinary physical target directory and every descendant parent generation, and reports the exact completed prefix or stopping effect. Newly created directories accept only an identity-fenced empty generation, and new files reserve their final slot relative to a held parent handle through POSIX `openat` or Windows `NtCreateFile` exclusive creation. `force` overwrites only the exact captured ordinary single-link file descriptor, while linked roots, linked parents or files, hard-linked files, non-empty directory successors, normalized target collisions, and concurrent pathname successors fail closed without cleanup, including after descriptor close.
 
 Ordinary Node scripts can also load the current tracked design and the last compiler-owned snapshot:
 

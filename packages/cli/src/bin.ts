@@ -1,13 +1,11 @@
 #!/usr/bin/env node
 import { AutoMovieLegacyImporter } from "@automovie/production";
-import {
-  isAutoMovieProductionLanguage,
-  renderScaffold,
-  writeFiles,
-} from "@automovie/template";
+import { publishFiles, renderScaffold } from "@automovie/template";
 import { spawnSync } from "node:child_process";
 import * as fs from "node:fs";
 import * as path from "node:path";
+
+import { dispatchAutoMovieCommandArguments } from "./commandArguments";
 
 const USAGE = `automovie: scaffold an automovie project
 
@@ -31,12 +29,18 @@ Commands:
   render <action>     Run the current project's resumable render job.
 
 Options:
-  --force             Scaffold into a non-empty directory.
+  --force             Scaffold into a non-empty directory (start only).
   --language <name>   Install exactly one production-authoring language pack.
-  --dry-run           Print the immutable legacy import plan without writing.
-  --rollback          Remove one still-untouched applied legacy import.
-  -h, --help          Show this help.
-  -v, --version       Print the version.
+  --dry-run           Print the immutable legacy import plan (migrate only).
+  --rollback          Remove one untouched import (migrate only).
+  --chunk-frames <n>  Positive render chunk size (all, plan, or run only).
+  --deliverable <id>  Render one deliverable (all or run only).
+  --tier <name>       Select proxy or final (all, plan, run, status, verify,
+                      or finalize only).
+  --workers <n>       Positive render worker count (all or run only).
+  --apply             Apply render garbage collection (gc only).
+  -h, --help          Show this help as a standalone request.
+  -v, --version       Print the version as a standalone request.
 `;
 
 /**
@@ -536,100 +540,76 @@ const projectNameOf = (targetDir: string): string =>
  * @evidenceExclude specifications/execution-and-recovery/retry-backoff-and-idempotency.md#execution-duplicate-submission The executable carries no submission identity; the write it delegates to owns that boundary.
  */
 export const run = (argv: readonly string[]): number => {
-  const args = argv.slice(2);
-  if (args.length === 0 || args.includes("-h") || args.includes("--help")) {
-    process.stdout.write(USAGE);
-    return 0;
-  }
-  if (args.includes("-v") || args.includes("--version")) {
-    process.stdout.write(`${packageVersion()}\n`);
-    return 0;
-  }
-
-  const [command, ...rest] = args;
-  if (command === "render") return runProjectRender(rest);
-  if (command === "sync" || command === "verify") {
-    if (rest.length !== 0) {
-      process.stderr.write(`${command} takes no arguments.\n`);
-      return 1;
-    }
-    return runProjectScript(`${command}.ts`, []);
-  }
-  if (command !== "start" && command !== "migrate") {
-    process.stderr.write(`unknown command "${command}"\n\n${USAGE}`);
-    return 1;
-  }
-
-  const dir = rest.find((arg) => !arg.startsWith("-"));
-  if (dir === undefined) {
-    process.stderr.write(`${command} needs a target directory\n\n${USAGE}`);
-    return 1;
-  }
-
-  const targetDir = path.resolve(process.cwd(), dir);
   try {
-    if (command === "migrate") {
-      if (rest.includes("--dry-run") && rest.includes("--rollback"))
-        throw new Error("migrate accepts only one of --dry-run or --rollback.");
-      const importer = new AutoMovieLegacyImporter(targetDir);
-      const output = rest.includes("--rollback")
-        ? importer.rollback()
-        : rest.includes("--dry-run")
-          ? importer.plan()
-          : importer.apply();
-      process.stdout.write(`${JSON.stringify(output, null, 2)}\n`);
-      return 0;
-    }
-    const languageIndex = rest.indexOf("--language");
-    const language = languageIndex < 0 ? undefined : rest[languageIndex + 1];
-    if (language === undefined || !isAutoMovieProductionLanguage(language))
-      throw new Error(
-        "start requires --language with one of chinese, english, japanese, or korean.",
+    return dispatchAutoMovieCommandArguments(argv.slice(2), (command) => {
+      if (command.command === "help") {
+        process.stdout.write(USAGE);
+        return 0;
+      }
+      if (command.command === "version") {
+        process.stdout.write(`${packageVersion()}\n`);
+        return 0;
+      }
+      if (command.command === "render")
+        return runProjectScript("render.ts", command.arguments);
+      if (command.command === "sync" || command.command === "verify")
+        return runProjectScript(`${command.command}.ts`, []);
+
+      const targetDir = path.resolve(process.cwd(), command.directory);
+      if (command.command === "migrate") {
+        const importer = new AutoMovieLegacyImporter(targetDir);
+        const output =
+          command.mode === "rollback"
+            ? importer.rollback()
+            : command.mode === "dry-run"
+              ? importer.plan()
+              : importer.apply();
+        process.stdout.write(`${JSON.stringify(output, null, 2)}\n`);
+        return 0;
+      }
+      const files = renderScaffold({
+        name: projectNameOf(targetDir),
+        language: command.language,
+      });
+      const receipt = publishFiles(targetDir, files, { force: command.force });
+      if (receipt.status !== "completed") {
+        const failure = receipt.failure!;
+        const outcome = failure.outcome;
+        throw new Error(
+          `scaffold publication ${receipt.status}: ${JSON.stringify({
+            bytesWritten:
+              outcome.status === "partial" ? outcome.bytesWritten : undefined,
+            completed: receipt.completed.map(({ entry, parentIdentity }) => ({
+              parentIdentity,
+              relative: entry.relative,
+            })),
+            parentIdentity:
+              outcome.status === "partial" ? outcome.parentIdentity : undefined,
+            reason: outcome.status === "refused" ? outcome.reason : undefined,
+            relative: failure.entry.relative,
+            status: outcome.status,
+          })}`,
+          { cause: outcome.error },
+        );
+      }
+      const written = receipt.completed.map(({ entry }) => entry.target);
+      process.stdout.write(
+        `Scaffolded ${written.length} files into ${targetDir}\n\n` +
+          written
+            .map((file) => `  ${path.relative(targetDir, file) || "."}`)
+            .join("\n") +
+          `\n\nNext:\n  cd ${command.directory}\n  npm install\n  npm run capture:install\n  npm run capture:doctor\n  npm run build\n  npm run lint:source\n  npm run lint\n  npm run render -- all --tier proxy\n  npm run viewer\n\n` +
+          `Open http://127.0.0.1:5173 after the viewer starts.\n\n` +
+          `README.md explains source ownership, evidence gates, and the local viewer.\n`,
       );
-    if (rest.indexOf("--language", languageIndex + 1) >= 0)
-      throw new Error("start accepts exactly one --language selection.");
-    const files = renderScaffold({
-      name: projectNameOf(targetDir),
-      language,
+      return 0;
     });
-    const written = writeFiles(targetDir, files, {
-      force: rest.includes("--force"),
-    });
-    process.stdout.write(
-      `Scaffolded ${written.length} files into ${targetDir}\n\n` +
-        written
-          .map((file) => `  ${path.relative(targetDir, file) || "."}`)
-          .join("\n") +
-        `\n\nNext:\n  cd ${dir}\n  npm install\n  npm run capture:install\n  npm run capture:doctor\n  npm run build\n  npm run lint:source\n  npm run lint\n  npm run render -- all --tier proxy\n  npm run viewer\n\n` +
-        `Open http://127.0.0.1:5173 after the viewer starts.\n\n` +
-        `README.md explains source ownership, evidence gates, and the local viewer.\n`,
-    );
-    return 0;
   } catch (error) {
     process.stderr.write(
       `${error instanceof Error ? error.message : String(error)}\n`,
     );
     return 1;
   }
-};
-
-const runProjectRender = (args: readonly string[]): number => {
-  const action = args[0];
-  if (
-    action !== "plan" &&
-    action !== "run" &&
-    action !== "status" &&
-    action !== "verify" &&
-    action !== "finalize" &&
-    action !== "all" &&
-    action !== "gc"
-  ) {
-    process.stderr.write(
-      `render needs one of all, plan, run, status, verify, finalize, or gc\n\n${USAGE}`,
-    );
-    return 1;
-  }
-  return runProjectScript("render.ts", args);
 };
 
 const runProjectScript = (
