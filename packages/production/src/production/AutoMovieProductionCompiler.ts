@@ -210,9 +210,13 @@ import {
  * motion rather than written down beside it -- so a v7 reader would look for
  * that one where it is no longer written.
  *
+ * Version 10 adds the exact graph-selected source owner to compiled shot and
+ * film artifacts, so a version 9 reader cannot assume source path and digest
+ * alone identify the authored target that was admitted.
+ *
  * @author Samchon
  */
-export const AUTOMOVIE_PRODUCTION_COMPILER_PROTOCOL = "automovie.compiler.v9";
+export const AUTOMOVIE_PRODUCTION_COMPILER_PROTOCOL = "automovie.compiler.v10";
 
 const FILM_SOURCE_PATH = "src/film.ts";
 const FILM_SOURCE_EXPORT = "film";
