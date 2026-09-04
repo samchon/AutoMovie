@@ -1,12 +1,17 @@
+import { productionFrameBoundaryToSeconds } from "@automovie/engine";
 import {
   IAutoMovieEffectRecipe,
   IAutoMovieFilmTimeline,
+  IAutoMovieGeneratedManifest,
   IAutoMovieWorldDesign,
 } from "@automovie/interface";
 import {
   AutoMovieFilmEffectRuntimeError,
   IAutoMovieFilmEffectCurrentIdentity,
+  canonicalAutoMovieJsonBytes,
+  digestAutoMovieBytes,
   materializeProductionFilmEffects,
+  parseAutoMovieFilmEffects,
   sampleProductionFilmEffects,
 } from "@automovie/production";
 import { TestValidator } from "@nestia/e2e";
@@ -107,6 +112,144 @@ export const test_production_film_effect_runtime = (): void => {
     world: world(),
     effects: cues(),
   });
+  const artifact = (
+    value: unknown,
+    props: {
+      expectedFingerprint?: `sha256:${string}`;
+      manifestFingerprint?: `sha256:${string}`;
+      declaredDigest?: `sha256:${string}`;
+      includeEntry?: boolean;
+    } = {},
+  ) => {
+    const bytes = Buffer.concat([
+      Buffer.from(canonicalAutoMovieJsonBytes(value)),
+      Buffer.from("\n", "utf8"),
+    ]);
+    const manifest: IAutoMovieGeneratedManifest = {
+      version: 1,
+      compiler: { packageVersion: "test", protocolVersion: "test" },
+      inputFingerprint: props.manifestFingerprint ?? current.compileFingerprint,
+      files:
+        props.includeEntry === false
+          ? []
+          : [
+              {
+                path: "film-effects.json",
+                owner: "compiler",
+                digest: props.declaredDigest ?? digestAutoMovieBytes(bytes),
+                sourceTargets: ["film"],
+              },
+            ],
+    };
+    return {
+      manifest,
+      fingerprint: props.expectedFingerprint ?? current.compileFingerprint,
+      read: () => bytes,
+    };
+  };
+  const staleRuntime = structuredClone(runtime);
+  staleRuntime[0]!.compileFingerprint = digest("c");
+  TestValidator.equals(
+    "film effect artifacts retain manifest, byte, schema, and compile ownership",
+    namedFacts([
+      [
+        "current",
+        () =>
+          JSON.stringify(parseAutoMovieFilmEffects(artifact(runtime))) ===
+          JSON.stringify(runtime),
+      ],
+      [
+        "manifestMissing",
+        () =>
+          String(
+            captureError(() =>
+              parseAutoMovieFilmEffects({
+                ...artifact(runtime),
+                manifest: null,
+              }),
+            ),
+          ).includes("missing or changed"),
+      ],
+      [
+        "manifestStale",
+        () =>
+          String(
+            captureError(() =>
+              parseAutoMovieFilmEffects(
+                artifact(runtime, { manifestFingerprint: digest("c") }),
+              ),
+            ),
+          ).includes("missing or changed"),
+      ],
+      [
+        "entryMissing",
+        () =>
+          String(
+            captureError(() =>
+              parseAutoMovieFilmEffects(
+                artifact(runtime, { includeEntry: false }),
+              ),
+            ),
+          ).includes("missing or changed"),
+      ],
+      [
+        "bytesChanged",
+        () =>
+          String(
+            captureError(() =>
+              parseAutoMovieFilmEffects(
+                artifact(runtime, { declaredDigest: digest("d") }),
+              ),
+            ),
+          ).includes("bytes differ"),
+      ],
+      [
+        "schemaInvalid",
+        () =>
+          String(
+            captureError(() => parseAutoMovieFilmEffects(artifact({}))),
+          ).includes("invalid or stale"),
+      ],
+      [
+        "runtimeStale",
+        () =>
+          String(
+            captureError(() =>
+              parseAutoMovieFilmEffects(artifact(staleRuntime)),
+            ),
+          ).includes("invalid or stale"),
+      ],
+      [
+        "rationalSeconds",
+        () =>
+          productionFrameBoundaryToSeconds({
+            frame: 12,
+            frameRate: { numerator: 24_000, denominator: 1_001 },
+          }) === 0.5005,
+      ],
+      [
+        "invalidFrame",
+        () =>
+          captureError(() =>
+            productionFrameBoundaryToSeconds({
+              frame: -1,
+              frameRate: { numerator: 24, denominator: 1 },
+            }),
+          ) instanceof Error,
+      ],
+    ]),
+    {
+      current: true,
+      manifestMissing: true,
+      manifestStale: true,
+      entryMissing: true,
+      bytesChanged: true,
+      schemaInvalid: true,
+      runtimeStale: true,
+      rationalSeconds: true,
+      invalidFrame: true,
+    },
+  );
   const repeated = sampleProductionFilmEffects({
     identity: current,
     effects: runtime,

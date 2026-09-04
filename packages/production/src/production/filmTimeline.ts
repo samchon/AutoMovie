@@ -137,16 +137,28 @@ export const readAutoMovieFilmTimeline = (
 export const readAutoMovieFilmEffects = (
   project: AutoMovieProductionProject,
   fingerprint: AutoMovieContentDigest,
+): IAutoMovieCompiledFilmEffect[] =>
+  parseAutoMovieFilmEffects({
+    manifest: project.generatedManifest(),
+    fingerprint,
+    read: (file) => project.readGeneratedFile(file),
+  });
+
+/** Validate manifest ownership, bytes, schema, and compile identity together. */
+export const parseAutoMovieFilmEffects = (
+  artifact: IAutoMovieFilmTimelineArtifact,
 ): IAutoMovieCompiledFilmEffect[] => {
-  const manifest = project.generatedManifest();
-  const entry = manifest?.files.find(
+  const entry = artifact.manifest?.files.find(
     (file) => file.path === "film-effects.json",
   );
-  if (manifest?.inputFingerprint !== fingerprint || entry === undefined)
+  if (
+    artifact.manifest?.inputFingerprint !== artifact.fingerprint ||
+    entry === undefined
+  )
     throw new Error(
       "Compiler-owned film effects are missing or changed after compilation. Run the scaffold source compile command.",
     );
-  const bytes = project.readGeneratedFile(entry.path);
+  const bytes = artifact.read(entry.path);
   if (digestAutoMovieBytes(bytes) !== entry.digest)
     throw new Error(
       "Compiler-owned film effect bytes differ from the generated manifest. Run the scaffold source compile command.",
@@ -156,7 +168,9 @@ export const readAutoMovieFilmEffects = (
   );
   if (
     validation.success === false ||
-    validation.data.some((effect) => effect.compileFingerprint !== fingerprint)
+    validation.data.some(
+      (effect) => effect.compileFingerprint !== artifact.fingerprint,
+    )
   )
     throw new Error(
       "Compiler-owned film effects are invalid or stale. Run the scaffold source compile command.",
