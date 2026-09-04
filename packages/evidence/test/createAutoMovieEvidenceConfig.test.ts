@@ -942,7 +942,7 @@ export const review = true;
         graph.claims.find(
           (candidate) =>
             candidate.name ===
-            `${layer} H2 units answer their principle checklists, cover the layer's obligations, and account for inherited work`,
+            `${layer} H2 units answer their principle checklists and account for inherited work`,
         ),
       ),
       [],
@@ -1023,7 +1023,7 @@ export const review = true;
         (candidate) =>
           candidate.name ===
           (depth === 2
-            ? `${layer} H2 units answer their principle checklists, cover the layer's obligations, and account for inherited work`
+            ? `${layer} H2 units answer their principle checklists and account for inherited work`
             : `${layer} H${depth} units answer their principle checklists and account for inherited work`),
       );
       assert.deepEqual(
@@ -1053,31 +1053,52 @@ export const review = true;
       );
       assert.deepEqual(
         sharedFilesOf(claim, "obligations"),
-        depth === 2
-          ? [
-              "obligations/core/common.md",
-              ...(narrative ? ["obligations/story/narratives.md"] : []),
-              ...(layer === "research"
-                ? []
-                : [`obligations/${domain}/${contract}.md`]),
-            ].sort()
-          : [],
-        `${layer} obligations must be covered once-plus across only its primary H2 owner population`,
+        [],
+        `${layer} authored units must not repeat whole-population obligations`,
       );
+    }
+    const obligations =
+      layer === "research"
+        ? []
+        : [
+            "obligations/core/common.md",
+            ...(narrative ? ["obligations/story/narratives.md"] : []),
+            `obligations/${domain}/${contract}.md`,
+          ];
+    for (const obligation of obligations) {
+      const account = graph.claims.find(
+        (claim) =>
+          claim.name ===
+          `${layer} population accounts answer each ${obligation} obligation once`,
+      );
+      assert.deepEqual(account?.files, [
+        `accounts/${layer}/${obligation
+          .replace(/^obligations\//u, "")
+          .replaceAll("/", "-")}`,
+      ]);
+      assert.equal(account?.symbol, "h2");
+      assert.equal(referenceTo(account, obligation)?.uniqueEvidence, true);
+      const population = referenceTo(account, `${layer}/**/*.md`);
+      assert.equal(population?.checklist, true);
+      assert.equal(population?.noEvidenceExclude, true);
     }
   }
   const briefH2 = graph.claims.find(
     (claim) =>
       claim.name ===
-      "briefs H2 units answer their principle checklists, cover the layer's obligations, and account for inherited work",
+      "briefs H2 units answer their principle checklists and account for inherited work",
   );
   assert.deepEqual(
     sharedFilesOf(briefH2, "obligations"),
-    ["obligations/core/common.md", "obligations/delivery/briefs.md"],
-    "brief H2 units must cover addressability without inheriting film narrative obligations",
+    [],
+    "brief H2 units must leave whole-population addressability to their accounts",
   );
   const briefAddressability = referenceTo(
-    briefH2,
+    graph.claims.find(
+      (claim) =>
+        claim.name ===
+        "briefs population accounts answer each obligations/delivery/briefs.md obligation once",
+    ),
     "obligations/delivery/briefs.md",
   );
   assert.equal(
@@ -1117,16 +1138,12 @@ export const review = true;
   const treatmentH2 = graph.claims.find(
     (claim) =>
       claim.name ===
-      "treatments H2 units answer their principle checklists, cover the layer's obligations, and account for inherited work",
+      "treatments H2 units answer their principle checklists and account for inherited work",
   );
   assert.deepEqual(
     sharedFilesOf(treatmentH2, "obligations"),
-    [
-      "obligations/core/common.md",
-      "obligations/story/narratives.md",
-      "obligations/story/treatments.md",
-    ],
-    "the treatment H2 population must cover its complete treatment obligations once across the population",
+    [],
+    "the treatment H2 population must leave complete-population comparisons to its accounts",
   );
   for (const depth of [3, 4])
     assert.deepEqual(
@@ -1162,7 +1179,7 @@ export const review = true;
       graph.claims.some(
         (claim) =>
           claim.name ===
-            `${layer} H2 units answer their principle checklists, cover the layer's obligations, and account for inherited work` &&
+            `${layer} H2 units answer their principle checklists and account for inherited work` &&
           claim.disabled === true,
       ),
       `disabled shared claims omitted docs/${layer}`,
@@ -2906,7 +2923,7 @@ export const review = true;
   const filmSettings = filmGraph.claims.find(
     (claim) =>
       claim.name ===
-      "settings H2 units answer their principle checklists, cover the layer's obligations, and account for inherited work",
+      "settings population accounts answer each obligations/story/subjects.md obligation once",
   );
   const subjectDepth = referenceTo(
     filmSettings,
@@ -2946,7 +2963,7 @@ export const review = true;
     }).claims.find(
       (claim) =>
         claim.name ===
-        "settings H2 units answer their principle checklists, cover the layer's obligations, and account for inherited work",
+        "settings population accounts answer each obligations/core/settings.md obligation once",
     );
     assert.equal(
       referenceTo(shapedSettings, "obligations/story/subjects.md"),
