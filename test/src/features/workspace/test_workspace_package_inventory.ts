@@ -113,6 +113,16 @@ export const test_workspace_package_inventory = (): void => {
         "@example/directory-two",
       ),
       declaration(
+        "missing-duplicate-directory",
+        "missing-directory-one",
+        "@example/missing-directory-one",
+      ),
+      declaration(
+        "missing-duplicate-directory",
+        "missing-directory-two",
+        "@example/missing-directory-two",
+      ),
+      declaration(
         "same-declaration-name-one",
         "name-one",
         "@example/same-declaration-name",
@@ -150,6 +160,8 @@ export const test_workspace_package_inventory = (): void => {
       manifest("same-manifest-directory", "@example/manifest-directory-copy"),
       manifest("same-manifest-name-one", "@example/shared-manifest-name"),
       manifest("same-manifest-name-two", "@example/shared-manifest-name"),
+      manifest("same-undeclared-directory", "@example/undeclared-one"),
+      manifest("same-undeclared-directory", "@example/undeclared-two"),
     ],
   });
   TestValidator.equals("duplicate identities", duplicates, {
@@ -161,6 +173,10 @@ export const test_workspace_package_inventory = (): void => {
         subject: "same-declaration-directory",
       },
       {
+        code: "duplicate-declaration-directory",
+        subject: "missing-duplicate-directory",
+      },
+      {
         code: "duplicate-declaration-name",
         subject: "@example/same-declaration-name",
       },
@@ -170,8 +186,20 @@ export const test_workspace_package_inventory = (): void => {
         subject: "same-manifest-directory",
       },
       {
+        code: "duplicate-manifest-directory",
+        subject: "same-undeclared-directory",
+      },
+      {
         code: "duplicate-manifest-name",
         subject: "@example/shared-manifest-name",
+      },
+      {
+        code: "missing-workspace-package",
+        subject: "missing-duplicate-directory",
+      },
+      {
+        code: "undeclared-workspace-package",
+        subject: "same-undeclared-directory",
       },
     ],
   });
