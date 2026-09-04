@@ -39,7 +39,7 @@ export const test_workspace_fatal_test_event = (): void => {
     [
       {
         kind: "uncaught exception",
-        diagnostic: exception.stack,
+        diagnostic: exception.stack!,
       },
     ],
   );
@@ -60,6 +60,14 @@ export const test_workspace_fatal_test_event = (): void => {
       { kind: "uncaught exception", diagnostic: "Error: stackless" },
       { kind: "critical error", diagnostic: "undefined" },
     ],
+  );
+
+  const circular: { self?: unknown } = {};
+  circular.self = circular;
+  TestValidator.equals(
+    "a circular rejection falls back to safe string coercion",
+    capture("unhandled rejection", circular),
+    { kind: "unhandled rejection", diagnostic: "[object Object]" },
   );
 
   const unprintable: IFatalTestEvent[] = [];

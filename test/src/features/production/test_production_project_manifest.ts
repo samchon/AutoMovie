@@ -84,6 +84,9 @@ const preserveProjectManifestRaceCleanup = (
  * 6. Manifest asset entries remain a unique index after path normalization.
  */
 const runProjectManifest = (fileSystem: typeof fs): void => {
+  const mutableFileSystem = fileSystem as {
+    lstatSync: typeof fs.lstatSync;
+  };
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "automovie-manifest-"));
   let projectManifestFailure: IProjectManifestFixtureFailure | undefined;
   try {
@@ -131,7 +134,7 @@ const runProjectManifest = (fileSystem: typeof fs): void => {
       }
       return exists;
     }) as typeof fs.existsSync;
-    fileSystem.lstatSync = ((file, options) => {
+    mutableFileSystem.lstatSync = ((file, options) => {
       const status = nativeManifestLstat(file, options);
       if (
         manifestSwapBoundary === null &&
@@ -163,7 +166,7 @@ const runProjectManifest = (fileSystem: typeof fs): void => {
         {
           resource: "manifest lstat hook",
           cleanup: () => {
-            fileSystem.lstatSync = nativeManifestLstat;
+            mutableFileSystem.lstatSync = nativeManifestLstat;
           },
         },
         {
@@ -297,7 +300,7 @@ const runProjectManifest = (fileSystem: typeof fs): void => {
     const nativeOptionalLstat = fs.lstatSync;
     let optionalRootSwapped = false;
     let optionalReplacementUntouched = false;
-    fileSystem.lstatSync = ((file, options) => {
+    mutableFileSystem.lstatSync = ((file, options) => {
       try {
         return nativeOptionalLstat(file, options);
       } catch (error) {
@@ -328,7 +331,7 @@ const runProjectManifest = (fileSystem: typeof fs): void => {
         {
           resource: "optional-root lstat hook",
           cleanup: () => {
-            fileSystem.lstatSync = nativeOptionalLstat;
+            mutableFileSystem.lstatSync = nativeOptionalLstat;
           },
         },
         {
