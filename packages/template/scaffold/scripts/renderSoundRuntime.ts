@@ -46,6 +46,7 @@ import {
   type IKokoroGenerationWorkerPackage,
   createKokoroGenerationWorker,
 } from "./kokoroGenerationWorker";
+import { encodeOpusGeneration } from "./opusGenerationWorker";
 import {
   type IAutoMovieDialogueSynthesisSelection,
   AUTOMOVIE_DIALOGUE_MODEL_REVISION as KOKORO_MODEL_REVISION,
@@ -1278,69 +1279,23 @@ export const createProductionRenderEncoderRuntime = (props: {
   return {
     assertCurrent: assertCurrentEncoder,
     encodeOpus: async (pcm) => {
-      if (pcm.length === 0 || pcm.length % 2 !== 0)
-        throw new Error(
-          "Opus encoding requires non-empty interleaved stereo PCM.",
-        );
-      const { createEncoder } = await import("libopus-wasm");
-      const encoder = await createEncoder({
-        bitrate: 128_000,
-        complexity: 10,
-        vbr: false,
+      const opus = snapshotRuntimePackage({
+        entry: fileURLToPath(import.meta.resolve("libopus-wasm")),
+        moduleClosure: true,
+        packageName: "libopus-wasm",
       });
       const sampleFrames = pcm.length / 2;
-      let primingSamples = 0;
-      let codedSampleFrames = 0;
-      const packets: Array<{
-        bytes: Uint8Array<ArrayBuffer>;
-        duration: number;
-        dts: number;
-      }> = [];
-      let failure: { error: unknown } | undefined;
-      try {
-        if (
-          encoder.frameSize !== 960 ||
-          encoder.channels !== 2 ||
-          encoder.sampleRate !== 48_000
-        )
-          throw new Error(
-            "Pinned Opus runtime no longer exposes the required 48 kHz stereo 20 ms profile.",
-          );
-        primingSamples = encoder.getLookahead();
-        if (
-          Number.isSafeInteger(primingSamples) === false ||
-          primingSamples < 0 ||
-          primingSamples >= encoder.frameSize
-        )
-          throw new Error(
-            "Pinned Opus runtime returned an invalid encoder lookahead.",
-          );
-        codedSampleFrames =
-          Math.ceil((sampleFrames + primingSamples) / encoder.frameSize) *
-          encoder.frameSize;
-        for (let dts = 0; dts < codedSampleFrames; dts += encoder.frameSize) {
-          const frame = new Float32Array(encoder.frameSize * encoder.channels);
-          frame.set(
-            pcm.subarray(
-              dts * encoder.channels,
-              Math.min(
-                pcm.length,
-                (dts + encoder.frameSize) * encoder.channels,
-              ),
-            ),
-          );
-          packets.push({
-            bytes: Uint8Array.from(encoder.encodeFloat(frame)),
-            duration: encoder.frameSize,
-            dts,
-          });
-        }
-      } catch (error) {
-        failure = { error };
-      }
-      props.preserveCleanup(failure, [
-        { resource: "Opus encoder", cleanup: (): void => encoder.free() },
-      ]);
+      const { codedSampleFrames, packets, primingSamples } =
+        await encodeOpusGeneration({
+          package: {
+            contentFingerprint: opus.contentFingerprint,
+            entry: opus.entry,
+            fingerprint: opus.fingerprint,
+            packageName: opus.package,
+          },
+          pcm,
+        });
+      assertRuntimePackageSnapshotCurrent(opus);
       const description = new BoxParser.box.dOps();
       description.Version = 0;
       description.OutputChannelCount = 2;
