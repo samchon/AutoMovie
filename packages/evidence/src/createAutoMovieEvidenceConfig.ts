@@ -736,13 +736,7 @@ const EXPECTED_CONTRACTS = [
   {
     domain: "core",
     file: "principles/core/common.md",
-    anchors: [
-      "scope-preservation",
-      "substantive-completion",
-      "evidence-content-conformance",
-      "machine-default",
-      "declared-basis",
-    ],
+    anchors: ["scope-preservation", "substantive-completion", "declared-basis"],
   },
   {
     domain: "core",

@@ -202,7 +202,7 @@ ${tag}
         host(
           "Two",
           "two",
-          `@evidence principles/core/common.md#machine-default ${shared}`,
+          `@evidence principles/core/defaults.md#purposeful-enumeration ${shared}`,
         ),
         "docs/models/d.md",
       ),

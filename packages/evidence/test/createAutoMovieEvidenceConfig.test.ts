@@ -3695,6 +3695,38 @@ export const review = true;
     true,
   );
 
+  const retiredMachineDefaultTarget = root();
+  const retiredMachineDefaultCommon = contract(
+    retiredMachineDefaultTarget,
+    "docs/principles/core/common.md",
+  );
+  fs.writeFileSync(
+    retiredMachineDefaultCommon,
+    rewrite(
+      fs.readFileSync(retiredMachineDefaultCommon, "utf8"),
+      "## Declared basis {#declared-basis}",
+      [
+        "## Machine default {#machine-default}",
+        "",
+        "A retired catch-all must not return beside the purpose-specific defaults contracts.",
+        "",
+        "Review question: did this host restore the retired catch-all?",
+        "",
+        "Sources: synthetic retired-target migration probe.",
+        "",
+        "## Declared basis {#declared-basis}",
+      ].join("\n"),
+    ),
+  );
+  assert.equal(
+    throws(
+      () =>
+        createAutoMovieEvidenceConfig(disabled(retiredMachineDefaultTarget)),
+      "H2 inventory changed without graph wiring",
+    ),
+    true,
+  );
+
   const retiredSourceConformanceTarget = root();
   const retiredSourceUnits = contract(
     retiredSourceConformanceTarget,

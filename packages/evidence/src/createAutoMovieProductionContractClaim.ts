@@ -127,9 +127,9 @@ export interface IAutoMovieProductionContractClaimProps {
  * contract claim remains declared but disabled alongside the shared graph.
  *
  * @evidence requirements/production-evidence/graph.md#agent-production-evidence-shared-contract Preserves the required no-exclusion per-host checklist meaning of a principle.
- * @evidence requirements/production-evidence/graph.md#agent-production-evidence-additive-extension Produces one production-owned claim without exposing or replacing shared claims.
+ * @evidence requirements/production-evidence/graph.md#agent-production-evidence-additive-extension Appends this local principle as a per-host checklist while leaving the reusable graph's selected claims intact.
  * @evidence specifications/production-evidence/graph.md#spec-authoring-production-evidence-shared-contract Emits the checklist, exclusion, and review flags that define principle wiring.
- * @evidence specifications/production-evidence/graph.md#spec-authoring-production-evidence-additive-extension Returns only the additive claim consumed by the generated project's claims array.
+ * @evidence specifications/production-evidence/graph.md#spec-authoring-production-evidence-additive-extension Returns one checklist-shaped extension whose H2, H3, and H4 hosts remain independently accountable.
  */
 export function createAutoMovieProductionPrincipleClaim(
   props: IAutoMovieProductionContractClaimProps,
@@ -148,9 +148,9 @@ export function createAutoMovieProductionPrincipleClaim(
  * owes, not a question one host may declare irrelevant.
  *
  * @evidence requirements/production-evidence/graph.md#agent-production-evidence-shared-contract Preserves the required no-exclusion population coverage meaning of an obligation.
- * @evidence requirements/production-evidence/graph.md#agent-production-evidence-additive-extension Produces one production-owned claim without exposing or replacing shared claims.
+ * @evidence requirements/production-evidence/graph.md#agent-production-evidence-additive-extension Appends this local obligation as population-level H2 coverage without mutating the reusable claims.
  * @evidence specifications/production-evidence/graph.md#spec-authoring-production-evidence-shared-contract Emits ordinary H2 coverage rather than turning an obligation into a per-host checklist.
- * @evidence specifications/production-evidence/graph.md#spec-authoring-production-evidence-additive-extension Returns only the additive claim consumed by the generated project's claims array.
+ * @evidence specifications/production-evidence/graph.md#spec-authoring-production-evidence-additive-extension Returns one ordinary H2 extension whose population coverage is consumed through the generated claims array.
  */
 export function createAutoMovieProductionObligationClaim(
   props: IAutoMovieProductionContractClaimProps,
