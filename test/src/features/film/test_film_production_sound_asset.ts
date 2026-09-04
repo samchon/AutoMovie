@@ -2,7 +2,7 @@ import { renderProductionSound } from "@automovie/engine";
 import { IAutoMovieProductionSoundPlan } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
-import { namedFacts, nclose } from "../internal/predicates";
+import { namedFacts, nclose, throwsError } from "../internal/predicates";
 
 const FPS = 24;
 const SAMPLE_RATE = 48_000;
@@ -143,6 +143,67 @@ export const test_film_production_sound_asset = (): void => {
       theStandInStillSounds: true,
       andTheStandInIsNotTheAsset: true,
       pastTheAssetItIsSilent: true,
+    },
+  );
+
+  const dialoguePlan: IAutoMovieProductionSoundPlan = {
+    ...plan({}),
+    cues: [],
+    dialogue: [
+      {
+        id: "line",
+        text: "line",
+        language: "en",
+        startFrame: 0,
+        endFrame: 1,
+      },
+    ],
+  };
+  TestValidator.equals(
+    "only referenced supplied PCM must be finite before mixing",
+    namedFacts([
+      [
+        "aReferencedAssetNaNIsRefusedByIdentityAndIndex",
+        () =>
+          throwsError(
+            () =>
+              renderProductionSound({
+                plan: plan({}),
+                assets: new Map([
+                  ["public/bed.wav", Float32Array.of(0, Number.NaN)],
+                ]),
+              }),
+            ['audio asset "public/bed.wav"', "index 1"],
+          ),
+      ],
+      [
+        "aReferencedDialogueInfinityIsRefused",
+        () =>
+          throwsError(
+            () =>
+              renderProductionSound({
+                plan: dialoguePlan,
+                dialogue: new Map([["line", Float32Array.of(-Infinity)]]),
+              }),
+            ['dialogue line "line"', "index 0"],
+          ),
+      ],
+      [
+        "anUnreferencedInvalidEntryIsOutsideTheIngressBoundary",
+        () =>
+          renderProductionSound({
+            plan: plan({}),
+            assets: new Map([
+              ["unused", Float32Array.of(Number.NaN)],
+              ["public/bed.wav", Float32Array.of(-0, 1e-45, 3.4e38)],
+            ]),
+          }).pcm.every(Number.isFinite),
+      ],
+    ]),
+    {
+      aReferencedAssetNaNIsRefusedByIdentityAndIndex: true,
+      aReferencedDialogueInfinityIsRefused: true,
+      anUnreferencedInvalidEntryIsOutsideTheIngressBoundary: true,
     },
   );
 };

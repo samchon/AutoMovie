@@ -17,12 +17,29 @@ type AutoMovieRenderOption =
 type AutoMovieCommand =
   | { command: "help" }
   | { command: "version" }
-  | { command: "start"; directory: string; force: boolean }
+  | {
+      command: "start";
+      directory: string;
+      force: boolean;
+      language: "chinese" | "english" | "japanese" | "korean";
+    }
   | {
       command: "migrate";
       directory: string;
       mode: "apply" | "dry-run" | "rollback";
     }
+  | { command: "contracts"; action: "migrate"; dryRun: boolean }
+  | {
+      command: "inspect-external";
+      path: string;
+      profile:
+        | "gltf-static-v1"
+        | "gltf-humanoid-v1"
+        | "gltf-motion-v1"
+        | "vrm-humanoid-v1";
+    }
+  | { command: "toc"; check: boolean }
+  | { command: "routes"; kind: "film" | "brief" | "library" }
   | { command: "sync" }
   | { command: "verify" }
   | { command: "render"; arguments: readonly string[] };
@@ -65,6 +82,54 @@ const nonBlankDirectory = (
   if (value === undefined || value.trim().length === 0)
     throw new Error(`${command} needs one non-blank target directory.`);
   return value;
+};
+
+const PRODUCTION_LANGUAGES = new Set([
+  "chinese",
+  "english",
+  "japanese",
+  "korean",
+]);
+
+const startArguments = (
+  args: readonly string[],
+): Extract<AutoMovieCommand, { command: "start" }> => {
+  const positionals: string[] = [];
+  let force = false;
+  let language: string | undefined;
+  for (let index = 0; index < args.length; ++index) {
+    const token = args[index]!;
+    if (token === "--force") {
+      if (force)
+        throw new Error("--force may be supplied only once for start.");
+      force = true;
+    } else if (token === "--language") {
+      if (language !== undefined)
+        throw new Error("--language may be supplied only once for start.");
+      language = args[++index];
+      if (language === undefined || language.startsWith("-"))
+        throw new Error("--language requires a value.");
+    } else if (token.startsWith("-"))
+      throw new Error(`Unknown or inapplicable start option "${token}".`);
+    else positionals.push(token);
+  }
+  if (positionals.length > 1)
+    throw new Error(
+      `start accepts exactly one target directory; received ${positionals.length}.`,
+    );
+  if (language === undefined || PRODUCTION_LANGUAGES.has(language) === false)
+    throw new Error(
+      "start requires --language with one of chinese, english, japanese, or korean.",
+    );
+  return {
+    command: "start",
+    directory: nonBlankDirectory("start", positionals[0]),
+    force,
+    language: language as Extract<
+      AutoMovieCommand,
+      { command: "start" }
+    >["language"],
+  };
 };
 
 const oneDirectory = (
@@ -160,14 +225,7 @@ export const readAutoMovieCommandArguments = (
     return { command: "version" } as const;
 
   const [command, ...rest] = args;
-  if (command === "start") {
-    const request = oneDirectory("start", rest, new Set(["--force"]));
-    return {
-      command,
-      directory: request.directory,
-      force: request.options.has("--force"),
-    } as const;
-  }
+  if (command === "start") return startArguments(rest);
   if (command === "migrate") {
     const request = oneDirectory(
       "migrate",
@@ -185,6 +243,74 @@ export const readAutoMovieCommandArguments = (
           ? ("dry-run" as const)
           : ("apply" as const),
     } as const;
+  }
+  if (command === "contracts") {
+    const [action, ...options] = rest;
+    if (action !== "migrate")
+      throw new Error('contracts needs the "migrate" action.');
+    if (
+      options.some((option) => option !== "--dry-run") ||
+      options.filter((option) => option === "--dry-run").length > 1
+    )
+      throw new Error("contracts migrate accepts --dry-run at most once.");
+    return {
+      command,
+      action,
+      dryRun: options.includes("--dry-run"),
+    } as const;
+  }
+  if (command === "toc") {
+    if (rest.some((option) => option !== "--check") || rest.length > 1)
+      throw new Error("toc accepts --check at most once.");
+    return { command, check: rest.includes("--check") } as const;
+  }
+  if (command === "inspect-external") {
+    const positionals: string[] = [];
+    let profile: string | undefined;
+    for (let index = 0; index < rest.length; ++index) {
+      const token = rest[index]!;
+      if (token === "--profile") {
+        if (profile !== undefined)
+          throw new Error("--profile may be supplied only once.");
+        profile = rest[++index];
+        if (profile === undefined || profile.startsWith("-"))
+          throw new Error("--profile requires a value.");
+      } else if (token.startsWith("-"))
+        throw new Error(
+          `Unknown or inapplicable inspect-external option "${token}".`,
+        );
+      else positionals.push(token);
+    }
+    if (positionals.length !== 1)
+      throw new Error(
+        `inspect-external accepts exactly one source path; received ${positionals.length}.`,
+      );
+    const profiles = new Set([
+      "gltf-static-v1",
+      "gltf-humanoid-v1",
+      "gltf-motion-v1",
+      "vrm-humanoid-v1",
+    ]);
+    if (profile === undefined || profiles.has(profile) === false)
+      throw new Error(
+        "inspect-external requires --profile with one supported ingest profile.",
+      );
+    return {
+      command,
+      path: positionals[0]!,
+      profile: profile as Extract<
+        AutoMovieCommand,
+        { command: "inspect-external" }
+      >["profile"],
+    } as const;
+  }
+  if (command === "routes") {
+    if (
+      rest.length !== 1 ||
+      (rest[0] !== "film" && rest[0] !== "brief" && rest[0] !== "library")
+    )
+      throw new Error("routes needs exactly one of film, brief, or library.");
+    return { command, kind: rest[0] } as const;
   }
   if (command === "sync" || command === "verify") {
     if (rest.length !== 0) throw new Error(`${command} takes no arguments.`);

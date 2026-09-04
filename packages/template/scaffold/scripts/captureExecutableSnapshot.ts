@@ -262,8 +262,8 @@ export class CaptureExecutableTouchedError extends CaptureExecutableInstructedEr
 /**
  * What is left to say once waiting has been tried and did not work.
  *
- * Reinstalling is still not the answer — the bytes were proven before the first
- * wait — so the remaining causes are the ones that do not stop on their own.
+ * Reinstalling is still not the answer; the bytes were proven before the first
+ * wait; so the remaining causes are the ones that do not stop on their own.
  */
 const PERSISTENT_INSTRUCTION =
   "Exclude this directory from your antivirus and search indexer, or run with AUTOMOVIE_CAPTURE_BROWSER=chrome to use a system channel, then run npm run capture:doctor again.";
@@ -283,7 +283,7 @@ export interface ISettledCaptureExecutable<T> {
  * This exists because a diagnostic that answers "run me again" has not
  * answered. `capture:doctor` is the first gate a new project meets, one command
  * after `capture:install`, which is exactly when a scanner is most likely to be
- * reading a browser that finished extracting seconds ago — so the transient
+ * reading a browser that finished extracting seconds ago; so the transient
  * refusal lands on the reader least equipped to recognize it as transient, and
  * the temptation the message spends a paragraph arguing against is to reinstall.
  *

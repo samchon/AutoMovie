@@ -35,14 +35,16 @@ const productionId = currentAutoMovieProductionId();
  * not exist yet at the stage that scope belongs to.
  */
 const project = AutoMovieProductionProject.open(process.cwd(), productionId);
-const authoringEvidence = readAutoMovieProductionEvidence({
-  root: process.cwd(),
-  productionEvidence,
-});
-const output = new AutoMovieProductionCompiler(project, authoringEvidence).lint(
-  {
-    scope: request.scope,
-  },
-);
+const currentAuthoringEvidence = () =>
+  readAutoMovieProductionEvidence({
+    root: process.cwd(),
+    productionEvidence,
+  });
+const authoringEvidence = currentAuthoringEvidence();
+const output = new AutoMovieProductionCompiler(
+  project,
+  authoringEvidence,
+  currentAuthoringEvidence,
+).lint({ scope: request.scope });
 process.stdout.write(`${JSON.stringify(output, null, 2)}\n`);
 if (output.success === false) process.exitCode = 1;

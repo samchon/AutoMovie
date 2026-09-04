@@ -19,7 +19,7 @@ import type {
  * an OBSERVATION: the marks that are on the sheet, one or more proposed
  * meanings for them, and an honest list of everything still undecided. The
  * building itself is written by you, in TypeScript, exactly as it is in
- * `examples/buildings.ts` — and it CITES the observation as its reason.
+ * `examples/buildings.ts` : and it CITES the observation as its reason.
  *
  * That asymmetry is the point. If a sheet is ambiguous, the ambiguity survives
  * in the record instead of being silently resolved by whoever ran the reader
@@ -30,8 +30,8 @@ import type {
  *
  * The observed file lives with the project's other assets and is registered in
  * `automovie/assets.json` with a `design-reference` use naming the document id
- * below. Bytes that a model produced record `generated` — provider, model,
- * request, prompt digest, inputs, output digest — instead of `original`, so a
+ * below. Bytes that a model produced record `generated` : provider, model,
+ * request, prompt digest, inputs, output digest : instead of `original`, so a
  * study that no URL ever served does not have to invent one.
  *
  * ## What "unsupported" and "not-run" mean here
@@ -186,7 +186,7 @@ export const OBSERVED_PAVILION_PLAN: IAutoMovieDesignReference = {
  *
  * Note the second entry: it deliberately cites BOTH north readings. The
  * authored wall had to sit somewhere, so the author chose one and wrote down
- * why — but the competing reading stays attached to the decision instead of
+ * why : but the competing reading stays attached to the decision instead of
  * disappearing the moment a wall existed.
  */
 export const PAVILION_DESIGN_EVIDENCE: IAutoMovieDesignEvidence[] = [
@@ -213,7 +213,7 @@ export const PAVILION_DESIGN_EVIDENCE: IAutoMovieDesignEvidence[] = [
  * and `skipped`, not `promoted`. Out of three readings, exactly one becomes
  * geometry; the two north candidates stay observations because they contradict
  * each other, and two analyses report that they produced nothing. Feeding
- * `promoted` into a building is optional and manual — it is a proposal, not the
+ * `promoted` into a building is optional and manual : it is a proposal, not the
  * design.
  */
 export const readPavilionPlan = (): IAutoMovieDesignPromotion => {

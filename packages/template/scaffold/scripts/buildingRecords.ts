@@ -19,7 +19,7 @@ export interface IAutoMovieBuildingRecord {
  *
  * A production may hold both: a library owner publishes a building and a shot
  * stages the same one to film it. The id is the identity, so the union is taken
- * by id and the staged record wins -- it is the one a frame was actually drawn
+ * by id and the staged record wins; it is the one a frame was actually drawn
  * from, and a report that silently preferred the other would describe a
  * building nobody photographed.
  *
@@ -74,8 +74,8 @@ export const describeAutoMovieBuildingRecords = (
  * the document path alone matched nothing, every time, in silence.
  *
  * Two owners publishing one building id carry it once. A library owner may name
- * a building another owner also names -- the compiler refuses that as duplicate
- * publication at its own address -- and a report that drew both would put one
+ * a building another owner also names; the compiler refuses that as duplicate
+ * publication at its own address; and a report that drew both would put one
  * sheet on the page twice and double its take-off.
  */
 export const collectAutoMovieMaterializedEnvironments = (props: {

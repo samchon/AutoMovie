@@ -21,7 +21,7 @@ const testCreateAutoMoviePopulationFiles = (): void => {
     "complete-production",
     "complete-production-reset",
   ] as const) {
-    const scope: AutoMoviePopulationScope = { mode };
+    const scope = { mode } as AutoMoviePopulationScope;
     assert.deepEqual(createAutoMoviePopulationFiles("treatments", scope), [
       "treatments/???-*.md",
     ]);

@@ -14,6 +14,10 @@ import type {
 
 import { resolveCameraAt } from "../film/cameraProjection";
 import {
+  productionFrameBoundaryToGridTick,
+  resolveProductionFrameRate,
+} from "../film/productionTimebase";
+import {
   sampleFormationMotion,
   transformFormationBounds,
   transformFormationPoint,
@@ -192,6 +196,7 @@ export const deriveProductionSoundPlan = (props: {
     version: 1,
     inputFingerprint: props.timeline.inputFingerprint,
     fps: props.timeline.fps,
+    frameRate: props.timeline.frameRate,
     totalFrames: props.timeline.totalFrames,
     sampleRate: 48_000,
     channels: 2,
@@ -277,9 +282,17 @@ export const renderProductionSound = (props: {
    */
   assets?: ReadonlyMap<string, Float32Array>;
 }): IAutoMovieRenderedProductionSound => {
-  const sampleFrames = Math.round(
-    (props.plan.totalFrames / props.plan.fps) * props.plan.sampleRate,
-  );
+  for (const asset of new Set(props.plan.cues.map((cue) => cue.asset))) {
+    const source = props.assets?.get(asset);
+    if (source !== undefined)
+      assertFiniteProductionPcm(source, `audio asset "${asset}"`);
+  }
+  for (const line of new Set(props.plan.dialogue.map((line) => line.id))) {
+    const source = props.dialogue?.get(line);
+    if (source !== undefined)
+      assertFiniteProductionPcm(source, `dialogue line "${line}"`);
+  }
+  const sampleFrames = frameToSample(props.plan, props.plan.totalFrames);
   const pcm = new Float32Array(sampleFrames * 2);
   for (const event of props.plan.events) {
     const room = event.acousticResponse;
@@ -316,6 +329,7 @@ export const renderProductionSound = (props: {
       pcm[(start + index) * 2 + 1] += value;
     }
   }
+  assertFiniteProductionPcm(pcm, "generated production mix");
   let peak = 0;
   for (const value of pcm) peak = Math.max(peak, Math.abs(value));
   if (peak > 0.95) {
@@ -324,6 +338,20 @@ export const renderProductionSound = (props: {
       pcm[index] = Math.fround(pcm[index]! * scale);
   }
   return { pcm, analysis: analyzeProductionSound(props.plan, pcm) };
+};
+
+/** Refuse an adopted PCM generation before interpolation or numeric evidence. */
+const assertFiniteProductionPcm = (
+  samples: Float32Array,
+  source: string,
+): void => {
+  if (samples.length === 0)
+    throw new Error(`Production sound ${source} supplied empty PCM.`);
+  for (let index = 0; index < samples.length; ++index)
+    if (Number.isFinite(samples[index]) === false)
+      throw new Error(
+        `Production sound ${source} contains a non-finite PCM sample at index ${index}.`,
+      );
 };
 
 /**
@@ -814,8 +842,10 @@ const analyzeProductionSound = (
           peakSample = sample;
         }
       }
+      const frameRate = resolveProductionFrameRate(plan);
       const errorFrames =
-        (Math.abs(peakSample - expected) * plan.fps) / plan.sampleRate;
+        (Math.abs(peakSample - expected) * frameRate.numerator) /
+        (plan.sampleRate * frameRate.denominator);
       return {
         id: event.id,
         expectedSeconds: expected / plan.sampleRate,
@@ -937,7 +967,13 @@ const resampleMono = (source: Float32Array, length: number): Float32Array => {
 const frameToSample = (
   plan: IAutoMovieProductionSoundPlan,
   frame: number,
-): number => Math.round((frame / plan.fps) * plan.sampleRate);
+): number =>
+  productionFrameBoundaryToGridTick({
+    frame,
+    frameRate: resolveProductionFrameRate(plan),
+    ticksPerSecond: plan.sampleRate,
+    rounding: "nearest",
+  });
 
 const edgeEnvelope = (index: number, length: number, edge: number): number =>
   Math.min(1, index / edge, (length - index) / edge);

@@ -1,11 +1,14 @@
 import type {
   AutoMovieContentDigest,
+  IAutoMovieProductionPublicationIdentity,
   IAutoMovieProductionRenderManifest,
 } from "@automovie/interface";
 import {
   type IAutoMovieProductionRenderJobPlan,
   type IAutoMovieProductionRenderTier,
+  canonicalAutoMovieJsonBytes,
   digestAutoMovieBytes,
+  parseProductionRenderPublicationIdentity,
   readAutoMovieProductionOwnedFile,
 } from "@automovie/production";
 import fs from "node:fs";
@@ -53,6 +56,7 @@ export interface IVerifiedProxyPublication {
   frameFormat: IAutoMovieProductionRenderJobPlan["frameFormat"];
   manifest: IAutoMovieProductionRenderManifest;
   publicationFingerprint: AutoMovieContentDigest;
+  publicationIdentity: IAutoMovieProductionPublicationIdentity;
   sourceFrameFormat: IAutoMovieProductionRenderJobPlan["sourceFrameFormat"];
   tier: IAutoMovieProductionRenderTier;
   totalFrames: number;
@@ -261,6 +265,9 @@ const parseProxyPublication = (
   if (isRecord(value) === false)
     throw new Error("Proxy publication receipt is not an object.");
   const receipt = value as Record<string, unknown>;
+  const publicationIdentity = parseProductionRenderPublicationIdentity(
+    receipt.publicationIdentity,
+  );
   if (
     receipt.version !== 1 ||
     validDigest(receipt.publicationFingerprint) === false ||
@@ -273,12 +280,23 @@ const parseProxyPublication = (
     Number.isSafeInteger(receipt.totalFrames) === false ||
     receipt.totalFrames <= 0 ||
     isRecord(receipt.manifest) === false ||
-    receipt.manifest.version !== 1 ||
+    receipt.manifest.version !== 2 ||
     receipt.manifest.compileFingerprint !== receipt.compileFingerprint ||
+    receipt.publicationFingerprint !== publicationIdentity.fingerprint ||
+    publicationIdentity.tier.kind !== "proxy" ||
+    publicationIdentity.compileFingerprint !== receipt.compileFingerprint ||
+    publicationIdentity.editFingerprint !== receipt.editFingerprint ||
+    Buffer.from(
+      canonicalAutoMovieJsonBytes(receipt.manifest.publication),
+    ).equals(Buffer.from(canonicalAutoMovieJsonBytes(publicationIdentity))) ===
+      false ||
     Array.isArray(receipt.manifest.deliverables) === false
   )
     throw new Error("Proxy publication receipt has an invalid identity.");
-  return value as unknown as IVerifiedProxyPublication;
+  return {
+    ...(value as Omit<IVerifiedProxyPublication, "publicationIdentity">),
+    publicationIdentity,
+  };
 };
 
 const proxyManifestFiles = (
@@ -456,28 +474,34 @@ const validRendition = (
   IAutoMovieProductionRenderManifest["deliverables"][number]["rendition"]
 > =>
   isRecord(value) &&
-  value.kind === "repainted" &&
+  value.version === 2 &&
+  value.kind === "visual-lanes" &&
+  validDigest(value.memberSetDigest) &&
+  (value.observationDigest === null || validDigest(value.observationDigest)) &&
+  (value.observation === null || isRecord(value.observation)) &&
   Array.isArray(value.shots) &&
   value.shots.every(
     (shot) =>
       isRecord(shot) &&
+      typeof shot.occurrence === "string" &&
+      shot.occurrence.length > 0 &&
       typeof shot.shot === "string" &&
       shot.shot.length > 0 &&
       typeof shot.path === "string" &&
       shot.path.length > 0 &&
       validDigest(shot.digest) &&
-      validDigest(shot.receiptDigest) &&
-      validDigest(shot.sourceReviewFingerprint) &&
-      validDigest(shot.renditionReviewFingerprint),
-  ) &&
-  Array.isArray(value.aggregateReviews) &&
-  value.aggregateReviews.every(
-    (review) =>
-      isRecord(review) &&
-      (review.kind === "sequence" || review.kind === "film") &&
-      typeof review.id === "string" &&
-      review.id.length > 0 &&
-      validDigest(review.fingerprint),
+      validDigest(shot.sourceDigest) &&
+      (shot.lane === "deterministic"
+        ? shot.receiptDigest === null && shot.selectionDigest === null
+        : shot.lane === "repainted" &&
+          validDigest(shot.receiptDigest) &&
+          validDigest(shot.selectionDigest) &&
+          typeof shot.selectionId === "string" &&
+          shot.selectionId.length > 0 &&
+          typeof shot.requestId === "string" &&
+          shot.requestId.length > 0 &&
+          typeof shot.attemptId === "string" &&
+          shot.attemptId.length > 0),
   );
 
 const physicalBundle = (

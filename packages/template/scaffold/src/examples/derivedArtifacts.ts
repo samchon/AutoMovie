@@ -45,7 +45,7 @@
  * what make the dependency reviewable.
  *
  * The function below is deliberately trivial so the shape stays visible. A real
- * one earns the ledger entry -- a masonry course table, a packed lookup, a
+ * one earns the ledger entry; a masonry course table, a packed lookup, a
  * tessellation nobody wants to recompute per build.
  */
 export const deriveUtf8LineIndex = (input: Uint8Array): Uint8Array => {

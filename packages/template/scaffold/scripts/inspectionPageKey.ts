@@ -35,7 +35,7 @@ export const pageSubject = (
  * level, so no in-process reader can reach it, and what these keys leave out is
  * the whole decision: nothing else in this project can say whether the subject
  * is absent from one and the compile identity present in the other. Both
- * mistakes are silent -- the first costs a rebuilt scene per subject, and the
+ * mistakes are silent; the first costs a rebuilt scene per subject, and the
  * second serves a stale page for a shot that has since recompiled.
  */
 export const pageKey = (

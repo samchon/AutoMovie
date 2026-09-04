@@ -4,6 +4,8 @@
 
 ### 외부 motion 채택과 비파괴 receipt {#performance-motion-external-adoption-receipt}
 
+Generated project는 exact glTF, GLB 또는 VRM byte path와 명시 profile을 받는 inspector command를 제공한다. Inspector는 source-order node identity, hierarchy, local rest transform, dependency, take와 channel facts만 반환한다. Semantic bone mapping, native use 또는 retarget adoption은 별도 저작 결정이며 inspector가 추론하지 않는다.
+
 <!-- @evidence requirements/motion/scope-and-identity.md#motion-scope-identity motion을 시간에 따른 명시적 state 변화로 정의한다. -->
 <!-- @evidence requirements/motion/scope-and-identity.md#motion-all-objects-all-motion actor뿐 아니라 모든 object와 열린 동작 vocabulary를 수용한다. -->
 <!-- @evidence requirements/motion/scope-and-identity.md#motion-source-kinds authored, procedural, captured, imported source kind를 구분한다. -->

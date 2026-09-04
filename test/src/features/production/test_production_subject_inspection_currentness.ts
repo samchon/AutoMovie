@@ -76,6 +76,11 @@ const observation = (props: {
   record: IAutoMovieSubjectInspectionObservationRecord;
 } => {
   const bytes = new TextEncoder().encode("current subject pixels");
+  const selectedPose =
+    props.pose !== undefined ? props.pose : props.plan.poses[0]!;
+  const selectedRuntime = props.runtimeIdentity ?? testCaptureRuntimeIdentity();
+  const selectedCompile =
+    props.compileFingerprint ?? props.plan.compileFingerprint;
   const artifact =
     "automovie/inspections/fixture-film/opening/element%3Ahero/" +
     `${encodeURIComponent(props.plan.planIdentity)}/attempt-1/front.png`;
@@ -88,19 +93,26 @@ const observation = (props: {
       revision: props.plan.revision,
       observation: {
         kind: "subject-view",
+        productionId: props.plan.productionId,
+        target: props.plan.target,
         subject: props.plan.target.subject,
         revision: props.plan.revision,
+        compileFingerprint: selectedCompile,
+        planIdentity: props.plan.planIdentity,
         viewpoint: "front",
+        pose: selectedPose,
+        runtimeIdentity: selectedRuntime,
         artifact,
         digest: digestAutoMovieBytes(bytes),
+        verdict: "passed",
+        deliveryEvidence: false,
       },
-      pose: (props.pose ?? props.plan.poses[0])!,
-      compileFingerprint:
-        props.compileFingerprint ?? props.plan.compileFingerprint,
+      pose: selectedPose,
+      compileFingerprint: selectedCompile,
       planIdentity: props.plan.planIdentity,
       attempt: 1,
       viewpoint: "front",
-      runtimeIdentity: props.runtimeIdentity ?? testCaptureRuntimeIdentity(),
+      runtimeIdentity: selectedRuntime,
       verdict: "passed",
       deliveryEvidence: false,
     },
@@ -186,6 +198,26 @@ export const test_production_subject_inspection_currentness = (): void => {
   TestValidator.equals(
     "stale, malformed, non-passed and unsupported-version twins fail closed",
     namedFacts([
+      [
+        "directOldProtocol",
+        () =>
+          throwsError(
+            () =>
+              canonicalAutoMovieCaptureRuntimeIdentity({
+                ...system,
+                protocolVersion: "automovie.capture-runtime.v1",
+              } as unknown as IAutoMovieCaptureRuntimeIdentity),
+            "Unsupported",
+          ),
+      ],
+      [
+        "scalarProtocol",
+        () =>
+          throwsError(
+            () => parseAutoMovieCaptureRuntimeIdentity("null"),
+            "versioned JSON object",
+          ),
+      ],
       [
         "compile",
         () => {
@@ -282,6 +314,69 @@ export const test_production_subject_inspection_currentness = (): void => {
           ),
       ],
       [
+        "planContext",
+        () =>
+          throwsError(
+            () =>
+              parseAutoMovieSubjectInspectionPlan({
+                ...currentPlan,
+                productionId: " ",
+              }),
+            "non-blank context",
+          ),
+      ],
+      [
+        "planIdentity",
+        () =>
+          throwsError(
+            () =>
+              parseAutoMovieSubjectInspectionPlan({
+                ...currentPlan,
+                planIdentity: digest("9"),
+              }),
+            "identity does not match",
+          ),
+      ],
+      [
+        "observationContext",
+        () =>
+          throwsError(
+            () =>
+              parseAutoMovieSubjectInspectionObservation({
+                ...current.record,
+                observation: {
+                  ...current.record.observation,
+                  artifact: " ",
+                },
+              }),
+            "exact passed context",
+          ),
+      ],
+      [
+        "observationJoins",
+        () =>
+          [
+            { ...current.record, productionId: "other-production" },
+            {
+              ...current.record,
+              target: { ...current.record.target, shot: "other-shot" },
+            },
+            { ...current.record, revision: digest("8") },
+            { ...current.record, compileFingerprint: digest("8") },
+            { ...current.record, planIdentity: digest("8") },
+            { ...current.record, pose: pose(8) },
+            {
+              ...current.record,
+              runtimeIdentity: testCaptureRuntimeIdentity("other"),
+            },
+          ].every((record) =>
+            throwsError(
+              () => parseAutoMovieSubjectInspectionObservation(record),
+              "exact passed context",
+            ),
+          ),
+      ],
+      [
         "extra",
         () =>
           throwsError(
@@ -330,11 +425,17 @@ export const test_production_subject_inspection_currentness = (): void => {
     ]),
     {
       compile: true,
+      directOldProtocol: true,
+      scalarProtocol: true,
       runtime: true,
       pose: true,
       bytes: true,
       locator: true,
       v1: true,
+      planContext: true,
+      planIdentity: true,
+      observationContext: true,
+      observationJoins: true,
       extra: true,
       notPassed: true,
       oldProtocol: true,

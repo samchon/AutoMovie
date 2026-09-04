@@ -7,12 +7,25 @@ import { namedFacts } from "../internal/predicates";
 type CommandPlan =
   | { command: "help" }
   | { command: "version" }
-  | { command: "start"; directory: string; force: boolean }
+  | {
+      command: "start";
+      directory: string;
+      force: boolean;
+      language: "chinese" | "english" | "japanese" | "korean";
+    }
   | {
       command: "migrate";
       directory: string;
       mode: "apply" | "dry-run" | "rollback";
     }
+  | { command: "contracts"; action: "migrate"; dryRun: boolean }
+  | {
+      command: "inspect-external";
+      path: string;
+      profile: string;
+    }
+  | { command: "toc"; check: boolean }
+  | { command: "routes"; kind: "film" | "brief" | "library" }
   | { command: "sync" | "verify" }
   | { command: "render"; arguments: readonly string[] };
 
@@ -38,7 +51,7 @@ const refuses = (args: readonly string[], fragment: string): boolean => {
 
 /** The root CLI consumes one complete command before dispatching any work. */
 export const test_cli_command_arguments = (): void => {
-  const start = read("start", "--force", "film");
+  const start = read("start", "--force", "film", "--language", "english");
   const migrate = [
     read("migrate", "film"),
     read("migrate", "--dry-run", "film"),
@@ -58,7 +71,7 @@ export const test_cli_command_arguments = (): void => {
   );
   let dispatches = 0;
   const dispatched = unit.dispatchAutoMovieCommandArguments(
-    ["start", "film"],
+    ["start", "film", "--language", "english"],
     (command) => {
       ++dispatches;
       return command;
@@ -66,7 +79,7 @@ export const test_cli_command_arguments = (): void => {
   );
   try {
     unit.dispatchAutoMovieCommandArguments(
-      ["start", "film", "--dryrun"],
+      ["start", "film", "--language", "english", "--dryrun"],
       () => ++dispatches,
     );
   } catch {}
@@ -91,11 +104,13 @@ export const test_cli_command_arguments = (): void => {
           start.command === "start" &&
           start.directory === "film" &&
           start.force &&
-          JSON.stringify(read("start", "film")) ===
+          start.language === "english" &&
+          JSON.stringify(read("start", "film", "--language", "korean")) ===
             JSON.stringify({
               command: "start",
               directory: "film",
               force: false,
+              language: "korean",
             }),
       ],
       [
@@ -113,6 +128,63 @@ export const test_cli_command_arguments = (): void => {
           read("verify").command === "verify" &&
           refuses(["sync", "extra"], "sync takes no arguments") &&
           refuses(["verify", "--force"], "verify takes no arguments"),
+      ],
+      [
+        "maintenanceCommandsConsumeOneClosedMode",
+        () =>
+          JSON.stringify(read("contracts", "migrate", "--dry-run")) ===
+            JSON.stringify({
+              command: "contracts",
+              action: "migrate",
+              dryRun: true,
+            }) &&
+          JSON.stringify(read("toc", "--check")) ===
+            JSON.stringify({ command: "toc", check: true }) &&
+          refuses(["contracts"], "migrate") &&
+          refuses(["contracts", "migrate", "--check"], "--dry-run") &&
+          refuses(["toc", "--check", "--check"], "at most once"),
+      ],
+      [
+        "externalInspectionRequiresOnePathAndExplicitProfile",
+        () =>
+          JSON.stringify(
+            read(
+              "inspect-external",
+              "public/assets/walk.glb",
+              "--profile",
+              "gltf-motion-v1",
+            ),
+          ) ===
+            JSON.stringify({
+              command: "inspect-external",
+              path: "public/assets/walk.glb",
+              profile: "gltf-motion-v1",
+            }) &&
+          refuses(["inspect-external"], "exactly one source path") &&
+          refuses(["inspect-external", "a.glb"], "requires --profile") &&
+          refuses(
+            ["inspect-external", "a.glb", "--profile", "guessed"],
+            "supported ingest profile",
+          ) &&
+          refuses(
+            [
+              "inspect-external",
+              "a.glb",
+              "--profile",
+              "gltf-motion-v1",
+              "extra.glb",
+            ],
+            "received 2",
+          ),
+      ],
+      [
+        "routeMatrixRequiresOneProductionKind",
+        () =>
+          JSON.stringify(read("routes", "brief")) ===
+            JSON.stringify({ command: "routes", kind: "brief" }) &&
+          refuses(["routes"], "exactly one") &&
+          refuses(["routes", "film", "brief"], "exactly one") &&
+          refuses(["routes", "unknown"], "exactly one"),
       ],
       [
         "renderConsumesTheGeneratedRunnerGrammar",
@@ -143,11 +215,27 @@ export const test_cli_command_arguments = (): void => {
         "unknownDuplicateInapplicableAndExtraTokensAreRefused",
         () =>
           refuses(["launch", "film"], "Unknown command") &&
-          refuses(["start", "film", "--dryrun"], "start option") &&
-          refuses(["start", "film", "--dry-run"], "start option") &&
+          refuses(
+            ["start", "film", "--language", "english", "--dryrun"],
+            "start option",
+          ) &&
+          refuses(
+            ["start", "film", "--language", "english", "--dry-run"],
+            "start option",
+          ) &&
           refuses(["start", "-h"], "start option") &&
-          refuses(["start", "film", "--force", "--force"], "only once") &&
-          refuses(["start", "film", "other"], "received 2") &&
+          refuses(
+            ["start", "film", "--language", "english", "--force", "--force"],
+            "only once",
+          ) &&
+          refuses(
+            ["start", "film", "--language", "english", "--language", "korean"],
+            "only once",
+          ) &&
+          refuses(
+            ["start", "film", "--language", "english", "other"],
+            "received 2",
+          ) &&
           refuses(["migrate", "film", "--force"], "migrate option") &&
           refuses(["migrate", "film", "--dry-run", "--dry-run"], "only once") &&
           refuses(["migrate", "film", "--dry-run", "--rollback"], "only one") &&
@@ -156,8 +244,17 @@ export const test_cli_command_arguments = (): void => {
       [
         "missingAndBlankDirectoriesAreRefused",
         () =>
-          refuses(["start"], "non-blank target") &&
-          refuses(["start", "  "], "non-blank target") &&
+          refuses(["start"], "requires --language") &&
+          refuses(["start", "film"], "requires --language") &&
+          refuses(["start", "film", "--language"], "requires a value") &&
+          refuses(
+            ["start", "film", "--language", "french"],
+            "requires --language",
+          ) &&
+          refuses(
+            ["start", "  ", "--language", "english"],
+            "non-blank target",
+          ) &&
           refuses(["migrate"], "non-blank target"),
       ],
       [
@@ -200,7 +297,10 @@ export const test_cli_command_arguments = (): void => {
       startConsumesItsDirectoryAndOptionalFlag: true,
       migrateResolvesExactlyOneMode: true,
       zeroArgumentCommandsConsumeNothingElse: true,
+      maintenanceCommandsConsumeOneClosedMode: true,
+      externalInspectionRequiresOnePathAndExplicitProfile: true,
       renderConsumesTheGeneratedRunnerGrammar: true,
+      routeMatrixRequiresOneProductionKind: true,
       unknownDuplicateInapplicableAndExtraTokensAreRefused: true,
       missingAndBlankDirectoriesAreRefused: true,
       renderRejectsEveryMalformedTokenClass: true,

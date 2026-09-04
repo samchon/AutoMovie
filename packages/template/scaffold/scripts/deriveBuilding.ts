@@ -42,7 +42,7 @@ import { productionBuildingStudies } from "./productionStudies";
  * somebody orders material from is not that. They are also not shot source. A
  * shot or film build function runs in a deterministic no-I/O sandbox that may
  * import only the engine names on its published surface, and every derivation
- * below is off that surface on purpose — it writes files, and a build function
+ * below is off that surface on purpose : it writes files, and a build function
  * that wrote a file would not be deterministic.
  *
  * So this is the third place, and the one the guides name for this work: an
@@ -52,8 +52,8 @@ import { productionBuildingStudies } from "./productionStudies";
  * ## What it reads
  *
  * Current generated state, never source. A building reaches this script the way
- * it reaches the renderer — a subject contributed it, the compiler validated
- * and retained it — so a sheet is a projection of exactly the bytes a frame was
+ * it reaches the renderer : a subject contributed it, the compiler validated
+ * and retained it : so a sheet is a projection of exactly the bytes a frame was
  * drawn from. Requiring the state to be `current` is what makes that true: a
  * stale compile would produce documents for a design that no longer exists.
  *
@@ -96,15 +96,21 @@ export const runAutoMovieBuildingDerivation = (props: {
   state: {
     root: string;
     generated: {
+      kind: "brief" | "film" | "library";
       shots: Iterable<readonly [string, IAutoMovieCompiledShotSource]>;
+      libraryEnvironments: Iterable<
+        readonly [string, IAutoMovieBuiltEnvironment]
+      >;
       manifest: { inputFingerprint: string };
       design: {
-        production: { environmentContext?: IAutoMovieEnvironmentContext };
+        production: {
+          environmentContext?: IAutoMovieEnvironmentContext;
+        } | null;
       };
     };
   };
 }): void => {
-  // One root, taken from the state. Two -- a caller's and the state's -- can
+  // One root, taken from the state. Two; a caller's and the state's; can
   // disagree, and a report drawn from one tree into another tree's directory is
   // exactly the kind of result nobody can trace.
   const projectRoot = props.state.root;
@@ -130,7 +136,7 @@ export const runAutoMovieBuildingDerivation = (props: {
    *
    * A shot stages an environment to photograph it; a library materializes one as
    * the delivered work itself. This report counted only the first, so a library
-   * production -- the shape that delivers buildings and no timeline at all --
+   * production; the shape that delivers buildings and no timeline at all;
    * read as having nothing to draw, count or state. The author of four buildings
    * would run the report and be told their production stages no built
    * environment, which is true and useless.
@@ -142,14 +148,18 @@ export const runAutoMovieBuildingDerivation = (props: {
    * reached that point is not in error.
    */
   const materialized = (): IAutoMovieBuiltEnvironment[] => {
-    // No guard around these two reads. The cases one would catch -- a project
-    // with no compiler-owned tree, a library before its first compile -- are
+    if (state.generated.kind === "library")
+      return [...state.generated.libraryEnvironments].map(
+        ([, environment]) => environment,
+      );
+    // No guard around these two reads. The cases one would catch; a project
+    // with no compiler-owned tree, a library before its first compile; are
     // both refused above this line already: `requireCurrentAutoMovieProjectState`
     // runs at module level and stops an uncompiled or stale project, and
     // importing `../lint.config` validates the evidence declaration before this
     // file runs at all. A catch here would be a branch no run can take, and it
     // would swallow the reader's own refusal of an owner addressed without its
-    // anchor -- which is exactly the defect this command carried in silence.
+    // anchor; which is exactly the defect this command carried in silence.
     const project = AutoMovieProductionProject.openReadOnly(
       projectRoot,
       productionId,
@@ -232,7 +242,7 @@ export const runAutoMovieBuildingDerivation = (props: {
         serviceNetworks,
         fluidDomains,
         waterFeatures,
-        context: state.generated.design.production.environmentContext ?? null,
+        context: state.generated.design.production?.environmentContext ?? null,
         studies: productionBuildingStudies,
       }),
     tally: describeAutoMovieBuildingRecords,

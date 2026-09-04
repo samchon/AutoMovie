@@ -215,8 +215,8 @@ export interface IAutoMovieBuildingReport {
    * The bounded verdict over those runs, or null when no run was produced.
    *
    * A verdict over nothing would clear everything, so no report is written
-   * rather than an empty one. Why there is no run — no study declared, or a
-   * declared study whose site the production never stated — is in {@link gaps}.
+   * rather than an empty one. Why there is no run : no study declared, or a
+   * declared study whose site the production never stated : is in {@link gaps}.
    */
   analysis: IAutoMovieAnalysisReport | null;
   /**
@@ -271,7 +271,7 @@ export const AUTOMOVIE_BUILDING_SCHEDULE_SUBJECTS: IAutoMovieCompleteScheduleSub
  * Four projections are two decisions, not four algorithms: where the cut plane
  * is, and which side of it survives. The plan looks down, the reflected ceiling
  * plan looks up and mirrors the page basis, the section cuts on a vertical
- * plane, and the elevation has no cut at all — one derivation, four
+ * plane, and the elevation has no cut at all : one derivation, four
  * conventions.
  *
  * Two of the six are here to be honest rather than to be useful. A services

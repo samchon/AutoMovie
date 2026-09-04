@@ -164,6 +164,12 @@
         "package": "@automovie/interface"
       }
     },
+    "requirements/agent-authoring/source-owned-loop.md#agent-source-result-link": {
+      "owner": {
+        "kind": "package",
+        "package": "@automovie/interface"
+      }
+    },
     "requirements/asset-authoring/era-and-style.md#asset-style-reference-role": {
       "owner": {
         "kind": "package",
@@ -3281,7 +3287,6 @@
     "requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring": "sha256:d84be595eb8acde15a8f223184bd08ce7cfee77e6f6038ce696db251342ee200",
     "requirements/agent-authoring/source-owned-loop.md#agent-reviewable-source-change": "sha256:8a9fd2d7ce0553a8bd7d3a36fd826c2898915d0404ace4895cf57cca24858351",
     "requirements/agent-authoring/source-owned-loop.md#agent-source-owned-loop": "sha256:8bbd52fd9f30fe93d0aea0ad562c968798f04fd2758fd39ba2057360ec70429a",
-    "requirements/agent-authoring/source-owned-loop.md#agent-source-result-link": "sha256:ef7e1961db94fdc6577147ca394e983d037ba83f4dfbc8a3258abb47c2314f05",
     "requirements/asset-authoring/era-and-style.md#asset-era-independent-expression": "sha256:71758f160dcb75bf33436c09233e824c12dd0c9fd51f25de549aa19dbdc44ce1",
     "requirements/asset-authoring/era-and-style.md#asset-style-as-input": "sha256:3537975f7d49e3a1a2e22e8578348b2c0012a99aeab6d31197d606d1b699586f",
     "requirements/asset-authoring/era-and-style.md#asset-style-catalogue-refusal": "sha256:62eb00fcff35e28924513e283a6622762376c351ef752819c4700b5229961bac",

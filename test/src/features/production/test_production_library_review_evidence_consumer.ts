@@ -334,15 +334,20 @@ const compilerProbe = (): {
 } => {
   const fixture = productionFixture();
   try {
-    const library = authoring();
-    (library as unknown as { root: string }).root = fixture.root;
-    (library as unknown as { designOwners: unknown[] }).designOwners = [];
+    const currentLibraryEvidence = (): IAutoMovieProductionEvidence => {
+      const library = authoring();
+      (library as unknown as { root: string }).root = fixture.root;
+      (library as unknown as { designOwners: unknown[] }).designOwners = [];
+      return library;
+    };
+    const library = currentLibraryEvidence();
     const film = authoring("film");
     (film as unknown as { root: string }).root = fixture.root;
     return {
       openedLibraryDiagnostics: openAutoMovieProduction({
         projectRoot: fixture.root,
         authoringEvidence: library,
+        currentAuthoringEvidence: currentLibraryEvidence,
       })
         .compiler.lint({ scope: "review" })
         .diagnostics.filter((entry) => entry.target.startsWith("library:")),

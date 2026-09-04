@@ -29,24 +29,28 @@ import {
 export const test_production_library_unstarted_branch = (): void => {
   const fixture = libraryFixture();
   try {
-    const compile = (binding?: "empty" | "none"): string[] =>
-      new AutoMovieProductionCompiler(
+    const compile = (binding?: "empty" | "none"): string[] => {
+      const currentAuthoringEvidence = () =>
+        libraryAuthoring({
+          anchors: [LIBRARY_ANCHOR, LIBRARY_SECOND_ANCHOR],
+          binding,
+          root: fixture.root,
+        });
+      return new AutoMovieProductionCompiler(
         AutoMovieProductionProject.open(fixture.root),
         // Two units, of which the fixture's source registers only the first.
         // The second is what makes the charge appear at all, so the three
         // readings below differ by the binding rather than by having nothing
         // to charge.
-        libraryAuthoring({
-          anchors: [LIBRARY_ANCHOR, LIBRARY_SECOND_ANCHOR],
-          binding,
-          root: fixture.root,
-        }),
+        currentAuthoringEvidence(),
+        currentAuthoringEvidence,
       )
         .compile({ scope: "source" })
         .diagnostics.filter(
           (diagnostic) => diagnostic.code === "source-export-missing",
         )
         .map((diagnostic) => diagnostic.target);
+    };
 
     TestValidator.equals(
       "an owner is charged for its unregistered unit only once its source begins",

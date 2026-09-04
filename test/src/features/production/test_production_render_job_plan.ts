@@ -4,6 +4,7 @@ import {
   IAutoMovieProductionDesign,
 } from "@automovie/interface";
 import {
+  type IAutoMovieProductionAudioAssetIdentity,
   IAutoMovieProductionRenderJobPlan,
   IAutoMovieProductionRenderTier,
   planProductionRenderJob,
@@ -39,7 +40,39 @@ const RUNTIME_IDENTITY = {
   },
 } as const;
 
+const WAVE_AUDIO_ASSET = {
+  path: "assets/audio/tone.wav",
+  digest: digest("c"),
+  durationSeconds: 0.5,
+  sampleRate: 48_000,
+  channels: 2,
+  kind: "wave",
+  sourceFormat: {
+    kind: "wave",
+    header: "wave-format-extensible",
+    encoding: "pcm-s16le",
+    containerBits: 16,
+    validBits: 16,
+    sampleRate: 48_000,
+    channels: 2,
+    layout: {
+      kind: "stereo",
+      speakers: ["front-left", "front-right"],
+      source: "channel-mask",
+      mask: 0x3,
+    },
+    subFormatGuid: "00000001-0000-0010-8000-00aa00389b71",
+  },
+  processing: {
+    kind: "downmix",
+    outputChannels: 1,
+    outputSampleRate: 48_000,
+    matrix: [[0.5, 0.5]],
+  },
+} as const satisfies IAutoMovieProductionAudioAssetIdentity;
+
 const AUDIO_ASSET = {
+  kind: "placeholder-audio-stem",
   path: "assets/audio/tone.wav",
   digest: digest("c"),
   durationSeconds: 0.5,
@@ -147,7 +180,7 @@ const plan = (props: {
   chunkFrames?: number;
   timeline?: IAutoMovieFilmTimeline;
   production?: IAutoMovieProductionDesign;
-  audioAssets?: readonly (typeof AUDIO_ASSET)[];
+  audioAssets?: readonly IAutoMovieProductionAudioAssetIdentity[];
   guidePasses?: readonly ["pose" | "depth", ...("pose" | "depth")[]];
   sourceFingerprints?: Readonly<Record<string, AutoMovieContentDigest>>;
   runtimeIdentity?: IAutoMovieProductionRenderJobPlan["runtimeIdentity"];
@@ -506,6 +539,11 @@ export const test_production_render_job_plan = (): void => {
       audio: ["tone"],
     },
   );
+  TestValidator.equals(
+    "WAVE source facts and processing survive render planning",
+    plan({ audioAssets: [WAVE_AUDIO_ASSET] }).tracks.audioAssets,
+    [WAVE_AUDIO_ASSET],
+  );
 
   TestValidator.equals(
     "every planning input a worker cannot recover from is refused by name",
@@ -627,6 +665,85 @@ export const test_production_render_job_plan = (): void => {
           ),
       ],
       [
+        "contradictoryWaveLayout",
+        () =>
+          throwsError(
+            () =>
+              plan({
+                audioAssets: [
+                  {
+                    ...WAVE_AUDIO_ASSET,
+                    sourceFormat: {
+                      ...WAVE_AUDIO_ASSET.sourceFormat,
+                      layout: {
+                        ...WAVE_AUDIO_ASSET.sourceFormat.layout,
+                        mask: 0x5,
+                      },
+                    },
+                  },
+                ],
+              }),
+            "invalid identity, duration, sample rate, channels, or duplicate ownership",
+          ),
+      ],
+      [
+        "unknownAudioKind",
+        () =>
+          throwsError(
+            () =>
+              plan({
+                audioAssets: [
+                  {
+                    ...AUDIO_ASSET,
+                    kind: "unknown-audio" as never,
+                  },
+                ],
+              }),
+            "invalid identity, duration, sample rate, channels, or duplicate ownership",
+          ),
+      ],
+      [
+        "unknownWaveEncoding",
+        () =>
+          throwsError(
+            () =>
+              plan({
+                audioAssets: [
+                  {
+                    ...WAVE_AUDIO_ASSET,
+                    sourceFormat: {
+                      ...WAVE_AUDIO_ASSET.sourceFormat,
+                      encoding: "unknown-encoding" as never,
+                    },
+                  },
+                ],
+              }),
+            "invalid identity, duration, sample rate, channels, or duplicate ownership",
+          ),
+      ],
+      [
+        "unknownWaveLayoutSource",
+        () =>
+          throwsError(
+            () =>
+              plan({
+                audioAssets: [
+                  {
+                    ...WAVE_AUDIO_ASSET,
+                    sourceFormat: {
+                      ...WAVE_AUDIO_ASSET.sourceFormat,
+                      layout: {
+                        ...WAVE_AUDIO_ASSET.sourceFormat.layout,
+                        source: "unknown-layout-source" as never,
+                      },
+                    },
+                  },
+                ],
+              }),
+            "invalid identity, duration, sample rate, channels, or duplicate ownership",
+          ),
+      ],
+      [
         "ambiguousGuidePass",
         () =>
           throwsError(
@@ -646,6 +763,10 @@ export const test_production_render_job_plan = (): void => {
       clockDisagreement: true,
       unfingerprintedShot: true,
       unverifiedAudio: true,
+      contradictoryWaveLayout: true,
+      unknownAudioKind: true,
+      unknownWaveEncoding: true,
+      unknownWaveLayoutSource: true,
       ambiguousGuidePass: true,
     },
   );

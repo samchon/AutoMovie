@@ -8,6 +8,8 @@ Settle the complete delivery partition before writing any script body. Writing t
 
 Author a partition map that lists every delivery-group directory and H1 title, every script filename and H1 title beneath it, the ordered H2/H3/H4 identities inside each file, and every treatment H2 each script unit realizes. A treatment event may run across several script units and one script unit may braid several treatment events.
 
+After adding, removing, renaming, or reordering a numbered unit, run `npm run toc` to regenerate the managed links in every script and screenplay index. Run `npm run toc -- --check` before advancing evidence; it compares the same canonical bytes without writing and refuses missing, extra, duplicate, mistargeted, or misordered links.
+
 The map must satisfy four conditions before drafting begins:
 
 - **Coverage.** Every treatment H2 in the active population is realized by the script population at every governed script depth. A treatment event nothing cites has been dropped, and the graph refuses it.
@@ -32,6 +34,8 @@ Before refining the partition map, rerun the [production-specific contract](../e
 Apply the narrative addressability obligation across the partition and the script staging-block principle to every H2/H3/H4. Reverse-outline the execution blocks after drafting. If executable detail reveals a missing narrative event, repair treatments first; if it reveals a defective delivery scene or beat boundary, repair the script partition and propagate that exact identity only to screenplays.
 
 ## Gate
+
+Treat every script and caption boundary as an integer frame boundary on the one authored rational production clock. Destination audio samples, WebVTT milliseconds, and MP4 ticks use the shared nearest-half-up boundary mapping; do not calculate each carrier independently from decimal `fps`.
 
 Start at `scripts: "draft"` only after treatments are in `review`. Before `evidence`, enact every H4 in order and test physical possibility, timing, resources, settings capabilities, entry and exit continuity, proportional expansion beyond its actual treatment parents, and every consequential action, exchange, knowledge change, or silence. A summary that merely says these occur is not a script.
 

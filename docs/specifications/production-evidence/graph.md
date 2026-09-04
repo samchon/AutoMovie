@@ -8,11 +8,15 @@
 
 팩터리는 `docs/principles`, `docs/obligations`, domain 별 `docs/upstream/{design,story,delivery}`와 `docs/discovery`의 정규화된 상대 경로와 명시적 H2 anchor 목록을 하나의 고정 inventory로 읽는다. 그래프를 구성하기 전에 inventory의 파일·anchor identity와 실제 문서 트리가 서로 정확히 일치하는지 검사한다.
 
-모든 원칙 reference는 선택된 저술 H2/H3/H4 host에 `checklist: true`, `noEvidenceExclude: true`로 연결한다. 모든 저술 의무 reference는 같은 계층의 primary H2 모집단에 일반 coverage와 `noEvidenceExclude: true`로 연결하며 checklist로 만들거나 H3/H4마다 반복하지 않는다. TypeScript source 의무는 그 family가 선택한 public export 모집단에 같은 방식으로 연결한다. 한 공용 reference builder가 checklist 여부와 진실한 무결과 허용 여부를 명시적으로 받아 family별 flag 조합을 한 곳에서 드러내야 한다.
+모든 원칙 reference는 선택된 저술 H2/H3/H4 host에 `checklist: true`, `noEvidenceExclude: true`로 연결한다. 각 저술 의무 문서에는 `docs/accounts/<layer>`의 전용 account 파일을 배정한다. Account H2는 정확히 한 의무 H2를 소유하고 같은 계층의 완전한 H2 모집단을 `checklist: true`, `noEvidenceExclude: true`로 비교한다. 저술 H2/H3/H4에는 이 모집단 질문을 반복하지 않는다. TypeScript source 의무는 그 family가 선택한 public export 모집단에 기존 coverage 방식으로 연결한다. 한 공용 reference builder가 checklist 여부와 진실한 무결과 허용 여부를 명시적으로 받아 family별 flag 조합을 한 곳에서 드러내야 한다.
+
+팩터리는 settings가 모든 후속 저술 계층에 제공하는 edge와 `DESIGN_FOUNDATIONS`의 edge를 하나의 provider-consumer topology로 투영한다. 각 행은 `uses | inapplicable` 상태와 사유를 가지며 inspector는 missing consumer, extra provider, disabled residue, wrong order, unknown branch, duplicate declaration과 빈 사유를 결정적 순서로 보고한다. Motions와 systems의 상호 edge만 같은 coordinated order를 허용한다. Manifest와 project reader는 이 matrix와 diagnostics를 그대로 공개하며 unit-local foundation claim은 별도로 유지한다.
 
 상위 수정 reference는 상속하는 design·brief·서사 H2/H3/H4와 source export에 `checklist: true`로 연결하고 제외를 허용한다. 각 host는 하위 저작이 드러내어 가장 이른 부모에서 수리한 결함을 양의 evidence로 기록하거나, 실제 부모와 시험한 결정을 밝힌 제외로 충분성을 기록한다. 설정과 조사는 이 reference를 선택하지 않는다. 별도의 무배제 parent-differentiation 원칙과 실제 계보 관계가 자식의 layer-owned 추가 결정과 한 개 이상의 실제 부모를 각각 검사하므로, 상위 수정 제외가 부모 없는 host를 정당화할 수 없다.
 
 팩터리는 반환 전에 현재 프로젝트의 저술 Markdown과 TypeScript host에서 인접한 acknowledgement-review 쌍과 host별 review 관찰을 결정적인 순서로 읽는다. 구두점·기호·대소문자·기계적인 비교 도입부를 정규화한 review가 acknowledgement와 같거나, target 경로만 바꾼 같은 관찰이 한 host의 서로 다른 target에 반복되면 문서·host·line·target을 밝히며 실패한다. 이 검사는 fingerprint, outcome, queue 또는 review ledger를 만들지 않고 그 밖의 산문 품질을 판정하지 않는다.
+
+Project reader는 같은 문서 모집단을 semantic alarm inspector에도 전달한다. Inspector는 layer와 acknowledgement 또는 exclusion 종류별로 quote, Markdown·TypeScript path, 숫자와 target 문구 slot을 정규화한 review frame을 세고 임계 이상인 모든 위치를 반환한다. Target 문서가 제공되면 각 H2의 Review question을 읽어 이유에 그 질문이 그대로 포함된 위치를 반환하고 `questionPasteChecked: true`를 기록한다. 두 alarm은 Self-Review 관찰일 뿐 graph 실패나 review 판정이 아니다.
 
 <!-- @evidenceObligation shared-contract 고정된 공통 문서·H2 inventory와 실제 트리 사이의 양방향 일치, 원칙과 상위 수정의 단위별 checklist, 의무의 계층 모집단 coverage, 기계적으로 복제된 review 이유의 무상태 거부. -->
 
@@ -42,9 +46,9 @@
 
 <!-- @evidence requirements/production-evidence/graph.md#agent-production-evidence-physical-integrity 선택이 실제 대상을 하나만 지배하고 비활성 잔여물을 함께 막게 한다. -->
 
-팩터리는 glob으로 Markdown과 TypeScript host를 열거하고 활성 분기의 최소 host 수, 비활성 분기의 잔여물, 명시적 H2 anchor, 중복 target identity, 각 source 파일의 구체적인 named export owner를 그래프 생성 전에 검사한다. `treatments`는 중첩·index가 없는 평면 번호 event 파일이고 각 H2가 한 사건이다. `scripts`와 `screenplays`는 번호 delivery-group 디렉터리와 H1 전용 `index.md`, 번호 unit 파일의 H2/H3/H4 구조를 사용한다. 모든 script와 screenplay 파일 host 및 H2/H3/H4 단위는 treatment H2를 직접 완전 피복하고, screenplay는 대응 script의 group-index H1, unit 파일과 H1, 동일 깊이 lineage와 순서를 정확히 보존한다. 반환된 claim은 lint가 실제 export와 annotation을 선택하여 각 상속 단위가 한 개 이상의 실제 부모를 갖게 하고, 디자인 owner마다 정확히 한 디자인 파일, shot·acceptance owner마다 한 screenplay scene 또는 brief shot, 완전한 target coverage와 단계별 review cardinality를 검사하게 한다.
+팩터리는 glob으로 Markdown과 TypeScript host를 열거하고 활성 분기의 최소 host 수, 비활성 분기의 잔여물, 명시적 H2 anchor, 중복 target identity, 각 source 파일의 구체적인 named export owner를 그래프 생성 전에 검사한다. 프로젝트 입력은 `lstat` 기준 regular file이고 symlink가 아니며 `nlink === 1`일 때만 읽는다. 이 판정은 문서·source 모집단과 package identity manifest에 동일하게 적용하여 hardlink 별칭이 별도 계약, source 또는 owner identity로 들어오는 것을 거부한다. `treatments`는 중첩·index가 없는 평면 번호 event 파일이고 각 H2가 한 사건이다. `scripts`와 `screenplays`는 번호 delivery-group 디렉터리와 H1 전용 `index.md`, 번호 unit 파일의 H2/H3/H4 구조를 사용한다. 모든 script와 screenplay 파일 host 및 H2/H3/H4 단위는 treatment H2를 직접 완전 피복하고, screenplay는 대응 script의 group-index H1, unit 파일과 H1, 동일 깊이 lineage와 순서를 정확히 보존한다. 반환된 claim은 lint가 실제 export와 annotation을 선택하여 각 상속 단위가 한 개 이상의 실제 부모를 갖게 하고, 디자인 owner마다 정확히 한 디자인 파일, shot·acceptance owner마다 한 screenplay scene 또는 brief shot, 완전한 target coverage와 단계별 review cardinality를 검사하게 한다.
 
-<!-- @evidenceObligation physical-population-integrity 실제 파일 모집단에서 검증하는 host 수, 잔여물, identity, 소유 cardinality와 계보. -->
+<!-- @evidenceObligation physical-population-integrity 실제 파일 모집단과 package manifest에서 검증하는 단일 물리 identity, host 수, 잔여물, 소유 cardinality와 계보. -->
 
 ### 공통 그래프 뒤의 로컬 합성 {#spec-authoring-production-evidence-additive-extension}
 
@@ -58,6 +62,6 @@
 
 <!-- @evidence requirements/production-evidence/graph.md#agent-production-evidence-deterministic-result 같은 입력의 동일 출력과 모순 입력의 명시적 실패를 규정한다. -->
 
-파일·anchor·claim과 review-reason 검사는 고정 inventory와 코드 단위 정렬 순서를 사용한다. 검증 실패는 잘못된 종류·단계·분기, 파일 경로와 충돌한 identity 또는 기계적으로 복제된 review의 문서·host·line·target을 이름 붙인 예외로 반환하며, 모든 검증이 끝나기 전에는 부분 그래프를 공개하지 않는다.
+파일·anchor·claim, population account, topology와 review-reason 검사는 고정 inventory와 코드 단위 정렬 순서를 사용한다. 검증 실패는 잘못된 종류·단계·분기, 파일 경로와 충돌한 identity, foundation edge 또는 기계적으로 복제된 review의 문서·host·line·target을 이름 붙인 예외로 반환하며, 모든 검증이 끝나기 전에는 부분 그래프를 공개하지 않는다. Semantic review alarm은 같은 입력에 같은 정렬 결과를 내지만 이 실패 집합에는 들어가지 않는다.
 
 <!-- @evidenceObligation deterministic-failure 고정 순서의 그래프 구성과 구체적인 원인을 가진 원자적 사전 실패. -->

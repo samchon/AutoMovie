@@ -622,11 +622,14 @@ export const test_engine_sound_propagation = (): void => {
       decodedFirstSample: nclose(decodedCue.pcm[0]!, 1e-6),
       decodedPastEndIsSilent: decodedCue.pcm[2] === 0,
       subGateLoudness: decodedCue.analysis.integratedLoudness,
-      emptyDialogueIsSilent:
-        renderProductionSound({
-          plan: oneSampleDialoguePlan,
-          dialogue: new Map([["one-sample", new Float32Array()]]),
-        }).analysis.samplePeak === 0,
+      emptyDialogueIsRefused: throwsError(
+        () =>
+          renderProductionSound({
+            plan: oneSampleDialoguePlan,
+            dialogue: new Map([["one-sample", new Float32Array()]]),
+          }),
+        ['dialogue line "one-sample"', "empty PCM"],
+      ),
       resampledDialogueAudible: resampledDialogue.pcm.some(
         (sample) => sample !== 0,
       ),
@@ -643,7 +646,7 @@ export const test_engine_sound_propagation = (): void => {
       decodedFirstSample: true,
       decodedPastEndIsSilent: true,
       subGateLoudness: null,
-      emptyDialogueIsSilent: true,
+      emptyDialogueIsRefused: true,
       resampledDialogueAudible: true,
       resampledDialogueFinite: true,
       equalSortKeysRetained: 2,

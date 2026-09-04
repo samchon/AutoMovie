@@ -19,6 +19,9 @@ vegetation, props, and debris. Grid, disk-scatter, and route layouts retain
 only count, seed, model reference, and bounded variation law. Compiled slots
 derive stable scale, palette, and numeric traits without expanding scene nodes.
 
+`IAutoMovieSubjectReviewObservation` is a portable passed receipt, not a loose image reference.
+It carries the production and exact subject target, revision, compile and whole-plan identities, viewpoint and resolved pose, artifact digest, complete capture runtime including actual graphics, and the literal non-delivery boundary needed to decide whether the observation is current.
+
 automovie의 타입 허브. 캐릭터·사물의 형상·포즈·모션·표정·머티리얼·씬과 production 증거 계약을 기술하는 모든 AST 구조체의 단일 진실 공급원이다. 코딩 에이전트는 이 타입을 tracked TypeScript에서 직접 소비한다.
 
 런타임 의존은 없다. `typia`도, `three.js`도 없다. 순수 타입 선언만 담는다. 제약은 필드 JSDoc으로 문서화하고 `@automovie/engine`의 런타임 검증기가 강제한다. 빌드 도구(`ttsc`/`typescript`/`rimraf`/`@ttsc/lint`)는 devDependency일 뿐이다.
@@ -68,7 +71,7 @@ automovie는 **glTF / VRM 규약**을 따른다.
 | `fluid/`      | 건축과 독립된 유체 도메인: 고정 격자·고정 스텝 shallow-water 설계(`IAutoMovieFluidDomain`), 절대 스텝 상태·표면·분무·예산(`IAutoMovieFluidState`), 건물이 논리 공간에 묶는 수경 바인딩(`IAutoMovieWaterFeature`)                                       |
 | `cinematics/` | 촬영·편집: 샷·카메라 인텐트·커버리지(대체 앵글 테이크), 시퀀스·전환·트림, 렌더 스펙, 인터랙션 이벤트, 포즈 키포인트, 가이드 패스                                                                                 |
 | `harness/`    | 저수준 액션 콜·타겟·beat-end 엔진 어휘와 레거시 slate/context 호환 타입. 현재 stage/block/perform 입력은 `authoring/`이 소유하며 이 폴더의 Request 모양은 공개 진입점이 아님                                                      |
-| `validation/` | 검증 봉투 + 제약 위반 리포트 (engine ↔ harness 계약)                                                                                                                                                             |
+| `validation/` | 검증 봉투 + 제약 위반 리포트 (engine  harness 계약)                                                                                                                                                             |
 
 > 코드 저작의 정본은 `authoring/`이며 `@automovie/engine`의 `defineShot`이 이를 실행한다. `harness/`에서 엔진이 계속 소비하는 것은 action/target/beat-end 같은 저수준 어휘뿐이며, 외부 에이전트는 이를 tracked TypeScript 안에서 사용한다.
 

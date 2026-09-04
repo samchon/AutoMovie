@@ -2,7 +2,7 @@
 
 This is a coding-agent-first AutoMovie authoring repository. It deliberately starts without production documents, source, design records, assets, or review claims. Author documents, source, assets, and the screenplay index as ordinary project-owned files; emit the other tracked design records from reviewed source. AutoMovie supplies bounded design types and owns deterministic generated output, geometry facts, actual-frame evidence, and review freshness.
 
-Choose one production shape in `lint.config.ts`: `film` for the exact `settings -> treatments -> scripts -> screenplays -> shots -> filmSources` ladder, `brief` for one bounded result that needs no independent narrative refinement through `settings -> briefs -> shots -> filmSources`, or `library` for reviewed design/source branches without shots. Film and brief also require reviewed `productionSources` as a parallel input before `filmSources`. Runtime does not decide the shape. Read `docs/README.md` for the non-overlapping settings, research, map, model, space, material, instance, motion, system, narrative, and brief ownership map.
+Choose one production shape in `lint.config.ts`. The [production-kinds route](.agents/skills/production-lifecycle/production-kinds.md) is the single owner of the film, brief, and library ladders, their parallel inputs, and their refusals. Read `docs/README.md` for the non-overlapping physical document owners; neither this overview nor runtime maintains another shape definition.
 
 The project has one self-contained documentation root. Its scaffold-supplied `docs/{discovery,upstream,principles,obligations}` inventory contains every reusable target; named authoring branches hold production hosts, and flat `docs/contracts/*.md` files hold production-specific targets. The single typed `lint.config.ts` owns the production kind, population scope, every branch stage, every additive custom claim, and the resulting graph, while `@automovie/evidence` supplies reusable populations and topology checks. No evidence target resolves through `node_modules`. Never replace or weaken the shared graph.
 
@@ -13,6 +13,8 @@ Discovery proves that each active Markdown layer audited the actual production i
 `docs/research` is optional. When active, each H2 identifies one source and used portion, authority, uncertainty, and exact affected production decision. Research reaches review before settings begins; every adopted result is interpreted and cited by a settings H2 before specialist or narrative layers consume that setting. Research supports decisions but never makes them.
 
 Film treatments are flat numbered event files with required H1 titles, H2 units only, and no delivery group. Scripts partition those events independently into grouped H2/H3/H4 delivery units, and screenplays preserve the script delivery groups, index and unit titles, filenames, anchors, nesting, and order exactly. Both scripts and screenplays retain direct many-to-many treatment coverage. Keep screenplay beat text and `SCN-*` identities aligned with the hand-authored screenplay index; after shots exist, preserve deleted numbers as `OMITTED` and use alpha insertion ids.
+
+`npm run toc` regenerates only the marked link block in every script and screenplay group index from numbered unit filenames and their H1 titles. `npm run toc -- --check` is the read-only freshness gate. After an AutoMovie package upgrade, `npm run contracts:migrate -- --dry-run` compares the installed scaffold contract baseline with the recorded generation; plain `npm run contracts:migrate` applies only conflict-free baseline bytes and leaves local edits, removed anchors, and ambiguous renames for explicit adjudication.
 
 Every distributable file matched by the asset lint configuration belongs in `automovie/assets.json`. Record its source URL, license, original/current SHA-256, processing chain, and reasoned use before referencing it. External glTF, GLB, and VRM entries also require explicit ingest, LOD, collision, and measurement-proxy decisions. Changed or unregistered bytes fail lint and compilation; ingestion itself remains a pure fixed-byte conversion.
 
@@ -27,6 +29,24 @@ npm run lint:source
 
 The empty design emitter, compile, review lint, preview, render, and verify commands fail until you select a kind and author their prerequisites. That is a truthful blank state, not setup failure. After reviewed source exists, add its explicit imports and `emit` calls to the marked block in `scripts/emitDesign.ts`; preserve the shell's unchanged-record and orphan-inventory checks. Then run `npm run design`, `npm run compile`, and the applicable review/render gates.
 
+## Canonical command routes
+
+This table is the command inventory owner. Skills link here for route discovery and retain only the procedure that decides when a route applies.
+
+| Purpose | Command route |
+| --- | --- |
+| Source validity while authoring | `npm run lint:source` |
+| Derived design and compiler state | `npm run design`, then `npm run compile` |
+| Contract migration and delivery index | `npm run contracts:migrate -- --dry-run`, `npm run contracts:migrate`, `npm run toc -- --check`, `npm run toc` |
+| External model and motion facts | `npm run external:inspect -- <project-path> --profile <gltf-static-v1|gltf-humanoid-v1|gltf-motion-v1|vrm-humanoid-v1>` |
+| Production-kind capability routes | `npm run routes -- <film|brief|library>` |
+| Capture runtime | `npm run capture:install`, then `npm run capture:doctor` |
+| Current inspection and review | `npm run inspect -- --shot <id> --subject <kind:id>`, `npm run preview -- --shot <id> --time <seconds>`, `npm run lint -- --scope review` |
+| Library observation | `npm run library:review -- inspect`, followed by the plan and record routes owned by the library review procedure |
+| Rendering and delivery | `npm run render -- all --tier <proxy|final>`, then `npm run verify` |
+| Local viewer | `npm run viewer` |
+| Generated instruction refresh | `npm run sync` |
+
 For a library, `npm run library:review -- inspect` prints the exact active branch/H2 population and current receipt state. Create one adjacent observation plan with `npm run library:review -- plan --owner docs/<branch>/<design>.md#<h2-anchor> --source src/<branch>/<owner>.ts --observation <stable-id>:artifact|facts`; models instead use `<stable-id>:turntable:<model-id>`. After performing the named observation, use `record` with the same owner and observation, one canonical `--runtime`, an explicit `--verdict`, and exactly one of `--artifact-project`, `--artifact-render`, `--facts-file`, or `--turntable`. An interior observation also takes --pose, one JSON object stating the position, direction, target and space the eye actually used; without it the review gate refuses the receipt, because a picture drawn from the corridor outside carries the same bytes as one drawn inside the room. Pass --measurements, one JSON object of named numbers, for whatever the observation read; a threshold observation that passes without a single reading is refused as a picture with a verdict attached. The command derives every digest from current bytes and compiler identity; never type a receipt by hand.
 
 Every checked-in `ttsc` and `ttsx` launcher pins its compiler cache to `node_modules/.cache/ttsc`. This keeps a generated project standalone even when its directory is nested below another workspace. Preserve that flag on new TypeScript launcher scripts instead of relying on upward workspace discovery.
@@ -39,7 +59,7 @@ After compilation, the viewer is available at `http://127.0.0.1:5173`. Run `capt
 
 Generated commands consume their complete argument list before reading production identity or state, opening a project, creating a capture runtime, compiling, deriving, installing a browser, or writing a receipt. `preview` accepts `--shot`, `--pass`, `--time`, `--width`, and `--height`; `--pass` accepts `beauty`, `depth`, `mask`, `normal`, `outline`, or `pose` and defaults to `beauty`, while its compatibility positional form remains `<time> <shot>`. `turntable` accepts `--asset`, `--width`, and `--height`; its compatibility positional form remains `<asset>`. `lint` accepts at most one `--scope` whose value is `design`, `source`, `review`, or `final`, defaulting to `review`. A named value and its compatibility positional slot cannot name the same target together. Time must be finite and nonnegative, dimensions must be positive whole numbers, and unknown, repeated, inapplicable, missing, blank, conflicting, or extra values are refused. `capture:doctor`, `capture:install`, `compile`, `building:report`, `derive:example`, `design`, `texture:scale`, and `verify` accept no arguments.
 
-`npm run repaint -- reroll --shot <id>` derives only the reviewed request for that shot when `visualDelivery` is `repainted`, and stores a successful result only as a candidate. Retry the same immutable request with `retry --shot <id> --request <uuid>`, make a reviewed candidate current with `select --shot <id> --attempt <uuid>`, or restore an earlier candidate with the corresponding `reverse` operation. Final publication requires one current verified selection per compiled shot. Select the exact provider, model version, execution boundary, source, rights, terms review, cost, consumer, bounded execution policy, prompts, seed, strength, scalar controls, registered references, and evidence addresses on the production design record's `repaint` field, so a changed request stales the compile that consumed it; each request's post-generation selection review is joined by shot from `repaintSelectionReviews.ts`, which stays outside compiler content so recording what you saw does not invalidate the render you saw it in. The command accepts none of them as an ephemeral override. The model remains yours: `scripts/repaintAdapter.ts` refuses by name until this project implements it, because AutoMovie ships no diffusion model and will not publish output nobody drew.
+`npm run repaint -- reroll --shot <id>` derives only the reviewed request for a shot assigned to a repaint lane, and stores a successful result only as a candidate. Retry the same immutable request with `retry --shot <id> --request <uuid>`, make a reviewed candidate current with `select --shot <id> --attempt <uuid>`, or restore an earlier candidate with the corresponding `reverse` operation. `visualDelivery` remains the explicit all-deterministic/all-repainted shorthand; a mixed film declares every timeline occurrence in `visualDeliveryLanes` plus a versioned `mixedVisualDeliveryPolicy`, and never infers membership from receipt presence. Final publication requires one current verified selection per declared repaint shot, a current `repaintSequenceBaseline`, and an aggregate `repaintSequenceObservation` over that exact baseline and ordered occurrence set, including a one-shot film. Select the exact provider, model version, execution boundary, source, rights, terms review, cost, consumer, bounded execution policy, prompts, seed, strength, scalar controls, registered references, and evidence addresses on the production design record's `repaint` field, so a changed request stales the compile that consumed it; candidate and aggregate observations live in `repaintSelectionReviews.ts`, outside compiler content, so recording what you saw does not invalidate the render you saw it in. Changing the baseline address, version, scope, or intended deltas stales the prior observation. Failed, unsupported, and not-run sequence truth remains recordable, but only a current completed five-pass observation may publish. The command accepts no ephemeral override. The model remains yours: `scripts/repaintAdapter.ts` refuses by name until this project implements it, because AutoMovie ships no diffusion model and will not publish output nobody drew.
 
 Playwright's standard `HTTPS_PROXY`, `PLAYWRIGHT_DOWNLOAD_HOST`, and `PLAYWRIGHT_CHROMIUM_DOWNLOAD_HOST` variables support proxies and offline mirrors. The default `PLAYWRIGHT_BROWSERS_PATH=0` keeps the binary package-local; set that variable to an explicit path for a configured shared cache. The browser itself is a host boundary rather than a production choice, so it is selected on the invoking command instead of in a project file. To use a system browser deliberately:
 
@@ -57,7 +77,7 @@ Open every PNG the contract names, and say what each one showed in the evidence 
 
 ## Begin the production
 
-The scaffold ships four independently discoverable authoring skills. `.agents/skills/production-lifecycle/SKILL.md` owns shape and narrative lifecycle, `evidence-graph/SKILL.md` owns contracts and graph stages, `source-authoring/SKILL.md` owns TypeScript and geometry realization, and `review-verification/SKILL.md` owns Self-Review, viewer evidence, and final acceptance. `AGENTS.md` routes to all four, and each skill routes conditionally needed sibling documents one level deep.
+The scaffold ships five independently discoverable authoring skills. `.agents/skills/contract/SKILL.md` locates project-local contract questions, `production-lifecycle/SKILL.md` owns shape and narrative lifecycle, `evidence-graph/SKILL.md` owns contracts and graph stages, `source-authoring/SKILL.md` owns TypeScript and geometry realization, and `review-verification/SKILL.md` owns Self-Review, viewer evidence, and final acceptance. `AGENTS.md` routes to all five, and each skill routes conditionally needed sibling documents one level deep.
 
 Select the kind and begin research or settings at draft. Review settings before activating design or narrative children. For each applicable design branch, review its Markdown before activating matching source. Film shots wait for reviewed screenplays, brief shots wait for reviewed briefs, and both wait for the reviewed source corresponding to every active design branch.
 
@@ -65,7 +85,7 @@ The design emitter is production-owned code. Import each reviewed source explici
 
 Read `EVIDENCE_GRAPH` for the authoring graph and `PRODUCTION_DESIGN` for typed design emission. The scaffold contains no completed production to delete.
 
-After each complete contract-discovery, layer-authorship, evidence-repair, review-verification, or authorized stage-transition process, its author rereads the complete affected surface and restarts after any repair until one complete no-edit round passes. This process review does not replace evidence gates or the final whole-production review's two consecutive clean rounds.
+After each complete contract-discovery, layer-authorship, evidence-repair, review-verification, or authorized stage-transition process, follow the [author process Self-Review](.agents/skills/review-verification/self-review.md). That route alone owns the complete-round rule and its relationship to the final whole-production review.
 
 ## Offline geometry measurements
 
@@ -103,7 +123,11 @@ The state reader performs filesystem I/O and is therefore forbidden inside shot 
 Full render, chunk resume, encode, and final publication are project CLI jobs:
 
 ```sh
-npx automovie render plan npx automovie render status npx automovie render run --workers 2 npx automovie render verify npx automovie render finalize
+npx automovie render plan
+npx automovie render status
+npx automovie render run --workers 2
+npx automovie render verify
+npx automovie render finalize
 ```
 
 Use `--tier proxy` for a half-raster, stepped-frame review render and `--tier final` (the default) for delivery. Both tiers reopen the same compiled film timeline and publish under separate content-addressed paths, so a proxy approval never overwrites the final bundle:

@@ -1,3 +1,4 @@
+import { readAutoMovieProductionEvidence } from "@automovie/evidence";
 import type { IAutoMovieModel } from "@automovie/interface";
 import { findAutoMovieProjectRoot } from "@automovie/production";
 import {
@@ -5,6 +6,7 @@ import {
   requireCurrentAutoMovieProjectState,
 } from "automovie";
 
+import { productionEvidence } from "../lint.config";
 import { assertAutoMovieNoArguments } from "./commandArguments";
 import { readAutoMovieProjectProductionId } from "./projectIdentity";
 import {
@@ -20,6 +22,9 @@ const projectRoot = findAutoMovieProjectRoot(process.cwd());
 
 /** The production namespace that project declares in its own package manifest. */
 const productionId = readAutoMovieProjectProductionId(projectRoot);
+const currentAuthoringEvidence = () =>
+  readAutoMovieProductionEvidence({ root: projectRoot, productionEvidence });
+const authoringEvidence = currentAuthoringEvidence();
 
 /**
  * Measure the texture scale of every model this build produced.
@@ -27,7 +32,7 @@ const productionId = readAutoMovieProjectProductionId(projectRoot);
  * ## Why this is a script and not a compile step
  *
  * The same reason the building report is one. A finish reading at the wrong
- * size is not a compiler error — the model is well formed and the frame draws —
+ * size is not a compiler error : the model is well formed and the frame draws :
  * and the answer is not part of a frame either, so it is not compiler output.
  * Shot source cannot ask the question at all: a build function runs in a
  * deterministic no-I/O sandbox over a published engine surface that
@@ -56,6 +61,8 @@ const state = requireCurrentAutoMovieProjectState(
   loadAutoMovieProjectState({
     root: projectRoot,
     productionId,
+    authoringEvidence,
+    currentAuthoringEvidence,
   }),
 );
 

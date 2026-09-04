@@ -1,11 +1,20 @@
+import { canonicalProductionFrameRate } from "@automovie/engine";
 import {
+  IAutoMovieProductionAudioProbe,
   IAutoMovieProductionDeliverable,
   IAutoMovieProductionMediaProbe,
+  IAutoMovieProductionVideoProbe,
 } from "@automovie/interface";
-import type { Movie, Track, createFile } from "mp4box";
+import type { Box, Movie, Track, createFile } from "mp4box";
 import { TextDecoder } from "node:util";
 
-import { residentMp4Box, residentPngJs } from "./residentCodecs";
+import {
+  assertProductionOpusProfile,
+  productionOpusDescription,
+} from "./productionMp4Profile";
+import { probeProductionPngPicture } from "./productionPngPicture";
+import { residentMp4Box } from "./residentCodecs";
+import { parseProductionSoundEvidence } from "./verifyProductionNonVideoDeliverables";
 
 /**
  * Parse renderer-owned bytes instead of trusting manifest media claims.
@@ -24,52 +33,18 @@ export const probeProductionMedia = (props: {
       throw new Error(
         `${props.kind} output declares "${props.mediaType}", but this image requires image/png bytes.`,
       );
-    const png = residentPngJs().PNG.sync.read(Buffer.from(props.bytes));
-    return { kind: "png", width: png.width, height: png.height };
+    const picture = probeProductionPngPicture(props.bytes);
+    return {
+      kind: "png",
+      width: picture.width,
+      height: picture.height,
+      picture,
+    };
   }
   if (props.kind === "audio-mix" && props.mediaType === "application/json") {
-    let parsed: unknown;
-    try {
-      parsed = JSON.parse(
-        new TextDecoder("utf-8", { fatal: true }).decode(props.bytes),
-      );
-    } catch {
-      throw new Error("Sound evidence bytes are not valid UTF-8 JSON.");
-    }
-    const evidence = parsed as Partial<{
-      version: number;
-      plan: { events: unknown[] };
-      analysis: {
-        clippingSamples: number;
-        eventAlignment: Array<{ passed: boolean }>;
-      };
-      tts: unknown[];
-    }>;
-    if (
-      evidence.version !== 1 ||
-      Array.isArray(evidence.plan?.events) === false ||
-      Number.isSafeInteger(evidence.analysis?.clippingSamples) === false ||
-      evidence.analysis!.clippingSamples < 0 ||
-      Array.isArray(evidence.analysis?.eventAlignment) === false ||
-      Array.isArray(evidence.tts) === false
-    )
-      throw new Error(
-        "Sound evidence JSON lacks a versioned plan, analysis, and TTS receipt list.",
-      );
-    if (
-      evidence.analysis!.eventAlignment.length !== evidence.plan!.events.length
-    )
-      throw new Error(
-        "Sound evidence event analysis does not cover every planned event.",
-      );
     return {
       kind: "sound-evidence",
-      eventCount: evidence.plan!.events.length,
-      dialogueCount: evidence.tts.length,
-      clippingSamples: evidence.analysis!.clippingSamples,
-      eventAlignmentPassed: evidence.analysis!.eventAlignment.every(
-        (event) => event.passed === true,
-      ),
+      evidence: parseProductionSoundEvidence(props.bytes),
     };
   }
   if (props.kind === "captions") {
@@ -91,7 +66,10 @@ export const probeProductionMedia = (props: {
       .replace(/^([^\n]*\n)[ \t]+\n/u, "$1\n")
       .split(/\n{2,}/u)
       .slice(1);
-    const cues: Array<{ start: number; end: number }> = [];
+    const cues: Extract<
+      IAutoMovieProductionMediaProbe,
+      { kind: "webvtt" }
+    >["cues"] = [];
     for (const block of blocks) {
       if (block.trim().length === 0) continue;
       const lines = block.split("\n");
@@ -110,7 +88,7 @@ export const probeProductionMedia = (props: {
         throw new Error(
           `WebVTT block "${firstLine.trim()}" is neither a timed cue nor NOTE, STYLE, or REGION metadata. Remove the stray block or add its cue timing.`,
         );
-      const cue = parseWebVttCue(lines[timingIndex]!);
+      const timing = parseWebVttCue(lines[timingIndex]!);
       const payload = lines.slice(timingIndex + 1);
       if (payload.some((line) => line.includes("-->")))
         throw new Error(
@@ -120,7 +98,12 @@ export const probeProductionMedia = (props: {
         throw new Error(
           `WebVTT cue ${cues.length + 1} has no non-empty payload. Add observable caption text after its timing line.`,
         );
-      cues.push(cue);
+      cues.push({
+        id: timingIndex === 1 ? firstLine : null,
+        text: payload.join("\n"),
+        startMilliseconds: timing.start,
+        endMilliseconds: timing.end,
+      });
     }
     if (cues.length === 0)
       throw new Error(
@@ -128,11 +111,14 @@ export const probeProductionMedia = (props: {
       );
     for (let index = 0; index < cues.length; ++index) {
       const cue = cues[index]!;
-      if (cue.start >= cue.end)
+      if (cue.startMilliseconds >= cue.endMilliseconds)
         throw new Error(
           `WebVTT cue ${index + 1} must end after it starts. Correct the cue timing.`,
         );
-      if (index > 0 && cue.start < cues[index - 1]!.start)
+      if (
+        index > 0 &&
+        cue.startMilliseconds < cues[index - 1]!.startMilliseconds
+      )
         throw new Error(
           `WebVTT cue ${index + 1} starts before the preceding cue. Keep deterministic cue order.`,
         );
@@ -140,11 +126,13 @@ export const probeProductionMedia = (props: {
     return {
       kind: "webvtt",
       cueCount: cues.length,
-      firstCueSeconds: cues[0]!.start,
+      firstCueSeconds: cues[0]!.startMilliseconds / 1_000,
       lastCueSeconds: cues.reduce(
-        (latest, cue) => Math.max(latest, cue.end),
+        (latest, cue) => Math.max(latest, cue.endMilliseconds / 1_000),
         0,
       ),
+      cues,
+      text,
     };
   }
   const parsed = parseMp4(props.bytes);
@@ -179,12 +167,21 @@ export const probeProductionMedia = (props: {
       movie.audioTracks[0]!,
       movie,
     );
-    if (video.runtimeSeconds !== audio.runtimeSeconds)
+    if (
+      exactClockProduct(
+        video.presentation.movieDuration,
+        audio.timebase.movieTimescale,
+      ) !==
+      exactClockProduct(
+        audio.timebase.movieDuration,
+        video.presentation.movieTimescale,
+      )
+    )
       throw new Error(
         "Feature MP4 video and audio tracks do not have exactly equal runtimes.",
       );
     assertProductionAudioProfile(audio, "Feature MP4");
-    return video;
+    return { kind: "feature", video, audio };
   }
   if (props.mediaType !== "audio/mp4")
     throw new Error(
@@ -240,7 +237,7 @@ const probeAudioTrack = (
   file: ReturnType<typeof createFile>,
   track: Track,
   movie: Movie,
-): Extract<IAutoMovieProductionMediaProbe, { kind: "audio" }> => {
+): IAutoMovieProductionAudioProbe => {
   const audio = track.audio;
   if (
     audio === undefined ||
@@ -252,14 +249,16 @@ const probeAudioTrack = (
       "MP4 audio track lacks codec, duration, or channel metadata.",
     );
   const samples = verifySampleStorage(bytes, file, track);
-  const description = samples[0]!.description as {
-    boxes?: Array<{ type?: string; PreSkip?: number }>;
+  const description = samples[0]!.description as unknown as {
+    boxes?: Array<{ type?: string } & Record<string, unknown>>;
   };
-  const primingSamples = /^(opus)(?:\.|$)/i.test(track.codec)
-    ? description.boxes?.find((box) => box.type === "dOps")?.PreSkip
-    : 0;
-  if (Number.isSafeInteger(primingSamples) === false || primingSamples! < 0)
-    throw new Error("Opus audio track lacks a finite dOps pre-skip.");
+  const sampleEntry = productionOpusDescription({
+    boxes: description.boxes,
+    codec: track.codec,
+    trackChannels: audio.channel_count,
+    trackSampleRate: audio.sample_rate,
+  });
+  const primingSamples = sampleEntry.preSkip;
   const presentationDuration =
     track.movie_duration > 0 && movie.timescale > 0
       ? track.movie_duration / movie.timescale
@@ -272,23 +271,36 @@ const probeAudioTrack = (
     channels: audio.channel_count,
     sampleRate: audio.sample_rate,
     sampleCount: samples.length,
-    primingSamples: primingSamples!,
+    primingSamples,
+    timebase: {
+      movieTimescale: track.movie_timescale,
+      mediaTimescale: track.timescale,
+      movieDuration: track.movie_duration,
+      mediaDuration: track.duration,
+      edits: (track.edits ?? []).map((edit) => ({
+        segmentDuration: edit.segment_duration,
+        mediaTime: edit.media_time,
+        mediaRateInteger: edit.media_rate_integer,
+        mediaRateFraction: edit.media_rate_fraction,
+      })),
+    },
+    sampleEntry,
   };
 };
 
 const assertProductionAudioProfile = (
-  audio: Extract<IAutoMovieProductionMediaProbe, { kind: "audio" }>,
+  audio: IAutoMovieProductionAudioProbe,
   label: string,
 ): void => {
-  if (
-    audio.sampleCount <= 0 ||
-    audio.channels !== 2 ||
-    audio.sampleRate !== 48_000 ||
-    /^(opus|mp4a)(?:\.|$)/i.test(audio.codec) === false
-  )
+  if (audio.sampleCount <= 0)
+    throw new Error(`${label} audio must contain resident coded samples.`);
+  try {
+    assertProductionOpusProfile(audio);
+  } catch (error) {
     throw new Error(
-      `${label} audio must contain resident 48 kHz stereo Opus or AAC packets, but parsed ${audio.sampleCount} samples of ${audio.codec}, ${audio.sampleRate} Hz, ${audio.channels} channels.`,
+      `${label} ${error instanceof Error ? error.message : String(error)}`,
     );
+  }
 };
 
 const parseWebVttCue = (line: string): { start: number; end: number } => {
@@ -304,17 +316,20 @@ const parseWebVttCue = (line: string): { start: number; end: number } => {
       `WebVTT cue timing "${line.trim()}" is malformed. Use HH:MM:SS.mmm --> HH:MM:SS.mmm.`,
     );
   return {
-    start: webVttTimestampSeconds(match[1]!),
-    end: webVttTimestampSeconds(match[2]!),
+    start: webVttTimestampMilliseconds(match[1]!),
+    end: webVttTimestampMilliseconds(match[2]!),
   };
 };
 
-const webVttTimestampSeconds = (value: string): number => {
-  const parts = value.split(":");
-  const seconds = Number(parts.pop()!);
-  const minutes = Number(parts.pop()!);
-  const hours = parts.length === 0 ? 0 : Number(parts.pop()!);
-  return hours * 3_600 + minutes * 60 + seconds;
+const webVttTimestampMilliseconds = (value: string): number => {
+  const match = /^(?:(\d{2,}):)?([0-5]\d):([0-5]\d)\.(\d{3})$/u.exec(value);
+  if (match === null)
+    throw new Error(`WebVTT timestamp "${value}" is malformed.`);
+  const hours = match[1] === undefined ? 0 : Number(match[1]);
+  const minutes = Number(match[2]);
+  const seconds = Number(match[3]);
+  const milliseconds = Number(match[4]);
+  return ((hours * 60 + minutes) * 60 + seconds) * 1_000 + milliseconds;
 };
 
 const parseMp4 = (
@@ -366,7 +381,7 @@ const probeVideoTrack = (
   bytes: Uint8Array,
   file: ReturnType<typeof createFile>,
   track: Track,
-): Extract<IAutoMovieProductionMediaProbe, { kind: "video" }> => {
+): IAutoMovieProductionVideoProbe => {
   if (/^(avc1|avc3)(?:\.|$)/i.test(track.codec) === false)
     throw new Error(
       `MP4 video codec "${track.codec}" is not an H.264/AVC sample entry.`,
@@ -397,6 +412,104 @@ const probeVideoTrack = (
     throw new Error(
       "MP4 video track has no independently decodable sync sample.",
     );
+  const ftypBoxes = file.getBoxes("ftyp", false) as Array<
+    Box & {
+      major_brand: string;
+      compatible_brands: string[];
+    }
+  >;
+  if (
+    ftypBoxes.length !== 1 ||
+    typeof ftypBoxes[0]!.major_brand !== "string" ||
+    Array.isArray(ftypBoxes[0]!.compatible_brands) === false ||
+    ftypBoxes[0]!.compatible_brands.some(
+      (brand) => typeof brand !== "string",
+    ) ||
+    ftypBoxes[0]!.major_brand.trim().length === 0 ||
+    ftypBoxes[0]!.compatible_brands.some((brand) => brand.trim().length === 0)
+  )
+    throw new Error("MP4 output requires one nonblank file-type brand box.");
+  const ftyp = ftypBoxes[0]!;
+  const description = samples[0]!.description as unknown as {
+    width: number;
+    height: number;
+    boxes?: Array<{ type?: string } & Record<string, unknown>>;
+  };
+  if (
+    description.width !== track.video.width ||
+    description.height !== track.video.height
+  )
+    throw new Error(
+      "MP4 video sample entry raster differs from the parsed video track raster.",
+    );
+  if (
+    samples.some(
+      (sample) =>
+        sample.timescale !== track.timescale ||
+        Number.isSafeInteger(sample.dts) === false ||
+        Number.isSafeInteger(sample.cts) === false,
+    )
+  )
+    throw new Error(
+      "MP4 video samples do not share one safe integer media clock.",
+    );
+  const colorBoxes = (description.boxes ?? []).filter(
+    (box) => box.type === "colr",
+  );
+  if (colorBoxes.length > 1)
+    throw new Error("MP4 video sample entry contains multiple color boxes.");
+  const colorBox = colorBoxes[0] as
+    | {
+        colour_type: string;
+        colour_primaries: number;
+        transfer_characteristics: number;
+        matrix_coefficients: number;
+        full_range_flag: number;
+      }
+    | undefined;
+  const paspBoxes = (description.boxes ?? []).filter(
+    (box) => box.type === "pasp",
+  ) as Array<{ hSpacing: number; vSpacing: number }>;
+  if (paspBoxes.length > 1)
+    throw new Error(
+      "MP4 video sample entry contains multiple pixel-aspect boxes.",
+    );
+  if (
+    paspBoxes.some(
+      (box) =>
+        Number.isSafeInteger(box.hSpacing) === false ||
+        box.hSpacing <= 0 ||
+        Number.isSafeInteger(box.vSpacing) === false ||
+        box.vSpacing <= 0,
+    )
+  )
+    throw new Error("MP4 pixel-aspect terms must be positive safe integers.");
+  const trackHeaders = file.getBoxes("tkhd", false) as Array<
+    Box & {
+      track_id: number;
+      width: number;
+      height: number;
+      matrix: number[];
+    }
+  >;
+  const trackHeaderMatches = trackHeaders.filter(
+    (header) => header.track_id === track.id,
+  );
+  if (trackHeaderMatches.length !== 1)
+    throw new Error(
+      `MP4 video track ${track.id} requires one exact track header.`,
+    );
+  const trackHeader = trackHeaderMatches[0]!;
+  if (
+    Number.isSafeInteger(trackHeader.width) === false ||
+    Number.isSafeInteger(trackHeader.height) === false ||
+    Array.isArray(trackHeader.matrix) === false ||
+    trackHeader.matrix.length !== 9 ||
+    trackHeader.matrix.some((value) => Number.isSafeInteger(value) === false)
+  )
+    throw new Error(
+      `MP4 video track ${track.id} has a malformed fixed-point display transform.`,
+    );
   return {
     kind: "video",
     container: "mp4",
@@ -406,7 +519,86 @@ const probeVideoTrack = (
     runtimeSeconds,
     frameCount: track.nb_samples,
     fps,
+    frameRate: canonicalProductionFrameRate({
+      numerator: track.timescale,
+      denominator: firstDuration,
+    }),
+    brands: {
+      major: ftyp.major_brand,
+      compatible: [...ftyp.compatible_brands],
+    },
+    coded: {
+      width: description.width,
+      height: description.height,
+    },
+    trackDisplay: {
+      width16_16: trackHeader.width,
+      height16_16: trackHeader.height,
+    },
+    trackMatrix: [
+      ...trackHeader.matrix,
+    ] as IAutoMovieProductionVideoProbe["trackMatrix"],
+    pixelAspect:
+      paspBoxes.length === 0
+        ? { kind: "implicit-square" }
+        : {
+            kind: "explicit",
+            hSpacing: paspBoxes[0]!.hSpacing,
+            vSpacing: paspBoxes[0]!.vSpacing,
+          },
+    presentation: {
+      movieTimescale: track.movie_timescale,
+      mediaTimescale: track.timescale,
+      movieDuration: track.movie_duration,
+      mediaDuration: track.duration,
+      edits: (track.edits ?? []).map((edit) => ({
+        segmentDuration: edit.segment_duration,
+        mediaTime: edit.media_time,
+        mediaRateInteger: edit.media_rate_integer,
+        mediaRateFraction: edit.media_rate_fraction,
+      })),
+    },
+    samples: {
+      count: samples.length,
+      duration: firstDuration,
+      timescale: track.timescale,
+      firstDts: samples[0]!.dts,
+      lastDts: samples.at(-1)!.dts,
+      firstCts: samples[0]!.cts,
+      lastCts: samples.at(-1)!.cts,
+    },
+    color: {
+      container:
+        colorBox?.colour_type === "nclx"
+          ? {
+              kind: "nclx",
+              primaries: colorBox.colour_primaries,
+              transfer: colorBox.transfer_characteristics,
+              matrix: colorBox.matrix_coefficients,
+              fullRange: colorBox.full_range_flag === 1,
+            }
+          : { kind: "absent" },
+      resolved:
+        colorBox?.colour_type === "nclx" &&
+        colorBox.colour_primaries === 1 &&
+        colorBox.transfer_characteristics === 13 &&
+        colorBox.matrix_coefficients === 1 &&
+        colorBox.full_range_flag === 1
+          ? { kind: "srgb", source: "container" }
+          : { kind: "absent" },
+    },
   };
+};
+
+const exactClockProduct = (left: number, right: number): bigint => {
+  if (
+    Number.isSafeInteger(left) === false ||
+    left <= 0 ||
+    Number.isSafeInteger(right) === false ||
+    right <= 0
+  )
+    throw new Error("MP4 presentation clocks must be positive safe integers.");
+  return BigInt(left) * BigInt(right);
 };
 
 const verifySampleStorage = (

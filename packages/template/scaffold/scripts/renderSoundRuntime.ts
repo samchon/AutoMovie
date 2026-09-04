@@ -3,6 +3,7 @@ import {
   productionSoundSpectrogram,
   productionSoundWaveform,
   renderProductionSound,
+  resolveProductionFrameRate,
 } from "@automovie/engine";
 import type {
   AutoMovieContentDigest,
@@ -19,6 +20,7 @@ import {
   decodeProductionAudioAsset,
   digestAutoMovieBytes,
   encodeAutoMoviePathSegment,
+  normalizeProductionH264Mp4,
   readAutoMovieFilmTimeline,
   trimProductionAudioPresentation,
 } from "@automovie/production";
@@ -32,6 +34,15 @@ import {
   captureExistingDialogueCache,
   publishDialogueCache,
 } from "./dialogueCacheSnapshot";
+import {
+  type IProductionDialogueCacheFinding,
+  type IProductionDialogueCacheIdentity,
+  type IProductionDialogueCacheRecord,
+  PRODUCTION_DIALOGUE_CACHE_VERSION,
+  inspectProductionDialogueCache,
+  productionDialogueCacheIdentity,
+  validateProductionDialogueCache,
+} from "./dialogueCacheTextIdentity";
 import {
   type IKokoroGenerationWorker,
   type IKokoroGenerationWorkerPackage,
@@ -100,12 +111,8 @@ export interface IPreparedProductionSoundRuntime {
   };
 }
 
-export interface IProductionDialogueCacheIdentity {
-  key: AutoMovieContentDigest;
-  path: string;
-}
-
 class ProductionRuntimeClosureError extends AggregateError {}
+class ProductionDialogueCacheObservationError extends Error {}
 
 /** Revalidate one runtime closure without replacing an operation failure. */
 export const runWithProductionRuntimeClosure = async <Output>(
@@ -132,34 +139,6 @@ export const runWithProductionRuntimeClosure = async <Output>(
   }
   if (failure !== undefined) throw failure;
   return output!;
-};
-
-/** Current private dialogue-cache generation; older identities never hit. */
-export const PRODUCTION_DIALOGUE_CACHE_VERSION = 5 as const;
-
-/** Exact normalized identity of one line and its executable runtime assets. */
-export const productionDialogueCacheIdentity = (props: {
-  cacheRoot: string;
-  selection: IAutoMovieDialogueSynthesisSelection;
-  text: string;
-  language: string;
-  speaker: string | null;
-  runtimeAssets: IAutoMovieProductionTtsReceipt["runtimeAssets"];
-}): IProductionDialogueCacheIdentity => {
-  const key = digestAutoMovieBytes(
-    Buffer.from(
-      JSON.stringify({
-        version: PRODUCTION_DIALOGUE_CACHE_VERSION,
-        ...props.selection,
-        text: props.text.normalize("NFKC"),
-        language: props.language.normalize("NFKC"),
-        speaker: props.speaker?.normalize("NFKC") ?? null,
-        runtimeAssets: props.runtimeAssets,
-      }),
-      "utf8",
-    ),
-  );
-  return { key, path: path.join(props.cacheRoot, key.slice(7)) };
 };
 
 /** Bind render-owned content and one explicit dialogue runtime into one source. */
@@ -370,7 +349,15 @@ export const createProductionSoundRuntime = (props: {
         const digest = digestAutoMovieBytes(bytes);
         const stem = placeholderAudioStem(asset, bytes);
         if (stem !== null)
-          return { identity: { path: asset, digest, ...stem }, samples: null };
+          return {
+            identity: {
+              kind: "placeholder-audio-stem" as const,
+              path: asset,
+              digest,
+              ...stem,
+            },
+            samples: null,
+          };
         const decoded = decodeProductionAudioAsset({
           path: asset,
           bytes,
@@ -383,6 +370,9 @@ export const createProductionSoundRuntime = (props: {
             durationSeconds: decoded.durationSeconds,
             sampleRate: decoded.sourceSampleRate,
             channels: decoded.sourceChannels,
+            kind: "wave",
+            sourceFormat: decoded.sourceFormat,
+            processing: decoded.processing,
           },
           samples: decoded.samples,
         };
@@ -674,98 +664,27 @@ export const createProductionSoundRuntime = (props: {
     ];
   };
 
-  interface IKokoroCacheRecord {
-    version: typeof PRODUCTION_DIALOGUE_CACHE_VERSION;
-    cacheKey: AutoMovieContentDigest;
-    model: IAutoMovieDialogueSynthesisSelection["model"];
-    modelRevision: IAutoMovieDialogueSynthesisSelection["modelRevision"];
-    voice: string;
-    generatorProvenance: IAutoMovieDialogueSynthesisSelection["generatorProvenance"];
-    generatedAt: string;
-    sourceSampleRate: number;
-    sourceSamples: number;
-    pcmDigest: AutoMovieContentDigest;
-    phonemes: string;
-    phonemeChunks: IAutoMovieProductionTtsReceipt["phonemeChunks"];
-    runtimeAssets: IAutoMovieProductionTtsReceipt["runtimeAssets"];
-  }
-
   interface IKokoroLoadedRuntime {
     runtime: IKokoroGenerationWorker;
     runtimeAssets: IAutoMovieProductionTtsReceipt["runtimeAssets"];
   }
 
-  const validPhonemeChunks = (
-    chunks: unknown,
-    sourceSamples: number,
-  ): chunks is IKokoroCacheRecord["phonemeChunks"] =>
-    Array.isArray(chunks) &&
-    chunks.length > 0 &&
-    chunks.every(
-      (chunk, index) =>
-        typeof chunk === "object" &&
-        chunk !== null &&
-        typeof chunk.phonemes === "string" &&
-        Number.isSafeInteger(chunk.startSample) &&
-        Number.isSafeInteger(chunk.endSample) &&
-        chunk.startSample ===
-          (index === 0 ? 0 : chunks[index - 1]!.endSample) &&
-        chunk.endSample > chunk.startSample,
-    ) &&
-    chunks.at(-1)!.endSample === sourceSamples;
-
-  const validatedDialogueCache = (
-    snapshot: IDialogueCacheSnapshot,
-    cacheKey: AutoMovieContentDigest,
-    runtimeAssets: IAutoMovieProductionTtsReceipt["runtimeAssets"],
-    selection: IAutoMovieDialogueSynthesisSelection,
-  ): { record: IKokoroCacheRecord; samples: Float32Array } | undefined => {
-    const record = JSON.parse(
-      Buffer.from(snapshot.receipt).toString("utf8"),
-    ) as IKokoroCacheRecord;
-    const generatedAt = new Date(record.generatedAt);
-    if (
-      record.version !== PRODUCTION_DIALOGUE_CACHE_VERSION ||
-      record.cacheKey !== cacheKey ||
-      record.model !== selection.model ||
-      record.modelRevision !== selection.modelRevision ||
-      record.voice !== selection.voice ||
-      isDeepStrictEqual(
-        record.generatorProvenance,
-        selection.generatorProvenance,
-      ) === false ||
-      isDeepStrictEqual(record.runtimeAssets, runtimeAssets) === false ||
-      typeof record.generatedAt !== "string" ||
-      Number.isNaN(generatedAt.getTime()) ||
-      generatedAt.toISOString() !== record.generatedAt ||
-      Number.isSafeInteger(record.sourceSampleRate) === false ||
-      record.sourceSampleRate <= 0 ||
-      Number.isSafeInteger(record.sourceSamples) === false ||
-      record.sourceSamples <= 0 ||
-      typeof record.phonemes !== "string" ||
-      validPhonemeChunks(record.phonemeChunks, record.sourceSamples) ===
-        false ||
-      record.sourceSamples * Float32Array.BYTES_PER_ELEMENT !==
-        snapshot.pcm.length ||
-      record.pcmDigest !== digestAutoMovieBytes(snapshot.pcm)
-    )
-      return undefined;
-    assertAutoMovieExternalGeneratorTermsAt({
-      termsCheckedAt: record.generatorProvenance.termsCheckedAt,
-      occurredAt: generatedAt,
-      label: "Kokoro dialogue receipt generatorProvenance",
-    });
-    return {
-      record,
-      samples: new Float32Array(Uint8Array.from(snapshot.pcm).buffer),
-    };
-  };
+  const publicDialogueCacheRecord = ({
+    requestText: _requestText,
+    ...record
+  }: IProductionDialogueCacheRecord): Omit<
+    IProductionDialogueCacheRecord,
+    "requestText"
+  > => record;
 
   const dialogueReceipt = (
     line: IAutoMovieProductionSoundPlan["dialogue"][number],
-    cached: NonNullable<ReturnType<typeof validatedDialogueCache>>,
+    cached: Extract<
+      ReturnType<typeof validateProductionDialogueCache>,
+      { status: "current" }
+    >["cached"],
   ): IAutoMovieProductionTtsReceipt => ({
-    ...cached.record,
+    ...publicDialogueCacheRecord(cached.record),
     version: 6,
     line: line.id,
     visemes: productionPhonemesToVisemes({
@@ -775,6 +694,20 @@ export const createProductionSoundRuntime = (props: {
       endFrame: line.endFrame,
     }),
   });
+
+  const dialogueCacheObservationFailure = (
+    line: string,
+    finding: Exclude<
+      IProductionDialogueCacheFinding,
+      { status: "absent" | "current" | "stale" }
+    >,
+  ): Error =>
+    new ProductionDialogueCacheObservationError(
+      `Dialogue cache observation failed at stage "cache-read" for line "${line}", target "${finding.identity.path}", generation ${finding.identity.key}: ${
+        finding.status === "integrity-failed" ? finding.reason : finding.status
+      }. Preserve the generation and recover or quarantine it manually.`,
+      "error" in finding ? { cause: finding.error } : undefined,
+    );
 
   const loadPinnedKokoroRuntime = async (
     modelCacheRoot: string,
@@ -884,7 +817,7 @@ export const createProductionSoundRuntime = (props: {
           productionDialogueCacheIdentity({
             cacheRoot,
             selection,
-            text: line.text,
+            text: identity.requestText,
             language: line.language,
             speaker: line.speaker ?? null,
             runtimeAssets: assets,
@@ -894,22 +827,17 @@ export const createProductionSoundRuntime = (props: {
           identify: cacheIdentity,
           load: currentRuntime,
           read: (identity, assets) => {
-            try {
-              const captured = captureExistingDialogueCache(
-                cacheRoot,
-                identity.path,
-              );
-              return captured === null
-                ? undefined
-                : validatedDialogueCache(
-                    captured,
-                    identity.key,
-                    assets,
-                    selection,
-                  );
-            } catch {
+            const finding = inspectProductionDialogueCache({
+              identity,
+              runtimeAssets: assets,
+              selection,
+              read: () =>
+                captureExistingDialogueCache(cacheRoot, identity.path),
+            });
+            if (finding.status === "current") return finding.cached;
+            if (finding.status === "absent" || finding.status === "stale")
               return undefined;
-            }
+            throw dialogueCacheObservationFailure(line.id, finding);
           },
           runtimeAssets: (loaded) => loaded.runtimeAssets,
         });
@@ -927,7 +855,8 @@ export const createProductionSoundRuntime = (props: {
           });
           const chunks: Float32Array[] = [];
           const phonemes: string[] = [];
-          const phonemeChunks: IKokoroCacheRecord["phonemeChunks"] = [];
+          const phonemeChunks: IProductionDialogueCacheRecord["phonemeChunks"] =
+            [];
           let sourceSampleRate: number | undefined;
           let sourceOffset = 0;
           const generated = await loadedRuntime.runtime.synthesize({
@@ -956,6 +885,11 @@ export const createProductionSoundRuntime = (props: {
               throw new Error(
                 `Kokoro line "${line.id}" returned an empty PCM chunk.`,
               );
+            for (let index = 0; index < audio.length; ++index)
+              if (Number.isFinite(audio[index]) === false)
+                throw new Error(
+                  `Kokoro line "${line.id}" returned a non-finite PCM sample at source index ${sourceOffset + index}.`,
+                );
             chunks.push(audio);
             phonemes.push(chunk.phonemes);
             phonemeChunks.push({
@@ -973,8 +907,9 @@ export const createProductionSoundRuntime = (props: {
             samples.byteOffset,
             samples.byteLength,
           );
-          const record: IKokoroCacheRecord = {
+          const record: IProductionDialogueCacheRecord = {
             version: PRODUCTION_DIALOGUE_CACHE_VERSION,
+            requestText: identity.requestText,
             cacheKey: identity.key,
             model: selection.model,
             modelRevision: selection.modelRevision,
@@ -988,25 +923,37 @@ export const createProductionSoundRuntime = (props: {
             phonemeChunks,
             runtimeAssets,
           };
+          const receipt = Buffer.from(
+            `${JSON.stringify(record, null, 2)}\n`,
+            "utf8",
+          );
+          const stagedValidation = validateProductionDialogueCache({
+            snapshot: { pcm: bytes, receipt },
+            identity,
+            runtimeAssets,
+            selection,
+          });
+          if (stagedValidation.status !== "current")
+            throw new Error(
+              `Kokoro generation for line "${line.id}" failed cache protocol validation before publication: ${stagedValidation.reason}.`,
+            );
           const published = publishDialogueCache({
             base: cacheRoot,
             pcm: bytes,
-            receipt: Buffer.from(
-              `${JSON.stringify(record, null, 2)}\n`,
-              "utf8",
-            ),
+            receipt,
             target: identity.path,
           });
-          cached = validatedDialogueCache(
-            published,
-            identity.key,
+          const validation = validateProductionDialogueCache({
+            snapshot: published,
+            identity,
             runtimeAssets,
             selection,
-          );
-          if (cached === undefined)
+          });
+          if (validation.status !== "current")
             throw new Error(
               `Published Kokoro cache generation for line "${line.id}" is invalid.`,
             );
+          cached = validation.cached;
         }
         pcm.set(line.id, cached.samples);
         receipts.push(dialogueReceipt(line, cached));
@@ -1153,22 +1100,22 @@ export const createProductionSoundRuntime = (props: {
         speaker: line.speaker ?? null,
         runtimeAssets,
       });
-      try {
-        const captured = captureExistingDialogueCache(cacheRoot, identity.path);
-        if (captured === null) return [];
-        const cached = validatedDialogueCache(
-          captured,
-          identity.key,
-          runtimeAssets,
-          selection,
-        );
-        if (cached === undefined) return [];
-        dialogueSnapshots.push(captured);
-        receipts.push(dialogueReceipt(line, cached));
+      const finding = inspectProductionDialogueCache({
+        identity,
+        runtimeAssets,
+        selection,
+        read: () => captureExistingDialogueCache(cacheRoot, identity.path),
+      });
+      if (finding.status === "absent") return [];
+      if (finding.status === "stale") {
+        dialogueSnapshots.push(finding.snapshot);
         return [`audio-cache/kokoro/${identity.key.slice(7)}`];
-      } catch {
-        return [];
       }
+      if (finding.status !== "current")
+        throw dialogueCacheObservationFailure(line.id, finding);
+      dialogueSnapshots.push(finding.snapshot);
+      receipts.push(dialogueReceipt(line, finding.cached));
+      return [`audio-cache/kokoro/${identity.key.slice(7)}`];
     });
     const retention: IProductionSoundCacheRetention = {
       assertCurrent: () => {
@@ -1185,7 +1132,7 @@ export const createProductionSoundRuntime = (props: {
         ...retention,
         status: "not-ready",
         correction:
-          "Run a dialogue-producing render action to synthesize every current v5 Kokoro cache generation before verifying this plan.",
+          "Run a dialogue-producing render action to synthesize every current v6 Kokoro cache generation before verifying this plan.",
       };
     const dialogueRuntime = compileProductionDialogueRuntime({
       plan,
@@ -1325,6 +1272,11 @@ export const createProductionRenderEncoderRuntime = (props: {
     plan: IAutoMovieProductionRenderJobPlan,
   ): void => {
     assertRuntimePackagesCurrent();
+    const frameRate = resolveProductionFrameRate(plan.frameFormat);
+    if (frameRate.denominator !== 1)
+      throw new Error(
+        `The pinned H.264 encoder cannot express exact rational frame rate ${frameRate.numerator}/${frameRate.denominator}. Select a supported integer rate before rendering; rounding or decimal substitution is not permitted.`,
+      );
     if (
       isDeepStrictEqual(
         props.productionEncoderIdentity(plan.frameFormat.fps),
@@ -1439,8 +1391,8 @@ export const createProductionRenderEncoderRuntime = (props: {
             });
             finalizeAttempted = true;
             encoder.finalize();
-            output = Uint8Array.from(
-              encoder.FS.readFile(encoder.outputFilename),
+            output = normalizeProductionH264Mp4(
+              Uint8Array.from(encoder.FS.readFile(encoder.outputFilename)),
             );
           } catch (error) {
             failure = { error };
@@ -1568,6 +1520,7 @@ export const encodeProductionSoundRaster = (raster: {
     packageName: "pngjs",
   }).module;
   const png = new PNG({ width: raster.width, height: raster.height });
+  png.gamma = 0.45455;
   png.data = Buffer.from(raster.rgba);
   return PNG.sync.write(png);
 };

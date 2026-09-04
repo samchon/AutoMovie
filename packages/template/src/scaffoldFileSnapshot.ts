@@ -1,6 +1,80 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 
+import { publishNativeScaffoldFile } from "./nativeScaffoldPublication";
+import type { ScaffoldFilePublicationOutcome } from "./scaffoldPublication";
+
+/**
+ * Closed input passed to a platform adapter for one parent-bound new slot.
+ *
+ * The adapter must open the parent without following a link, prove
+ * `expectedParentIdentity`, create `childName` relative to that held native
+ * handle with exclusive/no-follow semantics, and own descriptor write, sync,
+ * readback, one-link and held-parent-relative resident-identity verification,
+ * final-status, and close reporting. It must never retry through `parentPath`,
+ * reopen through a mutable absolute child pathname, or delete a reported
+ * partial slot.
+ *
+ * @evidence requirements/operations-and-recovery/idempotency-and-side-effects.md#operations-idempotent-deterministic-results Binds exact candidate bytes to one captured physical parent generation.
+ * @evidence specifications/execution-and-recovery/retry-backoff-and-idempotency.md#execution-deterministic-result-reuse Makes the native parent capability and candidate bytes the closed reuse input.
+ * @author Samchon
+ */
+export interface IScaffoldParentPublicationRequest {
+  /**
+   * Exact bytes the held descriptor must write and read back.
+   *
+   * @evidence requirements/operations-and-recovery/idempotency-and-side-effects.md#operations-idempotent-deterministic-results Pins the complete deterministic value before native creation.
+   * @evidence specifications/execution-and-recovery/retry-backoff-and-idempotency.md#execution-deterministic-result-reuse Prevents a retry from rebuilding different bytes after mutation begins.
+   */
+  bytes: readonly number[];
+  /**
+   * Single child segment created relative to the held parent handle.
+   *
+   * @evidence requirements/operations-and-recovery/idempotency-and-side-effects.md#operations-duplicate-submission Names the exact slot protected by exclusive creation.
+   * @evidence specifications/execution-and-recovery/retry-backoff-and-idempotency.md#execution-duplicate-submission Keeps competitor refusal inside the captured parent.
+   */
+  childName: string;
+  /**
+   * Physical identity the opened parent handle must prove before creation.
+   *
+   * @evidence requirements/operations-and-recovery/idempotency-and-side-effects.md#operations-idempotent-deterministic-results Refuses a successor instead of publishing into its inventory.
+   * @evidence specifications/execution-and-recovery/retry-backoff-and-idempotency.md#execution-deterministic-result-reuse Allows reuse only of the captured parent generation.
+   */
+  expectedParentIdentity: string;
+  /**
+   * Path used only to acquire the parent handle whose identity is then proved.
+   *
+   * @evidence requirements/operations-and-recovery/idempotency-and-side-effects.md#operations-duplicate-submission Locates the parent capability without authorizing child creation through the mutable path.
+   * @evidence specifications/execution-and-recovery/retry-backoff-and-idempotency.md#execution-duplicate-submission Separates capability acquisition from relative exclusive creation.
+   */
+  parentPath: string;
+}
+
+/**
+ * Platform boundary for a parent-handle-relative exclusive file publication.
+ *
+ * A supported adapter returns `refused` only when it knows no slot was
+ * created. Once a descriptor is secured, every failure is `partial`, with the
+ * exact bound parent identity and byte count; only verified write/readback,
+ * one-link and held-parent-relative resident identity, final status, and close
+ * may return `completed`.
+ *
+ * @evidence requirements/operations-and-recovery/idempotency-and-side-effects.md#operations-compensation-reconciliation Reports absence and bound partial state without pathname cleanup.
+ * @evidence specifications/execution-and-recovery/retry-backoff-and-idempotency.md#execution-compensation-adoption Supplies the exact one-slot result that candidate recovery consumes.
+ * @author Samchon
+ */
+export interface IScaffoldParentPublicationCapability {
+  /**
+   * Execute one native parent-bound publication and return its truthful effect.
+   *
+   * @evidence requirements/operations-and-recovery/idempotency-and-side-effects.md#operations-compensation-reconciliation Preserves the effect boundary across native create, write, verification, and close.
+   * @evidence specifications/execution-and-recovery/retry-backoff-and-idempotency.md#execution-compensation-adoption Makes the native outcome explicit rather than reconstructing it from a pathname.
+   */
+  publish(
+    request: IScaffoldParentPublicationRequest,
+  ): ScaffoldFilePublicationOutcome;
+}
+
 /**
  * Captured physical identity of one ordinary scaffold directory generation.
  *
@@ -42,6 +116,83 @@ interface IScaffoldDescriptorFailure {
 }
 
 class ScaffoldDescriptorCleanupError extends AggregateError {}
+
+/**
+ * Publish one new scaffold file through an explicit parent-bound capability.
+ *
+ * This pure boundary closes and freezes the exact parent identity, child
+ * segment, and bytes before entering the platform adapter. It accepts a
+ * completed or partial result only when the adapter names that same parent
+ * generation, and accepts a refusal only with one of the three pre-create
+ * reasons. It performs no pathname retry and authorizes no cleanup.
+ *
+ * @evidence requirements/operations-and-recovery/idempotency-and-side-effects.md#operations-idempotent-deterministic-results Sends one immutable byte sequence to exactly the captured parent generation.
+ * @evidence specifications/execution-and-recovery/retry-backoff-and-idempotency.md#execution-deterministic-result-reuse Rejects an adapter result that cannot prove the requested parent identity.
+ * @evidence requirements/operations-and-recovery/idempotency-and-side-effects.md#operations-duplicate-submission Preserves target-competitor refusal at the native exclusive-create boundary.
+ * @evidence specifications/execution-and-recovery/retry-backoff-and-idempotency.md#execution-duplicate-submission Makes the exact relative slot the only admissible native create target.
+ * @evidence requirements/operations-and-recovery/idempotency-and-side-effects.md#operations-compensation-reconciliation Returns truthful zero-publication or bound-partial state without deleting either generation.
+ * @evidence specifications/execution-and-recovery/retry-backoff-and-idempotency.md#execution-compensation-adoption Carries the native one-slot outcome directly into candidate recovery.
+ * @author Samchon
+ */
+export const publishScaffoldFileToCapturedParent = (props: {
+  bytes: readonly number[];
+  capability: IScaffoldParentPublicationCapability;
+  parent: IScaffoldPhysicalDirectory;
+  target: string;
+}): ScaffoldFilePublicationOutcome => {
+  const target = path.resolve(props.target);
+  if (path.dirname(target) !== props.parent.path)
+    throw new Error(`scaffold file changed declared parent: ${target}`);
+  if (props.parent.identity.length === 0)
+    throw new Error(`scaffold parent omitted physical identity: ${target}`);
+  if (
+    props.bytes.some(
+      (byte) => Number.isSafeInteger(byte) === false || byte < 0 || byte > 0xff,
+    )
+  )
+    throw new Error(`scaffold file contains invalid byte values: ${target}`);
+
+  const request = Object.freeze({
+    bytes: Object.freeze([...props.bytes]),
+    childName: path.basename(target),
+    expectedParentIdentity: props.parent.identity,
+    parentPath: props.parent.path,
+  });
+  const outcome = props.capability.publish(request);
+  if (outcome.status === "refused") {
+    if (
+      outcome.reason !== "create-failed" &&
+      outcome.reason !== "parent-changed" &&
+      outcome.reason !== "target-competitor"
+    )
+      throw new Error(
+        `scaffold parent capability returned an invalid refusal: ${target}`,
+      );
+    return Object.freeze({ ...outcome });
+  }
+  if (outcome.status === "completed") {
+    if (outcome.parentIdentity !== props.parent.identity)
+      throw new Error(
+        `completed scaffold publication changed parent identity: ${target}`,
+      );
+    return Object.freeze({ ...outcome });
+  }
+  if (outcome.status === "partial") {
+    if (
+      outcome.parentIdentity !== props.parent.identity ||
+      Number.isSafeInteger(outcome.bytesWritten) === false ||
+      outcome.bytesWritten < 0 ||
+      outcome.bytesWritten > request.bytes.length
+    )
+      throw new Error(
+        `partial scaffold publication has invalid bound state: ${target}`,
+      );
+    return Object.freeze({ ...outcome });
+  }
+  throw new Error(
+    `scaffold parent capability returned an unknown outcome: ${target}`,
+  );
+};
 
 /**
  * Create or capture one ordinary scaffold base without following a linked
@@ -204,7 +355,7 @@ export const writeScaffoldFile = (props: {
   force: boolean;
   parent: IScaffoldPhysicalDirectory;
   target: string;
-}): void => {
+}): ScaffoldFilePublicationOutcome => {
   const absolute = path.resolve(props.target);
   if (path.dirname(absolute) !== props.parent.path)
     throw new Error(`scaffold file changed declared parent: ${absolute}`);
@@ -218,61 +369,15 @@ export const writeScaffoldFile = (props: {
       existing = null;
     }
     if (existing !== null) {
-      overwriteScaffoldFile({ ...props, existing });
-      return;
+      return overwriteScaffoldFile({ ...props, existing });
     }
   }
-  createScaffoldFile(props);
-};
-
-const createScaffoldFile = (props: {
-  base: IScaffoldPhysicalDirectory;
-  bytes: Uint8Array;
-  parent: IScaffoldPhysicalDirectory;
-  target: string;
-}): void => {
-  const descriptor = fs.openSync(props.target, "wx+");
-  let failure: IScaffoldDescriptorFailure | undefined;
-  let completedSnapshot: IScaffoldFileSnapshot | null = null;
-  try {
-    const opened = fs.fstatSync(descriptor, { bigint: true });
-    assertOrdinarySingleLinkFile(opened, props.target);
-    assertScaffoldOwnership(props.base, props.parent);
-    assertScaffoldFileDescriptor(
-      captureScaffoldFile(props.target),
-      descriptor,
-      physicalVersion(opened),
-    );
-    writeScaffoldDescriptor(descriptor, props.target, props.bytes);
-    const completed = fs.fstatSync(descriptor, { bigint: true });
-    if (completed.size !== BigInt(props.bytes.byteLength))
-      throw new Error(`scaffold file changed final size: ${props.target}`);
-    assertScaffoldFileDescriptor(
-      captureScaffoldFile(props.target),
-      descriptor,
-      physicalVersion(completed),
-    );
-    assertScaffoldDescriptorBytes(descriptor, props.target, props.bytes);
-    const finalStatus = fs.fstatSync(descriptor, { bigint: true });
-    if (writtenVersion(finalStatus) !== writtenVersion(completed))
-      throw new Error(
-        `scaffold file changed after final readback: ${props.target}`,
-      );
-    completedSnapshot = captureScaffoldFile(props.target);
-    assertScaffoldFileDescriptor(
-      completedSnapshot,
-      descriptor,
-      physicalVersion(finalStatus),
-    );
-    assertScaffoldOwnership(props.base, props.parent);
-  } catch (error) {
-    failure = { error };
-    throw error;
-  } finally {
-    closeScaffoldDescriptor(descriptor, failure, "created scaffold file");
-  }
-  assertScaffoldFileSnapshot(completedSnapshot!);
-  assertScaffoldOwnership(props.base, props.parent);
+  return publishScaffoldFileToCapturedParent({
+    bytes: Array.from(props.bytes),
+    capability: { publish: publishNativeScaffoldFile },
+    parent: props.parent,
+    target: absolute,
+  });
 };
 
 const overwriteScaffoldFile = (props: {
@@ -281,9 +386,20 @@ const overwriteScaffoldFile = (props: {
   existing: IScaffoldFileSnapshot;
   parent: IScaffoldPhysicalDirectory;
   target: string;
-}): void => {
-  const descriptor = fs.openSync(props.target, "r+");
-  let failure: IScaffoldDescriptorFailure | undefined;
+}): ScaffoldFilePublicationOutcome => {
+  let descriptor: number;
+  try {
+    descriptor = fs.openSync(props.target, "r+");
+  } catch (error) {
+    return Object.freeze({
+      error,
+      reason: "create-failed" as const,
+      status: "refused" as const,
+    });
+  }
+  const progress = { bytesWritten: 0 };
+  let failure: unknown = undefined;
+  let mutated = false;
   let completedSnapshot: IScaffoldFileSnapshot | null = null;
   try {
     const opened = fs.fstatSync(descriptor, { bigint: true });
@@ -295,7 +411,8 @@ const overwriteScaffoldFile = (props: {
     );
     assertScaffoldOwnership(props.base, props.parent);
     fs.ftruncateSync(descriptor, 0);
-    writeScaffoldDescriptor(descriptor, props.target, props.bytes);
+    mutated = true;
+    writeScaffoldDescriptor(descriptor, props.target, props.bytes, progress);
     const completed = fs.fstatSync(descriptor, { bigint: true });
     if (completed.size !== BigInt(props.bytes.byteLength))
       throw new Error(`scaffold file changed final size: ${props.target}`);
@@ -318,13 +435,41 @@ const overwriteScaffoldFile = (props: {
     );
     assertScaffoldOwnership(props.base, props.parent);
   } catch (error) {
-    failure = { error };
-    throw error;
-  } finally {
-    closeScaffoldDescriptor(descriptor, failure, "overwritten scaffold file");
+    failure = error;
   }
-  assertScaffoldFileSnapshot(completedSnapshot!);
-  assertScaffoldOwnership(props.base, props.parent);
+  try {
+    fs.closeSync(descriptor);
+  } catch (closeError) {
+    failure = combineScaffoldFailures(
+      failure,
+      closeError,
+      "overwritten scaffold file",
+    );
+  }
+  if (failure === undefined)
+    try {
+      assertScaffoldFileSnapshot(completedSnapshot!);
+      assertScaffoldOwnership(props.base, props.parent);
+    } catch (error) {
+      failure = error;
+    }
+  if (failure !== undefined && mutated === false)
+    return Object.freeze({
+      error: failure,
+      reason: "create-failed" as const,
+      status: "refused" as const,
+    });
+  return failure === undefined
+    ? Object.freeze({
+        parentIdentity: props.parent.identity,
+        status: "completed",
+      })
+    : Object.freeze({
+        bytesWritten: progress.bytesWritten,
+        error: failure,
+        parentIdentity: props.parent.identity,
+        status: "partial",
+      });
 };
 
 const captureScaffoldFile = (file: string): IScaffoldFileSnapshot => {
@@ -413,6 +558,7 @@ const writeScaffoldDescriptor = (
   descriptor: number,
   target: string,
   bytes: Uint8Array,
+  progress?: { bytesWritten: number },
 ): void => {
   const source = Buffer.from(bytes);
   let offset = 0;
@@ -427,10 +573,23 @@ const writeScaffoldDescriptor = (
     if (written === 0)
       throw new Error(`scaffold file stopped while written: ${target}`);
     offset += written;
+    if (progress !== undefined) progress.bytesWritten = offset;
   }
   fs.fsyncSync(descriptor);
   assertScaffoldDescriptorBytes(descriptor, target, source);
 };
+
+const combineScaffoldFailures = (
+  first: unknown,
+  second: unknown,
+  resource: string,
+): unknown =>
+  first === undefined
+    ? second
+    : new AggregateError(
+        [...(first instanceof AggregateError ? first.errors : [first]), second],
+        `${resource} close failed after publication failure`,
+      );
 
 const assertScaffoldDescriptorBytes = (
   descriptor: number,

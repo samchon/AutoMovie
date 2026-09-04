@@ -48,13 +48,14 @@
   },
   "dependencies": {
     "@automovie/engine": "workspace:^",
+    "@automovie/evidence": "workspace:^",
+    "@automovie/ingest": "workspace:^",
     "@automovie/interface": "workspace:^",
     "@automovie/production": "workspace:^",
     "@automovie/template": "workspace:^",
     "typia": "catalog:samchon"
   },
   "devDependencies": {
-    "@automovie/evidence": "workspace:^",
     "@automovie/viewer": "workspace:^",
     "@ttsc/evidence": "catalog:typescript",
     "@types/node": "catalog:utils",

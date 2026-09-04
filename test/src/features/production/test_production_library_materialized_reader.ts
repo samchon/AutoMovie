@@ -39,7 +39,9 @@ import {
 export const test_production_library_materialized_reader = (): void => {
   const fixture = libraryFixture();
   try {
-    const authoring = libraryAuthoring({ root: fixture.root });
+    const currentAuthoringEvidence = () =>
+      libraryAuthoring({ root: fixture.root });
+    const authoring = currentAuthoringEvidence();
     const before = autoMovieMaterializedLibraryEnvironments({
       read: (relative) =>
         AutoMovieProductionProject.openReadOnly(fixture.root).readGeneratedFile(
@@ -53,6 +55,7 @@ export const test_production_library_materialized_reader = (): void => {
     const compiled = new AutoMovieProductionCompiler(
       AutoMovieProductionProject.open(fixture.root),
       authoring,
+      currentAuthoringEvidence,
     ).compile({ scope: "source" });
     const resolve = autoMovieMaterializedLibraryEnvironments({
       read: (relative) =>

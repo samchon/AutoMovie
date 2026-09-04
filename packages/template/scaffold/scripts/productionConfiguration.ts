@@ -420,7 +420,7 @@ export const readProductionRepaintSelection = (
 /** Refuse a delivery whose reviewed request set differs from compiled shots. */
 export const assertProductionRepaintSelection = (props: {
   selected: unknown;
-  visualDelivery: "deterministic" | "repainted";
+  visualDelivery: "deterministic" | "repainted" | "mixed";
   continuity: "film" | "inapplicable";
   shots: readonly string[];
 }): IAutoMovieProductionRepaintSelection | null => {
@@ -434,7 +434,7 @@ export const assertProductionRepaintSelection = (props: {
   }
   if (selected === null)
     throw new Error(
-      "A repainted visual delivery requires an explicit repaint generator and reviewed request for every compiled shot.",
+      "A repainted or mixed visual delivery requires an explicit repaint generator and reviewed request for every declared repaint shot.",
     );
   const missingReview = selected.requests.find(
     (request) => request.selectionReview === null,
@@ -465,7 +465,7 @@ export const assertProductionRepaintSelection = (props: {
     compiled.some((shot, index) => shot !== configured[index])
   )
     throw new Error(
-      `repaint.requests must exactly equal the compiled repaint shot set; configured: ${configured.join(", ") || "none"}; compiled: ${compiled.join(", ") || "none"}.`,
+      `repaint.requests must exactly equal the declared repaint shot set; configured: ${configured.join(", ") || "none"}; declared: ${compiled.join(", ") || "none"}.`,
     );
   return selected;
 };

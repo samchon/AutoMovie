@@ -40,8 +40,8 @@ import {
  * - Four video deliverables, three cuts in every chunk: ~166,000 output frames,
  *   about 1.9 hours at 24 fps.
  *
- * The same four-deliverable production reached this cap at 13,919 frames -- 9.7
- * minutes at 24 fps -- while the plan spelled out every frame. What bounds a
+ * The same four-deliverable production reached this cap at 13,919 frames; 9.7
+ * minutes at 24 fps; while the plan spelled out every frame. What bounds a
  * plan now is how often the edit cuts or dissolves, not how long it runs.
  */
 const RENDER_PLAN_MAX_BYTES = 16 * 1024 * 1024;
@@ -459,8 +459,8 @@ const recordBytes = (record: IRenderPlanGenerationRecord): Buffer => {
  * Choose the schema one generation is stored in.
  *
  * The range schema is preferred, and taken only when the encoded form decodes
- * back to a byte-identical plan. A plan the codec cannot describe -- one whose
- * frames are not the exact derivation of its own ranges -- is stored verbatim
+ * back to a byte-identical plan. A plan the codec cannot describe; one whose
+ * frames are not the exact derivation of its own ranges; is stored verbatim
  * rather than approximated, so choosing the schema can never change what a
  * later read returns.
  */
@@ -492,7 +492,7 @@ const storedGeneration = (record: IRenderPlanGenerationRecord): unknown => {
  * frame step, the film second is that cursor over the frame clock, and the
  * layers advance exactly one source frame per output frame for as long as the
  * edit holds still. Only the layer runs carry information, and there is one run
- * per cut, per dissolve frame, and per chunk -- never one per frame. Storing
+ * per cut, per dissolve frame, and per chunk; never one per frame. Storing
  * the runs is what stops a plan growing with the length of the film.
  */
 const encodeRenderPlanRanges = (

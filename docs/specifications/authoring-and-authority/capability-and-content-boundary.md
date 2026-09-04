@@ -59,3 +59,9 @@ Capability 상태는 `available`, `unsupported`, `unverified` 중 하나다. `av
 <!-- @evidence requirements/product/scope-and-exclusions.md#product-exclusion-reopening 이 절이 제외를 다시 여는 조건을 authorability와 검증 근거로 제한한다. -->
 
 새 capability는 기존 입력을 재해석하지 않는 additive contract로 들어와야 한다. 기존 의미를 바꾸는 변화는 version과 migration 결과를 가져야 하며, 현재 제외는 저작 가능한 입력과 검증 경로가 입증되기 전까지 `unsupported` 상태를 유지한다.
+
+### 제작 언어 module 선택 {#spec-authoring-production-language-module}
+
+<!-- @evidence requirements/agent-authoring/capability-discovery.md#agent-production-language-contract 선택한 제작 언어 하나의 계약만 생성 project에 존재하고 같은 설정과 router가 그 identity를 보고하게 한다. -->
+
+Scaffold 입력은 `chinese`, `english`, `japanese`, `korean` 중 정확히 하나의 제작 언어를 요구한다. 출력은 선택한 module의 고정된 discovery, principle과 obligation 파일 집합만 `docs/language`에 물질화하며, 누락·미지원 값, 불완전 module, 예상 밖 파일, 다른 언어를 식별하는 structured rule을 전체 생성 전 거부한다.

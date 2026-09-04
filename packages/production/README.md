@@ -35,7 +35,10 @@ Frame capture resolves only ids present in the current compiler-owned `manifests
 
 Repaint is unavailable unless the caller passes an `AutoMovieProductionShotRepaint`. Accepted MP4 output is parsed and committed with a receipt binding compiler, source-render, control, reference, adapter and model, parameter, and output identities. Rerolling replaces the active pointer only; unchanged deterministic truth keeps its own receipts.
 
-Subject inspection is the same shape: without an instrument the call refuses rather than answering, because AutoMovie does not report an observation nobody drew. The scaffold ships one at `scripts/inspectSubject.ts`.
+Subject inspection is the same shape: without an instrument the call refuses rather than answering, because AutoMovie does not report an observation nobody drew.
+The scaffold ships one at `scripts/inspectSubject.ts`.
+Its versioned plan and observation records bind production, exact target, compile, ordered plan, resolved pose, artifact bytes, actual browser-and-graphics runtime, terminal pass, and the non-delivery boundary.
+Readers reopen those records through duplicate-aware strict UTF-8 JSON admission and count only an exact current join; failed, unsupported, not-run, and runtime-unidentified attempts remain history.
 
 A generated library passes its single graph-derived authoring snapshot into the compiler at `review` and `final`. `readAutoMovieLibraryReviewRequirements` exposes the exact active branch, H2 owner, source, compile, and finite-plan identities to its offline observation commands. The compiler derives the same population again, reopens artifact bytes or canonical structured facts, and refuses stale or inconclusive receipts. Film and brief keep their compiled-consumer population, so an unused recipe is still not charged merely because it exists.
 
@@ -51,6 +54,11 @@ they are not test-only helpers.
 | `findAutoMovieDiagnosticCatalogEntry` | Resolves one diagnostic code to its remediation contract. |
 | `assertProductionFeatureUsesRenditionVideo` | Refuses production features that bypass the canonical rendition video. |
 | `assertProductionRenderDialogueRuntimeIdentity` | Refuses a capture whose final-byte dialogue generation differs from the versioned render plan. |
+| `productionRenderPublicationIdentity` | Projects an exact final or proxy render plan into a structured, independently recomputable publication identity. |
+| `parseProductionRenderPublicationIdentity` | Strictly parses and recomputes stored publication provenance before reuse. |
+| `assertProductionRenderPublicationCurrent` | Compares stored provenance with the current same-tier render plan. |
+| `captureProductionPayloadSnapshot` | Captures exact retained or terminal payload bytes for guarded publication. |
+| `isProductionPayloadSnapshotCurrent` | Detects deletion, replacement, or in-place byte mutation across a publication transaction. |
 | `readAutoMovieSubjectInspection` | Reads and validates one committed subject-inspection receipt. |
 | `compareAutoMovieVisualRevisions` | Compares two visual-revision receipts for review tooling. |
 

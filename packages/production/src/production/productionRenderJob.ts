@@ -1,13 +1,36 @@
 import {
+  canonicalProductionFrameRate,
+  equalProductionFrameRates,
+  productionFrameBoundaryToGridTick,
+  productionFrameIntervalToGridTicks,
+  resolveProductionFrameRate,
+} from "@automovie/engine";
+import {
   AutoMovieContentDigest,
   AutoMovieGuidePass,
   IAutoMovieCaptureRuntimeIdentity,
   IAutoMovieFilmTimeline,
   IAutoMovieProductionDesign,
 } from "@automovie/interface";
-import { createHash } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
+import { isDeepStrictEqual } from "node:util";
+
+import type {
+  IAutoMovieProductionAudioProcessing,
+  IAutoMovieProductionWaveSourceFormat,
+} from "./decodeProductionAudioAsset";
+
+import { parseAutoMovieCaptionLanguage } from "./captionLanguage";
+import {
+  serializeAutoMovieWebVttCueText,
+  serializeAutoMovieWebVttSingleLineText,
+} from "./captionText";
+import {
+  canonicalAutoMovieJsonBytes,
+  canonicalizeAutoMovieJson,
+  digestAutoMovieBytes,
+} from "./contentIdentity";
 
 /**
  * Package-owned encoder identity fenced into every chunk.
@@ -339,7 +362,7 @@ export interface IAutoMovieProductionRenderChunkStatus {
 /**
  * Parser/preflight identity for one compiler-declared audio source asset.
  */
-export interface IAutoMovieProductionAudioAssetIdentity {
+interface IAutoMovieProductionAudioAssetIdentityBase {
   /**
    * Project-relative compiler-declared asset path.
    */
@@ -361,6 +384,20 @@ export interface IAutoMovieProductionAudioAssetIdentity {
    */
   channels: number;
 }
+
+/**
+ * Exact source-format or placeholder provenance carried by one audio asset.
+ */
+export type IAutoMovieProductionAudioAssetIdentity =
+  IAutoMovieProductionAudioAssetIdentityBase &
+    (
+      | { kind: "placeholder-audio-stem" }
+      | {
+          kind: "wave";
+          sourceFormat: IAutoMovieProductionWaveSourceFormat;
+          processing: IAutoMovieProductionAudioProcessing;
+        }
+    );
 
 /**
  * Build content-addressed chunks from the compiler-owned film edit.
@@ -399,18 +436,21 @@ export const planProductionRenderJob = (props: {
     props.production.frameFormat,
     tier,
   );
+  const outputRate = resolveProductionFrameRate(frameFormat);
   if (frameFormat.width % 2 !== 0 || frameFormat.height % 2 !== 0)
     throw new Error(
       "The production H.264 render adapter requires even width and height.",
     );
+  const timelineRate = resolveProductionFrameRate(props.timeline);
+  const productionRate = resolveProductionFrameRate(
+    props.production.frameFormat,
+  );
   if (
     props.timeline.id !== props.production.id ||
-    props.timeline.fps !== props.production.frameFormat.fps ||
-    props.timeline.totalFrames !==
-      Math.round(
-        props.production.targetRuntimeSeconds *
-          props.production.frameFormat.fps,
-      )
+    equalProductionFrameRates(timelineRate, productionRate) === false ||
+    props.production.targetRuntimeSeconds !==
+      (props.timeline.totalFrames * productionRate.denominator) /
+        productionRate.numerator
   )
     throw new Error(
       "The film edit differs from the production identity, frame clock, or runtime. Recompile before planning.",
@@ -422,10 +462,20 @@ export const planProductionRenderJob = (props: {
   const audioAssets = normalizeAudioAssets(props.audioAssets);
   for (const cue of props.timeline.tracks.audio) {
     const asset = audioAssets.find((candidate) => candidate.path === cue.asset);
+    const expectedSamples =
+      asset === undefined
+        ? null
+        : productionFrameBoundaryToGridTick({
+            frame: cue.sourceDurationFrames,
+            frameRate: timelineRate,
+            ticksPerSecond: asset.sampleRate,
+            rounding: "nearest",
+          });
     if (
       asset === undefined ||
-      Math.round(asset.durationSeconds * props.timeline.fps) !==
-        cue.sourceDurationFrames
+      Number.isSafeInteger(asset.durationSeconds * asset.sampleRate) ===
+        false ||
+      asset.durationSeconds * asset.sampleRate !== expectedSamples
     )
       throw new Error(
         `Audio cue "${cue.id}" lacks one digest-, format-, and duration-verified source asset.`,
@@ -433,9 +483,10 @@ export const planProductionRenderJob = (props: {
   }
   const legacyGuidePasses = normalizeGuidePasses(props.guidePasses ?? ["pose"]);
   const editFingerprint = digestJson({
-    protocol: "automovie.production-render-edit.v1",
+    protocol: "automovie.production-render-edit.v2",
     id: props.timeline.id,
     fps: props.timeline.fps,
+    frameRate: props.timeline.frameRate,
     totalFrames: props.timeline.totalFrames,
     segments: props.timeline.segments,
     omissions: props.timeline.omissions,
@@ -449,7 +500,8 @@ export const planProductionRenderJob = (props: {
         ...sampleProductionRenderFrame(props.timeline, timelineFrame),
         globalFrame: outputFrame,
         timelineFrame,
-        timeSeconds: outputFrame / frameFormat.fps,
+        timeSeconds:
+          (outputFrame * outputRate.denominator) / outputRate.numerator,
       };
     },
   );
@@ -563,7 +615,10 @@ export const verifyProductionRenderJobPlan = (props: {
     guidePasses: props.guidePasses,
     tier: props.plan.tier,
   });
-  if (canonicalJson(props.plan) !== canonicalJson(expected))
+  if (
+    canonicalizeAutoMovieJson(props.plan) !==
+    canonicalizeAutoMovieJson(expected)
+  )
     throw new Error(
       "Stored render plan differs from the current compiler-owned timeline and render inputs. Run automovie render plan, then rerender only changed chunk identities.",
     );
@@ -668,6 +723,7 @@ export const productionRenderLayersForPass = (
 export const canonicalProductionWebVtt = (
   timeline: IAutoMovieFilmTimeline,
 ): string => {
+  const frameRate = resolveProductionFrameRate(timeline);
   const cues = [...timeline.tracks.captions].sort(
     (left, right) =>
       left.startFrame - right.startFrame ||
@@ -675,22 +731,29 @@ export const canonicalProductionWebVtt = (
       compareCodeUnits(left.id, right.id),
   );
   return [
-    `WEBVTT ${webVttPlainText(timeline.id)}`,
+    `WEBVTT ${serializeAutoMovieWebVttSingleLineText(timeline.id)}`,
     "",
-    ...cues.flatMap((cue) => [
-      webVttPlainText(cue.id),
-      `${webVttTime(cue.startFrame / timeline.fps)} --> ${webVttTime(
-        cue.endFrame / timeline.fps,
-      )}`,
-      `<lang ${webVttPlainText(cue.language)}>${
-        cue.speaker === undefined
-          ? webVttPlainText(cue.text)
-          : `<v ${webVttPlainText(cue.speaker)}>${webVttPlainText(
-              cue.text,
-            )}</v>`
-      }</lang>`,
-      "",
-    ]),
+    ...cues.flatMap((cue) => {
+      const interval = productionFrameIntervalToGridTicks({
+        startFrame: cue.startFrame,
+        endFrame: cue.endFrame,
+        frameRate,
+        ticksPerSecond: 1_000,
+        rounding: "nearest",
+      });
+      return [
+        serializeAutoMovieWebVttSingleLineText(cue.id),
+        `${webVttTime(interval.start)} --> ${webVttTime(interval.end)}`,
+        `<lang ${webVttCaptionLanguage(cue.language)}>${
+          cue.speaker === undefined
+            ? serializeAutoMovieWebVttCueText(cue.text)
+            : `<v ${serializeAutoMovieWebVttSingleLineText(
+                cue.speaker,
+              )}>${serializeAutoMovieWebVttCueText(cue.text)}</v>`
+        }</lang>`,
+        "",
+      ];
+    }),
   ].join("\n");
 };
 
@@ -1105,12 +1168,15 @@ const frame = (
   timeline: IAutoMovieFilmTimeline,
   globalFrame: number,
   layers: IAutoMovieProductionRenderLayer[],
-): IAutoMovieProductionRenderFrame => ({
-  globalFrame,
-  timelineFrame: globalFrame,
-  timeSeconds: globalFrame / timeline.fps,
-  layers,
-});
+): IAutoMovieProductionRenderFrame => {
+  const frameRate = resolveProductionFrameRate(timeline);
+  return {
+    globalFrame,
+    timelineFrame: globalFrame,
+    timeSeconds: (globalFrame * frameRate.denominator) / frameRate.numerator,
+    layers,
+  };
+};
 
 const normalizeRenderTier = (
   tier: IAutoMovieProductionRenderTier | undefined,
@@ -1151,10 +1217,16 @@ export const resolveProductionRenderTierFrameFormat = (
   if (normalized.kind === "final") return structuredClone(source);
   const even = (value: number): number =>
     Math.max(2, Math.floor((value * normalized.resolutionScale) / 2) * 2);
+  const sourceRate = resolveProductionFrameRate(source);
+  const frameRate = canonicalProductionFrameRate({
+    numerator: sourceRate.numerator,
+    denominator: sourceRate.denominator * normalized.frameStep,
+  });
   return {
     width: even(source.width),
     height: even(source.height),
-    fps: source.fps / normalized.frameStep,
+    fps: frameRate.numerator / frameRate.denominator,
+    frameRate,
     colorSpace: source.colorSpace,
     ...(source.crop === undefined
       ? {}
@@ -1212,7 +1284,11 @@ const normalizeAudioAssets = (
         Number.isSafeInteger(asset.sampleRate) === false ||
         asset.sampleRate <= 0 ||
         Number.isSafeInteger(asset.channels) === false ||
-        asset.channels <= 0
+        asset.channels <= 0 ||
+        (asset.kind !== "placeholder-audio-stem" && asset.kind !== "wave") ||
+        (asset.kind === "placeholder-audio-stem" &&
+          (asset.sampleRate !== 48_000 || asset.channels !== 2)) ||
+        (asset.kind === "wave" && validWaveAudioIdentity(asset) === false)
       )
         throw new Error(
           `Audio asset "${asset.path}" has invalid identity, duration, sample rate, channels, or duplicate ownership.`,
@@ -1223,8 +1299,55 @@ const normalizeAudioAssets = (
   return output;
 };
 
-const webVttTime = (seconds: number): string => {
-  const milliseconds = Math.round(seconds * 1_000);
+const validWaveAudioIdentity = (
+  asset: Extract<IAutoMovieProductionAudioAssetIdentity, { kind: "wave" }>,
+): boolean => {
+  const source = asset.sourceFormat;
+  const processing = asset.processing;
+  const expectedSpeakers =
+    asset.channels === 1 ? ["front-center"] : ["front-left", "front-right"];
+  const expectedMatrix = asset.channels === 1 ? [[1]] : [[0.5, 0.5]];
+  const resampled = processing.outputSampleRate !== asset.sampleRate;
+  const expectedKind =
+    asset.channels === 1
+      ? resampled
+        ? "resample"
+        : "copy"
+      : resampled
+        ? "downmix-resample"
+        : "downmix";
+  return (
+    (asset.channels === 1 || asset.channels === 2) &&
+    source.kind === "wave" &&
+    source.sampleRate === asset.sampleRate &&
+    source.channels === asset.channels &&
+    (source.encoding === "pcm-s16le"
+      ? source.containerBits === 16 && source.validBits === 16
+      : source.encoding === "float-f32le" &&
+        source.containerBits === 32 &&
+        source.validBits === 32) &&
+    source.layout.kind === (asset.channels === 1 ? "mono" : "stereo") &&
+    isDeepStrictEqual(source.layout.speakers, expectedSpeakers) &&
+    (source.layout.source === "legacy-default"
+      ? source.header === "wave-format-ex" &&
+        source.layout.mask === null &&
+        source.subFormatGuid === null
+      : source.layout.source === "channel-mask" &&
+        source.header === "wave-format-extensible" &&
+        source.layout.mask === (asset.channels === 1 ? 0x4 : 0x3) &&
+        source.subFormatGuid ===
+          (source.encoding === "pcm-s16le"
+            ? "00000001-0000-0010-8000-00aa00389b71"
+            : "00000003-0000-0010-8000-00aa00389b71")) &&
+    processing.kind === expectedKind &&
+    processing.outputChannels === 1 &&
+    Number.isSafeInteger(processing.outputSampleRate) &&
+    processing.outputSampleRate > 0 &&
+    isDeepStrictEqual(processing.matrix, expectedMatrix)
+  );
+};
+
+const webVttTime = (milliseconds: number): string => {
   const hours = Math.floor(milliseconds / 3_600_000);
   const minutes = Math.floor((milliseconds % 3_600_000) / 60_000);
   const remainder = Math.floor((milliseconds % 60_000) / 1_000);
@@ -1238,13 +1361,14 @@ const webVttTime = (seconds: number): string => {
   )}`;
 };
 
-/** Escape one authored plain-text field into a single WebVTT content line. */
-const webVttPlainText = (value: string): string =>
-  value
-    .replace(/[\u0000-\u001f\u007f]/gu, " ")
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;");
+const webVttCaptionLanguage = (value: string): string => {
+  const identity = parseAutoMovieCaptionLanguage(value);
+  if (identity === null)
+    throw new Error(
+      `Caption language "${value}" is not a well-formed RFC 5646 tag.`,
+    );
+  return serializeAutoMovieWebVttSingleLineText(identity.display);
+};
 
 const validByteFact = (fact: { digest: string; bytes: number }): boolean =>
   Number.isSafeInteger(fact.bytes) &&
@@ -1255,30 +1379,7 @@ const validDigest = (value: string): boolean =>
   /^sha256:[0-9a-f]{64}$/.test(value);
 
 const digestJson = (value: unknown): AutoMovieContentDigest =>
-  `sha256:${createHash("sha256")
-    .update(Buffer.from(canonicalJson(value), "utf8"))
-    .digest("hex")}`;
-
-const canonicalJson = (value: unknown): string => {
-  if (value === null || typeof value === "boolean" || typeof value === "string")
-    return JSON.stringify(value);
-  if (typeof value === "number") {
-    if (Number.isFinite(value) === false)
-      throw new Error("Render identity refuses non-finite numbers.");
-    return JSON.stringify(value);
-  }
-  if (Array.isArray(value))
-    return `[${value.map((item) => canonicalJson(item)).join(",")}]`;
-  if (typeof value === "object") {
-    const record = value as Record<string, unknown>;
-    return `{${Object.keys(record)
-      .filter((key) => record[key] !== undefined)
-      .sort(compareCodeUnits)
-      .map((key) => `${JSON.stringify(key)}:${canonicalJson(record[key])}`)
-      .join(",")}}`;
-  }
-  throw new Error("Render identity requires JSON-compatible values.");
-};
+  digestAutoMovieBytes(canonicalAutoMovieJsonBytes(value));
 
 const compareCodeUnits = (left: string, right: string): number =>
   left < right ? -1 : left > right ? 1 : 0;

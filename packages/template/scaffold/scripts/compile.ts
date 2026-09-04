@@ -38,14 +38,13 @@ const archetypes = createAutoMovieArchetypeRegistry(
  * The root comes from the declaration's own `location` rather than from the
  * working directory. The reader refuses a declaration belonging to another
  * root, and a project reached through a different spelling of the same
- * directory -- a Windows short path, a symlinked checkout -- is exactly the
+ * directory; a Windows short path, a symlinked checkout; is exactly the
  * case where two true paths compare unequal.
  */
 const root = productionEvidence.location;
-const authoringEvidence = readAutoMovieProductionEvidence({
-  root,
-  productionEvidence,
-});
+const currentAuthoringEvidence = () =>
+  readAutoMovieProductionEvidence({ root, productionEvidence });
+const authoringEvidence = currentAuthoringEvidence();
 
 const output = compileAutoMovieProduction({
   projectRoot: root,
@@ -53,6 +52,7 @@ const output = compileAutoMovieProduction({
   scope: "source",
   archetypes,
   authoringEvidence,
+  currentAuthoringEvidence,
 });
 process.stdout.write(`${JSON.stringify(output, null, 2)}\n`);
 if (output.success === false) process.exitCode = 1;

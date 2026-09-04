@@ -10,7 +10,11 @@ import {
 import path from "node:path";
 
 import { productionEvidence } from "../lint.config";
-import { repaintSelectionReviews } from "../repaintSelectionReviews";
+import {
+  repaintSelectionReviews,
+  repaintSequenceBaseline,
+  repaintSequenceObservation,
+} from "../repaintSelectionReviews";
 import { inspectPublishedProxyBundle } from "./assertProxyBundle";
 import { preserveProductionEncoderCleanup } from "./preserveProductionEncoderCleanup";
 import {
@@ -348,6 +352,8 @@ const executeProductionRenderCommand = async (
     progress: renderProgress,
     publication: publicationRuntime,
     repaintSelection: productionRepaintSelection,
+    repaintSequenceBaseline: () => repaintSequenceBaseline,
+    repaintSequenceObservation: () => repaintSequenceObservation,
     root,
     sound: soundRuntime,
   });
