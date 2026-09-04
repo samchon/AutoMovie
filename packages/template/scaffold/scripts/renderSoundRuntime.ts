@@ -446,7 +446,9 @@ export const createProductionSoundRuntime = (props: {
       packageExports: true,
     });
 
-  const onnxRuntimeNodePackage = (): {
+  const onnxRuntimeNodePackage = (
+    importer: IRuntimePackageSnapshot,
+  ): {
     snapshot: IRuntimePackageSnapshot;
     nativeAssets: IAutoMovieProductionTtsReceipt["runtimeAssets"];
   } => {
@@ -458,9 +460,11 @@ export const createProductionSoundRuntime = (props: {
     ].join("/");
     let snapshot: IRuntimePackageSnapshot;
     try {
-      snapshot = resolvedPackageSnapshot("onnxruntime-node", [
-        { kind: "tree", relative },
-      ]);
+      snapshot = resolvedPackageSnapshot(
+        "onnxruntime-node",
+        [{ kind: "tree", relative }],
+        { entry: createRequire(importer.entry).resolve("onnxruntime-node") },
+      );
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code === "ENOENT")
         throw new Error(
@@ -481,12 +485,12 @@ export const createProductionSoundRuntime = (props: {
     };
   };
 
-  const onnxRuntimeNodeIdentity = (): ReturnType<
-    typeof packageSnapshotIdentity
-  > & {
+  const onnxRuntimeNodeIdentity = (
+    importer: IRuntimePackageSnapshot,
+  ): ReturnType<typeof packageSnapshotIdentity> & {
     nativeAssets: IAutoMovieProductionTtsReceipt["runtimeAssets"];
   } => {
-    const runtime = onnxRuntimeNodePackage();
+    const runtime = onnxRuntimeNodePackage(importer);
     return {
       ...packageSnapshotIdentity(runtime.snapshot),
       nativeAssets: runtime.nativeAssets,
@@ -521,7 +525,7 @@ export const createProductionSoundRuntime = (props: {
       return {
         ...packageSnapshotIdentity(kokoro),
         adapter: packageSnapshotIdentity(adapter),
-        backend: onnxRuntimeNodeIdentity(),
+        backend: onnxRuntimeNodeIdentity(adapter),
         dependencies: [
           packageSnapshotIdentity(
             resolvedDependencySnapshot(kokoro, "phonemizer"),
@@ -530,7 +534,9 @@ export const createProductionSoundRuntime = (props: {
             resolvedDependencySnapshot(adapter, "onnxruntime-common"),
           ),
         ],
-        imageCapability: resolvedPackageIdentity("sharp"),
+        imageCapability: packageSnapshotIdentity(
+          resolvedDependencySnapshot(adapter, "sharp"),
+        ),
         ...props.dialogueSelection,
       };
     })(),
@@ -582,8 +588,10 @@ export const createProductionSoundRuntime = (props: {
       "@huggingface/transformers",
     );
     const transformers = packageSnapshotIdentity(transformersSnapshot);
-    const backend = onnxRuntimeNodeIdentity();
-    const imageCapability = resolvedPackageIdentity("sharp");
+    const backend = onnxRuntimeNodeIdentity(transformersSnapshot);
+    const imageCapability = packageSnapshotIdentity(
+      resolvedDependencySnapshot(transformersSnapshot, "sharp"),
+    );
     const phonemizer = packageSnapshotIdentity(
       resolvedDependencySnapshot(kokoro, "phonemizer"),
     );
@@ -627,13 +635,13 @@ export const createProductionSoundRuntime = (props: {
     const kokoroAssets = [{ kind: "file", relative: voiceRelative } as const];
     const kokoro = resolvedPackageSnapshot("kokoro-js", kokoroAssets);
     const transformers = resolvedPackageSnapshot("@huggingface/transformers");
-    const onnx = onnxRuntimeNodePackage();
+    const onnx = onnxRuntimeNodePackage(transformers);
     const phonemizer = resolvedDependencySnapshot(kokoro, "phonemizer");
     const onnxCommon = resolvedDependencySnapshot(
       transformers,
       "onnxruntime-common",
     );
-    const sharp = resolvedPackageSnapshot("sharp");
+    const sharp = resolvedDependencySnapshot(transformers, "sharp");
     const declaration = (
       snapshot: IRuntimePackageSnapshot,
       options: Pick<
@@ -662,7 +670,7 @@ export const createProductionSoundRuntime = (props: {
       }),
       declaration(phonemizer, { packageExports: true }),
       declaration(onnxCommon, { packageExports: true }),
-      declaration(sharp),
+      declaration(sharp, { packageExports: true }),
     ];
   };
 
