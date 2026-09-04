@@ -86,6 +86,23 @@ assert.throws(
     }),
   /cardinality or source address changed/u,
 );
+for (const after of [
+  source("#abcdef0").replace(
+    "@evidence contracts/shared.md#item",
+    "@evidence contracts/shared.md#other",
+  ),
+  source("#abcdef0").replace("@evidence ", "@evidenceExclude "),
+])
+  assert.throws(
+    () =>
+      verifyAutoMovieEvidenceMetadataRewrite({
+        path: "docs/contracts/local.md",
+        before: source("#abcdef0"),
+        after,
+        ownership: "comments",
+      }),
+    /changed an unowned evidence field/u,
+  );
 assert.throws(
   () =>
     verifyAutoMovieEvidenceMetadataRewrite({

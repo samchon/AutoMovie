@@ -56,6 +56,8 @@ export interface IAutoMovieEvidenceMetadataRewriteReport {
 
 const REVIEW_FINGERPRINT =
   /^(@evidence(?:Exclude)?Review\s+\S+\s+)#[0-9a-f]{7}(\s+\S[\s\S]*)$/u;
+const DECLARATION_IDENTITY =
+  /^(@evidence(?:Exclude(?:Review)?|Part|Review)?)\s+(\S+)/u;
 
 /**
  * Proves that one evidence metadata rewrite preserves authored work.
@@ -145,6 +147,15 @@ function ownedChange(
   after: string,
   ownership: AutoMovieEvidenceMetadataOwnership,
 ): boolean {
+  const beforeIdentity = DECLARATION_IDENTITY.exec(before);
+  const afterIdentity = DECLARATION_IDENTITY.exec(after);
+  if (
+    beforeIdentity === null ||
+    afterIdentity === null ||
+    beforeIdentity[1] !== afterIdentity[1] ||
+    beforeIdentity[2] !== afterIdentity[2]
+  )
+    return false;
   if (ownership === "comments") return true;
   const beforeReview = /^@evidence(?:Exclude)?Review\b/u.test(before);
   const afterReview = /^@evidence(?:Exclude)?Review\b/u.test(after);
