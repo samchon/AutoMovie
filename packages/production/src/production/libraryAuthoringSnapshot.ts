@@ -36,17 +36,29 @@ export interface IAutoMovieLibraryAuthoringSourceSnapshot {
  * @author Samchon
  */
 export interface IAutoMovieLibraryAuthoringSnapshot {
+  /** Snapshot schema version. */
   version: 1;
+  /** Protocol that gives the snapshot identity its meaning. */
   protocol: typeof AUTOMOVIE_LIBRARY_AUTHORING_SNAPSHOT_PROTOCOL;
+  /** Absolute normalized compiler project root. */
   root: string;
+  /** Package identity observed with the authoring graph. */
   packageName: string;
+  /** Graph-selected production kind. */
   kind: "library";
+  /** Complete graph configuration in effect for the attempt. */
   configuration: IAutoMovieProductionEvidence["configuration"];
+  /** Selected production manifest. */
   manifest: IAutoMovieProductionEvidence["manifest"];
+  /** Complete canonical design-branch population. */
   designBranches: readonly IAutoMovieProductionEvidenceDesignBranch[];
+  /** Complete canonical design-owner population. */
   designOwners: readonly IAutoMovieProductionEvidenceDesignOwner[];
+  /** Complete canonical source-owner population. */
   sourceOwners: readonly IAutoMovieProductionEvidenceSourceOwnerBinding[];
+  /** Normalized bytes identity of every selected source member. */
   sources: readonly IAutoMovieLibraryAuthoringSourceSnapshot[];
+  /** Canonical digest of the complete snapshot. */
   digest: AutoMovieContentDigest;
 }
 
@@ -56,11 +68,17 @@ export interface IAutoMovieLibraryAuthoringSnapshot {
  * @author Samchon
  */
 export interface IAutoMovieLibrarySourceExecution {
+  /** Graph source branch that selected the export. */
   branch: string;
+  /** Canonical project-relative POSIX source module path. */
   sourcePath: string;
+  /** Named top-level export to evaluate. */
   exportName: string;
+  /** Exact authored target path and anchor. */
   owner: string;
+  /** Reviewed normalized source digest. */
   sourceDigest: string;
+  /** Whether the current graph edge passed review. */
   reviewed: boolean;
 }
 
@@ -70,8 +88,11 @@ export interface IAutoMovieLibrarySourceExecution {
  * @author Samchon
  */
 export interface IAutoMovieLibrarySourceExecutionPlan {
+  /** Canonically ordered exports safe to execute together. */
   entries: readonly IAutoMovieLibrarySourceExecution[];
+  /** Complete selected source identity, including missing members. */
   sources: readonly IAutoMovieLibraryAuthoringSourceSnapshot[];
+  /** Refusals that empty the executable entry set. */
   problems: readonly string[];
 }
 

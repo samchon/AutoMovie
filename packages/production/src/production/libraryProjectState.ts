@@ -30,8 +30,11 @@ export type AutoMovieLibraryProjectStateProblemCode =
  * @author Samchon
  */
 export interface IAutoMovieLibraryProjectStateProblem {
+  /** Stable machine-readable refusal category. */
   code: AutoMovieLibraryProjectStateProblemCode;
+  /** Affected generated path, when one exists. */
   path: string | null;
+  /** Actionable refusal explanation. */
   message: string;
 }
 
@@ -41,7 +44,9 @@ export interface IAutoMovieLibraryProjectStateProblem {
  * @author Samchon
  */
 export interface IAutoMovieLibraryProjectStateInspection {
+  /** Parsed index, or null when no strict index could be opened. */
   index: IAutoMovieMaterializedLibrary | null;
+  /** Every strict currentness refusal found. */
   problems: readonly IAutoMovieLibraryProjectStateProblem[];
 }
 

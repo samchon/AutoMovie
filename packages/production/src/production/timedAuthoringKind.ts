@@ -6,9 +6,13 @@ import type { IAutoMovieProductionEvidence } from "@automovie/evidence";
  * @author Samchon
  */
 export interface IAutoMovieTimedAuthoringKind {
+  /** Selected timed-production shape, including the legacy fallback. */
   kind: "brief" | "film" | "legacy-film";
+  /** Graph branch that owns the timed source document. */
   ownerBranch: "briefs" | "screenplays";
+  /** Whether the film-only screenplay ladder must run. */
   screenplayRequired: boolean;
+  /** Whether the selection came from current graph evidence. */
   evidenceBound: boolean;
 }
 

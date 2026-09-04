@@ -16,7 +16,9 @@ export const AUTOMOVIE_DESIGN_DERIVATION_PROTOCOL =
  * @author Samchon
  */
 export interface IAutoMovieDesignDerivationDependency {
+  /** Canonical project-relative POSIX input path. */
   path: string;
+  /** SHA-256 identity of the exact input bytes. */
   digest: AutoMovieContentDigest;
 }
 
@@ -26,20 +28,34 @@ export interface IAutoMovieDesignDerivationDependency {
  * @author Samchon
  */
 export interface IAutoMovieDesignDerivationBasis {
+  /** Derivation protocol that gives this identity its meaning. */
   protocol: typeof AUTOMOVIE_DESIGN_DERIVATION_PROTOCOL;
+  /** Production that owns the derived target. */
   production: string;
+  /** Stable logical target identity. */
   target: string;
+  /** Canonical path where the derived record is published. */
   recordPath: string;
+  /** Command emitter participating in the producer closure. */
   emitter: IAutoMovieDesignDerivationDependency;
+  /** Selected source module export and optional member selector. */
   source: {
+    /** Canonical project-relative POSIX module path. */
     path: string;
+    /** Named top-level module export. */
     export: string;
+    /** Optional member inside the named export. */
     selector: string | null;
   };
+  /** Target-local transitive source inputs. */
   dependencies: readonly IAutoMovieDesignDerivationDependency[];
+  /** Toolchain versions participating in derivation. */
   tool: {
+    /** Production package version. */
     production: string;
+    /** TypeScript compiler version. */
     typescript: string;
+    /** Node.js runtime version. */
     node: string;
   };
 }
@@ -50,10 +66,15 @@ export interface IAutoMovieDesignDerivationBasis {
  * @author Samchon
  */
 export interface IAutoMovieDesignDerivationRecord {
+  /** Stable logical target identity. */
   target: string;
+  /** Canonical path of the derived output. */
   recordPath: string;
+  /** Complete producer basis recorded with the output. */
   basis: IAutoMovieDesignDerivationBasis;
+  /** Canonical digest of `basis`. */
   basisDigest: AutoMovieContentDigest;
+  /** SHA-256 digest of the canonical output bytes. */
   outputDigest: AutoMovieContentDigest;
 }
 
@@ -63,8 +84,11 @@ export interface IAutoMovieDesignDerivationRecord {
  * @author Samchon
  */
 export interface IAutoMovieDesignDerivationManifest {
+  /** Manifest schema version. */
   version: 1;
+  /** Derivation protocol that gives the records their meaning. */
   protocol: typeof AUTOMOVIE_DESIGN_DERIVATION_PROTOCOL;
+  /** Complete canonical target inventory. */
   records: readonly IAutoMovieDesignDerivationRecord[];
 }
 
@@ -86,9 +110,13 @@ export type AutoMovieDesignDerivationFailureCode =
  * @author Samchon
  */
 export interface IAutoMovieDesignDerivationProblem {
+  /** Stable machine-readable refusal category. */
   code: AutoMovieDesignDerivationFailureCode;
+  /** Logical target affected by the problem. */
   target: string;
+  /** Affected project-relative path, when one exists. */
   path: string | null;
+  /** Actionable refusal explanation. */
   message: string;
 }
 
@@ -99,6 +127,7 @@ export interface IAutoMovieDesignDerivationProblem {
  */
 export class AutoMovieDesignDerivationError extends Error {
   public constructor(
+    /** Stable machine-readable refusal category. */
     public readonly code: AutoMovieDesignDerivationFailureCode,
     message: string,
   ) {
