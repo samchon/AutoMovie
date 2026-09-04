@@ -351,7 +351,7 @@ assert.throws(
       stages: {},
       hosts: [libraryHost, librarySourceHost],
     }),
-  /one exact reviewed design\/source branch pair/u,
+  /one exact reviewed design\/source pair/u,
 );
 assert.throws(
   () =>
