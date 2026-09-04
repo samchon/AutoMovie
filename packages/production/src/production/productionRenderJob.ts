@@ -9,6 +9,7 @@ import {
   AutoMovieContentDigest,
   AutoMovieGuidePass,
   IAutoMovieCaptureRuntimeIdentity,
+  IAutoMovieCompiledFilmEffect,
   IAutoMovieFilmTimeline,
   IAutoMovieProductionDesign,
   IAutoMovieSemanticMaskReceipt,
@@ -32,6 +33,10 @@ import {
   canonicalizeAutoMovieJson,
   digestAutoMovieBytes,
 } from "./contentIdentity";
+import {
+  productionFilmEffectEditFingerprint,
+  sampleProductionFilmEffects,
+} from "./filmEffectRuntime";
 
 /**
  * Package-owned encoder identity fenced into every chunk.
@@ -199,7 +204,7 @@ export interface IAutoMovieProductionRenderJobPlan {
   /**
    * Plan schema.
    */
-  version: 3;
+  version: 4;
   /**
    * Exact production namespace that owns every slot and output.
    */
@@ -250,6 +255,8 @@ export interface IAutoMovieProductionRenderJobPlan {
     audio: IAutoMovieFilmTimeline["tracks"]["audio"];
     /** Byte, duration, and format identity for every referenced audio asset. */
     audioAssets: IAutoMovieProductionAudioAssetIdentity[];
+    /** Current executable film-global effect runtimes. */
+    effects: IAutoMovieCompiledFilmEffect[];
   };
 }
 
@@ -407,6 +414,7 @@ export type IAutoMovieProductionAudioAssetIdentity =
  */
 export const planProductionRenderJob = (props: {
   timeline: IAutoMovieFilmTimeline;
+  effects: readonly IAutoMovieCompiledFilmEffect[];
   production: IAutoMovieProductionDesign;
   runtimeIdentity: IAutoMovieProductionRenderRuntimeIdentity;
   sourceFingerprints: Readonly<Record<string, AutoMovieContentDigest>>;
@@ -485,15 +493,16 @@ export const planProductionRenderJob = (props: {
       );
   }
   const legacyGuidePasses = normalizeGuidePasses(props.guidePasses ?? ["pose"]);
-  const editFingerprint = digestJson({
-    protocol: "automovie.production-render-edit.v2",
-    id: props.timeline.id,
-    fps: props.timeline.fps,
-    frameRate: props.timeline.frameRate,
-    totalFrames: props.timeline.totalFrames,
-    segments: props.timeline.segments,
-    omissions: props.timeline.omissions,
-    tracks: props.timeline.tracks,
+  const editFingerprint = productionFilmEffectEditFingerprint(props.timeline);
+  sampleProductionFilmEffects({
+    identity: {
+      production: props.production.id,
+      film: props.timeline.id,
+      compileFingerprint: props.timeline.inputFingerprint,
+      editFingerprint,
+    },
+    effects: props.effects,
+    timelineFrame: 0,
   });
   const frames = Array.from(
     { length: props.timeline.totalFrames / tier.frameStep },
@@ -550,12 +559,13 @@ export const planProductionRenderJob = (props: {
           });
         const slot = `${props.production.id}:${tier.kind}:${deliverable.id}:${pass}:${index}`;
         const identity = {
-          protocol: "automovie.production-render-chunk.v3",
+          protocol: "automovie.production-render-chunk.v4",
           production: props.production.id,
           tier,
           deliverable: deliverable.id,
           kind: deliverable.kind,
           editFingerprint,
+          effects: props.effects.map((effect) => effect.digest),
           sourceFrameFormat: props.production.frameFormat,
           frameFormat,
           frameStart,
@@ -577,7 +587,7 @@ export const planProductionRenderJob = (props: {
       }
   }
   return {
-    version: 3,
+    version: 4,
     productionId: props.production.id,
     compileFingerprint: props.timeline.inputFingerprint,
     editFingerprint,
@@ -592,6 +602,7 @@ export const planProductionRenderJob = (props: {
       captions: canonicalProductionWebVtt(props.timeline),
       audio: structuredClone(props.timeline.tracks.audio),
       audioAssets,
+      effects: structuredClone(props.effects),
     },
   };
 };
@@ -602,6 +613,7 @@ export const planProductionRenderJob = (props: {
 export const verifyProductionRenderJobPlan = (props: {
   plan: IAutoMovieProductionRenderJobPlan;
   timeline: IAutoMovieFilmTimeline;
+  effects: readonly IAutoMovieCompiledFilmEffect[];
   production: IAutoMovieProductionDesign;
   runtimeIdentity: IAutoMovieProductionRenderRuntimeIdentity;
   sourceFingerprints: Readonly<Record<string, AutoMovieContentDigest>>;
@@ -610,6 +622,7 @@ export const verifyProductionRenderJobPlan = (props: {
 }): void => {
   const expected = planProductionRenderJob({
     timeline: props.timeline,
+    effects: props.effects,
     production: props.production,
     runtimeIdentity: props.runtimeIdentity,
     sourceFingerprints: props.sourceFingerprints,

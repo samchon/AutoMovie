@@ -1,5 +1,6 @@
 import {
   AutoMovieContentDigest,
+  IAutoMovieCompiledFilmEffect,
   IAutoMovieFilmTimeline,
   IAutoMovieProductionDesign,
 } from "@automovie/interface";
@@ -179,6 +180,7 @@ const plan = (props: {
   tier?: IAutoMovieProductionRenderTier;
   chunkFrames?: number;
   timeline?: IAutoMovieFilmTimeline;
+  effects?: readonly IAutoMovieCompiledFilmEffect[];
   production?: IAutoMovieProductionDesign;
   audioAssets?: readonly IAutoMovieProductionAudioAssetIdentity[];
   guidePasses?: readonly ["pose" | "depth", ...("pose" | "depth")[]];
@@ -187,6 +189,7 @@ const plan = (props: {
 }): IAutoMovieProductionRenderJobPlan =>
   planProductionRenderJob({
     timeline: props.timeline ?? TIMELINE(),
+    effects: props.effects ?? [],
     production: props.production ?? PRODUCTION(),
     runtimeIdentity: props.runtimeIdentity ?? RUNTIME_IDENTITY,
     sourceFingerprints: props.sourceFingerprints ?? SOURCE_FINGERPRINTS,
@@ -272,7 +275,7 @@ export const test_production_render_job_plan = (): void => {
       voicedDialogueIdentity: voiced.runtimeIdentity.dialogueRuntimeIdentity,
     },
     {
-      version: 3,
+      version: 4,
       productionId: "fixture-film",
       tier: { kind: "final", resolutionScale: 1, frameStep: 1 },
       sourceFrameFormat: {
@@ -465,6 +468,7 @@ export const test_production_render_job_plan = (): void => {
             verifyProductionRenderJobPlan({
               plan: final,
               timeline: TIMELINE(),
+              effects: [],
               production: PRODUCTION(),
               runtimeIdentity: RUNTIME_IDENTITY,
               sourceFingerprints: SOURCE_FINGERPRINTS,
@@ -479,6 +483,7 @@ export const test_production_render_job_plan = (): void => {
             verifyProductionRenderJobPlan({
               plan: proxy,
               timeline: TIMELINE(),
+              effects: [],
               production: PRODUCTION(),
               runtimeIdentity: RUNTIME_IDENTITY,
               sourceFingerprints: SOURCE_FINGERPRINTS,
@@ -501,6 +506,7 @@ export const test_production_render_job_plan = (): void => {
                   ),
                 },
                 timeline: TIMELINE(),
+                effects: [],
                 production: PRODUCTION(),
                 runtimeIdentity: RUNTIME_IDENTITY,
                 sourceFingerprints: SOURCE_FINGERPRINTS,

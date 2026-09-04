@@ -60,6 +60,7 @@ import {
   IAutoMovieCompileProjectOutput,
   IAutoMovieCompiledContractRealization,
   IAutoMovieCompiledFilmEdit,
+  IAutoMovieCompiledFilmEffect,
   IAutoMovieCompiledFormation,
   IAutoMovieCompiledShotSource,
   IAutoMovieConstraintViolation,
@@ -143,6 +144,10 @@ import {
 } from "./contentIdentity";
 import { inspectAutoMovieDerivedArtifacts } from "./derivedArtifacts";
 import { designReferenceDiagnostics } from "./designReferenceDiagnostics";
+import {
+  materializeProductionFilmEffects,
+  productionFilmEffectEditFingerprint,
+} from "./filmEffectRuntime";
 import { filmGrammarDiagnostics } from "./filmGrammarDiagnostics";
 import { readAutoMovieFilmTimeline } from "./filmTimeline";
 import { autoMovieLibraryArtifactSourceTargets } from "./libraryArtifactTargets";
@@ -776,14 +781,28 @@ export class AutoMovieProductionCompiler {
       sourceFields,
       contentFields,
     );
-    const filmArtifacts =
-      compiledFilm === null || filmSourceDigest === null
-        ? null
-        : materializeFilmArtifacts(
-            compiledFilm,
-            filmSourceDigest,
-            inputFingerprint,
-          );
+    let filmArtifacts: ReturnType<typeof materializeFilmArtifacts> | null =
+      null;
+    if (compiledFilm !== null && filmSourceDigest !== null)
+      try {
+        filmArtifacts = materializeFilmArtifacts(
+          compiledFilm,
+          filmSourceDigest,
+          inputFingerprint,
+          graph.production!,
+          graph.world!,
+          compiled,
+        );
+      } catch (error) {
+        diagnostics.push(
+          filmDiagnostic(
+            "film-effect-cue-invalid",
+            error instanceof Error
+              ? error.message
+              : "Film effect runtime materialization failed.",
+          ),
+        );
+      }
     const inputCurrent = (): boolean =>
       `${this.project.revision()}\0${currentAutoMovieProductionCompilerInputFingerprint(this.project, input.scope)}\0${this.project.revision()}` ===
       `${inputRevision}\0${inputFingerprint}\0${inputRevision}`;
@@ -8771,6 +8790,7 @@ const materializeGeneratedFiles = (
   film: {
     edit: IAutoMovieCompiledFilmEdit;
     timeline: IAutoMovieFilmTimeline;
+    effects: IAutoMovieCompiledFilmEffect[];
   } | null,
   inputFingerprint: AutoMovieContentDigest,
 ): ReadonlyMap<string, Uint8Array> => {
@@ -8840,6 +8860,7 @@ const materializeGeneratedFiles = (
   if (film !== null) {
     put("contracts/film-edit.json", film.edit);
     put("film-timeline.json", film.timeline);
+    put("film-effects.json", film.effects);
   }
   put("manifests/compile.json", {
     version: 2,
@@ -8863,28 +8884,69 @@ const materializeFilmArtifacts = (
   draft: ICompiledFilmDraft,
   sourceDigest: AutoMovieContentDigest,
   inputFingerprint: AutoMovieContentDigest,
+  production: IAutoMovieProductionDesign,
+  world: IAutoMovieWorldDesign,
+  shots: ReadonlyMap<string, IAutoMovieCompiledShotSource>,
 ): {
   edit: IAutoMovieCompiledFilmEdit;
   timeline: IAutoMovieFilmTimeline;
-} => ({
-  edit: {
-    version: 1,
-    compiler: AUTOMOVIE_PRODUCTION_COMPILER_PROTOCOL,
-    inputFingerprint,
-    source: {
-      path: FILM_SOURCE_PATH,
-      export: FILM_SOURCE_EXPORT,
-      digest: sourceDigest,
-    },
-    edit: draft.edit,
-  },
-  timeline: {
+  effects: IAutoMovieCompiledFilmEffect[];
+} => {
+  const timeline: IAutoMovieFilmTimeline = {
     ...draft.timeline,
     compiler: AUTOMOVIE_PRODUCTION_COMPILER_PROTOCOL,
     inputFingerprint,
     sourceDigest,
-  },
-});
+  };
+  const editFingerprint = productionFilmEffectEditFingerprint(timeline);
+  const shotEffects = timeline.segments.flatMap((segment) => {
+    const shot = shots.get(segment.shot);
+    if (shot === undefined) return [];
+    return shot.effects.flatMap((effect) => {
+      const effectStart = Math.round(effect.start * timeline.fps);
+      const effectEnd = Math.round(effect.end * timeline.fps);
+      const start = Math.max(segment.sourceInFrame, effectStart);
+      const end = Math.min(segment.sourceOutFrame, effectEnd);
+      return end <= start
+        ? []
+        : [
+            {
+              cue: effect.id,
+              shot: segment.shot,
+              zone: effect.zone,
+              startFrame: segment.startFrame + start - segment.sourceInFrame,
+              endFrame: segment.startFrame + end - segment.sourceInFrame,
+            },
+          ];
+    });
+  });
+  return {
+    edit: {
+      version: 1,
+      compiler: AUTOMOVIE_PRODUCTION_COMPILER_PROTOCOL,
+      inputFingerprint,
+      source: {
+        path: FILM_SOURCE_PATH,
+        export: FILM_SOURCE_EXPORT,
+        digest: sourceDigest,
+      },
+      edit: draft.edit,
+    },
+    timeline,
+    effects: materializeProductionFilmEffects({
+      identity: {
+        production: production.id,
+        film: timeline.id,
+        compileFingerprint: inputFingerprint,
+        editFingerprint,
+      },
+      frameRate: timeline.frameRate ?? timeline.fps,
+      world,
+      effects: timeline.tracks.effects,
+      shotEffects,
+    }),
+  };
+};
 
 const statusesOf = (
   project: AutoMovieProductionProject,
@@ -8917,7 +8979,11 @@ const sourceTargetsOf = (
   file: string,
   graph: ReturnType<AutoMovieProductionProject["graph"]>,
 ): string[] => {
-  if (file === "contracts/film-edit.json" || file === "film-timeline.json")
+  if (
+    file === "contracts/film-edit.json" ||
+    file === "film-timeline.json" ||
+    file === "film-effects.json"
+  )
     return ["film"];
   for (const [id] of graph.shots)
     if (

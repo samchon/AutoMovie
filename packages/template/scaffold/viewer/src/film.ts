@@ -11,11 +11,18 @@ import type {
   IAutoMovieSemanticMaskCoverage,
 } from "@automovie/interface";
 import {
+  type IAutoMovieProductionRenderLayer,
+  productionRenderLayersForPass,
+  sampleProductionRenderFrame,
+} from "@automovie/production";
+import {
   attachAutoMovieSemanticMask,
   auditAutoMovieSemanticMaskScene,
   mountViewer,
   observeAutoMovieRendererFrame,
   renderCrossDissolveFrames,
+  renderFadeToBlackFrame,
+  resolveAutoMovieFilmBeautyComposition,
 } from "@automovie/viewer";
 import type { WebGLRenderer } from "three";
 
@@ -29,12 +36,6 @@ import {
   VIEWER_BACKGROUND,
   viewerDocument,
 } from "./viewerDocument";
-
-interface IFilmLayer {
-  shot: string;
-  sourceFrame: number;
-  weight: number;
-}
 
 /** One film shot's runtime beside the palette and coverage derived with it. */
 interface IFilmShot {
@@ -80,6 +81,8 @@ for (const shot of new Set(timeline.segments.map((segment) => segment.shot))) {
     dialogue: productionRuntime.dialogue,
     deliveryCrop: productionRuntime.deliveryCrop ?? undefined,
     liveWearableSoftBodies: productionRuntime.liveWearableSoftBodies,
+    filmEffects: productionRuntime.filmEffects,
+    filmEffectIdentity: productionRuntime.filmEffectIdentity,
   });
   // Each cut carries its own palette, because a colour is derived from the
   // entities of the shot that draws it; one film-wide palette would have to
@@ -129,7 +132,7 @@ viewerRendererRef.current = mounted.renderer;
 viewerRendererRef.current.setClearColor(VIEWER_BACKGROUND, 1);
 
 const renderLayer = (
-  layer: IFilmLayer,
+  layer: IAutoMovieProductionRenderLayer,
   pass: AutoMovieGuidePass,
   globalFrame: number,
 ): string => {
@@ -156,24 +159,37 @@ function renderFilm(time: number, pass: AutoMovieGuidePass): void {
     timeline.totalFrames - 1,
     Math.floor(time * timeline.fps),
   );
-  const layers = sampleFilmFrame(timeline, frame);
+  const sample = sampleProductionRenderFrame(timeline, frame);
+  const layers = productionRenderLayersForPass(sample, pass);
   const renderer = viewerRendererRef.current;
   if (renderer === undefined) throw new Error("Film renderer is not mounted.");
   const measured = observeAutoMovieRendererFrame(renderer, () => {
-    if (pass !== "beauty" || layers.length === 1) {
-      const dominant = layers.reduce((selected, candidate) =>
-        candidate.weight >= selected.weight ? candidate : selected,
+    if (pass !== "beauty") {
+      if (layers.length !== 1)
+        throw new Error(
+          `Structural film pass "${pass}" requires one dominant layer, but received ${layers.length}.`,
+        );
+      renderLayer(layers[0]!, pass, sample.timelineFrame);
+      return;
+    }
+    const composition = resolveAutoMovieFilmBeautyComposition(layers);
+    if (composition.kind === "direct")
+      renderLayer(composition.layer, pass, sample.timelineFrame);
+    else if (composition.kind === "fade")
+      renderFadeToBlackFrame(
+        renderer,
+        () => void renderLayer(composition.layer, pass, sample.timelineFrame),
+        composition.weight,
       );
-      renderLayer(dominant, pass, frame);
-    } else {
-      const [outgoing, incoming] = layers as [IFilmLayer, IFilmLayer];
+    else
       renderCrossDissolveFrames(
         renderer,
-        () => void renderLayer(outgoing, pass, frame),
-        () => void renderLayer(incoming, pass, frame),
-        incoming.weight,
+        () =>
+          void renderLayer(composition.outgoing, pass, sample.timelineFrame),
+        () =>
+          void renderLayer(composition.incoming, pass, sample.timelineFrame),
+        composition.alpha,
       );
-    }
   });
   lastObservation = {
     shot: drawnShot.runtime.id,
@@ -200,57 +216,8 @@ window.__automovieCapture = {
   sidecar: () => renderAutoMovieSemanticMaskSidecar(drawnShot.mask),
 };
 
-const sampleFilmFrame = (
-  source: IAutoMovieFilmTimeline,
-  frame: number,
-): IFilmLayer[] => {
-  const active = source.segments
-    .map((segment, index) => ({ segment, index }))
-    .filter(
-      ({ segment }) => segment.startFrame <= frame && frame < segment.endFrame,
-    )
-    .at(-1);
-  if (active === undefined)
-    throw new Error(`Film frame ${frame} has no compiler-owned segment.`);
-  const offset = frame - active.segment.startFrame;
-  const incoming: IFilmLayer = {
-    shot: active.segment.shot,
-    sourceFrame: active.segment.sourceInFrame + offset,
-    weight: 1,
-  };
-  if (
-    active.segment.transitionIn.kind === "dissolve" &&
-    offset < active.segment.transitionIn.durationFrames
-  ) {
-    const outgoing = source.segments[active.index - 1];
-    if (outgoing === undefined)
-      throw new Error(
-        `Film segment "${active.segment.shot}" dissolves without an outgoing shot.`,
-      );
-    const alpha = offset / active.segment.transitionIn.durationFrames;
-    return [
-      {
-        shot: outgoing.shot,
-        sourceFrame:
-          outgoing.sourceOutFrame -
-          active.segment.transitionIn.durationFrames +
-          offset,
-        weight: 1 - alpha,
-      },
-      { ...incoming, weight: alpha },
-    ];
-  }
-  return [incoming];
-};
-
 // Last statement in the module, and that placement is load-bearing.
 //
-// `renderFilm` reaches `sampleFilmFrame`, which is a `const` and therefore in
-// its temporal dead zone until its own declaration is evaluated. Drawing the
-// first frame from anywhere above that line throws
-// `ReferenceError: Cannot access 'sampleFilmFrame' before initialization`, and
-// the page renders nothing at all; in every generated project, since each one
-// inherits this file verbatim. The capture harness above only registers
-// callbacks, so it is unaffected by where it sits; this call runs immediately,
-// so it is not.
+// Keep initial drawing after every callback and compositor declaration so the
+// module cannot enter the capture-ready state before its first frame exists.
 renderFilm(0, "beauty");

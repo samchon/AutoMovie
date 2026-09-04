@@ -26,6 +26,7 @@ export * from "./production/derivedArtifacts";
 export * from "./production/designReferenceDiagnostics";
 export * from "./production/inspectDesignReferenceAsset";
 export * from "./production/filmGrammarDiagnostics";
+export * from "./production/filmEffectRuntime";
 export * from "./production/filmTimeline";
 export * from "./production/linkProductionSource";
 export * from "./production/libraryReviewEvidenceConsumer";

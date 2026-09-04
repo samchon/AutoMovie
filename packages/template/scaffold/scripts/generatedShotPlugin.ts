@@ -1,5 +1,11 @@
 import type { IAutoMovieDeliveryCrop } from "@automovie/interface";
-import { AutoMovieProductionProject } from "@automovie/production";
+import {
+  AutoMovieProductionProject,
+  productionFilmEffectEditFingerprint,
+  readAutoMovieFilmEffects,
+  readAutoMovieFilmTimeline,
+  sampleProductionFilmEffects,
+} from "@automovie/production";
 import { createHash } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
@@ -59,6 +65,39 @@ export const generatedShotPlugin = (
         void Promise.resolve()
           .then(() => runtimeProvider.prepare?.())
           .then(() => {
+            const project = AutoMovieProductionProject.openReadOnly(
+              projectRoot,
+              productionId,
+            );
+            const manifest = project.generatedManifest();
+            if (manifest === null)
+              throw new Error(
+                "Production runtime requires current compiler-owned artifacts.",
+              );
+            const production = project.graph().production;
+            if (production === null)
+              throw new Error(
+                "Production runtime requires a current production design.",
+              );
+            const timeline = readAutoMovieFilmTimeline(
+              project,
+              manifest.inputFingerprint,
+            );
+            const filmEffectIdentity = {
+              production: production.id,
+              film: timeline.id,
+              compileFingerprint: manifest.inputFingerprint,
+              editFingerprint: productionFilmEffectEditFingerprint(timeline),
+            };
+            const filmEffects = readAutoMovieFilmEffects(
+              project,
+              manifest.inputFingerprint,
+            );
+            sampleProductionFilmEffects({
+              identity: filmEffectIdentity,
+              effects: filmEffects,
+              timelineFrame: 0,
+            });
             const runtime = {
               dialogue: cloneProductionDialogueRuntime(
                 runtimeProvider.dialogue(),
@@ -67,11 +106,10 @@ export const generatedShotPlugin = (
                 runtimeProvider.deliveryCrop(),
               ),
               liveWearableSoftBodies: readProductionLiveWearableSoftBodies(
-                AutoMovieProductionProject.productionDesign(
-                  projectRoot,
-                  productionId,
-                )?.simulation?.liveWearableSoftBodies ?? [],
+                production.simulation?.liveWearableSoftBodies ?? [],
               ),
+              filmEffects,
+              filmEffectIdentity,
             };
             response.statusCode = 200;
             response.setHeader(
@@ -86,7 +124,7 @@ export const generatedShotPlugin = (
             response.setHeader("Content-Type", "text/plain; charset=utf-8");
             response.setHeader("Cache-Control", "no-store");
             response.end(
-              `Production dialogue runtime preparation failed: ${
+              `Production viewer runtime preparation failed: ${
                 error instanceof Error ? error.message : String(error)
               }`,
             );

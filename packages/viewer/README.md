@@ -1,5 +1,9 @@
 # `@automovie/viewer`
 
+## 필름 전환 합성
+
+`resolveAutoMovieFilmBeautyComposition`은 컴파일러가 샘플링한 한두 개의 뷰티 레이어를 직접 렌더, 검정으로의 페이드, 디졸브로 구분한다. `renderFadeToBlackFrame`은 단일 레이어의 가중치를 전체 프레임에 적용하고 `disposeFadeToBlack`은 렌더러가 소유한 GPU 자원을 해제한다.
+
 `mapImportedHumanoidBones` maps a loaded glTF/VRM scene onto a compiled
 proxy skeleton before `createImportedModelObject` wraps it. Production hosts
 therefore render and review the final registered mesh while engine validation

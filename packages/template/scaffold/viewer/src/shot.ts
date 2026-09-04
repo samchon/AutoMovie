@@ -57,6 +57,8 @@ const runtime = await createCompiledShotRuntime(compiled, deliveryTone, {
   dialogue: productionRuntime.dialogue,
   deliveryCrop: productionRuntime.deliveryCrop ?? undefined,
   liveWearableSoftBodies: productionRuntime.liveWearableSoftBodies,
+  filmEffects: productionRuntime.filmEffects,
+  filmEffectIdentity: productionRuntime.filmEffectIdentity,
 });
 // The palette is a pure function of the compiled artifact, so the page derives
 // the same one the compiler's own evidence path derives, and the mask pass

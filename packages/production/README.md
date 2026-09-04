@@ -1,5 +1,9 @@
 # `@automovie/production`
 
+## 필름 효과 실행
+
+`materializeProductionFilmEffects`는 정규화된 필름 효과 트랙을 현재 월드 레시피와 존에 결합하고, `sampleProductionFilmEffects`는 전체 해상도 `timelineFrame`에서 그 결과를 재구성한다. 렌더 계획과 뷰어는 동일한 런타임 식별자를 소비하며 누락되거나 오래된 산출물은 다시 컴파일하도록 거부한다.
+
 The deterministic production runtime a generated AutoMovie project runs on: the compiler, the tracked project store, frame capture, subject inspection, and the render job. A project's own npm scripts call it. Nothing here listens on a socket, serves a document, or answers a model.
 
 That is a deliberate boundary rather than an omission. What an authoring agent knows comes from the skill the project ships and from what this package refuses; a refusal names the invariant it enforces and the correction that owns it, and the agent reads the project to find the rest. A capability an agent cannot reach by reading the project and running its scripts does not exist.

@@ -1,11 +1,12 @@
 import * as THREE from "three";
 
 import { disposeCrossDissolve } from "./applyDissolve";
+import { disposeFadeToBlack } from "./applyFade";
 
 /**
  * Release a viewer's renderer AND the auxiliary GPU state frames created for
- * it: today the cross-dissolve FBO/quad, which #1050 gave a dispose that
- * nothing wired (#1090). `mountViewer`'s `stop()` calls this; a host that owns
+ * it: the cross-dissolve and fade FBO/quads. `mountViewer`'s `stop()` calls
+ * this; a host that owns
  * its renderer directly (a capture harness) calls it the same way. Idempotent
  * and safe when no dissolve ever ran.
  *
@@ -14,6 +15,7 @@ import { disposeCrossDissolve } from "./applyDissolve";
  */
 export const releaseViewerRenderer = (renderer: THREE.WebGLRenderer): void => {
   disposeCrossDissolve(renderer);
+  disposeFadeToBlack(renderer);
   renderer.dispose();
 };
 
