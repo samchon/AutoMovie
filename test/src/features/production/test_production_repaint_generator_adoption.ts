@@ -147,6 +147,7 @@ const executableServices = (props: {
   root: string;
   commit: (receipt: IAutoMovieRepaintReceipt, bytes: Uint8Array) => void;
   referenceBytes?: (referencePath: string) => Buffer;
+  assetManifest?: (manifest: IAutoMovieAssetManifest) => void;
 }): IAutoMovieProductionServices => {
   const compileFingerprint = digestAutoMovieBytes(
     Buffer.from("repaint-compile", "utf8"),
@@ -177,6 +178,7 @@ const executableServices = (props: {
       ],
     }),
   );
+  props.assetManifest?.(assetManifest);
   const assetManifestBytes = Buffer.from(JSON.stringify(assetManifest), "utf8");
   const registry: IAutoMovieProductionRegistryManifest = {
     version: 2,
@@ -543,6 +545,35 @@ export const test_production_repaint_generator_adoption =
         root,
         commit: (receipt) => committed.push(receipt),
       });
+      const credentialReferenceServices = [
+        {
+          secret: "repaint-source-secret",
+          services: executableServices({
+            root,
+            commit: () => undefined,
+            assetManifest: (manifest) => {
+              const fetched = manifest.assets.find(
+                (asset) => asset.original !== undefined,
+              );
+              if (fetched?.original === undefined)
+                throw new Error("Repaint references need one fetched asset.");
+              fetched.original.url =
+                "https://source-user:repaint-source-secret@assets.example/reference.png";
+            },
+          }),
+        },
+        {
+          secret: "repaint-license-secret",
+          services: executableServices({
+            root,
+            commit: () => undefined,
+            assetManifest: (manifest) => {
+              manifest.assets[0]!.license.url =
+                "https://license-user:repaint-license-secret@licenses.example/terms";
+            },
+          }),
+        },
+      ];
       const digestAliasRoot = path.join(root, "digest-aliases");
       const digestAliasServices = executableServices({
         root: digestAliasRoot,
@@ -919,6 +950,31 @@ export const test_production_repaint_generator_adoption =
         "all preflight failures precede provider execution",
         providerExecutions,
         0,
+      );
+      const credentialReferenceFailures = await Promise.all(
+        credentialReferenceServices.map(({ services }) => repaint(services)),
+      );
+      TestValidator.equals(
+        "credential-bearing source and license URLs refuse before provider execution",
+        {
+          codes: credentialReferenceFailures.map(codeOf),
+          providerExecutions,
+          leaked: credentialReferenceFailures.some((result) =>
+            credentialReferenceServices.some(({ secret }) =>
+              result.diagnostics.some((entry) =>
+                entry.message.includes(secret),
+              ),
+            ),
+          ),
+        },
+        {
+          codes: [
+            "repaint-reference-manifest-invalid",
+            "repaint-reference-manifest-invalid",
+          ],
+          providerExecutions: 0,
+          leaked: false,
+        },
       );
       const served = await new AutoMovieProductionRepaintService(
         actualAdapter(selected.runtimeIdentity),
@@ -2186,6 +2242,27 @@ export const test_production_repaint_generator_adoption =
         "project revalidation accepts the exact current v4 receipt and terminal attempt identity",
         commitThroughProject(accepted.receipt),
         1,
+      );
+      TestValidator.predicate(
+        "stored receipt revalidation refuses credential-bearing source and license manifests",
+        credentialReferenceServices.every(({ services }) => {
+          try {
+            AutoMovieProductionProject.prototype.commitRepaintRendition.call(
+              services.project,
+              accepted.receipt!,
+              generatedBytes,
+            );
+            return false;
+          } catch (error) {
+            return (
+              error instanceof Error &&
+              error.message.includes("inadmissible source or license URL") &&
+              credentialReferenceServices.every(
+                ({ secret }) => error.message.includes(secret) === false,
+              )
+            );
+          }
+        }),
       );
       const projectRefuses = (receipt: IAutoMovieRepaintReceipt): boolean => {
         try {

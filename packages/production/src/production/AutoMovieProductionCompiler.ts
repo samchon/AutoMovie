@@ -128,6 +128,7 @@ import {
 import {
   assetAcquisitionIncomplete,
   assetProcessingOmitted,
+  assetUrlAdmissionRefusal,
 } from "./assetAcquisition";
 import { parseAutoMovieCaptionLanguage } from "./captionLanguage";
 import {
@@ -7542,6 +7543,20 @@ const compilerAssetInventory = (
     };
   }
 
+  const records = validation.data.assets;
+  validation.data.assets = [];
+  for (const asset of records) {
+    const refusal = assetUrlAdmissionRefusal(asset);
+    if (refusal === null) {
+      validation.data.assets.push(asset);
+      continue;
+    }
+    diagnostic(
+      "asset-provenance-incomplete",
+      asset.path,
+      `Asset "${asset.path}" ${refusal.field} URL is ${refusal.reason}. Use one credential-free HTTP(S) locator and correct the distribution ledger before compiling.`,
+    );
+  }
   const content = new Map(inputs.map((entry) => [entry.path, entry]));
   const paths = new Map<string, string>();
   const assets = validation.data.assets
@@ -7697,7 +7712,6 @@ const compilerAssetInventory = (
       isSha256Digest(asset.digest) === false ||
       assetAcquisitionIncomplete(asset) ||
       asset.license.identifier.trim().length === 0 ||
-      isHttpUrl(asset.license.url) === false ||
       asset.uses.length === 0 ||
       asset.uses.some(assetUseIncomplete) ||
       asset.processing.some(assetProcessingStepIncomplete)
@@ -8581,14 +8595,6 @@ const isCanonicalAssetPath = (value: string): boolean =>
 
 const isSha256Digest = (value: string): boolean =>
   /^sha256:[0-9a-f]{64}$/.test(value);
-
-const isHttpUrl = (value: string): boolean => {
-  try {
-    return ["http:", "https:"].includes(new URL(value).protocol);
-  } catch {
-    return false;
-  }
-};
 
 const isExternalModelAsset = (value: string): boolean =>
   [".gltf", ".glb", ".vrm"].includes(path.extname(value).toLowerCase());

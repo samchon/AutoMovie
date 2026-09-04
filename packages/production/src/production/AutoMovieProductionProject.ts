@@ -36,6 +36,7 @@ import {
   acceptanceAddressesShot,
   acceptanceCriterionShots,
 } from "./acceptanceScope";
+import { assetUrlAdmissionRefusal } from "./assetAcquisition";
 import { parseAutoMovieCaptureRuntimeIdentity } from "./captureRuntimeIdentity";
 import {
   canonicalAutoMovieJsonBytes,
@@ -3484,6 +3485,14 @@ export class AutoMovieProductionProject {
     if (validation.success === false)
       throw new Error(
         "Repaint asset manifest does not match its strict schema.",
+      );
+    if (
+      validation.data.assets.some(
+        (asset) => assetUrlAdmissionRefusal(asset) !== null,
+      )
+    )
+      throw new Error(
+        "Repaint asset manifest contains an inadmissible source or license URL.",
       );
     const seen = new Set<string>();
     const rolesByDigest = new Map<
