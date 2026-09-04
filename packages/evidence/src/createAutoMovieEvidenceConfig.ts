@@ -2440,25 +2440,41 @@ const resetTransitionHosts = (
   graph: IProductionGraph,
 ): readonly { path: string; source: string }[] => {
   if (graph.populationScope.mode !== "complete-production-reset") return [];
-  const files =
-    graph.kind === "film"
-      ? ["treatments", "scripts", "screenplays"].flatMap((layer) =>
-          walkProjectFiles(
-            graph,
-            path.join(graph.location, DOCS, layer),
-            ".md",
-          ),
-        )
-      : graph.populationScope.transition.kind === "library"
-        ? graph.populationScope.transition.reviewedPairs.flatMap((pair) => [
-            ...walkProjectFiles(
-              graph,
-              path.join(graph.location, DOCS, pair.design),
-              ".md",
-            ),
-            ...populationFiles(graph, SOURCES[pair.source].files, ".ts"),
-          ])
-        : [];
+  let files: readonly string[] = [];
+  if (graph.kind === "film")
+    files = ["treatments", "scripts", "screenplays"].flatMap((layer) =>
+      walkProjectFiles(graph, path.join(graph.location, DOCS, layer), ".md"),
+    );
+  else if (graph.populationScope.transition.kind === "library") {
+    const pairs: readonly unknown[] = Array.isArray(
+      graph.populationScope.transition.reviewedPairs,
+    )
+      ? graph.populationScope.transition.reviewedPairs
+      : [];
+    files = pairs.flatMap((value) => {
+      if (value === null || typeof value !== "object") return [];
+      const pair = value as { design?: string; source?: string };
+      if (
+        typeof pair.design !== "string" ||
+        typeof pair.source !== "string" ||
+        !Object.hasOwn(SOURCES, pair.source) ||
+        SOURCES[pair.source as SourceLayer].design !== pair.design
+      )
+        return [];
+      return [
+        ...walkProjectFiles(
+          graph,
+          path.join(graph.location, DOCS, pair.design),
+          ".md",
+        ),
+        ...populationFiles(
+          graph,
+          SOURCES[pair.source as SourceLayer].files,
+          ".ts",
+        ),
+      ];
+    });
+  }
   return [...new Set(files)].sort(compareCodeUnits).map((file) => ({
     path: posix(path.relative(graph.location, file)),
     source: fs.readFileSync(file, "utf8"),
