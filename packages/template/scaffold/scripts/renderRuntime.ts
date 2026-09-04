@@ -7,7 +7,6 @@ import {
   readAutoMovieProductionOwnedFile,
   runProductionRenderJob,
 } from "@automovie/production";
-import { createRequire } from "node:module";
 import path from "node:path";
 
 import { productionEvidence } from "../lint.config";
@@ -312,12 +311,6 @@ const executeProductionRenderCommand = async (
     authoringEvidence,
     captureCurrentChunkPointer: gcRuntime.captureCurrentChunkPointer,
     compareCodeUnits,
-    // A generated project is `"type": "module"`, so `require` is not defined in
-    // this scope and the bare call threw `ReferenceError` the moment anything
-    // reached it. It is a lazy field on the planning runtime, so `status`,
-    // `verify` and `finalize` never touched it and only `render gc` did, which
-    // is why one command failed while its siblings passed.
-    h264Entry: createRequire(import.meta.url).resolve("h264-mp4-encoder"),
     host: renderHost,
     output,
     planPath,
@@ -330,6 +323,7 @@ const executeProductionRenderCommand = async (
     stateRoot,
   });
   const encoderRuntime = createProductionRenderEncoderRuntime({
+    assertRuntimePackagesCurrent: renderHost.assertRuntimePackagesCurrent,
     createMp4File: renderHost.createMp4File,
     h264Module: renderHost.h264Module,
     preserveCleanup: preserveProductionEncoderCleanup,
@@ -367,6 +361,7 @@ const executeProductionRenderCommand = async (
     stateRoot,
   });
   const chunkCapture = createProductionRenderChunkCaptureRuntime({
+    assertRuntimePackagesCurrent: renderHost.assertRuntimePackagesCurrent,
     capture: renderHost.capture,
     captureCompleted: captureRenderGcTarget,
     capturePointer: gcRuntime.captureCurrentChunkPointer,
@@ -383,6 +378,7 @@ const executeProductionRenderCommand = async (
       state: renderObservations,
     },
     pid: renderHost.pid,
+    pngModule: renderHost.pngModule,
     productionId,
     publication: {
       publish: publishRenderChunkSnapshot,

@@ -1,3 +1,11 @@
+import { createRequire } from "node:module";
+
+import {
+  type IRuntimePackageSnapshot,
+  assertRuntimePackageSnapshotCurrent,
+  snapshotRuntimePackage,
+} from "./runtimePackageSnapshot";
+
 /**
  * One loaded module whose cache entry and package snapshot are one generation.
  */
@@ -141,6 +149,28 @@ export const loadRuntimePackageGeneration = <
   entry.state = "loaded";
   handle.assertCurrent();
   return handle;
+};
+
+const residentRequire = createRequire(import.meta.url);
+
+/** Snapshot and load one CommonJS entry before it can become resident. */
+export const loadResidentRuntimePackage = <Module>(props: {
+  entry?: string;
+  packageName: string;
+}): IRuntimePackageGenerationHandle<IRuntimePackageSnapshot, Module> => {
+  const snapshot = snapshotRuntimePackage({
+    entry: props.entry ?? residentRequire.resolve(props.packageName),
+    moduleClosure: true,
+    packageName: props.packageName,
+  });
+  return loadRuntimePackageGeneration({
+    key: `${snapshot.package}\0${snapshot.entry}`,
+    generation: snapshot.fingerprint,
+    snapshot,
+    assertCurrent: () => assertRuntimePackageSnapshotCurrent(snapshot),
+    observeCache: () => residentRequire.cache[snapshot.entry],
+    load: () => residentRequire(snapshot.entry) as Module,
+  });
 };
 
 class RuntimePackageGenerationOperationError extends AggregateError {}
