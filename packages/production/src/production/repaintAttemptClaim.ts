@@ -61,6 +61,18 @@ export type AutoMovieRepaintClaimedDispatch<T> =
 export class AutoMovieRepaintUnknownOutcomeError extends Error {}
 
 /**
+ * Refuse a malformed claim before it reaches a project-owned transaction.
+ *
+ * @evidence requirements/repaint/retries-seeds-and-variation.md#repaint-retry-request-boundary Keeps every admission entry point on the same exact request-prefix identity.
+ * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-repaint-attempt-selection Prevents a direct project caller from bypassing claim validation.
+ */
+export const assertAutoMovieRepaintAttemptClaim = (
+  claim: IAutoMovieRepaintAttemptClaim,
+): void => {
+  validatedClaim(claim);
+};
+
+/**
  * Reserve one exact next attempt before invoking an external repaint adapter.
  *
  * @evidence requirements/repaint/retries-seeds-and-variation.md#repaint-retry-request-boundary Prevents concurrent retries from dispatching the same immutable request prefix twice.

@@ -68,6 +68,7 @@ import {
   AutoMovieRepaintClaimAdmission,
   AutoMovieRepaintClaimSettlement,
   IAutoMovieRepaintAttemptClaim,
+  assertAutoMovieRepaintAttemptClaim,
 } from "./repaintAttemptClaim";
 import {
   IAutoMovieRepaintAttemptRecord,
@@ -1934,6 +1935,7 @@ export class AutoMovieProductionProject {
   public acquireRepaintAttemptClaim(
     claim: IAutoMovieRepaintAttemptClaim,
   ): AutoMovieRepaintClaimAdmission {
+    assertAutoMovieRepaintAttemptClaim(claim);
     const claimPath = repaintAttemptClaimPath(claim.requestId);
     let admission: AutoMovieRepaintClaimAdmission = {
       status: "prefix-changed",
@@ -2009,6 +2011,7 @@ export class AutoMovieProductionProject {
     claim: IAutoMovieRepaintAttemptClaim,
     settlement: AutoMovieRepaintClaimSettlement,
   ): number {
+    assertAutoMovieRepaintAttemptClaim(claim);
     const claimPath = repaintAttemptClaimPath(claim.requestId);
     return this.commitFiles(() => {
       const resident = this.readTrackedStateFile(claimPath);

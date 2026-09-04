@@ -629,6 +629,9 @@ export class AutoMovieProductionRepaintService {
             diagnostics: [],
           };
         } catch (error) {
+          const inputRaceMessage = safeRepaintInputRaceMessage(error);
+          if (inputRaceMessage !== null)
+            return failure("repaint-input-changed", inputRaceMessage);
           return failure(
             "repaint-commit-refused",
             safeRepaintDiagnosticMessage(
@@ -841,10 +844,7 @@ export class AutoMovieProductionRepaintService {
                 ).toISOString(),
                 maximumBytes: REPAINT_RAW_OUTPUT_MAXIMUM_BYTES,
               });
-              services.project.commitRepaintRawOutput(
-                publication,
-                inputCurrent,
-              );
+              services.project.commitRepaintRawOutput(publication);
               throw new AutoMovieRepaintAttemptError(
                 error.failureClass,
                 error.message,
@@ -915,10 +915,7 @@ export class AutoMovieProductionRepaintService {
                 ).toISOString(),
                 maximumBytes: REPAINT_RAW_OUTPUT_MAXIMUM_BYTES,
               });
-              services.project.commitRepaintRawOutput(
-                publication,
-                inputCurrent,
-              );
+              services.project.commitRepaintRawOutput(publication);
               availableOutput = {
                 digest: publication.receipt.digest,
                 bytes: publication.receipt.bytes,
@@ -1005,10 +1002,7 @@ export class AutoMovieProductionRepaintService {
                 ).toISOString(),
                 maximumBytes: REPAINT_RAW_OUTPUT_MAXIMUM_BYTES,
               });
-              services.project.commitRepaintRawOutput(
-                publication,
-                inputCurrent,
-              );
+              services.project.commitRepaintRawOutput(publication);
               availableOutput = {
                 digest: publication.receipt.digest,
                 bytes: publication.receipt.bytes,
@@ -1030,7 +1024,7 @@ export class AutoMovieProductionRepaintService {
           }
         },
         onAttempt: (attempt, observation) => {
-          services.project.commitRepaintAttempt(attempt, inputCurrent);
+          services.project.commitRepaintAttempt(attempt);
           const claim = claims.get(attempt.attemptId);
           if (claim === undefined)
             throw new Error(
