@@ -1,5 +1,4 @@
 import type * as HME from "h264-mp4-encoder";
-import type { createFile } from "mp4box";
 import { randomUUID } from "node:crypto";
 import fs from "node:fs";
 import type { PNG } from "pngjs";
@@ -8,8 +7,17 @@ import {
   type IProductionFrameCaptureRuntime,
   createProductionFrameCaptureRuntime,
 } from "./capture";
-import { loadResidentRuntimePackage } from "./runtimePackageGeneration";
+import {
+  type IRuntimePackageGenerationHandle,
+  loadResidentRuntimePackage,
+} from "./runtimePackageGeneration";
 import type { IRuntimePackageSnapshot } from "./runtimePackageSnapshot";
+
+type H264Module = typeof HME & {
+  default?: Pick<typeof HME, "createH264MP4Encoder">;
+};
+type Mp4Module = typeof import("mp4box");
+type PngModule = typeof import("pngjs") & { PNG: typeof PNG };
 
 export interface IProductionRenderHost {
   arch: string;
@@ -18,16 +26,22 @@ export interface IProductionRenderHost {
   captureMetrics: IProductionFrameCaptureRuntime["metrics"];
   closeCapture: IProductionFrameCaptureRuntime["close"];
   installDialogue: IProductionFrameCaptureRuntime["installDialogue"];
-  h264Module: typeof HME & {
-    default?: Pick<typeof HME, "createH264MP4Encoder">;
-  };
-  h264Snapshot: IRuntimePackageSnapshot;
-  createMp4File: typeof createFile;
+  h264Generation: IRuntimePackageGenerationHandle<
+    IRuntimePackageSnapshot,
+    H264Module
+  >;
+  mp4Generation: IRuntimePackageGenerationHandle<
+    IRuntimePackageSnapshot,
+    Mp4Module
+  >;
   filesystem: typeof fs;
   now: () => number;
   pid: number;
   platform: NodeJS.Platform;
-  pngModule: typeof import("pngjs") & { PNG: typeof PNG };
+  pngGeneration: IRuntimePackageGenerationHandle<
+    IRuntimePackageSnapshot,
+    PngModule
+  >;
   processAlive: (pid: number) => boolean;
   randomUuid: () => string;
   root: string;
@@ -38,20 +52,18 @@ export interface IProductionRenderHost {
 
 export interface IProductionRenderHostSystem {
   arch: string;
-  assertRuntimePackagesCurrent: () => void;
   capture: IProductionFrameCaptureRuntime["capture"];
   captureMetrics: IProductionFrameCaptureRuntime["metrics"];
   closeCapture: IProductionFrameCaptureRuntime["close"];
   installDialogue: IProductionFrameCaptureRuntime["installDialogue"];
-  h264Module: IProductionRenderHost["h264Module"];
-  h264Snapshot: IRuntimePackageSnapshot;
-  createMp4File: typeof createFile;
+  h264Generation: IProductionRenderHost["h264Generation"];
+  mp4Generation: IProductionRenderHost["mp4Generation"];
   filesystem: typeof fs;
   kill: (pid: number, signal: 0) => true;
   now: () => number;
   pid: number;
   platform: NodeJS.Platform;
-  pngModule: IProductionRenderHost["pngModule"];
+  pngGeneration: IProductionRenderHost["pngGeneration"];
   randomUuid: () => string;
   root: string;
   setExitCode: (value: number) => void;
@@ -77,19 +89,22 @@ export const createProductionRenderHost = (
   system: IProductionRenderHostSystem,
 ): IProductionRenderHost => ({
   arch: system.arch,
-  assertRuntimePackagesCurrent: system.assertRuntimePackagesCurrent,
+  assertRuntimePackagesCurrent: () => {
+    system.h264Generation.assertCurrent();
+    system.mp4Generation.assertCurrent();
+    system.pngGeneration.assertCurrent();
+  },
   capture: system.capture,
   captureMetrics: system.captureMetrics,
   closeCapture: system.closeCapture,
   installDialogue: system.installDialogue,
-  h264Module: system.h264Module,
-  h264Snapshot: system.h264Snapshot,
-  createMp4File: system.createMp4File,
+  h264Generation: system.h264Generation,
+  mp4Generation: system.mp4Generation,
   filesystem: system.filesystem,
   now: system.now,
   pid: system.pid,
   platform: system.platform,
-  pngModule: system.pngModule,
+  pngGeneration: system.pngGeneration,
   processAlive: (pid) => productionRenderProcessAlive(pid, system.kill),
   randomUuid: system.randomUuid,
   root: system.root,
@@ -108,35 +123,29 @@ export const createNodeProductionRenderHost = (): IProductionRenderHost =>
 export const createNodeProductionRenderHostWithCapture = (
   captureRuntime: IProductionFrameCaptureRuntime,
 ): IProductionRenderHost => {
-  const h264 = loadResidentRuntimePackage<IProductionRenderHost["h264Module"]>({
+  const h264 = loadResidentRuntimePackage<H264Module>({
     packageName: "h264-mp4-encoder",
   });
   const mp4 = loadResidentRuntimePackage<typeof import("mp4box")>({
     packageName: "mp4box",
   });
-  const png = loadResidentRuntimePackage<IProductionRenderHost["pngModule"]>({
+  const png = loadResidentRuntimePackage<PngModule>({
     packageName: "pngjs",
   });
   return createProductionRenderHost({
     arch: process.arch,
-    assertRuntimePackagesCurrent: () => {
-      h264.assertCurrent();
-      mp4.assertCurrent();
-      png.assertCurrent();
-    },
     capture: captureRuntime.capture,
     captureMetrics: captureRuntime.metrics,
     closeCapture: captureRuntime.close,
     installDialogue: captureRuntime.installDialogue,
-    h264Module: h264.module,
-    h264Snapshot: h264.snapshot,
-    createMp4File: mp4.module.createFile,
+    h264Generation: h264,
+    mp4Generation: mp4,
     filesystem: fs,
     kill: (pid, signal) => process.kill(pid, signal),
     now: Date.now,
     pid: process.pid,
     platform: process.platform,
-    pngModule: png.module,
+    pngGeneration: png,
     randomUuid: randomUUID,
     root: process.cwd(),
     setExitCode: (value) => {

@@ -546,7 +546,7 @@ export const createProductionRenderPlanningRuntime = (props: {
 
   const snapshotProductionEncoderIdentity = (fps: number) => {
     renderHost.assertRuntimePackagesCurrent();
-    const snapshot = renderHost.h264Snapshot;
+    const snapshot = renderHost.h264Generation.snapshot;
     const encoder: IAutoMovieProductionEncoderIdentity = {
       package: snapshot.package,
       version: snapshot.version,
