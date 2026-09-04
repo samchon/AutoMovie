@@ -13,6 +13,7 @@ import {
 import path from "node:path";
 
 import {
+  autoMovieExternalLocatorRefusal,
   canonicalAutoMovieJsonBytes,
   canonicalizeAutoMovieJson,
   compareCodeUnits,
@@ -63,6 +64,8 @@ export const canonicalAutoMovieRepaintGeneratorProvenance = (
     ]) === false ||
     isNonBlank(provenance.source) === false ||
     isNonBlank(provenance.license) === false ||
+    autoMovieExternalLocatorRefusal(provenance.source) !== null ||
+    autoMovieExternalLocatorRefusal(provenance.license) !== null ||
     canonicalAutoMovieExternalGeneratorTermsDate(provenance.termsCheckedAt) !==
       provenance.termsCheckedAt ||
     isNonBlank(provenance.cost) === false ||

@@ -133,6 +133,11 @@ import {
 } from "./assetAcquisition";
 import { parseAutoMovieCaptionLanguage } from "./captionLanguage";
 import {
+  canonicalizeAutoMovieCaptionText,
+  isAutoMovieWebVttIdentifier,
+  serializeAutoMovieWebVttSingleLineText,
+} from "./captionText";
+import {
   AUTOMOVIE_COMPILE_FINGERPRINT_PROTOCOL,
   IAutoMovieFingerprintField,
   canonicalAutoMovieJsonBytes,
@@ -5426,10 +5431,13 @@ const normalizeCaptionCues = (
     if (startFrame === null || endFrame === null) continue;
     if (
       cue.id.trim().length === 0 ||
+      isAutoMovieWebVttIdentifier(cue.id) === false ||
       ids.has(cue.id) ||
-      cue.text.trim().length === 0 ||
+      canonicalizeAutoMovieCaptionText(cue.text).trim().length === 0 ||
       parseAutoMovieCaptionLanguage(cue.language) === null ||
-      cue.speaker?.trim().length === 0 ||
+      (cue.speaker !== undefined &&
+        serializeAutoMovieWebVttSingleLineText(cue.speaker).trim().length ===
+          0) ||
       startFrame < priorEnd ||
       endFrame <= startFrame ||
       endFrame > totalFrames

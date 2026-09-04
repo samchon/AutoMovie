@@ -218,9 +218,7 @@ export const planProductionRenderGc = (props: {
     const path = canonicalRelativePath(candidate.path);
     const chunkPath = /^(proxy|final)\/chunks\/([0-9a-f]{64})$/u.exec(path);
     const pointerPath = /^(proxy|final)\/pointers\/([0-9a-f]{64})$/u.exec(path);
-    const treePath = /^(proxy|final)\/tmp\/([0-9a-f]{64})\.[^/]+$/u.exec(
-      path,
-    );
+    const treePath = /^(proxy|final)\/tmp\/([0-9a-f]{64})\.[^/]+$/u.exec(path);
     const ownedDigest =
       candidate.kind === "chunk"
         ? chunkPath?.[2]
@@ -297,13 +295,15 @@ export const planProductionRenderGc = (props: {
             state: "current" as const,
             authority: "none" as const,
             stage: "reference" as const,
-            reason: "the current plan or aggregate publication marks this exact target",
+            reason:
+              "the current plan or aggregate publication marks this exact target",
           }
         : {
             state: "verified-stale" as const,
             authority: "exact-remove" as const,
             stage: "reference" as const,
-            reason: "no current plan, authenticated chunk pair, cache generation, or publication references this exact target",
+            reason:
+              "no current plan, authenticated chunk pair, cache generation, or publication references this exact target",
           });
     const decision: IAutoMovieProductionRenderCleanupDecision = {
       candidate: normalized,
@@ -319,10 +319,7 @@ export const planProductionRenderGc = (props: {
       marked
     )
       retain.push(decision);
-    else if (
-      observation.state === "absent" &&
-      observation.authority === "none"
-    )
+    else if (observation.state === "absent" && observation.authority === "none")
       retain.push(decision);
     else if (
       observation.state === "verified-stale" &&
@@ -411,9 +408,7 @@ const isRenderCleanupState = (
 const isRenderCleanupAuthority = (
   value: unknown,
 ): value is AutoMovieProductionRenderCleanupAuthority =>
-  value === "none" ||
-  value === "exact-remove" ||
-  value === "exact-quarantine";
+  value === "none" || value === "exact-remove" || value === "exact-quarantine";
 
 const isRenderCleanupStage = (
   value: unknown,

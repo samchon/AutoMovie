@@ -390,9 +390,9 @@ export const currentRenderChunkPublicationProtectsTree = (props: {
   ) => IRenderChunkPublicationSnapshot | null;
   chunks: ReadonlyMap<AutoMovieContentDigest, IAutoMovieProductionRenderChunk>;
 }): boolean => {
-  const match = /^([0-9a-f]{64})\.[^.]+\.\d+$/u.exec(props.candidateName);
-  if (match === null) return false;
-  const digest = `sha256:${match[1]}` as AutoMovieContentDigest;
+  const identity = renderChunkTemporaryTreeIdentity(props.candidateName);
+  if (identity === null) return false;
+  const digest = `sha256:${identity.digest}` as AutoMovieContentDigest;
   const chunk = props.chunks.get(digest);
   if (chunk === undefined) return false;
   try {

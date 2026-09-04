@@ -235,7 +235,11 @@ export const createProductionRenderGarbageRuntime = (props: {
       )) {
         const chunk = tierChunks.get(pointer.candidate.digest!);
         if (tierPlan === undefined || chunk === undefined) continue;
-        const inspection = props.inspectChunk(tierPlan, chunk, pointer.snapshot!);
+        const inspection = props.inspectChunk(
+          tierPlan,
+          chunk,
+          pointer.snapshot!,
+        );
         if (inspection.finding.state === "current") continue;
         const observation = {
           state: inspection.finding.state,
@@ -258,7 +262,10 @@ export const createProductionRenderGarbageRuntime = (props: {
       for (const entry of publicationInventory.entries) {
         candidates.push(entry.candidate);
         if (entry.snapshot !== null)
-          candidateSnapshots.set(gcCandidateKey(entry.candidate), entry.snapshot);
+          candidateSnapshots.set(
+            gcCandidateKey(entry.candidate),
+            entry.snapshot,
+          );
       }
       for (const retained of currentPublicationPaths)
         retainedChunkPaths.add(retained);
@@ -344,8 +351,7 @@ export const createProductionRenderGarbageRuntime = (props: {
       for (const entry of renderHost.filesystem
         .readdirSync(proxyRoot, { withFileTypes: true })
         .sort((left, right) => compareCodeUnits(left.name, right.name))) {
-        if (/^[0-9a-f]{64}$/u.test(entry.name) === false)
-          continue;
+        if (/^[0-9a-f]{64}$/u.test(entry.name) === false) continue;
         const target = path.join(proxyRoot, entry.name);
         const relative = normalizeSlash(path.relative(renderRoot, target));
         const logical = `publication/${relative}`;
@@ -492,8 +498,7 @@ export const createProductionRenderGarbageRuntime = (props: {
             state: "unavailable",
             authority: "none",
             stage: "capture",
-            reason:
-              "the publication target could not be captured consistently",
+            reason: "the publication target could not be captured consistently",
           };
           candidates.push(candidate);
           continue;

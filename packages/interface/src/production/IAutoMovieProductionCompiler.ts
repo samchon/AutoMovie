@@ -150,7 +150,9 @@ export const AUTOMOVIE_DIAGNOSTIC_CODES = [
   "design-range-invalid",
   "design-reference-active",
   "design-reference-asset-missing",
+  "design-reference-container-invalid",
   "design-reference-duplicate",
+  "design-reference-encoding-invalid",
   "design-reference-evidence-dangling",
   "design-reference-frame-bounds-mismatch",
   "design-reference-frame-page-missing",
@@ -1370,13 +1372,13 @@ export interface IAutoMovieProductionPublicationIdentity {
    * @evidence requirements/rendering/scope-and-artifact-identity.md#rendering-artifact-invalidation Versions the identity whose changes invalidate prior outputs.
    * @evidence specifications/editorial-render-and-delivery/delivery-package-provenance-and-publication.md#spec-delivery-provenance-integrity Closes the recomputation protocol.
    */
-  protocolVersion: "automovie.production-publication.v3";
+  protocolVersion: "automovie.production-publication.v4";
   /**
    * Persisted render-plan schema.
    * @evidence requirements/rendering/scope-and-artifact-identity.md#rendering-artifact-invalidation Invalidates publications across plan-schema changes.
    * @evidence specifications/editorial-render-and-delivery/delivery-package-provenance-and-publication.md#spec-delivery-provenance-integrity Identifies the plan projection being recomputed.
    */
-  planVersion: 3;
+  planVersion: 4;
   /**
    * Production namespace whose plan produced the publication.
    * @evidence requirements/production-design/continuity-change-and-deliverables.md#production-design-deliverable-provenance Joins delivery provenance to its production.
@@ -1502,6 +1504,8 @@ export interface IAutoMovieProductionPublicationIdentity {
     audio: AutoMovieContentDigest;
     /** Canonical source-audio inventory digest. */
     audioAssets: AutoMovieContentDigest;
+    /** Canonical film-effect runtime digest. */
+    effects: AutoMovieContentDigest;
   };
   /**
    * Digest of the canonical identity fields above.

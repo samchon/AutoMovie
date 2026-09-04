@@ -1,8 +1,8 @@
+import type { AutoMovieProductionLanguage } from "./AutoMovieProductionLanguage";
 import type {
   AutoMovieEvidenceStage,
   IAutoMovieEvidenceConfigProps,
 } from "./createAutoMovieEvidenceConfig";
-import type { AutoMovieProductionLanguage } from "./AutoMovieProductionLanguage";
 
 const DISABLED: AutoMovieEvidenceStage = "disabled";
 

@@ -32,9 +32,7 @@ import {
   createProductionRenderChunkCaptureRuntime,
   createProductionRenderChunkLeaseRuntime,
 } from "./renderChunkRuntime";
-import {
-  publishRenderChunkSnapshot,
-} from "./renderChunkSnapshot";
+import { publishRenderChunkSnapshot } from "./renderChunkSnapshot";
 import {
   type IProductionRenderCommand,
   runProductionRenderCommand,
@@ -284,8 +282,6 @@ const executeProductionRenderCommand = async (
       design?.sound?.dialogueSynthesis ?? null,
     ),
     host: renderHost,
-    inspectChunk: (plan, chunk, pointer) =>
-      planningRuntime.inspectChunkPublication(plan, chunk, pointer),
     liveWearableSoftBodies: design?.simulation?.liveWearableSoftBodies ?? [],
     productionStateRoot,
     progress: renderProgress,
@@ -298,6 +294,8 @@ const executeProductionRenderCommand = async (
     compareCodeUnits,
     finalTier: renderTiers.final,
     host: renderHost,
+    inspectChunk: (plan, chunk, pointer) =>
+      planningRuntime.inspectChunkPublication(plan, chunk, pointer),
     productionId,
     productionStateRoot,
     proxyTier: renderTiers.proxy,

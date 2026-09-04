@@ -15,7 +15,6 @@ export * from "./parseAutoMovieEvidenceMarkdown";
 export * from "./measureAutoMovieAuthoredText";
 export * from "./inspectAutoMovieEvidenceReviewAlarms";
 export * from "./inspectAutoMovieEvidenceTopology";
-export * from "./parseAutoMovieEvidenceMarkdown";
 export * from "./parseAutoMovieEvidenceSyntax";
 export * from "./readAutoMovieContractRules";
 export * from "./readAutoMovieProductionEvidence";

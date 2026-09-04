@@ -21,7 +21,7 @@ const digestValue = (value: unknown): AutoMovieContentDigest =>
 const publicationBasis = (
   plan: IAutoMovieProductionRenderJobPlan,
 ): PublicationBasis => ({
-  protocolVersion: "automovie.production-publication.v3",
+  protocolVersion: "automovie.production-publication.v4",
   planVersion: plan.version,
   productionId: plan.productionId,
   compileFingerprint: plan.compileFingerprint,
@@ -46,6 +46,7 @@ const publicationBasis = (
     captions: digestValue(plan.tracks.captions),
     audio: digestValue(plan.tracks.audio),
     audioAssets: digestValue(plan.tracks.audioAssets),
+    effects: digestValue(plan.tracks.effects),
   },
 });
 

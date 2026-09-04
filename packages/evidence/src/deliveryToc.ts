@@ -38,7 +38,7 @@ export const planAutoMovieDeliveryToc = (props: {
   indexSource: string;
   units: readonly { path: string; source: string }[];
 }): IAutoMovieDeliveryTocResult => {
-  const h1 = heading(props.indexSource, props.indexPath);
+  heading(props.indexSource, props.indexPath);
   const units = [...props.units].sort((left, right) =>
     left.path < right.path ? -1 : left.path > right.path ? 1 : 0,
   );

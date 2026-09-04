@@ -4,6 +4,30 @@ import { createHash } from "node:crypto";
 import { decodeAutoMovieUtf8 } from "./strictUtf8";
 
 /**
+ * Why an external locator cannot cross the credential boundary.
+ *
+ * Non-URL identifiers remain valid inputs. A caller that requires a URL owns
+ * its protocol and syntax policy separately from this credential boundary.
+ *
+ * @evidence requirements/external-inputs/credentials-rights-and-provenance.md#external-credential-separation Detects credentials and malformed absolute URLs before source and license locators reach provenance.
+ * @evidence specifications/interchange-and-adoption/provenance-rights-and-secrets.md#interchange-secret-reference-boundary Implements the shared external-locator boundary without rejecting non-URL license identifiers.
+ */
+export const autoMovieExternalLocatorRefusal = (
+  value: string,
+): "credential-bearing" | "malformed-absolute-url" | null => {
+  try {
+    const parsed = new URL(value);
+    return parsed.username.length !== 0 || parsed.password.length !== 0
+      ? "credential-bearing"
+      : null;
+  } catch {
+    return /^[a-z][a-z0-9+.-]*:\/\//iu.test(value)
+      ? "malformed-absolute-url"
+      : null;
+  }
+};
+
+/**
  * Versioned production-compiler input protocol.
  */
 export const AUTOMOVIE_COMPILE_FINGERPRINT_PROTOCOL =
@@ -486,6 +510,11 @@ const assertScalarString = (value: string, role: string): void => {
   for (let index = 0; index < value.length; ++index) {
     const unit = value.charCodeAt(index);
     if (unit >= 0xd800 && unit <= 0xdbff) {
+      if (index + 1 >= value.length)
+        throw new AutoMovieCanonicalJsonError(
+          "non-scalar-string",
+          `${role} ends with a lone high surrogate`,
+        );
       const trail = value.charCodeAt(index + 1);
       if (trail < 0xdc00 || trail > 0xdfff)
         throw new AutoMovieCanonicalJsonError(

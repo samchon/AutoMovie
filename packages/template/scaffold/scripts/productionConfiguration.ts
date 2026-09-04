@@ -19,6 +19,7 @@ import {
   type IAutoMovieProductionRenderTier,
   assertAutoMovieExternalGeneratorTermsAt,
   assertAutoMovieRepaintExecutionPolicy,
+  autoMovieExternalLocatorRefusal,
   canonicalizeAutoMovieJson,
 } from "@automovie/production";
 
@@ -889,9 +890,18 @@ const readExternalGeneratorProvenance = <
   ]);
   if (consumer.kind !== kind)
     throw new Error(`${label}.consumer.kind must be "${kind}".`);
+  const source = nonBlank(value.source, `${label}.source`);
+  const license = nonBlank(value.license, `${label}.license`);
+  if (
+    autoMovieExternalLocatorRefusal(source) !== null ||
+    autoMovieExternalLocatorRefusal(license) !== null
+  )
+    throw new Error(
+      `${label} source and license locators must not contain credentials.`,
+    );
   return {
-    source: nonBlank(value.source, `${label}.source`),
-    license: nonBlank(value.license, `${label}.license`),
+    source,
+    license,
     termsCheckedAt,
     cost: nonBlank(value.cost, `${label}.cost`),
     consumer: {

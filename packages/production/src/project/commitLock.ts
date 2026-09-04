@@ -6,6 +6,7 @@ import { autoMovieFileSystem as fileSystem } from "./fileSystem";
 import {
   type IAutoMovieLocalProcessOwner,
   currentAutoMovieLocalProcessOwner,
+  currentAutoMovieLocalProcessQuery,
   isAutoMovieLocalProcessOwner,
   observeAutoMovieLocalProcessOwner,
 } from "./localProcessOwner";
@@ -200,7 +201,7 @@ const reclaimCommitLock = (lockPath: string, token: string): void => {
   try {
     const resident = readCommitLockSnapshot(lockPath);
     if (resident !== null && resident.token === token)
-      held.set(lockPath, { token, depth: 1 });
+      held.set(lockPath, { token, depth: 0 });
   } catch {
     // nothing resident to reclaim
   }
@@ -284,7 +285,10 @@ export const releaseCommitLock = (
   const current = held.get(lockPath);
   let owned = false;
   if (current !== undefined && current.token === token) {
-    if (options.retire !== true && --current.depth !== 0) return;
+    if (options.retire !== true && current.depth > 1) {
+      --current.depth;
+      return;
+    }
     held.delete(lockPath);
     owned = true;
   }
@@ -322,7 +326,9 @@ export const releaseCommitLock = (
       if (owned) reclaimCommitLock(lockPath, token);
     }
   } catch {
-    // already gone, nothing of ours to release
+    // A read failure proves neither absence nor replacement. Recover the
+    // process-local entry only if a fresh exact read still finds our token.
+    if (owned) reclaimCommitLock(lockPath, token);
   }
 };
 
@@ -444,7 +450,7 @@ const commitLockOwnerState = (
   observeAutoMovieLocalProcessOwner({
     owner,
     current: currentAutoMovieLocalProcessOwner(),
-    query: (pid, signal) => process.kill(pid, signal),
+    query: currentAutoMovieLocalProcessQuery(),
   });
 
 interface ICommitLockInspection {
@@ -548,7 +554,7 @@ export const describeCommitLockHolder = (
     case "absent":
       return `"${holder.path}" is held by process ${owner.pid} on this host${taken}, and no process holds that id, so the session that took it is gone`;
     case "elsewhere":
-      return `"${holder.path}" is held by process ${owner.pid} on host "${owner.host}"${taken}; this host's process table cannot say whether that session is still running`;
+      return `"${holder.path}" is held by process ${owner.pid} on host ${JSON.stringify(owner.host)}${taken}; this host's process table cannot say whether that session is still running`;
   }
 };
 

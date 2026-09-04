@@ -1,4 +1,8 @@
 import type { AutoMovieContentDigest } from "@automovie/interface";
+import type {
+  PreTrainedTokenizer,
+  StyleTextToSpeech2Model,
+} from "@huggingface/transformers";
 import { pathToFileURL } from "node:url";
 import {
   Worker,
@@ -7,6 +11,7 @@ import {
   workerData,
 } from "node:worker_threads";
 
+import { loadKokoroRuntime } from "./loadKokoroRuntime";
 import {
   type IRuntimePackageSnapshot,
   type RuntimePackageAssetSelection,
@@ -86,16 +91,17 @@ interface IKokoroRuntime {
 
 interface IKokoroModule {
   KokoroTTS: {
-    from_pretrained(
-      model: string,
-      options: { device: "cpu"; dtype: "q8" },
-    ): Promise<IKokoroRuntime>;
+    new (
+      model: StyleTextToSpeech2Model,
+      tokenizer: PreTrainedTokenizer,
+    ): IKokoroRuntime;
   };
   TextSplitterStream: new () => IKokoroTextSplitter;
 }
 
 interface ITransformersModule {
-  env: { cacheDir?: string };
+  AutoTokenizer: typeof import("@huggingface/transformers").AutoTokenizer;
+  StyleTextToSpeech2Model: typeof import("@huggingface/transformers").StyleTextToSpeech2Model;
 }
 
 /**
@@ -198,6 +204,7 @@ const serveKokoroGenerationWorker = async (
     data.protocol !== "automovie.kokoro-generation-worker.v1"
   )
     throw new Error("Kokoro generation worker bootstrap is invalid.");
+  const port = parentPort;
   const snapshots = data.packages.map((declared) => {
     const snapshot = snapshotRuntimePackage({
       assets: declared.assets,
@@ -240,40 +247,30 @@ const serveKokoroGenerationWorker = async (
     ) as Promise<ITransformersModule>,
   ]);
   assertCurrent();
-  transformers.env.cacheDir = data.cacheRoot;
-  const hostFetch = globalThis.fetch.bind(globalThis);
-  globalThis.fetch = async (input, init) => {
-    const source =
-      typeof input === "string"
-        ? input
-        : input instanceof URL
-          ? input.href
-          : input.url;
-    const marker = `huggingface.co/${data.selection.model}/resolve/`;
-    const markerIndex = source.indexOf(marker);
-    if (markerIndex < 0) return hostFetch(input, init);
-    const suffix = source.slice(markerIndex + marker.length);
-    const separator = suffix.indexOf("/");
-    if (separator < 0) throw new Error("Kokoro model URL has no asset path.");
-    const pinned =
-      source.slice(0, markerIndex + marker.length) +
-      data.selection.modelRevision +
-      suffix.slice(separator);
-    const request =
-      typeof input === "object" &&
-      input !== null &&
-      "url" in input &&
-      input instanceof Request
-        ? new Request(pinned, input)
-        : pinned;
-    return hostFetch(request, init);
-  };
-  const runtime = await kokoro.KokoroTTS.from_pretrained(data.selection.model, {
-    dtype: data.selection.dtype,
+  const runtime = await loadKokoroRuntime({
+    cacheRoot: data.cacheRoot,
     device: data.selection.device,
+    dtype: data.selection.dtype,
+    factories: {
+      construct: (model, tokenizer) => new kokoro.KokoroTTS(model, tokenizer),
+      loadModel: async (model, options) => {
+        const loaded =
+          await transformers.StyleTextToSpeech2Model.from_pretrained(
+            model,
+            options,
+          );
+        if (loaded instanceof transformers.StyleTextToSpeech2Model === false)
+          throw new Error("Kokoro loader returned an unexpected model class.");
+        return loaded;
+      },
+      loadTokenizer: (model, options) =>
+        transformers.AutoTokenizer.from_pretrained(model, options),
+    },
+    model: data.selection.model,
+    revision: data.selection.modelRevision,
   });
   assertCurrent();
-  parentPort.postMessage({
+  port.postMessage({
     id: 0,
     kind: "ready",
   } satisfies KokoroWorkerResponse);
@@ -282,7 +279,7 @@ const serveKokoroGenerationWorker = async (
     try {
       if (request.kind === "close") {
         assertCurrent();
-        parentPort.postMessage({
+        port.postMessage({
           id: request.id,
           kind: "closed",
         } satisfies KokoroWorkerResponse);
@@ -303,13 +300,13 @@ const serveKokoroGenerationWorker = async (
           sampleRate: chunk.audio.sampling_rate,
         });
       assertCurrent();
-      parentPort.postMessage({
+      port.postMessage({
         chunks,
         id: request.id,
         kind: "synthesized",
       } satisfies KokoroWorkerResponse);
     } catch (error) {
-      parentPort.postMessage({
+      port.postMessage({
         id: request.id,
         kind: "failed",
         message: error instanceof Error ? error.message : String(error),
@@ -317,7 +314,7 @@ const serveKokoroGenerationWorker = async (
     }
   };
   let requests = Promise.resolve();
-  parentPort.on("message", (request: KokoroWorkerRequest) => {
+  port.on("message", (request: KokoroWorkerRequest) => {
     requests = requests.then(
       () => respond(request),
       () => respond(request),

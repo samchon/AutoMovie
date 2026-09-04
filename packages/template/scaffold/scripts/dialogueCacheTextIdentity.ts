@@ -52,12 +52,6 @@ export type IProductionDialogueCacheFinding =
       cached: IValidatedProductionDialogueCache;
     }
   | {
-      status: "stale";
-      identity: IProductionDialogueCacheIdentity;
-      reason: string;
-      snapshot: IDialogueCacheSnapshot;
-    }
-  | {
       status: "integrity-failed";
       identity: IProductionDialogueCacheIdentity;
       reason: string;
@@ -131,6 +125,13 @@ export const inspectProductionDialogueCache = (props: {
     selection: props.selection,
     snapshot,
   });
+  if (validated.status === "stale")
+    return {
+      status: "integrity-failed",
+      identity: props.identity,
+      reason: `current-target-${validated.reason}`,
+      snapshot,
+    };
   return { ...validated, identity: props.identity, snapshot };
 };
 

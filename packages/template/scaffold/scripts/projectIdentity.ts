@@ -1,4 +1,7 @@
-import { AutoMovieProductionProject } from "@automovie/production";
+import {
+  AutoMovieProductionProject,
+  parseAutoMovieStructuredJson,
+} from "@automovie/production";
 import fs from "node:fs";
 import path from "node:path";
 
@@ -55,9 +58,9 @@ export const selectAutoMovieProjectProductionId = (props: {
  */
 export const readAutoMovieProjectProductionId = (root: string): string => {
   const file = path.join(root, "package.json");
-  let raw: string;
+  let raw: Uint8Array;
   try {
-    raw = fs.readFileSync(file, "utf8");
+    raw = fs.readFileSync(file);
   } catch {
     throw new Error(
       `Project manifest "${file}" is unreadable. Run project scripts from a generated AutoMovie project root.`,
@@ -65,7 +68,7 @@ export const readAutoMovieProjectProductionId = (root: string): string => {
   }
   let parsed: unknown;
   try {
-    parsed = JSON.parse(raw) as unknown;
+    parsed = parseAutoMovieStructuredJson({ record: file, bytes: raw });
   } catch {
     throw new Error(
       `Project manifest "${file}" is not valid JSON. Repair it before opening the production.`,
@@ -112,7 +115,7 @@ const hasProductionOwnedState = (root: string): boolean => {
   for (const directory of [
     path.join(automovie, "productions"),
     path.join(root, "generated"),
-    path.join(root, "render"),
+    path.join(root, "renders"),
   ])
     if (
       fs.existsSync(directory) &&

@@ -10,7 +10,11 @@ import {
 } from "@automovie/interface";
 
 import { digestAutoMovieBytes } from "./contentIdentity";
-import { inspectDesignReferenceAsset } from "./inspectDesignReferenceAsset";
+import {
+  AutoMovieDesignReferenceContainerError,
+  inspectAutoMovieDesignReferenceContainer,
+} from "./designReferenceContainer";
+import { AutoMovieUtf8Error } from "./strictUtf8";
 
 /** Containers that carry exactly one page, so no frame may cite a second. */
 const SINGLE_PAGE_MEDIA = new Set(["image/png", "image/jpeg", "image/svg+xml"]);
@@ -129,21 +133,44 @@ export const designReferenceDiagnostics = (props: {
       continue;
     }
 
-    let inspected;
+    let inspected: {
+      media: IAutoMovieDesignReference["media"];
+      bounds:
+        | { status: "measured"; width: number; height: number }
+        | { status: "unsupported"; reason: string };
+    };
     try {
-      inspected = inspectDesignReferenceAsset({
+      const container = inspectAutoMovieDesignReferenceContainer({
         path: reference.asset,
         bytes,
       });
+      if (container === null)
+        throw new Error(
+          `Design reference "${reference.asset}" is not a supported parser-confirmed PNG, JPEG, SVG, PDF, or DXF container.`,
+        );
+      inspected = {
+        media: container.media,
+        bounds:
+          "width" in container && "height" in container
+            ? {
+                status: "measured",
+                width: container.width,
+                height: container.height,
+              }
+            : {
+                status: "unsupported",
+                reason: `The ${container.media} parser confirms the container but does not expose a source extent.`,
+              },
+      };
     } catch (error) {
-      // Precondition rather than a defensive branch: every throw site in
-      // `inspectDesignReferenceAsset` is `new Error(...)`, so widening this to
-      // `error instanceof Error ? ... : String(error)` would add an arm no
-      // input can reach and no test could ever pin.
       diagnostic(
-        "design-reference-media-unsupported",
+        error instanceof AutoMovieUtf8Error
+          ? "design-reference-encoding-invalid"
+          : error instanceof AutoMovieDesignReferenceContainerError
+            ? "design-reference-container-invalid"
+            : "design-reference-media-unsupported",
         reference.id,
-        `${(error as Error).message} Convert the reference to a registrable container before citing it.`,
+        `${error instanceof Error ? error.message : String(error)} Convert the reference to a registrable container before citing it.`,
       );
       continue;
     }

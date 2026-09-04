@@ -1,7 +1,7 @@
 import {
   type IAutoMovieEvidenceConfigProps,
-  createBlankAutoMovieProductionEvidence,
   createAutoMovieEvidenceConfig,
+  createBlankAutoMovieProductionEvidence,
   evidence,
 } from "@automovie/evidence";
 import type { ITtscLintConfig } from "@ttsc/lint";

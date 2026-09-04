@@ -1,5 +1,6 @@
-import { PNG } from "pngjs";
+import type { PNG } from "pngjs";
 
+import { residentPngJs } from "./residentCodecs";
 import { decodeAutoMovieUtf8 } from "./strictUtf8";
 
 /** Parser-confirmed family and any extent carried by the admitted container. */
@@ -76,7 +77,9 @@ const inspectPng = (props: {
 }): IAutoMovieDesignReferenceContainer => {
   let decoded: PNG;
   try {
-    decoded = PNG.sync.read(Buffer.from(props.bytes), { checkCRC: true });
+    decoded = residentPngJs().PNG.sync.read(Buffer.from(props.bytes), {
+      checkCRC: true,
+    });
   } catch (error) {
     throw invalid(props.path, "PNG", "closure", error);
   }

@@ -32,6 +32,7 @@ export * from "./production/linkProductionSource";
 export * from "./production/libraryReviewEvidenceConsumer";
 export * from "./production/libraryArtifactTargets";
 export * from "./production/libraryContributionContract";
+export * from "./production/libraryProjectState";
 export * from "./production/materializeProduction";
 export * from "./production/probeProductionMedia";
 export * from "./production/productionPngPicture";

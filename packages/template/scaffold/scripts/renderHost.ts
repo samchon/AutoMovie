@@ -50,7 +50,6 @@ export interface IProductionRenderHost {
     IRuntimePackageSnapshot,
     PngModule
   >;
-  processAlive: (pid: number) => boolean;
   observeProcessOwner: (
     owner: unknown,
   ) => AutoMovieLocalProcessOwnerObservation;
@@ -117,7 +116,6 @@ export const createProductionRenderHost = (
     observeProcessOwner: (owner) =>
       productionRenderProcessOwnerObservation(owner, system.owner, system.kill),
     pngGeneration: system.pngGeneration,
-    processAlive: (pid) => productionRenderProcessAlive(pid, system.kill),
     randomUuid: system.randomUuid,
     root: system.root,
     setExitCode: system.setExitCode,

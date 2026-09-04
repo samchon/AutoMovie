@@ -20,6 +20,19 @@ export const serializeAutoMovieWebVttCueText = (value: string): string =>
     .map((line) => (line.length === 0 ? "<c></c>" : escapeWebVttText(line)))
     .join("\n");
 
+/** Preserve one WebVTT header or cue identifier without text escaping. */
+export const serializeAutoMovieWebVttIdentifier = (value: string): string => {
+  if (isAutoMovieWebVttIdentifier(value) === false)
+    throw new Error(
+      "WebVTT header and cue identifiers must not contain a line break or -->.",
+    );
+  return value;
+};
+
+/** Whether a string can be preserved verbatim as a WebVTT identifier. */
+export const isAutoMovieWebVttIdentifier = (value: string): boolean =>
+  /[\r\n]/u.test(value) === false && value.includes("-->") === false;
+
 /**
  * Serialize an identifier or annotation that must remain on one WebVTT line.
  */

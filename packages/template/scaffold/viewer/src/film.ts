@@ -155,10 +155,11 @@ const renderLayer = (
 function renderFilm(time: number, pass: AutoMovieGuidePass): void {
   if (Number.isFinite(time) === false || time < 0)
     throw new Error("Film seek time must be finite and non-negative.");
-  const frame = Math.min(
-    timeline.totalFrames - 1,
-    Math.floor(time * timeline.fps),
-  );
+  const frame = Math.floor(time * timeline.fps);
+  if (frame >= timeline.totalFrames)
+    throw new Error(
+      `Film seek time ${time} resolves outside the ${timeline.totalFrames}-frame timeline.`,
+    );
   const sample = sampleProductionRenderFrame(timeline, frame);
   const layers = productionRenderLayersForPass(sample, pass);
   const renderer = viewerRendererRef.current;

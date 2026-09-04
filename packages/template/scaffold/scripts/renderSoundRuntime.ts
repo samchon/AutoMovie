@@ -120,24 +120,24 @@ export const runWithProductionRuntimeClosure = async <Output>(
   operation: () => Output | Promise<Output>,
 ): Promise<Output> => {
   assertCurrent();
-  let failure: unknown;
+  let failure: { error: unknown } | undefined;
   let output: Output | undefined;
   try {
     output = await operation();
   } catch (error) {
-    failure = error;
+    failure = { error };
   }
   try {
     assertCurrent();
   } catch (closureFailure) {
     if (failure === undefined) throw closureFailure;
     throw new ProductionRuntimeClosureError(
-      [failure, closureFailure],
+      [failure.error, closureFailure],
       "Production runtime closure changed after the operation failed.",
-      { cause: failure },
+      { cause: failure.error },
     );
   }
-  if (failure !== undefined) throw failure;
+  if (failure !== undefined) throw failure.error;
   return output!;
 };
 
@@ -292,6 +292,7 @@ export const createProductionSoundRuntime = (props: {
     bytes: Uint8Array,
   ): {
     durationSeconds: number;
+    sourceFrames: number;
     sampleRate: number;
     channels: number;
   } | null => {
@@ -315,6 +316,9 @@ export const createProductionSoundRuntime = (props: {
     if (value?.kind !== "placeholder-audio-stem") return null;
     if (
       Number.isFinite(value.durationSeconds) === false ||
+      Number.isSafeInteger(value.durationSeconds! * value.sampleRate!) ===
+        false ||
+      value.durationSeconds! * value.sampleRate! <= 0 ||
       Number.isSafeInteger(value.sampleRate) === false ||
       Number.isSafeInteger(value.channels) === false ||
       value.sampleRate !== 48_000 ||
@@ -325,6 +329,7 @@ export const createProductionSoundRuntime = (props: {
       );
     return {
       durationSeconds: value.durationSeconds!,
+      sourceFrames: value.durationSeconds! * value.sampleRate!,
       sampleRate: value.sampleRate,
       channels: value.channels,
     };
@@ -368,6 +373,7 @@ export const createProductionSoundRuntime = (props: {
             path: asset,
             digest,
             durationSeconds: decoded.durationSeconds,
+            sourceFrames: decoded.sourceFrames,
             sampleRate: decoded.sourceSampleRate,
             channels: decoded.sourceChannels,
             kind: "wave",
@@ -699,7 +705,7 @@ export const createProductionSoundRuntime = (props: {
     line: string,
     finding: Exclude<
       IProductionDialogueCacheFinding,
-      { status: "absent" | "current" | "stale" }
+      { status: "absent" | "current" }
     >,
   ): Error =>
     new ProductionDialogueCacheObservationError(
@@ -817,7 +823,7 @@ export const createProductionSoundRuntime = (props: {
           productionDialogueCacheIdentity({
             cacheRoot,
             selection,
-            text: identity.requestText,
+            text: line.text,
             language: line.language,
             speaker: line.speaker ?? null,
             runtimeAssets: assets,
@@ -835,8 +841,7 @@ export const createProductionSoundRuntime = (props: {
                 captureExistingDialogueCache(cacheRoot, identity.path),
             });
             if (finding.status === "current") return finding.cached;
-            if (finding.status === "absent" || finding.status === "stale")
-              return undefined;
+            if (finding.status === "absent") return undefined;
             throw dialogueCacheObservationFailure(line.id, finding);
           },
           runtimeAssets: (loaded) => loaded.runtimeAssets,
@@ -860,7 +865,7 @@ export const createProductionSoundRuntime = (props: {
           let sourceSampleRate: number | undefined;
           let sourceOffset = 0;
           const generated = await loadedRuntime.runtime.synthesize({
-            text: line.text,
+            text: identity.requestText,
             voice: selection.voice,
             speed: selection.speed,
           });
@@ -1107,10 +1112,6 @@ export const createProductionSoundRuntime = (props: {
         read: () => captureExistingDialogueCache(cacheRoot, identity.path),
       });
       if (finding.status === "absent") return [];
-      if (finding.status === "stale") {
-        dialogueSnapshots.push(finding.snapshot);
-        return [`audio-cache/kokoro/${identity.key.slice(7)}`];
-      }
       if (finding.status !== "current")
         throw dialogueCacheObservationFailure(line.id, finding);
       dialogueSnapshots.push(finding.snapshot);

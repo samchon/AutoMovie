@@ -174,15 +174,16 @@ export const loadResidentRuntimePackage = <Module>(props: {
       return module === undefined ? [] : ([[entry, module]] as const);
     });
     if (current.length === 0) return undefined;
+    const expected = admitted;
     if (
-      admitted !== undefined &&
-      current.length === admitted.length &&
+      expected !== undefined &&
+      current.length === expected.length &&
       current.every(
         ([entry, module], index) =>
-          admitted![index]![0] === entry && admitted[index]![1] === module,
+          expected[index]![0] === entry && expected[index]![1] === module,
       )
     )
-      return admitted;
+      return expected;
     admitted = current;
     return admitted;
   };
@@ -224,6 +225,7 @@ export const runRuntimePackageGeneration = async <Snapshot, Module, Output>(
     throw new RuntimePackageGenerationOperationError(
       [operationFailure.error, postcheckFailure.error],
       "Runtime package generation changed after its operation failed.",
+      { cause: operationFailure.error },
     );
   if (operationFailure !== undefined) throw operationFailure.error;
   if (postcheckFailure !== undefined) throw postcheckFailure.error;

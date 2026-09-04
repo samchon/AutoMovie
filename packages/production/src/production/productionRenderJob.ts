@@ -14,18 +14,14 @@ import {
   IAutoMovieProductionDesign,
   IAutoMovieSemanticMaskReceipt,
 } from "@automovie/interface";
-import { createHash } from "node:crypto";
 import path from "node:path";
 import { isDeepStrictEqual } from "node:util";
 
-import type {
-  IAutoMovieProductionAudioProcessing,
-  IAutoMovieProductionWaveSourceFormat,
-} from "./decodeProductionAudioAsset";
-
+import { autoMovieFileSystem as fileSystem } from "../project/fileSystem";
 import { parseAutoMovieCaptionLanguage } from "./captionLanguage";
 import {
   serializeAutoMovieWebVttCueText,
+  serializeAutoMovieWebVttIdentifier,
   serializeAutoMovieWebVttSingleLineText,
 } from "./captionText";
 import {
@@ -33,12 +29,14 @@ import {
   canonicalizeAutoMovieJson,
   digestAutoMovieBytes,
 } from "./contentIdentity";
+import type {
+  IAutoMovieProductionAudioProcessing,
+  IAutoMovieProductionWaveSourceFormat,
+} from "./decodeProductionAudioAsset";
 import {
   productionFilmEffectEditFingerprint,
   sampleProductionFilmEffects,
 } from "./filmEffectRuntime";
-
-import { autoMovieFileSystem as fileSystem } from "../project/fileSystem";
 
 /**
  * Package-owned encoder identity fenced into every chunk.
@@ -388,6 +386,10 @@ interface IAutoMovieProductionAudioAssetIdentityBase {
    */
   durationSeconds: number;
   /**
+   * Exact number of source sample frames represented by the asset.
+   */
+  sourceFrames: number;
+  /**
    * Declared PCM clock used by the deterministic adapter.
    */
   sampleRate: number;
@@ -486,9 +488,8 @@ export const planProductionRenderJob = (props: {
           });
     if (
       asset === undefined ||
-      Number.isSafeInteger(asset.durationSeconds * asset.sampleRate) ===
-        false ||
-      asset.durationSeconds * asset.sampleRate !== expectedSamples
+      asset.sourceFrames !== expectedSamples ||
+      asset.durationSeconds !== asset.sourceFrames / asset.sampleRate
     )
       throw new Error(
         `Audio cue "${cue.id}" lacks one digest-, format-, and duration-verified source asset.`,
@@ -503,7 +504,7 @@ export const planProductionRenderJob = (props: {
       compileFingerprint: props.timeline.inputFingerprint,
       editFingerprint,
     },
-    effects: props.effects,
+    effects: structuredClone(props.effects),
     timelineFrame: 0,
   });
   const frames = Array.from(
@@ -749,7 +750,7 @@ export const canonicalProductionWebVtt = (
       compareCodeUnits(left.id, right.id),
   );
   return [
-    `WEBVTT ${serializeAutoMovieWebVttSingleLineText(timeline.id)}`,
+    `WEBVTT ${serializeAutoMovieWebVttIdentifier(timeline.id)}`,
     "",
     ...cues.flatMap((cue) => {
       const interval = productionFrameIntervalToGridTicks({
@@ -760,7 +761,7 @@ export const canonicalProductionWebVtt = (
         rounding: "nearest",
       });
       return [
-        serializeAutoMovieWebVttSingleLineText(cue.id),
+        serializeAutoMovieWebVttIdentifier(cue.id),
         `${webVttTime(interval.start)} --> ${webVttTime(interval.end)}`,
         `<lang ${webVttCaptionLanguage(cue.language)}>${
           cue.speaker === undefined
@@ -1363,6 +1364,9 @@ const normalizeAudioAssets = (
         validByteFact({ digest: asset.digest, bytes: 1 }) === false ||
         Number.isFinite(asset.durationSeconds) === false ||
         asset.durationSeconds <= 0 ||
+        Number.isSafeInteger(asset.sourceFrames) === false ||
+        asset.sourceFrames <= 0 ||
+        asset.durationSeconds !== asset.sourceFrames / asset.sampleRate ||
         Number.isSafeInteger(asset.sampleRate) === false ||
         asset.sampleRate <= 0 ||
         Number.isSafeInteger(asset.channels) === false ||
@@ -1389,7 +1393,8 @@ const validWaveAudioIdentity = (
   const expectedSpeakers =
     asset.channels === 1 ? ["front-center"] : ["front-left", "front-right"];
   const expectedMatrix = asset.channels === 1 ? [[1]] : [[0.5, 0.5]];
-  const resampled = processing.outputSampleRate !== asset.sampleRate;
+  const outputSampleRate = 48_000;
+  const resampled = outputSampleRate !== asset.sampleRate;
   const expectedKind =
     asset.channels === 1
       ? resampled
@@ -1423,8 +1428,7 @@ const validWaveAudioIdentity = (
             : "00000003-0000-0010-8000-00aa00389b71")) &&
     processing.kind === expectedKind &&
     processing.outputChannels === 1 &&
-    Number.isSafeInteger(processing.outputSampleRate) &&
-    processing.outputSampleRate > 0 &&
+    processing.outputSampleRate === outputSampleRate &&
     isDeepStrictEqual(processing.matrix, expectedMatrix)
   );
 };

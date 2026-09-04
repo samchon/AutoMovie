@@ -69,12 +69,10 @@ import {
   type IAutoMovieProductionRenderJobPlan,
   readAutoMovieProductionOwnedFile,
 } from "./productionRenderJob";
-import {
-  assertProductionRenderPublicationCurrent,
-  parseProductionRenderPublicationIdentity,
-} from "./productionRenderPublicationIdentity";
+import { assertProductionRenderPublicationCurrent } from "./productionRenderPublicationIdentity";
 import {
   assertAutoMovieExternalGeneratorTermsAt,
+  canonicalAutoMovieRepaintGeneratorProvenance,
   canonicalAutoMovieRepaintRuntimeIdentity,
   productionRepaintActiveReceiptPath,
   productionRepaintOutputPath,
@@ -1939,24 +1937,40 @@ export class AutoMovieProductionProject {
         `Render bundle "${relativeBundle}" is not the content-addressed path "${expectedBundle}". Use the current target-local fingerprint and render spec.`,
       );
     const bundleRoot = resolveInside(this.renderRoot(), relativeBundle);
-    const supplied = new Map(
-      [...files].map(([relativePath, bytes]) => [
-        normalizeSlash(relativePath).toLowerCase(),
-        Buffer.from(bytes),
-      ]),
-    );
+    const bundleEntry = (relativePath: string) => {
+      const normalized = normalizeSlash(relativePath);
+      const target = resolveInside(bundleRoot, relativePath);
+      const relative = normalizeSlash(path.relative(bundleRoot, target));
+      if (relative.length === 0 || normalized !== relative)
+        throw new Error(
+          `Render bundle path "${relativePath}" is not one canonical bundle-relative identity.`,
+        );
+      return { key: relative.toLowerCase(), relative, target };
+    };
+    const supplied = new Map<
+      string,
+      { bytes: Buffer; relative: string; target: string }
+    >();
+    for (const [relativePath, bytes] of files) {
+      const entry = bundleEntry(relativePath);
+      if (supplied.has(entry.key))
+        throw new Error(
+          `Render bundle repeats portable path "${relativePath}".`,
+        );
+      supplied.set(entry.key, { ...entry, bytes: Buffer.from(bytes) });
+    }
     const framePaths = new Set<string>();
     const retainedPaths: string[] = [];
     const expectedPayload: IProductionPayloadSnapshot = { entries: [] };
     for (const frame of manifest.frames) {
-      const normalized = normalizeSlash(frame.path).toLowerCase();
-      if (framePaths.has(normalized))
+      const entry = bundleEntry(frame.path);
+      if (framePaths.has(entry.key))
         throw new Error(`Render bundle repeats frame path "${frame.path}".`);
-      framePaths.add(normalized);
+      framePaths.add(entry.key);
       const relative = normalizeSlash(
-        path.relative(this.renderRoot(), resolveInside(bundleRoot, frame.path)),
+        path.relative(this.renderRoot(), entry.target),
       );
-      const staged = supplied.get(normalized);
+      const staged = supplied.get(entry.key)?.bytes;
       if (staged !== undefined) {
         if (digestAutoMovieBytes(staged) !== frame.digest)
           throw new Error(
@@ -1998,9 +2012,9 @@ export class AutoMovieProductionProject {
           }
         },
       });
-    const writes: IStagedFile[] = [...files].map(([relativePath, bytes]) => ({
-      path: resolveInside(bundleRoot, relativePath),
-      content: bytes,
+    const writes: IStagedFile[] = [...supplied.values()].map((entry) => ({
+      path: entry.target,
+      content: entry.bytes,
     }));
     const serializedManifest = serializeJson(manifest);
     writes.push({
@@ -3320,6 +3334,7 @@ export class AutoMovieProductionProject {
     )
       throw new Error("Stored repaint receipt parameters are invalid.");
     assertAutoMovieRepaintExecutionPolicy(receipt.executionPolicy!);
+    canonicalAutoMovieRepaintGeneratorProvenance(receipt.generatorProvenance);
     assertAutoMovieExternalGeneratorTermsAt({
       termsCheckedAt: receipt.generatorProvenance.termsCheckedAt,
       occurredAt: receipt.startedAt!,

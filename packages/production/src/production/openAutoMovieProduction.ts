@@ -50,9 +50,13 @@ import type { IAutoMovieProductionDesignGraph } from "./validateProductionDesign
  */
 const PROJECT_MARKERS = ["package.json", "lint.config.ts"] as const;
 
-const CAPTION_GRAPHEME_SEGMENTER = new Intl.Segmenter("en", {
-  granularity: "grapheme",
-});
+const CAPTION_GRAPHEME_REQUESTED_LOCALE = "en";
+const CAPTION_GRAPHEME_SEGMENTER = new Intl.Segmenter(
+  CAPTION_GRAPHEME_REQUESTED_LOCALE,
+  {
+    granularity: "grapheme",
+  },
+);
 const CAPTION_GRAPHEME_SEGMENTER_OPTIONS =
   CAPTION_GRAPHEME_SEGMENTER.resolvedOptions();
 
@@ -69,7 +73,7 @@ export const AUTOMOVIE_CAPTION_GRAPHEME_SEGMENTATION = Object.freeze({
   granularity: CAPTION_GRAPHEME_SEGMENTER_OPTIONS.granularity as "grapheme",
   locale: Object.freeze({
     kind: "requested-resolved" as const,
-    requested: "en",
+    requested: CAPTION_GRAPHEME_REQUESTED_LOCALE,
     resolved: CAPTION_GRAPHEME_SEGMENTER_OPTIONS.locale,
   }),
 }) satisfies IAutoMovieCaptionGraphemeSegmentationIdentity;

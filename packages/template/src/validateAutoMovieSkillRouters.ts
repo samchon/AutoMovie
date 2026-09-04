@@ -44,7 +44,9 @@ export const validateAutoMovieInstructionLink = (
   const resolved =
     route === ""
       ? source
-      : path.posix.normalize(path.posix.join(path.posix.dirname(source), route));
+      : path.posix.normalize(
+          path.posix.join(path.posix.dirname(source), route),
+        );
   if (
     resolved === ".." ||
     resolved.startsWith("../") ||
@@ -91,14 +93,15 @@ export const validateAutoMovieSkillRouterLinks = (
     sources.map((source) => [normalizeSourcePath(source.path), source.content]),
   );
   const routers = [...files].filter(([file]) => file.endsWith("/SKILL.md"));
-  if (routers.length === 0)
-    throw new Error("no SKILL.md router is installed.");
+  if (routers.length === 0) throw new Error("no SKILL.md router is installed.");
   for (const [file, markdown] of routers) {
     const headings = visibleLines(markdown).filter((line) =>
       /^#{1,6}\s+\S/u.test(line),
     );
     if (headings.length !== 1 || !headings[0]!.startsWith("# "))
-      throw new Error(`${file}: every SKILL.md is an H1-only index and router.`);
+      throw new Error(
+        `${file}: every SKILL.md is an H1-only index and router.`,
+      );
     for (const match of markdown.matchAll(/\[[^\]]*\]\(([^)]+)\)/gu))
       validateAutoMovieInstructionLink(sources, file, match[1]!);
   }
@@ -117,7 +120,9 @@ export const validateAutoMovieSkillRouters = (root: string): void => {
     for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
       const target = path.join(directory, entry.name);
       if (entry.isSymbolicLink())
-        throw new Error(`${target}: instruction sources may not contain links.`);
+        throw new Error(
+          `${target}: instruction sources may not contain links.`,
+        );
       if (entry.isDirectory()) visit(target);
       else if (entry.isFile() && entry.name.endsWith(".md"))
         sources.push({
@@ -159,7 +164,9 @@ const normalizeSourcePath = (value: string): string => {
     normalized.startsWith("../") ||
     path.posix.isAbsolute(normalized)
   )
-    throw new Error(`${value}: instruction source path must stay inside the project root.`);
+    throw new Error(
+      `${value}: instruction source path must stay inside the project root.`,
+    );
   return normalized;
 };
 

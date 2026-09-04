@@ -17,13 +17,15 @@ import {
   assertProductionRenderDialogueRuntimeIdentity,
   assertProductionVideoProfile,
   canonicalAutoMovieCaptureRuntimeIdentity,
+  classifyAutoMovieProductionSemanticMaskEvidence,
+  createAutoMovieProductionSemanticMaskReceipt,
   digestAutoMovieBytes,
   encodeAutoMoviePathSegment,
   isAutoMovieLocalProcessOwner,
   probeProductionMedia,
   probeProductionVideoMp4,
-  productionRenderMaterializationDecision,
   productionRenderLayersForPass,
+  productionRenderMaterializationDecision,
   resolveProductionVideoProfile,
 } from "@automovie/production";
 import path from "node:path";
@@ -43,14 +45,14 @@ import {
   createRenderGcFileSnapshot,
 } from "./renderGcSnapshot";
 import type { IProductionRenderHost } from "./renderHost";
-import type { IProductionRenderChunkInspection } from "./renderPlanningRuntime";
 import type {
   IProductionMaskSidecarPublication,
   IProductionRenderObservationAudit,
 } from "./renderObservationAudit";
-import { runWithProductionRuntimeClosure } from "./renderSoundRuntime";
 import { observeRenderOwnerRecovery } from "./renderOwnerState";
+import type { IProductionRenderChunkInspection } from "./renderPlanningRuntime";
 import { renderProcessOwnerSuffix } from "./renderProcessOwner";
+import { runWithProductionRuntimeClosure } from "./renderSoundRuntime";
 import {
   type IRenderChunkTemporaryTree,
   assertRenderChunkTemporaryTree,
@@ -148,7 +150,7 @@ export const createProductionRenderChunkLeaseRuntime = (props: {
     const claims = props.host.filesystem.existsSync(directory)
       ? props.host.filesystem
           .readdirSync(directory, { withFileTypes: true })
-          .filter((entry) => entry.isFile() && entry.name.endsWith(".lock"))
+          .filter((entry) => entry.name.endsWith(".lock"))
           .map((entry) => path.join(directory, entry.name))
       : [];
     const legacy = legacyLockPath(chunk);
@@ -535,7 +537,9 @@ export const createProductionRenderChunkCaptureRuntime = (props: {
                   `Semantic mask evidence for shot "${layer.shot}" at frame ${sample.globalFrame} is ${semanticStatus.status}: ${semanticStatus.reason}`,
                 );
               const sidecarBytes = Buffer.from(
-                renderAutoMovieSemanticMaskSidecar(semanticStatus.evidence.mask),
+                renderAutoMovieSemanticMaskSidecar(
+                  semanticStatus.evidence.mask,
+                ),
                 "utf8",
               );
               const relativeSidecar = `semantic/frame_${String(

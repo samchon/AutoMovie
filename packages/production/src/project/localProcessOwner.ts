@@ -1,3 +1,4 @@
+import { AsyncLocalStorage } from "node:async_hooks";
 import { randomUUID } from "node:crypto";
 import os from "node:os";
 
@@ -59,11 +60,26 @@ export type AutoMovieLocalProcessOwnerObservation =
 /** The signal-zero process query injected by platform adapters and tests. */
 export type AutoMovieLocalProcessQuery = (pid: number, signal: 0) => unknown;
 
+const PROCESS_QUERY = new AsyncLocalStorage<AutoMovieLocalProcessQuery>();
+
+/** The invocation-scoped process query, or the real Node process table. */
+export const currentAutoMovieLocalProcessQuery =
+  (): AutoMovieLocalProcessQuery =>
+    PROCESS_QUERY.getStore() ?? ((pid, signal) => process.kill(pid, signal));
+
+/** Run one operation with an explicit process-table observation capability. */
+export const withAutoMovieLocalProcessQuery = <Output>(
+  query: AutoMovieLocalProcessQuery,
+  operation: () => Output,
+): Output => PROCESS_QUERY.run(query, operation);
+
 const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu;
 const PROCESS_GENERATION_SYMBOL = Symbol.for(
   "automovie.local-process-generation.v1",
 );
+const HOST_MAX_BYTES = 255;
+const HOST_CONTROL_PATTERN = /[\u0000-\u001f\u007f-\u009f\u2028\u2029]/u;
 
 const processGeneration = (): string => {
   const owner = globalThis as typeof globalThis & {
@@ -87,6 +103,8 @@ export const isAutoMovieLocalProcessOwner = (
     typeof host === "string" &&
     host.length !== 0 &&
     host === host.trim() &&
+    Buffer.byteLength(host, "utf8") <= HOST_MAX_BYTES &&
+    HOST_CONTROL_PATTERN.test(host) === false &&
     typeof pid === "number" &&
     Number.isSafeInteger(pid) &&
     pid > 0 &&
@@ -142,7 +160,16 @@ export const observeAutoMovieLocalProcessOwner = (props: {
     props.query(owner.pid, 0);
     return { state: "occupied-or-reused", owner };
   } catch (error) {
-    const code = (error as NodeJS.ErrnoException).code;
+    let code: unknown;
+    try {
+      code = (error as NodeJS.ErrnoException).code;
+    } catch {
+      return {
+        state: "unknown",
+        owner,
+        reason: "process-query-unavailable",
+      };
+    }
     if (code === "ESRCH") return { state: "absent", owner };
     if (code === "EPERM") return { state: "occupied-or-reused", owner };
     return {

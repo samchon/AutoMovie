@@ -29,13 +29,12 @@ import {
   encodeAutoMoviePathSegment,
   muxProductionFeatureMp4,
   normalizeAutoMovieVisualDeliveryLanes,
-  openAutoMovieProduction,
   planAutoMovieVisualDelivery,
   probeProductionMedia,
   productionDeterministicVisualSourceDigest,
   productionPublicationInputFingerprint,
-  productionVisualDeliveryOccurrence,
   productionRenderPublicationIdentity,
+  productionVisualDeliveryOccurrence,
   readAutoMovieFilmTimeline,
   resolveProductionPngProfile,
   resolveProductionVideoProfile,
@@ -51,12 +50,10 @@ import {
   assertProductionRepaintSelection,
 } from "./productionConfiguration";
 import { assertProductionSoundRenderClock } from "./productionRuntime";
-import {
-  consumeCurrentRenderChunkFrames,
-} from "./renderChunkSnapshot";
-import type { IProductionRenderChunkInspection } from "./renderPlanningRuntime";
+import { consumeCurrentRenderChunkFrames } from "./renderChunkSnapshot";
 import { productionRenderFrameCaptureInput } from "./renderFrameCaptureInput";
 import type { IProductionRenderHost } from "./renderHost";
+import type { IProductionRenderChunkInspection } from "./renderPlanningRuntime";
 import type { createProductionRenderPlanningRuntime } from "./renderPlanningRuntime";
 import {
   type IProductionRenderEncoderRuntime,
@@ -255,14 +252,6 @@ export const createProductionRenderFinalizationRuntime = (props: {
   const renderProgress = props.progress;
   const root = props.root;
   const soundRuntime = props.sound;
-
-  const productionServices = () =>
-    openAutoMovieProduction({
-      projectRoot: root,
-      productionId,
-      capture: renderHost.capture,
-      authoringEvidence: props.authoringEvidence,
-    });
 
   const finalize = async (plan: IAutoMovieProductionRenderJobPlan) => {
     renderProgress("finalize.start", { tier: plan.tier.kind });
@@ -882,10 +871,10 @@ export const createProductionRenderFinalizationRuntime = (props: {
         ) === snapshot,
       publicationCurrent: () => {
         const staged = new AutoMovieProductionCompiler(
-         AutoMovieProductionProject.openReadOnly(root, productionId),
-         props.authoringEvidence,
-         undefined,
-         plan,
+          AutoMovieProductionProject.openReadOnly(root, productionId),
+          props.authoringEvidence,
+          undefined,
+          plan,
         ).lint({ scope: "final" });
         if (staged.success === false)
           throw new Error(
@@ -897,10 +886,10 @@ export const createProductionRenderFinalizationRuntime = (props: {
       expectedRevision: project.revision(),
     });
     const final = new AutoMovieProductionCompiler(
-     AutoMovieProductionProject.openReadOnly(root, productionId),
-     props.authoringEvidence,
-     undefined,
-     plan,
+      AutoMovieProductionProject.openReadOnly(root, productionId),
+      props.authoringEvidence,
+      undefined,
+      plan,
     ).compile({ scope: "final" });
     if (final.success === false)
       throw new Error(

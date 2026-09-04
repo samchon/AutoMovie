@@ -1,6 +1,8 @@
 import { validateGeneratedAcquisition } from "@automovie/engine";
 import { IAutoMovieAssetProvenance } from "@automovie/interface";
 
+import { autoMovieExternalLocatorRefusal } from "./contentIdentity";
+
 /** A plain SHA-256 content digest as this project writes it. */
 const DIGEST_PATTERN = /^sha256:[0-9a-f]{64}$/;
 
@@ -21,7 +23,7 @@ const httpUrlAdmissionRefusal = (
   }
   if (["http:", "https:"].includes(parsed.protocol) === false)
     return "unsupported-protocol";
-  return parsed.username.length !== 0 || parsed.password.length !== 0
+  return autoMovieExternalLocatorRefusal(value) === "credential-bearing"
     ? "credential-bearing"
     : null;
 };
@@ -32,6 +34,11 @@ const httpUrlAdmissionRefusal = (
  * The result names only the field and failure class. It never carries the
  * rejected locator, so a caller can diagnose the correction without copying
  * embedded credentials into a diagnostic, receipt, or generated artifact.
+ *
+ * @evidence requirements/external-inputs/credentials-rights-and-provenance.md#external-credential-separation Keeps credential-bearing locators out of admitted source and license provenance.
+ * @evidence requirements/evidence-and-provenance/privacy-credentials-and-disclosure.md#privacy-credential-omission Returns a failure class without retaining the rejected secret-bearing locator.
+ * @evidence specifications/interchange-and-adoption/provenance-rights-and-secrets.md#interchange-secret-reference-boundary Implements the credential-free URI boundary for provenance ledgers.
+ * @evidence specifications/evidence-and-provenance/privacy-credentials-and-disclosure.md#evp-credential-exclusion-gate Gives ingestion callers a redacted credential exclusion decision before publication.
  */
 export const assetUrlAdmissionRefusal = (
   asset: IAutoMovieAssetProvenance,
@@ -65,6 +72,9 @@ export const assetUrlAdmissionRefusal = (
  * Backward compatibility falls out of the shape: every manifest written before
  * generated assets existed carries `original`, so it reads unchanged and is
  * held to exactly the rules it was written against.
+ *
+ * @evidence requirements/external-inputs/credentials-rights-and-provenance.md#external-credential-separation Refuses fetched acquisition records whose locator embeds credentials.
+ * @evidence specifications/interchange-and-adoption/provenance-rights-and-secrets.md#interchange-secret-reference-boundary Applies the provenance ledger's credential-free locator rule while preserving generated acquisitions.
  */
 export const assetAcquisitionIncomplete = (
   asset: IAutoMovieAssetProvenance,

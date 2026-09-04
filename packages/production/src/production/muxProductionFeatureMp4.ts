@@ -412,12 +412,18 @@ export const conformProductionVisualDeliveryVideoMp4 = (props: {
     throw new Error("Visual delivery sources do not cover the current film.");
   const bytes = new Uint8Array(output.getBuffer().buffer);
   const conformed = probeProductionVideoMp4(bytes);
+  const frameRate = resolveProductionFrameRate(props.timeline);
+  assertProductionVideoProfile({
+    expected: resolveProductionVideoProfile({
+      width: first.probe.width,
+      height: first.probe.height,
+      frameRate,
+    }),
+    actual: conformed,
+  });
   if (
-    conformed.width !== first.probe.width ||
-    conformed.height !== first.probe.height ||
     conformed.frameCount !== props.timeline.totalFrames ||
-    Math.abs(conformed.fps - first.probe.fps) > 1e-9 ||
-    Math.abs(conformed.runtimeSeconds - props.timeline.runtimeSeconds) > 1e-9
+    equalProductionFrameRates(conformed.frameRate, frameRate) === false
   )
     throw new Error(
       "Visual delivery conform changed the exact film presentation contract.",

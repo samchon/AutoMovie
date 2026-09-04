@@ -55,6 +55,7 @@ const DIGIT = /^[0-9]+$/u;
 export const parseAutoMovieCaptionLanguage = (
   value: string,
 ): IAutoMovieCaptionLanguageIdentity | null => {
+  if (/^[A-Za-z0-9-]+$/u.test(value) === false) return null;
   const comparisonKey = value.toLowerCase();
   if (GRANDFATHERED_LANGUAGE_TAGS.has(comparisonKey))
     return { display: value, comparisonKey };
