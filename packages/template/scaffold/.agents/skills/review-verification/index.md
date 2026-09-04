@@ -7,6 +7,7 @@ Review the declared work against its exact current source, compiled artifact, ta
 Read the applicable sibling in full before acting:
 
 - [Author process Self-Review](self-review.md) closes each complete contract, authorship, evidence-repair, review-verification, and stage-transition process.
+- [Independent semantic review](semantic-review.md) owns the prose-before-fingerprint transaction, literal host-target pass, completing-population audit, and post-edit invalidation.
 - [Production review](review.md) owns evidence review and final whole-production review.
 - [Capture](capture.md) owns exact targets, passes, receipts, and refusal recovery.
 - [Inspection](inspection.md) owns render-free structural descriptions of compiled subjects, parts, instances, and spaces.

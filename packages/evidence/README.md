@@ -16,6 +16,8 @@ Upstream은 실제 부모를 상속하는 design·brief·서사 H2/H3/H4와 sour
 
 Discovery는 저술 unit에 반복하는 checklist나 H2 모집단 coverage가 아니라 별도 작품 계약 감사면의 file-level coverage다. 모든 활성 Markdown 계층은 `docs/contracts/*.md`에서 `discovery/core/common.md`를 답하고, settings는 settings discovery를, 각 model·space·material·instance·motion·system 분기는 designs와 자기 layer discovery를, treatments·scripts·screenplays는 films와 자기 layer discovery를, brief는 brief discovery를 더한다. Research는 common만 답해 외부 근거 채택과 design boundary 탐색을 합치지 않는다. 결과가 있으면 평면 계약 파일이 가장 이른 의미 소유자와 현재 실현을 증명한다. 결과가 정말 없으면 `docs/contracts/index.md`만 조사한 구체적 입력·위험과 충분한 기존 소유자를 밝힌 계층 단위 제외를 소유한다. 저술 H2/H3/H4는 제작 내용을 기술할 뿐 감사를 증언하지 않는다. 발견 claim은 저술 계층의 draft부터 활성화되고 review에서 현재 fingerprint를 요구한다. Settings discovery는 실제 delivery를 역산하며 settings obligation은 독립적으로 결과를 바꾸는 operative subject를 빠짐없이 분류한다.
 
+Evidence conformance는 저술 host가 자기 annotation을 다시 인증하는 principle이 아니다. 생성 프로젝트의 evidence-graph skill은 구조, freshness, rewrite, repair owner를 하나의 conformance map으로 연결하고, review-verification skill은 fingerprint를 붙이기 전 literal host-target 판정과 두 축의 전체 모집단 감사를 독립 절차로 수행한다. 반복 frame과 target-question 복제 측정은 전체 재독을 여는 alarm이며 semantic verdict가 아니다.
+
 ## 공개 표면
 
 | Export | 역할 |

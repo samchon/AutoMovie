@@ -838,6 +838,44 @@ export const review = true;
     true,
   );
 
+  const missingAccount = root();
+  write(missingAccount, "docs/settings/production.md", "## Scope {#scope}\n");
+  fs.unlinkSync(
+    path.join(missingAccount, "docs/accounts/settings/core-common.md"),
+  );
+  assert.equal(
+    throws(
+      () =>
+        createAutoMovieEvidenceConfig({
+          ...disabled(missingAccount),
+          kind: "library",
+          settings: "evidence",
+        }),
+      "without its population account",
+    ),
+    true,
+  );
+
+  const partialAccount = root();
+  write(partialAccount, "docs/settings/production.md", "## Scope {#scope}\n");
+  write(
+    partialAccount,
+    "docs/accounts/settings/core-common.md",
+    "# Partial account\n\n## One owner {#one-owner}\n",
+  );
+  assert.equal(
+    throws(
+      () =>
+        createAutoMovieEvidenceConfig({
+          ...disabled(partialAccount),
+          kind: "library",
+          settings: "evidence",
+        }),
+      "population account has 1 H2 owners for 5",
+    ),
+    true,
+  );
+
   const empty = root();
   const graph = createAutoMovieEvidenceConfig(disabled(empty));
   assert.equal(
@@ -3569,6 +3607,65 @@ export const review = true;
   assert.equal(
     throws(
       () => createAutoMovieEvidenceConfig(disabled(addedContractUnit)),
+      "H2 inventory changed without graph wiring",
+    ),
+    true,
+  );
+
+  const retiredConformanceTarget = root();
+  const retiredCommon = contract(
+    retiredConformanceTarget,
+    "docs/principles/core/common.md",
+  );
+  fs.writeFileSync(
+    retiredCommon,
+    rewrite(
+      fs.readFileSync(retiredCommon, "utf8"),
+      "## Declared basis {#declared-basis}",
+      [
+        "## Evidence-content conformance {#evidence-content-conformance}",
+        "",
+        "Semantic judgment cannot be restored as a self-certified principle.",
+        "",
+        "Review question: does this host certify its own evidence truth?",
+        "",
+        "Sources: synthetic retired-target migration probe.",
+        "",
+        "## Declared basis {#declared-basis}",
+      ].join("\n"),
+    ),
+  );
+  assert.equal(
+    throws(
+      () => createAutoMovieEvidenceConfig(disabled(retiredConformanceTarget)),
+      "H2 inventory changed without graph wiring",
+    ),
+    true,
+  );
+
+  const retiredSourceConformanceTarget = root();
+  const retiredSourceUnits = contract(
+    retiredSourceConformanceTarget,
+    "docs/principles/core/source-units.md",
+  );
+  fs.appendFileSync(
+    retiredSourceUnits,
+    [
+      "",
+      "## Source-owner evidence-content conformance {#source-evidence-content-conformance}",
+      "",
+      "Semantic judgment cannot be restored as a source owner certifying its own evidence.",
+      "",
+      "Review question: does this source owner certify its own evidence truth?",
+      "",
+      "Sources: synthetic retired-target migration probe.",
+      "",
+    ].join("\n"),
+  );
+  assert.equal(
+    throws(
+      () =>
+        createAutoMovieEvidenceConfig(disabled(retiredSourceConformanceTarget)),
       "H2 inventory changed without graph wiring",
     ),
     true,

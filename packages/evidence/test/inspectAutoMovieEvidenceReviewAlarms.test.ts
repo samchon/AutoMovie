@@ -153,6 +153,14 @@ assert.deepEqual(
   }).alarms,
   [],
 );
+assert.throws(
+  () =>
+    inspectAutoMovieEvidenceReviewAlarms({
+      documents: [],
+      frameThreshold: 2.5,
+    }),
+  /integer of at least two/u,
+);
 
 assert.throws(
   () =>

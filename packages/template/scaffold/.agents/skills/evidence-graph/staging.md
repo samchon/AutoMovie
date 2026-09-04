@@ -63,7 +63,7 @@ Move a layer from `disabled` to `draft` only after its initially applicable disc
 
 Move a layer from `draft` to `evidence` only after the full layer has a complete first version, stable anchored topology and ordered files, no placeholders, a manual scope and omission audit, and its applicable discovery searches and result classification in `docs/contracts`. Every retained rule must already have its target and additive claim, and every true no-result must already have its concrete exclusion on `index.md`. Read every selected principle against each H2, H3, and H4 in turn. Then create each required `docs/accounts/<layer>` H2, compare the obligation against the complete authored H2 population, name every actual owner, and confirm the account cites both the obligation and every compared unit. Settings additionally completes planned-delivery backcast and operative-subject accounting. Commit that coherent draft before changing the state.
 
-Move the layer to `review` only after all shared and production-specific claim batches are complete and the production source lint is clean. Commit that evidence state before review. Review each relationship independently under [Review](../review-verification/review.md), copy only compiler-issued fingerprints, and compile again.
+Move the layer to `review` only after all shared and production-specific claim batches are complete and the production source lint is clean. Commit that evidence state before review. Review each relationship independently under [Review](../review-verification/review.md) and its [semantic-review procedure](../review-verification/semantic-review.md), copy only compiler-issued fingerprints, and compile again.
 
 A child may enter `draft` only after every direct parent is in `review`. Research, when present, is an additional reviewed parent of authored documents. Shots wait for reviewed screenplay or brief and for the reviewed source corresponding to every active map, model, space, material, instance, motion, and system branch. Production source waits for settings. Film source waits for production source and shots.
 
@@ -74,6 +74,8 @@ This gate is on entering `review` rather than on entering `draft` because motion
 `@automovie/evidence` checks non-empty host populations, required anchors, named source owners, population accounts, production-kind exclusions, the declared settings-and-design provider-consumer topology, flat treatment topology, treatment coverage, and exact script-to-screenplay delivery identities from the declaration before lint. Read `readAutoMovieProductionEvidence(...).manifest.topology` as the provider-consumer-status-reason matrix; every diagnostic is an account or lifecycle defect, while an `inapplicable` row is green only when its provider or consumer is genuinely outside the selected population. Keep every project-specific selector and additive claim in the one typed `lint.config.ts` declaration that also turns that value into the graph lint configuration. Preserve the typed declaration, additive `claims`, layer grouping, host-independent ordering, and mixed-state tests.
 
 ## Diagnostics
+
+A diagnostic is routed through the [conformance owner map](conformance.md) before repair. The compiler owns mechanically decidable syntax, graph, attachment, and freshness failures. [Independent semantic review](../review-verification/semantic-review.md) owns truth, role, literal support, absence, and exchange judgments.
 
 A compiler diagnostic is a question about the artifact, not an instruction to add a tag.
 
@@ -86,7 +88,7 @@ A compiler diagnostic is a question about the artifact, not an instruction to ad
 
 Rewrite false or shallow content. Split, move, rename, merge, or replace a target whose scope is wrong. Correct only the tag when the content relationship already holds. Change config only when its intended population, stage, cardinality, exclusion, or implementation is itself wrong.
 
-Never clear a diagnostic with exaggerated evidence, copied reviews, blanket exclusions, filler, path shuffling, stage reduction, weakened populations, invented fingerprints, or a package exception. When `principles/core/common.md#evidence-content-conformance` fails, perform its halt and repair before retaining any acknowledgement.
+Never clear a diagnostic with exaggerated evidence, copied reviews, blanket exclusions, filler, path shuffling, stage reduction, weakened populations, invented fingerprints, or a package exception. Perform the owner map's halt and earliest-owner repair before retaining any acknowledgement.
 
 ## Production-specific claims
 

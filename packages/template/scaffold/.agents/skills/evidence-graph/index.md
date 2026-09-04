@@ -12,6 +12,7 @@ Read the applicable sibling in full before acting:
 - [Production-specific contract](work-specific.md) classifies direct instructions and additive local targets under `docs/contracts`.
 - [Upstream revision](upstream.md) governs shared inherited-unit duties when an owner changes.
 - [Evidence staging](staging.md) owns populations, citations, exclusions, `disabled -> draft -> evidence -> review`, diagnostics, and fingerprints.
+- [Conformance owner map](conformance.md) routes semantic, structural, freshness, rewrite, and repair failures to one canonical owner.
 
 ## Invariants
 

@@ -738,6 +738,7 @@ const EXPECTED_CONTRACTS = [
       "scope-preservation",
       "substantive-completion",
       "evidence-content-conformance",
+      "machine-default",
       "declared-basis",
     ],
   },
@@ -755,11 +756,7 @@ const EXPECTED_CONTRACTS = [
   {
     domain: "core",
     file: "principles/core/source-units.md",
-    anchors: [
-      "source-scope-preservation",
-      "source-substantive-completion",
-      "source-evidence-content-conformance",
-    ],
+    anchors: ["source-scope-preservation", "source-substantive-completion"],
   },
   {
     domain: "delivery",
@@ -2487,6 +2484,45 @@ const markdownPopulationFiles = (
       )
     : walkProjectFiles(graph, path.join(graph.location, DOCS, layer), ".md");
 
+/** Refuse an enabled population account with no exact physical H2 owners. */
+const validatePopulationAccountHosts = (graph: IProductionGraph): void => {
+  for (const layer of Object.keys(MARKDOWN) as MarkdownLayer[]) {
+    if (!MARKDOWN[layer].obligation || !requiresEvidence(graph[layer]))
+      continue;
+    const claims = createAutoMoviePopulationAccountClaims({
+      layer,
+      populationFiles: authoredPopulationFiles(graph, layer),
+      obligationFiles: populationObligations(graph, layer),
+      enabled: true,
+      requireReview: requiresReview(graph[layer]),
+    });
+    for (const claim of claims) {
+      const relative = claim.files[0]!;
+      const file = path.join(graph.location, DOCS, relative);
+      if (!fs.existsSync(file))
+        throw new Error(
+          `${relative}: ${layer} cannot enter ${graph[layer]} without its population account.`,
+        );
+      const references = Array.isArray(claim.reference)
+        ? claim.reference
+        : [claim.reference];
+      const obligation = references.find(
+        (reference) =>
+          reference.type === "markdown" &&
+          reference.files[0]?.startsWith("obligations/") === true,
+      ) as ITtscEvidenceGraphMarkdownReference;
+      const target = EXPECTED_CONTRACTS.find(
+        (contract) => contract.file === obligation.files[0],
+      )!;
+      const units = markdownIdentities(file, [2]);
+      if (units.length !== target.anchors.length)
+        throw new Error(
+          `${relative}: population account has ${units.length} H2 owners for ${target.anchors.length} ${obligation.files[0]} obligations.`,
+        );
+    }
+  }
+};
+
 const NUMBERED_NARRATIVE_NAME = /^\d{3}-[a-z0-9]+(?:-[a-z0-9]+)*$/u;
 
 const narrativeH1 = (file: string): string => {
@@ -2633,6 +2669,7 @@ const resetTransitionHosts = (
 };
 
 const validateHosts = (graph: IProductionGraph): void => {
+  validatePopulationAccountHosts(graph);
   validateNarrativePopulationTopology(graph);
   const identities = new Map<MarkdownLayer, Map<string, IHeadingIdentity[]>>();
   const titles = new Map<MarkdownLayer, Map<string, string>>();

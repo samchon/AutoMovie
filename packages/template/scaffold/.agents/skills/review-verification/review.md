@@ -38,9 +38,9 @@ Use Git history to preserve earlier observations, candidate comparisons, selecti
 
 ## Evidence review
 
-Start a layer's evidence review only after that layer is in `review`. Missing or stale review diagnostics are the worklist, not permission to bulk-fill fingerprints.
+Start a layer's evidence review only after that layer is in `review`. Missing or stale review diagnostics are the worklist, not permission to bulk-fill fingerprints. Complete [Independent semantic review](semantic-review.md) for every acknowledgement, exclusion, review, and population account. It owns the prose-before-fingerprint transaction, literal target and host pass, both population axes, repair, and post-edit invalidation.
 
-For a citation, read the complete target scope and host with necessary upstream context, decide whether the host truly realizes or depends on the target, repair any disagreement, then write a review sentence naming the facts or behavior compared and append the compiler-issued fingerprint.
+For a citation, read the complete target scope and host with necessary upstream context, decide whether the host truly realizes or depends on the target, repair any disagreement, then write a review sentence naming the facts or behavior compared. Append the compiler-issued fingerprint only as the second step of the transaction.
 
 For a principle item, read the item in full and reread the complete selected H2, H3, or H4 host with its necessary parent and descendant context, asking only that question of that unit. Repair that unit if it fails. One item receives one check on every selected unit; do not reuse a review sentence across items or units.
 
