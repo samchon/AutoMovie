@@ -20,40 +20,42 @@ assignees: ""
 
 ## Subjects, conditions, and units
 
-| Subject id | Condition id | Replicate id | Unit/run id | Comparator | Changed axis | Frozen invariant basis |
-| --- | --- | --- | --- | --- | --- | --- |
-| unverified | unverified | unverified | unverified | n/a | n/a | unverified |
+| Subject id | Condition id | Replicate id | Experimental unit id | Run id | Generation | Comparator | Changed axis | Frozen invariant basis |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| unverified | unverified | unverified | unverified | unverified | unverified | n/a | n/a | unverified |
 
 - Repetition rationale, expected heterogeneity, cost, and limitation:
 - Outcome rubric identity and digest:
 - Aggregation and uncertainty method:
+- Result disposition (`exploratory`, `provisional`, `consistency-only`, `variability-found`, `controlled-comparison`, or `inconclusive`):
 - Uncontrolled differences and excluded claims:
 
 ## Frozen provenance manifest
 
-| Carrier | Planned identity or value | Actual identity or value | Receipt/digest | Limitation |
-| --- | --- | --- | --- | --- |
-| Brief | unverified | unverified | unverified | unverified |
-| Harness and packed packages | unverified | unverified | unverified | unverified |
-| Model and reasoning effort | unverified | unverified | unverified | unverified |
-| Tools and versions | unverified | unverified | unverified | unverified |
-| Policy and readable/write roots | unverified | unverified | unverified | unverified |
-| Inputs and references | unverified | unverified | unverified | unverified |
-| Runtime and resource envelope | unverified | unverified | unverified | unverified |
-| Windows `MAX_PATH`/long-path mode, path budget, and longest resolved path | unverified | unverified | unverified | unverified |
+| Run id | Generation | Condition id | Carrier | Planned identity or value | Actual identity or value | Receipt/digest | Limitation |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| unverified | unverified | unverified | Brief | unverified | unverified | unverified | unverified |
+| unverified | unverified | unverified | Harness and packed packages | unverified | unverified | unverified | unverified |
+| unverified | unverified | unverified | Model and reasoning effort | unverified | unverified | unverified | unverified |
+| unverified | unverified | unverified | Tools and versions | unverified | unverified | unverified | unverified |
+| unverified | unverified | unverified | Policy and readable/write roots | unverified | unverified | unverified | unverified |
+| unverified | unverified | unverified | Inputs and references | unverified | unverified | unverified | unverified |
+| unverified | unverified | unverified | Observation plan identity and digest | unverified | unverified | unverified | unverified |
+| unverified | unverified | unverified | Runtime and resource envelope | unverified | unverified | unverified | unverified |
+| unverified | unverified | unverified | Windows `MAX_PATH`/long-path mode, path budget, and longest resolved path | unverified | unverified | unverified | unverified |
 
 - Retrieval mode (`disabled`, `controlled`, or `open`), allowed/denied domains, and exposure policy:
 
-| Retrieval receipt id | Sanitized query | Result URL | Timestamp | Actor | Purpose | Disposition |
-| --- | --- | --- | --- | --- | --- | --- |
-| unverified | unverified | unverified | unverified | unverified | unverified | unverified |
+| Run id | Generation | Condition id | Retrieval receipt id | Sanitized query | Result URL | Timestamp | Actor | Purpose | Disposition |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| unverified | unverified | unverified | unverified | unverified | unverified | unverified | unverified | unverified | unverified |
 
 - Contamination and benchmark-identity exposure:
-- Observable trajectory manifest (format/version, length, digest, timestamps, location, retention, access, redactions, privacy; hidden reasoning excluded):
+- Observable trajectory manifest by run, generation, and condition (format/version, length, digest, timestamps, location, retention, access, redactions, privacy; hidden reasoning excluded):
 
-| Transfer receipt id | Source identity/digest | Destination identity/digest | Transformation | Timestamp | Actor | Privacy disposition |
-| --- | --- | --- | --- | --- | --- | --- |
-| unverified | unverified | unverified | unverified | unverified | unverified | unverified |
+| Run id | Generation | Condition id | Transfer receipt id | Source identity/digest | Destination identity/digest | Transformation | Timestamp | Actor | Privacy disposition |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| unverified | unverified | unverified | unverified | unverified | unverified | unverified | unverified | unverified | unverified |
 
 ## Judgment calibration and escalation
 
@@ -66,7 +68,7 @@ assignees: ""
 
 ## Operation and recovery ledger
 
-- Coordinator, writers, reviewers, and one liveness observer:
+- Stable coordinator, commissioner, writer, independent reviewer, and liveness-observer ids, plus proof that the reviewer overlaps none of the other four roles:
 - Preflight result, including model availability, root isolation, path budget, process ownership, and observation instrument:
 
 | Receipt id | Sequence | Run/generation | From | To | Timestamp | Actor | Reason | Evidence | Result |
@@ -77,9 +79,9 @@ assignees: ""
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | unverified | unverified | unverified | unverified | unverified | unverified | unverified | unverified | unknown |
 
-| Intervention id | Opened before action | Run/generation | Owner/reason/evidence | Intended action | Closed after action | Result/state | Process and cleanup evidence |
-| --- | --- | --- | --- | --- | --- | --- | --- |
-| unverified | unverified | unverified | unverified | unverified | unverified | unverified | unverified |
+| Intervention id | Opened before action | Run/generation | Affected process/artifact identities | Recovery boundary | Owner/reason/evidence | Intended action | Exact action taken | Preserved artifacts | Closed after action | Result/state | Process and cleanup evidence |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| unverified | unverified | unverified | unverified | unverified | unverified | unverified | unverified | unverified | unverified | unverified | unverified |
 
 - Interrupted generations and replacement notices:
 - Planned and actual runtime/resource use:
@@ -104,3 +106,5 @@ assignees: ""
 - Durable conclusions carried by this issue:
 - Manual record-matrix result from `.agents/skills/experiment/records.md`:
 - Launch audit disposition (`ready`, `blocked`, or `not authorized`) and reason:
+
+`ready` is invalid when calibration, outcome rubric, observation plan, role separation, per-run actual provenance, or path/root preflight is missing or `unverified`. A completed run whose design cannot support its claimed result disposition is retained as `inconclusive`, never upgraded after observing the outcome.

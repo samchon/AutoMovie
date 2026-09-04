@@ -10,7 +10,7 @@ A comparison run is still an experiment, so [Read The Result](SKILL.md#read-the-
 
 Freeze the common harness, the shipped skills, the contract family behavior, the stage semantics, the compiler gates, the review completion rule, and the observation plan before any writer launches.
 
-A comparison is only a comparison where the productions differ in their subject and in nothing else. A harness edited between two productions makes every later difference unattributable, and unlike a brief the harness cannot be restored by rerunning it, because the earlier production already paid its cost against the earlier harness.
+A subject-breadth comparison changes only the subject and reports patterns across those named subjects without a causal contrast. A controlled comparison keeps the subject fixed, changes exactly one predeclared axis, repeats both conditions independently, and freezes every other basis. A harness edited between productions invalidates either design because the earlier production already paid its cost against the earlier harness.
 
 One production is one experimental unit. Do not merge two units, do not silently drop one, and never let a unit discharge an obligation with another unit's evidence.
 
@@ -18,14 +18,15 @@ The packed product tree is part of the harness, so refreshing one unit's package
 
 ## Keep Judgment Away From Commissioning
 
-These four roles replace [briefing.md's Observer](briefing.md#keep-the-roles-apart) for the length of a comparison run. That role holds measurement and judgment together, which one benchmark can afford and a comparison cannot, so it is split here into the reviewer, the liveness observer, and the coordinator. The authoring agent and the repository issue owner rows carry over unchanged, the first as the writer below.
+These roles specialize the separation already required by [briefing.md](briefing.md#keep-the-roles-apart). Measurement, commissioning, operation, writing, and judgment stay distinct in both single and multi-unit benchmarks.
 
 | Role | Owns | Never |
 | --- | --- | --- |
 | Writer | One production: its research, design, source, fan-out, and repairs | Another unit's paths, the harness, or the verdict on its own work |
 | Paired reviewer | The PASS or FAIL at each gate of that one production, read over the complete corpus | Editing content, moving stage state, staging, committing, or pushing anything |
 | Liveness observer | Whether each unit is alive and moving, for the whole run | Any judgment about content |
-| Coordinator | The harness, the launches, recovery, the records, and the final cross-work review | Writing production source, or sending content feedback to a working writer |
+| Cross-work reviewer | The final whole-surface verdict across all immutable productions | Commissioning, harness operation, writer steering, content edits, or per-unit measurement |
+| Coordinator | The harness, launches, recovery, and operation records | Writing production source, sending content feedback, or issuing any gate or final verdict |
 
 Each active production gets one persistent writer and one separate persistent read-only reviewer on the same interpreting model, and that pair holds across every layer. Enforce read-only through the tools or permissions the reviewer is given, because a role stated in prose is not a role the harness can refuse to break.
 
@@ -81,13 +82,13 @@ Different subjects are separate experimental units, not replicates of one condit
 
 A per-production review never substitutes for the comparison. Each writer's reviewer read one unit, so anything that appears only between units is invisible to all of them: a harness defect every writer worked around differently, a contract every writer read the same wrong way, an instruction that was clear to three and ambiguous to the fourth.
 
-The coordinator closes the run by reading all productions as one surface in one round, and separates what is a common harness defect from what is specific to one unit. This is the same structure the [issue campaign](../issue-campaign/SKILL.md) uses when owners' rounds never add up to the integration round.
+The independent cross-work reviewer closes the comparison by reading all productions as one immutable surface in one round and separates common harness defects from unit-specific findings. The coordinator supplies the frozen records and performs no judgment. This is the same structure the [issue campaign](../issue-campaign/SKILL.md) uses when owners' rounds never add up to the integration round.
 
 ## Known Failures
 
 | Area | Symptom | Rule |
 | --- | --- | --- |
-| Supervision | Work drifts toward the coordinator's taste, and feedback arrives on layers still in draft | One agent never holds commissioner, experimenter, and reviewer together |
+| Supervision | Work drifts toward the commissioner or coordinator's taste, and feedback arrives on layers still in draft | Writer, commissioner, observer, coordinator, and reviewer identities are recorded and judgment never overlaps the first four |
 | Supervision | A writer receives contradictory direction from two supervisors | One liveness observer for the whole run, never one per production |
 | Ownership | A reviewer or observer edits, stages, or commits an artifact | Read-only is enforced by tools or permissions, not stated in prose |
 | Ownership | Two units contend over one file, one config key, or one scratch name | Every shared resource on the machine is prefixed by its owner, and [One Machine, Several Campaigns](steering.md#one-machine-several-campaigns) applies in full |

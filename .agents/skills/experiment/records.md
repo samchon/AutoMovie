@@ -31,6 +31,8 @@ A repetition under one condition measures consistency and variability under that
 
 A controlled comparison names exactly one `changedAxis` and freezes the remaining `invariantBasis`. Any uncontrolled difference is a limitation and lowers the claim ceiling. Never generalize the contrast to an unobserved axis or subject population.
 
+The disposition is part of the result record, not an inference from the design row. Record exactly one of `exploratory`, `provisional`, `consistency-only`, `variability-found`, `controlled-comparison`, or `inconclusive` for every terminal run or comparison and verify that it does not exceed the predeclared ceiling.
+
 There is no global sample size or metric. State why the chosen repetition is enough for this question, outcome shape, expected heterogeneity, cost, and failure risk. Two runs remain the minimum reproduction probe for a universal claim, not proof of a cause. `pass^k` is available only for repeated exact binary endpoints under one task and condition; it never replaces a structural, visual, or narrative rubric.
 
 Keep writer variance and judge variance separate. A changed writer artifact and a changed verdict on the same artifact are different observations and are aggregated only after immutable condition identity and a calibrated rubric bind both.
@@ -40,6 +42,8 @@ Keep writer variance and judge variance separate. A changed writer artifact and 
 Freeze a calibration corpus with qualified-human truth, including at least one passing artifact, one known failure, one ambiguous or high-impact case, and one pair whose presentation order can be reversed. Cover more than one claim and artifact topology so a narrow population cannot masquerade as general calibration. Record rubric shape and language, the first and reversed order, the reviewer verdict and reason for each presentation, human agreement, false PASS and false FAIL results, and every known blind spot.
 
 A separated reviewer using the same model family is still useful, but separation is not calibration and does not erase self-preference or order sensitivity. A known failed artifact that the reviewer passes makes the affected rubric axis uncalibrated. Do not average that disagreement away or promote a production result on that axis to PASS.
+
+Missing calibration, a missing outcome rubric, or a reviewer who overlaps the writer or commissioner makes `ready` and `gate-review` invalid. Preserve an already-run incomplete record as `inconclusive`; do not repair its authority after the outcome is known. An order-reversal witness uses an independent reviewer or session, or a counterbalancing order frozen before either presentation, so memory of the first result is not called a blind reversal.
 
 The reviewer derives its verdict from the frozen corpus independently of the writer and commissioner. Every gate verdict is `PASS`, `FAIL`, or `INCONCLUSIVE`. `FAIL` names the rubric claim, observed evidence, affected artifact and stage, reason, and next action. Audit the evidence topology and claim population before judging content. An empty `claims: []`, a topology the reviewer did not inspect, or a machine-invisible defect is recorded explicitly rather than treated as no finding.
 

@@ -121,13 +121,14 @@ Different subjects are different experimental units, even when they share a harn
 
 | Role | Owns | Does not |
 | --- | --- | --- |
-| Observer | Measurement and judgment: the instrument, the counts, the frames, the findings, and the turns that carry them | Write production source |
+| Observer | Measurement: the instrument, counts, frames, liveness and the turns that carry observations | Write production source or issue a gate, result, or cross-work verdict |
+| Independent reviewer | Gate, result, and final verdicts derived from the frozen rubric and immutable evidence | Commission the run, operate the harness, steer the writer, or edit production content |
 | Authoring agent | The production, including its own fan-out | Change repository code |
 | Repository issue owner | One issue the benchmark produced, under the [issue-campaign skill](../issue-campaign/SKILL.md) | Steer the benchmark |
 
-State the first two rows in the brief, because the agent cannot respect a boundary it was never told. Both crossings in that campaign were the observer's: it wired production source the authoring agent was already wiring, and it ran a parallel fan-out that was the authoring agent's to run.
+State the observer, independent-reviewer, and authoring-agent rows in the brief, because the agent cannot respect a boundary it was never told. Both crossings in that campaign were the observer's: it wired production source the authoring agent was already wiring, and it ran a parallel fan-out that was the authoring agent's to run.
 
-The observer's product is measurement, not code. That is what keeps an observation an observation.
+The observer's product is measurement, not code or judgment. The reviewer derives a verdict independently of the writer and commissioner; combining those roles turns the commissioner's preferred outcome into part of the measuring instrument.
 
 ## Carry The Numbers Forward As Evidence
 
