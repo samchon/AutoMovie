@@ -735,6 +735,13 @@ export const verifyAutoMovieSubjectInspectionObservation = (props: {
   const actualRuntime = canonicalAutoMovieCaptureRuntimeIdentity(
     record.runtimeIdentity,
   );
+  const expectedArtifact = `${inspectionDirectory(
+    plan.productionId,
+    plan.target.shot,
+    plan.target.subject,
+  )}/${encodeAutoMoviePathSegment(plan.planIdentity)}/attempt-${
+    record.attempt
+  }/${encodeAutoMoviePathSegment(record.viewpoint)}.png`;
   if (
     record.productionId !== plan.productionId ||
     record.target.shot !== plan.target.shot ||
@@ -745,6 +752,7 @@ export const verifyAutoMovieSubjectInspectionObservation = (props: {
     viewpoint === -1 ||
     canonicalizeAutoMovieJson(record.pose) !==
       canonicalizeAutoMovieJson(plan.poses[viewpoint]) ||
+    record.observation.artifact !== expectedArtifact ||
     actualRuntime !==
       canonicalAutoMovieCaptureRuntimeIdentity(props.runtimeIdentity) ||
     digestAutoMovieBytes(props.artifactBytes) !== record.observation.digest

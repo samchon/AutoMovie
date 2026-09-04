@@ -250,6 +250,26 @@ export const test_production_subject_inspection_currentness = (): void => {
           ),
       ],
       [
+        "locator",
+        () =>
+          throwsError(
+            () =>
+              verifyAutoMovieSubjectInspectionObservation({
+                plan: currentPlan,
+                runtimeIdentity: testCaptureRuntimeIdentity(),
+                record: {
+                  ...current.record,
+                  observation: {
+                    ...current.record.observation,
+                    artifact: "../foreign.png",
+                  },
+                },
+                artifactBytes: current.bytes,
+              }),
+            "stale",
+          ),
+      ],
+      [
         "v1",
         () =>
           throwsError(
@@ -313,6 +333,7 @@ export const test_production_subject_inspection_currentness = (): void => {
       runtime: true,
       pose: true,
       bytes: true,
+      locator: true,
       v1: true,
       extra: true,
       notPassed: true,
