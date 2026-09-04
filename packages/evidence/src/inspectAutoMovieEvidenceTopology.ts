@@ -167,10 +167,20 @@ export function inspectAutoMovieEvidenceTopology(props: {
   for (const edge of props.expected) {
     const provider = branches.get(edge.provider);
     const consumer = branches.get(edge.consumer);
-    if (provider === undefined || consumer === undefined) continue;
     const declaration = declarations.get(
       identity(edge.provider, edge.consumer),
     );
+    if (provider === undefined || consumer === undefined) {
+      if (declaration === undefined)
+        diagnostics.push(
+          diagnostic(
+            "unknown-branch",
+            edge,
+            `${identity(edge.provider, edge.consumer)} names a branch outside the selected topology.`,
+          ),
+        );
+      continue;
+    }
     if (
       declaration === undefined ||
       (provider.active && consumer.active && declaration.status !== "uses")
