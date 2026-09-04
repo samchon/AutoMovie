@@ -766,6 +766,30 @@ export const review = true;
     true,
   );
 
+  const wrongLayerAccount = root();
+  write(
+    wrongLayerAccount,
+    "docs/settings/production.md",
+    "## Scope {#scope}\n",
+  );
+  write(
+    wrongLayerAccount,
+    "docs/accounts/settings/design-models.md",
+    "## Wrong layer {#wrong-layer}\n",
+  );
+  assert.equal(
+    throws(
+      () =>
+        createAutoMovieEvidenceConfig({
+          ...disabled(wrongLayerAccount),
+          kind: "library",
+          settings: "evidence",
+        }),
+      "population accounts contain unowned files",
+    ),
+    true,
+  );
+
   const partialAccount = root();
   write(partialAccount, "docs/settings/production.md", "## Scope {#scope}\n");
   write(
