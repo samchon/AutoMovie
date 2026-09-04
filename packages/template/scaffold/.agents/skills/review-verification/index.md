@@ -21,4 +21,4 @@ Run `capture:install` and `capture:doctor` before the first preview or render. U
 
 Declare the basis, enumerate the complete reviewed population, compare each claim with the observation that can falsify it, record findings and downstream consequences, and repair the earliest owner. Structural inspection and measurements complement images; neither substitutes for seeing composition, occlusion, material response, motion, lighting, or continuity.
 
-After any edit, restart the affected review round. Close an author boundary only after one complete no-edit Self-Review. Close final whole-production review only through the two clean rounds defined in [Production review](review.md), with graph lint, source checks, compilation, and current viewer evidence all passing.
+Use [Author process Self-Review](self-review.md) to close an author boundary and [Production review](review.md) to close the final whole-production boundary. Those procedures own their round, restart, and verification conditions; this index only routes the two review scopes.

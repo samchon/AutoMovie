@@ -55,4 +55,4 @@ Run `npm run book -- --layer <layer> --title <title>` for a deterministic reader
 
 ## Handoff
 
-Before handing a lifecycle layer to evidence staging or source authorship, reread the complete applicable process, trace authority and dependencies, collect all findings, repair them at their earliest owners, and restart after an edit. One complete no-edit round closes the lifecycle boundary; it never replaces the graph gates or final review.
+Before handing a completed lifecycle layer to evidence staging or source authorship, run [Author process Self-Review](../review-verification/self-review.md). That procedure owns the complete-round rule; this handoff adds only the lifecycle boundary at which it applies.

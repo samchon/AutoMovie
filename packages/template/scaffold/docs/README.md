@@ -1,50 +1,29 @@
 # Production documents
 
-This directory is the production's self-contained evidence root. Named authoring branches, population-owned `docs/accounts/<layer>` files, and flat `docs/contracts` files are production-owned: they hold this work's facts, whole-layer obligation comparisons, research, designs, narrative or brief documents, and production-specific targets. The `discovery`, `upstream`, `principles`, and `obligations` branches are scaffold-supplied reusable targets; the production answers them locally but changes them only through an explicit reusable-contract revision with every affected host and review traced.
+This directory is the production's self-contained evidence root. The generated [contract skill](../.agents/skills/contract/SKILL.md) routes to the exact live bindings, while this file owns only the physical document map.
 
-The generated [contract skill](../.agents/skills/contract/SKILL.md) is the route into this tracked root. Its H1-only entry owns no evidence target and adds no second inventory: `AGENTS.md` lists the exact live factory bindings, while this document explains the physical owners those routes select.
+The [contract-target procedure](../.agents/skills/evidence-graph/contract-targets.md) owns shared and language target forms. [Production-specific contract](../.agents/skills/evidence-graph/work-specific.md) owns local contract discovery and placement, [Evidence staging](../.agents/skills/evidence-graph/staging.md) owns annotations and branch stages, and [Production kinds](../.agents/skills/production-lifecycle/production-kinds.md) decides which authored rows are active. Read those owners instead of inferring semantics from directory names.
 
-`language` contains exactly one creation-selected Chinese, English, Japanese, or Korean module. Every authored layer reads its discovery signal before first-version work, applies its composition-safe principles per unit, and accounts for its obligations only after the complete selected population exists; another pack is not a fallback and may not remain as residue.
-
-No configuration file stands beside these documents and `src`. Reviewed delivery tiers, repaint adoption and requests, dialogue generation, external-generator provenance, speaker joins, and live-simulation admission are fields of the production design record that `scripts/emitDesign.ts` emits from governed source, so each one has the same reviewed owner and the same staleness as every other design decision. The one authored file outside both trees is `repaintSelectionReviews.ts`, and it holds observations rather than decisions: a candidate review is deliberately kept out of compiler content so that recording what you saw does not invalidate the render you saw it in. The production namespace and the local capture and viewer hosts are not authored decisions at all: the namespace is derived from `package.json`, and the host boundary is selected on the invoking command.
-
-The reusable contracts those hosts answer live here too. This scaffold supplies `docs/discovery`, `docs/upstream`, `docs/principles`, and `docs/obligations`, and the graph resolves every target from this project-local root without reading an installed package. Cite them by their evidence roots (`discovery/...`, `upstream/...`, `principles/...`, `obligations/...`). Discovery states the open searches a population must run. Principles are no-exclusion checklists every selected authored H2/H3/H4 answers for itself. Authored-layer obligations are no-exclusion roles compared once by dedicated H2s under `docs/accounts/<layer>` against that layer's complete H2 population; source obligations remain coverage by the selected public-export population. Work-specific results become flat files in `docs/contracts`. A deliberate reusable-contract revision changes the local target and every affected host, router, and review together.
-
-Choose one shape in `../lint.config.ts` before authoring. The [production-kinds route](../.agents/skills/production-lifecycle/production-kinds.md) owns the exact ladders, parallel inputs, applicability tests, and refusals; this table names only the physical document owner selected by each shape:
-
-| Shape | Physical authored owner |
+| Path | Physical owner |
 | --- | --- |
-| Film | settings, film narrative documents, shots, and film sources |
-| Brief | settings, bounded brief documents, shots, and film sources |
-| Library | settings and each matching design and source branch it delivers |
+| `discovery`, `upstream`, `principles`, `obligations` | Scaffold-supplied reusable contract targets. |
+| `language` | The one creation-selected language contract module. |
+| `contracts` | Flat production-specific targets and the optional no-result index. |
+| `accounts` | One authored layer's whole-population obligation comparisons. |
+| `settings` | Production facts, identities, capabilities, limits, and delivery conditions. |
+| `research` | Optional external-source records and their production consequences. |
+| `maps` | Broad world organization, site boundary, scale, temporal state, and external access. |
+| `models` | Deterministic bounded representation of a subject or reusable object. |
+| `spaces` | Building exterior or interior topology, enclosure, openings, and circulation inside the adopted site boundary. |
+| `materials` | Construction, finish, texture scale, optical response, and material state. |
+| `instances` | Repeated membership, stable identities, transforms, variation, and placement. |
+| `motions` | Deterministic state transitions over time. |
+| `systems` | Coupled lighting, environment, effects, simulation, sound, services, and other processes. |
+| `treatments` | Film treatment units. |
+| `scripts` | Film script delivery units. |
+| `screenplays` | Film screenplay delivery units. |
+| `briefs` | Direct-brief delivery, shot, and observation units. |
 
-Runtime alone does not choose the shape. Design branches are orthogonal to shape:
+Reviewed delivery configuration is emitted from governed source into the production design record rather than authored as another document tree. `repaintSelectionReviews.ts` is the one tracked observation file outside `docs` and `src`; it records candidate observations, not production decisions.
 
-| Directory | Sole ownership |
-| --- | --- |
-| accounts | one layer's whole-population comparison against each selected obligation |
-| settings | production facts, identities, capabilities, limits, and delivery contract |
-| research | retrievable external-source records and their production consequence |
-| maps | broad world organization, site boundary, scale and partition, temporal world state, and external access node |
-| models | deterministic bounded representation of one subject or reusable object |
-| spaces | building exterior/interior, room, zone, enclosure, opening, and circulation topology inside the adopted map/site boundary |
-| materials | construction, finish, texture scale, optical response, and material state |
-| instances | repeated/group membership, stable instance identity, transforms, variation, and placement |
-| motions | deterministic state transition over time |
-| systems | lighting, environment, effects, simulation, sound, services, and other coupled processes |
-| treatments | flat ordered narrative events: causal/formal development and audience change without a delivery partition |
-| scripts | independently partitioned delivery units with executable physical progression and consequential exchange |
-| screenplays | exact script-delivery identities refined into the final audiovisual screenplay |
-| briefs | one bounded delivery/shot/observation hierarchy with no separate narrative-refinement ladder |
-
-Every shape accounts for the settings population roles for operative-subject inventory, actual agency or a passive boundary, and the subject conditions on which its design depends. A film's settings account additionally compares `obligations/story/subjects.md` against the complete settings H2 population: those film-only roles decide dramatic position, motive, knowledge, expression, relationship, and change without taxing a brief or reusable library with false character work.
-
-Each active Markdown file contains explicitly anchored H2 owners. Treatments are flat numbered event files with one required H1 title and H2 units only; they have no group directory or index. Scripts and screenplays use numbered delivery-group directories, H1-only indexes with generated unit links, and numbered unit files with required H1 titles and anchored H2/H3/H4 units. Brief files likewise use H2/H3/H4. Settings, research, design, and brief files may optionally begin with an H1; outside those titles their configured unit depths are closed. Any other authored heading depth is a hard error. Scripts may split one treatment event across delivery units or braid several events, and both scripts and screenplays cite the flat treatment H2 population by many-to-many coverage. Screenplays alone preserve the script delivery groups, index and unit titles, filenames, identities, nesting, and order exactly.
-
-Discovery is file-level coverage over the separate work-specific contract population, not a checklist repeated by authored units. Every active Markdown layer selects `docs/contracts/*.md` and answers `discovery/core/common.md`; settings adds `settings.md`, each map, model, space, material, instance, motion, or system branch adds `designs.md` and its own layer file, treatments add `films.md` and `treatments.md`, scripts add `films.md` and `scripts.md`, screenplays add `films.md` and `screenplays.md`, and briefs add `briefs.md`. Research adds nothing beyond common so external-evidence adoption stays separate from design-boundary discovery. A retained result becomes a flat contract file that identifies its earliest semantic owner and current realization. A true no-result is recorded only in `docs/contracts/index.md` and names the concrete inputs, risks, and sufficient existing owners examined. Authored H2/H3/H4 units describe the work and do not testify about the audit. Settings backcasts the actual planned delivery and accounts for every independently consequential operative subject before a dependent layer begins.
-
-Evidence truth is not a principle host certifies about itself. The evidence-graph conformance owner map routes mechanically decidable failures, and review-verification owns the independent semantic-review transaction for acknowledgements, exclusions, reviews, and population accounts.
-
-Stages are disabled -> draft -> evidence -> review. Draft authored hosts first without evidence tags; the separate contract audit is active at draft and carries discovery evidence only in each retained rule's comment preamble before H1. A passed pilot has one explicit `complete-production-reset` exception: retained pilot tags stay inactive while the complete selected population is rebuilt in draft, pay no claim, and are reread before evidence. After the complete layer is coherent, switch to evidence and write truthful authored-host citations. Review adds target fingerprints and must be complete before a child layer starts outside that synchronized reset. Empty active populations, an active layer with neither a retained contract nor a truthful negative ledger, and files left in a disabled selected population are hard errors.
-
-The project declaration is intentionally extensible because a production may need extra targets; only the additive `claims` list in `lint.config.ts` is that extension seam. The scaffold-supplied local inventory is exact, and its H2s each contain one review question and one final sources line. Put every production-specific target directly under `docs/contracts` with a descriptive family-prefixed filename, then append the typed claim that selects the affected authored or source population. A retained rule carries its discovery host evidence only in the comment preamble before H1; target H2s themselves never carry host-side evidence. Only `docs/contracts/index.md` may carry truthful discovery exclusions, and it carries no positive evidence or H2 target. H2 titles and anchors are globally unique across the complete scaffold-plus-production target inventory. A local target with no additive reference, an enabled local target pattern matching zero files, a nested contract directory, or a contract with the wrong tag placement is a hard error. Never remove, filter, copy, replace, or weaken the shared populations, review requirements, cardinality, exclusions, or topology checks. If a new reusable target family is genuinely needed, change the inventory, population, negative tests, and routing guidance together upstream and synchronize the resulting scaffold.
+This README is a tracked snapshot created with the scaffold. Follow [Static-document updates](../README.md#static-document-updates) before expecting an installed package upgrade, instruction sync, or contract migration to replace it.
