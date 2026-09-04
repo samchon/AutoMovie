@@ -11,6 +11,15 @@ interface IBoundParent {
   openResident(childName: string): number;
 }
 
+interface INativeEnvironment {
+  fileSystem: typeof fs;
+  foreign: typeof koffi;
+  platform: NodeJS.Platform;
+  posixConstants(): IPosixConstants;
+  posixLibrary(): IPosixLibrary;
+  windowsLibrary(): IWindowsLibrary;
+}
+
 type ICreateResult =
   | { descriptor: number; status: "opened" }
   | { error: unknown; status: "partial" }
@@ -54,18 +63,24 @@ class ScaffoldCreatedSlotError extends Error {
  */
 export const publishNativeScaffoldFile = (
   request: IScaffoldParentPublicationRequest,
+): ScaffoldFilePublicationOutcome =>
+  publishNativeScaffoldFileWithEnvironment(request, NATIVE_ENVIRONMENT);
+
+const publishNativeScaffoldFileWithEnvironment = (
+  request: IScaffoldParentPublicationRequest,
+  environment: INativeEnvironment,
 ): ScaffoldFilePublicationOutcome => {
   let parent: IBoundParent;
   try {
-    parent = openBoundParent(request);
+    parent = openBoundParent(request, environment);
   } catch (error) {
     return Object.freeze({
       error,
       reason:
         error instanceof ScaffoldParentChangedError
-          ? "parent-changed"
-          : "create-failed",
-      status: "refused",
+          ? ("parent-changed" as const)
+          : ("create-failed" as const),
+      status: "refused" as const,
     });
   }
 
@@ -81,8 +96,8 @@ export const publishNativeScaffoldFile = (
     }
     return Object.freeze({
       error: failure,
-      reason: "create-failed",
-      status: "refused",
+      reason: "create-failed" as const,
+      status: "refused" as const,
     });
   }
   if (creation.status === "refused") {
@@ -115,10 +130,12 @@ export const publishNativeScaffoldFile = (
   let failure: unknown | undefined;
   let completedVersion: string | undefined;
   try {
-    const opened = fs.fstatSync(descriptor, { bigint: true });
+    const opened = environment.fileSystem.fstatSync(descriptor, {
+      bigint: true,
+    });
     assertOrdinarySingleLink(opened, request.childName);
     while (bytesWritten < source.length) {
-      const written = fs.writeSync(
+      const written = environment.fileSystem.writeSync(
         descriptor,
         source,
         bytesWritten,
@@ -131,20 +148,27 @@ export const publishNativeScaffoldFile = (
         );
       bytesWritten += written;
     }
-    fs.fsyncSync(descriptor);
-    const completed = fs.fstatSync(descriptor, { bigint: true });
+    environment.fileSystem.fsyncSync(descriptor);
+    const completed = environment.fileSystem.fstatSync(descriptor, {
+      bigint: true,
+    });
     assertOrdinarySingleLink(completed, request.childName);
     if (completed.size !== BigInt(source.length))
       throw new Error(`scaffold file changed final size: ${request.childName}`);
-    assertDescriptorBytes(descriptor, request.childName, source);
+    assertDescriptorBytes(environment, descriptor, request.childName, source);
     completedVersion = physicalVersion(completed);
-    assertBoundResident(parent, request.childName, completedVersion);
+    assertBoundResident(
+      environment,
+      parent,
+      request.childName,
+      completedVersion,
+    );
   } catch (error) {
     failure = error;
   }
 
   try {
-    fs.closeSync(descriptor);
+    environment.fileSystem.closeSync(descriptor);
   } catch (closeError) {
     failure = combineFailures(
       failure,
@@ -154,7 +178,12 @@ export const publishNativeScaffoldFile = (
   }
   if (failure === undefined)
     try {
-      assertBoundResident(parent, request.childName, completedVersion!);
+      assertBoundResident(
+        environment,
+        parent,
+        request.childName,
+        completedVersion!,
+      );
     } catch (residentError) {
       failure = residentError;
     }
@@ -179,13 +208,16 @@ export const publishNativeScaffoldFile = (
 
 const openBoundParent = (
   request: IScaffoldParentPublicationRequest,
+  environment: INativeEnvironment,
 ): IBoundParent => {
   const parent =
-    process.platform === "win32"
-      ? openWindowsParent(request.parentPath)
-      : openPosixParent(request.parentPath);
+    environment.platform === "win32"
+      ? openWindowsParent(request.parentPath, environment)
+      : openPosixParent(request.parentPath, environment);
   try {
-    const status = fs.fstatSync(parentDescriptor(parent), { bigint: true });
+    const status = environment.fileSystem.fstatSync(parentDescriptor(parent), {
+      bigint: true,
+    });
     if (
       status.isDirectory() === false ||
       physicalIdentity(status) !== request.expectedParentIdentity
@@ -218,9 +250,12 @@ type ParentWithDescriptor = IBoundParent & { [PARENT_DESCRIPTOR]: number };
 const parentDescriptor = (parent: IBoundParent): number =>
   (parent as ParentWithDescriptor)[PARENT_DESCRIPTOR];
 
-const openPosixParent = (parentPath: string): IBoundParent => {
-  const library = posixLibrary();
-  const constants = requiredPosixConstants();
+const openPosixParent = (
+  parentPath: string,
+  environment: INativeEnvironment,
+): IBoundParent => {
+  const library = environment.posixLibrary();
+  const constants = environment.posixConstants();
   const descriptor = library.open(
     parentPath,
     constants.O_RDONLY |
@@ -230,19 +265,19 @@ const openPosixParent = (parentPath: string): IBoundParent => {
     0,
   );
   if (descriptor < 0) {
-    const code = koffi.errno();
+    const code = environment.foreign.errno();
     const error = nativeError("unable to open scaffold parent", code);
     if (
-      code === koffi.os.errno.ENOENT ||
-      code === koffi.os.errno.ENOTDIR ||
-      code === koffi.os.errno.ELOOP
+      code === environment.foreign.os.errno.ENOENT ||
+      code === environment.foreign.os.errno.ENOTDIR ||
+      code === environment.foreign.os.errno.ELOOP
     )
       throw new ScaffoldParentChangedError(error.message);
     throw error;
   }
   const parent: ParentWithDescriptor = {
     [PARENT_DESCRIPTOR]: descriptor,
-    close: () => fs.closeSync(descriptor),
+    close: () => environment.fileSystem.closeSync(descriptor),
     createExclusive: (childName) => {
       const child = library.openat(
         descriptor,
@@ -255,11 +290,11 @@ const openPosixParent = (parentPath: string): IBoundParent => {
         0o600,
       );
       if (child >= 0) return { descriptor: child, status: "opened" };
-      const code = koffi.errno();
+      const code = environment.foreign.errno();
       return {
         error: nativeError("unable to create scaffold child", code),
         reason:
-          code === koffi.os.errno.EEXIST
+          code === environment.foreign.os.errno.EEXIST
             ? "target-competitor"
             : "create-failed",
         status: "refused",
@@ -273,7 +308,10 @@ const openPosixParent = (parentPath: string): IBoundParent => {
         0,
       );
       if (child < 0)
-        throw nativeError("unable to reopen scaffold child", koffi.errno());
+        throw nativeError(
+          "unable to reopen scaffold child",
+          environment.foreign.errno(),
+        );
       return child;
     },
   };
@@ -290,11 +328,9 @@ interface IPosixLibrary {
   ): number;
 }
 
-let POSIX_LIBRARY: IPosixLibrary | undefined;
-const posixLibrary = (): IPosixLibrary => {
-  if (POSIX_LIBRARY !== undefined) return POSIX_LIBRARY;
-  const library = koffi.load(null);
-  POSIX_LIBRARY = {
+const createPosixLibrary = (foreign: typeof koffi): IPosixLibrary => {
+  const library = foreign.load(null);
+  return {
     open: library.func(
       "int open(const char *pathname, int flags, uint32_t mode)",
     ) as IPosixLibrary["open"],
@@ -302,7 +338,6 @@ const posixLibrary = (): IPosixLibrary => {
       "int openat(int directory, const char *pathname, int flags, uint32_t mode)",
     ) as IPosixLibrary["openat"],
   };
-  return POSIX_LIBRARY;
 };
 
 interface IPosixConstants {
@@ -315,8 +350,11 @@ interface IPosixConstants {
   O_RDWR: number;
 }
 
-const requiredPosixConstants = (): IPosixConstants => {
-  const constants = fs.constants as unknown as Record<string, number>;
+const requiredPosixConstants = (
+  fileSystem: typeof fs,
+  platform: NodeJS.Platform,
+): IPosixConstants => {
+  const constants = fileSystem.constants as unknown as Record<string, number>;
   const names = [
     "O_CLOEXEC",
     "O_CREAT",
@@ -331,9 +369,7 @@ const requiredPosixConstants = (): IPosixConstants => {
       throw new Error(`supported POSIX runtime omitted ${name}`);
   const closeOnExec =
     constants.O_CLOEXEC ??
-    (process.platform === "linux" || process.platform === "android"
-      ? 0x00080000
-      : undefined);
+    (platform === "linux" || platform === "android" ? 0x00080000 : undefined);
   if (closeOnExec === undefined)
     throw new Error("supported POSIX runtime omitted O_CLOEXEC");
   return {
@@ -347,8 +383,11 @@ const requiredPosixConstants = (): IPosixConstants => {
   };
 };
 
-const openWindowsParent = (parentPath: string): IBoundParent => {
-  const windows = windowsLibrary();
+const openWindowsParent = (
+  parentPath: string,
+  environment: INativeEnvironment,
+): IBoundParent => {
+  const windows = environment.windowsLibrary();
   const raw = windows.createFile(
     path.toNamespacedPath(parentPath),
     0x00100081,
@@ -358,7 +397,7 @@ const openWindowsParent = (parentPath: string): IBoundParent => {
     0x02200000,
     null,
   );
-  if (invalidWindowsHandle(raw, windows.handleType)) {
+  if (invalidWindowsHandle(environment.foreign, raw, windows.handleType)) {
     const code = windows.getLastError();
     if (code === 2 || code === 3 || code === 4390)
       throw new ScaffoldParentChangedError(
@@ -368,7 +407,7 @@ const openWindowsParent = (parentPath: string): IBoundParent => {
   }
   const descriptor = windows.openOsHandle(raw, 0x8000);
   if (descriptor < 0) {
-    const code = koffi.errno();
+    const code = environment.foreign.errno();
     windows.closeHandle(raw);
     throw nativeError("unable to adopt scaffold parent handle", code);
   }
@@ -384,7 +423,7 @@ const openWindowsParent = (parentPath: string): IBoundParent => {
     };
     const attributes = {
       Attributes: 0x40,
-      Length: koffi.sizeof(windows.objectAttributesType),
+      Length: environment.foreign.sizeof(windows.objectAttributesType),
       ObjectName: unicode,
       RootDirectory: raw,
       SecurityDescriptor: null,
@@ -409,7 +448,7 @@ const openWindowsParent = (parentPath: string): IBoundParent => {
     const childRaw = output[0];
     const childDescriptor = windows.openOsHandle(childRaw, 0x8002);
     if (childDescriptor < 0) {
-      const code = koffi.errno();
+      const code = environment.foreign.errno();
       let error: unknown = nativeError(
         "unable to adopt scaffold child handle",
         code,
@@ -434,7 +473,7 @@ const openWindowsParent = (parentPath: string): IBoundParent => {
   };
   const parent: ParentWithDescriptor = {
     [PARENT_DESCRIPTOR]: descriptor,
-    close: () => fs.closeSync(descriptor),
+    close: () => environment.fileSystem.closeSync(descriptor),
     createExclusive: (childName) => {
       let created: { descriptor?: number; status: number };
       try {
@@ -483,37 +522,35 @@ interface IWindowsLibrary {
   openOsHandle(handle: unknown, flags: number): number;
 }
 
-let WINDOWS_LIBRARY: IWindowsLibrary | undefined;
-const windowsLibrary = (): IWindowsLibrary => {
-  if (WINDOWS_LIBRARY !== undefined) return WINDOWS_LIBRARY;
-  const kernel = koffi.load("kernel32.dll");
-  const runtime = koffi.load("ucrtbase.dll");
-  const ntdll = koffi.load("ntdll.dll");
-  const handleType = koffi.pointer(
+const createWindowsLibrary = (foreign: typeof koffi): IWindowsLibrary => {
+  const kernel = foreign.load("kernel32.dll");
+  const runtime = foreign.load("ucrtbase.dll");
+  const ntdll = foreign.load("ntdll.dll");
+  const handleType = foreign.pointer(
     "AutoMovieScaffoldHandle",
-    koffi.opaque("AutoMovieScaffoldHandleValue"),
+    foreign.opaque("AutoMovieScaffoldHandleValue"),
   );
-  const unicodeType = koffi.struct("AutoMovieScaffoldUnicodeString", {
+  const unicodeType = foreign.struct("AutoMovieScaffoldUnicodeString", {
     Length: "uint16_t",
     MaximumLength: "uint16_t",
     Buffer: "void *",
   });
-  const objectAttributesType = koffi.struct(
+  const objectAttributesType = foreign.struct(
     "AutoMovieScaffoldObjectAttributes",
     {
       Length: "uint32_t",
       RootDirectory: handleType,
-      ObjectName: koffi.pointer(unicodeType),
+      ObjectName: foreign.pointer(unicodeType),
       Attributes: "uint32_t",
       SecurityDescriptor: "void *",
       SecurityQualityOfService: "void *",
     },
   );
-  const ioStatusType = koffi.struct("AutoMovieScaffoldIoStatusBlock", {
+  const ioStatusType = foreign.struct("AutoMovieScaffoldIoStatusBlock", {
     Status: "intptr_t",
     Information: "uintptr_t",
   });
-  WINDOWS_LIBRARY = {
+  return {
     closeHandle: kernel.func("__stdcall", "CloseHandle", "bool", [
       handleType,
     ]) as IWindowsLibrary["closeHandle"],
@@ -531,10 +568,10 @@ const windowsLibrary = (): IWindowsLibrary => {
     ) as IWindowsLibrary["getLastError"],
     handleType,
     ntCreateFile: ntdll.func("NtCreateFile", "int32_t", [
-      koffi.out(koffi.pointer(handleType)),
+      foreign.out(foreign.pointer(handleType)),
       "uint32_t",
-      koffi.pointer(objectAttributesType),
-      koffi.out(koffi.pointer(ioStatusType)),
+      foreign.pointer(objectAttributesType),
+      foreign.out(foreign.pointer(ioStatusType)),
       "int64_t *",
       "uint32_t",
       "uint32_t",
@@ -548,17 +585,49 @@ const windowsLibrary = (): IWindowsLibrary => {
       "int _open_osfhandle(intptr_t handle, int flags)",
     ) as IWindowsLibrary["openOsHandle"],
   };
-  return WINDOWS_LIBRARY;
+};
+
+const createNativeEnvironment = (props: {
+  fileSystem: typeof fs;
+  foreign: typeof koffi;
+  platform: NodeJS.Platform;
+}): INativeEnvironment => {
+  let posix: IPosixLibrary | undefined;
+  let windows: IWindowsLibrary | undefined;
+  return {
+    fileSystem: props.fileSystem,
+    foreign: props.foreign,
+    platform: props.platform,
+    posixConstants: () =>
+      requiredPosixConstants(props.fileSystem, props.platform),
+    posixLibrary: () => (posix ??= createPosixLibrary(props.foreign)),
+    windowsLibrary: () => (windows ??= createWindowsLibrary(props.foreign)),
+  };
+};
+
+const NATIVE_ENVIRONMENT = createNativeEnvironment({
+  fileSystem: fs,
+  foreign: koffi,
+  platform: process.platform,
+});
+
+/** @internal Injectable native boundary used only by semantic unit tests. */
+export const nativeScaffoldPublicationForTesting = {
+  createEnvironment: createNativeEnvironment,
+  publish: publishNativeScaffoldFileWithEnvironment,
 };
 
 const invalidWindowsHandle = (
+  foreign: typeof koffi,
   handle: unknown,
   handleType: TypeObject,
 ): boolean =>
   handle === null ||
-  BigInt.asIntN(koffi.sizeof(handleType) * 8, koffi.address(handle)) === -1n;
+  BigInt.asIntN(foreign.sizeof(handleType) * 8, foreign.address(handle)) ===
+    -1n;
 
 const assertBoundResident = (
+  environment: INativeEnvironment,
   parent: IBoundParent,
   childName: string,
   expectedVersion: string,
@@ -566,7 +635,9 @@ const assertBoundResident = (
   const descriptor = parent.openResident(childName);
   let failure: unknown | undefined;
   try {
-    const status = fs.fstatSync(descriptor, { bigint: true });
+    const status = environment.fileSystem.fstatSync(descriptor, {
+      bigint: true,
+    });
     assertOrdinarySingleLink(status, childName);
     if (physicalVersion(status) !== expectedVersion)
       throw new Error(
@@ -577,7 +648,7 @@ const assertBoundResident = (
     throw error;
   } finally {
     try {
-      fs.closeSync(descriptor);
+      environment.fileSystem.closeSync(descriptor);
     } catch (closeError) {
       if (failure === undefined) throw closeError;
       throw combineFailures(
@@ -590,6 +661,7 @@ const assertBoundResident = (
 };
 
 const assertDescriptorBytes = (
+  environment: INativeEnvironment,
   descriptor: number,
   childName: string,
   bytes: Buffer,
@@ -597,7 +669,7 @@ const assertDescriptorBytes = (
   const readback = Buffer.alloc(bytes.length);
   let offset = 0;
   while (offset < readback.length) {
-    const read = fs.readSync(
+    const read = environment.fileSystem.readSync(
       descriptor,
       readback,
       offset,

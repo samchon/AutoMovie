@@ -21,10 +21,23 @@ import {
  * @evidence requirements/operations-and-recovery/idempotency-and-side-effects.md#operations-compensation-reconciliation Keeps the completed prefix and stopping effect attached to a failed legacy write call.
  * @evidence specifications/execution-and-recovery/retry-backoff-and-idempotency.md#execution-compensation-adoption Lets a caller inspect the same receipt used by the non-throwing publication API.
  * @author Samchon
+ * @internal
  */
 export class ScaffoldPublicationError extends Error {
+  /**
+   * Exact candidate-wide effect observed before the compatibility call threw.
+   *
+   * @evidence requirements/operations-and-recovery/idempotency-and-side-effects.md#operations-compensation-reconciliation Preserves the completed prefix and stopping effect for reconciliation.
+   * @evidence specifications/execution-and-recovery/retry-backoff-and-idempotency.md#execution-compensation-adoption Supplies the immutable receipt to an explicit recovery decision.
+   */
   public readonly receipt: IScaffoldPublicationReceipt;
 
+  /**
+   * Construct the compatibility error from the already completed receipt.
+   *
+   * @evidence requirements/operations-and-recovery/idempotency-and-side-effects.md#operations-compensation-reconciliation Raises only after the exact observed effect has been captured.
+   * @evidence specifications/execution-and-recovery/retry-backoff-and-idempotency.md#execution-compensation-adoption Keeps the recovery value intact across the legacy throwing boundary.
+   */
   public constructor(receipt: IScaffoldPublicationReceipt) {
     const failure = receipt.failure;
     super(

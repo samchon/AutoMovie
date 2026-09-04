@@ -373,7 +373,7 @@ export const writeScaffoldFile = (props: {
     }
   }
   return publishScaffoldFileToCapturedParent({
-    bytes: props.bytes,
+    bytes: Array.from(props.bytes),
     capability: { publish: publishNativeScaffoldFile },
     parent: props.parent,
     target: absolute,
@@ -391,7 +391,11 @@ const overwriteScaffoldFile = (props: {
   try {
     descriptor = fs.openSync(props.target, "r+");
   } catch (error) {
-    return Object.freeze({ error, reason: "create-failed", status: "refused" });
+    return Object.freeze({
+      error,
+      reason: "create-failed" as const,
+      status: "refused" as const,
+    });
   }
   const progress = { bytesWritten: 0 };
   let failure: unknown | undefined;
