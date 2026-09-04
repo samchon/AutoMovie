@@ -323,9 +323,9 @@ const executeProductionRenderCommand = async (
     stateRoot,
   });
   const encoderRuntime = createProductionRenderEncoderRuntime({
-    assertRuntimePackagesCurrent: renderHost.assertRuntimePackagesCurrent,
-    createMp4File: renderHost.createMp4File,
-    h264Module: renderHost.h264Module,
+    h264Generation: renderHost.h264Generation,
+    mp4Generation: renderHost.mp4Generation,
+    pngGeneration: renderHost.pngGeneration,
     preserveCleanup: preserveProductionEncoderCleanup,
     productionEncoderIdentity: planningRuntime.productionEncoderIdentity,
   });
@@ -361,7 +361,6 @@ const executeProductionRenderCommand = async (
     stateRoot,
   });
   const chunkCapture = createProductionRenderChunkCaptureRuntime({
-    assertRuntimePackagesCurrent: renderHost.assertRuntimePackagesCurrent,
     capture: renderHost.capture,
     captureCompleted: captureRenderGcTarget,
     capturePointer: gcRuntime.captureCurrentChunkPointer,
@@ -378,7 +377,7 @@ const executeProductionRenderCommand = async (
       state: renderObservations,
     },
     pid: renderHost.pid,
-    pngModule: renderHost.pngModule,
+    pngGeneration: renderHost.pngGeneration,
     productionId,
     publication: {
       publish: publishRenderChunkSnapshot,

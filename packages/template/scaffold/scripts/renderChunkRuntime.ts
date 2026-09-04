@@ -288,7 +288,6 @@ export interface IProductionRenderInvocationObservationState {
 
 /** Capture, encode, verify, and atomically publish one render chunk. */
 export const createProductionRenderChunkCaptureRuntime = (props: {
-  assertRuntimePackagesCurrent: () => void;
   capture: IProductionRenderHost["capture"];
   captureCompleted: (root: string, target: string) => IRenderGcTargetSnapshot;
   capturePointer: (
@@ -331,7 +330,7 @@ export const createProductionRenderChunkCaptureRuntime = (props: {
     state: IProductionRenderInvocationObservationState;
   };
   pid: number;
-  pngModule: IProductionRenderHost["pngModule"];
+  pngGeneration: IProductionRenderHost["pngGeneration"];
   productionId: string;
   publication: {
     publish: (props: {
@@ -368,9 +367,9 @@ export const createProductionRenderChunkCaptureRuntime = (props: {
 } => ({
   render: (plan, chunk, reports) =>
     runWithProductionRuntimeClosure(
-      props.assertRuntimePackagesCurrent,
+      props.pngGeneration.assertCurrent,
       async () => {
-        const { PNG } = props.pngModule;
+        const { PNG } = props.pngGeneration.module;
         const pointer = props.capturePointer(chunk);
         const existing = await props.current(plan, chunk, pointer);
         if (existing !== null) return existing.receipt;
@@ -484,7 +483,7 @@ export const createProductionRenderChunkCaptureRuntime = (props: {
             images,
             plan.frameFormat.width,
             plan.frameFormat.height,
-            props.pngModule,
+            props.pngGeneration.module,
           );
           const relative = `frame_${String(sample.globalFrame).padStart(
             8,
@@ -586,7 +585,7 @@ export const compositeProductionCaptureLayers = (
   layers: Array<{ image: PNG; weight: number }>,
   width: number,
   height: number,
-  pngModule: IProductionRenderHost["pngModule"],
+  pngModule: IProductionRenderHost["pngGeneration"]["module"],
 ): Uint8Array => {
   const { PNG } = pngModule;
   const output = new PNG({ width, height });

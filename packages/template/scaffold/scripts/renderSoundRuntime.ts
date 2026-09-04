@@ -1297,25 +1297,26 @@ export const createProductionSoundRuntime = (props: {
 
 /** Own the production's H.264 and Opus resources for one invocation. */
 export const createProductionRenderEncoderRuntime = (props: {
-  assertRuntimePackagesCurrent: () => void;
-  createMp4File: IProductionRenderHost["createMp4File"];
-  h264Module: IProductionRenderHost["h264Module"];
+  h264Generation: IProductionRenderHost["h264Generation"];
+  mp4Generation: IProductionRenderHost["mp4Generation"];
+  pngGeneration: IProductionRenderHost["pngGeneration"];
   preserveCleanup: (
     failure: { error: unknown } | undefined,
     resources: readonly { resource: string; cleanup: () => unknown }[],
   ) => void;
   productionEncoderIdentity: (fps: number) => unknown;
 }): IProductionRenderEncoderRuntime => {
-  const { BoxParser } = loadResidentRuntimePackage<typeof import("mp4box")>({
-    packageName: "mp4box",
-  }).module;
-  const { PNG } = loadResidentRuntimePackage<typeof import("pngjs")>({
-    packageName: "pngjs",
-  }).module;
+  const { BoxParser } = props.mp4Generation.module;
+  const { PNG } = props.pngGeneration.module;
+  const assertRuntimePackagesCurrent = (): void => {
+    props.h264Generation.assertCurrent();
+    props.mp4Generation.assertCurrent();
+    props.pngGeneration.assertCurrent();
+  };
   const assertCurrentEncoder = (
     plan: IAutoMovieProductionRenderJobPlan,
   ): void => {
-    props.assertRuntimePackagesCurrent();
+    assertRuntimePackagesCurrent();
     if (
       isDeepStrictEqual(
         props.productionEncoderIdentity(plan.frameFormat.fps),
@@ -1330,7 +1331,7 @@ export const createProductionRenderEncoderRuntime = (props: {
     assertCurrent: assertCurrentEncoder,
     encodeOpus: (pcm) =>
       runWithProductionRuntimeClosure(
-        props.assertRuntimePackagesCurrent,
+        assertRuntimePackagesCurrent,
         async () => {
           const opus = snapshotRuntimePackage({
             entry: fileURLToPath(import.meta.resolve("libopus-wasm")),
@@ -1359,7 +1360,7 @@ export const createProductionRenderEncoderRuntime = (props: {
           description.StreamCount = 1;
           description.CoupledCount = 1;
           description.ChannelMapping = [];
-          const file = props.createMp4File();
+          const file = props.mp4Generation.module.createFile();
           file.init({
             brands: ["isom", "iso2", "mp41", "Opus"],
             timescale: 48_000,
@@ -1399,7 +1400,7 @@ export const createProductionRenderEncoderRuntime = (props: {
       runWithProductionRuntimeClosure(
         () => assertCurrentEncoder(plan),
         async () => {
-          const module = props.h264Module;
+          const module = props.h264Generation.module;
           const createEncoder =
             typeof module.createH264MP4Encoder === "function"
               ? module.createH264MP4Encoder
