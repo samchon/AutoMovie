@@ -5,6 +5,7 @@ import {
   productionFrameIntervalToGridTicks,
   resolveProductionFrameRate,
 } from "@automovie/engine";
+import { isProductionFrameTime } from "@automovie/production";
 import { TestValidator } from "@nestia/e2e";
 
 const refused = (closure: () => unknown, message: string): boolean => {
@@ -44,12 +45,19 @@ export const test_production_media_timebase_join = (): void => {
         { numerator: 30_000, denominator: 1_001 },
         { numerator: 2_997, denominator: 100 },
       ),
+      rationalFrameTime: isProductionFrameTime(1_001 / 30_000, {
+        numerator: 30_000,
+        denominator: 1_001,
+      }),
+      integerFrameTime: isProductionFrameTime(1 / 24, 24),
     },
     {
       integer: { numerator: 24, denominator: 1 },
       reduced: { numerator: 30_000, denominator: 1_001 },
       equal: true,
       distinct: false,
+      rationalFrameTime: true,
+      integerFrameTime: true,
     },
   );
   TestValidator.equals(
@@ -231,6 +239,12 @@ export const test_production_media_timebase_join = (): void => {
           }),
         "collapses",
       ),
+      offGridTime: isProductionFrameTime(0.04, {
+        numerator: 24_000,
+        denominator: 1_001,
+      }),
+      nonFiniteTime: isProductionFrameTime(Number.NaN, 24),
+      invalidTimeRate: isProductionFrameTime(1, 29.97),
     },
     {
       fractionalScalar: true,
@@ -243,6 +257,9 @@ export const test_production_media_timebase_join = (): void => {
       overflow: true,
       reversed: true,
       collapsed: true,
+      offGridTime: false,
+      nonFiniteTime: false,
+      invalidTimeRate: false,
     },
   );
 };

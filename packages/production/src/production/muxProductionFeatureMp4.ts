@@ -1,4 +1,11 @@
-import type { IAutoMovieFilmTimeline } from "@automovie/interface";
+import {
+  equalProductionFrameRates,
+  resolveProductionFrameRate,
+} from "@automovie/engine";
+import type {
+  IAutoMovieFilmTimeline,
+  IAutoMovieProductionFrameRate,
+} from "@automovie/interface";
 import type {
   Box,
   BoxKind,
@@ -14,6 +21,10 @@ import {
   probeProductionMedia,
   probeProductionVideoMp4,
 } from "./probeProductionMedia";
+import {
+  assertProductionVideoProfile,
+  resolveProductionVideoProfile,
+} from "./productionMp4Profile";
 import { residentMp4Box } from "./residentCodecs";
 import { trimProductionAudioPresentation } from "./trimProductionAudioPresentation";
 
@@ -134,7 +145,15 @@ export const normalizeProductionH264Mp4 = (bytes: Uint8Array): Uint8Array => {
       sampleOptions(sample),
     );
   const normalized = new Uint8Array(output.getBuffer().buffer);
-  probeProductionVideoMp4(normalized);
+  const probe = probeProductionVideoMp4(normalized);
+  assertProductionVideoProfile({
+    expected: resolveProductionVideoProfile({
+      width: probe.width,
+      height: probe.height,
+      frameRate: probe.frameRate,
+    }),
+    actual: probe,
+  });
   return normalized;
 };
 
@@ -233,10 +252,18 @@ export const conformProductionRenditionVideoMp4 = (props: {
     );
   const bytes = new Uint8Array(output.getBuffer().buffer);
   const probe = probeProductionVideoMp4(bytes);
+  const frameRate = resolveProductionFrameRate(props.timeline);
+  assertProductionVideoProfile({
+    expected: resolveProductionVideoProfile({
+      width: first.probe.width,
+      height: first.probe.height,
+      frameRate,
+    }),
+    actual: probe,
+  });
   if (
-    probe.kind !== "video" ||
     probe.frameCount !== props.timeline.totalFrames ||
-    Math.abs(probe.fps - props.timeline.fps) > 1e-9
+    equalProductionFrameRates(probe.frameRate, frameRate) === false
   )
     throw new Error(
       "Conformed repaint video failed exact parser verification.",
@@ -277,7 +304,12 @@ export const assembleProductionChunkVideoMp4 = (props: {
   chunks: Iterable<Uint8Array>;
 
   /** Exact raster and rational frame clock every chunk must already carry. */
-  frameFormat: { fps: number; height: number; width: number };
+  frameFormat: {
+    fps: number;
+    frameRate?: IAutoMovieProductionFrameRate;
+    height: number;
+    width: number;
+  };
 
   /** Exact total output frames the assembled chunks must cover. */
   totalFrames: number;
@@ -291,8 +323,17 @@ export const assembleProductionChunkVideoMp4 = (props: {
     | undefined;
   let frame = 0;
   let index = 0;
+  const frameRate = resolveProductionFrameRate(props.frameFormat);
   for (const bytes of props.chunks) {
     const clip = parseProductionRenditionClip(bytes, `Render chunk ${index}`);
+    assertProductionVideoProfile({
+      expected: resolveProductionVideoProfile({
+        width: props.frameFormat.width,
+        height: props.frameFormat.height,
+        frameRate,
+      }),
+      actual: clip.probe,
+    });
     const description = sampleDescription(clip.samples[0]!);
     reference ??= {
       description,
@@ -305,7 +346,7 @@ export const assembleProductionChunkVideoMp4 = (props: {
     if (
       clip.probe.width !== props.frameFormat.width ||
       clip.probe.height !== props.frameFormat.height ||
-      Math.abs(clip.probe.fps - props.frameFormat.fps) > 1e-9 ||
+      equalProductionFrameRates(clip.probe.frameRate, frameRate) === false ||
       clip.track.timescale !== reference.timescale ||
       clip.sampleDuration !== reference.sampleDuration ||
       sameSampleDescription(reference.description, description) === false
@@ -351,7 +392,7 @@ export const assembleProductionChunkVideoMp4 = (props: {
     probe.frameCount !== props.totalFrames ||
     probe.width !== props.frameFormat.width ||
     probe.height !== props.frameFormat.height ||
-    Math.abs(probe.fps - props.frameFormat.fps) > 1e-9
+    equalProductionFrameRates(probe.frameRate, frameRate) === false
   )
     throw new Error(
       `Assembled chunk video parses as ${probe.frameCount} frames of ${probe.width}x${probe.height} at ${probe.fps} fps; expected ${props.totalFrames} frames of ${props.frameFormat.width}x${props.frameFormat.height} at ${props.frameFormat.fps} fps.`,
@@ -369,6 +410,7 @@ export const assertProductionRenditionClipDelivery = (props: {
   width: number;
   height: number;
   fps: number;
+  frameRate?: IAutoMovieProductionFrameRate;
   frameCount: number;
   runtimeSeconds: number;
 }): void => {
@@ -376,12 +418,24 @@ export const assertProductionRenditionClipDelivery = (props: {
     props.bytes,
     `Repaint clip "${props.shot}"`,
   );
+  const frameRate = resolveProductionFrameRate(props);
+  assertProductionVideoProfile({
+    expected: resolveProductionVideoProfile({
+      width: props.width,
+      height: props.height,
+      frameRate,
+    }),
+    actual: clip.probe,
+  });
   if (
-    clip.probe.width !== props.width ||
-    clip.probe.height !== props.height ||
     clip.probe.frameCount !== props.frameCount ||
-    Math.abs(clip.probe.fps - props.fps) > 1e-9 ||
-    Math.abs(clip.probe.runtimeSeconds - props.runtimeSeconds) > 1e-9
+    props.runtimeSeconds !==
+      (props.frameCount * frameRate.denominator) / frameRate.numerator ||
+    BigInt(clip.probe.presentation.movieDuration) *
+      BigInt(frameRate.numerator) !==
+      BigInt(props.frameCount) *
+        BigInt(frameRate.denominator) *
+        BigInt(clip.probe.presentation.movieTimescale)
   )
     throw new Error(
       `Repaint clip "${props.shot}" does not match its exact raster, rational frame clock, frame count, and runtime contract.`,
@@ -640,6 +694,7 @@ const productionRenditionVideoPlan = (props: {
   timeline: IAutoMovieFilmTimeline;
   clips: ReadonlyMap<string, Uint8Array>;
 }) => {
+  const frameRate = resolveProductionFrameRate(props.timeline);
   const parsed = props.timeline.segments.map((segment) => {
     if (
       segment.transitionIn.kind !== "cut" ||
@@ -661,7 +716,7 @@ const productionRenditionVideoPlan = (props: {
       segment.sourceInFrame !== 0 ||
       segment.sourceOutFrame !== clip.probe.frameCount ||
       segment.endFrame - segment.startFrame !== clip.probe.frameCount ||
-      Math.abs(clip.probe.fps - props.timeline.fps) > 1e-9
+      equalProductionFrameRates(clip.probe.frameRate, frameRate) === false
     )
       throw new Error(
         `Repainted feature delivery requires one full-shot ${props.timeline.fps}fps clip for segment "${segment.shot}"; partial trims and mismatched media are not representable yet.`,

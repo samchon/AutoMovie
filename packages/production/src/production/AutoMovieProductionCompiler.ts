@@ -94,6 +94,7 @@ import {
   IAutoMovieMotion,
   IAutoMovieProductionDesign,
   IAutoMovieExternalMotionAdoption as IAutoMovieProductionExternalMotionAdoption,
+  IAutoMovieProductionFrameRate,
   IAutoMovieProductionManifest,
   IAutoMovieProductionMediaProbe,
   IAutoMovieProductionRenderManifest,
@@ -4569,10 +4570,13 @@ const compileFilmSource = (
     return { value: null, diagnostics: source.diagnostics };
   const diagnostics = [...source.diagnostics];
   const edit = source.value;
-  const fps = props.context.production.frameFormat.fps;
+  const frameRate = resolveProductionFrameRate(
+    props.context.production.frameFormat,
+  );
+  const fps = frameRate.numerator / frameRate.denominator;
   const targetFrames = frameTime(
     { seconds: props.context.production.targetRuntimeSeconds },
-    fps,
+    frameRate,
     "production target runtime",
     diagnostics,
   );
@@ -4642,49 +4646,49 @@ const compileFilmSource = (
       );
     const sourceInFrame = frameTime(
       placement.sourceIn,
-      fps,
+      frameRate,
       `${placement.shot} sourceIn`,
       diagnostics,
     );
     const sourceOutFrame = frameTime(
       placement.sourceOut,
-      fps,
+      frameRate,
       `${placement.shot} sourceOut`,
       diagnostics,
     );
     const startFrame = frameTime(
       placement.start,
-      fps,
+      frameRate,
       `${placement.shot} global start`,
       diagnostics,
     );
     const headHandleFrames = frameTime(
       placement.handles.head,
-      fps,
+      frameRate,
       `${placement.shot} head handle`,
       diagnostics,
     );
     const tailHandleFrames = frameTime(
       placement.handles.tail,
-      fps,
+      frameRate,
       `${placement.shot} tail handle`,
       diagnostics,
     );
     const transitionIn = normalizeFilmTransition(
       placement.transitionIn,
-      fps,
+      frameRate,
       `${placement.shot} transitionIn`,
       diagnostics,
     );
     const transitionOut = normalizeFilmTransition(
       placement.transitionOut,
-      fps,
+      frameRate,
       `${placement.shot} transitionOut`,
       diagnostics,
     );
     const shotFrames = frameTime(
       { seconds: contract.durationSeconds },
-      fps,
+      frameRate,
       `${placement.shot} contract duration`,
       diagnostics,
     );
@@ -4731,7 +4735,7 @@ const compileFilmSource = (
           `Shot "${shot}" is neither placed nor explicitly omitted. Account for every current narrative shot.`,
         ),
       );
-  validateVideoTimeline(segments, props, fps, diagnostics);
+  validateVideoTimeline(segments, props, frameRate, diagnostics);
   const totalFrames =
     segments.length === 0
       ? 0
@@ -4759,15 +4763,20 @@ const compileFilmSource = (
   const audio = normalizeAudioCues(
     edit,
     props.context.assets,
-    fps,
+    frameRate,
     totalFrames,
     diagnostics,
   );
-  const captions = normalizeCaptionCues(edit, fps, totalFrames, diagnostics);
+  const captions = normalizeCaptionCues(
+    edit,
+    frameRate,
+    totalFrames,
+    diagnostics,
+  );
   const effects = normalizeEffectCues(
     edit,
     props.context.effectZones.map((zone) => zone.id),
-    fps,
+    frameRate,
     totalFrames,
     diagnostics,
   );
@@ -4797,7 +4806,7 @@ const compileFilmSource = (
             version: 1,
             id: edit.id,
             fps,
-            frameRate: props.context.production.frameFormat.frameRate,
+            frameRate,
             totalFrames,
             segments,
             omissions: edit.omissions,
@@ -4822,18 +4831,25 @@ const filmDiagnostic = (
 
 const frameTime = (
   value: { frame: number } | { seconds: number },
-  fps: number,
+  frameRate: IAutoMovieProductionFrameRate,
   label: string,
   diagnostics: IAutoMovieDiagnostic[],
 ): number | null => {
-  const raw = "frame" in value ? value.frame : value.seconds * fps;
+  const raw =
+    "frame" in value
+      ? value.frame
+      : (value.seconds * frameRate.numerator) / frameRate.denominator;
   const rounded = Math.round(raw);
   if (
     Number.isFinite(raw) === false ||
     Number.isSafeInteger(rounded) === false ||
     rounded < 0 ||
-    Math.abs(raw - rounded) > Number.EPSILON * 64 * Math.max(1, Math.abs(raw))
+    ("frame" in value
+      ? value.frame !== rounded
+      : value.seconds !==
+        (rounded * frameRate.denominator) / frameRate.numerator)
   ) {
+    const fps = frameRate.numerator / frameRate.denominator;
     diagnostics.push(
       filmDiagnostic(
         "film-time-off-grid",
@@ -4847,14 +4863,14 @@ const frameTime = (
 
 const normalizeFilmTransition = (
   transition: IAutoMovieFilmEdit["tracks"]["video"][number]["transitionIn"],
-  fps: number,
+  frameRate: IAutoMovieProductionFrameRate,
   label: string,
   diagnostics: IAutoMovieDiagnostic[],
 ): IAutoMovieFilmTimeline["segments"][number]["transitionIn"] | null => {
   if (transition.kind === "cut") return { kind: "cut" };
   const durationFrames = frameTime(
     transition.duration,
-    fps,
+    frameRate,
     `${label} duration`,
     diagnostics,
   );
@@ -4878,7 +4894,7 @@ const transitionDuration = (
 const validateVideoTimeline = (
   segments: readonly IAutoMovieFilmTimeline["segments"][number][],
   props: ICompileFilmSourceProps,
-  fps: number,
+  frameRate: IAutoMovieProductionFrameRate,
   diagnostics: IAutoMovieDiagnostic[],
 ): void => {
   if (segments.length === 0) {
@@ -4952,7 +4968,7 @@ const validateVideoTimeline = (
           `Shot "${segment.shot}" starts at frame ${segment.startFrame}; transition law requires frame ${expectedStart}. Arbitrary gaps and overlaps are forbidden.`,
         ),
       );
-    validateStateContinuity(previous, segment, props, fps, diagnostics);
+    validateStateContinuity(previous, segment, props, frameRate, diagnostics);
   }
 };
 
@@ -4960,12 +4976,15 @@ const validateStateContinuity = (
   previous: IAutoMovieFilmTimeline["segments"][number],
   current: IAutoMovieFilmTimeline["segments"][number],
   props: ICompileFilmSourceProps,
-  fps: number,
+  frameRate: IAutoMovieProductionFrameRate,
   diagnostics: IAutoMovieDiagnostic[],
 ): void => {
   const previousContract = props.contracts.get(previous.shot)!;
   const currentContract = props.contracts.get(current.shot)!;
-  const previousFrames = Math.round(previousContract.durationSeconds * fps);
+  const previousFrames = Math.round(
+    (previousContract.durationSeconds * frameRate.numerator) /
+      frameRate.denominator,
+  );
   if (
     previous.sourceOutFrame !== previousFrames ||
     current.sourceInFrame !== 0
@@ -5004,7 +5023,7 @@ const validateStateContinuity = (
 const normalizeAudioCues = (
   edit: IAutoMovieFilmEdit,
   assets: readonly string[],
-  fps: number,
+  frameRate: IAutoMovieProductionFrameRate,
   totalFrames: number,
   diagnostics: IAutoMovieDiagnostic[],
 ): IAutoMovieFilmTimeline["tracks"]["audio"] => {
@@ -5014,37 +5033,37 @@ const normalizeAudioCues = (
   for (const cue of edit.tracks.audio) {
     const sourceDurationFrames = frameTime(
       cue.sourceDuration,
-      fps,
+      frameRate,
       `${cue.id} audio source duration`,
       diagnostics,
     );
     const sourceOffsetFrame = frameTime(
       cue.sourceOffset,
-      fps,
+      frameRate,
       `${cue.id} audio source offset`,
       diagnostics,
     );
     const startFrame = frameTime(
       cue.start,
-      fps,
+      frameRate,
       `${cue.id} audio start`,
       diagnostics,
     );
     const durationFrames = frameTime(
       cue.duration,
-      fps,
+      frameRate,
       `${cue.id} audio duration`,
       diagnostics,
     );
     const fadeInFrames = frameTime(
       cue.fadeIn,
-      fps,
+      frameRate,
       `${cue.id} audio fadeIn`,
       diagnostics,
     );
     const fadeOutFrames = frameTime(
       cue.fadeOut,
-      fps,
+      frameRate,
       `${cue.id} audio fadeOut`,
       diagnostics,
     );
@@ -5097,7 +5116,7 @@ const normalizeAudioCues = (
 
 const normalizeCaptionCues = (
   edit: IAutoMovieFilmEdit,
-  fps: number,
+  frameRate: IAutoMovieProductionFrameRate,
   totalFrames: number,
   diagnostics: IAutoMovieDiagnostic[],
 ): IAutoMovieFilmTimeline["tracks"]["captions"] => {
@@ -5107,13 +5126,13 @@ const normalizeCaptionCues = (
   for (const cue of edit.tracks.captions) {
     const startFrame = frameTime(
       cue.start,
-      fps,
+      frameRate,
       `${cue.id} caption start`,
       diagnostics,
     );
     const endFrame = frameTime(
       cue.end,
-      fps,
+      frameRate,
       `${cue.id} caption end`,
       diagnostics,
     );
@@ -5151,7 +5170,7 @@ const normalizeCaptionCues = (
 const normalizeEffectCues = (
   edit: IAutoMovieFilmEdit,
   zones: readonly string[],
-  fps: number,
+  frameRate: IAutoMovieProductionFrameRate,
   totalFrames: number,
   diagnostics: IAutoMovieDiagnostic[],
 ): IAutoMovieFilmTimeline["tracks"]["effects"] => {
@@ -5161,13 +5180,13 @@ const normalizeEffectCues = (
   for (const cue of edit.tracks.effects) {
     const startFrame = frameTime(
       cue.start,
-      fps,
+      frameRate,
       `${cue.id} effect start`,
       diagnostics,
     );
     const durationFrames = frameTime(
       cue.duration,
-      fps,
+      frameRate,
       `${cue.id} effect duration`,
       diagnostics,
     );

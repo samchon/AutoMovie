@@ -258,7 +258,7 @@ export interface IAutoMovieProductionVideoProfile {
 /**
  * Resolve authored raster and exact clock to the current MP4 picture profile.
  *
- * @evidence requirements/delivery-and-accessibility/containers-codecs-and-media-facts.md#delivery-observed-media-facts Keeps expected delivery facts separate from parser-observed bytes.
+ * @evidence requirements/delivery-and-accessibility/containers-codecs-and-media-facts.md#delivery-container-metadata Keeps expected delivery facts separate from parser-observed bytes.
  * @evidence specifications/editorial-render-and-delivery/delivery-profiles-time-and-picture.md#spec-delivery-container-media-facts Defines the current neutral presentation and explicit sRGB container tuple.
  */
 export const resolveProductionVideoProfile = (props: {
@@ -422,7 +422,7 @@ export const assertProductionVideoProfile = (props: {
 /**
  * Enforce the kind-discriminated scalar tuple of one render-manifest row.
  *
- * @evidence requirements/delivery-and-accessibility/containers-codecs-and-media-facts.md#delivery-observed-media-facts Prevents a text, still, audio, or video output from claiming facts its media class cannot possess.
+ * @evidence requirements/delivery-and-accessibility/containers-codecs-and-media-facts.md#delivery-container-metadata Prevents a text, still, audio, or video output from claiming facts its media class cannot possess.
  * @evidence specifications/editorial-render-and-delivery/delivery-profiles-time-and-picture.md#spec-delivery-container-media-facts Makes the parsed probe the only authority for non-null runtime, frame, and codec facts.
  */
 export const assertProductionRenderedDeliverableFacts = (props: {

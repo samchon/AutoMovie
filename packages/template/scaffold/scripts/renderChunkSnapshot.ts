@@ -1,11 +1,17 @@
-import type { AutoMovieContentDigest } from "@automovie/interface";
+import { resolveProductionFrameRate } from "@automovie/engine";
+import type {
+  AutoMovieContentDigest,
+  IAutoMovieProductionFrameRate,
+} from "@automovie/interface";
 import {
   type IAutoMovieProductionRenderChunk,
   type IAutoMovieProductionRenderChunkReceipt,
   type IAutoMovieProductionRenderGcCandidate,
+  assertProductionVideoProfile,
   digestAutoMovieBytes,
   probeProductionMedia,
   probeProductionVideoMp4,
+  resolveProductionVideoProfile,
 } from "@automovie/production";
 import { randomUUID } from "node:crypto";
 import fs from "node:fs";
@@ -283,7 +289,12 @@ export const loadCapturedRenderChunkPublication = (
 export const loadCurrentRenderChunkPublication = (props: {
   assertReceipt: (receipt: IAutoMovieProductionRenderChunkReceipt) => void;
   chunk: Pick<IAutoMovieProductionRenderChunk, "frames">;
-  frameFormat: { fps: number; height: number; width: number };
+  frameFormat: {
+    fps: number;
+    frameRate?: IAutoMovieProductionFrameRate;
+    height: number;
+    width: number;
+  };
   pointer: IRenderGcTargetSnapshot;
 }): ICurrentRenderChunkPublication | null => {
   const loaded = loadCapturedRenderChunkPublication(props.pointer);
@@ -302,12 +313,22 @@ export const loadCurrentRenderChunkPublication = (props: {
       return null;
   }
   const video = probeProductionVideoMp4(loaded.encoded);
+  try {
+    assertProductionVideoProfile({
+      expected: resolveProductionVideoProfile({
+        width: props.frameFormat.width,
+        height: props.frameFormat.height,
+        frameRate: resolveProductionFrameRate(props.frameFormat),
+      }),
+      actual: video,
+    });
+  } catch {
+    return null;
+  }
   if (
-    video.kind !== "video" ||
     video.width !== props.frameFormat.width ||
     video.height !== props.frameFormat.height ||
-    video.frameCount !== props.chunk.frames.length ||
-    Math.abs(video.fps - props.frameFormat.fps) > 1e-9
+    video.frameCount !== props.chunk.frames.length
   )
     return null;
   return {
