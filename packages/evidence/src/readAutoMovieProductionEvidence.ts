@@ -833,7 +833,7 @@ const resolvePopulationFiles = (
   projectRoot: string,
   populationRoot: string,
   patterns: readonly string[],
-  extension = ".ts",
+  extension: ".md" | ".ts" = ".ts",
 ): string[] => {
   const root = path.resolve(projectRoot, populationRoot);
   const candidates = walkAutoMovieProjectPopulationFiles(
