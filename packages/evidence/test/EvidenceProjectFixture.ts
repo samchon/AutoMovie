@@ -372,6 +372,10 @@ const CONTRACTS: readonly IContractFixture[] = [
         title: "Placement validity and review",
         anchor: "instance-placement-review",
       },
+      {
+        title: "Prop and set-dressing account",
+        anchor: "instance-prop-set-dressing-account",
+      },
     ],
   },
   {
@@ -515,6 +519,10 @@ const CONTRACTS: readonly IContractFixture[] = [
       {
         title: "Model review set",
         anchor: "model-review-set",
+      },
+      {
+        title: "Representation completion account",
+        anchor: "model-representation-completion",
       },
     ],
   },
@@ -943,6 +951,10 @@ const CONTRACTS: readonly IContractFixture[] = [
         title: "Verification-addressable population claims",
         anchor: "instance-verification-address",
       },
+      {
+        title: "Prop and set-dressing boundary",
+        anchor: "instance-prop-set-dressing-boundary",
+      },
     ],
   },
   {
@@ -1008,6 +1020,14 @@ const CONTRACTS: readonly IContractFixture[] = [
       {
         title: "Reviewable structure",
         anchor: "reviewable-structure",
+      },
+      {
+        title: "Observable style basis",
+        anchor: "model-observable-style-basis",
+      },
+      {
+        title: "Scale and layer completion",
+        anchor: "model-scale-layer-completion",
       },
     ],
   },

@@ -41,3 +41,11 @@ The population defines overlap, clearance, terrain/host contact, culling, select
 Review question: which deterministic probe exposes collision, drift, unstable membership, or an invalid tier transition?
 
 Sources: [NASA on requirement-specific verification methods and evidence](https://www.nasa.gov/reference/system-engineering-handbook-appendix/)
+
+## Prop and set-dressing account {#instance-prop-set-dressing-account}
+
+The complete instance population classifies every staged object whose identity matters as a story prop, set dressing, a space-owned structural element, or another explicit owner. Props retain action, contact, state, and continuity identity; dressing retains its place, period, access, activity, or visual purpose without being treated as an anonymous substitute for a prop.
+
+Review question: which staged member is misclassified, and what observable action, continuity, spatial, or visual responsibility gives it the correct owner?
+
+Sources: [StudioBinder guide to script breakdown elements](https://www.studiobinder.com/blog/the-complete-guide-to-mastering-script-breakdown-elements/); [OpenUSD scenegraph instancing](https://openusd.org/release/api/_usd__page__scenegraph_instancing.html)

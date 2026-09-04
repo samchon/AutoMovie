@@ -580,6 +580,7 @@ const EXPECTED_CONTRACTS = [
       "instance-identity-transform",
       "instance-variation-tiers",
       "instance-placement-review",
+      "instance-prop-set-dressing-account",
     ],
   },
   {
@@ -615,6 +616,7 @@ const EXPECTED_CONTRACTS = [
       "reference-scale",
       "articulation-ownership",
       "model-review-set",
+      "model-representation-completion",
     ],
   },
   {
@@ -797,6 +799,7 @@ const EXPECTED_CONTRACTS = [
       "instance-prototype-boundary",
       "instance-derivation-authority",
       "instance-verification-address",
+      "instance-prop-set-dressing-boundary",
     ],
   },
   {
@@ -845,6 +848,8 @@ const EXPECTED_CONTRACTS = [
       "representation-contract",
       "spatial-convention",
       "reviewable-structure",
+      "model-observable-style-basis",
+      "model-scale-layer-completion",
     ],
   },
   {
