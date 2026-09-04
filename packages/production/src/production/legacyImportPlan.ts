@@ -120,6 +120,11 @@ const assertBaseline = (
     (entry) =>
       entry.kind === "project" && isBaselinePath(entry.path, expectedPath),
   );
+  const directories = new Set(baseline.directories);
+  if (baseline.files.some((entry) => directories.has(entry.path)))
+    throw new AutoMovieLegacyImportPlanError(
+      `${expectedPath} baseline cannot describe one path as both file and directory`,
+    );
 };
 
 const assertInventory = (
@@ -132,17 +137,23 @@ const assertInventory = (
     role,
     (path) => isCanonicalRelativePath(path),
   );
-  for (const entry of inventory)
+  const folded = new Set<string>();
+  for (const entry of inventory) {
+    const lower = entry.path.toLowerCase();
     if (
       !Number.isSafeInteger(entry.bytes) ||
       entry.bytes < 0 ||
       (entry.digest === null && entry.bytes !== 0) ||
+      (entry.digest === null && entry.kind !== "asset") ||
       (entry.digest !== null && !/^sha256:[0-9a-f]{64}$/.test(entry.digest)) ||
-      !extra(entry)
+      !extra(entry) ||
+      folded.has(lower)
     )
       throw new AutoMovieLegacyImportPlanError(
         `${role} contains an invalid entry for ${JSON.stringify(entry.path)}`,
       );
+    folded.add(lower);
+  }
 };
 
 const assertSortedPaths = (
@@ -167,6 +178,7 @@ const isCanonicalRelativePath = (value: string): boolean =>
   value.length !== 0 &&
   value.includes("\\") === false &&
   !value.startsWith("/") &&
+  !/^[A-Za-z]:/.test(value) &&
   value
     .split("/")
     .every(

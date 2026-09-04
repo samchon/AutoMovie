@@ -1,11 +1,10 @@
-import { TestValidator } from "@nestia/e2e";
-
 import {
   AUTOMOVIE_SOURCE_NORMALIZATION_PROTOCOL,
+  AutoMovieUtf8Error,
   normalizeAutoMovieSource,
   normalizeAutoMovieSourceIdentity,
-} from "../../../../packages/production/src/production/contentIdentity";
-import { AutoMovieUtf8Error } from "../../../../packages/production/src/production/strictUtf8";
+} from "@automovie/production";
+import { TestValidator } from "@nestia/e2e";
 
 const throwsUtf8 = (bytes: Uint8Array): boolean => {
   try {

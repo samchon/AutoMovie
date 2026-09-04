@@ -1,9 +1,8 @@
-import { TestValidator } from "@nestia/e2e";
-
 import {
   AutoMovieStructuredJsonError,
   parseAutoMovieStructuredJson,
-} from "../../../../packages/production/src/production/duplicateAwareJson";
+} from "@automovie/production";
+import { TestValidator } from "@nestia/e2e";
 
 const parse = (text: string): unknown =>
   parseAutoMovieStructuredJson({

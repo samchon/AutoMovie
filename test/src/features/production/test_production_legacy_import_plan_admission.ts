@@ -1,12 +1,11 @@
 import { IAutoMovieLegacyImportPlan } from "@automovie/interface";
-import { TestValidator } from "@nestia/e2e";
-
 import {
   AutoMovieLegacyImportPlanError,
   assertAutoMovieLegacyImportPlan,
   fingerprintAutoMovieLegacyImportPlan,
   isAutoMovieLegacyImportPlan,
-} from "../../../../packages/production/src/production/legacyImportPlan";
+} from "@automovie/production";
+import { TestValidator } from "@nestia/e2e";
 
 const plan = (): IAutoMovieLegacyImportPlan => {
   const value: IAutoMovieLegacyImportPlan = {
@@ -52,6 +51,18 @@ const plan = (): IAutoMovieLegacyImportPlan => {
       logline: "A recovered production.",
       targetRuntimeSeconds: 1,
       visualDelivery: "deterministic",
+      frameFormat: {
+        width: 1280,
+        height: 720,
+        fps: 24,
+        colorSpace: "srgb",
+      },
+      artDirection: {
+        style: "primitive-3d",
+        palette: ["#808080"],
+        silhouettePriority: "Preserve the recovered silhouette.",
+        scaleGrammar: "Preserve the recovered scale.",
+      },
       deliverables: [],
     },
     shotContractDrafts: [],
@@ -136,6 +147,7 @@ export const test_production_legacy_import_plan_admission = (): void => {
       }),
       rejected((value) => {
         value.inventory[1]!.digest = null;
+        value.inventory[1]!.bytes = 0;
         refingerprint(value);
       }),
       rejected((value) => {
@@ -143,15 +155,24 @@ export const test_production_legacy_import_plan_admission = (): void => {
         refingerprint(value);
       }),
       rejected((value) => {
-        value.inventory[1]!.path = "../automovie.json";
+        value.inventory[1]!.path = "C:automovie.json";
         refingerprint(value);
       }),
       rejected((value) => {
         value.inventory.reverse();
         refingerprint(value);
       }),
+      rejected((value) => {
+        const first = { ...value.inventory[1]!, path: "A.json" };
+        value.inventory = [first, { ...first, path: "a.json" }];
+        refingerprint(value);
+      }),
+      rejected((value) => {
+        value.rollbackBaseline[0]!.files[0]!.path = "src/nested";
+        refingerprint(value);
+      }),
     ],
-    [false, false, false, true, true, true, true, true, true, true],
+    [false, false, false, true, true, true, true, true, true, true, true, true],
   );
   const changed = clone();
   changed.productionDraft.title = "Re-derived";

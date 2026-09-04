@@ -47,6 +47,7 @@ export class AutoMovieCanonicalJsonError extends TypeError {
   public readonly code = "automovie-canonical-json-invalid" as const;
 
   public constructor(
+    /** Stable refusal category independent of engine error wording. */
     public readonly category: AutoMovieCanonicalJsonErrorCategory,
     detail: string,
   ) {
@@ -312,14 +313,25 @@ export const identifyAutoMovieCanonicalJson = (
   };
 };
 
-/** Canonicalize under an explicitly selected current protocol. */
+/**
+ * Canonicalize under an explicitly selected current protocol.
+ *
+ * @evidence requirements/evidence-and-provenance/canonical-digests-and-content-identity.md#integrity-structured-canonicalization Requires an explicit current protocol before emitting structured identity.
+ * @evidence specifications/evidence-and-provenance/canonical-digests-and-content-identity.md#evp-structured-canonicalization Couples canonical bytes to their declared algorithm version.
+ */
 export const canonicalizeAutoMovieJsonForProtocol = (props: {
   /** Required current algorithm identity. */
   protocol: typeof AUTOMOVIE_CANONICAL_JSON_PROTOCOL;
   /** Structured value in the declared accepted domain. */
   value: unknown;
-}): IAutoMovieCanonicalJsonIdentity =>
-  identifyAutoMovieCanonicalJson(props.value);
+}): IAutoMovieCanonicalJsonIdentity => {
+  if (props.protocol !== AUTOMOVIE_CANONICAL_JSON_PROTOCOL)
+    throw new AutoMovieCanonicalJsonError(
+      "unsupported-value",
+      `protocol ${JSON.stringify(props.protocol)} is not current`,
+    );
+  return identifyAutoMovieCanonicalJson(props.value);
+};
 
 /**
  * Verify an explicitly versioned JSON identity and rederive the current one.
@@ -341,19 +353,31 @@ export const verifyAutoMovieCanonicalJsonIdentity = (props: {
       reason: "Original structured value is required to verify canonical JSON.",
     };
   if (props.protocol === AUTOMOVIE_CANONICAL_JSON_PROTOCOL) {
-    const current = identifyAutoMovieCanonicalJson(props.value);
+    let current: IAutoMovieCanonicalJsonIdentity;
+    try {
+      current = identifyAutoMovieCanonicalJson(props.value);
+    } catch (error) {
+      return { status: "unverifiable", reason: String(error) };
+    }
     return current.digest === props.digest
       ? { status: "current", current }
       : { status: "stale" };
   }
   if (props.protocol === AUTOMOVIE_LEGACY_CANONICAL_JSON_PROTOCOL) {
-    const legacy = Buffer.from(legacyCanonicalizeJson(props.value), "utf8");
+    let current: IAutoMovieCanonicalJsonIdentity;
+    let legacy: Uint8Array;
+    try {
+      current = identifyAutoMovieCanonicalJson(props.value);
+      legacy = Buffer.from(legacyCanonicalizeJson(props.value), "utf8");
+    } catch (error) {
+      return { status: "unverifiable", reason: String(error) };
+    }
     if (digestAutoMovieBytes(legacy) !== props.digest)
       return { status: "stale" };
     return {
       status: "migrated",
       legacyDigest: props.digest,
-      current: identifyAutoMovieCanonicalJson(props.value),
+      current,
     };
   }
   return {
