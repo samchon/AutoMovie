@@ -14,62 +14,69 @@ const SUBFORMAT_TAIL = Uint8Array.from([
 
 /**
  * Exact supported WAVE declaration before processing.
- *
- * @evidence requirements/sound/sources-and-external-assets.md#sound-decode-contract Carries encoding, precision, source clock, and ordered channel semantics.
- * @evidence specifications/interchange-and-adoption/media-inspection-boundaries.md#interchange-audio-inspection Represents source declarations independently from derived audio.
  */
 export interface IAutoMovieProductionWaveSourceFormat {
+  /** Media-family discriminant. */
   kind: "wave";
+  /** Legacy or extensible format-envelope spelling. */
   header: "wave-format-ex" | "wave-format-extensible";
+  /** Exact supported expanded-sample encoding. */
   encoding: "pcm-s16le" | "float-f32le";
+  /** Bits allocated to each encoded channel sample. */
   containerBits: 16 | 32;
+  /** Meaningful bits declared inside the container sample. */
   validBits: 16 | 32;
+  /** Source sample clock before resampling. */
   sampleRate: number;
+  /** Source channel count before downmix. */
   channels: 1 | 2;
+  /** Ordered speaker semantics and their declaration source. */
   layout: {
     kind: "mono" | "stereo";
     speakers: ["front-center"] | ["front-left", "front-right"];
     source: "legacy-default" | "channel-mask";
     mask: number | null;
   };
+  /** Canonical extensible SubFormat GUID, absent for legacy headers. */
   subFormatGuid: string | null;
 }
 
 /**
  * Deterministic conversion from declared WAVE layout/clock to mixer input.
- *
- * @evidence requirements/sound/sources-and-external-assets.md#sound-derived-source-closure Names the channel matrix and resampling result without rewriting source facts.
- * @evidence specifications/interchange-and-adoption/media-inspection-boundaries.md#interchange-audio-inspection Separates processing lineage from the inspected source format.
  */
 export interface IAutoMovieProductionAudioProcessing {
+  /** Exact conversion stages applied in source order. */
   kind: "copy" | "downmix" | "resample" | "downmix-resample";
+  /** Mixer-facing mono channel count. */
   outputChannels: 1;
+  /** Mixer-facing sample clock after conversion. */
   outputSampleRate: number;
+  /** Output-by-input downmix coefficients. */
   matrix: readonly (readonly number[])[];
 }
 
 /**
  * One WAVE source's declared facts and the exact processing applied to it.
- *
- * @evidence requirements/sound/sources-and-external-assets.md#sound-decode-contract Preserves the supported encoding, precision, sample clock, and ordered channel layout found at adoption.
- * @evidence specifications/interchange-and-adoption/media-inspection-boundaries.md#interchange-audio-inspection Keeps declared source facts separate from downmix and resampling results.
  */
 export interface IAutoMovieDecodedProductionAudioAsset {
+  /** Source sample clock before resampling. */
   sourceSampleRate: number;
+  /** Source channel count before downmix. */
   sourceChannels: number;
+  /** Complete source sample-frame count. */
   sourceFrames: number;
+  /** Exact source runtime derived from frames and sample rate. */
   durationSeconds: number;
+  /** Parsed immutable source-format facts. */
   sourceFormat: IAutoMovieProductionWaveSourceFormat;
+  /** Deterministic processing lineage applied to the source. */
   processing: IAutoMovieProductionAudioProcessing;
+  /** Finite mono samples at the requested output clock. */
   samples: Float32Array;
 }
 
 /**
  * Decode one complete supported RIFF/WAVE generation into finite mono PCM.
- *
- * @evidence requirements/sound/sources-and-external-assets.md#sound-decode-contract Refuses malformed, unsupported-layout, unsupported-precision, and non-finite inputs before adoption.
- * @evidence requirements/sound/sources-and-external-assets.md#sound-derived-source-closure Records the exact downmix/resample lineage applied to immutable source bytes.
- * @evidence specifications/interchange-and-adoption/media-inspection-boundaries.md#interchange-audio-inspection Validates RIFF/WAVE relationships and exposes typed source and processing facts.
  */
 export const decodeProductionAudioAsset = (props: {
   path: string;

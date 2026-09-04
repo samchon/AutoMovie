@@ -376,10 +376,6 @@ interface IAutoMovieProductionAudioAssetIdentityBase {
 
 /**
  * Exact source-format or placeholder provenance carried by one audio asset.
- *
- * @evidence requirements/sound/sources-and-external-assets.md#sound-decode-contract Carries the format facts verified before a cue is admitted to the plan.
- * @evidence requirements/sound/sources-and-external-assets.md#sound-derived-source-closure Retains the exact processing lineage beside immutable source identity.
- * @evidence specifications/interchange-and-adoption/media-inspection-boundaries.md#interchange-audio-inspection Prevents a count-only projection from erasing ordered channel semantics.
  */
 export type IAutoMovieProductionAudioAssetIdentity =
   IAutoMovieProductionAudioAssetIdentityBase &
