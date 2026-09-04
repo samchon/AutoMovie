@@ -49,6 +49,7 @@ export const test_template_catalog_resolution = (): void => {
         "media",
         "__proto__",
       ),
+      resolve("catalogs:\n  media:\n    lib: __proto__"),
       resolve(
         "catalogs:\n  ? [not, scalar]\n  : ignored\n  media:\n    lib: ^1.2.3",
       ),
@@ -57,6 +58,7 @@ export const test_template_catalog_resolution = (): void => {
       "^1.2.3",
       "^1.2.3",
       "^1.2.3",
+      "__proto__",
       "^1.2.3",
       "^1.2.3",
       "^1.2.3",
