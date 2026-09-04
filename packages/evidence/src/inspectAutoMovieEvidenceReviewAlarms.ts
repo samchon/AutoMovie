@@ -40,6 +40,11 @@ interface IReview {
   target: string;
 }
 
+interface ITargetText {
+  question?: string;
+  title: string;
+}
+
 const REVIEW = /^@evidence(Exclude)?Review\s+(\S+)\s+#[^\s]+\s+(.+?)\s*$/u;
 
 /**
@@ -64,12 +69,16 @@ export function inspectAutoMovieEvidenceReviewAlarms(props: {
       "Evidence review frame threshold must be an integer of at least two.",
     );
   const reviews = props.documents.flatMap(reviewsOf);
+  const targets =
+    props.targets === undefined
+      ? new Map<string, ITargetText>()
+      : targetTexts(props.targets);
   const frames = new Map<string, IReview[]>();
   for (const review of reviews) {
     const key = [
       review.layer,
       review.exclusion ? "exclude" : "answer",
-      frameOf(review.reason),
+      frameOf(review.reason, targets.get(review.target)),
     ].join("\0");
     const grouped = frames.get(key) ?? [];
     grouped.push(review);
@@ -88,13 +97,9 @@ export function inspectAutoMovieEvidenceReviewAlarms(props: {
           ),
         );
 
-  const questions =
-    props.targets === undefined
-      ? new Map<string, string>()
-      : targetQuestions(props.targets);
   if (props.targets !== undefined)
     for (const review of reviews) {
-      const question = questions.get(review.target);
+      const question = targets.get(review.target)?.question;
       if (
         question !== undefined &&
         normalized(review.reason).includes(question)
@@ -138,32 +143,41 @@ const reviewsOf = (document: IAutoMovieEvidenceSyntaxDocument): IReview[] =>
     ];
   });
 
-const targetQuestions = (
+const targetTexts = (
   documents: readonly IAutoMovieEvidenceSyntaxDocument[],
-): Map<string, string> => {
-  const output = new Map<string, string>();
+): Map<string, ITargetText> => {
+  const output = new Map<string, ITargetText>();
   for (const document of documents) {
     const path = document.path.replaceAll("\\", "/").replace(/^docs\//u, "");
     const lines = projectAutoMovieMarkdownSyntax(document).visibleLines;
     let target: string | undefined;
     for (const line of lines) {
-      const heading = /^##(?!#)\s+.+?\s+\{#([^{}\s]+)\}\s*$/u.exec(line);
-      if (heading !== null) target = `${path}#${heading[1]!}`;
-      else if (target !== undefined && /^Review question:\s*/iu.test(line))
-        output.set(
-          target,
-          normalized(line.replace(/^Review question:\s*/iu, "")),
-        );
+      const heading = /^##(?!#)\s+(.+?)\s+\{#([^{}\s]+)\}\s*$/u.exec(line);
+      if (heading !== null) {
+        target = `${path}#${heading[2]!}`;
+        output.set(target, { title: normalized(heading[1]!) });
+      } else if (target !== undefined && /^Review question:\s*/iu.test(line))
+        output.set(target, {
+          ...output.get(target)!,
+          question: normalized(line.replace(/^Review question:\s*/iu, "")),
+        });
     }
   }
   return output;
 };
 
-const frameOf = (reason: string): string =>
-  normalized(reason)
-    .replace(/(?:[^\s]+\.md|[^\s]+\.ts)(?:#[^\s]+)?/gu, "<host>")
-    .replace(/\b\d+(?:\.\d+)?\b/gu, "<number>")
-    .replace(/(?:`[^`]+`|"[^"]+"|'[^']+')/gu, "<quote>");
+const frameOf = (reason: string, target: ITargetText | undefined): string => {
+  let value = reason
+    .normalize("NFKC")
+    .toLocaleLowerCase("en-US")
+    .replace(/(?:`[^`]+`|"[^"]+"|'[^']+')/gu, "<quote>")
+    .replace(/\b[^\s"'`]+?\.(?:md|ts)(?:#[^\s"'`]+)?/giu, "<host>")
+    .replace(/\b\d+(?:\.\d+)?\b/gu, "<number>");
+  for (const slot of [target?.question, target?.title])
+    if (slot !== undefined && slot !== "")
+      value = value.replaceAll(slot, "<target>");
+  return normalized(value);
+};
 
 const normalized = (value: string): string =>
   value
