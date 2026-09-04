@@ -1,5 +1,6 @@
 import {
   type ScaffoldFilePublicationOutcome,
+  ScaffoldPublicationError,
   planScaffoldPublication,
   publishScaffoldCandidate,
 } from "@automovie/template";
@@ -72,7 +73,6 @@ export const test_cli_scaffold_publication_receipt = (): void => {
       status: "completed",
     },
   );
-
   const firstRefusal = attempt([
     {
       status: "refused",
@@ -96,6 +96,20 @@ export const test_cli_scaffold_publication_receipt = (): void => {
       parentIdentity: "parent-1",
     },
   ]);
+  TestValidator.predicate(
+    "compatibility errors retain and project the exact receipt",
+    (() => {
+      const refused = new ScaffoldPublicationError(firstRefusal.receipt);
+      const impossible = new ScaffoldPublicationError(completed.receipt);
+      return (
+        refused.receipt === firstRefusal.receipt &&
+        refused.cause === firstRefusal.receipt.failure?.outcome.error &&
+        refused.message.includes('"reason":"parent-changed"') &&
+        impossible.receipt === completed.receipt &&
+        impossible.message.includes("without a stopping entry")
+      );
+    })(),
+  );
   TestValidator.equals(
     "zero-publication and partial outcomes remain distinct",
     [

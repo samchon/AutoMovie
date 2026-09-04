@@ -16,15 +16,19 @@ interface INativeScenario {
   childLinks?: bigint;
   closeFails?: ReadonlySet<number>;
   constantsMissing?: string;
+  createThrows?: boolean;
   errno?: number;
   finalSizeDelta?: bigint;
   fsyncFails?: boolean;
   parentIdentity?: string;
+  parentAdoptionFails?: boolean;
+  parentFstatFails?: boolean;
   parentIsDirectory?: boolean;
-  parentOpen?: "fail" | "invalid" | "ok";
+  parentOpen?: "fail" | "invalid" | "null" | "ok";
   platform: NodeJS.Platform;
   read?: "mismatch" | "stop" | "success";
   residentIdentity?: string;
+  residentAdoptionFails?: boolean;
   residentOpenFails?: boolean;
   target?: "competitor" | "create-failed" | "ok";
   write?: "fail" | "stop" | "success";
@@ -92,7 +96,11 @@ const execute = (scenario: INativeScenario) => {
       O_RDONLY: 0,
       O_RDWR: 2,
     } as Record<string, number>,
-    fstatSync: (descriptor: number) => status(descriptor),
+    fstatSync: (descriptor: number) => {
+      if (descriptor === 10 && scenario.parentFstatFails)
+        throw new Error("parent fstat failed");
+      return status(descriptor);
+    },
     fsyncSync: () => {
       if (scenario.fsyncFails) throw new Error("sync failed");
     },
@@ -142,6 +150,7 @@ const execute = (scenario: INativeScenario) => {
   const posixOpenAt = callable((...arguments_: unknown[]) => {
     const flags = arguments_[2] as number;
     if ((flags & 0x40) !== 0) {
+      if (scenario.createThrows) throw new Error("create threw");
       if (scenario.target === "competitor") {
         errno = 17;
         return -1;
@@ -156,14 +165,19 @@ const execute = (scenario: INativeScenario) => {
     return 12;
   });
   const createFile = callable(() =>
-    scenario.parentOpen === "invalid" ? -1n : 100n,
+    scenario.parentOpen === "invalid"
+      ? -1n
+      : scenario.parentOpen === "null"
+        ? null
+        : 100n,
   );
   const closeHandle = callable(() => !scenario.childCloseFails);
   const openOsHandle = callable((...arguments_: unknown[]) => {
     const handle = arguments_[0] as bigint;
-    if (handle === 100n) return 10;
+    if (handle === 100n) return scenario.parentAdoptionFails ? -1 : 10;
     childAdoptions++;
     if (scenario.childAdoptionFails && childAdoptions === 1) return -1;
+    if (scenario.residentAdoptionFails && childAdoptions > 1) return -1;
     return childAdoptions === 1 ? 11 : 12;
   });
   const ntCreateFile = callable((...arguments_: unknown[]) => {
@@ -233,13 +247,19 @@ export const test_cli_scaffold_native_adapter = (): void => {
     { platform: "linux", target: "ok" },
     { platform: "win32", target: "ok" },
     { errno: 40, parentOpen: "fail", platform: "linux" },
+    { errno: 2, parentOpen: "fail", platform: "linux" },
+    { errno: 20, parentOpen: "fail", platform: "linux" },
     { errno: 13, parentOpen: "fail", platform: "linux" },
     { parentIdentity: "1:9", platform: "linux" },
     { parentIsDirectory: false, platform: "linux" },
     { platform: "linux", target: "competitor" },
     { platform: "linux", target: "create-failed" },
     { parentOpen: "invalid", platform: "win32" },
+    { errno: 2, parentOpen: "invalid", platform: "win32" },
+    { errno: 4390, parentOpen: "invalid", platform: "win32" },
+    { parentOpen: "null", platform: "win32" },
     { errno: 5, parentOpen: "invalid", platform: "win32" },
+    { parentAdoptionFails: true, platform: "win32" },
     { platform: "win32", target: "competitor" },
     { platform: "win32", target: "create-failed" },
     { childAdoptionFails: true, platform: "win32", target: "ok" },
@@ -247,6 +267,13 @@ export const test_cli_scaffold_native_adapter = (): void => {
       childAdoptionFails: true,
       childCloseFails: true,
       platform: "win32",
+      target: "ok",
+    },
+    { platform: "win32", residentAdoptionFails: true, target: "ok" },
+    {
+      childCloseFails: true,
+      platform: "win32",
+      residentAdoptionFails: true,
       target: "ok",
     },
     { childIsFile: false, platform: "linux", target: "ok" },
@@ -262,11 +289,45 @@ export const test_cli_scaffold_native_adapter = (): void => {
     { closeFails: new Set([11]), platform: "linux", target: "ok" },
     { closeFails: new Set([12]), platform: "linux", target: "ok" },
     { closeFails: new Set([10]), platform: "linux", target: "ok" },
+    {
+      closeFails: new Set([10]),
+      parentIdentity: "1:9",
+      platform: "linux",
+      target: "ok",
+    },
+    {
+      closeFails: new Set([10]),
+      platform: "linux",
+      target: "competitor",
+    },
+    {
+      childAdoptionFails: true,
+      closeFails: new Set([10]),
+      platform: "win32",
+      target: "ok",
+    },
+    {
+      closeFails: new Set([10]),
+      parentFstatFails: true,
+      platform: "linux",
+      target: "ok",
+    },
+    { createThrows: true, platform: "linux", target: "ok" },
     { constantsMissing: "O_NOFOLLOW", platform: "linux", target: "ok" },
     { constantsMissing: "O_CLOEXEC", platform: "linux", target: "ok" },
+    { constantsMissing: "O_CLOEXEC", platform: "android", target: "ok" },
     { constantsMissing: "O_CLOEXEC", platform: "darwin", target: "ok" },
   ];
   const outcomes = cases.map(execute);
+  const competitorReason = (platform: NodeJS.Platform): string => {
+    const outcome = outcomes.find(
+      ({ first }, index) =>
+        cases[index]!.platform === platform &&
+        cases[index]!.target === "competitor" &&
+        first.status === "refused",
+    )!.first;
+    return outcome.status === "refused" ? outcome.reason : outcome.status;
+  };
   const invalidRequests = [
     { ...request, childName: "" },
     { ...request, childName: "." },
@@ -304,16 +365,15 @@ export const test_cli_scaffold_native_adapter = (): void => {
     "positive adapters complete and pre-create competitors refuse",
     {
       linux: outcomes[0]!.first.status,
-      posixCompetitor:
-        outcomes[6]!.first.status === "refused"
-          ? outcomes[6]!.first.reason
-          : outcomes[6]!.first.status,
+      posixCompetitor: competitorReason("linux"),
       windows: outcomes[1]!.first.status,
-      windowsCompetitor:
-        outcomes[10]!.first.status === "refused"
-          ? outcomes[10]!.first.reason
-          : outcomes[10]!.first.status,
-      windowsPostCreateAdoption: outcomes[12]!.first.status,
+      windowsCompetitor: competitorReason("win32"),
+      windowsPostCreateAdoption: outcomes.find(
+        ({ first }, index) =>
+          cases[index]!.platform === "win32" &&
+          cases[index]!.childAdoptionFails === true &&
+          first.status === "partial",
+      )!.first.status,
     },
     {
       linux: "completed",

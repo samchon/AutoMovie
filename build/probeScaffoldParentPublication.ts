@@ -33,7 +33,7 @@ try {
   );
 
   const successor = publishScaffoldFileToCapturedParent({
-    bytes: Buffer.from("must-not-escape", "utf8"),
+    bytes: Array.from(Buffer.from("must-not-escape", "utf8")),
     capability: { publish: publishNativeScaffoldFile },
     parent: captured,
     target: path.join(nested, "successor.txt"),
@@ -47,7 +47,7 @@ try {
   const current = captureScaffoldPhysicalDirectory(parked);
   const positiveBytes = Buffer.from("bound-parent", "utf8");
   const positive = publishScaffoldFileToCapturedParent({
-    bytes: positiveBytes,
+    bytes: Array.from(positiveBytes),
     capability: { publish: publishNativeScaffoldFile },
     parent: current,
     target: path.join(parked, "positive.txt"),
@@ -62,7 +62,7 @@ try {
   fs.writeFileSync(competitor, "resident", "utf8");
   const before = fs.lstatSync(competitor, { bigint: true });
   const collision = publishScaffoldFileToCapturedParent({
-    bytes: Buffer.from("replacement", "utf8"),
+    bytes: Array.from(Buffer.from("replacement", "utf8")),
     capability: { publish: publishNativeScaffoldFile },
     parent: current,
     target: competitor,
