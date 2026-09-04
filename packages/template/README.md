@@ -16,7 +16,9 @@ Every rendered project is self-contained:
 
 Generated graph evaluation never resolves evidence targets from `node_modules/@automovie/template`. The package ships the scaffold bytes that become project-owned inputs; `@automovie/evidence` supplies the reusable graph mechanics that validate those local inputs.
 
-The scaffold deliberately contains no production content and no provider-specific hook. Compiler, lint, sync, capture, and verify commands enforce their own ownership and validity boundaries.
+The scaffold deliberately contains no production content and no provider-specific hook.
+Compiler, lint, sync, capture, and verify commands enforce their own ownership and validity boundaries.
+Subject inspection retains the capture browser's launch closure, asserts it across page and draw boundaries, and pairs each PNG with the actual page graphics identity instead of publishing runtime-anonymous review evidence.
 
 ## Public API
 

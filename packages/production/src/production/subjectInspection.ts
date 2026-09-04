@@ -13,6 +13,7 @@ import {
   IAutoMovieSubjectBox,
   IAutoMovieSubjectReviewCoverage,
   IAutoMovieSubjectReviewObservation,
+  IAutoMovieSubjectReviewPose,
   IAutoMovieSubjectReviewTarget,
   IAutoMovieSubjectReviewViewpoint,
   IAutoMovieVector3,
@@ -33,6 +34,7 @@ import {
   digestAutoMovieBytes,
   encodeAutoMoviePathSegment,
 } from "./contentIdentity";
+import { parseAutoMovieStructuredJson } from "./duplicateAwareJson";
 import { readAutoMovieProductionOwnedFile } from "./productionRenderJob";
 import { residentPngJs } from "./residentCodecs";
 
@@ -165,36 +167,7 @@ const DEFAULT_ELEVATIONS_DEG: readonly number[] = [20];
  *
  * @author Samchon
  */
-export interface IAutoMovieSubjectInspectionPose {
-  /**
-   * Coordinate basis both {@link position} and {@link target} are stated in.
-   */
-  coordinateSpace: "model" | "world";
-  /**
-   * Eye position in metres.
-   */
-  position: IAutoMovieVector3;
-  /**
-   * Point the eye looks at, in metres.
-   */
-  target: IAutoMovieVector3;
-  /**
-   * Vertical field of view in degrees.
-   */
-  fovDeg: number;
-  /**
-   * Viewport width divided by height.
-   */
-  aspect: number;
-  /**
-   * Near clip distance in metres, derived from the subject's own size.
-   */
-  near: number;
-  /**
-   * Far clip distance in metres, derived from the subject's own size.
-   */
-  far: number;
-}
+export type IAutoMovieSubjectInspectionPose = IAutoMovieSubjectReviewPose;
 
 /**
  * Host instrument that answers one inspection pose with PNG bytes.
@@ -704,9 +677,20 @@ export const parseAutoMovieSubjectInspectionObservation = (
     Number.isSafeInteger(record.attempt) === false ||
     record.attempt <= 0 ||
     record.viewpoint !== record.observation.viewpoint ||
+    record.productionId !== record.observation.productionId ||
+    record.target.shot !== record.observation.target.shot ||
+    record.target.subject !== record.observation.target.subject ||
     record.revision !== record.observation.revision ||
+    record.compileFingerprint !== record.observation.compileFingerprint ||
+    record.planIdentity !== record.observation.planIdentity ||
     record.target.subject !== record.observation.subject ||
     record.observation.kind !== "subject-view" ||
+    canonicalizeAutoMovieJson(record.pose) !==
+      canonicalizeAutoMovieJson(record.observation.pose) ||
+    canonicalizeAutoMovieJson(record.runtimeIdentity) !==
+      canonicalizeAutoMovieJson(record.observation.runtimeIdentity) ||
+    record.observation.verdict !== "passed" ||
+    record.observation.deliveryEvidence !== false ||
     record.observation.artifact.trim().length === 0 ||
     isContentDigest(record.observation.digest) === false
   )
@@ -1129,11 +1113,19 @@ export class AutoMovieProductionSubjectInspectionService {
       const digest = digestAutoMovieBytes(bytes);
       const observation: IAutoMovieSubjectReviewObservation = {
         kind: "subject-view",
+        productionId: services.project.productionId,
+        target: planRecord.target,
         subject: resolved.description.id,
         revision: resolved.revision,
+        compileFingerprint: generated.inputFingerprint,
+        planIdentity: planRecord.planIdentity,
         viewpoint: viewpoint.id,
+        pose,
+        runtimeIdentity: drawn.runtimeIdentity,
         artifact: relative,
         digest,
+        verdict: "passed",
+        deliveryEvidence: false,
       };
       publishInspectionFile(
         services.project.root,
@@ -1305,7 +1297,10 @@ const resolveSubject = (
     // answer to the caller, and a second branch saying so would only be a
     // branch no arrangement can reach.
     compiled = typia.assertEquals<IAutoMovieCompiledShotSource>(
-      JSON.parse(Buffer.from(bytes).toString("utf8")) as unknown,
+      parseAutoMovieStructuredJson({
+        record: `generated shot ${target.shot}`,
+        bytes,
+      }),
     );
   } catch {
     return null;
@@ -1455,7 +1450,10 @@ export const readAutoMovieSubjectInspection = (props: {
   let plan: IAutoMovieSubjectInspectionPlanRecord;
   try {
     plan = parseAutoMovieSubjectInspectionPlan(
-      JSON.parse(Buffer.from(planBytes).toString("utf8")) as unknown,
+      parseAutoMovieStructuredJson({
+        record: `${directory}/${AUTOMOVIE_SUBJECT_INSPECTION_PLAN_FILE}`,
+        bytes: planBytes,
+      }),
     );
   } catch {
     // v1 and every malformed/unknown version are historical, never inferred.
@@ -1476,7 +1474,10 @@ export const readAutoMovieSubjectInspection = (props: {
   let journal: IAutoMovieSubjectInspectionAttemptJournal;
   try {
     journal = parseInspectionJournal(
-      JSON.parse(Buffer.from(journalBytes).toString("utf8")) as unknown,
+      parseAutoMovieStructuredJson({
+        record: `${directory}/${inspectionJournalRelative(expected.planIdentity)}`,
+        bytes: journalBytes,
+      }),
       expected.planIdentity,
     );
   } catch {
@@ -1493,7 +1494,10 @@ export const readAutoMovieSubjectInspection = (props: {
       let record: IAutoMovieSubjectInspectionObservationRecord;
       try {
         record = parseAutoMovieSubjectInspectionObservation(
-          JSON.parse(Buffer.from(recordBytes).toString("utf8")) as unknown,
+          parseAutoMovieStructuredJson({
+            record: recordPath,
+            bytes: recordBytes,
+          }),
         );
       } catch {
         continue;
@@ -1555,7 +1559,10 @@ const publishedInspectionPlanMatches = (props: {
     });
     return (
       parseAutoMovieSubjectInspectionPlan(
-        JSON.parse(Buffer.from(bytes).toString("utf8")) as unknown,
+        parseAutoMovieStructuredJson({
+          record: `${props.directory}/${AUTOMOVIE_SUBJECT_INSPECTION_PLAN_FILE}`,
+          bytes,
+        }),
       ).planIdentity === props.planIdentity
     );
   } catch {
@@ -1611,7 +1618,10 @@ const mutateInspectionJournal = (
     let journal: IAutoMovieSubjectInspectionAttemptJournal;
     if (fs.existsSync(absolute))
       journal = parseInspectionJournal(
-        JSON.parse(fs.readFileSync(absolute, "utf8")) as unknown,
+        parseAutoMovieStructuredJson({
+          record: relative,
+          bytes: fs.readFileSync(absolute),
+        }),
         props.planIdentity,
       );
     else

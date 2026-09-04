@@ -10,6 +10,7 @@ import {
   IAutoMovieWorldDesign,
 } from "@automovie/interface";
 import {
+  AUTOMOVIE_CAPTURE_RUNTIME_IDENTITY_PROTOCOL,
   AutoMovieProductionCompiler,
   AutoMovieProductionProject,
   canonicalAutoMovieCaptureRuntimeIdentity,
@@ -498,7 +499,7 @@ export const testCaptureRuntimeIdentity = (
     browserSupport,
   };
   return {
-    protocolVersion: "automovie.capture-runtime.v2",
+    protocolVersion: AUTOMOVIE_CAPTURE_RUNTIME_IDENTITY_PROTOCOL,
     playwright: {
       package: "playwright",
       version: "1.60.0",
