@@ -3065,6 +3065,10 @@ export class AutoMovieProductionProject {
 
   /**
    * Atomically write the exact aggregate production-delivery ledger.
+   *
+   * This compatibility writer owns no output bytes, so it may publish only
+   * with the complete plan and a caller-supplied generation-current assertion.
+   * New finalization should use {@link commitProductionPublication} instead.
    */
   public commitProductionRenderManifest(
     manifest: IAutoMovieProductionRenderManifest,
@@ -3141,6 +3145,7 @@ export class AutoMovieProductionProject {
       publicationFingerprint: publication.fingerprint,
       files: receiptFiles,
     };
+    const receiptContent = serializeJson(receipt);
     const snapshot = captureProductionPayloadSnapshot({
       paths: receiptFiles.map((file) => file.path),
       read: (relative) => {
@@ -3151,17 +3156,36 @@ export class AutoMovieProductionProject {
         }
       },
     });
-    const payloadCurrent = (): boolean =>
-      isProductionPayloadSnapshotCurrent({
-        snapshot,
-        read: (relative) => {
-          try {
-            return this.readRenderFile(relative);
-          } catch {
-            return null;
-          }
-        },
-      });
+    const expectedPayload: IProductionPayloadSnapshot = {
+      entries: receiptFiles.map((file) => ({
+        path: file.path,
+        digest: file.digest,
+        bytes: file.bytes,
+      })),
+    };
+    const payloadCurrent = (): boolean => {
+      const read = (relative: string): Uint8Array | null => {
+        try {
+          return this.readRenderFile(relative);
+        } catch {
+          return null;
+        }
+      };
+      return (
+        isProductionPayloadSnapshotCurrent({
+          snapshot,
+          read,
+        }) &&
+        isProductionPayloadSnapshotCurrent({
+          snapshot: expectedPayload,
+          read,
+        })
+      );
+    };
+    if (payloadCurrent() === false)
+      throw new AutoMovieProductionInputRaceError(
+        "A terminal deliverable changed while its manifest-only ledger was prepared.",
+      );
     return this.commitFiles(
       [
         {
@@ -3173,7 +3197,7 @@ export class AutoMovieProductionProject {
             this.productionStateRoot,
             "render-manifest-receipt.json",
           ),
-          content: serializeJson(receipt),
+          content: receiptContent,
         },
       ],
       () => payloadCurrent() && planCurrent() === true,
@@ -3182,6 +3206,24 @@ export class AutoMovieProductionProject {
         if (payloadCurrent() === false || planCurrent() !== true)
           throw new AutoMovieProductionInputRaceError(
             "A terminal deliverable or render plan changed while its manifest-only ledger was committed.",
+          );
+        const residentManifest = this.readTrackedStateFile(
+          "render-manifest.json",
+        );
+        const residentReceipt = this.readTrackedStateFile(
+          "render-manifest-receipt.json",
+        );
+        if (
+          residentManifest === null ||
+          residentReceipt === null ||
+          Buffer.from(residentManifest).equals(Buffer.from(content, "utf8")) ===
+            false ||
+          Buffer.from(residentReceipt).equals(
+            Buffer.from(receiptContent, "utf8"),
+          ) === false
+        )
+          throw new AutoMovieProductionInputRaceError(
+            "The manifest-only render ledger changed before revision commit.",
           );
       },
     );
@@ -3317,6 +3359,27 @@ export class AutoMovieProductionProject {
       () => props.inputCurrent?.() !== false && props.planCurrent() === true,
       props.expectedRevision ?? this.lastReadRevision_,
       () => {
+        const assertLedgerCurrent = (): void => {
+          const residentManifest = this.readTrackedStateFile(
+            "render-manifest.json",
+          );
+          const residentReceipt = this.readTrackedStateFile(
+            "render-manifest-receipt.json",
+          );
+          if (
+            residentManifest === null ||
+            residentReceipt === null ||
+            Buffer.from(residentManifest).equals(
+              Buffer.from(manifestContent, "utf8"),
+            ) === false ||
+            Buffer.from(residentReceipt).equals(
+              Buffer.from(receiptContent, "utf8"),
+            ) === false
+          )
+            throw new AutoMovieProductionInputRaceError(
+              "Terminal render manifest or receipt changed after publication.",
+            );
+        };
         for (const deliverable of candidate.deliverables)
           for (const file of deliverable.files) {
             const bytes = this.readRenderFile(file.path);
@@ -3324,29 +3387,11 @@ export class AutoMovieProductionProject {
               bytes.length !== file.bytes ||
               digestAutoMovieBytes(bytes) !== file.digest
             )
-              throw new Error(
+              throw new AutoMovieProductionInputRaceError(
                 `Committed terminal file "${file.path}" failed its post-publication byte check.`,
               );
           }
-        const residentManifest = this.readTrackedStateFile(
-          "render-manifest.json",
-        );
-        const residentReceipt = this.readTrackedStateFile(
-          "render-manifest-receipt.json",
-        );
-        if (
-          residentManifest === null ||
-          residentReceipt === null ||
-          Buffer.from(residentManifest).equals(
-            Buffer.from(manifestContent, "utf8"),
-          ) === false ||
-          Buffer.from(residentReceipt).equals(
-            Buffer.from(receiptContent, "utf8"),
-          ) === false
-        )
-          throw new Error(
-            "Terminal render manifest or receipt changed after publication.",
-          );
+        assertLedgerCurrent();
         props.publicationCurrent?.();
         for (const deliverable of candidate.deliverables)
           for (const file of deliverable.files) {
@@ -3359,6 +3404,7 @@ export class AutoMovieProductionProject {
                 `Committed terminal file "${file.path}" changed during the final compiler gate.`,
               );
           }
+        assertLedgerCurrent();
         if (props.inputCurrent?.() === false || props.planCurrent() !== true)
           throw new AutoMovieProductionInputRaceError(
             "Production inputs or the render-plan generation changed during the staged terminal publication final gate.",

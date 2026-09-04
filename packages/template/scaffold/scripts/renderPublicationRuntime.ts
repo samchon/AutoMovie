@@ -14,9 +14,9 @@ import {
   type IAutoMovieProductionRenderChunk,
   type IAutoMovieProductionRenderJobPlan,
   assembleProductionChunkVideoMp4,
-  assertProductionRenderDialogueRuntimeIdentity,
   assertProductionOpusProfile,
   assertProductionPngPicture,
+  assertProductionRenderDialogueRuntimeIdentity,
   assertProductionVideoProfile,
   canonicalAutoMovieCaptureRuntimeIdentity,
   canonicalAutoMovieJsonBytes,
@@ -682,6 +682,7 @@ export const createProductionRenderFinalizationRuntime = (props: {
         const staged = new AutoMovieProductionCompiler(
           AutoMovieProductionProject.openReadOnly(root, productionId),
           props.authoringEvidence,
+          plan,
         ).lint({ scope: "final" });
         if (staged.success === false)
           throw new Error(
@@ -692,7 +693,11 @@ export const createProductionRenderFinalizationRuntime = (props: {
       },
       expectedRevision: project.revision(),
     });
-    const final = productionServices().compiler.compile({ scope: "final" });
+    const final = new AutoMovieProductionCompiler(
+      AutoMovieProductionProject.openReadOnly(root, productionId),
+      props.authoringEvidence,
+      plan,
+    ).compile({ scope: "final" });
     if (final.success === false)
       throw new Error(
         `Parser-verified publication committed at revision ${revision}, but final compilation rejected it: ${JSON.stringify(final.diagnostics)}`,

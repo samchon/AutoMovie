@@ -172,8 +172,14 @@ import {
   assertProductionPngPicture,
   resolveProductionPngProfile,
 } from "./productionPngPicture";
-import { canonicalProductionWebVtt } from "./productionRenderJob";
-import { parseProductionRenderPublicationIdentity } from "./productionRenderPublicationIdentity";
+import {
+  type IAutoMovieProductionRenderJobPlan,
+  canonicalProductionWebVtt,
+} from "./productionRenderJob";
+import {
+  assertProductionRenderPublicationCurrent,
+  parseProductionRenderPublicationIdentity,
+} from "./productionRenderPublicationIdentity";
 import { productionRenderTargetFingerprint } from "./renderIdentity";
 import {
   assetReviewEvidenceDiagnostics,
@@ -264,6 +270,7 @@ export class AutoMovieProductionCompiler {
   public constructor(
     private readonly project: AutoMovieProductionProject,
     private readonly authoringEvidence?: IAutoMovieProductionEvidence,
+    private readonly finalRenderPlan?: IAutoMovieProductionRenderJobPlan,
   ) {}
 
   /**
@@ -833,6 +840,7 @@ export class AutoMovieProductionCompiler {
           inputFingerprint,
           graph.shots,
           compiled,
+          this.finalRenderPlan,
         ),
       );
     // Close the loop between what the compiled production SAMPLES and what its
@@ -8816,6 +8824,7 @@ const finalDeliverableDiagnostics = (
   inputFingerprint: AutoMovieContentDigest,
   contracts: ReadonlyMap<string, IAutoMovieShotContract>,
   compiled: ReadonlyMap<string, IAutoMovieCompiledShotSource>,
+  currentPlan?: IAutoMovieProductionRenderJobPlan,
 ): IAutoMovieDiagnostic[] => {
   if (production === null) return [];
   let bytes: Uint8Array | null;
@@ -8891,9 +8900,13 @@ const finalDeliverableDiagnostics = (
   }
   let publication: ReturnType<typeof parseProductionRenderPublicationIdentity>;
   try {
-    publication = parseProductionRenderPublicationIdentity(
-      manifest.publication,
-    );
+    publication =
+      currentPlan === undefined
+        ? parseProductionRenderPublicationIdentity(manifest.publication)
+        : assertProductionRenderPublicationCurrent({
+            identity: manifest.publication,
+            plan: currentPlan,
+          });
   } catch (error) {
     return [
       renderDeliverableDiagnostic(

@@ -1265,18 +1265,31 @@ export interface IAutoMovieProductionPublicationIdentity {
    * @evidence specifications/editorial-render-and-delivery/delivery-package-provenance-and-publication.md#spec-delivery-provenance-integrity Makes runtime provenance inspectable.
    */
   runtimeIdentity: {
+    /** Render-runtime identity protocol. */
     protocolVersion: "automovie.production-render-runtime.v3";
+    /** Digest of declared viewer, capture, asset, and package inputs. */
     sourceDigest: AutoMovieContentDigest;
+    /** Final-byte dialogue generation, or null for a silent plan. */
     dialogueRuntimeIdentity: AutoMovieContentDigest | null;
+    /** Exact browser and graphics capture closure. */
     capture: IAutoMovieCaptureRuntimeIdentity;
+    /** Exact encoder closure and arguments. */
     encoder: {
+      /** Encoder package name. */
       package: string;
+      /** Encoder package version. */
       version: string;
+      /** Digest of the installed executable closure. */
       closureDigest: AutoMovieContentDigest;
+      /** Closed video codec. */
       codec: "h264";
+      /** Every byte-affecting encoder argument. */
       arguments: {
+        /** Constant-rate-factor analogue. */
         quantizationParameter: number;
+        /** Encoder speed setting. */
         speed: number;
+        /** Key-frame period in frames. */
         groupOfPictures: number;
       };
     };
@@ -1287,8 +1300,11 @@ export interface IAutoMovieProductionPublicationIdentity {
    * @evidence specifications/editorial-render-and-delivery/delivery-package-provenance-and-publication.md#spec-delivery-publication-retention Keeps proxy and final histories independent.
    */
   tier: {
+    /** Independent proxy or final publication family. */
     kind: "proxy" | "final";
+    /** Output raster multiplier. */
     resolutionScale: number;
+    /** Source-frame sampling interval. */
     frameStep: number;
   };
   /**
@@ -1321,13 +1337,21 @@ export interface IAutoMovieProductionPublicationIdentity {
    * @evidence specifications/validation-and-diagnostics/partial-artifacts-and-refusal.md#validation-resume-verified-artifacts Allows reuse only from verified chunks.
    */
   chunks: Array<{
+    /** Stable operational slot. */
     slot: string;
+    /** Content-addressed chunk identity. */
     id: AutoMovieContentDigest;
+    /** Owning deliverable. */
     deliverable: string;
+    /** Moving-image deliverable class. */
     kind: "feature" | "guide-pass";
+    /** Beauty or structural render pass. */
     pass: AutoMovieGuidePass;
+    /** Inclusive output-frame boundary. */
     frameStart: number;
+    /** Exclusive output-frame boundary. */
     frameEndExclusive: number;
+    /** Digest of the complete exact frame mapping. */
     frames: AutoMovieContentDigest;
   }>;
   /**
@@ -1336,8 +1360,11 @@ export interface IAutoMovieProductionPublicationIdentity {
    * @evidence specifications/editorial-render-and-delivery/delivery-package-provenance-and-publication.md#spec-delivery-provenance-integrity Completes package provenance beyond picture chunks.
    */
   tracks: {
+    /** Canonical caption-track digest. */
     captions: AutoMovieContentDigest;
+    /** Canonical dialogue-track digest. */
     audio: AutoMovieContentDigest;
+    /** Canonical source-audio inventory digest. */
     audioAssets: AutoMovieContentDigest;
   };
   /**
