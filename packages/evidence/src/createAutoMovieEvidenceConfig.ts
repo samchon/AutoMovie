@@ -2117,6 +2117,7 @@ const validateProductionTargets = (
 ): void => {
   const root = path.join(graph.location, DOCS);
   const reserved = new Set<string>([
+    "accounts",
     "discovery",
     "obligations",
     "principles",
