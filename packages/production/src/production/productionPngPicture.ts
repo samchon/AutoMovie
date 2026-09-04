@@ -117,10 +117,10 @@ export const probeProductionPngPicture = (
   const colorSpace: IAutoMovieProductionPngPicture["colorSpace"] =
     srgb !== undefined
       ? "srgb"
-      : gammaValue === 45_455
-        ? "srgb"
-        : icc !== undefined
-          ? (pngProfileName(icc.data), "icc")
+      : icc !== undefined
+        ? (pngProfileName(icc.data), "icc")
+        : gammaValue === 45_455
+          ? "srgb"
           : gammaValue !== null
             ? "gamma"
             : "unidentified";
