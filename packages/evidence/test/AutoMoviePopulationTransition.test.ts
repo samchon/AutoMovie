@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import path from "node:path";
 
 import {
   type IAutoMovieFilmPopulationTransitionReceipt,
@@ -8,13 +9,16 @@ import {
   validateAutoMoviePopulationTransition,
 } from "../src/AutoMoviePopulationTransition";
 
+const FILM_LOCATION = path.resolve("synthetic-productions/film");
+const LIBRARY_LOCATION = path.resolve("synthetic-productions/library");
+
 const filmSource =
   "# Event\n\n## Beat {#beat}\n\n<!-- @evidence contracts/local.md#rule The event owns the beat. -->\n\nAction.\n";
 const filmHost = { path: "docs/treatments/001-beat.md", source: filmSource };
 const filmReceipt: IAutoMovieFilmPopulationTransitionReceipt = {
   version: 1,
   kind: "film",
-  productionLocation: "C:\\productions\\film",
+  productionLocation: FILM_LOCATION,
   owner: "director",
   pilotScope: { mode: "first-pilot", partitionGroup: "001-opening" },
   reviewedBranches: ["treatments", "scripts", "screenplays"],
@@ -24,7 +28,7 @@ const film = (
   overrides: Partial<IValidateAutoMoviePopulationTransitionProps> = {},
 ): IValidateAutoMoviePopulationTransitionProps => ({
   kind: "film" as const,
-  productionLocation: "C:\\productions\\film",
+  productionLocation: FILM_LOCATION,
   owner: "director",
   receipt: filmReceipt,
   stages: {
@@ -91,7 +95,7 @@ assert.throws(
 assert.throws(
   () =>
     validateAutoMoviePopulationTransition(
-      film({ productionLocation: "C:\\productions\\other" }),
+      film({ productionLocation: path.resolve("synthetic-productions/other") }),
     ),
   /location does not match/u,
 );
@@ -274,7 +278,7 @@ const librarySourceHost = {
 const libraryReceipt: IAutoMovieLibraryPopulationTransitionReceipt = {
   version: 1,
   kind: "library",
-  productionLocation: "C:\\productions\\library",
+  productionLocation: LIBRARY_LOCATION,
   owner: "asset-author",
   pilotScope: { mode: "first-pilot" },
   reviewedPairs: [{ design: "models", source: "modelSources" }],
@@ -286,7 +290,7 @@ const libraryReceipt: IAutoMovieLibraryPopulationTransitionReceipt = {
 assert.doesNotThrow(() =>
   validateAutoMoviePopulationTransition({
     kind: "library",
-    productionLocation: "C:\\productions\\library",
+    productionLocation: LIBRARY_LOCATION,
     owner: "asset-author",
     receipt: libraryReceipt,
     stages: { models: "draft", modelSources: "draft" },
@@ -297,7 +301,7 @@ assert.throws(
   () =>
     validateAutoMoviePopulationTransition({
       kind: "library",
-      productionLocation: "C:\\productions\\library",
+      productionLocation: LIBRARY_LOCATION,
       owner: "asset-author",
       receipt: libraryReceipt,
       stages: { models: "draft", modelSources: "review" },
@@ -309,7 +313,7 @@ assert.throws(
   () =>
     validateAutoMoviePopulationTransition({
       kind: "library",
-      productionLocation: "C:\\productions\\library",
+      productionLocation: LIBRARY_LOCATION,
       owner: "asset-author",
       receipt: libraryReceipt,
       stages: {
@@ -326,7 +330,7 @@ assert.throws(
   () =>
     validateAutoMoviePopulationTransition({
       kind: "library",
-      productionLocation: "C:\\productions\\library",
+      productionLocation: LIBRARY_LOCATION,
       owner: "asset-author",
       receipt: {
         ...libraryReceipt,
@@ -341,7 +345,7 @@ assert.throws(
   () =>
     validateAutoMoviePopulationTransition({
       kind: "library",
-      productionLocation: "C:\\productions\\library",
+      productionLocation: LIBRARY_LOCATION,
       owner: "asset-author",
       receipt: { ...libraryReceipt, reviewedPairs: [] },
       stages: {},
@@ -353,7 +357,7 @@ assert.throws(
   () =>
     validateAutoMoviePopulationTransition({
       kind: "library",
-      productionLocation: "C:\\productions\\library",
+      productionLocation: LIBRARY_LOCATION,
       owner: "asset-author",
       receipt: libraryReceipt,
       stages: { models: "draft", modelSources: "draft" },
@@ -374,7 +378,7 @@ assert.throws(
   () =>
     validateAutoMoviePopulationTransition({
       kind: "library",
-      productionLocation: "C:\\productions\\library",
+      productionLocation: LIBRARY_LOCATION,
       owner: "asset-author",
       receipt: libraryReceipt,
       stages: { models: "draft", modelSources: "draft" },
