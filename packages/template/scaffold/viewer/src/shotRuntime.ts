@@ -24,7 +24,10 @@ import type {
   IAutoMovieSoftBodyDomain,
   IAutoMovieTransform,
 } from "@automovie/interface";
-import { sampleProductionFilmEffects } from "@automovie/production";
+import {
+  type IAutoMovieFilmEffectCurrentIdentity,
+  sampleProductionFilmEffects,
+} from "@automovie/production";
 import {
   AutoMoviePlayer,
   type IAutoMovieModelObject,
@@ -219,8 +222,17 @@ export const createCompiledShotRuntime = async (
     liveWearableSoftBodies?: readonly string[];
     /** Current compiler-owned film-global effect runtimes. */
     filmEffects?: readonly IAutoMovieCompiledFilmEffect[];
+    /** Current identity established independently from the runtime array. */
+    filmEffectIdentity?: IAutoMovieFilmEffectCurrentIdentity;
   },
 ): Promise<IAutoMovieCompiledShotRuntime> => {
+  if (
+    (runtime?.filmEffects === undefined) !==
+    (runtime?.filmEffectIdentity === undefined)
+  )
+    throw new Error(
+      "Film effects and their independently current identity must be supplied together.",
+    );
   const models = new Map(compiled.models.map((model) => [model.id, model]));
   const textures = createShotTextureCache();
   const built = await Promise.all(
@@ -759,14 +771,8 @@ export const createCompiledShotRuntime = async (
       for (const effect of filmEffectObjects)
         effect.object.object.visible = false;
     } else if (filmEffectObjects.length !== 0) {
-      const current = filmEffectObjects[0]!.runtime;
       sampleProductionFilmEffects({
-        identity: {
-          production: current.production,
-          film: current.film,
-          compileFingerprint: current.compileFingerprint,
-          editFingerprint: current.editFingerprint,
-        },
+        identity: runtime!.filmEffectIdentity!,
         effects: filmEffectObjects.map((effect) => effect.runtime),
         timelineFrame: globalFrame,
       });

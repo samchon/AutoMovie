@@ -768,19 +768,21 @@ export const materializeCompiledShot = (props: {
 /**
  * Materialize shot-local cues into compiler-owned deterministic streams.
  */
-export const materializeCompiledEffects = (props: {
-  world?: IAutoMovieWorldDesign;
-  fps?: number;
-  fixedStepSeconds?: number;
-  seedOwner?: unknown;
-  contract?: IAutoMovieShotContract;
-  cues: NonNullable<IAutoMovieShotSourceOutput["effectCues"]>;
-}): IAutoMovieCompiledEffect[] => {
+export const materializeCompiledEffects = (
+  props: {
+    world?: IAutoMovieWorldDesign;
+    fps?: number;
+    fixedStepSeconds?: number;
+    cues: NonNullable<IAutoMovieShotSourceOutput["effectCues"]>;
+  } & (
+    | { contract: IAutoMovieShotContract; seedOwner?: never }
+    | {
+        contract?: never;
+        seedOwner: { production: string; film: string };
+      }
+  ),
+): IAutoMovieCompiledEffect[] => {
   if (props.world === undefined) return [];
-  if (props.contract === undefined && props.seedOwner === undefined)
-    throw new Error(
-      "Effect materialization requires an explicit shot contract or seed owner.",
-    );
   const recipes = new Map(
     props.world.effectRecipes.map((recipe) => [recipe.id, recipe]),
   );

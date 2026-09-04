@@ -1,7 +1,10 @@
 import type { IAutoMovieDeliveryCrop } from "@automovie/interface";
 import {
   AutoMovieProductionProject,
+  productionFilmEffectEditFingerprint,
   readAutoMovieFilmEffects,
+  readAutoMovieFilmTimeline,
+  sampleProductionFilmEffects,
 } from "@automovie/production";
 import { createHash } from "node:crypto";
 import fs from "node:fs";
@@ -71,6 +74,25 @@ export const generatedShotPlugin = (
               throw new Error(
                 "Production runtime requires current compiler-owned artifacts.",
               );
+            const timeline = readAutoMovieFilmTimeline(
+              project,
+              manifest.inputFingerprint,
+            );
+            const filmEffectIdentity = {
+              production: productionId,
+              film: timeline.id,
+              compileFingerprint: manifest.inputFingerprint,
+              editFingerprint: productionFilmEffectEditFingerprint(timeline),
+            };
+            const filmEffects = readAutoMovieFilmEffects(
+              project,
+              manifest.inputFingerprint,
+            );
+            sampleProductionFilmEffects({
+              identity: filmEffectIdentity,
+              effects: filmEffects,
+              timelineFrame: 0,
+            });
             const runtime = {
               dialogue: cloneProductionDialogueRuntime(
                 runtimeProvider.dialogue(),
@@ -82,10 +104,8 @@ export const generatedShotPlugin = (
                 project.graph().production?.simulation
                   ?.liveWearableSoftBodies ?? [],
               ),
-              filmEffects: readAutoMovieFilmEffects(
-                project,
-                manifest.inputFingerprint,
-              ),
+              filmEffects,
+              filmEffectIdentity,
             };
             response.statusCode = 200;
             response.setHeader(

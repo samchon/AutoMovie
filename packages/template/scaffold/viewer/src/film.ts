@@ -81,6 +81,7 @@ for (const shot of new Set(timeline.segments.map((segment) => segment.shot))) {
     deliveryCrop: productionRuntime.deliveryCrop ?? undefined,
     liveWearableSoftBodies: productionRuntime.liveWearableSoftBodies,
     filmEffects: productionRuntime.filmEffects,
+    filmEffectIdentity: productionRuntime.filmEffectIdentity,
   });
   // Each cut carries its own palette, because a colour is derived from the
   // entities of the shot that draws it; one film-wide palette would have to
