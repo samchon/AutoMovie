@@ -382,6 +382,7 @@ export const createProductionRenderFinalizationRuntime = (props: {
       })());
     const publicationSegment =
       productionRenderPublicationFingerprint(plan).slice(7);
+    const publicationFrameRate = resolveProductionFrameRate(plan.frameFormat);
     for (const deliverable of graph.production.deliverables) {
       const owned = new Map<string, Uint8Array>();
       const deliverableChunks = plan.chunks.filter(
@@ -636,7 +637,8 @@ export const createProductionRenderFinalizationRuntime = (props: {
         files: files.map(({ probe: _probe, ...file }) => file),
         runtimeSeconds:
           deliverable.kind === "captions"
-            ? plan.totalFrames / plan.frameFormat.fps
+            ? (plan.totalFrames * publicationFrameRate.denominator) /
+              publicationFrameRate.numerator
             : video?.kind === "video"
               ? video.runtimeSeconds
               : audio?.kind === "audio"

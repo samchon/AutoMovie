@@ -269,7 +269,7 @@ const receipt = (
         frameRate: { numerator: 24, denominator: 1 },
         brands: { major: "isom", compatible: ["isom"] },
         coded: { width: 16, height: 16 },
-        trackDisplay: { width16_16: 16, height16_16: 16 },
+        trackDisplay: { width16_16: 1_048_576, height16_16: 1_048_576 },
         trackMatrix: [65_536, 0, 0, 0, 65_536, 0, 0, 0, 1_073_741_824],
         pixelAspect: { kind: "implicit-square" },
         presentation: {

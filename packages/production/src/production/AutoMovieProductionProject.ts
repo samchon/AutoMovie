@@ -1,3 +1,4 @@
+import { resolveProductionFrameRate } from "@automovie/engine";
 import {
   AutoMovieContentDigest,
   AutoMovieGuidePass,
@@ -2860,18 +2861,15 @@ export class AutoMovieProductionProject {
     const shot = graph.shots.get(receipt.shot);
     if (production === null || shot === undefined)
       throw new Error("Stored repaint media target is stale.");
+    const frameRate = resolveProductionFrameRate(production.frameFormat);
     const expectedFrameCount = Math.round(
-      shot.durationSeconds * production.frameFormat.fps,
+      (shot.durationSeconds * frameRate.numerator) / frameRate.denominator,
     );
     if (
       probe.kind !== "video" ||
       canonicalizeAutoMovieJson(probe) !==
         canonicalizeAutoMovieJson(receipt.output.probe) ||
-      probe.width !== production.frameFormat.width ||
-      probe.height !== production.frameFormat.height ||
-      Math.abs(probe.fps - production.frameFormat.fps) > 1e-9 ||
-      probe.frameCount !== expectedFrameCount ||
-      Math.abs(probe.runtimeSeconds - shot.durationSeconds) > 1e-9
+      probe.frameCount !== expectedFrameCount
     )
       throw new Error("Stored repaint media facts are stale.");
     assertProductionRenditionClipDelivery({
@@ -2880,6 +2878,7 @@ export class AutoMovieProductionProject {
       width: production.frameFormat.width,
       height: production.frameFormat.height,
       fps: production.frameFormat.fps,
+      frameRate,
       frameCount: expectedFrameCount,
       runtimeSeconds: shot.durationSeconds,
     });

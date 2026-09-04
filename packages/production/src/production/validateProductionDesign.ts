@@ -1,5 +1,6 @@
 import {
   autoMovieStoryTime,
+  resolveProductionFrameRate,
   validateProfileCapabilities,
 } from "@automovie/engine";
 import {
@@ -10,6 +11,7 @@ import {
   IAutoMovieFormationDesign,
   IAutoMovieModelRecipe,
   IAutoMovieProductionDesign,
+  IAutoMovieProductionFrameRate,
   IAutoMovieProfile,
   IAutoMovieShotContract,
   IAutoMovieShotPredicate,
@@ -223,6 +225,17 @@ export const validateAutoMovieProductionGraph = (
       file,
       "frameFormat.fps",
     );
+    try {
+      resolveProductionFrameRate(graph.production.frameFormat);
+    } catch (error) {
+      invalid(
+        diagnostics,
+        "design-frame-clock-invalid",
+        target,
+        file,
+        `${error instanceof Error ? error.message : String(error)} Author one exact reduced rational frame rate and an equal display fps, or use a lossless positive integer fps.`,
+      );
+    }
     const crop = graph.production.frameFormat.crop;
     if (crop !== undefined) {
       bounded(
@@ -283,7 +296,8 @@ export const validateAutoMovieProductionGraph = (
       graph.production.frameFormat.fps > 0 &&
       isProductionFrameTime(
         graph.production.targetRuntimeSeconds,
-        graph.production.frameFormat.fps,
+        graph.production.frameFormat.frameRate ??
+          graph.production.frameFormat.fps,
       ) === false
     )
       invalid(
@@ -1377,7 +1391,8 @@ export const validateAutoMovieProductionGraph = (
       shot.durationSeconds > 0 &&
       isProductionFrameTime(
         shot.durationSeconds,
-        graph.production.frameFormat.fps,
+        graph.production.frameFormat.frameRate ??
+          graph.production.frameFormat.fps,
       ) === false
     )
       invalid(
@@ -1568,8 +1583,11 @@ export const validateAutoMovieProductionGraph = (
         );
       else if (
         graph.production !== null &&
-        isProductionFrameTime(frame.time, graph.production.frameFormat.fps) ===
-          false
+        isProductionFrameTime(
+          frame.time,
+          graph.production.frameFormat.frameRate ??
+            graph.production.frameFormat.fps,
+        ) === false
       )
         invalid(
           diagnostics,
@@ -3152,11 +3170,29 @@ const validatePredicates = (
  *
  * @author Samchon
  */
-export const isProductionFrameTime = (time: number, fps: number): boolean => {
-  const frame = time * fps;
-  const tolerance =
-    Number.EPSILON * 64 * Math.max(1, Math.abs(frame), Math.abs(time), fps);
-  return Math.abs(frame - Math.round(frame)) <= tolerance;
+export const isProductionFrameTime = (
+  time: number,
+  input: number | IAutoMovieProductionFrameRate,
+): boolean => {
+  if (Number.isFinite(time) === false || time < 0) return false;
+  try {
+    const frameRate =
+      typeof input === "number"
+        ? resolveProductionFrameRate({ fps: input })
+        : resolveProductionFrameRate({
+            fps: input.numerator / input.denominator,
+            frameRate: input,
+          });
+    const frame = Math.round(
+      (time * frameRate.numerator) / frameRate.denominator,
+    );
+    return (
+      Number.isSafeInteger(frame) &&
+      time === (frame * frameRate.denominator) / frameRate.numerator
+    );
+  } catch {
+    return false;
+  }
 };
 
 const text = (
