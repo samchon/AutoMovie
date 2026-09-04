@@ -50,6 +50,30 @@ assert.deepEqual(
   }),
   [],
 );
+assert.equal(
+  inspectAutoMovieEvidenceTopology({
+    branches,
+    expected,
+    declarations: [
+      {
+        provider: "settings",
+        consumer: "maps",
+        status: "uses",
+        reason: "Map decisions consume the selected world basis.",
+      },
+      {
+        provider: "maps",
+        consumer: "spaces",
+        status: "uses",
+        reason: "Spaces consume the map site boundary.",
+      },
+    ],
+  }).find(
+    (diagnostic) =>
+      diagnostic.provider === "spaces" && diagnostic.consumer === "models",
+  )?.code,
+  "missing-consumer",
+);
 
 const diagnostics = inspectAutoMovieEvidenceTopology({
   branches: [
