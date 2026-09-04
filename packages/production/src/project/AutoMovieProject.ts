@@ -21,7 +21,6 @@ import {
 } from "@automovie/interface";
 import { renderPathStem } from "@automovie/render";
 import { randomUUID } from "node:crypto";
-import fs from "node:fs";
 import path from "node:path";
 
 import { readAutoMovieProductionOwnedFile } from "../production/productionRenderJob";
@@ -51,6 +50,7 @@ import {
   validateVectorArtifact,
 } from "../validators/primitives";
 import { acquireCommitLock, releaseCommitLock } from "./commitLock";
+import { autoMovieFileSystem as fileSystem } from "./fileSystem";
 import {
   IAutoMovieLegacyActorSpec,
   IAutoMovieLegacyProjectSummary,
@@ -124,7 +124,7 @@ export class AutoMovieProject {
   ) {
     for (const dir of RESERVED_DIRS) {
       assertNamespace();
-      fs.mkdirSync(path.join(root, dir), { recursive: true });
+      fileSystem.mkdirSync(path.join(root, dir), { recursive: true });
       assertNamespace();
     }
     this.lastReadRevision_ = this.readRevision();
@@ -340,7 +340,7 @@ export class AutoMovieProject {
   ): void {
     const base = path.join(this.root, dir);
     assertNamespace();
-    for (const name of fs.readdirSync(base))
+    for (const name of fileSystem.readdirSync(base))
       if (name.endsWith(".json") && !staged.has(name))
         removeAtomic(path.join(base, name), assertNamespace);
     for (const [name, content] of staged)
@@ -579,7 +579,7 @@ export class AutoMovieProject {
     const target = sliceFilename(node);
     const lower = target.toLowerCase();
     const base = path.join(this.root, dir);
-    for (const name of fs.readdirSync(base))
+    for (const name of fileSystem.readdirSync(base))
       if (
         name.endsWith(".json") &&
         name.toLowerCase() === lower &&
@@ -622,7 +622,7 @@ export class AutoMovieProject {
       const manifestContent = serializeJson(next);
       if (bytes !== undefined) {
         assertNamespace();
-        if (fs.existsSync(absolute))
+        if (fileSystem.existsSync(absolute))
           throw new Error(
             `asset file "${normalized}" already exists; refusing to overwrite it`,
           );
@@ -693,7 +693,7 @@ export class AutoMovieProject {
     // whose result varies with the host locale/ICU build and can even return 0
     // for distinct Unicode-equivalent names). Distinct filenames are never
     // equal, so both comparator arms are reachable and none needs a c8-ignore.
-    return fs
+    return fileSystem
       .readdirSync(path.join(this.root, "renders"))
       .sort(compareCodeUnits)
       .filter((name) => !owned(name))
@@ -746,7 +746,7 @@ export class AutoMovieProject {
   ): T[] {
     const base = path.join(this.root, dir);
     const out: T[] = [];
-    for (const name of fs
+    for (const name of fileSystem
       .readdirSync(base)
       .filter((name) => name.endsWith(".json"))
       .sort(compareCodeUnits)) {
@@ -1674,18 +1674,18 @@ const writeAtomic = (
   let published = false;
   try {
     assertNamespace();
-    fs.mkdirSync(path.dirname(file), { recursive: true });
+    fileSystem.mkdirSync(path.dirname(file), { recursive: true });
     assertNamespace();
-    fs.writeFileSync(temp, data);
+    fileSystem.writeFileSync(temp, data);
     assertNamespace();
-    fs.renameSync(temp, file);
+    fileSystem.renameSync(temp, file);
     published = true;
     assertNamespace();
   } finally {
     if (published === false)
       try {
         assertNamespace();
-        fs.rmSync(temp, { force: true });
+        fileSystem.rmSync(temp, { force: true });
       } catch {
         // A stale pathname must not clean a temporary file in a replacement
         // namespace. The original physical root retains it for diagnosis.
@@ -1698,7 +1698,7 @@ const removeAtomic = (file: string, assertNamespace: () => void): void => {
   const quarantine = `${file}.delete.${process.pid}.${randomUUID()}`;
   assertNamespace();
   try {
-    fs.renameSync(file, quarantine);
+    fileSystem.renameSync(file, quarantine);
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code === "ENOENT") {
       assertNamespace();
@@ -1708,13 +1708,16 @@ const removeAtomic = (file: string, assertNamespace: () => void): void => {
   }
   try {
     assertNamespace();
-    fs.rmSync(quarantine, { force: true });
+    fileSystem.rmSync(quarantine, { force: true });
     assertNamespace();
   } catch (error) {
     try {
       assertNamespace();
-      if (fs.existsSync(quarantine) && fs.existsSync(file) === false)
-        fs.renameSync(quarantine, file);
+      if (
+        fileSystem.existsSync(quarantine) &&
+        fileSystem.existsSync(file) === false
+      )
+        fileSystem.renameSync(quarantine, file);
       assertNamespace();
     } catch {
       // Never follow the quarantined name after the physical root changed.

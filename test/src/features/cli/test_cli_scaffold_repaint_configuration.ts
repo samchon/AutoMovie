@@ -5,7 +5,8 @@ import type {
 } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 import path from "node:path";
-import { pathToFileURL } from "node:url";
+
+import { loadSourceModule } from "../internal/loadSourceModule";
 
 interface IRepaintRequest {
   shot: string;
@@ -329,11 +330,7 @@ export const test_cli_scaffold_repaint_configuration =
       __dirname,
       "../../../../packages/template/scaffold/scripts/productionConfiguration.ts",
     );
-    const configuration = (
-      process.env.AUTOMOVIE_ISSUE_2126_ESM === "1"
-        ? await import(pathToFileURL(configSource).href)
-        : require(configSource)
-    ) as IConfigurationModule;
+    const configuration = loadSourceModule<IConfigurationModule>(configSource);
     const authored = selection();
     const parsed = configuration.readProductionRepaintSelection(
       authored,

@@ -68,7 +68,7 @@ const driven = (
  *    the narrowing.
  * 4. Negative twin: a TRS output still rejects with the NaN-poisoning rationale.
  */
-export const test_resolve_drivers_driven_weights = (): void => {
+export const test_resolve_driver_weights = (): void => {
   // 1. unsampled weights: the driver creates the scalar channel and it folds
   const out = resolveFrame({
     nodes: [node("k")],

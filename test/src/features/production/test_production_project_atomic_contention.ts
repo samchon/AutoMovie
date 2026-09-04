@@ -4,6 +4,7 @@ import fs from "node:fs";
 import path from "node:path";
 
 import { namedFacts } from "../internal/predicates";
+import { isolatedFileSystemTest } from "../internal/testFileSystem";
 import { productionFixture } from "./productionFixtures";
 
 /**
@@ -45,7 +46,7 @@ import { productionFixture } from "./productionFixtures";
  * 4. A final attempt that changes from contention to an unrelated failure
  *    preserves that last refusal instead of misreporting exhausted contention.
  */
-export const test_production_project_atomic_contention = (): void => {
+const runProjectAtomicContention = (fileSystem: typeof fs): void => {
   const fixture = productionFixture();
   const nativeRename = fs.renameSync;
   try {
@@ -77,7 +78,7 @@ export const test_production_project_atomic_contention = (): void => {
     ): { attempts: () => number; landed: () => number } => {
       let attempts = 0;
       let landed = 0;
-      fs.renameSync = ((from: fs.PathLike, to: fs.PathLike) => {
+      fileSystem.renameSync = ((from: fs.PathLike, to: fs.PathLike) => {
         if (isTarget(to) === false) return nativeRename(from, to);
         attempts += 1;
         if (attempts <= failures) throw contended(code);
@@ -177,7 +178,7 @@ export const test_production_project_atomic_contention = (): void => {
     );
 
     let changedAttempts = 0;
-    fs.renameSync = ((from: fs.PathLike, to: fs.PathLike) => {
+    fileSystem.renameSync = ((from: fs.PathLike, to: fs.PathLike) => {
       if (isTarget(to) === false) return nativeRename(from, to);
       changedAttempts += 1;
       throw contended(changedAttempts < 5 ? "EBUSY" : "ENOSPC");
@@ -194,10 +195,14 @@ export const test_production_project_atomic_contention = (): void => {
       { attempts: 5, code: "ENOSPC" },
     );
   } finally {
-    fs.renameSync = nativeRename;
+    fileSystem.renameSync = nativeRename;
     fixture.dispose();
   }
 };
+
+export const test_production_project_atomic_contention = isolatedFileSystemTest(
+  runProjectAtomicContention,
+);
 
 /** The production `productionFixture` renders. */
 const PRODUCTION = "fixture-film";

@@ -1,7 +1,8 @@
 import { randomUUID } from "node:crypto";
-import fs from "node:fs";
+import type { BigIntStats } from "node:fs";
 import path from "node:path";
 
+import { autoMovieFileSystem as fileSystem } from "./fileSystem";
 import {
   type IAutoMovieLocalProcessOwner,
   currentAutoMovieLocalProcessOwner,
@@ -101,7 +102,7 @@ const closeCommitLockDescriptor = (
   lockPath: string,
 ): void => {
   try {
-    fs.closeSync(descriptor);
+    fileSystem.closeSync(descriptor);
   } catch (closeFailure) {
     if (failure === undefined) throw closeFailure;
     throw new CommitLockDescriptorCleanupError(
@@ -116,32 +117,34 @@ const closeCommitLockDescriptor = (
   }
 };
 
-const lockIdentity = (status: fs.BigIntStats): string =>
+const lockIdentity = (status: BigIntStats): string =>
   `${status.dev}\0${status.ino}`;
 
 const readCommitLockSnapshot = (
   lockPath: string,
 ): ICommitLockSnapshot | null => {
-  const linked = fs.lstatSync(lockPath, { bigint: true });
+  const linked = fileSystem.lstatSync(lockPath, { bigint: true });
   if (linked.isSymbolicLink() || linked.isFile() === false) return null;
   const linkedIdentity = lockIdentity(linked);
-  const descriptor = fs.openSync(lockPath, "r");
+  const descriptor = fileSystem.openSync(lockPath, "r");
   let failure: ICommitLockDescriptorFailure | undefined;
   try {
-    const opened = fs.fstatSync(descriptor, { bigint: true });
+    const opened = fileSystem.fstatSync(descriptor, { bigint: true });
     if (opened.isFile() === false) return null;
-    const token = fs.readFileSync(descriptor, "utf8");
-    const resident = fs.lstatSync(lockPath, { bigint: true });
+    const token = fileSystem.readFileSync(descriptor, "utf8");
+    const resident = fileSystem.lstatSync(lockPath, { bigint: true });
     if (
       resident.isSymbolicLink() ||
       resident.isFile() === false ||
       lockIdentity(resident) !== linkedIdentity
     )
       return null;
-    const residentDescriptor = fs.openSync(lockPath, "r");
+    const residentDescriptor = fileSystem.openSync(lockPath, "r");
     let residentFailure: ICommitLockDescriptorFailure | undefined;
     try {
-      const current = fs.fstatSync(residentDescriptor, { bigint: true });
+      const current = fileSystem.fstatSync(residentDescriptor, {
+        bigint: true,
+      });
       if (
         current.isFile() === false ||
         lockIdentity(current) !== lockIdentity(opened)
@@ -164,17 +167,21 @@ const readCommitLockSnapshot = (
 
 const restoreQuarantinedLock = (quarantine: string, lockPath: string): void => {
   try {
-    fs.linkSync(quarantine, lockPath);
+    fileSystem.linkSync(quarantine, lockPath);
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code === "EEXIST") return;
     try {
-      fs.copyFileSync(quarantine, lockPath, fs.constants.COPYFILE_EXCL);
+      fileSystem.copyFileSync(
+        quarantine,
+        lockPath,
+        fileSystem.constants.COPYFILE_EXCL,
+      );
     } catch {
       return;
     }
   }
   try {
-    fs.rmSync(quarantine, { force: true });
+    fileSystem.rmSync(quarantine, { force: true });
   } catch {
     // The canonical foreign lock is restored; an extra hard link or backup
     // is fail-closed evidence and must not endanger the resident owner.
@@ -221,7 +228,7 @@ export const acquireCommitLock = (lockPath: string): string => {
       // Exclusive create admits only one owner. The token is fully written
       // before this acquire returns, and contenders never read it to decide
       // whether they may proceed -- only to say who is in the way.
-      fs.writeFileSync(lockPath, token, { flag: "wx" });
+      fileSystem.writeFileSync(lockPath, token, { flag: "wx" });
       held.set(lockPath, { token, depth: 1 });
       return token;
     } catch (error) {
@@ -290,7 +297,7 @@ export const releaseCommitLock = (
       `.automovie-lock-release-${process.pid}-${randomUUID()}`,
     );
     try {
-      fs.renameSync(lockPath, quarantine);
+      fileSystem.renameSync(lockPath, quarantine);
     } catch {
       // The ownership entry is already gone and the resident lock still holds
       // this session's token, so returning here leaves the file with no owner
@@ -308,7 +315,7 @@ export const releaseCommitLock = (
         moved.identity === observed.identity &&
         moved.token === token
       )
-        fs.rmSync(quarantine, { force: true });
+        fileSystem.rmSync(quarantine, { force: true });
       else restoreQuarantinedLock(quarantine, lockPath);
     } catch {
       restoreQuarantinedLock(quarantine, lockPath);
@@ -465,7 +472,7 @@ const inspectCommitLockSnapshot = (
   }
   if (resident === null) {
     try {
-      fs.lstatSync(lockPath);
+      fileSystem.lstatSync(lockPath);
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code === "ENOENT") return null;
     }
@@ -640,7 +647,7 @@ const reclaimDeadCommitLock = (lockPath: string, token: string): boolean => {
     return false;
   const staging = `${lockPath}.reclaim`;
   try {
-    fs.writeFileSync(staging, token, { flag: "wx" });
+    fileSystem.writeFileSync(staging, token, { flag: "wx" });
   } catch {
     return false;
   }
@@ -653,14 +660,14 @@ const reclaimDeadCommitLock = (lockPath: string, token: string): boolean => {
       resident.snapshot.identity !== observed.snapshot.identity ||
       resident.snapshot.token !== observed.snapshot.token
     ) {
-      fs.rmSync(staging, { force: true });
+      fileSystem.rmSync(staging, { force: true });
       return false;
     }
-    fs.renameSync(staging, lockPath);
+    fileSystem.renameSync(staging, lockPath);
     return true;
   } catch {
     try {
-      fs.rmSync(staging, { force: true });
+      fileSystem.rmSync(staging, { force: true });
     } catch {
       // The resident lock is untouched either way; a staging file left behind
       // costs a later reclaim, not correctness.

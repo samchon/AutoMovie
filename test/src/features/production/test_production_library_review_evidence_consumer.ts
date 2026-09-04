@@ -493,20 +493,20 @@ export const test_production_library_review_evidence_consumer = (): void => {
   });
   const nonErrorJsonState = project();
   writePlans(nonErrorJsonState);
-  const parseJson = JSON.parse;
-  let nonErrorJson: IAutoMovieLibraryReviewPopulation;
-  try {
-    JSON.parse = (() => {
-      throw nonError("plan parser unavailable");
-    }) as typeof JSON.parse;
-    nonErrorJson = consumer.readAutoMovieLibraryReviewRequirements({
-      authoring: binding,
-      project: nonErrorJsonState,
-      compileFingerprint: COMPILE,
-    });
-  } finally {
-    JSON.parse = parseJson;
-  }
+  const readNonErrorJsonPlan = nonErrorJsonState.readProseDocument;
+  nonErrorJsonState.readProseDocument = (relative) =>
+    relative === reviewPath("models")
+      ? ({
+          toString: () => {
+            throw nonError("plan parser unavailable");
+          },
+        } as unknown as string)
+      : readNonErrorJsonPlan(relative);
+  const nonErrorJson = consumer.readAutoMovieLibraryReviewRequirements({
+    authoring: binding,
+    project: nonErrorJsonState,
+    compileFingerprint: COMPILE,
+  });
   const invalidState = project();
   writePlans(invalidState);
   const invalidPlan = JSON.parse(

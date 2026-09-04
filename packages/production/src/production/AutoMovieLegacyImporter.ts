@@ -13,13 +13,14 @@ import {
   IAutoMovieShotContract,
 } from "@automovie/interface";
 import { randomUUID } from "node:crypto";
-import fs from "node:fs";
+import type { Stats } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import typia from "typia";
 
 import { AutoMovieProject, checkAssetPath } from "../project/AutoMovieProject";
 import { acquireCommitLock, releaseCommitLock } from "../project/commitLock";
+import { autoMovieFileSystem as fileSystem } from "../project/fileSystem";
 import {
   canonicalAutoMovieJsonBytes,
   compareCodeUnits,
@@ -104,7 +105,7 @@ const removeLegacyImportTemporary = (
   resource: string,
 ): void => {
   try {
-    fs.rmSync(temporary, { force: true, recursive: true });
+    fileSystem.rmSync(temporary, { force: true, recursive: true });
   } catch (cleanupFailure) {
     if (failure === undefined) throw cleanupFailure;
     throw new LegacyImportCleanupError(
@@ -200,18 +201,22 @@ export class AutoMovieLegacyImporter {
     };
     const files = appliedImportFiles(root, plan, state);
     assertProductionRootNamespaceLease(lease);
-    const staging = fs.mkdtempSync(path.join(root, ".automovie-import-"));
+    const staging = fileSystem.mkdtempSync(
+      path.join(root, ".automovie-import-"),
+    );
     let stagingFailure: ILegacyImportCleanupFailure | undefined;
     try {
       for (const directory of PRODUCTION_STATE_DIRECTORIES)
-        fs.mkdirSync(path.join(staging, directory), { recursive: true });
+        fileSystem.mkdirSync(path.join(staging, directory), {
+          recursive: true,
+        });
       for (const [relative, bytes] of files) {
         const file = path.join(staging, ...relative.split("/"));
-        fs.mkdirSync(path.dirname(file), { recursive: true });
-        fs.writeFileSync(file, bytes);
+        fileSystem.mkdirSync(path.dirname(file), { recursive: true });
+        fileSystem.writeFileSync(file, bytes);
       }
       assertProductionRootNamespaceLease(lease);
-      fs.renameSync(staging, stateRoot);
+      fileSystem.renameSync(staging, stateRoot);
       assertProductionRootNamespaceLease(lease);
     } catch (error) {
       stagingFailure = { error };
@@ -224,7 +229,7 @@ export class AutoMovieLegacyImporter {
         leaseCurrent = false;
       }
       // A replaced root must not receive cleanup intended for the lease root.
-      if (leaseCurrent && fs.existsSync(staging))
+      if (leaseCurrent && fileSystem.existsSync(staging))
         removeLegacyImportTemporary(
           staging,
           stagingFailure,
@@ -292,21 +297,21 @@ export class AutoMovieLegacyImporter {
       );
       const removed: string[] = [];
       assertProductionRootNamespaceLease(lease);
-      fs.renameSync(stateRoot, quarantine);
+      fileSystem.renameSync(stateRoot, quarantine);
       assertProductionRootNamespaceLease(lease);
       try {
         for (const baseline of plan.rollbackBaseline)
           if (baseline.existed === false) {
             const directory = path.join(root, baseline.path);
-            if (fs.existsSync(directory)) {
+            if (fileSystem.existsSync(directory)) {
               assertProductionRootNamespaceLease(lease);
-              fs.rmdirSync(directory);
+              fileSystem.rmdirSync(directory);
               assertProductionRootNamespaceLease(lease);
               removed.push(directory);
             }
           }
         assertProductionRootNamespaceLease(lease);
-        fs.rmSync(quarantine, { recursive: true });
+        fileSystem.rmSync(quarantine, { recursive: true });
         assertProductionRootNamespaceLease(lease);
       } catch (error) {
         try {
@@ -318,20 +323,20 @@ export class AutoMovieLegacyImporter {
           );
         }
         const restorationErrors: unknown[] = [];
-        if (fs.existsSync(stateRoot) === false) {
+        if (fileSystem.existsSync(stateRoot) === false) {
           try {
             if (
-              fs.existsSync(quarantine) &&
+              fileSystem.existsSync(quarantine) &&
               verifyAppliedImport(quarantine, root, plan, appliedState, {
                 path: "revision.lock",
                 bytes: Buffer.from(token, "utf8"),
               })
             )
-              fs.renameSync(quarantine, stateRoot);
+              fileSystem.renameSync(quarantine, stateRoot);
             else {
               restoreAppliedImport(stateRoot, root, plan, appliedState, token);
               try {
-                fs.rmSync(quarantine, { force: true, recursive: true });
+                fileSystem.rmSync(quarantine, { force: true, recursive: true });
               } catch {
                 // The authoritative applied state is restored at `automovie`.
               }
@@ -342,7 +347,7 @@ export class AutoMovieLegacyImporter {
         }
         for (const directory of removed)
           try {
-            fs.mkdirSync(directory);
+            fileSystem.mkdirSync(directory);
           } catch (restorationError) {
             restorationErrors.push(restorationError);
           }
@@ -351,7 +356,7 @@ export class AutoMovieLegacyImporter {
             [error, ...restorationErrors],
             `Legacy import rollback failed and restoration was incomplete. Preserve "${quarantine}" and repair the reported paths before retrying.`,
           );
-        if (fs.existsSync(stateRoot) === false)
+        if (fileSystem.existsSync(stateRoot) === false)
           throw new Error(
             `Legacy import rollback failed and the applied state remains preserved at "${quarantine}": ${String(error)}`,
           );
@@ -612,7 +617,7 @@ const validateLegacyRoot = (rootDirectory: string): string => {
     throw new Error(
       `Legacy project root "${root}" must be one physical, dedicated project directory.`,
     );
-  return fs.realpathSync(root);
+  return fileSystem.realpathSync(root);
 };
 
 const readLegacySnapshot = (
@@ -730,7 +735,7 @@ const withLegacyProject = <T>(
   snapshot: ILegacySnapshot,
   task: (project: AutoMovieProject) => T,
 ): T => {
-  const temporary = fs.mkdtempSync(
+  const temporary = fileSystem.mkdtempSync(
     path.join(os.tmpdir(), "automovie-legacy-import-"),
   );
   let result: T;
@@ -738,8 +743,8 @@ const withLegacyProject = <T>(
     for (const [relative, bytes] of snapshot.files)
       if (bytes !== null) {
         const file = path.join(temporary, ...relative.split("/"));
-        fs.mkdirSync(path.dirname(file), { recursive: true });
-        fs.writeFileSync(file, bytes);
+        fileSystem.mkdirSync(path.dirname(file), { recursive: true });
+        fileSystem.writeFileSync(file, bytes);
       }
     result = task(AutoMovieProject.open(temporary));
   } catch (error) {
@@ -767,7 +772,7 @@ const collectDirectory = (
     throw new Error(
       `Legacy inventory directory "${absolute}" must be a physical directory.`,
     );
-  for (const entry of fs
+  for (const entry of fileSystem
     .readdirSync(absolute, { withFileTypes: true })
     .sort((left, right) => compareCodeUnits(left.name, right.name))) {
     const child = `${relative}/${entry.name}`;
@@ -793,7 +798,7 @@ const readPhysicalFile = (
   required: boolean,
 ): Uint8Array | null => {
   let current = root;
-  let finalStatus: fs.Stats | null = null;
+  let finalStatus: Stats | null = null;
   for (const segment of relative.split("/")) {
     current = path.join(current, segment);
     const status = lstatOrNull(current);
@@ -974,7 +979,9 @@ const collectStateTree = (
   const directories: string[] = [];
   const files: string[] = [];
   const visit = (directory: string): void => {
-    for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
+    for (const entry of fileSystem.readdirSync(directory, {
+      withFileTypes: true,
+    })) {
       const absolute = path.join(directory, entry.name);
       const relative = path.relative(root, absolute).split(path.sep).join("/");
       if (entry.isSymbolicLink()) throw changedImportError(root, relative);
@@ -1084,7 +1091,7 @@ const assertRollbackBaseline = (
         status !== null &&
         (status.isSymbolicLink() ||
           status.isDirectory() === false ||
-          fs.readdirSync(directory).length !== 0)
+          fileSystem.readdirSync(directory).length !== 0)
       )
         throw new Error(
           `Production-owned directory "${directory}" contains work created after import. Preserve it; rollback refused.`,
@@ -1120,26 +1127,28 @@ const restoreAppliedImport = (
   state: IAppliedImportState,
   lockToken: string,
 ): void => {
-  const staging = fs.mkdtempSync(path.join(root, ".automovie-restore-"));
+  const staging = fileSystem.mkdtempSync(
+    path.join(root, ".automovie-restore-"),
+  );
   let failure: ILegacyImportCleanupFailure | undefined;
   try {
     for (const directory of PRODUCTION_STATE_DIRECTORIES)
-      fs.mkdirSync(path.join(staging, directory), { recursive: true });
+      fileSystem.mkdirSync(path.join(staging, directory), { recursive: true });
     for (const [relative, bytes] of appliedImportFiles(root, plan, state)) {
       const file = path.join(staging, ...relative.split("/"));
-      fs.mkdirSync(path.dirname(file), { recursive: true });
-      fs.writeFileSync(file, bytes);
+      fileSystem.mkdirSync(path.dirname(file), { recursive: true });
+      fileSystem.writeFileSync(file, bytes);
     }
-    fs.writeFileSync(
+    fileSystem.writeFileSync(
       path.join(staging, "revision.lock"),
       Buffer.from(lockToken, "utf8"),
     );
-    fs.renameSync(staging, stateRoot);
+    fileSystem.renameSync(staging, stateRoot);
   } catch (error) {
     failure = { error };
     throw error;
   } finally {
-    if (fs.existsSync(staging))
+    if (fileSystem.existsSync(staging))
       removeLegacyImportTemporary(
         staging,
         failure,
@@ -1223,9 +1232,9 @@ const readJson = <T>(root: string, relative: string): T | null => {
 const serializeJson = (value: unknown): Uint8Array =>
   Buffer.from(`${JSON.stringify(value, null, 2)}\n`, "utf8");
 
-const lstatOrNull = (file: string): fs.Stats | null => {
+const lstatOrNull = (file: string): Stats | null => {
   try {
-    return fs.lstatSync(file);
+    return fileSystem.lstatSync(file);
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code === "ENOENT") return null;
     throw error;
