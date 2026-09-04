@@ -2,6 +2,7 @@ import { AutoMovieContentDigest } from "@automovie/interface";
 import {
   assertAutoMovieRepaintRawOutput,
   planAutoMovieRepaintRawOutput,
+  productionRepaintRawOutputReceiptPath,
 } from "@automovie/production";
 import { TestValidator } from "@nestia/e2e";
 
@@ -56,11 +57,17 @@ export const test_production_repaint_raw_output = (): void => {
       disposition: receipt.disposition,
       bytes: [...bytes],
       path: receipt.path,
+      receiptPath: productionRepaintRawOutputReceiptPath(
+        receipt.requestId,
+        receipt.attemptId,
+      ),
     })),
     publications.map(({ receipt }) => ({
       disposition: receipt.disposition,
       bytes: [1, 2, 3, 4],
       path: `renditions/raw/10000000-0000-4000-8000-000000000001/20000000-0000-4000-8000-000000000001/${receipt.digest.slice("sha256:".length)}.bin`,
+      receiptPath:
+        "renditions/raw/10000000-0000-4000-8000-000000000001/20000000-0000-4000-8000-000000000001/receipt.json",
     })),
   );
   const receipt = publications[0]!.receipt;

@@ -1158,12 +1158,18 @@ export interface IAutoMovieProductionRenderedDeliverable {
 }
 
 /**
- * One selected repaint output and its independent review chain.
+ * One exact delivered occurrence and its lane-specific source identity.
  *
  * @evidence requirements/delivery-and-accessibility/captions-subtitles-and-cues.md#delivery-caption-readability-profile Exposes `IAutoMovieProductionRenditionDeliveryShot` as the portable data boundary for the delivery caption readability profile requirement.
  * @evidence specifications/editorial-render-and-delivery/delivery-audio-text-and-localization.md#spec-delivery-caption-readability-profile Types `IAutoMovieProductionRenditionDeliveryShot` for the spec delivery caption readability profile system contract.
  */
-export interface IAutoMovieProductionRenditionDeliveryShot {
+export type IAutoMovieProductionRenditionDeliveryShot = {
+  /**
+   * Stable timeline occurrence identity.
+   * @evidence requirements/repaint/sequence-continuity-and-publication.md#repaint-mixed-delivery Keeps repeated shot labels distinct.
+   * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-repaint-failure-publication Supplies the exact final-conform join key.
+   */
+  occurrence: string;
   /**
    * Exact compiled shot id.
    *
@@ -1191,8 +1197,38 @@ export interface IAutoMovieProductionRenditionDeliveryShot {
    * @evidence requirements/delivery-and-accessibility/captions-subtitles-and-cues.md#delivery-caption-readability-profile Exposes `receiptDigest` as the portable data boundary for the delivery caption readability profile requirement.
    * @evidence specifications/editorial-render-and-delivery/delivery-audio-text-and-localization.md#spec-delivery-caption-readability-profile Types `receiptDigest` for the spec delivery caption readability profile system contract.
    */
-  receiptDigest: AutoMovieContentDigest;
-}
+} & (
+  | {
+      /**
+       * Deterministic renderer source, unaffected by resident repaint data.
+       * @evidence requirements/repaint/sequence-continuity-and-publication.md#repaint-mixed-delivery Makes the lane explicit.
+       * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-repaint-failure-publication Refuses receipt-based inference.
+       */
+      lane: "deterministic";
+      /** Current deterministic feature source digest. */
+      sourceDigest: AutoMovieContentDigest;
+      /** No repaint lineage belongs to this lane. */
+      receiptDigest: null;
+      /** No active selection belongs to this lane. */
+      selectionDigest: null;
+    }
+  | {
+      /** Explicit selected repaint source. */
+      lane: "repainted";
+      /** Candidate output digest, repeated as the exact source identity. */
+      sourceDigest: AutoMovieContentDigest;
+      /** Digest of the canonical immutable candidate receipt. */
+      receiptDigest: AutoMovieContentDigest;
+      /** Digest of the active immutable selection record. */
+      selectionDigest: AutoMovieContentDigest;
+      /** Stable active selection identity. */
+      selectionId: string;
+      /** Immutable request identity. */
+      requestId: string;
+      /** Immutable successful attempt identity. */
+      attemptId: string;
+    }
+);
 
 /**
  * Review and receipt provenance for one repainted feature delivery.
@@ -1201,13 +1237,21 @@ export interface IAutoMovieProductionRenditionDeliveryShot {
  * @evidence specifications/editorial-render-and-delivery/delivery-audio-text-and-localization.md#spec-delivery-caption-readability-profile Types `IAutoMovieProductionRenditionDelivery` for the spec delivery caption readability profile system contract.
  */
 export interface IAutoMovieProductionRenditionDelivery {
+  /** Versioned occurrence-lane provenance protocol. */
+  version: 2;
   /**
    * Explicit selected visual layer.
    *
    * @evidence requirements/delivery-and-accessibility/captions-subtitles-and-cues.md#delivery-caption-readability-profile Exposes `kind` as the portable data boundary for the delivery caption readability profile requirement.
    * @evidence specifications/editorial-render-and-delivery/delivery-audio-text-and-localization.md#spec-delivery-caption-readability-profile Types `kind` for the spec delivery caption readability profile system contract.
    */
-  kind: "repainted";
+  kind: "visual-lanes";
+  /** Digest of the canonical ordered occurrence-member population. */
+  memberSetDigest: AutoMovieContentDigest;
+  /** Current passing aggregate sequence observation, null for all-deterministic. */
+  observationDigest: AutoMovieContentDigest | null;
+  /** Full observation needed for parser-only readback, null for all-deterministic. */
+  observation: IAutoMovieRepaintSequenceObservation | null;
   /**
    * Every shot rendition consumed by the current film timeline.
    *
@@ -1215,6 +1259,59 @@ export interface IAutoMovieProductionRenditionDelivery {
    * @evidence specifications/editorial-render-and-delivery/delivery-audio-text-and-localization.md#spec-delivery-caption-readability-profile Types `shots` for the spec delivery caption readability profile system contract.
    */
   shots: IAutoMovieProductionRenditionDeliveryShot[];
+}
+
+/** Exact deterministic or selected-repaint member of one sequence observation. */
+export type IAutoMovieRepaintObservationMember =
+  | {
+      occurrence: string;
+      shot: string;
+      lane: "deterministic";
+      sourceDigest: AutoMovieContentDigest;
+    }
+  | {
+      occurrence: string;
+      shot: string;
+      lane: "repainted";
+      requestId: string;
+      attemptId: string;
+      outputDigest: AutoMovieContentDigest;
+      candidateReceiptDigest: AutoMovieContentDigest;
+      selectionId: string;
+      selectionDigest: AutoMovieContentDigest;
+    };
+
+/** Independent truth value for one aggregate temporal review axis. */
+export type AutoMovieRepaintObservationVerdict =
+  | "pass"
+  | "fail"
+  | "not-run"
+  | "unsupported";
+
+/** Versioned aggregate observation over one exact current visual member set. */
+export interface IAutoMovieRepaintSequenceObservation {
+  version: 1;
+  productionId: string;
+  compileFingerprint: AutoMovieContentDigest;
+  timelineFingerprint: AutoMovieContentDigest;
+  baseline: {
+    address: string;
+    version: string;
+    scope: string[];
+    intendedDeltas: string[];
+  };
+  members: IAutoMovieRepaintObservationMember[];
+  memberSetDigest: AutoMovieContentDigest;
+  artifact: { path: string; digest: AutoMovieContentDigest };
+  playback: { runtime: string; context: string };
+  status: "completed" | "failed" | "not-run" | "unsupported";
+  verdicts: {
+    flicker: AutoMovieRepaintObservationVerdict;
+    identityDrift: AutoMovieRepaintObservationVerdict;
+    geometryWarp: AutoMovieRepaintObservationVerdict;
+    textureCrawl: AutoMovieRepaintObservationVerdict;
+    transitionMismatch: AutoMovieRepaintObservationVerdict;
+  };
 }
 
 /**

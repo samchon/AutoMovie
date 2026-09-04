@@ -11,7 +11,10 @@ import { createRequire } from "node:module";
 import path from "node:path";
 
 import { productionEvidence } from "../lint.config";
-import { repaintSelectionReviews } from "../repaintSelectionReviews";
+import {
+  repaintSelectionReviews,
+  repaintSequenceObservation,
+} from "../repaintSelectionReviews";
 import { inspectPublishedProxyBundle } from "./assertProxyBundle";
 import { preserveProductionEncoderCleanup } from "./preserveProductionEncoderCleanup";
 import {
@@ -354,6 +357,7 @@ const executeProductionRenderCommand = async (
     progress: renderProgress,
     publication: publicationRuntime,
     repaintSelection: productionRepaintSelection,
+    repaintSequenceObservation: () => repaintSequenceObservation,
     root,
     sound: soundRuntime,
   });

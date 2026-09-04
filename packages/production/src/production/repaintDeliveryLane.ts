@@ -1,5 +1,10 @@
 import { AutoMovieContentDigest } from "@automovie/interface";
 
+import {
+  canonicalAutoMovieJsonBytes,
+  digestAutoMovieBytes,
+} from "./contentIdentity";
+
 /**
  * One exact delivered occurrence in the current film timeline.
  *
@@ -81,6 +86,24 @@ export interface IAutoMovieVisualDeliveryPlan {
   segments: IAutoMovieVisualDeliveryLane[];
   diagnostics: AutoMovieVisualDeliveryDiagnostic[];
 }
+
+/**
+ * Stable deterministic-lane identity available before final publication.
+ *
+ * @evidence requirements/repaint/sequence-continuity-and-publication.md#repaint-mixed-delivery Binds a deterministic occurrence to the current compile without requiring repaint evidence.
+ * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-repaint-failure-publication Gives review and reopen the same pre-publication deterministic source identity.
+ */
+export const productionDeterministicVisualSourceDigest = (props: {
+  compileFingerprint: AutoMovieContentDigest;
+  occurrence: string;
+}): AutoMovieContentDigest =>
+  digestAutoMovieBytes(
+    canonicalAutoMovieJsonBytes({
+      protocol: "automovie.deterministic-visual-source.v1",
+      compileFingerprint: props.compileFingerprint,
+      occurrence: props.occurrence,
+    }),
+  );
 
 /**
  * Resolve an explicit visual lane for every delivered occurrence.

@@ -159,7 +159,10 @@ import {
   materializeCompiledShot,
   materializeProductionModels,
 } from "./materializeProduction";
-import { assertProductionFeatureUsesRenditionClips } from "./muxProductionFeatureMp4";
+import {
+  assertProductionFeatureUsesRenditionClips,
+  productionVisualDeliveryOccurrence,
+} from "./muxProductionFeatureMp4";
 import { probeProductionMedia } from "./probeProductionMedia";
 import { AutoMovieModelArchetypeRegistry } from "./productionArchetypes";
 import {
@@ -174,6 +177,14 @@ import {
 } from "./productionPngPicture";
 import { canonicalProductionWebVtt } from "./productionRenderJob";
 import { productionRenderTargetFingerprint } from "./renderIdentity";
+import {
+  planAutoMovieVisualDelivery,
+  productionDeterministicVisualSourceDigest,
+} from "./repaintDeliveryLane";
+import {
+  autoMovieRepaintSequenceObservationDiagnostics,
+  digestAutoMovieRepaintObservationMembers,
+} from "./repaintSequenceObservation";
 import {
   assetReviewEvidenceDiagnostics,
   consumedModelIds,
@@ -9122,72 +9133,196 @@ const appendRenditionDeliveryDiagnostics = (
       );
     return;
   }
-  if (production.visualDelivery !== "repainted") {
-    if (deliverable.rendition !== undefined)
-      diagnostics.push(
-        renderDeliverableDiagnostic(
-          "render-rendition-provenance-invalid",
-          deliverable.id,
-          "Deterministic feature delivery must not claim repaint rendition provenance.",
-        ),
-      );
+  if (
+    production.visualDelivery === "deterministic" &&
+    deliverable.rendition === undefined
+  )
     return;
-  }
   try {
     const timeline = readAutoMovieFilmTimeline(project, inputFingerprint);
-    const shots = [
-      ...new Set(timeline.segments.map((segment) => segment.shot)),
+    const occurrences = timeline.segments.map((segment, index) => ({
+      occurrence: productionVisualDeliveryOccurrence(segment, index),
+      shot: segment.shot,
+    }));
+    const declared =
+      production.visualDelivery === "mixed"
+        ? (production.visualDeliveryLanes ?? [])
+        : occurrences.map((occurrence) => ({
+            ...occurrence,
+            lane: production.visualDelivery,
+          }));
+    const repaintShots = [
+      ...new Set(
+        declared.flatMap((lane) =>
+          lane.lane === "repainted" ? [lane.shot] : [],
+        ),
+      ),
     ];
-    const receipts = new Map(
+    const selections = new Map(
       project
-        .verifiedRepaintRenditions(shots)
-        .map((receipt) => [receipt.shot, receipt] as const),
+        .verifiedRepaintSelections(repaintShots)
+        .map((selection) => [selection.receipt.shot, selection] as const),
     );
-    const expected = {
-      kind: "repainted" as const,
-      shots: shots.map((shot) => {
-        const receipt = receipts.get(shot);
-        if (receipt === undefined)
-          throw new Error(
-            `Shot "${shot}" has no current verified repaint receipt.`,
-          );
-        return {
-          shot,
-          path: receipt.output.path,
-          digest: receipt.output.digest,
-          receiptDigest: digestAutoMovieBytes(
-            canonicalAutoMovieJsonBytes(receipt),
-          ),
-        };
-      }),
-    };
     if (
       deliverable.rendition === undefined ||
-      Buffer.from(canonicalAutoMovieJsonBytes(deliverable.rendition)).equals(
-        Buffer.from(canonicalAutoMovieJsonBytes(expected)),
-      ) === false
+      deliverable.rendition.version !== 2 ||
+      deliverable.rendition.kind !== "visual-lanes" ||
+      deliverable.rendition.shots.length !== occurrences.length
     )
       throw new Error(
-        "Feature manifest does not exactly cite the current receipt and review chain.",
+        "Feature manifest does not carry the exact current occurrence-lane protocol.",
+      );
+    const members = deliverable.rendition.shots.map((segment, index) => {
+      const occurrence = occurrences[index];
+      const lane = declared[index];
+      if (
+        occurrence === undefined ||
+        lane === undefined ||
+        segment.occurrence !== occurrence.occurrence ||
+        segment.shot !== occurrence.shot ||
+        lane.occurrence !== occurrence.occurrence ||
+        lane.shot !== occurrence.shot ||
+        segment.lane !== lane.lane
+      )
+        throw new Error(
+          `Visual lane occurrence ${index} is stale or reordered.`,
+        );
+      if (segment.lane === "deterministic") {
+        if (
+          segment.receiptDigest !== null ||
+          segment.selectionDigest !== null ||
+          segment.sourceDigest !== segment.digest ||
+          segment.path !==
+            `generated/deterministic/${encodeAutoMoviePathSegment(segment.occurrence)}` ||
+          segment.digest !==
+            productionDeterministicVisualSourceDigest({
+              compileFingerprint: inputFingerprint,
+              occurrence: segment.occurrence,
+            })
+        )
+          throw new Error(
+            `Deterministic occurrence ${index} carries repaint provenance.`,
+          );
+        return {
+          occurrence: segment.occurrence,
+          shot: segment.shot,
+          lane: "deterministic" as const,
+          sourceDigest: segment.sourceDigest,
+        };
+      }
+      const selection = selections.get(segment.shot);
+      if (
+        selection === undefined ||
+        segment.requestId !== selection.receipt.requestId ||
+        segment.attemptId !== selection.receipt.attemptId ||
+        segment.selectionId !== selection.selectionId ||
+        segment.selectionDigest !== selection.selectionDigest ||
+        segment.path !== selection.receipt.output.path ||
+        segment.digest !== selection.receipt.output.digest ||
+        segment.sourceDigest !== selection.receipt.output.digest ||
+        segment.receiptDigest !==
+          digestAutoMovieBytes(canonicalAutoMovieJsonBytes(selection.receipt))
+      )
+        throw new Error(
+          `Repaint occurrence ${index} does not cite its exact current selection chain.`,
+        );
+      return {
+        occurrence: segment.occurrence,
+        shot: segment.shot,
+        lane: "repainted" as const,
+        requestId: segment.requestId,
+        attemptId: segment.attemptId,
+        outputDigest: segment.digest,
+        candidateReceiptDigest: segment.receiptDigest,
+        selectionId: segment.selectionId,
+        selectionDigest: segment.selectionDigest,
+      };
+    });
+    if (
+      deliverable.rendition.memberSetDigest !==
+      digestAutoMovieRepaintObservationMembers(members)
+    )
+      throw new Error("Feature manifest active visual member set is stale.");
+    const observation = deliverable.rendition.observation;
+    const observationDigest =
+      observation === null
+        ? null
+        : digestAutoMovieBytes(canonicalAutoMovieJsonBytes(observation));
+    if (
+      deliverable.rendition.observationDigest !== observationDigest ||
+      (repaintShots.length === 0
+        ? observation !== null
+        : observation === null ||
+          autoMovieRepaintSequenceObservationDiagnostics({
+            observation,
+            productionId: production.id,
+            compileFingerprint: inputFingerprint,
+            timelineFingerprint: digestAutoMovieBytes(
+              canonicalAutoMovieJsonBytes(timeline),
+            ),
+            baseline: observation.baseline,
+            members,
+          }).length !== 0)
+    )
+      throw new Error(
+        "Feature manifest aggregate sequence observation is stale.",
+      );
+    const deliveryPlan = planAutoMovieVisualDelivery({
+      timeline: occurrences,
+      lanes: deliverable.rendition.shots.map((segment) =>
+        segment.lane === "deterministic"
+          ? {
+              occurrence: segment.occurrence,
+              shot: segment.shot,
+              lane: "deterministic" as const,
+              deterministic: {
+                path: segment.path,
+                digest: segment.digest,
+              },
+              repaint: null,
+            }
+          : {
+              occurrence: segment.occurrence,
+              shot: segment.shot,
+              lane: "repainted" as const,
+              deterministic: null,
+              repaint: {
+                path: segment.path,
+                digest: segment.digest,
+                receiptDigest: segment.receiptDigest,
+                selectionDigest: segment.selectionDigest,
+              },
+            },
+      ),
+      policy:
+        production.visualDelivery === "mixed"
+          ? (production.mixedVisualDeliveryPolicy ?? null)
+          : null,
+      currentObservationDigest: observationDigest,
+    });
+    if (deliveryPlan.diagnostics.length !== 0)
+      throw new Error(
+        `Feature manifest visual delivery plan is invalid: ${deliveryPlan.diagnostics.join(", ")}.`,
       );
     const feature = deliverable.files.find(
       (file) => file.mediaType === "video/mp4",
     );
     if (feature === undefined)
       throw new Error("Feature manifest has no video/mp4 output.");
-    assertProductionFeatureUsesRenditionClips({
-      feature: project.readRenderFile(feature.path),
-      timeline,
-      clips: new Map(
-        shots.map(
-          (shot) =>
-            [
+    if (declared.every((lane) => lane.lane === "repainted"))
+      assertProductionFeatureUsesRenditionClips({
+        feature: project.readRenderFile(feature.path),
+        timeline,
+        clips: new Map(
+          repaintShots.map((shot) => {
+            const selection = selections.get(shot)!;
+            return [
               shot,
-              project.readRenderFile(receipts.get(shot)!.output.path),
-            ] as const,
+              project.readRenderFile(selection.receipt.output.path),
+            ] as const;
+          }),
         ),
-      ),
-    });
+      });
   } catch (error) {
     diagnostics.push(
       renderDeliverableDiagnostic(

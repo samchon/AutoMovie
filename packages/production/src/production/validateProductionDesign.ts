@@ -170,14 +170,43 @@ export const validateAutoMovieProductionGraph = (
     );
     if (
       graph.production.visualDelivery !== "deterministic" &&
-      graph.production.visualDelivery !== "repainted"
+      graph.production.visualDelivery !== "repainted" &&
+      graph.production.visualDelivery !== "mixed"
     )
       invalid(
         diagnostics,
         "design-enum-invalid",
         target,
         file,
-        'visualDelivery must be either "deterministic" or "repainted". Choose the final visual delivery layer in the tracked production design record.',
+        'visualDelivery must be "deterministic", "repainted", or "mixed". Choose the final visual delivery layer in the tracked production design record.',
+      );
+    const deliveryLanes = graph.production.visualDeliveryLanes;
+    const mixedPolicy = graph.production.mixedVisualDeliveryPolicy;
+    if (
+      graph.production.visualDelivery === "mixed"
+        ? deliveryLanes === undefined ||
+          deliveryLanes.length === 0 ||
+          new Set(deliveryLanes.map((lane) => lane.occurrence)).size !==
+            deliveryLanes.length ||
+          deliveryLanes.some(
+            (lane) =>
+              lane.occurrence.trim().length === 0 ||
+              lane.occurrence !== lane.occurrence.trim() ||
+              lane.shot.trim().length === 0 ||
+              lane.shot !== lane.shot.trim(),
+          ) ||
+          new Set(deliveryLanes.map((lane) => lane.lane)).size !== 2 ||
+          mixedPolicy === undefined ||
+          mixedPolicy.version !== 1 ||
+          /^sha256:[0-9a-f]{64}$/u.test(mixedPolicy.observationDigest) === false
+        : deliveryLanes !== undefined || mixedPolicy !== undefined
+    )
+      invalid(
+        diagnostics,
+        "design-enum-invalid",
+        target,
+        file,
+        "Mixed visual delivery requires one unique explicit occurrence-lane population containing both lanes and one versioned aggregate-observation transition policy; all-one-lane shorthand must omit both fields.",
       );
     if (graph.production.storyClock !== undefined)
       text(
@@ -349,7 +378,7 @@ export const validateAutoMovieProductionGraph = (
         );
     }
     if (
-      graph.production.visualDelivery === "repainted" &&
+      graph.production.visualDelivery !== "deterministic" &&
       graph.production.deliverables.some(
         (deliverable) => deliverable.kind === "feature" && deliverable.required,
       ) === false
@@ -359,7 +388,7 @@ export const validateAutoMovieProductionGraph = (
         "design-repaint-feature-required",
         target,
         file,
-        'visualDelivery "repainted" requires at least one required feature deliverable. A nominal repaint selection cannot ship only deterministic previews, guides, audio, or omitted optional features.',
+        "Repainted or mixed visual delivery requires at least one required feature deliverable. A nominal repaint selection cannot ship only deterministic previews, guides, audio, or omitted optional features.",
       );
     const adoptionIds = new Set<string>();
     const adoptionClips = new Set<string>();

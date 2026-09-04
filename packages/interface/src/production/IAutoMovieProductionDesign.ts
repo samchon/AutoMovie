@@ -299,6 +299,43 @@ export interface IAutoMovieProductionFrameRate {
 }
 
 /**
+ * Explicit delivery lane for one occurrence in the compiled film timeline.
+ *
+ * @evidence requirements/repaint/sequence-continuity-and-publication.md#repaint-mixed-delivery Requires every delivered occurrence to name exactly one deterministic or repainted lane.
+ * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-repaint-failure-publication Carries occurrence identity without inferring a lane from resident artifacts.
+ */
+export interface IAutoMovieProductionVisualDeliveryLane {
+  /** Exact occurrence identity derived from its current timeline position. */
+  occurrence: string;
+  /** Current compiled shot id at that occurrence. */
+  shot: string;
+  /** Sole selected source class for the occurrence. */
+  lane: "deterministic" | "repainted";
+}
+
+/**
+ * Reviewed policy for every adjacent crossing between unlike visual lanes.
+ *
+ * @evidence requirements/repaint/sequence-continuity-and-publication.md#repaint-mixed-delivery Binds each actual lane crossing to the current aggregate observation.
+ * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-repaint-structure-continuity Makes transition review versioned and occurrence-addressed.
+ */
+export interface IAutoMovieProductionMixedVisualDeliveryPolicy {
+  /** Protocol version. */
+  version: 1;
+  /** Current aggregate sequence observation digest. */
+  observationDigest: AutoMovieContentDigest;
+  /** Exact ordered crossing reviews. */
+  transitions: Array<{
+    /** Occurrence immediately before the crossing. */
+    fromOccurrence: string;
+    /** Occurrence immediately after the crossing. */
+    toOccurrence: string;
+    /** Immutable review receipt digest for this crossing. */
+    reviewDigest: AutoMovieContentDigest;
+  }>;
+}
+
+/**
  * Global frame and art-direction invariants for one production.
  *
  * @evidence requirements/production-design/scope-and-source-of-truth.md#production-design-source-ownership Defines the typed production-design root as authored project source rather than treating references or renders as design authority.
@@ -335,7 +372,7 @@ export interface IAutoMovieProductionDesign {
    */
   targetRuntimeSeconds: number;
   /**
-   * Final visual delivery layer.
+   * Legacy all-one-lane shorthand or an explicit mixed film delivery.
    *
    * Deterministic delivery uses compiler/render output directly. Repainted
    * delivery keeps that output as technical truth and additionally requires a
@@ -345,7 +382,21 @@ export interface IAutoMovieProductionDesign {
    * @evidence requirements/production-design/art-direction-and-visual-language.md#production-design-art-direction-exceptions Exposes `visualDelivery` as the portable data boundary for the production design art direction exceptions requirement.
    * @evidence specifications/narrative-and-intent/design-authority-and-visual-language.md#narrative-intent-graphics-style-exceptions Types `visualDelivery` for the narrative intent graphics style exceptions system contract.
    */
-  visualDelivery: "deterministic" | "repainted";
+  visualDelivery: "deterministic" | "repainted" | "mixed";
+  /**
+   * Ordered explicit occurrence lanes, required exactly for mixed delivery.
+   *
+   * @evidence requirements/repaint/sequence-continuity-and-publication.md#repaint-mixed-delivery Prevents receipt presence or absence from choosing delivery membership.
+   * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-repaint-failure-publication Supplies the exact population consumed by final conform and reopen.
+   */
+  visualDeliveryLanes?: IAutoMovieProductionVisualDeliveryLane[];
+  /**
+   * Versioned crossing policy, required exactly when explicit lanes cross.
+   *
+   * @evidence requirements/repaint/sequence-continuity-and-publication.md#repaint-mixed-delivery Requires reviewed transition identity for every actual lane change.
+   * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-repaint-structure-continuity Binds the crossing set to the current aggregate observation.
+   */
+  mixedVisualDeliveryPolicy?: IAutoMovieProductionMixedVisualDeliveryPolicy;
   /**
    * Story clock every pinned shot and cross-shot criterion is measured on.
    *

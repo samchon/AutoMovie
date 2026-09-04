@@ -1,77 +1,20 @@
-import { AutoMovieContentDigest } from "@automovie/interface";
+import {
+  AutoMovieContentDigest,
+  AutoMovieRepaintObservationVerdict,
+  IAutoMovieRepaintObservationMember,
+  IAutoMovieRepaintSequenceObservation,
+} from "@automovie/interface";
 
 import {
   canonicalAutoMovieJsonBytes,
   digestAutoMovieBytes,
 } from "./contentIdentity";
 
-/**
- * Exact timeline occurrence represented by an aggregate repaint observation.
- *
- * @evidence requirements/repaint/sequence-continuity-and-publication.md#repaint-temporal-artifacts Identifies every deterministic or selected repaint occurrence that playback observed.
- * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-repaint-structure-continuity Preserves occurrence identity instead of collapsing repeated shot labels.
- */
-export type IAutoMovieRepaintObservationMember =
-  | {
-      occurrence: string;
-      shot: string;
-      lane: "deterministic";
-      sourceDigest: AutoMovieContentDigest;
-    }
-  | {
-      occurrence: string;
-      shot: string;
-      lane: "repainted";
-      requestId: string;
-      attemptId: string;
-      outputDigest: AutoMovieContentDigest;
-      candidateReceiptDigest: AutoMovieContentDigest;
-      selectionId: string;
-      selectionDigest: AutoMovieContentDigest;
-    };
-
-/**
- * Complete five-axis temporal verdict retained even when it is not passing.
- *
- * @evidence requirements/repaint/sequence-continuity-and-publication.md#repaint-temporal-artifacts Records pass, failure, unsupported, and unperformed truth independently.
- * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-repaint-structure-continuity Keeps failed observations durable while reserving publication for passes.
- */
-export type AutoMovieRepaintObservationVerdict =
-  | "pass"
-  | "fail"
-  | "not-run"
-  | "unsupported";
-
-/**
- * Versioned aggregate observation over one exact active visual set.
- *
- * @evidence requirements/repaint/sequence-continuity-and-publication.md#repaint-continuity-baseline-changes Binds playback to current compile, timeline, baseline, members, artifact, and runtime.
- * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-repaint-structure-continuity Carries the complete sequence observation consumed by final publication.
- */
-export interface IAutoMovieRepaintSequenceObservation {
-  version: 1;
-  productionId: string;
-  compileFingerprint: AutoMovieContentDigest;
-  timelineFingerprint: AutoMovieContentDigest;
-  baseline: {
-    address: string;
-    version: string;
-    scope: string[];
-    intendedDeltas: string[];
-  };
-  members: IAutoMovieRepaintObservationMember[];
-  memberSetDigest: AutoMovieContentDigest;
-  artifact: { path: string; digest: AutoMovieContentDigest };
-  playback: { runtime: string; context: string };
-  status: "completed" | "failed" | "not-run" | "unsupported";
-  verdicts: {
-    flicker: AutoMovieRepaintObservationVerdict;
-    identityDrift: AutoMovieRepaintObservationVerdict;
-    geometryWarp: AutoMovieRepaintObservationVerdict;
-    textureCrawl: AutoMovieRepaintObservationVerdict;
-    transitionMismatch: AutoMovieRepaintObservationVerdict;
-  };
-}
+export type {
+  AutoMovieRepaintObservationVerdict,
+  IAutoMovieRepaintObservationMember,
+  IAutoMovieRepaintSequenceObservation,
+} from "@automovie/interface";
 
 /**
  * Stable aggregate-observation refusal classes.

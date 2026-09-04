@@ -51,6 +51,24 @@ export interface IAutoMovieRepaintRawOutputPublication {
 }
 
 /**
+ * Canonical tracked receipt path for one attempt-owned raw revision.
+ *
+ * @evidence requirements/repaint/retries-seeds-and-variation.md#repaint-attempt-failure-provenance Keeps the recoverable byte revision reachable from its terminal attempt.
+ * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-repaint-attempt-selection Gives project persistence one unambiguous receipt owner.
+ */
+export const productionRepaintRawOutputReceiptPath = (
+  requestId: string,
+  attemptId: string,
+): string =>
+  [
+    "renditions",
+    "raw",
+    encodeAutoMoviePathSegment(exactText(requestId, "request id")),
+    encodeAutoMoviePathSegment(exactText(attemptId, "attempt id")),
+    "receipt.json",
+  ].join("/");
+
+/**
  * Form the immutable raw-output publication for one terminal attempt.
  *
  * @evidence requirements/repaint/retries-seeds-and-variation.md#repaint-attempt-failure-provenance Retains available provider bytes even when validation, cancellation, or the request budget prevents candidate admission.

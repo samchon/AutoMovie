@@ -7,25 +7,33 @@ import type {
   IAutoMovieProductionRenderManifest,
   IAutoMovieProductionRenditionDelivery,
   IAutoMovieRepaintReceipt,
+  IAutoMovieRepaintSequenceObservation,
 } from "@automovie/interface";
 import {
   AutoMovieProductionCompiler,
   AutoMovieProductionProject,
   type IAutoMovieProductionRenderChunk,
   type IAutoMovieProductionRenderJobPlan,
+  type IAutoMovieVisualDeliveryLane,
   assembleProductionChunkVideoMp4,
   assertProductionOpusProfile,
   assertProductionPngPicture,
   assertProductionVideoProfile,
+  autoMovieRepaintSequenceObservationDiagnostics,
   canonicalAutoMovieCaptureRuntimeIdentity,
   canonicalAutoMovieJsonBytes,
-  conformProductionRenditionVideoMp4,
+  conformProductionVisualDeliveryVideoMp4,
   digestAutoMovieBytes,
+  digestAutoMovieRepaintObservationMembers,
   encodeAutoMoviePathSegment,
   muxProductionFeatureMp4,
+  normalizeAutoMovieVisualDeliveryLanes,
   openAutoMovieProduction,
+  planAutoMovieVisualDelivery,
   probeProductionMedia,
+  productionDeterministicVisualSourceDigest,
   productionPublicationInputFingerprint,
+  productionVisualDeliveryOccurrence,
   readAutoMovieFilmTimeline,
   resolveProductionPngProfile,
   resolveProductionVideoProfile,
@@ -248,6 +256,7 @@ export const createProductionRenderFinalizationRuntime = (props: {
   ) => void;
   publication: IProductionRenderPublicationRuntime;
   repaintSelection: () => IAutoMovieProductionRepaintSelection | null;
+  repaintSequenceObservation: () => IAutoMovieRepaintSequenceObservation | null;
   root: string;
   sound: IProductionSoundRuntime;
 }) => {
@@ -255,6 +264,7 @@ export const createProductionRenderFinalizationRuntime = (props: {
   const planningRuntime = props.planning;
   const productionId = props.productionId;
   const productionRepaintSelection = props.repaintSelection;
+  const productionRepaintSequenceObservation = props.repaintSequenceObservation;
   const publicationRuntime = props.publication;
   const renderHost = props.host;
   const renderProgress = props.progress;
@@ -309,8 +319,7 @@ export const createProductionRenderFinalizationRuntime = (props: {
     if (plan.tier.kind === "final")
       publicationRuntime.assertMatchingProxy(project, plan);
     const timeline =
-      plan.tier.kind === "final" &&
-      graph.production.visualDelivery === "repainted"
+      plan.tier.kind === "final"
         ? readAutoMovieFilmTimeline(project, plan.compileFingerprint)
         : null;
     const selectedRepaint =
@@ -324,21 +333,50 @@ export const createProductionRenderFinalizationRuntime = (props: {
                 ? []
                 : [
                     ...new Set(
-                      timeline.segments.map((segment) => segment.shot),
+                      timeline.segments.flatMap((segment, index) => {
+                        const lane =
+                          graph.production!.visualDelivery === "mixed"
+                            ? graph.production!.visualDeliveryLanes?.find(
+                                (candidate) =>
+                                  candidate.occurrence ===
+                                  productionVisualDeliveryOccurrence(
+                                    segment,
+                                    index,
+                                  ),
+                              )?.lane
+                            : graph.production!.visualDelivery;
+                        return lane === "repainted" ? [segment.shot] : [];
+                      }),
                     ),
                   ],
           })
         : configuredRepaint;
-    const renditionReceipts: Map<string, IAutoMovieRepaintReceipt> =
+    const renditionSelections =
       timeline === null
         ? new Map()
         : new Map(
             project
-              .verifiedRepaintRenditions([
-                ...new Set(timeline.segments.map((segment) => segment.shot)),
-              ])
-              .map((receipt) => [receipt.shot, receipt] as const),
+              .verifiedRepaintSelections(
+                timeline.segments.flatMap((segment, index) => {
+                  const lane =
+                    graph.production!.visualDelivery === "mixed"
+                      ? graph.production!.visualDeliveryLanes?.find(
+                          (candidate) =>
+                            candidate.occurrence ===
+                            productionVisualDeliveryOccurrence(segment, index),
+                        )?.lane
+                      : graph.production!.visualDelivery;
+                  return lane === "repainted" ? [segment.shot] : [];
+                }),
+              )
+              .map((selection) => [selection.receipt.shot, selection] as const),
           );
+    const renditionReceipts: Map<string, IAutoMovieRepaintReceipt> = new Map(
+      [...renditionSelections].map(([shot, selection]) => [
+        shot,
+        selection.receipt,
+      ]),
+    );
     if (plan.tier.kind === "final" && selectedRepaint !== null)
       assertProductionRepaintReceiptAdoption({
         selected: selectedRepaint,
@@ -416,25 +454,187 @@ export const createProductionRenderFinalizationRuntime = (props: {
         renderProgress("video.feature.encode.start", {
           deliverable: deliverable.id,
         });
-        const video =
-          timeline === null
-            ? publicationRuntime.assembleChunkVideo(plan, deliverableChunks)
-            : conformProductionRenditionVideoMp4({
-                timeline,
-                clips: new Map(
-                  timeline.segments.map((segment) => {
-                    const receipt = renditionReceipts.get(segment.shot);
-                    if (receipt === undefined)
-                      throw new Error(
-                        `Repainted feature delivery is missing current receipt-bound output for shot "${segment.shot}".`,
-                      );
-                    return [
-                      segment.shot,
-                      project.readRenderFile(receipt.output.path),
-                    ] as const;
+        const deterministicVideo = publicationRuntime.assembleChunkVideo(
+          plan,
+          deliverableChunks,
+        );
+        let video = deterministicVideo;
+        if (timeline !== null) {
+          const timelineOccurrences = timeline.segments.map(
+            (segment, index) => ({
+              occurrence: productionVisualDeliveryOccurrence(segment, index),
+              shot: segment.shot,
+            }),
+          );
+          const lanes: IAutoMovieVisualDeliveryLane[] =
+            graph.production.visualDelivery === "mixed"
+              ? (graph.production.visualDeliveryLanes ?? []).map((lane) => {
+                  if (lane.lane === "deterministic")
+                    return {
+                      ...lane,
+                      lane: "deterministic" as const,
+                      deterministic: {
+                        path: `generated/deterministic/${encodeAutoMoviePathSegment(lane.occurrence)}`,
+                        digest: productionDeterministicVisualSourceDigest({
+                          compileFingerprint: plan.compileFingerprint,
+                          occurrence: lane.occurrence,
+                        }),
+                      },
+                      repaint: null,
+                    };
+                  const selection = renditionSelections.get(lane.shot);
+                  if (selection === undefined)
+                    throw new Error(
+                      `Repaint occurrence "${lane.occurrence}" has no current verified selection.`,
+                    );
+                  return {
+                    ...lane,
+                    lane: "repainted" as const,
+                    deterministic: null,
+                    repaint: {
+                      path: selection.receipt.output.path,
+                      digest: selection.receipt.output.digest,
+                      receiptDigest: digestAutoMovieBytes(
+                        canonicalAutoMovieJsonBytes(selection.receipt),
+                      ),
+                      selectionDigest: selection.selectionDigest,
+                    },
+                  };
+                })
+              : normalizeAutoMovieVisualDeliveryLanes({
+                  timeline: timelineOccurrences,
+                  visualDelivery: graph.production.visualDelivery,
+                  deterministic: (occurrence) => ({
+                    path: `generated/deterministic/${encodeAutoMoviePathSegment(occurrence.occurrence)}`,
+                    digest: productionDeterministicVisualSourceDigest({
+                      compileFingerprint: plan.compileFingerprint,
+                      occurrence: occurrence.occurrence,
+                    }),
                   }),
+                  repaint: (occurrence) => {
+                    const selection = renditionSelections.get(occurrence.shot);
+                    if (selection === undefined)
+                      throw new Error(
+                        `Repaint occurrence "${occurrence.occurrence}" has no current verified selection.`,
+                      );
+                    return {
+                      path: selection.receipt.output.path,
+                      digest: selection.receipt.output.digest,
+                      receiptDigest: digestAutoMovieBytes(
+                        canonicalAutoMovieJsonBytes(selection.receipt),
+                      ),
+                      selectionDigest: selection.selectionDigest,
+                    };
+                  },
+                });
+          const members = lanes.map((lane) => {
+            if (lane.lane === "deterministic")
+              return {
+                occurrence: lane.occurrence,
+                shot: lane.shot,
+                lane: "deterministic" as const,
+                sourceDigest: lane.deterministic.digest,
+              };
+            const selection = renditionSelections.get(lane.shot)!;
+            return {
+              occurrence: lane.occurrence,
+              shot: lane.shot,
+              lane: "repainted" as const,
+              requestId: selection.receipt.requestId!,
+              attemptId: selection.receipt.attemptId,
+              outputDigest: selection.receipt.output.digest,
+              candidateReceiptDigest: lane.repaint.receiptDigest,
+              selectionId: selection.selectionId,
+              selectionDigest: selection.selectionDigest,
+            };
+          });
+          const observation = productionRepaintSequenceObservation();
+          const observationDigest =
+            observation === null
+              ? null
+              : digestAutoMovieBytes(canonicalAutoMovieJsonBytes(observation));
+          if (
+            lanes.some((lane) => lane.lane === "repainted") &&
+            (observation === null ||
+              autoMovieRepaintSequenceObservationDiagnostics({
+                observation,
+                productionId,
+                compileFingerprint: plan.compileFingerprint,
+                timelineFingerprint: digestAutoMovieBytes(
+                  canonicalAutoMovieJsonBytes(timeline),
                 ),
-              });
+                baseline: observation.baseline,
+                members,
+              }).length !== 0)
+          )
+            throw new Error(
+              "Final visual delivery requires one current completed five-pass aggregate sequence observation.",
+            );
+          const deliveryPlan = planAutoMovieVisualDelivery({
+            timeline: timelineOccurrences,
+            lanes,
+            policy:
+              graph.production.visualDelivery === "mixed"
+                ? (graph.production.mixedVisualDeliveryPolicy ?? null)
+                : null,
+            currentObservationDigest: observationDigest,
+          });
+          if (deliveryPlan.diagnostics.length !== 0)
+            throw new Error(
+              `Visual delivery plan was refused: ${deliveryPlan.diagnostics.join(", ")}.`,
+            );
+          if (
+            deliveryPlan.segments.some(
+              (segment) => segment.lane === "repainted",
+            )
+          )
+            video = conformProductionVisualDeliveryVideoMp4({
+              timeline,
+              sources: deliveryPlan.segments.map((segment) => ({
+                occurrence: segment.occurrence,
+                lane: segment.lane,
+                bytes:
+                  segment.lane === "deterministic"
+                    ? deterministicVideo
+                    : project.readRenderFile(segment.repaint.path),
+              })),
+            });
+          rendition = {
+            version: 2,
+            kind: "visual-lanes",
+            memberSetDigest: digestAutoMovieRepaintObservationMembers(members),
+            observationDigest,
+            observation:
+              observation === null ? null : structuredClone(observation),
+            shots: deliveryPlan.segments.map((segment) => {
+              if (segment.lane === "deterministic")
+                return {
+                  occurrence: segment.occurrence,
+                  shot: segment.shot,
+                  lane: "deterministic" as const,
+                  path: segment.deterministic.path,
+                  digest: segment.deterministic.digest,
+                  sourceDigest: segment.deterministic.digest,
+                  receiptDigest: null,
+                  selectionDigest: null,
+                };
+              const selection = renditionSelections.get(segment.shot)!;
+              return {
+                occurrence: segment.occurrence,
+                shot: segment.shot,
+                lane: "repainted" as const,
+                path: segment.repaint.path,
+                digest: segment.repaint.digest,
+                sourceDigest: segment.repaint.digest,
+                receiptDigest: segment.repaint.receiptDigest,
+                selectionDigest: segment.repaint.selectionDigest,
+                selectionId: selection.selectionId,
+                requestId: selection.receipt.requestId!,
+                attemptId: selection.receipt.attemptId,
+              };
+            }),
+          };
+        }
         renderProgress("video.feature.encode.complete", {
           deliverable: deliverable.id,
         });
@@ -452,29 +652,6 @@ export const createProductionRenderFinalizationRuntime = (props: {
         renderProgress("video.feature.mux.complete", {
           deliverable: deliverable.id,
         });
-        if (timeline !== null) {
-          const shots = [
-            ...new Set(timeline.segments.map((segment) => segment.shot)),
-          ];
-          rendition = {
-            kind: "repainted",
-            shots: shots.map((shot) => {
-              const receipt = renditionReceipts.get(shot);
-              if (receipt === undefined)
-                throw new Error(
-                  `Repainted feature delivery requires a current verified repaint receipt for shot "${shot}".`,
-                );
-              return {
-                shot,
-                path: receipt.output.path,
-                digest: receipt.output.digest,
-                receiptDigest: digestAutoMovieBytes(
-                  canonicalAutoMovieJsonBytes(receipt),
-                ),
-              };
-            }),
-          };
-        }
       } else if (deliverable.kind === "guide-pass") {
         const passes = [
           ...new Set(deliverableChunks.map((chunk) => chunk.pass)),

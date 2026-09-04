@@ -12,6 +12,7 @@ import { canonicalAutoMovieRepaintRuntimeIdentity } from "./renditionIdentity";
 interface IAutoMovieRepaintAttemptOutput {
   digest: AutoMovieContentDigest;
   bytes: number;
+  receipt?: string;
 }
 
 /** One immutable terminal transport-attempt record. */
@@ -91,6 +92,7 @@ interface IAutoMovieRepaintExecutionResult<T> {
     | "attempts-exhausted"
     | "backoff-failed"
     | "not-retryable"
+    | "claim-refused"
     | "outcome-unknown"
     | "observer-failed";
 }
@@ -152,7 +154,11 @@ export const executeAutoMovieRepaintRequest = async <T>(props: {
   policy: IAutoMovieRepaintExecutionPolicy;
   runtime: IAutoMovieRepaintExecutionRuntime;
   signal?: AbortSignal;
-  execute: (signal: AbortSignal) => Promise<{
+  admitAttempt?: (attemptId: string, ordinal: number) => unknown;
+  execute: (
+    signal: AbortSignal,
+    attemptId: string,
+  ) => Promise<{
     value: T;
     costUnits: number;
     availableOutput: IAutoMovieRepaintAttemptOutput | null;
@@ -242,6 +248,18 @@ export const executeAutoMovieRepaintRequest = async <T>(props: {
       props.signal?.removeEventListener("abort", relay);
       throw error;
     }
+    if (props.admitAttempt !== undefined) {
+      let admitted = false;
+      try {
+        admitted = (await props.admitAttempt(attemptId, ordinal)) === true;
+      } catch {
+        admitted = false;
+      }
+      if (admitted === false) {
+        props.signal?.removeEventListener("abort", relay);
+        return result(props.requestId, attempts, null, "claim-refused");
+      }
+    }
     const remainingElapsed = Math.max(
       1,
       props.policy.maximumElapsedMs -
@@ -254,7 +272,7 @@ export const executeAutoMovieRepaintRequest = async <T>(props: {
     let disclosedCostUnits = 0;
     let disclosedOutput: IAutoMovieRepaintAttemptOutput | null = null;
     try {
-      const adapter = props.execute(controller.signal);
+      const adapter = props.execute(controller.signal, attemptId);
       void adapter
         .then(() => {
           adapterSettled = true;
@@ -758,7 +776,11 @@ const validAttemptOutput = (
   if (
     /^sha256:[0-9a-f]{64}$/u.test(value.digest) === false ||
     Number.isSafeInteger(value.bytes) === false ||
-    value.bytes <= 0
+    value.bytes <= 0 ||
+    (value.receipt !== undefined &&
+      (typeof value.receipt !== "string" ||
+        value.receipt.trim().length === 0 ||
+        value.receipt !== value.receipt.trim()))
   )
     throw new Error(
       "Repaint available output requires a canonical sha256 digest and positive safe-integer byte count.",

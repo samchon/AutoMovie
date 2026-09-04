@@ -1,3 +1,5 @@
+import type { IAutoMovieRepaintSequenceObservation } from "@automovie/interface";
+
 import type { IAutoMovieProductionRepaintSelectionReview } from "./scripts/productionConfiguration";
 
 /**
@@ -13,3 +15,11 @@ import type { IAutoMovieProductionRepaintSelectionReview } from "./scripts/produ
 export const repaintSelectionReviews: Readonly<
   Record<string, IAutoMovieProductionRepaintSelectionReview>
 > = {};
+
+/**
+ * Latest aggregate playback observation of the exact current film member set.
+ * Failed, unsupported, and not-run observations remain recordable here; only
+ * a current completed five-pass observation can authorize final publication.
+ */
+export const repaintSequenceObservation: IAutoMovieRepaintSequenceObservation | null =
+  null;

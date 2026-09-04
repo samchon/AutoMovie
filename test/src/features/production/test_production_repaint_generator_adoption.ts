@@ -219,6 +219,10 @@ const executableServices = (props: {
   fs.mkdirSync(bundle, { recursive: true });
   fs.writeFileSync(path.join(bundle, "manifest.json"), "{}\n", "utf8");
   const repaintAttempts: IAutoMovieRepaintAttemptRecord[] = [];
+  const repaintRawOutputs = new Map<
+    string,
+    { receipt: { requestId: string; attemptId: string }; bytes: Uint8Array }
+  >();
   const project = {
     productionId: input.productionId,
     root: props.root,
@@ -258,6 +262,23 @@ const executableServices = (props: {
       structuredClone(
         repaintAttempts.filter((attempt) => attempt.requestId === requestId),
       ),
+    acquireRepaintAttemptClaim: () => ({ status: "acquired" as const }),
+    settleRepaintAttemptClaim: () => 1,
+    commitRepaintRawOutput: (publication: {
+      receipt: { requestId: string; attemptId: string };
+      bytes: Uint8Array;
+    }) => {
+      repaintRawOutputs.set(
+        `${publication.receipt.requestId}/${publication.receipt.attemptId}`,
+        structuredClone(publication),
+      );
+      return 1;
+    },
+    repaintRawOutput: (requestId: string, attemptId: string) => {
+      const publication = repaintRawOutputs.get(`${requestId}/${attemptId}`);
+      if (publication === undefined) throw new Error("raw output absent");
+      return structuredClone(publication);
+    },
     commitFiles: () => 1,
   };
   Object.setPrototypeOf(project, AutoMovieProductionProject.prototype);

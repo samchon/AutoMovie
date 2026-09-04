@@ -24,6 +24,7 @@ import type {
 import { AutoMovieProductionInputRaceError } from "./AutoMovieProductionProject";
 import { parseAutoMovieCaptureRuntimeIdentity } from "./captureRuntimeIdentity";
 import {
+  canonicalAutoMovieJsonBytes,
   canonicalizeAutoMovieJson,
   compareCodeUnits,
   digestAutoMovieBytes,
@@ -40,11 +41,16 @@ import {
   productionRepaintStructuralControls,
   productionSourceRenderFingerprint,
 } from "./renditionIdentity";
+import { IAutoMovieRepaintAttemptClaim } from "./repaintAttemptClaim";
 import {
   AutoMovieRepaintAttemptError,
   assertAutoMovieRepaintExecutionPolicy,
   executeAutoMovieRepaintRequest,
 } from "./repaintExecution";
+import {
+  planAutoMovieRepaintRawOutput,
+  productionRepaintRawOutputReceiptPath,
+} from "./repaintRawOutput";
 
 interface IAutoMovieRepaintSelectionInput {
   productionId: string;
@@ -134,10 +140,18 @@ export class AutoMovieProductionRepaintService {
         ),
       );
     }
-    if (services.project.graph().production?.visualDelivery !== "repainted")
+    const delivery = services.project.graph().production;
+    if (
+      delivery === null ||
+      delivery.visualDelivery === "deterministic" ||
+      (delivery.visualDelivery === "mixed" &&
+        delivery.visualDeliveryLanes?.some(
+          (lane) => lane.shot === requestedShot && lane.lane === "repainted",
+        ) !== true)
+    )
       return refusal(
         "repaint-delivery-disabled",
-        'The current production design declares visualDelivery "deterministic". Change that tracked contract to "repainted", recompile current source, then read DIFFUSION_ENHANCE before requesting a rendition.',
+        "The current production design does not assign this shot to a repainted delivery lane. Change the tracked lane contract, recompile current source, then read DIFFUSION_ENHANCE before requesting a rendition.",
       );
     return this.repaint(services, request);
   }
@@ -534,6 +548,92 @@ export class AutoMovieProductionRepaintService {
       const latest = priorAttempts.at(-1)!;
       const latestFailure = latest.failure;
       if (
+        latest.status === "succeeded" &&
+        latest.availableOutput?.receipt !== undefined
+      ) {
+        try {
+          const raw = services.project.repaintRawOutput(
+            latest.requestId,
+            latest.attemptId,
+          );
+          if (
+            raw.receipt.disposition !== "candidate-source" ||
+            raw.receipt.digest !== latest.availableOutput.digest ||
+            raw.receipt.bytes !== latest.availableOutput.bytes
+          )
+            throw new Error(
+              "Succeeded repaint attempt does not cite a candidate-source raw revision.",
+            );
+          const probe = probeProductionVideoMp4(raw.bytes);
+          assertProductionRenditionClipDelivery({
+            bytes: raw.bytes,
+            shot: requestedShot,
+            ...expectedOutput,
+          });
+          const outputPath = productionRepaintOutputPath({
+            shot: requestedShot,
+            sourceRenderFingerprint,
+            attemptId: latest.attemptId,
+            adapterIdentity: latest.adapterIdentity,
+            generatorProvenance: generator.generatorProvenance,
+            parameters: request.parameters,
+            executionPolicy,
+            evidence,
+            references: referenceReceipts,
+            outputDigest: raw.receipt.digest,
+          });
+          const receipt: IAutoMovieRepaintReceipt = {
+            version: 4,
+            productionId: services.project.productionId,
+            shot: requestedShot,
+            compileFingerprint: registry.inputFingerprint,
+            sourceRenderFingerprint,
+            requestId,
+            attemptId: latest.attemptId,
+            startedAt: latest.startedAt,
+            completedAt: latest.completedAt,
+            costUnits: latest.costUnits,
+            executionPolicy: structuredClone(executionPolicy),
+            sourceBundle: source.bundle,
+            controls: productionRepaintStructuralControls(source.manifest),
+            references: referenceReceipts,
+            adapterIdentity: latest.adapterIdentity,
+            generatorProvenance: structuredClone(generator.generatorProvenance),
+            structuralAuthority: "deterministic-source-only",
+            parameters: structuredClone(request.parameters),
+            evidence: structuredClone(evidence),
+            output: {
+              path: outputPath,
+              digest: raw.receipt.digest,
+              bytes: raw.receipt.bytes,
+              probe,
+            },
+          };
+          services.project.commitRepaintRendition(
+            receipt,
+            raw.bytes,
+            inputCurrent,
+          );
+          return {
+            repainted: true,
+            selected: false,
+            requestId,
+            productionId: services.project.productionId,
+            shot: requestedShot,
+            receipt,
+            diagnostics: [],
+          };
+        } catch (error) {
+          return failure(
+            "repaint-commit-refused",
+            safeRepaintDiagnosticMessage(
+              error,
+              "Repaint candidate could not be resumed from its exact raw revision.",
+            ),
+          );
+        }
+      }
+      if (
         latest.status !== "failed" ||
         latestFailure === null ||
         latestFailure.retryable !== true ||
@@ -649,6 +749,7 @@ export class AutoMovieProductionRepaintService {
       return observed;
     };
     let execution;
+    const claims = new Map<string, IAutoMovieRepaintAttemptClaim>();
     try {
       execution = await executeAutoMovieRepaintRequest({
         productionId: services.project.productionId,
@@ -667,7 +768,27 @@ export class AutoMovieProductionRepaintService {
           attemptId: randomUUID,
           wait: waitForRepaintBackoff,
         },
-        execute: async (signal) => {
+        admitAttempt: (attemptId, ordinal) => {
+          const prefix = services.project.repaintRequestAttempts(requestId);
+          const claim: IAutoMovieRepaintAttemptClaim = {
+            version: 1,
+            productionId: services.project.productionId,
+            shot: requestedShot,
+            requestId,
+            requestFingerprint,
+            attemptOrdinal: ordinal,
+            attemptId,
+            prefixDigest: digestAutoMovieBytes(
+              canonicalAutoMovieJsonBytes(prefix),
+            ),
+            generation: ordinal,
+            claimedAt: executionNow().toISOString(),
+          };
+          const admission = services.project.acquireRepaintAttemptClaim(claim);
+          if (admission.status === "acquired") claims.set(attemptId, claim);
+          return admission.status === "acquired";
+        },
+        execute: async (signal, attemptId) => {
           const generated = await this.adapter!({
             signal,
             projectRoot: services.project.root,
@@ -700,6 +821,7 @@ export class AutoMovieProductionRepaintService {
             bytes: number;
           } | null = null;
           let inputStaleError: AutoMovieRepaintAttemptError | undefined;
+          let rawRetained = false;
           try {
             const reportedCostUnits = generated.costUnits;
             if (
@@ -721,7 +843,47 @@ export class AutoMovieProductionRepaintService {
               outputDigest === null
                 ? null
                 : { digest: outputDigest, bytes: bytes.length };
+            const retainRaw = (
+              disposition:
+                | "candidate-source"
+                | "invalid"
+                | "cancelled"
+                | "budget-exhausted",
+            ): void => {
+              if (outputDigest === null || rawRetained) return;
+              const publication = planAutoMovieRepaintRawOutput({
+                productionId: services.project.productionId,
+                shot: requestedShot,
+                requestId,
+                attemptId,
+                bytes,
+                mediaType:
+                  typeof generated.mediaType === "string"
+                    ? generated.mediaType
+                    : "application/octet-stream",
+                disposition,
+                retainedAt: repaintRuntimeInstant(
+                  now(),
+                  "raw output retention",
+                ).toISOString(),
+                maximumBytes: REPAINT_RAW_OUTPUT_MAXIMUM_BYTES,
+              });
+              services.project.commitRepaintRawOutput(
+                publication,
+                inputCurrent,
+              );
+              availableOutput = {
+                digest: publication.receipt.digest,
+                bytes: publication.receipt.bytes,
+                receipt: productionRepaintRawOutputReceiptPath(
+                  requestId,
+                  attemptId,
+                ),
+              };
+              rawRetained = true;
+            };
             if (inputCurrent() === false) {
+              retainRaw("invalid");
               inputStaleError = new AutoMovieRepaintAttemptError(
                 "input-stale",
                 "Compiler registry or deterministic source pixels changed while repaint was running.",
@@ -763,6 +925,13 @@ export class AutoMovieProductionRepaintService {
               shot: requestedShot,
               ...expectedOutput,
             });
+            retainRaw(
+              signal.aborted
+                ? "cancelled"
+                : costUnits > remainingPolicy.maximumCostUnits
+                  ? "budget-exhausted"
+                  : "candidate-source",
+            );
             return {
               value: {
                 bytes,
@@ -776,6 +945,37 @@ export class AutoMovieProductionRepaintService {
           } catch (error) {
             if (inputStaleError !== undefined && error === inputStaleError)
               throw error;
+            if (availableOutput !== null && rawRetained === false) {
+              const publication = planAutoMovieRepaintRawOutput({
+                productionId: services.project.productionId,
+                shot: requestedShot,
+                requestId,
+                attemptId,
+                bytes: new Uint8Array(generated.bytes),
+                mediaType:
+                  typeof generated.mediaType === "string"
+                    ? generated.mediaType
+                    : "application/octet-stream",
+                disposition: signal.aborted ? "cancelled" : "invalid",
+                retainedAt: repaintRuntimeInstant(
+                  now(),
+                  "raw output retention",
+                ).toISOString(),
+                maximumBytes: REPAINT_RAW_OUTPUT_MAXIMUM_BYTES,
+              });
+              services.project.commitRepaintRawOutput(
+                publication,
+                inputCurrent,
+              );
+              availableOutput = {
+                digest: publication.receipt.digest,
+                bytes: publication.receipt.bytes,
+                receipt: productionRepaintRawOutputReceiptPath(
+                  requestId,
+                  attemptId,
+                ),
+              };
+            }
             throw new AutoMovieRepaintAttemptError(
               "invalid-output",
               safeRepaintDiagnosticMessage(
@@ -789,6 +989,21 @@ export class AutoMovieProductionRepaintService {
         },
         onAttempt: (attempt) => {
           services.project.commitRepaintAttempt(attempt, inputCurrent);
+          const claim = claims.get(attempt.attemptId);
+          if (claim === undefined)
+            throw new Error(
+              `Repaint terminal attempt "${attempt.attemptId}" lost its provider-dispatch claim.`,
+            );
+          services.project.settleRepaintAttemptClaim(
+            claim,
+            attempt.failure?.message.includes(
+              "external outcome requires reconciliation",
+            ) === true
+              ? "unknown-outcome"
+              : attempt.status === "succeeded"
+                ? "fulfilled"
+                : "rejected",
+          );
           currentRequestId = requestId;
         },
       });
@@ -1155,6 +1370,7 @@ const resolveReferences = (
 };
 
 const REPAINT_REFERENCE_ROLE_COUNT = 7;
+const REPAINT_RAW_OUTPUT_MAXIMUM_BYTES = 512 * 1024 * 1024;
 
 const physicalFiles = (root: string): string[] => {
   if (fs.existsSync(root) === false) return [];

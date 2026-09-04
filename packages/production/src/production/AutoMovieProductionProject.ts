@@ -64,9 +64,20 @@ import {
   productionSourceRenderFingerprint,
 } from "./renditionIdentity";
 import {
+  AutoMovieRepaintClaimAdmission,
+  AutoMovieRepaintClaimSettlement,
+  IAutoMovieRepaintAttemptClaim,
+} from "./repaintAttemptClaim";
+import {
   IAutoMovieRepaintAttemptRecord,
   assertAutoMovieRepaintExecutionPolicy,
 } from "./repaintExecution";
+import {
+  IAutoMovieRepaintRawOutputPublication,
+  IAutoMovieRepaintRawOutputReceipt,
+  assertAutoMovieRepaintRawOutput,
+  productionRepaintRawOutputReceiptPath,
+} from "./repaintRawOutput";
 import {
   IAutoMovieProductionRootNamespaceLease,
   acquireOrCreateProductionRootNamespace,
@@ -107,6 +118,18 @@ export interface IAutoMovieProductionProjectSummary {
    * True when this call initialized a fresh production manifest.
    */
   initialized: boolean;
+}
+
+/**
+ * Current candidate plus the exact immutable selection that activated it.
+ *
+ * @evidence requirements/repaint/sequence-continuity-and-publication.md#repaint-publication-gate Preserves active selection identity for aggregate observation and final publication.
+ * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-repaint-output-provenance Joins the verified candidate to its current selection record without receipt inference.
+ */
+export interface IAutoMovieVerifiedRepaintSelection {
+  receipt: IAutoMovieRepaintReceipt;
+  selectionId: string;
+  selectionDigest: AutoMovieContentDigest;
 }
 
 /**
@@ -167,6 +190,11 @@ interface IAutoMovieRepaintSelectionRecord {
     textureCrawl: "pass";
     transitionMismatch: "pass";
   } | null;
+}
+
+interface IAutoMovieStoredRepaintAttemptClaim {
+  claim: IAutoMovieRepaintAttemptClaim;
+  settlement: AutoMovieRepaintClaimSettlement | null;
 }
 
 const REPAINT_RETRYABLE_FAILURE_CLASSES: ReadonlySet<AutoMovieRepaintFailureClass> =
@@ -1895,6 +1923,113 @@ export class AutoMovieProductionProject {
     return this.commitFiles(writes, inputCurrent);
   }
 
+  /** Atomically reserve one exact next repaint attempt before provider dispatch. */
+  public acquireRepaintAttemptClaim(
+    claim: IAutoMovieRepaintAttemptClaim,
+  ): AutoMovieRepaintClaimAdmission {
+    const claimPath = repaintAttemptClaimPath(claim.requestId);
+    let admission: AutoMovieRepaintClaimAdmission = {
+      status: "prefix-changed",
+    };
+    this.commitFiles(
+      () => {
+        const attempts = this.repaintRequestAttempts(claim.requestId);
+        const prefixDigest = digestAutoMovieBytes(
+          canonicalAutoMovieJsonBytes(attempts),
+        );
+        const resident = this.readTrackedStateFile(claimPath);
+        const current =
+          resident === null
+            ? null
+            : typia.validateEquals<IAutoMovieStoredRepaintAttemptClaim>(
+                JSON.parse(Buffer.from(resident).toString("utf8")),
+              );
+        if (current !== null && current.success === false)
+          throw new Error("Stored repaint attempt claim is malformed.");
+        if (
+          claim.productionId !== this.productionId ||
+          claim.prefixDigest !== prefixDigest ||
+          claim.attemptOrdinal !== attempts.length + 1
+        ) {
+          admission = { status: "prefix-changed" };
+          return [];
+        }
+        if (current !== null && current.data.settlement === null) {
+          admission = {
+            status: "already-active",
+            ownerAttemptId: current.data.claim.attemptId,
+          };
+          return [];
+        }
+        if (current !== null && current.data.settlement === "unknown-outcome") {
+          admission = {
+            status: "unknown-outcome",
+            ownerAttemptId: current.data.claim.attemptId,
+          };
+          return [];
+        }
+        if (
+          current !== null &&
+          (claim.generation !== current.data.claim.generation + 1 ||
+            claim.requestFingerprint !==
+              current.data.claim.requestFingerprint ||
+            claim.shot !== current.data.claim.shot)
+        ) {
+          admission = { status: "prefix-changed" };
+          return [];
+        }
+        admission = { status: "acquired" };
+        return [
+          {
+            path: path.join(this.productionStateRoot, ...claimPath.split("/")),
+            content: serializeJson({
+              claim: structuredClone(claim),
+              settlement: null,
+            } satisfies IAutoMovieStoredRepaintAttemptClaim),
+          },
+        ];
+      },
+      undefined,
+      this.lastReadRevision_,
+      undefined,
+      false,
+    );
+    return admission;
+  }
+
+  /** Settle only the exact claim that owns the just-journaled attempt. */
+  public settleRepaintAttemptClaim(
+    claim: IAutoMovieRepaintAttemptClaim,
+    settlement: AutoMovieRepaintClaimSettlement,
+  ): number {
+    const claimPath = repaintAttemptClaimPath(claim.requestId);
+    return this.commitFiles(() => {
+      const resident = this.readTrackedStateFile(claimPath);
+      if (resident === null)
+        throw new Error("Repaint attempt claim disappeared before settlement.");
+      const current = typia.validateEquals<IAutoMovieStoredRepaintAttemptClaim>(
+        JSON.parse(Buffer.from(resident).toString("utf8")),
+      );
+      if (
+        current.success === false ||
+        canonicalizeAutoMovieJson(current.data.claim) !==
+          canonicalizeAutoMovieJson(claim) ||
+        (current.data.settlement !== null &&
+          current.data.settlement !== settlement)
+      )
+        throw new Error("Repaint attempt claim settlement lost ownership.");
+      return [
+        {
+          path: path.join(this.productionStateRoot, ...claimPath.split("/")),
+          content: serializeJson({
+            claim: current.data.claim,
+            settlement,
+          } satisfies IAutoMovieStoredRepaintAttemptClaim),
+        },
+      ];
+    });
+  }
+
   /** Persist one immutable terminal repaint attempt without changing selection. */
   public commitRepaintAttempt(
     attempt: IAutoMovieRepaintAttemptRecord,
@@ -1945,6 +2080,72 @@ export class AutoMovieProductionProject {
         }
       },
     );
+  }
+
+  /** Persist raw provider bytes and their receipt before terminal journaling. */
+  public commitRepaintRawOutput(
+    publication: IAutoMovieRepaintRawOutputPublication,
+    inputCurrent?: () => boolean,
+  ): number {
+    assertAutoMovieRepaintRawOutput({
+      receipt: publication.receipt,
+      bytes: publication.bytes,
+      requestId: publication.receipt.requestId,
+      attemptId: publication.receipt.attemptId,
+    });
+    if (publication.receipt.productionId !== this.productionId)
+      throw new Error("Repaint raw output belongs to another production.");
+    const receiptPath = productionRepaintRawOutputReceiptPath(
+      publication.receipt.requestId,
+      publication.receipt.attemptId,
+    );
+    return this.commitFiles(
+      [
+        {
+          path: path.join(this.productionStateRoot, ...receiptPath.split("/")),
+          content: serializeJson(publication.receipt),
+        },
+        {
+          path: path.join(
+            this.renderRoot(),
+            ...publication.receipt.path.split("/"),
+          ),
+          content: publication.bytes,
+        },
+      ],
+      () =>
+        (inputCurrent?.() ?? true) &&
+        this.readTrackedStateFile(receiptPath) === null,
+    );
+  }
+
+  /** Read and verify one exact raw attempt revision for candidate recovery. */
+  public repaintRawOutput(
+    requestId: string,
+    attemptId: string,
+  ): IAutoMovieRepaintRawOutputPublication {
+    const receiptPath = productionRepaintRawOutputReceiptPath(
+      requestId,
+      attemptId,
+    );
+    const resident = this.readTrackedStateFile(receiptPath);
+    if (resident === null)
+      throw new Error(`Repaint raw output receipt "${receiptPath}" is absent.`);
+    const decoded = typia.validateEquals<IAutoMovieRepaintRawOutputReceipt>(
+      JSON.parse(Buffer.from(resident).toString("utf8")),
+    );
+    if (decoded.success === false)
+      throw new Error(
+        `Repaint raw output receipt "${receiptPath}" is malformed.`,
+      );
+    const bytes = this.readRenderFile(decoded.data.path);
+    assertAutoMovieRepaintRawOutput({
+      receipt: decoded.data,
+      bytes,
+      requestId,
+      attemptId,
+    });
+    return { receipt: decoded.data, bytes };
   }
 
   /** Read every immutable terminal attempt belonging to one request. */
@@ -2344,6 +2545,65 @@ export class AutoMovieProductionProject {
     return receipts;
   }
 
+  /**
+   * Read each current rendition with the selection identity final delivery
+   * must seal into its aggregate member set.
+   */
+  public verifiedRepaintSelections(
+    shots: readonly string[],
+  ): IAutoMovieVerifiedRepaintSelection[] {
+    const receipts = new Map(
+      this.verifiedRepaintRenditions(shots).map((receipt) => [
+        receipt.shot,
+        receipt,
+      ]),
+    );
+    return [...new Set(shots)].sort(compareCodeUnits).flatMap((shot) => {
+      const receipt = receipts.get(shot);
+      if (receipt === undefined) return [];
+      const activeBytes = this.readTrackedStateFile(
+        productionRepaintActiveReceiptPath(shot),
+      );
+      if (activeBytes === null)
+        throw new Error(
+          `Current repaint selection for shot "${shot}" vanished.`,
+        );
+      const active = typia.validateEquals<IAutoMovieActiveRepaintReceipt>(
+        JSON.parse(Buffer.from(activeBytes).toString("utf8")),
+      );
+      if (active.success === false)
+        throw new Error(
+          `Current repaint pointer for shot "${shot}" is malformed.`,
+        );
+      const selectionBytes = this.readTrackedStateFile(active.data.selection);
+      if (selectionBytes === null)
+        throw new Error(
+          `Current repaint selection for shot "${shot}" vanished.`,
+        );
+      const selection = typia.validateEquals<IAutoMovieRepaintSelectionRecord>(
+        JSON.parse(Buffer.from(selectionBytes).toString("utf8")),
+      );
+      if (
+        selection.success === false ||
+        selection.data.selectionId.trim().length === 0 ||
+        selection.data.shot !== shot ||
+        selection.data.attemptId !== receipt.attemptId ||
+        selection.data.candidateReceipt !==
+          productionRepaintReceiptPath(receipt.output.path)
+      )
+        throw new Error(
+          `Current repaint selection for shot "${shot}" does not match its verified candidate.`,
+        );
+      return [
+        {
+          receipt,
+          selectionId: selection.data.selectionId,
+          selectionDigest: digestAutoMovieBytes(selectionBytes),
+        },
+      ];
+    });
+  }
+
   private verifiedRepaintSelectionLineage(props: {
     shot: string;
     selectionPath: string;
@@ -2499,7 +2759,13 @@ export class AutoMovieProductionProject {
         (Number.isSafeInteger(attempt.availableOutput.bytes) === false ||
           attempt.availableOutput.bytes <= 0 ||
           /^sha256:[0-9a-f]{64}$/u.test(attempt.availableOutput.digest) ===
-            false))
+            false ||
+          (attempt.availableOutput.receipt !== undefined &&
+            attempt.availableOutput.receipt !==
+              productionRepaintRawOutputReceiptPath(
+                attempt.requestId,
+                attempt.attemptId,
+              ))))
     )
       throw new Error("Repaint attempt record is malformed.");
   }
@@ -2722,6 +2988,9 @@ export class AutoMovieProductionProject {
           availableOutput: {
             digest: receipt.output.digest,
             bytes: receipt.output.bytes,
+            ...(attempt.availableOutput?.receipt === undefined
+              ? {}
+              : { receipt: attempt.availableOutput.receipt }),
           },
         })
     )
@@ -3456,7 +3725,7 @@ export class AutoMovieProductionProject {
       consequences: mergeMutationConsequences(
         consequences,
         nextConsequences,
-        next.production?.visualDelivery === "repainted",
+        next.production?.visualDelivery !== "deterministic",
       ),
       diagnostics: downstreamDiagnostics,
     };
@@ -4476,7 +4745,7 @@ const consequencesOf = (
         });
   for (const id of affectedShots) {
     addReview({ kind: "shot", id });
-    if (graph.production?.visualDelivery === "repainted")
+    if (graph.production?.visualDelivery !== "deterministic")
       addReview({ kind: "rendition", id });
   }
   for (const id of affectedSequenceIds(graph, screenplay, affectedShots))
@@ -4604,6 +4873,13 @@ const repaintAttemptPath = (requestId: string, attemptId: string): string =>
     "attempts",
     encodeAutoMoviePathSegment(uuid(requestId, "Repaint request id")),
     `${encodeAutoMoviePathSegment(uuid(attemptId, "Repaint attempt id"))}.json`,
+  );
+
+const repaintAttemptClaimPath = (requestId: string): string =>
+  path.posix.join(
+    "renditions",
+    "claims",
+    `${encodeAutoMoviePathSegment(uuid(requestId, "Repaint request id"))}.json`,
   );
 
 const repaintSelectionPath = (shot: string, selectionId: string): string =>
