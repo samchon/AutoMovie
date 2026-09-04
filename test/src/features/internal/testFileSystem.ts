@@ -40,7 +40,9 @@ export const createTestFileSystem = (
     get: (target, property) => {
       const value = overrides.has(property)
         ? overrides.get(property)
-        : Reflect.get(target, property);
+        : Object.prototype.hasOwnProperty.call(target, property)
+          ? Reflect.get(target, property)
+          : Reflect.get(fs, property);
       if (typeof value !== "function") return value;
       return (...args: unknown[]) => {
         calls.push({ operation: String(property), arguments: args });
