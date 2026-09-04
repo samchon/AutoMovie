@@ -75,7 +75,7 @@ try {
   write(
     project,
     "src/models/z.ts",
-    `\ufeff${"/**\n * @evidence models/zeta.md#zeta-form Realizes the reviewed zeta form.\n * @evidenceReview models/zeta.md#zeta-form #9782bb7 Read the form and checked this export.\n */\nclass Z {}\nexport { Z as Zeta };\n".replaceAll("\n", "\r\n")}`,
+    `\ufeff${"/**\n * @evidence models/zeta.md#zeta-form Realizes the reviewed zeta form.\n * @evidenceReview models/zeta.md#zeta-form #76e54b5 Read the form and checked this export.\n */\nclass Z {}\nexport { Z as Zeta };\n".replaceAll("\n", "\r\n")}`,
   );
   write(
     project,
