@@ -43,7 +43,28 @@ export class ScaffoldPublicationError extends Error {
     super(
       failure === null
         ? "scaffold publication failed without a stopping entry"
-        : `scaffold publication ${receipt.status} at ${failure.entry.relative}: ${failure.outcome.status}`,
+        : `scaffold publication ${receipt.status}: ${JSON.stringify({
+            completed: receipt.completed.map(({ entry, parentIdentity }) => ({
+              parentIdentity,
+              relative: entry.relative,
+            })),
+            failure: {
+              bytesWritten:
+                failure.outcome.status === "partial"
+                  ? failure.outcome.bytesWritten
+                  : undefined,
+              parentIdentity:
+                failure.outcome.status === "partial"
+                  ? failure.outcome.parentIdentity
+                  : undefined,
+              reason:
+                failure.outcome.status === "refused"
+                  ? failure.outcome.reason
+                  : undefined,
+              relative: failure.entry.relative,
+              status: failure.outcome.status,
+            },
+          })}`,
       { cause: failure?.outcome.error },
     );
     this.name = "ScaffoldPublicationError";
