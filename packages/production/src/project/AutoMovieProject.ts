@@ -58,6 +58,10 @@ import {
   IAutoMovieLegacyWritableSlate,
   toEnginePropSpec,
 } from "./legacyRecords";
+import {
+  advanceAutoMovieProjectRevision,
+  decodeAutoMovieProjectRevision,
+} from "./projectRevision";
 import { beatOf, shotIdOf } from "./shotKey";
 
 /**
@@ -367,10 +371,15 @@ export class AutoMovieProject {
             `another session committed to this project (on-disk revision ${current}; this session last synchronized at ${base}); nothing was written, re-read the current state (getSlate / nextSteps) and re-issue the call from that truth`,
           );
         }
+        const advance = advanceAutoMovieProjectRevision(current);
+        if (advance.state !== "next")
+          throw new Error(
+            "the project revision is exhausted; no project bytes were written because this store cannot publish another safe-integer revision",
+          );
+        const nextRevision = advance.revision;
         assertNamespace();
         flush(assertNamespace);
         assertNamespace();
-        const nextRevision = current + 1;
         writeJsonAtomic(
           this.revisionPath,
           {
@@ -412,13 +421,31 @@ export class AutoMovieProject {
 
   /** The committed revision on disk; a legacy project without one is 0. */
   private readRevision(): number {
-    const value = readJson<{ revision?: unknown }>(
-      this.root,
-      this.revisionPath,
-    );
-    return value !== null && typeof value.revision === "number"
-      ? value.revision
-      : 0;
+    let value: unknown;
+    try {
+      const bytes = readAutoMovieProductionOwnedFile({
+        root: this.root,
+        directory: this.root,
+        relative: path.basename(this.revisionPath),
+        optional: true,
+      });
+      value =
+        bytes === null
+          ? undefined
+          : (JSON.parse(Buffer.from(bytes).toString("utf8")) as unknown);
+    } catch (error) {
+      throw new AutoMovieProjectJsonError(
+        this.revisionPath,
+        (error as Error).message,
+      );
+    }
+    const decision = decodeAutoMovieProjectRevision(value);
+    if (decision.state === "invalid")
+      throw new AutoMovieProjectJsonError(
+        this.revisionPath,
+        "the record must contain one non-negative safe-integer revision",
+      );
+    return decision.revision;
   }
 
   private readManifest(): IManifest {
