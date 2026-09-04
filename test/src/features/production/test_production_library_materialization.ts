@@ -35,13 +35,16 @@ const run = (props: {
   const project = props.materialize
     ? AutoMovieProductionProject.open(props.root)
     : AutoMovieProductionProject.openReadOnly(props.root);
-  const compiler = new AutoMovieProductionCompiler(
-    project,
+  const currentAuthoringEvidence = () =>
     libraryAuthoring({
       root: project.root,
       anchors: props.anchors,
       models: props.models,
-    }),
+    });
+  const compiler = new AutoMovieProductionCompiler(
+    project,
+    currentAuthoringEvidence(),
+    currentAuthoringEvidence,
   );
   const input = { scope: props.scope ?? "source" } as const;
   return props.materialize ? compiler.compile(input) : compiler.lint(input);
@@ -241,6 +244,8 @@ export const test_production_library_materialization = (): void => {
       productionId: production,
       scope: "source",
       authoringEvidence: libraryAuthoring({ root: fixture.root }),
+      currentAuthoringEvidence: () =>
+        libraryAuthoring({ root: fixture.root }),
     });
     TestValidator.equals(
       "the package compile entry reaches the library path too",
@@ -490,15 +495,14 @@ export const test_production_library_materialization = (): void => {
       materialize: false,
       models: true,
     });
-    const swappedAuthoring = libraryAuthoring({
-      root: swappedOwner.root,
-      anchors: [LIBRARY_ANCHOR, LIBRARY_SECOND_ANCHOR],
-    });
-    const swapped = new AutoMovieProductionCompiler(
-      AutoMovieProductionProject.openReadOnly(swappedOwner.root),
-      {
-        ...swappedAuthoring,
-        sourceOwners: swappedAuthoring.sourceOwners.map((binding) => ({
+    const swappedAuthoring = () => {
+      const authoring = libraryAuthoring({
+        root: swappedOwner.root,
+        anchors: [LIBRARY_ANCHOR, LIBRARY_SECOND_ANCHOR],
+      });
+      return {
+        ...authoring,
+        sourceOwners: authoring.sourceOwners.map((binding) => ({
           ...binding,
           targetPath: LIBRARY_DESIGN,
           targetAnchor:
@@ -506,7 +510,12 @@ export const test_production_library_materialization = (): void => {
               ? LIBRARY_ANCHOR
               : LIBRARY_SECOND_ANCHOR,
         })),
-      },
+      };
+    };
+    const swapped = new AutoMovieProductionCompiler(
+      AutoMovieProductionProject.openReadOnly(swappedOwner.root),
+      swappedAuthoring(),
+      swappedAuthoring,
     ).lint({ scope: "source" });
 
     TestValidator.equals(
