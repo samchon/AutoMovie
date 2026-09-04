@@ -125,6 +125,7 @@ import {
   assetAcquisitionIncomplete,
   assetProcessingOmitted,
 } from "./assetAcquisition";
+import { parseAutoMovieCaptionLanguage } from "./captionLanguage";
 import {
   AUTOMOVIE_COMPILE_FINGERPRINT_PROTOCOL,
   IAutoMovieFingerprintField,
@@ -5102,7 +5103,7 @@ const normalizeCaptionCues = (
       cue.id.trim().length === 0 ||
       ids.has(cue.id) ||
       cue.text.trim().length === 0 ||
-      /^[A-Za-z]{2,3}(?:-[A-Za-z0-9]{2,8})*$/u.test(cue.language) === false ||
+      parseAutoMovieCaptionLanguage(cue.language) === null ||
       cue.speaker?.trim().length === 0 ||
       startFrame < priorEnd ||
       endFrame <= startFrame ||
@@ -5111,7 +5112,7 @@ const normalizeCaptionCues = (
       diagnostics.push(
         filmDiagnostic(
           "film-caption-cue-invalid",
-          `Caption cue "${cue.id}" must be unique, non-overlapping, in range, plain non-blank text, and use a non-blank language/speaker identity.`,
+          `Caption cue "${cue.id}" must be unique, non-overlapping, in range, plain non-blank text, use a well-formed RFC 5646 language tag, and use a non-blank speaker identity.`,
         ),
       );
     ids.add(cue.id);
