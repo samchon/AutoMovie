@@ -3,11 +3,11 @@ import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
 
+import { publishNativeScaffoldFile } from "../packages/template/src/nativeScaffoldPublication";
 import {
   captureScaffoldPhysicalDirectory,
   publishScaffoldFileToCapturedParent,
-} from "../packages/template/src";
-import { publishNativeScaffoldFile } from "../packages/template/src/nativeScaffoldPublication";
+} from "../packages/template/src/scaffoldFileSnapshot";
 
 const temporaryRoot = fs.realpathSync(os.tmpdir());
 const scratch = fs.mkdtempSync(
