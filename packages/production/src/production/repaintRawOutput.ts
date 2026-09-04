@@ -5,7 +5,12 @@ import {
   encodeAutoMoviePathSegment,
 } from "./contentIdentity";
 
-/** Why provider output remained raw rather than becoming an active candidate. */
+/**
+ * Why provider output remained raw rather than becoming an active candidate.
+ *
+ * @evidence requirements/repaint/retries-seeds-and-variation.md#repaint-attempt-failure-provenance Keeps rejected and interrupted output addressable without promoting it.
+ * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-repaint-attempt-selection Separates raw retention state from candidate admission.
+ */
 export type AutoMovieRepaintRawOutputDisposition =
   | "candidate-source"
   | "invalid"
@@ -13,7 +18,12 @@ export type AutoMovieRepaintRawOutputDisposition =
   | "cancelled"
   | "budget-exhausted";
 
-/** Immutable attempt-owned provider output identity. */
+/**
+ * Immutable attempt-owned provider output identity.
+ *
+ * @evidence requirements/repaint/retries-seeds-and-variation.md#repaint-attempt-failure-provenance Preserves exact available bytes beside their terminal attempt.
+ * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-repaint-attempt-selection Binds raw bytes to one request, attempt, disposition, and retention ceiling.
+ */
 export interface IAutoMovieRepaintRawOutputReceipt {
   version: 1;
   productionId: string;
@@ -23,12 +33,18 @@ export interface IAutoMovieRepaintRawOutputReceipt {
   path: string;
   digest: AutoMovieContentDigest;
   bytes: number;
+  maximumBytes: number;
   mediaType: string;
   disposition: AutoMovieRepaintRawOutputDisposition;
   retainedAt: string;
 }
 
-/** Raw output plus the copied bytes that an atomic project transaction writes. */
+/**
+ * Raw output plus the copied bytes that an atomic project transaction writes.
+ *
+ * @evidence requirements/repaint/retries-seeds-and-variation.md#repaint-attempt-failure-provenance Keeps receipt and bytes in one publication unit.
+ * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-repaint-attempt-selection Prevents a digest-only record from standing in for recoverable output.
+ */
 export interface IAutoMovieRepaintRawOutputPublication {
   receipt: IAutoMovieRepaintRawOutputReceipt;
   bytes: Uint8Array;
@@ -59,6 +75,8 @@ export const planAutoMovieRepaintRawOutput = (props: {
     ["media type", props.mediaType],
   ] as const)
     exactText(value, label);
+  if (!isDisposition(props.disposition))
+    throw new Error("Repaint raw output disposition is malformed.");
   if (
     props.bytes instanceof Uint8Array === false ||
     props.bytes.length === 0 ||
@@ -89,6 +107,7 @@ export const planAutoMovieRepaintRawOutput = (props: {
       path,
       digest,
       bytes: bytes.length,
+      maximumBytes: props.maximumBytes,
       mediaType: props.mediaType,
       disposition: props.disposition,
       retainedAt,
@@ -115,7 +134,19 @@ export const assertAutoMovieRepaintRawOutput = (props: {
     receipt.requestId !== props.requestId ||
     receipt.attemptId !== props.attemptId ||
     props.bytes instanceof Uint8Array === false ||
+    !isExactText(receipt.productionId) ||
+    !isExactText(receipt.shot) ||
+    !isExactText(receipt.requestId) ||
+    !isExactText(receipt.attemptId) ||
+    !isExactText(receipt.mediaType) ||
+    !isExactText(receipt.path) ||
+    !isExactInstant(receipt.retainedAt) ||
+    !isDisposition(receipt.disposition) ||
+    /^sha256:[0-9a-f]{64}$/u.test(receipt.digest) === false ||
+    Number.isSafeInteger(receipt.maximumBytes) === false ||
+    receipt.maximumBytes <= 0 ||
     receipt.bytes !== props.bytes.length ||
+    receipt.bytes > receipt.maximumBytes ||
     receipt.digest !== digestAutoMovieBytes(props.bytes) ||
     receipt.path !==
       [
@@ -149,3 +180,26 @@ const exactInstant = (value: string): string => {
     throw new Error("Repaint raw output requires an exact UTC instant.");
   return value;
 };
+
+const isExactInstant = (value: string): boolean => {
+  try {
+    return exactInstant(value) === value;
+  } catch {
+    return false;
+  }
+};
+
+const isExactText = (value: string): boolean => {
+  try {
+    return exactText(value, "field") === value;
+  } catch {
+    return false;
+  }
+};
+
+const isDisposition = (value: AutoMovieRepaintRawOutputDisposition): boolean =>
+  value === "candidate-source" ||
+  value === "invalid" ||
+  value === "partial" ||
+  value === "cancelled" ||
+  value === "budget-exhausted";

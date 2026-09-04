@@ -1,7 +1,17 @@
-/** Persisted repaint record kinds that can be inspected independently. */
+/**
+ * Persisted repaint record kinds that can be inspected independently.
+ *
+ * @evidence requirements/repaint/identity-and-provenance.md#repaint-provenance-refusal Keeps candidate and active-rendition failure channels distinct.
+ * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-repaint-output-provenance Names the persisted lineage population inspected by consumers.
+ */
 export type AutoMovieRepaintRecordKind = "candidate" | "rendition";
 
-/** Stable failure classes exposed without leaking persisted or provider bytes. */
+/**
+ * Stable failure classes exposed without leaking persisted or provider bytes.
+ *
+ * @evidence requirements/repaint/identity-and-provenance.md#repaint-provenance-refusal Preserves the reason a stored record is unusable.
+ * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-repaint-output-provenance Provides recovery-safe classifications instead of catch-all absence.
+ */
 export type AutoMovieRepaintRecordFailureClass =
   | "absent"
   | "schema-invalid"
@@ -11,7 +21,12 @@ export type AutoMovieRepaintRecordFailureClass =
   | "unavailable"
   | "render-corrupt";
 
-/** Stable stages in the persisted repaint lineage. */
+/**
+ * Stable stages in the persisted repaint lineage.
+ *
+ * @evidence requirements/repaint/identity-and-provenance.md#repaint-provenance-refusal Locates the exact failed provenance boundary.
+ * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-repaint-output-provenance Separates pointer, selection, receipt, currentness, and output inspection.
+ */
 export type AutoMovieRepaintRecordInspectionStage =
   | "enumeration"
   | "pointer"
@@ -20,14 +35,24 @@ export type AutoMovieRepaintRecordInspectionStage =
   | "currentness"
   | "output";
 
-/** Safe identity of one requested persisted record. */
+/**
+ * Safe identity of one requested persisted record.
+ *
+ * @evidence requirements/repaint/identity-and-provenance.md#repaint-provenance-refusal Keeps the affected shot and record addressable without raw contents.
+ * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-repaint-output-provenance Identifies one inspection target across candidate and rendition readers.
+ */
 export interface IAutoMovieRepaintRecordTarget {
   kind: AutoMovieRepaintRecordKind;
   shot: string;
   recordId: string;
 }
 
-/** One stable finding produced while inspecting a persisted repaint record. */
+/**
+ * One stable finding produced while inspecting a persisted repaint record.
+ *
+ * @evidence requirements/repaint/identity-and-provenance.md#repaint-provenance-refusal Exposes exact target, stage, class, and safe recovery.
+ * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-repaint-output-provenance Carries a refusal without copying record or provider bytes.
+ */
 export interface IAutoMovieRepaintRecordFinding {
   target: IAutoMovieRepaintRecordTarget;
   stage: AutoMovieRepaintRecordInspectionStage;
@@ -35,7 +60,12 @@ export interface IAutoMovieRepaintRecordFinding {
   recovery: string;
 }
 
-/** Complete fail-closed inspection result, preserving valid siblings. */
+/**
+ * Complete fail-closed inspection result, preserving valid siblings.
+ *
+ * @evidence requirements/repaint/identity-and-provenance.md#repaint-provenance-refusal Prevents one corrupt record from erasing unrelated valid candidates.
+ * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-repaint-output-provenance Returns valid records and classified findings in one deterministic observation.
+ */
 export interface IAutoMovieRepaintRecordInspection<T> {
   records: Array<{ target: IAutoMovieRepaintRecordTarget; value: T }>;
   findings: IAutoMovieRepaintRecordFinding[];
@@ -52,15 +82,22 @@ export interface IAutoMovieRepaintRecordInspection<T> {
  * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-repaint-output-provenance Carries the exact lineage stage and safe recovery action across the record-reader boundary.
  */
 export class AutoMovieRepaintRecordInspectionError extends Error {
+  public readonly recovery: string;
+
   public constructor(
     public readonly stage: AutoMovieRepaintRecordInspectionStage,
     public readonly failure: Exclude<
       AutoMovieRepaintRecordFailureClass,
       "absent" | "unavailable"
     >,
-    public readonly recovery: string,
   ) {
     super(`Repaint ${stage} inspection failed as ${failure}.`);
+    if (
+      INSPECTION_STAGES.has(stage) === false ||
+      CLASSIFIED_FAILURES.has(failure) === false
+    )
+      throw new Error("Repaint inspection refusal is malformed.");
+    this.recovery = recoveryFor(failure);
   }
 }
 
@@ -122,15 +159,66 @@ const validateTarget = (
 
 const safeClassifiedError = (
   error: unknown,
-): AutoMovieRepaintRecordInspectionError | null => {
+): {
+  stage: AutoMovieRepaintRecordInspectionStage;
+  failure: Exclude<
+    AutoMovieRepaintRecordFailureClass,
+    "absent" | "unavailable"
+  >;
+  recovery: string;
+} | null => {
   try {
-    return error instanceof AutoMovieRepaintRecordInspectionError
-      ? error
+    if (error instanceof AutoMovieRepaintRecordInspectionError === false)
+      return null;
+    const classified = {
+      stage: error.stage,
+      failure: error.failure,
+      recovery: error.recovery,
+    };
+    return INSPECTION_STAGES.has(classified.stage) &&
+      CLASSIFIED_FAILURES.has(classified.failure) &&
+      classified.recovery.trim().length > 0 &&
+      classified.recovery === classified.recovery.trim()
+      ? classified
       : null;
   } catch {
     return null;
   }
 };
+
+const INSPECTION_STAGES = new Set<AutoMovieRepaintRecordInspectionStage>([
+  "enumeration",
+  "pointer",
+  "selection",
+  "receipt",
+  "currentness",
+  "output",
+]);
+const CLASSIFIED_FAILURES = new Set<
+  Exclude<AutoMovieRepaintRecordFailureClass, "absent" | "unavailable">
+>([
+  "schema-invalid",
+  "identity-invalid",
+  "stale",
+  "unsafe-locator",
+  "render-corrupt",
+]);
+
+const recoveryFor = (
+  failure: Exclude<
+    AutoMovieRepaintRecordFailureClass,
+    "absent" | "unavailable"
+  >,
+): string =>
+  ({
+    "schema-invalid":
+      "Replace the record with one matching the current schema.",
+    "identity-invalid": "Restore the record at its canonical identity.",
+    stale: "Regenerate the record from current production inputs.",
+    "unsafe-locator":
+      "Replace linked or escaping state with an owned tracked record.",
+    "render-corrupt": "Restore or regenerate the exact rendition bytes.",
+  })[failure];
 
 const compareTargets = (
   left: IAutoMovieRepaintRecordTarget,

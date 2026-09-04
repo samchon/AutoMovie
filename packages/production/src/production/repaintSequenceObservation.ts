@@ -5,7 +5,12 @@ import {
   digestAutoMovieBytes,
 } from "./contentIdentity";
 
-/** Exact timeline occurrence represented by an aggregate repaint observation. */
+/**
+ * Exact timeline occurrence represented by an aggregate repaint observation.
+ *
+ * @evidence requirements/repaint/sequence-continuity-and-publication.md#repaint-temporal-artifacts Identifies every deterministic or selected repaint occurrence that playback observed.
+ * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-repaint-structure-continuity Preserves occurrence identity instead of collapsing repeated shot labels.
+ */
 export type IAutoMovieRepaintObservationMember =
   | {
       occurrence: string;
@@ -25,14 +30,24 @@ export type IAutoMovieRepaintObservationMember =
       selectionDigest: AutoMovieContentDigest;
     };
 
-/** Complete five-axis temporal verdict retained even when it is not passing. */
+/**
+ * Complete five-axis temporal verdict retained even when it is not passing.
+ *
+ * @evidence requirements/repaint/sequence-continuity-and-publication.md#repaint-temporal-artifacts Records pass, failure, unsupported, and unperformed truth independently.
+ * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-repaint-structure-continuity Keeps failed observations durable while reserving publication for passes.
+ */
 export type AutoMovieRepaintObservationVerdict =
   | "pass"
   | "fail"
   | "not-run"
   | "unsupported";
 
-/** Versioned aggregate observation over one exact active visual set. */
+/**
+ * Versioned aggregate observation over one exact active visual set.
+ *
+ * @evidence requirements/repaint/sequence-continuity-and-publication.md#repaint-continuity-baseline-changes Binds playback to current compile, timeline, baseline, members, artifact, and runtime.
+ * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-repaint-structure-continuity Carries the complete sequence observation consumed by final publication.
+ */
 export interface IAutoMovieRepaintSequenceObservation {
   version: 1;
   productionId: string;
@@ -58,7 +73,12 @@ export interface IAutoMovieRepaintSequenceObservation {
   };
 }
 
-/** Stable aggregate-observation refusal classes. */
+/**
+ * Stable aggregate-observation refusal classes.
+ *
+ * @evidence requirements/repaint/sequence-continuity-and-publication.md#repaint-publication-gate Distinguishes malformed, stale-set, stale-basis, and incomplete observations.
+ * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-repaint-structure-continuity Lets finalization refuse the exact failed aggregate invariant.
+ */
 export type AutoMovieRepaintObservationDiagnostic =
   | "observation-schema-invalid"
   | "observation-member-set-stale"
@@ -96,6 +116,13 @@ export const autoMovieRepaintSequenceObservationDiagnostics = (props: {
   try {
     assertObservation(props.observation);
     assertMembers(props.members);
+    assertBaseline(props.baseline);
+    if (
+      !isExactText(props.productionId) ||
+      !isDigest(props.compileFingerprint) ||
+      !isDigest(props.timelineFingerprint)
+    )
+      throw new Error("Current repaint observation basis is malformed.");
   } catch {
     return ["observation-schema-invalid"];
   }
@@ -141,14 +168,12 @@ const assertObservation = (
       observation.memberSetDigest,
       observation.artifact.digest,
     ].some((digest) => !isDigest(digest)) ||
-    observation.baseline.scope.some((value) => !isExactText(value)) ||
-    new Set(observation.baseline.scope).size !==
-      observation.baseline.scope.length ||
-    observation.baseline.intendedDeltas.some((value) => !isExactText(value)) ||
-    new Set(observation.baseline.intendedDeltas).size !==
-      observation.baseline.intendedDeltas.length
+    !isStatus(observation.status) ||
+    Object.values(observation.verdicts).length !== 5 ||
+    Object.values(observation.verdicts).some((verdict) => !isVerdict(verdict))
   )
     throw new Error("Repaint sequence observation is malformed.");
+  assertBaseline(observation.baseline);
   assertMembers(observation.members);
   if (
     observation.memberSetDigest !==
@@ -168,6 +193,7 @@ const assertMembers = (
       !isExactText(member.occurrence) ||
       !isExactText(member.shot) ||
       occurrences.has(member.occurrence) ||
+      (member.lane !== "deterministic" && member.lane !== "repainted") ||
       (member.lane === "deterministic"
         ? !isDigest(member.sourceDigest)
         : !isExactText(member.requestId) ||
@@ -182,6 +208,21 @@ const assertMembers = (
   }
 };
 
+const assertBaseline = (
+  baseline: IAutoMovieRepaintSequenceObservation["baseline"],
+): void => {
+  if (
+    !isExactText(baseline.address) ||
+    !isExactText(baseline.version) ||
+    baseline.scope.length === 0 ||
+    baseline.scope.some((value) => !isExactText(value)) ||
+    new Set(baseline.scope).size !== baseline.scope.length ||
+    baseline.intendedDeltas.some((value) => !isExactText(value)) ||
+    new Set(baseline.intendedDeltas).size !== baseline.intendedDeltas.length
+  )
+    throw new Error("Repaint sequence observation baseline is malformed.");
+};
+
 const canonical = (value: unknown): string =>
   Buffer.from(canonicalAutoMovieJsonBytes(value)).toString("utf8");
 const isDigest = (value: string): boolean =>
@@ -190,3 +231,15 @@ const isExactText = (value: string): boolean =>
   typeof value === "string" &&
   value.trim().length > 0 &&
   value === value.trim();
+const isStatus = (
+  value: IAutoMovieRepaintSequenceObservation["status"],
+): boolean =>
+  value === "completed" ||
+  value === "failed" ||
+  value === "not-run" ||
+  value === "unsupported";
+const isVerdict = (value: AutoMovieRepaintObservationVerdict): boolean =>
+  value === "pass" ||
+  value === "fail" ||
+  value === "not-run" ||
+  value === "unsupported";

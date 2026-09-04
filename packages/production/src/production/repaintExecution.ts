@@ -157,7 +157,7 @@ export const executeAutoMovieRepaintRequest = async <T>(props: {
     costUnits: number;
     availableOutput: IAutoMovieRepaintAttemptOutput | null;
   }>;
-  onAttempt: (attempt: IAutoMovieRepaintAttemptRecord) => void | Promise<void>;
+  onAttempt: (attempt: IAutoMovieRepaintAttemptRecord) => unknown;
 }): Promise<IAutoMovieRepaintExecutionResult<T>> => {
   assertAutoMovieRepaintExecutionPolicy(props.policy);
   assertRepaintExecutionIdentity(props);
@@ -254,16 +254,14 @@ export const executeAutoMovieRepaintRequest = async <T>(props: {
     let disclosedCostUnits = 0;
     let disclosedOutput: IAutoMovieRepaintAttemptOutput | null = null;
     try {
-      const adapter = props.execute(controller.signal).then(
-        (value) => {
+      const adapter = props.execute(controller.signal);
+      void adapter
+        .then(() => {
           adapterSettled = true;
-          return value;
-        },
-        (error: unknown) => {
+        })
+        .catch(() => {
           adapterSettled = true;
-          throw error;
-        },
-      );
+        });
       const outcome = await Promise.race([
         adapter,
         new Promise<never>((resolve, reject) => {

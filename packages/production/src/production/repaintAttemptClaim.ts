@@ -1,6 +1,11 @@
 import { AutoMovieContentDigest } from "@automovie/interface";
 
-/** Immutable request-prefix claim held before an external repaint side effect. */
+/**
+ * Immutable request-prefix claim held before an external repaint side effect.
+ *
+ * @evidence requirements/repaint/retries-seeds-and-variation.md#repaint-retry-request-boundary Identifies the one request prefix allowed to dispatch next.
+ * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-repaint-attempt-selection Carries the atomic admission identity across the project store.
+ */
 export interface IAutoMovieRepaintAttemptClaim {
   version: 1;
   productionId: string;
@@ -14,27 +19,45 @@ export interface IAutoMovieRepaintAttemptClaim {
   claimedAt: string;
 }
 
-/** Atomic admission result returned by the project-owned claim store. */
+/**
+ * Atomic admission result returned by the project-owned claim store.
+ *
+ * @evidence requirements/repaint/retries-seeds-and-variation.md#repaint-retry-request-boundary Distinguishes an acquired retry from a duplicate, moved prefix, or unknown predecessor.
+ * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-repaint-attempt-selection Prevents non-acquired states from reaching provider dispatch.
+ */
 export type AutoMovieRepaintClaimAdmission =
   | { status: "acquired" }
   | { status: "already-active"; ownerAttemptId: string }
   | { status: "prefix-changed" }
   | { status: "unknown-outcome"; ownerAttemptId: string };
 
-/** Terminal claim state written after the adapter boundary settles. */
+/**
+ * Terminal claim state written after the adapter boundary settles.
+ *
+ * @evidence requirements/repaint/retries-seeds-and-variation.md#repaint-attempt-failure-provenance Preserves whether external work settled or remains unknown.
+ * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-repaint-attempt-selection Gates retry recovery on an explicit settlement fact.
+ */
 export type AutoMovieRepaintClaimSettlement =
   | "fulfilled"
   | "rejected"
   | "unknown-outcome";
 
-/** Result of one request-scoped claimed dispatch. */
+/**
+ * Result of one request-scoped claimed dispatch.
+ *
+ * @evidence requirements/repaint/retries-seeds-and-variation.md#repaint-retry-request-boundary Returns completion only for the attempt that acquired the exact request prefix.
+ * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-repaint-attempt-selection Retains duplicate and reconciliation refusals as typed outcomes.
+ */
 export type AutoMovieRepaintClaimedDispatch<T> =
   | { status: "completed"; value: T }
-  | {
-      status: Exclude<AutoMovieRepaintClaimAdmission["status"], "acquired">;
-    };
+  | Exclude<AutoMovieRepaintClaimAdmission, { status: "acquired" }>;
 
-/** Error identifying a timed-out adapter whose external outcome is unknown. */
+/**
+ * Error identifying a timed-out adapter whose external outcome is unknown.
+ *
+ * @evidence requirements/repaint/retries-seeds-and-variation.md#repaint-retry-budget-stop Prevents an ignored cancellation from being treated as a completed timeout.
+ * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-repaint-attempt-selection Requires reconciliation rather than automatic retry after an unknown outcome.
+ */
 export class AutoMovieRepaintUnknownOutcomeError extends Error {}
 
 /**
@@ -52,15 +75,14 @@ export const executeClaimedAutoMovieRepaintAttempt = async <T>(props: {
   settle: (
     claim: IAutoMovieRepaintAttemptClaim,
     settlement: AutoMovieRepaintClaimSettlement,
-  ) => void | Promise<void>;
+  ) => unknown;
 }): Promise<AutoMovieRepaintClaimedDispatch<T>> => {
   const claim = validatedClaim(props.claim);
   const admission = props.acquire(structuredClone(claim));
-  if (admission.status !== "acquired") return { status: admission.status };
+  if (admission.status !== "acquired") return structuredClone(admission);
+  let value: T;
   try {
-    const value = await props.execute();
-    await props.settle(structuredClone(claim), "fulfilled");
-    return { status: "completed", value };
+    value = await props.execute();
   } catch (error) {
     if (safeUnknownOutcome(error)) {
       await props.settle(structuredClone(claim), "unknown-outcome");
@@ -69,6 +91,8 @@ export const executeClaimedAutoMovieRepaintAttempt = async <T>(props: {
     await props.settle(structuredClone(claim), "rejected");
     throw error;
   }
+  await props.settle(structuredClone(claim), "fulfilled");
+  return { status: "completed", value };
 };
 
 const validatedClaim = (

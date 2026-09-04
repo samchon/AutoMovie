@@ -67,11 +67,13 @@ export const test_production_repaint_visual_delivery = (): void => {
     timeline,
     lanes: lanes.slice(1),
     policy,
+    currentObservationDigest: policy.observationDigest,
   });
   const reordered = planAutoMovieVisualDelivery({
     timeline,
     lanes: [lanes[1]!, lanes[0]!, lanes[2]!],
     policy,
+    currentObservationDigest: policy.observationDigest,
   });
   const fallback = structuredClone(lanes);
   fallback[0] = {
@@ -81,18 +83,31 @@ export const test_production_repaint_visual_delivery = (): void => {
   TestValidator.equals(
     "explicit occurrence lanes and crossings are exact",
     {
-      mixed: planAutoMovieVisualDelivery({ timeline, lanes, policy }),
+      mixed: planAutoMovieVisualDelivery({
+        timeline,
+        lanes,
+        policy,
+        currentObservationDigest: policy.observationDigest,
+      }),
       missing: missing.diagnostics,
       reordered: reordered.diagnostics,
       fallback: planAutoMovieVisualDelivery({
         timeline,
         lanes: fallback,
         policy,
+        currentObservationDigest: policy.observationDigest,
       }).diagnostics,
       noPolicy: planAutoMovieVisualDelivery({
         timeline,
         lanes,
         policy: null,
+        currentObservationDigest: null,
+      }).diagnostics,
+      staleObservation: planAutoMovieVisualDelivery({
+        timeline,
+        lanes,
+        policy,
+        currentObservationDigest: digest("7"),
       }).diagnostics,
       allDeterministic: planAutoMovieVisualDelivery({
         timeline,
@@ -103,6 +118,18 @@ export const test_production_repaint_visual_delivery = (): void => {
           repaint: () => repaint,
         }),
         policy: null,
+        currentObservationDigest: null,
+      }).diagnostics,
+      allDeterministicWithPolicy: planAutoMovieVisualDelivery({
+        timeline,
+        lanes: normalizeAutoMovieVisualDeliveryLanes({
+          timeline,
+          visualDelivery: "deterministic",
+          deterministic: () => deterministic,
+          repaint: () => repaint,
+        }),
+        policy: { ...policy, transitions: [] },
+        currentObservationDigest: policy.observationDigest,
       }).diagnostics,
       allRepainted: planAutoMovieVisualDelivery({
         timeline,
@@ -113,6 +140,7 @@ export const test_production_repaint_visual_delivery = (): void => {
           repaint: () => repaint,
         }),
         policy: null,
+        currentObservationDigest: null,
       }).diagnostics,
     },
     {
@@ -121,7 +149,9 @@ export const test_production_repaint_visual_delivery = (): void => {
       reordered: ["visual-lane-population-invalid"],
       fallback: ["visual-lane-source-invalid"],
       noPolicy: ["visual-lane-policy-missing"],
+      staleObservation: ["visual-lane-transition-invalid"],
       allDeterministic: [],
+      allDeterministicWithPolicy: ["visual-lane-transition-invalid"],
       allRepainted: [],
     },
   );

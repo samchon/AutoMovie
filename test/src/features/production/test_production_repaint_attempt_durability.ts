@@ -135,7 +135,9 @@ export const test_production_repaint_attempt_durability =
       },
       execute: async () => {
         ++unknownCalls;
-        return new Promise<never>(() => undefined);
+        return new Promise<never>(() => {
+          // Deliberately ignore abort to model an unknown external outcome.
+        });
       },
       onAttempt: () => undefined,
     });

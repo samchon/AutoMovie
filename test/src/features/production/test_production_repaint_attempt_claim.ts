@@ -81,7 +81,7 @@ export const test_production_repaint_attempt_claim =
       },
       {
         completed: { status: "completed", value: 1 },
-        duplicate: { status: "already-active" },
+        duplicate: { status: "already-active", ownerAttemptId: "owner" },
         changed: { status: "prefix-changed" },
         independent: { status: "completed", value: 2 },
         unknown: { status: "unknown-outcome" },

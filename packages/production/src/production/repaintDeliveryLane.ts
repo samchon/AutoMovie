@@ -1,12 +1,22 @@
 import { AutoMovieContentDigest } from "@automovie/interface";
 
-/** One exact delivered occurrence in the current film timeline. */
+/**
+ * One exact delivered occurrence in the current film timeline.
+ *
+ * @evidence requirements/repaint/sequence-continuity-and-publication.md#repaint-mixed-delivery Makes lane membership occurrence-addressed.
+ * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-repaint-failure-publication Prevents repeated shot labels from collapsing during final conform.
+ */
 export interface IAutoMovieVisualDeliveryOccurrence {
   occurrence: string;
   shot: string;
 }
 
-/** Explicit source selected for one deterministic or repainted occurrence. */
+/**
+ * Explicit source selected for one deterministic or repainted occurrence.
+ *
+ * @evidence requirements/repaint/sequence-continuity-and-publication.md#repaint-mixed-delivery Assigns exactly one visual lane and source without receipt inference or fallback.
+ * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-repaint-failure-publication Carries lane-specific deterministic or selected-rendition provenance into conform.
+ */
 export type IAutoMovieVisualDeliveryLane =
   | (IAutoMovieVisualDeliveryOccurrence & {
       lane: "deterministic";
@@ -24,28 +34,48 @@ export type IAutoMovieVisualDeliveryLane =
       };
     });
 
-/** Reviewed transition between adjacent unlike visual lanes. */
+/**
+ * Reviewed transition between adjacent unlike visual lanes.
+ *
+ * @evidence requirements/repaint/sequence-continuity-and-publication.md#repaint-mixed-delivery Makes every actual lane crossing independently reviewable.
+ * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-repaint-structure-continuity Binds transition review to adjacent occurrence identities.
+ */
 export interface IAutoMovieVisualDeliveryTransition {
   fromOccurrence: string;
   toOccurrence: string;
   reviewDigest: AutoMovieContentDigest;
 }
 
-/** Versioned mixed-lane policy; absent for an all-one-lane film. */
+/**
+ * Versioned mixed-lane policy; absent for an all-one-lane film.
+ *
+ * @evidence requirements/repaint/sequence-continuity-and-publication.md#repaint-mixed-delivery Couples mixed delivery to the current aggregate observation and exact crossings.
+ * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-repaint-structure-continuity Refuses invented transition policy on a film with no lane crossing.
+ */
 export interface IAutoMovieMixedVisualDeliveryPolicy {
   version: 1;
   observationDigest: AutoMovieContentDigest;
   transitions: IAutoMovieVisualDeliveryTransition[];
 }
 
-/** Stable exact-join failures produced before any final mux side effect. */
+/**
+ * Stable exact-join failures produced before any final mux side effect.
+ *
+ * @evidence requirements/repaint/sequence-continuity-and-publication.md#repaint-publication-gate Names population, source, policy, and transition refusals before bytes are written.
+ * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-repaint-failure-publication Makes lane-specific publication failure explicit.
+ */
 export type AutoMovieVisualDeliveryDiagnostic =
   | "visual-lane-population-invalid"
   | "visual-lane-source-invalid"
   | "visual-lane-policy-missing"
   | "visual-lane-transition-invalid";
 
-/** Result of resolving every current occurrence to exactly one visual source. */
+/**
+ * Result of resolving every current occurrence to exactly one visual source.
+ *
+ * @evidence requirements/repaint/sequence-continuity-and-publication.md#repaint-mixed-delivery Provides the ordered sources a final mux consumes only after exact validation.
+ * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-repaint-failure-publication Returns no segments whenever any lane invariant fails.
+ */
 export interface IAutoMovieVisualDeliveryPlan {
   segments: IAutoMovieVisualDeliveryLane[];
   diagnostics: AutoMovieVisualDeliveryDiagnostic[];
@@ -61,6 +91,7 @@ export const planAutoMovieVisualDelivery = (props: {
   timeline: readonly IAutoMovieVisualDeliveryOccurrence[];
   lanes: readonly IAutoMovieVisualDeliveryLane[];
   policy: IAutoMovieMixedVisualDeliveryPolicy | null;
+  currentObservationDigest: AutoMovieContentDigest | null;
 }): IAutoMovieVisualDeliveryPlan => {
   const diagnostics: AutoMovieVisualDeliveryDiagnostic[] = [];
   if (
@@ -75,7 +106,7 @@ export const planAutoMovieVisualDelivery = (props: {
     )
   )
     diagnostics.push("visual-lane-population-invalid");
-  if (props.lanes.some((lane) => !validLane(lane)))
+  if (props.lanes.some((lane) => !safeValidLane(lane)))
     diagnostics.push("visual-lane-source-invalid");
   const mixed = new Set(props.lanes.map((lane) => lane.lane)).size > 1;
   const crossings = props.lanes.slice(1).flatMap((lane, index) => {
@@ -93,24 +124,26 @@ export const planAutoMovieVisualDelivery = (props: {
     diagnostics.push("visual-lane-policy-missing");
   else if (
     props.policy !== null &&
-    (props.policy.version !== 1 ||
-      !isDigest(props.policy.observationDigest) ||
-      props.policy.transitions.length !== crossings.length ||
-      props.policy.transitions.some(
-        (transition, index) =>
-          transition.fromOccurrence !== crossings[index]?.fromOccurrence ||
-          transition.toOccurrence !== crossings[index]?.toOccurrence ||
-          !isDigest(transition.reviewDigest),
-      ))
+    (!mixed ||
+      props.currentObservationDigest !== props.policy.observationDigest ||
+      !validPolicy(props.policy, crossings))
   )
     diagnostics.push("visual-lane-transition-invalid");
   return {
-    segments: diagnostics.length === 0 ? structuredClone(props.lanes) : [],
+    segments:
+      diagnostics.length === 0
+        ? props.lanes.map((lane) => structuredClone(lane))
+        : [],
     diagnostics,
   };
 };
 
-/** Normalize an explicit legacy all-one-lane declaration without receipt inference. */
+/**
+ * Normalize an explicit legacy all-one-lane declaration without receipt inference.
+ *
+ * @evidence requirements/repaint/sequence-continuity-and-publication.md#repaint-mixed-delivery Preserves all-deterministic and all-repainted designs as explicit lane populations.
+ * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-repaint-failure-publication Migrates the production-wide shorthand without guessing membership from artifacts.
+ */
 export const normalizeAutoMovieVisualDeliveryLanes = (props: {
   timeline: readonly IAutoMovieVisualDeliveryOccurrence[];
   visualDelivery: "deterministic" | "repainted";
@@ -160,6 +193,31 @@ const validLane = (lane: IAutoMovieVisualDeliveryLane): boolean =>
       isDigest(lane.repaint.digest) &&
       isDigest(lane.repaint.receiptDigest) &&
       isDigest(lane.repaint.selectionDigest);
+
+const safeValidLane = (lane: IAutoMovieVisualDeliveryLane): boolean => {
+  try {
+    return validLane(lane);
+  } catch {
+    return false;
+  }
+};
+
+const validPolicy = (
+  policy: IAutoMovieMixedVisualDeliveryPolicy,
+  crossings: ReadonlyArray<{
+    fromOccurrence: string;
+    toOccurrence: string;
+  }>,
+): boolean =>
+  policy.version === 1 &&
+  isDigest(policy.observationDigest) &&
+  policy.transitions.length === crossings.length &&
+  policy.transitions.every(
+    (transition, index) =>
+      transition.fromOccurrence === crossings[index]?.fromOccurrence &&
+      transition.toOccurrence === crossings[index]?.toOccurrence &&
+      isDigest(transition.reviewDigest),
+  );
 
 const isDigest = (value: string): boolean =>
   /^sha256:[0-9a-f]{64}$/u.test(value);
