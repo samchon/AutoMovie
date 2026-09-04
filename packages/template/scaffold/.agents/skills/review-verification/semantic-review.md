@@ -19,15 +19,15 @@ The durable Git commit or pull-request chronology records the fingerprint-empty 
 
 Use the configured claim and ask only the subject that host kind owns:
 
-| Host kind | Semantic subject |
-| --- | --- |
-| Authored H2, H3, or H4 | Whether this exact unit performs one principle, dependency, lineage, upstream, or observation predicate |
-| Authored file | What the complete selected file realizes for a file-level relation |
-| Population-obligation account | One comparison over every selected population member and exactly one obligation |
-| Settings-coverage or topology account | The declared all-host, dense, sparse, or absent edge population |
-| Work-contract H2 | The unit, file, or population operation explicitly selected by its additive claim |
-| Discovery carrier | What the complete production-specific search found and which existing owners make an additional rule unnecessary |
-| Public TypeScript owner | What the selected export's type, value, behavior, callers, and consequences implement |
+| Host kind                             | Semantic subject                                                                                                 |
+| ------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| Authored H2, H3, or H4                | Whether this exact unit performs one principle, dependency, lineage, upstream, or observation predicate          |
+| Authored file                         | What the complete selected file realizes for a file-level relation                                               |
+| Population-obligation account         | One comparison over every selected population member and exactly one obligation                                  |
+| Settings-coverage or topology account | The declared all-host, dense, sparse, or absent edge population                                                  |
+| Work-contract H2                      | The unit, file, or population operation explicitly selected by its additive claim                                |
+| Discovery carrier                     | What the complete production-specific search found and which existing owners make an additional rule unnecessary |
+| Public TypeScript owner               | What the selected export's type, value, behavior, callers, and consequences implement                            |
 
 An exclusion uses the negative scope configured by its claim. A unit-local upstream exclusion asks whether writing this exact child exposed a defect in its exact parent relation. A discovery or population exclusion asks whether the relation is absent from every selected host. Never substitute one scope for the other. Config decides mechanically knowable host kinds and attachment identities; literal review decides whether the prose answers them.
 
@@ -69,19 +69,21 @@ When the audit confirms a reusable frame, report the affected target and host po
 
 Use these cases when reviewing the harness or a production's completed evidence population:
 
-| Case | Expected result |
-| --- | --- |
-| Generic majority or slotted nouns | Fail with the reusable predicate or clause skeleton and every class member. |
-| Category or semantic-role substitution | Fail at the literal predicate or host-role check. |
-| Unit evidence offered for a file or population relation | Fail because the host operation cannot answer the configured subject. |
-| Complete population account | Pass the structural discriminator only when it covers every selected member once, then continue literal and exchange checks. |
-| Exact lineage relation versus a sibling's result | Pass only the exact child-parent edge and fail the exchanged attachment. |
-| Discovery or population exclusion contradicted by one selected host | Fail the exclusion and report the complete contradicted class. |
-| False quotation, converted notation, or asserted absence without a full search | Fail literal support. |
-| Cross-event fact, wrong authority, or premature consequence | Fail even when the address and fingerprint are current. |
-| Generic rows with current unique fingerprints | Fail because attachment freshness cannot satisfy semantic independence. |
-| One tool writes findings and fingerprints | Fail because the same operation owns both sides of the transaction. |
-| Honest similarity | Pass only when both axes establish distinct literal host facts and target-specific falsifiers. |
-| Target, host, population, or semantic-row edit after judgment | Invalidate the judgment and restart from a new immutable basis. |
+| Case                                                                           | Expected result                                                                                                                    |
+| ------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------- |
+| Generic majority or slotted nouns                                              | Fail with the reusable predicate or clause skeleton and every class member.                                                        |
+| Category or semantic-role substitution                                         | Fail at the literal predicate or host-role check.                                                                                  |
+| Unit evidence offered for a file or population relation                        | Fail because the host operation cannot answer the configured subject.                                                              |
+| Complete population account                                                    | Pass the structural discriminator only when it covers every selected member once, then continue literal and exchange checks.       |
+| Exact lineage relation versus a sibling's result                               | Pass only the exact child-parent edge and fail the exchanged attachment.                                                           |
+| Discovery or population exclusion contradicted by one selected host            | Fail the exclusion and report the complete contradicted class.                                                                     |
+| False quotation, converted notation, or asserted absence without a full search | Fail literal support.                                                                                                              |
+| Cross-event fact, wrong authority, or premature consequence                    | Fail even when the address and fingerprint are current.                                                                            |
+| Generic rows with current unique fingerprints                                  | Fail because attachment freshness cannot satisfy semantic independence.                                                            |
+| One tool writes findings and fingerprints                                      | Fail because the same operation owns both sides of the transaction.                                                                |
+| Metadata rewrite changes any protected authored byte                           | Fail before semantic judgment; restore the protected projection and restart from the immutable basis.                              |
+| Loud repetition alarms with exact independent findings                         | Pass only after both complete axes establish the literal host facts and target-specific falsifiers; alarm volume is not a verdict. |
+| Honest similarity                                                              | Pass only when both axes establish distinct literal host facts and target-specific falsifiers.                                     |
+| Target, host, population, or semantic-row edit after judgment                  | Invalidate the judgment and restart from a new immutable basis.                                                                    |
 
 Run the complete matrix with current compiler-issued fingerprints where applicable so fingerprint freshness cannot decide the semantic result. A harness passes only when identical immutable inputs produce identical alarm membership and every semantic verdict still comes from literal review.
