@@ -50,6 +50,7 @@ import {
   IAutoMovieModelRecipe,
   IAutoMovieProductionDeliverable,
   IAutoMovieProductionDesign,
+  IAutoMovieProductionFrameRate,
   IAutoMovieShotContract,
   IAutoMovieShotPredicate,
   IAutoMovieWorldDesign,
@@ -1246,7 +1247,12 @@ export interface IAutoMovieProductionRenderManifest {
   deliverables: IAutoMovieProductionRenderedDeliverable[];
 }
 
-/** Decoded PNG color model. */
+/**
+ * Decoded PNG color model.
+ *
+ * @evidence requirements/delivery-and-accessibility/picture-color-and-image-sequences.md#delivery-picture-alpha-channels Distinguishes the exact decoded channel population.
+ * @evidence specifications/editorial-render-and-delivery/delivery-profiles-time-and-picture.md#spec-delivery-picture-products Defines the closed picture-model vocabulary used by profile comparison.
+ */
 export type AutoMovieProductionPngColor =
   | "gray"
   | "gray-alpha"
@@ -1261,16 +1267,61 @@ export type AutoMovieProductionPngColor =
  * @evidence specifications/editorial-render-and-delivery/delivery-profiles-time-and-picture.md#spec-delivery-picture-products Supplies the observed picture product compared fieldwise with the selected delivery profile.
  */
 export interface IAutoMovieProductionPngPicture {
+  /**
+   * Decoded pixel width.
+   * @evidence requirements/delivery-and-accessibility/picture-color-and-image-sequences.md#delivery-picture-color-sequences Preserves the decoded horizontal raster.
+   * @evidence specifications/editorial-render-and-delivery/delivery-profiles-time-and-picture.md#spec-delivery-picture-products Supplies the observed width for profile comparison.
+   */
   width: number;
+  /**
+   * Decoded pixel height.
+   * @evidence requirements/delivery-and-accessibility/picture-color-and-image-sequences.md#delivery-picture-color-sequences Preserves the decoded vertical raster.
+   * @evidence specifications/editorial-render-and-delivery/delivery-profiles-time-and-picture.md#spec-delivery-picture-products Supplies the observed height for profile comparison.
+   */
   height: number;
+  /**
+   * Decoded sample precision.
+   * @evidence requirements/delivery-and-accessibility/picture-color-and-image-sequences.md#delivery-picture-color-sequences Preserves the encoded channel precision.
+   * @evidence specifications/editorial-render-and-delivery/delivery-profiles-time-and-picture.md#spec-delivery-picture-products Supplies the observed bit depth for profile comparison.
+   */
   bitDepth: number;
+  /**
+   * Decoded channel population.
+   * @evidence requirements/delivery-and-accessibility/picture-color-and-image-sequences.md#delivery-picture-color-sequences Distinguishes grayscale, palette, RGB, and alpha-bearing pictures.
+   * @evidence specifications/editorial-render-and-delivery/delivery-profiles-time-and-picture.md#spec-delivery-picture-products Supplies the observed color model for profile comparison.
+   */
   color: AutoMovieProductionPngColor;
+  /**
+   * Decoded alpha relation.
+   * @evidence requirements/delivery-and-accessibility/picture-color-and-image-sequences.md#delivery-picture-alpha-channels Keeps opacity distinct from straight alpha.
+   * @evidence specifications/editorial-render-and-delivery/delivery-profiles-time-and-picture.md#spec-delivery-picture-products Supplies the observed alpha fact for profile comparison.
+   */
   alpha: "none" | "straight";
+  /**
+   * Decoded scan organization.
+   * @evidence requirements/delivery-and-accessibility/picture-color-and-image-sequences.md#delivery-image-sequences Preserves whether the picture is interlaced.
+   * @evidence specifications/editorial-render-and-delivery/delivery-profiles-time-and-picture.md#spec-delivery-picture-products Supplies the observed interlace fact for profile comparison.
+   */
   interlace: "none" | "adam7";
+  /**
+   * Color meaning explicitly carried by the datastream.
+   * @evidence requirements/delivery-and-accessibility/picture-color-and-image-sequences.md#delivery-picture-color-sequences Refuses to infer missing picture color identity.
+   * @evidence specifications/editorial-render-and-delivery/delivery-profiles-time-and-picture.md#spec-delivery-picture-products Supplies the observed color-space fact for profile comparison.
+   */
   colorSpace: "srgb" | "icc" | "gamma" | "unidentified";
+  /**
+   * Implicit or explicit pixel aspect carried by the datastream.
+   * @evidence requirements/delivery-and-accessibility/picture-color-and-image-sequences.md#delivery-picture-refusal Makes stretch-producing density metadata observable.
+   * @evidence specifications/editorial-render-and-delivery/delivery-profiles-time-and-picture.md#spec-delivery-picture-products Supplies the observed aspect fact for profile comparison.
+   */
   pixelAspect:
     | { kind: "square" }
     | { kind: "explicit"; x: number; y: number; unit: 0 | 1 };
+  /**
+   * Presence of orientation metadata that could transform presentation.
+   * @evidence requirements/delivery-and-accessibility/picture-color-and-image-sequences.md#delivery-picture-refusal Keeps encoded orientation from being silently applied.
+   * @evidence specifications/editorial-render-and-delivery/delivery-profiles-time-and-picture.md#spec-delivery-picture-products Supplies the observed orientation fact for profile comparison.
+   */
   orientation: "upright" | "metadata-present";
 }
 
@@ -1281,9 +1332,29 @@ export interface IAutoMovieProductionPngPicture {
  * @evidence specifications/editorial-render-and-delivery/delivery-audio-text-and-localization.md#spec-delivery-caption-cues Supplies the canonical delivered cue facts consumed by final caption verification.
  */
 export interface IAutoMovieProductionWebVttCue {
+  /**
+   * Delivered cue identifier, if present.
+   * @evidence requirements/delivery-and-accessibility/captions-subtitles-and-cues.md#delivery-cue-text-language Preserves cue identity for current-plan comparison.
+   * @evidence specifications/editorial-render-and-delivery/delivery-audio-text-and-localization.md#spec-delivery-caption-cues Supplies the delivered cue id.
+   */
   id: string | null;
+  /**
+   * Complete delivered cue payload.
+   * @evidence requirements/delivery-and-accessibility/captions-subtitles-and-cues.md#delivery-cue-text-language Preserves caption text and markup identity.
+   * @evidence specifications/editorial-render-and-delivery/delivery-audio-text-and-localization.md#spec-delivery-caption-cues Supplies the delivered cue text.
+   */
   text: string;
+  /**
+   * Exact parsed cue-start millisecond.
+   * @evidence requirements/delivery-and-accessibility/captions-subtitles-and-cues.md#delivery-cue-freshness Preserves the delivered start boundary.
+   * @evidence specifications/editorial-render-and-delivery/delivery-audio-text-and-localization.md#spec-delivery-caption-cues Supplies the delivered cue start.
+   */
   startMilliseconds: number;
+  /**
+   * Exact parsed exclusive cue-end millisecond.
+   * @evidence requirements/delivery-and-accessibility/captions-subtitles-and-cues.md#delivery-cue-freshness Preserves the delivered end boundary.
+   * @evidence specifications/editorial-render-and-delivery/delivery-audio-text-and-localization.md#spec-delivery-caption-cues Supplies the delivered cue end.
+   */
   endMilliseconds: number;
 }
 
@@ -1294,12 +1365,47 @@ export interface IAutoMovieProductionWebVttCue {
  * @evidence specifications/editorial-render-and-delivery/delivery-profiles-time-and-picture.md#spec-delivery-container-media-facts Carries parser-observed codec configuration for fieldwise comparison with the selected delivery profile.
  */
 export interface IAutoMovieProductionOpusDescription {
+  /**
+   * Closed parsed sample-entry family.
+   * @evidence requirements/delivery-and-accessibility/audio-streams-and-channels.md#delivery-audio-streams-channels Identifies the encoded Opus stream.
+   * @evidence specifications/editorial-render-and-delivery/delivery-profiles-time-and-picture.md#spec-delivery-container-media-facts Supplies the parsed sample-entry kind.
+   */
   kind: "opus";
+  /**
+   * Parsed dOps version.
+   * @evidence requirements/delivery-and-accessibility/audio-streams-and-channels.md#delivery-audio-streams-channels Preserves codec-description version identity.
+   * @evidence specifications/editorial-render-and-delivery/delivery-profiles-time-and-picture.md#spec-delivery-container-media-facts Supplies the parsed dOps version.
+   */
   version: number;
+  /**
+   * Parsed output channel count.
+   * @evidence requirements/delivery-and-accessibility/audio-streams-and-channels.md#delivery-channel-layout Preserves the coded channel population.
+   * @evidence specifications/editorial-render-and-delivery/delivery-profiles-time-and-picture.md#spec-delivery-container-media-facts Supplies the sample-entry channel count.
+   */
   outputChannelCount: number;
+  /**
+   * Parsed decoder pre-skip in samples.
+   * @evidence requirements/delivery-and-accessibility/audio-streams-and-channels.md#delivery-audio-streams-channels Preserves the coded priming boundary.
+   * @evidence specifications/editorial-render-and-delivery/delivery-profiles-time-and-picture.md#spec-delivery-container-media-facts Supplies the parsed pre-skip.
+   */
   preSkip: number;
+  /**
+   * Parsed input sample rate.
+   * @evidence requirements/delivery-and-accessibility/audio-streams-and-channels.md#delivery-audio-streams-channels Preserves the Opus input clock.
+   * @evidence specifications/editorial-render-and-delivery/delivery-profiles-time-and-picture.md#spec-delivery-container-media-facts Supplies the sample-entry rate.
+   */
   inputSampleRate: number;
+  /**
+   * Parsed signed Q7.8 output gain.
+   * @evidence requirements/delivery-and-accessibility/audio-streams-and-channels.md#delivery-audio-downmix Prevents hidden final-stream gain changes.
+   * @evidence specifications/editorial-render-and-delivery/delivery-profiles-time-and-picture.md#spec-delivery-container-media-facts Supplies the parsed Opus gain.
+   */
   outputGainQ7_8: number;
+  /**
+   * Parsed mapping-family, stream, and channel-order facts.
+   * @evidence requirements/delivery-and-accessibility/audio-streams-and-channels.md#delivery-channel-layout Preserves the complete coded channel mapping.
+   * @evidence specifications/editorial-render-and-delivery/delivery-profiles-time-and-picture.md#spec-delivery-container-media-facts Supplies the parsed mapping structure.
+   */
   channelMapping: {
     family: number;
     streamCount: number | null;
@@ -1316,20 +1422,70 @@ export interface IAutoMovieProductionOpusDescription {
  * @evidence specifications/simulation-effects-and-sound/mix-stems-loudness-and-av-join.md#sound-delivery-stream-and-inventory Binds the final audio inventory to its actual timebase, samples, and codec description.
  */
 export interface IAutoMovieProductionAudioProbe {
+  /**
+   * Parsed media class.
+   * @evidence requirements/delivery-and-accessibility/audio-streams-and-channels.md#delivery-audio-streams-channels Identifies one final audio track.
+   * @evidence specifications/simulation-effects-and-sound/mix-stems-loudness-and-av-join.md#sound-delivery-stream-and-inventory Supplies the audio inventory kind.
+   */
   kind: "audio";
+  /**
+   * Parsed container family.
+   * @evidence requirements/delivery-and-accessibility/audio-streams-and-channels.md#delivery-audio-streams-channels Preserves the final audio container identity.
+   * @evidence specifications/simulation-effects-and-sound/mix-stems-loudness-and-av-join.md#sound-delivery-stream-and-inventory Supplies the audio inventory container.
+   */
   container: "mp4";
+  /**
+   * Parsed codec string.
+   * @evidence requirements/delivery-and-accessibility/audio-streams-and-channels.md#delivery-audio-streams-channels Preserves the final stream codec.
+   * @evidence specifications/simulation-effects-and-sound/mix-stems-loudness-and-av-join.md#sound-delivery-stream-and-inventory Supplies the audio inventory codec.
+   */
   codec: string;
+  /**
+   * Parsed presentation runtime.
+   * @evidence requirements/delivery-and-accessibility/audio-streams-and-channels.md#delivery-audio-streams-channels Preserves the stream presentation duration.
+   * @evidence specifications/simulation-effects-and-sound/mix-stems-loudness-and-av-join.md#audio-visual-duration-and-timebase-join Supplies the audio side of the duration join.
+   */
   runtimeSeconds: number;
+  /**
+   * Parsed channel count.
+   * @evidence requirements/delivery-and-accessibility/audio-streams-and-channels.md#delivery-channel-layout Preserves the actual final channel population.
+   * @evidence specifications/simulation-effects-and-sound/mix-stems-loudness-and-av-join.md#sound-delivery-stream-and-inventory Supplies the final channel count.
+   */
   channels: number;
+  /**
+   * Parsed media sample rate.
+   * @evidence requirements/delivery-and-accessibility/audio-streams-and-channels.md#delivery-audio-streams-channels Preserves the final audio clock.
+   * @evidence specifications/simulation-effects-and-sound/mix-stems-loudness-and-av-join.md#sound-delivery-stream-and-inventory Supplies the final sample rate.
+   */
   sampleRate: number;
+  /**
+   * Parsed packet count.
+   * @evidence requirements/delivery-and-accessibility/audio-streams-and-channels.md#delivery-audio-streams-channels Proves the final track has resident coded samples.
+   * @evidence specifications/simulation-effects-and-sound/mix-stems-loudness-and-av-join.md#sound-delivery-stream-and-inventory Supplies the coded packet population.
+   */
   sampleCount: number;
+  /**
+   * Parsed decoder priming in samples.
+   * @evidence requirements/delivery-and-accessibility/audio-streams-and-channels.md#delivery-audio-streams-channels Preserves the presentation offset.
+   * @evidence specifications/simulation-effects-and-sound/mix-stems-loudness-and-av-join.md#audio-visual-duration-and-timebase-join Supplies the audio priming fact.
+   */
   primingSamples: number;
+  /**
+   * Raw movie and media integer clocks.
+   * @evidence requirements/delivery-and-accessibility/frame-rate-timebase-and-timecode.md#delivery-stream-synchronization Preserves exact presentation and media timebases.
+   * @evidence specifications/simulation-effects-and-sound/mix-stems-loudness-and-av-join.md#audio-visual-duration-and-timebase-join Supplies the integer audio clock join.
+   */
   timebase: {
     movieTimescale: number;
     mediaTimescale: number;
     movieDuration: number;
     mediaDuration: number;
   };
+  /**
+   * Complete parsed codec sample entry.
+   * @evidence requirements/delivery-and-accessibility/audio-streams-and-channels.md#delivery-channel-layout Preserves channel mapping and gain beside track facts.
+   * @evidence specifications/simulation-effects-and-sound/mix-stems-loudness-and-av-join.md#sound-delivery-stream-and-inventory Supplies the final codec description.
+   */
   sampleEntry: IAutoMovieProductionOpusDescription;
 }
 
@@ -1340,17 +1496,77 @@ export interface IAutoMovieProductionAudioProbe {
  * @evidence specifications/editorial-render-and-delivery/delivery-profiles-time-and-picture.md#spec-delivery-container-media-facts Supplies the observed facts compared fieldwise with the selected delivery profile.
  */
 export interface IAutoMovieProductionVideoProbe {
+  /**
+   * Parsed media class.
+   * @evidence requirements/delivery-and-accessibility/containers-codecs-and-media-facts.md#delivery-container-codec-facts Identifies one final video track.
+   * @evidence specifications/editorial-render-and-delivery/delivery-profiles-time-and-picture.md#spec-delivery-container-media-facts Supplies the video inventory kind.
+   */
   kind: "video";
+  /**
+   * Parsed container family.
+   * @evidence requirements/delivery-and-accessibility/containers-codecs-and-media-facts.md#delivery-container-metadata Preserves the final container identity.
+   * @evidence specifications/editorial-render-and-delivery/delivery-profiles-time-and-picture.md#spec-delivery-container-media-facts Supplies the parsed container.
+   */
   container: "mp4";
+  /**
+   * Parsed coded-stream family.
+   * @evidence requirements/delivery-and-accessibility/containers-codecs-and-media-facts.md#delivery-container-codec-facts Preserves the final video codec.
+   * @evidence specifications/editorial-render-and-delivery/delivery-profiles-time-and-picture.md#spec-delivery-container-media-facts Supplies the parsed codec.
+   */
   codec: "h264";
+  /**
+   * Compatibility width projected from coded facts.
+   * @evidence requirements/delivery-and-accessibility/containers-codecs-and-media-facts.md#delivery-observed-media-facts Keeps the delivered raster observable.
+   * @evidence specifications/editorial-render-and-delivery/delivery-profiles-time-and-picture.md#spec-delivery-container-media-facts Supplies the compatibility width.
+   */
   width: number;
+  /**
+   * Compatibility height projected from coded facts.
+   * @evidence requirements/delivery-and-accessibility/containers-codecs-and-media-facts.md#delivery-observed-media-facts Keeps the delivered raster observable.
+   * @evidence specifications/editorial-render-and-delivery/delivery-profiles-time-and-picture.md#spec-delivery-container-media-facts Supplies the compatibility height.
+   */
   height: number;
+  /**
+   * Parsed presentation runtime.
+   * @evidence requirements/delivery-and-accessibility/frame-rate-timebase-and-timecode.md#delivery-stream-synchronization Preserves the final picture duration.
+   * @evidence specifications/editorial-render-and-delivery/delivery-profiles-time-and-picture.md#spec-delivery-timecode-sync Supplies the picture runtime projection.
+   */
   runtimeSeconds: number;
+  /**
+   * Parsed resident picture-sample count.
+   * @evidence requirements/delivery-and-accessibility/frame-rate-timebase-and-timecode.md#delivery-time-boundary-count Preserves the final frame population.
+   * @evidence specifications/editorial-render-and-delivery/delivery-profiles-time-and-picture.md#spec-delivery-timecode-sync Supplies the parsed frame count.
+   */
   frameCount: number;
+  /**
+   * Compatibility rate projected from the raw sample clock.
+   * @evidence requirements/delivery-and-accessibility/frame-rate-timebase-and-timecode.md#delivery-rational-frame-rate Keeps the legacy display rate beside its exact source facts.
+   * @evidence specifications/editorial-render-and-delivery/delivery-profiles-time-and-picture.md#spec-delivery-timecode-sync Supplies the display-rate projection.
+   */
   fps: number;
+  /**
+   * Parsed major and compatible brands.
+   * @evidence requirements/delivery-and-accessibility/containers-codecs-and-media-facts.md#delivery-container-metadata Preserves the final container brands.
+   * @evidence specifications/editorial-render-and-delivery/delivery-profiles-time-and-picture.md#spec-delivery-container-media-facts Supplies the parsed brand set.
+   */
   brands: { major: string; compatible: string[] };
+  /**
+   * Parsed coded sample-entry raster.
+   * @evidence requirements/delivery-and-accessibility/containers-codecs-and-media-facts.md#delivery-observed-media-facts Preserves coded dimensions independently of display transforms.
+   * @evidence specifications/editorial-render-and-delivery/delivery-profiles-time-and-picture.md#spec-delivery-container-media-facts Supplies the coded raster.
+   */
   coded: { width: number; height: number };
+  /**
+   * Parsed fixed-point track display raster.
+   * @evidence requirements/delivery-and-accessibility/picture-color-and-image-sequences.md#delivery-picture-refusal Makes stretch-producing display metadata observable.
+   * @evidence specifications/editorial-render-and-delivery/delivery-profiles-time-and-picture.md#spec-delivery-picture-products Supplies the track presentation raster.
+   */
   trackDisplay: { width16_16: number; height16_16: number };
+  /**
+   * Parsed fixed-point track presentation matrix.
+   * @evidence requirements/delivery-and-accessibility/picture-color-and-image-sequences.md#delivery-picture-refusal Makes rotation, reflection, and translation observable.
+   * @evidence specifications/editorial-render-and-delivery/delivery-profiles-time-and-picture.md#spec-delivery-picture-products Supplies the complete track matrix.
+   */
   trackMatrix: [
     number,
     number,
@@ -1362,9 +1578,19 @@ export interface IAutoMovieProductionVideoProbe {
     number,
     number,
   ];
+  /**
+   * Parsed pixel-aspect declaration.
+   * @evidence requirements/delivery-and-accessibility/picture-color-and-image-sequences.md#delivery-picture-refusal Makes non-square presentation metadata observable.
+   * @evidence specifications/editorial-render-and-delivery/delivery-profiles-time-and-picture.md#spec-delivery-picture-products Supplies the pixel-aspect fact.
+   */
   pixelAspect:
     | { kind: "implicit-square" }
     | { kind: "explicit"; hSpacing: number; vSpacing: number };
+  /**
+   * Raw movie/media clocks and edit list.
+   * @evidence requirements/delivery-and-accessibility/frame-rate-timebase-and-timecode.md#delivery-stream-synchronization Preserves the integer presentation timeline.
+   * @evidence specifications/editorial-render-and-delivery/delivery-profiles-time-and-picture.md#spec-delivery-timecode-sync Supplies the exact presentation clock.
+   */
   presentation: {
     movieTimescale: number;
     mediaTimescale: number;
@@ -1377,6 +1603,11 @@ export interface IAutoMovieProductionVideoProbe {
       mediaRateFraction: number;
     }>;
   };
+  /**
+   * Raw constant-sample clock and boundary facts.
+   * @evidence requirements/delivery-and-accessibility/frame-rate-timebase-and-timecode.md#delivery-time-boundary-count Preserves the actual first, last, and exclusive sample boundary.
+   * @evidence specifications/editorial-render-and-delivery/delivery-profiles-time-and-picture.md#spec-delivery-timecode-sync Supplies the exact media sample clock.
+   */
   samples: {
     count: number;
     duration: number;
@@ -1386,6 +1617,11 @@ export interface IAutoMovieProductionVideoProbe {
     firstCts: number;
     lastCts: number;
   };
+  /**
+   * Container-declared and resolved picture color identity.
+   * @evidence requirements/delivery-and-accessibility/picture-color-and-image-sequences.md#delivery-picture-color-sequences Refuses unidentified or conflicting color interpretation.
+   * @evidence specifications/editorial-render-and-delivery/delivery-profiles-time-and-picture.md#spec-delivery-picture-products Supplies the final color facts.
+   */
   color: {
     container:
       | {
@@ -2268,6 +2504,16 @@ export interface IAutoMovieFilmTimeline {
    * @evidence specifications/narrative-and-intent/events-causality-and-time.md#narrative-intent-temporal-state-handoff Types `fps` for the narrative intent temporal state handoff system contract.
    */
   fps: number;
+  /**
+   * Exact reduced production frame rate.
+   *
+   * Integer legacy timelines may omit this field and are interpreted as
+   * `fps/1`; fractional timelines must preserve their explicit identity.
+   *
+   * @evidence requirements/editorial/rational-time-and-ranges.md#editorial-rational-time-ranges Preserves the compiler-owned frame clock without a decimal reconstruction.
+   * @evidence specifications/editorial-render-and-delivery/rational-timeline-and-composition.md#spec-editorial-rational-timeline Supplies the canonical rational clock to caption, sound, and delivery consumers.
+   */
+  frameRate?: IAutoMovieProductionFrameRate;
   /**
    * Exact target and derived timeline duration.
    *

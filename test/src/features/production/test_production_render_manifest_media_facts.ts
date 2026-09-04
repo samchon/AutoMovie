@@ -210,4 +210,76 @@ export const test_production_render_manifest_media_facts = (): void => {
       kind: true,
     },
   );
+  const scalarMatrix: Array<{
+    label: string;
+    row: Parameters<typeof assertProductionRenderedDeliverableFacts>[0];
+    field: string;
+  }> = [
+    ...[1, 0, Number.MAX_SAFE_INTEGER + 1].map((runtimeSeconds) => ({
+      label: `preview runtime ${runtimeSeconds}`,
+      row: { ...accepts[5]!, runtimeSeconds },
+      field: "runtimeSeconds",
+    })),
+    ...[1, 0, Number.MAX_SAFE_INTEGER + 1].map((frameCount) => ({
+      label: `preview frame count ${frameCount}`,
+      row: { ...accepts[5]!, frameCount },
+      field: "frameCount",
+    })),
+    ...["h264", ""].map((codec) => ({
+      label: `preview codec ${JSON.stringify(codec)}`,
+      row: { ...accepts[5]!, codec },
+      field: "codec",
+    })),
+    {
+      label: "caption invented frame count",
+      row: { ...accepts[4]!, frameCount: 24 },
+      field: "frameCount",
+    },
+    {
+      label: "caption invented codec",
+      row: { ...accepts[4]!, codec: "vtt" },
+      field: "codec",
+    },
+    {
+      label: "audio invented frame count",
+      row: { ...accepts[2]!, frameCount: 48_000 },
+      field: "frameCount",
+    },
+    {
+      label: "feature missing runtime",
+      row: { ...accepts[0]!, runtimeSeconds: null },
+      field: "runtimeSeconds",
+    },
+    {
+      label: "feature missing frames",
+      row: { ...accepts[0]!, frameCount: null },
+      field: "frameCount",
+    },
+    {
+      label: "feature missing codec",
+      row: { ...accepts[0]!, codec: null },
+      field: "codec",
+    },
+    {
+      label: "guide runtime mismatch",
+      row: { ...accepts[1]!, runtimeSeconds: 0 },
+      field: "runtimeSeconds",
+    },
+    {
+      label: "guide frame mismatch",
+      row: { ...accepts[1]!, frameCount: 0 },
+      field: "frameCount",
+    },
+    {
+      label: "guide codec mismatch",
+      row: { ...accepts[1]!, codec: "avc1" },
+      field: "codec",
+    },
+  ];
+  TestValidator.predicate(
+    "the complete five-kind scalar matrix fails at its exact field",
+    scalarMatrix.every(({ row, field }) =>
+      refused(() => assertProductionRenderedDeliverableFacts(row), field),
+    ),
+  );
 };

@@ -509,6 +509,9 @@ export interface IAutoMovieProductionSoundPlan {
   /**
    * Exact frame rate when `fps` is fractional. Integer legacy rates use an
    * equivalent denominator of one when this field is omitted.
+   *
+   * @evidence requirements/delivery-and-accessibility/frame-rate-timebase-and-timecode.md#delivery-rational-frame-rate Binds the sound plan to the exact production frame clock.
+   * @evidence specifications/simulation-effects-and-sound/clocks-ordering-seek-and-checkpoints.md#effect-film-time-step-boundary Supplies the rational source clock for sample-boundary conversion.
    */
   frameRate?: IAutoMovieProductionFrameRate;
   /**
@@ -911,9 +914,29 @@ export interface IAutoMovieProductionSoundAnalysis {
  * @evidence specifications/simulation-effects-and-sound/mix-stems-loudness-and-av-join.md#sound-delivery-stream-and-inventory Carries the final encoded audio inventory beside its plan and measurements.
  */
 export interface IAutoMovieProductionSoundEvidenceAudio {
+  /**
+   * Render-root-relative sibling audio path.
+   * @evidence requirements/sound/validation-and-delivery.md#sound-final-media-probe Binds evidence to the exact final audio member.
+   * @evidence specifications/simulation-effects-and-sound/mix-stems-loudness-and-av-join.md#sound-delivery-stream-and-inventory Supplies the final audio inventory path.
+   */
   path: string;
+  /**
+   * Closed final audio media type.
+   * @evidence requirements/sound/validation-and-delivery.md#sound-final-media-probe Binds evidence to the encoded audio class.
+   * @evidence specifications/simulation-effects-and-sound/mix-stems-loudness-and-av-join.md#sound-delivery-stream-and-inventory Supplies the final audio inventory type.
+   */
   mediaType: "audio/mp4";
+  /**
+   * Exact sibling audio byte length.
+   * @evidence requirements/sound/validation-and-delivery.md#sound-final-media-probe Binds evidence to the complete encoded byte population.
+   * @evidence specifications/simulation-effects-and-sound/mix-stems-loudness-and-av-join.md#sound-delivery-stream-and-inventory Supplies the final audio size.
+   */
   bytes: number;
+  /**
+   * Digest of the exact sibling audio bytes.
+   * @evidence requirements/sound/validation-and-delivery.md#sound-final-media-probe Binds evidence to one encoded payload identity.
+   * @evidence specifications/simulation-effects-and-sound/mix-stems-loudness-and-av-join.md#sound-delivery-stream-and-inventory Supplies the final audio digest.
+   */
   digest: AutoMovieContentDigest;
 }
 
@@ -924,11 +947,41 @@ export interface IAutoMovieProductionSoundEvidenceAudio {
  * @evidence specifications/simulation-effects-and-sound/validation-evidence-and-compatibility.md#sound-budget-and-audible-review Carries the complete measured evidence used by delivery validation rather than lossy aggregate counts.
  */
 export interface IAutoMovieProductionSoundEvidence {
+  /**
+   * Complete evidence schema epoch.
+   * @evidence requirements/sound/validation-and-delivery.md#sound-evidence-identity-freshness Refuses aggregate-only legacy evidence.
+   * @evidence specifications/simulation-effects-and-sound/validation-evidence-and-compatibility.md#sound-budget-and-audible-review Identifies the complete evidence schema.
+   */
   version: 2;
+  /**
+   * Exact current semantic sound plan.
+   * @evidence requirements/sound/validation-and-delivery.md#sound-evidence-identity-freshness Preserves every planned event, cue, and dialogue identity.
+   * @evidence specifications/simulation-effects-and-sound/validation-evidence-and-compatibility.md#sound-budget-and-audible-review Supplies the measured plan owner.
+   */
   plan: IAutoMovieProductionSoundPlan;
+  /**
+   * Measurements of the exact pre-encode PCM.
+   * @evidence requirements/sound/validation-and-delivery.md#sound-numeric-verification Preserves the complete current analysis.
+   * @evidence specifications/simulation-effects-and-sound/validation-evidence-and-compatibility.md#sound-budget-and-audible-review Supplies the numeric evidence result.
+   */
   analysis: IAutoMovieProductionSoundAnalysis;
+  /**
+   * Exact current dialogue synthesis receipts.
+   * @evidence requirements/sound/validation-and-delivery.md#sound-evidence-identity-freshness Preserves each current dialogue byte and viseme identity.
+   * @evidence specifications/simulation-effects-and-sound/validation-evidence-and-compatibility.md#sound-budget-and-audible-review Supplies the dialogue evidence population.
+   */
   tts: IAutoMovieProductionTtsReceipt[];
+  /**
+   * Exact sibling final-audio identity.
+   * @evidence requirements/sound/validation-and-delivery.md#sound-picture-delivery-join Joins the evidence to the encoded mix used by delivery.
+   * @evidence specifications/simulation-effects-and-sound/mix-stems-loudness-and-av-join.md#sound-delivery-stream-and-inventory Supplies the encoded audio inventory record.
+   */
   audio: IAutoMovieProductionSoundEvidenceAudio;
+  /**
+   * Closed measurement source and algorithm identity.
+   * @evidence requirements/sound/validation-and-delivery.md#sound-evidence-identity-freshness Prevents encoded-byte or unknown-method measurements from masquerading as current PCM analysis.
+   * @evidence specifications/simulation-effects-and-sound/validation-evidence-and-compatibility.md#sound-budget-and-audible-review Supplies the measurement provenance.
+   */
   measurement: {
     source: "pre-encode-pcm";
     algorithm: "automovie-production-sound-analysis-v1";
