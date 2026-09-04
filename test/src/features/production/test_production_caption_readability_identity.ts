@@ -182,6 +182,44 @@ export const test_production_caption_readability_identity = (): void => {
     ],
   );
 
+  const malformedLanguage =
+    readability.inspectAutoMovieCaptionReadabilityWithRuntime(
+      timeline(
+        cues.map((cue, index) => ({
+          ...cue,
+          id: `malformed-${index}`,
+          language: "en-12",
+        })),
+      ),
+      [{ ...profile(identity, true), language: "en-12" }],
+      runtime(identity),
+    );
+  TestValidator.equals(
+    "malformed languages never become a profile or gap identity",
+    malformedLanguage.cues.map((cue) => ({
+      gap: cue.measurement.gapBeforeFrames,
+      outcome: cue.outcome,
+    })),
+    [
+      {
+        gap: null,
+        outcome: {
+          status: "not-run",
+          segmentation: null,
+          reason: "caption-readability-profile-not-declared",
+        },
+      },
+      {
+        gap: null,
+        outcome: {
+          status: "not-run",
+          segmentation: null,
+          reason: "caption-readability-profile-not-declared",
+        },
+      },
+    ],
+  );
+
   const exclusive = readability.inspectAutoMovieCaptionReadabilityWithRuntime(
     timeline(cues),
     [profile(identity, false)],

@@ -5,7 +5,7 @@
  * case, as RFC 5646 comparison requires, without consulting a language
  * registry or replacing a tag with a Preferred-Value.
  */
-export interface IAutoMovieCaptionLanguageIdentity {
+interface IAutoMovieCaptionLanguageIdentity {
   /** Authored language tag preserved for display and serialization. */
   display: string;
   /** ASCII case-insensitive identity used by every caption consumer. */
@@ -138,20 +138,6 @@ export const parseAutoMovieCaptionLanguage = (
 export const autoMovieCaptionLanguageComparisonKey = (
   value: string,
 ): string | null => parseAutoMovieCaptionLanguage(value)?.comparisonKey ?? null;
-
-/** Compare two well-formed caption language tags by RFC 5646 identity. */
-export const sameAutoMovieCaptionLanguage = (
-  left: string,
-  right: string,
-): boolean => {
-  const leftIdentity = parseAutoMovieCaptionLanguage(left);
-  const rightIdentity = parseAutoMovieCaptionLanguage(right);
-  return (
-    leftIdentity !== null &&
-    rightIdentity !== null &&
-    leftIdentity.comparisonKey === rightIdentity.comparisonKey
-  );
-};
 
 const isVariant = (value: string): boolean =>
   (value.length >= 5 && value.length <= 8) ||

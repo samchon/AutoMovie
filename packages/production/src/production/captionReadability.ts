@@ -12,7 +12,7 @@ import { autoMovieCaptionLanguageComparisonKey } from "./captionLanguage";
 import { canonicalizeAutoMovieCaptionText } from "./captionText";
 
 /** Runtime-owned grapheme segmentation behavior and its complete identity. */
-export interface IAutoMovieCaptionGraphemeRuntime {
+interface IAutoMovieCaptionGraphemeRuntime {
   /** Complete identity of the exact segmentation behavior below. */
   identity: IAutoMovieCaptionGraphemeSegmentationIdentity;
   /** Segment one canonical caption line into grapheme clusters. */
@@ -30,16 +30,17 @@ export const inspectAutoMovieCaptionReadabilityWithRuntime = (
   profiles: readonly IAutoMovieCaptionReadabilityProfile[],
   runtime: IAutoMovieCaptionGraphemeRuntime,
 ): IAutoMovieCaptionReadabilityReport => {
-  const profilesByLanguage = new Map(
-    profiles.map(
-      (profile) =>
-        [
-          autoMovieCaptionLanguageComparisonKey(profile.language) ??
-            profile.language,
-          profile,
-        ] as const,
-    ),
-  );
+  const profilesByLanguage = new Map<
+    string,
+    IAutoMovieCaptionReadabilityProfile
+  >();
+  for (const profile of profiles) {
+    const languageIdentity = autoMovieCaptionLanguageComparisonKey(
+      profile.language,
+    );
+    if (languageIdentity !== null)
+      profilesByLanguage.set(languageIdentity, profile);
+  }
   const precedingEndByLanguage = new Map<string, number>();
   return {
     version: 2,
@@ -54,10 +55,15 @@ export const inspectAutoMovieCaptionReadabilityWithRuntime = (
         0,
       );
       const durationFrames = cue.endFrame - cue.startFrame;
-      const languageIdentity =
-        autoMovieCaptionLanguageComparisonKey(cue.language) ?? cue.language;
-      const precedingEnd = precedingEndByLanguage.get(languageIdentity);
-      precedingEndByLanguage.set(languageIdentity, cue.endFrame);
+      const languageIdentity = autoMovieCaptionLanguageComparisonKey(
+        cue.language,
+      );
+      const precedingEnd =
+        languageIdentity === null
+          ? undefined
+          : precedingEndByLanguage.get(languageIdentity);
+      if (languageIdentity !== null)
+        precedingEndByLanguage.set(languageIdentity, cue.endFrame);
       const measurement: IAutoMovieCaptionReadabilityMeasurement = {
         cue: cue.id,
         language: cue.language,
@@ -74,7 +80,9 @@ export const inspectAutoMovieCaptionReadabilityWithRuntime = (
         measurement,
         outcome: captionReadabilityOutcome(
           measurement,
-          profilesByLanguage.get(languageIdentity),
+          languageIdentity === null
+            ? undefined
+            : profilesByLanguage.get(languageIdentity),
           runtime.identity,
         ),
       };

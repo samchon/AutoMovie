@@ -12,7 +12,6 @@ const language = loadSourceModule<{
     comparisonKey: string;
   } | null;
   autoMovieCaptionLanguageComparisonKey: (value: string) => string | null;
-  sameAutoMovieCaptionLanguage: (left: string, right: string) => boolean;
 }>(
   path.resolve(
     __dirname,
@@ -120,17 +119,17 @@ export const test_production_caption_language_identity = (): void => {
     {
       key: language.autoMovieCaptionLanguageComparisonKey("EN-us"),
       invalidKey: language.autoMovieCaptionLanguageComparisonKey("en-12"),
-      same: language.sameAutoMovieCaptionLanguage("EN-us", "en-US"),
-      invalidLeft: language.sameAutoMovieCaptionLanguage("en-12", "en-US"),
-      invalidRight: language.sameAutoMovieCaptionLanguage("en-US", "en-12"),
-      different: language.sameAutoMovieCaptionLanguage("en-US", "en-GB"),
+      same:
+        language.autoMovieCaptionLanguageComparisonKey("EN-us") ===
+        language.autoMovieCaptionLanguageComparisonKey("en-US"),
+      different:
+        language.autoMovieCaptionLanguageComparisonKey("en-US") ===
+        language.autoMovieCaptionLanguageComparisonKey("en-GB"),
     },
     {
       key: "en-us",
       invalidKey: null,
       same: true,
-      invalidLeft: false,
-      invalidRight: false,
       different: false,
     },
   );
