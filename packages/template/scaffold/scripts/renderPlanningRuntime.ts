@@ -146,6 +146,9 @@ export const createProductionRenderPlanningRuntime = (props: {
   captureCurrentChunkPointer: (
     chunk: IAutoMovieProductionRenderChunk,
   ) => IRenderGcTargetSnapshot | null;
+  currentChunkPointerLocatorState: (
+    chunk: IAutoMovieProductionRenderChunk,
+  ) => "absent" | "resident" | "unsafe" | "unavailable";
   compareCodeUnits: (left: string, right: string) => number;
   host: IProductionRenderHost;
   output: (value: unknown) => void;
@@ -170,6 +173,7 @@ export const createProductionRenderPlanningRuntime = (props: {
   const compareCodeUnits = props.compareCodeUnits;
   const gcRuntime = {
     captureCurrentChunkPointer: props.captureCurrentChunkPointer,
+    currentChunkPointerLocatorState: props.currentChunkPointerLocatorState,
   };
   const output = props.output;
 
@@ -502,14 +506,18 @@ export const createProductionRenderPlanningRuntime = (props: {
           ? gcRuntime.captureCurrentChunkPointer(chunk)
           : pointer;
     } catch {
+      const locator = gcRuntime.currentChunkPointerLocatorState(chunk);
       return {
         current: null,
         pointer: null,
         finding: {
           authority: "none",
           generation: null,
-          reason: `Chunk "${chunk.slot}" pointer could not be inspected. Preserve it and manually adjudicate availability before retrying.`,
-          state: "unavailable",
+          reason:
+            locator === "unsafe"
+              ? `Chunk "${chunk.slot}" pointer locator is unsafe. Preserve it and manually adjudicate the locator before retrying.`
+              : `Chunk "${chunk.slot}" pointer could not be inspected. Preserve it and manually adjudicate availability before retrying.`,
+          state: locator === "unsafe" ? "unsafe-locator" : "unavailable",
           target,
         },
       };

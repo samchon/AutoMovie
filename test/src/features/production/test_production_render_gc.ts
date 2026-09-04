@@ -136,7 +136,7 @@ export const test_production_render_gc = async (): Promise<void> => {
         >));
   const active = digest("a");
   const pointer = `proxy/pointers/${"a".repeat(64)}`;
-  const tree = `proxy/tmp/${"a".repeat(64)}.owner.7`;
+  const tree = `proxy/tmp/${"a".repeat(64)}.attempt.7.00000000-0000-4000-8000-000000000000.aG9zdA`;
   const currentDialogue = `audio-cache/kokoro/${"b".repeat(64)}`;
   const currentModel = "model-cache/kokoro/current-revision";
   const candidates: IAutoMovieProductionRenderGcCandidate[] = [

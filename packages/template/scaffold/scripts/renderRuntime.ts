@@ -311,6 +311,7 @@ const executeProductionRenderCommand = async (
   const planningRuntime = createProductionRenderPlanningRuntime({
     authoringEvidence,
     captureCurrentChunkPointer: gcRuntime.captureCurrentChunkPointer,
+    currentChunkPointerLocatorState: gcRuntime.currentChunkPointerLocatorState,
     compareCodeUnits,
     host: renderHost,
     output,

@@ -204,7 +204,7 @@ export const planProductionRenderGc = (props: {
     const path = canonicalRelativePath(candidate.path);
     const chunkPath = /^(proxy|final)\/chunks\/([0-9a-f]{64})$/u.exec(path);
     const pointerPath = /^(proxy|final)\/pointers\/([0-9a-f]{64})$/u.exec(path);
-    const treePath = /^(proxy|final)\/tmp\/([0-9a-f]{64})\.[^.]+\.\d+$/u.exec(
+    const treePath = /^(proxy|final)\/tmp\/([0-9a-f]{64})\.[^/]+$/u.exec(
       path,
     );
     const ownedDigest =
@@ -342,7 +342,7 @@ export const planProductionRenderGc = (props: {
   const retainedPairs = new Map<string, { pointers: number; trees: number }>();
   for (const path of retainedChunkPaths) {
     const pointer = /^(proxy|final)\/pointers\/([0-9a-f]{64})$/u.exec(path);
-    const tree = /^(proxy|final)\/tmp\/([0-9a-f]{64})\.[^.]+\.\d+$/u.exec(path);
+    const tree = /^(proxy|final)\/tmp\/([0-9a-f]{64})\.[^/]+$/u.exec(path);
     // Retained paths already proved an exact pointer/tree candidate above.
     const match = (pointer ?? tree)!;
     const key = `${match[1]}\0${match[2]}`;

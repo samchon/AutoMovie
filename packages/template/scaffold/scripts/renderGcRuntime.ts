@@ -224,11 +224,42 @@ export const createProductionRenderGarbageRuntime = (props: {
         scope: renderLivenessScope,
         tier,
       });
+      const currentPublicationPaths = new Set(
+        publicationInventory.retainedChunkPaths,
+      );
+      for (const pointer of publicationInventory.entries.filter(
+        (entry) =>
+          entry.candidate.kind === "chunk-pointer" &&
+          entry.snapshot !== null &&
+          currentPublicationPaths.has(entry.candidate.path),
+      )) {
+        const chunk = tierChunks.get(pointer.candidate.digest!);
+        if (tierPlan === undefined || chunk === undefined) continue;
+        const inspection = props.inspectChunk(tierPlan, chunk, pointer.snapshot!);
+        if (inspection.finding.state === "current") continue;
+        const observation = {
+          state: inspection.finding.state,
+          authority: inspection.finding.authority,
+          reason: inspection.finding.reason,
+        };
+        pointer.candidate.observation = observation;
+        currentPublicationPaths.delete(pointer.candidate.path);
+        for (const tree of publicationInventory.entries)
+          if (
+            tree.candidate.kind === "chunk-tree" &&
+            tree.candidate.digest === pointer.candidate.digest &&
+            currentPublicationPaths.has(tree.candidate.path)
+          ) {
+            tree.candidate.observation = observation;
+            currentPublicationPaths.delete(tree.candidate.path);
+          }
+      }
       for (const entry of publicationInventory.entries) {
         candidates.push(entry.candidate);
-        candidateSnapshots.set(gcCandidateKey(entry.candidate), entry.snapshot);
+        if (entry.snapshot !== null)
+          candidateSnapshots.set(gcCandidateKey(entry.candidate), entry.snapshot);
       }
-      for (const retained of publicationInventory.retainedChunkPaths)
+      for (const retained of currentPublicationPaths)
         retainedChunkPaths.add(retained);
       const chunks = path.join(renderJobRoot, tier, "chunks");
       if (renderHost.filesystem.existsSync(chunks))
@@ -780,6 +811,22 @@ export const createProductionRenderGarbageRuntime = (props: {
     }
   };
 
+  const currentChunkPointerLocatorState = (
+    chunk: IAutoMovieProductionRenderChunk,
+  ): "absent" | "resident" | "unsafe" | "unavailable" => {
+    try {
+      const status = renderHost.filesystem.lstatSync(chunkDirectory(chunk.id));
+      return status.isSymbolicLink() ||
+        (status.isFile() === false && status.isDirectory() === false)
+        ? "unsafe"
+        : "resident";
+    } catch (error) {
+      return (error as NodeJS.ErrnoException).code === "ENOENT"
+        ? "absent"
+        : "unavailable";
+    }
+  };
+
   const currentPublicationProtectsTree = (
     chunks: ReadonlyMap<
       AutoMovieContentDigest,
@@ -934,6 +981,7 @@ export const createProductionRenderGarbageRuntime = (props: {
 
   return {
     captureCurrentChunkPointer,
+    currentChunkPointerLocatorState,
     captureExistingRenderStateTarget,
     collect: renderGarbageCollection,
     quarantine,
