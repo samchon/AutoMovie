@@ -22,7 +22,8 @@ const digest = (fill: string): AutoMovieContentDigest =>
   `sha256:${fill.repeat(64).slice(0, 64)}`;
 
 const RUNTIME_IDENTITY = {
-  protocolVersion: "automovie.production-render-runtime.v2",
+  protocolVersion: "automovie.production-render-runtime.v3",
+  dialogueRuntimeIdentity: null,
   sourceDigest: digest("a"),
   capture: testCaptureRuntimeIdentity(),
   encoder: {
