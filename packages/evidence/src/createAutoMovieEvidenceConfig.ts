@@ -1183,7 +1183,7 @@ const validateLocalClaims = (graph: IProductionGraph): void => {
       !isDeepStrictEqual(binding.populationScope, graph.populationScope) ||
       (binding.disposition !== "binding" &&
         binding.disposition !== "inapplicable") ||
-      raw.disabled !==
+      (raw.disabled === true) !==
         (binding.stage === "disabled" ||
           binding.stage === "draft" ||
           binding.disposition === "inapplicable") ||
