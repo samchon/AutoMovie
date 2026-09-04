@@ -135,18 +135,19 @@ const serveOpusGenerationWorker = async (
       `Runtime package "${data.package.packageName}" changed before its isolated worker loaded.`,
     );
   assertRuntimePackageSnapshotCurrent(snapshot);
-  const runtime = (await import(
-    pathToFileURL(snapshot.entry).href
-  )) as IOpusModule;
-  assertRuntimePackageSnapshotCurrent(snapshot);
-  const encoder = await runtime.createEncoder({
-    bitrate: 128_000,
-    complexity: 10,
-    vbr: false,
-  });
+  let encoder: IOpusEncoder | undefined;
   let operationFailure: { error: unknown } | undefined;
   let result: IOpusGenerationResult | undefined;
   try {
+    const runtime = (await import(
+      pathToFileURL(snapshot.entry).href
+    )) as IOpusModule;
+    assertRuntimePackageSnapshotCurrent(snapshot);
+    encoder = await runtime.createEncoder({
+      bitrate: 128_000,
+      complexity: 10,
+      vbr: false,
+    });
     if (
       encoder.frameSize !== 960 ||
       encoder.channels !== 2 ||
@@ -191,22 +192,21 @@ const serveOpusGenerationWorker = async (
     operationFailure = { error };
   }
   let cleanupFailure: { error: unknown } | undefined;
-  try {
-    encoder.free();
-  } catch (error) {
-    cleanupFailure = { error };
-  }
+  if (encoder !== undefined)
+    try {
+      encoder.free();
+    } catch (error) {
+      cleanupFailure = { error };
+    }
   let postcheckFailure: { error: unknown } | undefined;
   try {
     assertRuntimePackageSnapshotCurrent(snapshot);
   } catch (error) {
     postcheckFailure = { error };
   }
-  const failures = [
-    operationFailure?.error,
-    cleanupFailure?.error,
-    postcheckFailure?.error,
-  ].filter((error): error is unknown => error !== undefined);
+  const failures = [operationFailure, cleanupFailure, postcheckFailure].flatMap(
+    (failure) => (failure === undefined ? [] : [failure.error]),
+  );
   if (failures.length > 1)
     throw new OpusGenerationOperationError(
       failures,
