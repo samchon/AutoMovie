@@ -278,6 +278,19 @@ export interface IAutoMovieCaptionReadabilityBoundary {
 }
 
 /**
+ * Exact rational frame rate for a production timeline.
+ *
+ * @evidence requirements/editorial/rational-time-and-ranges.md#editorial-rational-time-ranges Preserves fractional frame rates as authored rational values instead of a lossy decimal proxy.
+ * @evidence specifications/editorial-render-and-delivery/rational-timeline-and-composition.md#spec-editorial-rational-timeline Defines the portable numerator and denominator consumed by timeline calculations.
+ */
+export interface IAutoMovieProductionFrameRate {
+  /** Positive integer numerator. */
+  numerator: number;
+  /** Positive integer denominator. */
+  denominator: number;
+}
+
+/**
  * Global frame and art-direction invariants for one production.
  *
  * @evidence requirements/production-design/scope-and-source-of-truth.md#production-design-source-ownership Defines the typed production-design root as authored project source rather than treating references or renders as design authority.
@@ -612,6 +625,11 @@ export interface IAutoMovieProductionDesign {
     height: number;
     /** Finite frames per second, strictly above zero. */
     fps: number;
+    /**
+     * Exact frame rate when `fps` is fractional. Integer legacy rates use an
+     * equivalent denominator of one when this field is omitted.
+     */
+    frameRate?: IAutoMovieProductionFrameRate;
     /** Output color space. */
     colorSpace: "srgb";
     /**

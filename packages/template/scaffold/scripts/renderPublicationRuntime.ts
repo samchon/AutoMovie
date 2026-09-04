@@ -512,31 +512,36 @@ export const createProductionRenderFinalizationRuntime = (props: {
           owned.set("captions.vtt", Buffer.from(plan.tracks.captions, "utf8"));
       } else if (deliverable.kind === "audio-mix") {
         const sound = await currentSound();
+        const audioEvidence = {
+          version: 2 as const,
+          plan: sound.plan,
+          analysis: sound.analysis,
+          tts: sound.tts,
+          audio: {
+            path: "audio.mp4",
+            mediaType: "audio/mp4" as const,
+            bytes: sound.audio.byteLength,
+            digest: digestAutoMovieBytes(sound.audio),
+          },
+          measurement: {
+            source: "pre-encode-pcm" as const,
+            algorithm: "automovie-production-sound-analysis-v1" as const,
+          },
+        };
         owned.set("audio.mp4", sound.audio);
         owned.set("waveform.png", sound.waveform);
         owned.set("spectrogram.png", sound.spectrogram);
         owned.set(
           "evidence.json",
-          Buffer.from(
-            `${JSON.stringify(
-              {
-                version: 1,
-                plan: sound.plan,
-                analysis: sound.analysis,
-                tts: sound.tts,
-              },
-              null,
-              2,
-            )}\n`,
-            "utf8",
-          ),
+          Buffer.from(`${JSON.stringify(audioEvidence, null, 2)}\n`, "utf8"),
         );
       } else {
         const timeline = readAutoMovieFilmTimeline(
           project,
           plan.compileFingerprint,
         );
-        const frame = sampleProductionRenderFrame(timeline, 0).layers.at(-1)!;
+        const sample = sampleProductionRenderFrame(timeline, 0);
+        const frame = sample.layers.at(-1)!;
         const captured = await renderHost.capture(
           productionRenderFrameCaptureInput({
             root,
@@ -545,7 +550,7 @@ export const createProductionRenderFinalizationRuntime = (props: {
             shot: frame.shot,
             sourceFrame: frame.sourceFrame,
             sourceFps: timeline.fps,
-            globalFrame: 0,
+            sample,
             pass: "beauty",
           }),
         );
@@ -723,7 +728,10 @@ export const createProductionRenderFinalizationRuntime = (props: {
     if (probe.kind === "png" || probe.kind === "sound-evidence") {
       if (
         probe.kind === "sound-evidence" &&
-        (probe.clippingSamples !== 0 || probe.eventAlignmentPassed === false)
+        (probe.evidence.analysis.clippingSamples !== 0 ||
+          probe.evidence.analysis.eventAlignment.some(
+            (event) => event.passed === false,
+          ))
       )
         throw new Error(
           "Sound evidence reports clipping or a semantic event outside its frame gate.",

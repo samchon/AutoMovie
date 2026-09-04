@@ -390,7 +390,7 @@ export const createProductionRenderChunkCaptureRuntime = (props: {
             shot: layer.shot,
             sourceFrame: layer.sourceFrame,
             sourceFps: plan.sourceFrameFormat.fps,
-            globalFrame: sample.globalFrame,
+            sample,
             pass: chunk.pass,
           }),
         );

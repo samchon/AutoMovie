@@ -1,6 +1,7 @@
 import { IAutoMovieVector3 } from "../geometry/IAutoMovieVector3";
 import {
   AutoMovieContentDigest,
+  IAutoMovieProductionFrameRate,
   IAutoMovieShotEventContract,
 } from "./IAutoMovieProductionDesign";
 
@@ -506,6 +507,11 @@ export interface IAutoMovieProductionSoundPlan {
    */
   fps: number;
   /**
+   * Exact frame rate when `fps` is fractional. Integer legacy rates use an
+   * equivalent denominator of one when this field is omitted.
+   */
+  frameRate?: IAutoMovieProductionFrameRate;
+  /**
    * Exact finished-film frame count.
    *
    * @evidence requirements/sound/sources-and-external-assets.md#sound-derived-source-closure Exposes `totalFrames` as the portable data boundary for the sound derived source closure requirement.
@@ -896,4 +902,35 @@ export interface IAutoMovieProductionSoundAnalysis {
     /** Whether observable energy lands within one production frame. */
     passed: boolean;
   }>;
+}
+
+/**
+ * Final encoded audio identity retained by sound evidence.
+ *
+ * @evidence requirements/sound/validation-and-delivery.md#sound-final-media-probe Binds the sound evidence to the exact final audio path, type, size, and bytes inspected for delivery.
+ * @evidence specifications/simulation-effects-and-sound/mix-stems-loudness-and-av-join.md#sound-delivery-stream-and-inventory Carries the final encoded audio inventory beside its plan and measurements.
+ */
+export interface IAutoMovieProductionSoundEvidenceAudio {
+  path: string;
+  mediaType: "audio/mp4";
+  bytes: number;
+  digest: AutoMovieContentDigest;
+}
+
+/**
+ * Complete deterministic sound evidence bound to current plans and bytes.
+ *
+ * @evidence requirements/sound/validation-and-delivery.md#sound-evidence-identity-freshness Requires final sound evidence to identify its current plan, analysis, synthesis receipts, encoded bytes, and measurement basis.
+ * @evidence specifications/simulation-effects-and-sound/validation-evidence-and-compatibility.md#sound-budget-and-audible-review Carries the complete measured evidence used by delivery validation rather than lossy aggregate counts.
+ */
+export interface IAutoMovieProductionSoundEvidence {
+  version: 2;
+  plan: IAutoMovieProductionSoundPlan;
+  analysis: IAutoMovieProductionSoundAnalysis;
+  tts: IAutoMovieProductionTtsReceipt[];
+  audio: IAutoMovieProductionSoundEvidenceAudio;
+  measurement: {
+    source: "pre-encode-pcm";
+    algorithm: "automovie-production-sound-analysis-v1";
+  };
 }

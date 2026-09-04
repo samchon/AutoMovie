@@ -8832,7 +8832,7 @@ const finalDeliverableDiagnostics = (
   }
   if (
     receipt === null ||
-    receipt.version !== 2 ||
+    receipt.version !== 3 ||
     receipt.manifestDigest !== manifestDigest
   )
     return [

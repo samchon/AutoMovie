@@ -3011,7 +3011,7 @@ export class AutoMovieProductionProject {
       }
     receiptFiles.sort((left, right) => compareCodeUnits(left.path, right.path));
     const receipt: IAutoMovieProductionRenderReceipt = {
-      version: 2,
+      version: 3,
       manifestDigest: digestAutoMovieBytes(Buffer.from(content, "utf8")),
       files: receiptFiles,
     };
@@ -3114,7 +3114,7 @@ export class AutoMovieProductionProject {
     receiptFiles.sort((left, right) => compareCodeUnits(left.path, right.path));
     const manifestContent = serializeJson(validation.data);
     const receiptContent = serializeJson({
-      version: 2,
+      version: 3,
       manifestDigest: digestAutoMovieBytes(
         Buffer.from(manifestContent, "utf8"),
       ),

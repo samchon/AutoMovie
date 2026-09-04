@@ -55,6 +55,7 @@ import {
   IAutoMovieWorldDesign,
 } from "./IAutoMovieProductionDesign";
 import type { IAutoMovieRenderBundleManifest } from "./IAutoMovieProductionOracle";
+import type { IAutoMovieProductionSoundEvidence } from "./IAutoMovieProductionSound";
 import type { IAutoMovieSubjectReviewTarget } from "./IAutoMovieSubjectReview";
 
 /**
@@ -1245,6 +1246,160 @@ export interface IAutoMovieProductionRenderManifest {
   deliverables: IAutoMovieProductionRenderedDeliverable[];
 }
 
+/** Decoded PNG color model. */
+export type AutoMovieProductionPngColor =
+  | "gray"
+  | "gray-alpha"
+  | "rgb"
+  | "rgba"
+  | "palette";
+
+/**
+ * Complete parser-observed PNG picture facts.
+ *
+ * @evidence requirements/delivery-and-accessibility/picture-color-and-image-sequences.md#delivery-picture-color-sequences Preserves the decoded raster, channel, alpha, color, aspect, and orientation facts required for final picture verification.
+ * @evidence specifications/editorial-render-and-delivery/delivery-profiles-time-and-picture.md#spec-delivery-picture-products Supplies the observed picture product compared fieldwise with the selected delivery profile.
+ */
+export interface IAutoMovieProductionPngPicture {
+  width: number;
+  height: number;
+  bitDepth: number;
+  color: AutoMovieProductionPngColor;
+  alpha: "none" | "straight";
+  interlace: "none" | "adam7";
+  colorSpace: "srgb" | "icc" | "gamma" | "unidentified";
+  pixelAspect:
+    | { kind: "square" }
+    | { kind: "explicit"; x: number; y: number; unit: 0 | 1 };
+  orientation: "upright" | "metadata-present";
+}
+
+/**
+ * One canonical cue parsed from final WebVTT bytes.
+ *
+ * @evidence requirements/delivery-and-accessibility/captions-subtitles-and-cues.md#delivery-cue-text-language Retains delivered cue identity, text, and exact millisecond boundaries for comparison with the current caption plan.
+ * @evidence specifications/editorial-render-and-delivery/delivery-audio-text-and-localization.md#spec-delivery-caption-cues Supplies the canonical delivered cue facts consumed by final caption verification.
+ */
+export interface IAutoMovieProductionWebVttCue {
+  id: string | null;
+  text: string;
+  startMilliseconds: number;
+  endMilliseconds: number;
+}
+
+/**
+ * Observed Opus sample-entry facts from final delivery bytes.
+ *
+ * @evidence requirements/delivery-and-accessibility/audio-streams-and-channels.md#delivery-audio-streams-channels Preserves the exact coded stream and channel facts used to validate a final audio deliverable.
+ * @evidence specifications/editorial-render-and-delivery/delivery-profiles-time-and-picture.md#spec-delivery-container-media-facts Carries parser-observed codec configuration for fieldwise comparison with the selected delivery profile.
+ */
+export interface IAutoMovieProductionOpusDescription {
+  kind: "opus";
+  version: number;
+  outputChannelCount: number;
+  preSkip: number;
+  inputSampleRate: number;
+  outputGainQ7_8: number;
+  channelMapping: {
+    family: number;
+    streamCount: number | null;
+    coupledCount: number | null;
+    mapping: number[];
+    channelOrder: string[] | null;
+  };
+}
+
+/**
+ * Parser-observed audio track and presentation facts.
+ *
+ * @evidence requirements/delivery-and-accessibility/audio-streams-and-channels.md#delivery-channel-layout Makes final channel layout and sample-clock identity inspectable from the published stream.
+ * @evidence specifications/simulation-effects-and-sound/mix-stems-loudness-and-av-join.md#sound-delivery-stream-and-inventory Binds the final audio inventory to its actual timebase, samples, and codec description.
+ */
+export interface IAutoMovieProductionAudioProbe {
+  kind: "audio";
+  container: "mp4";
+  codec: string;
+  runtimeSeconds: number;
+  channels: number;
+  sampleRate: number;
+  sampleCount: number;
+  primingSamples: number;
+  timebase: {
+    movieTimescale: number;
+    mediaTimescale: number;
+    movieDuration: number;
+    mediaDuration: number;
+  };
+  sampleEntry: IAutoMovieProductionOpusDescription;
+}
+
+/**
+ * Parser-observed video track, presentation, and picture facts.
+ *
+ * @evidence requirements/delivery-and-accessibility/containers-codecs-and-media-facts.md#delivery-container-codec-facts Retains the final container, coded-stream, timing, and presentation facts read from delivery bytes.
+ * @evidence specifications/editorial-render-and-delivery/delivery-profiles-time-and-picture.md#spec-delivery-container-media-facts Supplies the observed facts compared fieldwise with the selected delivery profile.
+ */
+export interface IAutoMovieProductionVideoProbe {
+  kind: "video";
+  container: "mp4";
+  codec: "h264";
+  width: number;
+  height: number;
+  runtimeSeconds: number;
+  frameCount: number;
+  fps: number;
+  brands: { major: string; compatible: string[] };
+  coded: { width: number; height: number };
+  trackDisplay: { width16_16: number; height16_16: number };
+  trackMatrix: [
+    number,
+    number,
+    number,
+    number,
+    number,
+    number,
+    number,
+    number,
+    number,
+  ];
+  pixelAspect:
+    | { kind: "implicit-square" }
+    | { kind: "explicit"; hSpacing: number; vSpacing: number };
+  presentation: {
+    movieTimescale: number;
+    mediaTimescale: number;
+    movieDuration: number;
+    mediaDuration: number;
+    edits: Array<{
+      segmentDuration: number;
+      mediaTime: number;
+      mediaRateInteger: number;
+      mediaRateFraction: number;
+    }>;
+  };
+  samples: {
+    count: number;
+    duration: number;
+    timescale: number;
+    firstDts: number;
+    lastDts: number;
+    firstCts: number;
+    lastCts: number;
+  };
+  color: {
+    container:
+      | {
+          kind: "nclx";
+          primaries: number;
+          transfer: number;
+          matrix: number;
+          fullRange: boolean;
+        }
+      | { kind: "absent" };
+    resolved: { kind: "srgb"; source: "container" } | { kind: "absent" };
+  };
+}
+
 /**
  * Parser-derived metadata for one renderer-owned output file.
  *
@@ -1259,42 +1414,18 @@ export type IAutoMovieProductionMediaProbe =
       width: number;
       /** Actual pixel height. */
       height: number;
+      /** Complete decoded picture identity. */
+      picture: IAutoMovieProductionPngPicture;
     }
+  | IAutoMovieProductionVideoProbe
+  | IAutoMovieProductionAudioProbe
   | {
-      /** Parsed ISO base-media video track. */
-      kind: "video";
-      /** Actual container family. */
-      container: "mp4";
-      /** Actual video codec family. */
-      codec: "h264";
-      /** Actual coded width. */
-      width: number;
-      /** Actual coded height. */
-      height: number;
-      /** Actual track duration in seconds. */
-      runtimeSeconds: number;
-      /** Actual video sample count. */
-      frameCount: number;
-      /** Actual constant frame rate. */
-      fps: number;
-    }
-  | {
-      /** Parsed ISO base-media audio track. */
-      kind: "audio";
-      /** Actual container family. */
-      container: "mp4";
-      /** Actual codec string reported by the container. */
-      codec: string;
-      /** Actual track duration in seconds. */
-      runtimeSeconds: number;
-      /** Actual audio channel count. */
-      channels: number;
-      /** Actual audio sample rate. */
-      sampleRate: number;
-      /** Number of non-empty resident coded packets. */
-      sampleCount: number;
-      /** Encoder priming discarded by the presentation timeline. */
-      primingSamples: number;
+      /** Parsed feature delivery with both picture and sound tracks. */
+      kind: "feature";
+      /** Final video track facts. */
+      video: IAutoMovieProductionVideoProbe;
+      /** Final audio track facts. */
+      audio: IAutoMovieProductionAudioProbe;
     }
   | {
       /** Parsed WebVTT text. */
@@ -1305,18 +1436,16 @@ export type IAutoMovieProductionMediaProbe =
       firstCueSeconds: number;
       /** Latest parsed cue end in seconds. */
       lastCueSeconds: number;
+      /** Canonical cue sequence in delivery order. */
+      cues: IAutoMovieProductionWebVttCue[];
+      /** Strict UTF-8 canonical WebVTT presentation. */
+      text: string;
     }
   | {
       /** Parsed deterministic sound evidence JSON. */
       kind: "sound-evidence";
-      /** Number of semantic events in the sound plan. */
-      eventCount: number;
-      /** Number of locally synthesized dialogue receipts. */
-      dialogueCount: number;
-      /** Number of samples outside [-1, 1] in the final PCM. */
-      clippingSamples: number;
-      /** Whether every semantic event passed the frame-alignment gate. */
-      eventAlignmentPassed: boolean;
+      /** Complete evidence bound to the current plan, PCM analysis, and audio bytes. */
+      evidence: IAutoMovieProductionSoundEvidence;
     };
 
 /**
@@ -1355,7 +1484,7 @@ export interface IAutoMovieProductionRenderReceipt {
    * @evidence requirements/motion/external-motion-inputs.md#motion-external-adoption-receipt Exposes `version` as the portable data boundary for the motion external adoption receipt requirement.
    * @evidence specifications/performance-motion-and-staging/motion-sampling-and-composition.md#performance-motion-external-adoption-receipt Types `version` for the performance motion external adoption receipt system contract.
    */
-  version: 2;
+  version: 3;
   /**
    * Exact digest of the active production's tracked render manifest.
    *
