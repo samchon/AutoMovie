@@ -1,4 +1,5 @@
 import { createRequire } from "node:module";
+import path from "node:path";
 
 import {
   type IRuntimePackageSnapshot,
@@ -163,12 +164,34 @@ export const loadResidentRuntimePackage = <Module>(props: {
     moduleClosure: true,
     packageName: props.packageName,
   });
+  const cachePaths = snapshot.closure.map((entry) =>
+    path.resolve(snapshot.root, entry.path),
+  );
+  let admitted: ReadonlyArray<readonly [string, NodeJS.Module]> | undefined;
+  const observeCache = () => {
+    const current = cachePaths.flatMap((entry) => {
+      const module = residentRequire.cache[entry];
+      return module === undefined ? [] : ([[entry, module]] as const);
+    });
+    if (current.length === 0) return undefined;
+    if (
+      admitted !== undefined &&
+      current.length === admitted.length &&
+      current.every(
+        ([entry, module], index) =>
+          admitted![index]![0] === entry && admitted[index]![1] === module,
+      )
+    )
+      return admitted;
+    admitted = current;
+    return admitted;
+  };
   return loadRuntimePackageGeneration({
     key: `${snapshot.package}\0${snapshot.entry}`,
     generation: snapshot.fingerprint,
     snapshot,
     assertCurrent: () => assertRuntimePackageSnapshotCurrent(snapshot),
-    observeCache: () => residentRequire.cache[snapshot.entry],
+    observeCache,
     load: () => residentRequire(snapshot.entry) as Module,
   });
 };
