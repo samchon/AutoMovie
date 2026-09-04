@@ -77,7 +77,7 @@ export const packWorkspaceDependencies: IPackWorkspaceDependencies = {
   write: (message) => process.stdout.write(message),
 };
 
-/** Read every direct workspace package manifest before archive planning. */
+/** Read every direct `packages/*` manifest before archive planning. */
 const workspacePackageManifests = (): IWorkspacePackageManifest[] =>
   fs
     .readdirSync(path.join(ROOT, "packages"), { withFileTypes: true })
