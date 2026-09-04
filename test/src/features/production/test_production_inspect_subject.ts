@@ -578,6 +578,14 @@ export const test_production_inspect_subject = async (): Promise<void> => {
     });
     fs.writeFileSync(receiptPath, "{}", "utf8");
     const malformedRecord = readBack();
+    fs.writeFileSync(
+      receiptPath,
+      receiptBytes
+        .toString("utf8")
+        .replace('"version": 2,', '"version": 2,\n  "version": 2,'),
+      "utf8",
+    );
+    const duplicateRecord = readBack();
     fs.writeFileSync(receiptPath, Buffer.from([0xff]));
     const nonUtf8Record = readBack();
     fs.writeFileSync(receiptPath, receiptBytes);
@@ -599,6 +607,7 @@ export const test_production_inspect_subject = async (): Promise<void> => {
         foreignRecord: foreignRecord.observations.length,
         absentRecord: absentRecord.observations.length,
         malformedRecord: malformedRecord.observations.length,
+        duplicateRecord: duplicateRecord.observations.length,
         nonUtf8Record: nonUtf8Record.observations.length,
       },
       {
@@ -617,6 +626,7 @@ export const test_production_inspect_subject = async (): Promise<void> => {
         foreignRecord: dug.plan.length - 1,
         absentRecord: dug.plan.length - 1,
         malformedRecord: dug.plan.length - 1,
+        duplicateRecord: dug.plan.length - 1,
         nonUtf8Record: dug.plan.length - 1,
       },
     );
