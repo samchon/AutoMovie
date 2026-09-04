@@ -13,7 +13,9 @@ import type { IAutoMovieProductionEvidenceSourceOwnerBinding } from "@automovie/
  * @author Samchon
  */
 export const resolveAutoMovieSourceOwnerBinding = (props: {
-  bindings: readonly IAutoMovieProductionEvidenceSourceOwnerBinding[];
+  bindings:
+    | readonly IAutoMovieProductionEvidenceSourceOwnerBinding[]
+    | undefined;
   branch: string;
   sourcePath: string;
   exportName: string;
@@ -22,7 +24,7 @@ export const resolveAutoMovieSourceOwnerBinding = (props: {
   sourceDigest: string;
   requireReviewed: boolean;
 }) => {
-  const candidates = props.bindings.filter(
+  const candidates = (props.bindings ?? []).filter(
     (binding) =>
       binding.branch === props.branch &&
       binding.sourcePath === props.sourcePath &&

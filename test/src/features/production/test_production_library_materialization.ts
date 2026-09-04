@@ -10,7 +10,8 @@ import { rectangularBuilding } from "../internal/envelopeFixtures";
 import { namedFacts } from "../internal/predicates";
 import {
   LIBRARY_ANCHOR,
-  LIBRARY_MODEL,
+  LIBRARY_MODEL_OWNER,
+  LIBRARY_MODEL_SOURCE,
   LIBRARY_OWNER,
   LIBRARY_SECOND_ANCHOR,
   LIBRARY_SECOND_OWNER,
@@ -18,6 +19,7 @@ import {
   libraryAuthoring,
   libraryFixture,
   libraryModelLiteral,
+  libraryModelSourceModule,
   librarySourceModule,
 } from "./libraryFixtures";
 
@@ -27,13 +29,18 @@ const run = (props: {
   materialize: boolean;
   scope?: "design" | "source" | "review" | "final";
   anchors?: readonly string[];
+  models?: boolean;
 }): IAutoMovieCompileProjectOutput => {
   const project = props.materialize
     ? AutoMovieProductionProject.open(props.root)
     : AutoMovieProductionProject.openReadOnly(props.root);
   const compiler = new AutoMovieProductionCompiler(
     project,
-    libraryAuthoring({ root: project.root, anchors: props.anchors }),
+    libraryAuthoring({
+      root: project.root,
+      anchors: props.anchors,
+      models: props.models,
+    }),
   );
   const input = { scope: props.scope ?? "source" } as const;
   return props.materialize ? compiler.compile(input) : compiler.lint(input);
@@ -115,11 +122,6 @@ export const test_production_library_materialization = (): void => {
               .join(",") ===
             [
               "library/environments/hall-house.json:created",
-              // The owner delivers one model beside its building, so the compile
-              // publishes it too. A library that returned a model and wrote
-              // only its buildings would leave the model unreachable to every
-              // consumer that reads the published index.
-              "models/hall-bench.json:created",
               "library/index.json:created",
             ]
               .sort((left, right) => (left < right ? -1 : left > right ? 1 : 0))
@@ -187,10 +189,7 @@ export const test_production_library_materialization = (): void => {
             source: LIBRARY_SOURCE,
             export: "hall",
             environments: ["hall-house"],
-            // The owner delivers one model beside its building, and the
-            // published index names it: a consumer reading the index is how a
-            // model becomes reachable at all.
-            models: [LIBRARY_MODEL],
+            models: [],
             digested: true,
           },
         ],
@@ -255,7 +254,6 @@ export const test_production_library_materialization = (): void => {
         published: [
           "library/environments/hall-house.json",
           "library/index.json",
-          "models/" + LIBRARY_MODEL + ".json",
         ],
       },
     );
@@ -325,24 +323,34 @@ export const test_production_library_materialization = (): void => {
     [LIBRARY_SOURCE]: "export const helper = { at: 1 };\n",
   });
   const withModel = libraryFixture({
-    [LIBRARY_SOURCE]: librarySourceModule({
+    [LIBRARY_MODEL_SOURCE]: libraryModelSourceModule({
       models: `[${libraryModelLiteral("hall-box")}]`,
     }),
   });
   const duplicateModel = libraryFixture({
-    [LIBRARY_SOURCE]: librarySourceModule({
+    [LIBRARY_MODEL_SOURCE]: `${libraryModelSourceModule({
       models: `[${libraryModelLiteral("hall-box")}]`,
-      second: {
-        exportName: "annex",
-        design: LIBRARY_SECOND_OWNER,
-        environmentId: "hall-annex",
-        models: `[${libraryModelLiteral("hall-box")}]`,
-      },
-    }),
+    })}\n${libraryModelSourceModule({
+      exportName: "again",
+      models: `[${libraryModelLiteral("hall-box")}]`,
+    }).replace(
+      'import type { IAutoMovieLibrarySourceOwner } from "@automovie/interface";\n\n',
+      "",
+    )}`,
   });
   const invalidModel = libraryFixture({
-    [LIBRARY_SOURCE]: librarySourceModule({
+    [LIBRARY_MODEL_SOURCE]: libraryModelSourceModule({
       models: `[${libraryModelLiteral(" ")}]`,
+    }),
+  });
+  const swappedOwner = libraryFixture({
+    [LIBRARY_SOURCE]: librarySourceModule({
+      design: LIBRARY_SECOND_OWNER,
+      second: {
+        exportName: "annex",
+        design: LIBRARY_OWNER,
+        environmentId: "hall-annex",
+      },
     }),
   });
   // Every other refusal names a field inside the contribution. This one is
@@ -466,17 +474,53 @@ export const test_production_library_materialization = (): void => {
         "and blocks from review on": true,
       },
     );
-    const published = run({ root: withModel.root, materialize: true });
+    const published = run({
+      root: withModel.root,
+      materialize: true,
+      models: true,
+    });
     const collidedModel = run({
       root: duplicateModel.root,
       materialize: false,
+      models: true,
+    });
+    const rejectedModel = run({
+      root: invalidModel.root,
+      materialize: false,
+      models: true,
+    });
+    const swappedAuthoring = libraryAuthoring({
+      root: swappedOwner.root,
       anchors: [LIBRARY_ANCHOR, LIBRARY_SECOND_ANCHOR],
     });
-    const rejectedModel = run({ root: invalidModel.root, materialize: false });
+    const swapped = new AutoMovieProductionCompiler(
+      AutoMovieProductionProject.openReadOnly(swappedOwner.root),
+      {
+        ...swappedAuthoring,
+        sourceOwners: swappedAuthoring.sourceOwners.map((binding) => ({
+          ...binding,
+          targetPath: LIBRARY_DESIGN,
+          targetAnchor:
+            binding.exportName === "hall"
+              ? LIBRARY_ANCHOR
+              : LIBRARY_SECOND_ANCHOR,
+        })),
+      },
+    ).lint({ scope: "source" });
 
     TestValidator.equals(
       "a published model lands where every model lands and is owned once",
       namedFacts([
+        [
+          "two valid owners swapped between exports are refused",
+          () =>
+            swapped.success === false &&
+            swapped.diagnostics.some(
+              (diagnostic) =>
+                diagnostic.code === "source-owner-mismatch" &&
+                diagnostic.message.includes("not runtime owner"),
+            ),
+        ],
         [
           "the model is written under the compiled model namespace",
           () =>
@@ -488,16 +532,15 @@ export const test_production_library_materialization = (): void => {
           () =>
             published.materialized
               .find((file) => file.path === "models/hall-box.json")
-              ?.sourceTargets.join(",") === `library:spaces:${LIBRARY_OWNER}`,
+              ?.sourceTargets.join(",") ===
+            `library:models:${LIBRARY_MODEL_OWNER}`,
         ],
         [
-          "two owners publishing one model id is refused",
+          "one model owner registered twice is refused",
           () =>
             collidedModel.success === false &&
             collidedModel.diagnostics.some((diagnostic) =>
-              diagnostic.message.includes(
-                'Library model "hall-box" is published by both',
-              ),
+              diagnostic.message.includes("is registered by both"),
             ),
         ],
         [
@@ -524,14 +567,15 @@ export const test_production_library_materialization = (): void => {
             rejectedModel.diagnostics.some(
               (diagnostic) =>
                 diagnostic.code === "source-scene-content-invalid" &&
-                diagnostic.path === LIBRARY_SOURCE,
+                diagnostic.path === LIBRARY_MODEL_SOURCE,
             ),
         ],
       ]),
       {
+        "two valid owners swapped between exports are refused": true,
         "the model is written under the compiled model namespace": true,
         "attributed to the owner whose export returned it": true,
-        "two owners publishing one model id is refused": true,
+        "one model owner registered twice is refused": true,
         "a contribution that is not a contribution is refused at its own shape": true,
         "and a model the engine rejects blocks the compile": true,
       },
@@ -546,6 +590,7 @@ export const test_production_library_materialization = (): void => {
     withModel.dispose();
     duplicateModel.dispose();
     invalidModel.dispose();
+    swappedOwner.dispose();
   }
 
   // A library owner's source is one module only because every fixture so far

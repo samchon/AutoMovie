@@ -304,6 +304,7 @@ export const AUTOMOVIE_DIAGNOSTIC_CODES = [
   "source-motion-adoption-invalid",
   "source-motion-retarget-invalid",
   "source-nondeterministic",
+  "source-owner-mismatch",
   "source-path-missing",
   "source-path-outside-root",
   "source-registration-mismatch",
@@ -3550,6 +3551,31 @@ export interface IAutoMovieShotSourceOutput {
  * @evidence specifications/authoring-and-authority/source-authority-and-derivation.md#spec-authoring-source-derivation-state Types `IAutoMovieCompiledShotSource` for the spec authoring source derivation state system contract.
  */
 export interface IAutoMovieCompiledShotSource extends IAutoMovieShotSourceOutput {
+  /**
+   * Exact graph-selected source export and authored H3 carried into the
+   * materialized shot. Omitted only for legacy source-scope callers that did
+   * not supply authoring evidence; review and final never publish without it.
+   *
+   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-source-result-link Keeps the executed source revision and exact authored target together in the compiled result.
+   * @evidence specifications/authoring-and-authority/source-authority-and-derivation.md#spec-authoring-derivation-output-lineage Carries the resolved runtime and target identity into the derived shot artifact.
+   */
+  sourceOwner?: {
+    branch: string;
+    path: string;
+    export: string;
+    digest: AutoMovieContentDigest;
+    target: string;
+  };
+  /**
+   * Reviewed non-entry exports bound to the same H3, retained as acceptance
+   * attribution without executing them as shot builders.
+   */
+  acceptanceSources?: Array<{
+    path: string;
+    export: string;
+    digest: AutoMovieContentDigest;
+    target: string;
+  }>;
   /**
    * Models required by this shot.
    *

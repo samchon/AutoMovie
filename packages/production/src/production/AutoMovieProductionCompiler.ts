@@ -139,6 +139,8 @@ import { inspectAutoMovieDerivedArtifacts } from "./derivedArtifacts";
 import { designReferenceDiagnostics } from "./designReferenceDiagnostics";
 import { filmGrammarDiagnostics } from "./filmGrammarDiagnostics";
 import { readAutoMovieFilmTimeline } from "./filmTimeline";
+import { autoMovieLibraryArtifactSourceTargets } from "./libraryArtifactTargets";
+import { autoMovieLibraryContributionDiagnostics } from "./libraryContributionContract";
 import { libraryReviewEvidenceConsumerDiagnostics } from "./libraryReviewEvidenceConsumer";
 import {
   AUTOMOVIE_SANDBOX_MODULE_EXPORTS,
@@ -182,6 +184,8 @@ import {
   autoMovieSourceContentFinding,
   autoMovieValidationFindings,
 } from "./sourceContentDiagnostics";
+import { resolveAutoMovieSourceOwnerBinding } from "./sourceOwnerBinding";
+import { createAutoMovieSourceRuntimeModelRegistry } from "./sourceRuntimeModelRegistry";
 import { storySyncDiagnostics } from "./storySyncDiagnostics";
 import {
   IAutoMovieProductionDesignGraph,
@@ -325,6 +329,14 @@ export class AutoMovieProductionCompiler {
         normalizeAutoMovieSource(this.project.readSource(relative)),
       ).toString("utf8");
     const sourceFields: IAutoMovieFingerprintField[] = [];
+    if (this.authoringEvidence !== undefined)
+      sourceFields.push({
+        role: "source:owner-bindings",
+        kind: "application/json",
+        payload: canonicalAutoMovieJsonBytes(
+          this.authoringEvidence.sourceOwners ?? [],
+        ),
+      });
     const contentFields: IAutoMovieFingerprintField[] = [];
     let contentInputs: IAutoMovieProductionContentInput[] | undefined;
     let declaredAssets: string[] = [];
@@ -520,6 +532,30 @@ export class AutoMovieProductionCompiler {
         const normalized = shotSources.get(entry.id);
         let closing: IAutoMovieBeatEndState | null = null;
         if (normalized !== undefined) {
+          const requireReviewed =
+            input.scope === "review" || input.scope === "final";
+          const owner =
+            this.authoringEvidence !== undefined || requireReviewed
+              ? resolveAutoMovieSourceOwnerBinding({
+                  bindings: this.authoringEvidence?.sourceOwners,
+                  branch: "shots",
+                  sourcePath: entry.contract.source.module,
+                  exportName: entry.contract.source.export,
+                  sourceDigest: digestAutoMovieBytes(normalized),
+                  requireReviewed,
+                })
+              : null;
+          if (owner !== null && owner.success === false) {
+            diagnostics.push({
+              code: "source-owner-mismatch",
+              category: "error",
+              phase: "source",
+              target: entry.id,
+              path: entry.contract.source.module,
+              message: owner.message,
+            });
+            continue;
+          }
           const previous =
             previousVideo !== null &&
             entry.placement !== null &&
@@ -588,7 +624,45 @@ export class AutoMovieProductionCompiler {
               ...realized.diagnostics,
             ];
             diagnostics.push(...postDiagnostics);
-            compiled.set(entry.id, materialized.value);
+            const binding = owner?.success === true ? owner.binding : null;
+            const target =
+              binding === null
+                ? null
+                : `${binding.targetPath}#${binding.targetAnchor}`;
+            compiled.set(entry.id, {
+              ...materialized.value,
+              ...(binding === null
+                ? {}
+                : {
+                    sourceOwner: {
+                      branch: binding.branch,
+                      path: binding.sourcePath,
+                      export: binding.exportName,
+                      digest: binding.sourceDigest,
+                      target: target!,
+                    },
+                    acceptanceSources: (
+                      this.authoringEvidence?.sourceOwners ?? []
+                    )
+                      .filter(
+                        (candidate) =>
+                          candidate.branch === "shots" &&
+                          candidate.reviewed &&
+                          `${candidate.targetPath}#${candidate.targetAnchor}` ===
+                            target &&
+                          !(
+                            candidate.sourcePath === binding.sourcePath &&
+                            candidate.exportName === binding.exportName
+                          ),
+                      )
+                      .map((candidate) => ({
+                        path: candidate.sourcePath,
+                        export: candidate.exportName,
+                        digest: candidate.sourceDigest,
+                        target: target!,
+                      })),
+                  }),
+            });
             for (const conversion of result.conversions)
               externalMotionConversions.set(conversion.adoption, conversion);
             realizations.set(entry.id, realized.realization);
@@ -1077,14 +1151,18 @@ export class AutoMovieProductionCompiler {
     // building nobody asked for, and a review that never charges it is exactly
     // how an unreviewed artifact ships.
     const units = new Map<string, IAutoMovieLibraryBuildContext>();
+    const sourceBranchByDesign = new Map<string, string>();
     for (const owner of authoring.designOwners)
-      for (const unit of owner.units)
-        units.set(`${owner.path}#${unit.anchor}`, {
+      for (const unit of owner.units) {
+        const address = `${owner.path}#${unit.anchor}`;
+        units.set(address, {
           production: this.project.productionId,
           branch: owner.branch,
           design: owner.path,
           anchor: unit.anchor,
         });
+        sourceBranchByDesign.set(address, owner.sourceBinding?.branch ?? "");
+      }
 
     const results: IAutoMovieMaterializedLibraryResult[] = [];
     const registeredBy = new Map<string, string>();
@@ -1112,11 +1190,23 @@ export class AutoMovieProductionCompiler {
           });
         }
         if (text === null) continue;
+        const sourceDigest = digestAutoMovieBytes(Buffer.from(text, "utf8"));
         const compiled = compileLibrarySource({
           path: source,
           source: text,
           readSource: (relative) => this.readLibrarySource(relative),
           context: (design) => units.get(design) ?? null,
+          admit: (exportName, design) =>
+            resolveAutoMovieSourceOwnerBinding({
+              bindings: authoring.sourceOwners,
+              branch: sourceBranchByDesign.get(design) ?? "",
+              sourcePath: source,
+              exportName,
+              owner: design,
+              sourceDigest,
+              requireReviewed:
+                input.scope === "review" || input.scope === "final",
+            }),
         });
         diagnostics.push(...compiled.diagnostics);
         for (const registration of compiled.registrations) {
@@ -1212,7 +1302,10 @@ export class AutoMovieProductionCompiler {
               path: file,
               owner: "compiler" as const,
               digest: digestAutoMovieBytes(bytes),
-              sourceTargets: libraryTargetsOf(file, publication.index),
+              sourceTargets: autoMovieLibraryArtifactSourceTargets(
+                file,
+                publication.index,
+              ),
             }))
             .sort((left, right) => compareCodeUnits(left.path, right.path));
     const manifest: IAutoMovieGeneratedManifest | null =
@@ -1366,6 +1459,7 @@ export class AutoMovieProductionCompiler {
           manifest: authoring.manifest,
           designBranches: authoring.designBranches,
           designOwners: authoring.designOwners,
+          sourceOwners: authoring.sourceOwners,
         }),
       },
     ];
@@ -2833,7 +2927,7 @@ const compileShotSource = (
       // validator, and be dropped here without a word.
       objectMotions: shotProgram.objectMotions,
       props: shotProgram.props,
-      models: Object.values(sourceRuntime.runtimeModels),
+      models: sourceRuntime.models,
       previous: props.previous ?? undefined,
     },
   });
@@ -2930,6 +3024,9 @@ const resolveExternalMotionClips = (props: {
   const clips: IAutoMovieMotion[] = [];
   const conversions: ICompilerExternalMotionConversionDraft[] = [];
   const diagnostics: IAutoMovieDiagnostic[] = [];
+  const modelRegistry = createAutoMovieSourceRuntimeModelRegistry(
+    props.runtimeModels,
+  );
   const authoredClipIds = new Set(
     (props.program.clips ?? []).map((clip) => clip.id),
   );
@@ -2950,7 +3047,7 @@ const resolveExternalMotionClips = (props: {
       (candidate) => candidate.node === declaration.actor,
     );
     const targetModel =
-      actor === undefined ? undefined : props.runtimeModels[actor.model];
+      actor === undefined ? undefined : modelRegistry.resolve(actor.model);
     const targetSkeleton = targetModel?.skeleton ?? null;
     if (actor === undefined || targetSkeleton === null) {
       diagnostics.push({
@@ -3596,6 +3693,7 @@ const boundFolds = (
 
 interface ISourceRuntime {
   runtimeModels: Readonly<Record<string, IAutoMovieModel>>;
+  models: IAutoMovieModel[];
   authoredModels: IAutoMovieModel[];
   diagnostics: IAutoMovieDiagnostic[];
 }
@@ -3610,12 +3708,12 @@ const sourceRuntimeOf = (props: {
   const diagnostics: IAutoMovieDiagnostic[] = [];
   const authoredModels: IAutoMovieModel[] = [];
   const authoredDigests = new Map<string, AutoMovieContentDigest>();
-  const runtimeModels: Record<string, IAutoMovieModel> = {
-    ...props.runtimeModels,
-  };
+  const registry = createAutoMovieSourceRuntimeModelRegistry(
+    props.runtimeModels,
+  );
   const runtimeIds = new Set([
-    ...Object.keys(props.runtimeModels),
-    ...Object.values(props.runtimeModels).map((model) => model.id),
+    ...registry.keys(),
+    ...registry.values().map((model) => model.id),
   ]);
 
   const report = (message: string): void => {
@@ -3679,12 +3777,7 @@ const sourceRuntimeOf = (props: {
           `${modelPath}.origin is "${model.origin}". Shot source may create generated geometry only; register imported asset bytes in the production model registry and cite that runtime id.`,
         );
     } else {
-      const registered = runtimeIds.has(modelRef)
-        ? (props.runtimeModels[modelRef] ??
-          Object.values(props.runtimeModels).find(
-            (candidate) => candidate.id === modelRef,
-          ))
-        : undefined;
+      const registered = registry.resolve(modelRef);
       if (registered === undefined)
         report(
           `${modelPath} cites modelRef "${modelRef}", which does not resolve to a compiler-owned runtime model. Register the asset or model recipe, or drop the reference.`,
@@ -3727,7 +3820,7 @@ const sourceRuntimeOf = (props: {
     )
       return;
     authoredModels.push(model);
-    runtimeModels[model.id] = model;
+    registry.define(model.id, model);
   };
 
   (props.program.models ?? []).forEach((model, index) =>
@@ -3752,7 +3845,7 @@ const sourceRuntimeOf = (props: {
       acceptModel(model, `${environmentPath}.models[${modelIndex}]`),
     );
     environment.modelReferences.forEach((id, referenceIndex) => {
-      if (!runtimeIds.has(id))
+      if (registry.resolve(id) === undefined)
         report(
           `${environmentPath}.modelReferences[${referenceIndex}] "${id}" does not resolve to a compiler-owned runtime model. Register the asset/model recipe or remove the reference.`,
         );
@@ -3794,8 +3887,8 @@ const sourceRuntimeOf = (props: {
     );
 
   const available = new Set([
-    ...Object.keys(runtimeModels),
-    ...Object.values(runtimeModels).map((model) => model.id),
+    ...registry.keys(),
+    ...registry.values().map((model) => model.id),
   ]);
   (props.program.stage.set ?? []).forEach((piece, index) => {
     if (!available.has(piece.model))
@@ -3804,7 +3897,12 @@ const sourceRuntimeOf = (props: {
       );
   });
 
-  return { runtimeModels, authoredModels, diagnostics };
+  return {
+    runtimeModels: registry.record,
+    models: registry.values(),
+    authoredModels,
+    diagnostics,
+  };
 };
 
 const contractOfRegistration = (
@@ -3831,13 +3929,15 @@ const actorRuntimeOf = (
   const diagnostics: IAutoMovieDiagnostic[] = [];
   const actors = new Map<string, IAutoMovieActorContext>();
   const models = new Map<string, IAutoMovieModel>();
+  const modelRegistry =
+    createAutoMovieSourceRuntimeModelRegistry(runtimeModels);
   const stageActors = new Map(
     program.stage.actors.map((actor) => [actor.node, actor]),
   );
   program.actors.forEach((actor, index) => {
     const path = `$program.actors[${index}]`;
     const staged = stageActors.get(actor.node);
-    const model = runtimeModels[actor.model];
+    const model = modelRegistry.resolve(actor.model);
     const gaitNames = new Set<string>();
     const gaits =
       model?.profiles
@@ -4283,25 +4383,6 @@ const compileDeterministicSource = <T>(
  * the environment or model inside it, so the index the same publication just
  * produced is what says whose it is; nothing has to be parsed out of a path.
  */
-const libraryTargetsOf = (
-  file: string,
-  index: IAutoMovieMaterializedLibrary,
-): string[] => {
-  for (const owner of index.owners) {
-    const target = `library:${owner.branch}:${owner.owner}`;
-    for (const environment of owner.environments)
-      if (
-        file ===
-        `library/environments/${encodeAutoMoviePathSegment(environment)}.json`
-      )
-        return [target];
-    for (const model of owner.models)
-      if (file === `models/${encodeAutoMoviePathSegment(model)}.json`)
-        return [target];
-  }
-  return ["library"];
-};
-
 /** One owner registration a library source module exported and returned. */
 interface ICompiledLibraryOwnerRegistration {
   /** Named export the registration was found under. */
@@ -4386,6 +4467,11 @@ const compileLibrarySource = (props: {
   readSource: (relativePath: string) => string;
   /** Build context for an address the active authoring population owns. */
   context: (design: string) => IAutoMovieLibraryBuildContext | null;
+  /** Admit the exact graph-selected owner edge before invoking build(). */
+  admit: (
+    exportName: string,
+    design: string,
+  ) => ReturnType<typeof resolveAutoMovieSourceOwnerBinding>;
 }): {
   registrations: ICompiledLibraryOwnerRegistration[];
   diagnostics: IAutoMovieDiagnostic[];
@@ -4427,6 +4513,18 @@ const compileLibrarySource = (props: {
         });
         continue;
       }
+      const admission = props.admit(entry.name, entry.design);
+      if (admission.success === false) {
+        diagnostics.push({
+          code: "source-owner-mismatch",
+          category: "error",
+          phase: "source",
+          target: `${target}:${entry.name}`,
+          path: props.path,
+          message: admission.message,
+        });
+        continue;
+      }
       sandbox.__automovieContextJson = JSON.stringify(context);
       sandbox.__automovieExportName = entry.name;
       new vm.Script(LIBRARY_INVOCATION, {
@@ -4461,6 +4559,24 @@ const compileLibrarySource = (props: {
           });
         continue;
       }
+      const contribution = {
+        ...validation.data,
+        contexts: validation.data.contexts ?? [],
+      };
+      const contributionDiagnostics = autoMovieLibraryContributionDiagnostics(
+        context.branch,
+        contribution,
+      );
+      for (const message of contributionDiagnostics)
+        diagnostics.push({
+          code: "source-export-invalid",
+          category: "error",
+          phase: "source",
+          target: `${target}:${entry.name}`,
+          path: props.path,
+          message,
+        });
+      if (contributionDiagnostics.length !== 0) continue;
       registrations.push({
         export: entry.name,
         design: entry.design,
@@ -4469,10 +4585,7 @@ const compileLibrarySource = (props: {
         // existed still satisfies the shape; every reader after this point is
         // owed a list, and three of them were each deciding that for
         // themselves.
-        contribution: {
-          ...validation.data,
-          contexts: validation.data.contexts ?? [],
-        },
+        contribution,
       });
     }
   } catch (error) {
