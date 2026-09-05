@@ -89,8 +89,10 @@ export const resolveProductionPngProfile = (props: {
 export const probeProductionPngPicture = (
   bytes: Uint8Array,
 ): IAutoMovieProductionPngPicture => {
-  residentPngJs().PNG.sync.read(Buffer.from(bytes));
+  // The chunk walk names every PNG datastream refusal before the decoder can
+  // answer a foreign byte stream with its own unnamed signature error.
   const chunks = parsePngChunks(bytes);
+  residentPngJs().PNG.sync.read(Buffer.from(bytes));
   if (chunks[0]?.type !== "IHDR" || chunks[0].data.length !== 13)
     throw new Error("PNG datastream lacks one leading 13-byte IHDR chunk.");
   const header = chunks[0].data;

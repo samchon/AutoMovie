@@ -294,6 +294,14 @@ export const assertProductionVideoProfile = (props: {
   actual: IAutoMovieProductionVideoProbe;
 }): void => {
   const { expected, actual } = props;
+  // The sample clock is judged by name before any rate is derived from it, so
+  // a zero duration or timescale is refused as that field rather than as a
+  // frame-rate arithmetic failure.
+  const positiveClock = (value: number): boolean =>
+    Number.isSafeInteger(value) && value > 0;
+  const clockValid =
+    positiveClock(actual.samples.timescale) &&
+    positiveClock(actual.samples.duration);
   const actualRate = {
     numerator: actual.samples.timescale,
     denominator: actual.samples.duration,
@@ -322,8 +330,15 @@ export const assertProductionVideoProfile = (props: {
       JSON.stringify(actual.trackMatrix),
     ],
     ["samples.count", actual.frameCount, actual.samples.count],
-    ["samples.duration", true, actual.samples.duration > 0],
-    ["samples.timescale", true, actual.samples.timescale > 0],
+    ["samples.duration", true, positiveClock(actual.samples.duration)],
+    ["samples.timescale", true, positiveClock(actual.samples.timescale)],
+    [
+      "frameRate",
+      true,
+      clockValid &&
+        equalProductionFrameRates(expected.frameRate, actualRate) &&
+        equalProductionFrameRates(actual.frameRate, actualRate),
+    ],
     ["samples.firstDts", 0, actual.samples.firstDts],
     [
       "samples.lastDts",
@@ -370,12 +385,6 @@ export const assertProductionVideoProfile = (props: {
       true,
       actual.brands.compatible.includes(brand),
     ]);
-  comparisons.push([
-    "frameRate",
-    true,
-    equalProductionFrameRates(expected.frameRate, actualRate) &&
-      equalProductionFrameRates(actual.frameRate, actualRate),
-  ]);
   if (actual.pixelAspect.kind === "explicit")
     comparisons.push([
       "pixelAspect",

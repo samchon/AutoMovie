@@ -342,6 +342,7 @@ export const conformProductionVisualDeliveryVideoMp4 = (props: {
       return {
         ...deterministic,
         samples,
+        decodeStart: samples[0]!.dts,
         presentationStart: samples.reduce(
           (minimum, sample) => Math.min(minimum, sample.cts),
           samples[0]!.cts,
@@ -498,14 +499,6 @@ export const assembleProductionChunkVideoMp4 = (props: {
   const frameRate = resolveProductionFrameRate(props.frameFormat);
   for (const bytes of props.chunks) {
     const clip = parseProductionRenditionClip(bytes, `Render chunk ${index}`);
-    assertProductionVideoProfile({
-      expected: resolveProductionVideoProfile({
-        width: props.frameFormat.width,
-        height: props.frameFormat.height,
-        frameRate,
-      }),
-      actual: clip.probe,
-    });
     const description = sampleDescription(clip.samples[0]!);
     reference ??= {
       description,
@@ -526,6 +519,16 @@ export const assembleProductionChunkVideoMp4 = (props: {
       throw new Error(
         `Render chunk ${index} does not share the assembled raster, rational frame clock, and H.264 decoder configuration.`,
       );
+    // The chunk is attributed by index above; only then does the generic
+    // delivery profile judge its container facts.
+    assertProductionVideoProfile({
+      expected: resolveProductionVideoProfile({
+        width: props.frameFormat.width,
+        height: props.frameFormat.height,
+        frameRate,
+      }),
+      actual: clip.probe,
+    });
     ++index;
     if (opening === undefined) {
       opening = { bytes, clip };
@@ -591,15 +594,12 @@ export const assertProductionRenditionClipDelivery = (props: {
     `Repaint clip "${props.shot}"`,
   );
   const frameRate = resolveProductionFrameRate(props);
-  assertProductionVideoProfile({
-    expected: resolveProductionVideoProfile({
-      width: props.width,
-      height: props.height,
-      frameRate,
-    }),
-    actual: clip.probe,
-  });
+  // The shot's own contract is judged first and by name, so a raster, clock,
+  // count, or runtime drift is attributed to the clip before the generic
+  // delivery profile speaks.
   if (
+    clip.probe.width !== props.width ||
+    clip.probe.height !== props.height ||
     clip.probe.frameCount !== props.frameCount ||
     props.runtimeSeconds !==
       (props.frameCount * frameRate.denominator) / frameRate.numerator ||
@@ -612,6 +612,14 @@ export const assertProductionRenditionClipDelivery = (props: {
     throw new Error(
       `Repaint clip "${props.shot}" does not match its exact raster, rational frame clock, frame count, and runtime contract.`,
     );
+  assertProductionVideoProfile({
+    expected: resolveProductionVideoProfile({
+      width: props.width,
+      height: props.height,
+      frameRate,
+    }),
+    actual: clip.probe,
+  });
 };
 
 /**
@@ -784,6 +792,8 @@ interface IProductionRenditionClip {
   track: Track;
   samples: Sample[];
   sampleDuration: number;
+  /** Decode time of the clip's first sample on its own clock. */
+  decodeStart: number;
   presentationStart: number;
 }
 
@@ -843,7 +853,11 @@ const appendLosslessVideoClip = (props: {
   sampleDuration: number;
 }): number => {
   for (const sample of props.clip.samples) {
-    const dtsFrame = sample.dts / props.clip.sampleDuration;
+    // Both clocks are re-based on the clip's own first sample: a range cut from
+    // the middle of a feature carries absolute decode times, and re-timing
+    // only the presentation side would push cts below dts.
+    const dtsFrame =
+      (sample.dts - props.clip.decodeStart) / props.clip.sampleDuration;
     const ctsFrame =
       (sample.cts - props.clip.presentationStart) / props.clip.sampleDuration;
     props.file.addSample(
@@ -996,6 +1010,7 @@ const parseProductionRenditionClip = (
     track,
     samples,
     sampleDuration,
+    decodeStart: samples[0]!.dts,
     presentationStart,
   };
 };
