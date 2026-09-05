@@ -7,6 +7,7 @@ import { compileAutoMovieProduction } from "@automovie/production";
 
 import { productionEvidence } from "../lint.config";
 import { assertAutoMovieNoArguments } from "./commandArguments";
+import { readAutoMovieProjectProductionId } from "./projectIdentity";
 
 assertAutoMovieNoArguments("compile", process.argv.slice(2));
 
@@ -41,6 +42,16 @@ const root = productionEvidence.location;
 const currentAuthoringEvidence = () =>
   readAutoMovieProductionEvidence({ root, productionEvidence });
 const authoringEvidence = currentAuthoringEvidence();
+
+/**
+ * Refuse a project whose namespace cannot be selected before anything opens.
+ *
+ * The id itself is not passed on. The project store selects the namespace
+ * inside its own root lease, so a registry another command created between
+ * this read and the open is honored rather than answered by registering the
+ * package-name seed beside it.
+ */
+readAutoMovieProjectProductionId(root);
 
 const output = compileAutoMovieProduction({
   projectRoot: root,

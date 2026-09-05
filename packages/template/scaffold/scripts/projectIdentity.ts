@@ -1,3 +1,4 @@
+import type { AutoMovieModelArchetypeRegistry } from "@automovie/archetypes";
 import {
   AutoMovieProductionProject,
   parseAutoMovieStructuredJson,
@@ -29,7 +30,7 @@ export const selectAutoMovieProjectProductionId = (props: {
   if (props.registered === null) {
     if (props.hasOwnedState)
       throw new Error(
-        "AutoMovie production state exists without a valid registry. Recover or migrate that state before selecting a new package-name seed.",
+        "AutoMovie production state exists without a valid registry. Restore automovie/productions.json from version control, or remove the orphaned production state, before a package-name seed may register a production.",
       );
     return { kind: "fresh-seed", productionId: props.packageName };
   }
@@ -37,7 +38,7 @@ export const selectAutoMovieProjectProductionId = (props: {
     return { kind: "registered", productionId: props.registered[0]! };
   throw new Error(
     props.registered.length === 0
-      ? "The AutoMovie production registry is empty. Recover or migrate it before opening the project."
+      ? "The AutoMovie production registry is empty. Restore automovie/productions.json from version control before opening the project."
       : `This project contains ${props.registered.length} registered productions (${props.registered.join(", ")}). Generated commands require an explicit production selection.`,
   );
 };
@@ -101,6 +102,40 @@ export const readAutoMovieProjectProductionId = (root: string): string => {
 };
 
 /**
+ * Open the declared production for mutation.
+ *
+ * The strict read above refuses a project this harness must not touch, and
+ * the project store then selects the namespace itself, under its own root
+ * lease. Handing the store the id read a moment earlier would reopen the
+ * window this closes: a registry another command created between the read and
+ * the open would be answered by appending the package-name seed beside it as a
+ * second, empty production. With no requested id the store reads the registry
+ * inside the lease and either selects the one registered production or seeds
+ * the same package name this read validated.
+ */
+export const openAutoMovieProjectProduction = (
+  root: string,
+  archetypes?: AutoMovieModelArchetypeRegistry,
+): AutoMovieProductionProject => {
+  readAutoMovieProjectProductionId(root);
+  return AutoMovieProductionProject.open(root, undefined, archetypes);
+};
+
+/**
+ * Open the declared production without creating or repairing any state.
+ *
+ * The same strict read runs first, and the store's read-only registration
+ * then requires exactly one initialized production, so a fresh or ambiguous
+ * project is refused by name rather than initialized by a check.
+ */
+export const openAutoMovieProjectProductionReadOnly = (
+  root: string,
+): AutoMovieProductionProject => {
+  readAutoMovieProjectProductionId(root);
+  return AutoMovieProductionProject.openReadOnly(root);
+};
+
+/**
  * The production namespace of the project the current script is running in.
  *
  * Every shipped script resolves the project from the working directory, so the
@@ -109,9 +144,20 @@ export const readAutoMovieProjectProductionId = (root: string): string => {
 export const currentAutoMovieProductionId = (): string =>
   readAutoMovieProjectProductionId(process.cwd());
 
+/**
+ * Whether production-owned state exists that a fresh registry would strand.
+ *
+ * The store's own legacy layout, a `production.json` directly under the design
+ * root, is not orphaned state: the store reads that record's id and migrates
+ * the layout on the next mutable open, and it refuses any other requested id
+ * by name. A lone `incarnation.json` is not either, because the store writes
+ * it before the registry on a first open and completes that open without
+ * stranding anything on the next attempt.
+ */
 const hasProductionOwnedState = (root: string): boolean => {
   const automovie = path.join(root, "automovie");
-  if (fs.existsSync(path.join(automovie, "incarnation.json"))) return true;
+  const design = path.join(automovie, "design");
+  if (fs.existsSync(path.join(design, "production.json"))) return false;
   for (const directory of [
     path.join(automovie, "productions"),
     path.join(root, "generated"),
@@ -122,7 +168,6 @@ const hasProductionOwnedState = (root: string): boolean => {
       fs.readdirSync(directory, { withFileTypes: true }).length !== 0
     )
       return true;
-  const design = path.join(automovie, "design");
   if (fs.existsSync(design) === false) return false;
   return fs.readdirSync(design, { withFileTypes: true }).some(
     (entry) =>

@@ -192,7 +192,9 @@ export const test_production_library_project_state = (): void => {
                 },
                 {
                   ...index.owners[0]!,
-                  export: "annex",
+                  // Sorts after every letter so the index stays in canonical
+                  // order and the refusal is the duplicated owner, not the order.
+                  export: "~annex",
                   environments: [],
                   models: [],
                   contexts: [],

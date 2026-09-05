@@ -1,11 +1,9 @@
 import { readAutoMovieProductionEvidence } from "@automovie/evidence";
-import {
-  AutoMovieProductionCompiler,
-  AutoMovieProductionProject,
-} from "@automovie/production";
+import { AutoMovieProductionCompiler } from "@automovie/production";
 
 import { productionEvidence } from "../lint.config";
 import { readAutoMovieLintArguments } from "./commandArguments";
+import { openAutoMovieProjectProductionReadOnly } from "./projectIdentity";
 
 const request = readAutoMovieLintArguments(process.argv.slice(2));
 
@@ -30,7 +28,7 @@ const request = readAutoMovieLintArguments(process.argv.slice(2));
  * each model the film stages, and `source` reports neither, because frames do
  * not exist yet at the stage that scope belongs to.
  */
-const project = AutoMovieProductionProject.openReadOnly(process.cwd());
+const project = openAutoMovieProjectProductionReadOnly(process.cwd());
 const currentAuthoringEvidence = () =>
   readAutoMovieProductionEvidence({
     root: process.cwd(),
