@@ -211,7 +211,7 @@ export const readExperimentalArguments = (
 ): ExperimentalArguments => {
   let force = false;
   let install = true;
-  let language: string | undefined;
+  let language: AutoMovieProductionLanguage | undefined;
   let languageSeen = false;
   let name: string | undefined;
   let refresh = false;
@@ -230,13 +230,14 @@ export const readExperimentalArguments = (
       if (languageSeen)
         throw new Error("--language may be supplied only once.");
       languageSeen = true;
-      language = args[++index];
-      if (language === undefined || language.startsWith("-"))
+      const candidate = args[++index];
+      if (candidate === undefined || candidate.startsWith("-"))
         throw new Error("--language requires one supported language.");
-      if (!isAutoMovieProductionLanguage(language))
+      if (!isAutoMovieProductionLanguage(candidate))
         throw new Error(
-          `Unsupported experimental production language ${JSON.stringify(language)}.`,
+          `Unsupported experimental production language ${JSON.stringify(candidate)}.`,
         );
+      language = candidate;
     } else if (argument.startsWith("-"))
       throw new Error(`Unsupported experimental option ${argument}.`);
     else if (name !== undefined)
