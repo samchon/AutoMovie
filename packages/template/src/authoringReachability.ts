@@ -55,8 +55,8 @@ const RENDER_TIER_REGISTRY = {
 /**
  * Closed camera-action vocabulary consumed by the shot compiler.
  *
- * @evidence requirements/product/authorability.md#product-explicit-control Gives the author the exact executable camera literals instead of broader film terminology.
- * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-choice-discovery Publishes the compiler-supported camera choices through the authoring route.
+ * @evidence requirements/product/authorability.md#product-discoverable-control Publishes the exact executable camera literals as the queryable choice set instead of broader film terminology.
+ * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-choice-discovery Makes the compiler-supported camera choices discoverable through the authoring route.
  */
 export const AUTO_MOVIE_CAMERA_ACTIONS: readonly AutoMovieCameraAction[] =
   Object.freeze(Object.keys(CAMERA_ACTION_REGISTRY) as AutoMovieCameraAction[]);
@@ -69,8 +69,9 @@ const RENDER_TIERS = Object.freeze(Object.keys(RENDER_TIER_REGISTRY));
 
 /**
  * Versioned byte-inspection profiles the generated `external:inspect` command
- * accepts. `@automovie/ingest` owns the runtime vocabulary; the template cannot
- * depend on it, so this copy is held equal to that export by the route test.
+ * accepts. `@automovie/ingest` owns the runtime vocabulary; the template does
+ * not depend on it, so this copy is held equal to that export by the route
+ * test rather than by the type system.
  */
 const EXTERNAL_MODEL_INSPECTION_PROFILES = Object.freeze([
   "gltf-static-v1",
@@ -107,10 +108,30 @@ type AutoMovieAuthoringRoute =
   | ".agents/skills/source-authoring/spatial-design.md";
 
 /**
+ * Runtime copy of the route union, so a row handed to the inspector at runtime
+ * is held to the same closed document set the type admits at compile time.
+ */
+const ROUTE_REGISTRY = {
+  ".agents/skills/production-lifecycle/settings.md": true,
+  ".agents/skills/production-lifecycle/configuration.md": true,
+  ".agents/skills/production-lifecycle/screenplays.md": true,
+  ".agents/skills/production-lifecycle/briefs.md": true,
+  ".agents/skills/source-authoring/index.md": true,
+  ".agents/skills/source-authoring/design-branches.md": true,
+  ".agents/skills/source-authoring/compilation.md": true,
+  ".agents/skills/source-authoring/models-and-motions.md": true,
+  ".agents/skills/source-authoring/composition.md": true,
+  ".agents/skills/source-authoring/cinematography.md": true,
+  ".agents/skills/source-authoring/sound.md": true,
+  ".agents/skills/source-authoring/spatial-design.md": true,
+} satisfies Record<AutoMovieAuthoringRoute, true>;
+
+/**
  * One public capability's complete route from author decision to consumer.
  *
- * @evidence requirements/product/authorability.md#product-discoverable-control Carries the fields needed to prove that a capability is reachable.
- * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-choice-discovery Distinguishes a complete route from a truthful inapplicability reason.
+ * @evidence requirements/product/authorability.md#product-discoverable-control Carries the owner, serializer, consumer, and route fields one capability needs to be provably reachable, or its concrete inapplicable reason.
+ * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-choice-discovery Is the typed row the production-kind route query returns.
+ * @author Samchon
  */
 export interface IAutoMovieAuthoringReachabilityRow {
   /** Addressable capability family. */
@@ -168,7 +189,7 @@ export const AUTO_MOVIE_AUTHORING_PRODUCTION_KINDS: readonly AutoMovieAuthoringP
  * Whether an untyped selection names one production shape the matrix covers.
  *
  * @evidence requirements/product/authorability.md#product-discoverable-control Lets a command refuse a shape the matrix does not publish instead of printing an empty route set.
- * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-diagnostic-failure Decides shape membership from the same closed inventory the matrix is built from.
+ * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-choice-discovery Decides shape membership from the same closed inventory the route query is built from.
  */
 export const isAutoMovieAuthoringProductionKind = (
   value: unknown,
@@ -178,11 +199,12 @@ export const isAutoMovieAuthoringProductionKind = (
 const KINDS = AUTO_MOVIE_AUTHORING_PRODUCTION_KINDS;
 
 /**
- * The production design record is authored in `src/production.ts`, published
- * by the generated `scripts/emitDesign.ts`, and read back only by the timed
- * compile. `AutoMovieProductionCompiler.run` dispatches a library to
- * `runLibrary` before the record is opened, so every field row below is
- * applicable to film and brief alike and inapplicable to a library.
+ * The production design record is authored in the reviewed `src/production.ts`
+ * source that `productionSources` binds, published through the generated
+ * `scripts/emitDesign.ts`, and read back only by the timed compile.
+ * `AutoMovieProductionCompiler.run` dispatches a library to `runLibrary`
+ * before the record is opened, so every field row below is applicable to film
+ * and brief alike and inapplicable to a library.
  */
 const PRODUCTION_DESIGN_OWNER = "docs/settings -> src/production.ts";
 const PRODUCTION_DESIGN_SERIALIZER =
@@ -254,7 +276,7 @@ const PRODUCTION_DESIGN_FIELD_ROUTES = {
     ".agents/skills/source-authoring/sound.md",
   ),
   renderTiers: field(
-    "scripts/productionConfiguration.ts render tier selection",
+    "scripts/renderRuntime.ts render tier selection",
     ".agents/skills/production-lifecycle/configuration.md",
     RENDER_TIERS,
   ),
@@ -263,7 +285,7 @@ const PRODUCTION_DESIGN_FIELD_ROUTES = {
     ".agents/skills/production-lifecycle/configuration.md",
   ),
   simulation: field(
-    "scripts/productionConfiguration.ts soft-body admission and scripts/generatedShotPlugin.ts",
+    "scripts/renderRuntime.ts, scripts/captureDialogueRuntime.ts, and scripts/generatedShotPlugin.ts live soft-body admission",
     ".agents/skills/source-authoring/design-branches.md",
   ),
   environmentContext: field(
@@ -297,7 +319,8 @@ const BASE_ROUTE_DEFINITIONS = {
   "design-branches": {
     owner:
       "docs/{maps,models,spaces,materials,instances,motions,systems} -> src/<branch>",
-    serializer: "scripts/emitDesign.ts records and reviewed source-owner exports",
+    serializer:
+      "scripts/emitDesign.ts records and reviewed source-owner exports",
     consumer: "AutoMovieProductionCompiler source scope",
     route: ".agents/skills/source-authoring/design-branches.md",
   },
@@ -310,7 +333,8 @@ const BASE_ROUTE_DEFINITIONS = {
   "external-model-inspection": {
     choices: EXTERNAL_MODEL_INSPECTION_PROFILES,
     owner: "public assets registered in automovie/assets.json",
-    serializer: "npm run external:inspect -- <project-path> --profile <profile>",
+    serializer:
+      "npm run external:inspect -- <project-path> --profile <profile>",
     consumer:
       "automovie/assets.json provenance and the author's explicit model or motion adoption record",
     route: ".agents/skills/source-authoring/models-and-motions.md",
@@ -325,10 +349,7 @@ const BASE_ROUTE_DEFINITIONS = {
 } satisfies Record<
   Exclude<
     AutoMovieAuthoringCapability,
-    | "production-design-field"
-    | "film-sources"
-    | "acceptance"
-    | "camera-actions"
+    "production-design-field" | "film-sources" | "acceptance" | "camera-actions"
   >,
   IAuthoringRouteDefinition
 >;
@@ -466,18 +487,21 @@ export const AUTO_MOVIE_AUTHORING_REACHABILITY: readonly IAutoMovieAuthoringReac
     ]).map((row) => Object.freeze(row)),
   );
 
-const FIELDS = Object.keys(
-  PRODUCTION_DESIGN_FIELD_ROUTES,
-) as AutoMovieProductionDesignField[];
-const CAPABILITIES: readonly AutoMovieAuthoringCapability[] = [
-  ...(Object.keys(BASE_ROUTE_DEFINITIONS) as Array<
-    keyof typeof BASE_ROUTE_DEFINITIONS
-  >),
-  "film-sources",
-  "acceptance",
-  "camera-actions",
-  "production-design-field",
-];
+const FIELDS: ReadonlySet<string> = new Set(
+  Object.keys(PRODUCTION_DESIGN_FIELD_ROUTES),
+);
+const CAPABILITIES: ReadonlySet<string> = new Set<AutoMovieAuthoringCapability>(
+  [
+    ...(Object.keys(BASE_ROUTE_DEFINITIONS) as Array<
+      keyof typeof BASE_ROUTE_DEFINITIONS
+    >),
+    "film-sources",
+    "acceptance",
+    "camera-actions",
+    "production-design-field",
+  ],
+);
+const ROUTES: ReadonlySet<string> = new Set(Object.keys(ROUTE_REGISTRY));
 
 const rowKey = (row: {
   capability: AutoMovieAuthoringCapability;
@@ -489,12 +513,22 @@ const rowKey = (row: {
 /** Every kind, capability, and field-level address the matrix must answer. */
 const EXPECTED_ROW_KEYS: ReadonlySet<string> = new Set(
   KINDS.flatMap((kind) =>
-    CAPABILITIES.flatMap((capability) =>
+    [...CAPABILITIES].flatMap((capability) =>
       capability === "production-design-field"
-        ? FIELDS.map((designField) =>
-            rowKey({ capability, field: designField, kind }),
+        ? [...FIELDS].map((designField) =>
+            rowKey({
+              capability,
+              field: designField as AutoMovieProductionDesignField,
+              kind,
+            }),
           )
-        : [rowKey({ capability, field: null, kind })],
+        : [
+            rowKey({
+              capability: capability as AutoMovieAuthoringCapability,
+              field: null,
+              kind,
+            }),
+          ],
     ),
   ),
 );
@@ -505,8 +539,12 @@ const blank = (value: string | null): boolean =>
 /**
  * Reject a capability matrix that hides a missing route as applicability.
  *
- * @evidence requirements/product/authorability.md#product-hidden-inference-refusal Refuses rows whose missing owner or consumer would force the author to guess.
- * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-diagnostic-failure Returns stable, located route diagnostics.
+ * Every finding names the row it was observed on, so the command that prints
+ * the matrix can refuse the whole answer rather than publish a route an author
+ * would have to complete by guessing.
+ *
+ * @evidence requirements/product/authorability.md#product-discoverable-control Refuses to claim a capability whose owner, serializer, consumer, or route the author could not find, and refuses an absent capability presented as a blank path.
+ * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-choice-discovery Diagnoses blank supported fields, duplicated kind and capability addresses, and inapplicable rows that also claim a route.
  */
 export const inspectAutoMovieAuthoringReachability = (
   rows: readonly IAutoMovieAuthoringReachabilityRow[],
@@ -517,14 +555,26 @@ export const inspectAutoMovieAuthoringReachability = (
     const key = rowKey(row);
     if (seen.has(key)) findings.push(`${key} is duplicated.`);
     seen.add(key);
-    if (EXPECTED_ROW_KEYS.has(key) === false)
-      findings.push(`${key} is not a supported kind, capability, or field.`);
+    if (isAutoMovieAuthoringProductionKind(row.kind) === false)
+      findings.push(
+        `${key} names unknown production kind ${JSON.stringify(row.kind)}.`,
+      );
+    if (CAPABILITIES.has(row.capability) === false)
+      findings.push(
+        `${key} names unknown capability ${JSON.stringify(row.capability)}.`,
+      );
+    else if (row.capability === "production-design-field") {
+      if (row.field === null || FIELDS.has(row.field) === false)
+        findings.push(`${key} must name one production design field.`);
+    } else if (row.field !== null)
+      findings.push(`${key} takes no production design field.`);
     if (
       row.choices !== null &&
       (row.choices.length === 0 ||
         row.choices.some(
           (choice, index) =>
-            choice.trim().length === 0 || row.choices!.indexOf(choice) !== index,
+            choice.trim().length === 0 ||
+            row.choices!.indexOf(choice) !== index,
         ))
     )
       findings.push(`${key} has invalid closed choices.`);
@@ -536,6 +586,10 @@ export const inspectAutoMovieAuthoringReachability = (
         ["route", row.route],
       ] as const)
         if (blank(value)) findings.push(`${key} has no ${name}.`);
+      if (row.route !== null && ROUTES.has(row.route) === false)
+        findings.push(
+          `${key} names unknown generated-project route ${JSON.stringify(row.route)}.`,
+        );
       if (row.owner !== null && /(^|\/)packages\//u.test(row.owner))
         findings.push(
           `${key} names a repository path instead of its generated-project owner.`,

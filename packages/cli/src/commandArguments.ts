@@ -287,7 +287,7 @@ export const readAutoMovieCommandArguments = (
       );
     if (isAutoMovieExternalModelIngestProfile(profile) === false)
       throw new Error(
-        `inspect-external requires --profile with one of ${AUTO_MOVIE_EXTERNAL_MODEL_INGEST_PROFILES.join(", ")}.`,
+        `inspect-external requires --profile naming one supported ingest profile: ${AUTO_MOVIE_EXTERNAL_MODEL_INGEST_PROFILES.join(", ")}.`,
       );
     return {
       command,

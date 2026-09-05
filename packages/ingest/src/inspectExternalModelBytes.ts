@@ -261,7 +261,9 @@ const INGEST_PROFILE_REGISTRY = {
  */
 export const AUTO_MOVIE_EXTERNAL_MODEL_INGEST_PROFILES: readonly AutoMovieExternalModelIngestProfile[] =
   Object.freeze(
-    Object.keys(INGEST_PROFILE_REGISTRY) as AutoMovieExternalModelIngestProfile[],
+    Object.keys(
+      INGEST_PROFILE_REGISTRY,
+    ) as AutoMovieExternalModelIngestProfile[],
   );
 
 /**
@@ -1145,7 +1147,17 @@ const decodeJson = (bytes: Uint8Array): unknown => {
   return value;
 };
 
-/** Refuse decoded-equivalent member names before last-wins JSON can escape. */
+/**
+ * Refuse decoded-equivalent member names before last-wins JSON can escape.
+ *
+ * The walk runs only over text `JSON.parse` has already accepted, so it needs
+ * no error recovery of its own: it tracks object scopes and decodes each member
+ * name through `JSON.parse` so an escaped spelling of a name collides with its
+ * plain spelling. It lives
+ * here rather than reusing the production package's structured JSON ingress
+ * because ingest depends on `@automovie/interface` alone and production sits
+ * above it in the dependency graph.
+ */
 const assertUniqueJsonObjectMembers = (text: string): void => {
   let cursor = 0;
   const whitespace = (): void => {

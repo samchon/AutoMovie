@@ -183,6 +183,14 @@ export const test_ingest_external_model_inspector = (): void => {
     '"asset":',
     '"extras":{"owner":"left","owner":"right"},"asset":',
   );
+  const arrayElementDuplicate = source.replace(
+    '"asset":',
+    '"extras":{"list":[1,{"k":1,"k":2}]},"asset":',
+  );
+  const trickyStrings = source.replace(
+    '"asset":',
+    '"extras":{"note":"{\\"a\\":[1,{\\"b\\":2}]}","q\\"uote":"]}","\\u007b":" , "},"asset":',
+  );
   TestValidator.equals(
     "decoded duplicate members are refused in JSON glTF and GLB",
     namedFacts([
@@ -226,6 +234,22 @@ export const test_ingest_external_model_inspector = (): void => {
           ),
       ],
       [
+        "jsonArrayElementDuplicate",
+        () =>
+          throwsError(
+            () =>
+              inspectSource(arrayElementDuplicate, "public/motion/array.gltf"),
+            'duplicate member "k"',
+          ),
+      ],
+      [
+        "jsonBracesAndEscapesInsideStringsAreNotStructure",
+        () => {
+          inspectSource(trickyStrings, "public/motion/tricky.gltf");
+          return true;
+        },
+      ],
+      [
         "glbRootDuplicate",
         () =>
           throwsError(
@@ -240,6 +264,8 @@ export const test_ingest_external_model_inspector = (): void => {
     ]),
     {
       glbRootDuplicate: true,
+      jsonArrayElementDuplicate: true,
+      jsonBracesAndEscapesInsideStringsAreNotStructure: true,
       jsonEscapedDuplicate: true,
       jsonNestedDuplicate: true,
       jsonRootDuplicate: true,

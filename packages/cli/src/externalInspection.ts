@@ -27,6 +27,7 @@ const isCanonicalProjectPath = (value: string): boolean =>
  *
  * @evidence requirements/external-inputs/resource-closure-and-acquisition.md#external-resource-media-dependencies Binds one glTF buffer or image dependency to the digest and length of the bytes the inspector actually read.
  * @evidence specifications/interchange-and-adoption/resource-closure-and-acquisition.md#interchange-media-dependency-extraction Carries the canonical locator, every declared URI that reached it, its byte length, and its content digest as one closure member.
+ * @author Samchon
  */
 export interface IAutoMovieExternalProjectResource {
   /** Resident byte length of the sidecar. */
@@ -46,6 +47,7 @@ export interface IAutoMovieExternalProjectResource {
  *
  * @evidence requirements/external-inputs/resource-closure-and-acquisition.md#external-resource-media-dependencies Seals the inspected result to the exact primary and sidecar bytes it was computed from.
  * @evidence specifications/interchange-and-adoption/resource-closure-and-acquisition.md#interchange-media-dependency-extraction Publishes the finite closure the parser reached beside the facts derived from it.
+ * @author Samchon
  */
 export interface IAutoMovieExternalProjectInspection {
   /** Structural facts returned by the ingest inspector under the fixed profile. */
