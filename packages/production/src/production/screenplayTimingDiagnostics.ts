@@ -133,7 +133,14 @@ export const screenplayTimingDiagnostics = (props: {
       );
 
   for (const scene of screenplay.screenplay.scenes) {
-    if (scene.status !== "active" || scene.disposition?.phase === "screenplay")
+    // A scene the screenplay omits has no prose to own, and a scene this
+    // production deliberately leaves unrealized has no shot to own it; only an
+    // edit-phase omission still compiles the shot whose fields the prose quotes.
+    if (
+      scene.status !== "active" ||
+      scene.disposition?.phase === "screenplay" ||
+      scene.disposition?.phase === "production"
+    )
       continue;
     const documentPath = scene.path ?? screenplay.screenplay.path;
     const content = read(documentPath);

@@ -61,6 +61,62 @@ const geometryProofPassed = (props: {
 };
 
 /**
+ * Whether one acceptance scenario is the exact proof a claim selected.
+ *
+ * The scenario must be required, cite the claim, address a current target,
+ * and carry the proof family the claim declared. A frame-review proof also
+ * needs the criterion frame to exist in the owning shot's contract; a film-level
+ * frame or event criterion names that shot itself, and a shot-level one may
+ * repeat the target shot but never contradict it. The criterion is read once
+ * into a local so each discriminated narrowing survives into the callbacks.
+ */
+const acceptanceProofMatches = (props: {
+  claim: string;
+  owner: "frame-review" | "acceptance";
+  expectedProduction: string;
+  scenario: IAutoMovieAcceptanceScenario;
+  contracts: ReadonlyMap<string, IAutoMovieShotContract>;
+  realizations: ReadonlyMap<string, IAutoMovieCompiledContractRealization>;
+}): boolean => {
+  const scenario = props.scenario;
+  if (
+    scenario.required !== true ||
+    scenario.evidence?.some((evidence) => evidence.claim === props.claim) !==
+      true
+  )
+    return false;
+  const criterion = scenario.criterion;
+  const criterionShot =
+    criterion.kind === "frame" || criterion.kind === "event"
+      ? criterion.shot
+      : undefined;
+  if (
+    (criterion.kind === "frame" || criterion.kind === "event") &&
+    (scenario.target.kind === "shot"
+      ? criterionShot !== undefined && criterionShot !== scenario.target.id
+      : criterionShot === undefined)
+  )
+    return false;
+  if (
+    scenario.target.kind === "film" &&
+    scenario.target.id !== props.expectedProduction
+  )
+    return false;
+  const shot =
+    scenario.target.kind === "shot" ? scenario.target.id : criterionShot;
+  if (shot !== undefined && props.realizations.get(shot)?.shot !== shot)
+    return false;
+  if (props.owner === "acceptance") return true;
+  return (
+    criterion.kind === "frame" &&
+    shot !== undefined &&
+    props.contracts
+      .get(shot)
+      ?.reviewFrames.some((frame) => frame.id === criterion.frame) === true
+  );
+};
+
+/**
  * Validate screenplay identity, casting and proof against current production.
  *
  * The ledger's internal validator cannot settle these joins because their
@@ -184,51 +240,17 @@ export const screenplayCrossRecordDiagnostics = (props: {
         );
       continue;
     }
-    const scenario: IAutoMovieAcceptanceScenario | undefined =
-      props.graph.acceptance.get(claim.proof.scenario);
-    const cited = scenario?.evidence?.some(
-      (evidence) => evidence.claim === claim.id,
-    );
-    const criterionShot =
-      scenario?.criterion.kind === "frame" ||
-      scenario?.criterion.kind === "event"
-        ? scenario.criterion.shot
-        : undefined;
-    const scenarioShot =
-      scenario?.target.kind === "shot" ? scenario.target.id : criterionShot;
-    const criterionTargetMatches =
-      scenario !== undefined &&
-      (scenario.criterion.kind === "frame" ||
-      scenario.criterion.kind === "event"
-        ? scenario.target.kind === "shot"
-          ? criterionShot === undefined || criterionShot === scenario.target.id
-          : criterionShot !== undefined
-        : true);
-    const targetCurrent =
-      scenario !== undefined &&
-      (scenario.target.kind === "shot"
-        ? props.realizations.get(scenario.target.id)?.shot ===
-          scenario.target.id
-        : scenario.target.id === props.expectedProduction &&
-          (scenarioShot === undefined ||
-            props.realizations.get(scenarioShot)?.shot === scenarioShot));
-    const frameExists =
-      scenario?.criterion.kind === "frame" && scenarioShot !== undefined
-        ? props.graph.shots
-            .get(scenarioShot)
-            ?.reviewFrames.some(
-              (frame) => frame.id === scenario.criterion.frame,
-            ) === true
-        : false;
-    const ownerMatches =
-      claim.proof.owner === "frame-review"
-        ? scenario?.required === true && criterionTargetMatches && frameExists
-        : scenario?.required === true && criterionTargetMatches;
+    const scenario = props.graph.acceptance.get(claim.proof.scenario);
     if (
       scenario === undefined ||
-      cited !== true ||
-      ownerMatches !== true ||
-      targetCurrent !== true
+      acceptanceProofMatches({
+        claim: claim.id,
+        owner: claim.proof.owner,
+        expectedProduction: props.expectedProduction,
+        scenario,
+        contracts: props.graph.shots,
+        realizations: props.realizations,
+      }) === false
     ) {
       refuse(
         "screenplay-continuity-proof-absent",

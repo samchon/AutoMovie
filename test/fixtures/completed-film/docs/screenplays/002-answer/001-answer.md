@@ -130,9 +130,19 @@
 @evidenceReview obligations/story/screenplays.md#realization-ready-contract #a74682c Coverage review counted 2 screenplays H2 owners for Realization-ready contract; screenplays/002-answer/001-answer.md#seq-answer grounds its share in “The second scene contains no new subject motion”, which answers could independent shot and edit implementers build one equivalent blocking pass from the complete screenplay without making different narrative or audience-content decisions? with authored content rather than an annotation-only catalogue.
 -->
 
-The second scene contains no new subject motion. Its six-second source enters through the opening source's half-second dissolve, then fades to black over its final local half-second. The wide terminal insert of the shut gate makes the first scene's endpoint legible as a completed exchange rather than a transient frame.
+The second scene contains no new subject motion. Its source, the same length as the opening's, enters through the opening source's twelve-frame dissolve, then fades to black over its final twelve frames. The wide terminal insert of the shut gate makes the first scene's endpoint legible as a completed exchange rather than a transient frame.
 
 ### SCN-002 — The answer {#scn-002}
+
+@automovie-scene
+location: plaza
+story-time: DAY, CONTINUOUS
+participant: soloist on-screen
+participant: chorus crowd
+participant: gate object
+beat: BEAT-ANSWER-1
+beat: BEAT-ANSWER-2
+@end-automovie-scene
 
 <!--
 @evidence principles/core/common.md#scope-preservation Owns the continuous plaza state, shot-readable subject allocation, and unchanged local endpoint; no assigned consequence is deferred to an unnamed unit.
@@ -221,11 +231,11 @@ The second scene contains no new subject motion. Its six-second source enters th
 
 EXT. PLAZA — DAY, CONTINUOUS
 
-From local 0.0 through 6.0 seconds, SOLOIST stands on `plaza-center` with the hand held at the exact cue endpoint. CHORUS stands 2 m nearer than its opening anchor, with facing and row and column intervals unchanged. At the screen-right half of the far edge, GATE remains shut at zero degrees. No pose, root, formation, gate, world, effect, or audio channel changes.
+From local 0.0 through 6.0 seconds {@timing shot:answer/duration}, SOLOIST stands on `plaza-center` with the hand held at the exact cue endpoint. CHORUS stands 2 m nearer than its opening anchor, with facing and row and column intervals unchanged. At the screen-right half of the far edge, GATE remains shut at zero degrees. No pose, root, formation, gate, world, effect, or audio channel changes.
 
 Dissolve from the opening's held cue into a fixed wide insert aimed along GATE's clear screen-right sightline. The gate leaf and post own the insert; the held edge of CHORUS may remain as peripheral frame-left context. Do not force the full hand, 2,049-member formation, and 0.9 m gate into one nominally inclusive but unreadable master image.
 
-End at local 6.0 seconds on the same state. The held hand and ordered rows are the completed exchange; the shut boundary is not a promise of another event.
+End at local 6.0 seconds {@timing shot:answer/duration} on the same state. The held hand and ordered rows are the completed exchange; the shut boundary is not a promise of another event.
 
 #### B003 — Consequence remains {#b003-consequence-remains}
 
@@ -298,7 +308,7 @@ End at local 6.0 seconds on the same state. The held hand and ordered rows are t
 @evidenceReview settings/040-plaza.md#plaza-background-role #29cf787 Reading parent and child side by side found settings/040-plaza.md#plaza-background-role's “PLAZA provides a neutral uninterrupted background behind SOLOIST's raised hand and behind the edges of CHORUS” is the concrete input to screenplays/002-answer/001-answer.md#b003-consequence-remains's “At every sample from local 0.0 through 6.0 seconds, the hand pose and formation state equal SCN-001's final sample”; removing that parent would leave this refinement without its stated basis.
 -->
 
-At every sample from local 0.0 through 6.0 seconds, the hand pose and formation state equal SCN-001's final sample.
+At every sample from local 0.0 through 6.0 seconds {@timing shot:answer/duration}, the hand pose and formation state equal SCN-001's final sample.
 
 #### B004 — The boundary stays shut {#b004-boundary-stays-shut}
 
@@ -377,4 +387,4 @@ At every sample from local 0.0 through 6.0 seconds, the hand pose and formation 
 @evidenceReview settings/050-art-direction.md#art-delivery-review-condition #04d2491 Reading parent and child side by side found settings/050-art-direction.md#art-delivery-review-condition's “Deterministic blocking is the final fidelity truth for this fixture; it selects no repaint provider, repaint request, or derived appearance” is the concrete input to screenplays/002-answer/001-answer.md#b004-boundary-stays-shut's “At every sample from local 0.0 through 6.0 seconds, the gate leaf rotation remains zero and the frame remains fixed”; removing that parent would leave this refinement without its stated basis.
 -->
 
-At every sample from local 0.0 through 6.0 seconds, the gate leaf rotation remains zero and the frame remains fixed. Hold its wide insert through the final sample; the film ends without opening it.
+At every sample from local 0.0 through 6.0 seconds {@timing shot:answer/duration}, the gate leaf rotation remains zero and the frame remains fixed. Hold its wide insert through the final sample; the film ends without opening it.
