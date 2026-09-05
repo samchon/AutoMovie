@@ -14,29 +14,46 @@ const segment = (marker: number, payload: readonly number[]): number[] => [
   (payload.length + 2) & 0xff,
   ...payload,
 ];
-const jpeg = (frameMarker = 0xc0): Uint8Array =>
+const jpeg = (
+  frameMarker = 0xc0,
+  restartInterval?: number | null,
+): Uint8Array =>
   new Uint8Array([
     0xff,
     0xd8,
     ...segment(frameMarker, [8, 0, 3, 0, 4, 1, 1, 0x11, 0]),
+    ...(typeof restartInterval === "number"
+      ? segment(0xdd, [restartInterval >>> 8, restartInterval & 0xff])
+      : []),
     ...segment(0xda, [1, 1, 0, 0, 63, 0]),
     0x11,
     0xff,
     0x00,
     0x22,
-    0xff,
-    0xd0,
+    ...(restartInterval === undefined ? [] : [0xff, 0xd0]),
     0x33,
     0xff,
     0xd9,
   ]);
-const pdf = (): Uint8Array => {
-  const prefix = "%PDF-1.4\n1 0 obj\n<< /Type /Catalog >>\nendobj\n";
-  const offset = Buffer.byteLength(prefix, "latin1");
-  return Buffer.from(
-    `${prefix}xref\n0 2\n0000000000 65535 f \n0000000009 00000 n \ntrailer\n<< /Size 2 /Root 1 0 R >>\nstartxref\n${offset}\n%%EOF\n`,
-    "latin1",
-  );
+const pdf = (
+  objects: readonly string[] = [
+    "<< /Type /Catalog /Pages 2 0 R >>",
+    "<< /Type /Pages /Kids [] /Count 0 >>",
+  ],
+): Uint8Array => {
+  let text = "%PDF-1.4\n";
+  const offsets: number[] = [];
+  for (const [index, body] of objects.entries()) {
+    offsets.push(Buffer.byteLength(text, "latin1"));
+    text += `${index + 1} 0 obj\n${body}\nendobj\n`;
+  }
+  const xref = Buffer.byteLength(text, "latin1");
+  text += `xref\n0 ${objects.length + 1}\n0000000000 65535 f \n`;
+  text += offsets
+    .map((offset) => `${offset.toString().padStart(10, "0")} 00000 n \n`)
+    .join("");
+  text += `trailer\n<< /Size ${objects.length + 1} /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF\n`;
+  return Buffer.from(text, "latin1");
 };
 const dxf = (eol = "\n"): Uint8Array =>
   utf8(
@@ -85,9 +102,11 @@ export const test_production_design_reference_container = (): void => {
       inspect("plan.png", png),
       inspect("scan.jpg", jpeg()),
       inspect("scan-progressive.jpg", jpeg(0xc2)),
+      inspect("scan-restarted.jpg", jpeg(0xc0, 4)),
     ],
     [
       { media: "image/png", width: 4, height: 3 },
+      { media: "image/jpeg", width: 4, height: 3 },
       { media: "image/jpeg", width: 4, height: 3 },
       { media: "image/jpeg", width: 4, height: 3 },
     ],
@@ -165,8 +184,33 @@ export const test_production_design_reference_container = (): void => {
           0xd9,
         ]),
       ),
+      refuses("restart-without-dri.jpg", jpeg(0xc0, null)),
+      refuses("restart-with-zero-dri.jpg", jpeg(0xc0, 0)),
+      refuses(
+        "malformed-dri.jpg",
+        new Uint8Array([
+          0xff,
+          0xd8,
+          ...segment(0xdd, [1]),
+          ...jpeg().subarray(2),
+        ]),
+      ),
+      refuses(
+        "empty-restart-scan.jpg",
+        new Uint8Array([
+          0xff,
+          0xd8,
+          ...segment(0xc0, [8, 0, 3, 0, 4, 1, 1, 0x11, 0]),
+          ...segment(0xdd, [0, 1]),
+          ...segment(0xda, [1, 1, 0, 0, 63, 0]),
+          0xff,
+          0xd0,
+          0xff,
+          0xd9,
+        ]),
+      ),
     ],
-    [true, true, true, true, true, true, true, true],
+    [true, true, true, true, true, true, true, true, true, true, true, true],
   );
   const svg = utf8(
     '<?xml version="1.0"?><!-- viewBox="0 0 999 999" --><svg xmlns="http://www.w3.org/2000/svg" viewBox=\'0 0 420 297\'><g><path d="M0 0"/></g></svg><!-- epilog -->',
@@ -189,6 +233,44 @@ export const test_production_design_reference_container = (): void => {
       { media: "image/svg+xml", width: 800, height: 600 },
       null,
     ],
+  );
+  TestValidator.equals(
+    "XML namespace scope and expanded attribute names are enforced",
+    [
+      inspect(
+        "bound.svg",
+        utf8(
+          '<s:svg xmlns:s="http://www.w3.org/2000/svg" xmlns:a="urn:a" id="plain" a:id="qualified" xml:lang="en"><a:g/></s:svg>',
+        ),
+      ),
+      refuses(
+        "unbound-root.svg",
+        utf8('<s:svg xmlns="http://www.w3.org/2000/svg"/>'),
+      ),
+      refuses(
+        "unbound-child.svg",
+        utf8('<svg xmlns="http://www.w3.org/2000/svg"><a:g/></svg>'),
+      ),
+      refuses(
+        "scope.svg",
+        utf8(
+          '<svg xmlns="http://www.w3.org/2000/svg"><g xmlns:a="urn:a"><a:path/></g><a:path/></svg>',
+        ),
+      ),
+      refuses(
+        "expanded-duplicate.svg",
+        utf8(
+          '<svg xmlns="http://www.w3.org/2000/svg" xmlns:a="urn:same" xmlns:b="urn:same" a:id="one" b:id="two"/>',
+        ),
+      ),
+      refuses(
+        "reserved-binding.svg",
+        utf8(
+          '<svg xmlns="http://www.w3.org/2000/svg" xmlns:xml="urn:not-xml"/>',
+        ),
+      ),
+    ],
+    [{ media: "image/svg+xml" }, true, true, true, true, true],
   );
   TestValidator.equals(
     "malformed SVG and raw malformed UTF-8 never become measured evidence",
@@ -274,19 +356,28 @@ export const test_production_design_reference_container = (): void => {
       true,
       true,
       true,
-      true,
       { media: "image/svg+xml" },
+      true,
       { media: "image/svg+xml", width: 1, height: 1 },
     ],
   );
   TestValidator.equals(
-    "closed PDF and LF/CRLF DXF are valid but deliberately unmeasured",
+    "closed PDF page trees and LF/CRLF DXF are valid but deliberately unmeasured",
     [
       inspect("sheet.pdf", pdf()),
+      inspect(
+        "page.pdf",
+        pdf([
+          "<< /Type /Catalog /Pages 2 0 R >>",
+          "<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
+          "<< /Type /Page /Parent 2 0 R >>",
+        ]),
+      ),
       inspect("a.dxf", dxf()),
       inspect("b.dxf", dxf("\r\n")),
     ],
     [
+      { media: "application/pdf" },
       { media: "application/pdf" },
       { media: "image/vnd.dxf" },
       { media: "image/vnd.dxf" },
@@ -307,7 +398,7 @@ export const test_production_design_reference_container = (): void => {
     "latin1",
   );
   const wrongPdfCount = Buffer.from(
-    Buffer.from(pdf()).toString("latin1").replace("xref\n0 2", "xref\n0 3"),
+    Buffer.from(pdf()).toString("latin1").replace("xref\n0 3", "xref\n0 4"),
     "latin1",
   );
   const wrongPdfRootType = Buffer.from(
@@ -315,13 +406,55 @@ export const test_production_design_reference_container = (): void => {
     "latin1",
   );
   const missingPdfSize = Buffer.from(
-    Buffer.from(pdf()).toString("latin1").replace("/Size 2 ", ""),
+    Buffer.from(pdf()).toString("latin1").replace("/Size 3 ", ""),
     "latin1",
   );
   const shortPdfSize = Buffer.from(
-    Buffer.from(pdf()).toString("latin1").replace("/Size 2", "/Size 1"),
+    Buffer.from(pdf()).toString("latin1").replace("/Size 3", "/Size 2"),
     "latin1",
   );
+  const missingPages = pdf([
+    "<< /Type /Catalog >>",
+    "<< /Type /Pages /Kids [] /Count 0 >>",
+  ]);
+  const missingPagesObject = pdf([
+    "<< /Type /Catalog /Pages 9 0 R >>",
+    "<< /Type /Pages /Kids [] /Count 0 >>",
+  ]);
+  const wrongPagesGeneration = pdf([
+    "<< /Type /Catalog /Pages 2 1 R >>",
+    "<< /Type /Pages /Kids [] /Count 0 >>",
+  ]);
+  const wrongPagesType = pdf([
+    "<< /Type /Catalog /Pages 2 0 R >>",
+    "<< /Type /Page >>",
+  ]);
+  const missingKids = pdf([
+    "<< /Type /Catalog /Pages 2 0 R >>",
+    "<< /Type /Pages /Count 0 >>",
+  ]);
+  const missingPageCount = pdf([
+    "<< /Type /Catalog /Pages 2 0 R >>",
+    "<< /Type /Pages /Kids [] >>",
+  ]);
+  const wrongPageCount = pdf([
+    "<< /Type /Catalog /Pages 2 0 R >>",
+    "<< /Type /Pages /Kids [] /Count 1 >>",
+  ]);
+  const wrongPageParent = pdf([
+    "<< /Type /Catalog /Pages 2 0 R >>",
+    "<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
+    "<< /Type /Page /Parent 9 0 R >>",
+  ]);
+  const cyclicPages = pdf([
+    "<< /Type /Catalog /Pages 2 0 R >>",
+    "<< /Type /Pages /Kids [2 0 R] /Count 0 >>",
+  ]);
+  const repeatedPage = pdf([
+    "<< /Type /Catalog /Pages 2 0 R >>",
+    "<< /Type /Pages /Kids [3 0 R 3 0 R] /Count 2 >>",
+    "<< /Type /Page /Parent 2 0 R >>",
+  ]);
   TestValidator.equals(
     "prefix PDF and token-only or unclosed DXF remain refusals",
     [
@@ -333,7 +466,17 @@ export const test_production_design_reference_container = (): void => {
       refuses("root-type.pdf", wrongPdfRootType),
       refuses("missing-size.pdf", missingPdfSize),
       refuses("short-size.pdf", shortPdfSize),
-      refuses("memo.dxf", utf8("memo: $ACADVER means version")),
+      refuses("missing-pages.pdf", missingPages),
+      refuses("missing-pages-object.pdf", missingPagesObject),
+      refuses("pages-generation.pdf", wrongPagesGeneration),
+      refuses("pages-type.pdf", wrongPagesType),
+      refuses("missing-kids.pdf", missingKids),
+      refuses("missing-page-count.pdf", missingPageCount),
+      refuses("wrong-page-count.pdf", wrongPageCount),
+      refuses("wrong-page-parent.pdf", wrongPageParent),
+      refuses("cyclic-pages.pdf", cyclicPages),
+      refuses("repeated-page.pdf", repeatedPage),
+      inspect("memo.dxf", utf8("memo: $ACADVER means version")) === null,
       refuses("open.dxf", utf8("0\nSECTION\n2\nHEADER\n0\nEOF")),
       refuses(
         "code.dxf",
@@ -346,6 +489,6 @@ export const test_production_design_reference_container = (): void => {
         ),
       ),
     ],
-    [true, true, true, true, true, true, true, true, true, true, true, true],
+    new Array(22).fill(true),
   );
 };

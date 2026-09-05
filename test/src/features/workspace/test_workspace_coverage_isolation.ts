@@ -10,11 +10,12 @@ import {
   coverageRecords,
   coverageRunPaths,
   coverageScriptShapes,
-  isMeasuredScriptUrl,
+  measuredScriptIdentity,
 } from "../../coverage/measureCoverage";
 import {
   coverageProcessIsEntry,
   coverageRunDependencies,
+  coverageStageStatus,
   runCoverage,
   runCoverageCli,
 } from "../../coverage/runCoverage";
@@ -70,6 +71,10 @@ import { namedFacts } from "../internal/predicates";
  *    changed gate's verdict describe a set other than the one it names, and both
  *    of its statuses are pinned so a step wired to a gate that cannot refuse
  *    would show here.
+ * 6. Every consumer receives the one publication the measurement returned; a
+ *    success that returns none, a stage that returns a status outside 0, 1
+ *    and 2, and a stage or cleanup that throws are each an instrument red
+ *    named on its own line rather than a status guessed from a boolean.
  */
 export const test_workspace_coverage_isolation = (): void => {
   // A directory holding a complete record, a truncated one, and two things that
@@ -159,24 +164,25 @@ export const test_workspace_coverage_isolation = (): void => {
     narrow: coverageScriptShapes(shaped, ["packages/face/src"]),
     hosts:
       Number(
-        isMeasuredScriptUrl(
+        measuredScriptIdentity(
           "file:///D:/repo/packages/engine/src/windows.ts",
           ["."],
           "D:/repo",
-        ),
+        ) !== null,
       ) +
       Number(
-        isMeasuredScriptUrl(
+        measuredScriptIdentity(
           "file:///home/runner/packages/engine/src/posix.ts",
           ["."],
           "/home/runner",
-        ),
+        ) !== null,
       ),
-    nonFile: isMeasuredScriptUrl(
-      "https://example.com/D:/repo/packages/engine/src/remote.ts",
-      ["."],
-      "d:/repo",
-    ),
+    nonFile:
+      measuredScriptIdentity(
+        "https://example.com/D:/repo/packages/engine/src/remote.ts",
+        ["."],
+        "d:/repo",
+      ) !== null,
     mappedSeen: coverageNeverRecorded({
       directory: records,
       identity: (url) =>
@@ -231,12 +237,10 @@ export const test_workspace_coverage_isolation = (): void => {
       ],
       ["two draws in one process differ", () => drawn.first !== drawn.second],
       [
-        "one run owns raw report and source-host paths together",
+        "one run owns raw and report paths together",
         () =>
           path.dirname(drawn.run.rawDirectory) === drawn.run.rootDirectory &&
-          path.dirname(drawn.run.reportDirectory) === drawn.run.rootDirectory &&
-          path.dirname(drawn.run.sourceHostDirectory) ===
-            drawn.run.rootDirectory,
+          path.dirname(drawn.run.reportDirectory) === drawn.run.rootDirectory,
       ],
       [
         "both sit under the coverage cache",
@@ -301,7 +305,7 @@ export const test_workspace_coverage_isolation = (): void => {
       "non-file URLs have no source identity": true,
       "source-mapped raw URLs satisfy authored report identity": true,
       "two draws in one process differ": true,
-      "one run owns raw report and source-host paths together": true,
+      "one run owns raw and report paths together": true,
       "both sit under the coverage cache": true,
       "neither is the shared parent itself": true,
       "drawing a path does not create or start a measurement": true,
@@ -407,6 +411,40 @@ export const test_workspace_coverage_isolation = (): void => {
     changed: unreached("changed gate", "a failed report"),
     cleanup: () => undefined,
   });
+  const diagnostics: string[] = [];
+  const unknownMeasurement = runCoverage(
+    [],
+    {
+      measure: () => measured(3),
+      report: unreached("report", "an unknown measurement status"),
+      population: unreached("population gate", "an unknown measurement status"),
+      changed: unreached("changed gate", "an unknown measurement status"),
+      cleanup: unreached("cleanup", "an unknown measurement status"),
+    },
+    (line) => diagnostics.push(line),
+  );
+  const unknownReport = runCoverage(
+    [],
+    {
+      measure: () => measured(0),
+      report: () => -1,
+      population: unreached("population gate", "an unknown report status"),
+      changed: unreached("changed gate", "an unknown report status"),
+      cleanup: () => undefined,
+    },
+    (line) => diagnostics.push(line),
+  );
+  const missingPublication = runCoverage(
+    [],
+    {
+      measure: () => ({ status: 0 }),
+      report: unreached("report", "a missing publication"),
+      population: unreached("population gate", "a missing publication"),
+      changed: unreached("changed gate", "a missing publication"),
+      cleanup: unreached("cleanup", "a missing publication"),
+    },
+    (line) => diagnostics.push(line),
+  );
   const thrownMeasurement = runCoverage([], {
     measure: () => {
       throw new Error("measurement failed before returning a status");
@@ -468,6 +506,13 @@ export const test_workspace_coverage_isolation = (): void => {
       changedRed,
       coverageGap,
       reportGap,
+      unknownMeasurement,
+      unknownReport,
+      missingPublication,
+      directUnknownStatus: coverageStageStatus("changed", 9, (line) =>
+        diagnostics.push(line),
+      ),
+      diagnostics,
       thrownMeasurement,
       thrownCleanup,
       cliStatuses,
@@ -486,6 +531,16 @@ export const test_workspace_coverage_isolation = (): void => {
       changedRed: 2,
       coverageGap: 1,
       reportGap: 1,
+      unknownMeasurement: 2,
+      unknownReport: 2,
+      missingPublication: 2,
+      directUnknownStatus: 2,
+      diagnostics: [
+        "INSTRUMENT FAILURE: coverage measure returned unsupported status 3",
+        "INSTRUMENT FAILURE: coverage report returned unsupported status -1",
+        "INSTRUMENT FAILURE: coverage measure returned success without a publication",
+        "INSTRUMENT FAILURE: coverage changed returned unsupported status 9",
+      ],
       thrownMeasurement: 2,
       thrownCleanup: 2,
       cliStatuses: [0],

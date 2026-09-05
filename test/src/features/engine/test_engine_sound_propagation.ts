@@ -548,15 +548,20 @@ export const test_engine_sound_propagation = (): void => {
     endFrame: 2,
   });
   TestValidator.equals(
-    "profile variants, zero-length cues, one-sample dialogue, and late phonemes stay bounded",
+    "profile variants, zero-length cues, one-sample dialogue, and late phonemes are decided",
     {
       derivedProfile: derivedPlan.acousticProfile?.kind,
       providerlessProfile:
         providerlessPlan.acousticProfile?.kind === "adopted-response"
           ? providerlessPlan.acousticProfile.provider
           : "wrong",
-      zeroCueSilent:
-        renderProductionSound({ plan: zeroCuePlan }).analysis.samplePeak === 0,
+      // A cue with no frames has no sample to mix and no source to read: the
+      // compiler refuses it when lowering the edit, and the mix refuses the
+      // same contradiction rather than rendering it as silence.
+      zeroCueRefused: throwsError(
+        () => renderProductionSound({ plan: zeroCuePlan }),
+        ['cue "zero"', "positive whole-frame span"],
+      ),
       missingDialogueSilent:
         renderProductionSound({ plan: oneSampleDialoguePlan }).analysis
           .samplePeak === 0,
@@ -571,7 +576,7 @@ export const test_engine_sound_propagation = (): void => {
     {
       derivedProfile: "derived-room-analysis",
       providerlessProfile: undefined,
-      zeroCueSilent: true,
+      zeroCueRefused: true,
       missingDialogueSilent: true,
       oneSampleDialogueFinite: true,
       latePhonemeMerged: "ab",

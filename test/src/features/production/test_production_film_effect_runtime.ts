@@ -12,7 +12,9 @@ import {
   digestAutoMovieBytes,
   materializeProductionFilmEffects,
   parseAutoMovieFilmEffects,
+  productionFilmEffectEditFingerprint,
   sampleProductionFilmEffects,
+  verifyProductionFilmEffectPopulation,
 } from "@automovie/production";
 import { TestValidator } from "@nestia/e2e";
 
@@ -22,11 +24,50 @@ import { worldDesign } from "./productionFixtures";
 const digest = (character: string): `sha256:${string}` =>
   `sha256:${character.repeat(64)}`;
 
+const cues = (): IAutoMovieFilmTimeline["tracks"]["effects"] => [
+  {
+    id: "film-fog",
+    recipe: "world-zone",
+    zone: "courtyard-fog",
+    startFrame: 12,
+    durationFrames: 24,
+    intensity: 0.6,
+  },
+];
+
+/** One 48-frame single-shot edit whose effect track carries the film cue. */
+const timeline = (
+  effects: IAutoMovieFilmTimeline["tracks"]["effects"] = cues(),
+): IAutoMovieFilmTimeline => ({
+  version: 1,
+  compiler: "automovie.production-compiler.test",
+  inputFingerprint: digest("a"),
+  sourceDigest: digest("e"),
+  id: "campaign-film",
+  fps: 24,
+  totalFrames: 48,
+  segments: [
+    {
+      shot: "shot-a",
+      sourceInFrame: 0,
+      sourceOutFrame: 48,
+      startFrame: 0,
+      endFrame: 48,
+      headHandleFrames: 0,
+      tailHandleFrames: 0,
+      transitionIn: { kind: "cut" },
+      transitionOut: { kind: "cut" },
+    },
+  ],
+  omissions: [],
+  tracks: { audio: [], captions: [], effects },
+});
+
 const identity = (): IAutoMovieFilmEffectCurrentIdentity => ({
   production: "campaign-film",
   film: "campaign-film",
   compileFingerprint: digest("a"),
-  editFingerprint: digest("b"),
+  editFingerprint: productionFilmEffectEditFingerprint(timeline()),
 });
 
 const recipe = (): IAutoMovieEffectRecipe => ({
@@ -65,17 +106,6 @@ const world = (): IAutoMovieWorldDesign => ({
   ],
 });
 
-const cues = (): IAutoMovieFilmTimeline["tracks"]["effects"] => [
-  {
-    id: "film-fog",
-    recipe: "world-zone",
-    zone: "courtyard-fog",
-    startFrame: 12,
-    durationFrames: 24,
-    intensity: 0.6,
-  },
-];
-
 const captureError = (operation: () => void): unknown => {
   try {
     operation();
@@ -87,21 +117,27 @@ const captureError = (operation: () => void): unknown => {
 
 /**
  * Film-global effects must become one current runtime on the compiler-owned
- * full-rate clock rather than remaining fingerprint-only edit data.
+ * full-rate clock rather than remaining fingerprint-only edit data, and a
+ * persisted runtime is admitted only as the exact projection of the timeline
+ * it is read beside.
  *
  * Scenarios:
  *
- * 1. A registered world-zone cue materializes deterministically, includes the
+ * 1. The artifact reader keeps manifest, byte, schema and compile ownership,
+ *    and then refuses an empty, truncated, extended, retimed, re-rated or
+ *    foreign-film runtime population that every per-entry check would pass,
+ *    while an empty population beside an empty effect track is current.
+ * 2. A registered world-zone cue materializes deterministically, includes the
  *    production, film, recipe and zone revision in its identity, and repeated
  *    or reordered seeks return the same samples.
- * 2. The half-open interval is inactive immediately before and after, and active
+ * 3. The half-open interval is inactive immediately before and after, and active
  *    at its first and last included frames.
- * 3. Proxy output frame six samples timeline frame twelve and therefore matches
+ * 4. Proxy output frame six samples timeline frame twelve and therefore matches
  *    the final-tier sample at frame twelve rather than using frame six.
- * 4. Missing zones or recipes, duplicate world ids, invalid cues, malformed
+ * 5. Missing zones or recipes, duplicate world ids, invalid cues, malformed
  *    sample inputs, stale identities, altered bytes and unsupported versions
  *    are named refusals rather than empty successful samples.
- * 5. Film and shot owners on the same zone are accepted when disjoint and
+ * 6. Film and shot owners on the same zone are accepted when disjoint and
  *    refused with both cue ids when their half-open intervals overlap.
  */
 export const test_production_film_effect_runtime = (): void => {
@@ -149,24 +185,74 @@ export const test_production_film_effect_runtime = (): void => {
   };
   const staleRuntime = structuredClone(runtime);
   staleRuntime[0]!.compileFingerprint = digest("c");
+  const materializeAgainst = (props: {
+    identity?: IAutoMovieFilmEffectCurrentIdentity;
+    frameRate?: number;
+    effects?: IAutoMovieFilmTimeline["tracks"]["effects"];
+  }) =>
+    materializeProductionFilmEffects({
+      identity: props.identity ?? current,
+      frameRate: props.frameRate ?? 24,
+      world: world(),
+      effects: props.effects ?? cues(),
+    });
+  const populationRefusal = (
+    effects: readonly (typeof runtime)[number][],
+    against: IAutoMovieFilmTimeline = timeline(),
+  ): string | null => {
+    const error = captureError(() =>
+      parseAutoMovieFilmEffects(artifact(effects), against),
+    );
+    return error instanceof AutoMovieFilmEffectRuntimeError &&
+      error.code === "film-effect-runtime-invalid"
+      ? error.message
+      : null;
+  };
+  const retimed = materializeAgainst({
+    effects: [{ ...cues()[0]!, startFrame: 13 }],
+  });
+  const rerated = materializeAgainst({ frameRate: 25 });
+  const foreignFilm = materializeAgainst({
+    identity: { ...current, film: "other-film" },
+  });
+  const secondCue = {
+    ...cues()[0]!,
+    id: "film-fog-late",
+    startFrame: 40,
+    durationFrames: 4,
+  };
+  const twoCueTimeline = timeline([cues()[0]!, secondCue]);
+  const twoCueRuntime = materializeProductionFilmEffects({
+    identity: {
+      ...current,
+      editFingerprint: productionFilmEffectEditFingerprint(twoCueTimeline),
+    },
+    frameRate: 24,
+    world: world(),
+    effects: [secondCue, cues()[0]!],
+  });
   TestValidator.equals(
-    "film effect artifacts retain manifest, byte, schema, and compile ownership",
+    "film effect artifacts retain manifest, byte, schema, compile ownership, and exact population",
     namedFacts([
       [
         "current",
         () =>
-          JSON.stringify(parseAutoMovieFilmEffects(artifact(runtime))) ===
-          JSON.stringify(runtime),
+          JSON.stringify(
+            parseAutoMovieFilmEffects(artifact(runtime), timeline()),
+          ) === JSON.stringify(runtime),
       ],
       [
         "manifestMissing",
         () =>
           String(
             captureError(() =>
-              parseAutoMovieFilmEffects({
-                ...artifact(runtime),
-                manifest: null,
-              }),
+              parseAutoMovieFilmEffects(
+                {
+                  ...artifact(runtime),
+                  manifest: null,
+                },
+                timeline(),
+              ),
             ),
           ).includes("missing or changed"),
       ],
@@ -177,6 +263,7 @@ export const test_production_film_effect_runtime = (): void => {
             captureError(() =>
               parseAutoMovieFilmEffects(
                 artifact(runtime, { manifestFingerprint: digest("c") }),
+                timeline(),
               ),
             ),
           ).includes("missing or changed"),
@@ -188,6 +275,7 @@ export const test_production_film_effect_runtime = (): void => {
             captureError(() =>
               parseAutoMovieFilmEffects(
                 artifact(runtime, { includeEntry: false }),
+                timeline(),
               ),
             ),
           ).includes("missing or changed"),
@@ -199,6 +287,7 @@ export const test_production_film_effect_runtime = (): void => {
             captureError(() =>
               parseAutoMovieFilmEffects(
                 artifact(runtime, { declaredDigest: digest("d") }),
+                timeline(),
               ),
             ),
           ).includes("bytes differ"),
@@ -207,7 +296,9 @@ export const test_production_film_effect_runtime = (): void => {
         "schemaInvalid",
         () =>
           String(
-            captureError(() => parseAutoMovieFilmEffects(artifact({}))),
+            captureError(() =>
+              parseAutoMovieFilmEffects(artifact({}), timeline()),
+            ),
           ).includes("invalid or stale"),
       ],
       [
@@ -215,9 +306,62 @@ export const test_production_film_effect_runtime = (): void => {
         () =>
           String(
             captureError(() =>
-              parseAutoMovieFilmEffects(artifact(staleRuntime)),
+              parseAutoMovieFilmEffects(artifact(staleRuntime), timeline()),
             ),
           ).includes("invalid or stale"),
+      ],
+      [
+        "emptyPopulationRefused",
+        () => populationRefusal([])?.includes("0 entries") === true,
+      ],
+      [
+        "extendedPopulationRefused",
+        () =>
+          populationRefusal([runtime[0]!, runtime[0]!])?.includes(
+            "2 entries",
+          ) === true,
+      ],
+      [
+        "retimedRefused",
+        () => populationRefusal(retimed)?.includes("film-fog") === true,
+      ],
+      [
+        "reratedRefused",
+        () => populationRefusal(rerated)?.includes("film-fog") === true,
+      ],
+      [
+        "foreignFilmRefused",
+        () => populationRefusal(foreignFilm)?.includes("film-fog") === true,
+      ],
+      [
+        "canonicalOrderAdmitted",
+        () =>
+          parseAutoMovieFilmEffects(artifact(twoCueRuntime), twoCueTimeline)
+            .map((effect) => effect.effect.id)
+            .join(",") === "film-fog,film-fog-late",
+      ],
+      [
+        "reorderedPopulationRefused",
+        () =>
+          populationRefusal(
+            [twoCueRuntime[1]!, twoCueRuntime[0]!],
+            twoCueTimeline,
+          )?.includes("film-fog") === true,
+      ],
+      [
+        "emptyTrackAdmitsEmptyPopulation",
+        () =>
+          parseAutoMovieFilmEffects(artifact([]), timeline([])).length === 0,
+      ],
+      [
+        "directVerification",
+        () =>
+          captureError(() =>
+            verifyProductionFilmEffectPopulation({
+              timeline: timeline(),
+              effects: runtime,
+            }),
+          ) === undefined,
       ],
       [
         "rationalSeconds",
@@ -246,6 +390,15 @@ export const test_production_film_effect_runtime = (): void => {
       bytesChanged: true,
       schemaInvalid: true,
       runtimeStale: true,
+      emptyPopulationRefused: true,
+      extendedPopulationRefused: true,
+      retimedRefused: true,
+      reratedRefused: true,
+      foreignFilmRefused: true,
+      canonicalOrderAdmitted: true,
+      reorderedPopulationRefused: true,
+      emptyTrackAdmitsEmptyPopulation: true,
+      directVerification: true,
       rationalSeconds: true,
       invalidFrame: true,
     },

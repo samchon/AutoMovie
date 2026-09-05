@@ -1,19 +1,54 @@
-import type { AutoMovieContentDigest } from "@automovie/interface";
+import {
+  digestAutoMovieSemanticMask,
+  renderAutoMovieSemanticMaskSidecar,
+} from "@automovie/engine";
+import type {
+  AutoMovieContentDigest,
+  IAutoMovieSemanticMask,
+} from "@automovie/interface";
 import {
   type IAutoMovieProductionRenderJobPlan,
   assertProductionRenderPublicationCurrent,
   canonicalAutoMovieJsonBytes,
+  createAutoMovieProductionSemanticMaskReceipt,
   digestAutoMovieBytes,
   parseProductionRenderPublicationIdentity,
+  probeProductionMedia,
   productionRenderPublicationIdentity,
 } from "@automovie/production";
 import { TestValidator } from "@nestia/e2e";
+import path from "node:path";
 
+import { loadSourceModule } from "../internal/loadSourceModule";
 import { namedFacts, throwsError } from "../internal/predicates";
 import { testCaptureRuntimeIdentity } from "./productionFixtures";
 
+const { assertProxyPublicationCandidate } = loadSourceModule<{
+  assertProxyPublicationCandidate: (props: {
+    bundle: string;
+    expected: ReadonlyMap<string, Uint8Array>;
+    plan: IAutoMovieProductionRenderJobPlan;
+    receipt: Uint8Array;
+  }) => unknown;
+}>(
+  path.resolve(
+    __dirname,
+    "../../../../packages/template/scaffold/scripts/assertProxyBundle.ts",
+  ),
+);
+
 const digest = (digit: string): AutoMovieContentDigest =>
   `sha256:${digit.repeat(64)}`;
+
+const resign = <T extends { fingerprint: AutoMovieContentDigest }>(
+  identity: T,
+): T => {
+  const { fingerprint: _fingerprint, ...basis } = identity;
+  return {
+    ...basis,
+    fingerprint: digestAutoMovieBytes(canonicalAutoMovieJsonBytes(basis)),
+  } as T;
+};
 
 const plan = (
   kind: "proxy" | "final",
@@ -49,12 +84,14 @@ const plan = (
     width: 1920,
     height: 1080,
     fps: 24,
+    frameRate: { numerator: 24, denominator: 1 },
     colorSpace: "srgb",
   },
   frameFormat: {
     width: kind === "final" ? 1920 : 960,
     height: kind === "final" ? 1080 : 540,
     fps: kind === "final" ? 24 : 12,
+    frameRate: { numerator: kind === "final" ? 24 : 12, denominator: 1 },
     colorSpace: "srgb",
   },
   totalFrames: 24,
@@ -85,6 +122,10 @@ const plan = (
  * 2. A runtime-only change is stale despite equal compiler and media bytes.
  * 3. A forged digest, missing field, and unknown field are refused before
  *    publication.
+ * 4. A semantic-mask JSON sidecar is parsed as its own media fact and a
+ *    tampered palette digest is refused.
+ * 5. A proxy receipt and semantic sidecar are completely validated before the
+ *    immutable publisher is allowed to create its first file.
  */
 export const test_production_publication_runtime_identity = (): void => {
   const finalPlan = plan("final");
@@ -135,17 +176,10 @@ export const test_production_publication_runtime_identity = (): void => {
         "effectDrift",
         () =>
           throwsError(() => {
-            const { fingerprint: _fingerprint, ...basis } = finalIdentity;
-            const changedBasis = {
-              ...basis,
-              tracks: { ...basis.tracks, effects: digest("9") },
-            };
-            const changed = {
-              ...changedBasis,
-              fingerprint: digestAutoMovieBytes(
-                canonicalAutoMovieJsonBytes(changedBasis),
-              ),
-            };
+            const changed = resign({
+              ...finalIdentity,
+              tracks: { ...finalIdentity.tracks, effects: digest("9") },
+            });
             assertProductionRenderPublicationCurrent({
               identity: changed,
               plan: finalPlan,
@@ -162,6 +196,62 @@ export const test_production_publication_runtime_identity = (): void => {
                 fingerprint: digest("7"),
               }),
             "does not match its canonical structured basis",
+          ),
+      ],
+      [
+        "blankProduction",
+        () =>
+          throwsError(
+            () =>
+              parseProductionRenderPublicationIdentity(
+                resign({ ...finalIdentity, productionId: " " }),
+              ),
+            "blank production",
+          ),
+      ],
+      [
+        "invalidTier",
+        () =>
+          throwsError(
+            () =>
+              parseProductionRenderPublicationIdentity(
+                resign({
+                  ...finalIdentity,
+                  tier: { kind: "final", resolutionScale: 0.5, frameStep: 1 },
+                }),
+              ),
+            "tier identity is invalid",
+          ),
+      ],
+      [
+        "frameProjectionMismatch",
+        () =>
+          throwsError(
+            () =>
+              parseProductionRenderPublicationIdentity(
+                resign({
+                  ...proxyIdentity,
+                  frameFormat: { ...proxyIdentity.frameFormat, width: 958 },
+                }),
+              ),
+            "frame or chunk extent is invalid",
+          ),
+      ],
+      [
+        "duplicateChunk",
+        () =>
+          throwsError(
+            () =>
+              parseProductionRenderPublicationIdentity(
+                resign({
+                  ...finalIdentity,
+                  chunks: [
+                    ...finalIdentity.chunks,
+                    { ...finalIdentity.chunks[0]!, id: digest("a") },
+                  ],
+                }),
+              ),
+            "chunk identity is malformed, duplicated",
           ),
       ],
       [
@@ -191,8 +281,208 @@ export const test_production_publication_runtime_identity = (): void => {
       chunkFrameDrift: true,
       effectDrift: true,
       forgedFingerprint: true,
+      blankProduction: true,
+      invalidTier: true,
+      frameProjectionMismatch: true,
+      duplicateChunk: true,
       missingRuntime: true,
       unknownField: true,
+    },
+  );
+
+  const maskBasis: Omit<IAutoMovieSemanticMask, "digest"> = {
+    version: 2,
+    protocol: "automovie.semantic-mask.v2",
+    background: "#000000",
+    entries: [
+      {
+        id: "node:hero",
+        kind: "node",
+        label: null,
+        color: "#123456",
+        owner: null,
+        nodes: ["hero"],
+        slot: null,
+      },
+    ],
+    unaddressed: [],
+  };
+  const mask: IAutoMovieSemanticMask = {
+    ...maskBasis,
+    digest: digestAutoMovieSemanticMask(maskBasis),
+  };
+  const maskBytes = Buffer.from(renderAutoMovieSemanticMaskSidecar(mask));
+  TestValidator.equals(
+    "semantic publication sidecars are parser-verified media facts",
+    {
+      probe: probeProductionMedia({
+        kind: "guide-pass",
+        mediaType: "application/vnd.automovie.semantic-mask+json",
+        bytes: maskBytes,
+      }),
+      tampered: throwsError(
+        () =>
+          probeProductionMedia({
+            kind: "guide-pass",
+            mediaType: "application/vnd.automovie.semantic-mask+json",
+            bytes: Buffer.from(
+              renderAutoMovieSemanticMaskSidecar({
+                ...mask,
+                digest: digest("f"),
+              }),
+            ),
+          }),
+        "digest",
+      ),
+      malformed: throwsError(
+        () =>
+          probeProductionMedia({
+            kind: "guide-pass",
+            mediaType: "application/vnd.automovie.semantic-mask+json",
+            bytes: Buffer.from("{not-json"),
+          }),
+        "strict UTF-8 JSON",
+      ),
+    },
+    {
+      probe: { kind: "semantic-mask", mask },
+      tampered: true,
+      malformed: true,
+    },
+  );
+
+  const semanticPlan = structuredClone(proxyPlan);
+  semanticPlan.totalFrames = 1;
+  semanticPlan.chunkFrames = 1;
+  semanticPlan.chunks = [
+    {
+      ...semanticPlan.chunks[0]!,
+      deliverable: "mask-guide",
+      kind: "guide-pass",
+      pass: "mask",
+      frameStart: 0,
+      frameEndExclusive: 1,
+      frames: [
+        {
+          globalFrame: 0,
+          timelineFrame: 0,
+          timeSeconds: 0,
+          layers: [{ shot: "opening", sourceFrame: 0, weight: 1 }],
+        },
+      ],
+    },
+  ];
+  const semanticIdentity = productionRenderPublicationIdentity(semanticPlan);
+  const bundle = `deliverables/proxy/${semanticIdentity.fingerprint.slice(7)}`;
+  const semanticPath = `${bundle}/mask-guide/frames/mask/frame_00000000.semantic.json`;
+  const semanticReceipt = createAutoMovieProductionSemanticMaskReceipt({
+    frame: 0,
+    expectedShot: "opening",
+    evidence: {
+      version: 1,
+      shot: "opening",
+      mask,
+      coverage: { unresolved: [], unaddressed: 0 },
+    },
+    sidecar: { path: semanticPath, bytes: maskBytes },
+  });
+  const proxyManifest = {
+    version: 2,
+    compileFingerprint: semanticPlan.compileFingerprint,
+    publication: semanticIdentity,
+    deliverables: [
+      {
+        id: "mask-guide",
+        kind: "guide-pass",
+        files: [
+          {
+            path: semanticPath,
+            digest: digestAutoMovieBytes(maskBytes),
+            bytes: maskBytes.byteLength,
+            mediaType: "application/vnd.automovie.semantic-mask+json",
+            semanticMask: semanticReceipt,
+          },
+        ],
+        runtimeSeconds: null,
+        frameCount: null,
+        codec: null,
+      },
+    ],
+  } as const;
+  const proxyReceipt = {
+    version: 1,
+    tier: semanticPlan.tier,
+    publicationFingerprint: semanticIdentity.fingerprint,
+    publicationIdentity: semanticIdentity,
+    compileFingerprint: semanticPlan.compileFingerprint,
+    editFingerprint: semanticPlan.editFingerprint,
+    frameFormat: semanticPlan.frameFormat,
+    sourceFrameFormat: semanticPlan.sourceFrameFormat,
+    totalFrames: semanticPlan.totalFrames,
+    manifest: proxyManifest,
+  };
+  const proxyBytes = (value: unknown): Buffer =>
+    Buffer.from(`${JSON.stringify(value, null, 2)}\n`);
+  TestValidator.equals(
+    "proxy preflight binds nested identity and semantic bytes before publish",
+    namedFacts([
+      [
+        "currentCandidate",
+        () => {
+          assertProxyPublicationCandidate({
+            bundle,
+            expected: new Map([[semanticPath, maskBytes]]),
+            plan: semanticPlan,
+            receipt: proxyBytes(proxyReceipt),
+          });
+          return true;
+        },
+      ],
+      [
+        "topLevelProjection",
+        () =>
+          throwsError(
+            () =>
+              assertProxyPublicationCandidate({
+                bundle,
+                expected: new Map([[semanticPath, maskBytes]]),
+                plan: semanticPlan,
+                receipt: proxyBytes({
+                  ...proxyReceipt,
+                  frameFormat: { ...proxyReceipt.frameFormat, width: 958 },
+                }),
+              }),
+            "invalid identity",
+          ),
+      ],
+      [
+        "missingSemanticReceipt",
+        () => {
+          const changed = structuredClone(proxyReceipt) as unknown as {
+            manifest: {
+              deliverables: Array<{
+                files: Array<{ semanticMask?: unknown }>;
+              }>;
+            };
+          };
+          delete changed.manifest.deliverables[0]!.files[0]!.semanticMask;
+          return throwsError(
+            () =>
+              assertProxyPublicationCandidate({
+                bundle,
+                expected: new Map([[semanticPath, maskBytes]]),
+                plan: semanticPlan,
+                receipt: proxyBytes(changed),
+              }),
+            "has no semantic receipt",
+          );
+        },
+      ],
+    ]),
+    {
+      currentCandidate: true,
+      topLevelProjection: true,
+      missingSemanticReceipt: true,
     },
   );
 };

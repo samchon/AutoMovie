@@ -6,13 +6,18 @@ import type {
 import {
   type IAutoMovieProductionRenderJobPlan,
   type IAutoMovieProductionRenderTier,
+  assertProductionRenderPublicationCurrent,
   canonicalAutoMovieJsonBytes,
   digestAutoMovieBytes,
   parseProductionRenderPublicationIdentity,
+  probeProductionMedia,
+  productionRenderLayersForPass,
   readAutoMovieProductionOwnedFile,
+  verifyAutoMovieProductionSemanticMaskReceipt,
 } from "@automovie/production";
 import fs from "node:fs";
 import path from "node:path";
+import typia from "typia";
 
 import type { IProxyBundleCapturedEvidence } from "./publishProxyBundle";
 import {
@@ -62,6 +67,61 @@ export interface IVerifiedProxyPublication {
   totalFrames: number;
   version: 1;
 }
+
+/** Refuse a proxy candidate semantically before any immutable path is created. */
+export const assertProxyPublicationCandidate = (props: {
+  bundle: string;
+  expected: ReadonlyMap<string, Uint8Array>;
+  plan: IAutoMovieProductionRenderJobPlan;
+  receipt: Uint8Array;
+}): IVerifiedProxyPublication => {
+  const parsed = parseProxyPublication(props.receipt);
+  assertProductionRenderPublicationCurrent({
+    identity: parsed.publicationIdentity,
+    plan: props.plan,
+  });
+  const facts = proxyManifestFiles(parsed, props.bundle);
+  if (facts.size !== props.expected.size)
+    throw new Error(
+      "Proxy publication candidate does not match its manifest inventory.",
+    );
+  for (const [path, bytes] of props.expected) {
+    if (path.startsWith(`${props.bundle}/`) === false)
+      throw new Error(
+        `Proxy publication candidate path "${path}" escapes "${props.bundle}".`,
+      );
+    const relative = path.slice(props.bundle.length + 1);
+    const fact = facts.get(relative);
+    if (
+      fact === undefined ||
+      fact.bytes !== bytes.byteLength ||
+      fact.digest !== digestAutoMovieBytes(bytes)
+    )
+      throw new Error(
+        `Proxy publication candidate file "${relative}" differs from its manifest.`,
+      );
+    assertProxySemanticFile(fact, bytes);
+    if (
+      fact.semanticMask !== undefined &&
+      props.plan.chunks.some(
+        (chunk) =>
+          chunk.deliverable === fact.deliverable &&
+          chunk.pass === "mask" &&
+          chunk.frames.some(
+            (frame) =>
+              frame.globalFrame === fact.semanticMask!.frame &&
+              productionRenderLayersForPass(frame, "mask").some(
+                (layer) => layer.shot === fact.semanticMask!.shot,
+              ),
+          ),
+      ) === false
+    )
+      throw new Error(
+        `Proxy semantic sidecar "${relative}" is not owned by the current plan.`,
+      );
+  }
+  return parsed;
+};
 
 /** Verify one immutable proxy publication against its exact expected files. */
 export const assertPublishedProxyBundle = (
@@ -129,6 +189,7 @@ export const inspectPublishedProxyBundle = (
       throw new Error(
         `Proxy bundle file "${relative}" differs from its publication manifest.`,
       );
+    assertProxySemanticFile(fact, resident);
   }
   assertExactBundle(physical.target, bundle);
   return parsed;
@@ -268,7 +329,11 @@ const parseProxyPublication = (
   const publicationIdentity = parseProductionRenderPublicationIdentity(
     receipt.publicationIdentity,
   );
+  const manifestValidation =
+    typia.validateEquals<IAutoMovieProductionRenderManifest>(receipt.manifest);
   if (
+    Object.keys(receipt).sort(compare).join(",") !==
+      "compileFingerprint,editFingerprint,frameFormat,manifest,publicationFingerprint,publicationIdentity,sourceFrameFormat,tier,totalFrames,version" ||
     receipt.version !== 1 ||
     validDigest(receipt.publicationFingerprint) === false ||
     validDigest(receipt.compileFingerprint) === false ||
@@ -279,40 +344,55 @@ const parseProxyPublication = (
     typeof receipt.totalFrames !== "number" ||
     Number.isSafeInteger(receipt.totalFrames) === false ||
     receipt.totalFrames <= 0 ||
-    isRecord(receipt.manifest) === false ||
-    receipt.manifest.version !== 2 ||
-    receipt.manifest.compileFingerprint !== receipt.compileFingerprint ||
+    manifestValidation.success === false ||
+    manifestValidation.data.compileFingerprint !== receipt.compileFingerprint ||
     receipt.publicationFingerprint !== publicationIdentity.fingerprint ||
     publicationIdentity.tier.kind !== "proxy" ||
     publicationIdentity.compileFingerprint !== receipt.compileFingerprint ||
     publicationIdentity.editFingerprint !== receipt.editFingerprint ||
     Buffer.from(
-      canonicalAutoMovieJsonBytes(receipt.manifest.publication),
+      canonicalAutoMovieJsonBytes(manifestValidation.data.publication),
     ).equals(Buffer.from(canonicalAutoMovieJsonBytes(publicationIdentity))) ===
       false ||
-    Array.isArray(receipt.manifest.deliverables) === false
+    Buffer.from(canonicalAutoMovieJsonBytes(receipt.tier)).equals(
+      Buffer.from(canonicalAutoMovieJsonBytes(publicationIdentity.tier)),
+    ) === false ||
+    Buffer.from(canonicalAutoMovieJsonBytes(receipt.frameFormat)).equals(
+      Buffer.from(canonicalAutoMovieJsonBytes(publicationIdentity.frameFormat)),
+    ) === false ||
+    Buffer.from(canonicalAutoMovieJsonBytes(receipt.sourceFrameFormat)).equals(
+      Buffer.from(
+        canonicalAutoMovieJsonBytes(publicationIdentity.sourceFrameFormat),
+      ),
+    ) === false ||
+    receipt.totalFrames !== publicationIdentity.totalFrames
   )
     throw new Error("Proxy publication receipt has an invalid identity.");
   return {
-    ...(value as Omit<IVerifiedProxyPublication, "publicationIdentity">),
+    version: 1,
+    compileFingerprint: publicationIdentity.compileFingerprint,
+    editFingerprint: publicationIdentity.editFingerprint,
+    frameFormat: structuredClone(publicationIdentity.frameFormat),
+    manifest: manifestValidation.data,
+    publicationFingerprint: publicationIdentity.fingerprint,
     publicationIdentity,
+    sourceFrameFormat: structuredClone(publicationIdentity.sourceFrameFormat),
+    tier: structuredClone(publicationIdentity.tier),
+    totalFrames: publicationIdentity.totalFrames,
   };
 };
 
 const proxyManifestFiles = (
   receipt: IVerifiedProxyPublication,
   bundle: string,
-): Map<string, { bytes: number; digest: AutoMovieContentDigest }> => {
+): Map<string, IProxyManifestFile> => {
   const expectedBundle = `deliverables/proxy/${receipt.publicationFingerprint.slice(7)}`;
   if (bundle !== expectedBundle)
     throw new Error(
       `Proxy publication receipt belongs to "${expectedBundle}", not "${bundle}".`,
     );
-  const files = new Map<
-    string,
-    { bytes: number; digest: AutoMovieContentDigest }
-  >();
-  for (const deliverable of receipt.manifest.deliverables as unknown[]) {
+  const files = new Map<string, IProxyManifestFile>();
+  for (const deliverable of receipt.manifest.deliverables) {
     if (validRenderedDeliverable(deliverable) === false)
       throw new Error("Proxy publication manifest has an invalid deliverable.");
     for (const value of deliverable.files) {
@@ -340,13 +420,69 @@ const proxyManifestFiles = (
         );
       files.set(relative, {
         bytes: value.bytes,
+        deliverable: deliverable.id,
         digest: value.digest as AutoMovieContentDigest,
+        kind: deliverable.kind,
+        mediaType: value.mediaType,
+        path: value.path,
+        semanticMask: value.semanticMask,
       });
     }
   }
   if (files.size === 0)
     throw new Error("Proxy publication manifest has no payload files.");
   return files;
+};
+
+interface IProxyManifestFile {
+  bytes: number;
+  deliverable: string;
+  digest: AutoMovieContentDigest;
+  kind: IAutoMovieProductionRenderManifest["deliverables"][number]["kind"];
+  mediaType: string;
+  path: string;
+  semanticMask?: NonNullable<
+    IAutoMovieProductionRenderManifest["deliverables"][number]["files"][number]["semanticMask"]
+  >;
+}
+
+const assertProxySemanticFile = (
+  fact: IProxyManifestFile,
+  bytes: Uint8Array,
+): void => {
+  const probe = probeProductionMedia({
+    kind: fact.kind,
+    mediaType: fact.mediaType,
+    bytes,
+  });
+  if (fact.semanticMask === undefined) {
+    if (probe.kind === "semantic-mask")
+      throw new Error(
+        `Proxy semantic sidecar "${fact.path}" has no semantic receipt.`,
+      );
+    return;
+  }
+  const semantic = fact.semanticMask;
+  if (
+    fact.kind !== "guide-pass" ||
+    probe.kind !== "semantic-mask" ||
+    semantic.sidecar.path !== fact.path
+  )
+    throw new Error(
+      `Proxy semantic sidecar "${fact.path}" has an invalid guide-pass owner.`,
+    );
+  verifyAutoMovieProductionSemanticMaskReceipt({
+    receipt: semantic,
+    expectedFrame: semantic.frame,
+    expectedShot: semantic.shot,
+    evidence: {
+      version: 1,
+      shot: semantic.shot,
+      mask: probe.mask,
+      coverage: semantic.coverage,
+    },
+    resident: { path: fact.path, bytes },
+  });
 };
 
 const assertExpectedBundleInventory = (

@@ -2,69 +2,12 @@ import type { AutoMovieContentDigest } from "@automovie/interface";
 import {
   type IAutoMovieProductionRenderGcCandidate,
   type IAutoMovieProductionRenderJobPlan,
+  planProductionRenderGc,
+  productionRenderMaterializationDecision,
 } from "@automovie/production";
 import { TestValidator } from "@nestia/e2e";
-import fs from "node:fs";
-import { createRequire } from "node:module";
-import os from "node:os";
-import path from "node:path";
-import { pathToFileURL } from "node:url";
-import { tsImport } from "tsx/esm/api";
-import * as ts from "typescript-compiler";
 
 import { namedFacts, throwsError } from "../internal/predicates";
-
-let planProductionRenderGc: typeof import("@automovie/production").planProductionRenderGc;
-let productionRenderMaterializationDecision: typeof import("@automovie/production").productionRenderMaterializationDecision;
-
-const loadExactRenderGc = async (
-  source: string,
-): Promise<
-  Pick<
-    typeof import("@automovie/production"),
-    "planProductionRenderGc" | "productionRenderMaterializationDecision"
-  >
-> => {
-  const directory = fs.mkdtempSync(
-    path.join(os.tmpdir(), "automovie-production-render-gc-"),
-  );
-  try {
-    const instrumented = path.join(directory, "productionRenderGc.mjs");
-    const transpiled = ts.transpileModule(fs.readFileSync(source, "utf8"), {
-      fileName: source,
-      compilerOptions: {
-        inlineSources: true,
-        module: ts.ModuleKind.ESNext,
-        sourceMap: true,
-        target: ts.ScriptTarget.ES2022,
-      },
-    });
-    const sourceMap = JSON.parse(transpiled.sourceMapText!) as {
-      file: string;
-      sources: string[];
-    };
-    sourceMap.file = path.basename(instrumented);
-    sourceMap.sources = [source];
-    fs.writeFileSync(
-      instrumented,
-      transpiled.outputText.replace(
-        /^\/\/# sourceMappingURL=.*$/mu,
-        `//# sourceMappingURL=${path.basename(instrumented)}.map`,
-      ),
-      "utf8",
-    );
-    fs.writeFileSync(`${instrumented}.map`, JSON.stringify(sourceMap), "utf8");
-    return (await tsImport(pathToFileURL(instrumented).href, {
-      parentURL: pathToFileURL(__filename).href,
-      tsconfig: false,
-    })) as Pick<
-      typeof import("@automovie/production"),
-      "planProductionRenderGc" | "productionRenderMaterializationDecision"
-    >;
-  } finally {
-    fs.rmSync(directory, { force: true, recursive: true });
-  }
-};
 
 const digest = (fill: string): AutoMovieContentDigest =>
   `sha256:${fill.repeat(64).slice(0, 64)}`;
@@ -86,6 +29,7 @@ const candidate = (
   digest: digest("a"),
   bytes: 1,
   generation: "generation-a",
+  fingerprint: digest("f"),
   observation: null,
   ...overrides,
 });
@@ -122,18 +66,7 @@ const plan = (
  *    missing retained, unpaired, and inactive facts refuse deterministically.
  * 4. The reclaim sum accepts the largest safe integer and refuses overflow.
  */
-export const test_production_render_gc = async (): Promise<void> => {
-  const source = path.resolve(
-    __dirname,
-    "../../../../packages/production/src/production/productionRenderGc.ts",
-  );
-  ({ planProductionRenderGc, productionRenderMaterializationDecision } =
-    process.env.AUTOMOVIE_EXACT_ESM_COVERAGE === "1"
-      ? await loadExactRenderGc(source)
-      : (createRequire(__filename)(source) as Pick<
-          typeof import("@automovie/production"),
-          "planProductionRenderGc" | "productionRenderMaterializationDecision"
-        >));
+export const test_production_render_gc = (): void => {
   const active = digest("a");
   const pointer = `proxy/pointers/${"a".repeat(64)}`;
   const tree = `proxy/tmp/${"a".repeat(64)}.attempt.7.00000000-0000-4000-8000-000000000000.aG9zdA`;
@@ -216,7 +149,7 @@ export const test_production_render_gc = async (): Promise<void> => {
       reclaimableBytes: classified.reclaimableBytes,
     },
     {
-      version: 3,
+      version: 4,
       retain: [
         currentDialogue,
         currentModel,
@@ -235,6 +168,56 @@ export const test_production_render_gc = async (): Promise<void> => {
       manualAdjudication: [],
       reclaimableBytes: 72,
     },
+  );
+  const classifiedDecisions = [
+    ...classified.retain.map((decision) => ({
+      disposition: "retain" as const,
+      decision,
+    })),
+    ...classified.remove.map((decision) => ({
+      disposition: "remove" as const,
+      decision,
+    })),
+    ...classified.quarantine.map((decision) => ({
+      disposition: "quarantine" as const,
+      decision,
+    })),
+    ...classified.manualAdjudication.map((decision) => ({
+      disposition: "manual-adjudication" as const,
+      decision,
+    })),
+  ];
+  TestValidator.predicate(
+    "every decision receipt is bound to the complete deterministic plan basis",
+    /^sha256:[0-9a-f]{64}$/u.test(classified.basis) &&
+      classifiedDecisions.every(({ disposition, decision }) => {
+        const receipt = decision.receipt;
+        return (
+          receipt.version === 1 &&
+          receipt.basis === classified.basis &&
+          receipt.disposition === disposition &&
+          receipt.kind === decision.candidate.kind &&
+          receipt.path === decision.candidate.path &&
+          receipt.generation === decision.candidate.generation &&
+          receipt.fingerprint === decision.candidate.fingerprint &&
+          receipt.state === decision.state &&
+          receipt.authority === decision.authority &&
+          receipt.stage === decision.stage &&
+          receipt.reason === decision.reason
+        );
+      }),
+  );
+  const reordered = plan({
+    plans: [renderPlan("final", []), renderPlan("proxy", [active])],
+    publicationPaths: ["publication/current.mp4"],
+    retainedChunkPaths: [pointer, tree],
+    retainedCachePaths: [currentDialogue, currentModel],
+    candidates: [...candidates].reverse(),
+  });
+  TestValidator.equals(
+    "equivalent input order retains one dry-run basis",
+    reordered.basis,
+    classified.basis,
   );
 
   const observed = (
@@ -306,6 +289,14 @@ export const test_production_render_gc = async (): Promise<void> => {
           { generation: null },
         ),
       ),
+      staleWithoutFingerprint: disposition(
+        observed(
+          "publication/stale-unfingerprinted",
+          "verified-stale",
+          "exact-remove",
+          { fingerprint: null },
+        ),
+      ),
       staleWithoutAuthority: disposition(
         observed("publication/stale-unowned", "verified-stale", "none"),
       ),
@@ -346,6 +337,7 @@ export const test_production_render_gc = async (): Promise<void> => {
       absent: "retain",
       stale: "remove",
       staleWithoutGeneration: "manual-adjudication",
+      staleWithoutFingerprint: "manual-adjudication",
       staleWithoutAuthority: "manual-adjudication",
       integrity: "quarantine",
       integrityWithoutGeneration: "manual-adjudication",
@@ -445,6 +437,10 @@ export const test_production_render_gc = async (): Promise<void> => {
       ["negative bytes", () => invalidCandidate({ bytes: -1 })],
       ["blank generation", () => invalidCandidate({ generation: " " })],
       ["unsafe generation", () => invalidCandidate({ generation: "a\n" })],
+      [
+        "malformed fingerprint",
+        () => invalidCandidate({ fingerprint: "sha256:x" }),
+      ],
       [
         "unknown observation",
         () =>
@@ -599,8 +595,10 @@ export const test_production_render_gc = async (): Promise<void> => {
       "negative bytes": true,
       "blank generation": true,
       "unsafe generation": true,
+      "malformed fingerprint": true,
       "unknown observation": true,
       "unknown authority": true,
+      "unknown stage": true,
       "empty observation reason": true,
       "unsafe observation reason": true,
       "chunk null digest": true,

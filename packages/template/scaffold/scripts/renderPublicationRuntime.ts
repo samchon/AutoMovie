@@ -4,26 +4,32 @@ import type {
   AutoMovieContentDigest,
   IAutoMovieProductionDeliverable,
   IAutoMovieProductionMediaProbe,
+  IAutoMovieProductionPublicationIdentity,
   IAutoMovieProductionRenderManifest,
   IAutoMovieProductionRenditionDelivery,
   IAutoMovieRepaintReceipt,
   IAutoMovieRepaintSequenceObservation,
+  IAutoMovieSemanticMask,
 } from "@automovie/interface";
 import {
+  AUTOMOVIE_SEMANTIC_MASK_MEDIA_TYPE,
   AutoMovieProductionCompiler,
   AutoMovieProductionProject,
   type IAutoMovieProductionRenderChunk,
   type IAutoMovieProductionRenderJobPlan,
+  type IAutoMovieProductionSemanticMaskReceipt,
   type IAutoMovieVisualDeliveryLane,
   assembleProductionChunkVideoMp4,
   assertProductionOpusProfile,
   assertProductionPngPicture,
+  assertProductionRenderPublicationCurrent,
   assertProductionRenderDialogueRuntimeIdentity,
   assertProductionVideoProfile,
   autoMovieRepaintSequenceObservationDiagnostics,
   canonicalAutoMovieCaptureRuntimeIdentity,
   canonicalAutoMovieJsonBytes,
   conformProductionVisualDeliveryVideoMp4,
+  createAutoMovieProductionSemanticMaskReceipt,
   digestAutoMovieBytes,
   digestAutoMovieRepaintObservationMembers,
   encodeAutoMoviePathSegment,
@@ -39,6 +45,7 @@ import {
   resolveProductionPngProfile,
   resolveProductionVideoProfile,
   sampleProductionRenderFrame,
+  verifyAutoMovieProductionSemanticMaskReceipt,
   verifyProductionNonVideoDeliverables,
 } from "@automovie/production";
 import path from "node:path";
@@ -49,8 +56,13 @@ import {
   assertProductionRepaintReceiptAdoption,
   assertProductionRepaintSelection,
 } from "./productionConfiguration";
+import { assertProxyPublicationCandidate } from "./assertProxyBundle";
 import { assertProductionSoundRenderClock } from "./productionRuntime";
-import { consumeCurrentRenderChunkFrames } from "./renderChunkSnapshot";
+import {
+  captureRenderChunkPublicationFromPointer,
+  consumeCurrentRenderChunkFrames,
+  readRenderChunkPublicationFile,
+} from "./renderChunkSnapshot";
 import { productionRenderFrameCaptureInput } from "./renderFrameCaptureInput";
 import type { IProductionRenderHost } from "./renderHost";
 import type { IProductionRenderChunkInspection } from "./renderPlanningRuntime";
@@ -62,6 +74,7 @@ import {
   produceProductionSound as produceSoundBundle,
   runWithProductionRuntimeClosure,
 } from "./renderSoundRuntime";
+import { captureExistingRenderPlan } from "./renderPlanSnapshot";
 
 /** Digest every publication input without reading mutable process state. */
 export const productionRenderPublicationFingerprint = (
@@ -106,12 +119,14 @@ export const createProductionRenderPublicationRuntime = (props: {
   ) => {
     compileFingerprint: string;
     editFingerprint: string;
+    publicationIdentity: IAutoMovieProductionPublicationIdentity;
     sourceFrameFormat: unknown;
   };
   publicationFingerprint: (plan: IAutoMovieProductionRenderJobPlan) => string;
   publishProxyBundle: (props: {
     expected: ReadonlyMap<string, Uint8Array>;
     parent: string;
+    preflight: () => void;
     renderRoot: string;
     target: string;
   }) => { reused: boolean };
@@ -136,37 +151,66 @@ export const createProductionRenderPublicationRuntime = (props: {
     });
   },
   assertMatchingProxy: (project, plan) => {
-    const proxyRoot = path.join(project.renderRoot(), "deliverables", "proxy");
-    if (props.filesystem.existsSync(proxyRoot) === false)
+    const proxyStateRoot = path.join(
+      project.root,
+      "automovie",
+      "productions",
+      encodeAutoMoviePathSegment(project.productionId),
+      "render-job",
+      "proxy",
+    );
+    const proxyPlanSnapshot = props.filesystem.existsSync(proxyStateRoot)
+      ? captureExistingRenderPlan(
+          proxyStateRoot,
+          path.join(proxyStateRoot, "plan.json"),
+        )
+      : null;
+    if (proxyPlanSnapshot === null)
       throw new Error(
-        "Final publication requires one immutable proxy publication of the same compiler-owned EDL. Finalize the proxy tier, review it, then finalize this plan.",
+        "Final publication requires the current proxy render-plan generation. Plan and finalize the proxy tier before final conform.",
       );
-    const matched = props.filesystem
-      .readdirSync(proxyRoot, { withFileTypes: true })
-      .filter(
-        (entry) =>
-          entry.isSymbolicLink() === false &&
-          (entry.isFile() || entry.isDirectory()) &&
-          /^[0-9a-f]{64}$/u.test(entry.name),
-      )
-      .some((entry) => {
-        try {
-          const receipt = props.inspectProxy(
-            project.renderRoot(),
-            path.join(proxyRoot, entry.name),
-          );
-          return (
-            receipt.compileFingerprint === plan.compileFingerprint &&
-            receipt.editFingerprint === plan.editFingerprint &&
-            isDeepStrictEqual(receipt.sourceFrameFormat, plan.sourceFrameFormat)
-          );
-        } catch {
-          return false;
-        }
-      });
-    if (matched === false)
+    const proxyPlan = proxyPlanSnapshot.plan;
+    const proxyIdentity = productionRenderPublicationIdentity(proxyPlan);
+    const target = path.join(
+      project.renderRoot(),
+      "deliverables",
+      "proxy",
+      proxyIdentity.fingerprint.slice(7),
+    );
+    if (props.filesystem.existsSync(target) === false)
       throw new Error(
-        "No immutable proxy publication matches this final plan's compile fingerprint, EDL fingerprint, and source frame format. Replan and finalize proxy before final conform.",
+        "Final publication requires the publication of the current proxy render plan, and none exists. Finalize the proxy tier, review it, then finalize this plan.",
+      );
+    const receipt = props.inspectProxy(project.renderRoot(), target);
+    assertProductionRenderPublicationCurrent({
+      identity: receipt.publicationIdentity,
+      plan: proxyPlan,
+    });
+    if (
+      receipt.compileFingerprint !== plan.compileFingerprint ||
+      receipt.editFingerprint !== plan.editFingerprint ||
+      isDeepStrictEqual(receipt.sourceFrameFormat, plan.sourceFrameFormat) ===
+        false
+    )
+      throw new Error(
+        "The current proxy publication does not match this final plan's compiler-owned EDL and source frame format. Replan and finalize both tiers.",
+      );
+    const currentProxyPlan = captureExistingRenderPlan(
+      proxyStateRoot,
+      path.join(proxyStateRoot, "plan.json"),
+    );
+    if (
+      currentProxyPlan === null ||
+      currentProxyPlan.generation !== proxyPlanSnapshot.generation ||
+      currentProxyPlan.snapshot.targetIdentity !==
+        proxyPlanSnapshot.snapshot.targetIdentity ||
+      currentProxyPlan.snapshot.targetVersion !==
+        proxyPlanSnapshot.snapshot.targetVersion ||
+      currentProxyPlan.snapshot.fileDigest !==
+        proxyPlanSnapshot.snapshot.fileDigest
+    )
+      throw new Error(
+        "The current proxy render-plan generation changed during final admission. Retry finalization.",
       );
   },
   publishProxy: (plan, publication, manifest, project) => {
@@ -179,8 +223,6 @@ export const createProductionRenderPublicationRuntime = (props: {
       );
     const publicationSegment = fingerprint.slice(7);
     const bundle = ["deliverables", "proxy", publicationSegment].join("/");
-    const parent = props.ensureDirectory(renderRoot, "deliverables/proxy");
-    const target = path.join(parent, publicationSegment);
     const manifestBytes = Buffer.from(
       `${JSON.stringify(
         {
@@ -200,6 +242,8 @@ export const createProductionRenderPublicationRuntime = (props: {
       )}\n`,
       "utf8",
     );
+    const parent = props.ensureDirectory(renderRoot, "deliverables/proxy");
+    const target = path.join(parent, publicationSegment);
     const files = new Map<string, Uint8Array>([
       ["publication.json", manifestBytes],
     ]);
@@ -213,6 +257,13 @@ export const createProductionRenderPublicationRuntime = (props: {
     const published = props.publishProxyBundle({
       expected: files,
       parent,
+      preflight: () =>
+        assertProxyPublicationCandidate({
+          bundle,
+          expected: publication,
+          plan,
+          receipt: manifestBytes,
+        }),
       renderRoot,
       target,
     });
@@ -259,11 +310,18 @@ export const createProductionRenderFinalizationRuntime = (props: {
     // than on a stored review ledger. A film that has not answered its
     // contracts at review stage has not been reviewed, whatever a ledger would
     // have said about it.
+    //
+    // This is the review-scope gate, deliberately. The final scope adds the
+    // aggregate delivery ledger, which is what this very run is about to
+    // create, so asking for it here refuses every first final publication as
+    // "no render manifest". The ledger is judged where it exists: the staged
+    // final gate inside the terminal commit and the final compile after it,
+    // both against the exact plan being published.
     if (plan.tier.kind === "final") {
       const gate = new AutoMovieProductionCompiler(
         AutoMovieProductionProject.openReadOnly(root, productionId),
         props.authoringEvidence,
-      ).lint({ scope: "final" });
+      ).lint({ scope: "review" });
       if (gate.success === false)
         // Carry each diagnostic's own message, not just its code and target. A
         // refusal here names the exact frames a shot or a staged model still
@@ -415,6 +473,14 @@ export const createProductionRenderFinalizationRuntime = (props: {
     const publicationFrameRate = resolveProductionFrameRate(plan.frameFormat);
     for (const deliverable of graph.production.deliverables) {
       const owned = new Map<string, Uint8Array>();
+      // Semantic sidecars a mask guide carries beside its frames, keyed by the
+      // owned name their bytes are published under. The chunk receipt that
+      // produced each one is kept so the publication record can be re-bound to
+      // the new path against the exact same shot, frame, palette, and coverage.
+      const semantics = new Map<
+        string,
+        IAutoMovieProductionSemanticMaskReceipt
+      >();
       const deliverableChunks = plan.chunks.filter(
         (chunk) => chunk.deliverable === deliverable.id,
       );
@@ -687,6 +753,46 @@ export const createProductionRenderFinalizationRuntime = (props: {
               frame.bytes,
             ),
           );
+          // A mask frame is unreadable without the palette that names its
+          // colours, so the chunk's semantic sidecars are published beside the
+          // frames as exact bytes. The pointer the inspection judged current is
+          // the only publication read, and every sidecar is reopened against
+          // the chunk receipt that sealed it before it is carried anywhere.
+          if (passes[0] === "mask") {
+            const chunkPublication = captureRenderChunkPublicationFromPointer(
+              inspection.pointer!,
+            );
+            for (const semantic of inspection.current.receipt.semanticMasks) {
+              const bytes = readRenderChunkPublicationFile(
+                chunkPublication,
+                semantic.sidecar.path,
+              );
+              verifyAutoMovieProductionSemanticMaskReceipt({
+                receipt: semantic,
+                expectedFrame: semantic.frame,
+                expectedShot: semantic.shot,
+                evidence: {
+                  version: 1,
+                  shot: semantic.shot,
+                  mask: JSON.parse(
+                    Buffer.from(bytes).toString("utf8"),
+                  ) as IAutoMovieSemanticMask,
+                  coverage: semantic.coverage,
+                },
+                resident: { path: semantic.sidecar.path, bytes },
+              });
+              const name = `frames/mask/frame_${String(semantic.frame).padStart(
+                8,
+                "0",
+              )}.semantic.json`;
+              if (owned.has(name) || semantics.has(name))
+                throw new Error(
+                  `Guide deliverable "${deliverable.id}" publishes two semantic sidecars for frame ${semantic.frame}.`,
+                );
+              owned.set(name, bytes);
+              semantics.set(name, semantic);
+            }
+          }
         }
       } else if (deliverable.kind === "captions") {
         if (plan.tracks.captions.split("-->").length < 2) {
@@ -774,6 +880,7 @@ export const createProductionRenderFinalizationRuntime = (props: {
         digest: AutoMovieContentDigest;
         bytes: number;
         mediaType: string;
+        semanticMask?: IAutoMovieProductionSemanticMaskReceipt;
         probe: ReturnType<typeof probeProductionMedia>;
       }> = [];
       for (const [name, bytes] of owned) {
@@ -784,16 +891,19 @@ export const createProductionRenderFinalizationRuntime = (props: {
           encodeAutoMoviePathSegment(deliverable.id),
           name,
         ].join("/");
+        const chunkSemantic = semantics.get(name);
         const mediaType =
           deliverable.kind === "captions"
             ? "text/vtt"
-            : name.endsWith(".json")
-              ? "application/json"
-              : deliverable.kind === "preview" || name.endsWith(".png")
-                ? "image/png"
-                : deliverable.kind === "audio-mix"
-                  ? "audio/mp4"
-                  : "video/mp4";
+            : chunkSemantic !== undefined
+              ? AUTOMOVIE_SEMANTIC_MASK_MEDIA_TYPE
+              : name.endsWith(".json")
+                ? "application/json"
+                : deliverable.kind === "preview" || name.endsWith(".png")
+                  ? "image/png"
+                  : deliverable.kind === "audio-mix"
+                    ? "audio/mp4"
+                    : "video/mp4";
         const probe = probeProductionMedia({
           kind: deliverable.kind,
           mediaType,
@@ -806,6 +916,24 @@ export const createProductionRenderFinalizationRuntime = (props: {
           digest: digestAutoMovieBytes(bytes),
           bytes: bytes.length,
           mediaType,
+          // The publication record names the sidecar at its delivered path
+          // while keeping the chunk receipt's shot, frame, palette digest, and
+          // coverage; the parser-verified palette is the one the bytes carry.
+          ...(chunkSemantic === undefined || probe.kind !== "semantic-mask"
+            ? {}
+            : {
+                semanticMask: createAutoMovieProductionSemanticMaskReceipt({
+                  frame: chunkSemantic.frame,
+                  expectedShot: chunkSemantic.shot,
+                  evidence: {
+                    version: 1,
+                    shot: chunkSemantic.shot,
+                    mask: probe.mask,
+                    coverage: chunkSemantic.coverage,
+                  },
+                  sidecar: { path: relative, bytes },
+                }),
+              }),
           probe,
         });
       }
@@ -908,6 +1036,7 @@ export const createProductionRenderFinalizationRuntime = (props: {
     plan: IAutoMovieProductionRenderJobPlan,
   ): void => {
     if (kind === "feature" || kind === "guide-pass") {
+      if (kind === "guide-pass" && probe.kind === "semantic-mask") return;
       if (kind === "guide-pass" && probe.kind === "png") {
         assertProductionPngPicture({
           profile: resolveProductionPngProfile({

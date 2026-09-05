@@ -40,10 +40,44 @@ const PNG_SIGNATURE = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a];
 const JPEG_FRAME_MARKERS = new Set([
   0xc0, 0xc1, 0xc2, 0xc3, 0xc5, 0xc6, 0xc7, 0xc9, 0xca, 0xcb, 0xcd, 0xce, 0xcf,
 ]);
+/** PDF white-space characters (ISO 32000-1 table 1) as a regex class source. */
+const PDF_SPACE = "[\\0\\t\\n\\f\\r ]";
+const XML_NAMESPACE = "http://www.w3.org/XML/1998/namespace";
+const XMLNS_NAMESPACE = "http://www.w3.org/2000/xmlns/";
+const XML_BASE_NAMESPACES = new Map<string, string>([["xml", XML_NAMESPACE]]);
 
 /**
  * Admit one design reference only after its complete supported profile parses.
  *
+ * A signature or a token selects the family and nothing more; the family's
+ * parser then has to close the container before any fact leaves this function.
+ * The admitted profiles are deliberately narrow and are stated here so a
+ * refusal is a decision rather than a limitation nobody wrote down:
+ *
+ * - PNG: the resident decoder reads the whole datastream with CRC checking,
+ *   the first chunk is a 13-byte `IHDR` with a positive extent, at least one
+ *   `IDAT` follows, and an empty `IEND` closes the bytes exactly.
+ * - JPEG: every byte outside entropy-coded data is a marker segment of the
+ *   interchange format, exactly one frame header states the extent, every scan
+ *   references frame components, restart markers appear only under a positive
+ *   `DRI` interval and in `RST0..RST7` order, and a terminal `EOI` closes the
+ *   bytes exactly.
+ * - PDF: a `%PDF-1.x` header, at least one closed indirect object, a classic
+ *   cross-reference table reachable from `startxref`, a trailer naming `/Size`
+ *   and `/Root`, a `Catalog` whose single `/Pages` tree is acyclic, parent-
+ *   consistent and whose `/Count` equals its leaves, and a terminal `%%EOF`.
+ *   The page box is not read, so the extent stays unsupported.
+ * - SVG: strictly decoded UTF-8 that is a well-formed XML document without
+ *   DTD or external entities, whose namespace-resolved root is `svg` in the
+ *   SVG namespace; the extent is the root `viewBox`, else unitless or `px`
+ *   `width` and `height`, and is omitted when neither states user units.
+ * - DXF: group-code and value pairs forming `SECTION` / `ENDSEC` records that
+ *   end with one `EOF`; the drawing extent is never derived.
+ *
+ * `null` means no family candidate was observed. A candidate that fails its
+ * parser throws {@link AutoMovieDesignReferenceContainerError} naming the
+ * family and stage, and malformed text throws the strict UTF-8 refusal before
+ * any grammar runs.
  */
 export const inspectAutoMovieDesignReferenceContainer = (props: {
   path: string;
@@ -139,6 +173,7 @@ const inspectJpeg = (props: {
   let width: number | undefined;
   let height: number | undefined;
   let frameComponents: Set<number> | undefined;
+  let restartInterval = 0;
   let scans = 0;
   let entropyBytes = 0;
   while (cursor < bytes.length) {
@@ -193,6 +228,15 @@ const inspectJpeg = (props: {
         "marker",
         `unexpected standalone marker 0x${hex(marker)}`,
       );
+    // 0x00 is byte stuffing that exists only inside entropy-coded data, and
+    // 0x02..0xBF are reserved codes with no defined segment structure.
+    if (marker <= 0xbf)
+      throw invalid(
+        props.path,
+        "JPEG",
+        "marker",
+        `reserved marker 0x${hex(marker)} has no segment structure`,
+      );
     if (cursor + 2 > bytes.length)
       throw invalid(props.path, "JPEG", "segment", "truncated segment length");
     const size = readU16(bytes, cursor);
@@ -204,6 +248,16 @@ const inspectJpeg = (props: {
         `invalid segment length ${size}`,
       );
     const payload = cursor + 2;
+    if (marker === 0xdd) {
+      if (size !== 4)
+        throw invalid(
+          props.path,
+          "JPEG",
+          "restart",
+          "DRI must carry one two-byte restart interval",
+        );
+      restartInterval = readU16(bytes, payload);
+    }
     if (JPEG_FRAME_MARKERS.has(marker)) {
       if (width !== undefined || height !== undefined)
         throw invalid(
@@ -265,14 +319,16 @@ const inspectJpeg = (props: {
             "scan references a component absent from the frame",
           );
       scans += 1;
-      const start = cursor;
+      let nextRestart = 0;
       while (cursor < bytes.length) {
         if (bytes[cursor] !== 0xff) {
+          entropyBytes += 1;
           cursor += 1;
           continue;
         }
         const next = bytes[cursor + 1];
         if (next === 0x00) {
+          entropyBytes += 1;
           cursor += 2;
           continue;
         }
@@ -281,12 +337,26 @@ const inspectJpeg = (props: {
           continue;
         }
         if (next !== undefined && next >= 0xd0 && next <= 0xd7) {
+          if (restartInterval === 0)
+            throw invalid(
+              props.path,
+              "JPEG",
+              "restart",
+              "restart markers require a positive DRI interval",
+            );
+          if (next - 0xd0 !== nextRestart)
+            throw invalid(
+              props.path,
+              "JPEG",
+              "restart",
+              `expected RST${nextRestart} but found RST${next - 0xd0}`,
+            );
+          nextRestart = (nextRestart + 1) % 8;
           cursor += 2;
           continue;
         }
         break;
       }
-      entropyBytes += cursor - start;
     }
   }
   throw invalid(props.path, "JPEG", "closure", "missing terminal EOI");
@@ -304,14 +374,14 @@ const inspectPdf = (props: {
       "header",
       "unsupported or incomplete header",
     );
-  if (!/\d+\s+\d+\s+obj\b[\s\S]*?\bendobj\b/.test(text))
+  if (!/\d+[\0\t\n\f\r ]+\d+[\0\t\n\f\r ]+obj\b[\s\S]*?\bendobj\b/.test(text))
     throw invalid(
       props.path,
       "PDF",
       "object",
       "no closed indirect object was found",
     );
-  const closure = /startxref\s+(\d+)\s+%%EOF(?:\r\n|\r|\n)?$/.exec(text);
+  const closure = /startxref[\0\t\n\f\r ]+(\d+)[\0\t\n\f\r ]+%%EOF(?:\r\n|\r|\n)?$/.exec(text);
   if (closure === null)
     throw invalid(
       props.path,
@@ -336,26 +406,28 @@ const inspectPdf = (props: {
       "trailer",
       "xref and Root trailer are incomplete",
     );
-  const root = xref.entries.get(xref.root.object);
-  const rootObject =
-    root === undefined
-      ? null
-      : new RegExp(
-          `^${xref.root.object}[ \\t]+${xref.root.generation}[ \\t]+obj\\b([\\s\\S]*?)\\bendobj\\b`,
-        ).exec(text.slice(root.offset));
-  if (
-    root === undefined ||
-    root.inUse === false ||
-    root.generation !== xref.root.generation ||
-    rootObject === null ||
-    !/\/Type[ \t\r\n]+\/Catalog\b/.test(rootObject[1]!)
-  )
+  const rootObject = readClassicPdfObject(text, xref.entries, xref.root);
+  if (rootObject === null || pdfTypes(rootObject).join() !== "Catalog")
     throw invalid(
       props.path,
       "PDF",
       "Root",
       "the Root reference has no matching in-use xref object",
     );
+  const pages = pdfReferences(rootObject, "Pages");
+  if (pages.length !== 1)
+    throw invalid(
+      props.path,
+      "PDF",
+      "Pages",
+      "the Catalog must carry one Pages tree reference",
+    );
+  inspectClassicPdfPageTree({
+    path: props.path,
+    text,
+    entries: xref.entries,
+    root: pages[0]!,
+  });
   return { media: "application/pdf" };
 };
 
@@ -365,14 +437,19 @@ interface IPdfXrefEntry {
   inUse: boolean;
 }
 
+interface IPdfReference {
+  object: number;
+  generation: number;
+}
+
 const inspectClassicPdfXref = (
   text: string,
 ): {
   entries: Map<number, IPdfXrefEntry>;
-  root: { object: number; generation: number };
+  root: IPdfReference;
 } | null => {
   const normalized = text.replace(/\r\n?/g, "\n");
-  const trailer = /\ntrailer[ \t\n]*<<([\s\S]*)>>[ \t\n]*$/.exec(normalized);
+  const trailer = /\ntrailer[\0\t\n\f ]*<<([\s\S]*)>>[\0\t\n\f ]*$/.exec(normalized);
   if (trailer === null) return null;
   const lines = normalized.slice(0, trailer.index).split("\n");
   if (lines.shift() !== "xref") return null;
@@ -403,10 +480,10 @@ const inspectClassicPdfXref = (
   const dictionary = trailer[1]!;
   const roots = [
     ...dictionary.matchAll(
-      /\/Root[ \t\r\n]+(\d+)[ \t\r\n]+(\d+)[ \t\r\n]+R\b/g,
+      /\/Root[\0\t\n\f\r ]+(\d+)[\0\t\n\f\r ]+(\d+)[\0\t\n\f\r ]+R\b/g,
     ),
   ];
-  const sizes = [...dictionary.matchAll(/\/Size[ \t\r\n]+(\d+)\b/g)];
+  const sizes = [...dictionary.matchAll(/\/Size[\0\t\n\f\r ]+(\d+)\b/g)];
   if (roots.length !== 1 || sizes.length !== 1) return null;
   const root = {
     object: Number(roots[0]![1]),
@@ -425,6 +502,136 @@ const inspectClassicPdfXref = (
   return { entries, root };
 };
 
+const readClassicPdfObject = (
+  text: string,
+  entries: ReadonlyMap<number, IPdfXrefEntry>,
+  reference: IPdfReference,
+): string | null => {
+  const entry = entries.get(reference.object);
+  if (
+    entry === undefined ||
+    entry.inUse === false ||
+    entry.generation !== reference.generation
+  )
+    return null;
+  return (
+    new RegExp(
+      `^${reference.object}${PDF_SPACE}+${reference.generation}${PDF_SPACE}+obj\\b([\\s\\S]*?)\\bendobj\\b`,
+    ).exec(text.slice(entry.offset))?.[1] ?? null
+  );
+};
+
+const pdfTypes = (body: string): string[] =>
+  [...body.matchAll(/\/Type[\0\t\n\f\r ]+\/([A-Za-z]+)\b/g)].map(
+    (match) => match[1]!,
+  );
+
+const pdfReferences = (body: string, key: string): IPdfReference[] =>
+  [
+    ...body.matchAll(
+      new RegExp(
+        `/${key}${PDF_SPACE}+(\\d+)${PDF_SPACE}+(\\d+)${PDF_SPACE}+R\\b`,
+        "g",
+      ),
+    ),
+  ].map((match) => ({
+    object: Number(match[1]),
+    generation: Number(match[2]),
+  }));
+
+const inspectClassicPdfPageTree = (props: {
+  path: string;
+  text: string;
+  entries: ReadonlyMap<number, IPdfXrefEntry>;
+  root: IPdfReference;
+}): void => {
+  const visited = new Set<string>();
+  const visit = (
+    reference: IPdfReference,
+    parent: IPdfReference | null,
+  ): number => {
+    const identity = `${reference.object}:${reference.generation}`;
+    if (visited.has(identity))
+      throw invalid(
+        props.path,
+        "PDF",
+        "Pages",
+        "the Pages tree contains a cycle or repeated child",
+      );
+    visited.add(identity);
+    const body = readClassicPdfObject(props.text, props.entries, reference);
+    if (body === null)
+      throw invalid(
+        props.path,
+        "PDF",
+        "Pages",
+        "a Pages tree reference has no matching in-use xref object",
+      );
+    const types = pdfTypes(body);
+    if (types.length !== 1 || (types[0] !== "Pages" && types[0] !== "Page"))
+      throw invalid(
+        props.path,
+        "PDF",
+        "Pages",
+        "every Pages tree object must declare one Page or Pages type",
+      );
+    const parents = pdfReferences(body, "Parent");
+    if (
+      parent === null
+        ? parents.length !== 0 || types[0] !== "Pages"
+        : parents.length !== 1 ||
+          parents[0]!.object !== parent.object ||
+          parents[0]!.generation !== parent.generation
+    )
+      throw invalid(
+        props.path,
+        "PDF",
+        "Pages",
+        "each non-root page-tree object must point to its exact parent",
+      );
+    if (types[0] === "Page") return 1;
+    const kids = [...body.matchAll(/\/Kids[\0\t\n\f\r ]*\[([^\]]*)\]/g)];
+    const counts = [...body.matchAll(/\/Count[\0\t\n\f\r ]+(\d+)\b/g)];
+    if (kids.length !== 1 || counts.length !== 1)
+      throw invalid(
+        props.path,
+        "PDF",
+        "Pages",
+        "each Pages node must carry one Kids array and Count",
+      );
+    const children = [
+      ...kids[0]![1]!.matchAll(/(\d+)[\0\t\n\f\r ]+(\d+)[\0\t\n\f\r ]+R\b/g),
+    ].map((match) => ({
+      object: Number(match[1]),
+      generation: Number(match[2]),
+    }));
+    const residue = kids[0]![1]!
+      .replace(/\d+[\0\t\n\f\r ]+\d+[\0\t\n\f\r ]+R\b/g, "")
+      .trim();
+    const declared = Number(counts[0]![1]);
+    if (!Number.isSafeInteger(declared) || residue !== "")
+      throw invalid(
+        props.path,
+        "PDF",
+        "Pages",
+        "the Kids array and Count must use bounded indirect identities",
+      );
+    const measured = children.reduce(
+      (sum, child) => sum + visit(child, reference),
+      0,
+    );
+    if (measured !== declared)
+      throw invalid(
+        props.path,
+        "PDF",
+        "Pages",
+        `page-tree Count ${declared} does not match ${measured} leaves`,
+      );
+    return measured;
+  };
+  visit(props.root, null);
+};
+
 interface IXmlRoot {
   localName: string;
   namespace: string | undefined;
@@ -433,6 +640,9 @@ interface IXmlRoot {
 
 const inspectXmlRoot = (path: string, text: string): IXmlRoot | null => {
   const cursor = skipXmlMisc(path, text, 0, true);
+  const leading = text.codePointAt(cursor);
+  if (leading !== undefined && !isXmlCharacter(leading))
+    throw invalid(path, "XML", "character", "invalid leading XML character");
   if (text[cursor] !== "<") return null;
   if (text.startsWith("<!", cursor))
     throw invalid(
@@ -441,19 +651,21 @@ const inspectXmlRoot = (path: string, text: string): IXmlRoot | null => {
       "prolog",
       "declarations and external entities are not admitted",
     );
-  const root = readStartTag(path, text, cursor);
+  const root = readStartTag(path, text, cursor, XML_BASE_NAMESPACES);
   if (root === null) return null;
-  const prefix = root.name.includes(":") ? root.name.split(":", 1)[0]! : "";
-  const localName = root.name.includes(":")
-    ? root.name.slice(root.name.indexOf(":") + 1)
-    : root.name;
-  const namespace = root.attributes.get(prefix ? `xmlns:${prefix}` : "xmlns");
   validateXmlClosure(path, text, root);
-  return { localName, namespace, attributes: root.attributes };
+  return {
+    localName: root.localName,
+    namespace: root.namespace,
+    attributes: root.attributes,
+  };
 };
 
 interface IStartTag {
   name: string;
+  localName: string;
+  namespace: string | undefined;
+  namespaces: ReadonlyMap<string, string>;
   attributes: Map<string, string>;
   end: number;
   selfClosing: boolean;
@@ -463,6 +675,7 @@ const readStartTag = (
   path: string,
   text: string,
   offset: number,
+  inheritedNamespaces: ReadonlyMap<string, string>,
 ): IStartTag | null => {
   const name = /^<([A-Za-z_][\w.:-]*)/.exec(text.slice(offset));
   if (name === null) return null;
@@ -473,14 +686,23 @@ const readStartTag = (
   while (true) {
     cursor = skipXmlSpace(text, cursor);
     if (text.startsWith("/>", cursor))
-      return { name: name[1]!, attributes, end: cursor + 2, selfClosing: true };
+      return finishStartTag({
+        path,
+        name: name[1]!,
+        attributes,
+        end: cursor + 2,
+        selfClosing: true,
+        inheritedNamespaces,
+      });
     if (text[cursor] === ">")
-      return {
+      return finishStartTag({
+        path,
         name: name[1]!,
         attributes,
         end: cursor + 1,
         selfClosing: false,
-      };
+        inheritedNamespaces,
+      });
     const attribute =
       /^([A-Za-z_][\w.:-]*)[ \t\r\n]*=[ \t\r\n]*(["'])([\s\S]*?)\2/.exec(
         text.slice(cursor),
@@ -511,6 +733,97 @@ const readStartTag = (
   }
 };
 
+const finishStartTag = (props: {
+  path: string;
+  name: string;
+  attributes: Map<string, string>;
+  end: number;
+  selfClosing: boolean;
+  inheritedNamespaces: ReadonlyMap<string, string>;
+}): IStartTag => {
+  const namespaces = new Map(props.inheritedNamespaces);
+  for (const [name, namespace] of props.attributes) {
+    const prefix =
+      name === "xmlns"
+        ? ""
+        : name.startsWith("xmlns:")
+          ? name.slice("xmlns:".length)
+          : null;
+    if (prefix === null) continue;
+    if (
+      prefix === "xmlns" ||
+      namespace === XMLNS_NAMESPACE ||
+      (prefix === "xml" && namespace !== XML_NAMESPACE) ||
+      (prefix !== "xml" && namespace === XML_NAMESPACE) ||
+      (prefix !== "" && namespace === "")
+    )
+      throw invalid(
+        props.path,
+        "XML",
+        "namespace",
+        `invalid namespace binding ${name}`,
+      );
+    if (namespace === "") namespaces.delete(prefix);
+    else namespaces.set(prefix, namespace);
+  }
+  const element = resolveXmlName(props.path, props.name, namespaces, true);
+  const expandedAttributes = new Set<string>();
+  for (const name of props.attributes.keys()) {
+    if (name === "xmlns" || name.startsWith("xmlns:")) continue;
+    const expanded = resolveXmlName(props.path, name, namespaces, false);
+    const identity = `${expanded.namespace ?? ""}\u0000${expanded.localName}`;
+    if (expandedAttributes.has(identity))
+      throw invalid(
+        props.path,
+        "XML",
+        "namespace",
+        `duplicate expanded attribute name ${name}`,
+      );
+    expandedAttributes.add(identity);
+  }
+  return {
+    name: props.name,
+    localName: element.localName,
+    namespace: element.namespace,
+    namespaces,
+    attributes: props.attributes,
+    end: props.end,
+    selfClosing: props.selfClosing,
+  };
+};
+
+const resolveXmlName = (
+  path: string,
+  name: string,
+  namespaces: ReadonlyMap<string, string>,
+  defaultNamespace: boolean,
+): { localName: string; namespace: string | undefined } => {
+  const separator = name.indexOf(":");
+  const prefix = separator === -1 ? "" : name.slice(0, separator);
+  const localName = separator === -1 ? name : name.slice(separator + 1);
+  if (prefix === "xmlns")
+    throw invalid(
+      path,
+      "XML",
+      "namespace",
+      "the xmlns prefix cannot name an element or ordinary attribute",
+    );
+  const namespace =
+    prefix === ""
+      ? defaultNamespace
+        ? namespaces.get("")
+        : undefined
+      : namespaces.get(prefix);
+  if (prefix !== "" && namespace === undefined)
+    throw invalid(
+      path,
+      "XML",
+      "namespace",
+      `unbound namespace prefix ${prefix}`,
+    );
+  return { localName, namespace };
+};
+
 const validateXmlClosure = (
   path: string,
   text: string,
@@ -526,7 +839,7 @@ const validateXmlClosure = (
       );
     return;
   }
-  const stack = [root.name];
+  const stack = [root];
   let cursor = root.end;
   while (cursor < text.length) {
     const open = text.indexOf("<", cursor);
@@ -568,7 +881,7 @@ const validateXmlClosure = (
           "name",
           `invalid qualified name ${close[1]}`,
         );
-      if (stack.pop() !== close[1])
+      if (stack.pop()?.name !== close[1])
         throw invalid(
           path,
           "SVG",
@@ -588,7 +901,7 @@ const validateXmlClosure = (
       }
       continue;
     }
-    const child = readStartTag(path, text, open);
+    const child = readStartTag(path, text, open, stack.at(-1)!.namespaces);
     if (child === null)
       throw invalid(
         path,
@@ -596,7 +909,7 @@ const validateXmlClosure = (
         "closure",
         `malformed markup at character ${open}`,
       );
-    if (!child.selfClosing) stack.push(child.name);
+    if (!child.selfClosing) stack.push(child);
     cursor = child.end;
   }
   throw invalid(path, "SVG", "closure", "root element is not closed");
@@ -634,8 +947,7 @@ const skipXmlMisc = (
 const validateXmlCharacterData = (path: string, value: string): void => {
   if (value.includes("]]>"))
     throw invalid(path, "SVG", "text", "invalid XML character data");
-  validateXmlCharacters(path, value);
-  decodeXmlAttribute(path, value);
+  decodeXmlText(path, value, "text");
 };
 
 const validateXmlCharacters = (path: string, value: string): void => {
@@ -663,8 +975,10 @@ const validateXmlInstruction = (
 ): void => {
   validateXmlCharacters(path, body);
   const target = /^([A-Za-z_][\w.:-]*)(?:[ \t\r\n]|$)/.exec(body)?.[1];
+  // XML 1.0 XMLDecl: the pseudo-attribute names, the version and the
+  // standalone values are case-sensitive; only the encoding name is not.
   const declaration =
-    /^xml[ \t\r\n]+version[ \t\r\n]*=[ \t\r\n]*(["'])1\.0\1(?:[ \t\r\n]+encoding[ \t\r\n]*=[ \t\r\n]*(["'])utf-8\2)?(?:[ \t\r\n]+standalone[ \t\r\n]*=[ \t\r\n]*(["'])(?:yes|no)\3)?[ \t\r\n]*$/i.test(
+    /^xml[ \t\r\n]+version[ \t\r\n]*=[ \t\r\n]*(["'])1\.0\1(?:[ \t\r\n]+encoding[ \t\r\n]*=[ \t\r\n]*(["'])[Uu][Tt][Ff]-8\2)?(?:[ \t\r\n]+standalone[ \t\r\n]*=[ \t\r\n]*(["'])(?:yes|no)\3)?[ \t\r\n]*$/.test(
       body,
     );
   if (
@@ -680,12 +994,10 @@ const svgExtent = (
 ): IDesignReferenceExtent => {
   const viewBox = attributes.get("viewBox");
   if (viewBox !== undefined) {
-    const fields = trimXmlSpace(viewBox)
-      .split(/[ \t\r\n,]+/)
-      .map(Number);
+    const fields = trimXmlSpace(viewBox).split(/[ \t\r\n,]+/).map(svgNumber);
     if (
       fields.length === 4 &&
-      fields.every(Number.isFinite) &&
+      fields.every((field) => field !== null) &&
       fields[2]! > 0 &&
       fields[3]! > 0
     )
@@ -700,9 +1012,19 @@ const svgExtent = (
 
 const svgLength = (raw: string | undefined): number | null => {
   if (raw === undefined) return null;
-  const spelling = trimXmlSpace(raw).replace(/px$/, "");
+  const value = svgNumber(trimXmlSpace(raw).replace(/px$/, ""));
+  return value !== null && value > 0 ? value : null;
+};
+
+/**
+ * One SVG `<number>`: an optional sign, an integer or a fraction with digits
+ * after the point, and an optional exponent. `Number()` would also read hex,
+ * binary, octal and `Infinity` spellings the SVG grammar does not contain.
+ */
+const svgNumber = (spelling: string): number | null => {
+  if (!/^[+-]?(?:\d+|\d*\.\d+)(?:[eE][+-]?\d+)?$/.test(spelling)) return null;
   const value = Number(spelling);
-  return spelling !== "" && Number.isFinite(value) && value > 0 ? value : null;
+  return Number.isFinite(value) ? value : null;
 };
 
 const inspectDxf = (path: string, text: string): boolean => {
@@ -771,11 +1093,19 @@ const inspectDxf = (path: string, text: string): boolean => {
   return true;
 };
 
-const decodeXmlAttribute = (path: string, value: string): string => {
+const decodeXmlAttribute = (path: string, value: string): string =>
+  decodeXmlText(path, value, "attribute");
+
+/** Resolve the predefined entities and character references of one text run. */
+const decodeXmlText = (
+  path: string,
+  value: string,
+  role: "attribute" | "text",
+): string => {
   validateXmlCharacters(path, value);
   const entity = /&(?:amp|lt|gt|quot|apos|#\d+|#x[0-9a-fA-F]+);/g;
   if (/[<&]/.test(value.replace(entity, "")))
-    throw invalid(path, "SVG", "attribute", "unescaped markup in attribute");
+    throw invalid(path, "SVG", role, `unescaped markup in ${role}`);
   return value.replace(entity, (reference) => {
     const decoded: Record<string, string> = {
       "&amp;": "&",

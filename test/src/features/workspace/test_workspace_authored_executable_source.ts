@@ -33,8 +33,16 @@ export const test_workspace_authored_executable_source = (): void => {
       [
         "packageBuildToolingIsNotMeasured",
         () =>
-          isAuthoredExecutableSource("packages/template/build/versions.ts") ===
-          false,
+          isAuthoredExecutableSource("packages/engine/build/versions.mts") ===
+            false &&
+          isAuthoredExecutableSource("packages/template/build/versions.cts") ===
+            false,
+      ],
+      [
+        "formatSpecificRuntimeSourcesAreMeasured",
+        () =>
+          isAuthoredExecutableSource("packages/engine/src/runtime.cts") &&
+          isAuthoredExecutableSource("packages/engine/src/runtime.mts"),
       ],
       [
         "aConfigurationDeclarationIsNotMeasured",
@@ -54,6 +62,7 @@ export const test_workspace_authored_executable_source = (): void => {
       ordinaryPackageLogicIsMeasured: true,
       commandOrchestrationIsNotMeasured: true,
       packageBuildToolingIsNotMeasured: true,
+      formatSpecificRuntimeSourcesAreMeasured: true,
       aConfigurationDeclarationIsNotMeasured: true,
       aNormalModuleNamedAfterConfigurationIsMeasured: true,
     },

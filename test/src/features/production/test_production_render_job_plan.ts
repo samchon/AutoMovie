@@ -98,6 +98,12 @@ const AUDIO_ASSET = {
   channels: 2,
 } as const;
 
+const LONG_AUDIO_ASSET = {
+  ...AUDIO_ASSET,
+  durationSeconds: 1,
+  sourceFrames: 48_000,
+} as const;
+
 /**
  * Production design fixed to the hand-derivable clock this case computes from.
  *
@@ -216,6 +222,14 @@ const plan = (props: {
     tier: props.tier,
   });
 
+const audioTimeline = (
+  cue: Partial<IAutoMovieFilmTimeline["tracks"]["audio"][number]>,
+): IAutoMovieFilmTimeline => {
+  const timeline = TIMELINE();
+  timeline.tracks.audio[0] = { ...timeline.tracks.audio[0]!, ...cue };
+  return timeline;
+};
+
 const chunkShape = (
   built: IAutoMovieProductionRenderJobPlan,
 ): Array<{ slot: string; frameStart: number; frameEndExclusive: number }> =>
@@ -257,7 +271,10 @@ const chunkShape = (
  *    the authored edit, and `verifyProductionRenderJobPlan` accepts the plan it
  *    produced and refuses one whose frame range was widened by a single frame.
  * 5. Captions become canonical WebVTT addressed in film seconds, and the audio
- *    cue keeps its digest-, duration-, and format-verified asset.
+ *    cue keeps its digest-, duration-, and format-verified asset. The cue's
+ *    `sourceDurationFrames` is verified as the complete asset at the asset's
+ *    own sample clock, so a trim that starts partway through a longer asset is
+ *    carried through as authored.
  * 6. Refusals: a non-positive chunk size, a runtime digest that is not a
  *    SHA-256 identity, a frame step that does not divide the edit, a "final"
  *    tier that is not exactly full quality, a "proxy" tier that reduces
@@ -569,6 +586,30 @@ export const test_production_render_job_plan = (): void => {
       plan({ audioAssets: [RESAMPLED_WAVE_AUDIO_ASSET] }).tracks.audioAssets[0],
     ],
     [WAVE_AUDIO_ASSET, RESAMPLED_WAVE_AUDIO_ASSET],
+  );
+  // The cue's `sourceDurationFrames` names the complete asset, so a one-second
+  // asset is verified by a 24-frame declaration and the twelve-frame trim that
+  // starts twelve frames in is the asset's second half, carried through as
+  // authored rather than re-read as a span or a rate.
+  const offsetCue = {
+    ...TIMELINE().tracks.audio[0]!,
+    sourceDurationFrames: 24,
+    sourceOffsetFrame: 12,
+  };
+  const offsetAudio = plan({
+    audioAssets: [LONG_AUDIO_ASSET],
+    timeline: audioTimeline(offsetCue),
+  });
+  TestValidator.equals(
+    "audio source duration identifies the complete asset while the offset trim is carried as authored",
+    {
+      asset: offsetAudio.tracks.audioAssets[0],
+      cue: offsetAudio.tracks.audio[0],
+    },
+    {
+      asset: LONG_AUDIO_ASSET,
+      cue: offsetCue,
+    },
   );
 
   TestValidator.equals(

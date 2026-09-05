@@ -25,6 +25,7 @@ const {
   AUTOMOVIE_DESIGN_DERIVATION_PROTOCOL,
   AutoMovieDesignDerivationError,
   autoMovieDesignDerivationBasisDigest,
+  captureAutoMovieDesignDerivationBasis,
   createAutoMovieDesignDerivationCandidate,
   inspectAutoMovieDesignDerivation,
 } = loadSourceModule<{
@@ -35,6 +36,19 @@ const {
   autoMovieDesignDerivationBasisDigest: (
     basis: IAutoMovieDesignDerivationBasis,
   ) => AutoMovieContentDigest;
+  captureAutoMovieDesignDerivationBasis: (props: {
+    production: string;
+    target: string;
+    recordPath: string;
+    emitter: { path: string; bytes: Uint8Array };
+    source: {
+      path: string;
+      export: string;
+      selector: string | null;
+    };
+    readSource: (path: string) => Uint8Array;
+    tool: IAutoMovieDesignDerivationBasis["tool"];
+  }) => IAutoMovieDesignDerivationBasis;
   createAutoMovieDesignDerivationCandidate: (props: {
     bases: readonly IAutoMovieDesignDerivationBasis[];
     evaluate: () => Array<{
@@ -97,6 +111,49 @@ const output = (value = 1) => [
  */
 export const test_production_design_derivation = (): void => {
   const initialBasis = basis();
+  const sourceFiles = {
+    "src/design/production.ts":
+      'import type { T } from "./types";\nimport { value } from "./shared";\nexport const production = value;\n',
+    "src/design/shared.ts": "export const value = 1;\n",
+  };
+  const captureBasis = (
+    files: Readonly<Record<string, string>> = sourceFiles,
+    emitter = "export {};\n",
+  ): IAutoMovieDesignDerivationBasis =>
+    captureAutoMovieDesignDerivationBasis({
+      production: "film",
+      target: "production",
+      recordPath: "automovie/design/film/production.json",
+      emitter: {
+        path: "scripts/emitDesign.ts",
+        bytes: Buffer.from(emitter),
+      },
+      source: {
+        path: "src/design/production.ts",
+        export: "production",
+        selector: null,
+      },
+      readSource: (sourcePath) => {
+        const source = files[sourcePath];
+        if (source === undefined) throw new Error("missing source");
+        return Buffer.from(source);
+      },
+      tool: { production: "1.0.0", typescript: "7.0.0", node: "22" },
+    });
+  const linkedBasis = captureBasis();
+  const linkedBasisCrlf = captureBasis(
+    Object.fromEntries(
+      Object.entries(sourceFiles).map(([sourcePath, source]) => [
+        sourcePath,
+        source.replaceAll("\n", "\r\n"),
+      ]),
+    ),
+    "export {};\r\n",
+  );
+  const changedTransitiveBasis = captureBasis({
+    ...sourceFiles,
+    "src/design/shared.ts": "export const value = 2;\n",
+  });
   const candidate = createAutoMovieDesignDerivationCandidate({
     bases: [initialBasis],
     evaluate: () => output(),
@@ -131,6 +188,44 @@ export const test_production_design_derivation = (): void => {
           autoMovieDesignDerivationBasisDigest(initialBasis) ===
           autoMovieDesignDerivationBasisDigest(
             basis({ dependencies: [...initialBasis.dependencies].reverse() }),
+          ),
+      ],
+      [
+        "runtimeClosureCaptured",
+        () =>
+          linkedBasis.dependencies
+            .map((dependency) => dependency.path)
+            .join(",") === "src/design/production.ts,src/design/shared.ts",
+      ],
+      [
+        "typeOnlyDependencyExcluded",
+        () =>
+          linkedBasis.dependencies.some(
+            (dependency) => dependency.path === "src/design/types.ts",
+          ) === false,
+      ],
+      [
+        "sourceEolNormalizationStable",
+        () =>
+          autoMovieDesignDerivationBasisDigest(linkedBasis) ===
+          autoMovieDesignDerivationBasisDigest(linkedBasisCrlf),
+      ],
+      [
+        "transitiveSourceChangeStalesBasis",
+        () =>
+          autoMovieDesignDerivationBasisDigest(linkedBasis) !==
+          autoMovieDesignDerivationBasisDigest(changedTransitiveBasis),
+      ],
+      [
+        "missingRuntimeDependencyRefused",
+        () =>
+          throwsError(
+            () =>
+              captureBasis({
+                "src/design/production.ts":
+                  'import { value } from "./missing";\nexport const production = value;\n',
+              }),
+            "unreadable runtime source closure",
           ),
       ],
       [
@@ -394,6 +489,11 @@ export const test_production_design_derivation = (): void => {
     ]),
     {
       dependencyOrderCanonical: true,
+      runtimeClosureCaptured: true,
+      typeOnlyDependencyExcluded: true,
+      sourceEolNormalizationStable: true,
+      transitiveSourceChangeStalesBasis: true,
+      missingRuntimeDependencyRefused: true,
       dependencyChangesBasis: true,
       mappingChangesBasis: true,
       toolChangesBasis: true,

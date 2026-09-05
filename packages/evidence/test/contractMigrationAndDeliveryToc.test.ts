@@ -7,8 +7,10 @@ import {
   createAutoMovieContractBaseline,
   createAutoMovieContractMigrationReceiptArtifacts,
   isAutoMovieContractTargetPath,
+  observeAutoMovieContractMigrationOutcomes,
   parseAutoMovieContractBaseline,
   planAutoMovieContractMigration,
+  planAutoMovieContractMigrationPublication,
   planAutoMovieDeliveryToc,
 } from "../src";
 
@@ -41,64 +43,188 @@ assert.deepEqual(
   ["write", "add", "rename"],
 );
 assert.equal(plan.conflicts.length, 0);
+assert.match(plan.inputs.current, /^sha256:[0-9a-f]{64}$/u);
+assert.equal(
+  plan.inputs.from,
+  planAutoMovieContractMigration({
+    current: original,
+    from: originalBaseline,
+    targetSources: original,
+    to: baseline("1", original),
+  }).inputs.to,
+);
+assert.notEqual(plan.inputs.from, plan.inputs.to);
 const applied = applyAutoMovieContractMigrationPlan(plan, original);
 assert.deepEqual(applied, target);
 assert.equal(Object.isFrozen(plan), true);
 assert.equal(Object.isFrozen(plan.actions), true);
+assert.equal(Object.isFrozen(plan.inputs), true);
 assert.equal(
   Object.isFrozen(
     parseAutoMovieContractBaseline(JSON.stringify(baseline("2", target))),
   ),
   true,
 );
-const outcomesOf = (
-  migration: typeof plan,
-  targetGeneration: typeof targetBaseline,
-) =>
-  migration.actions.map((action) => ({
-    action: action.action,
-    afterSha256: targetGeneration.files.find(
-      (file) => file.path === action.path,
-    )!.sha256,
-    beforeSha256: action.action === "add" ? null : action.beforeSha256,
-    from: action.action === "rename" ? action.from : null,
-    path: action.path,
-    status: "published" as const,
-  }));
+
+// A plan binds the whole judged population: a byte change on a path no
+// action touches is a currentness failure for apply and for publication.
+const driftedRename = {
+  ...original,
+  "docs/discovery/rename.md": "# Rename\n\n## Rule {#rename}\n\nDrift.\n",
+};
+assert.throws(
+  () => applyAutoMovieContractMigrationPlan(plan, driftedRename),
+  /changed after planning/u,
+);
+assert.throws(
+  () =>
+    planAutoMovieContractMigrationPublication({
+      current: driftedRename,
+      observed: original,
+      plan,
+    }),
+  /changed after planning/u,
+);
+assert.throws(
+  () =>
+    planAutoMovieContractMigrationPublication({
+      current: original,
+      observed: { ...original, "docs/discovery/extra.md": "# Extra\n" },
+      plan,
+    }),
+  /changed after planning/u,
+);
+const publication = planAutoMovieContractMigrationPublication({
+  current: original,
+  observed: original,
+  plan,
+});
+assert.deepEqual(Object.keys(publication.creations).sort(), [
+  "docs/discovery/added.md",
+  "docs/discovery/renamed.md",
+]);
+assert.deepEqual(Object.keys(publication.replacements), [
+  "docs/discovery/a.md",
+]);
+assert.deepEqual(
+  publication.removals.map((removal) => removal.path),
+  ["docs/discovery/rename.md"],
+);
+
+const published = {
+  ...publication.creations,
+  ...publication.replacements,
+};
+const outcomes = observeAutoMovieContractMigrationOutcomes({
+  plan,
+  published,
+});
+assert.deepEqual(
+  outcomes.map((outcome) => [outcome.action, outcome.path, outcome.status]),
+  [
+    ["write", "docs/discovery/a.md", "published"],
+    ["add", "docs/discovery/added.md", "published"],
+    ["rename", "docs/discovery/renamed.md", "published"],
+  ],
+);
+assert.deepEqual(
+  outcomes.map((outcome) => [outcome.beforeSha256 === null, outcome.from]),
+  [
+    [false, null],
+    [true, null],
+    [false, "docs/discovery/rename.md"],
+  ],
+);
+assert.equal(
+  outcomes[2]!.afterSha256,
+  targetBaseline.files.find(
+    (file) => file.path === "docs/discovery/renamed.md",
+  )!.sha256,
+);
+assert.equal(Object.isFrozen(outcomes), true);
+const damaged = observeAutoMovieContractMigrationOutcomes({
+  plan,
+  published: {
+    "docs/discovery/a.md": "competitor bytes",
+    "docs/discovery/renamed.md": published["docs/discovery/renamed.md"]!,
+  },
+});
+assert.deepEqual(
+  damaged.map((outcome) => outcome.status),
+  ["failed", "incomplete", "published"],
+);
+assert.deepEqual(
+  damaged.map((outcome) => outcome.afterSha256),
+  outcomes.map((outcome) => outcome.afterSha256),
+);
+
 const receiptProps = {
   from: originalBaseline,
   observed: original,
-  outcomes: outcomesOf(plan, targetBaseline),
+  outcomes,
   plan,
-  publicationGeneration: "generation-a",
   to: targetBaseline,
-  validation: "completed" as const,
 };
 const receipt = createAutoMovieContractMigrationReceiptArtifacts(receiptProps);
 assert.deepEqual(
   createAutoMovieContractMigrationReceiptArtifacts(receiptProps),
   receipt,
 );
+assert.equal(Object.isFrozen(receipt.receipt), true);
 assert.match(
   receipt.predecessor.path,
-  /^automovie\/contract-migrations\/generation-a\/[0-9a-f]{64}\.baseline\.json$/u,
+  /^automovie\/contract-migrations\/[0-9a-f]{64}\/[0-9a-f]{64}\.baseline\.json$/u,
 );
 assert.match(
   receipt.receipt.path,
-  /^automovie\/contract-migrations\/generation-a\/[0-9a-f]{64}\.receipt\.json$/u,
+  /^automovie\/contract-migrations\/[0-9a-f]{64}\/[0-9a-f]{64}\.receipt\.json$/u,
+);
+assert.equal(
+  receipt.predecessor.path.split("/")[2],
+  receipt.receipt.path.split("/")[2],
+);
+assert.equal(
+  receipt.predecessor.path.split("/")[3],
+  `${plan.inputs.from.slice("sha256:".length)}.baseline.json`,
 );
 assert.equal(
   receipt.predecessor.source,
   `${JSON.stringify(originalBaseline, null, 2)}\n`,
 );
-assert.equal(JSON.parse(receipt.receipt.source).validation.status, "completed");
-assert.notEqual(
-  createAutoMovieContractMigrationReceiptArtifacts({
-    ...receiptProps,
-    publicationGeneration: "generation-b",
-  }).receipt.path,
-  receipt.receipt.path,
+const receiptRecord = JSON.parse(receipt.receipt.source) as {
+  actions: unknown[];
+  from: { identity: string; version: string };
+  observedInputDigest: string;
+  planDigest: string;
+  publicationGeneration: string;
+  to: { identity: string; version: string };
+  validation: { status: string; targetBaselineIdentity: string };
+};
+assert.deepEqual(
+  {
+    actions: receiptRecord.actions,
+    from: receiptRecord.from,
+    observedInputDigest: receiptRecord.observedInputDigest,
+    to: receiptRecord.to,
+    validation: receiptRecord.validation,
+  },
+  {
+    actions: outcomes,
+    from: { identity: plan.inputs.from, version: "1" },
+    observedInputDigest: plan.inputs.current,
+    to: { identity: plan.inputs.to, version: "2" },
+    validation: { status: "completed", targetBaselineIdentity: plan.inputs.to },
+  },
 );
+assert.equal(
+  receiptRecord.planDigest,
+  `sha256:${receiptRecord.publicationGeneration}`,
+);
+assert.equal(
+  receipt.receipt.path.split("/")[2],
+  receiptRecord.publicationGeneration,
+);
+
 const changedTarget = {
   ...target,
   "docs/discovery/added.md": "# Added\n\n## Added {#added}\n\nChanged.\n",
@@ -110,38 +236,132 @@ const changedPlan = planAutoMovieContractMigration({
   targetSources: changedTarget,
   to: changedBaseline,
 });
-assert.notEqual(
-  createAutoMovieContractMigrationReceiptArtifacts({
-    from: originalBaseline,
-    observed: original,
-    outcomes: outcomesOf(changedPlan, changedBaseline),
+const changedReceipt = createAutoMovieContractMigrationReceiptArtifacts({
+  from: originalBaseline,
+  observed: original,
+  outcomes: observeAutoMovieContractMigrationOutcomes({
     plan: changedPlan,
-    publicationGeneration: "generation-a",
-    to: changedBaseline,
-    validation: "completed",
-  }).receipt.path,
-  receipt.receipt.path,
-);
-assert.throws(() =>
-  createAutoMovieContractMigrationReceiptArtifacts({
-    ...receiptProps,
-    validation: "incomplete",
+    published: applyAutoMovieContractMigrationPlan(changedPlan, original),
   }),
+  plan: changedPlan,
+  to: changedBaseline,
+});
+assert.notEqual(
+  changedReceipt.receipt.path.split("/")[2],
+  receipt.receipt.path.split("/")[2],
 );
-assert.throws(() =>
-  createAutoMovieContractMigrationReceiptArtifacts({
-    ...receiptProps,
-    publicationGeneration: "con",
-  }),
+assert.notEqual(changedReceipt.receipt.source, receipt.receipt.source);
+
+// The receipt refuses anything short of a completed, matching observation.
+assert.throws(
+  () =>
+    createAutoMovieContractMigrationReceiptArtifacts({
+      ...receiptProps,
+      outcomes: damaged,
+    }),
+  /do not match the completed plan/u,
 );
-assert.throws(() =>
-  createAutoMovieContractMigrationReceiptArtifacts({
-    ...receiptProps,
-    outcomes: receiptProps.outcomes.map((outcome, index) =>
-      index === 0 ? { ...outcome, status: "failed" as const } : outcome,
-    ),
-  }),
+assert.throws(
+  () =>
+    createAutoMovieContractMigrationReceiptArtifacts({
+      ...receiptProps,
+      outcomes: outcomes.slice(1),
+    }),
+  /do not match the completed plan/u,
 );
+assert.throws(
+  () =>
+    createAutoMovieContractMigrationReceiptArtifacts({
+      ...receiptProps,
+      outcomes: outcomes.map((outcome, index) =>
+        index === 1 ? { ...outcome, afterSha256: "sha256:0" } : outcome,
+      ),
+    }),
+  /do not match the completed plan/u,
+);
+assert.throws(
+  () =>
+    createAutoMovieContractMigrationReceiptArtifacts({
+      ...receiptProps,
+      observed: driftedRename,
+    }),
+  /changed after planning/u,
+);
+assert.throws(
+  () =>
+    createAutoMovieContractMigrationReceiptArtifacts({
+      ...receiptProps,
+      to: changedBaseline,
+    }),
+  /compatible conflict-free plan/u,
+);
+assert.throws(
+  () =>
+    createAutoMovieContractMigrationReceiptArtifacts({
+      ...receiptProps,
+      to: baseline("2", changedTarget),
+    }),
+  /baselines do not match the plan/u,
+);
+assert.throws(
+  () =>
+    createAutoMovieContractMigrationReceiptArtifacts({
+      ...receiptProps,
+      from: baseline("1", { ...original, "docs/discovery/extra.md": "# X\n" }),
+    }),
+  /baselines do not match the plan/u,
+);
+assert.throws(
+  () =>
+    createAutoMovieContractMigrationReceiptArtifacts({
+      ...receiptProps,
+      plan: {
+        ...plan,
+        conflicts: [
+          { kind: "target-collision", path: "x", reason: "occupied" },
+        ],
+      },
+    }),
+  /compatible conflict-free plan/u,
+);
+assert.throws(
+  () =>
+    createAutoMovieContractMigrationReceiptArtifacts({
+      ...receiptProps,
+      plan: { ...plan, protocol: "other" as typeof plan.protocol },
+    }),
+  /compatible conflict-free plan/u,
+);
+assert.throws(
+  () =>
+    createAutoMovieContractMigrationReceiptArtifacts({
+      ...receiptProps,
+      plan: { ...plan, fromVersion: "0" },
+    }),
+  /compatible conflict-free plan/u,
+);
+assert.throws(
+  () =>
+    createAutoMovieContractMigrationReceiptArtifacts({
+      ...receiptProps,
+      plan: { ...plan, toVersion: "0" },
+    }),
+  /compatible conflict-free plan/u,
+);
+assert.throws(
+  () =>
+    createAutoMovieContractMigrationReceiptArtifacts({
+      ...receiptProps,
+      from: createAutoMovieContractBaseline({
+        files: original,
+        language: "korean",
+        version: "1",
+      }),
+    }),
+  /compatible conflict-free plan/u,
+);
+
+// An already migrated project plans no action against its own generation.
 assert.deepEqual(
   planAutoMovieContractMigration({
     current: applied,

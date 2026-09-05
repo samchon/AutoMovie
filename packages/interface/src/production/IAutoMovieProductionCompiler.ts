@@ -19,6 +19,10 @@ import {
 import { IAutoMoviePropSpec } from "../harness";
 import { IAutoMovieModel } from "../model";
 import { IAutoMovieMotion } from "../motion";
+import type {
+  IAutoMovieSemanticMask,
+  IAutoMovieSemanticMaskReceipt,
+} from "../render";
 import {
   IAutoMovieCameraDepthPrecisionReport,
   IAutoMovieProductionLighting,
@@ -1128,6 +1132,17 @@ export interface IAutoMovieProductionDeliverableFile {
    * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-generation-provider-choice Types `mediaType` for the asset spec generation provider choice system contract.
    */
   mediaType: string;
+  /**
+   * Semantic identity carried by a mask sidecar.
+   *
+   * Omitted for every ordinary media file. When present, its sidecar path is
+   * this file's path and the final reader reopens the JSON bytes against the
+   * shot, frame, palette digest, and coverage recorded here.
+   *
+   * @evidence requirements/rendering/passes-channels-and-products.md#rendering-identity-mask-channels Carries the owner-and-instance mapping a delivered mask frame depends on into the same ledger entry as its bytes.
+   * @evidence specifications/editorial-render-and-delivery/render-products-visibility-and-color.md#spec-render-pass-products Records the semantic-channel dependency closure of a delivered mask product beside its file identity.
+   */
+  semanticMask?: IAutoMovieSemanticMaskReceipt;
 }
 
 /**
@@ -2071,6 +2086,12 @@ export type IAutoMovieProductionMediaProbe =
       kind: "sound-evidence";
       /** Complete evidence bound to the current plan, PCM analysis, and audio bytes. */
       evidence: IAutoMovieProductionSoundEvidence;
+    }
+  | {
+      /** Parsed and self-verifying semantic-mask sidecar JSON. */
+      kind: "semantic-mask";
+      /** Complete canonical palette reopened from resident bytes. */
+      mask: IAutoMovieSemanticMask;
     };
 
 /**

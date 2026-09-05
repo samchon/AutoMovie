@@ -1,9 +1,13 @@
-import { canonicalProductionFrameRate } from "@automovie/engine";
+import {
+  canonicalProductionFrameRate,
+  verifyAutoMovieSemanticMask,
+} from "@automovie/engine";
 import {
   IAutoMovieProductionAudioProbe,
   IAutoMovieProductionDeliverable,
   IAutoMovieProductionMediaProbe,
   IAutoMovieProductionVideoProbe,
+  IAutoMovieSemanticMask,
 } from "@automovie/interface";
 import type { Box, Movie, Track, createFile } from "mp4box";
 import { TextDecoder } from "node:util";
@@ -17,6 +21,20 @@ import { residentMp4Box } from "./residentCodecs";
 import { parseProductionSoundEvidence } from "./verifyProductionNonVideoDeliverables";
 
 /**
+ * Media type under which a guide deliverable publishes a semantic-mask sidecar.
+ *
+ * A mask picture is unreadable without the palette that names its colours, so
+ * the sidecar travels beside the frames as its own declared medium rather than
+ * as generic JSON, and the probe parses and self-verifies it like any other
+ * delivered byte stream.
+ *
+ * @evidence requirements/production-design/continuity-change-and-deliverables.md#production-design-deliverable-provenance Names the delivered semantic dependency of a mask frame as an explicit medium a final reader can reopen.
+ * @evidence specifications/narrative-and-intent/budgets-continuity-and-deliverables.md#narrative-intent-deliverable-provenance-handoff Fixes the media identity under which the palette hand-off is carried in a delivery ledger.
+ */
+export const AUTOMOVIE_SEMANTIC_MASK_MEDIA_TYPE =
+  "application/vnd.automovie.semantic-mask+json";
+
+/**
  * Parse renderer-owned bytes instead of trusting manifest media claims.
  */
 export const probeProductionMedia = (props: {
@@ -24,6 +42,21 @@ export const probeProductionMedia = (props: {
   mediaType: string;
   bytes: Uint8Array;
 }): IAutoMovieProductionMediaProbe => {
+  if (
+    props.kind === "guide-pass" &&
+    props.mediaType === AUTOMOVIE_SEMANTIC_MASK_MEDIA_TYPE
+  ) {
+    let mask: IAutoMovieSemanticMask;
+    try {
+      mask = JSON.parse(
+        new TextDecoder("utf-8", { fatal: true }).decode(props.bytes),
+      ) as IAutoMovieSemanticMask;
+    } catch {
+      throw new Error("Semantic-mask sidecar bytes are not strict UTF-8 JSON.");
+    }
+    verifyAutoMovieSemanticMask(mask);
+    return { kind: "semantic-mask", mask };
+  }
   if (
     props.kind === "preview" ||
     ((props.kind === "guide-pass" || props.kind === "audio-mix") &&

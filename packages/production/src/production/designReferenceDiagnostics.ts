@@ -10,10 +10,11 @@ import {
 } from "@automovie/interface";
 
 import { digestAutoMovieBytes } from "./contentIdentity";
+import { AutoMovieDesignReferenceContainerError } from "./designReferenceContainer";
 import {
-  AutoMovieDesignReferenceContainerError,
-  inspectAutoMovieDesignReferenceContainer,
-} from "./designReferenceContainer";
+  IAutoMovieInspectedDesignReference,
+  inspectDesignReferenceAsset,
+} from "./inspectDesignReferenceAsset";
 import { AutoMovieUtf8Error } from "./strictUtf8";
 
 /** Containers that carry exactly one page, so no frame may cite a second. */
@@ -133,35 +134,9 @@ export const designReferenceDiagnostics = (props: {
       continue;
     }
 
-    let inspected: {
-      media: IAutoMovieDesignReference["media"];
-      bounds:
-        | { status: "measured"; width: number; height: number }
-        | { status: "unsupported"; reason: string };
-    };
+    let inspected: IAutoMovieInspectedDesignReference;
     try {
-      const container = inspectAutoMovieDesignReferenceContainer({
-        path: reference.asset,
-        bytes,
-      });
-      if (container === null)
-        throw new Error(
-          `Design reference "${reference.asset}" is not a supported parser-confirmed PNG, JPEG, SVG, PDF, or DXF container.`,
-        );
-      inspected = {
-        media: container.media,
-        bounds:
-          "width" in container && "height" in container
-            ? {
-                status: "measured",
-                width: container.width,
-                height: container.height,
-              }
-            : {
-                status: "unsupported",
-                reason: `The ${container.media} parser confirms the container but does not expose a source extent.`,
-              },
-      };
+      inspected = inspectDesignReferenceAsset({ path: reference.asset, bytes });
     } catch (error) {
       diagnostic(
         error instanceof AutoMovieUtf8Error

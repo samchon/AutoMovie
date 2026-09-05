@@ -8,10 +8,38 @@ import {
 import { namedFacts } from "../internal/predicates";
 
 const SOURCE = "/repo/packages/engine/src/source.ts";
+const OTHER = "/repo/packages/engine/src/other.ts";
 const A = { lines: 1, sha256: "a" };
 const B = { lines: 1, sha256: "b" };
 
-/** One run publishes only its own complete and unchanged source measurement. */
+/**
+ * One run publishes only its own complete and unchanged source measurement.
+ *
+ * A measurement is a claim about exact bytes: the report's positions were
+ * taken from the sources captured before the child started, and the numbers
+ * downstream consumers read belong to that snapshot and no other. Anything
+ * the instrument cannot stand behind exits with status 2 and publishes
+ * nothing, so an ordinary test failure (status 1) and an untrustworthy
+ * reading never wear the same colour.
+ *
+ * Scenarios:
+ *
+ * 1. A child that exits 0 over unchanged sources publishes a result naming
+ *    this run's private report directory, and both c8 paths the child was
+ *    given belong to this run.
+ * 2. A child that exits 1 is an ordinary red; a child with no status is an
+ *    instrument red; neither publishes.
+ * 3. A same-length edit between capture and report is refused by digest, and
+ *    a publisher that throws is an instrument failure, not a partial success.
+ * 4. Every measurement-validity observation decides status 2 on its own --
+ *    zero, truncated or resultless records, a vanished measured source, a
+ *    union shortfall, a reconciliation failure -- and invalidity outranks a
+ *    child failure, while a valid child failure stays status 1.
+ * 5. The snapshot inspection names each disagreement: a pre-run source the
+ *    report lacks, a report source the snapshot lacks, a source that
+ *    disappeared or appeared during the run, and one drifted source among
+ *    several, which withholds the whole publication rather than the one file.
+ */
 export const test_workspace_coverage_measurement = (): void => {
   let arguments_: string[] = [];
   let current = { [SOURCE]: A };
@@ -40,7 +68,6 @@ export const test_workspace_coverage_measurement = (): void => {
       rawDirectory: "/this-run/raw",
       reportDirectory: "/this-run/report",
       rootDirectory: "/this-run",
-      sourceHostDirectory: "/this-run/source-host",
     }),
     scriptShapes: () => ({ disagreeing: 0, reread: 0, sample: [], urls: 1 }),
     spawn: (_executable: string, received: string[]) => {
@@ -58,7 +85,7 @@ export const test_workspace_coverage_measurement = (): void => {
   const publicationFailed = measureCoverage({
     ...dependencies(0),
     publish: () => {
-      throw new Error("sidecar write failed");
+      throw new Error("publication failed");
     },
   });
 
@@ -96,6 +123,11 @@ export const test_workspace_coverage_measurement = (): void => {
     current: { [SOURCE]: A, "/repo/packages/engine/src/appeared.ts": A },
     reportFiles: [SOURCE],
     snapshot: { [SOURCE]: A },
+  });
+  const oneOfSeveral = inspectCoverageSnapshot({
+    current: { [SOURCE]: A, [OTHER]: B },
+    reportFiles: [SOURCE, OTHER],
+    snapshot: { [SOURCE]: A, [OTHER]: A },
   });
 
   TestValidator.equals(
@@ -182,16 +214,25 @@ export const test_workspace_coverage_measurement = (): void => {
           ) === true,
       ],
       [
-        "disappeared source prevents every sidecar",
+        "disappeared source prevents publication",
         () =>
           disappeared.failures[0]?.includes("disappeared") === true &&
           Object.keys(disappeared.published).length === 0,
       ],
       [
-        "appeared source prevents every sidecar",
+        "appeared source prevents publication",
         () =>
           appeared.failures[0]?.includes("appeared") === true &&
           Object.keys(appeared.published).length === 0,
+      ],
+      [
+        "one drifted source among several withholds every entry",
+        () =>
+          oneOfSeveral.failures.length === 1 &&
+          oneOfSeveral.failures[0]?.startsWith(OTHER) === true &&
+          oneOfSeveral.failures[0]?.includes("changed during the run") ===
+            true &&
+          Object.keys(oneOfSeveral.published).length === 0,
       ],
     ]),
     Object.fromEntries(
@@ -216,8 +257,9 @@ export const test_workspace_coverage_measurement = (): void => {
         "exact snapshot publishes every report source",
         "missing report source is named",
         "unexpected report source is named",
-        "disappeared source prevents every sidecar",
-        "appeared source prevents every sidecar",
+        "disappeared source prevents publication",
+        "appeared source prevents publication",
+        "one drifted source among several withholds every entry",
       ].map((key) => [key, true]),
     ),
   );

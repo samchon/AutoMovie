@@ -1,4 +1,3 @@
-import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 
@@ -10,15 +9,12 @@ import {
   sourceDigest,
 } from "./coverageIdentity";
 
-export const MEASURED_LINES = "measured-lines.json";
-export const MEASURED_SOURCES = "measured-sources.json";
 export const COVERAGE_REPORT = "coverage-final.json";
 
 export interface ICoverageRunPaths {
   rawDirectory: string;
   reportDirectory: string;
   rootDirectory: string;
-  sourceHostDirectory: string;
 }
 
 export interface ICoveragePublication {
@@ -51,7 +47,24 @@ const freezeSources = (
     ),
   );
 
-/** Capture bytes before the child starts; this map is the run's source truth. */
+/**
+ * Capture every measured source before the child starts.
+ *
+ * An Istanbul report carries positions and no way to say which content they
+ * were taken from: the per-file entry holds `path`, the maps and the counts,
+ * and no hash. A reader asking "does this position exist in the file?" against
+ * whatever the file has since become blames the instrument for an ordinary
+ * edit; measured on this repository, one commit that shortened a file by 23
+ * lines made 26 positions read as past its end, none of which was a fault. And
+ * a length alone cannot tell an equal-length edit from the measured bytes, so
+ * both the line count and the digest are taken here, from the same bytes, in
+ * the one moment that precedes execution.
+ *
+ * This map is the run's source truth. {@link inspectCoverageSnapshot} refuses
+ * the run when the report or the post-run bytes disagree with it, and only its
+ * entries are ever published; a file it does not name is one no consumer may
+ * judge.
+ */
 export const captureCoverageSnapshot = (props: {
   candidates: readonly string[];
   root: string;
@@ -115,27 +128,18 @@ export const inspectCoverageSnapshot = (props: {
   return { failures, published };
 };
 
-/** Publish both compatibility sidecars from one immutable in-memory snapshot. */
+/**
+ * Publish one immutable in-memory identity for the run-private report.
+ *
+ * Nothing is written beside the report. Every consumer receives this value
+ * from the orchestration that measured, and {@link publicationReport} re-reads
+ * the report against the digest taken here, so a consumer can neither find a
+ * report by convention nor read one whose bytes are not the ones published.
+ */
 export const publishCoverageSnapshot = (props: {
   reportDirectory: string;
   sources: Readonly<Record<string, IMeasuredSource>>;
 }): ICoveragePublication => {
-  const lines = Object.fromEntries(
-    Object.entries(props.sources).map(([file, source]) => [file, source.lines]),
-  );
-  const suffix = crypto.randomUUID();
-  const linesFile = path.join(props.reportDirectory, MEASURED_LINES);
-  const sourcesFile = path.join(props.reportDirectory, MEASURED_SOURCES);
-  const pendingLines = `${linesFile}.${suffix}.tmp`;
-  const pendingSources = `${sourcesFile}.${suffix}.tmp`;
-  fs.writeFileSync(pendingLines, `${JSON.stringify(lines, null, 2)}\n`, "utf8");
-  fs.writeFileSync(
-    pendingSources,
-    `${JSON.stringify(props.sources, null, 2)}\n`,
-    "utf8",
-  );
-  fs.renameSync(pendingLines, linesFile);
-  fs.renameSync(pendingSources, sourcesFile);
   const report = fs.readFileSync(
     path.join(props.reportDirectory, COVERAGE_REPORT),
   );
@@ -154,20 +158,4 @@ export const publicationReport = (
   if (sourceDigest(fs.readFileSync(report)) !== publication.reportSha256)
     throw new Error("coverage report no longer matches its run publication");
   return report;
-};
-
-/** Load a complete explicit publication for the standalone changed gate. */
-export const loadCoveragePublication = (
-  reportDirectory: string,
-): ICoveragePublication => {
-  const directory = path.resolve(reportDirectory);
-  const sources = JSON.parse(
-    fs.readFileSync(path.join(directory, MEASURED_SOURCES), "utf8"),
-  ) as Record<string, IMeasuredSource>;
-  const report = fs.readFileSync(path.join(directory, COVERAGE_REPORT));
-  return Object.freeze({
-    reportDirectory: directory,
-    reportSha256: sourceDigest(report),
-    sources: freezeSources(sources),
-  });
 };

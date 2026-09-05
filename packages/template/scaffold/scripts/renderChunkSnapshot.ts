@@ -381,6 +381,38 @@ export const renderChunkPublicationProtectsTree = (
   publication.tree.target === candidate.target &&
   publication.tree.targetIdentity === candidate.targetIdentity;
 
+/** Classify one readable receipt without treating current corruption as stale. */
+export const renderChunkReceiptObservation = (props: {
+  expected: Pick<IAutoMovieProductionRenderChunk, "id" | "slot"> | null;
+  receipt: Pick<
+    IAutoMovieProductionRenderChunkReceipt,
+    "chunk" | "slot" | "version"
+  >;
+  verified: boolean;
+}): IAutoMovieProductionRenderCleanupObservation | null => {
+  const identityMatches =
+    props.expected !== null &&
+    props.receipt.version === 2 &&
+    props.receipt.slot === props.expected.slot &&
+    props.receipt.chunk === props.expected.id;
+  if (identityMatches && props.verified) return null;
+  return identityMatches
+    ? {
+        state: "integrity-failed",
+        authority: "exact-quarantine",
+        stage: "inventory",
+        reason:
+          "the current chunk receipt contradicts its declared frame, media, or semantic inventory",
+      }
+    : {
+        state: "verified-stale",
+        authority: "exact-remove",
+        stage: "currentness",
+        reason:
+          "the readable receipt-bound chunk generation is not the current plan generation",
+      };
+};
+
 /** Resolve one dead-tree candidate through its canonical current chunk only. */
 export const currentRenderChunkPublicationProtectsTree = (props: {
   candidate: IRenderGcTargetSnapshot;
@@ -404,12 +436,40 @@ export const currentRenderChunkPublicationProtectsTree = (props: {
       renderChunkPublicationProtectsTree(publication, props.candidate)
     );
   } catch {
-    // Only the complete exact canonical pointer protects a dead temp tree.
-    return false;
+    // A current pointer that cannot be resolved proves neither absence nor
+    // staleness. Preserve every matching tree until explicit GC can report the
+    // typed pointer finding and an operator can adjudicate it.
+    return true;
   }
 };
 
-/** Inventory pointer/tree GC candidates and retain only an exact current pair. */
+/** Filesystem, capture, and revalidation seams behind one chunk GC inventory. */
+export interface IRenderChunkGcInventorySeams {
+  assertCaptured: (snapshot: IRenderGcTargetSnapshot) => void;
+  captureTarget: (base: string, target: string) => IRenderGcTargetSnapshot;
+  capturePublication: (
+    pointer: IRenderGcTargetSnapshot,
+  ) => IRenderChunkPublicationSnapshot;
+  filesystem: Pick<typeof fs, "existsSync" | "lstatSync" | "readdirSync">;
+}
+
+/** The real seams every generated render command inventories through. */
+export const RENDER_CHUNK_GC_INVENTORY_SEAMS: IRenderChunkGcInventorySeams = {
+  assertCaptured: assertCapturedRenderTarget,
+  captureTarget: captureRenderGcTarget,
+  capturePublication: captureRenderChunkPublicationFromPointer,
+  filesystem: fs,
+};
+
+/**
+ * Inventory pointer/tree GC candidates and retain only an exact current pair.
+ *
+ * A current pointer authenticates one tree at capture time. When the later
+ * tree scan cannot confirm that exact tree (it changed, could not be recaptured,
+ * or is gone), the pair is a changed-during-read observation: the pointer
+ * carries an observation conflict rather than falling through to the planner's
+ * unreferenced default, which would remove it.
+ */
 export const inventoryRenderChunkGarbage = (props: {
   assertReceipt: (
     chunk: IAutoMovieProductionRenderChunk,
@@ -422,6 +482,7 @@ export const inventoryRenderChunkGarbage = (props: {
   renderJobRoot: string;
   root: string;
   scope: string;
+  seams: IRenderChunkGcInventorySeams;
   tier: "final" | "proxy";
 }): {
   entries: IRenderChunkGcInventoryEntry[];
@@ -429,6 +490,7 @@ export const inventoryRenderChunkGarbage = (props: {
 } => {
   if (SCOPE_PATTERN.test(props.scope) === false)
     throw new Error("Render chunk GC scope is not a SHA-256 namespace.");
+  const seams = props.seams;
   const entries: IRenderChunkGcInventoryEntry[] = [];
   const retainedChunkPaths = new Set<string>();
   const authenticatedTrees = new Map<
@@ -437,8 +499,10 @@ export const inventoryRenderChunkGarbage = (props: {
       current: boolean;
       digest: AutoMovieContentDigest;
       observation: IAutoMovieProductionRenderCleanupObservation | null;
+      pointer: IAutoMovieProductionRenderGcCandidate;
       pointerPath: string;
       tree: IRenderGcTargetSnapshot;
+      visited: boolean;
     }
   >();
   const unresolvedDigests = new Set<AutoMovieContentDigest>();
@@ -446,7 +510,9 @@ export const inventoryRenderChunkGarbage = (props: {
     `^\\.automovie-chunk-${props.scope}\\.${props.tier}\\.([0-9a-f]{64})\\.publication\\.json$`,
     "u",
   );
-  for (const name of fs.readdirSync(props.root).sort(compareCodeUnits)) {
+  for (const name of seams.filesystem
+    .readdirSync(props.root)
+    .sort(compareCodeUnits)) {
     const match = pointerPattern.exec(name);
     if (match === null) continue;
     const digest = `sha256:${match[1]}` as AutoMovieContentDigest;
@@ -454,11 +520,11 @@ export const inventoryRenderChunkGarbage = (props: {
     const pointerTarget = path.join(props.root, name);
     let pointer: IRenderGcTargetSnapshot;
     try {
-      pointer = captureRenderGcTarget(props.root, pointerTarget);
+      pointer = seams.captureTarget(props.root, pointerTarget);
     } catch {
       let unsafe = false;
       try {
-        unsafe = fs.lstatSync(pointerTarget).isSymbolicLink();
+        unsafe = seams.filesystem.lstatSync(pointerTarget).isSymbolicLink();
       } catch {
         unsafe = false;
       }
@@ -469,6 +535,7 @@ export const inventoryRenderChunkGarbage = (props: {
           digest,
           bytes: null,
           generation: null,
+          fingerprint: null,
           observation: {
             state: unsafe ? "unsafe-locator" : "unavailable",
             authority: "none",
@@ -483,22 +550,20 @@ export const inventoryRenderChunkGarbage = (props: {
       unresolvedDigests.add(digest);
       continue;
     }
-    entries.push({
-      candidate: {
-        path: pointerPath,
-        kind: "chunk-pointer",
-        digest,
-        bytes: pointer.bytes,
-        generation: pointer.targetIdentity,
-        observation: null,
-      },
-      snapshot: pointer,
-    });
+    const candidate: IAutoMovieProductionRenderGcCandidate = {
+      path: pointerPath,
+      kind: "chunk-pointer",
+      digest,
+      bytes: pointer.bytes,
+      generation: pointer.targetIdentity,
+      fingerprint: pointer.contentFingerprint,
+      observation: null,
+    };
+    entries.push({ candidate, snapshot: pointer });
     let publication: IRenderChunkPublicationSnapshot;
     try {
-      publication = captureRenderChunkPublicationFromPointer(pointer);
+      publication = seams.capturePublication(pointer);
     } catch {
-      const candidate = entries.at(-1)!.candidate;
       candidate.observation = {
         state: "integrity-failed",
         authority: "exact-quarantine",
@@ -517,7 +582,7 @@ export const inventoryRenderChunkGarbage = (props: {
       treeIdentity === null ||
       treeIdentity.digest !== match[1]
     ) {
-      entries.at(-1)!.candidate.observation = {
+      candidate.observation = {
         state: "unsafe-locator",
         authority: "none",
         stage: "locator",
@@ -528,7 +593,7 @@ export const inventoryRenderChunkGarbage = (props: {
       continue;
     }
     if (authenticatedTrees.has(publication.tree.target)) {
-      entries.at(-1)!.candidate.observation = {
+      candidate.observation = {
         state: "observation-conflict",
         authority: "none",
         stage: "reference",
@@ -539,48 +604,88 @@ export const inventoryRenderChunkGarbage = (props: {
       continue;
     }
     const chunk = props.chunks.get(digest);
-    let current = false;
-    let observation: IAutoMovieProductionRenderCleanupObservation | null = {
-      state: "verified-stale",
-      authority: "exact-remove",
-      stage: "currentness",
-      reason:
-        "the readable receipt-bound chunk generation is not the current plan generation",
-    };
-    if (chunk !== undefined)
+    let verified = false;
+    if (chunk !== undefined) {
       try {
         props.assertReceipt(chunk, publication.receipt);
-        current = publication.receipt.slot === chunk.slot;
+        verified = true;
       } catch {
-        current = false;
+        verified = false;
       }
-    if (current) observation = null;
-    else entries.at(-1)!.candidate.observation = observation;
+    }
+    const observation = renderChunkReceiptObservation({
+      expected: chunk ?? null,
+      receipt: publication.receipt,
+      verified,
+    });
+    candidate.observation = observation;
     authenticatedTrees.set(publication.tree.target, {
-      current,
+      current: observation === null,
       digest,
-      observation: current ? null : observation,
+      observation,
+      pointer: candidate,
       pointerPath,
       tree: publication.tree,
+      visited: false,
     });
   }
   const temporaryRoot = path.join(props.renderJobRoot, props.tier, "tmp");
-  if (fs.existsSync(temporaryRoot))
-    for (const entry of fs
+  if (seams.filesystem.existsSync(temporaryRoot))
+    for (const entry of seams.filesystem
       .readdirSync(temporaryRoot, { withFileTypes: true })
       .sort((left, right) => compareCodeUnits(left.name, right.name))) {
       const identity = renderChunkTemporaryTreeIdentity(entry.name);
       if (identity === null) continue;
       const target = path.join(temporaryRoot, entry.name);
-      const snapshot = captureRenderGcTarget(props.renderJobRoot, target);
-      const authenticated = authenticatedTrees.get(target);
       const digest = `sha256:${identity.digest}` as AutoMovieContentDigest;
+      const authenticated = authenticatedTrees.get(target);
+      if (authenticated !== undefined) authenticated.visited = true;
+      let snapshot: IRenderGcTargetSnapshot;
+      try {
+        snapshot = seams.captureTarget(props.renderJobRoot, target);
+      } catch {
+        const unsafe =
+          entry.isSymbolicLink() ||
+          (entry.isDirectory() === false && entry.isFile() === false);
+        entries.push({
+          candidate: {
+            path: `${props.tier}/tmp/${entry.name}`,
+            kind: "chunk-tree",
+            digest,
+            bytes: null,
+            generation: null,
+            fingerprint: null,
+            observation: {
+              state: unsafe ? "unsafe-locator" : "unavailable",
+              authority: "none",
+              stage: unsafe ? "locator" : "capture",
+              reason: unsafe
+                ? "the chunk tree locator is not one physical directory"
+                : "the chunk tree generation could not be captured consistently",
+            },
+          },
+          snapshot: null,
+        });
+        if (authenticated?.current === true)
+          authenticated.pointer.observation = {
+            state: "observation-conflict",
+            authority: "none",
+            stage: "capture",
+            reason:
+              "the tree observed through this current pointer could not be recaptured consistently",
+          };
+        continue;
+      }
+      const exact =
+        authenticated !== undefined &&
+        exactTreeContent(authenticated.tree, snapshot);
       const candidate: IAutoMovieProductionRenderGcCandidate = {
         path: `${props.tier}/tmp/${entry.name}`,
         kind: "chunk-tree",
         digest,
         bytes: snapshot.bytes,
         generation: snapshot.targetIdentity,
+        fingerprint: snapshot.contentFingerprint,
         observation:
           authenticated === undefined
             ? unresolvedDigests.has(digest)
@@ -592,7 +697,7 @@ export const inventoryRenderChunkGarbage = (props: {
                     "an unresolved pointer shares this digest, so the tree is not proven stale",
                 }
               : null
-            : exactTreeContent(authenticated.tree, snapshot)
+            : exact
               ? authenticated.observation
               : {
                   state: "observation-conflict",
@@ -602,10 +707,18 @@ export const inventoryRenderChunkGarbage = (props: {
                     "the recaptured tree differs from the generation observed through its pointer",
                 },
       };
+      if (authenticated !== undefined && authenticated.current && !exact)
+        authenticated.pointer.observation = {
+          state: "observation-conflict",
+          authority: "none",
+          stage: "capture",
+          reason:
+            "the tree observed through this current pointer differs from its recaptured generation",
+        };
       if (authenticated === undefined && candidate.observation === null) {
         if (
           observeRenderOwnerRecovery({
-            between: () => assertCapturedRenderTarget(snapshot),
+            between: () => seams.assertCaptured(snapshot),
             observe: props.observeProcessOwner,
             owner: identity.owner,
           }).state !== "reclaimable"
@@ -617,18 +730,23 @@ export const inventoryRenderChunkGarbage = (props: {
             reason:
               "the temporary tree owner is not proved reclaimable by this process generation",
           };
-        else assertCapturedRenderTarget(snapshot);
+        else seams.assertCaptured(snapshot);
       }
       entries.push({ candidate, snapshot });
-      if (
-        authenticated?.current === true &&
-        authenticated.digest === digest &&
-        exactTreeContent(authenticated.tree, snapshot)
-      ) {
+      if (authenticated?.current === true && exact) {
         retainedChunkPaths.add(authenticated.pointerPath);
         retainedChunkPaths.add(candidate.path);
       }
     }
+  for (const authenticated of authenticatedTrees.values())
+    if (authenticated.current && authenticated.visited === false)
+      authenticated.pointer.observation = {
+        state: "observation-conflict",
+        authority: "none",
+        stage: "capture",
+        reason:
+          "the tree observed through this current pointer was absent from the tree inventory",
+      };
   return {
     entries,
     retainedChunkPaths: [...retainedChunkPaths].sort(compareCodeUnits),

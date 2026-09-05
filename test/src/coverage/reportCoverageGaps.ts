@@ -177,12 +177,11 @@ export const lineCount = (text: string): number =>
  * the instrument regresses, which is the difference between a gate and a number
  * nobody can certify.
  *
- * The line count must come from `measured-lines.json`, which the measurement
- * writes while the sources on disk are still the sources it measured. Judging
- * against the current file instead blames the instrument for an ordinary edit:
- * one commit that shortened a file by 23 lines made 26 of its positions read as
- * past the end, and not one of them was a fault. A file the sidecar does not
- * name is left unjudged and counted as such.
+ * The line count comes from the explicit run publication. Judging against the
+ * current file instead blames the instrument for an ordinary edit: one commit
+ * that shortened a file by 23 lines made 26 of its positions read as past the
+ * end, and not one of them was a fault. A file the publication does not name is
+ * left unjudged and counted as such.
  */
 export const positionsPastEndOfFile = (
   data: {
@@ -233,28 +232,6 @@ export const measuredLineCount = (
     : null;
 };
 
-/**
- * What each file's length was when the report was written, or `null`.
- *
- * Absent for a report produced before this sidecar existed, or by anything other
- * than the typed coverage command. That is a reason to judge nothing rather than a
- * reason to judge against today's file.
- */
-const readMeasuredLines = (
-  reportFile: string,
-): Record<string, unknown> | null => {
-  try {
-    return JSON.parse(
-      fs.readFileSync(
-        path.join(path.dirname(reportFile), "measured-lines.json"),
-        "utf8",
-      ),
-    ) as Record<string, unknown>;
-  } catch {
-    return null;
-  }
-};
-
 const ROOT = path.resolve(__dirname, "../../..");
 
 const relative = (file: string): string =>
@@ -277,8 +254,8 @@ const location = (span: ICoverageSpan): string => {
  */
 export const reportCoverageGaps = (
   reportFile: string,
-  write: Writer = console.log,
-  measuredSources?: Record<string, unknown>,
+  write: Writer,
+  measuredSources: Record<string, unknown>,
 ): number => {
   if (fs.existsSync(reportFile) === false) {
     write("No Istanbul coverage-final.json was produced.");
@@ -293,7 +270,7 @@ export const reportCoverageGaps = (
   let outside = 0;
   let unmeasured = 0;
   const outsideFiles: string[] = [];
-  const measuredLines = measuredSources ?? readMeasuredLines(reportFile);
+  const measuredLines = measuredSources;
   for (const [file, data] of Object.entries(coverage).sort(([left], [right]) =>
     left.localeCompare(right),
   )) {

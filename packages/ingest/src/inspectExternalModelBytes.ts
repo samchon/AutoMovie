@@ -242,6 +242,39 @@ export type AutoMovieExternalModelIngestProfile =
   | "gltf-motion-v1"
   | "vrm-humanoid-v1";
 
+const INGEST_PROFILE_REGISTRY = {
+  "gltf-static-v1": true,
+  "gltf-humanoid-v1": true,
+  "gltf-motion-v1": true,
+  "vrm-humanoid-v1": true,
+} satisfies Record<AutoMovieExternalModelIngestProfile, true>;
+
+/**
+ * Every supported ingest profile literal, in declaration order.
+ *
+ * The object above is pinned to the profile union by `satisfies`, so a literal
+ * added to or removed from the type changes this runtime vocabulary in the same
+ * edit; a command surface that consults it cannot lag behind the inspector.
+ *
+ * @evidence requirements/external-inputs/media-families-and-declared-facts.md#external-media-extensible-families Publishes the closed, versioned profile vocabulary a caller may select from rather than a guessed family.
+ * @evidence specifications/interchange-and-adoption/media-inspection-boundaries.md#interchange-extensible-media-profile Gives profile extension one additive runtime inventory that stays equal to the declared union.
+ */
+export const AUTO_MOVIE_EXTERNAL_MODEL_INGEST_PROFILES: readonly AutoMovieExternalModelIngestProfile[] =
+  Object.freeze(
+    Object.keys(INGEST_PROFILE_REGISTRY) as AutoMovieExternalModelIngestProfile[],
+  );
+
+/**
+ * Whether an untyped selection names one supported ingest profile.
+ *
+ * @evidence requirements/external-inputs/unsupported-and-degradation.md#external-unsupported-format-feature Refuses a profile name outside the supported vocabulary before any bytes are interpreted under it.
+ * @evidence specifications/interchange-and-adoption/support-degradation-and-refusal.md#interchange-format-feature-support-matrix Decides profile membership from the same closed inventory the inspector enforces.
+ */
+export const isAutoMovieExternalModelIngestProfile = (
+  value: unknown,
+): value is AutoMovieExternalModelIngestProfile =>
+  typeof value === "string" && SUPPORTED_PROFILES.has(value);
+
 /**
  * Parse and validate exact external model bytes before compilation.
  *
@@ -682,13 +715,9 @@ export const inspectAutoMovieExternalModelBytes = (props: {
   };
 };
 
-const SUPPORTED_PROFILES: ReadonlySet<string> =
-  new Set<AutoMovieExternalModelIngestProfile>([
-    "gltf-static-v1",
-    "gltf-humanoid-v1",
-    "gltf-motion-v1",
-    "vrm-humanoid-v1",
-  ]);
+const SUPPORTED_PROFILES: ReadonlySet<string> = new Set<string>(
+  AUTO_MOVIE_EXTERNAL_MODEL_INGEST_PROFILES,
+);
 
 const inspectExternalMotion = (props: {
   path: string;
@@ -1090,13 +1119,101 @@ const decodeGlb = (
 };
 
 const decodeJson = (bytes: Uint8Array): unknown => {
+  let text: string;
   try {
-    return JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(bytes));
+    text = new TextDecoder("utf-8", { fatal: true }).decode(bytes);
   } catch (error) {
     throw new Error(
       `External model JSON is invalid: ${(error as Error).message}.`,
     );
   }
+  let value: unknown;
+  try {
+    value = JSON.parse(text);
+  } catch (error) {
+    throw new Error(
+      `External model JSON is invalid: ${(error as Error).message}.`,
+    );
+  }
+  try {
+    assertUniqueJsonObjectMembers(text);
+  } catch (error) {
+    throw new Error(
+      `External model JSON is invalid: ${(error as Error).message}.`,
+    );
+  }
+  return value;
+};
+
+/** Refuse decoded-equivalent member names before last-wins JSON can escape. */
+const assertUniqueJsonObjectMembers = (text: string): void => {
+  let cursor = 0;
+  const whitespace = (): void => {
+    while (/\s/u.test(text.charAt(cursor))) ++cursor;
+  };
+  const string = (): string => {
+    const start = cursor++;
+    while (text[cursor] !== '"') {
+      if (text[cursor] === "\\") {
+        ++cursor;
+        if (text[cursor] === "u") cursor += 4;
+      }
+      ++cursor;
+    }
+    ++cursor;
+    return JSON.parse(text.slice(start, cursor)) as string;
+  };
+  const value = (): void => {
+    whitespace();
+    if (text[cursor] === "{") object();
+    else if (text[cursor] === "[") array();
+    else if (text[cursor] === '"') void string();
+    else {
+      while (cursor < text.length && /[^\s,\]}]/u.test(text[cursor]!)) ++cursor;
+    }
+    whitespace();
+  };
+  const object = (): void => {
+    ++cursor;
+    whitespace();
+    const names = new Set<string>();
+    if (text[cursor] === "}") {
+      ++cursor;
+      return;
+    }
+    while (true) {
+      const name = string();
+      if (names.has(name))
+        throw new Error(`duplicate member ${JSON.stringify(name)}`);
+      names.add(name);
+      whitespace();
+      ++cursor;
+      value();
+      if (text[cursor] === "}") {
+        ++cursor;
+        return;
+      }
+      ++cursor;
+      whitespace();
+    }
+  };
+  const array = (): void => {
+    ++cursor;
+    whitespace();
+    if (text[cursor] === "]") {
+      ++cursor;
+      return;
+    }
+    while (true) {
+      value();
+      if (text[cursor] === "]") {
+        ++cursor;
+        return;
+      }
+      ++cursor;
+    }
+  };
+  value();
 };
 
 const object = (value: unknown, path: string): Record<string, unknown> => {

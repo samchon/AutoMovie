@@ -19,6 +19,7 @@ export const UNMEASURED_SOURCE_ROOTS: readonly string[] = [
 
 const DECLARATION_FILE =
   /(?:^|\/)(?:lint\.config|vite\.config)\.[cm]?ts$|EvidenceExclusions\.ts$/u;
+const PACKAGE_BUILD_DIRECTORY = /^packages\/[^/]+\/build\//u;
 
 export const UNJUDGED_DECLARATION_GLOBS: readonly string[] = [
   "**/lint.config.ts",
@@ -36,11 +37,21 @@ export const canonicalCoveragePath = (
   return platform === "win32" ? canonical.toLowerCase() : canonical;
 };
 
+/** Canonical Istanbul report key, folding path case only on Windows. */
+export const canonicalCoverageEntryPath = (
+  value: string,
+  platform: NodeJS.Platform = process.platform,
+): string => {
+  const canonical = slash(value);
+  return platform === "win32" ? canonical.toLowerCase() : canonical;
+};
+
 /** The single authored-source policy shared by c8 and raw-record attribution. */
 export const isAuthoredExecutableSource = (relative: string): boolean => {
   const target = slash(relative);
   if (UNMEASURED_SOURCE_ROOTS.some((root) => target.startsWith(root)))
     return false;
+  if (PACKAGE_BUILD_DIRECTORY.test(target)) return false;
   if (DECLARATION_FILE.test(target)) return false;
   const typedRepositoryTool =
     target.startsWith("test/src/coverage/") ||

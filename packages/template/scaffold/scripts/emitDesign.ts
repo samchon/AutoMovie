@@ -15,15 +15,11 @@ import {
 } from "@automovie/production";
 
 import { assertAutoMovieNoArguments } from "./commandArguments";
-import { readAutoMovieProjectProductionId } from "./projectIdentity";
 
 assertAutoMovieNoArguments("design", process.argv.slice(2));
 
 /** The project this invocation belongs to, found from the host's own seed. */
 const projectRoot = findAutoMovieProjectRoot(process.cwd());
-
-/** The production namespace that project declares in its own package manifest. */
-const productionId = readAutoMovieProjectProductionId(projectRoot);
 
 /**
  * Production-owned design emitter entry point.
@@ -39,7 +35,7 @@ const productionId = readAutoMovieProjectProductionId(projectRoot);
  */
 const project = AutoMovieProductionProject.open(
   projectRoot,
-  productionId,
+  undefined,
   createAutoMovieArchetypeRegistry(AUTOMOVIE_PRIMITIVE_ARCHETYPES),
 );
 

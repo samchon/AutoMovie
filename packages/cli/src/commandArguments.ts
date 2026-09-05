@@ -1,3 +1,18 @@
+import {
+  type AutoMovieProductionLanguage,
+  isAutoMovieProductionLanguage,
+} from "@automovie/evidence";
+import {
+  AUTO_MOVIE_EXTERNAL_MODEL_INGEST_PROFILES,
+  type AutoMovieExternalModelIngestProfile,
+  isAutoMovieExternalModelIngestProfile,
+} from "@automovie/ingest";
+import {
+  AUTO_MOVIE_AUTHORING_PRODUCTION_KINDS,
+  type AutoMovieAuthoringProductionKind,
+  isAutoMovieAuthoringProductionKind,
+} from "@automovie/template";
+
 type AutoMovieRenderAction =
   | "all"
   | "plan"
@@ -21,7 +36,7 @@ type AutoMovieCommand =
       command: "start";
       directory: string;
       force: boolean;
-      language: "chinese" | "english" | "japanese" | "korean";
+      language: AutoMovieProductionLanguage;
     }
   | {
       command: "migrate";
@@ -32,14 +47,10 @@ type AutoMovieCommand =
   | {
       command: "inspect-external";
       path: string;
-      profile:
-        | "gltf-static-v1"
-        | "gltf-humanoid-v1"
-        | "gltf-motion-v1"
-        | "vrm-humanoid-v1";
+      profile: AutoMovieExternalModelIngestProfile;
     }
   | { command: "toc"; check: boolean }
-  | { command: "routes"; kind: "film" | "brief" | "library" }
+  | { command: "routes"; kind: AutoMovieAuthoringProductionKind }
   | { command: "sync" }
   | { command: "verify" }
   | { command: "render"; arguments: readonly string[] };
@@ -84,13 +95,6 @@ const nonBlankDirectory = (
   return value;
 };
 
-const PRODUCTION_LANGUAGES = new Set([
-  "chinese",
-  "english",
-  "japanese",
-  "korean",
-]);
-
 const startArguments = (
   args: readonly string[],
 ): Extract<AutoMovieCommand, { command: "start" }> => {
@@ -117,7 +121,7 @@ const startArguments = (
     throw new Error(
       `start accepts exactly one target directory; received ${positionals.length}.`,
     );
-  if (language === undefined || PRODUCTION_LANGUAGES.has(language) === false)
+  if (isAutoMovieProductionLanguage(language) === false)
     throw new Error(
       "start requires --language with one of chinese, english, japanese, or korean.",
     );
@@ -125,10 +129,7 @@ const startArguments = (
     command: "start",
     directory: nonBlankDirectory("start", positionals[0]),
     force,
-    language: language as Extract<
-      AutoMovieCommand,
-      { command: "start" }
-    >["language"],
+    language,
   };
 };
 
@@ -211,7 +212,6 @@ const renderArguments = (args: readonly string[]): readonly string[] => {
  *
  * @evidence requirements/operations-and-recovery/scope-job-identity-and-state.md#operations-requested-effective-work Refuses ambiguous or unconsumed command input before work starts.
  * @evidence specifications/execution-and-recovery/state-machine-and-admission.md#execution-admission-decision Produces the typed admission plan that is the only input to dispatch.
- * @evidencePart specifications/execution-and-recovery/state-machine-and-admission.md#execution-admission-decision::admission-decision
  */
 export const readAutoMovieCommandArguments = (
   args: readonly string[],
@@ -285,32 +285,23 @@ export const readAutoMovieCommandArguments = (
       throw new Error(
         `inspect-external accepts exactly one source path; received ${positionals.length}.`,
       );
-    const profiles = new Set([
-      "gltf-static-v1",
-      "gltf-humanoid-v1",
-      "gltf-motion-v1",
-      "vrm-humanoid-v1",
-    ]);
-    if (profile === undefined || profiles.has(profile) === false)
+    if (isAutoMovieExternalModelIngestProfile(profile) === false)
       throw new Error(
-        "inspect-external requires --profile with one supported ingest profile.",
+        `inspect-external requires --profile with one of ${AUTO_MOVIE_EXTERNAL_MODEL_INGEST_PROFILES.join(", ")}.`,
       );
     return {
       command,
       path: positionals[0]!,
-      profile: profile as Extract<
-        AutoMovieCommand,
-        { command: "inspect-external" }
-      >["profile"],
+      profile,
     } as const;
   }
   if (command === "routes") {
-    if (
-      rest.length !== 1 ||
-      (rest[0] !== "film" && rest[0] !== "brief" && rest[0] !== "library")
-    )
-      throw new Error("routes needs exactly one of film, brief, or library.");
-    return { command, kind: rest[0] } as const;
+    const kind = rest[0];
+    if (rest.length !== 1 || isAutoMovieAuthoringProductionKind(kind) === false)
+      throw new Error(
+        `routes needs exactly one of ${AUTO_MOVIE_AUTHORING_PRODUCTION_KINDS.join(", ")}.`,
+      );
+    return { command, kind } as const;
   }
   if (command === "sync" || command === "verify") {
     if (rest.length !== 0) throw new Error(`${command} takes no arguments.`);
@@ -327,7 +318,6 @@ export const readAutoMovieCommandArguments = (
  *
  * @evidence requirements/operations-and-recovery/scope-job-identity-and-state.md#operations-requested-effective-work Prevents rejected argv from reaching a stateful successor.
  * @evidence specifications/execution-and-recovery/state-machine-and-admission.md#execution-admission-decision Makes successful parsing the predecessor of every dispatched operation.
- * @evidencePart specifications/execution-and-recovery/state-machine-and-admission.md#execution-admission-decision::admission-decision
  */
 export const dispatchAutoMovieCommandArguments = <Output>(
   args: readonly string[],

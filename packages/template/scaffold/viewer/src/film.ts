@@ -12,8 +12,10 @@ import type {
 } from "@automovie/interface";
 import {
   type IAutoMovieProductionRenderLayer,
+  productionFilmEffectEditFingerprint,
   productionRenderLayersForPass,
   sampleProductionRenderFrame,
+  verifyProductionFilmEffectPopulation,
 } from "@automovie/production";
 import {
   attachAutoMovieSemanticMask,
@@ -67,6 +69,24 @@ if (productionRuntimeResponse.ok === false)
   );
 const productionRuntime =
   (await productionRuntimeResponse.json()) as IAutoMovieProductionViewerRuntime;
+// The timeline and the runtime arrive from two fetches, so a compile settling
+// between them would hand this page a runtime for a different edit. Every
+// frame below samples the runtime at a frame of this timeline, which is only
+// meaningful once the two are proved to be one compile and one edit.
+if (
+  productionRuntime.filmEffectIdentity.film !== timeline.id ||
+  productionRuntime.filmEffectIdentity.compileFingerprint !==
+    timeline.inputFingerprint ||
+  productionRuntime.filmEffectIdentity.editFingerprint !==
+    productionFilmEffectEditFingerprint(timeline)
+)
+  throw new Error(
+    "Production runtime and compiled film differ in compile or edit identity. Reload after the compile settles.",
+  );
+verifyProductionFilmEffectPopulation({
+  timeline,
+  effects: productionRuntime.filmEffects,
+});
 const runtimes = new Map<string, IFilmShot>();
 for (const shot of new Set(timeline.segments.map((segment) => segment.shot))) {
   const response = await fetch(

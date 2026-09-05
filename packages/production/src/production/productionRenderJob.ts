@@ -382,7 +382,7 @@ interface IAutoMovieProductionAudioAssetIdentityBase {
    */
   digest: AutoMovieContentDigest;
   /**
-   * Declared source duration.
+   * Exact complete source runtime derived from `sourceFrames / sampleRate`.
    */
   durationSeconds: number;
   /**
@@ -477,6 +477,10 @@ export const planProductionRenderJob = (props: {
   const audioAssets = normalizeAudioAssets(props.audioAssets);
   for (const cue of props.timeline.tracks.audio) {
     const asset = audioAssets.find((candidate) => candidate.path === cue.asset);
+    // `sourceDurationFrames` is the cue's claim about the complete asset, so it
+    // is checked where the asset's own clock is known: the declared frame count
+    // must land on exactly the sample count the asset carries at its source
+    // rate. The trim inside that duration is the mix's own refusal.
     const expectedSamples =
       asset === undefined
         ? null

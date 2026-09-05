@@ -17,6 +17,7 @@ export * from "./production/AutoMovieProductionProject";
 export * from "./production/captureRuntimeIdentity";
 export * from "./production/contentIdentity";
 export * from "./production/designReferenceContainer";
+export * from "./production/designDerivation";
 export * from "./production/legacyImportPlan";
 export * from "./production/strictUtf8";
 export * from "./production/structuredJsonIngress";

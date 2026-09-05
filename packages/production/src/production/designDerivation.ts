@@ -4,7 +4,9 @@ import {
   canonicalAutoMovieJsonBytes,
   compareCodeUnits,
   digestAutoMovieBytes,
+  normalizeAutoMovieSource,
 } from "./contentIdentity";
+import { linkProductionSource } from "./linkProductionSource";
 
 /** Current film/brief design-derivation protocol. */
 export const AUTOMOVIE_DESIGN_DERIVATION_PROTOCOL =
@@ -141,6 +143,68 @@ export const autoMovieDesignDerivationBasisDigest = (
   basis: IAutoMovieDesignDerivationBasis,
 ): AutoMovieContentDigest =>
   digestAutoMovieBytes(canonicalAutoMovieJsonBytes(canonicalBasis(basis)));
+
+/**
+ * Acquire one target-local producer basis from the source graph it executes.
+ *
+ * Relative runtime imports are followed through the production linker, while
+ * type-only imports remain outside the runtime closure. Every included module
+ * is normalized before hashing so the basis has the same source-byte semantics
+ * as production compilation.
+ */
+export const captureAutoMovieDesignDerivationBasis = (props: {
+  production: string;
+  target: string;
+  recordPath: string;
+  emitter: { path: string; bytes: Uint8Array };
+  source: {
+    path: string;
+    export: string;
+    selector: string | null;
+  };
+  readSource: (path: string) => Uint8Array;
+  tool: IAutoMovieDesignDerivationBasis["tool"];
+}): IAutoMovieDesignDerivationBasis => {
+  assertRelativePath(props.emitter.path);
+  assertRelativePath(props.source.path);
+  const entryBytes = normalizeAutoMovieSource(
+    props.readSource(props.source.path),
+  );
+  const textOf = (bytes: Uint8Array): string =>
+    Buffer.from(bytes).toString("utf8");
+  const linked = linkProductionSource({
+    entryPath: props.source.path,
+    entrySource: textOf(entryBytes),
+    read: (sourcePath) =>
+      textOf(normalizeAutoMovieSource(props.readSource(sourcePath))),
+  });
+  if (linked.failures.length !== 0)
+    throw new AutoMovieDesignDerivationError(
+      "design-derivation-basis-changed",
+      `Design target "${props.target}" has an unreadable runtime source closure: ${linked.failures
+        .map((failure) => `${failure.path}: ${failure.reason}`)
+        .join(" ")}`,
+    );
+  const dependencies = linked.modules.map((module) => ({
+    path: module.path,
+    digest: digestAutoMovieBytes(Buffer.from(module.source, "utf8")),
+  }));
+  return canonicalBasis({
+    protocol: AUTOMOVIE_DESIGN_DERIVATION_PROTOCOL,
+    production: props.production,
+    target: props.target,
+    recordPath: props.recordPath,
+    emitter: {
+      path: props.emitter.path,
+      digest: digestAutoMovieBytes(
+        normalizeAutoMovieSource(props.emitter.bytes),
+      ),
+    },
+    source: { ...props.source },
+    dependencies,
+    tool: { ...props.tool },
+  });
+};
 
 /**
  * Evaluate one frozen design plan twice and return a staged complete candidate.

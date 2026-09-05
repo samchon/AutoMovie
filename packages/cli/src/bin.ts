@@ -1,5 +1,4 @@
 #!/usr/bin/env node
-import { inspectAutoMovieExternalModelBytes } from "@automovie/ingest";
 import { AutoMovieLegacyImporter } from "@automovie/production";
 import {
   AUTO_MOVIE_AUTHORING_REACHABILITY,
@@ -22,6 +21,7 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 
 import { dispatchAutoMovieCommandArguments } from "./commandArguments";
+import { inspectAutoMovieExternalProjectBytes } from "./externalInspection";
 
 const USAGE = `automovie: scaffold an automovie project
 
@@ -583,7 +583,7 @@ export const run = (argv: readonly string[]): number => {
         return runProjectScript(`${command.command}.ts`, []);
 
       if (command.command === "inspect-external") {
-        const root = process.cwd();
+        const root = fs.realpathSync(process.cwd());
         const source = path.resolve(root, command.path);
         const relative = path.relative(root, source);
         if (
@@ -594,25 +594,20 @@ export const run = (argv: readonly string[]): number => {
           throw new Error(
             "inspect-external source must be a file inside the current project.",
           );
-        const inspection = inspectAutoMovieExternalModelBytes({
-          bytes: fs.readFileSync(source),
-          path: relative.split(path.sep).join("/"),
+        const sourceBytes = readProjectRegularFile(root, source);
+        if (sourceBytes === null)
+          throw new Error(
+            "inspect-external source must be one regular, non-linked file inside the current project.",
+          );
+        const inspection = inspectAutoMovieExternalProjectBytes({
+          bytes: sourceBytes,
+          source: relative.split(path.sep).join("/"),
           profile: command.profile,
-          resolveResource: (uri) => {
-            if (/^[A-Za-z][A-Za-z0-9+.-]*:/u.test(uri)) return null;
-            const resource = path.resolve(
-              path.dirname(source),
-              decodeURIComponent(uri),
-            );
-            const resourceRelative = path.relative(root, resource);
-            if (
-              resourceRelative.startsWith(`..${path.sep}`) ||
-              path.isAbsolute(resourceRelative) ||
-              fs.existsSync(resource) === false
-            )
-              return null;
-            return fs.readFileSync(resource);
-          },
+          readResource: (resource) =>
+            readProjectRegularFile(
+              root,
+              path.resolve(root, ...resource.split("/")),
+            ),
         });
         process.stdout.write(`${JSON.stringify(inspection, null, 2)}\n`);
         return 0;
@@ -699,7 +694,8 @@ export const run = (argv: readonly string[]): number => {
           observed,
           plan,
         });
-        publishProjectCandidate(root, publication.writes);
+        publishProjectCandidate(root, publication.creations, "create");
+        publishProjectCandidate(root, publication.replacements, "replace");
         for (const removal of publication.removals) {
           const source = resolveProjectFile(root, removal.path);
           const status = fs.lstatSync(source, { bigint: true });
@@ -778,6 +774,27 @@ export const run = (argv: readonly string[]): number => {
   }
 };
 
+const readProjectRegularFile = (
+  root: string,
+  target: string,
+): Uint8Array | null => {
+  const relative = path.relative(root, target);
+  if (
+    relative === "" ||
+    relative.startsWith(`..${path.sep}`) ||
+    path.isAbsolute(relative)
+  )
+    return null;
+  try {
+    const status = fs.lstatSync(target);
+    if (status.isFile() === false || status.isSymbolicLink()) return null;
+    if (path.relative(target, fs.realpathSync(target)) !== "") return null;
+    return fs.readFileSync(target);
+  } catch {
+    return null;
+  }
+};
+
 const readMarkdownFiles = (
   directory: string,
   root: string,
@@ -842,9 +859,17 @@ const readProjectTextFile = (root: string, relative: string): string => {
 const publishProjectCandidate = (
   root: string,
   files: Readonly<Record<string, string>>,
+  authority: "create" | "replace" = "replace",
 ): void => {
   if (Object.keys(files).length === 0) return;
-  const receipt = publishFiles(root, { ...files }, { force: true });
+  const receipt = publishFiles(
+    root,
+    { ...files },
+    {
+      allowExistingRoot: true,
+      overwriteExistingFiles: authority === "replace",
+    },
+  );
   if (receipt.status !== "completed")
     throw new ScaffoldPublicationError(receipt);
 };

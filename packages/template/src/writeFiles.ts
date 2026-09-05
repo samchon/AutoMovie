@@ -15,13 +15,42 @@ import {
 } from "./scaffoldPublication";
 
 /**
+ * The two independent filesystem authorities one publication may hold.
+ *
+ * Admitting a populated root and replacing an exact captured file are separate
+ * decisions: a maintenance write into a project that already exists needs the
+ * first without the second, so a new path can never overwrite a competitor.
+ * `force` remains the compatibility shorthand that grants both at once.
+ *
+ * @evidence requirements/operations-and-recovery/idempotency-and-side-effects.md#operations-duplicate-submission Names the explicit replacement authority a duplicate final path requires, separately from root admission.
+ * @evidence specifications/execution-and-recovery/retry-backoff-and-idempotency.md#execution-duplicate-submission Types exact replacement and populated-root admission as distinct explicit grants.
+ */
+export interface IScaffoldPublicationOptions {
+  /** Permit publication below an already populated root. */
+  allowExistingRoot?: boolean;
+  /** Compatibility shorthand that enables both authorities. */
+  force?: boolean;
+  /** Permit replacement of an exact captured ordinary file. */
+  overwriteExistingFiles?: boolean;
+}
+
+/** Resolve each authority from its explicit grant, else from `force`. */
+const resolveScaffoldPublicationAuthority = (
+  options: IScaffoldPublicationOptions | undefined,
+): { allowExistingRoot: boolean; overwriteExistingFiles: boolean } => ({
+  allowExistingRoot: options?.allowExistingRoot ?? options?.force === true,
+  overwriteExistingFiles:
+    options?.overwriteExistingFiles ?? options?.force === true,
+});
+
+/**
  * Error raised by the compatibility write API with its exact publication
- * receipt retained for recovery.
+ * receipt retained for recovery. Raised only after the exact observed effect
+ * has been captured, so the receipt crosses the throwing boundary intact.
  *
  * @evidence requirements/operations-and-recovery/idempotency-and-side-effects.md#operations-compensation-reconciliation Keeps the completed prefix and stopping effect attached to a failed legacy write call.
  * @evidence specifications/execution-and-recovery/retry-backoff-and-idempotency.md#execution-compensation-adoption Lets a caller inspect the same receipt used by the non-throwing publication API.
  * @author Samchon
- * @internal
  */
 export class ScaffoldPublicationError extends Error {
   /**
@@ -32,12 +61,6 @@ export class ScaffoldPublicationError extends Error {
    */
   public readonly receipt: IScaffoldPublicationReceipt;
 
-  /**
-   * Construct the compatibility error from the already completed receipt.
-   *
-   * @evidence requirements/operations-and-recovery/idempotency-and-side-effects.md#operations-compensation-reconciliation Raises only after the exact observed effect has been captured.
-   * @evidence specifications/execution-and-recovery/retry-backoff-and-idempotency.md#execution-compensation-adoption Keeps the recovery value intact across the legacy throwing boundary.
-   */
   public constructor(receipt: IScaffoldPublicationReceipt) {
     const failure = receipt.failure;
     super(
@@ -79,7 +102,9 @@ export class ScaffoldPublicationError extends Error {
  *
  * Refuses lexical escapes, colliding targets, linked physical parents, and
  * pathname successors. New files reserve their final slot directly; `force`
- * modifies only the exact captured ordinary single-link file generation.
+ * remains the compatibility shorthand for allowing a populated root and
+ * replacing exact captured ordinary single-link files. Maintenance callers
+ * separate those authorities so a new path can never overwrite a competitor.
  * Rendering the map is {@link renderScaffold}'s job; this is its write half.
  *
  * @evidence requirements/operations-and-recovery/idempotency-and-side-effects.md#operations-idempotent-deterministic-results Repeated explicit writes converge on the same scaffold bytes while an unforced duplicate is refused.
@@ -100,7 +125,7 @@ export class ScaffoldPublicationError extends Error {
 export const writeFiles = (
   location: string,
   files: Record<string, string>,
-  options?: { force?: boolean },
+  options?: IScaffoldPublicationOptions,
 ): string[] => {
   const receipt = publishFiles(location, files, options);
   if (receipt.status !== "completed")
@@ -130,10 +155,11 @@ export const writeFiles = (
 export const publishFiles = (
   location: string,
   files: Record<string, string>,
-  options?: { force?: boolean },
+  options?: IScaffoldPublicationOptions,
 ): IScaffoldPublicationReceipt => {
   const base = path.resolve(process.cwd(), location);
   const candidate = planScaffoldPublication({ files, root: base });
+  const authority = resolveScaffoldPublicationAuthority(options);
   let baseOwnership: IScaffoldPhysicalDirectory | undefined;
   let directories: Map<string, IScaffoldPhysicalDirectory> | undefined;
   return publishScaffoldCandidate({
@@ -143,7 +169,10 @@ export const publishFiles = (
         if (baseOwnership === undefined) {
           baseOwnership = ensureScaffoldBaseDirectory(base);
           assertScaffoldPhysicalDirectory(baseOwnership);
-          if (fs.readdirSync(base).length > 0 && options?.force !== true)
+          if (
+            fs.readdirSync(base).length > 0 &&
+            authority.allowExistingRoot === false
+          )
             throw new Error(
               `target directory is not empty: ${base}; pass --force to scaffold into it anyway`,
             );
@@ -158,7 +187,7 @@ export const publishFiles = (
         return writeScaffoldFile({
           base: baseOwnership,
           bytes: Uint8Array.from(entry.bytes),
-          force: options?.force === true,
+          force: authority.overwriteExistingFiles,
           parent,
           target: entry.target,
         });

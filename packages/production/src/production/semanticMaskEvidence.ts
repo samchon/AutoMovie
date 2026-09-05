@@ -11,6 +11,10 @@ import {
 } from "@automovie/interface";
 
 import { compareCodeUnits, digestAutoMovieBytes } from "./contentIdentity";
+import {
+  type IAutoMovieProductionRenderJobPlan,
+  productionRenderLayersForPass,
+} from "./productionRenderJob";
 
 /**
  * Runtime agreement between a semantic palette and the scene actually drawn.

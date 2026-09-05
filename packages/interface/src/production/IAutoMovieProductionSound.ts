@@ -384,7 +384,13 @@ export interface IAutoMovieProductionSoundCue {
    */
   sourceOffsetFrame: number;
   /**
-   * Source-asset duration available to this edit.
+   * Complete source-asset duration on the production frame clock.
+   *
+   * This is the asset's identity and the ceiling the trim fits inside, never a
+   * selected span or a playback-rate control: the cue reads
+   * `durationFrames` frames from `sourceOffsetFrame` at unit rate, and
+   * `sourceOffsetFrame + durationFrames` may not exceed this value. Planning
+   * verifies it against the decoded asset's own sample count.
    *
    * @evidence requirements/sound/event-cues-and-timing.md#sound-cue-sample-boundary Exposes `sourceDurationFrames` as the portable data boundary for the sound cue sample boundary requirement.
    * @evidence specifications/simulation-effects-and-sound/sound-sources-events-dialogue-and-foley.md#sound-cue-sample-boundary-and-arrival Types `sourceDurationFrames` for the sound cue sample boundary and arrival system contract.

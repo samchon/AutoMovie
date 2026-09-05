@@ -4,6 +4,7 @@ import path from "node:path";
 import {
   type ICoverageSpan,
   branchIdentity,
+  canonicalCoverageEntryPath,
   functionIdentity,
   statementIdentity,
 } from "./coverageIdentity";
@@ -222,7 +223,6 @@ export const unionEntryByLine = <T extends ICoverageEntry>(
   return { ...base, b: { ...(base.b ?? {}), ...b }, f, s };
 };
 
-/** Per file, every group's reading folded together by exact identity. */
 /** A file the union wrote without a position one reading had covered. */
 export interface IUnionShortfall {
   file: string;
@@ -245,10 +245,18 @@ export interface IUnionShortfall {
  *
  * Identities rather than counts. A count says how much was covered while a
  * complete key says exactly which declaration, statement, or branch arm was.
+ *
+ * Covered positions only, deliberately. A reading's uncovered positions are
+ * its own geometry: the `--all` entry a group writes for a file it never
+ * loaded carries one zero-hit statement per source line, and a second emitted
+ * form carries function entries at lines that define nothing. Neither is an
+ * obligation the base lost; what must never be lost is coverage a process
+ * observed.
  */
 export const unionShortfalls = <T extends ICoverageEntry>(
   grouped: ReadonlyMap<string, readonly T[]>,
   united: Readonly<Record<string, T>>,
+  identity: (file: string) => string = canonicalCoverageEntryPath,
 ): IUnionShortfall[] => {
   const allIdentities = (entry: ICoverageEntry): Set<string> => {
     const kinds = coveredIdentities(entry);
@@ -258,17 +266,20 @@ export const unionShortfalls = <T extends ICoverageEntry>(
       ...kinds.branches,
     ]);
   };
+  const writtenEntries = new Map(
+    Object.entries(united).map(([file, entry]) => [identity(file), entry]),
+  );
   const shortfalls: IUnionShortfall[] = [];
   for (const [file, entries] of grouped) {
-    const chosen = united[file];
+    const chosen = writtenEntries.get(identity(file));
     if (chosen === undefined) continue;
     const written = allIdentities(chosen);
     const lost = new Set<string>();
     for (const [reading, entry] of entries.entries()) {
       for (const missing of unidentifiableCoveredPositions(entry))
         lost.add(`unidentifiable:${reading}:${missing}`);
-      for (const identity of allIdentities(entry))
-        if (written.has(identity) === false) lost.add(identity);
+      for (const position of allIdentities(entry))
+        if (written.has(position) === false) lost.add(position);
     }
     if (lost.size !== 0)
       shortfalls.push({
@@ -284,19 +295,21 @@ export const unionShortfalls = <T extends ICoverageEntry>(
 /** Group every report's entries by file, keeping each reading separate. */
 export const groupEntriesByFile = <T extends ICoverageEntry>(
   reports: ReadonlyArray<Record<string, T>>,
+  identity: (file: string) => string = canonicalCoverageEntryPath,
 ): Map<string, T[]> => {
   const grouped = new Map<string, T[]>();
   for (const report of reports)
     for (const [file, entry] of Object.entries(report))
-      grouped.set(file, [...(grouped.get(file) ?? []), entry]);
+      grouped.set(identity(file), [...(grouped.get(identity(file)) ?? []), entry]);
   return grouped;
 };
 
 export const unionEntries = <T extends ICoverageEntry>(
   reports: ReadonlyArray<Record<string, T>>,
+  identity: (file: string) => string = canonicalCoverageEntryPath,
 ): Record<string, T> => {
   const united: Record<string, T> = {};
-  for (const [file, entries] of groupEntriesByFile(reports)) {
+  for (const [file, entries] of groupEntriesByFile(reports, identity)) {
     const merged = unionEntryByLine(entries);
     if (merged !== undefined) united[file] = merged;
   }
@@ -363,8 +376,14 @@ export interface IShapeReconciliation {
  * reading that saw the most of it run.
  *
  * One group means nothing was read twice and the merge had nothing to lose, so
- * the report c8 already wrote stands untouched. A group whose report cannot be
- * produced or read stops the correction and says why: a partial correction
+ * the report c8 already wrote stands. It is rewritten only to key every entry
+ * by its canonical identity, which on a case-preserving host is what makes two
+ * spellings of one file fold into one entry: a source loaded through its map
+ * is keyed by the checkout's real casing while `--all` keys a never-loaded
+ * file by the working directory's, and a consumer indexing by canonical path
+ * would otherwise keep whichever of the two arrived last. On a host whose
+ * keys are already canonical nothing is rewritten. A group whose report cannot
+ * be produced or read stops the correction and says why: a partial correction
  * would be a third reading with no account of itself.
  */
 export const reconcileCoverageShapes = (props: {
@@ -378,14 +397,27 @@ export const reconcileCoverageShapes = (props: {
   reportDirectory: string;
   temporary: string;
   writeReport: (entries: Record<string, ICoverageEntry>) => void;
+  /** Canonical report-key identity; defaults to the current host platform. */
+  entryIdentity?: (file: string) => string;
 }): IShapeReconciliation => {
+  const identity = props.entryIdentity ?? canonicalCoverageEntryPath;
   const groups = partitionByShape(
     readRecordShapes(props.temporary, props.measured),
   );
   if (groups.length < 2) {
     const merged = props.readReport(props.reportDirectory);
     if (merged === null) return { failure: null, groups: groups.length };
-    const shortfalls = unionShortfalls(groupEntriesByFile([merged]), merged);
+    const united = unionEntries([merged], identity);
+    const shortfalls = unionShortfalls(
+      groupEntriesByFile([merged], identity),
+      united,
+      identity,
+    );
+    if (
+      Object.keys(merged).length !== Object.keys(united).length ||
+      Object.keys(merged).some((file) => identity(file) !== file)
+    )
+      props.writeReport(united);
     return shortfalls.length === 0
       ? { failure: null, groups: groups.length }
       : { failure: null, groups: groups.length, shortfalls };
@@ -424,11 +456,15 @@ export const reconcileCoverageShapes = (props: {
   // one made this claim's own JSDoc false.
   const merged = props.readReport(props.reportDirectory);
   const candidates = merged === null ? reports : [...reports, merged];
-  const united = unionEntries(candidates);
+  const united = unionEntries(candidates, identity);
   props.writeReport(united);
   return {
     failure: null,
     groups: groups.length,
-    shortfalls: unionShortfalls(groupEntriesByFile(candidates), united),
+    shortfalls: unionShortfalls(
+      groupEntriesByFile(candidates, identity),
+      united,
+      identity,
+    ),
   };
 };

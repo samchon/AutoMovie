@@ -23,7 +23,6 @@ import {
 } from "./coverageIdentity";
 import {
   type ICoveragePublication,
-  loadCoveragePublication,
   publicationReport,
 } from "./coveragePublication";
 import {
@@ -233,13 +232,27 @@ const nulSet = (output: string): Set<string> =>
  * Collect committed, index, worktree, and untracked changes as one final-tree
  * population. A file changed in both index and worktree is refused because one
  * coverage snapshot cannot certify the two different byte sequences.
+ *
+ * An untracked authored source is demanded whole. The diff against the merge
+ * base cannot name its lines, because git has no prior version to diff it
+ * against, and an empty line set would read as a file with nothing to cover:
+ * every position inherited, `0/0`, green. So it is listed among the changed
+ * files with no lines and named in `wholeFiles`, which the inspection reads
+ * as every executable position. An untracked file the policy does not admit
+ * stays listed and is skipped by the inspection like any other such file.
+ *
+ * `execute` is the git seam, so the population this derives from git's four
+ * answers can be pinned from those answers alone.
  */
 export const collectGitChangedLines = (
   root: string,
   base: string,
+  execute: GitExecute = executeGit,
 ): IChangedFiles => {
-  const mergeBase = runGit(root, ["merge-base", base, "HEAD"]).trim();
-  const diff = runGit(root, [
+  const git = (arguments_: string[]): string =>
+    runGit(root, arguments_, execute);
+  const mergeBase = git(["merge-base", base, "HEAD"]).trim();
+  const diff = git([
     "-c",
     "core.quotepath=false",
     "diff",
@@ -251,12 +264,10 @@ export const collectGitChangedLines = (
     "--",
   ]);
   const files = parseChangedLines(diff);
-  const staged = nulSet(
-    runGit(root, ["diff", "--cached", "--name-only", "-z", "--"]),
-  );
-  const worktree = nulSet(runGit(root, ["diff", "--name-only", "-z", "--"]));
+  const staged = nulSet(git(["diff", "--cached", "--name-only", "-z", "--"]));
+  const worktree = nulSet(git(["diff", "--name-only", "-z", "--"]));
   const untracked = nulSet(
-    runGit(root, ["ls-files", "--others", "--exclude-standard", "-z"]),
+    git(["ls-files", "--others", "--exclude-standard", "-z"]),
   );
   const wholeFiles = new Set<string>();
   for (const relative of untracked) {
@@ -542,9 +553,8 @@ export const reportChangedCoverage = (
 
 export const parseChangedCoverageArguments = (
   arguments_: string[],
-): { base?: string; reportDirectory?: string; root?: string } => {
-  const options: { base?: string; reportDirectory?: string; root?: string } =
-    {};
+): { base?: string; root?: string } => {
+  const options: { base?: string; root?: string } = {};
   for (let index = 0; index < arguments_.length; index++) {
     const argument = arguments_[index];
     const key =
@@ -552,9 +562,7 @@ export const parseChangedCoverageArguments = (
         ? "base"
         : argument === "--root"
           ? "root"
-          : argument === "--report-directory"
-            ? "reportDirectory"
-            : undefined;
+          : undefined;
     if (key === undefined) throw new Error(`unknown argument '${argument}'`);
     if (options[key] !== undefined || arguments_[index + 1] === undefined)
       throw new Error(`${argument} requires exactly one value`);
@@ -575,7 +583,7 @@ const readJson = (file: string, label: string): unknown => {
 
 export const runChangedCoverageGate = (
   arguments_: string[],
-  publication?: ICoveragePublication,
+  publication: ICoveragePublication,
   environment: NodeJS.ProcessEnv = process.env,
   write: Writer = console.log,
 ): number => {
@@ -584,25 +592,13 @@ export const runChangedCoverageGate = (
     const root = path.resolve(
       options.root ?? path.resolve(__dirname, "../../.."),
     );
-    if (publication !== undefined && options.reportDirectory !== undefined)
-      throw new Error(
-        "--report-directory cannot replace an explicit run publication",
-      );
-    let owned = publication;
-    if (owned === undefined) {
-      if (options.reportDirectory === undefined)
-        throw new Error(
-          "changed coverage requires an explicit run publication or --report-directory",
-        );
-      owned = loadCoveragePublication(path.resolve(options.reportDirectory));
-    }
     const base = resolveCoverageBase(root, options.base, environment);
     const changes = collectGitChangedLines(root, base);
     const coverage = readJson(
-      publicationReport(owned),
+      publicationReport(publication),
       "coverage report",
     ) as Record<string, IIstanbulFileCoverage>;
-    const measuredSources = owned.sources;
+    const measuredSources = publication.sources;
     const result = inspectChangedCoverage({
       root,
       files: changes.files,

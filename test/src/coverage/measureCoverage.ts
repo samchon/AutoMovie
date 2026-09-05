@@ -15,9 +15,9 @@
 // than reporting them. That is the only reason the instrument's fault surfaced
 // instead of entering the record as two mysterious regressions.
 //
-// Raw records, report, source host and sidecars share one private run root. The
-// exact immutable publication is passed to every consumer, then the whole root
-// is removed; concurrent runs neither overwrite nor consume each other.
+// Raw records and report share one private run root. The exact immutable
+// publication is passed to every consumer, then the whole root is removed;
+// concurrent runs neither overwrite nor consume each other.
 import { spawnSync } from "node:child_process";
 import crypto from "node:crypto";
 import fs from "node:fs";
@@ -168,7 +168,6 @@ export const coverageRunPaths = (): ICoverageRunPaths => {
     rawDirectory: path.join(rootDirectory, "raw"),
     reportDirectory: path.join(rootDirectory, "report"),
     rootDirectory,
-    sourceHostDirectory: path.join(rootDirectory, "source-host"),
   };
 };
 
@@ -342,12 +341,6 @@ export const measuredScriptIdentity = (
     ? `${canonicalRepository}/${relative}`.replace(/\/$/u, "")
     : null;
 };
-
-export const isMeasuredScriptUrl = (
-  url: string,
-  roots: readonly string[],
-  repository: string,
-): boolean => measuredScriptIdentity(url, roots, repository) !== null;
 
 /** Resolve source-map `sources` against the map file without choosing one. */
 export const sourceMapSourceFiles = (props: {
@@ -619,73 +612,23 @@ export const coverageIncludes = [
   "*.tsx",
   "*.cts",
   "*.mts",
-  "build/**",
   "config/**",
   "docs/lint.config.ts",
   "packages/*/*.ts",
   "packages/*/*.tsx",
   "packages/*/*.cts",
   "packages/*/*.mts",
-  "packages/*/build/**/*.ts",
-  "packages/*/build/**/*.tsx",
-  "packages/*/build/**/*.cts",
-  "packages/*/build/**/*.mts",
   "packages/*/scripts/**",
   "packages/*/src/**",
-  "test/src/coverage/**",
-  "test/src/integrity/**",
-  "packages/template/scaffold/**",
 ];
 
 const SOURCES = coverageSourceRoots;
 const INCLUDES = coverageIncludes;
 
-export { MEASURED_LINES, MEASURED_SOURCES } from "./coveragePublication";
-
-/*
- * Record every measured file's line count beside the report that names it.
- *
- * An Istanbul report carries positions and no way to say which content they were
- * taken from — the per-file entry holds `path`, the maps and the counts, and no
- * hash. So a reader asking "does this position exist in the file?" is asking
- * about whatever the file has since become, and a guard built on that answer
- * blames the instrument for an ordinary edit. Measured on this repository: one
- * commit that shortened a file by 23 lines made 26 positions read as past its
- * end, none of which was a fault.
- *
- * Written here because this is the one moment the sources on disk are the
- * sources just measured. A missing entry is a file the reader must not judge.
- *
- * The length itself is {@link lineCount}'s to define, and it is defined beside
- * the reader because that is where the reason lives: a file ending in a newline
- * splits into one more piece than it has lines, and the reader's check is exact
- * or it is nothing. Two copies of that arithmetic is how a writer and a reader
- * stop agreeing about what a length is.
- */
-/*
- * Record both length and content identity for every measured source.
- *
- * A line-count sidecar can prove that an Istanbul position existed when the
- * report was written, but equal-length edits can still leave a stale report
- * looking current. Changed coverage must refuse that case rather than certify
- * today's diff against yesterday's execution.
- */
-/**
- * Measure once, into a directory this run alone owns.
- *
- * Guarded so importing this module to read its path rule does not launch the
- * whole suite. `test_workspace_coverage_isolation` does exactly that.
- */
+/** Remove one run's private directory; a missing one is already removed. */
 export const removeCoverageTemporaryDirectory = (directory: string): void =>
   fs.rmSync(directory, { recursive: true, force: true });
 
-/**
- * Ask each shape-consistent group of raw records for its own report.
- *
- * The group reports are written beside the run's own temp directory, which is
- * removed with it, so a corrected run leaves nothing behind for the next one to
- * inherit.
- */
 /**
  * The parts a real shape reconciliation is made of, each one askable on its own.
  *
@@ -903,6 +846,8 @@ export const coverageInstrumentPopulation = (): string[] => [
   "--exclude",
   "**/bin.ts",
   ...UNMEASURED_SOURCE_ROOTS.flatMap((root) => ["--exclude", `${root}**`]),
+  "--exclude",
+  "packages/*/build/**",
   ...UNJUDGED_DECLARATION_GLOBS.flatMap((glob) => ["--exclude", glob]),
   "--extension",
   ".ts",
@@ -919,7 +864,6 @@ export const measureCoverage = (
 ): ICoverageMeasurementResult => {
   const paths = dependencies.runPaths();
   const temporary = paths.rawDirectory;
-  const sourceHost = paths.sourceHostDirectory;
   let publication: ICoveragePublication | undefined;
   try {
     const snapshot = Object.freeze(
@@ -931,7 +875,6 @@ export const measureCoverage = (
       ),
     );
     dependencies.mkdir(temporary, { recursive: true });
-    dependencies.mkdir(sourceHost, { recursive: true });
     dependencies.mkdir(paths.reportDirectory, { recursive: true });
     const result = dependencies.spawn(
       process.execPath,
@@ -970,7 +913,6 @@ export const measureCoverage = (
         shell: false,
         env: {
           ...dependencies.environment,
-          AUTOMOVIE_COVERAGE_SOURCE_HOST: sourceHost,
         },
       },
     );
@@ -1074,7 +1016,6 @@ export const measureCoverage = (
     return { status: 2 };
   } finally {
     dependencies.remove(temporary);
-    dependencies.remove(sourceHost);
     if (publication === undefined) dependencies.remove(paths.rootDirectory);
   }
 };

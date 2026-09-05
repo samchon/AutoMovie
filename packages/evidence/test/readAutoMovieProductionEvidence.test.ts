@@ -24,6 +24,9 @@ const roots: string[] = [];
  * 3. A direct brief exposes its graph-selected shot export and exact H3 owner.
  * 4. A declaration rooted at another project and a manifest without a package
  *    name fail before either can become a router or review denominator.
+ * 5. A review row that records a host-specific comparison raises no alarm,
+ *    while a sibling unit whose review pastes the target's Review question is
+ *    reported as a question paste at that exact host.
  */
 try {
   const project = createProject();
@@ -62,13 +65,21 @@ try {
       "",
       "## Shell {#shell}",
       "",
-      "<!-- @evidenceReview contracts/visual.md#profile #reader-test does the selected model preserve its reviewed profile? -->",
+      "<!--",
+      "@evidence contracts/visual.md#profile The shell preserves the production's reviewed model profile.",
+      "@evidenceReview contracts/visual.md#profile #abcdef0 Compared the shell body with the local profile contract and found the exact reviewed-model constraint.",
+      "-->",
       "",
       "The exact shell.",
       "",
       "The shell detail.",
       "",
       "## Joint {#joint}",
+      "",
+      "<!--",
+      "@evidence contracts/visual.md#profile The joint keeps the reviewed profile at every articulation.",
+      "@evidenceReview contracts/visual.md#profile #abcdef1 does the selected model preserve its reviewed profile?",
+      "-->",
       "",
       "The exact joint.",
       "",
@@ -174,7 +185,7 @@ try {
       [
         "evidence-review-question-paste",
         "docs/models/alpha.md",
-        "docs/models/alpha.md#shell",
+        "docs/models/alpha.md#joint",
       ],
     ],
   );

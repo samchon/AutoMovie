@@ -70,6 +70,7 @@ const inventoryCacheRoot = (props: {
           digest: snapshot.contentFingerprint,
           bytes: snapshot.bytes,
           generation: snapshot.targetIdentity,
+          fingerprint: snapshot.contentFingerprint,
           observation: null,
         },
         snapshot,

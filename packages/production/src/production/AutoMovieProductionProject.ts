@@ -67,9 +67,13 @@ import {
 } from "./productionPayloadSnapshot";
 import {
   type IAutoMovieProductionRenderJobPlan,
+  productionRenderLayersForPass,
   readAutoMovieProductionOwnedFile,
 } from "./productionRenderJob";
-import { assertProductionRenderPublicationCurrent } from "./productionRenderPublicationIdentity";
+import {
+  assertProductionRenderPublicationCurrent,
+  isPortableProductionPublicationPath,
+} from "./productionRenderPublicationIdentity";
 import {
   assertAutoMovieExternalGeneratorTermsAt,
   canonicalAutoMovieRepaintGeneratorProvenance,
@@ -1959,14 +1963,14 @@ export class AutoMovieProductionProject {
         );
       supplied.set(entry.key, { ...entry, bytes: Buffer.from(bytes) });
     }
-    const framePaths = new Set<string>();
+    const payloadPaths = new Set<string>();
     const retainedPaths: string[] = [];
     const expectedPayload: IProductionPayloadSnapshot = { entries: [] };
     for (const frame of manifest.frames) {
       const entry = bundleEntry(frame.path);
-      if (framePaths.has(entry.key))
+      if (payloadPaths.has(entry.key))
         throw new Error(`Render bundle repeats frame path "${frame.path}".`);
-      framePaths.add(entry.key);
+      payloadPaths.add(entry.key);
       const relative = normalizeSlash(
         path.relative(this.renderRoot(), entry.target),
       );
@@ -1983,13 +1987,70 @@ export class AutoMovieProductionProject {
         bytes: staged?.length ?? this.readRenderFile(relative).length,
       });
     }
+    const semanticKeys = new Set<string>();
+    for (const semantic of manifest.semanticMasks) {
+      const semanticKey = `${semantic.frame}\0${semantic.pass}`;
+      if (
+        semanticKeys.has(semanticKey) ||
+        manifest.target.kind !== "shot" ||
+        semantic.shot !== manifest.target.id ||
+        manifest.frames.some(
+          (frame) =>
+            frame.index === semantic.frame && frame.pass === semantic.pass,
+        ) === false
+      )
+        throw new Error(
+          `Render bundle semantic receipt for frame ${semantic.frame} is duplicate, foreign, or has no mask frame.`,
+        );
+      semanticKeys.add(semanticKey);
+      const entry = bundleEntry(semantic.sidecar.path);
+      if (payloadPaths.has(entry.key))
+        throw new Error(
+          `Render bundle repeats semantic sidecar path "${semantic.sidecar.path}".`,
+        );
+      payloadPaths.add(entry.key);
+      const relative = normalizeSlash(
+        path.relative(this.renderRoot(), entry.target),
+      );
+      const staged = supplied.get(entry.key)?.bytes;
+      const bytes = staged ?? Buffer.from(this.readRenderFile(relative));
+      verifyAutoMovieProductionSemanticMaskReceipt({
+        receipt: semantic,
+        expectedFrame: semantic.frame,
+        expectedShot: semantic.shot,
+        evidence: {
+          version: 1,
+          shot: semantic.shot,
+          mask: JSON.parse(bytes.toString("utf8")) as IAutoMovieSemanticMask,
+          coverage: semantic.coverage,
+        },
+        resident: { path: semantic.sidecar.path, bytes },
+      });
+      if (staged === undefined) retainedPaths.push(relative);
+      expectedPayload.entries.push({
+        path: relative,
+        digest: semantic.sidecar.digest,
+        bytes: semantic.sidecar.bytes,
+      });
+    }
     if (
-      [...supplied.keys()].some(
-        (relative) => framePaths.has(relative) === false,
+      manifest.target.kind === "shot" &&
+      manifest.frames.some(
+        (frame) =>
+          frame.pass === "mask" &&
+          semanticKeys.has(`${frame.index}\0${frame.pass}`) === false,
       )
     )
       throw new Error(
-        "Render bundle supplied a frame that its manifest does not claim.",
+        "Render bundle mask frames require one current semantic sidecar each.",
+      );
+    if (
+      [...supplied.keys()].some(
+        (relative) => payloadPaths.has(relative) === false,
+      )
+    )
+      throw new Error(
+        "Render bundle supplied a payload that its manifest does not claim.",
       );
     const retainedSnapshot = captureProductionPayloadSnapshot({
       paths: retainedPaths,
@@ -3751,172 +3812,6 @@ export class AutoMovieProductionProject {
   }
 
   /**
-   * Atomically write the exact aggregate production-delivery ledger.
-   *
-   * This compatibility writer owns no output bytes, so it may publish only
-   * with the complete plan and a caller-supplied generation-current assertion.
-   * New finalization should use {@link commitProductionPublication} instead.
-   */
-  public commitProductionRenderManifest(
-    manifest: IAutoMovieProductionRenderManifest,
-    plan: IAutoMovieProductionRenderJobPlan,
-    planCurrent: () => boolean,
-  ): number {
-    const validation =
-      typia.validateEquals<IAutoMovieProductionRenderManifest>(manifest);
-    if (validation.success === false)
-      throw new Error(
-        `Invalid aggregate render manifest: ${validation.errors
-          .map((error) => `${error.path} expects ${error.expected}`)
-          .join("; ")}.`,
-      );
-    const candidate = structuredClone(validation.data);
-    const publication = assertProductionRenderPublicationCurrent({
-      identity: candidate.publication,
-      plan,
-    });
-    if (candidate.compileFingerprint !== publication.compileFingerprint)
-      throw new Error(
-        "The aggregate render manifest compile fingerprint differs from its publication identity.",
-      );
-    if (planCurrent() !== true)
-      throw new AutoMovieProductionInputRaceError(
-        "The render plan changed before its manifest-only ledger could be committed.",
-      );
-    if (
-      this.generatedManifest()?.inputFingerprint !==
-      publication.compileFingerprint
-    )
-      throw new AutoMovieProductionInputRaceError(
-        "The aggregate render manifest does not target the current compiler input.",
-      );
-    const content = serializeJson(candidate);
-    const paths = new Set<string>();
-    const receiptFiles: IAutoMovieProductionRenderReceipt["files"] = [];
-    for (const deliverable of candidate.deliverables)
-      for (const file of deliverable.files) {
-        const portable = normalizeSlash(file.path).toLowerCase();
-        if (paths.has(portable))
-          throw new Error(
-            `Render file "${file.path}" is claimed more than once. Give it one deliverable owner before committing the aggregate manifest.`,
-          );
-        paths.add(portable);
-        const bytes = this.readRenderFile(file.path);
-        const digest = digestAutoMovieBytes(bytes);
-        if (bytes.length !== file.bytes || digest !== file.digest)
-          throw new Error(
-            `Render file "${file.path}" does not match its declared byte size and digest. Rebuild the deliverable ledger from current bytes.`,
-          );
-        let probe: IAutoMovieProductionRenderReceipt["files"][number]["probe"];
-        try {
-          probe = probeProductionMedia({
-            kind: deliverable.kind,
-            mediaType: file.mediaType,
-            bytes,
-          });
-        } catch (error) {
-          throw new Error(
-            `Render file "${file.path}" failed media probing: ${String(error)}`,
-          );
-        }
-        receiptFiles.push({
-          deliverable: deliverable.id,
-          ...file,
-          probe,
-        });
-      }
-    receiptFiles.sort((left, right) => compareCodeUnits(left.path, right.path));
-    const receipt: IAutoMovieProductionRenderReceipt = {
-      version: 4,
-      manifestDigest: digestAutoMovieBytes(Buffer.from(content, "utf8")),
-      publicationFingerprint: publication.fingerprint,
-      files: receiptFiles,
-    };
-    const receiptContent = serializeJson(receipt);
-    const snapshot = captureProductionPayloadSnapshot({
-      paths: receiptFiles.map((file) => file.path),
-      read: (relative) => {
-        try {
-          return this.readRenderFile(relative);
-        } catch {
-          return null;
-        }
-      },
-    });
-    const expectedPayload: IProductionPayloadSnapshot = {
-      entries: receiptFiles.map((file) => ({
-        path: file.path,
-        digest: file.digest,
-        bytes: file.bytes,
-      })),
-    };
-    const payloadCurrent = (): boolean => {
-      const read = (relative: string): Uint8Array | null => {
-        try {
-          return this.readRenderFile(relative);
-        } catch {
-          return null;
-        }
-      };
-      return (
-        isProductionPayloadSnapshotCurrent({
-          snapshot,
-          read,
-        }) &&
-        isProductionPayloadSnapshotCurrent({
-          snapshot: expectedPayload,
-          read,
-        })
-      );
-    };
-    if (payloadCurrent() === false)
-      throw new AutoMovieProductionInputRaceError(
-        "A terminal deliverable changed while its manifest-only ledger was prepared.",
-      );
-    return this.commitFiles(
-      [
-        {
-          path: path.join(this.productionStateRoot, "render-manifest.json"),
-          content,
-        },
-        {
-          path: path.join(
-            this.productionStateRoot,
-            "render-manifest-receipt.json",
-          ),
-          content: receiptContent,
-        },
-      ],
-      () => payloadCurrent() && planCurrent() === true,
-      this.lastReadRevision_,
-      () => {
-        if (payloadCurrent() === false || planCurrent() !== true)
-          throw new AutoMovieProductionInputRaceError(
-            "A terminal deliverable or render plan changed while its manifest-only ledger was committed.",
-          );
-        const residentManifest = this.readTrackedStateFile(
-          "render-manifest.json",
-        );
-        const residentReceipt = this.readTrackedStateFile(
-          "render-manifest-receipt.json",
-        );
-        if (
-          residentManifest === null ||
-          residentReceipt === null ||
-          Buffer.from(residentManifest).equals(Buffer.from(content, "utf8")) ===
-            false ||
-          Buffer.from(residentReceipt).equals(
-            Buffer.from(receiptContent, "utf8"),
-          ) === false
-        )
-          throw new AutoMovieProductionInputRaceError(
-            "The manifest-only render ledger changed before revision commit.",
-          );
-      },
-    );
-  }
-
-  /**
    * Atomically publish every deliverable byte, aggregate manifest, and parser
    * receipt under one revision/input fence.
    *
@@ -3933,9 +3828,9 @@ export class AutoMovieProductionProject {
     manifest: IAutoMovieProductionRenderManifest;
     plan: IAutoMovieProductionRenderJobPlan;
     planCurrent: () => boolean;
-    inputCurrent?: () => boolean;
-    publicationCurrent?: () => void;
-    expectedRevision?: number;
+    inputCurrent: () => boolean;
+    publicationCurrent: () => void;
+    expectedRevision: number;
   }): number {
     const validation = typia.validateEquals<IAutoMovieProductionRenderManifest>(
       props.manifest,
@@ -3955,9 +3850,9 @@ export class AutoMovieProductionProject {
       throw new Error(
         "The terminal render manifest compile fingerprint differs from its publication identity.",
       );
-    if (props.planCurrent() !== true)
+    if (props.inputCurrent() !== true || props.planCurrent() !== true)
       throw new AutoMovieProductionInputRaceError(
-        "The render plan changed before terminal publication began.",
+        "Production inputs or the render plan changed before terminal publication began.",
       );
     if (
       this.generatedManifest()?.inputFingerprint !==
@@ -3966,46 +3861,93 @@ export class AutoMovieProductionProject {
       throw new AutoMovieProductionInputRaceError(
         "The terminal publication does not target the current compiler input. Replan and rerender before finalizing.",
       );
-    const files = new Map<string, Buffer>();
+    const renderRoot = this.renderRoot();
+    const files = new Map<
+      string,
+      { bytes: Buffer; relative: string; target: string }
+    >();
     for (const [relativePath, content] of props.files) {
-      const absolute = resolveInside(this.renderRoot(), relativePath);
-      const normalized = normalizeSlash(
-        path.relative(this.renderRoot(), absolute),
-      );
-      if (files.has(normalized.toLowerCase()))
+      const relative = canonicalProductionRenderPath(relativePath);
+      const target = resolveInside(renderRoot, relative);
+      const key = relative.toLowerCase();
+      if (files.has(key))
         throw new Error(
-          `Terminal publication maps more than one byte source to "${normalized}". Keep one canonical render path.`,
+          `Terminal publication maps more than one byte source to "${relative}". Keep one canonical render path.`,
         );
-      files.set(normalized.toLowerCase(), Buffer.from(content));
+      files.set(key, { bytes: Buffer.from(content), relative, target });
     }
     const receiptFiles: IAutoMovieProductionRenderReceipt["files"] = [];
     const claimed = new Set<string>();
     for (const deliverable of candidate.deliverables)
       for (const file of deliverable.files) {
-        const normalized = normalizeSlash(file.path).toLowerCase();
-        if (claimed.has(normalized))
+        const relative = canonicalProductionRenderPath(file.path);
+        const key = relative.toLowerCase();
+        if (claimed.has(key))
           throw new Error(
             `Render file "${file.path}" is claimed more than once. Give it one deliverable owner.`,
           );
-        claimed.add(normalized);
-        const bytes = files.get(normalized);
-        if (bytes === undefined)
+        claimed.add(key);
+        const supplied = files.get(key);
+        if (supplied === undefined)
           throw new Error(
             `Terminal publication is missing claimed file "${file.path}".`,
           );
+        const bytes = supplied.bytes;
         const digest = digestAutoMovieBytes(bytes);
         if (bytes.length !== file.bytes || digest !== file.digest)
           throw new Error(
             `Terminal publication file "${file.path}" differs from its manifest byte facts.`,
           );
+        const probe = probeProductionMedia({
+          kind: deliverable.kind,
+          mediaType: file.mediaType,
+          bytes,
+        });
+        if (file.semanticMask === undefined) {
+          if (probe.kind === "semantic-mask")
+            throw new Error(
+              `Semantic sidecar "${file.path}" has no semantic receipt in its deliverable manifest.`,
+            );
+        } else {
+          const semantic = file.semanticMask;
+          const ownedByPlan = props.plan.chunks.some(
+            (chunk) =>
+              chunk.deliverable === deliverable.id &&
+              chunk.pass === "mask" &&
+              chunk.frames.some(
+                (frame) =>
+                  frame.globalFrame === semantic.frame &&
+                  productionRenderLayersForPass(frame, "mask").some(
+                    (layer) => layer.shot === semantic.shot,
+                  ),
+              ),
+          );
+          if (
+            deliverable.kind !== "guide-pass" ||
+            probe.kind !== "semantic-mask" ||
+            semantic.sidecar.path !== file.path ||
+            ownedByPlan === false
+          )
+            throw new Error(
+              `Semantic sidecar "${file.path}" is not bound to one current mask frame in its guide deliverable.`,
+            );
+          verifyAutoMovieProductionSemanticMaskReceipt({
+            receipt: semantic,
+            expectedFrame: semantic.frame,
+            expectedShot: semantic.shot,
+            evidence: {
+              version: 1,
+              shot: semantic.shot,
+              mask: probe.mask,
+              coverage: semantic.coverage,
+            },
+            resident: { path: file.path, bytes },
+          });
+        }
         receiptFiles.push({
           deliverable: deliverable.id,
           ...file,
-          probe: probeProductionMedia({
-            kind: deliverable.kind,
-            mediaType: file.mediaType,
-            bytes,
-          }),
+          probe,
         });
       }
     if (files.size !== claimed.size)
@@ -4022,13 +3964,29 @@ export class AutoMovieProductionProject {
       publicationFingerprint: publication.fingerprint,
       files: receiptFiles,
     } satisfies IAutoMovieProductionRenderReceipt);
-    const writes: IStagedFile[] = [
-      ...candidate.deliverables.flatMap((deliverable) =>
-        deliverable.files.map((file) => ({
-          path: resolveInside(this.renderRoot(), file.path),
-          content: files.get(normalizeSlash(file.path).toLowerCase())!,
-        })),
-      ),
+    const payload = candidate.deliverables.flatMap((deliverable) =>
+      deliverable.files.map((file) => {
+        const key = canonicalProductionRenderPath(file.path).toLowerCase();
+        return files.get(key)!;
+      }),
+    );
+    const writes = (): IStagedFile[] => [
+      ...payload.flatMap((entry): IStagedFile[] => {
+        if (lstatOrNull(entry.target) === null)
+          return [
+            {
+              path: entry.target,
+              content: entry.bytes,
+              immutable: true,
+            },
+          ];
+        const resident = this.readRenderFile(entry.relative);
+        if (Buffer.from(resident).equals(entry.bytes) === false)
+          throw new AutoMovieProductionInputRaceError(
+            `Immutable terminal publication path "${entry.relative}" already contains another payload generation. Replan before publishing different bytes.`,
+          );
+        return [];
+      }),
       {
         path: path.join(this.productionStateRoot, "render-manifest.json"),
         content: manifestContent,
@@ -4043,8 +4001,8 @@ export class AutoMovieProductionProject {
     ];
     return this.commitFiles(
       writes,
-      () => props.inputCurrent?.() !== false && props.planCurrent() === true,
-      props.expectedRevision ?? this.lastReadRevision_,
+      () => props.inputCurrent() === true && props.planCurrent() === true,
+      props.expectedRevision,
       () => {
         const assertLedgerCurrent = (): void => {
           const residentManifest = this.readTrackedStateFile(
@@ -4079,7 +4037,7 @@ export class AutoMovieProductionProject {
               );
           }
         assertLedgerCurrent();
-        props.publicationCurrent?.();
+        props.publicationCurrent();
         for (const deliverable of candidate.deliverables)
           for (const file of deliverable.files) {
             const bytes = this.readRenderFile(file.path);
@@ -4092,7 +4050,7 @@ export class AutoMovieProductionProject {
               );
           }
         assertLedgerCurrent();
-        if (props.inputCurrent?.() === false || props.planCurrent() !== true)
+        if (props.inputCurrent() !== true || props.planCurrent() !== true)
           throw new AutoMovieProductionInputRaceError(
             "Production inputs or the render-plan generation changed during the staged terminal publication final gate.",
           );
@@ -4588,6 +4546,7 @@ export class AutoMovieProductionProject {
     const stage = (pending: readonly IStagedFile[]) =>
       pending.map((file) => ({
         path: file.path,
+        immutable: file.immutable === true,
         content:
           file.content === null
             ? null
@@ -4673,6 +4632,13 @@ export class AutoMovieProductionProject {
             };
             if (file.content === null)
               removeAtomic(file.path, assertMutationNamespace);
+            else if (file.immutable)
+              writeAtomicImmutable(
+                file.path,
+                file.content,
+                assertMutationNamespace,
+                assertMutationNamespace,
+              );
             else writeAtomic(file.path, file.content, assertMutationNamespace);
             assertProductionRootNamespaceLease(rootLease);
             this.assertIncarnation();
@@ -4835,6 +4801,7 @@ export class AutoMovieProductionProject {
 interface IStagedFile {
   path: string;
   content: string | Uint8Array | null;
+  immutable?: boolean;
 }
 
 interface IAutoMovieRenderBundleReceipt {
@@ -5701,6 +5668,37 @@ const writeAtomic = (
   }
 };
 
+/** Publish complete bytes at a path that no generation may replace. */
+const writeAtomicImmutable = (
+  file: string,
+  content: Uint8Array,
+  beforePublish: () => void,
+  afterPublish: () => void,
+): void => {
+  fileSystem.mkdirSync(path.dirname(file), { recursive: true });
+  const temporary = temporaryPath(file, "tmp");
+  let failure: IProductionAtomicFailure | undefined;
+  try {
+    fileSystem.writeFileSync(temporary, content);
+    beforePublish();
+    try {
+      fileSystem.linkSync(temporary, file);
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === "EEXIST")
+        throw new AutoMovieProductionInputRaceError(
+          `Immutable publication target "${file}" already exists. Reopen its exact bytes instead of replacing it.`,
+        );
+      throw error;
+    }
+    afterPublish();
+  } catch (error) {
+    failure = { error };
+    throw error;
+  } finally {
+    removeAtomicTemporary(temporary, failure);
+  }
+};
+
 const removeAtomic = (file: string, afterQuarantine: () => void): void => {
   if (lstatOrNull(file) === null) {
     afterQuarantine();
@@ -5996,6 +5994,14 @@ export const productionRenderBundleRelativePath = (
 
 const digestSegment = (digest: `sha256:${string}`): string =>
   digest.slice("sha256:".length);
+
+const canonicalProductionRenderPath = (value: string): string => {
+  if (isPortableProductionPublicationPath(value) === false)
+    throw new Error(
+      `Render publication path "${value}" is not one canonical portable relative path.`,
+    );
+  return value;
+};
 
 const normalizeSlash = (value: string): string =>
   value.split(path.sep).join("/");

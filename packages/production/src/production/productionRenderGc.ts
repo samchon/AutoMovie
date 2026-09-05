@@ -1,3 +1,8 @@
+import {
+  canonicalAutoMovieJsonBytes,
+  digestAutoMovieBytes,
+} from "./contentIdentity";
+
 type AutoMovieContentDigest =
   import("@automovie/interface").AutoMovieContentDigest;
 type IAutoMovieProductionRenderJobPlan =
@@ -38,6 +43,10 @@ export interface IAutoMovieProductionRenderGcCandidate {
    * could not authenticate one without weakening the ownership boundary.
    */
   generation: string | null;
+  /**
+   * Exact captured content fingerprint, or null when capture was unavailable.
+   */
+  fingerprint: AutoMovieContentDigest | null;
   /**
    * A host finding that must override ordinary reference-based retention.
    */
@@ -90,9 +99,13 @@ export type AutoMovieProductionRenderArtifactStage =
  * @evidence specifications/editorial-render-and-delivery/render-budget-identity-and-recovery.md#spec-render-chunk-recovery Carries inspection failure without copying raw artifact bytes into diagnostics.
  */
 export interface IAutoMovieProductionRenderCleanupObservation {
+  /** Mutually exclusive result of the observation. */
   state: AutoMovieProductionRenderArtifactState;
+  /** Exact mutation authority proved by the observation. */
   authority: AutoMovieProductionRenderCleanupAuthority;
+  /** Boundary that produced the observation. */
   stage: AutoMovieProductionRenderArtifactStage;
+  /** Sanitized operator-facing explanation. */
   reason: string;
 }
 
@@ -103,11 +116,36 @@ export interface IAutoMovieProductionRenderCleanupObservation {
  * @evidence specifications/execution-and-recovery/retention-cleanup-and-quarantine.md#execution-cleanup-plan-preview Binds a disposition to the captured candidate and sanitized reason.
  */
 export interface IAutoMovieProductionRenderCleanupDecision {
+  /** Exact inventory candidate being adjudicated. */
   candidate: IAutoMovieProductionRenderGcCandidate;
+  /** State carried from inspection or reference classification. */
   state: AutoMovieProductionRenderArtifactState;
+  /** Mutation authority retained by this decision. */
+  authority: AutoMovieProductionRenderCleanupAuthority;
+  /** Boundary responsible for the decision. */
   stage: AutoMovieProductionRenderArtifactStage;
+  /** Sanitized reason for the selected disposition. */
   reason: string;
+  /** Immutable decision identity bound to one complete plan basis. */
+  receipt: {
+    version: 1;
+    basis: AutoMovieContentDigest;
+    disposition: "retain" | "remove" | "quarantine" | "manual-adjudication";
+    kind: IAutoMovieProductionRenderGcCandidate["kind"];
+    path: string;
+    generation: string | null;
+    fingerprint: AutoMovieContentDigest | null;
+    state: AutoMovieProductionRenderArtifactState;
+    authority: AutoMovieProductionRenderCleanupAuthority;
+    stage: AutoMovieProductionRenderArtifactStage;
+    reason: string;
+  };
 }
+
+type IUnreceiptedRenderCleanupDecision = Omit<
+  IAutoMovieProductionRenderCleanupDecision,
+  "receipt"
+>;
 
 /**
  * Decide whether one typed artifact finding may feed or replace a chunk.
@@ -136,7 +174,9 @@ export interface IAutoMovieProductionRenderGcPlan {
   /**
    * GC plan schema.
    */
-  version: 3;
+  version: 4;
+  /** Digest of the complete normalized inventory and retention basis. */
+  basis: AutoMovieContentDigest;
   /**
    * Entries retained because a current plan or publication marks them.
    */
@@ -208,10 +248,10 @@ export const planProductionRenderGc = (props: {
   }
   const paths = new Set<string>();
   const chunkPublicationCandidates = new Set<string>();
-  const retain: IAutoMovieProductionRenderCleanupDecision[] = [];
-  const remove: IAutoMovieProductionRenderCleanupDecision[] = [];
-  const quarantine: IAutoMovieProductionRenderCleanupDecision[] = [];
-  const manualAdjudication: IAutoMovieProductionRenderCleanupDecision[] = [];
+  const retain: IUnreceiptedRenderCleanupDecision[] = [];
+  const remove: IUnreceiptedRenderCleanupDecision[] = [];
+  const quarantine: IUnreceiptedRenderCleanupDecision[] = [];
+  const manualAdjudication: IUnreceiptedRenderCleanupDecision[] = [];
   for (const candidate of [...props.candidates].sort((left, right) =>
     left.path < right.path ? -1 : left.path > right.path ? 1 : 0,
   )) {
@@ -241,6 +281,8 @@ export const planProductionRenderGc = (props: {
       (candidate.generation !== null &&
         (candidate.generation.trim().length === 0 ||
           /[\r\n\0]/u.test(candidate.generation))) ||
+      (candidate.fingerprint !== null &&
+        /^sha256:[0-9a-f]{64}$/u.test(candidate.fingerprint) === false) ||
       (candidate.observation !== null &&
         (isRenderCleanupState(candidate.observation.state) === false ||
           isRenderCleanupAuthority(candidate.observation.authority) === false ||
@@ -255,7 +297,9 @@ export const planProductionRenderGc = (props: {
           ownedDigest === undefined ||
           candidate.digest !== `sha256:${ownedDigest}`)) ||
       (candidate.kind === "quarantine" &&
-        /^(?:proxy|final)\/quarantine\/[^/]+$/u.test(path) === false) ||
+        /^(?:(?:proxy|final)\/quarantine|quarantine\/(?:project|production|render-job|publication))\/[^/]+$/u.test(
+          path,
+        ) === false) ||
       (candidate.kind === "publication" &&
         path.startsWith("publication/") === false) ||
       ((candidate.kind === "dialogue-cache" ||
@@ -305,14 +349,17 @@ export const planProductionRenderGc = (props: {
             reason:
               "no current plan, authenticated chunk pair, cache generation, or publication references this exact target",
           });
-    const decision: IAutoMovieProductionRenderCleanupDecision = {
+    const decision: IUnreceiptedRenderCleanupDecision = {
       candidate: normalized,
       state: observation.state,
+      authority: observation.authority,
       stage: observation.stage,
       reason: observation.reason,
     };
     const exactGeneration =
-      normalized.bytes !== null && normalized.generation !== null;
+      normalized.bytes !== null &&
+      normalized.generation !== null &&
+      normalized.fingerprint !== null;
     if (
       observation.state === "current" &&
       observation.authority === "none" &&
@@ -383,12 +430,66 @@ export const planProductionRenderGc = (props: {
     throw new Error(
       "Render GC reclaimable byte total exceeds safe integer range.",
     );
+  const dispositionEntries = [
+    ...retain.map((decision) => ({ disposition: "retain" as const, decision })),
+    ...remove.map((decision) => ({ disposition: "remove" as const, decision })),
+    ...quarantine.map((decision) => ({
+      disposition: "quarantine" as const,
+      decision,
+    })),
+    ...manualAdjudication.map((decision) => ({
+      disposition: "manual-adjudication" as const,
+      decision,
+    })),
+  ].sort((left, right) => {
+    const pathOrder = compareCodeUnits(
+      left.decision.candidate.path,
+      right.decision.candidate.path,
+    );
+    return pathOrder !== 0
+      ? pathOrder
+      : compareCodeUnits(left.disposition, right.disposition);
+  });
+  const planKeys = props.plans
+    .map((plan) => Buffer.from(canonicalAutoMovieJsonBytes(plan)).toString())
+    .sort(compareCodeUnits);
+  const basis = digestAutoMovieBytes(
+    canonicalAutoMovieJsonBytes({
+      version: 1,
+      plans: planKeys,
+      publicationPaths: [...activePublication].sort(compareCodeUnits),
+      retainedChunkPaths: [...retainedChunkPaths].sort(compareCodeUnits),
+      retainedCachePaths: [...retainedCachePaths].sort(compareCodeUnits),
+      decisions: dispositionEntries,
+    }),
+  );
+  const bind = (
+    disposition: IAutoMovieProductionRenderCleanupDecision["receipt"]["disposition"],
+    decisions: readonly IUnreceiptedRenderCleanupDecision[],
+  ): IAutoMovieProductionRenderCleanupDecision[] =>
+    decisions.map((decision) => ({
+      ...decision,
+      receipt: {
+        version: 1,
+        basis,
+        disposition,
+        kind: decision.candidate.kind,
+        path: decision.candidate.path,
+        generation: decision.candidate.generation,
+        fingerprint: decision.candidate.fingerprint,
+        state: decision.state,
+        authority: decision.authority,
+        stage: decision.stage,
+        reason: decision.reason,
+      },
+    }));
   return {
-    version: 3,
-    retain,
-    remove,
-    quarantine,
-    manualAdjudication,
+    version: 4,
+    basis,
+    retain: bind("retain", retain),
+    remove: bind("remove", remove),
+    quarantine: bind("quarantine", quarantine),
+    manualAdjudication: bind("manual-adjudication", manualAdjudication),
     reclaimableBytes,
   };
 };
@@ -422,6 +523,9 @@ const isRenderCleanupStage = (
   value === "currentness" ||
   value === "ownership" ||
   value === "reference";
+
+const compareCodeUnits = (left: string, right: string): number =>
+  left < right ? -1 : left > right ? 1 : 0;
 
 function canonicalRelativePath(value: string): string {
   if (

@@ -1492,6 +1492,7 @@ const COMMON_ACCOUNT_OBLIGATIONS = [
 ] as const;
 
 const ACCOUNT_OBLIGATIONS = {
+  research: [...COMMON_ACCOUNT_OBLIGATIONS],
   settings: [
     ...COMMON_ACCOUNT_OBLIGATIONS,
     "obligations/core/settings.md",

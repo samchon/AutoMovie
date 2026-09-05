@@ -97,6 +97,36 @@ export interface IAutoMovieContractMigrationConflict {
 }
 
 /**
+ * SHA-256 identities of the three populations one plan was decided from.
+ *
+ * @evidence requirements/operations-and-recovery/contract-migration-plan.md#operations-contract-migration-plan Binds a plan to the exact predecessor, successor, and current bytes it judged so a later apply cannot continue on changed input.
+ * @evidence specifications/execution-and-recovery/contract-migration-plan.md#execution-contract-migration-plan Carries the three input-population digests the plan must include.
+ */
+export interface IAutoMovieContractMigrationPlanInputs {
+  /**
+   * Identity of the sorted path-to-digest population the planner inspected.
+   *
+   * @evidence requirements/operations-and-recovery/contract-migration-plan.md#operations-contract-migration-plan Detects any byte change after planning, including on a path no action touches.
+   * @evidence specifications/execution-and-recovery/contract-migration-plan.md#execution-contract-migration-plan Identifies the current file map input by its complete digest population.
+   */
+  current: string;
+  /**
+   * Identity of the canonical predecessor baseline.
+   *
+   * @evidence requirements/operations-and-recovery/contract-migration-plan.md#operations-contract-migration-plan Ties the plan to the recorded generation rather than to its version label alone.
+   * @evidence specifications/execution-and-recovery/contract-migration-plan.md#execution-contract-migration-plan Identifies the immutable from baseline input.
+   */
+  from: string;
+  /**
+   * Identity of the canonical successor baseline.
+   *
+   * @evidence requirements/operations-and-recovery/contract-migration-plan.md#operations-contract-migration-plan Ties the plan to the installed generation rather than to its version label alone.
+   * @evidence specifications/execution-and-recovery/contract-migration-plan.md#execution-contract-migration-plan Identifies the immutable to baseline input.
+   */
+  to: string;
+}
+
+/**
  * One closed migration decision reused by dry-run and apply.
  *
  * @evidence requirements/operations-and-recovery/contract-migration-plan.md#operations-contract-migration-plan Prevents apply from silently recomputing a different migration.
@@ -124,6 +154,13 @@ export interface IAutoMovieContractMigrationPlan {
    * @evidence specifications/execution-and-recovery/contract-migration-plan.md#execution-contract-migration-plan Names the immutable source generation.
    */
   fromVersion: string;
+  /**
+   * Identities of the predecessor, successor, and current populations judged.
+   *
+   * @evidence requirements/operations-and-recovery/contract-migration-plan.md#operations-contract-migration-plan Lets apply refuse to continue without a new plan once any judged byte changed.
+   * @evidence specifications/execution-and-recovery/contract-migration-plan.md#execution-contract-migration-plan Includes the three input-population digests in the plan record.
+   */
+  inputs: IAutoMovieContractMigrationPlanInputs;
   /**
    * Portable migration-plan protocol.
    *
@@ -248,6 +285,39 @@ const baselineMap = (
   validateContractBaseline(baseline);
   return new Map(baseline.files.map((file) => [file.path, file]));
 };
+
+const canonicalBaseline = (
+  baseline: IAutoMovieContractBaseline,
+): IAutoMovieContractBaseline => {
+  validateContractBaseline(baseline);
+  return {
+    files: baseline.files.map((file) => ({
+      anchors: [...file.anchors],
+      path: file.path,
+      sha256: file.sha256,
+    })),
+    language: baseline.language,
+    protocol: baseline.protocol,
+    version: baseline.version,
+  };
+};
+
+const baselineIdentity = (baseline: IAutoMovieContractBaseline): string =>
+  digest(JSON.stringify(canonicalBaseline(baseline)));
+
+const populationIdentity = (
+  population: Readonly<Record<string, string>>,
+): string =>
+  digest(
+    JSON.stringify(
+      Object.keys(population)
+        .sort(compare)
+        .map((relative) => {
+          assertContractPath(relative);
+          return { path: relative, sha256: digest(population[relative]!) };
+        }),
+    ),
+  );
 
 const validateContractBaseline = (
   baseline: IAutoMovieContractBaseline,
@@ -388,11 +458,12 @@ export const planAutoMovieContractMigration = (props: {
   const to = baselineMap(props.to);
   if (props.from.language !== props.to.language)
     throw new Error("Contract migration cannot change production language.");
-  if (
-    props.from.version === props.to.version &&
-    JSON.stringify(canonicalBaseline(props.from)) !==
-      JSON.stringify(canonicalBaseline(props.to))
-  )
+  const inputs: IAutoMovieContractMigrationPlanInputs = {
+    current: populationIdentity(props.current),
+    from: baselineIdentity(props.from),
+    to: baselineIdentity(props.to),
+  };
+  if (props.from.version === props.to.version && inputs.from !== inputs.to)
     throw new Error(
       "One contract generation cannot identify different baseline inventories.",
     );
@@ -403,11 +474,7 @@ export const planAutoMovieContractMigration = (props: {
     targetPaths.some((relative) => !to.has(relative))
   )
     throw new Error("Target source inventory does not match its baseline.");
-  for (const relative of Object.keys(props.current))
-    assertContractPath(relative);
   for (const target of to.values()) {
-    if (!Object.prototype.hasOwnProperty.call(props.targetSources, target.path))
-      throw new Error(`Target source is missing for ${target.path}.`);
     const targetSource = props.targetSources[target.path]!;
     if (
       digest(targetSource) !== target.sha256 ||
@@ -482,9 +549,9 @@ export const planAutoMovieContractMigration = (props: {
   )) {
     if (renamedFrom.has(path) || renamedTo.has(path)) continue;
     const source = from.get(path);
-    const target = to.get(path);
     const current = props.current[path];
-    if (source === undefined && target !== undefined) {
+    if (source === undefined) {
+      const target = to.get(path)!;
       if (current === undefined)
         actions.push({
           action: "add",
@@ -499,7 +566,8 @@ export const planAutoMovieContractMigration = (props: {
         });
       continue;
     }
-    if (source !== undefined && target === undefined) {
+    const target = to.get(path);
+    if (target === undefined) {
       if (current === undefined) continue;
       if (digest(current) !== source.sha256)
         conflicts.push({
@@ -515,7 +583,6 @@ export const planAutoMovieContractMigration = (props: {
         });
       continue;
     }
-    if (source === undefined || target === undefined) continue;
     if (current === undefined) {
       conflicts.push({
         kind: "missing-source",
@@ -555,16 +622,31 @@ export const planAutoMovieContractMigration = (props: {
     actions: actions.sort((left, right) => compare(left.path, right.path)),
     conflicts: conflicts.sort((left, right) => compare(left.path, right.path)),
     fromVersion: props.from.version,
+    inputs,
     protocol: "automovie.contract-migration-plan.v1" as const,
     toVersion: props.to.version,
   });
 };
 
+const assertPlannedPopulation = (
+  plan: IAutoMovieContractMigrationPlan,
+  population: Readonly<Record<string, string>>,
+): void => {
+  if (populationIdentity(population) !== plan.inputs.current)
+    throw new Error(
+      "Contract migration input population changed after planning.",
+    );
+};
+
 /**
  * Apply one already-decided plan to the exact current byte map.
  *
- * @evidence requirements/operations-and-recovery/contract-migration-plan.md#operations-contract-migration-plan Refuses conflicts and changed source bytes before deriving replacement output.
- * @evidence specifications/execution-and-recovery/contract-migration-plan.md#execution-contract-migration-plan Executes only the actions frozen by the inspected plan.
+ * The plan's recorded input identity binds its actions to the population the
+ * planner judged, so once the byte map proves current the frozen actions are
+ * consistent with it by construction and are executed without re-judgement.
+ *
+ * @evidence requirements/operations-and-recovery/contract-migration-plan.md#operations-contract-migration-plan Refuses conflicts and any byte change since planning before deriving replacement output.
+ * @evidence specifications/execution-and-recovery/contract-migration-plan.md#execution-contract-migration-plan Returns a currentness failure when the observed population differs from the plan's recorded input and otherwise executes only the frozen actions.
  */
 export const applyAutoMovieContractMigrationPlan = (
   plan: IAutoMovieContractMigrationPlan,
@@ -574,27 +656,13 @@ export const applyAutoMovieContractMigrationPlan = (
     throw new Error(
       "A contract migration plan with conflicts cannot be applied.",
     );
+  assertPlannedPopulation(plan, current);
   const output = { ...current };
   for (const action of plan.actions) {
-    if (action.action === "add") {
-      if (output[action.path] !== undefined)
-        throw new Error(`Contract migration target changed: ${action.path}.`);
-      output[action.path] = action.after;
-    } else if (action.action === "rename") {
-      const source = output[action.from];
-      if (source === undefined || digest(source) !== action.beforeSha256)
-        throw new Error(`Contract migration source changed: ${action.from}.`);
-      const target = output[action.path];
-      if (target !== undefined && digest(target) !== action.beforeSha256)
-        throw new Error(`Contract migration target changed: ${action.path}.`);
-      if (target === undefined) output[action.path] = source;
+    if (action.action === "rename") {
+      output[action.path] = output[action.from]!;
       delete output[action.from];
-    } else {
-      const source = output[action.path];
-      if (source === undefined || digest(source) !== action.beforeSha256)
-        throw new Error(`Contract migration source changed: ${action.path}.`);
-      output[action.path] = action.after;
-    }
+    } else output[action.path] = action.after;
   }
   return output;
 };
@@ -631,11 +699,6 @@ export interface IAutoMovieContractMigrationPublication {
   replacements: Readonly<Record<string, string>>;
 }
 
-const actionPaths = (
-  action: AutoMovieContractMigrationAction,
-): readonly string[] =>
-  action.action === "rename" ? [action.from, action.path] : [action.path];
-
 /**
  * Revalidate a migration plan against a new observation and close its complete
  * target candidate before a caller performs filesystem mutation.
@@ -648,12 +711,7 @@ export const planAutoMovieContractMigrationPublication = (props: {
   observed: Readonly<Record<string, string>>;
   plan: IAutoMovieContractMigrationPlan;
 }): IAutoMovieContractMigrationPublication => {
-  const compared = new Set(props.plan.actions.flatMap(actionPaths));
-  for (const relative of compared)
-    if (props.current[relative] !== props.observed[relative])
-      throw new Error(
-        `Contract migration input changed after planning: ${relative}.`,
-      );
+  assertPlannedPopulation(props.plan, props.current);
   const migrated = applyAutoMovieContractMigrationPlan(
     props.plan,
     props.observed,
@@ -684,7 +742,7 @@ export const planAutoMovieContractMigrationPublication = (props: {
 };
 
 /**
- * One target publication outcome admitted into a durable migration receipt.
+ * One successor-target observation admitted into a durable migration receipt.
  *
  * @evidence requirements/operations-and-recovery/contract-migration-publication.md#operations-contract-migration-publication Records the exact successor result before predecessor retirement.
  * @evidence specifications/execution-and-recovery/contract-migration-publication.md#execution-contract-migration-publication Carries canonical before, after, source, target, and status fields for one action.
@@ -692,7 +750,7 @@ export const planAutoMovieContractMigrationPublication = (props: {
 export interface IAutoMovieContractMigrationActionOutcome {
   /** Planned action kind. */
   action: AutoMovieContractMigrationAction["action"];
-  /** Published target byte identity. */
+  /** Target byte identity the plan requires at the published path. */
   afterSha256: string;
   /** Previous source byte identity, or null for a new target. */
   beforeSha256: string | null;
@@ -700,7 +758,11 @@ export interface IAutoMovieContractMigrationActionOutcome {
   from: string | null;
   /** Published target path. */
   path: string;
-  /** Target publication and validation completed. */
+  /**
+   * `published` when the observed target carries the required identity,
+   * `incomplete` when no target was observed, and `failed` when different
+   * bytes occupy the target.
+   */
   status: "published" | "incomplete" | "failed";
 }
 
@@ -730,22 +792,6 @@ export interface IAutoMovieContractMigrationReceiptArtifacts {
   receipt: IAutoMovieContractMigrationArtifact;
 }
 
-const canonicalBaseline = (
-  baseline: IAutoMovieContractBaseline,
-): IAutoMovieContractBaseline => {
-  validateContractBaseline(baseline);
-  return {
-    files: baseline.files.map((file) => ({
-      anchors: [...file.anchors],
-      path: file.path,
-      sha256: file.sha256,
-    })),
-    language: baseline.language,
-    protocol: baseline.protocol,
-    version: baseline.version,
-  };
-};
-
 const canonicalAction = (
   action: AutoMovieContractMigrationAction,
 ): Record<string, unknown> =>
@@ -765,122 +811,83 @@ const canonicalAction = (
           path: action.path,
         };
 
-const canonicalPlan = (
-  plan: IAutoMovieContractMigrationPlan,
-): Record<string, unknown> => ({
-  actions: plan.actions.map(canonicalAction),
-  conflicts: plan.conflicts.map((conflict) => ({
-    kind: conflict.kind,
-    path: conflict.path,
-    reason: conflict.reason,
-  })),
-  fromVersion: plan.fromVersion,
-  protocol: plan.protocol,
-  toVersion: plan.toVersion,
-});
-
-const baselineIdentity = (baseline: IAutoMovieContractBaseline): string =>
-  digest(JSON.stringify(canonicalBaseline(baseline)));
-
-const observedInputIdentity = (
-  observed: Readonly<Record<string, string>>,
-): string =>
+/** Digest of one conflict-free plan; the receipt asserts that precondition. */
+const planDigest = (plan: IAutoMovieContractMigrationPlan): string =>
   digest(
-    JSON.stringify(
-      Object.keys(observed)
-        .sort(compare)
-        .map((relative) => {
-          assertContractPath(relative);
-          return { path: relative, sha256: digest(observed[relative]!) };
-        }),
-    ),
+    JSON.stringify({
+      actions: plan.actions.map(canonicalAction),
+      fromVersion: plan.fromVersion,
+      inputs: {
+        current: plan.inputs.current,
+        from: plan.inputs.from,
+        to: plan.inputs.to,
+      },
+      protocol: plan.protocol,
+      toVersion: plan.toVersion,
+    }),
   );
 
-const expectedActionOutcomes = (props: {
-  from: Map<string, IAutoMovieContractBaselineFile>;
-  observed: Readonly<Record<string, string>>;
-  plan: IAutoMovieContractMigrationPlan;
-  to: Map<string, IAutoMovieContractBaselineFile>;
-}): IAutoMovieContractMigrationActionOutcome[] =>
-  props.plan.actions.map((action) => {
-    const target = props.to.get(action.path);
-    if (target === undefined)
-      throw new Error(
-        `Contract migration action has no target: ${action.path}.`,
-      );
-    const sourcePath = action.action === "rename" ? action.from : action.path;
-    const source = props.from.get(sourcePath);
-    if (action.action === "add") {
-      if (source !== undefined || props.observed[action.path] !== undefined)
-        throw new Error(`Contract migration add is not new: ${action.path}.`);
-    } else if (
-      source === undefined ||
-      source.sha256 !== action.beforeSha256 ||
-      props.observed[sourcePath] === undefined ||
-      digest(props.observed[sourcePath]!) !== action.beforeSha256
-    )
-      throw new Error(
-        `Contract migration action changed source: ${sourcePath}.`,
-      );
-    const afterSha256 =
-      action.action === "rename" ? action.beforeSha256 : digest(action.after);
-    if (target.sha256 !== afterSha256)
-      throw new Error(
-        `Contract migration action changed target: ${action.path}.`,
-      );
-    return {
-      action: action.action,
-      afterSha256,
-      beforeSha256: action.action === "add" ? null : action.beforeSha256,
-      from: action.action === "rename" ? action.from : null,
-      path: action.path,
-      status: "published",
-    };
-  });
-
-const canonicalOutcome = (
-  outcome: IAutoMovieContractMigrationActionOutcome,
-): IAutoMovieContractMigrationActionOutcome => ({
-  action: outcome.action,
-  afterSha256: outcome.afterSha256,
-  beforeSha256: outcome.beforeSha256,
-  from: outcome.from,
-  path: outcome.path,
-  status: outcome.status,
+const actionIdentity = (
+  action: AutoMovieContractMigrationAction,
+): Omit<IAutoMovieContractMigrationActionOutcome, "status"> => ({
+  action: action.action,
+  afterSha256:
+    action.action === "rename" ? action.beforeSha256 : digest(action.after),
+  beforeSha256: action.action === "add" ? null : action.beforeSha256,
+  from: action.action === "rename" ? action.from : null,
+  path: action.path,
 });
 
-const publicationGeneration = (value: string): string => {
-  if (
-    value.length > 120 ||
-    !/^[a-z0-9]+(?:[a-z0-9.-]*[a-z0-9])?$/u.test(value) ||
-    PORTABLE_RESERVED_NAME.test(value)
-  )
-    throw new Error(
-      "Contract migration publication generation is not one portable segment.",
-    );
-  return value;
-};
+/**
+ * Classify every planned successor target from the bytes observed at its
+ * path after publication.
+ *
+ * @evidence requirements/operations-and-recovery/contract-migration-publication.md#operations-contract-migration-publication Turns the post-publication re-read of each target into the per-action result a receipt records.
+ * @evidence specifications/execution-and-recovery/contract-migration-publication.md#execution-contract-migration-publication Reports a missing or different target as incomplete or failed instead of letting the pointer advance.
+ * @publicUnconsumed packages/cli/src/bin.ts `contracts migrate` apply step: that file is another batch's path this wave, so the target validation wiring lands through the integration hand-off after this API.
+ */
+export const observeAutoMovieContractMigrationOutcomes = (props: {
+  plan: IAutoMovieContractMigrationPlan;
+  published: Readonly<Record<string, string>>;
+}): readonly IAutoMovieContractMigrationActionOutcome[] =>
+  freeze(
+    props.plan.actions.map((action) => {
+      const identity = actionIdentity(action);
+      const published = props.published[action.path];
+      return {
+        ...identity,
+        status:
+          published === undefined
+            ? ("incomplete" as const)
+            : digest(published) === identity.afterSha256
+              ? ("published" as const)
+              : ("failed" as const),
+      };
+    }),
+  );
 
 /**
  * Render the append-only receipt and predecessor baseline artifacts for one
  * completely validated successor-target publication.
  *
+ * The publication generation is the canonical plan digest, so an identical
+ * plan reproduces the same record paths and bytes while any changed input,
+ * action, or generation lands in a distinct namespace.
+ *
  * @evidence requirements/operations-and-recovery/contract-migration-publication.md#operations-contract-migration-publication Preserves the predecessor and exact target-publication receipt before the baseline pointer changes.
  * @evidence specifications/execution-and-recovery/contract-migration-publication.md#execution-contract-migration-publication Derives deterministic content-addressed record paths from canonical identities and refuses incomplete validation.
+ * @publicUnconsumed packages/cli/src/bin.ts `contracts migrate` apply step: that file is another batch's path this wave, so the receipt publication lands through the integration hand-off after this API.
  */
 export const createAutoMovieContractMigrationReceiptArtifacts = (props: {
   from: IAutoMovieContractBaseline;
   observed: Readonly<Record<string, string>>;
   outcomes: readonly IAutoMovieContractMigrationActionOutcome[];
   plan: IAutoMovieContractMigrationPlan;
-  publicationGeneration: string;
   to: IAutoMovieContractBaseline;
-  validation: "completed" | "incomplete" | "failed";
 }): IAutoMovieContractMigrationReceiptArtifacts => {
-  const from = baselineMap(props.from);
-  const to = baselineMap(props.to);
+  baselineMap(props.from);
+  baselineMap(props.to);
   if (
-    props.validation !== "completed" ||
     props.plan.protocol !== "automovie.contract-migration-plan.v1" ||
     props.plan.conflicts.length !== 0 ||
     props.plan.fromVersion !== props.from.version ||
@@ -888,37 +895,48 @@ export const createAutoMovieContractMigrationReceiptArtifacts = (props: {
     props.from.language !== props.to.language
   )
     throw new Error(
-      "Contract migration receipt requires one completed compatible plan.",
+      "Contract migration receipt requires one compatible conflict-free plan.",
     );
-  const expected = expectedActionOutcomes({
-    from,
-    observed: props.observed,
-    plan: props.plan,
-    to,
-  });
-  const outcomes = props.outcomes.map(canonicalOutcome);
   if (
-    outcomes.some((outcome) => outcome.status !== "published") ||
-    JSON.stringify(outcomes) !== JSON.stringify(expected)
+    props.plan.inputs.from !== baselineIdentity(props.from) ||
+    props.plan.inputs.to !== baselineIdentity(props.to)
   )
+    throw new Error(
+      "Contract migration receipt baselines do not match the plan.",
+    );
+  assertPlannedPopulation(props.plan, props.observed);
+  const outcomes = props.outcomes.map((outcome) => ({
+    action: outcome.action,
+    afterSha256: outcome.afterSha256,
+    beforeSha256: outcome.beforeSha256,
+    from: outcome.from,
+    path: outcome.path,
+    status: outcome.status,
+  }));
+  const expected = props.plan.actions.map((action) => ({
+    ...actionIdentity(action),
+    status: "published" as const,
+  }));
+  if (JSON.stringify(outcomes) !== JSON.stringify(expected))
     throw new Error(
       "Contract migration receipt outcomes do not match the completed plan.",
     );
-  const generation = publicationGeneration(props.publicationGeneration);
-  const fromIdentity = baselineIdentity(props.from);
-  const toIdentity = baselineIdentity(props.to);
+  const generation = planDigest(props.plan).slice("sha256:".length);
   const predecessorSource = `${JSON.stringify(canonicalBaseline(props.from), null, 2)}\n`;
   const receiptSource = `${JSON.stringify(
     {
       actions: outcomes,
-      from: { identity: fromIdentity, version: props.from.version },
+      from: { identity: props.plan.inputs.from, version: props.from.version },
       language: props.from.language,
-      observedInputDigest: observedInputIdentity(props.observed),
-      planDigest: digest(JSON.stringify(canonicalPlan(props.plan))),
+      observedInputDigest: props.plan.inputs.current,
+      planDigest: `sha256:${generation}`,
       protocol: "automovie.contract-migration-receipt.v1",
       publicationGeneration: generation,
-      to: { identity: toIdentity, version: props.to.version },
-      validation: { status: "completed", targetBaselineIdentity: toIdentity },
+      to: { identity: props.plan.inputs.to, version: props.to.version },
+      validation: {
+        status: "completed",
+        targetBaselineIdentity: props.plan.inputs.to,
+      },
       version: 1,
     },
     null,
@@ -927,7 +945,7 @@ export const createAutoMovieContractMigrationReceiptArtifacts = (props: {
   const root = `automovie/contract-migrations/${generation}`;
   return freeze({
     predecessor: {
-      path: `${root}/${fromIdentity.slice("sha256:".length)}.baseline.json`,
+      path: `${root}/${props.plan.inputs.from.slice("sha256:".length)}.baseline.json`,
       source: predecessorSource,
     },
     receipt: {

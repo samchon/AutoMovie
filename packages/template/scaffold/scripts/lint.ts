@@ -6,12 +6,8 @@ import {
 
 import { productionEvidence } from "../lint.config";
 import { readAutoMovieLintArguments } from "./commandArguments";
-import { currentAutoMovieProductionId } from "./projectIdentity";
 
 const request = readAutoMovieLintArguments(process.argv.slice(2));
-
-/** The production namespace this project declares in its own package manifest. */
-const productionId = currentAutoMovieProductionId();
 
 /**
  * The scope this lint runs at, `review` unless `--scope <name>` says otherwise.
@@ -34,7 +30,7 @@ const productionId = currentAutoMovieProductionId();
  * each model the film stages, and `source` reports neither, because frames do
  * not exist yet at the stage that scope belongs to.
  */
-const project = AutoMovieProductionProject.open(process.cwd(), productionId);
+const project = AutoMovieProductionProject.openReadOnly(process.cwd());
 const currentAuthoringEvidence = () =>
   readAutoMovieProductionEvidence({
     root: process.cwd(),

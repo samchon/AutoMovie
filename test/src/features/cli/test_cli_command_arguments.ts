@@ -163,6 +163,25 @@ export const test_cli_command_arguments = (): void => {
           refuses(["inspect-external"], "exactly one source path") &&
           refuses(["inspect-external", "a.glb"], "requires --profile") &&
           refuses(
+            ["inspect-external", "a.glb", "--unknown"],
+            "inspect-external option",
+          ) &&
+          refuses(
+            ["inspect-external", "a.glb", "--profile"],
+            "requires a value",
+          ) &&
+          refuses(
+            [
+              "inspect-external",
+              "a.glb",
+              "--profile",
+              "gltf-motion-v1",
+              "--profile",
+              "gltf-static-v1",
+            ],
+            "only once",
+          ) &&
+          refuses(
             ["inspect-external", "a.glb", "--profile", "guessed"],
             "supported ingest profile",
           ) &&

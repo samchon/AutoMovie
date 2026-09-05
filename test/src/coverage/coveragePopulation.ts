@@ -9,7 +9,6 @@ import {
 } from "./coverageIdentity";
 import {
   type ICoveragePublication,
-  loadCoveragePublication,
   publicationReport,
 } from "./coveragePublication";
 
@@ -157,26 +156,17 @@ const readCoverageKeys = (report: string): string[] => {
  * from a coverage gap.
  */
 export const runCoveragePopulationGate = (options: {
-  publication?: ICoveragePublication;
-  reportDirectory?: string;
+  publication: ICoveragePublication;
   root: string;
   write?: Writer;
 }): number => {
   const write = options.write ?? console.log;
   try {
     const root = path.resolve(options.root);
-    let publication = options.publication;
-    if (publication === undefined) {
-      if (options.reportDirectory === undefined)
-        throw new Error("coverage population requires an explicit publication");
-      publication = loadCoveragePublication(
-        path.resolve(options.reportDirectory),
-      );
-    }
     const result = inspectCoveragePopulation({
       root,
       candidates: repositoryCandidates(root),
-      measured: readCoverageKeys(publicationReport(publication)),
+      measured: readCoverageKeys(publicationReport(options.publication)),
     });
     reportCoveragePopulation(result, write);
     return result.unmeasured.length + result.unjudged.length === 0 ? 0 : 2;

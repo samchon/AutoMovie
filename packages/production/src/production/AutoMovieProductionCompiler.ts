@@ -182,7 +182,10 @@ import {
   assertProductionFeatureUsesRenditionClips,
   productionVisualDeliveryOccurrence,
 } from "./muxProductionFeatureMp4";
-import { probeProductionMedia } from "./probeProductionMedia";
+import {
+  AUTOMOVIE_SEMANTIC_MASK_MEDIA_TYPE,
+  probeProductionMedia,
+} from "./probeProductionMedia";
 import { AutoMovieModelArchetypeRegistry } from "./productionArchetypes";
 import {
   assertProductionOpusProfile,
@@ -197,9 +200,11 @@ import {
 import {
   type IAutoMovieProductionRenderJobPlan,
   canonicalProductionWebVtt,
+  productionRenderLayersForPass,
 } from "./productionRenderJob";
 import {
   assertProductionRenderPublicationCurrent,
+  isPortableProductionPublicationPath,
   parseProductionRenderPublicationIdentity,
 } from "./productionRenderPublicationIdentity";
 import { productionRenderTargetFingerprint } from "./renderIdentity";
@@ -216,6 +221,7 @@ import {
   consumedModelIds,
   reviewEvidenceDiagnostics,
 } from "./reviewEvidenceDiagnostics";
+import { verifyAutoMovieProductionSemanticMaskReceipt } from "./semanticMaskEvidence";
 import {
   AUTOMOVIE_SANDBOX_BRIDGED_ENGINE_EXPORTS,
   callAutoMovieSandboxEngine,
@@ -9242,6 +9248,18 @@ const finalDeliverableDiagnostics = (
           "Required deliverables have no current render manifest. Run the project render command before final compilation.",
       },
     ];
+  // A publication proves only that some plan generation produced it. Whether
+  // that generation is the one currently planned is a comparison with the
+  // final plan, and a caller that supplies none has asked a question this gate
+  // cannot answer; it says so rather than trusting the manifest's own claim.
+  if (currentPlan === undefined)
+    return [
+      renderDeliverableDiagnostic(
+        "render-deliverable-stale",
+        production.id,
+        "Final delivery verification requires the current final render plan to compare the publication against. Run the project verify command, which supplies the current final plan generation.",
+      ),
+    ];
   const manifestDigest = digestAutoMovieBytes(bytes);
   let receipt: IAutoMovieProductionRenderReceipt | null = null;
   try {
@@ -9297,13 +9315,10 @@ const finalDeliverableDiagnostics = (
   }
   let publication: ReturnType<typeof parseProductionRenderPublicationIdentity>;
   try {
-    publication =
-      currentPlan === undefined
-        ? parseProductionRenderPublicationIdentity(manifest.publication)
-        : assertProductionRenderPublicationCurrent({
-            identity: manifest.publication,
-            plan: currentPlan,
-          });
+    publication = assertProductionRenderPublicationCurrent({
+      identity: manifest.publication,
+      plan: currentPlan,
+    });
   } catch (error) {
     return [
       renderDeliverableDiagnostic(
@@ -9356,17 +9371,18 @@ const finalDeliverableDiagnostics = (
   >();
   const filePaths = new Set<string>();
   const receiptByPath = new Map(
-    receipt.files.map((file) => [
-      normalizeSlash(file.path).toLowerCase(),
-      file,
-    ]),
+    receipt.files.flatMap((file) =>
+      isPortableProductionPublicationPath(file.path)
+        ? [[file.path.toLowerCase(), file] as const]
+        : [],
+    ),
   );
   if (receiptByPath.size !== receipt.files.length)
     diagnostics.push(
       renderDeliverableDiagnostic(
         "render-deliverable-unowned",
         production.id,
-        "The renderer-owned receipt repeats a physical file path. Recreate it through the production render command.",
+        "The renderer-owned receipt repeats a physical file path or spells one outside the canonical portable form. Recreate it through the production render command.",
       ),
     );
   const witnessedReceiptPaths = new Set<string>();
@@ -9399,7 +9415,18 @@ const finalDeliverableDiagnostics = (
       );
     const observed: IAutoMovieObservedDeliverableFile[] = [];
     for (const file of deliverable.files) {
-      const portablePath = normalizeSlash(file.path).toLowerCase();
+      if (isPortableProductionPublicationPath(file.path) === false) {
+        diagnostics.push(
+          renderDeliverableDiagnostic(
+            "render-deliverable-invalid",
+            deliverable.id,
+            `Render file "${file.path}" is not one canonical portable relative path. Rebuild the manifest without legacy path aliases.`,
+            file.path,
+          ),
+        );
+        continue;
+      }
+      const portablePath = file.path.toLowerCase();
       if (filePaths.has(portablePath))
         diagnostics.push(
           renderDeliverableDiagnostic(
@@ -9446,7 +9473,12 @@ const finalDeliverableDiagnostics = (
           receiptFile.deliverable !== deliverable.id ||
           receiptFile.digest !== file.digest ||
           receiptFile.bytes !== file.bytes ||
-          receiptFile.mediaType !== file.mediaType
+          receiptFile.mediaType !== file.mediaType ||
+          Buffer.from(
+            canonicalAutoMovieJsonBytes(receiptFile.semanticMask ?? null),
+          ).equals(
+            Buffer.from(canonicalAutoMovieJsonBytes(file.semanticMask ?? null)),
+          ) === false
         )
           diagnostics.push(
             renderDeliverableDiagnostic(
@@ -9484,7 +9516,77 @@ const finalDeliverableDiagnostics = (
                 file.path,
               ),
             );
-          else observed.push({ file, bytes: actual, probe });
+          else {
+            let semanticCurrent = true;
+            if (file.semanticMask === undefined) {
+              if (probe.kind === "semantic-mask") {
+                semanticCurrent = false;
+                diagnostics.push(
+                  renderDeliverableDiagnostic(
+                    "render-deliverable-unowned",
+                    deliverable.id,
+                    `Semantic sidecar "${file.path}" has no semantic receipt in the current aggregate manifest.`,
+                    file.path,
+                  ),
+                );
+              }
+            } else {
+              const semantic = file.semanticMask;
+              const ownedByPlan = currentPlan.chunks.some(
+                (chunk) =>
+                  chunk.deliverable === deliverable.id &&
+                  chunk.pass === "mask" &&
+                  chunk.frames.some(
+                    (frame) =>
+                      frame.globalFrame === semantic.frame &&
+                      productionRenderLayersForPass(frame, "mask").some(
+                        (layer) => layer.shot === semantic.shot,
+                      ),
+                  ),
+              );
+              if (
+                deliverable.kind !== "guide-pass" ||
+                probe.kind !== "semantic-mask" ||
+                semantic.sidecar.path !== file.path ||
+                ownedByPlan === false
+              ) {
+                semanticCurrent = false;
+                diagnostics.push(
+                  renderDeliverableDiagnostic(
+                    "render-deliverable-stale",
+                    deliverable.id,
+                    `Semantic sidecar "${file.path}" is not bound to one current mask frame in this guide deliverable.`,
+                    file.path,
+                  ),
+                );
+              } else
+                try {
+                  verifyAutoMovieProductionSemanticMaskReceipt({
+                    receipt: semantic,
+                    expectedFrame: semantic.frame,
+                    expectedShot: semantic.shot,
+                    evidence: {
+                      version: 1,
+                      shot: semantic.shot,
+                      mask: probe.mask,
+                      coverage: semantic.coverage,
+                    },
+                    resident: { path: file.path, bytes: actual },
+                  });
+                } catch (error) {
+                  semanticCurrent = false;
+                  diagnostics.push(
+                    renderDeliverableDiagnostic(
+                      "render-deliverable-stale",
+                      deliverable.id,
+                      `${errorMessage(error)} Recreate the semantic sidecar from its current mask frame.`,
+                      file.path,
+                    ),
+                  );
+                }
+            }
+            if (semanticCurrent) observed.push({ file, bytes: actual, probe });
+          }
         }
       } catch (error) {
         diagnostics.push(
@@ -9516,10 +9618,7 @@ const finalDeliverableDiagnostics = (
     );
   }
   for (const file of receipt.files)
-    if (
-      witnessedReceiptPaths.has(normalizeSlash(file.path).toLowerCase()) ===
-      false
-    )
+    if (witnessedReceiptPaths.has(file.path.toLowerCase()) === false)
       diagnostics.push(
         renderDeliverableDiagnostic(
           "render-deliverable-unowned",
@@ -9863,18 +9962,21 @@ const appendDeliverableTimelineDiagnostics = (
       assertProductionVideoProfile({ expected: profile, actual: video.probe });
       assertExactVideoTimeline(video.probe, timeline);
       const controls = byProbeKind("png");
+      const semantics = byProbeKind("semantic-mask");
       const guidePass =
         contract?.kind === "guide-pass" ? (contract.pass ?? "pose") : "pose";
+      const expectedSemantics = guidePass === "mask" ? timeline.totalFrames : 0;
       if (
         controls.length !== timeline.totalFrames ||
-        observed.length !== controls.length + 1
+        semantics.length !== expectedSemantics ||
+        observed.length !== controls.length + semantics.length + 1
       )
         throw new Error(
-          `Guide delivery requires ${timeline.totalFrames} PNG controls beside its video.`,
+          `Guide delivery requires ${timeline.totalFrames} PNG controls and ${expectedSemantics} semantic sidecars beside its video.`,
         );
       controls.forEach((control, index) => {
         const suffix = `frames/${guidePass}/frame_${String(index).padStart(8, "0")}.png`;
-        const portablePath = normalizeSlash(control.file.path);
+        const portablePath = control.file.path;
         if (
           control.file.mediaType !== "image/png" ||
           (portablePath !== suffix &&
@@ -9891,6 +9993,22 @@ const appendDeliverableTimelineDiagnostics = (
           }),
           actual: control.probe.picture,
         });
+      });
+      // Each mask picture depends on the sidecar of the same output frame, so
+      // the sidecar series must be continuous in the same numbering as the
+      // controls and each receipt must name the frame its filename claims.
+      semantics.forEach((semantic, index) => {
+        const suffix = `frames/mask/frame_${String(index).padStart(8, "0")}.semantic.json`;
+        const portablePath = semantic.file.path;
+        if (
+          semantic.file.mediaType !== AUTOMOVIE_SEMANTIC_MASK_MEDIA_TYPE ||
+          semantic.file.semanticMask?.frame !== index ||
+          (portablePath !== suffix &&
+            portablePath.endsWith(`/${suffix}`) === false)
+        )
+          throw new Error(
+            `Mask semantic sidecar ${index} must own the continuous path "${suffix}" and a semantic receipt for output frame ${index}.`,
+          );
       });
       return;
     }
