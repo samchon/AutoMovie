@@ -273,6 +273,7 @@ export interface IAutoMovieProjectState {
  * @author Samchon
  */
 export interface IAutoMovieCurrentTimedGeneratedProjectState extends IAutoMovieGeneratedProjectState {
+  /** Timed production shape the graph selected for this generated state. */
   kind: "brief" | "film";
   /**
    * Verified ownership manifest for the current generated state.
@@ -310,9 +311,13 @@ export interface IAutoMovieCurrentTimedGeneratedProjectState extends IAutoMovieG
  * @author Samchon
  */
 export interface IAutoMovieCurrentLibraryGeneratedProjectState extends IAutoMovieGeneratedProjectState {
+  /** The library shape the graph selected for this generated state. */
   kind: "library";
+  /** Verified ownership manifest for the current generated library. */
   manifest: IAutoMovieGeneratedManifest;
+  /** Materialized library index and artifacts, authenticated against the manifest. */
   library: IAutoMovieMaterializedLibrary;
+  /** A library has no runtime model registry; the field is present so the union narrows by shape. */
   registry: null;
 }
 

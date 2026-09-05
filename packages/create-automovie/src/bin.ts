@@ -139,6 +139,8 @@ import { run } from "automovie";
  * @evidenceExclude specifications/authoring-and-authority/source-authority-and-derivation.md#spec-authoring-source-ownership-failure Target-path refusal does not validate an adopted input's source, license, digest, consumer, or snapshot identity.
  * @evidence specifications/authoring-and-authority/source-authority-and-derivation.md#spec-authoring-source-resume-compatibility Leaves all continued authoring state in public generated-project files rather than launcher session state.
  * @author Samchon
+ * @evidenceExclude requirements/agent-authoring/production-language.md#agent-production-language-contract The creator forwards the invocation to the shared scaffolder, which owns the language selection and its module; the creator neither defaults nor validates a language itself.
+ * @evidenceExclude specifications/authoring-and-authority/production-language.md#spec-authoring-production-language-module The creator forwards the invocation to the shared scaffolder, which owns the language selection and its module; the creator neither defaults nor validates a language itself.
  */
 export const runCreateAutoMovie = (
   argv: readonly string[] = process.argv,

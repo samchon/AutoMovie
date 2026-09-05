@@ -322,6 +322,8 @@ import {
  * @evidenceExclude specifications/narrative-and-intent/story-authority-and-hierarchy.md#narrative-intent-story-unit-identity Screenplay text serializes supplied hierarchy and prose; narrative authority, intent formation, causality, and creative choice remain with the authoring layer.
  * @evidenceExclude specifications/narrative-and-intent/story-authority-and-hierarchy.md#narrative-intent-story-unknown-review-state Screenplay text serializes supplied hierarchy and prose; narrative authority, intent formation, causality, and creative choice remain with the authoring layer.
  * @author Samchon
+ * @evidenceExclude requirements/story/delivery-index.md#story-delivery-index The render package schedules frames and plans captions from compiled artifacts; the production language module and the delivery index are generated-project authoring contracts owned by the evidence and template packages.
+ * @evidenceExclude specifications/narrative-and-intent/delivery-index.md#narrative-intent-delivery-index The render package schedules frames and plans captions from compiled artifacts; the production language module and the delivery index are generated-project authoring contracts owned by the evidence and template packages.
  */
 export const renderScreenplay = (script: IAutoMovieScript): string => {
   if (script.beats.length === 0)
