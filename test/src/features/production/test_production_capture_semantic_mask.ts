@@ -338,6 +338,23 @@ export const test_production_capture_semantic_mask =
         },
       );
 
+      // A compile after the captures reads every retained view, including the
+      // semantic coverage the mask frames carry, as review evidence; the mask
+      // frame at the cue apex satisfies the contract declared mask evidence.
+      await shotMask(sameShot, 2);
+      const reviewed = new AutoMovieProductionCompiler(
+        AutoMovieProductionProject.open(fixture.root),
+      ).lint({ scope: "review" });
+      TestValidator.equals(
+        "captured mask frames are read back as review evidence with their coverage",
+        reviewed.diagnostics.some(
+          (diagnostic) =>
+            diagnostic.code === "review-evidence-missing" &&
+            diagnostic.target === "shot:opening" &&
+            diagnostic.message.includes("(mask)") === false,
+        ),
+        true,
+      );
       const ground = plain.forProduction("fixture-film").oracle.query({
         request: { query: "ground", point: { x: 0, z: 0 } },
       });

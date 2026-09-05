@@ -5,10 +5,10 @@ import type { IAutoMovieFilmSource } from "@automovie/interface";
  *
  * @evidence screenplays/001-cue/001-cue.md#seq-cue Places the complete cue source first,
  *   carries its authored English caption, and preserves its silent meaning.
- * @evidenceReview screenplays/001-cue/001-cue.md#seq-cue #2715908 Read screenplays/001-cue/001-cue.md#seq-cue and film; confirmed the six-second opening fades up over its first local half-second, dissolves over its last local half-second, and carries the exact English caption from 1.5 through 3.0.
+ * @evidenceReview screenplays/001-cue/001-cue.md#seq-cue #685a3cf Read screenplays/001-cue/001-cue.md#seq-cue and film; confirmed the six-second opening fades up over its first local half-second, dissolves over its last local half-second, and carries the exact English caption from 1.5 through 3.0.
  * @evidence screenplays/002-answer/001-answer.md#seq-answer Dissolves into the complete answer
  *   source and holds it through the final global sample.
- * @evidenceReview screenplays/002-answer/001-answer.md#seq-answer #a8e919b Read screenplays/002-answer/001-answer.md#seq-answer and film; confirmed the six-second answer enters through the authored half-second dissolve, holds its wide insert, and fades to black over its final local half-second.
+ * @evidenceReview screenplays/002-answer/001-answer.md#seq-answer #848767f Read screenplays/002-answer/001-answer.md#seq-answer and film; confirmed the six-second answer enters through the authored half-second dissolve, holds its wide insert, and fades to black over its final local half-second.
  * @evidence obligations/delivery/film-sources.md#editorial-only-assembly Selects only the
  *   two reviewed shots and declares their half-second overlap and fades.
  * @evidenceReview obligations/delivery/film-sources.md#editorial-only-assembly #2f800c2 Read obligations/delivery/film-sources.md#editorial-only-assembly and film; confirmed both video entries select reviewed shots, map explicit local/global intervals, and assemble exactly 11.5 seconds without local creative decisions.

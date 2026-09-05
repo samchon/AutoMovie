@@ -1442,6 +1442,9 @@ export class AutoMovieProductionProject {
     remaining: string[];
   } {
     this.assertWritable();
+    // A handle whose production was already erased refuses here, before any
+    // lease or lock, instead of failing its own identity fence later.
+    this.assertProjectRootIdentity();
     if (reason.trim().length === 0)
       throw new Error("Production erase audit reason must not be blank.");
     const lease = acquireProductionRootNamespace(this.root);
@@ -1507,13 +1510,16 @@ export class AutoMovieProductionProject {
       return fence;
     };
     try {
-      token = acquireCommitLock(this.lockPath);
-      assertProductionRootNamespaceLease(lease);
-      this.assertIncarnation();
+      // The state identity is read before the lock is taken, so a refusal at
+      // any later step still knows the lock file sits in its own state root
+      // and can unlink it instead of leaving a lock this process cannot retake.
       const residentStateIdentity = fileIdentityKey(
         fileSystem.statSync(this.productionStateRoot, { bigint: true }),
       );
       productionStateIdentity = residentStateIdentity;
+      token = acquireCommitLock(this.lockPath);
+      assertProductionRootNamespaceLease(lease);
+      this.assertIncarnation();
       const registry = validateProductionRegistry(
         readOwnedJson(this.rootReal, this.registryPath),
         this.registryPath,
@@ -2333,6 +2339,11 @@ export class AutoMovieProductionProject {
       publication.receipt.requestId,
       publication.receipt.attemptId,
     );
+    if (this.readTrackedStateFile(receiptPath) !== null)
+      throw new Error(
+        `Repaint raw output receipt "${receiptPath}" already exists; raw revisions are immutable.`,
+      );
+    const receiptContent = serializeJson(publication.receipt);
     return this.commitFiles(
       [
         {
@@ -2344,12 +2355,19 @@ export class AutoMovieProductionProject {
         },
         {
           path: path.join(this.productionStateRoot, ...receiptPath.split("/")),
-          content: serializeJson(publication.receipt),
+          content: receiptContent,
         },
       ],
-      () =>
-        (inputCurrent?.() ?? true) &&
-        this.readTrackedStateFile(receiptPath) === null,
+      // The guard runs before and after the files land, so the resident
+      // receipt is either still absent or exactly this publication.
+      () => {
+        if ((inputCurrent?.() ?? true) === false) return false;
+        const resident = this.readTrackedStateFile(receiptPath);
+        return (
+          resident === null ||
+          Buffer.from(resident).equals(Buffer.from(receiptContent, "utf8"))
+        );
+      },
     );
   }
 

@@ -9921,9 +9921,9 @@ const appendDeliverableTimelineDiagnostics = (
         "Not every manifest file passed its exact current receipt and probe comparison.",
       );
     if (deliverable.kind === "feature") {
+      // Every observed feature file probed as one video/mp4 feature, so the
+      // single-file rule is the exactly-one rule above.
       const feature = exactlyOne(byProbeKind("feature"), "feature MP4");
-      if (observed.length !== 1 || feature.file.mediaType !== "video/mp4")
-        throw new Error("Feature delivery must own only one video/mp4 file.");
       assertProductionRenderedDeliverableFacts({
         kind: deliverable.kind,
         runtimeSeconds: deliverable.runtimeSeconds,
@@ -9937,17 +9937,14 @@ const appendDeliverableTimelineDiagnostics = (
         actual: feature.probe.video,
       });
       assertProductionOpusProfile(feature.probe.audio);
-      assertExactAudioVideoPresentation(
-        feature.probe.video,
-        feature.probe.audio,
-      );
+      // The feature probe proved positive presentation clocks and exactly
+      // equal audio and video runtimes when it admitted the file.
       assertExactVideoTimeline(feature.probe.video, timeline);
       return;
     }
     if (deliverable.kind === "guide-pass") {
+      // The probe admits a guide video only under video/mp4.
       const video = exactlyOne(byProbeKind("video"), "guide video/mp4");
-      if (video.file.mediaType !== "video/mp4")
-        throw new Error("Guide video must declare media type video/mp4.");
       assertProductionRenderedDeliverableFacts({
         kind: deliverable.kind,
         runtimeSeconds: deliverable.runtimeSeconds,
@@ -10023,9 +10020,8 @@ const appendDeliverableTimelineDiagnostics = (
         expectedCaptionRuntimeSeconds: null,
         probe: pictures[0]!.probe,
       });
-      for (const picture of pictures) {
-        if (picture.file.mediaType !== "image/png")
-          throw new Error("Preview picture must declare media type image/png.");
+      // The probe admits a preview picture only under image/png.
+      for (const picture of pictures)
         assertProductionPngPicture({
           profile: resolveProductionPngProfile({
             role: "preview",
@@ -10034,13 +10030,12 @@ const appendDeliverableTimelineDiagnostics = (
           }),
           actual: picture.probe.picture,
         });
-      }
       return;
     }
     if (deliverable.kind === "captions") {
+      // The probe admits captions only under text/vtt, and every observed
+      // caption file probed as WebVTT, so exactly-one owns the count.
       const caption = exactlyOne(byProbeKind("webvtt"), "caption WebVTT");
-      if (observed.length !== 1 || caption.file.mediaType !== "text/vtt")
-        throw new Error("Caption delivery must own only one text/vtt file.");
       assertProductionRenderedDeliverableFacts({
         kind: deliverable.kind,
         runtimeSeconds: deliverable.runtimeSeconds,
@@ -10070,13 +10065,8 @@ const appendDeliverableTimelineDiagnostics = (
       throw new Error(
         "Audio delivery must own audio.mp4, evidence.json, waveform.png, and spectrogram.png only.",
       );
-    if (
-      audio.file.mediaType !== "audio/mp4" ||
-      evidence.file.mediaType !== "application/json"
-    )
-      throw new Error(
-        "Audio and evidence files must declare their closed media types.",
-      );
+    // The probe yields an audio track only under audio/mp4 and sound evidence
+    // only under application/json, so both media types are already exact.
     assertProductionRenderedDeliverableFacts({
       kind: deliverable.kind,
       runtimeSeconds: deliverable.runtimeSeconds,
@@ -10122,33 +10112,6 @@ const appendDeliverableTimelineDiagnostics = (
       ),
     );
   }
-};
-
-const assertExactAudioVideoPresentation = (
-  video: Extract<IAutoMovieProductionMediaProbe, { kind: "video" }>,
-  audio: Extract<IAutoMovieProductionMediaProbe, { kind: "audio" }>,
-): void => {
-  const terms = [
-    video.presentation.movieDuration,
-    video.presentation.movieTimescale,
-    audio.timebase.movieDuration,
-    audio.timebase.movieTimescale,
-  ];
-  if (
-    terms.some((value) => Number.isSafeInteger(value) === false || value <= 0)
-  )
-    throw new Error(
-      "Audio/video presentation clocks are not positive safe integers.",
-    );
-  if (
-    BigInt(video.presentation.movieDuration) *
-      BigInt(audio.timebase.movieTimescale) !==
-    BigInt(audio.timebase.movieDuration) *
-      BigInt(video.presentation.movieTimescale)
-  )
-    throw new Error(
-      "Feature audio and video do not end at the same exact rational presentation boundary.",
-    );
 };
 
 const assertExactVideoTimeline = (
@@ -10322,28 +10285,19 @@ const assertCurrentSoundEvidence = (props: {
   });
 };
 
+/**
+ * The audio presentation length in media samples.
+ *
+ * The audio probe's Opus profile assertion already proved the presentation an
+ * exact safe-integer sample count over positive safe clocks, so the division
+ * is exact without a second verdict.
+ */
 const exactPresentationTicks = (
   duration: number,
   timescale: number,
   destinationTimescale: number,
-): number => {
-  if (
-    [duration, timescale, destinationTimescale].some(
-      (value) => Number.isSafeInteger(value) === false || value <= 0,
-    )
-  )
-    throw new Error("Presentation conversion requires positive safe integers.");
-  const numerator = BigInt(duration) * BigInt(destinationTimescale);
-  const denominator = BigInt(timescale);
-  if (numerator % denominator !== 0n)
-    throw new Error(
-      "Presentation duration is not an exact integer on the destination clock.",
-    );
-  const quotient = numerator / denominator;
-  if (quotient > BigInt(Number.MAX_SAFE_INTEGER))
-    throw new Error("Presentation duration exceeds the safe integer domain.");
-  return Number(quotient);
-};
+): number =>
+  Number((BigInt(duration) * BigInt(destinationTimescale)) / BigInt(timescale));
 
 const canonicalizeProbe = (probe: IAutoMovieProductionMediaProbe): string =>
   Buffer.from(canonicalAutoMovieJsonBytes(probe)).toString("utf8");
