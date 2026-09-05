@@ -286,6 +286,15 @@ const FAMILY_CONTRACTS: Readonly<Record<string, IDiagnosticFamilyContract>> = {
 const CODE_CONTRACTS: Readonly<
   Partial<Record<AutoMovieDiagnosticCode, IDiagnosticFamilyContract>>
 > = {
+  "repaint-claim-refused": {
+    path: ".agents/skills/review-verification/capture.md#request",
+    invariant:
+      "One immutable repaint request prefix dispatches to the provider at most once at a time: an unsettled or unknown-outcome claim closes that prefix until its owner settles, and a moved journal or claim generation is replanned rather than dispatched.",
+    correction:
+      "Read the refusal's cause. Wait for an active owner to settle; after an unknown provider outcome reconcile the provider side and author a new request identity instead of retrying this one; after a moved prefix rerun the same repaint so it plans against the current journal.",
+    recheck:
+      "Run the repaint again and confirm the request either dispatches or names a different, current cause.",
+  },
   "source-scene-coverage-incomplete": {
     path: ".agents/skills/source-authoring/design-branches.md#design-branches",
     invariant:

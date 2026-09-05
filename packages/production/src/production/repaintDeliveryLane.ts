@@ -141,7 +141,11 @@ export const planAutoMovieVisualDelivery = (props: {
         occurrence.shot !== props.lanes[index]?.shot,
     )
   )
-    diagnostics.push("visual-lane-population-invalid");
+    // Every later check reads lanes by timeline position, so a population that
+    // does not join the timeline exactly is the one cause worth reporting;
+    // crossings and policy derived from a misjoined population would only add
+    // consequences of the same defect.
+    return { segments: [], diagnostics: ["visual-lane-population-invalid"] };
   if (props.lanes.some((lane) => !safeValidLane(lane)))
     diagnostics.push("visual-lane-source-invalid");
   const hasRepaint = props.lanes.some((lane) => lane.lane === "repainted");

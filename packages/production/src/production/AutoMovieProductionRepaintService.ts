@@ -31,6 +31,7 @@ import {
   compareCodeUnits,
   digestAutoMovieBytes,
 } from "./contentIdentity";
+import { parseAutoMovieStructuredJson } from "./duplicateAwareJson";
 import { assertProductionRenditionClipDelivery } from "./muxProductionFeatureMp4";
 import { probeProductionVideoMp4 } from "./probeProductionMedia";
 import { readAutoMovieProductionRegistry } from "./productionRegistry";
@@ -46,6 +47,7 @@ import {
 import { IAutoMovieRepaintAttemptClaim } from "./repaintAttemptClaim";
 import {
   AutoMovieRepaintAttemptError,
+  type AutoMovieRepaintClaimRefusal,
   assertAutoMovieRepaintExecutionPolicy,
   executeAutoMovieRepaintRequest,
 } from "./repaintExecution";
@@ -795,7 +797,7 @@ export class AutoMovieProductionRepaintService {
           };
           const admission = services.project.acquireRepaintAttemptClaim(claim);
           if (admission.status === "acquired") claims.set(attemptId, claim);
-          return admission.status === "acquired";
+          return admission;
         },
         execute: async (signal, attemptId) => {
           let generated: Awaited<ReturnType<AutoMovieProductionShotRepaint>>;
@@ -870,6 +872,12 @@ export class AutoMovieProductionRepaintService {
           } | null = null;
           let inputStaleError: AutoMovieRepaintAttemptError | undefined;
           let rawRetained = false;
+          // Every adapter field is read exactly once, inside the classified
+          // try: a getter that throws is an invalid output, and the raw
+          // retention below reuses the captured values instead of touching the
+          // hostile object again from inside a catch handler.
+          let reportedMediaType: unknown;
+          let reportedBytes: Uint8Array | undefined;
           try {
             const reportedCostUnits = generated.costUnits;
             if (
@@ -881,10 +889,12 @@ export class AutoMovieProductionRepaintService {
                 "the adapter returned an invalid metered cost disclosure",
               );
             costUnits = reportedCostUnits ?? 0;
-            const reportedBytes = generated.bytes;
-            if (reportedBytes instanceof Uint8Array === false)
+            reportedMediaType = generated.mediaType;
+            const adapterBytes = generated.bytes;
+            if (adapterBytes instanceof Uint8Array === false)
               throw new Error("the adapter did not return Uint8Array bytes");
-            const bytes = new Uint8Array(reportedBytes);
+            const bytes = new Uint8Array(adapterBytes);
+            reportedBytes = bytes;
             const outputDigest =
               bytes.length === 0 ? null : digestAutoMovieBytes(bytes);
             availableOutput =
@@ -906,8 +916,8 @@ export class AutoMovieProductionRepaintService {
                 attemptId,
                 bytes,
                 mediaType:
-                  typeof generated.mediaType === "string"
-                    ? generated.mediaType
+                  typeof reportedMediaType === "string"
+                    ? reportedMediaType
                     : "application/octet-stream",
                 disposition,
                 retainedAt: repaintRuntimeInstant(
@@ -938,7 +948,7 @@ export class AutoMovieProductionRepaintService {
               throw inputStaleError;
             }
             if (
-              generated.mediaType !== "video/mp4" ||
+              reportedMediaType !== "video/mp4" ||
               bytes.length === 0 ||
               outputDigest === null
             )
@@ -985,16 +995,20 @@ export class AutoMovieProductionRepaintService {
           } catch (error) {
             if (inputStaleError !== undefined && error === inputStaleError)
               throw error;
-            if (availableOutput !== null && rawRetained === false) {
+            if (
+              availableOutput !== null &&
+              rawRetained === false &&
+              reportedBytes !== undefined
+            ) {
               const publication = planAutoMovieRepaintRawOutput({
                 productionId: services.project.productionId,
                 shot: requestedShot,
                 requestId,
                 attemptId,
-                bytes: new Uint8Array(generated.bytes),
+                bytes: reportedBytes,
                 mediaType:
-                  typeof generated.mediaType === "string"
-                    ? generated.mediaType
+                  typeof reportedMediaType === "string"
+                    ? reportedMediaType
                     : "application/octet-stream",
                 disposition: signal.aborted ? "cancelled" : "invalid",
                 retainedAt: repaintRuntimeInstant(
@@ -1055,6 +1069,11 @@ export class AutoMovieProductionRepaintService {
       return failure(
         "repaint-commit-refused",
         `Repaint terminal attempt "${execution.attempts.at(-1)?.attemptId ?? "unknown"}" could not be committed; no retry or candidate publication was started.`,
+      );
+    if (execution.stop === "claim-refused")
+      return failure(
+        "repaint-claim-refused",
+        repaintClaimRefusalMessage(requestId, execution.claimRefusal),
       );
     if (execution.accepted === null)
       return failure(
@@ -1319,7 +1338,10 @@ const resolveReferences = (
     };
   let decoded: unknown;
   try {
-    decoded = JSON.parse(Buffer.from(manifestInput.bytes).toString("utf8"));
+    decoded = parseAutoMovieStructuredJson({
+      record: "asset-manifest",
+      bytes: manifestInput.bytes,
+    });
   } catch {
     return {
       diagnostic: diagnostic(
@@ -1447,6 +1469,31 @@ const diagnostic = (
   path: null,
   message,
 });
+
+/**
+ * Explain a refused dispatch admission as the action it calls for: wait for
+ * the attempt that holds this request prefix, author a new request identity
+ * after an unknown provider outcome, or replan against a moved journal. The
+ * same prefix is never dispatched twice and no attempt is pretended to have
+ * run.
+ */
+const repaintClaimRefusalMessage = (
+  requestId: string,
+  refusal: AutoMovieRepaintClaimRefusal | null,
+): string => {
+  if (refusal === null)
+    return `Repaint request "${requestId}" was refused a dispatch claim before any provider call; no cause was reported.`;
+  switch (refusal.status) {
+    case "already-active":
+      return `Repaint request "${requestId}" is held by an unsettled dispatch claim for attempt "${refusal.ownerAttemptId}"; no provider call was made. If that run is still executing, wait for it to settle. If it ended without settling, its provider outcome is unknown and this request identity stays closed: author a new request instead of retrying this one.`;
+    case "unknown-outcome":
+      return `Repaint request "${requestId}" attempt "${refusal.ownerAttemptId}" ended with an unknown provider outcome, so this request identity is closed to further dispatch and no provider call was made. Reconcile the provider side, then author a new request identity.`;
+    case "prefix-changed":
+      return `Repaint request "${requestId}" attempt journal or claim generation changed between planning and dispatch; no provider call was made. Run the same repaint again so it plans against the current journal.`;
+    case "admission-failed":
+      return `Repaint request "${requestId}" claim admission failed before any provider call: ${refusal.message}`;
+  }
+};
 
 const safeRepaintDiagnosticMessage = (
   error: unknown,

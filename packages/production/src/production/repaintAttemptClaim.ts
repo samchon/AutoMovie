@@ -53,24 +53,6 @@ export type AutoMovieRepaintClaimSettlement =
   | "unknown-outcome";
 
 /**
- * Result of one request-scoped claimed dispatch.
- *
- * @evidence requirements/repaint/retries-seeds-and-variation.md#repaint-retry-request-boundary Returns completion only for the attempt that acquired the exact request prefix.
- * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-repaint-attempt-selection Retains duplicate and reconciliation refusals as typed outcomes.
- */
-export type AutoMovieRepaintClaimedDispatch<T> =
-  | { status: "completed"; value: T }
-  | Exclude<AutoMovieRepaintClaimAdmission, { status: "acquired" }>;
-
-/**
- * Error identifying a timed-out adapter whose external outcome is unknown.
- *
- * @evidence requirements/repaint/retries-seeds-and-variation.md#repaint-retry-budget-stop Prevents an ignored cancellation from being treated as a completed timeout.
- * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-repaint-attempt-selection Requires reconciliation rather than automatic retry after an unknown outcome.
- */
-export class AutoMovieRepaintUnknownOutcomeError extends Error {}
-
-/**
  * Refuse a malformed claim before it reaches a project-owned transaction.
  *
  * @evidence requirements/repaint/retries-seeds-and-variation.md#repaint-retry-request-boundary Keeps every admission entry point on the same exact request-prefix identity.
@@ -80,43 +62,6 @@ export const assertAutoMovieRepaintAttemptClaim = (
   claim: IAutoMovieRepaintAttemptClaim,
 ): void => {
   validatedClaim(claim);
-};
-
-/**
- * Reserve one exact next attempt before invoking an external repaint adapter.
- *
- * @evidence requirements/repaint/retries-seeds-and-variation.md#repaint-retry-request-boundary Prevents concurrent retries from dispatching the same immutable request prefix twice.
- * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-repaint-attempt-selection Binds atomic admission to the request fingerprint, journal prefix, next ordinal, attempt identity, and claim generation.
- */
-export const executeClaimedAutoMovieRepaintAttempt = async <T>(props: {
-  claim: IAutoMovieRepaintAttemptClaim;
-  acquire: (
-    claim: IAutoMovieRepaintAttemptClaim,
-  ) =>
-    | AutoMovieRepaintClaimAdmission
-    | PromiseLike<AutoMovieRepaintClaimAdmission>;
-  execute: () => Promise<T>;
-  settle: (
-    claim: IAutoMovieRepaintAttemptClaim,
-    settlement: AutoMovieRepaintClaimSettlement,
-  ) => unknown;
-}): Promise<AutoMovieRepaintClaimedDispatch<T>> => {
-  const claim = validatedClaim(props.claim);
-  const admission = await props.acquire(structuredClone(claim));
-  if (admission.status !== "acquired") return structuredClone(admission);
-  let value: T;
-  try {
-    value = await props.execute();
-  } catch (error) {
-    if (safeUnknownOutcome(error)) {
-      await props.settle(structuredClone(claim), "unknown-outcome");
-      return { status: "unknown-outcome", ownerAttemptId: claim.attemptId };
-    }
-    await props.settle(structuredClone(claim), "rejected");
-    throw error;
-  }
-  await props.settle(structuredClone(claim), "fulfilled");
-  return { status: "completed", value };
 };
 
 const validatedClaim = (
@@ -145,12 +90,4 @@ const validatedClaim = (
   )
     throw new Error("Repaint attempt claim requires an exact UTC instant.");
   return structuredClone(claim);
-};
-
-const safeUnknownOutcome = (error: unknown): boolean => {
-  try {
-    return error instanceof AutoMovieRepaintUnknownOutcomeError;
-  } catch {
-    return false;
-  }
 };

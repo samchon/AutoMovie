@@ -7,6 +7,21 @@ import {
 } from "@automovie/interface";
 
 import { canonicalAutoMovieRepaintRuntimeIdentity } from "./renditionIdentity";
+import type { AutoMovieRepaintClaimAdmission } from "./repaintAttemptClaim";
+
+/**
+ * Why a request stopped before its next provider dispatch was admitted.
+ *
+ * The project claim store's own refusals pass through unchanged; a store that
+ * threw or answered with a shape outside the admission contract is reported as
+ * a failed admission carrying only a safe message, never as a dispatch.
+ *
+ * @evidence requirements/repaint/retries-seeds-and-variation.md#repaint-retry-request-boundary Preserves whether the same request prefix is held by another attempt, closed by an unknown outcome, or moved, so the author can tell a wait from a new request identity.
+ * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-repaint-attempt-selection Keeps every non-acquired admission a typed outcome instead of a bare boolean that erases its cause.
+ */
+export type AutoMovieRepaintClaimRefusal =
+  | Exclude<AutoMovieRepaintClaimAdmission, { status: "acquired" }>
+  | { status: "admission-failed"; message: string };
 
 /** Available bytes reported even when an attempt cannot become a candidate. */
 interface IAutoMovieRepaintAttemptOutput {
@@ -97,6 +112,12 @@ interface IAutoMovieRepaintExecutionResult<T> {
     | "claim-refused"
     | "outcome-unknown"
     | "observer-failed";
+  /**
+   * The admission that stopped the request, present exactly when `stop` is
+   * `claim-refused`; names the refused admission's cause and owning attempt
+   * beside the stop reason.
+   */
+  claimRefusal: AutoMovieRepaintClaimRefusal | null;
 }
 
 /** Validate the exact bounded repaint policy before any provider execution.
@@ -158,7 +179,12 @@ export const executeAutoMovieRepaintRequest = async <T>(props: {
   policy: IAutoMovieRepaintExecutionPolicy;
   runtime: IAutoMovieRepaintExecutionRuntime;
   signal?: AbortSignal;
-  admitAttempt?: (attemptId: string, ordinal: number) => unknown;
+  admitAttempt?: (
+    attemptId: string,
+    ordinal: number,
+  ) =>
+    | AutoMovieRepaintClaimAdmission
+    | PromiseLike<AutoMovieRepaintClaimAdmission>;
   execute: (
     signal: AbortSignal,
     attemptId: string,
@@ -257,15 +283,31 @@ export const executeAutoMovieRepaintRequest = async <T>(props: {
       throw error;
     }
     if (props.admitAttempt !== undefined) {
-      let admitted = false;
+      let admission:
+        | AutoMovieRepaintClaimAdmission
+        | AutoMovieRepaintClaimRefusal;
       try {
-        admitted = (await props.admitAttempt(attemptId, ordinal)) === true;
-      } catch {
-        admitted = false;
+        admission = validAdmission(
+          await props.admitAttempt(attemptId, ordinal),
+        );
+      } catch (error) {
+        admission = {
+          status: "admission-failed",
+          message: safeUnknownMessage(
+            error,
+            "Repaint attempt claim admission failed without a safe diagnostic.",
+          ),
+        };
       }
-      if (admitted === false) {
+      if (admission.status !== "acquired") {
         props.signal?.removeEventListener("abort", relay);
-        return result(props.requestId, attempts, null, "claim-refused");
+        return result(
+          props.requestId,
+          attempts,
+          null,
+          "claim-refused",
+          admission,
+        );
       }
     }
     const remainingElapsed = Math.max(
@@ -578,12 +620,54 @@ const result = <T>(
   attempts: IAutoMovieRepaintAttemptRecord[],
   accepted: IAutoMovieRepaintExecutionResult<T>["accepted"],
   stop: IAutoMovieRepaintExecutionResult<T>["stop"],
+  claimRefusal: AutoMovieRepaintClaimRefusal | null = null,
 ): IAutoMovieRepaintExecutionResult<T> => ({
   requestId,
   attempts: structuredClone(attempts),
   accepted,
   stop,
+  claimRefusal: claimRefusal === null ? null : structuredClone(claimRefusal),
 });
+
+const ADMISSION_STATUSES: ReadonlySet<
+  AutoMovieRepaintClaimAdmission["status"]
+> = new Set([
+  "acquired",
+  "already-active",
+  "prefix-changed",
+  "unknown-outcome",
+]);
+
+/** Admit only the exact admission contract; anything else is a failed admission. */
+const validAdmission = (
+  value: unknown,
+): AutoMovieRepaintClaimAdmission | AutoMovieRepaintClaimRefusal => {
+  const candidate = value as { status?: unknown; ownerAttemptId?: unknown };
+  const status = candidate?.status;
+  if (
+    typeof status !== "string" ||
+    ADMISSION_STATUSES.has(
+      status as AutoMovieRepaintClaimAdmission["status"],
+    ) === false
+  )
+    return {
+      status: "admission-failed",
+      message:
+        "Repaint attempt claim store answered outside the admission contract.",
+    };
+  const admitted = status as AutoMovieRepaintClaimAdmission["status"];
+  if (admitted === "acquired" || admitted === "prefix-changed")
+    return { status: admitted };
+  if (
+    typeof candidate.ownerAttemptId !== "string" ||
+    candidate.ownerAttemptId.trim().length === 0
+  )
+    return {
+      status: "admission-failed",
+      message: `Repaint attempt claim store reported ${admitted} without naming the owning attempt.`,
+    };
+  return { status: admitted, ownerAttemptId: candidate.ownerAttemptId };
+};
 
 const terminalAttempt = (
   input: Omit<

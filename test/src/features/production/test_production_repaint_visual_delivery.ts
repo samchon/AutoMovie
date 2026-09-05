@@ -101,7 +101,7 @@ export const test_production_repaint_visual_delivery = (): void => {
         timeline,
         lanes,
         policy: null,
-        currentObservationDigest: null,
+        currentObservationDigest: policy.observationDigest,
       }).diagnostics,
       staleObservation: planAutoMovieVisualDelivery({
         timeline,

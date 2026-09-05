@@ -339,6 +339,10 @@ const scenarioServices = (
  *    deterministic structural authority, and exact resident identities.
  * 7. Caller/provider mutation cannot change the immutable request snapshot
  *    shared by execution and receipt publication.
+ * 8. A dispatch claim the project store refuses as held, closed by an unknown
+ *    outcome, or moved returns the claim-refused diagnostic that names the
+ *    cause, the owning attempt, and the author's next step, with no provider
+ *    call.
  */
 export const test_production_repaint_generator_adoption =
   async (): Promise<void> => {
@@ -1642,6 +1646,68 @@ export const test_production_repaint_generator_adoption =
             "repaint-failed",
             "repaint-failed",
           ],
+          providerCalls: 0,
+        },
+      );
+
+      let claimRefusedProviderCalls = 0;
+      const claimRefusals = await Promise.all(
+        (
+          [
+            { status: "already-active", ownerAttemptId: "owner-attempt" },
+            { status: "unknown-outcome", ownerAttemptId: "owner-attempt" },
+            { status: "prefix-changed" },
+          ] as const
+        ).map((admission) =>
+          new AutoMovieProductionRepaintService(
+            async (props) => {
+              ++claimRefusedProviderCalls;
+              return actualAdapter(selected.runtimeIdentity)(props);
+            },
+            selected,
+            { policy: executionPolicy(), evidence: executionEvidence() },
+          ).repaint(
+            scenarioServices(runnable, {
+              project: { acquireRepaintAttemptClaim: () => admission },
+            }),
+            input,
+          ),
+        ),
+      );
+      const claimRefusalMessages = claimRefusals.map(
+        (result) => result.diagnostics[0]?.message ?? "",
+      );
+      TestValidator.equals(
+        "a refused dispatch claim names its cause, its owner, and the author's next step",
+        {
+          codes: claimRefusals.map(codeOf),
+          receipts: claimRefusals.map((result) => result.receipt),
+          explained: [
+            claimRefusalMessages[0]!.includes(
+              'unsettled dispatch claim for attempt "owner-attempt"',
+            ) && claimRefusalMessages[0]!.includes("author a new request"),
+            claimRefusalMessages[1]!.includes(
+              'attempt "owner-attempt" ended with an unknown provider outcome',
+            ) && claimRefusalMessages[1]!.includes("new request identity"),
+            claimRefusalMessages[2]!.includes(
+              "changed between planning and dispatch",
+            ) &&
+              claimRefusalMessages[2]!.includes("Run the same repaint again"),
+          ],
+          noProviderCall: claimRefusalMessages.every((message) =>
+            message.includes("no provider call was made"),
+          ),
+          providerCalls: claimRefusedProviderCalls,
+        },
+        {
+          codes: [
+            "repaint-claim-refused",
+            "repaint-claim-refused",
+            "repaint-claim-refused",
+          ],
+          receipts: [null, null, null],
+          explained: [true, true, true],
+          noProviderCall: true,
           providerCalls: 0,
         },
       );
