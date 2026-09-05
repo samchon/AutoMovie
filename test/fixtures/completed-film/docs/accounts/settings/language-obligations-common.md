@@ -4,7 +4,7 @@
 
 <!--
 @evidence language/obligations/common.md#english-population-register-frame-account The complete settings population, 23 H2 units, was read as one whole against "Population register and frame account"; the tags below quote what each unit itself states, and those units are the owners this production names for the obligation.
-@evidenceReview language/obligations/common.md#english-population-register-frame-account #8143d19 Reread the obligation's text, "contract-rule", beside every settings unit before recording the lines below; no unit hands this obligation to an owner the population does not contain.
+@evidenceReview language/obligations/common.md#english-population-register-frame-account #8143d19 Reread the obligation's text, "After a layer is complete, a reviewer fluent in the declared English variety reads its evidence-free population before counting recurrent frames", beside every settings unit before recording the lines below; no unit hands this obligation to an owner the population does not contain.
 @evidence settings/000-governing-aim.md#delivery-contract Against "Population register and frame account", Delivery contract states "Status: production invention; repository starter contract.".
 @evidenceReview settings/000-governing-aim.md#delivery-contract #c5ab39f Checked Delivery contract in settings/000-governing-aim.md for "Population register and frame account"; the quoted statement is that unit's own text, and its scope stays inside the unit rather than reaching a sibling.
 @evidence settings/000-governing-aim.md#governing-aim Against "Population register and frame account", Governing aim states "Status: production invention; repository starter contract.".
@@ -59,7 +59,7 @@ Every settings unit is compared with this obligation above, one quoted statement
 
 <!--
 @evidence language/obligations/common.md#english-audience-language-access The complete settings population, 23 H2 units, was read as one whole against "Audience language access"; the tags below quote what each unit itself states, and those units are the owners this production names for the obligation.
-@evidenceReview language/obligations/common.md#english-audience-language-access #f976d4e Reread the obligation's text, "contract-rule", beside every settings unit before recording the lines below; no unit hands this obligation to an owner the population does not contain.
+@evidenceReview language/obligations/common.md#english-audience-language-access #f976d4e Reread the obligation's text, "The complete population makes unexplained code-switches, specialist terms, historical forms, captions, quotations, and translated variants accessible to the declared audience without erasing distinctions the production intends to preserve", beside every settings unit before recording the lines below; no unit hands this obligation to an owner the population does not contain.
 @evidence settings/000-governing-aim.md#delivery-contract Against "Audience language access", Delivery contract states "Status: production invention; repository starter contract.".
 @evidenceReview settings/000-governing-aim.md#delivery-contract #c5ab39f Checked Delivery contract in settings/000-governing-aim.md for "Audience language access"; the quoted statement is that unit's own text, and its scope stays inside the unit rather than reaching a sibling.
 @evidence settings/000-governing-aim.md#governing-aim Against "Audience language access", Governing aim states "Status: production invention; repository starter contract.".

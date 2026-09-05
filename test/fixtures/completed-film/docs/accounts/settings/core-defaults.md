@@ -4,7 +4,7 @@
 
 <!--
 @evidence obligations/core/defaults.md#recurrent-frame-distribution The complete settings population, 23 H2 units, was read as one whole against "Recurrent frame distribution"; the tags below quote what each unit itself states, and those units are the owners this production names for the obligation.
-@evidenceReview obligations/core/defaults.md#recurrent-frame-distribution #7b1eacb Reread the obligation's text, "contract-rule", beside every settings unit before recording the lines below; no unit hands this obligation to an owner the population does not contain.
+@evidenceReview obligations/core/defaults.md#recurrent-frame-distribution #7b1eacb Reread the obligation's text, "Group repeated contrasts, qualifications, enumerations, transitions, predicates, and closures by their literal operation", beside every settings unit before recording the lines below; no unit hands this obligation to an owner the population does not contain.
 @evidence settings/000-governing-aim.md#delivery-contract Against "Recurrent frame distribution", Delivery contract states "Status: production invention; repository starter contract.".
 @evidenceReview settings/000-governing-aim.md#delivery-contract #c5ab39f Checked Delivery contract in settings/000-governing-aim.md for "Recurrent frame distribution"; the quoted statement is that unit's own text, and its scope stays inside the unit rather than reaching a sibling.
 @evidence settings/000-governing-aim.md#governing-aim Against "Recurrent frame distribution", Governing aim states "Status: production invention; repository starter contract.".
@@ -59,7 +59,7 @@ Every settings unit is compared with this obligation above, one quoted statement
 
 <!--
 @evidence obligations/core/defaults.md#surface-cadence-distribution The complete settings population, 23 H2 units, was read as one whole against "Surface cadence distribution"; the tags below quote what each unit itself states, and those units are the owners this production names for the obligation.
-@evidenceReview obligations/core/defaults.md#surface-cadence-distribution #f287e18 Reread the obligation's text, "contract-rule", beside every settings unit before recording the lines below; no unit hands this obligation to an owner the population does not contain.
+@evidenceReview obligations/core/defaults.md#surface-cadence-distribution #f287e18 Reread the obligation's text, "Map sentence length, paragraph movement, breaks, emphasis, and handoff patterns to the pressures and forms they carry", beside every settings unit before recording the lines below; no unit hands this obligation to an owner the population does not contain.
 @evidence settings/000-governing-aim.md#delivery-contract Against "Surface cadence distribution", Delivery contract states "Status: production invention; repository starter contract.".
 @evidenceReview settings/000-governing-aim.md#delivery-contract #c5ab39f Checked Delivery contract in settings/000-governing-aim.md for "Surface cadence distribution"; the quoted statement is that unit's own text, and its scope stays inside the unit rather than reaching a sibling.
 @evidence settings/000-governing-aim.md#governing-aim Against "Surface cadence distribution", Governing aim states "Status: production invention; repository starter contract.".
