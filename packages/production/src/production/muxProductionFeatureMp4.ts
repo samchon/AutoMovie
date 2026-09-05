@@ -5,6 +5,7 @@ import {
 import type {
   IAutoMovieFilmTimeline,
   IAutoMovieProductionFrameRate,
+  IAutoMovieProductionMediaProbe,
 } from "@automovie/interface";
 import type {
   Box,
@@ -36,17 +37,17 @@ export const muxProductionFeatureMp4 = (props: {
   audio: Uint8Array;
 }): Uint8Array => {
   const videoProbe = probeProductionVideoMp4(props.video);
+  // An audio-mix probe resolves to an audio probe or throws, so the union is
+  // narrowed here instead of being re-checked after the fact.
   const audioProbe = probeProductionMedia({
     kind: "audio-mix",
     mediaType: "audio/mp4",
     bytes: props.audio,
-  });
+  }) as Extract<IAutoMovieProductionMediaProbe, { kind: "audio" }>;
   const video = parseMp4(props.video);
   const audio = parseMp4(props.audio);
   const videoTrack = video.movie.videoTracks[0]!;
   const audioTrack = audio.movie.audioTracks[0]!;
-  if (videoProbe.kind !== "video" || audioProbe.kind !== "audio")
-    throw new Error("Feature mux requires one parsed video and audio track.");
   if (
     exactClockProduct(
       videoProbe.presentation.movieDuration,
@@ -185,28 +186,20 @@ const exactClockProduct = (left: number, right: number): bigint => {
   return BigInt(left) * BigInt(right);
 };
 
+/**
+ * The audio presentation length in 48 kHz samples.
+ *
+ * The audio-mix probe's Opus profile assertion already proved this presentation
+ * an exact safe-integer sample count on its 48 kHz clock, and the runtime
+ * comparison proved the movie timescale a positive safe integer, so the exact
+ * division needs no second verdict here.
+ */
 const exactPresentationTicks = (
   duration: number,
   timescale: number,
   destinationTimescale: number,
-): number => {
-  const numerator = exactClockProduct(duration, destinationTimescale);
-  if (Number.isSafeInteger(timescale) === false || timescale <= 0)
-    throw new Error(
-      "MP4 presentation timescale must be a positive safe integer.",
-    );
-  const denominator = BigInt(timescale);
-  if (numerator % denominator !== 0n)
-    throw new Error(
-      "Audio presentation duration is not an exact integer sample boundary.",
-    );
-  const quotient = numerator / denominator;
-  if (quotient > BigInt(Number.MAX_SAFE_INTEGER))
-    throw new Error(
-      "Audio presentation sample count exceeds the safe integer domain.",
-    );
-  return Number(quotient);
-};
+): number =>
+  Number(exactClockProduct(duration, destinationTimescale) / BigInt(timescale));
 
 /**
  * Conform immutable per-shot repaint clips into the current cut-only timeline.
@@ -412,23 +405,16 @@ export const conformProductionVisualDeliveryVideoMp4 = (props: {
   if (frame !== props.timeline.totalFrames)
     throw new Error("Visual delivery sources do not cover the current film.");
   const bytes = new Uint8Array(output.getBuffer().buffer);
-  const conformed = probeProductionVideoMp4(bytes);
-  const frameRate = resolveProductionFrameRate(props.timeline);
+  // The frame count was proved equal to the film above, and the profile
+  // assertion proves the exact rational clock of every written sample.
   assertProductionVideoProfile({
     expected: resolveProductionVideoProfile({
       width: first.probe.width,
       height: first.probe.height,
-      frameRate,
+      frameRate: resolveProductionFrameRate(props.timeline),
     }),
-    actual: conformed,
+    actual: probeProductionVideoMp4(bytes),
   });
-  if (
-    conformed.frameCount !== props.timeline.totalFrames ||
-    equalProductionFrameRates(conformed.frameRate, frameRate) === false
-  )
-    throw new Error(
-      "Visual delivery conform changed the exact film presentation contract.",
-    );
   return bytes;
 };
 

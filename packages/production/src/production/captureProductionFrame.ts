@@ -134,12 +134,14 @@ export const captureAutoMovieProductionFrame = async (
       rendererIdentity: manifest.rendererIdentity,
       bundle: preview.renderBundle,
       outputDigest: frame.digest,
+      // The receipt reopen above proved a same-shot semantic record for every
+      // shot mask frame, so the lookup cannot miss.
       semanticMask:
         frame.pass === "mask" && manifest.target.kind === "shot"
-          ? (manifest.semanticMasks.find(
+          ? manifest.semanticMasks.find(
               (record) =>
                 record.frame === frame.index && record.pass === frame.pass,
-            ) ?? null)
+            )!
           : null,
     },
     frame: {

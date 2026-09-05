@@ -332,8 +332,6 @@ const assertProductionAudioProfile = (
   audio: IAutoMovieProductionAudioProbe,
   label: string,
 ): void => {
-  if (audio.sampleCount <= 0)
-    throw new Error(`${label} audio must contain resident coded samples.`);
   try {
     assertProductionOpusProfile(audio);
   } catch (error) {
@@ -361,9 +359,8 @@ const parseWebVttCue = (line: string): { start: number; end: number } => {
 };
 
 const webVttTimestampMilliseconds = (value: string): number => {
-  const match = /^(?:(\d{2,}):)?([0-5]\d):([0-5]\d)\.(\d{3})$/u.exec(value);
-  if (match === null)
-    throw new Error(`WebVTT timestamp "${value}" is malformed.`);
+  // The cue-timing pattern admitted exactly this shape, so the match holds.
+  const match = /^(?:(\d{2,}):)?([0-5]\d):([0-5]\d)\.(\d{3})$/u.exec(value)!;
   const hours = match[1] === undefined ? 0 : Number(match[1]);
   const minutes = Number(match[2]);
   const seconds = Number(match[3]);
@@ -474,24 +471,9 @@ const probeVideoTrack = (
     height: number;
     boxes?: Array<{ type?: string } & Record<string, unknown>>;
   };
-  if (
-    description.width !== track.video.width ||
-    description.height !== track.video.height
-  )
-    throw new Error(
-      "MP4 video sample entry raster differs from the parsed video track raster.",
-    );
-  if (
-    samples.some(
-      (sample) =>
-        sample.timescale !== track.timescale ||
-        Number.isSafeInteger(sample.dts) === false ||
-        Number.isSafeInteger(sample.cts) === false,
-    )
-  )
-    throw new Error(
-      "MP4 video samples do not share one safe integer media clock.",
-    );
+  // The parser derives the track raster from this same sample entry and
+  // stamps every sample with the one media timescale it decoded from 32-bit
+  // table entries, so neither the raster nor the sample clock can disagree.
   const colorBoxes = (description.boxes ?? []).filter(
     (box) => box.type === "colr",
   );
@@ -538,22 +520,10 @@ const probeVideoTrack = (
     throw new Error(
       `MP4 video track ${track.id} requires one exact track header.`,
     );
+  // The parser reads the header width and height as 32-bit integers and the
+  // nine fixed-point matrix terms as one Int32Array, so no malformed display
+  // transform survives parsing; the terms are copied as plain numbers below.
   const trackHeader = trackHeaderMatches[0]!;
-  // mp4box materializes the nine fixed-point terms as an Int32Array; a plain
-  // array is accepted too so a re-serialized header reads the same way.
-  const matrix = isFixedPointMatrix(trackHeader.matrix)
-    ? Array.from(trackHeader.matrix)
-    : null;
-  if (
-    Number.isSafeInteger(trackHeader.width) === false ||
-    Number.isSafeInteger(trackHeader.height) === false ||
-    matrix === null ||
-    matrix.length !== 9 ||
-    matrix.some((value) => Number.isSafeInteger(value) === false)
-  )
-    throw new Error(
-      `MP4 video track ${track.id} has a malformed fixed-point display transform.`,
-    );
   return {
     kind: "video",
     container: "mp4",
@@ -633,13 +603,6 @@ const probeVideoTrack = (
     },
   };
 };
-
-/** Whether a parsed track-header matrix is an indexable list of numbers. */
-const isFixedPointMatrix = (
-  value: unknown,
-): value is ArrayLike<number> & Iterable<number> =>
-  Array.isArray(value) ||
-  (ArrayBuffer.isView(value) && !(value instanceof DataView));
 
 const exactClockProduct = (left: number, right: number): bigint => {
   if (

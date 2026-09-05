@@ -34,6 +34,8 @@ const SUBJECT = "prototype:automovie:model:soloist";
  *
  * Scenarios:
  *
+ * 0. A record naming a picture outside the inspection directory and a reading
+ *    without a runtime identity both keep the plan and drop the observation.
  * 1. Inspecting a shot whose compiled artifact does not exist is refused as
  *    `capture-target-missing` before the instrument is asked to draw anything.
  * 2. A completed sweep reads back its full plan and every observation.
@@ -87,6 +89,33 @@ export const test_production_inspect_subject_absent_files =
         });
       const whole = readBack();
 
+      // A record that names a picture outside the inspection directory is not
+      // an observation of this inspection, however well formed it is.
+      const foreignRecord = path.join(
+        fixture.root,
+        ...swept.views[1]!.path.replace(/.png$/u, ".json").split("/"),
+      );
+      const foreignOriginal = fs.readFileSync(foreignRecord);
+      const record = JSON.parse(foreignOriginal.toString("utf8")) as {
+        observation: { artifact: string };
+      };
+      record.observation.artifact = `elsewhere/${path.posix.basename(
+        record.observation.artifact,
+      )}`;
+      fs.writeFileSync(foreignRecord, JSON.stringify(record));
+      const foreignArtifact = readBack();
+      fs.writeFileSync(foreignRecord, foreignOriginal);
+      // Without a current runtime identity nothing can be verified, so the
+      // reading keeps its denominator and reports no observation.
+      const unverifiable = readAutoMovieSubjectInspection({
+        projectRoot: fixture.root,
+        productionId: "fixture-film",
+        shot: "opening",
+        subject: SUBJECT,
+        plan: swept.planRecord!,
+        runtimeIdentity: null,
+      });
+
       // Deleted rather than rewritten. A rewritten picture is refused by its
       // digest; a deleted one has to be refused by its absence, and that is the
       // branch nothing reached.
@@ -110,6 +139,14 @@ export const test_production_inspect_subject_absent_files =
           whole: {
             planned: whole.planned.length,
             observations: whole.observations.length,
+          },
+          foreignArtifact: {
+            planned: foreignArtifact.planned.length,
+            observations: foreignArtifact.observations.length,
+          },
+          unverifiable: {
+            planned: unverifiable.planned.length,
+            observations: unverifiable.observations.length,
           },
           oneGone: {
             planned: oneGone.planned.length,
@@ -135,6 +172,8 @@ export const test_production_inspect_subject_absent_files =
             drawn: 0,
           },
           whole: { planned: 6, observations: 6 },
+          foreignArtifact: { planned: 6, observations: 5 },
+          unverifiable: { planned: 6, observations: 0 },
           oneGone: { planned: 6, observations: 5, keptTheOthers: true },
           // The denominator survives its numerator, which is what makes the
           // honest incomplete reading possible at all.

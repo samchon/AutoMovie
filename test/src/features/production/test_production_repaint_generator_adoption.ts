@@ -1657,6 +1657,7 @@ export const test_production_repaint_generator_adoption =
             { status: "already-active", ownerAttemptId: "owner-attempt" },
             { status: "unknown-outcome", ownerAttemptId: "owner-attempt" },
             { status: "prefix-changed" },
+            { status: "answered-outside-the-contract" },
           ] as const
         ).map((admission) =>
           new AutoMovieProductionRepaintService(
@@ -1693,9 +1694,14 @@ export const test_production_repaint_generator_adoption =
               "changed between planning and dispatch",
             ) &&
               claimRefusalMessages[2]!.includes("Run the same repaint again"),
+            claimRefusalMessages[3]!.includes(
+              "claim admission failed before any provider call: Repaint attempt claim store answered outside the admission contract.",
+            ),
           ],
-          noProviderCall: claimRefusalMessages.every((message) =>
-            message.includes("no provider call was made"),
+          noProviderCall: claimRefusalMessages.every(
+            (message) =>
+              message.includes("no provider call was made") ||
+              message.includes("before any provider call"),
           ),
           providerCalls: claimRefusedProviderCalls,
         },
@@ -1704,9 +1710,10 @@ export const test_production_repaint_generator_adoption =
             "repaint-claim-refused",
             "repaint-claim-refused",
             "repaint-claim-refused",
+            "repaint-claim-refused",
           ],
-          receipts: [null, null, null],
-          explained: [true, true, true],
+          receipts: [null, null, null, null],
+          explained: [true, true, true, true],
           noProviderCall: true,
           providerCalls: 0,
         },
@@ -2497,6 +2504,311 @@ export const test_production_repaint_generator_adoption =
           evidence: expectedEvidence,
           commits: 1,
         },
+      );
+
+      const laneServices = (
+        lanes: Array<{ shot: string; lane: "deterministic" | "repainted" }>,
+      ): AutoMovieProductionContext =>
+        ({
+          forProduction: () =>
+            ({
+              project: {
+                productionId: input.productionId,
+                graph: () => ({
+                  production: {
+                    visualDelivery: "mixed",
+                    visualDeliveryLanes: lanes.map((lane, index) => ({
+                      occurrence: `occurrence-${index}`,
+                      ...lane,
+                    })),
+                  },
+                }),
+              },
+            }) as unknown as IAutoMovieProductionServices,
+        }) as unknown as AutoMovieProductionContext;
+      const laneRefusals = await Promise.all([
+        new AutoMovieProductionRepaintService(
+          actualAdapter(selected.runtimeIdentity),
+          selected,
+        ).serve(laneServices([{ shot: "other", lane: "repainted" }]), input),
+        new AutoMovieProductionRepaintService(
+          actualAdapter(selected.runtimeIdentity),
+          selected,
+        ).serve(
+          laneServices([{ shot: input.shot, lane: "deterministic" }]),
+          input,
+        ),
+      ]);
+      TestValidator.equals(
+        "mixed delivery admits a repaint only for a shot assigned to the repainted lane",
+        laneRefusals.map(codeOf),
+        ["repaint-delivery-disabled", "repaint-delivery-disabled"],
+      );
+
+      const storedRaw = runnable.project.repaintRawOutput(
+        priorSucceeded.requestId,
+        priorSucceeded.attemptId,
+      );
+      const resume = (
+        repaintRawOutput: () => unknown,
+      ): Promise<IAutoMovieRepaintShot> =>
+        new AutoMovieProductionRepaintService(
+          actualAdapter(selected.runtimeIdentity),
+          selected,
+          {
+            policy: retryLegalityPolicy,
+            evidence: executionEvidence(),
+            requestId: priorSucceeded.requestId,
+            now: () => new Date("2026-08-28T12:03:01.000Z"),
+          },
+        ).repaint(
+          scenarioServices(runnable, {
+            project: {
+              repaintRequestAttempts: () => [priorSucceeded],
+              repaintRawOutput,
+              commitRepaintRendition: () => 1,
+            },
+          }),
+          input,
+        );
+      const resumeRefusals = await Promise.all([
+        resume(() => ({
+          receipt: { ...storedRaw.receipt, disposition: "invalid" },
+          bytes: storedRaw.bytes,
+        })),
+        resume(() => {
+          throw new AutoMovieProductionInputRaceError(
+            "the raw revision moved during resume",
+          );
+        }),
+      ]);
+      TestValidator.equals(
+        "resuming a succeeded attempt requires its exact candidate-source raw revision",
+        resumeRefusals.map(codeOf),
+        ["repaint-commit-refused", "repaint-input-changed"],
+      );
+
+      const wrongRasterOutput = await productionH264Mp4({
+        width: 8,
+        height: 16,
+        fps: 24,
+        frameCount: 4,
+      });
+      const retained: Array<{ disposition: string; mediaType: string }> = [];
+      const retainingServices = (
+        extra: Record<string, unknown> = {},
+      ): IAutoMovieProductionServices =>
+        scenarioServices(runnable, {
+          project: {
+            commitRepaintRawOutput: (publication: {
+              receipt: { disposition: string; mediaType: string };
+            }) => {
+              retained.push({
+                disposition: publication.receipt.disposition,
+                mediaType: publication.receipt.mediaType,
+              });
+              return 1;
+            },
+            commitRepaintRendition: () => 1,
+            ...extra,
+          },
+        });
+      const staleAfterProvider = (): Record<string, unknown> => {
+        let reads = 0;
+        return {
+          contentInputs: () => (++reads === 1 ? validInputs : []),
+        };
+      };
+      const cancelling = (
+        adapter: (signal: AbortController) => AutoMovieProductionShotRepaint,
+      ): Promise<IAutoMovieRepaintShot> => {
+        const controller = new AbortController();
+        return new AutoMovieProductionRepaintService(
+          adapter(controller),
+          selected,
+          {
+            policy: executionPolicy(),
+            evidence: executionEvidence(),
+            signal: controller.signal,
+          },
+        ).repaint(retainingServices(), input);
+      };
+      const retention: Array<[string, () => Promise<IAutoMovieRepaintShot>]> = [
+        [
+          "partialAfterCancel",
+          () =>
+            cancelling((controller) => async () => {
+              controller.abort();
+              throw new AutoMovieRepaintAttemptError(
+                "provider-refusal",
+                "the provider stopped after the caller cancelled",
+                1,
+                null,
+                {
+                  bytes: Buffer.from("partial-frames"),
+                  mediaType: "video/mp4",
+                },
+              );
+            }),
+        ],
+        [
+          "acceptedAfterCancel",
+          () =>
+            cancelling((controller) => async () => {
+              controller.abort();
+              return {
+                mediaType: "video/mp4",
+                bytes: generatedBytes,
+                runtimeIdentity: selected.runtimeIdentity,
+              };
+            }),
+        ],
+        [
+          "invalidAfterCancel",
+          () =>
+            cancelling((controller) => async () => {
+              controller.abort();
+              return {
+                mediaType: "video/mp4",
+                bytes: wrongRasterOutput,
+                runtimeIdentity: selected.runtimeIdentity,
+              };
+            }),
+        ],
+        [
+          "overBudget",
+          () =>
+            new AutoMovieProductionRepaintService(
+              async () => ({
+                mediaType: "video/mp4",
+                bytes: generatedBytes,
+                costUnits: executionPolicy().maximumCostUnits + 1,
+                runtimeIdentity: selected.runtimeIdentity,
+              }),
+              selected,
+              { policy: executionPolicy(), evidence: executionEvidence() },
+            ).repaint(retainingServices(), input),
+        ],
+        [
+          "staleWithoutBytes",
+          () =>
+            repaint(retainingServices(staleAfterProvider()), {
+              adapter: async () => ({
+                mediaType: "video/mp4",
+                bytes: new Uint8Array(),
+                runtimeIdentity: selected.runtimeIdentity,
+              }),
+            }),
+        ],
+        [
+          "staleWithUntypedBytes",
+          () =>
+            repaint(retainingServices(staleAfterProvider()), {
+              adapter: async () =>
+                ({
+                  mediaType: 42,
+                  bytes: generatedBytes,
+                  runtimeIdentity: selected.runtimeIdentity,
+                }) as never,
+            }),
+        ],
+        [
+          "untypedBytes",
+          () =>
+            repaint(retainingServices(), {
+              adapter: async () =>
+                ({
+                  mediaType: 42,
+                  bytes: generatedBytes,
+                  runtimeIdentity: selected.runtimeIdentity,
+                }) as never,
+            }),
+        ],
+      ];
+      const retentionResults: Record<string, string | undefined> = {};
+      const retentionRecords: Record<string, typeof retained> = {};
+      for (const [name, pending] of retention) {
+        retained.length = 0;
+        retentionResults[name] = codeOf(await pending());
+        retentionRecords[name] = [...retained];
+      }
+      TestValidator.equals(
+        "every terminal raw output is retained under the disposition that ended it",
+        { results: retentionResults, records: retentionRecords },
+        {
+          results: {
+            partialAfterCancel: "repaint-failed",
+            acceptedAfterCancel: "repaint-failed",
+            invalidAfterCancel: "repaint-failed",
+            overBudget: "repaint-failed",
+            staleWithoutBytes: "repaint-input-changed",
+            staleWithUntypedBytes: "repaint-input-changed",
+            untypedBytes: "repaint-output-invalid",
+          },
+          records: {
+            partialAfterCancel: [
+              { disposition: "cancelled", mediaType: "video/mp4" },
+            ],
+            acceptedAfterCancel: [
+              { disposition: "cancelled", mediaType: "video/mp4" },
+            ],
+            invalidAfterCancel: [
+              { disposition: "cancelled", mediaType: "video/mp4" },
+            ],
+            overBudget: [
+              { disposition: "budget-exhausted", mediaType: "video/mp4" },
+            ],
+            staleWithoutBytes: [],
+            staleWithUntypedBytes: [
+              {
+                disposition: "invalid",
+                mediaType: "application/octet-stream",
+              },
+            ],
+            untypedBytes: [
+              {
+                disposition: "invalid",
+                mediaType: "application/octet-stream",
+              },
+            ],
+          },
+        },
+      );
+
+      const settlements: string[] = [];
+      const unknownOutcome = await new AutoMovieProductionRepaintService(
+        () =>
+          new Promise<never>(() => {
+            // The provider never answers inside the attempt timeout.
+          }),
+        selected,
+        {
+          policy: executionPolicy({
+            maximumAttempts: 1,
+            attemptTimeoutMs: 5,
+            maximumElapsedMs: 50,
+            backoffMs: [],
+          }),
+          evidence: executionEvidence(),
+        },
+      ).repaint(
+        scenarioServices(runnable, {
+          project: {
+            settleRepaintAttemptClaim: (
+              _claim: unknown,
+              settlement: string,
+            ) => {
+              settlements.push(settlement);
+              return 1;
+            },
+          },
+        }),
+        input,
+      );
+      TestValidator.equals(
+        "a provider that never answers settles its claim as an unknown outcome",
+        { code: codeOf(unknownOutcome), settlements },
+        { code: "repaint-failed", settlements: ["unknown-outcome"] },
       );
     } catch (error) {
       rootFailure = { error };

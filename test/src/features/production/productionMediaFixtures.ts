@@ -3,7 +3,14 @@ import {
   trimProductionAudioPresentation,
 } from "@automovie/production";
 import * as HME from "h264-mp4-encoder";
-import { BoxParser, createFile } from "mp4box";
+import {
+  type Box,
+  type BoxKind,
+  BoxParser,
+  MP4BoxBuffer,
+  type Movie,
+  createFile,
+} from "mp4box";
 import { PNG } from "pngjs";
 
 interface IProductionMediaEncoderFailure {
@@ -112,6 +119,14 @@ export const productionAudioMp4 = (): Uint8Array =>
 export const productionOpusMp4 = (
   sampleFrames: number,
   channels: 1 | 2 = 2,
+  options: {
+    /**
+     * Explicit movie clock and track-header duration. When given, the file
+     * carries no presentation edit, so the movie header alone states the
+     * runtime the way a foreign muxer might.
+     */
+    movie?: { timescale: number; duration: number };
+  } = {},
 ): Uint8Array => {
   const primingSamples = 312;
   const codedSampleFrames =
@@ -126,18 +141,22 @@ export const productionOpusMp4 = (
   description.StreamCount = 1;
   description.CoupledCount = channels - 1;
   description.ChannelMapping = [];
+  const movie = options.movie ?? {
+    timescale: 48_000,
+    duration: codedSampleFrames,
+  };
   const file = createFile();
   file.init({
     brands: ["isom", "iso2", "mp41", "Opus"],
-    timescale: 48_000,
-    duration: codedSampleFrames,
+    timescale: movie.timescale,
+    duration: movie.duration,
   });
   const track = file.addTrack({
     type: "Opus",
     hdlr: "soun",
     timescale: 48_000,
     media_duration: codedSampleFrames,
-    duration: codedSampleFrames,
+    duration: movie.duration,
     samplerate: 48_000,
     channel_count: channels,
     samplesize: 16,
@@ -150,15 +169,102 @@ export const productionOpusMp4 = (
       cts: dts,
       is_sync: true,
     });
-  trimProductionAudioPresentation({
-    file,
-    track,
-    mediaTimescale: 48_000,
-    movieTimescale: 48_000,
-    primingSamples,
-    presentationSamples: sampleFrames,
-  });
+  if (options.movie === undefined)
+    trimProductionAudioPresentation({
+      file,
+      track,
+      mediaTimescale: 48_000,
+      movieTimescale: 48_000,
+      primingSamples,
+      presentationSamples: sampleFrames,
+    });
   return new Uint8Array(file.getBuffer().buffer);
+};
+
+/** Parse one MP4 the way the production probe does. */
+export const parseProductionMp4 = (
+  bytes: Uint8Array,
+): { file: ReturnType<typeof createFile>; movie: Movie } => {
+  const file = createFile();
+  let movie: Movie | null = null;
+  file.onReady = (info) => {
+    movie = info;
+  };
+  const copy = Uint8Array.from(bytes).buffer;
+  file.appendBuffer(MP4BoxBuffer.fromArrayBuffer(copy, 0), true);
+  file.flush();
+  return { file, movie: movie ?? file.getInfo() };
+};
+
+/**
+ * One raw child box for a visual sample entry, written from its exact payload
+ * so a test can author the header shapes the encoder never produces.
+ */
+export const rawMp4Box = (type: "colr" | "pasp", payload: Uint8Array): Box => {
+  const box = new BoxParser.box[type]() as Box & { data?: Uint8Array };
+  box.data = payload;
+  return box;
+};
+
+/**
+ * Re-serialize one normalized H.264 MP4 through the resident writer.
+ *
+ * `movie` replaces the movie clock and track-header duration,
+ * `descriptionBoxes` rewrites the sample-entry child boxes, and `mutate`
+ * may reshape the writable file before it is serialized.
+ */
+export const rewriteProductionH264Mp4 = (
+  bytes: Uint8Array,
+  props: {
+    movie?: { timescale: number; duration: number };
+    descriptionBoxes?: (boxes: Box[]) => Box[];
+    mutate?: (file: ReturnType<typeof createFile>, track: number) => void;
+  } = {},
+): Uint8Array => {
+  const { file, movie } = parseProductionMp4(bytes);
+  const track = movie.videoTracks[0]!;
+  const samples = file.getTrackSamplesInfo(track.id);
+  const description = samples[0]!.description as unknown as {
+    type: NonNullable<
+      Parameters<ReturnType<typeof createFile>["addTrack"]>[0]
+    >["type"];
+    boxes: Box[];
+  };
+  const output = createFile();
+  output.init({
+    brands: ["isom", "iso2", "mp41"],
+    timescale: props.movie?.timescale ?? track.timescale,
+    duration: props.movie?.duration ?? track.duration,
+  });
+  const outputTrack = output.addTrack({
+    type: description.type,
+    hdlr: "vide",
+    name: "AutoMovie rewritten H.264",
+    timescale: track.timescale,
+    media_duration: track.duration,
+    duration: props.movie?.duration ?? track.duration,
+    width: track.video!.width,
+    height: track.video!.height,
+    language: track.language,
+    description_boxes: (props.descriptionBoxes ?? ((boxes) => boxes))(
+      description.boxes,
+    ) as unknown as BoxKind[],
+  });
+  for (const sample of samples)
+    output.addSample(
+      outputTrack,
+      Uint8Array.from(
+        bytes.subarray(sample.offset, sample.offset + sample.size),
+      ),
+      {
+        duration: sample.duration,
+        dts: sample.dts,
+        cts: sample.cts,
+        is_sync: sample.is_sync,
+      },
+    );
+  props.mutate?.(output, outputTrack);
+  return new Uint8Array(output.getBuffer().buffer);
 };
 
 /** One actual MPEG-4 Part 2 video track used to reject non-AVC MP4. */

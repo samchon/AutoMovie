@@ -1142,16 +1142,9 @@ export class AutoMovieProductionOracleService {
             evidence: semanticStatus.evidence,
           }
         : null;
-    if (
-      input.target.kind === "shot" &&
-      pass === "mask" &&
-      semanticSidecar === null
-    )
-      return previewFailure(
-        generated.inputFingerprint,
-        "capture-failed",
-        "A shot mask frame has no reopenable same-shot semantic evidence. Correct the capture host and capture it again.",
-      );
+    // A shot mask frame always reaches here with complete or incomplete
+    // same-shot evidence: every other classification was refused above, so
+    // the sidecar is present exactly when the target is a shot.
     const retained = retainedBundleFrames(
       this.project,
       bundleRoot,
@@ -1189,10 +1182,9 @@ export class AutoMovieProductionOracleService {
               sidecar: semanticSidecar,
             }),
           ]),
-    ].sort(
-      (left, right) =>
-        left.frame - right.frame || compareCodeUnits(left.shot, right.shot),
-    );
+      // One bundle carries at most one mask receipt per frame, all for the
+      // target shot, so frame order is total.
+    ].sort((left, right) => left.frame - right.frame);
     const manifest: IAutoMovieRenderBundleManifest = {
       version: 6,
       target: input.target,

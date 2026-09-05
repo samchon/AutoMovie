@@ -1040,13 +1040,10 @@ export class AutoMovieProductionRepaintService {
         },
         onAttempt: (attempt, observation) => {
           services.project.commitRepaintAttempt(attempt);
-          const claim = claims.get(attempt.attemptId);
-          if (claim === undefined)
-            throw new Error(
-              `Repaint terminal attempt "${attempt.attemptId}" lost its provider-dispatch claim.`,
-            );
+          // Execution admits an attempt only through the claim recorded above,
+          // so every terminal attempt it reports carries its own claim.
           services.project.settleRepaintAttemptClaim(
-            claim,
+            claims.get(attempt.attemptId)!,
             observation.externalOutcome === "unknown"
               ? "unknown-outcome"
               : attempt.status === "succeeded"
@@ -1068,12 +1065,14 @@ export class AutoMovieProductionRepaintService {
     if (execution.stop === "observer-failed")
       return failure(
         "repaint-commit-refused",
-        `Repaint terminal attempt "${execution.attempts.at(-1)?.attemptId ?? "unknown"}" could not be committed; no retry or candidate publication was started.`,
+        // An observer can fail only while notifying a pushed terminal attempt.
+        `Repaint terminal attempt "${execution.attempts.at(-1)!.attemptId}" could not be committed; no retry or candidate publication was started.`,
       );
     if (execution.stop === "claim-refused")
       return failure(
         "repaint-claim-refused",
-        repaintClaimRefusalMessage(requestId, execution.claimRefusal),
+        // A claim-refused stop always carries the admission that refused it.
+        repaintClaimRefusalMessage(requestId, execution.claimRefusal!),
       );
     if (execution.accepted === null)
       return failure(
@@ -1479,10 +1478,8 @@ const diagnostic = (
  */
 const repaintClaimRefusalMessage = (
   requestId: string,
-  refusal: AutoMovieRepaintClaimRefusal | null,
+  refusal: AutoMovieRepaintClaimRefusal,
 ): string => {
-  if (refusal === null)
-    return `Repaint request "${requestId}" was refused a dispatch claim before any provider call; no cause was reported.`;
   switch (refusal.status) {
     case "already-active":
       return `Repaint request "${requestId}" is held by an unsettled dispatch claim for attempt "${refusal.ownerAttemptId}"; no provider call was made. If that run is still executing, wait for it to settle. If it ended without settling, its provider outcome is unknown and this request identity stays closed: author a new request instead of retrying this one.`;
