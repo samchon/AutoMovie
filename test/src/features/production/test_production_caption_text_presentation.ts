@@ -26,7 +26,9 @@ const captionText = loadSourceModule<{
  * 3. WebVTT reserved characters are escaped without flattening line breaks.
  * 4. Empty authored lines use an empty WebVTT class span, preserving a visible
  *    line without introducing a blank block delimiter or a text grapheme.
- * 5. Identifier and annotation text uses a separate single-line sanitizer.
+ * 5. Annotation text uses a separate single-line sanitizer, while header and
+ *    cue identifiers are preserved verbatim: WebVTT defines no entity escape
+ *    for them, so escaping would change the identity they carry.
  * 6. Direct WebVTT serialization refuses a malformed language rather than
  *    publishing it as an annotation.
  */
@@ -87,7 +89,7 @@ export const test_production_caption_text_presentation = (): void => {
   TestValidator.equals(
     "canonical WebVTT preserves the exact caption presentation bytes",
     serialized,
-    "WEBVTT film&lt;&amp;&gt;\n\ncue&lt;&amp;&gt;\n00:00:00.000 --> 00:00:01.000\n<lang EN-us><v Narrator One>first\n<c></c>\nthird\t&lt;&amp;&gt; </v></lang>\n",
+    "WEBVTT film<&>\n\ncue<&>\n00:00:00.000 --> 00:00:01.000\n<lang EN-us><v Narrator One>first\n<c></c>\nthird\t&lt;&amp;&gt; </v></lang>\n",
   );
   const payload = serialized
     .split("\n")

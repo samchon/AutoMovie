@@ -276,7 +276,7 @@ export const test_inspection_subject_review_coverage = (): void => {
       missing: ["front", "back"],
       stale: [],
       unplanned: [],
-      foreign: 15,
+      foreign: 20,
       duplicates: 0,
     },
   );
