@@ -1,8 +1,10 @@
+import { readAutoMovieProductionEvidence } from "@automovie/evidence";
 import {
   AutoMovieProductionContext,
   captureAutoMovieProductionTurntable,
 } from "@automovie/production";
 
+import { productionEvidence } from "../lint.config";
 import { createProductionFrameCaptureRuntime } from "./capture";
 import { readAutoMovieTurntableArguments } from "./commandArguments";
 import { currentAutoMovieProductionId } from "./projectIdentity";
@@ -25,11 +27,26 @@ const productionId = currentAutoMovieProductionId();
  * fingerprint. A model whose design or source moved owes the set again; its
  * previous frames stay on disk and do not count.
  */
+/**
+ * This project's own graph-derived authoring identity, read the way
+ * `compile` reads it. The compile identity includes the reviewed source owner
+ * bindings, so a capture judged without the same declaration would read every
+ * compiled production as stale.
+ */
+const currentAuthoringEvidence = () =>
+  readAutoMovieProductionEvidence({
+    root: productionEvidence.location,
+    productionEvidence,
+  });
+const authoringEvidence = currentAuthoringEvidence();
 const captureRuntime = createProductionFrameCaptureRuntime();
 const context = new AutoMovieProductionContext(
   captureRuntime.capture,
   process.cwd(),
   productionId,
+  undefined,
+  authoringEvidence,
+  currentAuthoringEvidence,
 );
 let captureFailure: { error: unknown } | undefined;
 try {

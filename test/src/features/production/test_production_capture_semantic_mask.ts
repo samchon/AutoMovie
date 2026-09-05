@@ -1,4 +1,5 @@
 import { digestAutoMovieSemanticMask } from "@automovie/engine";
+import { readAutoMovieProductionEvidence } from "@automovie/evidence";
 import type {
   IAutoMovieModelRecipe,
   IAutoMoviePreviewFrameInput,
@@ -15,6 +16,7 @@ import { TestValidator } from "@nestia/e2e";
 import fs from "node:fs";
 import path from "node:path";
 
+import { completedFilmEvidenceConfig } from "../internal/completedFilmFixture";
 import { recordingCapture } from "./captureHost";
 import {
   productionCompileSucceeded,
@@ -77,7 +79,9 @@ type SemanticMaskObservation = Awaited<
  *    its coverage gap, and the receipt reopens through the bundle.
  * 2. A shot mask frame without semantic evidence, a beauty frame carrying
  *    another shot's evidence, and an asset frame carrying any evidence are
- *    refused as capture failures naming the classification.
+ *    refused as capture failures naming the classification, and a context
+ *    opened without the compile's own authoring declaration reads the compile
+ *    as stale rather than capturing against a foreign identity.
  * 3. Range-of-motion extremes are previewed for a rigged model and refused for
  *    a rigless one; a named compiled part is framed and an unknown part is
  *    refused.
@@ -100,9 +104,17 @@ export const test_production_capture_semantic_mask =
         "utf8",
       );
       const project = AutoMovieProductionProject.open(fixture.root);
-      const compiled = new AutoMovieProductionCompiler(project).compile({
-        scope: "source",
+      // Review scope admits a shot only through its reviewed source-owner
+      // binding, so both compiles read the fixture's own authoring evidence.
+      const evidence = readAutoMovieProductionEvidence({
+        root: fixture.root,
+        productionEvidence: completedFilmEvidenceConfig(fixture.root),
       });
+      const compiled = new AutoMovieProductionCompiler(
+        project,
+        evidence,
+        () => evidence,
+      ).compile({ scope: "source" });
       if (
         productionCompileSucceeded("semantic capture fixture", compiled) ===
         false
@@ -121,6 +133,9 @@ export const test_production_capture_semantic_mask =
           }),
           fixture.root,
           undefined,
+          undefined,
+          evidence,
+          () => evidence,
         );
       const notRun: SemanticMaskObservation = {
         status: "not-run",
@@ -158,6 +173,17 @@ export const test_production_capture_semantic_mask =
       const firstMask = await shotMask(sameShot, 0);
       const secondMask = await shotMask(sameShot, 1 / 24);
       const incompleteMask = await shotMask(incompleteEvidence, 2 / 24);
+      console.log(
+        "F0CAP",
+        JSON.stringify(firstMask.diagnostics),
+        JSON.stringify(
+          compiled.diagnostics.map((d) => [
+            d.code,
+            d.target,
+            d.message.slice(0, 200),
+          ]),
+        ),
+      );
       const secondManifest =
         secondMask.receipt === null
           ? null
@@ -199,6 +225,16 @@ export const test_production_capture_semantic_mask =
         host.adapter,
         fixture.root,
         undefined,
+        undefined,
+        evidence,
+        () => evidence,
+      );
+      // The compile identity carries the reviewed owner bindings, so a context
+      // that never read the declaration cannot match the generated manifest.
+      const undeclared = new AutoMovieProductionContext(
+        host.adapter,
+        fixture.root,
+        undefined,
       );
       const foreignEvidence = withSemantic(() => ({
         status: "available",
@@ -206,6 +242,14 @@ export const test_production_capture_semantic_mask =
       }));
       const refusals = {
         maskWithoutEvidence: await shotMask(plain, 0),
+        withoutDeclaration: await captureAutoMovieProductionFrame(undeclared, {
+          target: {
+            kind: "shot",
+            productionId: "fixture-film",
+            id: "opening",
+            time: 0,
+          },
+        }),
         foreignOnBeauty: await captureAutoMovieProductionFrame(
           foreignEvidence,
           {
@@ -232,6 +276,7 @@ export const test_production_capture_semantic_mask =
       const refusalPrefixes: Record<keyof typeof refusals, string> = {
         maskWithoutEvidence:
           "The capture host returned not-run semantic evidence: ",
+        withoutDeclaration: "Generated input ",
         foreignOnBeauty:
           "The capture host returned foreign semantic evidence: ",
         assetWithEvidence:
@@ -259,6 +304,11 @@ export const test_production_capture_semantic_mask =
           maskWithoutEvidence: {
             captured: false,
             code: "capture-failed",
+            named: true,
+          },
+          withoutDeclaration: {
+            captured: false,
+            code: "generated-stale",
             named: true,
           },
           foreignOnBeauty: {
@@ -344,6 +394,8 @@ export const test_production_capture_semantic_mask =
       await shotMask(sameShot, 2);
       const reviewed = new AutoMovieProductionCompiler(
         AutoMovieProductionProject.open(fixture.root),
+        evidence,
+        () => evidence,
       ).lint({ scope: "review" });
       TestValidator.equals(
         "captured mask frames are read back as review evidence with their coverage",

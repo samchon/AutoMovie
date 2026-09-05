@@ -1,3 +1,4 @@
+import type { IAutoMovieProductionEvidence } from "@automovie/evidence";
 import {
   AutoMovieProductionContext,
   AutoMovieProductionRepaintService,
@@ -87,6 +88,10 @@ export const createNodeProductionRepaintHost = (props: {
   capture: ConstructorParameters<typeof AutoMovieProductionContext>[0];
   closeCapture: IProductionRepaintHost["closeCapture"];
   root: string;
+  /** The authoring declaration the current compile was judged against. */
+  authoringEvidence?: IAutoMovieProductionEvidence;
+  /** Fresh reader of that declaration for atomic currentness confirmation. */
+  currentAuthoringEvidence?: () => IAutoMovieProductionEvidence;
   signal?: AbortSignal;
   setExitCode: IProductionRepaintHost["setExitCode"];
   stdout: IProductionRepaintHost["stdout"];
@@ -97,6 +102,9 @@ export const createNodeProductionRepaintHost = (props: {
       props.capture,
       props.root,
       invocation.productionId,
+      undefined,
+      props.authoringEvidence,
+      props.currentAuthoringEvidence,
     );
     if (invocation.kind === "selection" || invocation.kind === "reversal") {
       const inspection = context

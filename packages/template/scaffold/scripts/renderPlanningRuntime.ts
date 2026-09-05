@@ -620,7 +620,13 @@ export const createProductionRenderPlanningRuntime = (props: {
     });
 
   const productionCaptureContext = (): AutoMovieProductionContext =>
-    new AutoMovieProductionContext(renderHost.capture, root, productionId);
+    new AutoMovieProductionContext(
+      renderHost.capture,
+      root,
+      productionId,
+      undefined,
+      props.authoringEvidence,
+    );
 
   const productionServices = () =>
     openAutoMovieProduction({
