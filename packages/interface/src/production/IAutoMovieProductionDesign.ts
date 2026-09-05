@@ -280,19 +280,19 @@ export interface IAutoMovieCaptionReadabilityBoundary {
 /**
  * Exact rational frame rate for a production timeline.
  *
- * @evidence requirements/editorial/rational-time-and-ranges.md#editorial-rational-time-ranges Preserves fractional frame rates as authored rational values instead of a lossy decimal proxy.
+ * @evidence requirements/editorial/rational-time-and-ranges.md#editorial-canonical-time Preserves fractional frame rates as authored rational values whose identity survives reduction instead of a lossy decimal proxy.
  * @evidence specifications/editorial-render-and-delivery/rational-timeline-and-composition.md#spec-editorial-rational-timeline Defines the portable numerator and denominator consumed by timeline calculations.
  */
 export interface IAutoMovieProductionFrameRate {
   /**
    * Positive integer numerator.
-   * @evidence requirements/editorial/rational-time-and-ranges.md#editorial-rational-time-ranges Preserves the authored rate numerator.
+   * @evidence requirements/editorial/rational-time-and-ranges.md#editorial-canonical-time Preserves the authored rate numerator of the canonical rational rate.
    * @evidence specifications/editorial-render-and-delivery/rational-timeline-and-composition.md#spec-editorial-rational-timeline Supplies the canonical clock numerator.
    */
   numerator: number;
   /**
    * Positive integer denominator.
-   * @evidence requirements/editorial/rational-time-and-ranges.md#editorial-rational-time-ranges Preserves the authored rate denominator.
+   * @evidence requirements/editorial/rational-time-and-ranges.md#editorial-canonical-time Preserves the authored positive rate denominator of the canonical rational rate.
    * @evidence specifications/editorial-render-and-delivery/rational-timeline-and-composition.md#spec-editorial-rational-timeline Supplies the canonical clock denominator.
    */
   denominator: number;
@@ -670,7 +670,7 @@ export interface IAutoMovieProductionDesign {
    *
    * @evidence requirements/production-design/art-direction-and-visual-language.md#production-design-art-direction-exceptions Exposes `frameFormat` as the portable data boundary for the production design art direction exceptions requirement.
    * @evidence specifications/narrative-and-intent/design-authority-and-visual-language.md#narrative-intent-graphics-style-exceptions Types `frameFormat` for the narrative intent graphics style exceptions system contract.
-   * @evidence requirements/editorial/rational-time-and-ranges.md#editorial-rational-time-ranges Preserves the authored frame clock as an exact reduced rational identity.
+   * @evidence requirements/editorial/rational-time-and-ranges.md#editorial-canonical-time Preserves the authored frame clock as an exact reduced rational identity.
    * @evidence specifications/editorial-render-and-delivery/rational-timeline-and-composition.md#spec-editorial-rational-timeline Supplies the canonical timeline numerator and denominator.
    */
   frameFormat: {

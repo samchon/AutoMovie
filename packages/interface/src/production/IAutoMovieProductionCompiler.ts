@@ -1190,12 +1190,12 @@ export interface IAutoMovieProductionRenderedDeliverable {
 }
 
 /**
- * One exact delivered occurrence and its lane-specific source identity.
+ * The lane-independent identity of one exact delivered occurrence.
  *
- * @evidence requirements/repaint/sequence-continuity-and-publication.md#repaint-mixed-delivery Preserves one explicit occurrence lane and its source provenance.
+ * @evidence requirements/repaint/sequence-continuity-and-publication.md#repaint-mixed-delivery Preserves one explicit occurrence and its source provenance.
  * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-repaint-failure-publication Types the exact final-conform occurrence join.
  */
-export type IAutoMovieProductionRenditionDeliveryShot = {
+export interface IAutoMovieProductionRenditionDeliveryOccurrence {
   /**
    * Stable timeline occurrence identity.
    * @evidence requirements/repaint/sequence-continuity-and-publication.md#repaint-mixed-delivery Keeps repeated shot labels distinct.
@@ -1223,44 +1223,74 @@ export type IAutoMovieProductionRenditionDeliveryShot = {
    * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-repaint-failure-publication Seals the conformed source bytes.
    */
   digest: AutoMovieContentDigest;
+}
+
+/**
+ * The deterministic renderer lane of one delivered occurrence.
+ *
+ * @evidence requirements/repaint/sequence-continuity-and-publication.md#repaint-mixed-delivery Makes the deterministic lane explicit rather than inferred from absent repaint data.
+ * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-repaint-failure-publication Refuses receipt-based lane inference for deterministic pixels.
+ */
+export interface IAutoMovieProductionRenditionDeliveryDeterministicLane {
   /**
-   * Digest of the canonical immutable receipt, or null for deterministic pixels.
+   * Deterministic renderer source, unaffected by resident repaint data.
+   * @evidence requirements/repaint/sequence-continuity-and-publication.md#repaint-mixed-delivery Makes the lane explicit.
+   * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-repaint-failure-publication Refuses receipt-based inference.
+   */
+  lane: "deterministic";
+  /** Current deterministic feature source digest. */
+  sourceDigest: AutoMovieContentDigest;
+  /**
+   * No repaint lineage belongs to this lane.
    *
-   * @evidence requirements/repaint/sequence-continuity-and-publication.md#repaint-publication-gate Preserves whether selected repaint lineage exists.
+   * @evidence requirements/repaint/sequence-continuity-and-publication.md#repaint-publication-gate Records that no selected repaint lineage exists for deterministic pixels.
+   * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-repaint-failure-publication Seals the absence of a candidate receipt in final conform.
+   */
+  receiptDigest: null;
+  /** No active selection belongs to this lane. */
+  selectionDigest: null;
+}
+
+/**
+ * The selected-repaint lane of one delivered occurrence.
+ *
+ * @evidence requirements/repaint/sequence-continuity-and-publication.md#repaint-mixed-delivery Makes the repainted lane and its selection explicit.
+ * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-repaint-failure-publication Types the selected candidate provenance final conform consumes.
+ */
+export interface IAutoMovieProductionRenditionDeliveryRepaintedLane {
+  /** Explicit selected repaint source. */
+  lane: "repainted";
+  /** Candidate output digest, repeated as the exact source identity. */
+  sourceDigest: AutoMovieContentDigest;
+  /**
+   * Digest of the canonical immutable candidate receipt.
+   *
+   * @evidence requirements/repaint/sequence-continuity-and-publication.md#repaint-publication-gate Preserves that selected repaint lineage exists.
    * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-repaint-failure-publication Seals the candidate receipt consumed by final conform.
    */
-} & (
-  | {
-      /**
-       * Deterministic renderer source, unaffected by resident repaint data.
-       * @evidence requirements/repaint/sequence-continuity-and-publication.md#repaint-mixed-delivery Makes the lane explicit.
-       * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-repaint-failure-publication Refuses receipt-based inference.
-       */
-      lane: "deterministic";
-      /** Current deterministic feature source digest. */
-      sourceDigest: AutoMovieContentDigest;
-      /** No repaint lineage belongs to this lane. */
-      receiptDigest: null;
-      /** No active selection belongs to this lane. */
-      selectionDigest: null;
-    }
-  | {
-      /** Explicit selected repaint source. */
-      lane: "repainted";
-      /** Candidate output digest, repeated as the exact source identity. */
-      sourceDigest: AutoMovieContentDigest;
-      /** Digest of the canonical immutable candidate receipt. */
-      receiptDigest: AutoMovieContentDigest;
-      /** Digest of the active immutable selection record. */
-      selectionDigest: AutoMovieContentDigest;
-      /** Stable active selection identity. */
-      selectionId: string;
-      /** Immutable request identity. */
-      requestId: string;
-      /** Immutable successful attempt identity. */
-      attemptId: string;
-    }
-);
+  receiptDigest: AutoMovieContentDigest;
+  /** Digest of the active immutable selection record. */
+  selectionDigest: AutoMovieContentDigest;
+  /** Stable active selection identity. */
+  selectionId: string;
+  /** Immutable request identity. */
+  requestId: string;
+  /** Immutable successful attempt identity. */
+  attemptId: string;
+}
+
+/**
+ * One exact delivered occurrence and its lane-specific source identity.
+ *
+ * @evidence requirements/repaint/sequence-continuity-and-publication.md#repaint-mixed-delivery Preserves one explicit occurrence lane and its source provenance.
+ * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-repaint-failure-publication Types the exact final-conform occurrence join.
+ */
+export type IAutoMovieProductionRenditionDeliveryShot =
+  IAutoMovieProductionRenditionDeliveryOccurrence &
+    (
+      | IAutoMovieProductionRenditionDeliveryDeterministicLane
+      | IAutoMovieProductionRenditionDeliveryRepaintedLane
+    );
 
 /**
  * Review and receipt provenance for one repainted feature delivery.
@@ -1334,26 +1364,69 @@ export type AutoMovieRepaintObservationVerdict =
  * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-repaint-structure-continuity Supplies the complete parser-verifiable sequence receipt.
  */
 export interface IAutoMovieRepaintSequenceObservation {
+  /** Closed observation protocol version; any other value is a malformed receipt. */
   version: 1;
+  /** Production namespace whose current visual member set was observed together. */
   productionId: string;
+  /** Compile fingerprint the observation was performed against; a later compile stales it. */
   compileFingerprint: AutoMovieContentDigest;
+  /** Film timeline fingerprint the ordered member set was read from. */
   timelineFingerprint: AutoMovieContentDigest;
+  /**
+   * Continuity baseline the observation judged drift against.
+   *
+   * @evidence requirements/repaint/sequence-continuity-and-publication.md#repaint-continuity-baseline-changes Binds the observation to one explicit baseline address, version, scope, and intended-delta list.
+   * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-repaint-structure-continuity Makes an intentional change distinguishable from drift by naming it before observation.
+   */
   baseline: {
+    /** Stable address of the baseline artifact the members were compared against. */
     address: string;
+    /** Exact baseline revision identity. */
     version: string;
+    /** Continuity aspects the baseline governs, in declared order. */
     scope: string[];
+    /** Unique intentional deviations from the baseline that must not count as drift. */
     intendedDeltas: string[];
   };
+  /** Complete ordered occurrence members observed together, lane by lane. */
   members: IAutoMovieRepaintObservationMember[];
+  /** Digest of the canonical ordered member population, recomputed on every read. */
   memberSetDigest: AutoMovieContentDigest;
-  artifact: { path: string; digest: AutoMovieContentDigest };
-  playback: { runtime: string; context: string };
+  /** Observed playback artifact and the exact bytes the verdicts were read from. */
+  artifact: {
+    /** Render-root-relative path of the observed artifact. */
+    path: string;
+    /** Digest of the observed artifact bytes at observation time. */
+    digest: AutoMovieContentDigest;
+  };
+  /** Playback runtime and presentation context the sequence was observed under. */
+  playback: {
+    /** Exact playback runtime identity. */
+    runtime: string;
+    /** Exact presentation context identity. */
+    context: string;
+  };
+  /**
+   * Whether the aggregate observation ran to completion.
+   * @evidence requirements/repaint/sequence-continuity-and-publication.md#repaint-temporal-artifacts Keeps failed, unperformed, and unsupported observation distinct from a passing one.
+   * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-repaint-structure-continuity Gates publication on a completed observation rather than on the absence of failures.
+   */
   status: "completed" | "failed" | "not-run" | "unsupported";
+  /**
+   * Independent verdict per temporal review axis.
+   * @evidence requirements/repaint/sequence-continuity-and-publication.md#repaint-temporal-artifacts Records flicker, identity drift, geometry warp, texture crawl, and transition mismatch as separate truths.
+   * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-repaint-structure-continuity Requires every axis to pass before the member set is publishable.
+   */
   verdicts: {
+    /** Frame-to-frame luminance or color flicker across the member sequence. */
     flicker: AutoMovieRepaintObservationVerdict;
+    /** Loss of subject identity between consecutive members. */
     identityDrift: AutoMovieRepaintObservationVerdict;
+    /** Structural geometry warping across consecutive members. */
     geometryWarp: AutoMovieRepaintObservationVerdict;
+    /** Surface texture crawling or swimming across consecutive members. */
     textureCrawl: AutoMovieRepaintObservationVerdict;
+    /** Mismatch at a cut or transition between adjacent members. */
     transitionMismatch: AutoMovieRepaintObservationVerdict;
   };
 }
@@ -1569,31 +1642,31 @@ export type AutoMovieProductionPngColor =
 /**
  * Complete parser-observed PNG picture facts.
  *
- * @evidence requirements/delivery-and-accessibility/picture-color-and-image-sequences.md#delivery-picture-color-sequences Preserves the decoded raster, channel, alpha, color, aspect, and orientation facts required for final picture verification.
+ * @evidence requirements/delivery-and-accessibility/picture-color-and-image-sequences.md#delivery-picture-dimensions-window Preserves the decoded raster, precision, channel, color, aspect, and orientation facts final picture verification compares against the planned window.
  * @evidence specifications/editorial-render-and-delivery/delivery-profiles-time-and-picture.md#spec-delivery-picture-products Supplies the observed picture product compared fieldwise with the selected delivery profile.
  */
 export interface IAutoMovieProductionPngPicture {
   /**
    * Decoded pixel width.
-   * @evidence requirements/delivery-and-accessibility/picture-color-and-image-sequences.md#delivery-picture-color-sequences Preserves the decoded horizontal raster.
+   * @evidence requirements/delivery-and-accessibility/picture-color-and-image-sequences.md#delivery-picture-dimensions-window Preserves the decoded horizontal stored dimension.
    * @evidence specifications/editorial-render-and-delivery/delivery-profiles-time-and-picture.md#spec-delivery-picture-products Supplies the observed width for profile comparison.
    */
   width: number;
   /**
    * Decoded pixel height.
-   * @evidence requirements/delivery-and-accessibility/picture-color-and-image-sequences.md#delivery-picture-color-sequences Preserves the decoded vertical raster.
+   * @evidence requirements/delivery-and-accessibility/picture-color-and-image-sequences.md#delivery-picture-dimensions-window Preserves the decoded vertical stored dimension.
    * @evidence specifications/editorial-render-and-delivery/delivery-profiles-time-and-picture.md#spec-delivery-picture-products Supplies the observed height for profile comparison.
    */
   height: number;
   /**
    * Decoded sample precision.
-   * @evidence requirements/delivery-and-accessibility/picture-color-and-image-sequences.md#delivery-picture-color-sequences Preserves the encoded channel precision.
+   * @evidence requirements/delivery-and-accessibility/picture-color-and-image-sequences.md#delivery-picture-alpha-channels Preserves the encoded per-channel precision that fixes each channel's valid range.
    * @evidence specifications/editorial-render-and-delivery/delivery-profiles-time-and-picture.md#spec-delivery-picture-products Supplies the observed bit depth for profile comparison.
    */
   bitDepth: number;
   /**
    * Decoded channel population.
-   * @evidence requirements/delivery-and-accessibility/picture-color-and-image-sequences.md#delivery-picture-color-sequences Distinguishes grayscale, palette, RGB, and alpha-bearing pictures.
+   * @evidence requirements/delivery-and-accessibility/picture-color-and-image-sequences.md#delivery-picture-alpha-channels Distinguishes grayscale, palette, RGB, and alpha-bearing channel populations.
    * @evidence specifications/editorial-render-and-delivery/delivery-profiles-time-and-picture.md#spec-delivery-picture-products Supplies the observed color model for profile comparison.
    */
   color: AutoMovieProductionPngColor;
@@ -1611,7 +1684,7 @@ export interface IAutoMovieProductionPngPicture {
   interlace: "none" | "adam7";
   /**
    * Color meaning explicitly carried by the datastream.
-   * @evidence requirements/delivery-and-accessibility/picture-color-and-image-sequences.md#delivery-picture-color-sequences Refuses to infer missing picture color identity.
+   * @evidence requirements/delivery-and-accessibility/picture-color-and-image-sequences.md#delivery-scene-display-picture Preserves the display-referred color identity the datastream declares instead of inferring one.
    * @evidence specifications/editorial-render-and-delivery/delivery-profiles-time-and-picture.md#spec-delivery-picture-products Supplies the observed color-space fact for profile comparison.
    */
   colorSpace: "srgb" | "icc" | "gamma" | "unidentified";
@@ -1667,20 +1740,18 @@ export interface IAutoMovieProductionWebVttCue {
 /**
  * Observed Opus sample-entry facts from final delivery bytes.
  *
- * @evidence requirements/delivery-and-accessibility/audio-streams-and-channels.md#delivery-audio-streams-channels Preserves the exact coded stream and channel facts used to validate a final audio deliverable.
+ * @evidence requirements/delivery-and-accessibility/audio-streams-and-channels.md#delivery-channel-layout Preserves the coded channel count, mapping family, coupling, and channel order the final Opus stream declares.
  * @evidence specifications/editorial-render-and-delivery/delivery-profiles-time-and-picture.md#spec-delivery-container-media-facts Carries parser-observed codec configuration for fieldwise comparison with the selected delivery profile.
  */
 export interface IAutoMovieProductionOpusDescription {
   /**
    * Closed parsed sample-entry family.
-   * @evidence requirements/delivery-and-accessibility/audio-streams-and-channels.md#delivery-audio-streams-channels Identifies the encoded Opus stream.
+   * @evidence requirements/delivery-and-accessibility/containers-codecs-and-media-facts.md#delivery-supported-combinations Identifies the Opus sample-entry family the delivery profile's supported codec subset is checked against.
    * @evidence specifications/editorial-render-and-delivery/delivery-profiles-time-and-picture.md#spec-delivery-container-media-facts Supplies the parsed sample-entry kind.
    */
   kind: "opus";
   /**
    * Parsed dOps version.
-   * @evidence requirements/delivery-and-accessibility/audio-streams-and-channels.md#delivery-audio-streams-channels Preserves codec-description version identity.
-   * @evidence specifications/editorial-render-and-delivery/delivery-profiles-time-and-picture.md#spec-delivery-container-media-facts Supplies the parsed dOps version.
    */
   version: number;
   /**
@@ -1691,13 +1762,13 @@ export interface IAutoMovieProductionOpusDescription {
   outputChannelCount: number;
   /**
    * Parsed decoder pre-skip in samples.
-   * @evidence requirements/delivery-and-accessibility/audio-streams-and-channels.md#delivery-audio-streams-channels Preserves the coded priming boundary.
+   * @evidence requirements/delivery-and-accessibility/audio-streams-and-channels.md#delivery-audio-sample-boundary Preserves the coded priming boundary that offsets the first audible sample.
    * @evidence specifications/editorial-render-and-delivery/delivery-profiles-time-and-picture.md#spec-delivery-container-media-facts Supplies the parsed pre-skip.
    */
   preSkip: number;
   /**
    * Parsed input sample rate.
-   * @evidence requirements/delivery-and-accessibility/audio-streams-and-channels.md#delivery-audio-streams-channels Preserves the Opus input clock.
+   * @evidence requirements/delivery-and-accessibility/audio-streams-and-channels.md#delivery-audio-sample-boundary Preserves the Opus input clock that converts sample counts into presentation time.
    * @evidence specifications/editorial-render-and-delivery/delivery-profiles-time-and-picture.md#spec-delivery-container-media-facts Supplies the sample-entry rate.
    */
   inputSampleRate: number;
@@ -1730,25 +1801,25 @@ export interface IAutoMovieProductionOpusDescription {
 export interface IAutoMovieProductionAudioProbe {
   /**
    * Parsed media class.
-   * @evidence requirements/delivery-and-accessibility/audio-streams-and-channels.md#delivery-audio-streams-channels Identifies one final audio track.
+   * @evidence requirements/delivery-and-accessibility/containers-codecs-and-media-facts.md#delivery-supported-combinations Identifies one final audio track within the delivered container and codec combination.
    * @evidence specifications/simulation-effects-and-sound/mix-stems-loudness-and-av-join.md#sound-delivery-stream-and-inventory Supplies the audio inventory kind.
    */
   kind: "audio";
   /**
    * Parsed container family.
-   * @evidence requirements/delivery-and-accessibility/audio-streams-and-channels.md#delivery-audio-streams-channels Preserves the final audio container identity.
+   * @evidence requirements/delivery-and-accessibility/containers-codecs-and-media-facts.md#delivery-supported-combinations Preserves the observed container family of the final audio stream.
    * @evidence specifications/simulation-effects-and-sound/mix-stems-loudness-and-av-join.md#sound-delivery-stream-and-inventory Supplies the audio inventory container.
    */
   container: "mp4";
   /**
    * Parsed codec string.
-   * @evidence requirements/delivery-and-accessibility/audio-streams-and-channels.md#delivery-audio-streams-channels Preserves the final stream codec.
+   * @evidence requirements/delivery-and-accessibility/containers-codecs-and-media-facts.md#delivery-supported-combinations Preserves the observed codec of the final audio stream.
    * @evidence specifications/simulation-effects-and-sound/mix-stems-loudness-and-av-join.md#sound-delivery-stream-and-inventory Supplies the audio inventory codec.
    */
   codec: string;
   /**
    * Parsed presentation runtime.
-   * @evidence requirements/delivery-and-accessibility/audio-streams-and-channels.md#delivery-audio-streams-channels Preserves the stream presentation duration.
+   * @evidence requirements/delivery-and-accessibility/containers-codecs-and-media-facts.md#delivery-stream-duration-interleave Preserves the observed presentation duration of the final audio stream.
    * @evidence specifications/simulation-effects-and-sound/mix-stems-loudness-and-av-join.md#audio-visual-duration-and-timebase-join Supplies the audio side of the duration join.
    */
   runtimeSeconds: number;
@@ -1760,19 +1831,19 @@ export interface IAutoMovieProductionAudioProbe {
   channels: number;
   /**
    * Parsed media sample rate.
-   * @evidence requirements/delivery-and-accessibility/audio-streams-and-channels.md#delivery-audio-streams-channels Preserves the final audio clock.
+   * @evidence requirements/delivery-and-accessibility/audio-streams-and-channels.md#delivery-audio-sample-boundary Preserves the final audio clock every sample count is measured against.
    * @evidence specifications/simulation-effects-and-sound/mix-stems-loudness-and-av-join.md#sound-delivery-stream-and-inventory Supplies the final sample rate.
    */
   sampleRate: number;
   /**
    * Parsed packet count.
-   * @evidence requirements/delivery-and-accessibility/audio-streams-and-channels.md#delivery-audio-streams-channels Proves the final track has resident coded samples.
+   * @evidence requirements/delivery-and-accessibility/audio-streams-and-channels.md#delivery-audio-sample-boundary Proves the exact resident coded sample count of the final track.
    * @evidence specifications/simulation-effects-and-sound/mix-stems-loudness-and-av-join.md#sound-delivery-stream-and-inventory Supplies the coded packet population.
    */
   sampleCount: number;
   /**
    * Parsed decoder priming in samples.
-   * @evidence requirements/delivery-and-accessibility/audio-streams-and-channels.md#delivery-audio-streams-channels Preserves the presentation offset.
+   * @evidence requirements/delivery-and-accessibility/containers-codecs-and-media-facts.md#delivery-stream-duration-interleave Preserves the observed priming-like presentation offset of the final audio stream.
    * @evidence specifications/simulation-effects-and-sound/mix-stems-loudness-and-av-join.md#audio-visual-duration-and-timebase-join Supplies the audio priming fact.
    */
   primingSamples: number;
@@ -1804,13 +1875,13 @@ export interface IAutoMovieProductionAudioProbe {
 /**
  * Parser-observed video track, presentation, and picture facts.
  *
- * @evidence requirements/delivery-and-accessibility/containers-codecs-and-media-facts.md#delivery-container-codec-facts Retains the final container, coded-stream, timing, and presentation facts read from delivery bytes.
+ * @evidence requirements/delivery-and-accessibility/containers-codecs-and-media-facts.md#delivery-stream-duration-interleave Retains the observed timing, presentation, and coded-stream facts of the final video track read from delivery bytes.
  * @evidence specifications/editorial-render-and-delivery/delivery-profiles-time-and-picture.md#spec-delivery-container-media-facts Supplies the observed facts compared fieldwise with the selected delivery profile.
  */
 export interface IAutoMovieProductionVideoProbe {
   /**
    * Parsed media class.
-   * @evidence requirements/delivery-and-accessibility/containers-codecs-and-media-facts.md#delivery-container-codec-facts Identifies one final video track.
+   * @evidence requirements/delivery-and-accessibility/containers-codecs-and-media-facts.md#delivery-supported-combinations Identifies one final video track within the delivered container and codec combination.
    * @evidence specifications/editorial-render-and-delivery/delivery-profiles-time-and-picture.md#spec-delivery-container-media-facts Supplies the video inventory kind.
    */
   kind: "video";
@@ -1822,7 +1893,7 @@ export interface IAutoMovieProductionVideoProbe {
   container: "mp4";
   /**
    * Parsed coded-stream family.
-   * @evidence requirements/delivery-and-accessibility/containers-codecs-and-media-facts.md#delivery-container-codec-facts Preserves the final video codec.
+   * @evidence requirements/delivery-and-accessibility/containers-codecs-and-media-facts.md#delivery-supported-combinations Preserves the observed video codec of the final stream.
    * @evidence specifications/editorial-render-and-delivery/delivery-profiles-time-and-picture.md#spec-delivery-container-media-facts Supplies the parsed codec.
    */
   codec: "h264";
@@ -1937,7 +2008,7 @@ export interface IAutoMovieProductionVideoProbe {
   };
   /**
    * Container-declared and resolved picture color identity.
-   * @evidence requirements/delivery-and-accessibility/picture-color-and-image-sequences.md#delivery-picture-color-sequences Refuses unidentified or conflicting color interpretation.
+   * @evidence requirements/delivery-and-accessibility/picture-color-and-image-sequences.md#delivery-scene-display-picture Preserves the container-declared and resolved display-referred color identity so a conflicting interpretation is refused rather than inferred.
    * @evidence specifications/editorial-render-and-delivery/delivery-profiles-time-and-picture.md#spec-delivery-picture-products Supplies the final color facts.
    */
   color: {
@@ -2834,7 +2905,7 @@ export interface IAutoMovieFilmTimeline {
    * Integer legacy timelines may omit this field and are interpreted as
    * `fps/1`; fractional timelines must preserve their explicit identity.
    *
-   * @evidence requirements/editorial/rational-time-and-ranges.md#editorial-rational-time-ranges Preserves the compiler-owned frame clock without a decimal reconstruction.
+   * @evidence requirements/editorial/rational-time-and-ranges.md#editorial-canonical-time Preserves the compiler-owned frame clock as one canonical rational identity without a decimal reconstruction.
    * @evidence specifications/editorial-render-and-delivery/rational-timeline-and-composition.md#spec-editorial-rational-timeline Supplies the canonical rational clock to caption, sound, and delivery consumers.
    */
   frameRate?: IAutoMovieProductionFrameRate;
