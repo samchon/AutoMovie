@@ -17,7 +17,11 @@ const captureError = (operation: () => void): unknown => {
   }
 };
 
-const fakeRenderer = (width = 64, height = 32, antialias = true) => {
+const fakeRenderer = (
+  width = 64,
+  height = 32,
+  antialias: boolean | "unreported" = true,
+) => {
   const size = new THREE.Vector2(width, height);
   let target: THREE.WebGLRenderTarget | null = null;
   let autoClear = true;
@@ -27,6 +31,7 @@ const fakeRenderer = (width = 64, height = 32, antialias = true) => {
   const opacities: number[] = [];
   const toneMapped: boolean[] = [];
   const clearColors: Array<{ color: number; alpha: number }> = [];
+  const renderedInto: Array<THREE.WebGLRenderTarget | null> = [];
   const restorationAttempts = { autoClear: 0, color: 0, target: 0 };
   let failAutoClear: Error | undefined;
   let failColor: Error | undefined;
@@ -48,7 +53,11 @@ const fakeRenderer = (width = 64, height = 32, antialias = true) => {
       autoClear = value;
     },
     getDrawingBufferSize: (output: THREE.Vector2) => output.copy(size),
-    getContextAttributes: () => ({ antialias }),
+    // A renderer that does not report its context attributes is the prior
+    // unconditional default, AA on, exactly as the dissolve helper reads it.
+    ...(antialias === "unreported"
+      ? {}
+      : { getContextAttributes: () => ({ antialias }) }),
     getRenderTarget: () => target,
     setRenderTarget: (value: THREE.WebGLRenderTarget | null) => {
       if (failTarget !== undefined && value === failTarget.value) {
@@ -72,6 +81,7 @@ const fakeRenderer = (width = 64, height = 32, antialias = true) => {
     },
     clear: () => undefined,
     render: (scene: THREE.Scene) => {
+      renderedInto.push(target);
       const mesh = scene.children[0] as THREE.Mesh | undefined;
       const material = mesh?.material;
       if (material instanceof THREE.MeshBasicMaterial)
@@ -91,6 +101,7 @@ const fakeRenderer = (width = 64, height = 32, antialias = true) => {
     opacities,
     toneMapped,
     clearColors,
+    renderedInto,
     restorationAttempts,
     state: () => ({
       target,
@@ -124,11 +135,15 @@ const fakeRenderer = (width = 64, height = 32, antialias = true) => {
  * 2. Empty, oversized, non-finite, out-of-range and non-complementary layer
  *    inputs are refused instead of clamped or drawn opaquely.
  * 3. Fade weights zero, one-half and one reach the GPU quad exactly, with black
- *    output clear and callback execution at every boundary.
+ *    output clear and callback execution at every boundary; the offscreen
+ *    target matches the renderer's antialiasing, and a renderer that reports
+ *    no context attributes is treated as antialiased.
  * 4. Per-renderer targets are reused, resized and disposed independently, and
  *    disposal before creation or twice is safe.
  * 5. Target, auto-clear, clear color and clear alpha are restored after success,
- *    primary rendering failure, each restoration failure, and combined failure.
+ *    including a success that started on a caller-owned render target whose
+ *    composite lands in that target, after primary rendering failure, after
+ *    each restoration failure, and after combined failure.
  */
 export const test_viewer_film_fade = (): void => {
   const directLayer = { shot: "shot-a", weight: 1 };
@@ -193,6 +208,7 @@ export const test_viewer_film_fade = (): void => {
 
   const first = fakeRenderer();
   const second = fakeRenderer(128, 72, false);
+  const unreported = fakeRenderer(8, 8, "unreported");
   disposeFadeToBlack(first.renderer);
   let callbacks = 0;
   for (const weight of [0, 0.5, 1])
@@ -204,8 +220,10 @@ export const test_viewer_film_fade = (): void => {
       weight,
     );
   renderFadeToBlackFrame(second.renderer, () => undefined, 0.5);
+  renderFadeToBlackFrame(unreported.renderer, () => undefined, 0.5);
   const firstTarget = first.targets[0] as THREE.WebGLRenderTarget;
   const secondTarget = second.targets[0] as THREE.WebGLRenderTarget;
+  const unreportedTarget = unreported.targets[0] as THREE.WebGLRenderTarget;
   TestValidator.equals(
     "fade sends exact weights through renderer-local targets over black",
     namedFacts([
@@ -235,6 +253,7 @@ export const test_viewer_film_fade = (): void => {
       ["rendererLocal", () => firstTarget !== secondTarget],
       ["aaOn", () => firstTarget.samples === 4],
       ["aaOff", () => secondTarget.samples === 0],
+      ["aaUnreportedIsOn", () => unreportedTarget.samples === 4],
       [
         "stateRestored",
         () =>
@@ -256,9 +275,43 @@ export const test_viewer_film_fade = (): void => {
       rendererLocal: true,
       aaOn: true,
       aaOff: true,
+      aaUnreportedIsOn: true,
       stateRestored: true,
     },
   );
+
+  // A capture host composes into its own render target; the fade must land
+  // there and leave that target selected rather than switching to the screen.
+  const hosted = fakeRenderer();
+  const hostTarget = new THREE.WebGLRenderTarget(4, 4);
+  hosted.renderer.setRenderTarget(hostTarget);
+  renderFadeToBlackFrame(hosted.renderer, () => undefined, 0.25);
+  TestValidator.equals(
+    "fade composes into a caller-owned render target and keeps it selected",
+    namedFacts([
+      [
+        "compositeTarget",
+        () =>
+          hosted.renderedInto.length === 1 &&
+          hosted.renderedInto[0] === hostTarget,
+      ],
+      ["selectedAfter", () => hosted.state().target === hostTarget],
+      ["weight", () => hosted.opacities[0] === 0.25],
+      [
+        "clearRestored",
+        () =>
+          hosted.state().clearColor === 0x336699 &&
+          hosted.state().clearAlpha === 0.4,
+      ],
+    ]),
+    {
+      compositeTarget: true,
+      selectedAfter: true,
+      weight: true,
+      clearRestored: true,
+    },
+  );
+  hostTarget.dispose();
 
   first.size.set(320, 180);
   renderFadeToBlackFrame(first.renderer, () => undefined, 0.5);
@@ -278,7 +331,9 @@ export const test_viewer_film_fade = (): void => {
   disposeFadeToBlack(first.renderer);
   disposeFadeToBlack(first.renderer);
   renderFadeToBlackFrame(first.renderer, () => undefined, 0.5);
-  const freshTarget = first.targets.at(-2);
+  // One fade pushes three targets: the fade target, the previous target the
+  // quad is composited into, and the previous target again from restoration.
+  const freshTarget = first.targets.at(-3);
   TestValidator.equals(
     "fade disposal is idempotent and permits lazy recreation",
     namedFacts([

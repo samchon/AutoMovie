@@ -1,8 +1,14 @@
 # `@automovie/viewer`
 
-## 필름 전환 합성
-
-`resolveAutoMovieFilmBeautyComposition`은 컴파일러가 샘플링한 한두 개의 뷰티 레이어를 직접 렌더, 검정으로의 페이드, 디졸브로 구분한다. `renderFadeToBlackFrame`은 단일 레이어의 가중치를 전체 프레임에 적용하고 `disposeFadeToBlack`은 렌더러가 소유한 GPU 자원을 해제한다.
+`resolveAutoMovieFilmBeautyComposition` classifies the one or two beauty
+layers the production sampler returns for a film frame as a direct render, a
+fade over black, or a cross-dissolve, and refuses any other cardinality or
+weight by name. `renderFadeToBlackFrame` multiplies one whole beauty frame by
+its compiler-owned weight, the same operation the final renderer applies to
+captured bytes, and restores the renderer's target and clear state on every
+exit; `disposeFadeToBlack` releases the renderer-owned GPU resources, which
+`mountViewer` already does when it disposes the renderer. Structural passes
+never take this path: they draw the dominant layer at full weight.
 
 `mapImportedHumanoidBones` maps a loaded glTF/VRM scene onto a compiled
 proxy skeleton before `createImportedModelObject` wraps it. Production hosts

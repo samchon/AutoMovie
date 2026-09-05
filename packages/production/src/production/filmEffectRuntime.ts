@@ -47,6 +47,12 @@ export interface IAutoMovieShotEffectFilmInterval {
 /**
  * Current identities required when sampling a persisted film effect.
  *
+ * A consumer establishes these four values from the compile manifest and the
+ * timeline it holds, never from the runtime array itself, so a stale artifact
+ * cannot vouch for its own currentness.
+ *
+ * @evidence requirements/effects-and-simulation/clock-seek-and-determinism.md#effects-cache-identity Names the production, film, compile, and edit identities a persisted stream must match before it is reused.
+ * @evidence specifications/simulation-effects-and-sound/clocks-ordering-seek-and-checkpoints.md#checkpoint-cache-identity-and-validity Carries the production and edit key fields whose mismatch is a cache miss rather than a stale success.
  * @author Samchon
  */
 export interface IAutoMovieFilmEffectCurrentIdentity {
@@ -63,7 +69,10 @@ export interface IAutoMovieFilmEffectCurrentIdentity {
 /**
  * One film-owned effect and its deterministic engine sample.
  *
+ * @evidence requirements/effects-and-simulation/clock-seek-and-determinism.md#effects-arbitrary-seek Pairs one frame's sample with the runtime it was reconstructed from so no previous-frame state is implied.
+ * @evidence specifications/simulation-effects-and-sound/clocks-ordering-seek-and-checkpoints.md#arbitrary-seek-reconstruction-contract Returns the target state beside the immutable stream identity that produced it.
  * @author Samchon
+ * @evidence requirements/effects-and-simulation/scope-and-simulation-tiers.md#effects-authored-solved Pairs the derived engine sample with the authored cue it came from so author input and derived state stay distinguishable.
  */
 export interface IAutoMovieProductionFilmEffectSample {
   /** Persisted film-owned runtime identity. */
@@ -79,6 +88,8 @@ export interface IAutoMovieProductionFilmEffectSample {
  * exact rational rate turns a shot-local second into the frame the engine
  * sampler will actually compare against.
  *
+ * @evidence requirements/effects-and-simulation/clock-seek-and-determinism.md#effects-film-time-mapping Fixes the rational rate and segment map every shot-to-film frame projection reads.
+ * @evidence specifications/simulation-effects-and-sound/clocks-ordering-seek-and-checkpoints.md#effect-film-time-step-boundary Supplies the exact rational film clock the boundary comparison uses instead of a display rate.
  * @author Samchon
  */
 export type IAutoMovieFilmEffectClock = Pick<
@@ -88,9 +99,16 @@ export type IAutoMovieFilmEffectClock = Pick<
 
 /**
  * A named refusal at the film-effect owner and identity boundary.
+ *
+ * Every refusal carries a closed code so a compiler diagnostic, a render plan,
+ * and a viewer classify the same failure without parsing its message.
+ *
+ * @evidence requirements/effects-and-simulation/scope-and-simulation-tiers.md#effects-scope-refusal Names the missing zone, recipe, owner, or bound instead of running an unbounded or silently empty effect.
+ * @evidence specifications/simulation-effects-and-sound/clocks-ordering-seek-and-checkpoints.md#clock-seek-failure-and-recovery Returns an explicit refused state rather than a remapped clock or a downgraded fallback.
  */
 export class AutoMovieFilmEffectRuntimeError extends Error {
   public constructor(
+    /** Closed refusal class shared by every film-effect consumer. */
     public readonly code:
       | "film-effect-input-invalid"
       | "film-effect-owner-conflict"
@@ -110,6 +128,7 @@ export class AutoMovieFilmEffectRuntimeError extends Error {
  *
  * @evidence requirements/effects-and-simulation/clock-seek-and-determinism.md#effects-seek-reconstruction Binds persisted film effects to the exact current normalized edit.
  * @evidence specifications/simulation-effects-and-sound/clocks-ordering-seek-and-checkpoints.md#arbitrary-seek-reconstruction-contract Gives compiler materialization and render planning one edit-identity algorithm.
+ * @evidence specifications/simulation-effects-and-sound/scope-tiers-and-identities.md#effect-sound-story-lifecycle-identity Folds the production, film and edit revision into each effect runtime's identity so an effect is addressed by its production lifecycle.
  */
 export const productionFilmEffectEditFingerprint = (
   timeline: IAutoMovieFilmTimeline,
@@ -283,6 +302,7 @@ export const verifyProductionFilmEffectPopulation = (props: {
  * @evidence requirements/effects-and-simulation/clock-seek-and-determinism.md#effects-seek-reconstruction Derives every stream from current content identities rather than playback history.
  * @evidence specifications/simulation-effects-and-sound/scope-tiers-and-identities.md#effect-tier-state-machine Gives film-global and shot-local cues disjoint, checked ownership.
  * @evidence specifications/simulation-effects-and-sound/clocks-ordering-seek-and-checkpoints.md#arbitrary-seek-reconstruction-contract Produces immutable streams that can be sampled in any order.
+ * @evidence requirements/effects-and-simulation/clock-seek-and-determinism.md#effects-platform-determinism Fixes iteration order and canonical serialization of the materialized runtime so a platform difference surfaces as an identity change rather than silent drift.
  */
 export const materializeProductionFilmEffects = (props: {
   identity: IAutoMovieFilmEffectCurrentIdentity;
@@ -405,6 +425,7 @@ export const materializeProductionFilmEffects = (props: {
  * @evidence requirements/effects-and-simulation/clock-seek-and-determinism.md#effects-film-time-mapping Uses the timeline frame even when a proxy output frame has a different index.
  * @evidence specifications/simulation-effects-and-sound/clocks-ordering-seek-and-checkpoints.md#arbitrary-seek-reconstruction-contract Reconstructs the same state for repeated and reordered seeks.
  * @evidence specifications/simulation-effects-and-sound/clocks-ordering-seek-and-checkpoints.md#effect-film-time-step-boundary Performs one exact rational frame-to-seconds conversion at the sampler boundary.
+ * @evidence requirements/effects-and-simulation/clock-seek-and-determinism.md#effects-step-boundary Samples every effect at one declared film frame boundary so anchors, emitters and environment read the same time.
  */
 export const sampleProductionFilmEffects = (props: {
   identity: IAutoMovieFilmEffectCurrentIdentity;

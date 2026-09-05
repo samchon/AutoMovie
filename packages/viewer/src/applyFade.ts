@@ -15,7 +15,7 @@ export interface IAutoMovieFilmBeautyLayer {
 /**
  * Closed beauty-composition decision for one sampled film frame.
  *
- * @evidence requirements/rendering/passes-channels-and-products.md#rendering-beauty-pass Keeps fade and dissolve confined to the beauty product.
+ * @evidence requirements/rendering/passes-channels-and-products.md#rendering-beauty-structural-distinction Names fade and dissolve as beauty-only compositions so a structural pass is never handed one.
  * @evidence specifications/editorial-render-and-delivery/render-schedule-state-and-headless.md#spec-render-frame-schedule Preserves the compiler-owned one- or two-layer schedule without inventing a fallback.
  */
 export type AutoMovieFilmBeautyComposition<
@@ -37,7 +37,7 @@ export type AutoMovieFilmBeautyComposition<
  * retain the existing cross-dissolve. Invalid weights and cardinalities are
  * refused by name instead of being clamped or rendered as an opaque shot.
  *
- * @evidence requirements/rendering/passes-channels-and-products.md#rendering-beauty-pass Applies continuous color composition only to sampled beauty layers.
+ * @evidence requirements/rendering/passes-channels-and-products.md#rendering-beauty-structural-distinction Decides continuous color composition for sampled beauty layers only, leaving structural passes to the dominant-layer rule.
  * @evidence requirements/rendering/frame-schedules-and-sampling.md#rendering-state-sampling Consumes the compiler's exact transition weights without a private sampler.
  * @evidence specifications/editorial-render-and-delivery/render-schedule-state-and-headless.md#spec-render-frame-schedule Distinguishes direct, fade, and dissolve schedules at the projection boundary.
  */
@@ -91,7 +91,7 @@ const states = new WeakMap<THREE.WebGLRenderer, IFadeState>();
  * content. Renderer target, auto-clear, clear color and clear alpha are restored
  * on success and every failure path.
  *
- * @evidence requirements/rendering/passes-channels-and-products.md#rendering-beauty-pass Applies the sampled one-layer beauty weight uniformly over black.
+ * @evidence requirements/rendering/passes-channels-and-products.md#rendering-beauty-structural-distinction Multiplies only the beauty picture by its sampled weight, the one effect the structural products must never inherit.
  * @evidence requirements/rendering/scene-lowering-and-runtime-state.md#rendering-runtime-lifecycle Keeps the renderer-owned target and state inside one explicit lifecycle.
  * @evidence specifications/editorial-render-and-delivery/render-schedule-state-and-headless.md#spec-render-frame-schedule Projects a one-layer fade without changing the sampled schedule.
  * @evidence specifications/editorial-render-and-delivery/render-schedule-state-and-headless.md#spec-render-state-isolation Restores mutable renderer state after both successful and failed composition.
