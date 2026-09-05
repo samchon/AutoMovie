@@ -9,7 +9,41 @@ interface IBoundParent {
   close(): void;
   createExclusive(childName: string): ICreateResult;
   inspect(): { directory: boolean; identity: string };
-  openResident(childName: string): number;
+  openResident(childName: string): IBoundChild;
+}
+
+/**
+ * One child opened relative to a held parent, driven through whatever the
+ * platform hands back: a POSIX descriptor served by `node:fs`, or a Windows
+ * HANDLE served by kernel32. Node's own C runtime does not share descriptor
+ * tables with `ucrtbase.dll`, so a Windows handle is never lowered to a CRT
+ * descriptor; every byte, flush, inspection, and close goes through the
+ * handle itself.
+ */
+interface IBoundChild {
+  close(): void;
+  read(
+    target: Buffer,
+    offset: number,
+    length: number,
+    position: number,
+  ): number;
+  status(): IBoundChildStatus;
+  sync(): void;
+  write(
+    source: Buffer,
+    offset: number,
+    length: number,
+    position: number,
+  ): number;
+}
+
+interface IBoundChildStatus {
+  link: boolean;
+  links: bigint;
+  regular: boolean;
+  size: bigint;
+  version: string;
 }
 
 interface INativeEnvironment {
@@ -22,7 +56,7 @@ interface INativeEnvironment {
 }
 
 type ICreateResult =
-  | { descriptor: number; status: "opened" }
+  | { child: IBoundChild; status: "opened" }
   | { error: unknown; status: "partial" }
   | {
       error: unknown;
@@ -143,18 +177,14 @@ const publishNativeScaffoldFileWithEnvironment = (
   }
 
   const source = Buffer.from(request.bytes);
-  const descriptor = creation.descriptor;
+  const child = creation.child;
   let bytesWritten = 0;
   let failure: unknown = undefined;
   let completedVersion: string | undefined;
   try {
-    const opened = environment.fileSystem.fstatSync(descriptor, {
-      bigint: true,
-    });
-    assertOrdinarySingleLink(opened, request.childName);
+    assertOrdinarySingleLink(child.status(), request.childName);
     while (bytesWritten < source.length) {
-      const written = environment.fileSystem.writeSync(
-        descriptor,
+      const written = child.write(
         source,
         bytesWritten,
         source.length - bytesWritten,
@@ -166,27 +196,20 @@ const publishNativeScaffoldFileWithEnvironment = (
         );
       bytesWritten += written;
     }
-    environment.fileSystem.fsyncSync(descriptor);
-    const completed = environment.fileSystem.fstatSync(descriptor, {
-      bigint: true,
-    });
+    child.sync();
+    const completed = child.status();
     assertOrdinarySingleLink(completed, request.childName);
     if (completed.size !== BigInt(source.length))
       throw new Error(`scaffold file changed final size: ${request.childName}`);
-    assertDescriptorBytes(environment, descriptor, request.childName, source);
-    completedVersion = physicalVersion(completed);
-    assertBoundResident(
-      environment,
-      parent,
-      request.childName,
-      completedVersion,
-    );
+    assertChildBytes(child, request.childName, source);
+    completedVersion = completed.version;
+    assertBoundResident(parent, request.childName, completedVersion);
   } catch (error) {
     failure = error;
   }
 
   try {
-    environment.fileSystem.closeSync(descriptor);
+    child.close();
   } catch (closeError) {
     failure = combineFailures(
       failure,
@@ -196,12 +219,7 @@ const publishNativeScaffoldFileWithEnvironment = (
   }
   if (failure === undefined)
     try {
-      assertBoundResident(
-        environment,
-        parent,
-        request.childName,
-        completedVersion!,
-      );
+      assertBoundResident(parent, request.childName, completedVersion!);
     } catch (residentError) {
       failure = residentError;
     }
@@ -298,7 +316,8 @@ const openPosixParent = (
           constants.O_CLOEXEC,
         0o600,
       );
-      if (child >= 0) return { descriptor: child, status: "opened" };
+      if (child >= 0)
+        return { child: posixChild(environment, child), status: "opened" };
       const code = environment.foreign.errno();
       return {
         error: nativeError("unable to create scaffold child", code),
@@ -330,11 +349,47 @@ const openPosixParent = (
           "unable to reopen scaffold child",
           environment.foreign.errno(),
         );
-      return child;
+      return posixChild(environment, child);
     },
   };
   return parent;
 };
+
+const posixChild = (
+  environment: INativeEnvironment,
+  descriptor: number,
+): IBoundChild => ({
+  close: () => environment.fileSystem.closeSync(descriptor),
+  read: (target, offset, length, position) =>
+    environment.fileSystem.readSync(
+      descriptor,
+      target,
+      offset,
+      length,
+      position,
+    ),
+  status: () => {
+    const status = environment.fileSystem.fstatSync(descriptor, {
+      bigint: true,
+    });
+    return {
+      link: status.isSymbolicLink(),
+      links: status.nlink,
+      regular: status.isFile(),
+      size: status.size,
+      version: physicalVersion(status),
+    };
+  },
+  sync: () => environment.fileSystem.fsyncSync(descriptor),
+  write: (source, offset, length, position) =>
+    environment.fileSystem.writeSync(
+      descriptor,
+      source,
+      offset,
+      length,
+      position,
+    ),
+});
 
 interface IPosixLibrary {
   open(pathname: string, flags: number, mode: number): number;
@@ -426,7 +481,7 @@ const openWindowsParent = (
   const openChild = (
     childName: string,
     disposition: number,
-  ): { descriptor?: number; status: number } => {
+  ): { handle?: unknown; status: number } => {
     const nameBytes = Buffer.from(`${childName}\0`, "utf16le");
     const unicode = {
       Buffer: nameBytes,
@@ -443,14 +498,19 @@ const openWindowsParent = (
     };
     const output: unknown[] = [null];
     const ioStatus = { Information: 0n, Status: 0n };
+    // The exclusive create holds read and write access and lets a later
+    // reader share the file; a resident reopen asks for read access only and
+    // tolerates the still-open writer, so the pre-close identity check does
+    // not trip a sharing violation on itself.
+    const creating = disposition === 0x2;
     const status = windows.ntCreateFile(
       output,
-      0x00100183,
+      creating ? 0x00100183 : 0x00100081,
       attributes,
       ioStatus,
       null,
       0x80,
-      0x7,
+      creating ? 0x1 : 0x3,
       disposition,
       0x00200060,
       null,
@@ -458,63 +518,22 @@ const openWindowsParent = (
     );
     if (status < 0) return { status };
     const childRaw = output[0];
-    let childDescriptor: number;
-    try {
-      if (
-        invalidWindowsHandle(environment.foreign, childRaw, windows.handleType)
-      )
-        throw new Error("native create returned an invalid scaffold child");
-      childDescriptor = windows.openOsHandle(childRaw, 0x8002);
-    } catch (error) {
-      let failure = error;
-      if (childRaw !== null)
-        try {
-          if (windows.closeHandle(childRaw) === false)
-            failure = combineFailures(
-              failure,
-              nativeError(
-                "unable to close unadopted scaffold child",
-                windows.getLastError(),
-              ),
-              "unadopted scaffold child",
-            );
-        } catch (closeError) {
-          failure = combineFailures(
-            failure,
-            closeError,
-            "unadopted scaffold child",
-          );
-        }
-      if (disposition === 0x2)
-        throw new ScaffoldCreatedSlotError(
-          "scaffold slot was created before descriptor adoption failed",
-          { cause: failure },
-        );
-      throw nativeFailure(failure);
-    }
-    if (childDescriptor < 0) {
-      const code = environment.foreign.errno();
-      let error: unknown = nativeError(
-        "unable to adopt scaffold child handle",
-        code,
+    if (
+      invalidWindowsHandle(environment.foreign, childRaw, windows.handleType)
+    ) {
+      const error = new Error(
+        "native create returned an invalid scaffold child",
       );
-      if (windows.closeHandle(childRaw) === false)
-        error = combineFailures(
-          error,
-          nativeError(
-            "unable to close unadopted scaffold child",
-            windows.getLastError(),
-          ),
-          "unadopted scaffold child",
-        );
+      // A successful create that yields no usable handle has still reserved
+      // the slot, so the caller learns about a created slot, not a clean miss.
       if (disposition === 0x2)
         throw new ScaffoldCreatedSlotError(
-          "scaffold slot was created before descriptor adoption failed",
+          "scaffold slot was created before its handle could be bound",
           { cause: error },
         );
       throw error;
     }
-    return { descriptor: childDescriptor, status };
+    return { handle: childRaw, status };
   };
   const parent: IBoundParent = {
     close: () => {
@@ -525,7 +544,7 @@ const openWindowsParent = (
         );
     },
     createExclusive: (childName) => {
-      let created: { descriptor?: number; status: number };
+      let created: { handle?: unknown; status: number };
       try {
         created = openChild(childName, 0x2);
       } catch (error) {
@@ -533,8 +552,11 @@ const openWindowsParent = (
           return { error, status: "partial" };
         return { error, reason: "create-failed", status: "refused" };
       }
-      if (created.descriptor !== undefined)
-        return { descriptor: created.descriptor, status: "opened" };
+      if (created.handle !== undefined)
+        return {
+          child: windowsChild(windows, created.handle),
+          status: "opened",
+        };
       return {
         error: nativeError("unable to create scaffold child", created.status),
         reason:
@@ -547,13 +569,89 @@ const openWindowsParent = (
     inspect: () => windows.inspectParent(raw),
     openResident: (childName) => {
       const opened = openChild(childName, 0x1);
-      if (opened.descriptor === undefined)
+      if (opened.handle === undefined)
         throw nativeError("unable to reopen scaffold child", opened.status);
-      return opened.descriptor;
+      return windowsChild(windows, opened.handle);
     },
   };
   return parent;
 };
+
+const windowsChild = (
+  windows: IWindowsLibrary,
+  handle: unknown,
+): IBoundChild => {
+  const seek = (position: number): void => {
+    if (windows.setFilePointer(handle, position) === false)
+      throw nativeError(
+        "unable to position scaffold child",
+        windows.getLastError(),
+      );
+  };
+  return {
+    close: () => {
+      if (windows.closeHandle(handle) === false)
+        throw nativeError(
+          "unable to close scaffold child",
+          windows.getLastError(),
+        );
+    },
+    read: (target, offset, length, position) => {
+      seek(position);
+      const read = windows.readFile(
+        handle,
+        target.subarray(offset, offset + length),
+        length,
+      );
+      if (read === null)
+        throw nativeError(
+          "unable to read scaffold child",
+          windows.getLastError(),
+        );
+      return read;
+    },
+    status: () => {
+      const information = windows.inspectFile(handle);
+      const reparse = (information.attributes & 0x400) !== 0;
+      return {
+        link: reparse,
+        links: BigInt(information.links),
+        regular: reparse === false && (information.attributes & 0x10) === 0,
+        size: information.size,
+        version: `${information.identity}:${information.size}:${information.lastWrite}`,
+      };
+    },
+    sync: () => {
+      if (windows.flushFileBuffers(handle) === false)
+        throw nativeError(
+          "unable to flush scaffold child",
+          windows.getLastError(),
+        );
+    },
+    write: (source, offset, length, position) => {
+      seek(position);
+      const written = windows.writeFile(
+        handle,
+        source.subarray(offset, offset + length),
+        length,
+      );
+      if (written === null)
+        throw nativeError(
+          "unable to write scaffold child",
+          windows.getLastError(),
+        );
+      return written;
+    },
+  };
+};
+
+interface IWindowsFileInformation {
+  attributes: number;
+  identity: string;
+  lastWrite: bigint;
+  links: number;
+  size: bigint;
+}
 
 interface IWindowsLibrary {
   closeHandle(handle: unknown): boolean;
@@ -566,17 +664,20 @@ interface IWindowsLibrary {
     flags: number,
     template: unknown,
   ): unknown;
+  flushFileBuffers(handle: unknown): boolean;
   getLastError(): number;
   handleType: TypeObject;
+  inspectFile(handle: unknown): IWindowsFileInformation;
   inspectParent(handle: unknown): { directory: boolean; identity: string };
   ntCreateFile: ReturnType<LibraryHandle["func"]>;
   objectAttributesType: TypeObject;
-  openOsHandle(handle: unknown, flags: number): number;
+  readFile(handle: unknown, target: Buffer, length: number): number | null;
+  setFilePointer(handle: unknown, position: number): boolean;
+  writeFile(handle: unknown, source: Buffer, length: number): number | null;
 }
 
 const createWindowsLibrary = (foreign: typeof koffi): IWindowsLibrary => {
   const kernel = foreign.load("kernel32.dll");
-  const runtime = foreign.load("ucrtbase.dll");
   const ntdll = foreign.load("ntdll.dll");
   const handleType = foreign.pointer(
     "AutoMovieScaffoldHandle",
@@ -630,6 +731,73 @@ const createWindowsLibrary = (foreign: typeof koffi): IWindowsLibrary => {
   const getLastError = kernel.func(
     "uint32_t __stdcall GetLastError(void)",
   ) as IWindowsLibrary["getLastError"];
+  const transferCount = foreign.out(foreign.pointer("uint32_t"));
+  const writeFileNative = kernel.func("__stdcall", "WriteFile", "bool", [
+    handleType,
+    "void *",
+    "uint32_t",
+    transferCount,
+    "void *",
+  ]) as (
+    handle: unknown,
+    source: Buffer,
+    length: number,
+    written: number[],
+    overlapped: null,
+  ) => boolean;
+  const readFileNative = kernel.func("__stdcall", "ReadFile", "bool", [
+    handleType,
+    "void *",
+    "uint32_t",
+    transferCount,
+    "void *",
+  ]) as (
+    handle: unknown,
+    target: Buffer,
+    length: number,
+    read: number[],
+    overlapped: null,
+  ) => boolean;
+  const setFilePointerNative = kernel.func(
+    "__stdcall",
+    "SetFilePointerEx",
+    "bool",
+    [handleType, "int64_t", "void *", "uint32_t"],
+  ) as (
+    handle: unknown,
+    distance: bigint,
+    newPointer: null,
+    method: number,
+  ) => boolean;
+  const dword = (value: unknown): number => Number(value) >>> 0;
+  const readInformation = (
+    handle: unknown,
+    label: string,
+  ): Record<string, unknown> => {
+    const zeroTime = { dwHighDateTime: 0, dwLowDateTime: 0 };
+    const information: Record<string, unknown> = {
+      dwFileAttributes: 0,
+      dwVolumeSerialNumber: 0,
+      ftCreationTime: { ...zeroTime },
+      ftLastAccessTime: { ...zeroTime },
+      ftLastWriteTime: { ...zeroTime },
+      nFileIndexHigh: 0,
+      nFileIndexLow: 0,
+      nFileSizeHigh: 0,
+      nFileSizeLow: 0,
+      nNumberOfLinks: 0,
+    };
+    if (getFileInformation(handle, information) === false)
+      throw nativeError(`unable to inspect ${label}`, getLastError());
+    return information;
+  };
+  const identityOf = (information: Record<string, unknown>): string => {
+    const volume = BigInt(dword(information.dwVolumeSerialNumber));
+    const fileIndex =
+      (BigInt(dword(information.nFileIndexHigh)) << 32n) |
+      BigInt(dword(information.nFileIndexLow));
+    return `${volume}:${fileIndex}`;
+  };
   return {
     closeHandle: kernel.func("__stdcall", "CloseHandle", "bool", [
       handleType,
@@ -641,33 +809,36 @@ const createWindowsLibrary = (foreign: typeof koffi): IWindowsLibrary => {
       "void *",
       "uint32_t",
       "uint32_t",
-      handleType,
+      "void *",
     ]) as IWindowsLibrary["createFile"],
+    flushFileBuffers: kernel.func("__stdcall", "FlushFileBuffers", "bool", [
+      handleType,
+    ]) as IWindowsLibrary["flushFileBuffers"],
     getLastError,
     handleType,
-    inspectParent: (handle) => {
-      const zeroTime = { dwHighDateTime: 0, dwLowDateTime: 0 };
-      const information = {
-        dwFileAttributes: 0,
-        dwVolumeSerialNumber: 0,
-        ftCreationTime: { ...zeroTime },
-        ftLastAccessTime: { ...zeroTime },
-        ftLastWriteTime: { ...zeroTime },
-        nFileIndexHigh: 0,
-        nFileIndexLow: 0,
-        nFileSizeHigh: 0,
-        nFileSizeLow: 0,
-        nNumberOfLinks: 0,
+    inspectFile: (handle) => {
+      const information = readInformation(handle, "scaffold child");
+      const lastWrite = information.ftLastWriteTime as {
+        dwHighDateTime: unknown;
+        dwLowDateTime: unknown;
       };
-      if (getFileInformation(handle, information) === false)
-        throw nativeError("unable to inspect scaffold parent", getLastError());
-      const volume = BigInt(information.dwVolumeSerialNumber >>> 0);
-      const fileIndex =
-        (BigInt(information.nFileIndexHigh >>> 0) << 32n) |
-        BigInt(information.nFileIndexLow >>> 0);
       return {
-        directory: (information.dwFileAttributes & 0x10) !== 0,
-        identity: `${volume}:${fileIndex}`,
+        attributes: dword(information.dwFileAttributes),
+        identity: identityOf(information),
+        lastWrite:
+          (BigInt(dword(lastWrite.dwHighDateTime)) << 32n) |
+          BigInt(dword(lastWrite.dwLowDateTime)),
+        links: dword(information.nNumberOfLinks),
+        size:
+          (BigInt(dword(information.nFileSizeHigh)) << 32n) |
+          BigInt(dword(information.nFileSizeLow)),
+      };
+    },
+    inspectParent: (handle) => {
+      const information = readInformation(handle, "scaffold parent");
+      return {
+        directory: (dword(information.dwFileAttributes) & 0x10) !== 0,
+        identity: identityOf(information),
       };
     },
     ntCreateFile: ntdll.func("__stdcall", "NtCreateFile", "int32_t", [
@@ -684,10 +855,20 @@ const createWindowsLibrary = (foreign: typeof koffi): IWindowsLibrary => {
       "uint32_t",
     ]),
     objectAttributesType,
-    openOsHandle: runtime.func("_open_osfhandle", "int", [
-      handleType,
-      "int",
-    ]) as IWindowsLibrary["openOsHandle"],
+    readFile: (handle, target, length) => {
+      const read = [0];
+      return readFileNative(handle, target, length, read, null) === false
+        ? null
+        : read[0]!;
+    },
+    setFilePointer: (handle, position) =>
+      setFilePointerNative(handle, BigInt(position), null, 0),
+    writeFile: (handle, source, length) => {
+      const written = [0];
+      return writeFileNative(handle, source, length, written, null) === false
+        ? null
+        : written[0]!;
+    },
   };
 };
 
@@ -731,19 +912,16 @@ const invalidWindowsHandle = (
     -1n;
 
 const assertBoundResident = (
-  environment: INativeEnvironment,
   parent: IBoundParent,
   childName: string,
   expectedVersion: string,
 ): void => {
-  const descriptor = parent.openResident(childName);
+  const resident = parent.openResident(childName);
   let failure: unknown = undefined;
   try {
-    const status = environment.fileSystem.fstatSync(descriptor, {
-      bigint: true,
-    });
+    const status = resident.status();
     assertOrdinarySingleLink(status, childName);
-    if (physicalVersion(status) !== expectedVersion)
+    if (status.version !== expectedVersion)
       throw new Error(
         `scaffold resident changed descriptor generation: ${childName}`,
       );
@@ -751,7 +929,7 @@ const assertBoundResident = (
     failure = error;
   }
   try {
-    environment.fileSystem.closeSync(descriptor);
+    resident.close();
   } catch (closeError) {
     failure = combineFailures(
       failure,
@@ -762,22 +940,15 @@ const assertBoundResident = (
   if (failure !== undefined) throw nativeFailure(failure);
 };
 
-const assertDescriptorBytes = (
-  environment: INativeEnvironment,
-  descriptor: number,
+const assertChildBytes = (
+  child: IBoundChild,
   childName: string,
   bytes: Buffer,
 ): void => {
   const readback = Buffer.alloc(bytes.length);
   let offset = 0;
   while (offset < readback.length) {
-    const read = environment.fileSystem.readSync(
-      descriptor,
-      readback,
-      offset,
-      readback.length - offset,
-      offset,
-    );
+    const read = child.read(readback, offset, readback.length - offset, offset);
     if (read === 0)
       throw new Error(`scaffold file stopped during readback: ${childName}`);
     offset += read;
@@ -787,14 +958,10 @@ const assertDescriptorBytes = (
 };
 
 const assertOrdinarySingleLink = (
-  status: fs.BigIntStats,
+  status: IBoundChildStatus,
   childName: string,
 ): void => {
-  if (
-    status.isSymbolicLink() ||
-    status.isFile() === false ||
-    status.nlink !== 1n
-  )
+  if (status.link || status.regular === false || status.links !== 1n)
     throw new Error(
       `scaffold file is not one ordinary single-link file: ${childName}`,
     );

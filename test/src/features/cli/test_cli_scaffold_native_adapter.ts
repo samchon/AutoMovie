@@ -10,11 +10,11 @@ type NativeEnvironmentProps = Parameters<
 >[0];
 
 interface INativeScenario {
-  childAdoptionFails?: boolean;
-  childAdoptionThrows?: boolean;
   childCloseFails?: boolean;
   childHandleInvalid?: boolean;
+  childInspectFails?: boolean;
   childIsFile?: boolean;
+  childIsLink?: boolean;
   childLinks?: bigint;
   closeFails?: ReadonlySet<number>;
   constantsMissing?: string;
@@ -28,10 +28,12 @@ interface INativeScenario {
   parentIsDirectory?: boolean;
   parentOpen?: "fail" | "invalid" | "null" | "ok";
   platform: NodeJS.Platform;
-  read?: "mismatch" | "stop" | "success";
+  read?: "fail" | "mismatch" | "stop" | "success";
+  residentCloseFails?: boolean;
+  residentHandleInvalid?: boolean;
   residentIdentity?: string;
-  residentAdoptionFails?: boolean;
   residentOpenFails?: boolean;
+  seekFails?: boolean;
   target?: "competitor" | "create-failed" | "ok";
   write?: "fail" | "stop" | "success";
 }
@@ -42,6 +44,13 @@ interface IFakeNode {
   identity: string;
 }
 
+const PARENT = 10;
+const CREATED = 11;
+const RESIDENT = 12;
+const PARENT_HANDLE = 100n;
+const CREATED_HANDLE = 101n;
+const RESIDENT_HANDLE = 102n;
+
 const request: IScaffoldParentPublicationRequest = {
   bytes: [1, 2, 3],
   childName: "entry.bin",
@@ -51,38 +60,74 @@ const request: IScaffoldParentPublicationRequest = {
 
 const execute = (scenario: INativeScenario) => {
   const nodes = new Map<number, IFakeNode>([
-    [10, { bytes: Buffer.alloc(0), directory: true, identity: "1:2" }],
-    [11, { bytes: Buffer.alloc(0), directory: false, identity: "1:3" }],
-    [12, { bytes: Buffer.alloc(0), directory: false, identity: "1:3" }],
+    [PARENT, { bytes: Buffer.alloc(0), directory: true, identity: "1:2" }],
+    [CREATED, { bytes: Buffer.alloc(0), directory: false, identity: "1:3" }],
+    [RESIDENT, { bytes: Buffer.alloc(0), directory: false, identity: "1:3" }],
   ]);
   let errno = scenario.errno ?? 2;
-  let childAdoptions = 0;
+  const identityOf = (descriptor: number): string => {
+    const node = nodes.get(descriptor)!;
+    return descriptor === PARENT
+      ? (scenario.parentIdentity ?? node.identity)
+      : descriptor === RESIDENT
+        ? (scenario.residentIdentity ?? node.identity)
+        : node.identity;
+  };
+  const sizeOf = (descriptor: number): bigint =>
+    BigInt(nodes.get(descriptor)!.bytes.length) +
+    (descriptor === CREATED ? (scenario.finalSizeDelta ?? 0n) : 0n);
   const status = (descriptor: number) => {
     const node = nodes.get(descriptor)!;
-    const identity =
-      descriptor === 10
-        ? (scenario.parentIdentity ?? node.identity)
-        : descriptor === 12
-          ? (scenario.residentIdentity ?? node.identity)
-          : node.identity;
-    const [device, inode] = identity.split(":").map(BigInt);
-    const size =
-      BigInt(node.bytes.length) +
-      (descriptor === 11 ? (scenario.finalSizeDelta ?? 0n) : 0n);
+    const [device, inode] = identityOf(descriptor).split(":").map(BigInt);
     return {
       dev: device,
       ino: inode,
       isDirectory: () =>
-        descriptor === 10
+        descriptor === PARENT
           ? (scenario.parentIsDirectory ?? true)
           : node.directory,
       isFile: () =>
-        descriptor === 10 ? false : (scenario.childIsFile ?? true),
-      isSymbolicLink: () => false,
+        descriptor === PARENT ? false : (scenario.childIsFile ?? true),
+      isSymbolicLink: () =>
+        descriptor === PARENT ? false : (scenario.childIsLink ?? false),
       mtimeNs: 7n,
       nlink: scenario.childLinks ?? 1n,
-      size,
+      size: sizeOf(descriptor),
     } as fs.BigIntStats;
+  };
+  const appendWritten = (
+    descriptor: number,
+    buffer: Buffer,
+    offset: number,
+    length: number,
+  ): number => {
+    if (scenario.write === "fail") return -1;
+    if (scenario.write === "stop") return 0;
+    const written = Math.min(length, 2);
+    const node = nodes.get(descriptor)!;
+    node.bytes = Buffer.concat([
+      node.bytes,
+      buffer.subarray(offset, offset + written),
+    ]);
+    nodes.get(RESIDENT)!.bytes = node.bytes;
+    return written;
+  };
+  const readBack = (
+    descriptor: number,
+    buffer: Buffer,
+    offset: number,
+    length: number,
+    position: number,
+  ): number => {
+    if (scenario.read === "fail") return -1;
+    if (scenario.read === "stop") return 0;
+    const source = nodes.get(
+      descriptor === RESIDENT ? CREATED : descriptor,
+    )!.bytes;
+    const read = Math.min(length, source.length - position);
+    source.copy(buffer, offset, position, position + read);
+    if (scenario.read === "mismatch" && read > 0) buffer[offset] ^= 0xff;
+    return read;
   };
   const fileSystem = {
     closeSync: (descriptor: number) => {
@@ -99,8 +144,10 @@ const execute = (scenario: INativeScenario) => {
       O_RDWR: 2,
     } as Record<string, number>,
     fstatSync: (descriptor: number) => {
-      if (descriptor === 10 && scenario.parentFstatFails)
+      if (descriptor === PARENT && scenario.parentFstatFails)
         throw new Error("parent fstat failed");
+      if (descriptor !== PARENT && scenario.childInspectFails)
+        throw new Error("child fstat failed");
       return status(descriptor);
     },
     fsyncSync: () => {
@@ -113,11 +160,8 @@ const execute = (scenario: INativeScenario) => {
       length: number,
       position: number,
     ) => {
-      if (scenario.read === "stop") return 0;
-      const source = nodes.get(descriptor === 12 ? 11 : descriptor)!.bytes;
-      const read = Math.min(length, source.length - position);
-      source.copy(buffer, offset, position, position + read);
-      if (scenario.read === "mismatch" && read > 0) buffer[offset] ^= 0xff;
+      const read = readBack(descriptor, buffer, offset, length, position);
+      if (read < 0) throw new Error("read failed");
       return read;
     },
     writeSync: (
@@ -126,15 +170,8 @@ const execute = (scenario: INativeScenario) => {
       offset: number,
       length: number,
     ) => {
-      if (scenario.write === "fail") throw new Error("write failed");
-      if (scenario.write === "stop") return 0;
-      const written = Math.min(length, 2);
-      const node = nodes.get(descriptor)!;
-      node.bytes = Buffer.concat([
-        node.bytes,
-        buffer.subarray(offset, offset + written),
-      ]);
-      nodes.get(12)!.bytes = node.bytes;
+      const written = appendWritten(descriptor, buffer, offset, length);
+      if (written < 0) throw new Error("write failed");
       return written;
     },
   } as unknown as typeof fs;
@@ -148,7 +185,9 @@ const execute = (scenario: INativeScenario) => {
       async: () => undefined,
       info: { arguments: [], name: "fake", result: {} },
     });
-  const posixOpen = callable(() => (scenario.parentOpen === "fail" ? -1 : 10));
+  const posixOpen = callable(() =>
+    scenario.parentOpen === "fail" ? -1 : PARENT,
+  );
   const posixOpenAt = callable((...arguments_: unknown[]) => {
     const flags = arguments_[2] as number;
     if ((flags & 0x40) !== 0) {
@@ -161,54 +200,107 @@ const execute = (scenario: INativeScenario) => {
         errno = 13;
         return -1;
       }
-      return 11;
+      return CREATED;
     }
     if (scenario.residentOpenFails) return -1;
-    return 12;
+    return RESIDENT;
   });
+  const descriptorOf = (handle: unknown): number =>
+    handle === PARENT_HANDLE
+      ? PARENT
+      : handle === CREATED_HANDLE
+        ? CREATED
+        : RESIDENT;
   const createFile = callable(() =>
     scenario.parentOpen === "invalid"
       ? -1n
       : scenario.parentOpen === "null"
         ? null
-        : 100n,
+        : PARENT_HANDLE,
   );
   const closeHandle = callable((...arguments_: unknown[]) =>
-    arguments_[0] === 100n
+    arguments_[0] === PARENT_HANDLE
       ? !scenario.parentCloseFails
-      : !scenario.childCloseFails,
+      : arguments_[0] === CREATED_HANDLE
+        ? !scenario.childCloseFails
+        : !scenario.residentCloseFails,
   );
-  const openOsHandle = callable(() => {
-    childAdoptions++;
-    if (scenario.childAdoptionThrows && childAdoptions === 1)
-      throw new Error("child adoption threw");
-    if (scenario.childAdoptionFails && childAdoptions === 1) return -1;
-    if (scenario.residentAdoptionFails && childAdoptions > 1) return -1;
-    return childAdoptions === 1 ? 11 : 12;
-  });
   const ntCreateFile = callable((...arguments_: unknown[]) => {
     const output = arguments_[0] as unknown[];
     const disposition = arguments_[7] as number;
+    if (disposition === 2 && scenario.createThrows)
+      throw new Error("create threw");
     if (disposition === 2 && scenario.target === "competitor")
       return 0xc0000035 | 0;
     if (disposition === 2 && scenario.target === "create-failed") return -1;
     if (disposition === 1 && scenario.residentOpenFails) return -1;
-    output[0] = scenario.childHandleInvalid ? null : 101n;
+    if (disposition === 2)
+      output[0] = scenario.childHandleInvalid ? null : CREATED_HANDLE;
+    else output[0] = scenario.residentHandleInvalid ? -1n : RESIDENT_HANDLE;
     return 0;
   });
   const getFileInformation = callable((...arguments_: unknown[]) => {
-    if (scenario.parentFstatFails) return false;
-    const information = arguments_[1] as Record<string, number>;
-    const [volume, fileIndex] = (scenario.parentIdentity ?? "1:2")
-      .split(":")
-      .map(Number);
+    const descriptor = descriptorOf(arguments_[0]);
+    if (descriptor === PARENT && scenario.parentFstatFails) return false;
+    if (descriptor !== PARENT && scenario.childInspectFails) return false;
+    const information = arguments_[1] as Record<string, unknown>;
+    const [volume, fileIndex] = identityOf(descriptor).split(":").map(Number);
+    const node = nodes.get(descriptor)!;
+    const directory =
+      descriptor === PARENT
+        ? (scenario.parentIsDirectory ?? true)
+        : node.directory || scenario.childIsFile === false;
     information.dwFileAttributes =
-      scenario.parentIsDirectory === false ? 0 : 0x10;
+      (directory ? 0x10 : 0x20) |
+      (descriptor !== PARENT && scenario.childIsLink ? 0x400 : 0);
     information.dwVolumeSerialNumber = volume!;
     information.nFileIndexHigh = Math.floor(fileIndex! / 0x1_0000_0000);
     information.nFileIndexLow = fileIndex! >>> 0;
+    information.nNumberOfLinks =
+      descriptor === PARENT ? 1 : Number(scenario.childLinks ?? 1n);
+    const size = descriptor === PARENT ? 0n : sizeOf(descriptor);
+    information.nFileSizeHigh = Number(size >> 32n);
+    information.nFileSizeLow = Number(size & 0xffff_ffffn);
+    information.ftLastWriteTime = { dwHighDateTime: 0, dwLowDateTime: 7 };
     return true;
   });
+  const pointers = new Map<unknown, number>();
+  const setFilePointer = callable((...arguments_: unknown[]) => {
+    if (scenario.seekFails) return false;
+    pointers.set(arguments_[0], Number(arguments_[1]));
+    return true;
+  });
+  const writeFile = callable((...arguments_: unknown[]) => {
+    const [handle, buffer, length, written] = arguments_ as [
+      unknown,
+      Buffer,
+      number,
+      number[],
+    ];
+    const count = appendWritten(descriptorOf(handle), buffer, 0, length);
+    if (count < 0) return false;
+    written[0] = count;
+    return true;
+  });
+  const readFile = callable((...arguments_: unknown[]) => {
+    const [handle, buffer, length, read] = arguments_ as [
+      unknown,
+      Buffer,
+      number,
+      number[],
+    ];
+    const count = readBack(
+      descriptorOf(handle),
+      buffer,
+      0,
+      length,
+      pointers.get(handle) ?? 0,
+    );
+    if (count < 0) return false;
+    read[0] = count;
+    return true;
+  });
+  const flushFileBuffers = callable(() => !scenario.fsyncFails);
   const library = (name: string | null) => ({
     func: (...arguments_: unknown[]) => {
       const declaration = arguments_.map(String).join(" ");
@@ -220,7 +312,10 @@ const execute = (scenario: INativeScenario) => {
         return getFileInformation;
       if (declaration.includes("GetLastError"))
         return callable(() => scenario.errno ?? 3);
-      if (declaration.includes("_open_osfhandle")) return openOsHandle;
+      if (declaration.includes("WriteFile")) return writeFile;
+      if (declaration.includes("ReadFile")) return readFile;
+      if (declaration.includes("SetFilePointerEx")) return setFilePointer;
+      if (declaration.includes("FlushFileBuffers")) return flushFileBuffers;
       return ntCreateFile;
     },
   });
@@ -259,161 +354,251 @@ const execute = (scenario: INativeScenario) => {
   };
 };
 
+/** The same behavioral matrix, run once per platform capability. */
+const perPlatform = (
+  platforms: readonly NodeJS.Platform[],
+  scenario: Omit<INativeScenario, "platform">,
+  outcome: string,
+): Array<{ outcome: string; scenario: INativeScenario }> =>
+  platforms.map((platform) => ({
+    outcome,
+    scenario: { ...scenario, platform },
+  }));
+
 /**
  * Native publication maps injectable ABI and descriptor results to truthful
  * receipts without patching `node:fs` or depending on an OS race.
+ *
+ * Scenarios:
+ *
+ * 1. Both platforms complete a clean publication and refuse a pre-create
+ *    competitor or create failure by name; an invalid request refuses before
+ *    any capability is acquired.
+ * 2. A parent that cannot be opened, is not a directory, or changed identity
+ *    is a parent-changed refusal on both platforms.
+ * 3. After the slot exists, every defect is a partial outcome carrying the
+ *    exact written extent: a child that is not one ordinary single-link file,
+ *    a write that fails or stops, a failed flush, a changed size, a readback
+ *    that fails, stops, or differs, a resident that cannot be reopened,
+ *    inspected, or matched, and a child, resident, or parent close failure.
+ * 4. Windows never lowers a HANDLE to a C-runtime descriptor: bytes, flush,
+ *    inspection, seek, and readback all travel through kernel32 on the handle,
+ *    and an invalid child or resident handle is reported as the created slot
+ *    or a partial result rather than adopted.
  */
 export const test_cli_scaffold_native_adapter = (): void => {
-  const cases: INativeScenario[] = [
-    { platform: "linux", target: "ok" },
-    { platform: "win32", target: "ok" },
-    { errno: 40, parentOpen: "fail", platform: "linux" },
-    { errno: 2, parentOpen: "fail", platform: "linux" },
-    { errno: 20, parentOpen: "fail", platform: "linux" },
-    { errno: 13, parentOpen: "fail", platform: "linux" },
-    { parentIdentity: "1:9", platform: "linux" },
-    { parentIsDirectory: false, platform: "linux" },
-    { platform: "linux", target: "competitor" },
-    { platform: "linux", target: "create-failed" },
-    { parentOpen: "invalid", platform: "win32" },
-    { errno: 2, parentOpen: "invalid", platform: "win32" },
-    { errno: 4390, parentOpen: "invalid", platform: "win32" },
-    { parentOpen: "null", platform: "win32" },
-    { errno: 5, parentOpen: "invalid", platform: "win32" },
-    { parentFstatFails: true, platform: "win32" },
-    { platform: "win32", target: "competitor" },
-    { platform: "win32", target: "create-failed" },
-    { childAdoptionFails: true, platform: "win32", target: "ok" },
-    { childAdoptionThrows: true, platform: "win32", target: "ok" },
-    { childHandleInvalid: true, platform: "win32", target: "ok" },
+  const both: readonly NodeJS.Platform[] = ["linux", "win32"];
+  const matrix: Array<{ outcome: string; scenario: INativeScenario }> = [
+    ...perPlatform(both, { target: "ok" }, "completed"),
     {
-      childAdoptionFails: true,
-      childCloseFails: true,
-      platform: "win32",
-      target: "ok",
-    },
-    { platform: "win32", residentAdoptionFails: true, target: "ok" },
-    {
-      childCloseFails: true,
-      platform: "win32",
-      residentAdoptionFails: true,
-      target: "ok",
-    },
-    { childIsFile: false, platform: "linux", target: "ok" },
-    { childLinks: 2n, platform: "linux", target: "ok" },
-    { platform: "linux", target: "ok", write: "fail" },
-    { platform: "linux", target: "ok", write: "stop" },
-    { fsyncFails: true, platform: "linux", target: "ok" },
-    { finalSizeDelta: 1n, platform: "linux", target: "ok" },
-    { platform: "linux", read: "stop", target: "ok" },
-    { platform: "linux", read: "mismatch", target: "ok" },
-    { platform: "linux", residentIdentity: "1:9", target: "ok" },
-    { platform: "linux", residentOpenFails: true, target: "ok" },
-    { closeFails: new Set([11]), platform: "linux", target: "ok" },
-    { closeFails: new Set([12]), platform: "linux", target: "ok" },
-    { closeFails: new Set([10]), platform: "linux", target: "ok" },
-    { parentCloseFails: true, platform: "win32", target: "ok" },
-    {
-      parentCloseFails: true,
-      parentIdentity: "1:9",
-      platform: "win32",
-      target: "ok",
+      outcome: "refused:parent-changed",
+      scenario: { errno: 40, parentOpen: "fail", platform: "linux" },
     },
     {
-      closeFails: new Set([10]),
-      parentIdentity: "1:9",
-      platform: "linux",
-      target: "ok",
+      outcome: "refused:parent-changed",
+      scenario: { errno: 2, parentOpen: "fail", platform: "linux" },
     },
     {
-      closeFails: new Set([10]),
-      platform: "linux",
-      target: "competitor",
+      outcome: "refused:parent-changed",
+      scenario: { errno: 20, parentOpen: "fail", platform: "linux" },
     },
     {
-      childAdoptionFails: true,
-      parentCloseFails: true,
-      platform: "win32",
-      target: "ok",
+      outcome: "refused:create-failed",
+      scenario: { errno: 13, parentOpen: "fail", platform: "linux" },
+    },
+    ...perPlatform(both, { parentIdentity: "1:9" }, "refused:parent-changed"),
+    ...perPlatform(
+      both,
+      { parentIsDirectory: false },
+      "refused:parent-changed",
+    ),
+    ...perPlatform(both, { parentFstatFails: true }, "refused:create-failed"),
+    ...perPlatform(both, { target: "competitor" }, "refused:target-competitor"),
+    ...perPlatform(both, { target: "create-failed" }, "refused:create-failed"),
+    ...perPlatform(
+      both,
+      { createThrows: true, target: "ok" },
+      "refused:create-failed",
+    ),
+    {
+      outcome: "refused:parent-changed",
+      scenario: { parentOpen: "invalid", platform: "win32" },
     },
     {
-      closeFails: new Set([10]),
-      parentFstatFails: true,
-      platform: "linux",
-      target: "ok",
+      outcome: "refused:parent-changed",
+      scenario: { errno: 2, parentOpen: "invalid", platform: "win32" },
     },
-    { createThrows: true, platform: "linux", target: "ok" },
-    { constantsMissing: "O_NOFOLLOW", platform: "linux", target: "ok" },
-    { constantsMissing: "O_CLOEXEC", platform: "linux", target: "ok" },
-    { constantsMissing: "O_CLOEXEC", platform: "android", target: "ok" },
-    { constantsMissing: "O_CLOEXEC", platform: "darwin", target: "ok" },
+    {
+      outcome: "refused:parent-changed",
+      scenario: { errno: 4390, parentOpen: "invalid", platform: "win32" },
+    },
+    {
+      outcome: "refused:parent-changed",
+      scenario: { parentOpen: "null", platform: "win32" },
+    },
+    {
+      outcome: "refused:create-failed",
+      scenario: { errno: 5, parentOpen: "invalid", platform: "win32" },
+    },
+    {
+      outcome: "partial:0",
+      scenario: { childHandleInvalid: true, platform: "win32", target: "ok" },
+    },
+    ...perPlatform(
+      both,
+      { childInspectFails: true, target: "ok" },
+      "partial:0",
+    ),
+    ...perPlatform(both, { childIsFile: false, target: "ok" }, "partial:0"),
+    ...perPlatform(both, { childIsLink: true, target: "ok" }, "partial:0"),
+    ...perPlatform(both, { childLinks: 2n, target: "ok" }, "partial:0"),
+    ...perPlatform(both, { target: "ok", write: "fail" }, "partial:0"),
+    ...perPlatform(both, { target: "ok", write: "stop" }, "partial:0"),
+    {
+      outcome: "partial:0",
+      scenario: { platform: "win32", seekFails: true, target: "ok" },
+    },
+    ...perPlatform(both, { fsyncFails: true, target: "ok" }, "partial:3"),
+    ...perPlatform(both, { finalSizeDelta: 1n, target: "ok" }, "partial:3"),
+    ...perPlatform(both, { read: "fail", target: "ok" }, "partial:3"),
+    ...perPlatform(both, { read: "stop", target: "ok" }, "partial:3"),
+    ...perPlatform(both, { read: "mismatch", target: "ok" }, "partial:3"),
+    ...perPlatform(
+      both,
+      { residentIdentity: "1:9", target: "ok" },
+      "partial:3",
+    ),
+    ...perPlatform(
+      both,
+      { residentOpenFails: true, target: "ok" },
+      "partial:3",
+    ),
+    {
+      outcome: "partial:3",
+      scenario: {
+        platform: "win32",
+        residentHandleInvalid: true,
+        target: "ok",
+      },
+    },
+    {
+      outcome: "partial:3",
+      scenario: {
+        closeFails: new Set([CREATED]),
+        platform: "linux",
+        target: "ok",
+      },
+    },
+    {
+      outcome: "partial:3",
+      scenario: {
+        closeFails: new Set([RESIDENT]),
+        platform: "linux",
+        target: "ok",
+      },
+    },
+    {
+      outcome: "partial:3",
+      scenario: {
+        closeFails: new Set([PARENT]),
+        platform: "linux",
+        target: "ok",
+      },
+    },
+    {
+      outcome: "partial:3",
+      scenario: { childCloseFails: true, platform: "win32", target: "ok" },
+    },
+    {
+      outcome: "partial:3",
+      scenario: { platform: "win32", residentCloseFails: true, target: "ok" },
+    },
+    {
+      outcome: "partial:3",
+      scenario: { parentCloseFails: true, platform: "win32", target: "ok" },
+    },
+    {
+      outcome: "refused:parent-changed",
+      scenario: {
+        parentCloseFails: true,
+        parentIdentity: "1:9",
+        platform: "win32",
+      },
+    },
+    {
+      outcome: "refused:parent-changed",
+      scenario: {
+        closeFails: new Set([PARENT]),
+        parentIdentity: "1:9",
+        platform: "linux",
+      },
+    },
+    {
+      outcome: "refused:target-competitor",
+      scenario: {
+        closeFails: new Set([PARENT]),
+        platform: "linux",
+        target: "competitor",
+      },
+    },
+    {
+      outcome: "partial:0",
+      scenario: {
+        childHandleInvalid: true,
+        parentCloseFails: true,
+        platform: "win32",
+        target: "ok",
+      },
+    },
+    {
+      outcome: "refused:create-failed",
+      scenario: {
+        closeFails: new Set([PARENT]),
+        createThrows: true,
+        platform: "linux",
+        target: "ok",
+      },
+    },
+    {
+      outcome: "refused:create-failed",
+      scenario: {
+        constantsMissing: "O_NOFOLLOW",
+        platform: "linux",
+        target: "ok",
+      },
+    },
+    {
+      outcome: "completed",
+      scenario: {
+        constantsMissing: "O_CLOEXEC",
+        platform: "linux",
+        target: "ok",
+      },
+    },
+    {
+      outcome: "completed",
+      scenario: {
+        constantsMissing: "O_CLOEXEC",
+        platform: "android",
+        target: "ok",
+      },
+    },
+    {
+      outcome: "refused:create-failed",
+      scenario: {
+        constantsMissing: "O_CLOEXEC",
+        platform: "darwin",
+        target: "ok",
+      },
+    },
   ];
-  const outcomes = cases.map(execute);
-  const expected = [
-    "completed",
-    "completed",
-    "refused:parent-changed",
-    "refused:parent-changed",
-    "refused:parent-changed",
-    "refused:create-failed",
-    "refused:parent-changed",
-    "refused:parent-changed",
-    "refused:target-competitor",
-    "refused:create-failed",
-    "refused:parent-changed",
-    "refused:parent-changed",
-    "refused:parent-changed",
-    "refused:parent-changed",
-    "refused:create-failed",
-    "refused:create-failed",
-    "refused:target-competitor",
-    "refused:create-failed",
-    "partial:0",
-    "partial:0",
-    "partial:0",
-    "partial:0",
-    "partial:3",
-    "partial:3",
-    "partial:0",
-    "partial:0",
-    "partial:0",
-    "partial:0",
-    "partial:3",
-    "partial:3",
-    "partial:3",
-    "partial:3",
-    "partial:3",
-    "partial:3",
-    "partial:3",
-    "partial:3",
-    "partial:3",
-    "partial:3",
-    "refused:parent-changed",
-    "refused:parent-changed",
-    "refused:target-competitor",
-    "partial:0",
-    "refused:create-failed",
-    "refused:create-failed",
-    "refused:create-failed",
-    "completed",
-    "completed",
-    "refused:create-failed",
-  ];
+  const outcomes = matrix.map(({ scenario }) => execute(scenario));
   const summarize = (outcome: (typeof outcomes)[number]["first"]): string =>
     outcome.status === "refused"
       ? `${outcome.status}:${outcome.reason}`
       : outcome.status === "partial"
         ? `${outcome.status}:${outcome.bytesWritten}`
         : outcome.status;
-  const competitorReason = (platform: NodeJS.Platform): string => {
-    const outcome = outcomes.find(
-      ({ first }, index) =>
-        cases[index]!.platform === platform &&
-        cases[index]!.target === "competitor" &&
-        first.status === "refused",
-    )!.first;
-    return outcome.status === "refused" ? outcome.reason : outcome.status;
-  };
   const invalidRequests = [
     { ...request, childName: "" },
     { ...request, childName: "." },
@@ -441,9 +626,15 @@ export const test_cli_scaffold_native_adapter = (): void => {
     ),
   );
   TestValidator.equals(
-    "every native branch preserves its exact effect class",
-    outcomes.map(({ first }) => summarize(first)),
-    expected,
+    "every native branch preserves its exact effect class on both platforms",
+    outcomes.map(({ first }, index) => ({
+      platform: matrix[index]!.scenario.platform,
+      outcome: summarize(first),
+    })),
+    matrix.map(({ outcome, scenario }) => ({
+      platform: scenario.platform,
+      outcome,
+    })),
   );
   TestValidator.predicate(
     "invalid native requests refuse before a platform capability is acquired",
@@ -451,27 +642,5 @@ export const test_cli_scaffold_native_adapter = (): void => {
       (outcome) =>
         outcome.status === "refused" && outcome.reason === "create-failed",
     ),
-  );
-  TestValidator.equals(
-    "positive adapters complete and pre-create competitors refuse",
-    {
-      linux: outcomes[0]!.first.status,
-      posixCompetitor: competitorReason("linux"),
-      windows: outcomes[1]!.first.status,
-      windowsCompetitor: competitorReason("win32"),
-      windowsPostCreateAdoption: outcomes.find(
-        ({ first }, index) =>
-          cases[index]!.platform === "win32" &&
-          cases[index]!.childAdoptionFails === true &&
-          first.status === "partial",
-      )!.first.status,
-    },
-    {
-      linux: "completed",
-      posixCompetitor: "target-competitor",
-      windows: "completed",
-      windowsCompetitor: "target-competitor",
-      windowsPostCreateAdoption: "partial",
-    },
   );
 };

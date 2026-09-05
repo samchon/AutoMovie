@@ -246,10 +246,38 @@ export const captureScaffoldPhysicalDirectory = (
       `scaffold directory is not one ordinary directory: ${absolute}`,
     );
   return {
-    identity: physicalIdentity(status),
+    identity: physicalDirectoryIdentity(absolute, status),
     path: absolute,
     real: path.resolve(fs.realpathSync.native(absolute)),
   };
+};
+
+/**
+ * Derive a directory's physical identity from an opened descriptor.
+ *
+ * A path-based stat is not a reliable device source everywhere: Node 22 on
+ * Windows reports device 0 for a directory reached by path while `fstat` on
+ * the opened directory reports the volume serial, which is also what the
+ * native parent handle reports at publication. Deriving the identity from the
+ * descriptor keeps the captured identity and the held-handle identity on one
+ * basis, and the inode equality check pins the descriptor to the very
+ * directory the caller just inspected.
+ */
+const physicalDirectoryIdentity = (
+  absolute: string,
+  status: fs.BigIntStats,
+): string => {
+  const descriptor = fs.openSync(absolute, fs.constants.O_RDONLY);
+  try {
+    const opened = fs.fstatSync(descriptor, { bigint: true });
+    if (opened.isDirectory() === false || opened.ino !== status.ino)
+      throw new Error(
+        `scaffold directory changed while its identity was captured: ${absolute}`,
+      );
+    return physicalIdentity(opened);
+  } finally {
+    fs.closeSync(descriptor);
+  }
 };
 
 /**
@@ -274,12 +302,12 @@ const captureEmptyScaffoldPhysicalDirectory = (
 ): IScaffoldPhysicalDirectory => {
   const ownership = captureScaffoldPhysicalDirectory(directory);
   const before = fs.lstatSync(ownership.path, { bigint: true });
-  if (physicalIdentity(before) !== ownership.identity)
+  if (physicalDirectoryIdentity(ownership.path, before) !== ownership.identity)
     throw new Error(`scaffold directory changed generation: ${ownership.path}`);
   const entries = fs.readdirSync(ownership.path);
   const after = fs.lstatSync(ownership.path, { bigint: true });
   if (
-    physicalIdentity(after) !== ownership.identity ||
+    physicalDirectoryIdentity(ownership.path, after) !== ownership.identity ||
     physicalVersion(after) !== physicalVersion(before)
   )
     throw new Error(
