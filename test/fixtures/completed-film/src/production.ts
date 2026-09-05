@@ -5,7 +5,7 @@ import type { IAutoMovieProductionDesign } from "@automovie/interface";
  *
  * @evidence settings/050-art-direction.md#art-palette Implements the
  *   single production background swatch reused by every viewer surface.
- * @evidenceReview settings/050-art-direction.md#art-palette #d26ffe8 Compared settings/050-art-direction.md#art-palette with the complete src/production.ts file. Verified relationship: Implements the single production background swatch reused by every viewer surface.
+ * @evidenceReview settings/050-art-direction.md#art-palette #d26ffe8 Read the palette grammar's five swatches against PRODUCTION_BACKGROUND; the constant is the dark background swatch `#182235`, spelled once, and the production palette lists it by reference instead of repeating the literal.
  * @evidence obligations/delivery/production-sources.md#shared-visual-grammar Defines the
  *   shared clear color once rather than copying a viewer-local background.
  * @evidenceReview obligations/delivery/production-sources.md#shared-visual-grammar #af7c4d8 Read obligations/delivery/production-sources.md#shared-visual-grammar and PRODUCTION_BACKGROUND; confirmed the value is production-scoped and reused rather than independently authored by a viewer.
@@ -38,39 +38,39 @@ export const PRODUCTION_BACKGROUND = "#182235";
  * @evidenceReview settings/000-governing-aim.md#delivery-contract #c5ab39f Compared settings/000-governing-aim.md#delivery-contract with the complete src/production.ts file. Verified relationship: Serializes the film identity, 11.5-second edit, required English-caption deliverable, and inert zero-gain audio output while film source owns the exact track mapping and intentionally absent products receive no empty deliverable.
  * @evidence settings/000-governing-aim.md#governing-aim Serializes the exact
  *   raised-hand and ordered-chorus-answer logline as the production promise.
- * @evidenceReview settings/000-governing-aim.md#governing-aim #81fee69 Compared settings/000-governing-aim.md#governing-aim with the complete src/production.ts file. Verified relationship: Serializes the exact raised-hand and ordered-chorus-answer logline as the production promise.
+ * @evidenceReview settings/000-governing-aim.md#governing-aim #81fee69 Read the governing aim's quoted logline against production.logline; the serialized string is the same call-and-response sentence character for character, and no other production field paraphrases or extends the promise.
  * @evidence settings/000-governing-aim.md#coordinate-time-convention Uses
  *   seconds for the exact runtime and a 24 fps frame clock while leaving world
  *   axes to model and world source.
- * @evidenceReview settings/000-governing-aim.md#coordinate-time-convention #8aa0cd6 Compared settings/000-governing-aim.md#coordinate-time-convention with the complete src/production.ts file. Verified relationship: Uses seconds for the exact runtime and a 24 fps frame clock while leaving world axes to model and world source.
+ * @evidenceReview settings/000-governing-aim.md#coordinate-time-convention #8aa0cd6 Read the convention's metre and second units against production; targetRuntimeSeconds carries 11.5 seconds and frameFormat a 24 fps clock, while no production field names an axis, handedness, or origin, which stay with world and model source.
  * @evidenceExclude settings/000-governing-aim.md#audience-access Audience
  *   access is realized by screenplay, shot, and film source, not this design
  *   envelope.
- * @evidenceExcludeReview settings/000-governing-aim.md#audience-access #4aa8ba3 Compared settings/000-governing-aim.md#audience-access with the complete production-source property population represented by the complete src/production.ts file. Verified relationship: Audience access is realized by screenplay, shot, and film source, not this design envelope.
+ * @evidenceExcludeReview settings/000-governing-aim.md#audience-access #4aa8ba3 Read the audience-access unit against every production field; the record names deliverable kinds and a frame format but no staged body, caption line, or transition, so the audience's route to the cue is realized only by screenplay, shot, and film source.
  * @evidenceExclude settings/000-governing-aim.md#production-language Final
  *   English caption content is authored in screenplay and mapped by film
  *   source; this record only requires the caption deliverable kind.
- * @evidenceExcludeReview settings/000-governing-aim.md#production-language #6330b70 Compared settings/000-governing-aim.md#production-language with the complete production-source property population represented by the complete src/production.ts file. Verified relationship: Final English caption content is authored in screenplay and mapped by film source; this record only requires the caption deliverable kind.
+ * @evidenceExcludeReview settings/000-governing-aim.md#production-language #6330b70 Read the production-language unit against production.deliverables; the record requires a captions deliverable kind and carries no caption text or language tag, which screenplay and film source own.
  * @evidenceExclude settings/000-governing-aim.md#settings-coverage-map The
  *   work-specific settings requirement allocation governs authoring
  *   completeness and is not serialized as a runtime production field.
- * @evidenceExcludeReview settings/000-governing-aim.md#settings-coverage-map #a95e1fc Compared settings/000-governing-aim.md#settings-coverage-map with the complete production-source property population represented by the complete src/production.ts file. Verified relationship: The work-specific settings requirement allocation governs authoring completeness and is not serialized as a runtime production field.
+ * @evidenceExcludeReview settings/000-governing-aim.md#settings-coverage-map #a95e1fc Read the coverage map's owner allocation against production; the map routes SOLOIST, CHORUS, GATE, PLAZA, and the haze to their settings documents, and no production field serializes that routing.
  * @evidence settings/050-art-direction.md#art-delivery-review-condition Keeps
  *   the delivered frame grammar sized around the readable cue and formation.
  * @evidenceReview settings/050-art-direction.md#art-delivery-review-condition #04d2491 Read settings/050-art-direction.md#art-delivery-review-condition and production; confirmed its deterministic mode and 1280-by-720, 24 fps, sRGB frame format exactly serialize the declared final review condition.
  * @evidence settings/050-art-direction.md#art-palette Serializes the one
  *   shared primitive-3D palette and reserved subject accent.
- * @evidenceReview settings/050-art-direction.md#art-palette #d26ffe8 Compared settings/050-art-direction.md#art-palette with the complete src/production.ts file. Verified relationship: Serializes the one shared primitive-3D palette and reserved subject accent.
+ * @evidenceReview settings/050-art-direction.md#art-palette #d26ffe8 Read the five swatches against production.artDirection.palette; the array lists `#182235`, `#d7b56d`, `#8f9d74`, `#6f746e`, and `#89918a` in the grammar's order with the background taken from PRODUCTION_BACKGROUND, and the soloist accent appears once.
  * @evidence settings/050-art-direction.md#art-scale Serializes the 1.8 m
  *   human reference as the production-wide relative-scale grammar.
- * @evidenceReview settings/050-art-direction.md#art-scale #eebef5f Compared settings/050-art-direction.md#art-scale with the complete src/production.ts file. Verified relationship: Serializes the 1.8 m human reference as the production-wide relative-scale grammar.
+ * @evidenceReview settings/050-art-direction.md#art-scale #eebef5f Read the scale unit against production.artDirection.scaleGrammar; the sentence names the 1.8 m soloist as the metre reference for every represented extent, and no other production field carries a second scale figure.
  * @evidenceExclude settings/050-art-direction.md#art-effects-boundary Haze
  *   construction and use belong to plaza and opening-shot source, not the
  *   production design envelope.
- * @evidenceExcludeReview settings/050-art-direction.md#art-effects-boundary #e03b2d7 Compared settings/050-art-direction.md#art-effects-boundary with the complete production-source property population represented by the complete src/production.ts file. Verified relationship: Haze construction and use belong to plaza and opening-shot source, not the production design envelope.
+ * @evidenceExcludeReview settings/050-art-direction.md#art-effects-boundary #e03b2d7 Read the effects-boundary unit against every production field; the record lists the neutral haze swatch `#89918a` in its palette but declares no fog density, extent, or placement, so haze construction stays with plaza and opening-shot source.
  * @evidence settings/050-art-direction.md#art-audio-boundary Requires
  *   only the declared structural zero-gain audio output at production scope.
- * @evidenceReview settings/050-art-direction.md#art-audio-boundary #bcbbe3f Compared settings/050-art-direction.md#art-audio-boundary with the complete src/production.ts file. Verified relationship: Requires only the declared structural zero-gain audio output at production scope.
+ * @evidenceReview settings/050-art-direction.md#art-audio-boundary #bcbbe3f Read the audio-boundary unit against production.deliverables; the record requires the `starter-audio` audio-mix deliverable and carries no gain, cue, or mix parameter, so only the structural output is demanded here.
  * @evidenceExclude settings/010-soloist.md#soloist-identity-scale Subject
  *   scale is realized by the soloist model source, not this production record.
  * @evidenceExcludeReview settings/010-soloist.md#soloist-identity-scale #7a10a48 Read the soloist identity unit and production; confirmed Soloist owns its 1.8 m scale and this record publishes only the shared scale grammar.
@@ -91,20 +91,20 @@ export const PRODUCTION_BACKGROUND = "#182235";
  * @evidenceExcludeReview settings/020-chorus.md#chorus-break-capability #9b04a80 Read the break unit and production; confirmed the reusable formation and motion owners expose it while production neither selects nor parameterizes it.
  * @evidenceExclude settings/030-gate.md#gate-identity Gate identity is
  *   realized by its model and answer-shot sources.
- * @evidenceExcludeReview settings/030-gate.md#gate-identity #cc8741b Compared settings/030-gate.md#gate-identity with the complete production-source property population represented by the complete src/production.ts file. Verified relationship: Gate identity is realized by its model and answer-shot sources.
+ * @evidenceExcludeReview settings/030-gate.md#gate-identity #cc8741b Read the gate identity unit against production; no production field names GATE, its finish appears only as the palette swatch `#6f746e`, and the gate model and answer shot own the identity.
  * @evidenceExclude settings/030-gate.md#gate-placement Gate placement is
  *   derived by its model and used by the answer shot.
- * @evidenceExcludeReview settings/030-gate.md#gate-placement #a2dfd9f Compared settings/030-gate.md#gate-placement with the complete production-source property population represented by the complete src/production.ts file. Verified relationship: Gate placement is derived by its model and used by the answer shot.
+ * @evidenceExcludeReview settings/030-gate.md#gate-placement #a2dfd9f Read the gate placement unit against production; the record carries no position, sightline, or plaza relation for the gate, which its model derives and the answer shot consumes.
  * @evidenceExclude settings/030-gate.md#gate-hinge-capability Gate
  *   articulation is realized by its model source.
  * @evidenceExcludeReview settings/030-gate.md#gate-hinge-capability #18cef82 Read the hinge unit and production; confirmed PlazaGate owns the 0-to-100-degree interface and production exposes no prop articulation.
  * @evidenceExclude settings/040-plaza.md#plaza-ground Ground construction is
  *   realized by the plaza model source.
- * @evidenceExcludeReview settings/040-plaza.md#plaza-ground #6aa537d Compared settings/040-plaza.md#plaza-ground with the complete production-source property population represented by the complete src/production.ts file. Verified relationship: Ground construction is realized by the plaza model source.
+ * @evidenceExcludeReview settings/040-plaza.md#plaza-ground #6aa537d Read the plaza ground unit against production; the record carries no ground extent, material, or level value, so ground construction stays with the plaza model source.
  * @evidenceExclude settings/040-plaza.md#plaza-center The shared origin is
  *   realized by the plaza model and consumed by shots rather than serialized
  *   here.
- * @evidenceExcludeReview settings/040-plaza.md#plaza-center #1122438 Compared settings/040-plaza.md#plaza-center with the complete production-source property population represented by the complete src/production.ts file. Verified relationship: The shared origin is realized by the plaza model and consumed by shots rather than serialized here.
+ * @evidenceExcludeReview settings/040-plaza.md#plaza-center #1122438 Read the plaza center unit against production; no production field names `plaza-center` or any coordinate, so the shared origin is realized by the plaza model and consumed by shots.
  * @evidenceExclude settings/040-plaza.md#plaza-background-role Background
  *   geometry and haze are realized by plaza and shot sources.
  * @evidenceExcludeReview settings/040-plaza.md#plaza-background-role #29cf787 Read the plaza background unit and production; confirmed Plaza and opening own ground and haze geometry while production owns only the clear-color grammar.

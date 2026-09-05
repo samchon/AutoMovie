@@ -1,81 +1,33 @@
-import {
-  type IAutoMovieProductionEvidence,
-  createAutoMovieContractBindingManifest,
-  createBlankAutoMovieProductionEvidence,
-} from "@automovie/evidence";
+import type { IAutoMovieProductionEvidence } from "@automovie/evidence";
 import {
   AutoMovieProductionCompiler,
   AutoMovieProductionProject,
-  digestAutoMovieBytes,
-  normalizeAutoMovieSource,
 } from "@automovie/production";
 import { TestValidator } from "@nestia/e2e";
 import fs from "node:fs";
 import path from "node:path";
 
 import { namedFacts } from "../internal/predicates";
-import { productionFixture } from "./productionFixtures";
+import { completedProductionFixture } from "./productionFixtures";
 
-const evidence = (
-  root: string,
-  kind: "brief" | "film",
-): IAutoMovieProductionEvidence => {
-  const configuration = {
-    ...createBlankAutoMovieProductionEvidence(root, "english"),
-    kind,
-  };
-  const owner = (props: {
-    branch: "filmSources" | "shots";
-    sourcePath: string;
-    exportName: string;
-    targetAnchor: string;
-  }): IAutoMovieProductionEvidence["sourceOwners"][number] => ({
-    branch: props.branch,
-    stage: "review",
-    enforced: true,
-    relationship: "lineage",
-    sourcePath: props.sourcePath,
-    exportName: props.exportName,
-    symbolKind: "property",
-    sourceDigest: digestAutoMovieBytes(
-      normalizeAutoMovieSource(
-        fs.readFileSync(path.join(root, ...props.sourcePath.split("/"))),
-      ),
-    ),
-    targetPath:
-      kind === "brief"
-        ? "docs/briefs/direct.md"
-        : "docs/screenplays/completed-film.md",
-    targetAnchor: props.targetAnchor,
-    reviewed: true,
-  });
-  return {
-    root,
-    packageName: "fixture-film",
-    description: "timed compiler fixture",
-    configuration,
-    manifest: createAutoMovieContractBindingManifest(configuration),
-    designBranches: [],
-    designOwners: [],
-    sourceOwners: [
-      owner({
-        branch: "shots",
-        sourcePath: "src/shots/opening.ts",
-        exportName: "opening",
-        targetAnchor: "opening-shot",
-      }),
-      owner({
-        branch: "filmSources",
-        sourcePath: "src/film.ts",
-        exportName: "film",
-        targetAnchor: "delivery",
-      }),
-    ],
-    contracts: [],
-    contractRules: [],
-    reviewAlarms: { alarms: [], questionPasteChecked: false },
-  };
-};
+/**
+ * The completed fixture's own graph-derived evidence, re-declared as a brief.
+ *
+ * The compiler dispatches screenplay ownership from the manifest kind alone,
+ * and a brief graph cannot be validated over a fixture whose narrative layers
+ * hold reviewed hosts, so the kind is overridden on the real evidence object
+ * rather than rebuilt from a blank configuration.
+ */
+const asBrief = (
+  evidence: IAutoMovieProductionEvidence,
+): IAutoMovieProductionEvidence => ({
+  ...evidence,
+  configuration: { ...evidence.configuration, kind: "brief" },
+  manifest: { ...evidence.manifest, kind: "brief" },
+});
+
+const screenplayIndex = (root: string): string =>
+  path.join(root, "automovie/design/fixture-film/screenplay/index.json");
 
 /**
  * A direct brief reaches the timed compiler without acquiring film narrative.
@@ -89,16 +41,15 @@ const evidence = (
  *    forbidden file as the workaround for a film-only prerequisite.
  */
 export const test_production_direct_brief_compiler = (): void => {
-  const fixture = productionFixture();
-  const residue = productionFixture();
+  const fixture = completedProductionFixture();
+  const residue = completedProductionFixture();
   try {
-    fs.rmSync(
-      path.join(
-        fixture.root,
-        "automovie/design/fixture-film/screenplay/index.json",
-      ),
-    );
-    const briefEvidence = evidence(fixture.root, "brief");
+    // Read-only verification joins an incarnated project; opening each root
+    // once for writing creates that state exactly as `npm run compile` would.
+    AutoMovieProductionProject.open(fixture.root);
+    AutoMovieProductionProject.open(residue.root);
+    fs.rmSync(screenplayIndex(fixture.root));
+    const briefEvidence = asBrief(fixture.evidence);
     const design = new AutoMovieProductionCompiler(
       AutoMovieProductionProject.openReadOnly(fixture.root),
       briefEvidence,
@@ -109,11 +60,11 @@ export const test_production_direct_brief_compiler = (): void => {
     ).lint({ scope: "source" });
     const film = new AutoMovieProductionCompiler(
       AutoMovieProductionProject.openReadOnly(fixture.root),
-      evidence(fixture.root, "film"),
+      fixture.evidence,
     ).lint({ scope: "design" });
     const withResidue = new AutoMovieProductionCompiler(
       AutoMovieProductionProject.openReadOnly(residue.root),
-      evidence(residue.root, "brief"),
+      asBrief(residue.evidence),
     ).lint({ scope: "design" });
     const screenplayDiagnostics = (
       diagnostics: readonly { code: string }[],
