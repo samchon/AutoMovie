@@ -224,7 +224,7 @@ export const test_cli_authoring_reachability = (): void => {
       [
         "unknownKindCapabilityAndBlankReasonAreRefused",
         () => {
-          const unknownKind = { ...first, kind: "episode" } as Row;
+          const unknownKind = { ...first, kind: "episode" } as unknown as Row;
           const unknownCapability = {
             ...first,
             capability: "telepathy",
