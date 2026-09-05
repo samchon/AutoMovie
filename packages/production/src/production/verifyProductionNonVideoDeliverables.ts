@@ -9,6 +9,7 @@ import { TextDecoder } from "node:util";
 import typia from "typia";
 
 import { canonicalizeAutoMovieJson } from "./contentIdentity";
+import { parseAutoMovieStructuredJson } from "./duplicateAwareJson";
 
 /** Stable result of contextual caption and sound publication verification. */
 export interface IAutoMovieProductionNonVideoVerification {
@@ -30,9 +31,7 @@ export const parseProductionSoundEvidence = (
 ): IAutoMovieProductionSoundEvidence => {
   let parsed: unknown;
   try {
-    parsed = JSON.parse(
-      new TextDecoder("utf-8", { fatal: true }).decode(bytes),
-    );
+    parsed = parseAutoMovieStructuredJson({ record: "sound-evidence", bytes });
   } catch {
     throw new Error("Sound evidence bytes are not valid UTF-8 JSON.");
   }

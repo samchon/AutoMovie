@@ -1,6 +1,7 @@
 import type { IAutoMovieDeliveryCrop } from "@automovie/interface";
 import {
   AutoMovieProductionProject,
+  parseAutoMovieStructuredJson,
   productionFilmEffectEditFingerprint,
   readAutoMovieFilmEffects,
   readAutoMovieFilmTimeline,
@@ -314,7 +315,10 @@ const readAssetAuthorization = (
     path.dirname(ledgerPath),
     path.basename(ledgerPath),
   );
-  const ledger = JSON.parse(ledgerFile.bytes.toString("utf8")) as {
+  const ledger = parseAutoMovieStructuredJson({
+    record: "asset-ledger",
+    bytes: ledgerFile.bytes,
+  }) as {
     version?: unknown;
     assets?: unknown;
   };
@@ -395,7 +399,10 @@ const readCompiledAssetClosure = (
   for (const name of inventory) {
     const file = readPhysicalFileSnapshot(project, models.real, name);
     files.push(file);
-    const model = JSON.parse(file.bytes.toString("utf8")) as {
+    const model = parseAutoMovieStructuredJson({
+      record: "compiled-model",
+      bytes: file.bytes,
+    }) as {
       imported?: { assets?: unknown };
     };
     if (model.imported === undefined) continue;

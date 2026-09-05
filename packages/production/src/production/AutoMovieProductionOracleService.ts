@@ -63,6 +63,7 @@ import {
   digestAutoMovieBytes,
   encodeAutoMoviePathSegment,
 } from "./contentIdentity";
+import { parseAutoMovieStructuredJson } from "./duplicateAwareJson";
 import { readAutoMovieFilmTimeline } from "./filmTimeline";
 import { materializeFormationSlot } from "./materializeProduction";
 import { productionRenderTargetFingerprint } from "./renderIdentity";
@@ -889,11 +890,10 @@ export class AutoMovieProductionOracleService {
       if (input.target.pose === "rom-extremes")
         try {
           const validation = typia.validateEquals<IAutoMovieModel>(
-            JSON.parse(
-              Buffer.from(this.project.readGeneratedFile(targetPath)).toString(
-                "utf8",
-              ),
-            ) as unknown,
+            parseAutoMovieStructuredJson({
+              record: "compiled-model",
+              bytes: this.project.readGeneratedFile(targetPath),
+            }),
           );
           if (validation.success === false || validation.data.skeleton === null)
             throw new Error("the compiled model has no humanoid skeleton");
@@ -911,11 +911,10 @@ export class AutoMovieProductionOracleService {
         let model: IAutoMovieModel;
         try {
           const validation = typia.validateEquals<IAutoMovieModel>(
-            JSON.parse(
-              Buffer.from(this.project.readGeneratedFile(targetPath)).toString(
-                "utf8",
-              ),
-            ) as unknown,
+            parseAutoMovieStructuredJson({
+              record: "compiled-model",
+              bytes: this.project.readGeneratedFile(targetPath),
+            }),
           );
           if (validation.success === false)
             throw new Error("the compiled model has an invalid schema");
@@ -1303,7 +1302,10 @@ const readCompiledShots = (
       throw new Error(
         `Generated shot "${entry.path}" changed after compiler freshness validation. Run the scaffold compile command before requesting oracle evidence.`,
       );
-    const raw = JSON.parse(Buffer.from(bytes).toString("utf8")) as unknown;
+    const raw = parseAutoMovieStructuredJson({
+      record: "compiled-shot",
+      bytes,
+    });
     const validation = typia.validateEquals<IAutoMovieCompiledShotSource>(raw);
     if (validation.success === false)
       throw new Error(

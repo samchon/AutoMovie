@@ -13,6 +13,7 @@ import type {
 } from "./AutoMovieProductionContext";
 import { autoMovieAssetReviewViews } from "./assetReviewViews";
 import { captureAutoMovieProductionFrame } from "./captureProductionFrame";
+import { parseAutoMovieStructuredJson } from "./duplicateAwareJson";
 import { readAutoMovieProductionRegistry } from "./productionRegistry";
 
 /**
@@ -119,11 +120,10 @@ const riggedAsset = (
     );
   try {
     const validation = typia.validateEquals<IAutoMovieModel>(
-      JSON.parse(
-        Buffer.from(services.project.readGeneratedFile(entry.path)).toString(
-          "utf8",
-        ),
-      ) as unknown,
+      parseAutoMovieStructuredJson({
+        record: "compiled-model",
+        bytes: services.project.readGeneratedFile(entry.path),
+      }),
     );
     if (validation.success === false)
       throw new Error("the compiled model has an invalid schema");

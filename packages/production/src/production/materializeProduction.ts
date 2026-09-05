@@ -40,6 +40,7 @@ import {
   digestAutoMovieBytes,
   encodeAutoMoviePathSegment,
 } from "./contentIdentity";
+import { parseAutoMovieStructuredJson } from "./duplicateAwareJson";
 import {
   AUTOMOVIE_REGISTERED_ARCHETYPES,
   AutoMovieModelArchetypeRegistry,
@@ -1075,9 +1076,10 @@ const materializedLibraryReader = <T>(props: {
   const published = new Map<string, string[]>();
   try {
     const index = typia.validateEquals<IAutoMovieMaterializedLibrary>(
-      JSON.parse(
-        Buffer.from(props.read(AUTOMOVIE_LIBRARY_INDEX_PATH)).toString("utf8"),
-      ) as unknown,
+      parseAutoMovieStructuredJson({
+        record: "library-index",
+        bytes: props.read(AUTOMOVIE_LIBRARY_INDEX_PATH),
+      }),
     );
     if (index.success === true)
       for (const owner of index.data.owners)
@@ -1104,7 +1106,10 @@ const materializedLibraryReader = <T>(props: {
     for (const id of ids)
       try {
         const validation = props.validate(
-          JSON.parse(Buffer.from(props.read(props.file(id))).toString("utf8")),
+          parseAutoMovieStructuredJson({
+            record: "library-record",
+            bytes: props.read(props.file(id)),
+          }),
         );
         if (validation.success === true) found.push(validation.data);
       } catch {

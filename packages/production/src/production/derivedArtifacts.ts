@@ -19,6 +19,7 @@ import {
   fingerprintAutoMovieFields,
   normalizeAutoMovieSource,
 } from "./contentIdentity";
+import { parseAutoMovieStructuredJson } from "./duplicateAwareJson";
 
 /**
  * Tracked ledger selected by a production that uses deterministic precompute.
@@ -598,7 +599,10 @@ const parseManifest = (
 ): { manifest: IAutoMovieDerivedArtifactManifest | null; reason: string } => {
   let value: unknown;
   try {
-    value = JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(bytes));
+    value = parseAutoMovieStructuredJson({
+      record: "derived-artifact-manifest",
+      bytes,
+    });
   } catch (error) {
     return {
       manifest: null,

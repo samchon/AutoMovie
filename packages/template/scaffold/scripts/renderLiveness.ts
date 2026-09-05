@@ -2,6 +2,7 @@ import {
   type AutoMovieLocalProcessOwnerObservation,
   type IAutoMovieLocalProcessOwner,
   isAutoMovieLocalProcessOwner,
+  parseAutoMovieStructuredJson,
 } from "@automovie/production";
 import { randomUUID } from "node:crypto";
 import fs from "node:fs";
@@ -307,7 +308,10 @@ const captureExisting = (
 const readOwner = (snapshot: IRenderGcTargetSnapshot): unknown => {
   const bytes = readCapturedRenderGcFile(snapshot, LEASE_MAX_BYTES);
   try {
-    return JSON.parse(Buffer.from(bytes).toString("utf8")) as unknown;
+    return parseAutoMovieStructuredJson({
+      record: "render-lease-owner",
+      bytes,
+    });
   } catch {
     // Malformed or unstable owner bytes authorize nothing and must not leak
     // their arbitrary payload through the JSON parser's diagnostic.

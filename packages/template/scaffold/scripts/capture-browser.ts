@@ -3,6 +3,7 @@ import {
   AUTOMOVIE_CAPTURE_RUNTIME_IDENTITY_PROTOCOL,
   compareCodeUnits,
   digestAutoMovieBytes,
+  parseAutoMovieStructuredJson,
   readAutoMovieProductionOwnedFile,
 } from "@automovie/production";
 import { spawnSync } from "node:child_process";
@@ -205,7 +206,10 @@ const capturePlaywrightMetadataOnce = (props?: {
   );
   if (cli === undefined || browsersFile === undefined)
     throw new Error("Installed Playwright package assets are incomplete.");
-  const browsersJson = JSON.parse(browsersFile.bytes.toString("utf8")) as {
+  const browsersJson = parseAutoMovieStructuredJson({
+    record: "playwright-browsers",
+    bytes: browsersFile.bytes,
+  }) as {
     browsers?: IPlaywrightBrowserRecord[];
   };
   const browser = browsersJson.browsers?.find(
@@ -502,7 +506,7 @@ export const readCaptureInstallReceipt = (
     );
   try {
     const receipt = parseReceipt(
-      JSON.parse(Buffer.from(bytes).toString("utf8")) as unknown,
+      parseAutoMovieStructuredJson({ record: "capture-receipt", bytes }),
       file,
     );
     if (

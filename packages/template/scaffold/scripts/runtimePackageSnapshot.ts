@@ -1,5 +1,6 @@
 import {
   digestAutoMovieBytes,
+  parseAutoMovieStructuredJson,
   readAutoMovieProductionOwnedFile,
 } from "@automovie/production";
 import fs from "node:fs";
@@ -171,7 +172,10 @@ const packageExecutableExports = (
   root: IPhysicalDirectory,
   manifest: Buffer,
 ): string[] => {
-  const parsed = JSON.parse(manifest.toString("utf8")) as {
+  const parsed = parseAutoMovieStructuredJson({
+    record: "runtime-package-manifest",
+    bytes: manifest,
+  }) as {
     exports?: unknown;
   };
   const relative = new Set<string>();
@@ -365,7 +369,10 @@ const locatePackage = (
       assertPhysicalDirectory(root, "runtime package ancestor");
     }
     if (manifest !== undefined) {
-      const parsed = JSON.parse(manifest.bytes.toString("utf8")) as {
+      const parsed = parseAutoMovieStructuredJson({
+        record: "runtime-package-manifest",
+        bytes: manifest.bytes,
+      }) as {
         name?: unknown;
         version?: unknown;
       };

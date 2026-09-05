@@ -11,6 +11,7 @@ import typia from "typia";
 
 import { AutoMovieProductionProject } from "./AutoMovieProductionProject";
 import { digestAutoMovieBytes } from "./contentIdentity";
+import { parseAutoMovieStructuredJson } from "./duplicateAwareJson";
 import { verifyProductionFilmEffectPopulation } from "./filmEffectRuntime";
 
 /**
@@ -104,7 +105,7 @@ export const parseAutoMovieFilmTimeline = (
       "Canonical film timeline bytes differ from the generated manifest. Run the scaffold source compile command.",
     );
   const validation = typia.validateEquals<IAutoMovieFilmTimeline>(
-    JSON.parse(Buffer.from(bytes).toString("utf8")) as unknown,
+    parseAutoMovieStructuredJson({ record: "film-timeline", bytes }),
   );
   if (
     validation.success === false ||
@@ -185,7 +186,7 @@ export const parseAutoMovieFilmEffects = (
       "Compiler-owned film effect bytes differ from the generated manifest. Run the scaffold source compile command.",
     );
   const validation = typia.validateEquals<IAutoMovieCompiledFilmEffect[]>(
-    JSON.parse(Buffer.from(bytes).toString("utf8")) as unknown,
+    parseAutoMovieStructuredJson({ record: "film-effects", bytes }),
   );
   if (
     validation.success === false ||

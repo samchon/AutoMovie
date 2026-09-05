@@ -25,6 +25,7 @@ import {
   digestAutoMovieBytes,
   encodeAutoMoviePathSegment,
   inspectAutoMovieLibraryProjectState,
+  parseAutoMovieStructuredJson,
 } from "@automovie/production";
 import path from "node:path";
 import typia from "typia";
@@ -1008,7 +1009,7 @@ const parseGeneratedJson = <T>(
   const bytes = verified.get(file);
   if (bytes === undefined) return null;
   try {
-    return assert(JSON.parse(Buffer.from(bytes).toString("utf8")));
+    return assert(parseAutoMovieStructuredJson({ record: file, bytes }));
   } catch (error) {
     problems.push({
       code: "generated-json-invalid",

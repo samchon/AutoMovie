@@ -51,6 +51,7 @@ import {
   digestAutoMovieBytes,
   encodeAutoMoviePathSegment,
 } from "./contentIdentity";
+import { parseAutoMovieStructuredJson } from "./duplicateAwareJson";
 import { assertProductionRenditionClipDelivery } from "./muxProductionFeatureMp4";
 import {
   probeProductionMedia,
@@ -2029,7 +2030,10 @@ export class AutoMovieProductionProject {
         evidence: {
           version: 1,
           shot: semantic.shot,
-          mask: JSON.parse(bytes.toString("utf8")) as IAutoMovieSemanticMask,
+          mask: parseAutoMovieStructuredJson({
+            record: "semantic-mask-sidecar",
+            bytes,
+          }) as IAutoMovieSemanticMask,
           coverage: semantic.coverage,
         },
         resident: { path: semantic.sidecar.path, bytes },
@@ -2155,7 +2159,10 @@ export class AutoMovieProductionProject {
           resident === null
             ? null
             : typia.validateEquals<IAutoMovieStoredRepaintAttemptClaim>(
-                JSON.parse(Buffer.from(resident).toString("utf8")),
+                parseAutoMovieStructuredJson({
+                  record: "repaint-attempt-claim",
+                  bytes: resident,
+                }),
               );
         if (current !== null && current.success === false)
           throw new Error("Stored repaint attempt claim is malformed.");
@@ -2222,7 +2229,10 @@ export class AutoMovieProductionProject {
       if (resident === null)
         throw new Error("Repaint attempt claim disappeared before settlement.");
       const current = typia.validateEquals<IAutoMovieStoredRepaintAttemptClaim>(
-        JSON.parse(Buffer.from(resident).toString("utf8")),
+        parseAutoMovieStructuredJson({
+          record: "repaint-attempt-claim",
+          bytes: resident,
+        }),
       );
       if (
         current.success === false ||
@@ -2356,7 +2366,10 @@ export class AutoMovieProductionProject {
     if (resident === null)
       throw new Error(`Repaint raw output receipt "${receiptPath}" is absent.`);
     const decoded = typia.validateEquals<IAutoMovieRepaintRawOutputReceipt>(
-      JSON.parse(Buffer.from(resident).toString("utf8")),
+      parseAutoMovieStructuredJson({
+        record: "repaint-raw-output-receipt",
+        bytes: resident,
+      }),
     );
     if (decoded.success === false)
       throw new Error(
@@ -2401,9 +2414,10 @@ export class AutoMovieProductionProject {
           const bytes = this.readTrackedStateFile(relative);
           if (bytes === null)
             throw new Error("the resident disappeared while being read");
-          decoded = JSON.parse(
-            Buffer.from(bytes).toString("utf8"),
-          ) as IAutoMovieRepaintAttemptRecord;
+          decoded = parseAutoMovieStructuredJson({
+            record: "repaint-attempt",
+            bytes,
+          }) as IAutoMovieRepaintAttemptRecord;
           this.assertRepaintAttempt(decoded);
         } catch (error) {
           throw new Error(
@@ -2591,7 +2605,10 @@ export class AutoMovieProductionProject {
     let previousCandidate: IAutoMovieRepaintReceipt | undefined;
     if (activeBytes !== null) {
       const previous = typia.validateEquals<IAutoMovieActiveRepaintReceipt>(
-        JSON.parse(Buffer.from(activeBytes).toString("utf8")),
+        parseAutoMovieStructuredJson({
+          record: "repaint-active-pointer",
+          bytes: activeBytes,
+        }),
       );
       if (previous.success === false || previous.data.shot !== props.shot)
         throw new Error("Current repaint selection pointer is malformed.");
@@ -2797,7 +2814,10 @@ export class AutoMovieProductionProject {
         }
         let decoded: unknown;
         try {
-          decoded = JSON.parse(Buffer.from(bytes).toString("utf8"));
+          decoded = parseAutoMovieStructuredJson({
+            record: "repaint-candidate-receipt",
+            bytes,
+          });
         } catch {
           findings.push({
             target,
@@ -2931,7 +2951,10 @@ export class AutoMovieProductionProject {
         try {
           pointerValidation =
             typia.validateEquals<IAutoMovieActiveRepaintReceipt>(
-              JSON.parse(Buffer.from(activeBytes).toString("utf8")),
+              parseAutoMovieStructuredJson({
+                record: "repaint-active-pointer",
+                bytes: activeBytes,
+              }),
             );
         } catch {
           throw new AutoMovieRepaintRecordInspectionError(
@@ -3009,7 +3032,10 @@ export class AutoMovieProductionProject {
           `Current repaint selection for shot "${shot}" vanished.`,
         );
       const active = typia.validateEquals<IAutoMovieActiveRepaintReceipt>(
-        JSON.parse(Buffer.from(activeBytes).toString("utf8")),
+        parseAutoMovieStructuredJson({
+          record: "repaint-active-pointer",
+          bytes: activeBytes,
+        }),
       );
       if (active.success === false)
         throw new Error(
@@ -3021,7 +3047,10 @@ export class AutoMovieProductionProject {
           `Current repaint selection for shot "${shot}" vanished.`,
         );
       const selection = typia.validateEquals<IAutoMovieRepaintSelectionRecord>(
-        JSON.parse(Buffer.from(selectionBytes).toString("utf8")),
+        parseAutoMovieStructuredJson({
+          record: "repaint-selection",
+          bytes: selectionBytes,
+        }),
       );
       if (
         selection.success === false ||
@@ -3080,9 +3109,10 @@ export class AutoMovieProductionProject {
         throw new AutoMovieRepaintRecordInspectionError("selection", "absent");
       let selectionValue: unknown;
       try {
-        selectionValue = JSON.parse(
-          Buffer.from(selectionBytes).toString("utf8"),
-        );
+        selectionValue = parseAutoMovieStructuredJson({
+          record: "repaint-selection",
+          bytes: selectionBytes,
+        });
       } catch {
         throw new AutoMovieRepaintRecordInspectionError(
           "selection",
@@ -3112,7 +3142,10 @@ export class AutoMovieProductionProject {
         throw new AutoMovieRepaintRecordInspectionError("receipt", "absent");
       let receiptValue: unknown;
       try {
-        receiptValue = JSON.parse(Buffer.from(receiptBytes).toString("utf8"));
+        receiptValue = parseAutoMovieStructuredJson({
+          record: "repaint-candidate-receipt",
+          bytes: receiptBytes,
+        });
       } catch {
         throw new AutoMovieRepaintRecordInspectionError(
           "receipt",
@@ -3577,7 +3610,10 @@ export class AutoMovieProductionProject {
       );
     let decoded: unknown;
     try {
-      decoded = JSON.parse(Buffer.from(manifestInput.bytes).toString("utf8"));
+      decoded = parseAutoMovieStructuredJson({
+        record: "asset-manifest",
+        bytes: manifestInput.bytes,
+      });
     } catch {
       throw new Error("Repaint asset manifest is not valid JSON.");
     }
@@ -3715,7 +3751,10 @@ export class AutoMovieProductionProject {
       );
       const bytes = Buffer.from(this.readRenderFile(relativeManifest));
       const validation = typia.validateEquals<IAutoMovieRenderBundleManifest>(
-        JSON.parse(bytes.toString("utf8")),
+        parseAutoMovieStructuredJson({
+          record: "render-bundle-manifest",
+          bytes,
+        }),
       );
       if (validation.success === false) return null;
       try {
@@ -3737,9 +3776,10 @@ export class AutoMovieProductionProject {
         ),
       );
       if (receiptBytes === null) return null;
-      const receipt = JSON.parse(
-        Buffer.from(receiptBytes).toString("utf8"),
-      ) as Partial<IAutoMovieRenderBundleReceipt>;
+      const receipt = parseAutoMovieStructuredJson({
+        record: "render-bundle-receipt",
+        bytes: receiptBytes,
+      }) as Partial<IAutoMovieRenderBundleReceipt>;
       if (
         receipt.version !== 1 ||
         receipt.bundle !== relativeBundle ||
@@ -3788,9 +3828,10 @@ export class AutoMovieProductionProject {
         const sidecarBytes = this.readRenderFile(
           normalizeSlash(path.relative(root, absoluteSidecar)),
         );
-        const mask = JSON.parse(
-          Buffer.from(sidecarBytes).toString("utf8"),
-        ) as IAutoMovieSemanticMask;
+        const mask = parseAutoMovieStructuredJson({
+          record: "semantic-mask-sidecar",
+          bytes: sidecarBytes,
+        }) as IAutoMovieSemanticMask;
         verifyAutoMovieProductionSemanticMaskReceipt({
           receipt: semantic,
           expectedFrame: semantic.frame,
@@ -4958,7 +4999,10 @@ const readOwnedJson = (rootReal: string, file: string): unknown => {
     throw error;
   }
   try {
-    return JSON.parse(Buffer.from(bytes).toString("utf8")) as unknown;
+    return parseAutoMovieStructuredJson({
+      record: path.basename(file),
+      bytes,
+    });
   } catch (error) {
     throw new Error(
       `Invalid AutoMovie JSON "${file}": ${String(error)}. Correct the file before continuing.`,
@@ -5902,9 +5946,10 @@ const isUuid = (value: unknown): value is string =>
  */
 const projectIdOf = (root: string): string => {
   try {
-    const declared: unknown = JSON.parse(
-      fileSystem.readFileSync(path.join(root, "package.json"), "utf8"),
-    );
+    const declared: unknown = parseAutoMovieStructuredJson({
+      record: "package.json",
+      bytes: fileSystem.readFileSync(path.join(root, "package.json")),
+    });
     const name = (declared as { name?: unknown } | null)?.name;
     if (typeof name === "string" && name.trim().length > 0) return name.trim();
   } catch {

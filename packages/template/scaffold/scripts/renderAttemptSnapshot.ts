@@ -4,6 +4,7 @@ import {
   type IAutoMovieLocalProcessOwner,
   compareCodeUnits,
   isAutoMovieLocalProcessOwner,
+  parseAutoMovieStructuredJson,
 } from "@automovie/production";
 import { randomUUID } from "node:crypto";
 import fs from "node:fs";
@@ -228,7 +229,10 @@ export const assertRenderAttemptLockOwner = (
   );
   let owner: unknown;
   try {
-    owner = JSON.parse(Buffer.from(ownerBytes).toString("utf8")) as unknown;
+    owner = parseAutoMovieStructuredJson({
+      record: "render-chunk-lock-owner",
+      bytes: ownerBytes,
+    });
   } catch {
     throw new Error("Render attempt chunk lock owner bytes are unreadable.");
   }
@@ -265,7 +269,7 @@ export const readRenderAttempt = (
   );
   let record: unknown;
   try {
-    record = JSON.parse(Buffer.from(bytes).toString("utf8")) as unknown;
+    record = parseAutoMovieStructuredJson({ record: "render-attempt", bytes });
   } catch {
     throw new Error("Render attempt record is unreadable.");
   }

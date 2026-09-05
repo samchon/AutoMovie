@@ -27,6 +27,7 @@ import {
   digestAutoMovieBytes,
   encodeAutoMoviePathSegment,
 } from "./contentIdentity";
+import { parseAutoMovieStructuredJson } from "./duplicateAwareJson";
 import { readAutoMovieProductionOwnedFile } from "./productionRenderJob";
 import {
   IAutoMovieProductionRootNamespaceLease,
@@ -1203,7 +1204,7 @@ const projectIdOf = (root: string): string => path.basename(root).trim();
 
 const parseJson = (bytes: Uint8Array, file: string): unknown => {
   try {
-    return JSON.parse(Buffer.from(bytes).toString("utf8")) as unknown;
+    return parseAutoMovieStructuredJson({ record: file, bytes });
   } catch (error) {
     throw new InvalidLegacyImportJsonError(
       `Invalid JSON "${file}": ${String(error)}`,

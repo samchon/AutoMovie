@@ -23,6 +23,7 @@ import { renderPathStem } from "@automovie/render";
 import { randomUUID } from "node:crypto";
 import path from "node:path";
 
+import { parseAutoMovieStructuredJson } from "../production/duplicateAwareJson";
 import { readAutoMovieProductionOwnedFile } from "../production/productionRenderJob";
 import {
   acquireOrCreateProductionRootNamespace,
@@ -432,7 +433,10 @@ export class AutoMovieProject {
       value =
         bytes === null
           ? undefined
-          : (JSON.parse(Buffer.from(bytes).toString("utf8")) as unknown);
+          : parseAutoMovieStructuredJson({
+              record: path.basename(this.revisionPath),
+              bytes,
+            });
     } catch (error) {
       throw new AutoMovieProjectJsonError(
         this.revisionPath,
@@ -1590,9 +1594,12 @@ const readJson = <T>(root: string, file: string): T | null => {
       optional: true,
     });
     if (bytes === null) return null;
-    return JSON.parse(Buffer.from(bytes).toString("utf8")) as T;
+    return parseAutoMovieStructuredJson({
+      record: path.basename(file),
+      bytes,
+    }) as T;
   } catch (error) {
-    // JSON.parse and Node's synchronous filesystem APIs throw Error objects.
+    // The structured parser and Node's synchronous filesystem APIs throw Error objects.
     const reason = (error as Error).message;
     throw new AutoMovieProjectJsonError(file, reason);
   }

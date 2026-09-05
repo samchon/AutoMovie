@@ -355,6 +355,32 @@ export const test_production_project_store = (): void => {
         ["AutoMovie project file", "script.json", "Fix or remove"],
       ),
     );
+    fs.writeFileSync(
+      path.join(sliceRoot, "script.json"),
+      Buffer.concat([
+        Buffer.from('{"logline":"'),
+        Buffer.from([0x80]),
+        Buffer.from('"}'),
+      ]),
+    );
+    TestValidator.predicate(
+      "a slice with malformed UTF-8 is refused at the encoding stage",
+      throwsProjectJsonError(
+        () => AutoMovieProject.open(sliceRoot).writableSlate(),
+        ["AutoMovie project file", "script.json", "encoding admission"],
+      ),
+    );
+    fs.writeFileSync(
+      path.join(sliceRoot, "script.json"),
+      '{"logline":"a","logline":"b"}',
+    );
+    TestValidator.predicate(
+      "a slice with a duplicate member is refused instead of read last-wins",
+      throwsProjectJsonError(
+        () => AutoMovieProject.open(sliceRoot).writableSlate(),
+        ["AutoMovie project file", "script.json", "duplicate member"],
+      ),
+    );
   } catch (error) {
     sliceFailure = { error };
     throw error;

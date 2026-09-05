@@ -189,8 +189,16 @@ export const test_production_design_reference_asset = (): void => {
     ["an overflowing viewBox", 'viewBox="0 0 1e400 297"', ["unsupported"]],
     ["a zero-width viewBox", 'viewBox="0 0 0 297"', ["unsupported"]],
     ["a zero-height viewBox", 'viewBox="0 0 420 0"', ["unsupported"]],
-    ["unitless width and height", 'width="800" height="600"', ["measured", 800, 600]],
-    ["pixel width and height", 'width="800px" height="600px"', ["measured", 800, 600]],
+    [
+      "unitless width and height",
+      'width="800" height="600"',
+      ["measured", 800, 600],
+    ],
+    [
+      "pixel width and height",
+      'width="800px" height="600px"',
+      ["measured", 800, 600],
+    ],
     ["a millimetre sheet", 'width="210mm" height="297mm"', ["unsupported"]],
     ["a width with no height", 'width="800"', ["unsupported"]],
     ["an empty width", 'width="" height="600"', ["unsupported"]],
@@ -199,7 +207,10 @@ export const test_production_design_reference_asset = (): void => {
   TestValidator.equals(
     "SVG extents follow the SVG number grammar of the root attributes",
     viewBoxes.map(([, attributes]) => verdict(svg(attributes))),
-    viewBoxes.map(([, , expected]) => ["image/svg+xml", ...(expected as unknown[])]),
+    viewBoxes.map(([, , expected]) => [
+      "image/svg+xml",
+      ...(expected as unknown[]),
+    ]),
   );
 
   const drawing = utf8("0\nSECTION\n2\nHEADER\n0\nENDSEC\n0\nEOF\n");
@@ -256,6 +267,6 @@ export const test_production_design_reference_asset = (): void => {
         ]),
       ),
     ],
-    [true, true, true, ["AutoMovieUtf8Error", 59, "isolated-continuation"]],
+    [true, true, true, ["AutoMovieUtf8Error", 58, "isolated-continuation"]],
   );
 };
