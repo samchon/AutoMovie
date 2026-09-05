@@ -122,7 +122,8 @@ export const inspectAutoMovieLibraryProjectState = (props: {
       problems: problems.concat({
         code: "library-index-invalid",
         path: "library/index.json",
-        message: errorMessage(error),
+        // The index parser throws nothing but its own Error refusals.
+        message: (error as Error).message,
       }),
     };
   }
@@ -139,7 +140,7 @@ export const inspectAutoMovieLibraryProjectState = (props: {
     });
 
   const bindings = new Map(
-    (evidence.sourceOwners ?? []).map((binding) => [
+    evidence.sourceOwners.map((binding) => [
       JSON.stringify([
         binding.branch,
         `${binding.targetPath}#${binding.targetAnchor}`,
@@ -208,7 +209,7 @@ export const inspectAutoMovieLibraryProjectState = (props: {
         });
     }
   }
-  for (const binding of evidence.sourceOwners ?? []) {
+  for (const binding of evidence.sourceOwners) {
     if (binding.enforced === false || binding.reviewed === false) continue;
     const identity = JSON.stringify([
       binding.branch,
@@ -246,7 +247,9 @@ const ownerArtifactPaths = (
     ...owner.models.map(
       (id) => `models/${encodeAutoMoviePathSegment(id)}.json`,
     ),
-    ...(owner.contexts ?? []).map(
+    // `parseOwner` materializes every context list, so the optional interface
+    // field is always present here.
+    ...owner.contexts!.map(
       (id) => `library/contexts/${encodeAutoMoviePathSegment(id)}.json`,
     ),
   ].sort(compareCodeUnits);
@@ -366,6 +369,3 @@ const isDigest = (value: unknown): value is AutoMovieContentDigest =>
 
 const isStringArray = (value: unknown): value is string[] =>
   Array.isArray(value) && value.every((entry) => typeof entry === "string");
-
-const errorMessage = (error: unknown): string =>
-  error instanceof Error ? error.message : String(error);

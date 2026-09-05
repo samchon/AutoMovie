@@ -146,7 +146,8 @@ export const designReferenceDiagnostics = (props: {
             ? "design-reference-container-invalid"
             : "design-reference-media-unsupported",
         reference.id,
-        `${error instanceof Error ? error.message : String(error)} Convert the reference to a registrable container before citing it.`,
+        // The asset inspector throws nothing but Error refusals.
+        `${(error as Error).message} Convert the reference to a registrable container before citing it.`,
       );
       continue;
     }

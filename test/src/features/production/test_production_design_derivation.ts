@@ -18,16 +18,37 @@ interface IAutoMovieDesignDerivationBasis {
 interface IDerivationCandidate {
   outputs: ReadonlyMap<string, Uint8Array>;
   manifest: {
-    records: Array<{ basis: IAutoMovieDesignDerivationBasis }>;
+    records: Array<{
+      target: string;
+      recordPath: string;
+      basis: IAutoMovieDesignDerivationBasis;
+    }>;
   };
+}
+interface IProducerEntry {
+  target: string;
+  recordPath: string;
+  source: IAutoMovieDesignDerivationBasis["source"];
+  evaluate: () => unknown;
+  store: (value: unknown) => {
+    accepted: boolean;
+    revision: number;
+    diagnostics: Array<{ message: string }>;
+  };
+}
+interface IDerivationRun {
+  manifest: IDerivationCandidate["manifest"];
+  outcomes: Array<{ target: string; recordPath: string; state: string }>;
 }
 const {
   AUTOMOVIE_DESIGN_DERIVATION_PROTOCOL,
   AutoMovieDesignDerivationError,
   autoMovieDesignDerivationBasisDigest,
+  autoMovieDesignTargetAddress,
   captureAutoMovieDesignDerivationBasis,
   createAutoMovieDesignDerivationCandidate,
   inspectAutoMovieDesignDerivation,
+  runAutoMovieDesignDerivation,
 } = loadSourceModule<{
   AUTOMOVIE_DESIGN_DERIVATION_PROTOCOL: string;
   AutoMovieDesignDerivationError: new (
@@ -36,6 +57,17 @@ const {
   autoMovieDesignDerivationBasisDigest: (
     basis: IAutoMovieDesignDerivationBasis,
   ) => AutoMovieContentDigest;
+  autoMovieDesignTargetAddress: (
+    target: { kind: "production" | "world" } | { kind: string; id: string },
+  ) => string;
+  runAutoMovieDesignDerivation: (props: {
+    production: string;
+    emitter: { path: string; bytes: Uint8Array };
+    tool: IAutoMovieDesignDerivationBasis["tool"];
+    readSource: (path: string) => Uint8Array;
+    resident: readonly { target: string; recordPath: string; value: unknown }[];
+    entries: readonly IProducerEntry[];
+  }) => IDerivationRun;
   captureAutoMovieDesignDerivationBasis: (props: {
     production: string;
     target: string;
@@ -62,7 +94,8 @@ const {
     manifest: IDerivationCandidate["manifest"] | null;
     bases: readonly IAutoMovieDesignDerivationBasis[];
     readOutput: (path: string) => Uint8Array | null;
-  }) => Array<{ code: string }>;
+    residentRecordPaths?: readonly string[];
+  }) => Array<{ code: string; path: string | null; message: string }>;
 }>(
   path.resolve(
     __dirname,
@@ -108,6 +141,15 @@ const output = (value = 1) => [
  * 1. Dependency order is canonical while target, mapping, dependency, and tool changes alter the basis.
  * 2. Two equal evaluations stage one complete manifest; a changed live basis, output, target set, duplicate, or unsafe path is refused.
  * 3. Inspection distinguishes producer-basis staleness, resident-output staleness, missing targets, and malformed manifests.
+ * 4. A complete generation run creates, updates, or leaves each declared record
+ *    through the project's typed setter in plan order, and refuses an orphan
+ *    resident record, a refused store, or a value without a canonical JSON
+ *    form before any record is published.
+ * 5. Every basis, output, and manifest shape rule is named: protocol, blank
+ *    selector, repeated dependency path, several targets on one record path,
+ *    a duplicate evaluated target, a changed evaluated target set, a manifest
+ *    that repeats a record path, an unowned resident record, and a live
+ *    closure that fails with a non-Error value.
  */
 export const test_production_design_derivation = (): void => {
   const initialBasis = basis();
@@ -516,6 +558,267 @@ export const test_production_design_derivation = (): void => {
       missingTargetDetected: true,
       malformedManifestDetected: true,
       duplicateManifestDetected: true,
+    },
+  );
+
+  const stored: unknown[] = [];
+  const entry = (
+    overrides: Partial<IProducerEntry> = {},
+    value: unknown = { value: 1 },
+  ): IProducerEntry => ({
+    target: "production",
+    recordPath: "automovie/design/film/production.json",
+    source: {
+      path: "src/design/production.ts",
+      export: "production",
+      selector: null,
+    },
+    evaluate: () => value,
+    store: (accepted) => {
+      stored.push(accepted);
+      return { accepted: true, revision: 1, diagnostics: [] };
+    },
+    ...overrides,
+  });
+  const run = (
+    entries: readonly IProducerEntry[],
+    resident: readonly {
+      target: string;
+      recordPath: string;
+      value: unknown;
+    }[] = [],
+  ): IDerivationRun =>
+    runAutoMovieDesignDerivation({
+      production: "film",
+      emitter: {
+        path: "scripts/emitDesign.ts",
+        bytes: Buffer.from("export {};\n"),
+      },
+      tool: { production: "1.0.0", typescript: "7.0.0", node: "22" },
+      readSource: (sourcePath) => {
+        const source = sourceFiles[sourcePath as keyof typeof sourceFiles];
+        if (source === undefined) throw new Error("missing source");
+        return Buffer.from(source);
+      },
+      resident,
+      entries,
+    });
+  const refusal = (task: () => unknown): string => {
+    try {
+      task();
+      return "accepted";
+    } catch (error) {
+      return error instanceof AutoMovieDesignDerivationError
+        ? `${error.code}: ${error.message}`
+        : error instanceof Error
+          ? `Error: ${error.message}`
+          : String(error);
+    }
+  };
+  const states = (result: IDerivationRun): string =>
+    result.outcomes.map((outcome) => outcome.state).join(",");
+  const created = run([entry()]);
+  const unchanged = run(
+    [entry()],
+    [
+      {
+        target: "production",
+        recordPath: "automovie/design/film/production.json",
+        value: { value: 1 },
+      },
+    ],
+  );
+  const updated = run(
+    [entry()],
+    [
+      {
+        target: "production",
+        recordPath: "automovie/design/film/production.json",
+        value: { value: 0 },
+      },
+    ],
+  );
+  TestValidator.equals(
+    "a generation run publishes only a complete current candidate in plan order",
+    {
+      created: states(created),
+      createdManifest: created.manifest.records.length,
+      unchanged: states(unchanged),
+      updated: states(updated),
+      storedValues: stored,
+      orphan: refusal(() =>
+        run(
+          [entry()],
+          [
+            {
+              target: 'model "orphan"',
+              recordPath: "automovie/design/film/models/orphan.json",
+              value: {},
+            },
+          ],
+        ),
+      ),
+      refusedStore: refusal(() =>
+        run([
+          entry({
+            store: () => ({
+              accepted: false,
+              revision: 1,
+              diagnostics: [{ message: "The store refused the record." }],
+            }),
+          }),
+        ]),
+      ),
+      bigintValue: refusal(() => run([entry({}, { value: 1n })])),
+      undefinedValue: refusal(() =>
+        run([entry({ evaluate: () => undefined })]),
+      ),
+      addresses: [
+        autoMovieDesignTargetAddress({ kind: "production" }),
+        autoMovieDesignTargetAddress({ kind: "world" }),
+        autoMovieDesignTargetAddress({ kind: "model", id: "hero" }),
+      ],
+    },
+    {
+      created: "created",
+      createdManifest: 1,
+      unchanged: "unchanged",
+      updated: "updated",
+      storedValues: [{ value: 1 }, { value: 1 }],
+      orphan:
+        'design-derivation-orphan-record: 1 resident design record(s) are derived by no producer entry:\n  automovie/design/film/models/orphan.json  (model "orphan")\n\nDerive each record from its current owner or delete the named file. No design record was published.',
+      refusedStore:
+        'design-derivation-publication-failed: Design target "production" was refused by the project store: The store refused the record.',
+      bigintValue:
+        'design-derivation-output-malformed: Design target "production" evaluated to a value that has no canonical JSON form (AutoMovie canonical JSON refused unsupported-value: bigint has no JSON representation). No design record was published.',
+      undefinedValue:
+        'design-derivation-output-malformed: Design target "production" evaluated to a value that has no canonical JSON form (AutoMovie canonical JSON refused unsupported-value: the root must have a JSON representation). No design record was published.',
+      addresses: ["production", "world", 'model "hero"'],
+    },
+  );
+
+  let alternating = 0;
+  TestValidator.equals(
+    "every basis, output, and manifest shape rule is named",
+    {
+      protocol: refusal(() =>
+        createAutoMovieDesignDerivationCandidate({
+          bases: [basis({ protocol: "automovie.design-derivation.v0" })],
+          evaluate: () => output(),
+          currentBases: () => [initialBasis],
+        }),
+      ),
+      blankSelector: refusal(() =>
+        createAutoMovieDesignDerivationCandidate({
+          bases: [basis({ source: { ...initialBasis.source, selector: " " } })],
+          evaluate: () => output(),
+          currentBases: () => [initialBasis],
+        }),
+      ),
+      repeatedDependency: refusal(() =>
+        createAutoMovieDesignDerivationCandidate({
+          bases: [
+            basis({
+              dependencies: [
+                initialBasis.dependencies[0]!,
+                initialBasis.dependencies[0]!,
+              ],
+            }),
+          ],
+          evaluate: () => output(),
+          currentBases: () => [initialBasis],
+        }),
+      ),
+      sharedRecordPath: refusal(() =>
+        createAutoMovieDesignDerivationCandidate({
+          bases: [initialBasis, basis({ target: "world" })],
+          evaluate: () => output(),
+          currentBases: () => [initialBasis],
+        }),
+      ),
+      duplicateOutputTarget: refusal(() =>
+        createAutoMovieDesignDerivationCandidate({
+          bases: [initialBasis],
+          evaluate: () => [...output(), ...output()],
+          currentBases: () => [initialBasis],
+        }),
+      ),
+      changedOutputSet: refusal(() =>
+        createAutoMovieDesignDerivationCandidate({
+          bases: [initialBasis],
+          evaluate: () =>
+            ++alternating === 1
+              ? output()
+              : [
+                  ...output(),
+                  {
+                    target: "world",
+                    recordPath: "automovie/design/shared/world.json",
+                    bytes: Buffer.from("{}"),
+                  },
+                ],
+          currentBases: () => [initialBasis],
+        }),
+      ),
+      liveClosureValueFailure: refusal(() =>
+        createAutoMovieDesignDerivationCandidate({
+          bases: [initialBasis],
+          evaluate: () => output(),
+          currentBases: () => {
+            const failure: unknown = "live closure exploded";
+            throw failure;
+          },
+        }),
+      ),
+      manifestSharedRecordPath: inspectAutoMovieDesignDerivation({
+        manifest: {
+          ...candidate.manifest,
+          records: [
+            candidate.manifest.records[0]!,
+            {
+              ...candidate.manifest.records[0]!,
+              target: "world",
+              basis: {
+                ...candidate.manifest.records[0]!.basis,
+                target: "world",
+              },
+            },
+          ],
+        },
+        bases: [initialBasis],
+        readOutput: () => output()[0]!.bytes,
+      }).map((problem) => `${problem.code}: ${problem.message}`),
+      unownedResident: inspectAutoMovieDesignDerivation({
+        manifest: candidate.manifest,
+        bases: [initialBasis],
+        readOutput: () => output()[0]!.bytes,
+        residentRecordPaths: [
+          "automovie/design/film/production.json",
+          "automovie/design/film/models/orphan.json",
+        ],
+      }).map((problem) => `${problem.code}: ${problem.path}`),
+    },
+    {
+      protocol:
+        'Error: Unsupported design basis protocol "automovie.design-derivation.v0".',
+      blankSelector:
+        "Error: Design derivation source selector is empty or malformed.",
+      repeatedDependency:
+        'Error: Design target "production" repeats a dependency path.',
+      sharedRecordPath:
+        "Error: Design producer basis maps several targets to one record path.",
+      duplicateOutputTarget:
+        "design-derivation-nondeterministic: Design evaluation returned a duplicate target identity.",
+      changedOutputSet:
+        "design-derivation-nondeterministic: Design target set produced different canonical bytes from the same frozen basis. No design record was published.",
+      liveClosureValueFailure:
+        "design-derivation-basis-changed: The live design producer closure became invalid during generation (live closure exploded). Run the explicit design command again.",
+      manifestSharedRecordPath: [
+        "design-derivation-manifest-malformed: Design-derivation manifest repeats a record path. Regenerate the canonical design-derivation manifest.",
+      ],
+      unownedResident: [
+        "design-derivation-stale: automovie/design/film/models/orphan.json",
+      ],
     },
   );
 };

@@ -581,9 +581,7 @@ export const inspectAutoMovieDesignDerivation = (props: {
 
 const canonicalDesignBytes = (target: string, value: unknown): Uint8Array => {
   try {
-    const bytes = canonicalAutoMovieJsonBytes(value);
-    if (bytes.length === 0) throw new Error("the value is not a JSON value");
-    return bytes;
+    return canonicalAutoMovieJsonBytes(value);
   } catch (error) {
     throw new AutoMovieDesignDerivationError(
       "design-derivation-output-malformed",

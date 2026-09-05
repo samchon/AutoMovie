@@ -111,8 +111,9 @@ export const verifyProductionNonVideoDeliverables = (props: {
       actualJson = canonicalizeAutoMovieJson(actual);
       expectedJson = canonicalizeAutoMovieJson(expected);
     } catch (error) {
+      // Canonicalization throws nothing but its typed Error refusal.
       throw new Error(
-        `Sound evidence contains a non-finite or non-JSON value: ${error instanceof Error ? error.message : String(error)}`,
+        `Sound evidence contains a non-finite or non-JSON value: ${(error as Error).message}`,
       );
     }
     if (actualJson !== expectedJson)

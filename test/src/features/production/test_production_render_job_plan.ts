@@ -88,6 +88,60 @@ const RESAMPLED_WAVE_AUDIO_ASSET = {
   },
 } as const satisfies IAutoMovieProductionAudioAssetIdentity;
 
+const MONO_WAVE_AUDIO_ASSET = {
+  ...WAVE_AUDIO_ASSET,
+  channels: 1,
+  sourceFormat: {
+    ...WAVE_AUDIO_ASSET.sourceFormat,
+    channels: 1,
+    layout: {
+      kind: "mono",
+      speakers: ["front-center"],
+      source: "channel-mask",
+      mask: 0x4,
+    },
+  },
+  processing: {
+    kind: "copy",
+    outputChannels: 1,
+    outputSampleRate: 48_000,
+    matrix: [[1]],
+  },
+} as const satisfies IAutoMovieProductionAudioAssetIdentity;
+
+const MONO_FLOAT_WAVE_AUDIO_ASSET = {
+  ...MONO_WAVE_AUDIO_ASSET,
+  sourceFrames: 12_000,
+  sampleRate: 24_000,
+  sourceFormat: {
+    ...MONO_WAVE_AUDIO_ASSET.sourceFormat,
+    sampleRate: 24_000,
+    encoding: "float-f32le",
+    containerBits: 32,
+    validBits: 32,
+    subFormatGuid: "00000003-0000-0010-8000-00aa00389b71",
+  },
+  processing: {
+    ...MONO_WAVE_AUDIO_ASSET.processing,
+    kind: "resample",
+  },
+} as const satisfies IAutoMovieProductionAudioAssetIdentity;
+
+const LEGACY_WAVE_AUDIO_ASSET = {
+  ...WAVE_AUDIO_ASSET,
+  sourceFormat: {
+    ...WAVE_AUDIO_ASSET.sourceFormat,
+    header: "wave-format-ex",
+    layout: {
+      kind: "stereo",
+      speakers: ["front-left", "front-right"],
+      source: "legacy-default",
+      mask: null,
+    },
+    subFormatGuid: null,
+  },
+} as const satisfies IAutoMovieProductionAudioAssetIdentity;
+
 const AUDIO_ASSET = {
   kind: "placeholder-audio-stem",
   path: "assets/audio/tone.wav",
@@ -590,8 +644,39 @@ export const test_production_render_job_plan = (): void => {
     [
       plan({ audioAssets: [WAVE_AUDIO_ASSET] }).tracks.audioAssets[0],
       plan({ audioAssets: [RESAMPLED_WAVE_AUDIO_ASSET] }).tracks.audioAssets[0],
+      plan({ audioAssets: [MONO_WAVE_AUDIO_ASSET] }).tracks.audioAssets[0],
+      plan({ audioAssets: [MONO_FLOAT_WAVE_AUDIO_ASSET] }).tracks
+        .audioAssets[0],
+      plan({ audioAssets: [LEGACY_WAVE_AUDIO_ASSET] }).tracks.audioAssets[0],
     ],
-    [WAVE_AUDIO_ASSET, RESAMPLED_WAVE_AUDIO_ASSET],
+    [
+      WAVE_AUDIO_ASSET,
+      RESAMPLED_WAVE_AUDIO_ASSET,
+      MONO_WAVE_AUDIO_ASSET,
+      MONO_FLOAT_WAVE_AUDIO_ASSET,
+      LEGACY_WAVE_AUDIO_ASSET,
+    ],
+  );
+  TestValidator.predicate(
+    "a mono WAVE identity must carry the mono channel mask",
+    throwsError(
+      () =>
+        plan({
+          audioAssets: [
+            {
+              ...MONO_WAVE_AUDIO_ASSET,
+              sourceFormat: {
+                ...MONO_WAVE_AUDIO_ASSET.sourceFormat,
+                layout: {
+                  ...MONO_WAVE_AUDIO_ASSET.sourceFormat.layout,
+                  mask: 0x3,
+                },
+              },
+            },
+          ],
+        }),
+      "invalid identity",
+    ),
   );
   // The cue's `sourceDurationFrames` names the complete asset, so a one-second
   // asset is verified by a 24-frame declaration and the twelve-frame trim that

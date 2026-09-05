@@ -626,6 +626,24 @@ export const test_production_semantic_mask_evidence = (): void => {
         ],
         attempts: [],
       })[0]!.status,
+      orderedGaps: productionRenderChunkStatuses({
+        plan,
+        receipts: [
+          {
+            ...chunkReceipt,
+            semanticMasks: [
+              {
+                ...receipt,
+                coverage: {
+                  unresolved: ["node:first", "node:second"],
+                  unaddressed: 0,
+                },
+              },
+            ],
+          },
+        ],
+        attempts: [],
+      })[0]!.status,
     },
     {
       verified: undefined,
@@ -633,6 +651,7 @@ export const test_production_semantic_mask_evidence = (): void => {
       historical: "failed",
       missing: "failed",
       incomplete: "failed",
+      orderedGaps: "failed",
     },
   );
 

@@ -276,6 +276,21 @@ export const test_production_library_authoring_snapshot = (): void => {
           ),
       ],
       [
+        "unselectedKindRefused",
+        () =>
+          throwsError(
+            () =>
+              snapshot(
+                {
+                  ...base,
+                  manifest: { ...base.manifest, kind: null },
+                } as IAutoMovieProductionEvidence,
+                { [LIBRARY_SOURCE]: "" },
+              ),
+            'not "unselected"',
+          ),
+      ],
+      [
         "reviewedSourceExecuted",
         () => execution.entries.length === 1 && execution.problems.length === 0,
       ],
@@ -335,6 +350,7 @@ export const test_production_library_authoring_snapshot = (): void => {
       missingSourceChanges: true,
       rootMismatchRefused: true,
       nonLibraryRefused: true,
+      unselectedKindRefused: true,
       reviewedSourceExecuted: true,
       productionSourceExecuted: true,
       staleSourceRefused: true,

@@ -1467,6 +1467,14 @@ export const test_production_repaint_execution = async (): Promise<void> => {
     admitted(() => ({ status: "already-active", ownerAttemptId: " " })),
     admitted(async () => ({ status: "acquired" })),
   ]);
+  const signalled = await execute<number>({
+    policy: policy(),
+    signal: new AbortController().signal,
+    admitAttempt: (() => {
+      throw new Error("claim store offline");
+    }) as NonNullable<Parameters<typeof execute>[0]["admitAttempt"]>,
+    calls: async () => ({ value: 1, costUnits: 0, availableOutput: null }),
+  });
   const refusalOf = (
     outcome: Awaited<ReturnType<typeof execute<number>>>,
   ): unknown => ({
@@ -1491,6 +1499,7 @@ export const test_production_repaint_execution = async (): Promise<void> => {
         claimRefusal: acquired.result.claimRefusal,
       },
       providerCalls: admittedProviderCalls,
+      signalledStoreThrew: refusalOf(signalled),
     },
     {
       heldByOwner: {
@@ -1548,6 +1557,16 @@ export const test_production_repaint_execution = async (): Promise<void> => {
       },
       acquired: { stop: "accepted", attempts: 1, claimRefusal: null },
       providerCalls: 1,
+      signalledStoreThrew: {
+        stop: "claim-refused",
+        attempts: 0,
+        records: 0,
+        accepted: null,
+        claimRefusal: {
+          status: "admission-failed",
+          message: "claim store offline",
+        },
+      },
     },
   );
 };

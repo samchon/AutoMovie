@@ -103,6 +103,12 @@ const inspect = (props: {
  * 1. A complete graph-bound index and every declared artifact reopens cleanly.
  * 2. Missing evidence, timed residue, missing files, malformed identity, owner drift, and duplicate artifact ownership remain distinct refusals.
  * 3. Duplicate JSON members and duplicate owner identities are rejected before a library state can become current.
+ * 4. Every index shape refusal is named: extra or missing members, malformed
+ *    identity, repeated or unsorted owners, malformed owner fields, and
+ *    repeated or unsorted artifact ids; an index the manifest does not own,
+ *    evidence without source owners, an unenforced binding, a reviewed binding
+ *    without an owner entry, a production-source owner, and a foreign-branch
+ *    owner each join to their exact problems.
  */
 export const test_production_library_project_state = (): void => {
   const evidence = libraryAuthoring({ root: "C:/project" });
@@ -246,6 +252,133 @@ export const test_production_library_project_state = (): void => {
       duplicateDesignOwnerRejected: true,
       malformedIndexRejected: true,
       duplicateJsonMemberRejected: true,
+    },
+  );
+
+  const firstOwner = index.owners[0]!;
+  const parseFailure = (library: unknown): string | undefined =>
+    inspect({ evidence, library }).problems.find(
+      (problem) => problem.code === "library-index-invalid",
+    )?.message;
+  const direct = (props: {
+    sourceOwners?: (typeof owner)[];
+    library?: unknown;
+    manifestFiles?: readonly string[];
+  }) =>
+    inspectAutoMovieLibraryProjectState({
+      production: "library-fixture",
+      compiler: "automovie.compiler.v9",
+      inputFingerprint: hash("1"),
+      authoringEvidence: {
+        ...evidence,
+        sourceOwners: props.sourceOwners ?? [],
+      },
+      manifest: {
+        ...manifest(),
+        files: manifest().files.filter((file) =>
+          (props.manifestFiles ?? paths).includes(file.path),
+        ),
+      },
+      readFile: (path) =>
+        path === "library/index.json"
+          ? bytes(props.library ?? index)
+          : bytes({ id: path }),
+    });
+  TestValidator.equals(
+    "the index parser names every shape refusal and owner joins are exact",
+    {
+      extraMember: parseFailure({ ...index, extra: 1 }),
+      malformedIdentity: parseFailure({ ...index, compiler: 1 }),
+      repeatedOwner: parseFailure({
+        ...index,
+        owners: [firstOwner, firstOwner],
+      }),
+      unsortedOwners: parseFailure({
+        ...index,
+        owners: [{ ...firstOwner, export: "zeta" }, firstOwner],
+      }),
+      malformedOwner: parseFailure({
+        ...index,
+        owners: [{ ...firstOwner, sourceDigest: "sha256:short" }],
+      }),
+      ownerExtraMember: parseFailure({
+        ...index,
+        owners: [{ ...firstOwner, note: "extra" }],
+      }),
+      repeatedEnvironment: parseFailure({
+        ...index,
+        owners: [{ ...firstOwner, environments: ["hall", "hall"] }],
+      }),
+      unsortedModels: parseFailure({
+        ...index,
+        owners: [{ ...firstOwner, models: ["z", "bench"] }],
+      }),
+      unmanifestedIndex: direct({
+        sourceOwners: [owner],
+        manifestFiles: paths.slice(1),
+      }).problems.map((problem) => problem.code),
+      evidenceWithoutSourceOwners: direct({}).problems.map(
+        (problem) => problem.code,
+      ),
+      unenforcedBindingIgnored: direct({
+        sourceOwners: [{ ...owner, enforced: false }],
+      }).problems.map((problem) => problem.code),
+      reviewedBindingWithoutOwner: direct({
+        sourceOwners: [owner, { ...owner, exportName: "annex" }],
+      }).problems.map((problem) => problem.message.includes("annex")),
+      productionSourceOwner: direct({
+        sourceOwners: [
+          {
+            ...owner,
+            branch: "productionSources",
+            targetPath: "docs/settings/production.md",
+            targetAnchor: "production",
+          },
+        ],
+        library: {
+          ...index,
+          owners: [
+            {
+              ...firstOwner,
+              branch: "productionSources",
+              owner: "docs/settings/production.md#production",
+              environments: [],
+              models: [],
+              contexts: [],
+            },
+          ],
+        },
+      }).problems.map((problem) => problem.code),
+      foreignBranchOwner: direct({
+        sourceOwners: [owner],
+        library: {
+          ...index,
+          owners: [{ ...firstOwner, branch: "materials" }],
+        },
+      }).problems.map((problem) => problem.code),
+    },
+    {
+      extraMember:
+        "Library index object has unexpected or missing members: compiler, extra, inputFingerprint, owners, production, version.",
+      malformedIdentity: "Library index identity or owners are malformed.",
+      repeatedOwner: "Library index repeats an owner identity.",
+      unsortedOwners: "Library index owners are not in canonical order.",
+      malformedOwner: "Library index owner 0 is malformed.",
+      ownerExtraMember:
+        "Library index object has unexpected or missing members: branch, contexts, environments, export, models, note, owner, source, sourceDigest.",
+      repeatedEnvironment: "Library index owner 0 repeats a environment id.",
+      unsortedModels:
+        "Library index owner 0 model ids are not in canonical order.",
+      unmanifestedIndex: ["generated-file-missing"],
+      evidenceWithoutSourceOwners: ["library-owner-mismatch"],
+      unenforcedBindingIgnored: ["library-owner-mismatch"],
+      reviewedBindingWithoutOwner: [true],
+      productionSourceOwner: [
+        "generated-shape-mismatch",
+        "generated-shape-mismatch",
+        "generated-shape-mismatch",
+      ],
+      foreignBranchOwner: ["library-owner-mismatch", "library-owner-mismatch"],
     },
   );
 };

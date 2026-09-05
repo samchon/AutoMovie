@@ -337,9 +337,8 @@ const assertProductionAudioProfile = (
   try {
     assertProductionOpusProfile(audio);
   } catch (error) {
-    throw new Error(
-      `${label} ${error instanceof Error ? error.message : String(error)}`,
-    );
+    // The Opus profile assertion throws nothing but Error refusals.
+    throw new Error(`${label} ${(error as Error).message}`);
   }
 };
 

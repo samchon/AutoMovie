@@ -808,13 +808,9 @@ export class AutoMovieProductionCompiler {
           compiled,
         );
       } catch (error) {
+        // The film-effect runtime throws nothing but its typed Error refusal.
         diagnostics.push(
-          filmDiagnostic(
-            "film-effect-cue-invalid",
-            error instanceof Error
-              ? error.message
-              : "Film effect runtime materialization failed.",
-          ),
+          filmDiagnostic("film-effect-cue-invalid", (error as Error).message),
         );
       }
     const inputCurrent = (): boolean => {

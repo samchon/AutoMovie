@@ -7,6 +7,7 @@ import {
   AutoMovieProductionCompiler,
   AutoMovieProductionProject,
   canonicalizeAutoMovieJson,
+  readAutoMovieFilmEffects,
 } from "@automovie/production";
 import { TestValidator } from "@nestia/e2e";
 import fs from "node:fs";
@@ -141,6 +142,11 @@ export const test_production_completed_film_compiler = (): void => {
       fixture.evidence,
       () => fixture.evidence,
     ).compile({ scope: "source" });
+    const compiled = AutoMovieProductionProject.open(fixture.root);
+    const effects = readAutoMovieFilmEffects(
+      compiled,
+      compiled.generatedManifest()!.inputFingerprint,
+    );
 
     const authored = fs.readFileSync(
       path.join(fixture.root, "src/shots/opening.ts"),
@@ -166,6 +172,10 @@ export const test_production_completed_film_compiler = (): void => {
           () => output.materialized.length > 0,
         ],
         [
+          "the compiled film effects reopen from the generated manifest",
+          () => Array.isArray(effects),
+        ],
+        [
           "a stale authored source is refused",
           () =>
             stale.success === false &&
@@ -178,6 +188,7 @@ export const test_production_completed_film_compiler = (): void => {
         "all checked design is source-derived": true,
         "the complete source compile succeeds": true,
         "the compiler materializes real output": true,
+        "the compiled film effects reopen from the generated manifest": true,
         "a stale authored source is refused": true,
       },
     );

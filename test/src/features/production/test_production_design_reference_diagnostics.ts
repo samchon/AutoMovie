@@ -303,6 +303,16 @@ export const test_production_design_reference_diagnostics = (): void => {
       ["design-reference-media-unsupported"],
     ],
     [
+      "text bytes that are not strict UTF-8",
+      (value) => {
+        const bytes = new Uint8Array([0x3c, 0x73, 0x76, 0x67, 0x80]);
+        value.assets.set(PLAN_PATH, bytes);
+        value.references[0]!.digest = digestAutoMovieBytes(bytes);
+        value.references[0]!.media = "image/svg+xml";
+      },
+      ["design-reference-encoding-invalid"],
+    ],
+    [
       "an XML candidate preceded by an invalid XML scalar",
       (value) => {
         const bytes = Buffer.from(
@@ -359,10 +369,7 @@ export const test_production_design_reference_diagnostics = (): void => {
     "an unmeasurable container leaves its frames unverified rather than blessed",
     codes((value) => {
       const bytes = new Uint8Array(
-        Buffer.from(
-          "0\nSECTION\n2\nHEADER\n0\nENDSEC\n0\nEOF",
-          "utf8",
-        ),
+        Buffer.from("0\nSECTION\n2\nHEADER\n0\nENDSEC\n0\nEOF", "utf8"),
       );
       value.assets.set(PLAN_PATH, bytes);
       value.references[0]!.digest = digestAutoMovieBytes(bytes);

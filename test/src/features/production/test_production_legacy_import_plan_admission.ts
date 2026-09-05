@@ -175,11 +175,16 @@ export const test_production_legacy_import_plan_admission = (): void => {
         value.rollbackBaseline[0]!.files[0]!.path = "src/NESTED";
         refingerprint(value);
       }),
+      rejected((value) => {
+        value.rollbackBaseline = value.rollbackBaseline.slice(0, 2);
+        refingerprint(value);
+      }),
     ],
     [
       false,
       false,
       false,
+      true,
       true,
       true,
       true,

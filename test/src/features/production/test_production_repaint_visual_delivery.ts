@@ -1,6 +1,9 @@
 import {
+  canonicalAutoMovieJsonBytes,
+  digestAutoMovieBytes,
   normalizeAutoMovieVisualDeliveryLanes,
   planAutoMovieVisualDelivery,
+  productionDeterministicVisualSourceDigest,
 } from "@automovie/production";
 import { TestValidator } from "@nestia/e2e";
 
@@ -19,7 +22,10 @@ const timeline = [
  * 1. A deterministic/repainted/repainted film resolves with exactly one
  *    reviewed crossing, preserving repeated shot occurrence identity.
  * 2. Missing, reordered, duplicate, fallback-shaped and unreviewed lanes are
- *    refused while all-one-lane normalization remains explicit.
+ *    refused while all-one-lane normalization remains explicit; a lane whose
+ *    declared source is absent is a source refusal rather than a thrown error.
+ * 3. The deterministic source digest is one domain-separated identity over the
+ *    compile fingerprint and occurrence, so a changed occurrence changes it.
  */
 export const test_production_repaint_visual_delivery = (): void => {
   const deterministic = {
@@ -168,6 +174,44 @@ export const test_production_repaint_visual_delivery = (): void => {
       ],
       allRepaintedMissingObservation: ["visual-lane-observation-invalid"],
       allRepainted: [],
+    },
+  );
+
+  const sourceless = structuredClone(lanes);
+  sourceless[0] = {
+    ...sourceless[0]!,
+    deterministic: null,
+  } as unknown as (typeof lanes)[number];
+  const sourceDigest = productionDeterministicVisualSourceDigest({
+    compileFingerprint: digest("1"),
+    occurrence: "occurrence-1",
+  });
+  TestValidator.equals(
+    "an absent declared source is a lane refusal and the source digest is domain-separated",
+    {
+      sourceless: planAutoMovieVisualDelivery({
+        timeline,
+        lanes: sourceless,
+        policy,
+        currentObservationDigest: policy.observationDigest,
+      }).diagnostics,
+      sourceDigest,
+      anotherOccurrence:
+        productionDeterministicVisualSourceDigest({
+          compileFingerprint: digest("1"),
+          occurrence: "occurrence-2",
+        }) === sourceDigest,
+    },
+    {
+      sourceless: ["visual-lane-source-invalid"],
+      sourceDigest: digestAutoMovieBytes(
+        canonicalAutoMovieJsonBytes({
+          protocol: "automovie.deterministic-visual-source.v1",
+          compileFingerprint: digest("1"),
+          occurrence: "occurrence-1",
+        }),
+      ),
+      anotherOccurrence: false,
     },
   );
 };

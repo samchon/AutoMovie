@@ -73,6 +73,19 @@ export const test_production_library_context_targets = (): void => {
           )[0] === target,
       ],
       [
+        "ownerWithoutContextsStillOwnsItsModel",
+        () => {
+          const { contexts, ...withoutContexts } = index.owners[0]!;
+          return (
+            contexts !== undefined &&
+            autoMovieLibraryArtifactSourceTargets("models/bench.json", {
+              ...index,
+              owners: [withoutContexts],
+            })[0] === target
+          );
+        },
+      ],
+      [
         "unownedArtifactIsRefused",
         () =>
           throwsError(
@@ -105,6 +118,7 @@ export const test_production_library_context_targets = (): void => {
       environmentKeepsOwner: true,
       modelKeepsOwner: true,
       encodedContextKeepsOwner: true,
+      ownerWithoutContextsStillOwnsItsModel: true,
       unownedArtifactIsRefused: true,
       multiplyOwnedArtifactIsRefused: true,
     },

@@ -846,10 +846,11 @@ export const productionRenderChunkStatuses = (props: {
           "Verify current bytes, then reuse this chunk.",
         );
       } catch (error) {
+        // Receipt verification throws nothing but Error refusals.
         return status(
           chunk,
           "failed",
-          `${error instanceof Error ? error.message : String(error)} Rerender this chunk.`,
+          `${(error as Error).message} Rerender this chunk.`,
         );
       }
     }

@@ -264,7 +264,8 @@ export const validateAutoMovieProductionGraph = (
         "design-frame-clock-invalid",
         target,
         file,
-        `${error instanceof Error ? error.message : String(error)} Author one exact reduced rational frame rate and an equal display fps, or use a lossless positive integer fps.`,
+        // The frame-rate resolver throws nothing but Error refusals.
+        `${(error as Error).message} Author one exact reduced rational frame rate and an equal display fps, or use a lossless positive integer fps.`,
       );
     }
     const crop = graph.production.frameFormat.crop;

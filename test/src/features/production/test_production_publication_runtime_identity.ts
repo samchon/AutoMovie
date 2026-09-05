@@ -366,6 +366,23 @@ export const test_production_publication_runtime_identity = (): void => {
           ),
       ],
       [
+        "shortChunkBeforeTheEnd",
+        () =>
+          throwsError(
+            () =>
+              parseProductionRenderPublicationIdentity(
+                resign({
+                  ...finalIdentity,
+                  chunks: [
+                    { ...finalIdentity.chunks[0]!, frameEndExclusive: 6 },
+                    { ...finalIdentity.chunks[1]!, frameStart: 6 },
+                  ],
+                }),
+              ),
+            "does not continue one exact partition",
+          ),
+      ],
+      [
         "duplicateChunk",
         () =>
           throwsError(
@@ -422,6 +439,7 @@ export const test_production_publication_runtime_identity = (): void => {
       featureOnStructuralPass: true,
       brokenPartition: true,
       truncatedDeliverable: true,
+      shortChunkBeforeTheEnd: true,
       duplicateChunk: true,
       missingRuntime: true,
       unknownField: true,

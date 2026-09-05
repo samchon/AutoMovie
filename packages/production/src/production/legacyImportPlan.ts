@@ -58,7 +58,7 @@ export const assertAutoMovieLegacyImportPlan = (
   const validation = typia.validateEquals<IAutoMovieLegacyImportPlan>(value);
   if (validation.success === false)
     throw new AutoMovieLegacyImportPlanError(
-      `schema mismatch at ${validation.errors[0]?.path ?? "$input"}`,
+      `schema mismatch at ${validation.errors[0]!.path}`,
     );
   const plan = validation.data;
   if (!Number.isSafeInteger(plan.legacyRevision) || plan.legacyRevision < 0)

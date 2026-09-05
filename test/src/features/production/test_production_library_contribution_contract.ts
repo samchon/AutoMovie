@@ -94,6 +94,14 @@ export const test_production_library_contribution_contract = (): void => {
             "not a recognized design owner",
           ) === true,
       ],
+      [
+        "omittedContextsReadAsEmpty",
+        () =>
+          autoMovieLibraryContributionDiagnostics("maps", {
+            environments: [],
+            models: [],
+          }).some((message) => message.includes("returned no contexts")),
+      ],
     ]),
     {
       supportedBranchesAcceptTheirOwnCarrier: true,
@@ -101,6 +109,7 @@ export const test_production_library_contribution_contract = (): void => {
       crossBranchPayloadsAreRefused: true,
       unsupportedBranchesFailExplicitly: true,
       unknownBranchDoesNotBorrowAResultCarrier: true,
+      omittedContextsReadAsEmpty: true,
     },
   );
 };

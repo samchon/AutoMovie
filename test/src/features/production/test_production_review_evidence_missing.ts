@@ -258,6 +258,20 @@ export const test_production_review_evidence_missing = (): void => {
         },
       ],
       [
+        "unaddressedMeshesAloneRemainNamed",
+        () =>
+          run({
+            frames: [frame("identity", 1.5, ["mask"])],
+            held: [
+              {
+                pass: "mask",
+                time: 1.5,
+                semanticCoverage: { unresolved: [], unaddressed: 1 },
+              },
+            ],
+          })[0]?.message.includes("1 unnamed mesh") === true,
+      ],
+      [
         "completeMaskIsHeld",
         () =>
           run({
@@ -428,6 +442,7 @@ export const test_production_review_evidence_missing = (): void => {
       completeIsSilent: true,
       maskNeedsCompleteSemanticEvidence: true,
       maskGapRemainsNamed: true,
+      unaddressedMeshesAloneRemainNamed: true,
       completeMaskIsHeld: true,
       passIsNotInterchangeable: true,
       timeIsNotInterchangeable: true,
