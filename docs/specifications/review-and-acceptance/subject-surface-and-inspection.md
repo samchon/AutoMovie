@@ -14,7 +14,6 @@ Placement record는 자신이 참조하는 원형 identity를 별도 field로 �
 
 ### 검사 Target에서 관찰 단위로의 해석 {#review-system-subject-target-parity}
 
-
 <!-- @evidence requirements/review/subject-inspection.md#review-observable-judgeable-parity 제품이 공개한 모든 주체 검사 target이 실제 관찰 단위로 해석되게 만든다. -->
 <!-- @evidence requirements/acceptance/review-surfaces-and-sampling.md#acceptance-subject-surface 주체를 shot과 독립된 acceptance 표면으로 정의한다. -->
 
@@ -37,7 +36,6 @@ Interior station의 position은 그 space 자신의 진술된 volume 안에 있�
 
 ### 주체 검사의 요청 표면 {#review-system-subject-inspection-reach}
 
-
 <!-- @evidence requirements/review/subject-inspection.md#review-subject-inspection-reach 화면을 볼 수 없는 당사자가 검사를 요청할 수 있어야 한다는 요구를 요청 표면 계약으로 고정한다. -->
 
 주체 검사 요청 표면은 주체 target, viewpoint plan 선택 규칙과 raster 크기를 입력으로 받고, 해석된 주체 record, plan, 각 시점의 해석된 camera state, 그 시점에서 생산된 관찰 artifact와 coverage를 반환한다. 표면은 저작된 camera, shot 경계와 film time을 입력으로 받지 않으며, 같은 주체, plan 선택 규칙과 raster 크기는 어느 요청자에게나 같은 시점 identity와 같은 camera state를 만든다.
@@ -47,7 +45,6 @@ Interior station의 position은 그 space 자신의 진술된 volume 안에 있�
 관찰 artifact를 생산하는 host 기구가 없거나 그 산출물이 검증을 통과하지 못하면 표면은 관찰을 만들지 않고 거부하며, 거부는 없는 기구와 그 조달 방법을 이름으로 말한다.
 
 ### 주체 Observation Record {#review-system-subject-observation}
-
 
 <!-- @evidence requirements/review/subject-inspection.md#review-subject-evidence 주체 관찰의 evidence 구성과 필수 표본 누락 상태를 정의한다. -->
 
@@ -59,7 +56,6 @@ Plan record는 production, 주체 target, compiled revision, compile fingerprint
 필수 시점이 없거나 읽을 수 없으면 coverage는 complete가 될 수 없다. 결과는 원인에 따라 not-run, unsupported, indeterminate 또는 partial이며 관찰된 시점의 좁은 결과를 별도로 보존한다.
 
 ### 주체 Freshness {#review-system-subject-freshness}
-
 
 <!-- @evidence requirements/review/subject-inspection.md#review-subject-evidence 주체 검토가 stale로 전환되는 조건을 freshness key로 고정한다. -->
 <!-- @evidence requirements/review/subject-inspection.md#review-subject-time-noninterchange 시간 축 검토와 주체 검토가 서로의 freshness를 회복하지 못하게 한다. -->
@@ -83,7 +79,6 @@ Shot render, rendition 교체와 delivery 재생성은 주체 freshness key에 �
 ### Library 전달 관찰 집계 {#review-system-library-delivery-coverage}
 
 Compiler는 graph-selected owner edge를 실행 전에 확인하고, maps/contexts, models/models, spaces/environments의 branch별 nonempty 결과만 materialize한다. Empty, cross-branch, unsupported 결과는 completed owner나 review denominator가 되지 않으며, 각 environment, model, context 파일의 generated manifest target은 materialized owner index의 정확히 하나인 branch/H2로 역해석되어야 한다.
-
 
 <!-- @evidence requirements/review/subject-inspection.md#review-library-delivery-coverage Library의 graph-selected 전달 owner와 branch별 유한 current observation을 review denominator로 고정한다. -->
 
