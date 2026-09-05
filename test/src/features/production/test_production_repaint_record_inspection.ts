@@ -14,6 +14,10 @@ import { throwsError } from "../internal/predicates";
  * 1. Valid candidates and renditions survive failures in unrelated records.
  * 2. Absence, typed schema/stale/unsafe/corrupt failures and hostile reads each
  *    retain a deterministic target, stage, class and credential-free recovery.
+ * 3. An untyped reader error and a refusal whose stage was overwritten after
+ *    construction both fall back to the enumeration/unavailable class without
+ *    leaking, and a refusal constructed outside the stage and failure sets is
+ *    itself refused.
  */
 export const test_production_repaint_record_inspection = (): void => {
   const targets = [
@@ -28,12 +32,21 @@ export const test_production_repaint_record_inspection = (): void => {
     { kind: "rendition" as const, shot: "a", recordId: "unsafe" },
     { kind: "rendition" as const, shot: "a", recordId: "corrupt" },
     { kind: "rendition" as const, shot: "c", recordId: "hostile" },
+    { kind: "rendition" as const, shot: "a", recordId: "missing" },
+    { kind: "candidate" as const, shot: "a", recordId: "plain" },
+    { kind: "candidate" as const, shot: "a", recordId: "tampered" },
   ];
   const result = inspectAutoMovieRepaintRecords({
     targets,
     inspect: (target) => {
       if (target.recordId.startsWith("valid")) return target.recordId;
       if (target.recordId === "missing") return null;
+      if (target.recordId === "plain") throw new Error("secret-token");
+      if (target.recordId === "tampered")
+        throw Object.assign(
+          new AutoMovieRepaintRecordInspectionError("receipt", "stale"),
+          { stage: "secret-token" },
+        );
       if (target.recordId === "linked-missing")
         throw new AutoMovieRepaintRecordInspectionError("selection", "absent");
       if (target.recordId === "unavailable")
@@ -121,6 +134,13 @@ export const test_production_repaint_record_inspection = (): void => {
         },
         {
           shot: "a",
+          record: "plain",
+          stage: "enumeration",
+          failure: "unavailable",
+          leaksSecret: false,
+        },
+        {
+          shot: "a",
           record: "schema",
           stage: "receipt",
           failure: "schema-invalid",
@@ -135,6 +155,13 @@ export const test_production_repaint_record_inspection = (): void => {
         },
         {
           shot: "a",
+          record: "tampered",
+          stage: "enumeration",
+          failure: "unavailable",
+          leaksSecret: false,
+        },
+        {
+          shot: "a",
           record: "unavailable",
           stage: "receipt",
           failure: "unavailable",
@@ -145,6 +172,13 @@ export const test_production_repaint_record_inspection = (): void => {
           record: "corrupt",
           stage: "output",
           failure: "render-corrupt",
+          leaksSecret: false,
+        },
+        {
+          shot: "a",
+          record: "missing",
+          stage: "pointer",
+          failure: "absent",
           leaksSecret: false,
         },
         {
@@ -171,6 +205,17 @@ export const test_production_repaint_record_inspection = (): void => {
         targets: [{ kind: "candidate", shot: " ", recordId: "x" }],
         inspect: () => "unreachable",
       }),
+    ),
+  );
+  TestValidator.predicate(
+    "a refusal outside the stage and failure sets is refused at construction",
+    throwsError(
+      () =>
+        new AutoMovieRepaintRecordInspectionError(
+          "secret-token" as never,
+          "absent",
+        ),
+      "Repaint inspection refusal is malformed.",
     ),
   );
 };

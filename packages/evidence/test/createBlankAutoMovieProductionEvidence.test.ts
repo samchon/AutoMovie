@@ -1,9 +1,7 @@
 import assert from "node:assert/strict";
 import path from "node:path";
 
-import {
-  createBlankAutoMovieProductionEvidence,
-} from "../src";
+import { createBlankAutoMovieProductionEvidence } from "../src";
 
 /** The blank declaration is complete, explicit, and selects no graph branch. */
 const location = path.resolve(".");

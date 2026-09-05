@@ -14,7 +14,8 @@ import * as path from "node:path";
  *
  * Scenarios:
  *
- * 1. A completed write lists every published target in code-unit order.
+ * 1. A completed write into a base whose parents do not exist yet creates
+ *    them and lists every published target in code-unit order.
  * 2. A populated root refuses the second write through a
  *    `ScaffoldPublicationError` whose receipt and message name the stopping
  *    entry and reason, carry no completed prefix, and leave no resident.
@@ -26,21 +27,29 @@ export const test_template_publication_error = (): void => {
   const root = fs.mkdtempSync(
     path.join(os.tmpdir(), "automovie-publication-error-"),
   );
+  const base = path.join(root, "nested", "project");
   try {
-    const written = writeFiles(root, {
+    const written = writeFiles(base, {
       "b/second.txt": "2",
       "a.txt": "1",
       "c.txt": "3",
     });
-    TestValidator.equals("completed targets are sorted by code unit", written, [
-      path.join(root, "a.txt"),
-      path.join(root, "b", "second.txt"),
-      path.join(root, "c.txt"),
-    ]);
+    TestValidator.equals(
+      "missing parents are created and completed targets are sorted by code unit",
+      { created: fs.statSync(base).isDirectory(), written },
+      {
+        created: true,
+        written: [
+          path.join(base, "a.txt"),
+          path.join(base, "b", "second.txt"),
+          path.join(base, "c.txt"),
+        ],
+      },
+    );
 
     let thrown: unknown;
     try {
-      writeFiles(root, { "d.txt": "4" });
+      writeFiles(base, { "d.txt": "4" });
     } catch (error) {
       thrown = error;
     }
@@ -61,7 +70,7 @@ export const test_template_publication_error = (): void => {
           refusal.message.includes('"reason":"create-failed"') &&
           refusal.message.includes('"relative":"d.txt"') &&
           refusal.message.includes('"status":"refused"'),
-        resident: fs.existsSync(path.join(root, "d.txt")),
+        resident: fs.existsSync(path.join(base, "d.txt")),
       },
       {
         name: "ScaffoldPublicationError",

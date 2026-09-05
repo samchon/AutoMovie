@@ -347,6 +347,10 @@ const unique = (values: string[], owner: number, kind: string): string[] => {
   return values;
 };
 
+/**
+ * Both callers have already read one required member off `value`, so the
+ * actual key list is never empty when it is reported.
+ */
 const assertExactKeys = (
   value: Record<string, unknown>,
   expected: readonly string[],
@@ -357,7 +361,7 @@ const assertExactKeys = (
     JSON.stringify([...expected].sort(compareCodeUnits))
   )
     throw new Error(
-      `Library index object has unexpected or missing members: ${actual.join(", ") || "<none>"}.`,
+      `Library index object has unexpected or missing members: ${actual.join(", ")}.`,
     );
 };
 
