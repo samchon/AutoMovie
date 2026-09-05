@@ -208,10 +208,12 @@ export const test_workspace_coverage_changed_population = (): void => {
       ],
       [
         "base and root parse once each",
-        () => arguments_.base === "origin/master" && arguments_.root === "/repo",
+        () =>
+          arguments_.base === "origin/master" && arguments_.root === "/repo",
       ],
-      ["no arguments parse to nothing", () =>
-        Object.keys(parseChangedCoverageArguments([])).length === 0,
+      [
+        "no arguments parse to nothing",
+        () => Object.keys(parseChangedCoverageArguments([])).length === 0,
       ],
       [
         "an unknown flag is refused",

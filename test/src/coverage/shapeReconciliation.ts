@@ -292,15 +292,20 @@ export const unionShortfalls = <T extends ICoverageEntry>(
   return shortfalls.sort((left, right) => right.lost.length - left.lost.length);
 };
 
-/** Group every report's entries by file, keeping each reading separate. */
+/**
+ * Group every report's entries by canonical file identity, keeping each
+ * reading separate. Two spellings of one path are two readings of one file.
+ */
 export const groupEntriesByFile = <T extends ICoverageEntry>(
   reports: ReadonlyArray<Record<string, T>>,
-  identity: (file: string) => string = canonicalCoverageEntryPath,
+  identity: (file: string) => string,
 ): Map<string, T[]> => {
   const grouped = new Map<string, T[]>();
   for (const report of reports)
-    for (const [file, entry] of Object.entries(report))
-      grouped.set(identity(file), [...(grouped.get(identity(file)) ?? []), entry]);
+    for (const [file, entry] of Object.entries(report)) {
+      const key = identity(file);
+      grouped.set(key, [...(grouped.get(key) ?? []), entry]);
+    }
   return grouped;
 };
 

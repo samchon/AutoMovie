@@ -57,7 +57,8 @@ export const test_workspace_coverage_publication = (): void => {
       fs.writeFileSync(file, text, "utf8");
       return file;
     };
-    const logicText = "export const logic = (): number => 1;\nexport const idle = (): number => 2;\n";
+    const logicText =
+      "export const logic = (): number => 1;\nexport const idle = (): number => 2;\n";
     const logic = write("packages/engine/src/logic.ts", logicText);
     write("packages/engine/lint.config.ts", "export default {};\n");
     write("packages/cli/src/command.ts", "export const run = 1;\n");
@@ -142,7 +143,8 @@ export const test_workspace_coverage_publication = (): void => {
       namedFacts([
         [
           "only the admitted candidate on disk is captured",
-          () => Object.keys(captured).join(",") === canonicalCoveragePath(logic),
+          () =>
+            Object.keys(captured).join(",") === canonicalCoveragePath(logic),
         ],
         [
           "the capture carries the line count and digest of its bytes",
@@ -171,7 +173,8 @@ export const test_workspace_coverage_publication = (): void => {
         [
           "replaced bytes are refused",
           () =>
-            replaced === "coverage report no longer matches its run publication",
+            replaced ===
+            "coverage report no longer matches its run publication",
         ],
         ["positions inside the file exit zero", () => inside === 0],
         [
@@ -201,7 +204,9 @@ export const test_workspace_coverage_publication = (): void => {
         [
           "and names the file with its published length",
           () =>
-            outsideLines.some((line) => line.startsWith("3 reported positions lie past the end")) &&
+            outsideLines.some((line) =>
+              line.startsWith("3 reported positions lie past the end"),
+            ) &&
             outsideLines.includes(
               `  ${path.relative(path.resolve(__dirname, "../../../.."), logic).replaceAll("\\", "/")} (3, 1 lines)`,
             ),

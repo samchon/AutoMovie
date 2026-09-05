@@ -73,8 +73,12 @@ import { namedFacts } from "../internal/predicates";
  *    would show here.
  * 6. Every consumer receives the one publication the measurement returned; a
  *    success that returns none, a stage that returns a status outside 0, 1
- *    and 2, and a stage or cleanup that throws are each an instrument red
- *    named on its own line rather than a status guessed from a boolean.
+ *    and 2, and a measurement, consumer or cleanup that throws are each an
+ *    instrument red named on its own line rather than a status guessed from a
+ *    boolean, and a consumer that throws still has its run removed.
+ * 7. A raw script URL inside the repository has a source identity only when
+ *    the authored-source policy admits it: a toolchain module, an unmeasured
+ *    package, an entry barrel and another checkout's file are all refused.
  */
 export const test_workspace_coverage_isolation = (): void => {
   // A directory holding a complete record, a truncated one, and two things that
@@ -183,6 +187,16 @@ export const test_workspace_coverage_isolation = (): void => {
         ["."],
         "d:/repo",
       ) !== null,
+    // Inside the repository and outside the authored population: a toolchain
+    // module, an unmeasured package, an entry barrel, and a file under another
+    // checkout. Each is refused by the one policy the changed gate judges by,
+    // so none can split a record group or enter the shape census.
+    excluded: [
+      "file:///D:/repo/node_modules/pkg/index.js",
+      "file:///D:/repo/packages/evidence/src/internal.ts",
+      "file:///D:/repo/packages/engine/src/index.ts",
+      "file:///D:/other/packages/engine/src/elsewhere.ts",
+    ].map((url) => measuredScriptIdentity(url, ["."], "D:/repo")),
     mappedSeen: coverageNeverRecorded({
       directory: records,
       identity: (url) =>
@@ -231,6 +245,12 @@ export const test_workspace_coverage_isolation = (): void => {
         () => drawn.hosts === 2,
       ],
       ["non-file URLs have no source identity", () => drawn.nonFile === false],
+      [
+        "excluded repository URLs have no source identity",
+        () =>
+          drawn.excluded.length === 4 &&
+          drawn.excluded.every((identity) => identity === null),
+      ],
       [
         "source-mapped raw URLs satisfy authored report identity",
         () => drawn.mappedSeen.length === 0,
@@ -303,6 +323,7 @@ export const test_workspace_coverage_isolation = (): void => {
       "a source outside the measured set is not counted at all": true,
       "both host shapes of a file URL are measured on either platform": true,
       "non-file URLs have no source identity": true,
+      "excluded repository URLs have no source identity": true,
       "source-mapped raw URLs satisfy authored report identity": true,
       "two draws in one process differ": true,
       "one run owns raw and report paths together": true,
@@ -445,24 +466,50 @@ export const test_workspace_coverage_isolation = (): void => {
     },
     (line) => diagnostics.push(line),
   );
-  const thrownMeasurement = runCoverage([], {
-    measure: () => {
-      throw new Error("measurement failed before returning a status");
+  const thrownMeasurement = runCoverage(
+    [],
+    {
+      measure: () => {
+        throw new Error("measurement failed before returning a status");
+      },
+      report: unreached("report", "a thrown measurement"),
+      population: unreached("population gate", "a thrown measurement"),
+      changed: unreached("changed gate", "a thrown measurement"),
+      cleanup: unreached("cleanup", "a thrown measurement"),
     },
-    report: unreached("report", "a thrown measurement"),
-    population: unreached("population gate", "a thrown measurement"),
-    changed: unreached("changed gate", "a thrown measurement"),
-    cleanup: unreached("cleanup", "a thrown measurement"),
-  });
-  const thrownCleanup = runCoverage([], {
-    measure: () => measured(0),
-    report: () => 0,
-    population: () => 0,
-    changed: () => 0,
-    cleanup: () => {
-      throw new Error("cleanup failed");
+    (line) => diagnostics.push(line),
+  );
+  // A consumer that throws is an instrument red, and the run it was reading is
+  // still removed: the publication was made, so its directory exists.
+  let cleanedAfterThrow = false;
+  const thrownConsumer = runCoverage(
+    [],
+    {
+      measure: () => measured(0),
+      report: () => {
+        throw new Error("report threw");
+      },
+      population: unreached("population gate", "a thrown report"),
+      changed: unreached("changed gate", "a thrown report"),
+      cleanup: () => {
+        cleanedAfterThrow = true;
+      },
     },
-  });
+    (line) => diagnostics.push(line),
+  );
+  const thrownCleanup = runCoverage(
+    [],
+    {
+      measure: () => measured(0),
+      report: () => 0,
+      population: () => 0,
+      changed: () => 0,
+      cleanup: () => {
+        throw new Error("cleanup failed");
+      },
+    },
+    (line) => diagnostics.push(line),
+  );
   const cliStatuses: number[] = [];
   runCoverageCli(false, [], dependencies, (status) => cliStatuses.push(status));
   runCoverageCli(
@@ -514,6 +561,8 @@ export const test_workspace_coverage_isolation = (): void => {
       ),
       diagnostics,
       thrownMeasurement,
+      thrownConsumer,
+      cleanedAfterThrow,
       thrownCleanup,
       cliStatuses,
       entryDecision,
@@ -539,9 +588,14 @@ export const test_workspace_coverage_isolation = (): void => {
         "INSTRUMENT FAILURE: coverage measure returned unsupported status 3",
         "INSTRUMENT FAILURE: coverage report returned unsupported status -1",
         "INSTRUMENT FAILURE: coverage measure returned success without a publication",
+        "INSTRUMENT FAILURE: coverage measure threw: measurement failed before returning a status",
+        "INSTRUMENT FAILURE: coverage consumer threw: report threw",
+        "INSTRUMENT FAILURE: coverage cleanup threw: cleanup failed",
         "INSTRUMENT FAILURE: coverage changed returned unsupported status 9",
       ],
       thrownMeasurement: 2,
+      thrownConsumer: 2,
+      cleanedAfterThrow: true,
       thrownCleanup: 2,
       cliStatuses: [0],
       entryDecision: { own: true, launcher: false, absent: false },

@@ -24,6 +24,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { describeThrown } from "../integrity/describeThrown";
 import {
   type IMeasuredSource,
   UNJUDGED_DECLARATION_GLOBS,
@@ -32,6 +33,7 @@ import {
   coverageSourceAttribution,
   isAuthoredExecutableSource,
 } from "./coverageIdentity";
+import { repositoryCandidates } from "./coveragePopulation";
 import {
   type ICoverageMeasurementResult,
   type ICoveragePublication,
@@ -793,34 +795,19 @@ export const coverageMeasurementDependencies: ICoverageMeasurementDependencies =
     environment: process.env,
   };
 
-/** Git-known authored files, captured without consulting a post-run report. */
-export const coverageSnapshotCandidates = (root: string): string[] => {
-  const list = (arguments_: string[]): string[] => {
-    const result = spawnSync("git", arguments_, {
-      cwd: root,
-      encoding: "utf8",
-      shell: false,
-    });
-    if (result.status !== 0)
-      throw new Error(`git ${arguments_.join(" ")} failed while snapshotting`);
-    return result.stdout
-      .split("\0")
-      .filter((entry) => entry.length !== 0)
-      .map((entry) => entry.replaceAll("\\", "/"));
-  };
-  return [
-    ...new Set([
-      ...list(["ls-files", "-z"]),
-      ...list(["ls-files", "--others", "--exclude-standard", "-z"]),
-    ]),
-  ].sort((left, right) => Number(left > right) - Number(left < right));
-};
-
+/**
+ * The pre-run snapshot of every git-known authored source.
+ *
+ * The candidates are the population gate's own `repositoryCandidates`, so the
+ * set the snapshot binds and the set the gate judges are one enumeration
+ * rather than two that can drift; the report this run writes is consulted by
+ * neither.
+ */
 export const captureRepositoryCoverageSnapshot = (
   root: string,
 ): Record<string, IMeasuredSource> =>
   captureCoverageSnapshot({
-    candidates: coverageSnapshotCandidates(root),
+    candidates: repositoryCandidates(root),
     root,
   });
 
@@ -848,6 +835,12 @@ export const coverageInstrumentPopulation = (): string[] => [
   ...UNMEASURED_SOURCE_ROOTS.flatMap((root) => ["--exclude", `${root}**`]),
   "--exclude",
   "packages/*/build/**",
+  // Passing any `--exclude` replaces c8's default list, and `**/*.d.ts` was on
+  // it. A declaration emitted beside a source by a stray `tsc` run is
+  // gitignored, so the population gate never sees it, while `--all` walks the
+  // disk and would report it as a source the pre-run snapshot never named.
+  "--exclude",
+  "**/*.d.ts",
   ...UNJUDGED_DECLARATION_GLOBS.flatMap((glob) => ["--exclude", glob]),
   "--extension",
   ".ts",
@@ -1011,7 +1004,7 @@ export const measureCoverage = (
     return { publication, status: 0 };
   } catch (error) {
     dependencies.log(
-      `INSTRUMENT FAILURE: coverage publication failed: ${error instanceof Error ? error.message : String(error)}`,
+      `INSTRUMENT FAILURE: coverage publication failed: ${describeThrown(error)}`,
     );
     return { status: 2 };
   } finally {

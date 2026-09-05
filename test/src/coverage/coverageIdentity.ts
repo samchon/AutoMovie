@@ -11,7 +11,6 @@ export const UNMEASURED_SOURCE_ROOTS: readonly string[] = [
   "packages/cli/",
   "packages/evidence/",
   "packages/playground/",
-  "packages/template/build/",
   "packages/template/scaffold/",
   "test/src/coverage/",
   "test/src/integrity/",
@@ -19,6 +18,13 @@ export const UNMEASURED_SOURCE_ROOTS: readonly string[] = [
 
 const DECLARATION_FILE =
   /(?:^|\/)(?:lint\.config|vite\.config)\.[cm]?ts$|EvidenceExclusions\.ts$/u;
+/**
+ * A package-local `build/` directory is packaging tooling, whichever package
+ * owns it. `coverageInstrumentPopulation` spells the same rule as a c8 exclude
+ * glob over every package's `build` directory, and the population gate keeps
+ * the two spellings equal: a tracked build script the glob missed would be
+ * measured and never judged, which is the fault that gate names.
+ */
 const PACKAGE_BUILD_DIRECTORY = /^packages\/[^/]+\/build\//u;
 
 export const UNJUDGED_DECLARATION_GLOBS: readonly string[] = [
@@ -53,15 +59,11 @@ export const isAuthoredExecutableSource = (relative: string): boolean => {
     return false;
   if (PACKAGE_BUILD_DIRECTORY.test(target)) return false;
   if (DECLARATION_FILE.test(target)) return false;
-  const typedRepositoryTool =
-    target.startsWith("test/src/coverage/") ||
-    target.startsWith("test/src/integrity/");
   return !(
     SOURCE_EXTENSION.test(target) === false ||
     /\.d\.[cm]?ts$/u.test(target) ||
-    (typedRepositoryTool === false &&
-      (/(^|\/)(?:test|tests|__tests__|fixtures)(\/|$)/u.test(target) ||
-        /(^|\/)coverage(\/|$)/u.test(target))) ||
+    /(^|\/)(?:test|tests|__tests__|fixtures)(\/|$)/u.test(target) ||
+    /(^|\/)coverage(\/|$)/u.test(target) ||
     /(^|\/)(?:node_modules|dist|generated|\.cache)(\/|$)/u.test(target) ||
     /(?:\.test|\.spec|\.generated)\.[cm]?[jt]sx?$/u.test(target) ||
     /(^|\/)(?:index|bin)\.ts$/u.test(target)

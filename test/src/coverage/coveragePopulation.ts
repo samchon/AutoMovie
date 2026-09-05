@@ -2,7 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 
 import { describeThrown } from "../integrity/describeThrown";
-import { runGit } from "./changedCoverage";
+import { type GitExecute, runGit } from "./changedCoverage";
 import {
   canonicalCoveragePath,
   isAuthoredExecutableSource,
@@ -40,11 +40,15 @@ export interface ICoveragePopulationInspection {
  * Tracked files plus the ones the working tree has added and `.gitignore` does
  * not remove, which is the population the changed-file gate already collects. A
  * gitignored file on one contributor's disk is not a repository fact and must
- * not decide a gate that has to mean the same thing in CI.
+ * not decide a gate that has to mean the same thing in CI. `execute` is the
+ * git seam; the pre-run snapshot enumerates through this same function.
  */
-export const repositoryCandidates = (root: string): string[] => {
+export const repositoryCandidates = (
+  root: string,
+  execute?: GitExecute,
+): string[] => {
   const listing = (arguments_: string[]): string[] =>
-    runGit(root, arguments_)
+    runGit(root, arguments_, execute)
       .split("\0")
       .filter((entry) => entry.length !== 0)
       .map(slash);
@@ -153,9 +157,11 @@ const readCoverageKeys = (report: string): string[] => {
  * and never saw, and one it saw and never demanded, both leave a verdict that
  * answered about a different set than the one it names. Exits 2 for the same
  * reason the changed gate does, so an instrument fault stays a different colour
- * from a coverage gap.
+ * from a coverage gap. `candidates` is the repository enumeration, injectable
+ * so the gate can be driven from a canned listing over a fixture root.
  */
 export const runCoveragePopulationGate = (options: {
+  candidates?: (root: string) => string[];
   publication: ICoveragePublication;
   root: string;
   write?: Writer;
@@ -165,7 +171,7 @@ export const runCoveragePopulationGate = (options: {
     const root = path.resolve(options.root);
     const result = inspectCoveragePopulation({
       root,
-      candidates: repositoryCandidates(root),
+      candidates: (options.candidates ?? repositoryCandidates)(root),
       measured: readCoverageKeys(publicationReport(options.publication)),
     });
     reportCoveragePopulation(result, write);

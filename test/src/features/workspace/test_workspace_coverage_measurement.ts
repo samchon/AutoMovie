@@ -1,5 +1,6 @@
 import { TestValidator } from "@nestia/e2e";
 
+import { canonicalCoveragePath } from "../../coverage/coverageIdentity";
 import { inspectCoverageSnapshot } from "../../coverage/coveragePublication";
 import {
   decideCoverageMeasurementStatus,
@@ -226,12 +227,13 @@ export const test_workspace_coverage_measurement = (): void => {
           Object.keys(appeared.published).length === 0,
       ],
       [
+        // Failures name the canonical path, which on Windows carries the
+        // resolved drive and folded case rather than the POSIX spelling above.
         "one drifted source among several withholds every entry",
         () =>
           oneOfSeveral.failures.length === 1 &&
-          oneOfSeveral.failures[0]?.startsWith(OTHER) === true &&
-          oneOfSeveral.failures[0]?.includes("changed during the run") ===
-            true &&
+          oneOfSeveral.failures[0] ===
+            `${canonicalCoveragePath(OTHER)}: measured source bytes changed during the run` &&
           Object.keys(oneOfSeveral.published).length === 0,
       ],
     ]),

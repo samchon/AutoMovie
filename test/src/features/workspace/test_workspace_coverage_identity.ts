@@ -3,6 +3,7 @@ import path from "node:path";
 import { pathToFileURL } from "node:url";
 
 import {
+  canonicalCoverageEntryPath,
   canonicalCoveragePath,
   coverageSourceAttribution,
   functionIdentity,
@@ -17,7 +18,35 @@ import {
 import { sourceMapSourceFiles } from "../../coverage/measureCoverage";
 import { namedFacts } from "../internal/predicates";
 
-/** Coverage identity is exact across sources, emitted modules, and positions. */
+/**
+ * Coverage identity is exact across sources, emitted modules, and positions.
+ *
+ * A raw V8 script URL is attributed to at most one authored source, an
+ * accepted source extension names exactly one compiler output, and a hit is
+ * reconciled only against a complete declaration or position identity. Every
+ * ambiguity fails closed: two source-map candidates, a guessed output name, or
+ * a span missing a column each yield no identity rather than a near one.
+ *
+ * Scenarios:
+ *
+ * 1. A direct authored URL is measured; a toolchain module, an unmeasured
+ *    package, entry barrels and a declaration are excluded; one source-map
+ *    attribution is measured and two are ambiguous; every map source survives
+ *    resolution.
+ * 2. Both canonical path forms preserve case on a case-sensitive host and
+ *    fold it on Windows, the report-key form also normalising separators.
+ * 3. `.ts` and `.tsx` emit `.js`, `.cts` emits `.cjs`, `.mts` emits `.mjs`,
+ *    and an unsupported extension names no output; the exact bodies the
+ *    repository compiler writes for a type-only module of each kind read as
+ *    empty, while a user export that resembles the ESM marker stays
+ *    executable.
+ * 4. The non-executable probe excuses an empty emitted module, keeps the
+ *    obligation for a runtime statement, a failed compile and a missing exact
+ *    output, asks the probe about the original source identity, and moves only
+ *    proven-empty owners out of the gap list.
+ * 5. Two statements on one line, and one name at two declarations, are
+ *    distinct identities; an incomplete position has none.
+ */
 export const test_workspace_coverage_identity = (): void => {
   const repository = path.resolve("/repo");
   const url = (relative: string): string =>
@@ -116,6 +145,18 @@ export const test_workspace_coverage_identity = (): void => {
           ),
       ],
       [
+        "case-sensitive hosts preserve report key case",
+        () =>
+          canonicalCoverageEntryPath("/Repo/Engine/Scene.ts", "linux") ===
+          "/Repo/Engine/Scene.ts",
+      ],
+      [
+        "Windows report keys fold case and separators",
+        () =>
+          canonicalCoverageEntryPath("D:\\Repo\\Engine\\Scene.ts", "win32") ===
+          "d:/repo/engine/scene.ts",
+      ],
+      [
         "ts maps to js",
         () => emittedModuleFilename("ledger.ts") === "ledger.js",
       ],
@@ -145,6 +186,26 @@ export const test_workspace_coverage_identity = (): void => {
       [
         "exact ESM empty marker is empty",
         () => emittedModuleBody("export {};\n") === "",
+      ],
+      // The bodies TypeScript 5.9 writes for `export type Ledger = never;`
+      // under `--module commonjs`: the `.cjs` and `.js` carry the CommonJS
+      // preamble, the `.mjs` carries the strict directive and the ESM marker.
+      [
+        "the compiler's type-only mjs body is empty",
+        () => emittedModuleBody('"use strict";\nexport {};\n') === "",
+      ],
+      [
+        "the compiler's type-only cjs body with a map trailer is empty",
+        () =>
+          emittedModuleBody(
+            '"use strict";\nObject.defineProperty(exports, "__esModule", { value: true });\n//# sourceMappingURL=ledger.cjs.map\n',
+          ) === "",
+      ],
+      [
+        "the compiler's runtime mjs body is kept",
+        () =>
+          emittedModuleBody('"use strict";\nexport const run = () => 1;\n') ===
+          "export const run = () => 1;",
       ],
       [
         "similar user export remains executable",
@@ -206,6 +267,8 @@ export const test_workspace_coverage_identity = (): void => {
         "source-map paths preserve every candidate",
         "case-sensitive hosts preserve source case",
         "Windows source identity folds case",
+        "case-sensitive hosts preserve report key case",
+        "Windows report keys fold case and separators",
         "ts maps to js",
         "tsx maps to js",
         "cts maps to cjs",
@@ -213,6 +276,9 @@ export const test_workspace_coverage_identity = (): void => {
         "unsupported extension has no guessed output",
         "exact CJS preamble is empty",
         "exact ESM empty marker is empty",
+        "the compiler's type-only mjs body is empty",
+        "the compiler's type-only cjs body with a map trailer is empty",
+        "the compiler's runtime mjs body is kept",
         "similar user export remains executable",
         "empty emitted module is excused",
         "runtime statement keeps obligation",

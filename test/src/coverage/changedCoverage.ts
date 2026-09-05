@@ -26,6 +26,7 @@ import {
   publicationReport,
 } from "./coveragePublication";
 import {
+  type IEmitProbe,
   emitsNoExecutableStatement,
   excuseNonExecutableGaps,
   repositoryEmitProbe,
@@ -176,20 +177,37 @@ export const runGit = (
   return result.stdout;
 };
 
-const existingRef = (root: string, reference: string): boolean => {
-  const result = spawnSync(
+const existingRef = (
+  root: string,
+  reference: string,
+  execute: GitExecute,
+): boolean =>
+  execute(
     "git",
     ["rev-parse", "--verify", "--quiet", `${reference}^{commit}`],
-    { cwd: root, encoding: "utf8", shell: false },
-  );
-  return result.status === 0;
-};
+    {
+      cwd: root,
+      encoding: "utf8",
+      maxBuffer: 64 * 1024 * 1024,
+      shell: false,
+    },
+  ).status === 0;
 
-/** Resolve the explicit or CI/local default comparison base. */
+/**
+ * Resolve the explicit or CI/local default comparison base.
+ *
+ * `--base` outranks `AUTOMOVIE_COVERAGE_BASE`, which outranks the pull
+ * request's `GITHUB_BASE_REF` read as its `origin/` remote branch. A configured
+ * base that does not name a commit is refused rather than skipped, because the
+ * next candidate would silently move the merge base the verdict is about. With
+ * nothing configured, `origin/master` and then `master` are tried, so a local
+ * run needs no flag. `execute` is the git seam.
+ */
 export const resolveCoverageBase = (
   root: string,
   explicit: string | undefined,
   environment: NodeJS.ProcessEnv = process.env,
+  execute: GitExecute = executeGit,
 ): string => {
   const configured = [
     { source: "--base", value: explicit },
@@ -208,13 +226,13 @@ export const resolveCoverageBase = (
   ];
   for (const candidate of configured)
     if (candidate.value !== undefined && candidate.value.length !== 0) {
-      if (existingRef(root, candidate.value)) return candidate.value;
+      if (existingRef(root, candidate.value, execute)) return candidate.value;
       throw new Error(
         `configured coverage base from ${candidate.source} does not resolve to a commit: ${JSON.stringify(candidate.value)}`,
       );
     }
   for (const candidate of ["origin/master", "master"])
-    if (existingRef(root, candidate)) return candidate;
+    if (existingRef(root, candidate, execute)) return candidate;
   throw new Error(
     `no coverage comparison base exists; pass --base <ref> or set AUTOMOVIE_COVERAGE_BASE`,
   );
@@ -581,40 +599,77 @@ const readJson = (file: string, label: string): unknown => {
   }
 };
 
+/** The processes and directories the changed gate reaches outside itself. */
+export interface IChangedCoverageGateDependencies {
+  /** The git seam, shared by base resolution and change collection. */
+  execute: GitExecute;
+  /** The compiler probe that decides whether a gap's owner emits anything. */
+  probe: (root: string) => IEmitProbe;
+  /** Remove the probe's output directory once the verdict is settled. */
+  remove: (directory: string) => void;
+  /** A fresh directory for the probe's emitted output. */
+  temporaryDirectory: () => string;
+}
+
+const REPOSITORY_ROOT = path.resolve(__dirname, "../../..");
+
+export const changedCoverageGateDependencies: IChangedCoverageGateDependencies =
+  {
+    execute: executeGit,
+    probe: (root) =>
+      repositoryEmitProbe({
+        compilerRoot: REPOSITORY_ROOT,
+        root,
+        spawn: spawnSync,
+      }),
+    remove: (directory) =>
+      fs.rmSync(directory, { recursive: true, force: true }),
+    temporaryDirectory: () =>
+      fs.mkdtempSync(path.join(os.tmpdir(), "automovie-coverage-emit-")),
+  };
+
+/**
+ * Refuse any base-to-final changed line the run did not cover completely.
+ *
+ * The publication is the only report this reads, and it is re-read through its
+ * digest, so the verdict is about the bytes the measurement published and no
+ * other. Exits 1 for a coverage gap and 2 for anything that keeps the gate
+ * from judging: a divergent index and worktree, a report that predates the
+ * source, an unreadable report, an unresolvable base, or an unknown argument.
+ * `dependencies` are the processes and directories it reaches, injectable so
+ * the orchestration can be driven from canned git answers and a fake probe.
+ */
 export const runChangedCoverageGate = (
   arguments_: string[],
   publication: ICoveragePublication,
   environment: NodeJS.ProcessEnv = process.env,
   write: Writer = console.log,
+  dependencies: IChangedCoverageGateDependencies = changedCoverageGateDependencies,
 ): number => {
   try {
     const options = parseChangedCoverageArguments(arguments_);
-    const root = path.resolve(
-      options.root ?? path.resolve(__dirname, "../../.."),
+    const root = path.resolve(options.root ?? REPOSITORY_ROOT);
+    const base = resolveCoverageBase(
+      root,
+      options.base,
+      environment,
+      dependencies.execute,
     );
-    const base = resolveCoverageBase(root, options.base, environment);
-    const changes = collectGitChangedLines(root, base);
+    const changes = collectGitChangedLines(root, base, dependencies.execute);
     const coverage = readJson(
       publicationReport(publication),
       "coverage report",
     ) as Record<string, IIstanbulFileCoverage>;
-    const measuredSources = publication.sources;
     const result = inspectChangedCoverage({
       root,
       files: changes.files,
       divergent: changes.divergent,
       coverage,
-      measuredSources,
+      measuredSources: publication.sources,
       wholeFiles: changes.wholeFiles,
     });
-    const probe = repositoryEmitProbe({
-      compilerRoot: path.resolve(__dirname, "../../.."),
-      root,
-      spawn: spawnSync,
-    });
-    const outDirectory = fs.mkdtempSync(
-      path.join(os.tmpdir(), "automovie-coverage-emit-"),
-    );
+    const probe = dependencies.probe(root);
+    const outDirectory = dependencies.temporaryDirectory();
     let judged;
     try {
       judged = excuseNonExecutableGaps({
@@ -623,7 +678,7 @@ export const runChangedCoverageGate = (
           emitsNoExecutableStatement({ file, outDirectory, probe }),
       });
     } finally {
-      fs.rmSync(outDirectory, { recursive: true, force: true });
+      dependencies.remove(outDirectory);
     }
     reportChangedCoverage(changes, { ...result, gaps: judged.gaps }, write);
     for (const file of judged.excused)
