@@ -150,6 +150,8 @@ export const currentAutoMovieLocalProcessOwner =
  *
  * @evidence requirements/operations-and-recovery/concurrent-runs-and-locking.md#operations-stale-lock-recovery Refuses stale recovery unless the original local owner is proved absent.
  * @evidence specifications/execution-and-recovery/concurrent-ownership-and-locking.md#execution-stale-claim-recovery Implements the generation-aware observation used before takeover or cleanup.
+ * @evidence requirements/rendering/chunks-resume-and-recovery.md#rendering-concurrent-work Classifies a recorded worker by host, PID and process generation so concurrent workers are coordinated by identity rather than by bare PID occupancy.
+ * @evidence requirements/rendering/chunks-resume-and-recovery.md#rendering-failure-recovery Proves a lost worker absent, and keeps reused, remote, malformed and unqueryable owners as refusals, before any recovery may reclaim its claim.
  */
 export const observeAutoMovieLocalProcessOwner = (props: {
   /** Persisted owner-shaped value to validate and observe. */

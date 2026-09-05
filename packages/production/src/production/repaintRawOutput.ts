@@ -25,17 +25,29 @@ export type AutoMovieRepaintRawOutputDisposition =
  * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-repaint-attempt-selection Binds raw bytes to one request, attempt, disposition, and retention ceiling.
  */
 export interface IAutoMovieRepaintRawOutputReceipt {
+  /** Receipt schema version. */
   version: 1;
+  /** Production namespace that owns the attempt. */
   productionId: string;
+  /** Shot the attempt repainted. */
   shot: string;
+  /** Request the attempt belongs to. */
   requestId: string;
+  /** Attempt whose provider output these bytes are. */
   attemptId: string;
+  /** Tracked project-relative path of the retained raw bytes. */
   path: string;
+  /** Content digest of the retained raw bytes. */
   digest: AutoMovieContentDigest;
+  /** Exact retained byte length. */
   bytes: number;
+  /** Retention ceiling the raw output was admitted under. */
   maximumBytes: number;
+  /** Media type the provider declared for the raw output. */
   mediaType: string;
+  /** Terminal attempt disposition the raw output belongs to. */
   disposition: AutoMovieRepaintRawOutputDisposition;
+  /** ISO-8601 UTC instant the raw output was retained. */
   retainedAt: string;
 }
 
@@ -46,7 +58,9 @@ export interface IAutoMovieRepaintRawOutputReceipt {
  * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-repaint-attempt-selection Prevents a digest-only record from standing in for recoverable output.
  */
 export interface IAutoMovieRepaintRawOutputPublication {
+  /** Receipt describing the bytes published beside it. */
   receipt: IAutoMovieRepaintRawOutputReceipt;
+  /** Exact raw bytes the receipt's digest covers. */
   bytes: Uint8Array;
 }
 
@@ -73,6 +87,7 @@ export const productionRepaintRawOutputReceiptPath = (
  *
  * @evidence requirements/repaint/retries-seeds-and-variation.md#repaint-attempt-failure-provenance Retains available provider bytes even when validation, cancellation, or the request budget prevents candidate admission.
  * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-repaint-attempt-selection Separates attempt-owned raw bytes from the validated candidate revision derived from them.
+ * @evidence requirements/evidence-and-provenance/completeness-freshness-and-refusal.md#evidence-reproduction-boundary Preserves a provider's raw result and its conditions because a repaint cannot be re-verified by rerun.
  */
 export const planAutoMovieRepaintRawOutput = (props: {
   productionId: string;

@@ -24,6 +24,11 @@ interface IAutoMovieCaptionGraphemeRuntime {
  *
  * This package-private seam keeps runtime mismatch cases deterministic without
  * replacing the host's global `Intl` implementation in tests.
+ * @evidence requirements/delivery-and-accessibility/captions-subtitles-and-cues.md#delivery-caption-reading-overlap Measures reading rate, line count, line length, duration and same-language gap per cue against the declared profile boundaries.
+ * @evidence requirements/delivery-and-accessibility/captions-subtitles-and-cues.md#delivery-caption-readability-profile Computes a verdict only when the profile's complete segmentation identity equals the runtime that measured the cue, and reports measure-only `not-run` otherwise.
+ * @evidence requirements/evidence-and-provenance/completeness-freshness-and-refusal.md#evidence-unsupported-and-not-run Reports `not-run` with its reason when no profile or an unsupported identity prevents a verdict, and never counts that as pass.
+ * @evidence specifications/editorial-render-and-delivery/delivery-audio-text-and-localization.md#spec-delivery-caption-readability-profile Applies the language profile's complete identity, boundaries and canonical cue text exactly as this contract states them.
+ * @evidence specifications/editorial-render-and-delivery/delivery-audio-text-and-localization.md#spec-delivery-caption-readability-measurement Implements the measure-always, verdict-only-on-exact-identity evaluator with the case-insensitive same-language gap lookup.
  */
 export const inspectAutoMovieCaptionReadabilityWithRuntime = (
   timeline: IAutoMovieFilmTimeline,

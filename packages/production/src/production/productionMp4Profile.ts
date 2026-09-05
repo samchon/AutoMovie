@@ -246,12 +246,19 @@ export const assertProductionOpusProfile = (
 
 /** Exact current H.264/MP4 delivery profile resolved from authored inputs. */
 export interface IAutoMovieProductionVideoProfile {
+  /** Coded picture width in pixels. */
   width: number;
+  /** Coded picture height in pixels. */
   height: number;
+  /** Exact rational picture rate of the track. */
   frameRate: IAutoMovieProductionFrameRate;
+  /** Major brand and the compatible brands the file must declare. */
   brands: { major: "isom"; requiredCompatible: readonly string[] };
+  /** Identity track matrix the writer emits. */
   trackMatrix: IAutoMovieProductionVideoProbe["trackMatrix"];
+  /** Pixel aspect; the profile admits square pixels only. */
   pixelAspect: "square";
+  /** Color primaries, transfer, matrix and range the track declares. */
   color: { primaries: 1; transfer: 13; matrix: 1; fullRange: true };
 }
 
@@ -260,6 +267,7 @@ export interface IAutoMovieProductionVideoProfile {
  *
  * @evidence requirements/delivery-and-accessibility/containers-codecs-and-media-facts.md#delivery-container-metadata Keeps expected delivery facts separate from parser-observed bytes.
  * @evidence specifications/editorial-render-and-delivery/delivery-profiles-time-and-picture.md#spec-delivery-container-media-facts Defines the current neutral presentation and explicit sRGB container tuple.
+ * @evidence requirements/delivery-and-accessibility/containers-codecs-and-media-facts.md#delivery-supported-combinations Fixes the supported container, codec, raster and color combination of each tier as one profile instead of accepting whatever a muxer produced.
  */
 export const resolveProductionVideoProfile = (props: {
   width: number;
@@ -424,6 +432,10 @@ export const assertProductionVideoProfile = (props: {
  *
  * @evidence requirements/delivery-and-accessibility/containers-codecs-and-media-facts.md#delivery-container-metadata Prevents a text, still, audio, or video output from claiming facts its media class cannot possess.
  * @evidence specifications/editorial-render-and-delivery/delivery-profiles-time-and-picture.md#spec-delivery-container-media-facts Makes the parsed probe the only authority for non-null runtime, frame, and codec facts.
+ * @evidence requirements/delivery-and-accessibility/containers-codecs-and-media-facts.md#delivery-stream-duration-interleave Checks each delivered row's duration and timebase facts against the plan so a stream cannot drift from its declared presentation extent.
+ * @evidence requirements/delivery-and-accessibility/containers-codecs-and-media-facts.md#delivery-media-fact-refusal Refuses a planned-versus-actual media fact mismatch by the field and row that disagree.
+ * @evidence specifications/simulation-effects-and-sound/mix-stems-loudness-and-av-join.md#audio-visual-duration-and-timebase-join Compares each delivered stream's duration facts against the plan's rational mapping so picture and sound are joined by one exact clock.
+ * @evidence specifications/simulation-effects-and-sound/mix-stems-loudness-and-av-join.md#sound-sync-refusal-contract Refuses an audio-visual duration mismatch by row instead of trimming or padding a stream into agreement.
  */
 export const assertProductionRenderedDeliverableFacts = (props: {
   kind: "feature" | "guide-pass" | "preview" | "captions" | "audio-mix";

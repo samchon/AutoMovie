@@ -12,7 +12,9 @@ import { canonicalizeAutoMovieJson } from "./contentIdentity";
 
 /** Stable result of contextual caption and sound publication verification. */
 export interface IAutoMovieProductionNonVideoVerification {
+  /** Whether the plan had no caption sidecar or the delivered one verified against it. */
   caption: "absent" | "verified";
+  /** Whether the plan had no sound master or the delivered one verified against it. */
   sound: "absent" | "verified";
 }
 
@@ -21,6 +23,7 @@ export interface IAutoMovieProductionNonVideoVerification {
  *
  * @evidence requirements/sound/validation-and-delivery.md#sound-evidence-identity-freshness Keeps the complete plan, analysis, TTS, and sibling-audio identity available to the final gate.
  * @evidence specifications/simulation-effects-and-sound/validation-evidence-and-compatibility.md#sound-delivery-status-and-failure-propagation Refuses legacy or malformed evidence instead of reducing it to aggregate counts.
+ * @evidence requirements/sound/validation-and-delivery.md#sound-evidence-status Reads the planned, rendered, probed and not-run states of sound evidence as distinct facts without projecting identity away.
  */
 export const parseProductionSoundEvidence = (
   bytes: Uint8Array,
@@ -53,6 +56,10 @@ export const parseProductionSoundEvidence = (
  * @evidence specifications/editorial-render-and-delivery/delivery-audio-text-and-localization.md#spec-delivery-caption-cues Compares delivered canonical WebVTT bytes with the complete current caption plan.
  * @evidence requirements/sound/validation-and-delivery.md#sound-picture-delivery-join Binds measured sound evidence to the exact sibling audio deliverable.
  * @evidence specifications/simulation-effects-and-sound/mix-stems-loudness-and-av-join.md#sound-delivery-stream-and-inventory Implements the complete plan, analysis, dialogue, and audio identity join.
+ * @evidence requirements/delivery-and-accessibility/audio-streams-and-channels.md#delivery-audio-silence Distinguishes a missing, undecodable or not-run sound deliverable from a verified one instead of reading absent energy as authored silence.
+ * @evidence requirements/delivery-and-accessibility/audio-streams-and-channels.md#delivery-audio-refusal Refuses a delivered stream whose duration, digest or plan binding contradicts the current sound plan, naming the stream rather than marking the set complete.
+ * @evidence requirements/sound/validation-and-delivery.md#sound-delivery-inventory Verifies each sound deliverable's role, duration and digest against the current plan inventory rather than accepting a placeholder as the master.
+ * @evidence specifications/editorial-render-and-delivery/delivery-audio-text-and-localization.md#spec-delivery-audio-streams Verifies the master stream's role, sample facts and digest against the current sound plan and keeps missing, undecodable and not-run states separate.
  */
 export const verifyProductionNonVideoDeliverables = (props: {
   caption: {

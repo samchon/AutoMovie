@@ -50,7 +50,11 @@ export const canonicalAutoMovieRepaintRuntimeIdentity = (
   return canonicalizeAutoMovieJson(identity);
 };
 
-/** Validate and canonicalize reviewed repaint-generator provenance. */
+/** Validate and canonicalize reviewed repaint-generator provenance.
+ * @evidence requirements/external-inputs/credentials-rights-and-provenance.md#external-provenance-acquisition-activity Records the provider, model and terms review of a generated rendition without claiming that a seed reproduces it.
+ * @evidence requirements/repaint/identity-and-provenance.md#repaint-nondeterminism-record Canonicalizes the provider and model facts of a rendition as provenance, not as a promise that the same seed reproduces it.
+ * @evidence specifications/interchange-and-adoption/provenance-rights-and-secrets.md#interchange-generated-acquisition-snapshot Records the provider, exact model and terms review of a generated rendition as canonical provenance without inferring reproducibility.
+ */
 export const canonicalAutoMovieRepaintGeneratorProvenance = (
   provenance: IAutoMovieRepaintGeneratorProvenance,
 ): string => {
@@ -88,6 +92,7 @@ export const canonicalAutoMovieRepaintGeneratorProvenance = (
  *
  * @evidence requirements/repaint/providers-models-and-credentials.md#repaint-provider-terms Keeps a real reviewed terms date in generator provenance without making content identity depend on the current clock.
  * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-repaint-output-provenance Separates canonical generator identity from runtime-fact validation.
+ * @evidence requirements/sound/sources-and-external-assets.md#sound-source-provenance Requires a generator's terms review to be a real UTC calendar date that is not after the recorded execution instant.
  */
 export const canonicalAutoMovieExternalGeneratorTermsDate = (
   value: unknown,
@@ -268,7 +273,9 @@ export const productionRepaintOutputPath = (props: {
   ].join("/");
 };
 
-/** Content identity shared by every transport retry of one repaint request. */
+/** Content identity shared by every transport retry of one repaint request.
+ * @evidence specifications/authoring-and-authority/prototype-determinism-and-fidelity.md#spec-authoring-downstream-fidelity-output Gives a repaint rendition an identity of its own, derived from but distinct from the deterministic source render.
+ */
 export const productionRepaintRequestFingerprint = (props: {
   shot: string;
   compileFingerprint: AutoMovieContentDigest;

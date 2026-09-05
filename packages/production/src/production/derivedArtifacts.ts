@@ -249,6 +249,7 @@ export const generateAutoMovieDerivedArtifact = (
  * detect a race over the same closure.
  *
  * @author Samchon
+ * @evidence requirements/agent-authoring/deterministic-precomputation.md#agent-precomputed-provenance-separation Admits a derived artifact only when its record keeps external-asset separation, so deterministic bytes never borrow an acquired asset's provenance or freshness.
  */
 export const inspectAutoMovieDerivedArtifacts = (props: {
   root: string;

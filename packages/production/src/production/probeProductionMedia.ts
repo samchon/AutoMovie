@@ -36,6 +36,7 @@ export const AUTOMOVIE_SEMANTIC_MASK_MEDIA_TYPE =
 
 /**
  * Parse renderer-owned bytes instead of trusting manifest media claims.
+ * @evidence requirements/delivery-and-accessibility/containers-codecs-and-media-facts.md#delivery-partial-container Reports a container that opens but lacks a required stream or fact as a refusal rather than as delivered media.
  */
 export const probeProductionMedia = (props: {
   kind: IAutoMovieProductionDeliverable["kind"];
@@ -244,6 +245,7 @@ export const probeProductionMedia = (props: {
 
 /**
  * Parse one H.264-only intermediate production video.
+ * @evidence requirements/delivery-and-accessibility/containers-codecs-and-media-facts.md#delivery-stream-identity Identifies each track by its parsed role and codec facts rather than by a probe index.
  */
 export const probeProductionVideoMp4 = (
   bytes: Uint8Array,

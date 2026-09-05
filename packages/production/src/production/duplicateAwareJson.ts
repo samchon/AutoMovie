@@ -38,6 +38,8 @@ export class AutoMovieStructuredJsonError extends Error {
  * object scope. A duplicate is refused before any last-wins object can escape
  * to schema validation.
  *
+ * @evidence requirements/external-inputs/media-families-and-declared-facts.md#external-media-text-metadata Parses a text record as a data tree with strict UTF-8 and duplicate-member refusal, never as an instruction.
+ * @evidence specifications/interchange-and-adoption/media-inspection-boundaries.md#interchange-text-metadata-inspection Yields a text record as a data tree only, refusing duplicate members and malformed UTF-8 and executing nothing embedded in it.
  */
 export const parseAutoMovieStructuredJson = (props: {
   /** Logical record named by refusals. */

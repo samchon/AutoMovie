@@ -157,8 +157,11 @@ export interface IAutoMovieProductionProjectSummary {
  * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-repaint-output-provenance Joins the verified candidate to its current selection record without receipt inference.
  */
 export interface IAutoMovieVerifiedRepaintSelection {
+  /** Verified candidate receipt the selection activated. */
   receipt: IAutoMovieRepaintReceipt;
+  /** Stable identity of the selection record. */
   selectionId: string;
+  /** Digest of the immutable selection record bytes. */
   selectionDigest: AutoMovieContentDigest;
 }
 
@@ -304,6 +307,11 @@ const REPAINT_REFERENCE_ROLE_COUNT = 7;
  * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-generation-boundary Persists explicit generator choice, request identity, result provenance, and refusal records without treating external output as deterministic source truth.
  * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-repaint-handoff-boundary Owns the source lock, controls, attempts, selection, validation, and publication pointers of the optional repaint handoff.
  * @evidence specifications/narrative-and-intent/budgets-continuity-and-deliverables.md#narrative-intent-design-continuity-ledger Preserves production revisions and immutable identities so design change comparison remains source-derived.
+ * @evidence requirements/agent-authoring/partial-work.md#agent-resumable-authoring Reopens a production from its tracked project state and source snapshots alone, without any prior session or agent memory.
+ * @evidence specifications/authoring-and-authority/partial-targets-and-atomic-results.md#spec-authoring-partial-resume-compatibility Opens the same project state from its tracked records and snapshots without a prior session, and refuses a stale snapshot instead of mixing it into the current result.
+ * @evidence specifications/authoring-and-authority/source-authority-and-derivation.md#spec-authoring-source-resume-compatibility Reopens a production from its tracked ledger and source snapshots so a new tool that honors the same public contract inherits source authority without prior session memory.
+ * @evidence specifications/execution-and-recovery/artifacts-and-atomic-publication.md#execution-atomic-current-commit Commits staged writes under one revision compare-and-set so a reader sees either the old or the new generation and never a mixture.
+ * @evidence specifications/execution-and-recovery/artifacts-and-atomic-publication.md#execution-publication-conflict-rollback Refuses a commit whose base revision another session advanced, returning the current revision so the caller re-evaluates from that truth.
  */
 export class AutoMovieProductionProject {
   /**

@@ -4,6 +4,10 @@ import type {
   IAutoMovieScreenplayScene,
 } from "@automovie/interface";
 
+/**
+ * Lifecycle phase at which a scene's disposition is read: the authored
+ * screenplay, the compiled production, or the edit.
+ */
 export type AutoMovieScreenplayDispositionPhase =
   | "screenplay"
   | "production"

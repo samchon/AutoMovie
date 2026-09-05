@@ -623,6 +623,7 @@ export const materializeCompiledInstanceSet = (
  *
  * Anonymous identities remain derived from formation id and slot index and
  * never become a large scene-node array.
+ * @evidence specifications/authoring-and-authority/prototype-determinism-and-fidelity.md#spec-authoring-structural-output-invariant Materializes each compiled shot's models, hero nodes and formations into a reviewable runtime form whose proxies stay marked as proxies.
  */
 export const materializeCompiledShot = (props: {
   contract: IAutoMovieShotContract;

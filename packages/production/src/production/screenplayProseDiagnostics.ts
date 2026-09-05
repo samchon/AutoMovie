@@ -14,24 +14,43 @@ import type {
  * all or only a promise of one.
  */
 export interface IAutoMovieParsedScreenplayAuthority {
+  /** Authored location line of the authority block. */
   location: string;
+  /** Authored story-time line of the authority block. */
   storyTime: string;
+  /** Participants named in the authority block, with their roles. */
   participants: IAutoMovieScreenplayParticipant[];
+  /** Beat lines in authored order. */
   beats: string[];
 }
 
+/**
+ * One timing phrase found in a scene body, with the selector it names.
+ */
 export interface IAutoMovieParsedScreenplayTimingOccurrence {
+  /** Authored timing phrase as written. */
   text: string;
+  /** Seconds the phrase denotes; `NaN` when no number could be read from it. */
   seconds: number;
+  /** Shot or event selector attached to the phrase, or null when it names none. */
   selector: string | null;
 }
 
+/**
+ * One parsed scene: its heading identity, body, authority block and timing phrases.
+ */
 export interface IAutoMovieParsedScreenplayScene {
+  /** Scene identifier read from the heading. */
   id: string;
+  /** Heading text after the identifier and its separator. */
   title: string;
+  /** Every line until the next heading. */
   body: string;
+  /** Parsed authority block, or null when the scene carries none. */
   authority: IAutoMovieParsedScreenplayAuthority | null;
+  /** Authority lines that failed to parse, verbatim. */
   authorityErrors: string[];
+  /** Timing phrases found in the body, in order of appearance. */
   timing: IAutoMovieParsedScreenplayTimingOccurrence[];
 }
 
@@ -165,6 +184,13 @@ const timingSeconds = (value: string): number => {
   return TIMING_WORDS[normalized] ?? Number(normalized);
 };
 
+/**
+ * Find every timing phrase in one scene body together with its selector.
+ *
+ * Emphasis markup is stripped first so an italicized duration still counts;
+ * a phrase whose number cannot be read keeps `NaN` seconds so the timing
+ * check reports it rather than silently skipping it.
+ */
 export const parseScreenplayTimingOccurrences = (
   body: string,
 ): IAutoMovieParsedScreenplayTimingOccurrence[] => {

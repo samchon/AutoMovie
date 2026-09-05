@@ -14,6 +14,10 @@ import {
 /** Compare authored seconds at the precision of the portable JSON contract. */
 const SAME_SECOND = 1e-6;
 
+/**
+ * Which realized quantity a screenplay timing phrase measures: a shot's
+ * duration, or the offset of an event boundary within a shot.
+ */
 export type IAutoMovieScreenplayTimingSelector =
   | { kind: "duration"; shot: string }
   | {

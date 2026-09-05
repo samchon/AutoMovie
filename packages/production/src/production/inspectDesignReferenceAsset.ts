@@ -89,6 +89,9 @@ export interface IAutoMovieInspectedDesignReference {
  *
  * The whole function is a pure function of `bytes`: no filesystem, no clock, no
  * locale, so the same asset inspects identically on every machine.
+ * @evidence requirements/external-inputs/media-families-and-declared-facts.md#external-media-image-video Reads the family, extent and digest of a design reference image out of its bytes, never out of its filename extension.
+ * @evidence specifications/interchange-and-adoption/media-inspection-boundaries.md#interchange-image-video-inspection Produces the decoded extent and container facts of a design reference image from its parsed bytes.
+ * @evidence specifications/interchange-and-adoption/media-inspection-boundaries.md#interchange-design-drawing-inspection Identifies the registered drawing family from the bytes and measures its source-space extent without claiming map adoption or placement.
  */
 export const inspectDesignReferenceAsset = (props: {
   /** Project-relative declared asset path, named in every refusal. */

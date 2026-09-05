@@ -99,7 +99,9 @@ interface IAutoMovieRepaintExecutionResult<T> {
     | "observer-failed";
 }
 
-/** Validate the exact bounded repaint policy before any provider execution. */
+/** Validate the exact bounded repaint policy before any provider execution.
+ * @evidence specifications/authoring-and-authority/prototype-determinism-and-fidelity.md#spec-authoring-fidelity-failure-choice Refuses a rendition attempt whose bounded policy does not hold before any provider runs, leaving the deterministic output as the standing result.
+ */
 export const assertAutoMovieRepaintExecutionPolicy = (
   policy: IAutoMovieRepaintExecutionPolicy,
 ): void => {

@@ -7,15 +7,25 @@ import { AutoMovieContentDigest } from "@automovie/interface";
  * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-repaint-attempt-selection Carries the atomic admission identity across the project store.
  */
 export interface IAutoMovieRepaintAttemptClaim {
+  /** Claim schema version. */
   version: 1;
+  /** Production namespace the claimed request belongs to. */
   productionId: string;
+  /** Shot whose repaint request this attempt extends. */
   shot: string;
+  /** Stable identity of the request being attempted. */
   requestId: string;
+  /** Digest of the exact request the claim was admitted against. */
   requestFingerprint: AutoMovieContentDigest;
+  /** One-based position of this attempt within its request. */
   attemptOrdinal: number;
+  /** Stable identity of the attempt the claim reserves. */
   attemptId: string;
+  /** Digest of the attempt prefix that must still be current when the side effect settles. */
   prefixDigest: AutoMovieContentDigest;
+  /** Project-store generation the claim was written under. */
   generation: number;
+  /** ISO-8601 UTC instant the claim was admitted. */
   claimedAt: string;
 }
 

@@ -50,6 +50,7 @@ const SINGLE_PAGE_MEDIA = new Set(["image/png", "image/jpeg", "image/svg+xml"]);
  * scale. An unmeasurable container (a PDF page, a DXF drawing) simply leaves
  * the frame unverified instead of being approximated into agreement, because a
  * gate that invents the number it is checking is not a gate.
+ * @evidence requirements/external-inputs/validation-and-quarantine.md#external-validation-result-states Names the member, rule and consequence of each design-reference finding as distinct diagnostics instead of one accepted or rejected verdict.
  */
 export const designReferenceDiagnostics = (props: {
   /** Project-relative ledger path reported as each diagnostic's file. */

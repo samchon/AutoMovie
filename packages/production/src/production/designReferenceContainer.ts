@@ -78,6 +78,8 @@ const XML_BASE_NAMESPACES = new Map<string, string>([["xml", XML_NAMESPACE]]);
  * parser throws {@link AutoMovieDesignReferenceContainerError} naming the
  * family and stage, and malformed text throws the strict UTF-8 refusal before
  * any grammar runs.
+ * @evidence requirements/external-inputs/validation-and-quarantine.md#external-validation-content-facts Selects a family from the signature, then requires that family's parser to close the whole container before any fact leaves, so a contradictory or polyglot input is refused rather than decoded by convenience.
+ * @evidence requirements/external-inputs/validation-and-quarantine.md#external-validation-active-content Reads SVG, PDF and raster containers as data under a narrow admitted profile and executes nothing embedded in them.
  */
 export const inspectAutoMovieDesignReferenceContainer = (props: {
   path: string;
@@ -381,7 +383,10 @@ const inspectPdf = (props: {
       "object",
       "no closed indirect object was found",
     );
-  const closure = /startxref[\0\t\n\f\r ]+(\d+)[\0\t\n\f\r ]+%%EOF(?:\r\n|\r|\n)?$/.exec(text);
+  const closure =
+    /startxref[\0\t\n\f\r ]+(\d+)[\0\t\n\f\r ]+%%EOF(?:\r\n|\r|\n)?$/.exec(
+      text,
+    );
   if (closure === null)
     throw invalid(
       props.path,
@@ -449,7 +454,9 @@ const inspectClassicPdfXref = (
   root: IPdfReference;
 } | null => {
   const normalized = text.replace(/\r\n?/g, "\n");
-  const trailer = /\ntrailer[\0\t\n\f ]*<<([\s\S]*)>>[\0\t\n\f ]*$/.exec(normalized);
+  const trailer = /\ntrailer[\0\t\n\f ]*<<([\s\S]*)>>[\0\t\n\f ]*$/.exec(
+    normalized,
+  );
   if (trailer === null) return null;
   const lines = normalized.slice(0, trailer.index).split("\n");
   if (lines.shift() !== "xref") return null;
@@ -994,7 +1001,9 @@ const svgExtent = (
 ): IDesignReferenceExtent => {
   const viewBox = attributes.get("viewBox");
   if (viewBox !== undefined) {
-    const fields = trimXmlSpace(viewBox).split(/[ \t\r\n,]+/).map(svgNumber);
+    const fields = trimXmlSpace(viewBox)
+      .split(/[ \t\r\n,]+/)
+      .map(svgNumber);
     if (
       fields.length === 4 &&
       fields.every((field) => field !== null) &&

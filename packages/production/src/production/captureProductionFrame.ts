@@ -29,6 +29,7 @@ type IAutoMoviePreviewFrame = NonNullable<
  *
  * The knowledge gate is the one exception. It precedes the call rather than
  * answering it, so an ungated caller gets no outcome to interpret.
+ * @evidence requirements/agent-authoring/source-owned-loop.md#agent-narrowest-valid-check Captures one requested frame or turntable view and proves it, so an author answers the current question without rendering the film and without claiming more than that view.
  */
 export const captureAutoMovieProductionFrame = async (
   context: AutoMovieProductionContext,

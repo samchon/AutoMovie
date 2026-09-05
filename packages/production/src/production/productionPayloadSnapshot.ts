@@ -33,6 +33,7 @@ export interface IProductionPayloadSnapshot {
  *
  * @evidence requirements/rendering/scope-and-artifact-identity.md#rendering-artifact-invalidation Binds every retained or final payload member to the bytes verified for this commit attempt.
  * @evidence specifications/execution-and-recovery/artifacts-and-atomic-publication.md#execution-publication-preconditions Captures the complete candidate inventory before the guarded transition.
+ * @evidence specifications/editorial-render-and-delivery/delivery-package-provenance-and-publication.md#spec-delivery-package-safety Captures every delivered file's canonical path, size and digest as one closed snapshot before publication begins.
  */
 export const captureProductionPayloadSnapshot = (props: {
   paths: readonly string[];

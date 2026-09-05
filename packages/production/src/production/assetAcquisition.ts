@@ -39,6 +39,8 @@ const httpUrlAdmissionRefusal = (
  * @evidence requirements/evidence-and-provenance/privacy-credentials-and-disclosure.md#privacy-credential-omission Returns a failure class without retaining the rejected secret-bearing locator.
  * @evidence specifications/interchange-and-adoption/provenance-rights-and-secrets.md#interchange-secret-reference-boundary Implements the credential-free URI boundary for provenance ledgers.
  * @evidence specifications/evidence-and-provenance/privacy-credentials-and-disclosure.md#evp-credential-exclusion-gate Gives ingestion callers a redacted credential exclusion decision before publication.
+ * @evidence requirements/sound/sources-and-external-assets.md#sound-source-secret-remote-boundary Refuses a source or license locator that carries credentials before any ledger entry, receipt or artifact could store them.
+ * @evidence specifications/simulation-effects-and-sound/sound-sources-events-dialogue-and-foley.md#sound-source-choice-provider-and-secret-boundary Stops a credential-bearing locator at admission so no artifact records a secret and no remote fetch is implied by a stored URL.
  */
 export const assetUrlAdmissionRefusal = (
   asset: IAutoMovieAssetProvenance,
@@ -75,6 +77,8 @@ export const assetUrlAdmissionRefusal = (
  *
  * @evidence requirements/external-inputs/credentials-rights-and-provenance.md#external-credential-separation Refuses fetched acquisition records whose locator embeds credentials.
  * @evidence specifications/interchange-and-adoption/provenance-rights-and-secrets.md#interchange-secret-reference-boundary Applies the provenance ledger's credential-free locator rule while preserving generated acquisitions.
+ * @evidence requirements/external-inputs/credentials-rights-and-provenance.md#external-provenance-source-record Requires each asset to state exactly one acquisition, fetched or generated, and refuses a ledger entry that invents a source rather than admitting it is unknown.
+ * @evidence specifications/interchange-and-adoption/provenance-rights-and-secrets.md#interchange-source-provenance-snapshot Requires the fetched or generated acquisition record to be present and complete, leaving unknown fields unknown rather than inventing a source.
  */
 export const assetAcquisitionIncomplete = (
   asset: IAutoMovieAssetProvenance,
@@ -107,6 +111,8 @@ export const assetAcquisitionIncomplete = (
  * against the digest its source served, a generated one against the digest its
  * generator returned. An asset with neither acquisition is silent here rather
  * than doubly reported; {@link assetAcquisitionIncomplete} already owns it.
+ * @evidence requirements/external-inputs/credentials-rights-and-provenance.md#external-provenance-derivation-consumers Detects an asset whose current bytes differ from its acquired digest without a recorded transformation, so a replaced source cannot pass as its consumers' unchanged input.
+ * @evidence specifications/interchange-and-adoption/provenance-rights-and-secrets.md#interchange-derivation-consumer-reachability Detects a source whose bytes changed without a recorded processing step, so its consumers cannot keep reading it as the adopted revision.
  */
 export const assetProcessingOmitted = (
   asset: IAutoMovieAssetProvenance,

@@ -50,6 +50,7 @@ export const fingerprintAutoMovieLegacyImportPlan = (
 /**
  * Admit the full plan shape, runtime refinements, baseline and fingerprint.
  *
+ * @evidence requirements/external-inputs/validation-and-quarantine.md#external-validation-adoption-gate Binds a legacy import to its plan fingerprint and baseline so changed bytes never reuse an earlier admission.
  */
 export const assertAutoMovieLegacyImportPlan = (
   value: unknown,

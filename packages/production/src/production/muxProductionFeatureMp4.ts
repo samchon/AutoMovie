@@ -469,6 +469,7 @@ export const productionVisualDeliveryOccurrence = (
  * One chunk covering the whole film is returned verbatim: it already is the
  * film's video, so an assembly that spans a single chunk is byte-identical to
  * encoding that chunk.
+ * @evidence requirements/rendering/chunks-resume-and-recovery.md#rendering-chunk-assembly Assembles the feature only from a contiguous, complete set of current chunks and refuses a partial set as encode input.
  */
 export const assembleProductionChunkVideoMp4 = (props: {
   /** Encoded chunk MP4s in play order, read once. */

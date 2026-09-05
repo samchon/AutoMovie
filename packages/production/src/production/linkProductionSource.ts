@@ -178,6 +178,7 @@ const runtimeSpecifiers = (path: string, source: string): string[] => {
  * The reader is the project's own owned-source reader, so path escape,
  * symlinks, and missing files stay refused exactly as they are for an entry
  * module. Nothing here widens what the compiler is willing to open.
+ * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Links scenes and assets from the project's reviewable TypeScript modules in dependency order rather than from hidden editor state.
  */
 export const linkProductionSource = (props: {
   entryPath: string;

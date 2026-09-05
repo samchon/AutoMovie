@@ -188,6 +188,7 @@ export const normalizeAutoMovieSourceIdentity = (props: {
 /**
  * Verify an explicitly versioned source identity from its recoverable bytes.
  *
+ * @evidence specifications/evidence-and-provenance/completeness-freshness-and-refusal.md#evp-reproduction-verification-boundary Reverifies a deterministic source identity by exact digest comparison and reports match, mismatch or unverifiable.
  */
 export const verifyAutoMovieSourceIdentity = (props: {
   /** Source-relative pathname named by strict-decoding refusals. */
@@ -246,6 +247,7 @@ export const digestAutoMovieBytes = (
  * basenames such as `CON` remain reserved even with an extension. Escape the
  * complete RFC 3986 reserved tail and the first character of a device name so
  * every accepted string has one reversible cross-platform representation.
+ * @evidence requirements/rendering/headless-and-platform-determinism.md#rendering-cross-platform-paths Encodes a logical identity into one portable path segment so reserved names, separators and case cannot differ between Windows and POSIX.
  */
 export const encodeAutoMoviePathSegment = (value: string): string => {
   let encoded = encodeURIComponent(value).replace(
@@ -287,6 +289,7 @@ export const decodeAutoMoviePathSegment = (value: string): string =>
 
 /**
  * Canonicalize a JSON-compatible value with lexicographically sorted keys.
+ * @evidence requirements/rendering/headless-and-platform-determinism.md#rendering-locale-time-determinism Serializes identities without locale, timezone or clock participation so the same input yields the same bytes on every host.
  */
 export const canonicalizeAutoMovieJson = (value: unknown): string => {
   const active = new Set<object>();

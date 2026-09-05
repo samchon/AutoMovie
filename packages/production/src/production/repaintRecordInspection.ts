@@ -42,8 +42,11 @@ export type AutoMovieRepaintRecordInspectionStage =
  * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-repaint-output-provenance Identifies one inspection target across candidate and rendition readers.
  */
 export interface IAutoMovieRepaintRecordTarget {
+  /** Record family the target belongs to. */
   kind: AutoMovieRepaintRecordKind;
+  /** Shot that owns the record. */
   shot: string;
+  /** Stable identity of the record within its family. */
   recordId: string;
 }
 
@@ -54,9 +57,13 @@ export interface IAutoMovieRepaintRecordTarget {
  * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-repaint-output-provenance Carries a refusal without copying record or provider bytes.
  */
 export interface IAutoMovieRepaintRecordFinding {
+  /** The record the finding is about. */
   target: IAutoMovieRepaintRecordTarget;
+  /** Inspection stage that produced the finding. */
   stage: AutoMovieRepaintRecordInspectionStage;
+  /** Classified failure, carrying no record or provider bytes. */
   failure: AutoMovieRepaintRecordFailureClass;
+  /** Safe recovery sentence a caller may show as is. */
   recovery: string;
 }
 
@@ -67,7 +74,9 @@ export interface IAutoMovieRepaintRecordFinding {
  * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-repaint-output-provenance Returns valid records and classified findings in one deterministic observation.
  */
 export interface IAutoMovieRepaintRecordInspection<T> {
+  /** Every record that inspected clean, with the target it was read as. */
   records: Array<{ target: IAutoMovieRepaintRecordTarget; value: T }>;
+  /** Classified refusals for the records that did not. */
   findings: IAutoMovieRepaintRecordFinding[];
 }
 
@@ -82,10 +91,13 @@ export interface IAutoMovieRepaintRecordInspection<T> {
  * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-repaint-output-provenance Carries the exact lineage stage and safe recovery action across the record-reader boundary.
  */
 export class AutoMovieRepaintRecordInspectionError extends Error {
+  /** Built-in safe recovery sentence for the classified failure. */
   public readonly recovery: string;
 
   public constructor(
+    /** Inspection stage the reader was in when it refused. */
     public readonly stage: AutoMovieRepaintRecordInspectionStage,
+    /** Classified failure the reader refused with. */
     public readonly failure: AutoMovieRepaintRecordFailureClass,
   ) {
     super(`Repaint ${stage} inspection failed as ${failure}.`);
@@ -103,6 +115,7 @@ export class AutoMovieRepaintRecordInspectionError extends Error {
  *
  * @evidence requirements/repaint/identity-and-provenance.md#repaint-provenance-refusal Makes missing, malformed, stale, unsafe, unavailable, and corrupt persisted records distinguishable to recovery tooling.
  * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-repaint-output-provenance Keeps the record identity and failed lineage stage while excluding raw record contents from the finding.
+ * @evidence requirements/repaint/identity-and-provenance.md#repaint-derivation-chain Walks request, attempt, raw output and selected rendition records as one derivation chain and names the first broken link.
  */
 export const inspectAutoMovieRepaintRecords = <T>(props: {
   targets: readonly IAutoMovieRepaintRecordTarget[];

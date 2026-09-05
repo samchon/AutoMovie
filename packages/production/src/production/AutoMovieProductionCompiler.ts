@@ -221,7 +221,6 @@ import {
   consumedModelIds,
   reviewEvidenceDiagnostics,
 } from "./reviewEvidenceDiagnostics";
-import { verifyAutoMovieProductionSemanticMaskReceipt } from "./semanticMaskEvidence";
 import {
   AUTOMOVIE_SANDBOX_BRIDGED_ENGINE_EXPORTS,
   callAutoMovieSandboxEngine,
@@ -234,6 +233,7 @@ import {
 import { screenplayLedgerDiagnostics } from "./screenplayLedgerDiagnostics";
 import { screenplayProseDiagnostics } from "./screenplayProseDiagnostics";
 import { screenplayTimingDiagnostics } from "./screenplayTimingDiagnostics";
+import { verifyAutoMovieProductionSemanticMaskReceipt } from "./semanticMaskEvidence";
 import { shotDeterminismDiagnostics } from "./shotDeterminismDiagnostics";
 import {
   IAutoMovieSourceContentFinding,
@@ -308,6 +308,10 @@ export const AUTOMOVIE_PRODUCTION_COMPILER_VERSION =
  * @evidence requirements/review/subject-inspection.md#review-library-delivery-coverage Consumes the graph-derived library owner population at review and final without charging unused film inventory.
  * @evidence specifications/review-and-acceptance/subject-surface-and-inspection.md#review-system-library-delivery-coverage Runs the current finite library observation gate inside the same compiler path as final publication.
  * @author Samchon
+ * @evidence requirements/agent-authoring/partial-work.md#agent-declared-omission Carries authored omissions into the compiled timeline as records with a range and reason instead of counting a black or placeholder shot as finished.
+ * @evidence requirements/delivery-and-accessibility/captions-subtitles-and-cues.md#delivery-caption-refusal Refuses reversed, overlapping, out-of-range, blank or malformed-language caption cues during compilation instead of publishing a valid subset as the complete alternative.
+ * @evidence requirements/rendering/scope-and-artifact-identity.md#rendering-compile-render-distinction Fixes scene, timeline and validation before any render and leaves the render stage nothing to invent for a missing subject or camera.
+ * @evidence specifications/authoring-and-authority/partial-targets-and-atomic-results.md#spec-authoring-partial-omission-failure Refuses a missing required fact with the missing identity and the correction, and keeps a placeholder provisional rather than complete.
  */
 export class AutoMovieProductionCompiler {
   public constructor(
@@ -7283,6 +7287,7 @@ export const validateAutoMovieFormationSlotMotions = (
  * Validate shot-local effect cues against compiler-owned streams and events.
  *
  * @author Samchon
+ * @evidence requirements/effects-and-simulation/scope-and-simulation-tiers.md#effects-story-binding Requires every effect cue to name a registered world zone and recipe within its shot's time, so an effect is bound to an authored event rather than to a floating preset.
  */
 export const validateAutoMovieEffects = (
   contract: IAutoMovieShotContract,
@@ -8691,6 +8696,7 @@ const productionCompilerInputFingerprint = (
  * sides of the commit lock.
  *
  * @author Samchon
+ * @evidence specifications/authoring-and-authority/prototype-determinism-and-fidelity.md#spec-authoring-choice-determinism-invariant Turns every authoring choice into a new input identity so alternatives stay comparable without forcing one result.
  */
 export const currentAutoMovieProductionCompilerInputFingerprint = (
   project: AutoMovieProductionProject,
