@@ -219,6 +219,33 @@ export const test_cli_scaffold_contract_maintenance = (): void => {
       screenplay: generated.files["docs/screenplays/001-act/index.md"],
     },
   );
+  const reversed = planAutoMovieProjectDeliveryTocs({
+    files: {
+      "docs/screenplays/002-close/001-final.md": "# Final\n",
+      "docs/screenplays/002-close/index.md": "# Close\n",
+      "docs/screenplays/001-act/001-opening.md": "# Opening\n",
+      "docs/screenplays/001-act/index.md": "# Act\n",
+      "docs/scripts/002-close/001-final.md": "# Final\n",
+      "docs/scripts/002-close/index.md": "# Close\n",
+      "docs/scripts/001-act/001-opening.md": "# Opening\n",
+      "docs/scripts/001-act/index.md": "# Act\n",
+    },
+  });
+  TestValidator.equals(
+    "delivery planning orders groups and members by code unit, not by observation order",
+    {
+      diagnostics: reversed.diagnostics,
+      act: reversed.files["docs/scripts/001-act/index.md"],
+      mirrored:
+        reversed.files["docs/scripts/002-close/index.md"] ===
+        reversed.files["docs/screenplays/002-close/index.md"],
+    },
+    {
+      diagnostics: [],
+      act: generated.files["docs/scripts/001-act/index.md"],
+      mirrored: true,
+    },
+  );
   const tocWrites = planAutoMovieDeliveryTocPublication({
     current: validFiles,
     observed: validFiles,

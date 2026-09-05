@@ -410,13 +410,13 @@ export const renderScaffold = (
   );
   const manifest = JSON.parse(files["package.json"]!) as {
     name: string;
-    description?: string;
+    description: string;
   };
   const blank = createBlankAutoMovieProductionEvidence(root, props.language);
   const instructions = renderAutoMovieProductionInstructionCandidate({
     evidence: {
       packageName: manifest.name,
-      description: manifest.description?.trim() ?? "",
+      description: manifest.description.trim(),
       manifest: {
         kind: blank.kind,
         language: blank.language,

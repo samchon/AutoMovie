@@ -54,6 +54,10 @@ export const renderAutoMovieContractBaseline = (props: {
     2,
   )}\n`;
 
+/** Stable code-unit ordering independent of host locale and ICU data. */
+const compareCodeUnits = (left: string, right: string): number =>
+  Number(left > right) - Number(left < right);
+
 /**
  * Plan every delivery index in scripts and screenplays from numbered units.
  *
@@ -76,7 +80,7 @@ export const planAutoMovieProjectDeliveryTocs = (props: {
     const validMembers = new Set<string>();
     const residents = Object.keys(props.files)
       .filter((path) => path.startsWith(prefix) && path.endsWith(".md"))
-      .sort((left, right) => (left < right ? -1 : left > right ? 1 : 0));
+      .sort(compareCodeUnits);
     for (const resident of residents) {
       const parts = resident.slice(prefix.length).split("/");
       if (
@@ -92,9 +96,7 @@ export const planAutoMovieProjectDeliveryTocs = (props: {
       validMembers.add(resident.slice(prefix.length));
     }
     deliveryMembers.set(layer, validMembers);
-    for (const group of [...groups].sort((left, right) =>
-      left < right ? -1 : left > right ? 1 : 0,
-    )) {
+    for (const group of [...groups].sort(compareCodeUnits)) {
       const indexPath = `${prefix}${group}/index.md`;
       const indexSource = props.files[indexPath];
       if (indexSource === undefined) {
@@ -133,7 +135,7 @@ export const planAutoMovieProjectDeliveryTocs = (props: {
   const screenplays = deliveryMembers.get("screenplays")!;
   if (scripts.size !== 0 && screenplays.size !== 0)
     for (const relative of [...new Set([...scripts, ...screenplays])].sort(
-      (left, right) => (left < right ? -1 : left > right ? 1 : 0),
+      compareCodeUnits,
     ))
       if (scripts.has(relative) !== screenplays.has(relative))
         diagnostics.push(

@@ -10,9 +10,9 @@ import { TestValidator } from "@nestia/e2e";
  *    keys resolve to their interpreted direct string value.
  * 2. A same-named mapping outside `catalogs`, a sibling catalog, and a deeper
  *    descendant never take ownership from the requested direct path.
- * 3. Missing owners, wrong node kinds, blank values, duplicate keys, invalid
- *    syntax, and unresolved or forward aliases are refused with the requested
- *    catalog and dependency in the diagnostic.
+ * 3. Missing owners, wrong node kinds, blank or absent values, duplicate keys,
+ *    invalid syntax, and unresolved or forward aliases are refused with the
+ *    requested catalog and dependency in the diagnostic.
  */
 export const test_template_catalog_resolution = (): void => {
   const resolve = (
@@ -91,6 +91,7 @@ export const test_template_catalog_resolution = (): void => {
     "catalogs:\n  value: &value {}\n  media: *value",
     "catalogs:\n  media:\n    other: ^1.2.3",
     "catalogs:\n  media:\n    lib:",
+    "catalogs:\n  media:\n    ? lib",
     "catalogs:\n  media:\n    lib: '   '",
     "catalogs:\n  media:\n    lib: 123",
     "catalogs:\n  media:\n    lib: []",

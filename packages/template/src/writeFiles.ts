@@ -134,7 +134,7 @@ export const writeFiles = (
   // same order on every host (localeCompare varies with host locale/ICU).
   return receipt.completed
     .map(({ entry }) => entry.target)
-    .sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
+    .sort((a, b) => Number(a > b) - Number(a < b));
 };
 
 /**

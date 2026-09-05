@@ -32,7 +32,9 @@ interface INativeScenario {
   residentCloseFails?: boolean;
   residentHandleInvalid?: boolean;
   residentIdentity?: string;
+  residentInspectThrowsValue?: boolean;
   residentOpenFails?: boolean;
+  residentVersionChangesAfterClose?: boolean;
   seekFails?: boolean;
   target?: "competitor" | "create-failed" | "ok";
   write?: "fail" | "stop" | "success";
@@ -76,9 +78,19 @@ const execute = (scenario: INativeScenario) => {
   const sizeOf = (descriptor: number): bigint =>
     BigInt(nodes.get(descriptor)!.bytes.length) +
     (descriptor === CREATED ? (scenario.finalSizeDelta ?? 0n) : 0n);
+  let residentInspections = 0;
+  const residentMoved = (descriptor: number): boolean => {
+    if (descriptor === RESIDENT) residentInspections++;
+    return (
+      descriptor === RESIDENT &&
+      scenario.residentVersionChangesAfterClose === true &&
+      residentInspections >= 2
+    );
+  };
   const status = (descriptor: number) => {
     const node = nodes.get(descriptor)!;
     const [device, inode] = identityOf(descriptor).split(":").map(BigInt);
+    const moved = residentMoved(descriptor);
     return {
       dev: device,
       ino: inode,
@@ -90,7 +102,7 @@ const execute = (scenario: INativeScenario) => {
         descriptor === PARENT ? false : (scenario.childIsFile ?? true),
       isSymbolicLink: () =>
         descriptor === PARENT ? false : (scenario.childIsLink ?? false),
-      mtimeNs: 7n,
+      mtimeNs: moved ? 8n : 7n,
       nlink: scenario.childLinks ?? 1n,
       size: sizeOf(descriptor),
     } as fs.BigIntStats;
@@ -148,6 +160,12 @@ const execute = (scenario: INativeScenario) => {
         throw new Error("parent fstat failed");
       if (descriptor !== PARENT && scenario.childInspectFails)
         throw new Error("child fstat failed");
+      if (descriptor === RESIDENT && scenario.residentInspectThrowsValue) {
+        // The adapter must wrap a thrown non-Error value; a native binding
+        // that rejects with a bare string is exactly that value.
+        const value: unknown = "resident inspection failed without an Error";
+        throw value;
+      }
       return status(descriptor);
     },
     fsyncSync: () => {
@@ -261,7 +279,10 @@ const execute = (scenario: INativeScenario) => {
     const size = descriptor === PARENT ? 0n : sizeOf(descriptor);
     information.nFileSizeHigh = Number(size >> 32n);
     information.nFileSizeLow = Number(size & 0xffff_ffffn);
-    information.ftLastWriteTime = { dwHighDateTime: 0, dwLowDateTime: 7 };
+    information.ftLastWriteTime = {
+      dwHighDateTime: 0,
+      dwLowDateTime: residentMoved(descriptor) ? 8 : 7,
+    };
     return true;
   });
   const pointers = new Map<unknown, number>();
@@ -380,7 +401,11 @@ const perPlatform = (
  *    exact written extent: a child that is not one ordinary single-link file,
  *    a write that fails or stops, a failed flush, a changed size, a readback
  *    that fails, stops, or differs, a resident that cannot be reopened,
- *    inspected, or matched, and a child, resident, or parent close failure.
+ *    inspected, or matched, a resident whose generation moves only after the
+ *    created descriptor closed, a resident inspection that fails with a
+ *    non-Error value, and a child, resident, or parent close failure, including
+ *    a parent close failure stacked on an earlier child close failure or on a
+ *    failed parent inspection.
  * 4. Windows never lowers a HANDLE to a C-runtime descriptor: bytes, flush,
  *    inspection, seek, and readback all travel through kernel32 on the handle,
  *    and an invalid child or resident handle is reported as the created slot
@@ -473,6 +498,44 @@ export const test_cli_scaffold_native_adapter = (): void => {
       { residentOpenFails: true, target: "ok" },
       "partial:3",
     ),
+    ...perPlatform(
+      both,
+      { residentVersionChangesAfterClose: true, target: "ok" },
+      "partial:3",
+    ),
+    {
+      outcome: "partial:3",
+      scenario: {
+        platform: "linux",
+        residentInspectThrowsValue: true,
+        target: "ok",
+      },
+    },
+    {
+      outcome: "partial:0",
+      scenario: {
+        closeFails: new Set([CREATED, PARENT]),
+        platform: "linux",
+        target: "ok",
+        write: "fail",
+      },
+    },
+    {
+      outcome: "refused:create-failed",
+      scenario: {
+        closeFails: new Set([PARENT]),
+        parentFstatFails: true,
+        platform: "linux",
+      },
+    },
+    {
+      outcome: "refused:create-failed",
+      scenario: {
+        parentCloseFails: true,
+        parentFstatFails: true,
+        platform: "win32",
+      },
+    },
     {
       outcome: "partial:3",
       scenario: {

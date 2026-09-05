@@ -43,25 +43,28 @@ const languageInventory = (root: string): InventoryEntry[] => {
       )) {
       const absolute = path.join(directory, entry.name);
       const relative = path.relative(root, absolute).split(path.sep).join("/");
-      if (entry.isSymbolicLink()) output.push({ kind: "link", path: relative });
-      else if (entry.isDirectory()) {
-        output.push({ kind: "directory", path: relative });
+      const kind = entry.isDirectory()
+        ? "directory"
+        : entry.isFile()
+          ? "file"
+          : null;
+      if (kind === null)
+        throw new Error(
+          `${absolute}: language contract assets must be physical files and directories.`,
+        );
+      if (kind === "directory") {
+        output.push({ kind, path: relative });
         visit(absolute);
-      } else if (entry.isFile())
-        output.push({
-          content: strictUtf8(absolute),
-          kind: "file",
-          path: relative,
-        });
-      else output.push({ kind: "other", path: relative });
+      } else
+        output.push({ content: strictUtf8(absolute), kind, path: relative });
     }
   };
   visit(root);
   return output;
 };
 
-const sharedTargetIdentities = (): ReservedTarget[] => {
-  const docs = path.join(packageDirectory, "scaffold", "docs");
+const sharedTargetIdentities = (assetRoot: string): ReservedTarget[] => {
+  const docs = path.join(assetRoot, "scaffold", "docs");
   const output: ReservedTarget[] = [];
   const visit = (directory: string): void => {
     if (!fs.lstatSync(directory, { throwIfNoEntry: false })?.isDirectory())
@@ -123,12 +126,15 @@ const sharedTargetIdentities = (): ReservedTarget[] => {
  */
 export const renderAutoMovieLanguageContracts = (props: {
   language: string;
+  /** Alternate package asset root used only by deterministic consumers/tests. */
+  assetRoot?: string;
 }): Record<string, string> => {
   if (!isAutoMovieProductionLanguage(props.language))
     throw new Error(
       `${props.language || "(missing)"}: expected one bundled production language (${AUTO_MOVIE_PRODUCTION_LANGUAGES.join(", ")}).`,
     );
-  const root = path.join(packageDirectory, "language-contracts");
+  const assetRoot = path.resolve(props.assetRoot ?? packageDirectory);
+  const root = path.join(assetRoot, "language-contracts");
   if (!fs.lstatSync(root, { throwIfNoEntry: false })?.isDirectory())
     throw new Error(`language contract assets are missing: ${root}`);
   const selected = path.join(root, props.language);
@@ -139,6 +145,6 @@ export const renderAutoMovieLanguageContracts = (props: {
   return validateAutoMovieLanguageContractInventory({
     entries: languageInventory(selected),
     language: props.language,
-    reservedTargets: sharedTargetIdentities(),
+    reservedTargets: sharedTargetIdentities(assetRoot),
   });
 };

@@ -89,23 +89,18 @@ const collectProjectInstructionTarget = (
   files: Record<string, string>,
 ): void => {
   const target = path.resolve(root, relative);
-  const contained = path.relative(root, target);
-  if (
-    contained === "" ||
-    contained === ".." ||
-    contained.startsWith(`..${path.sep}`) ||
-    path.isAbsolute(contained)
-  )
-    throw new Error(
-      `${relative}: instruction target escapes the project root.`,
-    );
   const metadata = fs.lstatSync(target, { throwIfNoEntry: false });
   if (metadata === undefined || metadata.isSymbolicLink() || !metadata.isFile())
     throw new Error(`${relative}: instruction target is not a physical file.`);
   files[relative.replaceAll("\\", "/")] = fs.readFileSync(target, "utf8");
 };
 
-/** Read the whole installed instruction candidate before target mutation. */
+/**
+ * Read the whole installed instruction candidate before target mutation.
+ *
+ * `assertInstructionSourceIsPhysical` has already refused every link in this
+ * tree, so each remaining entry is a directory to descend or a file to read.
+ */
 const collectInstructionFiles = (props: {
   directory: string;
   files: Record<string, string>;
@@ -125,16 +120,18 @@ const collectInstructionFiles = (props: {
         files: props.files,
         relative,
       });
-    else if (entry.isFile())
-      props.files[relative] = fs.readFileSync(source, "utf8");
-    else
-      throw new Error(
-        `${source}: installed production instructions must contain only physical files and directories.`,
-      );
+    else props.files[relative] = fs.readFileSync(source, "utf8");
   }
 };
 
-/** Remove stale generated doctrine only after every desired file completed. */
+/**
+ * Remove stale generated doctrine only after every desired file completed.
+ *
+ * Both sides are compared through the filesystem's own resolved spelling, so a
+ * case-insensitive volume and a case-sensitive one agree without a platform
+ * switch: every desired file was just published and every visited entry is
+ * resident, so each has one native real path.
+ */
 const removeStaleInstructionEntries = (
   targetSkills: string,
   desiredFiles: ReadonlySet<string>,
@@ -142,25 +139,21 @@ const removeStaleInstructionEntries = (
   const root = path.dirname(path.dirname(targetSkills));
   const desired = new Set(
     [...desiredFiles].map((entry) =>
-      canonicalInstructionPath(path.resolve(root, entry)),
+      fs.realpathSync.native(path.resolve(root, entry)),
     ),
   );
   const visit = (directory: string): void => {
-    if (!fs.existsSync(directory)) return;
     for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
       const target = path.join(directory, entry.name);
       if (entry.isDirectory()) {
         visit(target);
         if (fs.readdirSync(target).length === 0) fs.rmdirSync(target);
-      } else if (!desired.has(canonicalInstructionPath(path.resolve(target))))
+      } else if (!desired.has(fs.realpathSync.native(target)))
         fs.rmSync(target, { force: true });
     }
   };
   visit(targetSkills);
 };
-
-const canonicalInstructionPath = (target: string): string =>
-  process.platform === "win32" ? target.toLowerCase() : target;
 
 /** Refuse a generated-project root that aliases or is not a directory. */
 const assertManagedRootIsPhysical = (root: string): void => {
