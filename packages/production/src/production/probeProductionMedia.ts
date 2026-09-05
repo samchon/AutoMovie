@@ -12,6 +12,7 @@ import {
 import type { Box, Movie, Track, createFile } from "mp4box";
 import { TextDecoder } from "node:util";
 
+import { parseAutoMovieStructuredJson } from "./duplicateAwareJson";
 import {
   assertProductionOpusProfile,
   productionOpusDescription,
@@ -49,9 +50,10 @@ export const probeProductionMedia = (props: {
   ) {
     let mask: IAutoMovieSemanticMask;
     try {
-      mask = JSON.parse(
-        new TextDecoder("utf-8", { fatal: true }).decode(props.bytes),
-      ) as IAutoMovieSemanticMask;
+      mask = parseAutoMovieStructuredJson({
+        record: "semantic-mask-sidecar",
+        bytes: props.bytes,
+      }) as IAutoMovieSemanticMask;
     } catch {
       throw new Error("Semantic-mask sidecar bytes are not strict UTF-8 JSON.");
     }
@@ -301,7 +303,10 @@ const probeAudioTrack = (
   return {
     kind: "audio",
     container: "mp4",
-    codec: track.codec,
+    // mp4box reports the sample entry's four-character code as spelled in the
+    // file ("Opus"); the probe reports codec identity case-insensitively, the
+    // way the video probe reports "h264".
+    codec: track.codec.toLowerCase(),
     runtimeSeconds: presentationDuration,
     channels: audio.channel_count,
     sampleRate: audio.sample_rate,
@@ -535,12 +540,17 @@ const probeVideoTrack = (
       `MP4 video track ${track.id} requires one exact track header.`,
     );
   const trackHeader = trackHeaderMatches[0]!;
+  // mp4box materializes the nine fixed-point terms as an Int32Array; a plain
+  // array is accepted too so a re-serialized header reads the same way.
+  const matrix = isFixedPointMatrix(trackHeader.matrix)
+    ? Array.from(trackHeader.matrix)
+    : null;
   if (
     Number.isSafeInteger(trackHeader.width) === false ||
     Number.isSafeInteger(trackHeader.height) === false ||
-    Array.isArray(trackHeader.matrix) === false ||
-    trackHeader.matrix.length !== 9 ||
-    trackHeader.matrix.some((value) => Number.isSafeInteger(value) === false)
+    matrix === null ||
+    matrix.length !== 9 ||
+    matrix.some((value) => Number.isSafeInteger(value) === false)
   )
     throw new Error(
       `MP4 video track ${track.id} has a malformed fixed-point display transform.`,
@@ -624,6 +634,13 @@ const probeVideoTrack = (
     },
   };
 };
+
+/** Whether a parsed track-header matrix is an indexable list of numbers. */
+const isFixedPointMatrix = (
+  value: unknown,
+): value is ArrayLike<number> & Iterable<number> =>
+  Array.isArray(value) ||
+  (ArrayBuffer.isView(value) && !(value instanceof DataView));
 
 const exactClockProduct = (left: number, right: number): bigint => {
   if (

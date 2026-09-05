@@ -230,9 +230,7 @@ export const parseProductionRenderPublicationIdentity = (
     assertPublicationSemantics(validation.data);
   } catch (error) {
     throw new Error(
-      `Invalid production publication identity: ${
-        error instanceof Error ? error.message : String(error)
-      }`,
+      `Invalid production publication identity: ${(error as Error).message}`,
     );
   }
   const { fingerprint, ...basis } = validation.data;
@@ -248,6 +246,7 @@ export const parseProductionRenderPublicationIdentity = (
  *
  * @evidence requirements/production-design/continuity-change-and-deliverables.md#production-design-deliverable-provenance Prevents coincidentally identical output bytes from erasing the execution generation that produced them.
  * @evidence specifications/editorial-render-and-delivery/delivery-package-provenance-and-publication.md#spec-delivery-publication-retention Keeps proxy and final histories independent while rejecting a stale generation within either tier.
+ * @evidence requirements/rendering/chunks-resume-and-recovery.md#rendering-atomic-publication Admits stored publication provenance as current only when it equals the same-tier render plan, so a half-written or superseded publication is never read as current.
  */
 export const assertProductionRenderPublicationCurrent = (props: {
   identity: unknown;
@@ -271,6 +270,7 @@ export const assertProductionRenderPublicationCurrent = (props: {
  *
  * @evidence requirements/rendering/scope-and-artifact-identity.md#rendering-missing-artifact-refusal Refuses a ledger path alias that would let one physical output be claimed or missed under a second spelling.
  * @evidence specifications/editorial-render-and-delivery/delivery-package-provenance-and-publication.md#spec-delivery-provenance-integrity Fixes the portable path identity that manifest and receipt entries are joined on.
+ * @evidence requirements/agent-authoring/deterministic-precomputation.md#agent-precomputed-portable-publication Refuses absolute, drive-letter, traversal, NUL and unnormalized publication paths so one derived deliverable has exactly one project-relative spelling on Windows and POSIX.
  */
 export const isPortableProductionPublicationPath = (value: string): boolean =>
   value.length !== 0 &&

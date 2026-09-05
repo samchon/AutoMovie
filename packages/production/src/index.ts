@@ -45,6 +45,7 @@ export * from "./production/productionPublicationSnapshot";
 export * from "./production/productionPayloadSnapshot";
 export * from "./production/productionRenderJob";
 export * from "./production/productionRenderPublicationIdentity";
+export * from "./production/productionRenderLedgerRecords";
 export * from "./production/productionRenderGc";
 export * from "./production/productionRenderDialogueRuntimeIdentity";
 export * from "./production/productionRegistry";

@@ -1,9 +1,5 @@
 # `@automovie/production`
 
-## 필름 효과 실행
-
-`materializeProductionFilmEffects`는 정규화된 필름 효과 트랙을 현재 월드 레시피와 존에 결합하고, `sampleProductionFilmEffects`는 전체 해상도 `timelineFrame`에서 그 결과를 재구성한다. 렌더 계획과 뷰어는 동일한 런타임 식별자를 소비하며 누락되거나 오래된 산출물은 다시 컴파일하도록 거부한다.
-
 The deterministic production runtime a generated AutoMovie project runs on: the compiler, the tracked project store, frame capture, subject inspection, and the render job. A project's own npm scripts call it. Nothing here listens on a socket, serves a document, or answers a model.
 
 That is a deliberate boundary rather than an omission. What an authoring agent knows comes from the skill the project ships and from what this package refuses; a refusal names the invariant it enforces and the correction that owns it, and the agent reads the project to find the rest. A capability an agent cannot reach by reading the project and running its scripts does not exist.
@@ -44,6 +40,10 @@ The scaffold ships one at `scripts/inspectSubject.ts`.
 Its versioned plan and observation records bind production, exact target, compile, ordered plan, resolved pose, artifact bytes, actual browser-and-graphics runtime, terminal pass, and the non-delivery boundary.
 Readers reopen those records through duplicate-aware strict UTF-8 JSON admission and count only an exact current join; failed, unsupported, not-run, and runtime-unidentified attempts remain history.
 
+## Film effects
+
+A film's effect track has two owners that must never overlap on one world zone: a shot-local cue realized inside that shot, and a film-global cue on the compiler-owned timeline. `materializeProductionFilmEffects` joins the normalized film cues to the current world recipes and zones and refuses a film cue that overlaps a shot cue, or another film cue, on the same zone, naming both cue ids and the overlapping frames. `projectProductionShotEffectFilmIntervals` supplies the shot-owner intervals for that check by the exact rational frame boundary rather than a rounded `seconds * fps` product. `sampleProductionFilmEffects` reconstructs any film-global `timelineFrame` from the persisted runtime alone, so a proxy tier's output index is never mistaken for the film clock and repeated or reordered seeks return the same sample. `readAutoMovieFilmEffects` reopens the persisted runtime beside the timeline it was compiled with and `verifyProductionFilmEffectPopulation` refuses a population that drops, adds, retimes, re-zones, or re-weights any accepted cue. `productionFilmFrameForShotTime` gives a shot page the one film frame that owns a shot-local second, or null when the edit realizes that second never or more than once.
+
 A generated library passes its single graph-derived authoring snapshot into the compiler at `review` and `final`. `readAutoMovieLibraryReviewRequirements` exposes the exact active branch, H2 owner, source, compile, and finite-plan identities to its offline observation commands. The compiler derives the same population again, reopens artifact bytes or canonical structured facts, and refuses stale or inconclusive receipts. Film and brief keep their compiled-consumer population, so an unused recipe is still not charged merely because it exists.
 
 ## Reviewed public utility callables
@@ -61,6 +61,8 @@ they are not test-only helpers.
 | `productionRenderPublicationIdentity` | Projects an exact final or proxy render plan into a structured, independently recomputable publication identity. |
 | `parseProductionRenderPublicationIdentity` | Strictly parses and recomputes stored publication provenance before reuse. |
 | `assertProductionRenderPublicationCurrent` | Compares stored provenance with the current same-tier render plan. |
+| `parseProductionRenderManifestBytes` / `parseProductionRenderReceiptBytes` | Admit the persisted render manifest and renderer receipt through strict structured JSON ingress and their versioned schemas. |
+| `assertProductionRenderManifestRecord` / `assertProductionRenderReceiptRecord` | Admit an already materialized manifest or receipt value, naming only schema paths in a refusal. |
 | `captureProductionPayloadSnapshot` | Captures exact retained or terminal payload bytes for guarded publication. |
 | `isProductionPayloadSnapshotCurrent` | Detects deletion, replacement, or in-place byte mutation across a publication transaction. |
 | `readAutoMovieSubjectInspection` | Reads and validates one committed subject-inspection receipt. |

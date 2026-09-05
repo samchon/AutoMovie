@@ -6,18 +6,19 @@ import type {
 import {
   type IAutoMovieProductionRenderJobPlan,
   type IAutoMovieProductionRenderTier,
+  assertAutoMovieProductionDeliverableSemanticMask,
+  assertProductionRenderManifestRecord,
   assertProductionRenderPublicationCurrent,
   canonicalAutoMovieJsonBytes,
+  compareCodeUnits,
   digestAutoMovieBytes,
+  parseAutoMovieStructuredJson,
   parseProductionRenderPublicationIdentity,
   probeProductionMedia,
-  productionRenderLayersForPass,
   readAutoMovieProductionOwnedFile,
-  verifyAutoMovieProductionSemanticMaskReceipt,
 } from "@automovie/production";
 import fs from "node:fs";
 import path from "node:path";
-import typia from "typia";
 
 import type { IProxyBundleCapturedEvidence } from "./publishProxyBundle";
 import {
@@ -68,7 +69,14 @@ export interface IVerifiedProxyPublication {
   version: 1;
 }
 
-/** Refuse a proxy candidate semantically before any immutable path is created. */
+/**
+ * Refuse a proxy candidate semantically before any immutable path is created.
+ *
+ * The receipt is parsed and bound to the current proxy plan, the candidate
+ * files are matched one-to-one against the manifest inventory, and every file
+ * is probed and classified against its semantic receipt and the plan, all
+ * before the publisher may create the first immutable slot.
+ */
 export const assertProxyPublicationCandidate = (props: {
   bundle: string;
   expected: ReadonlyMap<string, Uint8Array>;
@@ -100,28 +108,32 @@ export const assertProxyPublicationCandidate = (props: {
       throw new Error(
         `Proxy publication candidate file "${relative}" differs from its manifest.`,
       );
-    assertProxySemanticFile(fact, bytes);
-    if (
-      fact.semanticMask !== undefined &&
-      props.plan.chunks.some(
-        (chunk) =>
-          chunk.deliverable === fact.deliverable &&
-          chunk.pass === "mask" &&
-          chunk.frames.some(
-            (frame) =>
-              frame.globalFrame === fact.semanticMask!.frame &&
-              productionRenderLayersForPass(frame, "mask").some(
-                (layer) => layer.shot === fact.semanticMask!.shot,
-              ),
-          ),
-      ) === false
-    )
-      throw new Error(
-        `Proxy semantic sidecar "${relative}" is not owned by the current plan.`,
-      );
+    assertProxyFileSemantics(fact, bytes, props.plan);
   }
   return parsed;
 };
+
+/**
+ * Reopen one stored proxy publication and bind it to the current proxy plan.
+ *
+ * This is the reopen a currentness judgement needs: the receipt's structured
+ * identity must equal the current plan's, and every resident file must reopen
+ * against its byte facts and, for a mask sidecar, against the semantic receipt
+ * and the mask frame the plan schedules for it.
+ */
+export const inspectCurrentProxyPublication = (props: {
+  plan: IAutoMovieProductionRenderJobPlan;
+  renderRoot: string;
+  target: string;
+}): IVerifiedProxyPublication =>
+  reopenPublishedProxyBundle(props.renderRoot, props.target, {
+    parsed: (parsed) =>
+      assertProductionRenderPublicationCurrent({
+        identity: parsed.publicationIdentity,
+        plan: props.plan,
+      }),
+    file: (fact, bytes) => assertProxyFileSemantics(fact, bytes, props.plan),
+  });
 
 /** Verify one immutable proxy publication against its exact expected files. */
 export const assertPublishedProxyBundle = (
@@ -151,10 +163,30 @@ export const assertPublishedProxyBundle = (
   assertExactBundle(root, bundle);
 };
 
-/** Reopen one stored proxy publication through its self-described manifest. */
+/**
+ * Reopen one stored proxy publication through its self-described manifest.
+ *
+ * This reopen proves the bundle's exact inventory and byte facts and nothing
+ * about the current plan, so it cannot say whether a mask sidecar is bound to
+ * a scheduled frame. A consumer judging currentness uses
+ * {@link inspectCurrentProxyPublication} instead.
+ */
 export const inspectPublishedProxyBundle = (
   renderRoot: string,
   target: string,
+): IVerifiedProxyPublication =>
+  reopenPublishedProxyBundle(renderRoot, target, {
+    parsed: () => undefined,
+    file: () => undefined,
+  });
+
+const reopenPublishedProxyBundle = (
+  renderRoot: string,
+  target: string,
+  gates: {
+    parsed: (parsed: IVerifiedProxyPublication) => void;
+    file: (fact: IProxyManifestFile, bytes: Uint8Array) => void;
+  },
 ): IVerifiedProxyPublication => {
   const linked = fs.lstatSync(target);
   if (linked.isSymbolicLink() || linked.isDirectory() === false)
@@ -169,6 +201,7 @@ export const inspectPublishedProxyBundle = (
       `Proxy bundle "${target}" has no root publication receipt.`,
     );
   const parsed = parseProxyPublication(readBundleFile(bundle, receipt));
+  gates.parsed(parsed);
   const bundlePath = path
     .relative(physical.ownership.path, physical.target.path)
     .replaceAll("\\", "/");
@@ -189,7 +222,7 @@ export const inspectPublishedProxyBundle = (
       throw new Error(
         `Proxy bundle file "${relative}" differs from its publication manifest.`,
       );
-    assertProxySemanticFile(fact, resident);
+    gates.file(fact, resident);
   }
   assertExactBundle(physical.target, bundle);
   return parsed;
@@ -322,17 +355,26 @@ const physicalDescendant = (
 const parseProxyPublication = (
   bytes: Uint8Array,
 ): IVerifiedProxyPublication => {
-  const value = JSON.parse(Buffer.from(bytes).toString("utf8")) as unknown;
+  const value = parseAutoMovieStructuredJson({
+    record: "proxy-publication-receipt",
+    bytes,
+  });
   if (isRecord(value) === false)
     throw new Error("Proxy publication receipt is not an object.");
   const receipt = value as Record<string, unknown>;
   const publicationIdentity = parseProductionRenderPublicationIdentity(
     receipt.publicationIdentity,
   );
-  const manifestValidation =
-    typia.validateEquals<IAutoMovieProductionRenderManifest>(receipt.manifest);
+  let manifest: IAutoMovieProductionRenderManifest;
+  try {
+    manifest = assertProductionRenderManifestRecord(receipt.manifest);
+  } catch (error) {
+    throw new Error(
+      `Proxy publication receipt manifest is invalid: ${error instanceof Error ? error.message : String(error)}`,
+    );
+  }
   if (
-    Object.keys(receipt).sort(compare).join(",") !==
+    Object.keys(receipt).sort(compareCodeUnits).join(",") !==
       "compileFingerprint,editFingerprint,frameFormat,manifest,publicationFingerprint,publicationIdentity,sourceFrameFormat,tier,totalFrames,version" ||
     receipt.version !== 1 ||
     validDigest(receipt.publicationFingerprint) === false ||
@@ -344,16 +386,14 @@ const parseProxyPublication = (
     typeof receipt.totalFrames !== "number" ||
     Number.isSafeInteger(receipt.totalFrames) === false ||
     receipt.totalFrames <= 0 ||
-    manifestValidation.success === false ||
-    manifestValidation.data.compileFingerprint !== receipt.compileFingerprint ||
+    manifest.compileFingerprint !== receipt.compileFingerprint ||
     receipt.publicationFingerprint !== publicationIdentity.fingerprint ||
     publicationIdentity.tier.kind !== "proxy" ||
     publicationIdentity.compileFingerprint !== receipt.compileFingerprint ||
     publicationIdentity.editFingerprint !== receipt.editFingerprint ||
-    Buffer.from(
-      canonicalAutoMovieJsonBytes(manifestValidation.data.publication),
-    ).equals(Buffer.from(canonicalAutoMovieJsonBytes(publicationIdentity))) ===
-      false ||
+    Buffer.from(canonicalAutoMovieJsonBytes(manifest.publication)).equals(
+      Buffer.from(canonicalAutoMovieJsonBytes(publicationIdentity)),
+    ) === false ||
     Buffer.from(canonicalAutoMovieJsonBytes(receipt.tier)).equals(
       Buffer.from(canonicalAutoMovieJsonBytes(publicationIdentity.tier)),
     ) === false ||
@@ -373,7 +413,7 @@ const parseProxyPublication = (
     compileFingerprint: publicationIdentity.compileFingerprint,
     editFingerprint: publicationIdentity.editFingerprint,
     frameFormat: structuredClone(publicationIdentity.frameFormat),
-    manifest: manifestValidation.data,
+    manifest,
     publicationFingerprint: publicationIdentity.fingerprint,
     publicationIdentity,
     sourceFrameFormat: structuredClone(publicationIdentity.sourceFrameFormat),
@@ -446,44 +486,23 @@ interface IProxyManifestFile {
   >;
 }
 
-const assertProxySemanticFile = (
+/** Probe one resident file and refuse a semantic receipt the plan does not own. */
+const assertProxyFileSemantics = (
   fact: IProxyManifestFile,
   bytes: Uint8Array,
-): void => {
-  const probe = probeProductionMedia({
-    kind: fact.kind,
-    mediaType: fact.mediaType,
+  plan: IAutoMovieProductionRenderJobPlan,
+): void =>
+  assertAutoMovieProductionDeliverableSemanticMask({
+    deliverable: { id: fact.deliverable, kind: fact.kind },
+    file: { path: fact.path, semanticMask: fact.semanticMask },
+    probe: probeProductionMedia({
+      kind: fact.kind,
+      mediaType: fact.mediaType,
+      bytes,
+    }),
     bytes,
+    plan,
   });
-  if (fact.semanticMask === undefined) {
-    if (probe.kind === "semantic-mask")
-      throw new Error(
-        `Proxy semantic sidecar "${fact.path}" has no semantic receipt.`,
-      );
-    return;
-  }
-  const semantic = fact.semanticMask;
-  if (
-    fact.kind !== "guide-pass" ||
-    probe.kind !== "semantic-mask" ||
-    semantic.sidecar.path !== fact.path
-  )
-    throw new Error(
-      `Proxy semantic sidecar "${fact.path}" has an invalid guide-pass owner.`,
-    );
-  verifyAutoMovieProductionSemanticMaskReceipt({
-    receipt: semantic,
-    expectedFrame: semantic.frame,
-    expectedShot: semantic.shot,
-    evidence: {
-      version: 1,
-      shot: semantic.shot,
-      mask: probe.mask,
-      coverage: semantic.coverage,
-    },
-    resident: { path: fact.path, bytes },
-  });
-};
 
 const assertExpectedBundleInventory = (
   bundle: IPhysicalBundle,

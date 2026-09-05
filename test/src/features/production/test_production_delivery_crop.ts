@@ -52,6 +52,7 @@ export const test_production_delivery_crop = (): void => {
       width: 960,
       height: 540,
       fps: 12,
+      frameRate: { numerator: 12, denominator: 1 },
       colorSpace: "srgb",
       crop: { left: 0.125, top: 0.25, right: 0.875, bottom: 0.75 },
     },

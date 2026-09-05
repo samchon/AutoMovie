@@ -22,7 +22,6 @@ import {
   assembleProductionChunkVideoMp4,
   assertProductionOpusProfile,
   assertProductionPngPicture,
-  assertProductionRenderPublicationCurrent,
   assertProductionRenderDialogueRuntimeIdentity,
   assertProductionVideoProfile,
   autoMovieRepaintSequenceObservationDiagnostics,
@@ -51,12 +50,12 @@ import {
 import path from "node:path";
 import { isDeepStrictEqual } from "node:util";
 
+import { assertProxyPublicationCandidate } from "./assertProxyBundle";
 import {
   type IAutoMovieProductionRepaintSelection,
   assertProductionRepaintReceiptAdoption,
   assertProductionRepaintSelection,
 } from "./productionConfiguration";
-import { assertProxyPublicationCandidate } from "./assertProxyBundle";
 import { assertProductionSoundRenderClock } from "./productionRuntime";
 import {
   captureRenderChunkPublicationFromPointer,
@@ -65,8 +64,14 @@ import {
 } from "./renderChunkSnapshot";
 import { productionRenderFrameCaptureInput } from "./renderFrameCaptureInput";
 import type { IProductionRenderHost } from "./renderHost";
-import type { IProductionRenderChunkInspection } from "./renderPlanningRuntime";
-import type { createProductionRenderPlanningRuntime } from "./renderPlanningRuntime";
+import {
+  assertRenderPlanHead,
+  captureExistingRenderPlan,
+} from "./renderPlanSnapshot";
+import type {
+  IProductionRenderChunkInspection,
+  createProductionRenderPlanningRuntime,
+} from "./renderPlanningRuntime";
 import {
   type IProductionRenderEncoderRuntime,
   type IProductionSoundBundle,
@@ -74,7 +79,6 @@ import {
   produceProductionSound as produceSoundBundle,
   runWithProductionRuntimeClosure,
 } from "./renderSoundRuntime";
-import { captureExistingRenderPlan } from "./renderPlanSnapshot";
 
 /** Digest every publication input without reading mutable process state. */
 export const productionRenderPublicationFingerprint = (
@@ -113,10 +117,11 @@ export const createProductionRenderPublicationRuntime = (props: {
   ) => IProductionRenderChunkInspection;
   ensureDirectory: (root: string, relative: string) => string;
   filesystem: Pick<typeof import("node:fs"), "existsSync" | "readdirSync">;
-  inspectProxy: (
-    renderRoot: string,
-    target: string,
-  ) => {
+  inspectProxy: (props: {
+    plan: IAutoMovieProductionRenderJobPlan;
+    renderRoot: string;
+    target: string;
+  }) => {
     compileFingerprint: string;
     editFingerprint: string;
     publicationIdentity: IAutoMovieProductionPublicationIdentity;
@@ -181,10 +186,13 @@ export const createProductionRenderPublicationRuntime = (props: {
       throw new Error(
         "Final publication requires the publication of the current proxy render plan, and none exists. Finalize the proxy tier, review it, then finalize this plan.",
       );
-    const receipt = props.inspectProxy(project.renderRoot(), target);
-    assertProductionRenderPublicationCurrent({
-      identity: receipt.publicationIdentity,
+    // The seam binds the publication to the proxy plan itself: its structured
+    // identity must equal that plan and every resident file, semantic sidecar
+    // included, must reopen against the mask frame that plan schedules.
+    const receipt = props.inspectProxy({
       plan: proxyPlan,
+      renderRoot: project.renderRoot(),
+      target,
     });
     if (
       receipt.compileFingerprint !== plan.compileFingerprint ||
@@ -195,23 +203,17 @@ export const createProductionRenderPublicationRuntime = (props: {
       throw new Error(
         "The current proxy publication does not match this final plan's compiler-owned EDL and source frame format. Replan and finalize both tiers.",
       );
-    const currentProxyPlan = captureExistingRenderPlan(
-      proxyStateRoot,
-      path.join(proxyStateRoot, "plan.json"),
-    );
-    if (
-      currentProxyPlan === null ||
-      currentProxyPlan.generation !== proxyPlanSnapshot.generation ||
-      currentProxyPlan.snapshot.targetIdentity !==
-        proxyPlanSnapshot.snapshot.targetIdentity ||
-      currentProxyPlan.snapshot.targetVersion !==
-        proxyPlanSnapshot.snapshot.targetVersion ||
-      currentProxyPlan.snapshot.fileDigest !==
-        proxyPlanSnapshot.snapshot.fileDigest
-    )
+    try {
+      assertRenderPlanHead(
+        proxyStateRoot,
+        path.join(proxyStateRoot, "plan.json"),
+        proxyPlanSnapshot,
+      );
+    } catch {
       throw new Error(
         "The current proxy render-plan generation changed during final admission. Retry finalization.",
       );
+    }
   },
   publishProxy: (plan, publication, manifest, project) => {
     const renderRoot = project.renderRoot();
@@ -479,7 +481,10 @@ export const createProductionRenderFinalizationRuntime = (props: {
       // the new path against the exact same shot, frame, palette, and coverage.
       const semantics = new Map<
         string,
-        IAutoMovieProductionSemanticMaskReceipt
+        {
+          receipt: IAutoMovieProductionSemanticMaskReceipt;
+          mask: IAutoMovieSemanticMask;
+        }
       >();
       const deliverableChunks = plan.chunks.filter(
         (chunk) => chunk.deliverable === deliverable.id,
@@ -767,6 +772,15 @@ export const createProductionRenderFinalizationRuntime = (props: {
                 chunkPublication,
                 semantic.sidecar.path,
               );
+              const probe = probeProductionMedia({
+                kind: "guide-pass",
+                mediaType: AUTOMOVIE_SEMANTIC_MASK_MEDIA_TYPE,
+                bytes,
+              });
+              if (probe.kind !== "semantic-mask")
+                throw new Error(
+                  `Chunk "${chunk.slot}" sidecar "${semantic.sidecar.path}" did not probe as a semantic-mask sidecar.`,
+                );
               verifyAutoMovieProductionSemanticMaskReceipt({
                 receipt: semantic,
                 expectedFrame: semantic.frame,
@@ -774,9 +788,7 @@ export const createProductionRenderFinalizationRuntime = (props: {
                 evidence: {
                   version: 1,
                   shot: semantic.shot,
-                  mask: JSON.parse(
-                    Buffer.from(bytes).toString("utf8"),
-                  ) as IAutoMovieSemanticMask,
+                  mask: probe.mask,
                   coverage: semantic.coverage,
                 },
                 resident: { path: semantic.sidecar.path, bytes },
@@ -785,12 +797,12 @@ export const createProductionRenderFinalizationRuntime = (props: {
                 8,
                 "0",
               )}.semantic.json`;
-              if (owned.has(name) || semantics.has(name))
+              if (owned.has(name))
                 throw new Error(
                   `Guide deliverable "${deliverable.id}" publishes two semantic sidecars for frame ${semantic.frame}.`,
                 );
               owned.set(name, bytes);
-              semantics.set(name, semantic);
+              semantics.set(name, { receipt: semantic, mask: probe.mask });
             }
           }
         }
@@ -918,18 +930,18 @@ export const createProductionRenderFinalizationRuntime = (props: {
           mediaType,
           // The publication record names the sidecar at its delivered path
           // while keeping the chunk receipt's shot, frame, palette digest, and
-          // coverage; the parser-verified palette is the one the bytes carry.
-          ...(chunkSemantic === undefined || probe.kind !== "semantic-mask"
+          // coverage; the palette is the one the chunk's own bytes reopened as.
+          ...(chunkSemantic === undefined
             ? {}
             : {
                 semanticMask: createAutoMovieProductionSemanticMaskReceipt({
-                  frame: chunkSemantic.frame,
-                  expectedShot: chunkSemantic.shot,
+                  frame: chunkSemantic.receipt.frame,
+                  expectedShot: chunkSemantic.receipt.shot,
                   evidence: {
                     version: 1,
-                    shot: chunkSemantic.shot,
-                    mask: probe.mask,
-                    coverage: chunkSemantic.coverage,
+                    shot: chunkSemantic.receipt.shot,
+                    mask: chunkSemantic.mask,
+                    coverage: chunkSemantic.receipt.coverage,
                   },
                   sidecar: { path: relative, bytes },
                 }),

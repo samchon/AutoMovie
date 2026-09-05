@@ -87,7 +87,7 @@ export const test_production_media_probe = async (): Promise<void> => {
     ),
   );
   TestValidator.predicate(
-    "a malformed PNG is rejected by the decoder",
+    "a malformed PNG is refused by name before any decoder speaks",
     refused(
       () =>
         probeProductionMedia({
@@ -95,7 +95,7 @@ export const test_production_media_probe = async (): Promise<void> => {
           mediaType: "image/png",
           bytes: Buffer.from("not a png"),
         }),
-      "unrecognised content",
+      "PNG datastream lacks the required signature",
     ),
   );
   const soundEvidenceValue: IAutoMovieProductionSoundEvidence = {
@@ -872,11 +872,16 @@ export const test_production_media_probe = async (): Promise<void> => {
       "MP4",
     ),
   );
+  // The normalized fixture is fragmented: its movie-level sample tables are
+  // empty and every sample offset comes from the fragment run, so the escape
+  // is staged on the run's data offset rather than on an empty `stco`.
   const escapedSamples = Buffer.from(video);
-  const chunkOffsetBox = escapedSamples.indexOf("stco");
-  if (chunkOffsetBox < 0)
-    throw new Error("H.264 fixture has no stco sample-offset table to mutate.");
-  escapedSamples.writeUInt32BE(0xffffffff, chunkOffsetBox + 12);
+  const trackRunBox = escapedSamples.indexOf("trun");
+  if (trackRunBox < 0)
+    throw new Error("H.264 fixture has no trun sample-offset table to mutate.");
+  if ((escapedSamples.readUInt32BE(trackRunBox + 4) & 0x1) === 0)
+    throw new Error("H.264 fixture trun carries no data offset to mutate.");
+  escapedSamples.writeInt32BE(0x7fffffff, trackRunBox + 12);
   TestValidator.predicate(
     "a sample table cannot point outside resident container bytes",
     refused(
@@ -904,9 +909,14 @@ export const test_production_media_probe = async (): Promise<void> => {
       "positive dimensions",
     ),
   );
+  // Fragmented samples carry their durations in the track run, so the zero
+  // duration is staged on the run's first sample rather than on the empty
+  // movie-level time-to-sample table.
   const zeroSampleDuration = Buffer.from(video);
-  const timeToSample = boxTypeOffset(zeroSampleDuration, "stts");
-  zeroSampleDuration.writeUInt32BE(0, timeToSample + 16);
+  const trackRun = boxTypeOffset(zeroSampleDuration, "trun");
+  if ((zeroSampleDuration.readUInt32BE(trackRun + 4) & 0x100) === 0)
+    throw new Error("H.264 fixture trun carries no per-sample durations.");
+  zeroSampleDuration.writeUInt32BE(0, trackRun + 16);
   TestValidator.predicate(
     "video frames require a positive constant sample duration",
     refused(
@@ -919,9 +929,37 @@ export const test_production_media_probe = async (): Promise<void> => {
       "constant deterministic frame duration",
     ),
   );
+  // Fragmented samples carry their sync flag per sample in each track run
+  // (bit 16 set means "not a sync sample"), so every run's sample flags are
+  // rewritten rather than an empty movie-level sync table.
   const noSyncSample = Buffer.from(productionInterframeH264Mp4());
-  const syncSamples = boxTypeOffset(noSyncSample, "stss");
-  noSyncSample.writeUInt32BE(0, syncSamples + 8);
+  let trackRunCursor = noSyncSample.indexOf("trun");
+  if (trackRunCursor < 0)
+    throw new Error("H.264 fixture has no trun sample table to mutate.");
+  while (trackRunCursor >= 0) {
+    const flags = noSyncSample.readUInt32BE(trackRunCursor + 4) & 0xffffff;
+    if ((flags & 0x400) === 0)
+      throw new Error("H.264 fixture trun carries no per-sample flags.");
+    const sampleCount = noSyncSample.readUInt32BE(trackRunCursor + 8);
+    const entryStart =
+      trackRunCursor +
+      12 +
+      ((flags & 0x1) !== 0 ? 4 : 0) +
+      ((flags & 0x4) !== 0 ? 4 : 0);
+    const entrySize =
+      ((flags & 0x100) !== 0 ? 4 : 0) +
+      ((flags & 0x200) !== 0 ? 4 : 0) +
+      4 +
+      ((flags & 0x800) !== 0 ? 4 : 0);
+    const flagOffset =
+      ((flags & 0x100) !== 0 ? 4 : 0) + ((flags & 0x200) !== 0 ? 4 : 0);
+    for (let index = 0; index < sampleCount; ++index)
+      noSyncSample.writeUInt32BE(
+        0x01010000,
+        entryStart + index * entrySize + flagOffset,
+      );
+    trackRunCursor = noSyncSample.indexOf("trun", trackRunCursor + 4);
+  }
   TestValidator.predicate(
     "a deterministic video requires at least one sync sample",
     refused(
@@ -1027,7 +1065,7 @@ export const test_production_media_probe = async (): Promise<void> => {
           mediaType: "audio/mp4",
           bytes: productionAudioMp4(),
         }),
-      "48 kHz stereo",
+      "expected Opus",
     ),
   );
   const zeroAudioClock = Buffer.from(audio);

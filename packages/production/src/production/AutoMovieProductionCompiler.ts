@@ -149,6 +149,7 @@ import {
 } from "./contentIdentity";
 import { inspectAutoMovieDerivedArtifacts } from "./derivedArtifacts";
 import { designReferenceDiagnostics } from "./designReferenceDiagnostics";
+import { parseAutoMovieStructuredJson } from "./duplicateAwareJson";
 import {
   materializeProductionFilmEffects,
   productionFilmEffectEditFingerprint,
@@ -202,6 +203,11 @@ import {
   canonicalProductionWebVtt,
   productionRenderLayersForPass,
 } from "./productionRenderJob";
+import {
+  AutoMovieProductionRenderLedgerSchemaError,
+  parseProductionRenderManifestBytes,
+  parseProductionRenderReceiptBytes,
+} from "./productionRenderLedgerRecords";
 import {
   assertProductionRenderPublicationCurrent,
   isPortableProductionPublicationPath,
@@ -333,13 +339,12 @@ export class AutoMovieProductionCompiler {
   private compiledModelIsRigged(model: string): boolean {
     try {
       const validation = typia.validateEquals<IAutoMovieModel>(
-        JSON.parse(
-          Buffer.from(
-            this.project.readGeneratedFile(
-              `models/${encodeAutoMoviePathSegment(model)}.json`,
-            ),
-          ).toString("utf8"),
-        ) as unknown,
+        parseAutoMovieStructuredJson({
+          record: "compiled-model",
+          bytes: this.project.readGeneratedFile(
+            `models/${encodeAutoMoviePathSegment(model)}.json`,
+          ),
+        }),
       );
       return validation.success && validation.data.skeleton !== null;
     } catch {
@@ -7559,7 +7564,10 @@ const compilerAssetInventory = (
 
   let decoded: unknown;
   try {
-    decoded = JSON.parse(Buffer.from(manifestInput.bytes).toString("utf8"));
+    decoded = parseAutoMovieStructuredJson({
+      record: "asset-manifest",
+      bytes: manifestInput.bytes,
+    });
   } catch (error) {
     diagnostic(
       "asset-manifest-invalid",
@@ -8364,7 +8372,10 @@ const readExternalProxyAsset = <Kind extends "collision" | "measurement">(
     return null;
   try {
     const validation = typia.validateEquals<IAutoMovieModelProxyAsset>(
-      JSON.parse(Buffer.from(input.bytes).toString("utf8")),
+      parseAutoMovieStructuredJson({
+        record: "model-proxy-asset",
+        bytes: input.bytes,
+      }),
     );
     if (validation.success === false) return null;
     const selected = validation.data[kind];
@@ -9272,13 +9283,8 @@ const finalDeliverableDiagnostics = (
     const receiptBytes = project.readTrackedStateFile(
       "render-manifest-receipt.json",
     );
-    if (receiptBytes !== null) {
-      const validation =
-        typia.validateEquals<IAutoMovieProductionRenderReceipt>(
-          JSON.parse(Buffer.from(receiptBytes).toString("utf8")) as unknown,
-        );
-      if (validation.success) receipt = validation.data;
-    }
+    if (receiptBytes !== null)
+      receipt = parseProductionRenderReceiptBytes(receiptBytes);
   } catch {
     receipt = null;
   }
@@ -9296,26 +9302,15 @@ const finalDeliverableDiagnostics = (
     ];
   let manifest: IAutoMovieProductionRenderManifest;
   try {
-    const validation = typia.validateEquals<IAutoMovieProductionRenderManifest>(
-      JSON.parse(Buffer.from(bytes).toString("utf8")) as unknown,
-    );
-    if (validation.success === false)
-      return [
-        renderDeliverableDiagnostic(
-          "render-deliverable-invalid",
-          production.id,
-          `The active production render manifest does not satisfy the aggregate render-ledger schema: ${validation.errors
-            .map((error) => `${error.path} expects ${error.expected}`)
-            .join("; ")}. Recreate it through the production render command.`,
-        ),
-      ];
-    manifest = validation.data;
-  } catch {
+    manifest = parseProductionRenderManifestBytes(bytes);
+  } catch (error) {
     return [
       renderDeliverableDiagnostic(
         "render-deliverable-invalid",
         production.id,
-        "The aggregate render manifest is not valid JSON. Recreate it through the production render command.",
+        error instanceof AutoMovieProductionRenderLedgerSchemaError
+          ? `The active production render manifest does not satisfy the aggregate render-ledger schema: ${error.violations.join("; ")}. Recreate it through the production render command.`
+          : "The aggregate render manifest is not valid JSON. Recreate it through the production render command.",
       ),
     ];
   }

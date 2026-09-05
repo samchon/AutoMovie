@@ -428,7 +428,13 @@ export const test_production_render_job_plan = (): void => {
         ),
     },
     {
-      frameFormat: { width: 16, height: 8, fps: 12, colorSpace: "srgb" },
+      frameFormat: {
+        width: 16,
+        height: 8,
+        fps: 12,
+        frameRate: { numerator: 12, denominator: 1 },
+        colorSpace: "srgb",
+      },
       sourceFrameFormat: {
         width: 32,
         height: 18,

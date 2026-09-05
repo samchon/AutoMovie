@@ -12,6 +12,7 @@ import {
   canonicalAutoMovieJsonBytes,
   createAutoMovieProductionSemanticMaskReceipt,
   digestAutoMovieBytes,
+  isPortableProductionPublicationPath,
   parseProductionRenderPublicationIdentity,
   probeProductionMedia,
   productionRenderPublicationIdentity,
@@ -21,7 +22,8 @@ import path from "node:path";
 
 import { loadSourceModule } from "../internal/loadSourceModule";
 import { namedFacts, throwsError } from "../internal/predicates";
-import { testCaptureRuntimeIdentity } from "./productionFixtures";
+import { productionPng } from "./productionMediaFixtures";
+import { renderJobPlanFixture, repeatedDigest } from "./renderJobPlanFixtures";
 
 const { assertProxyPublicationCandidate } = loadSourceModule<{
   assertProxyPublicationCandidate: (props: {
@@ -37,8 +39,8 @@ const { assertProxyPublicationCandidate } = loadSourceModule<{
   ),
 );
 
-const digest = (digit: string): AutoMovieContentDigest =>
-  `sha256:${digit.repeat(64)}`;
+const digest = repeatedDigest;
+const plan = renderJobPlanFixture;
 
 const resign = <T extends { fingerprint: AutoMovieContentDigest }>(
   identity: T,
@@ -50,67 +52,6 @@ const resign = <T extends { fingerprint: AutoMovieContentDigest }>(
   } as T;
 };
 
-const plan = (
-  kind: "proxy" | "final",
-  sourceDigest: AutoMovieContentDigest = digest("1"),
-): IAutoMovieProductionRenderJobPlan => ({
-  version: 4,
-  productionId: "publication-film",
-  compileFingerprint: digest("2"),
-  editFingerprint: digest("3"),
-  runtimeIdentity: {
-    protocolVersion: "automovie.production-render-runtime.v3",
-    sourceDigest,
-    dialogueRuntimeIdentity: null,
-    capture: testCaptureRuntimeIdentity(),
-    encoder: {
-      package: "h264-mp4-encoder",
-      version: "1.0.12",
-      closureDigest: digest("4"),
-      codec: "h264",
-      arguments: {
-        quantizationParameter: 26,
-        speed: 10,
-        groupOfPictures: 24,
-      },
-    },
-  },
-  tier: {
-    kind,
-    resolutionScale: kind === "final" ? 1 : 0.5,
-    frameStep: kind === "final" ? 1 : 2,
-  },
-  sourceFrameFormat: {
-    width: 1920,
-    height: 1080,
-    fps: 24,
-    frameRate: { numerator: 24, denominator: 1 },
-    colorSpace: "srgb",
-  },
-  frameFormat: {
-    width: kind === "final" ? 1920 : 960,
-    height: kind === "final" ? 1080 : 540,
-    fps: kind === "final" ? 24 : 12,
-    frameRate: { numerator: kind === "final" ? 24 : 12, denominator: 1 },
-    colorSpace: "srgb",
-  },
-  totalFrames: 24,
-  chunkFrames: 12,
-  chunks: [
-    {
-      slot: "feature-main/beauty/0-24",
-      id: digest("8"),
-      deliverable: "feature-main",
-      kind: "feature",
-      pass: "beauty",
-      frameStart: 0,
-      frameEndExclusive: 24,
-      frames: [],
-    },
-  ],
-  tracks: { captions: "WEBVTT\n", audio: [], audioAssets: [], effects: [] },
-});
-
 /**
  * Final publication provenance is a self-verifying projection of one exact
  * same-tier render plan rather than an opaque staging-directory name.
@@ -121,17 +62,36 @@ const plan = (
  *    complete identity even though their tier runtime facts differ.
  * 2. A runtime-only change is stale despite equal compiler and media bytes.
  * 3. A forged digest, missing field, and unknown field are refused before
- *    publication.
- * 4. A semantic-mask JSON sidecar is parsed as its own media fact and a
- *    tampered palette digest is refused.
- * 5. A proxy receipt and semantic sidecar are completely validated before the
- *    immutable publisher is allowed to create its first file.
+ *    publication, and so is a structurally valid identity no planner could
+ *    have produced: blank production or encoder names, malformed digests, a
+ *    blank capture identity field, a non-positive raster, an fps that
+ *    contradicts its rational frame rate, a frame format that is not the tier
+ *    projection of its source, a non-positive extent, a feature chunk on a
+ *    structural pass, a duplicated slot, a broken partition, and a
+ *    deliverable whose chunks stop short of the planned extent.
+ * 4. A publication path has exactly one portable spelling: relative, forward
+ *    slashes, normalized, with no NUL, root, drive, empty, `.`, or `..`
+ *    segment.
+ * 5. A semantic-mask JSON sidecar is parsed as its own media fact and a
+ *    tampered palette digest or malformed bytes are refused.
+ * 6. A proxy receipt, its ordinary media files, and its semantic sidecar are
+ *    completely validated against the current plan before the immutable
+ *    publisher is allowed to create its first file, and an inventory
+ *    mismatch, escaping path, changed bytes, unknown receipt key, missing
+ *    semantic receipt, or unscheduled semantic frame refuses the candidate.
+ *    The receipt bytes enter through the production package's strict
+ *    structured JSON ingress and manifest admission, so a duplicate member or
+ *    a manifest that is not its schema is refused before any identity join,
+ *    without the script owning a schema validator of its own.
  */
 export const test_production_publication_runtime_identity = (): void => {
   const finalPlan = plan("final");
   const proxyPlan = plan("proxy", digest("5"));
   const finalIdentity = productionRenderPublicationIdentity(finalPlan);
   const proxyIdentity = productionRenderPublicationIdentity(proxyPlan);
+  const dialogueIdentity = productionRenderPublicationIdentity(
+    plan("final", digest("1"), digest("d")),
+  );
   TestValidator.equals(
     "each tier preserves and validates its own exact plan generation",
     {
@@ -140,9 +100,17 @@ export const test_production_publication_runtime_identity = (): void => {
         plan: finalPlan,
       }),
       proxy: parseProductionRenderPublicationIdentity(proxyIdentity),
+      dialogue:
+        parseProductionRenderPublicationIdentity(dialogueIdentity)
+          .runtimeIdentity.dialogueRuntimeIdentity,
       distinct: finalIdentity.fingerprint !== proxyIdentity.fingerprint,
     },
-    { final: finalIdentity, proxy: proxyIdentity, distinct: true },
+    {
+      final: finalIdentity,
+      proxy: proxyIdentity,
+      dialogue: digest("d"),
+      distinct: true,
+    },
   );
 
   TestValidator.equals(
@@ -210,6 +178,111 @@ export const test_production_publication_runtime_identity = (): void => {
           ),
       ],
       [
+        "blankEncoder",
+        () =>
+          throwsError(
+            () =>
+              parseProductionRenderPublicationIdentity(
+                resign({
+                  ...finalIdentity,
+                  runtimeIdentity: {
+                    ...finalIdentity.runtimeIdentity,
+                    encoder: {
+                      ...finalIdentity.runtimeIdentity.encoder,
+                      version: " 1.0.12",
+                    },
+                  },
+                }),
+              ),
+            "blank production or encoder package",
+          ),
+      ],
+      [
+        "malformedDigest",
+        () =>
+          throwsError(
+            () =>
+              parseProductionRenderPublicationIdentity(
+                resign({
+                  ...finalIdentity,
+                  compileFingerprint: "sha256:not-a-digest",
+                }),
+              ),
+            "malformed content digest",
+          ),
+      ],
+      [
+        "malformedDialogue",
+        () =>
+          throwsError(
+            () =>
+              parseProductionRenderPublicationIdentity(
+                resign({
+                  ...dialogueIdentity,
+                  runtimeIdentity: {
+                    ...dialogueIdentity.runtimeIdentity,
+                    dialogueRuntimeIdentity: "sha256:XYZ",
+                  },
+                }),
+              ),
+            "malformed content digest",
+          ),
+      ],
+      [
+        "blankCaptureField",
+        () =>
+          throwsError(
+            () =>
+              parseProductionRenderPublicationIdentity(
+                resign({
+                  ...finalIdentity,
+                  runtimeIdentity: {
+                    ...finalIdentity.runtimeIdentity,
+                    capture: {
+                      ...finalIdentity.runtimeIdentity.capture,
+                      platform: { os: " ", arch: "test" },
+                    },
+                  },
+                }),
+              ),
+            "text fields must be non-blank",
+          ),
+      ],
+      [
+        "zeroRaster",
+        () =>
+          throwsError(
+            () =>
+              parseProductionRenderPublicationIdentity(
+                resign({
+                  ...finalIdentity,
+                  sourceFrameFormat: {
+                    ...finalIdentity.sourceFrameFormat,
+                    width: 0,
+                  },
+                }),
+              ),
+            "raster is not a positive integer size",
+          ),
+      ],
+      [
+        "fpsContradiction",
+        () =>
+          throwsError(
+            () =>
+              parseProductionRenderPublicationIdentity(
+                resign({
+                  ...finalIdentity,
+                  frameFormat: {
+                    ...finalIdentity.frameFormat,
+                    frameRate: { numerator: 25, denominator: 1 },
+                  },
+                }),
+              ),
+            "does not equal its exact 25/1 frame-rate identity",
+          ),
+      ],
+      [
         "invalidTier",
         () =>
           throwsError(
@@ -220,7 +293,7 @@ export const test_production_publication_runtime_identity = (): void => {
                   tier: { kind: "final", resolutionScale: 0.5, frameStep: 1 },
                 }),
               ),
-            "tier identity is invalid",
+            "Render tier must be exact final",
           ),
       ],
       [
@@ -234,7 +307,62 @@ export const test_production_publication_runtime_identity = (): void => {
                   frameFormat: { ...proxyIdentity.frameFormat, width: 958 },
                 }),
               ),
+            "not the tier projection of its source frame format",
+          ),
+      ],
+      [
+        "zeroExtent",
+        () =>
+          throwsError(
+            () =>
+              parseProductionRenderPublicationIdentity(
+                resign({ ...finalIdentity, totalFrames: 0, chunks: [] }),
+              ),
             "frame or chunk extent is invalid",
+          ),
+      ],
+      [
+        "featureOnStructuralPass",
+        () =>
+          throwsError(
+            () =>
+              parseProductionRenderPublicationIdentity(
+                resign({
+                  ...finalIdentity,
+                  chunks: [{ ...finalIdentity.chunks[0]!, pass: "mask" }],
+                }),
+              ),
+            "pairs a deliverable kind with a foreign pass",
+          ),
+      ],
+      [
+        "brokenPartition",
+        () =>
+          throwsError(
+            () =>
+              parseProductionRenderPublicationIdentity(
+                resign({
+                  ...finalIdentity,
+                  chunks: [{ ...finalIdentity.chunks[0]!, frameStart: 1 }],
+                }),
+              ),
+            "does not continue one exact partition",
+          ),
+      ],
+      [
+        "truncatedDeliverable",
+        () =>
+          throwsError(
+            () =>
+              parseProductionRenderPublicationIdentity(
+                resign({
+                  ...finalIdentity,
+                  chunks: [
+                    { ...finalIdentity.chunks[0]!, frameEndExclusive: 12 },
+                  ],
+                }),
+              ),
+            "chunks stop at frame 12 of 24",
           ),
       ],
       [
@@ -282,11 +410,58 @@ export const test_production_publication_runtime_identity = (): void => {
       effectDrift: true,
       forgedFingerprint: true,
       blankProduction: true,
+      blankEncoder: true,
+      malformedDigest: true,
+      malformedDialogue: true,
+      blankCaptureField: true,
+      zeroRaster: true,
+      fpsContradiction: true,
       invalidTier: true,
       frameProjectionMismatch: true,
+      zeroExtent: true,
+      featureOnStructuralPass: true,
+      brokenPartition: true,
+      truncatedDeliverable: true,
       duplicateChunk: true,
       missingRuntime: true,
       unknownField: true,
+    },
+  );
+
+  TestValidator.equals(
+    "a publication path has exactly one portable spelling",
+    Object.fromEntries(
+      (
+        [
+          ["portable", "deliverables/final/0f/feature-main/feature.mp4"],
+          ["empty", ""],
+          ["backslash", "deliverables\\final"],
+          ["nul", "deliverables/\u0000final"],
+          ["rooted", "/deliverables/final"],
+          ["drive", "C:/deliverables/final"],
+          ["doubledSeparator", "deliverables//final"],
+          ["parentSegment", "../deliverables"],
+          ["currentSegment", "./deliverables"],
+          ["trailingSeparator", "deliverables/"],
+          ["dot", "."],
+        ] as const
+      ).map(([name, value]) => [
+        name,
+        isPortableProductionPublicationPath(value),
+      ]),
+    ),
+    {
+      portable: true,
+      empty: false,
+      backslash: false,
+      nul: false,
+      rooted: false,
+      drive: false,
+      doubledSeparator: false,
+      parentSegment: false,
+      currentSegment: false,
+      trailingSeparator: false,
+      dot: false,
     },
   );
 
@@ -375,40 +550,50 @@ export const test_production_publication_runtime_identity = (): void => {
   const semanticIdentity = productionRenderPublicationIdentity(semanticPlan);
   const bundle = `deliverables/proxy/${semanticIdentity.fingerprint.slice(7)}`;
   const semanticPath = `${bundle}/mask-guide/frames/mask/frame_00000000.semantic.json`;
-  const semanticReceipt = createAutoMovieProductionSemanticMaskReceipt({
-    frame: 0,
-    expectedShot: "opening",
-    evidence: {
-      version: 1,
-      shot: "opening",
-      mask,
-      coverage: { unresolved: [], unaddressed: 0 },
-    },
-    sidecar: { path: semanticPath, bytes: maskBytes },
-  });
-  const proxyManifest = {
-    version: 2,
-    compileFingerprint: semanticPlan.compileFingerprint,
-    publication: semanticIdentity,
-    deliverables: [
-      {
-        id: "mask-guide",
-        kind: "guide-pass",
-        files: [
-          {
-            path: semanticPath,
-            digest: digestAutoMovieBytes(maskBytes),
-            bytes: maskBytes.byteLength,
-            mediaType: "application/vnd.automovie.semantic-mask+json",
-            semanticMask: semanticReceipt,
-          },
-        ],
-        runtimeSeconds: null,
-        frameCount: null,
-        codec: null,
+  const framePath = `${bundle}/mask-guide/frames/mask/frame_00000000.png`;
+  const frameBytes = productionPng(16, 16);
+  const semanticReceipt = (frame: number) =>
+    createAutoMovieProductionSemanticMaskReceipt({
+      frame,
+      expectedShot: "opening",
+      evidence: {
+        version: 1,
+        shot: "opening",
+        mask,
+        coverage: { unresolved: [], unaddressed: 0 },
       },
-    ],
-  } as const;
+      sidecar: { path: semanticPath, bytes: maskBytes },
+    });
+  const proxyManifest = (semanticFrame: number) =>
+    ({
+      version: 2,
+      compileFingerprint: semanticPlan.compileFingerprint,
+      publication: semanticIdentity,
+      deliverables: [
+        {
+          id: "mask-guide",
+          kind: "guide-pass",
+          files: [
+            {
+              path: framePath,
+              digest: digestAutoMovieBytes(frameBytes),
+              bytes: frameBytes.byteLength,
+              mediaType: "image/png",
+            },
+            {
+              path: semanticPath,
+              digest: digestAutoMovieBytes(maskBytes),
+              bytes: maskBytes.byteLength,
+              mediaType: "application/vnd.automovie.semantic-mask+json",
+              semanticMask: semanticReceipt(semanticFrame),
+            },
+          ],
+          runtimeSeconds: null,
+          frameCount: null,
+          codec: null,
+        },
+      ],
+    }) as const;
   const proxyReceipt = {
     version: 1,
     tier: semanticPlan.tier,
@@ -419,22 +604,31 @@ export const test_production_publication_runtime_identity = (): void => {
     frameFormat: semanticPlan.frameFormat,
     sourceFrameFormat: semanticPlan.sourceFrameFormat,
     totalFrames: semanticPlan.totalFrames,
-    manifest: proxyManifest,
+    manifest: proxyManifest(0),
   };
   const proxyBytes = (value: unknown): Buffer =>
     Buffer.from(`${JSON.stringify(value, null, 2)}\n`);
+  const expected = new Map<string, Uint8Array>([
+    [framePath, frameBytes],
+    [semanticPath, maskBytes],
+  ]);
+  const candidate = (overrides: {
+    expected?: ReadonlyMap<string, Uint8Array>;
+    receipt?: unknown;
+  }): unknown =>
+    assertProxyPublicationCandidate({
+      bundle,
+      expected: overrides.expected ?? expected,
+      plan: semanticPlan,
+      receipt: proxyBytes(overrides.receipt ?? proxyReceipt),
+    });
   TestValidator.equals(
     "proxy preflight binds nested identity and semantic bytes before publish",
     namedFacts([
       [
         "currentCandidate",
         () => {
-          assertProxyPublicationCandidate({
-            bundle,
-            expected: new Map([[semanticPath, maskBytes]]),
-            plan: semanticPlan,
-            receipt: proxyBytes(proxyReceipt),
-          });
+          candidate({});
           return true;
         },
       ],
@@ -443,16 +637,85 @@ export const test_production_publication_runtime_identity = (): void => {
         () =>
           throwsError(
             () =>
-              assertProxyPublicationCandidate({
-                bundle,
-                expected: new Map([[semanticPath, maskBytes]]),
-                plan: semanticPlan,
-                receipt: proxyBytes({
+              candidate({
+                receipt: {
                   ...proxyReceipt,
                   frameFormat: { ...proxyReceipt.frameFormat, width: 958 },
-                }),
+                },
               }),
             "invalid identity",
+          ),
+      ],
+      [
+        "unknownReceiptKey",
+        () =>
+          throwsError(
+            () => candidate({ receipt: { ...proxyReceipt, attemptPid: 7 } }),
+            "invalid identity",
+          ),
+      ],
+      [
+        "manifestSchema",
+        () =>
+          throwsError(
+            () =>
+              candidate({
+                receipt: {
+                  ...proxyReceipt,
+                  manifest: { ...proxyManifest(0), attemptPid: 7 },
+                },
+              }),
+            ["Proxy publication receipt manifest is invalid", "attemptPid"],
+          ),
+      ],
+      [
+        "duplicateReceiptMember",
+        () =>
+          throwsError(
+            () =>
+              assertProxyPublicationCandidate({
+                bundle,
+                expected,
+                plan: semanticPlan,
+                receipt: Buffer.from('{"version":1,"version":1}'),
+              }),
+            ["proxy-publication-receipt", "duplicate member"],
+          ),
+      ],
+      [
+        "inventoryMismatch",
+        () =>
+          throwsError(
+            () => candidate({ expected: new Map([[semanticPath, maskBytes]]) }),
+            "does not match its manifest inventory",
+          ),
+      ],
+      [
+        "escapingPath",
+        () =>
+          throwsError(
+            () =>
+              candidate({
+                expected: new Map([
+                  [framePath, frameBytes],
+                  ["deliverables/proxy/elsewhere/frame.json", maskBytes],
+                ]),
+              }),
+            "escapes",
+          ),
+      ],
+      [
+        "changedBytes",
+        () =>
+          throwsError(
+            () =>
+              candidate({
+                expected: new Map([
+                  [framePath, productionPng(16, 8)],
+                  [semanticPath, maskBytes],
+                ]),
+              }),
+            "differs from its manifest",
           ),
       ],
       [
@@ -465,24 +728,36 @@ export const test_production_publication_runtime_identity = (): void => {
               }>;
             };
           };
-          delete changed.manifest.deliverables[0]!.files[0]!.semanticMask;
+          delete changed.manifest.deliverables[0]!.files[1]!.semanticMask;
           return throwsError(
-            () =>
-              assertProxyPublicationCandidate({
-                bundle,
-                expected: new Map([[semanticPath, maskBytes]]),
-                plan: semanticPlan,
-                receipt: proxyBytes(changed),
-              }),
+            () => candidate({ receipt: changed }),
             "has no semantic receipt",
           );
         },
+      ],
+      [
+        "unscheduledSemanticFrame",
+        () =>
+          throwsError(
+            () =>
+              candidate({
+                receipt: { ...proxyReceipt, manifest: proxyManifest(1) },
+              }),
+            "is not bound to a current mask frame 1",
+          ),
       ],
     ]),
     {
       currentCandidate: true,
       topLevelProjection: true,
+      unknownReceiptKey: true,
+      manifestSchema: true,
+      duplicateReceiptMember: true,
+      inventoryMismatch: true,
+      escapingPath: true,
+      changedBytes: true,
       missingSemanticReceipt: true,
+      unscheduledSemanticFrame: true,
     },
   );
 };

@@ -7,14 +7,19 @@ import {
   IAutoMovieSemanticMask,
 } from "@automovie/interface";
 import {
+  AUTOMOVIE_SEMANTIC_MASK_MEDIA_TYPE,
   IAutoMovieProductionRenderChunk,
   IAutoMovieProductionRenderChunkReceipt,
   IAutoMovieProductionRenderJobPlan,
   IAutoMovieProductionSemanticMaskEvidence,
   IAutoMovieProductionSemanticMaskReceipt,
+  assertAutoMovieProductionDeliverableSemanticMask,
+  classifyAutoMovieProductionDeliverableSemanticMask,
   classifyAutoMovieProductionSemanticMaskEvidence,
   createAutoMovieProductionSemanticMaskReceipt,
+  probeProductionMedia,
   productionRenderChunkStatuses,
+  productionRenderPlanOwnsSemanticMaskReceipt,
   verifyAutoMovieProductionSemanticMaskEvidence,
   verifyAutoMovieProductionSemanticMaskReceipt,
   verifyProductionRenderChunkReceipt,
@@ -23,6 +28,7 @@ import { TestValidator } from "@nestia/e2e";
 import { createHash } from "node:crypto";
 
 import { throwsError } from "../internal/predicates";
+import { productionPng, productionWebVtt } from "./productionMediaFixtures";
 
 /**
  * Semantic palette, runtime coverage, and resident sidecar bytes form one
@@ -43,6 +49,10 @@ import { throwsError } from "../internal/predicates";
  *    changed resident bytes, and stale semantic digest or coverage.
  * 7. Repeating the same shot and palette at another frame yields a separate
  *    frame record while retaining the same semantic and sidecar digests.
+ * 8. A delivered ledger file classifies as plain media, a current semantic
+ *    sidecar, an unreceipted sidecar, a receipt unbound by owner kind, bytes,
+ *    path, frame, shot, deliverable, or pass, a stale reopen, or incomplete
+ *    runtime coverage, and the assert form throws only for the refusals.
  */
 export const test_production_semantic_mask_evidence = (): void => {
   const evidence = validEvidence();
@@ -623,6 +633,198 @@ export const test_production_semantic_mask_evidence = (): void => {
       historical: "failed",
       missing: "failed",
       incomplete: "failed",
+    },
+  );
+
+  const sidecarPath =
+    "deliverables/final/0f/semantic-guide/frames/mask/frame_00000000.semantic.json";
+  const delivered = createReceipt({
+    evidence,
+    sidecarBytes,
+    path: sidecarPath,
+  });
+  const sidecarProbe = probeProductionMedia({
+    kind: "guide-pass",
+    mediaType: AUTOMOVIE_SEMANTIC_MASK_MEDIA_TYPE,
+    bytes: sidecarBytes,
+  });
+  const png = productionPng(16, 16);
+  const pngProbe = probeProductionMedia({
+    kind: "guide-pass",
+    mediaType: "image/png",
+    bytes: png,
+  });
+  const vtt = productionWebVtt();
+  const vttProbe = probeProductionMedia({
+    kind: "captions",
+    mediaType: "text/vtt",
+    bytes: vtt,
+  });
+  const guide = { id: "semantic-guide", kind: "guide-pass" } as const;
+  const classify = (
+    overrides: Partial<
+      Parameters<typeof classifyAutoMovieProductionDeliverableSemanticMask>[0]
+    >,
+  ) =>
+    classifyAutoMovieProductionDeliverableSemanticMask({
+      deliverable: guide,
+      file: { path: sidecarPath, semanticMask: delivered },
+      probe: sidecarProbe,
+      bytes: sidecarBytes,
+      plan,
+      ...overrides,
+    });
+  const reasonOf = (
+    finding: ReturnType<
+      typeof classifyAutoMovieProductionDeliverableSemanticMask
+    >,
+  ): string => ("reason" in finding ? finding.reason : finding.status);
+  const paddedBytes = bytes(
+    `${renderAutoMovieSemanticMaskSidecar(evidence.mask)}\n`,
+  );
+  const beautyPlan = {
+    ...plan,
+    chunks: [{ ...chunk, kind: "feature", pass: "beauty" }],
+  } as unknown as IAutoMovieProductionRenderJobPlan;
+  const deliverableFindings = {
+    media: classify({
+      file: {
+        path: "deliverables/final/0f/semantic-guide/frames/mask/frame_00000000.png",
+      },
+      probe: pngProbe,
+      bytes: png,
+    }),
+    current: classify({}),
+    unreceipted: classify({ file: { path: sidecarPath } }),
+    captionsOwner: classify({
+      deliverable: { id: "subtitles", kind: "captions" },
+      file: {
+        path: "deliverables/final/0f/subtitles/captions.vtt",
+        semanticMask: delivered,
+      },
+      probe: vttProbe,
+      bytes: vtt,
+    }),
+    pngBytes: classify({ probe: pngProbe, bytes: png }),
+    pathMismatch: classify({
+      file: { path: `${sidecarPath}.moved`, semanticMask: delivered },
+    }),
+    foreignFrame: classify({
+      file: {
+        path: sidecarPath,
+        semanticMask: createReceipt({
+          frame: 1,
+          evidence,
+          sidecarBytes,
+          path: sidecarPath,
+        }),
+      },
+    }),
+    foreignShot: classify({
+      file: {
+        path: sidecarPath,
+        semanticMask: createReceipt({
+          evidence: { ...evidence, shot: "closing" },
+          expectedShot: "closing",
+          sidecarBytes,
+          path: sidecarPath,
+        }),
+      },
+    }),
+    foreignDeliverable: classify({
+      deliverable: { id: "other-guide", kind: "guide-pass" },
+    }),
+    beautyPlan: classify({ plan: beautyPlan }),
+    stale: classify({
+      probe: probeProductionMedia({
+        kind: "guide-pass",
+        mediaType: AUTOMOVIE_SEMANTIC_MASK_MEDIA_TYPE,
+        bytes: paddedBytes,
+      }),
+      bytes: paddedBytes,
+    }),
+    incomplete: classify({
+      file: {
+        path: sidecarPath,
+        semanticMask: createReceipt({
+          evidence: withCoverage(evidence, {
+            unresolved: ["node:missing"],
+            unaddressed: 0,
+          }),
+          sidecarBytes,
+          path: sidecarPath,
+        }),
+      },
+    }),
+  };
+  TestValidator.equals(
+    "a delivered ledger file is classified from its receipt, bytes, and plan",
+    {
+      findings: Object.fromEntries(
+        Object.entries(deliverableFindings).map(([name, finding]) => [
+          name,
+          reasonOf(finding),
+        ]),
+      ),
+      currentReceipt:
+        deliverableFindings.current.status === "semantic-mask"
+          ? deliverableFindings.current.receipt
+          : null,
+      owned: productionRenderPlanOwnsSemanticMaskReceipt({
+        plan,
+        deliverable: "semantic-guide",
+        receipt: delivered,
+      }),
+      asserted: {
+        media: assertAutoMovieProductionDeliverableSemanticMask({
+          deliverable: guide,
+          file: {
+            path: "deliverables/final/0f/semantic-guide/frames/mask/frame_00000000.png",
+          },
+          probe: pngProbe,
+          bytes: png,
+          plan,
+        }),
+        current: assertAutoMovieProductionDeliverableSemanticMask({
+          deliverable: guide,
+          file: { path: sidecarPath, semanticMask: delivered },
+          probe: sidecarProbe,
+          bytes: sidecarBytes,
+          plan,
+        }),
+        unreceipted: throwsError(
+          () =>
+            assertAutoMovieProductionDeliverableSemanticMask({
+              deliverable: guide,
+              file: { path: sidecarPath },
+              probe: sidecarProbe,
+              bytes: sidecarBytes,
+              plan,
+            }),
+          `Semantic sidecar "${sidecarPath}" has no semantic receipt`,
+        ),
+      },
+    },
+    {
+      findings: {
+        media: "media",
+        current: "semantic-mask",
+        unreceipted: `Semantic sidecar "${sidecarPath}" has no semantic receipt in its deliverable ledger.`,
+        captionsOwner:
+          'Semantic receipt on "deliverables/final/0f/subtitles/captions.vtt" belongs to captions deliverable "subtitles"; only a guide-pass deliverable owns mask sidecars.',
+        pngBytes: `Semantic receipt on "${sidecarPath}" describes bytes that are not a semantic-mask sidecar.`,
+        pathMismatch: `Semantic receipt on "${sidecarPath}.moved" names sidecar path "${sidecarPath}".`,
+        foreignFrame: `Semantic sidecar "${sidecarPath}" is not bound to a current mask frame 1 of shot "opening" in guide deliverable "semantic-guide".`,
+        foreignShot: `Semantic sidecar "${sidecarPath}" is not bound to a current mask frame 0 of shot "closing" in guide deliverable "semantic-guide".`,
+        foreignDeliverable: `Semantic sidecar "${sidecarPath}" is not bound to a current mask frame 0 of shot "opening" in guide deliverable "other-guide".`,
+        beautyPlan: `Semantic sidecar "${sidecarPath}" is not bound to a current mask frame 0 of shot "opening" in guide deliverable "semantic-guide".`,
+        stale:
+          'semantic sidecar bytes for shot "opening" do not match its canonical palette',
+        incomplete: `Semantic sidecar "${sidecarPath}" records 1 unresolved ids and 0 unaddressed meshes for shot "opening"; a delivered mask product requires complete runtime coverage.`,
+      },
+      currentReceipt: delivered,
+      owned: true,
+      asserted: { media: undefined, current: undefined, unreceipted: true },
     },
   );
 

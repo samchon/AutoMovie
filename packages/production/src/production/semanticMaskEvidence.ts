@@ -5,12 +5,18 @@ import {
 } from "@automovie/engine";
 import {
   AutoMovieCaptureObservation,
+  IAutoMovieProductionDeliverable,
+  IAutoMovieProductionMediaProbe,
   IAutoMovieSemanticMaskCoverage,
   IAutoMovieSemanticMaskEvidence,
   IAutoMovieSemanticMaskReceipt,
 } from "@automovie/interface";
 
 import { compareCodeUnits, digestAutoMovieBytes } from "./contentIdentity";
+import {
+  type IAutoMovieProductionRenderJobPlan,
+  productionRenderLayersForPass,
+} from "./productionRenderJob";
 
 /**
  * Runtime agreement between a semantic palette and the scene actually drawn.
@@ -258,6 +264,160 @@ export const verifyAutoMovieProductionSemanticMaskReceipt = (props: {
     throw new Error(
       `stale semantic payload for shot "${props.expectedShot}" does not match its receipt`,
     );
+};
+
+/**
+ * Whether the current render plan schedules the mask layer a receipt names.
+ *
+ * A semantic receipt is bound to one output frame of one shot inside one guide
+ * deliverable. The plan is the only authority on which shot the mask pass
+ * draws at that frame, so a receipt whose frame, shot, or deliverable the plan
+ * does not schedule describes another generation and is not current evidence.
+ *
+ * @evidence requirements/production-design/continuity-change-and-deliverables.md#production-design-deliverable-freshness Decides from the current plan, not the receipt's own claim, whether a delivered semantic dependency still describes a scheduled frame.
+ * @evidence specifications/narrative-and-intent/budgets-continuity-and-deliverables.md#narrative-intent-deliverable-authority-gaps Keeps the render plan the owning source a delivered sidecar record is checked against.
+ */
+export const productionRenderPlanOwnsSemanticMaskReceipt = (props: {
+  plan: IAutoMovieProductionRenderJobPlan;
+  deliverable: string;
+  receipt: Pick<IAutoMovieProductionSemanticMaskReceipt, "frame" | "shot">;
+}): boolean =>
+  props.plan.chunks.some(
+    (chunk) =>
+      chunk.deliverable === props.deliverable &&
+      chunk.pass === "mask" &&
+      chunk.frames.some(
+        (frame) =>
+          frame.globalFrame === props.receipt.frame &&
+          productionRenderLayersForPass(frame, "mask").some(
+            (layer) => layer.shot === props.receipt.shot,
+          ),
+      ),
+  );
+
+/**
+ * Semantic standing of one delivered file inside a proxy or final ledger.
+ *
+ * `media` is an ordinary file with no semantic role. `semantic-mask` is a
+ * sidecar whose receipt reopened exactly. The refusals keep their cause apart:
+ * `unreceipted` sidecar bytes travel with no receipt, `unbound` receipt does
+ * not belong to this deliverable, file, or current plan, `stale` receipt does
+ * not reopen against the resident bytes, and `incomplete` evidence reopens but
+ * records runtime gaps a delivered mask product may not carry.
+ *
+ * @evidence requirements/production-design/continuity-change-and-deliverables.md#production-design-deliverable-gaps Reports the exact reason a delivered mask sidecar is not current instead of one folded failure.
+ * @evidence specifications/narrative-and-intent/budgets-continuity-and-deliverables.md#narrative-intent-deliverable-authority-gaps Separates missing, foreign, stale, and incomplete semantic dependencies so each maps to its own correction.
+ */
+export type AutoMovieProductionDeliverableSemanticMaskFinding =
+  | { status: "media" }
+  | {
+      status: "semantic-mask";
+      receipt: IAutoMovieProductionSemanticMaskReceipt;
+    }
+  | {
+      status: "unreceipted" | "unbound" | "stale" | "incomplete";
+      reason: string;
+    };
+
+/**
+ * Classify one delivered file's semantic receipt against its bytes and plan.
+ *
+ * Every ledger that carries deliverable files answers the same question: does
+ * this file's semantic receipt, when present, describe exactly these bytes at
+ * this path for a mask frame the current plan schedules in this deliverable?
+ * The project's terminal commit, the read-only final compiler, and the proxy
+ * publication preflight all decide it here so no ledger admits a sidecar
+ * another one would refuse.
+ *
+ * @evidence requirements/production-design/continuity-change-and-deliverables.md#production-design-deliverable-provenance Ties a delivered sidecar's receipt to its exact bytes, path, and plan-scheduled frame rather than to its label.
+ * @evidence specifications/narrative-and-intent/budgets-continuity-and-deliverables.md#narrative-intent-deliverable-provenance-handoff Reopens the semantic dependency of a delivered mask product from the receipt every publication ledger carries.
+ */
+export const classifyAutoMovieProductionDeliverableSemanticMask = (props: {
+  deliverable: { id: string; kind: IAutoMovieProductionDeliverable["kind"] };
+  file: {
+    path: string;
+    semanticMask?: IAutoMovieProductionSemanticMaskReceipt;
+  };
+  probe: IAutoMovieProductionMediaProbe;
+  bytes: Uint8Array;
+  plan: IAutoMovieProductionRenderJobPlan;
+}): AutoMovieProductionDeliverableSemanticMaskFinding => {
+  const { deliverable, file, probe } = props;
+  if (file.semanticMask === undefined)
+    return probe.kind === "semantic-mask"
+      ? {
+          status: "unreceipted",
+          reason: `Semantic sidecar "${file.path}" has no semantic receipt in its deliverable ledger.`,
+        }
+      : { status: "media" };
+  const receipt = file.semanticMask;
+  if (deliverable.kind !== "guide-pass")
+    return {
+      status: "unbound",
+      reason: `Semantic receipt on "${file.path}" belongs to ${deliverable.kind} deliverable "${deliverable.id}"; only a guide-pass deliverable owns mask sidecars.`,
+    };
+  if (probe.kind !== "semantic-mask")
+    return {
+      status: "unbound",
+      reason: `Semantic receipt on "${file.path}" describes bytes that are not a semantic-mask sidecar.`,
+    };
+  if (receipt.sidecar.path !== file.path)
+    return {
+      status: "unbound",
+      reason: `Semantic receipt on "${file.path}" names sidecar path "${receipt.sidecar.path}".`,
+    };
+  if (
+    productionRenderPlanOwnsSemanticMaskReceipt({
+      plan: props.plan,
+      deliverable: deliverable.id,
+      receipt,
+    }) === false
+  )
+    return {
+      status: "unbound",
+      reason: `Semantic sidecar "${file.path}" is not bound to a current mask frame ${receipt.frame} of shot "${receipt.shot}" in guide deliverable "${deliverable.id}".`,
+    };
+  try {
+    verifyAutoMovieProductionSemanticMaskReceipt({
+      receipt,
+      expectedFrame: receipt.frame,
+      expectedShot: receipt.shot,
+      evidence: {
+        version: 1,
+        shot: receipt.shot,
+        mask: probe.mask,
+        coverage: receipt.coverage,
+      },
+      resident: { path: file.path, bytes: props.bytes },
+    });
+  } catch (error) {
+    return { status: "stale", reason: (error as Error).message };
+  }
+  if (
+    receipt.coverage.unresolved.length !== 0 ||
+    receipt.coverage.unaddressed !== 0
+  )
+    return {
+      status: "incomplete",
+      reason: `Semantic sidecar "${file.path}" records ${receipt.coverage.unresolved.length} unresolved ids and ${receipt.coverage.unaddressed} unaddressed meshes for shot "${receipt.shot}"; a delivered mask product requires complete runtime coverage.`,
+    };
+  return { status: "semantic-mask", receipt };
+};
+
+/**
+ * Refuse a delivered file whose semantic standing is anything but current.
+ *
+ * @evidence requirements/production-design/continuity-change-and-deliverables.md#production-design-deliverable-provenance Stops a publication ledger from notarizing a sidecar whose receipt, bytes, path, or plan binding does not hold.
+ * @evidence specifications/narrative-and-intent/budgets-continuity-and-deliverables.md#narrative-intent-deliverable-provenance-handoff Makes the semantic reopen a precondition of writing a proxy or final publication rather than a later review step.
+ */
+export const assertAutoMovieProductionDeliverableSemanticMask = (
+  props: Parameters<
+    typeof classifyAutoMovieProductionDeliverableSemanticMask
+  >[0],
+): void => {
+  const finding = classifyAutoMovieProductionDeliverableSemanticMask(props);
+  if (finding.status !== "media" && finding.status !== "semantic-mask")
+    throw new Error(finding.reason);
 };
 
 /** Refuse non-exact records before reading any field as evidence. */
