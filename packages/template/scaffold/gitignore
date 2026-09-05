@@ -4,6 +4,9 @@ dist/
 generated/
 automovie/*
 !automovie/assets.json
+!automovie/contracts-baseline.json
+!automovie/contract-migrations/
+!automovie/contract-migrations/**
 !automovie/derived-artifacts.json
 !automovie/derived/
 !automovie/derived/**

@@ -15,22 +15,33 @@
 // than reporting them. That is the only reason the instrument's fault surfaced
 // instead of entering the record as two mysterious regressions.
 //
-// So the temporary directory is per-run and removed afterwards. The report
-// directory stays where it is, because the typed report and changed-source gate
-// resolve that exact path; a concurrent run therefore still overwrites the
-// report, which is last-writer-wins rather than corruption — the file is one
-// run's complete result instead of a mixture of two.
+// Raw records and report share one private run root. The exact immutable
+// publication is passed to every consumer, then the whole root is removed;
+// concurrent runs neither overwrite nor consume each other.
 import { spawnSync } from "node:child_process";
 import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { describeThrown } from "../integrity/describeThrown";
 import {
+  type IMeasuredSource,
   UNJUDGED_DECLARATION_GLOBS,
   UNMEASURED_SOURCE_ROOTS,
-} from "./changedCoverage";
-import { lineCount } from "./reportCoverageGaps";
+  canonicalCoveragePath,
+  coverageSourceAttribution,
+  isAuthoredExecutableSource,
+} from "./coverageIdentity";
+import { repositoryCandidates } from "./coveragePopulation";
+import {
+  type ICoverageMeasurementResult,
+  type ICoveragePublication,
+  type ICoverageRunPaths,
+  captureCoverageSnapshot,
+  inspectCoverageSnapshot,
+  publishCoverageSnapshot,
+} from "./coveragePublication";
 import {
   type ICoverageEntry,
   type IShapeReconciliation,
@@ -85,18 +96,55 @@ export interface ICoverageSpawnResult {
   status: number | null;
 }
 
+/** All observations that decide whether a measurement can be trusted. */
+export interface ICoverageMeasurementObservation {
+  child: ICoverageSpawnResult;
+  missingMeasuredSources: number;
+  records: ICoverageRecords;
+  reconciliationFailure: string | null;
+  unionShortfalls: number;
+}
+
+/** Instrument invalidity outranks an ordinary test failure. */
+export const decideCoverageMeasurementStatus = (
+  observation: ICoverageMeasurementObservation,
+): number => {
+  if (
+    observation.child.error !== undefined ||
+    observation.child.status === null ||
+    observation.reconciliationFailure !== null ||
+    observation.records.count === 0 ||
+    observation.records.parsed !== observation.records.count ||
+    observation.records.results === 0 ||
+    observation.missingMeasuredSources !== 0 ||
+    observation.unionShortfalls !== 0
+  )
+    return 2;
+  return observation.child.status === 0 ? 0 : 1;
+};
+
 export interface ICoverageMeasurementDependencies {
+  captureSnapshot: () => Record<string, IMeasuredSource>;
   /** Measured sources that appear in no record this run wrote. */
-  neverRecorded: (directory: string) => string[];
+  neverRecorded: (directory: string, reportDirectory: string) => string[];
   environment: NodeJS.ProcessEnv;
   log: (line: string) => void;
   mkdir: (directory: string, options: { recursive: true }) => unknown;
   missingScripts: (directory: string) => ICoverageMissingScripts;
   records: (directory: string) => ICoverageRecords;
-  reconcile: (directory: string) => IShapeReconciliation;
+  reconcile: (
+    directory: string,
+    reportDirectory: string,
+  ) => IShapeReconciliation;
   remove: (directory: string) => void;
   scriptShapes: (directory: string) => ICoverageScriptShapes;
-  sourceHostDirectory: () => string;
+  currentSnapshot: () => Record<string, IMeasuredSource>;
+  publish: (
+    reportDirectory: string,
+    sources: Readonly<Record<string, IMeasuredSource>>,
+  ) => ICoveragePublication;
+  reportFiles: (reportDirectory: string) => string[];
+  runPaths: () => ICoverageRunPaths;
   spawn: (
     executable: string,
     arguments_: string[],
@@ -107,50 +155,23 @@ export interface ICoverageMeasurementDependencies {
       stdio: "inherit";
     },
   ) => ICoverageSpawnResult;
-  temporaryDirectory: () => string;
-  writeLines: () => void;
-  writeSources: () => void;
 }
 
 export const COVERAGE_ROOT = path.resolve(__dirname, "../../..");
 const ROOT = COVERAGE_ROOT;
 const CACHE = path.join(ROOT, "node_modules", ".cache");
-export const COVERAGE_REPORT_DIRECTORY = path.join(
-  CACHE,
-  "automovie-c8-report",
-);
-const REPORT = COVERAGE_REPORT_DIRECTORY;
-
-/**
- * One run's own scratch directory, exported so the invariant can be tested.
- *
- * The process id alone is not enough. It is recycled, and a run killed before
- * its cleanup leaves a directory behind for whichever later process happens to
- * draw the same number — which is the stale-merge half of the same defect, and
- * would reappear the first time a run were interrupted. The random suffix is
- * what makes two calls distinct even inside one process, which is the property
- * `test_workspace_coverage_isolation` actually measures.
- */
-export const coverageTemporaryDirectory = (): string =>
-  path.join(CACHE, "automovie-c8", `${process.pid}-${crypto.randomUUID()}`);
-
-/** Persistent-until-report host for source-mapped focused browser fixtures. */
-export const coverageSourceHostDirectory = (): string =>
-  path.join(
+export const coverageRunPaths = (): ICoverageRunPaths => {
+  const rootDirectory = path.join(
     CACHE,
-    "automovie-source-hosts",
+    "automovie-c8-runs",
     `${process.pid}-${crypto.randomUUID()}`,
   );
-
-/**
- * How many per-process coverage records a run left in its own directory.
- *
- * Counts the files V8 writes, one per process that exited under the collector,
- * and nothing else: the directory is this run's alone, so anything that is not
- * a record is not part of this measurement.
- */
-export const coverageRecordCount = (directory: string): number =>
-  coverageRecords(directory).count;
+  return {
+    rawDirectory: path.join(rootDirectory, "raw"),
+    reportDirectory: path.join(rootDirectory, "report"),
+    rootDirectory,
+  };
+};
 
 /**
  * What a run's own record directory holds, counted three ways.
@@ -191,7 +212,7 @@ export const coverageRecordCount = (directory: string): number =>
 export const coverageMissingScripts = (
   directory: string,
   isMeasured: (url: string) => boolean = (url) =>
-    isMeasuredScriptUrl(url, SOURCES, ROOT.replaceAll("\\", "/").toLowerCase()),
+    measuredRawScriptIdentity(url, SOURCES, ROOT) !== null,
 ): ICoverageMissingScripts => {
   const urls = new Set<string>();
   let entries: string[];
@@ -268,11 +289,11 @@ export const coverageMissingScripts = (
  * instead of two that can drift apart. The decoding notes inside are the
  * reason this is a parse rather than a host path resolution.
  */
-export const isMeasuredScriptUrl = (
+export const measuredScriptIdentity = (
   url: string,
   roots: readonly string[],
   repository: string,
-): boolean => {
+): string | null => {
   // Decode the URL rather than stripping its scheme by hand, and decode it
   // the same way on every host.
   //
@@ -289,23 +310,122 @@ export const isMeasuredScriptUrl = (
   // real URL shape this function is asked about. What the census needs is the
   // path the URL names, not the path this host could open, so the parse is
   // neutral and only a genuinely malformed URL is skipped.
-  let lowered: string;
+  let target: string;
   try {
     const parsed = new URL(url);
+    if (parsed.protocol !== "file:" || parsed.hostname.length !== 0)
+      return null;
     const decoded = decodeURIComponent(parsed.pathname);
     // A leading slash belongs to a POSIX path and precedes a Windows drive
     // letter; keep the first and drop the second.
-    lowered = (/^\/[A-Za-z]:/u.test(decoded) ? decoded.slice(1) : decoded)
-      .replaceAll("\\", "/")
-      .toLowerCase();
+    target = canonicalCoveragePath(
+      /^\/[A-Za-z]:/u.test(decoded) ? decoded.slice(1) : decoded,
+    );
   } catch {
-    return false;
+    return null;
   }
+  const canonicalRepository = canonicalCoveragePath(repository);
+  const relative = target.slice(canonicalRepository.length).replace(/^\//u, "");
   return roots.some((root) => {
-    if (root === ".")
-      return lowered === repository || lowered.startsWith(`${repository}/`);
-    return lowered.includes(root.toLowerCase());
+    if (
+      target !== canonicalRepository &&
+      target.startsWith(`${canonicalRepository}/`) === false
+    )
+      return false;
+    const canonicalRoot =
+      process.platform === "win32" ? root.toLowerCase() : root;
+    const underRoot =
+      canonicalRoot === "." ||
+      relative === canonicalRoot ||
+      relative.startsWith(`${canonicalRoot.replace(/\/$/u, "")}/`);
+    return underRoot && isAuthoredExecutableSource(relative);
+  })
+    ? `${canonicalRepository}/${relative}`.replace(/\/$/u, "")
+    : null;
+};
+
+/** Resolve source-map `sources` against the map file without choosing one. */
+export const sourceMapSourceFiles = (props: {
+  map: { sourceRoot?: string; sources?: unknown };
+  mapFile: string;
+}): string[] => {
+  if (Array.isArray(props.map.sources) === false) return [];
+  const root = props.map.sourceRoot ?? "";
+  return props.map.sources
+    .filter((source): source is string => typeof source === "string")
+    .map((source) => {
+      try {
+        if (source.startsWith("file:")) return fileURLToPath(source);
+        return path.resolve(path.dirname(props.mapFile), root, source);
+      } catch {
+        return "";
+      }
+    })
+    .filter((source) => source.length !== 0);
+};
+
+const sourceMappedFiles = (url: string): string[] => {
+  try {
+    const script = fileURLToPath(url);
+    const text = fs.readFileSync(script, "utf8");
+    const match = /\/\/[#@] sourceMappingURL=([^\s]+)\s*$/mu.exec(text);
+    if (match === null) return [];
+    const reference = match[1]!;
+    let mapFile = `${script}.map`;
+    let encoded: string;
+    if (reference.startsWith("data:application/json;base64,"))
+      encoded = Buffer.from(
+        reference.slice(reference.indexOf(",") + 1),
+        "base64",
+      ).toString("utf8");
+    else {
+      mapFile = path.resolve(
+        path.dirname(script),
+        decodeURIComponent(reference),
+      );
+      encoded = fs.readFileSync(mapFile, "utf8");
+    }
+    return sourceMapSourceFiles({
+      map: JSON.parse(encoded) as { sourceRoot?: string; sources?: unknown },
+      mapFile,
+    });
+  } catch {
+    return [];
+  }
+};
+
+/** Direct source URL or exactly one authored source-map attribution. */
+export const measuredRawScriptIdentity = (
+  url: string,
+  roots: readonly string[],
+  repository: string,
+): string | null => {
+  const direct = measuredScriptIdentity(url, roots, repository);
+  if (direct !== null) return direct;
+  if (measuredScriptIdentity(url, ["."], repository) !== null) return null;
+  const attributed = coverageSourceAttribution({
+    attributed: sourceMappedFiles(url),
+    repository,
+    url,
   });
+  if (attributed.reason !== "measured" || attributed.identity === null)
+    return null;
+  const relative = path
+    .relative(repository, attributed.identity)
+    .replaceAll("\\", "/");
+  const relativeIdentity =
+    process.platform === "win32" ? relative.toLowerCase() : relative;
+  return roots.some(
+    (root) =>
+      root === "." ||
+      relativeIdentity ===
+        (process.platform === "win32" ? root.toLowerCase() : root) ||
+      relativeIdentity.startsWith(
+        `${(process.platform === "win32" ? root.toLowerCase() : root).replace(/\/$/u, "")}/`,
+      ),
+  )
+    ? attributed.identity
+    : null;
 };
 
 /**
@@ -326,6 +446,7 @@ export const isMeasuredScriptUrl = (
  */
 export const coverageNeverRecorded = (props: {
   directory: string;
+  identity?: (url: string) => string | null;
   reported: readonly string[];
 }): string[] => {
   const seen = new Set<string>();
@@ -351,11 +472,11 @@ export const coverageNeverRecorded = (props: {
         continue;
       const cut = url.search(/[?#]/u);
       try {
-        seen.add(
-          fileURLToPath(cut === -1 ? url : url.slice(0, cut))
-            .replaceAll("\\", "/")
-            .toLowerCase(),
-        );
+        const identity =
+          props.identity === undefined
+            ? fileURLToPath(cut === -1 ? url : url.slice(0, cut))
+            : props.identity(url);
+        if (identity !== null) seen.add(canonicalCoveragePath(identity));
       } catch {
         // A URL this cannot resolve names no file, which is a different
         // finding and one `coverageMissingScripts` already reports.
@@ -363,9 +484,7 @@ export const coverageNeverRecorded = (props: {
     }
   }
   return props.reported
-    .filter(
-      (file) => seen.has(file.replaceAll("\\", "/").toLowerCase()) === false,
-    )
+    .filter((file) => seen.has(canonicalCoveragePath(file)) === false)
     .sort((left, right) => left.localeCompare(right));
 };
 
@@ -373,9 +492,8 @@ export const coverageScriptShapes = (
   directory: string,
   roots: readonly string[] = SOURCES,
 ): ICoverageScriptShapes => {
-  const repository = ROOT.replaceAll("\\", "/").toLowerCase();
-  const measured = (url: string): boolean =>
-    isMeasuredScriptUrl(url, roots, repository);
+  const measured = (url: string): string | null =>
+    measuredRawScriptIdentity(url, roots, ROOT);
   const shapes = new Map<string, { count: number; forms: Set<string> }>();
   let entries: string[];
   try {
@@ -396,10 +514,11 @@ export const coverageScriptShapes = (
     for (const script of Array.isArray(record.result) ? record.result : []) {
       if (
         typeof script.url !== "string" ||
-        script.url.startsWith("file:") === false ||
-        measured(script.url) === false
+        script.url.startsWith("file:") === false
       )
         continue;
+      const identity = measured(script.url);
+      if (identity === null) continue;
       const shape = (Array.isArray(script.functions) ? script.functions : [])
         .map(
           (fn) =>
@@ -407,10 +526,10 @@ export const coverageScriptShapes = (
         )
         .sort((left, right) => left.localeCompare(right))
         .join(",");
-      const seen = shapes.get(script.url) ?? { count: 0, forms: new Set() };
+      const seen = shapes.get(identity) ?? { count: 0, forms: new Set() };
       seen.count += 1;
       seen.forms.add(shape);
-      shapes.set(script.url, seen);
+      shapes.set(identity, seen);
     }
   }
   let reread = 0;
@@ -495,141 +614,23 @@ export const coverageIncludes = [
   "*.tsx",
   "*.cts",
   "*.mts",
-  "build/**",
   "config/**",
   "docs/lint.config.ts",
   "packages/*/*.ts",
   "packages/*/*.tsx",
   "packages/*/*.cts",
   "packages/*/*.mts",
-  "packages/*/build/**/*.ts",
-  "packages/*/build/**/*.tsx",
-  "packages/*/build/**/*.cts",
-  "packages/*/build/**/*.mts",
   "packages/*/scripts/**",
   "packages/*/src/**",
-  "test/src/coverage/**",
-  "test/src/integrity/**",
-  "packages/template/scaffold/**",
 ];
 
 const SOURCES = coverageSourceRoots;
 const INCLUDES = coverageIncludes;
 
-/** Where a run records how long each measured file was while it was measured. */
-export const MEASURED_LINES = "measured-lines.json";
-
-/** Exact source snapshot covered by the report consumed by the changed gate. */
-export const MEASURED_SOURCES = "measured-sources.json";
-
-/**
- * Record every measured file's line count beside the report that names it.
- *
- * An Istanbul report carries positions and no way to say which content they were
- * taken from — the per-file entry holds `path`, the maps and the counts, and no
- * hash. So a reader asking "does this position exist in the file?" is asking
- * about whatever the file has since become, and a guard built on that answer
- * blames the instrument for an ordinary edit. Measured on this repository: one
- * commit that shortened a file by 23 lines made 26 positions read as past its
- * end, none of which was a fault.
- *
- * Written here because this is the one moment the sources on disk are the
- * sources just measured. A missing entry is a file the reader must not judge.
- *
- * The length itself is {@link lineCount}'s to define, and it is defined beside
- * the reader because that is where the reason lives: a file ending in a newline
- * splits into one more piece than it has lines, and the reader's check is exact
- * or it is nothing. Two copies of that arithmetic is how a writer and a reader
- * stop agreeing about what a length is.
- */
-export const writeMeasuredLines = (reportDirectory: string = REPORT): void => {
-  const report = path.join(reportDirectory, "coverage-final.json");
-  let coverage: Record<string, unknown>;
-  try {
-    coverage = JSON.parse(fs.readFileSync(report, "utf8")) as Record<
-      string,
-      unknown
-    >;
-  } catch {
-    // No report, nothing to describe. The reader already says so in its own
-    // words when the report is absent.
-    return;
-  }
-  const lines: Record<string, number> = {};
-  for (const file of Object.keys(coverage)) {
-    let text;
-    try {
-      text = fs.readFileSync(file, "utf8");
-    } catch {
-      continue;
-    }
-    lines[file] = lineCount(text);
-  }
-  fs.writeFileSync(
-    path.join(reportDirectory, MEASURED_LINES),
-    `${JSON.stringify(lines, null, 2)}
-`,
-    "utf8",
-  );
-};
-
-/**
- * Record both length and content identity for every measured source.
- *
- * A line-count sidecar can prove that an Istanbul position existed when the
- * report was written, but equal-length edits can still leave a stale report
- * looking current. Changed coverage must refuse that case rather than certify
- * today's diff against yesterday's execution.
- */
-export const writeMeasuredSources = (
-  reportDirectory: string = REPORT,
-): void => {
-  const report = path.join(reportDirectory, "coverage-final.json");
-  let coverage: Record<string, unknown>;
-  try {
-    coverage = JSON.parse(fs.readFileSync(report, "utf8")) as Record<
-      string,
-      unknown
-    >;
-  } catch {
-    return;
-  }
-  const sources: Record<string, { lines: number; sha256: string }> = {};
-  for (const file of Object.keys(coverage)) {
-    let bytes;
-    try {
-      bytes = fs.readFileSync(file);
-    } catch {
-      continue;
-    }
-    sources[file] = {
-      lines: lineCount(bytes.toString("utf8")),
-      sha256: crypto.createHash("sha256").update(bytes).digest("hex"),
-    };
-  }
-  fs.writeFileSync(
-    path.join(reportDirectory, MEASURED_SOURCES),
-    `${JSON.stringify(sources, null, 2)}\n`,
-    "utf8",
-  );
-};
-
-/**
- * Measure once, into a directory this run alone owns.
- *
- * Guarded so importing this module to read its path rule does not launch the
- * whole suite. `test_workspace_coverage_isolation` does exactly that.
- */
+/** Remove one run's private directory; a missing one is already removed. */
 export const removeCoverageTemporaryDirectory = (directory: string): void =>
   fs.rmSync(directory, { recursive: true, force: true });
 
-/**
- * Ask each shape-consistent group of raw records for its own report.
- *
- * The group reports are written beside the run's own temp directory, which is
- * removed with it, so a corrected run leaves nothing behind for the next one to
- * inherit.
- */
 /**
  * The parts a real shape reconciliation is made of, each one askable on its own.
  *
@@ -659,8 +660,7 @@ export const measuredShapeReconciliationParts = (props: {
   copy: (from, to) => fs.copyFileSync(from, to),
   groupRoot: props.groupRoot,
   reportDirectory: props.reportDirectory,
-  measured: (url) =>
-    isMeasuredScriptUrl(url, SOURCES, ROOT.replaceAll("\\", "/").toLowerCase()),
+  measured: (url) => measuredRawScriptIdentity(url, SOURCES, ROOT) ?? false,
   mkdir: (directory) => fs.mkdirSync(directory, { recursive: true }),
   readReport: (directory) => {
     try {
@@ -709,7 +709,7 @@ export const measuredShapeReconciliationParts = (props: {
  */
 export const reconcileMeasuredShapes = (
   temporary: string,
-  reportDirectory: string = REPORT,
+  reportDirectory: string,
 ): IShapeReconciliation => {
   const groupRoot = `${temporary}-shapes`;
   try {
@@ -737,9 +737,7 @@ const slashOf = (file: string): string => file.replaceAll("\\", "/");
  * dependency would never run under test, which is the shape this branch's own
  * commits keep catching elsewhere.
  */
-export const measuredReportedSources = (
-  reportDirectory: string = REPORT,
-): string[] => {
+export const measuredReportedSources = (reportDirectory: string): string[] => {
   try {
     return Object.keys(
       JSON.parse(
@@ -768,22 +766,26 @@ export const measuredReportedSources = (
  */
 export const coverageUnloadedSources = (props: {
   directory: string;
-  reportDirectory?: string;
+  reportDirectory: string;
 }): string[] =>
   coverageNeverRecorded({
     directory: props.directory,
+    identity: (url) => measuredRawScriptIdentity(url, SOURCES, ROOT),
     reported: measuredReportedSources(props.reportDirectory),
   });
 
 export const coverageMeasurementDependencies: ICoverageMeasurementDependencies =
   {
-    neverRecorded: (directory) => coverageUnloadedSources({ directory }),
-    temporaryDirectory: coverageTemporaryDirectory,
-    sourceHostDirectory: coverageSourceHostDirectory,
+    neverRecorded: (directory, reportDirectory) =>
+      coverageUnloadedSources({ directory, reportDirectory }),
+    runPaths: coverageRunPaths,
     mkdir: fs.mkdirSync,
     spawn: spawnSync,
-    writeLines: writeMeasuredLines,
-    writeSources: writeMeasuredSources,
+    captureSnapshot: () => captureRepositoryCoverageSnapshot(ROOT),
+    currentSnapshot: () => captureRepositoryCoverageSnapshot(ROOT),
+    publish: (reportDirectory, sources) =>
+      publishCoverageSnapshot({ reportDirectory, sources }),
+    reportFiles: measuredReportedSources,
     records: coverageRecords,
     reconcile: reconcileMeasuredShapes,
     missingScripts: coverageMissingScripts,
@@ -792,6 +794,22 @@ export const coverageMeasurementDependencies: ICoverageMeasurementDependencies =
     remove: removeCoverageTemporaryDirectory,
     environment: process.env,
   };
+
+/**
+ * The pre-run snapshot of every git-known authored source.
+ *
+ * The candidates are the population gate's own `repositoryCandidates`, so the
+ * set the snapshot binds and the set the gate judges are one enumeration
+ * rather than two that can drift; the report this run writes is consulted by
+ * neither.
+ */
+export const captureRepositoryCoverageSnapshot = (
+  root: string,
+): Record<string, IMeasuredSource> =>
+  captureCoverageSnapshot({
+    candidates: repositoryCandidates(root),
+    root,
+  });
 
 /**
  * Which sources the instrument takes, and which it leaves alone.
@@ -815,6 +833,14 @@ export const coverageInstrumentPopulation = (): string[] => [
   "--exclude",
   "**/bin.ts",
   ...UNMEASURED_SOURCE_ROOTS.flatMap((root) => ["--exclude", `${root}**`]),
+  "--exclude",
+  "packages/*/build/**",
+  // Passing any `--exclude` replaces c8's default list, and `**/*.d.ts` was on
+  // it. A declaration emitted beside a source by a stray `tsc` run is
+  // gitignored, so the population gate never sees it, while `--all` walks the
+  // disk and would report it as a source the pre-run snapshot never named.
+  "--exclude",
+  "**/*.d.ts",
   ...UNJUDGED_DECLARATION_GLOBS.flatMap((glob) => ["--exclude", glob]),
   "--extension",
   ".ts",
@@ -828,12 +854,21 @@ export const coverageInstrumentPopulation = (): string[] => [
 
 export const measureCoverage = (
   dependencies: ICoverageMeasurementDependencies,
-): number => {
-  const temporary = dependencies.temporaryDirectory();
-  const sourceHost = dependencies.sourceHostDirectory();
+): ICoverageMeasurementResult => {
+  const paths = dependencies.runPaths();
+  const temporary = paths.rawDirectory;
+  let publication: ICoveragePublication | undefined;
   try {
+    const snapshot = Object.freeze(
+      Object.fromEntries(
+        Object.entries(dependencies.captureSnapshot()).map(([file, source]) => [
+          file,
+          Object.freeze({ ...source }),
+        ]),
+      ),
+    );
     dependencies.mkdir(temporary, { recursive: true });
-    dependencies.mkdir(sourceHost, { recursive: true });
+    dependencies.mkdir(paths.reportDirectory, { recursive: true });
     const result = dependencies.spawn(
       process.execPath,
       [
@@ -844,7 +879,7 @@ export const measureCoverage = (
         "--temp-directory",
         temporary,
         "--reports-dir",
-        REPORT,
+        paths.reportDirectory,
         "--reporter=text",
         "--reporter=text-summary",
         "--reporter=json",
@@ -871,7 +906,6 @@ export const measureCoverage = (
         shell: false,
         env: {
           ...dependencies.environment,
-          AUTOMOVIE_COVERAGE_SOURCE_HOST: sourceHost,
         },
       },
     );
@@ -879,7 +913,7 @@ export const measureCoverage = (
       dependencies.log(
         `INSTRUMENT FAILURE: coverage process could not start: ${result.error.message}`,
       );
-      return 2;
+      return { status: 2 };
     }
     // Printed because the report alone cannot say whether a low number means
     // little ran or little was counted. This suite's total is bimodal -- about
@@ -895,16 +929,19 @@ export const measureCoverage = (
     // that entry is worse than the better of the two -- measured here at 90.93
     // percent where the two groups alone read 100 and 32.56. The snapshot and
     // the gate both consume this report, so the correction comes first.
-    const reconciliation = dependencies.reconcile(temporary);
+    const reconciliation = dependencies.reconcile(
+      temporary,
+      paths.reportDirectory,
+    );
     if (reconciliation.failure !== null) {
       dependencies.log(`INSTRUMENT FAILURE: ${reconciliation.failure}`);
-      return 2;
+      return { status: 2 };
     }
     // A file the union wrote worse than a reading it was given is the union
     // losing, and it used to be indistinguishable from a file nothing covered.
     for (const shortfall of reconciliation.shortfalls ?? [])
       dependencies.log(
-        `UNION SHORTFALL: ${shortfall.file} lost ${shortfall.lost.length} covered ${shortfall.lost.length === 1 ? "line" : "lines"} a reading had (${shortfall.lost.slice(0, 12).join(", ")})`,
+        `UNION SHORTFALL: ${shortfall.file} lost ${shortfall.lost.length} covered ${shortfall.lost.length === 1 ? "position" : "positions"} a reading had (${shortfall.lost.slice(0, 12).join(", ")})`,
       );
     dependencies.log(
       `coverage groups: ${reconciliation.groups} shape-consistent record ` +
@@ -912,8 +949,6 @@ export const measureCoverage = (
           ? "group, so the merge had nothing to lose"
           : "groups, report corrected to the fullest reading of each file"),
     );
-    dependencies.writeLines();
-    dependencies.writeSources();
     const records = dependencies.records(temporary);
     const scripts = dependencies.missingScripts(temporary);
     dependencies.log(
@@ -933,7 +968,7 @@ export const measureCoverage = (
     // Which measured sources no process ever loaded. `--all` reports every
     // include match, so a zero-percent file is either untested or ran somewhere
     // the report could not follow, and only the records tell them apart.
-    const never = dependencies.neverRecorded(temporary);
+    const never = dependencies.neverRecorded(temporary, paths.reportDirectory);
     dependencies.log(
       `coverage never loaded: ${never.length} measured ${never.length === 1 ? "source was" : "sources were"} in no record`,
     );
@@ -945,11 +980,35 @@ export const measureCoverage = (
         `process, ${shapes.disagreeing} of those in more than one shape` +
         (shapes.sample.length === 0 ? "" : ` (${shapes.sample.join(", ")})`),
     );
-    if (result.status === null) return 2;
-    return result.status === 0 ? 0 : 1;
+    const status = decideCoverageMeasurementStatus({
+      child: result,
+      missingMeasuredSources: scripts.measured.length,
+      records,
+      reconciliationFailure: reconciliation.failure,
+      unionShortfalls: reconciliation.shortfalls?.length ?? 0,
+    });
+    if (status === 2) return { status };
+    const inspected = inspectCoverageSnapshot({
+      current: dependencies.currentSnapshot(),
+      reportFiles: dependencies.reportFiles(paths.reportDirectory),
+      snapshot,
+    });
+    for (const failure of inspected.failures)
+      dependencies.log(`INSTRUMENT FAILURE: ${failure}`);
+    if (inspected.failures.length !== 0) return { status: 2 };
+    if (status === 1) return { status };
+    publication = dependencies.publish(
+      paths.reportDirectory,
+      inspected.published,
+    );
+    return { publication, status: 0 };
+  } catch (error) {
+    dependencies.log(
+      `INSTRUMENT FAILURE: coverage publication failed: ${describeThrown(error)}`,
+    );
+    return { status: 2 };
   } finally {
-    // Leaving it behind is the stale half of the defect this file exists to fix.
     dependencies.remove(temporary);
-    dependencies.remove(sourceHost);
+    if (publication === undefined) dependencies.remove(paths.rootDirectory);
   }
 };

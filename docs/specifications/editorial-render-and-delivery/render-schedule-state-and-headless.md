@@ -4,8 +4,6 @@
 
 ### Render phase와 공통 Artifact 축 {#spec-render-artifact-lifecycle}
 
-<!-- @evidenceObligation artifact-lifecycle plan, run, resume, inspect, publish 단계가 공유하는 artifact identity와 상태 전이. -->
-<!-- @evidenceObligation portable-artifact-state render target의 결정적 입력과 content identity를 package-independent record로 보존하는 경계. -->
 <!-- @evidence requirements/rendering/scope-and-artifact-identity.md#rendering-scope-artifact-identity Render artifact의 complete identity를 정밀화한다. -->
 <!-- @evidence requirements/rendering/scope-and-artifact-identity.md#rendering-compile-render-distinction Compile과 render 책임을 정밀화한다. -->
 <!-- @evidence requirements/rendering/scope-and-artifact-identity.md#rendering-planned-materialized 계획과 materialization 상태를 정밀화한다. -->

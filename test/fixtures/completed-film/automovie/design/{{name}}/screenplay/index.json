@@ -1,5 +1,5 @@
 {
-  "version": 1,
+  "version": 2,
   "production": "{{name}}",
   "treatment": {
     "path": "docs/treatments/001-cue.md",
@@ -53,15 +53,28 @@
         "status": "active",
         "covers": [
           {
+            "id": "BEAT-CUE-1",
             "reason": "The opening shot must make the separated caller's deliberate gesture readable.",
             "beat": "The audience finds SOLOIST ahead of the rows, and the hand begins to rise as a deliberate act rather than incidental motion."
           },
           {
+            "id": "BEAT-CUE-2",
             "reason": "The opening shot must show the ordered group accept the cue without losing formation.",
             "beat": "CHORUS closes the authored distance without losing order."
           }
         ],
         "location": "plaza",
+        "storyTime": "DAY",
+        "participants": [
+          {
+            "id": "soloist",
+            "mode": "on-screen"
+          },
+          {
+            "id": "chorus",
+            "mode": "crowd"
+          }
+        ],
         "disposition": null,
         "path": "docs/screenplays/001-cue/001-cue.md"
       },
@@ -71,15 +84,32 @@
         "status": "active",
         "covers": [
           {
+            "id": "BEAT-ANSWER-1",
             "reason": "The answer shot must preserve the first scene's hand and formation endpoint without drift.",
             "beat": "CHORUS remains where the cue brought it, and SOLOIST's hand remains raised; neither state decays when the initiating movement ends."
           },
           {
+            "id": "BEAT-ANSWER-2",
             "reason": "The answer shot must keep the gate shut so the film closes on the exchange rather than a new event.",
             "beat": "GATE stays shut while the raised hand and advanced rows remain the established answer."
           }
         ],
         "location": "plaza",
+        "storyTime": "DAY, CONTINUOUS",
+        "participants": [
+          {
+            "id": "soloist",
+            "mode": "on-screen"
+          },
+          {
+            "id": "chorus",
+            "mode": "crowd"
+          },
+          {
+            "id": "gate",
+            "mode": "object"
+          }
+        ],
         "disposition": null,
         "path": "docs/screenplays/002-answer/001-answer.md"
       }

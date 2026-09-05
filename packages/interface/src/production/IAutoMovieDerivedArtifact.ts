@@ -39,7 +39,6 @@ export interface IAutoMovieDerivedArtifactDependency {
  *
  * @evidence requirements/agent-authoring/deterministic-precomputation.md#agent-precomputed-derived-artifact Replaces giant source literals with reviewable project-owned derived bytes.
  * @evidence specifications/authoring-and-authority/deterministic-precomputed-artifacts.md#spec-authoring-precomputed-manifest Carries the separate manifest record the compiler verifies.
- * @evidencePart specifications/authoring-and-authority/deterministic-precomputed-artifacts.md#spec-authoring-precomputed-manifest::derived-artifact-manifest
  * @author Samchon
  */
 export interface IAutoMovieDerivedArtifactRecord {

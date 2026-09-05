@@ -1177,8 +1177,8 @@ const report = (
     inventory,
     budget,
     mask: {
-      version: 1,
-      protocol: "automovie.semantic-mask.v1",
+      version: 2,
+      protocol: "automovie.semantic-mask.v2",
       background: "#000000",
       entries: [],
       unaddressed: [],

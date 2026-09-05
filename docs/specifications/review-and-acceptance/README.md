@@ -5,7 +5,6 @@
 
 ## 시스템 경계 {#review-acceptance-system-boundary}
 
-<!-- @evidenceObligation compiled-subject-review-boundary compiler가 만든 주체와 현재 evidence를 재개방하는 deterministic 검토 경계. -->
 
 이 주제는 제품이 소유하는 compiled subject 검사와 시각 변경 보고, 그리고 acceptance requirement가 요구하는 criterion, evidence, verdict와 publication 계약을 정의한다. Production consumer는 compiler-derived subject와 현재 observation population을 다시 여는 경계만 소유한다. AutoMovie는 작품 review의 annotation, finding lifecycle, 대안 선택, 승인, 반려와 waiver를 저장하는 서비스를 제공하지 않는다. Repository review는 [Review skill](../../../.agents/skills/review/SKILL.md)이, 생성 production review는 [shipped Production review](../../../packages/template/scaffold/.agents/skills/review-verification/review.md)가 절차로 소유한다.
 

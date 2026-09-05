@@ -39,8 +39,8 @@ result, on every host and in every process.
 ## Gait tables
 
 The gait tables ship here for the same reason the archetypes do. The engine owns
-the gait *machinery* — phase, duty, amplitude, per-limb easing, root bob,
-contact resolution — and that machinery describes how any jointed body walks.
+the gait *machinery* : phase, duty, amplitude, per-limb easing, root bob,
+contact resolution : and that machinery describes how any jointed body walks.
 Which bones swing, at which phases, with which amplitudes is data about one kind
 of body, so it belongs to the catalogue a host chooses rather than to the
 universal surface.

@@ -40,5 +40,8 @@ Admission은 canonical job contract, current authoritative revision, dependency 
 ### Admission Decision {#execution-admission-decision}
 
 <!-- @evidence requirements/operations-and-recovery/scope-job-identity-and-state.md#operations-job-state-vocabulary 시작, 대기, 차단과 종료 상태를 모호하지 않은 결과로 반환한다. -->
+<!-- @evidence requirements/operations-and-recovery/scope-job-identity-and-state.md#operations-requested-effective-work 전체 명령 요청을 실행 전에 확정하거나 거부한다. -->
 
 Admission output은 admitted, queued, blocked 또는 rejected와 applied policy, limiting facts, queue class, retry condition 및 decision identity를 가진다. Admitted만 execution owner를 획득할 수 있고 blocked는 충족 가능한 dependency나 capacity condition을, rejected는 입력 또는 policy를 바꾸지 않고는 진행할 수 없는 reason을 제공해야 한다.
+
+Command admission은 argv 전체를 정확히 하나의 discriminated command plan으로 바꾸거나 rejected 결과를 반환한다. Plan은 command별 허용 option 집합, 단일 공급 여부, positional slot, default와 typed value를 모두 확정해야 하며 unknown, duplicate, inapplicable, extra, missing, blank와 같은 거부 이유 및 문제 token class를 보존해야 한다. Dispatcher와 생성된 project command는 성공한 plan만 실행 입력으로 받아야 하고, parsing 실패 뒤에는 target path resolution, project 또는 production state 조회, migration이나 scaffold write, child process spawn, browser 설치·실행·capture, compile 또는 derivation을 호출해서는 안 된다.

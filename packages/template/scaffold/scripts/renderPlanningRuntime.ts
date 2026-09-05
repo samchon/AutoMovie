@@ -16,30 +16,43 @@ import {
   type IAutoMovieProductionRenderJobPlan,
   type IAutoMovieProductionRenderRuntimeIdentity,
   type IAutoMovieProductionRenderTier,
+  assertProductionRenderDialogueRuntimeIdentity,
+  assertProductionRenderPublicationCurrent,
   captureAutoMovieProductionFrame,
+  digestAutoMovieBytes,
   encodeAutoMoviePathSegment,
   openAutoMovieProduction,
+  parseProductionRenderManifestBytes,
+  parseProductionRenderReceiptBytes,
   planProductionRenderJob,
   productionRenderChunkStatuses,
+  productionRenderPublicationIdentity,
+  readAutoMovieFilmEffects,
   readAutoMovieFilmTimeline,
   resolveProductionRenderTierFrameFormat,
   sampleProductionRenderFrame,
   selectAutoMovieFilmReviewFrames,
-  verifyProductionRenderChunkReceipt,
   verifyProductionRenderJobPlan,
 } from "@automovie/production";
 import { autoMovieRenderBudgetRefusal } from "@automovie/render";
 import path from "node:path";
 import { isDeepStrictEqual } from "node:util";
 
+import { inspectPublishedProxyBundle } from "./assertProxyBundle";
 import { PRODUCTION_DELIVERY_TONE_MAPPING } from "./capture";
 import { inspectCurrentCaptureRuntimeClosure } from "./capture-browser";
 import { readAutoMovieHostCaptureBrowser } from "./hostBoundary";
+import { productionDialogueRuntimeIdentity } from "./productionRuntime";
 import { listRenderAttempts } from "./renderAttemptSnapshot";
 import {
   assessProductionRenderBudget,
   publishRenderBudgetEvidence,
 } from "./renderBudgetSnapshot";
+import {
+  type IProductionRenderChunkInspection,
+  inspectRenderChunkPublication,
+  productionRenderSchedulerReceipt,
+} from "./renderChunkInspection";
 import {
   type ICurrentRenderChunkPublication,
   loadCurrentRenderChunkPublication,
@@ -59,11 +72,11 @@ import {
   verifyCurrentProductionRender,
 } from "./renderReadOnlyRuntime";
 import type { IProductionSoundRuntime } from "./renderSoundRuntime";
-import {
-  assertRuntimePackageSnapshotCurrent,
-  bindRuntimePackageSnapshotGeneration,
-  snapshotRuntimePackage,
-} from "./runtimePackageSnapshot";
+
+export type {
+  IProductionRenderChunkFinding,
+  IProductionRenderChunkInspection,
+} from "./renderChunkInspection";
 
 export interface IProductionDeliveryToneCheck {
   requested: IAutoMovieRenderSpec["toneMapping"];
@@ -133,8 +146,10 @@ export const createProductionRenderPlanningRuntime = (props: {
   captureCurrentChunkPointer: (
     chunk: IAutoMovieProductionRenderChunk,
   ) => IRenderGcTargetSnapshot | null;
+  currentChunkPointerLocatorState: (
+    chunk: IAutoMovieProductionRenderChunk,
+  ) => "absent" | "resident" | "unsafe" | "unavailable";
   compareCodeUnits: (left: string, right: string) => number;
-  h264Entry: string;
   host: IProductionRenderHost;
   output: (value: unknown) => void;
   planPath: string;
@@ -158,6 +173,7 @@ export const createProductionRenderPlanningRuntime = (props: {
   const compareCodeUnits = props.compareCodeUnits;
   const gcRuntime = {
     captureCurrentChunkPointer: props.captureCurrentChunkPointer,
+    currentChunkPointerLocatorState: props.currentChunkPointerLocatorState,
   };
   const output = props.output;
 
@@ -369,6 +385,10 @@ export const createProductionRenderPlanningRuntime = (props: {
     });
     const planned = planProductionRenderJob({
       timeline,
+      effects: readAutoMovieFilmEffects(
+        project,
+        compiled.compiler.inputFingerprint,
+      ),
       production: graph.production,
       audioAssets: soundRuntime.audioAssets(project, timeline),
       runtimeIdentity,
@@ -416,11 +436,11 @@ export const createProductionRenderPlanningRuntime = (props: {
   };
 
   const renderStatus = async (plan: IAutoMovieProductionRenderJobPlan) => {
-    const currentChunks = await Promise.all(
-      plan.chunks.map((chunk) => currentChunk(plan, chunk)),
+    const inspections = await Promise.all(
+      plan.chunks.map((chunk) => inspectChunk(plan, chunk)),
     );
-    const receipts = currentChunks.flatMap((current) =>
-      current === null ? [] : [current.receipt],
+    const receipts = inspections.flatMap((inspection) =>
+      inspection.current === null ? [] : [inspection.current.receipt],
     );
     const attempts = listRenderAttempts(
       stateRoot,
@@ -428,24 +448,133 @@ export const createProductionRenderPlanningRuntime = (props: {
     ).map((attempt) => attempt.record);
     const rows = productionRenderChunkStatuses({ plan, receipts, attempts });
     return rows.map((row, index) => {
-      if (row.status !== "complete") return row;
-      return currentChunks[index] === null
-        ? {
-            ...row,
-            status: "failed" as const,
-            correction:
-              "Chunk publication tree or receipt is partial, changed, corrupt, or parser-inconsistent. Quarantine and rerender this chunk.",
-          }
-        : row;
+      const inspection = inspections[index]!;
+      if (row.status === "complete" && inspection.current === null)
+        return {
+          ...row,
+          status: "failed" as const,
+          artifact: inspection.finding,
+          correction: inspection.finding.reason,
+        };
+      return {
+        ...row,
+        artifact: inspection.finding,
+      };
     });
+  };
+
+  /** Compare the terminal ledger with the current final plan for status only. */
+  const tierPublicationStatus = (
+    plan: IAutoMovieProductionRenderJobPlan,
+  ): Array<{
+    slot: string;
+    chunk: AutoMovieContentDigest;
+    status: "planned" | "complete" | "stale";
+    correction: string;
+  }> => {
+    const expected = productionRenderPublicationIdentity(plan);
+    const project = AutoMovieProductionProject.openReadOnly(root, productionId);
+    if (plan.tier.kind === "proxy") {
+      const target = path.join(
+        project.renderRoot(),
+        "deliverables",
+        "proxy",
+        expected.fingerprint.slice(7),
+      );
+      if (renderHost.filesystem.existsSync(target) === false)
+        return [
+          {
+            slot: "publication/proxy",
+            chunk: expected.fingerprint,
+            status: "planned",
+            correction:
+              "Current proxy chunks have not been published. Run automovie render finalize after every required chunk is complete.",
+          },
+        ];
+      try {
+        const receipt = inspectPublishedProxyBundle(
+          project.renderRoot(),
+          target,
+        );
+        assertProductionRenderPublicationCurrent({
+          identity: receipt.publicationIdentity,
+          plan,
+        });
+        return [
+          {
+            slot: "publication/proxy",
+            chunk: expected.fingerprint,
+            status: "complete",
+            correction: "No correction required.",
+          },
+        ];
+      } catch (error) {
+        return [
+          {
+            slot: "publication/proxy",
+            chunk: expected.fingerprint,
+            status: "stale",
+            correction: `${error instanceof Error ? error.message : String(error)} Re-run automovie render finalize for the current proxy plan.`,
+          },
+        ];
+      }
+    }
+    const manifestBytes = project.readTrackedStateFile("render-manifest.json");
+    const receiptBytes = project.readTrackedStateFile(
+      "render-manifest-receipt.json",
+    );
+    if (manifestBytes === null || receiptBytes === null)
+      return [
+        {
+          slot: "publication/final",
+          chunk: expected.fingerprint,
+          status: "planned",
+          correction:
+            "Current final chunks have not been published. Run automovie render finalize after every required chunk is complete.",
+        },
+      ];
+    try {
+      const manifest = parseProductionRenderManifestBytes(manifestBytes);
+      const receipt = parseProductionRenderReceiptBytes(receiptBytes);
+      const identity = assertProductionRenderPublicationCurrent({
+        identity: manifest.publication,
+        plan,
+      });
+      if (
+        manifest.version !== 2 ||
+        receipt.version !== 4 ||
+        receipt.manifestDigest !== digestAutoMovieBytes(manifestBytes) ||
+        receipt.publicationFingerprint !== identity.fingerprint
+      )
+        throw new Error(
+          "The manifest and renderer receipt do not carry one matching current publication identity.",
+        );
+      return [
+        {
+          slot: "publication/final",
+          chunk: identity.fingerprint,
+          status: "complete",
+          correction: "No correction required.",
+        },
+      ];
+    } catch (error) {
+      return [
+        {
+          slot: "publication/final",
+          chunk: expected.fingerprint,
+          status: "stale",
+          correction: `${error instanceof Error ? error.message : String(error)} Re-run automovie render finalize for the current final plan.`,
+        },
+      ];
+    }
   };
 
   const currentReceipt = async (
     plan: IAutoMovieProductionRenderJobPlan,
     chunk: IAutoMovieProductionRenderChunk,
   ): Promise<IAutoMovieProductionRenderChunkReceipt | null> => {
-    const current = await currentChunk(plan, chunk);
-    return current?.receipt ?? null;
+    const inspection = await inspectChunk(plan, chunk);
+    return productionRenderSchedulerReceipt(inspection);
   };
 
   const currentChunk = async (
@@ -453,7 +582,7 @@ export const createProductionRenderPlanningRuntime = (props: {
     chunk: IAutoMovieProductionRenderChunk,
     pointer?: IRenderGcTargetSnapshot | null,
   ): Promise<ICurrentRenderChunkPublication | null> =>
-    currentChunkPublication(plan, chunk, pointer);
+    inspectChunkPublication(plan, chunk, pointer).current;
 
   /**
    * The synchronous core of {@link currentChunk}, so the final assembly can pull
@@ -464,24 +593,31 @@ export const createProductionRenderPlanningRuntime = (props: {
     plan: IAutoMovieProductionRenderJobPlan,
     chunk: IAutoMovieProductionRenderChunk,
     pointer?: IRenderGcTargetSnapshot | null,
-  ): ICurrentRenderChunkPublication | null => {
-    try {
-      const currentPointer =
-        pointer === undefined
-          ? gcRuntime.captureCurrentChunkPointer(chunk)
-          : pointer;
-      if (currentPointer === null) return null;
-      return loadCurrentRenderChunkPublication({
-        assertReceipt: (receipt) =>
-          verifyProductionRenderChunkReceipt({ plan, chunk, receipt }),
-        chunk,
-        frameFormat: plan.frameFormat,
-        pointer: currentPointer,
-      });
-    } catch {
-      return null;
-    }
-  };
+  ): ICurrentRenderChunkPublication | null =>
+    inspectChunkPublication(plan, chunk, pointer).current;
+
+  const inspectChunk = async (
+    plan: IAutoMovieProductionRenderJobPlan,
+    chunk: IAutoMovieProductionRenderChunk,
+    pointer?: IRenderGcTargetSnapshot | null,
+  ): Promise<IProductionRenderChunkInspection> =>
+    inspectChunkPublication(plan, chunk, pointer);
+
+  const inspectChunkPublication = (
+    plan: IAutoMovieProductionRenderJobPlan,
+    chunk: IAutoMovieProductionRenderChunk,
+    pointer?: IRenderGcTargetSnapshot | null,
+  ): IProductionRenderChunkInspection =>
+    inspectRenderChunkPublication({
+      chunk,
+      plan,
+      pointer,
+      seams: {
+        capturePointer: gcRuntime.captureCurrentChunkPointer,
+        loadCurrent: loadCurrentRenderChunkPublication,
+        locatorState: gcRuntime.currentChunkPointerLocatorState,
+      },
+    });
 
   const productionCaptureContext = (): AutoMovieProductionContext =>
     new AutoMovieProductionContext(renderHost.capture, root, productionId);
@@ -549,11 +685,8 @@ export const createProductionRenderPlanningRuntime = (props: {
     }));
 
   const snapshotProductionEncoderIdentity = (fps: number) => {
-    const snapshot = snapshotRuntimePackage({
-      entry: props.h264Entry,
-      moduleClosure: true,
-      packageName: "h264-mp4-encoder",
-    });
+    renderHost.assertRuntimePackagesCurrent();
+    const snapshot = renderHost.h264Generation.snapshot;
     const encoder: IAutoMovieProductionEncoderIdentity = {
       package: snapshot.package,
       version: snapshot.version,
@@ -567,8 +700,7 @@ export const createProductionRenderPlanningRuntime = (props: {
     };
     return {
       identity: encoder,
-      assertCurrent: () => assertRuntimePackageSnapshotCurrent(snapshot),
-      bindCurrent: () => bindRuntimePackageSnapshotGeneration(snapshot),
+      assertCurrent: renderHost.assertRuntimePackagesCurrent,
     };
   };
 
@@ -576,7 +708,6 @@ export const createProductionRenderPlanningRuntime = (props: {
     fps: number,
   ): IAutoMovieProductionEncoderIdentity => {
     const snapshot = snapshotProductionEncoderIdentity(fps);
-    snapshot.bindCurrent();
     return snapshot.identity;
   };
 
@@ -608,6 +739,7 @@ export const createProductionRenderPlanningRuntime = (props: {
     });
     return {
       timeline,
+      effects: readAutoMovieFilmEffects(project, plan.compileFingerprint),
       production,
       runtimeIdentity,
       sourceFingerprints: renderShotFingerprints(project, timeline),
@@ -669,8 +801,12 @@ export const createProductionRenderPlanningRuntime = (props: {
       plan.runtimeIdentity as Partial<IAutoMovieProductionRenderRuntimeIdentity> | null;
     if (
       stored === null ||
-      stored.protocolVersion !== "automovie.production-render-runtime.v2" ||
+      stored.protocolVersion !== "automovie.production-render-runtime.v3" ||
       stored.sourceDigest !== sound.sourceDigest ||
+      stored.dialogueRuntimeIdentity !==
+        (sound.plan.dialogue.length === 0
+          ? null
+          : productionDialogueRuntimeIdentity(sound.dialogueRuntime)) ||
       isDeepStrictEqual(stored.capture?.runtimeClosure, capture.identity) ===
         false ||
       isDeepStrictEqual(stored.encoder, encoder.identity) === false
@@ -716,22 +852,35 @@ export const createProductionRenderPlanningRuntime = (props: {
       width: props.width,
       height: props.height,
     });
+    const dialogueRuntimeIdentity =
+      preparedSound.plan.dialogue.length === 0
+        ? null
+        : productionDialogueRuntimeIdentity(preparedSound.dialogueRuntime);
+    assertProductionRenderDialogueRuntimeIdentity({
+      boundary: "render planning preflight",
+      expected: dialogueRuntimeIdentity,
+      observed: preflight.dialogueRuntimeIdentity,
+    });
     return {
-      protocolVersion: "automovie.production-render-runtime.v2",
+      protocolVersion: "automovie.production-render-runtime.v3",
       sourceDigest: soundRuntime.sourceDigest(
         props.project,
         props.timeline,
         preparedSound.dialogueRuntime,
       ),
+      dialogueRuntimeIdentity,
       capture: preflight.runtimeIdentity,
       encoder: productionEncoderIdentity(props.fps),
     };
   };
 
   return {
+    assertPlanCurrent,
     captureReviewEvidence,
     currentChunk,
     currentChunkPublication,
+    inspectChunk,
+    inspectChunkPublication,
     currentPlan,
     currentReceipt,
     currentStoredPlan,
@@ -745,6 +894,10 @@ export const createProductionRenderPlanningRuntime = (props: {
         inspectInputs: inspectCurrentRenderPlanInputs,
         output,
         readPlan,
+        reportStatus: async (plan) => [
+          ...(await renderStatus(plan)),
+          ...tierPublicationStatus(plan),
+        ],
         renderStatus,
         runtimeIdentitiesEqual: isDeepStrictEqual,
         sourceFingerprint,

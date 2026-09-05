@@ -32,7 +32,7 @@ import { TestValidator } from "@nestia/e2e";
 export const test_cli_scaffold_render_refusals = (): void => {
   const refusal = (name: string): string => {
     try {
-      renderScaffold({ name });
+      renderScaffold({ name, language: "english" });
       return "accepted";
     } catch (error) {
       return error instanceof Error ? error.message : String(error);

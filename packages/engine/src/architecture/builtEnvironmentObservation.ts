@@ -645,7 +645,6 @@ const thresholdPose = (props: {
  *
  * @evidence requirements/review/subject-inspection.md#review-subject-viewpoint-ownership Enumerates the closed interior station population and proves each camera stands inside its own space.
  * @evidence specifications/review-and-acceptance/subject-surface-and-inspection.md#review-system-subject-viewpoint-plan Implements the centre, corner, and threshold station derivation over a stated space volume.
- * @evidencePart specifications/review-and-acceptance/subject-surface-and-inspection.md#review-system-subject-viewpoint-plan::interior-station-containment
  */
 export const builtSpaceObservationStations = (
   environment: IAutoMovieBuiltEnvironment,
@@ -773,7 +772,6 @@ export const builtSpaceObservationStations = (
  *
  * @evidence requirements/review/subject-inspection.md#review-subject-viewpoint-ownership Aggregates every derived envelope, corner, entrance, space, and route population per building unit.
  * @evidence specifications/review-and-acceptance/subject-surface-and-inspection.md#review-system-subject-viewpoint-plan Implements the building aggregate the review denominator and the subject hierarchy share.
- * @evidencePart specifications/review-and-acceptance/subject-surface-and-inspection.md#review-system-subject-viewpoint-plan::topology-derived-population
  */
 export const builtEnvironmentBuildingCensus = (
   environment: IAutoMovieBuiltEnvironment,

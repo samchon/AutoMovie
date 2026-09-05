@@ -12,7 +12,7 @@ export interface IAutoMovieBuildingSidecar {
  * Split from the command because none of it is I/O: it is the naming, and the
  * naming is where a building id becomes a path. `deriveBuilding.ts` opens
  * project state at module level and refuses unless it is current, so nothing
- * could load it to see whether an id is encoded before it is joined -- and an
+ * could load it to see whether an id is encoded before it is joined; and an
  * id is author-chosen text, not a filename.
  *
  * Every segment goes through `encode`, supplied by the caller so this stays a

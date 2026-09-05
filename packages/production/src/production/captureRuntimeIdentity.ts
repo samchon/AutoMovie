@@ -10,14 +10,25 @@ import {
  * Current structured capture-runtime identity protocol.
  */
 export const AUTOMOVIE_CAPTURE_RUNTIME_IDENTITY_PROTOCOL =
-  "automovie.capture-runtime.v2";
+  "automovie.capture-runtime.v2" satisfies IAutoMovieCaptureRuntimeIdentity["protocolVersion"];
 
 /**
  * Validate and canonically encode one capture runtime identity.
+ * @evidence requirements/rendering/headless-and-platform-determinism.md#rendering-cross-platform-evidence Records the compared runtime identity in canonical form beside captured evidence so a reproducibility claim names what it compared.
+ * @evidence specifications/editorial-render-and-delivery/render-schedule-state-and-headless.md#spec-render-headless-platform Canonicalizes headless and interactive capture identity into one encoding in which the execution mode is a field rather than a separate contract.
  */
 export const canonicalAutoMovieCaptureRuntimeIdentity = (
   identity: IAutoMovieCaptureRuntimeIdentity,
 ): string => {
+  if (
+    (identity as { protocolVersion?: unknown }).protocolVersion !==
+    AUTOMOVIE_CAPTURE_RUNTIME_IDENTITY_PROTOCOL
+  )
+    throw new Error(
+      `Unsupported AutoMovie capture runtime identity protocol ${JSON.stringify(
+        (identity as { protocolVersion?: unknown }).protocolVersion,
+      )}; expected ${AUTOMOVIE_CAPTURE_RUNTIME_IDENTITY_PROTOCOL}.`,
+    );
   const validation =
     typia.validateEquals<IAutoMovieCaptureRuntimeIdentity>(identity);
   if (validation.success === false)
@@ -165,6 +176,7 @@ const compareCodeUnits = (left: string, right: string): number =>
 
 /**
  * Parse one exact canonical identity embedded in a current render manifest.
+ * @evidence specifications/editorial-render-and-delivery/render-schedule-state-and-headless.md#spec-render-capture-runtime-identity Validates the versioned schema and canonical encoding of a capture runtime identity before it may vouch for pixel evidence.
  */
 export const parseAutoMovieCaptureRuntimeIdentity = (
   encoded: string,
@@ -177,6 +189,17 @@ export const parseAutoMovieCaptureRuntimeIdentity = (
       `Capture runtime identity is not JSON: ${String(error)}. Return canonical structured identity from the capture adapter.`,
     );
   }
+  if (value === null || typeof value !== "object" || Array.isArray(value))
+    throw new Error(
+      "Capture runtime identity must decode to one versioned JSON object.",
+    );
+  const protocolVersion = (value as Record<string, unknown>).protocolVersion;
+  if (protocolVersion !== AUTOMOVIE_CAPTURE_RUNTIME_IDENTITY_PROTOCOL)
+    throw new Error(
+      `Unsupported AutoMovie capture runtime identity protocol ${JSON.stringify(
+        protocolVersion,
+      )}; expected ${AUTOMOVIE_CAPTURE_RUNTIME_IDENTITY_PROTOCOL}.`,
+    );
   const canonical = canonicalAutoMovieCaptureRuntimeIdentity(
     value as IAutoMovieCaptureRuntimeIdentity,
   );

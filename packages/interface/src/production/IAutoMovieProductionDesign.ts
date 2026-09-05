@@ -163,10 +163,16 @@ export interface IAutoMovieCaptionReadabilityProfile {
    */
   version: number;
   /**
-   * Canonical language tag whose cues this profile evaluates.
+   * RFC 5646 well-formed language tag whose cues this profile evaluates.
+   *
+   * Authored spelling is retained while identity comparison is ASCII
+   * case-insensitive. Registry membership and Preferred-Value replacement are
+   * outside this field's validation contract.
    *
    * @evidence requirements/delivery-and-accessibility/captions-subtitles-and-cues.md#delivery-caption-readability-profile Keeps thresholds language-specific and production-owned.
+   * @evidence requirements/delivery-and-accessibility/localization-and-language-versions.md#delivery-language-selection Preserves authored display spelling while language lookup uses one case-insensitive identity.
    * @evidence specifications/editorial-render-and-delivery/delivery-audio-text-and-localization.md#spec-delivery-caption-readability-profile Selects which cue population the profile evaluates.
+   * @evidence specifications/editorial-render-and-delivery/delivery-audio-text-and-localization.md#spec-delivery-localization Applies the shared RFC 5646 syntax and comparison boundary.
    */
   language: string;
   /**
@@ -175,12 +181,7 @@ export interface IAutoMovieCaptionReadabilityProfile {
    * @evidence requirements/delivery-and-accessibility/captions-subtitles-and-cues.md#delivery-caption-readability-profile Requires segmentation identity alongside numeric thresholds.
    * @evidence specifications/editorial-render-and-delivery/delivery-audio-text-and-localization.md#spec-delivery-caption-readability-profile Makes grapheme measurement reproducible without hardcoding one Unicode family.
    */
-  segmentation: {
-    /** Non-blank algorithm identity supported by the selected validator. */
-    algorithm: string;
-    /** Exact algorithm or segmentation-data revision. */
-    version: string;
-  };
+  segmentation: IAutoMovieCaptionGraphemeSegmentationIdentity;
   /**
    * Maximum displayed graphemes per second and its boundary semantics.
    *
@@ -219,6 +220,40 @@ export interface IAutoMovieCaptionReadabilityProfile {
 }
 
 /**
+ * Complete execution identity of one caption grapheme segmenter.
+ *
+ * Locale-sensitive runtimes retain both the requested locale and the locale
+ * they actually resolved. An implementation may claim locale neutrality only
+ * when locale is not an input to its segmentation behavior.
+ *
+ * @evidence requirements/delivery-and-accessibility/captions-subtitles-and-cues.md#delivery-caption-readability-profile Makes the actual grapheme execution basis observable beside every measurement.
+ * @evidence specifications/editorial-render-and-delivery/delivery-audio-text-and-localization.md#spec-delivery-caption-readability-profile Defines the complete identity a profile must select before it can produce a verdict.
+ * @author Samchon
+ */
+export interface IAutoMovieCaptionGraphemeSegmentationIdentity {
+  /** Non-blank algorithm identity supported by the selected validator. */
+  algorithm: string;
+  /** Exact algorithm or segmentation-data revision. */
+  version: string;
+  /** Grapheme-cluster granularity used to measure caption text. */
+  granularity: "grapheme";
+  /** Locale participation in the actual segmentation execution. */
+  locale:
+    | {
+        /** The runtime resolves a requested locale before segmenting. */
+        kind: "requested-resolved";
+        /** Non-blank locale passed to the runtime. */
+        requested: string;
+        /** Non-blank locale reported by the runtime after resolution. */
+        resolved: string;
+      }
+    | {
+        /** The algorithm does not consume or resolve locale state. */
+        kind: "locale-neutral";
+      };
+}
+
+/**
  * One production-owned numeric caption boundary.
  *
  * @evidence requirements/delivery-and-accessibility/captions-subtitles-and-cues.md#delivery-caption-readability-profile Makes equality behavior part of the declared threshold.
@@ -240,6 +275,64 @@ export interface IAutoMovieCaptionReadabilityBoundary {
    * @evidence specifications/editorial-render-and-delivery/delivery-audio-text-and-localization.md#spec-delivery-caption-readability-profile Prevents validators from assuming one boundary convention.
    */
   inclusive: boolean;
+}
+
+/**
+ * Exact rational frame rate for a production timeline.
+ *
+ * @evidence requirements/editorial/rational-time-and-ranges.md#editorial-canonical-time Preserves fractional frame rates as authored rational values whose identity survives reduction instead of a lossy decimal proxy.
+ * @evidence specifications/editorial-render-and-delivery/rational-timeline-and-composition.md#spec-editorial-rational-timeline Defines the portable numerator and denominator consumed by timeline calculations.
+ */
+export interface IAutoMovieProductionFrameRate {
+  /**
+   * Positive integer numerator.
+   * @evidence requirements/editorial/rational-time-and-ranges.md#editorial-canonical-time Preserves the authored rate numerator of the canonical rational rate.
+   * @evidence specifications/editorial-render-and-delivery/rational-timeline-and-composition.md#spec-editorial-rational-timeline Supplies the canonical clock numerator.
+   */
+  numerator: number;
+  /**
+   * Positive integer denominator.
+   * @evidence requirements/editorial/rational-time-and-ranges.md#editorial-canonical-time Preserves the authored positive rate denominator of the canonical rational rate.
+   * @evidence specifications/editorial-render-and-delivery/rational-timeline-and-composition.md#spec-editorial-rational-timeline Supplies the canonical clock denominator.
+   */
+  denominator: number;
+}
+
+/**
+ * Explicit delivery lane for one occurrence in the compiled film timeline.
+ *
+ * @evidence requirements/repaint/sequence-continuity-and-publication.md#repaint-mixed-delivery Requires every delivered occurrence to name exactly one deterministic or repainted lane.
+ * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-repaint-failure-publication Carries occurrence identity without inferring a lane from resident artifacts.
+ */
+export interface IAutoMovieProductionVisualDeliveryLane {
+  /** Exact occurrence identity derived from its current timeline position. */
+  occurrence: string;
+  /** Current compiled shot id at that occurrence. */
+  shot: string;
+  /** Sole selected source class for the occurrence. */
+  lane: "deterministic" | "repainted";
+}
+
+/**
+ * Reviewed policy for every adjacent crossing between unlike visual lanes.
+ *
+ * @evidence requirements/repaint/sequence-continuity-and-publication.md#repaint-mixed-delivery Binds each actual lane crossing to the current aggregate observation.
+ * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-repaint-structure-continuity Makes transition review versioned and occurrence-addressed.
+ */
+export interface IAutoMovieProductionMixedVisualDeliveryPolicy {
+  /** Protocol version. */
+  version: 1;
+  /** Current aggregate sequence observation digest. */
+  observationDigest: AutoMovieContentDigest;
+  /** Exact ordered crossing reviews. */
+  transitions: Array<{
+    /** Occurrence immediately before the crossing. */
+    fromOccurrence: string;
+    /** Occurrence immediately after the crossing. */
+    toOccurrence: string;
+    /** Immutable review receipt digest for this crossing. */
+    reviewDigest: AutoMovieContentDigest;
+  }>;
 }
 
 /**
@@ -279,7 +372,7 @@ export interface IAutoMovieProductionDesign {
    */
   targetRuntimeSeconds: number;
   /**
-   * Final visual delivery layer.
+   * Legacy all-one-lane shorthand or an explicit mixed film delivery.
    *
    * Deterministic delivery uses compiler/render output directly. Repainted
    * delivery keeps that output as technical truth and additionally requires a
@@ -289,7 +382,21 @@ export interface IAutoMovieProductionDesign {
    * @evidence requirements/production-design/art-direction-and-visual-language.md#production-design-art-direction-exceptions Exposes `visualDelivery` as the portable data boundary for the production design art direction exceptions requirement.
    * @evidence specifications/narrative-and-intent/design-authority-and-visual-language.md#narrative-intent-graphics-style-exceptions Types `visualDelivery` for the narrative intent graphics style exceptions system contract.
    */
-  visualDelivery: "deterministic" | "repainted";
+  visualDelivery: "deterministic" | "repainted" | "mixed";
+  /**
+   * Ordered explicit occurrence lanes, required exactly for mixed delivery.
+   *
+   * @evidence requirements/repaint/sequence-continuity-and-publication.md#repaint-mixed-delivery Prevents receipt presence or absence from choosing delivery membership.
+   * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-repaint-failure-publication Supplies the exact population consumed by final conform and reopen.
+   */
+  visualDeliveryLanes?: IAutoMovieProductionVisualDeliveryLane[];
+  /**
+   * Versioned crossing policy, required exactly when explicit lanes cross.
+   *
+   * @evidence requirements/repaint/sequence-continuity-and-publication.md#repaint-mixed-delivery Requires reviewed transition identity for every actual lane change.
+   * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-repaint-structure-continuity Binds the crossing set to the current aggregate observation.
+   */
+  mixedVisualDeliveryPolicy?: IAutoMovieProductionMixedVisualDeliveryPolicy;
   /**
    * Story clock every pinned shot and cross-shot criterion is measured on.
    *
@@ -563,6 +670,8 @@ export interface IAutoMovieProductionDesign {
    *
    * @evidence requirements/production-design/art-direction-and-visual-language.md#production-design-art-direction-exceptions Exposes `frameFormat` as the portable data boundary for the production design art direction exceptions requirement.
    * @evidence specifications/narrative-and-intent/design-authority-and-visual-language.md#narrative-intent-graphics-style-exceptions Types `frameFormat` for the narrative intent graphics style exceptions system contract.
+   * @evidence requirements/editorial/rational-time-and-ranges.md#editorial-canonical-time Preserves the authored frame clock as an exact reduced rational identity.
+   * @evidence specifications/editorial-render-and-delivery/rational-timeline-and-composition.md#spec-editorial-rational-timeline Supplies the canonical timeline numerator and denominator.
    */
   frameFormat: {
     /**
@@ -577,6 +686,11 @@ export interface IAutoMovieProductionDesign {
     height: number;
     /** Finite frames per second, strictly above zero. */
     fps: number;
+    /**
+     * Exact frame rate when `fps` is fractional. Integer legacy rates use an
+     * equivalent denominator of one when this field is omitted.
+     */
+    frameRate?: IAutoMovieProductionFrameRate;
     /** Output color space. */
     colorSpace: "srgb";
     /**

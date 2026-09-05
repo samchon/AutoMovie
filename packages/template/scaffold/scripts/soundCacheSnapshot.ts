@@ -3,8 +3,7 @@ import path from "node:path";
 
 import {
   type IRenderGcTargetSnapshot,
-  assertCapturedRenderTarget,
-  captureRenderGcTarget,
+  isRenderGcPreservedPath,
 } from "./renderGcSnapshot";
 
 export interface IProductionSoundCacheCandidate {
@@ -12,10 +11,23 @@ export interface IProductionSoundCacheCandidate {
   snapshot: IRenderGcTargetSnapshot;
 }
 
-/** Capture every direct dialogue and model generation from exact physical trees. */
+/** Capture and revalidation seams behind one sound cache inventory. */
+export interface IProductionSoundCacheSeams {
+  assertCaptured: (snapshot: IRenderGcTargetSnapshot) => void;
+  captureTarget: (base: string, target: string) => IRenderGcTargetSnapshot;
+}
+
+/**
+ * Capture every direct dialogue and model generation from exact physical trees.
+ *
+ * Each cache root is its own GC ownership root, so a removal applied to one of
+ * its generations stages through a preserved directory beside the generations.
+ * That directory is GC's, not a cache generation: reading it as one would plan
+ * its removal into itself on the next apply.
+ */
 export const inventoryProductionSoundCaches = (props: {
-  captureTarget: typeof captureRenderGcTarget;
   productionStateRoot: string;
+  seams: IProductionSoundCacheSeams;
 }): IProductionSoundCacheCandidate[] => [
   ...inventoryCacheRoot({
     ...props,
@@ -30,10 +42,10 @@ export const inventoryProductionSoundCaches = (props: {
 ];
 
 const inventoryCacheRoot = (props: {
-  captureTarget: typeof captureRenderGcTarget;
   kind: "dialogue-cache" | "model-cache";
   logicalRoot: "audio-cache/kokoro" | "model-cache/kokoro";
   productionStateRoot: string;
+  seams: IProductionSoundCacheSeams;
 }): IProductionSoundCacheCandidate[] => {
   const rootPath = path.join(
     props.productionStateRoot,
@@ -41,7 +53,7 @@ const inventoryCacheRoot = (props: {
   );
   let root: IRenderGcTargetSnapshot;
   try {
-    root = props.captureTarget(props.productionStateRoot, rootPath);
+    root = props.seams.captureTarget(props.productionStateRoot, rootPath);
   } catch (error) {
     if (
       (error as NodeJS.ErrnoException).code === "ENOENT" ||
@@ -56,10 +68,13 @@ const inventoryCacheRoot = (props: {
     );
   const output = root.entries
     .filter(
-      (entry) => entry.path.length !== 0 && entry.path.includes("/") === false,
+      (entry) =>
+        entry.path.length !== 0 &&
+        entry.path.includes("/") === false &&
+        isRenderGcPreservedPath(entry.path) === false,
     )
     .map((entry) => {
-      const snapshot = props.captureTarget(
+      const snapshot = props.seams.captureTarget(
         root.target,
         path.join(root.target, entry.path),
       );
@@ -69,10 +84,13 @@ const inventoryCacheRoot = (props: {
           kind: props.kind,
           digest: snapshot.contentFingerprint,
           bytes: snapshot.bytes,
+          generation: snapshot.targetIdentity,
+          fingerprint: snapshot.contentFingerprint,
+          observation: null,
         },
         snapshot,
       } satisfies IProductionSoundCacheCandidate;
     });
-  assertCapturedRenderTarget(root);
+  props.seams.assertCaptured(root);
   return output;
 };

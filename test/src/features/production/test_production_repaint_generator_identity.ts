@@ -131,7 +131,17 @@ export const test_production_repaint_generator_identity = (): void => {
     { ...provenance, credential: "must-not-enter-provenance" },
     { ...provenance, source: "" },
     { ...provenance, source: " padded " },
+    {
+      ...provenance,
+      source: "https://user:secret@models.example/repaint-model",
+    },
+    { ...provenance, source: "https://[invalid" },
     { ...provenance, license: "" },
+    {
+      ...provenance,
+      license: "https://license-user:secret@licenses.example/repaint",
+    },
+    { ...provenance, license: "https://[invalid" },
     { ...provenance, termsCheckedAt: "today" },
     { ...provenance, termsCheckedAt: "2026-02-30" },
     { ...provenance, cost: "" },
@@ -439,10 +449,37 @@ export const test_production_repaint_generator_identity = (): void => {
 
   const sourceManifest = {
     frames: [
-      { path: "beauty-0.png", pass: "beauty", digest: digest("beauty-0") },
-      { path: "depth-0.png", pass: "depth", digest: digest("depth-0") },
-      { path: "depth-1.png", pass: "depth", digest: digest("depth-1") },
-      { path: "mask-0.png", pass: "mask", digest: digest("mask-0") },
+      {
+        index: 0,
+        path: "beauty-0.png",
+        pass: "beauty",
+        digest: digest("beauty-0"),
+      },
+      {
+        index: 0,
+        path: "depth-0.png",
+        pass: "depth",
+        digest: digest("depth-0"),
+      },
+      {
+        index: 1,
+        path: "depth-1.png",
+        pass: "depth",
+        digest: digest("depth-1"),
+      },
+      {
+        index: 0,
+        path: "mask-0.png",
+        pass: "mask",
+        digest: digest("mask-0"),
+      },
+    ],
+    semanticMasks: [
+      {
+        frame: 0,
+        pass: "mask",
+        coverage: { unresolved: [], unaddressed: 0 },
+      },
     ],
   } as unknown as IAutoMovieRenderBundleManifest;
   const sourceFrames = sourceManifest.frames.map(({ path, digest }) => ({
@@ -476,6 +513,13 @@ export const test_production_repaint_generator_identity = (): void => {
           ],
         }) !== sourceFingerprint,
       controls: productionRepaintStructuralControls(sourceManifest),
+      incompleteControls: productionRepaintStructuralControls({
+        ...sourceManifest,
+        semanticMasks: sourceManifest.semanticMasks.map((semantic) => ({
+          ...semantic,
+          coverage: { unresolved: ["node:missing"], unaddressed: 0 },
+        })),
+      }),
       requestStable:
         productionRepaintRequestFingerprint({
           ...outputRequest,
@@ -503,6 +547,12 @@ export const test_production_repaint_generator_identity = (): void => {
           frameDigests: [digest("depth-0"), digest("depth-1")],
         },
         { pass: "mask", frameDigests: [digest("mask-0")] },
+      ],
+      incompleteControls: [
+        {
+          pass: "depth",
+          frameDigests: [digest("depth-0"), digest("depth-1")],
+        },
       ],
       requestStable: true,
       requestChanges: true,
@@ -546,6 +596,38 @@ export const test_production_repaint_generator_identity = (): void => {
         runtimeSeconds: 1,
         frameCount: 24,
         fps: 24,
+        frameRate: { numerator: 24, denominator: 1 },
+        brands: { major: "isom", compatible: ["isom"] },
+        coded: { width: 16, height: 16 },
+        trackDisplay: { width16_16: 1_048_576, height16_16: 1_048_576 },
+        trackMatrix: [65_536, 0, 0, 0, 65_536, 0, 0, 0, 1_073_741_824],
+        pixelAspect: { kind: "implicit-square" },
+        presentation: {
+          movieTimescale: 24,
+          mediaTimescale: 24,
+          movieDuration: 24,
+          mediaDuration: 24,
+          edits: [],
+        },
+        samples: {
+          count: 24,
+          duration: 1,
+          timescale: 24,
+          firstDts: 0,
+          lastDts: 23,
+          firstCts: 0,
+          lastCts: 23,
+        },
+        color: {
+          container: {
+            kind: "nclx",
+            primaries: 1,
+            transfer: 13,
+            matrix: 1,
+            fullRange: true,
+          },
+          resolved: { kind: "srgb", source: "container" },
+        },
       },
     },
   };

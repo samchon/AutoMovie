@@ -153,6 +153,25 @@ Do not list the contract anchors that currently cite a source. Those relationshi
 | WikiProject AI Cleanup, Signs of AI writing | https://en.wikipedia.org/wiki/Wikipedia:Signs_of_AI_writing | Language, structural, and formatting marks of unedited machine-generated prose |
 | Padmakumar and He, content diversity | https://arxiv.org/abs/2309.05196 | Measured loss of lexical and content diversity in model-assisted writing |
 | Chakrabarty and colleagues, Art or Artifice? | https://arxiv.org/abs/2309.14556 | Creative-writing tests professional work passes and machine-generated work often fails |
+| Kobak and colleagues, Delving into LLM-assisted writing | https://arxiv.org/abs/2406.07016 | Population-level vocabulary shifts in biomedical abstracts; it does not identify one document as machine-written |
+| Liang and colleagues, Mapping the Increasing Use of LLMs in Scientific Papers | https://arxiv.org/abs/2404.01268 | Corpus-level estimation of LLM-modified scientific writing; its aggregate method is not an individual-text detector |
+| Shaib and colleagues, Measuring AI Slop in Text | https://arxiv.org/abs/2509.19163 | Span-level coherence and relevance dimensions behind partly subjective quality judgments |
+| Jain and colleagues, Task-Dependent Evaluation of LLM Output Homogenization | https://arxiv.org/abs/2509.21267 | Functional diversity depends on the task; required regularity must not be mistaken for harmful homogenization |
+| Baumler and colleagues, Can You Make It Sound Like You? | https://arxiv.org/abs/2604.24444 | Post-editing can improve perceived personal style while retaining measurable model influence |
+| van Nuenen, Voice Under Revision | https://arxiv.org/abs/2604.22142 | Model revision can normalize personal narrative across several linguistic markers; the study does not define a universal banned-word list |
+| Abdulhai and colleagues, How LLMs Distort Our Written Language | https://arxiv.org/abs/2603.18161 | Even narrow editing prompts can change stance and meaning; its measured effects are not AutoMovie acceptance thresholds |
+| Agarwal, Naaman, and Vashistha, AI Suggestions Homogenize Writing Toward Western Styles | https://arxiv.org/abs/2409.11360 | Cross-cultural writing assistance can pull language toward Western norms; the observed population does not define every language's local default surface |
+
+## Building-code research limits
+
+Model codes, adopted codes, and vendor summaries are research inputs, not universal geometry constants. A production records the applicable jurisdiction, edition, adoption, amendment, and exact used section before a dimension becomes settings canon.
+
+| Source | URL | What it settles |
+| --- | --- | --- |
+| ICC, 2021 International Building Code chapter 10 | https://codes.iccsafe.org/content/IBC2021P1/chapter-10-means-of-egress | Model-code egress provisions before jurisdictional adoption and amendment |
+| UpCodes, Illinois 2021 IBC chapter 10 | https://up.codes/viewer/illinois/ibc-2021/chapter/10/means-of-egress | One jurisdiction-specific presentation whose applicability still requires adoption and amendment verification |
+| UpCodes, hallway summaries | https://up.codes/s/hallways | A discovery summary only; follow the cited governing code and jurisdiction before adopting a value |
+| USA Made Supply, IBC corridor width summary | https://usmadesupply.com/resources/building-codes-standards/emergency-life-safety/ibc-corridor-width | A vendor summary useful for discovery, never authority for a production dimension |
 
 ## Retrieval limits
 

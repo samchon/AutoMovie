@@ -61,7 +61,7 @@ export interface IAutoMovieTextureScaleFinding {
  * where both halves of the question exist: a surface carrying its own texture
  * coordinates, and a binding that declared what one unit of them means. A
  * production whose surfaces are primitives, or whose bindings are bare asset
- * ids, offers it nothing — and "nothing to measure" and "measured and correct"
+ * ids, offers it nothing : and "nothing to measure" and "measured and correct"
  * are the same empty finding list.
  *
  * Measured on a real production while this script was written: 197 models, 398
@@ -114,8 +114,8 @@ export interface IAutoMovieTextureScaleReport {
  * Nothing in compilation runs `validateTextureScale`, and shot source cannot
  * import it: a build function runs in a deterministic no-I/O sandbox over a
  * published engine surface this validator is deliberately off. The question it
- * answers is also not a frame — it is whether a finish will read at the size it
- * was authored at — so it is not compiler output either. That leaves the third
+ * answers is also not a frame : it is whether a finish will read at the size it
+ * was authored at : so it is not compiler output either. That leaves the third
  * place, an ordinary Node script over compiler-owned state, which is where the
  * `GEOMETRY` and `MODEL_RECIPE` guides send an author for it.
  *

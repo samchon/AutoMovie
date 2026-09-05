@@ -29,15 +29,3 @@ Review question: what behavior, value, type boundary, invalid-state response, or
 When this principle fails, implement or replace the source owner instead of adding evidence text. If the missing decision belongs to design, settings, screenplay, or brief authorship, repair that upstream owner first and propagate the result before returning to source.
 
 Sources: [TypeScript handbook on functions as typed implementation boundaries](https://www.typescriptlang.org/docs/handbook/2/functions.html); [NASA systems engineering handbook on verification-ready implementation](https://www.nasa.gov/reference/systems-engineering-handbook/)
-
-## Source-owner evidence-content conformance {#source-evidence-content-conformance}
-
-Every acknowledgement and review attached to the current source owner states a relationship that actually holds between its complete type, value, or behavior and the target. A clean compiler, satisfied cardinality, and current review fingerprint do not substitute for semantic truth. Each reason names the concrete implemented structure, state, transition, error, serialization, shot result, or editorial consequence by which this owner realizes the target.
-
-An unrelated or bundled target, a generic or copied reason, a design citation that the implementation contradicts, a review renewed without rereading behavior, a mechanically refreshed fingerprint, or code added only to echo a target is a violation. Moving a declaration, weakening a population, or replacing a false acknowledgement with an exclusion does not repair one.
-
-Review question: which evidence statement on this owner claims a host-target relationship that its complete type, value, behavior, configured population, or review state does not establish?
-
-When this principle fails, stop the evidence batch. Read the complete source owner, target, graph claim, callers, tests, and generated consequence; repair the earliest defect in authorship, ownership, implementation, or statement; then rerun the source and downstream verification before renewing evidence.
-
-Sources: [Google DeepMind on specification gaming](https://deepmind.google/blog/specification-gaming-the-flip-side-of-ai-ingenuity/); [NASA on distinguishing symptoms from root causes and tracing affected areas](https://swehb.nasa.gov/spaces/SWEHBVC/pages/50889445/SWE-204%2B-%2BProcess%2BAssessments); [ttsc on evidence relationships between selected hosts and references](https://ttsc.dev/docs/evidence/claims/)

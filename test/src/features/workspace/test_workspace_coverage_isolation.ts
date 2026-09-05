@@ -6,17 +6,18 @@ import { pathToFileURL } from "node:url";
 
 import {
   coverageMissingScripts,
-  coverageRecordCount,
+  coverageNeverRecorded,
   coverageRecords,
+  coverageRunPaths,
   coverageScriptShapes,
-  coverageTemporaryDirectory,
+  measuredScriptIdentity,
 } from "../../coverage/measureCoverage";
 import {
   coverageProcessIsEntry,
   coverageRunDependencies,
+  coverageStageStatus,
   runCoverage,
   runCoverageCli,
-  setCoverageExitStatus,
 } from "../../coverage/runCoverage";
 import { namedFacts } from "../internal/predicates";
 
@@ -70,6 +71,14 @@ import { namedFacts } from "../internal/predicates";
  *    changed gate's verdict describe a set other than the one it names, and both
  *    of its statuses are pinned so a step wired to a gate that cannot refuse
  *    would show here.
+ * 6. Every consumer receives the one publication the measurement returned; a
+ *    success that returns none, a stage that returns a status outside 0, 1
+ *    and 2, and a measurement, consumer or cleanup that throws are each an
+ *    instrument red named on its own line rather than a status guessed from a
+ *    boolean, and a consumer that throws still has its run removed.
+ * 7. A raw script URL inside the repository has a source identity only when
+ *    the authored-source policy admits it: a toolchain module, an unmeasured
+ *    package, an entry barrel and another checkout's file are all refused.
  */
 export const test_workspace_coverage_isolation = (): void => {
   // A directory holding a complete record, a truncated one, and two things that
@@ -149,26 +158,67 @@ export const test_workspace_coverage_isolation = (): void => {
   );
 
   const drawn = {
-    first: coverageTemporaryDirectory(),
-    second: coverageTemporaryDirectory(),
-    counted: coverageRecordCount(records),
-    absent: coverageRecordCount(path.join(records, "never-created")),
+    run: coverageRunPaths(),
+    first: coverageRunPaths().rootDirectory,
+    second: coverageRunPaths().rootDirectory,
     walked: coverageRecords(records),
+    absent: coverageRecords(path.join(records, "never-created")),
     scripts: coverageMissingScripts(records),
     shapes: coverageScriptShapes(shaped),
     narrow: coverageScriptShapes(shaped, ["packages/face/src"]),
-    hosts: coverageScriptShapes(hostShapes, ["packages/engine/src"]).urls,
+    hosts:
+      Number(
+        measuredScriptIdentity(
+          "file:///D:/repo/packages/engine/src/windows.ts",
+          ["."],
+          "D:/repo",
+        ) !== null,
+      ) +
+      Number(
+        measuredScriptIdentity(
+          "file:///home/runner/packages/engine/src/posix.ts",
+          ["."],
+          "/home/runner",
+        ) !== null,
+      ),
+    nonFile:
+      measuredScriptIdentity(
+        "https://example.com/D:/repo/packages/engine/src/remote.ts",
+        ["."],
+        "d:/repo",
+      ) !== null,
+    // Inside the repository and outside the authored population: a toolchain
+    // module, an unmeasured package, an entry barrel, and a file under another
+    // checkout. Each is refused by the one policy the changed gate judges by,
+    // so none can split a record group or enter the shape census.
+    excluded: [
+      "file:///D:/repo/node_modules/pkg/index.js",
+      "file:///D:/repo/packages/evidence/src/internal.ts",
+      "file:///D:/repo/packages/engine/src/index.ts",
+      "file:///D:/other/packages/engine/src/elsewhere.ts",
+    ].map((url) => measuredScriptIdentity(url, ["."], "D:/repo")),
+    mappedSeen: coverageNeverRecorded({
+      directory: records,
+      identity: (url) =>
+        url === pathToFileURL(present).href
+          ? path.join(ROOT, "packages", "engine", "src", "mapped.ts")
+          : null,
+      reported: [path.join(ROOT, "packages", "engine", "src", "mapped.ts")],
+    }),
   };
   fs.rmSync(records, { recursive: true, force: true });
   fs.rmSync(shaped, { recursive: true, force: true });
   fs.rmSync(hostShapes, { recursive: true, force: true });
 
-  const parent = path.join(ROOT, "node_modules", ".cache", "automovie-c8");
+  const parent = path.join(ROOT, "node_modules", ".cache", "automovie-c8-runs");
 
   TestValidator.equals(
     "every coverage run draws a directory no other run writes",
     namedFacts([
-      ["the typed measurement functions answered", () => drawn.counted === 2],
+      [
+        "the typed measurement functions answered",
+        () => drawn.walked.count === 2,
+      ],
       // A whole-suite figure can read lower than a scoped one over the same
       // file, which no execution count can do and a merge can. Two processes
       // that resolved one source through different loaded forms leave two range
@@ -194,7 +244,24 @@ export const test_workspace_coverage_isolation = (): void => {
         "both host shapes of a file URL are measured on either platform",
         () => drawn.hosts === 2,
       ],
+      ["non-file URLs have no source identity", () => drawn.nonFile === false],
+      [
+        "excluded repository URLs have no source identity",
+        () =>
+          drawn.excluded.length === 4 &&
+          drawn.excluded.every((identity) => identity === null),
+      ],
+      [
+        "source-mapped raw URLs satisfy authored report identity",
+        () => drawn.mappedSeen.length === 0,
+      ],
       ["two draws in one process differ", () => drawn.first !== drawn.second],
+      [
+        "one run owns raw and report paths together",
+        () =>
+          path.dirname(drawn.run.rawDirectory) === drawn.run.rootDirectory &&
+          path.dirname(drawn.run.reportDirectory) === drawn.run.rootDirectory,
+      ],
       [
         "both sit under the coverage cache",
         () =>
@@ -219,11 +286,11 @@ export const test_workspace_coverage_isolation = (): void => {
       // different question than the one it is printed to answer.
       [
         "it counts records and not the other contents",
-        () => drawn.counted === 2,
+        () => drawn.walked.count === 2,
       ],
       [
         "and a directory that was never created is zero rather than a throw",
-        () => drawn.absent === 0,
+        () => drawn.absent.count === 0,
       ],
       // A record caught mid-write has a name, an entry and a size and no usable
       // content, so a count alone reads it as present. Parsability is what
@@ -255,7 +322,11 @@ export const test_workspace_coverage_isolation = (): void => {
       "and named, so the figure it spoils can be found": true,
       "a source outside the measured set is not counted at all": true,
       "both host shapes of a file URL are measured on either platform": true,
+      "non-file URLs have no source identity": true,
+      "excluded repository URLs have no source identity": true,
+      "source-mapped raw URLs satisfy authored report identity": true,
       "two draws in one process differ": true,
+      "one run owns raw and report paths together": true,
       "both sit under the coverage cache": true,
       "neither is the shared parent itself": true,
       "drawing a path does not create or start a measurement": true,
@@ -269,15 +340,35 @@ export const test_workspace_coverage_isolation = (): void => {
 
   const order: string[] = [];
   const arguments_: string[] = [];
+  const receivedPublications: unknown[] = [];
+  const publication = {
+    reportDirectory: "/this-run/report",
+    reportSha256: "report",
+    sources: {},
+  };
+  const measured = (status: number) => ({
+    publication: status === 0 ? publication : undefined,
+    status,
+  });
   const dependencies = coverageRunDependencies(
-    () => (order.push("measure"), 0),
-    (received) => {
+    () => (order.push("measure"), measured(0)),
+    (received, owned) => {
       order.push("changed");
       arguments_.push(...received);
+      receivedPublications.push(owned);
       return 0;
     },
-    () => (order.push("report"), 0),
-    () => (order.push("population"), 0),
+    (owned) => {
+      order.push("report");
+      receivedPublications.push(owned);
+      return 0;
+    },
+    (owned) => {
+      order.push("population");
+      receivedPublications.push(owned);
+      return 0;
+    },
+    (owned) => (order.push("cleanup"), receivedPublications.push(owned)),
   );
   const green = runCoverage(["--base", "origin/master"], dependencies);
   const unreached = (step: string, after: string): (() => never) => {
@@ -286,70 +377,153 @@ export const test_workspace_coverage_isolation = (): void => {
     };
   };
   const ordinaryRed = runCoverage([], {
-    measure: () => 1,
+    measure: () => measured(1),
     report: unreached("report", "a failed measurement"),
     population: unreached("population gate", "a failed measurement"),
     changed: unreached("changed gate", "a failed measurement"),
+    cleanup: unreached("cleanup", "a failed measurement"),
   });
   const measurementInstrumentRed = runCoverage([], {
-    measure: () => 2,
+    measure: () => measured(2),
     report: unreached("report", "an invalid measurement"),
     population: unreached("population gate", "an invalid measurement"),
     changed: unreached("changed gate", "an invalid measurement"),
+    cleanup: unreached("cleanup", "an invalid measurement"),
   });
   const instrumentRed = runCoverage([], {
-    measure: () => 0,
+    measure: () => measured(0),
     report: () => 2,
     population: unreached("population gate", "an invalid report"),
     changed: unreached("changed gate", "an invalid report"),
+    cleanup: () => undefined,
   });
   const populationInstrumentRed = runCoverage([], {
-    measure: () => 0,
+    measure: () => measured(0),
     report: () => 0,
     population: () => 2,
     changed: unreached("changed gate", "a disagreeing population"),
+    cleanup: () => undefined,
   });
   const populationOrdinaryRed = runCoverage([], {
-    measure: () => 0,
+    measure: () => measured(0),
     report: () => 0,
     population: () => 1,
     changed: unreached("changed gate", "a refused population"),
+    cleanup: () => undefined,
   });
   const changedRed = runCoverage([], {
-    measure: () => 0,
+    measure: () => measured(0),
     report: () => 0,
     population: () => 0,
     changed: () => 2,
+    cleanup: () => undefined,
   });
   const coverageGap = runCoverage([], {
-    measure: () => 0,
+    measure: () => measured(0),
     report: () => 0,
     population: () => 0,
     changed: () => 1,
+    cleanup: () => undefined,
   });
   const reportGap = runCoverage([], {
-    measure: () => 0,
+    measure: () => measured(0),
     report: () => 1,
     population: unreached("population gate", "a failed report"),
     changed: unreached("changed gate", "a failed report"),
+    cleanup: () => undefined,
   });
+  const diagnostics: string[] = [];
+  const unknownMeasurement = runCoverage(
+    [],
+    {
+      measure: () => measured(3),
+      report: unreached("report", "an unknown measurement status"),
+      population: unreached("population gate", "an unknown measurement status"),
+      changed: unreached("changed gate", "an unknown measurement status"),
+      cleanup: unreached("cleanup", "an unknown measurement status"),
+    },
+    (line) => diagnostics.push(line),
+  );
+  const unknownReport = runCoverage(
+    [],
+    {
+      measure: () => measured(0),
+      report: () => -1,
+      population: unreached("population gate", "an unknown report status"),
+      changed: unreached("changed gate", "an unknown report status"),
+      cleanup: () => undefined,
+    },
+    (line) => diagnostics.push(line),
+  );
+  const missingPublication = runCoverage(
+    [],
+    {
+      measure: () => ({ status: 0 }),
+      report: unreached("report", "a missing publication"),
+      population: unreached("population gate", "a missing publication"),
+      changed: unreached("changed gate", "a missing publication"),
+      cleanup: unreached("cleanup", "a missing publication"),
+    },
+    (line) => diagnostics.push(line),
+  );
+  const thrownMeasurement = runCoverage(
+    [],
+    {
+      measure: () => {
+        throw new Error("measurement failed before returning a status");
+      },
+      report: unreached("report", "a thrown measurement"),
+      population: unreached("population gate", "a thrown measurement"),
+      changed: unreached("changed gate", "a thrown measurement"),
+      cleanup: unreached("cleanup", "a thrown measurement"),
+    },
+    (line) => diagnostics.push(line),
+  );
+  // A consumer that throws is an instrument red, and the run it was reading is
+  // still removed: the publication was made, so its directory exists.
+  let cleanedAfterThrow = false;
+  const thrownConsumer = runCoverage(
+    [],
+    {
+      measure: () => measured(0),
+      report: () => {
+        throw new Error("report threw");
+      },
+      population: unreached("population gate", "a thrown report"),
+      changed: unreached("changed gate", "a thrown report"),
+      cleanup: () => {
+        cleanedAfterThrow = true;
+      },
+    },
+    (line) => diagnostics.push(line),
+  );
+  const thrownCleanup = runCoverage(
+    [],
+    {
+      measure: () => measured(0),
+      report: () => 0,
+      population: () => 0,
+      changed: () => 0,
+      cleanup: () => {
+        throw new Error("cleanup failed");
+      },
+    },
+    (line) => diagnostics.push(line),
+  );
   const cliStatuses: number[] = [];
   runCoverageCli(false, [], dependencies, (status) => cliStatuses.push(status));
   runCoverageCli(
     true,
     [],
     {
-      measure: () => 0,
+      measure: () => measured(0),
       report: () => 0,
       population: () => 0,
       changed: () => 0,
+      cleanup: () => undefined,
     },
     (status) => cliStatuses.push(status),
   );
-  const previousExitStatus = process.exitCode;
-  setCoverageExitStatus(0);
-  const directExitStatus = process.exitCode;
-  process.exitCode = previousExitStatus;
   // The two `runCoverageCli` calls above pin the unit with both booleans, which
   // is what let the real defect hide: the call site passed
   // `require.main === module`, always false under `ttsx`, so the covered unit
@@ -368,6 +542,9 @@ export const test_workspace_coverage_isolation = (): void => {
       green,
       order,
       arguments_,
+      onePublication: receivedPublications.every(
+        (owned) => owned === publication,
+      ),
       ordinaryRed,
       measurementInstrumentRed,
       instrumentRed,
@@ -376,14 +553,25 @@ export const test_workspace_coverage_isolation = (): void => {
       changedRed,
       coverageGap,
       reportGap,
+      unknownMeasurement,
+      unknownReport,
+      missingPublication,
+      directUnknownStatus: coverageStageStatus("changed", 9, (line) =>
+        diagnostics.push(line),
+      ),
+      diagnostics,
+      thrownMeasurement,
+      thrownConsumer,
+      cleanedAfterThrow,
+      thrownCleanup,
       cliStatuses,
-      directExitStatus,
       entryDecision,
     },
     {
       green: 0,
-      order: ["measure", "report", "population", "changed"],
+      order: ["measure", "report", "population", "changed", "cleanup"],
       arguments_: ["--base", "origin/master"],
+      onePublication: true,
       ordinaryRed: 1,
       measurementInstrumentRed: 2,
       instrumentRed: 2,
@@ -392,8 +580,24 @@ export const test_workspace_coverage_isolation = (): void => {
       changedRed: 2,
       coverageGap: 1,
       reportGap: 1,
+      unknownMeasurement: 2,
+      unknownReport: 2,
+      missingPublication: 2,
+      directUnknownStatus: 2,
+      diagnostics: [
+        "INSTRUMENT FAILURE: coverage measure returned unsupported status 3",
+        "INSTRUMENT FAILURE: coverage report returned unsupported status -1",
+        "INSTRUMENT FAILURE: coverage measure returned success without a publication",
+        "INSTRUMENT FAILURE: coverage measure threw: measurement failed before returning a status",
+        "INSTRUMENT FAILURE: coverage consumer threw: report threw",
+        "INSTRUMENT FAILURE: coverage cleanup threw: cleanup failed",
+        "INSTRUMENT FAILURE: coverage changed returned unsupported status 9",
+      ],
+      thrownMeasurement: 2,
+      thrownConsumer: 2,
+      cleanedAfterThrow: true,
+      thrownCleanup: 2,
       cliStatuses: [0],
-      directExitStatus: 0,
       entryDecision: { own: true, launcher: false, absent: false },
     },
   );

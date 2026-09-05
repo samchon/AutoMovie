@@ -62,6 +62,12 @@ Sequence는 목적, 시작과 종료 조건, 포함 beat, 앞뒤 관계, coverag
 
 Authoritative prose는 heading, 행동과 dialogue를 소유하고 index는 stable scene identity를 prose, sequence와 beat에 연결한다. Index가 prose를 다시 요약하여 서로 다른 사실 owner가 되어서는 안 되며 heading, 장소, 시간, 참여자 또는 포함 beat 충돌은 source-authority failure로 출력한다.
 
+활성 scene의 bounded authority carrier는 location, story time, participant identity와 closed participant mode, treatment beat identity를 정규화한다. Parser는 heading 바로 아래 carrier만 읽고 HTML comment와 backtick 또는 tilde fence 안의 유사 문법을 무시한다. Whole-screenplay와 split-scene layout은 동일한 scene projection을 만들며 active scene의 carrier 누락, `OMITTED` scene의 carrier 존재, index와 carrier의 정확 불일치를 각각 stable diagnostic으로 출력한다.
+
+초 단위 prose occurrence는 같은 occurrence에 붙은 owner selector를 통해서만 shot duration, event `from` 또는 `to`, review frame time에 연결된다. Decimal, word와 fraction spelling은 동일한 seconds 값으로 정규화하되 selector의 shot이 현재 scene을 realize하고 target field가 실제로 존재하며 값이 일치해야 한다. 다른 shot의 같은 값, 다른 target kind, owner 없는 occurrence와 malformed selector는 일치로 간주하지 않는다.
+
+Scene disposition evaluator는 `active`와 `OMITTED`, nullable phase-local disposition, nonblank reason, prose claim, compiled realization, required observation과 edit inclusion을 하나의 상태 전이로 판정한다. Tombstone은 모든 phase에서 제외되고 downstream claim을 거부하며, active disposition은 자신이 지정한 phase에서만 제외되고 그 phase의 claim을 거부한다. Disposition이 없는 active scene은 screenplay와 production coverage를 요구하고 review 또는 final scope에서는 required observation을 요구한다.
+
 ## 형식과 Content 경계 {#narrative-intent-story-form-content-boundary}
 
 ### Unknown과 Review 상태 {#narrative-intent-story-unknown-review-state}

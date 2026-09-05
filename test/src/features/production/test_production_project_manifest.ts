@@ -5,10 +5,7 @@ import os from "node:os";
 import path from "node:path";
 
 import { namedFacts, throwsError } from "../internal/predicates";
-
-const mutableFs = fs as {
-  lstatSync: typeof fs.lstatSync;
-};
+import { isolatedFileSystemTest } from "../internal/testFileSystem";
 
 interface IProjectManifestFixtureFailure {
   error: unknown;
@@ -86,7 +83,10 @@ const preserveProjectManifestRaceCleanup = (
  *    new registrations.
  * 6. Manifest asset entries remain a unique index after path normalization.
  */
-export const test_production_project_manifest = (): void => {
+const runProjectManifest = (fileSystem: typeof fs): void => {
+  const mutableFileSystem = fileSystem as {
+    lstatSync: typeof fs.lstatSync;
+  };
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "automovie-manifest-"));
   let projectManifestFailure: IProjectManifestFixtureFailure | undefined;
   try {
@@ -122,7 +122,7 @@ export const test_production_project_manifest = (): void => {
         })}\n`,
       );
     };
-    fs.existsSync = ((file: fs.PathLike): boolean => {
+    fileSystem.existsSync = ((file: fs.PathLike): boolean => {
       const exists = nativeManifestExists(file);
       if (
         exists &&
@@ -134,7 +134,7 @@ export const test_production_project_manifest = (): void => {
       }
       return exists;
     }) as typeof fs.existsSync;
-    mutableFs.lstatSync = ((file, options) => {
+    mutableFileSystem.lstatSync = ((file, options) => {
       const status = nativeManifestLstat(file, options);
       if (
         manifestSwapBoundary === null &&
@@ -160,13 +160,13 @@ export const test_production_project_manifest = (): void => {
         {
           resource: "manifest exists hook",
           cleanup: () => {
-            fs.existsSync = nativeManifestExists;
+            fileSystem.existsSync = nativeManifestExists;
           },
         },
         {
           resource: "manifest lstat hook",
           cleanup: () => {
-            mutableFs.lstatSync = nativeManifestLstat;
+            mutableFileSystem.lstatSync = nativeManifestLstat;
           },
         },
         {
@@ -300,7 +300,7 @@ export const test_production_project_manifest = (): void => {
     const nativeOptionalLstat = fs.lstatSync;
     let optionalRootSwapped = false;
     let optionalReplacementUntouched = false;
-    mutableFs.lstatSync = ((file, options) => {
+    mutableFileSystem.lstatSync = ((file, options) => {
       try {
         return nativeOptionalLstat(file, options);
       } catch (error) {
@@ -331,7 +331,7 @@ export const test_production_project_manifest = (): void => {
         {
           resource: "optional-root lstat hook",
           cleanup: () => {
-            mutableFs.lstatSync = nativeOptionalLstat;
+            mutableFileSystem.lstatSync = nativeOptionalLstat;
           },
         },
         {
@@ -406,3 +406,6 @@ export const test_production_project_manifest = (): void => {
     );
   }
 };
+
+export const test_production_project_manifest =
+  isolatedFileSystemTest(runProjectManifest);

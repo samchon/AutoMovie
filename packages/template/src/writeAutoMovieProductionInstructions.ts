@@ -5,8 +5,9 @@ import {
 import fs from "node:fs";
 import path from "node:path";
 
-import { renderAutoMovieProductionRouter } from "./renderAutoMovieProductionRouter";
+import { renderAutoMovieProductionInstructionCandidate } from "./renderAutoMovieProductionRouter";
 import { scaffoldAssetDirectory } from "./renderScaffold";
+import { ScaffoldPublicationError, publishFiles } from "./writeFiles";
 
 /**
  * Overwrite one generated project's shared instruction surface from its template.
@@ -42,18 +43,6 @@ export const writeAutoMovieProductionInstructions = (props: {
       `${sourceSkills}: the installed production skills are missing.`,
     );
   assertInstructionSourceIsPhysical(sourceSkills);
-  for (const name of [
-    "evidence-graph",
-    "production-lifecycle",
-    "review-verification",
-    "source-authoring",
-  ]) {
-    const entry = path.join(sourceSkills, name, "SKILL.md");
-    if (!fs.lstatSync(entry, { throwIfNoEntry: false })?.isFile())
-      throw new Error(
-        `${entry}: the installed ${name} skill entry point is missing.`,
-      );
-  }
   if (fs.realpathSync(root) === fs.realpathSync(scaffoldRoot))
     throw new Error(
       `${root}: a scaffold source cannot synchronize instructions into itself.`,
@@ -70,13 +59,100 @@ export const writeAutoMovieProductionInstructions = (props: {
     root,
     productionEvidence: props.productionEvidence,
   });
-  fs.rmSync(targetSkills, { force: true, recursive: true });
-  fs.mkdirSync(path.dirname(targetSkills), { recursive: true });
-  fs.cpSync(sourceSkills, targetSkills, { recursive: true });
-
-  fs.writeFileSync(agents, renderAutoMovieProductionRouter(identity), "utf8");
-  fs.writeFileSync(claude, "@AGENTS.md\n", "utf8");
+  const sources = Object.create(null) as Record<string, string>;
+  collectInstructionFiles({
+    directory: sourceSkills,
+    files: sources,
+    relative: path.join(".agents", "skills"),
+  });
+  for (const relative of new Set([
+    "docs/README.md",
+    ...identity.contracts.map((contract) => contract.path),
+    ...identity.designOwners.map((owner) => owner.path),
+  ]))
+    collectProjectInstructionTarget(root, relative, sources);
+  const files = renderAutoMovieProductionInstructionCandidate({
+    evidence: identity,
+    sources,
+  });
+  const receipt = publishFiles(root, files, { force: true });
+  if (receipt.status !== "completed")
+    throw new ScaffoldPublicationError(receipt);
+  removeStaleInstructionEntries(targetSkills, new Set(Object.keys(files)));
   return [targetSkills, agents, claude];
+};
+
+/** Add one dynamic project document addressed by the generated root router. */
+const collectProjectInstructionTarget = (
+  root: string,
+  relative: string,
+  files: Record<string, string>,
+): void => {
+  const target = path.resolve(root, relative);
+  const metadata = fs.lstatSync(target, { throwIfNoEntry: false });
+  if (metadata === undefined || metadata.isSymbolicLink() || !metadata.isFile())
+    throw new Error(`${relative}: instruction target is not a physical file.`);
+  files[relative.replaceAll("\\", "/")] = fs.readFileSync(target, "utf8");
+};
+
+/**
+ * Read the whole installed instruction candidate before target mutation.
+ *
+ * `assertInstructionSourceIsPhysical` has already refused every link in this
+ * tree, so each remaining entry is a directory to descend or a file to read.
+ */
+const collectInstructionFiles = (props: {
+  directory: string;
+  files: Record<string, string>;
+  relative: string;
+}): void => {
+  for (const entry of fs
+    .readdirSync(props.directory, { withFileTypes: true })
+    .sort(
+      (left, right) =>
+        Number(left.name > right.name) - Number(left.name < right.name),
+    )) {
+    const source = path.join(props.directory, entry.name);
+    const relative = path.join(props.relative, entry.name);
+    if (entry.isDirectory())
+      collectInstructionFiles({
+        directory: source,
+        files: props.files,
+        relative,
+      });
+    else props.files[relative] = fs.readFileSync(source, "utf8");
+  }
+};
+
+/**
+ * Remove stale generated doctrine only after every desired file completed.
+ *
+ * Both sides are compared through the filesystem's own resolved spelling, so a
+ * case-insensitive volume and a case-sensitive one agree without a platform
+ * switch: every desired file was just published and every visited entry is
+ * resident, so each has one native real path.
+ */
+const removeStaleInstructionEntries = (
+  targetSkills: string,
+  desiredFiles: ReadonlySet<string>,
+): void => {
+  const root = path.dirname(path.dirname(targetSkills));
+  const desired = new Set(
+    [...desiredFiles].map((entry) =>
+      fs.realpathSync.native(path.resolve(root, entry)),
+    ),
+  );
+  const visit = (directory: string): void => {
+    for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
+      const target = path.join(directory, entry.name);
+      if (entry.isDirectory()) {
+        visit(target);
+        if (fs.readdirSync(target).length === 0) fs.rmdirSync(target);
+      } else if (!desired.has(fs.realpathSync.native(target)))
+        fs.rmSync(target, { force: true });
+    }
+  };
+  visit(targetSkills);
 };
 
 /** Refuse a generated-project root that aliases or is not a directory. */

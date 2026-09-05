@@ -1,4 +1,5 @@
 import {
+  IAutoMovieCurrentSubjectReviewObservation,
   foldAutoMovieSubjectReviewCoverage,
   resolveAutoMovieSubjectReviewUnit,
 } from "@automovie/engine";
@@ -6,11 +7,13 @@ import {
   AutoMovieContentDigest,
   AutoMovieDiagnosticCode,
   AutoMovieSubjectReviewDescription,
+  IAutoMovieCaptureRuntimeIdentity,
   IAutoMovieCompiledShotSource,
   IAutoMovieDiagnostic,
   IAutoMovieSubjectBox,
   IAutoMovieSubjectReviewCoverage,
   IAutoMovieSubjectReviewObservation,
+  IAutoMovieSubjectReviewPose,
   IAutoMovieSubjectReviewTarget,
   IAutoMovieSubjectReviewViewpoint,
   IAutoMovieVector3,
@@ -25,10 +28,14 @@ import type {
   AutoMovieProductionContext,
   IAutoMovieProductionServices,
 } from "./AutoMovieProductionContext";
+import { canonicalAutoMovieCaptureRuntimeIdentity } from "./captureRuntimeIdentity";
 import {
+  canonicalizeAutoMovieJson,
   digestAutoMovieBytes,
   encodeAutoMoviePathSegment,
 } from "./contentIdentity";
+import { parseAutoMovieStructuredJson } from "./duplicateAwareJson";
+import { readAutoMovieProductionOwnedFile } from "./productionRenderJob";
 import { residentPngJs } from "./residentCodecs";
 
 /**
@@ -66,7 +73,7 @@ export const AUTOMOVIE_SUBJECT_INSPECTION_PLAN_FILE = "plan.json";
  */
 export interface IAutoMovieSubjectInspectionPlanRecord {
   /** Record format. */
-  version: 1;
+  version: 2;
   /** Production namespace the inspection ran in. */
   productionId: string;
   /** Compiled artifact and compiled subject id the plan was laid out for. */
@@ -75,8 +82,12 @@ export interface IAutoMovieSubjectInspectionPlanRecord {
   revision: string;
   /** Compile the plan and its observations were derived from. */
   compileFingerprint: AutoMovieContentDigest;
+  /** Canonical digest of every ordered plan and current-context member. */
+  planIdentity: AutoMovieContentDigest;
   /** Viewpoints the inspection undertook to observe, in plan order. */
   planned: IAutoMovieSubjectReviewViewpoint[];
+  /** Exact camera pose paired with every viewpoint in plan order. */
+  poses: IAutoMovieSubjectInspectionPose[];
   /** Never delivery evidence, and typed so it cannot become it. */
   deliveryEvidence: false;
 }
@@ -93,13 +104,29 @@ export interface IAutoMovieSubjectInspectionPlanRecord {
  */
 export interface IAutoMovieSubjectInspectionObservationRecord {
   /** Record format. */
-  version: 1;
+  version: 2;
+  /** Production namespace the observation was captured in. */
+  productionId: string;
+  /** Exact artifact-qualified subject target. */
+  target: IAutoMovieSubjectReviewTarget;
+  /** Exact compiled subject revision. */
+  revision: string;
   /** Receipt in the shape subject coverage counts. */
   observation: IAutoMovieSubjectReviewObservation;
   /** Camera state the artifact was drawn through. */
   pose: IAutoMovieSubjectInspectionPose;
   /** Compile the observation was derived from. */
   compileFingerprint: AutoMovieContentDigest;
+  /** Canonical ordered whole-plan identity. */
+  planIdentity: AutoMovieContentDigest;
+  /** Sweep attempt this record belongs to. */
+  attempt: number;
+  /** Planned viewpoint identity repeated outside the portable receipt. */
+  viewpoint: string;
+  /** Complete actual capture runtime, including inspected graphics. */
+  runtimeIdentity: IAutoMovieCaptureRuntimeIdentity;
+  /** Only terminal passed records own an observation artifact. */
+  verdict: "passed";
   /** Never delivery evidence, and typed so it cannot become it. */
   deliveryEvidence: false;
 }
@@ -140,46 +167,16 @@ const DEFAULT_ELEVATIONS_DEG: readonly number[] = [20];
  *
  * @author Samchon
  */
-export interface IAutoMovieSubjectInspectionPose {
-  /**
-   * Coordinate basis both {@link position} and {@link target} are stated in.
-   */
-  coordinateSpace: "model" | "world";
-  /**
-   * Eye position in metres.
-   */
-  position: IAutoMovieVector3;
-  /**
-   * Point the eye looks at, in metres.
-   */
-  target: IAutoMovieVector3;
-  /**
-   * Vertical field of view in degrees.
-   */
-  fovDeg: number;
-  /**
-   * Viewport width divided by height.
-   */
-  aspect: number;
-  /**
-   * Near clip distance in metres, derived from the subject's own size.
-   */
-  near: number;
-  /**
-   * Far clip distance in metres, derived from the subject's own size.
-   */
-  far: number;
-}
+export type IAutoMovieSubjectInspectionPose = IAutoMovieSubjectReviewPose;
 
 /**
  * Host instrument that answers one inspection pose with PNG bytes.
  *
  * It is deliberately a second adapter beside the delivery frame capture rather
- * than a third target on it. A delivery capture carries a renderer identity, a
- * target fingerprint and a content-addressed render bundle because a delivered
- * frame has to be reopenable as the thing that was delivered; an inspection
- * image has none of those obligations and must not be able to acquire them by
- * travelling the same path. Separating the instrument makes a subject image
+ * than a third target on it. Both report their exact runtime identity because
+ * neither can make historical pixels current, but only delivery capture owns a
+ * target fingerprint and content-addressed render bundle. Separating the
+ * instrument keeps a subject image reopenable for its own plan while making it
  * structurally incapable of arriving with a delivery receipt attached.
  *
  * @author Samchon
@@ -204,7 +201,9 @@ export type AutoMovieProductionSubjectInspection = (input: {
   /** Requested pixel height. */
   height: number;
 }) => Promise<
-  IAutoMovieSubjectInspectionDrawn | IAutoMovieSubjectInspectionRefusal
+  | IAutoMovieSubjectInspectionDrawn
+  | IAutoMovieSubjectInspectionRefusal
+  | IAutoMovieSubjectInspectionRuntimeUnidentified
 >;
 
 /**
@@ -219,6 +218,45 @@ export interface IAutoMovieSubjectInspectionDrawn {
   width: number;
   /** Pixel height the instrument actually drew. */
   height: number;
+  /** Complete launch closure combined with the actual page graphics identity. */
+  runtimeIdentity?: IAutoMovieCaptureRuntimeIdentity;
+  /** Assert that the captured runtime closure is still resident. */
+  assertRuntimeCurrent?: () => void;
+}
+
+/** Explicit host outcome when it cannot identify the capture runtime. */
+export interface IAutoMovieSubjectInspectionRuntimeUnidentified {
+  /** Why no complete runtime identity can accompany this attempted draw. */
+  runtimeUnidentified: string;
+}
+
+/** Terminal outcome retained for every attempted inspection sweep. */
+export interface IAutoMovieSubjectInspectionAttemptRecord {
+  /** Stable monotonic attempt number inside one plan identity. */
+  attempt: number;
+  /** Terminal sweep outcome; only passed observations enter coverage. */
+  verdict:
+    | "passed"
+    | "failed"
+    | "unsupported"
+    | "not-run"
+    | "runtime-unidentified";
+  /** Exact terminal reason, null only for a completed sweep. */
+  reason: string | null;
+  /** Passed observation records published before the terminal outcome. */
+  observations: string[];
+}
+
+/** History-preserving attempt journal for one immutable plan identity. */
+export interface IAutoMovieSubjectInspectionAttemptJournal {
+  /** Journal record format. */
+  version: 1;
+  /** Exact plan identity this journal belongs to. */
+  planIdentity: AutoMovieContentDigest;
+  /** Every attempt in monotonic order. */
+  attempts: IAutoMovieSubjectInspectionAttemptRecord[];
+  /** Never delivery evidence, and typed so it cannot become it. */
+  deliveryEvidence: false;
 }
 
 /**
@@ -313,6 +351,12 @@ export interface IAutoMovieInspectSubject {
    * Revision of the compiled artifact the subject was read from, or null.
    */
   revision: string | null;
+  /** Exact ordered current plan identity, or null before a plan exists. */
+  planIdentity: AutoMovieContentDigest | null;
+  /** Exact versioned current plan record, or null before a plan exists. */
+  planRecord: IAutoMovieSubjectInspectionPlanRecord | null;
+  /** Complete actual capture runtime, or null when it was unidentified. */
+  runtimeIdentity: IAutoMovieCaptureRuntimeIdentity | null;
   /**
    * Compiled description of the subject, or null when it did not resolve.
    */
@@ -553,6 +597,164 @@ export const autoMovieSubjectInspectionPose = (props: {
   };
 };
 
+/** Compute the immutable identity of one ordered subject-inspection plan. */
+export const autoMovieSubjectInspectionPlanIdentity = (props: {
+  productionId: string;
+  target: IAutoMovieSubjectReviewTarget;
+  revision: string;
+  compileFingerprint: AutoMovieContentDigest;
+  planned: readonly IAutoMovieSubjectReviewViewpoint[];
+  poses: readonly IAutoMovieSubjectInspectionPose[];
+}): AutoMovieContentDigest =>
+  digestAutoMovieBytes(
+    Buffer.from(
+      canonicalizeAutoMovieJson({
+        version: 2,
+        productionId: props.productionId,
+        target: props.target,
+        revision: props.revision,
+        compileFingerprint: props.compileFingerprint,
+        planned: props.planned,
+        poses: props.poses,
+        deliveryEvidence: false,
+      }),
+      "utf8",
+    ),
+  );
+
+/** Parse and semantically verify one exact v2 subject-inspection plan. */
+export const parseAutoMovieSubjectInspectionPlan = (
+  value: unknown,
+): IAutoMovieSubjectInspectionPlanRecord => {
+  const validation =
+    typia.validateEquals<IAutoMovieSubjectInspectionPlanRecord>(value);
+  if (validation.success === false)
+    throw new Error(
+      `Invalid AutoMovie subject-inspection plan: ${validation.errors
+        .map((error) => `${error.path} expects ${error.expected}`)
+        .join("; ")}`,
+    );
+  const plan = validation.data;
+  if (
+    plan.productionId.trim().length === 0 ||
+    plan.target.shot.trim().length === 0 ||
+    plan.target.subject.trim().length === 0 ||
+    plan.revision.trim().length === 0 ||
+    isContentDigest(plan.compileFingerprint) === false ||
+    plan.planned.length !== plan.poses.length
+  )
+    throw new Error(
+      "Subject-inspection plan requires non-blank context, a current compile digest, and one pose per ordered viewpoint.",
+    );
+  if (autoMovieSubjectInspectionPlanIdentity(plan) !== plan.planIdentity)
+    throw new Error(
+      "Subject-inspection plan identity does not match its exact ordered context and poses.",
+    );
+  return plan;
+};
+
+/** Parse and semantically verify one exact terminal passed observation. */
+export const parseAutoMovieSubjectInspectionObservation = (
+  value: unknown,
+): IAutoMovieSubjectInspectionObservationRecord => {
+  const validation =
+    typia.validateEquals<IAutoMovieSubjectInspectionObservationRecord>(value);
+  if (validation.success === false)
+    throw new Error(
+      `Invalid AutoMovie subject-inspection observation: ${validation.errors
+        .map((error) => `${error.path} expects ${error.expected}`)
+        .join("; ")}`,
+    );
+  const record = validation.data;
+  if (
+    record.productionId.trim().length === 0 ||
+    record.target.shot.trim().length === 0 ||
+    record.target.subject.trim().length === 0 ||
+    record.revision.trim().length === 0 ||
+    isContentDigest(record.compileFingerprint) === false ||
+    isContentDigest(record.planIdentity) === false ||
+    Number.isSafeInteger(record.attempt) === false ||
+    record.attempt <= 0 ||
+    record.viewpoint !== record.observation.viewpoint ||
+    record.productionId !== record.observation.productionId ||
+    record.target.shot !== record.observation.target.shot ||
+    record.target.subject !== record.observation.target.subject ||
+    record.revision !== record.observation.revision ||
+    record.compileFingerprint !== record.observation.compileFingerprint ||
+    record.planIdentity !== record.observation.planIdentity ||
+    record.target.subject !== record.observation.subject ||
+    record.observation.kind !== "subject-view" ||
+    canonicalizeAutoMovieJson(record.pose) !==
+      canonicalizeAutoMovieJson(record.observation.pose) ||
+    canonicalizeAutoMovieJson(record.runtimeIdentity) !==
+      canonicalizeAutoMovieJson(record.observation.runtimeIdentity) ||
+    record.observation.artifact.trim().length === 0 ||
+    isContentDigest(record.observation.digest) === false
+  )
+    throw new Error(
+      "Subject-inspection observation does not preserve one exact passed context and content-addressed artifact.",
+    );
+  canonicalAutoMovieCaptureRuntimeIdentity(record.runtimeIdentity);
+  return record;
+};
+
+/**
+ * Admit one parsed observation only when every current-context join and the
+ * reopened artifact bytes match exactly.
+ */
+export const verifyAutoMovieSubjectInspectionObservation = (props: {
+  plan: IAutoMovieSubjectInspectionPlanRecord;
+  runtimeIdentity: IAutoMovieCaptureRuntimeIdentity;
+  record: IAutoMovieSubjectInspectionObservationRecord;
+  artifactBytes: Uint8Array;
+}): IAutoMovieCurrentSubjectReviewObservation => {
+  const record = parseAutoMovieSubjectInspectionObservation(props.record);
+  const plan = parseAutoMovieSubjectInspectionPlan(props.plan);
+  const viewpoint = plan.planned.findIndex(
+    (candidate) => candidate.id === record.viewpoint,
+  );
+  const actualRuntime = canonicalAutoMovieCaptureRuntimeIdentity(
+    record.runtimeIdentity,
+  );
+  const expectedArtifact = `${inspectionDirectory(
+    plan.productionId,
+    plan.target.shot,
+    plan.target.subject,
+  )}/${encodeAutoMoviePathSegment(plan.planIdentity)}/attempt-${
+    record.attempt
+  }/${encodeAutoMoviePathSegment(record.viewpoint)}.png`;
+  if (
+    record.productionId !== plan.productionId ||
+    record.target.shot !== plan.target.shot ||
+    record.target.subject !== plan.target.subject ||
+    record.revision !== plan.revision ||
+    record.compileFingerprint !== plan.compileFingerprint ||
+    record.planIdentity !== plan.planIdentity ||
+    viewpoint === -1 ||
+    canonicalizeAutoMovieJson(record.pose) !==
+      canonicalizeAutoMovieJson(plan.poses[viewpoint]) ||
+    record.observation.artifact !== expectedArtifact ||
+    actualRuntime !==
+      canonicalAutoMovieCaptureRuntimeIdentity(props.runtimeIdentity) ||
+    digestAutoMovieBytes(props.artifactBytes) !== record.observation.digest
+  )
+    throw new Error(
+      "Subject-inspection observation is stale for the exact current plan, pose, runtime, or artifact bytes.",
+    );
+  return {
+    ...record.observation,
+    productionId: record.productionId,
+    target: record.target,
+    compileFingerprint: record.compileFingerprint,
+    planIdentity: record.planIdentity,
+    captureRuntimeIdentity: actualRuntime,
+    verdict: "passed",
+  };
+};
+
+const isContentDigest = (value: string): value is AutoMovieContentDigest =>
+  /^sha256:[0-9a-f]{64}$/u.test(value);
+
 /**
  * Answer a named subject and an inspection-owned viewpoint with an image.
  *
@@ -611,6 +813,9 @@ export class AutoMovieProductionSubjectInspectionService {
       productionId: services.project.productionId,
       target,
       revision: null,
+      planIdentity: null,
+      planRecord: null,
+      runtimeIdentity: null,
       subject: null,
       plan: [],
       views: [],
@@ -715,10 +920,35 @@ export class AutoMovieProductionSubjectInspectionService {
     } catch (error) {
       return refuse(
         "preview-input-invalid",
-        `${error instanceof Error ? error.message : String(error)} Correct the inspectSubject viewpoint rule.`,
+        `${inspectionErrorMessage(error)} Correct the inspectSubject viewpoint rule.`,
         { revision: resolved.revision, subject: resolved.description },
       );
     }
+    const poses = plan.map((viewpoint) =>
+      autoMovieSubjectInspectionPose({
+        bounds: frame.bounds,
+        coordinateSpace: frame.coordinateSpace,
+        viewpoint,
+        fovDeg: INSPECTION_FOV_DEG,
+        aspect: width / height,
+      }),
+    );
+    const planRecordWithoutIdentity = {
+      productionId: services.project.productionId,
+      target: { shot: target.shot, subject: resolved.description.id },
+      revision: resolved.revision,
+      compileFingerprint: generated.inputFingerprint,
+      planned: plan,
+      poses,
+    };
+    const planRecord: IAutoMovieSubjectInspectionPlanRecord = {
+      version: 2,
+      ...planRecordWithoutIdentity,
+      planIdentity: autoMovieSubjectInspectionPlanIdentity(
+        planRecordWithoutIdentity,
+      ),
+      deliveryEvidence: false,
+    };
     // The plan is published before the first picture is drawn, so a sweep that
     // refuses partway leaves a denominator standing beside the observations it
     // did manage. Without that, a half-finished inspection would read as a
@@ -731,39 +961,51 @@ export class AutoMovieProductionSubjectInspectionService {
     publishInspectionFile(
       services.project.root,
       `${directory}/${AUTOMOVIE_SUBJECT_INSPECTION_PLAN_FILE}`,
-      Buffer.from(
-        `${JSON.stringify(
-          {
-            version: 1,
-            productionId: services.project.productionId,
-            target: { shot: target.shot, subject: resolved.description.id },
-            revision: resolved.revision,
-            compileFingerprint: generated.inputFingerprint,
-            planned: plan,
-            deliveryEvidence: false,
-          } satisfies IAutoMovieSubjectInspectionPlanRecord,
-          null,
-          2,
-        )}\n`,
-        "utf8",
-      ),
+      Buffer.from(`${JSON.stringify(planRecord, null, 2)}\n`, "utf8"),
+    );
+    const attempt = beginInspectionAttempt(
+      services.project.root,
+      directory,
+      planRecord.planIdentity,
     );
     const views: IAutoMovieSubjectInspectionView[] = [];
-    for (const viewpoint of plan) {
-      const pose = autoMovieSubjectInspectionPose({
-        bounds: frame.bounds,
-        coordinateSpace: frame.coordinateSpace,
-        viewpoint,
-        fovDeg: INSPECTION_FOV_DEG,
-        aspect: width / height,
+    let runtimeIdentity: IAutoMovieCaptureRuntimeIdentity | null = null;
+    let assertRuntimeCurrent: (() => void) | null = null;
+    const terminalRefuse = (
+      verdict: Exclude<
+        IAutoMovieSubjectInspectionAttemptRecord["verdict"],
+        "passed" | "not-run"
+      >,
+      code: AutoMovieDiagnosticCode,
+      message: string,
+    ): IAutoMovieInspectSubject => {
+      finishInspectionAttempt({
+        root: services.project.root,
+        directory,
+        planIdentity: planRecord.planIdentity,
+        attempt,
+        verdict,
+        reason: message,
       });
+      return refuse(code, message, {
+        revision: resolved.revision,
+        planIdentity: planRecord.planIdentity,
+        planRecord,
+        runtimeIdentity,
+        subject: resolved.description,
+        plan,
+        views,
+      });
+    };
+    for (const [viewpointIndex, viewpoint] of plan.entries()) {
+      const pose = poses[viewpointIndex]!;
       let drawn: Awaited<ReturnType<AutoMovieProductionSubjectInspection>>;
       try {
         drawn = await this.adapter({
           projectRoot: services.project.root,
           productionId: services.project.productionId,
           compileFingerprint: generated.inputFingerprint,
-          target,
+          target: planRecord.target,
           revision: resolved.revision,
           viewpoint: viewpoint.id,
           pose,
@@ -771,10 +1013,10 @@ export class AutoMovieProductionSubjectInspectionService {
           height,
         });
       } catch (error) {
-        return refuse(
+        return terminalRefuse(
+          "failed",
           "capture-failed",
-          `${error instanceof Error ? error.message : String(error)} Correct the subject inspection instrument and retry inspectSubject.`,
-          { revision: resolved.revision, subject: resolved.description, plan },
+          `${inspectionErrorMessage(error)} Correct the subject inspection instrument and retry inspectSubject.`,
         );
       }
       // A working instrument saying it cannot frame this subject is the
@@ -783,21 +1025,61 @@ export class AutoMovieProductionSubjectInspectionService {
       // to the one place the fault is not, and the review surface already reads
       // this code as the range being unobservable rather than as work owed.
       if ("refused" in drawn)
-        return refuse(
+        return terminalRefuse(
+          "unsupported",
           "review-subject-viewpoint-unsupported",
           `The subject inspection instrument cannot frame compiled subject "${input.subject}": ${drawn.refused} Report its viewpoint range as unsupported rather than as observed.`,
-          { revision: resolved.revision, subject: resolved.description, plan },
         );
+      if ("runtimeUnidentified" in drawn)
+        return terminalRefuse(
+          "runtime-unidentified",
+          "capture-failed",
+          `The subject inspection instrument did not return its complete current capture runtime identity: ${drawn.runtimeUnidentified}. Reopen the inspection host and recapture the subject.`,
+        );
+      if (
+        drawn.runtimeIdentity === undefined ||
+        drawn.assertRuntimeCurrent === undefined
+      )
+        return terminalRefuse(
+          "runtime-unidentified",
+          "capture-failed",
+          "The subject inspection instrument did not return its complete current capture runtime identity: no runtime reason was reported. Reopen the inspection host and recapture the subject.",
+        );
+      let canonicalRuntime: string;
+      try {
+        drawn.assertRuntimeCurrent();
+        canonicalRuntime = canonicalAutoMovieCaptureRuntimeIdentity(
+          drawn.runtimeIdentity,
+        );
+      } catch (error) {
+        return terminalRefuse(
+          "failed",
+          "capture-failed",
+          `${inspectionErrorMessage(error)} The capture runtime changed before the subject observation could be published. Reopen the inspection host and recapture the subject.`,
+        );
+      }
+      if (
+        runtimeIdentity !== null &&
+        canonicalRuntime !==
+          canonicalAutoMovieCaptureRuntimeIdentity(runtimeIdentity)
+      )
+        return terminalRefuse(
+          "failed",
+          "capture-failed",
+          "The capture runtime identity changed during the subject sweep. Reopen the inspection host and recapture the whole subject.",
+        );
+      runtimeIdentity ??= drawn.runtimeIdentity;
+      assertRuntimeCurrent ??= drawn.assertRuntimeCurrent;
       let png: PNG;
       try {
         if (drawn.bytes.length === 0)
           throw new Error("the inspection instrument returned zero bytes");
         png = residentPngJs().PNG.sync.read(Buffer.from(drawn.bytes));
       } catch (error) {
-        return refuse(
+        return terminalRefuse(
+          "failed",
           "capture-png-invalid",
-          `${error instanceof Error ? error.message : String(error)}. The subject inspection instrument must return a decodable PNG.`,
-          { revision: resolved.revision, subject: resolved.description, plan },
+          `${inspectionErrorMessage(error)}. The subject inspection instrument must return a decodable PNG.`,
         );
       }
       if (
@@ -806,39 +1088,60 @@ export class AutoMovieProductionSubjectInspectionService {
         png.width !== width ||
         png.height !== height
       )
-        return refuse(
+        return terminalRefuse(
+          "failed",
           "capture-size-mismatch",
           `Requested ${width}x${height}, instrument reported ${drawn.width}x${drawn.height}, and PNG decoded as ${png.width}x${png.height}. Fix the subject inspection viewport.`,
-          { revision: resolved.revision, subject: resolved.description, plan },
         );
       if (hasVisiblePixelVariance(png) === false)
-        return refuse(
+        return terminalRefuse(
+          "failed",
           "capture-png-blank",
           `Viewpoint "${viewpoint.id}" decoded with no visible pixel variance. An empty picture is not an observation of the subject; correct the framing, lighting, or instrument before recording it.`,
-          { revision: resolved.revision, subject: resolved.description, plan },
         );
       const bytes = Buffer.from(drawn.bytes);
-      const relative = `${directory}/${encodeAutoMoviePathSegment(viewpoint.id)}.png`;
+      const attemptDirectory = `${directory}/${encodeAutoMoviePathSegment(
+        planRecord.planIdentity,
+      )}/attempt-${attempt}`;
+      const relative = `${attemptDirectory}/${encodeAutoMoviePathSegment(
+        viewpoint.id,
+      )}.png`;
       publishInspectionFile(services.project.root, relative, bytes);
       const digest = digestAutoMovieBytes(bytes);
       const observation: IAutoMovieSubjectReviewObservation = {
         kind: "subject-view",
+        productionId: services.project.productionId,
+        target: planRecord.target,
         subject: resolved.description.id,
         revision: resolved.revision,
+        compileFingerprint: generated.inputFingerprint,
+        planIdentity: planRecord.planIdentity,
         viewpoint: viewpoint.id,
+        pose,
+        runtimeIdentity: drawn.runtimeIdentity,
         artifact: relative,
         digest,
+        verdict: "passed",
+        deliveryEvidence: false,
       };
       publishInspectionFile(
         services.project.root,
-        `${directory}/${encodeAutoMoviePathSegment(viewpoint.id)}.json`,
+        `${attemptDirectory}/${encodeAutoMoviePathSegment(viewpoint.id)}.json`,
         Buffer.from(
           `${JSON.stringify(
             {
-              version: 1,
+              version: 2,
+              productionId: services.project.productionId,
+              target: planRecord.target,
+              revision: resolved.revision,
               observation,
               pose,
               compileFingerprint: generated.inputFingerprint,
+              planIdentity: planRecord.planIdentity,
+              attempt,
+              viewpoint: viewpoint.id,
+              runtimeIdentity: drawn.runtimeIdentity,
+              verdict: "passed",
               deliveryEvidence: false,
             } satisfies IAutoMovieSubjectInspectionObservationRecord,
             null,
@@ -847,6 +1150,24 @@ export class AutoMovieProductionSubjectInspectionService {
           "utf8",
         ),
       );
+      try {
+        drawn.assertRuntimeCurrent();
+      } catch (error) {
+        return terminalRefuse(
+          "failed",
+          "capture-failed",
+          `${inspectionErrorMessage(error)} The capture runtime changed while the subject observation was published. Reopen the inspection host and recapture the whole subject.`,
+        );
+      }
+      recordInspectionObservation({
+        root: services.project.root,
+        directory,
+        planIdentity: planRecord.planIdentity,
+        attempt,
+        record: `${attemptDirectory}/${encodeAutoMoviePathSegment(
+          viewpoint.id,
+        )}.json`,
+      });
       views.push({
         viewpoint: viewpoint.id,
         pose,
@@ -864,15 +1185,65 @@ export class AutoMovieProductionSubjectInspectionService {
       current === null ||
       current.inputFingerprint !== generated.inputFingerprint
     )
-      return refuse(
+      return terminalRefuse(
+        "failed",
         "capture-input-changed",
         "Production source or generated output changed while the subject was being inspected. Discard this mixed sweep, compile the current project, and inspect the subject again.",
-        { revision: resolved.revision, subject: resolved.description, plan },
       );
+    if (
+      publishedInspectionPlanMatches({
+        root: services.project.root,
+        directory,
+        planIdentity: planRecord.planIdentity,
+      }) === false
+    )
+      return terminalRefuse(
+        "failed",
+        "capture-input-changed",
+        "The current subject inspection plan changed while this sweep was running. Keep its passed prefix as history and recapture the current whole plan.",
+      );
+    const completedRuntime =
+      runtimeIdentity as IAutoMovieCaptureRuntimeIdentity;
+    const completedAssertion = assertRuntimeCurrent as () => void;
+    try {
+      completedAssertion();
+    } catch (error) {
+      return terminalRefuse(
+        "failed",
+        "capture-failed",
+        `${inspectionErrorMessage(error)} The capture runtime changed before the sweep receipt was finalized. Reopen the inspection host and recapture the whole subject.`,
+      );
+    }
+    finishInspectionAttempt({
+      root: services.project.root,
+      directory,
+      planIdentity: planRecord.planIdentity,
+      attempt,
+      verdict: "passed",
+      reason: null,
+    });
+    const runtimeCanonical =
+      canonicalAutoMovieCaptureRuntimeIdentity(completedRuntime);
     const coverage = foldAutoMovieSubjectReviewCoverage(
       resolved.unit,
+      {
+        productionId: services.project.productionId,
+        target: planRecord.target,
+        revision: resolved.revision,
+        compileFingerprint: generated.inputFingerprint,
+        planIdentity: planRecord.planIdentity,
+        captureRuntimeIdentity: runtimeCanonical,
+      },
       plan,
-      views.map((view) => view.observation),
+      views.map((view) => ({
+        ...view.observation,
+        productionId: services.project.productionId,
+        target: planRecord.target,
+        compileFingerprint: generated.inputFingerprint,
+        planIdentity: planRecord.planIdentity,
+        captureRuntimeIdentity: runtimeCanonical,
+        verdict: "passed" as const,
+      })),
     );
     return {
       // Reaching here means every planned viewpoint produced a verified
@@ -880,8 +1251,11 @@ export class AutoMovieProductionSubjectInspectionService {
       // A partial sweep is never reported as an inspection.
       inspected: true,
       productionId: services.project.productionId,
-      target,
+      target: planRecord.target,
       revision: resolved.revision,
+      planIdentity: planRecord.planIdentity,
+      planRecord,
+      runtimeIdentity: completedRuntime,
       subject: resolved.description,
       plan,
       views,
@@ -920,7 +1294,10 @@ const resolveSubject = (
     // answer to the caller, and a second branch saying so would only be a
     // branch no arrangement can reach.
     compiled = typia.assertEquals<IAutoMovieCompiledShotSource>(
-      JSON.parse(Buffer.from(bytes).toString("utf8")) as unknown,
+      parseAutoMovieStructuredJson({
+        record: `generated shot ${target.shot}`,
+        bytes,
+      }),
     );
   } catch {
     return null;
@@ -1028,65 +1405,281 @@ export const readAutoMovieSubjectInspection = (props: {
   shot: string;
   /** Compiled subject id. */
   subject: string;
+  /** Exact current ordered plan and context. */
+  plan: IAutoMovieSubjectInspectionPlanRecord;
+  /** Complete capture runtime expected now, or null when unidentified. */
+  runtimeIdentity: IAutoMovieCaptureRuntimeIdentity | null;
 }): {
   /** Declared viewpoint population, empty when nothing was ever planned. */
   planned: IAutoMovieSubjectReviewViewpoint[];
   /** Observations whose artifacts still answer for them, in plan order. */
-  observations: IAutoMovieSubjectReviewObservation[];
+  observations: IAutoMovieCurrentSubjectReviewObservation[];
+  /** Same-plan attempt history, including non-passed terminal outcomes. */
+  history: IAutoMovieSubjectInspectionAttemptRecord[];
 } => {
   const directory = inspectionDirectory(
     props.productionId,
     props.shot,
     props.subject,
   );
-  const absolute = (relative: string): string =>
-    path.join(props.projectRoot, ...relative.split("/"));
-  const plan = readInspectionJson<IAutoMovieSubjectInspectionPlanRecord>(
-    absolute(`${directory}/${AUTOMOVIE_SUBJECT_INSPECTION_PLAN_FILE}`),
-    (value) =>
-      value.version === 1 &&
-      Array.isArray(value.planned) &&
-      value.deliveryEvidence === false,
-  );
-  if (plan === null) return { planned: [], observations: [] };
-  const observations: IAutoMovieSubjectReviewObservation[] = [];
-  for (const viewpoint of plan.planned) {
-    const record =
-      readInspectionJson<IAutoMovieSubjectInspectionObservationRecord>(
-        absolute(
-          `${directory}/${encodeAutoMoviePathSegment(viewpoint.id)}.json`,
-        ),
-        (value) =>
-          value.version === 1 &&
-          value.deliveryEvidence === false &&
-          typeof value.observation?.artifact === "string" &&
-          typeof value.observation?.digest === "string",
-      );
-    if (record === null) continue;
-    let bytes: Buffer;
-    try {
-      bytes = fs.readFileSync(absolute(record.observation.artifact));
-    } catch {
-      continue;
-    }
-    if (digestAutoMovieBytes(bytes) !== record.observation.digest) continue;
-    observations.push(record.observation);
+  let expected: IAutoMovieSubjectInspectionPlanRecord;
+  try {
+    expected = parseAutoMovieSubjectInspectionPlan(props.plan);
+  } catch {
+    return { planned: [], observations: [], history: [] };
   }
-  return { planned: plan.planned, observations };
+  const ownedDirectory = path.join(props.projectRoot, ...directory.split("/"));
+  const readOwned = (relative: string): Uint8Array | null => {
+    try {
+      if (fs.existsSync(ownedDirectory) === false) return null;
+      return readAutoMovieProductionOwnedFile({
+        root: props.projectRoot,
+        directory: ownedDirectory,
+        relative,
+        optional: true,
+      });
+    } catch {
+      return null;
+    }
+  };
+  const planBytes = readOwned(AUTOMOVIE_SUBJECT_INSPECTION_PLAN_FILE);
+  if (planBytes === null) return { planned: [], observations: [], history: [] };
+  let plan: IAutoMovieSubjectInspectionPlanRecord;
+  try {
+    plan = parseAutoMovieSubjectInspectionPlan(
+      parseAutoMovieStructuredJson({
+        record: `${directory}/${AUTOMOVIE_SUBJECT_INSPECTION_PLAN_FILE}`,
+        bytes: planBytes,
+      }),
+    );
+  } catch {
+    // v1 and every malformed/unknown version are historical, never inferred.
+    return { planned: [], observations: [], history: [] };
+  }
+  if (
+    expected.productionId !== props.productionId ||
+    expected.target.shot !== props.shot ||
+    expected.target.subject !== props.subject ||
+    plan.planIdentity !== expected.planIdentity
+  )
+    return { planned: expected.planned, observations: [], history: [] };
+  const journalBytes = readOwned(
+    inspectionJournalRelative(expected.planIdentity),
+  );
+  if (journalBytes === null)
+    return { planned: expected.planned, observations: [], history: [] };
+  let journal: IAutoMovieSubjectInspectionAttemptJournal;
+  try {
+    journal = parseInspectionJournal(
+      parseAutoMovieStructuredJson({
+        record: `${directory}/${inspectionJournalRelative(expected.planIdentity)}`,
+        bytes: journalBytes,
+      }),
+      expected.planIdentity,
+    );
+  } catch {
+    return { planned: expected.planned, observations: [], history: [] };
+  }
+  const observations: IAutoMovieCurrentSubjectReviewObservation[] = [];
+  for (const attempt of journal.attempts)
+    for (const recordPath of attempt.observations) {
+      const prefix = `${directory}/`;
+      if (recordPath.startsWith(prefix) === false) continue;
+      const relativeRecord = recordPath.slice(prefix.length);
+      const recordBytes = readOwned(relativeRecord);
+      if (recordBytes === null) continue;
+      let record: IAutoMovieSubjectInspectionObservationRecord;
+      try {
+        record = parseAutoMovieSubjectInspectionObservation(
+          parseAutoMovieStructuredJson({
+            record: recordPath,
+            bytes: recordBytes,
+          }),
+        );
+      } catch {
+        continue;
+      }
+      const expectedRecord = `${encodeAutoMoviePathSegment(
+        expected.planIdentity,
+      )}/attempt-${attempt.attempt}/${encodeAutoMoviePathSegment(
+        record.viewpoint,
+      )}.json`;
+      const artifactPrefix = `${directory}/`;
+      if (
+        relativeRecord !== expectedRecord ||
+        record.attempt !== attempt.attempt ||
+        record.observation.artifact.startsWith(artifactPrefix) === false
+      )
+        continue;
+      const relativeArtifact = record.observation.artifact.slice(
+        artifactPrefix.length,
+      );
+      const expectedArtifact = expectedRecord.replace(/\.json$/u, ".png");
+      if (relativeArtifact !== expectedArtifact) continue;
+      const artifactBytes = readOwned(relativeArtifact);
+      if (artifactBytes === null) continue;
+      if (props.runtimeIdentity === null) continue;
+      try {
+        observations.push(
+          verifyAutoMovieSubjectInspectionObservation({
+            plan,
+            runtimeIdentity: props.runtimeIdentity,
+            record,
+            artifactBytes,
+          }),
+        );
+      } catch {
+        continue;
+      }
+    }
+  return {
+    planned: expected.planned,
+    observations,
+    history: journal.attempts,
+  };
 };
 
-/** Read one inspection record, refusing anything it cannot recognize. */
-const readInspectionJson = <T>(
-  file: string,
-  accepts: (value: T) => boolean,
-): T | null => {
+const inspectionJournalRelative = (
+  planIdentity: AutoMovieContentDigest,
+): string => `${encodeAutoMoviePathSegment(planIdentity)}/attempts.json`;
+
+const publishedInspectionPlanMatches = (props: {
+  root: string;
+  directory: string;
+  planIdentity: AutoMovieContentDigest;
+}): boolean => {
   try {
-    const value = JSON.parse(fs.readFileSync(file, "utf8")) as T;
-    return accepts(value) ? value : null;
+    const bytes = readAutoMovieProductionOwnedFile({
+      root: props.root,
+      directory: path.join(props.root, ...props.directory.split("/")),
+      relative: AUTOMOVIE_SUBJECT_INSPECTION_PLAN_FILE,
+    });
+    return (
+      parseAutoMovieSubjectInspectionPlan(
+        parseAutoMovieStructuredJson({
+          record: `${props.directory}/${AUTOMOVIE_SUBJECT_INSPECTION_PLAN_FILE}`,
+          bytes,
+        }),
+      ).planIdentity === props.planIdentity
+    );
   } catch {
-    return null;
+    return false;
   }
 };
+
+const parseInspectionJournal = (
+  value: unknown,
+  planIdentity: AutoMovieContentDigest,
+): IAutoMovieSubjectInspectionAttemptJournal => {
+  const validation =
+    typia.validateEquals<IAutoMovieSubjectInspectionAttemptJournal>(value);
+  if (validation.success === false)
+    throw new Error(
+      `Invalid subject-inspection attempt journal: ${validation.errors
+        .map((error) => `${error.path} expects ${error.expected}`)
+        .join("; ")}`,
+    );
+  const journal = validation.data;
+  if (
+    journal.planIdentity !== planIdentity ||
+    journal.attempts.some(
+      (attempt, index) =>
+        attempt.attempt !== index + 1 ||
+        (attempt.verdict === "passed") !== (attempt.reason === null) ||
+        new Set(attempt.observations).size !== attempt.observations.length,
+    )
+  )
+    throw new Error(
+      "Subject-inspection attempt journal is not canonical for its plan identity.",
+    );
+  return journal;
+};
+
+const mutateInspectionJournal = (
+  props: {
+    root: string;
+    directory: string;
+    planIdentity: AutoMovieContentDigest;
+  },
+  mutate: (journal: IAutoMovieSubjectInspectionAttemptJournal) => void,
+): void => {
+  const relative = `${props.directory}/${inspectionJournalRelative(
+    props.planIdentity,
+  )}`;
+  const absolute = path.join(props.root, ...relative.split("/"));
+  fs.mkdirSync(path.dirname(absolute), { recursive: true });
+  const lockFile = path.join(props.root, ...INSPECTION_LOCK_PATH.split("/"));
+  fs.mkdirSync(path.dirname(lockFile), { recursive: true });
+  const token = acquireCommitLock(lockFile);
+  try {
+    let journal: IAutoMovieSubjectInspectionAttemptJournal;
+    if (fs.existsSync(absolute))
+      journal = parseInspectionJournal(
+        parseAutoMovieStructuredJson({
+          record: relative,
+          bytes: fs.readFileSync(absolute),
+        }),
+        props.planIdentity,
+      );
+    else
+      journal = {
+        version: 1,
+        planIdentity: props.planIdentity,
+        attempts: [],
+        deliveryEvidence: false,
+      };
+    mutate(journal);
+    const staged = `${absolute}.staged`;
+    fs.writeFileSync(staged, `${JSON.stringify(journal, null, 2)}\n`, "utf8");
+    fs.renameSync(staged, absolute);
+  } finally {
+    releaseCommitLock(lockFile, token);
+  }
+};
+
+const beginInspectionAttempt = (
+  root: string,
+  directory: string,
+  planIdentity: AutoMovieContentDigest,
+): number => {
+  let attempt = 0;
+  mutateInspectionJournal({ root, directory, planIdentity }, (journal) => {
+    attempt = journal.attempts.length + 1;
+    journal.attempts.push({
+      attempt,
+      verdict: "not-run",
+      reason: "The inspection attempt did not reach a terminal outcome.",
+      observations: [],
+    });
+  });
+  return attempt;
+};
+
+const recordInspectionObservation = (props: {
+  root: string;
+  directory: string;
+  planIdentity: AutoMovieContentDigest;
+  attempt: number;
+  record: string;
+}): void =>
+  mutateInspectionJournal(props, (journal) => {
+    const attempt = journal.attempts[props.attempt - 1]!;
+    attempt.observations.push(props.record);
+  });
+
+const finishInspectionAttempt = (props: {
+  root: string;
+  directory: string;
+  planIdentity: AutoMovieContentDigest;
+  attempt: number;
+  verdict: IAutoMovieSubjectInspectionAttemptRecord["verdict"];
+  reason: string | null;
+}): void =>
+  mutateInspectionJournal(props, (journal) => {
+    const attempt = journal.attempts[props.attempt - 1]!;
+    attempt.verdict = props.verdict;
+    attempt.reason = props.reason;
+  });
 
 /** Write one inspection file under the project's inspection lock. */
 const publishInspectionFile = (
@@ -1204,3 +1797,6 @@ const hasVisiblePixelVariance = (png: PNG): boolean => {
   }
   return false;
 };
+
+const inspectionErrorMessage = (error: unknown): string =>
+  error instanceof Error ? error.message : String(error);

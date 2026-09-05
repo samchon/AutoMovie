@@ -4,14 +4,10 @@ import os from "node:os";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 
-import {
-  measuredShapeReconciliationParts,
-  reconcileMeasuredShapes,
-} from "../../coverage/measureCoverage";
+import { measuredShapeReconciliationParts } from "../../coverage/measureCoverage";
 import {
   type ICoverageEntry,
   coveredPositions,
-  mostCoveredEntries,
   partitionByShape,
   readRecordShapes,
   reconcileCoverageShapes,
@@ -28,9 +24,9 @@ const ROOT = path.resolve(__dirname, "../../../..");
  * drive letter. On a POSIX runner the path's own leading slash makes it four,
  * and the census reads a URL it cannot parse -- which is how the first of these
  * two call sites failed on Ubuntu while passing on Windows, and how the reader
- * `isMeasuredScriptUrl` replaced reported zero measured scripts on Linux for
- * its whole life. One spelling is what keeps the second site from repeating the
- * first.
+ * `measuredScriptIdentity` replaced reported zero measured scripts on Linux
+ * for its whole life. One spelling is what keeps the second site from
+ * repeating the first.
  */
 const repositoryUrl = (...segments: readonly string[]): string =>
   pathToFileURL(path.join(ROOT, ...segments)).href;
@@ -69,9 +65,17 @@ const repositoryUrl = (...segments: readonly string[]): string =>
  * 4. Reading skips what says nothing: a file that is not JSON, a record caught
  *    mid-write, a URL outside the measured population, and a record left with
  *    no measured URL at all.
- * 5. One group means the merge had nothing to lose, so no report is written. A
- *    group whose report cannot be produced or read stops the correction and
- *    says which group and why, rather than writing a partial third reading.
+ * 5. One group means the merge had nothing to lose, so a report whose keys are
+ *    already canonical is not written. A group whose report cannot be produced
+ *    or read stops the correction and says which group and why, rather than
+ *    writing a partial third reading.
+ * 6. One group whose report keys two spellings of one file folds them into one
+ *    entry under the canonical key and loses neither reading's coverage, and a
+ *    single non-canonical key is rewritten under its canonical one; both are
+ *    decided by an injected identity so the fold is pinned on every host.
+ * 7. Through the real measured-URL predicate, two records that differ only in
+ *    the shape of an excluded toolchain module stay one group, while the same
+ *    difference on an authored source separates them.
  */
 export const test_workspace_coverage_shape_reconciliation = (): void => {
   TestValidator.equals(
@@ -121,25 +125,19 @@ export const test_workspace_coverage_shape_reconciliation = (): void => {
     f: Record<string, number> = {},
     b: Record<string, number[]> = {},
   ): ICoverageEntry => ({ s, f, b });
+  const coverageSpan = (line: number) => ({
+    start: { line, column: 0 },
+    end: { line, column: 1 },
+  });
   TestValidator.equals(
-    "the fullest reading wins and a lone file is carried through",
+    "covered positions count only positive statement, function, and branch hits",
     {
       counted: coveredPositions(entry({ 0: 1, 1: 0 }, { 0: 2 }, { 0: [1, 0] })),
       empty: coveredPositions({}),
-      best: mostCoveredEntries([
-        { "a.ts": entry({ 0: 1, 1: 0 }), "b.ts": entry({ 0: 1 }) },
-        { "a.ts": entry({ 0: 1, 1: 1 }), "c.ts": entry({ 0: 0 }) },
-        { "a.ts": entry({ 0: 0, 1: 0 }) },
-      ]),
     },
     {
       counted: 3,
       empty: 0,
-      best: {
-        "a.ts": entry({ 0: 1, 1: 1 }),
-        "b.ts": entry({ 0: 1 }),
-        "c.ts": entry({ 0: 0 }),
-      },
     },
   );
 
@@ -255,6 +253,65 @@ export const test_workspace_coverage_shape_reconciliation = (): void => {
         throw new Error("a single group must write no corrected report");
       },
     });
+    const singleUnidentifiable = reconcileCoverageShapes({
+      copy: () => undefined,
+      groupRoot,
+      measured: () => false,
+      mkdir: () => undefined,
+      readReport: () => ({
+        "one.ts": {
+          s: { 0: 1 },
+          statementMap: { 0: { start: { line: 1 } } },
+        },
+      }),
+      report: () => 0,
+      reportDirectory: path.join(directory, "single-report"),
+      temporary: directory,
+      writeReport: () => {
+        throw new Error("a single group must write no corrected report");
+      },
+    });
+    // One group, and c8 wrote one file under two spellings: the reading a
+    // process loaded through its source map under the checkout's real casing,
+    // and the `--all` entry under the working directory's. Each covered one of
+    // the two statements. Keyed by an injected lower-casing identity so the
+    // fold is decided the same way on a case-preserving and a case-sensitive
+    // host.
+    const lowered = (file: string): string => file.toLowerCase();
+    const twoSpellings = (
+      report: Record<string, ICoverageEntry>,
+    ): {
+      result: ReturnType<typeof reconcileCoverageShapes>;
+      written: unknown;
+    } => {
+      let written: unknown = null;
+      const result = reconcileCoverageShapes({
+        copy: () => undefined,
+        entryIdentity: lowered,
+        groupRoot,
+        measured: () => false,
+        mkdir: () => undefined,
+        readReport: () => report,
+        report: () => 0,
+        reportDirectory: path.join(directory, "single-report"),
+        temporary: directory,
+        writeReport: (entries) => {
+          written = entries;
+        },
+      });
+      return { result, written };
+    };
+    const twoLineMap = { 0: coverageSpan(1), 1: coverageSpan(2) };
+    const singleFolded = twoSpellings({
+      "/Repo/One.ts": { s: { 0: 1, 1: 0 }, statementMap: twoLineMap },
+      "/repo/one.ts": { s: { 0: 0, 1: 1 }, statementMap: twoLineMap },
+    });
+    const singleRecased = twoSpellings({
+      "/Repo/One.ts": { s: { 0: 1 }, statementMap: { 0: coverageSpan(1) } },
+    });
+    const singleCanonical = twoSpellings({
+      "/repo/one.ts": { s: { 0: 1 }, statementMap: { 0: coverageSpan(1) } },
+    });
 
     TestValidator.equals(
       "a correction is written only when every group answered",
@@ -282,8 +339,8 @@ export const test_workspace_coverage_shape_reconciliation = (): void => {
                   fnMap: {},
                   s: { 0: 1, 1: 1 },
                   statementMap: {
-                    0: { start: { line: 1 } },
-                    1: { start: { line: 2 } },
+                    0: coverageSpan(1),
+                    1: coverageSpan(2),
                   },
                 },
                 {
@@ -293,9 +350,9 @@ export const test_workspace_coverage_shape_reconciliation = (): void => {
                   fnMap: {},
                   s: { 0: 0, 1: 0, 2: 1 },
                   statementMap: {
-                    0: { start: { line: 20 } },
-                    1: { start: { line: 21 } },
-                    2: { start: { line: 22 } },
+                    0: coverageSpan(20),
+                    1: coverageSpan(21),
+                    2: coverageSpan(22),
                   },
                 },
               ],
@@ -307,10 +364,29 @@ export const test_workspace_coverage_shape_reconciliation = (): void => {
             "one.ts": {
               s: { 0: 0, 1: 0, 2: 1 },
               statementMap: {
-                0: { start: { line: 20 } },
-                1: { start: { line: 21 } },
-                2: { start: { line: 22 } },
+                0: coverageSpan(20),
+                1: coverageSpan(21),
+                2: coverageSpan(22),
               },
+            },
+          },
+        ),
+        unidentifiable: unionShortfalls(
+          new Map([
+            [
+              "one.ts",
+              [
+                {
+                  s: { 0: 1 },
+                  statementMap: { 0: { start: { line: 1 } } },
+                },
+              ],
+            ],
+          ]),
+          {
+            "one.ts": {
+              s: { 0: 1 },
+              statementMap: { 0: { start: { line: 1 } } },
             },
           },
         ),
@@ -318,11 +394,23 @@ export const test_workspace_coverage_shape_reconciliation = (): void => {
         reportFailedWrote: reportFailed.written,
         readFailed: readFailed.result,
         single,
+        singleUnidentifiable,
+        singleFolded,
+        singleRecased,
+        singleCanonical,
       },
       {
         succeeded: { failure: null, groups: 2, shortfalls: [] },
         quiet: [],
-        losing: [{ file: "one.ts", lost: [1, 2] }],
+        losing: [
+          {
+            file: "one.ts",
+            lost: ["statement:1:0-1:1", "statement:2:0-2:1"],
+          },
+        ],
+        unidentifiable: [
+          { file: "one.ts", lost: ["unidentifiable:0:statement:0"] },
+        ],
         written: { "one.ts": entry({ 0: 1, 1: 1 }) },
         withMerged: { "one.ts": entry({ 0: 1, 1: 1, 2: 1 }) },
         reportFailed: {
@@ -335,15 +423,51 @@ export const test_workspace_coverage_shape_reconciliation = (): void => {
           groups: 2,
         },
         single: { failure: null, groups: 0 },
+        singleUnidentifiable: {
+          failure: null,
+          groups: 0,
+          shortfalls: [
+            { file: "one.ts", lost: ["unidentifiable:0:statement:0"] },
+          ],
+        },
+        // Both statements ran in one spelling or the other, so the folded
+        // entry carries both and no reading lost a position.
+        singleFolded: {
+          result: { failure: null, groups: 0 },
+          written: {
+            "/repo/one.ts": {
+              b: {},
+              f: {},
+              s: { 0: 1, 1: 1 },
+              statementMap: twoLineMap,
+            },
+          },
+        },
+        singleRecased: {
+          result: { failure: null, groups: 0 },
+          written: {
+            "/repo/one.ts": {
+              b: {},
+              f: {},
+              s: { 0: 1 },
+              statementMap: { 0: coverageSpan(1) },
+            },
+          },
+        },
+        singleCanonical: {
+          result: { failure: null, groups: 0 },
+          written: null,
+        },
       },
     );
 
-    // The real wiring, part by part. Each is one line over `fs` or one spawn,
-    // and each is the kind of line that survives every green run until the day
-    // it is needed.
+    // The filesystem adapters are exercised against this disposable fixture;
+    // the reporter process remains injected so this logic case never launches
+    // c8 recursively.
     const parts = measuredShapeReconciliationParts({
       groupRoot: path.join(directory, "real-groups"),
       reportDirectory: path.join(directory, "real-report"),
+      spawn: () => ({ status: 0 }),
       temporary: directory,
     });
     parts.mkdir(path.join(directory, "real-report"));
@@ -354,6 +478,58 @@ export const test_workspace_coverage_shape_reconciliation = (): void => {
     );
     const emptyReport = parts.readReport(path.join(directory, "real-groups"));
     parts.writeReport({ "one.ts": entry({ 0: 1 }) });
+    // Two records that agree about an authored source and disagree about the
+    // shape of a toolchain module under `node_modules`. The module is outside
+    // the authored population, so the disagreement must not split the group;
+    // the same disagreement on a second authored source must.
+    const census = path.join(directory, "census");
+    fs.mkdirSync(census);
+    const scripts = (
+      entries: ReadonlyArray<readonly [string, number]>,
+    ): string =>
+      JSON.stringify({
+        result: entries.map(([url, offset]) => ({
+          url,
+          functions: [{ functionName: "f", ranges: [{ startOffset: offset }] }],
+        })),
+      });
+    const authored = repositoryUrl("packages", "engine", "src", "x.ts");
+    const sibling = repositoryUrl("packages", "engine", "src", "y.ts");
+    const toolchain = repositoryUrl("node_modules", "pkg", "index.js");
+    fs.writeFileSync(
+      path.join(census, "a.json"),
+      scripts([
+        [authored, 1],
+        [toolchain, 1],
+      ]),
+      "utf8",
+    );
+    fs.writeFileSync(
+      path.join(census, "b.json"),
+      scripts([
+        [authored, 1],
+        [toolchain, 2],
+      ]),
+      "utf8",
+    );
+    const authoredCensus = path.join(directory, "authored-census");
+    fs.mkdirSync(authoredCensus);
+    fs.writeFileSync(
+      path.join(authoredCensus, "a.json"),
+      scripts([
+        [authored, 1],
+        [sibling, 1],
+      ]),
+      "utf8",
+    );
+    fs.writeFileSync(
+      path.join(authoredCensus, "b.json"),
+      scripts([
+        [authored, 1],
+        [sibling, 2],
+      ]),
+      "utf8",
+    );
     TestValidator.equals(
       "every part of the real wiring answers on its own",
       {
@@ -364,10 +540,14 @@ export const test_workspace_coverage_shape_reconciliation = (): void => {
           path.join(directory, "real-records"),
           path.join(directory, "real-report"),
         ),
-        inside: parts.measured(
-          repositoryUrl("packages", "engine", "src", "x.ts"),
-        ),
+        inside: parts.measured(authored) !== false,
         outside: parts.measured("file:///elsewhere/x.ts"),
+        toolchainGroups: partitionByShape(
+          readRecordShapes(census, parts.measured),
+        ),
+        authoredGroups: partitionByShape(
+          readRecordShapes(authoredCensus, parts.measured),
+        ).length,
         // A signalled reporter has no status, and reading that as success
         // would correct a report from a group that never finished.
         signalled: measuredShapeReconciliationParts({
@@ -384,64 +564,9 @@ export const test_workspace_coverage_shape_reconciliation = (): void => {
         reported: 0,
         inside: true,
         outside: false,
+        toolchainGroups: [["a.json", "b.json"]],
+        authoredGroups: 2,
         signalled: 1,
-      },
-    );
-
-    // The composition root, end to end, over two records that disagree about a
-    // real repository source. It spawns the real reporter twice and must leave
-    // its group directory behind it.
-    const liveRecords = path.join(directory, "live-records");
-    const liveReport = path.join(directory, "live-report");
-    fs.mkdirSync(liveRecords, { recursive: true });
-    fs.mkdirSync(liveReport, { recursive: true });
-    const liveUrl = repositoryUrl(
-      "packages",
-      "engine",
-      "src",
-      "architecture",
-      "builtEnvironmentObservation.ts",
-    );
-    for (const [name, offset] of [
-      ["one.json", 0],
-      ["two.json", 40],
-    ] as const)
-      fs.writeFileSync(
-        path.join(liveRecords, name),
-        JSON.stringify({
-          result: [
-            {
-              url: liveUrl,
-              functions: [
-                {
-                  functionName: "probe",
-                  isBlockCoverage: true,
-                  ranges: [
-                    { count: 1, endOffset: offset + 10, startOffset: offset },
-                  ],
-                },
-              ],
-            },
-          ],
-        }),
-        "utf8",
-      );
-    const live = reconcileMeasuredShapes(liveRecords, liveReport);
-    TestValidator.equals(
-      "the composition root reports both groups and cleans up after itself",
-      {
-        groups: live.groups,
-        failure: live.failure,
-        wroteReport: fs.existsSync(
-          path.join(liveReport, "coverage-final.json"),
-        ),
-        groupRootRemoved: fs.existsSync(`${liveRecords}-shapes`) === false,
-      },
-      {
-        groups: 2,
-        failure: null,
-        wroteReport: true,
-        groupRootRemoved: true,
       },
     );
   } finally {

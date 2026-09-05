@@ -1,6 +1,5 @@
 import { canonicalAutoMovieCaptureRuntimeIdentity } from "@automovie/production";
 import { createHash } from "node:crypto";
-import { PNG } from "pngjs";
 
 import {
   inspectCaptureGraphics,
@@ -8,7 +7,14 @@ import {
   launchCaptureBrowser,
 } from "./capture-browser";
 import { settleCaptureExecutableTouch } from "./captureExecutableSnapshot";
+import { assertAutoMovieNoArguments } from "./commandArguments";
 import { readAutoMovieHostCaptureBrowser } from "./hostBoundary";
+import {
+  loadResidentRuntimePackage,
+  runRuntimePackageGeneration,
+} from "./runtimePackageGeneration";
+
+assertAutoMovieNoArguments("capture:doctor", process.argv.slice(2));
 
 interface CaptureDoctorFailure {
   error: unknown;
@@ -44,6 +50,10 @@ const preserveCleanupFailure = async (
 const SETTLE_ATTEMPTS = 4;
 const SETTLE_WAIT_MS = 2_000;
 
+const pngGeneration = loadResidentRuntimePackage<typeof import("pngjs")>({
+  packageName: "pngjs",
+});
+
 const browser = readAutoMovieHostCaptureBrowser(process.env);
 const closure = inspectCurrentCaptureRuntimeClosure({
   projectRoot: process.cwd(),
@@ -72,7 +82,9 @@ try {
     const graphics = await inspectCaptureGraphics(page);
     const bytes = await page.locator("#view").screenshot({ type: "png" });
     session.assertRuntimeCurrent();
-    const png = PNG.sync.read(bytes);
+    const png = await runRuntimePackageGeneration(pngGeneration, ({ PNG }) =>
+      PNG.sync.read(bytes),
+    );
     if (png.width !== 16 || png.height !== 16)
       throw new Error(
         `Capture doctor decoded ${png.width}x${png.height}; expected 16x16.`,

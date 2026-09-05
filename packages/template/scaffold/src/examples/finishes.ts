@@ -203,7 +203,7 @@ export const emissiveFinish = (props: {
  * The scene's photographic response: what lights it and how it is exposed.
  *
  * `image` is a registered equirectangular HDR and is what makes a
- * physically-based interior read at all — it supplies the sky through a window,
+ * physically-based interior read at all : it supplies the sky through a window,
  * the bounce off a floor, and the reflections metal and glass in the shot are
  * showing. `background` is its alternative, not its companion, and exactly one
  * of the two is stated.

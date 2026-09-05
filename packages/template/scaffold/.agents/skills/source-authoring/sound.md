@@ -14,7 +14,7 @@ Give each layer a narrative job. If two sounds compete for the same job, simplif
 
 ## What an authored cue plays
 
-An audio cue on the film timeline names its `asset` and states where it sits: a film-global start, a duration, the source frame the edit begins at, the span of source it uses, a gain, fades and a bus. The mix plays that asset read at its own rate from the stated offset, stretched only by the ratio between the source span and the film span, and silent past the asset's end rather than looped. Decoding happens outside the mix: whoever renders hands the decoded samples in, exactly as it does for synthesized dialogue, so a codec never reaches a mix that has to produce the same bytes on every machine.
+An audio cue on the film timeline names its `asset` and states where it sits: a film-global start, a duration, the source offset the edit begins at, the asset's complete source duration, a gain, fades and a bus. The source duration is the whole asset, not the part the cue uses: the offset plus the duration must fit inside it, and the compiler refuses a cue that does not. The mix plays the asset at unit rate from the offset for exactly the cue's duration, so the same trim sounds the same at any offset and a longer asset is never squeezed into a shorter cue. Decoding happens outside the mix: whoever renders hands the decoded samples in, exactly as it does for synthesized dialogue, so a codec never reaches a mix that has to produce the same bytes on every machine.
 
 A cue whose asset has not been decoded still sounds, as a bus-shaped stand-in: a bed for music, filtered noise for ambience and effects. That is scaffolding for a film mid-authoring and not the sound design: a review that judges a cue before its asset is decoded is judging the stand-in.
 
@@ -42,7 +42,7 @@ Write speakable lines and let the user or delegated authoring agent choose a rec
 
 Preserve actual sample-clock or aligned phoneme timing from the final decoded bytes for lip sync and caption alignment. Mouth motion follows the speaker's emission interval, not a later listener-arrival frame. Caption duration and Unicode character count do not reveal pronunciation timing. Normalize level, remove unintended leading/trailing silence without cutting expressive breath, and keep dialogue intelligible over effects and music.
 
-Caption readability is evaluated only against a production-selected, versioned profile whose language, grapheme rule, rate, line, duration, and gap limits are explicit. The user or delegated authoring agent owns that profile and its thresholds. When no profile is selected, report the measured grapheme count, duration, rate, lines, and gaps with a `not-run` verdict; do not invent a default threshold or turn measure-only output into pass or fail.
+Caption readability is evaluated only against a production-selected, versioned profile whose RFC 5646 well-formed language tag, complete grapheme execution identity, rate, line, duration, and gap limits are explicit. Copy the algorithm, revision, grapheme granularity, and requested/resolved locale or locale-neutral state from `AUTOMOVIE_CAPTION_GRAPHEME_SEGMENTATION`; a mismatch remains `not-run` without fallback. Language comparison is ASCII case-insensitive while authored spelling is retained, and registry membership, Preferred-Value replacement, and language inference remain outside this validation. Readability and WebVTT consume the same authored presentation: CRLF and CR become LF, legal tabs and line breaks remain, prohibited controls are sanitized, and no automatic reflow is inferred. The user or delegated authoring agent owns that profile and its thresholds. When no profile is selected, report the actual segmentation identity, measured grapheme count, duration, rate, lines, and gaps with a `not-run` verdict; do not invent a default threshold or turn measure-only output into pass or fail.
 
 ## Mix hierarchy
 
@@ -52,7 +52,7 @@ Shape ambience across edits with L-cuts and J-cuts. Crossfade room tone where co
 
 ## Verification
 
-Probe final media facts, resident sample count, duration, channel count, sample rate, codec, and audiovisual runtime. Listen on headphones and small speakers at a stable level. Check dialogue, event sync, spatial motion, loops, clipping, accidental gaps, captions, and the first and last second of every sequence.
+Probe final media facts, resident sample count, duration, channel count, sample rate, codec, and audiovisual runtime. Derive the audio sample boundary from the exact reduced rational film rate with the shared nearest-half-up mapper; never estimate it from decimal `fps`. Listen on headphones and small speakers at a stable level. Check dialogue, event sync, spatial motion, loops, clipping, accidental gaps, captions, and the first and last second of every sequence.
 
 ## Evidence for a sound verdict
 

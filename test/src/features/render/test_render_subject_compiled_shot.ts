@@ -256,7 +256,7 @@ export const test_render_subject_compiled_shot = (): void => {
     "the sidecar is deterministic bytes that round-trip to the same palette",
     {
       trailing: sidecar.endsWith("\n") && sidecar.endsWith("\n\n") === false,
-      indented: sidecar.startsWith('{\n  "version": 1,'),
+      indented: sidecar.startsWith('{\n  "version": 2,'),
       stable: sidecar === renderAutoMovieSemanticMaskSidecar(mask),
       digest: (JSON.parse(sidecar) as IAutoMovieSemanticMask).digest,
       pond: (JSON.parse(sidecar) as IAutoMovieSemanticMask).entries.find(

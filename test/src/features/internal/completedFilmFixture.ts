@@ -1,9 +1,32 @@
 import { compareCodeUnits } from "@automovie/engine";
+import {
+  type IAutoMovieEvidenceConfigProps,
+  createBlankAutoMovieProductionEvidence,
+} from "@automovie/evidence";
 import { renderScaffold } from "@automovie/template";
 import fs from "node:fs";
 import path from "node:path";
 
 const FIXTURE = path.resolve(__dirname, "../../../fixtures/completed-film");
+
+/** Exact graph declaration exercised by the completed-film regression. */
+export const completedFilmEvidenceConfig = (
+  root: string,
+): IAutoMovieEvidenceConfigProps => ({
+  ...createBlankAutoMovieProductionEvidence(root, "english"),
+  kind: "film",
+  settings: "review",
+  models: "review",
+  motions: "review",
+  treatments: "review",
+  scripts: "review",
+  screenplays: "review",
+  modelSources: "review",
+  motionSources: "review",
+  shots: "review",
+  productionSources: "review",
+  filmSources: "review",
+});
 
 const files = (root: string): string[] => {
   return fs
@@ -23,17 +46,18 @@ const files = (root: string): string[] => {
  * Overlay the repository-only completed film fixture on the blank public
  * scaffold. The fixture proves production behavior without making every new
  * user's project inherit somebody else's evidence, source, assets, or design.
- * It deliberately leaves the blank scaffold's lint declaration untouched:
- * historical fixture annotations are regression data, not a current authored
- * evidence state that may be promoted by a test helper.
+ * Its authored files are paired with the explicit declaration returned by
+ * {@link completedFilmEvidenceConfig}; tests pass that declaration through the
+ * public evidence reader instead of reconstructing a partial evidence object.
  */
 export const renderCompletedFilmFixture = (
   name: string,
   scaffold: (props: {
     name: string;
+    language: "english";
   }) => Record<string, string> = renderScaffold,
 ): Record<string, string> => {
-  const rendered = scaffold({ name });
+  const rendered = scaffold({ name, language: "english" });
   for (const absolute of files(FIXTURE)) {
     const legacyRelative = path
       .relative(FIXTURE, absolute)

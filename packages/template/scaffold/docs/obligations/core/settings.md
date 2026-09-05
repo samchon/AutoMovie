@@ -58,7 +58,7 @@ Review question: which promised visible or operable element still lacks an expli
 
 This obligation owns the production-wide asset and design plan. `delivery-scope` owns the final artifacts promised to the recipient, `settings-coverage-map` allocates settings domains rather than concrete build-or-adopt items, and `operative-subject-inventory` accounts for consequential participants and controllers whether or not they require a new asset.
 
-Sources: [NASA work breakdown structure handbook](https://www.nasa.gov/wp-content/uploads/2018/09/nasa_wbs_handbook.pdf); [NASA systems engineering handbook on technical planning and resource allocation](https://www.nasa.gov/reference/systems-engineering-handbook/); [OpenUSD on assets and models](https://openusd.org/release/glossary.html)
+Sources: [NASA work breakdown structure handbook](https://www.nasa.gov/wp-content/uploads/2023/08/nasa-work-breakdown-structure-handbook.pdf); [NASA systems engineering handbook on technical planning and resource allocation](https://www.nasa.gov/reference/systems-engineering-handbook/); [OpenUSD on assets and models](https://openusd.org/release/glossary.html)
 
 ## Audience or operator access {#audience-operator-access}
 
@@ -142,13 +142,15 @@ Sources: [2010 ADA Standards for Accessible Design](https://www.ada.gov/law-and-
 
 ## Minimal departure {#minimal-departure}
 
-The settings population does not repeat real-world, medium, or genre defaults that the production leaves unchanged. It records each deliberate departure before a lower layer relies on it, including the scope and consequences of that departure. Where no departure is declared, the applicable shared default remains in force.
+Leave only incidental real-world, medium, or genre defaults implicit when no authored decision, causal chain, continuity check, evidence claim, implementation choice, or audience promise depends on them. Give every consequential fact an explicit settings H2 owner even when it is common knowledge or a familiar convention; familiarity never authorizes downstream work to reconstruct production canon.
+
+Record each deliberate departure before a lower layer relies on it, including its scope and consequences. Do not quietly change an implicit default for later convenience and present the change as a reversal.
 
 Review question: which recorded fact merely restates a stable default, or which unstated departure would surprise a downstream author or audience?
 
-This obligation owns the boundary between inherited defaults and production-specific canon. The common scope-preservation principle owns whether the declared delivery requires an additional settings owner.
+This obligation owns only the boundary between incidental inherited defaults and production-specific canon. `settings-coverage-map` owns the complete classification of settings domains, and the common scope-preservation principle owns whether the declared delivery requires an additional settings owner.
 
-Sources: [Ryan's principle of minimal departure](https://doi.org/10.1016/0304-422X%2880%2990030-3); [Ryan on possible-world construction](https://archive.org/details/possibleworldsar0000ryan)
+Sources: [Ryan's principle of minimal departure](https://doi.org/10.1016/0304-422X%2880%2990030-3); [Ryan on possible-world construction](https://archive.org/details/possibleworldsar0000ryan); [NASA on complete, traceable requirements](https://swehb.nasa.gov/spaces/7150/pages/16450593/SWE-051%2B-%2BSoftware%2BRequirements%2BAnalysis)
 
 ## Internal coherence {#internal-coherence}
 

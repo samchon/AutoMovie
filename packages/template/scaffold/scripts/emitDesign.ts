@@ -9,77 +9,83 @@ import type {
   IAutoMovieShotContract,
 } from "@automovie/interface";
 import {
-  AutoMovieProductionProject,
-  compareCodeUnits,
+  AUTOMOVIE_PRODUCTION_COMPILER_VERSION,
+  type IAutoMovieDesignDerivationBasis,
+  type IAutoMovieDesignProducerEntry,
+  autoMovieDesignTargetAddress,
   findAutoMovieProjectRoot,
+  runAutoMovieDesignDerivation,
 } from "@automovie/production";
+import fs from "node:fs";
+import path from "node:path";
+import ts from "typescript";
 
-import { readAutoMovieProjectProductionId } from "./projectIdentity";
+import { assertAutoMovieNoArguments } from "./commandArguments";
+import { openAutoMovieProjectProduction } from "./projectIdentity";
+
+assertAutoMovieNoArguments("design", process.argv.slice(2));
 
 /** The project this invocation belongs to, found from the host's own seed. */
 const projectRoot = findAutoMovieProjectRoot(process.cwd());
 
-/** The production namespace that project declares in its own package manifest. */
-const productionId = readAutoMovieProjectProductionId(projectRoot);
+/** This emitter's own project-relative path, which every record's basis names. */
+const EMITTER_PATH = "scripts/emitDesign.ts";
 
 /**
  * Production-owned design emitter entry point.
  *
  * After reviewing settings and the applicable design/source branches, add
- * explicit imports and {@link emit} calls in the marked block below.
- * Keep the screenplay index hand-authored: it records semantic coverage that
- * cannot be derived from prose without comparing the prose with itself.
+ * explicit imports and {@link derive} calls in the marked block below. Keep
+ * the screenplay index hand-authored: it records semantic coverage that cannot
+ * be derived from prose without comparing the prose with itself.
+ *
+ * Every declared target is evaluated twice against one frozen producer basis
+ * (this emitter's bytes, the named source export, its transitive runtime
+ * imports and the toolchain), compared with the live basis, and only then
+ * stored. A result that differs between the two evaluations, a basis that moved
+ * during the run, or a resident record no entry derives refuses the whole run
+ * before any record is written.
  *
  * This generic shell owns no production record. Its initial run fails, while
  * its inventory check remains after authorship so a design record no current
  * source derives cannot survive as plausible residue.
  */
-const project = AutoMovieProductionProject.open(
+const project = openAutoMovieProjectProduction(
   projectRoot,
-  productionId,
   createAutoMovieArchetypeRegistry(AUTOMOVIE_PRIMITIVE_ARCHETYPES),
 );
 
-/** Stable comparable identity for one project-owned design record. */
-const address = (target: IAutoMovieDesignTarget): string =>
-  target.kind === "production" || target.kind === "world"
-    ? target.kind
-    : `${target.kind} "${target.id}"`;
-
-/** Every record derived by this exact emitter run. */
-const derived = new Set<string>();
+/** Every record this emitter derives, in the order it publishes them. */
+const plan: IAutoMovieDesignProducerEntry[] = [];
 
 /**
- * Store one derived record without invalidating dependants when its bytes did
- * not change. Registration occurs inside this call so ownership cannot drift
- * into a second hand-maintained inventory.
+ * Declare one derived record: the exact source export it comes from, how to
+ * evaluate it from that export, and the typed project setter that stores it.
+ *
+ * `source.selector` names the member of the export the value comes from when
+ * the export itself is not the record: `"design()"` for a unit whose recipe is
+ * its `design` method, or `"[0]"` for one element of an acceptance array. Leave
+ * it `null` when the named export is the record. Declare a production record
+ * before records measured against its frame clock, referenced model tiers
+ * before the recipe that names them, and shots before their acceptance cases.
  */
-const emit = (
-  label: string,
+const derive = <T>(
   target: IAutoMovieDesignTarget,
-  value: unknown,
-  store: () => IAutoMovieDesignMutationOutput,
+  source: IAutoMovieDesignDerivationBasis["source"],
+  evaluate: () => T,
+  store: (value: T) => IAutoMovieDesignMutationOutput,
 ): void => {
-  derived.add(address(target));
-  const current = project.design(target);
-  if (current !== null && JSON.stringify(current) === JSON.stringify(value)) {
-    process.stdout.write(`unchanged ${label}\n`);
-    return;
-  }
-  const output = store();
-  if (output.accepted === false)
-    throw new Error(
-      `Derived design "${label}" was refused: ${output.diagnostics
-        .map((diagnostic) => diagnostic.message)
-        .join(" ")}`,
-    );
-  process.stdout.write(
-    `${current === null ? "created" : "updated"} ${label}\n`,
-  );
+  plan.push({
+    target: autoMovieDesignTargetAddress(target),
+    recordPath: project.designRecordPath(target),
+    source,
+    evaluate,
+    store: (value) => store(value as T),
+  });
 };
 
 /**
- * Add source module/export identity to one typed shot contract before emitting
+ * Add source module/export identity to one typed shot contract before deriving
  * it through `project.setShotContract`.
  */
 const shotContract = (
@@ -90,10 +96,9 @@ const shotContract = (
   return { id: defined.id, beat, source, ...measured };
 };
 
-// AUTHOR PRODUCTION IMPORTS ABOVE AND EMIT CALLS HERE. Emit a production record
-// before records measured against its frame clock; emit referenced model tiers
-// before the recipe that names them; emit shots before their acceptance cases.
-// Use shotContract(...) for each imported shot and state its module and export.
+// AUTHOR PRODUCTION IMPORTS ABOVE AND DERIVE CALLS HERE. Use shotContract(...)
+// for each imported shot and state its module and export in both the derive
+// source and the contract source.
 
 const inventory = project.inventory();
 const resident: IAutoMovieDesignTarget[] = [
@@ -104,32 +109,38 @@ const resident: IAutoMovieDesignTarget[] = [
   ...inventory.shots.map((id) => ({ kind: "shot", id }) as const),
   ...inventory.acceptance.map((id) => ({ kind: "acceptance", id }) as const),
 ];
-const orphaned = resident
-  .filter((target) => derived.has(address(target)) === false)
-  .map(
-    (target) => `  ${project.designRecordPath(target)}  (${address(target)})`,
-  )
-  .sort(compareCodeUnits);
-if (orphaned.length !== 0)
-  throw new Error(
-    [
-      `${orphaned.length} resident design record(s) are derived by no source in this script:`,
-      ...orphaned,
-      "",
-      "Derive each record from its current owner above or delete the named file.",
-    ].join("\n"),
-  );
+const run = runAutoMovieDesignDerivation({
+  production: project.productionId,
+  emitter: {
+    path: EMITTER_PATH,
+    bytes: fs.readFileSync(path.join(projectRoot, ...EMITTER_PATH.split("/"))),
+  },
+  tool: {
+    production: AUTOMOVIE_PRODUCTION_COMPILER_VERSION,
+    typescript: ts.version,
+    node: process.versions.node,
+  },
+  readSource: (source) => project.readSource(source),
+  resident: resident.map((target) => ({
+    target: autoMovieDesignTargetAddress(target),
+    recordPath: project.designRecordPath(target),
+    value: project.design(target),
+  })),
+  entries: plan,
+});
+for (const outcome of run.outcomes)
+  process.stdout.write(`${outcome.state} ${outcome.recordPath}\n`);
 
-if (derived.size === 0)
+if (plan.length === 0)
   throw new Error(
     [
       "No production design emitter has been authored.",
       "Select a production kind in lint.config.ts, complete and review settings,",
       "author the applicable design and source branches, then add explicit",
-      "imports and emit calls to scripts/emitDesign.ts.",
+      "imports and derive calls to scripts/emitDesign.ts.",
     ].join(" "),
   );
 
 // Keep these helpers live in the blank shell and available to authoring edits.
-void emit;
+void derive;
 void shotContract;

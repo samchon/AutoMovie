@@ -1,21 +1,15 @@
 import assert from "node:assert/strict";
+import crypto from "node:crypto";
 import fs from "node:fs";
-import os from "node:os";
 import path from "node:path";
 
 import {
   type IAutoMovieEvidenceConfigProps,
   readAutoMovieProductionEvidence,
 } from "../src";
+import { createEvidenceProjectFixture } from "./EvidenceProjectFixture";
 
 const roots: string[] = [];
-const scaffoldRoot = path.resolve(
-  import.meta.dirname,
-  "..",
-  "..",
-  "template",
-  "scaffold",
-);
 
 /**
  * The production-evidence reader exposes one exact router/review denominator.
@@ -27,11 +21,15 @@ const scaffoldRoot = path.resolve(
  *    flat local contracts in deterministic code-unit order.
  * 2. Comments and fenced examples cannot manufacture owner headings, while a
  *    change inside one H2 changes only that unit's digest.
- * 3. A declaration rooted at another project and a manifest without a package
+ * 3. A direct brief exposes its graph-selected shot export and exact H3 owner.
+ * 4. A declaration rooted at another project and a manifest without a package
  *    name fail before either can become a router or review denominator.
+ * 5. A review row that records a host-specific comparison raises no alarm,
+ *    while a sibling unit whose review pastes the target's Review question is
+ *    reported as a question paste at that exact host.
  */
 try {
-  const project = createProject("reader-library");
+  const project = createProject();
   write(
     project,
     "package.json",
@@ -67,18 +65,43 @@ try {
       "",
       "## Shell {#shell}",
       "",
+      "<!--",
+      "@evidence contracts/visual.md#profile The shell preserves the production's reviewed model profile.",
+      "@evidenceReview contracts/visual.md#profile #abcdef0 Compared the shell body with the local profile contract and found the exact reviewed-model constraint.",
+      "-->",
+      "",
       "The exact shell.",
       "",
       "The shell detail.",
       "",
       "## Joint {#joint}",
       "",
+      "<!--",
+      "@evidence contracts/visual.md#profile The joint keeps the reviewed profile at every articulation.",
+      "@evidenceReview contracts/visual.md#profile #abcdef1 does the selected model preserve its reviewed profile?",
+      "-->",
+      "",
       "The exact joint.",
       "",
     ].join("\n"),
   );
-  write(project, "src/models/z.ts", "export class Z {}\n");
-  write(project, "src/models/nested/a.ts", "export class A {}\n");
+  write(
+    project,
+    "src/models/z.ts",
+    `\ufeff${"/**\n * @evidence models/zeta.md#zeta-form Realizes the reviewed zeta form.\n * @evidenceReview models/zeta.md#zeta-form #76e54b5 Read the form and checked this export.\n */\nclass Z {}\nexport { Z as Zeta };\n".replaceAll("\n", "\r\n")}`,
+  );
+  write(
+    project,
+    "src/models/nested/a.ts",
+    [
+      "/**",
+      " * @evidence models/alpha.md#shell Realizes the reviewed shell.",
+      " * @evidence models/alpha.md#joint Realizes the reviewed joint.",
+      " */",
+      "export class A {}",
+      "",
+    ].join("\n"),
+  );
   write(
     project,
     "docs/contracts/visual.md",
@@ -89,6 +112,16 @@ try {
       "This target governs the exact model profile selected by this production.",
       "",
       "## Profile {#profile}",
+      "",
+      "```contract-rule",
+      JSON.stringify({
+        id: "reviewed-model-profile",
+        status: "active",
+        safeApplication: "composition-safe",
+        timing: "before model composition",
+        sourceIdentity: "production-decision-v1",
+      }),
+      "```",
       "",
       "Every model keeps its reviewed profile.",
       "",
@@ -104,7 +137,7 @@ try {
     kind: "library",
     settings: "review",
     models: "review",
-    modelSources: "draft",
+    modelSources: "evidence",
     claims: [
       {
         name: "models answer the local visual contract",
@@ -134,6 +167,28 @@ try {
   assert.equal(first.description, "An exact model library.");
   assert.equal(first.configuration, configuration);
   assert.equal(first.manifest.kind, "library");
+  assert.deepEqual(first.manifest.topology.diagnostics, []);
+  assert.equal(
+    first.manifest.topology.declarations.find(
+      (edge) => edge.provider === "settings" && edge.consumer === "models",
+    )?.status,
+    "uses",
+  );
+  assert.equal(first.reviewAlarms.questionPasteChecked, true);
+  assert.deepEqual(
+    first.reviewAlarms.alarms.map((alarm) => [
+      alarm.code,
+      alarm.path,
+      alarm.host,
+    ]),
+    [
+      [
+        "evidence-review-question-paste",
+        "docs/models/alpha.md",
+        "docs/models/alpha.md#joint",
+      ],
+    ],
+  );
   assert.deepEqual(
     first.designBranches.map((branch) => ({
       branch: branch.branch,
@@ -147,10 +202,23 @@ try {
         branch: "models",
         designStage: "review",
         sourceBranch: "modelSources",
-        sourceStage: "draft",
+        sourceStage: "evidence",
         sourcePaths: ["src/models/nested/a.ts", "src/models/z.ts"],
       },
     ],
+  );
+  assert.equal(
+    first.sourceOwners.find((owner) => owner.exportName === "Zeta")
+      ?.sourceDigest,
+    `sha256:${crypto
+      .createHash("sha256")
+      .update(
+        fs
+          .readFileSync(path.join(project, "src/models/z.ts"), "utf8")
+          .replace(/^\ufeff/u, "")
+          .replace(/\r\n?/gu, "\n"),
+      )
+      .digest("hex")}`,
   );
   assert.deepEqual(
     first.designOwners.map((owner) => ({
@@ -173,7 +241,7 @@ try {
         ],
         sourceFiles: ["src/models/**/*.ts"],
         sourceSymbols: ["function", "property", "type"],
-        sourceEnforced: false,
+        sourceEnforced: true,
       },
       {
         branch: "models",
@@ -182,7 +250,55 @@ try {
         units: [["zeta-form", "Form"]],
         sourceFiles: ["src/models/**/*.ts"],
         sourceSymbols: ["function", "property", "type"],
-        sourceEnforced: false,
+        sourceEnforced: true,
+      },
+    ],
+  );
+  assert.deepEqual(
+    first.sourceOwners.map((owner) => ({
+      branch: owner.branch,
+      sourcePath: owner.sourcePath,
+      exportName: owner.exportName,
+      symbolKind: owner.symbolKind,
+      target: `${owner.targetPath}#${owner.targetAnchor}`,
+      stage: owner.stage,
+      enforced: owner.enforced,
+      reviewed: owner.reviewed,
+      digested: /^sha256:[a-f0-9]{64}$/u.test(owner.sourceDigest),
+    })),
+    [
+      {
+        branch: "modelSources",
+        sourcePath: "src/models/nested/a.ts",
+        exportName: "A",
+        symbolKind: "type",
+        target: "docs/models/alpha.md#joint",
+        stage: "evidence",
+        enforced: true,
+        reviewed: false,
+        digested: true,
+      },
+      {
+        branch: "modelSources",
+        sourcePath: "src/models/nested/a.ts",
+        exportName: "A",
+        symbolKind: "type",
+        target: "docs/models/alpha.md#shell",
+        stage: "evidence",
+        enforced: true,
+        reviewed: false,
+        digested: true,
+      },
+      {
+        branch: "modelSources",
+        sourcePath: "src/models/z.ts",
+        exportName: "Zeta",
+        symbolKind: "type",
+        target: "docs/models/zeta.md#zeta-form",
+        stage: "evidence",
+        enforced: true,
+        reviewed: false,
+        digested: true,
       },
     ],
   );
@@ -205,6 +321,21 @@ try {
       },
     ],
   );
+  assert.deepEqual(first.contractRules, [
+    {
+      address: "visual.md#profile",
+      anchor: "profile",
+      heading: "Profile",
+      file: "visual.md",
+      metadata: {
+        id: "reviewed-model-profile",
+        status: "active",
+        safeApplication: "composition-safe",
+        timing: "before model composition",
+        sourceIdentity: "production-decision-v1",
+      },
+    },
+  ]);
   assert.deepEqual(
     readAutoMovieProductionEvidence({
       root: project,
@@ -212,27 +343,68 @@ try {
     }),
     first,
   );
-  const linkedSourceParent = fs.mkdtempSync(
-    path.join(os.tmpdir(), "reader-linked-source-"),
+  const reviewed = readAutoMovieProductionEvidence({
+    root: project,
+    productionEvidence: { ...configuration, modelSources: "review" },
+  });
+  assert.equal(
+    reviewed.sourceOwners.find((owner) => owner.exportName === "Zeta")
+      ?.reviewed,
+    true,
   );
-  roots.push(linkedSourceParent);
-  const linkedSourceTarget = path.join(linkedSourceParent, "models");
-  fs.renameSync(path.join(project, "src", "models"), linkedSourceTarget);
-  fs.symlinkSync(
-    linkedSourceTarget,
-    path.join(project, "src", "models"),
-    process.platform === "win32" ? "junction" : "dir",
+  assert.equal(
+    reviewed.sourceOwners.find((owner) => owner.exportName === "A")?.reviewed,
+    false,
   );
-  assert.throws(
-    () =>
-      readAutoMovieProductionEvidence({
-        root: project,
-        productionEvidence: configuration,
-      }),
-    /project evidence populations contain only real files and directories inside the project root/u,
+
+  const brief = createProject();
+  write(
+    brief,
+    "package.json",
+    JSON.stringify({ name: "reader-brief", description: "One brief." }),
   );
-  fs.rmSync(path.join(project, "src", "models"));
-  fs.renameSync(linkedSourceTarget, path.join(project, "src", "models"));
+  write(
+    brief,
+    "docs/settings/production.md",
+    "# Production settings\n\n## Delivery {#delivery}\n\nOne direct brief.\n",
+  );
+  write(
+    brief,
+    "docs/briefs/delivery.md",
+    "# Delivery\n\n## Sequence {#sequence}\n\n### Opening {#opening}\n\n#### Beat {#opening-beat}\n\nOne opening shot.\n",
+  );
+  write(
+    brief,
+    "src/shots/delivery.ts",
+    "/** @evidence briefs/delivery.md#opening Realizes the exact opening. */\nexport const opening = (): void => undefined;\n",
+  );
+  const briefEvidence = readAutoMovieProductionEvidence({
+    root: brief,
+    productionEvidence: {
+      ...disabled(brief),
+      kind: "brief",
+      settings: "review",
+      briefs: "review",
+      shots: "evidence",
+    },
+  });
+  assert.deepEqual(
+    briefEvidence.sourceOwners.map((owner) => ({
+      branch: owner.branch,
+      sourcePath: owner.sourcePath,
+      exportName: owner.exportName,
+      target: `${owner.targetPath}#${owner.targetAnchor}`,
+    })),
+    [
+      {
+        branch: "shots",
+        sourcePath: "src/shots/delivery.ts",
+        exportName: "opening",
+        target: "docs/briefs/delivery.md#opening",
+      },
+    ],
+  );
+
   const modelSources = path.join(project, "src", "models");
   const inactiveSources = path.join(project, "inactive-models");
   fs.renameSync(modelSources, inactiveSources);
@@ -249,9 +421,11 @@ try {
   );
   fs.writeFileSync(
     alpha,
-    fs
-      .readFileSync(alpha, "utf8")
-      .replace("The exact joint.", "The exact revised joint."),
+    rewrite(
+      fs.readFileSync(alpha, "utf8"),
+      "The exact joint.",
+      "The exact revised joint.",
+    ),
   );
   const revised = readAutoMovieProductionEvidence({
     root: project,
@@ -294,22 +468,20 @@ try {
   for (const root of roots) fs.rmSync(root, { force: true, recursive: true });
 }
 
-/** Create a generated project with its scaffold-local contract inventory. */
-function createProject(name: string): string {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), `${name}-`));
-  roots.push(root);
-  for (const family of ["discovery", "obligations", "principles", "upstream"])
-    fs.cpSync(
-      path.join(scaffoldRoot, "docs", family),
-      path.join(root, "docs", family),
-      { recursive: true },
-    );
-  write(
-    root,
-    "docs/contracts/index.md",
-    "<!-- @evidenceExclude discovery/core/common.md#shared-local-boundary This reader fixture retains no other production-specific rule. -->\n\n# Work-specific contract audit\n",
-  );
-  return root;
+/** Create a generated project with a synthetic local contract inventory. */
+function createProject(): string {
+  return createEvidenceProjectFixture(roots);
+}
+
+/** Refuse to silently weaken a mutation-based arrangement. */
+function rewrite(
+  source: string,
+  search: string | RegExp,
+  replacement: string,
+): string {
+  const rewritten = source.replace(search, replacement);
+  assert.notEqual(rewritten, source, "the fixture mutation anchor must exist");
+  return rewritten;
 }
 
 /** Write one project-relative UTF-8 fixture file. */
@@ -324,6 +496,7 @@ function disabled(location: string): IAutoMovieEvidenceConfigProps {
   return {
     location,
     kind: null,
+    language: "english",
     populationScope: { mode: "complete-production" },
     settings: "disabled",
     research: "disabled",

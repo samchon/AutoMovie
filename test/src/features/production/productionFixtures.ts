@@ -1,4 +1,8 @@
 import {
+  type IAutoMovieProductionEvidence,
+  readAutoMovieProductionEvidence,
+} from "@automovie/evidence";
+import {
   IAutoMovieAcceptanceScenario,
   IAutoMovieAssetManifest,
   IAutoMovieCaptureRuntimeIdentity,
@@ -10,6 +14,7 @@ import {
   IAutoMovieWorldDesign,
 } from "@automovie/interface";
 import {
+  AUTOMOVIE_CAPTURE_RUNTIME_IDENTITY_PROTOCOL,
   AutoMovieProductionCompiler,
   AutoMovieProductionProject,
   canonicalAutoMovieCaptureRuntimeIdentity,
@@ -22,6 +27,7 @@ import os from "node:os";
 import path from "node:path";
 
 import {
+  completedFilmEvidenceConfig,
   completedFilmJson,
   renderCompletedFilmFixture,
 } from "../internal/completedFilmFixture";
@@ -155,6 +161,38 @@ export const film = {
     writeFiles(root, files);
     return {
       root,
+      dispose: () => fs.rmSync(root, { force: true, recursive: true }),
+    };
+  } catch (error) {
+    return throwProductionFixtureConstructionFailure(error, () =>
+      fs.rmSync(root, { force: true, recursive: true }),
+    );
+  }
+};
+
+/**
+ * Render the complete authored film and read its exact graph-backed identity.
+ *
+ * Unlike {@link productionFixture}, this does not slice the film for focused
+ * unit scenarios. It is the integration fixture used to prove the whole
+ * checked-in record through the public compiler.
+ */
+export const completedProductionFixture = (): {
+  root: string;
+  evidence: IAutoMovieProductionEvidence;
+  dispose: () => void;
+} => {
+  const root = fs.mkdtempSync(
+    path.join(os.tmpdir(), "automovie-completed-production-"),
+  );
+  try {
+    writeFiles(root, renderCompletedFilmFixture("fixture-film"));
+    return {
+      root,
+      evidence: readAutoMovieProductionEvidence({
+        root,
+        productionEvidence: completedFilmEvidenceConfig(root),
+      }),
       dispose: () => fs.rmSync(root, { force: true, recursive: true }),
     };
   } catch (error) {
@@ -498,7 +536,7 @@ export const testCaptureRuntimeIdentity = (
     browserSupport,
   };
   return {
-    protocolVersion: "automovie.capture-runtime.v2",
+    protocolVersion: AUTOMOVIE_CAPTURE_RUNTIME_IDENTITY_PROTOCOL,
     playwright: {
       package: "playwright",
       version: "1.60.0",

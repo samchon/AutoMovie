@@ -3,6 +3,10 @@ import {
   generateAutoMovieDerivedArtifact,
 } from "@automovie/production";
 
+import { assertAutoMovieNoArguments } from "./commandArguments";
+
+assertAutoMovieNoArguments("derive:example", process.argv.slice(2));
+
 /**
  * Explicit deterministic precomputation, run by `npm run derive:example`.
  *
@@ -10,7 +14,7 @@ import {
  * recorded basis: editing what it computes, what it reads, or where it writes
  * makes the published artifact stale and the next compile refuses it. That is
  * why the derivation is inlined here instead of imported from
- * `src/examples/derivedArtifacts.ts` -- a generator that delegates to a module
+ * `src/examples/derivedArtifacts.ts`; a generator that delegates to a module
  * outside its own basis can change behavior without changing the digest, and
  * deleting the example after reading it would break this command.
  */

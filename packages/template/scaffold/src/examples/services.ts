@@ -28,8 +28,8 @@ import { ExampleBuilding } from "./buildings";
  * One graph carries every discipline on purpose. Water, drainage, power, data,
  * air, fire and control are the same computational object, and giving each its
  * own record would make "is this network whole" seven questions with seven
- * answers. What differs per discipline is only the rules — which media it may
- * carry, and which unit each medium is measured in — and the engine owns
+ * answers. What differs per discipline is only the rules : which media it may
+ * carry, and which unit each medium is measured in : and the engine owns
  * those.
  *
  * ## What is deliberately small here

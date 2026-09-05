@@ -417,6 +417,7 @@ const QUESTION_OF_EXPORT: Readonly<
  * only seven were named anywhere, and an author reading that sentence had no way
  * to learn that `builtEnvironmentSpaceFidelity` existed. A count nobody types
  * cannot drift from the surface it counts.
+ * @evidence requirements/agent-authoring/partial-work.md#agent-partial-work-gap-distinction Lets an author ask whether a capability is reachable at all, so an unauthored fact and a capability AutoMovie cannot express stay distinguishable without an external substitute.
  */
 export const AUTOMOVIE_SANDBOX_CAPABILITY_INDEX: readonly {
   readonly question: AutoMovieSandboxCapabilityQuestion;

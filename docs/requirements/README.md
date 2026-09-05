@@ -2,7 +2,7 @@
 
 이 디렉터리는 AutoMovie가 사용자의 영화 저작에서 제공해야 하는 결과와 지켜야 하는 경계를 주제별로 정의한다. 각 주제는 독립된 폴더를 가지며, 폴더 안의 각 문서는 하나의 검토 가능한 요구사항 단원을 소유한다.
 
-각 요구사항 단원의 소유자는 package마다 반복되는 `@evidenceExclude` 산문에서 역산하지 않고 `../contract-ownership/requirements.json`이 한 번만 긍정형으로 선언한다. 소유자는 실제 구현 package, 제품이 무엇을 공급하는지 함께 지목한 project source, 또는 이유를 적은 결정된 제외 중 하나이며, 선언되지 않은 단원은 `legacy` 원장에 남은 이행 부채로 계상된다. 선언 형식과 게이트는 [evidence graph skill](../../.agents/skills/evidence-graph/SKILL.md#declare-one-owner-per-contract-unit)이 소유한다.
+각 요구사항 단원의 실현은 해당 단원을 직접 참조하는 public TypeScript `@evidence`와 package별 evidence claim으로 증명한다. 한 요구사항의 서로 다른 결과를 여러 package가 구현할 수 있으므로 임의의 단일 owner 원장을 두지 않는다. 대신 요구사항, package와 symbol 종류를 고른 lint claim, 실제 public export가 이루는 삼각형을 모두 검증하고, 구현하지 않는 package는 자기 경계에서만 구체적인 `@evidenceExclude`를 남긴다. 선언되지 않거나 public carrier가 없는 단원은 통과한 것으로 기록하지 않고 graph debt로 실패한다. 정확한 모집단과 게이트는 [evidence graph skill](../../.agents/skills/evidence-graph/SKILL.md#required-triangle)이 소유한다.
 
 ## 요구사항의 역할 {#requirements-role}
 

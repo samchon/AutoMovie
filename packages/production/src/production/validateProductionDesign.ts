@@ -1,5 +1,6 @@
 import {
   autoMovieStoryTime,
+  resolveProductionFrameRate,
   validateProfileCapabilities,
 } from "@automovie/engine";
 import {
@@ -10,6 +11,7 @@ import {
   IAutoMovieFormationDesign,
   IAutoMovieModelRecipe,
   IAutoMovieProductionDesign,
+  IAutoMovieProductionFrameRate,
   IAutoMovieProfile,
   IAutoMovieShotContract,
   IAutoMovieShotPredicate,
@@ -17,6 +19,7 @@ import {
 } from "@automovie/interface";
 import path from "node:path";
 
+import { parseAutoMovieCaptionLanguage } from "./captionLanguage";
 import {
   compareCodeUnits,
   encodeAutoMoviePathSegment,
@@ -67,6 +70,7 @@ export interface IAutoMovieProductionDesignGraph {
  * Maximum exact production raster accepted by design and frame review.
  *
  * @author Samchon
+ * @evidence specifications/editorial-render-and-delivery/render-budget-identity-and-recovery.md#spec-render-raster-admission-bound Fixes the exact pixel-product limit the raster admission compares against, admitting equality and refusing excess.
  */
 export const AUTOMOVIE_MAX_FRAME_PIXELS = 16_777_216;
 /**
@@ -142,6 +146,7 @@ export const AUTOMOVIE_GENERAL_INSTANCE_BUFFER_BUDGET_BYTES = 32 * 1024 * 1024;
  * Validate graph-level production invariants after structural validation.
  *
  * @author Samchon
+ * @evidence specifications/editorial-render-and-delivery/render-budget-identity-and-recovery.md#spec-render-budget-preflight Bounds formation members, instances, effect particles and raster before anything is materialized, refusing the design that would exceed them.
  */
 export const validateAutoMovieProductionGraph = (
   graph: IAutoMovieProductionDesignGraph,
@@ -169,14 +174,43 @@ export const validateAutoMovieProductionGraph = (
     );
     if (
       graph.production.visualDelivery !== "deterministic" &&
-      graph.production.visualDelivery !== "repainted"
+      graph.production.visualDelivery !== "repainted" &&
+      graph.production.visualDelivery !== "mixed"
     )
       invalid(
         diagnostics,
         "design-enum-invalid",
         target,
         file,
-        'visualDelivery must be either "deterministic" or "repainted". Choose the final visual delivery layer in the tracked production design record.',
+        'visualDelivery must be "deterministic", "repainted", or "mixed". Choose the final visual delivery layer in the tracked production design record.',
+      );
+    const deliveryLanes = graph.production.visualDeliveryLanes;
+    const mixedPolicy = graph.production.mixedVisualDeliveryPolicy;
+    if (
+      graph.production.visualDelivery === "mixed"
+        ? deliveryLanes === undefined ||
+          deliveryLanes.length === 0 ||
+          new Set(deliveryLanes.map((lane) => lane.occurrence)).size !==
+            deliveryLanes.length ||
+          deliveryLanes.some(
+            (lane) =>
+              lane.occurrence.trim().length === 0 ||
+              lane.occurrence !== lane.occurrence.trim() ||
+              lane.shot.trim().length === 0 ||
+              lane.shot !== lane.shot.trim(),
+          ) ||
+          new Set(deliveryLanes.map((lane) => lane.lane)).size !== 2 ||
+          mixedPolicy === undefined ||
+          mixedPolicy.version !== 1 ||
+          /^sha256:[0-9a-f]{64}$/u.test(mixedPolicy.observationDigest) === false
+        : deliveryLanes !== undefined || mixedPolicy !== undefined
+    )
+      invalid(
+        diagnostics,
+        "design-enum-invalid",
+        target,
+        file,
+        "Mixed visual delivery requires one unique explicit occurrence-lane population containing both lanes and one versioned aggregate-observation transition policy; all-one-lane shorthand must omit both fields.",
       );
     if (graph.production.storyClock !== undefined)
       text(
@@ -222,6 +256,18 @@ export const validateAutoMovieProductionGraph = (
       file,
       "frameFormat.fps",
     );
+    try {
+      resolveProductionFrameRate(graph.production.frameFormat);
+    } catch (error) {
+      invalid(
+        diagnostics,
+        "design-frame-clock-invalid",
+        target,
+        file,
+        // The frame-rate resolver throws nothing but Error refusals.
+        `${(error as Error).message} Author one exact reduced rational frame rate and an equal display fps, or use a lossless positive integer fps.`,
+      );
+    }
     const crop = graph.production.frameFormat.crop;
     if (crop !== undefined) {
       bounded(
@@ -282,7 +328,8 @@ export const validateAutoMovieProductionGraph = (
       graph.production.frameFormat.fps > 0 &&
       isProductionFrameTime(
         graph.production.targetRuntimeSeconds,
-        graph.production.frameFormat.fps,
+        graph.production.frameFormat.frameRate ??
+          graph.production.frameFormat.fps,
       ) === false
     )
       invalid(
@@ -348,7 +395,7 @@ export const validateAutoMovieProductionGraph = (
         );
     }
     if (
-      graph.production.visualDelivery === "repainted" &&
+      graph.production.visualDelivery !== "deterministic" &&
       graph.production.deliverables.some(
         (deliverable) => deliverable.kind === "feature" && deliverable.required,
       ) === false
@@ -358,7 +405,7 @@ export const validateAutoMovieProductionGraph = (
         "design-repaint-feature-required",
         target,
         file,
-        'visualDelivery "repainted" requires at least one required feature deliverable. A nominal repaint selection cannot ship only deterministic previews, guides, audio, or omitted optional features.',
+        "Repainted or mixed visual delivery requires at least one required feature deliverable. A nominal repaint selection cannot ship only deterministic previews, guides, audio, or omitted optional features.",
       );
     const adoptionIds = new Set<string>();
     const adoptionClips = new Set<string>();
@@ -470,27 +517,37 @@ export const validateAutoMovieProductionGraph = (
         file,
         "captionReadabilityProfiles",
       );
-      unique(
+      text(
         diagnostics,
-        captionLanguages,
         profile.language,
         target,
         file,
         "captionReadabilityProfiles.language",
       );
-      text(
+      const languageIdentity = parseAutoMovieCaptionLanguage(profile.language);
+      if (languageIdentity === null)
+        invalid(
+          diagnostics,
+          "design-reference-invalid",
+          target,
+          file,
+          `Caption readability profile "${profile.id}" language "${profile.language}" is not a well-formed RFC 5646 tag. Correct its language without inferring a replacement.`,
+        );
+      else if (captionLanguages.has(languageIdentity.comparisonKey))
+        invalid(
+          diagnostics,
+          "design-duplicate-id",
+          target,
+          file,
+          `Caption readability profile language "${profile.language}" duplicates an existing language by ASCII case-insensitive identity. Keep one profile for that language identity.`,
+        );
+      else captionLanguages.add(languageIdentity.comparisonKey);
+      validateCaptionGraphemeSegmentationIdentity(
         diagnostics,
-        profile.segmentation.algorithm,
+        profile.segmentation,
+        profile.id,
         target,
         file,
-        `captionReadabilityProfiles.${profile.id}.segmentation.algorithm`,
-      );
-      text(
-        diagnostics,
-        profile.segmentation.version,
-        target,
-        file,
-        `captionReadabilityProfiles.${profile.id}.segmentation.version`,
       );
       if (!Number.isSafeInteger(profile.version) || profile.version <= 0)
         invalid(
@@ -1366,7 +1423,8 @@ export const validateAutoMovieProductionGraph = (
       shot.durationSeconds > 0 &&
       isProductionFrameTime(
         shot.durationSeconds,
-        graph.production.frameFormat.fps,
+        graph.production.frameFormat.frameRate ??
+          graph.production.frameFormat.fps,
       ) === false
     )
       invalid(
@@ -1557,8 +1615,11 @@ export const validateAutoMovieProductionGraph = (
         );
       else if (
         graph.production !== null &&
-        isProductionFrameTime(frame.time, graph.production.frameFormat.fps) ===
-          false
+        isProductionFrameTime(
+          frame.time,
+          graph.production.frameFormat.frameRate ??
+            graph.production.frameFormat.fps,
+        ) === false
       )
         invalid(
           diagnostics,
@@ -3141,11 +3202,29 @@ const validatePredicates = (
  *
  * @author Samchon
  */
-export const isProductionFrameTime = (time: number, fps: number): boolean => {
-  const frame = time * fps;
-  const tolerance =
-    Number.EPSILON * 64 * Math.max(1, Math.abs(frame), Math.abs(time), fps);
-  return Math.abs(frame - Math.round(frame)) <= tolerance;
+export const isProductionFrameTime = (
+  time: number,
+  input: number | IAutoMovieProductionFrameRate,
+): boolean => {
+  if (Number.isFinite(time) === false || time < 0) return false;
+  try {
+    const frameRate =
+      typeof input === "number"
+        ? resolveProductionFrameRate({ fps: input })
+        : resolveProductionFrameRate({
+            fps: input.numerator / input.denominator,
+            frameRate: input,
+          });
+    const frame = Math.round(
+      (time * frameRate.numerator) / frameRate.denominator,
+    );
+    return (
+      Number.isSafeInteger(frame) &&
+      time === (frame * frameRate.denominator) / frameRate.numerator
+    );
+  } catch {
+    return false;
+  }
 };
 
 const text = (
@@ -3162,6 +3241,109 @@ const text = (
       target,
       file,
       `${field} must contain non-whitespace text. Fix ${field} in its design setter.`,
+    );
+};
+
+const validateCaptionGraphemeSegmentationIdentity = (
+  diagnostics: IAutoMovieDiagnostic[],
+  value: unknown,
+  profileId: string,
+  target: string,
+  file: string,
+): void => {
+  const field = `captionReadabilityProfiles.${profileId}.segmentation`;
+  if (typeof value !== "object" || value === null) {
+    invalid(
+      diagnostics,
+      "design-reference-invalid",
+      target,
+      file,
+      `${field} must carry a complete grapheme segmentation identity. Copy a supported package identity or declare another complete runtime identity.`,
+    );
+    return;
+  }
+  const identity = value as Record<string, unknown>;
+  if (typeof identity.algorithm === "string")
+    text(diagnostics, identity.algorithm, target, file, `${field}.algorithm`);
+  else
+    invalid(
+      diagnostics,
+      "design-reference-invalid",
+      target,
+      file,
+      `${field}.algorithm must be non-blank text.`,
+    );
+  if (typeof identity.version === "string")
+    text(diagnostics, identity.version, target, file, `${field}.version`);
+  else
+    invalid(
+      diagnostics,
+      "design-reference-invalid",
+      target,
+      file,
+      `${field}.version must be non-blank text.`,
+    );
+  if (identity.granularity !== "grapheme")
+    invalid(
+      diagnostics,
+      "design-reference-invalid",
+      target,
+      file,
+      `${field}.granularity must be "grapheme".`,
+    );
+  if (typeof identity.locale !== "object" || identity.locale === null) {
+    invalid(
+      diagnostics,
+      "design-reference-invalid",
+      target,
+      file,
+      `${field}.locale must declare requested-resolved or locale-neutral execution.`,
+    );
+    return;
+  }
+  const locale = identity.locale as Record<string, unknown>;
+  if (locale.kind === "locale-neutral") return;
+  if (locale.kind !== "requested-resolved") {
+    invalid(
+      diagnostics,
+      "design-reference-invalid",
+      target,
+      file,
+      `${field}.locale.kind must be "requested-resolved" or "locale-neutral".`,
+    );
+    return;
+  }
+  if (typeof locale.requested === "string")
+    text(
+      diagnostics,
+      locale.requested,
+      target,
+      file,
+      `${field}.locale.requested`,
+    );
+  else
+    invalid(
+      diagnostics,
+      "design-reference-invalid",
+      target,
+      file,
+      `${field}.locale.requested must be non-blank text.`,
+    );
+  if (typeof locale.resolved === "string")
+    text(
+      diagnostics,
+      locale.resolved,
+      target,
+      file,
+      `${field}.locale.resolved`,
+    );
+  else
+    invalid(
+      diagnostics,
+      "design-reference-invalid",
+      target,
+      file,
+      `${field}.locale.resolved must be non-blank text.`,
     );
 };
 

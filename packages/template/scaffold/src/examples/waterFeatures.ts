@@ -18,7 +18,7 @@ import { ExampleBuilding } from "./buildings";
  * production world with no building at all. The building's half is the
  * _binding_ below: it says which logical space is the basin, which boundaries
  * are its rim, and which domain fills it. Two records, one seam, and that seam
- * is the only place the two vocabularies meet — which is also the only place
+ * is the only place the two vocabularies meet : which is also the only place
  * they can be checked against each other.
  *
  * Turn that around and the cost is obvious. A pond modelled as a child of a
@@ -87,7 +87,7 @@ export const exampleBasinDomain = (
   // different orders that nothing would notice until the water ran uphill.
   const cellCount = columns * rows;
   // A dished floor: flat in the middle, rising toward the rim. Any law works
-  // here — a survey, a fall toward a drain, a stepped shelf — because the bed
+  // here : a survey, a fall toward a drain, a stepped shelf : because the bed
   // is data rather than a shape the solver knows about.
   const bed = Array.from({ length: cellCount }, (_unused, index) => {
     const column = index % columns;

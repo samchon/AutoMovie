@@ -29,6 +29,7 @@ type IAutoMoviePreviewFrame = NonNullable<
  *
  * The knowledge gate is the one exception. It precedes the call rather than
  * answering it, so an ungated caller gets no outcome to interpret.
+ * @evidence requirements/agent-authoring/source-owned-loop.md#agent-narrowest-valid-check Captures one requested frame or turntable view and proves it, so an author answers the current question without rendering the film and without claiming more than that view.
  */
 export const captureAutoMovieProductionFrame = async (
   context: AutoMovieProductionContext,
@@ -121,7 +122,7 @@ export const captureAutoMovieProductionFrame = async (
         ? { kind: "shot", id: props.target.id }
         : { kind: "asset", id: props.target.id },
     receipt: {
-      version: 1,
+      version: 2,
       productionId: services.project.productionId,
       target: captureTargetOf(
         services.project.productionId,
@@ -133,6 +134,13 @@ export const captureAutoMovieProductionFrame = async (
       rendererIdentity: manifest.rendererIdentity,
       bundle: preview.renderBundle,
       outputDigest: frame.digest,
+      semanticMask:
+        frame.pass === "mask" && manifest.target.kind === "shot"
+          ? (manifest.semanticMasks.find(
+              (record) =>
+                record.frame === frame.index && record.pass === frame.pass,
+            ) ?? null)
+          : null,
     },
     frame: {
       index: frame.index,
@@ -239,7 +247,15 @@ const reopensThroughReceipt = (props: {
           candidate.digest === frame.digest &&
           candidate.width === frame.width &&
           candidate.height === frame.height,
-      )
+      ) &&
+      (frame.pass !== "mask" ||
+        manifest.target.kind !== "shot" ||
+        manifest.semanticMasks.some(
+          (semantic) =>
+            semantic.frame === frame.index &&
+            semantic.pass === frame.pass &&
+            semantic.shot === target.id,
+        ))
     );
   } catch {
     return false;

@@ -4,7 +4,7 @@ Capture produces actual current PNG evidence through the project's own browser. 
 
 ## Capture takes as long as it takes
 
-A registered capture browser starts, draws, and commits bytes. `npm run preview` and `npm run turntable` are synchronous, and either may legitimately run for minutes on a heavy scene or a cold browser. Whatever you drive them from -- an npm script, a measurement module, a harness of your own -- give it a deadline in the hundreds of seconds rather than the tens, and read a timeout as a fact about your caller rather than as a capture diagnostic. Nothing in the capture pipeline reports itself by timing out.
+A registered capture browser starts, draws, and commits bytes. `npm run preview` and `npm run turntable` are synchronous, and either may legitimately run for minutes on a heavy scene or a cold browser. Whatever you drive them from; an npm script, a measurement module, a harness of your own; give it a deadline in the hundreds of seconds rather than the tens, and read a timeout as a fact about your caller rather than as a capture diagnostic. Nothing in the capture pipeline reports itself by timing out.
 
 Run `capture:install` and `capture:doctor` before the first capture of a session. A missing or drifted browser is refused by name there, which is cheaper than reading it out of a failed render.
 
@@ -23,7 +23,7 @@ Use `beauty` to judge appearance. Use structural passes when the target, accepta
 
 Know what a `mask` frame separates before you cite it. A SHOT target paints the stable semantic palette: the page derives it from the same compiled artifact it draws, with `autoMovieRenderSubjectOfCompiledShot` and `deriveAutoMovieSemanticMask`, so a wall, the opening cut through it, the leaf filling that opening, and one repeated instanced slot are four exact colours that survive a rebuild in a different order. `#000000` stays reserved for background, a mesh no entry claims is painted that background rather than left showing its lit material, and slots the bounded palette could not address are counted rather than approximated. An ASSET turntable has no compiled design and keeps the legacy ramp, which colours top-level scene children by their position: read coverage, silhouette, and occlusion from that one, never identity.
 
-A colour means nothing without the document that names it. The palette is the sidecar, `renderAutoMovieSemanticMaskSidecar` is its exact bytes, and every entry carries the semantic id, its kind and label, and the `owner` chain that resolves a door leaf to its opening, its wall boundary, its room, and its building unit. Derive it from the same compiled shot you captured, never from a design that has moved on since; the capture receipt does not carry it for you yet, so a mask frame you cite for identity travels with a palette you derived and stored yourself.
+A colour means nothing without the document that names it. The palette is the sidecar, `renderAutoMovieSemanticMaskSidecar` is its exact bytes, and every entry carries the semantic id, its kind and label, and the `owner` chain that resolves a door leaf to its opening, its wall boundary, its room, and its building unit. Derive it from the same compiled shot you captured, never from a design that has moved on since. Current shot-mask capture and render receipts carry the same-shot semantic digest, runtime coverage, and resident sidecar facts atomically; an incomplete or non-reopenable record does not count as current evidence.
 
 ## The whole asset turntable in one call
 

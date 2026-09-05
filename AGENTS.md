@@ -31,9 +31,9 @@ Work rules, testing, the per-change 100% coverage obligation, validation, conseq
 
 ### Scaffold Authoring
 
-How `packages/template/scaffold` is maintained as the self-contained harness every generated project inherits verbatim: its four trigger-partitioned authoring skills, the reserved `docs/discovery`, domain-partitioned `docs/upstream/{design,story,delivery}`, `docs/obligations`, and `docs/principles` inventory, and the negative-probe and generated-consumer verification gates, `.agents/skills/scaffold/SKILL.md`. Read before editing anything under the scaffold.
+How `packages/template/scaffold`, `packages/template/language-contracts`, and the instruction and contract materializers under `packages/template/src` are maintained as the self-contained harness every generated project inherits: its five trigger-partitioned contract and authoring skills, the reserved `docs/discovery`, domain-partitioned `docs/upstream/{design,story,delivery}`, `docs/obligations`, `docs/principles`, and selected language inventory, and the negative-probe and generated-consumer verification gates, `.agents/skills/scaffold/SKILL.md`. Read before editing any of those sources.
 
-The production procedure ships inside the scaffold as `production-lifecycle`, `evidence-graph`, `source-authoring`, and `review-verification`, so this repository keeps one trigger-partitioned copy of each concern. Read the applicable shipped skills before authoring or reviewing production content anywhere, including a fixture or an experimental sandbox here.
+The production contract and procedures ship inside the scaffold as `contract`, `production-lifecycle`, `evidence-graph`, `source-authoring`, and `review-verification`, so this repository keeps one trigger-partitioned copy of each concern. Read the applicable shipped skills before interpreting, authoring, or reviewing production content anywhere, including a fixture or an experimental sandbox here.
 
 ### Documentation
 
@@ -41,7 +41,7 @@ The `.wiki/` working knowledge base, package READMEs, code JSDoc, and the writin
 
 ### Evidence Graph
 
-The committed contract trace from product requirements through package-independent system specifications to public source JSDoc, including stable anchors, citations, exclusions, README participation, lint populations, and triangular reachability, `.agents/skills/evidence-graph/SKILL.md`. Read before adding, moving, or reviewing requirements or specifications, changing public-export evidence JSDoc, or reshaping repository `@ttsc/evidence` configuration and guards.
+The committed requirement-to-specification-to-public-source triangle, plus the separate reusable scaffold and language target corpus and the stable anchors, citations, exclusions, README participation, and lint populations that keep both graphs resolvable, `.agents/skills/evidence-graph/SKILL.md`. Read before adding, moving, or reviewing those contract sources, changing public-export evidence JSDoc, or reshaping repository `@ttsc/evidence` configuration and guards.
 
 ### Review
 
@@ -79,7 +79,7 @@ Branch, commit, pull request, check, and merge flow, `.agents/skills/pull-reques
 
 ### Writing style
 
-AGENTS.md and SKILL.md files are read by humans as well as agents. Read the documentation skill's [Agent instructions](.agents/skills/documentation/SKILL.md#agent-instructions) section before editing either; it owns the operational writing rules and the prose-line rule.
+AGENTS.md and SKILL.md files are read by humans as well as agents. Read the documentation skill's [Instruction authority](.agents/skills/documentation/SKILL.md#instruction-authority) section before editing either; it owns instruction classification, semantic ownership, writing form, link integrity, and the two-clean-round review gate.
 
 ### AGENTS.md
 

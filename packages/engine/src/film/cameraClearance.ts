@@ -219,7 +219,6 @@ const obstaclesByNode = (
  * @evidence requirements/camera/clipping-occlusion-and-spatial-constraints.md#camera-spatial-geometry-revision Refuses to apply a report whose resolved geometry revision is no longer current.
  * @evidence specifications/camera-light-and-visibility/framing-axis-and-camera-path.md#clv-camera-path-constraints-refusal Returns addressed body/rig contacts rather than silently accepting a physically impossible take.
  * @evidence specifications/camera-light-and-visibility/visibility-and-image-space-observation.md#clv-clipping-clearance-evaluation Evaluates the declared physical camera and rig envelope against current resolved geometry over every fixed-clock interval.
- * @evidencePart specifications/camera-light-and-visibility/visibility-and-image-space-observation.md#clv-clipping-clearance-evaluation::camera-clearance-swept-volume Compares camera-body and parent-rig capsules with every current scene obstacle's same-fixed-clock conservative interval bound.
  * @author Samchon
  */
 export function evaluateCameraClearance(

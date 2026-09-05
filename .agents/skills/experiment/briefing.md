@@ -19,13 +19,13 @@ Six things, all settled before the first turn, because a brief edited mid-run ca
 
 ## Say Which Source Governs When Two Disagree
 
-A brief names the subject **and** the references it is judged against, and those two disagree. Not occasionally — twice in one run, on one production, in the same shape.
+A brief names the subject **and** the references it is judged against, and those two disagree. Not occasionally : twice in one run, on one production, in the same shape.
 
-The fixed massing said "one main body, one garage, nothing else"; the reference plainly showed a chimney. Earlier, the fixed circulation named a straight flight; the reference showed a dog-leg stair. Both times the agent stopped and asked, which is the behaviour to want — it refused to resolve a contradiction in its own instructions by picking the half it preferred. Both times the driver had to adjudicate in flight, which is a decision the brief should already have made.
+The fixed massing said "one main body, one garage, nothing else"; the reference plainly showed a chimney. Earlier, the fixed circulation named a straight flight; the reference showed a dog-leg stair. Both times the agent stopped and asked, which is the behaviour to want : it refused to resolve a contradiction in its own instructions by picking the half it preferred. Both times the driver had to adjudicate in flight, which is a decision the brief should already have made.
 
 So the brief states the rule, once, in the section that fixes the massing: **which source governs, and for what.** The ruling that worked was that the fixed graph governs volumes and circulation, the reference governs everything the envelope carries, and a detail that cannot be expressed without changing the graph is a stop rather than a judgement call.
 
-Whatever the rule is, name it before the first turn. A contradiction adjudicated mid-run cannot be rerun, and an agent that meets one with no rule either stops — costing a turn — or picks, which silently makes the brief mean whatever it picked.
+Whatever the rule is, name it before the first turn. A contradiction adjudicated mid-run cannot be rerun, and an agent that meets one with no rule either stops : costing a turn : or picks, which silently makes the brief mean whatever it picked.
 
 ## Withhold The Method
 
@@ -49,7 +49,7 @@ Two consequences for a brief. A tool named once is named for the whole session, 
 
 Measuring discoverability needs a run in which the name appears in no message at all, including the ones that only list what the agent may read.
 
-**And including anything you quote back from the product.** Its own diagnostics name its tools — one refusal used to read *"Run prepareReview, correct the target, and submitReview before this compile scope"* — so relaying a diagnostic verbatim spends the measurement in the act of describing it. A driver caught that with the message already drafted: it had been analysing a contradiction between two commands' remedies, and quoting either one to the agent would have handed over two of the three names the run existed to see whether the agent could find.
+**And including anything you quote back from the product.** Its own diagnostics name its tools : one refusal used to read *"Run prepareReview, correct the target, and submitReview before this compile scope"* : so relaying a diagnostic verbatim spends the measurement in the act of describing it. A driver caught that with the message already drafted: it had been analysing a contradiction between two commands' remedies, and quoting either one to the agent would have handed over two of the three names the run existed to see whether the agent could find.
 
 The consequence is not "paraphrase the diagnostic". It is that **a finding about the product's text is the driver's to file and not the author's to be told**, and a run measuring discoverability cannot use the product's own error messages as steering material at all. Scan every outgoing message against the tool names, not only against the ones you wrote yourself.
 
@@ -107,25 +107,28 @@ That campaign closed when both lists were empty against all ten references, the 
 
 ## Run The Same Brief Twice
 
-Run the same brief a second time in a fresh sandbox, byte for byte identical, before concluding anything about the product.
+Run the same brief a second time in a fresh sandbox, byte for byte identical, before treating a single run as a stable product observation.
 
-A conclusion drawn from one run cannot be separated from that run's character. The second run is what tells a habit of this agent apart from something the brief induced or the product forced.
+A second run can expose variability and can disprove a universal account of what the writer always does. Agreement means only that the behavior was consistent under the observed condition. It does not distinguish writer habit from something the brief, model, harness, or product induced. [The causal ceiling](records.md#declare-the-causal-ceiling) requires a predeclared comparator and one changed axis before any causal contrast.
 
-In that campaign the second run disproved the observer's hypothesis. It was about to conclude that the authoring agent hand-expands grids instead of programming them, and the reproduction derived room boundaries from dimensions without being told to and parameterised the spiral stair from the start. The narrow conclusion that survived, that derivation stops one level up, was a far more accurate description of the product.
+In that campaign the second run disproved the observer's universal hypothesis. It was about to conclude that the authoring agent always hand-expands grids instead of programming them, and the reproduction derived room boundaries from dimensions without being told to and parameterised the spiral stair from the start. The surviving observation was narrower: the two runs differed in where derivation stopped. Neither run identified the cause of that difference.
 
 Byte for byte identical is why the brief is a file. An agent that received half of its brief in conversation cannot be rerun, and neither can one whose brief was edited mid-run. [Read The Result](SKILL.md#read-the-result) requires reproduction before belief for a single result, and a benchmark's conclusion is a result of the same kind.
+
+Different subjects are different experimental units, even when they share a harness and brief shape. They do not increase the replicate count for one condition. There is no fixed run count beyond the two-run reproduction probe: record the sample-size rationale and lower the claim when the observations cannot support it.
 
 ## Keep The Roles Apart
 
 | Role | Owns | Does not |
 | --- | --- | --- |
-| Observer | Measurement and judgment: the instrument, the counts, the frames, the findings, and the turns that carry them | Write production source |
+| Observer | Measurement: the instrument, counts, frames, liveness and the turns that carry observations | Write production source or issue a gate, result, or cross-work verdict |
+| Independent reviewer | Gate, result, and final verdicts derived from the frozen rubric and immutable evidence | Commission the run, operate the harness, steer the writer, or edit production content |
 | Authoring agent | The production, including its own fan-out | Change repository code |
 | Repository issue owner | One issue the benchmark produced, under the [issue-campaign skill](../issue-campaign/SKILL.md) | Steer the benchmark |
 
-State the first two rows in the brief, because the agent cannot respect a boundary it was never told. Both crossings in that campaign were the observer's: it wired production source the authoring agent was already wiring, and it ran a parallel fan-out that was the authoring agent's to run.
+State the observer, independent-reviewer, and authoring-agent rows in the brief, because the agent cannot respect a boundary it was never told. Both crossings in that campaign were the observer's: it wired production source the authoring agent was already wiring, and it ran a parallel fan-out that was the authoring agent's to run.
 
-The observer's product is measurement, not code. That is what keeps an observation an observation.
+The observer's product is measurement, not code or judgment. The reviewer derives a verdict independently of the writer and commissioner; combining those roles turns the commissioner's preferred outcome into part of the measuring instrument.
 
 ## Carry The Numbers Forward As Evidence
 

@@ -1,10 +1,12 @@
 # Models and motions
 
+Before authoring an `externalMotions` adoption, run `npm run external:inspect -- <project-path> --profile <profile>`. The deterministic result supplies the exact source-order node identities, hierarchy, local rest basis, dependencies, takes, channels, and timing the adoption record may name. It deliberately performs no semantic bone mapping or adoption choice; the author records those decisions in governed source and may not infer them from display names alone.
+
 Read [Rigging](rigging.md) alongside this document before changing geometry, rigs, or derived assets.
 
 ## Model decisions
 
-`docs/models` records the deterministic blocking representation of a settings subject: coordinate frame, dimensions, hierarchy, joints or degrees of freedom, geometry allocation, stable surface partitions, level of abstraction, and visible limitations. It answers what is built, not what the fictional subject is, how its surfaces respond, or how it moves over time.
+`docs/models` records the deterministic blocking representation of a settings subject: coordinate frame, dimensions, hierarchy, joints or degrees of freedom, geometry allocation, stable surface partitions, level of abstraction, and visible limitations. Structural validity and semantic completion are separate: a parseable mesh recipe or hierarchy still fails when the promised scale relation, representation layer, stable boundary, proxy limit, observable style consequence, or review observation has no owner. It answers what is built, not what the fictional subject is, how its surfaces respond, or how it moves over time.
 
 Each model-source file contains a concrete named exported class, and every exported type in the branch cites exactly one model document. Properties and helpers collectively cover the model-source obligations, while the exact type edge prevents undocumented or multiply owned model contracts. Derived design records and meshes do not substitute for this authored source edge.
 

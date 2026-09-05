@@ -14,6 +14,11 @@ import type {
 
 import { resolveCameraAt } from "../film/cameraProjection";
 import {
+  productionFrameBoundaryToGridTick,
+  productionFrameIntervalToGridTicks,
+  resolveProductionFrameRate,
+} from "../film/productionTimebase";
+import {
   sampleFormationMotion,
   transformFormationBounds,
   transformFormationPoint,
@@ -192,6 +197,7 @@ export const deriveProductionSoundPlan = (props: {
     version: 1,
     inputFingerprint: props.timeline.inputFingerprint,
     fps: props.timeline.fps,
+    frameRate: props.timeline.frameRate,
     totalFrames: props.timeline.totalFrames,
     sampleRate: 48_000,
     channels: 2,
@@ -251,13 +257,17 @@ export const deriveProductionSoundPlan = (props: {
  * @evidence specifications/simulation-effects-and-sound/validation-evidence-and-compatibility.md#sound-budget-and-audible-review Computes exact numeric verification facts from final mixed PCM.
  * @evidence requirements/sound/scope-and-identity.md#sound-fixed-audio-clock Converts every film-frame boundary directly through the plan FPS and declared sample rate without a mutable sample cursor.
  * @evidence requirements/sound/mix-hierarchy-and-loudness.md#sound-loudness-peak Measures integrated loudness, sample peak, and clipping state from the exact post-limiter master samples.
- * @evidence requirements/sound/editing-synchronization-and-continuity.md#sound-time-transform Applies cue source offset and source-to-presentation duration ratio while evaluating each output sample.
+ * @evidence requirements/sound/editing-synchronization-and-continuity.md#sound-time-transform Reads each cue's source trim at unit rate from exact rational frame boundaries, so the sample index is derived from the frame clock rather than identified with it.
  * @evidence requirements/sound/editing-synchronization-and-continuity.md#sound-audiovisual-duration-join Derives the final PCM length once from total picture frames, FPS, and sample rate.
+ * @evidence requirements/sound/event-cues-and-timing.md#sound-cue-sample-boundary Maps every cue's start, source trim, end, and fade boundary onto the sample clock through the one nearest-tick rule.
+ * @evidence requirements/sound/event-cues-and-timing.md#sound-cue-refusal Refuses a cue whose trim leaves its declared source duration or whose span is empty before any sample is mixed.
  * @evidence specifications/simulation-effects-and-sound/clocks-ordering-seek-and-checkpoints.md#effect-film-time-step-boundary Maps film-frame positions directly onto the separate fixed audio sample clock.
+ * @evidence specifications/simulation-effects-and-sound/sound-sources-events-dialogue-and-foley.md#sound-cue-sample-boundary-and-arrival Converts each cue's presentation and source film-time boundaries to integer sample indices exactly once.
+ * @evidence specifications/simulation-effects-and-sound/sound-sources-events-dialogue-and-foley.md#sound-cue-failure-contract Fails a cue with an empty span or a trim outside its declared source instead of mixing a plausible result.
  * @evidence specifications/simulation-effects-and-sound/mix-stems-loudness-and-av-join.md#sound-processing-chain-and-stable-summation Executes event, cue, dialogue, and master-limiter stages in one deterministic plan order.
  * @evidence specifications/simulation-effects-and-sound/mix-stems-loudness-and-av-join.md#sound-mix-automation-sample-clock Evaluates cue gain and fades from the current sample index rather than prior playback state.
  * @evidence specifications/simulation-effects-and-sound/mix-stems-loudness-and-av-join.md#sound-loudness-peak-and-mix-failure Computes loudness and peak facts only after the declared master limiting stage.
- * @evidence specifications/simulation-effects-and-sound/mix-stems-loudness-and-av-join.md#sound-event-sync-and-boundary-continuity Applies each cue's declared source span to its film presentation span.
+ * @evidence specifications/simulation-effects-and-sound/mix-stems-loudness-and-av-join.md#sound-event-sync-and-boundary-continuity Places each cue's source trim on its film presentation span without altering the source clock.
  * @evidence specifications/simulation-effects-and-sound/mix-stems-loudness-and-av-join.md#audio-visual-duration-and-timebase-join Produces one audio sample range from the finished picture range and shared timebase.
  */
 export const renderProductionSound = (props: {
@@ -274,12 +284,36 @@ export const renderProductionSound = (props: {
    * produce the same bytes on every machine. A cue whose asset is absent falls
    * back to the bus stand-in, so a film mixes at every stage of its authoring
    * and a missing asset is silence-shaped rather than a crash.
+   *
+   * A supplied generation is the asset's audio laid on the plan's sample clock
+   * from its first sample; its declared extent is the cue's complete
+   * `sourceDurationFrames`. Whether the generation is that asset is settled
+   * where the source clock is known, by digest and sample count at planning,
+   * because a resampled generation ends within one sample of the declared
+   * frame boundary and the mix clock alone cannot tell that from a wrong one.
+   * The mix owns what it can decide exactly: every sample is finite, every
+   * read stays inside the cue's trim and the generation, and a tick the
+   * generation does not reach is silent.
    */
   assets?: ReadonlyMap<string, Float32Array>;
 }): IAutoMovieRenderedProductionSound => {
-  const sampleFrames = Math.round(
-    (props.plan.totalFrames / props.plan.fps) * props.plan.sampleRate,
+  // Every cue is placed on the sample clock before any sample is mixed, so a
+  // cue that contradicts its own source is refused before the work it would
+  // have wasted, and each placement is computed once for the mix that follows.
+  const ranges = props.plan.cues.map((cue) =>
+    cueSampleRanges(props.plan, cue),
   );
+  for (const asset of new Set(props.plan.cues.map((cue) => cue.asset))) {
+    const source = props.assets?.get(asset);
+    if (source !== undefined)
+      assertFiniteProductionPcm(source, `audio asset "${asset}"`);
+  }
+  for (const line of new Set(props.plan.dialogue.map((line) => line.id))) {
+    const source = props.dialogue?.get(line);
+    if (source !== undefined)
+      assertFiniteProductionPcm(source, `dialogue line "${line}"`);
+  }
+  const sampleFrames = frameToSample(props.plan, props.plan.totalFrames);
   const pcm = new Float32Array(sampleFrames * 2);
   for (const event of props.plan.events) {
     const room = event.acousticResponse;
@@ -297,8 +331,9 @@ export const renderProductionSound = (props: {
         pcm[index] += responded[index]!;
     }
   }
-  for (const cue of props.plan.cues)
-    mixCue(pcm, props.plan, cue, props.assets?.get(cue.asset));
+  props.plan.cues.forEach((cue, index) =>
+    mixCue(pcm, props.plan, cue, ranges[index]!, props.assets?.get(cue.asset)),
+  );
   for (const line of props.plan.dialogue) {
     const source = props.dialogue?.get(line.id);
     if (source === undefined) continue;
@@ -316,6 +351,7 @@ export const renderProductionSound = (props: {
       pcm[(start + index) * 2 + 1] += value;
     }
   }
+  assertFiniteProductionPcm(pcm, "generated production mix");
   let peak = 0;
   for (const value of pcm) peak = Math.max(peak, Math.abs(value));
   if (peak > 0.95) {
@@ -324,6 +360,20 @@ export const renderProductionSound = (props: {
       pcm[index] = Math.fround(pcm[index]! * scale);
   }
   return { pcm, analysis: analyzeProductionSound(props.plan, pcm) };
+};
+
+/** Refuse an adopted PCM generation before interpolation or numeric evidence. */
+const assertFiniteProductionPcm = (
+  samples: Float32Array,
+  source: string,
+): void => {
+  if (samples.length === 0)
+    throw new Error(`Production sound ${source} supplied empty PCM.`);
+  for (let index = 0; index < samples.length; ++index)
+    if (Number.isFinite(samples[index]) === false)
+      throw new Error(
+        `Production sound ${source} contains a non-finite PCM sample at index ${index}.`,
+      );
 };
 
 /**
@@ -708,60 +758,104 @@ const mixCue = (
   pcm: Float32Array,
   plan: IAutoMovieProductionSoundPlan,
   cue: IAutoMovieProductionSoundPlan["cues"][number],
+  range: ICueSampleRanges,
   source: Float32Array | undefined,
 ): void => {
   if (cue.gain === 0) return;
-  const start = frameToSample(plan, cue.startFrame);
-  const length = Math.max(0, frameToSample(plan, cue.durationFrames));
+  const start = range.presentation.start;
+  const length = range.presentation.end - start;
   const fadeIn = frameToSample(plan, cue.fadeInFrames);
   const fadeOut = frameToSample(plan, cue.fadeOutFrames);
-  const frames = pcm.length / 2;
   // Everything constant across the cue, read once. A film-length cue runs this
   // loop tens of millions of times, so a value derived inside it is derived per
   // sample: at half an hour that is the difference between a mix that costs its
   // buffer and one that costs several.
-  const offset = frameToSample(plan, cue.sourceOffsetFrame);
-  const rate =
-    cue.durationFrames === 0
-      ? 1
-      : cue.sourceDurationFrames / cue.durationFrames;
   const played = source !== undefined;
-  for (let index = 0; index < length && start + index < frames; ++index) {
+  for (let index = 0; index < length; ++index) {
     const fade =
       Math.min(1, fadeIn === 0 ? 1 : index / fadeIn) *
       Math.min(1, fadeOut === 0 ? 1 : (length - index) / fadeOut);
-    // The asset the cue names, when the caller decoded it. Read at its own rate
-    // from the offset the edit begins at, and stretched only by the ratio the
-    // author asked for: a cue whose source span equals its film span plays at
-    // native pitch, and one that differs asked for that difference. Past the end
-    // of the buffer it is silent rather than looped, because a cue longer than
-    // its asset is a fact about the edit and not a licence to repeat it.
+    // The trim is read at unit rate from its own start tick. Its source and
+    // presentation intervals carry the same frame count through the same
+    // nearest-tick rule, so they agree to within one sample of grid phase; the
+    // last presentation sample reads the asset only while the trim and the
+    // generation both still reach it, and is silent otherwise. A stretch that
+    // reconciled the two by resampling would be a rate change the author never
+    // asked for, and a read past the trim would leave the declared source.
+    const at = range.source.start + index;
     let signal: number;
     if (played) {
-      const at = Math.round(offset + index * rate);
-      signal = at >= 0 && at < source!.length ? source![at]! : 0;
+      signal = at < range.source.end && at < source.length ? source[at]! : 0;
     } else {
       // Derived only where it is used: a cue playing its asset never needs the
       // stand-in, and a film-length cue that computed one anyway would pay for
       // a sound nobody hears.
-      const sourceSample = offset + index;
-      const t = sourceSample / plan.sampleRate;
+      const t = at / plan.sampleRate;
       signal =
         cue.bus === "music"
           ? Math.sin(2 * Math.PI * 110 * t) * 0.18 +
             Math.sin(2 * Math.PI * 165 * t) * 0.12 +
             Math.sin(2 * Math.PI * 220 * t) * 0.08
           : cue.bus === "ambience"
-            ? seededNoise(cue.seed, sourceSample) * 0.09 +
+            ? seededNoise(cue.seed, at) * 0.09 +
               Math.sin(2 * Math.PI * 48 * t) * 0.04
             : cue.bus === "effects"
-              ? seededNoise(cue.seed, sourceSample) * 0.16
+              ? seededNoise(cue.seed, at) * 0.16
               : Math.sin(2 * Math.PI * 175 * t) * 0.08;
     }
     const value = signal * cue.gain * fade;
     pcm[(start + index) * 2] += value;
     pcm[(start + index) * 2 + 1] += value;
   }
+};
+
+/** One cue's presentation span and source trim as exclusive sample ranges. */
+interface ICueSampleRanges {
+  presentation: { start: number; end: number };
+  source: { start: number; end: number };
+}
+
+/**
+ * Place one cue on the sample clock, or refuse it by name.
+ *
+ * `sourceDurationFrames` is the complete asset on the frame clock: the ceiling
+ * the trim must fit inside and nothing else. The compiler refuses the same
+ * contradictions when it lowers the edit, and the mix refuses them again here
+ * because the plan is a public input and a cue that reads outside its source or
+ * its film has no sample to mix.
+ */
+const cueSampleRanges = (
+  plan: IAutoMovieProductionSoundPlan,
+  cue: IAutoMovieProductionSoundPlan["cues"][number],
+): ICueSampleRanges => {
+  if (
+    Number.isSafeInteger(cue.sourceDurationFrames) === false ||
+    cue.sourceDurationFrames <= 0 ||
+    Number.isSafeInteger(cue.sourceOffsetFrame) === false ||
+    cue.sourceOffsetFrame < 0 ||
+    Number.isSafeInteger(cue.durationFrames) === false ||
+    cue.durationFrames <= 0 ||
+    Number.isSafeInteger(cue.startFrame) === false ||
+    cue.startFrame < 0 ||
+    cue.sourceOffsetFrame + cue.durationFrames > cue.sourceDurationFrames ||
+    cue.startFrame + cue.durationFrames > plan.totalFrames
+  )
+    throw new Error(
+      `Production sound cue "${cue.id}" must play a positive whole-frame span inside its ${cue.sourceDurationFrames}-frame source and the ${plan.totalFrames}-frame film, but reads ${cue.durationFrames} frames from source frame ${cue.sourceOffsetFrame} at film frame ${cue.startFrame}.`,
+    );
+  const frameRate = resolveProductionFrameRate(plan);
+  const interval = (startFrame: number): { start: number; end: number } =>
+    productionFrameIntervalToGridTicks({
+      startFrame,
+      endFrame: startFrame + cue.durationFrames,
+      frameRate,
+      ticksPerSecond: plan.sampleRate,
+      rounding: "nearest",
+    });
+  return {
+    presentation: interval(cue.startFrame),
+    source: interval(cue.sourceOffsetFrame),
+  };
 };
 
 const analyzeProductionSound = (
@@ -814,8 +908,10 @@ const analyzeProductionSound = (
           peakSample = sample;
         }
       }
+      const frameRate = resolveProductionFrameRate(plan);
       const errorFrames =
-        (Math.abs(peakSample - expected) * plan.fps) / plan.sampleRate;
+        (Math.abs(peakSample - expected) * frameRate.numerator) /
+        (plan.sampleRate * frameRate.denominator);
       return {
         id: event.id,
         expectedSeconds: expected / plan.sampleRate,
@@ -937,7 +1033,13 @@ const resampleMono = (source: Float32Array, length: number): Float32Array => {
 const frameToSample = (
   plan: IAutoMovieProductionSoundPlan,
   frame: number,
-): number => Math.round((frame / plan.fps) * plan.sampleRate);
+): number =>
+  productionFrameBoundaryToGridTick({
+    frame,
+    frameRate: resolveProductionFrameRate(plan),
+    ticksPerSecond: plan.sampleRate,
+    rounding: "nearest",
+  });
 
 const edgeEnvelope = (index: number, length: number, edge: number): number =>
   Math.min(1, index / edge, (length - index) / edge);

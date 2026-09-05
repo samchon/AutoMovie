@@ -15,6 +15,7 @@ import {
   AutoMovieProductionInputRaceError,
   AutoMovieProductionProject,
   AutoMovieProductionRepaintService,
+  AutoMovieRepaintAttemptError,
   type IAutoMovieProductionServices,
   type IAutoMovieRepaintAttemptRecord,
   canonicalAutoMovieRepaintRuntimeIdentity,
@@ -146,6 +147,7 @@ const executableServices = (props: {
   root: string;
   commit: (receipt: IAutoMovieRepaintReceipt, bytes: Uint8Array) => void;
   referenceBytes?: (referencePath: string) => Buffer;
+  assetManifest?: (manifest: IAutoMovieAssetManifest) => void;
 }): IAutoMovieProductionServices => {
   const compileFingerprint = digestAutoMovieBytes(
     Buffer.from("repaint-compile", "utf8"),
@@ -176,6 +178,7 @@ const executableServices = (props: {
       ],
     }),
   );
+  props.assetManifest?.(assetManifest);
   const assetManifestBytes = Buffer.from(JSON.stringify(assetManifest), "utf8");
   const registry: IAutoMovieProductionRegistryManifest = {
     version: 2,
@@ -204,7 +207,7 @@ const executableServices = (props: {
       })),
   ).flat();
   const manifest = {
-    version: 5,
+    version: 6,
     target: { kind: "shot", id: input.shot },
     compileFingerprint,
     dialogueRuntimeIdentity: null,
@@ -214,11 +217,16 @@ const executableServices = (props: {
     ),
     renderSpec: { frameFormat },
     frames,
-  } as IAutoMovieRenderBundleManifest;
+    semanticMasks: [],
+  } as unknown as IAutoMovieRenderBundleManifest;
   const bundle = path.join(props.root, "bundle");
   fs.mkdirSync(bundle, { recursive: true });
   fs.writeFileSync(path.join(bundle, "manifest.json"), "{}\n", "utf8");
   const repaintAttempts: IAutoMovieRepaintAttemptRecord[] = [];
+  const repaintRawOutputs = new Map<
+    string,
+    { receipt: { requestId: string; attemptId: string }; bytes: Uint8Array }
+  >();
   const project = {
     productionId: input.productionId,
     root: props.root,
@@ -258,6 +266,23 @@ const executableServices = (props: {
       structuredClone(
         repaintAttempts.filter((attempt) => attempt.requestId === requestId),
       ),
+    acquireRepaintAttemptClaim: () => ({ status: "acquired" as const }),
+    settleRepaintAttemptClaim: () => 1,
+    commitRepaintRawOutput: (publication: {
+      receipt: { requestId: string; attemptId: string };
+      bytes: Uint8Array;
+    }) => {
+      repaintRawOutputs.set(
+        `${publication.receipt.requestId}/${publication.receipt.attemptId}`,
+        structuredClone(publication),
+      );
+      return 1;
+    },
+    repaintRawOutput: (requestId: string, attemptId: string) => {
+      const publication = repaintRawOutputs.get(`${requestId}/${attemptId}`);
+      if (publication === undefined) throw new Error("raw output absent");
+      return structuredClone(publication);
+    },
     commitFiles: () => 1,
   };
   Object.setPrototypeOf(project, AutoMovieProductionProject.prototype);
@@ -314,6 +339,10 @@ const scenarioServices = (
  *    deterministic structural authority, and exact resident identities.
  * 7. Caller/provider mutation cannot change the immutable request snapshot
  *    shared by execution and receipt publication.
+ * 8. A dispatch claim the project store refuses as held, closed by an unknown
+ *    outcome, or moved returns the claim-refused diagnostic that names the
+ *    cause, the owning attempt, and the author's next step, with no provider
+ *    call.
  */
 export const test_production_repaint_generator_adoption =
   async (): Promise<void> => {
@@ -521,6 +550,35 @@ export const test_production_repaint_generator_adoption =
         root,
         commit: (receipt) => committed.push(receipt),
       });
+      const credentialReferenceServices = [
+        {
+          secret: "repaint-source-secret",
+          services: executableServices({
+            root,
+            commit: () => undefined,
+            assetManifest: (manifest) => {
+              const fetched = manifest.assets.find(
+                (asset) => asset.original !== undefined,
+              );
+              if (fetched?.original === undefined)
+                throw new Error("Repaint references need one fetched asset.");
+              fetched.original.url =
+                "https://source-user:repaint-source-secret@assets.example/reference.png";
+            },
+          }),
+        },
+        {
+          secret: "repaint-license-secret",
+          services: executableServices({
+            root,
+            commit: () => undefined,
+            assetManifest: (manifest) => {
+              manifest.assets[0]!.license.url =
+                "https://license-user:repaint-license-secret@licenses.example/terms";
+            },
+          }),
+        },
+      ];
       const digestAliasRoot = path.join(root, "digest-aliases");
       const digestAliasServices = executableServices({
         root: digestAliasRoot,
@@ -898,6 +956,31 @@ export const test_production_repaint_generator_adoption =
         providerExecutions,
         0,
       );
+      const credentialReferenceFailures = await Promise.all(
+        credentialReferenceServices.map(({ services }) => repaint(services)),
+      );
+      TestValidator.equals(
+        "credential-bearing source and license URLs refuse before provider execution",
+        {
+          codes: credentialReferenceFailures.map(codeOf),
+          providerExecutions,
+          leaked: credentialReferenceFailures.some((result) =>
+            credentialReferenceServices.some(({ secret }) =>
+              result.diagnostics.some((entry) =>
+                entry.message.includes(secret),
+              ),
+            ),
+          ),
+        },
+        {
+          codes: [
+            "repaint-reference-manifest-invalid",
+            "repaint-reference-manifest-invalid",
+          ],
+          providerExecutions: 0,
+          leaked: false,
+        },
+      );
       const served = await new AutoMovieProductionRepaintService(
         actualAdapter(selected.runtimeIdentity),
         selected,
@@ -938,6 +1021,58 @@ export const test_production_repaint_generator_adoption =
         "adapter failures retain one specific refusal across thrown values",
         adapterFailures.map(codeOf),
         ["repaint-failed", "repaint-failed"],
+      );
+      const partialAttempts: IAutoMovieRepaintAttemptRecord[] = [];
+      const partialPublications: Array<{
+        receipt: { disposition: string; path: string };
+        bytes: Uint8Array;
+      }> = [];
+      const partial = await repaint(
+        scenarioServices(runnable, {
+          project: {
+            commitRepaintAttempt: (attempt: IAutoMovieRepaintAttemptRecord) => {
+              partialAttempts.push(structuredClone(attempt));
+              return 1;
+            },
+            commitRepaintRawOutput: (publication: {
+              receipt: { disposition: string; path: string };
+              bytes: Uint8Array;
+            }) => {
+              partialPublications.push(structuredClone(publication));
+              return 1;
+            },
+          },
+        }),
+        {
+          adapter: async () => {
+            throw new AutoMovieRepaintAttemptError(
+              "transport",
+              "provider disclosed a partial output",
+              2,
+              null,
+              { bytes: generatedBytes, mediaType: "video/mp4" },
+            );
+          },
+        },
+      );
+      TestValidator.equals(
+        "adapter-disclosed partial bytes are quarantined before terminal journaling",
+        {
+          code: codeOf(partial),
+          disposition: partialPublications[0]?.receipt.disposition,
+          bytes: partialPublications[0]?.bytes.length,
+          journalBytes: partialAttempts[0]?.availableOutput?.bytes,
+          journalReceiptMatches:
+            partialAttempts[0]?.availableOutput?.receipt ===
+            `renditions/raw/${partialAttempts[0]?.requestId}/${partialAttempts[0]?.attemptId}/receipt.json`,
+        },
+        {
+          code: "repaint-failed",
+          disposition: "partial",
+          bytes: generatedBytes.length,
+          journalBytes: generatedBytes.length,
+          journalReceiptMatches: true,
+        },
       );
       const currentCompile = runnable.compileStatus();
       if (currentCompile.success === false)
@@ -1511,6 +1646,68 @@ export const test_production_repaint_generator_adoption =
             "repaint-failed",
             "repaint-failed",
           ],
+          providerCalls: 0,
+        },
+      );
+
+      let claimRefusedProviderCalls = 0;
+      const claimRefusals = await Promise.all(
+        (
+          [
+            { status: "already-active", ownerAttemptId: "owner-attempt" },
+            { status: "unknown-outcome", ownerAttemptId: "owner-attempt" },
+            { status: "prefix-changed" },
+          ] as const
+        ).map((admission) =>
+          new AutoMovieProductionRepaintService(
+            async (props) => {
+              ++claimRefusedProviderCalls;
+              return actualAdapter(selected.runtimeIdentity)(props);
+            },
+            selected,
+            { policy: executionPolicy(), evidence: executionEvidence() },
+          ).repaint(
+            scenarioServices(runnable, {
+              project: { acquireRepaintAttemptClaim: () => admission },
+            }),
+            input,
+          ),
+        ),
+      );
+      const claimRefusalMessages = claimRefusals.map(
+        (result) => result.diagnostics[0]?.message ?? "",
+      );
+      TestValidator.equals(
+        "a refused dispatch claim names its cause, its owner, and the author's next step",
+        {
+          codes: claimRefusals.map(codeOf),
+          receipts: claimRefusals.map((result) => result.receipt),
+          explained: [
+            claimRefusalMessages[0]!.includes(
+              'unsettled dispatch claim for attempt "owner-attempt"',
+            ) && claimRefusalMessages[0]!.includes("author a new request"),
+            claimRefusalMessages[1]!.includes(
+              'attempt "owner-attempt" ended with an unknown provider outcome',
+            ) && claimRefusalMessages[1]!.includes("new request identity"),
+            claimRefusalMessages[2]!.includes(
+              "changed between planning and dispatch",
+            ) &&
+              claimRefusalMessages[2]!.includes("Run the same repaint again"),
+          ],
+          noProviderCall: claimRefusalMessages.every((message) =>
+            message.includes("no provider call was made"),
+          ),
+          providerCalls: claimRefusedProviderCalls,
+        },
+        {
+          codes: [
+            "repaint-claim-refused",
+            "repaint-claim-refused",
+            "repaint-claim-refused",
+          ],
+          receipts: [null, null, null],
+          explained: [true, true, true],
+          noProviderCall: true,
           providerCalls: 0,
         },
       );
@@ -2113,6 +2310,27 @@ export const test_production_repaint_generator_adoption =
         commitThroughProject(accepted.receipt),
         1,
       );
+      TestValidator.predicate(
+        "stored receipt revalidation refuses credential-bearing source and license manifests",
+        credentialReferenceServices.every(({ services }) => {
+          try {
+            AutoMovieProductionProject.prototype.commitRepaintRendition.call(
+              services.project,
+              accepted.receipt!,
+              generatedBytes,
+            );
+            return false;
+          } catch (error) {
+            return (
+              error instanceof Error &&
+              error.message.includes("inadmissible source or license URL") &&
+              credentialReferenceServices.every(
+                ({ secret }) => error.message.includes(secret) === false,
+              )
+            );
+          }
+        }),
+      );
       const projectRefuses = (receipt: IAutoMovieRepaintReceipt): boolean => {
         try {
           commitThroughProject(receipt);
@@ -2131,6 +2349,20 @@ export const test_production_repaint_generator_adoption =
           generatorProvenance: {
             ...accepted.receipt.generatorProvenance,
             termsCheckedAt: "2026-08-29",
+          },
+        },
+        {
+          ...accepted.receipt,
+          generatorProvenance: {
+            ...accepted.receipt.generatorProvenance,
+            source: "https://user:secret@models.example/repaint",
+          },
+        },
+        {
+          ...accepted.receipt,
+          generatorProvenance: {
+            ...accepted.receipt.generatorProvenance,
+            license: "https://[invalid",
           },
         },
         {

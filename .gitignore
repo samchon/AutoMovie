@@ -1,4 +1,5 @@
-.claude/
+.claude/*
+!.claude/settings.json
 .discussions/
 # disposable workspace-linked sandboxes (`pnpm run experimental <name>`)
 experimental/

@@ -17,6 +17,8 @@ import { namedFacts, throwsError } from "../internal/predicates";
  *    instead of becoming a guessed source rest basis.
  * 4. A node matrix is refused because this profile promises explicit TRS and does
  *    not silently decompose or discard shear.
+ * 5. JSON glTF and GLB refuse duplicate object members, including names that
+ *    become equal only after JSON escape decoding.
  */
 export const test_ingest_external_model_inspector = (): void => {
   const inspected = inspect(motionFixture());
@@ -167,18 +169,142 @@ export const test_ingest_external_model_inspector = (): void => {
       ].map((name) => [name, true]),
     ),
   );
+
+  const duplicateFixture = motionFixture();
+  const source = JSON.stringify(duplicateFixture.document);
+  const rootDuplicate =
+    JSON.stringify({ asset: { version: "1.0" } }).slice(0, -1) +
+    `,${source.slice(1)}`;
+  const escapedDuplicate = source.replace(
+    '"asset":',
+    '"\\u0061sset":{"version":"1.0"},"asset":',
+  );
+  const nestedDuplicate = source.replace(
+    '"asset":',
+    '"extras":{"owner":"left","owner":"right"},"asset":',
+  );
+  const arrayElementDuplicate = source.replace(
+    '"asset":',
+    '"extras":{"list":[1,{"k":1,"k":2}]},"asset":',
+  );
+  const trickyStrings = source.replace(
+    '"asset":',
+    '"extras":{"note":"{\\"a\\":[1,{\\"b\\":2}]}","q\\"uote":"]}","\\u007b":" , "},"asset":',
+  );
+  TestValidator.equals(
+    "decoded duplicate members are refused in JSON glTF and GLB",
+    namedFacts([
+      [
+        "jsonRootDuplicate",
+        () =>
+          throwsError(
+            () => inspectSource(rootDuplicate, "public/motion/duplicate.gltf"),
+            'duplicate member "asset"',
+          ),
+      ],
+      [
+        "jsonSyntax",
+        () =>
+          throwsError(
+            () => inspectSource('{"asset":', "public/motion/invalid.gltf"),
+            "External model JSON is invalid",
+          ),
+      ],
+      [
+        "jsonWhitespace",
+        () => {
+          inspectSource(` \n${source}\n`, "public/motion/whitespace.gltf");
+          return true;
+        },
+      ],
+      [
+        "jsonEscapedDuplicate",
+        () =>
+          throwsError(
+            () => inspectSource(escapedDuplicate, "public/motion/escaped.gltf"),
+            'duplicate member "asset"',
+          ),
+      ],
+      [
+        "jsonNestedDuplicate",
+        () =>
+          throwsError(
+            () => inspectSource(nestedDuplicate, "public/motion/nested.gltf"),
+            'duplicate member "owner"',
+          ),
+      ],
+      [
+        "jsonArrayElementDuplicate",
+        () =>
+          throwsError(
+            () =>
+              inspectSource(arrayElementDuplicate, "public/motion/array.gltf"),
+            'duplicate member "k"',
+          ),
+      ],
+      [
+        "jsonBracesAndEscapesInsideStringsAreNotStructure",
+        () => {
+          inspectSource(trickyStrings, "public/motion/tricky.gltf");
+          return true;
+        },
+      ],
+      [
+        "glbRootDuplicate",
+        () =>
+          throwsError(
+            () =>
+              inspectSource(
+                motionGlb(rootDuplicate),
+                "public/motion/duplicate.glb",
+              ),
+            'duplicate member "asset"',
+          ),
+      ],
+    ]),
+    {
+      glbRootDuplicate: true,
+      jsonArrayElementDuplicate: true,
+      jsonBracesAndEscapesInsideStringsAreNotStructure: true,
+      jsonEscapedDuplicate: true,
+      jsonNestedDuplicate: true,
+      jsonRootDuplicate: true,
+      jsonSyntax: true,
+      jsonWhitespace: true,
+    },
+  );
 };
 
 type MotionDocument = ReturnType<typeof motionDocument>;
 type MotionNode = Record<string, unknown>;
 
 const inspect = (fixture: ReturnType<typeof motionFixture>) =>
+  inspectSource(fixture.bytes, "public/motion/grounded.gltf", fixture.payload);
+
+const inspectSource = (
+  bytes: Uint8Array | string,
+  path: string,
+  payload: Uint8Array = motionFixture().payload,
+) =>
   inspectAutoMovieExternalModelBytes({
-    path: "public/motion/grounded.gltf",
-    bytes: fixture.bytes,
+    path,
+    bytes: typeof bytes === "string" ? Buffer.from(bytes, "utf8") : bytes,
     profile: "gltf-motion-v1",
-    resolveResource: (uri) => (uri === "grounded.bin" ? fixture.payload : null),
+    resolveResource: (uri) => (uri === "grounded.bin" ? payload : null),
   });
+
+const motionGlb = (source: string): Uint8Array => {
+  const json = Buffer.from(source, "utf8");
+  const padding = (4 - (json.length % 4)) % 4;
+  const output = Buffer.alloc(20 + json.length + padding, 0x20);
+  output.writeUInt32LE(0x46546c67, 0);
+  output.writeUInt32LE(2, 4);
+  output.writeUInt32LE(output.length, 8);
+  output.writeUInt32LE(json.length + padding, 12);
+  output.writeUInt32LE(0x4e4f534a, 16);
+  json.copy(output, 20);
+  return output;
+};
 
 const rejects = (
   mutate: (nodes: MotionNode[]) => void,
@@ -203,6 +329,7 @@ const motionFixture = (document: MotionDocument = motionDocument()) => {
 
 const motionDocument = () => ({
   asset: { version: "2.0" },
+  extensionsUsed: [],
   buffers: [{ byteLength: 40, uri: "grounded.bin" }],
   bufferViews: [
     { buffer: 0, byteOffset: 0, byteLength: 8 },

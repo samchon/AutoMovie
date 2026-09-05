@@ -453,8 +453,8 @@ const bulk = (semantic: string): IAutoMovieScene["nodes"][number] => ({
 
 /** A hand-built mask whose single entry points at an owner that is not there. */
 const broken = (owner: string): IAutoMovieSemanticMask => ({
-  version: 1,
-  protocol: "automovie.semantic-mask.v1",
+  version: 2,
+  protocol: "automovie.semantic-mask.v2",
   background: "#000000",
   entries: [
     {

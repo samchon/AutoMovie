@@ -19,6 +19,7 @@ import os from "node:os";
 import path from "node:path";
 
 import { namedFacts } from "../internal/predicates";
+import { isolatedFileSystemTest } from "../internal/testFileSystem";
 
 const script: IAutoMovieScript = {
   logline: "A legacy door opens.",
@@ -290,7 +291,7 @@ const retiredReviewDirectories = [
  * 5. Current imports create no review ledger, while reapply and rollback accept
  *    only the complete empty directory shell emitted before ledger retirement.
  */
-export const test_production_legacy_import = (): void => {
+const runLegacyImport = (fileSystem: typeof fs): void => {
   const fileSymlinks = supportsFileSymlinks();
   const fixture = createLegacy();
   let fixtureFailure: ILegacyImportFixtureFailure | undefined;
@@ -319,7 +320,7 @@ export const test_production_legacy_import = (): void => {
       ].map((target) => [path.resolve(target.file), target] as const),
     );
     const planPathReads = new Set<string>();
-    fs.writeFileSync = ((
+    fileSystem.writeFileSync = ((
       file: fs.PathOrFileDescriptor,
       ...args: unknown[]
     ): void => {
@@ -332,7 +333,7 @@ export const test_production_legacy_import = (): void => {
       )
         planLockPaths.push(path.resolve(file.toString()));
     }) as typeof fs.writeFileSync;
-    fs.readFileSync = ((
+    fileSystem.readFileSync = ((
       file: fs.PathOrFileDescriptor,
       ...args: unknown[]
     ): unknown => {
@@ -377,13 +378,13 @@ export const test_production_legacy_import = (): void => {
         {
           resource: "plan read hook",
           cleanup: () => {
-            fs.readFileSync = nativePlanRead;
+            fileSystem.readFileSync = nativePlanRead;
           },
         },
         {
           resource: "plan write hook",
           cleanup: () => {
-            fs.writeFileSync = nativePlanWrite;
+            fileSystem.writeFileSync = nativePlanWrite;
           },
         },
         ...Array.from(planReadTargets.values()).flatMap((target) => [
@@ -464,7 +465,7 @@ export const test_production_legacy_import = (): void => {
     const legacyLockParked = `${legacyLockPath}.read-parked`;
     const nativeLegacyLockRead = fs.readFileSync;
     let legacyAssertionPathRead = false;
-    fs.readFileSync = ((
+    fileSystem.readFileSync = ((
       file: fs.PathOrFileDescriptor,
       ...args: unknown[]
     ): unknown => {
@@ -512,7 +513,7 @@ export const test_production_legacy_import = (): void => {
           {
             resource: "legacy-lock read hook",
             cleanup: () => {
-              fs.readFileSync = nativeLegacyLockRead;
+              fileSystem.readFileSync = nativeLegacyLockRead;
             },
           },
           {
@@ -540,7 +541,7 @@ export const test_production_legacy_import = (): void => {
     const appliedPlanParked = `${appliedPlanPath}.read-parked`;
     const nativeAppliedPlanRead = fs.readFileSync;
     let appliedPlanPathRead = false;
-    fs.readFileSync = ((
+    fileSystem.readFileSync = ((
       file: fs.PathOrFileDescriptor,
       ...args: unknown[]
     ): unknown => {
@@ -628,7 +629,7 @@ export const test_production_legacy_import = (): void => {
         {
           resource: "applied-plan read hook",
           cleanup: () => {
-            fs.readFileSync = nativeAppliedPlanRead;
+            fileSystem.readFileSync = nativeAppliedPlanRead;
           },
         },
         {
@@ -974,7 +975,7 @@ export const test_production_legacy_import = (): void => {
     const standaloneCleanupFailure = new Error(
       "injected planning cleanup failure",
     );
-    fs.rmSync = ((target: fs.PathLike, ...args: unknown[]): void => {
+    fileSystem.rmSync = ((target: fs.PathLike, ...args: unknown[]): void => {
       Reflect.apply(nativeRm, fs, [target, ...args]);
       if (
         path.basename(target.toString()).startsWith("automovie-legacy-import-")
@@ -993,7 +994,7 @@ export const test_production_legacy_import = (): void => {
         {
           resource: "planning cleanup remove hook",
           cleanup: () => {
-            fs.rmSync = nativeRm;
+            fileSystem.rmSync = nativeRm;
           },
         },
       ]);
@@ -1008,7 +1009,7 @@ export const test_production_legacy_import = (): void => {
         .resolve(file.toString())
         .split(path.sep)
         .some((component) => component.startsWith("automovie-legacy-import-"));
-    fs.writeFileSync = ((
+    fileSystem.writeFileSync = ((
       file: fs.PathOrFileDescriptor,
       ...args: unknown[]
     ): void => {
@@ -1016,7 +1017,7 @@ export const test_production_legacy_import = (): void => {
         throw planningFailure;
       Reflect.apply(nativeWrite, fs, [file, ...args]);
     }) as typeof fs.writeFileSync;
-    fs.rmSync = ((target: fs.PathLike, ...args: unknown[]): void => {
+    fileSystem.rmSync = ((target: fs.PathLike, ...args: unknown[]): void => {
       Reflect.apply(nativeRm, fs, [target, ...args]);
       if (belongsToPlanningTemporary(target)) throw combinedCleanupFailure;
     }) as typeof fs.rmSync;
@@ -1032,13 +1033,13 @@ export const test_production_legacy_import = (): void => {
         {
           resource: "planning write hook",
           cleanup: () => {
-            fs.writeFileSync = nativeWrite;
+            fileSystem.writeFileSync = nativeWrite;
           },
         },
         {
           resource: "planning remove hook",
           cleanup: () => {
-            fs.rmSync = nativeRm;
+            fileSystem.rmSync = nativeRm;
           },
         },
       ]);
@@ -1111,7 +1112,10 @@ export const test_production_legacy_import = (): void => {
     // rename failure also breaks the commit lock's release, which quarantines
     // the resident lock by rename and abandons it when that rename fails, so
     // every later acquisition of that coordinate sees a foreign owner.
-    fs.renameSync = ((oldPath: fs.PathLike, newPath: fs.PathLike): void => {
+    fileSystem.renameSync = ((
+      oldPath: fs.PathLike,
+      newPath: fs.PathLike,
+    ): void => {
       if (
         path.basename(oldPath.toString()).startsWith(".automovie-import-") &&
         path.basename(newPath.toString()) === "automovie"
@@ -1174,7 +1178,7 @@ export const test_production_legacy_import = (): void => {
         {
           resource: "collision staging rename hook",
           cleanup: () => {
-            fs.renameSync = nativeRename;
+            fileSystem.renameSync = nativeRename;
           },
         },
       ]);
@@ -1200,7 +1204,10 @@ export const test_production_legacy_import = (): void => {
     );
     const nativeRename = fs.renameSync;
     const nativeRm = fs.rmSync;
-    fs.renameSync = ((oldPath: fs.PathLike, newPath: fs.PathLike): void => {
+    fileSystem.renameSync = ((
+      oldPath: fs.PathLike,
+      newPath: fs.PathLike,
+    ): void => {
       if (
         path.basename(oldPath.toString()).startsWith(".automovie-import-") &&
         path.basename(newPath.toString()) === "automovie"
@@ -1208,7 +1215,7 @@ export const test_production_legacy_import = (): void => {
         throw publicationFailure;
       nativeRename(oldPath, newPath);
     }) as typeof fs.renameSync;
-    fs.rmSync = ((target: fs.PathLike, ...args: unknown[]): void => {
+    fileSystem.rmSync = ((target: fs.PathLike, ...args: unknown[]): void => {
       Reflect.apply(nativeRm, fs, [target, ...args]);
       if (path.basename(target.toString()).startsWith(".automovie-import-"))
         throw stagingCleanupFailure;
@@ -1227,13 +1234,13 @@ export const test_production_legacy_import = (): void => {
         {
           resource: "import cleanup rename hook",
           cleanup: () => {
-            fs.renameSync = nativeRename;
+            fileSystem.renameSync = nativeRename;
           },
         },
         {
           resource: "import cleanup remove hook",
           cleanup: () => {
-            fs.rmSync = nativeRm;
+            fileSystem.rmSync = nativeRm;
           },
         },
       ]);
@@ -1281,7 +1288,10 @@ export const test_production_legacy_import = (): void => {
       const stateRoot = path.join(publishRootSwap.root, "automovie");
       const nativeRename = fs.renameSync;
       let swapped = false;
-      fs.renameSync = ((oldPath: fs.PathLike, newPath: fs.PathLike): void => {
+      fileSystem.renameSync = ((
+        oldPath: fs.PathLike,
+        newPath: fs.PathLike,
+      ): void => {
         nativeRename(oldPath, newPath);
         if (
           swapped === false &&
@@ -1328,7 +1338,7 @@ export const test_production_legacy_import = (): void => {
           {
             resource: "publish root-swap rename hook",
             cleanup: () => {
-              fs.renameSync = nativeRename;
+              fileSystem.renameSync = nativeRename;
             },
           },
           {
@@ -1595,7 +1605,7 @@ export const test_production_legacy_import = (): void => {
       fs,
       "lstatSync",
     )!;
-    Object.defineProperty(fs, "lstatSync", {
+    Object.defineProperty(fileSystem, "lstatSync", {
       ...nativeLstatDescriptor,
       value: ((
         file: fs.PathLike,
@@ -1645,7 +1655,11 @@ export const test_production_legacy_import = (): void => {
         {
           resource: "denied import state lstat descriptor hook",
           cleanup: () =>
-            Object.defineProperty(fs, "lstatSync", nativeLstatDescriptor),
+            Object.defineProperty(
+              fileSystem,
+              "lstatSync",
+              nativeLstatDescriptor,
+            ),
         },
       ]);
     }
@@ -1775,7 +1789,7 @@ export const test_production_legacy_import = (): void => {
     const activeNamespaceLocks: string[] = [];
     let removals = 0;
     let quarantineCleanupDenied = false;
-    fs.writeFileSync = ((
+    fileSystem.writeFileSync = ((
       file: fs.PathOrFileDescriptor,
       ...args: unknown[]
     ): void => {
@@ -1788,7 +1802,7 @@ export const test_production_legacy_import = (): void => {
       )
         activeNamespaceLocks.push(path.resolve(file.toString()));
     }) as typeof fs.writeFileSync;
-    fs.rmdirSync = ((directory: fs.PathLike): void => {
+    fileSystem.rmdirSync = ((directory: fs.PathLike): void => {
       ++removals;
       if (removals === 2) {
         if (
@@ -1809,7 +1823,7 @@ export const test_production_legacy_import = (): void => {
       }
       nativeRmdir(directory);
     }) as typeof fs.rmdirSync;
-    fs.mkdirSync = ((directory: fs.PathLike, ...args: unknown[]) => {
+    fileSystem.mkdirSync = ((directory: fs.PathLike, ...args: unknown[]) => {
       if (
         ["src", "generated", "renders"].some(
           (relative) =>
@@ -1823,7 +1837,7 @@ export const test_production_legacy_import = (): void => {
         );
       return Reflect.apply(nativeMkdir, fs, [directory, ...args]) as unknown;
     }) as typeof fs.mkdirSync;
-    fs.rmSync = ((target: fs.PathLike, ...args: unknown[]): void => {
+    fileSystem.rmSync = ((target: fs.PathLike, ...args: unknown[]): void => {
       if (
         quarantineCleanupDenied === false &&
         path.basename(target.toString()).startsWith(".automovie-rollback-") &&
@@ -1865,25 +1879,25 @@ export const test_production_legacy_import = (): void => {
         {
           resource: "rollback rmdir hook",
           cleanup: () => {
-            fs.rmdirSync = nativeRmdir;
+            fileSystem.rmdirSync = nativeRmdir;
           },
         },
         {
           resource: "rollback mkdir hook",
           cleanup: () => {
-            fs.mkdirSync = nativeMkdir;
+            fileSystem.mkdirSync = nativeMkdir;
           },
         },
         {
           resource: "rollback write hook",
           cleanup: () => {
-            fs.writeFileSync = nativeWrite;
+            fileSystem.writeFileSync = nativeWrite;
           },
         },
         {
           resource: "rollback remove hook",
           cleanup: () => {
-            fs.rmSync = nativeRm;
+            fileSystem.rmSync = nativeRm;
           },
         },
       ]);
@@ -1924,7 +1938,7 @@ export const test_production_legacy_import = (): void => {
       createMissingOwnedRoots(rollbackRootSwap.root, plan);
       const nativeRmdir = fs.rmdirSync;
       let swapped = false;
-      fs.rmdirSync = ((directory: fs.PathLike): void => {
+      fileSystem.rmdirSync = ((directory: fs.PathLike): void => {
         nativeRmdir(directory);
         if (swapped === false) {
           swapped = true;
@@ -1965,7 +1979,7 @@ export const test_production_legacy_import = (): void => {
           {
             resource: "rollback root-swap rmdir hook",
             cleanup: () => {
-              fs.rmdirSync = nativeRmdir;
+              fileSystem.rmdirSync = nativeRmdir;
             },
           },
           {
@@ -2023,7 +2037,7 @@ export const test_production_legacy_import = (): void => {
     const nativeMkdir = fs.mkdirSync;
     let removals = 0;
     let removedDirectory: string | null = null;
-    fs.rmdirSync = ((directory: fs.PathLike): void => {
+    fileSystem.rmdirSync = ((directory: fs.PathLike): void => {
       ++removals;
       if (removals === 1) {
         removedDirectory = path.resolve(directory.toString());
@@ -2041,7 +2055,10 @@ export const test_production_legacy_import = (): void => {
       );
       throw new Error("injected rollback removal failure");
     }) as typeof fs.rmdirSync;
-    fs.renameSync = ((oldPath: fs.PathLike, newPath: fs.PathLike): void => {
+    fileSystem.renameSync = ((
+      oldPath: fs.PathLike,
+      newPath: fs.PathLike,
+    ): void => {
       if (
         path.basename(oldPath.toString()).startsWith(".automovie-restore-") &&
         path.resolve(newPath.toString()) === stateRoot
@@ -2049,7 +2066,7 @@ export const test_production_legacy_import = (): void => {
         throw new Error("injected applied-state restoration failure");
       nativeRename(oldPath, newPath);
     }) as typeof fs.renameSync;
-    fs.mkdirSync = ((directory: fs.PathLike, ...args: unknown[]) => {
+    fileSystem.mkdirSync = ((directory: fs.PathLike, ...args: unknown[]) => {
       if (
         removedDirectory !== null &&
         path.resolve(directory.toString()) === removedDirectory
@@ -2073,19 +2090,19 @@ export const test_production_legacy_import = (): void => {
         {
           resource: "incomplete restoration rmdir hook",
           cleanup: () => {
-            fs.rmdirSync = nativeRmdir;
+            fileSystem.rmdirSync = nativeRmdir;
           },
         },
         {
           resource: "incomplete restoration rename hook",
           cleanup: () => {
-            fs.renameSync = nativeRename;
+            fileSystem.renameSync = nativeRename;
           },
         },
         {
           resource: "incomplete restoration mkdir hook",
           cleanup: () => {
-            fs.mkdirSync = nativeMkdir;
+            fileSystem.mkdirSync = nativeMkdir;
           },
         },
       ]);
@@ -2129,7 +2146,7 @@ export const test_production_legacy_import = (): void => {
     // directories along its recovery path afterwards, so the total count is
     // incidental while the injection point is the fact this scenario owns.
     let injectedRemoval: number | null = null;
-    fs.rmdirSync = ((directory: fs.PathLike): void => {
+    fileSystem.rmdirSync = ((directory: fs.PathLike): void => {
       if (++removals === 2) {
         const quarantine = fs
           .readdirSync(restorationCleanupFailure.root)
@@ -2149,7 +2166,10 @@ export const test_production_legacy_import = (): void => {
       }
       nativeRmdir(directory);
     }) as typeof fs.rmdirSync;
-    fs.renameSync = ((oldPath: fs.PathLike, newPath: fs.PathLike): void => {
+    fileSystem.renameSync = ((
+      oldPath: fs.PathLike,
+      newPath: fs.PathLike,
+    ): void => {
       if (
         path.basename(oldPath.toString()).startsWith(".automovie-restore-") &&
         path.resolve(newPath.toString()) === stateRoot
@@ -2157,7 +2177,7 @@ export const test_production_legacy_import = (): void => {
         throw restorationFailure;
       nativeRename(oldPath, newPath);
     }) as typeof fs.renameSync;
-    fs.rmSync = ((target: fs.PathLike, ...args: unknown[]): void => {
+    fileSystem.rmSync = ((target: fs.PathLike, ...args: unknown[]): void => {
       Reflect.apply(nativeRm, fs, [target, ...args]);
       if (path.basename(target.toString()).startsWith(".automovie-restore-"))
         throw cleanupFailure;
@@ -2174,19 +2194,19 @@ export const test_production_legacy_import = (): void => {
         {
           resource: "restoration cleanup rmdir hook",
           cleanup: () => {
-            fs.rmdirSync = nativeRmdir;
+            fileSystem.rmdirSync = nativeRmdir;
           },
         },
         {
           resource: "restoration cleanup rename hook",
           cleanup: () => {
-            fs.renameSync = nativeRename;
+            fileSystem.renameSync = nativeRename;
           },
         },
         {
           resource: "restoration cleanup remove hook",
           cleanup: () => {
-            fs.rmSync = nativeRm;
+            fileSystem.rmSync = nativeRm;
           },
         },
       ]);
@@ -2257,12 +2277,15 @@ export const test_production_legacy_import = (): void => {
     const nativeRmdir = fs.rmdirSync;
     const nativeRename = fs.renameSync;
     let removals = 0;
-    fs.rmdirSync = ((directory: fs.PathLike): void => {
+    fileSystem.rmdirSync = ((directory: fs.PathLike): void => {
       if (++removals === 2)
         throw new Error("injected rollback removal failure");
       nativeRmdir(directory);
     }) as typeof fs.rmdirSync;
-    fs.renameSync = ((oldPath: fs.PathLike, newPath: fs.PathLike): void => {
+    fileSystem.renameSync = ((
+      oldPath: fs.PathLike,
+      newPath: fs.PathLike,
+    ): void => {
       if (
         path.basename(oldPath.toString()).startsWith(".automovie-rollback-") &&
         path.resolve(newPath.toString()) === stateRoot
@@ -2284,13 +2307,13 @@ export const test_production_legacy_import = (): void => {
         {
           resource: "preserved quarantine rmdir hook",
           cleanup: () => {
-            fs.rmdirSync = nativeRmdir;
+            fileSystem.rmdirSync = nativeRmdir;
           },
         },
         {
           resource: "preserved quarantine rename hook",
           cleanup: () => {
-            fs.renameSync = nativeRename;
+            fileSystem.renameSync = nativeRename;
           },
         },
       ]);
@@ -2502,7 +2525,7 @@ export const test_production_legacy_import = (): void => {
       const namespaceLocks: string[] = [];
       const nativeWrite = fs.writeFileSync;
       let replaced = false;
-      fs.writeFileSync = ((
+      fileSystem.writeFileSync = ((
         file: fs.PathOrFileDescriptor,
         ...args: unknown[]
       ): void => {
@@ -2574,7 +2597,7 @@ export const test_production_legacy_import = (): void => {
           {
             resource: "acquire root-swap write hook",
             cleanup: () => {
-              fs.writeFileSync = nativeWrite;
+              fileSystem.writeFileSync = nativeWrite;
             },
           },
           {
@@ -2634,7 +2657,7 @@ export const test_production_legacy_import = (): void => {
       );
       const nativeWrite = fs.writeFileSync;
       let replaced = false;
-      fs.writeFileSync = ((
+      fileSystem.writeFileSync = ((
         file: fs.PathOrFileDescriptor,
         ...args: unknown[]
       ): void => {
@@ -2673,7 +2696,7 @@ export const test_production_legacy_import = (): void => {
           {
             resource: "apply resident-lock write hook",
             cleanup: () => {
-              fs.writeFileSync = nativeWrite;
+              fileSystem.writeFileSync = nativeWrite;
             },
           },
         ]);
@@ -2793,7 +2816,7 @@ export const test_production_legacy_import = (): void => {
       );
       const nativeWrite = fs.writeFileSync;
       let replaced = false;
-      fs.writeFileSync = ((
+      fileSystem.writeFileSync = ((
         file: fs.PathOrFileDescriptor,
         ...args: unknown[]
       ): void => {
@@ -2829,7 +2852,7 @@ export const test_production_legacy_import = (): void => {
           {
             resource: "rollback resident-lock write hook",
             cleanup: () => {
-              fs.writeFileSync = nativeWrite;
+              fileSystem.writeFileSync = nativeWrite;
             },
           },
         ]);
@@ -2935,7 +2958,7 @@ export const test_production_legacy_import = (): void => {
     const revisionParked = `${revisionPath}.read-parked`;
     const nativeOpen = fs.openSync;
     let changed = false;
-    fs.openSync = ((file: fs.PathLike, ...args: unknown[]): number => {
+    fileSystem.openSync = ((file: fs.PathLike, ...args: unknown[]): number => {
       const descriptor = Reflect.apply(nativeOpen, fs, [
         file,
         ...args,
@@ -2978,7 +3001,7 @@ export const test_production_legacy_import = (): void => {
         {
           resource: "revision-race open hook",
           cleanup: () => {
-            fs.openSync = nativeOpen;
+            fileSystem.openSync = nativeOpen;
           },
         },
         {
@@ -3017,7 +3040,7 @@ export const test_production_legacy_import = (): void => {
     const nativeClose = fs.closeSync;
     let byteSourceDescriptor: number | null = null;
     let changedAfterRead = false;
-    fs.openSync = ((file: fs.PathLike, ...args: unknown[]): number => {
+    fileSystem.openSync = ((file: fs.PathLike, ...args: unknown[]): number => {
       const descriptor = Reflect.apply(nativeOpen, fs, [
         file,
         ...args,
@@ -3029,7 +3052,7 @@ export const test_production_legacy_import = (): void => {
         byteSourceDescriptor = descriptor;
       return descriptor;
     }) as typeof fs.openSync;
-    fs.closeSync = ((descriptor: number): void => {
+    fileSystem.closeSync = ((descriptor: number): void => {
       nativeClose(descriptor);
       if (changedAfterRead === false && descriptor === byteSourceDescriptor) {
         changedAfterRead = true;
@@ -3070,13 +3093,13 @@ export const test_production_legacy_import = (): void => {
         {
           resource: "revision-after-read open hook",
           cleanup: () => {
-            fs.openSync = nativeOpen;
+            fileSystem.openSync = nativeOpen;
           },
         },
         {
           resource: "revision-after-read close hook",
           cleanup: () => {
-            fs.closeSync = nativeClose;
+            fileSystem.closeSync = nativeClose;
           },
         },
       ]);
@@ -3151,7 +3174,7 @@ export const test_production_legacy_import = (): void => {
     fs.writeFileSync(path.join(collidingCase.root, "actors/officer.txt"), "B");
     const collidingActorDirectory = path.join(collidingCase.root, "actors");
     const nativeReaddir = fs.readdirSync;
-    fs.readdirSync = ((
+    fileSystem.readdirSync = ((
       directory: fs.PathLike,
       options?: { withFileTypes?: boolean },
     ): fs.Dirent[] => {
@@ -3196,7 +3219,7 @@ export const test_production_legacy_import = (): void => {
         {
           resource: "case-colliding inventory readdir hook",
           cleanup: () => {
-            fs.readdirSync = nativeReaddir;
+            fileSystem.readdirSync = nativeReaddir;
           },
         },
       ]);
@@ -3244,7 +3267,7 @@ export const test_production_legacy_import = (): void => {
   try {
     const nativeReaddir = fs.readdirSync;
     let injectedInventoryEntry: "special" | "symlink" = "special";
-    fs.readdirSync = ((
+    fileSystem.readdirSync = ((
       directory: fs.PathLike,
       options?: { withFileTypes?: boolean },
     ): fs.Dirent[] => {
@@ -3293,7 +3316,7 @@ export const test_production_legacy_import = (): void => {
         {
           resource: "special-entry inventory readdir hook",
           cleanup: () => {
-            fs.readdirSync = nativeReaddir;
+            fileSystem.readdirSync = nativeReaddir;
           },
         },
       ]);
@@ -3342,7 +3365,7 @@ export const test_production_legacy_import = (): void => {
           return { isSymbolicLink: () => true } as fs.Stats;
         return Reflect.apply(nativeLstat, fs, [file, ...args]) as fs.Stats;
       };
-      if (Reflect.set(fs, "lstatSync", lstatHook) === false)
+      if (Reflect.set(fileSystem, "lstatSync", lstatHook) === false)
         throw new Error("Unable to install the linked-revision lstat hook.");
       let lstatFailure: ILegacyImportFixtureFailure | undefined;
       try {
@@ -3361,7 +3384,7 @@ export const test_production_legacy_import = (): void => {
           {
             resource: "linked-revision lstat hook",
             cleanup: () => {
-              if (Reflect.set(fs, "lstatSync", nativeLstat) === false)
+              if (Reflect.set(fileSystem, "lstatSync", nativeLstat) === false)
                 throw new Error(
                   "Unable to restore the linked-revision lstat hook.",
                 );
@@ -3417,7 +3440,10 @@ export const test_production_legacy_import = (): void => {
       const nativeOpen = fs.openSync;
       let changed = false;
       let injectedLockReadFailure = false;
-      fs.openSync = ((file: fs.PathLike, ...args: unknown[]): number => {
+      fileSystem.openSync = ((
+        file: fs.PathLike,
+        ...args: unknown[]
+      ): number => {
         if (
           lockMutation === "read-error" &&
           changed &&
@@ -3475,7 +3501,7 @@ export const test_production_legacy_import = (): void => {
           {
             resource: "resident lock mutation open hook",
             cleanup: () => {
-              fs.openSync = nativeOpen;
+              fileSystem.openSync = nativeOpen;
             },
           },
         ]);
@@ -3517,7 +3543,7 @@ export const test_production_legacy_import = (): void => {
     );
     const nativeWrite = fs.writeFileSync;
     let corrupted = false;
-    fs.writeFileSync = ((
+    fileSystem.writeFileSync = ((
       file: fs.PathOrFileDescriptor,
       ...args: unknown[]
     ): void => {
@@ -3552,7 +3578,7 @@ export const test_production_legacy_import = (): void => {
         {
           resource: "rollback lock token write hook",
           cleanup: () => {
-            fs.writeFileSync = nativeWrite;
+            fileSystem.writeFileSync = nativeWrite;
           },
         },
       ]);
@@ -3648,7 +3674,7 @@ export const test_production_legacy_import = (): void => {
     const stateRoot = path.join(specialAppliedState.root, "automovie");
     const nativeReaddir = fs.readdirSync;
     let injectedAppliedEntry: "special" | "symlink" = "special";
-    fs.readdirSync = ((
+    fileSystem.readdirSync = ((
       directory: fs.PathLike,
       options?: { withFileTypes?: boolean },
     ): fs.Dirent[] => {
@@ -3690,7 +3716,7 @@ export const test_production_legacy_import = (): void => {
         {
           resource: "special applied-state readdir hook",
           cleanup: () => {
-            fs.readdirSync = nativeReaddir;
+            fileSystem.readdirSync = nativeReaddir;
           },
         },
       ]);
@@ -3820,3 +3846,6 @@ export const test_production_legacy_import = (): void => {
     ]);
   }
 };
+
+export const test_production_legacy_import =
+  isolatedFileSystemTest(runLegacyImport);

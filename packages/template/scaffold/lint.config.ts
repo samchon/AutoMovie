@@ -1,6 +1,8 @@
 import {
+  type AutoMovieProductionLanguage,
   type IAutoMovieEvidenceConfigProps,
   createAutoMovieEvidenceConfig,
+  createBlankAutoMovieProductionEvidence,
   evidence,
 } from "@automovie/evidence";
 import type { ITtscLintConfig } from "@ttsc/lint";
@@ -19,33 +21,10 @@ import { fileURLToPath } from "node:url";
  * as the parallel serialized input to filmSources.
  */
 export const productionEvidence = {
-  location: fileURLToPath(new URL(".", import.meta.url)),
-  kind: null,
-  populationScope: { mode: "complete-production" },
-  settings: "disabled",
-  research: "disabled",
-  maps: "disabled",
-  models: "disabled",
-  spaces: "disabled",
-  materials: "disabled",
-  instances: "disabled",
-  motions: "disabled",
-  systems: "disabled",
-  treatments: "disabled",
-  scripts: "disabled",
-  screenplays: "disabled",
-  briefs: "disabled",
-  mapSources: "disabled",
-  modelSources: "disabled",
-  spaceSources: "disabled",
-  materialSources: "disabled",
-  instanceSources: "disabled",
-  motionSources: "disabled",
-  systemSources: "disabled",
-  shots: "disabled",
-  productionSources: "disabled",
-  filmSources: "disabled",
-  claims: [],
+  ...createBlankAutoMovieProductionEvidence(
+    fileURLToPath(new URL(".", import.meta.url)),
+    "{{language}}" as AutoMovieProductionLanguage,
+  ),
 } satisfies IAutoMovieEvidenceConfigProps;
 
 const graph = createAutoMovieEvidenceConfig(productionEvidence);

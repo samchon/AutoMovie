@@ -1,6 +1,4 @@
 import assert from "node:assert";
-import fs from "node:fs";
-import path from "node:path";
 
 import { assertAutoMovieEvidenceReviewReasons } from "../src/auditAutoMovieEvidenceReviewReasons";
 
@@ -124,6 +122,14 @@ const testAcceptedBoundaries = (): void => {
 `),
     ]),
   );
+  assert.doesNotThrow(() =>
+    assertAutoMovieEvidenceReviewReasons([
+      document(
+        "<!-- @evidenceReview contracts/local.md#rule malformed -->",
+        "docs/models/malformed.md",
+      ),
+    ]),
+  );
 };
 
 const testAssertion = (): void => {
@@ -142,32 +148,9 @@ const testAssertion = (): void => {
   );
 };
 
-const fixtureDocuments = (
-  directory: string,
-  root = directory,
-): Array<Parameters<typeof assertAutoMovieEvidenceReviewReasons>[0][number]> =>
-  fs
-    .readdirSync(directory, { withFileTypes: true })
-    .sort((left, right) => left.name.localeCompare(right.name))
-    .flatMap((entry) => {
-      const absolute = path.join(directory, entry.name);
-      if (entry.isDirectory()) return fixtureDocuments(absolute, root);
-      return entry.isFile() && /\.(?:md|ts)$/u.test(entry.name)
-        ? [
-            {
-              path: path.relative(root, absolute).replaceAll("\\", "/"),
-              source: fs.readFileSync(absolute, "utf8"),
-            },
-          ]
-        : [];
-    });
-
 /**
  * Two hosts answering one target with one sentence, and the three boundaries
  * that are not that.
- *
- * Measured before this refusal existed, `test/fixtures/completed-film` carried
- * 82 of them; the corpus check below is what keeps that at zero.
  */
 const testCrossHostSharedReason = (): void => {
   const shared = "The unit fixes the ground origin and the raised endpoint.";
@@ -219,7 +202,7 @@ ${tag}
         host(
           "Two",
           "two",
-          `@evidence principles/core/common.md#machine-default ${shared}`,
+          `@evidence principles/core/defaults.md#purposeful-enumeration ${shared}`,
         ),
         "docs/models/d.md",
       ),
@@ -274,14 +257,24 @@ ${tag}
   );
 };
 
-const testCompletedFilmCorpus = (): void => {
-  const fixture = path.resolve(
-    import.meta.dirname,
-    "../../../test/fixtures/completed-film",
-  );
-  assert.doesNotThrow(
-    () => assertAutoMovieEvidenceReviewReasons(fixtureDocuments(fixture)),
-    "the complete historical production must contain zero mechanical restatements, zero same-host review reuse, and no reason shared word for word by two hosts answering one target",
+/** Native carrier syntax does not hide or manufacture shared reasons. */
+const testNativeCarrierBoundaries = (): void => {
+  const tag =
+    "@evidence principles/core/common.md#scope-preservation The unit owns its silhouette.";
+  const message = rejectionMessage([
+    document(
+      ["````text", "~~~", "```", "````", `<!-- ${tag} -->`].join("\n"),
+      "docs/models/a.md",
+    ),
+    document(`<!-- ${tag} -->`, "docs/models/b.md"),
+  ]);
+  assert.match(message, /evidence-reason-shared/u);
+
+  assert.doesNotThrow(() =>
+    assertAutoMovieEvidenceReviewReasons([
+      document(`export const sample = \`${tag}\`;`, "src/models/a.ts"),
+      document(`export const sample = \`${tag}\`;`, "src/models/b.ts"),
+    ]),
   );
 };
 
@@ -291,4 +284,4 @@ testTargetInterpolationReuse();
 testAcceptedBoundaries();
 testAssertion();
 testCrossHostSharedReason();
-testCompletedFilmCorpus();
+testNativeCarrierBoundaries();

@@ -1,16 +1,56 @@
 import { validateGeneratedAcquisition } from "@automovie/engine";
 import { IAutoMovieAssetProvenance } from "@automovie/interface";
 
+import { autoMovieExternalLocatorRefusal } from "./contentIdentity";
+
 /** A plain SHA-256 content digest as this project writes it. */
 const DIGEST_PATTERN = /^sha256:[0-9a-f]{64}$/;
 
-/** Whether a string is a URL something can actually be fetched from. */
-const isHttpUrl = (value: string): boolean => {
+type AssetUrlAdmissionRefusal = {
+  field: "original" | "license";
+  reason: "malformed" | "unsupported-protocol" | "credential-bearing";
+};
+
+/** Why one locator is not a credential-free HTTP(S) URL. */
+const httpUrlAdmissionRefusal = (
+  value: string,
+): AssetUrlAdmissionRefusal["reason"] | null => {
+  let parsed: URL;
   try {
-    return ["http:", "https:"].includes(new URL(value).protocol);
+    parsed = new URL(value);
   } catch {
-    return false;
+    return "malformed";
   }
+  if (["http:", "https:"].includes(parsed.protocol) === false)
+    return "unsupported-protocol";
+  return autoMovieExternalLocatorRefusal(value) === "credential-bearing"
+    ? "credential-bearing"
+    : null;
+};
+
+/**
+ * Refuse a fetched source or license locator before the asset is adopted.
+ *
+ * The result names only the field and failure class. It never carries the
+ * rejected locator, so a caller can diagnose the correction without copying
+ * embedded credentials into a diagnostic, receipt, or generated artifact.
+ *
+ * @evidence requirements/external-inputs/credentials-rights-and-provenance.md#external-credential-separation Keeps credential-bearing locators out of admitted source and license provenance.
+ * @evidence requirements/evidence-and-provenance/privacy-credentials-and-disclosure.md#privacy-credential-omission Returns a failure class without retaining the rejected secret-bearing locator.
+ * @evidence specifications/interchange-and-adoption/provenance-rights-and-secrets.md#interchange-secret-reference-boundary Implements the credential-free URI boundary for provenance ledgers.
+ * @evidence specifications/evidence-and-provenance/privacy-credentials-and-disclosure.md#evp-credential-exclusion-gate Gives ingestion callers a redacted credential exclusion decision before publication.
+ * @evidence requirements/sound/sources-and-external-assets.md#sound-source-secret-remote-boundary Refuses a source or license locator that carries credentials before any ledger entry, receipt or artifact could store them.
+ * @evidence specifications/simulation-effects-and-sound/sound-sources-events-dialogue-and-foley.md#sound-source-choice-provider-and-secret-boundary Stops a credential-bearing locator at admission so no artifact records a secret and no remote fetch is implied by a stored URL.
+ */
+export const assetUrlAdmissionRefusal = (
+  asset: IAutoMovieAssetProvenance,
+): AssetUrlAdmissionRefusal | null => {
+  if (asset.original !== undefined) {
+    const reason = httpUrlAdmissionRefusal(asset.original.url);
+    if (reason !== null) return { field: "original", reason };
+  }
+  const reason = httpUrlAdmissionRefusal(asset.license.url);
+  return reason === null ? null : { field: "license", reason };
 };
 
 /**
@@ -34,6 +74,11 @@ const isHttpUrl = (value: string): boolean => {
  * Backward compatibility falls out of the shape: every manifest written before
  * generated assets existed carries `original`, so it reads unchanged and is
  * held to exactly the rules it was written against.
+ *
+ * @evidence requirements/external-inputs/credentials-rights-and-provenance.md#external-credential-separation Refuses fetched acquisition records whose locator embeds credentials.
+ * @evidence specifications/interchange-and-adoption/provenance-rights-and-secrets.md#interchange-secret-reference-boundary Applies the provenance ledger's credential-free locator rule while preserving generated acquisitions.
+ * @evidence requirements/external-inputs/credentials-rights-and-provenance.md#external-provenance-source-record Requires each asset to state exactly one acquisition, fetched or generated, and refuses a ledger entry that invents a source rather than admitting it is unknown.
+ * @evidence specifications/interchange-and-adoption/provenance-rights-and-secrets.md#interchange-source-provenance-snapshot Requires the fetched or generated acquisition record to be present and complete, leaving unknown fields unknown rather than inventing a source.
  */
 export const assetAcquisitionIncomplete = (
   asset: IAutoMovieAssetProvenance,
@@ -44,7 +89,7 @@ export const assetAcquisitionIncomplete = (
   if (acquired !== undefined)
     return (
       DIGEST_PATTERN.test(acquired.digest) === false ||
-      isHttpUrl(acquired.url) === false
+      httpUrlAdmissionRefusal(acquired.url) !== null
     );
   return (
     validateGeneratedAcquisition({
@@ -66,6 +111,8 @@ export const assetAcquisitionIncomplete = (
  * against the digest its source served, a generated one against the digest its
  * generator returned. An asset with neither acquisition is silent here rather
  * than doubly reported; {@link assetAcquisitionIncomplete} already owns it.
+ * @evidence requirements/external-inputs/credentials-rights-and-provenance.md#external-provenance-derivation-consumers Detects an asset whose current bytes differ from its acquired digest without a recorded transformation, so a replaced source cannot pass as its consumers' unchanged input.
+ * @evidence specifications/interchange-and-adoption/provenance-rights-and-secrets.md#interchange-derivation-consumer-reachability Detects a source whose bytes changed without a recorded processing step, so its consumers cannot keep reading it as the adopted revision.
  */
 export const assetProcessingOmitted = (
   asset: IAutoMovieAssetProvenance,

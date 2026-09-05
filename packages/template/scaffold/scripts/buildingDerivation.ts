@@ -29,8 +29,8 @@ export type IAutoMovieBuildingAction =
  *
  * Split from the command with everything else it decides. The command opened
  * project state at module level and refused unless it was current, so nothing
- * could load it, and this refusal -- the one place a real contradiction between
- * two shots is caught -- had no reader at all.
+ * could load it, and this refusal; the one place a real contradiction between
+ * two shots is caught; had no reader at all.
  */
 export const collectAutoMovieStagedRecords = <T extends { id: string }>(props: {
   shots: ReadonlyArray<readonly [string, unknown]>;

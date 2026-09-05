@@ -48,7 +48,7 @@ export const recordingCapture = (): {
           status: "not-run" as const,
           reason: "The capture stub draws no shot scene graph.",
         },
-        maskSidecar: {
+        semanticMask: {
           status: "not-run" as const,
           reason: "The capture stub derives no semantic mask.",
         },

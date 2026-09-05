@@ -1,14 +1,11 @@
 import { readAutoMovieProductionEvidence } from "@automovie/evidence";
-import {
-  AutoMovieProductionCompiler,
-  AutoMovieProductionProject,
-} from "@automovie/production";
+import { AutoMovieProductionCompiler } from "@automovie/production";
 
 import { productionEvidence } from "../lint.config";
-import { currentAutoMovieProductionId } from "./projectIdentity";
+import { readAutoMovieLintArguments } from "./commandArguments";
+import { openAutoMovieProjectProductionReadOnly } from "./projectIdentity";
 
-/** The production namespace this project declares in its own package manifest. */
-const productionId = currentAutoMovieProductionId();
+const request = readAutoMovieLintArguments(process.argv.slice(2));
 
 /**
  * The scope this lint runs at, `review` unless `--scope <name>` says otherwise.
@@ -31,32 +28,17 @@ const productionId = currentAutoMovieProductionId();
  * each model the film stages, and `source` reports neither, because frames do
  * not exist yet at the stage that scope belongs to.
  */
-const scope = ((): "design" | "source" | "review" | "final" => {
-  const index = process.argv.indexOf("--scope");
-  if (index === -1) return "review";
-  const requested = process.argv[index + 1];
-  if (
-    requested === "design" ||
-    requested === "source" ||
-    requested === "review" ||
-    requested === "final"
-  )
-    return requested;
-  process.stderr.write(
-    `Unknown lint scope ${JSON.stringify(requested ?? "")}. Use design, source, review, or final.\n`,
-  );
-  process.exit(1);
-})();
-
-const project = AutoMovieProductionProject.open(process.cwd(), productionId);
-const authoringEvidence = readAutoMovieProductionEvidence({
-  root: process.cwd(),
-  productionEvidence,
-});
-const output = new AutoMovieProductionCompiler(project, authoringEvidence).lint(
-  {
-    scope,
-  },
-);
+const project = openAutoMovieProjectProductionReadOnly(process.cwd());
+const currentAuthoringEvidence = () =>
+  readAutoMovieProductionEvidence({
+    root: process.cwd(),
+    productionEvidence,
+  });
+const authoringEvidence = currentAuthoringEvidence();
+const output = new AutoMovieProductionCompiler(
+  project,
+  authoringEvidence,
+  currentAuthoringEvidence,
+).lint({ scope: request.scope });
 process.stdout.write(`${JSON.stringify(output, null, 2)}\n`);
 if (output.success === false) process.exitCode = 1;

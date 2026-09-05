@@ -18,7 +18,7 @@ A complete round must satisfy all four rules:
 - **Whole surface:** read every changed file and hunk. For issue discovery, audit the entire campaign scope. Never partition by file, package, concern, platform, or round.
 - **Consequence surface:** inspect affected code paths, tests, rendered output, CI, packaging, documentation, and consumers. Trace side effects, state transitions, determinism, numeric and quaternion behavior, Windows and POSIX behavior, public API compatibility, boundaries, and failure and recovery paths beyond the named symptom or diff.
 - **Fresh start:** use the current state and repeat the whole inspection. Earlier rounds, sampled files, and a recheck of only the latest fix do not count as coverage.
-- **Unlimited rounds:** whenever the reviewer applies an improvement or accepts a meaningful issue candidate, update the work and start another complete round. Stop only after a complete round produces nothing that survives verification.
+- **Unlimited rounds:** whenever the reviewer applies an improvement, update the work and start another complete round. In issue discovery, an accepted meaningful candidate likewise starts another round. Stop only after a complete round produces nothing that survives verification.
 
 ## Review records belong to the procedure
 
@@ -49,9 +49,9 @@ Self-Review does not authorize creating, pushing, updating, or merging a pull re
 
 ## Campaign Reviews Do Not Add Up
 
-An issue campaign's parallel owners each complete a Self-Review over their own issue, and the main agent completes one over the integrated diff. The [campaign development document](../issue-campaign/development.md#validate-with-ci-and-the-integration-self-review) defines both.
+An issue campaign's parallel owners each complete a Self-Review over their complete assigned issue or batch surface, and the main agent completes one over the integrated diff. The [campaign development document](../issue-campaign/development.md#validate-with-ci-and-the-integration-self-review) defines when both occur; this skill owns what makes each one a review round.
 
-The owners' rounds never substitute for the integration round. An owner reads the surface of one issue, so what appears only between issues is invisible to all of them: a helper two owners wrote twice, a validator whose new branch leaves a mirrored DTO stale, a document claiming a verification nothing performs, a limit one owner recorded honestly and another silently relied on.
+The owners' rounds never substitute for the integration round. An owner reads only its assigned surface, so what appears between assignments is invisible to all of them: a helper two owners wrote twice, a validator whose new branch leaves a mirrored DTO stale, a document claiming a verification nothing performs, a limit one owner recorded honestly and another silently relied on.
 
 Never report the owners' rounds as the campaign's Self-Review. A reader who sees that name concludes the gate already ran, and the whole-surface round disappears without anyone deciding to drop it.
 
@@ -90,11 +90,11 @@ Looking is expensive. It costs frames, an agent's attention, and a written justi
 
 Two requirements already draw that line, and they point the same way. `docs/requirements/story/coverage-and-acceptance.md#story-falsifiable-acceptance` asks a story success condition to carry a subject, a time or event, an observable state, and a failure condition, and forbids it ending in a bare evaluative word. `docs/requirements/story/scenes-and-observable-action.md#story-scene-observability` forbids resting acceptance on inner facts a camera cannot see. A claim that satisfies the first is by construction a predicate; a claim that needs the second is by construction pixels.
 
-Sorted by that test, a production's obligations split cleanly. Binding, exports, determinism, engine enforcement, and error paths are settled by reading the module. Identity, references, scope, ownership, ranges, and downstream consumability are settled by the records and the compile diagnostics. Acceptance outcomes are already the compiler's: it returns an explicit verdict per authored opening, closing, event, camera, actor, and formation predicate. What is left over — whether a silhouette reads, whether a performance is credible, whether a cut lands, whether a rendition holds together — is settled by looking, and by nothing else.
+Sorted by that test, a production's obligations split cleanly. Binding, exports, determinism, engine enforcement, and error paths are settled by reading the module. Identity, references, scope, ownership, ranges, and downstream consumability are settled by the records and the compile diagnostics. Acceptance outcomes are already the compiler's: it returns an explicit verdict per authored opening, closing, event, camera, actor, and formation predicate. What is left over : whether a silhouette reads, whether a performance is credible, whether a cut lands, whether a rendition holds together : is settled by looking, and by nothing else.
 
 The first group is the larger one. That is the whole argument for keeping it out of a person's hands: a compiler does not tire, does not stale, and names the exact figure that disagrees.
 
-So when a review keeps producing the same class of finding, ask whether it is a diagnostic in the wrong place. And measure what already refuses the case before writing the check that refuses it again — a regex beside a parser looks like new coverage and is a second, worse spelling of a rule that already held.
+So when a review keeps producing the same class of finding, ask whether it is a diagnostic in the wrong place. And measure what already refuses the case before writing the check that refuses it again : a regex beside a parser looks like new coverage and is a second, worse spelling of a rule that already held.
 
 This is not an argument against looking. It is what keeps looking affordable: let the compiler decide every addressed, timed, observable claim, and spend the frames on what only frames can answer. Then say what the frames showed, in the evidence citation on the source that claims the unit is realized. A citation that names no observation is not a review, and nothing records one on your behalf.
 

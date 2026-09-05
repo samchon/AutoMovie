@@ -2,6 +2,7 @@ import {
   type IAutoMovieProductionRenderJobPlan,
   type IAutoMovieProductionRenderLayer,
   compareCodeUnits,
+  parseAutoMovieStructuredJson,
 } from "@automovie/production";
 import { createHash, randomUUID } from "node:crypto";
 import fs from "node:fs";
@@ -40,8 +41,8 @@ import {
  * - Four video deliverables, three cuts in every chunk: ~166,000 output frames,
  *   about 1.9 hours at 24 fps.
  *
- * The same four-deliverable production reached this cap at 13,919 frames -- 9.7
- * minutes at 24 fps -- while the plan spelled out every frame. What bounds a
+ * The same four-deliverable production reached this cap at 13,919 frames; 9.7
+ * minutes at 24 fps; while the plan spelled out every frame. What bounds a
  * plan now is how often the edit cuts or dissolves, not how long it runs.
  */
 const RENDER_PLAN_MAX_BYTES = 16 * 1024 * 1024;
@@ -144,9 +145,9 @@ export const publishRenderPlan = async (props: {
 }): Promise<IRenderPlanSnapshot> => {
   const ownership = capturePlanOwnership(props.base, props.target);
   const predecessor = props.predecessor?.generation ?? null;
-  assertPlanHead(props.base, props.target, props.predecessor);
+  assertRenderPlanHead(props.base, props.target, props.predecessor);
   await props.inputCurrent();
-  assertPlanHead(props.base, props.target, props.predecessor);
+  assertRenderPlanHead(props.base, props.target, props.predecessor);
   if (
     props.predecessor !== null &&
     props.predecessor.generation.startsWith("legacy-") === false &&
@@ -163,7 +164,7 @@ export const publishRenderPlan = async (props: {
   const destination = generationSlot(ownership.generations.path, predecessor);
   assertPlanOwnership(ownership);
   try {
-    assertPlanHead(props.base, props.target, props.predecessor);
+    assertRenderPlanHead(props.base, props.target, props.predecessor);
     assertPlanOwnership(ownership);
     const snapshot = createRenderGcFileSnapshot(props.base, destination, bytes);
     const published = parseGeneration(snapshot);
@@ -235,11 +236,10 @@ const parseGeneration = (
 } => {
   if (snapshot.kind !== "file")
     throw new Error("Render plan generation is not one physical file.");
-  const value = JSON.parse(
-    Buffer.from(
-      readCapturedRenderGcFile(snapshot, RENDER_PLAN_MAX_BYTES),
-    ).toString("utf8"),
-  ) as unknown;
+  const value = parseAutoMovieStructuredJson({
+    record: "render-plan-generation",
+    bytes: readCapturedRenderGcFile(snapshot, RENDER_PLAN_MAX_BYTES),
+  });
   if (
     isRecord(value) === false ||
     Object.keys(value).sort(compareCodeUnits).join(",") !==
@@ -271,13 +271,22 @@ const parseGeneration = (
 };
 
 const parsePlan = (bytes: Uint8Array): IAutoMovieProductionRenderJobPlan => {
-  const value = JSON.parse(Buffer.from(bytes).toString("utf8")) as unknown;
+  const value = parseAutoMovieStructuredJson({ record: "render-plan", bytes });
   if (isRecord(value) === false)
     throw new Error("Stored render plan is malformed.");
   return value as unknown as IAutoMovieProductionRenderJobPlan;
 };
 
-const assertPlanHead = (
+/**
+ * Refuse to proceed unless the stored plan head is still the captured one.
+ *
+ * A consumer that read a generation and then acted on it re-asserts the head
+ * here before trusting its result: the same generation id, the same physical
+ * file identity and version, the same bytes, and the same namespace, or the
+ * plan changed underneath and the result describes a generation that no longer
+ * exists.
+ */
+export const assertRenderPlanHead = (
   base: string,
   target: string,
   expected: IRenderPlanSnapshot | null,
@@ -459,8 +468,8 @@ const recordBytes = (record: IRenderPlanGenerationRecord): Buffer => {
  * Choose the schema one generation is stored in.
  *
  * The range schema is preferred, and taken only when the encoded form decodes
- * back to a byte-identical plan. A plan the codec cannot describe -- one whose
- * frames are not the exact derivation of its own ranges -- is stored verbatim
+ * back to a byte-identical plan. A plan the codec cannot describe; one whose
+ * frames are not the exact derivation of its own ranges; is stored verbatim
  * rather than approximated, so choosing the schema can never change what a
  * later read returns.
  */
@@ -492,7 +501,7 @@ const storedGeneration = (record: IRenderPlanGenerationRecord): unknown => {
  * frame step, the film second is that cursor over the frame clock, and the
  * layers advance exactly one source frame per output frame for as long as the
  * edit holds still. Only the layer runs carry information, and there is one run
- * per cut, per dissolve frame, and per chunk -- never one per frame. Storing
+ * per cut, per dissolve frame, and per chunk; never one per frame. Storing
  * the runs is what stops a plan growing with the length of the film.
  */
 const encodeRenderPlanRanges = (
@@ -503,7 +512,7 @@ const encodeRenderPlanRanges = (
   const tier = source.tier;
   const frameFormat = source.frameFormat;
   if (
-    source.version !== 3 ||
+    source.version !== 4 ||
     Array.isArray(source.chunks) === false ||
     isRecord(tier) === false ||
     isRecord(frameFormat) === false

@@ -4,7 +4,7 @@
  * Split from the command so the request can be read without standing up a Vite
  * server and a browser. `inspect.ts` imports the inspection instrument, which
  * imports both at module level, so nothing in this project could load the
- * command to see what it does with a flag -- and every refusal below was
+ * command to see what it does with a flag; and every refusal below was
  * written and never read.
  *
  * The request is a value, so nothing here draws anything. What it decides is
@@ -44,7 +44,7 @@ const INSPECT_OPTIONS = new Set([
  * A flag repeated is refused rather than resolved by read order: two answers to
  * one question is a mistake in the command line, and picking either one hides
  * it. A flag whose value is missing or is itself another flag is refused for
- * the same reason -- `--shot --subject x` would otherwise inspect a shot named
+ * the same reason; `--shot --subject x` would otherwise inspect a shot named
  * `--subject`.
  */
 const one = (argv: readonly string[], name: string): string | undefined => {

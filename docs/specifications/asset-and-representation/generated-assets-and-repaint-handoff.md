@@ -92,7 +92,6 @@ Repaint executor는 caller가 제공한 adapter identity와 current deterministi
 
 ### attempt, retry와 채택 계보 {#asset-spec-repaint-attempt-selection}
 
-<!-- @evidenceObligation request-attempt-selection 요청별 attempt 기록에서 하나의 허용된 결과만 명시적으로 채택하는 계보. -->
 
 <!-- @evidence requirements/repaint/retries-seeds-and-variation.md#repaint-retries-seeds-variation 매 실행을 독립 result로 기록해야 한다. -->
 <!-- @evidence requirements/repaint/retries-seeds-and-variation.md#repaint-one-accepted-lineage 여러 후보 중 하나의 명시적 accepted lineage만 publication으로 이어져야 한다. -->
@@ -105,7 +104,6 @@ Runtime은 maximum attempt, per-attempt timeout, request elapsed·cost ceiling, 
 
 ### 구조 비교와 연속성 {#asset-spec-repaint-structure-continuity}
 
-<!-- @evidenceObligation selected-structure-continuity 선택된 rendition을 원본 구조 검토와 시간 연속성 증거에 묶는 검증. -->
 
 <!-- @evidence requirements/repaint/structural-comparison-and-review.md#repaint-structural-comparison-review 재도색 전후 subject, pose, silhouette, camera, contact와 event를 비교해야 한다. -->
 <!-- @evidence requirements/repaint/sequence-continuity-and-publication.md#repaint-sequence-continuity-publication 여러 재도색 shot에서 같은 film의 시각 identity를 추적해야 한다. -->
@@ -124,7 +122,6 @@ sequence 기록은 character, costume, prop, location, material, palette, light,
 
 ### rendition 출력과 provenance {#asset-spec-repaint-output-provenance}
 
-<!-- @evidenceObligation canonical-output-provenance 독립 rendition 출력의 요청·attempt·provider·model·terms·비용·digest 정본 기록. -->
 
 <!-- @evidence requirements/repaint/identity-and-provenance.md#repaint-identity-provenance 각 output에 source, 제공자, model, request, control, reference, 조건과 digest를 연결해야 한다. -->
 <!-- @evidence requirements/repaint/scope-and-user-choice.md#repaint-independent-artifact 재도색 결과를 원본과 독립된 artifact로 보존해야 한다. -->

@@ -1,8 +1,16 @@
 import fs from "node:fs";
 import path from "node:path";
 
-import { describeThrown } from "../integrity/contractOwnership";
-import { isAuthoredExecutableSource, runGit } from "./changedCoverage";
+import { describeThrown } from "../integrity/describeThrown";
+import { type GitExecute, runGit } from "./changedCoverage";
+import {
+  canonicalCoveragePath,
+  isAuthoredExecutableSource,
+} from "./coverageIdentity";
+import {
+  type ICoveragePublication,
+  publicationReport,
+} from "./coveragePublication";
 
 type Writer = (line: string) => void;
 
@@ -32,11 +40,15 @@ export interface ICoveragePopulationInspection {
  * Tracked files plus the ones the working tree has added and `.gitignore` does
  * not remove, which is the population the changed-file gate already collects. A
  * gitignored file on one contributor's disk is not a repository fact and must
- * not decide a gate that has to mean the same thing in CI.
+ * not decide a gate that has to mean the same thing in CI. `execute` is the
+ * git seam; the pre-run snapshot enumerates through this same function.
  */
-export const repositoryCandidates = (root: string): string[] => {
+export const repositoryCandidates = (
+  root: string,
+  execute?: GitExecute,
+): string[] => {
   const listing = (arguments_: string[]): string[] =>
-    runGit(root, arguments_)
+    runGit(root, arguments_, execute)
       .split("\0")
       .filter((entry) => entry.length !== 0)
       .map(slash);
@@ -75,25 +87,39 @@ export const inspectCoveragePopulation = (props: {
   measured: readonly string[];
   root: string;
 }): ICoveragePopulationInspection => {
-  const known = new Set(props.candidates.map(slash));
-  const measured = new Set<string>();
+  const known = new Map<string, string>(
+    props.candidates.map(
+      (file) =>
+        [
+          canonicalCoveragePath(path.resolve(props.root, file)),
+          slash(file),
+        ] as const,
+    ),
+  );
+  const measured = new Map<string, string>();
   for (const file of props.measured) {
     const relative = slash(path.relative(props.root, file));
     if (relative.length === 0 || relative.startsWith("../")) continue;
-    measured.add(relative);
+    measured.set(canonicalCoveragePath(file), relative);
   }
-  const obliged = [...known]
+  const obliged = [...known.values()]
     .filter(isAuthoredExecutableSource)
     .filter((file) => fs.existsSync(path.resolve(props.root, file)))
     .sort(byCodeUnit);
   return {
     obliged: obliged.length,
     measured: measured.size,
-    unmeasured: obliged.filter((file) => measured.has(file) === false),
+    unmeasured: obliged.filter(
+      (file) =>
+        measured.has(canonicalCoveragePath(path.resolve(props.root, file))) ===
+        false,
+    ),
     unjudged: [...measured]
-      .filter(
-        (file) => known.has(file) && isAuthoredExecutableSource(file) === false,
+      .map(([identity, relative]) => known.get(identity) ?? relative)
+      .filter((file) =>
+        known.has(canonicalCoveragePath(path.resolve(props.root, file))),
       )
+      .filter((file) => isAuthoredExecutableSource(file) === false)
       .sort(byCodeUnit),
   };
 };
@@ -116,8 +142,7 @@ export const reportCoveragePopulation = (
     );
 };
 
-const readCoverageKeys = (reportDirectory: string): string[] => {
-  const report = path.join(reportDirectory, "coverage-final.json");
+const readCoverageKeys = (report: string): string[] => {
   const parsed: unknown = JSON.parse(fs.readFileSync(report, "utf8"));
   if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed))
     throw new Error(`${report} does not contain a coverage object`);
@@ -132,10 +157,12 @@ const readCoverageKeys = (reportDirectory: string): string[] => {
  * and never saw, and one it saw and never demanded, both leave a verdict that
  * answered about a different set than the one it names. Exits 2 for the same
  * reason the changed gate does, so an instrument fault stays a different colour
- * from a coverage gap.
+ * from a coverage gap. `candidates` is the repository enumeration, injectable
+ * so the gate can be driven from a canned listing over a fixture root.
  */
 export const runCoveragePopulationGate = (options: {
-  reportDirectory: string;
+  candidates?: (root: string) => string[];
+  publication: ICoveragePublication;
   root: string;
   write?: Writer;
 }): number => {
@@ -144,8 +171,8 @@ export const runCoveragePopulationGate = (options: {
     const root = path.resolve(options.root);
     const result = inspectCoveragePopulation({
       root,
-      candidates: repositoryCandidates(root),
-      measured: readCoverageKeys(path.resolve(options.reportDirectory)),
+      candidates: (options.candidates ?? repositoryCandidates)(root),
+      measured: readCoverageKeys(publicationReport(options.publication)),
     });
     reportCoveragePopulation(result, write);
     return result.unmeasured.length + result.unjudged.length === 0 ? 0 : 2;

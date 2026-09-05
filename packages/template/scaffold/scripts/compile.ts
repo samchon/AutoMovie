@@ -6,10 +6,10 @@ import { readAutoMovieProductionEvidence } from "@automovie/evidence";
 import { compileAutoMovieProduction } from "@automovie/production";
 
 import { productionEvidence } from "../lint.config";
-import { currentAutoMovieProductionId } from "./projectIdentity";
+import { assertAutoMovieNoArguments } from "./commandArguments";
+import { readAutoMovieProjectProductionId } from "./projectIdentity";
 
-/** The production namespace this project declares in its own package manifest. */
-const productionId = currentAutoMovieProductionId();
+assertAutoMovieNoArguments("compile", process.argv.slice(2));
 
 /**
  * The archetypes this production builds from.
@@ -35,21 +35,30 @@ const archetypes = createAutoMovieArchetypeRegistry(
  * The root comes from the declaration's own `location` rather than from the
  * working directory. The reader refuses a declaration belonging to another
  * root, and a project reached through a different spelling of the same
- * directory -- a Windows short path, a symlinked checkout -- is exactly the
+ * directory; a Windows short path, a symlinked checkout; is exactly the
  * case where two true paths compare unequal.
  */
 const root = productionEvidence.location;
-const authoringEvidence = readAutoMovieProductionEvidence({
-  root,
-  productionEvidence,
-});
+const currentAuthoringEvidence = () =>
+  readAutoMovieProductionEvidence({ root, productionEvidence });
+const authoringEvidence = currentAuthoringEvidence();
+
+/**
+ * Refuse a project whose namespace cannot be selected before anything opens.
+ *
+ * The id itself is not passed on. The project store selects the namespace
+ * inside its own root lease, so a registry another command created between
+ * this read and the open is honored rather than answered by registering the
+ * package-name seed beside it.
+ */
+readAutoMovieProjectProductionId(root);
 
 const output = compileAutoMovieProduction({
   projectRoot: root,
-  productionId,
   scope: "source",
   archetypes,
   authoringEvidence,
+  currentAuthoringEvidence,
 });
 process.stdout.write(`${JSON.stringify(output, null, 2)}\n`);
 if (output.success === false) process.exitCode = 1;

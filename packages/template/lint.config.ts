@@ -14,7 +14,10 @@ const authoringSurface = [
   "src/**/*.ts",
   "!src/**/index.ts",
   "!src/writeFiles.ts",
+  "!src/nativeScaffoldPublication.ts",
+  "!src/productionMaintenance.ts",
   "!src/scaffoldFileSnapshot.ts",
+  "!src/scaffoldPublication.ts",
 ];
 
 /**
@@ -24,7 +27,15 @@ const authoringSurface = [
  * user already owns, which is an operations-and-recovery contract rather than
  * an authoring contract.
  */
-const writeSurface = ["src/writeFiles.ts", "src/scaffoldFileSnapshot.ts"];
+const writeSurface = [
+  "src/writeFiles.ts",
+  "src/nativeScaffoldPublication.ts",
+  "src/scaffoldFileSnapshot.ts",
+  "src/scaffoldPublication.ts",
+];
+
+/** Contract baseline and delivery-index renderers used by project maintenance. */
+const maintenanceSurface = ["src/productionMaintenance.ts"];
 
 const graph: ITtscEvidenceGraphConfig = {
   claims: [
@@ -124,6 +135,54 @@ const graph: ITtscEvidenceGraphConfig = {
           symbol: ["h3"],
         },
       ],
+    },
+    {
+      name: "template maintenance exports implement contract baseline requirements",
+      type: "typescript",
+      files: maintenanceSurface,
+      symbol: ["type", "function", "property"],
+      reference: {
+        type: "markdown",
+        root: "../../docs",
+        files: ["requirements/operations-and-recovery/contract-baseline.md"],
+        symbol: "h3",
+      },
+    },
+    {
+      name: "template maintenance exports implement contract baseline specifications",
+      type: "typescript",
+      files: maintenanceSurface,
+      symbol: ["type", "function", "property"],
+      reference: {
+        type: "markdown",
+        root: "../../docs",
+        files: ["specifications/execution-and-recovery/contract-baseline.md"],
+        symbol: "h3",
+      },
+    },
+    {
+      name: "template maintenance exports implement delivery index requirements",
+      type: "typescript",
+      files: maintenanceSurface,
+      symbol: ["type", "function", "property"],
+      reference: {
+        type: "markdown",
+        root: "../../docs",
+        files: ["requirements/story/delivery-index.md"],
+        symbol: "h3",
+      },
+    },
+    {
+      name: "template maintenance exports implement delivery index specifications",
+      type: "typescript",
+      files: maintenanceSurface,
+      symbol: ["type", "function", "property"],
+      reference: {
+        type: "markdown",
+        root: "../../docs",
+        files: ["specifications/narrative-and-intent/delivery-index.md"],
+        symbol: "h3",
+      },
     },
   ],
 };

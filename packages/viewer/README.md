@@ -1,5 +1,15 @@
 # `@automovie/viewer`
 
+`resolveAutoMovieFilmBeautyComposition` classifies the one or two beauty
+layers the production sampler returns for a film frame as a direct render, a
+fade over black, or a cross-dissolve, and refuses any other cardinality or
+weight by name. `renderFadeToBlackFrame` multiplies one whole beauty frame by
+its compiler-owned weight, the same operation the final renderer applies to
+captured bytes, and restores the renderer's target and clear state on every
+exit; `disposeFadeToBlack` releases the renderer-owned GPU resources, which
+`mountViewer` already does when it disposes the renderer. Structural passes
+never take this path: they draw the dominant layer at full weight.
+
 `mapImportedHumanoidBones` maps a loaded glTF/VRM scene onto a compiled
 proxy skeleton before `createImportedModelObject` wraps it. Production hosts
 therefore render and review the final registered mesh while engine validation
@@ -43,7 +53,7 @@ AI가 만든 `@automovie/interface` 모델, 포즈, 모션, 표정을 화면에 
 | `buildAnalysisOverlayObject` / `autoMovieAnalysisRampColor` | 분석 결과를 씬 위에 얹는다. 램프 색은 정의된 구간에서만 의미가 있고 바깥은 고정되며, 빌린 머티리얼은 처분하지 않고 스스로 만든 것만 처분한다. |
 | `mountViewer(canvas, scene, camera, onFrame)` | 브라우저 RAF와 `WebGLRenderer`를 붙인다. |
 | `captureViewerSnapshot(renderer, scene, camera)` | headless-friendly renderer 표면으로 한 프레임을 data URL로 읽는다. |
-| `applyAutoMovieSectionPlanes` | 선언된 절단을 **해석된 씬을 고치지 않고** 보기 상태로 실현한다. 절단면에 정확히 놓인 기하는 살아남는다 — 절개를 뜬 바닥은 자기 절단을 견딘다. `clipIntersection`을 기본값에 맡기지 않고 false로 쓰는데, 그래야 어느 한 평면이라도 지운 조각이 떨어지고 집합이 의도대로 교집합으로 작동한다. 합집합이 설정된 채 들어온 머티리얼은 두 번째 평면이 첫 번째가 자른 것을 되살릴 수 있기 때문이다. 빈 평면 목록은 절개를 해제하며, **한 번도 자르지 않은 씬과 자른 뒤 해제한 씬이 동일하게** 그려진다. 머티리얼 재컴파일은 평면 **개수**가 바뀔 때만 일어난다. three.js가 그 개수를 셰이더 프로그램에 굽고 값은 매 프레임 읽으므로, 절단면을 미끄러뜨리는 것은 공짜이고 뜨거나 놓는 것만 컴파일 한 번을 문다. |
+| `applyAutoMovieSectionPlanes` | 선언된 절단을 **해석된 씬을 고치지 않고** 보기 상태로 실현한다. 절단면에 정확히 놓인 기하는 살아남는다 : 절개를 뜬 바닥은 자기 절단을 견딘다. `clipIntersection`을 기본값에 맡기지 않고 false로 쓰는데, 그래야 어느 한 평면이라도 지운 조각이 떨어지고 집합이 의도대로 교집합으로 작동한다. 합집합이 설정된 채 들어온 머티리얼은 두 번째 평면이 첫 번째가 자른 것을 되살릴 수 있기 때문이다. 빈 평면 목록은 절개를 해제하며, **한 번도 자르지 않은 씬과 자른 뒤 해제한 씬이 동일하게** 그려진다. 머티리얼 재컴파일은 평면 **개수**가 바뀔 때만 일어난다. three.js가 그 개수를 셰이더 프로그램에 굽고 값은 매 프레임 읽으므로, 절단면을 미끄러뜨리는 것은 공짜이고 뜨거나 놓는 것만 컴파일 한 번을 문다. |
 | `autoMovieViewerSubjectKey` / `parseAutoMovieViewerSubjectKey` | 저작된 한 물건을 `<kind>:<id>`로 이름 붙이고 되읽는다. kind를 id 옆에 두는 것이 요점이다. 배치된 element와 그것이 배치하는 model이 같은 이름으로 저작됐을 때 두 문자열을 갈라놓는 것이 곧 prototype·placement 구분이다. 이 union에는 shot도 frame도 take도 없다. 주체는 자기가 무엇인지로 불리고, 자기를 담고 있는 배송된 그림으로 불리지 않는다. |
 | `frameAutoMovieViewerSubject(bounds, viewpoint)` | 한 주체를 한 시점에서 잡는 눈을 놓는다. 거리는 그 주체 자신의 반대각선과 두 화각 중 좁은 쪽에서 나오므로 **0.05 m 문설주와 50 m 입면이 한 규칙으로 잡히고** 어느 쪽도 손으로 맞춘 카메라를 필요로 하지 않는다. 클립 평면도 같은 반지름에서 파생되어 far/near 비가 규모를 건너 일정하게 유지된다. 고정 near는 작은 부품을 잘라내거나 큰 것에 깊이 버퍼를 통째로 낭비하고, 후자는 먼 픽셀 하나를 두고 두 면이 다투는 것처럼 보여 모델링 결함으로 읽힌다. |
 | `autoMovieViewerTurntableViewpoints` | 한 주체가 지는 고정 시점 집합을 낸다. 리뷰어가 고르는 것이 아니라 서비스가 정한다. |

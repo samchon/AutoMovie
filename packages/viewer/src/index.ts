@@ -28,3 +28,4 @@ export * from "./fluidSurface";
 export * from "./softBodySurface";
 export * from "./plantingInstances";
 export * from "./subjectViewpoint";
+export * from "./applyFade";

@@ -1,29 +1,61 @@
+import path from "node:path";
 import process from "node:process";
 
+import { describeThrown } from "../integrity/describeThrown";
 import { isProcessEntry } from "../integrity/zeroJavaScript";
 import { runChangedCoverageGate } from "./changedCoverage";
 import { runCoveragePopulationGate } from "./coveragePopulation";
 import {
-  COVERAGE_REPORT_DIRECTORY,
+  type ICoverageMeasurementResult,
+  type ICoveragePublication,
+  publicationReport,
+} from "./coveragePublication";
+import {
   COVERAGE_ROOT,
   coverageMeasurementDependencies,
   measureCoverage,
+  removeCoverageTemporaryDirectory,
 } from "./measureCoverage";
 import { reportCoverageGaps } from "./reportCoverageGaps";
 
 export interface IRunCoverageDependencies {
-  changed: (arguments_: string[]) => number;
-  measure: () => number;
-  population: () => number;
-  report: () => number;
+  changed: (arguments_: string[], publication: ICoveragePublication) => number;
+  cleanup: (publication: ICoveragePublication) => void;
+  measure: () => ICoverageMeasurementResult;
+  population: (publication: ICoveragePublication) => number;
+  report: (publication: ICoveragePublication) => number;
 }
 
+export type CoverageExitStatus = 0 | 1 | 2;
+type CoverageRunStage = "changed" | "measure" | "population" | "report";
+type Writer = (line: string) => void;
+
+/** Preserve 0/1/2 and reject every unsupported stage status as instrument red. */
+export const coverageStageStatus = (
+  stage: CoverageRunStage,
+  status: number,
+  write: Writer,
+): CoverageExitStatus => {
+  if (status === 0 || status === 1 || status === 2) return status;
+  write(
+    `INSTRUMENT FAILURE: coverage ${stage} returned unsupported status ${String(status)}`,
+  );
+  return 2;
+};
+
 export const coverageRunDependencies = (
-  measure: () => number,
-  changed: (arguments_: string[]) => number,
-  report: () => number,
-  population: () => number,
-): IRunCoverageDependencies => ({ changed, measure, population, report });
+  measure: () => ICoverageMeasurementResult,
+  changed: (arguments_: string[], publication: ICoveragePublication) => number,
+  report: (publication: ICoveragePublication) => number,
+  population: (publication: ICoveragePublication) => number,
+  cleanup: (publication: ICoveragePublication) => void,
+): IRunCoverageDependencies => ({
+  changed,
+  cleanup,
+  measure,
+  population,
+  report,
+});
 
 /**
  * Run the suite, the historical report, the population gate, and the
@@ -38,15 +70,68 @@ export const coverageRunDependencies = (
 export const runCoverage = (
   arguments_: string[],
   dependencies: IRunCoverageDependencies,
-): number => {
-  const measurement = dependencies.measure();
-  if (measurement !== 0) return measurement === 2 ? 2 : 1;
-  const report = dependencies.report();
-  if (report !== 0) return report === 2 ? 2 : 1;
-  const population = dependencies.population();
-  if (population !== 0) return population === 2 ? 2 : 1;
-  const changed = dependencies.changed(arguments_);
-  return changed === 2 ? 2 : changed === 0 ? 0 : 1;
+  write: Writer = console.log,
+): CoverageExitStatus => {
+  let measurement: ICoverageMeasurementResult;
+  try {
+    measurement = dependencies.measure();
+  } catch (error) {
+    write(
+      `INSTRUMENT FAILURE: coverage measure threw: ${describeThrown(error)}`,
+    );
+    return 2;
+  }
+  const measurementStatus = coverageStageStatus(
+    "measure",
+    measurement.status,
+    write,
+  );
+  if (measurementStatus !== 0) return measurementStatus;
+  const publication = measurement.publication;
+  if (publication === undefined) {
+    write(
+      "INSTRUMENT FAILURE: coverage measure returned success without a publication",
+    );
+    return 2;
+  }
+  let status: CoverageExitStatus = 2;
+  try {
+    const report = coverageStageStatus(
+      "report",
+      dependencies.report(publication),
+      write,
+    );
+    if (report !== 0) status = report;
+    else {
+      const population = coverageStageStatus(
+        "population",
+        dependencies.population(publication),
+        write,
+      );
+      if (population !== 0) status = population;
+      else {
+        status = coverageStageStatus(
+          "changed",
+          dependencies.changed(arguments_, publication),
+          write,
+        );
+      }
+    }
+  } catch (error) {
+    write(
+      `INSTRUMENT FAILURE: coverage consumer threw: ${describeThrown(error)}`,
+    );
+    status = 2;
+  }
+  try {
+    dependencies.cleanup(publication);
+  } catch (error) {
+    write(
+      `INSTRUMENT FAILURE: coverage cleanup threw: ${describeThrown(error)}`,
+    );
+    return 2;
+  }
+  return status;
 };
 
 type ExitStatusWriter = (status: number) => void;
@@ -93,11 +178,18 @@ runCoverageCli(
   coverageRunDependencies(
     measureCoverage.bind(undefined, coverageMeasurementDependencies),
     runChangedCoverageGate,
-    reportCoverageGaps,
-    runCoveragePopulationGate.bind(undefined, {
-      root: COVERAGE_ROOT,
-      reportDirectory: COVERAGE_REPORT_DIRECTORY,
-    }),
+    (publication) =>
+      reportCoverageGaps(
+        publicationReport(publication),
+        console.log,
+        publication.sources,
+      ),
+    (publication) =>
+      runCoveragePopulationGate({ publication, root: COVERAGE_ROOT }),
+    (publication) =>
+      removeCoverageTemporaryDirectory(
+        path.dirname(publication.reportDirectory),
+      ),
   ),
   setCoverageExitStatus,
 );

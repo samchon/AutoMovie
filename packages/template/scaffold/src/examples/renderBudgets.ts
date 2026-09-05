@@ -20,7 +20,7 @@ import type {
  *
  * A budget is a **decision**, never a measurement. It is authored beside the
  * production it constrains, and nothing here is ever inferred from what the
- * scene currently happens to cost — a limit derived from the present would
+ * scene currently happens to cost : a limit derived from the present would
  * ratify every regression the moment it landed. A production that declares no
  * budget is reported as unbudgeted rather than quietly given one.
  *
@@ -28,11 +28,11 @@ import type {
  * every metric is answered for, always, with one of five outcomes, and four of
  * them are not "pass".
  *
- * - `within` — measured, budgeted, at or below the limit;
- * - `over` — measured, budgeted, above it, with the dominant owners named;
- * - `unbudgeted` — measured, but nobody agreed what large means;
- * - `unsupported` — no analysis exists for what the design declares;
- * - `not-run` — the analysis exists, but its input was not supplied.
+ * - `within` : measured, budgeted, at or below the limit;
+ * - `over` : measured, budgeted, above it, with the dominant owners named;
+ * - `unbudgeted` : measured, but nobody agreed what large means;
+ * - `unsupported` : no analysis exists for what the design declares;
+ * - `not-run` : the analysis exists, but its input was not supplied.
  *
  * The last two make the whole report `incomplete`, and that is the point of
  * them. An artifact whose fluid cost was never computed has not been cleared
@@ -85,8 +85,8 @@ export const exampleRenderSubject = (
         },
       ],
       // No camera, deliberately. A budget is checked against what the scene
-      // commits the renderer to for EVERY camera — an upper bound, never an
-      // observed frame — so framing changes nothing this report measures.
+      // commits the renderer to for EVERY camera : an upper bound, never an
+      // observed frame : so framing changes nothing this report measures.
       cameras: [],
       lights: [
         {
@@ -155,8 +155,8 @@ export const exampleRenderSubject = (
         material: null,
       },
     ],
-    // Empty on purpose. Supply an entry per bound asset — decoded width, height
-    // and mipmap policy — and `textureBytes` becomes a measured number instead
+    // Empty on purpose. Supply an entry per bound asset : decoded width, height
+    // and mipmap policy : and `textureBytes` becomes a measured number instead
     // of a declared gap.
     textures: [],
   };
@@ -166,15 +166,15 @@ export const exampleRenderSubject = (
  * The limits this production commits to, per quality tier.
  *
  * Limits are inclusive, and an omitted metric is unbudgeted rather than
- * unlimited. Every metric this list leaves out — the memory pair, the instance
- * counts, the fluid pair — therefore shows up in the report as a visible
+ * unlimited. Every metric this list leaves out : the memory pair, the instance
+ * counts, the fluid pair : therefore shows up in the report as a visible
  * decision rather than as silence: "nobody thought about it" reads differently
  * from "allowed to be large", and the report keeps the two apart.
  *
  * One production may declare several tiers and check an artifact against the
  * one a render job actually targets, which is why the tier is a plain label
- * rather than a closed set. The label has to be one a job asks for — `proxy`
- * and `final` are what the generated project's render job looks up — because a budget
+ * rather than a closed set. The label has to be one a job asks for : `proxy`
+ * and `final` are what the generated project's render job looks up : because a budget
  * filed under a name nobody queries is a limit that never runs.
  */
 export const EXAMPLE_RENDER_BUDGET: IAutoMovieRenderBudget = {
@@ -198,7 +198,7 @@ export const EXAMPLE_RENDER_BUDGET: IAutoMovieRenderBudget = {
  * A budget verdict is only evidence while the thing it measured is still the
  * thing that will be drawn. Change the shadow filter, the pixel ratio or one
  * texture's bytes and the same design costs something else, so a report that
- * outlives its target is not conservative — it is wrong in an unknown
+ * outlives its target is not conservative : it is wrong in an unknown
  * direction. The fingerprint is what makes that detectable instead of
  * invisible, and it is deterministic by construction: no timestamps, no
  * absolute paths, and assets ordered by code unit rather than by locale.

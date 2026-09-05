@@ -59,6 +59,10 @@ const preserveDesignEscapeCleanup = (
  *    file name and by the offending path inside it.
  * 5. A record reached through a namespace directory that links outside the
  *    project is refused rather than followed out of it.
+ * 6. Malformed UTF-8 and a duplicate object member are refused by the shared
+ *    structured JSON admission before schema validation, naming the record and
+ *    the failed stage, so neither a replacement character nor a shadowed
+ *    member can become current design.
  */
 export const test_production_delivery_design_record = (): void => {
   const fixture = productionFixture();
@@ -121,6 +125,43 @@ export const test_production_delivery_design_record = (): void => {
             "fixture-film",
           ),
         ["Invalid AutoMovie JSON", "production.json"],
+      ),
+    );
+
+    fs.writeFileSync(
+      record,
+      Buffer.concat([
+        Buffer.from('{"id":"'),
+        Buffer.from([0x80]),
+        Buffer.from('"}'),
+      ]),
+    );
+    TestValidator.predicate(
+      "a design record with malformed UTF-8 is refused before a replacement character can pass as its id",
+      throwsError(
+        () =>
+          AutoMovieProductionProject.productionDesign(
+            fixture.root,
+            "fixture-film",
+          ),
+        ["Invalid AutoMovie JSON", "production.json", "encoding admission"],
+      ),
+    );
+
+    fs.writeFileSync(
+      record,
+      original.replace(/\}\s*$/u, ',"id":"shadow"}'),
+      "utf8",
+    );
+    TestValidator.predicate(
+      "a design record with a duplicate member is refused instead of read last-wins",
+      throwsError(
+        () =>
+          AutoMovieProductionProject.productionDesign(
+            fixture.root,
+            "fixture-film",
+          ),
+        ["Invalid AutoMovie JSON", "production.json", "duplicate member"],
       ),
     );
 

@@ -1,10 +1,13 @@
 import type { IAutoMovieDialogueVisemeTimeline } from "@automovie/engine";
 import type {
   AutoMovieContentDigest,
+  IAutoMovieCompiledFilmEffect,
   IAutoMovieDeliveryCrop,
   IAutoMovieFilmTimeline,
+  IAutoMovieProductionFrameRate,
   IAutoMovieProductionTtsReceipt,
 } from "@automovie/interface";
+import type { IAutoMovieFilmEffectCurrentIdentity } from "@automovie/production";
 import { createHash } from "node:crypto";
 
 /** Final-byte mouth data installed in the capture host before any frame opens. */
@@ -15,6 +18,8 @@ export interface IAutoMovieProductionDialogueRuntime {
   inputFingerprint: AutoMovieContentDigest;
   /** Film frame clock used by every mouth range. */
   fps: number;
+  /** Exact rational film clock when the legacy scalar is fractional. */
+  frameRate?: IAutoMovieProductionFrameRate;
   /** Film segments needed to map a shot-local review seek onto film time. */
   segments: Array<
     Pick<
@@ -36,6 +41,10 @@ export interface IAutoMovieProductionViewerRuntime {
   deliveryCrop: IAutoMovieDeliveryCrop | null;
   /** Exact authored live-soft admission order. */
   liveWearableSoftBodies: string[];
+  /** Current compiler-owned film-global effect runtimes. */
+  filmEffects: IAutoMovieCompiledFilmEffect[];
+  /** Current compiler and edit identity checked independently of effect bytes. */
+  filmEffectIdentity: IAutoMovieFilmEffectCurrentIdentity;
 }
 
 /** Clone one delivery crop without sharing mutable authoring input. */

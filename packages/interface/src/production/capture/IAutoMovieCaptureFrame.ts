@@ -1,4 +1,5 @@
 import { AutoMovieGuidePass } from "../../cinematics";
+import { IAutoMovieSemanticMaskReceipt } from "../../render/IAutoMovieSemanticMask";
 import {
   IAutoMovieDiagnostic,
   IAutoMovieReviewTarget,
@@ -63,7 +64,7 @@ export interface IAutoMovieCaptureReceipt {
    * @evidence requirements/agent-authoring/knowledge-boundary.md#agent-contract-guidance Exposes `version` as the portable data boundary for the agent contract guidance requirement.
    * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-knowledge-request-output Types `version` for the spec authoring knowledge request output system contract.
    */
-  version: 1;
+  version: 2;
   /**
    * Production namespace used to resolve the registry target.
    *
@@ -113,6 +114,8 @@ export interface IAutoMovieCaptureReceipt {
    * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-knowledge-request-output Types `outputDigest` for the spec authoring knowledge request output system contract.
    */
   outputDigest: AutoMovieContentDigest;
+  /** Semantic dependency of a shot mask, or null for every other product. */
+  semanticMask: IAutoMovieSemanticMaskReceipt | null;
 }
 
 /**

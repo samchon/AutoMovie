@@ -1,11 +1,12 @@
 import * as THREE from "three";
 
 import { disposeCrossDissolve } from "./applyDissolve";
+import { disposeFadeToBlack } from "./applyFade";
 
 /**
  * Release a viewer's renderer AND the auxiliary GPU state frames created for
- * it: today the cross-dissolve FBO/quad, which #1050 gave a dispose that
- * nothing wired (#1090). `mountViewer`'s `stop()` calls this; a host that owns
+ * it: the cross-dissolve and fade FBO/quads. `mountViewer`'s `stop()` calls
+ * this; a host that owns
  * its renderer directly (a capture harness) calls it the same way. Idempotent
  * and safe when no dissolve ever ran.
  *
@@ -14,6 +15,7 @@ import { disposeCrossDissolve } from "./applyDissolve";
  */
 export const releaseViewerRenderer = (renderer: THREE.WebGLRenderer): void => {
   disposeCrossDissolve(renderer);
+  disposeFadeToBlack(renderer);
   renderer.dispose();
 };
 
@@ -764,6 +766,18 @@ export interface IAutoMovieViewerHandle {
  * @evidenceExclude specifications/world-and-site/transport-crossings-and-utilities.md The viewer draws compiled world state; site authority, geospatial policy, traversal analysis, and validation remain upstream.
  * @evidenceExclude specifications/world-and-site/traversal-and-visibility.md The viewer draws compiled world state; site authority, geospatial policy, traversal analysis, and validation remain upstream.
  * @author Samchon
+ * @evidenceExclude requirements/agent-authoring/production-language.md#agent-production-language-contract The viewer mounts already-compiled scene data for playback; the production language module, contract baseline and migration, contract discriminators and delivery index are generated-project authoring contracts owned by the evidence and template packages.
+ * @evidenceExclude requirements/operations-and-recovery/contract-baseline.md#operations-contract-baseline-identity The viewer mounts already-compiled scene data for playback; the production language module, contract baseline and migration, contract discriminators and delivery index are generated-project authoring contracts owned by the evidence and template packages.
+ * @evidenceExclude requirements/operations-and-recovery/contract-migration-plan.md#operations-contract-migration-plan The viewer mounts already-compiled scene data for playback; the production language module, contract baseline and migration, contract discriminators and delivery index are generated-project authoring contracts owned by the evidence and template packages.
+ * @evidenceExclude requirements/operations-and-recovery/contract-migration-publication.md#operations-contract-migration-publication The viewer mounts already-compiled scene data for playback; the production language module, contract baseline and migration, contract discriminators and delivery index are generated-project authoring contracts owned by the evidence and template packages.
+ * @evidenceExclude requirements/production-evidence/authoring-contracts.md#agent-production-evidence-contract-discriminators The viewer mounts already-compiled scene data for playback; the production language module, contract baseline and migration, contract discriminators and delivery index are generated-project authoring contracts owned by the evidence and template packages.
+ * @evidenceExclude requirements/story/delivery-index.md#story-delivery-index The viewer mounts already-compiled scene data for playback; the production language module, contract baseline and migration, contract discriminators and delivery index are generated-project authoring contracts owned by the evidence and template packages.
+ * @evidenceExclude specifications/authoring-and-authority/production-language.md#spec-authoring-production-language-module The viewer mounts already-compiled scene data for playback; the production language module, contract baseline and migration, contract discriminators and delivery index are generated-project authoring contracts owned by the evidence and template packages.
+ * @evidenceExclude specifications/execution-and-recovery/contract-baseline.md#execution-contract-baseline-identity The viewer mounts already-compiled scene data for playback; the production language module, contract baseline and migration, contract discriminators and delivery index are generated-project authoring contracts owned by the evidence and template packages.
+ * @evidenceExclude specifications/execution-and-recovery/contract-migration-plan.md#execution-contract-migration-plan The viewer mounts already-compiled scene data for playback; the production language module, contract baseline and migration, contract discriminators and delivery index are generated-project authoring contracts owned by the evidence and template packages.
+ * @evidenceExclude specifications/execution-and-recovery/contract-migration-publication.md#execution-contract-migration-publication The viewer mounts already-compiled scene data for playback; the production language module, contract baseline and migration, contract discriminators and delivery index are generated-project authoring contracts owned by the evidence and template packages.
+ * @evidenceExclude specifications/narrative-and-intent/delivery-index.md#narrative-intent-delivery-index The viewer mounts already-compiled scene data for playback; the production language module, contract baseline and migration, contract discriminators and delivery index are generated-project authoring contracts owned by the evidence and template packages.
+ * @evidenceExclude specifications/production-evidence/authoring-contracts.md#spec-authoring-production-evidence-contract-discriminators The viewer mounts already-compiled scene data for playback; the production language module, contract baseline and migration, contract discriminators and delivery index are generated-project authoring contracts owned by the evidence and template packages.
  */
 export const mountViewer = (
   canvas: HTMLCanvasElement,

@@ -4,15 +4,19 @@ import {
   type IAutoMovieProductionRenderTier,
   digestAutoMovieBytes,
   encodeAutoMoviePathSegment,
+  parseAutoMovieStructuredJson,
   readAutoMovieProductionOwnedFile,
   runProductionRenderJob,
 } from "@automovie/production";
-import { createRequire } from "node:module";
 import path from "node:path";
 
 import { productionEvidence } from "../lint.config";
-import { repaintSelectionReviews } from "../repaintSelectionReviews";
-import { inspectPublishedProxyBundle } from "./assertProxyBundle";
+import {
+  repaintSelectionReviews,
+  repaintSequenceBaseline,
+  repaintSequenceObservation,
+} from "../repaintSelectionReviews";
+import { inspectCurrentProxyPublication } from "./assertProxyBundle";
 import { preserveProductionEncoderCleanup } from "./preserveProductionEncoderCleanup";
 import {
   type IAutoMovieProductionRepaintSelection,
@@ -29,10 +33,7 @@ import {
   createProductionRenderChunkCaptureRuntime,
   createProductionRenderChunkLeaseRuntime,
 } from "./renderChunkRuntime";
-import {
-  publishRenderChunkSnapshot,
-  removeCapturedRenderChunkPointer,
-} from "./renderChunkSnapshot";
+import { publishRenderChunkSnapshot } from "./renderChunkSnapshot";
 import {
   type IProductionRenderCommand,
   runProductionRenderCommand,
@@ -138,8 +139,8 @@ const executeProductionRenderCommand = async (
     }
     const session = acquireRenderSessionLease({
       coordinationRoot: root,
-      pid: renderHost.pid,
-      processAlive: renderHost.processAlive,
+      observeProcessOwner: renderHost.observeProcessOwner,
+      owner: renderHost.owner,
       scope: renderLivenessScope,
       tier: renderTier.kind,
     });
@@ -174,7 +175,7 @@ const executeProductionRenderCommand = async (
             );
       if (action === "run" || action === "all") {
         gcRuntime.recoverAbandonedTemporaryDirectories(current.chunks);
-        gcRuntime.quarantineStaleSlotOutputs(current.chunks);
+        gcRuntime.quarantineStaleSlotOutputs(current);
         const result = await runProductionRenderJob({
           plan: current,
           workers: command.workers,
@@ -251,15 +252,14 @@ const executeProductionRenderCommand = async (
   };
 
   const readRendererJson = <T>(ownershipRoot: string, file: string): T =>
-    JSON.parse(
-      Buffer.from(
-        readAutoMovieProductionOwnedFile({
-          root: ownershipRoot,
-          directory: path.dirname(file),
-          relative: path.basename(file),
-        }),
-      ).toString("utf8"),
-    ) as T;
+    parseAutoMovieStructuredJson({
+      record: path.basename(file),
+      bytes: readAutoMovieProductionOwnedFile({
+        root: ownershipRoot,
+        directory: path.dirname(file),
+        relative: path.basename(file),
+      }),
+    }) as T;
 
   const compareCodeUnits = (left: string, right: string): number =>
     left < right ? -1 : left > right ? 1 : 0;
@@ -294,6 +294,8 @@ const executeProductionRenderCommand = async (
     compareCodeUnits,
     finalTier: renderTiers.final,
     host: renderHost,
+    inspectChunk: (plan, chunk, pointer) =>
+      planningRuntime.inspectChunkPublication(plan, chunk, pointer),
     productionId,
     productionStateRoot,
     proxyTier: renderTiers.proxy,
@@ -311,13 +313,8 @@ const executeProductionRenderCommand = async (
   const planningRuntime = createProductionRenderPlanningRuntime({
     authoringEvidence,
     captureCurrentChunkPointer: gcRuntime.captureCurrentChunkPointer,
+    currentChunkPointerLocatorState: gcRuntime.currentChunkPointerLocatorState,
     compareCodeUnits,
-    // A generated project is `"type": "module"`, so `require` is not defined in
-    // this scope and the bare call threw `ReferenceError` the moment anything
-    // reached it. It is a lazy field on the planning runtime, so `status`,
-    // `verify` and `finalize` never touched it and only `render gc` did, which
-    // is why one command failed while its siblings passed.
-    h264Entry: createRequire(import.meta.url).resolve("h264-mp4-encoder"),
     host: renderHost,
     output,
     planPath,
@@ -330,18 +327,18 @@ const executeProductionRenderCommand = async (
     stateRoot,
   });
   const encoderRuntime = createProductionRenderEncoderRuntime({
-    createMp4File: renderHost.createMp4File,
-    h264Module: renderHost.h264Module,
+    h264Generation: renderHost.h264Generation,
+    mp4Generation: renderHost.mp4Generation,
+    pngGeneration: renderHost.pngGeneration,
     preserveCleanup: preserveProductionEncoderCleanup,
     productionEncoderIdentity: planningRuntime.productionEncoderIdentity,
   });
   const publicationRuntime = createProductionRenderPublicationRuntime({
     assertCurrentEncoder: encoderRuntime.assertCurrent,
-    currentChunk: planningRuntime.currentChunkPublication,
+    inspectChunk: planningRuntime.inspectChunkPublication,
     ensureDirectory: ensureRenderPhysicalDirectory,
     filesystem: renderHost.filesystem,
-    inspectProxy: inspectPublishedProxyBundle,
-    processAlive: renderHost.processAlive,
+    inspectProxy: inspectCurrentProxyPublication,
     publicationFingerprint: productionRenderPublicationFingerprint,
     publishProxyBundle,
   });
@@ -354,6 +351,8 @@ const executeProductionRenderCommand = async (
     progress: renderProgress,
     publication: publicationRuntime,
     repaintSelection: productionRepaintSelection,
+    repaintSequenceBaseline: () => repaintSequenceBaseline,
+    repaintSequenceObservation: () => repaintSequenceObservation,
     root,
     sound: soundRuntime,
   });
@@ -369,9 +368,8 @@ const executeProductionRenderCommand = async (
   const chunkCapture = createProductionRenderChunkCaptureRuntime({
     capture: renderHost.capture,
     captureCompleted: captureRenderGcTarget,
-    capturePointer: gcRuntime.captureCurrentChunkPointer,
     createTemporary: createRenderChunkTemporaryTree,
-    current: planningRuntime.currentChunk,
+    inspect: planningRuntime.inspectChunk,
     encode: (frames, plan) =>
       encoderRuntime.encodePngFrames((consumeFrame) => {
         for (const frame of frames) consumeFrame(frame);
@@ -382,11 +380,11 @@ const executeProductionRenderCommand = async (
       publishMask: publishProductionMaskSidecar,
       state: renderObservations,
     },
-    pid: renderHost.pid,
+    pngGeneration: renderHost.pngGeneration,
+    owner: renderHost.owner,
     productionId,
     publication: {
       publish: publishRenderChunkSnapshot,
-      removePointer: removeCapturedRenderChunkPointer,
     },
     randomUuid: renderHost.randomUuid,
     renderLivenessScope,

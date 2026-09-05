@@ -1,21 +1,19 @@
 import {
+  AutoMovieDesignReferenceContainerError,
+  AutoMovieUtf8Error,
   digestAutoMovieBytes,
   inspectDesignReferenceAsset,
 } from "@automovie/production";
 import { TestValidator } from "@nestia/e2e";
+import { PNG } from "pngjs";
 
 import { throwsError } from "../internal/predicates";
 
-/** A PNG datastream carrying only the header a plan's extent lives in. */
-const png = (width: number, height: number, tag = "IHDR"): Uint8Array => {
-  const bytes = new Uint8Array(24);
-  bytes.set([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a], 0);
-  const view = new DataView(bytes.buffer);
-  view.setUint32(8, 13, false);
-  bytes.set(Buffer.from(tag, "ascii"), 12);
-  view.setUint32(16, width, false);
-  view.setUint32(20, height, false);
-  return bytes;
+/** A complete PNG datastream that the resident decoder can read back. */
+const png = (width: number, height: number): Uint8Array => {
+  const image = new PNG({ width, height });
+  image.data.fill(0x7f);
+  return PNG.sync.write(image);
 };
 
 /** One JPEG marker segment: `0xFF`, the marker, its big-endian size, payload. */
@@ -27,269 +25,248 @@ const segment = (marker: number, payload: readonly number[]): number[] => [
   ...payload,
 ];
 
-/** A JPEG frame header payload: precision, height, width, component count. */
-const frame = (width: number, height: number): number[] => [
-  8,
-  (height >> 8) & 0xff,
-  height & 0xff,
-  (width >> 8) & 0xff,
-  width & 0xff,
-  3,
-];
+/** A one-component JPEG with a frame header, one entropy scan and an EOI. */
+const jpeg = (width: number, height: number, frameMarker = 0xc0): Uint8Array =>
+  new Uint8Array([
+    0xff,
+    0xd8,
+    ...segment(0xe0, [0x4a, 0x46, 0x49, 0x46, 0x00]),
+    ...segment(frameMarker, [
+      8,
+      (height >> 8) & 0xff,
+      height & 0xff,
+      (width >> 8) & 0xff,
+      width & 0xff,
+      1,
+      1,
+      0x11,
+      0,
+    ]),
+    ...segment(0xda, [1, 1, 0, 0, 63, 0]),
+    0x11,
+    0xff,
+    0x00,
+    0x22,
+    0xff,
+    0xd9,
+  ]);
 
-const jpeg = (...parts: readonly number[][]): Uint8Array =>
-  new Uint8Array([0xff, 0xd8, ...parts.flat()]);
+/** A classic-xref PDF whose catalog owns one closed, empty page tree. */
+const pdf = (): Uint8Array => {
+  const objects = [
+    "<< /Type /Catalog /Pages 2 0 R >>",
+    "<< /Type /Pages /Kids [] /Count 0 >>",
+  ];
+  let text = "%PDF-1.4\n";
+  const offsets: number[] = [];
+  for (const [index, body] of objects.entries()) {
+    offsets.push(Buffer.byteLength(text, "latin1"));
+    text += `${index + 1} 0 obj\n${body}\nendobj\n`;
+  }
+  const xref = Buffer.byteLength(text, "latin1");
+  text += `xref\n0 ${objects.length + 1}\n0000000000 65535 f \n`;
+  text += offsets
+    .map((offset) => `${offset.toString().padStart(10, "0")} 00000 n \n`)
+    .join("");
+  text += `trailer\n<< /Size ${objects.length + 1} /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF\n`;
+  return Buffer.from(text, "latin1");
+};
 
 const utf8 = (text: string): Uint8Array =>
   new Uint8Array(Buffer.from(text, "utf8"));
 
-/** The `bounds` verdict as a comparable tuple. */
-const extent = (bytes: Uint8Array): unknown => {
-  const bounds = inspectDesignReferenceAsset({ path: "sheet", bytes }).bounds;
-  return bounds.status === "measured"
-    ? [bounds.status, bounds.width, bounds.height]
-    : bounds.status;
+const svg = (attributes: string): Uint8Array =>
+  utf8(`<svg xmlns="http://www.w3.org/2000/svg" ${attributes}/>`);
+
+/** The media and `bounds` verdict as one comparable tuple. */
+const verdict = (bytes: Uint8Array): unknown => {
+  const inspected = inspectDesignReferenceAsset({ path: "sheet", bytes });
+  return inspected.bounds.status === "measured"
+    ? [
+        inspected.media,
+        inspected.bounds.status,
+        inspected.bounds.width,
+        inspected.bounds.height,
+      ]
+    : [inspected.media, inspected.bounds.status];
+};
+
+/** The typed refusal an inspection raises, as its class name and stage. */
+const refusal = (bytes: Uint8Array): unknown => {
+  try {
+    inspectDesignReferenceAsset({ path: "sheet", bytes });
+    return "accepted";
+  } catch (error) {
+    if (error instanceof AutoMovieDesignReferenceContainerError)
+      return [error.name, error.family, error.stage];
+    if (error instanceof AutoMovieUtf8Error)
+      return [error.name, error.offset, error.category];
+    return error instanceof Error ? error.name : error;
+  }
 };
 
 /**
  * A design reference is only evidence if the bytes decide what it is, so this
  * pins that the container family, the digest and the source extent are all read
- * out of the file rather than taken from a name or a declaration. It equally
- * pins the refusals: an unopenable file throws, and a container whose extent
- * this host genuinely cannot derive returns `unsupported` instead of a
- * plausible number a frame would then treat as measured.
+ * out of the file rather than taken from a name or a declaration, and that a
+ * family is confirmed by its complete parser rather than by a signature or a
+ * token. It equally pins the refusals: a candidate that fails its parser raises
+ * that parser's typed error, an unrecognized file names the supported set, and
+ * a confirmed container whose extent this host genuinely cannot derive returns
+ * `unsupported` instead of a plausible number a frame would then treat as
+ * measured.
  *
  * Scenarios:
  *
- * 1. A PNG's extent comes from its mandatory IHDR chunk, and the digest is the
- *    digest of exactly the inspected bytes.
- * 2. A PNG signature with no IHDR, one truncated before it, or one declaring a
- *    zero extent are each refused rather than read as a zero-sized sheet.
- * 3. A JPEG's extent comes from its frame header, found by walking the segment
- *    list past metadata and past legal `0xFF` fill bytes rather than by
- *    assuming an offset.
- * 4. A JPEG whose segment does not begin with `0xFF`, declares an impossible size,
- *    runs past the end of the file, carries a frame header too small to state
- *    an extent, declares a zero extent, or contains no frame header at all is
- *    refused, each with its own reason.
- * 5. A Huffman table is not mistaken for a frame despite sharing the `0xCn` marker
- *    range.
- * 6. SVG extents come from `viewBox`, because that is the user-unit space
- *    observations are recorded in; a malformed or non-positive box is reported
- *    unsupported rather than partially read.
- * 7. Without a `viewBox`, unitless and `px` sizes are read while a millimetre
- *    sheet is reported unsupported: a rendered size in physical units is not a
- *    user-unit extent.
- * 8. PDF and DXF are recognized as registrable references whose extent this host
- *    does not derive, and say so.
- * 9. Bytes belonging to no recognized container are refused, naming the supported
- *    set, and an empty file says it is empty rather than reading past its end.
+ * 1. A complete PNG, a baseline JPEG and a progressive JPEG report their family,
+ *    the digest of exactly the inspected bytes, and their parsed extent.
+ * 2. A PNG that stops after its header, a JPEG that stops after its frame
+ *    header and a bare `%PDF-` prefix are refused as the family's own parser
+ *    error, never measured, which is the signature-versus-container distinction.
+ * 3. SVG extents come from `viewBox` in the SVG number grammar: comma or
+ *    whitespace separators and exponents read, while a three-number box, a
+ *    word, a hexadecimal spelling, an overflowing exponent and a zero edge are
+ *    reported unsupported rather than partially read.
+ * 4. Without a `viewBox`, unitless and `px` sizes are read while a millimetre
+ *    sheet, a width with no height, an empty width and a negative width are
+ *    reported unsupported: a rendered size in physical units is not a user-unit
+ *    extent.
+ * 5. A closed PDF and a closed DXF are confirmed families whose extent is
+ *    reported unsupported with a reason naming the family.
+ * 6. An `svg` root outside the SVG namespace, plain text and an empty file are
+ *    not candidates of any family, so they are refused naming the supported set
+ *    and the leading bytes, and malformed UTF-8 is refused by the strict decoder
+ *    before any grammar runs.
  */
 export const test_production_design_reference_asset = (): void => {
-  // 1-2. PNG.
   const plan = png(1000, 800);
   const inspected = inspectDesignReferenceAsset({
     path: "plan.png",
     bytes: plan,
   });
   TestValidator.equals(
-    "a PNG plan reports its media, digest and IHDR extent",
-    [inspected.media, inspected.digest, extent(plan)],
-    ["image/png", digestAutoMovieBytes(plan), ["measured", 1000, 800]],
-  );
-  TestValidator.predicate(
-    "a PNG signature with no IHDR chunk is refused",
-    throwsError(
-      () =>
-        inspectDesignReferenceAsset({
-          path: "plan.png",
-          bytes: png(4, 4, "iTXt"),
-        }),
-      ["no leading IHDR chunk"],
-    ),
-  );
-  TestValidator.predicate(
-    "a PNG whose chunk tag is not printable text is refused",
-    throwsError(
-      () =>
-        inspectDesignReferenceAsset({ path: "plan.png", bytes: png(4, 4, "") }),
-      ["no leading IHDR chunk"],
-    ),
-  );
-  TestValidator.predicate(
-    "a PNG truncated before its header is refused",
-    throwsError(
-      () =>
-        inspectDesignReferenceAsset({
-          path: "plan.png",
-          bytes: png(4, 4).slice(0, 20),
-        }),
-      ["no leading IHDR chunk"],
-    ),
-  );
-  TestValidator.predicate(
-    "a PNG declaring a zero extent is refused rather than measured as empty",
-    throwsError(
-      () =>
-        inspectDesignReferenceAsset({ path: "plan.png", bytes: png(0, 800) }),
-      ["0x800"],
-    ),
-  );
-
-  // 3-5. JPEG.
-  const scan = jpeg(
-    segment(0xe0, [0x4a, 0x46, 0x49, 0x46, 0x00]),
-    segment(0xc4, [0, 1, 2, 3, 4, 5, 6, 7]),
-    [0xff, 0xff],
-    segment(0xc2, frame(1600, 1200)),
+    "complete raster containers report family, exact digest and parsed extent",
+    [
+      inspected.media,
+      inspected.digest,
+      verdict(plan),
+      verdict(jpeg(1600, 1200)),
+      verdict(jpeg(640, 480, 0xc2)),
+    ],
+    [
+      "image/png",
+      digestAutoMovieBytes(plan),
+      ["image/png", "measured", 1000, 800],
+      ["image/jpeg", "measured", 1600, 1200],
+      ["image/jpeg", "measured", 640, 480],
+    ],
   );
   TestValidator.equals(
-    "a progressive JPEG's extent is found past metadata, a Huffman table and fill",
+    "a signature or header is a candidate, not a measured container",
     [
-      inspectDesignReferenceAsset({ path: "sheet.jpg", bytes: scan }).media,
-      extent(scan),
-    ],
-    ["image/jpeg", ["measured", 1600, 1200]],
-  );
-  const jpegRefusals: ReadonlyArray<readonly [string, Uint8Array, string]> = [
-    [
-      "a segment that does not begin with 0xFF",
-      new Uint8Array([0xff, 0xd8, 0x00, 0xc0, 0x00, 0x08]),
-      "should begin a marker segment",
+      refusal(plan.subarray(0, 24)),
+      refusal(jpeg(640, 480).subarray(0, 24)),
+      refusal(utf8("%PDF-1.7\n")),
     ],
     [
-      "a segment declaring an impossible size",
-      new Uint8Array([0xff, 0xd8, 0xff, 0xe0, 0x00, 0x01, 0x00, 0x00]),
-      "truncated JPEG",
+      ["AutoMovieDesignReferenceContainerError", "PNG", "closure"],
+      ["AutoMovieDesignReferenceContainerError", "JPEG", "closure"],
+      ["AutoMovieDesignReferenceContainerError", "PDF", "object"],
     ],
-    [
-      "a segment running past the end of the file",
-      new Uint8Array([0xff, 0xd8, 0xff, 0xe0, 0x00, 0x40, 0x00, 0x00]),
-      "truncated JPEG",
-    ],
-    [
-      "a frame header too small to state an extent",
-      jpeg(segment(0xc0, [8, 0, 4])),
-      "too small to state an extent",
-    ],
-    [
-      "a frame header declaring a zero extent",
-      jpeg(segment(0xc0, frame(640, 0))),
-      "640x0",
-    ],
-    [
-      "a JPEG carrying no frame header at all",
-      jpeg(segment(0xe0, [0x4a, 0x46, 0x49, 0x46, 0x00])),
-      "no frame header",
-    ],
-  ];
-  jpegRefusals.forEach(([name, bytes, fragment]) =>
-    TestValidator.predicate(
-      `${name} is refused`,
-      throwsError(
-        () => inspectDesignReferenceAsset({ path: "sheet.jpg", bytes }),
-        [fragment],
-      ),
-    ),
   );
 
-  // 6-7. SVG.
-  const vector = utf8(
-    '<?xml version="1.0"?><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 420 297"><path d="M0 0"/></svg>',
-  );
-  TestValidator.equals(
-    "an SVG plan reports its user-unit extent from viewBox",
+  const viewBoxes: ReadonlyArray<readonly [string, string, unknown]> = [
+    ["a whitespace viewBox", 'viewBox="0 0 420 297"', ["measured", 420, 297]],
+    ["a comma viewBox", 'viewBox="0,0,420,297"', ["measured", 420, 297]],
     [
-      inspectDesignReferenceAsset({ path: "plan.svg", bytes: vector }).media,
-      extent(vector),
-    ],
-    ["image/svg+xml", ["measured", 420, 297]],
-  );
-  const svgVerdicts: ReadonlyArray<readonly [string, string, unknown]> = [
-    ["a three-number viewBox", '<svg viewBox="0 0 420"/>', "unsupported"],
-    [
-      "a viewBox carrying a word",
-      '<svg viewBox="0 0 wide 297"/>',
-      "unsupported",
-    ],
-    ["a zero-width viewBox", '<svg viewBox="0 0 0 297"/>', "unsupported"],
-    ["a zero-height viewBox", '<svg viewBox="0 0 420 0"/>', "unsupported"],
-    [
-      "a comma-separated viewBox",
-      '<svg viewBox="0,0,420,297"/>',
+      "an exponent and fraction viewBox",
+      'viewBox="0 .5 4.2e2 2.97E+2"',
       ["measured", 420, 297],
     ],
+    ["a three-number viewBox", 'viewBox="0 0 420"', ["unsupported"]],
+    ["a viewBox carrying a word", 'viewBox="0 0 wide 297"', ["unsupported"]],
+    ["a hexadecimal viewBox", 'viewBox="0 0 0x1a4 297"', ["unsupported"]],
+    ["an overflowing viewBox", 'viewBox="0 0 1e400 297"', ["unsupported"]],
+    ["a zero-width viewBox", 'viewBox="0 0 0 297"', ["unsupported"]],
+    ["a zero-height viewBox", 'viewBox="0 0 420 0"', ["unsupported"]],
     [
       "unitless width and height",
-      '<svg width="800" height="600"/>',
+      'width="800" height="600"',
       ["measured", 800, 600],
     ],
     [
       "pixel width and height",
-      '<svg width="800px" height="600px"/>',
+      'width="800px" height="600px"',
       ["measured", 800, 600],
     ],
-    [
-      "a millimetre sheet",
-      '<svg width="210mm" height="297mm"/>',
-      "unsupported",
-    ],
-    ["a width with no height", '<svg width="800"/>', "unsupported"],
-    ["an empty width", '<svg width="" height="600"/>', "unsupported"],
-    ["a negative width", '<svg width="-800" height="600"/>', "unsupported"],
+    ["a millimetre sheet", 'width="210mm" height="297mm"', ["unsupported"]],
+    ["a width with no height", 'width="800"', ["unsupported"]],
+    ["an empty width", 'width="" height="600"', ["unsupported"]],
+    ["a negative width", 'width="-800" height="600"', ["unsupported"]],
   ];
-  svgVerdicts.forEach(([name, markup, expected]) =>
-    TestValidator.equals(
-      `${name} reads as ${JSON.stringify(expected)}`,
-      extent(utf8(markup)),
-      expected,
-    ),
-  );
-
-  // 8. Recognized but unmeasurable.
-  const pdf = utf8("%PDF-1.7\n1 0 obj\n<<>>\nendobj\n");
-  const dxf = utf8("  0\nSECTION\n  2\nHEADER\n  9\n$ACADVER\n  1\nAC1027\n");
-  const dxfWithoutHeader = utf8("  0\nSECTION\n  2\nENTITIES\n  0\nENDSEC\n");
   TestValidator.equals(
-    "PDF and DXF are recognized references whose extent is reported unsupported",
+    "SVG extents follow the SVG number grammar of the root attributes",
+    viewBoxes.map(([, attributes]) => verdict(svg(attributes))),
+    viewBoxes.map(([, , expected]) => [
+      "image/svg+xml",
+      ...(expected as unknown[]),
+    ]),
+  );
+
+  const drawing = utf8("0\nSECTION\n2\nHEADER\n0\nENDSEC\n0\nEOF\n");
+  TestValidator.equals(
+    "closed PDF and DXF are confirmed families whose extent stays unsupported",
     [
-      inspectDesignReferenceAsset({ path: "sheet.pdf", bytes: pdf }).media,
-      extent(pdf),
-      inspectDesignReferenceAsset({ path: "sheet.dxf", bytes: dxf }).media,
-      extent(dxf),
-      inspectDesignReferenceAsset({ path: "e.dxf", bytes: dxfWithoutHeader })
-        .media,
+      verdict(pdf()),
+      verdict(drawing),
+      inspectDesignReferenceAsset({ path: "sheet.pdf", bytes: pdf() }).bounds,
     ],
     [
-      "application/pdf",
-      "unsupported",
-      "image/vnd.dxf",
-      "unsupported",
-      "image/vnd.dxf",
+      ["application/pdf", "unsupported"],
+      ["image/vnd.dxf", "unsupported"],
+      {
+        status: "unsupported",
+        reason:
+          'Design reference "sheet.pdf" is a parser-confirmed "application/pdf" container whose source extent this host does not derive. Declare the frame bounds from the drawing itself.',
+      },
     ],
   );
 
-  // 9. Nothing this host can open.
-  TestValidator.predicate(
-    "bytes belonging to no recognized container name the supported set",
-    throwsError(
-      () =>
-        inspectDesignReferenceAsset({
-          path: "notes.txt",
-          bytes: utf8("just a note about the pavilion"),
-        }),
-      ["Supported design references", "0x6a757374"],
-    ),
-  );
-  TestValidator.predicate(
-    "an empty file says it is empty rather than reading past its end",
-    throwsError(
-      () =>
-        inspectDesignReferenceAsset({
-          path: "empty.png",
-          bytes: new Uint8Array(),
-        }),
-      ["empty"],
-    ),
+  TestValidator.equals(
+    "bytes of no family are refused naming the supported set, before any grammar",
+    [
+      throwsError(
+        () =>
+          inspectDesignReferenceAsset({
+            path: "plan.svg",
+            bytes: utf8('<svg viewBox="0 0 420 297"/>'),
+          }),
+        ["Supported design references", "0x3c737667"],
+      ),
+      throwsError(
+        () =>
+          inspectDesignReferenceAsset({
+            path: "notes.txt",
+            bytes: utf8("just a note about the pavilion"),
+          }),
+        ["Supported design references", "0x6a757374"],
+      ),
+      throwsError(
+        () =>
+          inspectDesignReferenceAsset({
+            path: "empty.png",
+            bytes: new Uint8Array(),
+          }),
+        ["(empty)"],
+      ),
+      refusal(
+        new Uint8Array([
+          ...utf8('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1 1">'),
+          0x80,
+          ...utf8("</svg>"),
+        ]),
+      ),
+    ],
+    [true, true, true, ["AutoMovieUtf8Error", 58, "isolated-continuation"]],
   );
 };

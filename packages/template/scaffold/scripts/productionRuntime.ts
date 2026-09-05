@@ -6,6 +6,8 @@ import {
   deriveAutoMovieInteriorAcousticResponse,
   deriveProductionSoundPlan,
   joinAutoMovieDialogueVisemes,
+  productionFrameBoundaryToGridTick,
+  resolveProductionFrameRate,
 } from "@automovie/engine";
 import type {
   AutoMovieContentDigest,
@@ -153,9 +155,12 @@ export const compileProductionDialogueRuntime = (props: {
   receipts: readonly IAutoMovieProductionTtsReceipt[];
   bindings: readonly IAutoMovieDialogueSpeakerBinding[];
 }): IAutoMovieProductionDialogueRuntime => {
+  const planRate = resolveProductionFrameRate(props.plan);
+  const timelineRate = resolveProductionFrameRate(props.timeline);
   if (
     props.plan.inputFingerprint !== props.timeline.inputFingerprint ||
-    props.plan.fps !== props.timeline.fps ||
+    planRate.numerator !== timelineRate.numerator ||
+    planRate.denominator !== timelineRate.denominator ||
     props.plan.totalFrames !== props.timeline.totalFrames
   )
     throw new Error(
@@ -200,6 +205,7 @@ export const compileProductionDialogueRuntime = (props: {
     version: 1,
     inputFingerprint: props.plan.inputFingerprint,
     fps: props.plan.fps,
+    frameRate: props.plan.frameRate,
     segments: props.timeline.segments.map((segment) => ({
       shot: segment.shot,
       startFrame: segment.startFrame,
@@ -233,16 +239,42 @@ export const compileProductionDialogueRuntime = (props: {
  * multiplication cannot drift.
  */
 export const assertProductionSoundRenderClock = (props: {
-  plan: Pick<IAutoMovieProductionSoundPlan, "fps" | "totalFrames">;
+  plan: Pick<
+    IAutoMovieProductionSoundPlan,
+    "fps" | "frameRate" | "totalFrames"
+  >;
   render: Pick<
     IAutoMovieProductionRenderJobPlan,
     "sourceFrameFormat" | "tier" | "totalFrames"
   >;
 }): void => {
+  const soundRate = resolveProductionFrameRate(props.plan);
+  const renderRate = resolveProductionFrameRate(props.render.sourceFrameFormat);
+  const soundSamples = productionFrameBoundaryToGridTick({
+    frame: props.plan.totalFrames,
+    frameRate: soundRate,
+    ticksPerSecond: 48_000,
+    rounding: "nearest",
+  });
+  const renderSourceFrames =
+    props.render.totalFrames * props.render.tier.frameStep;
   if (
-    props.plan.fps !== props.render.sourceFrameFormat.fps ||
-    props.plan.totalFrames !==
-      props.render.totalFrames * props.render.tier.frameStep
+    Number.isSafeInteger(renderSourceFrames) === false ||
+    props.plan.totalFrames !== renderSourceFrames
+  )
+    throw new Error(
+      "Sound plan and render plan do not share one exact source-frame count.",
+    );
+  const renderSamples = productionFrameBoundaryToGridTick({
+    frame: renderSourceFrames,
+    frameRate: renderRate,
+    ticksPerSecond: 48_000,
+    rounding: "nearest",
+  });
+  if (
+    soundRate.numerator !== renderRate.numerator ||
+    soundRate.denominator !== renderRate.denominator ||
+    soundSamples !== renderSamples
   )
     throw new Error(
       `Sound plan and render plan do not share the exact film frame clock. The sound plan covers ${props.plan.totalFrames} frames at ${props.plan.fps} fps, while render tier "${props.render.tier.kind}" plays ${props.render.totalFrames} frames decimated by ${props.render.tier.frameStep} from a ${props.render.sourceFrameFormat.fps} fps edit.`,

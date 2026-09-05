@@ -51,11 +51,22 @@ const { screenplayTimingDiagnostics } = timingUnits;
 
 /** The prose-owned subset is sufficient for these diagnostics. */
 const screenplay = (props?: {
-  scenes?: IAutoMovieScreenplayIndex["screenplay"]["scenes"];
+  scenes?: Array<
+    Omit<
+      IAutoMovieScreenplayIndex["screenplay"]["scenes"][number],
+      "storyTime" | "participants"
+    > &
+      Partial<
+        Pick<
+          IAutoMovieScreenplayIndex["screenplay"]["scenes"][number],
+          "storyTime" | "participants"
+        >
+      >
+  >;
   sequences?: IAutoMovieScreenplayIndex["treatment"]["sequences"];
 }): IAutoMovieScreenplayIndex =>
   ({
-    version: 1,
+    version: 2,
     production: "diagnostic-units",
     treatment: {
       path: "docs/combined.md",
@@ -64,7 +75,11 @@ const screenplay = (props?: {
     screenplay: {
       path: "docs/combined.md",
       lock: null,
-      scenes: props?.scenes ?? [],
+      scenes: (props?.scenes ?? []).map((scene) => ({
+        storyTime: "unknown",
+        participants: [],
+        ...scene,
+      })),
     },
     catalog: { characters: [], factions: [], locations: [] },
     continuity: [],
@@ -216,7 +231,7 @@ export const test_production_screenplay_diagnostic_units = (): void => {
         status: "active",
         path: "docs/owned.md",
         covers: [],
-        location: null,
+        location: "unknown",
         disposition: null,
       },
       {
@@ -258,6 +273,10 @@ export const test_production_screenplay_diagnostic_units = (): void => {
         "# SCN-NOT-OWNED - Ignored",
         "Ignored body.",
         "# SCN-OWNED - Owned",
+        "@automovie-scene",
+        "location: unknown",
+        "story-time: unknown",
+        "@end-automovie-scene",
         "Owned body.",
       ].join("\n"),
     ],
@@ -448,18 +467,43 @@ export const test_production_screenplay_diagnostic_units = (): void => {
         location: null,
         disposition: null,
       },
+      {
+        id: "SCN-ABSENT",
+        title: "Absent",
+        status: "active",
+        path: "docs/absent.md",
+        covers: [],
+        location: null,
+        disposition: null,
+      },
     ],
   });
   const timingDocuments = new Map<string, string>([
     ["docs/no-heading.md", "No screenplay heading."],
     [
       "docs/match.md",
-      "# SCN-MATCH - Match\nAt **0 seconds**, then 1 to 2 seconds, at 3 seconds, and at 6 seconds.",
+      [
+        "# SCN-MATCH - Match",
+        "At six seconds {@timing shot:match/duration}.",
+        "The event opens at one second {@timing shot:match/event:event-0/from} and closes at two seconds {@timing shot:match/event:event-0/to}.",
+        "Review at three seconds {@timing shot:match/review:frame-0}.",
+      ].join("\n"),
     ],
-    ["docs/combined.md", "# SCN-ONE - One\nIt holds for _1.25 seconds_."],
+    [
+      "docs/absent.md",
+      [
+        "# SCN-ABSENT - Absent",
+        "The event opens at one second {@timing shot:absent/event:event-9/from}.",
+        "Review at three seconds {@timing shot:absent/review:frame-9}.",
+      ].join("\n"),
+    ],
+    [
+      "docs/combined.md",
+      "## Sequence lasts seven seconds\n# SCN-ONE - One\nIt holds for one second.",
+    ],
     [
       "docs/many.md",
-      "# SCN-MANY - Many\nIt holds for `1.25 and 1.75 seconds`, then repeats 1.25 seconds.",
+      "# SCN-MANY - Many\nIt holds for quarter-second {@timing shot:many/duration}, half-second {@timing shot:other/duration}, and three seconds {@timing wrong-selector}.",
     ],
   ]);
   const contracts = new Map<string, IAutoMovieShotContract>([
@@ -476,6 +520,15 @@ export const test_production_screenplay_diagnostic_units = (): void => {
     ],
     ["one", contract({ evidence: ["SCN-ONE"] })],
     ["many", contract({ evidence: ["SCN-MANY"] })],
+    [
+      "absent",
+      contract({
+        evidence: ["SCN-ABSENT"],
+        events: [{ from: 1, to: 2 }],
+        frames: [3],
+      }),
+    ],
+    ["other", contract({ duration: 0.5, evidence: ["SCN-MATCH"] })],
   ]);
   const runTiming = (scope: "design" | "source" | "review" | "final") =>
     screenplayTimingDiagnostics({
@@ -488,10 +541,7 @@ export const test_production_screenplay_diagnostic_units = (): void => {
   const source = runTiming("source");
   const review = runTiming("review");
   const final = runTiming("final");
-  const one = review.find(
-    (diagnostic) => diagnostic.path === "docs/combined.md",
-  );
-  const many = review.find((diagnostic) => diagnostic.path === "docs/many.md");
+  const timingCodes = review.map((diagnostic) => diagnostic.code);
 
   TestValidator.equals(
     "screenplay timing diagnostics own every skip, match, range, and severity branch",
@@ -526,16 +576,35 @@ export const test_production_screenplay_diagnostic_units = (): void => {
           ) === false,
       ],
       [
-        "oneDurationUsesSingular",
-        () => one?.message.includes("a duration 1.25s") === true,
+        "wordAndPreambleTimesAreOwned",
+        () =>
+          review.filter(
+            (diagnostic) =>
+              diagnostic.code === "screenplay-timing-unowned" &&
+              diagnostic.path === "docs/combined.md",
+          ).length === 2,
       ],
       [
-        "manyDurationsUsePlural",
-        () => many?.message.includes("durations 1.25s, 1.75s") === true,
+        "fractionValueMismatchIsNamed",
+        () => timingCodes.includes("screenplay-timing-value-mismatch"),
       ],
       [
-        "duplicateDurationsCollapse",
-        () => many?.message.match(/1\.25s/gu)?.length === 1,
+        "equalValueInAnotherShotDoesNotOwnOccurrence",
+        () => timingCodes.includes("screenplay-timing-owner-absent"),
+      ],
+      [
+        "unsupportedSelectorIsNamed",
+        () => timingCodes.includes("screenplay-timing-reference-invalid"),
+      ],
+      [
+        "selectorNamingNoContractFieldIsAbsent",
+        () =>
+          review.filter(
+            (diagnostic) =>
+              diagnostic.path === "docs/absent.md" &&
+              diagnostic.code === "screenplay-timing-owner-absent" &&
+              diagnostic.message.includes("names no field"),
+          ).length === 2,
       ],
       [
         "authoringScopesWarn",
@@ -555,9 +624,11 @@ export const test_production_screenplay_diagnostic_units = (): void => {
       matchingTimesAreClean: true,
       missingDocumentsAreSkipped: true,
       missingHeadingsAreSkipped: true,
-      oneDurationUsesSingular: true,
-      manyDurationsUsePlural: true,
-      duplicateDurationsCollapse: true,
+      wordAndPreambleTimesAreOwned: true,
+      fractionValueMismatchIsNamed: true,
+      equalValueInAnotherShotDoesNotOwnOccurrence: true,
+      unsupportedSelectorIsNamed: true,
+      selectorNamingNoContractFieldIsAbsent: true,
       authoringScopesWarn: true,
       deliveryScopesRefuse: true,
     },

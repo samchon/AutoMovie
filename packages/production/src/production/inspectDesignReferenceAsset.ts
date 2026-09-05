@@ -4,6 +4,7 @@ import {
 } from "@automovie/interface";
 
 import { digestAutoMovieBytes } from "./contentIdentity";
+import { inspectAutoMovieDesignReferenceContainer } from "./designReferenceContainer";
 
 /**
  * Every container this inspector recognizes, named in each refusal so a
@@ -12,27 +13,14 @@ import { digestAutoMovieBytes } from "./contentIdentity";
 const SUPPORTED_DESIGN_REFERENCES =
   'Supported design references are PNG ("image/png"), JPEG ("image/jpeg"), SVG ("image/svg+xml"), PDF ("application/pdf") and DXF ("image/vnd.dxf") bytes.';
 
-/** The eight bytes every PNG datastream begins with. */
-const PNG_SIGNATURE = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a];
-
-/**
- * JPEG frame headers whose payload carries the image extent. `0xC4`, `0xC8` and
- * `0xCC` share the `0xCn` range but are Huffman, reserved and arithmetic tables
- * rather than frames, so reading extents from them would return the table's
- * first two words as a picture size.
- */
-const JPEG_FRAME_MARKERS = new Set([
-  0xc0, 0xc1, 0xc2, 0xc3, 0xc5, 0xc6, 0xc7, 0xc9, 0xca, 0xcb, 0xcd, 0xce, 0xcf,
-]);
-
 /**
  * The source-space extent of one design reference, or an honest statement that
  * this host cannot measure it.
  *
- * A PDF page box needs a PDF parser and a DXF extent needs an entity sweep;
- * this host ships neither. Reporting `unsupported` keeps the frame the author
- * declared unverified rather than silently blessed, which is the opposite of
- * returning a plausible-looking guess.
+ * A PDF page box needs a page-content parser and a DXF extent needs an entity
+ * sweep; this host ships neither. Reporting `unsupported` keeps the frame the
+ * author declared unverified rather than silently blessed, which is the
+ * opposite of returning a plausible-looking guess.
  */
 export type IAutoMovieDesignReferenceBounds =
   | {
@@ -55,7 +43,7 @@ export type IAutoMovieDesignReferenceBounds =
  */
 export interface IAutoMovieInspectedDesignReference {
   /**
-   * Container family sniffed from the bytes themselves, never from a name.
+   * Container family confirmed by its own parser, never by a name.
    */
   media: AutoMovieDesignReferenceMedia;
   /**
@@ -79,18 +67,31 @@ export interface IAutoMovieInspectedDesignReference {
  * declares 4096 pixels of a 1024-pixel image, is contradicted by the file
  * itself rather than by nobody.
  *
+ * ## Why a signature is not a family
+ *
+ * The family is whatever {@link inspectAutoMovieDesignReferenceContainer}
+ * confirms after the complete admitted profile parses, so a PNG that stops
+ * after its header, a JPEG with no scan, a `%PDF-` prefix, or an SVG root
+ * hidden in a comment never becomes a measured reference. A candidate that
+ * fails its parser throws that parser's typed refusal, and malformed UTF-8
+ * text throws the strict decoding refusal, so a caller can name the exact
+ * stage rather than fold every failure into "unsupported".
+ *
  * ## Why it refuses instead of guessing
  *
- * An unrecognized container throws, naming {@link SUPPORTED_DESIGN_REFERENCES},
- * because a reference nobody can open cannot be the basis of a building. A
- * recognized container whose extent this host cannot derive — a PDF page, a DXF
- * drawing, an SVG sized only in millimetres with no `viewBox` — returns
- * `unsupported` with the reason. Both outcomes are deliberate: the one thing
- * this function will never do is invent a number that a downstream frame then
- * treats as measured.
+ * Bytes in which no family candidate is observed throw, naming
+ * {@link SUPPORTED_DESIGN_REFERENCES}, because a reference nobody can open
+ * cannot be the basis of a building. A confirmed container whose extent this
+ * host cannot derive — a PDF page, a DXF drawing, an SVG sized only in
+ * millimetres with no `viewBox` — returns `unsupported` with the reason. The
+ * one thing this function will never do is invent a number that a downstream
+ * frame then treats as measured.
  *
  * The whole function is a pure function of `bytes`: no filesystem, no clock, no
  * locale, so the same asset inspects identically on every machine.
+ * @evidence requirements/external-inputs/media-families-and-declared-facts.md#external-media-image-video Reads the family, extent and digest of a design reference image out of its bytes, never out of its filename extension.
+ * @evidence specifications/interchange-and-adoption/media-inspection-boundaries.md#interchange-image-video-inspection Produces the decoded extent and container facts of a design reference image from its parsed bytes.
+ * @evidence specifications/interchange-and-adoption/media-inspection-boundaries.md#interchange-design-drawing-inspection Identifies the registered drawing family from the bytes and measures its source-space extent without claiming map adoption or placement.
  */
 export const inspectDesignReferenceAsset = (props: {
   /** Project-relative declared asset path, named in every refusal. */
@@ -98,182 +99,36 @@ export const inspectDesignReferenceAsset = (props: {
   /** Exact current bytes of that asset. */
   bytes: Uint8Array;
 }): IAutoMovieInspectedDesignReference => {
-  const bytes = props.bytes;
-  const digest = digestAutoMovieBytes(bytes);
-  if (startsWith(bytes, PNG_SIGNATURE))
-    return { media: "image/png", digest, bounds: pngBounds(props.path, bytes) };
-  if (bytes.length >= 2 && bytes[0] === 0xff && bytes[1] === 0xd8)
+  const digest = digestAutoMovieBytes(props.bytes);
+  const container = inspectAutoMovieDesignReferenceContainer(props);
+  if (container === null)
+    throw new Error(
+      `Design reference "${props.path}" is not a container this host recognizes (${leadingHex(props.bytes)}). ${SUPPORTED_DESIGN_REFERENCES}`,
+    );
+  if ("width" in container)
     return {
-      media: "image/jpeg",
-      digest,
-      bounds: jpegBounds(props.path, bytes),
-    };
-  if (startsWith(bytes, [0x25, 0x50, 0x44, 0x46, 0x2d]))
-    return {
-      media: "application/pdf",
+      media: container.media,
       digest,
       bounds: {
-        status: "unsupported",
-        reason: `Design reference "${props.path}" is a PDF; this host ships no PDF page parser, so its page box is not measured here. Declare the frame bounds from the drawing itself.`,
+        status: "measured",
+        width: container.width,
+        height: container.height,
       },
     };
-  const text = Buffer.from(bytes).toString("utf8");
-  if (text.includes("<svg"))
-    return {
-      media: "image/svg+xml",
-      digest,
-      bounds: svgBounds(props.path, text),
-    };
-  if (text.includes("$ACADVER") || /(^|\n)\s*0\r?\nSECTION\r?\n/.test(text))
-    return {
-      media: "image/vnd.dxf",
-      digest,
-      bounds: {
-        status: "unsupported",
-        reason: `Design reference "${props.path}" is a DXF drawing; this host ships no entity sweep, so its drawing extent is not measured here. Declare the frame bounds from the drawing itself.`,
-      },
-    };
-  throw new Error(
-    `Design reference "${props.path}" is not a container this host recognizes (${leadingHex(bytes)}). ${SUPPORTED_DESIGN_REFERENCES}`,
-  );
-};
-
-/** Read the extent out of a PNG's mandatory leading `IHDR` chunk. */
-const pngBounds = (
-  path: string,
-  bytes: Uint8Array,
-): IAutoMovieDesignReferenceBounds => {
-  if (bytes.length < 24 || asciiTag(bytes, 12) !== "IHDR")
-    throw new Error(
-      `Design reference "${path}" begins with a PNG signature but carries no leading IHDR chunk, so it is not a readable PNG.`,
-    );
-  const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
-  const width = view.getUint32(16, false);
-  const height = view.getUint32(20, false);
-  if (width === 0 || height === 0)
-    throw new Error(
-      `Design reference "${path}" declares a PNG extent of ${width}x${height}; a readable plan image has a positive extent.`,
-    );
-  return { status: "measured", width, height };
-};
-
-/** Walk JPEG segments to the frame header that states the extent. */
-const jpegBounds = (
-  path: string,
-  bytes: Uint8Array,
-): IAutoMovieDesignReferenceBounds => {
-  const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
-  let cursor = 2;
-  while (cursor + 4 <= bytes.length) {
-    if (bytes[cursor] !== 0xff)
-      throw new Error(
-        `Design reference "${path}" is a malformed JPEG: byte ${cursor} should begin a marker segment but was 0x${hex2(bytes[cursor]!)}.`,
-      );
-    const marker = bytes[cursor + 1]!;
-    // 0xFF is a legal fill byte between markers, so a run of them is skipped
-    // one byte at a time rather than read as a segment length.
-    if (marker === 0xff) {
-      cursor += 1;
-      continue;
-    }
-    const size = view.getUint16(cursor + 2, false);
-    if (size < 2 || cursor + 2 + size > bytes.length)
-      throw new Error(
-        `Design reference "${path}" is a truncated JPEG: the segment at byte ${cursor} declares ${size} bytes but only ${bytes.length - cursor - 2} remain.`,
-      );
-    if (JPEG_FRAME_MARKERS.has(marker)) {
-      if (size < 7)
-        throw new Error(
-          `Design reference "${path}" carries a JPEG frame header of ${size} bytes, which is too small to state an extent.`,
-        );
-      const height = view.getUint16(cursor + 5, false);
-      const width = view.getUint16(cursor + 7, false);
-      if (width === 0 || height === 0)
-        throw new Error(
-          `Design reference "${path}" declares a JPEG extent of ${width}x${height}; a readable plan image has a positive extent.`,
-        );
-      return { status: "measured", width, height };
-    }
-    cursor += 2 + size;
-  }
-  throw new Error(
-    `Design reference "${path}" begins with a JPEG signature but carries no frame header, so its extent is unreadable.`,
-  );
-};
-
-/**
- * Read an SVG's user-unit extent.
- *
- * `viewBox` wins because it is the only attribute that states the user-unit
- * space observations are recorded in. `width`/`height` are a rendered size, so
- * they are accepted only when they are plain numbers or `px`; a sheet sized in
- * millimetres with no `viewBox` is reported `unsupported` rather than silently
- * read as millimetre-numbered pixels.
- */
-const svgBounds = (
-  path: string,
-  text: string,
-): IAutoMovieDesignReferenceBounds => {
-  const box = /viewBox\s*=\s*"([^"]*)"/.exec(text);
-  if (box !== null) {
-    const parts = box[1]!
-      .trim()
-      .split(/[\s,]+/)
-      .map(Number);
-    if (
-      parts.length === 4 &&
-      parts.every((value) => Number.isFinite(value)) &&
-      parts[2]! > 0 &&
-      parts[3]! > 0
-    )
-      return { status: "measured", width: parts[2]!, height: parts[3]! };
-    return {
-      status: "unsupported",
-      reason: `Design reference "${path}" declares viewBox "${box[1]!}", which is not four finite numbers with a positive extent.`,
-    };
-  }
-  const width = svgLength(text, "width");
-  const height = svgLength(text, "height");
-  if (width !== null && height !== null)
-    return { status: "measured", width, height };
   return {
-    status: "unsupported",
-    reason: `Design reference "${path}" states no viewBox and no unitless or "px" width/height, so its user-unit extent is undetermined. Add a viewBox before recording observations against it.`,
+    media: container.media,
+    digest,
+    bounds: {
+      status: "unsupported",
+      reason: `Design reference "${props.path}" is a parser-confirmed "${container.media}" container whose source extent this host does not derive. Declare the frame bounds from the drawing itself.`,
+    },
   };
-};
-
-/** One SVG length in user units, or null when it is not stated in them. */
-const svgLength = (text: string, name: string): number | null => {
-  const match = new RegExp(`\\b${name}\\s*=\\s*"([^"]*)"`).exec(text);
-  if (match === null) return null;
-  const raw = match[1]!.trim().replace(/px$/, "");
-  const value = Number(raw);
-  if (raw.length === 0 || !Number.isFinite(value) || value <= 0) return null;
-  return value;
-};
-
-/** Whether `bytes` opens with exactly `signature`. */
-const startsWith = (bytes: Uint8Array, signature: readonly number[]): boolean =>
-  bytes.length >= signature.length &&
-  signature.every((byte, index) => bytes[index] === byte);
-
-/** Four bytes as a printable chunk tag; an unprintable byte reads as ".". */
-const asciiTag = (bytes: Uint8Array, offset: number): string => {
-  let text = "";
-  for (let index = offset; index < offset + 4; ++index) {
-    const byte = bytes[index]!;
-    text += byte >= 0x20 && byte <= 0x7e ? String.fromCharCode(byte) : ".";
-  }
-  return text;
 };
 
 /** The leading bytes as hex, for a file whose family is not recognizable. */
 const leadingHex = (bytes: Uint8Array): string => {
   let text = "0x";
   for (let index = 0; index < Math.min(4, bytes.length); ++index)
-    text += hex2(bytes[index]!);
+    text += bytes[index]!.toString(16).padStart(2, "0");
   return bytes.length === 0 ? "empty" : text;
 };
-
-/** One byte as the two-digit hex a container specification writes. */
-const hex2 = (value: number): string => value.toString(16).padStart(2, "0");

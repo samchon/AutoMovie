@@ -13,6 +13,7 @@ import {
 import path from "node:path";
 
 import {
+  autoMovieExternalLocatorRefusal,
   canonicalAutoMovieJsonBytes,
   canonicalizeAutoMovieJson,
   compareCodeUnits,
@@ -49,7 +50,11 @@ export const canonicalAutoMovieRepaintRuntimeIdentity = (
   return canonicalizeAutoMovieJson(identity);
 };
 
-/** Validate and canonicalize reviewed repaint-generator provenance. */
+/** Validate and canonicalize reviewed repaint-generator provenance.
+ * @evidence requirements/external-inputs/credentials-rights-and-provenance.md#external-provenance-acquisition-activity Records the provider, model and terms review of a generated rendition without claiming that a seed reproduces it.
+ * @evidence requirements/repaint/identity-and-provenance.md#repaint-nondeterminism-record Canonicalizes the provider and model facts of a rendition as provenance, not as a promise that the same seed reproduces it.
+ * @evidence specifications/interchange-and-adoption/provenance-rights-and-secrets.md#interchange-generated-acquisition-snapshot Records the provider, exact model and terms review of a generated rendition as canonical provenance without inferring reproducibility.
+ */
 export const canonicalAutoMovieRepaintGeneratorProvenance = (
   provenance: IAutoMovieRepaintGeneratorProvenance,
 ): string => {
@@ -63,6 +68,8 @@ export const canonicalAutoMovieRepaintGeneratorProvenance = (
     ]) === false ||
     isNonBlank(provenance.source) === false ||
     isNonBlank(provenance.license) === false ||
+    autoMovieExternalLocatorRefusal(provenance.source) !== null ||
+    autoMovieExternalLocatorRefusal(provenance.license) !== null ||
     canonicalAutoMovieExternalGeneratorTermsDate(provenance.termsCheckedAt) !==
       provenance.termsCheckedAt ||
     isNonBlank(provenance.cost) === false ||
@@ -85,6 +92,7 @@ export const canonicalAutoMovieRepaintGeneratorProvenance = (
  *
  * @evidence requirements/repaint/providers-models-and-credentials.md#repaint-provider-terms Keeps a real reviewed terms date in generator provenance without making content identity depend on the current clock.
  * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-repaint-output-provenance Separates canonical generator identity from runtime-fact validation.
+ * @evidence requirements/sound/sources-and-external-assets.md#sound-source-provenance Requires a generator's terms review to be a real UTC calendar date that is not after the recorded execution instant.
  */
 export const canonicalAutoMovieExternalGeneratorTermsDate = (
   value: unknown,
@@ -116,7 +124,6 @@ export const canonicalAutoMovieExternalGeneratorTermsDate = (
  *
  * @evidence requirements/repaint/providers-models-and-credentials.md#repaint-provider-terms Prevents a repaint execution from claiming terms were reviewed on a later UTC calendar day.
  * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-repaint-output-provenance Binds reviewed generator terms to the immutable execution or adoption instant retained by the receipt.
- * @evidencePart specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-repaint-output-provenance::canonical-output-provenance
  */
 export const assertAutoMovieExternalGeneratorTermsAt = (props: {
   termsCheckedAt: unknown;
@@ -198,6 +205,21 @@ export const productionRepaintStructuralControls = (
         "beauty"
       > => pass !== "beauty",
     )
+    .filter(
+      (pass) =>
+        pass !== "mask" ||
+        manifest.frames
+          .filter((frame) => frame.pass === "mask")
+          .every((frame) =>
+            manifest.semanticMasks.some(
+              (semantic) =>
+                semantic.frame === frame.index &&
+                semantic.pass === frame.pass &&
+                semantic.coverage.unresolved.length === 0 &&
+                semantic.coverage.unaddressed === 0,
+            ),
+          ),
+    )
     .sort(compareCodeUnits)
     .map((pass) => ({
       pass,
@@ -211,7 +233,6 @@ export const productionRepaintStructuralControls = (
  *
  * @evidence requirements/repaint/retries-seeds-and-variation.md#repaint-attempt-failure-provenance Binds a candidate output to the complete immutable attempt request rather than an optional subset of its policy or evidence.
  * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-repaint-attempt-selection Keeps candidate identity distinct when any bounded policy or upstream evidence owner changes.
- * @evidencePart specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-repaint-attempt-selection::request-attempt-selection
  */
 export const productionRepaintOutputPath = (props: {
   shot: string;
@@ -252,7 +273,9 @@ export const productionRepaintOutputPath = (props: {
   ].join("/");
 };
 
-/** Content identity shared by every transport retry of one repaint request. */
+/** Content identity shared by every transport retry of one repaint request.
+ * @evidence specifications/authoring-and-authority/prototype-determinism-and-fidelity.md#spec-authoring-downstream-fidelity-output Gives a repaint rendition an identity of its own, derived from but distinct from the deterministic source render.
+ */
 export const productionRepaintRequestFingerprint = (props: {
   shot: string;
   compileFingerprint: AutoMovieContentDigest;

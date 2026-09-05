@@ -11,20 +11,16 @@ import {
   digestAutoMovieBytes,
 } from "@automovie/production";
 import { TestValidator } from "@nestia/e2e";
+import { PNG } from "pngjs";
 
 const PLAN_PATH = "public/design-references/pavilion-plan.png";
 const STUDY_PATH = "public/design-references/pavilion-study.png";
 
-/** A PNG datastream carrying only the header a plan's extent lives in. */
+/** A complete PNG datastream carrying the declared plan extent. */
 const png = (width: number, height: number): Uint8Array => {
-  const bytes = new Uint8Array(24);
-  bytes.set([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a], 0);
-  const view = new DataView(bytes.buffer);
-  view.setUint32(8, 13, false);
-  bytes.set(Buffer.from("IHDR", "ascii"), 12);
-  view.setUint32(16, width, false);
-  view.setUint32(20, height, false);
-  return bytes;
+  const image = new PNG({ width, height });
+  image.data.fill(0xff);
+  return PNG.sync.write(image);
 };
 
 const PLAN_BYTES = png(1000, 800);
@@ -307,6 +303,29 @@ export const test_production_design_reference_diagnostics = (): void => {
       ["design-reference-media-unsupported"],
     ],
     [
+      "text bytes that are not strict UTF-8",
+      (value) => {
+        const bytes = new Uint8Array([0x3c, 0x73, 0x76, 0x67, 0x80]);
+        value.assets.set(PLAN_PATH, bytes);
+        value.references[0]!.digest = digestAutoMovieBytes(bytes);
+        value.references[0]!.media = "image/svg+xml";
+      },
+      ["design-reference-encoding-invalid"],
+    ],
+    [
+      "an XML candidate preceded by an invalid XML scalar",
+      (value) => {
+        const bytes = Buffer.from(
+          '\u000b<svg xmlns="http://www.w3.org/2000/svg"/>',
+          "utf8",
+        );
+        value.assets.set(PLAN_PATH, bytes);
+        value.references[0]!.digest = digestAutoMovieBytes(bytes);
+        value.references[0]!.media = "image/svg+xml";
+      },
+      ["design-reference-container-invalid"],
+    ],
+    [
       "a frame claiming more sheet than the file holds",
       (value) => (value.references[0]!.frames[0]!.bounds.width = 4096),
       ["design-reference-frame-bounds-mismatch"],
@@ -349,10 +368,12 @@ export const test_production_design_reference_diagnostics = (): void => {
   TestValidator.equals(
     "an unmeasurable container leaves its frames unverified rather than blessed",
     codes((value) => {
-      const bytes = new Uint8Array(Buffer.from("%PDF-1.7\n1 0 obj\n", "utf8"));
+      const bytes = new Uint8Array(
+        Buffer.from("0\nSECTION\n2\nHEADER\n0\nENDSEC\n0\nEOF", "utf8"),
+      );
       value.assets.set(PLAN_PATH, bytes);
       value.references[0]!.digest = digestAutoMovieBytes(bytes);
-      value.references[0]!.media = "application/pdf";
+      value.references[0]!.media = "image/vnd.dxf";
       value.references[0]!.frames[0]!.page = 3;
       value.references[0]!.frames[0]!.bounds = { width: 99999, height: 99999 };
     }),

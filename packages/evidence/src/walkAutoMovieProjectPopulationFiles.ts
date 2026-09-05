@@ -4,13 +4,35 @@ import path from "node:path";
 const projectPopulationBoundaryDiagnostic =
   "project evidence populations contain only real files and directories inside the project root";
 
+interface IAutoMovieEvidencePhysicalFile {
+  /** Whether lstat classified the entry as a regular file. */
+  isFile(): boolean;
+  /** Whether lstat classified the entry as a symbolic link. */
+  isSymbolicLink(): boolean;
+  /** Number of directory entries naming the same physical inode. */
+  nlink: number | bigint;
+}
+
+/**
+ * Decide whether one lstat entry is an independently owned evidence file.
+ *
+ * @evidence requirements/production-evidence/graph.md#agent-production-evidence-physical-integrity Refuses a second pathname for the same bytes instead of counting it as an independent contract or source.
+ * @evidence specifications/production-evidence/graph.md#spec-authoring-production-evidence-physical-integrity Applies one regular-file, non-symlink, single-link predicate before any project evidence bytes are read.
+ * @author Samchon
+ */
+export const isAutoMovieEvidencePhysicalFile = (
+  entry: IAutoMovieEvidencePhysicalFile,
+): boolean =>
+  entry.isFile() &&
+  entry.isSymbolicLink() === false &&
+  (entry.nlink === 1 || entry.nlink === 1n);
+
 /**
  * Walk one project-local evidence population without following filesystem
  * indirection or accepting an entry the graph cannot inventory.
  *
  * @evidence requirements/production-evidence/graph.md#agent-production-evidence-physical-integrity Refuses linked, special, and project-external entries before a physical population can disappear from or enter the graph inventory.
  * @evidence specifications/production-evidence/graph.md#spec-authoring-production-evidence-physical-integrity Enumerates project-local population roots with lstat semantics while leaving the separately resolved shared-contract package outside this boundary.
- * @evidencePart specifications/production-evidence/graph.md#spec-authoring-production-evidence-physical-integrity::physical-population-integrity Makes active hosts, inactive residue, local contracts, and selected source trees one fail-closed physical inventory.
  * @author Samchon
  */
 export const walkAutoMovieProjectPopulationFiles = (
@@ -40,7 +62,7 @@ export const walkAutoMovieProjectPopulationFiles = (
 
   const output: string[] = [];
   const visit = (location: string, entry: fs.Stats): void => {
-    const regularFile = entry.isFile();
+    const regularFile = isAutoMovieEvidencePhysicalFile(entry);
     if (!entry.isDirectory() && !regularFile) fail(project, location);
     if (regularFile) {
       if (location.endsWith(extension)) output.push(location);

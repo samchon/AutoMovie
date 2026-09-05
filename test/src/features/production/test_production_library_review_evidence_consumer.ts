@@ -334,15 +334,20 @@ const compilerProbe = (): {
 } => {
   const fixture = productionFixture();
   try {
-    const library = authoring();
-    (library as unknown as { root: string }).root = fixture.root;
-    (library as unknown as { designOwners: unknown[] }).designOwners = [];
+    const currentLibraryEvidence = (): IAutoMovieProductionEvidence => {
+      const library = authoring();
+      (library as unknown as { root: string }).root = fixture.root;
+      (library as unknown as { designOwners: unknown[] }).designOwners = [];
+      return library;
+    };
+    const library = currentLibraryEvidence();
     const film = authoring("film");
     (film as unknown as { root: string }).root = fixture.root;
     return {
       openedLibraryDiagnostics: openAutoMovieProduction({
         projectRoot: fixture.root,
         authoringEvidence: library,
+        currentAuthoringEvidence: currentLibraryEvidence,
       })
         .compiler.lint({ scope: "review" })
         .diagnostics.filter((entry) => entry.target.startsWith("library:")),
@@ -488,20 +493,20 @@ export const test_production_library_review_evidence_consumer = (): void => {
   });
   const nonErrorJsonState = project();
   writePlans(nonErrorJsonState);
-  const parseJson = JSON.parse;
-  let nonErrorJson: IAutoMovieLibraryReviewPopulation;
-  try {
-    JSON.parse = (() => {
-      throw nonError("plan parser unavailable");
-    }) as typeof JSON.parse;
-    nonErrorJson = consumer.readAutoMovieLibraryReviewRequirements({
-      authoring: binding,
-      project: nonErrorJsonState,
-      compileFingerprint: COMPILE,
-    });
-  } finally {
-    JSON.parse = parseJson;
-  }
+  const readNonErrorJsonPlan = nonErrorJsonState.readProseDocument;
+  nonErrorJsonState.readProseDocument = (relative) =>
+    relative === reviewPath("models")
+      ? ({
+          toString: () => {
+            throw nonError("plan parser unavailable");
+          },
+        } as unknown as string)
+      : readNonErrorJsonPlan(relative);
+  const nonErrorJson = consumer.readAutoMovieLibraryReviewRequirements({
+    authoring: binding,
+    project: nonErrorJsonState,
+    compileFingerprint: COMPILE,
+  });
   const invalidState = project();
   writePlans(invalidState);
   const invalidPlan = JSON.parse(

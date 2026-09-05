@@ -22,19 +22,35 @@ import { spawnSync } from "node:child_process";
 import * as fs from "node:fs";
 import * as path from "node:path";
 
+import {
+  type AutoMovieProductionLanguage,
+  isAutoMovieProductionLanguage,
+} from "../packages/evidence/src/AutoMovieProductionLanguage";
+import {
+  AUTO_MOVIE_CONTRACT_BASELINE_PATH,
+  parseAutoMovieContractBaseline,
+} from "../packages/template/src/productionMaintenance";
 import { renderScaffold } from "../packages/template/src/renderScaffold";
 import { writeFiles } from "../packages/template/src/writeFiles";
-import { PACKAGES, isProcessEntry, packWorkspace } from "./tgz";
+import {
+  type IPackWorkspaceResult,
+  PACKAGES,
+  isProcessEntry,
+  packWorkspace,
+} from "./tgz";
 
 const ROOT = path.resolve(__dirname, "..");
 
 const USAGE = `create a working-tree automovie sandbox
 
 Usage:
-  pnpm run experimental <name> [--force] [--refresh] [--no-install]
+  pnpm run experimental <name> --language <chinese|english|japanese|korean> [--force] [--no-install]
+  pnpm run experimental <name> --refresh [--language <existing-language>] [--no-install]
 
 Options:
   --force       Render over a non-empty experimental/<name>.
+  --language    Select the production language when creating a sandbox. During
+                refresh, an optional value may only confirm the existing one.
   --refresh     Repack and reinstall without re-rendering, so a package change
                 reaches a sandbox whose production is already under way.
   --no-install  Render only, skipping the pack and install.
@@ -64,12 +80,13 @@ Options:
 export const sandboxManifest = (
   rendered: string,
   specifiers: Readonly<Record<string, string>>,
+  packages: readonly (typeof PACKAGES)[number][] = PACKAGES,
 ): string => {
   const manifest = JSON.parse(rendered) as {
     dependencies: Record<string, string>;
     devDependencies?: Record<string, string>;
   };
-  for (const { key, name: dependency } of PACKAGES) {
+  for (const { key, name: dependency } of packages) {
     if (specifiers[key] === undefined) continue;
     const table = Object.hasOwn(manifest.devDependencies ?? {}, dependency)
       ? manifest.devDependencies!
@@ -80,7 +97,7 @@ export const sandboxManifest = (
 };
 
 export interface IExperimentalDependencies {
-  readonly pack: (target: string) => Record<string, string>;
+  readonly pack: (target: string) => IPackWorkspaceResult;
   readonly install: (target: string) => number | null;
 }
 
@@ -172,6 +189,104 @@ export const sandboxTarget = (name: string): string => {
   return target;
 };
 
+type ExperimentalArguments =
+  | {
+      readonly force: boolean;
+      readonly install: boolean;
+      readonly language: AutoMovieProductionLanguage;
+      readonly name: string;
+      readonly refresh: false;
+    }
+  | {
+      readonly force: false;
+      readonly install: boolean;
+      readonly language?: AutoMovieProductionLanguage;
+      readonly name: string;
+      readonly refresh: true;
+    };
+
+/** Parse one closed sandbox request before any package or project I/O. */
+export const readExperimentalArguments = (
+  args: readonly string[],
+): ExperimentalArguments => {
+  let force = false;
+  let install = true;
+  let language: AutoMovieProductionLanguage | undefined;
+  let languageSeen = false;
+  let name: string | undefined;
+  let refresh = false;
+  for (let index = 0; index < args.length; ++index) {
+    const argument = args[index]!;
+    if (argument === "--force") {
+      if (force) throw new Error("--force may be supplied only once.");
+      force = true;
+    } else if (argument === "--no-install") {
+      if (!install) throw new Error("--no-install may be supplied only once.");
+      install = false;
+    } else if (argument === "--refresh") {
+      if (refresh) throw new Error("--refresh may be supplied only once.");
+      refresh = true;
+    } else if (argument === "--language") {
+      if (languageSeen)
+        throw new Error("--language may be supplied only once.");
+      languageSeen = true;
+      const candidate = args[++index];
+      if (candidate === undefined || candidate.startsWith("-"))
+        throw new Error("--language requires one supported language.");
+      if (!isAutoMovieProductionLanguage(candidate))
+        throw new Error(
+          `Unsupported experimental production language ${JSON.stringify(candidate)}.`,
+        );
+      language = candidate;
+    } else if (argument.startsWith("-"))
+      throw new Error(`Unsupported experimental option ${argument}.`);
+    else if (name !== undefined)
+      throw new Error("experimental accepts exactly one sandbox name.");
+    else name = argument;
+  }
+  if (name === undefined) throw new Error("a name is required");
+  if (refresh) {
+    if (force)
+      throw new Error("--force and --refresh cannot describe one sandbox run.");
+    return { force: false, install, language, name, refresh: true };
+  }
+  if (!isAutoMovieProductionLanguage(language))
+    throw new Error(
+      "sandbox creation requires --language with one of chinese, english, japanese, or korean.",
+    );
+  return { force, install, language, name, refresh: false };
+};
+
+/** The scaffold input for creation, or no render after validating refresh. */
+export const experimentalScaffoldRequest = (
+  request: ExperimentalArguments,
+  baselineSource?: string,
+):
+  | { readonly language: AutoMovieProductionLanguage; readonly name: string }
+  | undefined => {
+  if (!request.refresh)
+    return { language: request.language, name: request.name };
+  if (baselineSource === undefined)
+    throw new Error(
+      `experimental/${request.name} has no frozen contract baseline.`,
+    );
+  const existing = parseAutoMovieContractBaseline(baselineSource).language;
+  if (request.language !== undefined && request.language !== existing)
+    throw new Error(
+      `experimental/${request.name} uses ${existing}; refresh cannot change it to ${request.language}.`,
+    );
+  return undefined;
+};
+
+/** Recovery that preserves an authored sandbox whenever one already exists. */
+export const experimentalInstallFailureMessage = (
+  name: string,
+  refresh: boolean,
+): string =>
+  `npm install failed in experimental/${name}. Fix it there, then re-run with ${
+    refresh ? "--refresh" : "--force"
+  }.`;
+
 export const runExperimental = (
   args: readonly string[],
   dependencies: IExperimentalDependencies = experimentalDependencies,
@@ -182,12 +297,9 @@ export const runExperimental = (
     output.write(USAGE);
     return 0;
   }
-  const name = args.find((arg) => arg.startsWith("-") === false);
-  if (name === undefined) {
-    errorOutput.write(`a name is required\n\n${USAGE}`);
-    return 1;
-  }
   try {
+    const request = readExperimentalArguments(args);
+    const name = request.name;
     const target = sandboxTarget(name);
     // `--refresh` repacks and reinstalls without re-rendering the scaffold, so
     // a package fix reaches a sandbox whose production is mid-flight. Without
@@ -195,7 +307,7 @@ export const runExperimental = (
     // scaffold-managed file and can destroy exactly the authored configuration,
     // guides, scripts, viewer changes, and package wiring the experiment exists
     // to exercise.
-    const refresh = args.includes("--refresh");
+    const refresh = request.refresh;
 
     // Refuse a non-empty directory, not merely an existing one, matching the
     // CLI's own `--force` semantics. Deleting a sandbox on Windows routinely
@@ -204,7 +316,7 @@ export const runExperimental = (
     if (
       fs.existsSync(target) &&
       fs.readdirSync(target).length !== 0 &&
-      args.includes("--force") === false &&
+      request.force === false &&
       refresh === false
     )
       throw new Error(
@@ -223,18 +335,35 @@ export const runExperimental = (
         `experimental/${name} has no package.json to refresh. Create it first.`,
       );
 
+    const refreshSnapshot = refresh
+      ? {
+          baseline: fs.readFileSync(
+            path.join(target, AUTO_MOVIE_CONTRACT_BASELINE_PATH),
+            "utf8",
+          ),
+          manifest: fs.readFileSync(manifest, "utf8"),
+        }
+      : undefined;
+
     // Rendering is what enforces the scaffold's own name rule, so it runs
     // before the pack as well. Nothing reaches disk here; `writeFiles` below
     // still runs after the pack that fills the same directory.
-    const files = refresh ? undefined : renderScaffold({ name });
+    const scaffoldRequest = experimentalScaffoldRequest(
+      request,
+      refreshSnapshot?.baseline,
+    );
+    const files =
+      scaffoldRequest === undefined
+        ? undefined
+        : renderScaffold(scaffoldRequest);
 
-    const install = args.includes("--no-install") === false;
-    const specifiers = install ? dependencies.pack(target) : {};
+    const install = request.install;
+    const specifiers = install ? dependencies.pack(target).specifiers : {};
 
     if (files === undefined) {
       fs.writeFileSync(
         manifest,
-        sandboxManifest(fs.readFileSync(manifest, "utf8"), specifiers),
+        sandboxManifest(refreshSnapshot!.manifest, specifiers),
         "utf8",
       );
       // Say which of the two happened. `--refresh --no-install` leaves the
@@ -261,9 +390,7 @@ export const runExperimental = (
     if (install) {
       output.write("Installing the sandbox (npm install)\n");
       if (dependencies.install(target) !== 0)
-        throw new Error(
-          `npm install failed in experimental/${name}. Fix it there, then re-run with --force.`,
-        );
+        throw new Error(experimentalInstallFailureMessage(name, refresh));
     }
 
     output.write(

@@ -4,7 +4,6 @@
 
 ### 범위 선택 {#review-system-scope-selection}
 
-<!-- @evidenceObligation scope-selection review target과 저장된 shot context를 안정된 identity로 선택하고 모호한 선택을 거부하는 경계. -->
 
 <!-- @evidence requirements/acceptance/scope-targets-and-authority.md#acceptance-target-identity Defines a stable target identity across versions, variants and profiles. -->
 
@@ -23,7 +22,6 @@ Criterion dependency scope는 explicit target과 criterion이 읽는 shot을 별
 
 ### 표시와 청취 Context {#review-system-presentation-context}
 
-<!-- @evidenceObligation presentation-context subject, viewpoint, pose, artifact 종류, runtime identity와 terminal status를 보존하는 portable observation context. -->
 
 <!-- @evidence requirements/acceptance/review-surfaces-and-sampling.md#acceptance-presentation-conditions Prevents diagnostic presentation from being generalized to a target presentation. -->
 
@@ -31,7 +29,6 @@ Acceptance presentation context는 raster, crop, display transform과 color iden
 
 ### Context 부재 상태 {#review-system-context-unavailable}
 
-<!-- @evidenceObligation context-unavailable-state subject coverage의 indeterminate, not-run, partial, stale 상태와 누락·외부 observation을 성공으로 바꾸지 않는 경계. -->
 
 <!-- @evidence requirements/acceptance/criteria-and-observables.md#acceptance-preconditions-consumers Separates unmet preconditions from a target failure. -->
 

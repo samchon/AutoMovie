@@ -6,6 +6,7 @@ import {
   lowerPlantingInstallation,
   lowerSoftFurnishing,
   lowerWaterFeature,
+  productionFrameBoundaryToSeconds,
   sampleAutoMovieDialogueExpression,
   sampleMotion,
   simulateAutoMovieWearableSoftBody,
@@ -16,12 +17,17 @@ import {
 import type {
   AutoMovieExpressionPreset,
   AutoMovieGuidePass,
+  IAutoMovieCompiledFilmEffect,
   IAutoMovieCompiledShotSource,
   IAutoMovieDeliveryCrop,
   IAutoMovieExpression,
   IAutoMovieSoftBodyDomain,
   IAutoMovieTransform,
 } from "@automovie/interface";
+import {
+  type IAutoMovieFilmEffectCurrentIdentity,
+  sampleProductionFilmEffects,
+} from "@automovie/production";
 import {
   AutoMoviePlayer,
   type IAutoMovieModelObject,
@@ -163,7 +169,7 @@ export interface IAutoMovieCompiledShotRuntime {
    * Every instance set and formation builds its level-of-detail meshes hidden
    * and only reveals one when it is told how far away the eye is, so a scene
    * drawn straight out of this field shows the ordinary meshes and silently
-   * drops every instanced population — the laid modules, the flags, the
+   * drops every instanced population; the laid modules, the flags, the
    * boards. Call {@link IAutoMovieCompiledShotRuntime.resolveForCamera} first
    * when drawing this graph with a camera of your own; {@link render} already
    * does it for the shot's own camera.
@@ -174,8 +180,8 @@ export interface IAutoMovieCompiledShotRuntime {
    * Reveal the level of detail each population owes the given eye.
    *
    * Separated from {@link render} because looking at a shot from somewhere the
-   * shot does not go is an ordinary thing to want — a review from a fresh
-   * angle, a survey of a surface nobody authored a camera for — and the only
+   * shot does not go is an ordinary thing to want; a review from a fresh
+   * angle, a survey of a surface nobody authored a camera for; and the only
    * alternative was to draw through the shot's own camera and get the authored
    * view back every time.
    *
@@ -214,8 +220,19 @@ export const createCompiledShotRuntime = async (
     deliveryCrop?: IAutoMovieDeliveryCrop;
     /** Explicitly admitted live moving soft-body domain ids. */
     liveWearableSoftBodies?: readonly string[];
+    /** Current compiler-owned film-global effect runtimes. */
+    filmEffects?: readonly IAutoMovieCompiledFilmEffect[];
+    /** Current identity established independently from the runtime array. */
+    filmEffectIdentity?: IAutoMovieFilmEffectCurrentIdentity;
   },
 ): Promise<IAutoMovieCompiledShotRuntime> => {
+  if (
+    (runtime?.filmEffects === undefined) !==
+    (runtime?.filmEffectIdentity === undefined)
+  )
+    throw new Error(
+      "Film effects and their independently current identity must be supplied together.",
+    );
   const models = new Map(compiled.models.map((model) => [model.id, model]));
   const textures = createShotTextureCache();
   const built = await Promise.all(
@@ -312,6 +329,11 @@ export const createCompiledShotRuntime = async (
     scene.scene.add(instanceSet.object);
   const effectObjects = compiled.effects.map(buildInstancedEffect);
   for (const effect of effectObjects) scene.scene.add(effect.object);
+  const filmEffectObjects = (runtime?.filmEffects ?? []).map((effect) => ({
+    runtime: effect,
+    object: buildInstancedEffect(effect.effect),
+  }));
+  for (const effect of filmEffectObjects) scene.scene.add(effect.object.object);
   // Water, cloth and planting are independent domains a building binds rather
   // than scene nodes, so nothing in the node list builds them. Each binding is
   // lowered through the same engine call the compiler validated it with, and
@@ -745,6 +767,24 @@ export const createCompiledShotRuntime = async (
       heroSources,
     });
     for (const effect of effectObjects) effect.update(camera, time);
+    if (globalFrame === null) {
+      for (const effect of filmEffectObjects)
+        effect.object.object.visible = false;
+    } else if (filmEffectObjects.length !== 0) {
+      sampleProductionFilmEffects({
+        identity: runtime!.filmEffectIdentity!,
+        effects: filmEffectObjects.map((effect) => effect.runtime),
+        timelineFrame: globalFrame,
+      });
+      for (const effect of filmEffectObjects)
+        effect.object.update(
+          camera,
+          productionFrameBoundaryToSeconds({
+            frame: globalFrame,
+            frameRate: effect.runtime.frameRate,
+          }),
+        );
+    }
     formationObjects.forEach(({ stats }, index) => {
       const runtime = compiled.formations[index]!;
       if (
@@ -769,6 +809,19 @@ export const createCompiledShotRuntime = async (
       )
         throw new Error(
           `Effect viewer inventory diverged for "${runtime.id}".`,
+        );
+    });
+    filmEffectObjects.forEach(({ runtime: effect, object }) => {
+      if (globalFrame === null) return;
+      const expectedActive =
+        globalFrame >= effect.startFrame && globalFrame < effect.endFrame;
+      if (
+        object.stats.active !== expectedActive ||
+        object.stats.particles < 0 ||
+        object.stats.particles > object.stats.cap
+      )
+        throw new Error(
+          `Film effect viewer inventory diverged for "${effect.effect.id}".`,
         );
     });
     instanceSetObjects.forEach(({ stats }, index) => {
