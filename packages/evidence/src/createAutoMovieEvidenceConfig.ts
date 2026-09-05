@@ -1259,6 +1259,30 @@ const validateLocalClaims = (graph: IProductionGraph): void => {
   }
 };
 
+/**
+ * Whether a declaration is the shipped scaffold before creation rendered it.
+ *
+ * The scaffold's tracked `lint.config.ts` is a render template: creation
+ * substitutes the selected language and materializes its pack under
+ * `docs/language`. Before that, the file still has to evaluate, because the
+ * scaffold's own scripts import it and the repository that ships it compiles
+ * those scripts in place. The state is recognizable without knowing the
+ * placeholder's spelling: no production kind, every branch disabled, no local
+ * claim, the default population scope, and no language pack on disk. A
+ * declaration that selects anything, or that sits beside a materialized pack,
+ * is a production and must name one module.
+ */
+const isUnrenderedScaffoldDeclaration = (graph: IProductionGraph): boolean =>
+  graph.kind === null &&
+  graph.populationScope?.mode === "complete-production" &&
+  (graph.claims === undefined ||
+    (Array.isArray(graph.claims) && graph.claims.length === 0)) &&
+  [
+    ...(Object.keys(MARKDOWN) as MarkdownLayer[]),
+    ...(Object.keys(SOURCES) as SourceLayer[]),
+  ].every((name) => graph[name] === "disabled") &&
+  !fs.existsSync(path.join(graph.location, DOCS, "language"));
+
 const validateDeclaration = (graph: IProductionGraph): void => {
   if (typeof graph.location !== "string" || !path.isAbsolute(graph.location))
     throw new Error(
@@ -1280,7 +1304,10 @@ const validateDeclaration = (graph: IProductionGraph): void => {
     throw new Error(
       `Unsupported production kind ${describeDeclarationValue(kind)}.`,
     );
-  if (!isAutoMovieProductionLanguage(graph.language))
+  if (
+    !isAutoMovieProductionLanguage(graph.language) &&
+    !isUnrenderedScaffoldDeclaration(graph)
+  )
     throw new Error(
       `Unsupported production language ${describeDeclarationValue(graph.language)}.`,
     );
@@ -1851,7 +1878,10 @@ const validateContracts = (
       );
   }
   validateStructuredSharedRules(root);
-  validateLanguageContract(root, language);
+  // An unrendered scaffold has no pack to validate; every other declaration
+  // reached this point with a supported module and owes the complete pack.
+  if (isAutoMovieProductionLanguage(language))
+    validateLanguageContract(root, language);
   return { anchors, titles };
 };
 
@@ -3701,7 +3731,7 @@ export const createAutoMovieContractBindingManifest = (
  * @evidence requirements/production-evidence/graph.md#agent-production-evidence-physical-integrity Validates real target identities, hosts, owners, and lineage before returning a graph.
  * @evidence requirements/production-evidence/graph.md#agent-production-evidence-additive-extension Appends production-owned claims without exposing a replacement seam for the shared graph.
  * @evidence requirements/production-evidence/graph.md#agent-production-evidence-deterministic-result Produces one deterministic graph or fails with the concrete contradictory state.
- * @evidence requirements/agent-authoring/production-language.md#agent-production-language-contract Validates and routes the one selected language module.
+ * @evidence requirements/agent-authoring/production-language.md#agent-production-language-contract Validates and routes the one selected language module, admitting an unselected value only for the unrendered scaffold that has no pack and no branch.
  * @evidence requirements/production-evidence/authoring-contracts.md#agent-production-evidence-contract-discriminators Selects distinct unit, population, screenplay, and design contract targets.
  * @evidence specifications/production-evidence/README.md#production-evidence-specifications Implements the shared construction and validation boundary for generated projects.
  * @evidence specifications/production-evidence/graph.md#spec-authoring-production-evidence-shared-contract Reads and validates the fixed shared contract inventory before constructing claims.

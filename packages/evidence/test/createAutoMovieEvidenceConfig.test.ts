@@ -223,6 +223,55 @@ try {
     ),
     true,
   );
+  // The shipped scaffold before creation: no pack on disk, nothing selected,
+  // and a render placeholder where the language will be written. It evaluates
+  // to exactly the blank graph, and the same placeholder is refused the moment
+  // a kind, a branch, or a claim is selected, or a pack exists beside it.
+  const unrenderedScaffold = root();
+  fs.rmSync(path.join(unrenderedScaffold, "docs/language"), {
+    recursive: true,
+  });
+  const blankGraph = createAutoMovieEvidenceConfig(disabled(scopeRoot));
+  for (const claims of [[], undefined])
+    assert.deepEqual(
+      createAutoMovieEvidenceConfig({
+        ...disabled(unrenderedScaffold),
+        claims: claims as never,
+        language: "{{language}}" as never,
+      }).claims,
+      blankGraph.claims,
+      "the unrendered scaffold evaluates to exactly the blank graph",
+    );
+  for (const selection of [
+    { kind: "film" as const },
+    { settings: "draft" as const },
+    { claims: [{} as never] },
+    { populationScope: { mode: "complete-production-reset" } as never },
+    { populationScope: undefined as never },
+  ])
+    assert.equal(
+      throws(
+        () =>
+          createAutoMovieEvidenceConfig({
+            ...disabled(unrenderedScaffold),
+            ...selection,
+            language: "{{language}}" as never,
+          }),
+        "Unsupported production language",
+      ),
+      true,
+    );
+  assert.equal(
+    throws(
+      () =>
+        createAutoMovieEvidenceConfig({
+          ...disabled(scopeRoot),
+          language: "{{language}}" as never,
+        }),
+      "Unsupported production language",
+    ),
+    true,
+  );
   const missingLanguageContract = root();
   fs.rmSync(
     path.join(missingLanguageContract, "docs/language/discovery/signals.md"),
