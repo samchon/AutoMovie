@@ -57,17 +57,32 @@ export type AutoMovieLocalProcessOwnerObservation =
       reason: "invalid-owner" | "process-query-unavailable";
     };
 
-/** The signal-zero process query injected by platform adapters and tests. */
+/**
+ * The signal-zero process-table probe every local owner observation consumes.
+ *
+ * @evidence requirements/operations-and-recovery/concurrent-runs-and-locking.md#operations-lock-scope-owner Types the only liveness input a local claim may consult, so a reader cannot substitute wall-clock age for it.
+ * @evidence specifications/execution-and-recovery/concurrent-ownership-and-locking.md#execution-claim-scope-owner Binds the probe to signal zero, whose success and permission denial mean occupancy rather than generation liveness.
+ */
 export type AutoMovieLocalProcessQuery = (pid: number, signal: 0) => unknown;
 
 const PROCESS_QUERY = new AsyncLocalStorage<AutoMovieLocalProcessQuery>();
 
-/** The invocation-scoped process query, or the real Node process table. */
+/**
+ * The invocation-scoped process query, or the real Node process table.
+ *
+ * @evidence requirements/operations-and-recovery/concurrent-runs-and-locking.md#operations-lock-scope-owner Resolves one process table for every reader in an invocation, so the commit lock and render recovery cannot observe different hosts.
+ * @evidence specifications/execution-and-recovery/concurrent-ownership-and-locking.md#execution-claim-scope-owner Defaults to `process.kill(pid, 0)`, the signal-zero occupancy probe the observation states are defined against.
+ */
 export const currentAutoMovieLocalProcessQuery =
   (): AutoMovieLocalProcessQuery =>
     PROCESS_QUERY.getStore() ?? ((pid, signal) => process.kill(pid, signal));
 
-/** Run one operation with an explicit process-table observation capability. */
+/**
+ * Run one operation with an explicit process-table observation capability.
+ *
+ * @evidence requirements/operations-and-recovery/concurrent-runs-and-locking.md#operations-stale-lock-recovery Lets a recovery decision be exercised against absent, occupied, denied, and failing probes without a real process table deciding the case.
+ * @evidence specifications/execution-and-recovery/concurrent-ownership-and-locking.md#execution-stale-claim-recovery Scopes the injected probe to one operation, so the two independent observations reclaim requires read the same table.
+ */
 export const withAutoMovieLocalProcessQuery = <Output>(
   query: AutoMovieLocalProcessQuery,
   operation: () => Output,

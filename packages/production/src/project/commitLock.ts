@@ -276,6 +276,9 @@ export const acquireCommitLock = (lockPath: string): string => {
  * removed the complete lock namespace; this invalidates every matching nesting
  * level and always returns without resident-path I/O because none can still own
  * the deleted physical lock.
+ *
+ * @evidence requirements/operations-and-recovery/concurrent-runs-and-locking.md#operations-stale-lock-recovery Removes only a lock that still carries this session's token, so no release ever takes another owner's claim away.
+ * @evidence specifications/execution-and-recovery/concurrent-ownership-and-locking.md#execution-fencing-late-writer Verifies the exact file identity again after quarantine so a successor written between the read and the move is restored, never deleted.
  */
 export const releaseCommitLock = (
   lockPath: string,

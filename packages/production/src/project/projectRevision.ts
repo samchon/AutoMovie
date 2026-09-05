@@ -1,4 +1,9 @@
-/** One decoded project revision and whether it can advance once more. */
+/**
+ * One decoded project revision record, or the refusal to read it as one.
+ *
+ * @evidence requirements/operations-and-recovery/concurrent-runs-and-locking.md#operations-late-writer-fencing Distinguishes the one legal absence (revision 0) from a malformed record, which is never normalized to a number.
+ * @evidence specifications/execution-and-recovery/concurrent-ownership-and-locking.md#execution-fencing-late-writer Types the non-negative safe-integer domain the writer's equality check reads.
+ */
 export type AutoMovieProjectRevisionDecision =
   | {
       /** The persisted value belongs to the project-revision domain. */
@@ -11,7 +16,12 @@ export type AutoMovieProjectRevisionDecision =
       state: "invalid";
     };
 
-/** The outcome of asking one current project revision to advance. */
+/**
+ * The outcome of asking one current project revision to advance.
+ *
+ * @evidence requirements/operations-and-recovery/concurrent-runs-and-locking.md#operations-late-writer-fencing Names exhaustion as its own outcome so a writer at the maximum revision refuses before staging a byte.
+ * @evidence specifications/execution-and-recovery/concurrent-ownership-and-locking.md#execution-fencing-late-writer Carries the exact successor the fence publishes, separated from the invalid and exhausted refusals.
+ */
 export type AutoMovieProjectRevisionAdvance =
   | {
       /** The current revision has one exactly representable successor. */
