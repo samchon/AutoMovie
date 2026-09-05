@@ -242,18 +242,61 @@ const assertContractPath = (value: unknown): string => {
 
 const canonicalContractPath = (value: string): string => value.toLowerCase();
 
+/**
+ * One exact semantic version: the only spelling of a template generation that
+ * is neither a range (`^1.0.0`, `1.x`, `>=1`), an alias (`latest`,
+ * `workspace:*`), nor a locator (`file:`, `npm:`), and therefore the only one
+ * that names exactly one published contract inventory.
+ */
+const EXACT_GENERATION =
+  /^(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)(?:-(?:0|[1-9]\d*|\d*[A-Za-z-][0-9A-Za-z-]*)(?:\.(?:0|[1-9]\d*|\d*[A-Za-z-][0-9A-Za-z-]*))*)?(?:\+[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?$/u;
+
 const assertExactGeneration = (value: unknown): string => {
-  if (
-    typeof value !== "string" ||
-    value.length === 0 ||
-    value.trim() !== value ||
-    /\s/u.test(value) ||
-    /^[~^*<>=]/u.test(value)
-  )
+  if (typeof value !== "string" || !EXACT_GENERATION.test(value))
     throw new Error(
       "AutoMovie contract baseline requires an exact generation.",
     );
   return value;
+};
+
+/**
+ * Refuse a JSON text that spells one member name twice inside one object.
+ * `JSON.parse` keeps the last spelling silently, so a duplicate must be found
+ * on the text before the parsed value can be trusted. Names are compared after
+ * escape decoding within their own object scope. The text must already have
+ * passed `JSON.parse`, which is what lets every string here terminate.
+ */
+const assertUniqueJsonMembers = (source: string, owner: string): void => {
+  const scopes: (Set<string> | null)[] = [];
+  let expectName = false;
+  for (let cursor = 0; cursor < source.length; cursor += 1) {
+    const character = source[cursor]!;
+    if (character === '"') {
+      let end = cursor + 1;
+      while (source[end] !== '"') end += source[end] === "\\" ? 2 : 1;
+      const members = scopes[scopes.length - 1];
+      if (expectName && members) {
+        const name = JSON.parse(source.slice(cursor, end + 1)) as string;
+        if (members.has(name))
+          throw new Error(
+            `${owner} repeats member ${JSON.stringify(name)} in one object.`,
+          );
+        members.add(name);
+        expectName = false;
+      }
+      cursor = end;
+    } else if (character === "{") {
+      scopes.push(new Set());
+      expectName = true;
+    } else if (character === "[") {
+      scopes.push(null);
+      expectName = false;
+    } else if (character === "}" || character === "]") {
+      scopes.pop();
+      expectName = false;
+    } else if (character === ",")
+      expectName = scopes[scopes.length - 1] !== null;
+  }
 };
 
 const assertExactKeys = (
@@ -305,19 +348,32 @@ const canonicalBaseline = (
 const baselineIdentity = (baseline: IAutoMovieContractBaseline): string =>
   digest(JSON.stringify(canonicalBaseline(baseline)));
 
+/**
+ * Identity of one path-to-bytes population, refused at the input stage when a
+ * path escapes the contract inventory or two lexical spellings would occupy
+ * one portable target.
+ */
 const populationIdentity = (
   population: Readonly<Record<string, string>>,
-): string =>
-  digest(
+): string => {
+  const canonical = new Set<string>();
+  return digest(
     JSON.stringify(
       Object.keys(population)
         .sort(compare)
         .map((relative) => {
           assertContractPath(relative);
+          const key = canonicalContractPath(relative);
+          if (canonical.has(key))
+            throw new Error(
+              `Contract population repeats portable path ${JSON.stringify(relative)}.`,
+            );
+          canonical.add(key);
           return { path: relative, sha256: digest(population[relative]!) };
         }),
     ),
   );
+};
 
 const validateContractBaseline = (
   baseline: IAutoMovieContractBaseline,
@@ -385,12 +441,13 @@ const validateContractBaseline = (
  * used for project I/O.
  *
  * @evidence requirements/operations-and-recovery/contract-baseline.md#operations-contract-baseline-identity Rejects malformed or path-escaping recorded generations before migration inspection.
- * @evidence specifications/execution-and-recovery/contract-baseline.md#execution-contract-baseline-identity Produces a closed portable baseline value from untrusted JSON bytes.
+ * @evidence specifications/execution-and-recovery/contract-baseline.md#execution-contract-baseline-identity Refuses a duplicate member, an unknown field, an invalid path, and noncanonical ordering before returning the closed portable baseline value.
  */
 export const parseAutoMovieContractBaseline = (
   source: string,
 ): IAutoMovieContractBaseline => {
   const baseline = JSON.parse(source) as IAutoMovieContractBaseline;
+  assertUniqueJsonMembers(source, "AutoMovie contract baseline");
   validateContractBaseline(baseline);
   return freeze({
     files: baseline.files.map((file) => ({
