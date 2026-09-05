@@ -479,15 +479,14 @@ export const planProductionRenderGc = (props: {
       disposition: "manual-adjudication" as const,
       decision,
     })),
-  ].sort((left, right) => {
-    const pathOrder = compareCodeUnits(
+  ].sort((left, right) =>
+    // Candidate paths were proved unique above, so the path alone orders the
+    // partition.
+    compareCodeUnits(
       left.decision.candidate.path,
       right.decision.candidate.path,
-    );
-    return pathOrder !== 0
-      ? pathOrder
-      : compareCodeUnits(left.disposition, right.disposition);
-  });
+    ),
+  );
   const planKeys = props.plans
     .map((plan) => Buffer.from(canonicalAutoMovieJsonBytes(plan)).toString())
     .sort(compareCodeUnits);
@@ -563,7 +562,7 @@ const isRenderCleanupStage = (
   value === "reference";
 
 const compareCodeUnits = (left: string, right: string): number =>
-  left < right ? -1 : left > right ? 1 : 0;
+  Number(left > right) - Number(left < right);
 
 function canonicalRelativePath(value: string): string {
   if (

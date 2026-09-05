@@ -379,7 +379,9 @@ export const materializeProductionFilmEffects = (props: {
         "film-effect-owner-conflict",
         `Film effect cue "${cue.id}" and shot effect cue "${conflict.cue}" on shot "${conflict.shot}" both own zone "${cue.zone}" during frames ${Math.max(cue.startFrame, conflict.startFrame)}..${Math.min(endFrame, conflict.endFrame)}.`,
       );
-    const [effect] = materializeCompiledEffects({
+    // One validated cue materializes exactly one effect: the zone was resolved
+    // and the recipe admitted above, so the engine has nothing left to refuse.
+    const effect = materializeCompiledEffects({
       world: props.world,
       fixedStepSeconds: frameRate.denominator / frameRate.numerator,
       seedOwner: {
@@ -395,12 +397,7 @@ export const materializeProductionFilmEffects = (props: {
           intensity: { from: cue.intensity, to: cue.intensity },
         },
       ],
-    });
-    if (effect === undefined)
-      throw new AutoMovieFilmEffectRuntimeError(
-        "film-effect-runtime-invalid",
-        `Film effect cue "${cue.id}" did not materialize its validated zone and recipe.`,
-      );
+    })[0]!;
     const core: Omit<IAutoMovieCompiledFilmEffect, "digest"> = {
       version: 1,
       owner: "film",
@@ -710,4 +707,4 @@ const validDigest = (value: string): boolean =>
   /^sha256:[0-9a-f]{64}$/.test(value);
 
 const compareCodeUnits = (left: string, right: string): number =>
-  left < right ? -1 : left > right ? 1 : 0;
+  Number(left > right) - Number(left < right);

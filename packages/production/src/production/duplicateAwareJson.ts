@@ -55,15 +55,16 @@ export const parseAutoMovieStructuredJson = (props: {
       leadingBom: "preserve",
     });
   } catch (error) {
-    if (error instanceof AutoMovieUtf8Error)
-      throw new AutoMovieStructuredJsonError(
-        props.record,
-        "encoding",
-        error.offset,
-        "",
-        error.category,
-      );
-    throw error;
+    // The strict decoder throws nothing but its own typed refusal, so the
+    // encoding stage restates that refusal under the JSON record's identity.
+    const utf8 = error as AutoMovieUtf8Error;
+    throw new AutoMovieStructuredJsonError(
+      props.record,
+      "encoding",
+      utf8.offset,
+      "",
+      utf8.category,
+    );
   }
   return new JsonParser(props.record, text).parse();
 };

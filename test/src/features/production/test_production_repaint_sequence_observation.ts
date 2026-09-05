@@ -16,6 +16,10 @@ const digest = (character: string) => `sha256:${character.repeat(64)}` as const;
  *    verdicts.
  * 2. Replacing one selection, changing the compile/baseline, or retaining a
  *    failed verdict produces its independent stale or incomplete refusal.
+ * 3. A malformed observation, member set, baseline, or current basis is one
+ *    schema refusal rather than a stale or incomplete verdict, and every
+ *    non-passing status or verdict vocabulary member is admitted as incomplete
+ *    rather than refused.
  */
 export const test_production_repaint_sequence_observation = (): void => {
   const members = [
@@ -122,6 +126,78 @@ export const test_production_repaint_sequence_observation = (): void => {
       artifact: ["observation-artifact-stale"],
       failed: ["observation-incomplete"],
       oneShot: [],
+    },
+  );
+
+  const withStatus = (
+    status: IAutoMovieRepaintSequenceObservation["status"],
+    verdict: IAutoMovieRepaintSequenceObservation["verdicts"]["flicker"],
+  ): IAutoMovieRepaintSequenceObservation => ({
+    ...observation,
+    status,
+    verdicts: { ...observation.verdicts, flicker: verdict },
+  });
+  const blankOccurrence = structuredClone(members);
+  blankOccurrence[0]!.occurrence = " ";
+  const digestThrows = (task: () => unknown): boolean => {
+    try {
+      task();
+      return false;
+    } catch {
+      return true;
+    }
+  };
+  TestValidator.equals(
+    "malformed records are one schema refusal and every vocabulary member is admitted",
+    {
+      foreignVersion: diagnose({
+        observation: { ...observation, version: 2 as 1 },
+      }),
+      staleMemberDigest: diagnose({
+        observation: { ...observation, memberSetDigest: digest("a") },
+      }),
+      emptyMembers: diagnose({
+        observation: {
+          ...observation,
+          members: [],
+          memberSetDigest: digest("b"),
+        },
+      }),
+      blankMemberOccurrence: diagnose({ members: blankOccurrence }),
+      repeatedBaselineDelta: diagnose({
+        baseline: { ...baseline, intendedDeltas: ["same", "same"] },
+      }),
+      blankBasis: autoMovieRepaintSequenceObservationDiagnostics({
+        observation,
+        productionId: " ",
+        compileFingerprint: observation.compileFingerprint,
+        timelineFingerprint: observation.timelineFingerprint,
+        baseline,
+        members,
+        artifactDigest: observation.artifact.digest,
+      }),
+      notRun: diagnose({ observation: withStatus("not-run", "not-run") }),
+      unsupported: diagnose({
+        observation: withStatus("unsupported", "unsupported"),
+      }),
+      failedVerdictAlone: diagnose({
+        observation: withStatus("completed", "fail"),
+      }),
+      emptyMemberDigestRefused: digestThrows(() =>
+        digestAutoMovieRepaintObservationMembers([]),
+      ),
+    },
+    {
+      foreignVersion: ["observation-schema-invalid"],
+      staleMemberDigest: ["observation-schema-invalid"],
+      emptyMembers: ["observation-schema-invalid"],
+      blankMemberOccurrence: ["observation-schema-invalid"],
+      repeatedBaselineDelta: ["observation-schema-invalid"],
+      blankBasis: ["observation-schema-invalid"],
+      notRun: ["observation-incomplete"],
+      unsupported: ["observation-incomplete"],
+      failedVerdictAlone: ["observation-incomplete"],
+      emptyMemberDigestRefused: true,
     },
   );
 };

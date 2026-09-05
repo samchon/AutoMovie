@@ -8,6 +8,7 @@ import { loadSourceModule } from "../internal/loadSourceModule";
 const captionText = loadSourceModule<{
   canonicalizeAutoMovieCaptionText: (value: string) => string;
   serializeAutoMovieWebVttCueText: (value: string) => string;
+  serializeAutoMovieWebVttIdentifier: (value: string) => string;
   serializeAutoMovieWebVttSingleLineText: (value: string) => string;
 }>(
   path.resolve(
@@ -28,10 +29,24 @@ const captionText = loadSourceModule<{
  *    line without introducing a blank block delimiter or a text grapheme.
  * 5. Annotation text uses a separate single-line sanitizer, while header and
  *    cue identifiers are preserved verbatim: WebVTT defines no entity escape
- *    for them, so escaping would change the identity they carry.
+ *    for them, so escaping would change the identity they carry, and one that
+ *    contains a line break or the cue timing arrow is refused instead.
  * 6. Direct WebVTT serialization refuses a malformed language rather than
  *    publishing it as an annotation.
  */
+const refusedIdentifier = (value: string): boolean => {
+  try {
+    captionText.serializeAutoMovieWebVttIdentifier(value);
+    return false;
+  } catch (error) {
+    return (
+      error instanceof Error &&
+      error.message ===
+        "WebVTT header and cue identifiers must not contain a line break or -->."
+    );
+  }
+};
+
 export const test_production_caption_text_presentation = (): void => {
   const authored = "first\r\nsecond\rthird\nfourth\t<&>\u0001\n\nlast\u007f";
   const canonical = "first\nsecond\nthird\nfourth\t<&> \n\nlast ";
@@ -58,6 +73,15 @@ export const test_production_caption_text_presentation = (): void => {
       "id\r\n\t<&>\u0001\u007f",
     ),
     "id   &lt;&amp;&gt;  ",
+  );
+  TestValidator.equals(
+    "identifiers are preserved verbatim or refused, never escaped",
+    {
+      preserved: captionText.serializeAutoMovieWebVttIdentifier("cue <&> one"),
+      lineBreak: refusedIdentifier("cue\none"),
+      arrow: refusedIdentifier("cue --> one"),
+    },
+    { preserved: "cue <&> one", lineBreak: true, arrow: true },
   );
 
   const timeline: IAutoMovieFilmTimeline = {

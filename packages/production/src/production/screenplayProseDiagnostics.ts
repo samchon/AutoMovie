@@ -177,7 +177,7 @@ const comparableProse = (value: string): string =>
   value.split(/\s+/u).filter(Boolean).join(" ");
 
 const compareCodeUnits = (left: string, right: string): number =>
-  left < right ? -1 : left > right ? 1 : 0;
+  Number(left > right) - Number(left < right);
 
 const timingSeconds = (value: string): number => {
   const normalized = value.toLowerCase().replace(/[ \t]+/gu, " ");

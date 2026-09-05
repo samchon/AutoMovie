@@ -20,7 +20,35 @@ const throws = (task: () => unknown): boolean => {
   }
 };
 
-/** Canonical JSON is valid, versioned and migrates only from recoverable input. */
+const category = (task: () => unknown): string => {
+  try {
+    task();
+    return "accepted";
+  } catch (error) {
+    return error instanceof AutoMovieCanonicalJsonError
+      ? error.category
+      : error instanceof Error
+        ? `${error.name}: ${error.message}`
+        : String(error);
+  }
+};
+
+/**
+ * Canonical JSON is valid, versioned and migrates only from recoverable input.
+ *
+ * Scenarios:
+ *
+ * 1. Array length and every slot survive, identities expose their protocol,
+ *    and the explicit protocol entry agrees with the implicit one.
+ * 2. Every value outside the acyclic plain scalar domain is refused under its
+ *    typed category: accessor slots in arrays as well as objects, lone
+ *    surrogates at the end of or inside a string, non-finite numbers, and
+ *    bigint.
+ * 3. Current, stale, migrated and unverifiable verification states are
+ *    disjoint for both protocols; the legacy encoder used only to verify a
+ *    declared v1 digest keeps its exact lossy treatment of omitted members and
+ *    nulled items, and a value the current protocol refuses never reaches it.
+ */
 export const test_production_canonical_json_protocol = (): void => {
   const sparse = new Array(2);
   sparse[1] = undefined;
@@ -71,6 +99,35 @@ export const test_production_canonical_json_protocol = (): void => {
       throws(() => canonicalizeAutoMovieJson(accessor)),
     ],
     [true, true, true, true, true, true],
+  );
+  const accessorSlot = Object.defineProperty([0], 0, {
+    enumerable: true,
+    get: () => 1,
+  }) as unknown[];
+  TestValidator.equals(
+    "every refusal carries the category that names its domain violation",
+    {
+      accessorSlot: category(() => canonicalizeAutoMovieJson(accessorSlot)),
+      trailingHighSurrogate: category(() =>
+        canonicalizeAutoMovieJson("a\ud800"),
+      ),
+      unpairedHighSurrogate: category(() =>
+        canonicalizeAutoMovieJson("a\ud800b"),
+      ),
+      loneLowSurrogate: category(() => canonicalizeAutoMovieJson("\udc00")),
+      nonFinite: category(() => canonicalizeAutoMovieJson([Infinity])),
+      bigint: category(() => canonicalizeAutoMovieJson({ value: 1n })),
+      undefinedRoot: category(() => canonicalizeAutoMovieJson(undefined)),
+    },
+    {
+      accessorSlot: "accessor-property",
+      trailingHighSurrogate: "invalid-unicode",
+      unpairedHighSurrogate: "invalid-unicode",
+      loneLowSurrogate: "invalid-unicode",
+      nonFinite: "unsupported-value",
+      bigint: "unsupported-value",
+      undefinedRoot: "unsupported-value",
+    },
   );
   TestValidator.predicate(
     "the explicit protocol entry returns the same versioned identity",
@@ -179,5 +236,45 @@ export const test_production_canonical_json_protocol = (): void => {
       "unverifiable",
       "unverifiable",
     ],
+  );
+  const legacy = (value: unknown, digest = legacyDigest): string => {
+    const verification = verifyAutoMovieCanonicalJsonIdentity({
+      value,
+      protocol: AUTOMOVIE_LEGACY_CANONICAL_JSON_PROTOCOL,
+      digest,
+    });
+    return verification.status === "unverifiable"
+      ? `unverifiable: ${verification.reason}`
+      : verification.status;
+  };
+  TestValidator.equals(
+    "the legacy verifier reports stale digests and keeps its own exact refusals",
+    {
+      stale: legacy({ a: 1, b: 3 }),
+      omittedMembers: legacy(
+        { b: 2, a: 1, skipped: undefined, method: () => 1 },
+        legacyDigest,
+      ),
+      nulledItems: legacy(
+        [undefined, "text", true],
+        digestAutoMovieBytes(Buffer.from('[null,"text",true]')),
+      ),
+      symbolMember: legacy({ b: 2, a: 1, tag: Symbol("tag") }),
+      nestedScalars: legacy(
+        { list: [null, false, 1.5, "s"] },
+        digestAutoMovieBytes(Buffer.from('{"list":[null,false,1.5,"s"]}')),
+      ),
+      refusedBeforeLegacy: legacy({ value: 1n }).startsWith(
+        "unverifiable: AutoMovieCanonicalJsonError",
+      ),
+    },
+    {
+      stale: "stale",
+      omittedMembers: "migrated",
+      nulledItems: "migrated",
+      symbolMember: "migrated",
+      nestedScalars: "migrated",
+      refusedBeforeLegacy: true,
+    },
   );
 };

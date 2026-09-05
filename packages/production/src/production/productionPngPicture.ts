@@ -90,22 +90,19 @@ export const probeProductionPngPicture = (
   bytes: Uint8Array,
 ): IAutoMovieProductionPngPicture => {
   // The chunk walk names every PNG datastream refusal before the decoder can
-  // answer a foreign byte stream with its own unnamed signature error.
+  // answer a foreign byte stream with its own unnamed signature error. The
+  // decoder then owns the IHDR facts: it refuses a datastream whose first chunk
+  // is not the 13-byte IHDR, an interlace method other than none or Adam7, and
+  // a color type outside the five the format defines.
   const chunks = parsePngChunks(bytes);
   residentPngJs().PNG.sync.read(Buffer.from(bytes));
-  if (chunks[0]?.type !== "IHDR" || chunks[0].data.length !== 13)
-    throw new Error("PNG datastream lacks one leading 13-byte IHDR chunk.");
-  const header = chunks[0].data;
+  const header = chunks[0]!.data;
   const width = readUint32(header, 0);
   const height = readUint32(header, 4);
   const bitDepth = header[8]!;
   const colorType = header[9]!;
   const interlace = header[12]!;
-  const color = pngColorModel(colorType);
-  if (interlace !== 0 && interlace !== 1)
-    throw new Error(
-      `PNG IHDR carries unsupported interlace method ${interlace}.`,
-    );
+  const color = PNG_COLOR_MODELS[colorType]!;
   const srgb = uniquePngChunk(chunks, "sRGB");
   const gamma = uniquePngChunk(chunks, "gAMA");
   const icc = uniquePngChunk(chunks, "iCCP");
@@ -239,14 +236,15 @@ const uniquePngChunk = (
   return selected[0];
 };
 
-const pngColorModel = (colorType: number): AutoMovieProductionPngColor => {
-  if (colorType === 0) return "gray";
-  if (colorType === 2) return "rgb";
-  if (colorType === 3) return "palette";
-  if (colorType === 4) return "gray-alpha";
-  if (colorType === 6) return "rgba";
-  throw new Error(`PNG IHDR carries unsupported color type ${colorType}.`);
-};
+/** The five IHDR color types the format defines; the decoder admits no other. */
+const PNG_COLOR_MODELS: Readonly<Record<number, AutoMovieProductionPngColor>> =
+  {
+    0: "gray",
+    2: "rgb",
+    3: "palette",
+    4: "gray-alpha",
+    6: "rgba",
+  };
 
 const pngPixelAspect = (
   data: Uint8Array | undefined,

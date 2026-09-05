@@ -467,6 +467,15 @@ export const test_production_screenplay_diagnostic_units = (): void => {
         location: null,
         disposition: null,
       },
+      {
+        id: "SCN-ABSENT",
+        title: "Absent",
+        status: "active",
+        path: "docs/absent.md",
+        covers: [],
+        location: null,
+        disposition: null,
+      },
     ],
   });
   const timingDocuments = new Map<string, string>([
@@ -478,6 +487,14 @@ export const test_production_screenplay_diagnostic_units = (): void => {
         "At six seconds {@timing shot:match/duration}.",
         "The event opens at one second {@timing shot:match/event:event-0/from} and closes at two seconds {@timing shot:match/event:event-0/to}.",
         "Review at three seconds {@timing shot:match/review:frame-0}.",
+      ].join("\n"),
+    ],
+    [
+      "docs/absent.md",
+      [
+        "# SCN-ABSENT - Absent",
+        "The event opens at one second {@timing shot:absent/event:event-9/from}.",
+        "Review at three seconds {@timing shot:absent/review:frame-9}.",
       ].join("\n"),
     ],
     [
@@ -503,6 +520,14 @@ export const test_production_screenplay_diagnostic_units = (): void => {
     ],
     ["one", contract({ evidence: ["SCN-ONE"] })],
     ["many", contract({ evidence: ["SCN-MANY"] })],
+    [
+      "absent",
+      contract({
+        evidence: ["SCN-ABSENT"],
+        events: [{ from: 1, to: 2 }],
+        frames: [3],
+      }),
+    ],
     ["other", contract({ duration: 0.5, evidence: ["SCN-MATCH"] })],
   ]);
   const runTiming = (scope: "design" | "source" | "review" | "final") =>
@@ -572,6 +597,16 @@ export const test_production_screenplay_diagnostic_units = (): void => {
         () => timingCodes.includes("screenplay-timing-reference-invalid"),
       ],
       [
+        "selectorNamingNoContractFieldIsAbsent",
+        () =>
+          review.filter(
+            (diagnostic) =>
+              diagnostic.path === "docs/absent.md" &&
+              diagnostic.code === "screenplay-timing-owner-absent" &&
+              diagnostic.message.includes("names no field"),
+          ).length === 2,
+      ],
+      [
         "authoringScopesWarn",
         () =>
           design.every((diagnostic) => diagnostic.category === "warning") &&
@@ -593,6 +628,7 @@ export const test_production_screenplay_diagnostic_units = (): void => {
       fractionValueMismatchIsNamed: true,
       equalValueInAnotherShotDoesNotOwnOccurrence: true,
       unsupportedSelectorIsNamed: true,
+      selectorNamingNoContractFieldIsAbsent: true,
       authoringScopesWarn: true,
       deliveryScopesRefuse: true,
     },

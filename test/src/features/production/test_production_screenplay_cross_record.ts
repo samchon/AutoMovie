@@ -223,7 +223,9 @@ const geometryProof = (
  * 1. Exact production, first-shot lock, three binding families and a passed exact outcome succeed.
  * 2. Wrong production, null lock, missing, mistyped, dangling and reused bindings fail.
  * 3. A staged actor or formation must trace back to the matching story catalog.
- * 4. Geometry and review proof require an exact cited outcome and current evidence.
+ * 4. Geometry and review proof require an exact cited outcome and current evidence;
+ *    an outcome the realization never recorded, a graph without a world, and a
+ *    film-targeted frame review that names no shot are each absent proof.
  */
 export const test_production_screenplay_cross_record = (): void => {
   const wrongProduction = copy();
@@ -445,6 +447,42 @@ export const test_production_screenplay_cross_record = (): void => {
           ),
       ],
       [
+        "geometryProofOutcomeMustExist",
+        () => {
+          const missingOutcome = copy();
+          missingOutcome.continuity[0]!.proof = {
+            owner: "geometry",
+            shot: "SHOT-1",
+            outcome: { kind: "opening", id: "STATE-MISSING" },
+          };
+          return code(
+            run({ screenplay: missingOutcome }),
+            "screenplay-continuity-proof-absent",
+          );
+        },
+      ],
+      [
+        "worldlessGraphOwnsNoLandmark",
+        () =>
+          code(
+            run({ graph: { ...graph(), world: null } }),
+            "screenplay-binding-target-absent",
+          ),
+      ],
+      [
+        "filmScenarioFrameReviewNeedsAShot",
+        () =>
+          code(
+            run({
+              screenplay: reviewProof,
+              graph: reviewVariant({
+                target: { kind: "film", id: "PRODUCTION-1" },
+              }),
+            }),
+            "screenplay-continuity-proof-absent",
+          ),
+      ],
+      [
         "reviewProofWithCurrentEvidencePasses",
         () => run({ screenplay: reviewProof, graph: reviewGraph }).length === 0,
       ],
@@ -589,6 +627,9 @@ export const test_production_screenplay_cross_record = (): void => {
       eventGeometryProofPasses: true,
       formationGeometryProofPasses: true,
       geometryProofCannotBorrowShotIdentity: true,
+      geometryProofOutcomeMustExist: true,
+      worldlessGraphOwnsNoLandmark: true,
+      filmScenarioFrameReviewNeedsAShot: true,
       reviewProofWithCurrentEvidencePasses: true,
       optionalScenarioCannotProveClaim: true,
       wrongCriterionCannotProveFrameReview: true,

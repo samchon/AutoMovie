@@ -540,7 +540,16 @@ const legacyNormalizeAutoMovieSource = (source: Uint8Array): Uint8Array => {
   return Buffer.from(text.replace(/\r\n?/g, "\n"), "utf8");
 };
 
-/** Exact predecessor algorithm, used only to verify a declared v1 digest. */
+/**
+ * Exact predecessor algorithm, used only to verify a declared v1 digest.
+ *
+ * It runs only after {@link identifyAutoMovieCanonicalJson} admitted the same
+ * value, so every number is finite, no bigint occurs, and the root has a JSON
+ * representation. The predecessor's own refusals of those inputs can never be
+ * reached from here and are therefore not repeated; what remains is the exact
+ * v1 encoding of the admitted domain, including its lossy treatment of array
+ * holes and unsupported members.
+ */
 const legacyCanonicalizeJson = (value: unknown): string => {
   const encode = (current: unknown, arrayItem: boolean): string | undefined => {
     if (
@@ -549,24 +558,9 @@ const legacyCanonicalizeJson = (value: unknown): string => {
       typeof current === "symbol"
     )
       return arrayItem ? "null" : undefined;
-    if (
-      current === null ||
-      typeof current === "boolean" ||
-      typeof current === "string"
-    )
-      return JSON.stringify(current);
-    if (typeof current === "number") {
-      if (!Number.isFinite(current))
-        throw new TypeError(
-          "AutoMovie canonical JSON refuses non-finite numbers.",
-        );
-      return JSON.stringify(current);
-    }
-    if (typeof current === "bigint")
-      throw new TypeError("AutoMovie canonical JSON refuses bigint values.");
     if (Array.isArray(current))
       return `[${current.map((item) => encode(item, true)!).join(",")}]`;
-    if (typeof current === "object") {
+    if (typeof current === "object" && current !== null) {
       const record = current as Record<string, unknown>;
       const entries = Object.keys(record)
         .sort(compareCodeUnits)
@@ -578,11 +572,7 @@ const legacyCanonicalizeJson = (value: unknown): string => {
         });
       return `{${entries.join(",")}}`;
     }
+    return JSON.stringify(current);
   };
-  const output = encode(value, false);
-  if (output === undefined)
-    throw new TypeError(
-      "AutoMovie canonical JSON requires a serializable root value.",
-    );
-  return output;
+  return encode(value, false)!;
 };

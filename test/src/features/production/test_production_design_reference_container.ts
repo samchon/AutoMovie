@@ -4,6 +4,7 @@ import {
   inspectAutoMovieDesignReferenceContainer,
 } from "@automovie/production";
 import { TestValidator } from "@nestia/e2e";
+import zlib from "node:zlib";
 import { PNG } from "pngjs";
 
 const utf8 = (text: string): Uint8Array => Buffer.from(text, "utf8");
@@ -76,6 +77,101 @@ const dxf = (eol = "\n"): Uint8Array =>
 const inspect = (path: string, bytes: Uint8Array): unknown =>
   inspectAutoMovieDesignReferenceContainer({ path, bytes });
 
+/** The family and parser stage a refusal names, or the admitted result. */
+const stage = (path: string, bytes: Uint8Array): string => {
+  try {
+    return JSON.stringify(inspect(path, bytes));
+  } catch (error) {
+    return error instanceof AutoMovieDesignReferenceContainerError
+      ? `${error.family}:${error.stage}`
+      : error instanceof AutoMovieUtf8Error
+        ? "utf8"
+        : "unknown";
+  }
+};
+
+const CRC_TABLE = Array.from({ length: 256 }, (_, index) => {
+  let value = index;
+  for (let bit = 0; bit < 8; bit++)
+    value = value & 1 ? 0xedb88320 ^ (value >>> 1) : value >>> 1;
+  return value >>> 0;
+});
+const crc32 = (bytes: Uint8Array): number => {
+  let value = 0xffffffff;
+  for (const byte of bytes)
+    value = CRC_TABLE[(value ^ byte) & 0xff]! ^ (value >>> 8);
+  return (value ^ 0xffffffff) >>> 0;
+};
+/** One CRC-carrying PNG chunk, so the decoder's CRC check is not the refusal. */
+const pngChunk = (type: string, data: Uint8Array): Buffer => {
+  const length = Buffer.alloc(4);
+  length.writeUInt32BE(data.length);
+  const body = Buffer.concat([Buffer.from(type, "ascii"), Buffer.from(data)]);
+  const crc = Buffer.alloc(4);
+  crc.writeUInt32BE(crc32(body));
+  return Buffer.concat([length, body, crc]);
+};
+/** Split a decoder-written PNG into its chunks for surgical rebuilding. */
+const pngChunks = (
+  bytes: Uint8Array,
+): Array<{ type: string; data: Uint8Array }> => {
+  const chunks: Array<{ type: string; data: Uint8Array }> = [];
+  for (let cursor = 8; cursor < bytes.length; ) {
+    const size = Buffer.from(bytes).readUInt32BE(cursor);
+    chunks.push({
+      type: Buffer.from(bytes.subarray(cursor + 4, cursor + 8)).toString(
+        "ascii",
+      ),
+      data: bytes.subarray(cursor + 8, cursor + 8 + size),
+    });
+    cursor += 12 + size;
+  }
+  return chunks;
+};
+const rebuildPng = (
+  bytes: Uint8Array,
+  edit: (chunk: { type: string; data: Uint8Array }) => Buffer | null,
+): Uint8Array =>
+  Buffer.concat([
+    bytes.subarray(0, 8),
+    ...pngChunks(bytes).flatMap((chunk) => {
+      const rebuilt = edit(chunk);
+      return rebuilt === null ? [] : [rebuilt];
+    }),
+  ]);
+/**
+ * An RGBA datastream whose framing the decoder accepts, with the raster the
+ * IHDR declares (possibly empty) and an optional IDAT chunk.
+ */
+const pngStream = (
+  width: number,
+  height: number,
+  withIdat: boolean,
+): Uint8Array => {
+  const header = Buffer.alloc(13);
+  header.writeUInt32BE(width, 0);
+  header.writeUInt32BE(height, 4);
+  header.set([8, 6, 0, 0, 0], 8);
+  return Buffer.concat([
+    Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
+    pngChunk("IHDR", header),
+    ...(withIdat
+      ? [
+          pngChunk(
+            "IDAT",
+            zlib.deflateSync(Buffer.alloc(height * (1 + width * 4))),
+          ),
+        ]
+      : []),
+    pngChunk("IEND", new Uint8Array()),
+  ]);
+};
+const latin1 = (
+  bytes: Uint8Array,
+  edit: (text: string) => string,
+): Uint8Array =>
+  Buffer.from(edit(Buffer.from(bytes).toString("latin1")), "latin1");
+
 const refuses = (
   path: string,
   bytes: Uint8Array,
@@ -91,7 +187,22 @@ const refuses = (
   }
 };
 
-/** Design evidence is emitted only by parser-confirmed complete containers. */
+/**
+ * Design evidence is emitted only by parser-confirmed complete containers.
+ *
+ * Scenarios:
+ *
+ * 1. Complete PNG, baseline and progressive JPEG expose their parsed extent;
+ *    closed PDF page trees and DXF drawings are valid but unmeasured.
+ * 2. Truncated, corrupt, and structurally incomplete PNG, JPEG, PDF, and DXF
+ *    candidates are refused, and SVG family, namespace scope, expanded
+ *    attribute identity, and XML well-formedness are enforced.
+ * 3. Every refusal names the family and the exact parser stage that stopped
+ *    it: PNG facts the decoder leaves open, each JPEG marker, segment, frame,
+ *    scan, restart, and closure rule, each PDF header, closure, trailer, and
+ *    page-tree rule, each XML prolog, root, name, namespace, text, entity, and
+ *    closure rule, and each DXF record, section, and closure rule.
+ */
 export const test_production_design_reference_container = (): void => {
   const image = new PNG({ width: 4, height: 3 });
   image.data.fill(0xff);
@@ -490,5 +601,251 @@ export const test_production_design_reference_container = (): void => {
       ),
     ],
     new Array(22).fill(true),
+  );
+
+  const frame = segment(0xc0, [8, 0, 3, 0, 4, 1, 1, 0x11, 0]);
+  const scan = segment(0xda, [1, 1, 0, 0, 63, 0]);
+  const svgRoot = '<svg xmlns="http://www.w3.org/2000/svg"';
+  const svgOnly = JSON.stringify({ media: "image/svg+xml" });
+  const pdfText = (edit: (text: string) => string): Uint8Array =>
+    latin1(pdf(), edit);
+  const pageTree = (
+    kid: string,
+    pages = "/Kids [3 0 R] /Count 1",
+  ): Uint8Array =>
+    pdf([
+      "<< /Type /Catalog /Pages 2 0 R >>",
+      `<< /Type /Pages ${pages} >>`,
+      kid,
+    ]);
+  TestValidator.equals(
+    "every refusal names the family and the parser stage that stopped it",
+    {
+      pngNonEmptyIend: stage(
+        "iend.png",
+        rebuildPng(png, (chunk) =>
+          chunk.type === "IEND"
+            ? pngChunk("IEND", new Uint8Array([1]))
+            : pngChunk(chunk.type, chunk.data),
+        ),
+      ),
+      pngZeroExtent: stage("extent.png", pngStream(0, 2, true)),
+      pngNoIdat: stage("idat.png", pngStream(2, 2, false)),
+      jpegNoMarker: stage(
+        "marker.jpg",
+        new Uint8Array([0xff, 0xd8, ...frame, 0x12]),
+      ),
+      jpegTruncatedMarker: stage("cut.jpg", new Uint8Array([0xff, 0xd8, 0xff])),
+      jpegBytesAfterEoi: stage("tail.jpg", new Uint8Array([...jpeg(), 0x00])),
+      jpegEoiWithoutFrame: stage(
+        "frameless.jpg",
+        new Uint8Array([0xff, 0xd8, 0xff, 0xd9]),
+      ),
+      jpegStandaloneMarker: stage(
+        "tem.jpg",
+        new Uint8Array([0xff, 0xd8, 0xff, 0x01]),
+      ),
+      jpegReservedMarker: stage(
+        "reserved.jpg",
+        new Uint8Array([0xff, 0xd8, 0xff, 0x02]),
+      ),
+      jpegTruncatedSegmentLength: stage(
+        "length.jpg",
+        new Uint8Array([0xff, 0xd8, 0xff, 0xe0]),
+      ),
+      jpegShortFrame: stage(
+        "short-frame.jpg",
+        new Uint8Array([0xff, 0xd8, ...segment(0xc0, [8, 0, 3, 0, 4])]),
+      ),
+      jpegDuplicateComponent: stage(
+        "components.jpg",
+        new Uint8Array([
+          0xff,
+          0xd8,
+          ...segment(0xc0, [8, 0, 3, 0, 4, 2, 1, 0x11, 0, 1, 0x11, 0]),
+        ]),
+      ),
+      jpegZeroExtent: stage(
+        "zero.jpg",
+        new Uint8Array([
+          0xff,
+          0xd8,
+          ...segment(0xc0, [8, 0, 0, 0, 4, 1, 1, 0x11, 0]),
+        ]),
+      ),
+      jpegFillBytes: stage(
+        "fill.jpg",
+        new Uint8Array([0xff, 0xd8, ...frame, ...scan, 0x11, 0xff, 0xff, 0xd9]),
+      ),
+      jpegRestartOrder: stage(
+        "restart-order.jpg",
+        new Uint8Array([
+          0xff,
+          0xd8,
+          ...frame,
+          ...segment(0xdd, [0, 1]),
+          ...scan,
+          0x11,
+          0xff,
+          0xd1,
+          0x22,
+          0xff,
+          0xd9,
+        ]),
+      ),
+      pdfHeader: stage(
+        "header.pdf",
+        pdfText((text) => text.replace("%PDF-1.4", "%PDF-2.0")),
+      ),
+      pdfNoClosure: stage(
+        "closure.pdf",
+        pdfText((text) => text.replace("%%EOF\n", "")),
+      ),
+      pdfNoTrailerKeyword: stage(
+        "keyword.pdf",
+        pdfText((text) => text.replace("trailer", "trailor")),
+      ),
+      pdfXrefLineSuffix: stage(
+        "xref-line.pdf",
+        pdfText((text) => text.replace("xref\n0 3", "xref extra\n0 3")),
+      ),
+      pdfXrefHeading: stage(
+        "xref-heading.pdf",
+        pdfText((text) => text.replace("xref\n0 3\n", "xref\nzero 3\n")),
+      ),
+      pdfXrefEmptySubsection: stage(
+        "xref-count.pdf",
+        pdfText((text) => text.replace("xref\n0 3\n", "xref\n0 0\n")),
+      ),
+      pdfPageKidType: stage(
+        "kid-type.pdf",
+        pageTree("<< /Type /Foo /Parent 2 0 R >>"),
+      ),
+      pdfKidsResidue: stage(
+        "kids-residue.pdf",
+        pageTree(
+          "<< /Type /Page /Parent 2 0 R >>",
+          "/Kids [3 0 R junk] /Count 1",
+        ),
+      ),
+      xmlDoctype: stage("doctype.svg", utf8(`<!DOCTYPE svg>${svgRoot}/>`)),
+      xmlUnstartableRoot: stage("digit.svg", utf8("<1abc/>")),
+      svgMalformedAttribute: stage("attribute.svg", utf8(`${svgRoot} a=b/>`)),
+      svgAttributeName: stage("name.svg", utf8(`${svgRoot} a:b:c="1"/>`)),
+      svgDuplicateAttribute: stage(
+        "duplicate.svg",
+        utf8(`${svgRoot} id="1" id="2"/>`),
+      ),
+      svgUndeclaredDefaultNamespace: stage(
+        "undeclared.svg",
+        utf8('<svg xmlns=""/>'),
+      ),
+      xmlnsElementName: stage(
+        "xmlns-element.svg",
+        utf8('<xmlns:svg xmlns:svg="http://www.w3.org/2000/svg"/>'),
+      ),
+      svgTailAfterSelfClose: stage("tail-self.svg", utf8(`${svgRoot}/>tail`)),
+      svgUnclosedWithText: stage("unclosed-text.svg", utf8(`${svgRoot}>text`)),
+      svgUnterminatedComment: stage("comment.svg", utf8(`${svgRoot}><!-- x`)),
+      svgUnterminatedCdata: stage("cdata.svg", utf8(`${svgRoot}><![CDATA[x`)),
+      svgInstruction: stage(
+        "instruction.svg",
+        utf8(`${svgRoot}><?pi data?></svg>`),
+      ),
+      svgUnterminatedInstruction: stage("pi.svg", utf8(`${svgRoot}><?pi`)),
+      svgCloseName: stage("close-name.svg", utf8(`${svgRoot}></a:b:c>`)),
+      svgTailAfterRoot: stage("tail-root.svg", utf8(`${svgRoot}></svg>tail`)),
+      svgMalformedChild: stage("child.svg", utf8(`${svgRoot}><1/></svg>`)),
+      svgUnclosedRoot: stage("unclosed.svg", utf8(`${svgRoot}><g>`)),
+      xmlDeclarationAfterSpace: stage(
+        "spaced-declaration.svg",
+        utf8(` <?xml version="1.0"?>${svgRoot}/>`),
+      ),
+      xmlUnterminatedProlog: stage("prolog.svg", utf8('<?xml version="1.0"')),
+      xmlPrologCommentDashes: stage(
+        "prolog-comment.svg",
+        utf8(`<!-- a--b -->${svgRoot}/>`),
+      ),
+      svgCdataEndInText: stage("cdata-end.svg", utf8(`${svgRoot}>]]></svg>`)),
+      svgAstralText: stage("astral.svg", utf8(`${svgRoot}>\u{1f600}</svg>`)),
+      svgUnescapedAttribute: stage(
+        "ampersand.svg",
+        utf8(`${svgRoot} id="a&b"/>`),
+      ),
+      svgEntities: stage(
+        "entities.svg",
+        utf8(`${svgRoot} id="&amp;&#65;&#x42;"/>`),
+      ),
+      dxfOddRecords: stage(
+        "odd.dxf",
+        utf8("0\nSECTION\n2\nHEADER\n0\nENDSEC\n0\nEOF\n9"),
+      ),
+      dxfSectionName: stage(
+        "section-name.dxf",
+        utf8("0\nSECTION\n9\nX\n0\nENDSEC\n0\nEOF"),
+      ),
+      dxfNoEof: stage(
+        "no-eof.dxf",
+        utf8("0\nSECTION\n2\nHEADER\n0\nENDSEC\n0\nEXTRA"),
+      ),
+      dxfNoSection: stage("no-section.dxf", utf8("9\n$ACADVER\n1\nAC1027")),
+    },
+    {
+      pngNonEmptyIend: "PNG:IEND",
+      pngZeroExtent: "PNG:IHDR",
+      pngNoIdat: "PNG:IDAT",
+      jpegNoMarker: "JPEG:marker",
+      jpegTruncatedMarker: "JPEG:closure",
+      jpegBytesAfterEoi: "JPEG:closure",
+      jpegEoiWithoutFrame: "JPEG:frame",
+      jpegStandaloneMarker: "JPEG:marker",
+      jpegReservedMarker: "JPEG:marker",
+      jpegTruncatedSegmentLength: "JPEG:segment",
+      jpegShortFrame: "JPEG:frame",
+      jpegDuplicateComponent: "JPEG:frame",
+      jpegZeroExtent: "JPEG:frame",
+      jpegFillBytes: JSON.stringify({
+        media: "image/jpeg",
+        width: 4,
+        height: 3,
+      }),
+      jpegRestartOrder: "JPEG:restart",
+      pdfHeader: "PDF:header",
+      pdfNoClosure: "PDF:closure",
+      pdfNoTrailerKeyword: "PDF:trailer",
+      pdfXrefLineSuffix: "PDF:trailer",
+      pdfXrefHeading: "PDF:trailer",
+      pdfXrefEmptySubsection: "PDF:trailer",
+      pdfPageKidType: "PDF:Pages",
+      pdfKidsResidue: "PDF:Pages",
+      xmlDoctype: "XML:prolog",
+      xmlUnstartableRoot: "null",
+      svgMalformedAttribute: "SVG:root",
+      svgAttributeName: "SVG:name",
+      svgDuplicateAttribute: "SVG:root",
+      svgUndeclaredDefaultNamespace: "null",
+      xmlnsElementName: "XML:namespace",
+      svgTailAfterSelfClose: "SVG:closure",
+      svgUnclosedWithText: "SVG:closure",
+      svgUnterminatedComment: "SVG:closure",
+      svgUnterminatedCdata: "SVG:closure",
+      svgInstruction: svgOnly,
+      svgUnterminatedInstruction: "SVG:closure",
+      svgCloseName: "SVG:name",
+      svgTailAfterRoot: "SVG:closure",
+      svgMalformedChild: "SVG:closure",
+      svgUnclosedRoot: "SVG:closure",
+      xmlDeclarationAfterSpace: "XML:instruction",
+      xmlUnterminatedProlog: "XML:misc",
+      xmlPrologCommentDashes: "XML:comment",
+      svgCdataEndInText: "SVG:text",
+      svgAstralText: svgOnly,
+      svgUnescapedAttribute: "SVG:attribute",
+      svgEntities: svgOnly,
+      dxfOddRecords: "DXF:records",
+      dxfSectionName: "DXF:section",
+      dxfNoEof: "DXF:closure",
+      dxfNoSection: "DXF:closure",
+    },
   );
 };

@@ -54,6 +54,7 @@ export const test_production_strict_utf8 = (): void => {
       failure([0xf4, 0x90, 0x80, 0x80]),
       failure([0xf4, 0x90]),
       failure([0xf5, 0x80, 0x80, 0x80]),
+      failure([0xf0, 0x80, 0x80, 0x80]),
     ],
     [
       ["automovie-invalid-utf8", "src/shot.ts", 0, "isolated-continuation"],
@@ -69,6 +70,7 @@ export const test_production_strict_utf8 = (): void => {
       ["automovie-invalid-utf8", "src/shot.ts", 0, "out-of-range-scalar"],
       ["automovie-invalid-utf8", "src/shot.ts", 0, "out-of-range-scalar"],
       ["automovie-invalid-utf8", "src/shot.ts", 0, "invalid-leader"],
+      ["automovie-invalid-utf8", "src/shot.ts", 0, "overlong-sequence"],
     ],
   );
   TestValidator.predicate(

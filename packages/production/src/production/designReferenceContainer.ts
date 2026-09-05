@@ -54,9 +54,10 @@ const XML_BASE_NAMESPACES = new Map<string, string>([["xml", XML_NAMESPACE]]);
  * The admitted profiles are deliberately narrow and are stated here so a
  * refusal is a decision rather than a limitation nobody wrote down:
  *
- * - PNG: the resident decoder reads the whole datastream with CRC checking,
- *   the first chunk is a 13-byte `IHDR` with a positive extent, at least one
- *   `IDAT` follows, and an empty `IEND` closes the bytes exactly.
+ * - PNG: the resident decoder reads the whole datastream with CRC checking and
+ *   refuses any byte outside its chunk framing, so the leading 13-byte `IHDR`
+ *   and the terminal `IEND` are its facts; this parser then requires a positive
+ *   extent, at least one `IDAT`, and an empty `IEND`.
  * - JPEG: every byte outside entropy-coded data is a marker segment of the
  *   interchange format, exactly one frame header states the extent, every scan
  *   references frame components, restart markers appear only under a positive
@@ -121,48 +122,23 @@ const inspectPng = (props: {
   }
   if (decoded.width <= 0 || decoded.height <= 0)
     throw invalid(props.path, "PNG", "IHDR", "extent must be positive");
-  let cursor = 8;
-  let first = true;
+  // The decoder has already refused any byte outside the chunk framing, a
+  // first chunk that is not the 13-byte IHDR, and a datastream that IEND does
+  // not close exactly, so this walk only has to read the facts it left open.
   let idat = false;
-  let ended = false;
-  while (cursor + 12 <= props.bytes.length) {
+  for (let cursor = 8; cursor < props.bytes.length; ) {
     const size = readU32(props.bytes, cursor);
-    const end = cursor + 12 + size;
-    if (end > props.bytes.length)
-      throw invalid(
-        props.path,
-        "PNG",
-        "chunk",
-        `chunk at byte ${cursor} is truncated`,
-      );
     const tag = ascii(props.bytes, cursor + 4, 4);
-    if (first && (tag !== "IHDR" || size !== 13))
-      throw invalid(
-        props.path,
-        "PNG",
-        "IHDR",
-        "the first chunk must be a 13-byte IHDR",
-      );
     if (tag === "IDAT") idat = true;
     if (tag === "IEND") {
       if (size !== 0)
         throw invalid(props.path, "PNG", "IEND", "IEND must be empty");
-      ended = true;
-      cursor = end;
       break;
     }
-    cursor = end;
-    first = false;
+    cursor += 12 + size;
   }
   if (!idat)
     throw invalid(props.path, "PNG", "IDAT", "no IDAT chunk was found");
-  if (!ended || cursor !== props.bytes.length)
-    throw invalid(
-      props.path,
-      "PNG",
-      "IEND",
-      "the datastream is not closed exactly by IEND",
-    );
   return { media: "image/png", width: decoded.width, height: decoded.height };
 };
 

@@ -77,7 +77,10 @@ const run = (props: {
  * 1. Active and tombstone records select the correct phase denominators.
  * 2. Every phase-local disposition rejects a claim in that same phase.
  * 3. Blank reasons and double omission states fail immediately.
- * 4. Source, review and final scopes require realization, observation and edit respectively.
+ * 4. Source, review and final scopes require realization, observation and edit respectively;
+ *    only the source scope softens a missing realization to a warning.
+ * 5. A tombstone with no downstream claim in any phase is clean, and a claim in
+ *    the last phase alone still names the tombstone.
  */
 export const test_production_screenplay_disposition = (): void => {
   const active = scene();
@@ -190,6 +193,36 @@ export const test_production_screenplay_disposition = (): void => {
           ),
       ],
       ["completeFinalStatePasses", () => run({ scene: active }).length === 0],
+      [
+        "finalUnrealizedErrors",
+        () =>
+          run({ scene: active, realized: false }).find(
+            (entry) => entry.code === "screenplay-scene-unrealized",
+          )?.category === "error",
+      ],
+      [
+        "tombstoneWithoutAnyClaimIsClean",
+        () =>
+          run({
+            scene: scene({ status: "OMITTED" }),
+            prose: false,
+            realized: false,
+            observed: false,
+            edited: false,
+          }).length === 0,
+      ],
+      [
+        "tombstoneLateClaimIsStillInvalid",
+        () =>
+          run({
+            scene: scene({ status: "OMITTED" }),
+            prose: false,
+            realized: false,
+            observed: false,
+          }).some(
+            (diagnostic) => diagnostic.code === "screenplay-tombstone-realized",
+          ),
+      ],
     ]),
     {
       nullIndexIsEmpty: true,
@@ -205,6 +238,9 @@ export const test_production_screenplay_disposition = (): void => {
       reviewRequiresObservation: true,
       finalRequiresEdit: true,
       completeFinalStatePasses: true,
+      finalUnrealizedErrors: true,
+      tombstoneWithoutAnyClaimIsClean: true,
+      tombstoneLateClaimIsStillInvalid: true,
     },
   );
 };

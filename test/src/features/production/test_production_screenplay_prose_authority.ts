@@ -8,7 +8,18 @@ import path from "node:path";
 import { loadSourceModule } from "../internal/loadSourceModule";
 import { namedFacts } from "../internal/predicates";
 
-const { screenplayProseDiagnostics } = loadSourceModule<{
+const { parseScreenplayProse, screenplayProseDiagnostics } = loadSourceModule<{
+  parseScreenplayProse: (content: string) => Array<{
+    id: string;
+    authority: {
+      location: string;
+      storyTime: string;
+      participants: Array<{ id: string; mode: string }>;
+      beats: string[];
+    } | null;
+    authorityErrors: string[];
+    timing: Array<{ text: string; seconds: number; selector: string | null }>;
+  }>;
   screenplayProseDiagnostics: (props: {
     screenplay: IAutoMovieScreenplayIndex | null;
     read: (relativePath: string) => string | null;
@@ -116,6 +127,11 @@ const run = (
  * 2. Place, time, participant and beat mismatches each emit their stable code.
  * 3. Comments, fences, malformed carriers and OMITTED carriers cannot become authority.
  * 4. A split scene path yields the same normalized comparison as a whole screenplay.
+ * 5. The carrier parser names every malformed line: a missing end marker, a
+ *    line without a field separator, a repeated location or story-time, a
+ *    participant without a mode, a blank beat, an unsupported field, a blank
+ *    location or story-time, and a repeated participant or beat; a timing
+ *    range contributes its opening number without a selector.
  */
 export const test_production_screenplay_prose_authority = (): void => {
   const exact = base();
@@ -211,6 +227,126 @@ export const test_production_screenplay_prose_authority = (): void => {
       hiddenCarrierIsAbsent: true,
       malformedCarrierIsInvalid: true,
       omittedCarrierIsUnexpected: true,
+    },
+  );
+
+  const parsed = (
+    lines: readonly string[],
+  ): { authority: boolean; errors: string[] } => {
+    const scene = parseScreenplayProse(
+      ["# SCN-1 - Signal", "@automovie-scene", ...lines].join("\n"),
+    )[0]!;
+    return {
+      authority: scene.authority !== null,
+      errors: scene.authorityErrors,
+    };
+  };
+  const valid = ["location: LOC-1", "story-time: NIGHT"];
+  TestValidator.equals(
+    "the carrier parser names every malformed authority line",
+    {
+      unterminated: parsed(valid),
+      noSeparator: parsed([...valid, "mood tense", "@end-automovie-scene"]),
+      repeatedLocation: parsed([
+        ...valid,
+        "location: LOC-2",
+        "@end-automovie-scene",
+      ]),
+      repeatedStoryTime: parsed([
+        ...valid,
+        "story-time: DAY",
+        "@end-automovie-scene",
+      ]),
+      participantWithoutMode: parsed([
+        ...valid,
+        "participant: CHAR-1",
+        "@end-automovie-scene",
+      ]),
+      blankBeat: parsed([...valid, "beat:", "@end-automovie-scene"]),
+      unsupportedField: parsed([
+        ...valid,
+        "mood: tense",
+        "@end-automovie-scene",
+      ]),
+      blankLocation: parsed([
+        "location:",
+        "story-time:",
+        "@end-automovie-scene",
+      ]),
+      missingStoryTime: parsed(["location: LOC-1", "@end-automovie-scene"]),
+      repeatedParticipant: parsed([
+        ...valid,
+        "participant: CHAR-1 on-screen",
+        "participant: CHAR-1 on-screen",
+        "@end-automovie-scene",
+      ]),
+      repeatedBeat: parsed([
+        ...valid,
+        "beat: BEAT-1",
+        "beat: BEAT-1",
+        "@end-automovie-scene",
+      ]),
+      exact: parsed([
+        ...valid,
+        "",
+        "participant: CHAR-1 on-screen",
+        "beat: BEAT-1",
+        "@end-automovie-scene",
+      ]),
+      rangeTiming: parseScreenplayProse(
+        "# SCN-1 - Signal\nThe hold lasts two to three seconds.",
+      )[0]!.timing,
+    },
+    {
+      unterminated: {
+        authority: false,
+        errors: ["@automovie-scene has no @end-automovie-scene"],
+      },
+      noSeparator: {
+        authority: true,
+        errors: ['authority line "mood tense" has no field separator'],
+      },
+      repeatedLocation: {
+        authority: true,
+        errors: ["location is declared twice"],
+      },
+      repeatedStoryTime: {
+        authority: true,
+        errors: ["story-time is declared twice"],
+      },
+      participantWithoutMode: {
+        authority: true,
+        errors: ['participant "CHAR-1" has no valid identity and mode'],
+      },
+      blankBeat: { authority: true, errors: ["beat identity is blank"] },
+      unsupportedField: {
+        authority: true,
+        errors: ['authority field "mood" is not supported'],
+      },
+      blankLocation: {
+        authority: true,
+        errors: [
+          "location is absent or blank",
+          "story-time is absent or blank",
+        ],
+      },
+      missingStoryTime: {
+        authority: false,
+        errors: ["story-time is absent or blank"],
+      },
+      repeatedParticipant: {
+        authority: true,
+        errors: ["a participant identity and mode pair is repeated"],
+      },
+      repeatedBeat: {
+        authority: true,
+        errors: ["a beat identity is repeated"],
+      },
+      exact: { authority: true, errors: [] },
+      rangeTiming: [
+        { text: "three", seconds: 3, selector: null },
+        { text: "two", seconds: 2, selector: null },
+      ],
     },
   );
 };

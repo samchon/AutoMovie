@@ -16,6 +16,10 @@ import { throwsError } from "../internal/predicates";
  * 1. Candidate, invalid, partial, cancelled and over-budget output all receive
  *    the same content-addressed raw receipt without sharing mutable bytes.
  * 2. Empty, oversized, changed or cross-attempt bytes are refused.
+ * 3. A plan with a blank identity, an unknown disposition, or an inexact
+ *    instant is refused, and a stored receipt whose version, identities,
+ *    text fields, instant, disposition, digest, ceiling, byte count, or path
+ *    have drifted is refused before its bytes are trusted.
  */
 export const test_production_repaint_raw_output = (): void => {
   const source = new Uint8Array([1, 2, 3, 4]);
@@ -119,5 +123,73 @@ export const test_production_repaint_raw_output = (): void => {
       /^sha256:[0-9a-f]{64}$/u.test(receipt.digest as AutoMovieContentDigest),
     ],
     [true, true, true, true, true],
+  );
+
+  const plan = (
+    overrides: Partial<Parameters<typeof planAutoMovieRepaintRawOutput>[0]>,
+  ): boolean =>
+    throwsError(() =>
+      planAutoMovieRepaintRawOutput({
+        productionId: "film",
+        shot: "opening",
+        requestId: "10000000-0000-4000-8000-000000000001",
+        attemptId: "20000000-0000-4000-8000-000000000001",
+        bytes: new Uint8Array([1]),
+        mediaType: "video/mp4",
+        disposition: "candidate-source",
+        retainedAt: "2026-09-04T00:00:00.000Z",
+        maximumBytes: 4,
+        ...overrides,
+      }),
+    );
+  const stored = (overrides: Partial<typeof receipt>): boolean =>
+    throwsError(() =>
+      assertAutoMovieRepaintRawOutput({
+        receipt: { ...receipt, ...overrides },
+        bytes: publications[0]!.bytes,
+        requestId: receipt.requestId,
+        attemptId: receipt.attemptId,
+      }),
+    );
+  TestValidator.equals(
+    "blank identities, foreign dispositions, inexact instants, and drifted receipts are refused",
+    {
+      blankProduction: plan({ productionId: " " }),
+      paddedShot: plan({ shot: " opening" }),
+      unknownDisposition: plan({
+        disposition: "retained" as "candidate-source",
+      }),
+      inexactInstant: plan({ retainedAt: "2026-09-04" }),
+      foreignVersion: stored({ version: 2 as 1 }),
+      blankShot: stored({ shot: "" }),
+      paddedMediaType: stored({ mediaType: "video/mp4 " }),
+      driftedInstant: stored({ retainedAt: "2026-09-04T00:00:00Z" }),
+      driftedDisposition: stored({
+        disposition: "retained" as "candidate-source",
+      }),
+      malformedDigest: stored({
+        digest: "sha256:short" as AutoMovieContentDigest,
+      }),
+      zeroCeiling: stored({ maximumBytes: 0 }),
+      driftedCount: stored({ bytes: 3 }),
+      driftedPath: stored({ path: "renditions/raw/other.bin" }),
+      exactReceiptPasses: stored({}),
+    },
+    {
+      blankProduction: true,
+      paddedShot: true,
+      unknownDisposition: true,
+      inexactInstant: true,
+      foreignVersion: true,
+      blankShot: true,
+      paddedMediaType: true,
+      driftedInstant: true,
+      driftedDisposition: true,
+      malformedDigest: true,
+      zeroCeiling: true,
+      driftedCount: true,
+      driftedPath: true,
+      exactReceiptPasses: false,
+    },
   );
 };

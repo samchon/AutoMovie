@@ -1074,6 +1074,26 @@ export const test_production_film_effect_runtime = (): void => {
     fps: 24_000 / 1_001,
     frameRate: { numerator: 24_000, denominator: 1_001 },
   });
+  // `1.2929583333333334 * 24000 / 1001` evaluates to `31.000000000000004`, so
+  // a projection that trusts `Math.ceil` of the product would start one frame
+  // late; the segment is long enough to hold the exact frame 31 answer.
+  const longFractionalClock = clock({
+    fps: 24_000 / 1_001,
+    frameRate: { numerator: 24_000, denominator: 1_001 },
+    segments: [
+      {
+        shot: "shot-a",
+        sourceInFrame: 0,
+        sourceOutFrame: 60,
+        startFrame: 0,
+        endFrame: 60,
+        headHandleFrames: 0,
+        tailHandleFrames: 0,
+        transitionIn: { kind: "cut" },
+        transitionOut: { kind: "cut" },
+      },
+    ],
+  });
   TestValidator.equals(
     "shot cues project onto the film clock by exact frame boundaries",
     namedFacts([
@@ -1133,6 +1153,20 @@ export const test_production_film_effect_runtime = (): void => {
           ) === "shot-a/a-frac:12..24",
       ],
       [
+        "ulpAboveBoundaryStartsNextFrame",
+        () =>
+          intervals([["shot-a", [shotCue("a-ulp", 1.7000000000000002, 2)]]]) ===
+          "shot-a/a-ulp:18..20",
+      ],
+      [
+        "productAboveBoundaryStaysOnFrame",
+        () =>
+          intervals(
+            [["shot-a", [shotCue("a-high", 1.2929583333333334, 2)]]],
+            longFractionalClock,
+          ) === "shot-a/a-high:31..48",
+      ],
+      [
         "nanStart",
         () =>
           projectionRefusal([["shot-a", [shotCue("a-nan", Number.NaN, 1)]]]) ===
@@ -1176,6 +1210,8 @@ export const test_production_film_effect_runtime = (): void => {
       unknownShotSkipped: true,
       absentShotSkipped: true,
       fractionalRate: true,
+      ulpAboveBoundaryStartsNextFrame: true,
+      productAboveBoundaryStaysOnFrame: true,
       nanStart: true,
       emptyInterval: true,
       negativeStart: true,
@@ -1210,6 +1246,10 @@ export const test_production_film_effect_runtime = (): void => {
     "shot review seconds map to the one film frame whose boundary owns them",
     namedFacts([
       ["ulpBelowInteger", () => filmFrame("shot-a", 0.57, hundredFps) === 57],
+      [
+        "ulpBelowBoundaryOwnsPriorFrame",
+        () => filmFrame("shot-a", 0.8999999999999999) === 8,
+      ],
       ["exactBoundary", () => filmFrame("shot-a", 0.3) === 3],
       ["insideFrame", () => filmFrame("shot-a", 0.35) === 3],
       ["lastOwnedSecond", () => filmFrame("shot-a", 2.999) === 29],
@@ -1246,6 +1286,7 @@ export const test_production_film_effect_runtime = (): void => {
     ]),
     {
       ulpBelowInteger: true,
+      ulpBelowBoundaryOwnsPriorFrame: true,
       exactBoundary: true,
       insideFrame: true,
       lastOwnedSecond: true,
