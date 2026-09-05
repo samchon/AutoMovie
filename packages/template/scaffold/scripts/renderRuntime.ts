@@ -4,6 +4,7 @@ import {
   type IAutoMovieProductionRenderTier,
   digestAutoMovieBytes,
   encodeAutoMoviePathSegment,
+  parseAutoMovieStructuredJson,
   readAutoMovieProductionOwnedFile,
   runProductionRenderJob,
 } from "@automovie/production";
@@ -15,7 +16,7 @@ import {
   repaintSequenceBaseline,
   repaintSequenceObservation,
 } from "../repaintSelectionReviews";
-import { inspectPublishedProxyBundle } from "./assertProxyBundle";
+import { inspectCurrentProxyPublication } from "./assertProxyBundle";
 import { preserveProductionEncoderCleanup } from "./preserveProductionEncoderCleanup";
 import {
   type IAutoMovieProductionRepaintSelection,
@@ -251,15 +252,14 @@ const executeProductionRenderCommand = async (
   };
 
   const readRendererJson = <T>(ownershipRoot: string, file: string): T =>
-    JSON.parse(
-      Buffer.from(
-        readAutoMovieProductionOwnedFile({
-          root: ownershipRoot,
-          directory: path.dirname(file),
-          relative: path.basename(file),
-        }),
-      ).toString("utf8"),
-    ) as T;
+    parseAutoMovieStructuredJson({
+      record: path.basename(file),
+      bytes: readAutoMovieProductionOwnedFile({
+        root: ownershipRoot,
+        directory: path.dirname(file),
+        relative: path.basename(file),
+      }),
+    }) as T;
 
   const compareCodeUnits = (left: string, right: string): number =>
     left < right ? -1 : left > right ? 1 : 0;
@@ -338,7 +338,7 @@ const executeProductionRenderCommand = async (
     inspectChunk: planningRuntime.inspectChunkPublication,
     ensureDirectory: ensureRenderPhysicalDirectory,
     filesystem: renderHost.filesystem,
-    inspectProxy: inspectPublishedProxyBundle,
+    inspectProxy: inspectCurrentProxyPublication,
     publicationFingerprint: productionRenderPublicationFingerprint,
     publishProxyBundle,
   });

@@ -2,6 +2,7 @@ import {
   type IAutoMovieProductionRenderJobPlan,
   type IAutoMovieProductionRenderLayer,
   compareCodeUnits,
+  parseAutoMovieStructuredJson,
 } from "@automovie/production";
 import { createHash, randomUUID } from "node:crypto";
 import fs from "node:fs";
@@ -144,9 +145,9 @@ export const publishRenderPlan = async (props: {
 }): Promise<IRenderPlanSnapshot> => {
   const ownership = capturePlanOwnership(props.base, props.target);
   const predecessor = props.predecessor?.generation ?? null;
-  assertPlanHead(props.base, props.target, props.predecessor);
+  assertRenderPlanHead(props.base, props.target, props.predecessor);
   await props.inputCurrent();
-  assertPlanHead(props.base, props.target, props.predecessor);
+  assertRenderPlanHead(props.base, props.target, props.predecessor);
   if (
     props.predecessor !== null &&
     props.predecessor.generation.startsWith("legacy-") === false &&
@@ -163,7 +164,7 @@ export const publishRenderPlan = async (props: {
   const destination = generationSlot(ownership.generations.path, predecessor);
   assertPlanOwnership(ownership);
   try {
-    assertPlanHead(props.base, props.target, props.predecessor);
+    assertRenderPlanHead(props.base, props.target, props.predecessor);
     assertPlanOwnership(ownership);
     const snapshot = createRenderGcFileSnapshot(props.base, destination, bytes);
     const published = parseGeneration(snapshot);
@@ -235,11 +236,10 @@ const parseGeneration = (
 } => {
   if (snapshot.kind !== "file")
     throw new Error("Render plan generation is not one physical file.");
-  const value = JSON.parse(
-    Buffer.from(
-      readCapturedRenderGcFile(snapshot, RENDER_PLAN_MAX_BYTES),
-    ).toString("utf8"),
-  ) as unknown;
+  const value = parseAutoMovieStructuredJson({
+    record: "render-plan-generation",
+    bytes: readCapturedRenderGcFile(snapshot, RENDER_PLAN_MAX_BYTES),
+  });
   if (
     isRecord(value) === false ||
     Object.keys(value).sort(compareCodeUnits).join(",") !==
@@ -271,13 +271,22 @@ const parseGeneration = (
 };
 
 const parsePlan = (bytes: Uint8Array): IAutoMovieProductionRenderJobPlan => {
-  const value = JSON.parse(Buffer.from(bytes).toString("utf8")) as unknown;
+  const value = parseAutoMovieStructuredJson({ record: "render-plan", bytes });
   if (isRecord(value) === false)
     throw new Error("Stored render plan is malformed.");
   return value as unknown as IAutoMovieProductionRenderJobPlan;
 };
 
-const assertPlanHead = (
+/**
+ * Refuse to proceed unless the stored plan head is still the captured one.
+ *
+ * A consumer that read a generation and then acted on it re-asserts the head
+ * here before trusting its result: the same generation id, the same physical
+ * file identity and version, the same bytes, and the same namespace, or the
+ * plan changed underneath and the result describes a generation that no longer
+ * exists.
+ */
+export const assertRenderPlanHead = (
   base: string,
   target: string,
   expected: IRenderPlanSnapshot | null,

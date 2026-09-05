@@ -1,6 +1,7 @@
 import {
-  type IAutoMovieProductionRenderCleanupDecision,
+  type IAutoMovieProductionRenderCleanupReceipt,
   digestAutoMovieBytes,
+  parseAutoMovieStructuredJson,
 } from "@automovie/production";
 import { createHash, randomUUID } from "node:crypto";
 import fs from "node:fs";
@@ -16,6 +17,17 @@ export const isRenderGcPreservedPath = (relative: string): boolean =>
     .replaceAll("\\", "/")
     .split("/")[0]
     ?.startsWith(RENDER_GC_PRESERVED_PREFIX) === true;
+
+/**
+ * Recognize the marker directory GC writes at the top of an ownership root.
+ *
+ * A marker is inventoried once, as a quarantine candidate bound to its
+ * evidence. A scan of the same root for ordinary content has to step over the
+ * directory, or the marker file is planned a second time under another kind
+ * and one physical file receives two dispositions.
+ */
+export const isRenderGcQuarantineMarkerPath = (relative: string): boolean =>
+  relative.replaceAll("\\", "/").split("/")[0] === "quarantine";
 
 export interface IRenderGcTargetSnapshot {
   base: IRenderGcPhysicalDirectory;
@@ -59,7 +71,7 @@ export type IRenderQuarantineMarker = IRenderQuarantineMarkerBase &
     | { version: 1 }
     | {
         version: 2;
-        adjudication: IAutoMovieProductionRenderCleanupDecision["receipt"];
+        adjudication: IAutoMovieProductionRenderCleanupReceipt;
         logical: string;
       }
   );
@@ -72,9 +84,11 @@ export interface IRenderQuarantineEvidence {
 
 /** One GC candidate bound to its optional private quarantine evidence. */
 export interface IRenderQuarantineGcCandidate {
-  adjudication: IAutoMovieProductionRenderCleanupDecision["receipt"] | null;
+  adjudication: IAutoMovieProductionRenderCleanupReceipt | null;
   bytes: number;
   evidence: IRenderGcTargetSnapshot | null;
+  /** The marker's content identity, folded with its evidence when bound. */
+  fingerprint: `sha256:${string}`;
   marker: IRenderGcTargetSnapshot;
 }
 
@@ -273,9 +287,43 @@ export const removeCapturedRenderGcTarget = (props: {
   });
 };
 
+/**
+ * Build the marker that will publicly locate one privately preserved target.
+ *
+ * A marker written for an explicit GC decision carries that decision's receipt
+ * and the logical path it adjudicated; a marker written by render-time recovery
+ * has no receipt to carry and stays at version 1.
+ */
+export const createRenderQuarantineMarker = (
+  props: IRenderQuarantineMarkerBase & {
+    adjudication?: IAutoMovieProductionRenderCleanupReceipt;
+  },
+): IRenderQuarantineMarker => {
+  const base: IRenderQuarantineMarkerBase = {
+    contentFingerprint: props.contentFingerprint,
+    kind: props.kind,
+    original: props.original,
+    preserved: props.preserved,
+    targetIdentity: props.targetIdentity,
+  };
+  return props.adjudication === undefined
+    ? { version: 1, ...base }
+    : {
+        version: 2,
+        adjudication: props.adjudication,
+        logical: props.adjudication.path,
+        ...base,
+      };
+};
+
+/** The one canonical byte form a marker is written in and read back against. */
+export const encodeRenderQuarantineMarker = (
+  marker: IRenderQuarantineMarker,
+): Buffer => Buffer.from(`${JSON.stringify(marker, null, 2)}\n`);
+
 /** Quarantine only the exact captured target through a private staging path. */
 export const quarantineCapturedRenderTarget = (props: {
-  adjudication?: IAutoMovieProductionRenderCleanupDecision["receipt"];
+  adjudication?: IAutoMovieProductionRenderCleanupReceipt;
   destination: string;
   isolated: string;
   quarantine: string;
@@ -300,14 +348,8 @@ export const quarantineCapturedRenderTarget = (props: {
     destinationParent,
     "render quarantine destination",
   );
-  const marker: IRenderQuarantineMarker = {
-    ...(props.adjudication === undefined
-      ? { version: 1 as const }
-      : {
-          version: 2 as const,
-          adjudication: props.adjudication,
-          logical: props.adjudication.path,
-        }),
+  const marker = createRenderQuarantineMarker({
+    adjudication: props.adjudication,
     contentFingerprint: isolated.moved.contentFingerprint,
     kind: isolated.moved.kind,
     original: ownedRelativePath(
@@ -321,12 +363,11 @@ export const quarantineCapturedRenderTarget = (props: {
       "render quarantine evidence",
     ),
     targetIdentity: isolated.moved.targetIdentity,
-  };
-  const markerBytes = Buffer.from(`${JSON.stringify(marker, null, 2)}\n`);
+  });
   const published = createRenderGcFileSnapshot(
     props.snapshot.base.path,
     destination,
-    markerBytes,
+    encodeRenderQuarantineMarker(marker),
   );
   assertRenderGcTarget(isolated.moved);
   assertRenderGcTarget(published);
@@ -352,7 +393,10 @@ export const parseRenderQuarantineMarker = (
   const buffer = Buffer.from(bytes);
   let value: unknown;
   try {
-    value = JSON.parse(buffer.toString("utf8"));
+    value = parseAutoMovieStructuredJson({
+      record: "render-quarantine-marker",
+      bytes: buffer,
+    });
   } catch {
     throw new Error(`Render quarantine marker "${label}" is invalid.`);
   }
@@ -403,14 +447,11 @@ export const parseRenderQuarantineMarker = (
     preserved: value.preserved,
     targetIdentity: value.targetIdentity,
   };
-  let marker: IRenderQuarantineMarker;
-  if (value.version === 1) marker = { version: 1, ...markerBase };
-  else {
-    const adjudication =
-      value.adjudication as IAutoMovieProductionRenderCleanupDecision["receipt"];
+  let adjudication: IAutoMovieProductionRenderCleanupReceipt | undefined;
+  if (value.version === 2) {
+    adjudication =
+      value.adjudication as IAutoMovieProductionRenderCleanupReceipt;
     if (
-      typeof value.logical !== "string" ||
-      validOwnedRelativePath(value.logical) === false ||
       adjudication.path !== value.logical ||
       adjudication.generation !== value.targetIdentity ||
       adjudication.fingerprint !== value.contentFingerprint
@@ -418,16 +459,9 @@ export const parseRenderQuarantineMarker = (
       throw new Error(
         `Render quarantine marker "${label}" does not bind its adjudication receipt.`,
       );
-    marker = {
-      version: 2,
-      adjudication,
-      logical: value.logical,
-      ...markerBase,
-    };
   }
-  if (
-    buffer.equals(Buffer.from(`${JSON.stringify(marker, null, 2)}\n`)) === false
-  )
+  const marker = createRenderQuarantineMarker({ ...markerBase, adjudication });
+  if (buffer.equals(encodeRenderQuarantineMarker(marker)) === false)
     throw new Error(`Render quarantine marker "${label}" is not canonical.`);
   return marker;
 };
@@ -504,6 +538,14 @@ export const inventoryRenderQuarantineCandidates = (
       adjudication: entry.adjudication,
       bytes: entry.marker.bytes + (evidence?.bytes ?? 0),
       evidence,
+      fingerprint:
+        evidence === null
+          ? entry.marker.contentFingerprint
+          : digestAutoMovieBytes(
+              Buffer.from(
+                `${entry.marker.contentFingerprint}\0${evidence.contentFingerprint}`,
+              ),
+            ),
       marker: entry.marker,
     };
   });
@@ -1105,7 +1147,7 @@ const isPlainObject = (value: unknown): value is Record<string, unknown> =>
 
 const isRenderCleanupReceipt = (
   value: unknown,
-): value is IAutoMovieProductionRenderCleanupDecision["receipt"] =>
+): value is IAutoMovieProductionRenderCleanupReceipt =>
   isPlainObject(value) &&
   Object.keys(value).sort(compare).join("\0") ===
     [
@@ -1141,7 +1183,9 @@ const isRenderCleanupReceipt = (
   validOwnedRelativePath(value.path) &&
   typeof value.generation === "string" &&
   value.generation.length !== 0 &&
-  /[\r\n\0]/u.test(value.generation) === false &&
+  // A generation is a physical target identity, and that identity joins its
+  // device and inode with NUL on purpose; only line breaks are foreign to it.
+  /[\r\n]/u.test(value.generation) === false &&
   typeof value.fingerprint === "string" &&
   /^sha256:[0-9a-f]{64}$/u.test(value.fingerprint) &&
   value.state === "integrity-failed" &&

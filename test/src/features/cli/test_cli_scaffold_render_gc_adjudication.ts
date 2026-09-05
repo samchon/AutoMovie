@@ -49,6 +49,7 @@ interface IRenderGcTransactionModule {
       path: string;
       digest: AutoMovieContentDigest | null;
     }>;
+    retained: ReadonlySet<string>;
   }) => {
     observation: {
       state: string;
@@ -104,13 +105,13 @@ export const test_cli_scaffold_render_gc_adjudication = (): void => {
   const runtimeModule = loadSourceModule<IRenderGcTransactionModule>(
     path.resolve(
       __dirname,
-      "../../../../packages/template/scaffold/scripts/renderGcRuntime.ts",
+      "../../../../packages/template/scaffold/scripts/renderGcCollection.ts",
     ),
   );
   const schedulerModule = loadSourceModule<IRenderSchedulerModule>(
     path.resolve(
       __dirname,
-      "../../../../packages/template/scaffold/scripts/renderPlanningRuntime.ts",
+      "../../../../packages/template/scaffold/scripts/renderChunkInspection.ts",
     ),
   );
   const chunk = { id: digest("a"), slot: "beauty:0000" };
@@ -313,10 +314,12 @@ export const test_cli_scaffold_render_gc_adjudication = (): void => {
             digest: digest("a"),
           },
         ],
+        retained: new Set<string>(),
       }),
       released: runtimeModule.quarantinedRenderChunkPointerProtection({
         adjudication: quarantinedPointer,
         candidates: [],
+        retained: new Set<string>(),
       }),
     },
     {

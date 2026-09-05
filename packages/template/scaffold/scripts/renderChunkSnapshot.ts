@@ -13,6 +13,7 @@ import {
   type IAutoMovieProductionRenderGcCandidate,
   assertProductionVideoProfile,
   digestAutoMovieBytes,
+  parseAutoMovieStructuredJson,
   probeProductionMedia,
   probeProductionVideoMp4,
   resolveProductionVideoProfile,
@@ -295,9 +296,10 @@ export const loadCapturedRenderChunkPublication = (
       evidence: {
         version: 1,
         shot: semantic.shot,
-        mask: JSON.parse(
-          Buffer.from(sidecar).toString("utf8"),
-        ) as IAutoMovieSemanticMask,
+        mask: parseAutoMovieStructuredJson({
+          record: "semantic-mask-sidecar",
+          bytes: sidecar,
+        }) as IAutoMovieSemanticMask,
         coverage: semantic.coverage,
       },
       resident: { path: semantic.sidecar.path, bytes: sidecar },
@@ -453,14 +455,6 @@ export interface IRenderChunkGcInventorySeams {
   filesystem: Pick<typeof fs, "existsSync" | "lstatSync" | "readdirSync">;
 }
 
-/** The real seams every generated render command inventories through. */
-export const RENDER_CHUNK_GC_INVENTORY_SEAMS: IRenderChunkGcInventorySeams = {
-  assertCaptured: assertCapturedRenderTarget,
-  captureTarget: captureRenderGcTarget,
-  capturePublication: captureRenderChunkPublicationFromPointer,
-  filesystem: fs,
-};
-
 /**
  * Inventory pointer/tree GC candidates and retain only an exact current pair.
  *
@@ -469,6 +463,11 @@ export const RENDER_CHUNK_GC_INVENTORY_SEAMS: IRenderChunkGcInventorySeams = {
  * or is gone), the pair is a changed-during-read observation: the pointer
  * carries an observation conflict rather than falling through to the planner's
  * unreferenced default, which would remove it.
+ *
+ * One pointer name carries one digest and authenticates only a tree named by
+ * that digest, so two pointers of one tier can never claim one tree; the
+ * inventory therefore keys authenticated trees by target without a duplicate
+ * check.
  */
 export const inventoryRenderChunkGarbage = (props: {
   assertReceipt: (
@@ -592,17 +591,6 @@ export const inventoryRenderChunkGarbage = (props: {
       unresolvedDigests.add(digest);
       continue;
     }
-    if (authenticatedTrees.has(publication.tree.target)) {
-      candidate.observation = {
-        state: "observation-conflict",
-        authority: "none",
-        stage: "reference",
-        reason:
-          "multiple captured chunk pointers claim the same publication tree",
-      };
-      unresolvedDigests.add(digest);
-      continue;
-    }
     const chunk = props.chunks.get(digest);
     let verified = false;
     if (chunk !== undefined) {
@@ -716,13 +704,22 @@ export const inventoryRenderChunkGarbage = (props: {
             "the tree observed through this current pointer differs from its recaptured generation",
         };
       if (authenticated === undefined && candidate.observation === null) {
-        if (
-          observeRenderOwnerRecovery({
+        // The owner check recaptures the tree between its two observations and
+        // once more after them; a tree that moves under that fence is not
+        // reclaimable and not proven foreign, so it is reported as unavailable
+        // rather than ending the inventory for every sibling.
+        let recovery: "preserved" | "reclaimable" | "unavailable";
+        try {
+          recovery = observeRenderOwnerRecovery({
             between: () => seams.assertCaptured(snapshot),
             observe: props.observeProcessOwner,
             owner: identity.owner,
-          }).state !== "reclaimable"
-        )
+          }).state;
+          if (recovery === "reclaimable") seams.assertCaptured(snapshot);
+        } catch {
+          recovery = "unavailable";
+        }
+        if (recovery === "preserved")
           candidate.observation = {
             state: "foreign-generation",
             authority: "none",
@@ -730,7 +727,14 @@ export const inventoryRenderChunkGarbage = (props: {
             reason:
               "the temporary tree owner is not proved reclaimable by this process generation",
           };
-        else seams.assertCaptured(snapshot);
+        else if (recovery === "unavailable")
+          candidate.observation = {
+            state: "unavailable",
+            authority: "none",
+            stage: "capture",
+            reason:
+              "the temporary tree generation changed while its owner was observed",
+          };
       }
       entries.push({ candidate, snapshot });
       if (authenticated?.current === true && exact) {
@@ -848,7 +852,10 @@ const parsePublicationReceipt = (
 ): RenderChunkPublicationReceipt => {
   let value: unknown;
   try {
-    value = JSON.parse(Buffer.from(bytes).toString("utf8")) as unknown;
+    value = parseAutoMovieStructuredJson({
+      record: "render-chunk-receipt",
+      bytes,
+    });
   } catch {
     throw new Error("Render chunk pointer has no trustworthy receipt.");
   }
