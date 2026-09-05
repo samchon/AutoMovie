@@ -8,9 +8,26 @@ const inventoryModule = [
   "build",
   "workspacePackageInventory",
 ].join("/");
+interface IPlan {
+  readonly packages: ReadonlyArray<{
+    readonly key: string;
+    readonly directory: string;
+    readonly name: string;
+  }>;
+  readonly excluded: ReadonlyArray<{
+    readonly directory: string;
+    readonly name: string;
+    readonly private: boolean;
+    readonly reason: string;
+  }>;
+  readonly diagnostics: ReadonlyArray<{
+    readonly code: string;
+    readonly subject: string;
+  }>;
+}
 const planWorkspacePackageInventory = (
   require(inventoryModule) as {
-    readonly planWorkspacePackageInventory: (props: unknown) => unknown;
+    readonly planWorkspacePackageInventory: (props: unknown) => IPlan;
   }
 ).planWorkspacePackageInventory;
 
@@ -34,14 +51,17 @@ const manifest = (
   directory: string,
   name: string = `@example/${directory}`,
   privatePackage: boolean = false,
+  dependencies: readonly string[] = [],
 ): {
   readonly directory: string;
   readonly name: string;
   readonly private: boolean;
+  readonly dependencies: readonly string[];
 } => ({
   directory,
   name,
   private: privatePackage,
+  dependencies,
 });
 
 /**
@@ -55,6 +75,10 @@ const manifest = (
  * 3. Duplicate declaration and manifest identities are reported rather than
  *    producing an ambiguous archive plan.
  * 4. An empty declared workspace produces an empty plan.
+ * 5. The packed set is closed under workspace dependencies: a packed package
+ *    that depends on an excluded or undeclared workspace member is refused
+ *    with the member named, while a packed dependency, an external dependency,
+ *    and an excluded package's own dependencies raise nothing.
  */
 export const test_workspace_package_inventory = (): void => {
   const planned = planWorkspacePackageInventory({
@@ -226,4 +250,66 @@ export const test_workspace_package_inventory = (): void => {
     planWorkspacePackageInventory({ declarations: [], manifests: [] }),
     { packages: [], excluded: [], diagnostics: [] },
   );
+
+  const closed = planWorkspacePackageInventory({
+    declarations: [
+      declaration("core"),
+      declaration("runtime"),
+      {
+        directory: "application",
+        name: "@example/application",
+        disposition: "exclude",
+        reason: "private application",
+      },
+    ],
+    manifests: [
+      manifest("core", "@example/core", false, ["typescript"]),
+      manifest("runtime", "@example/runtime", false, [
+        "@example/core",
+        "three",
+      ]),
+      manifest("application", "@example/application", true, [
+        "@example/runtime",
+        "@example/nowhere",
+      ]),
+    ],
+  });
+  TestValidator.equals("closed packed set", closed.diagnostics, []);
+  TestValidator.equals(
+    "closed packed set keeps its packages",
+    closed.packages.map((entry) => entry.key),
+    ["core", "runtime"],
+  );
+
+  const open = planWorkspacePackageInventory({
+    declarations: [
+      declaration("runtime"),
+      {
+        directory: "creator",
+        name: "@example/creator",
+        disposition: "exclude",
+        reason: "front door",
+      },
+    ],
+    manifests: [
+      manifest("runtime", "@example/runtime", false, [
+        "@example/creator",
+        "@example/extra",
+        "left-pad",
+      ]),
+      manifest("creator", "@example/creator"),
+      manifest("extra"),
+    ],
+  });
+  TestValidator.equals("open packed set", open.diagnostics, [
+    { code: "undeclared-workspace-package", subject: "extra" },
+    {
+      code: "unpacked-workspace-dependency",
+      subject: "runtime:@example/creator",
+    },
+    {
+      code: "unpacked-workspace-dependency",
+      subject: "runtime:@example/extra",
+    },
+  ]);
 };

@@ -96,12 +96,24 @@ const workspacePackageManifests = (): IWorkspacePackageManifest[] =>
       const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf8")) as {
         name?: unknown;
         private?: unknown;
+        dependencies?: unknown;
+        optionalDependencies?: unknown;
+        peerDependencies?: unknown;
       };
       return [
         {
           directory: entry.name,
           name: typeof manifest.name === "string" ? manifest.name : "",
           private: manifest.private === true,
+          dependencies: [
+            manifest.dependencies,
+            manifest.optionalDependencies,
+            manifest.peerDependencies,
+          ].flatMap((section) =>
+            typeof section === "object" && section !== null
+              ? Object.keys(section)
+              : [],
+          ),
         },
       ];
     });

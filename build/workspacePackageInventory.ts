@@ -19,6 +19,12 @@ export interface IWorkspacePackageManifest {
   readonly directory: string;
   readonly name: string;
   readonly private: boolean;
+  /**
+   * Every runtime dependency name the manifest declares: `dependencies`,
+   * `optionalDependencies`, and `peerDependencies`. Development dependencies
+   * are not packed and therefore not listed.
+   */
+  readonly dependencies: readonly string[];
 }
 
 export interface IWorkspacePackageExclusion {
@@ -37,7 +43,8 @@ export type WorkspacePackageInventoryDiagnosticCode =
   | "manifest-name-mismatch"
   | "missing-workspace-package"
   | "private-package-selected"
-  | "undeclared-workspace-package";
+  | "undeclared-workspace-package"
+  | "unpacked-workspace-dependency";
 
 export interface IWorkspacePackageInventoryDiagnostic {
   readonly code: WorkspacePackageInventoryDiagnosticCode;
@@ -158,6 +165,16 @@ const repeated = (
  * The plan keeps exclusions observable and returns every identity fault instead
  * of beginning a partial pack. The command adapter decides how to present and
  * fail those diagnostics after it has read the workspace manifests.
+ *
+ * The packed set must also be closed under workspace dependencies. `pnpm pack`
+ * rewrites a `workspace:^` range to a plain semver range, so a packed package
+ * whose runtime dependency is a workspace member left out of the archive would
+ * be resolved from the public registry at a version this monorepo has never
+ * published. The comment on the archive population promised that closure for
+ * years while nothing checked it; `unpacked-workspace-dependency` names the
+ * packed package and the member it needs, whether that member is excluded or
+ * undeclared. A dependency on a name no manifest carries is an external
+ * package and is not the inventory's concern.
  */
 export const planWorkspacePackageInventory = (props: {
   readonly declarations: readonly IWorkspacePackageDeclaration[];
@@ -235,7 +252,12 @@ export const planWorkspacePackageInventory = (props: {
       continue;
     }
     if (declaration.disposition === "exclude") {
-      excluded.push({ ...manifest, reason: declaration.reason });
+      excluded.push({
+        directory: manifest.directory,
+        name: manifest.name,
+        private: manifest.private,
+        reason: declaration.reason,
+      });
       continue;
     }
     if (manifest.private) {
@@ -263,6 +285,17 @@ export const planWorkspacePackageInventory = (props: {
         subject: manifest.directory,
       });
     }
+
+  const packedNames = new Set(packages.map((entry) => entry.name));
+  for (const entry of packages) {
+    const manifest = manifestsByDirectory.get(entry.directory)!;
+    for (const dependency of manifest.dependencies)
+      if (manifestNames.has(dependency) && !packedNames.has(dependency))
+        diagnostics.push({
+          code: "unpacked-workspace-dependency",
+          subject: `${entry.directory}:${dependency}`,
+        });
+  }
 
   return { packages, excluded, diagnostics };
 };
