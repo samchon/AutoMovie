@@ -1,5 +1,4 @@
 import {
-  productionPhonemesToVisemes,
   productionSoundSpectrogram,
   productionSoundWaveform,
   renderProductionSound,
@@ -16,11 +15,11 @@ import {
   type AutoMovieProductionProject,
   type IAutoMovieProductionAudioAssetIdentity,
   type IAutoMovieProductionRenderJobPlan,
-  assertAutoMovieExternalGeneratorTermsAt,
   decodeProductionAudioAsset,
   digestAutoMovieBytes,
   encodeAutoMoviePathSegment,
   normalizeProductionH264Mp4,
+  parseAutoMovieStructuredJson,
   readAutoMovieFilmTimeline,
   trimProductionAudioPresentation,
 } from "@automovie/production";
@@ -37,10 +36,10 @@ import {
 import {
   type IProductionDialogueCacheFinding,
   type IProductionDialogueCacheIdentity,
-  type IProductionDialogueCacheRecord,
-  PRODUCTION_DIALOGUE_CACHE_VERSION,
+  generateProductionDialogueCache,
   inspectProductionDialogueCache,
   productionDialogueCacheIdentity,
+  projectProductionDialogueReceipt,
   validateProductionDialogueCache,
 } from "./dialogueCacheTextIdentity";
 import {
@@ -303,7 +302,10 @@ export const createProductionSoundRuntime = (props: {
     if (lead !== 0x7b) return null;
     let metadata: unknown;
     try {
-      metadata = JSON.parse(Buffer.from(bytes).toString("utf8"));
+      metadata = parseAutoMovieStructuredJson({
+        record: "placeholder-audio-stem",
+        bytes,
+      });
     } catch {
       return null;
     }
@@ -675,32 +677,6 @@ export const createProductionSoundRuntime = (props: {
     runtimeAssets: IAutoMovieProductionTtsReceipt["runtimeAssets"];
   }
 
-  const publicDialogueCacheRecord = ({
-    requestText: _requestText,
-    ...record
-  }: IProductionDialogueCacheRecord): Omit<
-    IProductionDialogueCacheRecord,
-    "requestText"
-  > => record;
-
-  const dialogueReceipt = (
-    line: IAutoMovieProductionSoundPlan["dialogue"][number],
-    cached: Extract<
-      ReturnType<typeof validateProductionDialogueCache>,
-      { status: "current" }
-    >["cached"],
-  ): IAutoMovieProductionTtsReceipt => ({
-    ...publicDialogueCacheRecord(cached.record),
-    version: 6,
-    line: line.id,
-    visemes: productionPhonemesToVisemes({
-      chunks: cached.record.phonemeChunks,
-      sourceSamples: cached.record.sourceSamples,
-      startFrame: line.startFrame,
-      endFrame: line.endFrame,
-    }),
-  });
-
   const dialogueCacheObservationFailure = (
     line: string,
     finding: Exclude<
@@ -852,100 +828,18 @@ export const createProductionSoundRuntime = (props: {
         let loadedRuntime = resolved.runtime;
         if (cached === undefined) {
           loadedRuntime ??= await currentRuntime();
-          const generatedAt = new Date(props.host.now()).toISOString();
-          assertAutoMovieExternalGeneratorTermsAt({
-            termsCheckedAt: selection.generatorProvenance.termsCheckedAt,
-            occurredAt: generatedAt,
-            label: "Kokoro dialogue generation generatorProvenance",
-          });
-          const chunks: Float32Array[] = [];
-          const phonemes: string[] = [];
-          const phonemeChunks: IProductionDialogueCacheRecord["phonemeChunks"] =
-            [];
-          let sourceSampleRate: number | undefined;
-          let sourceOffset = 0;
-          const generated = await loadedRuntime.runtime.synthesize({
-            text: identity.requestText,
-            voice: selection.voice,
-            speed: selection.speed,
-          });
-          for (const chunk of generated) {
-            if (
-              Number.isSafeInteger(chunk.sampleRate) === false ||
-              chunk.sampleRate <= 0
-            )
-              throw new Error(
-                `Kokoro line "${line.id}" returned an invalid PCM sample rate.`,
-              );
-            if (
-              sourceSampleRate !== undefined &&
-              sourceSampleRate !== chunk.sampleRate
-            )
-              throw new Error(
-                `Kokoro line "${line.id}" changed PCM sample rate mid-stream.`,
-              );
-            sourceSampleRate = chunk.sampleRate;
-            const audio = Float32Array.from(chunk.audio);
-            if (audio.length === 0)
-              throw new Error(
-                `Kokoro line "${line.id}" returned an empty PCM chunk.`,
-              );
-            for (let index = 0; index < audio.length; ++index)
-              if (Number.isFinite(audio[index]) === false)
-                throw new Error(
-                  `Kokoro line "${line.id}" returned a non-finite PCM sample at source index ${sourceOffset + index}.`,
-                );
-            chunks.push(audio);
-            phonemes.push(chunk.phonemes);
-            phonemeChunks.push({
-              phonemes: chunk.phonemes,
-              startSample: sourceOffset,
-              endSample: sourceOffset + audio.length,
-            });
-            sourceOffset += audio.length;
-          }
-          if (sourceSampleRate === undefined || chunks.length === 0)
-            throw new Error(`Kokoro synthesized no PCM for line "${line.id}".`);
-          const samples = concatenateProductionFloat32(chunks);
-          const bytes = new Uint8Array(
-            samples.buffer,
-            samples.byteOffset,
-            samples.byteLength,
-          );
-          const record: IProductionDialogueCacheRecord = {
-            version: PRODUCTION_DIALOGUE_CACHE_VERSION,
-            requestText: identity.requestText,
-            cacheKey: identity.key,
-            model: selection.model,
-            modelRevision: selection.modelRevision,
-            voice: selection.voice,
-            generatorProvenance: selection.generatorProvenance,
-            generatedAt,
-            sourceSampleRate,
-            sourceSamples: samples.length,
-            pcmDigest: digestAutoMovieBytes(bytes),
-            phonemes: phonemes.join(""),
-            phonemeChunks,
-            runtimeAssets,
-          };
-          const receipt = Buffer.from(
-            `${JSON.stringify(record, null, 2)}\n`,
-            "utf8",
-          );
-          const stagedValidation = validateProductionDialogueCache({
-            snapshot: { pcm: bytes, receipt },
+          const generation = await generateProductionDialogueCache({
+            line: line.id,
             identity,
-            runtimeAssets,
             selection,
+            runtimeAssets,
+            generatedAt: new Date(props.host.now()).toISOString(),
+            synthesize: loadedRuntime.runtime.synthesize,
           });
-          if (stagedValidation.status !== "current")
-            throw new Error(
-              `Kokoro generation for line "${line.id}" failed cache protocol validation before publication: ${stagedValidation.reason}.`,
-            );
           const published = publishDialogueCache({
             base: cacheRoot,
-            pcm: bytes,
-            receipt,
+            pcm: generation.pcm,
+            receipt: generation.receipt,
             target: identity.path,
           });
           const validation = validateProductionDialogueCache({
@@ -961,7 +855,7 @@ export const createProductionSoundRuntime = (props: {
           cached = validation.cached;
         }
         pcm.set(line.id, cached.samples);
-        receipts.push(dialogueReceipt(line, cached));
+        receipts.push(projectProductionDialogueReceipt({ line, cached }));
         props.progress("sound.dialogue.complete", { line: line.id });
       }
       return { pcm, receipts };
@@ -994,13 +888,12 @@ export const createProductionSoundRuntime = (props: {
       [...new Set(timeline.segments.map((segment) => segment.shot))].map(
         (shot) => [
           shot,
-          JSON.parse(
-            Buffer.from(
-              project.readGeneratedFile(
-                `shots/${encodeAutoMoviePathSegment(shot)}.json`,
-              ),
-            ).toString("utf8"),
-          ) as IAutoMovieCompiledShotSource,
+          parseAutoMovieStructuredJson({
+            record: "compiled-shot",
+            bytes: project.readGeneratedFile(
+              `shots/${encodeAutoMoviePathSegment(shot)}.json`,
+            ),
+          }) as IAutoMovieCompiledShotSource,
         ],
       ),
     );
@@ -1115,7 +1008,9 @@ export const createProductionSoundRuntime = (props: {
       if (finding.status !== "current")
         throw dialogueCacheObservationFailure(line.id, finding);
       dialogueSnapshots.push(finding.snapshot);
-      receipts.push(dialogueReceipt(line, finding.cached));
+      receipts.push(
+        projectProductionDialogueReceipt({ line, cached: finding.cached }),
+      );
       return [`audio-cache/kokoro/${identity.key.slice(7)}`];
     });
     const retention: IProductionSoundCacheRetention = {
@@ -1374,7 +1269,7 @@ export const createProductionRenderEncoderRuntime = (props: {
           let initialized = false;
           let finalizeAttempted = false;
           let failure: { error: unknown } | undefined;
-          let output = new Uint8Array();
+          let output: Uint8Array = new Uint8Array();
           try {
             encoder.width = plan.frameFormat.width;
             encoder.height = plan.frameFormat.height;
@@ -1524,18 +1419,4 @@ export const encodeProductionSoundRaster = (raster: {
   png.gamma = 0.45455;
   png.data = Buffer.from(raster.rgba);
   return PNG.sync.write(png);
-};
-
-export const concatenateProductionFloat32 = (
-  chunks: readonly Float32Array[],
-): Float32Array => {
-  const output = new Float32Array(
-    chunks.reduce((total, chunk) => total + chunk.length, 0),
-  );
-  let offset = 0;
-  for (const chunk of chunks) {
-    output.set(chunk, offset);
-    offset += chunk.length;
-  }
-  return output;
 };

@@ -1,10 +1,13 @@
+import { productionPhonemesToVisemes } from "@automovie/engine";
 import type {
   AutoMovieContentDigest,
+  IAutoMovieProductionDialogueLine,
   IAutoMovieProductionTtsReceipt,
 } from "@automovie/interface";
 import {
   assertAutoMovieExternalGeneratorTermsAt,
   digestAutoMovieBytes,
+  parseAutoMovieStructuredJson,
 } from "@automovie/production";
 import path from "node:path";
 import { isDeepStrictEqual } from "node:util";
@@ -14,6 +17,20 @@ import type { IAutoMovieDialogueSynthesisSelection } from "./productionConfigura
 
 /** Current private cache protocol. A lossy v5 generation is never relabelled. */
 export const PRODUCTION_DIALOGUE_CACHE_VERSION = 6 as const;
+
+/** One synthesized stream chunk on the generator's own PCM clock. */
+export interface IProductionDialogueGenerationChunk {
+  audio: ArrayLike<number>;
+  phonemes: string;
+  sampleRate: number;
+}
+
+/** One sealed generation: the private record and the exact bytes it describes. */
+export interface IProductionDialogueCacheGeneration {
+  record: IProductionDialogueCacheRecord;
+  pcm: Uint8Array;
+  receipt: Uint8Array;
+}
 
 export interface IProductionDialogueCacheIdentity {
   requestText: string;
@@ -91,6 +108,142 @@ export const productionDialogueCacheIdentity = (props: {
     ),
   );
   return { requestText, key, path: path.join(props.cacheRoot, key.slice(7)) };
+};
+
+/**
+ * Execute one exact request and seal its generation before publication.
+ *
+ * The synthesizer is handed `identity.requestText` and no other spelling of
+ * the line exists past this point: the record's request text, its key, the
+ * ordered phoneme chunks, and the joined aggregate all derive from that one
+ * identity and one stream, and the sealed bytes are validated exactly as the
+ * reader will validate them, so a generation that could not be read back as
+ * current is never published.
+ */
+export const generateProductionDialogueCache = async (props: {
+  line: string;
+  identity: IProductionDialogueCacheIdentity;
+  selection: IAutoMovieDialogueSynthesisSelection;
+  runtimeAssets: IAutoMovieProductionTtsReceipt["runtimeAssets"];
+  /** ISO-8601 UTC instant captured immediately before the generator call. */
+  generatedAt: string;
+  synthesize: (request: {
+    text: string;
+    voice: string;
+    speed: number;
+  }) => Promise<readonly IProductionDialogueGenerationChunk[]>;
+}): Promise<IProductionDialogueCacheGeneration> => {
+  assertAutoMovieExternalGeneratorTermsAt({
+    termsCheckedAt: props.selection.generatorProvenance.termsCheckedAt,
+    occurredAt: props.generatedAt,
+    label: "Kokoro dialogue generation generatorProvenance",
+  });
+  const generated = await props.synthesize({
+    text: props.identity.requestText,
+    voice: props.selection.voice,
+    speed: props.selection.speed,
+  });
+  const chunks: Float32Array[] = [];
+  const phonemeChunks: IProductionDialogueCacheRecord["phonemeChunks"] = [];
+  let sourceSampleRate: number | undefined;
+  let sourceOffset = 0;
+  for (const chunk of generated) {
+    if (
+      Number.isSafeInteger(chunk.sampleRate) === false ||
+      chunk.sampleRate <= 0
+    )
+      throw new Error(
+        `Kokoro line "${props.line}" returned an invalid PCM sample rate.`,
+      );
+    if (sourceSampleRate !== undefined && sourceSampleRate !== chunk.sampleRate)
+      throw new Error(
+        `Kokoro line "${props.line}" changed PCM sample rate mid-stream.`,
+      );
+    sourceSampleRate = chunk.sampleRate;
+    const audio = Float32Array.from(chunk.audio);
+    if (audio.length === 0)
+      throw new Error(
+        `Kokoro line "${props.line}" returned an empty PCM chunk.`,
+      );
+    for (let index = 0; index < audio.length; ++index)
+      if (Number.isFinite(audio[index]) === false)
+        throw new Error(
+          `Kokoro line "${props.line}" returned a non-finite PCM sample at source index ${sourceOffset + index}.`,
+        );
+    chunks.push(audio);
+    phonemeChunks.push({
+      phonemes: chunk.phonemes,
+      startSample: sourceOffset,
+      endSample: sourceOffset + audio.length,
+    });
+    sourceOffset += audio.length;
+  }
+  if (sourceSampleRate === undefined)
+    throw new Error(`Kokoro synthesized no PCM for line "${props.line}".`);
+  const samples = new Float32Array(sourceOffset);
+  let written = 0;
+  for (const chunk of chunks) {
+    samples.set(chunk, written);
+    written += chunk.length;
+  }
+  const pcm = new Uint8Array(samples.buffer);
+  const record: IProductionDialogueCacheRecord = {
+    version: PRODUCTION_DIALOGUE_CACHE_VERSION,
+    requestText: props.identity.requestText,
+    cacheKey: props.identity.key,
+    model: props.selection.model,
+    modelRevision: props.selection.modelRevision,
+    voice: props.selection.voice,
+    generatorProvenance: props.selection.generatorProvenance,
+    generatedAt: props.generatedAt,
+    sourceSampleRate,
+    sourceSamples: samples.length,
+    pcmDigest: digestAutoMovieBytes(pcm),
+    phonemes: phonemeChunks.map((chunk) => chunk.phonemes).join(""),
+    phonemeChunks,
+    runtimeAssets: props.runtimeAssets,
+  };
+  const receipt = Buffer.from(`${JSON.stringify(record, null, 2)}\n`, "utf8");
+  const validation = validateProductionDialogueCache({
+    snapshot: { pcm, receipt },
+    identity: props.identity,
+    runtimeAssets: props.runtimeAssets,
+    selection: props.selection,
+  });
+  if (validation.status !== "current")
+    throw new Error(
+      `Kokoro generation for line "${props.line}" failed cache protocol validation before publication: ${validation.reason}.`,
+    );
+  return { record, pcm, receipt };
+};
+
+/**
+ * Project one validated generation onto a line's placement.
+ *
+ * The public receipt consumes the validated record's single phoneme carrier
+ * and retimes its chunks onto the line's frames; the private request text
+ * stays private. The same generation may serve any line that made the same
+ * exact request, because line placement is not a synthesis input.
+ */
+export const projectProductionDialogueReceipt = (props: {
+  line: Pick<
+    IAutoMovieProductionDialogueLine,
+    "id" | "startFrame" | "endFrame"
+  >;
+  cached: IValidatedProductionDialogueCache;
+}): IAutoMovieProductionTtsReceipt => {
+  const { requestText: _requestText, ...record } = props.cached.record;
+  return {
+    ...record,
+    version: 6,
+    line: props.line.id,
+    visemes: productionPhonemesToVisemes({
+      chunks: record.phonemeChunks,
+      sourceSamples: record.sourceSamples,
+      startFrame: props.line.startFrame,
+      endFrame: props.line.endFrame,
+    }),
+  };
 };
 
 /** Capture and classify one target without turning observation failure into absence. */
@@ -185,7 +338,10 @@ export const validateProductionDialogueCache = (props: {
   | { status: "integrity-failed"; reason: string } => {
   let value: unknown;
   try {
-    value = JSON.parse(Buffer.from(props.snapshot.receipt).toString("utf8"));
+    value = parseAutoMovieStructuredJson({
+      record: "dialogue-cache-receipt",
+      bytes: props.snapshot.receipt,
+    });
   } catch {
     return { status: "integrity-failed", reason: "receipt-json" };
   }

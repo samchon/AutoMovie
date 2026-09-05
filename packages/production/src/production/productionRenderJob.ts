@@ -40,6 +40,7 @@ import {
 
 /**
  * Package-owned encoder identity fenced into every chunk.
+ * @evidence requirements/delivery-and-accessibility/containers-codecs-and-media-facts.md#delivery-encoding-tool-identity Records the encoder identity beside every encoded deliverable so output from a different tool is re-verified instead of trusted by command text.
  */
 export interface IAutoMovieProductionEncoderIdentity {
   /**
@@ -103,6 +104,7 @@ export interface IAutoMovieProductionRenderRuntimeIdentity {
 
 /**
  * Explicit cost/quality tier sharing one compiler-owned edit.
+ * @evidence requirements/delivery-and-accessibility/picture-color-and-image-sequences.md#delivery-picture-derivatives Binds the proxy tier to the master frame identity and range it derives from so a derivative never stands in for master verification.
  */
 export interface IAutoMovieProductionRenderTier {
   /**
@@ -139,6 +141,7 @@ export interface IAutoMovieProductionRenderLayer {
 
 /**
  * One exact film-global frame with transitions already resolved.
+ * @evidence requirements/rendering/frame-schedules-and-sampling.md#rendering-frame-number-time Binds each output frame number to exactly one global film frame so the mapping has no duplicate, gap or off-by-one.
  */
 export interface IAutoMovieProductionRenderFrame {
   /**
@@ -199,6 +202,8 @@ export interface IAutoMovieProductionRenderChunk {
 
 /**
  * Persisted plan reopened by every `automovie render` subcommand.
+ * @evidence requirements/rendering/scope-and-artifact-identity.md#rendering-product-scope Enumerates every product's expected outputs separately so one product's success never stands in for another's.
+ * @evidence specifications/editorial-render-and-delivery/render-schedule-state-and-headless.md#spec-render-artifact-lifecycle Fixes the production revision, edit, range, products, dimensions and runtime profile of one render request as the plan every later phase consumes.
  */
 export interface IAutoMovieProductionRenderJobPlan {
   /**
@@ -262,6 +267,7 @@ export interface IAutoMovieProductionRenderJobPlan {
 
 /**
  * Byte-exact PNG committed by one completed chunk.
+ * @evidence requirements/delivery-and-accessibility/picture-color-and-image-sequences.md#delivery-image-sequences Records each frame's number, path and digest so a sequence's exact count, gaps and stray frames are checkable.
  */
 export interface IAutoMovieProductionRenderedFrameReceipt {
   /**
@@ -401,6 +407,18 @@ interface IAutoMovieProductionAudioAssetIdentityBase {
 
 /**
  * Exact source-format or placeholder provenance carried by one audio asset.
+ *
+ * A WAVE arm carries the decoder's source facts and processing lineage into
+ * the plan unchanged, and planning refuses an identity whose format, layout,
+ * precision, or processing contradicts its own rate and channel count. The
+ * placeholder arm names a deterministic guide stem and carries no WAVE facts,
+ * so a stem cannot pose as a decoded source.
+ *
+ * @evidence requirements/sound/sources-and-external-assets.md#sound-derived-source-closure Carries the source facts and the exact downmix and resample recipe into the render plan as separate records.
+ * @evidence requirements/delivery-and-accessibility/audio-streams-and-channels.md#delivery-channel-layout Preserves the ordered speaker layout in the plan instead of reducing an asset to a channel count.
+ * @evidence specifications/interchange-and-adoption/media-inspection-boundaries.md#interchange-audio-inspection Keeps source facts and processing results as distinct plan fields.
+ * @evidence specifications/simulation-effects-and-sound/sound-sources-events-dialogue-and-foley.md#sound-decode-and-derived-source-closure Records the derived source's transform beside its parent facts for every planned cue asset.
+ * @evidence requirements/sound/sources-and-external-assets.md#sound-source-immutable-adoption Binds a planned cue to the digest of the adopted source bytes rather than to a URL, prompt or model name.
  */
 export type IAutoMovieProductionAudioAssetIdentity =
   IAutoMovieProductionAudioAssetIdentityBase &
@@ -415,6 +433,13 @@ export type IAutoMovieProductionAudioAssetIdentity =
 
 /**
  * Build content-addressed chunks from the compiler-owned film edit.
+ * @evidence requirements/delivery-and-accessibility/audio-streams-and-channels.md#delivery-audio-sample-boundary Plans every cue as exact source and presentation sample counts on the rational film clock, so the first and last audible samples are verifiable facts rather than rounded seconds.
+ * @evidence requirements/rendering/chunks-resume-and-recovery.md#rendering-chunk-partition Partitions the exact frame schedule into non-overlapping content-addressed chunks whose identity does not depend on chunk size or worker count.
+ * @evidence requirements/rendering/frame-schedules-and-sampling.md#rendering-frame-boundary-convention Reads the compiled edit's start-inclusive, end-exclusive frame ranges with exact integer arithmetic rather than rounding a duration by frame rate.
+ * @evidence requirements/rendering/frame-schedules-and-sampling.md#rendering-schedule-refusal Refuses an invalid rate, an empty range or an unrepresentable frame count before any chunk is scheduled.
+ * @evidence specifications/editorial-render-and-delivery/delivery-profiles-time-and-picture.md#spec-delivery-timecode-sync Carries the exact rational picture rate and the stream timebases as separate plan fields and never recomputes a duration from a decimal rate.
+ * @evidence specifications/simulation-effects-and-sound/sound-sources-events-dialogue-and-foley.md#sound-cue-sample-boundary-and-arrival Converts each cue's rational film time to integer sample indices once, on the fixed audio clock, and records the ranges in the plan.
+ * @evidence specifications/simulation-effects-and-sound/sound-sources-events-dialogue-and-foley.md#sound-cue-failure-contract Refuses a cue with a missing source, a negative or empty duration or an out-of-range sample instead of planning it as silence.
  */
 export const planProductionRenderJob = (props: {
   timeline: IAutoMovieFilmTimeline;
@@ -649,6 +674,7 @@ export const verifyProductionRenderJobPlan = (props: {
 
 /**
  * Resolve one global frame, including exact dissolve and fade weights.
+ * @evidence requirements/rendering/frame-schedules-and-sampling.md#rendering-subrange-stability Resolves a frame from its global film time so a chunk or retry yields the same frame as a full render.
  */
 export const sampleProductionRenderFrame = (
   timeline: IAutoMovieFilmTimeline,
@@ -723,6 +749,7 @@ export const sampleProductionRenderFrame = (
  * Beauty is alpha composited. Structural guide passes are classifications or
  * geometric fields, so linearly blending their pixels invents invalid values;
  * they select the dominant shot layer instead (incoming wins an exact tie).
+ * @evidence requirements/delivery-and-accessibility/picture-color-and-image-sequences.md#delivery-multipart-channels Keeps beauty and structural passes as separate products with their own layer sets instead of hiding one pass's failure in another's file.
  */
 export const productionRenderLayersForPass = (
   frame: IAutoMovieProductionRenderFrame,
@@ -742,6 +769,8 @@ export const productionRenderLayersForPass = (
 
 /**
  * Canonical WebVTT derived only from compiled caption placements.
+ * @evidence requirements/delivery-and-accessibility/captions-subtitles-and-cues.md#delivery-caption-presentation-form Delivers captions as a selectable WebVTT sidecar derived from compiled placements rather than burning text into the picture.
+ * @evidence requirements/rendering/frame-schedules-and-sampling.md#rendering-schedule-audio-cues Derives caption cue times from the same rational film clock and origin the frame schedule uses, so chunking never moves a cue boundary.
  */
 export const canonicalProductionWebVtt = (
   timeline: IAutoMovieFilmTimeline,
@@ -782,6 +811,9 @@ export const canonicalProductionWebVtt = (
 
 /**
  * Classify current identities without treating an old slot as current.
+ * @evidence requirements/rendering/scope-and-artifact-identity.md#rendering-planned-materialized Separates planned, materialized and verified chunk states instead of reading a receipt's existence as proof of frames.
+ * @evidence requirements/rendering/scope-and-artifact-identity.md#rendering-partial-artifact Reports completed chunks beside the missing set instead of exposing a partial sequence as a complete film.
+ * @evidence specifications/execution-and-recovery/artifacts-and-atomic-publication.md#execution-partial-artifact-isolation Keeps a chunk whose slot is not current out of the current set so a partial generation is never consumed as a complete manifest.
  */
 export const productionRenderChunkStatuses = (props: {
   plan: IAutoMovieProductionRenderJobPlan;
@@ -845,6 +877,7 @@ export const productionRenderChunkStatuses = (props: {
 
 /**
  * Verify completion identity, exact range coverage, raster, and byte facts.
+ * @evidence requirements/rendering/chunks-resume-and-recovery.md#rendering-resume Admits a chunk for reuse only when its receipt matches the current plan and chunk identity; anything else is rerendered or preserved for adjudication.
  */
 export const verifyProductionRenderChunkReceipt = (props: {
   plan: IAutoMovieProductionRenderJobPlan;

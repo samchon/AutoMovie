@@ -14,69 +14,225 @@ const SUBFORMAT_TAIL = Uint8Array.from([
 
 /**
  * Exact supported WAVE declaration before processing.
+ *
+ * These are the file's own facts, read from its format envelope and never
+ * inferred from its channel count: an extensible header names its speakers
+ * through `dwChannelMask` and its encoding through the full SubFormat GUID,
+ * while a legacy header carries the default mono front-center or stereo
+ * front-left/front-right semantics and says so in `layout.source`.
+ *
+ * @evidence requirements/sound/sources-and-external-assets.md#sound-decode-contract Records the container, encoding, channel, rate, and bit-depth facts the decode contract requires to be explicit rather than assumed from the extension.
+ * @evidence requirements/delivery-and-accessibility/audio-streams-and-channels.md#delivery-channel-layout Keeps ordered speaker labels and the declaration they came from, so two-channel sources with different semantics are not treated as compatible by count alone.
+ * @evidence specifications/interchange-and-adoption/media-inspection-boundaries.md#interchange-audio-inspection Separates the encoded representation, source rate, and channel layout observed in the bytes from any processing result.
  */
 export interface IAutoMovieProductionWaveSourceFormat {
-  /** Media-family discriminant. */
+  /**
+   * Media-family discriminant.
+   *
+   * @evidence requirements/sound/sources-and-external-assets.md#sound-decode-contract Names the one container family the supported subset admits.
+   * @evidence specifications/interchange-and-adoption/media-inspection-boundaries.md#interchange-audio-inspection Dispatches the audio fact envelope by family.
+   */
   kind: "wave";
-  /** Legacy or extensible format-envelope spelling. */
+  /**
+   * Legacy or extensible format-envelope spelling.
+   *
+   * @evidence requirements/sound/sources-and-external-assets.md#sound-decode-contract Distinguishes the two header spellings whose fields the decoder reads differently.
+   * @evidence specifications/interchange-and-adoption/media-inspection-boundaries.md#interchange-audio-inspection Records which envelope the channel layout and encoding facts were read from.
+   */
   header: "wave-format-ex" | "wave-format-extensible";
-  /** Exact supported expanded-sample encoding. */
+  /**
+   * Exact supported expanded-sample encoding.
+   *
+   * @evidence requirements/sound/sources-and-external-assets.md#sound-decode-contract States the sample encoding the codec facts resolved to.
+   * @evidence specifications/interchange-and-adoption/media-inspection-boundaries.md#interchange-audio-inspection Reports the encoded sample representation as a source fact.
+   */
   encoding: "pcm-s16le" | "float-f32le";
-  /** Bits allocated to each encoded channel sample. */
+  /**
+   * Bits allocated to each encoded channel sample.
+   *
+   * @evidence requirements/sound/sources-and-external-assets.md#sound-decode-contract Carries the declared bit depth of the container sample.
+   * @evidence specifications/interchange-and-adoption/media-inspection-boundaries.md#interchange-audio-inspection Distinguishes the container size from the precision the sample carries.
+   */
   containerBits: 16 | 32;
-  /** Meaningful bits declared inside the container sample. */
+  /**
+   * Meaningful bits declared inside the container sample.
+   *
+   * @evidence requirements/sound/sources-and-external-assets.md#sound-decode-contract Carries the extensible `wValidBitsPerSample` precision that the supported subset requires to fill its container.
+   * @evidence specifications/interchange-and-adoption/media-inspection-boundaries.md#interchange-audio-inspection Records the declared precision beside the container size instead of collapsing them.
+   */
   validBits: 16 | 32;
-  /** Source sample clock before resampling. */
+  /**
+   * Source sample clock before resampling.
+   *
+   * @evidence requirements/sound/sources-and-external-assets.md#sound-decode-contract Carries the declared source rate the decode contract requires to be explicit.
+   * @evidence specifications/interchange-and-adoption/media-inspection-boundaries.md#interchange-audio-inspection Reports the source sample rate as a fact separate from the resampled output clock.
+   */
   sampleRate: number;
-  /** Source channel count before downmix. */
+  /**
+   * Source channel count before downmix.
+   *
+   * @evidence requirements/sound/sources-and-external-assets.md#sound-decode-contract Carries the declared channel count of the supported mono or stereo subset.
+   * @evidence specifications/interchange-and-adoption/media-inspection-boundaries.md#interchange-audio-inspection Reports the source channel count as a fact separate from the mono downmix.
+   */
   channels: 1 | 2;
-  /** Ordered speaker semantics and their declaration source. */
+  /**
+   * Ordered speaker semantics and their declaration source.
+   *
+   * @evidence requirements/delivery-and-accessibility/audio-streams-and-channels.md#delivery-channel-layout Names the ordered speaker positions and whether a mask or the legacy default declared them.
+   * @evidence specifications/interchange-and-adoption/media-inspection-boundaries.md#interchange-audio-inspection Reports the channel layout as an observed source fact rather than an assumed stereo pair.
+   */
   layout: {
     kind: "mono" | "stereo";
     speakers: ["front-center"] | ["front-left", "front-right"];
     source: "legacy-default" | "channel-mask";
     mask: number | null;
   };
-  /** Canonical extensible SubFormat GUID, absent for legacy headers. */
+  /**
+   * Canonical extensible SubFormat GUID, absent for legacy headers.
+   *
+   * @evidence requirements/sound/sources-and-external-assets.md#sound-decode-contract Preserves the full sub-format identity that resolved the encoding rather than only its leading tag.
+   * @evidence specifications/interchange-and-adoption/media-inspection-boundaries.md#interchange-audio-inspection Records the codec identity observed in the extensible envelope.
+   */
   subFormatGuid: string | null;
 }
 
 /**
  * Deterministic conversion from declared WAVE layout/clock to mixer input.
+ *
+ * @evidence requirements/sound/sources-and-external-assets.md#sound-derived-source-closure Records the ordered downmix and resample recipe that produced the mixer samples from the source bytes.
+ * @evidence specifications/simulation-effects-and-sound/sound-sources-events-dialogue-and-foley.md#sound-decode-and-derived-source-closure Names the exact transform the derived mono buffer carries relative to its parent source.
+ * @evidence requirements/evidence-and-provenance/generation-transformation-and-derivation.md#provenance-transformation-record Records the resampling and downmix rules, coefficients and output identity as the transformation record of the derived buffer.
  */
 export interface IAutoMovieProductionAudioProcessing {
-  /** Exact conversion stages applied in source order. */
+  /**
+   * Exact conversion stages applied in source order.
+   *
+   * @evidence requirements/sound/sources-and-external-assets.md#sound-derived-source-closure Names which of channel conversion and resampling ran, in order.
+   * @evidence specifications/simulation-effects-and-sound/sound-sources-events-dialogue-and-foley.md#sound-decode-and-derived-source-closure Identifies the transform kind of the derived source.
+   */
   kind: "copy" | "downmix" | "resample" | "downmix-resample";
-  /** Mixer-facing mono channel count. */
+  /**
+   * Mixer-facing mono channel count.
+   *
+   * @evidence requirements/sound/sources-and-external-assets.md#sound-derived-source-closure States the channel count the conversion produced.
+   * @evidence specifications/simulation-effects-and-sound/sound-sources-events-dialogue-and-foley.md#sound-decode-and-derived-source-closure Records the output layout of the derived source.
+   */
   outputChannels: 1;
-  /** Mixer-facing sample clock after conversion. */
+  /**
+   * Mixer-facing sample clock after conversion.
+   *
+   * @evidence requirements/sound/sources-and-external-assets.md#sound-derived-source-closure States the clock the resample stage produced.
+   * @evidence specifications/simulation-effects-and-sound/sound-sources-events-dialogue-and-foley.md#sound-decode-and-derived-source-closure Records the output sample rate of the derived source.
+   */
   outputSampleRate: number;
-  /** Output-by-input downmix coefficients. */
+  /**
+   * Output-by-input downmix coefficients.
+   *
+   * @evidence requirements/sound/sources-and-external-assets.md#sound-derived-source-closure Records the exact channel-conversion weights instead of an unstated average.
+   * @evidence specifications/simulation-effects-and-sound/sound-sources-events-dialogue-and-foley.md#sound-decode-and-derived-source-closure Makes the downmix transform reproducible from the record alone.
+   */
   matrix: readonly (readonly number[])[];
 }
 
 /**
  * One WAVE source's declared facts and the exact processing applied to it.
+ *
+ * @evidence requirements/sound/sources-and-external-assets.md#sound-decode-contract Returns the declared source facts beside the decoded samples so a plan records the file's identity rather than the mix's.
+ * @evidence specifications/simulation-effects-and-sound/sound-sources-events-dialogue-and-foley.md#sound-decoder-input-contract Keeps the observed source facts and the bounded decoded buffer as separate outputs of one decode.
  */
 export interface IAutoMovieDecodedProductionAudioAsset {
-  /** Source sample clock before resampling. */
+  /**
+   * Source sample clock before resampling.
+   *
+   * @evidence requirements/sound/sources-and-external-assets.md#sound-decode-contract Reports the rate the file declares, not the plan's.
+   * @evidence specifications/simulation-effects-and-sound/sound-sources-events-dialogue-and-foley.md#sound-decoder-input-contract Carries the source clock apart from the decoded buffer's clock.
+   */
   sourceSampleRate: number;
-  /** Source channel count before downmix. */
+  /**
+   * Source channel count before downmix.
+   *
+   * @evidence requirements/sound/sources-and-external-assets.md#sound-decode-contract Reports the channel count the file declares.
+   * @evidence specifications/simulation-effects-and-sound/sound-sources-events-dialogue-and-foley.md#sound-decoder-input-contract Carries the source layout count apart from the mono output.
+   */
   sourceChannels: number;
-  /** Complete source sample-frame count. */
+  /**
+   * Complete source sample-frame count.
+   *
+   * @evidence requirements/sound/sources-and-external-assets.md#sound-decode-contract Reports the exact duration fact the plan verifies a cue's declared source duration against.
+   * @evidence specifications/simulation-effects-and-sound/sound-sources-events-dialogue-and-foley.md#sound-decoder-input-contract Carries the whole-asset frame count as an observed source fact.
+   */
   sourceFrames: number;
-  /** Exact source runtime derived from frames and sample rate. */
+  /**
+   * Exact source runtime derived from frames and sample rate.
+   *
+   * @evidence requirements/sound/sources-and-external-assets.md#sound-decode-contract Derives the runtime from the two declared facts rather than from a metadata field.
+   * @evidence specifications/simulation-effects-and-sound/sound-sources-events-dialogue-and-foley.md#sound-decoder-input-contract Reports the exact duration of the source bytes.
+   */
   durationSeconds: number;
-  /** Parsed immutable source-format facts. */
+  /**
+   * Parsed immutable source-format facts.
+   *
+   * @evidence requirements/sound/sources-and-external-assets.md#sound-decode-contract Carries the complete format declaration the decode admitted.
+   * @evidence specifications/simulation-effects-and-sound/sound-sources-events-dialogue-and-foley.md#sound-decoder-input-contract Keeps the observed source facts as one typed value.
+   */
   sourceFormat: IAutoMovieProductionWaveSourceFormat;
-  /** Deterministic processing lineage applied to the source. */
+  /**
+   * Deterministic processing lineage applied to the source.
+   *
+   * @evidence requirements/sound/sources-and-external-assets.md#sound-derived-source-closure Records the recipe that turned the source into the mixer buffer.
+   * @evidence specifications/simulation-effects-and-sound/sound-sources-events-dialogue-and-foley.md#sound-decode-and-derived-source-closure Carries the derived source's exact transform beside its parent facts.
+   */
   processing: IAutoMovieProductionAudioProcessing;
-  /** Finite mono samples at the requested output clock. */
+  /**
+   * Finite mono samples at the requested output clock.
+   *
+   * @evidence requirements/external-inputs/validation-and-quarantine.md#external-validation-structure-semantics Holds only samples whose finiteness was checked before any conversion.
+   * @evidence specifications/simulation-effects-and-sound/sound-sources-events-dialogue-and-foley.md#sound-decoder-input-contract Carries the bounded decoded buffer separately from the source facts.
+   */
   samples: Float32Array;
 }
 
 /**
  * Decode one complete supported RIFF/WAVE generation into finite mono PCM.
+ *
+ * The parser walks the RIFF chunks by id, requires the declared RIFF extent,
+ * `nBlockAlign`, and `nAvgBytesPerSec` to agree with the format fields, and
+ * refuses a duplicate `fmt ` or `data` chunk, an odd chunk without its pad
+ * byte, and terminal bytes too short for a chunk header. An extensible header
+ * follows the Microsoft WAVEFORMATEXTENSIBLE contract
+ * (https://learn.microsoft.com/en-us/windows/win32/api/mmreg/ns-mmreg-waveformatextensible):
+ * "The cbSize member must be at least 22", `wValidBitsPerSample` "can be any
+ * value not exceeding the container size", "the channels specified in
+ * dwChannelMask must be present in the prescribed order (from least
+ * significant bit up)" with SPEAKER_FRONT_LEFT `0x1`, SPEAKER_FRONT_RIGHT
+ * `0x2`, and SPEAKER_FRONT_CENTER `0x4`, and "the number of bits set in
+ * dwChannelMask should be the same as the number of channels". The SubFormat
+ * is admitted only when every byte after its leading 16-bit tag equals the
+ * `xxxxxxxx-0000-0010-8000-00aa00389b71` template that Ksmedia.h's
+ * `IS_VALID_WAVEFORMATEX_GUID` compares
+ * (https://learn.microsoft.com/en-us/windows-hardware/drivers/audio/converting-between-format-tags-and-subformat-guids),
+ * so a vendor GUID whose low word happens to read as PCM is not decoded as
+ * PCM.
+ *
+ * The supported subset is deliberately narrow: 16-bit PCM in a 16-bit
+ * container, 32-bit IEEE float in a 32-bit container, mono front-center, and
+ * stereo front-left/front-right. A legal declaration outside it, such as 20
+ * valid bits in a 24-bit container or a front-left/front-center pair, is
+ * refused as unsupported by field rather than misread as the nearest
+ * supported layout. Every decoded sample is checked finite before the mono
+ * fold and before any resampling, so a NaN or infinity in one channel refuses
+ * the whole asset at its frame and channel instead of averaging into a
+ * plausible number.
+ *
+ * @evidence requirements/sound/sources-and-external-assets.md#sound-decode-contract Admits only the declared container, encoding, channel, rate, and bit-depth subset and refuses everything else by the field that failed.
+ * @evidence requirements/external-inputs/media-families-and-declared-facts.md#external-media-audio Reads the speaker layout from the declared mask or the legacy default rather than assuming an unknown two-channel source is stereo.
+ * @evidence requirements/external-inputs/validation-and-quarantine.md#external-validation-structure-semantics Checks every decoded sample for finiteness before it can reach the downmix or the resampler.
+ * @evidence requirements/sound/sources-and-external-assets.md#sound-derived-source-closure Returns the exact downmix matrix and resample stages beside the source facts they were derived from.
+ * @evidence specifications/simulation-effects-and-sound/sound-sources-events-dialogue-and-foley.md#sound-decoder-input-contract Refuses unsupported or malformed input with the asset identity instead of substituting silence.
+ * @evidence specifications/simulation-effects-and-sound/sound-sources-events-dialogue-and-foley.md#sound-decode-and-derived-source-closure Produces the derived mono buffer together with the transform that made it.
+ * @evidence specifications/interchange-and-adoption/media-inspection-boundaries.md#interchange-audio-inspection Reports representation, rate, layout, and frame count as source facts and downmix and resample as separate processing.
+ * @evidence requirements/delivery-and-accessibility/audio-streams-and-channels.md#delivery-audio-downmix Records the exact downmix matrix and resample stages it applied to a source instead of an unstated average, and never duplicates a missing channel.
+ * @evidence requirements/sound/sources-and-external-assets.md#sound-source-provider-adapter-boundary Decodes adopted local bytes into provider-neutral source facts so playback and verification never need the provider again.
  */
 export const decodeProductionAudioAsset = (props: {
   path: string;

@@ -1,4 +1,3 @@
-import { env } from "@huggingface/transformers";
 import { TestValidator } from "@nestia/e2e";
 import { createRequire } from "node:module";
 import path from "node:path";
@@ -32,12 +31,43 @@ const { loadKokoroRuntime } = createRequire(__filename)(
   ),
 ) as IKokoroLoaderModule;
 
-/** Request-local Kokoro loads overlap without changing parent process globals. */
+/**
+ * Kokoro model loading is a request-local join of typed factories.
+ *
+ * The former loader pinned a model revision by replacing `globalThis.fetch`
+ * and the Transformers cache directory for the duration of the load, and a
+ * process-wide queue serialized AutoMovie's own callers around that patch. Any
+ * other consumer of the same process saw a rewritten fetch and a foreign cache
+ * root while a load was in flight. The loader now passes `revision` and
+ * `cache_dir` as request options to the injected model and tokenizer factories
+ * and constructs the runtime from the two results, so two loads can overlap
+ * with different revisions and cache roots and nothing outside the request is
+ * written.
+ *
+ * The factories are injected, so no model, ONNX session, or worker is created
+ * here: the test reads the exact options each factory received and the exact
+ * error each failing stage surfaced.
+ *
+ * Scenarios:
+ *
+ * 1. Two concurrent loads with different model, revision, cache root, dtype,
+ *    device, and progress callback each construct their own runtime from their
+ *    own model and tokenizer, and each factory receives exactly its request's
+ *    options: revision and cache root on both, dtype and device on the model
+ *    only.
+ * 2. The parent process's `fetch` identity and global symbol inventory are the
+ *    same after both loads as before them, which is the falsifier for the
+ *    patch-and-restore design (a restored patch would still have installed a
+ *    coordination slot).
+ * 3. A load without a progress callback passes no `progress_callback` key to
+ *    either factory rather than an `undefined` value.
+ * 4. A model, tokenizer, or constructor failure rejects with the original error
+ *    object, so no restoration step exists to replace or wrap it.
+ */
 export const test_cli_scaffold_kokoro_override_concurrency =
   async (): Promise<void> => {
     const originalFetch = globalThis.fetch;
     const originalSymbols = Object.getOwnPropertySymbols(globalThis);
-    const originalCacheDir = env.cacheDir;
     const observed: Array<{ kind: string; model: string; options: unknown }> =
       [];
     const progress = {
@@ -124,10 +154,9 @@ export const test_cli_scaffold_kokoro_override_concurrency =
       "parent fetch and global symbol inventory remain unchanged",
       {
         fetch: globalThis.fetch === originalFetch,
-        cacheDir: env.cacheDir,
         symbols: Object.getOwnPropertySymbols(globalThis),
       },
-      { fetch: true, cacheDir: originalCacheDir, symbols: originalSymbols },
+      { fetch: true, symbols: originalSymbols },
     );
     const withoutProgress: Array<Record<string, unknown>> = [];
     await loadKokoroRuntime({

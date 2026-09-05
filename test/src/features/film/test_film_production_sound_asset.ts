@@ -139,7 +139,10 @@ const sample = (pcm: Float32Array, index: number): number => pcm[index * 2]!;
  *    reaches and silent where it does not, because whether a generation is the
  *    declared asset is settled at planning, where the source clock is known.
  * 7. Only PCM the plan references must be finite, and a referenced non-finite
- *    sample is refused by identity and index before mixing.
+ *    sample is refused by identity and index before mixing. An empty supplied
+ *    generation is refused rather than mixed as silence, and a mix whose finite
+ *    inputs overflow the Float32 master is refused at the overflowing index
+ *    rather than limited from an infinite peak.
  */
 export const test_film_production_sound_asset = (): void => {
   const length = DURATION_FRAMES * SAMPLES_PER_FRAME;
@@ -232,7 +235,10 @@ export const test_film_production_sound_asset = (): void => {
   TestValidator.equals(
     "a cue that contradicts its source or its film is refused by name",
     namedFacts([
-      ["aTrimLeavingTheDeclaredSource", () => refused({ sourceOffsetFrame: 1 })],
+      [
+        "aTrimLeavingTheDeclaredSource",
+        () => refused({ sourceOffsetFrame: 1 }),
+      ],
       ["anEmptySpan", () => refused({ durationFrames: 0 })],
       ["anEmptySource", () => refused({ sourceDurationFrames: 0 })],
       ["aStartBeforeTheFilm", () => refused({ startFrame: -1 })],
@@ -271,11 +277,19 @@ export const test_film_production_sound_asset = (): void => {
   const twoFrames = ramp(TICK_2);
   const threeFrames = ramp(TICK_3);
   const shortPresentation = renderProductionSound({
-    plan: ntscPlan({ sourceDurationFrames: 2, sourceOffsetFrame: 0, startFrame: 1 }),
+    plan: ntscPlan({
+      sourceDurationFrames: 2,
+      sourceOffsetFrame: 0,
+      startFrame: 1,
+    }),
     assets: new Map([["public/bed.wav", twoFrames]]),
   }).pcm;
   const shortSource = renderProductionSound({
-    plan: ntscPlan({ sourceDurationFrames: 3, sourceOffsetFrame: 1, startFrame: 0 }),
+    plan: ntscPlan({
+      sourceDurationFrames: 3,
+      sourceOffsetFrame: 1,
+      startFrame: 0,
+    }),
     assets: new Map([["public/bed.wav", threeFrames]]),
   }).pcm;
   TestValidator.equals(
@@ -286,8 +300,7 @@ export const test_film_production_sound_asset = (): void => {
       // samples 0 through 1600 in order; source sample 1601 is unread.
       [
         "theFirstPresentationSampleReadsTheTrimStart",
-        () =>
-          nclose(sample(shortPresentation, TICK_1), twoFrames[0]!, 1e-6),
+        () => nclose(sample(shortPresentation, TICK_1), twoFrames[0]!, 1e-6),
       ],
       [
         "theLastPresentationSampleReadsTheLastReachableSourceSample",
@@ -347,7 +360,11 @@ export const test_film_production_sound_asset = (): void => {
       [
         "theReachedSampleIsExact",
         () =>
-          nclose(at(shortGeneration, length - 2), source[length - 2]! * gain, 1e-6),
+          nclose(
+            at(shortGeneration, length - 2),
+            source[length - 2]! * gain,
+            1e-6,
+          ),
       ],
       ["theUnreachedTickIsSilent", () => at(shortGeneration, length - 1) === 0],
     ]),
@@ -407,11 +424,47 @@ export const test_film_production_sound_asset = (): void => {
             ]),
           }).pcm.every(Number.isFinite),
       ],
+      // An empty generation is neither a missing asset (which mixes the
+      // stand-in) nor a finite one: a supplied buffer with nothing in it is
+      // refused by identity rather than rendered as silence.
+      [
+        "anEmptySuppliedGenerationIsRefusedRatherThanSilenced",
+        () =>
+          throwsError(
+            () =>
+              renderProductionSound({
+                plan: plan({}),
+                assets: new Map([["public/bed.wav", new Float32Array(0)]]),
+              }),
+            ['audio asset "public/bed.wav"', "supplied empty PCM"],
+          ),
+      ],
+      // Finite inputs can still overflow the Float32 master: the largest finite
+      // float at the largest authored gain lands past Float32's range at the
+      // cue's first sample, and the mix refuses its own product before the
+      // limiter can read a peak of Infinity as "above 0.95".
+      [
+        "aMixThatOverflowsTheMasterIsRefusedAtItsIndex",
+        () =>
+          throwsError(
+            () =>
+              renderProductionSound({
+                plan: plan({ gain: 4 }),
+                assets: new Map([["public/bed.wav", Float32Array.of(3.4e38)]]),
+              }),
+            [
+              "generated production mix",
+              `index ${START_FRAME * SAMPLES_PER_FRAME * 2}`,
+            ],
+          ),
+      ],
     ]),
     {
       aReferencedAssetNaNIsRefusedByIdentityAndIndex: true,
       aReferencedDialogueInfinityIsRefused: true,
       anUnreferencedInvalidEntryIsOutsideTheIngressBoundary: true,
+      anEmptySuppliedGenerationIsRefusedRatherThanSilenced: true,
+      aMixThatOverflowsTheMasterIsRefusedAtItsIndex: true,
     },
   );
 };
