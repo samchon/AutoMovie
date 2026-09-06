@@ -1,4 +1,8 @@
 /** AutoMovie production evidence graph construction and validation. */
+export * from "./AutoMovieAuthoredDocumentLayer";
+export * from "./createAutoMovieAuthoredPopulationFiles";
+export * from "./validateAutoMovieLocalContractClaims";
+export * from "./validateAutoMoviePopulationAccountHosts";
 export * from "./AutoMoviePopulationLayer";
 export * from "./AutoMoviePopulationScope";
 export * from "./AutoMovieProductionLanguage";
