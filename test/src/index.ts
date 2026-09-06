@@ -3,22 +3,7 @@ import chalk from "chalk";
 import path from "node:path";
 import process from "node:process";
 
-/** Read `--include` / `--exclude` substrings from the command line. */
-const selectors = (
-  argv: readonly string[],
-): { include: string[]; exclude: string[] } => {
-  const include: string[] = [];
-  const exclude: string[] = [];
-  let group: string[] | null = null;
-  for (const argument of argv) {
-    if (argument === "--include") group = include;
-    else if (argument === "--exclude") group = exclude;
-    else if (group === null)
-      throw new Error(`Unexpected argument "${argument}".`);
-    else group.push(argument);
-  }
-  return { include, exclude };
-};
+import { prepareScenarioFilter } from "./scenarioSelection";
 
 async function main(): Promise<void> {
   console.log("---------------------------------------------------");
@@ -26,11 +11,17 @@ async function main(): Promise<void> {
   console.log("Start", new Date().toLocaleString("en-US"));
   console.log("---------------------------------------------------");
 
-  const { include, exclude } = selectors(process.argv.slice(2));
-  const report = await DynamicExecutor.validate({
+  const discovery = {
     prefix: "test_",
     location: path.join(__dirname, "features"),
     parameters: () => [],
+    extension: "ts",
+  };
+  const filter = await prepareScenarioFilter(process.argv.slice(2), (filter) =>
+    DynamicExecutor.validate({ ...discovery, filter }),
+  );
+  const report = await DynamicExecutor.validate({
+    ...discovery,
     onComplete: (exec) => {
       const elapsed =
         new Date(exec.completed_at).getTime() -
@@ -38,10 +29,7 @@ async function main(): Promise<void> {
       const mark = exec.error === null ? chalk.green("  ✓") : chalk.red("  ✗");
       console.log(`${mark} ${exec.name} ${chalk.gray(`(${elapsed} ms)`)}`);
     },
-    filter: (name) =>
-      (include.length === 0 || include.some((s) => name.includes(s))) &&
-      (exclude.length === 0 || exclude.every((s) => !name.includes(s))),
-    extension: "ts",
+    filter,
   });
 
   if (report.executions.length === 0)
