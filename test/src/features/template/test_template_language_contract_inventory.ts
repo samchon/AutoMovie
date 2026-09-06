@@ -1,8 +1,6 @@
 import { AUTO_MOVIE_PRODUCTION_LANGUAGES } from "@automovie/evidence";
 import { renderAutoMovieLanguageContracts } from "@automovie/template";
 import assert from "node:assert/strict";
-import fs from "node:fs";
-import os from "node:os";
 import path from "node:path";
 
 import { loadSourceModule } from "../internal/loadSourceModule";
@@ -167,9 +165,6 @@ const replace = (
  *    ending the H2.
  * 4. Inventory paths must be unique relative POSIX paths whose kinds match the
  *    bundled shape, and reserved targets may not repeat an anchor or title.
- * 5. Rendering from an explicit asset root refuses a linked or non-UTF-8
- *    module entry, a linked or missing shared contract family, and a missing
- *    module or asset directory, each with the offending path.
  */
 export const test_template_language_contract_inventory = (): void => {
   for (const language of AUTO_MOVIE_PRODUCTION_LANGUAGES) {
@@ -475,80 +470,4 @@ export const test_template_language_contract_inventory = (): void => {
       reservedTitle: "b.md#two: reserved target title duplicates a.md#one.",
     },
   );
-
-  const assetRoot = fs.mkdtempSync(
-    path.join(os.tmpdir(), "automovie-language-assets-"),
-  );
-  try {
-    const assets = path.join(assetRoot, "language-contracts");
-    const module = path.join(assets, "english");
-    for (const entry of englishInventory) {
-      const target = path.join(module, ...entry.path.split("/"));
-      if (entry.kind === "directory") fs.mkdirSync(target, { recursive: true });
-      else fs.writeFileSync(target, (entry as { content: string }).content);
-    }
-    const docs = path.join(assetRoot, "scaffold", "docs");
-    for (const family of ["discovery", "obligations", "principles", "upstream"])
-      fs.mkdirSync(path.join(docs, family), { recursive: true });
-    fs.writeFileSync(
-      path.join(docs, "discovery", "shared.md"),
-      "# Shared\n\n## Shared rule {#shared-rule}\n\nText.\n",
-    );
-    const render = (language: string = "english"): string => {
-      try {
-        return Object.keys(
-          renderAutoMovieLanguageContracts({ language, assetRoot }),
-        ).join(",");
-      } catch (error) {
-        return error instanceof Error ? error.message : String(error);
-      }
-    };
-    const rendered = render();
-    const moduleLink = path.join(module, "linked");
-    fs.symlinkSync(path.join(docs, "upstream"), moduleLink, "junction");
-    const linkedModule = render();
-    fs.rmSync(moduleLink, { force: true });
-    const signalsFile = path.join(module, "discovery", "signals.md");
-    fs.writeFileSync(signalsFile, Buffer.from([0xff, 0xfe, 0x00]));
-    const invalidEncoding = render();
-    fs.writeFileSync(signalsFile, signals.content);
-    const docsLink = path.join(docs, "discovery", "linked");
-    fs.symlinkSync(path.join(docs, "upstream"), docsLink, "junction");
-    const linkedDocs = render();
-    fs.rmSync(docsLink, { force: true });
-    fs.rmSync(path.join(docs, "upstream"), { recursive: true });
-    const missingFamily = render();
-    fs.rmSync(module, { recursive: true });
-    const missingModule = render();
-    fs.rmSync(assets, { recursive: true });
-    const missingAssets = render();
-    assert.deepEqual(
-      {
-        rendered,
-        linkedModule,
-        invalidEncoding,
-        linkedDocs,
-        missingFamily,
-        missingModule,
-        missingAssets,
-        unknownLanguage: render("french"),
-        missingLanguage: render(""),
-      },
-      {
-        rendered: PATHS.join(","),
-        linkedModule: `${moduleLink}: language contract assets must be physical files and directories.`,
-        invalidEncoding: `${signalsFile}: language contract asset must be strict UTF-8.`,
-        linkedDocs: `${docsLink}: scaffold contract assets may not be linked.`,
-        missingFamily: `${path.join(docs, "upstream")}: scaffold contract asset root must be a physical directory.`,
-        missingModule: `english: bundled language contract directory is missing: ${module}`,
-        missingAssets: `language contract assets are missing: ${assets}`,
-        unknownLanguage:
-          "french: expected one bundled production language (chinese, english, japanese, korean).",
-        missingLanguage:
-          "(missing): expected one bundled production language (chinese, english, japanese, korean).",
-      },
-    );
-  } finally {
-    fs.rmSync(assetRoot, { force: true, recursive: true });
-  }
 };

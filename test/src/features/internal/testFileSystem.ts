@@ -64,15 +64,6 @@ export const withTestFileSystem = <T>(
   task: () => T,
 ): T => runtime.withAutoMovieFileSystem(fileSystem, task);
 
-/** Give each invocation of a scenario its own mutable filesystem adapter. */
-export const isolatedFileSystemTest = <T>(
-  task: (fileSystem: typeof fs) => T,
-): (() => T) =>
-  function isolatedFileSystemInvocation(): T {
-    const { fileSystem } = createTestFileSystem();
-    return withTestFileSystem(fileSystem, () => task(fileSystem));
-  };
-
 /** Observe the active dependency for a pure isolation assertion. */
 export const currentTestFileSystem = (): typeof fs =>
   runtime.currentAutoMovieFileSystem();
