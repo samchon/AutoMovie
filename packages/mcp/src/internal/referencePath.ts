@@ -48,7 +48,9 @@ export function validComponent(part: string): boolean {
  * @evidence specifications/authoring-and-authority/reference-navigation.md#spec-reference-selection Refuses malformed addresses before exact anchor lookup.
  */
 export function splitReferenceLocation(location: string): {
+  /** Admitted canonical authored Markdown path before the single anchor separator. */
   file: string;
+  /** Exact nonempty authored anchor after the separator, without slug inference. */
   anchor: string;
 } {
   const index = location.indexOf("#");

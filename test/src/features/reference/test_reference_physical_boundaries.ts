@@ -5,8 +5,10 @@ import {
 import { TestValidator } from "@nestia/e2e";
 import * as path from "node:path";
 
-import { parseReference } from "../../../../packages/mcp/src/internal/parseReference";
 import { createReferenceMemoryFileSystem } from "../internal/createReferenceMemoryFileSystem";
+import { referenceParser } from "../internal/referenceSourceModules";
+
+const { parseReference } = referenceParser;
 
 /**
  * Startup and resource boundary refusals preserve source isolation.

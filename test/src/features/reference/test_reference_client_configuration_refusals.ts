@@ -1,8 +1,7 @@
 import { planAutoMovieReferenceClientConfiguration } from "@automovie/mcp";
 import { TestValidator } from "@nestia/e2e";
+import { createHash } from "node:crypto";
 import * as path from "node:path";
-
-import { digest } from "../../../../packages/mcp/src/internal/parseReference";
 
 /**
  * Registration ownership never authorizes overwriting another client setting.
@@ -34,7 +33,7 @@ export const test_reference_client_configuration_refusals = (): void => {
     initial.codex.content.indexOf(end),
   );
   const block = (candidate: string): string =>
-    `# automovie-reference managed begin v1 sha256:${digest(candidate)}\n${candidate}${end}`;
+    `# automovie-reference managed begin v1 sha256:${createHash("sha256").update(candidate).digest("hex")}\n${candidate}${end}`;
   const cases: {
     root?: string;
     nodeExecutable?: string;
@@ -48,7 +47,10 @@ export const test_reference_client_configuration_refusals = (): void => {
       root: `${root}${path.sep}..${path.sep}reference-production`,
       code: "INVALID_ROOT",
     },
-    { root: `${root}\n`, code: "INVALID_ROOT" },
+    ...["\0", "\r", "\n"].flatMap((control) => [
+      { root: `${root}${control}`, code: "INVALID_ROOT" },
+      { nodeExecutable: `${nodeExecutable}${control}`, code: "INVALID_ROOT" },
+    ]),
     { claude: "not json", code: "INVALID_CONFIGURATION" },
     { claude: "[]", code: "CONFIGURATION_CONFLICT" },
     { claude: '{"mcpServers":null}', code: "CONFIGURATION_CONFLICT" },

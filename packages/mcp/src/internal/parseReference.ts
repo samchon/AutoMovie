@@ -10,11 +10,15 @@ import type {
 import { MAX_SOURCE_BYTES, fail } from "./referenceError";
 
 interface Interval {
+  /** Inclusive original UTF-16 offset. */
   start: number;
+  /** Exclusive original UTF-16 offset. */
   end: number;
 }
 interface Heading extends IAutoMovieReferenceHeading {
+  /** Offset after the selected heading's own final newline. */
   bodyStart: number;
+  /** Start of the next same-or-shallower heading, or EOF. */
   subtreeEnd: number;
 }
 /**
@@ -24,13 +28,21 @@ interface Heading extends IAutoMovieReferenceHeading {
  * @author Samchon
  */
 export interface ParsedReference {
+  /** Fatal UTF-8 decode of the original bytes, including any BOM. */
   source: string;
+  /** Canonical project-relative identity associated with these source bytes. */
   file: string;
+  /** SHA-256 captured before asynchronous syntax loading can observe mutable input. */
   revision: string;
+  /** Original byte count captured beside the source revision. */
   sourceBytes: number;
+  /** All top-level headings, including unsupported depths needed for subtree boundaries. */
   headings: Heading[];
+  /** Ordered intervals recognized as actual HTML comments, never comment-like code. */
   annotations: Interval[];
+  /** Annotation intervals lacking a closing marker, retained only for diagnostics. */
   unterminated: Interval[];
+  /** Resolve an original interval into line and UTF-16 coordinates for this snapshot. */
   range(interval: Interval): IAutoMovieReferenceRange;
 }
 
@@ -290,7 +302,14 @@ function retain(
  */
 export function readReference(
   parsed: ParsedReference,
-  options: { anchor?: string; expectedDigest?: string; detail?: boolean },
+  options: {
+    /** Explicit authored anchor; absent selects the whole file rather than one subtree. */
+    anchor?: string;
+    /** Source SHA-256 from navigation; a mismatch refuses the current snapshot. */
+    expectedDigest?: string;
+    /** Include original retained and omitted ranges only when explicitly true. */
+    detail?: boolean;
+  },
 ): IAutoMovieReferenceContent {
   if (
     options.expectedDigest !== undefined &&

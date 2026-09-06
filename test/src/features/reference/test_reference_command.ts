@@ -4,7 +4,7 @@ import {
 } from "@automovie/mcp";
 import { TestValidator } from "@nestia/e2e";
 
-import { ReferenceError } from "../../../../packages/mcp/src/internal/referenceError";
+import { referenceErrors } from "../internal/referenceSourceModules";
 
 /**
  * The local command delivers the same provider result with a result-only stdout.
@@ -94,7 +94,7 @@ export const test_reference_command = async (): Promise<void> => {
   );
   for (const error of [
     new Error("private path"),
-    new ReferenceError("PERMISSION_DENIED", "Read denied."),
+    new referenceErrors.ReferenceError("PERMISSION_DENIED", "Read denied."),
   ]) {
     const status = await runAutoMovieReferenceCommand(
       ["--root", "/production", "--request", "{}"],

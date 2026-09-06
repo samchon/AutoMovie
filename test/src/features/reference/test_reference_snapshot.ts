@@ -2,7 +2,9 @@ import { createAutoMovieReferenceProvider } from "@automovie/mcp";
 import { TestValidator } from "@nestia/e2e";
 import { createHash } from "node:crypto";
 
-import { parseReference } from "../../../../packages/mcp/src/internal/parseReference";
+import { referenceParser } from "../internal/referenceSourceModules";
+
+const { parseReference } = referenceParser;
 
 /**
  * Snapshot metadata cannot drift when an injected reader reuses mutable byte storage.

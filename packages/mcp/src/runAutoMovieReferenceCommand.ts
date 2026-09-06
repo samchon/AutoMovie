@@ -11,8 +11,11 @@ import type { IAutoMovieReferenceReader } from "./structures/IAutoMovieReference
  * @author Samchon
  */
 export interface IAutoMovieReferenceCommandRuntime {
+  /** Bind the explicit command-line root before dispatching its one JSON request. */
   reader(root: string): Promise<IAutoMovieReferenceReader>;
+  /** Write the single result JSON envelope and its trailing newline. */
   stdout(value: string): void;
+  /** Write usage or sanitized startup diagnostics separately from result output. */
   stderr(value: string): void;
 }
 

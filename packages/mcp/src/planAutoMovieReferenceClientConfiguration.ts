@@ -26,9 +26,13 @@ const codexServer = z.object({ ...command, cwd: z.string() }).strict();
  * @author Samchon
  */
 export interface IAutoMovieReferenceClientConfigurationRequest {
+  /** Normalized absolute production root that the installed reference binary will bind. */
   root: string;
+  /** Normalized absolute current Node executable; no PATH lookup or installer is used. */
   nodeExecutable: string;
+  /** Existing .mcp.json bytes decoded as text, or undefined when absent. */
   claude?: string;
+  /** Existing .codex/config.toml text whose unrelated bytes must be preserved. */
   codex?: string;
 }
 
@@ -39,8 +43,20 @@ export interface IAutoMovieReferenceClientConfigurationRequest {
  * @author Samchon
  */
 export interface IAutoMovieReferenceClientConfigurationPlan {
-  claude: { path: ".mcp.json"; content: string };
-  codex: { path: ".codex/config.toml"; content: string };
+  /** Scoped Claude registration candidate; the caller decides whether to publish it. */
+  claude: {
+    /** Project-relative Claude configuration target. */
+    path: ".mcp.json";
+    /** Complete JSON candidate preserving all unrelated user configuration values. */
+    content: string;
+  };
+  /** Scoped Codex registration candidate with an independently owned managed table. */
+  codex: {
+    /** Project-relative Codex configuration target. */
+    path: ".codex/config.toml";
+    /** Complete TOML candidate preserving bytes outside the owned registration span. */
+    content: string;
+  };
 }
 
 /**
@@ -100,7 +116,9 @@ function assertAbsolute(value: string): void {
   if (
     !path.isAbsolute(value) ||
     path.resolve(value) !== value ||
-    /[\u0000\r\n]/u.test(value)
+    value.includes("\0") ||
+    value.includes("\r") ||
+    value.includes("\n")
   )
     fail(
       "INVALID_ROOT",

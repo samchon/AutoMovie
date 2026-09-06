@@ -19,6 +19,7 @@ const read = {
  * @evidence specifications/authoring-and-authority/reference-navigation.md#spec-reference-transports Describes exactly four read-only operations and rejects unknown request properties.
  */
 export const autoMovieReferenceSchemas = {
+  /** Strict shared schema for revision-bound authored-layer pagination. */
   get_index_of_layer: z
     .object({
       layer: z.enum(AUTOMOVIE_AUTHORED_DOCUMENT_LAYERS),
@@ -30,12 +31,15 @@ export const autoMovieReferenceSchemas = {
       budgetBytes,
     })
     .strict(),
+  /** Strict shared schema for one compact canonical-file index. */
   get_index_of_file: z
     .object({ file: z.string().min(1).max(4_096), budgetBytes })
     .strict(),
+  /** Strict shared schema for full-source projection with optional stale and detail checks. */
   read_file_without_annotations: z
     .object({ file: z.string().min(1).max(4_096), ...read })
     .strict(),
+  /** Strict shared schema for an explicit section address and bounded subtree projection. */
   read_section_without_annotations: z
     .object({ location: z.string().min(1).max(4_096), ...read })
     .strict(),
@@ -67,7 +71,9 @@ const layerProbe = z.object({
  * @evidence specifications/authoring-and-authority/reference-navigation.md#spec-reference-bounds Classifies unknown layers independently of general schema admission.
  */
 export function autoMovieReferenceRequestError(input: unknown): {
+  /** Distinguishes unknown authored layers from all other malformed request inputs. */
   code: string;
+  /** Recovery guidance without reflecting request values or document contents. */
   message: string;
 } {
   const layer = layerProbe.safeParse(input);
@@ -93,9 +99,12 @@ export function autoMovieReferenceRequestError(input: unknown): {
  * @evidence requirements/agent-authoring/reference-navigation.md#agent-reference-bounds Refuses malformed operations and response limits before a reader is called.
  * @evidence specifications/authoring-and-authority/reference-navigation.md#spec-reference-bounds Applies bounded schema admission and supplies the documented default response budget.
  */
-export function parseAutoMovieReferenceRequest(
-  input: unknown,
-): (AutoMovieReferenceRequest & { budgetBytes: number }) | null {
+export function parseAutoMovieReferenceRequest(input: unknown):
+  | (AutoMovieReferenceRequest & {
+      /** Admitted success-envelope byte ceiling, with the 64 KiB default already applied. */
+      budgetBytes: number;
+    })
+  | null {
   const parsed = requestSchema.safeParse(input);
   return parsed.success
     ? { ...parsed.data, budgetBytes: parsed.data.budgetBytes ?? DEFAULT_BUDGET }

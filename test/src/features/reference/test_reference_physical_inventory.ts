@@ -54,7 +54,10 @@ export const test_reference_physical_inventory = async (): Promise<void> => {
     changed.state.hook = (operation) => {
       if (mutation === "population-loss" && operation === "list")
         changed.state.entries.delete(changed.absolute);
-      if (mutation === "primitive-error" && operation === "lstat") throw null;
+      if (mutation === "primitive-error" && operation === "lstat") {
+        // eslint-disable-next-line typescript/only-throw-error -- the reader must classify a null native failure without accessing its properties
+        throw null;
+      }
     };
     let code = "success";
     try {

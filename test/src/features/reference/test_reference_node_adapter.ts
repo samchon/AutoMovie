@@ -1,4 +1,7 @@
-import { createAutoMovieReferenceFileSystem } from "@automovie/mcp";
+import {
+  type IAutoMovieReferenceIdentity,
+  createAutoMovieReferenceFileSystem,
+} from "@automovie/mcp";
 import { TestValidator } from "@nestia/e2e";
 import { constants } from "node:fs";
 
@@ -11,7 +14,7 @@ import { constants } from "node:fs";
  * 3. The adapter preserves native failures and closes through the supplied handle.
  */
 export const test_reference_node_adapter = async (): Promise<void> => {
-  let kind = "file";
+  let kind: IAutoMovieReferenceIdentity["kind"] = "file";
   let content = Buffer.from("abc");
   let closed = 0;
   let flags = -1;
@@ -56,7 +59,7 @@ export const test_reference_node_adapter = async (): Promise<void> => {
       typeof createAutoMovieReferenceFileSystem
     >[0],
   );
-  for (kind of ["file", "directory", "link", "other"])
+  for (kind of ["file", "directory", "link", "other"] as const)
     TestValidator.equals("native kind", (await io.lstat("ignored")).kind, kind);
   kind = "file";
   TestValidator.equals(

@@ -5,7 +5,9 @@
  * @evidence specifications/authoring-and-authority/reference-navigation.md#spec-reference-bounds Carries a classified code with a source-free recovery message.
  */
 export class ReferenceError extends Error {
+  /** Keep the provider-authored category and message together without external error data. */
   public constructor(
+    /** Stable refusal category consumed by transports and configuration publication callers. */
     public readonly code: string,
     message: string,
   ) {

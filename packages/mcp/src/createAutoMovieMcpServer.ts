@@ -63,9 +63,12 @@ export function registerAutoMovieReferenceTools(
 export function createAutoMovieMcpServer(
   reader: IAutoMovieReferenceReader,
   version: string,
-  factory: (identity: { name: string; version: string }) => McpServer = (
-    identity,
-  ) => new McpServer(identity),
+  factory: (identity: {
+    /** Reference-only server identity announced to the client. */
+    name: string;
+    /** Installed package version, not a document or production revision. */
+    version: string;
+  }) => McpServer = (identity) => new McpServer(identity),
 ): McpServer {
   const server = factory({ name: "automovie-reference", version });
   registerAutoMovieReferenceTools(server, reader);
@@ -79,8 +82,11 @@ export function createAutoMovieMcpServer(
  * @author Samchon
  */
 export interface IAutoMovieMcpStartupRuntime {
+  /** Bind the startup root once; tool requests never supply a replacement root. */
   reader(root: string): Promise<IAutoMovieReferenceReader>;
+  /** Register only reference tools using the bound reader and installed package version. */
   server(reader: IAutoMovieReferenceReader, version: string): McpServer;
+  /** Supply the stdio connection without opening a network listener. */
   transport(): StdioServerTransport;
 }
 
