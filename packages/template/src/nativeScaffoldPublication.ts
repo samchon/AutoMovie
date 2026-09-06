@@ -39,6 +39,7 @@ interface IBoundChild {
 }
 
 interface IBoundChildStatus {
+  identity: string;
   link: boolean;
   links: bigint;
   regular: boolean;
@@ -181,6 +182,7 @@ const publishNativeScaffoldFileWithEnvironment = (
   let bytesWritten = 0;
   let failure: unknown = undefined;
   let completedVersion: string | undefined;
+  let completedIdentity: string | undefined;
   try {
     assertOrdinarySingleLink(child.status(), request.childName);
     while (bytesWritten < source.length) {
@@ -203,6 +205,7 @@ const publishNativeScaffoldFileWithEnvironment = (
       throw new Error(`scaffold file changed final size: ${request.childName}`);
     assertChildBytes(child, request.childName, source);
     completedVersion = completed.version;
+    completedIdentity = completed.identity;
     assertBoundResident(parent, request.childName, completedVersion);
   } catch (error) {
     failure = error;
@@ -231,6 +234,7 @@ const publishNativeScaffoldFileWithEnvironment = (
 
   return failure === undefined
     ? Object.freeze({
+        fileIdentity: completedIdentity!,
         parentIdentity: request.expectedParentIdentity,
         status: "completed",
       })
@@ -373,6 +377,7 @@ const posixChild = (
       bigint: true,
     });
     return {
+      identity: physicalIdentity(status),
       link: status.isSymbolicLink(),
       links: status.nlink,
       regular: status.isFile(),
@@ -614,6 +619,7 @@ const windowsChild = (
       const information = windows.inspectFile(handle);
       const reparse = (information.attributes & 0x400) !== 0;
       return {
+        identity: information.identity,
         link: reparse,
         links: BigInt(information.links),
         regular: reparse === false && (information.attributes & 0x10) === 0,

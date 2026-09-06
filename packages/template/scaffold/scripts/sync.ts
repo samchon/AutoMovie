@@ -1,4 +1,5 @@
 import { writeAutoMovieProductionInstructions } from "@automovie/template";
+import { synchronizeAutoMovieReferenceClients } from "automovie";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -17,12 +18,20 @@ import { productionEvidence } from "../lint.config";
 export const synchronizeProductionInstructions = (props?: {
   root?: string;
   scaffoldRoot?: string;
-}): string[] =>
-  writeAutoMovieProductionInstructions({
-    root: props?.root ?? process.cwd(),
-    productionEvidence,
-    scaffoldRoot: props?.scaffoldRoot,
-  });
+}): string[] => {
+  const root =
+    props?.root ??
+    path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+  const clients = synchronizeAutoMovieReferenceClients(root);
+  return [
+    ...clients,
+    ...writeAutoMovieProductionInstructions({
+      root,
+      productionEvidence,
+      scaffoldRoot: props?.scaffoldRoot,
+    }),
+  ];
+};
 
 if (
   process.argv[1] !== undefined &&
@@ -30,6 +39,6 @@ if (
 ) {
   const written = synchronizeProductionInstructions();
   process.stdout.write(
-    `Synchronized ${written.length} generated instruction path(s).\n`,
+    `Synchronized ${written.length} instruction or reference-client path(s).\n`,
   );
 }

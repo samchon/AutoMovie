@@ -413,6 +413,14 @@ const perPlatform = (
  */
 export const test_cli_scaffold_native_adapter = (): void => {
   const both: readonly NodeJS.Platform[] = ["linux", "win32"];
+  for (const platform of both) {
+    const completed = execute({ platform }).first;
+    TestValidator.equals(
+      `${platform} exposes the published descriptor identity`,
+      completed.status === "completed" ? completed.fileIdentity : null,
+      "1:3",
+    );
+  }
   const matrix: Array<{ outcome: string; scenario: INativeScenario }> = [
     ...perPlatform(both, { target: "ok" }, "completed"),
     {

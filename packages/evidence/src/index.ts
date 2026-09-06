@@ -25,3 +25,5 @@ export * from "./readAutoMovieProductionEvidence";
 export * from "./verifyAutoMovieEvidenceMetadataRewrite";
 export * from "./walkAutoMovieProjectPopulationFiles";
 export { evidence } from "@ttsc/evidence";
+export * from "./createAutoMovieSourceRealizationReferences";
+export * from "./assertAutoMovieProductionMaintenanceComplete";

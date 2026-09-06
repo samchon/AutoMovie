@@ -40,6 +40,13 @@ export interface IScaffoldPublicationEntry {
  */
 export interface IScaffoldCompletedFilePublicationOutcome {
   /**
+   * Identity observed through the descriptor that published the completed file.
+   *
+   * @evidence requirements/operations-and-recovery/idempotency-and-side-effects.md#operations-idempotent-deterministic-results Identifies the exact written file for later currentness checks.
+   * @evidence specifications/execution-and-recovery/retry-backoff-and-idempotency.md#execution-deterministic-result-reuse Lets reuse reject a successor after the publishing descriptor closes.
+   */
+  fileIdentity?: string;
+  /**
    * Captured physical parent generation used by the native operation.
    *
    * @evidence requirements/operations-and-recovery/idempotency-and-side-effects.md#operations-idempotent-deterministic-results Identifies the physical owner of the completed result.

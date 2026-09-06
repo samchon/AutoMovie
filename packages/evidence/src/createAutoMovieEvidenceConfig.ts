@@ -16,6 +16,7 @@ import {
   isAutoMovieProductionLanguage,
 } from "./AutoMovieProductionLanguage";
 import { assertAutoMovieEvidenceSyntax } from "./assertAutoMovieEvidenceSyntax";
+import { assertAutoMovieProductionMaintenanceComplete } from "./assertAutoMovieProductionMaintenanceComplete";
 import { assertAutoMovieEvidenceReviewReasons } from "./auditAutoMovieEvidenceReviewReasons";
 import { createAutoMovieAuthoredPopulationFiles } from "./createAutoMovieAuthoredPopulationFiles";
 import { createAutoMoviePopulationAccountClaims } from "./createAutoMoviePopulationAccountClaims";
@@ -1242,6 +1243,7 @@ const validateDeclaration = (graph: IProductionGraph): void => {
       `Production evidence location is not a directory: ${posix(graph.location)}.`,
     );
   const kind: unknown = graph.kind;
+  assertAutoMovieProductionMaintenanceComplete(graph.location);
   if (!PRODUCTION_KINDS.includes(kind))
     throw new Error(
       `Unsupported production kind ${describeDeclarationValue(kind)}.`,

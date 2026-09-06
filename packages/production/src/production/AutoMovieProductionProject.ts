@@ -79,6 +79,7 @@ import {
   assertProductionRenderPublicationCurrent,
   isPortableProductionPublicationPath,
 } from "./productionRenderPublicationIdentity";
+import { readProductionEntryPresence } from "./readProductionEntryPresence";
 import {
   assertAutoMovieExternalGeneratorTermsAt,
   canonicalAutoMovieRepaintGeneratorProvenance,
@@ -1863,6 +1864,24 @@ export class AutoMovieProductionProject {
         relative: path.basename(file),
       }),
     ).toString("utf8");
+  }
+
+  /**
+   * Observe any entry, not merely readable prose, so unsafe recovery markers
+   * cannot disappear behind the nullable text-reader contract.
+   *
+   * @evidence requirements/review/subject-inspection.md#review-library-delivery-coverage Keeps interrupted sidecar publication outside the completed observation population.
+   * @evidence specifications/review-and-acceptance/subject-surface-and-inspection.md#review-system-library-delivery-coverage Counts malformed files, directories, and dangling links as pending markers rather than absent text.
+   */
+  public proseDocumentExists(relativePath: string): boolean {
+    return readProductionEntryPresence({
+      root: this.rootReal,
+      relative: relativePath,
+      assertCurrent: () => this.assertIncarnation(),
+      assertParent: (parent) =>
+        assertPhysicalDirectoryAncestors(this.rootReal, parent, true),
+      exists: (file) => lstatOrNull(file) !== null,
+    });
   }
 
   /**
