@@ -1,9 +1,9 @@
-import {
-  type IScaffoldPhysicalDirectory,
+import type {
+  IScaffoldPhysicalDirectory,
   assertScaffoldPhysicalDirectory,
   publishNativeScaffoldFile,
 } from "@automovie/template";
-import {
+import type {
   autoMovieMaintenanceFileFromSnapshot,
   observeAutoMovieMaintenanceFiles,
   renameAutoMovieMaintenanceFile,
@@ -26,17 +26,6 @@ export interface ILibraryReviewPublicationFileSystem {
   move: typeof renameAutoMovieMaintenanceFile;
   sync: typeof syncAutoMovieMaintenanceDirectory;
 }
-
-/** Production wiring shares the same physical ownership protocol as maintenance. */
-export const libraryReviewPublicationFileSystem: ILibraryReviewPublicationFileSystem =
-  {
-    observe: observeAutoMovieMaintenanceFiles,
-    assertDirectory: assertScaffoldPhysicalDirectory,
-    file: autoMovieMaintenanceFileFromSnapshot,
-    publish: publishNativeScaffoldFile,
-    move: renameAutoMovieMaintenanceFile,
-    sync: syncAutoMovieMaintenanceDirectory,
-  };
 
 /**
  * Retain every physical ancestor of an adjacent sidecar before reading it.

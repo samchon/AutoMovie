@@ -17,6 +17,16 @@ import {
   parseAutoMovieLibraryReviewPlan,
   readAutoMovieLibraryReviewRequirements,
 } from "@automovie/production";
+import {
+  assertScaffoldPhysicalDirectory,
+  publishNativeScaffoldFile,
+} from "@automovie/template";
+import {
+  autoMovieMaintenanceFileFromSnapshot,
+  observeAutoMovieMaintenanceFiles,
+  renameAutoMovieMaintenanceFile,
+  syncAutoMovieMaintenanceDirectory,
+} from "automovie";
 import { randomUUID } from "node:crypto";
 import path from "node:path";
 
@@ -37,8 +47,8 @@ import {
 } from "./libraryReviewPublication";
 import { createLibraryReviewPublicationAdmissionReader } from "./libraryReviewPublicationAdmission";
 import {
+  type ILibraryReviewPublicationFileSystem,
   createLibraryReviewPublicationIO,
-  libraryReviewPublicationFileSystem,
 } from "./libraryReviewPublicationFileSystem";
 import {
   readAutoMovieObservationMeasurements,
@@ -46,6 +56,17 @@ import {
 } from "./libraryReviewRequest";
 
 type Verdict = "failed" | "not-run" | "passed" | "unsupported";
+
+/** Bind the publication policy to the shared native maintenance capabilities. */
+const libraryReviewPublicationFileSystem: ILibraryReviewPublicationFileSystem =
+  {
+    observe: observeAutoMovieMaintenanceFiles,
+    assertDirectory: assertScaffoldPhysicalDirectory,
+    file: autoMovieMaintenanceFileFromSnapshot,
+    publish: publishNativeScaffoldFile,
+    move: renameAutoMovieMaintenanceFile,
+    sync: syncAutoMovieMaintenanceDirectory,
+  };
 
 const values = (argv: readonly string[], name: string): string[] => {
   const output: string[] = [];
