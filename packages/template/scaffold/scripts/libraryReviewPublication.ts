@@ -14,6 +14,7 @@ import { isDeepStrictEqual } from "node:util";
 export interface ILibraryReviewPublicationFile {
   identity: string;
   source: string;
+  /** Stable identity/size/mtime token; handle-sensitive change time is excluded. */
   version: string;
 }
 
@@ -28,9 +29,9 @@ export interface ILibraryReviewPublicationArtifact {
 }
 
 /**
- * Bound-parent effects for one sidecar transaction. Moves are no-replace and
- * preserve a late source competitor, including when they report failure after
- * an effect. Staging syncs and verifies complete bytes before returning.
+ * Bound-parent effects for one sidecar transaction. No-replace moves preserve
+ * the full file token. A late source competitor stays retained, including when
+ * a move reports failure after an effect. Staging syncs and verifies bytes.
  *
  * @author Samchon
  */
@@ -72,6 +73,7 @@ export const parseLibraryReviewPublication = (props: {
     ? { version: 1, units: [] }
     : props.parse(props.before.source);
 
+/** A same-byte rewrite still changes ownership when its stable version changes. */
 const same = (
   left: ILibraryReviewPublicationFile | null,
   right: ILibraryReviewPublicationFile | null,
@@ -81,14 +83,6 @@ const same = (
     : left.identity === right.identity &&
       left.source === right.source &&
       left.version === right.version;
-
-const owns = (
-  left: ILibraryReviewPublicationFile | null,
-  right: ILibraryReviewPublicationFile | null,
-): boolean =>
-  left === null || right === null
-    ? left === right
-    : left.identity === right.identity && left.source === right.source;
 
 const message = (error: unknown): string =>
   error instanceof Error ? error.message : String(error);
@@ -252,7 +246,7 @@ export const publishLibraryReview = (props: {
     if (before !== null) io.move({ path: target, file: before }, archive);
     io.move(candidate, target);
     io.assertBound();
-    if (!owns(io.read(target), candidate.file))
+    if (!same(io.read(target), candidate.file))
       throw new Error(
         "Library review publication lost its candidate generation.",
       );
@@ -265,24 +259,24 @@ export const publishLibraryReview = (props: {
           "Library review recovery does not own its pending marker.",
         );
       let current = io.read(target);
-      if (owns(current, candidate.file)) {
+      if (same(current, candidate.file)) {
         io.move({ path: target, file: current! }, candidatePath);
         current = null;
       }
-      if (!owns(current, before)) {
+      if (!same(current, before)) {
         if (current !== null)
           throw new Error(
             "Library review recovery preserves a competing sidecar.",
           );
         const original = io.read(archive);
-        if (!owns(original, before))
+        if (!same(original, before))
           throw new Error(
             "Library review recovery cannot identify its predecessor archive.",
           );
         io.move({ path: archive, file: original! }, target);
       }
       io.assertBound();
-      if (!owns(io.read(target), before))
+      if (!same(io.read(target), before))
         throw new Error(
           "Library review recovery did not restore its predecessor.",
         );
