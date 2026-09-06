@@ -112,6 +112,17 @@ const inspectPng = (props: {
   path: string;
   bytes: Uint8Array;
 }): IAutoMovieDesignReferenceContainer => {
+  // A well-framed datastream that reaches IEND without an IDAT chunk is
+  // refused at the IDAT stage. The decoder would refuse the same bytes as a
+  // closure fault, so the framing walk reads the chunk tags first and leaves
+  // every other refusal to the decoder.
+  const tags = pngChunkTags(props.bytes);
+  if (
+    tags !== null &&
+    tags.some((chunk) => chunk.tag === "IEND") &&
+    tags.every((chunk) => chunk.tag !== "IDAT")
+  )
+    throw invalid(props.path, "PNG", "IDAT", "no IDAT chunk was found");
   let decoded: PNG;
   try {
     decoded = residentPngJs().PNG.sync.read(Buffer.from(props.bytes), {
@@ -122,23 +133,12 @@ const inspectPng = (props: {
   }
   if (decoded.width <= 0 || decoded.height <= 0)
     throw invalid(props.path, "PNG", "IHDR", "extent must be positive");
-  // The decoder has already refused any byte outside the chunk framing, a
-  // first chunk that is not the 13-byte IHDR, and a datastream that IEND does
-  // not close exactly, so this walk only has to read the facts it left open.
-  let idat = false;
-  for (let cursor = 8; cursor < props.bytes.length; ) {
-    const size = readU32(props.bytes, cursor);
-    const tag = ascii(props.bytes, cursor + 4, 4);
-    if (tag === "IDAT") idat = true;
-    if (tag === "IEND") {
-      if (size !== 0)
-        throw invalid(props.path, "PNG", "IEND", "IEND must be empty");
-      break;
-    }
-    cursor += 12 + size;
-  }
-  if (!idat)
-    throw invalid(props.path, "PNG", "IDAT", "no IDAT chunk was found");
+  // The decoder has already refused any byte outside the chunk framing and a
+  // first chunk that is not the 13-byte IHDR, so the closing chunk is the one
+  // fact it leaves open.
+  const iend = tags?.find((chunk) => chunk.tag === "IEND");
+  if (iend !== undefined && iend.size !== 0)
+    throw invalid(props.path, "PNG", "IEND", "IEND must be empty");
   return { media: "image/png", width: decoded.width, height: decoded.height };
 };
 
@@ -1144,6 +1144,24 @@ const readU32 = (bytes: Uint8Array, offset: number): number =>
   );
 const ascii = (bytes: Uint8Array, offset: number, length: number): string =>
   Buffer.from(bytes.subarray(offset, offset + length)).toString("ascii");
+/**
+ * The chunk tags and payload sizes of a PNG datastream in order, or null when
+ * the chunk framing runs past the bytes before it closes with IEND.
+ */
+const pngChunkTags = (
+  bytes: Uint8Array,
+): Array<{ tag: string; size: number }> | null => {
+  const chunks: Array<{ tag: string; size: number }> = [];
+  for (let cursor = 8; cursor + 8 <= bytes.length; ) {
+    const size = readU32(bytes, cursor);
+    const tag = ascii(bytes, cursor + 4, 4);
+    if (cursor + 12 + size > bytes.length) return null;
+    chunks.push({ tag, size });
+    if (tag === "IEND") return chunks;
+    cursor += 12 + size;
+  }
+  return null;
+};
 const skipXmlSpace = (text: string, offset: number): number => {
   while (
     text[offset] === " " ||
