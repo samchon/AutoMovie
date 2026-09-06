@@ -2,7 +2,7 @@
 
 ## 참조 snapshot과 선택 {#spec-reference-navigation}
 
-<!-- @evidence requirements/agent-authoring/reference-navigation.md#agent-reference-navigation 원문을 변경하지 않는 선택, projection, 예산과 transport 경계를 하나의 참조 계약으로 정한다. -->
+원문을 변경하지 않는 선택, projection, 예산과 transport 경계를 아래의 개별 계약으로 정한다.
 
 ### 파일 및 절 주소 {#spec-reference-selection}
 
