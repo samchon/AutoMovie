@@ -23,7 +23,7 @@ These roles specialize the separation already required by [briefing.md](briefing
 | Role | Owns | Never |
 | --- | --- | --- |
 | Writer | One production: its research, design, source, fan-out, and repairs | Another unit's paths, the harness, or the verdict on its own work |
-| Paired reviewer | The PASS or FAIL at each gate of that one production, read over the complete corpus | Editing content, moving stage state, staging, committing, or pushing anything |
+| Paired reviewer | The PASS, FAIL, or INCONCLUSIVE at each gate of that one production, read over the complete corpus | Editing content, moving stage state, staging, committing, or pushing anything |
 | Liveness observer | Whether each unit is alive and moving, for the whole run | Any judgment about content |
 | Cross-work reviewer | The final whole-surface verdict across all immutable productions | Commissioning, harness operation, writer steering, content edits, or per-unit measurement |
 | Coordinator | The harness, launches, recovery, and operation records | Writing production source, sending content feedback, or issuing any gate or final verdict |
@@ -37,6 +37,8 @@ The combination this separation exists to break is one agent holding commissione
 ## A Gate Is One Invocation And One Complete Pass
 
 A gate review is not a loop-until-dry round. `PASS` ends that gate, resumes the same writer immediately, and requires no second clean audit. `FAIL` leaves the stage where it is and returns every finding in one batch, and the same writer resumes on the repair.
+
+For `INCONCLUSIVE`, hand the unpassed gate to [the campaign record's judgment and escalation procedure](records.md#calibrate-judgment-before-production-review). The coordinator records the operation; it does not resolve the uncertainty by issuing a verdict or asking the writer for speculative repairs.
 
 Clean-round requirements belong to the procedures that declare them, and no gate is one of those procedures. The [review skill](../review/SKILL.md#self-review) closes a Self-Review on one complete round that finds nothing, and the [documentation skill](../documentation/SKILL.md#instruction-authority) separately requires two consecutive clean rounds over an agent-instruction diff. Demanding a duplicate clean pass at a gate uses the reviewer for nothing and pays a full corpus read for it.
 
@@ -92,7 +94,7 @@ The independent cross-work reviewer closes the comparison by reading all product
 | Supervision | A writer receives contradictory direction from two supervisors | One liveness observer for the whole run, never one per production |
 | Ownership | A reviewer or observer edits, stages, or commits an artifact | Read-only is enforced by tools or permissions, not stated in prose |
 | Ownership | Two units contend over one file, one config key, or one scratch name | Every shared resource on the machine is prefixed by its owner, and [One Machine, Several Campaigns](steering.md#one-machine-several-campaigns) applies in full |
-| Gate | The reviewer is asked for a second clean pass and finds nothing twice | One invocation, one complete pass, then `PASS` or a single batched `FAIL` |
+| Gate | The reviewer is asked for a second clean pass and finds nothing twice | One invocation and one complete pass; use the verdict and escalation handoff above rather than demanding another clean pass |
 | Gate | A run stops because an early artifact was judged against a late gate | Each gate judges only what its own transition is for |
 | Record | The result dies with the sandbox | Operational status goes to the ignored `.wiki`, durable conclusions to the issue, and a baseline to the tracked [baseline directory](../../../experiments/baselines/README.md) in its fixed format before the sandbox is deleted |
 | Record | A number in prose disagrees with the artifact it came from | Re-count when you move a number into prose, and cite what you re-counted from |
