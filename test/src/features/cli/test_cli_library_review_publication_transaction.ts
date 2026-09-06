@@ -294,6 +294,7 @@ export const test_cli_library_review_publication_transaction = (): void => {
       () =>
         fixture.run(() => {
           if (++admissions !== 2) return;
+          // eslint-disable-next-line typescript/only-throw-error -- final admission must retain a host's non-Error diagnostic
           if (fault === "final-admission") throw "fresh-source-diagnostic";
           if (fault === "marker" || fault === "candidate") {
             const name =

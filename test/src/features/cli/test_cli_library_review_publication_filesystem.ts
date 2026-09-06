@@ -98,7 +98,7 @@ export const test_cli_library_review_publication_filesystem = (): void => {
   let directoryError: Error | undefined;
   let syncError: Error | undefined;
   let moveError: Error | undefined;
-  let mutationAfterMove: (() => void) | undefined;
+  const effects: { afterMove?: () => void } = {};
   let outcome: ScaffoldFilePublicationOutcome = {
     status: "completed",
     fileIdentity: resident.identity,
@@ -161,7 +161,7 @@ export const test_cli_library_review_publication_filesystem = (): void => {
     move: (request) => {
       if (moveError !== undefined) throw moveError;
       moves.push(request);
-      mutationAfterMove?.();
+      effects.afterMove?.();
     },
     sync: (directory) => {
       if (syncError !== undefined) throw syncError;
@@ -347,7 +347,7 @@ export const test_cli_library_review_publication_filesystem = (): void => {
     true,
   );
   moveError = undefined;
-  mutationAfterMove = () => {
+  effects.afterMove = () => {
     directoryError = new Error("parent replaced during move");
   };
   TestValidator.equals(
