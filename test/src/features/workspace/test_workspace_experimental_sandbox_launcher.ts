@@ -177,7 +177,10 @@ export const test_workspace_experimental_sandbox_launcher = (): void => {
         if (options.fault === "pack-target") memory.putDirectory(target);
         if (options.fault === "pack-manifest")
           memory.putFile(manifest, "competitor");
-        if (options.fault === "pack-primitive") throw "pack refused";
+        if (options.fault === "pack-primitive") {
+          // eslint-disable-next-line typescript/only-throw-error -- the launcher must report the injected non-Error pack failure unchanged
+          throw "pack refused";
+        }
         assertCurrent();
         return packed;
       },
@@ -203,8 +206,10 @@ export const test_workspace_experimental_sandbox_launcher = (): void => {
         if (options.fault === "registration-target")
           memory.putDirectory(target);
         memory.io.assertDirectory(directory);
-        if (options.registrationFailure !== undefined)
+        if (options.registrationFailure !== undefined) {
+          // eslint-disable-next-line typescript/only-throw-error -- the registration boundary must preserve the injected unknown failure
           throw options.registrationFailure;
+        }
         if (options.fault === "after-registration-target")
           memory.putDirectory(target);
         if (options.fault === "after-registration-manifest")
