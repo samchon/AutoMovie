@@ -19,7 +19,6 @@
 //
 // `sandboxManifest` then pins every workspace package to its tarball.
 import { spawnSync } from "node:child_process";
-import * as fs from "node:fs";
 import * as path from "node:path";
 
 import {
@@ -31,7 +30,7 @@ import {
   parseAutoMovieContractBaseline,
 } from "../packages/template/src/productionMaintenance";
 import { renderScaffold } from "../packages/template/src/renderScaffold";
-import { writeFiles } from "../packages/template/src/writeFiles";
+import { openExperimentalSandbox } from "./experimentalSandbox";
 import {
   type IPackWorkspaceResult,
   PACKAGES,
@@ -97,8 +96,13 @@ export const sandboxManifest = (
 };
 
 export interface IExperimentalDependencies {
-  readonly pack: (target: string) => IPackWorkspaceResult;
+  readonly pack: (
+    target: string,
+    assertCurrent: () => void,
+  ) => IPackWorkspaceResult;
   readonly install: (target: string) => number | null;
+  readonly openSandbox: typeof openExperimentalSandbox;
+  readonly render: typeof renderScaffold;
 }
 
 export interface IExperimentalWriter {
@@ -157,9 +161,23 @@ export const runExperimentalInstall = (
   return launch(request.command, [...request.argv], request.options).status;
 };
 
+/**
+ * Carry the sandbox's captured authority into every package mutation.
+ *
+ * @evidence requirements/agent-authoring/project-ownership.md#agent-sandbox-write-boundary Keeps packing attached to the launcher-approved sandbox rather than recapturing a successor.
+ * @evidence specifications/authoring-and-authority/source-authority-and-derivation.md#spec-authoring-sandbox-physical-ownership Passes the same currentness callback into each package mutation boundary.
+ */
+export const packExperimentalWorkspace = (
+  target: string,
+  assertCurrent: () => void,
+  pack: typeof packWorkspace = packWorkspace,
+): IPackWorkspaceResult => pack(target, undefined, undefined, assertCurrent);
+
 export const experimentalDependencies: IExperimentalDependencies = {
-  pack: packWorkspace,
-  install: (target) => runExperimentalInstall(target),
+  pack: packExperimentalWorkspace,
+  install: runExperimentalInstall,
+  openSandbox: openExperimentalSandbox,
+  render: renderScaffold,
 };
 
 /** Where every sandbox lives, and the only directory one may be written into. */
@@ -174,8 +192,8 @@ export const EXPERIMENTAL_ROOT = path.join(ROOT, "experimental");
  * `--refresh` never calls it: `pnpm run experimental .. --refresh` resolved to
  * the repository root, rewrote the repository's own `package.json`, and exited
  * 0, and with the install enabled it first packed ten tarballs into whatever
- * directory the traversal reached. Containment is therefore checked here, once,
- * before anything is packed, written, or installed, and it holds for every name
+ * directory the traversal reached. This lexical check precedes physical
+ * approval by `openExperimentalSandbox` and holds for every name
  * shape a traversal can take: `..`, `a/b`, a backslash segment on Windows, an
  * absolute path, and the empty string, all of which resolve to a path whose
  * parent is not `experimental/`.
@@ -287,6 +305,26 @@ export const experimentalInstallFailureMessage = (
     refresh ? "--refresh" : "--force"
   }.`;
 
+/**
+ * Keep packing and cleanup causes visible when a guarded operation fails.
+ *
+ * @evidence requirements/agent-authoring/project-ownership.md#agent-sandbox-write-boundary Reports the underlying identity refusal even when it also prevents staging cleanup.
+ * @evidence specifications/authoring-and-authority/source-authority-and-derivation.md#spec-authoring-sandbox-physical-ownership Preserves operation and recovery causes in the launcher's terminal diagnostic.
+ */
+export const experimentalFailureMessage = (error: unknown): string =>
+  error instanceof AggregateError
+    ? `${error.message}\n${error.errors.map(experimentalFailureMessage).join("\n")}`
+    : error instanceof Error
+      ? error.message
+      : String(error);
+
+/**
+ * Create or refresh one sandbox while retaining its physical approval through
+ * packing, descriptor-bound publication and the installation boundary.
+ *
+ * @evidence requirements/agent-authoring/project-ownership.md#agent-sandbox-write-boundary Applies the same sandbox ownership contract to creation, force, refresh and no-install.
+ * @evidence specifications/authoring-and-authority/source-authority-and-derivation.md#spec-authoring-sandbox-physical-ownership Orders preflight, prepack approval, publication and install currentness checks without adopting replaced paths.
+ */
 export const runExperimental = (
   args: readonly string[],
   dependencies: IExperimentalDependencies = experimentalDependencies,
@@ -308,14 +346,22 @@ export const runExperimental = (
     // guides, scripts, viewer changes, and package wiring the experiment exists
     // to exercise.
     const refresh = request.refresh;
+    const files = refresh
+      ? undefined
+      : dependencies.render(experimentalScaffoldRequest(request)!);
+    const sandbox = dependencies.openSandbox({
+      create: !refresh,
+      overwrite: request.force,
+      root: EXPERIMENTAL_ROOT,
+      target,
+    });
 
     // Refuse a non-empty directory, not merely an existing one, matching the
     // CLI's own `--force` semantics. Deleting a sandbox on Windows routinely
     // leaves the directory behind once its `node_modules` links are gone, and
     // an existence check would make that residue block every later attempt.
     if (
-      fs.existsSync(target) &&
-      fs.readdirSync(target).length !== 0 &&
+      sandbox.entries.length !== 0 &&
       request.force === false &&
       refresh === false
     )
@@ -329,45 +375,31 @@ export const runExperimental = (
     // tarballs under a directory the command then declined to use: a refresh of
     // a sandbox that does not exist, and a render under a name `renderScaffold`
     // refuses, both went that way.
-    const manifest = path.join(target, "package.json");
-    if (refresh && fs.existsSync(manifest) === false)
+    if (refresh && sandbox.manifest === undefined)
       throw new Error(
         `experimental/${name} has no package.json to refresh. Create it first.`,
       );
 
     // A sandbox created before baselines were frozen has a manifest and no
     // baseline; the scaffold request names that state instead of an ENOENT.
-    const baselineFile = path.join(target, AUTO_MOVIE_CONTRACT_BASELINE_PATH);
-    const refreshSnapshot = refresh
-      ? {
-          baseline: fs.existsSync(baselineFile)
-            ? fs.readFileSync(baselineFile, "utf8")
-            : undefined,
-          manifest: fs.readFileSync(manifest, "utf8"),
-        }
-      : undefined;
-
-    // Rendering is what enforces the scaffold's own name rule, so it runs
-    // before the pack as well. Nothing reaches disk here; `writeFiles` below
-    // still runs after the pack that fills the same directory.
-    const scaffoldRequest = experimentalScaffoldRequest(
-      request,
-      refreshSnapshot?.baseline,
-    );
-    const files =
-      scaffoldRequest === undefined
-        ? undefined
-        : renderScaffold(scaffoldRequest);
+    if (refresh)
+      experimentalScaffoldRequest(
+        request,
+        sandbox.read(AUTO_MOVIE_CONTRACT_BASELINE_PATH),
+      );
+    sandbox.prepare(Object.keys(files ?? { "package.json": "" }));
 
     const install = request.install;
-    const specifiers = install ? dependencies.pack(target).specifiers : {};
+    sandbox.assertCurrent();
+    const specifiers = install
+      ? dependencies.pack(target, sandbox.assertCurrent).specifiers
+      : {};
+    sandbox.assertCurrent();
 
     if (files === undefined) {
-      fs.writeFileSync(
-        manifest,
-        sandboxManifest(refreshSnapshot!.manifest, specifiers),
-        "utf8",
-      );
+      sandbox.publish({
+        "package.json": sandboxManifest(sandbox.manifest!, specifiers),
+      });
       // Say which of the two happened. `--refresh --no-install` leaves the
       // specifiers empty, so the rewrite preserves the pins the manifest
       // already carried; reporting that as a refresh against the pack tells an
@@ -383,7 +415,7 @@ export const runExperimental = (
         files["package.json"],
         specifiers,
       );
-      writeFiles(target, files, { force: true });
+      sandbox.publish(files);
       output.write(
         `Rendered ${Object.keys(files).length} files into experimental/${name}\n`,
       );
@@ -391,10 +423,13 @@ export const runExperimental = (
 
     if (install) {
       output.write("Installing the sandbox (npm install)\n");
+      sandbox.assertCurrent();
       if (dependencies.install(target) !== 0)
         throw new Error(experimentalInstallFailureMessage(name, refresh));
+      sandbox.assertCurrent();
     }
 
+    sandbox.assertCurrent();
     output.write(
       `\nDrive it with Claude Code:\n` +
         `  cd experimental/${name}\n` +
@@ -409,9 +444,7 @@ export const runExperimental = (
     );
     return 0;
   } catch (error) {
-    errorOutput.write(
-      `${error instanceof Error ? error.message : String(error)}\n`,
-    );
+    errorOutput.write(`${experimentalFailureMessage(error)}\n`);
     return 1;
   }
 };
