@@ -12,6 +12,8 @@ Immediately below each active `SCN` heading, open a bounded authority carrier: a
 
 Every duration a scene states in prose names the shot field it quotes with an inline selector immediately after the figure: `6.0 seconds {@timing shot:<shot id>/duration}`, `3.0 seconds {@timing shot:<shot id>/event:<event id>/from}` or `/to`, or `2.0 seconds {@timing shot:<shot id>/review:<frame id>}`. The named shot cites the scene, the field exists, and its contract value equals the stated figure; an unowned figure is a warning while authoring and a refusal at review, and a sequence heading or preamble owns no timing at all.
 
+Copy every selector identity exactly, including underscores: `**6 seconds** {@timing shot:shot_a/duration}` still names `shot_a`, never `shota`. Emphasis belongs around the duration, not inside the selector grammar.
+
 An H4 is the smallest lineage and authoring boundary. It need not become a visible card or cut. Preserve identity even when the final edit presents adjacent beats continuously.
 
 Before final expression, rerun the [production-specific contract](../evidence-graph/work-specific.md) pass with the `discovery/core/common.md`, `discovery/story/films.md`, and `discovery/story/screenplays.md` targets, and implement each retained expressive result in its target and claim. No example in the shared documents is a style inventory.

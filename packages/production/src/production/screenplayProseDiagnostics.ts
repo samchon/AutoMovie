@@ -187,14 +187,16 @@ const timingSeconds = (value: string): number => {
 /**
  * Find every timing phrase in one scene body together with its selector.
  *
- * Emphasis markup is stripped first so an italicized duration still counts;
- * a phrase whose number cannot be read keeps `NaN` seconds so the timing
- * check reports it rather than silently skipping it.
+ * Emphasis outside inline directives is stripped so italicized durations still
+ * count. Directive bytes, including incomplete or invalid selectors, stay
+ * unchanged: formatting must never redirect an authored identity.
  */
 export const parseScreenplayTimingOccurrences = (
   body: string,
 ): IAutoMovieParsedScreenplayTimingOccurrence[] => {
-  const prose = body.replace(/[*_`]/gu, "");
+  const prose = body.replace(/\{@[^}\r\n]*\}?|[*_`]/gu, (token) =>
+    token.startsWith("{@") ? token : "",
+  );
   return [
     ...[...prose.matchAll(TIMING_OCCURRENCE)].map((match) => ({
       text: match[2]!,
