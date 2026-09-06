@@ -1,10 +1,14 @@
 import * as path from "node:path";
 import { isDeepStrictEqual } from "node:util";
-import { parse, stringify } from "smol-toml";
+import type * as Toml from "smol-toml" with { "resolution-mode": "import" };
 import { z } from "zod";
 
 import { digest } from "./internal/parseReference";
 import { fail } from "./internal/referenceError";
+
+// The package publishes a CommonJS require entry with the same public declarations.
+// Resolve those ESM declarations as types while retaining synchronous registration.
+const { parse, stringify } = require("smol-toml") as typeof Toml;
 
 const OWNER = "automovie_reference";
 const BEGIN = "# automovie-reference managed begin v1";
