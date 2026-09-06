@@ -54,7 +54,7 @@ export const experimentalSandboxIO: IExperimentalSandboxIO = {
 };
 
 /**
- * Captured sandbox ownership retained through preparation and installation.
+ * Captured sandbox ownership retained through preparation and registration.
  *
  * @evidence requirements/agent-authoring/project-ownership.md#agent-sandbox-write-boundary Carries the original sandbox and file approvals through the complete launcher operation.
  * @evidence specifications/authoring-and-authority/source-authority-and-derivation.md#spec-authoring-sandbox-physical-ownership Gives preparation, publication and install one shared currentness check.
@@ -63,6 +63,8 @@ export const experimentalSandboxIO: IExperimentalSandboxIO = {
 export interface IExperimentalSandbox {
   readonly entries: readonly string[];
   readonly manifest: string | undefined;
+  /** The original sandbox approval, reused by subsequent confined writers. */
+  readonly physicalDirectory: IScaffoldPhysicalDirectory;
   readonly target: string;
   assertCurrent(): void;
   prepare(files: readonly string[]): void;
@@ -206,6 +208,7 @@ export const openExperimentalSandbox = (
     assertCurrent,
     entries,
     manifest,
+    physicalDirectory: base,
     target,
     prepare: (relativeFiles) => {
       const candidate = planScaffoldPublication({

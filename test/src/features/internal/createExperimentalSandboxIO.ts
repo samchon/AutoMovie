@@ -57,6 +57,7 @@ export interface IExperimentalSandboxTestIO {
 export interface IExperimentalSandboxTestSession {
   entries: readonly string[];
   manifest: string | undefined;
+  physicalDirectory: IDirectory;
   target: string;
   assertCurrent(): void;
   prepare(files: readonly string[]): void;

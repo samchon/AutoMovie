@@ -21,6 +21,7 @@
 import { spawnSync } from "node:child_process";
 import * as path from "node:path";
 
+import { synchronizeAutoMovieReferenceClients } from "../packages/cli/src/synchronizeAutoMovieReferenceClients";
 import {
   type AutoMovieProductionLanguage,
   isAutoMovieProductionLanguage,
@@ -52,7 +53,7 @@ Options:
                 refresh, an optional value may only confirm the existing one.
   --refresh     Repack and reinstall without re-rendering, so a package change
                 reaches a sandbox whose production is already under way.
-  --no-install  Render only, skipping the pack and install.
+  --no-install  Skip packing and installing; synchronize client entries.
 `;
 
 /**
@@ -103,6 +104,7 @@ export interface IExperimentalDependencies {
   readonly install: (target: string) => number | null;
   readonly openSandbox: typeof openExperimentalSandbox;
   readonly render: typeof renderScaffold;
+  readonly synchronizeReferenceClients: typeof synchronizeAutoMovieReferenceClients;
 }
 
 export interface IExperimentalWriter {
@@ -178,6 +180,7 @@ export const experimentalDependencies: IExperimentalDependencies = {
   install: runExperimentalInstall,
   openSandbox: openExperimentalSandbox,
   render: renderScaffold,
+  synchronizeReferenceClients: synchronizeAutoMovieReferenceClients,
 };
 
 /** Where every sandbox lives, and the only directory one may be written into. */
@@ -320,10 +323,10 @@ export const experimentalFailureMessage = (error: unknown): string =>
 
 /**
  * Create or refresh one sandbox while retaining its physical approval through
- * packing, descriptor-bound publication and the installation boundary.
+ * packing, descriptor-bound publication, installation and client registration.
  *
  * @evidence requirements/agent-authoring/project-ownership.md#agent-sandbox-write-boundary Applies the same sandbox ownership contract to creation, force, refresh and no-install.
- * @evidence specifications/authoring-and-authority/source-authority-and-derivation.md#spec-authoring-sandbox-physical-ownership Orders preflight, prepack approval, publication and install currentness checks without adopting replaced paths.
+ * @evidence specifications/authoring-and-authority/source-authority-and-derivation.md#spec-authoring-sandbox-physical-ownership Orders preflight, packing, publication, install and registration checks without adopting replaced paths.
  */
 export const runExperimental = (
   args: readonly string[],
@@ -429,6 +432,8 @@ export const runExperimental = (
       sandbox.assertCurrent();
     }
 
+    sandbox.assertCurrent();
+    dependencies.synchronizeReferenceClients(sandbox.physicalDirectory);
     sandbox.assertCurrent();
     output.write(
       `\nDrive it with Claude Code:\n` +

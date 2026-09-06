@@ -24,6 +24,9 @@ interface ILauncherDependencies {
   }): IExperimentalSandboxTestSession;
   pack(target: string, assertCurrent: () => void): IPackResult;
   render(props: { language: string; name: string }): Record<string, string>;
+  synchronizeReferenceClients(
+    directory: IExperimentalSandboxTestSession["physicalDirectory"],
+  ): string[];
 }
 
 const {
@@ -72,17 +75,19 @@ const { AUTO_MOVIE_CONTRACT_BASELINE_PATH } = loadSourceModule<{
 );
 
 /**
- * Creation and refresh use one physical approval through pack, write and install.
+ * Creation and refresh retain one approval through publication and registration.
  *
  * Scenarios:
  * 1. Creation and forced creation render the selected language; refresh retains
- *    authored files and no-install rewrites only the manifest with existing pins.
+ *    authored files and no-install keeps manifest pins while registering clients.
  * 2. Missing manifest/baseline, language mismatch, and nonempty creation fail
  *    before packing, publication, and installation.
  * 3. Changes during pack or at the install message refuse all later mutations;
  *    nonzero and signalled installers remain failures with the correct recovery.
  * 4. The pack adapter receives the original currentness callback unchanged;
  *    help and non-Error failures preserve the command's ordinary reporting.
+ * 5. Registration runs once after successful publication/install with the original
+ *    physical root. Conflicts, recovery failures and stale identities refuse success.
  */
 export const test_workspace_experimental_sandbox_launcher = (): void => {
   const target = path.join(EXPERIMENTAL_ROOT, "sample");
@@ -112,8 +117,15 @@ export const test_workspace_experimental_sandbox_launcher = (): void => {
       | "before-install-target"
       | "before-install-manifest"
       | "after-install"
-      | "pack-primitive";
+      | "pack-primitive"
+      | "publication"
+      | "before-registration-target"
+      | "registration-target"
+      | "after-registration-target"
+      | "after-registration-manifest";
     manifest?: boolean;
+    registrationFailure?: unknown;
+    registrationResult?: string[];
     status?: number | null;
   }) => {
     const memory = createExperimentalSandboxIO(target);
@@ -132,13 +144,29 @@ export const test_workspace_experimental_sandbox_launcher = (): void => {
     const events: string[] = [];
     const output: string[] = [];
     const error: string[] = [];
+    let approved: IExperimentalSandboxTestSession["physicalDirectory"];
+    if (options.fault === "publication")
+      memory.hooks.outcome = {
+        error: new Error("publication refused"),
+        reason: "target-competitor",
+        status: "refused",
+      };
     const dependencies: ILauncherDependencies = {
       install: () => {
         events.push("install");
         if (options.fault === "after-install") memory.putDirectory(target);
         return options.status === undefined ? 0 : options.status;
       },
-      openSandbox: (props) => openExperimentalSandbox(props, memory.io),
+      openSandbox: (props) => {
+        const session = openExperimentalSandbox(props, memory.io);
+        approved = session.physicalDirectory;
+        TestValidator.equals(
+          "session exposes its original physical target",
+          approved,
+          memory.directories.get(target),
+        );
+        return session;
+      },
       pack: (destination, assertCurrent) => {
         events.push("pack");
         TestValidator.equals(
@@ -157,6 +185,34 @@ export const test_workspace_experimental_sandbox_launcher = (): void => {
         events.push(`render:${props.language}`);
         return { "package.json": original, "authored.txt": "rendered" };
       },
+      synchronizeReferenceClients: (directory) => {
+        events.push("synchronize");
+        TestValidator.predicate(
+          "registration receives the original approval unchanged",
+          directory === approved,
+        );
+        TestValidator.predicate(
+          "publication completes before client registration",
+          output.some(
+            (message) =>
+              message.startsWith("Rendered") ||
+              message.startsWith("Refreshed") ||
+              message.startsWith("Rewrote"),
+          ),
+        );
+        if (options.fault === "registration-target")
+          memory.putDirectory(target);
+        memory.io.assertDirectory(directory);
+        if (options.registrationFailure !== undefined)
+          throw options.registrationFailure;
+        if (options.fault === "after-registration-target")
+          memory.putDirectory(target);
+        if (options.fault === "after-registration-manifest")
+          memory.putFile(manifest, original);
+        return (
+          options.registrationResult ?? [".mcp.json", ".codex/config.toml"]
+        );
+      },
     };
     const code = runExperimental(
       options.args,
@@ -164,6 +220,11 @@ export const test_workspace_experimental_sandbox_launcher = (): void => {
       {
         write: (message) => {
           output.push(message);
+          if (
+            options.fault === "before-registration-target" &&
+            message.startsWith("Rewrote")
+          )
+            memory.putDirectory(target);
           if (message.startsWith("Installing")) {
             if (options.fault === "before-install-target")
               memory.putDirectory(target);
@@ -181,9 +242,9 @@ export const test_workspace_experimental_sandbox_launcher = (): void => {
     args: ["sample", "--language", "korean", "--no-install"],
   });
   TestValidator.equals(
-    "creation renders selected language only",
+    "creation renders selected language and registers without install",
     [created.code, created.events],
-    [0, ["render:korean"]],
+    [0, ["render:korean", "synchronize"]],
   );
   const forced = run({
     args: ["sample", "--language", "english", "--force"],
@@ -193,7 +254,7 @@ export const test_workspace_experimental_sandbox_launcher = (): void => {
   TestValidator.equals(
     "force preserves pack and install semantics",
     [forced.code, forced.events],
-    [0, ["render:english", "pack", "install"]],
+    [0, ["render:english", "pack", "install", "synchronize"]],
   );
   TestValidator.equals(
     "force explicitly replaces scaffold-owned content",
@@ -213,7 +274,7 @@ export const test_workspace_experimental_sandbox_launcher = (): void => {
     TestValidator.equals(
       "refresh does not render",
       [refreshed.code, refreshed.events],
-      [0, install ? ["pack", "install"] : []],
+      [0, install ? ["pack", "install", "synchronize"] : ["synchronize"]],
     );
     TestValidator.equals(
       "refresh preserves authored content",
@@ -280,7 +341,7 @@ export const test_workspace_experimental_sandbox_launcher = (): void => {
     );
     TestValidator.equals(
       "invalid preflight has no effects",
-      refused.events.filter((event) => event === "pack" || event === "install"),
+      refused.events.filter((event) => !event.startsWith("render:")),
       [],
     );
     TestValidator.equals(
@@ -296,6 +357,7 @@ export const test_workspace_experimental_sandbox_launcher = (): void => {
     "before-install-manifest",
     "after-install",
     "pack-primitive",
+    "publication",
   ] as const) {
     const refused = run({
       args: ["sample", "--refresh"],
@@ -304,6 +366,11 @@ export const test_workspace_experimental_sandbox_launcher = (): void => {
       fault,
     });
     TestValidator.equals(`${fault} is refused`, refused.code, 1);
+    TestValidator.equals(
+      "earlier refusal cannot synchronize clients",
+      refused.events.includes("synchronize"),
+      false,
+    );
     TestValidator.equals(
       "install starts only before the post-install fault",
       refused.events.includes("install"),
@@ -335,11 +402,87 @@ export const test_workspace_experimental_sandbox_launcher = (): void => {
         failed.code,
         1,
       );
+      TestValidator.equals(
+        "failed installer cannot synchronize clients",
+        failed.events.includes("synchronize"),
+        false,
+      );
       TestValidator.predicate(
         "failure retains mode-specific recovery",
         failed.error.join("").includes(refresh ? "--refresh" : "--force"),
       );
     }
+  for (const fault of [
+    "before-registration-target",
+    "registration-target",
+    "after-registration-target",
+    "after-registration-manifest",
+  ] as const) {
+    const refused = run({
+      args: ["sample", "--refresh", "--no-install"],
+      baseline,
+      fault,
+      manifest: true,
+    });
+    TestValidator.equals(`${fault} refuses readiness`, refused.code, 1);
+    TestValidator.equals(
+      "stale pre-registration approval never calls registration",
+      refused.events,
+      fault === "before-registration-target" ? [] : ["synchronize"],
+    );
+    TestValidator.equals(
+      "stale registration has no drive instructions",
+      refused.output.some((message) => message.includes("Drive it with")),
+      false,
+    );
+  }
+  for (const { registrationFailure, diagnostic } of [
+    {
+      registrationFailure: new Error("reference client configuration conflict"),
+      diagnostic: "reference client configuration conflict\n",
+    },
+    {
+      registrationFailure: new AggregateError(
+        [new Error("registration failed"), new Error("recovery refused")],
+        "reference client publication failed",
+      ),
+      diagnostic:
+        "reference client publication failed\nregistration failed\nrecovery refused\n",
+    },
+  ]) {
+    const failed = run({
+      args: ["sample", "--refresh", "--no-install"],
+      baseline,
+      manifest: true,
+      registrationFailure,
+    });
+    TestValidator.equals(
+      "registration failures are neither retried nor reported ready",
+      [failed.code, failed.events],
+      [1, ["synchronize"]],
+    );
+    TestValidator.equals(
+      "registration failure retains its diagnostic",
+      failed.error,
+      [diagnostic],
+    );
+    TestValidator.equals(
+      "registration failure omits drive instructions",
+      failed.output.some((message) => message.includes("Drive it with")),
+      false,
+    );
+  }
+  const unchanged = run({
+    args: ["sample", "--refresh", "--no-install"],
+    baseline,
+    manifest: true,
+    registrationResult: [],
+  });
+  TestValidator.equals(
+    "unchanged registration is a successful completed call",
+    [unchanged.code, unchanged.events],
+    [0, ["synchronize"]],
+  );
   const help: string[] = [];
   TestValidator.equals(
     "help needs no sandbox effects",
