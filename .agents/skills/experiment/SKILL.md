@@ -7,7 +7,7 @@ description: Defines how automovie runs an ad-hoc experiment: creating a disposa
 
 An experiment answers one question by running the real thing. Create a disposable sandbox, drive it with a live agent, read what happens, and throw the sandbox away.
 
-The sandbox consumes this working tree, not a release. That is the whole point: a change to `packages/production` or `packages/engine` is live in the sandbox's next script run, so the agent-facing surface can be exercised before it ships rather than after.
+The sandbox consumes an immutable package generation packed from this working tree. After changing a package, refresh the sandbox before its next script run so the observation uses the new generation. [Create The Sandbox](#create-the-sandbox) owns that refresh boundary.
 
 An experiment produces an observation, not a score.
 
@@ -18,12 +18,14 @@ Read the [project](../project/SKILL.md) and [scaffold](../scaffold/SKILL.md) ski
 The typed repository implementation is `build/experimental.ts`, and its package materialization boundary is `build/tgz.ts`.
 
 ```bash
-pnpm run experimental <name>            # render experimental/<name> and install it
-pnpm run experimental <name> --force    # render over an existing one
-pnpm run experimental <name> --refresh  # repack and reinstall, keeping the production
+pnpm run experimental <name> --language korean         # create and install a sandbox
+pnpm run experimental <name> --language korean --force # render over an existing one
+pnpm run experimental <name> --refresh                 # repack and reinstall, keeping the production
 ```
 
-The name must be one portable directory segment. `--no-install` renders without packing or installing, which is only useful for inspecting the output.
+The name must be one portable directory segment. Creation, including `--force`, requires one explicit language: `chinese`, `english`, `japanese`, or `korean`. Refresh preserves the existing language; an optional `--language` may only confirm it, never switch it. `--force` and `--refresh` cannot be combined.
+
+`--no-install` skips packing and installation. With creation it only renders the scaffold; with refresh it retains the existing package pins. Neither form proves a package change reached the sandbox.
 
 Creation packs every workspace package, so it runs each package's build and takes several minutes. A sandbox holds the tarballs it was created from, not a live view of the working tree, so **a change under `packages/` reaches it only when you pack again**.
 
@@ -37,7 +39,7 @@ Read this before debugging a sandbox that will not start. Each item is a failure
 
 | Wiring | Reason |
 | --- | --- |
-| `@automovie/*` install as `file:./.tarballs/*.tgz`, packed from the working tree | A tarball carries `publishConfig`, so `exports` resolve to built `lib/*.js` with typia's transform applied. The sandbox exercises the same resolution a real user's project does |
+| `@automovie/*` install as `file:./.tarballs-<generation>/*.tgz`, packed from the working tree | A tarball carries `publishConfig`, so `exports` resolve to built `lib/*.js` with typia's transform applied. The sandbox exercises the same resolution a real user's project does |
 | The tarball filename carries a content digest | `file:` specifiers are keyed by path, so a rebuilt package under an unchanged version would leave a sandbox installed against stale bytes |
 | Every packed package is pinned directly, `evidence`, `ingest`, and `render` included | `pnpm pack` rewrites the packed packages' own `workspace:^` ranges into plain semver, which would otherwise resolve from the public registry at a version this monorepo never published |
 | The install runs `npm`, not `pnpm` | npm satisfies those transitive ranges from the directly installed siblings. pnpm does not, and its `overrides` do not reach a range from inside a packed tarball either; the same 404 just surfaces one package later |

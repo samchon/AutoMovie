@@ -34,7 +34,7 @@ The urge to pre-build is usually a symptom. "We should ship furniture" almost al
 
 Pre-built content also destroys a measurement. The subject-independence benchmark asks whether an agent can build a film from a subject the repository planted nothing for, so anything planted for a subject removes exactly what it measures.
 
-An example that proves a capability lives in a test fixture or in `packages/archetypes`, the designated home for shipped archetypes. It does not live in `engine`, in `interface`, or in the scaffold every generated project inherits verbatim.
+A logic example belongs in a pure unit test; a shipped archetype belongs in `packages/archetypes`. A production authored for an experiment belongs in its disposable sandbox under the [experiment skill](../experiment/SKILL.md). None belongs in `engine`, in `interface`, or in the scaffold every generated project inherits verbatim.
 
 ## Layout
 
@@ -46,12 +46,12 @@ An example that proves a capability lives in a test fixture or in `packages/arch
 - `packages/ingest` (`@automovie/ingest`): glTF/model ingestion via `@gltf-transform/core`.
 - `packages/viewer` (`@automovie/viewer`): the render/playback surface over `three.js`, and the only library package that imports `three`. A viewer, not an editor. `playground` imports it too, as the demo application that mounts the viewer rather than as a layer under it.
 - `packages/render` (`@automovie/render`): the deterministic frame schedule and encode plan a render spec turns into, plus headless capture, guide passes, caption planning and sidecars, and chunked sequence rendering.
-- `packages/cli` (`automovie`): the `automovie` binary that scaffolds and inspects a production repository. `packages/template/scaffold/` is the blank authoring harness it stamps out; completed regression productions live in repository-only fixtures (see the scaffold skill).
+- `packages/cli` (`automovie`): the `automovie` binary that scaffolds and inspects a production repository. `packages/template/scaffold/` is the blank authoring harness it stamps out (see the scaffold skill).
 - `packages/create-automovie`: the one-command project creator, a thin front door onto the same scaffolder.
 - `packages/playground`: Vite demo pages exercising the pipeline end to end; capture-verified via headless Chrome (see `.agents/skills/viewer-verification/SKILL.md`).
 - `packages/production` (`@automovie/production`): the deterministic production library a generated project runs on: the compiler, the tracked project store, capture, inspection, and the render job. It answers a project's own scripts, not a network surface: the repository hosts no internal LLM and no tool server, and what an authoring agent knows comes from the shipped skill rather than from a call.
 - `test/` (`@automovie/test`): the `@nestia/e2e` `DynamicExecutor` program; one scenario per file under `test/src/features/<domain>/`, builders under `features/internal/`. Every scenario is a pure logic unit test that finishes in under 500 ms.
-- `build/`: the two typed repository operations that materialize package tarballs and disposable experiments, `tgz.ts` and `experimental.ts`; it is not a catch-all for validation, tests, or package tooling, and there is no `internals/` directory.
+- `build/`: repository entry points for immutable package generations (`tgz.ts`), disposable experiments (`experimental.ts`), and prose lint (`proseVoice-cli.ts`), plus their inventory/logic helpers and TypeScript/lint configuration. Product tests belong in `test/`, not here.
 - `config/` (`@automovie/config`): the workspace-wide base `tsconfig.json` and shared lint policy.
 - `docs/` (`@automovie/docs`): product requirements and package-independent system specifications, checked as an evidence graph during the workspace build.
 - `.wiki/` (gitignored): the working knowledge base (research, design, decisions, worklog). Local to a checkout and often empty; read what it holds at session start and write what it lacks.
@@ -63,7 +63,7 @@ An example that proves a capability lives in a test fixture or in `packages/arch
 pnpm install                              # workspace install (native TypeScript 7 / tsgo via ttsc)
 pnpm run build                            # docs evidence lint plus recursive package builds
 pnpm run build:tgz                        # pack the working tree for generated consumers
-pnpm run experimental <name>             # render and install one disposable sandbox
+pnpm run experimental <name> --language korean # create and install a Korean-language sandbox
 pnpm run format                           # prettier write
 pnpm --filter @automovie/test start       # run the test suite (ttsx, no separate compile step)
 ```
