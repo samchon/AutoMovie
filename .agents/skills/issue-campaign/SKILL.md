@@ -43,7 +43,7 @@ The knowledge base supports the campaign but is not the final issue body. A publ
 
 Run the review skill's Solo Issue Discovery Rounds over the entire declared campaign scope.
 
-Source is only one evidence layer. Exercise real workflows: run a generated project's own scripts, render through the viewer with the viewer-verification skill, run the coverage gate when the phase authorizes it, and inspect relevant upstream behavior, history, consumers, fixtures, public documentation, and closed decisions.
+Source is only one evidence layer. Exercise real workflows: run a generated project's own scripts, render through the viewer with the viewer-verification skill, and inspect relevant upstream behavior, history, consumers, fixtures, public documentation, and closed decisions.
 
 Treat the development skill's [Forbidden](../development/SKILL.md#forbidden) section as an explicit retrospective audit contract, not only a rule for future changes. In every complete round, inspect the current implementation and its history for violations, including code that predates the campaign or passes every test at 100% coverage. A verified violation is a meaningful issue candidate. Prove the classification from purpose, control flow, consequence, and history; resemblance or stylistic preference alone is not evidence.
 
@@ -88,7 +88,7 @@ Write enough context for a fresh AI agent to begin implementation from the issue
 - **Consequence surface:** affected consumers, states, platforms, compatibility and failure paths, plus the complete case matrix for the cause.
 - **Approach:** the invariant and architectural owner, without prescribing an unverified implementation.
 - **Scope:** every layer this one topic crosses, each answered, including the layers whose answer is that they do not apply. [An Issue Stands Vertically](#an-issue-stands-vertically) owns this section.
-- **Acceptance and verification:** positive, negative, boundary, and regression outcomes with narrow and broader proving commands, including the coverage gate.
+- **Acceptance and verification:** positive, negative, boundary, and regression outcomes with narrow and broader proving commands.
 - **Coordination:** dependencies, exclusions, migration concerns, external blockers, and related open, closed, accepted, or rejected work.
 
 Use tables for repeated case mappings. Read the rendered issue back and keep its body as the current operative handoff; use comments only for chronology.

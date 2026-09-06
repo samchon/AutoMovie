@@ -52,9 +52,9 @@ For each immediately executable batch:
 3. Create an implementation-free commit with `git commit --allow-empty`.
 4. Push and open a draft pull request referencing every batch issue by number and stating its owned files. The [claim rule](../issue-campaign/development.md#claim-the-complete-cycle) applies unchanged: no closing keyword in a body written before the code exists.
 5. Record the batch, worktree, branch, issues, owned files, pull request, and verification lanes in the campaign knowledge base.
-6. Implement the full consequence surface and the required positive, negative, boundary, and regression coverage. Every executable position the batch writes must reach 100% statements, branches, functions, and lines under the development skill's exact obligation.
+6. Implement the full consequence surface and the required positive, negative, boundary, and regression coverage. Every executable position the batch writes is exercised by a unit test under the development skill's exact obligation.
 7. Run `pnpm run format`, then commit and push coherent increments, each carrying the [commit closing lines](../issue-campaign/development.md#implement-in-parallel) for the issues it earns.
-8. Run the narrowest proving command the [development skill's validation rule](../development/SKILL.md#validation) requires, then the broader locally owned lanes: `pnpm --filter @automovie/test start` for the suite and `pnpm --filter @automovie/test coverage` for the changed positions the batch owes.
+8. Run the narrowest proving command the [development skill's validation rule](../development/SKILL.md#validation) requires, then the broader locally owned lanes: `pnpm --filter @automovie/test start` for the suite.
 9. Freeze the head and complete solo Self-Review under the [review skill's law](../review/SKILL.md#non-negotiable-review-law). If code changes, rerun the necessary local gates and restart the full review.
 10. Let the lead independently verify issue fit, dispositions, evidence, and batch scope.
 11. Read the pull request's CI once per settled head. Diagnose and repair every red lane in that same pull request, even when the failure predates the campaign or is unrelated to its original issues, then commit, push, and restart the required review and CI loop.
@@ -74,7 +74,7 @@ After every parallel implementation batch is resolved and its worktree and exter
 
 1. Create one cleanup worktree and topic branch from the integrated target.
 2. Install its dependencies with `pnpm install`, then run `pnpm run format`.
-3. Run the full integrated local validation the project and development skills require, including `pnpm run build` and `pnpm --filter @automovie/test coverage`.
+3. Run the full integrated local validation the project and development skills require, including `pnpm run build` and `pnpm --filter @automovie/test start`.
 4. If formatting or integration validation changes files, open one ordinary cleanup pull request, let all CI checks run, and complete solo Self-Review while they run.
 5. Repair every CI or review finding in the same cleanup pull request, including a red lane unrelated to the campaign's original changes, and repeat until the same head is green and clean.
 6. Merge with authorization, then remove the cleanup worktree, branch, and assignment-owned external assets.

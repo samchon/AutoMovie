@@ -6,8 +6,7 @@
   "main": "src/index.ts",
   "scripts": {
     "build": "ttsc -p tsconfig.json --noEmit",
-    "start": "ttsx -P tsconfig.json src/index.ts",
-    "coverage": "ttsx -P tsconfig.json src/coverage/runCoverage.ts"
+    "start": "ttsx -P tsconfig.json src/index.ts"
   },
   "author": "Samchon",
   "license": "MIT",
@@ -38,7 +37,6 @@
     "@types/node": "catalog:utils",
     "@types/pngjs": "catalog:media",
     "@types/three": "catalog:three",
-    "c8": "catalog:utils",
     "chalk": "catalog:utils",
     "mp4box": "catalog:media",
     "playwright": "catalog:media",

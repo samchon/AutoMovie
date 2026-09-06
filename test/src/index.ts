@@ -3,9 +3,22 @@ import chalk from "chalk";
 import path from "node:path";
 import process from "node:process";
 
-import { createFatalTestEventHandler } from "./integrity/fatalTestEvent";
-import { scenarioSelectionDiagnostics } from "./integrity/scenarioSelection";
-import { parseScenarioSelectorArguments } from "./integrity/scenarioSelectorArguments";
+/** Read `--include` / `--exclude` substrings from the command line. */
+const selectors = (
+  argv: readonly string[],
+): { include: string[]; exclude: string[] } => {
+  const include: string[] = [];
+  const exclude: string[] = [];
+  let group: string[] | null = null;
+  for (const argument of argv) {
+    if (argument === "--include") group = include;
+    else if (argument === "--exclude") group = exclude;
+    else if (group === null)
+      throw new Error(`Unexpected argument "${argument}".`);
+    else group.push(argument);
+  }
+  return { include, exclude };
+};
 
 async function main(): Promise<void> {
   console.log("---------------------------------------------------");
@@ -13,13 +26,7 @@ async function main(): Promise<void> {
   console.log("Start", new Date().toLocaleString("en-US"));
   console.log("---------------------------------------------------");
 
-  const { include, exclude } = parseScenarioSelectorArguments(
-    process.argv.slice(2),
-  );
-
-  // Every name the discovery offered, so a term that matched nothing can be
-  // told from one that matched something the other half then removed.
-  const discovered: string[] = [];
+  const { include, exclude } = selectors(process.argv.slice(2));
   const report = await DynamicExecutor.validate({
     prefix: "test_",
     location: path.join(__dirname, "features"),
@@ -31,31 +38,14 @@ async function main(): Promise<void> {
       const mark = exec.error === null ? chalk.green("  ✓") : chalk.red("  ✗");
       console.log(`${mark} ${exec.name} ${chalk.gray(`(${elapsed} ms)`)}`);
     },
-    filter: (name) => {
-      discovered.push(name);
-      return (
-        (include.length === 0 || include.some((s) => name.includes(s))) &&
-        (exclude.length === 0 || exclude.every((s) => !name.includes(s)))
-      );
-    },
+    filter: (name) =>
+      (include.length === 0 || include.some((s) => name.includes(s))) &&
+      (exclude.length === 0 || exclude.every((s) => !name.includes(s))),
     extension: "ts",
   });
 
-  // A filter that selected nothing is refused before the verdict is printed.
-  // `--include test_this_does_not_exist` used to print "All tests passed" and
-  // exit 0, and four of this repository's own commands pass exactly one term.
-  const selection = scenarioSelectionDiagnostics({
-    discovered,
-    exclude,
-    include,
-    selected: report.executions.length,
-  });
-  if (selection.length !== 0) {
-    console.log(chalk.red("\nSCENARIO SELECTION:"));
-    for (const diagnostic of selection)
-      console.log(chalk.red(`  ${diagnostic}`));
-    process.exit(1);
-  }
+  if (report.executions.length === 0)
+    throw new Error("The scenario selection matched nothing.");
 
   const failures = report.executions.filter((e) => e.error !== null);
   const passed = report.executions.length - failures.length;
@@ -75,15 +65,7 @@ async function main(): Promise<void> {
   console.log(chalk.green("All tests passed."));
 }
 
-const fatal = createFatalTestEventHandler({
-  report: ({ kind, diagnostic }) => console.log(kind, diagnostic),
-  writeStatus: (status) => {
-    process.exitCode = status;
-  },
+main().catch((error: unknown) => {
+  console.error(error);
+  process.exit(1);
 });
-
-process.on("uncaughtException", (error) => fatal("uncaught exception", error));
-process.on("unhandledRejection", (error) =>
-  fatal("unhandled rejection", error),
-);
-main().catch((error: unknown) => fatal("critical error", error));

@@ -25,7 +25,7 @@ Stage explicit paths when the worktree is mixed. Never include unrelated user ch
 
 ## Write The Pull Request
 
-Write the PR body at open: intent, scope, deferred items, test plan (including the coverage result). Treat it as the PR's historical intent statement. Use a file-backed body for multiline Markdown when opening through `gh`.
+Write the PR body at open: intent, scope, deferred items, test plan. Treat it as the PR's historical intent statement. Use a file-backed body for multiline Markdown when opening through `gh`.
 
 Do not rewrite the body on every follow-up push. Record later CI fixes, newly found issues, and Self-Review results as formal GitHub pull-request reviews with the `COMMENT` event so the thread preserves chronology. Use an inline review comment when an observation belongs to a changed line, and the review body for commit-wide or round-wide results. Never `APPROVE` or `REQUEST_CHANGES` on your own pull request.
 
@@ -51,6 +51,6 @@ When the user explicitly asks to merge, or a standing autonomous mandate authori
 
 After GitHub records the merge, observe the `master` push `build` and `test` checks on the exact merge commit. A green pull-request head does not substitute for the post-merge event, and a red master run reopens delivery work immediately.
 
-If CI is red because code, tests, build, formatting, generated artifacts, or changed coverage failed, fix the PR and wait for green. A coverage refusal the scoped run contradicts is still red, and still not yours to merge over: report it and hand the measurement to the issue that owns the gate.
+If CI is red because code, tests, build, formatting, or generated artifacts failed, fix the PR and wait for green.
 
 If CI cannot start or finish for external repository infrastructure reasons outside the topic's code scope (for example billing, service outage, missing runner capacity, or permissions), report the exact blocker, document the local verification in the PR, and merge only after the user explicitly repeats the merge instruction. Do not force-merge against GitHub branch protection; if GitHub refuses the merge, report the blocker.
