@@ -181,9 +181,15 @@ export const openExperimentalSandbox = (
       fileParent(file, false);
       const result = io.readFile(file);
       const previous = files.get(file);
+      // assertCurrent already admitted the full token. Our own descriptor read
+      // may advance Windows ctime; retain identity, size and mtime here, then
+      // retain the new full snapshot for every subsequent admission.
       if (
         previous !== undefined &&
-        (previous === null || previous.version !== result.snapshot.version)
+        (previous === null ||
+          previous.identity !== result.snapshot.identity ||
+          previous.version.split(":").slice(0, 4).join(":") !==
+            result.snapshot.version.split(":").slice(0, 4).join(":"))
       )
         throw new Error(`sandbox file changed while read: ${file}`);
       io.assertFile(result.snapshot);

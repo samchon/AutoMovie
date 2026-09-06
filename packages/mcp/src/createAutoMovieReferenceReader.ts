@@ -20,12 +20,19 @@ import type { IAutoMovieReferenceReader } from "./structures/IAutoMovieReference
  * @author Samchon
  */
 export interface IAutoMovieReferenceIdentity {
+  /** Physical entry type without following a symbolic link. */
   kind: "file" | "directory" | "link" | "other";
+  /** Device identifier on the observation's pathname or descriptor basis. */
   device: bigint;
+  /** Inode/file identifier on that device. */
   inode: bigint;
+  /** Physical link count; authored files require exactly one. */
   links: bigint;
+  /** Observed byte extent, bounded before allocating the read buffer. */
   size: bigint;
+  /** Nanosecond content-modification time. */
   modified: bigint;
+  /** Nanosecond metadata-change time, subject to native own-open semantics. */
   changed: bigint;
 }
 
@@ -37,12 +44,21 @@ export interface IAutoMovieReferenceIdentity {
  * @author Samchon
  */
 export interface IAutoMovieReferenceFileSystem {
+  /** Native observation semantics; injected readers default to strict metadata. */
+  readonly platform?: NodeJS.Platform;
+  /** Observe the pathname entry itself, never its symbolic-link target. */
   lstat(location: string): Promise<IAutoMovieReferenceIdentity>;
+  /** Resolve physical ancestry for comparison with the declared pathname. */
   realpath(location: string): Promise<string>;
+  /** Enumerate one directory without reading child contents. */
   list(location: string): Promise<readonly string[]>;
+  /** Hold one read-only source descriptor until verification and close finish. */
   open(location: string): Promise<{
+    /** Observe metadata through this held descriptor. */
     stat(): Promise<IAutoMovieReferenceIdentity>;
+    /** Read at most the requested extent plus one overflow-detection byte. */
     read(maximum: number): Promise<Uint8Array>;
+    /** Release this descriptor, including when admission or reading fails. */
     close(): Promise<void>;
   }>;
 }
@@ -72,6 +88,7 @@ export function createAutoMovieReferenceFileSystem(
   native: Pick<typeof fs, "lstat" | "realpath" | "readdir" | "open"> = fs,
 ): IAutoMovieReferenceFileSystem {
   return {
+    platform: process.platform,
     lstat: async (location) =>
       identity(await native.lstat(location, { bigint: true })),
     realpath: native.realpath,
@@ -146,6 +163,9 @@ function ioFailure(error: unknown): never {
  *
  * The namespace is checked before opening, before consuming bytes, and after the
  * bounded handle read. A replacement or concurrent write invalidates the result.
+ * Windows observations compare pathname identities separately from descriptor
+ * identities; a second resident handle corroborates the latter. Own-open ctime
+ * drift is tolerated only inside that read, without ignoring identity or mtime.
  * Node's pathname APIs expose observations, not a kernel-level namespace lock;
  * hostile actors with unrestricted concurrent namespace control remain an OS
  * observation boundary rather than something pure unit tests can certify.
@@ -253,6 +273,24 @@ export async function createAutoMovieReferenceReader(
     if (entry.size > BigInt(MAX_SOURCE_BYTES))
       fail("RESOURCE_LIMIT", "Source exceeds the 8 MiB file limit.");
   };
+  // Windows pathname stats and handle stats can have different device ids,
+  // and our own read-only opens can advance ctime. Compare like observations
+  // and corroborate the held handle with a second resident handle instead.
+  const windows = io.platform === "win32";
+  const sameVersion = (
+    a: IAutoMovieReferenceIdentity,
+    b: IAutoMovieReferenceIdentity,
+  ): boolean =>
+    a.size === b.size &&
+    a.modified === b.modified &&
+    (windows || a.changed === b.changed);
+  const sameBoundary = (
+    a: IAutoMovieReferenceIdentity,
+    b: IAutoMovieReferenceIdentity,
+  ): boolean =>
+    windows
+      ? a.kind === b.kind && a.inode === b.inode && sameVersion(a, b)
+      : sameFile(a, b);
   return {
     read: async (file) => {
       admitReferencePath(file);
@@ -272,7 +310,7 @@ export async function createAutoMovieReferenceReader(
         try {
           const opened = await handle.stat();
           physicalFile(opened);
-          if (!sameFile(before, opened))
+          if (!sameBoundary(before, opened))
             fail(
               "PATH_IDENTITY_CHANGED",
               "The source changed before its handle was opened.",
@@ -286,8 +324,11 @@ export async function createAutoMovieReferenceReader(
           physicalFile(after);
           physicalFile(resident);
           if (
-            !sameFile(opened, after) ||
-            !sameFile(after, resident) ||
+            !sameNode(opened, after) ||
+            !sameVersion(opened, after) ||
+            !sameNode(before, resident) ||
+            !sameVersion(before, resident) ||
+            !sameBoundary(after, resident) ||
             BigInt(bytes.byteLength) !== after.size ||
             path.relative(location, await io.realpath(location)) !== ""
           )
@@ -295,6 +336,29 @@ export async function createAutoMovieReferenceReader(
               "PATH_IDENTITY_CHANGED",
               "The source changed during its read; fetch a fresh reference.",
             );
+          if (windows) {
+            const corroborating = await io.open(location);
+            try {
+              const current = await corroborating.stat();
+              physicalFile(current);
+              const final = await io.lstat(location);
+              physicalFile(final);
+              if (
+                !sameNode(after, current) ||
+                !sameVersion(after, current) ||
+                !sameNode(before, final) ||
+                !sameVersion(before, final) ||
+                !sameBoundary(current, final) ||
+                path.relative(location, await io.realpath(location)) !== ""
+              )
+                fail(
+                  "PATH_IDENTITY_CHANGED",
+                  "The resident handle no longer identifies the read source.",
+                );
+            } finally {
+              await corroborating.close();
+            }
+          }
           await recheck(chain);
           return bytes;
         } finally {
