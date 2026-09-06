@@ -400,9 +400,7 @@ const windowsCalls = (
 
 /**
  * Injectable Windows foreign-call adapter for pure handle-protocol tests.
+ * Exposes handle flags, generation checks, reads and failures without an OS fixture.
  * @internal
- *
- * @evidence requirements/operations-and-recovery/contract-migration-publication.md#operations-contract-migration-publication Makes native read, rename, flush and cleanup failures independently observable.
- * @evidence specifications/execution-and-recovery/contract-migration-publication.md#execution-contract-migration-publication Exposes adapter-owned handle flags, generation normalization and complete-read transitions without an OS fixture.
  */
 export const contractMaintenanceWindowsForTesting = { calls: windowsCalls };

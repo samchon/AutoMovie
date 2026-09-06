@@ -352,9 +352,7 @@ const nativeIO = (
 
 /**
  * Injectable native dispatch for pure platform-boundary scenarios.
+ * Keeps platform refusal and descriptor effects observable without OS fixtures.
  * @internal
- *
- * @evidence requirements/operations-and-recovery/contract-migration-publication.md#operations-contract-migration-publication Keeps platform refusal and native generation checks observable without filesystem fixtures.
- * @evidence specifications/execution-and-recovery/contract-migration-publication.md#execution-contract-migration-publication Exposes only the owned adapter protocol to injected descriptor and foreign-call effects.
  */
 export const contractMaintenanceNativeForTesting = { create: nativeIO };
