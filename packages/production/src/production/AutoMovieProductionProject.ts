@@ -62,6 +62,11 @@ import {
   AutoMovieModelArchetypeRegistry,
 } from "./productionArchetypes";
 import {
+  cleanupProductionAtomic,
+  recoverProductionAtomicDelete,
+  runProductionMutation,
+} from "./productionMutation";
+import {
   type IProductionPayloadSnapshot,
   captureProductionPayloadSnapshot,
   isProductionPayloadSnapshotCurrent,
@@ -3888,9 +3893,10 @@ export class AutoMovieProductionProject {
    * claimed file inventory. Probing happens before staging, the input guard
    * runs before and after all writes and once more after `publicationCurrent`
    * runs the read-only final compiler gate against staged bytes. commitFiles
-   * restores the previous valid publication if any write, guard, final gate, or
-   * post-commit byte assertion fails. A replaced physical root or state
-   * incarnation is the exception: stale paths are abandoned without rollback.
+   * restores the previous valid publication if a write, guard, final gate, or
+   * byte assertion fails before the revision commit. A later cleanup failure
+   * preserves the committed revision and tells the caller to reopen it. A
+   * replaced physical root or state incarnation also forbids stale-path rollback.
    */
   public commitProductionPublication(props: {
     files: ReadonlyMap<string, Uint8Array>;
@@ -4659,93 +4665,73 @@ export class AutoMovieProductionProject {
         const staged = stage(eager ?? lazy!());
         assertProductionRootNamespaceLease(rootLease);
         this.assertIncarnation();
-        let applied = 0;
-        try {
-          for (const file of staged) {
-            assertProductionRootNamespaceLease(rootLease);
-            this.assertIncarnation();
-            const assertMutationNamespace = (): void => {
-              assertProductionRootNamespaceLease(rootLease);
-              this.assertIncarnation();
-            };
+        const assertMutationNamespace = (): void => {
+          assertProductionRootNamespaceLease(rootLease);
+          this.assertIncarnation();
+        };
+        return runProductionMutation({
+          files: staged,
+          guard: assertMutationNamespace,
+          apply: (file, published) => {
             if (file.content === null)
-              removeAtomic(file.path, assertMutationNamespace);
+              removeAtomic(file.path, published, assertMutationNamespace);
             else if (file.immutable)
               writeAtomicImmutable(
                 file.path,
                 file.content,
                 assertMutationNamespace,
+                published,
+              );
+            else
+              writeAtomic(
+                file.path,
+                file.content,
+                assertMutationNamespace,
+                published,
+              );
+          },
+          restore: (file) => {
+            if (file.previous === null)
+              removeAtomic(
+                file.path,
+                assertMutationNamespace,
                 assertMutationNamespace,
               );
-            else writeAtomic(file.path, file.content, assertMutationNamespace);
+            else writeAtomic(file.path, file.previous, assertMutationNamespace);
+          },
+          complete: (committed) => {
+            if (inputCurrent?.() === false)
+              throw new AutoMovieProductionInputRaceError(
+                "Production inputs changed while the guarded commit was being applied.",
+              );
             assertProductionRootNamespaceLease(rootLease);
             this.assertIncarnation();
-            ++applied;
-          }
-          if (inputCurrent?.() === false)
-            throw new AutoMovieProductionInputRaceError(
-              "Production inputs changed while the guarded commit was being applied.",
-            );
-          assertProductionRootNamespaceLease(rootLease);
-          this.assertIncarnation();
-          outputCurrent?.();
-          assertProductionRootNamespaceLease(rootLease);
-          this.assertIncarnation();
-          if (staged.length === 0 && publishEmptyRevision === false) {
-            this.lastReadRevision_ = current;
-            return current;
-          }
-          assertProductionRootNamespaceLease(rootLease);
-          this.assertIncarnation();
-          writeJsonAtomic(
-            this.revisionPath,
-            {
-              revision: nextRevision,
-            },
-            () => {
-              assertProductionRootNamespaceLease(rootLease);
-              this.assertIncarnation();
-            },
-          );
-          assertProductionRootNamespaceLease(rootLease);
-          this.assertIncarnation();
-          this.lastReadRevision_ = nextRevision;
-          return nextRevision;
-        } catch (error) {
-          try {
+            outputCurrent?.();
             assertProductionRootNamespaceLease(rootLease);
             this.assertIncarnation();
-          } catch (identityError) {
-            throw new AggregateError(
-              [error, identityError],
-              "Production mutation stopped because the physical root or namespace fence changed, or the production state incarnation changed. No stale-path rollback was attempted in the replacement namespace.",
-            );
-          }
-          const rollbackErrors: unknown[] = [];
-          for (const file of staged.slice(0, applied).reverse())
-            try {
-              assertProductionRootNamespaceLease(rootLease);
-              this.assertIncarnation();
-              const assertRollbackNamespace = (): void => {
+            if (staged.length === 0 && publishEmptyRevision === false) {
+              this.lastReadRevision_ = current;
+              return current;
+            }
+            assertProductionRootNamespaceLease(rootLease);
+            this.assertIncarnation();
+            writeJsonAtomic(
+              this.revisionPath,
+              {
+                revision: nextRevision,
+              },
+              () => {
                 assertProductionRootNamespaceLease(rootLease);
                 this.assertIncarnation();
-              };
-              if (file.previous === null)
-                removeAtomic(file.path, assertRollbackNamespace);
-              else
-                writeAtomic(file.path, file.previous, assertRollbackNamespace);
-              assertProductionRootNamespaceLease(rootLease);
-              this.assertIncarnation();
-            } catch (rollbackError) {
-              rollbackErrors.push(rollbackError);
-            }
-          if (rollbackErrors.length !== 0)
-            throw new AggregateError(
-              [error, ...rollbackErrors],
-              "Production mutation failed and rollback was incomplete. Restore the listed owned files before retrying.",
+              },
+              committed,
             );
-          throw error;
-        }
+            assertProductionRootNamespaceLease(rootLease);
+            this.assertIncarnation();
+            this.lastReadRevision_ = nextRevision;
+            return nextRevision;
+          },
+        });
       } finally {
         if (lockBoundToIncarnation === false)
           // Acquisition itself reached a replacement state root. The exact
@@ -5569,10 +5555,6 @@ interface IProductionAtomicFailure {
   error: unknown;
 }
 
-class ProductionAtomicCleanupError extends AggregateError {}
-
-class ProductionAtomicRecoveryError extends AggregateError {}
-
 class ProductionAtomicContentionError extends AggregateError {}
 
 /**
@@ -5636,10 +5618,8 @@ const pauseAtomicRetry = (milliseconds: number): void => {
  * unchanged, because retrying an error this does not understand would turn a
  * clear refusal into a slow one. A contended code that outlives every attempt
  * is thrown as {@link ProductionAtomicContentionError} carrying the original,
- * because the caller's real problem by then is not the rename: the project has
- * a compiler-owned file that did not land, and the next command will read that
- * as state being merely out of date and tell the author to rerun the thing that
- * just died.
+ * because the caller must distinguish an unfinished step from the publication
+ * state tracked by its transaction. A cleanup failure does not undo a publish.
  */
 const runContendedAtomic = <T>(step: () => T, describe: () => string): T => {
   for (let attempt = 1; attempt < CONTENDED_ATOMIC_ATTEMPTS; ++attempt)
@@ -5655,7 +5635,7 @@ const runContendedAtomic = <T>(step: () => T, describe: () => string): T => {
     if (isContendedAtomicError(error) === false) throw error;
     throw new ProductionAtomicContentionError(
       [error],
-      `${describe()} after ${CONTENDED_ATOMIC_ATTEMPTS} attempts against a held handle. The compiler-owned file did not land, so the project may still describe an input it no longer has. Close whatever holds the path and run the command again.`,
+      `${describe()} after ${CONTENDED_ATOMIC_ATTEMPTS} attempts against a held handle. Close whatever holds the path, then reopen the project and inspect its publication state before retrying.`,
     );
   }
 };
@@ -5675,17 +5655,10 @@ const removeContendedAtomic = (file: string): void =>
 const removeAtomicTemporary = (
   temporary: string,
   failure: IProductionAtomicFailure | undefined,
-): void => {
-  try {
-    removeContendedAtomic(temporary);
-  } catch (cleanupFailure) {
-    if (failure === undefined) throw cleanupFailure;
-    throw new ProductionAtomicCleanupError(
-      [failure.error, cleanupFailure],
-      `Production atomic write cleanup failed after the operation failed: ${temporary}.`,
-    );
-  }
-};
+): void =>
+  cleanupProductionAtomic(temporary, failure, () =>
+    removeContendedAtomic(temporary),
+  );
 
 const writeAtomic = (
   file: string,
@@ -5740,7 +5713,11 @@ const writeAtomicImmutable = (
   }
 };
 
-const removeAtomic = (file: string, afterQuarantine: () => void): void => {
+const removeAtomic = (
+  file: string,
+  afterQuarantine: () => void,
+  guardRecovery: () => void,
+): void => {
   if (lstatOrNull(file) === null) {
     afterQuarantine();
     return;
@@ -5751,16 +5728,14 @@ const removeAtomic = (file: string, afterQuarantine: () => void): void => {
     afterQuarantine();
     removeContendedAtomic(quarantine);
   } catch (error) {
-    try {
-      if (lstatOrNull(quarantine) !== null && lstatOrNull(file) === null)
-        renameContendedAtomic(quarantine, file);
-    } catch (recoveryFailure) {
-      throw new ProductionAtomicRecoveryError(
-        [error, recoveryFailure],
-        `Production atomic delete recovery failed after the operation failed: ${file}.`,
-      );
-    }
-    throw error;
+    recoverProductionAtomicDelete({
+      file,
+      error,
+      guard: guardRecovery,
+      quarantined: () => lstatOrNull(quarantine) !== null,
+      occupied: () => lstatOrNull(file) !== null,
+      restore: () => renameContendedAtomic(quarantine, file),
+    });
   }
 };
 
@@ -5768,8 +5743,14 @@ const writeJsonAtomic = (
   file: string,
   value: unknown,
   beforePublish?: () => void,
+  afterPublish?: () => void,
 ): void =>
-  writeAtomic(file, Buffer.from(serializeJson(value), "utf8"), beforePublish);
+  writeAtomic(
+    file,
+    Buffer.from(serializeJson(value), "utf8"),
+    beforePublish,
+    afterPublish,
+  );
 
 const lstatOrNull = (file: string): Stats | null => {
   try {
