@@ -207,7 +207,7 @@ export const publishLibraryReview = (props: {
   before: ILibraryReviewPublicationFile | null;
   source: string;
   attempt: string;
-  admit: () => void;
+  admit: (pending: ILibraryReviewPublicationArtifact | null) => void;
   io: ILibraryReviewPublicationIO;
 }): "published" | "already-recorded" => {
   const { io, target, before } = props;
@@ -219,7 +219,7 @@ export const publishLibraryReview = (props: {
   const initial = readLibraryReviewPublication({ target, io });
   if (!same(initial, before))
     throw new Error(`Library review predecessor changed: ${target}.`);
-  props.admit();
+  props.admit(null);
   assertBefore();
   if (before?.source === props.source) return "already-recorded";
 
@@ -240,7 +240,7 @@ export const publishLibraryReview = (props: {
   };
   try {
     assertBefore();
-    props.admit();
+    props.admit(pending);
     assertBefore();
     if (
       !same(io.read(pendingPath), pending.file) ||

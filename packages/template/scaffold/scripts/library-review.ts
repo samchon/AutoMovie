@@ -5,6 +5,7 @@ import {
 import type {
   AutoMovieLibraryReviewEvidence,
   IAutoMovieLibraryReviewObservationPlan,
+  IAutoMovieLibraryReviewProjectReader,
 } from "@automovie/interface";
 import {
   AutoMovieProductionCompiler,
@@ -34,6 +35,7 @@ import {
   readLibraryReviewPublication,
   recordLibraryReviewReceipt,
 } from "./libraryReviewPublication";
+import { createLibraryReviewPublicationAdmissionReader } from "./libraryReviewPublicationAdmission";
 import {
   createLibraryReviewPublicationIO,
   libraryReviewPublicationFileSystem,
@@ -319,7 +321,9 @@ export const runLibraryReviewCommand = (props: {
     root,
     props.productionId,
   );
-  const readCurrent = () =>
+  const readCurrent = (
+    reader: IAutoMovieLibraryReviewProjectReader = project,
+  ) =>
     readCurrentLibraryReview({
       readAuthoring: currentAuthoringEvidence,
       compile: (evidence, currentEvidence) =>
@@ -331,7 +335,7 @@ export const runLibraryReviewCommand = (props: {
       population: (evidence, compileFingerprint) =>
         readAutoMovieLibraryReviewRequirements({
           authoring: evidence,
-          project,
+          project: reader,
           compileFingerprint,
           // The buildings this project's last compile published. Without them this
           // command would report an owner as owing only what its author already
@@ -435,10 +439,22 @@ export const runLibraryReviewCommand = (props: {
     io,
     attempt: randomUUID(),
     source: libraryReviewPublicationSource({ before, previous, plan }),
-    admit: () =>
+    admit: (pending) =>
       admitLibraryReviewReceipt({
         assertCurrent: () =>
-          assertCurrentLibraryReview({ expected: snapshot, read: readCurrent }),
+          assertCurrentLibraryReview({
+            expected: snapshot,
+            read: () =>
+              readCurrent(
+                createLibraryReviewPublicationAdmissionReader({
+                  project,
+                  target: relative,
+                  before,
+                  pending,
+                  io,
+                }),
+              ),
+          }),
         expected: evidence,
         read: () => evidenceOf({ argv: props.argv, project }),
       }),

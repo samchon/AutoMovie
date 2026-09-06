@@ -62,7 +62,9 @@ export const libraryPublication = loadSourceModule<{
     before: ILibraryPublicationFile | null;
     source: string;
     attempt: string;
-    admit: () => void;
+    admit: (
+      pending: { path: string; file: ILibraryPublicationFile } | null,
+    ) => void;
     io: ILibraryPublicationIO;
   }) => "published" | "already-recorded";
 }>(
@@ -81,8 +83,8 @@ export type LibraryPublicationEvent = {
 /** A typed publication protocol double; no project or operating system is created. */
 export const createLibraryPublicationFixture = (
   before: ILibraryPublicationFile | null,
+  target: string = "docs/models/subject.review.json",
 ) => {
-  const target = "docs/models/subject.review.json";
   const files = new Map<string, ILibraryPublicationFile>();
   if (before !== null) files.set(target, { ...before });
   const events: LibraryPublicationEvent[] = [];
@@ -125,7 +127,12 @@ export const createLibraryPublicationFixture = (
     hook: (next: typeof hook): void => {
       hook = next;
     },
-    run: (admit: () => void = () => {}, source: string = "new receipt bytes") =>
+    run: (
+      admit: (
+        pending: { path: string; file: ILibraryPublicationFile } | null,
+      ) => void = () => {},
+      source: string = "new receipt bytes",
+    ) =>
       libraryPublication.publishLibraryReview({
         target,
         before,
