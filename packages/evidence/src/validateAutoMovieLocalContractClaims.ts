@@ -166,18 +166,36 @@ export function projectAutoMovieLocalContractClaims(
  * @author Samchon
  */
 export interface IAutoMovieLocalContractProjection {
+  /** Native claim's diagnostic name, or an empty string when it is unnamed. */
   claim: string;
+  /** Authored branch whose declared stage and population govern this binding. */
   layer: AutoMovieProductionContractClaim["autoMovieBinding"]["layer"];
+  /** Owning branch's current lifecycle stage, including inactive declarations. */
   stage: AutoMovieProductionContractClaim["autoMovieBinding"]["stage"];
+  /** Whether the claim is not explicitly disabled, not an evidence verdict. */
   enforced: boolean;
+  /** Exact pilot, complete-production, or reset scope retained from the binding. */
   populationScope: AutoMovieProductionContractClaim["autoMovieBinding"]["populationScope"];
+  /** Distinguishes authored-unit checklists from dedicated obligation accounts. */
   relationship: "checklist" | "population-account";
+  /**
+   * Native host root, file selectors, and symbols for the accountable units.
+   * An omitted root becomes "." and an omitted symbol selector becomes [].
+   */
   host: { root: string; files: readonly string[]; symbols: readonly string[] };
+  /**
+   * Markdown contract references, excluding an account's compared population.
+   * Roots and symbols use the same omitted-value normalization as the host.
+   */
   targets: readonly {
     root: string;
     files: readonly string[];
     symbols: readonly string[];
   }[];
+  /**
+   * Complete authored H2 reference compared by an obligation account.
+   * Checklist bindings omit this field because their hosts answer independently.
+   */
   population?: {
     root: string;
     files: readonly string[];
