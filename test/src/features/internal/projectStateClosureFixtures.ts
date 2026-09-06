@@ -102,6 +102,7 @@ export const projectStateClosureReadFailure = (
     () => {
       reached.push(name);
       if (readIndex++ === failure)
+        // eslint-disable-next-line typescript/only-throw-error -- the closing boundary must preserve a non-Error reader failure
         throw failure % 2 === 0
           ? new Error(`read ${failure} failed`)
           : `read ${failure} failed`;
