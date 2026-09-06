@@ -5,7 +5,7 @@ description: Defines how packages/template/scaffold and packages/template/langua
 
 # Maintaining the scaffold
 
-`packages/template/scaffold` is the empty authoring harness `automovie` stamps out, `packages/template/language-contracts` supplies its creation-selected language module, and the instruction and contract materializers under `packages/template/src` publish both surfaces. A completed regression film fixture lives outside them so generated projects inherit capability and contracts, never another production's content. Treat every change to those sources as a generated-project API change.
+`packages/template/scaffold` is the empty authoring harness `automovie` stamps out, `packages/template/language-contracts` supplies its creation-selected language module, and the instruction and contract materializers under `packages/template/src` publish both surfaces. Generated projects inherit capability and contracts, never another production's content. Treat every change to those sources as a generated-project API change.
 
 ## The authoring procedures live with the production
 
@@ -37,7 +37,7 @@ Retire an item when it is wrong, absorbed, or inapplicable. Inconvenience to one
 
 ## Verification
 
-After topology, contract, or citation changes, run the scaffold evidence gate. Falsify each new edge or refusal with a disposable negative probe, restore it, and require the normal graph to pass. Build and test the repository, generate a fresh scaffold from packed packages, and prove that its source lint and canaries pass while production design and compile refuse the unselected blank state. Compile the repository-only completed fixture to preserve production regression coverage. Measure every executable position changed in scaffold source at 100% statements, branches, functions, and lines.
+After topology, contract, or citation changes, run the scaffold evidence gate. Falsify each new edge or refusal with a disposable negative probe, restore it, and require the normal graph to pass. Build and test the repository. The [development skill](../development/SKILL.md#testing) owns pure unit tests and changed-position coverage; there is no completed-film fixture or coverage instrument to run. When the change needs a real generated-consumer observation, use the [experiment procedure](../experiment/SKILL.md) with a disposable packed sandbox. Verify its source lint and canaries pass while production design and compile refuse the unselected blank state, without turning that experiment into a permanent fixture test.
 
 Instruction synchronization is an overwrite contract. In a fresh generated project, select representative production shapes through the tracked `lint.config.ts`, run `npm run sync`, and prove that stale `AGENTS.md`, `CLAUDE.md`, and `.agents/skills` content disappears while tracked package, contract, document, and source bytes do not change. Run sync twice and require byte-identical generated instructions. Verify that the root `AGENTS.md` names only the selected shape and exact active owners, that `CLAUDE.md` contains only `@AGENTS.md`, and that the generated instruction paths are ignored. Perform this check from the fresh project root so the expected Codex entry point and Claude Code import resolve there; a parent checkout's `AGENTS.md` is not evidence that the generated project's instructions load.
 

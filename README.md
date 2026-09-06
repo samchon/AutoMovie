@@ -37,15 +37,20 @@ That is the whole delivery mechanism, and it is deliberate. A capability an agen
 ## Start a production
 
 ```bash
-npx create-automovie <dir>
+npx create-automovie <dir> --language korean
 cd <dir>
 npm install
+npm run lint:source
+```
+
+Choose `chinese`, `english`, `japanese`, or `korean` explicitly. The scaffold starts without a production kind or authored content. Follow its generated `AGENTS.md` to select a kind, author the required documents and source, and configure design emission before compiling. Once the production has an authored shot, use its actual id in the preview command:
+
+```bash
 npm run capture:install
 npm run capture:doctor
-npm run lint:source
 npm run design
 npm run compile
-npm run preview -- --shot opening --time 2 --pass beauty
+npm run preview -- --shot <shot-id> --time <seconds> --pass beauty
 npm run lint -- --scope review
 ```
 

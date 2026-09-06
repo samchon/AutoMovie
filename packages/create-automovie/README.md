@@ -1,11 +1,11 @@
 # create-automovie
 
-Create a complete AutoMovie production repository with one command:
+Create a blank AutoMovie authoring repository with an explicit production language:
 
 ```bash
-npx create-automovie my-film
+npx create-automovie my-film --language korean
 ```
 
-This package is the package-manager-native entry point. It delegates to
-`automovie`, so the generated project and `npx automovie start my-film`
-remain byte-for-byte equivalent.
+Choose `chinese`, `english`, `japanese`, or `korean`; omission is an error, not a default language. This package delegates to `automovie`, so the command is equivalent to `npx automovie start my-film --language korean` with the same arguments.
+
+Install dependencies in the created directory and run `npm run lint:source` for the blank-project check. Follow the generated `AGENTS.md` before design, compilation, or capture. The [CLI README](../cli/README.md#generated-project-routes) owns those entry routes and prerequisites.
