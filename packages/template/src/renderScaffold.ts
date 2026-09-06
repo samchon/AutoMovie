@@ -370,6 +370,16 @@ export const scaffoldAssetDirectory = (
  * @evidenceExclude specifications/authoring-and-authority/source-authority-and-derivation.md#spec-authoring-source-derivation-state Derivation state lives in the generated project's compiler and its tracked output; rendering has no state beyond the bytes it returns.
  * @evidenceExclude specifications/authoring-and-authority/source-authority-and-derivation.md#spec-authoring-source-ownership-failure Ownership failures are raised where a write or a compile meets an existing tree, which is the writer's and the compiler's job rather than the renderer's.
  * @evidenceExclude specifications/authoring-and-authority/source-authority-and-derivation.md#spec-authoring-source-resume-compatibility Rendering is a single total act with nothing to resume; resumption belongs to the render job and the compiler.
+ * @evidence requirements/agent-authoring/reference-navigation.md#agent-reference-transports Materializes the installed reference command, dependency and client-discovery guide; explicit CLI and sync publication own machine-local configuration.
+ * @evidenceExclude requirements/agent-authoring/reference-navigation.md#agent-reference-selection Scaffold rendering installs the provider and its guide but does not execute reference reads; @automovie/mcp owns this navigation boundary.
+ * @evidenceExclude requirements/agent-authoring/reference-navigation.md#agent-reference-source Scaffold rendering installs the provider and its guide but does not execute reference reads; @automovie/mcp owns this navigation boundary.
+ * @evidenceExclude requirements/agent-authoring/reference-navigation.md#agent-reference-bounds Scaffold rendering installs the provider and its guide but does not execute reference reads; @automovie/mcp owns this navigation boundary.
+ * @evidenceExclude requirements/agent-authoring/reference-navigation.md#agent-reference-isolation Scaffold rendering installs the provider and its guide but does not execute reference reads; @automovie/mcp owns this navigation boundary.
+ * @evidence specifications/authoring-and-authority/reference-navigation.md#spec-reference-transports Materializes the installed reference command, dependency and client-discovery guide; explicit CLI and sync publication own machine-local configuration.
+ * @evidenceExclude specifications/authoring-and-authority/reference-navigation.md#spec-reference-selection Scaffold rendering installs the provider and its guide but does not execute reference reads; @automovie/mcp owns this navigation boundary.
+ * @evidenceExclude specifications/authoring-and-authority/reference-navigation.md#spec-reference-source Scaffold rendering installs the provider and its guide but does not execute reference reads; @automovie/mcp owns this navigation boundary.
+ * @evidenceExclude specifications/authoring-and-authority/reference-navigation.md#spec-reference-bounds Scaffold rendering installs the provider and its guide but does not execute reference reads; @automovie/mcp owns this navigation boundary.
+ * @evidenceExclude specifications/authoring-and-authority/reference-navigation.md#spec-reference-isolation Scaffold rendering installs the provider and its guide but does not execute reference reads; @automovie/mcp owns this navigation boundary.
  */
 export const renderScaffold = (
   props: IAutoMovieScaffoldProps,
@@ -423,6 +433,8 @@ export const renderScaffold = (
         populationScope: blank.populationScope,
         branches: [],
         bindings: [],
+        localBindings: [],
+        localAudits: [],
       },
       designOwners: [],
       contracts: [],

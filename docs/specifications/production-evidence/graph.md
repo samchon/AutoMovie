@@ -36,17 +36,25 @@ Project reader는 같은 문서 모집단을 semantic alarm inspector에도 전�
 
 `film`은 `settings`에서 `treatments`·`scripts`·`screenplays`·`shots`·`filmSources`로 이어지는 사다리를, `brief`는 `settings`에서 `briefs`·`shots`·`filmSources`로 이어지는 짧은 사다리를 허용한다. 둘은 완성 `filmSources` 전에 `productionSources`의 독립된 검토를 요구한다. `library`는 `settings`, 선택한 디자인 문서·source 분기와 필요할 때 설정만 직렬화하는 `productionSources`를 허용하고 서사·`shots`·편집 분기를 금지한다. 모든 자식 분기의 `draft`는 필요한 부모가 `review`에 도달한 뒤에만 허용하며, 아직 종류를 선택하지 않은 `null`은 모든 단계를 `disabled`로 유지한다. 디자인 분기의 `review`는 그 분기가 기반으로 삼는 모든 활성 디자인 분기가 함께 `review`에 있을 때에만 허용한다. 기반 분기는 자신이 검토되기 전까지 어떤 단위도 자식에게 지불시키지 않으므로, 기반보다 먼저 검토된 분기는 자신이 의존하는 부모에 아무것도 지불하지 않은 완료를 기록한다. `disabled` 기반은 요구하지 않는다. 이 선행 조건을 `draft`가 아니라 `review` 진입에 두는 이유는 `motions`와 `systems`가 서로를 기반으로 삼기 때문이며, 두 분기는 하나의 선언에서 함께 `review`로 승격한다.
 
+Source에서 렌더 대상 authored owner로 향하는 reference는 같은 roots·files·symbols·exclusion·cardinality를 가진 두 native reference로 나눈다. 구조 reference는 `severity: "error", requireReview: false`, review 단계의 렌더 관찰 reference는 `severity: "warning", requireReview: true`다. 적용 대상은 map·model·space·material·instance·motion source의 design, shot·acceptance source의 scene, film source의 sequence·delivery 관계다. System source의 design, production source의 settings와 원칙·상위 수정·의무·account 관계는 error 및 기존 review 요구를 유지한다. 전체 mixed claim의 severity를 낮추거나 진단을 사후 필터링하지 않는다. Manifest는 두 reference의 severity·requireReview를 그대로 보이고 source reader는 같은 exact owner identity를 중복 실행하지 않는다. `review` stage 선언은 렌더 관찰 완료와 다르며 해당 warning은 다음 compile·capture로 상환하지만 compiler의 `review`·`final` physical gate는 error를 유지한다.
+
 ### 파일 트리 기반 대상 검증 {#spec-authoring-production-evidence-physical-integrity}
 
 <!-- @evidence requirements/production-evidence/graph.md#agent-production-evidence-physical-integrity 선택이 실제 대상을 하나만 지배하고 비활성 잔여물을 함께 막게 한다. -->
 
 팩터리는 glob으로 Markdown과 TypeScript host를 열거하고 활성 분기의 최소 host 수, 비활성 분기의 잔여물, 명시적 H2 anchor, 중복 target identity, 각 source 파일의 구체적인 named export owner를 그래프 생성 전에 검사한다. 프로젝트 입력은 `lstat` 기준 regular file이고 symlink가 아니며 `nlink === 1`일 때만 읽는다. 이 판정은 문서·source 모집단과 package identity manifest에 동일하게 적용하여 hardlink 별칭이 별도 계약, source 또는 owner identity로 들어오는 것을 거부한다. `treatments`는 중첩·index가 없는 평면 번호 event 파일이고 각 H2가 한 사건이다. `scripts`와 `screenplays`는 번호 delivery-group 디렉터리와 H1 전용 `index.md`, 번호 unit 파일의 H2/H3/H4 구조를 사용한다. 모든 script와 screenplay 파일 host 및 H2/H3/H4 단위는 treatment H2를 직접 완전 피복하고, screenplay는 대응 script의 group-index H1, unit 파일과 H1, 동일 깊이 lineage와 순서를 정확히 보존한다. 반환된 claim은 lint가 실제 export와 annotation을 선택하여 각 상속 단위가 한 개 이상의 실제 부모를 갖게 하고, 디자인 owner마다 정확히 한 디자인 파일, shot·acceptance owner마다 한 screenplay scene 또는 brief shot, 완전한 target coverage와 단계별 review cardinality를 검사하게 한다.
 
+팩터리는 계약 inventory를 읽기 전에 ordinary `automovie` directory와 `contract-maintenance.pending.json`의 entry 존재를 검사한다. Marker가 파일·디렉터리·dangling link인 모든 pending 상태를 거부하고 permission 등 관측 실패를 부재로 바꾸지 않는다. 복구는 같은 종류의 명시적 CLI maintenance가 소유하며 graph construction은 아무것도 수정하지 않는다. 별도 reference-client pending은 이 계약 의미 admission에 포함하지 않는다.
+
 ### 공통 그래프 뒤의 로컬 합성 {#spec-authoring-production-evidence-additive-extension}
 
 <!-- @evidence requirements/production-evidence/graph.md#agent-production-evidence-additive-extension 작품 전용 관계를 허용하면서 공통 그래프의 무력화를 차단한다. -->
 
 팩터리는 공통 작품별 발견·원칙·의무·저작 단계·source 단계 claim과 실행 canary를 먼저 완성하고, 입력의 `claims`를 그 배열 뒤에 이어 붙인다. 호출자는 공통 배열이나 reference를 입력으로 받지 않으므로 기존 계약을 대체하는 확장 경로를 갖지 않는다.
+
+작품 고유 저술 의무 선언은 평면 계약 문서 하나와 정규화된 `accounts/<layer>/<name>.md` 파일 하나를 묶는다. 같은 공통 account builder가 정확히 한 의무 H2를 답하는 `uniqueEvidence`·`singleEvidencePerSymbol` reference와 완전한 authored H2 `checklist` reference를 만든다. 문서의 의무 H2마다 account H2가 정확히 하나 있어야 하며, 각 계층에서 같은 계약 문서의 중복 account 선언, 같은 account 파일의 중복 선언과 공통 예약 파일 충돌을 거부한다. 소유 layer와 populationScope가 비교 파일 selector를 유도하므로 임의의 일부 authored 파일로 denominator를 줄일 수 없다.
+
+`autoMovieBinding.account`를 가진 claim은 실제 native host와 두 reference가 그 typed 선언에서 재생성한 값과 일치해야 한다. Manifest의 `localBindings`와 pilot-only `localAudits`는 account host, 계약 `targets`, 별도 비교 `population`, `relationship`, 단계와 범위를 그대로 투영한다. `readAutoMovieContractRules`의 optional structured metadata 소유자는 계속 평면 계약 H2이며 account나 비교 대상 H2는 새 rule이 아니다. 이전 helper의 authored `files`·`symbol` 호출은 account 경로로 명시적으로 이관하고 복수 문서는 문서별 선언으로 나눈다. Authored 사실과 원칙·계보 관계를 보존하면서 기존 직접 의무 annotation을 새 전체 모집단 비교로 교체하고 새 관계를 실제로 다시 검토한다.
 
 ### 결정론적 출력과 사전 실패 {#spec-authoring-production-evidence-deterministic-result}
 

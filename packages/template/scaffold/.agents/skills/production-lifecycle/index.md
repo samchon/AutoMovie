@@ -22,6 +22,18 @@ Choose exactly one shape in `lint.config.ts`. [Production kinds](production-kind
 
 Start the coding-agent session from this project root after sync. Codex loads `AGENTS.md`; Claude Code follows `CLAUDE.md -> @AGENTS.md`.
 
+Sync also updates the owned `automovie_reference` entry in project-local `.mcp.json` and `.codex/config.toml`, using this project's installed package and absolute root. It preserves unrelated client settings and refuses an edited or conflicting owned entry. These local files are ignored because machine paths and other client settings are not production facts. Review the client trust prompt yourself: neither sync nor a reference request grants trust or edits global configuration. Moving a project requires sync before restarting its clients. If Node itself changed or an entry conflicts, inspect that exact entry and explicitly reconcile ownership before rerunning; do not discard the rest of the configuration.
+
+### Read-only authored reference
+
+The MCP server exposes only `get_index_of_layer`, `get_index_of_file`, `read_section_without_annotations`, and `read_file_without_annotations`. Start with a layer index, inspect the selected file's explicit anchors, then read the smallest useful section. A file revision or continuation identifies the bytes actually read; rediscover after a stale response. Requests cannot change the bound production root. The allowed layers are settings, research, maps, models, spaces, materials, instances, motions, systems, treatments, scripts, screenplays, and briefs.
+
+Without MCP, use the same provider through `npm run reference -- --request '{"operation":"get_index_of_layer","layer":"settings"}'`. The installed script binds this project root; it does not fetch a package or run lint, compile, or render. Use normal source tools to edit files and to inspect TypeScript, contracts, accounts, configuration, or evidence annotations. Comment-free reference results are not evidence audits or complete review reads, and neither these tools nor a reader edition pays an authoring or observation obligation.
+
+### Interrupted maintenance
+
+Contract and TOC updates preserve candidates, predecessor bytes and a durable journal beneath `automovie/contract-migrations`. A pending `automovie/contract-maintenance.pending.json` means the current file tree is not admitted for graph success, even when some successor files already exist. Rerun the same explicit mutating command to attempt its generation-bound recovery; `--dry-run` and `--check` refuse without recovering. Do not delete markers or restore a baseline alone to bypass this state. Preserve the named archive, competitors and primary failure if recovery requires manual adjudication. Reference-client registration uses its separate ignored `automovie/reference-client-maintenance` archive and pending marker; run sync to resume that operation. An interrupted operation must be recovered before starting another maintenance kind.
+
 ## External retrieval
 
 Use web search where settings, research, or a discovery target requires an externally checkable search. Search results and collection portals are routes, not evidence: open the primary record, official specification, scholarly work, critical edition, or direct technical source before accepting a claim. A source that blocks automated retrieval is blocked, not absent; record that limit and reduce precision or return the claim to unresolved instead of attaching a broad portal. Search never substitutes for the authored owner a contract requires.

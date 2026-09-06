@@ -66,6 +66,8 @@ Design H2, 선택 source bytes, compile identity 또는 관찰 계획이 바뀌�
 
 한 관찰의 완료는 current identity에서 정확히 하나의 다시 열린 passed receipt다. 같은 identity의 failed, unsupported, not-run과 runtime 미식별 결과는 history로 남으며, 완료를 만들지도 않고 이미 완료된 관찰을 모호하게 만들지도 않는다. 따라서 실패를 기록한 저자가 green으로 돌아가기 위해 그 실패를 삭제할 필요가 없어야 하고, 삭제나 plan 축소로 실패를 없애는 것을 완료로 간주해서도 안 된다.
 
+Plan과 receipt 갱신은 읽은 sidecar의 정확한 generation과 bytes를 보존해야 한다. 경쟁 writer의 변경을 병합하거나 덮어써서는 안 되며, publication 또는 복구가 실패해도 원래 입력·실패 history·경쟁 generation과 미완 상태를 판별할 수 있어야 한다. 동일 receipt 재시도도 current source와 제시한 관찰 evidence를 다시 확인한 경우에만 무변경으로 완료할 수 있다.
+
 ### 시간 축 단위와의 비대체 {#review-subject-time-noninterchange}
 
 주체 검토는 frame, 구간과 전체 작품 검토의 의무를 대신하지 않고 그 셋의 결과 또한 주체 검토의 의무를 대신하지 않아야 한다. 어느 한쪽의 coverage를 다른 쪽의 coverage로 합산하지 않아야 한다.
