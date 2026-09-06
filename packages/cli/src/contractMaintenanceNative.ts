@@ -87,7 +87,7 @@ const usingDescriptor = <T>(
   close: (descriptor: number) => void,
   action: (parent: number) => T,
 ): T => {
-  let failure: unknown;
+  let failure: Error | undefined;
   let output!: T;
   try {
     output = action(parent);
@@ -125,7 +125,7 @@ export const renameAutoMovieMaintenanceFile = (
   for (const slot of [request.source, request.target])
     requireChildName(slot.name);
   const opened: number[] = [];
-  let failure: unknown;
+  let failure: Error | undefined;
   try {
     const source = io.openParent(request.source.parent.path);
     opened.push(source);

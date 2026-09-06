@@ -59,7 +59,7 @@ export const test_cli_contract_maintenance_publication = (): void => {
   });
   TestValidator.equals(
     "preparation leaves every current source intact",
-    changes.map(({ path, before }) => harness.read(path)?.source ?? null),
+    changes.map(({ path }) => harness.read(path)?.source ?? null),
     changes.map(({ before }) => before?.source ?? null),
   );
   TestValidator.equals(

@@ -1,3 +1,4 @@
+import { compareCodeUnits } from "@automovie/engine";
 import {
   type IScaffoldFileSnapshot,
   type IScaffoldPhysicalDirectory,
@@ -129,7 +130,7 @@ export const observeAutoMovieMaintenanceFiles = (props: {
     string,
     Pick<IScaffoldFileSnapshot, "identity" | "version"> | null
   >;
-  for (const relative of [...new Set(props.paths)].sort()) {
+  for (const relative of [...new Set(props.paths)].sort(compareCodeUnits)) {
     const segments = relative.split("/");
     if (
       relative.includes("\\") ||

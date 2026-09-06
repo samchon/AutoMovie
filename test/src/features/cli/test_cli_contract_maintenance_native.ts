@@ -195,7 +195,10 @@ export const test_cli_contract_maintenance_native = (): void => {
         return model.io.openParent(path);
       },
       rename: (...args) => {
-        if (operation === "undefined") throw undefined;
+        if (operation === "undefined") {
+          // eslint-disable-next-line typescript/only-throw-error -- the native boundary must retain an undefined host failure as its cause
+          throw undefined;
+        }
         if (operation === "rename" || operation === "combined-close")
           throw new Error("move failed");
         model.io.rename(...args);
@@ -217,12 +220,20 @@ export const test_cli_contract_maintenance_native = (): void => {
           throw new Error("close failed");
       },
     };
+    const error = contractMaintenanceFailure(() =>
+      renameAutoMovieMaintenanceFile(request, io),
+    );
     TestValidator.predicate(
       `${operation} remains a failure`,
-      contractMaintenanceFailure(() =>
-        renameAutoMovieMaintenanceFile(request, io),
-      ) instanceof Error,
+      error instanceof Error,
     );
+    if (operation === "undefined")
+      TestValidator.predicate(
+        "undefined move failure remains an explicit cause",
+        error instanceof Error &&
+          Object.hasOwn(error, "cause") &&
+          error.cause === undefined,
+      );
     TestValidator.equals(
       `${operation} releases every acquired parent`,
       model.closed,
@@ -273,7 +284,10 @@ export const test_cli_contract_maintenance_native = (): void => {
           ? before
           : model.io.read(parent, name),
       flushFile: () => {
-        if (fault === "undefined") throw undefined;
+        if (fault === "undefined") {
+          // eslint-disable-next-line typescript/only-throw-error -- the reused-record boundary must retain an undefined flush failure as its cause
+          throw undefined;
+        }
         if (fault === "flush" || fault === "combined")
           throw new Error("flush failed");
         flushed = true;
@@ -297,6 +311,13 @@ export const test_cli_contract_maintenance_native = (): void => {
       `${fault} reused record refuses`,
       error instanceof Error,
     );
+    if (fault === "undefined")
+      TestValidator.predicate(
+        "undefined flush failure remains an explicit cause",
+        error instanceof Error &&
+          Object.hasOwn(error, "cause") &&
+          error.cause === undefined,
+      );
     TestValidator.equals(
       `${fault} reused record closes its held parent`,
       model.closed,

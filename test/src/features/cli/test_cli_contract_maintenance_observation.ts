@@ -118,6 +118,17 @@ export const test_cli_contract_maintenance_observation = (): void => {
     1,
   );
   TestValidator.equals(
+    "observation order is byte-independent code-unit order with duplicates removed",
+    Object.keys(
+      observeAutoMovieMaintenanceFiles({
+        root,
+        paths: ["z.md", "a.md", "Z.md", "é.md", "a.md"],
+        io,
+      }).files,
+    ),
+    ["Z.md", "a.md", "z.md", "é.md"],
+  );
+  TestValidator.equals(
     "native token omits only ctime",
     autoMovieMaintenanceFileFromSnapshot(
       { identity: "4:9", version: "4:9:12:50:70" },
@@ -229,6 +240,7 @@ export const test_cli_contract_maintenance_observation = (): void => {
               target === root
                 ? directory("")
                 : (() => {
+                    // eslint-disable-next-line typescript/only-throw-error -- the reader must propagate every non-missing host exception without normalizing its identity
                     throw error;
                   })(),
           },
