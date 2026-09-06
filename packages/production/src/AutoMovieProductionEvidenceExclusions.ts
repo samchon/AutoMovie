@@ -2,6 +2,8 @@
  * Package-local ledger for contract units the production library does not
  * implement.
  *
+ * @evidenceExclude specifications/authoring-and-authority/source-authority-and-derivation.md#spec-authoring-sandbox-physical-ownership Repository sandbox creation, package packing and installer admission belong to the build launcher, not production compilation or its artifact store.
+ *
  * The production library compiles authored source into a film, keeps the
  * tracked project store, plans and verifies renders, probes delivered media and
  * inspects design references. It does not solve simulations, mix sound, drive

@@ -46,6 +46,7 @@ export const test_evidence_pending_maintenance = (): void => {
     let observed: unknown = "not thrown";
     try {
       assertAutoMovieProductionMaintenanceComplete("project", () => {
+        // eslint-disable-next-line typescript/only-throw-error -- injected host failures must propagate without becoming absence
         throw cause;
       });
     } catch (error) {

@@ -81,11 +81,14 @@ export const createScaffoldSnapshotFileSystem = () => {
       if (!opened.directory && descriptors.size === 0)
         state.afterFinalClose?.();
       if (!opened.directory && state.closeFailure !== undefined)
+        // eslint-disable-next-line typescript/only-throw-error -- exercise non-Error close failures without rewriting their identity
         throw state.closeFailure;
     },
     readFileSync: (_descriptor: number) => {
       state.beforeRead?.();
-      if (state.readFailure !== undefined) throw state.readFailure;
+      if (state.readFailure !== undefined)
+        // eslint-disable-next-line typescript/only-throw-error -- exercise non-Error read failures and aggregate preservation
+        throw state.readFailure;
       const result = Buffer.from(state.bytes);
       state.afterRead?.();
       return result;

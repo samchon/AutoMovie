@@ -210,6 +210,7 @@ const verifyRecoveryAdmission = (): void => {
       io: {
         ...state.harness.io,
         assertRoot: () => {
+          // eslint-disable-next-line typescript/only-throw-error -- preserve a non-Error boundary failure through recovery diagnostics
           throw "root changed";
         },
       },

@@ -1,5 +1,7 @@
-import type { IAutoMovieMaintenanceObservation } from "./contractMaintenanceFileSystem";
-import { autoMovieMaintenanceFileFromSnapshot } from "./contractMaintenanceFileSystem";
+import {
+  type IAutoMovieMaintenanceObservation,
+  autoMovieMaintenanceFileFromSnapshot,
+} from "./contractMaintenanceFileSystem";
 import {
   type IAutoMovieMaintenanceChange,
   type IAutoMovieMaintenanceJournal,
@@ -33,7 +35,7 @@ export const planAutoMoviePhysicalMaintenanceChanges = (
         );
       return { path: relative, before: null, after };
     }
-    if (descriptor == null || source === undefined)
+    if (descriptor === null || descriptor === undefined || source === undefined)
       throw new Error(
         `Maintenance predecessor lacks descriptor bytes: ${relative}.`,
       );

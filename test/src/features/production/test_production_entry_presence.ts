@@ -1,8 +1,23 @@
 import { TestValidator } from "@nestia/e2e";
 import path from "node:path";
 
-import { readProductionEntryPresence } from "../../../../packages/production/src/production/readProductionEntryPresence";
+import { loadSourceModule } from "../internal/loadSourceModule";
 import { throwsError } from "../internal/predicates";
+
+const { readProductionEntryPresence } = loadSourceModule<{
+  readProductionEntryPresence(props: {
+    root: string;
+    relative: string;
+    assertCurrent: () => void;
+    assertParent: (parent: string) => void;
+    exists: (file: string) => boolean;
+  }): boolean;
+}>(
+  path.resolve(
+    __dirname,
+    "../../../../packages/production/src/production/readProductionEntryPresence.ts",
+  ),
+);
 
 /**
  * Recovery presence is a physical entry observation, not a nullable text read.
