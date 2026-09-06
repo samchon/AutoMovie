@@ -87,7 +87,9 @@ export function createAutoMoviePopulationAccountClaims(
  *
  * Callers validate the shared or production-local path declaration before
  * handing it here; this builder gives both account families identical native
- * cardinality without maintaining another evidence evaluator.
+ * cardinality without maintaining another evidence evaluator. Both references
+ * are explicit errors; local callers must also preserve the canonical claim's
+ * activation and omitted claim-level severity.
  *
  * @evidence requirements/production-evidence/graph.md#agent-production-evidence-shared-contract Makes every account own one obligation and compare every authored H2.
  * @evidence specifications/production-evidence/graph.md#spec-authoring-production-evidence-shared-contract Emits the shared and local exact-one reference beside their no-exclusion population checklist.
@@ -108,6 +110,7 @@ export function createAutoMoviePopulationAccountClaim(props: {
 } {
   const obligation: ITtscEvidenceGraphMarkdownReference = {
     type: "markdown",
+    severity: "error",
     root: props.documentRoot,
     files: [props.document],
     symbol: "h2",
@@ -118,6 +121,7 @@ export function createAutoMoviePopulationAccountClaim(props: {
   };
   const population: ITtscEvidenceGraphMarkdownReference = {
     type: "markdown",
+    severity: "error",
     root: "docs",
     files: [...props.populationFiles],
     symbol: "h2",

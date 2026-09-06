@@ -22,6 +22,10 @@ import { createAutoMoviePopulationAccountClaims } from "./createAutoMoviePopulat
 import { createAutoMoviePopulationFiles } from "./createAutoMoviePopulationFiles";
 import type { AutoMovieProductionContractClaim } from "./createAutoMovieProductionContractClaim";
 import {
+  type AutoMovieSourceRealizationBranch,
+  createAutoMovieSourceRealizationReferences,
+} from "./createAutoMovieSourceRealizationReferences";
+import {
   type IAutoMovieEvidenceTopologyBranch,
   type IAutoMovieEvidenceTopologyDeclaration,
   type IAutoMovieEvidenceTopologyDiagnostic,
@@ -138,17 +142,7 @@ export interface IAutoMovieEvidenceConfigProps {
 type IProductionGraph = IAutoMovieEvidenceConfigProps;
 
 type MarkdownLayer = AutoMovieAuthoredDocumentLayer;
-type SourceLayer =
-  | "filmSources"
-  | "instanceSources"
-  | "mapSources"
-  | "materialSources"
-  | "modelSources"
-  | "motionSources"
-  | "productionSources"
-  | "shots"
-  | "spaceSources"
-  | "systemSources";
+type SourceLayer = AutoMovieSourceRealizationBranch;
 type EvidenceBranch = MarkdownLayer | SourceLayer;
 type ContractDomain = "core" | "delivery" | "design" | "story";
 type ContractFamily = "discovery" | "obligations" | "principles" | "upstream";
@@ -189,6 +183,10 @@ interface IAutoMovieContractBindingManifest {
     /** Stable graph diagnostic that owns the host population. */
     claim: string;
     relationship: ContractRelationship;
+    /** Native reference override; absence inherits the graph's error level. */
+    severity?: ITtscEvidenceGraphReference["severity"];
+    /** Whether this reference currently asks for native review freshness. */
+    requireReview?: boolean;
     host: {
       type: "markdown" | "typescript";
       root: string;
@@ -3258,15 +3256,18 @@ const sourceClaims = (graph: IProductionGraph): IBranchClaim[] => {
           files: [...source.files],
           symbol: [...source.ownerSymbols],
           disabled: !requiresEvidence(graph[name]),
-          reference: {
-            type: "markdown",
-            root: DOCS,
-            files: [`${design}/**/*.md`],
-            symbol: "file",
-            noEvidenceExclude: true,
-            singleEvidencePerSymbol: true,
+          reference: createAutoMovieSourceRealizationReferences({
+            branch: name,
+            reference: {
+              type: "markdown",
+              root: DOCS,
+              files: [`${design}/**/*.md`],
+              symbol: "file",
+              noEvidenceExclude: true,
+              singleEvidencePerSymbol: true,
+            },
             requireReview: review,
-          },
+          }),
         },
         {
           name: `${name} owners answer source-unit principle checklists, realize every ${design} unit, and cover source obligations`,
@@ -3278,14 +3279,17 @@ const sourceClaims = (graph: IProductionGraph): IBranchClaim[] => {
             sourceUnitPrinciples(shared, review),
             upstreamReference(shared, source.obligation, review),
             sourceObligations(shared, source.obligation, review),
-            {
-              type: "markdown",
-              root: DOCS,
-              files: [`${design}/**/*.md`],
-              symbol: "h2",
-              noEvidenceExclude: true,
+            ...createAutoMovieSourceRealizationReferences({
+              branch: name,
+              reference: {
+                type: "markdown",
+                root: DOCS,
+                files: [`${design}/**/*.md`],
+                symbol: "h2",
+                noEvidenceExclude: true,
+              },
               requireReview: review,
-            },
+            }),
           ],
         },
       ),
@@ -3300,16 +3304,21 @@ const sourceClaims = (graph: IProductionGraph): IBranchClaim[] => {
       files: [...SOURCES.shots.files],
       symbol: [...SOURCES.shots.ownerSymbols],
       disabled: !requiresEvidence(graph.shots),
-      reference: {
-        type: "markdown",
-        root: DOCS,
-        files:
-          graph.kind === "film" ? ["screenplays/**/*.md"] : ["briefs/**/*.md"],
-        symbol: "h3",
-        noEvidenceExclude: true,
-        singleEvidencePerSymbol: true,
+      reference: createAutoMovieSourceRealizationReferences({
+        branch: "shots",
+        reference: {
+          type: "markdown",
+          root: DOCS,
+          files:
+            graph.kind === "film"
+              ? ["screenplays/**/*.md"]
+              : ["briefs/**/*.md"],
+          symbol: "h3",
+          noEvidenceExclude: true,
+          singleEvidencePerSymbol: true,
+        },
         requireReview: shotReview,
-      },
+      }),
     }),
     ...branchClaims("shots", {
       name: "shot source owners answer source-unit principle checklists and cover every shot-source obligation",
@@ -3367,17 +3376,20 @@ const sourceClaims = (graph: IProductionGraph): IBranchClaim[] => {
           SOURCES.filmSources.obligation,
           requiresReview(graph.filmSources),
         ),
-        {
-          type: "markdown",
-          root: DOCS,
-          files:
-            graph.kind === "film"
-              ? ["screenplays/**/*.md"]
-              : ["briefs/**/*.md"],
-          symbol: "h2",
-          noEvidenceExclude: true,
+        ...createAutoMovieSourceRealizationReferences({
+          branch: "filmSources",
+          reference: {
+            type: "markdown",
+            root: DOCS,
+            files:
+              graph.kind === "film"
+                ? ["screenplays/**/*.md"]
+                : ["briefs/**/*.md"],
+            symbol: "h2",
+            noEvidenceExclude: true,
+          },
           requireReview: requiresReview(graph.filmSources),
-        },
+        }),
       ],
     }),
   );
@@ -3622,6 +3634,8 @@ export const createAutoMovieContractBindingManifest = (
         enforced: binding.claim.disabled !== true,
         claim: binding.claim.name!,
         relationship: relationshipOf(binding, reference, contract),
+        severity: reference.severity,
+        requireReview: reference.requireReview,
         host: {
           type: binding.claim.type as "markdown" | "typescript",
           root: evidenceRoot(binding.claim),

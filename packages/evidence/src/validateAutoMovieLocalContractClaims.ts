@@ -14,8 +14,9 @@ import {
 /**
  * Refuses a local binding whose native claim disagrees with its typed owner.
  *
- * Account references are reconstructed through the public factory so a caller
- * cannot retain admission metadata while narrowing or disabling its duty.
+ * Account references and claim severity are reconstructed through the public
+ * factory so a caller cannot retain admission metadata while narrowing or
+ * disabling its duty, including through native claim-level severity.
  * Native claims with no AutoMovie binding remain additive native claims.
  *
  * @evidence requirements/production-evidence/graph.md#agent-production-evidence-additive-extension Preserves the local extension boundary without allowing an account declaration to weaken its generated relationship.
@@ -82,12 +83,14 @@ export function validateAutoMovieLocalContractClaims(
     if (
       !isDeepStrictEqual(
         {
+          severity: raw.severity,
           root: raw.root,
           files: raw.files,
           symbol: raw.symbol,
           reference: raw.reference,
         },
         {
+          severity: expected.severity,
           root: expected.root,
           files: expected.files,
           symbol: expected.symbol,
@@ -96,7 +99,7 @@ export function validateAutoMovieLocalContractClaims(
       )
     )
       throw new Error(
-        `Production-local account ${binding.account} must retain its exact owner, obligation reference, and complete authored H2 population.`,
+        `Production-local account ${binding.account} must retain its canonical claim severity, exact owner, obligation reference, and complete authored H2 population.`,
       );
   }
 }

@@ -6,6 +6,8 @@ import {
   createAutoMoviePopulationAccountClaims,
   createAutoMovieProductionObligationClaim,
   createAutoMovieProductionPrincipleClaim,
+  createBlankAutoMovieProductionEvidence,
+  validateAutoMovieLocalContractClaims,
 } from "@automovie/evidence";
 import { TestValidator } from "@nestia/e2e";
 
@@ -27,6 +29,8 @@ type ITtscEvidenceGraphMarkdownReference = Extract<
  * 4. Missing, cross-layer, non-normalized, plural, and legacy account inputs
  *    are refused; the alternate flat contract root remains valid.
  * 5. Shared accounts retain family order, ownership, and their input failures.
+ * 6. Both account references are explicit errors, and canonical admission
+ *    refuses claim-level overrides or a weakened target/population reference.
  */
 export const test_evidence_local_account_claim = (): void => {
   const props: IAutoMovieProductionObligationClaimProps = {
@@ -44,6 +48,7 @@ export const test_evidence_local_account_claim = (): void => {
   TestValidator.equals("exact reference pair", claim.reference, [
     {
       type: "markdown",
+      severity: "error",
       root: "docs",
       files: [props.document],
       symbol: "h2",
@@ -54,6 +59,7 @@ export const test_evidence_local_account_claim = (): void => {
     },
     {
       type: "markdown",
+      severity: "error",
       root: "docs",
       files: ["models/**/*.md"],
       symbol: "h2",
@@ -62,6 +68,46 @@ export const test_evidence_local_account_claim = (): void => {
       requireReview: false,
     },
   ]);
+  const accountGraph = {
+    ...createBlankAutoMovieProductionEvidence("/production", "english"),
+    models: props.stage,
+    claims: [claim],
+  };
+  validateAutoMovieLocalContractClaims(accountGraph);
+  validateAutoMovieLocalContractClaims({
+    ...accountGraph,
+    claims: [{ ...claim, severity: undefined }],
+  });
+  for (const severity of ["off", 0, "warning", "error", 2] as const)
+    TestValidator.error("canonical claim severity cannot be overridden", () =>
+      validateAutoMovieLocalContractClaims({
+        ...accountGraph,
+        claims: [{ ...claim, severity }],
+      }),
+    );
+  const accountReferences =
+    claim.reference as ITtscEvidenceGraphMarkdownReference[];
+  TestValidator.equals(
+    "account reference levels are explicit",
+    accountReferences.map((reference) => reference.severity),
+    ["error", "error"],
+  );
+  for (const weakened of [0, 1])
+    TestValidator.error("canonical account reference cannot be weakened", () =>
+      validateAutoMovieLocalContractClaims({
+        ...accountGraph,
+        claims: [
+          {
+            ...claim,
+            reference: accountReferences.map((reference, index) =>
+              index === weakened
+                ? { ...reference, severity: "warning" as const }
+                : reference,
+            ),
+          },
+        ],
+      }),
+    );
   for (const stage of ["disabled", "draft", "evidence", "review"] as const) {
     const staged = createAutoMovieProductionObligationClaim({
       ...props,

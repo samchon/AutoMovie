@@ -10,6 +10,12 @@ Upstream references ask each inheriting authored or source unit what it learned 
 
 The graph's structural and freshness checks do not decide prose truth. The shipped evidence-graph and review-verification procedures own literal relationship review and whole-population comparison. Repeated review frames and pasted target questions remain semantic-review alarms.
 
+## Rendered realization severity
+
+The generated graph rule remains `error`. Map, model, space, material, instance, and motion source-to-design references, shot-to-scene references, and film-source-to-delivery references retain an error reference for their exact coverage and cardinality. At `review`, a second native reference requires their rendered review at `warning` severity so source compilation and initial capture can produce the still-missing observation. System evaluation, production serialization, source principles, upstream checks, source obligations, and every authored or account relationship retain error review requirements. The model review-set obligation is a finite pre-render plan and remains an error on both account references.
+
+`createAutoMovieSourceRealizationReferences` implements that split for the factory without changing selectors or interpreting native diagnostics. The manifest retains each reference's optional `severity` and `requireReview`; an absent override inherits the graph's error level. The reader still derives one source-owner lineage identity and its actual current review state. Warning-only lint is not completed review: physical `review` and `final` gates still require current observed evidence, including consumed-model coverage for film and brief and exact selected library owners. Source, target, generated output, or plan changes can reopen those independent obligations. The shipped [rendered-realization procedure](../template/scaffold/.agents/skills/evidence-graph/staging.md#rendered-realization-review) owns the policy table and capture-to-observation workflow.
+
 ## Production-local accounts
 
 Use the owning branch's values from the single `productionEvidence` declaration in `lint.config.ts`:
@@ -27,7 +33,7 @@ createAutoMovieProductionObligationClaim({
 
 Append the returned claim to that declaration's `claims`. `documentRoot` defaults to `docs`; alternatively use `documentRoot: "docs/contracts"` and a bare filename. Each H2 in the contract document requires exactly one account H2. Different documents need different account files, and the complete authored H2 population is derived from `layer` and `populationScope`. Callers cannot replace it with a selected subset. Shared filenames and the settings story-subject account are reserved.
 
-Disabled and draft claims remain declared but inactive. Evidence requires physical accounts and targets; review additionally requires current native fingerprints on both references. `inapplicable: true` is permitted only for an explicit first-pilot audit. Complete production and its authorized reset cannot use that disposition to escape a duty. A reset retains the complete denominator while its reset branches remain inactive draft material.
+Disabled and draft claims remain declared but inactive. Evidence requires physical accounts and targets; review additionally requires current native fingerprints on both references. Both references explicitly use `error` severity. Preserve the helper's omitted claim-level severity: canonical admission refuses any claim-level override, including `off` or `0` that would disable the entire native claim, and refuses a weaker rewritten reference. `inapplicable: true` is permitted only for an explicit first-pilot audit. Complete production and its authorized reset cannot use that disposition to escape a duty. A reset retains the complete denominator while its reset branches remain inactive draft material.
 
 The manifest exposes the account in `localBindings[].host`, its contract in `targets`, and the compared authored H2 selector in `population`. Pilot-only inapplicable declarations appear in `localAudits` with the same identities. `readAutoMovieContractRules` continues to read optional structured metadata from the contract H2s; account H2s do not create new rule definitions.
 
