@@ -91,6 +91,12 @@ interface IConfigurationModule {
   }) => void;
 }
 
+const configSource = path.resolve(
+  __dirname,
+  "../../../../packages/template/scaffold/scripts/productionConfiguration.ts",
+);
+const configuration = loadSourceModule<IConfigurationModule>(configSource);
+
 const digest = (value: string): AutoMovieContentDigest => `sha256:${value}`;
 const outputDigest = (shot: "opening" | "answer"): AutoMovieContentDigest =>
   `sha256:${(shot === "opening" ? "a" : "b").repeat(64)}`;
@@ -330,11 +336,6 @@ const receipt = (
  */
 export const test_cli_scaffold_repaint_configuration =
   async (): Promise<void> => {
-    const configSource = path.resolve(
-      __dirname,
-      "../../../../packages/template/scaffold/scripts/productionConfiguration.ts",
-    );
-    const configuration = loadSourceModule<IConfigurationModule>(configSource);
     const authored = selection();
     const parsed = configuration.readProductionRepaintSelection(
       authored,
